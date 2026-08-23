@@ -24,6 +24,6 @@ public class HandlingActivityRegisteredListener {
     @RabbitListener(queues = TrackingEventChannels.HANDLING_QUEUE)
     public void onHandlingActivityRegistered(HandlingActivityRegisteredMessage message) {
         advanceTracking.advance(message.trackingNumber(), message.type(),
-                message.locationUnLocode());
+                message.locationUnLocode(), message.completionTime());
     }
 }

@@ -29,22 +29,58 @@ import org.springframework.core.Ordered;
 public class TrackingConfig {
 
     /**
+     * 公開する接頭辞（US18-5・[ADR-024] 決定 5）。
+     *
+     * <p><strong>1 本だけである。</strong>接頭辞で分けているので、ここに足すことは
+     * 「新しい公開経路を作る」と同義になる。足すときは決定 5 を読み直す。
+     */
+    public static final String PUBLIC_PATH_PREFIX = "/api/v1/public/";
+
+    /**
      * Gateway が付けた利用者ヘッダを必須とする（ADR-007）。
      *
      * <p>認可を書き忘れたエンドポイントが無認証で開くことを、認可判定より前で塞ぐ。
-     * 公開エンドポイントを持たないため、除外はヘルスチェックだけである。
+     *
+     * <p>除外はヘルスチェックと<strong>公開の追跡照会</strong>だけである（US18-5）。
+     * 荷主はログインしないため、この 1 本は認証の外に置く。
      */
     @Bean
     public FilterRegistrationBean<AuthenticatedUserFilter> authenticatedUserFilter() {
         FilterRegistrationBean<AuthenticatedUserFilter> registration =
-                new FilterRegistrationBean<>(new AuthenticatedUserFilter());
+                new FilterRegistrationBean<>(
+                        new AuthenticatedUserFilter(java.util.List.of(PUBLIC_PATH_PREFIX)));
         registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
         return registration;
     }
 
+    /**
+     * 公開の追跡照会に上限を置く（[ADR-024] 決定 6）。
+     *
+     * <p>認証が無い唯一の業務経路であり、追跡番号は日付が既知なら 4 桁しかない。
+     *
+     * <p><strong>ヘルスチェックには掛からない。</strong>フィルタが接頭辞で絞っている
+     * ——一律に掛けると、過負荷のときに liveness が 429 を返して再起動ループになる。
+     */
     @Bean
-    public TrackingActivityRepository trackingActivityRepository(TrackingActivityMapper mapper) {
-        return new MyBatisTrackingActivityRepository(mapper);
+    public FilterRegistrationBean<com.example.trackingms.interfaces.rest
+            .PublicLookupThrottleFilter> publicLookupThrottleFilter(
+            @org.springframework.beans.factory.annotation.Value(
+                    "${app.public-lookup.limit-per-minute:30}") int limitPerMinute,
+            java.time.Clock clock) {
+        FilterRegistrationBean<com.example.trackingms.interfaces.rest.PublicLookupThrottleFilter>
+                registration = new FilterRegistrationBean<>(
+                        new com.example.trackingms.interfaces.rest.PublicLookupThrottleFilter(
+                                PUBLIC_PATH_PREFIX, limitPerMinute, clock));
+        // 認証フィルタの直後に置く。公開経路は認証を通らないので、順序は実質ここが先頭になる
+        registration.setOrder(Ordered.HIGHEST_PRECEDENCE + 1);
+        return registration;
+    }
+
+    @Bean
+    public TrackingActivityRepository trackingActivityRepository(TrackingActivityMapper mapper,
+            com.example.trackingms.infrastructure.persistence.TrackingEventMapper events,
+            com.example.trackingms.infrastructure.persistence.TrackingExceptionMapper exceptions) {
+        return new MyBatisTrackingActivityRepository(mapper, events, exceptions);
     }
 
     @Bean
@@ -59,8 +95,67 @@ public class TrackingConfig {
     }
 
     @Bean
-    public AdvanceTrackingUseCase advanceTrackingUseCase(TrackingActivityRepository activities) {
-        return new AdvanceTrackingUseCase(activities);
+    public AdvanceTrackingUseCase advanceTrackingUseCase(TrackingActivityRepository activities,
+            LocationRepository locations,
+            com.example.trackingms.application.port.TrackingNotifier notifier) {
+        return new AdvanceTrackingUseCase(activities, locations, notifier);
+    }
+
+    /**
+     * 時刻源は業務タイムゾーンで持つ（[ADR-010]）。
+     *
+     * <p>UTC で「いま」を決めると、時差の分だけ日付がずれる時間帯ができる。日中しか
+     * 動かさないと気づかない。
+     */
+    @Bean
+    public java.time.Clock businessClock(
+            @org.springframework.beans.factory.annotation.Value("${app.business-time-zone}")
+            String zone) {
+        return java.time.Clock.system(java.time.ZoneId.of(zone));
+    }
+
+    @Bean
+    public com.example.trackingms.application.port.TrackingNoticeRepository trackingNoticeRepository(
+            com.example.trackingms.infrastructure.persistence.TrackingNoticeMapper mapper) {
+        return new com.example.trackingms.infrastructure.persistence
+                .MyBatisTrackingNoticeRepository(mapper);
+    }
+
+    @Bean
+    public com.example.trackingms.application.port.TrackingLookupLogger trackingLookupLogger(
+            com.example.trackingms.infrastructure.persistence.TrackingLookupLogMapper mapper) {
+        return new com.example.trackingms.infrastructure.persistence
+                .MyBatisTrackingLookupLogger(mapper);
+    }
+
+    /**
+     * 荷主への通知は<strong>記録で代替する</strong>（[ADR-024] 決定 9）。
+     *
+     * <p>メール送信を実装する日は、ここを差し替える。業務のコードは動かない。
+     */
+    @Bean
+    public com.example.trackingms.application.port.TrackingNotifier trackingNotifier(
+            com.example.trackingms.application.port.TrackingNoticeRepository notices,
+            java.time.Clock clock) {
+        return new com.example.trackingms.infrastructure.notification
+                .RecordingTrackingNotifier(notices, clock);
+    }
+
+    @Bean
+    public com.example.trackingms.application.internal.TrackingLookupUseCase trackingLookupUseCase(
+            TrackingActivityRepository activities,
+            com.example.trackingms.application.port.TrackingLookupLogger lookupLogger) {
+        return new com.example.trackingms.application.internal.TrackingLookupUseCase(
+                activities, lookupLogger);
+    }
+
+    @Bean
+    public com.example.trackingms.application.internal.ManageTrackingUseCase manageTrackingUseCase(
+            TrackingActivityRepository activities, LocationRepository locations,
+            com.example.trackingms.application.port.TrackingNotifier notifier,
+            java.time.Clock clock) {
+        return new com.example.trackingms.application.internal.ManageTrackingUseCase(
+                activities, locations, notifier, clock);
     }
 
     @Bean

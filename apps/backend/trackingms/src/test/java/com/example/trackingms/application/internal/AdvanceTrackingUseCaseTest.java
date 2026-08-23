@@ -39,6 +39,10 @@ class AdvanceTrackingUseCaseTest {
     /** 書き込まれた状態。何回書いたかを数えるために持つ。 */
     private final List<TrackingStatus> written = new ArrayList<>();
 
+    /** 積まれた出来事。**状態が動いたのに経過に出ない**形を捕まえるために持つ。 */
+    private final List<com.example.trackingms.domain.model.TrackingEvent> appendedEvents =
+            new ArrayList<>();
+
     private TrackingActivity stored = TrackingActivity.start(TrackingNumber.of(NUMBER),
             TrackingBookingId.of("BKG-2026000001"), TOKYO, LOS_ANGELES,
             LocalDate.of(2030, Month.SEPTEMBER, 20));
@@ -59,14 +63,66 @@ class AdvanceTrackingUseCaseTest {
         public Optional<TrackingActivity> findByTrackingNumber(TrackingNumber trackingNumber) {
             return NUMBER.equals(trackingNumber.value()) ? Optional.of(stored) : Optional.empty();
         }
+
+        @Override
+        public void appendEvent(TrackingNumber trackingNumber,
+                com.example.trackingms.domain.model.TrackingEvent event) {
+            appendedEvents.add(event);
+        }
+
+        @Override
+        public List<com.example.trackingms.domain.model.TrackingEvent> findEvents(
+                TrackingNumber trackingNumber, int limit) {
+            return List.copyOf(appendedEvents);
+        }
+
+        @Override
+        public void saveException(TrackingNumber trackingNumber, TrackingActivity activity) {
+            throw new UnsupportedOperationException("この検査では使わない");
+        }
+
+        @Override
+        public List<TrackingActivity> findWithOpenExceptions(int limit) {
+            throw new UnsupportedOperationException("この検査では使わない");
+        }
     };
 
-    private final AdvanceTrackingUseCase advanceTracking = new AdvanceTrackingUseCase(activities);
+    /** 地点マスタ。名前が引けないことで記録を止めないことも、ここで確かめる。 */
+    private final com.example.trackingms.application.port.LocationRepository locations =
+            unLocode -> Optional.of(Location.of(unLocode, "Tokyo"));
+
+    /** 通知したという事実。**メールは送らない**（[ADR-024] 決定 9）。 */
+    private final List<String> notified = new ArrayList<>();
+
+    private final com.example.trackingms.application.port.TrackingNotifier notifier =
+            new com.example.trackingms.application.port.TrackingNotifier() {
+                @Override
+                public void statusChanged(TrackingActivity activity) {
+                    notified.add(activity.trackingStatus().name());
+                }
+
+                @Override
+                public void exceptionRaised(TrackingActivity activity) {
+                    throw new UnsupportedOperationException("この検査では使わない");
+                }
+
+                @Override
+                public void exceptionResolved(TrackingActivity activity) {
+                    throw new UnsupportedOperationException("この検査では使わない");
+                }
+            };
+
+    private final AdvanceTrackingUseCase advanceTracking =
+            new AdvanceTrackingUseCase(activities, locations, notifier);
+
+    /** 荷役の作業日時。**経過にはこれが残る**——受け取った時刻ではない。 */
+    private static final java.time.Instant COMPLETED_AT =
+            java.time.Instant.parse("2026-08-23T02:00:00Z");
 
     @Test
     @DisplayName("荷役が届くと、進んだ状態を書き込む")
     void writesTheAdvancedStatus() {
-        advanceTracking.advance(NUMBER, "RECEIVE", "JPTYO");
+        advanceTracking.advance(NUMBER, "RECEIVE", "JPTYO", COMPLETED_AT);
 
         assertThat(written).containsExactly(TrackingStatus.RECEIVED);
     }
@@ -80,11 +136,11 @@ class AdvanceTrackingUseCaseTest {
     @Test
     @DisplayName("進まない荷役では書き込まない")
     void doesNotWriteWhenNothingAdvances() {
-        advanceTracking.advance(NUMBER, "RECEIVE", "JPTYO");
+        advanceTracking.advance(NUMBER, "RECEIVE", "JPTYO", COMPLETED_AT);
         written.clear();
 
         // 同じ荷役の再配送
-        advanceTracking.advance(NUMBER, "RECEIVE", "JPTYO");
+        advanceTracking.advance(NUMBER, "RECEIVE", "JPTYO", COMPLETED_AT);
 
         assertThat(written).as("進んでいないのに書き込んだ").isEmpty();
     }
@@ -92,9 +148,54 @@ class AdvanceTrackingUseCaseTest {
     @Test
     @DisplayName("知らない種別でも書き込まない")
     void doesNotWriteForUnknownHandling() {
-        advanceTracking.advance(NUMBER, "CUSTOMS_INSPECTION", "JPTYO");
+        advanceTracking.advance(NUMBER, "CUSTOMS_INSPECTION", "JPTYO", COMPLETED_AT);
 
         assertThat(written).isEmpty();
+    }
+
+    /**
+     * US18-3。<strong>状態が動いたら、経過にも残る</strong>。
+     *
+     * <p>状態は動いたのに経過に出ない行ができると、荷主は「いつ変わったか」を読めない。
+     * IT7 の購読経路は状態だけを動かしていた。
+     */
+    @Test
+    @DisplayName("荷役で進んだら、経過にも積む")
+    void appendsAnEventWhenItAdvances() {
+        advanceTracking.advance(NUMBER, "RECEIVE", "JPTYO", COMPLETED_AT);
+
+        assertThat(appendedEvents)
+                .as("状態は動いたのに、経過に出ていない")
+                .hasSize(1)
+                .allSatisfy(event -> {
+                    assertThat(event.trackingStatus()).isEqualTo(TrackingStatus.RECEIVED);
+                    // **受け取った時刻ではなく、実際に作業した時刻を残す**
+                    assertThat(event.occurredAt()).isEqualTo(COMPLETED_AT);
+                    assertThat(event.source().name()).isEqualTo("HANDLING");
+                });
+    }
+
+    /** 進まなければ、経過にも積まない。同じ荷役の再配送で行が増えない。 */
+    @Test
+    @DisplayName("進まない荷役では、経過にも積まない")
+    void doesNotAppendWhenNothingAdvances() {
+        advanceTracking.advance(NUMBER, "RECEIVE", "JPTYO", COMPLETED_AT);
+        appendedEvents.clear();
+
+        advanceTracking.advance(NUMBER, "RECEIVE", "JPTYO", COMPLETED_AT);
+
+        assertThat(appendedEvents).as("進んでいないのに経過へ積んだ").isEmpty();
+    }
+
+    /**
+     * [ADR-024] 決定 9。<strong>状態が変わったら荷主へ知らせる——ただしメールは送らない</strong>。
+     */
+    @Test
+    @DisplayName("荷役で進んだら、通知した事実を残す")
+    void recordsANoticeWhenItAdvances() {
+        advanceTracking.advance(NUMBER, "RECEIVE", "JPTYO", COMPLETED_AT);
+
+        assertThat(notified).containsExactly("RECEIVED");
     }
 
     /**
@@ -109,9 +210,9 @@ class AdvanceTrackingUseCaseTest {
     void recordsUnknownHandlingType() {
         List<String> recorded = capturedWarnings();
 
-        advanceTracking.advance(NUMBER, "CUSTOMS_INSPECTION", "JPTYO");
-        advanceTracking.advance(NUMBER, "RECEIVE", "JPTYO");
-        advanceTracking.advance(NUMBER, "RECEIVE", "JPTYO");
+        advanceTracking.advance(NUMBER, "CUSTOMS_INSPECTION", "JPTYO", COMPLETED_AT);
+        advanceTracking.advance(NUMBER, "RECEIVE", "JPTYO", COMPLETED_AT);
+        advanceTracking.advance(NUMBER, "RECEIVE", "JPTYO", COMPLETED_AT);
 
         assertThat(recorded)
                 .as("知らない種別が記録されないか、進まない種別まで記録された")
@@ -148,7 +249,8 @@ class AdvanceTrackingUseCaseTest {
     @Test
     @DisplayName("知らない追跡番号では、例外にせず何もしない")
     void ignoresUnknownTrackingNumber() {
-        assertThatCode(() -> advanceTracking.advance("TRK-99999999-9999", "RECEIVE", "JPTYO"))
+        assertThatCode(() ->
+                advanceTracking.advance("TRK-99999999-9999", "RECEIVE", "JPTYO", COMPLETED_AT))
                 .doesNotThrowAnyException();
 
         assertThat(written).isEmpty();

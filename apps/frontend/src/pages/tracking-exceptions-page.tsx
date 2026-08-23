@@ -57,7 +57,7 @@ export function TrackingExceptionsPage() {
                       緊急
                     </span>
                   )}
-                  {tracking.activeException?.exceptionType}
+                  {tracking.activeException?.label}
                 </td>
                 <td className="py-2">
                   {tracking.activeException?.description}

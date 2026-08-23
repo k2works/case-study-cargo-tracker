@@ -48,3 +48,7 @@ management:
 # 業務日付は業務タイムゾーンで判断する（UTC で判断しない）
 app:
   business-time-zone: Asia/Tokyo
+  public-lookup:
+    # 公開の追跡照会の上限（ADR-024 決定 6）。荷主 1 人の使い方（1 日数回）から十分に離す。
+    # **実運用の数字が無いため当て推量である。** 変え方は運用手順書に書く
+    limit-per-minute: 30

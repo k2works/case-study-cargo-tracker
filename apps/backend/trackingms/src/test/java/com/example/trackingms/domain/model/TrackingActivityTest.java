@@ -67,10 +67,15 @@ class TrackingActivityTest {
     @DisplayName("復元では検査しない")
     void restoreDoesNotValidate() {
         TrackingActivity restored = TrackingActivity.restore(1L, null, null,
-                TrackingStatus.NOT_RECEIVED, TOKYO, LOS_ANGELES, DEADLINE);
+                TrackingStatus.NOT_RECEIVED, null, TOKYO, LOS_ANGELES, null, DEADLINE, null, null);
 
         assertThat(restored.id()).isEqualTo(1L);
         assertThat(restored.trackingNumber()).isNull();
+        // 現在地の列が無かったころの行も読める。空なら出発港として扱う（[ADR-009]）
+        assertThat(restored.currentLocation()).isEqualTo(TOKYO);
+        assertThat(restored.estimatedArrival())
+                .as("経路が決まっていない行を、日付で埋めている")
+                .isEmpty();
     }
 
     @Nested

@@ -216,6 +216,10 @@ function managedView(tracking: MockTracking) {
         : {
             id: active.id,
             exceptionType: active.exceptionType,
+            label:
+              RAISABLE_EXCEPTION_TYPES.find(
+                (choice) => choice.exceptionType === active.exceptionType,
+              )?.label ?? active.exceptionType,
             description: active.description,
             occurredAt: active.occurredAt,
             urgent: active.urgent,

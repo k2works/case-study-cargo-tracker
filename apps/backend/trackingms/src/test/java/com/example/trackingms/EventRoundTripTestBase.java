@@ -12,10 +12,7 @@ import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.rabbit.listener.RabbitListenerEndpointRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.test.context.ActiveProfiles;
-import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.RabbitMQContainer;
 
 /**
@@ -29,25 +26,18 @@ import org.testcontainers.containers.RabbitMQContainer;
  * US17 で 3 契約目が入る。契約が増えるたびに同じクラスが伸びると、どの契約の何を
  * 確かめているのかが読めなくなる。土台だけを共有し、契約ごとの取り決めは各テストが持つ。
  */
-@SpringBootTest
-@ActiveProfiles("integration")
-abstract class EventRoundTripTestBase {
+abstract class EventRoundTripTestBase extends TrackingIntegrationTestBase {
 
     /**
-     * コンテナは 1 組を共有し、止めない。
+     * メッセージ基盤は 1 つを共有し、止めない。DB は土台が持つ。
      *
-     * <p>{@code @Container} の静的フィールドは<strong>それを宣言したクラスの終了時に止まる</strong>。
-     * 土台を継承するテストが 2 つあると、先に終わったほうがコンテナを止め、後のほうは
-     * 接続できない。起動しっぱなしにして JVM の終了に任せる（Ryuk が後片付けする）。
+     * <p>テストごとに立てると、1 つの JVM で何個も同時に立ち上がり、資源が足りずに
+     * <strong>関係のないテストが落ちる</strong>。
      */
-    @ServiceConnection
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
-
     @ServiceConnection
     static RabbitMQContainer rabbitmq = new RabbitMQContainer("rabbitmq:3-management-alpine");
 
     static {
-        postgres.start();
         rabbitmq.start();
     }
 

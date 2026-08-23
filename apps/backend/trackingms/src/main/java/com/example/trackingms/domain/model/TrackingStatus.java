@@ -65,6 +65,26 @@ public enum TrackingStatus {
     UNKNOWN;
 
     /**
+     * 画面に出す名前。
+     *
+     * <p><strong>画面が対訳表を持たない</strong>（[ADR-023] 決定 1 と同じ形）。持たせると、
+     * 値を足したときに画面が列挙の名前をそのまま出す。
+     */
+    public String label() {
+        return switch (this) {
+            case NOT_RECEIVED -> "受領待ち";
+            case RECEIVED -> "受領済み";
+            case LOADED -> "積込済み";
+            case ONBOARD_CARRIER -> "輸送中";
+            case UNLOADED -> "荷降し済み";
+            case AWAITING_CLAIM -> "引取待ち";
+            case CLAIMED -> "引取済み";
+            case EXCEPTION -> "例外発生";
+            case UNKNOWN -> "不明";
+        };
+    }
+
+    /**
      * その状態から、この状態へ進めるか。
      *
      * <p><strong>戻る向きには進めない。</strong>再試行やデッドレターからの送り直しで、

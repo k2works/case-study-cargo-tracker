@@ -67,6 +67,8 @@ export type ManagedTracking = {
 export type TrackingException = {
   id: number;
   exceptionType: ExceptionType;
+  /** 表示名。**画面が対訳表を持たない**（[ADR-023] 決定 1 と同じ形）。 */
+  label: string;
   description: string;
   occurredAt: string;
   /** 紛失だけが真（[ADR-024] 決定 3）。 */

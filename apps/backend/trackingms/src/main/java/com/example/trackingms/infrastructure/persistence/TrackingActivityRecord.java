@@ -14,6 +14,10 @@ public class TrackingActivityRecord {
     private String destinationUnlocode;
     private String destinationName;
     private LocalDate arrivalDeadline;
+    private String statusBefore;
+    private String currentLocationUnlocode;
+    private String currentLocationName;
+    private LocalDate estimatedArrival;
 
     public Long getId() {
         return id;
@@ -85,5 +89,37 @@ public class TrackingActivityRecord {
 
     public void setArrivalDeadline(LocalDate arrivalDeadline) {
         this.arrivalDeadline = arrivalDeadline;
+    }
+
+    public String getStatusBefore() {
+        return statusBefore;
+    }
+
+    public void setStatusBefore(String statusBefore) {
+        this.statusBefore = statusBefore;
+    }
+
+    public String getCurrentLocationUnlocode() {
+        return currentLocationUnlocode;
+    }
+
+    public void setCurrentLocationUnlocode(String currentLocationUnlocode) {
+        this.currentLocationUnlocode = currentLocationUnlocode;
+    }
+
+    public String getCurrentLocationName() {
+        return currentLocationName;
+    }
+
+    public void setCurrentLocationName(String currentLocationName) {
+        this.currentLocationName = currentLocationName;
+    }
+
+    public LocalDate getEstimatedArrival() {
+        return estimatedArrival;
+    }
+
+    public void setEstimatedArrival(LocalDate estimatedArrival) {
+        this.estimatedArrival = estimatedArrival;
     }
 }

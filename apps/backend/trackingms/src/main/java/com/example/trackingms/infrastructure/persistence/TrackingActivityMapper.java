@@ -20,13 +20,16 @@ public interface TrackingActivityMapper {
             t.id, t.tracking_number, t.booking_id, t.tracking_status,
             t.origin_unlocode, o.name AS origin_name,
             t.destination_unlocode, d.name AS destination_name,
-            t.arrival_deadline
+            t.arrival_deadline, t.status_before,
+            t.current_location_unlocode, c.name AS current_location_name,
+            t.estimated_arrival
             """;
 
     String JOINS = """
             FROM tracking_activity t
             JOIN location o ON o.unlocode = t.origin_unlocode
             JOIN location d ON d.unlocode = t.destination_unlocode
+            LEFT JOIN location c ON c.unlocode = t.current_location_unlocode
             """;
 
     /**
@@ -51,29 +54,37 @@ public interface TrackingActivityMapper {
     @Insert("""
             INSERT INTO tracking_activity (
                 tracking_number, booking_id, tracking_status,
-                origin_unlocode, destination_unlocode, arrival_deadline)
+                origin_unlocode, destination_unlocode, arrival_deadline,
+                current_location_unlocode)
             SELECT
                 #{trackingNumber}, #{bookingId}, #{trackingStatus},
-                #{originUnlocode}, #{destinationUnlocode}, #{arrivalDeadline}
+                #{originUnlocode}, #{destinationUnlocode}, #{arrivalDeadline},
+                #{originUnlocode}
             WHERE NOT EXISTS (
                 SELECT 1 FROM tracking_activity WHERE tracking_number = #{trackingNumber})
             """)
     void insertIfAbsent(TrackingActivityRecord row);
 
     /**
-     * 追跡の状態を更新する（US15-4）。
+     * 追跡の状態を更新する（US15-4・US17-2・US19-4）。
      *
-     * <p>更新するのは状態だけである。出発地・目的地・期限は追跡が始まったときに決まり、
-     * 荷役では変わらない。全項目を書き戻す形にすると、イベントが運んでこない項目まで
-     * 上書きすることになる。
+     * <p>更新するのは<strong>動く項目だけ</strong>である。出発地・目的地・期限は追跡が
+     * 始まったときに決まり、あとから変わらない。全項目を書き戻す形にすると、
+     * 呼び出し側が運んでこない項目まで上書きすることになる。
+     *
+     * <p><strong>発生前の状態も同じ書き込みで動かす。</strong>別の更新に分けると、
+     * 片方だけ書けた行が残り、解決したときに戻る先が消える（[ADR-024] 決定 2）。
      */
     @org.apache.ibatis.annotations.Update("""
             UPDATE tracking_activity
-               SET tracking_status = #{trackingStatus}, updated_at = NOW()
+               SET tracking_status = #{trackingStatus},
+                   status_before = #{statusBefore},
+                   current_location_unlocode = #{currentLocationUnlocode},
+                   estimated_arrival = #{estimatedArrival},
+                   updated_at = NOW()
              WHERE tracking_number = #{trackingNumber}
             """)
-    void updateStatus(@Param("trackingNumber") String trackingNumber,
-            @Param("trackingStatus") String trackingStatus);
+    void updateStatus(TrackingActivityRecord row);
 
     @Select("SELECT " + COLUMNS + JOINS + " WHERE t.tracking_number = #{trackingNumber}")
     @Results(id = "trackingResult", value = {
@@ -84,7 +95,11 @@ public interface TrackingActivityMapper {
         @Result(column = "origin_name", property = "originName"),
         @Result(column = "destination_unlocode", property = "destinationUnlocode"),
         @Result(column = "destination_name", property = "destinationName"),
-        @Result(column = "arrival_deadline", property = "arrivalDeadline")
+        @Result(column = "arrival_deadline", property = "arrivalDeadline"),
+        @Result(column = "status_before", property = "statusBefore"),
+        @Result(column = "current_location_unlocode", property = "currentLocationUnlocode"),
+        @Result(column = "current_location_name", property = "currentLocationName"),
+        @Result(column = "estimated_arrival", property = "estimatedArrival")
     })
     TrackingActivityRecord findByTrackingNumber(@Param("trackingNumber") String trackingNumber);
 }
