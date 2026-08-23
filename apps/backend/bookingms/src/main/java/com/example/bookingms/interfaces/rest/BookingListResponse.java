@@ -12,4 +12,12 @@ import java.util.List;
  */
 public record BookingListResponse(
         List<BookingResponse> bookings, long totalCount, int limit, boolean truncated) {
+
+        public BookingListResponse {
+        // 受け取った一覧を写して持つ。呼び出し元が渡したものをそのまま抱えると、
+        // 渡したあとの書き換えがこちらの中身を変える。null は許す——項目が無いことと
+        // 空であることは違う
+        bookings = bookings == null ? null : List.copyOf(bookings);
+        }
+
 }

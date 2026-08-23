@@ -86,11 +86,19 @@ subprojects {
     checkstyle {
         toolVersion = '10.21.4'
         configFile = file("${rootProject.projectDir}/config/checkstyle/checkstyle.xml")
-        ignoreFailures = true
+        configDirectory = file("${rootProject.projectDir}/config/checkstyle")
+        // 指摘でビルドを止める。見逃す設定のままだと、レポートに出ても誰も直さない
+        // （IT6 では二重 import が検出されていたのにビルドが緑だった）
+        ignoreFailures = false
+        maxWarnings = 0
     }
 
     spotbugs {
-        ignoreFailures = true
+        // 指摘でビルドを止める。除外は config/spotbugs/exclude-filter.xml に理由つきで置く
+        ignoreFailures = false
+        // Java 25（クラスファイル 69）を読める版。古い版は全クラスの解析に失敗し、
+        // ignoreFailures = true のもとでは「1 件も指摘が無い」ように見えていた
+        toolVersion = '4.9.8'
         excludeFilter = file("${rootProject.projectDir}/config/spotbugs/exclude-filter.xml")
     }
 

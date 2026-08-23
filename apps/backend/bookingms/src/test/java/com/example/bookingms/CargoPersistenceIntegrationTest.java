@@ -4,43 +4,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.bookingms.application.internal.BookCargoCommand;
-import com.example.bookingms.application.internal.BookCargoUseCase;
-import com.example.bookingms.application.internal.RegisterShipperCommand;
-import com.example.bookingms.application.internal.RegisterShipperUseCase;
-import com.example.bookingms.application.internal.RegistrationOutcome;
-import com.example.bookingms.application.internal.SearchCargoUseCase;
 import com.example.bookingms.application.port.CargoSummary;
-import com.example.bookingms.application.port.CargoRepository;
-import com.example.bookingms.application.port.LocationRepository;
 import com.example.bookingms.domain.model.BookingId;
-import com.example.shared.domain.model.Location;
 import com.example.bookingms.domain.model.BookingStatus;
 import com.example.bookingms.domain.model.Cargo;
-import com.example.bookingms.domain.model.CargoItinerary;
-import com.example.bookingms.domain.model.TrackingNumber;
 import com.example.bookingms.domain.model.CargoType;
 import com.example.bookingms.domain.model.HazardClass;
-import com.example.bookingms.domain.model.Leg;
 import com.example.bookingms.domain.model.RoutingStatus;
-import com.example.bookingms.domain.model.ShipperType;
 import com.example.bookingms.domain.model.TransportStatus;
-import com.example.bookingms.domain.model.VoyageNumber;
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Month;
 import java.time.ZoneId;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.ActiveProfiles;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
  * 貨物予約が実際の DB で成立することを確認する。
@@ -48,79 +26,11 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  * <p>採番・地点の結合・危険物と冷凍の保存は、いずれも DB の振る舞いに依存する。
  * ユニットテストのスタブが緑でも、ここが噛み合わなければ 1 件も登録できない。
  */
-@SpringBootTest
-@Testcontainers
-@org.springframework.context.annotation.Import(
-        CargoPersistenceIntegrationTest.RecordingNotifier.class)
-@ActiveProfiles("integration")
+/**
+ * 予約が実際の DB で成立する（受付・採番・地点・特殊貨物・一覧）。
+ */
 @DisplayName("貨物予約の永続化")
-class CargoPersistenceIntegrationTest {
-
-    @Container
-    @ServiceConnection
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
-
-    @Autowired
-    private BookCargoUseCase bookCargo;
-
-    @Autowired
-    private SearchCargoUseCase searchCargo;
-
-    @Autowired
-    private RegisterShipperUseCase registerShipper;
-
-    @Autowired
-    private LocationRepository locations;
-
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
-
-    @Autowired
-    private CargoRepository repository;
-
-    /** 業務タイムゾーンの時刻源。実装と同じものを使う（別々に「今日」を決めない）。 */
-    @Autowired
-    private java.time.Clock clock;
-
-    @Autowired
-    private com.example.bookingms.application.internal.IssueTrackingNumberUseCase
-            issueTrackingNumber;
-
-    /** 発行の時点でトランザクションが生きていたか。 */
-    private static boolean transactionActiveWhenPublished;
-
-    /**
-     * 発行の呼び出しを捕まえる差し替え。
-     *
-     * <p>本物（RabbitMQ）に送らせない。ここで見たいのは<strong>いつ呼ばれるか</strong>である。
-     */
-    @org.springframework.boot.test.context.TestConfiguration
-    static class RecordingNotifier {
-
-        @org.springframework.context.annotation.Bean
-        @org.springframework.context.annotation.Primary
-        com.example.bookingms.application.port.CargoEventNotifier recordingCargoEventNotifier() {
-            return event -> transactionActiveWhenPublished = org.springframework.transaction
-                    .support.TransactionSynchronizationManager.isSynchronizationActive();
-        }
-    }
-
-    private Long shipperId(String name, String email) {
-        RegistrationOutcome outcome = registerShipper.registerAnyway(new RegisterShipperCommand(
-                ShipperType.INDIVIDUAL, name, email, "東京都千代田区 1-1-1", null));
-        return ((RegistrationOutcome.Registered) outcome).shipper().id();
-    }
-
-    private BookCargoCommand command(Long shipperId, CargoType type) {
-        return new BookCargoCommand(shipperId, type, new BigDecimal("12000"), 20, "電子部品",
-                new BigDecimal("120"), new BigDecimal("80"), new BigDecimal("100"),
-                "JPTYO", "USLAX", LocalDate.of(2030, Month.SEPTEMBER, 1), LocalDate.of(2030, Month.SEPTEMBER, 20),
-                type == CargoType.HAZARDOUS ? "3" : null,
-                type == CargoType.HAZARDOUS ? "UN1263" : null,
-                type == CargoType.HAZARDOUS ? "PAINT" : null,
-                type == CargoType.REFRIGERATED ? new BigDecimal("-20") : null,
-                type == CargoType.REFRIGERATED ? new BigDecimal("-15") : null);
-    }
+class CargoPersistenceIntegrationTest extends CargoPersistenceTestBase {
 
     @Test
     @DisplayName("予約番号が本番経路（DB シーケンス）で採番される")
@@ -335,175 +245,5 @@ class CargoPersistenceIntegrationTest {
 
         Cargo reloaded = repository.findByBookingId(bookingId.value()).orElseThrow().cargo();
         assertThat(reloaded.routingStatus()).isEqualTo(RoutingStatus.ROUTING_REQUESTED);
-    }
-
-    private static final ZoneId LA = ZoneId.of("America/Los_Angeles");
-
-    private static CargoItinerary itineraryVia(String transitUnLocode, String transitName) {
-        return CargoItinerary.of(List.of(
-                Leg.of(VoyageNumber.of("V0201"), Location.of("JPTYO", "Tokyo"),
-                        Location.of(transitUnLocode, transitName),
-                        Instant.parse("2030-09-02T09:00:00Z"),
-                        Instant.parse("2030-09-05T09:00:00Z")),
-                Leg.of(VoyageNumber.of("V0202"), Location.of(transitUnLocode, transitName),
-                        Location.of("USLAX", "Los Angeles"),
-                        Instant.parse("2030-09-06T09:00:00Z"),
-                        Instant.parse("2030-09-18T09:00:00Z"))));
-    }
-
-    @Test
-    @DisplayName("旅程が保存され、区間が順序どおりに読み戻せる")
-    void persistsItinerary() {
-        Cargo booked = bookCargo.book(command(shipperId("旅程太郎", "itinerary@example.com"),
-                CargoType.GENERAL));
-        Cargo assigned = repository.save(
-                booked.requestRouting().assignItinerary(itineraryVia("CNSHA", "Shanghai"), LA));
-
-        Cargo found = repository.findById(assigned.id()).orElseThrow();
-
-        assertThat(found.routingStatus()).isEqualTo(RoutingStatus.ROUTED);
-        assertThat(found.bookingStatus()).isEqualTo(BookingStatus.ROUTE_PROPOSED);
-        assertThat(found.itinerary()).isPresent();
-        // 順序に意味がある。並びが崩れると「東京 → ロサンゼルス → 上海」になる
-        assertThat(found.itinerary().orElseThrow().legs())
-                .extracting(leg -> leg.loadLocation().unLocode())
-                .containsExactly("JPTYO", "CNSHA");
-        // 地点は名称まで読み戻す。画面がコードから引き直さずに済む
-        assertThat(found.itinerary().orElseThrow().legs().get(0).unloadLocation().name())
-                .isEqualTo("Shanghai");
-        assertThat(found.itinerary().orElseThrow().expectedArrivalTime())
-                .isEqualTo(Instant.parse("2030-09-18T09:00:00Z"));
-    }
-
-    /**
-     * IT3 の欠陥と同じ形。区間を消さずに入れ直すと、旅程が二重になる。
-     *
-     * <p>しかも順序は保たれるため、画面上は「区間が増えた」ようにしか見えない。
-     */
-    @Test
-    @DisplayName("経路を差し替えても区間の行が増えない")
-    void replacingItineraryDoesNotAddRows() {
-        Cargo booked = bookCargo.book(command(shipperId("差替太郎", "replace@example.com"),
-                CargoType.GENERAL));
-        Cargo assigned = repository.save(
-                booked.requestRouting().assignItinerary(itineraryVia("CNSHA", "Shanghai"), LA));
-
-        Cargo replaced = repository.save(
-                assigned.assignItinerary(itineraryVia("SGSIN", "Singapore"), LA));
-
-        Long rows = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM leg WHERE cargo_id = ?", Long.class, assigned.id());
-        assertThat(rows).as("差し替えで区間の行が増えている").isEqualTo(2L);
-        // **保存の戻り値ではなく DB から読み戻す。**戻り値は渡した集約そのものなので、
-        // 古い区間を消して古い区間を入れ直す実装でも緑になる
-        assertThat(repository.findById(assigned.id()).orElseThrow().itinerary().orElseThrow()
-                .legs())
-                .extracting(leg -> leg.unloadLocation().unLocode())
-                .containsExactly("SGSIN", "USLAX");
-        assertThat(replaced.itinerary()).isPresent();
-    }
-
-    @Test
-    @DisplayName("経路が決まっていない予約は旅程を持たない")
-    void cargoWithoutItineraryReadsBack() {
-        Cargo booked = bookCargo.book(command(shipperId("未定太郎", "no-itinerary@example.com"),
-                CargoType.GENERAL));
-
-        // 空のリストと「旅程が無い」を取り違えると、画面が空の旅程表を出す
-        assertThat(repository.findById(booked.id()).orElseThrow().itinerary()).isEmpty();
-    }
-
-    /**
-     * 通知の記録と追跡番号が<strong>読み戻せる</strong>（US12-4・US14）。
-     *
-     * <p>戻り値だけを見ると、列に書いていない実装でも通る（IT6 タスク 0.9 で直した形と同じ）。
-     */
-    @Test
-    @DisplayName("通知の記録と追跡番号が読み戻せる")
-    void persistsNotificationAndTrackingNumber() {
-        Cargo booked = bookCargo.book(command(shipperId("通知太郎", "cargo-notify@example.com"),
-                CargoType.GENERAL));
-        String bookingId = booked.bookingId().orElseThrow().value();
-
-        Cargo routed = repository.save(
-                booked.requestRouting().assignItinerary(itineraryVia("CNSHA", "Shanghai"), LA));
-
-        Instant notifiedAt = Instant.parse("2026-08-22T02:00:00Z");
-        Cargo confirmed = repository.save(
-                repository.save(routed.notifyShipper(notifiedAt, "sales01")).confirm());
-
-        // 採番は本番と同じ経路（シーケンス）を通す。自前採番だと UNIQUE 制約で落ちる
-        String number = repository.nextTrackingNumber();
-        assertThat(number).matches("^TRK-\\d{8}-\\d{4}$");
-        repository.save(confirmed.issueTrackingNumber(TrackingNumber.of(number)));
-
-        assertThat(repository.findByBookingId(bookingId))
-                .get()
-                .satisfies(found -> {
-                    Cargo cargo = found.cargo();
-                    assertThat(cargo.bookingStatus()).isEqualTo(BookingStatus.TRACKING_ISSUED);
-                    assertThat(cargo.routeNotification().orElseThrow().notifiedAt())
-                            .isEqualTo(notifiedAt);
-                    assertThat(cargo.routeNotification().orElseThrow().notifiedBy())
-                            .isEqualTo("sales01");
-                    assertThat(cargo.trackingNumber().orElseThrow().value()).isEqualTo(number);
-                });
-    }
-
-    /** 採番は続けて呼んでも衝突しない（US14-2）。 */
-    @Test
-    @DisplayName("追跡番号は続けて採番しても衝突しない")
-    void numbersDistinctTrackingNumbers() {
-        assertThat(repository.nextTrackingNumber())
-                .isNotEqualTo(repository.nextTrackingNumber());
-    }
-
-    /**
-     * <strong>発行はトランザクションの中で行われる</strong>（[ADR-022] 決定 6）。
-     *
-     * <p>「コミット後に送る」機構は、送るときにトランザクションが生きていて初めて働く。
-     * 置き忘れると機構は素通りし、結果の順序が正しいのは「たまたま save のあとに呼んで
-     * いる」からになる。<strong>本番の呼び出し形で同期が有効であること</strong>を固定する。
-     *
-     * <p>アダプタ側の「コミット前は送らない・ロールバックでは送らない」は
-     * {@code RabbitCargoEventNotifierTest} が見る。ここが見るのは<strong>境界の有無</strong>である。
-     */
-    @Test
-    @DisplayName("追跡番号の発行は、トランザクションの中から伝える")
-    void publishesInsideATransaction() {
-        Cargo booked = bookCargo.book(command(shipperId("発行太郎", "cargo-issue-tx@example.com"),
-                CargoType.GENERAL));
-        String bookingId = booked.bookingId().orElseThrow().value();
-        Cargo confirmed = repository.save(repository.save(repository.save(
-                booked.requestRouting().assignItinerary(itineraryVia("CNSHA", "Shanghai"), LA))
-                .notifyShipper(java.time.Instant.parse("2026-08-22T02:00:00Z"), "sales01"))
-                .confirm());
-        assertThat(confirmed.bookingStatus()).isEqualTo(BookingStatus.CONFIRMED);
-
-        issueTrackingNumber.issue(bookingId);
-
-        assertThat(transactionActiveWhenPublished)
-                .as("発行の時点でトランザクションが生きていない。"
-                        + "「コミット後に送る」機構が素通りしている")
-                .isTrue();
-    }
-
-    /**
-     * 追跡番号の日付は<strong>業務タイムゾーン</strong>で決まる（IT6 のクローズレビュー）。
-     *
-     * <p>`CURRENT_DATE` は DB のセッションのタイムゾーン（コンテナは通常 UTC）で決まる。
-     * それを使うと、<strong>日本時間の 00:00〜09:00 に発行した番号が前日の日付を持つ</strong>。
-     * 「番号だけでいつごろの貨物か分かる」という目的が 1 日 9 時間ぶん外れる。
-     *
-     * <p><strong>テストも同じ Clock で「今日」を決める。</strong>ここで
-     * {@code LocalDate.now()} を書くと、CI（UTC）でだけ落ちるテストになる。
-     */
-    @Test
-    @DisplayName("追跡番号の日付は業務タイムゾーンの今日")
-    void numbersWithTheBusinessDate() {
-        String expected = java.time.LocalDate.now(clock)
-                .format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE);
-
-        assertThat(repository.nextTrackingNumber()).startsWith("TRK-" + expected + "-");
     }
 }

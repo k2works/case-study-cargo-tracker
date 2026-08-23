@@ -19,6 +19,15 @@ public record VoyageResponse(
         Instant arrivalTime,
         List<MovementResponse> movements) {
 
+        public VoyageResponse {
+        // 受け取った一覧を写して持つ。呼び出し元が渡したものをそのまま抱えると、
+        // 渡したあとの書き換えがこちらの中身を変える。null は許す——項目が無いことと
+        // 空であることは違う
+        supportedCargoTypes = supportedCargoTypes == null ? null : List.copyOf(supportedCargoTypes);
+        movements = movements == null ? null : List.copyOf(movements);
+        }
+
+
     /** 1 区間分。地点は名称も返す（画面に対訳表を持たせない）。 */
     public record MovementResponse(
             String departureUnLocode,

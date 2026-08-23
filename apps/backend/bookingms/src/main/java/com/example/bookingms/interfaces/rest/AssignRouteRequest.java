@@ -16,6 +16,14 @@ import java.util.List;
  */
 public record AssignRouteRequest(List<LegRequest> legs, Integer maxTransshipments) {
 
+        public AssignRouteRequest {
+        // 受け取った一覧を写して持つ。呼び出し元が渡したものをそのまま抱えると、
+        // 渡したあとの書き換えがこちらの中身を変える。null は許す——項目が無いことと
+        // 空であることは違う
+        legs = legs == null ? null : List.copyOf(legs);
+        }
+
+
     public record LegRequest(
             String voyageNumber,
             String loadUnLocode,

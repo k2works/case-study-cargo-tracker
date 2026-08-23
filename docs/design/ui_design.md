@@ -1275,7 +1275,7 @@ take-3 の方針（キーボードナビゲーション・ARIA・カラーコン
 | `PRELIMINARY` | 仮予約 | `bg-yellow-100 text-yellow-800` |
 | `ROUTE_PROPOSED` | 経路提案中 | `bg-blue-100 text-blue-800` |
 | `ROUTE_NOTIFIED` | 荷主へ通知済 | `bg-indigo-100 text-indigo-800` |
-| `CONFIRMED` | 確認済 | `bg-green-100 text-green-800` |
+| `CONFIRMED` | 確定済 | `bg-green-100 text-green-800` |
 | `TRACKING_ISSUED` | 追跡番号発行済 | `bg-cyan-100 text-cyan-800` |
 | `IN_TRANSIT` | 輸送中 | `bg-blue-100 text-blue-800` |
 | `DELIVERED` | 配送完了 | `bg-green-100 text-green-800` |

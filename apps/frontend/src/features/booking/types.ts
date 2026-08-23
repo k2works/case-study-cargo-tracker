@@ -52,7 +52,7 @@ export const BOOKING_STATUS_LABELS: Record<string, string> = {
   /** 経路が決まり、荷主に提示できる状態。**確定ではない**（確定は荷主の合意を経た別の作業）。 */
   ROUTE_PROPOSED: '経路提案中',
   ROUTE_NOTIFIED: '荷主へ通知済',
-  CONFIRMED: '確認済',
+  CONFIRMED: '確定済',
   TRACKING_ISSUED: '追跡番号発行済',
 }
 

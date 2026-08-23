@@ -4,9 +4,22 @@
     "https://checkstyle.org/dtds/configuration_1_3.dtd">
 <module name="Checker">
     <property name="charset" value="UTF-8"/>
-    <property name="severity" value="warning"/>
+    <!--
+      指摘は落とす（severity=error + ignoreFailures=false）。警告のままにすると、
+      レポートに出続けるだけで誰も止まらない——IT6 では二重 import が検出されていたのに
+      ビルドが緑のまま通っていた。
+    -->
+    <property name="severity" value="error"/>
     <property name="fileExtensions" value="java, properties, xml"/>
 
+    <module name="SuppressionFilter">
+        <property name="file" value="${config_loc}/suppressions.xml"/>
+    </module>
+
+    <!--
+      ファイルが長いのは「割る基準を決めていない」ことの現れである。500 行はその合図で、
+      超えたら責務で割る（行数で切らない）。
+    -->
     <module name="FileLength">
         <property name="max" value="500"/>
     </module>

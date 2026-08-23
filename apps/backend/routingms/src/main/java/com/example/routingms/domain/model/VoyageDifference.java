@@ -22,6 +22,14 @@ import java.util.stream.Collectors;
  */
 public record VoyageDifference(List<Change> changes) {
 
+        public VoyageDifference {
+        // 受け取った一覧を写して持つ。呼び出し元が渡したものをそのまま抱えると、
+        // 渡したあとの書き換えがこちらの中身を変える。null は許す——項目が無いことと
+        // 空であることは違う
+        changes = changes == null ? null : List.copyOf(changes);
+        }
+
+
     /** 1 項目分の変更。項目名は画面にそのまま出す言葉にする。 */
     public record Change(String item, String before, String after) {
     }

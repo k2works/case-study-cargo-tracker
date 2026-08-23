@@ -19,7 +19,9 @@ import org.springframework.stereotype.Component;
  * 署名の検証は Gateway が行うため、authms は検証側の実装を持たない。
  */
 @Component
-public class JwtTokenIssuer implements TokenIssuer {
+// final にするのは、コンストラクタが例外を投げうるためである（鍵が短すぎる設定で落ちる）。
+// 途中まで作られたオブジェクトは、継承できると finalizer から触れてしまう
+public final class JwtTokenIssuer implements TokenIssuer {
 
     private final SecretKey key;
     private final Duration validity;

@@ -29,6 +29,16 @@ public record RouteCandidateResponse(
         BigDecimal estimatedCost,
         List<LegResponse> legs) {
 
+        public RouteCandidateResponse {
+        // 受け取った一覧を写して持つ。呼び出し元が渡したものをそのまま抱えると、
+        // 渡したあとの書き換えがこちらの中身を変える。null は許す——項目が無いことと
+        // 空であることは違う
+        voyageNumbers = voyageNumbers == null ? null : List.copyOf(voyageNumbers);
+        transitPorts = transitPorts == null ? null : List.copyOf(transitPorts);
+        legs = legs == null ? null : List.copyOf(legs);
+        }
+
+
     /**
      * 港。UN/LOCODE と名称を対で返す。
      *

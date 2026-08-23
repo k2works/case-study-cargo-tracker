@@ -19,6 +19,14 @@ public record RouteCandidateListResponse(
         int totalCount,
         AppliedCriteria appliedCriteria) {
 
+        public RouteCandidateListResponse {
+        // 受け取った一覧を写して持つ。呼び出し元が渡したものをそのまま抱えると、
+        // 渡したあとの書き換えがこちらの中身を変える。null は許す——項目が無いことと
+        // 空であることは違う
+        candidates = candidates == null ? null : List.copyOf(candidates);
+        }
+
+
     /** 実際に使った条件。到着期限は業務タイムゾーンでの当日終わりに直したもの。 */
     public record AppliedCriteria(
             String originUnLocode,
