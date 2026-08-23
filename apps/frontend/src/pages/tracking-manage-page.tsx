@@ -216,8 +216,9 @@ export function TrackingManagePage() {
               **消えた理由を書く**——書かないと「バグで欄が出ない」と受け取られる */}
           {tracking.activeException !== null && (
             <p className="rounded bg-gray-50 p-3 text-sm text-gray-700">
-              <strong>例外を解決するまで、状態は更新できません。</strong>
-              解決すると、例外が起きる前の状態に戻ってから更新できます。
+              {/* 改行を空白と読ませない（日本語は語間を空けない） */}
+              <strong>例外を解決するまで、状態は更新できません。</strong>解決すると、
+              例外が起きる前の状態に戻ってから更新できます。
             </p>
           )}
           {tracking.activeException === null && (

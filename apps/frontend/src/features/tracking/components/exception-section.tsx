@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import type { ExceptionTypeChoice, ManagedTracking } from '../types'
 
-type Props = {
+type Props = Readonly<{
   tracking: ManagedTracking
   exceptionTypes: ExceptionTypeChoice[]
   pending: boolean
   onBegin: () => void
   onRaise: (input: { exceptionType: string; description: string }) => void
   onResolve: (input: { resolutionNotes: string; newEstimatedArrival: string | null }) => void
-}
+}>
 
 /**
  * 例外の起票と解決（US19・US20）。

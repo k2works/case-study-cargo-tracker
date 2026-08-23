@@ -8,7 +8,9 @@ import type { TrackingEvent } from '../types'
  *
  * 公開画面と管理画面で同じものを使う。写すと、片方だけが古い形のまま残る。
  */
-export function TrackingEventsTable({ events }: { events: TrackingEvent[] }) {
+export function TrackingEventsTable({
+  events,
+}: Readonly<{ events: TrackingEvent[] }>) {
   if (events.length === 0) {
     return <p className="text-sm text-gray-600">まだ動きはありません。</p>
   }

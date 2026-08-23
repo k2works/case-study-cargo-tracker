@@ -2,12 +2,12 @@ import { useState } from 'react'
 import type { HandlingLocation } from '../../handling/types'
 import type { TrackingStatusChoice } from '../types'
 
-type Props = {
+type Props = Readonly<{
   statuses: TrackingStatusChoice[]
   locations: HandlingLocation[]
   pending: boolean
   onSubmit: (input: { status: string; locationUnLocode: string; occurredAt: string }) => void
-}
+}>
 
 /**
  * 状態を手で反映する（US17-2）。

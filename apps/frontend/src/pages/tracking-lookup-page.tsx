@@ -126,8 +126,9 @@ export function TrackingLookupPage() {
             {/* **代替であることを書く**（[ADR-024] 決定 9）。書かないと、荷主は
                 「メールが来ないのは不具合」と受け取る */}
             <p className="text-sm text-gray-600">
-              状態が変わったときのお知らせは、<strong>この画面に出ます</strong>
-              。 メールは送っていません。
+              {/* 改行を空白と読ませない（日本語は語間を空けない） */}
+              状態が変わったときのお知らせは、
+              <strong>この画面に出ます。メールは送っていません。</strong>
             </p>
             {data.notices.length === 0 ? (
               <p className="text-sm text-gray-600">お知らせはありません。</p>

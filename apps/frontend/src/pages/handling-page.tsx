@@ -335,8 +335,9 @@ export function HandlingPage() {
                 <p role="alert" className="text-amber-900">
                   <strong>予定と違う場所での作業です。</strong>
                   {/* 改行を空白と読ませない（日本語は語間を空けない） */}
-                  記録は残しました。<strong>追跡管理者</strong>
-                  へ連絡してください （経路の見直しが要るかを判断します）。
+                  {/* 改行を空白と読ませない（日本語は語間を空けない） */}
+                  記録は残しました。
+                  <strong>追跡管理者へ連絡してください</strong>（経路の見直しが要るかを判断します）。
                 </p>
               )}
             </div>

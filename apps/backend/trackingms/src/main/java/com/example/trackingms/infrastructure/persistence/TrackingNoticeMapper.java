@@ -6,7 +6,6 @@ import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Result;
-import org.apache.ibatis.annotations.Results;
 import org.apache.ibatis.annotations.Select;
 
 /** 荷主へ通知した事実（{@code tracking_notice}）。 */
@@ -31,7 +30,7 @@ public interface TrackingNoticeMapper {
              ORDER BY noticed_at DESC, id DESC
              LIMIT #{limit}
             """)
-    @Results({@Result(column = "noticed_at", property = "noticedAt")})
+    @Result(column = "noticed_at", property = "noticedAt")
     List<TrackingNoticeRecord> findByTrackingNumber(
             @Param("trackingNumber") String trackingNumber, @Param("limit") int limit);
 }
