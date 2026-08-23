@@ -248,4 +248,13 @@ public interface CargoMapper {
     @Select("SELECT " + COLUMNS + JOINS + " WHERE c.booking_id = #{bookingId}")
     @ResultMap("cargoList")
     CargoRecord findByBookingId(@Param("bookingId") String bookingId);
+
+    /**
+     * 追跡番号から 1 件（US15-1）。
+     *
+     * <p>荷役作業員は予約番号を知らない。手元にあるのは貨物に貼られた追跡番号である。
+     */
+    @Select("SELECT " + COLUMNS + JOINS + " WHERE c.tracking_number = #{trackingNumber}")
+    @ResultMap("cargoList")
+    CargoRecord findByTrackingNumber(@Param("trackingNumber") String trackingNumber);
 }

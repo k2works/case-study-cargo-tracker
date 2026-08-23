@@ -29,6 +29,11 @@ spec:
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef: { name: cargo-secrets, key: DB_PASSWORD }
+            # 追跡番号から貨物を引く先（ADR-023 決定 2）。既定値は開発機を指すため、
+            # クラスタでは必ず上書きする。入れ忘れても起動は成功し、
+            # 荷役を記録する瞬間にだけ「貨物を確認できません」に化ける
+            - name: APP_BOOKING_SERVICE_BASE_URL
+              value: http://bookingms:8082
             - name: RABBITMQ_HOST
               value: rabbitmq
             - name: RABBITMQ_PORT

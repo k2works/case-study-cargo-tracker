@@ -158,6 +158,12 @@ public class MyBatisCargoRepository implements CargoRepository {
     }
 
     @Override
+    public Optional<CargoSummary> findByTrackingNumber(String trackingNumber) {
+        return Optional.ofNullable(mapper.findByTrackingNumber(trackingNumber))
+                .map(row -> new CargoSummary(toDomainWithItinerary(row), row.getShipperName()));
+    }
+
+    @Override
     public List<CargoSummary> search(CargoType type, String keyword,
             Collection<RoutingStatus> routingStatuses, BookingStatus bookingStatus, int limit) {
         return mapper.search(nameOf(type), normalize(keyword), namesOf(routingStatuses),

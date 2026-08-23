@@ -68,6 +68,12 @@ class RequestConsultationUseCaseTest {
         }
 
         @Override
+        public java.util.Optional<CargoSummary> findByTrackingNumber(String trackingNumber) {
+            // この検査は追跡番号から引かない。呼ばれたら、テストの前提が変わっている
+            throw new UnsupportedOperationException("この検査では使わない");
+        }
+
+        @Override
         public List<CargoSummary> search(CargoType type, String keyword,
                 java.util.Collection<RoutingStatus> routingStatuses,
                 com.example.bookingms.domain.model.BookingStatus bookingStatus, int limit) {

@@ -32,6 +32,14 @@ public interface CargoRepository {
     Optional<CargoSummary> findByBookingId(String bookingId);
 
     /**
+     * 追跡番号から探す（US15-1）。
+     *
+     * <p>荷役作業員は予約番号を知らない。手元にあるのは貨物に貼られた追跡番号である。
+     * handlingms はこれを起点に貨物を特定する（[ADR-023] 決定 2）。
+     */
+    Optional<CargoSummary> findByTrackingNumber(String trackingNumber);
+
+    /**
      * 一覧を新しい順に返す。
      *
      * @param type 貨物種別での絞り込み（null なら全種別）
