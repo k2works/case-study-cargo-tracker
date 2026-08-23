@@ -18,6 +18,9 @@ const FRONTEND_DIR = 'apps/frontend';
 const KUSTOMIZE_LOCAL = 'ops/k8s/kustomize/overlays/local';
 const KIND_CLUSTER = 'cargo';
 const K8S_NAMESPACE = 'cargo';
+
+/** ローカル統合環境の PostgreSQL 利用者（ops/k8s/kustomize/base/postgres.yaml と揃える）。 */
+const K8S_POSTGRES_USER = 'cargo_tracker';
 /**
  * kubectl の接続先。
  *
@@ -455,6 +458,103 @@ function waitDatabaseServiceRollouts() {
   });
 }
 
+
+/**
+ * デッドレターに溜まったイベントを、元の交換機へ送り直す。
+ *
+ * 「番号は渡されたのに追えない」は、ブローカーの一時障害や購読側の不具合で確実に起きる。
+ * 発行側は成功しているので、放っておくと**どこにも異常が残らないまま**追跡だけが欠ける。
+ * 手で送り直す手段を用意しておく（Outbox を入れるのはその次の話である）。
+ *
+ * @param {string} deadLetterQueue 送り直す元のデッドレターキュー
+ * @param {string} exchange 送り先の交換機
+ * @param {string} routingKey 送り先のルーティングキー
+ * @param {number} limit 一度に送り直す最大件数
+ */
+function redeliverDeadLetters(deadLetterQueue, exchange, routingKey, limit) {
+  // rabbitmqadmin は管理プラグインの CLI で、公式イメージに同梱されている。
+  // 独自のスクリプトを書かずに済む。
+  //
+  // 1 件ずつ取り出して送り直す。payload_file は count=1 のときしか使えないため、
+  // まとめて取り出すことはできない。
+  // 送り直すときも本番と同じヘッダを付ける。付け忘れると購読側は読めず、
+  // そのままデッドレターへ戻る——「再実行したのに直らない」ことになる
+  const properties =
+    `'{"content_type":"application/json",` +
+    `"headers":{"__TypeId__":"${TRACKING_NUMBER_ISSUED_TYPE_ID}"}}'`;
+
+  const script = [
+    'cd /tmp',
+    `i=0; while [ $i -lt ${limit} ]; do`,
+    '  rm -f dlq-payload',
+    `  rabbitmqadmin get queue=${deadLetterQueue} count=1 ackmode=ack_requeue_false payload_file=dlq-payload > /dev/null 2>&1 || break`,
+    '  [ -s dlq-payload ] || break',
+    `  rabbitmqadmin publish exchange=${exchange} routing_key=${routingKey} properties=${properties} < dlq-payload > /dev/null || break`,
+    '  i=$((i+1))',
+    'done',
+    'rm -f dlq-payload',
+    'echo "送り直した件数: $i"',
+  ].join('\n');
+
+  run('kubectl', [
+    '--context', K8S_CONTEXT, '-n', K8S_NAMESPACE,
+    'exec', 'deploy/rabbitmq', '--', 'sh', '-c', script,
+  ]);
+}
+
+/**
+ * プロデューサが `__TypeId__` に載せる型名。
+ *
+ * 送り直すときも本番と同じヘッダを付ける。付け忘れると、購読側は読めずに
+ * そのままデッドレターへ戻る——「再実行したのに直らない」ことになる。
+ */
+const TRACKING_NUMBER_ISSUED_TYPE_ID =
+  'com.example.bookingms.application.port.TrackingNumberIssued';
+
+/**
+ * 取りこぼしを数える。
+ *
+ * 追跡番号を発行済みなのに追跡が始まっていない予約は、荷主から見ると
+ * 「番号はもらったのに追えない」状態である。件数が出るだけでは次の行動に繋がらないため、
+ * 予約番号まで出す。
+ */
+function reportMissingTracking() {
+  const issued = psql('booking_db', `SELECT tracking_number FROM cargo
+      WHERE tracking_number IS NOT NULL ORDER BY tracking_number`);
+  const tracked = psql('tracking_db', `SELECT tracking_number FROM tracking_activity
+      ORDER BY tracking_number`);
+  const trackedSet = new Set(tracked);
+  const missing = issued.filter((number) => !trackedSet.has(number));
+
+  console.log(`発行済み: ${issued.length} 件 / 追跡あり: ${tracked.length} 件`);
+  if (missing.length === 0) {
+    console.log('取りこぼしはありません。');
+    return;
+  }
+  console.log(`\n**取りこぼし ${missing.length} 件**（番号は渡したのに追跡が始まっていない）:`);
+  missing.forEach((number) => console.log(`  ${number}`));
+  console.log('\n送り直すには: npx gulp dev:k8s:events:redeliver');
+}
+
+/**
+ * ローカル統合環境の DB に読み取りの問い合わせを投げ、1 列目を配列で返す。
+ *
+ * @param {string} database 対象データベース
+ * @param {string} sql 読み取りの SQL
+ * @returns {string[]} 1 列目の値
+ */
+function psql(database, sql) {
+  const result = spawnCommand('kubectl', [
+    '--context', K8S_CONTEXT, '-n', K8S_NAMESPACE,
+    'exec', 'deploy/postgres', '--',
+    'psql', '-U', K8S_POSTGRES_USER, '-d', database, '-t', '-A', '-c', sql,
+  ], { stdio: ['ignore', 'pipe', 'inherit'], env: cleanDockerEnv() });
+  if (result.status !== 0) {
+    throw new Error(`${database} への問い合わせが失敗しました`);
+  }
+  return String(result.stdout).split('\n').map((line) => line.trim()).filter(Boolean);
+}
+
 export default function (gulp) {
   // --- バックエンド ---
 
@@ -676,6 +776,34 @@ export default function (gulp) {
     await promptReleaseImageTag();
   });
 
+
+  /**
+   * 取りこぼし（発行済みだが追跡が無い予約）を照会する。
+   *
+   * イベントは届かなくても発行側がエラーにならないため、この照会が唯一の気づく手段である。
+   */
+  gulp.task('dev:k8s:events:missing', (done) => {
+    reportMissingTracking();
+    done();
+  });
+
+  /**
+   * デッドレターのイベントを元の交換機へ送り直す。
+   *
+   * 送り直す前に dev:k8s:events:missing で対象を確かめること。購読側の不具合が
+   * 直っていなければ、送り直したイベントはそのままデッドレターへ戻る。
+   */
+  gulp.task('dev:k8s:events:redeliver', (done) => {
+    redeliverDeadLetters(
+      'trackingms.tracking-number-issued.dlq',
+      'cargoBookingChannel',
+      'cargo.tracking-number-issued',
+      Number(process.env.DLQ_REDELIVER_LIMIT ?? 50),
+    );
+    reportMissingTracking();
+    done();
+  });
+
   gulp.task('dev:k8s:up', gulp.series('dev:k8s:images', 'dev:k8s:apply', 'dev:k8s:status'));
 
   // --- 設計ドキュメント生成（JIG / jig-erd） ---
@@ -794,6 +922,8 @@ export default function (gulp) {
     dev:k8s:www:artifacts       apps/www 配信用の docs / manual / JIG / jig-erd を生成
     dev:k8s:rollout:image       Deployment のイメージを指定タグへ切り替え
     dev:k8s:rollout:restart     アプリ Deployment を再起動して新しい同一タグイメージを反映
+    dev:k8s:events:missing      取りこぼし（発行済みだが追跡が無い予約）を照会する
+    dev:k8s:events:redeliver    デッドレターのイベントを元の交換機へ送り直す（DLQ_REDELIVER_LIMIT 対応）
     dev:k8s:db:reset            PostgreSQL を初期化し、DB 利用サービスの Flyway を再実行
     dev:k8s:status              Pod / Service / Ingress の状態
     dev:k8s:logs                全サービスの直近ログ
