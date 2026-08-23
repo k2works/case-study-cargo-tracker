@@ -26,6 +26,51 @@ public final class HexagonalArchitectureRules {
     }
 
     /**
+     * サービスがトークンをどう扱うか（[ADR-004]）。
+     *
+     * <p>署名検証は gatewayms に一元化し、発行は authms だけが行う。残りは<strong>どちらも
+     * しない</strong>。3 つの立場でそれぞれ掛ける規則が違うため、サービス名の名簿ではなく
+     * 立場で表す——名簿だと新しいサービスが「載っていない」側に落ちて無検査になる。
+     */
+    public enum TokenHandling {
+        /** トークンを扱わない。JWT ライブラリへの依存自体を禁じる。 */
+        NONE,
+        /** 発行する（authms）。ライブラリは持つが、検証の入口を呼ばない。 */
+        ISSUES,
+        /** 検証する（gatewayms）。ADR-004 が検証を任せた唯一のサービス。 */
+        VERIFIES
+    }
+
+    /**
+     * 1 つのサービスが満たすべき規則をすべて返す。
+     *
+     * <p><strong>適用する側に規則を並べさせない。</strong>各サービスの ArchitectureTest が
+     * 規則を 1 つずつ呼ぶ形だと、規則を足したときに 7 サービスへ手で写すことになり、
+     * 写し漏れたサービスが無検査のまま残る——IT6 で
+     * {@code eventPublishingOnlyInMessagingInfrastructureRule} が bookingms だけに適用され、
+     * AMQP に最も広く触っている trackingms が無検査だったのがその形である。
+     *
+     * <p>ここに足せば、その瞬間に全サービスへ掛かる。サービス側は「自分は誰か」
+     * （サービス名とトークンの扱い）だけを申告する。
+     */
+    public static List<ArchRule> allServiceRules(String serviceName, TokenHandling tokenHandling) {
+        String basePackage = "com.example." + serviceName;
+        List<ArchRule> rules = new java.util.ArrayList<>(layerRules(basePackage));
+        rules.add(serviceIsolationRule(serviceName));
+        rules.add(validationAfterAuthorizationRule());
+        rules.add(eventPublishingOnlyInMessagingInfrastructureRule());
+        switch (tokenHandling) {
+            case NONE -> rules.add(noJwtDependencyRule(serviceName));
+            case ISSUES -> rules.add(noTokenVerificationRule(serviceName));
+            case VERIFIES -> {
+                // gatewayms は ADR-004 が検証を任せた唯一のサービス。掛ける規則は無い
+            }
+            default -> throw new IllegalStateException("未知のトークンの扱い: " + tokenHandling);
+        }
+        return List.copyOf(rules);
+    }
+
+    /**
      * ヘキサゴナル 4 層（domain / application / infrastructure / interfaces）の依存方向を検査する。
      * 依存は常に外から内へ向かう。domain は誰にも依存しない。
      */

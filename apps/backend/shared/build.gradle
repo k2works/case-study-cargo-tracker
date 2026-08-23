@@ -21,6 +21,9 @@ dependencies {
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
 
     testFixturesApi 'com.tngtech.archunit:archunit-junit5:1.4.1'
+    // 全サービス共通のアーキテクチャ検査の基底（ServiceArchitectureTest）を testFixtures で配布する。
+    // 適用を基底へ寄せることで、規則を足しても各サービスへ写す作業が発生しない
+    testFixturesApi 'org.junit.jupiter:junit-jupiter-api'
     // 方言スモークで MyBatis の登録済みステートメントを列挙するため
     testFixturesApi 'org.mybatis:mybatis:3.5.19'
 
