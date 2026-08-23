@@ -29,5 +29,6 @@
 | [ADR-021](021-shipper-notification-and-confirmation-transitions.md) | 荷主への通知を状態にし、確定後は経路設計へ戻さない | 承認済み | 2026-08-22 |
 | [ADR-022](022-domain-event-contract.md) | 追跡番号の発行でイベントを出し、受け取れなかったものはデッドレターへ送る | 承認済み | 2026-08-22 |
 | [ADR-023](023-handling-activity-validation.md) | 予定外の荷役は拒まず記録に残し、引取は荷受人の確認を必須にする | 承認済み | 2026-08-23 |
+| [ADR-024](024-tracking-manual-update-and-exceptions.md) | 手動更新も進む向きだけに限り、公開照会は返す項目を絞って照会を記録する | 承認済み | 2026-08-23 |
 
 ADR の作成には `creating-adr` スキルを使用してください。
