@@ -2,7 +2,6 @@ package com.example.trackingms.infrastructure.persistence;
 
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Result;
 import org.apache.ibatis.annotations.Results;
@@ -30,6 +29,16 @@ public interface TrackingActivityMapper {
             JOIN location d ON d.unlocode = t.destination_unlocode
             """;
 
+    /**
+     * まだ無ければ入れる。<strong>重複は一意制約が決める</strong>。
+     *
+     * <p>「探してから無ければ入れる」形にすると、同じイベントが同時に 2 通届いたときに
+     * 双方が「無い」と読んでから書き、後の 1 通が落ちてデッドレターへ回る。
+     *
+     * <p>例外を捕まえる形も使えない——PostgreSQL は制約違反でトランザクションを中断するため、
+     * その後の読み出しまで落ちる。いまトランザクション境界が無いことに頼ると、後から
+     * {@code @Transactional} を足した人が静かに壊すことになる。
+     */
     @Insert("""
             INSERT INTO tracking_activity (
                 tracking_number, booking_id, transport_status,
@@ -37,9 +46,9 @@ public interface TrackingActivityMapper {
             VALUES (
                 #{trackingNumber}, #{bookingId}, #{transportStatus},
                 #{originUnlocode}, #{destinationUnlocode}, #{arrivalDeadline})
+            ON CONFLICT (tracking_number) DO NOTHING
             """)
-    @Options(useGeneratedKeys = true, keyProperty = "id", keyColumn = "id")
-    void insert(TrackingActivityRecord row);
+    void insertIfAbsent(TrackingActivityRecord row);
 
     @Select("SELECT " + COLUMNS + JOINS + " WHERE t.tracking_number = #{trackingNumber}")
     @Results(id = "trackingResult", value = {

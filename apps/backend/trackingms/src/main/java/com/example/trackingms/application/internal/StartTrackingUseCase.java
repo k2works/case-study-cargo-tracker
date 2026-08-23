@@ -7,7 +7,6 @@ import com.example.trackingms.domain.model.TrackingActivity;
 import com.example.trackingms.domain.model.TrackingBookingId;
 import com.example.trackingms.domain.model.TrackingNumber;
 import java.time.LocalDate;
-import java.util.Optional;
 
 /**
  * 追跡を始める（US14-3）。
@@ -32,17 +31,15 @@ public class StartTrackingUseCase {
     /**
      * 追跡を始める。すでにあればそれを返す（作り直さない）。
      *
+     * <p><strong>探してから書く形にはしない。</strong>重複かどうかは保存先の一意制約が決める。
+     *
      * @throws IllegalArgumentException 地点がマスタに無いとき。<strong>握りつぶさない</strong>
      *     ——黙って作ると、出発地の分からない追跡ができる
      */
     public TrackingActivity start(String trackingNumber, String bookingId,
             String originUnLocode, String destinationUnLocode, LocalDate arrivalDeadline) {
         TrackingNumber number = TrackingNumber.of(trackingNumber);
-        Optional<TrackingActivity> existing = activities.findByTrackingNumber(number);
-        if (existing.isPresent()) {
-            return existing.get();
-        }
-        return activities.save(TrackingActivity.start(number, TrackingBookingId.of(bookingId),
+        return activities.saveIfAbsent(TrackingActivity.start(number, TrackingBookingId.of(bookingId),
                 requireLocation(originUnLocode, "出発地"),
                 requireLocation(destinationUnLocode, "目的地"),
                 arrivalDeadline));

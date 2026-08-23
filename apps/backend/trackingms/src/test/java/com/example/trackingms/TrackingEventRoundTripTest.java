@@ -2,7 +2,10 @@ package com.example.trackingms;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.trackingms.application.port.LocationRepository;
 import com.example.trackingms.application.port.TrackingActivityRepository;
+import com.example.trackingms.domain.model.TrackingActivity;
+import com.example.trackingms.domain.model.TrackingBookingId;
 import com.example.trackingms.domain.model.TrackingNumber;
 import com.example.trackingms.domain.model.TransportStatus;
 import com.example.trackingms.infrastructure.messaging.TrackingEventChannels;
@@ -59,6 +62,9 @@ class TrackingEventRoundTripTest {
 
     @Autowired
     private TrackingActivityRepository activities;
+
+    @Autowired
+    private LocationRepository locations;
 
     private void startListening() {
         if (!listeners.isRunning()) {
@@ -172,6 +178,32 @@ class TrackingEventRoundTripTest {
                 .isEmpty();
     }
 
+
+
+    /**
+     * [ADR-022] 決定 5。<strong>二重に届いても、保存先の 1 回の書き込みで決まる</strong>。
+     *
+     * <p>上の {@link #isIdempotent()} は購読の入口から見ており、「探してから無ければ保存する」
+     * 実装でも緑になる。ここは保存先を直接 2 回呼ぶ——事前の読み出しに頼っていると、
+     * 2 回目が一意制約に当たって落ちる。
+     */
+    @Test
+    @DisplayName("保存先を同じ追跡番号で 2 回呼んでも落ちず 1 件のまま")
+    void saveIfAbsentDecidesByTheConstraint() {
+        TrackingNumber number = TrackingNumber.of("TRK-20260822-9005");
+        TrackingActivity activity = TrackingActivity.start(number,
+                TrackingBookingId.of("BKG-2026000004"),
+                locations.findByUnLocode("JPTYO").orElseThrow(),
+                locations.findByUnLocode("USLAX").orElseThrow(),
+                LocalDate.of(2030, Month.SEPTEMBER, 20));
+
+        TrackingActivity first = activities.saveIfAbsent(activity);
+        TrackingActivity second = activities.saveIfAbsent(activity);
+
+        assertThat(second.id())
+                .as("2 回目が別の行を作っている。冪等が保存先で決まっていない")
+                .isEqualTo(first.id());
+    }
 
     /**
      * [ADR-022] 決定 4。<strong>どのキューにも入らなかったイベントが消えない</strong>。
