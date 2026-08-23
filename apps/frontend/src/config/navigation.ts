@@ -66,8 +66,12 @@ export const NAVIGATION: NavigationItem[] = [
   { label: "貨物追跡", to: "/tracking", roles: [], available: true },
   {
     label: "貨物状態管理",
+    // 起票は荷役作業員にも開く（US20 のアクターは 2 つ）。
+    // **破損・紛失に最初に気づくのは港にいる人である**——追跡管理者だけに絞ると、
+    // 気づいた人が伝える手段を持たない。状態を動かせるのは追跡管理者だけで、
+    // それはサーバが決める（TrackingManagementController）
     to: "/tracking/manage",
-    roles: ["ROLE_TRACKER"],
+    roles: ["ROLE_TRACKER", "ROLE_HANDLER"],
     available: true,
   },
   // 記録できるのは荷役作業員だけだが、参照は追跡管理者にも開く（US15 の履歴）。

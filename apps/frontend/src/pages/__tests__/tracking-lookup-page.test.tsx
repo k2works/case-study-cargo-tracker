@@ -126,6 +126,52 @@ describe('追跡情報の照会（US18）', () => {
     expect(screen.getByText(/メールは送っていません/)).toBeInTheDocument()
   })
 
+  /**
+   * [ADR-024] 決定 9。**お知らせの中身が画面に出る**。
+   *
+   * 文言の説明だけを見ると、一覧の描画を丸ごと消しても緑になる。
+   */
+  it('お知らせの中身が、画面に並ぶ', async () => {
+    trackings[0].notices.push({
+      noticedAt: '2027-09-02T00:00:00Z',
+      message: 'お荷物の状況が「受領済み」になりました。',
+    })
+
+    renderPage('TRK-20260823-0001')
+
+    expect(await screen.findByText(/お荷物の状況が「受領済み」になりました。/))
+      .toBeInTheDocument()
+  })
+
+  /**
+   * **荷主に UTC の生の日時を出さない**（[ADR-010]）。
+   *
+   * `2027-09-02T00:00:00.000Z` と並ぶと、荷主は「深夜 0 時に受領した」と読む。
+   * 入力側は業務の暦で解釈しているのに、出力側だけ揃っていない形になる。
+   */
+  it('経過の日時は、業務の暦で読める形で出る', async () => {
+    handlingActivities.push({
+      id: 1,
+      bookingId: 'BKG-2026000004',
+      type: 'RECEIVE',
+      locationUnLocode: 'JPTYO',
+      locationName: 'Tokyo',
+      completionTime: '2027-09-02T00:00:00Z',
+      operatorName: 'handler01',
+      voyageNumber: null,
+      consigneeConfirmation: null,
+      offRoute: false,
+    })
+
+    renderPage('TRK-20260823-0001')
+    const history = await screen.findByRole('table')
+
+    // 業務の暦（Asia/Tokyo）では 9 時
+    expect(within(history).getByText('2027-09-02 09:00')).toBeInTheDocument()
+    // UTC の生の日時が漏れていない
+    expect(document.body.textContent ?? '').not.toContain('T00:00:00')
+  })
+
   /** 番号を打ち直すと、その番号の照会に移る。 */
   it('別の追跡番号を入れて照会し直せる', async () => {
     const user = userEvent.setup()

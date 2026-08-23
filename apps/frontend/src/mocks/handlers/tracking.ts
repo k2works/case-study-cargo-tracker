@@ -15,6 +15,7 @@
  * </ul>
  */
 import { HttpResponse, http } from "msw";
+import { formatBusinessDateTime } from "../../lib/business-time";
 import { API_PATHS } from "../../config/api";
 import { handlingActivities } from "./handling";
 
@@ -69,6 +70,7 @@ type MockException = {
   occurredAt: string;
   urgent: boolean;
   resolvedAt: string | null;
+  resolutionNotes: string | null;
 };
 
 type MockTracking = {
@@ -155,9 +157,14 @@ function eventsOf(tracking: MockTracking) {
     ...event,
     statusLabel: STATUS_LABELS[event.status],
   }));
-  return [...fromHandling, ...manual].sort((a, b) =>
-    a.occurredAt.localeCompare(b.occurredAt),
-  );
+  // **本物と同じ形で返す。**サーバは業務の暦で整形した文字列を返す（ADR-010）
+  // ——ここが ISO のままだと、画面が本番で別の見え方になる
+  return [...fromHandling, ...manual]
+    .sort((a, b) => a.occurredAt.localeCompare(b.occurredAt))
+    .map((event) => ({
+      ...event,
+      occurredAt: formatBusinessDateTime(event.occurredAt),
+    }));
 }
 
 /**
@@ -225,6 +232,24 @@ function managedView(tracking: MockTracking) {
             urgent: active.urgent,
           },
     events: eventsOf(tracking),
+    // US19-5。**解決したものも含む**
+    exceptionHistory: trackingExceptions
+      .filter((exception) => exception.trackingNumber === tracking.trackingNumber)
+      .map((exception) => ({
+        exceptionType: exception.exceptionType,
+        label:
+          RAISABLE_EXCEPTION_TYPES.find(
+            (choice) => choice.exceptionType === exception.exceptionType,
+          )?.label ?? exception.exceptionType,
+        description: exception.description,
+        occurredAt: formatBusinessDateTime(exception.occurredAt),
+        resolvedAt:
+          exception.resolvedAt === null
+            ? null
+            : formatBusinessDateTime(exception.resolvedAt),
+        resolutionNotes: exception.resolutionNotes ?? null,
+        urgent: exception.urgent,
+      })),
   };
 }
 
@@ -246,7 +271,10 @@ function publicView(tracking: MockTracking) {
     hasException: active !== undefined,
     urgent: active?.urgent ?? false,
     events: eventsOf(tracking),
-    notices: tracking.notices,
+    notices: tracking.notices.map((notice) => ({
+      ...notice,
+      noticedAt: formatBusinessDateTime(notice.noticedAt),
+    })),
   };
 }
 
@@ -351,6 +379,7 @@ export const trackingHandlers = [
         );
       }
       exception.resolvedAt = new Date().toISOString();
+    exception.resolutionNotes = body.resolutionNotes;
       // **発生前の状態に戻す。**履歴から導かない（[ADR-024] 決定 2）
       tracking.status = tracking.statusBefore ?? tracking.status;
       tracking.statusBefore = null;
@@ -414,6 +443,7 @@ export const trackingHandlers = [
         occurredAt: new Date().toISOString(),
         urgent: choice.urgent,
         resolvedAt: null,
+        resolutionNotes: null,
       });
       tracking.statusBefore = currentStatusOf(tracking);
       tracking.status = "EXCEPTION";

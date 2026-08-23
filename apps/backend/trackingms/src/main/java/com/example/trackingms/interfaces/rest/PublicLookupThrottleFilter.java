@@ -35,8 +35,25 @@ public class PublicLookupThrottleFilter extends HttpFilter {
     private final int limitPerWindow;
     private final Clock clock;
 
-    /** IP ごとの窓と件数。プロセス内に持つ——1 台で足りない規模になったら共有先へ移す。 */
+    /**
+     * IP ごとの窓と件数。
+     *
+     * <p><strong>放っておくと増え続ける。</strong>認証の外にある経路で、呼び出し元ごとに
+     * 1 件ずつ増える——<strong>総当たりを防ぐ仕組みが、別の枯渇経路になる</strong>。
+     * 窓が過ぎたものを捨て、上限も置く。
+     *
+     * <p>プロセス内に持つ。<strong>台数を増やすと実効の上限も台数倍になる</strong>
+     * ——1 台で足りない規模になったら共有先へ移す（[ADR-024] 決定 6 の備考）。
+     */
     private final Map<String, Window> windows = new ConcurrentHashMap<>();
+
+    /**
+     * 覚えておく呼び出し元の上限。
+     *
+     * <p>超えたら、窓の過ぎたものを捨てる。それでも減らなければ全部捨てる
+     * ——<strong>数え直しになるが、落ちるよりよい</strong>。上限そのものは残る。
+     */
+    static final int MAX_TRACKED_CLIENTS = 10_000;
 
     public PublicLookupThrottleFilter(String pathPrefix, int limitPerWindow, Clock clock) {
         this.pathPrefix = pathPrefix;
@@ -66,11 +83,30 @@ public class PublicLookupThrottleFilter extends HttpFilter {
 
     private boolean exceedsLimit(String clientIp) {
         Instant now = clock.instant();
+        evictIfCrowded(now);
         Window window = windows.compute(clientIp, (key, current) ->
-                current == null || current.startedAt.plus(WINDOW).isBefore(now)
-                        ? new Window(now)
-                        : current);
+                current == null || expired(current, now) ? new Window(now) : current);
         return window.count.incrementAndGet() > limitPerWindow;
+    }
+
+    private boolean expired(Window window, Instant now) {
+        return window.startedAt.plus(WINDOW).isBefore(now);
+    }
+
+    /**
+     * 覚えている呼び出し元が増えすぎたら捨てる。
+     *
+     * <p>まず窓の過ぎたものを捨てる。それでも上限を超えているなら全部捨てる——
+     * <strong>数え直しになるが、際限なく持つよりよい</strong>。
+     */
+    private void evictIfCrowded(Instant now) {
+        if (windows.size() < MAX_TRACKED_CLIENTS) {
+            return;
+        }
+        windows.values().removeIf(window -> expired(window, now));
+        if (windows.size() >= MAX_TRACKED_CLIENTS) {
+            windows.clear();
+        }
     }
 
     /** 1 つの IP の窓。 */

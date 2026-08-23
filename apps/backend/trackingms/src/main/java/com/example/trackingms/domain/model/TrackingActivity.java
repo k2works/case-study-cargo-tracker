@@ -226,6 +226,13 @@ public final class TrackingActivity {
         if (activeException == null || !activeException.unresolved()) {
             throw new IllegalStateException("未解決の例外がありません");
         }
+        if (statusBefore == null) {
+            // **戻る先が分からない行は解決できない。**復元は列の空を許す（列が無かった
+            // ころの行が読めなくなるため）ので、ここに来る行がありうる。そのまま進めると
+            // 状態が空になり、ずっと先で読めない行として現れる
+            throw new IllegalStateException(
+                    "この例外は発生前の状態を持っていません。運用へ連絡してください");
+        }
         // **解決しても消さない。**実際に起きたことの記録である（[ADR-023] 決定 3 と同じ立場）。
         // 保存先はこれを読んで、解決したことを行へ足す
         TrackingException resolved = activeException.resolve(resolutionNotes, resolvedAt);

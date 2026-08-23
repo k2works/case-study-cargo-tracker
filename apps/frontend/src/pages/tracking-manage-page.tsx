@@ -212,7 +212,14 @@ export function TrackingManagePage() {
           </section>
 
           {/* **例外が解決するまで、状態は動かせない。** 動かせると、解決したときに
-              戻る先が変わってしまう（[ADR-024] 決定 2） */}
+              戻る先が変わってしまう（[ADR-024] 決定 2）。
+              **消えた理由を書く**——書かないと「バグで欄が出ない」と受け取られる */}
+          {tracking.activeException !== null && (
+            <p className="rounded bg-gray-50 p-3 text-sm text-gray-700">
+              <strong>例外を解決するまで、状態は更新できません。</strong>
+              解決すると、例外が起きる前の状態に戻ってから更新できます。
+            </p>
+          )}
           {tracking.activeException === null && (
             <ManualUpdateForm
               statuses={statuses}
@@ -234,6 +241,49 @@ export function TrackingManagePage() {
           <section className="space-y-2">
             <h2 className="text-lg font-semibold text-gray-900">これまでの経過</h2>
             <TrackingEventsTable events={tracking.events} />
+          </section>
+
+          {/* US19-5。**解決したら見えなくなる、では業務が回らない。**
+              「先週の遅れはどうなったのか」と荷主から問い合わせが来たとき、
+              担当者はここを読む */}
+          <section className="space-y-2">
+            <h2 className="text-lg font-semibold text-gray-900">例外の記録</h2>
+            {tracking.exceptionHistory.length === 0 ? (
+              <p className="text-sm text-gray-600">例外は起きていません。</p>
+            ) : (
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200 text-gray-600">
+                    <th className="py-2">種別</th>
+                    <th className="py-2">発生</th>
+                    <th className="py-2">発生状況</th>
+                    <th className="py-2">解決</th>
+                    <th className="py-2">対応内容</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tracking.exceptionHistory.map((exception) => (
+                    <tr
+                      key={`${exception.occurredAt}-${exception.exceptionType}`}
+                      className="border-b border-gray-100"
+                    >
+                      <td className="py-2">
+                        {exception.urgent && (
+                          <span className="mr-1 rounded bg-red-100 px-2 py-0.5 text-red-900">
+                            緊急
+                          </span>
+                        )}
+                        {exception.label}
+                      </td>
+                      <td className="py-2">{exception.occurredAt}</td>
+                      <td className="py-2">{exception.description}</td>
+                      <td className="py-2">{exception.resolvedAt ?? '対応中'}</td>
+                      <td className="py-2">{exception.resolutionNotes ?? '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </section>
         </>
       )}

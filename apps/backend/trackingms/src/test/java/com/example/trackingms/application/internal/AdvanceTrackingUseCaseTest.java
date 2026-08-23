@@ -85,6 +85,12 @@ class AdvanceTrackingUseCaseTest {
         public List<TrackingActivity> findWithOpenExceptions(int limit) {
             throw new UnsupportedOperationException("この検査では使わない");
         }
+
+        @Override
+        public List<com.example.trackingms.domain.model.TrackingException> findExceptions(
+                TrackingNumber trackingNumber, int limit) {
+            throw new UnsupportedOperationException("この検査では使わない");
+        }
     };
 
     /** 地点マスタ。名前が引けないことで記録を止めないことも、ここで確かめる。 */

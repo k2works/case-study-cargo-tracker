@@ -36,6 +36,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * 断られたときに正しい形で返すことである。
  */
 @WebMvcTest(TrackingManagementController.class)
+@org.springframework.context.annotation.Import(TrackingManagementControllerTest.ClockConfig.class)
 @DisplayName("貨物状態の管理 API")
 class TrackingManagementControllerTest {
 
@@ -48,6 +49,15 @@ class TrackingManagementControllerTest {
             {"trackingNumber": "TRK-20260823-0001", "status": "ONBOARD_CARRIER",
              "locationUnLocode": "JPTYO", "occurredAt": "2027-09-03T00:00:00Z"}
             """;
+
+    @org.springframework.boot.test.context.TestConfiguration
+    static class ClockConfig {
+        /** 表示の暦は業務のタイムゾーン（[ADR-010]）。本番と同じ設定で確かめる。 */
+        @org.springframework.context.annotation.Bean
+        java.time.Clock businessClock() {
+            return java.time.Clock.system(java.time.ZoneId.of("Asia/Tokyo"));
+        }
+    }
 
     @Autowired
     private MockMvc mockMvc;

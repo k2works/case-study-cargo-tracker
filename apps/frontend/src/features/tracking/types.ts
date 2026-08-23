@@ -61,6 +61,25 @@ export type ManagedTracking = {
   estimatedArrival: string | null;
   activeException: TrackingException | null;
   events: TrackingEvent[];
+  /**
+   * 起きた例外の記録（US19-5）。**解決したものも含む**。
+   *
+   * 「先週の遅れはどうなったのか」と荷主から問い合わせが来たとき、担当者はこれを読む。
+   * 解決したら見えなくなる、では業務が回らない。
+   */
+  exceptionHistory: ResolvedException[];
+};
+
+/** 起きた例外の 1 件（解決済みを含む）。 */
+export type ResolvedException = {
+  exceptionType: ExceptionType;
+  label: string;
+  description: string;
+  occurredAt: string;
+  /** 未解決なら null。 */
+  resolvedAt: string | null;
+  resolutionNotes: string | null;
+  urgent: boolean;
 };
 
 /** 起票された例外。 */

@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { NAVIGATION } from '../navigation'
@@ -11,6 +11,38 @@ import { NAVIGATION } from '../navigation'
  */
 // vitest の実行時カレントは apps/frontend
 const MANUAL = readFileSync(resolve('../../docs/manual/01-業務フロー.md'), 'utf8')
+const MANUAL_INDEX = readFileSync(resolve('../../docs/manual/index.md'), 'utf8')
+const MKDOCS = readFileSync(resolve('../../mkdocs.yml'), 'utf8')
+
+/** `docs/manual/NN-*.md` の章。索引と目次の両方に現れなければならない。 */
+const CHAPTERS = readdirSync(resolve('../../docs/manual'))
+  .filter((name) => /^\d\d-.+\.md$/.test(name))
+  .sort()
+
+/**
+ * **章を書くことと、章を届けることは別である。**
+ *
+ * <p>IT8 で 09 章を書いたのに、索引にも mkdocs のナビにも載せ忘れ、
+ * **書いた章がドキュメントサイトから辿れない**状態になった。本文だけを完了条件に
+ * していると、この 3 点（索引・ナビ・キャプチャ）が同時に落ちる。
+ */
+describe('章が索引と目次から辿れる', () => {
+  it('章が 1 つも読み取れていなければ、この検査は何も守らない', () => {
+    expect(CHAPTERS.length).toBeGreaterThan(5)
+  })
+
+  it('すべての章が索引に載っている', () => {
+    const missing = CHAPTERS.filter((chapter) => !MANUAL_INDEX.includes(chapter))
+
+    expect(missing, '索引（docs/manual/index.md）に載っていない章').toEqual([])
+  })
+
+  it('すべての章がドキュメントサイトの目次に載っている', () => {
+    const missing = CHAPTERS.filter((chapter) => !MKDOCS.includes(`manual/${chapter}`))
+
+    expect(missing, 'mkdocs.yml のナビに載っていない章。書いても誰も辿れない').toEqual([])
+  })
+})
 
 describe('業務フロー章とメニューの整合', () => {
   it('すべてのメニューが業務フロー章に載っている', () => {

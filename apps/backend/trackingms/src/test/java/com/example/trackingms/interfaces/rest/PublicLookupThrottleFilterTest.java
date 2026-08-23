@@ -23,7 +23,33 @@ class PublicLookupThrottleFilterTest {
     private static final String PREFIX = "/api/v1/public/";
     private static final Instant NOW = Instant.parse("2026-08-23T00:00:00Z");
 
-    private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
+    /**
+     * 進められる時計。
+     *
+     * <p><strong>新しいフィルタを作って確かめない。</strong>新しい実体の窓は空なので、
+     * <strong>窓を数え直す実装を丸ごと消しても緑になる</strong>——時間で守る仕組みは、
+     * 同じ実体のまま時間を進めて初めて判別できる（IT8 のクローズレビュー）。
+     */
+    private final java.util.concurrent.atomic.AtomicReference<Instant> now =
+            new java.util.concurrent.atomic.AtomicReference<>(NOW);
+
+    private final Clock clock = new Clock() {
+        @Override
+        public java.time.ZoneId getZone() {
+            return ZoneOffset.UTC;
+        }
+
+        @Override
+        public Clock withZone(java.time.ZoneId zone) {
+            return this;
+        }
+
+        @Override
+        public Instant instant() {
+            return now.get();
+        }
+    };
+
     private final PublicLookupThrottleFilter filter =
             new PublicLookupThrottleFilter(PREFIX, 3, clock);
 
@@ -84,23 +110,61 @@ class PublicLookupThrottleFilterTest {
         assertThat(passedThrough).as("素通しされていない").isEqualTo(40);
     }
 
-    /** 窓が過ぎたら数え直す。1 分に 3 件でも、1 日中は使える。 */
+    /**
+     * 窓が過ぎたら数え直す。1 分に 3 件でも、1 日中は使える。
+     *
+     * <p><strong>同じ実体のまま時間を進める。</strong>新しい実体で確かめると、
+     * 数え直す実装を消しても緑になる。
+     */
     @Test
     @DisplayName("窓が過ぎたら、数え直す")
     void resetsAfterTheWindow() throws Exception {
         for (int attempt = 1; attempt <= 4; attempt++) {
             call(PREFIX + "tracking/TRK-1", "203.0.113.10");
         }
+        assertThat(call(PREFIX + "tracking/TRK-1", "203.0.113.10").getStatus())
+                .as("まだ窓の中なのに数え直している")
+                .isEqualTo(429);
 
-        PublicLookupThrottleFilter later = new PublicLookupThrottleFilter(PREFIX, 3,
-                Clock.fixed(NOW.plus(PublicLookupThrottleFilter.WINDOW).plusSeconds(1),
-                        ZoneOffset.UTC));
-        MockHttpServletRequest request =
-                new MockHttpServletRequest("GET", PREFIX + "tracking/TRK-1");
-        request.setRemoteAddr("203.0.113.10");
-        MockHttpServletResponse response = new MockHttpServletResponse();
-        later.doFilter(request, response, chain);
+        now.set(NOW.plus(PublicLookupThrottleFilter.WINDOW).plusSeconds(1));
 
-        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(call(PREFIX + "tracking/TRK-1", "203.0.113.10").getStatus())
+                .as("窓が過ぎたのに数え直していない。1 分あたりでなく通算の上限になっている")
+                .isEqualTo(200);
+    }
+
+    /**
+     * <strong>覚えている呼び出し元が増え続けない。</strong>
+     *
+     * <p>認証の外にある経路で、呼び出し元ごとに 1 件ずつ増える。捨てる経路が無いと、
+     * <strong>総当たりを防ぐ仕組みが、別の枯渇経路になる</strong>——送信元を詐称した
+     * 要求を撒くだけでヒープを押し上げられる。
+     */
+    @Test
+    @DisplayName("呼び出し元が増えすぎても、覚えている数に上限がある")
+    void doesNotGrowWithoutBound() throws Exception {
+        for (int i = 0; i < PublicLookupThrottleFilter.MAX_TRACKED_CLIENTS + 500; i++) {
+            call(PREFIX + "tracking/TRK-1", "203.0.113." + i);
+        }
+
+        assertThat(trackedClients())
+                .as("覚えている呼び出し元が増え続けている")
+                .isLessThanOrEqualTo(PublicLookupThrottleFilter.MAX_TRACKED_CLIENTS);
+
+        // **上限そのものは残る。**捨てたあとも、同じ相手からの連打は断る
+        for (int attempt = 1; attempt <= 3; attempt++) {
+            call(PREFIX + "tracking/TRK-1", "198.51.100.7");
+        }
+        assertThat(call(PREFIX + "tracking/TRK-1", "198.51.100.7").getStatus())
+                .as("捨てたあとに上限が働かなくなっている")
+                .isEqualTo(429);
+    }
+
+    /** 覚えている呼び出し元の数。実装の内側を見るのは、増え続けないことを見るためだけ。 */
+    private int trackedClients() throws Exception {
+        java.lang.reflect.Field field =
+                PublicLookupThrottleFilter.class.getDeclaredField("windows");
+        field.setAccessible(true);
+        return ((java.util.Map<?, ?>) field.get(filter)).size();
     }
 }

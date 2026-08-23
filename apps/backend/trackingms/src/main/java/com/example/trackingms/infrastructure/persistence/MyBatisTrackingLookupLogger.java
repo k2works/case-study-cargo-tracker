@@ -23,6 +23,15 @@ public class MyBatisTrackingLookupLogger implements TrackingLookupLogger {
     /** 番号は読めない値も残す。総当たりの手がかりになるため、長さだけを制限する。 */
     private static final int TRACKING_NUMBER_LIMIT = 40;
 
+    /**
+     * 呼び出し元も切る。
+     *
+     * <p><strong>値の出所は詐称できるヘッダである。</strong>長い値を送られると列に
+     * 収まらず、記録そのものが落ちる——攻撃者が<strong>自分の照会に限って</strong>
+     * 記録を無効化できることになる（決定 7 の「見つからなかった照会こそ材料」が崩れる）。
+     */
+    private static final int CLIENT_IP_LIMIT = 45;
+
     private final TrackingLookupLogMapper mapper;
 
     public MyBatisTrackingLookupLogger(TrackingLookupLogMapper mapper) {
@@ -32,7 +41,8 @@ public class MyBatisTrackingLookupLogger implements TrackingLookupLogger {
     @Override
     public void log(String trackingNumber, String clientIp, String userAgent, boolean found) {
         try {
-            mapper.insert(truncate(trackingNumber, TRACKING_NUMBER_LIMIT), clientIp,
+            mapper.insert(truncate(trackingNumber, TRACKING_NUMBER_LIMIT),
+                    truncate(clientIp, CLIENT_IP_LIMIT),
                     truncate(userAgent, USER_AGENT_LIMIT), found);
         } catch (RuntimeException e) {
             log.warn("追跡照会の記録に失敗しました。照会そのものは返します。"

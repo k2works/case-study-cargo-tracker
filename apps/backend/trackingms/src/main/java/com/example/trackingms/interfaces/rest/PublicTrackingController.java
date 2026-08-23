@@ -31,10 +31,14 @@ public class PublicTrackingController {
     private final TrackingLookupUseCase lookUp;
     private final TrackingNoticeRepository notices;
 
+    /** 表示の暦。荷主が読む日時は業務のタイムゾーンで出す（[ADR-010]）。 */
+    private final java.time.ZoneId zone;
+
     public PublicTrackingController(TrackingLookupUseCase lookUp,
-            TrackingNoticeRepository notices) {
+            TrackingNoticeRepository notices, java.time.Clock clock) {
         this.lookUp = lookUp;
         this.notices = notices;
+        this.zone = clock.getZone();
     }
 
     /**
@@ -54,22 +58,32 @@ public class PublicTrackingController {
                 .orElseThrow(PublicTrackingController::notFound);
 
         return PublicTrackingResponse.from(activity, lookUp.events(activity),
-                notices.findByTrackingNumber(activity.trackingNumber(), NOTICE_LIMIT));
+                notices.findByTrackingNumber(activity.trackingNumber(), NOTICE_LIMIT), zone);
     }
 
     /**
      * 呼び出し元の IP。
      *
-     * <p><strong>{@code X-Forwarded-For} をそのまま信じない</strong>（決定 6）。
-     * 誰でも付けられるヘッダであり、信じると総当たりの上限をいくらでも回避できる。
-     * Gateway が付けた<strong>先頭の 1 つだけ</strong>を見る。
+     * <p><strong>{@code X-Forwarded-For} の先頭を採らない</strong>（決定 6）。
+     * このヘッダは<strong>各ホップが末尾に追記する</strong>——先頭はクライアントが
+     * 送った文字列そのものであり、誰でも好きな値を書ける。先頭を採ると、値を毎回
+     * 変えるだけで<strong>IP ごとの上限をいくらでも回避できる</strong>。
+     *
+     * <p>採るのは<strong>末尾</strong>である。末尾を書き込むのは、こちらに最も近い
+     * ホップ（Ingress / Gateway）であり、そこは詐称できない。
+     *
+     * <p>実装時に一度、先頭を採る形にしていた。javadoc は「そのまま信じない」と
+     * 宣言していたのに、実装は最も信じてはいけない値を採っていた——<strong>しかも
+     * 検査がその誤りを期待値として固定していた</strong>（IT8 のクローズレビュー）。
      */
     static String clientIpOf(HttpServletRequest request) {
         String forwarded = request.getHeader("X-Forwarded-For");
         if (forwarded == null || forwarded.isBlank()) {
             return request.getRemoteAddr();
         }
-        return forwarded.split(",")[0].trim();
+        String[] hops = forwarded.split(",");
+        String nearest = hops[hops.length - 1].trim();
+        return nearest.isEmpty() ? request.getRemoteAddr() : nearest;
     }
 
     /**

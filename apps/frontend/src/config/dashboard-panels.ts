@@ -73,7 +73,12 @@ export const PANELS: Panel[] = [
   {
     role: 'ROLE_HANDLER',
     title: '荷役ダッシュボード',
-    actions: [{ label: '荷役作業を記録する', to: '/handling' }],
+    actions: [
+      { label: '荷役作業を記録する', to: '/handling' },
+      // **破損・紛失に最初に気づくのは港にいる人である**（US20 のアクターは 2 つ）。
+      // 気づいた人が伝える手段を持たないと、例外はどこにも起票されない
+      { label: '貨物の破損・紛失を報告する', to: '/tracking/manage' },
+    ],
   },
   {
     role: 'ROLE_TRACKER',

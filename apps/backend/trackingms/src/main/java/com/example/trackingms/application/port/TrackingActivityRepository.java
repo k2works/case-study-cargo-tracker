@@ -2,6 +2,7 @@ package com.example.trackingms.application.port;
 
 import com.example.trackingms.domain.model.TrackingActivity;
 import com.example.trackingms.domain.model.TrackingEvent;
+import com.example.trackingms.domain.model.TrackingException;
 import com.example.trackingms.domain.model.TrackingNumber;
 import java.util.List;
 import java.util.Optional;
@@ -52,4 +53,13 @@ public interface TrackingActivityRepository {
 
     /** 未解決の例外がある追跡を返す。件数の遷移先である（横断規約）。 */
     List<TrackingActivity> findWithOpenExceptions(int limit);
+
+    /**
+     * 1 つの貨物に起きた例外を、解決済みも含めて古い順に返す（US19-5）。
+     *
+     * <p><strong>解決したら見えなくなる、では業務が回らない。</strong>「先週の遅れは
+     * どうなったのか」と荷主から問い合わせが来たとき、担当者は解決の記録を読む。
+     * 同じ貨物で 2 回目の遅延が起きたときに「前も同じ港で遅れた」と言えることも要る。
+     */
+    List<TrackingException> findExceptions(TrackingNumber trackingNumber, int limit);
 }

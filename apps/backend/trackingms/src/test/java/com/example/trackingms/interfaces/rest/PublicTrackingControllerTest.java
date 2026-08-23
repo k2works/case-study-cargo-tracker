@@ -59,6 +59,12 @@ class PublicTrackingControllerTest {
                 TrackingLookupLogger logger) {
             return new TrackingLookupUseCase(activities, logger);
         }
+
+        /** 表示の暦は業務のタイムゾーン（[ADR-010]）。本番と同じ設定で確かめる。 */
+        @org.springframework.context.annotation.Bean
+        java.time.Clock businessClock() {
+            return java.time.Clock.system(java.time.ZoneId.of("Asia/Tokyo"));
+        }
     }
 
     @Autowired
@@ -221,21 +227,42 @@ class PublicTrackingControllerTest {
     }
 
     /**
-     * <strong>{@code X-Forwarded-For} をそのまま信じない</strong>（[ADR-024] 決定 6）。
+     * <strong>詐称できる値で上限を回避させない</strong>（[ADR-024] 決定 6）。
      *
-     * <p>誰でも付けられるヘッダであり、信じると総当たりの上限をいくらでも回避できる。
-     * Gateway が付けた<strong>先頭の 1 つだけ</strong>を見る。
+     * <p>{@code X-Forwarded-For} は<strong>各ホップが末尾に追記する</strong>。先頭は
+     * クライアントが送った文字列そのもので、誰でも好きな値を書ける。先頭を採ると、
+     * 値を毎回変えるだけで IP ごとの上限をいくらでも回避できる。
+     *
+     * <p>採るのは末尾——こちらに最も近いホップ（Ingress / Gateway）が書いた値で、
+     * そこは詐称できない。
      */
     @Test
-    @DisplayName("転送元は、先頭の 1 つだけを見る")
-    void takesOnlyTheFirstForwardedAddress() throws Exception {
+    @DisplayName("転送元は、詐称できない末尾のホップを見る")
+    void doesNotTrustTheClientSuppliedForwardedAddress() throws Exception {
         when(activities.findByTrackingNumber(any())).thenReturn(Optional.empty());
 
+        // 攻撃者が先頭に好きな値を書き、Ingress が末尾に本当の送信元を追記した形
         mockMvc.perform(get("/api/v1/public/tracking/TRK-20260823-9999")
-                        .header("X-Forwarded-For", "203.0.113.10, 198.51.100.7"))
+                        .header("X-Forwarded-For", "1.2.3.4, 198.51.100.7"))
                 .andExpect(status().isNotFound());
 
-        verify(lookupLogger).log(anyString(), org.mockito.Mockito.eq("203.0.113.10"), any(),
+        verify(lookupLogger).log(anyString(), org.mockito.Mockito.eq("198.51.100.7"), any(),
+                anyBoolean());
+        // **詐称された値を採っていない。**採ると上限が働かない
+        verify(lookupLogger, org.mockito.Mockito.never())
+                .log(anyString(), org.mockito.Mockito.eq("1.2.3.4"), any(), anyBoolean());
+    }
+
+    /** ヘッダが無ければ、接続元をそのまま使う。 */
+    @Test
+    @DisplayName("転送元のヘッダが無ければ、接続元を使う")
+    void fallsBackToTheRemoteAddress() throws Exception {
+        when(activities.findByTrackingNumber(any())).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/api/v1/public/tracking/TRK-20260823-9999"))
+                .andExpect(status().isNotFound());
+
+        verify(lookupLogger).log(anyString(), org.mockito.Mockito.eq("127.0.0.1"), any(),
                 anyBoolean());
     }
 }

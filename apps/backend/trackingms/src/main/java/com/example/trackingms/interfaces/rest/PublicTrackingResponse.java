@@ -3,7 +3,10 @@ package com.example.trackingms.interfaces.rest;
 import com.example.trackingms.domain.model.TrackingActivity;
 import com.example.trackingms.domain.model.TrackingEvent;
 import com.example.trackingms.domain.model.TrackingNotice;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
@@ -26,12 +29,26 @@ public record PublicTrackingResponse(String trackingNumber, String status, Strin
         String locationName, LocalDate estimatedArrival, boolean hasException, boolean urgent,
         List<PublicTrackingEvent> events, List<PublicTrackingNotice> notices) {
 
+    /**
+     * 荷主が読む形に整える。
+     *
+     * <p><strong>UTC の ISO 8601 をそのまま出さない。</strong>{@code 2026-08-23T04:12:34.123Z}
+     * と並ぶと、荷主は「深夜 4 時に荷降しした」と読む——実際は業務の暦では昼である。
+     * 入力側は業務の暦で解釈しているのに、出力側だけ揃っていない形になる（[ADR-010]）。
+     */
+    private static final DateTimeFormatter DISPLAY =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+
+    static String display(Instant at, ZoneId zone) {
+        return DISPLAY.format(at.atZone(zone));
+    }
+
     /** 経過の 1 件。<strong>荷役の種別も作業者も返さない</strong>。 */
     public record PublicTrackingEvent(String occurredAt, String status, String statusLabel,
             String locationName) {
 
-        static PublicTrackingEvent from(TrackingEvent event) {
-            return new PublicTrackingEvent(event.occurredAt().toString(),
+        static PublicTrackingEvent from(TrackingEvent event, ZoneId zone) {
+            return new PublicTrackingEvent(display(event.occurredAt(), zone),
                     event.trackingStatus().name(), event.trackingStatus().label(),
                     event.location().name());
         }
@@ -40,13 +57,13 @@ public record PublicTrackingResponse(String trackingNumber, String status, Strin
     /** お知らせの 1 件（[ADR-024] 決定 9）。<strong>メールは送っていない</strong>。 */
     public record PublicTrackingNotice(String noticedAt, String message) {
 
-        static PublicTrackingNotice from(TrackingNotice notice) {
-            return new PublicTrackingNotice(notice.noticedAt().toString(), notice.message());
+        static PublicTrackingNotice from(TrackingNotice notice, ZoneId zone) {
+            return new PublicTrackingNotice(display(notice.noticedAt(), zone), notice.message());
         }
     }
 
     static PublicTrackingResponse from(TrackingActivity activity, List<TrackingEvent> events,
-            List<TrackingNotice> notices) {
+            List<TrackingNotice> notices, ZoneId zone) {
         return new PublicTrackingResponse(
                 activity.trackingNumber().value(),
                 activity.trackingStatus().name(),
@@ -55,7 +72,7 @@ public record PublicTrackingResponse(String trackingNumber, String status, Strin
                 activity.estimatedArrival().orElse(null),
                 activity.activeException().isPresent(),
                 activity.hasUrgentException(),
-                events.stream().map(PublicTrackingEvent::from).toList(),
-                notices.stream().map(PublicTrackingNotice::from).toList());
+                events.stream().map(event -> PublicTrackingEvent.from(event, zone)).toList(),
+                notices.stream().map(notice -> PublicTrackingNotice.from(notice, zone)).toList());
     }
 }

@@ -86,11 +86,13 @@ export default function App() {
         <Route path="/handling" element={<HandlingPage />} />
       </Route>
 
-      {/* 貨物状態の管理は追跡管理者の業務（US17・US19・US20）。荷役作業員には開かない
-          ——状態を動かすのは、結果を見る役割の仕事である */}
+      {/* 貨物状態の管理は追跡管理者の業務（US17・US19・US20）。
+          **例外の起票は荷役作業員にも開く**——破損・紛失に最初に気づくのは港にいる人で
+          ある（US20 のアクターは 2 つ）。状態を動かせるのは追跡管理者だけで、それは
+          サーバが決める（画面に出す・出さないでは守れない） */}
       <Route
         element={
-          <RequireAuth allowedRoles={['ROLE_TRACKER']}>
+          <RequireAuth allowedRoles={['ROLE_TRACKER', 'ROLE_HANDLER']}>
             <AppLayout />
           </RequireAuth>
         }

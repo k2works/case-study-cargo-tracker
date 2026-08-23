@@ -47,9 +47,28 @@ public class ManageTrackingUseCase {
         return activities.findEvents(activity.trackingNumber(), TrackingLookupUseCase.HISTORY_LIMIT);
     }
 
-    /** 未解決の例外がある貨物（横断規約）。**件数の遷移先である**。 */
+    /**
+     * 未解決の例外がある貨物（横断規約）。<strong>件数の遷移先である</strong>。
+     *
+     * <p>上限は経過のものと分ける。経過の上限（200）の根拠は「1 つの貨物の経過が
+     * 200 を超えることは実務では無い」であり、<strong>貨物の件数には成り立たない</strong>。
+     */
     public List<TrackingActivity> withOpenExceptions() {
-        return activities.findWithOpenExceptions(TrackingLookupUseCase.HISTORY_LIMIT);
+        return activities.findWithOpenExceptions(OPEN_EXCEPTION_LIMIT);
+    }
+
+    /** 一覧に出す貨物の上限。**朝の一覧としてこれ以上は読めない**。 */
+    public static final int OPEN_EXCEPTION_LIMIT = 100;
+
+    /**
+     * 1 つの貨物に起きた例外を、解決済みも含めて返す（US19-5）。
+     *
+     * <p><strong>解決したら見えなくなる、では業務が回らない。</strong>
+     */
+    public List<com.example.trackingms.domain.model.TrackingException> exceptions(
+            TrackingActivity activity) {
+        return activities.findExceptions(activity.trackingNumber(),
+                TrackingLookupUseCase.HISTORY_LIMIT);
     }
 
     /**

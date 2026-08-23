@@ -41,8 +41,12 @@ public class TrackingManagementController {
 
     private final ManageTrackingUseCase manage;
 
-    public TrackingManagementController(ManageTrackingUseCase manage) {
+    /** 表示の暦。日時は業務のタイムゾーンで出す（[ADR-010]）。 */
+    private final java.time.ZoneId zone;
+
+    public TrackingManagementController(ManageTrackingUseCase manage, java.time.Clock clock) {
         this.manage = manage;
+        this.zone = clock.getZone();
     }
 
     /** 起票できる例外の種別（[ADR-024] 決定 11）。**画面が一覧を持たない**。 */
@@ -75,7 +79,7 @@ public class TrackingManagementController {
         requireTrackerOrHandler(userId, roles);
 
         return manage.withOpenExceptions().stream()
-                .map(activity -> ManagedTrackingResponse.from(activity, List.of()))
+                .map(activity -> ManagedTrackingResponse.from(activity, List.of(), List.of(), zone))
                 .toList();
     }
 
@@ -110,7 +114,7 @@ public class TrackingManagementController {
 
         TrackingActivity activity = manage.find(trackingNumber)
                 .orElseThrow(TrackingManagementController::notFound);
-        return ManagedTrackingResponse.from(activity, manage.events(activity));
+        return ManagedTrackingResponse.from(activity, manage.events(activity), manage.exceptions(activity), zone);
     }
 
     /**
@@ -129,7 +133,7 @@ public class TrackingManagementController {
         TrackingActivity updated = manage.updateStatus(request.trackingNumber(), request.status(),
                         request.locationUnLocode(), parseInstant(request.occurredAt()))
                 .orElseThrow(TrackingManagementController::notFound);
-        return ManagedTrackingResponse.from(updated, manage.events(updated));
+        return ManagedTrackingResponse.from(updated, manage.events(updated), manage.exceptions(updated), zone);
     }
 
     /**
@@ -148,7 +152,7 @@ public class TrackingManagementController {
         TrackingActivity raised = manage.raiseException(request.trackingNumber(),
                         request.exceptionType(), request.description())
                 .orElseThrow(TrackingManagementController::notFound);
-        return ManagedTrackingResponse.from(raised, manage.events(raised));
+        return ManagedTrackingResponse.from(raised, manage.events(raised), manage.exceptions(raised), zone);
     }
 
     /**
@@ -168,7 +172,7 @@ public class TrackingManagementController {
         TrackingActivity resolved = manage.resolveException(request.trackingNumber(),
                         request.resolutionNotes(), parseDate(request.newEstimatedArrival()))
                 .orElseThrow(TrackingManagementController::notFound);
-        return ManagedTrackingResponse.from(resolved, manage.events(resolved));
+        return ManagedTrackingResponse.from(resolved, manage.events(resolved), manage.exceptions(resolved), zone);
     }
 
     /** 起票できる種別（[ADR-024] 決定 11）。 */

@@ -111,6 +111,13 @@ public class MyBatisTrackingActivityRepository implements TrackingActivityReposi
     }
 
     @Override
+    public List<TrackingException> findExceptions(TrackingNumber trackingNumber, int limit) {
+        return exceptions.findByTrackingNumber(trackingNumber.value(), limit).stream()
+                .map(MyBatisTrackingActivityRepository::toException)
+                .toList();
+    }
+
+    @Override
     public List<TrackingActivity> findWithOpenExceptions(int limit) {
         return exceptions.findOpenTrackingNumbers(limit).stream()
                 .map(TrackingNumber::restore)

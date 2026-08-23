@@ -172,7 +172,13 @@ class TrackingExceptionPersistenceIntegrationTest extends TrackingIntegrationTes
         assertThat(notices.findByTrackingNumber(TrackingNumber.of(number()), 10))
                 .hasSize(1)
                 .allSatisfy(notice -> {
-                    assertThat(notice.message()).contains("紛失");
+                    assertThat(notice.message()).contains("問題が発生しました");
+                    // **種別を書かない。**上の欄で「問題が起きています」としか書かないのに
+                    // お知らせで「紛失」と書けば、隠した意味が無い（[ADR-024] 決定 5）。
+                    // とくに「紛失」は補償の話に直結する言葉である
+                    assertThat(notice.message())
+                            .as("例外の種別が荷主向けの文言に入っている")
+                            .doesNotContain("紛失");
                     assertThat(notice.message())
                             .as("社内の手がかりが荷主向けの文言に入っている")
                             .doesNotContain("積替港")

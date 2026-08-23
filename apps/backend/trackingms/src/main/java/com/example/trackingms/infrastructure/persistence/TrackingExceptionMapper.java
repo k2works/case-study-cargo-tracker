@@ -58,6 +58,21 @@ public interface TrackingExceptionMapper {
     TrackingExceptionRecord findOpen(@Param("trackingNumber") String trackingNumber);
 
     /**
+     * 1 つの貨物に起きた例外を、解決済みも含めて古い順に返す（US19-5）。
+     *
+     * <p><strong>解決しても消さない</strong>ので、ここで読み出せる。
+     */
+    @Select("SELECT " + COLUMNS + """
+             FROM tracking_exception_event
+             WHERE tracking_number = #{trackingNumber}
+             ORDER BY occurred_at, id
+             LIMIT #{limit}
+            """)
+    @org.apache.ibatis.annotations.ResultMap("exceptionResult")
+    List<TrackingExceptionRecord> findByTrackingNumber(
+            @Param("trackingNumber") String trackingNumber, @Param("limit") int limit);
+
+    /**
      * 未解決の例外がある追跡番号（横断規約）。
      *
      * <p><strong>絞り込みは SQL で行う。</strong>全件読んで Java で数えると、件数が

@@ -26,6 +26,12 @@ describe('貨物状態の管理（US17・US19・US20）', () => {
     })
   }
 
+  /** 見出しの下の要約。経過や記録の表と同じ語が並ぶため、場所を絞って見る。 */
+  function summaryOf() {
+    return screen.getByRole('heading', { name: 'TRK-20260823-0001' })
+      .parentElement as HTMLElement
+  }
+
   async function show(user: ReturnType<typeof userEvent.setup>) {
     await user.type(await screen.findByLabelText('追跡番号'), 'TRK-20260823-0001')
     await user.click(screen.getByRole('button', { name: '貨物を表示する' }))
@@ -121,7 +127,8 @@ describe('貨物状態の管理（US17・US19・US20）', () => {
     await user.click(screen.getByRole('button', { name: '起票する' }))
     await screen.findByText('起票しました。')
 
-    expect(screen.queryByText('緊急')).not.toBeInTheDocument()
+    // 要約の欄で見る。例外の記録の表にも同じ語が並ぶため
+    expect(within(summaryOf()).queryByText('緊急')).not.toBeInTheDocument()
 
     // 解決してから紛失を起票する（未解決の例外は 1 件まで）
     await user.click(screen.getByRole('button', { name: '解決する' }))
@@ -134,8 +141,9 @@ describe('貨物状態の管理（US17・US19・US20）', () => {
     await user.selectOptions(screen.getByLabelText('例外の種別'), 'LOST')
     await user.type(screen.getByLabelText('発生状況'), '積替港で所在が確認できません')
     await user.click(screen.getByRole('button', { name: '起票する' }))
+    await screen.findByText('起票しました。')
 
-    expect(await screen.findByText('緊急')).toBeInTheDocument()
+    expect(within(summaryOf()).getByText('緊急')).toBeInTheDocument()
   })
 
   /**
@@ -215,6 +223,55 @@ describe('貨物状態の管理（US17・US19・US20）', () => {
       'href',
       '/tracking/manage/exceptions',
     )
+  })
+
+  /**
+   * US19-5。**解決したら見えなくなる、では業務が回らない。**
+   *
+   * 「先週の遅れはどうなったのか」と荷主から問い合わせが来たとき、担当者はここを読む。
+   */
+  it('解決した例外も、記録として残って読める', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await show(user)
+
+    await user.click(screen.getByRole('button', { name: '例外を起票する' }))
+    await screen.findByRole('option', { name: '遅延' })
+    await user.selectOptions(screen.getByLabelText('例外の種別'), 'DELAY')
+    await user.type(screen.getByLabelText('発生状況'), '台風により出港が遅れています')
+    await user.click(screen.getByRole('button', { name: '起票する' }))
+    await screen.findByText('起票しました。')
+
+    await user.click(screen.getByRole('button', { name: '解決する' }))
+    await user.type(screen.getByLabelText('対応内容'), '別便に振り替えました')
+    await user.click(screen.getByRole('button', { name: '解決を記録する' }))
+    await screen.findByText('解決しました。')
+
+    // 解決しても消えない。何をしたかまで残る
+    const history = screen.getByRole('heading', { name: '例外の記録' })
+      .parentElement as HTMLElement
+    expect(within(history).getByText('台風により出港が遅れています')).toBeInTheDocument()
+    expect(within(history).getByText('別便に振り替えました')).toBeInTheDocument()
+  })
+
+  /**
+   * **例外があるあいだ、状態を更新できない理由を書く。**
+   *
+   * 欄が消えるだけだと、担当者は「バグで出ない」と受け取る。
+   */
+  it('例外があるあいだは、更新できない理由が画面に出る', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await show(user)
+
+    await user.click(screen.getByRole('button', { name: '例外を起票する' }))
+    await screen.findByRole('option', { name: '遅延' })
+    await user.selectOptions(screen.getByLabelText('例外の種別'), 'DELAY')
+    await user.type(screen.getByLabelText('発生状況'), '遅延しています')
+    await user.click(screen.getByRole('button', { name: '起票する' }))
+    await screen.findByText('起票しました。')
+
+    expect(screen.getByText(/例外を解決するまで、状態は更新できません/)).toBeInTheDocument()
   })
 
   it('存在しない追跡番号は理由を出す', async () => {

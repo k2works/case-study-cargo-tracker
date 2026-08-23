@@ -573,8 +573,8 @@ carrier_movement }o--|| location : "到着地"
 
 ### tracking_db — Tracking Context
 
-貨物追跡の状態・イベント・例外を管理する。`tracking_activity` が集約ルート。Booking Context / Handling Context からのイベントをサブスクライブしてデータを構築する CQRS 読み取り側モデル。
-例外種別に `MISROUTE`（誤配、US28）と `CUSTOMS_HOLD`（税関保留、UC21）を含む。
+貨物追跡の状態・イベント・例外を管理する。`tracking_activity` が集約ルート。Booking Context / Handling Context からのイベントをサブスクライブしてデータを構築する。
+例外種別に `MISROUTE`（誤配、US28）と `CUSTOMS_HOLD`（税関保留、UC21）を含むが、**手で起票できるのは `DELAY` / `DAMAGE` / `LOST` の 3 つだけ**である（[ADR-024](../adr/024-tracking-manual-update-and-exceptions.md) 決定 11）。
 
 ```plantuml
 @startuml
@@ -592,38 +592,74 @@ entity "tracking_activity\n（追跡レコード）" as tracking_activity {
   --
   * tracking_number : VARCHAR(20) <<UK, NOT NULL>>
   * booking_id : VARCHAR(20) <<NOT NULL>>
-  * transport_status : VARCHAR(30) <<NOT NULL>>
+  * tracking_status : VARCHAR(30) <<NOT NULL>>
+  status_before : VARCHAR(30)
+  * origin_unlocode : VARCHAR(5) <<FK, NOT NULL>>
+  * destination_unlocode : VARCHAR(5) <<FK, NOT NULL>>
+  current_location_unlocode : VARCHAR(5) <<FK>>
+  * arrival_deadline : DATE <<NOT NULL>>
+  estimated_arrival : DATE
 }
 
 entity "tracking_handling_event\n（追跡イベント）" as tracking_handling_event {
   * id : BIGINT <<PK, BIGSERIAL>>
   --
-  * tracking_id : BIGINT <<FK, NOT NULL>>
-  * event_type : VARCHAR(30) <<NOT NULL>>
-  * event_time : TIMESTAMP WITH TIME ZONE <<NOT NULL>>
-  * location_unlocode : VARCHAR(5) <<FK>>
-  voyage_number : VARCHAR(20)
+  * tracking_number : VARCHAR(20) <<FK, NOT NULL>>
+  * tracking_status : VARCHAR(30) <<NOT NULL>>
+  * location_unlocode : VARCHAR(5) <<FK, NOT NULL>>
+  * occurred_at : TIMESTAMP WITH TIME ZONE <<NOT NULL>>
+  * source : VARCHAR(20) <<NOT NULL>>
 }
 
 entity "tracking_exception_event\n（追跡例外イベント）" as tracking_exception_event {
   * id : BIGINT <<PK, BIGSERIAL>>
   --
-  * tracking_id : BIGINT <<FK, NOT NULL>>
-  * exception_type : VARCHAR(50) <<NOT NULL>>
+  * tracking_number : VARCHAR(20) <<FK, NOT NULL>>
+  * exception_type : VARCHAR(30) <<NOT NULL>>
+  * description : VARCHAR(500) <<NOT NULL>>
   * occurred_at : TIMESTAMP WITH TIME ZONE <<NOT NULL>>
-  * escalation_flag : BOOLEAN <<NOT NULL, DEFAULT FALSE>>
-  description : VARCHAR(500)
-  detected_location_unlocode : VARCHAR(5)
   resolved_at : TIMESTAMP WITH TIME ZONE
-  resolution_notes : TEXT
+  resolution_notes : VARCHAR(500)
+}
+
+entity "tracking_notice\n（荷主へのお知らせ）" as tracking_notice {
+  * id : BIGINT <<PK, BIGSERIAL>>
+  --
+  * tracking_number : VARCHAR(20) <<FK, NOT NULL>>
+  * message : VARCHAR(500) <<NOT NULL>>
+  * noticed_at : TIMESTAMP WITH TIME ZONE <<NOT NULL>>
+}
+
+entity "tracking_lookup_log\n（公開照会の記録）" as tracking_lookup_log {
+  * id : BIGINT <<PK, BIGSERIAL>>
+  --
+  * tracking_number : VARCHAR(40) <<NOT NULL>>
+  * client_ip : VARCHAR(45) <<NOT NULL>>
+  user_agent : VARCHAR(255)
+  * found : BOOLEAN <<NOT NULL>>
+  * looked_up_at : TIMESTAMP WITH TIME ZONE <<NOT NULL>>
 }
 
 tracking_activity ||--o{ tracking_handling_event : "イベントを持つ"
 tracking_activity ||--o{ tracking_exception_event : "例外を持つ"
-tracking_handling_event }o--o| location : "発生場所"
+tracking_activity ||--o{ tracking_notice : "お知らせを持つ"
+tracking_handling_event }o--|| location : "発生場所"
+tracking_activity }o--|| location : "現在地"
 
 @enduml
 ```
+
+> **状態は `tracking_status` である。** IT6 の実装は `transport_status` と名付けていたが、その名前は設計では **Booking Context の `Delivery` が持つもの**であり、BC をまたいで同じ名前が別物を指していた。IT7 で改名した（`V3__rename_transport_status.sql`）。
+
+> **例外の発生前状態は列に持つ**（[ADR-024](../adr/024-tracking-manual-update-and-exceptions.md) 決定 2）。`status_before` を置かず履歴から再導出すると、1 リクエストの中では履歴が手元にあるので正しく見え、**行に残っていないことに気づけない**。ユニットが緑のままクロスリクエストで誤復帰する。未解決の例外が無ければ NULL である。
+
+> **`estimated_arrival` は `arrival_deadline` とは別物である。** 期限は「いつまでに届けるか」、こちらは「いつ届く見込みか」。経路が決まるまでは分からないため **NULL を許し、0 や現在時刻で埋めない**（US18-2。埋めると荷主は「今日着く」と読む）。値は `TrackingNumberIssued` が運ぶ（決定 4）。
+
+> **`escalation_flag` は列に持たない。** 緊急かどうかは種別が答える（`ExceptionType#urgent`。決定 3）。列に持つと、種別と列が食い違った行を誰も検出できない。
+
+> **`tracking_notice` はメール送信の記録ではない。** 送信の**代替**である（決定 9）。メールの実体はまだ無く、荷主は公開の追跡照会でこれを読む。
+
+> **`tracking_lookup_log` は成否に関わらず残す**（決定 7）。見つからなかった照会こそ、総当たりを見つける材料である。認証が無い経路なので「誰が」は IP と `User-Agent` である。
 
 ---
 
