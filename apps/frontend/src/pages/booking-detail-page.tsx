@@ -18,18 +18,11 @@ import {
   can,
 } from "../features/booking/types";
 import { formatBusinessDateTime } from "../lib/business-time";
-import { transitDaysBetween } from "../features/routing/transit-days";
+import { ItineraryTable } from "../features/booking/components/itinerary-table";
+import { RouteDesignSection } from "../features/booking/components/route-design-section";
+import { ScheduleRevisionSection } from "../features/booking/components/schedule-revision-section";
+import { ShipperDialogueSection } from "../features/booking/components/shipper-dialogue-section";
 
-/**
- * 入力欄の値を文字列で取り出す。
- *
- * <p>`FormData` はファイルも返しうる。素朴に文字列化すると `[object Object]` がそのまま
- * 送られ、日付として読めない値が API に届く。
- */
-function textField(form: FormData, name: string): string {
-  const value = form.get(name);
-  return typeof value === "string" ? value : "";
-}
 
 /**
  * 状態ごとの手番（[ADR-021] 決定 6）。
@@ -287,162 +280,15 @@ export function BookingDetailPage() {
         </section>
       )}
 
-      {/* 割り当てられた旅程（US09）。**経路が決まっていない予約では枠ごと出さない**。
-          空の表を出すと「区間が 0 件の旅程がある」ように見える */}
-      {/* null も未設定も「旅程が無い」。項目ごと省く応答もありうる */}
-      {(booking.itinerary?.length ?? 0) > 0 && (
-        <section className="space-y-2 rounded border border-gray-200 p-4">
-          <h2 className="text-lg font-semibold text-gray-900">
-            割り当て経路（旅程・{booking.itinerary?.length} 区間）
-          </h2>
-          <div className="overflow-x-auto">
-            <table className="min-w-full border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-gray-300 text-left">
-                  <th className="py-2">順</th>
-                  <th>航海</th>
-                  <th>積込</th>
-                  <th>荷降し</th>
-                  <th>積込日時</th>
-                  <th>荷降し日時</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(booking.itinerary ?? []).map((leg, index) => (
-                  <tr
-                    key={`${leg.voyageNumber}-${leg.loadUnLocode}`}
-                    className="border-b"
-                  >
-                    <td className="py-2">{index + 1}</td>
-                    <td>{leg.voyageNumber}</td>
-                    {/* 港は名前で、コードは併記にとどめる（表示規約） */}
-                    <td>
-                      {leg.loadName}
-                      <span className="ml-1 text-gray-500">
-                        ({leg.loadUnLocode})
-                      </span>
-                    </td>
-                    <td>
-                      {leg.unloadName}
-                      <span className="ml-1 text-gray-500">
-                        ({leg.unloadUnLocode})
-                      </span>
-                    </td>
-                    {/* 日時は業務タイムゾーン（表示規約） */}
-                    <td>{formatBusinessDateTime(leg.loadTime)}</td>
-                    <td>{formatBusinessDateTime(leg.unloadTime)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
+      <ItineraryTable booking={booking} />
 
-      {/* 日程の訂正（US06 の訂正）。**引き渡す前か、営業へ戻された予約だけ**。
-          経路設計者が組んでいる最中に条件が変わると、出来上がった経路が条件を満たさなくなる。
-          条件協議の結果が「期限を延ばす」だったとき、直せないと再依頼しても同じ結果になる */}
-      {isSales && can(booking, "REVISE_SCHEDULE") && (
-          <section className="space-y-2 rounded border border-gray-200 p-4">
-            <h2 className="text-lg font-semibold text-gray-900">日程の訂正</h2>
-            {revising ? (
-              <form
-                className="space-y-3"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  const form = new FormData(event.currentTarget);
-                  const departureDate = textField(form, "departureDate");
-                  revise.mutate(
-                    {
-                      departureDate:
-                        departureDate === "" ? null : departureDate,
-                      arrivalDeadline: textField(form, "arrivalDeadline"),
-                    },
-                    { onSuccess: () => setRevising(false) },
-                  );
-                }}
-              >
-                <div className="flex flex-wrap gap-4">
-                  <div>
-                    <label
-                      htmlFor="departureDate"
-                      className="block text-sm font-medium text-gray-700"
-                    >
-                      出発希望日（任意）
-                    </label>
-                    <input
-                      id="departureDate"
-                      name="departureDate"
-                      type="date"
-                      defaultValue={booking.departureDate ?? ""}
-                      className="rounded border border-gray-300 px-2 py-1"
-                    />
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="arrivalDeadline"
-                      className="block text-sm font-medium text-gray-700"
-                    >
-                      到着期限
-                    </label>
-                    <input
-                      id="arrivalDeadline"
-                      name="arrivalDeadline"
-                      type="date"
-                      required
-                      defaultValue={booking.arrivalDeadline}
-                      className="rounded border border-gray-300 px-2 py-1"
-                    />
-                  </div>
-                </div>
-                {revise.error !== null && revise.error !== undefined && (
-                  <p
-                    role="alert"
-                    className="rounded border border-red-200 bg-red-50 p-2 text-red-700"
-                  >
-                    {revise.error instanceof ApiError
-                      ? ((revise.error.body as { message?: string } | undefined)
-                          ?.message ?? "日程を直せませんでした。")
-                      : "日程を直せませんでした。時間をおいて再度お試しください。"}
-                  </p>
-                )}
-                <div className="flex gap-2">
-                  <button
-                    type="submit"
-                    disabled={revise.isPending}
-                    className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    日程を保存する
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRevising(false)}
-                    className="rounded border border-gray-400 px-4 py-2 text-sm text-gray-700"
-                  >
-                    やめる
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <>
-                <p className="text-sm text-gray-700">
-                  荷主と条件が変わったら、到着期限と出発希望日を直せます。
-                  {""}
-                  <strong>出発地・目的地・貨物の内容は直せません</strong>
-                  {""}
-                  （変えるならそれは別の予約です）。
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setRevising(true)}
-                  className="rounded border border-gray-400 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                >
-                  日程を直す
-                </button>
-              </>
-            )}
-          </section>
-        )}
+      <ScheduleRevisionSection
+        booking={booking}
+        isSales={isSales}
+        revise={revise}
+        revising={revising}
+        setRevising={setRevising}
+      />
 
       {/* 手番。いまの状態で誰が動くかを 1 行で出す（ADR-021 決定 6） */}
       <p className="rounded border border-gray-200 bg-blue-50 p-3 text-sm text-gray-800">
@@ -475,193 +321,19 @@ export function BookingDetailPage() {
         </section>
       )}
 
-      {/* 荷主への通知・確定・経路設計へ戻す（US12・US13）。営業担当者の操作である。
-          荷主とのやりとりを持っているのは営業であり、経路設計者が直接連絡すると、
-          営業が把握していない約束ができる。
-          **状態で出し分ける**——すべての操作を常に出して押したときに断ると、
-          利用者は「押せるのにできない」を毎回学び直すことになる */}
-      {isSales && can(booking, "NOTIFY_SHIPPER") && (
-          <section className="space-y-3 rounded border border-gray-200 bg-gray-50 p-4">
-            <h2 className="text-lg font-semibold text-gray-900">
-              荷主とのやりとり
-            </h2>
+      <ShipperDialogueSection
+        booking={booking}
+        isSales={isSales}
+        notify={notify}
+        confirm={confirm}
+        returnToRouting={returnToRouting}
+      />
 
-            {/* 送る前に、何を伝えることになるかを同じ画面で確認できるようにする（US12-2）。
-              確認せずに送れる形にすると、営業は送ってから旅程を見ることになる */}
-            {(booking.itinerary?.length ?? 0) > 0 && (
-              <dl className="grid grid-cols-[10rem_1fr] gap-y-1 text-sm text-gray-800">
-                <dt className="font-medium">経由港</dt>
-                <dd>
-                  {(booking.itinerary ?? []).length === 1
-                    ? "直行（積み替えなし）"
-                    : (booking.itinerary ?? [])
-                        .slice(0, -1)
-                        .map((leg) => leg.unloadName)
-                        .join(" → ")}
-                </dd>
-                <dt className="font-medium">所要日数</dt>
-                <dd>
-                  約{" "}
-                  {transitDaysBetween(
-                    (booking.itinerary ?? [])[0].loadTime,
-                    (booking.itinerary ?? [])[
-                      (booking.itinerary ?? []).length - 1
-                    ].unloadTime,
-                  )}{" "}
-                  日
-                </dd>
-                <dt className="font-medium">到着予定</dt>
-                <dd>
-                  {formatBusinessDateTime(
-                    (booking.itinerary ?? [])[
-                      (booking.itinerary ?? []).length - 1
-                    ].unloadTime,
-                  )}
-                </dd>
-                <dt className="font-medium">費用の概算</dt>
-                <dd>
-                  経路設計の画面で確認してください（<strong>概算</strong>
-                  {/* 改行を空白と読ませない（日本語は語間を空けない） */}
-                  です。正式な料金は 精算時に確定します）
-                </dd>
-              </dl>
-            )}
-
-            <p className="rounded border border-amber-200 bg-amber-50 p-2 text-sm text-amber-900">
-              <strong>この操作ではメールは送られません。</strong>
-              {""}
-              荷主へは電話・メールで連絡してください。ここに残るのは「通知した」という記録です。
-            </p>
-
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => notify.mutate()}
-                disabled={notify.isPending}
-                className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
-              >
-                {/* 「もう一度」かどうかは遷移の可否ではなく、通知の記録があるかである */}
-                {booking.routeNotifiedAt ? "もう一度通知する" : "荷主へ通知する"}
-              </button>
-              {/* 通知していない予約は確定できない（ADR-021 決定 1）。
-                確定は「荷主の合意を得た」という業務上の事実である */}
-              {can(booking, "CONFIRM") && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => confirm.mutate()}
-                    disabled={confirm.isPending}
-                    className="rounded bg-green-700 px-4 py-2 text-white hover:bg-green-800 disabled:opacity-50"
-                  >
-                    予約を確定する
-                  </button>
-                  {/* 戻すと経路の状態も作業待ちに戻り、経路設計者の一覧に現れる
-                    （ADR-021 決定 4）。BookingStatus だけ戻しても伝わらない */}
-                  <button
-                    type="button"
-                    onClick={() => returnToRouting.mutate()}
-                    disabled={returnToRouting.isPending}
-                    className="rounded border border-gray-400 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50"
-                  >
-                    経路設計へ戻す
-                  </button>
-                </>
-              )}
-            </div>
-            <p className="text-sm text-gray-600">
-              荷主が経路の変更を希望したら「経路設計へ戻す」を押してください。経路設計者の
-              「経路設計を待っている予約」に表示されます。
-            </p>
-          </section>
-        )}
-
-      {/* 経路設計の入口。**状態で出し分ける**（ADR-015・ADR-020）。
-          引き渡されていない予約に経路を組むのは、営業がまだ作業中のものに手を出すことになる。
-          サーバは引き渡し済み・確定済み・差し戻し済みを開き、それ以外は存在しない予約と
-          同じ 404 を返す（RoutingStatus#visibleToRoutingPlanner）。出し分けはそれに合わせる */}
-      {isRoutingPlanner && (
-        <section className="space-y-2 rounded border border-gray-200 bg-gray-50 p-4">
-          <h2 className="text-lg font-semibold text-gray-900">経路設計</h2>
-          {booking.routingStatus === "ROUTING_REQUESTED" && (
-            <>
-              <p className="text-sm text-gray-700">
-                期限内に着く経路の候補を算出します。条件はこの予約から引き継ぎます。
-              </p>
-              <Link
-                to={`/routing/design/${booking.bookingId}`}
-                className="inline-block rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-              >
-                経路を割り当て
-              </Link>
-            </>
-          )}
-          {/* 航海の遅延・欠航で差し替えることがある（ADR-020 決定 4）。
-              決まったら終わりにすると、差し替えの入口がどこにも無くなる。
-              **確定したあとは差し替えられない**（ADR-021 決定 3）。入口を出すと、
-              候補を出し、選び、確認まで進んでから断られることになる */}
-          {booking.routingStatus === "ROUTED" && can(booking, "ASSIGN_ROUTE") && (
-            <>
-              <p className="text-sm text-gray-700">
-                この予約には経路が決まっています。航海の変更があれば見直せます。
-              </p>
-              <Link
-                to={`/routing/design/${booking.bookingId}`}
-                className="inline-block rounded border border-gray-400 px-4 py-2 text-sm text-gray-700"
-              >
-                経路を見直す
-              </Link>
-            </>
-          )}
-          {booking.routingStatus === "ROUTED" && !can(booking, "ASSIGN_ROUTE") && (
-            <p className="text-sm text-gray-700">
-              この予約は確定しています。
-              {/* 改行を空白と読ませない（日本語は語間を空けない） */}
-              <strong>経路は差し替えられません。</strong>
-              {""}
-              航海の変更で経路を変える必要があるときは、運用のルールに従って社内で調整して
-              ください（システムでの変更は次のリリース以降です）。
-            </p>
-          )}
-          {/* 差し戻し中も経路設計へ戻れる。営業と話がついたあとに続きができないと、
-              差し戻した本人が自分の仕事に戻れない（ADR-020 決定 7） */}
-          {booking.routingStatus === "CONSULTATION_REQUESTED" && (
-            <>
-              <p className="text-sm text-gray-700">
-                この予約は営業へ戻しています。条件が決まったら、もう一度経路を探せます。
-              </p>
-              <Link
-                to={`/routing/design/${booking.bookingId}`}
-                className="inline-block rounded border border-gray-400 px-4 py-2 text-sm text-gray-700"
-              >
-                経路設計を開く
-              </Link>
-            </>
-          )}
-          {booking.routingStatus === "NOT_ROUTED" && (
-            <p className="text-sm text-gray-700">
-              この予約はまだ経路設計に引き渡されていません。
-            </p>
-          )}
-
-          {/* 追跡番号の発行（US14）。確定した予約にだけ出す。
-              二重に発行すると、荷主に伝えた番号で追えなくなる */}
-          {can(booking, "ISSUE_TRACKING_NUMBER") && (
-            <div className="space-y-2 border-t border-gray-300 pt-3">
-              <p className="text-sm text-gray-700">
-                この予約は確定しています。追跡番号を発行すると、貨物の追跡が始まります。
-              </p>
-              <button
-                type="button"
-                onClick={() => issueTracking.mutate()}
-                disabled={issueTracking.isPending}
-                className="rounded bg-cyan-700 px-4 py-2 text-white hover:bg-cyan-800 disabled:opacity-50"
-              >
-                追跡番号を発行する
-              </button>
-            </div>
-          )}
-        </section>
-      )}
+      <RouteDesignSection
+        booking={booking}
+        isRoutingPlanner={isRoutingPlanner}
+        issueTracking={issueTracking}
+      />
 
       <p className="text-sm text-gray-600">
         出発地・目的地・貨物の内容に不備があるときは、予約を作り直してください。

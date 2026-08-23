@@ -1,8 +1,38 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
+  "plugins": [
+    "react",
+    "typescript",
+    "oxc"
+  ],
   "rules": {
     "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
+    "react/only-export-components": [
+      "warn",
+      {
+        "allowConstantExport": true
+      }
+    ],
+    "eslint/max-lines": [
+      "error",
+      {
+        "max": 400,
+        "skipComments": true,
+        "skipBlankLines": true
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": [
+        "src/**/__tests__/**",
+        "e2e/**",
+        "src/test/**",
+        "src/mocks/**"
+      ],
+      "rules": {
+        "eslint/max-lines": "off"
+      }
+    }
+  ]
 }

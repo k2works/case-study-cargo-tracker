@@ -173,3 +173,18 @@ export type RouteSearchCriteria = {
    */
   earliestDeparture: string | null
 }
+
+/**
+ * 登録・訂正の入力欄 1 区間分。
+ *
+ * 画面と検証の両方が使うため、features 側に置く。画面の中に閉じ込めると、
+ * 検証だけを切り出したときに型が付いてこない。
+ */
+export type MovementInput = {
+  /** 並べ替え・削除しても入力欄が入れ替わらないための識別子。表示には使わない。 */
+  key: string
+  departureUnLocode: string
+  arrivalUnLocode: string
+  departureTime: string
+  arrivalTime: string
+}

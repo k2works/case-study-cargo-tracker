@@ -11,19 +11,14 @@ import {
 } from '../features/routing/queries'
 import {
   ROUTING_CARGO_TYPE_LABELS,
+  type MovementInput,
   type RoutingCargoType,
   type VoyageDifference,
   type VoyageRequest,
 } from '../features/routing/types'
+import { voyageInvalidMessage } from '../features/routing/voyage-validation'
+import { MovementsFieldset } from '../features/routing/components/movements-fieldset'
 
-type MovementInput = {
-  /** 並べ替え・削除しても入力欄が入れ替わらないための識別子。表示には使わない。 */
-  key: string
-  departureUnLocode: string
-  arrivalUnLocode: string
-  departureTime: string
-  arrivalTime: string
-}
 
 let movementKeySequence = 0
 
@@ -102,54 +97,6 @@ export function VoyageRegisterPage() {
   const update = useUpdateVoyage()
   const navigate = useNavigate()
 
-  /**
-   * 送信前に、サーバが返すのと同じ文言で拒む。
-   *
-   * ブラウザ既定の検証は吹き出しで知らせるだけで画面には何も残らない。
-   * 「押しても何も起きない」と受け取られ、経路設計者は原因を探せない。
-   */
-  function localInvalidMessage(): string | null {
-    if (voyageNumber.trim() === '') return '航海番号は必須です'
-    if (vesselName.trim() === '') return '船名は必須です'
-    if (carrierName.trim() === '') return '運送会社は必須です'
-    if (supportedCargoTypes.length === 0) return '対応できる貨物種別を 1 つ以上選んでください'
-    if (movements.length === 0) return '寄港地を 1 区間以上入力してください'
-
-    for (const [index, movement] of movements.entries()) {
-      const message = movementInvalidMessage(movement, index, movements[index - 1])
-      if (message !== null) return message
-    }
-    return null
-  }
-
-  /** 区間 1 つ分の検査。前の区間との繋がりもここで見る。 */
-  function movementInvalidMessage(
-    movement: MovementInput,
-    index: number,
-    previous: MovementInput | undefined,
-  ): string | null {
-    const label = `${index + 1} 区間目`
-    if (movement.departureUnLocode === '') return `${label}の出発地を選んでください`
-    if (movement.arrivalUnLocode === '') return `${label}の到着地を選んでください`
-    if (movement.departureUnLocode === movement.arrivalUnLocode) {
-      return `${label}の出発地と到着地は同じにできません`
-    }
-    if (movement.departureTime === '') return `${label}の出発日時を入力してください`
-    if (movement.arrivalTime === '') return `${label}の到着日時を入力してください`
-    if (movement.arrivalTime <= movement.departureTime) {
-      return `${label}の到着日時は出発日時より後にしてください`
-    }
-    if (previous === undefined) return null
-    // つながっていない区間の並びは「航海」ではない。経路候補算出が実在しない乗り継ぎを提案する
-    if (previous.arrivalUnLocode !== movement.departureUnLocode) {
-      return `${label}は、前の区間の到着地から出発するようにしてください`
-    }
-    if (movement.departureTime < previous.arrivalTime) {
-      return `${label}が前の区間の到着より前に出発しています`
-    }
-    return null
-  }
-
   function toRequest(): VoyageRequest {
     return {
       voyageNumber: voyageNumber.trim(),
@@ -174,7 +121,13 @@ export function VoyageRegisterPage() {
     setDifference(null)
     setRegistered(null)
 
-    const message = localInvalidMessage()
+    const message = voyageInvalidMessage({
+      voyageNumber,
+      vesselName,
+      carrierName,
+      supportedCargoTypes,
+      movements,
+    })
     if (message !== null) {
       setInvalid(message)
       return
@@ -385,131 +338,13 @@ export function VoyageRegisterPage() {
           </div>
         </fieldset>
 
-        <fieldset className="space-y-4 rounded border border-gray-200 p-4">
-          <legend className="px-1 text-sm font-medium text-gray-700">寄港地（順番に入力）</legend>
-          {movements.map((movement, index) => (
-            <div
-              key={movement.key}
-              className="grid gap-3 rounded border border-gray-100 bg-gray-50 p-3 md:grid-cols-5"
-            >
-              <div>
-                <label
-                  htmlFor={`departureUnLocode-${index}`}
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  {index + 1} 区間目の出発地
-                </label>
-                <select
-                  id={`departureUnLocode-${index}`}
-                  value={movement.departureUnLocode}
-                  onChange={(event) =>
-                    updateMovement(index, {
-                      ...movement,
-                      departureUnLocode: event.target.value,
-                    })
-                  }
-                  className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
-                >
-                  <option value="">選んでください</option>
-                  {locations.map((location) => (
-                    <option key={location.unLocode} value={location.unLocode}>
-                      {location.name}（{location.unLocode}）
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label
-                  htmlFor={`arrivalUnLocode-${index}`}
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  {index + 1} 区間目の到着地
-                </label>
-                <select
-                  id={`arrivalUnLocode-${index}`}
-                  value={movement.arrivalUnLocode}
-                  onChange={(event) =>
-                    updateMovement(index, {
-                      ...movement,
-                      arrivalUnLocode: event.target.value,
-                    })
-                  }
-                  className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
-                >
-                  <option value="">選んでください</option>
-                  {locations.map((location) => (
-                    <option key={location.unLocode} value={location.unLocode}>
-                      {location.name}（{location.unLocode}）
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label
-                  htmlFor={`departureTime-${index}`}
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  {index + 1} 区間目の出発日時
-                </label>
-                <input
-                  id={`departureTime-${index}`}
-                  type="datetime-local"
-                  value={movement.departureTime}
-                  onChange={(event) =>
-                    updateMovement(index, {
-                      ...movement,
-                      departureTime: event.target.value,
-                    })
-                  }
-                  className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor={`arrivalTime-${index}`}
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  {index + 1} 区間目の到着日時
-                </label>
-                <input
-                  id={`arrivalTime-${index}`}
-                  type="datetime-local"
-                  value={movement.arrivalTime}
-                  onChange={(event) =>
-                    updateMovement(index, {
-                      ...movement,
-                      arrivalTime: event.target.value,
-                    })
-                  }
-                  className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
-                />
-              </div>
-
-              <div className="flex items-end">
-                {movements.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeMovement(index)}
-                    className="rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                  >
-                    この区間を削除
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-
-          <button
-            type="button"
-            onClick={addMovement}
-            className="rounded border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-          >
-            寄港地を追加する
-          </button>
-        </fieldset>
+        <MovementsFieldset
+          movements={movements}
+          locations={locations}
+          onChange={updateMovement}
+          onAdd={addMovement}
+          onRemove={removeMovement}
+        />
 
         <div className="flex gap-2">
           <button
