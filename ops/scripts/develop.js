@@ -555,6 +555,34 @@ function psql(database, sql) {
   return String(result.stdout).split('\n').map((line) => line.trim()).filter(Boolean);
 }
 
+
+/**
+ * 交換機を作り直す。
+ *
+ * RabbitMQ は<strong>既存の交換機を違う引数で宣言し直せない</strong>（PRECONDITION_FAILED）。
+ * alternate-exchange を足したときのように引数を変えると、すでに交換機がある環境では
+ * 宣言がそこで失敗し、<strong>その後ろに続くキューの宣言まで行われない</strong>。
+ * 症状は「新しいキューが無い」で出るため、原因が交換機だと分かりにくい。
+ *
+ * Testcontainers のテストはブローカーが毎回新品なので、この形を検出できない。
+ *
+ * <p>交換機を消してもキューのメッセージは消えない。結びつけは消えるが、各サービスが
+ * 起動時に宣言し直す。
+ *
+ * @param {string[]} exchanges 作り直す交換機
+ */
+function recreateExchanges(exchanges) {
+  exchanges.forEach((exchange) => {
+    run('kubectl', [
+      '--context', K8S_CONTEXT, '-n', K8S_NAMESPACE,
+      'exec', 'deploy/rabbitmq', '--',
+      // rabbitmqctl に交換機の削除は無い。管理プラグインの CLI を使う
+      'rabbitmqadmin', 'delete', 'exchange', `name=${exchange}`,
+    ]);
+  });
+  console.log('\n交換機を消しました。サービスを再起動すると、新しい引数で宣言し直されます。');
+}
+
 export default function (gulp) {
   // --- バックエンド ---
 
@@ -777,6 +805,20 @@ export default function (gulp) {
   });
 
 
+
+  /**
+   * 交換機の引数を変えたときに作り直す。
+   *
+   * 引数（alternate-exchange など）を変えても、既存の交換機はそのままでは宣言し直せない。
+   * このタスクで消してから、アプリを再起動する。
+   */
+  gulp.task('dev:k8s:events:redeclare', (done) => {
+    recreateExchanges(['cargoBookingChannel', 'cargoHandlingChannel']);
+    restartApplicationDeployments();
+    waitApplicationRollouts();
+    done();
+  });
+
   /**
    * 取りこぼし（発行済みだが追跡が無い予約）を照会する。
    *
@@ -923,6 +965,7 @@ export default function (gulp) {
     dev:k8s:rollout:image       Deployment のイメージを指定タグへ切り替え
     dev:k8s:rollout:restart     アプリ Deployment を再起動して新しい同一タグイメージを反映
     dev:k8s:events:missing      取りこぼし（発行済みだが追跡が無い予約）を照会する
+    dev:k8s:events:redeclare    交換機の引数を変えたときに作り直して再起動する
     dev:k8s:events:redeliver    デッドレターのイベントを元の交換機へ送り直す（DLQ_REDELIVER_LIMIT 対応）
     dev:k8s:db:reset            PostgreSQL を初期化し、DB 利用サービスの Flyway を再実行
     dev:k8s:status              Pod / Service / Ingress の状態
