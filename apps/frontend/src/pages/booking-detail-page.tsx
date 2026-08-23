@@ -17,6 +17,7 @@ import {
   ROUTING_STATUS_LABELS,
 } from "../features/booking/types";
 import { formatBusinessDateTime } from "../lib/business-time";
+import { transitDaysBetween } from "../features/routing/transit-days";
 
 /**
  * 入力欄の値を文字列で取り出す。
@@ -44,12 +45,6 @@ const TURN_LABELS: Record<string, string> = {
   CONFIRMED: "経路設計者の手番です。追跡番号の発行を待っています。",
   TRACKING_ISSUED: "荷役の手番です。貨物の受け取りを待っています。",
 };
-
-/** 旅程から所要日数を出す。通知内容の確認（US12-2）に使う。 */
-function transitDaysOf(loadTime: string, unloadTime: string): number {
-  const millis = new Date(unloadTime).getTime() - new Date(loadTime).getTime();
-  return Math.max(1, Math.round(millis / (24 * 60 * 60 * 1000)));
-}
 
 /**
  * 予約の詳細（US06）。
@@ -514,7 +509,7 @@ export function BookingDetailPage() {
                 <dt className="font-medium">所要日数</dt>
                 <dd>
                   約{" "}
-                  {transitDaysOf(
+                  {transitDaysBetween(
                     (booking.itinerary ?? [])[0].loadTime,
                     (booking.itinerary ?? [])[
                       (booking.itinerary ?? []).length - 1

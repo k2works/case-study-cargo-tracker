@@ -7,6 +7,7 @@
  */
 import { type MockVoyage, LOCATIONS } from './data'
 import { businessLocalToInstant, formatBusinessDate } from '../lib/business-time'
+import { transitDaysBetween } from '../features/routing/transit-days'
 
 export const MOCK_MINIMUM_TRANSSHIPMENT_MS = 6 * 60 * 60 * 1000
 
@@ -119,9 +120,8 @@ export function findMockRoutes(
 export function toMockCandidate(legs: MockLeg[], rank: number) {
   const departureTime = legs[0].departureTime
   const arrivalTime = legs[legs.length - 1].arrivalTime
-  const transitDays = Math.floor(
-    (new Date(arrivalTime).getTime() - new Date(departureTime).getTime()) / (24 * 60 * 60 * 1000),
-  )
+  // 本物と同じ規則を呼ぶ。写すと、片方だけ直る
+  const transitDays = transitDaysBetween(departureTime, arrivalTime)
   // 積み替え港の待ち時間。本物と同じく、前の区間の到着から次の区間の出発まで
   const transitPorts = legs.slice(1).map((leg, index) => ({
     unLocode: leg.fromUnLocode,
