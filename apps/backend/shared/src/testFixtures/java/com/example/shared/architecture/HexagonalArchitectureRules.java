@@ -58,6 +58,7 @@ public final class HexagonalArchitectureRules {
         List<ArchRule> rules = new java.util.ArrayList<>(layerRules(basePackage));
         rules.add(serviceIsolationRule(serviceName));
         rules.add(validationAfterAuthorizationRule());
+        rules.add(authorizationCalledRule());
         rules.add(eventPublishingOnlyInMessagingInfrastructureRule());
         switch (tokenHandling) {
             case NONE -> rules.add(noJwtDependencyRule(serviceName));
@@ -250,6 +251,90 @@ public final class HexagonalArchitectureRules {
                 .as("入力の検査は認可のあとに、メソッド本体で行う（ADR-016）")
                 .allowEmptyShould(true);
     }
+
+    /**
+     * 認可の対象となるメソッドが、実際に認可を呼んでいることを検査する（[ADR-008]）。
+     *
+     * <p>{@link #validationAfterAuthorizationRule()} が守るのは<strong>順序</strong>だけで、
+     * 「そもそも呼んでいるか」は見ていない。書き忘れると 401 に倒れる——と考えたくなるが、
+     * それは<strong>ヘッダが無いときだけ</strong>である。ログイン済みの利用者が別のロールで
+     * 叩けば、ヘッダは付いており、認可を呼んでいないメソッドは<strong>素通りする</strong>。
+     *
+     * <p>IT7 の時点で守っていたのは「各コントローラが忘れないこと」だけだった。8 つ目の
+     * サービスで忘れた日に落ちる仕組みが無い。
+     *
+     * <p>サービス間の呼び出しはロールでは絞れないため、主体の名簿で認可する形も認める
+     * （{@code AuthenticatedUser#isOneOf}）。
+     *
+     * <p>ロールを問わない操作は {@link com.example.shared.auth.AnyAuthenticatedUser} で
+     * <strong>宣言させる</strong>。名簿で除外すると、載せ忘れたものほど素通りする
+     * （[ADR-015] が 3 IT 素通りしたのと同じ形）。宣言は付けた場所に理由が残る。
+     *
+     * <p>同じクラスの補助メソッド（{@code requireHandler} など）を経由する形を許す。
+     * そこまで潰すと、ロールの組み合わせごとにメソッドを分ける現在の書き方が使えなくなる。
+     */
+    public static ArchRule authorizationCalledRule() {
+        return classes()
+                .should(new ArchCondition<JavaClass>(
+                        "利用者ヘッダを受け取るメソッドは認可を呼ぶ（ADR-008）") {
+                    @Override
+                    public void check(JavaClass javaClass, ConditionEvents events) {
+                        javaClass.getMethods().stream()
+                                .filter(HexagonalArchitectureRules::subjectToAuthorization)
+                                .filter(method -> !method.isAnnotatedWith(
+                                        com.example.shared.auth.AnyAuthenticatedUser.class))
+                                .filter(method -> !callsAuthorization(method, javaClass))
+                                .forEach(method -> events.add(SimpleConditionEvent.violated(method,
+                                        "%s#%s は利用者ヘッダを受け取りながら認可を呼んでいない。"
+                                                .formatted(javaClass.getSimpleName(),
+                                                        method.getName())
+                                                + "ヘッダが無ければ 401 に倒れるが、"
+                                                + "別のロールで叩かれると素通りする")));
+                    }
+                })
+                .as("利用者ヘッダを受け取るメソッドは、必ず認可を呼ぶ（ADR-008）")
+                .allowEmptyShould(true);
+    }
+
+    /**
+     * そのメソッドから認可に届くか。同じクラスの補助メソッドを 1 段だけたどる。
+     *
+     * <p>何段でもたどれるようにはしない。深くたどるほど「たまたま何かを経由して呼んでいる」
+     * を認可と認めることになり、検査が甘くなる。
+     */
+    private static boolean callsAuthorization(com.tngtech.archunit.core.domain.JavaMethod method,
+            JavaClass javaClass) {
+        if (callsRoleCheckDirectly(method)) {
+            return true;
+        }
+        return method.getMethodCallsFromSelf().stream()
+                .filter(call -> call.getTargetOwner().equals(javaClass))
+                .map(call -> call.getTarget().resolveMember())
+                .flatMap(java.util.Optional::stream)
+                .anyMatch(HexagonalArchitectureRules::callsRoleCheckDirectly);
+    }
+
+    /** ロールの検査そのものを呼んでいるか。 */
+    private static boolean callsRoleCheckDirectly(
+            com.tngtech.archunit.core.domain.JavaMethod method) {
+        return method.getMethodCallsFromSelf().stream()
+                .anyMatch(call -> AUTHENTICATED_USER.equals(call.getTargetOwner().getName())
+                        && AUTHORIZATION_CHECKS.contains(call.getName()));
+    }
+
+    /** 本番の型と名前をそのまま使う。書き写すと、改名したときに検査だけが取り残される。 */
+    private static final String AUTHENTICATED_USER =
+            com.example.shared.auth.AuthenticatedUser.class.getName();
+
+    /**
+     * 認可そのものと認めるもの。
+     *
+     * <p>人はロールで、サービスは主体の名簿で絞る（[ADR-019] 後日談 3）。<strong>どちらも
+     * 共有カーネルのメソッドとして呼ばせる</strong>——各サービスが自前で名簿を比べていると、
+     * ここからは「認可を呼んでいない」と区別がつかない。
+     */
+    private static final java.util.Set<String> AUTHORIZATION_CHECKS =
+            java.util.Set.of("hasAnyRole", "isOneOf");
 
     /** Gateway が付けた利用者ヘッダを受け取るメソッドは、認可の対象である。 */
     private static boolean subjectToAuthorization(com.tngtech.archunit.core.domain.JavaMethod method) {

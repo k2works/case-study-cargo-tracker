@@ -65,7 +65,7 @@ public class CargoLookupController {
     }
 
     private void requireTrustedService(String userId) {
-        if (!TRUSTED_SERVICE_PRINCIPALS.contains(userId)) {
+        if (!AuthenticatedUser.of(userId, null).isOneOf(TRUSTED_SERVICE_PRINCIPALS)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "この操作を行う権限がありません");
         }
     }

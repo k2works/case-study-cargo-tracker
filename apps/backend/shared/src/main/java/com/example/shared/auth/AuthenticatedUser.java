@@ -34,4 +34,19 @@ public record AuthenticatedUser(String userId, Set<Role> roles) {
     public boolean hasAnyRole(Role... allowed) {
         return Arrays.stream(allowed).anyMatch(roles::contains);
     }
+
+    /**
+     * サービス間の呼び出しを、主体の名簿で認可する（[ADR-019] 後日談 3）。
+     *
+     * <p>相手が人ではなくサービスのとき、ロールでは絞れない。<strong>名簿に無い主体は
+     * 通さない</strong>——「システムらしい名前なら通す」形にすると、載せ忘れた主体ほど
+     * 素通りする。
+     *
+     * <p>共有カーネルに置くのは、これが<strong>認可の一形態であることを検査から見える
+     * ようにする</strong>ためである。各サービスが自前で名簿を比べていると、
+     * {@code authorizationCalledRule} からは「認可を呼んでいない」と区別がつかない。
+     */
+    public boolean isOneOf(Set<String> allowedPrincipals) {
+        return allowedPrincipals.contains(userId);
+    }
 }
