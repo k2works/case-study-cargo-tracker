@@ -256,19 +256,41 @@ class TrackingEventRoundTripTest {
 
         publishHandling(number, "RECEIVE", "JPTYO");
 
-        Awaitility.await().atMost(Duration.ofSeconds(20)).untilAsserted(() ->
-                assertThat(activities.findByTrackingNumber(TrackingNumber.of(number))
-                        .orElseThrow().trackingStatus())
-                        .as("荷役は届いたのに追跡が進んでいない")
-                        .isEqualTo(TrackingStatus.RECEIVED));
+        awaitStatus(number, TrackingStatus.RECEIVED);
+
+        publishHandling(number, "LOAD", "JPTYO");
+        awaitStatus(number, TrackingStatus.LOADED);
+
+        // 途中の港での荷降しは、次の積込を待つ
+        publishHandling(number, "UNLOAD", "CNSHA");
+        awaitStatus(number, TrackingStatus.UNLOADED);
 
         // 目的港での荷降しは、次の積込ではなく荷受人の引取を待つ
         publishHandling(number, "UNLOAD", "USLAX");
+        awaitStatus(number, TrackingStatus.AWAITING_CLAIM);
 
+        publishHandling(number, "CLAIM", "USLAX");
+        awaitStatus(number, TrackingStatus.CLAIMED);
+
+        // **戻せる遷移は作らない。**送り直す手段（dev:k8s:events:redeliver）がある以上、
+        // 届く順が入れ替わる経路は実際に存在する。巻き戻ると、荷主は「引取済だったはずの
+        // 貨物が受領待ちに戻っている」を見る
+        publishHandling(number, "RECEIVE", "JPTYO");
+
+        Awaitility.await().during(Duration.ofSeconds(3)).atMost(Duration.ofSeconds(15))
+                .untilAsserted(() -> assertThat(
+                        activities.findByTrackingNumber(TrackingNumber.of(number))
+                                .orElseThrow().trackingStatus())
+                        .as("古い荷役の再配送で追跡が巻き戻った")
+                        .isEqualTo(TrackingStatus.CLAIMED));
+    }
+
+    private void awaitStatus(String number, TrackingStatus expected) {
         Awaitility.await().atMost(Duration.ofSeconds(20)).untilAsserted(() ->
                 assertThat(activities.findByTrackingNumber(TrackingNumber.of(number))
                         .orElseThrow().trackingStatus())
-                        .isEqualTo(TrackingStatus.AWAITING_CLAIM));
+                        .as("荷役は届いたのに追跡が %s へ進んでいない", expected)
+                        .isEqualTo(expected));
     }
 
     /**

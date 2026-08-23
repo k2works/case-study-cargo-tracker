@@ -97,7 +97,20 @@ export const handlingHandlers = [
   }),
 
   http.get(API_PATHS.handling, ({ request }) => {
-    const bookingId = new URL(request.url).searchParams.get('bookingId')
+    const params = new URL(request.url).searchParams
+    const trackingNumber = params.get('trackingNumber')
+    const bookingId =
+      params.get('bookingId')
+      ?? bookings.find((candidate) => candidate.trackingNumber === trackingNumber)?.bookingId
+
+    // 追跡番号でも予約番号でも引けないなら、その貨物は無い
+    if (bookingId === undefined) {
+      return HttpResponse.json(
+        { message: '指定された追跡番号の貨物が見つかりません。番号を確かめてください' },
+        { status: 404 },
+      )
+    }
+
     return HttpResponse.json(
       handlingActivities
         .filter((activity) => activity.bookingId === bookingId)

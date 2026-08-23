@@ -22,10 +22,15 @@ export function fetchHandlingLocations(): Promise<HandlingLocation[]> {
   return apiClient.get<HandlingLocation[]>(`${API_PATHS.handling}/locations`)
 }
 
-/** 1 つの貨物に何が起きたかを、時系列で取る。 */
-export function fetchHandlingHistory(bookingId: string): Promise<HandlingActivity[]> {
+/**
+ * 1 つの貨物に何が起きたかを、時系列で取る。
+ *
+ * **追跡番号で引く。** 荷役作業員も追跡管理者も、手元にあるのは追跡番号である。
+ * 予約番号でしか引けないと、「あの貨物はもう積んだか」という問い合わせに誰も答えられない。
+ */
+export function fetchHandlingHistory(trackingNumber: string): Promise<HandlingActivity[]> {
   return apiClient.get<HandlingActivity[]>(
-    `${API_PATHS.handling}?bookingId=${encodeURIComponent(bookingId)}`,
+    `${API_PATHS.handling}?trackingNumber=${encodeURIComponent(trackingNumber)}`,
   )
 }
 

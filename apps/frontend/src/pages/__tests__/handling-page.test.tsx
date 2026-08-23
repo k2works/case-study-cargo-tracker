@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { fireEvent, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { handlingActivities, handlingHandlers } from '../../mocks/handlers/handling'
@@ -41,16 +41,14 @@ describe('荷役作業の記録（US15）', () => {
   async function fillAndSubmit(overrides: Record<string, string> = {}) {
     const user = userEvent.setup()
     await user.type(
-      await screen.findByLabelText(/追跡番号/),
+      await screen.findByLabelText('追跡番号'),
       overrides.trackingNumber ?? 'TRK-20260823-0001',
     )
     await selectType(user, overrides.type ?? 'RECEIVE')
     await user.selectOptions(screen.getByLabelText(/作業場所/), overrides.location ?? 'JPTYO')
-    await user.clear(screen.getByLabelText(/作業日時/))
-    await user.type(
-      screen.getByLabelText(/作業日時/),
-      overrides.completionTime ?? '2027-09-02T09:00',
-    )
+    fireEvent.change(screen.getByLabelText(/作業日時/), {
+      target: { value: overrides.completionTime ?? '2027-09-02T09:00' },
+    })
     if (overrides.voyageNumber !== undefined) {
       await user.type(screen.getByLabelText(/航海番号/), overrides.voyageNumber)
     }
@@ -89,7 +87,7 @@ describe('荷役作業の記録（US15）', () => {
     await fillAndSubmit()
     await screen.findByText(/記録しました/)
 
-    expect(await screen.findByLabelText(/追跡番号/)).toHaveValue('TRK-20260823-0001')
+    expect(await screen.findByLabelText('追跡番号')).toHaveValue('TRK-20260823-0001')
   })
 
   /** US15-6。番号を読み違えるのが最も多い。何を直せばよいかを伝える。 */
@@ -196,4 +194,89 @@ describe('荷役作業の記録（US15）', () => {
 
     expect(await screen.findByText(/荷主へは自動で通知されません/)).toBeInTheDocument()
   })
+
+  /**
+   * <strong>作業日時は「いま」から始める。</strong>
+   *
+   * 港の記録はほぼ「いま」であり、1 日数十件を打つ人にとって一番手数の多い欄である。
+   */
+  it('作業日時には、はじめから「いま」が入っている', async () => {
+    renderPage()
+
+    expect(await screen.findByLabelText(/作業日時/)).not.toHaveValue('')
+  })
+
+  /**
+   * <strong>読めない日時で送信そのものを止めない。</strong>
+   *
+   * 止めると画面には何も出ず、利用者からは「押しても何も起きない」に見える。
+   */
+
+  /** **気づく手段は次の行動へ繋ぐ。** 誰に連絡するのかを書く。 */
+  it('予定外の警告は、誰に連絡するかを示す', async () => {
+    renderPage()
+
+    await fillAndSubmit({ type: 'UNLOAD', location: 'SGSIN', voyageNumber: 'V-SEED-3' })
+
+    expect(await screen.findByText(/追跡管理者/)).toBeInTheDocument()
+  })
+
+  describe('追跡管理者として', () => {
+    beforeEach(() => {
+      loginAs(['ROLE_TRACKER'])
+    })
+
+    /**
+     * <strong>押せるのに断られる操作を出さない。</strong>
+     *
+     * サーバは追跡管理者の記録を 403 で断る。ボタンを出すと、押した先で断られる。
+     */
+    it('記録のフォームは出ない', async () => {
+      renderPage()
+
+      expect(await screen.findByRole('heading', { name: '荷役作業の記録' })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: '記録する' })).not.toBeInTheDocument()
+    })
+
+    /**
+     * <strong>メニューに出す以上、そこで何かできる。</strong>
+     *
+     * 追跡管理者が手元に持つのは追跡番号である。「あの貨物はもう積んだか」に
+     * 答えられないと、この画面を開く意味が無い。
+     */
+    it('追跡番号だけで履歴を見られる', async () => {
+      const user = userEvent.setup()
+      // 荷役作業員が 1 件記録しておく（追跡管理者は記録できない）
+      handlingActivities.push({
+        id: 1,
+        bookingId: 'BKG-2026000004',
+        type: 'RECEIVE',
+        locationUnLocode: 'JPTYO',
+        locationName: 'Tokyo',
+        completionTime: '2027-09-02T00:00:00Z',
+        operatorName: 'handler01',
+        voyageNumber: null,
+        consigneeConfirmation: null,
+        offRoute: false,
+      })
+      renderPage()
+
+      await user.type(await screen.findByLabelText('追跡番号'), 'TRK-20260823-0001')
+      await user.click(screen.getByRole('button', { name: '履歴を見る' }))
+
+      const history = await screen.findByRole('table')
+      expect(within(history).getByText('受領')).toBeInTheDocument()
+    })
+
+    it('知らない追跡番号の履歴は、理由を出す', async () => {
+      const user = userEvent.setup()
+      renderPage()
+
+      await user.type(await screen.findByLabelText('追跡番号'), 'TRK-99999999-9999')
+      await user.click(screen.getByRole('button', { name: '履歴を見る' }))
+
+      expect(await screen.findByText(/番号を確かめてください/)).toBeInTheDocument()
+    })
+  })
+
 })

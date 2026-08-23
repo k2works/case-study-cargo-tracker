@@ -2,6 +2,7 @@ package com.example.bookingms;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.bookingms.domain.model.BookingId;
 import com.example.bookingms.domain.model.BookingStatus;
 import com.example.bookingms.domain.model.Cargo;
 import com.example.bookingms.domain.model.TrackingNumber;
@@ -176,4 +177,45 @@ class CargoItineraryPersistenceIntegrationTest extends CargoPersistenceTestBase 
 
         assertThat(repository.nextTrackingNumber()).startsWith("TRK-" + expected + "-");
     }
+
+    /**
+     * 追跡番号から貨物を引く（US15-1・[ADR-023] 決定 2）。
+     *
+     * <p><strong>旅程まで戻ることを見る。</strong>join を書き落として旅程が空になると、
+     * handlingms 側の照合は「照らす相手が無い」として<strong>すべての積込・荷降しを
+     * 予定外に倒す</strong>（安全側に倒す設計なので、例外にはならない）。
+     * 荷役の記録すべてに「予定外」が付き、しかもどこにもエラーが出ない。
+     *
+     * <p>方言スモークは解釈できるかしか見ないため、この形は捕まえられない。
+     */
+    @Test
+    @DisplayName("追跡番号から貨物を引くと、旅程まで戻る")
+    void findsCargoByTrackingNumberWithItinerary() {
+        Cargo booked = repository.save(bookCargo.book(command(
+                shipperId("追跡照会太郎", "cargo-by-tracking@example.com"), CargoType.GENERAL)));
+        BookingId bookingId = booked.bookingId().orElseThrow();
+        Cargo routed = repository.save(
+                booked.requestRouting().assignItinerary(itineraryVia("CNSHA", "Shanghai"), LA));
+        Cargo issued = repository.save(routed
+                .notifyShipper(Instant.parse("2026-08-22T02:00:00Z"), "sales01")
+                .confirm()
+                .issueTrackingNumber(TrackingNumber.of(repository.nextTrackingNumber())));
+        String trackingNumber = issued.trackingNumber().orElseThrow().value();
+
+        Cargo found = repository.findByTrackingNumber(trackingNumber).orElseThrow().cargo();
+
+        assertThat(found.bookingId()).contains(bookingId);
+        assertThat(found.itinerary().orElseThrow().legs())
+                .as("旅程が戻らない。荷役の照合が、すべての作業を予定外に倒す")
+                .hasSize(2);
+        assertThat(found.itinerary().orElseThrow().legs().getFirst().loadLocation().unLocode())
+                .isEqualTo("JPTYO");
+    }
+
+    @Test
+    @DisplayName("知らない追跡番号では空を返す")
+    void findsNothingForUnknownTrackingNumber() {
+        assertThat(repository.findByTrackingNumber("TRK-99999999-9999")).isEmpty();
+    }
+
 }

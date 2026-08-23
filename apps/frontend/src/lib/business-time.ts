@@ -29,9 +29,36 @@ export function formatBusinessDate(value: Date): string {
  * 日本で入力した 09:00 が 09:00Z として送られる。業務の暦で解釈してから変換する。
  */
 export function businessLocalToInstant(value: string): string {
+  // **`Date` の解析に頼らない。** `new Date(':00Z')` は例外にならず、**2000 年**として
+  // 読まれる。空欄のまま送ると「2000-01-01 の作業」が記録される——例外より悪い。
+  // 画面の日時入力が返す形（YYYY-MM-DDTHH:mm[:ss]）だけを受け入れる
+  if (!BUSINESS_LOCAL_PATTERN.test(value)) {
+    throw new InvalidBusinessDateTimeError(value)
+  }
   // いったん UTC として読み、その時点の業務タイムゾーンのずれを引く
   const asUtc = new Date(`${value}:00Z`)
+  // **存在しない日を黙って繰り上げない。** `new Date('2027-02-30T09:00:00Z')` は
+  // 3 月 2 日として読まれる。読み戻して一致するかで確かめる
+  if (Number.isNaN(asUtc.getTime()) || !asUtc.toISOString().startsWith(value)) {
+    throw new InvalidBusinessDateTimeError(value)
+  }
   return new Date(asUtc.getTime() - businessOffsetMillis(asUtc)).toISOString()
+}
+
+/** `datetime-local` が返す形。秒は端末によって付くことがある。 */
+const BUSINESS_LOCAL_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/
+
+/**
+ * 日時として読めない入力。
+ *
+ * 呼び出し側が「利用者に見せる誤り」として扱えるよう、専用の型にする。
+ * `RangeError` のままだと、想定外の不具合と区別が付かない。
+ */
+export class InvalidBusinessDateTimeError extends Error {
+  constructor(readonly value: string) {
+    super('日時として読めません')
+    this.name = 'InvalidBusinessDateTimeError'
+  }
 }
 
 /** UTC の ISO 8601 を、画面の日時入力に入れられる業務タイムゾーンの文字列に戻す。 */

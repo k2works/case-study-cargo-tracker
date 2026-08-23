@@ -102,6 +102,13 @@ class HandlingPersistenceIntegrationTest {
      * <p>集約ごと比べる。項目を 1 つずつ比べる形にすると、属性が増えたときに比較を
      * 足し忘れ、保存できていない項目に気づけない。
      */
+    @org.junit.jupiter.api.BeforeEach
+    void clearPublished() {
+        // 静的に持つため、テストの順序で混ざらないよう毎回空にする
+        PUBLISHED.clear();
+        transactionActiveWhenPublished = false;
+    }
+
     @Test
     @DisplayName("記録した内容が、そのまま読み戻せる")
     void persistsEveryField() {
@@ -141,6 +148,12 @@ class HandlingPersistenceIntegrationTest {
         assertThat(offRoute.offRoute())
                 .as("予定外だったことが記録に残っていない。US28 で判定し直すことになる")
                 .isTrue();
+
+        // **イベントにも載る。**受け手（US28・IT10）はこれを誤配検知の入力にする。
+        // 保存だけを見ていると、イベント側で潰しても緑のままになる
+        assertThat(PUBLISHED.getLast().offRoute())
+                .as("予定外だったことがイベントに載っていない")
+                .isTrue();
     }
 
     /** 荷役は起きた順に読むもの。新しい順にすると「受領の前に積込がある」ように見える。 */
@@ -171,9 +184,6 @@ class HandlingPersistenceIntegrationTest {
     @Test
     @DisplayName("発行は、トランザクションの中から伝える")
     void publishesInsideTheTransaction() {
-        PUBLISHED.clear();
-        transactionActiveWhenPublished = false;
-
         registerActivity.register(claimCommand());
 
         assertThat(transactionActiveWhenPublished)

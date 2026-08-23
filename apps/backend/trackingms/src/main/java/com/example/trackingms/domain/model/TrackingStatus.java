@@ -1,5 +1,6 @@
 package com.example.trackingms.domain.model;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -62,6 +63,29 @@ public enum TrackingStatus {
      * 業務の操作でここへ来ることはない。
      */
     UNKNOWN;
+
+    /**
+     * その状態から、この状態へ進めるか。
+     *
+     * <p><strong>戻る向きには進めない。</strong>再試行やデッドレターからの送り直しで、
+     * 荷役の届く順は入れ替わる。順序を信じて上書きすると、あとから届いた古い作業で
+     * 追跡が巻き戻り、荷主は「引取済だったはずの貨物が受領待ちに戻っている」を見る。
+     *
+     * <p>判定は<strong>並び順</strong>で行う。{@link #EXCEPTION} と {@link #UNKNOWN} は
+     * 荷役では現れないため、この判定の外にある（それらへ動かすのは US20・IT8）。
+     */
+    public boolean canAdvanceTo(TrackingStatus next) {
+        return PROGRESS.indexOf(next) > PROGRESS.indexOf(this);
+    }
+
+    /**
+     * 貨物が進む順序。
+     *
+     * <p>値の宣言順に頼らない。宣言順は「一覧としての読みやすさ」で決まり、進行度とは
+     * 別の理由で並び替えられる。
+     */
+    private static final List<TrackingStatus> PROGRESS = List.of(
+            NOT_RECEIVED, RECEIVED, LOADED, ONBOARD_CARRIER, UNLOADED, AWAITING_CLAIM, CLAIMED);
 
     /**
      * 荷役の種別から、進む先を導く（[ADR-023] 決定 5・US15-4）。

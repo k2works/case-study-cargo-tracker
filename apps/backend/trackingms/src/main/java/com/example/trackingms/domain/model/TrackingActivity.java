@@ -73,16 +73,20 @@ public final class TrackingActivity {
      * 順に進む。届く順が入れ替わることはあるが、そのときに「戻す」と、あとから届いた古い
      * 作業で追跡が巻き戻る。
      *
-     * <p>進む先を決めるのは {@link TrackingStatus#afterHandling}。ここで種別を見比べると、
-     * 判定が集約と列挙の 2 か所に分かれる。
+     * <p>進む先を決めるのも、戻る向きかを決めるのも {@link TrackingStatus} である。
+     * ここで種別や状態を見比べると、判定が集約と列挙の 2 か所に分かれる。
+     *
+     * <p><strong>進まないときは、同じものをそのまま返す。</strong>呼び出し側はこれを見て
+     * 「書き込まない」を判断する。新しい実体を返すと、同じ内容の更新で行を触り続ける。
      *
      * @param handlingType 荷役の種別の名前（相手の型は持ち込まない）
      * @param locationUnLocode 作業場所
-     * @return 進めた追跡。進む先が決まらなければ、そのままの自分を返す
+     * @return 進めた追跡。進まないときは、そのままの自分
      */
     public TrackingActivity afterHandling(String handlingType, String locationUnLocode) {
         boolean atDestination = destination.unLocode().equals(locationUnLocode);
         return TrackingStatus.afterHandling(handlingType, atDestination)
+                .filter(trackingStatus::canAdvanceTo)
                 .map(next -> new TrackingActivity(id, trackingNumber, bookingId, next,
                         origin, destination, arrivalDeadline))
                 .orElse(this);

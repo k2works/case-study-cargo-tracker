@@ -3,9 +3,11 @@ package com.example.handlingms.interfaces.rest;
 import com.example.handlingms.application.internal.RegisterHandlingActivityCommand;
 import com.example.handlingms.application.internal.RegisterHandlingActivityUseCase;
 import com.example.handlingms.application.port.CargoLookupUnavailableException;
+import com.example.handlingms.application.port.CargoSnapshotFinder;
 import com.example.handlingms.application.port.HandlingActivityRepository;
 import com.example.handlingms.application.port.LocationRepository;
 import com.example.handlingms.domain.model.CargoBookingId;
+import com.example.handlingms.domain.model.HandlingTrackingNumber;
 import com.example.handlingms.domain.model.HandlingType;
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.auth.Role;
@@ -40,12 +42,15 @@ public class HandlingActivityController {
     private final RegisterHandlingActivityUseCase registerActivity;
     private final HandlingActivityRepository activities;
     private final LocationRepository locations;
+    private final CargoSnapshotFinder cargoes;
 
     public HandlingActivityController(RegisterHandlingActivityUseCase registerActivity,
-            HandlingActivityRepository activities, LocationRepository locations) {
+            HandlingActivityRepository activities, LocationRepository locations,
+            CargoSnapshotFinder cargoes) {
         this.registerActivity = registerActivity;
         this.activities = activities;
         this.locations = locations;
+        this.cargoes = cargoes;
     }
 
     /**
@@ -71,17 +76,41 @@ public class HandlingActivityController {
      * 1 つの貨物に何が起きたかを、時系列で返す（US15 の履歴）。
      *
      * <p>追跡管理者にも開く。<strong>参照のみ</strong>で、記録はできない。
+     *
+     * <p><strong>追跡番号でも引ける。</strong>荷役作業員も追跡管理者も、手元にあるのは
+     * 追跡番号である。予約番号でしか引けないと、「あの貨物はもう積んだか」という
+     * 問い合わせに誰も答えられない。予約番号は、記録したあとに応答から分かる。
      */
     @GetMapping
     public List<HandlingActivityResponse> history(
             @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
             @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles,
-            @RequestParam String bookingId) {
+            @RequestParam(required = false) String bookingId,
+            @RequestParam(required = false) String trackingNumber) {
         requireHandlerOrTracker(userId, roles);
 
-        return activities.findByBookingId(CargoBookingId.of(bookingId), HISTORY_LIMIT).stream()
+        CargoBookingId target = resolve(bookingId, trackingNumber);
+        return activities.findByBookingId(target, HISTORY_LIMIT).stream()
                 .map(HandlingActivityResponse::from)
                 .toList();
+    }
+
+    /**
+     * どの貨物の履歴かを決める。
+     *
+     * <p>追跡番号で指定されたときは ACL で貨物を引く。<strong>見つからないことと
+     * 確かめられないことを分ける</strong>のは記録のときと同じである。
+     */
+    private CargoBookingId resolve(String bookingId, String trackingNumber) {
+        if (bookingId != null && !bookingId.isBlank()) {
+            return CargoBookingId.of(bookingId);
+        }
+        if (trackingNumber == null || trackingNumber.isBlank()) {
+            throw new IllegalArgumentException("追跡番号か予約番号を指定してください");
+        }
+        return cargoes.findByTrackingNumber(HandlingTrackingNumber.of(trackingNumber))
+                .map(cargo -> CargoBookingId.of(cargo.bookingId()))
+                .orElseThrow(HandlingActivityController::cargoNotFound);
     }
 
     /** 作業場所の選択肢（US15-3）。自由入力にすると、綴りの揺れた港が記録に入る。 */

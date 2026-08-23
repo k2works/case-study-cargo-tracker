@@ -169,4 +169,89 @@ class TrackingActivityTest {
             assertThat(TrackingStatus.afterHandling("CUSTOMS_INSPECTION", false)).isEmpty();
         }
     }
+
+    @Nested
+    @DisplayName("荷役に応じて進むとき（US15-4）")
+    class WhenHandlingArrives {
+
+        private static TrackingActivity started() {
+            return TrackingActivity.start(TrackingNumber.of("TRK-20260823-0001"),
+                    TrackingBookingId.of("BKG-2026000001"), TOKYO, LOS_ANGELES, DEADLINE);
+        }
+
+        @Test
+        @DisplayName("受領が届くと受領済みへ進む")
+        void advancesOnReceive() {
+            assertThat(started().afterHandling("RECEIVE", "JPTYO").trackingStatus())
+                    .isEqualTo(TrackingStatus.RECEIVED);
+        }
+
+        @Test
+        @DisplayName("目的港での荷降しは、次の積込ではなく引取待ちへ進む")
+        void awaitsClaimAtDestination() {
+            assertThat(started().afterHandling("UNLOAD", "USLAX").trackingStatus())
+                    .isEqualTo(TrackingStatus.AWAITING_CLAIM);
+        }
+
+        /**
+         * <strong>戻せる遷移は作らない。</strong>
+         *
+         * <p>再試行・デッドレターからの送り直しで、届く順は入れ替わる。**送り直す手段は
+         * IT7 で用意した**（`dev:k8s:events:redeplay`）ので、この経路は実際に存在する。
+         * 巻き戻ると、荷主は「引取済だったはずの貨物が受領待ちに戻っている」を見る。
+         */
+        @Test
+        @DisplayName("引取済のあとに古い受領が届いても巻き戻らない")
+        void doesNotRegressWhenAnOlderHandlingArrives() {
+            TrackingActivity claimed = started()
+                    .afterHandling("RECEIVE", "JPTYO")
+                    .afterHandling("LOAD", "JPTYO")
+                    .afterHandling("UNLOAD", "USLAX")
+                    .afterHandling("CLAIM", "USLAX");
+            assertThat(claimed.trackingStatus()).isEqualTo(TrackingStatus.CLAIMED);
+
+            TrackingActivity redelivered = claimed.afterHandling("RECEIVE", "JPTYO");
+
+            assertThat(redelivered.trackingStatus())
+                    .as("古い荷役の再配送で追跡が巻き戻った")
+                    .isEqualTo(TrackingStatus.CLAIMED);
+        }
+
+        /** 同じ荷役が 2 回届いても、状態は変わらない（[ADR-022] 決定 5）。 */
+        @Test
+        @DisplayName("同じ荷役が 2 回届いても状態は変わらない")
+        void isIdempotent() {
+            TrackingActivity received = started().afterHandling("RECEIVE", "JPTYO");
+
+            assertThat(received.afterHandling("RECEIVE", "JPTYO").trackingStatus())
+                    .isEqualTo(TrackingStatus.RECEIVED);
+        }
+
+        /**
+         * 進む先が決まらなければ、<strong>そのままの自分</strong>を返す。
+         *
+         * <p>呼び出し側はこれを見て「書き込まない」を判断する。ここで新しい実体を返すと、
+         * 同じ内容の更新で行を触り続けることになる。
+         */
+        @Test
+        @DisplayName("知らない種別では、同じものをそのまま返す")
+        void returnsItselfForUnknownHandling() {
+            TrackingActivity started = started();
+
+            assertThat(started.afterHandling("CUSTOMS_INSPECTION", "JPTYO")).isSameAs(started);
+        }
+
+        @Test
+        @DisplayName("進めないときも、同じものをそのまま返す")
+        void returnsItselfWhenItCannotAdvance() {
+            TrackingActivity claimed = started()
+                    .afterHandling("RECEIVE", "JPTYO")
+                    .afterHandling("LOAD", "JPTYO")
+                    .afterHandling("UNLOAD", "USLAX")
+                    .afterHandling("CLAIM", "USLAX");
+
+            assertThat(claimed.afterHandling("RECEIVE", "JPTYO")).isSameAs(claimed);
+        }
+    }
+
 }

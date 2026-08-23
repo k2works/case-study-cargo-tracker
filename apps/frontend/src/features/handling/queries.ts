@@ -15,12 +15,17 @@ export function useHandlingLocations() {
   return useQuery({ queryKey: ['handling', 'locations'], queryFn: fetchHandlingLocations })
 }
 
-/** 1 つの貨物の荷役履歴。予約番号が決まるまでは引かない。 */
-export function useHandlingHistory(bookingId: string | null) {
+/**
+ * 1 つの貨物の荷役履歴。
+ *
+ * 追跡番号が決まるまでは引かない。**記録できたかどうかとは切り離す**——追跡管理者は
+ * 記録できないので、記録の成否に紐づけると履歴を一度も見られない。
+ */
+export function useHandlingHistory(trackingNumber: string | null) {
   return useQuery({
-    queryKey: ['handling', 'history', bookingId],
-    queryFn: () => fetchHandlingHistory(bookingId as string),
-    enabled: bookingId !== null && bookingId !== '',
+    queryKey: ['handling', 'history', trackingNumber],
+    queryFn: () => fetchHandlingHistory(trackingNumber as string),
+    enabled: trackingNumber !== null && trackingNumber !== '',
   })
 }
 

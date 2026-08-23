@@ -29,12 +29,21 @@ public class AdvanceTrackingUseCase {
      */
     public void advance(String trackingNumber, String handlingType, String locationUnLocode) {
         activities.findByTrackingNumber(TrackingNumber.of(trackingNumber))
-                .map(activity -> activity.afterHandling(handlingType, locationUnLocode))
-                .ifPresent(this::saveIfChanged);
+                .ifPresent(current -> saveIfChanged(current,
+                        current.afterHandling(handlingType, locationUnLocode)));
     }
 
-    /** 進む先が決まらなかったときは書き込まない。同じ内容の更新で行を触らない。 */
-    private void saveIfChanged(TrackingActivity advanced) {
+    /**
+     * 進んだときだけ書き込む。
+     *
+     * <p><strong>同じ内容の更新で行を触らない。</strong>集約は進まないとき同じものを返すので、
+     * それを見て判断する。無条件に書くと、再配送のたびに {@code updated_at} が動き、
+     * 「いつ状態が変わったか」が読めなくなる。
+     */
+    private void saveIfChanged(TrackingActivity current, TrackingActivity advanced) {
+        if (advanced == current) {
+            return;
+        }
         activities.updateStatus(advanced);
     }
 }

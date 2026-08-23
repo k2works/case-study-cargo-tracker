@@ -59,6 +59,9 @@ class HandlingActivityControllerTest {
     @MockitoBean
     private LocationRepository locations;
 
+    @MockitoBean
+    private com.example.handlingms.application.port.CargoSnapshotFinder cargoes;
+
     private static HandlingActivity received() {
         return HandlingActivity.restore(1L,
                 com.example.handlingms.domain.model.CargoBookingId.of("BKG-2026000001"),
@@ -114,6 +117,31 @@ class HandlingActivityControllerTest {
             verify(registerActivity).register(captor.capture());
             org.assertj.core.api.Assertions.assertThat(captor.getValue().operatorName())
                     .isEqualTo("handler01");
+        }
+
+        /**
+         * <strong>予定外だったことが応答に載る</strong>（[ADR-023] 決定 3）。
+         *
+         * <p>予定どおりの記録だけを見ていると、応答で {@code offRoute} を潰しても緑のままに
+         * なる。画面はこの値で警告を出すため、潰れると<strong>警告が一切出なくなる</strong>。
+         */
+        @Test
+        @DisplayName("予定外の作業は、予定外として応答に載る")
+        void reportsOffRoute() throws Exception {
+            when(registerActivity.register(any())).thenReturn(Optional.of(HandlingActivity.restore(
+                    2L, com.example.handlingms.domain.model.CargoBookingId.of("BKG-2026000001"),
+                    HandlingType.UNLOAD, Location.of("SGSIN", "Singapore"),
+                    Instant.parse("2026-08-23T02:00:00Z"), "handler01",
+                    com.example.handlingms.domain.model.HandlingVoyageNumber.of("V0100"), null,
+                    true)));
+
+            mockMvc.perform(post("/api/v1/handling")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "handler01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_HANDLER")
+                            .contentType(MediaType.APPLICATION_JSON).content(BODY))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.offRoute").value(true))
+                    .andExpect(jsonPath("$.voyageNumber").value("V0100"));
         }
 
         /** US15-6。番号を読み違えるのが最も多い。何を直せばよいかを伝える。 */
@@ -253,6 +281,48 @@ class HandlingActivityControllerTest {
                             .header(AuthenticatedUser.ROLES_HEADER, role))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$[0].type").value("RECEIVE"));
+        }
+
+        /**
+         * <strong>追跡管理者が実際に使えること</strong>を確かめる。
+         *
+         * <p>メニューに出しておきながら開いても何もできない画面は、
+         * 「壊れている」と受け取られる。追跡管理者が手元に持つのは追跡番号である。
+         */
+        @Test
+        @DisplayName("追跡管理者は、追跡番号だけで履歴を引ける")
+        void trackersCanReadHistoryByTrackingNumber() throws Exception {
+            when(cargoes.findByTrackingNumber(any())).thenReturn(Optional.of(
+                    com.example.handlingms.domain.model.CargoSnapshot.of("BKG-2026000001",
+                            "JPTYO", "USLAX", List.of())));
+            when(activities.findByBookingId(any(), org.mockito.ArgumentMatchers.anyInt()))
+                    .thenReturn(List.of(received()));
+
+            mockMvc.perform(get("/api/v1/handling").param("trackingNumber", "TRK-20260823-0001")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "tracker01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_TRACKER"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[0].type").value("RECEIVE"));
+        }
+
+        @Test
+        @DisplayName("知らない追跡番号の履歴は 404")
+        void reportsNotFoundForUnknownTrackingNumber() throws Exception {
+            when(cargoes.findByTrackingNumber(any())).thenReturn(Optional.empty());
+
+            mockMvc.perform(get("/api/v1/handling").param("trackingNumber", "TRK-99999999-9999")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "tracker01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_TRACKER"))
+                    .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("追跡番号も予約番号も無ければ 400")
+        void requiresOneOfTheIdentifiers() throws Exception {
+            mockMvc.perform(get("/api/v1/handling")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "tracker01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_TRACKER"))
+                    .andExpect(status().isBadRequest());
         }
 
         @Test

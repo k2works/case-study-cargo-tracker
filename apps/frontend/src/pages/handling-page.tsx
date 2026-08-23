@@ -8,8 +8,9 @@ import {
   useRegisterHandlingActivity,
 } from '../features/handling/queries'
 import type { HandlingActivity } from '../features/handling/types'
+import { useAuthStore } from '../stores/auth-store'
 import { ApiError } from '../lib/api-client'
-import { businessLocalToInstant } from '../lib/business-time'
+import { InvalidBusinessDateTimeError, businessLocalToInstant, instantToBusinessLocal } from '../lib/business-time'
 
 /**
  * 荷役作業の記録（US15・US16）。
@@ -25,17 +26,27 @@ export function HandlingPage() {
   const { data: locations = [] } = useHandlingLocations()
   const register = useRegisterHandlingActivity()
 
+  // 記録できるのは荷役作業員だけ（[ADR-008]）。追跡管理者は参照のみで、
+  // **押せるのに断られる操作を出さない**
+  const isHandler = useAuthStore((state) => state.hasAnyRole(['ROLE_HANDLER']))
+
   const [trackingNumber, setTrackingNumber] = useState('')
   const [type, setType] = useState('RECEIVE')
   const [locationUnLocode, setLocationUnLocode] = useState('')
-  const [completionTime, setCompletionTime] = useState('')
+  // 港の記録はほぼ「いま」である。空から始めると、1 日数十件を打つ人にとって
+  // 一番手数の多い欄になる
+  const [completionTime, setCompletionTime] = useState(() =>
+    instantToBusinessLocal(new Date().toISOString()),
+  )
   const [voyageNumber, setVoyageNumber] = useState('')
   const [consigneeConfirmation, setConsigneeConfirmation] = useState('')
   const [registered, setRegistered] = useState<HandlingActivity | null>(null)
+  const [invalid, setInvalid] = useState<string | null>(null)
+  const [viewing, setViewing] = useState<string | null>(null)
 
-  // 履歴は記録できた貨物のものを出す。追跡番号からは予約番号が分からないため、
-  // 記録の応答が持ってきた予約番号を使う
-  const { data: history = [] } = useHandlingHistory(registered?.bookingId ?? null)
+  // **記録できたかどうかと切り離す。** 追跡管理者は記録できないため、記録の成否に
+  // 紐づけると履歴を一度も見られない
+  const { data: history = [], error: historyError } = useHandlingHistory(viewing)
 
   // **要件はサーバが答える**（[ADR-023] 決定 1）。画面が「積込なら航海番号が要る」と
   // 書くと、規則が種別と画面の 2 か所に分かれ、片方だけ直る形になる
@@ -44,14 +55,29 @@ export function HandlingPage() {
   function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setRegistered(null)
+    setInvalid(null)
+
+    let completionInstant: string
+    try {
+      // 日時は業務の暦で解釈してから送る。toISOString をそのまま使うと、
+      // 端末の設定（CI では UTC）で解釈され、入力した時刻とずれる
+      completionInstant = businessLocalToInstant(completionTime)
+    } catch (error) {
+      // **読めない日時で送信そのものを止めない。** 止めると画面には何も出ず、
+      // 利用者からは「押しても何も起きない」に見える
+      if (error instanceof InvalidBusinessDateTimeError) {
+        setInvalid('作業日時を入力してください')
+        return
+      }
+      throw error
+    }
+
     register.mutate(
       {
         trackingNumber: trackingNumber.trim(),
         type,
         locationUnLocode,
-        // 日時は業務の暦で解釈してから送る。toISOString をそのまま使うと、
-        // 端末の設定（CI では UTC）で解釈され、入力した時刻とずれる
-        completionTime: businessLocalToInstant(completionTime),
+        completionTime: completionInstant,
         voyageNumber: voyageNumber.trim() === '' ? null : voyageNumber.trim(),
         consigneeConfirmation:
           consigneeConfirmation.trim() === '' ? null : consigneeConfirmation.trim(),
@@ -59,7 +85,10 @@ export function HandlingPage() {
       {
         onSuccess: (activity) => {
           setRegistered(activity)
-          // 追跡番号と作業場所は残す。同じ貨物に続けて記録するのが実際の使い方である
+          setViewing(trackingNumber.trim())
+          // 追跡番号と作業場所は残す。同じ貨物に続けて記録するのが実際の使い方である。
+          // **日時は「いま」に戻す。**前の作業の時刻のまま次を記録する事故を防ぐ
+          setCompletionTime(instantToBusinessLocal(new Date().toISOString()))
           setVoyageNumber('')
           setConsigneeConfirmation('')
         },
@@ -86,20 +115,47 @@ export function HandlingPage() {
         連絡が必要なときは営業担当者へ伝えてください（通知の仕組みは次のリリースです）。
       </p>
 
-      <form onSubmit={submit} className="space-y-4 rounded border border-gray-200 p-4">
-        <div className="grid gap-4 md:grid-cols-2">
+      {/* **記録できない人も使える入口。** 追跡管理者は「あの貨物はもう積んだか」に
+          答えるためにここへ来る。記録の成否に紐づけると、履歴を一度も見られない */}
+      <section className="space-y-2 rounded border border-gray-200 bg-gray-50 p-4">
+        <h2 className="text-lg font-semibold text-gray-900">この貨物の作業履歴を見る</h2>
+        <div className="flex flex-wrap items-end gap-2">
           <div>
-            <label htmlFor="trackingNumber" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="historyTrackingNumber" className="block text-sm font-medium text-gray-700">
               追跡番号
             </label>
             <input
-              id="trackingNumber"
+              id="historyTrackingNumber"
               value={trackingNumber}
               onChange={(event) => setTrackingNumber(event.target.value)}
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
+              className="mt-1 rounded border border-gray-300 px-3 py-2"
             />
           </div>
+          <button
+            type="button"
+            onClick={() => setViewing(trackingNumber.trim())}
+            className="rounded border border-gray-400 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+          >
+            履歴を見る
+          </button>
+        </div>
+        {historyError !== null && historyError !== undefined && (
+          <p role="alert" className="text-sm text-red-800">
+            {historyError instanceof ApiError
+              ? ((historyError.body as { message?: string } | undefined)?.message
+                ?? '履歴を取得できませんでした')
+              : '履歴を取得できませんでした'}
+          </p>
+        )}
+      </section>
 
+      {isHandler && (
+      <form onSubmit={submit} className="space-y-4 rounded border border-gray-200 p-4">
+        <h2 className="text-lg font-semibold text-gray-900">作業を記録する</h2>
+        <p className="text-sm text-gray-600">
+          上の追跡番号の貨物に記録します。
+        </p>
+        <div className="grid gap-4 md:grid-cols-2">
           <div>
             <label htmlFor="type" className="block text-sm font-medium text-gray-700">
               作業の種別
@@ -192,6 +248,12 @@ export function HandlingPage() {
           )}
         </div>
 
+        {invalid !== null && (
+          <p role="alert" className="rounded bg-red-50 p-3 text-sm text-red-800">
+            {invalid}
+          </p>
+        )}
+
         {register.error !== null && register.error !== undefined && (
           <p role="alert" className="rounded bg-red-50 p-3 text-sm text-red-800">
             {register.error instanceof ApiError
@@ -205,11 +267,14 @@ export function HandlingPage() {
           <div className="space-y-1 rounded bg-green-50 p-3 text-sm text-green-900">
             <p>記録しました。</p>
             {/* 予定外でも記録は拒まない（[ADR-023] 決定 3）。警告は記録したあとに出す */}
+            {/* **気づく手段は次の行動へ繋ぐ。**「担当者に確認」だけでは、港の作業員は
+                誰にどう連絡するのか分からない */}
             {registered.offRoute && (
               <p role="alert" className="text-amber-900">
                 <strong>予定と違う場所での作業です。</strong>
                 {/* 改行を空白と読ませない（日本語は語間を空けない） */}
-                記録は残しました。経路の見直しが必要かどうか、担当者に確認してください。
+                記録は残しました。<strong>追跡管理者</strong>へ連絡してください
+                （経路の見直しが要るかを判断します）。
               </p>
             )}
           </div>
@@ -223,12 +288,13 @@ export function HandlingPage() {
           記録する
         </button>
       </form>
+      )}
 
-      {registered !== null && (
+      {viewing !== null && viewing !== '' && (
         <section className="space-y-2">
-          <h2 className="text-lg font-semibold text-gray-900">
-            この貨物の作業履歴（{registered.bookingId}）
-          </h2>
+          {/* 見出しは追跡番号。この画面の前提（追跡番号が起点）と揃える。
+              作業員は予約番号を知らない */}
+          <h2 className="text-lg font-semibold text-gray-900">作業履歴（{viewing}）</h2>
           <HandlingHistoryTable activities={history} />
         </section>
       )}

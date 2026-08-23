@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  InvalidBusinessDateTimeError,
   businessLocalToInstant,
   businessToday,
   formatBusinessDate,
@@ -35,5 +36,44 @@ describe('業務タイムゾーンでの日時', () => {
 
   it('表示は業務タイムゾーンの日時になる', () => {
     expect(formatBusinessDateTime('2026-10-01T00:00:00Z')).toBe('2026-10-01 09:00')
+  })
+})
+
+/**
+ * 読めない日時で例外を投げるが、**型で区別できるようにする**。
+ *
+ * 素の `RangeError` のままだと、呼び出し側は想定外の不具合と区別できず、
+ * 送信そのものが止まって画面には何も出ない。利用者からは「押しても何も起きない」に見える。
+ */
+describe('読めない日時', () => {
+  it('空文字は、区別できる誤りとして投げる', () => {
+    expect(() => businessLocalToInstant('')).toThrow(InvalidBusinessDateTimeError)
+  })
+
+  it('日時として読めない文字列も同じ', () => {
+    expect(() => businessLocalToInstant('きのう')).toThrow(InvalidBusinessDateTimeError)
+  })
+
+  it('読める日時は、これまでどおり変換する', () => {
+    expect(businessLocalToInstant('2027-09-02T09:00')).toBe('2027-09-02T00:00:00.000Z')
+  })
+})
+
+/**
+ * **`Date` の解析に頼らない。**
+ *
+ * `new Date(':00Z')` は例外にならず **2000 年**として読まれる。空欄のまま送ると
+ * 「2000-01-01 の作業」が記録される——例外より悪い壊れ方である。
+ */
+describe('日時の解析に頼らない', () => {
+  it('空文字を 2000 年として通さない', () => {
+    expect(new Date(':00Z').getFullYear(), '前提が変わった').toBe(2000)
+    expect(() => businessLocalToInstant('')).toThrow(InvalidBusinessDateTimeError)
+  })
+
+  it('存在しない日は断る', () => {
+    expect(() => businessLocalToInstant('2027-02-30T09:00')).toThrow(
+      InvalidBusinessDateTimeError,
+    )
   })
 })
