@@ -160,6 +160,7 @@ nav:
       - ADR-020 経路割り当ての状態遷移: adr/020-itinerary-assignment-transitions.md
       - ADR-021 通知・確定・発行の状態遷移: adr/021-shipper-notification-and-confirmation-transitions.md
       - ADR-022 ドメインイベント契約: adr/022-domain-event-contract.md
+      - ADR-023 荷役作業の記録と妥当性検証: adr/023-handling-activity-validation.md
   - 記事:
       - 概要: article/index.md
       - モノリスアーキテクチャ実装比較:
