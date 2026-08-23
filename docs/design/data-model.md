@@ -224,6 +224,10 @@ package "handling_db\n(Handling Context)" #LightCoral {
     * event_type : VARCHAR(30)
     * event_completion_time : TIMESTAMP
     * location_unlocode : VARCHAR(5) <<FK>>
+      voyage_number : VARCHAR(20)
+    * operator_name : VARCHAR(200)
+      consignee_confirmation : VARCHAR(200)
+    * off_route : BOOLEAN
   }
 
   entity "customs_declaration\n（通関申告）" as customs_declaration {

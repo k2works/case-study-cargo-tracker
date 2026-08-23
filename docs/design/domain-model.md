@@ -980,11 +980,35 @@ TrackingExceptionEvent *-- TrackingLocation
 6. `ResolveExceptionCommand` の実行により TrackingStatus は例外発生前の状態に復帰する。解決後も例外の事実は記録として残り、料金調整の根拠として参照できる
 7. 例外の起票・解決は荷主への通知をトリガーする
 
+#### TrackingStatus の遷移（IT7 で追加）
+
+値の一覧だけでは「どの荷役でどこへ動くか」が読めないため、遷移を明記する。
+判定は `TrackingStatus#afterHandling` 1 つに置き、集約や購読側で書き直さない。
+
+| いまの状態 | 起きたこと | 次の状態 | 誰の手番か |
+|---|---|---|---|
+| NOT_RECEIVED | RECEIVE（受領） | RECEIVED | 荷役作業員。出発港での受領を待っている |
+| RECEIVED | LOAD（積込） | LOADED | 荷役作業員 |
+| LOADED | 出港 | ONBOARD_CARRIER | **荷役の記録では起きない**（US17・IT8 の手動更新） |
+| ONBOARD_CARRIER / LOADED | UNLOAD（荷降し・途中の港） | UNLOADED | 荷役作業員。次の積込を待つ |
+| ONBOARD_CARRIER / LOADED | UNLOAD（荷降し・**目的港**） | AWAITING_CLAIM | 荷受人の引取を待つ |
+| AWAITING_CLAIM | CLAIM（引取） | CLAIMED | 配送完了 |
+
+> **同じ「荷降し」でも行き先が違います。** 途中の港なら次の積込を待ち、目的港なら荷受人の
+> 引取を待ちます。貨物にとっての意味が違うためです。
+
+> **`EXCEPTION` / `UNKNOWN` は荷役では現れません。** 例外の起票は US20（IT8）、`UNKNOWN` は
+> 状態が読めない行のためのもので、新規には選べません。
+
+> **`CLAIMED` は精算の開始条件ですが、IT7 では `CargoDeliveredEvent` を発行しません**
+> （US26・IT12。[ADR-023](../adr/023-handling-activity-validation.md) 決定 5）。
+
 ### コマンド一覧
 
 | コマンド | 実行アクター | 主な処理 |
 |---|---|---|
 | AssignTrackingNumberCommand | Booking Context（イベント駆動） | TrackingActivity を新規作成し TrackingNumber を割り当て |
+| AdvanceTrackingCommand | Handling Context（イベント駆動・IT7） | 荷役の記録を受けて TrackingStatus を進める（US15-4）。**知らない追跡番号では止まらない**——例外にすると後続の荷役も進まなくなる |
 | AddTrackingEventCommand | 追跡管理者 | TrackingActivityEvent を時系列で追加 |
 | RegisterExceptionCommand | 追跡管理者・システム（誤配/税関保留の自動起票） | TrackingExceptionEvent を登録 |
 | ResolveExceptionCommand | 追跡管理者 | 例外を解決し TrackingStatus を復帰 |
@@ -1006,8 +1030,10 @@ package "Aggregates（集約）" {
     -location: Location
     -completionTime: Date
     -voyageNumber: VoyageNumber
+    -operatorName: String
+    -consigneeConfirmation: ConsigneeConfirmation
+    -offRoute: boolean
     +register()
-    +isValidFor(snapshot: CargoSnapshot): boolean
   }
   class CustomsDeclaration <<aggregate root>> {
     -declarationId: String
@@ -1047,6 +1073,7 @@ package "Value Objects（値オブジェクト）" {
     -destination: String
     -itineraryLegs: List<LegSnapshot>
     -routingStatus: String
+    +isOffRoute(type, unLocode): boolean
   }
   class LegSnapshot <<value object>> {
     -loadLocation: String
@@ -1092,11 +1119,14 @@ HandlingActivityHistory ..> CargoBookingId : query by
 | 集約ルート | HandlingActivity | 荷役作業 | 荷役作業の登録と妥当性検証 |
 | 集約ルート | CustomsDeclaration | 通関申告 | 通関申告の状態管理と監査履歴（UC21） |
 | エンティティ（集約内） | CustomsStatusHistory | 通関状態履歴 | 状態変更の日時・変更者・理由の記録 |
-| 値オブジェクト | CargoBookingId | 貨物予約識別子 | Booking Context との関連識別子（論理参照） |
+| 値オブジェクト | CargoBookingId | 貨物予約識別子 | Booking Context との関連識別子（論理参照）。**Tracking Context の `TrackingBookingId` と付け方がそろっていない**（接頭辞が文脈名でない）。そろえるかどうかは型名の変更を伴うため、扱う BC が出そろってから決める（[ADR-023](../adr/023-handling-activity-validation.md) のコンテキスト） |
 | 値オブジェクト | HandlingType | 荷役種別 | RECEIVE / LOAD / UNLOAD / CLAIM |
 | 値オブジェクト | CargoSnapshot | 貨物スナップショット | ACL 経由で取得した貨物情報。妥当性検証に使用 |
 | 値オブジェクト | LegSnapshot | 旅程区間スナップショット | CargoSnapshot 内の区間情報 |
-| 値オブジェクト | VoyageNumber | 航海番号 | Handling Context 固有の航海番号型 |
+| 値オブジェクト | HandlingVoyageNumber | 航海番号 | Handling Context 固有の航海番号型。積込・荷降しでのみ持つ |
+| 値オブジェクト | HandlingTrackingNumber | 追跡番号 | 荷役作業の起点となる入力（US15-1）。**採番も検証もしない** |
+| 値オブジェクト | ConsigneeConfirmation | 荷受人の確認 | 引取のときに、誰から確認を得たか。**通関ガード（US29・IT9）の代替**（[ADR-023](../adr/023-handling-activity-validation.md) 決定 4） |
+| 列挙型 | HandlingType | 荷役種別 | RECEIVE / LOAD / UNLOAD / CLAIM。**種別ごとの要件（航海番号・荷受人の確認・照合する港）を種別自身が持つ**（決定 1） |
 | 列挙型 | CustomsStatus | 通関状態 | PENDING / CLEARED / HELD / REJECTED |
 | Read Model | HandlingActivityHistory | 荷役履歴 | クエリ専用の荷役作業履歴 |
 
@@ -1363,6 +1393,7 @@ package "コンテキスト固有の VoyageNumber 型" {
 |---|---|---|
 | Booking Context | TrackingNumber | 予約に発行した番号。**採番するのはこちら**（DB シーケンス） |
 | Tracking Context | TrackingNumber | 追跡の識別子（集約の業務キー） |
+| Handling Context | HandlingTrackingNumber | 荷役作業の起点となる入力（US15-1。IT7 で追加）。**採番も検証もしない** |
 
 > **同じ番号を指していても共有しません。** こちらは「予約に発行した番号」、向こうは「追跡の識別子」であり、育つ方向が違います。Booking 側は発行の可否（確定済みか・二重発行でないか）を持ち、Tracking 側は照会の入口として振る舞います。
 
@@ -1388,10 +1419,10 @@ package "コンテキスト固有の VoyageNumber 型" {
 | TrackingNumberIssuedEvent | bookingms | trackingms | RabbitMQ | **追跡番号を発行したとき**（US14）に発行し、trackingms が追跡を作る |
 | CargoRoutedEvent | bookingms | trackingms | RabbitMQ | 旅程確定後、経路・旅程情報を追跡コンテキストに同期 |
 | CargoCancelledEvent | bookingms | trackingms・billingms | RabbitMQ | キャンセル確定後、追跡終了とキャンセル料算定をトリガー |
-| HandlingActivityRegisteredEvent | handlingms | trackingms・bookingms | RabbitMQ | 荷役作業完了後、TransportStatus と BookingStatus を同期。予定ルート外の作業場所は誤配検知の入力（US28） |
+| HandlingActivityRegisteredEvent | handlingms | trackingms（**IT7**）・bookingms（US28・**IT10**） | RabbitMQ | 荷役作業完了後、trackingms の `TrackingStatus` を進める（US15-4）。予定ルート外の作業場所（`offRoute`）は誤配検知の入力で、`RoutingStatus` を動かすのは US28（IT10）。**IT7 で購読するのは trackingms だけ**（[ADR-023](../adr/023-handling-activity-validation.md) 決定 6） |
 | CustomsStatusChangedEvent | handlingms | trackingms | RabbitMQ | 通関状態変更。HELD なら例外「税関保留」を自動起票、CLEARED なら通関完了通知（UC21） |
 | TrackingExceptionDetectedEvent | trackingms | bookingms | RabbitMQ | 例外検知後、通知を配信 |
-| CargoDeliveredEvent | trackingms | billingms | RabbitMQ | 配送完了後、精算処理をトリガー |
+| CargoDeliveredEvent | trackingms | billingms | RabbitMQ | 配送完了後、精算処理をトリガー。**IT7 では発行しない**（US16-4 は範囲外。US26・IT12。[ADR-023](../adr/023-handling-activity-validation.md) 決定 5） |
 | InvoiceCreatedEvent | billingms | （通知） | RabbitMQ | 請求書発行後、荷主への通知を配信 |
 
 ### ドメインイベントフロー

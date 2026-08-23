@@ -155,6 +155,10 @@ void 陸揚げ地なしの承認は拒否される() {
   ことの確認にはこちらを使う。一方、**構文の違いを prepare で捕まえられる範囲は限られる**ことも意味する。
   IT3 では `SUBSTRING(x FROM '正規表現')` が prepare を通り**実行時に**落ちた（Flyway の
   マイグレーション実行で判明）。方言差の一部は結局「実際に走らせる」ことでしか見つからない
+- **入口を持つ全サービスに置く。** IT7 まで trackingms と handlingms には無く、置いた途端に
+  `ON CONFLICT DO NOTHING`（H2 が解釈できない）が出た。本番は PostgreSQL なので実害は
+  ローカルの手軽な起動先（`dev:backend`）だけだが、**そこが挿入の瞬間に落ちる**形だった。
+  対象は `settings.gradle` から導き、名簿で管理しない
 
 この検査が見るのは「その DB がその SQL を理解できるか」までである。結果の正しさ（並び順・NULL の扱い・
 文字列比較の照合順序）は検出できないため、業務的な差異は結合テストで確かめる。
@@ -197,10 +201,10 @@ void 通関が完了していない貨物のCLAIMは409を返す() {
 | TrackingNumberIssuedEvent | bookingms | trackingms | イベントペイロードのフィールド・交換機とルーティングキー・**本番の変換器を通した JSON の形**（[ADR-022](../adr/022-domain-event-contract.md)） |
 | CargoRoutedEvent | bookingms | trackingms | イベントペイロードのフィールド |
 | CargoCancelledEvent | bookingms | trackingms, billingms | キャンセル時状態・陸揚げ地を含むペイロード |
-| HandlingActivityRegisteredEvent | handlingms | trackingms, bookingms | 作業場所・種別を含むペイロード（誤配検知の入力） |
+| HandlingActivityRegisteredEvent | handlingms | trackingms（IT7）, bookingms（US28・IT10） | 作業場所・種別・`offRoute` を含むペイロード（誤配検知の入力）。**本番の変換器を通した JSON の形**まで固定する（[ADR-023](../adr/023-handling-activity-validation.md) 決定 5） |
 | CustomsStatusChangedEvent | handlingms | trackingms | 通関状態・理由を含むペイロード |
 | CargoDeliveredEvent | trackingms | billingms | イベントペイロードのフィールド |
-| CargoSnapshot API | bookingms | handlingms | `GET /api/v1/bookings/{id}/snapshot` のレスポンス形式 |
+| CargoSnapshot API | bookingms | handlingms | `GET /api/v1/bookings/by-tracking-number/{trackingNumber}` のレスポンス形式（**追跡番号で引く**。荷役作業員は予約番号を知らない。US15-1・[ADR-023](../adr/023-handling-activity-validation.md) 決定 2）。契約は shared の testFixtures に 1 つ置き、両側が読む |
 
 **ツール**: Spring Cloud Contract
 
