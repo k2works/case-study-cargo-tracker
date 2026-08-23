@@ -30,7 +30,7 @@ public class RecordingTrackingNotifier implements TrackingNotifier {
 
     @Override
     public void statusChanged(TrackingActivity activity) {
-        record(activity, "お荷物の状況が「%s」になりました。"
+        noteForShipper(activity, "お荷物の状況が「%s」になりました。"
                 .formatted(activity.trackingStatus().label()));
     }
 
@@ -47,7 +47,7 @@ public class RecordingTrackingNotifier implements TrackingNotifier {
      */
     @Override
     public void exceptionRaised(TrackingActivity activity) {
-        record(activity, "お荷物に問題が発生しました。詳しくはご依頼元へお問い合わせください。");
+        noteForShipper(activity, "お荷物に問題が発生しました。詳しくはご依頼元へお問い合わせください。");
     }
 
     /**
@@ -59,13 +59,13 @@ public class RecordingTrackingNotifier implements TrackingNotifier {
     @Override
     public void exceptionResolved(TrackingActivity activity) {
         String arrival = activity.estimatedArrival()
-                .map(date -> "新しい到着予定日は %s です。".formatted(date))
+                .map("新しい到着予定日は %s です。"::formatted)
                 .orElse("");
-        record(activity, "お荷物の問題は解決しました。状況は「%s」です。%s"
+        noteForShipper(activity, "お荷物の問題は解決しました。状況は「%s」です。%s"
                 .formatted(activity.trackingStatus().label(), arrival));
     }
 
-    private void record(TrackingActivity activity, String message) {
+    private void noteForShipper(TrackingActivity activity, String message) {
         notices.save(activity.trackingNumber(), new TrackingNotice(clock.instant(), message));
     }
 }

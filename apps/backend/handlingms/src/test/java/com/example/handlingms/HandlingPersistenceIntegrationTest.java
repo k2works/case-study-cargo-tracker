@@ -224,9 +224,11 @@ class HandlingPersistenceIntegrationTest {
     @DisplayName("同じ作業を 2 回記録できない")
     void rejectsRecordingTheSameActivityTwice() {
         registerActivity.register(claimCommand("2026-08-23T06:00:00Z"));
+        // 組み立てをラムダの外に出す。中に置くと、どの呼び出しが投げたのか分からない
+        RegisterHandlingActivityCommand duplicate = claimCommand("2026-08-23T06:00:00Z");
 
         org.assertj.core.api.Assertions
-                .assertThatThrownBy(() -> registerActivity.register(claimCommand("2026-08-23T06:00:00Z")))
+                .assertThatThrownBy(() -> registerActivity.register(duplicate))
                 .as("同じ作業が 2 行入った。履歴からどちらが本物か分からなくなる")
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("すでに記録されています");

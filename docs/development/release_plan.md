@@ -445,7 +445,7 @@ gantt
 | IT5 | 8 | 8 | 100% | [完了](iteration_report-5.md) |
 | IT6 | 9 | 9 | 100% | [完了](iteration_report-6.md) |
 | IT7 | 10 | 10 | 100% | [完了](iteration_report-7.md) |
-| IT8 | 9 | - | - | [計画済み](iteration_plan-8.md) |
+| IT8 | 9 | 9 | 100% | [完了](iteration_report-8.md) |
 | IT9 | 10 | - | - | 未着手 |
 | IT10 | 7 | - | - | 未着手 |
 | IT11 | 9 | - | - | 未着手 |

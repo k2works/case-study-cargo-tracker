@@ -136,7 +136,8 @@ class TrackingExceptionPersistenceIntegrationTest extends TrackingIntegrationTes
     void rejectsASecondExceptionAcrossRequests() {
         manage.raiseException(number(), "DELAY", "遅延しています");
 
-        assertThatThrownBy(() -> manage.raiseException(number(), "DAMAGE", "破損しています"))
+        String target = number();
+        assertThatThrownBy(() -> manage.raiseException(target, "DAMAGE", "破損しています"))
                 .isInstanceOf(IllegalStateException.class);
     }
 

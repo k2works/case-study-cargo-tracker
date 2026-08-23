@@ -25,6 +25,11 @@ class TrackingExceptionFlowTest {
     private static final LocalDate DEADLINE = LocalDate.of(2030, Month.SEPTEMBER, 20);
     private static final Instant NOW = Instant.parse("2027-09-03T00:00:00Z");
 
+    /** 組み立てをラムダの外に出すための補助。中に置くと、どの呼び出しが投げたか分からない。 */
+    private static TrackingActivity raiseDamage(TrackingActivity activity) {
+        return activity.raiseException(ExceptionType.DAMAGE, "破損しています", NOW);
+    }
+
     private static TrackingActivity onboard() {
         return TrackingActivity.start(TrackingNumber.of("TRK-20260823-0001"),
                         TrackingBookingId.of("BKG-2026000001"), TOKYO, LOS_ANGELES, DEADLINE)
@@ -58,8 +63,8 @@ class TrackingExceptionFlowTest {
             TrackingActivity raised = onboard()
                     .raiseException(ExceptionType.DELAY, "遅延しています", NOW);
 
-            assertThatThrownBy(() ->
-                    raised.raiseException(ExceptionType.DAMAGE, "破損しています", NOW))
+            // 組み立てをラムダの外に出す。中に置くと、どの呼び出しが投げたのか分からない
+            assertThatThrownBy(() -> raiseDamage(raised))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("未解決の例外があります");
         }
@@ -82,8 +87,9 @@ class TrackingExceptionFlowTest {
         @Test
         @DisplayName("自動で検知する種別は、集約でも断る")
         void rejectsAutoDetectedTypes() {
+            TrackingActivity subject = onboard();
             assertThatThrownBy(() ->
-                    onboard().raiseException(ExceptionType.MISROUTE, "誤配", NOW))
+                    subject.raiseException(ExceptionType.MISROUTE, "誤配", NOW))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("手では起票できません");
         }
@@ -135,7 +141,8 @@ class TrackingExceptionFlowTest {
         @Test
         @DisplayName("未解決の例外が無ければ、解決できない")
         void rejectsResolvingWithoutAnException() {
-            assertThatThrownBy(() -> onboard().resolveException("直しました", NOW, null))
+            TrackingActivity subject = onboard();
+            assertThatThrownBy(() -> subject.resolveException("直しました", NOW, null))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("未解決の例外がありません");
         }
@@ -205,8 +212,9 @@ class TrackingExceptionFlowTest {
         @Test
         @DisplayName("戻る向きには更新できない")
         void doesNotRegressOnManualUpdate() {
+            TrackingActivity subject = onboard();
             assertThatThrownBy(() ->
-                    onboard().updateManually(TrackingStatus.NOT_RECEIVED, TOKYO, NOW))
+                    subject.updateManually(TrackingStatus.NOT_RECEIVED, TOKYO, NOW))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("前の状態には戻せません");
         }
@@ -215,7 +223,8 @@ class TrackingExceptionFlowTest {
         @Test
         @DisplayName("同じ状態への更新も断る")
         void rejectsUpdatingToTheSameStatus() {
-            assertThatThrownBy(() -> onboard().updateManually(TrackingStatus.LOADED, TOKYO, NOW))
+            TrackingActivity subject = onboard();
+            assertThatThrownBy(() -> subject.updateManually(TrackingStatus.LOADED, TOKYO, NOW))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
@@ -227,9 +236,10 @@ class TrackingExceptionFlowTest {
         @Test
         @DisplayName("例外・不明へは手でも動かせない")
         void rejectsOffPathStatuses() {
-            assertThatThrownBy(() -> onboard().updateManually(TrackingStatus.EXCEPTION, TOKYO, NOW))
+            TrackingActivity subject = onboard();
+            assertThatThrownBy(() -> subject.updateManually(TrackingStatus.EXCEPTION, TOKYO, NOW))
                     .isInstanceOf(IllegalArgumentException.class);
-            assertThatThrownBy(() -> onboard().updateManually(TrackingStatus.UNKNOWN, TOKYO, NOW))
+            assertThatThrownBy(() -> subject.updateManually(TrackingStatus.UNKNOWN, TOKYO, NOW))
                     .isInstanceOf(IllegalArgumentException.class);
         }
     }

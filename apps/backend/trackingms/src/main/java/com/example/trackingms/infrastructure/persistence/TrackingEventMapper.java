@@ -5,7 +5,6 @@ import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Result;
-import org.apache.ibatis.annotations.Results;
 import org.apache.ibatis.annotations.Select;
 
 /** 追跡の出来事（{@code tracking_handling_event}）。 */
@@ -41,13 +40,11 @@ public interface TrackingEventMapper {
              ORDER BY e.occurred_at, e.id
              LIMIT #{limit}
             """)
-    @Results({
-        @Result(column = "tracking_number", property = "trackingNumber"),
-        @Result(column = "tracking_status", property = "trackingStatus"),
-        @Result(column = "location_unlocode", property = "locationUnlocode"),
-        @Result(column = "location_name", property = "locationName"),
-        @Result(column = "occurred_at", property = "occurredAt")
-    })
+    @Result(column = "tracking_number", property = "trackingNumber")
+    @Result(column = "tracking_status", property = "trackingStatus")
+    @Result(column = "location_unlocode", property = "locationUnlocode")
+    @Result(column = "location_name", property = "locationName")
+    @Result(column = "occurred_at", property = "occurredAt")
     List<TrackingEventRecord> findByTrackingNumber(@Param("trackingNumber") String trackingNumber,
             @Param("limit") int limit);
 }

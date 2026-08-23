@@ -34,6 +34,7 @@ public class TrackingConfig {
      * <p><strong>1 本だけである。</strong>接頭辞で分けているので、ここに足すことは
      * 「新しい公開経路を作る」と同義になる。足すときは決定 5 を読み直す。
      */
+    @SuppressWarnings("java:S1075") // 業務の経路であり、環境で変わる URI ではない
     public static final String PUBLIC_PATH_PREFIX = "/api/v1/public/";
 
     /**

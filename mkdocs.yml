@@ -112,6 +112,8 @@ nav:
       - イテレーション 7 ふりかえり: development/retrospective-7.md
       - イテレーション 7 完了報告書: development/iteration_report-7.md
       - イテレーション 8 計画: development/iteration_plan-8.md
+      - イテレーション 8 ふりかえり: development/retrospective-8.md
+      - イテレーション 8 完了報告書: development/iteration_report-8.md
   - 運用:
       - 概要: operation/index.md
       - アプリケーション開発環境セットアップ手順書: operation/アプリケーション開発環境セットアップ手順書.md
@@ -127,6 +129,7 @@ nav:
       - イテレーション 5 開発成果物レビュー: review/イテレーション5_review_20260822.md
       - イテレーション 6 開発成果物レビュー: review/イテレーション6_review_20260822.md
       - イテレーション 7 開発成果物レビュー: review/イテレーション7_review_20260823.md
+      - イテレーション 8 開発成果物レビュー: review/イテレーション8_review_20260823.md
   - ユーザーマニュアル:
       - 概要: manual/index.md
       - はじめに: manual/00-はじめに.md

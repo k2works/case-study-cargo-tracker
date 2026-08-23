@@ -33,7 +33,8 @@ public class PublicLookupThrottleFilter extends HttpFilter {
 
     private final String pathPrefix;
     private final int limitPerWindow;
-    private final Clock clock;
+    // HttpFilter は Serializable を継承するが、この実装を直列化する経路は無い
+    private final transient Clock clock;
 
     /**
      * IP ごとの窓と件数。
@@ -45,7 +46,7 @@ public class PublicLookupThrottleFilter extends HttpFilter {
      * <p>プロセス内に持つ。<strong>台数を増やすと実効の上限も台数倍になる</strong>
      * ——1 台で足りない規模になったら共有先へ移す（[ADR-024] 決定 6 の備考）。
      */
-    private final Map<String, Window> windows = new ConcurrentHashMap<>();
+    private final transient Map<String, Window> windows = new ConcurrentHashMap<>();
 
     /**
      * 覚えておく呼び出し元の上限。
@@ -74,8 +75,8 @@ public class PublicLookupThrottleFilter extends HttpFilter {
         if (exceedsLimit(clientIp)) {
             response.setStatus(429);
             response.setContentType("application/json;charset=UTF-8");
-            response.getWriter().write("""
-                    {"message":"照会が多すぎます。しばらくしてからお試しください"}""");
+            response.getWriter()
+                    .write("{\"message\":\"照会が多すぎます。しばらくしてからお試しください\"}");
             return;
         }
         chain.doFilter(request, response);

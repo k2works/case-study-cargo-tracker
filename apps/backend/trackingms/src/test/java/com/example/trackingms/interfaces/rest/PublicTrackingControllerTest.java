@@ -60,10 +60,16 @@ class PublicTrackingControllerTest {
             return new TrackingLookupUseCase(activities, logger);
         }
 
-        /** 表示の暦は業務のタイムゾーン（[ADR-010]）。本番と同じ設定で確かめる。 */
+        /**
+         * 表示の暦は業務のタイムゾーン（[ADR-010]）。
+         *
+         * <p><strong>止まった時計を使う。</strong>検査で「いま」を読むと、実行した時刻に
+         * よって結果が変わる。ここで要るのは暦であって現在時刻ではない。
+         */
         @org.springframework.context.annotation.Bean
         java.time.Clock businessClock() {
-            return java.time.Clock.system(java.time.ZoneId.of("Asia/Tokyo"));
+            return java.time.Clock.fixed(java.time.Instant.parse("2026-08-23T00:00:00Z"),
+                    java.time.ZoneId.of("Asia/Tokyo"));
         }
     }
 
@@ -185,9 +191,11 @@ class PublicTrackingControllerTest {
                 .andExpect(jsonPath("$.urgent").value(true))
                 .andReturn().getResponse().getContentAsString();
 
-        assertThat(body).as("予約番号が荷主に見えている").doesNotContain("BKG-");
-        assertThat(body).as("例外の詳細が荷主に見えている").doesNotContain("積替港");
-        assertThat(body).as("荷役の種別が荷主に見えている").doesNotContain("HANDLING");
+        assertThat(body)
+                .as("予約番号・例外の詳細・荷役の種別が荷主に見えている")
+                .doesNotContain("BKG-")
+                .doesNotContain("積替港")
+                .doesNotContain("HANDLING");
     }
 
     /** [ADR-024] 決定 9。お知らせは返す——**メールは送っていない**。 */

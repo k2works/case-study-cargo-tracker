@@ -52,10 +52,16 @@ class TrackingManagementControllerTest {
 
     @org.springframework.boot.test.context.TestConfiguration
     static class ClockConfig {
-        /** 表示の暦は業務のタイムゾーン（[ADR-010]）。本番と同じ設定で確かめる。 */
+        /**
+         * 表示の暦は業務のタイムゾーン（[ADR-010]）。
+         *
+         * <p><strong>止まった時計を使う。</strong>検査で「いま」を読むと、実行した時刻に
+         * よって結果が変わる。ここで要るのは暦であって現在時刻ではない。
+         */
         @org.springframework.context.annotation.Bean
         java.time.Clock businessClock() {
-            return java.time.Clock.system(java.time.ZoneId.of("Asia/Tokyo"));
+            return java.time.Clock.fixed(java.time.Instant.parse("2026-08-23T00:00:00Z"),
+                    java.time.ZoneId.of("Asia/Tokyo"));
         }
     }
 
