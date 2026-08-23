@@ -21,12 +21,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
- * 貨物予約が実際の DB で成立することを確認する。
- *
- * <p>採番・地点の結合・危険物と冷凍の保存は、いずれも DB の振る舞いに依存する。
- * ユニットテストのスタブが緑でも、ここが噛み合わなければ 1 件も登録できない。
- */
-/**
  * 予約が実際の DB で成立する（受付・採番・地点・特殊貨物・一覧）。
  */
 @DisplayName("貨物予約の永続化")
