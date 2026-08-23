@@ -3,6 +3,10 @@ package com.example.trackingms.application.internal;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.example.shared.domain.model.Location;
 import com.example.trackingms.application.port.TrackingActivityRepository;
 import com.example.trackingms.domain.model.TrackingActivity;
@@ -11,11 +15,13 @@ import com.example.trackingms.domain.model.TrackingNumber;
 import com.example.trackingms.domain.model.TrackingStatus;
 import java.time.LocalDate;
 import java.time.Month;
+import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 
 /**
  * 荷役の記録に応じて追跡を進める（US15-4・[ADR-023] 決定 5）。
@@ -89,6 +95,48 @@ class AdvanceTrackingUseCaseTest {
         advanceTracking.advance(NUMBER, "CUSTOMS_INSPECTION", "JPTYO");
 
         assertThat(written).isEmpty();
+    }
+
+    /**
+     * <strong>例外にしないことは、記録しないことではない。</strong>
+     *
+     * <p>知らない種別と、進まない種別は、どちらも「書き込まない」に落ちる。そこだけを
+     * 見ていると、相手が新しい種別を送り始めたことに誰も気づかない。契約の食い違いは
+     * 残す——ただしデッドレターへは回さない（回すと種別 1 つで後続の荷役が止まる）。
+     */
+    @Test
+    @DisplayName("知らない種別は、進まない種別と区別して記録される")
+    void recordsUnknownHandlingType() {
+        List<String> recorded = capturedWarnings();
+
+        advanceTracking.advance(NUMBER, "CUSTOMS_INSPECTION", "JPTYO");
+        advanceTracking.advance(NUMBER, "RECEIVE", "JPTYO");
+        advanceTracking.advance(NUMBER, "RECEIVE", "JPTYO");
+
+        assertThat(recorded)
+                .as("知らない種別が記録されないか、進まない種別まで記録された")
+                .hasSize(1);
+        assertThat(recorded.get(0)).contains("CUSTOMS_INSPECTION").contains(NUMBER);
+    }
+
+    /** 使用中のログ実装から警告を拾う。記録されたことを、実際に残る場所で確かめる。 */
+    private static List<String> capturedWarnings() {
+        Logger logger = (Logger) LoggerFactory.getLogger(AdvanceTrackingUseCase.class);
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+        return new AbstractList<>() {
+            @Override
+            public String get(int index) {
+                return appender.list.get(index).getFormattedMessage();
+            }
+
+            @Override
+            public int size() {
+                return (int) appender.list.stream()
+                        .filter(event -> event.getLevel() == Level.WARN).count();
+            }
+        };
     }
 
     /**

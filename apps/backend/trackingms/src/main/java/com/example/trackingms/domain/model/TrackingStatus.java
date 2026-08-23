@@ -75,7 +75,24 @@ public enum TrackingStatus {
      * 荷役では現れないため、この判定の外にある（それらへ動かすのは US20・IT8）。
      */
     public boolean canAdvanceTo(TrackingStatus next) {
+        if (!isOnProgressPath() || !next.isOnProgressPath()) {
+            return false;
+        }
         return PROGRESS.indexOf(next) > PROGRESS.indexOf(this);
+    }
+
+    /**
+     * 貨物が進む道の上にいるか。
+     *
+     * <p>{@link #EXCEPTION} と {@link #UNKNOWN} は道の外にある。
+     * <strong>並び順を持たない値を並び順で比べない</strong>——
+     * {@code indexOf} が -1 を返すため、道の外にいる貨物からはどこへでも
+     * 「進める」ことになり、古い荷役の再配送で巻き戻る。US20 がこの 2 値へ
+     * 到達させるので、荷役の判定からは明示的に外す。例外への出入りは専用の
+     * 操作で行う。
+     */
+    public boolean isOnProgressPath() {
+        return PROGRESS.contains(this);
     }
 
     /**
@@ -86,6 +103,18 @@ public enum TrackingStatus {
      */
     private static final List<TrackingStatus> PROGRESS = List.of(
             NOT_RECEIVED, RECEIVED, LOADED, ONBOARD_CARRIER, UNLOADED, AWAITING_CLAIM, CLAIMED);
+
+    /**
+     * 荷役の種別として知っているものか（[ADR-023] の語彙）。
+     *
+     * <p><strong>知らない種別と、進まない種別を混ぜない。</strong>
+     * {@link #afterHandling} はどちらも空を返すため、そこだけを見ていると
+     * 「相手が新しい種別を送り始めた」を、設計どおりの無変化と見分けられない。
+     * 語彙をここに置き、購読側はまずこれを尋ねてから進む先を導く。
+     */
+    public static boolean isKnownHandlingType(String handlingType) {
+        return afterHandling(handlingType, false).isPresent();
+    }
 
     /**
      * 荷役の種別から、進む先を導く（[ADR-023] 決定 5・US15-4）。
@@ -101,6 +130,9 @@ public enum TrackingStatus {
      */
     public static Optional<TrackingStatus> afterHandling(String handlingType,
             boolean atDestination) {
+        if (handlingType == null) {
+            return Optional.empty();
+        }
         return switch (handlingType) {
             case "RECEIVE" -> Optional.of(RECEIVED);
             case "LOAD" -> Optional.of(LOADED);

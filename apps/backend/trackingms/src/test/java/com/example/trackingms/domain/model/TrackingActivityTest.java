@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.example.shared.domain.model.Location;
 import java.time.LocalDate;
 import java.time.Month;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -167,6 +168,55 @@ class TrackingActivityTest {
         @DisplayName("知らない種別では進む先を決めない")
         void doesNotGuessForUnknownHandling() {
             assertThat(TrackingStatus.afterHandling("CUSTOMS_INSPECTION", false)).isEmpty();
+        }
+
+        /**
+         * <strong>知らない種別と、進まない種別を混ぜない。</strong>
+         *
+         * <p>どちらも「何も起きない」に落ちると、契約の食い違い（相手が新しい種別を
+         * 送り始めた）が、設計どおりの無変化と見分けられなくなる。語彙は列挙が持つ。
+         */
+        @Test
+        @DisplayName("荷役の種別の語彙を列挙が持つ")
+        void ownsTheHandlingTypeVocabulary() {
+            assertThat(TrackingStatus.isKnownHandlingType("RECEIVE")).isTrue();
+            assertThat(TrackingStatus.isKnownHandlingType("LOAD")).isTrue();
+            assertThat(TrackingStatus.isKnownHandlingType("UNLOAD")).isTrue();
+            assertThat(TrackingStatus.isKnownHandlingType("CLAIM")).isTrue();
+
+            assertThat(TrackingStatus.isKnownHandlingType("CUSTOMS_INSPECTION")).isFalse();
+            assertThat(TrackingStatus.isKnownHandlingType(null)).isFalse();
+        }
+
+        /**
+         * <strong>進行の道の外にある値は、どちらの向きにも進めない。</strong>
+         *
+         * <p>{@link TrackingStatus#EXCEPTION} と {@link TrackingStatus#UNKNOWN} は
+         * 並び順を持たない。並び順で判定していると、この 2 値にいる貨物からは
+         * <strong>どこへでも「進める」ことになり、古い荷役の再配送で巻き戻る</strong>。
+         * US20 がこの 2 値へ到達させるため、先に閉じる。
+         */
+        @Test
+        @DisplayName("例外・不明の状態からは、荷役では動かない")
+        void neverAdvancesFromOffPathStatuses() {
+            for (TrackingStatus offPath : List.of(TrackingStatus.EXCEPTION,
+                    TrackingStatus.UNKNOWN)) {
+                for (TrackingStatus next : TrackingStatus.values()) {
+                    assertThat(offPath.canAdvanceTo(next))
+                            .as("%s から %s へ荷役で動いた", offPath, next)
+                            .isFalse();
+                }
+            }
+        }
+
+        /** 道の外の値へも、荷役では動かない。例外の起票は US20 の専用の操作で行う。 */
+        @Test
+        @DisplayName("荷役では例外・不明へ動かない")
+        void neverAdvancesToOffPathStatuses() {
+            for (TrackingStatus current : TrackingStatus.values()) {
+                assertThat(current.canAdvanceTo(TrackingStatus.EXCEPTION)).isFalse();
+                assertThat(current.canAdvanceTo(TrackingStatus.UNKNOWN)).isFalse();
+            }
         }
     }
 
