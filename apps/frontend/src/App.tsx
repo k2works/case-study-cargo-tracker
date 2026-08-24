@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { RequireAuth } from './components/require-auth'
 import { AppLayout } from './layouts/app-layout'
+import { CustomsPage } from './pages/customs-page'
 import { DashboardPage } from './pages/dashboard-page'
 import { ForbiddenPage } from './pages/forbidden-page'
 import { LoginPage } from './pages/login-page'
@@ -112,6 +113,19 @@ export default function App() {
         }
       >
         <Route path="/tracking/manage/exceptions" element={<TrackingExceptionsPage />} />
+      </Route>
+
+      {/* 通関管理は荷役作業員（申告の登録）と追跡管理者（状態の更新）の両方が使う。
+          画面の中で操作を出し分ける——荷役作業員に「状態を更新する」を見せて 403 に
+          しない（[ADR-025] 決定 6） */}
+      <Route
+        element={
+          <RequireAuth allowedRoles={['ROLE_HANDLER', 'ROLE_TRACKER']}>
+            <AppLayout />
+          </RequireAuth>
+        }
+      >
+        <Route path="/customs" element={<CustomsPage />} />
       </Route>
 
       {/* 航海スケジュールの管理は経路設計者の業務。営業に開くと、営業が

@@ -93,7 +93,12 @@ export const NAVIGATION: NavigationItem[] = [
   },
   {
     label: "通関管理",
+    // 申告の登録は荷役作業員、状態の更新は追跡管理者（[ADR-025] 決定 6）。
+    // 一覧は両方が読む——荷役作業員は自分が出した申告の行方を追えないと、
+    // 引取の作業をいつ始められるか分からない
     to: "/customs",
+    // **一覧だけでは業務が回らない。**申告の登録（/customs/new）と状態の更新
+    // （/customs/:declarationId）が揃うまで、使えると宣言しない
     roles: ["ROLE_HANDLER", "ROLE_TRACKER"],
     available: false,
   },
