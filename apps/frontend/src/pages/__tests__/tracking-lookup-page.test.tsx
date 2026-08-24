@@ -2,7 +2,13 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { handlingActivities, handlingHandlers } from '../../mocks/handlers/handling'
-import { resetTrackings, trackingHandlers, trackings } from '../../mocks/handlers/tracking'
+import {
+  forceLookupThrottle,
+  resetLookupThrottle,
+  resetTrackings,
+  trackingHandlers,
+  trackings,
+} from '../../mocks/handlers/tracking'
 import { server } from '../../test/msw/server'
 import { renderWithProviders } from '../../test/render'
 import { TrackingLookupPage } from '../tracking-lookup-page'
@@ -17,6 +23,8 @@ describe('追跡情報の照会（US18）', () => {
   beforeEach(() => {
     handlingActivities.length = 0
     resetTrackings()
+    // 上限の窓はテストをまたいで残る。開け直さないと、あとのテストが 429 を踏む
+    resetLookupThrottle()
     // ブラウザ用モックと同じハンドラを使う。テスト用に別のものを組み立てると、
     // 本物との読み比べ（IT5 Try 4）の対象が 1 つ増える
     server.use(...handlingHandlers, ...trackingHandlers)
@@ -37,11 +45,36 @@ describe('追跡情報の照会（US18）', () => {
     expect(screen.getByText('2027-09-15')).toBeInTheDocument()
   })
 
-  /** US18-4。**行き止まりにしない**——同じ画面で打ち直せる。 */
-  it('存在しない追跡番号は理由を出し、その場で打ち直せる', async () => {
+  /**
+   * 上限に当たったときに何が見えるか（[ADR-024] 決定 6）。
+   *
+   * **本物にあってモックに無い応答は、画面が一度も通らない経路になる。** 429 を
+   * 「ただいま照会できません」と出すと、荷主は障害だと受け取って何度も押し、
+   * 状況を悪くする。何が起きたのかを伝える。
+   */
+  it('照会が多すぎるときは、待てばよいと分かる文言を出す', async () => {
+    forceLookupThrottle()
+    renderPage('TRK-20260823-0001')
+
+    expect(await screen.findByText(/照会が多すぎます/)).toBeInTheDocument()
+  })
+
+  /**
+   * US18-4。**行き止まりにしない**——同じ画面で打ち直せる。
+   *
+   * 文言は**サーバが返したものをそのまま出す**。画面が自分の文を持つと、
+   * サーバ・モック・画面で 3 つの写しができ、案内を足してもどれか 1 つが
+   * 古いまま残る（IT9 返済枠 0.3 で実際にそうなっていた）。
+   *
+   * 番号の形まで確かめるのは、**層のどこを潰しても赤になる 1 本**にするため。
+   * サーバの文言・モックの文言・画面の表示のどれを削っても、これが落ちる。
+   */
+  it('存在しない追跡番号は、サーバが返した案内をそのまま出す', async () => {
     renderPage('TRK-20260823-9999')
 
     expect(await screen.findByText(/追跡番号が見つかりません/)).toBeInTheDocument()
+    expect(screen.getByText(/TRK- で始まります/)).toBeInTheDocument()
+    expect(screen.getByText(/予約番号 BKG- では引けません/)).toBeInTheDocument()
     expect(screen.getByLabelText('追跡番号')).toBeEnabled()
   })
 

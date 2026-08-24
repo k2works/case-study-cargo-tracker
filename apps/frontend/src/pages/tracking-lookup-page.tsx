@@ -28,6 +28,12 @@ export function TrackingLookupPage() {
     navigate(`/tracking/${encodeURIComponent(trimmed)}`);
   }
 
+  /**
+   * 見つからない案内は<strong>サーバの文言をそのまま出す</strong>。
+   *
+   * 画面が同じ文を持つと、サーバ・モック・画面で 3 つの写しができ、番号の形を
+   * 案内に足しても画面だけが古いまま残る（実際にそうなっていた。IT9 返済枠 0.3）。
+   */
   const notFound = error instanceof ApiError && error.status === 404;
 
   return (
@@ -64,13 +70,23 @@ export function TrackingLookupPage() {
 
       {notFound && (
         <p role="alert" className="rounded bg-red-50 p-3 text-sm text-red-800">
-          追跡番号が見つかりません。番号をお確かめのうえ、もう一度入力してください。
+          {error.message}
         </p>
       )}
 
       {error !== null && error !== undefined && !notFound && (
         <p role="alert" className="rounded bg-red-50 p-3 text-sm text-red-800">
-          ただいま照会できません。しばらくしてからお試しください。
+          {/*
+            サーバが理由を返しているならそれを出す。上限に当たったとき
+            （429「照会が多すぎます」）に「ただいま照会できません」と出すと、
+            荷主は障害だと受け取って何度も押し、状況を悪くする。
+
+            出すのは 429 のときだけにする。500 の本文には利用者に意味の無い
+            文字列が入りうるため、それを画面に流さない。
+          */}
+          {error instanceof ApiError && error.status === 429
+            ? error.message
+            : "ただいま照会できません。しばらくしてからお試しください。"}
         </p>
       )}
 

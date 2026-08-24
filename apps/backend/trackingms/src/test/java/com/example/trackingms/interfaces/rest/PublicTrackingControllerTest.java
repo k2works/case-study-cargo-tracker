@@ -145,6 +145,30 @@ class PublicTrackingControllerTest {
      *
      * <p>形式の誤りを別の答えにすると、番号の形を総当たりの手がかりとして教えることになる。
      */
+    /**
+     * <strong>本文が読める形で返る</strong>（IT9 返済枠 0.3・0.14）。
+     *
+     * <p>Spring の既定は {@code server.error.include-message=never} であり、
+     * {@code ResponseStatusException} に添えた文言は<strong>本文から落ちる</strong>。
+     * 画面は本文の {@code message} を読むため、丁寧に書いた案内は誰にも届いていなかった。
+     * モックだけが文言を返していたので、開発中は届いているように見えていた。
+     *
+     * <p>番号の形も添える。打ち間違いの次に多いのが、予約番号（{@code BKG-}）で
+     * 引こうとする誤りである。
+     */
+    @Test
+    @DisplayName("見つからないとき、何を直せばよいかが本文で返る")
+    void tellsWhatToFixInTheBody() throws Exception {
+        when(activities.findByTrackingNumber(any())).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/api/v1/public/tracking/TRK-20260823-9999"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value(
+                        "追跡番号が見つかりません。追跡番号は TRK- で始まります"
+                                + "（予約番号 BKG- では引けません）。番号をお確かめのうえ、"
+                                + "もう一度入力してください"));
+    }
+
     @Test
     @DisplayName("形式が違う番号も 404 で返す")
     void doesNotRevealTheNumberFormat() throws Exception {

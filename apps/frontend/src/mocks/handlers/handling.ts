@@ -142,6 +142,21 @@ export const handlingHandlers = [
       return HttpResponse.json({ message: '荷受人の確認は必須です' }, { status: 400 })
     }
 
+    // 作業日時（本物の `HandlingActivityController#parseInstant` の写し）。
+    // **本物にある検証がモックに無いと、画面のフォームは何を送っても通る。**
+    // 実際、日時が空でも不正な形でもモックは 201 を返していた（IT9 返済枠 0.3）。
+    const completionTime = body.completionTime
+    if (completionTime === null || completionTime === undefined || completionTime.trim() === '') {
+      return HttpResponse.json({ message: '作業日時を指定してください' }, { status: 400 })
+    }
+    // 入力値そのものは返さない（IT2 の決定）。何の項目が誤っているかだけを伝える
+    if (Number.isNaN(Date.parse(completionTime)) || !completionTime.includes('T')) {
+      return HttpResponse.json(
+        { message: '作業日時は ISO 8601（2026-08-23T09:00:00Z）の形式で指定してください' },
+        { status: 400 },
+      )
+    }
+
     const { LOCATIONS } = await import('../data')
     const location = LOCATIONS.find(
       (candidate) => candidate.unLocode === body.locationUnLocode,
@@ -160,7 +175,7 @@ export const handlingHandlers = [
       type: type.type,
       locationUnLocode: location.unLocode,
       locationName: location.name,
-      completionTime: body.completionTime as string,
+      completionTime,
       operatorName: 'handler01',
       voyageNumber: body.voyageNumber ?? null,
       consigneeConfirmation: body.consigneeConfirmation ?? null,

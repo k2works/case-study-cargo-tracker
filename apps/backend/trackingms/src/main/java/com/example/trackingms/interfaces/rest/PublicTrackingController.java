@@ -5,11 +5,12 @@ import com.example.trackingms.application.port.TrackingNoticeRepository;
 import com.example.trackingms.domain.model.TrackingActivity;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 
 /**
  * 公開の追跡照会（US18・[ADR-024] 決定 5・6・7）。
@@ -89,10 +90,46 @@ public class PublicTrackingController {
     /**
      * 見つからない（US18-4）。
      *
-     * <p><strong>何を直せばよいかを伝える。</strong>打ち間違いが最も多い。
+     * <p><strong>何を直せばよいかを伝える。</strong>打ち間違いが最も多く、その次が
+     * 予約番号（{@code BKG-}）で引こうとする誤りである。番号の形を添える。
+     *
+     * <p><strong>形式が違っても同じ答えを返す</strong>（[ADR-024] 決定 6）。この文言は
+     * 「その番号は存在しない」ではなく「引けなかった」を伝えるものであり、
+     * 実在するかどうかを区別して教えてはいない。
      */
-    private static ResponseStatusException notFound() {
-        return new ResponseStatusException(HttpStatus.NOT_FOUND,
-                "追跡番号が見つかりません。番号をお確かめのうえ、もう一度入力してください");
+    static final String NOT_FOUND_MESSAGE =
+            "追跡番号が見つかりません。追跡番号は TRK- で始まります"
+                    + "（予約番号 BKG- では引けません）。番号をお確かめのうえ、"
+                    + "もう一度入力してください";
+
+    private static TrackingNotFoundException notFound() {
+        return new TrackingNotFoundException();
+    }
+
+    /**
+     * 本文を返すための例外。
+     *
+     * <p><strong>{@code ResponseStatusException} では本文に文言が乗らない。</strong>
+     * Spring の既定は {@code server.error.include-message=never} であり、添えた理由は
+     * 落ちる。画面は本文の {@code message} を読むため、丁寧に書いた案内が誰にも
+     * 届かないまま、モックだけが文言を返していた（IT9 返済枠 0.3）。
+     */
+    static class TrackingNotFoundException extends RuntimeException {
+
+        private static final long serialVersionUID = 1L;
+
+        TrackingNotFoundException() {
+            super(NOT_FOUND_MESSAGE);
+        }
+    }
+
+    /** 見つからないときの本文。画面はこの {@code message} をそのまま出す。 */
+    @ExceptionHandler(TrackingNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNotFound(TrackingNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ErrorResponse(e.getMessage()));
+    }
+
+    /** 画面が読む形。他サービスの {@code ErrorResponse} と同じ形にそろえる。 */
+    public record ErrorResponse(String message) {
     }
 }

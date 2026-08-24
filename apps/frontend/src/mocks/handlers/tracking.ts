@@ -283,14 +283,64 @@ function notice(tracking: MockTracking, message: string) {
   tracking.notices.push({ noticedAt: new Date().toISOString(), message });
 }
 
+/**
+ * 見つからないときの文言。**本物と同じ文にする**。
+ *
+ * モックが本物より甘い（違う本文を返す）と、画面は開発中だけ正しく見える。
+ * 実際、本物は Spring の既定で本文から文言が落ちており、モックだけが案内を
+ * 返していた（IT9 返済枠 0.3）。文言は `PublicTrackingController.NOT_FOUND_MESSAGE`。
+ */
+const NOT_FOUND_MESSAGE =
+  "追跡番号が見つかりません。追跡番号は TRK- で始まります（予約番号 BKG- では引けません）。番号をお確かめのうえ、もう一度入力してください";
+
+/**
+ * 公開照会の上限（本物の `PublicLookupThrottleFilter` の写し）。
+ *
+ * **本物にあってモックに無い応答は、画面が一度も通らない経路になる。** 429 が無いと、
+ * 上限に当たった荷主に何が見えるかを誰も確かめないまま出すことになる（IT9 返済枠 0.3）。
+ *
+ * 窓と上限は本物と同じ（1 分・30 回。`app.public-lookup.limit-per-minute`）。
+ * 本物は IP ごとに数えるが、ブラウザからは自分の IP しか無いので 1 つの窓で数える。
+ */
+const LOOKUP_WINDOW_MS = 60_000;
+const LOOKUP_LIMIT_PER_WINDOW = 30;
+let lookupWindowStartedAt = 0;
+let lookupCount = 0;
+
+/** 上限を超えたか。超えたときだけ true。 */
+function exceedsLookupLimit(now: number): boolean {
+  if (now - lookupWindowStartedAt >= LOOKUP_WINDOW_MS) {
+    lookupWindowStartedAt = now;
+    lookupCount = 0;
+  }
+  lookupCount += 1;
+  return lookupCount > LOOKUP_LIMIT_PER_WINDOW;
+}
+
+/** テストが窓を開け直せるようにする。本物では時計が進むのを待つ。 */
+export function resetLookupThrottle() {
+  lookupWindowStartedAt = 0;
+  lookupCount = 0;
+}
+
+/** 上限に当たった状態を作る。本物では同じ IP から短時間に叩くと起きる。 */
+export function forceLookupThrottle() {
+  lookupWindowStartedAt = Date.now();
+  lookupCount = LOOKUP_LIMIT_PER_WINDOW;
+}
+
 export const trackingHandlers = [
   http.get(API_PATHS.publicTracking(":trackingNumber"), ({ params }) => {
+    // 上限は見つかるかどうかより先に効く。見つからない照会こそ総当たりの本体である
+    if (exceedsLookupLimit(Date.now())) {
+      return HttpResponse.json(
+        { message: "照会が多すぎます。しばらくしてからお試しください" },
+        { status: 429 },
+      );
+    }
     const tracking = find(String(params.trackingNumber));
     if (tracking === undefined) {
-      return HttpResponse.json(
-        { message: "追跡番号が見つかりません" },
-        { status: 404 },
-      );
+      return HttpResponse.json({ message: NOT_FOUND_MESSAGE }, { status: 404 });
     }
     return HttpResponse.json(publicView(tracking));
   }),
