@@ -30,6 +30,6 @@
 | [ADR-022](022-domain-event-contract.md) | 追跡番号の発行でイベントを出し、受け取れなかったものはデッドレターへ送る | 承認済み | 2026-08-22 |
 | [ADR-023](023-handling-activity-validation.md) | 予定外の荷役は拒まず記録に残し、引取は荷受人の確認を必須にする | 承認済み | 2026-08-23 |
 | [ADR-024](024-tracking-manual-update-and-exceptions.md) | 手動更新も進む向きだけに限り、公開照会は返す項目を絞って照会を記録する | 承認済み | 2026-08-23 |
-| [ADR-025](025-customs-declaration-and-cancellation-approval.md) | bookingms は荷役のイベントで輸送中を知り、公開画面の緊急は載せ続けて言葉を案内に変える | 承認済み（決定 1・2。決定 3〜9 は未決） | 2026-08-24 |
+| [ADR-025](025-customs-declaration-and-cancellation-approval.md) | bookingms は荷役のイベントで輸送中を知り、通関は未決着を高々 1 件に保って引取を止める | 承認済み | 2026-08-24 |
 
 ADR の作成には `creating-adr` スキルを使用してください。

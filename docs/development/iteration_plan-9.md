@@ -468,7 +468,7 @@ Day 1-3 に固めて置く。IT7・IT8 と同じ形。詳細は[上の表](#引�
 
 | # | 内容 | 見積 | 完了条件 |
 | :--- | :--- | :--- | :--- |
-| 1.1 | **[ADR-025](../adr/025-customs-declaration-and-cancellation-approval.md) の残る 7 件（B・C・D・F・G・H・I）を決める**。A・E は起票時に決定済み | 5h | 決定ごとに**検査の場所**を書き、**1 件ずつ壊して赤を確認した記録**を残す（成功基準 5）。**決定 1・2 の「壊して赤」も未確認のまま**なので、同じ表で消化する |
+| 1.1 | **[ADR-025](../adr/025-customs-declaration-and-cancellation-approval.md) の 9 決定を検査に落とす**（決定そのものは着手前に確定済み） | 4h | **1 件ずつ実装を壊して赤を確認した記録**を残す（成功基準 5）。コンプライアンス表の「壊して赤を確認」列が全件「済」になるまで完了としない |
 | 1.2 | デモ項目を E2E に翻訳する（Red） | 8h | **「条件が揃わなければスキップ」を作らない**。前提は種データで用意する |
 
 ### 2. Phase 2: 画面と導線（2.5 SP 相当・26h）
@@ -487,7 +487,8 @@ Day 1-3 に固めて置く。IT7・IT8 と同じ形。詳細は[上の表](#引�
 | # | 内容 | 見積 | 完了条件 |
 | :--- | :--- | :--- | :--- |
 | 3.1 | 通関申告の API `/api/v1/customs`（登録・一覧・詳細・状態更新） | 8h | **認可は入力検証より先**（[ADR-016](../adr/016-authorize-before-validate.md)） |
-| 3.2 | CLAIM ガードの配線（US29-3） | 5h | **画面から踏むテストと対にする**。拒否時に**現在の通関状態**を返す。文言は [ui_design.md](../design/ui_design.md) のフィードバック表（「通関が完了していないため引き取りできません（現在: 留置）」・`error`）に一致させる。**警告ダイアログは `role="alertdialog"`** |
+| 3.2 | CLAIM ガードの配線（US29-3）と、[ADR-023](../adr/023-handling-activity-validation.md) 決定 4 の但し書きの撤去（決定 9） | 6h | **画面から踏むテストと対にする**。拒否時に**現在の通関状態**を返す。文言は [ui_design.md](../design/ui_design.md) のフィードバック表（「通関が完了していないため引き取りできません（現在: 留置）」・`error`）に一致させる。**警告ダイアログは `role="alertdialog"`**。**荷受人確認は残し、「通関を仕組みで確かめていない」という文だけ外す**。**過去の記録はさかのぼって検査しない** |
+| 3.5 | **`CargoCancelledEvent` の発行と購読**（決定 3）。trackingms はお知らせに記録して公開画面に出す | 4h | **理由を載せない**。`TrackingStatus` に値を足さない。billingms へは発行しない（発行の呼び出し箇所を数える） |
 | 3.3 | キャンセルの API `/api/v1/bookings/{bookingId}/cancellation`（申請）・`.../cancellation/approve`・`.../cancellation/reject`（[ui_design.md](../design/ui_design.md) の対応表） | 6h | 承認は**陸揚げ地必須**。却下は `IN_TRANSIT` 維持 |
 | 3.4 | `CustomsStatusChangedEvent`（handlingms → trackingms）の契約と購読 | 3h | **[ADR-022] の型をそのまま写す**。交換機の引数を含めて契約から導く |
 
@@ -496,13 +497,13 @@ Day 1-3 に固めて置く。IT7・IT8 と同じ形。詳細は[上の表](#引�
 | # | 内容 | 見積 | 完了条件 |
 | :--- | :--- | :--- | :--- |
 | 4.0 | **handlingms の統合テスト土台を置く**（Try 6） | 3h | **2 つ目の統合テストを書く前**に置く。コンテナは 1 サービス 1 土台 |
-| 4.1 | `CustomsDeclaration` 集約・`CustomsStatus`・`updateStatus` | 8h | 理由なしの状態変更を断る。**`isCleared()` は CLEARED のみ true**。**申告が無い貨物も CLAIM を拒否する**（名簿方式は未登録を素通りさせない——過去 take の教訓） |
+| 4.1 | `CustomsDeclaration` 集約・`CustomsStatus`・`updateStatus`・`DeclarationNumber`（決定 8） | 8h | 理由なしの状態変更を断る。**`isCleared()` は CLEARED のみ true**。**申告が無い貨物も CLAIM を拒否する**（名簿方式は未登録を素通りさせない）。**未決着は高々 1 件**（決定 7）。識別子は既存 VO を使う |
 | 4.2 | `CustomsStatusHistory`（監査履歴）と永続化。**`from_status` も NOT NULL**（初回は `PENDING`） | 5h | **保存して読み直してから履歴を検証する**形にする |
 | 4.3 | 留置 3 日超の判定（`isHeldOverdue(now, thresholdDays)`） | 3h | **最新の HELD 遷移日時（`customs_status_history.changed_at`）から数える**（[data-model.md](../design/data-model.md) の注）。**日付単位で比較**する。テストも同じ Clock で「今日」を決める |
 | 4.4 | `BookingStatus` の拡張（`IN_TRANSIT` / `DELIVERED` / `SETTLED` / `CANCELLED`）と遷移規則 | 6h | **既存行を壊さない**（復元では検査せず新規受け入れ時だけ検査する——過去 take の教訓）。**`SETTLED` へ進める経路は作らない**（精算は US23・IT12）。作らないことを検査に落とす |
 | 4.7 | **bookingms が `HandlingActivityRegisteredEvent` を購読する**（[ADR-025](../adr/025-customs-declaration-and-cancellation-approval.md) 決定 1）。`transport_status` を更新し `BookingStatus` を導く | 6h | **冪等**（同じ荷役が 2 回来ても 1 度）・**巻き戻さない**。交換機は既存の引数で宣言する。**予約一覧で船に載った貨物が `NOT_RECEIVED` と出ていた状態が直る**——受入基準には無い副産物なので完了報告書に書く |
 | 4.8 | **公開画面の緊急の文言を案内に変え、層をまたいで届くことを固定する**（決定 2） | 3h | 集約 → 応答 → モック → 画面のどこで潰しても赤になる 1 本。**マニュアル 09 章の該当箇所も同じ変更で直す** |
-| 4.5 | `CancellationRequest` エンティティと `Cargo` のキャンセル操作 | 5h | **承認フローを迂回する経路が無い**ことを検査で固定（成功基準 3） |
+| 4.5 | `CancellationRequest` エンティティと `Cargo` のキャンセル操作。**陸揚げ地の候補**（決定 4） | 7h | **承認フローを迂回する経路が無い**ことを検査で固定（成功基準 3）。**候補外の港での承認を断る**。`cargo` に最後の荷役地点・日時の列を足す（[data-model.md](../design/data-model.md) への反映は返済枠 0.1 の検査が見る） |
 | 4.6 | `CUSTOMS_HOLD` の自動起票（trackingms 側） | 2h | **手で起票できるのは 3 種だけ**という [ADR-024] 決定 11 を壊さない。`ExceptionType.parseRaisable("CUSTOMS_HOLD")` が断り続けること（`ExceptionTypeTest`）を**緑のまま**にし、自動起票は購読側の経路で行う。**返済枠 0.4（起票可否の判定を寄せる）を先に済ませてから触る** |
 
 ### 5. Phase 5: 通知の代替（0.5 SP 相当・6h）
@@ -538,16 +539,16 @@ Day 1-3 に固めて置く。IT7・IT8 と同じ形。詳細は[上の表](#引�
 | 区分 | 見積 |
 | :--- | :--- |
 | 0. 返済枠 | 42h |
-| 1. Phase 1 受け入れテストと ADR | 13h |
+| 1. Phase 1 受け入れテストと ADR | 12h |
 | 2. Phase 2 画面と導線 | 26h |
-| 3. Phase 3 API と結合 | 22h |
-| 4. Phase 4 ドメイン | 41h |
+| 3. Phase 3 API と結合 | 27h |
+| 4. Phase 4 ドメイン | 43h |
 | 5. Phase 5 通知の代替 | 6h |
 | 6. Phase 6 実環境 | 10h |
 | 7. マニュアル | 12h |
 | 8. 計画への差し戻し | 4h |
 | 9. レビュー手直し | 12h |
-| **合計** | **188h** |
+| **合計** | **194h** |
 
 > **IT7 は 147h で 10 SP、IT8 は 144h で 9 SP、IT9 は 188h で 10 SP です。返済枠が 42h と過去最大**（IT8 の 28h から +14h）で、これが差の大部分を占めます。**IT8 は 13 件の注のうち 12 件を返せず、それが今回の 0.1・0.2 に積み上がりました**——落とした負債は据え置きではなく育つ（過去 take の教訓）。
 >
@@ -583,7 +584,7 @@ Day 1-3 に固めて置く。IT7・IT8 と同じ形。詳細は[上の表](#引�
 | Day 6 | 2.3 申告詳細、2.4 承認一覧、2.5 予約詳細、2.6 ナビ 4 点 | Phase 2 |
 | Day 7 | 4.0 統合テスト土台、3.1 通関 API、3.2 CLAIM ガード | Phase 3/4 |
 | Day 8 | 4.1〜4.3 通関ドメイン、3.4 イベント契約、4.6 自動起票 | Phase 4 |
-| Day 9 | 4.4 BookingStatus 拡張、**4.7 荷役イベントの購読**、4.5 キャンセル承認、3.3 API | Phase 3/4 |
+| Day 9 | 4.4 BookingStatus 拡張、**4.7 荷役イベントの購読**、4.5 キャンセル承認と陸揚げ地の候補、3.3 API、**3.5 キャンセルのイベント** | Phase 3/4 |
 | Day 10 | **4.8 緊急の文言と到達**、5.1-5.2 通知の代替、6.1-6.2 kind、7.1-7.3 マニュアル、8.1 起票 | 仕上げ |
 
 > **画面を先に作るのはアウトサイドインだからです。** ただし **4.0（統合テスト土台）は 4.1 を書く前**に置きます（Try 6）。
@@ -617,26 +618,24 @@ Day 1-3 に固めて置く。IT7・IT8 と同じ形。詳細は[上の表](#引�
 | 6 | `domain-model.md` のイベント一覧 | `CustomsStatusChangedEvent` の追加。**`CargoCancelledEvent` を発行するかは ADR-025（決めること B）** | 1.1 |
 | 7 | `domain-model.md` の**内部の食い違い** | 要素表は `DischargeLocation`（値オブジェクト）を挙げるが、Cargo 集約のクラス図は `dischargeLocation: Location`（共有カーネル）である。**どちらかに寄せる**。計画はクラス図（`Location`）に従う | 0.2 |
 | 8 | `domain-model.md` の Cargo 集約 | US30-1（輸送開始前の即時キャンセル）に対応する操作がクラス図に無い（`canCancelImmediately()` の述語だけがある）。**`cancelImmediately(cancelledBy)` を足す** | 0.2 |
+| 10 | `data-model.md` の `cargo` | **最後の荷役地点と日時の列が無い**（`last_handling_location_unlocode` / `last_handling_at`）。[ADR-025](../adr/025-customs-declaration-and-cancellation-approval.md) 決定 4 の陸揚げ地の候補に要る | 0.1 |
 | 9 | `domain-model.md` の `CustomsDeclaration` | `trackingNumber: String` / `declarationNumber: String` が素の文字列。handlingms は既に `HandlingTrackingNumber` 値オブジェクトを持つ。**値オブジェクトに寄せるかを ADR-025 で決め、同じ変更で設計を直す** | 1.1 |
 
-### 計画では決められないこと（ADR-025 で決める）
+### 計画では決められなかったこと（[ADR-025](../adr/025-customs-declaration-and-cancellation-approval.md) で決めた）
 
-> **A と E は起票時に決めました**（[ADR-025](../adr/025-customs-declaration-and-cancellation-approval.md) 決定 1・2）。先送りすると実装の形が決まらないため、Day 4 を待たずに決めています。残る 7 件は Day 4 のタスク 1.1 で決めます。
->
-> | 記号 | 決定 | 内容 |
-> | :--- | :--- | :--- |
-> | A | 決定 1 | **bookingms が既存の `HandlingActivityRegisteredEvent` を購読する。** 新しいイベントも同期呼び出しも足さない。`transport_status` を更新し、そこから `BookingStatus` を導く（最初の `LOAD` で `IN_TRANSIT`、`CLAIM` で `DELIVERED`）。**[ADR-009](../adr/009-cargo-status-columns-from-the-start.md) が 7 IT のあいだ空で持っていた列に、初めて意味が入る** |
-> | E | 決定 2 | **緊急は公開応答に載せ続ける。** 対立は「出すか隠すか」ではなく「出したものが行動につながるか」だった。**急かす言葉（「至急のご連絡が必要です」）をやめて案内に変え、層をまたいで届くことを検査で固定する**。`CUSTOMS_HOLD` と留置 3 日超は緊急にしない |
+**9 件すべてを着手前に決めました。** Day 4 のタスク 1.1 は「決める」ではなく「**決定を検査に落とし、1 件ずつ壊して赤を確認する**」枠になります。
 
-| # | 内容 | なぜ計画で決めないか |
+| 記号 | 決定 | 内容 |
 | :--- | :--- | :--- |
-| B | **`CargoCancelledEvent` を発行するか。** [domain-model.md](../design/domain-model.md) は billingms・trackingms が購読すると書いているが、**billingms は未実装**（IT11） | **購読者がいないイベントは発行しない**という [ADR-024] 決定 8 の形を踏襲するか、置き場だけ作るか。**発行しないなら検査に落とす** |
-| C | **陸揚げ地の候補をどこから引くか。** 「現在地の港または次の寄港地」（US30-5）のうち、**現在地は trackingms、旅程は bookingms** が持つ | サービスをまたぐ。**引かずに全港から選ばせる**のも選択肢（IT9 の範囲を切る判断） |
-| D | **「荷降しの手配」（US30-6）の範囲** | 荷役の予定を作る業務まで広げると US15/US16 の設計に手が入る。**IT9 でどこまでを「手配した」と呼ぶかを決める** |
-| F | **通関状態の変更を誰ができるか。** 受入基準は「追跡管理者」だが、**登録は荷役作業員**である | 同一画面に 2 ロールが入る。**共有画面のリンクをロールで出し分ける**方針と合わせて決める |
-| G | **通関申告の重複登録を許すか。** [data-model.md](../design/data-model.md) は「CLAIM ガードは `booking_id` で**最新の申告**を参照する」と定めており、**複数申告があることを前提にしている**。一方で登録画面は 1 貨物 1 申告を想定した作りにできる | **参照側は決まっているが、登録側が決まっていない**。許すなら一覧に複数行が並び、許さないなら 2 通目を断る。**決めないと「最新の 1 件」を暗黙に選ぶ実装になる** |
-| I | **[ADR-023](../adr/023-handling-activity-validation.md) 決定 5 の代替（荷受人の明示的な確認）を、通関ガード導入後も残すか** | IT7 は「通関の確認が仕組みでは行われないこと」を引取の操作のそばに書く代替を入れた。**ガードが入ると前提の文が誤りになる**。残す/外すのどちらでも、**画面の文言とマニュアルを同じ変更で直す**必要がある |
-| H | **`CustomsDeclaration` の識別子と値オブジェクト**（注 9）。設計は `declarationId: String` / `trackingNumber: String`、実装の既存 VO は `CargoBookingId` / `HandlingTrackingNumber` | **既存 VO を使わないと、同じ意味の値が 2 つの型で流れる**（[ADR-012](../adr/012-value-object-granularity.md) の粒度方針）。設計を直すか実装を設計に合わせるかを決める |
+| A | 1 | **bookingms が既存の `HandlingActivityRegisteredEvent` を購読する。** 新しいイベントも同期呼び出しも足さない。`transport_status` を更新し、そこから `BookingStatus` を導く。**[ADR-009](../adr/009-cargo-status-columns-from-the-start.md) が 7 IT のあいだ空で持っていた列に、初めて意味が入る** |
+| E | 2 | **緊急は公開応答に載せ続ける。** 急かす言葉（「至急のご連絡が必要です」）をやめて案内に変え、層をまたいで届くことを検査で固定する。`CUSTOMS_HOLD` と留置 3 日超は緊急にしない |
+| B | 3 | **`CargoCancelledEvent` を発行する。購読は trackingms だけ。** 発行しないと、承認されたキャンセルを荷主が公開追跡で「輸送中」と見る。**`TrackingStatus` に値は足さず**、お知らせに記録して公開画面に出す。billingms は IT11 |
+| C | 4 | **陸揚げ地の候補は bookingms の中で作る。** 現在地は決定 1 のイベントが運ぶ地点、次の寄港地は旅程の残り。**全港から選ばせない**（候補外の港での承認は断る） |
+| D | 5 | **「荷降しの手配」は陸揚げ地を記録して現場が見られるまで。** 作業指示は作らない（荷役は実績のモデルで予定を持たない）。**US30-6 は部分達成**とし、運用条件を添える |
+| F | 6 | **登録は荷役作業員、状態更新は追跡管理者、閲覧は両方。** 押せない操作は出さない。ただし荷役作業員に**閲覧は開く**——引き取れるかを判断するために要る |
+| G | 7 | **未決着（`PENDING` / `HELD`）の申告があるあいだは 2 通目を断る。** `REJECTED` のあとは再申告できる。**「最新の 1 件」を暗黙に選ぶ実装にしない**——未決着が高々 1 件であることを不変条件にする |
+| H | 8 | **既存の値オブジェクトを使う**（`CargoBookingId` / `HandlingTrackingNumber`）。新設は `DeclarationNumber` だけ。`declarationId` は VO にしない。**設計のほうを直す** |
+| I | 9 | **荷受人の確認は残す**（US16 の受入基準そのもの）。**外すのは「通関を仕組みで確かめていない」という但し書きだけ**。**素通りで作られた過去の記録はさかのぼって検査しない** |
 
 ## デモ項目
 
@@ -706,6 +705,7 @@ Day 1-3 に固めて置く。IT7・IT8 と同じ形。詳細は[上の表](#引�
 | 日付 | 内容 | 担当 |
 | :--- | :--- | :--- |
 | 2026-08-24 | 初版作成（US29・US30／10 SP／返済枠 14 件） | 開発 |
+| 2026-08-24 | [ADR-025](../adr/025-customs-declaration-and-cancellation-approval.md) の残る 7 件（B・C・D・F・G・H・I）を決定。タスク 3.5（キャンセルのイベント）を追加し 3.2・4.1・4.5 を拡張（見積 188h → 194h）、注を 9 件 → 10 件（`cargo` の最後の荷役地点）、Day 4 のタスク 1.1 を「決める」から「検査に落とす」へ | 開発 |
 | 2026-08-24 | [ADR-025](../adr/025-customs-declaration-and-cancellation-approval.md) を起票し、決めること A（bookingms は荷役のイベントで輸送中を知る）と E（緊急は載せ続け、急かす言葉をやめて届くことを検査で固定する）を決定。タスク 4.7・4.8 を追加（見積 180h → 188h）、リスク 1 を「経路が無い」から「交換機の引数の食い違い」へ差し替え | 開発 |
 | 2026-08-24 | 横断整合性検証（`validating-design`）の結果を反映——軸 A（Phase の並びを開発戦略の終盤ワークフローに一致させ、状態軸の到達性の横断規約を明記）、軸 C（[IT6](iteration_plan-6.md) が US30 へ送った US13-5・US13-6 を引き受け、[ADR-023](../adr/023-handling-activity-validation.md) 決定 5 の代替の畳み方を決めること I に追加、IT8 が固定した `parseRaisable` の検査を緑のまま保つ制約を 4.6 に明記）、軸 B（CLAIM 拒否の文言を `ui_design.md` のフィードバック表に一致） | 開発 |
 | 2026-08-24 | 整合性検証（`validating-iteration-plan`）の結果を反映——ER 図 4 件（`cancellation_request` の FK を `cargo_id → cargo.id` へ、桁数 3 件、`remarks` と監査カラムの補完）、ドメインモデルの名称 3 件（`updateStatus` / `isCleared` / `isHeldOverdue`・`dischargeLocation: Location`・フィールド名）、ストーリー文とアクターを正典に一致、API パスを明記、注を 6 件 → 9 件、ADR-025 の決めることを G → H の 8 件へ | 開発 |
@@ -718,4 +718,4 @@ Day 1-3 に固めて置く。IT7・IT8 と同じ形。詳細は[上の表](#引�
 - [ユーザーストーリー](../requirements/user_story.md) — US29・US30
 - [ドメインモデル設計](../design/domain-model.md) / [データモデル設計](../design/data-model.md) / [UI 設計](../design/ui_design.md)
 - [ADR-016 認可は入力検証より先](../adr/016-authorize-before-validate.md) / [ADR-022 ドメインイベント契約](../adr/022-domain-event-contract.md) / [ADR-023 荷役作業の検証](../adr/023-handling-activity-validation.md) / [ADR-024 貨物状態の手動更新・例外・公開追跡照会](../adr/024-tracking-manual-update-and-exceptions.md)
-- [ADR-025 通関申告とキャンセル承認](../adr/025-customs-declaration-and-cancellation-approval.md) — 決定 1・2 は起票時に確定、決定 3〜9 は Day 4
+- [ADR-025 通関申告とキャンセル承認](../adr/025-customs-declaration-and-cancellation-approval.md) — 決定 1〜9（着手前に確定済み）
