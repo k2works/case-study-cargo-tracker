@@ -3,6 +3,7 @@ package com.example.bookingms.domain.model;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -357,6 +358,56 @@ public final class Cargo {
         });
         return with(new CargoStatus(BookingStatus.CANCELLED, status.transport(), status.routing()),
                 itinerary, notification, trackingNumber);
+    }
+
+    /**
+     * 陸揚げ地の候補（US30-5・[ADR-025] 決定 4）。
+     *
+     * <p><strong>全港から選ばせない。</strong>船が寄らない港を指定できると、荷降しできない
+     * 約束を荷主にすることになる。候補は<strong>現在地の港</strong>（最後の荷役地点）と
+     * <strong>次の寄港地</strong>（旅程の残りの荷降し地）だけである。
+     *
+     * <p><strong>ここで作る。</strong>現在地は荷役のイベントが運び、次の寄港地は旅程が
+     * 持っている——どちらも手元にある。trackingms へ引くと、同じ事実を 2 ホップ先から
+     * 取りに行くことになる。
+     *
+     * <p>現在地を先頭に置く。いま貨物がある港が、最も早く降ろせる。
+     */
+    public List<DischargeCandidate> dischargeCandidates() {
+        List<DischargeCandidate> candidates = new java.util.ArrayList<>();
+        lastHandlingLocationOf().map(DischargeCandidate::currentPort).ifPresent(candidates::add);
+
+        itinerary().map(CargoItinerary::legs).orElse(List.of()).stream()
+                .map(Leg::unloadLocation)
+                .filter(location -> candidates.stream()
+                        .noneMatch(candidate -> candidate.unLocode().equals(location.unLocode())))
+                .map(DischargeCandidate::nextPort)
+                .forEach(candidates::add);
+
+        return List.copyOf(candidates);
+    }
+
+    /**
+     * その港で荷降しできるか（[ADR-025] 決定 4）。
+     *
+     * <p><strong>候補に無い港での承認は断る。</strong>判定はここが持つ——ユースケースや
+     * 画面が候補を組み立て直すと、規則が 2 か所に分かれる。
+     */
+    public boolean canDischargeAt(String unLocode) {
+        return dischargeCandidates().stream()
+                .anyMatch(candidate -> candidate.unLocode().equals(unLocode));
+    }
+
+    /** 最後の荷役地点を、旅程の港として引き当てる（名前が要るため）。 */
+    private Optional<com.example.shared.domain.model.Location> lastHandlingLocationOf() {
+        if (lastHandlingLocationUnLocode == null) {
+            return Optional.empty();
+        }
+        return itinerary().map(CargoItinerary::legs).orElse(List.of()).stream()
+                .flatMap(leg -> java.util.stream.Stream.of(leg.loadLocation(),
+                        leg.unloadLocation()))
+                .filter(location -> location.unLocode().equals(lastHandlingLocationUnLocode))
+                .findFirst();
     }
 
     /** 最後に荷役があった地点（[ADR-025] 決定 4）。陸揚げ地の候補「現在地の港」に使う。 */

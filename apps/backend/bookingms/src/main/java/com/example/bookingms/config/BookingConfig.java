@@ -13,6 +13,9 @@ import com.example.bookingms.application.internal.ReviseBookingScheduleUseCase;
 import com.example.bookingms.application.internal.ReturnToRoutingUseCase;
 import com.example.bookingms.application.port.CargoEventNotifier;
 import com.example.bookingms.application.internal.AdvanceBookingUseCase;
+import com.example.bookingms.application.port.CancellationRequestRepository;
+import com.example.bookingms.infrastructure.persistence.CancellationRequestMapper;
+import com.example.bookingms.infrastructure.persistence.MyBatisCancellationRequestRepository;
 import com.example.bookingms.infrastructure.messaging.CargoEventChannels;
 import com.example.bookingms.infrastructure.messaging.HandlingActivityRegisteredListener;
 import com.example.bookingms.infrastructure.messaging.RabbitCargoEventNotifier;
@@ -287,6 +290,12 @@ public class BookingConfig {
         return BindingBuilder.bind(bookingHandlingActivityRegisteredQueue())
                 .to(bookingCargoHandlingExchange())
                 .with(CargoEventChannels.HANDLING_ACTIVITY_REGISTERED);
+    }
+
+    @Bean
+    public CancellationRequestRepository cancellationRequestRepository(
+            CancellationRequestMapper mapper) {
+        return new MyBatisCancellationRequestRepository(mapper);
     }
 
     @Bean
