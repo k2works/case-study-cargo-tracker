@@ -190,7 +190,7 @@ class CargoTest {
     @Test
     @DisplayName("復元では検査しない（規則が無かったころの行が読めなくなる）")
     void restoreDoesNotValidate() {
-        Cargo restored = Cargo.restore(1L, BookingId.of("BKG-2026000001"), 1L,
+        Cargo restored = CargoRestoration.restore(1L, BookingId.of("BKG-2026000001"), 1L,
                 CargoStatus.preliminary(),
                 // 危険物なのに申告が無い（列が無かったころの行）
                 specification(CargoType.HAZARDOUS, null, null), ROUTE);

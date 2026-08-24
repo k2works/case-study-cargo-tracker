@@ -58,6 +58,43 @@ record CargoTransitionPolicy(CargoStatus status, boolean trackingNumberIssued) {
     }
 
     /** 追跡番号を発行できない理由。できるなら空を返す。 */
+    /**
+     * キャンセルを申請できない理由（US30-1）。
+     *
+     * <p>判定をここに置くのは、<strong>可否の判定を 1 か所に集めるため</strong>である。
+     * 集約に散らすと、状態を足したときに直す場所が増える。
+     *
+     * <p>配送完了はすでに荷受人へ引き渡しており、キャンセルする対象が無い。
+     */
+    /**
+     * その荷役のあと、予約はどの状態になるか（[ADR-025] 決定 1）。
+     *
+     * <p><strong>巻き戻さない。</strong>再試行やデッドレターからの送り直しで、荷役の
+     * 届く順は入れ替わる。順序を信じて上書きすると、あとから届いた古い作業で予約が
+     * 輸送中へ戻り、荷主は「配送完了だったはずの貨物が輸送中に戻っている」を見る。
+     *
+     * <p><strong>キャンセル済みの予約は動かない。</strong>遅れて届いた荷役でキャンセルが
+     * 覆ると、荷主との約束と記録が食い違う。
+     *
+     * <p><strong>冪等である。</strong>同じ荷役が 2 回届いても、2 回目は空を返す。
+     *
+     * @return 進む先。動かないなら空
+     */
+    Optional<BookingStatus> bookingStatusAfterHandling(String handlingType) {
+        if (status.booking() == BookingStatus.CANCELLED) {
+            return Optional.empty();
+        }
+        return BookingStatus.afterHandling(handlingType).filter(status.booking()::canAdvanceTo);
+    }
+
+    Optional<String> reasonCannotCancel() {
+        return switch (status.booking()) {
+            case CANCELLED -> Optional.of("この予約はすでにキャンセルされています");
+            case DELIVERED -> Optional.of("配送が完了した予約はキャンセルできません");
+            default -> Optional.empty();
+        };
+    }
+
     Optional<String> reasonCannotIssueTrackingNumber() {
         if (status.booking() != BookingStatus.CONFIRMED) {
             return Optional.of("確定した予約にだけ追跡番号を発行できます");

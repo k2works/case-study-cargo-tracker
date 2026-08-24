@@ -26,6 +26,30 @@ import org.junit.jupiter.api.Test;
 @DisplayName("貨物予約の永続化")
 class CargoPersistenceIntegrationTest extends CargoPersistenceTestBase {
 
+    /**
+     * <strong>最後の荷役地点が、行を往復しても残る</strong>（[ADR-025] 決定 4）。
+     *
+     * <p>陸揚げ地の候補「現在地の港」はこの列を読む。<strong>表示のためだけに運ぶ値は、
+     * どこか一層で潰しても緑になりやすい</strong>——集約が持っていることと、行に
+     * 書けていることは別である。
+     */
+    @Test
+    @DisplayName("最後の荷役地点と日時が、読み直しても残る")
+    void keepsTheLastHandlingAcrossAReload() {
+        Cargo booked = bookCargo.book(command(shipperId("荷役太郎", "last-handling@example.com"),
+                CargoType.GENERAL));
+        java.time.Instant at = java.time.Instant.parse("2026-09-05T00:00:00Z");
+
+        repository.save(booked.afterHandling("LOAD", "JPTYO", at));
+
+        // 集約として読み直す。**要約（CargoSummary）ではなく本体を見る**
+        Cargo reloaded = repository.findById(booked.id()).orElseThrow();
+        assertThat(reloaded.lastHandlingLocation())
+                .as("最後の荷役地点が行に残っていない。陸揚げ地の候補に現在地が出せない")
+                .contains("JPTYO");
+        assertThat(reloaded.lastHandlingAt()).contains(at);
+    }
+
     @Test
     @DisplayName("予約番号が本番経路（DB シーケンス）で採番される")
     void assignsBookingIdFromDatabase() {

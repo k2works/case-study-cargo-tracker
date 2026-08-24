@@ -1,15 +1,23 @@
 package com.example.bookingms.domain.model;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Optional;
 
 /**
- * 貨物予約。IT2 で作れるのは仮受付（{@link BookingStatus#PRELIMINARY}）までで、
- * 経路・配送状況・キャンセルは IT3 以降で扱う。
+ * 貨物予約（集約ルート）。
+ *
+ * <p>仮受付から経路の割り当て・荷主への通知・確定・追跡番号の発行を経て、荷役の記録で
+ * 輸送中・配送完了まで進む。キャンセルは輸送開始前なら即時、輸送中は追跡管理者の承認を
+ * 経て確定する（US30）。<strong>精算（`SETTLED`）はまだ無い</strong>——US23（IT12）である。
  *
  * <p>予約番号は永続化の経路（DB シーケンス）で採番する。集約側で組み立てると、
- * シーケンスと衝突した番号を発行できてしまう（ADR-011）。
+ * シーケンスと衝突した番号を発行できてしまう（[ADR-011]）。
+ *
+ * <p><strong>可否の判定は {@link CargoTransitionPolicy} が持つ。</strong>集約に散らすと、
+ * 状態を足したときに直す場所が増える。復元は {@link CargoRestoration}、貨物仕様の
+ * 不変条件は {@code CargoSpecificationRules} にある——どちらも責務が違う。
  */
 public final class Cargo {
 
@@ -28,6 +36,18 @@ public final class Cargo {
     /** 発行済みの追跡番号（US14）。未発行なら {@code null}。 */
     private final TrackingNumber trackingNumber;
 
+    /**
+     * 最後に荷役があった地点（[ADR-025] 決定 4）。まだ無ければ null。
+     *
+     * <p><strong>陸揚げ地の候補「現在地の港」はこれを使う。</strong>trackingms へ引かない
+     * ——現在地の一次情報は荷役にあり、trackingms もそれを購読して得ている。
+     * 2 ホップ先から取りに行く形にすると、同じ事実の伝聞が 1 段増える。
+     */
+    private final String lastHandlingLocationUnLocode;
+
+    /** 最後の荷役の日時。まだ無ければ null。 */
+    private final Instant lastHandlingAt;
+
     // S107（引数が多い）: 復元は永続化された行の写しであり、列数がそのまま現れる。
     // まとめると復元の意味が薄れる（テスト戦略の Quality Gate 例外表に記載）
     @SuppressWarnings("java:S107")
@@ -35,6 +55,18 @@ public final class Cargo {
             CargoSpecification specification, RouteSpecification routeSpecification,
             CargoItinerary itinerary, RouteNotification notification,
             TrackingNumber trackingNumber) {
+        this(id, bookingId, shipperId, status, specification, routeSpecification, itinerary,
+                notification, trackingNumber, null, null);
+    }
+
+    @SuppressWarnings("java:S107")
+    Cargo(Long id, BookingId bookingId, Long shipperId, CargoStatus status,
+            CargoSpecification specification, RouteSpecification routeSpecification,
+            CargoItinerary itinerary, RouteNotification notification,
+            TrackingNumber trackingNumber, String lastHandlingLocationUnLocode,
+            Instant lastHandlingAt) {
+        this.lastHandlingLocationUnLocode = lastHandlingLocationUnLocode;
+        this.lastHandlingAt = lastHandlingAt;
         this.id = id;
         this.bookingId = bookingId;
         this.shipperId = shipperId;
@@ -50,7 +82,14 @@ public final class Cargo {
     private Cargo with(CargoStatus newStatus, CargoItinerary newItinerary,
             RouteNotification newNotification, TrackingNumber newTrackingNumber) {
         return new Cargo(id, bookingId, shipperId, newStatus, specification, routeSpecification,
-                newItinerary, newNotification, newTrackingNumber);
+                newItinerary, newNotification, newTrackingNumber, lastHandlingLocationUnLocode,
+                lastHandlingAt);
+    }
+
+    /** 荷役の記録を反映した写しを作る。状態と最後の荷役地点が同時に動く。 */
+    private Cargo withHandling(CargoStatus newStatus, String locationUnLocode, Instant at) {
+        return new Cargo(id, bookingId, shipperId, newStatus, specification, routeSpecification,
+                itinerary, notification, trackingNumber, locationUnLocode, at);
     }
 
     /**
@@ -67,46 +106,10 @@ public final class Cargo {
         if (routeSpecification == null) {
             throw new IllegalArgumentException("輸送条件は必須です");
         }
-        requireValidSpecification(specification);
+        CargoSpecificationRules.requireValid(specification);
 
         return new Cargo(null, null, shipperId, CargoStatus.preliminary(), specification,
                 routeSpecification, null, null, null);
-    }
-
-    /**
-     * 貨物仕様の不変条件。
-     *
-     * <p>付け忘れ（危険物なのに申告が無い）と同じく、付けすぎ（一般貨物に温度条件がある）も
-     * 誤りとして扱う。付けすぎを通すと、経路設計（IT3）が「温度条件のある一般貨物」を
-     * どう扱うか判断できない。
-     */
-    private static void requireValidSpecification(CargoSpecification specification) {
-        if (specification == null || specification.type() == null) {
-            throw new IllegalArgumentException("貨物種別は必須です");
-        }
-        if (specification.weightKg() == null || specification.weightKg().signum() <= 0) {
-            throw new IllegalArgumentException(
-                    "重量は 0 より大きい値で指定してください: " + specification.weightKg());
-        }
-        if (specification.quantity() != null && specification.quantity() <= 0) {
-            throw new IllegalArgumentException("個数は 1 以上で指定してください: " + specification.quantity());
-        }
-
-        boolean hazardous = specification.type() == CargoType.HAZARDOUS;
-        boolean refrigerated = specification.type() == CargoType.REFRIGERATED;
-
-        if (hazardous && specification.hazardousDeclaration() == null) {
-            throw new IllegalArgumentException("危険物には危険物申告が必要です");
-        }
-        if (!hazardous && specification.hazardousDeclaration() != null) {
-            throw new IllegalArgumentException("危険物申告は危険物にだけ設定できます");
-        }
-        if (refrigerated && specification.temperatureRequirement() == null) {
-            throw new IllegalArgumentException("冷凍・冷蔵貨物には保管温度の条件が必要です");
-        }
-        if (!refrigerated && specification.temperatureRequirement() != null) {
-            throw new IllegalArgumentException("保管温度の条件は冷凍・冷蔵貨物にだけ設定できます");
-        }
     }
 
     /**
@@ -306,6 +309,66 @@ public final class Cargo {
                 status.routing()), itinerary, notification, issued);
     }
 
+    /**
+     * 荷役の記録に応じて状態を進める（[ADR-025] 決定 1）。
+     *
+     * <p><strong>bookingms は自分では輸送中を知らない。</strong>荷役の記録が一次情報で
+     * あり、{@code HandlingActivityRegisteredEvent} を購読して進める。
+     *
+     * <p>どこまで進むか・進めてよいかの判定は {@link CargoTransitionPolicy} が持つ。
+     */
+    public Cargo afterHandling(String handlingType, String locationUnLocode, Instant at) {
+        return transitions().bookingStatusAfterHandling(handlingType)
+                .map(advanced -> withHandling(
+                        new CargoStatus(advanced, status.transport(), status.routing()),
+                        locationUnLocode, at))
+                .orElse(this);
+    }
+
+    /**
+     * 輸送中か（US30-3）。<strong>キャンセルに承認が要るかを、集約が答える。</strong>
+     *
+     * <p>画面やユースケースが状態名を見比べると、規則が 2 か所に分かれる。
+     */
+    public boolean isInTransit() {
+        return status.booking() == BookingStatus.IN_TRANSIT;
+    }
+
+    /** いまキャンセルを申請できるか（US30-1）。判定は {@link CargoTransitionPolicy} が持つ。 */
+    public boolean canRequestCancellation() {
+        return transitions().reasonCannotCancel().isEmpty();
+    }
+
+    /**
+     * キャンセルを確定する（US30）。
+     *
+     * <p><strong>ここが {@code CANCELLED} へ動かす唯一の場所である</strong>
+     * （{@code BookingStatusTest#cancelsOnlyThroughTheAggregate}）。別の場所から
+     * 直接動かせると、輸送中の貨物が承認を経ずに止まる。
+     *
+     * <p><strong>承認が要るかどうかはここでは判断しない。</strong>それを決めるのは
+     * 申請のユースケースであり、集約が答えるのは {@link #isInTransit()} までである。
+     *
+     * @throws IllegalStateException 配送完了・キャンセル済みのとき
+     */
+    public Cargo cancel() {
+        transitions().reasonCannotCancel().ifPresent(reason -> {
+            throw new IllegalStateException(reason);
+        });
+        return with(new CargoStatus(BookingStatus.CANCELLED, status.transport(), status.routing()),
+                itinerary, notification, trackingNumber);
+    }
+
+    /** 最後に荷役があった地点（[ADR-025] 決定 4）。陸揚げ地の候補「現在地の港」に使う。 */
+    public Optional<String> lastHandlingLocation() {
+        return Optional.ofNullable(lastHandlingLocationUnLocode);
+    }
+
+    /** 最後の荷役の日時。 */
+    public Optional<Instant> lastHandlingAt() {
+        return Optional.ofNullable(lastHandlingAt);
+    }
+
     /** 発行済みの追跡番号。未発行なら空を返す。 */
     public java.util.Optional<TrackingNumber> trackingNumber() {
         return Optional.ofNullable(trackingNumber);
@@ -385,35 +448,6 @@ public final class Cargo {
         // 片方だけが古いままになる（ADR-020 後日談で一本化した形。IT6 でここが
         // 数え上げに戻っていたのを直した）
         return status.routing().visibleToRoutingPlanner();
-    }
-
-    /** 永続化された行から復元する。ここでは検査しない。 */
-    public static Cargo restore(Long id, BookingId bookingId, Long shipperId, CargoStatus status,
-            CargoSpecification specification, RouteSpecification routeSpecification) {
-        return restore(id, bookingId, shipperId, status, specification, routeSpecification, null);
-    }
-
-    /** 旅程を伴って復元する。ここでは検査しない。 */
-    public static Cargo restore(Long id, BookingId bookingId, Long shipperId, CargoStatus status,
-            CargoSpecification specification, RouteSpecification routeSpecification,
-            CargoItinerary itinerary) {
-        return restore(id, bookingId, shipperId, status, specification, routeSpecification,
-                itinerary, null, null);
-    }
-
-    /**
-     * 通知の記録と追跡番号まで伴って復元する。ここでは検査しない（[ADR-012]）。
-     *
-     * <p><strong>不変条件（`ROUTE_NOTIFIED` 以降なら通知の記録がある）をここで検査しない。</strong>
-     * 列が無かったころの行が読めなくなる。守るのは新しく受け入れるときだけでよい。
-     */
-    @SuppressWarnings("java:S107")
-    public static Cargo restore(Long id, BookingId bookingId, Long shipperId, CargoStatus status,
-            CargoSpecification specification, RouteSpecification routeSpecification,
-            CargoItinerary itinerary, RouteNotification notification,
-            TrackingNumber trackingNumber) {
-        return new Cargo(id, bookingId, shipperId, status, specification, routeSpecification,
-                itinerary, notification, trackingNumber);
     }
 
     public Long id() {

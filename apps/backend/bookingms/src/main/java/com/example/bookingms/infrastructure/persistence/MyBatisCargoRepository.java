@@ -5,6 +5,7 @@ import com.example.bookingms.application.port.CargoSummary;
 import com.example.bookingms.domain.model.BookingId;
 import com.example.bookingms.domain.model.BookingStatus;
 import com.example.bookingms.domain.model.Cargo;
+import com.example.bookingms.domain.model.CargoRestoration;
 import com.example.bookingms.domain.model.CargoItinerary;
 import com.example.bookingms.domain.model.CargoSpecification;
 import com.example.bookingms.domain.model.CargoStatus;
@@ -146,9 +147,11 @@ public class MyBatisCargoRepository implements CargoRepository {
      * 追跡番号を落とした）。落ちたことは<strong>読み戻しのテストでしか分からない</strong>。
      */
     private static Cargo withItinerary(Cargo cargo, CargoItinerary itinerary) {
-        return Cargo.restore(cargo.id(), cargo.bookingId().orElse(null), cargo.shipperId(),
+        return CargoRestoration.restore(cargo.id(), cargo.bookingId().orElse(null), cargo.shipperId(),
                 cargo.status(), cargo.specification(), cargo.routeSpecification(), itinerary,
-                cargo.routeNotification().orElse(null), cargo.trackingNumber().orElse(null));
+                cargo.routeNotification().orElse(null), cargo.trackingNumber().orElse(null),
+                // **ここで落とすと、読み戻しでだけ消える。**IT9 で実際に落とした
+                cargo.lastHandlingLocation().orElse(null), cargo.lastHandlingAt().orElse(null));
     }
 
     @Override
@@ -232,6 +235,9 @@ public class MyBatisCargoRepository implements CargoRepository {
             row.setRouteNotifiedBy(notification.notifiedBy());
         });
         row.setTrackingNumber(cargo.trackingNumber().map(TrackingNumber::value).orElse(null));
+        // 最後の荷役（[ADR-025] 決定 4）。**書かないと、陸揚げ地の候補に現在地が出ない**
+        row.setLastHandlingLocationUnlocode(cargo.lastHandlingLocation().orElse(null));
+        row.setLastHandlingAt(cargo.lastHandlingAt().orElse(null));
         return row;
     }
 
@@ -266,9 +272,10 @@ public class MyBatisCargoRepository implements CargoRepository {
                 TransportStatus.valueOf(row.getTransportStatus()),
                 RoutingStatus.valueOf(row.getRoutingStatus()));
 
-        return Cargo.restore(row.getId(), BookingId.restore(row.getBookingId()), row.getShipperId(),
+        return CargoRestoration.restore(row.getId(), BookingId.restore(row.getBookingId()), row.getShipperId(),
                 status, specification, route, null,
                 RouteNotification.restore(row.getRouteNotifiedAt(), row.getRouteNotifiedBy()),
-                TrackingNumber.restoreNullable(row.getTrackingNumber()));
+                TrackingNumber.restoreNullable(row.getTrackingNumber()),
+                row.getLastHandlingLocationUnlocode(), row.getLastHandlingAt());
     }
 }

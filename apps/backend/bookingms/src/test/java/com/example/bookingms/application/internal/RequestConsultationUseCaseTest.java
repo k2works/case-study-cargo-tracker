@@ -8,6 +8,7 @@ import com.example.bookingms.application.port.CargoSummary;
 import com.example.bookingms.domain.model.BookingId;
 import com.example.bookingms.domain.model.BookingStatus;
 import com.example.bookingms.domain.model.Cargo;
+import com.example.bookingms.domain.model.CargoRestoration;
 import com.example.bookingms.domain.model.CargoSpecification;
 import com.example.bookingms.domain.model.CargoStatus;
 import com.example.bookingms.domain.model.CargoType;
@@ -33,7 +34,7 @@ class RequestConsultationUseCaseTest {
     private Cargo stored = cargo(RoutingStatus.ROUTING_REQUESTED);
 
     private static Cargo cargo(RoutingStatus routingStatus) {
-        return Cargo.restore(1L, BookingId.of("BKG-2026000001"), 1L,
+        return CargoRestoration.restore(1L, BookingId.of("BKG-2026000001"), 1L,
                 new CargoStatus(BookingStatus.PRELIMINARY, TransportStatus.NOT_RECEIVED,
                         routingStatus),
                 CargoSpecification.general(new BigDecimal("12000"), 20, "電子部品", null),

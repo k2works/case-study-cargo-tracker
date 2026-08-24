@@ -30,6 +30,7 @@ public interface CargoMapper {
             c.hazardous_class, c.un_number, c.proper_shipping_name,
             c.temp_min, c.temp_max, c.temp_unit,
             c.route_notified_at, c.route_notified_by, c.tracking_number,
+            c.last_handling_location_unlocode, c.last_handling_at,
             s.name AS shipper_name
             """;
 
@@ -97,6 +98,8 @@ public interface CargoMapper {
                    route_notified_at = #{routeNotifiedAt},
                    route_notified_by = #{routeNotifiedBy},
                    tracking_number = #{trackingNumber},
+                   last_handling_location_unlocode = #{lastHandlingLocationUnlocode},
+                   last_handling_at = #{lastHandlingAt},
                    updated_at = NOW()
              WHERE id = #{id}
             """)
@@ -108,6 +111,9 @@ public interface CargoMapper {
         @Result(column = "shipper_id", property = "shipperId"),
         @Result(column = "booking_status", property = "bookingStatus"),
         @Result(column = "transport_status", property = "transportStatus"),
+        @Result(column = "last_handling_location_unlocode",
+                property = "lastHandlingLocationUnlocode"),
+        @Result(column = "last_handling_at", property = "lastHandlingAt"),
         @Result(column = "routing_status", property = "routingStatus"),
         @Result(column = "cargo_type", property = "cargoType"),
         @Result(column = "weight_kg", property = "weightKg"),
@@ -189,6 +195,9 @@ public interface CargoMapper {
         @Result(column = "shipper_id", property = "shipperId"),
         @Result(column = "booking_status", property = "bookingStatus"),
         @Result(column = "transport_status", property = "transportStatus"),
+        @Result(column = "last_handling_location_unlocode",
+                property = "lastHandlingLocationUnlocode"),
+        @Result(column = "last_handling_at", property = "lastHandlingAt"),
         @Result(column = "routing_status", property = "routingStatus"),
         @Result(column = "cargo_type", property = "cargoType"),
         @Result(column = "weight_kg", property = "weightKg"),

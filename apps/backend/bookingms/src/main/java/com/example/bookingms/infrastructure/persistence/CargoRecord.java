@@ -40,6 +40,12 @@ public class CargoRecord {
     /** 発行済みの追跡番号（US14）。未発行なら {@code null}。 */
     private String trackingNumber;
 
+    /** 最後に荷役があった地点（[ADR-025] 決定 4）。まだ無ければ null。 */
+    private String lastHandlingLocationUnlocode;
+
+    /** 最後の荷役の日時。まだ無ければ null。 */
+    private java.time.Instant lastHandlingAt;
+
     private String shipperName;
 
     public Long getId() {
@@ -265,6 +271,22 @@ public class CargoRecord {
 
     public String getTrackingNumber() {
         return trackingNumber;
+    }
+
+    public String getLastHandlingLocationUnlocode() {
+        return lastHandlingLocationUnlocode;
+    }
+
+    public void setLastHandlingLocationUnlocode(String lastHandlingLocationUnlocode) {
+        this.lastHandlingLocationUnlocode = lastHandlingLocationUnlocode;
+    }
+
+    public java.time.Instant getLastHandlingAt() {
+        return lastHandlingAt;
+    }
+
+    public void setLastHandlingAt(java.time.Instant lastHandlingAt) {
+        this.lastHandlingAt = lastHandlingAt;
     }
 
     public void setTrackingNumber(String trackingNumber) {

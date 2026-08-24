@@ -10,6 +10,7 @@ import com.example.bookingms.application.port.TrackingNumberIssued;
 import com.example.bookingms.domain.model.BookingId;
 import com.example.bookingms.domain.model.BookingStatus;
 import com.example.bookingms.domain.model.Cargo;
+import com.example.bookingms.domain.model.CargoRestoration;
 import com.example.bookingms.domain.model.CargoItinerary;
 import com.example.bookingms.domain.model.CargoSpecification;
 import com.example.bookingms.domain.model.CargoStatus;
@@ -62,7 +63,7 @@ class NotifyConfirmAndIssueUseCaseTest {
                 Leg.of(VoyageNumber.of("V0100"), TOKYO, LOS_ANGELES,
                         Instant.parse("2030-09-02T09:00:00Z"),
                         Instant.parse("2030-09-16T09:00:00Z"))));
-        return Cargo.restore(1L, BookingId.of("BKG-2026000001"), 1L,
+        return CargoRestoration.restore(1L, BookingId.of("BKG-2026000001"), 1L,
                 new CargoStatus(bookingStatus, TransportStatus.NOT_RECEIVED, RoutingStatus.ROUTED),
                 CargoSpecification.general(new BigDecimal("12000"), 20, "電子部品", null),
                 RouteSpecification.restore(TOKYO, LOS_ANGELES,
@@ -74,7 +75,7 @@ class NotifyConfirmAndIssueUseCaseTest {
     /** 旅程がまだ無い予約。経路が決まる前の姿である。 */
     private static Cargo withoutItinerary(BookingStatus bookingStatus,
             com.example.bookingms.domain.model.RouteNotification notification) {
-        return Cargo.restore(1L, BookingId.of("BKG-2026000001"), 1L,
+        return CargoRestoration.restore(1L, BookingId.of("BKG-2026000001"), 1L,
                 new CargoStatus(bookingStatus, TransportStatus.NOT_RECEIVED, RoutingStatus.ROUTED),
                 CargoSpecification.general(new BigDecimal("12000"), 20, "電子部品", null),
                 RouteSpecification.restore(TOKYO, LOS_ANGELES,

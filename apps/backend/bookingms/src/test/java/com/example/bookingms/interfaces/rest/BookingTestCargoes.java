@@ -2,6 +2,7 @@ package com.example.bookingms.interfaces.rest;
 
 import com.example.bookingms.domain.model.BookingId;
 import com.example.bookingms.domain.model.Cargo;
+import com.example.bookingms.domain.model.CargoRestoration;
 import com.example.bookingms.domain.model.CargoItinerary;
 import com.example.bookingms.domain.model.CargoSpecification;
 import com.example.bookingms.domain.model.CargoStatus;
@@ -29,7 +30,7 @@ final class BookingTestCargoes {
     }
 
     static Cargo booked() {
-        return Cargo.restore(1L, BookingId.of("BKG-2026000001"), 1L, CargoStatus.preliminary(),
+        return CargoRestoration.restore(1L, BookingId.of("BKG-2026000001"), 1L, CargoStatus.preliminary(),
                 CargoSpecification.general(new BigDecimal("12000"), 20, "電子部品", null),
                 RouteSpecification.restore(Location.of("JPTYO", "Tokyo"),
                         Location.of("USLAX", "Los Angeles"), LocalDate.of(2027, Month.SEPTEMBER, 1),

@@ -272,18 +272,30 @@ class CargoConfirmationTest {
         }
 
         /**
-         * 決定 5: `CANCELLED` は US30（IT9）まで足さない。
+         * 予約の状態を、要素と<strong>並び順</strong>で固定する。
          *
-         * <p><strong>「足さなかった」は書かないと守られない。</strong>要素の数で固定する。
+         * <p>[ADR-021] 決定 5 は「`CANCELLED` は US30 まで足さない」と定めており、
+         * <strong>US30（IT9）で足した</strong>。あわせて `IN_TRANSIT` / `DELIVERED` も入る
+         * （[ADR-025] 決定 1）。この検査は IT6 から IT9 まで「足していないこと」を守り、
+         * 足した日に赤になって<strong>気づかせた</strong>。
+         *
+         * <p><strong>並び順まで見るのは、荷役の遷移が並び順で「進む向き」を判定している</strong>
+         * ためである（{@code Cargo#afterHandling}）。並びを入れ替えると、巻き戻さない守りが
+         * 黙って壊れる。
+         *
+         * <p>`SETTLED` はまだ無い。精算は US23（IT12）であり、
+         * {@code BookingStatusTest#hasNoTransitionIntoSettled} が経路の不在を見ている。
          */
         @Test
-        @DisplayName("予約の状態は 5 つだけ（CANCELLED は US30 まで足さない）")
-        void hasExactlyFiveBookingStatuses() {
+        @DisplayName("予約の状態は 8 つで、並び順どおりに進む")
+        void hasExactlyEightBookingStatusesInOrder() {
             assertThat(BookingStatus.values())
-                    .as("状態を足すなら ADR-021 の決定 5 を読み直すこと")
+                    .as("状態を足すなら ADR-021 決定 5 と ADR-025 決定 1 を読み直すこと。"
+                            + "並びは「進む向き」の判定に使われている")
                     .containsExactly(BookingStatus.PRELIMINARY, BookingStatus.ROUTE_PROPOSED,
                             BookingStatus.ROUTE_NOTIFIED, BookingStatus.CONFIRMED,
-                            BookingStatus.TRACKING_ISSUED);
+                            BookingStatus.TRACKING_ISSUED, BookingStatus.IN_TRANSIT,
+                            BookingStatus.DELIVERED, BookingStatus.CANCELLED);
         }
     }
 }

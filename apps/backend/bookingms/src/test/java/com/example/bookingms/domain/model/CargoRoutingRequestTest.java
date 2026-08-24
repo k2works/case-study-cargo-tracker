@@ -51,7 +51,7 @@ class CargoRoutingRequestTest {
     @Test
     @DisplayName("経路が決まった予約には依頼できない")
     void rejectsAlreadyRoutedCargo() {
-        Cargo routed = Cargo.restore(1L, BookingId.restore("BKG-2026000001"), 1L,
+        Cargo routed = CargoRestoration.restore(1L, BookingId.restore("BKG-2026000001"), 1L,
                 new CargoStatus(BookingStatus.PRELIMINARY, TransportStatus.NOT_RECEIVED,
                         RoutingStatus.ROUTED),
                 CargoSpecification.general(new BigDecimal("1000"), null, null, null), ROUTE);

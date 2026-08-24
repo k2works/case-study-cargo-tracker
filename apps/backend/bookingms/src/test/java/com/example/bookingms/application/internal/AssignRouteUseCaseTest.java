@@ -11,6 +11,7 @@ import com.example.bookingms.application.port.RouteCandidateQuery;
 import com.example.bookingms.domain.model.BookingId;
 import com.example.bookingms.domain.model.BookingStatus;
 import com.example.bookingms.domain.model.Cargo;
+import com.example.bookingms.domain.model.CargoRestoration;
 import com.example.bookingms.domain.model.CargoItinerary;
 import com.example.bookingms.domain.model.CargoSpecification;
 import com.example.bookingms.domain.model.CargoStatus;
@@ -125,7 +126,7 @@ class AssignRouteUseCaseTest {
             new AssignRouteUseCase(cargoes, locations, routeCandidates);
 
     private static Cargo requested() {
-        return Cargo.restore(1L, BookingId.of("BKG-2026000001"), 1L,
+        return CargoRestoration.restore(1L, BookingId.of("BKG-2026000001"), 1L,
                 new CargoStatus(BookingStatus.PRELIMINARY, TransportStatus.NOT_RECEIVED,
                         RoutingStatus.ROUTING_REQUESTED),
                 CargoSpecification.general(new BigDecimal("12000"), 20, "電子部品", null),
