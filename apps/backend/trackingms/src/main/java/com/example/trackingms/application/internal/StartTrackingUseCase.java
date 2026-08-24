@@ -40,14 +40,43 @@ public class StartTrackingUseCase {
             String originUnLocode, String destinationUnLocode, LocalDate arrivalDeadline,
             LocalDate estimatedArrival) {
         TrackingNumber number = TrackingNumber.of(trackingNumber);
-        return activities.saveIfAbsent(TrackingActivity.start(number, TrackingBookingId.of(bookingId),
-                requireLocation(originUnLocode, "出発地"),
-                requireLocation(destinationUnLocode, "目的地"),
-                arrivalDeadline)
-                // **推定到着日は追跡の作成と同じイベントで届く**（[ADR-024] 決定 4）。
-                // 別のイベントで送ると、2 つのイベントが別々のキューを通るため順序が
-                // 保証されず、先に届いた到着日は引く相手が無く捨てられる
-                .withEstimatedArrival(estimatedArrival));
+        TrackingActivity existingOrNew = activities.saveIfAbsent(
+                TrackingActivity.start(number, TrackingBookingId.of(bookingId),
+                        requireLocation(originUnLocode, "出発地"),
+                        requireLocation(destinationUnLocode, "目的地"),
+                        arrivalDeadline)
+                        // **推定到着日は追跡の作成と同じイベントで届く**（[ADR-024] 決定 4）。
+                        // 別のイベントで送ると、2 つのイベントが別々のキューを通るため順序が
+                        // 保証されず、先に届いた到着日は引く相手が無く捨てられる
+                        .withEstimatedArrival(estimatedArrival));
+
+        return applyRevisedEstimate(existingOrNew, estimatedArrival);
+    }
+
+    /**
+     * 届いた推定到着日が新しければ反映する。
+     *
+     * <p><strong>作成は冪等でよいが、推定到着日まで冪等にしない</strong>（IT9 返済枠 0.5）。
+     * 経路を組み直した貨物は新しい見込みを持って届く。作成済みだからとイベントを丸ごと
+     * 捨てると、荷主は古い到着日を見続ける。
+     *
+     * <p><strong>追跡は作り直さない。</strong>作り直すと、これまでの経過が消える。
+     *
+     * <p><strong>空では上書きしない。</strong>推定到着日を運ばないイベントで消すと、
+     * いったん出せていた見込みが「未定」に戻る。
+     *
+     * <p><strong>変わっていなければ書かない。</strong>再試行で同じ中身が 2 回届くのは
+     * 普通のことであり、毎回書くと何も変わっていない更新が記録に積まれる。
+     */
+    private TrackingActivity applyRevisedEstimate(TrackingActivity activity,
+            LocalDate estimatedArrival) {
+        if (estimatedArrival == null
+                || activity.estimatedArrival().filter(estimatedArrival::equals).isPresent()) {
+            return activity;
+        }
+        TrackingActivity revised = activity.withEstimatedArrival(estimatedArrival);
+        activities.updateStatus(revised);
+        return revised;
     }
 
     private Location requireLocation(String unLocode, String label) {
