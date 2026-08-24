@@ -12,10 +12,13 @@ import com.example.bookingms.application.internal.RequestRoutingUseCase;
 import com.example.bookingms.application.internal.ReviseBookingScheduleUseCase;
 import com.example.bookingms.application.internal.ReturnToRoutingUseCase;
 import com.example.bookingms.application.port.CargoEventNotifier;
+import com.example.bookingms.application.internal.AdvanceBookingUseCase;
 import com.example.bookingms.infrastructure.messaging.CargoEventChannels;
+import com.example.bookingms.infrastructure.messaging.HandlingActivityRegisteredListener;
 import com.example.bookingms.infrastructure.messaging.RabbitCargoEventNotifier;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
+import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.FanoutExchange;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.TopicExchange;
@@ -229,5 +232,71 @@ public class BookingConfig {
     @Bean
     public Binding bookingUnroutableBinding() {
         return BindingBuilder.bind(bookingUnroutableQueue()).to(bookingUnroutableExchange());
+    }
+
+    /**
+     * 荷役の交換機（[ADR-025] 決定 1）。
+     *
+     * <p><strong>handlingms・trackingms と同じ引数で宣言する。</strong>交換機は Topic で
+     * あり、<strong>キューと結びつけを足す操作は既存の宣言を変えない</strong>。既存環境で
+     * 宣言し直せずに止まるのは<strong>引数</strong>を変えたときであり、購読者の追加は
+     * それに当たらない。
+     *
+     * <p>引数が 1 つでも食い違うと {@code PRECONDITION_FAILED} で落ち、<strong>後続の
+     * キュー宣言まで止まる</strong>。これは Testcontainers では出ず、kind で初めて出る。
+     */
+    @Bean
+    public TopicExchange bookingCargoHandlingExchange() {
+        return new TopicExchange(CargoEventChannels.HANDLING_EXCHANGE, true, false,
+                Map.of("alternate-exchange", CargoEventChannels.UNROUTABLE_EXCHANGE));
+    }
+
+    /** 受け取れなかったイベントの行き先（[ADR-022] 決定 4）。 */
+    @Bean
+    public DirectExchange bookingDeadLetterExchange() {
+        return new DirectExchange(CargoEventChannels.DEAD_LETTER_EXCHANGE, true, false);
+    }
+
+    /**
+     * 荷役のイベントを受け取るキュー。
+     *
+     * <p><strong>購読側ごとにキューを分ける。</strong>trackingms と共有すると、片方が
+     * 読んだイベントをもう片方が受け取れない。
+     */
+    @Bean
+    public Queue bookingHandlingActivityRegisteredQueue() {
+        return new Queue(CargoEventChannels.HANDLING_QUEUE, true, false, false, Map.of(
+                "x-dead-letter-exchange", CargoEventChannels.DEAD_LETTER_EXCHANGE,
+                "x-dead-letter-routing-key", CargoEventChannels.HANDLING_DEAD_LETTER_QUEUE));
+    }
+
+    @Bean
+    public Queue bookingHandlingDeadLetterQueue() {
+        return new Queue(CargoEventChannels.HANDLING_DEAD_LETTER_QUEUE, true);
+    }
+
+    @Bean
+    public Binding bookingHandlingDeadLetterBinding() {
+        return BindingBuilder.bind(bookingHandlingDeadLetterQueue())
+                .to(bookingDeadLetterExchange())
+                .with(CargoEventChannels.HANDLING_DEAD_LETTER_QUEUE);
+    }
+
+    @Bean
+    public Binding bookingHandlingActivityRegisteredBinding() {
+        return BindingBuilder.bind(bookingHandlingActivityRegisteredQueue())
+                .to(bookingCargoHandlingExchange())
+                .with(CargoEventChannels.HANDLING_ACTIVITY_REGISTERED);
+    }
+
+    @Bean
+    public AdvanceBookingUseCase advanceBookingUseCase(CargoRepository cargoes) {
+        return new AdvanceBookingUseCase(cargoes);
+    }
+
+    @Bean
+    public HandlingActivityRegisteredListener handlingActivityRegisteredListener(
+            AdvanceBookingUseCase advanceBooking) {
+        return new HandlingActivityRegisteredListener(advanceBooking);
     }
 }

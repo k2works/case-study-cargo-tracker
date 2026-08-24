@@ -21,6 +21,33 @@ public final class CargoEventChannels {
     public static final String TRACKING_NUMBER_ISSUED = "cargo.tracking-number-issued";
 
     /**
+     * 荷役の交換機（[ADR-023] 決定 5・[ADR-025] 決定 1）。
+     *
+     * <p><strong>handlingms・trackingms と同じ名前・同じ引数で宣言する。</strong>
+     * 引数が食い違うと {@code PRECONDITION_FAILED} で落ち、<strong>後続のキュー宣言まで
+     * 止まる</strong>。既存の環境では宣言し直せないため、これは Testcontainers では出ず
+     * kind で初めて出る形である。
+     */
+    public static final String HANDLING_EXCHANGE = "cargoHandlingChannel";
+
+    public static final String HANDLING_ACTIVITY_REGISTERED = "cargo.handling-activity-registered";
+
+    /**
+     * 荷役のイベントを読むキュー。
+     *
+     * <p><strong>購読側ごとにキューを分ける</strong>（トピック交換機 + 購読者ごとのキュー）。
+     * 共有すると、片方が読んだイベントをもう片方が受け取れない。
+     */
+    public static final String HANDLING_QUEUE = "bookingms.handling-activity-registered";
+
+    /** 荷役のイベントのデッドレター。 */
+    public static final String HANDLING_DEAD_LETTER_QUEUE =
+            "bookingms.handling-activity-registered.dlq";
+
+    /** 受け取れなかったイベントの行き先。 */
+    public static final String DEAD_LETTER_EXCHANGE = "bookingms.dlx";
+
+    /**
      * どのキューにも結びつかなかったイベントの行き先（[ADR-022] 決定 4）。
      *
      * <p>デッドレターが守るのは「受け取ったが処理できなかった」だけである。ルーティングキーの
