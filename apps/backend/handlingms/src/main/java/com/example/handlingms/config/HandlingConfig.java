@@ -2,12 +2,16 @@ package com.example.handlingms.config;
 
 import com.example.handlingms.application.internal.RegisterHandlingActivityUseCase;
 import com.example.handlingms.application.port.CargoSnapshotFinder;
+import com.example.handlingms.application.port.CustomsDeclarationRepository;
 import com.example.handlingms.application.port.HandlingActivityRepository;
 import com.example.handlingms.application.port.LocationRepository;
 import com.example.handlingms.application.port.HandlingEventNotifier;
 import com.example.handlingms.infrastructure.messaging.HandlingEventChannels;
 import com.example.handlingms.infrastructure.messaging.RabbitHandlingEventNotifier;
+import com.example.handlingms.infrastructure.persistence.CustomsDeclarationMapper;
+import com.example.handlingms.infrastructure.persistence.CustomsStatusHistoryMapper;
 import com.example.handlingms.infrastructure.persistence.HandlingActivityMapper;
+import com.example.handlingms.infrastructure.persistence.MyBatisCustomsDeclarationRepository;
 import com.example.handlingms.infrastructure.persistence.LocationMapper;
 import com.example.handlingms.infrastructure.persistence.MyBatisHandlingActivityRepository;
 import com.example.handlingms.infrastructure.persistence.MyBatisLocationRepository;
@@ -144,6 +148,12 @@ public class HandlingConfig {
     @Bean
     public LocationRepository locationRepository(LocationMapper mapper) {
         return new MyBatisLocationRepository(mapper);
+    }
+
+    @Bean
+    public CustomsDeclarationRepository customsDeclarationRepository(
+            CustomsDeclarationMapper declarations, CustomsStatusHistoryMapper histories) {
+        return new MyBatisCustomsDeclarationRepository(declarations, histories);
     }
 
     /**

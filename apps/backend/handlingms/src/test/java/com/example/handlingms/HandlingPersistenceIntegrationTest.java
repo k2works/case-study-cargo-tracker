@@ -21,16 +21,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
  * 荷役の記録が実際の DB で成立することを確認する。
@@ -38,17 +32,10 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  * <p>読み戻しで<strong>全項目が戻る</strong>ことを見る。項目ごとに比べる形にすると、
  * 属性が増えたときに比較を足し忘れ、保存できていない項目に気づけない（IT6 の欠陥 5）。
  */
-@SpringBootTest
-@Testcontainers
 @Import({HandlingPersistenceIntegrationTest.StubbedCargoes.class,
     HandlingPersistenceIntegrationTest.RecordingNotifier.class})
-@ActiveProfiles("integration")
 @DisplayName("荷役の記録の永続化")
-class HandlingPersistenceIntegrationTest {
-
-    @Container
-    @ServiceConnection
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
+class HandlingPersistenceIntegrationTest extends HandlingIntegrationTestBase {
 
     /** 貨物の写しは ACL の向こう側にある。ここでは実物の代わりに固定の写しを返す。 */
     @TestConfiguration

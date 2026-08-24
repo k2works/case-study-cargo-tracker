@@ -83,8 +83,6 @@ class SchemaDesignConsistencyTest {
             "booking_db.estimate", "US01 輸送見積（未着手）",
             "booking_db.route_candidate", "US01 輸送見積（未着手）",
             "booking_db.cancellation_request", "US30・IT9 タスク 4.5",
-            "handling_db.customs_declaration", "US29・IT9 タスク 4.1",
-            "handling_db.customs_status_history", "US29・IT9 タスク 4.2",
             "billing_db.invoice", "US21-US23・IT11-IT12",
             "billing_db.invoice_line_item", "US21-US23・IT11-IT12",
             "billing_db.payment", "US21-US23・IT11-IT12");

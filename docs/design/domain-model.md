@@ -83,7 +83,7 @@ quadrantChart
 | HandlingActivity | 荷役作業 | Handling Context | 実際に行われた荷役作業の記録 |
 | CargoSnapshot | 貨物スナップショット | Handling Context | ACL 経由で取得した貨物情報。妥当性検証に使用 |
 | CustomsDeclaration | 通関申告 | Handling Context | 通関申告の状態管理（集約ルート）。監査履歴を内包 |
-| CustomsStatusHistory | 通関状態履歴 | Handling Context | 通関状態の変更履歴（日時・変更者・理由） |
+| CustomsStatusChange | 通関状態の変更 | Handling Context | 通関状態の変更履歴（日時・変更者・理由）。**追記しかしない** |
 | Invoice | 精算書 | Billing Context | 貨物輸送 1 件に対して発行される請求書 |
 | Money | 金額 | Billing Context | 金額と通貨コードのペア。多通貨対応 |
 | DiscountPolicy | 割引方針 | Billing Context | 法人・ボリューム・シーズン割引のポリシー |
@@ -1054,23 +1054,26 @@ package "Aggregates（集約）" {
     +register()
   }
   class CustomsDeclaration <<aggregate root>> {
-    -declarationId: String
-    -declarationNumber: String
+    -id: Long
+    -declarationNumber: DeclarationNumber
     -cargoBookingId: CargoBookingId
-    -trackingNumber: String
-    -declarationStatus: CustomsStatus
-    -declaredAt: Date
-    -clearedAt: Date
-    -statusHistory: List<CustomsStatusHistory>
-    +updateStatus(newStatus, changedBy, reason): void
+    -trackingNumber: HandlingTrackingNumber
+    -status: CustomsStatus
+    -declaredAt: Instant
+    -clearedAt: Instant
+    -remarks: String
+    -history: List<CustomsStatusChange>
+    +declare(...): CustomsDeclaration
+    +updateStatus(newStatus, changedBy, reason, changedAt): CustomsDeclaration
     +isCleared(): boolean
-    +isHeldOverdue(now, thresholdDays): boolean
+    +isSettled(): boolean
+    +isHeldOverdue(today, zone, thresholdDays): boolean
   }
-  class CustomsStatusHistory <<entity>> {
-    -changedAt: Date
-    -changedBy: String
+  class CustomsStatusChange <<entity>> {
     -fromStatus: CustomsStatus
     -toStatus: CustomsStatus
+    -changedBy: String
+    -changedAt: Instant
     -reason: String
   }
 }
@@ -1129,7 +1132,7 @@ HandlingActivity ..> CargoSnapshot : validates against
 HandlingActivity ..> CustomsDeclaration : CLAIM は CLEARED を要求
 CargoSnapshot *-- LegSnapshot
 CustomsDeclaration *-- CustomsStatus
-CustomsDeclaration *-- CustomsStatusHistory
+CustomsDeclaration *-- CustomsStatusChange
 HandlingActivityHistory ..> CargoBookingId : query by
 
 @enduml
@@ -1141,7 +1144,9 @@ HandlingActivityHistory ..> CargoBookingId : query by
 |---|---|---|---|
 | 集約ルート | HandlingActivity | 荷役作業 | 荷役作業の登録と妥当性検証 |
 | 集約ルート | CustomsDeclaration | 通関申告 | 通関申告の状態管理と監査履歴（UC21） |
-| エンティティ（集約内） | CustomsStatusHistory | 通関状態履歴 | 状態変更の日時・変更者・理由の記録 |
+| エンティティ（集約内） | CustomsStatusChange | 通関状態の変更 | 状態変更の日時・変更者・理由の記録。**追記しかしない** |
+| 値オブジェクト | DeclarationNumber | 申告番号 | 税関から受け取る業務キー（[ADR-025](../adr/025-customs-declaration-and-cancellation-approval.md) 決定 8）。**書式は検査しない**——採番するのは税関である |
+| 列挙型 | CustomsStatus | 通関状態 | PENDING / CLEARED / HELD / REJECTED。**引取を許すのは CLEARED だけ** |
 | 値オブジェクト | CargoBookingId | 貨物予約識別子 | Booking Context との関連識別子（論理参照）。**Tracking Context の `TrackingBookingId` と付け方がそろっていない**（接頭辞が文脈名でない）。そろえるかどうかは型名の変更を伴うため、扱う BC が出そろってから決める（[ADR-023](../adr/023-handling-activity-validation.md) のコンテキスト） |
 | 値オブジェクト | HandlingType | 荷役種別 | RECEIVE / LOAD / UNLOAD / CLAIM |
 | 値オブジェクト | CargoSnapshot | 貨物スナップショット | ACL 経由で取得した貨物情報。妥当性検証に使用 |
@@ -1183,7 +1188,9 @@ HandlingActivityHistory ..> CargoBookingId : query by
 1. LOAD / UNLOAD 作業で MISROUTED が確定した場合、Booking Context の RoutingStatus と Tracking Context の例外起票を `HandlingActivityRegisteredEvent` 経由で連動させる（US28・**IT10**。IT7 では `offRoute` を記録に残すところまで）
 2. **通関ガード**: 対象貨物の CustomsDeclaration が CLEARED 状態になるまで CLAIM（引取）は実施できない。拒否時は現在の通関状態を提示する（US29・**IT9**。**IT7 では働かない**——`CustomsDeclaration` が無いため、荷役作業員の明示的な確認（`ConsigneeConfirmation`）で代替する。[ADR-023](../adr/023-handling-activity-validation.md) 決定 4）
 3. **通関申告の登録**は追跡番号・申告番号・申告日時を必須とし、初期状態は PENDING（審査中）とする
-4. **通関状態の更新**（CLEARED / HELD / REJECTED）には理由の入力が必須で、CustomsStatusHistory（日時・変更者・理由）として監査履歴に残す
+4. **通関状態の更新**（CLEARED / HELD / REJECTED）には理由の入力が必須で、CustomsStatusChange（日時・変更者・理由）として監査履歴に残す。**登録そのものも 1 行目として残す**（`from_status` も NOT NULL であり、初回は PENDING → PENDING）
+5. **未決着（PENDING / HELD）の申告は貨物あたり高々 1 件**（[ADR-025](../adr/025-customs-declaration-and-cancellation-approval.md) 決定 7）。REJECTED のあとは出し直せるが、CLEARED のあとは断る。「最新の 1 件」を暗黙に選ぶ実装にしない
+6. **留置 3 日超の判定は、最新の HELD 遷移日時から数える**（US29-6）。申告日から数えると、いったん通関して留め直した申告が留め直した初日から対象になる。**日付単位で、業務タイムゾーンで比べる**
 5. HELD（留置）への遷移時は `CustomsStatusChangedEvent` により Tracking Context に例外種別「税関保留」を自動起票させる。**HELD のまま 3 日を超えた申告は督促対象**として警告表示・件数集計する
 6. CLEARED への遷移時は荷主・荷受人に通関完了を通知する。REJECTED への遷移時は荷主に返送または廃棄の判断を求める
 7. HandlingActivityHistory はクエリ専用の Read Model として管理され、集約とは切り離す
@@ -1570,7 +1577,7 @@ take-3 では CustomsDeclaration を HandlingActivity の集約内エンティ�
 **根拠**:
 
 1. 通関申告は荷役作業とライフサイクルが異なる（申告 → 審査 → 状態変更が荷役作業の登録とは独立に進む）。UC21 では申告の登録者（荷役作業員）と状態の管理者（追跡管理者）も異なる
-2. 状態変更ごとの監査履歴（CustomsStatusHistory）と「HELD 3 日超の督促」の検査は申告単位の不変条件であり、荷役作業集約に含める必然性がない
+2. 状態変更ごとの監査履歴（CustomsStatusChange）と「HELD 3 日超の督促」の検査は申告単位の不変条件であり、荷役作業集約に含める必然性がない
 3. 「CLEARED でなければ CLAIM 不可」の通関ガードは、CLAIM 登録時に CustomsDeclaration を参照して検証する（集約間参照は ID 経由・同一サービス内）
 4. 荷役履歴は Read Model（HandlingActivityHistory）として集約と切り離し、コマンド側の複雑性を低減する
 
