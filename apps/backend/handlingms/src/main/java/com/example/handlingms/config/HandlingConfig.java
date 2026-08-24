@@ -2,6 +2,8 @@ package com.example.handlingms.config;
 
 import com.example.handlingms.application.internal.RegisterHandlingActivityUseCase;
 import com.example.handlingms.application.port.CargoSnapshotFinder;
+import com.example.handlingms.application.internal.ManageCustomsDeclarationUseCase;
+import com.example.handlingms.application.internal.RegisterCustomsDeclarationUseCase;
 import com.example.handlingms.application.port.CustomsDeclarationRepository;
 import com.example.handlingms.application.port.HandlingActivityRepository;
 import com.example.handlingms.application.port.LocationRepository;
@@ -148,6 +150,18 @@ public class HandlingConfig {
     @Bean
     public LocationRepository locationRepository(LocationMapper mapper) {
         return new MyBatisLocationRepository(mapper);
+    }
+
+    @Bean
+    public RegisterCustomsDeclarationUseCase registerCustomsDeclarationUseCase(
+            CustomsDeclarationRepository declarations, CargoSnapshotFinder cargoes) {
+        return new RegisterCustomsDeclarationUseCase(declarations, cargoes);
+    }
+
+    @Bean
+    public ManageCustomsDeclarationUseCase manageCustomsDeclarationUseCase(
+            CustomsDeclarationRepository declarations, Clock clock) {
+        return new ManageCustomsDeclarationUseCase(declarations, clock);
     }
 
     @Bean
