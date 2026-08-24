@@ -339,3 +339,45 @@ test('08-handling-history（この貨物の作業履歴）', async ({ page }) =>
 
   await page.screenshot({ path: `${ASSETS}/08-handling-history.png`, fullPage: true })
 })
+
+test('09-tracking-lookup（追跡照会・ログイン不要）', async ({ page }) => {
+  // **ログインしない。**この画面は認証の外にある（US18-5）。ログインしてから撮ると、
+  // 荷主が見る画面とは違うもの（ナビ付き）が載ってしまう
+  await page.goto('/tracking/TRK-20260823-0001')
+  await expect(page.getByRole('heading', { name: '貨物の追跡' })).toBeVisible()
+
+  await page.screenshot({ path: `${ASSETS}/09-tracking-lookup.png`, fullPage: true })
+})
+
+test('09-tracking-manage（貨物状態の管理）', async ({ page }) => {
+  await login(page, 'tracker01')
+  await page.goto('/tracking/manage')
+
+  // 空の入力欄だけを撮ると、マニュアル 9.2 の手順表と画面が食い違って見える。
+  // 貨物を表示した状態にしてから撮る
+  await page.getByLabel('追跡番号').fill('TRK-20260823-0001')
+  await page.getByRole('button', { name: '貨物を表示する' }).click()
+  await expect(page.getByRole('heading', { name: 'TRK-20260823-0001' })).toBeVisible()
+
+  await page.screenshot({ path: `${ASSETS}/09-tracking-manage.png`, fullPage: true })
+})
+
+test('09-open-exceptions（未解決の例外一覧）', async ({ page }) => {
+  await login(page, 'tracker01')
+  await page.goto('/tracking/manage')
+
+  // 例外が 1 件も無いと「未解決の例外はありません」だけの画面になり、
+  // マニュアル 9.4 の説明（並び順・列）と対応しない。起票してから撮る
+  await page.getByLabel('追跡番号').fill('TRK-20260823-0001')
+  await page.getByRole('button', { name: '貨物を表示する' }).click()
+  await page.getByRole('button', { name: '例外を起票する' }).click()
+  await page.getByLabel('例外の種別').selectOption('DELAY')
+  await page.getByLabel('発生状況').fill('台風により出港が遅れています')
+  await page.getByRole('button', { name: '起票する' }).click()
+  await expect(page.getByText('起票しました。')).toBeVisible()
+
+  await page.goto('/tracking/manage/exceptions')
+  await expect(page.getByRole('heading', { name: '未解決の例外' })).toBeVisible()
+
+  await page.screenshot({ path: `${ASSETS}/09-open-exceptions.png`, fullPage: true })
+})
