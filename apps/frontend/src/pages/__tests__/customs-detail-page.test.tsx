@@ -113,6 +113,39 @@ describe("通関申告の詳細（US29）", () => {
     ).not.toBeInTheDocument();
   });
 
+  /**
+   * US29-4 は<strong>代替</strong>である（通知の仕組みがまだ無い）。
+   *
+   * <p><strong>送っていないことを画面が言う</strong>（IT8 と同じ形）。書かないと、
+   * 追跡管理者は「通関済にしたから荷主に届いた」と受け取り、電話をしない。
+   * 荷主は引き取りに来ない。
+   */
+  it("通関済にしても、通知は送っていないことを画面が言う", async () => {
+    loginAs(["ROLE_TRACKER"]);
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByText("DEC-0001");
+
+    await user.selectOptions(screen.getByLabelText("新しい状態"), "CLEARED");
+    await user.type(screen.getByLabelText("変更の理由"), "書類確認により通関完了");
+    await user.click(screen.getByRole("button", { name: "状態を更新する" }));
+
+    expect(
+      await screen.findByText(/荷主・荷受人へのご連絡は自動では行われません/),
+    ).toBeInTheDocument();
+  });
+
+  /** 通関済でないあいだは出さない。**まだ伝えることが無い**。 */
+  it("審査中のあいだは、連絡の案内を出さない", async () => {
+    loginAs(["ROLE_TRACKER"]);
+    renderPage();
+
+    await screen.findByText("DEC-0001");
+    expect(
+      screen.queryByText(/荷主・荷受人へのご連絡は自動では行われません/),
+    ).not.toBeInTheDocument();
+  });
+
   /** 登録も履歴に残る。**何も無い状態から始まらない**。 */
   it("登録そのものが履歴の最初の 1 行として残っている", async () => {
     loginAs(["ROLE_TRACKER"]);

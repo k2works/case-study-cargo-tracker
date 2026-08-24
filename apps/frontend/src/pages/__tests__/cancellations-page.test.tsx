@@ -180,6 +180,42 @@ describe("キャンセル承認（US30）", () => {
     expect(cancellations[0].status).toBe("REQUESTED");
   });
 
+  /**
+   * US30-6・US30-7 は<strong>代替</strong>である（通知の仕組みがまだ無い）。
+   *
+   * <p><strong>送っていないことを画面が言う</strong>（IT8 と同じ形）。書かないと、
+   * 追跡管理者は「承認したから荷主に届いた」と受け取り、連絡をしない。
+   * 荷主は自分の申し入れがどうなったかを知らないままになる。
+   */
+  it("承認しても、連絡は自動では行われないことを画面が言う", async () => {
+    inTransitBookingWithRequest();
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(await screen.findByRole("button", { name: "開く" }));
+
+    await user.selectOptions(await screen.findByLabelText("陸揚げ地"), "SGSIN");
+    await user.type(screen.getByLabelText("決定の理由"), "荷主と合意");
+    await user.click(screen.getByRole("button", { name: "承認する" }));
+
+    expect(
+      await screen.findByText(/ご連絡は自動では行われません/),
+    ).toBeInTheDocument();
+  });
+
+  it("却下しても、連絡は自動では行われないことを画面が言う", async () => {
+    inTransitBookingWithRequest();
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(await screen.findByRole("button", { name: "開く" }));
+
+    await user.type(screen.getByLabelText("決定の理由"), "積み替え済みのため");
+    await user.click(screen.getByRole("button", { name: "却下する" }));
+
+    expect(
+      await screen.findByText(/ご連絡は自動では行われません/),
+    ).toBeInTheDocument();
+  });
+
   it("承認待ちが無ければ、その旨を出す", async () => {
     renderPage();
 

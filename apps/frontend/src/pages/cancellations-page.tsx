@@ -151,12 +151,27 @@ export function CancellationsPage() {
       </h1>
 
       {done !== null && (
-        <p
-          role="status"
-          className="rounded border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-900"
-        >
-          {done}
-        </p>
+        <div className="space-y-2">
+          <p
+            role="status"
+            className="rounded border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-900"
+          >
+            {done}
+          </p>
+          {/*
+            US30-6・US30-7 は**代替**である（通知の仕組みがまだ無い）。**送っていない
+            ことを画面が言う**（IT8 と同じ形）。書かないと、追跡管理者は「承認したから
+            荷主に届いた」と受け取って連絡をせず、荷主は自分の申し入れがどうなったかを
+            知らないままになる。
+          */}
+          <p className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            <strong>荷主と申請者へのご連絡は自動では行われません。</strong>
+            {/* 改行を空白と読ませない（日本語は語間を空けない） */}
+            決定の内容は、担当者からお伝えください。承認した場合は
+            <strong>荷役の担当者にも陸揚げ地をご連絡ください</strong>
+            （荷降しの作業指示は自動では作られません）。
+          </p>
+        </div>
       )}
 
       {isLoading && <p className="text-sm text-gray-600">読み込んでいます…</p>}

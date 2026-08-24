@@ -111,6 +111,19 @@ export function CustomsDetailPage() {
             <dd>{declaration.clearedAt ?? "―"}</dd>
           </div>
         </dl>
+
+        {/*
+          US29-4 は**代替**である（通知の仕組みがまだ無い）。**送っていないことを
+          画面が言う**（IT8 と同じ形）。書かないと、追跡管理者は「通関済にしたから
+          荷主に届いた」と受け取って電話をせず、荷主は引き取りに来ない。
+        */}
+        {declaration.status === "CLEARED" && (
+          <p className="mt-4 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            <strong>荷主・荷受人へのご連絡は自動では行われません。</strong>
+            {/* 改行を空白と読ませない（日本語は語間を空けない） */}
+            通関が完了したことは、担当者からお伝えください（通知の仕組みは次のリリース以降です）。
+          </p>
+        )}
       </section>
 
       {canUpdate && (
