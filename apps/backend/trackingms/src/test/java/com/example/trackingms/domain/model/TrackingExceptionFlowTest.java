@@ -166,7 +166,9 @@ class TrackingExceptionFlowTest {
             TrackingActivity raised = onboard()
                     .raiseException(ExceptionType.DELAY, "遅延しています", NOW);
 
-            TrackingActivity resolved = raised.resolveException("別便に振り替えました", NOW, null);
+            // 遅延の解決には新しい到着予定日が要る（返済枠 0.6）。ここで見るのは状態の戻り先
+            TrackingActivity resolved = raised.resolveException(null, "別便に振り替えました", NOW,
+                    LocalDate.of(2027, Month.SEPTEMBER, 20));
 
             assertThat(resolved.trackingStatus())
                     .as("発生前の状態に戻っていない")
@@ -177,7 +179,7 @@ class TrackingExceptionFlowTest {
             assertThat(resolved.activeException()).isEmpty();
         }
 
-        /** US19-4。新しい到着予定日を受け取る。空なら据え置く。 */
+        /** US19-4。新しい到着予定日を受け取る。遅延以外は空なら据え置く。 */
         @Test
         @DisplayName("解決のときに、新しい到着予定日を受け取れる")
         void acceptsANewEstimatedArrival() {
@@ -185,19 +187,73 @@ class TrackingExceptionFlowTest {
                     .raiseException(ExceptionType.DELAY, "遅延しています", NOW);
 
             LocalDate newArrival = LocalDate.of(2027, Month.SEPTEMBER, 20);
-            assertThat(raised.resolveException("別便に振り替えました", NOW, newArrival)
+            assertThat(raised.resolveException(null, "別便に振り替えました", NOW, newArrival)
                     .estimatedArrival()).contains(newArrival);
-            assertThat(raised.resolveException("別便に振り替えました", NOW, null)
-                    .estimatedArrival())
+        }
+
+        /**
+         * <strong>遅延を解決するなら、いつ着くのかを言う</strong>（IT9 返済枠 0.6・
+         * IT8 レビュー #18）。
+         *
+         * <p>遅延の解決とは「遅れの見通しが立った」ことである。到着予定日を入れずに
+         * 閉じると、遅れる前の古い予定日が残り続け、荷主は過ぎた日付を見る。
+         * それは「解決した」の意味ではない。
+         *
+         * <p>破損・紛失には求めない。到着の見込みとは別の話であり、求めると
+         * 担当者は形だけの日付を入れて閉じる。
+         */
+        @Test
+        @DisplayName("遅延の解決は、新しい到着予定日が無ければ断る")
+        void requiresANewEstimateWhenResolvingADelay() {
+            TrackingActivity raised = onboard()
+                    .raiseException(ExceptionType.DELAY, "遅延しています", NOW);
+
+            assertThatThrownBy(() -> raised.resolveException(null, "別便に振り替えました", NOW, null))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("到着予定日");
+        }
+
+        @Test
+        @DisplayName("遅延以外の解決では、到着予定日を求めない")
+        void doesNotRequireAnEstimateForOtherExceptions() {
+            TrackingActivity raised = onboard()
+                    .raiseException(ExceptionType.DAMAGE, "外装に破れ", NOW);
+
+            assertThat(raised.resolveException(null, "梱包し直しました", NOW, null).estimatedArrival())
                     .as("空の指定で、もとの予定日を消している")
                     .isEqualTo(raised.estimatedArrival());
+        }
+
+        /**
+         * <strong>開いていた一覧が古いまま閉じられない</strong>（IT9 返済枠 0.7・
+         * IT8 レビュー #14）。
+         *
+         * <p>未解決の例外一覧を開いたまま席を外している間に、別の担当者が同じ例外を
+         * 解決し、次の例外が起票されることがある。画面が持っている {@code exceptionId} は
+         * そのとき古い。照合しないと、<strong>見ていたのとは違う例外を、見ていた
+         * つもりの理由で閉じる</strong>ことになる。
+         *
+         * <p>受け取っているのに使っていなかった。引数があること自体が「照合している」
+         * ように読めるため、気づきにくい形だった。
+         */
+        @Test
+        @DisplayName("いま開いている例外と違う番号では、解決できない")
+        void refusesToResolveAStaleException() {
+            TrackingActivity raised = onboard()
+                    .raiseException(ExceptionType.DAMAGE, "外装に破れ", NOW);
+            Long current = raised.activeException().orElseThrow().id();
+
+            assertThatThrownBy(() -> raised.resolveException(
+                    current == null ? 999L : current + 1, "梱包し直しました", NOW, null))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("別の担当者");
         }
 
         @Test
         @DisplayName("未解決の例外が無ければ、解決できない")
         void rejectsResolvingWithoutAnException() {
             TrackingActivity subject = onboard();
-            assertThatThrownBy(() -> subject.resolveException("直しました", NOW, null))
+            assertThatThrownBy(() -> subject.resolveException(null, "直しました", NOW, null))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("未解決の例外がありません");
         }
@@ -208,7 +264,7 @@ class TrackingExceptionFlowTest {
             TrackingActivity raised = onboard()
                     .raiseException(ExceptionType.DELAY, "遅延しています", NOW);
 
-            assertThatThrownBy(() -> raised.resolveException(" ", NOW, null))
+            assertThatThrownBy(() -> raised.resolveException(null, " ", NOW, null))
                     .isInstanceOf(IllegalArgumentException.class);
         }
     }

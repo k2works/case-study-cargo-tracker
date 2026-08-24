@@ -169,7 +169,8 @@ public class TrackingManagementController {
             @RequestBody ResolveExceptionRequest request) {
         requireTracker(userId, roles);
 
-        TrackingActivity resolved = manage.resolveException(request.trackingNumber(),
+        // パスの番号を正とする。本文の番号と食い違うなら、画面が組み立てを誤っている
+        TrackingActivity resolved = manage.resolveException(request.trackingNumber(), exceptionId,
                         request.resolutionNotes(), parseDate(request.newEstimatedArrival()))
                 .orElseThrow(TrackingManagementController::notFound);
         return ManagedTrackingResponse.from(resolved, manage.events(resolved), manage.exceptions(resolved), zone);

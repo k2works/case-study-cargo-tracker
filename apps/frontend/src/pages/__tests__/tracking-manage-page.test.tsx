@@ -168,6 +168,8 @@ describe('貨物状態の管理（US17・US19・US20）', () => {
 
     await user.click(screen.getByRole('button', { name: '解決する' }))
     await user.type(screen.getByLabelText('対応内容'), '別便に振り替えました')
+    // 遅延の解決には新しい到着予定日が要る（返済枠 0.6）
+    await user.type(screen.getByLabelText(/新しい到着予定日/), '2027-09-20')
     await user.click(screen.getByRole('button', { name: '解決を記録する' }))
     await screen.findByText('解決しました。')
 
@@ -175,6 +177,32 @@ describe('貨物状態の管理（US17・US19・US20）', () => {
     const summary = screen.getByRole('heading', { name: 'TRK-20260823-0001' }).parentElement
     expect(within(summary as HTMLElement).getByText('受領済み')).toBeInTheDocument()
     expect(screen.queryByText('例外発生')).not.toBeInTheDocument()
+  })
+
+  /**
+   * US19-4・IT9 返済枠 0.6。**遅延の解決には、いつ着くのかが要る。**
+   *
+   * 到着予定日を入れずに閉じると、遅れる前の古い予定日が残り続け、荷主は過ぎた
+   * 日付を見る。それは「解決した」の意味ではない。
+   *
+   * サーバも同じ規則を持つ（`TrackingActivity#resolveException`）。画面が別の条件を
+   * 持つと、サーバが断る入力を画面が通す。
+   */
+  it('遅延の解決では、新しい到着予定日が必須になる', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await show(user)
+
+    await user.click(screen.getByRole('button', { name: '例外を起票する' }))
+    await screen.findByRole('option', { name: '遅延' })
+    await user.selectOptions(screen.getByLabelText('例外の種別'), 'DELAY')
+    await user.type(screen.getByLabelText('発生状況'), '台風により出港が遅れています')
+    await user.click(screen.getByRole('button', { name: '起票する' }))
+    await screen.findByText('起票しました。')
+
+    await user.click(screen.getByRole('button', { name: '解決する' }))
+
+    expect(screen.getByLabelText(/新しい到着予定日/)).toBeRequired()
   })
 
   /**
@@ -244,6 +272,8 @@ describe('貨物状態の管理（US17・US19・US20）', () => {
 
     await user.click(screen.getByRole('button', { name: '解決する' }))
     await user.type(screen.getByLabelText('対応内容'), '別便に振り替えました')
+    // 遅延の解決には新しい到着予定日が要る（返済枠 0.6）
+    await user.type(screen.getByLabelText(/新しい到着予定日/), '2027-09-20')
     await user.click(screen.getByRole('button', { name: '解決を記録する' }))
     await screen.findByText('解決しました。')
 

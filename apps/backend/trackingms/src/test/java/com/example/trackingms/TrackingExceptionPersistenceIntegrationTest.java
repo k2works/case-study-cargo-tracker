@@ -86,7 +86,9 @@ class TrackingExceptionPersistenceIntegrationTest extends TrackingIntegrationTes
         assertThat(reload().trackingStatus()).isEqualTo(TrackingStatus.EXCEPTION);
         assertThat(reload().statusBefore()).contains(TrackingStatus.LOADED);
 
-        manage.resolveException(number(), "別便に振り替えました", null);
+        // 遅延の解決には新しい到着予定日が要る（返済枠 0.6）。ここで見るのは状態の戻り先
+        manage.resolveException(number(), null, "別便に振り替えました",
+                LocalDate.of(2027, Month.SEPTEMBER, 25));
 
         assertThat(reload().trackingStatus())
                 .as("発生前の状態に戻っていない")
@@ -103,7 +105,7 @@ class TrackingExceptionPersistenceIntegrationTest extends TrackingIntegrationTes
     void persistsTheNewEstimatedArrival() {
         manage.raiseException(number(), "DELAY", "遅延しています");
 
-        manage.resolveException(number(), "別便に振り替えました",
+        manage.resolveException(number(), null, "別便に振り替えました",
                 LocalDate.of(2027, Month.SEPTEMBER, 25));
 
         assertThat(reload().estimatedArrival())

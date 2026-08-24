@@ -248,12 +248,30 @@ public final class TrackingActivity {
      * <p><strong>発生前の状態に戻る。</strong>初期状態へ戻すのではない——受領待ちまで
      * 巻き戻ると、荷主は「届いていたはずの貨物が出発前に戻った」を見る。
      *
-     * @param newEstimatedArrival 新しい到着予定日。空なら据え置く
+     * <p><strong>遅延を解決するなら、いつ着くのかを言う</strong>（IT9 返済枠 0.6）。
+     * 遅延の解決とは「遅れの見通しが立った」ことである。到着予定日を入れずに閉じると、
+     * 遅れる前の古い予定日が残り続け、荷主は過ぎた日付を見る。それは「解決した」の
+     * 意味ではない。破損・紛失には求めない——到着の見込みとは別の話であり、求めると
+     * 担当者は形だけの日付を入れて閉じる。
+     *
+     * @param newEstimatedArrival 新しい到着予定日。遅延では必須、それ以外は空なら据え置く
      */
-    public TrackingActivity resolveException(String resolutionNotes, Instant resolvedAt,
-            LocalDate newEstimatedArrival) {
+    public TrackingActivity resolveException(Long exceptionId, String resolutionNotes,
+            Instant resolvedAt, LocalDate newEstimatedArrival) {
         if (activeException == null || !activeException.unresolved()) {
             throw new IllegalStateException("未解決の例外がありません");
+        }
+        // **開いていた一覧が古いまま閉じられない**（IT9 返済枠 0.7）。
+        // 一覧を開いたまま席を外している間に、別の担当者が同じ例外を解決し、
+        // 次の例外が起票されることがある。照合しないと、見ていたのとは違う例外を、
+        // 見ていたつもりの理由で閉じる
+        if (exceptionId != null && !exceptionId.equals(activeException.id())) {
+            throw new IllegalStateException(
+                    "別の担当者がこの例外をすでに解決しています。一覧を開き直してください");
+        }
+        if (activeException.exceptionType() == ExceptionType.DELAY && newEstimatedArrival == null) {
+            throw new IllegalArgumentException(
+                    "遅延を解決するときは、新しい到着予定日を入れてください");
         }
         if (statusBefore == null) {
             // **戻る先が分からない行は解決できない。**復元は列の空を許す（列が無かった

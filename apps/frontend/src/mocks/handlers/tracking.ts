@@ -428,6 +428,31 @@ export const trackingHandlers = [
           { status: 400 },
         );
       }
+      // **開いていた一覧が古いまま閉じられない**（本物の
+      // `TrackingActivity#resolveException` の写し。IT9 返済枠 0.7）。
+      // 一覧を開いたまま席を外している間に、別の担当者が同じ例外を解決し、
+      // 次の例外が起票されることがある
+      const active = activeExceptionOf(body.trackingNumber);
+      if (active === undefined || active.id !== body.exceptionId) {
+        return HttpResponse.json(
+          {
+            message:
+              "別の担当者がこの例外をすでに解決しています。一覧を開き直してください",
+          },
+          { status: 409 },
+        );
+      }
+      // **遅延を解決するなら、いつ着くのかを言う**（本物の写し。IT9 返済枠 0.6）。
+      // 到着予定日を入れずに閉じると、遅れる前の古い予定日が残り、荷主は過ぎた日付を見る
+      if (
+        exception.exceptionType === "DELAY" &&
+        (body.newEstimatedArrival === null || body.newEstimatedArrival === "")
+      ) {
+        return HttpResponse.json(
+          { message: "遅延を解決するときは、新しい到着予定日を入れてください" },
+          { status: 400 },
+        );
+      }
       exception.resolvedAt = new Date().toISOString();
     exception.resolutionNotes = body.resolutionNotes;
       // **発生前の状態に戻す。**履歴から導かない（[ADR-024] 決定 2）

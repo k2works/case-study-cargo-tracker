@@ -11,6 +11,7 @@ import com.example.trackingms.domain.model.TrackingNumber;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.transaction.annotation.Transactional;
@@ -54,8 +55,28 @@ public class ManageTrackingUseCase {
      * 200 を超えることは実務では無い」であり、<strong>貨物の件数には成り立たない</strong>。
      */
     public List<TrackingActivity> withOpenExceptions() {
-        return activities.findWithOpenExceptions(OPEN_EXCEPTION_LIMIT);
+        return activities.findWithOpenExceptions(OPEN_EXCEPTION_LIMIT).stream()
+                .sorted(OPEN_EXCEPTION_ORDER)
+                .toList();
     }
+
+    /**
+     * 一覧の並び順（IT9 返済枠 0.8・IT8 レビュー #17）。
+     *
+     * <p><strong>緊急を先に、次に古い順。</strong>20 件を超えると、並んでいない一覧は
+     * 「上から順に見る」ことができなくなり、担当者は毎朝すべてを読み直すことになる。
+     * 古い順にするのは、<strong>最も長く放置されているものが最も危ない</strong>ためである。
+     * 新しい順にすると、古い 1 件が下へ沈み続ける。
+     *
+     * <p><strong>緊急かどうかは集約の述語をそのまま呼ぶ。</strong>SQL に種別名を書くと、
+     * 緊急の定義（[ADR-024] 決定 3。紛失だけ）が 2 か所になる。
+     */
+    private static final Comparator<TrackingActivity> OPEN_EXCEPTION_ORDER =
+            Comparator.comparing(TrackingActivity::hasUrgentException).reversed()
+                    .thenComparing(activity -> activity.activeException()
+                            .map(com.example.trackingms.domain.model.TrackingExceptionEvent
+                                    ::occurredAt)
+                            .orElse(Instant.MAX));
 
     /** 一覧に出す貨物の上限。**朝の一覧としてこれ以上は読めない**。 */
     public static final int OPEN_EXCEPTION_LIMIT = 100;
@@ -122,12 +143,12 @@ public class ManageTrackingUseCase {
      * （[ADR-024] 決定 2）。
      */
     @Transactional
-    public Optional<TrackingActivity> resolveException(String trackingNumber,
+    public Optional<TrackingActivity> resolveException(String trackingNumber, Long exceptionId,
             String resolutionNotes, LocalDate newEstimatedArrival) {
         return find(trackingNumber).map(activity -> {
             Instant now = clock.instant();
             TrackingActivity resolved =
-                    activity.resolveException(resolutionNotes, now, newEstimatedArrival);
+                    activity.resolveException(exceptionId, resolutionNotes, now, newEstimatedArrival);
             activities.updateStatus(resolved);
             activities.saveException(resolved.trackingNumber(), resolved);
             activities.appendEvent(resolved.trackingNumber(), new TrackingEvent(

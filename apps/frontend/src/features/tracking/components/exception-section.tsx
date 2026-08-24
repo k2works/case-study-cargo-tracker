@@ -32,6 +32,16 @@ export function ExceptionSection({
   const [resolutionNotes, setResolutionNotes] = useState('')
   const [newEstimatedArrival, setNewEstimatedArrival] = useState('')
 
+  /**
+   * 遅延の解決には新しい到着予定日が要る（サーバの `TrackingActivity#resolveException` と
+   * 同じ規則。IT9 返済枠 0.6）。
+   *
+   * **判定はサーバが返した種別で行う。** 画面が別の条件を持つと、サーバが断る入力を
+   * 画面が通す（またはその逆）ようになる。
+   */
+  const requiresNewEstimate = tracking.activeException?.exceptionType === 'DELAY'
+
+
   function submitRaise(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault()
     onRaise({ exceptionType, description })
@@ -145,14 +155,22 @@ export function ExceptionSection({
                 className="block text-sm font-medium text-gray-700"
               >
                 新しい到着予定日
+                {requiresNewEstimate && <span className="text-red-600">（必須）</span>}
               </label>
               <input
                 id="newEstimatedArrival"
                 type="date"
+                required={requiresNewEstimate}
                 value={newEstimatedArrival}
                 onChange={(event) => setNewEstimatedArrival(event.target.value)}
                 className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
               />
+              {requiresNewEstimate && (
+                <p className="mt-1 text-sm text-gray-600">
+                  遅延の解決には、いつ着くのかが要ります。入れずに閉じると、遅れる前の
+                  古い予定日が残り続けます。
+                </p>
+              )}
             </div>
           </div>
           <p className="text-sm text-gray-600">
