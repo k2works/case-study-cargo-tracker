@@ -207,6 +207,35 @@ public final class TrackingActivity {
             throw new IllegalArgumentException(
                     "%s は自動で検知されるため、手では起票できません".formatted(exceptionType.label()));
         }
+        return recordException(exceptionType, description, occurredAt);
+    }
+
+    /**
+     * 仕組みが検知した例外を起票する（US28 の誤配・US29 の税関保留）。
+     *
+     * <p><strong>人の手番とは入口を分ける</strong>（IT9 返済枠 0.4）。同じ入口に
+     * 「これは仕組みからだ」という引数を足すと、呼び出し側のどれが人でどれが仕組みかが
+     * コードから読めなくなり、手番の検査は入口が増えるたびに写される。入口を分ければ、
+     * それぞれが自分の断り方だけを持つ。
+     *
+     * <p><strong>人が決める種別は、ここからは入れない。</strong>遅延・破損・紛失は
+     * 人が見て決めることである。購読側の不具合で「遅延」が誰の判断も経ずに立つと、
+     * 追跡管理者は自分が起票していない例外の説明を求められる。
+     */
+    public TrackingActivity detectException(ExceptionType exceptionType, String description,
+            Instant occurredAt) {
+        requireNoActiveException("例外を起票できません");
+        if (exceptionType != null && exceptionType.raisableByOperator()) {
+            throw new IllegalArgumentException(
+                    "%s は担当者が判断して起票するため、自動では起票できません"
+                            .formatted(exceptionType.label()));
+        }
+        return recordException(exceptionType, description, occurredAt);
+    }
+
+    /** 起票の中身。手番の判断は呼び出し元（{@code raiseException} / {@code detectException}）が持つ。 */
+    private TrackingActivity recordException(ExceptionType exceptionType, String description,
+            Instant occurredAt) {
         TrackingExceptionEvent raised =
                 TrackingExceptionEvent.raise(exceptionType, description, occurredAt);
         return with(TrackingStatus.EXCEPTION, trackingStatus, currentLocation, estimatedArrival,

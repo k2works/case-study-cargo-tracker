@@ -95,6 +95,61 @@ class TrackingExceptionFlowTest {
         }
     }
 
+    /**
+     * 仕組みが検知して起票する道（US28 の誤配・US29 の税関保留）。
+     *
+     * <p><strong>人の手番とは別の入口にする</strong>（IT9 返済枠 0.4）。同じ
+     * {@code raiseException} に「これは仕組みからだ」という引数を足すと、呼び出し側の
+     * どれが人でどれが仕組みかがコードから読めなくなり、手番の検査は 3 か所目・4 か所目へ
+     * 増える。入口を分ければ、それぞれが自分の断り方だけを持つ。
+     */
+    @Nested
+    @DisplayName("仕組みが検知したとき（US28・US29）")
+    class WhenDetected {
+
+        @Test
+        @DisplayName("手では起票できない種別を、仕組みは起票できる")
+        void detectsWhatOperatorsCannotRaise() {
+            TrackingActivity subject = onboard();
+
+            TrackingActivity detected =
+                    subject.detectException(ExceptionType.CUSTOMS_HOLD, "税関で留置", NOW);
+
+            assertThat(detected.trackingStatus()).isEqualTo(TrackingStatus.EXCEPTION);
+            assertThat(detected.activeException()).isPresent();
+            assertThat(detected.activeException().orElseThrow().exceptionType())
+                    .isEqualTo(ExceptionType.CUSTOMS_HOLD);
+        }
+
+        /**
+         * <strong>人が起票する種別を、仕組みの入口からは入れない。</strong>
+         *
+         * <p>入れられると、購読側の不具合で「遅延」が誰の判断も経ずに立つ。
+         * 遅延・破損・紛失は人が見て決めることであり、仕組みが決めることではない。
+         */
+        @Test
+        @DisplayName("人が起票する種別は、仕組みの入口から入れない")
+        void refusesWhatOnlyOperatorsDecide() {
+            TrackingActivity subject = onboard();
+
+            assertThatThrownBy(() ->
+                    subject.detectException(ExceptionType.DELAY, "遅延", NOW))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("自動では起票できません");
+        }
+
+        /** 未解決の例外は 1 件までという規則は、仕組みからの起票にも効く。 */
+        @Test
+        @DisplayName("未解決の例外があるときは、仕組みからも起票しない")
+        void doesNotStackOnAnUnresolvedException() {
+            TrackingActivity subject = onboard().raiseException(ExceptionType.DELAY, "遅延", NOW);
+
+            assertThatThrownBy(() ->
+                    subject.detectException(ExceptionType.CUSTOMS_HOLD, "税関で留置", NOW))
+                    .isInstanceOf(IllegalStateException.class);
+        }
+    }
+
     @Nested
     @DisplayName("解決するとき（US19-4）")
     class WhenResolving {
