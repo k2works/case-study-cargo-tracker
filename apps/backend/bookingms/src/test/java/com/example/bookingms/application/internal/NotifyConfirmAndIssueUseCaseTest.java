@@ -130,7 +130,19 @@ class NotifyConfirmAndIssueUseCaseTest {
         }
     };
 
-    private final CargoEventNotifier events = published::add;
+    /** **キャンセルのイベントはここでは使わない。**追跡番号の発行だけを見る検査である。 */
+    private final CargoEventNotifier events = new CargoEventNotifier() {
+        @Override
+        public void trackingNumberIssued(
+                com.example.bookingms.application.port.TrackingNumberIssued event) {
+            published.add(event);
+        }
+
+        @Override
+        public void cargoCancelled(com.example.bookingms.application.port.CargoCancelled event) {
+            throw new UnsupportedOperationException("この検査では使わない");
+        }
+    };
 
     private final NotifyShipperUseCase notifyShipper = new NotifyShipperUseCase(cargoes, clock);
     private final ConfirmBookingUseCase confirmBooking = new ConfirmBookingUseCase(cargoes);

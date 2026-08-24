@@ -1,6 +1,8 @@
 package com.example.bookingms.application.internal;
 
 import com.example.bookingms.application.port.CancellationRequestRepository;
+import com.example.bookingms.application.port.CargoCancelled;
+import com.example.bookingms.application.port.CargoEventNotifier;
 import com.example.bookingms.application.port.CargoRepository;
 import com.example.bookingms.application.port.CargoSummary;
 import com.example.bookingms.domain.model.CancellationRequest;
@@ -22,12 +24,14 @@ public class DecideCancellationUseCase {
 
     private final CargoRepository cargoes;
     private final CancellationRequestRepository cancellations;
+    private final CargoEventNotifier events;
     private final Clock clock;
 
     public DecideCancellationUseCase(CargoRepository cargoes,
-            CancellationRequestRepository cancellations, Clock clock) {
+            CancellationRequestRepository cancellations, CargoEventNotifier events, Clock clock) {
         this.cargoes = cargoes;
         this.cancellations = cancellations;
+        this.events = events;
         this.clock = clock;
     }
 
@@ -64,7 +68,14 @@ public class DecideCancellationUseCase {
 
         CancellationRequest approved = cancellations.updateDecision(awaiting.approve(
                 dischargeLocationUnLocode, decidedBy, decisionReason, clock.instant()));
-        cargoes.save(cargo.cancel());
+        Cargo cancelled = cargoes.save(cargo.cancel());
+
+        // **公開追跡が開いている。**知らせないと、荷主は自分が申し入れて承認された
+        // キャンセルを画面で否定される（[ADR-025] 決定 3）。**理由は載せない**
+        cancelled.trackingNumber().ifPresent(trackingNumber ->
+                events.cargoCancelled(new CargoCancelled(trackingNumber.value(),
+                        cancelled.bookingId().map(Object::toString).orElse(null),
+                        approved.decidedAt().orElse(clock.instant()), clock.instant())));
         return approved;
     }
 

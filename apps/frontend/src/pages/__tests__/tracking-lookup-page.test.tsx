@@ -5,6 +5,7 @@ import { handlingActivities, handlingHandlers } from '../../mocks/handlers/handl
 import {
   forceLookupThrottle,
   resetLookupThrottle,
+  raiseExceptionForTest,
   resetTrackings,
   trackingHandlers,
   trackings,
@@ -43,6 +44,58 @@ describe('追跡情報の照会（US18）', () => {
     expect(await screen.findByText('受領待ち')).toBeInTheDocument()
     expect(screen.getByText('Tokyo')).toBeInTheDocument()
     expect(screen.getByText('2027-09-15')).toBeInTheDocument()
+  })
+
+  /**
+   * <strong>緊急が荷主に届く</strong>（[ADR-025] 決定 2・[IT8 Try 4]）。
+   *
+   * <p>この 1 本が、<strong>集約 → 応答 → モック → 画面</strong>のどこで潰しても赤になる。
+   * IT8 は緊急を「決めた」だけで、公開応答まで届くことを一度も確かめていなかった。
+   *
+   * <p><strong>急かす言葉は使わない。</strong>「至急のご連絡が必要です」は、何をすれば
+   * よいか伝えずに緊急だけを渡す。IT9 で営業に例外の導線が入り（返済枠 0.9）、
+   * <strong>案内した先に人がいる状態</strong>になって初めて案内は案内になる。
+   *
+   * <p><strong>種別は書かない</strong>（[ADR-024] 決定 3）。上の欄で隠したものを、
+   * ここで出さない。
+   */
+  it('紛失のときだけ、次の行動を案内する', async () => {
+    trackings[0].status = 'EXCEPTION'
+    trackings[0].statusBefore = 'ONBOARD_CARRIER'
+    // **緊急かどうかを検査が決めない。**種別から導く（定義を変えたら赤になる）
+    raiseExceptionForTest(
+      'TRK-20260823-0001',
+      'LOST',
+      '所在が確認できません',
+      '2027-09-05T00:00:00.000Z',
+    )
+    renderPage('TRK-20260823-0001')
+
+    expect(
+      await screen.findByText(/ご依頼元へのご連絡をおすすめします/),
+    ).toBeInTheDocument()
+    // **急かす言葉は使わない**
+    expect(screen.queryByText(/至急/)).not.toBeInTheDocument()
+    // **種別は書かない**（[ADR-024] 決定 3）
+    expect(screen.queryByText(/紛失/)).not.toBeInTheDocument()
+  })
+
+  /** 遅延・破損では案内を出さない。**緊急は紛失だけである**。 */
+  it('遅延では、連絡をすすめる案内を出さない', async () => {
+    trackings[0].status = 'EXCEPTION'
+    trackings[0].statusBefore = 'ONBOARD_CARRIER'
+    raiseExceptionForTest(
+      'TRK-20260823-0001',
+      'DELAY',
+      '台風により遅延',
+      '2027-09-05T00:00:00.000Z',
+    )
+    renderPage('TRK-20260823-0001')
+
+    expect(await screen.findByText(/お荷物に問題が起きています/)).toBeInTheDocument()
+    expect(
+      screen.queryByText(/ご依頼元へのご連絡をおすすめします/),
+    ).not.toBeInTheDocument()
   })
 
   /**

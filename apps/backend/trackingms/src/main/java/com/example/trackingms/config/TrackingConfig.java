@@ -186,6 +186,57 @@ public class TrackingConfig {
      * <p><strong>受け取れなかったイベントの行き先を、キューの宣言と同じ場所で決める</strong>
      * （[ADR-022] 決定 4）。別々に置くと、キューだけ作ってデッドレターを忘れた環境ができる。
      */
+    /**
+     * キャンセルのイベントを受け取るキュー（[ADR-025] 決定 3）。
+     *
+     * <p><strong>購読側ごとにキューを分ける。</strong>共有すると、片方が読んだイベントを
+     * もう片方が受け取れない。billingms が購読する日（US21・IT11）は、キューと
+     * 結びつけを足すだけで済む。
+     */
+    @Bean
+    public Queue cargoCancelledQueue() {
+        return new Queue(TrackingEventChannels.CANCELLED_QUEUE, true, false, false, Map.of(
+                "x-dead-letter-exchange", TrackingEventChannels.DEAD_LETTER_EXCHANGE,
+                "x-dead-letter-routing-key", TrackingEventChannels.CANCELLED_DEAD_LETTER_QUEUE));
+    }
+
+    @Bean
+    public Queue cargoCancelledDeadLetterQueue() {
+        return new Queue(TrackingEventChannels.CANCELLED_DEAD_LETTER_QUEUE, true);
+    }
+
+    @Bean
+    public Binding cargoCancelledDeadLetterBinding() {
+        return BindingBuilder.bind(cargoCancelledDeadLetterQueue())
+                .to(trackingDeadLetterExchange())
+                .with(TrackingEventChannels.CANCELLED_DEAD_LETTER_QUEUE);
+    }
+
+    @Bean
+    public Binding cargoCancelledBinding() {
+        return BindingBuilder.bind(cargoCancelledQueue())
+                .to(cargoEventExchange())
+                .with(TrackingEventChannels.CARGO_CANCELLED);
+    }
+
+    @Bean
+    public com.example.trackingms.application.internal.NoteCancellationUseCase
+            noteCancellationUseCase(
+            com.example.trackingms.application.port.TrackingActivityRepository activities,
+            com.example.trackingms.application.port.TrackingNoticeRepository notices,
+            java.time.Clock clock) {
+        return new com.example.trackingms.application.internal.NoteCancellationUseCase(
+                activities, notices, clock);
+    }
+
+    @Bean
+    public com.example.trackingms.infrastructure.messaging.CargoCancelledListener
+            cargoCancelledListener(
+            com.example.trackingms.application.internal.NoteCancellationUseCase noteCancellation) {
+        return new com.example.trackingms.infrastructure.messaging.CargoCancelledListener(
+                noteCancellation);
+    }
+
     @Bean
     public Queue handlingActivityRegisteredQueue() {
         return new Queue(TrackingEventChannels.HANDLING_QUEUE, true, false, false, Map.of(

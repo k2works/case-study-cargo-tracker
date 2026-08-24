@@ -308,8 +308,9 @@ public class BookingConfig {
 
     @Bean
     public DecideCancellationUseCase decideCancellationUseCase(CargoRepository cargoes,
-            CancellationRequestRepository cancellations, Clock clock) {
-        return new DecideCancellationUseCase(cargoes, cancellations, clock);
+            CancellationRequestRepository cancellations,
+            com.example.bookingms.application.port.CargoEventNotifier events, Clock clock) {
+        return new DecideCancellationUseCase(cargoes, cancellations, events, clock);
     }
 
     @Bean

@@ -317,6 +317,35 @@ function exceedsLookupLimit(now: number): boolean {
   return lookupCount > LOOKUP_LIMIT_PER_WINDOW;
 }
 
+/**
+ * 検査が例外を仕込むための入口。
+ *
+ * **緊急かどうかは種別から導く。** 検査が urgent を直接与えると、緊急の定義
+ * （[ADR-024] 決定 3。紛失だけ）を変えても検査は緑のままになる——実際、IT9 で
+ * そうなっていた。定義を写さず、**同じ表を引く**。
+ */
+export function raiseExceptionForTest(
+  trackingNumber: string,
+  exceptionType: string,
+  description: string,
+  occurredAt: string,
+) {
+  const choice = RAISABLE_EXCEPTION_TYPES.find(
+    (candidate) => candidate.exceptionType === exceptionType,
+  );
+  exceptionIdSequence += 1;
+  trackingExceptions.push({
+    id: exceptionIdSequence,
+    trackingNumber,
+    exceptionType,
+    description,
+    occurredAt,
+    urgent: choice?.urgent ?? false,
+    resolvedAt: null,
+    resolutionNotes: null,
+  });
+}
+
 /** テストが窓を開け直せるようにする。本物では時計が進むのを待つ。 */
 export function resetLookupThrottle() {
   lookupWindowStartedAt = 0;

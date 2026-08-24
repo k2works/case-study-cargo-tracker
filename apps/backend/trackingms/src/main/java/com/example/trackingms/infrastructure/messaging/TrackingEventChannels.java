@@ -36,6 +36,20 @@ public final class TrackingEventChannels {
 
     public static final String HANDLING_ACTIVITY_REGISTERED = "cargo.handling-activity-registered";
 
+    /**
+     * キャンセルが確定したことのルーティングキー（[ADR-025] 決定 3）。
+     *
+     * <p>交換機は予約のもの（{@link #EXCHANGE}）に相乗りする。トピック交換機なので、
+     * <strong>キューと結びつけを足すだけで済む</strong>。
+     */
+    public static final String CARGO_CANCELLED = "cargo.cancelled";
+
+    /** キャンセルのイベントを読むキュー。**購読側ごとに分ける**。 */
+    public static final String CANCELLED_QUEUE = "trackingms.cargo-cancelled";
+
+    /** キャンセルのイベントのデッドレター。 */
+    public static final String CANCELLED_DEAD_LETTER_QUEUE = "trackingms.cargo-cancelled.dlq";
+
     /** 荷役のイベントを読むキュー。 */
     public static final String HANDLING_QUEUE = "trackingms.handling-activity-registered";
 

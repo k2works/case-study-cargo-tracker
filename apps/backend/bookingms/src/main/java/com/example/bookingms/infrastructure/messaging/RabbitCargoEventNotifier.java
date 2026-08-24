@@ -1,5 +1,6 @@
 package com.example.bookingms.infrastructure.messaging;
 
+import com.example.bookingms.application.port.CargoCancelled;
 import com.example.bookingms.application.port.CargoEventNotifier;
 import com.example.bookingms.application.port.TrackingNumberIssued;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -25,6 +26,19 @@ public class RabbitCargoEventNotifier implements CargoEventNotifier {
     public void trackingNumberIssued(TrackingNumberIssued event) {
         afterCommit(() -> rabbitTemplate.convertAndSend(CargoEventChannels.EXCHANGE,
                 CargoEventChannels.TRACKING_NUMBER_ISSUED, event));
+    }
+
+    /**
+     * キャンセルが確定したことを流す（[ADR-025] 決定 3）。
+     *
+     * <p><strong>交換機は既存のものに相乗りする。</strong>トピック交換機なので、
+     * ルーティングキーを 1 本足すだけで済む。交換機を増やすと、購読側の宣言と
+     * 結びつけがそのぶん増える。
+     */
+    @Override
+    public void cargoCancelled(CargoCancelled event) {
+        afterCommit(() -> rabbitTemplate.convertAndSend(CargoEventChannels.EXCHANGE,
+                CargoEventChannels.CARGO_CANCELLED, event));
     }
 
     /**

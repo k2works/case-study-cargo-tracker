@@ -88,6 +88,10 @@ abstract class CargoPersistenceTestBase {
     /** 発行の時点でトランザクションが生きていたか。 */
     protected static boolean transactionActiveWhenPublished;
 
+    /** 発行されたキャンセルのイベント。**発行したことを検査から見えるようにする**。 */
+    protected static final java.util.List<com.example.bookingms.application.port.CargoCancelled>
+            CANCELLED_EVENTS = new java.util.concurrent.CopyOnWriteArrayList<>();
+
     /**
      * 発行の呼び出しを捕まえる差し替え。
      *
@@ -105,6 +109,12 @@ abstract class CargoPersistenceTestBase {
                         com.example.bookingms.application.port.TrackingNumberIssued event) {
                     transactionActiveWhenPublished = org.springframework.transaction
                             .support.TransactionSynchronizationManager.isSynchronizationActive();
+                }
+
+                @Override
+                public void cargoCancelled(
+                        com.example.bookingms.application.port.CargoCancelled event) {
+                    CANCELLED_EVENTS.add(event);
                 }
             };
         }

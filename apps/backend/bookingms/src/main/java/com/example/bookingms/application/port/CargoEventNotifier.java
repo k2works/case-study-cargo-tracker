@@ -19,4 +19,17 @@ public interface CargoEventNotifier {
      */
     void trackingNumberIssued(TrackingNumberIssued event);
 
+    /**
+     * キャンセルが確定したことを伝える（US30・[ADR-025] 決定 3）。
+     *
+     * <p><strong>購読者がいるから発行する。</strong>公開追跡が開いているため、キャンセルが
+     * 承認された貨物を荷主が引くと trackingms は「輸送中」のまま返す——荷主は自分が
+     * 申し入れて承認されたキャンセルを、画面で否定されることになる。
+     *
+     * <p><strong>billingms へは発行しない。</strong>キャンセル料の算定は US21（IT11）であり、
+     * 受け口が無い。読む側の無い配線を先に敷かない——同じイベントに購読者を足すだけで
+     * 済む形（トピック交換機 + 購読側ごとのキュー）にしてある。
+     */
+    void cargoCancelled(CargoCancelled event);
+
 }

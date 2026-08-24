@@ -21,6 +21,14 @@ public final class CargoEventChannels {
     public static final String TRACKING_NUMBER_ISSUED = "cargo.tracking-number-issued";
 
     /**
+     * キャンセルが確定したことのルーティングキー（[ADR-025] 決定 3）。
+     *
+     * <p><strong>交換機は増やさない。</strong>トピック交換機なので、ルーティングキーを
+     * 1 本足すだけで済む。
+     */
+    public static final String CARGO_CANCELLED = "cargo.cancelled";
+
+    /**
      * 荷役の交換機（[ADR-023] 決定 5・[ADR-025] 決定 1）。
      *
      * <p><strong>handlingms・trackingms と同じ名前・同じ引数で宣言する。</strong>

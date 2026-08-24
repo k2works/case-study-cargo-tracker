@@ -61,8 +61,27 @@ class CancellationUseCaseTest {
 
     private final RequestCancellationUseCase request =
             new RequestCancellationUseCase(cargoes, cancellations, clock);
+    /** 発行されたキャンセルのイベント。**発行したことを検査から見る**。 */
+    private final List<com.example.bookingms.application.port.CargoCancelled> published =
+            new ArrayList<>();
+
+    private final com.example.bookingms.application.port.CargoEventNotifier events =
+            new com.example.bookingms.application.port.CargoEventNotifier() {
+                @Override
+                public void trackingNumberIssued(
+                        com.example.bookingms.application.port.TrackingNumberIssued event) {
+                    throw new UnsupportedOperationException("この検査では使わない");
+                }
+
+                @Override
+                public void cargoCancelled(
+                        com.example.bookingms.application.port.CargoCancelled event) {
+                    published.add(event);
+                }
+            };
+
     private final DecideCancellationUseCase decide =
-            new DecideCancellationUseCase(cargoes, cancellations, clock);
+            new DecideCancellationUseCase(cargoes, cancellations, events, clock);
 
     private static Cargo cargoAt(BookingStatus status, String lastPort) {
         CargoItinerary itinerary = CargoItinerary.of(List.of(
@@ -178,6 +197,43 @@ class CancellationUseCaseTest {
             assertThat(stored.bookingStatus())
                     .as("断ったのに予約がキャンセルされている")
                     .isEqualTo(BookingStatus.IN_TRANSIT);
+        }
+
+        /**
+         * <strong>承認したら知らせる</strong>（[ADR-025] 決定 3）。
+         *
+         * <p>公開追跡が開いているため、知らせないと荷主は自分が申し入れて承認された
+         * キャンセルを画面で否定される。<strong>理由は載せない</strong>——認証の無い画面へ
+         * 社内の判断を流さない。
+         */
+        @Test
+        @DisplayName("承認すると、キャンセルが確定したことを知らせる")
+        void announcesTheCancellation() {
+            awaiting();
+
+            decide.approve(BOOKING_ID, "CNSHA", "tracker01", "荷主と合意");
+
+            assertThat(published).hasSize(1);
+            assertThat(published.getFirst().trackingNumber()).isEqualTo("TRK-20260823-0001");
+            assertThat(published.getFirst().bookingId()).isEqualTo(BOOKING_ID);
+        }
+
+        /**
+         * <strong>却下では知らせない。</strong>
+         *
+         * <p>却下は「キャンセルしない」という決定である。知らせると、荷主の画面に
+         * キャンセルのお知らせが出て、実際には輸送が続いていることと食い違う。
+         */
+        @Test
+        @DisplayName("却下したときは、キャンセルを知らせない")
+        void doesNotAnnounceOnRejection() {
+            awaiting();
+
+            decide.reject(BOOKING_ID, "tracker01", "積み替え済みのため");
+
+            assertThat(published)
+                    .as("却下したのにキャンセルを知らせている。荷主の画面と実態が食い違う")
+                    .isEmpty();
         }
 
         /** US30-7。**却下しても予約は輸送中のまま。** */
