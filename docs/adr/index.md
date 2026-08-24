@@ -4,14 +4,14 @@
 
 ## ADR 一覧
 
-| ADR | 決定内容 | ステータス |
-| :--- | :--- | :--- |
-| [ADR-001](001-microservices-architecture.md) | バウンデッドコンテキスト単位のマイクロサービスアーキテクチャの採用 | 承認済み |
-| [ADR-002](002-local-kubernetes-kustomize.md) | ローカル開発環境に kind + Kustomize を採用 | 承認済み |
+| ADR | 決定内容 | ステータス | 日付 |
+| :--- | :--- | :--- | :--- |
+| [ADR-001](001-microservices-architecture.md) | バウンデッドコンテキスト単位のマイクロサービスアーキテクチャの採用 | 承認済み | - |
+| [ADR-002](002-local-kubernetes-kustomize.md) | ローカル開発環境に kind + Kustomize を採用 | 承認済み | - |
 | [ADR-004](004-gateway-jwt-verification.md) | JWT の署名検証は Gateway に一元化し、各サービスはロール認可のみを行う | 承認済み | 2026-08-19 |
 | [ADR-005](005-token-storage-in-session-storage.md) | 認証トークンは sessionStorage に保持する | 承認済み | 2026-08-19 |
 | [ADR-006](006-demo-login-prefill.md) | 開発環境のログイン画面に動作確認用の利用者を事前入力する | 承認済み | 2026-08-19 |
-| [ADR-003](003-heroku-development-environment.md) | 開発環境（結合テスト）に Heroku Container Registry / Runtime を採用 | 承認済み |
+| [ADR-003](003-heroku-development-environment.md) | 開発環境（結合テスト）に Heroku Container Registry / Runtime を採用 | 承認済み | - |
 | [ADR-007](007-authenticated-user-header-required.md) | 業務サービスは Gateway が付けた利用者ヘッダを必須とし、共有フィルタで検査する | 承認済み | 2026-08-20 |
 | [ADR-008](008-no-user-shipper-link-in-it2.md) | IT2 では利用者と荷主を紐付けず、貨物予約は営業担当者のみが扱う | 承認済み | 2026-08-20 |
 | [ADR-009](009-cargo-status-columns-from-the-start.md) | 貨物の状態列は最初から NOT NULL で作り、料金列は算出できるまで NULL を許す | 承認済み | 2026-08-20 |
@@ -30,5 +30,6 @@
 | [ADR-022](022-domain-event-contract.md) | 追跡番号の発行でイベントを出し、受け取れなかったものはデッドレターへ送る | 承認済み | 2026-08-22 |
 | [ADR-023](023-handling-activity-validation.md) | 予定外の荷役は拒まず記録に残し、引取は荷受人の確認を必須にする | 承認済み | 2026-08-23 |
 | [ADR-024](024-tracking-manual-update-and-exceptions.md) | 手動更新も進む向きだけに限り、公開照会は返す項目を絞って照会を記録する | 承認済み | 2026-08-23 |
+| [ADR-025](025-customs-declaration-and-cancellation-approval.md) | bookingms は荷役のイベントで輸送中を知り、公開画面の緊急は載せ続けて言葉を案内に変える | 承認済み（決定 1・2。決定 3〜9 は未決） | 2026-08-24 |
 
 ADR の作成には `creating-adr` スキルを使用してください。

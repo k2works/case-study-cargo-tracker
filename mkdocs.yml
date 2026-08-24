@@ -172,6 +172,7 @@ nav:
       - ADR-022 ドメインイベント契約: adr/022-domain-event-contract.md
       - ADR-023 荷役作業の記録と妥当性検証: adr/023-handling-activity-validation.md
       - ADR-024 貨物状態の手動更新・例外・公開追跡照会: adr/024-tracking-manual-update-and-exceptions.md
+      - ADR-025 通関申告とキャンセル承認: adr/025-customs-declaration-and-cancellation-approval.md
   - 記事:
       - 概要: article/index.md
       - モノリスアーキテクチャ実装比較:
