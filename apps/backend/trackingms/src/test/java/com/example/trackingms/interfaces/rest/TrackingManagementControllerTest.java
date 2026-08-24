@@ -181,6 +181,49 @@ class TrackingManagementControllerTest {
                     .andExpect(status().isBadRequest());
         }
 
+        /**
+         * <strong>営業は読める。起票も解決もできない</strong>（IT9 返済枠 0.9・
+         * IT8 レビュー #19）。
+         *
+         * <p>荷主は公開の追跡照会で「ご依頼元の営業担当へ」と案内される。ところが営業には
+         * 例外に気づく手段が無く、電話を受けてから追跡管理者を探すことになっていた。
+         * 案内した先に何も無いのでは、案内が行き止まりである。
+         *
+         * <p>読みと書きを対で見る。読めるようにしただけの変更で書きまで開くと、
+         * 解決の判断（荷主への説明責任を伴う）が誰の手にでも渡る。
+         */
+        @Test
+        @DisplayName("営業は未解決の例外を読めるが、起票も解決もできない")
+        void opensReadingToSalesButNotWriting() throws Exception {
+            mockMvc.perform(get("/api/v1/tracking/manage/exceptions/open")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES"))
+                    .andExpect(status().isOk());
+
+            mockMvc.perform(get("/api/v1/tracking/manage/exceptions")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES"))
+                    .andExpect(status().isOk());
+
+            mockMvc.perform(post("/api/v1/tracking/manage/exceptions")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES")
+                            .contentType(MediaType.APPLICATION_JSON).content("""
+                                    {"trackingNumber": "TRK-20260823-0001",
+                                     "exceptionType": "DELAY", "description": "遅延"}
+                                    """))
+                    .andExpect(status().isForbidden());
+
+            mockMvc.perform(post("/api/v1/tracking/manage/exceptions/1/resolve")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES")
+                            .contentType(MediaType.APPLICATION_JSON).content("""
+                                    {"trackingNumber": "TRK-20260823-0001",
+                                     "resolutionNotes": "対応しました"}
+                                    """))
+                    .andExpect(status().isForbidden());
+        }
+
         /** [ADR-024] 決定 11。**起票できる 3 種別だけを返す**。 */
         @Test
         @DisplayName("起票できる種別だけを返す")

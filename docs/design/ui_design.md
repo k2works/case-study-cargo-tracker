@@ -123,7 +123,8 @@ IT2・IT3 のふりかえりが繰り返し「`ui_design.md` の規約」を反�
 | 航海スケジュール登録 | `/routing/voyages/new` | 新規航海登録フォーム（重複時は差分確認） | 経路設計者 | US24, US25 |
 | 航海スケジュール詳細 | `/routing/voyages/:voyageNumber` | 寄港地と区間ごとの時刻の確認 | 経路設計者 | US07, US08 |
 | 貨物追跡照会（公開） | `/tracking/:trackingNumber` | 輸送ステータスタイムライン（**認証不要**） | 荷主、荷受人 | US18 |
-| 貨物状態管理 | `/tracking/manage` | 状態手動更新・例外一覧・例外解決 | 追跡管理者 | US17, US19, US20, US28 |
+| 貨物状態管理 | `/tracking/manage` | 状態手動更新・例外の起票と解決 | 追跡管理者、荷役作業員（参照・起票） | US17, US19, US20, US28 |
+| 未解決の例外一覧 | `/tracking/manage/exceptions` | 未解決の例外がある貨物（緊急を先に、次に発生の古い順） | 追跡管理者、荷役作業員、**営業担当者（読むだけ）** | US19, US20 |
 | 荷役作業記録 | `/handling` | 荷役イベント登録フォーム（モバイル対応）・この貨物の作業履歴 | 荷役作業員（記録）・追跡管理者（参照のみ） | US15, US16 |
 | 荷役作業一覧 | `/handling/list` | 荷役履歴一覧・検索 | 荷役作業員、追跡管理者 | US15 |（**IT7 では作らない**。履歴は記録画面の中に出す——作業員がいるのはその画面であり、記録するたびに別画面へ移らせると手が止まる。検索を伴う一覧が要るのは、予約詳細から荷役履歴を辿る IT8 である）
 | 通関管理 | `/customs` | 通関申告一覧・検索（留置 3 日超の警告表示） | 荷役作業員、追跡管理者 | US29 |
@@ -150,7 +151,8 @@ IT2・IT3 のふりかえりが繰り返し「`ui_design.md` の規約」を反�
 | 航海スケジュール | `/routing/voyages` | ROLE_ROUTING |
 | ~~経路設計~~ | `/routing/design/:bookingId` | ROLE_ROUTING。**サイドバーには置かない**。予約を選ばないと開けない画面であり、メニューから踏むと予約番号の無い URL になる。入口は予約詳細の [経路を割り当て] とし、経路設計者は「経路設計待ち」の予約一覧から辿る |
 | 貨物追跡 | `/tracking` | 全ロール（公開画面への導線） |
-| 貨物状態管理 | `/tracking/manage` | ROLE_TRACKER |
+| 貨物状態管理 | `/tracking/manage` | ROLE_TRACKER, ROLE_HANDLER |
+| 未解決の例外 | `/tracking/manage/exceptions` | ROLE_TRACKER, ROLE_HANDLER, ROLE_SALES。**営業は読むだけ**——荷主は公開照会で「ご依頼元の営業担当へ」と案内されるため、営業が何も知らないままでは案内が行き止まりになる（IT9 返済枠 0.9）。起票と解決には開かない |
 | 荷役管理 | `/handling` | ROLE_HANDLER, ROLE_TRACKER |
 | 通関管理 | `/customs` | ROLE_HANDLER, ROLE_TRACKER |
 | 精算管理 | `/billing` | ROLE_ACCOUNTANT |
@@ -182,7 +184,7 @@ IT2・IT3 のふりかえりが繰り返し「`ui_design.md` の規約」を反�
 | キャンセル承認 | `/booking/cancellations` | `/api/v1/bookings/*/cancellation/approve|reject` | `ROLE_TRACKER` |
 | 航海・経路設計 | `/routing*` | `/api/v1/voyages`, `/api/v1/voyages/{voyageNumber}`, `/api/v1/routes` | `ROLE_ROUTING` |
 | 追跡照会（公開） | `/tracking/:trackingNumber` | `GET /api/v1/public/tracking/*` | **認証不要** |
-| 貨物状態管理・例外 | `/tracking/manage` | `/api/v1/tracking/manage*` | 更新・起票・解決は `ROLE_TRACKER`、**参照は `ROLE_HANDLER` にも開く**（US20-1。荷役作業員が現場で状態を確かめられないと、記録の前に電話が要る） |
+| 貨物状態管理・例外 | `/tracking/manage` | `/api/v1/tracking/manage*` | 更新・起票・解決は `ROLE_TRACKER`、**参照は `ROLE_HANDLER` にも開く**（US20-1。荷役作業員が現場で状態を確かめられないと、記録の前に電話が要る）。**未解決の例外を読むだけは `ROLE_SALES` にも開く**（IT9 返済枠 0.9） |
 | 荷役管理 | `/handling*` | `/api/v1/handling` | `ROLE_HANDLER`, `ROLE_TRACKER`（参照のみ） |
 | 通関管理 | `/customs*` | `/api/v1/customs` | `ROLE_HANDLER`（申告登録）, `ROLE_TRACKER`（状態更新） |
 | 精算管理 | `/billing*` | `/api/v1/billing` | `ROLE_ACCOUNTANT` |

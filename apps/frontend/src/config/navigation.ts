@@ -74,6 +74,15 @@ export const NAVIGATION: NavigationItem[] = [
     roles: ["ROLE_TRACKER", "ROLE_HANDLER"],
     available: true,
   },
+  {
+    // **状態軸の入口**（横断規約）。件数からではなく、メニューからも辿れるようにする。
+    // 営業にも開く——荷主は公開照会で「ご依頼元の営業担当へ」と案内されるため、
+    // 営業が何も知らないままでは案内が行き止まりになる（IT9 返済枠 0.9）
+    label: "未解決の例外",
+    to: "/tracking/manage/exceptions",
+    roles: ["ROLE_TRACKER", "ROLE_HANDLER", "ROLE_SALES"],
+    available: true,
+  },
   // 記録できるのは荷役作業員だけだが、参照は追跡管理者にも開く（US15 の履歴）。
   // メニューに出すのは、そのロールで**何かできる**画面に限る
   {

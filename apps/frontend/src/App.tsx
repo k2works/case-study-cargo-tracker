@@ -98,6 +98,19 @@ export default function App() {
         }
       >
         <Route path="/tracking/manage" element={<TrackingManagePage />} />
+      </Route>
+
+      {/* 未解決の例外は**営業にも読ませる**（IT9 返済枠 0.9）。荷主は公開の追跡照会で
+          「ご依頼元の営業担当へ」と案内されるのに、営業には気づく手段が無く、電話を
+          受けてから追跡管理者を探すことになっていた。読むだけであり、起票も解決も
+          できない（それはサーバが決める） */}
+      <Route
+        element={
+          <RequireAuth allowedRoles={['ROLE_TRACKER', 'ROLE_HANDLER', 'ROLE_SALES']}>
+            <AppLayout />
+          </RequireAuth>
+        }
+      >
         <Route path="/tracking/manage/exceptions" element={<TrackingExceptionsPage />} />
       </Route>
 

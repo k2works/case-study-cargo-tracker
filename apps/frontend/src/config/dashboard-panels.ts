@@ -46,6 +46,9 @@ export const PANELS: Panel[] = [
         label: '追跡番号を荷主へ伝える予約を見る',
         to: '/booking?bookingStatus=TRACKING_ISSUED',
       },
+      // 荷主は公開の追跡照会で「ご依頼元の営業担当へ」と案内される。営業に気づく手段が
+      // 無いと、電話を受けてから追跡管理者を探すことになる（IT9 返済枠 0.9）
+      { label: '例外が起きている貨物を見る', to: '/tracking/manage/exceptions' },
     ],
   },
   {

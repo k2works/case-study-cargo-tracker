@@ -25,8 +25,8 @@ public interface TrackingActivityRepository {
      * 追跡の状態を更新する（US15-4）。
      *
      * <p><strong>作成とは別のメソッドにする。</strong>「常に INSERT する save」で更新まで
-     * 賄うと、最初の更新のときに行が増える。IT6 では作成しか起きなかったため、
-     * 分岐が無いことを明記して先送りしていた。
+     * 賄うと、最初の更新のときに行が増える。作成しか起きないうちは表面化せず、
+     * <strong>最初の更新のストーリーで壊れる</strong>。
      */
     void updateStatus(TrackingActivity activity);
 

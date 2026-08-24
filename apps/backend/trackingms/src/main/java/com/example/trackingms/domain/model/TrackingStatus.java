@@ -52,7 +52,8 @@ public enum TrackingStatus {
     /**
      * 例外が起きている。
      *
-     * <p><strong>IT7 では使わない。</strong>例外の起票は US20（IT8）である。
+     * <p><strong>荷役では現れない。</strong>ここへ動かすのは例外の起票（US19・US20）
+     * だけであり、解決すると発生前の状態へ戻る（[ADR-024] 決定 2）。
      */
     EXCEPTION,
 
@@ -82,6 +83,26 @@ public enum TrackingStatus {
             case EXCEPTION -> "例外発生";
             case UNKNOWN -> "不明";
         };
+    }
+
+    /**
+     * 入力された名前から状態を読む。<strong>読み方はここだけが持つ</strong>。
+     *
+     * <p>{@link ExceptionType#parseRaisable(String)} と同じ形にそろえた（IT9 返済枠 0.10）。
+     * 読み方をユースケース側に書くと、入口が増えるたびに写され、入口ごとに不正の
+     * 見え方が変わる。<strong>語彙を知っているのは、その語彙を定義した型である。</strong>
+     *
+     * @throws IllegalArgumentException 空、または語彙に無い名前
+     */
+    public static TrackingStatus parse(String name) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("新しい状態を選んでください");
+        }
+        try {
+            return valueOf(name);
+        } catch (IllegalArgumentException _) {
+            throw new IllegalArgumentException("状態が不正です: " + name);
+        }
     }
 
     /**

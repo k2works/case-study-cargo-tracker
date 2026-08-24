@@ -64,7 +64,7 @@ public class TrackingManagementController {
     public OpenExceptionSummary openExceptions(
             @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
             @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles) {
-        requireTrackerOrHandler(userId, roles);
+        requireExceptionReader(userId, roles);
 
         List<TrackingActivity> open = manage.withOpenExceptions();
         return new OpenExceptionSummary(open.size(),
@@ -76,7 +76,7 @@ public class TrackingManagementController {
     public List<ManagedTrackingResponse> openExceptionList(
             @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
             @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles) {
-        requireTrackerOrHandler(userId, roles);
+        requireExceptionReader(userId, roles);
 
         return manage.withOpenExceptions().stream()
                 .map(activity -> ManagedTrackingResponse.from(activity, List.of(), List.of(), zone))
@@ -197,6 +197,24 @@ public class TrackingManagementController {
     /** 状態を動かすのは追跡管理者の業務（[ADR-008]）。 */
     private void requireTracker(String userId, String roles) {
         if (!AuthenticatedUser.of(userId, roles).hasAnyRole(Role.ROLE_TRACKER)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "この操作を行う権限がありません");
+        }
+    }
+
+    /**
+     * 未解決の例外を<strong>読むだけ</strong>は営業担当者にも開く（IT9 返済枠 0.9・
+     * IT8 レビュー #19）。
+     *
+     * <p>荷主は公開の追跡照会で「ご依頼元の営業担当へ」と案内される。ところが営業には
+     * 例外に気づく手段が無く、<strong>電話を受けてから追跡管理者を探す</strong>ことに
+     * なっていた。案内した先に何も無いのでは、案内が行き止まりである。
+     *
+     * <p><strong>起票と解決には開かない。</strong>解決したかどうかは荷主への説明責任を
+     * 伴う判断であり、追跡管理者の業務である（[ADR-008]）。
+     */
+    private void requireExceptionReader(String userId, String roles) {
+        if (!AuthenticatedUser.of(userId, roles)
+                .hasAnyRole(Role.ROLE_TRACKER, Role.ROLE_HANDLER, Role.ROLE_SALES)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "この操作を行う権限がありません");
         }
     }

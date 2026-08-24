@@ -7,7 +7,9 @@ import com.example.trackingms.application.port.TrackingNotifier;
 import com.example.trackingms.domain.model.ExceptionType;
 import com.example.trackingms.domain.model.TrackingActivity;
 import com.example.trackingms.domain.model.TrackingEvent;
+import com.example.trackingms.domain.model.TrackingExceptionEvent;
 import com.example.trackingms.domain.model.TrackingNumber;
+import com.example.trackingms.domain.model.TrackingStatus;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -74,8 +76,7 @@ public class ManageTrackingUseCase {
     private static final Comparator<TrackingActivity> OPEN_EXCEPTION_ORDER =
             Comparator.comparing(TrackingActivity::hasUrgentException).reversed()
                     .thenComparing(activity -> activity.activeException()
-                            .map(com.example.trackingms.domain.model.TrackingExceptionEvent
-                                    ::occurredAt)
+                            .map(TrackingExceptionEvent::occurredAt)
                             .orElse(Instant.MAX));
 
     /** 一覧に出す貨物の上限。**朝の一覧としてこれ以上は読めない**。 */
@@ -86,7 +87,7 @@ public class ManageTrackingUseCase {
      *
      * <p><strong>解決したら見えなくなる、では業務が回らない。</strong>
      */
-    public List<com.example.trackingms.domain.model.TrackingExceptionEvent> exceptions(
+    public List<TrackingExceptionEvent> exceptions(
             TrackingActivity activity) {
         return activities.findExceptions(activity.trackingNumber(),
                 TrackingLookupUseCase.HISTORY_LIMIT);
@@ -106,7 +107,7 @@ public class ManageTrackingUseCase {
         return find(trackingNumber).map(activity -> {
             Location location = requireLocation(locationUnLocode);
             TrackingActivity updated = activity.updateManually(
-                    parseStatus(status), location, occurredAt);
+                    TrackingStatus.parse(status), location, occurredAt);
             activities.updateStatus(updated);
             // **状態が動いたら、経過にも残す。**同じトランザクションで書く
             activities.appendEvent(updated.trackingNumber(), new TrackingEvent(
@@ -168,20 +169,4 @@ public class ManageTrackingUseCase {
                         "地点マスタにない場所です: " + unLocode));
     }
 
-    /**
-     * 状態の名前を読む。
-     *
-     * <p><strong>読み方を入口ごとに書かない。</strong>入口が増えた日に、状態の不正が
-     * 別の見え方をする（返済枠 0.5 と同じ形）。
-     */
-    private static com.example.trackingms.domain.model.TrackingStatus parseStatus(String status) {
-        if (status == null || status.isBlank()) {
-            throw new IllegalArgumentException("新しい状態を選んでください");
-        }
-        try {
-            return com.example.trackingms.domain.model.TrackingStatus.valueOf(status);
-        } catch (IllegalArgumentException _) {
-            throw new IllegalArgumentException("状態が不正です: " + status);
-        }
-    }
 }

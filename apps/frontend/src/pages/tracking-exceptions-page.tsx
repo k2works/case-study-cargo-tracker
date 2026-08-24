@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useOpenExceptionList } from "../features/tracking/queries";
+import { useAuthStore } from "../stores/auth-store";
 
 /**
  * 未解決の例外がある貨物の一覧（横断規約）。
@@ -9,17 +10,37 @@ import { useOpenExceptionList } from "../features/tracking/queries";
  *
  * **一覧から個別の管理画面へ行ける。** 一覧が行き止まりだと、番号を書き写して
  * 打ち直すことになる。
+ *
+ * **営業も読む**（IT9 返済枠 0.9）。荷主は公開の追跡照会で「ご依頼元の営業担当へ」と
+ * 案内されるため、営業が何も知らないままでは案内が行き止まりになる。ただし営業は
+ * 貨物状態の管理画面を開けない（[ADR-008]）ので、**リンク先をロールで出し分ける**。
+ * 開けない画面へ誘導すると、押した先で断られる。
+ *
+ * **並び順はサーバが決める**（緊急を先に、次に発生の古い順）。画面で並べ替えると、
+ * 並びの規則が 2 か所になる。
  */
 export function TrackingExceptionsPage() {
   const { data: trackings = [], isLoading } = useOpenExceptionList();
+  const user = useAuthStore((state) => state.user);
+  const canManage =
+    user?.roles.includes("ROLE_TRACKER") === true ||
+    user?.roles.includes("ROLE_HANDLER") === true;
+
+  /** 対応へ進む先。営業は管理画面を開けないので、公開の照会へ送る。 */
+  const detailPathOf = (trackingNumber: string) =>
+    canManage
+      ? `/tracking/manage?trackingNumber=${encodeURIComponent(trackingNumber)}`
+      : `/tracking/${encodeURIComponent(trackingNumber)}`;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">未解決の例外</h1>
-        <Link to="/tracking/manage" className="text-blue-600 hover:underline">
-          貨物状態の管理に戻る
-        </Link>
+        {canManage && (
+          <Link to="/tracking/manage" className="text-blue-600 hover:underline">
+            貨物状態の管理に戻る
+          </Link>
+        )}
       </div>
 
       {isLoading && <p className="text-sm text-gray-600">読み込んでいます…</p>}
@@ -32,6 +53,7 @@ export function TrackingExceptionsPage() {
             <tr className="border-b border-gray-200 text-gray-600">
               <th className="py-2">追跡番号</th>
               <th className="py-2">例外</th>
+              <th className="py-2">発生日時</th>
               <th className="py-2">発生状況</th>
               <th className="py-2">現在地</th>
             </tr>
@@ -45,7 +67,7 @@ export function TrackingExceptionsPage() {
                 <td className="py-2">
                   {/* 一覧を行き止まりにしない。ここから対応へ進む */}
                   <Link
-                    to={`/tracking/manage?trackingNumber=${encodeURIComponent(tracking.trackingNumber)}`}
+                    to={detailPathOf(tracking.trackingNumber)}
                     className="text-blue-600 hover:underline"
                   >
                     {tracking.trackingNumber}
@@ -59,6 +81,8 @@ export function TrackingExceptionsPage() {
                   )}
                   {tracking.activeException?.label}
                 </td>
+                {/* いつから放置されているか。これが無いと、どれから手を付けるか決まらない */}
+                <td className="py-2">{tracking.activeException?.occurredAt}</td>
                 <td className="py-2">
                   {tracking.activeException?.description}
                 </td>

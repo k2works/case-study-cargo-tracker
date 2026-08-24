@@ -454,7 +454,7 @@ export const trackingHandlers = [
         );
       }
       exception.resolvedAt = new Date().toISOString();
-    exception.resolutionNotes = body.resolutionNotes;
+      exception.resolutionNotes = body.resolutionNotes;
       // **発生前の状態に戻す。**履歴から導かない（[ADR-024] 決定 2）
       tracking.status = tracking.statusBefore ?? tracking.status;
       tracking.statusBefore = null;
