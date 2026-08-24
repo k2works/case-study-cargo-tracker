@@ -342,6 +342,7 @@ entity "users\n（ユーザー）" as users {
   --
   * username : VARCHAR(50) <<UK, NOT NULL>>
   * email : VARCHAR(200) <<UK, NOT NULL>>
+  * display_name : VARCHAR(100) <<NOT NULL>>
   * password : VARCHAR(255) <<NOT NULL>>
   * enabled : BOOLEAN <<NOT NULL, DEFAULT TRUE>>
   * failed_attempts : INTEGER <<NOT NULL, DEFAULT 0>>
@@ -361,6 +362,7 @@ entity "auth_audit_log\n（認証監査ログ）" as auth_audit_log {
   * event_type : VARCHAR(30) <<NOT NULL>>
   * occurred_at : TIMESTAMP WITH TIME ZONE <<NOT NULL, DEFAULT NOW()>>
   detail : VARCHAR(500)
+  actor : VARCHAR(50)
 }
 
 users ||--o{ user_roles : "ロールを持つ"
@@ -438,9 +440,9 @@ entity "cargo\n（貨物）" as cargo {
   last_handling_event_voyage : VARCHAR(20)
   quantity : INTEGER
   description : VARCHAR(500)
-  length : NUMERIC(8,2)
-  width : NUMERIC(8,2)
-  height : NUMERIC(8,2)
+  length_cm : NUMERIC(8,2)
+  width_cm : NUMERIC(8,2)
+  height_cm : NUMERIC(8,2)
   hazardous_class : VARCHAR(20)
   un_number : VARCHAR(10)
   proper_shipping_name : VARCHAR(200)
@@ -585,6 +587,8 @@ entity "location\n（場所）" as location {
   --
   * unlocode : VARCHAR(5) <<UK, NOT NULL>>
   * name : VARCHAR(100) <<NOT NULL>>
+  * country_code : VARCHAR(2) <<NOT NULL>>
+  * time_zone : VARCHAR(50) <<NOT NULL>>
 }
 
 entity "tracking_activity\n（追跡レコード）" as tracking_activity {
@@ -677,6 +681,8 @@ entity "location\n（場所）" as location {
   --
   * unlocode : VARCHAR(5) <<UK, NOT NULL>>
   * name : VARCHAR(100) <<NOT NULL>>
+  * country_code : VARCHAR(2) <<NOT NULL>>
+  * time_zone : VARCHAR(50) <<NOT NULL>>
 }
 
 entity "handling_activity\n（荷役作業記録）" as handling_activity {
@@ -689,6 +695,7 @@ entity "handling_activity\n（荷役作業記録）" as handling_activity {
   voyage_number : VARCHAR(20)
   operator_name : VARCHAR(200)
   consignee_confirmation : VARCHAR(200)
+  * off_route : BOOLEAN <<NOT NULL, DEFAULT FALSE>>
 }
 
 entity "customs_declaration\n（通関申告）" as customs_declaration {

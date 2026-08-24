@@ -37,3 +37,17 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
+
+// SchemaDesignConsistencyTest と LocationSeedReplicaTest は、この本文の外
+// （設計ドキュメントと各サービスのマイグレーション）を読む。入力として宣言しないと、
+// Gradle はタスクを UP-TO-DATE と判断し、**設計だけを変えたときに検査が走らない**。
+// 検査があるのに沈黙する形なので、宣言そのものを規律として置く。
+tasks.named('test') {
+    inputs.file(rootProject.file('../../docs/design/data-model.md'))
+            .withPropertyName('dataModelDesign')
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.files(rootProject.subprojects.collect { it.file('src/main/resources/db/migration') })
+            .withPropertyName('flywayMigrations')
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+            .optional()
+}
