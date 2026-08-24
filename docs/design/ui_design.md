@@ -182,7 +182,7 @@ IT2・IT3 のふりかえりが繰り返し「`ui_design.md` の規約」を反�
 | キャンセル承認 | `/booking/cancellations` | `/api/v1/bookings/*/cancellation/approve|reject` | `ROLE_TRACKER` |
 | 航海・経路設計 | `/routing*` | `/api/v1/voyages`, `/api/v1/voyages/{voyageNumber}`, `/api/v1/routes` | `ROLE_ROUTING` |
 | 追跡照会（公開） | `/tracking/:trackingNumber` | `GET /api/v1/public/tracking/*` | **認証不要** |
-| 貨物状態管理・例外 | `/tracking/manage` | `PUT /api/v1/tracking/*`, `/exceptions` | `ROLE_TRACKER` |
+| 貨物状態管理・例外 | `/tracking/manage` | `/api/v1/tracking/manage*` | 更新・起票・解決は `ROLE_TRACKER`、**参照は `ROLE_HANDLER` にも開く**（US20-1。荷役作業員が現場で状態を確かめられないと、記録の前に電話が要る） |
 | 荷役管理 | `/handling*` | `/api/v1/handling` | `ROLE_HANDLER`, `ROLE_TRACKER`（参照のみ） |
 | 通関管理 | `/customs*` | `/api/v1/customs` | `ROLE_HANDLER`（申告登録）, `ROLE_TRACKER`（状態更新） |
 | 精算管理 | `/billing*` | `/api/v1/billing` | `ROLE_ACCOUNTANT` |
@@ -1308,18 +1308,34 @@ take-3 の方針（キーボードナビゲーション・ARIA・カラーコン
 | `SETTLED` | 精算完了 | `bg-gray-100 text-gray-800` |
 | `CANCELLED` | キャンセル | `bg-red-100 text-red-800` |
 
-### TransportStatus バッジ定義
+### TrackingStatus バッジ定義
+
+**表示ラベルは画面が持たない。** サーバが `TrackingStatus#label()` の値を `statusLabel`
+として返し、画面はそれを出す（[ADR-023](../adr/023-handling-activity-validation.md) 決定 1 と
+同じ形）。画面に対訳表を持たせると、値を足したときに画面が列挙の名前をそのまま出す。
+下表はその `label()` を書き写したものであり、**画面の実装ではない**。
 
 | ステータス | 表示ラベル | Tailwind クラス |
 | :--- | :--- | :--- |
-| `NOT_RECEIVED` | 未受取 | `bg-gray-100 text-gray-800` |
-| `RECEIVED` | 受取済 | `bg-cyan-100 text-cyan-800` |
-| `LOADED` | 積み込み済 | `bg-blue-100 text-blue-800` |
-| `IN_TRANSIT` | 輸送中 | `bg-blue-100 text-blue-800` |
-| `UNLOADED` | 荷降ろし済 | `bg-yellow-100 text-yellow-800` |
+| `NOT_RECEIVED` | 受領待ち | `bg-gray-100 text-gray-800` |
+| `RECEIVED` | 受領済み | `bg-cyan-100 text-cyan-800` |
+| `LOADED` | 積込済み | `bg-blue-100 text-blue-800` |
+| `ONBOARD_CARRIER` | 輸送中 | `bg-blue-100 text-blue-800` |
+| `UNLOADED` | 荷降し済み | `bg-yellow-100 text-yellow-800` |
 | `AWAITING_CLAIM` | 引取待ち | `bg-yellow-100 text-yellow-800` |
-| `DELIVERED` | 引取完了 | `bg-green-100 text-green-800` |
-| `MISROUTED` | 誤配 | `bg-red-100 text-red-800` |
+| `CLAIMED` | 引取済み | `bg-green-100 text-green-800` |
+| `EXCEPTION` | 例外発生 | `bg-red-100 text-red-800` |
+| `UNKNOWN` | 不明 | `bg-gray-100 text-gray-800` |
+
+> **`TransportStatus` ではない。** IT6 の実装はこの状態を `transport_status` と名付けていたが、
+> その名前は設計では **Booking Context の `Delivery` が持つもの**であり、BC をまたいで
+> 同じ名前が別物を指していた。IT7 で `TrackingStatus` へ改名している。
+> Booking Context 側の `transport_status`（予約一覧に出る輸送状況）は別の列挙であり、
+> 値は `NOT_RECEIVED` だけである（US30・IT9 で `IN_TRANSIT` / `DELIVERED` が入る）。
+>
+> **`MISROUTED` はこの列挙に無い。** 誤配は状態ではなく例外種別（`ExceptionType.MISROUTE`）
+> として持つ（[ADR-024](../adr/024-tracking-manual-update-and-exceptions.md)）。状態に持つと、
+> 誤配の前にどこまで進んでいたかが失われる。
 
 ### CustomsStatus バッジ定義
 

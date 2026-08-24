@@ -605,8 +605,8 @@ end note
 | ~~`CargoBookedEvent`~~ | — | — | — | **廃止**（[ADR-022](../adr/022-domain-event-contract.md) 決定 1）。trackingms が採番する前提の設計だったが、採番は bookingms が行う（[ADR-021](../adr/021-shipper-notification-and-confirmation-transitions.md)）。「割り当てを依頼する」イベントは要らなくなった |
 | `TrackingNumberIssuedEvent` | bookingms | trackingms | cargoBookingChannel | **追跡番号を発行したとき**（US14）に発行し、trackingms が追跡を作る。ペイロードは `trackingNumber` / `bookingId` / `originUnLocode` / `destinationUnLocode` / `arrivalDeadline` / `occurredAt`（[ADR-022](../adr/022-domain-event-contract.md) 決定 2） |
 | `CargoRoutedEvent` | bookingms | trackingms | cargoRoutingChannel | 経路・旅程の確定を追跡に通知。**IT6 では発行しない**（追跡を作るのに旅程は要らず、要るのは荷役の照合＝US15・IT7）。[ADR-022](../adr/022-domain-event-contract.md) 決定 1 |
-| `CargoCancelledEvent` | bookingms | trackingms, billingms | cargoCancellationChannel | キャンセル確定 → 追跡終了・キャンセル料算定 |
-| `HandlingActivityRegisteredEvent` | handlingms | trackingms, bookingms | handlingChannel | 荷役作業登録 → 輸送ステータス同期。予定ルート外の作業場所は誤配検知の入力（US28） |
+| `CargoCancelledEvent` | bookingms | trackingms | cargoBookingChannel | キャンセル確定 → 追跡へお知らせを記録（IT9）。**billingms へは発行しない**——キャンセル料の算定は US23・IT11 であり、読む側の無い配線を先に敷かない（[ADR-025](../adr/025-customs-declaration-and-cancellation-approval.md) 決定 3） |
+| `HandlingActivityRegisteredEvent` | handlingms | trackingms（済）, bookingms（IT9。[ADR-025](../adr/025-customs-declaration-and-cancellation-approval.md) 決定 1） | cargoHandlingChannel | 荷役作業登録 → 輸送ステータス同期。予定ルート外の作業場所は誤配検知の入力（US28） |
 | `CustomsStatusChangedEvent` | handlingms | trackingms | customsChannel | 通関状態変更 → HELD なら例外「税関保留」を自動起票、CLEARED なら通関完了通知（UC21） |
 | `CargoDeliveredEvent` | trackingms | billingms | deliveryChannel | 配送完了 → 精算開始 |
 | `InvoiceCreatedEvent` | billingms | （通知システム） | billingChannel | 請求書発行 → 荷主への通知 |
@@ -696,8 +696,8 @@ public class RestRouteCandidateFinder implements RouteCandidateFinder {
 | 同期 | bookingms | routingms | REST | `GET /api/v1/routes` |
 | 非同期 | bookingms | trackingms | RabbitMQ | `cargoBookingChannel` |
 | 非同期 | bookingms | trackingms | RabbitMQ | `cargoRoutingChannel` |
-| 非同期 | bookingms | trackingms, billingms | RabbitMQ | `cargoCancellationChannel` |
-| 非同期 | handlingms | trackingms, bookingms | RabbitMQ | `handlingChannel` |
+| 非同期 | bookingms | trackingms | RabbitMQ | `cargoBookingChannel`（既存の交換機に相乗りする。交換機を増やさない） |
+| 非同期 | handlingms | trackingms, bookingms | RabbitMQ | `cargoHandlingChannel` |
 | 非同期 | handlingms | trackingms | RabbitMQ | `customsChannel` |
 | 非同期 | trackingms | billingms | RabbitMQ | `deliveryChannel` |
 
@@ -785,6 +785,8 @@ public class MyBatisCargoRepository implements CargoRepository {
 | :--- | :--- | :--- | :--- |
 | `POST` | `/api/v1/auth/login` | ログイン（JWT 発行）。失敗 5 回連続でロック | UC20 |
 | `POST` | `/api/v1/auth/logout` | ログアウト（セッション破棄記録） | UC20 |
+| `GET` | `/api/v1/admin/accounts/locked` | ロック中アカウントの一覧。システム管理者のみ | UC20 |
+| `POST` | `/api/v1/admin/accounts/{username}/unlock` | アカウントのロック解除。システム管理者のみ | UC20 |
 
 ##### `POST /api/v1/auth/login` の契約
 
@@ -862,6 +864,12 @@ IT1 で荷主登録画面のニーズから導出した。
 | `POST` | `/api/v1/bookings` | 貨物予約の登録 | UC03 |
 | `GET` | `/api/v1/bookings/{bookingId}` | 予約詳細の取得 | UC03 |
 | `GET` | `/api/v1/bookings` | 予約一覧の取得 | UC03 |
+| `GET` | `/api/v1/bookings/locations` | 予約の入力に使う地点の一覧（画面に対訳表を持たせない） | UC03 |
+| `GET` | `/api/v1/bookings/hazard-classes` | 危険物クラスの一覧 | UC03 |
+| `GET` | `/api/v1/bookings/by-tracking-number/{trackingNumber}` | 追跡番号で予約を引く（`CargoSnapshot` の契約。荷役作業員は予約番号を知らない。[ADR-023](../adr/023-handling-activity-validation.md) 決定 2） | UC13 |
+| `POST` | `/api/v1/bookings/{bookingId}/routing-request` | 経路設計を依頼する（`RoutingStatus` を `ROUTING_REQUESTED` へ）。営業担当者のみ | UC06 |
+| `POST` | `/api/v1/bookings/{bookingId}/consultation-request` | 候補が無いときに営業へ相談を戻す。経路設計者のみ | UC08 |
+| `PUT` | `/api/v1/bookings/{bookingId}/schedule` | 期限・出発希望日の変更。営業担当者のみ | UC04 |
 | `PUT` | `/api/v1/bookings/{bookingId}/route` | 経路の割り当て（誤配再設計時は現在地起点）。**候補の中身（区間の並び）を丸ごと受け取り、確定時に成立を再検証する**（[ADR-019](../adr/019-route-assignment-api.md)）。経路設計者のみ。成立しない経路は 409 | UC09, UC08 |
 | `POST` | `/api/v1/bookings/{bookingId}/route-notification` | 経路を荷主へ通知する（US12）。営業担当者のみ。**メールは送らない**——通知したという事実を記録し、画面が見せる（通知の仕組みが入る IT8 まで代替）。[ADR-021](../adr/021-shipper-notification-and-confirmation-transitions.md) 決定 1・決定 2 | UC10 |
 | `PUT` | `/api/v1/bookings/{bookingId}/confirm` | 予約確定。**通知した予約にだけ行える**（[ADR-021](../adr/021-shipper-notification-and-confirmation-transitions.md) 決定 1）。営業担当者のみ | UC11 |
@@ -879,6 +887,7 @@ IT1 で荷主登録画面のニーズから導出した。
 | `POST` | `/api/v1/voyages` | 航海スケジュール登録 | UC19 |
 | `PUT` | `/api/v1/voyages/{voyageNumber}` | 航海スケジュール更新 | UC19 |
 | `GET` | `/api/v1/voyages/{voyageNumber}` | 航海スケジュールの詳細 | UC05 |
+| `GET` | `/api/v1/voyages/locations` | 航海の入力に使う地点の一覧 | UC19 |
 | `GET` | `/api/v1/routes` | 経路候補算出。**推奨順に並んだ複数候補**を返す（[ADR-017](../adr/017-route-candidates-api.md)）。`origin` に現在地を指定して再設計可 | UC06 |
 
 ##### `GET /api/v1/routes` の契約（[ADR-017](../adr/017-route-candidates-api.md)）
@@ -938,15 +947,28 @@ GET /api/v1/routes?origin=JPTYO&destination=USLAX&deadline=2026-09-30&cargoType=
 | メソッド | パス | 説明 | 対応 UC |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/api/v1/public/tracking/{trackingNumber}` | 追跡情報照会（**認証不要**。公開経路は `/api/v1/public/` 配下に分ける） | UC15 |
-| `PUT` | `/api/v1/tracking/{trackingNumber}/status` | 貨物状態更新 | UC14 |
-| `POST` | `/api/v1/tracking/{trackingNumber}/exceptions` | 例外処理（遅延・破損・紛失・誤配・税関保留） | UC16 |
-| `PUT` | `/api/v1/tracking/{trackingNumber}/exceptions/{exceptionId}/resolve` | 例外解決の記録 | UC16 |
+| `GET` | `/api/v1/tracking/manage/{trackingNumber}` | 管理用の追跡詳細（経過・例外・お知らせ） | UC14 |
+| `GET` | `/api/v1/tracking/manage/{trackingNumber}/statuses` | その貨物にいま進められる状態の一覧。**画面はこれを見てボタンを出し分ける**（集約の述語をそのまま呼ぶ） | UC14 |
+| `POST` | `/api/v1/tracking/manage` | 貨物状態の手動更新（US17） | UC14 |
+| `GET` | `/api/v1/tracking/manage/exception-types` | 手で起票できる例外種別（`DELAY` / `DAMAGE` / `LOST` の 3 種だけ。[ADR-024](../adr/024-tracking-manual-update-and-exceptions.md) 決定 11） | UC16 |
+| `GET` | `/api/v1/tracking/manage/exceptions/open` | 未解決の例外一覧 | UC16 |
+| `GET` | `/api/v1/tracking/manage/exceptions` | 例外の記録（解決済みを含む。US19-5） | UC16 |
+| `POST` | `/api/v1/tracking/manage/exceptions` | 例外の起票（遅延・破損・紛失） | UC16 |
+| `POST` | `/api/v1/tracking/manage/exceptions/{exceptionId}/resolve` | 例外解決の記録 | UC16 |
+
+> **経路は `/api/v1/tracking/manage` 配下にまとめている。** 設計は当初
+> `/api/v1/tracking/{trackingNumber}/...` を想定していたが、実装は追跡番号を
+> パスの先頭に置いていない。番号を持たない操作（種別の一覧・未解決の一覧）が
+> あり、番号を先頭に置くと置き場所が無くなるためである。
 
 #### handlingms
 
 | メソッド | パス | 説明 | 対応 UC |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/api/v1/handling` | 荷役作業の登録（CLAIM は通関済チェック） | UC13 |
+| `POST` | `/api/v1/handling` | 荷役作業の登録（CLAIM は通関済チェック。ガードの配線は IT9） | UC13 |
+| `GET` | `/api/v1/handling` | 荷役作業の一覧・検索 | UC13 |
+| `GET` | `/api/v1/handling/locations` | 作業場所の一覧 | UC13 |
+| `GET` | `/api/v1/handling/types` | 荷役種別の一覧（`RECEIVE` / `LOAD` / `UNLOAD` / `CLAIM`） | UC13 |
 | `POST` | `/api/v1/customs` | 通関申告の登録（初期状態 PENDING） | UC21 |
 | `PUT` | `/api/v1/customs/{declarationId}/status` | 通関状態の更新（理由必須・監査ログ） | UC21 |
 | `GET` | `/api/v1/customs` | 通関申告一覧（貨物 ID・追跡番号・状態で検索） | UC21 |

@@ -78,7 +78,7 @@ quadrantChart
 | CarrierMovement | 運送区間 | Routing Context | 出発港・到着港・出発時刻・到着時刻を持つ区間単位 |
 | TrackingActivity | 追跡レコード | Tracking Context | 貨物の追跡情報全体を管理する集約 |
 | TrackingNumber | 追跡番号 | Tracking Context | 追跡活動を一意に識別する番号 |
-| TrackingActivityEvent | 追跡イベント | Tracking Context | 時系列で記録される追跡の出来事 |
+| TrackingEvent | 追跡イベント | Tracking Context | 時系列で記録される追跡の出来事（荷役由来と手動更新の両方） |
 | TrackingExceptionEvent | 追跡例外イベント | Tracking Context | 遅延・破損・紛失・誤配・税関保留の例外事象 |
 | HandlingActivity | 荷役作業 | Handling Context | 実際に行われた荷役作業の記録 |
 | CargoSnapshot | 貨物スナップショット | Handling Context | ACL 経由で取得した貨物情報。妥当性検証に使用 |
@@ -882,31 +882,48 @@ package "Aggregate（集約）" {
   class TrackingActivity <<aggregate root>> {
     -trackingNumber: TrackingNumber
     -bookingId: TrackingBookingId
-    -events: List<TrackingActivityEvent>
+    -trackingStatus: TrackingStatus
+    -statusBefore: TrackingStatus
+    -origin: Location
+    -destination: Location
+    -currentLocation: Location
+    -arrivalDeadline: LocalDate
+    -estimatedArrival: LocalDate
+    -events: List<TrackingEvent>
     -exceptions: List<TrackingExceptionEvent>
-    +addEvent(event: TrackingActivityEvent)
-    +addException(ex: TrackingExceptionEvent)
-    +resolveException(exceptionId, notes)
-    +currentStatus(): TrackingStatus
-    +hasActiveException(): boolean
+    -notices: List<TrackingNotice>
+    +afterHandling(handlingType, locationUnLocode): TrackingActivity
+    +updateManually(next, location, occurredAt, ...): TrackingActivity
+    +raiseException(exceptionType, description, ...): TrackingActivity
+    +resolveException(resolutionNotes, resolvedAt, ...): TrackingActivity
+    +withEstimatedArrival(newEstimatedArrival): TrackingActivity
+    +activeException(): Optional<TrackingExceptionEvent>
+    +hasUrgentException(): boolean
+    +statusBefore(): Optional<TrackingStatus>
   }
 }
 
 package "Entities（集約内エンティティ）" {
-  class TrackingActivityEvent {
-    -eventType: TrackingEventType
-    -location: TrackingLocation
-    -completionTime: Date
-    -voyageNumber: TrackingVoyageNumber
+  class TrackingEvent {
+    -trackingStatus: TrackingStatus
+    -location: Location
+    -occurredAt: Instant
+    -source: EventSource
   }
   class TrackingExceptionEvent {
+    -id: Long
     -exceptionType: ExceptionType
-    -location: TrackingLocation
-    -occurredAt: Date
     -description: String
-    -escalationFlag: Boolean
-    -resolvedAt: Date
+    -occurredAt: Instant
+    -resolvedAt: Instant
     -resolutionNotes: String
+    +unresolved(): boolean
+    +urgent(): boolean
+    +resolve(notes, resolvedAt): TrackingExceptionEvent
+  }
+  class TrackingNotice {
+    -noticedAt: Instant
+    -message: String
   }
 }
 
@@ -916,13 +933,6 @@ package "Value Objects（値オブジェクト）" {
   }
   class TrackingBookingId <<value object>> {
     -bookingId: String
-  }
-  class TrackingLocation <<value object>> {
-    -unLocode: String
-    -name: String
-  }
-  class TrackingVoyageNumber <<value object>> {
-    -number: String
   }
   enum TrackingStatus {
     NOT_RECEIVED
@@ -946,12 +956,12 @@ package "Value Objects（値オブジェクト）" {
 
 TrackingActivity *-- TrackingNumber
 TrackingActivity *-- TrackingBookingId
-TrackingActivity *-- TrackingActivityEvent
+TrackingActivity *-- TrackingEvent
 TrackingActivity *-- TrackingExceptionEvent
-TrackingActivityEvent *-- TrackingLocation
-TrackingActivityEvent *-- TrackingVoyageNumber
+TrackingActivity *-- TrackingNotice
+TrackingActivity ..> Location : 共有カーネル
+TrackingEvent ..> Location : 共有カーネル
 TrackingExceptionEvent *-- ExceptionType
-TrackingExceptionEvent *-- TrackingLocation
 
 @enduml
 ```
@@ -961,20 +971,28 @@ TrackingExceptionEvent *-- TrackingLocation
 | 種別 | クラス名 | 日本語名 | 責務 |
 |---|---|---|---|
 | 集約ルート | TrackingActivity | 追跡レコード | 貨物の追跡情報全体を管理 |
-| エンティティ（集約内） | TrackingActivityEvent | 追跡イベント | 時系列で記録される追跡の出来事 |
+| エンティティ（集約内） | TrackingEvent | 追跡イベント | 時系列で記録される追跡の出来事（荷役由来と手動更新の両方） |
 | エンティティ（集約内） | TrackingExceptionEvent | 追跡例外イベント | 遅延・破損・紛失・誤配・税関保留の例外記録 |
+| エンティティ（集約内） | TrackingNotice | 荷主へのお知らせ | 通知の代替。公開の追跡照会で荷主が読む（[ADR-024](../adr/024-tracking-manual-update-and-exceptions.md) 決定 9） |
 | 値オブジェクト | TrackingNumber | 追跡番号 | 追跡活動を一意に識別 |
 | 値オブジェクト | TrackingBookingId | 予約参照 ID | Booking Context との関連を保持（論理参照） |
-| 値オブジェクト | TrackingLocation | 追跡位置情報 | コンテキスト固有の位置情報型（ACL 変換） |
-| 値オブジェクト | TrackingVoyageNumber | 追跡航海番号 | Tracking Context 固有の航海番号型 |
-| 列挙型 | TrackingStatus | 追跡状態 | 9 段階の追跡フェーズ |
-| 列挙型 | ExceptionType | 例外種別 | DELAY / DAMAGE / LOST / MISROUTE / CUSTOMS_HOLD |
+| 列挙型 | TrackingStatus | 追跡状態 | 9 段階の追跡フェーズ。遷移の判定を `afterHandling` に集約する |
+| 列挙型 | ExceptionType | 例外種別 | DELAY / DAMAGE / LOST / MISROUTE / CUSTOMS_HOLD。手で起票できるのは前 3 者だけ |
+| 列挙型（集約内） | TrackingEvent.EventSource | 出来事の由来 | 荷役から来たのか、人が手で入れたのか |
+
+> **位置は共有カーネルの `Location` を使う。** 設計は当初 `TrackingLocation` という
+> コンテキスト固有型を置いていたが、実装は共有カーネルをそのまま使っている。
+> UN/LOCODE と名称しか持たない型を BC ごとに作ると、同じものの変換だけが増える
+> （`VoyageNumber` を固有型にしたのは、BC ごとに意味が違うためであり、事情が異なる）。
+>
+> **航海番号は追跡が持たない。** `TrackingVoyageNumber` は設計にあったが実装に無い。
+> 追跡が荷主に見せるのは「どうなったか」であり、どの船かではない。
 
 ### ビジネスルール
 
 1. 追跡活動は必ず一意の TrackingNumber を持つ
-2. TrackingActivityEvent は時系列順で管理される。イベントごとに位置と時刻が必須
-3. ExceptionType が LOST の場合、escalationFlag を `true` に設定し上位管理者へエスカレーションする
+2. TrackingEvent は時系列順で管理される。イベントごとに位置と時刻が必須
+3. **緊急かどうかは種別が答える。** `escalationFlag` という属性は持たない（[ADR-024](../adr/024-tracking-manual-update-and-exceptions.md) 決定 3）。属性に持つと、種別と属性が食い違った記録を誰も検出できない。判定は `ExceptionType#urgent`（`LOST` のみ真）に置く
 4. **MISROUTE（誤配）例外は荷役イベントの作業場所が予定ルート外の場合に自動起票される**（US28）。検知した荷役イベントの場所・日時を記録し、経路再設計の入口を提供する
 5. **CUSTOMS_HOLD（税関保留）例外は `CustomsStatusChangedEvent`（HELD）の受信で自動起票される**（UC21 連携）
 6. `ResolveExceptionCommand` の実行により TrackingStatus は例外発生前の状態に復帰する。解決後も例外の事実は記録として残り、料金調整の根拠として参照できる
@@ -1009,7 +1027,7 @@ TrackingExceptionEvent *-- TrackingLocation
 |---|---|---|
 | AssignTrackingNumberCommand | Booking Context（イベント駆動） | TrackingActivity を新規作成し TrackingNumber を割り当て |
 | AdvanceTrackingCommand | Handling Context（イベント駆動・IT7） | 荷役の記録を受けて TrackingStatus を進める（US15-4）。**知らない追跡番号では止まらない**——例外にすると後続の荷役も進まなくなる |
-| AddTrackingEventCommand | 追跡管理者 | TrackingActivityEvent を時系列で追加 |
+| AddTrackingEventCommand | 追跡管理者 | TrackingEvent を時系列で追加（手動更新。US17・IT8） |
 | RegisterExceptionCommand | 追跡管理者・システム（誤配/税関保留の自動起票） | TrackingExceptionEvent を登録 |
 | ResolveExceptionCommand | 追跡管理者 | 例外を解決し TrackingStatus を復帰 |
 
@@ -1376,9 +1394,6 @@ package "コンテキスト固有の VoyageNumber 型" {
   class VoyageNumber <<Booking Context>> as BookingVoyageNumber {
     -value: String
   }
-  class TrackingVoyageNumber <<Tracking Context>> {
-    -number: String
-  }
   class HandlingVoyageNumber <<Handling Context>> {
     -number: String
   }
@@ -1403,8 +1418,9 @@ package "コンテキスト固有の VoyageNumber 型" {
 |---|---|---|
 | Routing Context | VoyageNumber | 航海スケジュールの識別子（この文脈が持ち主） |
 | Booking Context | VoyageNumber | 旅程の区間が「どの航海で運ぶか」（ACL 変換。IT5 で追加） |
-| Tracking Context | TrackingVoyageNumber | 追跡イベントに紐づく航海番号（ACL 変換） |
 | Handling Context | HandlingVoyageNumber | 荷役作業に紐づく航海番号（ACL 変換） |
+
+> **Tracking Context は航海番号を持たない。** 当初は `TrackingVoyageNumber` を置く設計だったが、追跡が荷主に見せるのは「どうなったか」であり、どの船かではない。使い道の無い型を BC ごとに置くと、変換だけが増える。
 
 #### 追跡番号（IT6 で追加）
 
@@ -1432,17 +1448,21 @@ package "コンテキスト固有の VoyageNumber 型" {
 
 ## ドメインイベント
 
-| イベント名 | 発生元 | 処理先 | トランスポート | 内容 |
+> **「実装」列は、そのイベントを実際に発行・購読しているかを示す。** 設計にだけ存在する
+> イベントは、実装漏れなのか、まだ来ていないストーリーなのかが読み手に区別できない。
+> トランスポートは全て RabbitMQ（Spring Cloud Stream）であり、列に持つ意味が無かったため置き換えた。
+
+| イベント名 | 発生元 | 処理先 | 実装 | 内容 |
 |---|---|---|---|---|
-| ~~CargoBookedEvent~~ | — | — | — | **廃止**（[ADR-022](../adr/022-domain-event-contract.md) 決定 1）。trackingms が採番する前提の設計だった |
-| TrackingNumberIssuedEvent | bookingms | trackingms | RabbitMQ | **追跡番号を発行したとき**（US14）に発行し、trackingms が追跡を作る |
-| CargoRoutedEvent | bookingms | trackingms | RabbitMQ | 旅程確定後、経路・旅程情報を追跡コンテキストに同期 |
-| CargoCancelledEvent | bookingms | trackingms・billingms | RabbitMQ | キャンセル確定後、追跡終了とキャンセル料算定をトリガー |
-| HandlingActivityRegisteredEvent | handlingms | trackingms（**IT7**）・bookingms（US28・**IT10**） | RabbitMQ | 荷役作業完了後、trackingms の `TrackingStatus` を進める（US15-4）。予定ルート外の作業場所（`offRoute`）は誤配検知の入力で、`RoutingStatus` を動かすのは US28（IT10）。**IT7 で購読するのは trackingms だけ**（[ADR-023](../adr/023-handling-activity-validation.md) 決定 6） |
-| CustomsStatusChangedEvent | handlingms | trackingms | RabbitMQ | 通関状態変更。HELD なら例外「税関保留」を自動起票、CLEARED なら通関完了通知（UC21） |
-| TrackingExceptionDetectedEvent | trackingms | bookingms | RabbitMQ | 例外検知後、通知を配信 |
-| CargoDeliveredEvent | trackingms | billingms | RabbitMQ | 配送完了後、精算処理をトリガー。**IT7 では発行しない**（US16-4 は範囲外。US23・IT12。[ADR-023](../adr/023-handling-activity-validation.md) 決定 5） |
-| InvoiceCreatedEvent | billingms | （通知） | RabbitMQ | 請求書発行後、荷主への通知を配信 |
+| ~~CargoBookedEvent~~ | — | — | **廃止** | [ADR-022](../adr/022-domain-event-contract.md) 決定 1。trackingms が採番する前提の設計だったが、採番は bookingms が行う |
+| TrackingNumberIssuedEvent | bookingms | trackingms | **済**（IT6） | **追跡番号を発行したとき**（US14）に発行し、trackingms が追跡を作る |
+| CargoRoutedEvent | bookingms | trackingms | **未** | 旅程確定後、経路・旅程情報を追跡コンテキストに同期。**発行していない**——追跡を作るのに旅程は要らず、要るのは荷役の照合である（[ADR-022](../adr/022-domain-event-contract.md) 決定 1） |
+| CargoCancelledEvent | bookingms | trackingms | IT9 | キャンセル確定を追跡へ知らせ、お知らせに記録する。**billingms へは発行しない**——キャンセル料の算定は US23・IT11 であり、購読側が無いイベントを配ると誰も読まない配線だけが残る（[ADR-025](../adr/025-customs-declaration-and-cancellation-approval.md) 決定 3） |
+| HandlingActivityRegisteredEvent | handlingms | trackingms（**済**・IT7）・bookingms（**IT9**。[ADR-025](../adr/025-customs-declaration-and-cancellation-approval.md) 決定 1） | 一部 | 荷役作業完了後、trackingms の `TrackingStatus` を進める（US15-4）。予定ルート外の作業場所（`offRoute`）は誤配検知の入力で、`RoutingStatus` を動かすのは US28（IT10）。**IT7 で購読するのは trackingms だけ**（[ADR-023](../adr/023-handling-activity-validation.md) 決定 6） |
+| CustomsStatusChangedEvent | handlingms | trackingms | IT9 | 通関状態変更。HELD なら例外「税関保留」を自動起票、CLEARED なら通関完了通知（UC21） |
+| ~~TrackingExceptionDetectedEvent~~ | — | — | **廃止** | 設計にだけ存在し、実装も [architecture_backend.md](architecture_backend.md) のイベント一覧も持っていなかった。例外を営業へ届ける手段は、イベントではなくダッシュボードの件数と導線で用意する（IT9 返済枠 0.9）。**読む側の無いイベントを設計にだけ置くと、実装漏れと区別がつかない** |
+| CargoDeliveredEvent | trackingms | billingms | **未**（US23・IT12） | 配送完了後、精算処理をトリガー。**IT7 では発行しない**（US16-4 は範囲外。US23・IT12。[ADR-023](../adr/023-handling-activity-validation.md) 決定 5） |
+| InvoiceCreatedEvent | billingms | （通知） | **未**（IT12） | 請求書発行後、荷主への通知を配信 |
 
 ### ドメインイベントフロー
 
@@ -1474,7 +1494,7 @@ handling -> handling : HandlingActivityRegistration\n（RECEIVE / LOAD / UNLOAD�
 handling -> mq : HandlingActivityRegisteredEvent
 mq -> tracking : HandlingActivityRegisteredEvent
 mq -> booking : HandlingActivityRegisteredEvent
-tracking -> tracking : TrackingActivityEvent 追加\n（予定ルート外なら MISROUTE 例外を自動起票）
+tracking -> tracking : TrackingEvent 追加\n（予定ルート外なら MISROUTE 例外を自動起票）
 booking -> booking : Delivery.transportStatus 更新\n（予定ルート外なら RoutingStatus = MISROUTED）
 
 note right : 通関フェーズ（輸入港）
@@ -1539,7 +1559,7 @@ Voyage を集約ルートとし、Schedule（CarrierMovement のリスト）を�
 
 ### Tracking Context：TrackingActivity 集約
 
-TrackingActivity を集約ルートとし、TrackingActivityEvent と TrackingExceptionEvent を集約内エンティティとして管理する設計とした。
+TrackingActivity を集約ルートとし、TrackingEvent・TrackingExceptionEvent・TrackingNotice を集約内エンティティとして管理する設計とした。
 
 **根拠**: 追跡状態は時系列の全イベントと例外状態を総合的に判定するため、単一集約としてまとめる必要がある。誤配・税関保留の自動起票もイベント受信からこの集約の操作として閉じる。CQRS の読み取り側モデルとして機能し、イベントサブスクリプションでデータを構築する。
 
