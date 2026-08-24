@@ -1,6 +1,8 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { RequireAuth } from './components/require-auth'
 import { AppLayout } from './layouts/app-layout'
+import { CustomsDetailPage } from './pages/customs-detail-page'
+import { CustomsNewPage } from './pages/customs-new-page'
 import { CustomsPage } from './pages/customs-page'
 import { DashboardPage } from './pages/dashboard-page'
 import { ForbiddenPage } from './pages/forbidden-page'
@@ -126,6 +128,23 @@ export default function App() {
         }
       >
         <Route path="/customs" element={<CustomsPage />} />
+        {/* 状態を更新できるのは追跡管理者だけ。詳細は荷役作業員も読む
+            ——自分が出した申告の行方を追えないと、引取の作業をいつ始められるか
+            分からない。操作の出し分けは画面の中で行う */}
+        <Route path="/customs/:declarationId" element={<CustomsDetailPage />} />
+      </Route>
+
+      {/* 申告を出すのは荷役作業員だけ（[ADR-025] 決定 6）。追跡管理者は状態を
+          更新する側であり、申告そのものは出さない。サーバも同じ規則を持つ
+          ——画面に出す・出さないでは守れない */}
+      <Route
+        element={
+          <RequireAuth allowedRoles={['ROLE_HANDLER']}>
+            <AppLayout />
+          </RequireAuth>
+        }
+      >
+        <Route path="/customs/new" element={<CustomsNewPage />} />
       </Route>
 
       {/* 航海スケジュールの管理は経路設計者の業務。営業に開くと、営業が

@@ -219,6 +219,32 @@ describe("通関申告の一覧（US29）", () => {
     );
   });
 
+  /**
+   * **[ADR-025] 決定 6。申告を出すのは荷役作業員だけ。**
+   *
+   * 追跡管理者は状態を更新する側であり、申告そのものは出さない。押せない操作を
+   * 見せると、押した先で断られる。守るのはサーバであり、画面はその写しである。
+   */
+  it("追跡管理者には、新規申告のボタンが出ない", async () => {
+    clearedDeclaration(1, "DEC-0001");
+    renderPage();
+    await screen.findByText("DEC-0001");
+
+    expect(screen.queryByRole("link", { name: "新規申告" })).not.toBeInTheDocument();
+  });
+
+  it("荷役作業員には、新規申告のボタンが出る", async () => {
+    loginAs(["ROLE_HANDLER"]);
+    clearedDeclaration(1, "DEC-0001");
+    renderPage();
+    await screen.findByText("DEC-0001");
+
+    expect(screen.getByRole("link", { name: "新規申告" })).toHaveAttribute(
+      "href",
+      "/customs/new",
+    );
+  });
+
   it("1 件も無ければ、その旨を出す", async () => {
     renderPage();
 

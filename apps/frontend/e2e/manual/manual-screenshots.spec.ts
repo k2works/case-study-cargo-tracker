@@ -381,3 +381,69 @@ test('09-open-exceptions（未解決の例外一覧）', async ({ page }) => {
 
   await page.screenshot({ path: `${ASSETS}/09-open-exceptions.png`, fullPage: true })
 })
+
+test('10-customs-new（通関申告の登録）', async ({ page }) => {
+  await login(page, 'handler01')
+  await page.getByRole('link', { name: '通関管理' }).click()
+  await page.getByRole('link', { name: '新規申告' }).click()
+  await expect(page.getByRole('heading', { name: '通関申告の登録' })).toBeVisible()
+
+  // 空のフォームだけを撮ると、マニュアル 10.1 の手順表と対応しない
+  await page.getByLabel('追跡番号').fill('TRK-20260823-0001')
+  await page.getByLabel('申告番号').fill('DEC-0001')
+  await page.getByLabel('申告日時').fill('2027-09-03T09:00')
+
+  await page.screenshot({ path: `${ASSETS}/10-customs-new.png`, fullPage: true })
+})
+
+test('10-customs-list（通関申告一覧）', async ({ page }) => {
+  await login(page, 'handler01')
+
+  // 1 件も無いと「通関申告はありません」だけの画面になり、
+  // マニュアル 10.4 の説明（検索条件・列）と対応しない
+  await page.getByRole('link', { name: '通関管理' }).click()
+  await page.getByRole('link', { name: '新規申告' }).click()
+  await page.getByLabel('追跡番号').fill('TRK-20260823-0001')
+  await page.getByLabel('申告番号').fill('DEC-0001')
+  await page.getByLabel('申告日時').fill('2027-09-03T09:00')
+  await page.getByRole('button', { name: '登録する' }).click()
+  await expect(page.getByText(/登録しました/)).toBeVisible()
+
+  // **画面の中の導線で戻る。**page.goto は再読み込みになり、ブラウザ内のモックが
+  // 持っている申告が消える——空の一覧を撮ってしまう
+  await page.getByRole('button', { name: '一覧で確認する' }).click()
+  await expect(page.getByRole('heading', { name: '通関申告一覧' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'DEC-0001' })).toBeVisible()
+
+  await page.screenshot({ path: `${ASSETS}/10-customs-list.png`, fullPage: true })
+})
+
+test('10-customs-detail（通関申告詳細と状態の更新）', async ({ page }) => {
+  // 申告を出すのは荷役作業員、状態を更新するのは追跡管理者。この画面の値打ちは
+  // **更新の枠**なので追跡管理者で開く。
+  //
+  // 申告そのものは API で用意する。**ログインし直すとページが再読み込みされ、
+  // ブラウザ内のモックが持っている申告が消える**ためである（荷役作業員として
+  // 登録してから追跡管理者でログインし直す、という手順は取れない）。
+  await login(page, 'tracker01')
+  await page.evaluate(async () => {
+    await fetch('/api/v1/customs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        trackingNumber: 'TRK-20260823-0001',
+        declarationNumber: 'DEC-0001',
+        declaredAt: '2027-09-03T00:00:00.000Z',
+        remarks: null,
+      }),
+    })
+  })
+
+  // 画面の中の導線で開く（page.goto は再読み込みになり、申告が消える）
+  await page.getByRole('link', { name: '通関管理' }).click()
+  await expect(page.getByRole('heading', { name: '通関申告一覧' })).toBeVisible()
+  await page.getByRole('link', { name: 'DEC-0001' }).click()
+  await expect(page.getByRole('heading', { name: '通関申告詳細' })).toBeVisible()
+
+  await page.screenshot({ path: `${ASSETS}/10-customs-detail.png`, fullPage: true })
+})

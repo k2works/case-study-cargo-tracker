@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useAuthStore } from "../stores/auth-store";
 import {
   useCustomsDeclarations,
   useCustomsStatuses,
@@ -30,6 +31,13 @@ export function CustomsPage() {
   /** 留置 3 日超だけに絞っているか。**サーバの判定をそのまま使う**。 */
   const [overdueOnly, setOverdueOnly] = useState(false);
 
+  /**
+   * 申告を出すのは荷役作業員だけ（[ADR-025] 決定 6）。追跡管理者は状態を更新する側で
+   * あり、申告そのものは出さない。**押せない操作を見せない**。
+   */
+  const user = useAuthStore((state) => state.user);
+  const canRegister = user?.roles.includes("ROLE_HANDLER") === true;
+
   const { data: statuses = [] } = useCustomsStatuses();
   const { data: declarations = [], isLoading } = useCustomsDeclarations(criteria);
 
@@ -50,12 +58,14 @@ export function CustomsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">通関申告一覧</h1>
-        <Link
-          to="/customs/new"
-          className="rounded bg-blue-600 px-4 py-2 text-white"
-        >
-          新規申告
-        </Link>
+        {canRegister && (
+          <Link
+            to="/customs/new"
+            className="rounded bg-blue-600 px-4 py-2 text-white"
+          >
+            新規申告
+          </Link>
+        )}
       </div>
 
       {/* 件数を出すだけでは仕事は進まない。ここから対象だけに絞り込める */}
