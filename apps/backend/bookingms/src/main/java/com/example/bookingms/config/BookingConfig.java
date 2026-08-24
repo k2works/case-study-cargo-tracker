@@ -13,6 +13,8 @@ import com.example.bookingms.application.internal.ReviseBookingScheduleUseCase;
 import com.example.bookingms.application.internal.ReturnToRoutingUseCase;
 import com.example.bookingms.application.port.CargoEventNotifier;
 import com.example.bookingms.application.internal.AdvanceBookingUseCase;
+import com.example.bookingms.application.internal.DecideCancellationUseCase;
+import com.example.bookingms.application.internal.RequestCancellationUseCase;
 import com.example.bookingms.application.port.CancellationRequestRepository;
 import com.example.bookingms.infrastructure.persistence.CancellationRequestMapper;
 import com.example.bookingms.infrastructure.persistence.MyBatisCancellationRequestRepository;
@@ -296,6 +298,18 @@ public class BookingConfig {
     public CancellationRequestRepository cancellationRequestRepository(
             CancellationRequestMapper mapper) {
         return new MyBatisCancellationRequestRepository(mapper);
+    }
+
+    @Bean
+    public RequestCancellationUseCase requestCancellationUseCase(CargoRepository cargoes,
+            CancellationRequestRepository cancellations, Clock clock) {
+        return new RequestCancellationUseCase(cargoes, cancellations, clock);
+    }
+
+    @Bean
+    public DecideCancellationUseCase decideCancellationUseCase(CargoRepository cargoes,
+            CancellationRequestRepository cancellations, Clock clock) {
+        return new DecideCancellationUseCase(cargoes, cancellations, clock);
     }
 
     @Bean

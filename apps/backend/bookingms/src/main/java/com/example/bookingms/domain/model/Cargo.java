@@ -337,7 +337,19 @@ public final class Cargo {
 
     /** いまキャンセルを申請できるか（US30-1）。判定は {@link CargoTransitionPolicy} が持つ。 */
     public boolean canRequestCancellation() {
-        return transitions().reasonCannotCancel().isEmpty();
+        return reasonCannotCancel().isEmpty();
+    }
+
+    /**
+     * キャンセルできない理由。できるなら空。
+     *
+     * <p><strong>理由を返す。</strong>呼び出し側が「できない」だけを受け取ると、利用者に
+     * 何が起きたかを伝えられない。<strong>例外を出させるためだけに {@code cancel()} を
+     * 呼ぶ形にもしない</strong>——戻り値を捨てた呼び出しは、読み手に意図が伝わらない
+     * （SpotBugs もそう指摘する）。
+     */
+    public Optional<String> reasonCannotCancel() {
+        return transitions().reasonCannotCancel();
     }
 
     /**
