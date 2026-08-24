@@ -52,11 +52,13 @@ describe('まだ使えない画面への導線', () => {
   })
 
   it('準備中と示し、押せないようにする', () => {
-    renderAs(['ROLE_TRACKER'])
+    // 経理担当者の画面（精算管理）はまだ無い。IT9 で追跡管理者の画面が
+    // すべて使えるようになったため、準備中が残っているロールで確かめる
+    renderAs(['ROLE_ACCOUNTANT'])
 
     // 押した先が存在しないと、利用者は公開トップに飛ばされて
     // 「勝手にログアウトされた」と受け取る
-    expect(screen.queryByRole('link', { name: /貨物の状態を確認する/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /請求書/ })).not.toBeInTheDocument()
     expect(screen.getAllByText(/準備中/).length).toBeGreaterThan(0)
   })
 
@@ -75,12 +77,14 @@ describe('まだ使えない画面への導線', () => {
   })
 
   it('下位の URL が上位のメニューに吸われて押せるようにならない', () => {
-    renderAs(['ROLE_TRACKER'])
-
-    // /booking/cancellations は準備中だが /booking は使える。前方一致で最初に
-    // 当たったものを使うと、この行動だけリンクになって公開トップに飛ばされる
-    expect(screen.queryByRole('link', { name: /キャンセル申請を確認する/ })).not.toBeInTheDocument()
-    expect(resolveNavigationItem('/booking/cancellations')?.available).toBe(false)
+    // /booking/estimates は準備中だが /booking は使える。前方一致で最初に
+    // 当たったものを使うと、この行動だけリンクになって公開トップに飛ばされる。
+    //
+    // IT9 で /booking/cancellations が使えるようになったため、まだ準備中の
+    // 下位 URL で確かめる。**この性質は画面が増えても保ち続ける**
+    expect(resolveNavigationItem('/booking/estimates')?.to).toBe('/booking/estimates')
+    expect(resolveNavigationItem('/booking/estimates')?.available).toBe(false)
+    expect(resolveNavigationItem('/booking')?.available).toBe(true)
   })
 
   it('担当の画面がすべて準備中なら、その旨を伝える', () => {

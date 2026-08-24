@@ -54,6 +54,10 @@ export const BOOKING_STATUS_LABELS: Record<string, string> = {
   ROUTE_NOTIFIED: '荷主へ通知済',
   CONFIRMED: '確定済',
   TRACKING_ISSUED: '追跡番号発行済',
+  /** 荷役のイベントで輸送中を知る（[ADR-025] 決定 1）。ここから先はキャンセルに承認が要る。 */
+  IN_TRANSIT: '輸送中',
+  DELIVERED: '配送完了',
+  CANCELLED: 'キャンセル',
 }
 
 /**
@@ -153,6 +157,7 @@ export type BookingAction =
   | 'RETURN_TO_ROUTING'
   | 'ISSUE_TRACKING_NUMBER'
   | 'REVISE_SCHEDULE'
+  | 'REQUEST_CANCELLATION'
 
 /** その操作がいま行えるか。状態名の比較を画面に書かないための入口。 */
 export function can(booking: Booking, action: BookingAction): boolean {

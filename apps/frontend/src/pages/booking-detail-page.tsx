@@ -19,6 +19,7 @@ import {
 } from "../features/booking/types";
 import { formatBusinessDateTime } from "../lib/business-time";
 import { ItineraryTable } from "../features/booking/components/itinerary-table";
+import { CancellationSection } from "../features/booking/components/cancellation-section";
 import { RouteDesignSection } from "../features/booking/components/route-design-section";
 import { ScheduleRevisionSection } from "../features/booking/components/schedule-revision-section";
 import { ShipperDialogueSection } from "../features/booking/components/shipper-dialogue-section";
@@ -334,6 +335,8 @@ export function BookingDetailPage() {
         isRoutingPlanner={isRoutingPlanner}
         issueTracking={issueTracking}
       />
+
+      <CancellationSection booking={booking} isSales={isSales} />
 
       <p className="text-sm text-gray-600">
         出発地・目的地・貨物の内容に不備があるときは、予約を作り直してください。

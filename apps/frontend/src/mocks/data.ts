@@ -105,15 +105,34 @@ export type MockBooking = {
   routeNotifiedBy?: string | null
   /** 発行済みの追跡番号（US14）。未発行なら null。 */
   trackingNumber?: string | null
+  /**
+   * 最後の荷役があった地点（[ADR-025] 決定 1・4）。
+   *
+   * 荷役のイベントを購読して更新する。**陸揚げ地の候補「現在地の港」はこれを使う**
+   * ——同じ事実を trackingms から取りに行くと 2 ホップ先の伝聞になる。
+   */
+  lastHandlingLocationUnLocode?: string | null
+  lastHandlingAt?: string | null
 }
 
-/** 地点マスタ（ADR-010）。到着期限の判断に使う業務タイムゾーンを持つ。 */
+/**
+ * 地点マスタ（ADR-010・ADR-014）。到着期限の判断に使う業務タイムゾーンを持つ。
+ *
+ * **本物の種データ（bookingms の V3）と同じ 10 件にする。** モックだけが狭いと、
+ * 画面は少ない選択肢で動くまま、本番では出るはずの港が「出ていない」と報告される
+ * （IT9 で 5 件しか無く、旅程が参照している CNSHA すら入っていなかった）。
+ */
 export const LOCATIONS = [
   { unLocode: 'JPTYO', name: 'Tokyo', timeZone: 'Asia/Tokyo' },
   { unLocode: 'JPYOK', name: 'Yokohama', timeZone: 'Asia/Tokyo' },
+  { unLocode: 'JPOSA', name: 'Osaka', timeZone: 'Asia/Tokyo' },
   { unLocode: 'USLAX', name: 'Los Angeles', timeZone: 'America/Los_Angeles' },
   { unLocode: 'USNYC', name: 'New York', timeZone: 'America/New_York' },
+  { unLocode: 'CNSHA', name: 'Shanghai', timeZone: 'Asia/Shanghai' },
   { unLocode: 'SGSIN', name: 'Singapore', timeZone: 'Asia/Singapore' },
+  { unLocode: 'DEHAM', name: 'Hamburg', timeZone: 'Europe/Berlin' },
+  { unLocode: 'NLRTM', name: 'Rotterdam', timeZone: 'Europe/Amsterdam' },
+  { unLocode: 'AUMEL', name: 'Melbourne', timeZone: 'Australia/Melbourne' },
 ]
 
 /**
@@ -164,6 +183,12 @@ export function mockAvailableActions(booking: MockBooking): string[] {
   }
   if (booking.bookingStatus === 'CONFIRMED' && !booking.trackingNumber) {
     actions.push('ISSUE_TRACKING_NUMBER')
+  }
+  // キャンセルの申請（US30-1）。**輸送開始前でも輸送中でも申請はできる**——
+  // 違うのは、その場で確定するか承認を待つかである（US30-2・US30-3）。
+  // すでにキャンセルされた予約には出さない（押した先で 409 になる）
+  if (booking.bookingStatus !== 'CANCELLED' && booking.bookingStatus !== 'DELIVERED') {
+    actions.push('REQUEST_CANCELLATION')
   }
   if (
     booking.routingStatus === 'NOT_ROUTED' ||
@@ -393,6 +418,68 @@ export const bookings: MockBooking[] = [
     routeNotifiedAt: '2026-08-22T02:00:00Z',
     routeNotifiedBy: 'sales01',
     trackingNumber: 'TRK-20260823-0001',
+    itinerary: [
+      {
+        voyageNumber: 'V-SEED-3',
+        loadUnLocode: 'JPTYO',
+        loadName: 'Tokyo',
+        unloadUnLocode: 'CNSHA',
+        unloadName: 'Shanghai',
+        loadTime: '2027-09-02T00:00:00Z',
+        unloadTime: '2027-09-08T00:00:00Z',
+      },
+      {
+        voyageNumber: 'V-SEED-4',
+        loadUnLocode: 'CNSHA',
+        loadName: 'Shanghai',
+        unloadUnLocode: 'USLAX',
+        unloadName: 'Los Angeles',
+        loadTime: '2027-09-10T00:00:00Z',
+        unloadTime: '2027-09-25T00:00:00Z',
+      },
+    ],
+  },
+
+  /**
+   * 輸送中の予約（US30）。
+   *
+   * **輸送中でないと、キャンセルは申請したその場で確定する**（US30-2）。承認の画面を
+   * 確かめるには、船に載っている貨物が要る。荷役のイベントで輸送中を知る仕組み
+   * （[ADR-025] 決定 1）が入るまで、種データとして置く。
+   *
+   * 最後の荷役地点（Shanghai）を持たせているのは、**陸揚げ地の候補「現在地の港」**を
+   * 確かめられるようにするためである。
+   */
+  {
+    id: 5,
+    bookingId: 'BKG-2026000005',
+    shipperId: 1,
+    bookingStatus: 'IN_TRANSIT',
+    transportStatus: 'IN_TRANSIT',
+    routingStatus: 'ROUTED',
+    type: 'GENERAL',
+    weightKg: 5600,
+    quantity: 40,
+    description: '自動車部品',
+    lengthCm: null,
+    widthCm: null,
+    heightCm: null,
+    originUnLocode: 'JPTYO',
+    originName: 'Tokyo',
+    destinationUnLocode: 'USLAX',
+    destinationName: 'Los Angeles',
+    departureDate: null,
+    arrivalDeadline: '2027-10-25',
+    hazardousClass: null,
+    unNumber: null,
+    properShippingName: null,
+    minCelsius: null,
+    maxCelsius: null,
+    routeNotifiedAt: '2026-08-22T02:00:00Z',
+    routeNotifiedBy: 'sales01',
+    trackingNumber: 'TRK-20260823-0002',
+    lastHandlingLocationUnLocode: 'CNSHA',
+    lastHandlingAt: '2027-09-08T00:00:00Z',
     itinerary: [
       {
         voyageNumber: 'V-SEED-3',

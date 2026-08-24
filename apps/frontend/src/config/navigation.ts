@@ -48,9 +48,11 @@ export const NAVIGATION: NavigationItem[] = [
   },
   {
     label: "キャンセル承認",
+    // 承認するのは追跡管理者だけ（US30-4）。申請するのは営業であり、
+    // 自分の申請を自分で承認できると承認の意味が無くなる
     to: "/booking/cancellations",
     roles: ["ROLE_TRACKER"],
-    available: false,
+    available: true,
   },
   {
     label: "航海スケジュール",

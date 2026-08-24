@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { RequireAuth } from './components/require-auth'
 import { AppLayout } from './layouts/app-layout'
+import { CancellationsPage } from './pages/cancellations-page'
 import { CustomsDetailPage } from './pages/customs-detail-page'
 import { CustomsNewPage } from './pages/customs-new-page'
 import { CustomsPage } from './pages/customs-page'
@@ -115,6 +116,18 @@ export default function App() {
         }
       >
         <Route path="/tracking/manage/exceptions" element={<TrackingExceptionsPage />} />
+      </Route>
+
+      {/* 輸送中のキャンセル承認は追跡管理者の業務（US30-4）。営業は申請する側であり、
+          自分の申請を自分で承認できると承認の意味が無くなる */}
+      <Route
+        element={
+          <RequireAuth allowedRoles={['ROLE_TRACKER']}>
+            <AppLayout />
+          </RequireAuth>
+        }
+      >
+        <Route path="/booking/cancellations" element={<CancellationsPage />} />
       </Route>
 
       {/* 通関管理は荷役作業員（申告の登録）と追跡管理者（状態の更新）の両方が使う。

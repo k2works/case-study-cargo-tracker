@@ -447,3 +447,46 @@ test('10-customs-detail（通関申告詳細と状態の更新）', async ({ pag
 
   await page.screenshot({ path: `${ASSETS}/10-customs-detail.png`, fullPage: true })
 })
+
+test('11-cancellation-request（キャンセルの申請）', async ({ page }) => {
+  await login(page, 'sales01')
+
+  // 申請の枠は予約詳細にある。**輸送中かどうかで案内文が変わる**ので、
+  // 案内が写るところまで開いてから撮る
+  await page.getByRole('link', { name: '貨物予約を見る' }).click()
+  // 輸送中の予約で撮る。案内文が「その場で確定する」ではなく
+  // 「承認を待つ」側になり、マニュアル 11.1 の表と対応する
+  await page.getByRole('link', { name: 'BKG-2026000005' }).click()
+  await page.getByRole('button', { name: 'キャンセルを申請する' }).click()
+  await expect(page.getByLabel('キャンセルの理由')).toBeVisible()
+  await page.getByLabel('キャンセルの理由').fill('荷主都合により中止')
+
+  await page.screenshot({ path: `${ASSETS}/11-cancellation-request.png`, fullPage: true })
+})
+
+test('11-cancellation-approval（キャンセルの承認）', async ({ page }) => {
+  // 承認の画面は追跡管理者のもの。申請は API で用意する
+  // （ログインし直すとページが再読み込みになり、ブラウザ内のモックが持っている
+  // 申請が消えるため）
+  await login(page, 'tracker01')
+  const outcome = await page.evaluate(async () => {
+    // 輸送中でなければ即時に確定してしまい、承認待ちの一覧に出ない
+    const response = await fetch('/api/v1/bookings/BKG-2026000005/cancellation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: '荷主都合により中止' }),
+    })
+    return { status: response.status, body: await response.text() }
+  })
+  // 用意そのものが失敗していたら、そこで止める（空の一覧を撮らない）
+  expect(outcome.status, outcome.body).toBe(201)
+
+  await page.getByRole('link', { name: 'キャンセル承認' }).click()
+  await expect(
+    page.getByRole('heading', { name: 'キャンセル承認（承認待ち一覧）' }),
+  ).toBeVisible()
+  // **撮れたことと、中身が写っていることは違う。**行が出るまで待つ
+  await expect(page.getByText('BKG-2026000005')).toBeVisible()
+
+  await page.screenshot({ path: `${ASSETS}/11-cancellation-approval.png`, fullPage: true })
+})

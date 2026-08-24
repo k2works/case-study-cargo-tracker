@@ -17,6 +17,18 @@ export const API_PATHS = {
   trackingManagement: '/api/v1/tracking/manage',
   handling: '/api/v1/handling',
   customs: '/api/v1/customs',
+  /**
+   * 承認待ちのキャンセル申請（US30）。追跡管理者が見る。
+   *
+   * **`/api/v1/bookings/...` の下に置かない。** `/api/v1/bookings/{bookingId}` が
+   * `cancellations` を予約 ID として拾ってしまう——モックでも本物（Spring の
+   * パス変数）でも同じ衝突が起きる。実際 IT9 で先に置いてしまい、一覧が常に
+   * 空になった。
+   */
+  cancellations: '/api/v1/cancellations',
+  /** 1 つの予約のキャンセル申請（申請・承認・却下）。 */
+  cancellation: (bookingId: string) =>
+    `/api/v1/bookings/${encodeURIComponent(bookingId)}/cancellation`,
   billing: '/api/v1/billing',
   /** ロックされたアカウントの管理（US32）。システム管理者のみ。 */
   lockedAccounts: '/api/v1/admin/accounts/locked',

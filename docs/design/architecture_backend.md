@@ -875,8 +875,10 @@ IT1 で荷主登録画面のニーズから導出した。
 | `PUT` | `/api/v1/bookings/{bookingId}/confirm` | 予約確定。**通知した予約にだけ行える**（[ADR-021](../adr/021-shipper-notification-and-confirmation-transitions.md) 決定 1）。営業担当者のみ | UC11 |
 | `PUT` | `/api/v1/bookings/{bookingId}/return-to-routing` | 荷主が変更を希望したので経路設計へ戻す（US13-4）。**`RoutingStatus` も `ROUTING_REQUESTED` に戻る**（同 決定 4）。**確定後は行えない**（同 決定 3）。営業担当者のみ | UC11 |
 | `POST` | `/api/v1/bookings/{bookingId}/tracking-number` | 追跡番号発行。**確定した予約にだけ行え、二重には発行しない**。採番は DB のシーケンス（[ADR-011](../adr/011-booking-id-numbering.md) と同じ形）。経路設計者のみ | UC12 |
-| `POST` | `/api/v1/bookings/{bookingId}/cancellation` | キャンセル申請（輸送開始前は即確定、輸送中は承認待ち） | UC22 |
-| `PUT` | `/api/v1/bookings/{bookingId}/cancellation/approve` | キャンセル承認（追跡管理者・陸揚げ地指定） | UC22 |
+| `GET` | `/api/v1/cancellations` | 承認待ちのキャンセル申請の一覧。追跡管理者のみ。**`/api/v1/bookings/` の下に置かない**——`/api/v1/bookings/{bookingId}` が `cancellations` を予約 ID として拾う（IT9 でモックが実際にそうなった） | UC22 |
+| `POST` | `/api/v1/bookings/{bookingId}/cancellation` | キャンセル申請（輸送開始前は即確定、輸送中は承認待ち）。理由は必須 | UC22 |
+| `GET` | `/api/v1/bookings/{bookingId}/cancellation` | その予約のキャンセル申請。無ければ `null` | UC22 |
+| `PUT` | `/api/v1/bookings/{bookingId}/cancellation/approve` | キャンセル承認（追跡管理者・陸揚げ地指定）。**陸揚げ地は候補（現在地の港・次の寄港地）に限る**（[ADR-025](../adr/025-customs-declaration-and-cancellation-approval.md) 決定 4） | UC22 |
 | `PUT` | `/api/v1/bookings/{bookingId}/cancellation/reject` | キャンセル却下（理由必須） | UC22 |
 
 #### routingms
@@ -972,6 +974,9 @@ GET /api/v1/routes?origin=JPTYO&destination=USLAX&deadline=2026-09-30&cargoType=
 | `POST` | `/api/v1/customs` | 通関申告の登録（初期状態 PENDING） | UC21 |
 | `PUT` | `/api/v1/customs/{declarationId}/status` | 通関状態の更新（理由必須・監査ログ） | UC21 |
 | `GET` | `/api/v1/customs` | 通関申告一覧（貨物 ID・追跡番号・状態で検索） | UC21 |
+| `GET` | `/api/v1/customs/{declarationId}` | 通関申告の詳細（状態変更履歴を伴う） | UC21 |
+| `GET` | `/api/v1/customs/statuses` | 通関状態の選択肢（画面に対訳表を置かない） | UC21 |
+| `GET` | `/api/v1/customs/overdue` | 留置 3 日超の件数（US29-6。**件数から対象一覧へ辿れる**） | UC21 |
 
 #### billingms
 
