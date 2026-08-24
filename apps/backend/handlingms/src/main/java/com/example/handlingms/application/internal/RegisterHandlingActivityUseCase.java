@@ -1,12 +1,14 @@
 package com.example.handlingms.application.internal;
 
 import com.example.handlingms.application.port.CargoSnapshotFinder;
+import com.example.handlingms.application.port.CustomsDeclarationRepository;
 import com.example.handlingms.application.port.HandlingActivityRegistered;
 import com.example.handlingms.application.port.HandlingActivityRepository;
 import com.example.handlingms.application.port.HandlingEventNotifier;
 import com.example.handlingms.application.port.LocationRepository;
 import com.example.handlingms.domain.model.CargoBookingId;
 import com.example.handlingms.domain.model.CargoSnapshot;
+import com.example.handlingms.domain.model.CustomsDeclaration;
 import com.example.handlingms.domain.model.ConsigneeConfirmation;
 import com.example.handlingms.domain.model.HandlingActivity;
 import com.example.handlingms.domain.model.HandlingTrackingNumber;
@@ -29,15 +31,18 @@ public class RegisterHandlingActivityUseCase {
     private final CargoSnapshotFinder cargoes;
     private final LocationRepository locations;
     private final HandlingActivityRepository activities;
+    private final CustomsDeclarationRepository declarations;
     private final HandlingEventNotifier notifier;
     private final Clock clock;
 
     public RegisterHandlingActivityUseCase(CargoSnapshotFinder cargoes,
             LocationRepository locations, HandlingActivityRepository activities,
-            HandlingEventNotifier notifier, Clock clock) {
+            CustomsDeclarationRepository declarations, HandlingEventNotifier notifier,
+            Clock clock) {
         this.cargoes = cargoes;
         this.locations = locations;
         this.activities = activities;
+        this.declarations = declarations;
         this.notifier = notifier;
         this.clock = clock;
     }
@@ -62,6 +67,7 @@ public class RegisterHandlingActivityUseCase {
         HandlingType type = HandlingType.parse(command.type());
         Location location = requireLocation(command.locationUnLocode());
         requireNotAlreadyRecorded(snapshot, type, location, command.completionTime());
+        requireCustomsCleared(snapshot, type);
 
         HandlingActivity registered = activities.register(HandlingActivity.register(
                 snapshot,
@@ -106,6 +112,41 @@ public class RegisterHandlingActivityUseCase {
         if (activities.existsSameActivity(CargoBookingId.of(cargo.bookingId()), type,
                 location.unLocode(), completionTime)) {
             throw new IllegalStateException("同じ作業がすでに記録されています。履歴を確認してください");
+        }
+    }
+
+    /**
+     * 通関が下りていない貨物は引き渡さない（US29-3・[ADR-023] 決定 4 の拡張点）。
+     *
+     * <p>通関が下りていない貨物を引き渡すと、税関との関係で会社が責任を負う。
+     *
+     * <p><strong>申告が 1 件も無い貨物も断る。</strong>名簿方式の検査は「載っていないもの」を
+     * 通すと、載せ忘れたものほど漏れる（過去 take の教訓）。申告が無いのは「検査の対象外」
+     * ではなく<strong>「通関済でない」</strong>である。
+     *
+     * <p><strong>引取以外は対象にしない。</strong>受領・積込・荷降しまで止めると、通関前の
+     * 貨物が港で動かせなくなる。通関は<strong>引き渡しの前提</strong>であって、輸送の
+     * 前提ではない。
+     *
+     * <p><strong>過去の記録はさかのぼって検査しない</strong>（[ADR-025] 決定 9）。
+     * ガードが無かったあいだに記録された引取がある。ここで見るのは<strong>新しく
+     * 受け付ける引取だけ</strong>である。
+     *
+     * @throws IllegalStateException 通関済でないとき。**いまの状態を添える**
+     */
+    private void requireCustomsCleared(CargoSnapshot cargo, HandlingType type) {
+        if (type != HandlingType.CLAIM) {
+            return;
+        }
+        CargoBookingId bookingId = CargoBookingId.of(cargo.bookingId());
+        CustomsDeclaration latest = declarations.findLatestByBookingId(bookingId)
+                .orElseThrow(() -> new IllegalStateException(
+                        "この貨物には通関申告がありません。先に通関申告を登録してください"));
+        if (!latest.isCleared()) {
+            // 「できません」だけでは、次にすることが分からない。**いまの状態を伝える**
+            throw new IllegalStateException(
+                    "通関が完了していないため引き取りできません（現在: %s）"
+                            .formatted(latest.status().label()));
         }
     }
 

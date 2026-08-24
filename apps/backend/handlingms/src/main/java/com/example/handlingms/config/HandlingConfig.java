@@ -184,8 +184,9 @@ public class HandlingConfig {
     @Bean
     public RegisterHandlingActivityUseCase registerHandlingActivityUseCase(
             CargoSnapshotFinder cargoes, LocationRepository locations,
-            HandlingActivityRepository activities, HandlingEventNotifier notifier, Clock clock) {
-        return new RegisterHandlingActivityUseCase(cargoes, locations, activities, notifier,
-                clock);
+            HandlingActivityRepository activities, CustomsDeclarationRepository declarations,
+            HandlingEventNotifier notifier, Clock clock) {
+        return new RegisterHandlingActivityUseCase(cargoes, locations, activities, declarations,
+                notifier, clock);
     }
 }

@@ -9,6 +9,8 @@
  *   <li>{@code HandlingType} — 種別ごとの要件（航海番号・荷受人の確認・照合する港）
  *   <li>{@code CargoSnapshot#isOffRoute} — 作業場所の照合。<strong>照らす相手が無いときは
  *       予定外に倒す</strong>
+ *   <li>{@code RegisterHandlingActivityUseCase#requireCustomsCleared} — 引取の通関ガード
+ *       （US29-3）。<strong>申告が無い貨物も断る</strong>
  *   <li>{@code HandlingActivity#register} — 断る条件（航海番号・荷受人の確認・作業者）
  *   <li>{@code HandlingActivityController} — 認可（記録は荷役作業員だけ、参照は追跡管理者にも）
  * </ul>
@@ -155,6 +157,38 @@ export const handlingHandlers = [
         { message: '作業日時は ISO 8601（2026-08-23T09:00:00Z）の形式で指定してください' },
         { status: 400 },
       )
+    }
+
+    // **通関が下りていない貨物は引き渡さない**（US29-3。本物の
+    // `RegisterHandlingActivityUseCase#requireCustomsCleared` の写し）。
+    //
+    // **申告が 1 件も無い貨物も断る。**名簿方式の検査は「載っていないもの」を通すと、
+    // 載せ忘れたものほど漏れる。申告が無いのは「検査の対象外」ではなく「通関済でない」
+    if (type.type === 'CLAIM') {
+      const { customsDeclarations } = await import('./customs')
+      const latest = customsDeclarations
+        .filter((declaration) => declaration.trackingNumber === body.trackingNumber)
+        .at(-1)
+      if (latest === undefined) {
+        return HttpResponse.json(
+          { message: 'この貨物には通関申告がありません。先に通関申告を登録してください' },
+          { status: 409 },
+        )
+      }
+      if (latest.status !== 'CLEARED') {
+        const labels: Record<string, string> = {
+          PENDING: '審査中',
+          CLEARED: '通関済',
+          HELD: '留置',
+          REJECTED: '不可',
+        }
+        return HttpResponse.json(
+          {
+            message: `通関が完了していないため引き取りできません（現在: ${labels[latest.status] ?? latest.status}）`,
+          },
+          { status: 409 },
+        )
+      }
     }
 
     const { LOCATIONS } = await import('../data')

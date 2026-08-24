@@ -32,9 +32,22 @@ class CustomsDeclarationPersistenceIntegrationTest extends HandlingIntegrationTe
     @Autowired
     private CustomsDeclarationRepository declarations;
 
+    /**
+     * 予約 ID は<strong>この検査だけのものを使う</strong>。
+     *
+     * <p>DB は他の検査と共有している（{@link HandlingIntegrationTestBase}）。同じ予約 ID を
+     * 使うと、ここで作った審査中の申告が<strong>引取のガードから見て「最新の申告」</strong>に
+     * なり、荷役の検査が「通関が完了していない」で落ちる。実際にそうなった——
+     * 単体で走らせると緑、フルで走らせると赤、という形だった。
+     *
+     * <p>ここは永続化そのものを見る検査であり、登録の規則（[ADR-025] 決定 7）を通さずに
+     * 保存先へ直接書く。だからこそ<strong>他の検査の前提を壊さない ID</strong>を選ぶ。
+     */
+    private static final String BOOKING_ID = "BKG-2026009001";
+
     private CustomsDeclaration declare(String number, String trackingNumber) {
         return declarations.save(CustomsDeclaration.declare(
-                DeclarationNumber.of(number), CargoBookingId.of("BKG-2026000001"),
+                DeclarationNumber.of(number), CargoBookingId.of(BOOKING_ID),
                 HandlingTrackingNumber.of(trackingNumber), DECLARED_AT, "初回申告", "handler01"));
     }
 

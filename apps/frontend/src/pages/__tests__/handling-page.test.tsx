@@ -2,6 +2,11 @@ import { fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
+  customsDeclarations,
+  customsHandlers,
+  resetCustomsDeclarations,
+} from "../../mocks/handlers/customs";
+import {
   handlingActivities,
   handlingHandlers,
 } from "../../mocks/handlers/handling";
@@ -23,12 +28,34 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 describe("荷役作業の記録（US15）", () => {
+  /**
+   * 通関済の申告を 1 件用意する。
+   *
+   * **引取は通関が下りていないと記録できない**（US29-3）。ここを省くと、
+   * 引取の検査が「通関ガードに阻まれて記録されない」ことを見てしまい、
+   * 確かめたい荷受人の確認の話にならない。
+   */
+  function clearCustoms(trackingNumber = "TRK-20260823-0001") {
+    customsDeclarations.push({
+      declarationId: 1,
+      declarationNumber: "DEC-0001",
+      bookingId: "BKG-2026000004",
+      trackingNumber,
+      declaredAt: "2027-09-01T00:00:00.000Z",
+      status: "CLEARED",
+      clearedAt: "2027-09-02T00:00:00.000Z",
+      remarks: null,
+      history: [],
+    });
+  }
+
   beforeEach(() => {
     handlingActivities.length = 0;
+    resetCustomsDeclarations();
     loginAs(["ROLE_HANDLER"]);
     // ブラウザ用モックと同じハンドラを使う。テスト用に別のものを組み立てると、
     // 本物との読み比べ（IT5 Try 4）の対象が 1 つ増える
-    server.use(...handlingHandlers);
+    server.use(...handlingHandlers, ...customsHandlers);
   });
 
   function renderPage() {
@@ -186,6 +213,7 @@ describe("荷役作業の記録（US15）", () => {
 
     /** US16-3。 */
     it("荷受人の確認を入れると引取が記録される", async () => {
+      clearCustoms();
       renderPage();
 
       await fillAndSubmit({
@@ -205,6 +233,7 @@ describe("荷役作業の記録（US15）", () => {
      * 1 日数十件を打つ画面なので、確認は引取にだけ挟む。
      */
     it("引取は、確認するまで記録されない", async () => {
+      clearCustoms();
       const user = userEvent.setup();
       renderPage();
 
@@ -258,20 +287,83 @@ describe("荷役作業の記録（US15）", () => {
     });
 
     /**
-     * **代替であることを画面に書く**（[ADR-023] 決定 4）。
+     * US29-3。**通関が下りていない貨物は引き取れない。**
      *
-     * 通関の確認が仕組みとして働いていないことを伝えないと、作業員は
-     * 「システムが通関を見ている」と受け取る。
+     * ドメインの守りは、**画面から踏むテストと対にする**（過去 take の教訓）。
+     * 集約やユースケースの検査だけでは、画面での見え方（500 になっていないか、
+     * 何が起きたか読めるか）を判別しない。
+     *
+     * **現在の通関状態を出す。**「できません」だけでは、作業員は次にすることが
+     * 分からず、通関の担当者を探して電話することになる。
      */
-    it("通関の確認が仕組みでは行われないことを、引取の操作のそばに書く", async () => {
+    it("通関が留置のままなら、引取は断られ、いまの状態が画面に出る", async () => {
+      customsDeclarations.push({
+        declarationId: 1,
+        declarationNumber: "DEC-0001",
+        bookingId: "BKG-2026000004",
+        trackingNumber: "TRK-20260823-0001",
+        declaredAt: "2027-09-01T00:00:00.000Z",
+        status: "HELD",
+        clearedAt: null,
+        remarks: null,
+        history: [],
+      });
+      renderPage();
+
+      await fillAndSubmit({
+        type: "CLAIM",
+        location: "USLAX",
+        consigneeConfirmation: "山田太郎（受取担当）",
+      });
+
+      expect(
+        await screen.findByText(/通関が完了していないため引き取りできません（現在: 留置）/),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    });
+
+    /**
+     * **申告が 1 件も無い貨物も断る。**
+     *
+     * 名簿方式の検査は「載っていないもの」を通すと、載せ忘れたものほど漏れる。
+     * 申告が無いのは「検査の対象外」ではなく「通関済でない」である。
+     */
+    it("通関申告が無い貨物は、引取が断られる", async () => {
+      renderPage();
+
+      await fillAndSubmit({
+        type: "CLAIM",
+        location: "USLAX",
+        consigneeConfirmation: "山田太郎（受取担当）",
+      });
+
+      expect(
+        await screen.findByText(/この貨物には通関申告がありません/),
+      ).toBeInTheDocument();
+    });
+
+    /**
+     * **但し書きは外す**（[ADR-025] 決定 9）。
+     *
+     * IT9 で通関ガードが入った。「通関の確認は仕組みでは行われません」という文は
+     * **誤りになる**——読んだ作業員は書類を目視で確かめ続け、システムが断ることを
+     * 知らないまま二重に手間をかける。
+     *
+     * **文言の不在を見る。** 消したつもりで残っている形を、これで捕まえる
+     * （[ADR-023] 決定 4 は「消し忘れるほうを踏むな」と予告していた）。
+     */
+    it("通関を仕組みで確かめていない、とは書かない", async () => {
       const user = userEvent.setup();
       renderPage();
 
       await selectType(user, "CLAIM");
 
+      // 荷受人の確認そのものは残る（US16 の受入基準）
+      expect(await screen.findByLabelText(/荷受人の確認/)).toBeInTheDocument();
       expect(
-        await screen.findByText(/通関の確認は、まだ仕組みでは行われません/),
-      ).toBeInTheDocument();
+        screen.queryByText(/仕組みでは行われません/),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByText(/通関の書類を確かめてから/)).not.toBeInTheDocument();
     });
   });
 

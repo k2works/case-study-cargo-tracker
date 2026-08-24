@@ -5,11 +5,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.example.handlingms.application.internal.RegisterHandlingActivityCommand;
 import com.example.handlingms.application.internal.RegisterHandlingActivityUseCase;
 import com.example.handlingms.application.port.CargoSnapshotFinder;
+import com.example.handlingms.application.port.CustomsDeclarationRepository;
 import com.example.handlingms.application.port.HandlingActivityRegistered;
 import com.example.handlingms.application.port.HandlingActivityRepository;
 import com.example.handlingms.application.port.HandlingEventNotifier;
 import com.example.handlingms.domain.model.CargoBookingId;
 import com.example.handlingms.domain.model.CargoSnapshot;
+import com.example.handlingms.domain.model.CustomsDeclaration;
+import com.example.handlingms.domain.model.CustomsStatus;
+import com.example.handlingms.domain.model.DeclarationNumber;
+import com.example.handlingms.domain.model.HandlingTrackingNumber;
 import com.example.handlingms.domain.model.HandlingActivity;
 import com.example.handlingms.domain.model.HandlingType;
 import com.example.handlingms.domain.model.LegSnapshot;
@@ -74,6 +79,13 @@ class HandlingPersistenceIntegrationTest extends HandlingIntegrationTestBase {
 
     @Autowired
     private RegisterHandlingActivityUseCase registerActivity;
+
+    @Autowired
+    private CustomsDeclarationRepository declarations;
+
+    /** 申告番号の採番。DB を共有する検査どうしが同じ番号でぶつからないようにする。 */
+    private static final java.util.concurrent.atomic.AtomicInteger CLEARED_SEQUENCE =
+            new java.util.concurrent.atomic.AtomicInteger();
 
     @Autowired
     private HandlingActivityRepository activities;
@@ -210,6 +222,7 @@ class HandlingPersistenceIntegrationTest extends HandlingIntegrationTestBase {
     @Test
     @DisplayName("同じ作業を 2 回記録できない")
     void rejectsRecordingTheSameActivityTwice() {
+        clearCustoms();
         registerActivity.register(claimCommand("2026-08-23T06:00:00Z"));
         // 組み立てをラムダの外に出す。中に置くと、どの呼び出しが投げたのか分からない
         RegisterHandlingActivityCommand duplicate = claimCommand("2026-08-23T06:00:00Z");
@@ -258,10 +271,31 @@ class HandlingPersistenceIntegrationTest extends HandlingIntegrationTestBase {
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
+    /**
+     * 引取の前提として、通関済の申告を 1 件用意する（US29-3）。
+     *
+     * <p><strong>ガードは実 DB の経路にも効く。</strong>用意を省くと、引取の検査が
+     * 「通関ガードに阻まれた」ことを見てしまい、確かめたい話にならない。
+     */
+    private void clearCustoms() {
+        // 申告番号は業務キー（UNIQUE）である。DB を共有する検査どうしがぶつからないよう、
+        // 呼び出しごとに違う番号を採る——**本番の一意制約をテストで迂回しない**
+        CustomsDeclaration declared = declarations.save(CustomsDeclaration.declare(
+                DeclarationNumber.of("DEC-CLEAR-" + CLEARED_SEQUENCE.incrementAndGet()),
+                CargoBookingId.of("BKG-2026000001"),
+                HandlingTrackingNumber.of("TRK-20260823-0001"),
+                Instant.parse("2026-08-23T00:00:00Z")));
+        declarations.updateStatus(declared.updateStatus(CustomsStatus.CLEARED, "tracker01",
+                "書類確認により通関完了", Instant.parse("2026-08-23T01:00:00Z")));
+    }
+
     /** 種別の要件は集約が守る。ここで見るのは、実際の経路でも守られること。 */
     @Test
     @DisplayName("荷受人の確認がない引取は、実 DB の経路でも断られる")
     void rejectsClaimWithoutConfirmation() {
+        // 通関で断られるなら、荷受人の確認を集めても無駄である。ここで見たいのは
+        // 確認の規則なので、通関は通した状態にする
+        clearCustoms();
         RegisterHandlingActivityCommand withoutConfirmation = new RegisterHandlingActivityCommand(
                 "TRK-20260823-0001", "CLAIM", "USLAX",
                 Instant.parse("2026-08-23T02:00:00Z"), "handler01", null, null);
@@ -272,4 +306,5 @@ class HandlingPersistenceIntegrationTest extends HandlingIntegrationTestBase {
 
         assertThat(HandlingType.CLAIM.requiresConsigneeConfirmation()).isTrue();
     }
+
 }
