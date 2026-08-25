@@ -9,11 +9,11 @@ spring:
             - id: authms
               uri: ${AUTHMS_URL}
               predicates:
-                - Path=/api/v1/auth/**
+                - Path=/api/v1/auth/**,/api/v1/admin/accounts/**
             - id: bookingms
               uri: ${BOOKINGMS_URL}
               predicates:
-                - Path=/api/v1/bookings/**,/api/v1/shippers/**
+                - Path=/api/v1/bookings/**,/api/v1/shippers/**,/api/v1/cancellations/**,/api/v1/cancellations
             - id: routingms
               uri: ${ROUTINGMS_URL}
               predicates:
@@ -21,7 +21,7 @@ spring:
             - id: trackingms
               uri: ${TRACKINGMS_URL}
               predicates:
-                - Path=/api/v1/tracking/**
+                - Path=/api/v1/tracking/**,/api/v1/public/tracking/**
             - id: handlingms
               uri: ${HANDLINGMS_URL}
               predicates:

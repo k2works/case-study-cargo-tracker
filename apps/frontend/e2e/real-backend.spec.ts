@@ -82,6 +82,13 @@ async function ensureBookingWaitingForRouting(request: APIRequestContext): Promi
  * API で通す。画面から通すのは IT6 の受け入れが行っており、ここで見たいのは荷役である。
  */
 async function ensureTrackedCargo(request: APIRequestContext): Promise<string> {
+  return (await ensureTrackedVoyage(request)).trackingNumber
+}
+
+/** 追跡番号と、割り当てた航海番号（積込の記録に要る）。 */
+async function ensureTrackedVoyage(
+  request: APIRequestContext,
+): Promise<{ trackingNumber: string; voyageNumber: string; bookingId: string }> {
   const bookingId = await ensureBookingWaitingForRouting(request)
 
   const routing = await request.post('/api/v1/auth/login', {
@@ -105,9 +112,38 @@ async function ensureTrackedCargo(request: APIRequestContext): Promise<string> {
       arrivalTime: string
     }>
   }>
+  // **スキップせず作る**（IT5 の Try 2）。まっさらな DB では航海が 1 本も無い。
+  // 「候補が無いので飛ばす」にすると、通っていないことに気づけない。
+  if (candidates.length === 0) {
+    const registered = await request.post('/api/v1/voyages', {
+      headers: routingHeaders,
+      data: {
+        voyageNumber: `V-E2E-${Date.now()}`,
+        vesselName: '実 E2E 丸',
+        carrierName: '実 E2E 海運',
+        supportedCargoTypes: ['GENERAL'],
+        movements: [
+          {
+            departureUnLocode: 'JPTYO',
+            arrivalUnLocode: 'USLAX',
+            departureTime: `${utcDate(1)}T09:00:00Z`,
+            arrivalTime: `${utcDate(20)}T09:00:00Z`,
+          },
+        ],
+      },
+    })
+    expect(registered.ok(), '航海を登録できない').toBeTruthy()
+    const retried = await request.get(
+      `/api/v1/routes?origin=JPTYO&destination=USLAX`
+        + `&deadline=${businessLocalDateTime(120, '00:00').slice(0, 10)}&cargoType=GENERAL`,
+      { headers: routingHeaders },
+    )
+    expect(retried.ok()).toBeTruthy()
+    candidates.push(...((await retried.json()).candidates as typeof candidates))
+  }
   expect(
     candidates.length,
-    '候補が 1 件も無い。航海スケジュールの種データを確認すること',
+    '航海を登録しても候補が出ない。経路探索の条件を確認すること',
   ).toBeGreaterThan(0)
 
   const assigned = await request.put(`/api/v1/bookings/${bookingId}/route`, {
@@ -144,7 +180,7 @@ async function ensureTrackedCargo(request: APIRequestContext): Promise<string> {
   expect(issued.ok()).toBeTruthy()
   const trackingNumber = (await issued.json()).trackingNumber as string
   expect(trackingNumber, '追跡番号が発行されていない').toMatch(/^TRK-\d{8}-\d{4}$/)
-  return trackingNumber
+  return { trackingNumber, voyageNumber: candidates[0].legs[0].voyageNumber, bookingId }
 }
 
 /** 荷役作業員として API を呼ぶ。 */
@@ -768,10 +804,41 @@ test.describe('荷役の記録（実バックエンド）', () => {
     expect(notFound.status()).toBe(404)
   })
 
-  /** US16-2・成功基準 3。通関ガードが無い IT7 では、これが唯一の歯止めである。 */
-  test('荷受人の確認がない引取は、実バックエンドでも断られる', async ({ request }) => {
+  /**
+   * US16-2。**通関を済ませてから確かめる**（IT9 で歯止めが 2 段になった）。
+   *
+   * <p>IT7 はこれが唯一の歯止めだったので、申告の無い貨物にそのまま引取を投げていた。
+   * IT9 で通関ガードが**先に**立つため、そのままでは 409（通関申告がありません）で
+   * 止まり、**荷受人の確認の守りを一度も踏まない**。踏まない検査は、その守りを外しても
+   * 緑のままになる。
+   */
+  test('通関を済ませても、荷受人の確認がない引取は断られる', async ({ request }) => {
     const trackingNumber = await ensureTrackedCargo(request)
     const headers = await handlerHeaders(request)
+
+    const declared = await request.post('/api/v1/customs', {
+      headers,
+      data: {
+        trackingNumber,
+        declarationNumber: `DEC-CLR-${Date.now()}`,
+        declaredAt: `${utcDate(0)}T00:00:00Z`,
+        remarks: '荷受人の確認を確かめる',
+      },
+    })
+    expect(declared.status(), `申告を登録できない: ${await declared.text()}`).toBe(201)
+
+    const tracker = await request.post('/api/v1/auth/login', {
+      data: { userId: 'tracker01', password: 'password' },
+    })
+    expect(tracker.ok()).toBeTruthy()
+    const cleared = await request.put(
+      `/api/v1/customs/${(await declared.json()).declarationId}/status`,
+      {
+        headers: { Authorization: `Bearer ${(await tracker.json()).token}` },
+        data: { status: 'CLEARED', reason: '審査完了' },
+      },
+    )
+    expect(cleared.status(), `通関済にできない: ${await cleared.text()}`).toBe(200)
 
     const refused = await request.post('/api/v1/handling', {
       headers,
@@ -779,11 +846,180 @@ test.describe('荷役の記録（実バックエンド）', () => {
         trackingNumber,
         type: 'CLAIM',
         locationUnLocode: 'USLAX',
-        completionTime: '2026-08-23T00:00:00Z',
+        completionTime: `${utcDate(0)}T03:00:00Z`,
       },
     })
 
     expect(refused.status(), '荷受人の確認なしで引取が通った').toBe(400)
     expect((await refused.json()).message).toContain('荷受人の確認')
+  })
+})
+
+/**
+ * IT9 Phase 6。**実環境で 1 本通す**（成功基準 1・2・3・4）。
+ *
+ * <p>ここでしか出ない食い違いがある。交換機の引数は<strong>すでに交換機がある環境では
+ * 宣言し直せない</strong>——Testcontainers は毎回まっさらなので通ってしまう。イベントが
+ * 実際に配られることも、購読側の宣言が揃って初めて分かる。
+ *
+ * <p><strong>先にイメージを作り直すこと。</strong>同じタグのまま古いイメージが動いていると、
+ * 直したはずの経路が緑になる（IT6 で 2 度踏んだ）。
+ */
+test.describe('IT9 実環境（通関とキャンセル承認）', () => {
+  /** イベントは非同期に配られる。届くまで待つ——待たずに見ると、届いていても赤くなる。 */
+  async function eventually(check: () => Promise<void>): Promise<void> {
+    await expect.poll(async () => {
+      try {
+        await check()
+        return 'ok'
+      } catch {
+        return 'not yet'
+      }
+    }, { timeout: 20_000, intervals: [500, 1000, 2000] }).toBe('ok')
+  }
+
+  async function trackerHeaders(request: APIRequestContext): Promise<{ Authorization: string }> {
+    const tracker = await request.post('/api/v1/auth/login', {
+      data: { userId: 'tracker01', password: 'password' },
+    })
+    expect(tracker.ok()).toBeTruthy()
+    return { Authorization: `Bearer ${(await tracker.json()).token}` }
+  }
+
+  /**
+   * 成功基準 1・2。申告 → 引取の拒否 → 留置 → 公開追跡に税関保留。
+   *
+   * <p>1 本に繋げるのは、**繋がっていることがここでしか確かめられない**からである。
+   * ガードだけ・イベントだけなら、それぞれのサービスのテストが見ている。
+   */
+  test('通関申告から留置までを実バックエンドで通す', async ({ request }) => {
+    const trackingNumber = await ensureTrackedCargo(request)
+    const handler = await handlerHeaders(request)
+    const tracker = await trackerHeaders(request)
+
+    const declared = await request.post('/api/v1/customs', {
+      headers: handler,
+      data: {
+        trackingNumber,
+        declarationNumber: `DEC-${Date.now()}`,
+        declaredAt: `${utcDate(0)}T00:00:00Z`,
+        remarks: '実 E2E の申告',
+      },
+    })
+    expect(declared.status(), `申告を登録できない: ${await declared.text()}`).toBe(201)
+    const declarationId = (await declared.json()).declarationId
+
+    // 成功基準 1: 通関済でない貨物の引取は断られ、いまの状態が示される
+    const refused = await request.post('/api/v1/handling', {
+      headers: handler,
+      data: {
+        trackingNumber,
+        type: 'CLAIM',
+        locationUnLocode: 'USLAX',
+        completionTime: `${utcDate(0)}T01:00:00Z`,
+      },
+    })
+    // 409。**入力の誤りではなく状態の衝突**である（荷受人未確認の 400 とは別の理由）
+    expect(refused.status(), `通関前の引取が通った: ${await refused.text()}`).toBe(409)
+    expect(await refused.text()).toContain('通関')
+
+    // 成功基準 2: 留置にすると、追跡側に税関保留が自動で起票される
+    const held = await request.put(`/api/v1/customs/${declarationId}/status`, {
+      headers: tracker,
+      data: { status: 'HELD', reason: '書類不備のため留置' },
+    })
+    expect(held.status(), '留置にできない').toBe(200)
+
+    // 交換機・ルーティングキー・購読の宣言が全部揃って初めてここが例外になる
+    await eventually(async () => {
+      const publicView = await request.get(
+        `/api/v1/public/tracking/${encodeURIComponent(trackingNumber)}`,
+      )
+      expect(publicView.ok()).toBeTruthy()
+      const view = await publicView.json()
+      expect(view.hasException, '留置が追跡に届いていない').toBe(true)
+      // **公開画面に理由は出さない**（[ADR-025] 決定 3 と同じ立場）。
+      // 荷主に見えるのは「問題が発生した」までであり、留置の事情は社内で扱う
+      expect(JSON.stringify(view), '公開画面に社内の事情が漏れている').not.toContain('税関')
+      expect(JSON.stringify(view)).not.toContain('書類不備')
+    })
+
+    // 種別「税関保留」が分かるのは認証の内側。ここに載らなければ追跡管理者は動けない
+    // `/exceptions/open` は件数だけを返す。**件数から対象へ辿れること**を一覧で見る
+    const open = await request.get('/api/v1/tracking/manage/exceptions', {
+      headers: tracker,
+    })
+    expect(open.ok()).toBeTruthy()
+    const openText = await open.text()
+    expect(openText).toContain(trackingNumber)
+    expect(openText, '税関保留として起票されていない').toContain('CUSTOMS_HOLD')
+    expect(openText, '留置の理由が担当者に伝わっていない').toContain('書類不備のため留置')
+  })
+
+  /**
+   * 成功基準 3・4。輸送中 → 申請 → 陸揚げ地を指定して承認 → キャンセル確定。
+   *
+   * <p>輸送中にするのは<strong>荷役のイベント経由</strong>である。bookingms が初めて
+   * 購読側に回った経路であり、交換機の引数が揃っていなければここで止まる。
+   */
+  test('輸送中のキャンセル申請と承認を実バックエンドで通す', async ({ request }) => {
+    const { trackingNumber, voyageNumber, bookingId } = await ensureTrackedVoyage(request)
+    const handler = await handlerHeaders(request)
+    const tracker = await trackerHeaders(request)
+    const { headers: sales } = await salesApi(request)
+
+    for (const type of ['RECEIVE', 'LOAD']) {
+      const recorded = await request.post('/api/v1/handling', {
+        headers: handler,
+        data: {
+          trackingNumber,
+          type,
+          locationUnLocode: 'JPTYO',
+          completionTime: `${utcDate(0)}T0${type === 'RECEIVE' ? '0' : '2'}:00:00Z`,
+          // 積込は船に載せる作業なので航海番号が要る
+          voyageNumber: type === 'LOAD' ? voyageNumber : null,
+        },
+      })
+      expect(recorded.ok(), `${type} を記録できない: ${await recorded.text()}`).toBeTruthy()
+    }
+
+    // 積込が届いて初めて「輸送中」になる。届かなければ申請そのものが断られる
+    await eventually(async () => {
+      const requested = await request.post(
+        `/api/v1/bookings/${encodeURIComponent(bookingId)}/cancellation`,
+        { headers: sales, data: { reason: '荷主都合による中止' } },
+      )
+      expect(requested.status(), '輸送中の予約でキャンセルを申請できない').toBe(201)
+    })
+
+    const pending = await request.get('/api/v1/cancellations', { headers: tracker })
+    expect(pending.ok()).toBeTruthy()
+    const target = (await pending.json()).find(
+      (row: { bookingId: string }) => row.bookingId === bookingId,
+    )
+    expect(target, '承認待ちの一覧に出ていない').toBeTruthy()
+    expect(
+      target.dischargeCandidates.length,
+      '陸揚げ地の候補が無い。指定して承認できない',
+    ).toBeGreaterThan(0)
+
+    const approved = await request.put(
+      `/api/v1/bookings/${encodeURIComponent(bookingId)}/cancellation/approve`,
+      {
+        headers: tracker,
+        data: {
+          dischargeLocationUnLocode: target.dischargeCandidates[0].unLocode,
+          decisionReason: '現在地の港で陸揚げする',
+        },
+      },
+    )
+    expect(approved.status(), '承認できない').toBe(200)
+
+    const cargo = await request.get(`/api/v1/bookings/${encodeURIComponent(bookingId)}`, {
+      headers: sales,
+    })
+    expect(cargo.ok()).toBeTruthy()
+    expect((await cargo.json()).bookingStatus, '承認したのに予約が取消になっていない')
+      .toBe('CANCELLED')
   })
 })
