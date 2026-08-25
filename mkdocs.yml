@@ -152,6 +152,7 @@ nav:
   - 開発ジャーナル:
       - 2026-08-19: journal/20260819.md
       - 2026-08-20: journal/20260820.md
+      - 2026-08-25: journal/20260825.md
   - ADR:
       - 概要: adr/index.md
       - ADR-001 マイクロサービスアーキテクチャ: adr/001-microservices-architecture.md
