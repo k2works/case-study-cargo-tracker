@@ -61,7 +61,7 @@ export const shippers: MockShipper[] = SEED_SHIPPERS.map((shipper) => ({ ...ship
  * <p><strong>オブジェクトで持つ。</strong>`let` を export すると、読み込む側は値の写しを
  * 受け取るため、ハンドラ側で増やしても他のファイルからは増えて見えない。
  */
-export const sequenceState = { shipper: SEED_SHIPPERS.length, booking: 4, trackingNumber: 1 }
+export const sequenceState = { shipper: SEED_SHIPPERS.length, booking: 0, trackingNumber: 0 }
 
 export type MockItineraryLeg = {
   voyageNumber: string
@@ -502,6 +502,18 @@ export const bookings: MockBooking[] = [
     ],
   },
 ]
+
+/**
+ * 採番の初期値を<strong>シードから導く</strong>。
+ *
+ * <p>件数を書き写すと、シードを 1 件足したときに新規登録の番号が既存とぶつかる。
+ * IT9 で輸送中の予約を足したところ、新しく登録した予約が種データと同じ番号になり、
+ * <strong>一覧で別の予約を開いていた</strong>——原因と無関係なテストが赤くなる。
+ */
+sequenceState.booking = bookings.length
+sequenceState.trackingNumber = bookings.filter(
+  (booking) => booking.trackingNumber !== null && booking.trackingNumber !== undefined,
+).length
 export const BOOKING_LIMIT = 100
 
 /** 目的地の暦での「今日」。UTC で判断すると、時差の分だけ受付が拒否される時間帯ができる。 */

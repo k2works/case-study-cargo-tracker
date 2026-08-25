@@ -191,11 +191,15 @@ test.describe('経路設計への引き渡し（US06）', () => {
     await page.getByLabel('目的地').selectOption('USLAX')
     await page.getByLabel('到着期限').fill(businessLocalDateTime(60, '00:00').slice(0, 10))
     await page.getByRole('button', { name: '登録する' }).click()
-    await expect(page.getByText(/を発行しました/)).toBeVisible()
+    const registered = await page.getByText(/を発行しました/).textContent()
+    // **作った予約を名指しで開く。** `first()` は一覧の並び順に依存し、種データが
+    // 1 件増えただけで別の予約を開く（IT9 で輸送中の予約を足したときに実際そうなった）
+    const created = /BKG-\d+/.exec(registered ?? '')?.[0] ?? ''
+    expect(created, '発行された予約番号が読めない').toMatch(/^BKG-/)
 
     // 一覧から詳細へ入り、内容を確かめてから引き渡す。
     // 登録後は一覧に居るため、ここでページを読み直さない（読み直すとモックの登録が消える）
-    await page.getByRole('link', { name: /^BKG-/ }).first().click()
+    await page.getByRole('link', { name: created }).first().click()
     // 一覧にも同じ言葉が出る（状態の絞り込みと状態列）。詳細の見出しが出てから読む
     await expect(page.getByRole('heading', { name: /^予約 BKG-/ })).toBeVisible()
     await expect(page.getByText('未依頼').last()).toBeVisible()

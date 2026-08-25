@@ -957,6 +957,49 @@ test.describe('IT9 実環境（通関とキャンセル承認）', () => {
   })
 
   /**
+   * US16-1〜US16-3 の成功パス。**通関を済ませ、荷受人の確認を入れたら引取が通る。**
+   *
+   * <p>モックの E2E では書けない——通関済にできるのは追跡管理者だけで、ロールを
+   * 切り替えるとページが読み直されてモックの状態が消える。**守りを 2 段とも越える道が
+   * 実際に通ることは、ここでしか確かめられない。**
+   */
+  test('通関済なら、荷受人の確認を入れた引取が記録される', async ({ request }) => {
+    const trackingNumber = await ensureTrackedCargo(request)
+    const handler = await handlerHeaders(request)
+    const tracker = await trackerHeaders(request)
+
+    const declared = await request.post('/api/v1/customs', {
+      headers: handler,
+      data: {
+        trackingNumber,
+        declarationNumber: `DEC-OK-${Date.now()}`,
+        declaredAt: `${utcDate(0)}T00:00:00Z`,
+        remarks: '引取まで通す',
+      },
+    })
+    expect(declared.status(), `申告を登録できない: ${await declared.text()}`).toBe(201)
+
+    const cleared = await request.put(
+      `/api/v1/customs/${(await declared.json()).declarationId}/status`,
+      { headers: tracker, data: { status: 'CLEARED', reason: '審査完了' } },
+    )
+    expect(cleared.status(), `通関済にできない: ${await cleared.text()}`).toBe(200)
+
+    const claimed = await request.post('/api/v1/handling', {
+      headers: handler,
+      data: {
+        trackingNumber,
+        type: 'CLAIM',
+        locationUnLocode: 'USLAX',
+        completionTime: `${utcDate(0)}T04:00:00Z`,
+        consigneeConfirmation: '山田太郎（受取担当）',
+      },
+    })
+    expect(claimed.ok(), `通関済なのに引取が通らない: ${await claimed.text()}`).toBeTruthy()
+    expect((await claimed.json()).consigneeConfirmation).toContain('山田太郎')
+  })
+
+  /**
    * 成功基準 3・4。輸送中 → 申請 → 陸揚げ地を指定して承認 → キャンセル確定。
    *
    * <p>輸送中にするのは<strong>荷役のイベント経由</strong>である。bookingms が初めて

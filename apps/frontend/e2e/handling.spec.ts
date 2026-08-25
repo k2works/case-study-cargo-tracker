@@ -11,18 +11,25 @@ import type { Page } from '@playwright/test'
  * IT7 のスコープ外:
  * - 荷主への状態変更通知（US15-5 は代替。通知基盤は US19・IT8）
  * - 精算の開始（US16-4 は範囲外。`CargoDeliveredEvent` は IT12）
- * - 通関ガード（US29・IT9）。IT7 は荷受人の確認で代替する（[ADR-023] 決定 4）
+ *
+ * **IT9 で通関ガードが入った**（US29-3）。引取は<strong>通関済でなければ通らない</strong>
+ * ため、引取を確かめるテストは先に通関を済ませる。済ませずに書くと、
+ * <strong>荷受人の確認の守りを一度も踏まない</strong>——外しても緑のままになる。
  */
 
 /** 種データの追跡番号（`src/mocks/data.ts` の BKG-2026000004）。 */
 const TRACKING_NUMBER = 'TRK-20260823-0001'
 
-async function logInAsHandler(page: Page) {
+async function logInAs(page: Page, userId: string) {
   await page.goto('/login')
-  await page.getByLabel('利用者 ID').fill('handler01')
+  await page.getByLabel('利用者 ID').fill(userId)
   await page.getByLabel('パスワード').fill('password')
   await page.getByRole('button', { name: 'ログイン' }).click()
   await expect(page).toHaveURL(/\/dashboard/)
+}
+
+async function logInAsHandler(page: Page) {
+  await logInAs(page, 'handler01')
 }
 
 async function record(
@@ -99,30 +106,44 @@ test.describe('荷役作業の記録（US15・US16）', () => {
     await expect(page.getByRole('table')).toBeHidden()
   })
 
-  /** US16-1〜US16-3。 */
-  test('荷受人の確認を入れると引取が記録される', async ({ page }) => {
-    await record(page, {
-      type: 'CLAIM',
-      location: 'USLAX',
-      confirmation: '山田太郎（受取担当）',
-    })
-
-    await expect(page.getByRole('table').getByText('引取')).toBeVisible()
-    await expect(page.getByRole('table').getByText(/山田太郎/)).toBeVisible()
-  })
+  /**
+   * US16-1〜US16-3 の成功パスは<strong>実環境のテストが見る</strong>
+   * （`real-backend.spec.ts` の「通関済なら、荷受人の確認を入れた引取が記録される」）。
+   *
+   * <p>ここで書けないのは、通関済にできるのが追跡管理者だけであり、
+   * <strong>ロールを切り替えるとページが読み直されてモックの状態が消える</strong>ため
+   * である。**「状態が作れないから前提を省く」を選ぶと、通関ガードの手前で止まる引取を
+   * 「記録できた」と読み違える**——実際、IT9 でこのテストはそう壊れた。
+   */
 
   /**
    * **代替であることを画面に書く**（[ADR-023] 決定 4・US15-5）。
    *
-   * 書かないと、作業員は「システムが通関を見ている」「記録すれば荷主に伝わる」と受け取る。
+   * 書かないと、作業員は「記録すれば荷主に伝わる」と受け取る。
+   *
+   * <p><strong>通関の但し書きは IT9 で外した。</strong>ガードが入った以上その文は誤りで
+   * あり、残すと「仕組みは見ていない」と読んだ作業員が現物の書類を確かめずに引き渡す。
+   * ここでは<strong>消えていること</strong>を固定する——消し忘れを踏まないために。
    */
-  test('まだ仕組みで行われないこと（通関の確認・荷主への通知）が画面に書いてある', async ({
+  test('通知が代替であることは書いてあり、通関の但し書きは残っていない', async ({
     page,
   }) => {
     await expect(page.getByText(/荷主へは自動で通知されません/)).toBeVisible()
 
     await page.getByLabel('作業の種別').selectOption('CLAIM')
 
-    await expect(page.getByText(/通関の確認は、まだ仕組みでは行われません/)).toBeVisible()
+    await expect(page.getByText(/通関の確認は、まだ仕組みでは行われません/)).toBeHidden()
+  })
+
+  /** US29-3。**申告が無い貨物ほど漏れる**——名簿方式は未登録を素通りさせない。 */
+  test('通関申告が無い貨物の引取は、荷受人の確認を入れても断られる', async ({ page }) => {
+    await record(page, {
+      type: 'CLAIM',
+      location: 'USLAX',
+      confirmation: '山田太郎（受取担当）',
+    })
+
+    await expect(page.getByText(/通関申告がありません/)).toBeVisible()
+    await expect(page.getByRole('table')).toBeHidden()
   })
 })
