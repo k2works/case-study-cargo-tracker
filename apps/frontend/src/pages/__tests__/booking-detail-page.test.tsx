@@ -809,6 +809,26 @@ describe('予約の詳細（US06）', () => {
         .toHaveTextContent('経路設計者が組み直します')
     })
 
+    /**
+     * <strong>言葉が無いなら枠ごと出さない</strong>（IT10 のキャプチャで 2 度目）。
+     *
+     * <p>経路設計のセクションは `routingStatus` で言葉を出し分けるが、IT10 で足した
+     * `MISROUTED` を扱っていなかった。**見出しだけの空の枠**が出て、「何か出るはずの
+     * ものが出ていない」と読まれる。[ADR-026] 決定 2 が「列挙に値を足したら、既存の
+     * 述語すべてがその値を明示的に扱う」と決めているのは、この形を防ぐためである。
+     */
+    it('経路設計の枠が、誤配のときも言葉を持つ', async () => {
+      renderMisrouted(['ROLE_ROUTING'])
+
+      const heading = await screen.findByRole('heading', { name: '経路設計' })
+      const section = heading.parentElement!
+      expect(
+        section.textContent?.replace('経路設計', '').trim(),
+        '見出しだけの空の枠が出ている',
+      ).not.toBe('')
+      expect(section).toHaveTextContent(/予定ルートから外れ/)
+    })
+
     it('誤配していない予約には、バナーを出さない', async () => {
       renderPage(['ROLE_ROUTING'])
 
