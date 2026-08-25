@@ -383,7 +383,7 @@ end note
 
 | # | タスク | 見積 | 注意 |
 | :--- | :--- | :--- | :--- |
-| 8.1 | **US33 のリリース配置を決める**（IT9 で起票済み・未配置） | 2h | [Issue #555](https://github.com/k2works/case-study-cargo-tracker/issues/555)。**「次の見直しで」と書き続けない** |
+| 8.1 | **US33 のリリース配置を決める**（IT9 で起票済み・未配置） | 2h | [Issue #555](https://github.com/k2works/case-study-cargo-tracker/issues/555)。**「次の見直しで」と書き続けない**。→ **Release 2.1（IT13）に配置した**——依存が無く、一気通貫の完成を優先し、予備枠に収まる |
 | 8.2 | Release 1.1 の完了を確認し、Release 2.0（IT11〜IT12）の前提を洗い出す | 2h | 本 IT で Release 1.1 が完了する |
 
 ### 見積もり合計
