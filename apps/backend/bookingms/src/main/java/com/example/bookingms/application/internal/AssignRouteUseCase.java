@@ -50,7 +50,7 @@ public class AssignRouteUseCase {
                     // 通常の割り当てを通すと、輸送中の貨物が「経路を提示した」状態へ戻り、
                     // 荷主が合意して確定した記録が消える
                     Cargo assigned = cargoes.save(cargo.isMisrouted()
-                            ? cargo.reassignItinerary(chosen, destinationZone)
+                            ? cargo.reassignItinerary(chosen)
                             : cargo.assignItinerary(chosen, destinationZone));
                     // **期限を超えるなら、何日超えるかを返す**（US28-6・[ADR-026] 決定 5）。
                     // 「間に合いません」だけでは、荷主は次の手を決められない

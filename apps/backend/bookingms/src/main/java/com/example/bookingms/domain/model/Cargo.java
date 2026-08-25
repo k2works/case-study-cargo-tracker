@@ -371,8 +371,12 @@ public final class Cargo {
      * ——手番が営業に戻ることが、気づく手段である（通知の仕組みが無いため）。
      *
      * <p><strong>誤配の事実は消さない。</strong>料金調整の根拠として参照される。
+     *
+     * <p><strong>期限では弾かない</strong>（受入基準 28-6）。誤配のあとは、期限内に届く
+     * 経路が残っていないことがある——弾くと<strong>組み直す手段そのものが無くなる</strong>。
+     * 超える分は {@link #daysBeyondDeadline} が示し、荷主に伝えて判断してもらう。
      */
-    public Cargo reassignItinerary(CargoItinerary newItinerary, ZoneId destinationZone) {
+    public Cargo reassignItinerary(CargoItinerary newItinerary) {
         if (newItinerary == null) {
             throw new IllegalArgumentException("割り当てる旅程は必須です");
         }
@@ -383,7 +387,7 @@ public final class Cargo {
         // **出発地は現在地である**（US28-4）。元の出発地を要求すると、現在地から
         // 組んだ経路がすべて弾かれる——貨物が今いない港からの経路しか通らなくなる
         if (!routeSpecification.isSatisfiedByReroute(
-                newItinerary, lastHandlingLocationUnLocode, destinationZone)) {
+                newItinerary, lastHandlingLocationUnLocode)) {
             throw new IllegalArgumentException(
                     "この旅程は貨物の現在地から目的地へ向かうものではありません");
         }

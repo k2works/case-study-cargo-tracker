@@ -151,7 +151,7 @@ class MisrouteTest {
         @DisplayName("予約の状態は輸送中のまま、経路の状況だけが戻る")
         void keepsTheBookingStatusWhileRestoringTheRouting() {
             Cargo reassigned = misroutedAtSingapore()
-                    .reassignItinerary(fromSingapore(), java.time.ZoneId.of("America/Los_Angeles"));
+                    .reassignItinerary(fromSingapore());
 
             assertThat(reassigned.bookingStatus())
                     .as("輸送中の貨物が経路提示へ戻っている。荷主が合意した記録が消える")
@@ -168,7 +168,7 @@ class MisrouteTest {
         @DisplayName("組み直しても、誤配の記録は残る")
         void keepsTheMisrouteRecord() {
             Cargo reassigned = misroutedAtSingapore()
-                    .reassignItinerary(fromSingapore(), java.time.ZoneId.of("America/Los_Angeles"));
+                    .reassignItinerary(fromSingapore());
 
             assertThat(reassigned.isMisrouted())
                     .as("組み直した瞬間に誤配の記録が消えている。料金調整の根拠が失われる")
@@ -189,8 +189,9 @@ class MisrouteTest {
                             Instant.parse("2026-09-08T09:00:00Z"),
                             Instant.parse("2026-09-19T09:00:00Z"))));
 
-            assertThatThrownBy(() -> misroutedAtSingapore()
-                    .reassignItinerary(fromTokyo, java.time.ZoneId.of("America/Los_Angeles")))
+            Cargo misrouted = misroutedAtSingapore();
+
+            assertThatThrownBy(() -> misrouted.reassignItinerary(fromTokyo))
                     .as("貨物が今いない港からの経路が通っている。現場は動けない")
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("現在地");
@@ -206,8 +207,9 @@ class MisrouteTest {
                             Instant.parse("2026-09-08T09:00:00Z"),
                             Instant.parse("2026-09-10T09:00:00Z"))));
 
-            assertThatThrownBy(() -> misroutedAtSingapore()
-                    .reassignItinerary(toShanghai, java.time.ZoneId.of("America/Los_Angeles")))
+            Cargo misrouted = misroutedAtSingapore();
+
+            assertThatThrownBy(() -> misrouted.reassignItinerary(toShanghai))
                     .as("目的地が変わっている。荷主との約束は変わっていない")
                     .isInstanceOf(IllegalArgumentException.class);
         }
@@ -227,7 +229,7 @@ class MisrouteTest {
                             Instant.parse("2026-09-10T09:00:00Z"),
                             Instant.parse("2026-09-25T20:00:00Z"))));
             Cargo reassigned = misroutedAtSingapore()
-                    .reassignItinerary(late, java.time.ZoneId.of("America/Los_Angeles"));
+                    .reassignItinerary(late);
 
             assertThat(reassigned.daysBeyondDeadline(java.time.ZoneId.of("America/Los_Angeles")))
                     .as("何日超えるかが分からない。荷主は次の手を決められない")
@@ -250,19 +252,47 @@ class MisrouteTest {
                             // UTC では 9/21、ロサンゼルス（UTC-7）では 9/20 の 20 時
                             Instant.parse("2026-09-21T03:00:00Z"))));
             Cargo reassigned = misroutedAtSingapore()
-                    .reassignItinerary(onTime, java.time.ZoneId.of("America/Los_Angeles"));
+                    .reassignItinerary(onTime);
 
             assertThat(reassigned.daysBeyondDeadline(java.time.ZoneId.of("America/Los_Angeles")))
                     .as("UTC で判断している。時差の分だけ期限内の便が超過扱いになる")
                     .isEmpty();
         }
 
+        /**
+         * <strong>期限を超える経路も選べる</strong>（受入基準 28-6）。
+         *
+         * <p>誤配のあとは、期限内に届く経路が残っていないことがある——弾くと
+         * <strong>組み直す手段そのものが無くなり、貨物は経路から外れたまま止まる</strong>。
+         * 超える分を示して、<strong>荷主に伝えて判断してもらう</strong>のが業務の形である。
+         */
+        @Test
+        @DisplayName("期限を超える経路でも、組み直せる")
+        void acceptsAnItineraryBeyondTheDeadline() {
+            CargoItinerary late = CargoItinerary.of(List.of(
+                    Leg.of(VoyageNumber.of("V0801"), SINGAPORE, LOS_ANGELES,
+                            Instant.parse("2026-09-10T09:00:00Z"),
+                            // 期限（2026-09-20）を大きく超える
+                            Instant.parse("2026-10-15T09:00:00Z"))));
+
+            Cargo reassigned = misroutedAtSingapore().reassignItinerary(late);
+
+            assertThat(reassigned.routingStatus())
+                    .as("期限で弾いている。組み直す手段が無くなり、貨物は外れたまま止まる")
+                    .isEqualTo(RoutingStatus.ROUTED);
+            assertThat(reassigned.daysBeyondDeadline(java.time.ZoneId.of("America/Los_Angeles")))
+                    .as("超える分が分からない。荷主に伝えられない")
+                    .isPresent();
+        }
+
         /** 誤配していない予約には使わない。**通常の割り当てが通るべき経路である**。 */
         @Test
         @DisplayName("誤配していない予約には使えない")
         void refusesWhenNotMisrouted() {
-            assertThatThrownBy(() -> inTransit()
-                    .reassignItinerary(fromSingapore(), java.time.ZoneId.of("America/Los_Angeles")))
+            Cargo notMisrouted = inTransit();
+            CargoItinerary itinerary = fromSingapore();
+
+            assertThatThrownBy(() -> notMisrouted.reassignItinerary(itinerary))
                     .isInstanceOf(IllegalStateException.class);
         }
     }

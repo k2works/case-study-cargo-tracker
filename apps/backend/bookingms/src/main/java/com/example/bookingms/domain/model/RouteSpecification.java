@@ -110,15 +110,19 @@ public final class RouteSpecification {
      * <strong>いまいる港が出発地になる</strong>——元の出発地を要求すると、
      * 現在地から組んだ経路がすべて弾かれる。
      *
-     * <p><strong>目的地と期限は引き継ぐ</strong>（受入基準 28-5）。荷主との約束は
-     * 変わっていない——どこへ、いつまでに届けるかは同じである。
+     * <p><strong>目的地は引き継ぐ</strong>（受入基準 28-5）。荷主との約束のうち
+     * 「どこへ届けるか」は変わっていない。
+     *
+     * <p><strong>期限では弾かない</strong>（受入基準 28-6）。誤配のあとは、期限内に届く
+     * 経路が残っていないことがある——弾くと<strong>組み直す手段そのものが無くなり、
+     * 貨物は経路から外れたまま止まる</strong>。超える分は
+     * {@link #daysBeyondDeadline} が示し、<strong>荷主に伝えて判断してもらう</strong>。
      *
      * @param itinerary 組み直した旅程
      * @param currentLocationUnLocode 貨物の現在地。<strong>ここが出発地でなければならない</strong>
-     * @param destinationZone 目的地のタイムゾーン（[ADR-017]）
      */
-    public boolean isSatisfiedByReroute(CargoItinerary itinerary, String currentLocationUnLocode,
-            ZoneId destinationZone) {
+    public boolean isSatisfiedByReroute(CargoItinerary itinerary,
+            String currentLocationUnLocode) {
         if (itinerary == null || currentLocationUnLocode == null) {
             return false;
         }

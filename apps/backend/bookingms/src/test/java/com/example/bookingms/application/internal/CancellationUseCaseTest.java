@@ -355,7 +355,7 @@ class CancellationUseCaseTest {
         @Override
         public List<CancellationRequest> findAwaitingDischarge(int limit) {
             return requests.stream()
-                    .filter(request -> request.dischargeLocation().isPresent())
+                    .filter(candidate -> candidate.dischargeLocation().isPresent())
                     .toList();
         }
     }
