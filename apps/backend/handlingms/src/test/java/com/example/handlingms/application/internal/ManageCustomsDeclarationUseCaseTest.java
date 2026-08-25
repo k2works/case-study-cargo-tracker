@@ -36,8 +36,27 @@ class ManageCustomsDeclarationUseCaseTest {
 
     private final CustomsDeclarationRepository declarations = new StubRepository();
 
+    /** 発行されたイベント。**発行したことを検査から見る**。 */
+    private final List<com.example.handlingms.application.port.CustomsStatusChanged> published =
+            new ArrayList<>();
+
+    private final com.example.handlingms.application.port.HandlingEventNotifier notifier =
+            new com.example.handlingms.application.port.HandlingEventNotifier() {
+                @Override
+                public void handlingActivityRegistered(
+                        com.example.handlingms.application.port.HandlingActivityRegistered event) {
+                    throw new UnsupportedOperationException("この検査では使わない");
+                }
+
+                @Override
+                public void customsStatusChanged(
+                        com.example.handlingms.application.port.CustomsStatusChanged event) {
+                    published.add(event);
+                }
+            };
+
     private final ManageCustomsDeclarationUseCase useCase =
-            new ManageCustomsDeclarationUseCase(declarations, clock);
+            new ManageCustomsDeclarationUseCase(declarations, notifier, clock);
 
     private CustomsDeclaration heldSince(String number, String heldAt) {
         CustomsDeclaration declaration = CustomsDeclaration.declare(
@@ -97,6 +116,30 @@ class ManageCustomsDeclarationUseCaseTest {
         assertThatThrownBy(() -> useCase.search(null, null, "UNKNOWN"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("通関状態が不正です");
+    }
+
+    /**
+     * US29-5。<strong>留め置かれたことを知らせる。</strong>
+     *
+     * <p>知らせないと、留置は追跡管理者の未解決一覧に現れず、貨物はそのまま止まる。
+     * <strong>理由も載せる</strong>——税関に問い合わせるときの手がかりになる。
+     */
+    @Test
+    @DisplayName("状態を更新すると、通関状態が変わったことを知らせる")
+    void announcesTheStatusChange() {
+        CustomsDeclaration declared = CustomsDeclaration.declare(
+                DeclarationNumber.of("DEC-0020"), CargoBookingId.of("BKG-2026000001"),
+                HandlingTrackingNumber.of("TRK-20260823-0001"),
+                Instant.parse("2027-09-01T00:00:00Z"));
+        stored.add(declared);
+
+        useCase.updateStatus(1L, "HELD", "tracker01", "書類不備");
+
+        assertThat(published).hasSize(1);
+        assertThat(published.getFirst().toStatus()).isEqualTo("HELD");
+        assertThat(published.getFirst().fromStatus()).isEqualTo("PENDING");
+        assertThat(published.getFirst().reason()).isEqualTo("書類不備");
+        assertThat(published.getFirst().trackingNumber()).isEqualTo("TRK-20260823-0001");
     }
 
     @Test

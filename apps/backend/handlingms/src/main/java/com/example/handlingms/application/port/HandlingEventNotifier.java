@@ -18,4 +18,13 @@ public interface HandlingEventNotifier {
      * （[ADR-022] 決定 4）。
      */
     void handlingActivityRegistered(HandlingActivityRegistered event);
+
+    /**
+     * 通関状態が変わったことを伝える（US29-5）。
+     *
+     * <p><strong>購読者がいるから発行する。</strong>留置になったら例外「税関保留」を
+     * 自動で起票するのは trackingms である——追跡管理者の未解決一覧に現れないと、
+     * 留め置かれた貨物は誰の目にも入らない。
+     */
+    void customsStatusChanged(CustomsStatusChanged event);
 }

@@ -1,10 +1,13 @@
 package com.example.handlingms.application.internal;
 
 import com.example.handlingms.application.port.CustomsDeclarationRepository;
+import com.example.handlingms.application.port.CustomsStatusChanged;
+import com.example.handlingms.application.port.HandlingEventNotifier;
 import com.example.handlingms.domain.model.CargoBookingId;
 import com.example.handlingms.domain.model.CustomsDeclaration;
 import com.example.handlingms.domain.model.CustomsStatus;
 import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
@@ -26,11 +29,13 @@ public class ManageCustomsDeclarationUseCase {
     public static final int HELD_OVERDUE_DAYS = 3;
 
     private final CustomsDeclarationRepository declarations;
+    private final HandlingEventNotifier notifier;
     private final Clock clock;
 
     public ManageCustomsDeclarationUseCase(CustomsDeclarationRepository declarations,
-            Clock clock) {
+            HandlingEventNotifier notifier, Clock clock) {
         this.declarations = declarations;
+        this.notifier = notifier;
         this.clock = clock;
     }
 
@@ -56,9 +61,20 @@ public class ManageCustomsDeclarationUseCase {
     @Transactional
     public Optional<CustomsDeclaration> updateStatus(long declarationId, String status,
             String changedBy, String reason) {
-        return declarations.findById(declarationId).map(declaration ->
-                declarations.updateStatus(declaration.updateStatus(
-                        CustomsStatus.parse(status), changedBy, reason, clock.instant())));
+        return declarations.findById(declarationId).map(declaration -> {
+            CustomsStatus newStatus = CustomsStatus.parse(status);
+            Instant changedAt = clock.instant();
+            CustomsDeclaration updated = declarations.updateStatus(
+                    declaration.updateStatus(newStatus, changedBy, reason, changedAt));
+
+            // **留め置かれたことが誰の目にも入らないと、貨物はそのまま止まる**（US29-5）。
+            // 例外の起票は trackingms が行う——追跡の状態を動かすのは追跡の仕事である
+            notifier.customsStatusChanged(new CustomsStatusChanged(
+                    updated.trackingNumber().value(), updated.cargoBookingId().value(),
+                    updated.declarationNumber().value(), declaration.status().name(),
+                    newStatus.name(), reason, changedBy, changedAt, clock.instant()));
+            return updated;
+        });
     }
 
     /**

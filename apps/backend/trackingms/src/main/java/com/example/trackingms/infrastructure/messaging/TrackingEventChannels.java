@@ -50,6 +50,21 @@ public final class TrackingEventChannels {
     /** キャンセルのイベントのデッドレター。 */
     public static final String CANCELLED_DEAD_LETTER_QUEUE = "trackingms.cargo-cancelled.dlq";
 
+    /**
+     * 通関状態が変わったことのルーティングキー（US29-5）。
+     *
+     * <p>交換機は荷役のもの（{@link #HANDLING_EXCHANGE}）に相乗りする。送り手は同じ
+     * handlingms であり、トピック交換機なのでキューと結びつけを足すだけで済む。
+     */
+    public static final String CUSTOMS_STATUS_CHANGED = "cargo.customs-status-changed";
+
+    /** 通関のイベントを読むキュー。**購読側ごとに分ける**。 */
+    public static final String CUSTOMS_QUEUE = "trackingms.customs-status-changed";
+
+    /** 通関のイベントのデッドレター。 */
+    public static final String CUSTOMS_DEAD_LETTER_QUEUE =
+            "trackingms.customs-status-changed.dlq";
+
     /** 荷役のイベントを読むキュー。 */
     public static final String HANDLING_QUEUE = "trackingms.handling-activity-registered";
 

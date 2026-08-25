@@ -160,8 +160,9 @@ public class HandlingConfig {
 
     @Bean
     public ManageCustomsDeclarationUseCase manageCustomsDeclarationUseCase(
-            CustomsDeclarationRepository declarations, Clock clock) {
-        return new ManageCustomsDeclarationUseCase(declarations, clock);
+            CustomsDeclarationRepository declarations, HandlingEventNotifier notifier,
+            Clock clock) {
+        return new ManageCustomsDeclarationUseCase(declarations, notifier, clock);
     }
 
     @Bean

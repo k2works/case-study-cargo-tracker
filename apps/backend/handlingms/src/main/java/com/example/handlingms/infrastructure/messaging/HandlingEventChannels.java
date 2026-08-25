@@ -20,6 +20,14 @@ public final class HandlingEventChannels {
     public static final String HANDLING_ACTIVITY_REGISTERED = "cargo.handling-activity-registered";
 
     /**
+     * 通関状態が変わったことのルーティングキー（US29-5）。
+     *
+     * <p><strong>交換機は増やさない。</strong>送り手は同じ handlingms であり、
+     * トピック交換機なのでルーティングキーを 1 本足すだけで済む。
+     */
+    public static final String CUSTOMS_STATUS_CHANGED = "cargo.customs-status-changed";
+
+    /**
      * どのキューにも結びつかなかったイベントの行き先（[ADR-022] 決定 4）。
      *
      * <p>デッドレターが守るのは「受け取ったが処理できなかった」だけである。

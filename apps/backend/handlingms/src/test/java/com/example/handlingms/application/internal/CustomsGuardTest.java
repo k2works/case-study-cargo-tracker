@@ -68,8 +68,18 @@ class CustomsGuardTest {
             Clock.fixed(NOW, ZoneId.of("Asia/Tokyo")));
 
     private static HandlingEventNotifier notifier() {
-        return event -> {
-            // ガードの検査では、発行そのものは見ない
+        return new HandlingEventNotifier() {
+            @Override
+            public void handlingActivityRegistered(
+                    com.example.handlingms.application.port.HandlingActivityRegistered event) {
+                // ガードの検査では、発行そのものは見ない
+            }
+
+            @Override
+            public void customsStatusChanged(
+                    com.example.handlingms.application.port.CustomsStatusChanged event) {
+                // ガードの検査では、発行そのものは見ない
+            }
         };
     }
 

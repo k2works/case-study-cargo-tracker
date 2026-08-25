@@ -1,5 +1,6 @@
 package com.example.handlingms.infrastructure.messaging;
 
+import com.example.handlingms.application.port.CustomsStatusChanged;
 import com.example.handlingms.application.port.HandlingActivityRegistered;
 import com.example.handlingms.application.port.HandlingEventNotifier;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -24,6 +25,18 @@ public class RabbitHandlingEventNotifier implements HandlingEventNotifier {
     public void handlingActivityRegistered(HandlingActivityRegistered event) {
         afterCommit(() -> rabbitTemplate.convertAndSend(HandlingEventChannels.EXCHANGE,
                 HandlingEventChannels.HANDLING_ACTIVITY_REGISTERED, event));
+    }
+
+    /**
+     * 通関状態が変わったことを流す（US29-5）。
+     *
+     * <p>交換機は荷役のものに相乗りする。ルーティングキーが違うので、荷役だけを
+     * 読んでいる購読者には配られない。
+     */
+    @Override
+    public void customsStatusChanged(CustomsStatusChanged event) {
+        afterCommit(() -> rabbitTemplate.convertAndSend(HandlingEventChannels.EXCHANGE,
+                HandlingEventChannels.CUSTOMS_STATUS_CHANGED, event));
     }
 
     /**

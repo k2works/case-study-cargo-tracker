@@ -237,6 +237,50 @@ public class TrackingConfig {
                 noteCancellation);
     }
 
+    /** 通関のイベントを受け取るキュー（US29-5）。**購読側ごとに分ける**。 */
+    @Bean
+    public Queue customsStatusChangedQueue() {
+        return new Queue(TrackingEventChannels.CUSTOMS_QUEUE, true, false, false, Map.of(
+                "x-dead-letter-exchange", TrackingEventChannels.DEAD_LETTER_EXCHANGE,
+                "x-dead-letter-routing-key", TrackingEventChannels.CUSTOMS_DEAD_LETTER_QUEUE));
+    }
+
+    @Bean
+    public Queue customsStatusChangedDeadLetterQueue() {
+        return new Queue(TrackingEventChannels.CUSTOMS_DEAD_LETTER_QUEUE, true);
+    }
+
+    @Bean
+    public Binding customsStatusChangedDeadLetterBinding() {
+        return BindingBuilder.bind(customsStatusChangedDeadLetterQueue())
+                .to(trackingDeadLetterExchange())
+                .with(TrackingEventChannels.CUSTOMS_DEAD_LETTER_QUEUE);
+    }
+
+    @Bean
+    public Binding customsStatusChangedBinding() {
+        return BindingBuilder.bind(customsStatusChangedQueue())
+                .to(cargoHandlingExchange())
+                .with(TrackingEventChannels.CUSTOMS_STATUS_CHANGED);
+    }
+
+    @Bean
+    public com.example.trackingms.application.internal.DetectCustomsHoldUseCase
+            detectCustomsHoldUseCase(
+            com.example.trackingms.application.port.TrackingActivityRepository activities,
+            com.example.trackingms.application.port.TrackingNotifier notifier) {
+        return new com.example.trackingms.application.internal.DetectCustomsHoldUseCase(
+                activities, notifier);
+    }
+
+    @Bean
+    public com.example.trackingms.infrastructure.messaging.CustomsStatusChangedListener
+            customsStatusChangedListener(
+            com.example.trackingms.application.internal.DetectCustomsHoldUseCase detect) {
+        return new com.example.trackingms.infrastructure.messaging
+                .CustomsStatusChangedListener(detect);
+    }
+
     @Bean
     public Queue handlingActivityRegisteredQueue() {
         return new Queue(TrackingEventChannels.HANDLING_QUEUE, true, false, false, Map.of(

@@ -607,7 +607,7 @@ end note
 | `CargoRoutedEvent` | bookingms | trackingms | cargoRoutingChannel | 経路・旅程の確定を追跡に通知。**IT6 では発行しない**（追跡を作るのに旅程は要らず、要るのは荷役の照合＝US15・IT7）。[ADR-022](../adr/022-domain-event-contract.md) 決定 1 |
 | `CargoCancelledEvent` | bookingms | trackingms | cargoBookingChannel（ルーティングキー `cargo.cancelled`） | キャンセル確定 → 追跡へお知らせを記録（**済**・IT9）。**理由は載せない**——公開の追跡照会に流れる経路に社内の判断を置かない。**billingms へは発行しない**——キャンセル料の算定は US23・IT11 であり、読む側の無い配線を先に敷かない（[ADR-025](../adr/025-customs-declaration-and-cancellation-approval.md) 決定 3） |
 | `HandlingActivityRegisteredEvent` | handlingms | trackingms（済）, bookingms（**済**・IT9。[ADR-025](../adr/025-customs-declaration-and-cancellation-approval.md) 決定 1） | cargoHandlingChannel | 荷役作業登録 → 輸送ステータス同期。予定ルート外の作業場所は誤配検知の入力（US28） |
-| `CustomsStatusChangedEvent` | handlingms | trackingms | customsChannel | 通関状態変更 → HELD なら例外「税関保留」を自動起票、CLEARED なら通関完了通知（UC21） |
+| `CustomsStatusChangedEvent` | handlingms | trackingms | cargoHandlingChannel（ルーティングキー `cargo.customs-status-changed`） | 通関状態変更（**済**・IT9）。HELD なら例外「税関保留」を自動起票する。**理由も載せる**——行き先は追跡管理者の画面（認証の内側）であり、税関に問い合わせるときの手がかりになる。CLEARED の通知は代替（画面が「送っていない」と言う） |
 | `CargoDeliveredEvent` | trackingms | billingms | deliveryChannel | 配送完了 → 精算開始 |
 | `InvoiceCreatedEvent` | billingms | （通知システム） | billingChannel | 請求書発行 → 荷主への通知 |
 
@@ -698,7 +698,7 @@ public class RestRouteCandidateFinder implements RouteCandidateFinder {
 | 非同期 | bookingms | trackingms | RabbitMQ | `cargoRoutingChannel` |
 | 非同期 | bookingms | trackingms | RabbitMQ | `cargoBookingChannel`（既存の交換機に相乗りする。交換機を増やさない） |
 | 非同期 | handlingms | trackingms, bookingms | RabbitMQ | `cargoHandlingChannel` |
-| 非同期 | handlingms | trackingms | RabbitMQ | `customsChannel` |
+| 非同期 | handlingms | trackingms | RabbitMQ | `cargoHandlingChannel`（交換機を増やさない。送り手が同じなのでルーティングキーを 1 本足す） |
 | 非同期 | trackingms | billingms | RabbitMQ | `deliveryChannel` |
 
 ## データベース設計方針

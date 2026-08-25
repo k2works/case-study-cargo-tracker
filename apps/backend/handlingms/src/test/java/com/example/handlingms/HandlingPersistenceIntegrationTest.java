@@ -64,10 +64,19 @@ class HandlingPersistenceIntegrationTest extends HandlingIntegrationTestBase {
         @Bean
         @Primary
         HandlingEventNotifier recordingHandlingEventNotifier() {
-            return event -> {
-                PUBLISHED.add(event);
-                transactionActiveWhenPublished =
-                        TransactionSynchronizationManager.isSynchronizationActive();
+            return new HandlingEventNotifier() {
+                @Override
+                public void handlingActivityRegistered(HandlingActivityRegistered event) {
+                    PUBLISHED.add(event);
+                    transactionActiveWhenPublished =
+                            TransactionSynchronizationManager.isSynchronizationActive();
+                }
+
+                @Override
+                public void customsStatusChanged(
+                        com.example.handlingms.application.port.CustomsStatusChanged event) {
+                    // 荷役の永続化の検査では、通関のイベントは見ない
+                }
             };
         }
     }

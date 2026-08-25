@@ -36,6 +36,12 @@ class RabbitHandlingEventNotifierTest {
             Instant.parse("2026-08-23T02:00:00Z"), "V0100", false,
             Instant.parse("2026-08-23T02:05:00Z"));
 
+    private static final com.example.handlingms.application.port.CustomsStatusChanged
+            CUSTOMS_EVENT = new com.example.handlingms.application.port.CustomsStatusChanged(
+                    "TRK-20260823-0001", "BKG-2026000001", "DEC-2026-0001", "PENDING", "HELD",
+                    "書類不備のため留置", "tracker1", Instant.parse("2026-08-23T03:00:00Z"),
+                    Instant.parse("2026-08-23T03:00:05Z"));
+
     @AfterEach
     void clearTransaction() {
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
@@ -118,16 +124,47 @@ class RabbitHandlingEventNotifierTest {
      * <strong>発行しないと決めたイベントを発行していない</strong>（[ADR-023] 決定 5）。
      *
      * <p>`CargoDeliveredEvent`（billingms へ）は US23（IT12）である。「出ること」だけを
-     * 見ると、余分なイベントが増えても緑のままになる。発行の窓口が 1 つであることを、
-     * ポートの形から導いて固定する。
+     * 見ると、余分なイベントが増えても緑のままになる。発行の窓口を、ポートの形から
+     * 導いて固定する。
+     *
+     * <p><strong>数ではなく名前で固定する。</strong>IT7 では「1 つだけ」と数で書いており、
+     * US29-5 で通関状態を足したときに赤くなった——赤くなったこと自体は設計どおりだが、
+     * 数だけでは「1 本足して 1 本消した」入れ替えを見逃す。何を発行してよいかを
+     * 名前で並べる。
      */
     @Test
-    @DisplayName("発行する種類は 1 つだけ")
-    void publishesExactlyOneKindOfEvent() {
+    @DisplayName("発行してよい種類は、この 2 つだけ")
+    void publishesOnlyTheAgreedKindsOfEvent() {
         assertThat(com.example.handlingms.application.port.HandlingEventNotifier.class
                         .getDeclaredMethods())
-                .as("発行するイベントが増えた。ADR-023 決定 5 に足すか、増やさないこと")
-                .hasSize(1);
+                .extracting(java.lang.reflect.Method::getName)
+                .as("発行するイベントが増減した。ADR-023 決定 5 に足すか、増やさないこと")
+                .containsExactlyInAnyOrder("handlingActivityRegistered", "customsStatusChanged");
+    }
+
+    /**
+     * 通関状態のイベントも<strong>コミットするまで送らない</strong>。
+     *
+     * <p>送出の作法はメソッドごとに書ける。片方だけ守っていても、上の検査（呼び出し箇所の
+     * 数）は緑のままになる——留置を記録しそこねた取引で例外だけが起票される。
+     */
+    @Test
+    @DisplayName("通関状態の発行も、コミットするまで送らない")
+    void customsStatusWaitsForTheCommit() {
+        TransactionSynchronizationManager.initSynchronization();
+
+        notifier.customsStatusChanged(CUSTOMS_EVENT);
+
+        verify(rabbitTemplate, never()).convertAndSend(any(String.class), any(String.class),
+                any(Object.class));
+
+        TransactionSynchronizationManager.getSynchronizations()
+                .forEach(TransactionSynchronization::afterCommit);
+
+        verify(rabbitTemplate).convertAndSend(
+                HandlingEventChannels.EXCHANGE,
+                HandlingEventChannels.CUSTOMS_STATUS_CHANGED,
+                (Object) CUSTOMS_EVENT);
     }
 
     /**
@@ -142,7 +179,7 @@ class RabbitHandlingEventNotifierTest {
      * ポートに足しても足さなくても、ここが赤になる。
      */
     @Test
-    @DisplayName("発行の呼び出しは、この 1 メソッドだけにある")
+    @DisplayName("発行の呼び出しは、合意した 2 メソッドだけにある")
     void hasExactlyOnePublishingCallSite() {
         List<String> callers = new ClassFileImporter()
                 .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
@@ -155,8 +192,9 @@ class RabbitHandlingEventNotifierTest {
 
         assertThat(callers)
                 .as("発行の呼び出し箇所が増減した。ポートに足さずに直接送る経路も、"
-                        + "ADR-023 決定 5 の「発行するのは 1 種類」を破る")
-                .containsExactly("RabbitHandlingEventNotifier#handlingActivityRegistered");
+                        + "ADR-023 決定 5 の「発行してよい種類」を破る")
+                .containsExactly("RabbitHandlingEventNotifier#customsStatusChanged",
+                        "RabbitHandlingEventNotifier#handlingActivityRegistered");
     }
 
     /** メッセージ基盤へ送り出しているか。型名でも名前でもなく、送信のメソッドで見る。 */
