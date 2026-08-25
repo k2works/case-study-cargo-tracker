@@ -164,14 +164,17 @@ trackingms 側で「予定ルート外か」を判定し直すと、旅程の写
 
 | 決定 | 検査 | 壊して赤を確認 |
 | :--- | :--- | :--- |
-| 1 判定は handlingms・新しいイベントを作らない | （実装時に記入） | 未 |
-| 2 `MISROUTED` を足す・述語がすべて扱う | （実装時に記入） | 未 |
-| 3 誤配の事実は解決後も残る | （実装時に記入） | 未 |
-| 4 現在地を出発地とする・目的地と期限を引き継ぐ | （実装時に記入） | 未 |
-| 4b 再設計は `IN_TRANSIT` のまま・確定から戻さない | （実装時に記入） | 未 |
-| 5 期限超過の差分は目的地の暦で | （実装時に記入） | 未 |
-| 6 入口は予約詳細と例外一覧の両方・ロール別の到達性 | （実装時に記入） | 未 |
-| 7 通知は代替であることを画面が言う | （実装時に記入） | 未 |
+| 1 判定は handlingms・新しいイベントを作らない | `AdvanceBookingUseCaseTest#marksTheCargoAsMisrouted` / `#stillAdvancesTheStatusWhenMisrouted`・`DetectMisrouteUseCaseTest#ignoresPlannedHandling`・`HandlingEventSubscriptionScopeTest#doesNotCallBackIntoHandling` | **済**（誤配を記録しない／誤配だと状態を進めない／予定どおりでも起票する／handlingms を参照する、の 4 通りで赤） |
+| 2 `MISROUTED` を足す・述語がすべて扱う | `RoutingStatusTest#hasTheAgreedValues` / `#opensMisroutedCargoToTheRoutingPlanner` | **済**（値を足す前に赤・述語から落とすと赤） |
+| 3 誤配の事実は解決後も残る | `MisrouteTest#keepsTheFirstMisroute` / `#doesNotTouchCancelledCargo`・`CargoPersistenceIntegrationTest#keepsTheMisrouteAcrossAReload`・`MisrouteTest.WhenReassigning#keepsTheMisrouteRecord` | **済**（最後の誤配で上書き／キャンセル済みも動かす／`withItinerary` で落とす、の 3 通りで赤。**3 つ目は実際に落としていた**） |
+| 4 現在地を出発地とする・目的地と期限を引き継ぐ | `MisrouteTest.WhenReassigning#rejectsAnItineraryFromTheOriginalOrigin` / `#rejectsAnItineraryToAnotherDestination` | **済**（出発地を元の予約から取ると赤） |
+| 4b 再設計は `IN_TRANSIT` のまま・確定から戻さない | `MisrouteTest.WhenReassigning#keepsTheBookingStatusWhileRestoringTheRouting` | **済**（通常の割り当てと同じ動きにすると赤） |
+| 5 期限超過の差分は目的地の暦で | `MisrouteTest.WhenReassigning#tellsHowManyDaysBeyondTheDeadline` / `#judgesTheDeadlineInTheDestinationCalendar`・`route-design-page.test.tsx` の期限超過 2 件 | **済**（UTC で判断する／日数を数えない／超過を出さずに遷移する、の 3 通りで赤） |
+| 6 入口は予約詳細と例外一覧の両方・ロール別の到達性 | `booking-detail-page.test.tsx` の誤配 4 件・`tracking-exceptions-page.test.tsx` の誤配 2 件 | **済**（場所を出さない／ロールで出し分けない／例外一覧の導線を消す、の 3 通りで赤） |
+| 7 通知は代替であることを画面が言う | `route-design-page.test.tsx#期限を超えるときは、何日超えるかを出して遷移を止める` | **済**（超過を出さずに遷移すると赤） |
+
+> **決定 6 の検査は、最初は判別しなかった。** 外れた場所と現在地を同じ港（SGSIN）で書いて
+> いたため、片方を落としてももう片方が同じ文字列を出していた。別の港にして確認し直した。
 
 ## 関連
 

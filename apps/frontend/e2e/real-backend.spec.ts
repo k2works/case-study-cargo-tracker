@@ -1113,3 +1113,209 @@ test.describe('IT9 実環境（通関とキャンセル承認）', () => {
       .toBe('CANCELLED')
   })
 })
+
+/**
+ * IT10 Phase 6。**誤配を実環境で 1 本通す**（成功基準 1・2・3）。
+ *
+ * <p>ここでしか出ない食い違いがある。イベントは 2 つのサービスへ配られ、
+ * <strong>片方だけ処理される形は例外にならない</strong>——予約は誤配になったのに
+ * 例外が起票されない（またはその逆）が、どちらも黙って起きる。
+ *
+ * <p><strong>先にイメージを作り直すこと。</strong>同じタグのまま古いイメージが動いていると、
+ * 直したはずの経路が緑になる。
+ */
+test.describe('IT10 実環境（誤配の検知と再設計）', () => {
+  async function eventually(check: () => Promise<void>): Promise<void> {
+    await expect.poll(async () => {
+      try {
+        await check()
+        return 'ok'
+      } catch {
+        return 'not yet'
+      }
+    }, { timeout: 20_000, intervals: [500, 1000, 2000] }).toBe('ok')
+  }
+
+  async function trackerHeaders(request: APIRequestContext): Promise<{ Authorization: string }> {
+    const tracker = await request.post('/api/v1/auth/login', {
+      data: { userId: 'tracker01', password: 'password' },
+    })
+    expect(tracker.ok()).toBeTruthy()
+    return { Authorization: `Bearer ${(await tracker.json()).token}` }
+  }
+
+  /**
+   * 成功基準 1・2。予定外の荷役 → 予約が誤配 → 例外が起票 → 予約詳細に出る。
+   *
+   * <p><strong>1 つのイベントが 2 つのサービスへ届くことを、1 本で確かめる。</strong>
+   * 片方だけの検査に分けると、もう片方が落ちても緑になる。
+   */
+  test('予定ルート外の荷役が、予約と追跡の両方に届く', async ({ request }) => {
+    const { trackingNumber, voyageNumber, bookingId } = await ensureTrackedVoyage(request)
+    const handler = await handlerHeaders(request)
+    const tracker = await trackerHeaders(request)
+
+    // 受領 → 積込（予定どおり）
+    for (const type of ['RECEIVE', 'LOAD']) {
+      const recorded = await request.post('/api/v1/handling', {
+        headers: handler,
+        data: {
+          trackingNumber,
+          type,
+          locationUnLocode: 'JPTYO',
+          completionTime: `${utcDate(0)}T0${type === 'RECEIVE' ? '7' : '8'}:00:00Z`,
+          voyageNumber: type === 'LOAD' ? voyageNumber : null,
+        },
+      })
+      expect(recorded.ok(), `${type} を記録できない: ${await recorded.text()}`).toBeTruthy()
+    }
+
+    // **予定にない港で荷降し**（旅程は JPTYO → USLAX なので、SGSIN は予定外）
+    const misrouted = await request.post('/api/v1/handling', {
+      headers: handler,
+      data: {
+        trackingNumber,
+        type: 'UNLOAD',
+        locationUnLocode: 'SGSIN',
+        completionTime: `${utcDate(0)}T09:00:00Z`,
+        voyageNumber,
+      },
+    })
+    expect(misrouted.ok(), `予定外の荷役を記録できない: ${await misrouted.text()}`).toBeTruthy()
+    expect((await misrouted.json()).offRoute, '予定外と判定されていない').toBe(true)
+
+    // **予約が誤配になる**（成功基準 1 の片方）
+    const { headers: sales } = await salesApi(request)
+    await eventually(async () => {
+      const cargo = await request.get(`/api/v1/bookings/${encodeURIComponent(bookingId)}`, {
+        headers: sales,
+      })
+      expect(cargo.ok()).toBeTruthy()
+      const body = await cargo.json()
+      expect(body.routingStatus, '予約が誤配になっていない').toBe('MISROUTED')
+      // **どこで外れたかまで届く**（US28-3）
+      expect(body.misroute?.locationUnLocode, '外れた場所が届いていない').toBe('SGSIN')
+      // **経路設計者に組み直しの操作が出る**（US28-4）
+      expect(body.availableActions, '再設計の操作が載っていない').toContain('REASSIGN_ROUTE')
+    })
+
+    // **例外が自動起票される**（成功基準 2）
+    await eventually(async () => {
+      const open = await request.get('/api/v1/tracking/manage/exceptions', {
+        headers: tracker,
+      })
+      expect(open.ok()).toBeTruthy()
+      const text = await open.text()
+      expect(text, '誤配の例外が起票されていない').toContain(trackingNumber)
+      expect(text).toContain('MISROUTE')
+      expect(text, '外れた場所が発生状況に入っていない').toContain('SGSIN')
+    })
+  })
+
+  /**
+   * 成功基準 3。現在地を出発地として組み直す。
+   *
+   * <p><strong>確定した記録を消さない</strong>（[ADR-026] 決定 4b）。輸送中の貨物が
+   * 「経路を提示した」状態へ戻ると、荷主が合意した記録が消える。
+   */
+  test('誤配のあと、現在地から経路を組み直せる', async ({ request }) => {
+    const { trackingNumber, voyageNumber, bookingId } = await ensureTrackedVoyage(request)
+    const handler = await handlerHeaders(request)
+    const { headers: sales } = await salesApi(request)
+
+    for (const type of ['RECEIVE', 'LOAD']) {
+      await request.post('/api/v1/handling', {
+        headers: handler,
+        data: {
+          trackingNumber,
+          type,
+          locationUnLocode: 'JPTYO',
+          completionTime: `${utcDate(0)}T1${type === 'RECEIVE' ? '0' : '1'}:00:00Z`,
+          voyageNumber: type === 'LOAD' ? voyageNumber : null,
+        },
+      })
+    }
+    await request.post('/api/v1/handling', {
+      headers: handler,
+      data: {
+        trackingNumber,
+        type: 'UNLOAD',
+        locationUnLocode: 'SGSIN',
+        completionTime: `${utcDate(0)}T12:00:00Z`,
+        voyageNumber,
+      },
+    })
+
+    await eventually(async () => {
+      const cargo = await request.get(`/api/v1/bookings/${encodeURIComponent(bookingId)}`, {
+        headers: sales,
+      })
+      expect((await cargo.json()).routingStatus).toBe('MISROUTED')
+    })
+
+    // 現在地（SGSIN）から目的地（USLAX）への航海を用意する
+    const routing = await request.post('/api/v1/auth/login', {
+      data: { userId: 'routing01', password: 'password' },
+    })
+    const routingHeaders = { Authorization: `Bearer ${(await routing.json()).token}` }
+    const registered = await request.post('/api/v1/voyages', {
+      headers: routingHeaders,
+      data: {
+        voyageNumber: `V-RE-${Date.now()}`,
+        vesselName: '組み直し丸',
+        carrierName: '実 E2E 海運',
+        supportedCargoTypes: ['GENERAL'],
+        movements: [
+          {
+            departureUnLocode: 'SGSIN',
+            arrivalUnLocode: 'USLAX',
+            departureTime: `${utcDate(2)}T09:00:00Z`,
+            arrivalTime: `${utcDate(30)}T09:00:00Z`,
+          },
+        ],
+      },
+    })
+    expect(registered.ok(), `航海を登録できない: ${await registered.text()}`).toBeTruthy()
+
+    // **現在地を出発地として候補を引く**（US28-4）
+    const routes = await request.get(
+      `/api/v1/routes?origin=SGSIN&destination=USLAX`
+        + `&deadline=${businessLocalDateTime(120, '00:00').slice(0, 10)}&cargoType=GENERAL`,
+      { headers: routingHeaders },
+    )
+    expect(routes.ok()).toBeTruthy()
+    const candidates = (await routes.json()).candidates as Array<{
+      legs: Array<{
+        voyageNumber: string
+        fromUnLocode: string
+        toUnLocode: string
+        departureTime: string
+        arrivalTime: string
+      }>
+    }>
+    expect(candidates.length, '現在地からの候補が出ない').toBeGreaterThan(0)
+
+    const reassigned = await request.put(`/api/v1/bookings/${bookingId}/route`, {
+      headers: routingHeaders,
+      data: {
+        legs: candidates[0].legs.map((l) => ({
+          voyageNumber: l.voyageNumber,
+          loadUnLocode: l.fromUnLocode,
+          unloadUnLocode: l.toUnLocode,
+          loadTime: l.departureTime,
+          unloadTime: l.arrivalTime,
+        })),
+        maxTransshipments: null,
+      },
+    })
+    expect(reassigned.status(), `組み直せない: ${await reassigned.text()}`).toBe(200)
+    const body = await reassigned.json()
+
+    // **確定した記録を消さない**（[ADR-026] 決定 4b）
+    expect(body.bookingStatus, '輸送中の貨物が経路提示へ戻っている').toBe('IN_TRANSIT')
+    expect(body.routingStatus).toBe('ROUTED')
+    // **誤配の事実は残る**（US28-8。料金調整の根拠）
+    expect(body.misroute?.locationUnLocode, '組み直した瞬間に誤配の記録が消えた')
+      .toBe('SGSIN')
+  })
+})
