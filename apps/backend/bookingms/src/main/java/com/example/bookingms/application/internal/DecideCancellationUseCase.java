@@ -40,6 +40,20 @@ public class DecideCancellationUseCase {
         return cancellations.findAwaitingDecision(AWAITING_LIMIT);
     }
 
+    /**
+     * その予約のキャンセル申請の<strong>履歴</strong>（新しい順・US30-10）。
+     *
+     * <p><strong>最新の 1 件では足りない。</strong>却下されて再申請すると、前回の却下理由が
+     * 予約詳細から消える——「なぜ一度断られたか」は、次に荷主と話す営業がいちばん必要と
+     * する情報である。
+     */
+    public java.util.List<CancellationRequest> historyFor(String bookingId) {
+        return cargoes.findByBookingId(bookingId)
+                .map(CargoSummary::cargo)
+                .map(cargo -> cancellations.findAllByCargoId(cargo.id()))
+                .orElseGet(java.util.List::of);
+    }
+
     /** その予約の最新の申請。画面が「いまどうなっているか」を出すために引く。 */
     public java.util.Optional<CancellationRequest> latestFor(String bookingId) {
         return cargoes.findByBookingId(bookingId)

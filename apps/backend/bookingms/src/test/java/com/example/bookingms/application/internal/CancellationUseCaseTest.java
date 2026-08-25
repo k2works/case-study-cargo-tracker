@@ -328,6 +328,12 @@ class CancellationUseCaseTest {
                     : Optional.of(requests.getLast());
         }
 
+        /** 履歴は**新しい順**（US30-10）。本物の SQL と同じ向きで返す。 */
+        @Override
+        public java.util.List<CancellationRequest> findAllByCargoId(Long cargoId) {
+            return requests.reversed();
+        }
+
         @Override
         public List<CancellationRequest> findAwaitingDecision(int limit) {
             return requests.stream().filter(CancellationRequest::awaitingDecision).toList();

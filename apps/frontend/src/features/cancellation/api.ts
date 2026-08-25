@@ -19,6 +19,11 @@ export function fetchCancellation(bookingId: string) {
   return apiClient.get<CancellationRequest | null>(API_PATHS.cancellation(bookingId))
 }
 
+/** その予約のキャンセル申請の**履歴**（新しい順・US30-10）。 */
+export function fetchCancellationHistory(bookingId: string) {
+  return apiClient.get<CancellationRequest[]>(API_PATHS.cancellationHistory(bookingId))
+}
+
 /** キャンセルを申請する（US30-1）。 */
 export function requestCancellation(bookingId: string, request: RequestCancellationRequest) {
   return apiClient.post<CancellationOutcome>(API_PATHS.cancellation(bookingId), request)

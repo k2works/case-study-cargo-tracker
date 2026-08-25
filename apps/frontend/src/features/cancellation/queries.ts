@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   approveCancellation,
   fetchCancellation,
+  fetchCancellationHistory,
   fetchPendingCancellations,
   rejectCancellation,
   requestCancellation,
@@ -23,6 +24,20 @@ export function useCancellation(bookingId: string | null) {
   return useQuery({
     queryKey: ['cancellations', bookingId],
     queryFn: () => fetchCancellation(bookingId as string),
+    enabled: bookingId !== null && bookingId !== '',
+  })
+}
+
+/**
+ * キャンセル申請の履歴（US30-10）。
+ *
+ * **最新の 1 件では足りない。** 却下されて再申請すると、前回の却下理由が
+ * 予約詳細から消える——「なぜ一度断られたか」は、次に荷主と話す営業が必要とする。
+ */
+export function useCancellationHistory(bookingId: string | null) {
+  return useQuery({
+    queryKey: ['cancellations', bookingId, 'history'],
+    queryFn: () => fetchCancellationHistory(bookingId as string),
     enabled: bookingId !== null && bookingId !== '',
   })
 }

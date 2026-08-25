@@ -29,6 +29,14 @@ public interface CancellationRequestRepository {
     /** その貨物の最新の申請。画面が「いまどうなっているか」を出すために引く。 */
     Optional<CancellationRequest> findLatestByCargoId(Long cargoId);
 
+    /**
+     * その貨物のキャンセル申請を<strong>すべて</strong>（新しい順・US30-10）。
+     *
+     * <p><strong>却下されて再申請した予約では、前回の却下理由が要る。</strong>
+     * 最新の 1 件だけを返すと、「なぜ一度断られたか」が予約詳細から消える。
+     */
+    List<CancellationRequest> findAllByCargoId(Long cargoId);
+
     /** 承認待ちの一覧（US30-4）。**古い順**——放っておくほど貨物は目的地へ近づく。 */
     List<CancellationRequest> findAwaitingDecision(int limit);
 }

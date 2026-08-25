@@ -29,6 +29,14 @@ export const API_PATHS = {
   /** 1 つの予約のキャンセル申請（申請・承認・却下）。 */
   cancellation: (bookingId: string) =>
     `/api/v1/bookings/${encodeURIComponent(bookingId)}/cancellation`,
+  /**
+   * 1 つの予約のキャンセル申請の**履歴**（US30-10）。
+   *
+   * 最新の 1 件を返す `cancellation` とは別に置く。却下されて再申請した予約では、
+   * **前回の却下理由**が次の判断の材料になる。
+   */
+  cancellationHistory: (bookingId: string) =>
+    `/api/v1/bookings/${encodeURIComponent(bookingId)}/cancellations`,
   billing: '/api/v1/billing',
   /** ロックされたアカウントの管理（US32）。システム管理者のみ。 */
   lockedAccounts: '/api/v1/admin/accounts/locked',

@@ -127,4 +127,43 @@ describe("予約詳細からのキャンセル申請（US30）", () => {
     expect(await screen.findByText("承認待ち")).toBeInTheDocument();
     expect(screen.getByText("荷主都合")).toBeInTheDocument();
   });
+
+  /**
+   * US30-10。**却下されて再申請しても、前回の却下理由が残る。**
+   *
+   * 最新の 1 件しか出さないと、**「なぜ一度断られたか」が予約詳細から消える**。
+   * それは、次に荷主と話す営業がいちばん必要とする情報である。
+   */
+  it("却下されて再申請しても、前回の却下理由が残る", async () => {
+    bookingAt("IN_TRANSIT");
+    // 1 回目は却下された
+    cancellations.push({
+      cancellationId: 1,
+      bookingId: BOOKING_ID,
+      reason: "荷主都合",
+      status: "REJECTED",
+      requestedBy: "sales01",
+      requestedAt: "2026-09-05T00:00:00Z",
+      bookingStatusAtRequest: "IN_TRANSIT",
+      dischargeLocationUnLocode: null,
+      decidedBy: "tracker01",
+      decidedAt: "2026-09-05T03:00:00Z",
+      decisionReason: "積み替え済みのため",
+    });
+    const user = userEvent.setup();
+    renderPage();
+
+    // 2 回目を申請する
+    await request(user);
+    await screen.findByText(/承認をお待ちください/);
+
+    // いまの申請は「承認待ち」
+    expect(await screen.findByText("承認待ち")).toBeInTheDocument();
+    // **前回の却下理由と決定者が残っている**
+    expect(
+      await screen.findByText("積み替え済みのため"),
+      "前回の却下理由が消えている。なぜ一度断られたかが分からない",
+    ).toBeInTheDocument();
+    expect(screen.getByText(/tracker01/)).toBeInTheDocument();
+  });
 });

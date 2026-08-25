@@ -216,6 +216,36 @@ class CancellationControllerTest {
                     .andExpect(jsonPath("$.request.requestedAt").value("2026-09-05 09:00"));
         }
 
+        /**
+         * <strong>履歴は全件返す</strong>（US30-10）。
+         *
+         * <p>最新の 1 件だけを返すと、却下されて再申請した予約で
+         * <strong>前回の却下理由が消える</strong>——「なぜ一度断られたか」は、次に荷主と
+         * 話す営業がいちばん必要とする情報である。
+         */
+        @Test
+        @DisplayName("履歴は、これまでの申請を全件返す")
+        void returnsEveryPastRequest() throws Exception {
+            CancellationRequest rejected = CancellationRequest.request(1L, "荷主都合", "sales01",
+                            Instant.parse("2026-09-01T00:00:00Z"), BookingStatus.IN_TRANSIT, true)
+                    .reject("tracker01", "積み替え済みのため",
+                            Instant.parse("2026-09-01T03:00:00Z"));
+            when(decide.historyFor(anyString()))
+                    .thenReturn(java.util.List.of(awaiting(), rejected));
+
+            mockMvc.perform(get("/api/v1/bookings/" + BOOKING_ID + "/cancellations")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.length()").value(2))
+                    .andExpect(jsonPath("$[1].statusLabel").value("却下"))
+                    .andExpect(jsonPath("$[1].decisionReason").value("積み替え済みのため"))
+                    // **決定者と決定日時も返す**——誰がいつ断ったかが分からないと、
+                    // 営業は荷主に説明できない
+                    .andExpect(jsonPath("$[1].decidedBy").value("tracker01"))
+                    .andExpect(jsonPath("$[1].decidedAt").value("2026-09-01 12:00"));
+        }
+
         /** 申請が無ければ本文なし。**空の申請を作って返さない**。 */
         @Test
         @DisplayName("申請が無ければ本文なしで返す")

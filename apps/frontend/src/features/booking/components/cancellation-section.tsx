@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   useCancellation,
+  useCancellationHistory,
   useRequestCancellation,
 } from "../../cancellation/queries";
 import { ApiError } from "../../../lib/api-client";
@@ -24,6 +25,7 @@ export function CancellationSection({
   isSales,
 }: Readonly<{ booking: Booking; isSales: boolean }>) {
   const { data: cancellation } = useCancellation(booking.bookingId);
+  const { data: history = [] } = useCancellationHistory(booking.bookingId);
   const request = useRequestCancellation(booking.bookingId);
 
   const [requesting, setRequesting] = useState(false);
@@ -54,6 +56,9 @@ export function CancellationSection({
   if (!canRequest && cancellation == null) {
     return null;
   }
+
+  // 最新の 1 件は上の欄に出る。**履歴はそれより前の分**を並べる
+  const earlier = history.slice(1);
 
   return (
     <section className="space-y-4 rounded border border-gray-200 p-4">
@@ -111,7 +116,52 @@ export function CancellationSection({
               <dd>{cancellation.decisionReason}</dd>
             </div>
           )}
+          {cancellation.decidedBy !== null && (
+            <div>
+              <dt className="text-gray-600">決定者・決定日時</dt>
+              <dd>
+                {cancellation.decidedBy}・{cancellation.decidedAt}
+              </dd>
+            </div>
+          )}
         </dl>
+      )}
+
+      {/* **これまでの申請も残す**（US30-10）。却下されて再申請した予約では、
+          前回の却下理由が次の判断の材料になる——「なぜ一度断られたか」は、
+          次に荷主と話す営業がいちばん必要とする情報である */}
+      {earlier.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-sm font-semibold text-gray-900">これまでの申請</h3>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-200 text-left text-gray-600">
+                <th className="py-2">申請日時</th>
+                <th className="py-2">申請者</th>
+                <th className="py-2">理由</th>
+                <th className="py-2">結果</th>
+                <th className="py-2">決定者・決定日時</th>
+                <th className="py-2">決定の理由</th>
+              </tr>
+            </thead>
+            <tbody>
+              {earlier.map((past) => (
+                <tr key={past.cancellationId} className="border-b border-gray-100">
+                  <td className="py-2">{past.requestedAt}</td>
+                  <td className="py-2">{past.requestedBy}</td>
+                  <td className="py-2">{past.reason}</td>
+                  <td className="py-2">{past.statusLabel}</td>
+                  <td className="py-2">
+                    {past.decidedBy === null
+                      ? "-"
+                      : `${past.decidedBy}・${past.decidedAt ?? ""}`}
+                  </td>
+                  <td className="py-2">{past.decisionReason ?? "-"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {canRequest &&

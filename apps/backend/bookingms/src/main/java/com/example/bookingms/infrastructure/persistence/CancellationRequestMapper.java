@@ -82,6 +82,25 @@ public interface CancellationRequestMapper {
     @ResultMap("cancellationResult")
     CancellationRequestRecord findLatestByCargoId(@Param("cargoId") long cargoId);
 
+    /**
+     * その貨物のキャンセル申請を<strong>すべて</strong>返す（US30-10）。
+     *
+     * <p><strong>最新の 1 件では足りない。</strong>却下されて再申請すると、前回の却下理由が
+     * 予約詳細から消える——「なぜ一度断られたか」は、次に荷主と話す営業がいちばん必要と
+     * する情報である。
+     *
+     * <p><strong>新しい順</strong>に返す。いま何が起きているかが先に来る。
+     */
+    @Select("""
+            SELECT
+            """ + COLUMNS + """
+              FROM cancellation_request
+             WHERE cargo_id = #{cargoId}
+             ORDER BY requested_at DESC, id DESC
+            """)
+    @ResultMap("cancellationResult")
+    java.util.List<CancellationRequestRecord> findAllByCargoId(@Param("cargoId") long cargoId);
+
     /** 承認待ちの一覧（US30-4）。**古い順**——放っておくほど貨物は目的地へ近づく。 */
     @Select("""
             SELECT

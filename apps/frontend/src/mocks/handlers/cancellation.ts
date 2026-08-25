@@ -146,6 +146,18 @@ export const cancellationHandlers = [
     return HttpResponse.json(found === undefined ? null : view(found))
   }),
 
+  // **履歴（US30-10）。** 最新の 1 件では足りない——却下されて再申請すると、
+  // 前回の却下理由が予約詳細から消える。**新しい順**で返す（本物と同じ）
+  http.get('/api/v1/bookings/:bookingId/cancellations', ({ params }) =>
+    HttpResponse.json(
+      cancellations
+        .filter((candidate) => candidate.bookingId === String(params.bookingId))
+        .slice()
+        .reverse()
+        .map(view),
+    ),
+  ),
+
   http.post('/api/v1/bookings/:bookingId/cancellation', async ({ params, request }) => {
     const bookingId = String(params.bookingId)
     const body = (await request.json()) as { reason: string }

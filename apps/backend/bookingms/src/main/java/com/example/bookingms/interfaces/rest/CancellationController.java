@@ -81,6 +81,26 @@ public class CancellationController {
                 .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
+    /**
+     * その予約のキャンセル申請の<strong>履歴</strong>（US30-10）。
+     *
+     * <p><strong>最新の 1 件を返す `/cancellation` とは別に置く。</strong>画面は
+     * 「いまどうなっているか」と「これまで何があったか」の両方を出す——却下されて
+     * 再申請した予約では、前回の却下理由が次の判断の材料になる。
+     */
+    @GetMapping("/api/v1/bookings/{bookingId}/cancellations")
+    public List<CancellationResponse> history(
+            @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
+            @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles,
+            @PathVariable String bookingId) {
+        requireSalesOrTracker(userId, roles);
+
+        return decide.historyFor(bookingId).stream()
+                .map(found -> CancellationResponse.from(found, bookingId,
+                        found.dischargeLocation().orElse(null), zone()))
+                .toList();
+    }
+
     /** キャンセルを申請する（US30-1）。**営業担当者のみ**。 */
     @PostMapping("/api/v1/bookings/{bookingId}/cancellation")
     public ResponseEntity<CancellationOutcomeResponse> request(

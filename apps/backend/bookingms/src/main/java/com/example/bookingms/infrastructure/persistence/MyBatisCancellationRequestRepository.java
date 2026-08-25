@@ -42,6 +42,11 @@ public class MyBatisCancellationRequestRepository implements CancellationRequest
     }
 
     @Override
+    public List<CancellationRequest> findAllByCargoId(Long cargoId) {
+        return mapper.findAllByCargoId(cargoId).stream().map(this::toDomain).toList();
+    }
+
+    @Override
     public List<CancellationRequest> findAwaitingDecision(int limit) {
         return mapper.findAwaitingDecision(limit).stream().map(this::toDomain).toList();
     }
