@@ -8,6 +8,7 @@ import {
 } from "react-router-dom";
 import { ApiError } from "../lib/api-client";
 import { NoRouteCandidatesPanel } from "../features/routing/components/no-route-candidates-panel";
+import { BookingConditions } from "../features/routing/components/booking-conditions";
 import { RouteCandidateTable } from "../features/routing/components/route-candidate-table";
 import { RouteConfirmPanel } from "../features/routing/components/route-confirm-panel";
 import {
@@ -17,7 +18,6 @@ import {
 } from "../features/booking/queries";
 import { useRouteCandidates } from "../features/routing/queries";
 import {
-  ROUTING_CARGO_TYPE_LABELS,
   type RouteCandidate,
   type RouteSearchCriteria,
   type RoutingCargoType,
@@ -256,47 +256,12 @@ export function RouteDesignPage() {
         </div>
       </header>
 
-      <dl className="grid grid-cols-2 gap-2 rounded border border-gray-200 p-4 md:grid-cols-4">
-        <div>
-          <dt className="text-sm text-gray-600">予約番号</dt>
-          <dd>{booking.bookingId}</dd>
-        </div>
-        <div>
-          <dt className="text-sm text-gray-600">荷主</dt>
-          <dd>{booking.shipperName ?? "―"}</dd>
-        </div>
-        <div>
-          <dt className="text-sm text-gray-600">出発地</dt>
-          <dd>
-            {misrouted ? (
-              <>
-                {searchOrigin}
-                <span className="ml-2 text-sm text-gray-600">
-                  現在地（当初は {booking.originName}）
-                </span>
-              </>
-            ) : (
-              <>
-                {booking.originName}（{booking.originUnLocode}）
-              </>
-            )}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-sm text-gray-600">目的地</dt>
-          <dd>
-            {booking.destinationName}（{booking.destinationUnLocode}）
-          </dd>
-        </div>
-        <div>
-          <dt className="text-sm text-gray-600">貨物</dt>
-          <dd>{ROUTING_CARGO_TYPE_LABELS[cargoType]}</dd>
-        </div>
-        <div>
-          <dt className="text-sm text-gray-600">重量</dt>
-          <dd>{booking.weightKg.toLocaleString("ja-JP")} kg</dd>
-        </div>
-      </dl>
+      <BookingConditions
+        booking={booking}
+        cargoType={cargoType}
+        misrouted={misrouted}
+        searchOrigin={searchOrigin}
+      />
 
       {/* **超える分を出してから進む**（US28-6）。そのまま遷移すると、超過に気づかないまま
           次の作業へ移る——荷主に伝えるのは営業であり、ここで気づかなければ誰も伝えない */}
