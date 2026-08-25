@@ -121,4 +121,104 @@ class MisrouteTest {
                     .isInstanceOf(IllegalArgumentException.class);
         }
     }
+
+    @Nested
+    @DisplayName("誤配のあとに経路を組み直すとき（US28-4・[ADR-026] 決定 4b）")
+    class WhenReassigning {
+
+        private static final Location SINGAPORE = Location.of("SGSIN", "Singapore");
+
+        /** 現在地から目的地へ向かう旅程。**出発地は元の東京ではなくシンガポール**。 */
+        private static CargoItinerary fromSingapore() {
+            return CargoItinerary.of(List.of(
+                    Leg.of(VoyageNumber.of("V0301"), SINGAPORE, LOS_ANGELES,
+                            Instant.parse("2026-09-08T09:00:00Z"),
+                            Instant.parse("2026-09-19T09:00:00Z"))));
+        }
+
+        private static Cargo misroutedAtSingapore() {
+            return inTransit().afterHandling("UNLOAD", "SGSIN", AT).misrouted("SGSIN", AT);
+        }
+
+        /**
+         * <strong>確定した記録を消さない</strong>（[ADR-021] 決定 3・[ADR-026] 決定 4b）。
+         *
+         * <p>通常の割り当てを通すと、輸送中の貨物が {@code ROUTE_PROPOSED} へ戻る
+         * ——荷主が合意して確定した記録が消え、追跡番号を持つ貨物が「経路を提示した」
+         * 状態になる。
+         */
+        @Test
+        @DisplayName("予約の状態は輸送中のまま、経路の状況だけが戻る")
+        void keepsTheBookingStatusWhileRestoringTheRouting() {
+            Cargo reassigned = misroutedAtSingapore()
+                    .reassignItinerary(fromSingapore(), java.time.ZoneId.of("America/Los_Angeles"));
+
+            assertThat(reassigned.bookingStatus())
+                    .as("輸送中の貨物が経路提示へ戻っている。荷主が合意した記録が消える")
+                    .isEqualTo(BookingStatus.IN_TRANSIT);
+            assertThat(reassigned.routingStatus()).isEqualTo(RoutingStatus.ROUTED);
+        }
+
+        /**
+         * <strong>誤配の事実は消さない</strong>（受入基準 28-8）。
+         *
+         * <p>組み直した瞬間に消えると、料金調整の根拠が失われる。
+         */
+        @Test
+        @DisplayName("組み直しても、誤配の記録は残る")
+        void keepsTheMisrouteRecord() {
+            Cargo reassigned = misroutedAtSingapore()
+                    .reassignItinerary(fromSingapore(), java.time.ZoneId.of("America/Los_Angeles"));
+
+            assertThat(reassigned.isMisrouted())
+                    .as("組み直した瞬間に誤配の記録が消えている。料金調整の根拠が失われる")
+                    .isTrue();
+            assertThat(reassigned.misroute().orElseThrow().locationUnLocode()).isEqualTo("SGSIN");
+        }
+
+        /**
+         * <strong>出発地は現在地である</strong>（US28-4）。
+         *
+         * <p>元の出発地から組んだ経路は、貨物が今いない港からの経路である——現場は動けない。
+         */
+        @Test
+        @DisplayName("元の出発地から組んだ経路は使えない")
+        void rejectsAnItineraryFromTheOriginalOrigin() {
+            CargoItinerary fromTokyo = CargoItinerary.of(List.of(
+                    Leg.of(VoyageNumber.of("V0401"), TOKYO, LOS_ANGELES,
+                            Instant.parse("2026-09-08T09:00:00Z"),
+                            Instant.parse("2026-09-19T09:00:00Z"))));
+
+            assertThatThrownBy(() -> misroutedAtSingapore()
+                    .reassignItinerary(fromTokyo, java.time.ZoneId.of("America/Los_Angeles")))
+                    .as("貨物が今いない港からの経路が通っている。現場は動けない")
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("現在地");
+        }
+
+        /** <strong>目的地は引き継ぐ</strong>（受入基準 28-5）。荷主との約束は変わっていない。 */
+        @Test
+        @DisplayName("目的地が違う経路は使えない")
+        void rejectsAnItineraryToAnotherDestination() {
+            Location shanghai = Location.of("CNSHA", "Shanghai");
+            CargoItinerary toShanghai = CargoItinerary.of(List.of(
+                    Leg.of(VoyageNumber.of("V0501"), SINGAPORE, shanghai,
+                            Instant.parse("2026-09-08T09:00:00Z"),
+                            Instant.parse("2026-09-10T09:00:00Z"))));
+
+            assertThatThrownBy(() -> misroutedAtSingapore()
+                    .reassignItinerary(toShanghai, java.time.ZoneId.of("America/Los_Angeles")))
+                    .as("目的地が変わっている。荷主との約束は変わっていない")
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        /** 誤配していない予約には使わない。**通常の割り当てが通るべき経路である**。 */
+        @Test
+        @DisplayName("誤配していない予約には使えない")
+        void refusesWhenNotMisrouted() {
+            assertThatThrownBy(() -> inTransit()
+                    .reassignItinerary(fromSingapore(), java.time.ZoneId.of("America/Los_Angeles")))
+                    .isInstanceOf(IllegalStateException.class);
+        }
+    }
 }

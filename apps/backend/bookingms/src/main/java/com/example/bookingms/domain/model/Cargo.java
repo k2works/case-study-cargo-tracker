@@ -357,6 +357,48 @@ public final class Cargo {
     }
 
     /**
+     * 誤配のあと、現在地からの経路を割り当て直す（US28-4・[ADR-026] 決定 4b）。
+     *
+     * <p><strong>通常の割り当て（{@link #assignItinerary}）とは別の操作である。</strong>
+     * そちらは経路設計の依頼に応える操作であり、予約を {@code ROUTE_PROPOSED}（荷主に
+     * 見せる手番）へ動かす。<strong>輸送中の貨物にそれを通すと、荷主が合意して確定した
+     * 記録が消える</strong>——[ADR-021] 決定 3 が塞いだ「確定から戻す」を裏口から破る。
+     *
+     * <p><strong>予約の状態は動かさない。</strong>貨物は動いており、荷主との約束も
+     * 変わっていない。動くのは経路の状況（{@code MISROUTED} → {@code ROUTED}）だけである。
+     *
+     * <p><strong>通知の記録は消す。</strong>営業は古い経路を荷主に説明したままになる
+     * ——手番が営業に戻ることが、気づく手段である（通知の仕組みが無いため）。
+     *
+     * <p><strong>誤配の事実は消さない。</strong>料金調整の根拠として参照される。
+     */
+    public Cargo reassignItinerary(CargoItinerary newItinerary, ZoneId destinationZone) {
+        if (newItinerary == null) {
+            throw new IllegalArgumentException("割り当てる旅程は必須です");
+        }
+        if (!isMisrouted()) {
+            throw new IllegalStateException(
+                    "誤配が起きていない予約には、この操作を使いません");
+        }
+        // **出発地は現在地である**（US28-4）。元の出発地を要求すると、現在地から
+        // 組んだ経路がすべて弾かれる——貨物が今いない港からの経路しか通らなくなる
+        if (!routeSpecification.isSatisfiedByReroute(
+                newItinerary, lastHandlingLocationUnLocode, destinationZone)) {
+            throw new IllegalArgumentException(
+                    "この旅程は貨物の現在地から目的地へ向かうものではありません");
+        }
+        return withItineraryAndRouting(newItinerary, RoutingStatus.ROUTED);
+    }
+
+    /** 旅程と経路の状況だけを差し替える。<strong>予約の状態と誤配の記録は動かさない</strong>。 */
+    private Cargo withItineraryAndRouting(CargoItinerary newItinerary, RoutingStatus routing) {
+        return new Cargo(id, bookingId, shipperId,
+                new CargoStatus(status.booking(), status.transport(), routing),
+                specification, routeSpecification, newItinerary, null, trackingNumber,
+                lastHandlingLocationUnLocode, lastHandlingAt, misroute);
+    }
+
+    /**
      * 予定ルート外の荷役を受けて、誤配として記録する（US28-2・[ADR-026] 決定 1・決定 3）。
      *
      * <p><strong>経路の状況を {@code MISROUTED} にし、起きた事実を残す。</strong>

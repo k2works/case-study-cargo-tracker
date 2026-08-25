@@ -67,7 +67,18 @@ public record BookingResponse(
          * だけで、「その利用者が行ってよいか」は認可（[ADR-008]）が決める。両方を混ぜると、
          * 状態の規則と職掌の規則が 1 つの値に潰れて、どちらが効いたのか分からなくなる。
          */
-        List<BookingAction> availableActions) {
+        List<BookingAction> availableActions,
+        /**
+         * 誤配が起きた事実（US28-3・[ADR-026] 決定 3）。起きていなければ {@code null}。
+         *
+         * <p><strong>状態（{@code routingStatus}）とは別に返す。</strong>再設計して
+         * {@code ROUTED} へ戻っても、<strong>この記録は残る</strong>——料金調整の根拠として
+         * 参照される。
+         *
+         * <p><strong>いつ・どこで外れたかまで返す。</strong>「誤配があった」だけでは、
+         * 画面は場所を別に問い合わせることになる。
+         */
+        MisrouteResponse misroute) {
 
         public BookingResponse {
         // 受け取った一覧を写して持つ。呼び出し元が渡したものをそのまま抱えると、
@@ -176,7 +187,20 @@ public record BookingResponse(
                 cargo.routeNotification().map(n -> n.notifiedAt()).orElse(null),
                 cargo.routeNotification().map(n -> n.notifiedBy()).orElse(null),
                 cargo.trackingNumber().map(t -> t.value()).orElse(null),
-                availableActionsOf(cargo));
+                availableActionsOf(cargo),
+                cargo.misroute()
+                        .map(recorded -> new MisrouteResponse(
+                                recorded.at(), recorded.locationUnLocode()))
+                        .orElse(null));
+    }
+
+    /**
+     * 誤配が起きた事実（US28-3）。
+     *
+     * @param at 予定ルート外の荷役が行われた日時
+     * @param locationUnLocode その荷役が行われた港
+     */
+    public record MisrouteResponse(Instant at, String locationUnLocode) {
     }
 
     private static List<ItineraryLegResponse> legsOf(CargoItinerary itinerary) {

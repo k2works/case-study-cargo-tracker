@@ -103,6 +103,29 @@ public final class RouteSpecification {
                 && !arrivalDateAtDestination.isAfter(arrivalDeadline);
     }
 
+    /**
+     * 誤配のあとの再設計に、この旅程を使えるか（US28-4・US28-5・[ADR-026] 決定 4）。
+     *
+     * <p><strong>出発地は問わない。</strong>貨物はすでに予定ルートから外れており、
+     * <strong>いまいる港が出発地になる</strong>——元の出発地を要求すると、
+     * 現在地から組んだ経路がすべて弾かれる。
+     *
+     * <p><strong>目的地と期限は引き継ぐ</strong>（受入基準 28-5）。荷主との約束は
+     * 変わっていない——どこへ、いつまでに届けるかは同じである。
+     *
+     * @param itinerary 組み直した旅程
+     * @param currentLocationUnLocode 貨物の現在地。<strong>ここが出発地でなければならない</strong>
+     * @param destinationZone 目的地のタイムゾーン（[ADR-017]）
+     */
+    public boolean isSatisfiedByReroute(CargoItinerary itinerary, String currentLocationUnLocode,
+            ZoneId destinationZone) {
+        if (itinerary == null || currentLocationUnLocode == null) {
+            return false;
+        }
+        return currentLocationUnLocode.equals(itinerary.origin().unLocode())
+                && destination.equals(itinerary.destination());
+    }
+
     public Location origin() {
         return origin;
     }
