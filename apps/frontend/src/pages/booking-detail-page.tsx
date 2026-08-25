@@ -140,6 +140,18 @@ export function BookingDetailPage() {
               {booking.lastHandlingLocationUnLocode ?? "（荷役の記録がありません）"}
             </strong>
           </p>
+          {/* **超える分は営業が読める場所に残す**（US28-6・[ADR-026] 決定 5）。
+              荷主へ伝えるのは営業であり、経路を割り当てた直後の画面にしか
+              出さないと、**伝える人の手元に値が残らない** */}
+          {booking.daysBeyondDeadline !== null &&
+            booking.daysBeyondDeadline !== undefined && (
+              <p>
+                <strong>
+                  {`到着予定が当初の希望期限を ${booking.daysBeyondDeadline} 日超えます。`}
+                </strong>
+                {'荷主へは自動で通知されません——超過の日数もあわせてお伝えください。'}
+              </p>
+            )}
           {can(booking, "REASSIGN_ROUTE") && isRoutingPlanner && (
             <p>
               <Link

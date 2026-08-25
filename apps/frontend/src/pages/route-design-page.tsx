@@ -151,6 +151,19 @@ export function RouteDesignPage() {
     updateCriteria("earliestDeparture", value === "" ? null : value);
 
   const cargoType: RoutingCargoType = booking?.type ?? "GENERAL";
+  /**
+   * 誤配のあとは、貨物はもう元の出発地にいない（US28-4・[ADR-026] 決定 4）。
+   *
+   * <p>サーバは確定時に<strong>現在地起点</strong>で候補を突き合わせる
+   * （`AssignRouteUseCase#requireStillAvailable`）。ここが元の出発地のままだと、
+   * 画面に出した候補は<strong>選べるのに必ず断られる</strong>——しかも理由は
+   * 「航海スケジュールが変わった」に見え、経路設計者は航海マスタを疑って探し回る。
+   */
+  const misrouted = booking?.routingStatus === "MISROUTED";
+  const searchOrigin =
+    (misrouted ? booking?.lastHandlingLocationUnLocode : null) ??
+    booking?.originUnLocode ??
+    "";
   const effectiveDeadline = deadline ?? booking?.arrivalDeadline ?? "";
   const effectiveEarliestDeparture =
     earliestDeparture ?? booking?.departureDate ?? "";
@@ -176,7 +189,7 @@ export function RouteDesignPage() {
     booking === undefined || effectiveDeadline === ""
       ? null
       : {
-          origin: booking.originUnLocode,
+          origin: searchOrigin,
           destination: booking.destinationUnLocode,
           // 期限は日付のまま送る。日時への変換はサーバが業務タイムゾーンで行う（ADR-017）
           deadline: effectiveDeadline,
@@ -207,9 +220,14 @@ export function RouteDesignPage() {
   const returnedToSales = booking.routingStatus === "CONSULTATION_REQUESTED";
   // 確定した予約の経路は差し替えられない（ADR-021 決定 3）。選ばせると、候補を出し、
   // 選び、確認まで進んでから断られる。**先に断って理由を出す**
+  // **誤配は確定済みでも組み直す**（[ADR-026] 決定 4b）。予定外の港で受領された
+  // 誤配では予約は TRACKING_ISSUED のまま動かない（`BookingStatus#afterHandling` は
+  // LOAD と CLAIM しか進めない）。ここで一律に断ると、**誤配バナーの導線を押した先で
+  // 「確定しています」と言われ**、組み直す手段が画面から消える
   const confirmed =
-    booking.bookingStatus === "CONFIRMED" ||
-    booking.bookingStatus === "TRACKING_ISSUED";
+    !misrouted &&
+    (booking.bookingStatus === "CONFIRMED" ||
+      booking.bookingStatus === "TRACKING_ISSUED");
   const selectable = !loosened && !returnedToSales && !confirmed;
 
   return (
@@ -246,7 +264,18 @@ export function RouteDesignPage() {
         <div>
           <dt className="text-sm text-gray-600">出発地</dt>
           <dd>
-            {booking.originName}（{booking.originUnLocode}）
+            {misrouted ? (
+              <>
+                {searchOrigin}
+                <span className="ml-2 text-sm text-gray-600">
+                  現在地（当初は {booking.originName}）
+                </span>
+              </>
+            ) : (
+              <>
+                {booking.originName}（{booking.originUnLocode}）
+              </>
+            )}
           </dd>
         </div>
         <div>

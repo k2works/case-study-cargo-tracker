@@ -297,4 +297,34 @@ test.describe("ロール別の到達性", () => {
     await page.goto("/login");
     await expect(page.getByRole("link", { name: /追跡/ })).toBeVisible();
   });
+
+  /**
+   * IT10 レビュー（user-representative 高 1・高 2）。
+   *
+   * <p>誤配に気づくのも、キャンセルを承認するのも追跡管理者である。どちらの一覧からも
+   * 予約詳細へ渡す導線を置いたが、**押すと /403 に飛んでいた**。画面単体のテストは
+   * ルートガードを通らないため、この欠陥を判別しない。**ここでは実際に踏む。**
+   */
+  test("追跡管理者は、予約の詳細を読める（操作は出ない）", async ({ page }) => {
+    await logIn(page, "tracker01");
+
+    await page.goto("/booking/BKG-2026000001");
+    await expect(page).not.toHaveURL(/\/403/);
+    await expect(page.getByRole("heading", { name: /BKG-2026000001/ })).toBeVisible();
+    // 読むだけ。操作は出さない——出すと、押した先でサーバに断られる
+    await expect(
+      page.getByRole("button", { name: /経路を割り当て|確定する/ }),
+    ).toHaveCount(0);
+  });
+
+  /**
+   * **一覧までは開かない。** 例外や承認から辿る 1 件を読むことと、営業の抱えている
+   * 案件を横断して眺めることは別である。
+   */
+  test("追跡管理者に予約の一覧は開かない", async ({ page }) => {
+    await logIn(page, "tracker01");
+
+    await page.goto("/booking");
+    await expect(page).toHaveURL(/\/403/);
+  });
 });

@@ -69,6 +69,7 @@ describe("未解決の例外の一覧", () => {
    * ここから予約へ辿れないと、「気づいたが何もできない」で終わる。
    */
   it("誤配には、予約を開く導線が出る", async () => {
+    loginAs(["ROLE_ROUTING", "ROLE_TRACKER"]);
     givenExceptions("MISROUTE", "誤配");
     renderWithProviders(<TrackingExceptionsPage />);
 
@@ -76,6 +77,31 @@ describe("未解決の例外の一覧", () => {
       await screen.findByRole("link", { name: /予約を開く/ }),
       "誤配に気づいても、組み直す画面へ行けない",
     ).toHaveAttribute("href", `/booking/${BOOKING_ID}`);
+  });
+
+  /**
+   * **開けない画面へ誘導しない**（IT10 レビュー・user-representative 高 1）。
+   *
+   * <p>予約詳細は営業・経路設計者にしか開いていない（`App.tsx` のルートガード）。
+   * この一覧を見るのは追跡管理者・荷役・営業であり、**誤配に最初に気づく追跡管理者が
+   * 押すと /403 に飛ぶ**。押した先で断られる導線は、気づく手段を無くすより悪い
+   * ——「自分の権限が足りない」のか「システムが壊れている」のか判別できない。
+   */
+  it("予約を開けないロールには、リンクの代わりに次に起きることを伝える", async () => {
+    // 経理は予約詳細を開かない（App.tsx のルートガードと同じ範囲）
+    loginAs(["ROLE_ACCOUNTANT"]);
+    givenExceptions("MISROUTE", "誤配");
+    renderWithProviders(<TrackingExceptionsPage />);
+
+    await screen.findByText(TRACKING_NUMBER);
+    expect(
+      screen.queryByRole("link", { name: /予約を開く/ }),
+      "押すと 403 になるリンクを出している",
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/経路設計者が組み直します/),
+      "行き止まり。次に何が起きるか分からない",
+    ).toBeInTheDocument();
   });
 
   /** 誤配以外では出さない。**遅延や破損は追跡管理者が追跡の画面で対応する**。 */

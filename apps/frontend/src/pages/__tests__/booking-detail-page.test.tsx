@@ -674,6 +674,65 @@ describe('予約の詳細（US06）', () => {
     })
 
     /** 誤配していない予約にはバナーを出さない。**一覧が警告で埋まると読まれなくなる**。 */
+    /**
+     * US28-6。<strong>伝えるのは営業である</strong>（通知は代替）。
+     *
+     * <p>超過の日数が経路を割り当てた直後の画面にしか出ないと、経路設計者が
+     * メモを取り損ねた時点で誰も荷主に伝えられない。<strong>営業が開く場所に残す。</strong>
+     */
+    it('期限を超えるなら、何日超えるかと、伝えるのが営業であることを出す', async () => {
+      server.use(
+        http.get(`${API_PATHS.bookings}/:bookingId`, () =>
+          HttpResponse.json(
+            bookingIn({ ...MISROUTED, daysBeyondDeadline: 5 } as never),
+          ),
+        ),
+      )
+      renderPage(['ROLE_SALES'])
+
+      const alert = await screen.findByRole('alert')
+      expect(alert, '何日超えるかが出ていない。荷主に説明できない')
+        .toHaveTextContent('5 日超えます')
+      expect(alert, '荷主へ自動で伝わると誤解される').toHaveTextContent(
+        /自動で(は)?(通知|送)/,
+      )
+    })
+
+    it('期限内なら、超過の案内を出さない', async () => {
+      server.use(
+        http.get(`${API_PATHS.bookings}/:bookingId`, () =>
+          HttpResponse.json(
+            bookingIn({ ...MISROUTED, daysBeyondDeadline: null } as never),
+          ),
+        ),
+      )
+      renderPage(['ROLE_SALES'])
+
+      await screen.findByRole('alert')
+      expect(screen.queryByText(/超えます/)).not.toBeInTheDocument()
+    })
+
+    /**
+     * IT10 レビュー（user-representative 高 1・高 2）。<strong>読むだけで開ける。</strong>
+     *
+     * <p>誤配に最初に気づくのも、キャンセルを承認するのも追跡管理者である。例外一覧と
+     * 承認一覧の両方からここへ渡す導線があり、承認の判断には荷主・貨物種別・旅程が要る。
+     * <strong>操作は出さない</strong>——出すと、押した先でサーバに断られる。
+     */
+    it('追跡管理者は中身を読めるが、操作は出さない', async () => {
+      renderMisrouted(['ROLE_TRACKER'])
+
+      await screen.findByRole('alert')
+      // 判断材料は読める
+      expect(screen.getByText('丸紅商事株式会社')).toBeInTheDocument()
+      // 操作は出さない
+      expect(
+        screen.queryByRole('link', { name: '経路を再設計する' }),
+        '押した先でサーバに断られる操作を出している',
+      ).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /確定する/ })).not.toBeInTheDocument()
+    })
+
     it('誤配していない予約には、バナーを出さない', async () => {
       renderPage(['ROLE_ROUTING'])
 

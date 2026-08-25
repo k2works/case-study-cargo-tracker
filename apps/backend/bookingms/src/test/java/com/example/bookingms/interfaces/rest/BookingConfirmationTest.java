@@ -18,8 +18,15 @@ import com.example.bookingms.application.internal.SearchCargoUseCase;
 import com.example.bookingms.application.port.CargoRepository;
 import com.example.bookingms.application.port.CargoSummary;
 import com.example.bookingms.application.port.LocationRepository;
+import com.example.bookingms.domain.model.Cargo;
+import com.example.bookingms.domain.model.CargoItinerary;
+import com.example.bookingms.domain.model.Leg;
 import com.example.bookingms.domain.model.RoutingStatus;
+import com.example.bookingms.domain.model.VoyageNumber;
 import com.example.shared.auth.AuthenticatedUser;
+import com.example.shared.domain.model.Location;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -250,6 +257,117 @@ class BookingConfirmationTest {
         // 送った値が捨てられていないこと。捨てても一覧は返るため、結果を見るだけでは分からない
         verify(searchCargo).search(null, null, RoutingStatus.openToRoutingPlanner(),
                 com.example.bookingms.domain.model.BookingStatus.CONFIRMED);
+    }
+
+    /**
+     * US28-6。<strong>超える分は営業が読める場所に残す。</strong>
+     *
+     * <p>荷主へ伝えるのは営業である（通知は代替。[ADR-026] 決定 5）。超過の日数が
+     * 経路を割り当てた直後の画面にしか出ないと、<strong>経路設計者がメモを取り損ねた
+     * 時点で誰も伝えられなくなる</strong>。予約詳細を開けば読めることを固定する。
+     */
+    @Test
+    @DisplayName("期限を超える経路の予約は、詳細でも何日超えるかを返す")
+    void carriesDaysBeyondDeadlineOnDetail() throws Exception {
+        // 期限は 2027-09-20。誤配のあと組み直した経路は 2027-09-25 着で 5 日超える。
+        // **期限を超える旅程は再設計でしか作れない**（[ADR-026] 決定 4・5）——
+        // 割り当てのときは期限で弾く
+        Cargo beyond = BookingTestCargoes.routed()
+                .misrouted("SGSIN", Instant.parse("2027-09-10T12:00:00Z"))
+                .reassignItinerary(CargoItinerary.of(List.of(Leg.of(VoyageNumber.of("V0200"),
+                        Location.of("SGSIN", "Singapore"), Location.of("USLAX", "Los Angeles"),
+                        Instant.parse("2027-09-12T09:00:00Z"),
+                        Instant.parse("2027-09-25T09:00:00Z")))));
+        when(cargoes.findByBookingId("BKG-2026000001"))
+                .thenReturn(Optional.of(new CargoSummary(beyond, "丸紅商事")));
+        when(locations.timeZoneOf("USLAX"))
+                .thenReturn(Optional.of(ZoneId.of("America/Los_Angeles")));
+
+        mockMvc.perform(get("/api/v1/bookings/BKG-2026000001")
+                        .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                        .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.daysBeyondDeadline").value(5));
+    }
+
+    /**
+     * <strong>期限内なら値を出さない。</strong>毎回何かが出ると、超えている予約が
+     * 埋もれる。
+     */
+    @Test
+    @DisplayName("期限内の予約では、超過の日数を返さない")
+    void omitsDaysBeyondDeadlineWithinDeadline() throws Exception {
+        when(cargoes.findByBookingId("BKG-2026000001"))
+                .thenReturn(Optional.of(new CargoSummary(BookingTestCargoes.routed(), "丸紅商事")));
+        when(locations.timeZoneOf("USLAX"))
+                .thenReturn(Optional.of(ZoneId.of("America/Los_Angeles")));
+
+        mockMvc.perform(get("/api/v1/bookings/BKG-2026000001")
+                        .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                        .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.daysBeyondDeadline").doesNotExist());
+    }
+
+    /**
+     * <strong>マスタが欠けても詳細は開く。</strong>割り当てのときは断る（直すべきは
+     * こちら側の不備）が、読むだけの詳細まで落とすと、<strong>マスタの不備で予約が
+     * 1 件も開けなくなる</strong>——超過の表示はそこまでの価値を持たない。
+     */
+    @Test
+    @DisplayName("目的地の暦が引けなくても、詳細は開ける")
+    void stillOpensWhenTimeZoneIsMissing() throws Exception {
+        when(cargoes.findByBookingId("BKG-2026000001"))
+                .thenReturn(Optional.of(new CargoSummary(BookingTestCargoes.routed(), "丸紅商事")));
+        when(locations.timeZoneOf("USLAX")).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/api/v1/bookings/BKG-2026000001")
+                        .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                        .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.daysBeyondDeadline").doesNotExist());
+    }
+
+    /**
+     * IT10 レビュー（user-representative 高 1・高 2）。<strong>開けない画面へ誘導しない。</strong>
+     *
+     * <p>誤配に最初に気づくのは追跡管理者であり、キャンセルを承認するのも追跡管理者である。
+     * どちらの一覧からも予約詳細へ渡す導線を置いたが、<strong>押すと 403 になっていた</strong>。
+     * 承認の判断には荷主・貨物種別・旅程が要る（IT10 返済枠 0.4）。
+     *
+     * <p><strong>読むだけである。</strong>操作の可否は集約の述語が決め、画面がロールで
+     * 出し分ける。ここで開けるのは中身を読むことだけで、経路の割り当ても確定も行えない。
+     */
+    @Test
+    @DisplayName("追跡管理者と荷役作業員は、予約の詳細を読める")
+    void opensDetailToTrackerAndHandler() throws Exception {
+        when(cargoes.findByBookingId("BKG-2026000001"))
+                .thenReturn(Optional.of(new CargoSummary(BookingTestCargoes.routed(), "丸紅商事")));
+        when(locations.timeZoneOf("USLAX"))
+                .thenReturn(Optional.of(ZoneId.of("America/Los_Angeles")));
+
+        for (String[] who : List.of(new String[] {"tracker01", "ROLE_TRACKER"},
+                new String[] {"handler01", "ROLE_HANDLER"})) {
+            mockMvc.perform(get("/api/v1/bookings/BKG-2026000001")
+                            .header(AuthenticatedUser.USER_ID_HEADER, who[0])
+                            .header(AuthenticatedUser.ROLES_HEADER, who[1]))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.bookingId").value("BKG-2026000001"));
+        }
+    }
+
+    /**
+     * <strong>読み取りは詳細だけである。</strong>一覧まで開くと、追跡管理者が
+     * 営業の抱えている案件を横断して眺められる——例外や承認から辿る 1 件を読むこととは
+     * 別の話であり、US28・US30 のどちらも求めていない。
+     */
+    @Test
+    @DisplayName("追跡管理者に予約の一覧は開かない")
+    void keepsListClosedToTracker() throws Exception {
+        mockMvc.perform(get("/api/v1/bookings")
+                        .header(AuthenticatedUser.USER_ID_HEADER, "tracker01")
+                        .header(AuthenticatedUser.ROLES_HEADER, "ROLE_TRACKER"))
+                .andExpect(status().isForbidden());
     }
 
     @Test

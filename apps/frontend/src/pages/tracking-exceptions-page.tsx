@@ -26,6 +26,23 @@ export function TrackingExceptionsPage() {
     user?.roles.includes("ROLE_TRACKER") === true ||
     user?.roles.includes("ROLE_HANDLER") === true;
 
+  /**
+   * 予約詳細を開けるか（`App.tsx` のルートガードと揃える）。
+   *
+   * <p><strong>開けない画面へ誘導しない。</strong>IT10 のレビューで、誤配に最初に気づく
+   * 追跡管理者がこのリンクを押すと /403 に飛んでいた。予約詳細は読み取りで開いたが、
+   * <strong>ここの判定を揃えておかないと、次にロールが増えたとき同じことが起きる</strong>。
+   *
+   * <p>開けないロールには、代わりに<strong>次に何が起きるか</strong>を伝える。誤配を直すのは
+   * 経路設計者であり、その手元には気づく手段がある（経路設計ダッシュボードの件数）。
+   */
+  const canOpenBooking =
+    user?.roles.some((role) =>
+      ["ROLE_SALES", "ROLE_ROUTING", "ROLE_TRACKER", "ROLE_HANDLER"].includes(
+        role,
+      ),
+    ) === true;
+
   /** 対応へ進む先。営業は管理画面を開けないので、公開の照会へ送る。 */
   const detailPathOf = (trackingNumber: string) =>
     canManage
@@ -88,17 +105,23 @@ export function TrackingExceptionsPage() {
                   {/* **誤配は経路設計者が直す**（US28・[ADR-026] 決定 6）。
                       気づく人（追跡管理者）と直す人が違うため、予約へ渡す導線が要る
                       ——ここから辿れないと「気づいたが何もできない」で終わる */}
-                  {tracking.activeException?.exceptionType === "MISROUTE" && (
-                    <>
-                      {" "}
-                      <Link
-                        to={`/booking/${encodeURIComponent(tracking.bookingId)}`}
-                        className="text-blue-600 hover:underline"
-                      >
-                        予約を開く（経路の組み直し）
-                      </Link>
-                    </>
-                  )}
+                  {tracking.activeException?.exceptionType === "MISROUTE" &&
+                    (canOpenBooking ? (
+                      <>
+                        {" "}
+                        <Link
+                          to={`/booking/${encodeURIComponent(tracking.bookingId)}`}
+                          className="text-blue-600 hover:underline"
+                        >
+                          予約を開く（経路の組み直し）
+                        </Link>
+                      </>
+                    ) : (
+                      <span className="text-gray-600">
+                        {" "}
+                        （経路設計者が組み直します）
+                      </span>
+                    ))}
                 </td>
                 <td className="py-2">{tracking.locationName}</td>
               </tr>

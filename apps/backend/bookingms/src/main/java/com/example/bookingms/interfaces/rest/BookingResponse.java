@@ -169,6 +169,16 @@ public record BookingResponse(
         return from(summary.cargo(), summary.shipperName());
     }
 
+    /**
+     * 予約の詳細（US28-6）。
+     *
+     * <p><strong>超える分は詳細でも読める。</strong>荷主に伝えるのは営業であり、
+     * 割り当てた直後の画面にしか出さないと、伝える人の手元に値が残らない。
+     */
+    public static BookingResponse from(CargoSummary summary, Long daysBeyondDeadline) {
+        return from(summary.cargo(), summary.shipperName(), daysBeyondDeadline);
+    }
+
     public static BookingResponse from(Cargo cargo) {
         return from(cargo, null, null);
     }

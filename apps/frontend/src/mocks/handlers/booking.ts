@@ -26,6 +26,27 @@ import {
 } from '../data'
 import { type MockLeg, findMockRoutes, voyages } from '../routes'
 
+/**
+ * 到着予定が希望期限を超える日数（US28-6）。超えないなら null。
+ *
+ * <p><strong>1 か所に置く。</strong>割り当ての応答と詳細で別々に数えると、
+ * 片方だけ直したときに画面が場所によって違う日数を出す。
+ *
+ * <p>本物は目的地の暦で判断する（[ADR-010]）。ここでは日付だけを比べる
+ * ——モックは時差を持たない。
+ */
+function daysBeyondDeadlineOf(booking: MockBooking): number | null {
+  const arrival = booking.itinerary?.at(-1)?.unloadTime ?? null
+  if (arrival === null) {
+    return null
+  }
+  const beyond = Math.round(
+    (Date.parse(arrival.slice(0, 10)) - Date.parse(booking.arrivalDeadline)) /
+      (24 * 60 * 60 * 1000),
+  )
+  return beyond <= 0 ? null : beyond
+}
+
 export const bookingHandlers = [
   http.get(API_PATHS.bookingLocations, () =>
     HttpResponse.json(LOCATIONS.map(({ unLocode, name }) => ({ unLocode, name }))),
@@ -50,7 +71,12 @@ export const bookingHandlers = [
     const found = bookings.find((booking) => booking.bookingId === params.bookingId)
     return found === undefined
       ? HttpResponse.json({ message: '指定された予約が見つかりません' }, { status: 404 })
-      : HttpResponse.json(withShipperName(found))
+      : HttpResponse.json({
+          ...withShipperName(found),
+          // **詳細でも返す**（US28-6）。荷主へ伝えるのは営業であり、割り当てた
+          // 直後の応答にしか載せないと、伝える人の手元に値が残らない
+          daysBeyondDeadline: daysBeyondDeadlineOf(found),
+        })
   }),
 
 
@@ -202,23 +228,9 @@ export const bookingHandlers = [
     found.routeNotifiedAt = null
     found.routeNotifiedBy = null
 
-    // **期限を超えるなら、何日超えるかを返す**（US28-6）。本物は目的地の暦で判断する
-    // ——ここでは日付だけを比べる（モックは時差を持たない）
-    const arrival = found.itinerary?.at(-1)?.unloadTime ?? null
-    const beyond =
-      arrival === null
-        ? null
-        : Math.max(
-            0,
-            Math.round(
-              (Date.parse(arrival.slice(0, 10)) -
-                Date.parse(found.arrivalDeadline)) /
-                (24 * 60 * 60 * 1000),
-            ),
-          )
     return HttpResponse.json({
       ...withShipperName(found),
-      daysBeyondDeadline: beyond === null || beyond <= 0 ? null : beyond,
+      daysBeyondDeadline: daysBeyondDeadlineOf(found),
     })
   }),
 

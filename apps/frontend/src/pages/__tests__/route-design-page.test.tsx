@@ -616,6 +616,80 @@ describe('経路設計（経路候補の一覧）', () => {
     })
   })
 
+  describe('誤配のあとの組み直し（US28-4・ADR-026 決定 4）', () => {
+    /** 誤配して SGSIN に降ろされた予約。**現在地は出発地ではない**。 */
+    const MISROUTED = {
+      ...BOOKING,
+      bookingStatus: 'TRACKING_ISSUED',
+      routingStatus: 'MISROUTED',
+      misroute: { at: '2026-09-10T12:00:00Z', locationUnLocode: 'SGSIN' },
+      lastHandlingLocationUnLocode: 'SGSIN',
+    }
+
+    beforeEach(() => {
+      server.use(
+        http.get(`${API_PATHS.bookings}/BKG-2026000001`, () =>
+          HttpResponse.json(MISROUTED),
+        ),
+      )
+    })
+
+    /**
+     * <strong>現在地を出発地にする。</strong>
+     *
+     * <p>サーバは確定時に現在地起点で候補を突き合わせる（`AssignRouteUseCase`）。
+     * 画面が元の出発地で探すと、<strong>出た候補は選べるのに必ず断られる</strong>——
+     * しかも理由は「航海スケジュールが変わった」に見え、経路設計者は航海マスタを疑う。
+     */
+    it('現在地を出発地として候補を探す', async () => {
+      let asked: URL | null = null
+      server.use(
+        http.get(API_PATHS.routes, ({ request }) => {
+          asked = new URL(request.url)
+          return HttpResponse.json({
+            candidates: [DIRECT],
+            totalCount: 1,
+            appliedCriteria: APPLIED,
+          })
+        }),
+      )
+      renderPage()
+
+      await screen.findAllByRole('row')
+      expect(asked!.searchParams.get('origin'), '元の出発地で候補を探している')
+        .toBe('SGSIN')
+      // 画面の「出発地」欄も現在地を指す。ここが元の港（Tokyo）のままだと、
+      // 経路設計者は候補の出発地が違うことに気づけない
+      // 当初の港は併記してよい（どこから外れたかは判断材料になる）。
+      // ただし**出発地として出すのは現在地**でなければならない
+      const origin = screen.getByText('出発地').parentElement!
+      expect(origin.textContent, '元の出発地を出発地として出している')
+        .toMatch(/^出発地SGSIN/)
+      expect(origin).toHaveTextContent('現在地')
+    })
+
+    /**
+     * <strong>誤配は確定済みでも組み直す</strong>（[ADR-026] 決定 4b）。
+     *
+     * <p>予定外の港で受領された誤配では予約は `TRACKING_ISSUED` のまま動かない
+     * （`BookingStatus#afterHandling` は LOAD と CLAIM しか進めない）。確定済みを
+     * 一律で断ると、<strong>誤配バナーの導線を押した先で「確定しています」と言われる</strong>。
+     */
+    it('確定済みでも、誤配なら選んで確定できる', async () => {
+      givenCandidates([DIRECT, VIA_SHANGHAI])
+      renderPage()
+
+      await screen.findAllByRole('row')
+      expect(
+        screen.queryByText(/確定した予約の経路は差し替えられません/),
+        '誤配なのに確定済みとして断っている',
+      ).not.toBeInTheDocument()
+      expect(
+        screen.getAllByRole('button', { name: 'この経路を選ぶ' })[0],
+      ).toBeEnabled()
+    })
+  })
+
   describe('期限を超える経路（US28-6）', () => {
     /**
      * <strong>超える分を出してから進む。</strong>

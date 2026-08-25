@@ -194,6 +194,27 @@ export default function App() {
         {/* 一覧そのものは両者が開く。経路設計者に見えるのは依頼済みだけで、
             絞り込みの指定でその範囲は広げられない（ADR-015・サーバ側で担保） */}
         <Route path="/booking" element={<BookingListPage />} />
+      </Route>
+
+      {/* **予約の詳細は追跡管理者・荷役も読む**（IT10 レビュー）。誤配に最初に気づくのも、
+          キャンセルを承認するのも追跡管理者であり、例外一覧・承認一覧・陸揚げ待ちの
+          いずれからもここへ渡る導線がある。**読むだけである**——操作は集約の述語と
+          ロールで画面が出し分け、サーバも書き換えの入口を開いていない。
+          **一覧は広げない**：1 件を辿ることと、営業の案件を横断して眺めることは別 */}
+      <Route
+        element={
+          <RequireAuth
+            allowedRoles={[
+              'ROLE_SALES',
+              'ROLE_ROUTING',
+              'ROLE_TRACKER',
+              'ROLE_HANDLER',
+            ]}
+          >
+            <AppLayout />
+          </RequireAuth>
+        }
+      >
         <Route path="/booking/:bookingId" element={<BookingDetailPage />} />
       </Route>
 

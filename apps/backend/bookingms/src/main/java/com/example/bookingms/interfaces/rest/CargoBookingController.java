@@ -101,14 +101,33 @@ public class CargoBookingController {
             @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
             @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles,
             @PathVariable String bookingId) {
-        // 経路設計者も見る。引き渡された予約の中身が見えないと、経路を組む判断ができない
+        // 経路設計者も見る。引き渡された予約の中身が見えないと、経路を組む判断ができない。
+        // **追跡管理者と荷役作業員も読む**（IT10 レビュー）——誤配に最初に気づくのも、
+        // キャンセルを承認するのも追跡管理者であり、どちらの一覧からもここへ渡す導線が
+        // ある。**読むだけである**（操作の可否は集約の述語が決め、画面が出し分ける）
         AuthenticatedUser user = AuthenticatedUser.of(userId, roles);
-        requireSalesOrRouting(user);
+        requireBookingReader(user);
 
         CargoSummary summary = cargoes.findByBookingId(bookingId)
                 .filter(found -> visibleTo(user, found))
                 .orElseThrow(CargoBookingController::notFound);
-        return BookingResponse.from(summary);
+        return BookingResponse.from(summary, daysBeyondDeadlineOf(summary.cargo()));
+    }
+
+    /**
+     * 到着予定が希望期限を超える日数（US28-6）。超えないか、判断できないなら {@code null}。
+     *
+     * <p><strong>伝えるのは営業である</strong>（通知は代替。[ADR-026] 決定 5）。割り当てた
+     * 直後の画面にしか出さないと、経路設計者がメモを取り損ねた時点で誰も伝えられなくなる。
+     *
+     * <p><strong>暦が引けなくても詳細は開く。</strong>割り当てのときはこちら側の不備として
+     * 断るが（{@code AssignRouteUseCase}）、読むだけの詳細まで落とすと、マスタの不備で
+     * 予約が 1 件も開けなくなる。超過の表示はそこまでの価値を持たない。
+     */
+    private Long daysBeyondDeadlineOf(Cargo cargo) {
+        return locations.timeZoneOf(cargo.routeSpecification().destination().unLocode())
+                .flatMap(cargo::daysBeyondDeadline)
+                .orElse(null);
     }
 
     /**
@@ -257,6 +276,19 @@ public class CargoBookingController {
      *
      * <p>予約の中身は営業担当者と経路設計者が見る。経路を組む判断には内容が要る。
      */
+    /**
+     * 予約の詳細を読める人。
+     *
+     * <p><strong>一覧は広げない。</strong>一覧まで開くと、追跡管理者が営業の抱えている
+     * 案件を横断して眺められる——例外や承認から辿る 1 件を読むこととは別の話である。
+     */
+    private void requireBookingReader(AuthenticatedUser user) {
+        if (!user.hasAnyRole(Role.ROLE_SALES, Role.ROLE_ROUTING, Role.ROLE_TRACKER,
+                Role.ROLE_HANDLER)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "この操作を行う権限がありません");
+        }
+    }
+
     private void requireSalesOrRouting(AuthenticatedUser user) {
         if (!user.hasAnyRole(Role.ROLE_SALES, Role.ROLE_ROUTING)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "この操作を行う権限がありません");
@@ -271,7 +303,10 @@ public class CargoBookingController {
      * そのまま呼ぶ（一覧と別の判定を書かない）。
      */
     private boolean visibleTo(AuthenticatedUser user, CargoSummary summary) {
-        return user.hasAnyRole(Role.ROLE_SALES) || summary.cargo().visibleToRoutingPlanner();
+        // 追跡管理者・荷役は輸送中の貨物を扱う。経路設計の依頼有無で絞ると、
+        // 誤配や承認の一覧から辿った予約が「見つかりません」になる
+        return user.hasAnyRole(Role.ROLE_SALES, Role.ROLE_TRACKER, Role.ROLE_HANDLER)
+                || summary.cargo().visibleToRoutingPlanner();
     }
 
     /**
