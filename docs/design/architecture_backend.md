@@ -876,6 +876,8 @@ IT1 で荷主登録画面のニーズから導出した。
 | `PUT` | `/api/v1/bookings/{bookingId}/return-to-routing` | 荷主が変更を希望したので経路設計へ戻す（US13-4）。**`RoutingStatus` も `ROUTING_REQUESTED` に戻る**（同 決定 4）。**確定後は行えない**（同 決定 3）。営業担当者のみ | UC11 |
 | `POST` | `/api/v1/bookings/{bookingId}/tracking-number` | 追跡番号発行。**確定した予約にだけ行え、二重には発行しない**。採番は DB のシーケンス（[ADR-011](../adr/011-booking-id-numbering.md) と同じ形）。経路設計者のみ | UC12 |
 | `GET` | `/api/v1/cancellations` | 承認待ちのキャンセル申請の一覧。追跡管理者のみ。**`/api/v1/bookings/` の下に置かない**——`/api/v1/bookings/{bookingId}` が `cancellations` を予約 ID として拾う（IT9 でモックが実際にそうなった） | UC22 |
+| `GET` | `/api/v1/cancellations/awaiting-discharge` | **陸揚げ待ち**——承認済みで陸揚げ地が決まっている貨物（IT10）。荷役作業員と追跡管理者。作業指示は自動で作られないため（[ADR-025](../adr/025-customs-declaration-and-cancellation-approval.md) 決定 5）、荷役側がここで自分の手番に気づく | UC22 |
+| `GET` | `/api/v1/bookings/{bookingId}/cancellations` | キャンセル申請の**履歴**（US30-10・IT10）。営業担当者と追跡管理者。**最新の 1 件を返す `/cancellation` とは別に置く**——却下されて再申請すると、前回の却下理由が予約詳細から消える | UC22 |
 | `POST` | `/api/v1/bookings/{bookingId}/cancellation` | キャンセル申請（輸送開始前は即確定、輸送中は承認待ち）。理由は必須。**営業担当者のみ**——自分の申請を自分で承認できると承認の意味が無くなる。応答は `awaitingApproval` で承認を待つかどうかを返す（画面が状態名を見比べない） | UC22 |
 | `GET` | `/api/v1/bookings/{bookingId}/cancellation` | その予約のキャンセル申請。**無ければ 204**（空の申請を作って返さない）。営業担当者・追跡管理者 | UC22 |
 | `PUT` | `/api/v1/bookings/{bookingId}/cancellation/approve` | キャンセル承認（追跡管理者・陸揚げ地指定）。**陸揚げ地は候補（現在地の港・次の寄港地）に限る**（[ADR-025](../adr/025-customs-declaration-and-cancellation-approval.md) 決定 4） | UC22 |

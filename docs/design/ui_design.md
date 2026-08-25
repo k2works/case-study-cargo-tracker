@@ -127,7 +127,8 @@ IT2・IT3 のふりかえりが繰り返し「`ui_design.md` の規約」を反�
 | 未解決の例外一覧 | `/tracking/manage/exceptions` | 未解決の例外がある貨物（緊急を先に、次に発生の古い順） | 追跡管理者、荷役作業員、**営業担当者（読むだけ）** | US19, US20 |
 | 荷役作業記録 | `/handling` | 荷役イベント登録フォーム（モバイル対応）・この貨物の作業履歴 | 荷役作業員（記録）・追跡管理者（参照のみ） | US15, US16 |
 | 荷役作業一覧 | `/handling/list` | 荷役履歴一覧・検索 | 荷役作業員、追跡管理者 | US15 |（**IT7 では作らない**。履歴は記録画面の中に出す——作業員がいるのはその画面であり、記録するたびに別画面へ移らせると手が止まる。検索を伴う一覧が要るのは、予約詳細から荷役履歴を辿る IT8 である）
-| 通関管理 | `/customs` | 通関申告一覧・検索（留置 3 日超の警告表示） | 荷役作業員、追跡管理者 | US29 |
+| 陸揚げ待ち | `/handling/awaiting-discharge` | 承認済みで陸揚げ地が決まった貨物（IT10）。**作業指示は自動で作られない**ため、荷役側がここで自分の手番に気づく | 荷役作業員、追跡管理者 | US30 |
+| 通関管理 | `/customs` | 通関申告一覧・検索（**既定は未決着だけ**・留置 3 日超の警告表示・件数と切り捨ての明示。IT10） | 荷役作業員、追跡管理者 | US29 |
 | 通関申告登録 | `/customs/new` | 申告番号・日時の登録 | 荷役作業員 | US29 |
 | 通関申告詳細 | `/customs/:declarationId` | 状態更新（理由必須）・状態変更履歴 | 追跡管理者 | US29 |
 | 精算管理 | `/billing` | 請求書一覧・フィルタ | 経理担当者 | US21-US23 |
@@ -154,6 +155,7 @@ IT2・IT3 のふりかえりが繰り返し「`ui_design.md` の規約」を反�
 | 貨物状態管理 | `/tracking/manage` | ROLE_TRACKER, ROLE_HANDLER |
 | 未解決の例外 | `/tracking/manage/exceptions` | ROLE_TRACKER, ROLE_HANDLER, ROLE_SALES。**営業は読むだけ**——荷主は公開照会で「ご依頼元の営業担当へ」と案内されるため、営業が何も知らないままでは案内が行き止まりになる（IT9 返済枠 0.9）。起票と解決には開かない |
 | 荷役管理 | `/handling` | ROLE_HANDLER, ROLE_TRACKER |
+| 陸揚げ待ち | `/handling/awaiting-discharge` | ROLE_HANDLER, ROLE_TRACKER |
 | 通関管理 | `/customs` | ROLE_HANDLER, ROLE_TRACKER |
 | 精算管理 | `/billing` | ROLE_ACCOUNTANT |
 | アカウント管理 | `/admin/accounts` | ROLE_ADMIN。ロックされたアカウントの解除（US32）。**他のロールには出さない**——出すと、押した先で 403 になる画面へ誘導することになる |

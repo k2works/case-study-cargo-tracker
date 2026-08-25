@@ -609,7 +609,8 @@ Estimate *-- RouteCandidate
 | 値オブジェクト | TemperatureRequirement | 温度管理条件 | 最低/最高温度・温度単位 |
 | 列挙型 | BookingStatus | 予約状態 | 8 段階の予約ライフサイクル |
 | 列挙型 | CargoType | 貨物種別 | GENERAL / HAZARDOUS / REFRIGERATED |
-| 列挙型 | RoutingStatus | 経路の状況 | NOT_ROUTED / ROUTING_REQUESTED（経路設計を依頼した。US06・[ADR-015](../adr/015-routing-requested-state.md)）/ ROUTED（経路が決まった。US09）/ CONSULTATION_REQUESTED（条件では組めず営業へ差し戻した。US10・[ADR-020](../adr/020-itinerary-assignment-transitions.md) 決定 7）/ MISROUTED（誤配。US28）。**IT5 時点の実装は `MISROUTED` を持たない**（US28 は IT10）。持たない状態を先に足しても、遷移させる相手がいないうちは検査できない。**経路設計者に開く範囲は `NOT_ROUTED` 以外**（判定は `RoutingStatus#visibleToRoutingPlanner` 1 つに置く） |
+| 列挙型 | RoutingStatus | 経路の状況 | NOT_ROUTED / ROUTING_REQUESTED（経路設計を依頼した。US06・[ADR-015](../adr/015-routing-requested-state.md)）/ ROUTED（経路が決まった。US09）/ CONSULTATION_REQUESTED（条件では組めず営業へ差し戻した。US10・[ADR-020](../adr/020-itinerary-assignment-transitions.md) 決定 7）/ MISROUTED（誤配。US28・IT10 で実装）。**この列挙に進行の並びは無い**——判定は述語で行う（[ADR-026](../adr/026-misroute-detection-and-rerouting.md) 決定 2）。**経路設計者に開く範囲は `NOT_ROUTED` 以外**（判定は `RoutingStatus#visibleToRoutingPlanner` 1 つに置く）。値を足したら `RoutingStatusTest` が赤になり、述語がその値をどう扱うかを決めることになる |
+| 値オブジェクト | Misroute | 誤配の事実 | いつ・どこで予定ルートから外れたか（US28・[ADR-026](../adr/026-misroute-detection-and-rerouting.md) 決定 3・IT10）。**状態ではなく起きたこと**——`RoutingStatus` は再設計で `ROUTED` へ戻るが、この記録は戻らない（**料金調整の根拠**として参照される。受入基準 28-8）。2 回目以降の誤配でも**最初に外れた場所と日時**を残す |
 | 列挙型 | TransportStatus | 輸送状態 | 8 段階の輸送フェーズ |
 | 列挙型 | CancellationStatus | キャンセル申請状態 | REQUESTED / APPROVED / REJECTED |
 
