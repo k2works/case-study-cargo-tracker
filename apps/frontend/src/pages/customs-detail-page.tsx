@@ -131,12 +131,11 @@ export function CustomsDetailPage() {
           <h2 className="text-lg font-semibold text-gray-900">状態の更新</h2>
 
           {updated && (
-            <p
-              role="status"
-              className="rounded border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-900"
+            <output
+              className="rounded border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-900 block"
             >
               更新しました。
-            </p>
+            </output>
           )}
 
           {failure !== null && (

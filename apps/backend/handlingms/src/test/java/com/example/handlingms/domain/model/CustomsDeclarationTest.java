@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.Month;
 import java.time.ZoneId;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -63,8 +64,10 @@ class CustomsDeclarationTest {
         @Test
         @DisplayName("理由なしの更新は断る")
         void requiresAReason() {
+            CustomsDeclaration declaration = declared();
+
             assertThatThrownBy(() ->
-                    declared().updateStatus(CustomsStatus.HELD, "tracker01", " ", DECLARED_AT))
+                    declaration.updateStatus(CustomsStatus.HELD, "tracker01", " ", DECLARED_AT))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("理由");
         }
@@ -114,8 +117,10 @@ class CustomsDeclarationTest {
         @Test
         @DisplayName("いまと同じ状態には更新できない")
         void rejectsUpdatingToTheSameStatus() {
+            CustomsDeclaration declaration = declared();
+
             assertThatThrownBy(() ->
-                    declared().updateStatus(CustomsStatus.PENDING, "t", "変更なし", DECLARED_AT))
+                    declaration.updateStatus(CustomsStatus.PENDING, "t", "変更なし", DECLARED_AT))
                     .isInstanceOf(IllegalArgumentException.class);
         }
     }
@@ -167,7 +172,7 @@ class CustomsDeclarationTest {
         @DisplayName("留置 3 日ちょうどは、まだ督促の対象ではない")
         void doesNotWarnAtExactlyThreeDays() {
             Instant heldAt = Instant.parse("2027-09-02T00:00:00Z");
-            LocalDate today = LocalDate.of(2027, 9, 5);
+            LocalDate today = LocalDate.of(2027, Month.SEPTEMBER, 5);
 
             assertThat(heldAt(heldAt).isHeldOverdue(today, ZONE, THRESHOLD)).isFalse();
         }
@@ -176,7 +181,7 @@ class CustomsDeclarationTest {
         @DisplayName("留置 4 日目から督促の対象になる")
         void warnsAfterThreeDays() {
             Instant heldAt = Instant.parse("2027-09-02T00:00:00Z");
-            LocalDate today = LocalDate.of(2027, 9, 6);
+            LocalDate today = LocalDate.of(2027, Month.SEPTEMBER, 6);
 
             assertThat(heldAt(heldAt).isHeldOverdue(today, ZONE, THRESHOLD)).isTrue();
         }
@@ -196,14 +201,14 @@ class CustomsDeclarationTest {
                     .updateStatus(CustomsStatus.HELD, "t", "再検査",
                             Instant.parse("2027-09-20T00:00:00Z"));
 
-            assertThat(reheld.isHeldOverdue(LocalDate.of(2027, 9, 22), ZONE, THRESHOLD)).isFalse();
+            assertThat(reheld.isHeldOverdue(LocalDate.of(2027, Month.SEPTEMBER, 22), ZONE, THRESHOLD)).isFalse();
         }
 
         /** 留置でなければ督促の対象ではない。 */
         @Test
         @DisplayName("留置でない申告は督促の対象にならない")
         void ignoresDeclarationsThatAreNotHeld() {
-            assertThat(declared().isHeldOverdue(LocalDate.of(2099, 1, 1), ZONE, THRESHOLD))
+            assertThat(declared().isHeldOverdue(LocalDate.of(2099, Month.JANUARY, 1), ZONE, THRESHOLD))
                     .isFalse();
         }
     }

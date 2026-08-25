@@ -23,6 +23,8 @@ import com.example.handlingms.domain.model.HandlingTrackingNumber;
 import com.example.shared.auth.AuthenticatedUser;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.Month;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
@@ -77,7 +79,7 @@ class CustomsControllerTest {
      */
     @org.junit.jupiter.api.BeforeEach
     void stubTheBusinessCalendar() {
-        when(manage.today()).thenReturn(java.time.LocalDate.of(2027, 9, 3));
+        when(manage.today()).thenReturn(LocalDate.of(2027, Month.SEPTEMBER, 3));
         when(manage.zone()).thenReturn(ZoneId.of("Asia/Tokyo"));
     }
 

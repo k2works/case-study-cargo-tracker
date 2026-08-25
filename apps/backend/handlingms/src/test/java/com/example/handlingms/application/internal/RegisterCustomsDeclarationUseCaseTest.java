@@ -62,8 +62,10 @@ class RegisterCustomsDeclarationUseCaseTest {
     @Test
     @DisplayName("知らない追跡番号は断る")
     void rejectsAnUnknownTrackingNumber() {
-        assertThatThrownBy(() -> useCase.register(new RegisterCustomsDeclarationCommand(
-                "TRK-20260823-9999", "DEC-0001", DECLARED_AT, null, "handler01")))
+        RegisterCustomsDeclarationCommand unknown = new RegisterCustomsDeclarationCommand(
+                "TRK-20260823-9999", "DEC-0001", DECLARED_AT, null, "handler01");
+
+        assertThatThrownBy(() -> useCase.register(unknown))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("見つかりません");
     }

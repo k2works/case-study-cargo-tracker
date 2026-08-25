@@ -54,12 +54,12 @@ public class NoteCancellationUseCase {
     public void note(String trackingNumber) {
         TrackingNumber number = TrackingNumber.of(trackingNumber);
         activities.findByTrackingNumber(number).ifPresentOrElse(
-                activity -> record(number),
+                activity -> noteOnce(number),
                 () -> log.info("キャンセルのイベントに一致する追跡がありません: trackingNumber={}",
                         trackingNumber));
     }
 
-    private void record(TrackingNumber number) {
+    private void noteOnce(TrackingNumber number) {
         boolean alreadyNoted = notices.findByTrackingNumber(number, NOTICE_LIMIT).stream()
                 .anyMatch(notice -> MESSAGE.equals(notice.message()));
         if (alreadyNoted) {

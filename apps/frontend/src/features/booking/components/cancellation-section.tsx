@@ -60,12 +60,11 @@ export function CancellationSection({
       <h2 className="text-lg font-semibold text-gray-900">キャンセル</h2>
 
       {outcome !== null && (
-        <p
-          role="status"
-          className="rounded border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-900"
+        <output
+          className="rounded border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-900 block"
         >
           {outcome}
-        </p>
+        </output>
       )}
 
       {failure !== null && (
@@ -137,13 +136,13 @@ export function CancellationSection({
             <p className="text-sm text-gray-600">
               {booking.bookingStatus === "IN_TRANSIT" ? (
                 <>
-                  この貨物は<strong>輸送中</strong>です。申請は
+                  {'この貨物は'}<strong>輸送中</strong>{'です。申請は'}
                   <strong>追跡管理者の承認</strong>を経て確定します——
                   どこで荷降しするかを決める必要があるためです。
                 </>
               ) : (
                 <>
-                  この貨物はまだ動いていないため、申請すると
+                  {'この貨物はまだ動いていないため、申請すると'}
                   <strong>その場でキャンセルが確定します</strong>。
                 </>
               )}

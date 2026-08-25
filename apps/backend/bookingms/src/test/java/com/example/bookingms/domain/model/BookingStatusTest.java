@@ -101,10 +101,6 @@ class BookingStatusTest {
                 .contains("new CargoStatus(BookingStatus.CANCELLED");
     }
 
-    private static Stream<String> sourceFiles() {
-        return sourceFileNames().map(name -> read(DOMAIN.resolve(name)));
-    }
-
     private static Stream<String> sourceFileNames() {
         try (Stream<Path> files = Files.list(DOMAIN)) {
             return files.map(path -> path.getFileName().toString())

@@ -34,6 +34,17 @@ public final class CustomsDeclaration {
     private final String remarks;
     private final List<CustomsStatusChange> history;
 
+    /**
+     * <strong>引数の多さは、ここでは設計の合図ではない。</strong>
+     *
+     * <p>復元は保存された行をそのまま集約へ戻す操作であり、引数は集約の項目数そのもの
+     * になる。減らすには項目を束ねる型を作ることになるが、それは復元のためだけの型で
+     * あり、業務上の意味を持たない——<strong>検査を通すために語彙を増やすことになる</strong>。
+     *
+     * <p>外すのは復元だけである。人が値を渡す入口（登録・更新）には課したままにする
+     * ——そちらは引数が増えたら本当に合図である。
+     */
+    @SuppressWarnings("java:S107")
     private CustomsDeclaration(Long id, DeclarationNumber declarationNumber,
             CargoBookingId cargoBookingId, HandlingTrackingNumber trackingNumber,
             Instant declaredAt, CustomsStatus status, Instant clearedAt, String remarks,
@@ -87,6 +98,7 @@ public final class CustomsDeclaration {
      * 入った行が読めなくなる（過去 take の教訓——不変条件の追加は既存行を壊す）。
      * 検査するのは新しく受け付けるときだけである。
      */
+    @SuppressWarnings("java:S107")
     public static CustomsDeclaration restore(Long id, DeclarationNumber declarationNumber,
             CargoBookingId cargoBookingId, HandlingTrackingNumber trackingNumber,
             Instant declaredAt, CustomsStatus status, Instant clearedAt, String remarks,

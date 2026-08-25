@@ -57,9 +57,8 @@ export function CustomsNewPage() {
       </div>
 
       {registered !== null && (
-        <p
-          role="status"
-          className="rounded border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-900"
+        <output
+          className="rounded border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-900 block"
         >
           申告 {registered} を登録しました。状態は「審査中」です。
           <button
@@ -69,7 +68,7 @@ export function CustomsNewPage() {
           >
             一覧で確認する
           </button>
-        </p>
+        </output>
       )}
 
       {failure !== null && (

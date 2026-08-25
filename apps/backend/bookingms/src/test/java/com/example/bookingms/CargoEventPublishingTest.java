@@ -69,8 +69,7 @@ class CargoEventPublishingTest {
         assertThat(fields)
                 .as("契約と項目が食い違っている。送り手はエラーにならないまま、"
                         + "受け手が読めない形になる")
-                .isEqualTo(CargoCancelledContract.FIELDS);
-        assertThat(fields)
+                .isEqualTo(CargoCancelledContract.FIELDS)
                 .as("公開の追跡照会に流れる経路に、社内の判断が載っている")
                 .doesNotContainAnyElementsOf(CargoCancelledContract.FORBIDDEN_FIELDS);
     }

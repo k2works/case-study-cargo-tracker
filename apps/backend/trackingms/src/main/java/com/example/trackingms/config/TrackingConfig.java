@@ -181,12 +181,6 @@ public class TrackingConfig {
     }
 
     /**
-     * 荷役のイベントを受け取るキュー。
-     *
-     * <p><strong>受け取れなかったイベントの行き先を、キューの宣言と同じ場所で決める</strong>
-     * （[ADR-022] 決定 4）。別々に置くと、キューだけ作ってデッドレターを忘れた環境ができる。
-     */
-    /**
      * キャンセルのイベントを受け取るキュー（[ADR-025] 決定 3）。
      *
      * <p><strong>購読側ごとにキューを分ける。</strong>共有すると、片方が読んだイベントを
@@ -195,9 +189,8 @@ public class TrackingConfig {
      */
     @Bean
     public Queue cargoCancelledQueue() {
-        return new Queue(TrackingEventChannels.CANCELLED_QUEUE, true, false, false, Map.of(
-                "x-dead-letter-exchange", TrackingEventChannels.DEAD_LETTER_EXCHANGE,
-                "x-dead-letter-routing-key", TrackingEventChannels.CANCELLED_DEAD_LETTER_QUEUE));
+        return subscriberQueue(TrackingEventChannels.CANCELLED_QUEUE,
+                TrackingEventChannels.CANCELLED_DEAD_LETTER_QUEUE);
     }
 
     @Bean
@@ -240,9 +233,8 @@ public class TrackingConfig {
     /** 通関のイベントを受け取るキュー（US29-5）。**購読側ごとに分ける**。 */
     @Bean
     public Queue customsStatusChangedQueue() {
-        return new Queue(TrackingEventChannels.CUSTOMS_QUEUE, true, false, false, Map.of(
-                "x-dead-letter-exchange", TrackingEventChannels.DEAD_LETTER_EXCHANGE,
-                "x-dead-letter-routing-key", TrackingEventChannels.CUSTOMS_DEAD_LETTER_QUEUE));
+        return subscriberQueue(TrackingEventChannels.CUSTOMS_QUEUE,
+                TrackingEventChannels.CUSTOMS_DEAD_LETTER_QUEUE);
     }
 
     @Bean
@@ -281,11 +273,16 @@ public class TrackingConfig {
                 .CustomsStatusChangedListener(detect);
     }
 
+    /**
+     * 荷役のイベントを受け取るキュー。
+     *
+     * <p><strong>受け取れなかったイベントの行き先を、キューの宣言と同じ場所で決める</strong>
+     * （[ADR-022] 決定 4）。別々に置くと、キューだけ作ってデッドレターを忘れた環境ができる。
+     */
     @Bean
     public Queue handlingActivityRegisteredQueue() {
-        return new Queue(TrackingEventChannels.HANDLING_QUEUE, true, false, false, Map.of(
-                "x-dead-letter-exchange", TrackingEventChannels.DEAD_LETTER_EXCHANGE,
-                "x-dead-letter-routing-key", TrackingEventChannels.HANDLING_DEAD_LETTER_QUEUE));
+        return subscriberQueue(TrackingEventChannels.HANDLING_QUEUE,
+                TrackingEventChannels.HANDLING_DEAD_LETTER_QUEUE);
     }
 
     @Bean
@@ -344,9 +341,8 @@ public class TrackingConfig {
      */
     @Bean
     public Queue trackingNumberIssuedQueue() {
-        return new Queue(TrackingEventChannels.QUEUE, true, false, false, Map.of(
-                "x-dead-letter-exchange", TrackingEventChannels.DEAD_LETTER_EXCHANGE,
-                "x-dead-letter-routing-key", TrackingEventChannels.DEAD_LETTER_QUEUE));
+        return subscriberQueue(TrackingEventChannels.QUEUE,
+                TrackingEventChannels.DEAD_LETTER_QUEUE);
     }
 
     @Bean
@@ -393,4 +389,18 @@ public class TrackingConfig {
     public Binding trackingUnroutableBinding() {
         return BindingBuilder.bind(trackingUnroutableQueue()).to(trackingUnroutableExchange());
     }
+
+    /**
+     * 購読キューを、<strong>同じ引数で</strong>宣言する。
+     *
+     * <p>引数の組を 1 か所に集める。キューの引数は<strong>既存の環境では宣言し直せず</strong>、
+     * 1 つでも食い違うと {@code PRECONDITION_FAILED} で落ちて、そのサービスは起動しない。
+     * 書き写す形にすると、キューが増えるたびに写し間違いの機会が増える。
+     */
+    private static Queue subscriberQueue(String name, String deadLetterQueue) {
+        return new Queue(name, true, false, false, Map.of(
+                "x-dead-letter-exchange", TrackingEventChannels.DEAD_LETTER_EXCHANGE,
+                "x-dead-letter-routing-key", deadLetterQueue));
+    }
+
 }

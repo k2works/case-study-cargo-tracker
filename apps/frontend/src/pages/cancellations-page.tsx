@@ -24,15 +24,15 @@ function DecisionForm({
   const approve = useApproveCancellation(cancellation.bookingId);
   const reject = useRejectCancellation(cancellation.bookingId);
 
-  const [dischargeLocationUnLocode, setDischargeLocation] = useState("");
+  const [dischargeLocationUnLocode, setDischargeLocationUnLocode] = useState("");
   const [decisionReason, setDecisionReason] = useState("");
 
-  const failure =
-    approve.error instanceof ApiError
-      ? approve.error.message
-      : reject.error instanceof ApiError
-        ? reject.error.message
-        : null;
+  // **承認と却下の失敗を 1 か所で受ける。** 入れ子の三項にすると、
+  // 「どちらの失敗を出しているか」が読み取りにくくなる
+  const failed = [approve.error, reject.error].find(
+    (error) => error instanceof ApiError,
+  );
+  const failure = failed instanceof ApiError ? failed.message : null;
 
   function submitApprove(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -72,7 +72,7 @@ function DecisionForm({
               id="dischargeLocation"
               required
               value={dischargeLocationUnLocode}
-              onChange={(event) => setDischargeLocation(event.target.value)}
+              onChange={(event) => setDischargeLocationUnLocode(event.target.value)}
               className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
             >
               <option value="">選んでください</option>
@@ -101,7 +101,7 @@ function DecisionForm({
 
         <p className="text-sm text-gray-600">
           承認すると<strong>キャンセルが確定します</strong>。指定した陸揚げ地は予約詳細に
-          残り、荷役の担当者が確認します。
+          {'残り、荷役の担当者が確認します。'}
           <strong>荷降しの作業指示は自動では作られません</strong>——担当者へ連絡してください。
         </p>
 
@@ -152,12 +152,11 @@ export function CancellationsPage() {
 
       {done !== null && (
         <div className="space-y-2">
-          <p
-            role="status"
-            className="rounded border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-900"
+          <output
+            className="rounded border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-900 block"
           >
             {done}
-          </p>
+          </output>
           {/*
             US30-6・US30-7 は**代替**である（通知の仕組みがまだ無い）。**送っていない
             ことを画面が言う**（IT8 と同じ形）。書かないと、追跡管理者は「承認したから
@@ -167,9 +166,9 @@ export function CancellationsPage() {
           <p className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
             <strong>荷主と申請者へのご連絡は自動では行われません。</strong>
             {/* 改行を空白と読ませない（日本語は語間を空けない） */}
-            決定の内容は、担当者からお伝えください。承認した場合は
+            {'決定の内容は、担当者からお伝えください。承認した場合は'}
             <strong>荷役の担当者にも陸揚げ地をご連絡ください</strong>
-            （荷降しの作業指示は自動では作られません）。
+            {'（荷降しの作業指示は自動では作られません）。'}
           </p>
         </div>
       )}

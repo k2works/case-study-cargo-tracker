@@ -168,8 +168,11 @@ class CustomsGuardTest {
     @Test
     @DisplayName("通関が下りていなければ、荷受人の確認を入れる前に断られる")
     void checksCustomsBeforeTheConsigneeConfirmation() {
-        assertThatThrownBy(() -> useCase.register(new RegisterHandlingActivityCommand(
-                TRACKING, "CLAIM", "USLAX", NOW, "handler01", null, null)))
+        RegisterHandlingActivityCommand claimWithoutConfirmation =
+                new RegisterHandlingActivityCommand(
+                        TRACKING, "CLAIM", "USLAX", NOW, "handler01", null, null);
+
+        assertThatThrownBy(() -> useCase.register(claimWithoutConfirmation))
                 .as("荷受人の確認のほうで先に落ちている。順序が入れ替わっている")
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("通関申告がありません");

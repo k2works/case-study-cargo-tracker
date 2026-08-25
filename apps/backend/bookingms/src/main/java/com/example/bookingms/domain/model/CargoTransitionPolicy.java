@@ -57,15 +57,6 @@ record CargoTransitionPolicy(CargoStatus status, boolean trackingNumberIssued) {
         return Optional.empty();
     }
 
-    /** 追跡番号を発行できない理由。できるなら空を返す。 */
-    /**
-     * キャンセルを申請できない理由（US30-1）。
-     *
-     * <p>判定をここに置くのは、<strong>可否の判定を 1 か所に集めるため</strong>である。
-     * 集約に散らすと、状態を足したときに直す場所が増える。
-     *
-     * <p>配送完了はすでに荷受人へ引き渡しており、キャンセルする対象が無い。
-     */
     /**
      * その荷役のあと、予約はどの状態になるか（[ADR-025] 決定 1）。
      *
@@ -87,6 +78,14 @@ record CargoTransitionPolicy(CargoStatus status, boolean trackingNumberIssued) {
         return BookingStatus.afterHandling(handlingType).filter(status.booking()::canAdvanceTo);
     }
 
+    /**
+     * キャンセルを申請できない理由（US30-1）。
+     *
+     * <p>判定をここに置くのは、<strong>可否の判定を 1 か所に集めるため</strong>である。
+     * 集約に散らすと、状態を足したときに直す場所が増える。
+     *
+     * <p>配送完了はすでに荷受人へ引き渡しており、キャンセルする対象が無い。
+     */
     Optional<String> reasonCannotCancel() {
         return switch (status.booking()) {
             case CANCELLED -> Optional.of("この予約はすでにキャンセルされています");
@@ -95,6 +94,7 @@ record CargoTransitionPolicy(CargoStatus status, boolean trackingNumberIssued) {
         };
     }
 
+    /** 追跡番号を発行できない理由。できるなら空を返す。 */
     Optional<String> reasonCannotIssueTrackingNumber() {
         if (status.booking() != BookingStatus.CONFIRMED) {
             return Optional.of("確定した予約にだけ追跡番号を発行できます");

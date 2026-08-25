@@ -111,7 +111,8 @@ class SchemaDesignConsistencyTest {
         assertThat(design.values().stream().mapToInt(Map::size).sum())
                 .as("テーブルが 1 つも読めていない。パーサが壊れている")
                 .isGreaterThan(10);
-        assertThat(design.keySet()).contains("tracking_db", "handling_db", "booking_db");
+        assertThat(design)
+                .containsKeys("tracking_db", "handling_db", "booking_db");
     }
 
     @Test

@@ -25,6 +25,11 @@ const EMPTY: CustomsSearchCriteria = {
   status: "",
 };
 
+/** 留置からの日数の表示。留置でなければ数えていないので「-」を出す。 */
+function heldDaysLabel(heldDays: number | null): string {
+  return heldDays === null ? "-" : `${heldDays} 日`;
+}
+
 export function CustomsPage() {
   const [form, setForm] = useState<CustomsSearchCriteria>(EMPTY);
   const [criteria, setCriteria] = useState<CustomsSearchCriteria>(EMPTY);
@@ -83,7 +88,7 @@ export function CustomsPage() {
 
       {overdueOnly && (
         <p className="text-sm text-gray-600">
-          留置 3 日超だけを出しています。
+          {'留置 3 日超だけを出しています。'}
           <button
             type="button"
             onClick={() => setOverdueOnly(false)}
@@ -200,10 +205,8 @@ export function CustomsPage() {
                     <span className="rounded bg-red-100 px-2 py-0.5 text-red-900">
                       ⚠ 3 日超（{declaration.heldDays} 日）
                     </span>
-                  ) : declaration.heldDays !== null ? (
-                    `${declaration.heldDays} 日`
                   ) : (
-                    "-"
+                    heldDaysLabel(declaration.heldDays)
                   )}
                 </td>
               </tr>

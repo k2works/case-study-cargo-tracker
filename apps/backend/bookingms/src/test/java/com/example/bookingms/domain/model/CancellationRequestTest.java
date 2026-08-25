@@ -81,8 +81,10 @@ class CancellationRequestTest {
         @Test
         @DisplayName("陸揚げ地なしの承認は断る")
         void requiresADischargeLocation() {
+            CancellationRequest request = inTransit();
+
             assertThatThrownBy(() ->
-                    inTransit().approve(" ", "tracker01", "荷主と合意", DECIDED_AT))
+                    request.approve(" ", "tracker01", "荷主と合意", DECIDED_AT))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("陸揚げ地");
         }
@@ -122,7 +124,9 @@ class CancellationRequestTest {
         @Test
         @DisplayName("理由なしの却下は断る")
         void requiresADecisionReason() {
-            assertThatThrownBy(() -> inTransit().reject("tracker01", " ", DECIDED_AT))
+            CancellationRequest request = inTransit();
+
+            assertThatThrownBy(() -> request.reject("tracker01", " ", DECIDED_AT))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("理由");
         }

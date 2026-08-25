@@ -141,11 +141,6 @@ class PublicTrackingControllerTest {
     }
 
     /**
-     * <strong>形式が違っても「見つかりません」で返す</strong>（[ADR-024] 決定 6）。
-     *
-     * <p>形式の誤りを別の答えにすると、番号の形を総当たりの手がかりとして教えることになる。
-     */
-    /**
      * <strong>本文が読める形で返る</strong>（IT9 返済枠 0.3・0.14）。
      *
      * <p>Spring の既定は {@code server.error.include-message=never} であり、
@@ -169,6 +164,11 @@ class PublicTrackingControllerTest {
                                 + "もう一度入力してください"));
     }
 
+    /**
+     * <strong>形式が違っても「見つかりません」で返す</strong>（[ADR-024] 決定 6）。
+     *
+     * <p>形式の誤りを別の答えにすると、番号の形を総当たりの手がかりとして教えることになる。
+     */
     @Test
     @DisplayName("形式が違う番号も 404 で返す")
     void doesNotRevealTheNumberFormat() throws Exception {

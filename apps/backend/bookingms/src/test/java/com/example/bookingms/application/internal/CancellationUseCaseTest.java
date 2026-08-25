@@ -92,7 +92,7 @@ class CancellationUseCaseTest {
                         Instant.parse("2026-09-06T09:00:00Z"),
                         Instant.parse("2026-09-18T09:00:00Z"))));
 
-        Cargo cargo = CargoRestoration.restore(1L, BookingId.of(BOOKING_ID), 1L,
+        return CargoRestoration.restore(1L, BookingId.of(BOOKING_ID), 1L,
                 new CargoStatus(status, TransportStatus.NOT_RECEIVED, RoutingStatus.ROUTED),
                 CargoSpecification.general(new BigDecimal("12000"), 20, "電子部品", null),
                 RouteSpecification.restore(TOKYO, LOS_ANGELES,
@@ -100,7 +100,6 @@ class CancellationUseCaseTest {
                         LocalDate.of(2026, Month.SEPTEMBER, 20)),
                 itinerary, null, TrackingNumber.of("TRK-20260823-0001"),
                 lastPort, Instant.parse("2026-09-05T00:00:00Z"));
-        return cargo;
     }
 
     @Nested

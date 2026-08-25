@@ -11,6 +11,8 @@ import com.example.handlingms.domain.model.DeclarationNumber;
 import com.example.handlingms.domain.model.HandlingTrackingNumber;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.Month;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
@@ -71,7 +73,7 @@ class ManageCustomsDeclarationUseCaseTest {
     @Test
     @DisplayName("業務の暦は注入した時計から決まる")
     void takesTodayFromTheInjectedClock() {
-        assertThat(useCase.today()).isEqualTo(java.time.LocalDate.of(2027, 9, 10));
+        assertThat(useCase.today()).isEqualTo(LocalDate.of(2027, Month.SEPTEMBER, 10));
         assertThat(useCase.zone()).isEqualTo(ZONE);
     }
 

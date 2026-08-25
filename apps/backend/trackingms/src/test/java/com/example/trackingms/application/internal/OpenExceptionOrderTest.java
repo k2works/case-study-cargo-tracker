@@ -81,7 +81,10 @@ class OpenExceptionOrderTest {
     };
 
     private final ManageTrackingUseCase useCase = new ManageTrackingUseCase(activities,
-            unLocode -> Optional.of(TOKYO), notifier(), Clock.systemUTC());
+            unLocode -> Optional.of(TOKYO), notifier(),
+            // **テストで実時計を使わない。** 並び順の検査に「いま」は要らず、
+            // 使うと実行時刻で結果が変わる余地を残す
+            Clock.fixed(Instant.parse("2026-08-25T00:00:00Z"), ZoneOffset.UTC));
 
     private static TrackingNotifier notifier() {
         return new TrackingNotifier() {

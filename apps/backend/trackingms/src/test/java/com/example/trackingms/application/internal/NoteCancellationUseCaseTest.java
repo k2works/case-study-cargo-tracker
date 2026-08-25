@@ -105,7 +105,11 @@ class NoteCancellationUseCaseTest {
     @Test
     @DisplayName("追跡の状態に、キャンセルを足さない")
     void doesNotIntroduceACancelledStatus() {
+        // **先に空でないことを確かめる。** 列挙が読めていなければ doesNotContain は
+        // 常に真になり、値を足しても緑のままになる（検査が何も守らない）
         assertThat(Arrays.stream(TrackingStatus.values()).map(Enum::name))
+                .as("追跡の状態が 1 つも読めていない。検査が何も守らないまま緑になる")
+                .isNotEmpty()
                 .as("状態を足している。進行の並びに「進まない値」が増える")
                 .doesNotContain("CANCELLED");
     }

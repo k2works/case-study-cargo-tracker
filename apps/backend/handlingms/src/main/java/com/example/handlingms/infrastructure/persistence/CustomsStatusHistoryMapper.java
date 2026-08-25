@@ -6,7 +6,6 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Result;
-import org.apache.ibatis.annotations.Results;
 import org.apache.ibatis.annotations.Select;
 
 @Mapper
@@ -30,12 +29,10 @@ public interface CustomsStatusHistoryMapper {
              WHERE customs_declaration_id = #{declarationId}
              ORDER BY changed_at, id
             """)
-    @Results({
-        @Result(column = "customs_declaration_id", property = "customsDeclarationId"),
-        @Result(column = "from_status", property = "fromStatus"),
-        @Result(column = "to_status", property = "toStatus"),
-        @Result(column = "changed_by", property = "changedBy"),
-        @Result(column = "changed_at", property = "changedAt"),
-    })
+    @Result(column = "customs_declaration_id", property = "customsDeclarationId")
+    @Result(column = "from_status", property = "fromStatus")
+    @Result(column = "to_status", property = "toStatus")
+    @Result(column = "changed_by", property = "changedBy")
+    @Result(column = "changed_at", property = "changedAt")
     List<CustomsStatusHistoryRecord> findByDeclarationId(@Param("declarationId") long declarationId);
 }
