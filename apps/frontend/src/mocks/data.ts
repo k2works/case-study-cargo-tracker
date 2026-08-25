@@ -112,6 +112,8 @@ export type MockBooking = {
    * ——同じ事実を trackingms から取りに行くと 2 ホップ先の伝聞になる。
    */
   lastHandlingLocationUnLocode?: string | null
+  /** 誤配が起きた事実（US28）。**再設計しても消さない**。 */
+  misroute?: { at: string; locationUnLocode: string } | null
   lastHandlingAt?: string | null
 }
 
@@ -189,6 +191,11 @@ export function mockAvailableActions(booking: MockBooking): string[] {
   // すでにキャンセルされた予約には出さない（押した先で 409 になる）
   if (booking.bookingStatus !== 'CANCELLED' && booking.bookingStatus !== 'DELIVERED') {
     actions.push('REQUEST_CANCELLATION')
+  }
+  // 誤配のあとの組み直し（US28-4）。**通常の割り当てとは別に出す**——後者は
+  // 現在地が出発地であり、判断の前提が違う
+  if (booking.misroute !== null && booking.misroute !== undefined) {
+    actions.push('REASSIGN_ROUTE')
   }
   if (
     booking.routingStatus === 'NOT_ROUTED' ||
@@ -480,6 +487,68 @@ export const bookings: MockBooking[] = [
     trackingNumber: 'TRK-20260823-0002',
     lastHandlingLocationUnLocode: 'CNSHA',
     lastHandlingAt: '2027-09-08T00:00:00Z',
+    itinerary: [
+      {
+        voyageNumber: 'V-SEED-3',
+        loadUnLocode: 'JPTYO',
+        loadName: 'Tokyo',
+        unloadUnLocode: 'CNSHA',
+        unloadName: 'Shanghai',
+        loadTime: '2027-09-02T00:00:00Z',
+        unloadTime: '2027-09-08T00:00:00Z',
+      },
+      {
+        voyageNumber: 'V-SEED-4',
+        loadUnLocode: 'CNSHA',
+        loadName: 'Shanghai',
+        unloadUnLocode: 'USLAX',
+        unloadName: 'Los Angeles',
+        loadTime: '2027-09-10T00:00:00Z',
+        unloadTime: '2027-09-25T00:00:00Z',
+      },
+    ],
+  },
+
+  /**
+   * 誤配が起きている予約（US28・IT10）。
+   *
+   * <p>予定は東京 → 上海 → ロサンゼルスだったが、<strong>シンガポールで荷降しされた</strong>。
+   * 経路の状況は `MISROUTED` で、誤配の事実（いつ・どこで）を持つ。
+   *
+   * <p>この 2 つを<strong>別に持つ</strong>のが要点である——再設計して `ROUTED` へ戻っても、
+   * 誤配の記録は残る（料金調整の根拠。受入基準 28-8）。
+   */
+  {
+    id: 6,
+    bookingId: 'BKG-2026000006',
+    shipperId: 1,
+    bookingStatus: 'IN_TRANSIT',
+    transportStatus: 'IN_TRANSIT',
+    routingStatus: 'MISROUTED',
+    type: 'GENERAL',
+    weightKg: 3200,
+    quantity: 15,
+    description: '産業機械部品',
+    lengthCm: null,
+    widthCm: null,
+    heightCm: null,
+    originUnLocode: 'JPTYO',
+    originName: 'Tokyo',
+    destinationUnLocode: 'USLAX',
+    destinationName: 'Los Angeles',
+    departureDate: null,
+    arrivalDeadline: '2027-10-25',
+    hazardousClass: null,
+    unNumber: null,
+    properShippingName: null,
+    minCelsius: null,
+    maxCelsius: null,
+    routeNotifiedAt: '2026-08-22T02:00:00Z',
+    routeNotifiedBy: 'sales01',
+    trackingNumber: 'TRK-20260823-0003',
+    lastHandlingLocationUnLocode: 'SGSIN',
+    lastHandlingAt: '2027-09-09T00:00:00Z',
+    misroute: { at: '2027-09-09T00:00:00Z', locationUnLocode: 'SGSIN' },
     itinerary: [
       {
         voyageNumber: 'V-SEED-3',

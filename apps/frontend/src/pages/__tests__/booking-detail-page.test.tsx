@@ -590,4 +590,76 @@ describe('予約の詳細（US06）', () => {
       expect(screen.getByText(/荷主には自動で送られていません/)).toBeInTheDocument()
     })
   })
+
+  describe('誤配（US28-3・US28-4）', () => {
+    const MISROUTED = {
+      bookingStatus: 'IN_TRANSIT',
+      routingStatus: 'MISROUTED',
+      trackingNumber: 'TRK-20260823-0003',
+      // **外れた場所と現在地を別の港にする。** 同じにすると、片方を落としても
+      // もう片方が同じ文字列を出すため、検査が判別しない（最初にそう書いて空振りした）
+      lastHandlingLocationUnLocode: 'HKHKG',
+      misroute: { at: '2027-09-09 09:00', locationUnLocode: 'SGSIN' },
+    }
+
+    function renderMisrouted(roles: Role[]) {
+      server.use(
+        http.get(`${API_PATHS.bookings}/:bookingId`, () =>
+          HttpResponse.json(bookingIn(MISROUTED as never)),
+        ),
+      )
+      return renderPage(roles)
+    }
+
+    /**
+     * **「誤配があった」だけでは足りない**（US28-3）。
+     *
+     * 経路設計者は**どこで外れたか**と**いまどこにいるか**が分からないと、
+     * 組み直す起点を決められない。
+     */
+    it('外れた場所・日時と、現在地が出る', async () => {
+      renderMisrouted(['ROLE_ROUTING'])
+
+      const banner = await screen.findByRole('alert')
+      expect(banner).toHaveTextContent('予定ルートから外れています')
+      expect(banner, '外れた場所が出ていない。組み直す起点が分からない')
+        .toHaveTextContent('SGSIN')
+      expect(banner, '現在地が出ていない。いまどこから組み直すのか分からない')
+        .toHaveTextContent('HKHKG')
+      expect(banner).toHaveTextContent('2027-09-09 09:00')
+    })
+
+    /**
+     * **直すのは経路設計者である**（US28-4・[ADR-026] 決定 6）。
+     *
+     * サーバが操作を載せ、画面はそれに従う——**載せ忘れると画面には何も出ないが
+     * API は 200 を返す**（IT9 で踏んだ形）。
+     */
+    it('経路設計者には、再設計への導線が出る', async () => {
+      renderMisrouted(['ROLE_ROUTING'])
+
+      expect(
+        await screen.findByRole('link', { name: '経路を再設計する' }),
+        '再設計の入口が無い。誤配に気づいても直せない',
+      ).toHaveAttribute('href', '/routing/design/BKG-2026000001')
+    })
+
+    /** 営業は組み直さない。**押せない操作を見せない**。 */
+    it('営業には、再設計への導線を出さない', async () => {
+      renderMisrouted(['ROLE_SALES'])
+
+      await screen.findByRole('alert')
+      expect(
+        screen.queryByRole('link', { name: '経路を再設計する' }),
+      ).not.toBeInTheDocument()
+    })
+
+    /** 誤配していない予約にはバナーを出さない。**一覧が警告で埋まると読まれなくなる**。 */
+    it('誤配していない予約には、バナーを出さない', async () => {
+      renderPage(['ROLE_ROUTING'])
+
+      await screen.findByRole('heading', { name: /^予約 BKG-/ })
+      expect(screen.queryByText(/予定ルートから外れています/)).not.toBeInTheDocument()
+    })
+  })
 })

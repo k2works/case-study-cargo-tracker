@@ -157,6 +157,13 @@ export function DashboardPage() {
           )}
           {/* 追跡管理者は、通関の留置とキャンセルの承認待ちに自分で気づく必要がある
               ——どちらも通知の仕組みが無く、放置すると保管料と行き先を失った貨物になる */}
+          {/* 誤配は経路設計者が直す。**追跡管理者からの連絡待ちにしない**（US28） */}
+          {panel.role === 'ROLE_ROUTING' && (
+            <RoutingBacklogNotice
+              routingStatus="MISROUTED"
+              message={(count) => `誤配が起きている予約が ${count} 件あります。`}
+            />
+          )}
           {panel.role === 'ROLE_TRACKER' && <OverdueCustomsNotice />}
           {panel.role === 'ROLE_TRACKER' && <PendingCancellationNotice />}
           <ul className="mt-4 space-y-2 text-sm">

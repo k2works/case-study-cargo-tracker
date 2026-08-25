@@ -78,7 +78,14 @@ public record BookingResponse(
          * <p><strong>いつ・どこで外れたかまで返す。</strong>「誤配があった」だけでは、
          * 画面は場所を別に問い合わせることになる。
          */
-        MisrouteResponse misroute) {
+        MisrouteResponse misroute,
+        /**
+         * 最後に荷役があった港（US28-3・US28-4）。まだ荷役が無ければ {@code null}。
+         *
+         * <p>誤配のバナーが「いまどこにいるか」を出すために返す。
+         * <strong>再設計はここを出発地とする。</strong>
+         */
+        String lastHandlingLocationUnLocode) {
 
         public BookingResponse {
         // 受け取った一覧を写して持つ。呼び出し元が渡したものをそのまま抱えると、
@@ -123,6 +130,9 @@ public record BookingResponse(
         }
         if (cargo.canRequestCancellation()) {
             actions.add(BookingAction.REQUEST_CANCELLATION);
+        }
+        if (cargo.isMisrouted()) {
+            actions.add(BookingAction.REASSIGN_ROUTE);
         }
         return List.copyOf(actions);
     }
@@ -191,7 +201,8 @@ public record BookingResponse(
                 cargo.misroute()
                         .map(recorded -> new MisrouteResponse(
                                 recorded.at(), recorded.locationUnLocode()))
-                        .orElse(null));
+                        .orElse(null),
+                cargo.lastHandlingLocation().orElse(null));
     }
 
     /**

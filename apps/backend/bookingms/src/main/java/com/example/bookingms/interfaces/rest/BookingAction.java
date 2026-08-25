@@ -34,5 +34,13 @@ public enum BookingAction {
      * 応答に載らなければ画面は判断できず、モックだけが返している状態になる——実際、
      * IT9 のクローズまでその状態だった。
      */
-    REQUEST_CANCELLATION
+    REQUEST_CANCELLATION,
+    /**
+     * 誤配のあとに経路を組み直す（経路設計者・US28-4）。
+     *
+     * <p><strong>通常の経路割り当てとは別に出す。</strong>画面が同じボタンを出すと、
+     * 経路設計者は「依頼に応える作業」と「組み直す作業」を見分けられない
+     * ——後者は<strong>現在地が出発地</strong>であり、判断の前提が違う。
+     */
+    REASSIGN_ROUTE
 }

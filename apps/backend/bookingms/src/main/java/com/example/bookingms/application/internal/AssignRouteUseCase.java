@@ -46,7 +46,12 @@ public class AssignRouteUseCase {
                 .map(cargo -> {
                     requireStillAvailable(cargo, chosen, maxTransshipments);
                     ZoneId destinationZone = destinationZoneOf(cargo);
-                    return cargoes.save(cargo.assignItinerary(chosen, destinationZone));
+                    // **誤配のあとは別の操作である**（[ADR-026] 決定 4b）。
+                    // 通常の割り当てを通すと、輸送中の貨物が「経路を提示した」状態へ戻り、
+                    // 荷主が合意して確定した記録が消える
+                    return cargoes.save(cargo.isMisrouted()
+                            ? cargo.reassignItinerary(chosen, destinationZone)
+                            : cargo.assignItinerary(chosen, destinationZone));
                 });
     }
 
@@ -64,8 +69,14 @@ public class AssignRouteUseCase {
     private void requireStillAvailable(Cargo cargo, CargoItinerary chosen,
             Integer maxTransshipments) {
         RouteSpecification route = cargo.routeSpecification();
+        // **誤配のあとは現在地が出発地である**（US28-4・[ADR-026] 決定 4）。
+        // 元の出発地で候補を引くと、画面に出した候補（現在地起点）が
+        // 「候補に無い」と判定され、**選べたのに確定できない**
+        String origin = cargo.isMisrouted()
+                ? cargo.lastHandlingLocation().orElse(route.origin().unLocode())
+                : route.origin().unLocode();
         List<CargoItinerary> available = routeCandidates.find(new RouteCandidateQuery(
-                route.origin().unLocode(), route.destination().unLocode(),
+                origin, route.destination().unLocode(),
                 route.arrivalDeadline(), cargo.type(), maxTransshipments,
                 route.departureDate().orElse(null)));
 

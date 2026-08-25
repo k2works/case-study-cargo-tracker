@@ -64,6 +64,9 @@ export const PANELS: Panel[] = [
     actions: [
       // 件数だけ出しても仕事は進まない。ここから対象の一覧へ行けるようにする（US06）
       { label: '経路設計を待っている予約を見る', to: '/booking?routingStatus=ROUTING_REQUESTED' },
+      // **誤配は放っておくほど貨物が目的地から遠ざかる**（US28）。組み直すのは
+      // 経路設計者であり、気づく手段が無いと追跡管理者からの連絡待ちになる
+      { label: '誤配が起きている予約を見る', to: '/booking?routingStatus=MISROUTED' },
       // 確定した予約は経路設計者が追跡番号を発行する（US13-3・US14）。
       // 件数だけ出しても仕事は進まない。ここから対象の一覧へ行けるようにする
       { label: '追跡番号の発行を待っている予約を見る', to: '/booking?bookingStatus=CONFIRMED' },

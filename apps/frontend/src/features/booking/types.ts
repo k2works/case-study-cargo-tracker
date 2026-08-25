@@ -70,6 +70,7 @@ export const ROUTING_STATUS_LABELS: Record<string, string> = {
   ROUTING_REQUESTED: '経路設計を依頼済み',
   ROUTED: '経路確定',
   CONSULTATION_REQUESTED: '条件協議中',
+  MISROUTED: '誤配',
 }
 
 /**
@@ -97,6 +98,15 @@ export type Booking = {
   bookingStatus: string
   transportStatus: string
   routingStatus: string
+  /**
+   * 誤配が起きた事実（US28-3）。起きていなければ null。
+   *
+   * **状態（routingStatus）とは別に持つ。** 再設計して ROUTED へ戻っても
+   * この記録は残る——料金調整の根拠として参照される。
+   */
+  misroute?: { at: string; locationUnLocode: string } | null
+  /** 最後に荷役があった港。**誤配のあとの再設計は、ここを出発地とする**（US28-4）。 */
+  lastHandlingLocationUnLocode?: string | null
   type: CargoType
   weightKg: number
   quantity: number | null
@@ -158,6 +168,14 @@ export type BookingAction =
   | 'ISSUE_TRACKING_NUMBER'
   | 'REVISE_SCHEDULE'
   | 'REQUEST_CANCELLATION'
+  /**
+   * 誤配のあとに経路を組み直す（US28-4）。
+   *
+   * **通常の経路割り当てとは別に出す。** 同じボタンにすると、経路設計者は
+   * 「依頼に応える作業」と「組み直す作業」を見分けられない——後者は
+   * **現在地が出発地**であり、判断の前提が違う。
+   */
+  | 'REASSIGN_ROUTE'
 
 /** その操作がいま行えるか。状態名の比較を画面に書かないための入口。 */
 export function can(booking: Booking, action: BookingAction): boolean {

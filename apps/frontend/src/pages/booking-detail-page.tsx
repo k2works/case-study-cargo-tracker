@@ -111,6 +111,42 @@ export function BookingDetailPage() {
         </p>
       )}
 
+      {/* **誤配のバナー**（US28-3）。いつ・どこで外れたかと、いまどこにいるかを出す
+          ——「誤配があった」だけでは、経路設計者は組み直す起点が分からない。
+          **気づく人（追跡管理者）と直す人（経路設計者）の両方が読む** */}
+      {booking.misroute !== null && booking.misroute !== undefined && (
+        <div
+          role="alert"
+          className="space-y-1 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-900"
+        >
+          <p>
+            <strong>この貨物は予定ルートから外れています。</strong>
+            {'目的地までの経路を組み直してください。'}
+          </p>
+          <p>
+            外れた場所: <strong>{booking.misroute.locationUnLocode}</strong>／ 日時:{" "}
+            {booking.misroute.at}
+          </p>
+          <p>
+            現在地:{" "}
+            <strong>
+              {booking.lastHandlingLocationUnLocode ?? "（荷役の記録がありません）"}
+            </strong>
+          </p>
+          {can(booking, "REASSIGN_ROUTE") && isRoutingPlanner && (
+            <p>
+              <Link
+                to={`/routing/design/${encodeURIComponent(booking.bookingId)}`}
+                className="text-blue-700 underline"
+              >
+                経路を再設計する
+              </Link>
+              {'（現在地を出発地として候補を探します）'}
+            </p>
+          )}
+        </div>
+      )}
+
       {failure !== null && (
         <p
           role="alert"
