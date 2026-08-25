@@ -269,14 +269,6 @@ public class CargoBookingController {
     }
 
     /**
-     * 貨物予約は営業担当者の業務である（ADR-008）。
-     *
-     * <p>{@code ROLE_SHIPPER} には開かない。利用者と荷主を結ぶキーが無く「自分の予約だけ」に
-     * 絞り込めないため、開くと全荷主の予約が見える。US18（IT6）で紐付けと同時に広げ直す。
-     *
-     * <p>予約の中身は営業担当者と経路設計者が見る。経路を組む判断には内容が要る。
-     */
-    /**
      * 予約の詳細を読める人。
      *
      * <p><strong>一覧は広げない。</strong>一覧まで開くと、追跡管理者が営業の抱えている
@@ -289,6 +281,14 @@ public class CargoBookingController {
         }
     }
 
+    /**
+     * 貨物予約は営業担当者の業務である（ADR-008）。
+     *
+     * <p>{@code ROLE_SHIPPER} には開かない。利用者と荷主を結ぶキーが無く「自分の予約だけ」に
+     * 絞り込めないため、開くと全荷主の予約が見える。US18（IT6）で紐付けと同時に広げ直す。
+     *
+     * <p>予約の中身は営業担当者と経路設計者が見る。経路を組む判断には内容が要る。
+     */
     private void requireSalesOrRouting(AuthenticatedUser user) {
         if (!user.hasAnyRole(Role.ROLE_SALES, Role.ROLE_ROUTING)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "この操作を行う権限がありません");
