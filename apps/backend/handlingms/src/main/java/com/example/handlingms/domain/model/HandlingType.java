@@ -25,9 +25,12 @@ public enum HandlingType {
     /**
      * 引取。荷受人へ引き渡す。
      *
-     * <p>荷受人の確認が要る（[ADR-023] 決定 4）。これは通関ガード
-     * （{@code CustomsDeclaration}・US29・IT9）の<strong>代替</strong>である。ガードが
-     * 無いまま引取を通すと「通関前の貨物を引き渡した」記録が残る。IT9 で本物に置き換える。
+     * <p>荷受人の確認が要る（[ADR-023] 決定 4）。<strong>これは US16 の受入基準そのもの</strong>
+     * であり、通関ガードの代用として入れたのではない——IT7〜IT8 では代用も兼ねていたが、
+     * IT9 で本物の通関ガードが入ったあとも残る（[ADR-025] 決定 9）。
+     *
+     * <p><strong>通関ガードは、この確認の手前に立つ</strong>（US29-3）。順序が入れ替わると、
+     * 確認を入れさえすれば通関前でも通ってしまう。
      */
     CLAIM(false, true, ExpectedPort.DESTINATION);
 

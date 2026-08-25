@@ -5,9 +5,13 @@ package com.example.handlingms.domain.model;
  *
  * <p>引取のときに、荷役作業員が<strong>誰から確認を得たか</strong>を記録する。
  *
- * <p>これは通関ガード（{@code CustomsDeclaration}・US29・IT9）の<strong>代替</strong>である。
- * ガードが無いまま引取を通すと「通関前の貨物を引き渡した」記録が残る。空欄のまま通せる形に
- * しないために、確認を業務上の事実として残す。<strong>IT9 で本物のガードに置き換える。</strong>
+ * <p><strong>これは US16 の受入基準そのものである。</strong>誰に引き渡したかの記録であり、
+ * 通関ガードの代用として入れたのではない——IT7〜IT8 では代用も兼ねていたが、
+ * IT9 で本物の通関ガード（{@code CustomsDeclaration}・[ADR-025] 決定 9）が入った
+ * あとも<strong>この確認は残る</strong>。
+ *
+ * <p>通関ガードは引取の<strong>手前</strong>に立つ。順序が入れ替わると、確認を入れさえ
+ * すれば通関前でも通ってしまう。
  *
  * @param confirmedBy 確認を得た相手（荷受人の担当者名など）
  */

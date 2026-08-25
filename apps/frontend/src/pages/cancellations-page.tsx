@@ -112,6 +112,15 @@ function DecisionForm({
           <strong>荷降しの作業指示は自動では作られません</strong>——担当者へ連絡してください。
         </p>
 
+        {/* **キャンセル料の算定はまだ仕組みにない**（US21・Release 2.0）。
+            黙っていると、荷主は「無料で止められた」と受け取る——請求の段になって
+            話が食い違う。**申請時点の予約状態は記録してある**ので、算定の根拠は残る */}
+        <p className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          <strong>キャンセル料はこの画面では算定されません。</strong>
+          {'輸送の段階に応じた料金は、経理が別途算定します——'}
+          {'荷主には「料金は追ってご案内します」とお伝えください。'}
+        </p>
+
         <div className="flex gap-2">
           <button
             type="submit"
