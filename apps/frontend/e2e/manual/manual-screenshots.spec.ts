@@ -403,7 +403,12 @@ test('10-customs-list（通関申告一覧）', async ({ page }) => {
   // マニュアル 10.4 の説明（検索条件・列）と対応しない
   await page.getByRole('link', { name: '通関管理' }).click()
   await page.getByRole('link', { name: '新規申告' }).click()
+  // **描き終わってから入れる。** マウント直後に入れた値は、その後の初期化で
+  // 消えることがある——追跡番号だけが空のまま登録され、原因の分かりにくい
+  // 失敗になる。入ったことを確かめてから次へ進む
+  await expect(page.getByRole('heading', { name: '通関申告の登録' })).toBeVisible()
   await page.getByLabel('追跡番号').fill('TRK-20260823-0001')
+  await expect(page.getByLabel('追跡番号')).toHaveValue('TRK-20260823-0001')
   await page.getByLabel('申告番号').fill('DEC-0001')
   await page.getByLabel('申告日時').fill('2027-09-03T09:00')
   await page.getByRole('button', { name: '登録する' }).click()

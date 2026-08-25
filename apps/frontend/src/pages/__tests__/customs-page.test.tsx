@@ -86,6 +86,25 @@ describe("通関申告の一覧（US29）", () => {
   });
 
   /**
+   * **申告日時が、人の読む形で出る。**
+   *
+   * 生の ISO 文字列（`2027-09-03T00:00:00.000Z`）が出ると、利用者は自分の時刻に
+   * 読み替えられない。IT8 で荷主の画面に同じことが起き、IT9 では
+   * **モックだけが生の ISO を返していた**——画面のテストは日時の形を見ておらず、
+   * マニュアルのキャプチャにその姿が載った。
+   */
+  it("申告日時が、業務の時刻として読める形で出る", async () => {
+    clearedDeclaration(1, "DEC-0001");
+    renderPage();
+
+    const row = within(
+      (await screen.findByText("DEC-0001")).closest("tr") as HTMLElement,
+    );
+    // YYYY-MM-DD HH:mm。T や Z を含まない
+    expect(row.getByText(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/)).toBeInTheDocument();
+  });
+
+  /**
    * US29-6。**留置 3 日超は警告が出る。**
    *
    * 3 日ちょうどでは出さない。「3 日を超えたら」であり、境界を入れると

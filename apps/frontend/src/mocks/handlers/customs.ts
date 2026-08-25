@@ -19,6 +19,7 @@
 import { HttpResponse, http } from 'msw'
 import { API_PATHS } from '../../config/api'
 import { bookings } from '../data'
+import { formatBusinessDateTime } from '../../lib/business-time'
 
 /** 通関状態（本物の `CustomsStatus` の写し）。 */
 const CUSTOMS_STATUSES = [
@@ -80,6 +81,17 @@ function heldDaysOf(declaration: MockDeclaration): number | null {
   return Math.floor(elapsed / (24 * 60 * 60 * 1000))
 }
 
+/**
+ * 日時は<strong>本物と同じ形</strong>で返す（業務タイムゾーンの「YYYY-MM-DD HH:mm」）。
+ *
+ * <p>生の ISO 文字列を返すと、**モックの上でだけ画面が違って見える**——利用者には
+ * `2027-09-03T00:00:00.000Z` が出る。マニュアルのキャプチャはモックで撮るため、
+ * その姿が手引きに載る（IT9 のクローズで実際に撮れてしまった）。
+ */
+function businessTime(isoInstant: string | null): string | null {
+  return isoInstant === null ? null : formatBusinessDateTime(isoInstant)
+}
+
 function view(declaration: MockDeclaration) {
   const heldDays = heldDaysOf(declaration)
   return {
@@ -87,10 +99,10 @@ function view(declaration: MockDeclaration) {
     declarationNumber: declaration.declarationNumber,
     bookingId: declaration.bookingId,
     trackingNumber: declaration.trackingNumber,
-    declaredAt: declaration.declaredAt,
+    declaredAt: businessTime(declaration.declaredAt),
     status: declaration.status,
     statusLabel: labelOf(declaration.status),
-    clearedAt: declaration.clearedAt,
+    clearedAt: businessTime(declaration.clearedAt),
     heldOverdue: heldDays !== null && heldDays > HELD_OVERDUE_DAYS,
     heldDays,
     remarks: declaration.remarks,
@@ -106,7 +118,7 @@ function detailView(declaration: MockDeclaration) {
       toStatus: change.toStatus,
       toStatusLabel: labelOf(change.toStatus),
       changedBy: change.changedBy,
-      changedAt: change.changedAt,
+      changedAt: businessTime(change.changedAt),
       reason: change.reason,
     })),
   }
