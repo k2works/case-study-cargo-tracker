@@ -200,6 +200,10 @@ export function RouteDesignPage() {
             effectiveEarliestDeparture === ""
               ? null
               : effectiveEarliestDeparture,
+          // **期限では弾かない**（[ADR-026] 決定 4）。サーバは既定で期限を超える
+          // 候補を刈るため、伝えないと候補が 1 本も出ない——誤配した貨物は遅れて
+          // いるのが普通で、元の期限に間に合う便はまず残っていない
+          reroute: misrouted,
         };
 
   const { data, isLoading, isError, error, refetch } =

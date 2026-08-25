@@ -72,6 +72,14 @@ export function findMockRoutes(
   maxTransshipments: number,
   /** 荷物が出せるようになる時刻。本物と同じく、これより前に出る便には積めない（US10） */
   earliestDeparture: string | null = null,
+  /**
+   * 期限で候補を弾くか。
+   *
+   * **誤配のあとの組み直しでは弾かない**（US28-4・[ADR-026] 決定 4。本物の
+   * `RouteSearchSpecification#forReroute` と同じ）。誤配した貨物は遅れているのが
+   * 普通で、元の期限に間に合う便はまず残っていない——刈ると組み直せない。
+   */
+  enforceDeadline = true,
   readyAt: string | null = null,
   visited: string[] = [],
   arrivedOn: string | null = null,
@@ -86,7 +94,7 @@ export function findMockRoutes(
       continue
     }
     for (const leg of mockDeparturesFrom(voyage, from, readyAt)) {
-      if (leg.arrivalTime > deadline) {
+      if (enforceDeadline && leg.arrivalTime > deadline) {
         continue
       }
       if (earliestDeparture !== null && leg.departureTime < earliestDeparture) {
@@ -106,6 +114,7 @@ export function findMockRoutes(
         deadline,
         maxTransshipments,
         earliestDeparture,
+        enforceDeadline,
         leg.arrivalTime,
         [...visited, from],
         leg.voyageNumber,

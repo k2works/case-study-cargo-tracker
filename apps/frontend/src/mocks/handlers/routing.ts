@@ -115,6 +115,8 @@ export const routingHandlers = [
       (voyage) => voyage.supportedCargoTypes.includes(cargoType) && voyage.departureTime >= now,
     )
 
+    // **誤配のあとの組み直しでは期限で弾かない**（US28-4）。本物の routingms と同じ
+    const reroute = params.get('reroute') === 'true'
     const candidates = findMockRoutes(
       usable,
       origin,
@@ -122,6 +124,7 @@ export const routingHandlers = [
       deadlineInstant,
       maxTransshipments,
       earliestDepartureInstant,
+      !reroute,
     ).sort((a, b) => {
       const direct = Number(b.length === 1) - Number(a.length === 1)
       if (direct !== 0) return direct

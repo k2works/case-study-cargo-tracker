@@ -85,5 +85,8 @@ export function findRouteCandidates(criteria: RouteSearchCriteria): Promise<Rout
   if (criteria.earliestDeparture !== null) {
     params.set('earliestDeparture', criteria.earliestDeparture)
   }
+  if (criteria.reroute === true) {
+    params.set('reroute', 'true')
+  }
   return apiClient.get<RouteCandidateList>(`${API_PATHS.routes}?${params.toString()}`)
 }

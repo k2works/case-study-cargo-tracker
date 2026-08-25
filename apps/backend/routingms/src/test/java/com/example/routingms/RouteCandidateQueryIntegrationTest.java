@@ -86,6 +86,36 @@ class RouteCandidateQueryIntegrationTest {
     }
 
     /**
+     * 誤配のあとの組み直し（US28-4・[ADR-026] 決定 4）。
+     *
+     * <p><strong>SQL でも期限で落とさない。</strong>集約から期限検査を外し、探索の枝刈りも
+     * 条件に従わせても、<strong>SQL が「期限より後に出る航海」を落としていれば候補は
+     * 組み上がらない</strong>。誤配した貨物は遅れているのが普通で、間に合う便はまず
+     * 残っていない——刈ると組み直す手段そのものが無くなる。
+     */
+    @Test
+    @DisplayName("再設計では、期限より後に出る航海も引ける")
+    void keepsVoyagesDepartingAfterTheDeadlineWhenRerouting() {
+        save("Q-AFTER-DEADLINE", Set.of(CargoType.GENERAL),
+                leg(TOKYO, LOS_ANGELES, "2026-12-20T09:00:00Z", "2027-01-05T09:00:00Z"));
+
+        RouteSearchSpecification reroute = RouteSearchSpecification.forReroute(
+                TOKYO, LOS_ANGELES, Instant.parse("2026-11-30T00:00:00Z"), CargoType.GENERAL,
+                RouteSearchSpecification.DEFAULT_MAX_TRANSSHIPMENTS, null);
+
+        assertThat(repository.findCandidates(reroute, NOW))
+                .as("期限より後に出る航海を SQL が落としている。誤配した貨物を組み直せない")
+                .extracting(voyage -> voyage.voyageNumber().value())
+                .contains("Q-AFTER-DEADLINE");
+
+        // **通常の探索では落としたままにする。** 緩めるのは再設計だけ
+        assertThat(repository.findCandidates(
+                        spec(CargoType.GENERAL, "2026-11-30T00:00:00Z"), NOW))
+                .extracting(voyage -> voyage.voyageNumber().value())
+                .doesNotContain("Q-AFTER-DEADLINE");
+    }
+
+    /**
      * 往復航海の復路を落とさない。
      *
      * <p>IT3 では SQL の絞りと集約の判定が食い違い、集約側が復路を運べないと答えていた。

@@ -99,9 +99,14 @@ public class MyBatisVoyageRepository implements VoyageRepository {
     @Override
     public List<Voyage> findCandidates(RouteSearchSpecification specification,
             Instant notDepartedBefore) {
+        // **再設計では期限で落とさない**（US28-4・[ADR-026] 決定 4）。集約から期限検査を
+        // 外し、探索の枝刈りも条件に従わせても、ここで「期限より後に出る航海」を落とせば
+        // 候補は組み上がらない——**絞りは 3 か所にあり、1 か所でも残っていれば効かない**
+        Instant departureTo = specification.enforcesDeadline()
+                ? specification.arrivalDeadline()
+                : null;
         VoyageSearchCriteria criteria = new VoyageSearchCriteria(
-                null, null, notDepartedBefore, specification.arrivalDeadline(),
-                specification.cargoType());
+                null, null, notDepartedBefore, departureTo, specification.cargoType());
         return mapper.searchAll(toQueryParameters(criteria)).stream()
                 .map(this::toDomain)
                 .toList();

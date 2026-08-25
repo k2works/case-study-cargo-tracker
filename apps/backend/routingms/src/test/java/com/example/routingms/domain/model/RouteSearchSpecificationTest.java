@@ -259,4 +259,61 @@ class RouteSearchSpecificationTest {
             assertThat(specification.isSatisfiedBy(early)).isTrue();
         }
     }
+
+    /**
+     * 誤配のあとの組み直し（US28・[ADR-026] 決定 4・5）。
+     *
+     * <p><strong>期限で弾くと、組み直す手段そのものが無くなる。</strong>誤配した貨物は
+     * 遅れているのが普通であり、元の期限に間に合う便はまず残っていない。ここで候補を
+     * 刈ると、貨物は経路から外れたまま止まる——超える分は
+     * <strong>荷主に伝えて判断してもらう</strong>（決定 5）のであって、こちらで
+     * 「その経路は使えない」と決めるものではない。
+     */
+    @Nested
+    @DisplayName("期限で弾かない探索（US28-4）")
+    class WithoutDeadlineFilter {
+
+        private RouteSearchSpecification reroute() {
+            return RouteSearchSpecification.forReroute(SHANGHAI, LOS_ANGELES, DEADLINE,
+                    CargoType.GENERAL, RouteSearchSpecification.DEFAULT_MAX_TRANSSHIPMENTS, null);
+        }
+
+        @Test
+        @DisplayName("期限を超えて着く経路も候補になる")
+        void acceptsPathsBeyondTheDeadline() {
+            TransitPath late = TransitPath.of(List.of(edge(SHANGHAI, LOS_ANGELES,
+                    "2026-10-01T09:00:00Z", "2026-10-20T09:00:00Z")));
+
+            assertThat(reroute().isSatisfiedBy(late))
+                    .as("期限を超える経路を刈っている。誤配した貨物は組み直せない")
+                    .isTrue();
+        }
+
+        /** <strong>期限は残す。</strong>超える分を示すために要る（決定 5）。 */
+        @Test
+        @DisplayName("期限そのものは持ったままにする")
+        void keepsTheDeadlineForReporting() {
+            assertThat(reroute().arrivalDeadline()).isEqualTo(DEADLINE);
+        }
+
+        /** 期限のほかの条件は同じように効く。**全部を緩めるわけではない**。 */
+        @Test
+        @DisplayName("出発地・目的地は変わらず効く")
+        void stillFiltersByEndpoints() {
+            TransitPath wrongOrigin = TransitPath.of(List.of(edge(TOKYO, LOS_ANGELES,
+                    "2026-10-01T09:00:00Z", "2026-10-20T09:00:00Z")));
+
+            assertThat(reroute().isSatisfiedBy(wrongOrigin)).isFalse();
+        }
+
+        /** 通常の探索は期限で弾いたままにする。**緩めるのは再設計だけ**。 */
+        @Test
+        @DisplayName("通常の探索は今までどおり期限で弾く")
+        void ordinarySearchStillEnforcesTheDeadline() {
+            TransitPath late = TransitPath.of(List.of(edge(TOKYO, LOS_ANGELES,
+                    "2026-10-01T09:00:00Z", "2026-10-20T09:00:00Z")));
+
+            assertThat(specification().isSatisfiedBy(late)).isFalse();
+        }
+    }
 }

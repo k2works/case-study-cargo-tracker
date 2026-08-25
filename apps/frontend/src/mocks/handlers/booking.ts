@@ -170,13 +170,21 @@ export const bookingHandlers = [
     const usable = voyages.filter(
       (voyage) => voyage.supportedCargoTypes.includes(found.type) && voyage.departureTime >= now,
     )
+    // **誤配のあとは現在地が出発地で、期限では弾かない**（US28-4・[ADR-026] 決定 4）。
+    // 本物の `AssignRouteUseCase#requireStillAvailable` と同じ規則にする——ここが
+    // 甘い（または厳しい）と、モックでだけ通る・モックでだけ断られる形になる
+    const reroute = found.routingStatus === 'MISROUTED'
+    const searchOrigin = reroute
+      ? (found.lastHandlingLocationUnLocode ?? found.originUnLocode)
+      : found.originUnLocode
     const stillAvailable = findMockRoutes(
       usable,
-      found.originUnLocode,
+      searchOrigin,
       found.destinationUnLocode,
       deadlineInstant,
       body.maxTransshipments ?? 2,
       found.departureDate === null ? null : businessDateStartInstant(found.departureDate),
+      !reroute,
     ).some(
       (candidate) =>
         candidate.length === legs.length &&

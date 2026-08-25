@@ -438,9 +438,16 @@ public final class Cargo {
                         routeSpecification.daysBeyondDeadline(assigned, destinationZone));
     }
 
-    /** 誤配が起きているか（US28-3）。<strong>状態ではなく事実を見る</strong>。 */
+    /**
+     * <strong>いま</strong>経路から外れているか（US28-3）。
+     *
+     * <p><strong>「一度でも外れた」とは別である。</strong>記録（{@link #misroute()}）は
+     * 組み直しても消えないが、状態は `ROUTED` へ戻る（[ADR-026] 決定 3 と 4b）。事実の側で
+     * 振る舞いを決めると、組み直したのに「組み直してください」と言われ続け、通常の割り当てが
+     * 持つ端点・期限の検証が二度と適用されなくなる。<strong>分岐は状態で、表示は事実で。</strong>
+     */
     public boolean isMisrouted() {
-        return misroute != null;
+        return status.routing() == RoutingStatus.MISROUTED;
     }
 
     /** 誤配が起きた事実。起きていなければ空。 */

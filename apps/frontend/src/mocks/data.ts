@@ -193,8 +193,10 @@ export function mockAvailableActions(booking: MockBooking): string[] {
     actions.push('REQUEST_CANCELLATION')
   }
   // 誤配のあとの組み直し（US28-4）。**通常の割り当てとは別に出す**——後者は
-  // 現在地が出発地であり、判断の前提が違う
-  if (booking.misroute !== null && booking.misroute !== undefined) {
+  // 現在地が出発地であり、判断の前提が違う。
+  // **判定は状態で行う**（本物の `Cargo#isMisrouted` と同じ）。記録は組み直しても
+  // 消えないので、記録の有無で出すと済んだ操作の入口が残り続ける
+  if (booking.routingStatus === 'MISROUTED') {
     actions.push('REASSIGN_ROUTE')
   }
   if (

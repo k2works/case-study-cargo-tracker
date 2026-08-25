@@ -92,7 +92,9 @@ public class RestRouteCandidateFinder implements RouteCandidateFinder {
                 .queryParam("destination", query.destinationUnLocode())
                 // 期限は日付のまま渡す。日時への変換は相手が業務タイムゾーンで行う（ADR-017）
                 .queryParam("deadline", query.arrivalDeadline().toString())
-                .queryParam("cargoType", query.cargoType().name());
+                .queryParam("cargoType", query.cargoType().name())
+                // **再設計では期限で弾かない**（US28-4）。伝えなければ相手が既定で刈る
+                .queryParam("reroute", query.reroute());
         if (query.maxTransshipments() != null) {
             uriBuilder.queryParam("maxTransshipments", query.maxTransshipments());
         }

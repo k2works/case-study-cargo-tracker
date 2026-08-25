@@ -76,13 +76,17 @@ public class AssignRouteUseCase {
         // **誤配のあとは現在地が出発地である**（US28-4・[ADR-026] 決定 4）。
         // 元の出発地で候補を引くと、画面に出した候補（現在地起点）が
         // 「候補に無い」と判定され、**選べたのに確定できない**
-        String origin = cargo.isMisrouted()
+        boolean reroute = cargo.isMisrouted();
+        String origin = reroute
                 ? cargo.lastHandlingLocation().orElse(route.origin().unLocode())
                 : route.origin().unLocode();
+        // **再設計では期限で弾かないことを相手に伝える**（[ADR-026] 決定 4）。
+        // 集約から期限検査を外しただけでは足りない——routingms は既定で期限を超える
+        // 候補を刈るため、伝えなければ**候補が 1 本も返らず組み直せない**
         List<CargoItinerary> available = routeCandidates.find(new RouteCandidateQuery(
                 origin, route.destination().unLocode(),
                 route.arrivalDeadline(), cargo.type(), maxTransshipments,
-                route.departureDate().orElse(null)));
+                route.departureDate().orElse(null), reroute));
 
         if (!available.contains(chosen)) {
             throw new RouteNoLongerAvailableException(

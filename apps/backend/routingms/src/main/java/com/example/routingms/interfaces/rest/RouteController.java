@@ -54,14 +54,19 @@ public class RouteController {
             @RequestParam(name = "deadline", required = false) String deadline,
             @RequestParam(name = "cargoType", required = false) String cargoType,
             @RequestParam(name = "maxTransshipments", required = false) String maxTransshipments,
-            @RequestParam(name = "earliestDeparture", required = false) String earliestDeparture) {
+            @RequestParam(name = "earliestDeparture", required = false) String earliestDeparture,
+            // **誤配のあとの組み直しでは期限で弾かない**（US28-4・[ADR-026] 決定 4）。
+            // 弾くと組み直す手段そのものが無くなる。緩めるのはここだけで、出発地・目的地・
+            // 貨物種別・積み替えの上限は今までどおり効く
+            @RequestParam(name = "reroute", required = false) String reroute) {
         // 認可は入力の検査より先に行う（ADR-016）
         requireRoutingPlanner(userId, roles);
 
         return RouteCandidateListResponse.from(findRouteCandidates.find(origin, destination,
                 parseDeadline(deadline), parseCargoType(cargoType),
                 parseMaxTransshipments(maxTransshipments),
-                parseDate(earliestDeparture, "出発希望日")));
+                parseDate(earliestDeparture, "出発希望日"),
+                "true".equalsIgnoreCase(reroute)));
     }
 
     /**

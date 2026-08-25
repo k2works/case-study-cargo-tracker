@@ -98,6 +98,14 @@ export function BookingDetailPage() {
   }
 
   const failure = requestFailureMessage();
+  /**
+   * <strong>いま</strong>経路から外れているか。
+   *
+   * <p>誤配の記録は組み直しても消えない（US28-8。料金調整の根拠）。<strong>記録の有無で
+   * 指示を出すと、直したのに「直してください」と言われ続ける</strong>——サーバ側の
+   * `Cargo#isMisrouted` と同じく、分岐は状態で決める。
+   */
+  const offRoute = booking.routingStatus === "MISROUTED";
 
   return (
     <div className="space-y-6">
@@ -118,28 +126,45 @@ export function BookingDetailPage() {
 
       {/* **誤配のバナー**（US28-3）。いつ・どこで外れたかと、いまどこにいるかを出す
           ——「誤配があった」だけでは、経路設計者は組み直す起点が分からない。
-          **気づく人（追跡管理者）と直す人（経路設計者）の両方が読む** */}
+          **気づく人（追跡管理者）と直す人（経路設計者）の両方が読む**。
+
+          **「一度でも外れた」と「いま外れている」は別である**（[ADR-026] 決定 3 と 4b）。
+          記録は料金調整の根拠として残るが、組み直したあとも赤い指示が出続けると、
+          経路設計者は済んだ仕事をやり直す。**指示は状態で、記録の表示は事実で決める** */}
       {booking.misroute !== null && booking.misroute !== undefined && (
         <div
-          role="alert"
-          className="space-y-1 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-900"
+          role={offRoute ? "alert" : undefined}
+          className={
+            offRoute
+              ? "space-y-1 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-900"
+              : "space-y-1 rounded border border-gray-300 bg-gray-50 p-3 text-sm text-gray-800"
+          }
         >
-          <p>
-            <strong>この貨物は予定ルートから外れています。</strong>
-            {'目的地までの経路を組み直してください。'}
-          </p>
+          {offRoute ? (
+            <p>
+              <strong>この貨物は予定ルートから外れています。</strong>
+              {'目的地までの経路を組み直してください。'}
+            </p>
+          ) : (
+            <p>
+              <strong>誤配の記録</strong>
+              {'（経路は組み直し済みです。料金調整の根拠として残しています）'}
+            </p>
+          )}
           <p>
             外れた場所: <strong>{booking.misroute.locationUnLocode}</strong>／ 日時:{" "}
             {/* **業務の時刻で出す。**生の ISO（2027-09-09T00:00:00Z）を出すと、
                 担当者は自分の時刻に読み替えることになる（この画面の他の日時と同じ形） */}
             {formatBusinessDateTime(booking.misroute.at)}
           </p>
-          <p>
-            現在地:{" "}
-            <strong>
-              {booking.lastHandlingLocationUnLocode ?? "（荷役の記録がありません）"}
-            </strong>
-          </p>
+          {offRoute && (
+            <p>
+              現在地:{" "}
+              <strong>
+                {booking.lastHandlingLocationUnLocode ?? "（荷役の記録がありません）"}
+              </strong>
+            </p>
+          )}
           {/* **超える分は営業が読める場所に残す**（US28-6・[ADR-026] 決定 5）。
               荷主へ伝えるのは営業であり、経路を割り当てた直後の画面にしか
               出さないと、**伝える人の手元に値が残らない** */}

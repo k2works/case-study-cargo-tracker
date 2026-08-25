@@ -37,15 +37,26 @@ public final class RouteSearchSpecification {
     private final int maxTransshipments;
     /** 荷物が出せるようになる時刻。指定が無ければ出発の早さでは絞らない。 */
     private final Instant earliestDeparture;
+    /**
+     * 到着期限で候補を弾くか。
+     *
+     * <p>誤配のあとの組み直しでは<strong>弾かない</strong>（US28・[ADR-026] 決定 4・5）。
+     * 誤配した貨物は遅れているのが普通で、元の期限に間に合う便はまず残っていない。
+     * ここで刈ると<strong>組み直す手段そのものが無くなり</strong>、貨物は経路から
+     * 外れたまま止まる。超える分は荷主に伝えて判断してもらう。
+     */
+    private final boolean enforceDeadline;
 
     private RouteSearchSpecification(Location origin, Location destination, Instant arrivalDeadline,
-            CargoType cargoType, int maxTransshipments, Instant earliestDeparture) {
+            CargoType cargoType, int maxTransshipments, Instant earliestDeparture,
+            boolean enforceDeadline) {
         this.origin = origin;
         this.destination = destination;
         this.arrivalDeadline = arrivalDeadline;
         this.cargoType = cargoType;
         this.maxTransshipments = maxTransshipments;
         this.earliestDeparture = earliestDeparture;
+        this.enforceDeadline = enforceDeadline;
     }
 
     public static RouteSearchSpecification of(Location origin, Location destination,
@@ -74,6 +85,27 @@ public final class RouteSearchSpecification {
     public static RouteSearchSpecification of(Location origin, Location destination,
             Instant arrivalDeadline, CargoType cargoType, int maxTransshipments,
             Instant earliestDeparture) {
+        return build(origin, destination, arrivalDeadline, cargoType, maxTransshipments,
+                earliestDeparture, true);
+    }
+
+    /**
+     * 誤配のあとの組み直しの条件（US28-4・[ADR-026] 決定 4）。
+     *
+     * <p><strong>期限では弾かない。</strong>弾くと組み直す手段そのものが無くなり、貨物は
+     * 経路から外れたまま止まる。期限そのものは持ったままにする——<strong>超える分を示す</strong>
+     * ために要る（決定 5）。出発地・目的地・貨物種別・積み替えの上限は今までどおり効く。
+     */
+    public static RouteSearchSpecification forReroute(Location origin, Location destination,
+            Instant arrivalDeadline, CargoType cargoType, int maxTransshipments,
+            Instant earliestDeparture) {
+        return build(origin, destination, arrivalDeadline, cargoType, maxTransshipments,
+                earliestDeparture, false);
+    }
+
+    private static RouteSearchSpecification build(Location origin, Location destination,
+            Instant arrivalDeadline, CargoType cargoType, int maxTransshipments,
+            Instant earliestDeparture, boolean enforceDeadline) {
         if (origin == null || destination == null) {
             throw new IllegalArgumentException("出発地と目的地は必須です");
         }
@@ -97,7 +129,12 @@ public final class RouteSearchSpecification {
             throw new IllegalArgumentException("出発希望日が到着期限より後になっています");
         }
         return new RouteSearchSpecification(origin, destination, arrivalDeadline, cargoType,
-                maxTransshipments, earliestDeparture);
+                maxTransshipments, earliestDeparture, enforceDeadline);
+    }
+
+    /** 到着期限で候補を弾くか。{@link #forReroute} で組んだ条件だけが {@code false}。 */
+    public boolean enforcesDeadline() {
+        return enforceDeadline;
     }
 
     /**
@@ -111,7 +148,7 @@ public final class RouteSearchSpecification {
         return path != null
                 && origin.equals(path.origin())
                 && destination.equals(path.destination())
-                && !path.arrivalTime().isAfter(arrivalDeadline)
+                && (!enforceDeadline || !path.arrivalTime().isAfter(arrivalDeadline))
                 // 出発希望日ちょうどに出る便は満たす。荷物はその日から出せる
                 && (earliestDeparture == null
                         || !path.departureTime().isBefore(earliestDeparture))

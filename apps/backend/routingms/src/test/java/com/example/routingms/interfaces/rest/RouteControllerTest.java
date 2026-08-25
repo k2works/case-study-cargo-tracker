@@ -1,6 +1,7 @@
 package com.example.routingms.interfaces.rest;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -80,7 +81,7 @@ class RouteControllerTest {
         @Test
         @DisplayName("候補を推奨順で返す")
         void returnsRankedCandidates() throws Exception {
-            when(findRouteCandidates.find(any(), any(), any(), any(), any(), any()))
+            when(findRouteCandidates.find(any(), any(), any(), any(), any(), any(), anyBoolean()))
                     .thenReturn(new FindRouteCandidatesUseCase.Result(
                             List.of(direct(), viaShanghai()), specification()));
 
@@ -98,7 +99,7 @@ class RouteControllerTest {
         @Test
         @DisplayName("候補ごとに所要日数・経由港・費用・航海番号を返す")
         void returnsEveryFieldTheScreenNeeds() throws Exception {
-            when(findRouteCandidates.find(any(), any(), any(), any(), any(), any()))
+            when(findRouteCandidates.find(any(), any(), any(), any(), any(), any(), anyBoolean()))
                     .thenReturn(new FindRouteCandidatesUseCase.Result(
                             List.of(viaShanghai()), specification()));
 
@@ -134,7 +135,7 @@ class RouteControllerTest {
         @Test
         @DisplayName("候補が 0 件でも 200 で、使った条件を返す")
         void returnsOkWithCriteriaWhenEmpty() throws Exception {
-            when(findRouteCandidates.find(any(), any(), any(), any(), any(), any()))
+            when(findRouteCandidates.find(any(), any(), any(), any(), any(), any(), anyBoolean()))
                     .thenReturn(new FindRouteCandidatesUseCase.Result(List.of(), specification()));
 
             mockMvc.perform(request()
@@ -156,7 +157,7 @@ class RouteControllerTest {
         @Test
         @DisplayName("期限は日付（YYYY-MM-DD）で受け取り、そのままユースケースへ渡す")
         void passesTheDeadlineAsADate() throws Exception {
-            when(findRouteCandidates.find(any(), any(), any(), any(), any(), any()))
+            when(findRouteCandidates.find(any(), any(), any(), any(), any(), any(), anyBoolean()))
                     .thenReturn(new FindRouteCandidatesUseCase.Result(List.of(), specification()));
 
             mockMvc.perform(request()
@@ -165,13 +166,13 @@ class RouteControllerTest {
                     .andExpect(status().isOk());
 
             verify(findRouteCandidates).find("JPTYO", "USLAX",
-                    LocalDate.of(2026, Month.SEPTEMBER, 30), CargoType.GENERAL, null, null);
+                    LocalDate.of(2026, Month.SEPTEMBER, 30), CargoType.GENERAL, null, null, false);
         }
 
         @Test
         @DisplayName("積み替えの上限を指定できる（条件を緩めた再算出）")
         void acceptsALooserTransshipmentLimit() throws Exception {
-            when(findRouteCandidates.find(any(), any(), any(), any(), any(), any()))
+            when(findRouteCandidates.find(any(), any(), any(), any(), any(), any(), anyBoolean()))
                     .thenReturn(new FindRouteCandidatesUseCase.Result(List.of(), specification()));
 
             mockMvc.perform(request().param("maxTransshipments", "3")
@@ -179,13 +180,13 @@ class RouteControllerTest {
                             .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ROUTING"))
                     .andExpect(status().isOk());
 
-            verify(findRouteCandidates).find(any(), any(), any(), any(), eq(3), any());
+            verify(findRouteCandidates).find(any(), any(), any(), any(), eq(3), any(), anyBoolean());
         }
 
         @Test
         @DisplayName("港の指定が誤っていれば、経路が無いのではなく 400 で理由を返す")
         void reportsUnknownPortAsInvalidInput() throws Exception {
-            when(findRouteCandidates.find(any(), any(), any(), any(), any(), any()))
+            when(findRouteCandidates.find(any(), any(), any(), any(), any(), any(), anyBoolean()))
                     .thenThrow(new IllegalArgumentException("出発地が見つかりません: XXXXX"));
 
             mockMvc.perform(request().param("origin", "XXXXX")

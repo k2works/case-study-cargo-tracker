@@ -733,6 +733,41 @@ describe('予約の詳細（US06）', () => {
       expect(screen.queryByRole('button', { name: /確定する/ })).not.toBeInTheDocument()
     })
 
+    /**
+     * <strong>「一度でも外れた」と「いま外れている」は別である</strong>
+     * （IT10 レビュー・3 視点が独立に指摘）。
+     *
+     * <p>記録は料金調整の根拠として残る（US28-8）が、組み直したあとに赤い指示が
+     * 出続けると、経路設計者は<strong>済んだ仕事をやり直す</strong>。指示は状態で、
+     * 記録の表示は事実で決める。
+     */
+    it('組み直したあとは、指示ではなく記録として残る', async () => {
+      server.use(
+        http.get(`${API_PATHS.bookings}/:bookingId`, () =>
+          HttpResponse.json(
+            bookingIn({
+              ...MISROUTED,
+              routingStatus: 'ROUTED',
+            } as never),
+          ),
+        ),
+      )
+      renderPage(['ROLE_ROUTING'])
+
+      await screen.findByRole('heading', { name: /BKG-2026000001/ })
+      expect(
+        screen.queryByText(/経路を組み直してください/),
+        '組み直したのに、まだ組み直せと言っている',
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole('link', { name: '経路を再設計する' }),
+        '済んだ操作の入口が残っている',
+      ).not.toBeInTheDocument()
+      // **記録は残る**（US28-8。料金調整の根拠）
+      expect(screen.getByText(/誤配の記録/)).toBeInTheDocument()
+      expect(screen.getByText(/SGSIN/)).toBeInTheDocument()
+    })
+
     it('誤配していない予約には、バナーを出さない', async () => {
       renderPage(['ROLE_ROUTING'])
 

@@ -170,10 +170,30 @@ class MisrouteTest {
             Cargo reassigned = misroutedAtSingapore()
                     .reassignItinerary(fromSingapore());
 
-            assertThat(reassigned.isMisrouted())
+            assertThat(reassigned.misroute())
                     .as("組み直した瞬間に誤配の記録が消えている。料金調整の根拠が失われる")
-                    .isTrue();
+                    .isPresent();
             assertThat(reassigned.misroute().orElseThrow().locationUnLocode()).isEqualTo("SGSIN");
+        }
+
+        /**
+         * <strong>「一度でも外れた」と「いま外れている」は別である</strong>
+         * （IT10 レビュー・architect / technical-writer / user-representative）。
+         *
+         * <p>記録は残す（決定 3）が、状態は `ROUTED` へ戻る（決定 4b）。事実の側で
+         * 振る舞いを決めると、<strong>組み直したのに「組み直してください」と言われ続け</strong>、
+         * 通常の割り当てが持つ端点・期限の検証が二度と適用されなくなる。
+         */
+        @Test
+        @DisplayName("組み直したら、もう経路から外れてはいない")
+        void isNoLongerOffRouteAfterReassigning() {
+            Cargo reassigned = misroutedAtSingapore()
+                    .reassignItinerary(fromSingapore());
+
+            assertThat(reassigned.isMisrouted())
+                    .as("組み直したのに、まだ経路から外れている扱いになっている")
+                    .isFalse();
+            assertThat(reassigned.routingStatus()).isEqualTo(RoutingStatus.ROUTED);
         }
 
         /**

@@ -119,7 +119,7 @@ class RestRouteCandidateFinderTest {
     private static RouteCandidateQuery query(Integer maxTransshipments) {
         return new RouteCandidateQuery("JPTYO", "USLAX",
                 LocalDate.of(2030, Month.SEPTEMBER, 20), CargoType.GENERAL, maxTransshipments,
-                LocalDate.of(2030, Month.SEPTEMBER, 1));
+                LocalDate.of(2030, Month.SEPTEMBER, 1), false);
     }
 
     private static final String TWO_LEGS = """
@@ -148,6 +148,43 @@ class RestRouteCandidateFinderTest {
                 .andExpect(queryParam("cargoType", "GENERAL"))
                 .andExpect(queryParam("maxTransshipments", "3"))
                 .andExpect(queryParam("earliestDeparture", "2030-09-01"))
+                .andRespond(withSuccess(TWO_LEGS, MediaType.APPLICATION_JSON));
+
+        finder.find(query(3));
+
+        server.verify();
+    }
+
+    /**
+     * 誤配のあとの組み直し（US28-4・[ADR-026] 決定 4）。
+     *
+     * <p><strong>「期限で弾かない」を相手に伝える。</strong>routingms は既定で期限を超える
+     * 候補を刈る。誤配した貨物は遅れているのが普通で、元の期限に間に合う便はまず残っていない
+     * ——伝えなければ<strong>候補が 1 本も返らず、組み直す手段そのものが無くなる</strong>。
+     * 集約から期限検査を外しただけでは、この経路には効かない。
+     */
+    @Test
+    @DisplayName("再設計では、期限で弾かないことを相手に伝える")
+    void tellsTheProviderNotToEnforceTheDeadlineWhenRerouting() {
+        server.expect(requestTo(Matchers.startsWith("http://routingms:8080/api/v1/routes")))
+                .andExpect(queryParam("reroute", "true"))
+                // 期限そのものは渡す。**超える分を示す**ために要る（決定 5）
+                .andExpect(queryParam("deadline", "2030-09-20"))
+                .andRespond(withSuccess(TWO_LEGS, MediaType.APPLICATION_JSON));
+
+        finder.find(new RouteCandidateQuery("JPTYO", "USLAX",
+                LocalDate.of(2030, Month.SEPTEMBER, 20), CargoType.GENERAL, 3,
+                LocalDate.of(2030, Month.SEPTEMBER, 1), true));
+
+        server.verify();
+    }
+
+    /** 通常の割り当てでは伝えない。**緩めるのは再設計だけ**。 */
+    @Test
+    @DisplayName("通常の割り当てでは、期限で弾く既定のままにする")
+    void keepsTheDeadlineForOrdinaryAssignment() {
+        server.expect(requestTo(Matchers.startsWith("http://routingms:8080/api/v1/routes")))
+                .andExpect(queryParam("reroute", "false"))
                 .andRespond(withSuccess(TWO_LEGS, MediaType.APPLICATION_JSON));
 
         finder.find(query(3));

@@ -1348,4 +1348,144 @@ test.describe('IT10 実環境（誤配の検知と再設計）', () => {
     expect((await after.json()).misroute?.locationUnLocode, '例外を解決したら誤配の記録が消えた')
       .toBe('SGSIN')
   })
+
+  /**
+   * US28-4・US28-6（[ADR-026] 決定 4・5）。**期限を超える便しか無くても組み直せる。**
+   *
+   * <p>誤配した貨物は遅れているのが普通で、元の期限に間に合う便はまず残っていない。
+   * routingms は既定で期限を超える候補を刈るため、**「弾かない」を伝えないと候補が
+   * 1 本も返らず、貨物は経路から外れたまま止まる**——決定 4 が避けようとした事態そのもの。
+   *
+   * <p>集約から期限検査を外しただけでは、この経路には効かない。**bookingms →
+   * routingms を実際に通して確かめる**（IT10 レビュー・architect 高 1）。
+   */
+  test('期限を超える便しか無くても組み直せて、何日超えるかが返る', async ({ request }) => {
+    const { trackingNumber, voyageNumber, bookingId } = await ensureTrackedVoyage(request)
+    const handler = await handlerHeaders(request)
+    const { headers: sales } = await salesApi(request)
+    const routing = await request.post('/api/v1/auth/login', {
+      data: { userId: 'routing01', password: 'password' },
+    })
+    const routingHeaders = { Authorization: `Bearer ${(await routing.json()).token}` }
+
+    for (const type of ['RECEIVE', 'LOAD']) {
+      await request.post('/api/v1/handling', {
+        headers: handler,
+        data: {
+          trackingNumber,
+          type,
+          locationUnLocode: 'JPTYO',
+          completionTime: `${utcDate(0)}T1${type === 'RECEIVE' ? '0' : '1'}:00:00Z`,
+          voyageNumber: type === 'LOAD' ? voyageNumber : null,
+        },
+      })
+    }
+    await request.post('/api/v1/handling', {
+      headers: handler,
+      data: {
+        trackingNumber,
+        type: 'UNLOAD',
+        locationUnLocode: 'SGSIN',
+        completionTime: `${utcDate(0)}T12:00:00Z`,
+        voyageNumber,
+      },
+    })
+
+    await eventually(async () => {
+      const cargo = await request.get(`/api/v1/bookings/${encodeURIComponent(bookingId)}`, {
+        headers: sales,
+      })
+      expect((await cargo.json()).routingStatus).toBe('MISROUTED')
+    })
+
+    // **期限（120 日後）より後にしか着かない便**を用意する。これしか無い状況が、
+    // 誤配のあとの現実である
+    const registered = await request.post('/api/v1/voyages', {
+      headers: routingHeaders,
+      data: {
+        voyageNumber: `V-LATE-${Date.now()}`,
+        vesselName: '遅れて着く丸',
+        carrierName: '実 E2E 海運',
+        supportedCargoTypes: ['GENERAL'],
+        movements: [
+          {
+            departureUnLocode: 'SGSIN',
+            arrivalUnLocode: 'USLAX',
+            departureTime: `${utcDate(150)}T09:00:00Z`,
+            arrivalTime: `${utcDate(200)}T09:00:00Z`,
+          },
+        ],
+      },
+    })
+    expect(registered.ok(), `航海を登録できない: ${await registered.text()}`).toBeTruthy()
+
+    const deadline = businessLocalDateTime(120, '00:00').slice(0, 10)
+    // **弾かないことを伝える**。これが無いと候補は 0 件になる
+    const routes = await request.get(
+      `/api/v1/routes?origin=SGSIN&destination=USLAX`
+        + `&deadline=${deadline}&cargoType=GENERAL&reroute=true`,
+      { headers: routingHeaders },
+    )
+    expect(routes.ok()).toBeTruthy()
+    const candidates = (await routes.json()).candidates as Array<{
+      legs: Array<{
+        voyageNumber: string
+        fromUnLocode: string
+        toUnLocode: string
+        departureTime: string
+        arrivalTime: string
+      }>
+    }>
+    const late = candidates.find((candidate) =>
+      candidate.legs.some((leg) => leg.voyageNumber.startsWith('V-LATE-')),
+    )
+    expect(late, '期限を超える候補が刈られている。誤配した貨物を組み直せない')
+      .toBeDefined()
+
+    // **伝えなければ返らない**ことも確かめる。判別しない検査にしない
+    const enforced = await request.get(
+      `/api/v1/routes?origin=SGSIN&destination=USLAX`
+        + `&deadline=${deadline}&cargoType=GENERAL`,
+      { headers: routingHeaders },
+    )
+    const enforcedCandidates = (await enforced.json()).candidates as Array<{
+      legs: Array<{ voyageNumber: string }>
+    }>
+    expect(
+      enforcedCandidates.some((candidate) =>
+        candidate.legs.some((leg) => leg.voyageNumber.startsWith('V-LATE-')),
+      ),
+      '通常の探索まで期限で弾かなくなっている',
+    ).toBeFalsy()
+
+    const reassigned = await request.put(`/api/v1/bookings/${bookingId}/route`, {
+      headers: routingHeaders,
+      data: {
+        legs: late!.legs.map((l) => ({
+          voyageNumber: l.voyageNumber,
+          loadUnLocode: l.fromUnLocode,
+          unloadUnLocode: l.toUnLocode,
+          loadTime: l.departureTime,
+          unloadTime: l.arrivalTime,
+        })),
+        maxTransshipments: null,
+      },
+    })
+    expect(reassigned.status(), `組み直せない: ${await reassigned.text()}`).toBe(200)
+    const body = await reassigned.json()
+    // **何日超えるかが返る**（US28-6）。荷主に伝えて判断してもらう材料である
+    expect(body.daysBeyondDeadline, '超過の日数が返っていない。荷主に説明できない')
+      .toBeGreaterThan(0)
+    // **組み直したら、もう経路から外れてはいない**（決定 4b）
+    expect(body.routingStatus).toBe('ROUTED')
+
+    // **伝える側の営業も読める**（US28-6。通知は代替）
+    const detail = await request.get(`/api/v1/bookings/${encodeURIComponent(bookingId)}`, {
+      headers: sales,
+    })
+    expect(
+      (await detail.json()).daysBeyondDeadline,
+      '営業が予約詳細を開いても超過の日数が読めない',
+    ).toBeGreaterThan(0)
+  })
 })

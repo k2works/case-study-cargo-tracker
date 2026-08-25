@@ -65,6 +65,20 @@ public class FindRouteCandidatesUseCase {
     public Result find(String originUnLocode, String destinationUnLocode,
             LocalDate arrivalDeadline, CargoType cargoType, Integer maxTransshipments,
             LocalDate earliestDeparture) {
+        return find(originUnLocode, destinationUnLocode, arrivalDeadline, cargoType,
+                maxTransshipments, earliestDeparture, false);
+    }
+
+    /**
+     * 誤配のあとの組み直しでも使える形（US28-4・[ADR-026] 決定 4）。
+     *
+     * @param reroute 誤配のあとの組み直しなら {@code true}。<strong>期限で候補を弾かない</strong>
+     *     ——誤配した貨物は遅れているのが普通で、元の期限に間に合う便はまず残っていない。
+     *     刈ると組み直す手段そのものが無くなる。超える分は荷主に伝えて判断してもらう
+     */
+    public Result find(String originUnLocode, String destinationUnLocode,
+            LocalDate arrivalDeadline, CargoType cargoType, Integer maxTransshipments,
+            LocalDate earliestDeparture, boolean reroute) {
         Location origin = requireLocation(originUnLocode, "出発地");
         Location destination = requireLocation(destinationUnLocode, "目的地");
         if (arrivalDeadline == null) {
@@ -78,12 +92,15 @@ public class FindRouteCandidatesUseCase {
         // 目的地が東西にずれた分だけ bookingms の判定と食い違い、こちらが候補に出した経路を
         // 向こうが「期限を過ぎている」と断る（またはその逆で正当な便が消える）
         ZoneId destinationZone = locations.timeZoneOf(destinationUnLocode).orElse(businessZone);
-        RouteSearchSpecification specification = RouteSearchSpecification.of(
-                origin, destination, endOfDay(arrivalDeadline, destinationZone), cargoType,
-                maxTransshipments == null
-                        ? RouteSearchSpecification.DEFAULT_MAX_TRANSSHIPMENTS
-                        : maxTransshipments,
-                startOfDay(earliestDeparture));
+        Instant deadline = endOfDay(arrivalDeadline, destinationZone);
+        int transshipments = maxTransshipments == null
+                ? RouteSearchSpecification.DEFAULT_MAX_TRANSSHIPMENTS
+                : maxTransshipments;
+        RouteSearchSpecification specification = reroute
+                ? RouteSearchSpecification.forReroute(origin, destination, deadline, cargoType,
+                        transshipments, startOfDay(earliestDeparture))
+                : RouteSearchSpecification.of(origin, destination, deadline, cargoType,
+                        transshipments, startOfDay(earliestDeparture));
 
         // すでに出てしまった船は押さえられない。航海スケジュールの一覧と同じ扱いにする。
         // 出発希望日がそれより後なら、そちらを境目にする（前の便を引いても捨てるだけ）

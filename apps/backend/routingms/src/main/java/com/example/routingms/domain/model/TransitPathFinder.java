@@ -153,7 +153,11 @@ public final class TransitPathFinder {
                     voyage.arrivalTimeAt(unloadOrder).isPresent(); unloadOrder++) {
                 Instant arrival = voyage.arrivalTimeAt(unloadOrder).orElseThrow();
                 Location to = voyage.schedule().callingPorts().get(unloadOrder);
-                if (!arrival.isAfter(specification.arrivalDeadline()) && !to.equals(from)) {
+                // **枝刈りも条件に従う。** 再設計では期限で弾かない（US28・[ADR-026] 決定 4）
+                // ——ここで刈ると、条件が緩んでいても候補は 1 本も組み上がらない
+                boolean withinDeadline = !specification.enforcesDeadline()
+                        || !arrival.isAfter(specification.arrivalDeadline());
+                if (withinDeadline && !to.equals(from)) {
                     edges.add(TransitEdge.of(voyage.voyageNumber(), voyage.vesselName(),
                             voyage.carrierName(), from, to, departure, arrival));
                 }

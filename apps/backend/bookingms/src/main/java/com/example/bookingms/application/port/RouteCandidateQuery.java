@@ -16,6 +16,9 @@ import java.time.LocalDate;
  * @param cargoType 貨物種別。運べる船が限られる
  * @param maxTransshipments 積み替えの上限。{@code null} なら相手側の既定値
  * @param earliestDeparture 出発希望日。{@code null} なら出発の早さでは絞らない
+ * @param reroute 誤配のあとの組み直しか（US28-4・[ADR-026] 決定 4）。
+ *     <strong>期限で候補を弾かないことを相手に伝える</strong>——伝えなければ、
+ *     期限に間に合う便が残っていない誤配貨物には候補が 1 本も返らない
  */
 public record RouteCandidateQuery(
         String originUnLocode,
@@ -23,5 +26,6 @@ public record RouteCandidateQuery(
         LocalDate arrivalDeadline,
         CargoType cargoType,
         Integer maxTransshipments,
-        LocalDate earliestDeparture) {
+        LocalDate earliestDeparture,
+        boolean reroute) {
 }
