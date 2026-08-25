@@ -55,7 +55,14 @@ async function openTrackingManagement(page: Page) {
 async function lookUpByNavigating(page: Page, trackingNumber: string) {
   await page.getByRole("link", { name: "貨物追跡", exact: true }).click();
   await expect(page).toHaveURL(/\/tracking$/);
-  await page.getByLabel("追跡番号").fill(trackingNumber);
+  // **入った値を確かめてから押す。**画面に入った直後は React が描き直す途中で
+  // あり、fill した値がその再描画で捨てられることがある。押したあとに URL だけを
+  // 見ると、空のまま送られたのか遷移が遅いのかを見分けられない（CI でだけ落ちた）
+  const field = page.getByLabel("追跡番号");
+  await expect(async () => {
+    await field.fill(trackingNumber);
+    await expect(field).toHaveValue(trackingNumber);
+  }).toPass({ timeout: 10_000 });
   await page.getByRole("button", { name: "追跡する" }).click();
   await expect(page).toHaveURL(new RegExp(`/tracking/${trackingNumber}$`));
 }
