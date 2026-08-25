@@ -212,4 +212,30 @@ class CustomsDeclarationTest {
                     .isFalse();
         }
     }
+
+    /**
+     * <strong>復元では検査しない</strong>（既存の行を壊さない）。
+     *
+     * <p>不変条件を足したとき、列が無かったころの行や規則が変わる前に入った行が
+     * 読めなくなる。検査するのは<strong>新しく受け付けるとき</strong>だけである。
+     *
+     * <p><strong>この検査が無いと、コメントが宣言しているだけになる。</strong>
+     * 誰かが復元にも検査を入れた瞬間、古い行を持つ環境だけが落ちる——手元では出ない。
+     */
+    @Nested
+    @DisplayName("永続化された行から復元するとき")
+    class WhenRestoring {
+
+        @Test
+        @DisplayName("履歴が無くても、通関済でも読み戻せる")
+        void doesNotValidateOnRestore() {
+            // 履歴が空の通関済——申告そのものが履歴に残る新規の形とは食い違う
+            CustomsDeclaration restored = CustomsDeclaration.restore(1L, NUMBER, BOOKING,
+                    TRACKING, DECLARED_AT, CustomsStatus.CLEARED, null, null, null);
+
+            assertThat(restored.status()).isEqualTo(CustomsStatus.CLEARED);
+            assertThat(restored.history()).isEmpty();
+            assertThat(restored.isCleared()).isTrue();
+        }
+    }
 }

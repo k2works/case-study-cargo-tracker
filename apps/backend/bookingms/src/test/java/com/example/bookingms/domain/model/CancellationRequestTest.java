@@ -148,4 +148,30 @@ class CancellationRequestTest {
             assertThat(rejected.decisionReason()).contains("積み替え済みのため");
         }
     }
+
+    /**
+     * <strong>復元では検査しない</strong>（既存の行を壊さない）。
+     *
+     * <p>不変条件を足したとき、列が無かったころの行や規則が変わる前に入った行が
+     * 読めなくなる。検査するのは<strong>新しく受け付けるとき</strong>だけである。
+     *
+     * <p><strong>この検査が無いと、コメントが宣言しているだけになる。</strong>
+     * 誰かが復元にも検査を入れた瞬間、古い行を持つ環境だけが落ちる——手元では出ない。
+     */
+    @org.junit.jupiter.api.Nested
+    @DisplayName("永続化された行から復元するとき")
+    class WhenRestoring {
+
+        @Test
+        @DisplayName("いま受け付けないような値でも読み戻せる")
+        void doesNotValidateOnRestore() {
+            // 理由が空・申請者が空・決定済みなのに理由が無い——いずれも新規では断る形
+            CancellationRequest restored = CancellationRequest.restore(1L, 1L, "",
+                    CancellationStatus.REJECTED, "", AT, BookingStatus.IN_TRANSIT,
+                    null, "", DECIDED_AT, "");
+
+            assertThat(restored.status()).isEqualTo(CancellationStatus.REJECTED);
+            assertThat(restored.reason()).isEmpty();
+        }
+    }
 }
