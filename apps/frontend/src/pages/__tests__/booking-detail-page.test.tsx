@@ -599,7 +599,9 @@ describe('予約の詳細（US06）', () => {
       // **外れた場所と現在地を別の港にする。** 同じにすると、片方を落としても
       // もう片方が同じ文字列を出すため、検査が判別しない（最初にそう書いて空振りした）
       lastHandlingLocationUnLocode: 'HKHKG',
-      misroute: { at: '2027-09-09 09:00', locationUnLocode: 'SGSIN' },
+      // **本物と同じ形（ISO）で渡す。**画面が整形することを確かめる
+      // ——「2027-09-09 09:00」を渡すと、整形を外しても緑になる
+      misroute: { at: '2027-09-09T00:00:00Z', locationUnLocode: 'SGSIN' },
     }
 
     function renderMisrouted(roles: Role[]) {
@@ -626,7 +628,9 @@ describe('予約の詳細（US06）', () => {
         .toHaveTextContent('SGSIN')
       expect(banner, '現在地が出ていない。いまどこから組み直すのか分からない')
         .toHaveTextContent('HKHKG')
-      expect(banner).toHaveTextContent('2027-09-09 09:00')
+      // 業務タイムゾーン（Asia/Tokyo）で 9 時。**生の ISO のままでは出さない**
+      expect(banner, '日時が生の ISO のまま出ている。担当者が読み替えることになる')
+        .toHaveTextContent('2027-09-09 09:00')
     })
 
     /**
@@ -652,6 +656,21 @@ describe('予約の詳細（US06）', () => {
       expect(
         screen.queryByRole('link', { name: '経路を再設計する' }),
       ).not.toBeInTheDocument()
+    })
+
+    /**
+     * <strong>手番は全部の状態に言葉がある</strong>（[ADR-021] 決定 6）。
+     *
+     * <p>状態を足したときに書き足さないと、<strong>空の枠だけが出る</strong>
+     * ——「何か出るはずのものが出ていない」と読まれる（IT10 のキャプチャで気づいた）。
+     */
+    it('輸送中の予約にも、手番の言葉が出る', async () => {
+      renderMisrouted(['ROLE_ROUTING'])
+
+      expect(
+        await screen.findByText(/輸送中です/),
+        '手番の言葉が無い。空の枠だけが出る',
+      ).toBeInTheDocument()
     })
 
     /** 誤配していない予約にはバナーを出さない。**一覧が警告で埋まると読まれなくなる**。 */

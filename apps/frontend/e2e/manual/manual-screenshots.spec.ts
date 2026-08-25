@@ -532,3 +532,13 @@ test('11-awaiting-discharge（陸揚げ待ち）', async ({ page }) => {
 
   await page.screenshot({ path: `${ASSETS}/11-awaiting-discharge.png`, fullPage: true })
 })
+
+test('04-misroute-banner（誤配の警告）', async ({ page }) => {
+  // 種データの BKG-2026000006 は誤配が起きている（`src/mocks/data.ts`）
+  await login(page, 'routing01')
+  await page.goto('/booking/BKG-2026000006')
+  await expect(page.getByRole('heading', { name: /^予約 BKG-2026000006/ })).toBeVisible()
+  await expect(page.getByRole('alert')).toContainText('予定ルートから外れています')
+
+  await page.screenshot({ path: `${ASSETS}/04-misroute-banner.png`, fullPage: true })
+})

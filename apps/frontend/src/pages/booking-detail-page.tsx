@@ -39,6 +39,11 @@ const TURN_LABELS: Record<string, string> = {
   ROUTE_NOTIFIED: "荷主の手番です。返事を待っています。",
   CONFIRMED: "経路設計者の手番です。追跡番号の発行を待っています。",
   TRACKING_ISSUED: "荷役の手番です。貨物の受け取りを待っています。",
+  // IT9 で足した 3 つ。**状態を足したら、ここも足す**——空欄の枠だけが出て、
+  // 「誰の仕事か分からない」状態に戻る（IT10 のキャプチャで気づいた）
+  IN_TRANSIT: "輸送中です。荷役の記録で状態が進みます。",
+  DELIVERED: "配送が完了しました。",
+  CANCELLED: "この予約はキャンセルされました。",
 };
 
 /**
@@ -125,7 +130,9 @@ export function BookingDetailPage() {
           </p>
           <p>
             外れた場所: <strong>{booking.misroute.locationUnLocode}</strong>／ 日時:{" "}
-            {booking.misroute.at}
+            {/* **業務の時刻で出す。**生の ISO（2027-09-09T00:00:00Z）を出すと、
+                担当者は自分の時刻に読み替えることになる（この画面の他の日時と同じ形） */}
+            {formatBusinessDateTime(booking.misroute.at)}
           </p>
           <p>
             現在地:{" "}
@@ -327,10 +334,14 @@ export function BookingDetailPage() {
         setRevising={setRevising}
       />
 
-      {/* 手番。いまの状態で誰が動くかを 1 行で出す（ADR-021 決定 6） */}
-      <p className="rounded border border-gray-200 bg-blue-50 p-3 text-sm text-gray-800">
-        {TURN_LABELS[booking.bookingStatus] ?? ""}
-      </p>
+      {/* 手番。いまの状態で誰が動くかを 1 行で出す（ADR-021 決定 6）。
+          **言葉が無いなら枠ごと出さない**——空の枠は「何か出るはずのものが出ていない」
+          と読まれる（IT10 のキャプチャで実際にそう見えた） */}
+      {TURN_LABELS[booking.bookingStatus] !== undefined && (
+        <p className="rounded border border-gray-200 bg-blue-50 p-3 text-sm text-gray-800">
+          {TURN_LABELS[booking.bookingStatus]}
+        </p>
+      )}
 
       {/* 通知の記録（US12-4）。メールは送っていないため、これが唯一の証跡である。
           null も未設定も「記録が無い」。項目ごと省く応答もありうる（旅程と同じ扱い） */}
