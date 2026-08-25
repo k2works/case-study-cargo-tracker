@@ -65,10 +65,25 @@ export type UpdateCustomsStatusRequest = {
 }
 
 /** 一覧の検索条件（US29-7）。 */
+/**
+ * 検索の結果（US29-7）。
+ *
+ * **総件数と切り捨てを返す。** 黙って切ると「一覧に出ていないから無い」と読まれる
+ * （予約一覧と同じ形）。
+ */
+export type CustomsSearchResult = {
+  declarations: CustomsDeclaration[]
+  totalCount: number
+  limit: number
+  truncated: boolean
+}
+
 export type CustomsSearchCriteria = {
   bookingId: string
   trackingNumber: string
   status: string
+  /** 未決着（審査中・留置）だけに絞る。**朝の待ち行列**（US29-7）。 */
+  unsettledOnly: boolean
 }
 
 /** 留置 3 日超の件数（横断規約）。**件数から対象一覧へ辿れること**。 */

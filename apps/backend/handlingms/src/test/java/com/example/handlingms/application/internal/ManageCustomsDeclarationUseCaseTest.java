@@ -115,7 +115,7 @@ class ManageCustomsDeclarationUseCaseTest {
     @Test
     @DisplayName("状態の名前が不正なら断る")
     void rejectsAnUnknownStatusName() {
-        assertThatThrownBy(() -> useCase.search(null, null, "UNKNOWN"))
+        assertThatThrownBy(() -> useCase.search(null, null, "UNKNOWN", false))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("通関状態が不正です");
     }
@@ -182,8 +182,15 @@ class ManageCustomsDeclarationUseCaseTest {
         }
 
         @Override
+        public long count(String bookingId, String trackingNumber, CustomsStatus status,
+                boolean unsettledOnly) {
+            return search(bookingId, trackingNumber, status, unsettledOnly, Integer.MAX_VALUE)
+                    .size();
+        }
+
+        @Override
         public List<CustomsDeclaration> search(String bookingId, String trackingNumber,
-                CustomsStatus status, int limit) {
+                CustomsStatus status, boolean unsettledOnly, int limit) {
             return stored.stream()
                     .filter(candidate -> status == null || candidate.status() == status)
                     .toList();

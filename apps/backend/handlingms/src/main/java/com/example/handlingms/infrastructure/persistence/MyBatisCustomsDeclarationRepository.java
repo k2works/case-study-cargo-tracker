@@ -66,13 +66,20 @@ public class MyBatisCustomsDeclarationRepository implements CustomsDeclarationRe
 
     @Override
     public List<CustomsDeclaration> search(String bookingId, String trackingNumber,
-            CustomsStatus status, int limit) {
+            CustomsStatus status, boolean unsettledOnly, int limit) {
         return declarations
                 .search(blankToNull(bookingId), blankToNull(trackingNumber),
-                        status == null ? null : status.name(), limit)
+                        status == null ? null : status.name(), unsettledOnly, limit)
                 .stream()
                 .map(this::toDomain)
                 .toList();
+    }
+
+    @Override
+    public long count(String bookingId, String trackingNumber, CustomsStatus status,
+            boolean unsettledOnly) {
+        return declarations.count(blankToNull(bookingId), blankToNull(trackingNumber),
+                status == null ? null : status.name(), unsettledOnly);
     }
 
     private void insertHistory(Long declarationId, CustomsStatusChange change) {

@@ -52,6 +52,9 @@ type MockDeclaration = {
   history: MockStatusChange[]
 }
 
+/** 一覧の上限。**本物（`ManageCustomsDeclarationUseCase.SEARCH_LIMIT`）と同じ値**。 */
+const SEARCH_LIMIT = 200
+
 export const customsDeclarations: MockDeclaration[] = []
 
 let declarationIdSequence = 0
@@ -157,19 +160,30 @@ export const customsHandlers = [
     const bookingId = params.get('bookingId')
     const trackingNumber = params.get('trackingNumber')
     const status = params.get('status')
+    // **未決着（審査中・留置）だけ。**朝の待ち行列（US29-7）
+    const unsettledOnly = params.get('unsettledOnly') === 'true'
 
-    return HttpResponse.json(
-      customsDeclarations
-        .filter((declaration) => bookingId === null || declaration.bookingId === bookingId)
-        .filter(
-          (declaration) =>
-            trackingNumber === null || declaration.trackingNumber === trackingNumber,
-        )
-        .filter((declaration) => status === null || declaration.status === status)
-        // 留置が長いものを先に。担当者が毎朝この一覧を上から見る
-        .sort((a, b) => (heldDaysOf(b) ?? -1) - (heldDaysOf(a) ?? -1))
-        .map(view),
-    )
+    const matched = customsDeclarations
+      .filter((declaration) => bookingId === null || declaration.bookingId === bookingId)
+      .filter(
+        (declaration) =>
+          trackingNumber === null || declaration.trackingNumber === trackingNumber,
+      )
+      .filter((declaration) => status === null || declaration.status === status)
+      .filter(
+        (declaration) =>
+          !unsettledOnly || declaration.status === 'PENDING' || declaration.status === 'HELD',
+      )
+      // 留置が長いものを先に。担当者が毎朝この一覧を上から見る
+      .sort((a, b) => (heldDaysOf(b) ?? -1) - (heldDaysOf(a) ?? -1))
+
+    // **本物と同じ形で返す**（総件数と切り捨て）。黙って切ると「全件見た」と受け取られる
+    return HttpResponse.json({
+      declarations: matched.slice(0, SEARCH_LIMIT).map(view),
+      totalCount: matched.length,
+      limit: SEARCH_LIMIT,
+      truncated: matched.length > SEARCH_LIMIT,
+    })
   }),
 
   http.post(API_PATHS.customs, async ({ request }) => {

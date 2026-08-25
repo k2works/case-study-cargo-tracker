@@ -1,6 +1,7 @@
 package com.example.handlingms.interfaces.rest;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
@@ -137,7 +138,9 @@ class CustomsControllerTest {
         @Test
         @DisplayName("読むのは両方できる")
         void bothRolesCanRead() throws Exception {
-            when(manage.search(any(), any(), any())).thenReturn(List.of(declaration()));
+            when(manage.search(any(), any(), any(), anyBoolean())).thenReturn(
+                    new ManageCustomsDeclarationUseCase.CustomsSearchResult(
+                            List.of(declaration()), 1, 200, false));
 
             for (String[] user : new String[][] {
                 {"handler01", "ROLE_HANDLER"}, {"tracker01", "ROLE_TRACKER"}}) {
@@ -184,15 +187,43 @@ class CustomsControllerTest {
         @Test
         @DisplayName("一覧は、状態の読み方と留置の経過を添えて返す")
         void returnsLabelsAndHeldDays() throws Exception {
-            when(manage.search(any(), any(), any())).thenReturn(List.of(declaration()));
+            when(manage.search(any(), any(), any(), anyBoolean())).thenReturn(
+                    new ManageCustomsDeclarationUseCase.CustomsSearchResult(
+                            List.of(declaration()), 1, 200, false));
 
             mockMvc.perform(get("/api/v1/customs")
                             .header(AuthenticatedUser.USER_ID_HEADER, "tracker01")
                             .header(AuthenticatedUser.ROLES_HEADER, "ROLE_TRACKER"))
                     .andExpect(status().isOk())
                     // **画面が対訳表を持たない**（[ADR-023] 決定 1 と同じ形）
-                    .andExpect(jsonPath("$[0].statusLabel").value("審査中"))
-                    .andExpect(jsonPath("$[0].heldOverdue").value(false));
+                    .andExpect(jsonPath("$.declarations[0].statusLabel").value("審査中"))
+                    .andExpect(jsonPath("$.declarations[0].heldOverdue").value(false))
+                    // **総件数と切り捨てを返す**（US29-7）。黙って切ると「全件見た」と
+                    // 受け取られる
+                    .andExpect(jsonPath("$.totalCount").value(1))
+                    .andExpect(jsonPath("$.limit").value(200))
+                    .andExpect(jsonPath("$.truncated").value(false));
+        }
+
+        /**
+         * <strong>未決着だけの絞り込みが、サーバまで届く</strong>（US29-7）。
+         *
+         * <p>画面がチェックしても要求に載らなければ、一覧は全件のままである
+         * ——**値が層をまたいで生き延びるか**を見る。
+         */
+        @Test
+        @DisplayName("未決着だけの絞り込みが、要求からユースケースまで届く")
+        void carriesTheUnsettledOnlyFlag() throws Exception {
+            when(manage.search(any(), any(), any(), anyBoolean())).thenReturn(
+                    new ManageCustomsDeclarationUseCase.CustomsSearchResult(
+                            List.of(declaration()), 1, 200, false));
+
+            mockMvc.perform(get("/api/v1/customs?unsettledOnly=true")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "tracker01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_TRACKER"))
+                    .andExpect(status().isOk());
+
+            org.mockito.Mockito.verify(manage).search(null, null, null, true);
         }
 
         /** 選択肢はサーバが返す。**画面が一覧を持たない**。 */

@@ -39,12 +39,37 @@ public class ManageCustomsDeclarationUseCase {
         this.clock = clock;
     }
 
-    /** 一覧・検索（US29-7）。 */
-    public List<CustomsDeclaration> search(String bookingId, String trackingNumber,
-            String status) {
+    /**
+     * 一覧・検索（US29-7）。
+     *
+     * <p>{@code unsettledOnly} は<strong>未決着（審査中・留置）だけ</strong>に絞る。
+     * <strong>追跡管理者の朝の仕事は「未決着を上から片付ける」ことである。</strong>
+     * 状態の絞り込みは単一選択のため、この 2 つを同時に見る手段が別に要る。
+     *
+     * <p><strong>総件数も返す。</strong>上限で切ったことを黙ると、担当者は
+     * 「一覧に出ていないから無い」と読む。
+     */
+    public CustomsSearchResult search(String bookingId, String trackingNumber,
+            String status, boolean unsettledOnly) {
         CustomsStatus parsed =
                 status == null || status.isBlank() ? null : CustomsStatus.parse(status);
-        return declarations.search(bookingId, trackingNumber, parsed, SEARCH_LIMIT);
+        List<CustomsDeclaration> found =
+                declarations.search(bookingId, trackingNumber, parsed, unsettledOnly,
+                        SEARCH_LIMIT);
+        long total = declarations.count(bookingId, trackingNumber, parsed, unsettledOnly);
+        return new CustomsSearchResult(found, total, SEARCH_LIMIT, total > SEARCH_LIMIT);
+    }
+
+    /**
+     * 検索の結果。
+     *
+     * @param declarations 見つかった申告（上限まで）
+     * @param totalCount 条件に合う総件数
+     * @param limit 上限
+     * @param truncated 上限で切られているか。<strong>黙って切ると「全件見た」と受け取られる</strong>
+     */
+    public record CustomsSearchResult(List<CustomsDeclaration> declarations, long totalCount,
+            int limit, boolean truncated) {
     }
 
     /** 1 件を開く（US29-8）。 */
@@ -83,7 +108,7 @@ public class ManageCustomsDeclarationUseCase {
      * <p>判定は集約の述語をそのまま呼ぶ。ここで日数を数え直すと、督促の規則が 2 か所になる。
      */
     public long countHeldOverdue() {
-        return declarations.search(null, null, CustomsStatus.HELD, SEARCH_LIMIT).stream()
+        return declarations.search(null, null, CustomsStatus.HELD, false, SEARCH_LIMIT).stream()
                 .filter(declaration -> declaration.isHeldOverdue(today(), zone(), HELD_OVERDUE_DAYS))
                 .count();
     }

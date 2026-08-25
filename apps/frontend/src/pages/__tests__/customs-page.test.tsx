@@ -46,6 +46,27 @@ function heldDeclaration(
   });
 }
 
+/**
+ * 審査中の申告。
+ *
+ * <p>一覧の既定は<strong>未決着だけ</strong>なので、状態が本質でないテスト
+ * （絞り込み・導線・ボタンの出し分け）はこちらを使う。
+ */
+function pendingDeclaration(declarationId: number, declarationNumber: string) {
+  const at = new Date(Date.now() - DAY).toISOString();
+  customsDeclarations.push({
+    declarationId,
+    declarationNumber,
+    bookingId: `BKG-202600000${declarationId}`,
+    trackingNumber: `TRK-20260823-000${declarationId}`,
+    declaredAt: at,
+    status: "PENDING",
+    clearedAt: null,
+    remarks: null,
+    history: [],
+  });
+}
+
 function clearedDeclaration(declarationId: number, declarationNumber: string) {
   const at = new Date(Date.now() - DAY).toISOString();
   customsDeclarations.push({
@@ -74,9 +95,23 @@ describe("通関申告の一覧（US29）", () => {
     renderWithProviders(<CustomsPage />);
   }
 
+  /**
+   * 決着済みも見る。
+   *
+   * <p>一覧の既定は<strong>未決着（審査中・留置）だけ</strong>である
+   * ——追跡管理者の朝の仕事は「未決着を上から片付ける」ことであり、決着済みが混ざった
+   * 一覧を毎朝すべて見直すことはできない。決着済みを確かめるテストは、
+   * <strong>利用者と同じ操作で</strong>絞り込みを外す。
+   */
+  async function showSettledToo(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByLabelText("未決着（審査中・留置）だけ"));
+    await user.click(screen.getByRole("button", { name: "検索" }));
+  }
+
   it("申告が並び、状態が読める言葉で出る", async () => {
     clearedDeclaration(1, "DEC-0001");
     renderPage();
+    await showSettledToo(userEvent.setup());
 
     // 状態の言葉は検索の選択肢にも出る。**行の中**で見る
     const row = within(
@@ -96,6 +131,7 @@ describe("通関申告の一覧（US29）", () => {
   it("申告日時が、業務の時刻として読める形で出る", async () => {
     clearedDeclaration(1, "DEC-0001");
     renderPage();
+    await showSettledToo(userEvent.setup());
 
     const row = within(
       (await screen.findByText("DEC-0001")).closest("tr") as HTMLElement,
@@ -212,6 +248,8 @@ describe("通関申告の一覧（US29）", () => {
     await screen.findByText("DEC-0001");
 
     const user = userEvent.setup();
+    // 決着済みに絞る——**未決着の絞り込みも外す**（既定は未決着だけ）
+    await user.click(screen.getByLabelText("未決着（審査中・留置）だけ"));
     await user.selectOptions(screen.getByLabelText("通関状態"), "CLEARED");
     await user.click(screen.getByRole("button", { name: "検索" }));
 
@@ -223,8 +261,8 @@ describe("通関申告の一覧（US29）", () => {
 
   /** US29-7。貨物 ID・追跡番号・通関状態の 3 条件で絞れる。 */
   it("追跡番号で絞り込める", async () => {
-    clearedDeclaration(1, "DEC-0001");
-    clearedDeclaration(2, "DEC-0002");
+    pendingDeclaration(1, "DEC-0001");
+    pendingDeclaration(2, "DEC-0002");
     renderPage();
     await screen.findByText("DEC-0001");
 
@@ -237,7 +275,7 @@ describe("通関申告の一覧（US29）", () => {
   });
 
   it("状態で絞り込める", async () => {
-    clearedDeclaration(1, "DEC-0001");
+    pendingDeclaration(1, "DEC-0001");
     heldDeclaration(2, "DEC-0002", 1);
     renderPage();
     await screen.findByText("DEC-0001");
@@ -252,7 +290,7 @@ describe("通関申告の一覧（US29）", () => {
 
   /** 一覧を行き止まりにしない。申告番号から詳細へ進む。 */
   it("申告番号から詳細へ進める", async () => {
-    clearedDeclaration(1, "DEC-0001");
+    pendingDeclaration(1, "DEC-0001");
     renderPage();
 
     expect(await screen.findByRole("link", { name: "DEC-0001" })).toHaveAttribute(
@@ -268,7 +306,7 @@ describe("通関申告の一覧（US29）", () => {
    * 見せると、押した先で断られる。守るのはサーバであり、画面はその写しである。
    */
   it("追跡管理者には、新規申告のボタンが出ない", async () => {
-    clearedDeclaration(1, "DEC-0001");
+    pendingDeclaration(1, "DEC-0001");
     renderPage();
     await screen.findByText("DEC-0001");
 
@@ -277,7 +315,7 @@ describe("通関申告の一覧（US29）", () => {
 
   it("荷役作業員には、新規申告のボタンが出る", async () => {
     loginAs(["ROLE_HANDLER"]);
-    clearedDeclaration(1, "DEC-0001");
+    pendingDeclaration(1, "DEC-0001");
     renderPage();
     await screen.findByText("DEC-0001");
 
@@ -291,5 +329,52 @@ describe("通関申告の一覧（US29）", () => {
     renderPage();
 
     expect(await screen.findByText("通関申告はありません。")).toBeInTheDocument();
+  });
+
+  /**
+   * US29-7・IT10 返済枠 0.1。**朝の待ち行列。**
+   *
+   * <p>追跡管理者の朝の仕事は「未決着（審査中・留置）を上から片付ける」ことである。
+   * 決着済みが混ざった一覧を毎朝すべて見直すことはできない。
+   * <strong>状態の絞り込みは単一選択</strong>なので、審査中と留置を同時に見る手段が別に要る。
+   */
+  it("既定では、未決着（審査中・留置）だけが出る", async () => {
+    pendingDeclaration(1, "DEC-0001");
+    heldDeclaration(2, "DEC-0002", 1);
+    clearedDeclaration(3, "DEC-0003");
+    renderPage();
+
+    expect(await screen.findByText("DEC-0001")).toBeInTheDocument();
+    expect(screen.getByText("DEC-0002")).toBeInTheDocument();
+    expect(
+      screen.queryByText("DEC-0003"),
+      "決着済みが混ざっている。毎朝の待ち行列にならない",
+    ).not.toBeInTheDocument();
+  });
+
+  it("絞り込みを外すと、決着済みも出る", async () => {
+    pendingDeclaration(1, "DEC-0001");
+    clearedDeclaration(3, "DEC-0003");
+    renderPage();
+    await screen.findByText("DEC-0001");
+
+    await showSettledToo(userEvent.setup());
+
+    expect(await screen.findByText("DEC-0003")).toBeInTheDocument();
+  });
+
+  /**
+   * <strong>上限で切ったことを黙らない。</strong>
+   *
+   * <p>件数を知らせずに切ると、担当者は「一覧に出ていないから無い」と読む。
+   * 予約一覧と同じ形にする。
+   */
+  it("何件あるかが出る", async () => {
+    pendingDeclaration(1, "DEC-0001");
+    pendingDeclaration(2, "DEC-0002");
+    renderPage();
+    await screen.findByText("DEC-0001");
+
+    expect(await screen.findByText(/^2 件/)).toBeInTheDocument();
   });
 });

@@ -243,8 +243,15 @@ class CustomsGuardTest {
         }
 
         @Override
+        public long count(String bookingId, String trackingNumber, CustomsStatus status,
+                boolean unsettledOnly) {
+            return search(bookingId, trackingNumber, status, unsettledOnly, Integer.MAX_VALUE)
+                    .size();
+        }
+
+        @Override
         public List<CustomsDeclaration> search(String bookingId, String trackingNumber,
-                CustomsStatus status, int limit) {
+                CustomsStatus status, boolean unsettledOnly, int limit) {
             return List.copyOf(declarationsStored);
         }
     }

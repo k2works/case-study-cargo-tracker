@@ -97,6 +97,7 @@ public interface CustomsDeclarationMapper {
                <if test="bookingId != null">AND booking_id = #{bookingId}</if>
                <if test="trackingNumber != null">AND tracking_number = #{trackingNumber}</if>
                <if test="status != null">AND status = #{status}</if>
+               <if test="unsettledOnly">AND status IN ('PENDING', 'HELD')</if>
              </where>
              ORDER BY declared_at DESC, id DESC
              LIMIT #{limit}
@@ -105,5 +106,27 @@ public interface CustomsDeclarationMapper {
     @org.apache.ibatis.annotations.ResultMap("customsResult")
     List<CustomsDeclarationRecord> search(@Param("bookingId") String bookingId,
             @Param("trackingNumber") String trackingNumber, @Param("status") String status,
-            @Param("limit") int limit);
+            @Param("unsettledOnly") boolean unsettledOnly, @Param("limit") int limit);
+
+    /**
+     * 同じ条件に合う<strong>総件数</strong>（US29-7）。
+     *
+     * <p><strong>上限で切ったことを黙らない。</strong>件数を知らせずに切ると、
+     * 担当者は「一覧に出ていないから無い」と読む。予約一覧と同じ形にする。
+     */
+    @Select("""
+            <script>
+            SELECT COUNT(*)
+              FROM customs_declaration
+             <where>
+               <if test="bookingId != null">AND booking_id = #{bookingId}</if>
+               <if test="trackingNumber != null">AND tracking_number = #{trackingNumber}</if>
+               <if test="status != null">AND status = #{status}</if>
+               <if test="unsettledOnly">AND status IN ('PENDING', 'HELD')</if>
+             </where>
+            </script>
+            """)
+    long count(@Param("bookingId") String bookingId,
+            @Param("trackingNumber") String trackingNumber, @Param("status") String status,
+            @Param("unsettledOnly") boolean unsettledOnly);
 }

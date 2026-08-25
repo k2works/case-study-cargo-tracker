@@ -86,6 +86,18 @@ public final class CustomsResponses {
         }
     }
 
+    /**
+     * 一覧・検索の応答（US29-7）。
+     *
+     * @param declarations 見つかった申告（上限まで）
+     * @param totalCount 条件に合う総件数
+     * @param limit 上限
+     * @param truncated 上限で切られているか。<strong>黙って切ると「全件見た」と受け取られる</strong>
+     */
+    public record CustomsSearchResponse(List<CustomsDeclarationResponse> declarations,
+            long totalCount, int limit, boolean truncated) {
+    }
+
     /** 留置 3 日超の件数（US29-6）。**件数から対象一覧へ辿れる**。 */
     public record OverdueCustomsSummary(long count) {
     }

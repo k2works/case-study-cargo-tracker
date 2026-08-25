@@ -40,7 +40,22 @@ public interface CustomsDeclarationRepository {
     /** 引取のガードが引く（US29-3）。**通関済の申告があるか**を見る。 */
     Optional<CustomsDeclaration> findLatestByBookingId(CargoBookingId cargoBookingId);
 
-    /** 一覧・検索（US29-7）。条件は null で「指定なし」を表す。 */
+    /**
+     * 一覧・検索（US29-7）。条件は null で「指定なし」を表す。
+     *
+     * <p>{@code unsettledOnly} は<strong>未決着（審査中・留置）だけ</strong>に絞る。
+     * 追跡管理者の朝の仕事は「未決着を上から片付ける」ことだが、状態の絞り込みは
+     * 単一選択のため、この 2 つを同時に見る手段が要る。
+     */
     List<CustomsDeclaration> search(String bookingId, String trackingNumber,
-            CustomsStatus status, int limit);
+            CustomsStatus status, boolean unsettledOnly, int limit);
+
+    /**
+     * 同じ条件に合う<strong>総件数</strong>。
+     *
+     * <p><strong>上限で切ったことを黙らない。</strong>件数を知らせずに切ると、
+     * 担当者は「一覧に出ていないから無い」と読む。
+     */
+    long count(String bookingId, String trackingNumber, CustomsStatus status,
+            boolean unsettledOnly);
 }

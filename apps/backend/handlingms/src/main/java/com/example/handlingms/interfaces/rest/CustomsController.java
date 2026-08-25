@@ -9,6 +9,7 @@ import com.example.handlingms.interfaces.rest.CustomsRequests.RegisterCustomsDec
 import com.example.handlingms.interfaces.rest.CustomsRequests.UpdateCustomsStatusRequest;
 import com.example.handlingms.interfaces.rest.CustomsResponses.CustomsDeclarationDetailResponse;
 import com.example.handlingms.interfaces.rest.CustomsResponses.CustomsDeclarationResponse;
+import com.example.handlingms.interfaces.rest.CustomsResponses.CustomsSearchResponse;
 import com.example.handlingms.interfaces.rest.CustomsResponses.CustomsStatusResponse;
 import com.example.handlingms.interfaces.rest.CustomsResponses.OverdueCustomsSummary;
 import com.example.shared.auth.AuthenticatedUser;
@@ -73,19 +74,30 @@ public class CustomsController {
         return new OverdueCustomsSummary(manage.countHeldOverdue());
     }
 
-    /** 一覧・検索（US29-7）。 */
+    /**
+     * 一覧・検索（US29-7）。
+     *
+     * <p>{@code unsettledOnly} は<strong>未決着（審査中・留置）だけ</strong>に絞る。
+     * <strong>追跡管理者の朝の仕事は「未決着を上から片付ける」ことである。</strong>
+     *
+     * <p><strong>総件数と切り捨てを返す。</strong>黙って切ると「一覧に出ていないから無い」と
+     * 読まれる（予約一覧と同じ形）。
+     */
     @GetMapping
-    public List<CustomsDeclarationResponse> search(
+    public CustomsSearchResponse search(
             @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
             @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles,
             @RequestParam(required = false) String bookingId,
             @RequestParam(required = false) String trackingNumber,
-            @RequestParam(required = false) String status) {
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false, defaultValue = "false") boolean unsettledOnly) {
         requireHandlerOrTracker(userId, roles);
 
-        return manage.search(bookingId, trackingNumber, status).stream()
-                .map(this::toResponse)
-                .toList();
+        ManageCustomsDeclarationUseCase.CustomsSearchResult result =
+                manage.search(bookingId, trackingNumber, status, unsettledOnly);
+        return new CustomsSearchResponse(
+                result.declarations().stream().map(this::toResponse).toList(),
+                result.totalCount(), result.limit(), result.truncated());
     }
 
     /** 詳細（US29-8）。状態変更の履歴を伴う。 */

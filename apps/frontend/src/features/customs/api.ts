@@ -1,9 +1,9 @@
 import { API_PATHS } from '../../config/api'
 import { apiClient } from '../../lib/api-client'
 import type {
-  CustomsDeclaration,
   CustomsDeclarationDetail,
   CustomsSearchCriteria,
+  CustomsSearchResult,
   CustomsStatusChoice,
   OverdueCustomsSummary,
   RegisterCustomsDeclarationRequest,
@@ -22,8 +22,9 @@ export function fetchCustomsDeclarations(criteria: CustomsSearchCriteria) {
   if (criteria.trackingNumber !== '') params.set('trackingNumber', criteria.trackingNumber)
   
   if (criteria.status !== '') params.set('status', criteria.status)
+  if (criteria.unsettledOnly) params.set('unsettledOnly', 'true')
   const query = params.toString()
-  return apiClient.get<CustomsDeclaration[]>(
+  return apiClient.get<CustomsSearchResult>(
     query === '' ? API_PATHS.customs : `${API_PATHS.customs}?${query}`,
   )
 }

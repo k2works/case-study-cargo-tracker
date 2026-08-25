@@ -24,7 +24,16 @@ const EMPTY: CustomsSearchCriteria = {
   bookingId: "",
   trackingNumber: "",
   status: "",
+  unsettledOnly: false,
 };
+
+/**
+ * 既定は**未決着だけ**（US29-7）。
+ *
+ * **追跡管理者の朝の仕事は「未決着を上から片付ける」ことである。** 決着済みが混ざった
+ * 一覧を毎朝すべて見直すことはできない。決着済みを見たいときは絞り込みを外す。
+ */
+const MORNING_QUEUE: CustomsSearchCriteria = { ...EMPTY, unsettledOnly: true };
 
 /** 留置からの日数の表示。留置でなければ数えていないので「-」を出す。 */
 function heldDaysLabel(heldDays: number | null): string {
@@ -32,8 +41,10 @@ function heldDaysLabel(heldDays: number | null): string {
 }
 
 export function CustomsPage() {
-  const [form, setForm] = useState<CustomsSearchCriteria>(EMPTY);
-  const [criteria, setCriteria] = useState<CustomsSearchCriteria>(EMPTY);
+  // **入力欄と絞り込みの初期値を揃える。** 食い違うと、チェックが外れて見えるのに
+  // 一覧は未決着だけ、という状態になる——画面が利用者に嘘をつく
+  const [form, setForm] = useState<CustomsSearchCriteria>(MORNING_QUEUE);
+  const [criteria, setCriteria] = useState<CustomsSearchCriteria>(MORNING_QUEUE);
   /** 留置 3 日超だけに絞っているか。**サーバの判定をそのまま使う**。 */
   const [overdueOnly, setOverdueOnly] = useState(false);
 
@@ -45,7 +56,8 @@ export function CustomsPage() {
   const canRegister = user?.roles.includes("ROLE_HANDLER") === true;
 
   const { data: statuses = [] } = useCustomsStatuses();
-  const { data: declarations = [], isLoading } = useCustomsDeclarations(criteria);
+  const { data: result, isLoading } = useCustomsDeclarations(criteria);
+  const declarations = result?.declarations ?? [];
 
   /**
    * **件数はサーバに聞く。**
@@ -162,6 +174,22 @@ export function CustomsPage() {
             ))}
           </select>
         </div>
+        {/* **朝の待ち行列**（US29-7）。状態の絞り込みは単一選択のため、
+            審査中と留置を同時に見る手段がこれとは別に要る */}
+        <div className="flex items-center gap-2">
+          <input
+            id="unsettledOnly"
+            type="checkbox"
+            checked={form.unsettledOnly}
+            onChange={(event) =>
+              setForm({ ...form, unsettledOnly: event.target.checked })
+            }
+            className="h-4 w-4"
+          />
+          <label htmlFor="unsettledOnly" className="text-sm text-gray-700">
+            未決着（審査中・留置）だけ
+          </label>
+        </div>
         <button
           type="submit"
           className="rounded bg-blue-600 px-4 py-2 text-white"
@@ -171,6 +199,18 @@ export function CustomsPage() {
       </form>
 
       {isLoading && <p className="text-sm text-gray-600">読み込んでいます…</p>}
+
+      {/* **何件あるかを出す。**上限で切ったことを黙っていると「全件見た」と受け取られる */}
+      {!isLoading && result !== undefined && (
+        <p className="text-sm text-gray-700">
+          {result.totalCount} 件
+          {result.truncated && (
+            <span className="ml-2 text-amber-700">
+              （新しい {result.limit} 件のみ表示しています。絞り込んでください）
+            </span>
+          )}
+        </p>
+      )}
 
       {!isLoading && shown.length === 0 ? (
         <p className="text-sm text-gray-600">通関申告はありません。</p>

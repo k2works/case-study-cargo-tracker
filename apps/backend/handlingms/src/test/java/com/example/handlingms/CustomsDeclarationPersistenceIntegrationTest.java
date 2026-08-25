@@ -104,7 +104,7 @@ class CustomsDeclarationPersistenceIntegrationTest extends HandlingIntegrationTe
                 Instant.parse("2027-09-03T00:00:00Z")));
 
         List<CustomsDeclaration> found =
-                declarations.search(null, "TRK-20260823-1004", null, 100);
+                declarations.search(null, "TRK-20260823-1004", null, false, 100);
         assertThat(found).hasSize(1);
         assertThat(found.getFirst().status()).isEqualTo(CustomsStatus.CLEARED);
     }
@@ -137,12 +137,46 @@ class CustomsDeclarationPersistenceIntegrationTest extends HandlingIntegrationTe
         declarations.updateStatus(other.updateStatus(
                 CustomsStatus.HELD, "tracker01", "書類不備", Instant.parse("2027-09-03T00:00:00Z")));
 
-        assertThat(declarations.search(null, "TRK-20260823-1006", null, 100))
+        assertThat(declarations.search(null, "TRK-20260823-1006", null, false, 100))
                 .extracting(declaration -> declaration.declarationNumber().value())
                 .containsExactly("DEC-P0006");
-        assertThat(declarations.search(null, null, CustomsStatus.HELD, 100))
+        assertThat(declarations.search(null, null, CustomsStatus.HELD, false, 100))
                 .extracting(declaration -> declaration.declarationNumber().value())
                 .contains("DEC-P0007")
                 .doesNotContain("DEC-P0006");
+    }
+
+    /**
+     * US29-7・IT10 返済枠 0.1。<strong>未決着（審査中・留置）だけに絞れる</strong>。
+     *
+     * <p>追跡管理者の朝の仕事は「未決着を上から片付ける」ことだが、状態の絞り込みは
+     * <strong>単一選択</strong>のため、この 2 つを同時に見る手段が別に要る。
+     *
+     * <p><strong>総件数も返す。</strong>上限で切ったことを黙ると、担当者は
+     * 「一覧に出ていないから無い」と読む。
+     */
+    @Test
+    @DisplayName("未決着（審査中・留置）だけに絞れる")
+    void searchesOnlyUnsettledDeclarations() {
+        declare("DEC-P0008", "TRK-20260823-1008");
+        CustomsDeclaration held = declare("DEC-P0009", "TRK-20260823-1009");
+        declarations.updateStatus(held.updateStatus(
+                CustomsStatus.HELD, "tracker01", "書類不備", Instant.parse("2027-09-03T00:00:00Z")));
+        CustomsDeclaration cleared = declare("DEC-P0010", "TRK-20260823-1010");
+        declarations.updateStatus(cleared.updateStatus(
+                CustomsStatus.CLEARED, "tracker01", "審査完了",
+                Instant.parse("2027-09-03T00:00:00Z")));
+
+        assertThat(declarations.search(null, null, null, true, 100))
+                .extracting(declaration -> declaration.declarationNumber().value())
+                .as("決着済みが混ざっている。毎朝の待ち行列にならない")
+                .contains("DEC-P0008", "DEC-P0009")
+                .doesNotContain("DEC-P0010");
+
+        // **件数は同じ条件で数える。**一覧と件数が違う条件で出ると、担当者は数えなおす
+        assertThat(declarations.count(null, "TRK-20260823-1010", null, true))
+                .as("未決着の条件が件数に効いていない")
+                .isZero();
+        assertThat(declarations.count(null, "TRK-20260823-1010", null, false)).isEqualTo(1);
     }
 }
