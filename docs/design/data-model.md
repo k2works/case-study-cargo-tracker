@@ -435,6 +435,8 @@ entity "cargo\n（貨物）" as cargo {
   route_notified_by : VARCHAR(100)
   last_handling_location_unlocode : VARCHAR(5) <<FK>>
   last_handling_at : TIMESTAMPTZ
+  misrouted_at : TIMESTAMPTZ
+  misrouted_location_unlocode : VARCHAR(5)
   last_known_location_unlocode : VARCHAR(5)
   current_voyage_number : VARCHAR(20)
   last_handling_event_type : VARCHAR(30)

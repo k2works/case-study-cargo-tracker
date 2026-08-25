@@ -49,6 +49,14 @@ public final class Cargo {
     /** 最後の荷役の日時。まだ無ければ null。 */
     private final Instant lastHandlingAt;
 
+    /**
+     * 誤配が起きた事実（[ADR-026] 決定 3）。起きていなければ null。
+     *
+     * <p><strong>状態ではなく、起きたことである。</strong>再設計して {@code ROUTED} へ
+     * 戻っても<strong>この記録は消さない</strong>——料金調整の根拠として参照される。
+     */
+    private final Misroute misroute;
+
     // S107（引数が多い）: 復元は永続化された行の写しであり、列数がそのまま現れる。
     // まとめると復元の意味が薄れる（テスト戦略の Quality Gate 例外表に記載）
     @SuppressWarnings("java:S107")
@@ -66,8 +74,19 @@ public final class Cargo {
             CargoItinerary itinerary, RouteNotification notification,
             TrackingNumber trackingNumber, String lastHandlingLocationUnLocode,
             Instant lastHandlingAt) {
+        this(id, bookingId, shipperId, status, specification, routeSpecification, itinerary,
+                notification, trackingNumber, lastHandlingLocationUnLocode, lastHandlingAt, null);
+    }
+
+    @SuppressWarnings("java:S107")
+    Cargo(Long id, BookingId bookingId, Long shipperId, CargoStatus status,
+            CargoSpecification specification, RouteSpecification routeSpecification,
+            CargoItinerary itinerary, RouteNotification notification,
+            TrackingNumber trackingNumber, String lastHandlingLocationUnLocode,
+            Instant lastHandlingAt, Misroute misroute) {
         this.lastHandlingLocationUnLocode = lastHandlingLocationUnLocode;
         this.lastHandlingAt = lastHandlingAt;
+        this.misroute = misroute;
         this.id = id;
         this.bookingId = bookingId;
         this.shipperId = shipperId;
@@ -84,13 +103,24 @@ public final class Cargo {
             RouteNotification newNotification, TrackingNumber newTrackingNumber) {
         return new Cargo(id, bookingId, shipperId, newStatus, specification, routeSpecification,
                 newItinerary, newNotification, newTrackingNumber, lastHandlingLocationUnLocode,
-                lastHandlingAt);
+                lastHandlingAt, misroute);
     }
 
     /** 荷役の記録を反映した写しを作る。状態と最後の荷役地点が同時に動く。 */
     private Cargo withHandling(CargoStatus newStatus, String locationUnLocode, Instant at) {
+        return withHandling(newStatus, locationUnLocode, at, misroute);
+    }
+
+    /**
+     * 荷役の記録を反映した写しを作る。<strong>誤配の記録も同時に動く</strong>。
+     *
+     * <p><strong>書き忘れると、その項目だけが読み戻しで消える。</strong>写しを作る道具は
+     * 全項目を運ぶ責任を持つ。
+     */
+    private Cargo withHandling(CargoStatus newStatus, String locationUnLocode, Instant at,
+            Misroute newMisroute) {
         return new Cargo(id, bookingId, shipperId, newStatus, specification, routeSpecification,
-                itinerary, notification, trackingNumber, locationUnLocode, at);
+                itinerary, notification, trackingNumber, locationUnLocode, at, newMisroute);
     }
 
     /**
@@ -324,6 +354,40 @@ public final class Cargo {
                         new CargoStatus(advanced, status.transport(), status.routing()),
                         locationUnLocode, at))
                 .orElse(this);
+    }
+
+    /**
+     * 予定ルート外の荷役を受けて、誤配として記録する（US28-2・[ADR-026] 決定 1・決定 3）。
+     *
+     * <p><strong>経路の状況を {@code MISROUTED} にし、起きた事実を残す。</strong>
+     * 状態は再設計で {@code ROUTED} へ戻るが、<strong>事実は戻らない</strong>
+     * ——料金調整の根拠として参照される（受入基準 28-8）。
+     *
+     * <p><strong>キャンセル済みの予約は動かさない。</strong>遅れて届いた荷役で
+     * キャンセルが覆ると、荷主との約束と記録が食い違う（{@link #afterHandling} と同じ立場）。
+     *
+     * <p><strong>2 回目以降は最初の誤配を残す。</strong>誤配のあと目的地へ向かわずに
+     * 別の港でも荷役が起きることはある——<strong>いつ経路から外れたか</strong>が
+     * 料金調整の起点であり、最後に外れた場所ではない。
+     */
+    public Cargo misrouted(String locationUnLocode, Instant at) {
+        if (status.booking() == BookingStatus.CANCELLED) {
+            return this;
+        }
+        Misroute recorded = misroute == null ? new Misroute(at, locationUnLocode) : misroute;
+        return withHandling(
+                new CargoStatus(status.booking(), status.transport(), RoutingStatus.MISROUTED),
+                locationUnLocode, at, recorded);
+    }
+
+    /** 誤配が起きているか（US28-3）。<strong>状態ではなく事実を見る</strong>。 */
+    public boolean isMisrouted() {
+        return misroute != null;
+    }
+
+    /** 誤配が起きた事実。起きていなければ空。 */
+    public java.util.Optional<Misroute> misroute() {
+        return java.util.Optional.ofNullable(misroute);
     }
 
     /**

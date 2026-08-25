@@ -54,9 +54,26 @@ public final class CargoRestoration {
             CargoItinerary itinerary, RouteNotification notification,
             TrackingNumber trackingNumber, String lastHandlingLocationUnLocode,
             Instant lastHandlingAt) {
+        return restore(id, bookingId, shipperId, status, specification, routeSpecification,
+                itinerary, notification, trackingNumber, lastHandlingLocationUnLocode,
+                lastHandlingAt, null);
+    }
+
+    /**
+     * 誤配の記録まで伴って復元する（[ADR-026] 決定 3）。ここでは検査しない。
+     *
+     * <p><strong>書き忘れると、その項目だけが読み戻しで消える。</strong>誤配の事実は
+     * 料金調整の根拠であり、消えたことは請求の段まで気づかれない。
+     */
+    @SuppressWarnings("java:S107")
+    public static Cargo restore(Long id, BookingId bookingId, Long shipperId, CargoStatus status,
+            CargoSpecification specification, RouteSpecification routeSpecification,
+            CargoItinerary itinerary, RouteNotification notification,
+            TrackingNumber trackingNumber, String lastHandlingLocationUnLocode,
+            Instant lastHandlingAt, Misroute misroute) {
         return new Cargo(id, bookingId, shipperId, status, specification, routeSpecification,
                 itinerary, notification, trackingNumber, lastHandlingLocationUnLocode,
-                lastHandlingAt);
+                lastHandlingAt, misroute);
     }
 
 }

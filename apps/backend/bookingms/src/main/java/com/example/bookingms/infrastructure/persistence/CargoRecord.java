@@ -46,6 +46,12 @@ public class CargoRecord {
     /** 最後の荷役の日時。まだ無ければ null。 */
     private java.time.Instant lastHandlingAt;
 
+    /** 誤配が起きた日時（US28・[ADR-026] 決定 3）。**再設計しても消さない**。 */
+    private java.time.Instant misroutedAt;
+
+    /** 誤配が起きた港。「誤配があった」だけでは荷主にも経理にも説明できない。 */
+    private String misroutedLocationUnlocode;
+
     private String shipperName;
 
     public Long getId() {
@@ -296,4 +302,20 @@ public class CargoRecord {
     public void setShipperName(String shipperName) {
         this.shipperName = shipperName;
     }
+    public java.time.Instant getMisroutedAt() {
+        return misroutedAt;
+    }
+
+    public void setMisroutedAt(java.time.Instant misroutedAt) {
+        this.misroutedAt = misroutedAt;
+    }
+
+    public String getMisroutedLocationUnlocode() {
+        return misroutedLocationUnlocode;
+    }
+
+    public void setMisroutedLocationUnlocode(String misroutedLocationUnlocode) {
+        this.misroutedLocationUnlocode = misroutedLocationUnlocode;
+    }
+
 }

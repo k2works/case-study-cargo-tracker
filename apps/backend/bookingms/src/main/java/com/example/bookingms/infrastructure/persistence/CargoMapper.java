@@ -31,6 +31,7 @@ public interface CargoMapper {
             c.temp_min, c.temp_max, c.temp_unit,
             c.route_notified_at, c.route_notified_by, c.tracking_number,
             c.last_handling_location_unlocode, c.last_handling_at,
+            c.misrouted_at, c.misrouted_location_unlocode,
             s.name AS shipper_name
             """;
 
@@ -100,6 +101,8 @@ public interface CargoMapper {
                    tracking_number = #{trackingNumber},
                    last_handling_location_unlocode = #{lastHandlingLocationUnlocode},
                    last_handling_at = #{lastHandlingAt},
+                   misrouted_at = #{misroutedAt},
+                   misrouted_location_unlocode = #{misroutedLocationUnlocode},
                    updated_at = NOW()
              WHERE id = #{id}
             """)
@@ -114,6 +117,8 @@ public interface CargoMapper {
         @Result(column = "last_handling_location_unlocode",
                 property = "lastHandlingLocationUnlocode"),
         @Result(column = "last_handling_at", property = "lastHandlingAt"),
+        @Result(column = "misrouted_at", property = "misroutedAt"),
+        @Result(column = "misrouted_location_unlocode", property = "misroutedLocationUnlocode"),
         @Result(column = "routing_status", property = "routingStatus"),
         @Result(column = "cargo_type", property = "cargoType"),
         @Result(column = "weight_kg", property = "weightKg"),
@@ -198,6 +203,8 @@ public interface CargoMapper {
         @Result(column = "last_handling_location_unlocode",
                 property = "lastHandlingLocationUnlocode"),
         @Result(column = "last_handling_at", property = "lastHandlingAt"),
+        @Result(column = "misrouted_at", property = "misroutedAt"),
+        @Result(column = "misrouted_location_unlocode", property = "misroutedLocationUnlocode"),
         @Result(column = "routing_status", property = "routingStatus"),
         @Result(column = "cargo_type", property = "cargoType"),
         @Result(column = "weight_kg", property = "weightKg"),

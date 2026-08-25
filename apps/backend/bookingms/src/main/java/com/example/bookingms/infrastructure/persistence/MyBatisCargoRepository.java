@@ -13,6 +13,7 @@ import com.example.bookingms.domain.model.CargoType;
 import com.example.bookingms.domain.model.Dimensions;
 import com.example.bookingms.domain.model.HazardousDeclaration;
 import com.example.bookingms.domain.model.Leg;
+import com.example.bookingms.domain.model.Misroute;
 import com.example.bookingms.domain.model.RouteNotification;
 import com.example.bookingms.domain.model.RouteSpecification;
 import com.example.bookingms.domain.model.RoutingStatus;
@@ -150,8 +151,10 @@ public class MyBatisCargoRepository implements CargoRepository {
         return CargoRestoration.restore(cargo.id(), cargo.bookingId().orElse(null), cargo.shipperId(),
                 cargo.status(), cargo.specification(), cargo.routeSpecification(), itinerary,
                 cargo.routeNotification().orElse(null), cargo.trackingNumber().orElse(null),
-                // **ここで落とすと、読み戻しでだけ消える。**IT9 で実際に落とした
-                cargo.lastHandlingLocation().orElse(null), cargo.lastHandlingAt().orElse(null));
+                // **ここで落とすと、読み戻しでだけ消える。**IT9 で実際に落とし、
+                // IT10 で誤配の記録をまた落とした（どちらも読み戻しのテストが捕まえた）
+                cargo.lastHandlingLocation().orElse(null), cargo.lastHandlingAt().orElse(null),
+                cargo.misroute().orElse(null));
     }
 
     @Override
@@ -238,6 +241,11 @@ public class MyBatisCargoRepository implements CargoRepository {
         // 最後の荷役（[ADR-025] 決定 4）。**書かないと、陸揚げ地の候補に現在地が出ない**
         row.setLastHandlingLocationUnlocode(cargo.lastHandlingLocation().orElse(null));
         row.setLastHandlingAt(cargo.lastHandlingAt().orElse(null));
+        // **誤配の事実も運ぶ。**書き忘れると、この項目だけが読み戻しで消える
+        // ——料金調整の根拠が失われ、請求の段まで気づかれない
+        row.setMisroutedAt(cargo.misroute().map(Misroute::at).orElse(null));
+        row.setMisroutedLocationUnlocode(
+                cargo.misroute().map(Misroute::locationUnLocode).orElse(null));
         return row;
     }
 
@@ -276,6 +284,9 @@ public class MyBatisCargoRepository implements CargoRepository {
                 status, specification, route, null,
                 RouteNotification.restore(row.getRouteNotifiedAt(), row.getRouteNotifiedBy()),
                 TrackingNumber.restoreNullable(row.getTrackingNumber()),
-                row.getLastHandlingLocationUnlocode(), row.getLastHandlingAt());
+                row.getLastHandlingLocationUnlocode(), row.getLastHandlingAt(),
+                row.getMisroutedAt() == null ? null
+                        : new Misroute(row.getMisroutedAt(),
+                                row.getMisroutedLocationUnlocode()));
     }
 }

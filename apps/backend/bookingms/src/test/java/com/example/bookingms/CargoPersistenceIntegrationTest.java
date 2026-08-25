@@ -50,6 +50,32 @@ class CargoPersistenceIntegrationTest extends CargoPersistenceTestBase {
         assertThat(reloaded.lastHandlingAt()).contains(at);
     }
 
+    /**
+     * <strong>誤配の事実が、行を往復しても残る</strong>（US28-8・[ADR-026] 決定 3）。
+     *
+     * <p>この記録は<strong>料金調整の根拠</strong>である。どこか一層で潰しても集約の
+     * テストは緑のままであり、<strong>消えたことは請求の段まで気づかれない</strong>。
+     */
+    @Test
+    @DisplayName("誤配の事実が、読み直しても残る")
+    void keepsTheMisrouteAcrossAReload() {
+        Cargo booked = bookCargo.book(command(shipperId("誤配太郎", "misroute@example.com"),
+                CargoType.GENERAL));
+        java.time.Instant at = java.time.Instant.parse("2026-09-06T00:00:00Z");
+
+        repository.save(booked.misrouted("SGSIN", at));
+
+        Cargo reloaded = repository.findById(booked.id()).orElseThrow();
+        assertThat(reloaded.isMisrouted())
+                .as("誤配の事実が行に残っていない。料金調整の根拠が失われる")
+                .isTrue();
+        assertThat(reloaded.misroute().orElseThrow().locationUnLocode()).isEqualTo("SGSIN");
+        assertThat(reloaded.misroute().orElseThrow().at()).isEqualTo(at);
+        assertThat(reloaded.routingStatus())
+                .as("経路の状況が誤配になっていない。経路設計者の一覧に出ない")
+                .isEqualTo(com.example.bookingms.domain.model.RoutingStatus.MISROUTED);
+    }
+
     @Test
     @DisplayName("予約番号が本番経路（DB シーケンス）で採番される")
     void assignsBookingIdFromDatabase() {

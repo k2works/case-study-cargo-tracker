@@ -276,7 +276,13 @@ class SchemaDesignConsistencyTest {
 
         List<Path> files;
         try (Stream<Path> stream = Files.list(dir)) {
-            files = stream.filter(path -> path.getFileName().toString().endsWith(".sql")).sorted().toList();
+            files = stream.filter(path -> path.getFileName().toString().endsWith(".sql"))
+                    // **Flyway と同じ順で読む。**文字列順では V10 が V3 より前に来るため、
+                    // CREATE TABLE の前に ALTER TABLE が適用され、**足した列が消える**
+                    // （IT10 で実際に踏んだ。列を足したのに「設計にあるが実装に無い」と出た）
+                    .sorted(java.util.Comparator.comparingInt(
+                            SchemaDesignConsistencyTest::versionOf))
+                    .toList();
         } catch (IOException e) {
             throw new UncheckedIOException("マイグレーションを読めない: " + dir, e);
         }
@@ -285,6 +291,16 @@ class SchemaDesignConsistencyTest {
             apply(schema, stripComments(read(file)));
         }
         return schema;
+    }
+
+    /** {@code V12__foo.sql} の 12。Flyway の適用順は<strong>数値</strong>で決まる。 */
+    private static int versionOf(Path file) {
+        Matcher matcher = Pattern.compile("^V(\\d+)__").matcher(file.getFileName().toString());
+        if (!matcher.find()) {
+            throw new IllegalStateException(
+                    "Flyway の命名（V<数字>__）に従っていない: " + file.getFileName());
+        }
+        return Integer.parseInt(matcher.group(1));
     }
 
     private static void apply(Map<String, Map<String, String>> schema, String sql) {
