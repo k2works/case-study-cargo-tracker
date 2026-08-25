@@ -205,12 +205,16 @@ async function promptReleaseImageTag() {
     return;
   }
   if (!process.stdin.isTTY || !process.stdout.isTTY) {
-    console.log(`リリース番号が未指定のため、既定のタグ ${DEFAULT_IMAGE_TAG} を使います。`);
+    console.log(
+      `現在の最新リリース番号: ${latestReleaseImageTagLabel()}。` +
+        ` リリース番号が未指定のため、既定のタグ ${DEFAULT_IMAGE_TAG} を使います。`,
+    );
     return;
   }
 
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   try {
+    console.log(`現在の最新リリース番号: ${latestReleaseImageTagLabel()}`);
     const answer = await rl.question(`リリース番号（Docker image tag）を入力してください [${DEFAULT_IMAGE_TAG}]: `);
     promptedReleaseImageTag = answer.trim() || DEFAULT_IMAGE_TAG;
     assertValidImageTag(promptedReleaseImageTag);
@@ -243,6 +247,50 @@ function dockerImageExists(image) {
     env: cleanDockerEnv(),
   });
   return result.status === 0;
+}
+
+/**
+ * ローカル Docker にある cargo アプリケーションイメージの最新タグを返す。
+ *
+ * `docker image ls` は既定で作成日時の新しい順に並ぶため、release 時に作られた
+ * cargo-* イメージの先頭タグを現在の最新リリース番号として扱う。
+ *
+ * @returns {string | undefined} 最新の Docker イメージタグ
+ */
+function latestReleaseImageTag() {
+  const result = spawnCommand('docker', ['image', 'ls', '--format', '{{.Repository}}:{{.Tag}}'], {
+    stdio: ['ignore', 'pipe', 'ignore'],
+    env: cleanDockerEnv(),
+  });
+  if (result.status !== 0) {
+    return undefined;
+  }
+
+  const deploymentRepositories = new Set(K8S_DEPLOYMENTS.map((service) => `cargo-${service}`));
+  return String(result.stdout)
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((image) => {
+      const tagSeparatorIndex = image.lastIndexOf(':');
+      return {
+        repository: image.slice(0, tagSeparatorIndex),
+        tag: image.slice(tagSeparatorIndex + 1),
+      };
+    })
+    .find(({ repository, tag }) => deploymentRepositories.has(repository) && tag !== '<none>')?.tag;
+}
+
+/**
+ * 最新リリース番号の表示値を返す。
+ *
+ * @returns {string} プロンプト表示用の最新リリース番号
+ */
+function latestReleaseImageTagLabel() {
+  if (!isDockerAvailable()) {
+    return '取得できません';
+  }
+  return latestReleaseImageTag() ?? 'なし';
 }
 
 /**
