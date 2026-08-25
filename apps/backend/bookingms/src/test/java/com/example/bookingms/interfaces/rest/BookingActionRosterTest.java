@@ -47,8 +47,7 @@ class BookingActionRosterTest {
 
         assertThat(declared)
                 .as("操作が 1 つも読めていない。検査が何も守らないまま緑になる")
-                .isNotEmpty();
-        assertThat(declared)
+                .isNotEmpty()
                 .allSatisfy(action -> assertThat(response)
                         .as("%s が応答の組み立てに現れない。画面はこの操作のボタンを出せない",
                                 action)
