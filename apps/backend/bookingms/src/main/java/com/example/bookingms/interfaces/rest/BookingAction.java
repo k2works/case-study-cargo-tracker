@@ -26,5 +26,13 @@ public enum BookingAction {
     /** 追跡番号を発行する（経路設計者）。 */
     ISSUE_TRACKING_NUMBER,
     /** 日程を直す（営業）。 */
-    REVISE_SCHEDULE
+    REVISE_SCHEDULE,
+    /**
+     * キャンセルを申請する（営業・US30-1）。
+     *
+     * <p><strong>載せ忘れると、画面には申請の入口が出ない。</strong>集約に述語があっても
+     * 応答に載らなければ画面は判断できず、モックだけが返している状態になる——実際、
+     * IT9 のクローズまでその状態だった。
+     */
+    REQUEST_CANCELLATION
 }

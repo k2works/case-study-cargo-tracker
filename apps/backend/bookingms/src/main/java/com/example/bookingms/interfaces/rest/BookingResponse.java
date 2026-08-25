@@ -110,6 +110,9 @@ public record BookingResponse(
         if (cargo.canReviseSchedule()) {
             actions.add(BookingAction.REVISE_SCHEDULE);
         }
+        if (cargo.canRequestCancellation()) {
+            actions.add(BookingAction.REQUEST_CANCELLATION);
+        }
         return List.copyOf(actions);
     }
 

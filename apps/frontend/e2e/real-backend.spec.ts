@@ -1000,6 +1000,53 @@ test.describe('IT9 実環境（通関とキャンセル承認）', () => {
   })
 
   /**
+   * US30-1。**画面にキャンセル申請の入口が出る。**
+   *
+   * <p>API を直接叩く受け入れテストでは見つからない。画面は応答の
+   * {@code availableActions} を見てボタンを出すため、<strong>サーバが操作を載せ忘れると
+   * 画面には何も出ない</strong>——それでも API は 201 を返すので、API のテストは緑になる。
+   * IT9 のクローズまで実際にその状態で、モックだけがこの操作を返していた。
+   */
+  test('輸送中の予約には、営業の画面にキャンセル申請の入口が出る', async ({
+    page,
+    request,
+  }) => {
+    const { trackingNumber, voyageNumber, bookingId } = await ensureTrackedVoyage(request)
+    const handler = await handlerHeaders(request)
+
+    for (const type of ['RECEIVE', 'LOAD']) {
+      const recorded = await request.post('/api/v1/handling', {
+        headers: handler,
+        data: {
+          trackingNumber,
+          type,
+          locationUnLocode: 'JPTYO',
+          completionTime: `${utcDate(0)}T0${type === 'RECEIVE' ? '5' : '6'}:00:00Z`,
+          voyageNumber: type === 'LOAD' ? voyageNumber : null,
+        },
+      })
+      expect(recorded.ok(), `${type} を記録できない: ${await recorded.text()}`).toBeTruthy()
+    }
+
+    await page.goto('/login')
+    await page.getByLabel('利用者 ID').fill('sales01')
+    await page.getByLabel('パスワード').fill('password')
+    await page.getByRole('button', { name: 'ログイン' }).click()
+    await expect(page).toHaveURL(/\/dashboard/)
+
+    // 積込が bookingms に届いて輸送中になるまで待つ
+    await expect(async () => {
+      await page.goto(`/booking/${bookingId}`)
+      await expect(page.getByText('輸送中').first()).toBeVisible({ timeout: 3_000 })
+    }).toPass({ timeout: 20_000 })
+
+    await expect(
+      page.getByRole('button', { name: 'キャンセルを申請する' }),
+      '営業の画面にキャンセル申請の入口が無い。サーバが操作を載せていない',
+    ).toBeVisible()
+  })
+
+  /**
    * 成功基準 3・4。輸送中 → 申請 → 陸揚げ地を指定して承認 → キャンセル確定。
    *
    * <p>輸送中にするのは<strong>荷役のイベント経由</strong>である。bookingms が初めて

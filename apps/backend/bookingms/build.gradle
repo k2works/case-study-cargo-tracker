@@ -35,3 +35,18 @@ dependencyManagement {
         mavenBom "org.testcontainers:testcontainers-bom:${rootProject.ext.testcontainersVersion}"
     }
 }
+
+/**
+ * 画面側のファイルを検査の入力として宣言する。
+ *
+ * 宣言しないと Gradle はテストを UP-TO-DATE と見なし、**画面やモックだけを変えたときに
+ * 検査が動かない**。BookingActionRosterTest は画面の型とモックを読むため、
+ * 宣言を欠くと「壊しても緑」になる（IT9 の返済枠 0.1 で同じ落とし穴を踏んだ）。
+ */
+tasks.named('test') {
+    inputs.files(
+            rootProject.file('../frontend/src/features/booking/types.ts'),
+            rootProject.file('../frontend/src/mocks/data.ts'))
+            .withPropertyName('frontendBookingContract')
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+}

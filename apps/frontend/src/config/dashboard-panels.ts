@@ -103,7 +103,6 @@ export const PANELS: Panel[] = [
       // 輸送中のキャンセルは、承認しないと貨物が行き先を失ったまま船に乗り続ける。
       // 営業から電話が来て初めて気づく形にしない（US30-4）
       { label: '承認待ちのキャンセルを見る', to: '/booking/cancellations' },
-      { label: 'キャンセル申請を確認する', to: '/booking/cancellations' },
     ],
   },
   {
