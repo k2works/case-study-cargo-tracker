@@ -194,6 +194,46 @@ describe('経路設計待ちの気づき（US06）', () => {
     ).toHaveAttribute('href', '/booking?bookingStatus=CONFIRMED')
   })
 
+  /**
+   * US28・デモ項目 5。<strong>誤配は放っておくほど貨物が目的地から遠ざかる</strong>。
+   *
+   * <p>組み直すのは経路設計者だが、誤配を検知するのは荷役の記録であり、経路設計者には
+   * 何も知らされない。件数を出すだけでは足りず、そこから対象の予約へ行けて初めて
+   * 組み直しが始まる。絞り込みの値は一覧の選択肢と同じ <code>MISROUTED</code> である。
+   */
+  it('経路設計者は、誤配の件数からその予約の一覧へ行ける', async () => {
+    server.use(
+      http.get(API_PATHS.bookings, ({ request }) => {
+        const status = new URL(request.url).searchParams.get('routingStatus')
+        return HttpResponse.json({
+          bookings: [],
+          totalCount: status === 'MISROUTED' ? 2 : 0,
+          limit: 100,
+          truncated: false,
+        })
+      }),
+    )
+    renderAs(['ROLE_ROUTING'])
+
+    expect(await screen.findByText(/誤配が起きている予約が 2 件あります/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '誤配が起きている予約を見る' })).toHaveAttribute(
+      'href',
+      '/booking?routingStatus=MISROUTED',
+    )
+  })
+
+  it('誤配が無いときは件数を出さない', async () => {
+    server.use(
+      http.get(API_PATHS.bookings, () =>
+        HttpResponse.json({ bookings: [], totalCount: 0, limit: 100, truncated: false }),
+      ),
+    )
+    renderAs(['ROLE_ROUTING'])
+
+    await screen.findByRole('heading', { name: '経路設計ダッシュボード' })
+    expect(screen.queryByText(/誤配が起きている予約が/)).not.toBeInTheDocument()
+  })
+
   it('待っている予約が無いときは何も出さない', async () => {
     server.use(
       http.get(API_PATHS.bookings, () =>

@@ -1317,5 +1317,35 @@ test.describe('IT10 実環境（誤配の検知と再設計）', () => {
     // **誤配の事実は残る**（US28-8。料金調整の根拠）
     expect(body.misroute?.locationUnLocode, '組み直した瞬間に誤配の記録が消えた')
       .toBe('SGSIN')
+
+    // **例外を解決しても残る**（US28-8・デモ項目 10）。組み直しと例外の解決は別の
+    // 担当者が別の画面で行う。どちらか一方でも記録を消すと、料金調整の根拠が
+    // 「誤配があったはずだが証拠がない」になる
+    const tracker = await trackerHeaders(request)
+    const listed = await request.get('/api/v1/tracking/manage/exceptions', { headers: tracker })
+    const target = ((await listed.json()) as Array<{
+      trackingNumber: string
+      activeException: { id: number; exceptionType: string } | null
+    }>).find((t) => t.trackingNumber === trackingNumber)
+    expect(target?.activeException?.exceptionType, '誤配の例外が見つからない').toBe('MISROUTE')
+
+    const resolved = await request.post(
+      `/api/v1/tracking/manage/exceptions/${target!.activeException!.id}/resolve`,
+      {
+        headers: tracker,
+        data: {
+          trackingNumber,
+          resolutionNotes: '現在地から経路を組み直した',
+          newEstimatedArrival: null,
+        },
+      },
+    )
+    expect(resolved.status(), `例外を解決できない: ${await resolved.text()}`).toBe(200)
+
+    const after = await request.get(`/api/v1/bookings/${encodeURIComponent(bookingId)}`, {
+      headers: sales,
+    })
+    expect((await after.json()).misroute?.locationUnLocode, '例外を解決したら誤配の記録が消えた')
+      .toBe('SGSIN')
   })
 })
