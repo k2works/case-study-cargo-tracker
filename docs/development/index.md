@@ -25,6 +25,7 @@
 | IT8 | [計画](iteration_plan-8.md) | [ふりかえり](retrospective-8.md) | [報告書](iteration_report-8.md) | 完了 |
 | IT9 | [計画](iteration_plan-9.md) | [ふりかえり](retrospective-9.md) | [完了報告書](iteration_report-9.md) | 完了 |
 | IT10 | [計画](iteration_plan-10.md) | [ふりかえり](retrospective-10.md) | [完了報告書](iteration_report-10.md) | 完了 |
+| IT11 | [計画](iteration_plan-11.md) | - | - | 計画済み |
 
 ### 進捗サマリー
 

@@ -439,7 +439,7 @@ gantt
 | IT8 | US17, US18, US19, US20 | 9 | 荷主が自分で追える（公開追跡）+ 状態の手動更新と例外。詳細は [iteration_plan-8.md](./iteration_plan-8.md) |
 | IT9 | US29, US30 | 10 | 通関という関門を引取の前に置き、輸送中の予約に承認フローを与える。詳細は [iteration_plan-9.md](./iteration_plan-9.md) |
 | IT10 | US28 | 7 | 誤配を検知して経路を再設計する。**Release 1.1 が完了する**。詳細は [iteration_plan-10.md](./iteration_plan-10.md) |
-| IT11 | US21, US22 | 9 | — |
+| IT11 | US21, US22 | 9 | 引取済の予約から料金を算出して確定する。**billingms を業務として立ち上げる**。詳細は [iteration_plan-11.md](./iteration_plan-11.md) |
 | IT12 | US23, US01 | 8 | — |
 | IT13 | US33 | 5 | 荷主が自社の貨物を一覧で追える。**予備枠で消化する**（[開発戦略](development_strategy.md)） |
 
@@ -492,7 +492,7 @@ gantt
 | IT8 | 9 | 9 | 100% | [完了](iteration_report-8.md) |
 | IT9 | 10 | 10 | 100% | [完了](iteration_report-9.md) |
 | IT10 | 7 | 7 | 100% | [完了](iteration_report-10.md) |
-| IT11 | 9 | - | - | 未着手 |
+| IT11 | 9 | - | - | [計画済み](iteration_plan-11.md) |
 | IT12 | 8 | - | - | 未着手 |
 | IT13 | 5 | - | - | 未着手（予備枠） |
 
