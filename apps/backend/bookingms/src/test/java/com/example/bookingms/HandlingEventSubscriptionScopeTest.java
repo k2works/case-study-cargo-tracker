@@ -81,11 +81,19 @@ class HandlingEventSubscriptionScopeTest {
     @Test
     @DisplayName("荷役の記録を読みに行かない")
     void doesNotCallBackIntoHandling() {
-        String source = read(USE_CASE);
+        // **コメントは検査の対象外。**「handlingms が判定を済ませている」と説明することは
+        // 正当であり、むしろ書くべきである——読みに行っているかどうかは
+        // **import と呼び出し**に現れる（IT10 で説明文が引っかかった）
+        String source = stripComments(read(USE_CASE));
 
         assertThat(source)
                 .as("handlingms を読みに行っている。イベントが運ぶもので足りるはず")
                 .doesNotContain("handlingms");
+    }
+
+    /** ブロックコメントと行コメントを外す。**説明を書くことを罰しない**。 */
+    private static String stripComments(String source) {
+        return source.replaceAll("(?s)/\\*.*?\\*/", "").replaceAll("(?m)//.*$", "");
     }
 
     /** 進める入口は 1 つだけ。増えると、冪等と巻き戻さない守りを写す先が増える。 */

@@ -161,8 +161,9 @@ public class TrackingConfig {
 
     @Bean
     public HandlingActivityRegisteredListener handlingActivityRegisteredListener(
-            AdvanceTrackingUseCase advanceTracking) {
-        return new HandlingActivityRegisteredListener(advanceTracking);
+            AdvanceTrackingUseCase advanceTracking,
+            com.example.trackingms.application.internal.DetectMisrouteUseCase detectMisroute) {
+        return new HandlingActivityRegisteredListener(advanceTracking, detectMisroute);
     }
 
     /**
@@ -254,6 +255,15 @@ public class TrackingConfig {
         return BindingBuilder.bind(customsStatusChangedQueue())
                 .to(cargoHandlingExchange())
                 .with(TrackingEventChannels.CUSTOMS_STATUS_CHANGED);
+    }
+
+    @Bean
+    public com.example.trackingms.application.internal.DetectMisrouteUseCase
+            detectMisrouteUseCase(
+            com.example.trackingms.application.port.TrackingActivityRepository activities,
+            com.example.trackingms.application.port.TrackingNotifier notifier) {
+        return new com.example.trackingms.application.internal.DetectMisrouteUseCase(
+                activities, notifier);
     }
 
     @Bean

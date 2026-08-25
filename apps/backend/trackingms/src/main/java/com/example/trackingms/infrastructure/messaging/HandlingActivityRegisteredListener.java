@@ -16,14 +16,22 @@ import org.springframework.amqp.rabbit.annotation.RabbitListener;
 public class HandlingActivityRegisteredListener {
 
     private final AdvanceTrackingUseCase advanceTracking;
+    private final com.example.trackingms.application.internal.DetectMisrouteUseCase detectMisroute;
 
-    public HandlingActivityRegisteredListener(AdvanceTrackingUseCase advanceTracking) {
+    public HandlingActivityRegisteredListener(AdvanceTrackingUseCase advanceTracking,
+            com.example.trackingms.application.internal.DetectMisrouteUseCase detectMisroute) {
         this.advanceTracking = advanceTracking;
+        this.detectMisroute = detectMisroute;
     }
 
     @RabbitListener(queues = TrackingEventChannels.HANDLING_QUEUE)
     public void onHandlingActivityRegistered(HandlingActivityRegisteredMessage message) {
         advanceTracking.advance(message.trackingNumber(), message.type(),
                 message.locationUnLocode(), message.completionTime());
+
+        // **先に状態を進めてから起票する**（US28-2）。順序を逆にすると、例外を起票した
+        // 直後に荷役の状態で上書きされ、**未解決の例外が一覧から消える**
+        detectMisroute.onHandlingActivityRegistered(message.trackingNumber(),
+                message.locationUnLocode(), message.completionTime(), message.offRoute());
     }
 }

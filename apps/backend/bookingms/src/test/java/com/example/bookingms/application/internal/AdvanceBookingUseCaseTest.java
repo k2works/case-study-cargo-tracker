@@ -61,7 +61,7 @@ class AdvanceBookingUseCaseTest {
     private final AdvanceBookingUseCase useCase = new AdvanceBookingUseCase(cargoes);
 
     private void advance(String type, String locationUnLocode) {
-        useCase.advance(TRACKING, type, locationUnLocode, AT);
+        useCase.advance(TRACKING, type, locationUnLocode, AT, false);
     }
 
     @Test
@@ -121,7 +121,7 @@ class AdvanceBookingUseCaseTest {
     @Test
     @DisplayName("知らない追跡番号では止まらない")
     void doesNotFailForAnUnknownTrackingNumber() {
-        assertThatCode(() -> useCase.advance("TRK-20260823-9999", "LOAD", "JPTYO", AT))
+        assertThatCode(() -> useCase.advance("TRK-20260823-9999", "LOAD", "JPTYO", AT, false))
                 .doesNotThrowAnyException();
         assertThat(written).isEmpty();
     }
@@ -183,5 +183,52 @@ class AdvanceBookingUseCaseTest {
                 BookingStatus bookingStatus) {
             throw new UnsupportedOperationException("この検査では使わない");
         }
+    }
+
+    /**
+     * <strong>予定ルート外の荷役で、誤配として記録する</strong>（US28-2・[ADR-026] 決定 1）。
+     *
+     * <p><strong>判定はしない。</strong>{@code offRoute} は handlingms が旅程と作業場所を
+     * 照合した結果である——ここで判定し直すと、旅程の写しをもう 1 つ持つことになり、
+     * 片方だけが古い旅程で判定する状態が生まれる。
+     */
+    @Test
+    @DisplayName("予定ルート外の荷役で、予約が誤配になる")
+    void marksTheCargoAsMisrouted() {
+        useCase.advance(TRACKING, "UNLOAD", "SGSIN", AT, true);
+
+        assertThat(stored.isMisrouted())
+                .as("誤配が記録されていない。経路設計者は組み直す対象に気づけない")
+                .isTrue();
+        assertThat(stored.misroute().orElseThrow().locationUnLocode()).isEqualTo("SGSIN");
+        assertThat(stored.routingStatus()).isEqualTo(RoutingStatus.MISROUTED);
+    }
+
+    /**
+     * <strong>誤配でも状態は進む。</strong>
+     *
+     * <p>予定外の港で降ろされても、荷役は起きている。進めないと、貨物が動いているのに
+     * 予約は「受領待ち」のままになる——**IT9 まで 7 イテレーション続いた形**である。
+     */
+    @Test
+    @DisplayName("誤配でも、荷役に応じた状態は進む")
+    void stillAdvancesTheStatusWhenMisrouted() {
+        useCase.advance(TRACKING, "LOAD", "SGSIN", AT, true);
+
+        assertThat(stored.bookingStatus())
+                .as("誤配だと状態が進まない。貨物は動いているのに予約は受領待ちのまま")
+                .isEqualTo(BookingStatus.IN_TRANSIT);
+        assertThat(stored.isMisrouted()).isTrue();
+    }
+
+    /** 予定どおりの荷役では、誤配にしない。 */
+    @Test
+    @DisplayName("予定どおりの荷役は誤配にしない")
+    void doesNotMarkPlannedHandlingAsMisrouted() {
+        advance("LOAD", "JPTYO");
+
+        assertThat(stored.isMisrouted())
+                .as("予定どおりの荷役が誤配になっている。経路設計者の一覧が誤配で埋まる")
+                .isFalse();
     }
 }

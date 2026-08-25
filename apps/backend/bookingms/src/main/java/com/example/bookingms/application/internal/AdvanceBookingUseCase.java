@@ -43,21 +43,35 @@ public class AdvanceBookingUseCase {
      */
     @Transactional
     public void advance(String trackingNumber, String handlingType, String locationUnLocode,
-            Instant completionTime) {
+            Instant completionTime, boolean offRoute) {
         cargoes.findByTrackingNumber(trackingNumber)
                 .map(CargoSummary::cargo)
                 .ifPresentOrElse(
-                        cargo -> save(cargo, handlingType, locationUnLocode, completionTime),
+                        cargo -> save(cargo, handlingType, locationUnLocode, completionTime,
+                                offRoute),
                         () -> log.info("荷役のイベントに一致する予約がありません: trackingNumber={}",
                                 trackingNumber));
     }
 
-    private void save(Cargo cargo, String handlingType, String locationUnLocode, Instant at) {
+    /**
+     * 予約を進め、<strong>予定ルート外なら誤配として記録する</strong>
+     * （US28-2・[ADR-026] 決定 1）。
+     *
+     * <p><strong>判定は handlingms が済ませている。</strong>{@code offRoute} は旅程と作業
+     * 場所を照合した結果であり（[ADR-023] 決定 3）、ここで判定し直さない
+     * ——旅程の写しをもう 1 つ持つと、片方だけが古い旅程で判定する。
+     *
+     * <p><strong>誤配でも状態は進む。</strong>予定外の港で降ろされても、荷役は起きている。
+     * 進めないと、貨物が動いているのに予約は「受領待ち」のままになる。
+     */
+    private void save(Cargo cargo, String handlingType, String locationUnLocode, Instant at,
+            boolean offRoute) {
         Cargo advanced = cargo.afterHandling(handlingType, locationUnLocode, at);
-        if (advanced == cargo) {
+        Cargo result = offRoute ? advanced.misrouted(locationUnLocode, at) : advanced;
+        if (result == cargo) {
             // 集約が「動かない」と答えた。**書かない**——何も変わっていない更新を積まない
             return;
         }
-        cargoes.save(advanced);
+        cargoes.save(result);
     }
 }

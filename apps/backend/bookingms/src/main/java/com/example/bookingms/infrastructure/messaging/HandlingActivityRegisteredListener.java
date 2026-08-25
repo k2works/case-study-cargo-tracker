@@ -22,7 +22,9 @@ public class HandlingActivityRegisteredListener {
 
     @RabbitListener(queues = CargoEventChannels.HANDLING_QUEUE)
     public void onHandlingActivityRegistered(HandlingActivityRegisteredMessage message) {
+        // **offRoute はイベントが運ぶ**（[ADR-022] の契約に既にある・[ADR-026] 決定 1）。
+        // 新しいイベントを作らない——交換機を増やすほど移行の手順が要る
         advanceBooking.advance(message.trackingNumber(), message.type(),
-                message.locationUnLocode(), message.completionTime());
+                message.locationUnLocode(), message.completionTime(), message.offRoute());
     }
 }
