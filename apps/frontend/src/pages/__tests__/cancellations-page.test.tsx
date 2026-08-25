@@ -81,6 +81,11 @@ describe("キャンセル承認（US30）", () => {
       (await screen.findByText(BOOKING_ID)).closest("tr") as HTMLElement,
     );
     expect(row.getByText("荷主都合")).toBeInTheDocument();
+    // **一覧を行き止まりにしない。** 承認の判断には荷主・貨物種別・旅程を見たくなる
+    expect(
+      row.getByRole("link", { name: BOOKING_ID }),
+      "予約 ID から予約詳細へ行けない。別画面で探し直すことになる",
+    ).toHaveAttribute("href", `/booking/${BOOKING_ID}`);
     expect(row.getByText("sales01")).toBeInTheDocument();
     // 申請時点の予約状態は**キャンセル料の根拠**になる（US23・IT11）
     expect(row.getByText("輸送中")).toBeInTheDocument();

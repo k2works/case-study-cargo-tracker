@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import {
   useApproveCancellation,
   usePendingCancellations,
@@ -203,7 +204,16 @@ export function CancellationsPage() {
                 key={cancellation.cancellationId}
                 className="border-b border-gray-100"
               >
-                <td className="py-2">{cancellation.bookingId}</td>
+                <td className="py-2">
+                  {/* **一覧を行き止まりにしない。** 承認の判断には荷主・貨物種別・
+                      旅程を見たくなる——別画面で探し直させない */}
+                  <Link
+                    to={`/booking/${encodeURIComponent(cancellation.bookingId)}`}
+                    className="text-blue-600 hover:underline"
+                  >
+                    {cancellation.bookingId}
+                  </Link>
+                </td>
                 <td className="py-2">{cancellation.requestedAt}</td>
                 <td className="py-2">{cancellation.requestedBy}</td>
                 <td className="py-2">{cancellation.reason}</td>

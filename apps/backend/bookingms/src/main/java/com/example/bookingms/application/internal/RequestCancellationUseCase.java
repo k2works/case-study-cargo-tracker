@@ -1,5 +1,7 @@
 package com.example.bookingms.application.internal;
 
+import com.example.bookingms.application.port.CargoCancelled;
+import com.example.bookingms.application.port.CargoEventNotifier;
 import com.example.bookingms.application.port.CancellationRequestRepository;
 import com.example.bookingms.application.port.CargoRepository;
 import com.example.bookingms.application.port.CargoSummary;
@@ -22,12 +24,14 @@ public class RequestCancellationUseCase {
 
     private final CargoRepository cargoes;
     private final CancellationRequestRepository cancellations;
+    private final CargoEventNotifier events;
     private final Clock clock;
 
     public RequestCancellationUseCase(CargoRepository cargoes,
-            CancellationRequestRepository cancellations, Clock clock) {
+            CancellationRequestRepository cancellations, CargoEventNotifier events, Clock clock) {
         this.cargoes = cargoes;
         this.cancellations = cancellations;
+        this.events = events;
         this.clock = clock;
     }
 
@@ -60,7 +64,16 @@ public class RequestCancellationUseCase {
 
         if (!inTransit) {
             // **輸送開始前は承認を待つ理由が無い。**貨物はまだ動いていない
-            cargoes.save(cargo.cancel());
+            Cargo cancelled = cargoes.save(cargo.cancel());
+
+            // **知らせ方を承認の経路と揃える**（[ADR-025] 決定 3）。
+            // 輸送前でも追跡番号は出ていることがあり、荷主はそれを見ている
+            // ——知らせないと、自分が申し入れて確定したキャンセルを画面で否定される。
+            // **理由は載せない**（公開の追跡照会へ流れる経路である）
+            cancelled.trackingNumber().ifPresent(trackingNumber ->
+                    events.cargoCancelled(new CargoCancelled(trackingNumber.value(),
+                            cancelled.bookingId().map(Object::toString).orElse(null),
+                            clock.instant(), clock.instant())));
         }
         return new CancellationOutcome(saved, inTransit);
     }

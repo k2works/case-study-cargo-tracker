@@ -179,4 +179,36 @@ class CustomsDeclarationPersistenceIntegrationTest extends HandlingIntegrationTe
                 .isZero();
         assertThat(declarations.count(null, "TRK-20260823-1010", null, false)).isEqualTo(1);
     }
+
+    /**
+     * IT10 返済枠 0.5。<strong>通関済から審査中へ戻しても、「未決着は高々 1 件」が崩れない</strong>。
+     *
+     * <p>誤操作の訂正手段は要るため、巻き戻し自体は禁じていない。確かめるのは
+     * <strong>戻したあとに 2 通目を出せてしまわないか</strong>である——出せると、
+     * 同じ貨物に未決着の申告が 2 件並び、どちらを処理すればよいか決まらなくなる。
+     *
+     * <p>戻すと引取のガードも閉じる（最新が通関済でなくなる）。これは正しい
+     * ——通関を取り消したなら引き取れない。
+     */
+    @Test
+    @DisplayName("通関済から審査中へ戻しても、未決着は高々 1 件のままである")
+    void keepsAtMostOneUnsettledAfterRollingBack() {
+        CustomsDeclaration declared = declare("DEC-P0011", "TRK-20260823-1011");
+        CustomsDeclaration cleared = declarations.updateStatus(declared.updateStatus(
+                CustomsStatus.CLEARED, "tracker01", "審査完了",
+                Instant.parse("2027-09-03T00:00:00Z")));
+
+        // 誤って通関済にしたので、審査中へ戻す
+        declarations.updateStatus(cleared.updateStatus(
+                CustomsStatus.PENDING, "tracker01", "誤操作の訂正",
+                Instant.parse("2027-09-03T01:00:00Z")));
+
+        assertThat(declarations
+                .findUnsettledByTrackingNumber(HandlingTrackingNumber.of("TRK-20260823-1011")))
+                .as("戻した申告が未決着として引けない。2 通目を出せてしまう")
+                .isPresent();
+        assertThat(declarations.search(null, "TRK-20260823-1011", null, true, 100))
+                .as("未決着が 2 件ある。どちらを処理すればよいか決まらない")
+                .hasSize(1);
+    }
 }

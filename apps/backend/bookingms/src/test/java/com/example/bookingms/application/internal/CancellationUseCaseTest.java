@@ -59,8 +59,6 @@ class CancellationUseCaseTest {
     private final CargoRepository cargoes = new StubCargoes();
     private final CancellationRequestRepository cancellations = new StubCancellations();
 
-    private final RequestCancellationUseCase request =
-            new RequestCancellationUseCase(cargoes, cancellations, clock);
     /** 発行されたキャンセルのイベント。**発行したことを検査から見る**。 */
     private final List<com.example.bookingms.application.port.CargoCancelled> published =
             new ArrayList<>();
@@ -79,6 +77,10 @@ class CancellationUseCaseTest {
                     published.add(event);
                 }
             };
+
+    // **フィールドの順序は初期化の順序である。** events より前で使うと null になる
+    private final RequestCancellationUseCase request =
+            new RequestCancellationUseCase(cargoes, cancellations, events, clock);
 
     private final DecideCancellationUseCase decide =
             new DecideCancellationUseCase(cargoes, cancellations, events, clock);
@@ -116,6 +118,16 @@ class CancellationUseCaseTest {
 
             assertThat(outcome.awaitingApproval()).isFalse();
             assertThat(stored.bookingStatus()).isEqualTo(BookingStatus.CANCELLED);
+
+            // **即時確定でも申請は残る**（IT9 レビュー tester の指摘）。
+            // 残さないと、あとから「誰がいつ止めたのか」を追えない
+            assertThat(requests)
+                    .as("即時確定の申請が保存されていない。誰がいつ止めたのかを追えない")
+                    .hasSize(1);
+            // **荷主への知らせは出す。**輸送前でも、止まったことは荷主に届く必要がある
+            assertThat(published)
+                    .as("即時確定と承認確定で、外への知らせ方が食い違っている")
+                    .hasSize(1);
         }
 
         /** US30-3。輸送中は承認を待つ。**予約はまだ止まらない**。 */

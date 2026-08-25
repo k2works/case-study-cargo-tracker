@@ -202,6 +202,15 @@ class CustomsDeclarationTest {
                             Instant.parse("2027-09-20T00:00:00Z"));
 
             assertThat(reheld.isHeldOverdue(LocalDate.of(2027, Month.SEPTEMBER, 22), ZONE, THRESHOLD)).isFalse();
+
+            // **超える側も見る**（IT9 レビュー tester の指摘）。
+            // 「まだ超えていない」だけでは、申告日時と留置日時を取り違えた実装
+            // （どちらでも false になる日を選んでいる）を判別できない
+            assertThat(reheld.isHeldOverdue(LocalDate.of(2027, Month.SEPTEMBER, 24), ZONE,
+                            THRESHOLD))
+                    .as("留め直した日から数えていない。申告日時から数えると、"
+                            + "この日はとうに 3 日を超えている")
+                    .isTrue();
         }
 
         /** 留置でなければ督促の対象ではない。 */

@@ -113,6 +113,15 @@ class CancellationRequestTest {
                     .isInstanceOf(IllegalStateException.class);
             assertThatThrownBy(() -> approved.reject("tracker02", "やり直し", DECIDED_AT))
                     .isInstanceOf(IllegalStateException.class);
+
+            // **1 回目の決定が保持されている**（IT9 レビュー tester の指摘）。
+            // 例外を投げながら内部を書き換える実装だと、断ったはずの 2 回目の値が残る
+            // ——「承認したのは誰で、どこで降ろすことにしたか」が入れ替わる
+            assertThat(approved.decidedBy()).contains("tracker01");
+            assertThat(approved.dischargeLocation())
+                    .as("2 回目の陸揚げ地で上書きされている。現場は違う港へ向かう")
+                    .contains("CNSHA");
+            assertThat(approved.decisionReason()).contains("荷主と合意");
         }
     }
 
