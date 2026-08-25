@@ -266,4 +266,72 @@ describe('経路設計待ちの気づき（US06）', () => {
       expect(screen.queryByText(/まだ経路設計を依頼していない予約が/)).not.toBeInTheDocument()
     })
   })
+
+  describe('追跡管理者が自分で気づく件数', () => {
+    /**
+     * US29-6。**「1 日 1 回一覧を見る」は仕組みではない。**
+     *
+     * 忙しい日ほど抜け、保管料が発生してから荷主に指摘される。件数を出すだけでは
+     * 仕事が進まないので、そこから対象一覧へ行けることまで見る。
+     */
+    it('留置 3 日超の件数が出て、対象一覧へ行ける', async () => {
+      server.use(
+        http.get(`${API_PATHS.customs}/overdue`, () => HttpResponse.json({ count: 3 })),
+      )
+      renderAs(['ROLE_TRACKER'])
+
+      expect(
+        await screen.findByText(/留置のまま 3 日を超えた通関申告が 3 件あります/),
+      ).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: '通関の状態を管理する' })).toHaveAttribute(
+        'href',
+        '/customs',
+      )
+    })
+
+    it('留置 3 日超が無いときは件数を出さない', async () => {
+      server.use(
+        http.get(`${API_PATHS.customs}/overdue`, () => HttpResponse.json({ count: 0 })),
+      )
+      renderAs(['ROLE_TRACKER'])
+
+      await screen.findByRole('heading', { name: '追跡管理ダッシュボード' })
+      expect(screen.queryByText(/留置のまま 3 日を超えた/)).not.toBeInTheDocument()
+    })
+
+    /** US30-4 の通知の代替。承認しないと貨物は行き先を失ったまま船に乗り続ける。 */
+    it('承認待ちのキャンセル件数が出て、対象一覧へ行ける', async () => {
+      server.use(
+        http.get(API_PATHS.cancellations, () =>
+          HttpResponse.json([
+            {
+              cancellationId: 1,
+              bookingId: 'BKG-2026000005',
+              reason: '荷主都合',
+              status: 'REQUESTED',
+              statusLabel: '承認待ち',
+              requestedBy: 'sales01',
+              requestedAt: '2026-08-25 09:00',
+              bookingStatusAtRequest: 'IN_TRANSIT',
+              bookingStatusAtRequestLabel: '輸送中',
+              dischargeLocationUnLocode: null,
+              dischargeLocationName: null,
+              decidedBy: null,
+              decidedAt: null,
+              decisionReason: null,
+              dischargeCandidates: [],
+            },
+          ]),
+        ),
+      )
+      renderAs(['ROLE_TRACKER'])
+
+      expect(
+        await screen.findByText(/承認を待っているキャンセル申請が 1 件あります/),
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole('link', { name: '承認待ちのキャンセルを見る' }),
+      ).toHaveAttribute('href', '/booking/cancellations')
+    })
+  })
 })

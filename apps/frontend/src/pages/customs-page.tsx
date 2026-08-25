@@ -4,6 +4,7 @@ import { useAuthStore } from "../stores/auth-store";
 import {
   useCustomsDeclarations,
   useCustomsStatuses,
+  useOverdueCustoms,
 } from "../features/customs/queries";
 import type { CustomsSearchCriteria } from "../features/customs/types";
 
@@ -46,9 +47,14 @@ export function CustomsPage() {
   const { data: statuses = [] } = useCustomsStatuses();
   const { data: declarations = [], isLoading } = useCustomsDeclarations(criteria);
 
-  const overdueCount = declarations.filter(
-    (declaration) => declaration.heldOverdue,
-  ).length;
+  /**
+   * **件数はサーバに聞く。**
+   *
+   * いま画面に出ている行から数えると、貨物 ID で検索した直後や「通関済」に絞った状態で
+   * バナーが消える。**絞り込んだら警告が消えた**は、警告そのものへの信用を失わせる。
+   */
+  const { data: overdue } = useOverdueCustoms();
+  const overdueCount = overdue?.count ?? 0;
   const shown = overdueOnly
     ? declarations.filter((declaration) => declaration.heldOverdue)
     : declarations;

@@ -84,6 +84,11 @@ describe("キャンセル承認（US30）", () => {
     expect(row.getByText("sales01")).toBeInTheDocument();
     // 申請時点の予約状態は**キャンセル料の根拠**になる（US23・IT11）
     expect(row.getByText("輸送中")).toBeInTheDocument();
+    // **日時は人の読む形で出す。** 生の ISO（2026-08-25T03:41:09.075Z）が出ると
+    // 追跡管理者は自分の時刻に読み替えることになる。通関の一覧と同じ形に揃える
+    expect(
+      row.getByText(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/),
+    ).toBeInTheDocument();
   });
 
   /**
@@ -139,7 +144,7 @@ describe("キャンセル承認（US30）", () => {
     await user.click(await screen.findByRole("button", { name: "開く" }));
 
     await user.selectOptions(await screen.findByLabelText("陸揚げ地"), "SGSIN");
-    await user.type(screen.getByLabelText("決定の理由"), "荷主と合意");
+    await user.type(screen.getByLabelText(/決定の理由/), "荷主と合意");
     await user.click(screen.getByRole("button", { name: "承認する" }));
 
     expect(await screen.findByText(/承認しました/)).toBeInTheDocument();
@@ -159,7 +164,7 @@ describe("キャンセル承認（US30）", () => {
     renderPage();
     await user.click(await screen.findByRole("button", { name: "開く" }));
 
-    await user.type(screen.getByLabelText("決定の理由"), "積み替え済みのため");
+    await user.type(screen.getByLabelText(/決定の理由/), "積み替え済みのため");
     await user.click(screen.getByRole("button", { name: "却下する" }));
 
     expect(await screen.findByText(/却下しました/)).toBeInTheDocument();
@@ -194,7 +199,7 @@ describe("キャンセル承認（US30）", () => {
     await user.click(await screen.findByRole("button", { name: "開く" }));
 
     await user.selectOptions(await screen.findByLabelText("陸揚げ地"), "SGSIN");
-    await user.type(screen.getByLabelText("決定の理由"), "荷主と合意");
+    await user.type(screen.getByLabelText(/決定の理由/), "荷主と合意");
     await user.click(screen.getByRole("button", { name: "承認する" }));
 
     expect(
@@ -208,7 +213,7 @@ describe("キャンセル承認（US30）", () => {
     renderPage();
     await user.click(await screen.findByRole("button", { name: "開く" }));
 
-    await user.type(screen.getByLabelText("決定の理由"), "積み替え済みのため");
+    await user.type(screen.getByLabelText(/決定の理由/), "積み替え済みのため");
     await user.click(screen.getByRole("button", { name: "却下する" }));
 
     expect(

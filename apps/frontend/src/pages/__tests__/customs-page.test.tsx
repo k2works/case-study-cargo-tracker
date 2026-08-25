@@ -198,6 +198,29 @@ describe("通関申告の一覧（US29）", () => {
     expect(screen.queryByText("DEC-0002")).not.toBeInTheDocument();
   });
 
+  /**
+   * **絞り込んでも件数は消えない。**
+   *
+   * 画面に出ている行から数えると、「通関済」に絞った瞬間にバナーが消える。
+   * 留置 3 日超は依然としてあるのに「無い」と見える——**絞り込んだら警告が消えた**は、
+   * 警告そのものへの信用を失わせる。
+   */
+  it("別の条件で絞り込んでも、留置 3 日超の件数は出たままになる", async () => {
+    heldDeclaration(1, "DEC-0001", 5);
+    clearedDeclaration(2, "DEC-0002");
+    renderPage();
+    await screen.findByText("DEC-0001");
+
+    const user = userEvent.setup();
+    await user.selectOptions(screen.getByLabelText("通関状態"), "CLEARED");
+    await user.click(screen.getByRole("button", { name: "検索" }));
+
+    expect(await screen.findByText("DEC-0002")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /3 日を超えた申告が 1 件/ }),
+    ).toBeInTheDocument();
+  });
+
   /** US29-7。貨物 ID・追跡番号・通関状態の 3 条件で絞れる。 */
   it("追跡番号で絞り込める", async () => {
     clearedDeclaration(1, "DEC-0001");

@@ -27,6 +27,7 @@ class DischargeCandidatesTest {
     private static final Location TOKYO = Location.of("JPTYO", "Tokyo");
     private static final Location SHANGHAI = Location.of("CNSHA", "Shanghai");
     private static final Location LOS_ANGELES = Location.of("USLAX", "Los Angeles");
+    private static final Location HONG_KONG = Location.of("HKHKG", "Hong Kong");
     private static final Instant AT = Instant.parse("2026-09-05T00:00:00Z");
 
     private static Cargo tracked() {
@@ -110,6 +111,64 @@ class DischargeCandidatesTest {
         assertThat(loaded.canDischargeAt("JPYOK"))
                 .as("旅程に無い港を選べている。荷降しできない約束を荷主にすることになる")
                 .isFalse();
+    }
+
+
+    /**
+     * <strong>通過済みの港は候補に出さない。</strong>
+     *
+     * <p>旅程の全区間から採ると、すでに通り過ぎた港が並ぶ。「近いから」と選んで承認すると、
+     * <strong>船が二度と寄らない港で荷降しする約束</strong>を荷主にすることになる
+     * ——この候補方式が防ごうとしていた事故そのものである。
+     */
+    @Test
+    @DisplayName("すでに通り過ぎた港は候補に出ない")
+    void leavesOutThePortsAlreadyPassed() {
+        Cargo viaHongKong = viaHongKong();
+
+        // 香港を出て上海に着き、そこで積み込んだ（次は Los Angeles）
+        Cargo loadedAtShanghai = viaHongKong.afterHandling("LOAD", "CNSHA",
+                Instant.parse("2026-09-08T00:00:00Z"));
+
+        assertThat(loadedAtShanghai.dischargeCandidates())
+                .extracting(DischargeCandidate::unLocode)
+                .as("通り過ぎた香港が候補に出ている。船が二度と寄らない港を選べてしまう")
+                .containsExactly("CNSHA", "USLAX");
+        assertThat(loadedAtShanghai.canDischargeAt("HKHKG"))
+                .as("通り過ぎた港での承認が通っている")
+                .isFalse();
+    }
+
+    /** 荷役が起きる前は、旅程のすべてがこれからである。 */
+    @Test
+    @DisplayName("荷役の前なら、旅程の港はすべて候補になる")
+    void offersEveryPortBeforeAnyHandling() {
+        assertThat(viaHongKong().dischargeCandidates())
+                .extracting(DischargeCandidate::unLocode)
+                .containsExactly("HKHKG", "CNSHA", "USLAX");
+    }
+
+    /** 東京 → 香港 → 上海 → ロサンゼルスの旅程。 */
+    private static Cargo viaHongKong() {
+        CargoItinerary itinerary = CargoItinerary.of(List.of(
+                Leg.of(VoyageNumber.of("V0301"), TOKYO, HONG_KONG,
+                        Instant.parse("2026-09-02T09:00:00Z"),
+                        Instant.parse("2026-09-05T09:00:00Z")),
+                Leg.of(VoyageNumber.of("V0302"), HONG_KONG, SHANGHAI,
+                        Instant.parse("2026-09-06T09:00:00Z"),
+                        Instant.parse("2026-09-07T09:00:00Z")),
+                Leg.of(VoyageNumber.of("V0303"), SHANGHAI, LOS_ANGELES,
+                        Instant.parse("2026-09-09T09:00:00Z"),
+                        Instant.parse("2026-09-18T09:00:00Z"))));
+
+        return CargoRestoration.restore(1L, BookingId.of("BKG-2026000001"), 1L,
+                new CargoStatus(BookingStatus.TRACKING_ISSUED, TransportStatus.NOT_RECEIVED,
+                        RoutingStatus.ROUTED),
+                CargoSpecification.general(new BigDecimal("12000"), 20, "電子部品", null),
+                RouteSpecification.restore(TOKYO, LOS_ANGELES,
+                        LocalDate.of(2026, Month.SEPTEMBER, 1),
+                        LocalDate.of(2026, Month.SEPTEMBER, 20)),
+                itinerary, null, TrackingNumber.of("TRK-20260823-0001"));
     }
 
     /** 旅程が無ければ候補も無い。経路が決まる前のキャンセルに承認は要らない。 */

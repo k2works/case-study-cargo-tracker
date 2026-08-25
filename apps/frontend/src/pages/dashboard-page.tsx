@@ -3,6 +3,8 @@ import { PANELS } from '../config/dashboard-panels'
 import { resolveNavigationItem } from '../config/navigation'
 import { useAuthStore } from '../stores/auth-store'
 import { useBookings } from '../features/booking/queries'
+import { useOverdueCustoms } from '../features/customs/queries'
+import { usePendingCancellations } from '../features/cancellation/queries'
 
 /**
  * その行動の画面が使えるか。
@@ -39,6 +41,47 @@ function RoutingBacklogNotice({
   return (
     <p className="mt-2 rounded border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm text-yellow-900">
       {message(data.totalCount)}
+    </p>
+  )
+}
+
+/**
+ * 留置のまま 3 日を超えた申告の件数（US29-6）。
+ *
+ * <p><strong>「1 日 1 回一覧を見る」は仕組みではない。</strong>忙しい日ほど抜け、
+ * 保管料が発生してから荷主に指摘される。件数を出すだけでは仕事は進まないので、
+ * 同じパネルの行動から対象一覧へ行ける（横断規約）。
+ */
+function OverdueCustomsNotice() {
+  const { data } = useOverdueCustoms()
+
+  if (data === undefined || data.count === 0) {
+    return null
+  }
+
+  return (
+    <p className="mt-2 rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-900">
+      {`留置のまま 3 日を超えた通関申告が ${data.count} 件あります。`}
+    </p>
+  )
+}
+
+/**
+ * 承認を待っているキャンセル申請の件数（US30-4 の通知の代替）。
+ *
+ * <p>承認しないと、貨物は行き先を失ったまま船に乗り続ける。営業から電話が来て初めて
+ * 気づく形にしない。
+ */
+function PendingCancellationNotice() {
+  const { data } = usePendingCancellations()
+
+  if (data === undefined || data.length === 0) {
+    return null
+  }
+
+  return (
+    <p className="mt-2 rounded border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm text-yellow-900">
+      {`承認を待っているキャンセル申請が ${data.length} 件あります。`}
     </p>
   )
 }
@@ -112,6 +155,10 @@ export function DashboardPage() {
               message={(count) => `追跡番号を荷主へ伝える予約が ${count} 件あります。`}
             />
           )}
+          {/* 追跡管理者は、通関の留置とキャンセルの承認待ちに自分で気づく必要がある
+              ——どちらも通知の仕組みが無く、放置すると保管料と行き先を失った貨物になる */}
+          {panel.role === 'ROLE_TRACKER' && <OverdueCustomsNotice />}
+          {panel.role === 'ROLE_TRACKER' && <PendingCancellationNotice />}
           <ul className="mt-4 space-y-2 text-sm">
             {panel.actions.map((action) => (
               <li key={action.to}>

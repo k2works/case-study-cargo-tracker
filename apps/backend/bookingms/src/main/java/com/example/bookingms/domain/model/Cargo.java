@@ -384,12 +384,21 @@ public final class Cargo {
      * 取りに行くことになる。
      *
      * <p>現在地を先頭に置く。いま貨物がある港が、最も早く降ろせる。
+     *
+     * <p><strong>通過済みの港は出さない。</strong>旅程の全区間から採ると、すでに通り過ぎた
+     * 港が候補に並ぶ——上海を出て神戸へ向かう貨物に、香港が出る。「香港なら近い」と選んで
+     * 承認すると、<strong>船が二度と寄らない港で荷降しする約束</strong>を荷主にすることに
+     * なり、それはこの候補方式が防ごうとしていた事故そのものである。
+     *
+     * <p>「これから通る」の判定は<strong>最後の荷役の時刻</strong>で行う。港の名前で
+     * 探すと、同じ港に二度寄る旅程（積替えで戻る）で最初の 1 回に当たってしまう。
      */
     public List<DischargeCandidate> dischargeCandidates() {
         List<DischargeCandidate> candidates = new java.util.ArrayList<>();
         lastHandlingLocationOf().map(DischargeCandidate::currentPort).ifPresent(candidates::add);
 
         itinerary().map(CargoItinerary::legs).orElse(List.of()).stream()
+                .filter(this::stillAhead)
                 .map(Leg::unloadLocation)
                 .filter(location -> candidates.stream()
                         .noneMatch(candidate -> candidate.unLocode().equals(location.unLocode())))
@@ -397,6 +406,16 @@ public final class Cargo {
                 .forEach(candidates::add);
 
         return List.copyOf(candidates);
+    }
+
+    /**
+     * その区間の荷降しが、まだ先にあるか。
+     *
+     * <p>最後の荷役より<strong>後</strong>に降ろす区間だけが「これから通る港」である。
+     * 荷役の記録が無いあいだ（受領前）は、旅程のすべてがこれからである。
+     */
+    private boolean stillAhead(Leg leg) {
+        return lastHandlingAt == null || leg.unloadTime().isAfter(lastHandlingAt);
     }
 
     /**

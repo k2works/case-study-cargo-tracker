@@ -42,11 +42,16 @@ public class CancellationController {
     private final DecideCancellationUseCase decide;
     private final CargoRepository cargoes;
 
+    /** 日時を業務の時刻で返すために持つ。**画面に読み替えをさせない**。 */
+    private final java.time.Clock clock;
+
     public CancellationController(RequestCancellationUseCase request,
-            DecideCancellationUseCase decide, CargoRepository cargoes) {
+            DecideCancellationUseCase decide, CargoRepository cargoes,
+            java.time.Clock clock) {
         this.request = request;
         this.decide = decide;
         this.cargoes = cargoes;
+        this.clock = clock;
     }
 
     /** 承認待ちの一覧（US30-4）。**件数の遷移先である**。追跡管理者のみ。 */
@@ -72,7 +77,7 @@ public class CancellationController {
 
         return decide.latestFor(bookingId)
                 .map(found -> ResponseEntity.ok(CancellationResponse.from(found, bookingId,
-                        found.dischargeLocation().orElse(null))))
+                        found.dischargeLocation().orElse(null), zone())))
                 .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
@@ -87,7 +92,7 @@ public class CancellationController {
 
         CancellationOutcome outcome = request.request(bookingId, body.reason(), userId);
         return ResponseEntity.status(HttpStatus.CREATED).body(new CancellationOutcomeResponse(
-                CancellationResponse.from(outcome.request(), bookingId, null),
+                CancellationResponse.from(outcome.request(), bookingId, null, zone()),
                 outcome.awaitingApproval()));
     }
 
@@ -103,7 +108,7 @@ public class CancellationController {
         CancellationRequest approved = decide.approve(bookingId,
                 body.dischargeLocationUnLocode(), userId, body.decisionReason());
         return CancellationResponse.from(approved, bookingId,
-                approved.dischargeLocation().orElse(null));
+                approved.dischargeLocation().orElse(null), zone());
     }
 
     /** 却下する（US30-7）。**追跡管理者のみ**。予約は輸送中のまま維持される。 */
@@ -116,12 +121,17 @@ public class CancellationController {
         requireTracker(userId, roles);
 
         return CancellationResponse.from(
-                decide.reject(bookingId, userId, body.decisionReason()), bookingId, null);
+                decide.reject(bookingId, userId, body.decisionReason()), bookingId, null, zone());
+    }
+
+    /** 業務のタイムゾーン。日時の表示に使う。 */
+    private java.time.ZoneId zone() {
+        return clock.getZone();
     }
 
     private java.util.Optional<PendingCancellationResponse> toPending(CancellationRequest found) {
         return cargoes.findById(found.cargoId())
-                .map(cargo -> PendingCancellationResponse.from(found, cargo));
+                .map(cargo -> PendingCancellationResponse.from(found, cargo, zone()));
     }
 
     /**

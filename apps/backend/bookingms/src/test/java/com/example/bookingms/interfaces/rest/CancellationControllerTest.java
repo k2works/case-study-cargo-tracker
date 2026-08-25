@@ -39,6 +39,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * <p><strong>認可は入力検証より先に置く</strong>（[ADR-016]）。
  */
 @WebMvcTest(CancellationController.class)
+@org.springframework.context.annotation.Import(CancellationControllerTest.FixedClock.class)
 @DisplayName("キャンセル API")
 class CancellationControllerTest {
 
@@ -64,6 +65,19 @@ class CancellationControllerTest {
 
     @MockitoBean
     private CargoRepository cargoes;
+
+    /**
+     * 日時の表示に使う。**業務タイムゾーンを固定する**——実時計を使うと、
+     * 走らせた端末の設定で応答の日時が変わる。
+     */
+    @org.springframework.boot.test.context.TestConfiguration
+    static class FixedClock {
+        @org.springframework.context.annotation.Bean
+        java.time.Clock clock() {
+            return java.time.Clock.fixed(Instant.parse("2026-09-05T00:00:00Z"),
+                    java.time.ZoneId.of("Asia/Tokyo"));
+        }
+    }
 
     private static CancellationRequest awaiting() {
         return CancellationRequest.request(1L, "荷主都合", "sales01",
@@ -196,7 +210,10 @@ class CancellationControllerTest {
                     .andExpect(jsonPath("$.awaitingApproval").value(true))
                     // **状態の読み方はサーバが返す**（画面が対訳表を持たない）
                     .andExpect(jsonPath("$.request.statusLabel").value("承認待ち"))
-                    .andExpect(jsonPath("$.request.bookingStatusAtRequestLabel").value("輸送中"));
+                    .andExpect(jsonPath("$.request.bookingStatusAtRequestLabel").value("輸送中"))
+                    // **日時は業務の時刻で返す**（通関の応答と同じ形）。生の ISO を返すと
+                    // 追跡管理者が読み替えることになり、同じ画面群で形式が食い違う
+                    .andExpect(jsonPath("$.request.requestedAt").value("2026-09-05 09:00"));
         }
 
         /** 申請が無ければ本文なし。**空の申請を作って返さない**。 */

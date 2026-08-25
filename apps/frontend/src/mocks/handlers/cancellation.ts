@@ -18,6 +18,7 @@
 import { HttpResponse, http } from 'msw'
 import { API_PATHS } from '../../config/api'
 import { LOCATIONS, bookings } from '../data'
+import { formatBusinessDateTime } from '../../lib/business-time'
 
 /** 予約状態の読み方。**画面に対訳表を置かない**。 */
 const BOOKING_STATUS_LABELS: Record<string, string> = {
@@ -68,6 +69,13 @@ function nameOf(unLocode: string | null) {
 function view(cancellation: MockCancellation) {
   return {
     ...cancellation,
+    // **本物と同じ形で返す**（業務タイムゾーンの「YYYY-MM-DD HH:mm」）。
+    // 生の ISO を返すと、モックの上でだけ画面が違って見える
+    requestedAt: formatBusinessDateTime(cancellation.requestedAt),
+    decidedAt:
+      cancellation.decidedAt === null
+        ? null
+        : formatBusinessDateTime(cancellation.decidedAt),
     statusLabel: CANCELLATION_STATUS_LABELS[cancellation.status] ?? cancellation.status,
     bookingStatusAtRequestLabel:
       BOOKING_STATUS_LABELS[cancellation.bookingStatusAtRequest]

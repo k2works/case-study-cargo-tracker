@@ -88,7 +88,7 @@ function DecisionForm({
               htmlFor="decisionReason"
               className="block text-sm font-medium text-gray-700"
             >
-              決定の理由
+              決定の理由（却下のときは必須）
             </label>
             <input
               id="decisionReason"
@@ -96,6 +96,12 @@ function DecisionForm({
               onChange={(event) => setDecisionReason(event.target.value)}
               className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
             />
+            {/* **断られてから必須と知る形にしない。** 判断が重く毎日は使わない画面であり、
+                却下の理由は申請した営業担当者が読む——次にどうするかが分かるように書いて
+                もらう必要がある */}
+            <p className="mt-1 text-sm text-gray-600">
+              却下するときは理由を入れてください。申請した営業担当者が読みます。
+            </p>
           </div>
         </div>
 
