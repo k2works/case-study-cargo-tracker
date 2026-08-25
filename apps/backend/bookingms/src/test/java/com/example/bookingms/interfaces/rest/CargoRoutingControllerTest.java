@@ -95,7 +95,9 @@ class CargoRoutingControllerTest {
     @DisplayName("経路設計者が割り当てると 200 と割り当て後の予約を返す")
     void assigns() throws Exception {
         givenKnownPorts();
-        when(assignRoute.assign(any(), any(), any())).thenReturn(Optional.of(BookingTestCargoes.routed()));
+        when(assignRoute.assign(any(), any(), any())).thenReturn(Optional.of(
+                new com.example.bookingms.application.internal.AssignRouteUseCase.AssignmentResult(
+                        BookingTestCargoes.routed(), null)));
 
         mockMvc.perform(put("/api/v1/bookings/BKG-2026000001/route")
                         .header(AuthenticatedUser.USER_ID_HEADER, "routing01")

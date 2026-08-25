@@ -615,4 +615,53 @@ describe('経路設計（経路候補の一覧）', () => {
       )
     })
   })
+
+  describe('期限を超える経路（US28-6）', () => {
+    /**
+     * <strong>超える分を出してから進む。</strong>
+     *
+     * <p>そのまま予約詳細へ遷移すると、超過に気づかないまま次の作業へ移る
+     * ——荷主に伝えるのは営業であり、<strong>ここで気づかなければ誰も伝えない</strong>。
+     */
+    it('期限を超えるときは、何日超えるかを出して遷移を止める', async () => {
+      server.use(
+        http.put(`${API_PATHS.bookings}/:bookingId/route`, () =>
+          HttpResponse.json({ ...BOOKING, daysBeyondDeadline: 5 }),
+        ),
+      )
+      renderPage()
+
+      await screen.findAllByRole('row')
+      await userEvent.click(screen.getAllByRole('button', { name: 'この経路を選ぶ' })[0])
+      await userEvent.click(screen.getByRole('button', { name: 'この経路で確定する' }))
+
+      const alert = await screen.findByRole('alert')
+      expect(alert, '何日超えるかが出ていない。荷主は次の手を決められない')
+        .toHaveTextContent('5 日超えます')
+      // **通知が代替であることを言う**（[ADR-026] 決定 7）
+      expect(alert).toHaveTextContent('荷主へは自動で通知されません')
+      expect(
+        screen.getByRole('button', { name: /確認しました/ }),
+        '読んだことを示す手段が無い。読まずに閉じられる',
+      ).toBeInTheDocument()
+    })
+
+    /** 期限内なら止めない。**毎回止めると、読まずに押す癖がつく**。 */
+    it('期限内なら、確定後にそのまま予約詳細へ進む', async () => {
+      server.use(
+        http.put(`${API_PATHS.bookings}/:bookingId/route`, () =>
+          HttpResponse.json({ ...BOOKING, daysBeyondDeadline: null }),
+        ),
+      )
+      renderPage()
+
+      await screen.findAllByRole('row')
+      await userEvent.click(screen.getAllByRole('button', { name: 'この経路を選ぶ' })[0])
+      await userEvent.click(screen.getByRole('button', { name: 'この経路で確定する' }))
+
+      await waitFor(() =>
+        expect(screen.queryByText(/超えます/)).not.toBeInTheDocument(),
+      )
+    })
+  })
 })

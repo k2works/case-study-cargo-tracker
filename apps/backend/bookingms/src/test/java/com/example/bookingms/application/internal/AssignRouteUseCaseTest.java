@@ -155,7 +155,7 @@ class AssignRouteUseCaseTest {
     void assignsAvailableItinerary() {
         availableCandidates.add(direct());
 
-        Cargo assigned = useCase.assign("BKG-2026000001", direct(), null).orElseThrow();
+        Cargo assigned = useCase.assign("BKG-2026000001", direct(), null).orElseThrow().cargo();
 
         assertThat(assigned.routingStatus()).isEqualTo(RoutingStatus.ROUTED);
         assertThat(assigned.bookingStatus()).isEqualTo(BookingStatus.ROUTE_PROPOSED);

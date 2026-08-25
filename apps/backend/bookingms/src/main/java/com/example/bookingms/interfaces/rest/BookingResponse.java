@@ -85,7 +85,18 @@ public record BookingResponse(
          * <p>誤配のバナーが「いまどこにいるか」を出すために返す。
          * <strong>再設計はここを出発地とする。</strong>
          */
-        String lastHandlingLocationUnLocode) {
+        String lastHandlingLocationUnLocode,
+        /**
+         * 到着予定が希望期限を超える日数（US28-6）。超えないなら {@code null}。
+         *
+         * <p><strong>経路を割り当てた応答でだけ値を持つ。</strong>誤配のあとの再設計で
+         * 荷主に伝えるべき差分であり、<strong>「間に合いません」だけでは荷主は次の手を
+         * 決められない</strong>。
+         *
+         * <p>判断は目的地の暦で行う（[ADR-017]）——画面で日付を引き算すると、
+         * 利用者の端末の時計と時差の分だけ結果が変わる。
+         */
+        Long daysBeyondDeadline) {
 
         public BookingResponse {
         // 受け取った一覧を写して持つ。呼び出し元が渡したものをそのまま抱えると、
@@ -159,10 +170,25 @@ public record BookingResponse(
     }
 
     public static BookingResponse from(Cargo cargo) {
-        return from(cargo, null);
+        return from(cargo, null, null);
+    }
+
+    /**
+     * 経路を割り当てた応答（US28-6）。
+     *
+     * <p><strong>期限を超えるなら、何日超えるかを添える。</strong>「間に合いません」だけでは、
+     * 荷主は次の手を決められない。
+     */
+    public static BookingResponse from(Cargo cargo, Long daysBeyondDeadline) {
+        return from(cargo, null, daysBeyondDeadline);
     }
 
     private static BookingResponse from(Cargo cargo, String shipperName) {
+        return from(cargo, shipperName, null);
+    }
+
+    private static BookingResponse from(Cargo cargo, String shipperName,
+            Long daysBeyondDeadline) {
         var specification = cargo.specification();
         var route = cargo.routeSpecification();
         var dimensions = specification.dimensions();
@@ -202,7 +228,8 @@ public record BookingResponse(
                         .map(recorded -> new MisrouteResponse(
                                 recorded.at(), recorded.locationUnLocode()))
                         .orElse(null),
-                cargo.lastHandlingLocation().orElse(null));
+                cargo.lastHandlingLocation().orElse(null),
+                daysBeyondDeadline);
     }
 
     /**

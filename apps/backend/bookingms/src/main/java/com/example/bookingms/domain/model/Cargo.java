@@ -422,6 +422,18 @@ public final class Cargo {
                 locationUnLocode, at, recorded);
     }
 
+    /**
+     * いまの旅程が希望期限を<strong>何日超えるか</strong>（US28-6・[ADR-026] 決定 5）。
+     *
+     * <p>超えないなら空。<strong>誤配のあとの再設計で、荷主に伝えるべき差分である</strong>
+     * ——「間に合いません」だけでは、荷主は次の手を決められない。
+     */
+    public java.util.Optional<Long> daysBeyondDeadline(ZoneId destinationZone) {
+        return itinerary()
+                .flatMap(assigned ->
+                        routeSpecification.daysBeyondDeadline(assigned, destinationZone));
+    }
+
     /** 誤配が起きているか（US28-3）。<strong>状態ではなく事実を見る</strong>。 */
     public boolean isMisrouted() {
         return misroute != null;

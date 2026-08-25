@@ -126,6 +126,29 @@ public final class RouteSpecification {
                 && destination.equals(itinerary.destination());
     }
 
+    /**
+     * 到着予定が希望期限を<strong>何日超えるか</strong>（US28-6・[ADR-026] 決定 5）。
+     *
+     * <p>超えないなら空を返す。<strong>「超えた」だけでは荷主に説明できない</strong>
+     * ——1 日なのか 2 週間なのかで、荷主の判断は変わる。
+     *
+     * <p>判断は<strong>目的地の暦</strong>で行う（[ADR-017]）。UTC で判断すると、
+     * 時差の分だけ超過日数が増減する。
+     *
+     * @param itinerary 組み直した旅程
+     * @param destinationZone 目的地のタイムゾーン
+     */
+    public Optional<Long> daysBeyondDeadline(CargoItinerary itinerary, ZoneId destinationZone) {
+        if (itinerary == null) {
+            return Optional.empty();
+        }
+        LocalDate arrival = LocalDate.ofInstant(itinerary.expectedArrivalTime(), destinationZone);
+        if (!arrival.isAfter(arrivalDeadline)) {
+            return Optional.empty();
+        }
+        return Optional.of(java.time.temporal.ChronoUnit.DAYS.between(arrivalDeadline, arrival));
+    }
+
     public Location origin() {
         return origin;
     }

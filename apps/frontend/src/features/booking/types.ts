@@ -107,6 +107,13 @@ export type Booking = {
   misroute?: { at: string; locationUnLocode: string } | null
   /** 最後に荷役があった港。**誤配のあとの再設計は、ここを出発地とする**（US28-4）。 */
   lastHandlingLocationUnLocode?: string | null
+  /**
+   * 到着予定が希望期限を超える日数（US28-6）。超えないなら null。
+   *
+   * **経路を割り当てた応答でだけ値を持つ。** 誤配のあとの再設計で荷主に伝えるべき
+   * 差分であり、**「間に合いません」だけでは荷主は次の手を決められない**。
+   */
+  daysBeyondDeadline?: number | null
   type: CargoType
   weightKg: number
   quantity: number | null

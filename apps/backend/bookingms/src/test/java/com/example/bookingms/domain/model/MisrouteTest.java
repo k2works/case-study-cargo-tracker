@@ -212,6 +212,51 @@ class MisrouteTest {
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
+        /**
+         * <strong>期限を超えるなら、何日超えるかが分かる</strong>（US28-6・[ADR-026] 決定 5）。
+         *
+         * <p>「間に合いません」だけでは、荷主は次の手を決められない
+         * ——1 日なのか 2 週間なのかで判断は変わる。
+         */
+        @Test
+        @DisplayName("期限を超える経路では、超える日数が分かる")
+        void tellsHowManyDaysBeyondTheDeadline() {
+            // 期限は 2026-09-20。到着は 2026-09-25（目的地の暦で 5 日超過）
+            CargoItinerary late = CargoItinerary.of(List.of(
+                    Leg.of(VoyageNumber.of("V0601"), SINGAPORE, LOS_ANGELES,
+                            Instant.parse("2026-09-10T09:00:00Z"),
+                            Instant.parse("2026-09-25T20:00:00Z"))));
+            Cargo reassigned = misroutedAtSingapore()
+                    .reassignItinerary(late, java.time.ZoneId.of("America/Los_Angeles"));
+
+            assertThat(reassigned.daysBeyondDeadline(java.time.ZoneId.of("America/Los_Angeles")))
+                    .as("何日超えるかが分からない。荷主は次の手を決められない")
+                    .contains(5L);
+        }
+
+        /**
+         * <strong>判断は目的地の暦で行う</strong>（[ADR-017]）。
+         *
+         * <p>UTC で判断すると、時差の分だけ超過日数が増減する。ロサンゼルスは UTC より
+         * 遅れているため、<strong>UTC で 9/21 早朝の到着は、現地ではまだ 9/20</strong>
+         * ——期限内である。
+         */
+        @Test
+        @DisplayName("期限当日の到着は、目的地の暦で判断して超過にしない")
+        void judgesTheDeadlineInTheDestinationCalendar() {
+            CargoItinerary onTime = CargoItinerary.of(List.of(
+                    Leg.of(VoyageNumber.of("V0701"), SINGAPORE, LOS_ANGELES,
+                            Instant.parse("2026-09-10T09:00:00Z"),
+                            // UTC では 9/21、ロサンゼルス（UTC-7）では 9/20 の 20 時
+                            Instant.parse("2026-09-21T03:00:00Z"))));
+            Cargo reassigned = misroutedAtSingapore()
+                    .reassignItinerary(onTime, java.time.ZoneId.of("America/Los_Angeles"));
+
+            assertThat(reassigned.daysBeyondDeadline(java.time.ZoneId.of("America/Los_Angeles")))
+                    .as("UTC で判断している。時差の分だけ期限内の便が超過扱いになる")
+                    .isEmpty();
+        }
+
         /** 誤配していない予約には使わない。**通常の割り当てが通るべき経路である**。 */
         @Test
         @DisplayName("誤配していない予約には使えない")

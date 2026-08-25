@@ -95,7 +95,7 @@ public class CargoRoutingController {
 
         CargoItinerary chosen = itineraryOf(request);
         return useCases.assignRoute().assign(bookingId, chosen, request.maxTransshipments())
-                .map(BookingResponse::from)
+                .map(result -> BookingResponse.from(result.cargo(), result.daysBeyondDeadline()))
                 .orElseThrow(CargoRoutingController::notFound);
     }
 

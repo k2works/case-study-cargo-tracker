@@ -115,6 +115,8 @@ export function RouteDesignPage() {
   const [chosen, setChosen] = useState<RouteCandidate | null>(null);
   const [assignFailed, setAssignFailed] = useState<string | null>(null);
   const assign = useAssignRoute(bookingId);
+  /** 到着予定が希望期限を超える日数（US28-6）。確定した直後にだけ出す。 */
+  const [beyondDeadline, setBeyondDeadline] = useState<number | null>(null);
   const consultation = useRequestConsultation(bookingId);
   const deadline = searchParams.get("deadline");
   const maxTransshipments = Number(
@@ -263,6 +265,33 @@ export function RouteDesignPage() {
         </div>
       </dl>
 
+      {/* **超える分を出してから進む**（US28-6）。そのまま遷移すると、超過に気づかないまま
+          次の作業へ移る——荷主に伝えるのは営業であり、ここで気づかなければ誰も伝えない */}
+      {beyondDeadline !== null && (
+        <div
+          role="alert"
+          className="space-y-2 rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"
+        >
+          <p>
+            <strong>
+              {`経路を確定しましたが、到着予定が当初の希望期限を ${beyondDeadline} 日超えます。`}
+            </strong>
+          </p>
+          <p>
+            {'荷主へは自動で通知されません。'}
+            <strong>営業担当者に伝えてください</strong>
+            {'——超過の日数もあわせてお伝えください。'}
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate(`/booking/${booking.bookingId}`)}
+            className="rounded bg-amber-700 px-4 py-2 text-white"
+          >
+            確認しました（予約詳細へ）
+          </button>
+        </div>
+      )}
+
       {deadline !== null && deadline !== booking.arrivalDeadline && (
         <p className="rounded border border-amber-300 bg-amber-50 p-3 text-sm">
           {`この予約の到着期限は ${booking.arrivalDeadline} です。`}
@@ -361,8 +390,21 @@ export function RouteDesignPage() {
                 maxTransshipments,
               },
               {
-                // 確定できたことは、予約詳細に旅程が出ていることで分かる
-                onSuccess: () => navigate(`/booking/${booking.bookingId}`),
+                onSuccess: (assigned) => {
+                  // **期限を超えるなら、読んでから進んでもらう**（US28-6）。
+                  // そのまま遷移すると、超過に気づかないまま次の作業へ移る
+                  // ——荷主に伝えるのは経路設計者ではなく営業であり、
+                  // ここで気づかなければ誰も伝えない
+                  if (
+                    assigned.daysBeyondDeadline !== null &&
+                    assigned.daysBeyondDeadline !== undefined
+                  ) {
+                    setBeyondDeadline(assigned.daysBeyondDeadline);
+                    return;
+                  }
+                  // 確定できたことは、予約詳細に旅程が出ていることで分かる
+                  navigate(`/booking/${booking.bookingId}`);
+                },
                 onError: (error) => {
                   // 次の行動は「もう一度探す」であり、入力の修正ではない。
                   // **候補も取り直す。**古い候補表が残ると、そこから選び直して同じ 409 になる

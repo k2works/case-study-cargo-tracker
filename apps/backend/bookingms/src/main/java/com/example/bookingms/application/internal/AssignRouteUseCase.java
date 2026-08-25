@@ -39,7 +39,7 @@ public class AssignRouteUseCase {
      *     「候補に無い」と判定され、画面には出たのに確定できない
      * @throws RouteNoLongerAvailableException 選んだ経路がもう成立しないとき（[ADR-019] 決定 2）
      */
-    public Optional<Cargo> assign(String bookingId, CargoItinerary chosen,
+    public Optional<AssignmentResult> assign(String bookingId, CargoItinerary chosen,
             Integer maxTransshipments) {
         return cargoes.findByBookingId(bookingId)
                 .map(CargoSummary::cargo)
@@ -49,9 +49,13 @@ public class AssignRouteUseCase {
                     // **誤配のあとは別の操作である**（[ADR-026] 決定 4b）。
                     // 通常の割り当てを通すと、輸送中の貨物が「経路を提示した」状態へ戻り、
                     // 荷主が合意して確定した記録が消える
-                    return cargoes.save(cargo.isMisrouted()
+                    Cargo assigned = cargoes.save(cargo.isMisrouted()
                             ? cargo.reassignItinerary(chosen, destinationZone)
                             : cargo.assignItinerary(chosen, destinationZone));
+                    // **期限を超えるなら、何日超えるかを返す**（US28-6・[ADR-026] 決定 5）。
+                    // 「間に合いません」だけでは、荷主は次の手を決められない
+                    return new AssignmentResult(assigned,
+                            assigned.daysBeyondDeadline(destinationZone).orElse(null));
                 });
     }
 
@@ -101,4 +105,13 @@ public class AssignRouteUseCase {
                 .orElseThrow(() -> new LocationMasterMissingException(
                         cargo.routeSpecification().destination().unLocode()));
     }
+    /**
+     * 割り当ての結果。
+     *
+     * @param cargo 割り当て後の予約
+     * @param daysBeyondDeadline 到着予定が希望期限を超える日数。超えないなら {@code null}
+     */
+    public record AssignmentResult(Cargo cargo, Long daysBeyondDeadline) {
+    }
+
 }

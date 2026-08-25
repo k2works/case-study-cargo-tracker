@@ -109,15 +109,25 @@ export const bookingHandlers = [
     // ADR-020 決定 1・4: 引き渡された予約か、すでに経路が決まった予約にだけ割り当てられる。
     // 本物は「それ以外」を拒む。ここで NOT_ROUTED だけを見ると、差し戻し中の予約を
     // モックだけが通し、実物でだけ 409 になる
-    if (found.routingStatus !== 'ROUTING_REQUESTED' && found.routingStatus !== 'ROUTED') {
+    // **誤配のあとの組み直しも通す**（US28-4・[ADR-026] 決定 4b）。弾くと、
+    // 画面には [経路を再設計する] が出るのに押した先で 409 になる
+    if (
+      found.routingStatus !== 'ROUTING_REQUESTED' &&
+      found.routingStatus !== 'ROUTED' &&
+      found.routingStatus !== 'MISROUTED'
+    ) {
       return HttpResponse.json(
         { message: '経路設計を依頼された予約にだけ経路を割り当てられます' },
         { status: 409 },
       )
     }
     // ADR-021 決定 3: 確定したあとは差し替えられない。差し替えを許すと、
-    // 「確定から経路設計へ戻せない」を裏口から破ることになる
-    if (found.bookingStatus === 'CONFIRMED' || found.bookingStatus === 'TRACKING_ISSUED') {
+    // 「確定から経路設計へ戻せない」を裏口から破ることになる。
+    // **誤配のあとの組み直しは別の操作**であり、この制限の対象ではない（決定 4b）
+    if (
+      found.routingStatus !== 'MISROUTED' &&
+      (found.bookingStatus === 'CONFIRMED' || found.bookingStatus === 'TRACKING_ISSUED')
+    ) {
       return HttpResponse.json(
         {
           message:
@@ -180,13 +190,36 @@ export const bookingHandlers = [
         unloadTime: (leg as unknown as { unloadTime: string }).unloadTime,
       }
     })
+    // **誤配のあとは別の操作である**（[ADR-026] 決定 4b）。通常の割り当てを通すと、
+    // 輸送中の貨物が「経路を提示した」状態へ戻り、荷主が合意した記録が消える
+    const wasMisrouted = found.routingStatus === 'MISROUTED'
     found.routingStatus = 'ROUTED'
-    found.bookingStatus = 'ROUTE_PROPOSED'
+    if (!wasMisrouted) {
+      found.bookingStatus = 'ROUTE_PROPOSED'
+    }
     // 差し替えたら通知の記録は消える。残すと、画面は「通知しました」と出したまま
     // 経路だけが変わり、営業は変わったことに気づかない
     found.routeNotifiedAt = null
     found.routeNotifiedBy = null
-    return HttpResponse.json(withShipperName(found))
+
+    // **期限を超えるなら、何日超えるかを返す**（US28-6）。本物は目的地の暦で判断する
+    // ——ここでは日付だけを比べる（モックは時差を持たない）
+    const arrival = found.itinerary?.at(-1)?.unloadTime ?? null
+    const beyond =
+      arrival === null
+        ? null
+        : Math.max(
+            0,
+            Math.round(
+              (Date.parse(arrival.slice(0, 10)) -
+                Date.parse(found.arrivalDeadline)) /
+                (24 * 60 * 60 * 1000),
+            ),
+          )
+    return HttpResponse.json({
+      ...withShipperName(found),
+      daysBeyondDeadline: beyond === null || beyond <= 0 ? null : beyond,
+    })
   }),
 
   /**
