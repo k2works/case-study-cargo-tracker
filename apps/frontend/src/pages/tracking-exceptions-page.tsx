@@ -85,6 +85,20 @@ export function TrackingExceptionsPage() {
                 <td className="py-2">{tracking.activeException?.occurredAt}</td>
                 <td className="py-2">
                   {tracking.activeException?.description}
+                  {/* **誤配は経路設計者が直す**（US28・[ADR-026] 決定 6）。
+                      気づく人（追跡管理者）と直す人が違うため、予約へ渡す導線が要る
+                      ——ここから辿れないと「気づいたが何もできない」で終わる */}
+                  {tracking.activeException?.exceptionType === "MISROUTE" && (
+                    <>
+                      {" "}
+                      <Link
+                        to={`/booking/${encodeURIComponent(tracking.bookingId)}`}
+                        className="text-blue-600 hover:underline"
+                      >
+                        予約を開く（経路の組み直し）
+                      </Link>
+                    </>
+                  )}
                 </td>
                 <td className="py-2">{tracking.locationName}</td>
               </tr>
