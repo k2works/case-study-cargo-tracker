@@ -56,6 +56,24 @@ describe("陸揚げ待ち（IT10 返済枠 0.3）", () => {
   });
 
   /** 一覧を行き止まりにしない。貨物の中身は予約詳細で見る。 */
+  /**
+   * <strong>業務の時刻で出す。</strong>生の ISO（2026-09-05T03:00:00Z）が出ると、
+   * 荷役の担当者は自分の時刻に読み替えることになる。整形はサーバが業務タイムゾーンで
+   * 行うが、<strong>画面がその値を素通しすることまでを固定する</strong>
+   * ——どこか一層で潰しても、表示のためだけに運ぶ値は緑になりやすい。
+   */
+  it("承認日時は業務の時刻で出る（生の ISO を出さない）", async () => {
+    approvedCancellation("SGSIN");
+    renderWithProviders(<AwaitingDischargePage />);
+
+    // 2026-09-05T03:00Z = 日本時間 09-05 12:00
+    expect(await screen.findByText(/2026-09-05 12:00/)).toBeInTheDocument();
+    expect(
+      screen.queryByText(/2026-09-05T03:00/),
+      "生の ISO が画面に出ている",
+    ).not.toBeInTheDocument();
+  });
+
   it("予約 ID から予約詳細へ行ける", async () => {
     approvedCancellation("SGSIN");
     renderWithProviders(<AwaitingDischargePage />);

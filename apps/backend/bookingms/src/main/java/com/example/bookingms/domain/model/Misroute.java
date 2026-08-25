@@ -26,4 +26,22 @@ public record Misroute(Instant at, String locationUnLocode) {
             throw new IllegalArgumentException("誤配が起きた港は必須です");
         }
     }
+
+    /**
+     * 永続化された行から復元する。<strong>ここでは検査しない</strong>（[ADR-012]）。
+     *
+     * <p>2 列は独立した nullable として足した（{@code V10__add_misroute.sql}）。片方だけ
+     * 入った行があると、コンパクトコンストラクタが例外を投げ<strong>予約詳細が 500 になる</strong>
+     * ——不変条件を後から足したときに既存の行が読めなくなるのと同じ形である。守るのは
+     * <strong>新しく受け入れるときだけ</strong>でよい。
+     *
+     * <p>誤配していない予約では両方 {@code null} になる。そのときは記録が無いことを表す
+     * {@code null} を返す——空の記録を作ると「誤配したが、いつどこかは分からない」と
+     * 区別できない。
+     */
+    public static Misroute restore(Instant at, String locationUnLocode) {
+        return at == null || locationUnLocode == null || locationUnLocode.isBlank()
+                ? null
+                : new Misroute(at, locationUnLocode);
+    }
 }

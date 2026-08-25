@@ -120,6 +120,36 @@ class MisrouteTest {
             assertThatThrownBy(() -> new Misroute(AT, " "))
                     .isInstanceOf(IllegalArgumentException.class);
         }
+
+        /**
+         * <strong>復元では検査しない</strong>（[ADR-012]）。
+         *
+         * <p>2 列は独立した nullable として足した（`V10__add_misroute.sql`）。片方だけ
+         * 入った行があると、読み出しで例外になり<strong>予約詳細が 500 になる</strong>
+         * ——不変条件は<strong>新しく受け入れるときだけ</strong>守る。
+         */
+        @Test
+        @DisplayName("片方だけ入った行を読んでも落ちない")
+        void restoresWithoutValidating() {
+            assertThat(Misroute.restore(AT, null))
+                    .as("片方だけ入った行で読み出しが落ちる。予約詳細が 500 になる")
+                    .isNull();
+            assertThat(Misroute.restore(null, "SGSIN")).isNull();
+        }
+
+        /** 誤配していない予約では両方 null。**空の記録を作らない**。 */
+        @Test
+        @DisplayName("両方が空なら、記録が無いことを表す")
+        void restoresNothingWhenBothAreAbsent() {
+            assertThat(Misroute.restore(null, null)).isNull();
+        }
+
+        @Test
+        @DisplayName("両方そろっていれば復元する")
+        void restoresWhenBothArePresent() {
+            assertThat(Misroute.restore(AT, "SGSIN"))
+                    .isEqualTo(new Misroute(AT, "SGSIN"));
+        }
     }
 
     @Nested

@@ -285,8 +285,8 @@ public class MyBatisCargoRepository implements CargoRepository {
                 RouteNotification.restore(row.getRouteNotifiedAt(), row.getRouteNotifiedBy()),
                 TrackingNumber.restoreNullable(row.getTrackingNumber()),
                 row.getLastHandlingLocationUnlocode(), row.getLastHandlingAt(),
-                row.getMisroutedAt() == null ? null
-                        : new Misroute(row.getMisroutedAt(),
-                                row.getMisroutedLocationUnlocode()));
+                // **復元では検査しない**（[ADR-012]）。2 列は独立した nullable であり、
+                // 片方だけ入った行で落とすと予約詳細が 500 になる
+                Misroute.restore(row.getMisroutedAt(), row.getMisroutedLocationUnlocode()));
     }
 }

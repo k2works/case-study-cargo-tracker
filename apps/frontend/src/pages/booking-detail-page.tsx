@@ -106,6 +106,16 @@ export function BookingDetailPage() {
    * `Cargo#isMisrouted` と同じく、分岐は状態で決める。
    */
   const offRoute = booking.routingStatus === "MISROUTED";
+  /**
+   * いま誰の手番か。
+   *
+   * <p><strong>誤配は予約の状態を動かさない</strong>ので、状態だけで決めると
+   * 「輸送中です。荷役の記録で状態が進みます。」と出る——<strong>進まない</strong>。
+   * 経路を組み直すまで止まったままであり、バナーの赤い指示とも矛盾して読める。
+   */
+  const turnLabel = offRoute
+    ? "経路設計者の手番です。予定ルートから外れているため、経路の組み直しを待っています。"
+    : TURN_LABELS[booking.bookingStatus];
 
   return (
     <div className="space-y-6">
@@ -187,6 +197,12 @@ export function BookingDetailPage() {
               </Link>
               {'（現在地を出発地として候補を探します）'}
             </p>
+          )}
+          {/* **読む人には次に何が起きるかを書く**。再設計の入口は経路設計者にしか
+              出ないため、営業や追跡管理者には「組み直してください」だけが残る
+              ——誰が直すのか分からないと、連絡すべきか待つべきかを決められない */}
+          {offRoute && !isRoutingPlanner && (
+            <p>{'経路設計者が組み直します。'}</p>
           )}
         </div>
       )}
@@ -374,9 +390,9 @@ export function BookingDetailPage() {
       {/* 手番。いまの状態で誰が動くかを 1 行で出す（ADR-021 決定 6）。
           **言葉が無いなら枠ごと出さない**——空の枠は「何か出るはずのものが出ていない」
           と読まれる（IT10 のキャプチャで実際にそう見えた） */}
-      {TURN_LABELS[booking.bookingStatus] !== undefined && (
+      {turnLabel !== undefined && (
         <p className="rounded border border-gray-200 bg-blue-50 p-3 text-sm text-gray-800">
-          {TURN_LABELS[booking.bookingStatus]}
+          {turnLabel}
         </p>
       )}
 

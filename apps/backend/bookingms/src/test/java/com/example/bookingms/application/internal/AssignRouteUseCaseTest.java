@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -247,5 +248,93 @@ class AssignRouteUseCaseTest {
         availableCandidates.add(direct());
 
         assertThat(useCase.assign("BKG-9999999999", direct(), null)).isEmpty();
+    }
+
+    /**
+     * 誤配のあとの組み直し（US28-4・US28-6・[ADR-026] 決定 4・5）。
+     *
+     * <p>集約と画面には検査があるが、<strong>この橋には無かった</strong>——超過の日数を
+     * 常に {@code null} にしても全層が緑になる状態だった（IT10 レビュー・tester 高 3）。
+     */
+    @Nested
+    @DisplayName("誤配のあとの組み直し")
+    class WhenRerouting {
+
+        private static final Location SINGAPORE = Location.of("SGSIN", "Singapore");
+
+        private static Cargo misroutedAtSingapore() {
+            return requested()
+                    .assignItinerary(direct(), ZoneId.of("America/Los_Angeles"))
+                    .afterHandling("UNLOAD", "SGSIN", Instant.parse("2030-09-05T09:00:00Z"))
+                    .misrouted("SGSIN", Instant.parse("2030-09-05T09:00:00Z"));
+        }
+
+        /** 現在地から出て、**期限（9/20）を 5 日超えて着く**旅程。 */
+        private static CargoItinerary lateFromSingapore() {
+            return CargoItinerary.of(List.of(Leg.of(VoyageNumber.of("V0301"), SINGAPORE,
+                    LOS_ANGELES, Instant.parse("2030-09-08T09:00:00Z"),
+                    Instant.parse("2030-09-25T09:00:00Z"))));
+        }
+
+        @Test
+        @DisplayName("現在地を出発地として候補を問い合わせ、期限で弾かないことを伝える")
+        void asksFromTheCurrentLocationWithoutTheDeadline() {
+            stored = misroutedAtSingapore();
+            availableCandidates.add(lateFromSingapore());
+
+            useCase.assign("BKG-2026000001", lateFromSingapore(), null);
+
+            assertThat(askedWith).hasSize(1);
+            assertThat(askedWith.get(0).originUnLocode())
+                    .as("元の出発地で候補を引いている。選べた候補が確定で断られる")
+                    .isEqualTo("SGSIN");
+            assertThat(askedWith.get(0).reroute())
+                    .as("期限で弾かないことを伝えていない。候補が 1 本も返らない")
+                    .isTrue();
+        }
+
+        @Test
+        @DisplayName("期限を超える分を、日数で返す")
+        void reportsHowManyDaysBeyondTheDeadline() {
+            stored = misroutedAtSingapore();
+            availableCandidates.add(lateFromSingapore());
+
+            assertThat(useCase.assign("BKG-2026000001", lateFromSingapore(), null))
+                    .get()
+                    .extracting(AssignRouteUseCase.AssignmentResult::daysBeyondDeadline)
+                    .as("超過の日数が返っていない。荷主は次の手を決められない")
+                    .isEqualTo(5L);
+        }
+
+        /** 通常の割り当てでは伝えない。**緩めるのは再設計だけ**。 */
+        @Test
+        @DisplayName("通常の割り当てでは、期限で弾く既定のままにする")
+        void keepsTheDeadlineForOrdinaryAssignment() {
+            availableCandidates.add(direct());
+
+            useCase.assign("BKG-2026000001", direct(), null);
+
+            assertThat(askedWith.get(0).reroute()).isFalse();
+            assertThat(askedWith.get(0).originUnLocode()).isEqualTo("JPTYO");
+        }
+
+        /**
+         * <strong>目的地と希望期限は引き継ぐ</strong>（US28-5）。組み直しても荷主との
+         * 約束は変わらない——変わったのは出発地だけである。
+         */
+        @Test
+        @DisplayName("目的地と希望期限は、組み直しても変わらない")
+        void carriesOverTheDestinationAndDeadline() {
+            stored = misroutedAtSingapore();
+            availableCandidates.add(lateFromSingapore());
+
+            Cargo reassigned = useCase.assign("BKG-2026000001", lateFromSingapore(), null)
+                    .orElseThrow().cargo();
+
+            assertThat(reassigned.routeSpecification().destination()).isEqualTo(LOS_ANGELES);
+            assertThat(reassigned.routeSpecification().arrivalDeadline())
+                    .as("組み直しで希望期限が動いている。荷主との約束が消える")
+                    .isEqualTo(LocalDate.of(2030, Month.SEPTEMBER, 20));
+        }
     }
 }

@@ -665,7 +665,16 @@ describe('予約の詳細（US06）', () => {
      * ——「何か出るはずのものが出ていない」と読まれる（IT10 のキャプチャで気づいた）。
      */
     it('輸送中の予約にも、手番の言葉が出る', async () => {
-      renderMisrouted(['ROLE_ROUTING'])
+      // **誤配ではない輸送中**で見る。誤配で止まっている貨物は「荷役の記録で状態が
+      // 進みます」ではない（次の検査が守る）
+      server.use(
+        http.get(`${API_PATHS.bookings}/:bookingId`, () =>
+          HttpResponse.json(
+            bookingIn({ ...MISROUTED, routingStatus: 'ROUTED' } as never),
+          ),
+        ),
+      )
+      renderPage(['ROLE_ROUTING'])
 
       expect(
         await screen.findByText(/輸送中です/),
@@ -766,6 +775,38 @@ describe('予約の詳細（US06）', () => {
       // **記録は残る**（US28-8。料金調整の根拠）
       expect(screen.getByText(/誤配の記録/)).toBeInTheDocument()
       expect(screen.getByText(/SGSIN/)).toBeInTheDocument()
+    })
+
+    /**
+     * <strong>手番が実態と食い違わない</strong>（IT10 レビュー・user-representative 低 1）。
+     *
+     * <p>誤配で止まっている貨物は `IN_TRANSIT` のままなので、状態だけを見ると
+     * 「輸送中です。荷役の記録で状態が進みます。」と出る。<strong>進まない</strong>
+     * ——赤いバナーと矛盾して読める。
+     */
+    it('誤配で止まっているときは、輸送中の案内を出さない', async () => {
+      renderMisrouted(['ROLE_ROUTING'])
+
+      await screen.findByRole('alert')
+      expect(
+        screen.queryByText(/荷役の記録で状態が進みます/),
+        '誤配で止まっているのに「進みます」と出ている',
+      ).not.toBeInTheDocument()
+      expect(screen.getByText(/経路設計者の手番です/)).toBeInTheDocument()
+    })
+
+    /**
+     * <strong>営業には次にすることを書く</strong>（IT10 レビュー・user-representative 中 2）。
+     *
+     * <p>バナーは全ロールに出るが、再設計の入口は経路設計者にしか出ない。営業が読むと
+     * 「組み直してください」と言われるだけで、誰が直すのかが分からない。
+     */
+    it('営業には、経路設計者が組み直すことを伝える', async () => {
+      renderMisrouted(['ROLE_SALES'])
+
+      const banner = await screen.findByRole('alert')
+      expect(banner, '営業は次に何をすればよいか分からない')
+        .toHaveTextContent('経路設計者が組み直します')
     })
 
     it('誤配していない予約には、バナーを出さない', async () => {

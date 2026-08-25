@@ -870,7 +870,7 @@ IT1 で荷主登録画面のニーズから導出した。
 | `POST` | `/api/v1/bookings/{bookingId}/routing-request` | 経路設計を依頼する（`RoutingStatus` を `ROUTING_REQUESTED` へ）。営業担当者のみ | UC06 |
 | `POST` | `/api/v1/bookings/{bookingId}/consultation-request` | 候補が無いときに営業へ相談を戻す。経路設計者のみ | UC08 |
 | `PUT` | `/api/v1/bookings/{bookingId}/schedule` | 期限・出発希望日の変更。営業担当者のみ | UC04 |
-| `PUT` | `/api/v1/bookings/{bookingId}/route` | 経路の割り当て（誤配再設計時は現在地起点）。**候補の中身（区間の並び）を丸ごと受け取り、確定時に成立を再検証する**（[ADR-019](../adr/019-route-assignment-api.md)）。経路設計者のみ。成立しない経路は 409 | UC09, UC08 |
+| `PUT` | `/api/v1/bookings/{bookingId}/route` | 経路の割り当て。**候補の中身（区間の並び）を丸ごと受け取り、確定時に成立を再検証する**（[ADR-019](../adr/019-route-assignment-api.md)）。経路設計者のみ。成立しない経路は 409。**誤配のときは別の操作として振る舞う**（[ADR-026](../adr/026-misroute-detection-and-rerouting.md) 決定 4・4b・IT10）——(1) 再検証の出発地が**貨物の現在地**になる、(2) **期限では弾かない**（`reroute=true` を routingms に伝える）、(3) 予約の状態を動かさない（確定した予約でも組み直せる。「確定後は差し替えられない」の制約が効かない唯一の場面）、(4) 応答に `daysBeyondDeadline`（超過の日数）が載る | UC09, UC08 |
 | `POST` | `/api/v1/bookings/{bookingId}/route-notification` | 経路を荷主へ通知する（US12）。営業担当者のみ。**メールは送らない**——通知したという事実を記録し、画面が見せる（通知の仕組みが入る IT8 まで代替）。[ADR-021](../adr/021-shipper-notification-and-confirmation-transitions.md) 決定 1・決定 2 | UC10 |
 | `PUT` | `/api/v1/bookings/{bookingId}/confirm` | 予約確定。**通知した予約にだけ行える**（[ADR-021](../adr/021-shipper-notification-and-confirmation-transitions.md) 決定 1）。営業担当者のみ | UC11 |
 | `PUT` | `/api/v1/bookings/{bookingId}/return-to-routing` | 荷主が変更を希望したので経路設計へ戻す（US13-4）。**`RoutingStatus` も `ROUTING_REQUESTED` に戻る**（同 決定 4）。**確定後は行えない**（同 決定 3）。営業担当者のみ | UC11 |
@@ -892,7 +892,7 @@ IT1 で荷主登録画面のニーズから導出した。
 | `PUT` | `/api/v1/voyages/{voyageNumber}` | 航海スケジュール更新 | UC19 |
 | `GET` | `/api/v1/voyages/{voyageNumber}` | 航海スケジュールの詳細 | UC05 |
 | `GET` | `/api/v1/voyages/locations` | 航海の入力に使う地点の一覧 | UC19 |
-| `GET` | `/api/v1/routes` | 経路候補算出。**推奨順に並んだ複数候補**を返す（[ADR-017](../adr/017-route-candidates-api.md)）。`origin` に現在地を指定して再設計可 | UC06 |
+| `GET` | `/api/v1/routes` | 経路候補算出。**推奨順に並んだ複数候補**を返す（[ADR-017](../adr/017-route-candidates-api.md)）。`origin` に現在地を指定して再設計可。**`reroute=true` で期限による絞り込みだけを外す**（[ADR-026](../adr/026-misroute-detection-and-rerouting.md) 決定 4・IT10）——誤配した貨物は元の期限に間に合う便がまず残っておらず、刈ると組み直す手段そのものが無くなる。**絞りは 3 か所（SQL の航海取得・探索の枝刈り・条件の判定）にあり、1 か所でも残っていれば効かない**。出発地・目的地・貨物種別・積み替えの上限は今までどおり効く | UC06 |
 
 ##### `GET /api/v1/routes` の契約（[ADR-017](../adr/017-route-candidates-api.md)）
 
