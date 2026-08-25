@@ -94,6 +94,15 @@ export const NAVIGATION: NavigationItem[] = [
     available: true,
   },
   {
+    label: "陸揚げ待ち",
+    // 降ろすのは荷役の担当者、決めたのは追跡管理者。**作業指示は自動で作られない**
+    // （[ADR-025] 決定 5）ため、荷役側にも入口が要る——連絡を待つだけだと、
+    // 貨物は指定した港を通り過ぎる
+    to: "/handling/awaiting-discharge",
+    roles: ["ROLE_HANDLER", "ROLE_TRACKER"],
+    available: true,
+  },
+  {
     label: "通関管理",
     // 申告の登録は荷役作業員、状態の更新は追跡管理者（[ADR-025] 決定 6）。
     // 一覧は両方が読む——荷役作業員は自分が出した申告の行方を追えないと、

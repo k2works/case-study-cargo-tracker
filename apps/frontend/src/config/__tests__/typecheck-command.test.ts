@@ -42,8 +42,24 @@ describe('型検査のコマンド', () => {
     expect(found.length, `対象が読めていない: ${TARGETS.join(', ')}`).toBeGreaterThan(3)
   })
 
-  it('`tsc --noEmit` がどこにも書かれていない', () => {
-    const offenders = TARGETS.filter((path) => read(path)?.includes('tsc --noEmit') === true)
+  /**
+   * **実行を指示している箇所だけを見る。**
+   *
+   * <p>「このコマンドは何も検査しない」と**説明している**文は残してよい——
+   * むしろ残すべきである。消すと、次の人がまた同じ穴に落ちる（IT6 で指摘され、
+   * IT9 でまた踏んだ）。引用（`>` で始まる行）は説明として扱う。
+   */
+  function commandLines(source: string): string[] {
+    return source
+      .split('\n')
+      .filter((line) => !line.trimStart().startsWith('>'))
+  }
+
+  it('`tsc --noEmit` を実行するようには書かれていない', () => {
+    const offenders = TARGETS.filter((path) => {
+      const source = read(path)
+      return source !== null && commandLines(source).some((line) => line.includes('tsc --noEmit'))
+    })
 
     expect(
       offenders,
@@ -81,7 +97,10 @@ describe('型検査のコマンド', () => {
     for (const entry of readdirSync(operation, { withFileTypes: true })) {
       if (!entry.isFile() || !entry.name.endsWith('.md')) continue
       const full = join(operation, entry.name)
-      if (readFileSync(full, 'utf-8').includes('tsc --noEmit')) offenders.push(entry.name)
+      const source = readFileSync(full, 'utf-8')
+      if (commandLines(source).some((line) => line.includes('tsc --noEmit'))) {
+        offenders.push(entry.name)
+      }
     }
 
     expect(offenders.length, '手順書が 1 つも読めていない').toBeGreaterThanOrEqual(0)

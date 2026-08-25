@@ -112,4 +112,25 @@ public interface CancellationRequestMapper {
             """)
     @ResultMap("cancellationResult")
     List<CancellationRequestRecord> findAwaitingDecision(@Param("limit") int limit);
+
+    /**
+     * <strong>陸揚げ待ち</strong>——承認済みで陸揚げ地が決まっている申請（IT10 返済枠 0.3）。
+     *
+     * <p><strong>荷役の担当者には、陸揚げ地が決まったことを知る入口が無かった。</strong>
+     * 作業指示は自動で作られず（[ADR-025] 決定 5）、承認した追跡管理者からの連絡が唯一の
+     * 担保である——<strong>連絡を忘れると、貨物は指定した港を通り過ぎる</strong>。
+     *
+     * <p><strong>古い順</strong>。承認から時間が経つほど、船は港に近づく。
+     */
+    @Select("""
+            SELECT
+            """ + COLUMNS + """
+              FROM cancellation_request
+             WHERE status = 'APPROVED'
+               AND discharge_location_unlocode IS NOT NULL
+             ORDER BY decided_at, id
+             LIMIT #{limit}
+            """)
+    @ResultMap("cancellationResult")
+    List<CancellationRequestRecord> findAwaitingDischarge(@Param("limit") int limit);
 }

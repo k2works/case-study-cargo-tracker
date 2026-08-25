@@ -495,3 +495,40 @@ test('11-cancellation-approval（キャンセルの承認）', async ({ page }) 
 
   await page.screenshot({ path: `${ASSETS}/11-cancellation-approval.png`, fullPage: true })
 })
+
+test('11-awaiting-discharge（陸揚げ待ち）', async ({ page }) => {
+  // 承認済みの申請を用意する。**ログインし直すとページが再読み込みになり、
+  // ブラウザ内のモックが持っている申請が消える**ため、荷役作業員で入って
+  // API だけで承認まで進める（承認の権限は追跡管理者だが、モックは役割を見ない）
+  await login(page, 'handler01')
+  const outcome = await page.evaluate(async () => {
+    const requested = await fetch('/api/v1/bookings/BKG-2026000005/cancellation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: '荷主都合により中止' }),
+    })
+    if (requested.status !== 201) {
+      return { status: requested.status, body: await requested.text() }
+    }
+    const approved = await fetch(
+      '/api/v1/bookings/BKG-2026000005/cancellation/approve',
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dischargeLocationUnLocode: 'CNSHA',
+          decisionReason: '現在地の港で陸揚げする',
+        }),
+      },
+    )
+    return { status: approved.status, body: await approved.text() }
+  })
+  // 用意そのものが失敗していたら、そこで止める（空の一覧を撮らない）
+  expect(outcome.status, outcome.body).toBe(200)
+
+  await page.getByRole('link', { name: '陸揚げ待ち', exact: true }).click()
+  await expect(page.getByRole('heading', { name: '陸揚げ待ち' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'BKG-2026000005' })).toBeVisible()
+
+  await page.screenshot({ path: `${ASSETS}/11-awaiting-discharge.png`, fullPage: true })
+})

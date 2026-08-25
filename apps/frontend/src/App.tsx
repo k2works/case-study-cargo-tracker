@@ -4,6 +4,7 @@ import { AppLayout } from './layouts/app-layout'
 import { CancellationsPage } from './pages/cancellations-page'
 import { CustomsDetailPage } from './pages/customs-detail-page'
 import { CustomsNewPage } from './pages/customs-new-page'
+import { AwaitingDischargePage } from './pages/awaiting-discharge-page'
 import { CustomsPage } from './pages/customs-page'
 import { DashboardPage } from './pages/dashboard-page'
 import { ForbiddenPage } from './pages/forbidden-page'
@@ -140,6 +141,10 @@ export default function App() {
           </RequireAuth>
         }
       >
+        <Route
+          path="/handling/awaiting-discharge"
+          element={<AwaitingDischargePage />}
+        />
         <Route path="/customs" element={<CustomsPage />} />
         {/* 状態を更新できるのは追跡管理者だけ。詳細は荷役作業員も読む
             ——自分が出した申告の行方を追えないと、引取の作業をいつ始められるか

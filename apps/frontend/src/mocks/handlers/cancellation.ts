@@ -146,6 +146,23 @@ export const cancellationHandlers = [
     return HttpResponse.json(found === undefined ? null : view(found))
   }),
 
+  // **陸揚げ待ち**（IT10 返済枠 0.3）。承認済みで陸揚げ地が決まっている貨物。
+  // **古い順**——承認から時間が経つほど、船は港に近づく
+  http.get(API_PATHS.awaitingDischarge, () =>
+    HttpResponse.json(
+      cancellations
+        .filter(
+          (candidate) =>
+            candidate.status === 'APPROVED' &&
+            candidate.dischargeLocationUnLocode !== null,
+        )
+        .map((candidate) => ({
+          ...view(candidate),
+          dischargeCandidates: dischargeCandidatesOf(candidate.bookingId),
+        })),
+    ),
+  ),
+
   // **履歴（US30-10）。** 最新の 1 件では足りない——却下されて再申請すると、
   // 前回の却下理由が予約詳細から消える。**新しい順**で返す（本物と同じ）
   http.get('/api/v1/bookings/:bookingId/cancellations', ({ params }) =>

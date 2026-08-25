@@ -19,6 +19,11 @@ export function fetchCancellation(bookingId: string) {
   return apiClient.get<CancellationRequest | null>(API_PATHS.cancellation(bookingId))
 }
 
+/** **陸揚げ待ち**——承認済みで陸揚げ地が決まっている貨物（IT10 返済枠 0.3）。 */
+export function fetchAwaitingDischarge() {
+  return apiClient.get<PendingCancellation[]>(API_PATHS.awaitingDischarge)
+}
+
 /** その予約のキャンセル申請の**履歴**（新しい順・US30-10）。 */
 export function fetchCancellationHistory(bookingId: string) {
   return apiClient.get<CancellationRequest[]>(API_PATHS.cancellationHistory(bookingId))

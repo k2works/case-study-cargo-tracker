@@ -41,6 +41,17 @@ public class DecideCancellationUseCase {
     }
 
     /**
+     * <strong>陸揚げ待ち</strong>——承認済みで陸揚げ地が決まっている申請（IT10 返済枠 0.3）。
+     *
+     * <p>荷役の担当者には、陸揚げ地が決まったことを知る入口が無かった。作業指示は自動で
+     * 作られず（[ADR-025] 決定 5）、承認した追跡管理者からの連絡が唯一の担保である
+     * ——<strong>連絡を忘れると、貨物は指定した港を通り過ぎる</strong>。
+     */
+    public List<CancellationRequest> awaitingDischarge() {
+        return cancellations.findAwaitingDischarge(AWAITING_LIMIT);
+    }
+
+    /**
      * その予約のキャンセル申請の<strong>履歴</strong>（新しい順・US30-10）。
      *
      * <p><strong>最新の 1 件では足りない。</strong>却下されて再申請すると、前回の却下理由が

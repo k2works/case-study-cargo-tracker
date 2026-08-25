@@ -51,6 +51,11 @@ public class MyBatisCancellationRequestRepository implements CancellationRequest
         return mapper.findAwaitingDecision(limit).stream().map(this::toDomain).toList();
     }
 
+    @Override
+    public List<CancellationRequest> findAwaitingDischarge(int limit) {
+        return mapper.findAwaitingDischarge(limit).stream().map(this::toDomain).toList();
+    }
+
     private static CancellationRequestRecord toRecord(CancellationRequest request) {
         CancellationRequestRecord row = new CancellationRequestRecord();
         row.setId(request.id());

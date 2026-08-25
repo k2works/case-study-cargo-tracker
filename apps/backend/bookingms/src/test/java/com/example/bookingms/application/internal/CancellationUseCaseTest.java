@@ -350,5 +350,13 @@ class CancellationUseCaseTest {
         public List<CancellationRequest> findAwaitingDecision(int limit) {
             return requests.stream().filter(CancellationRequest::awaitingDecision).toList();
         }
+
+        /** 陸揚げ待ち——承認済みで陸揚げ地が決まっているもの（IT10 返済枠 0.3）。 */
+        @Override
+        public List<CancellationRequest> findAwaitingDischarge(int limit) {
+            return requests.stream()
+                    .filter(request -> request.dischargeLocation().isPresent())
+                    .toList();
+        }
     }
 }

@@ -39,4 +39,12 @@ public interface CancellationRequestRepository {
 
     /** 承認待ちの一覧（US30-4）。**古い順**——放っておくほど貨物は目的地へ近づく。 */
     List<CancellationRequest> findAwaitingDecision(int limit);
+
+    /**
+     * <strong>陸揚げ待ち</strong>——承認済みで陸揚げ地が決まっている申請（IT10 返済枠 0.3）。
+     *
+     * <p>荷役の担当者が「どの貨物をどこで降ろすことになったか」を自分で知るための入口。
+     * <strong>連絡を忘れると、貨物は指定した港を通り過ぎる。</strong>
+     */
+    List<CancellationRequest> findAwaitingDischarge(int limit);
 }

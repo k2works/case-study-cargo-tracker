@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   approveCancellation,
+  fetchAwaitingDischarge,
   fetchCancellation,
   fetchCancellationHistory,
   fetchPendingCancellations,
@@ -17,6 +18,19 @@ export function usePendingCancellations() {
   return useQuery({
     queryKey: ['cancellations', 'pending'],
     queryFn: fetchPendingCancellations,
+  })
+}
+
+/**
+ * 陸揚げ待ち（IT10 返済枠 0.3）。
+ *
+ * **作業指示は自動で作られない。** 荷役の担当者はここで自分の手番に気づく
+ * ——連絡を待つだけだと、貨物は指定した港を通り過ぎる。
+ */
+export function useAwaitingDischarge() {
+  return useQuery({
+    queryKey: ['cancellations', 'awaiting-discharge'],
+    queryFn: fetchAwaitingDischarge,
   })
 }
 

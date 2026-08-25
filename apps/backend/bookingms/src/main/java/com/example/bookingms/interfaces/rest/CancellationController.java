@@ -82,6 +82,25 @@ public class CancellationController {
     }
 
     /**
+     * <strong>陸揚げ待ちの一覧</strong>（IT10 返済枠 0.3）。**荷役作業員と追跡管理者**。
+     *
+     * <p>承認済みで陸揚げ地が決まっている貨物。<strong>作業指示は自動で作られない</strong>
+     * （[ADR-025] 決定 5）ため、荷役の担当者はここで自分の手番に気づく
+     * ——連絡を待つだけだと、貨物は指定した港を通り過ぎる。
+     */
+    @GetMapping("/api/v1/cancellations/awaiting-discharge")
+    public List<PendingCancellationResponse> awaitingDischarge(
+            @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
+            @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles) {
+        requireHandlerOrTracker(userId, roles);
+
+        return decide.awaitingDischarge().stream()
+                .map(this::toPending)
+                .flatMap(java.util.Optional::stream)
+                .toList();
+    }
+
+    /**
      * その予約のキャンセル申請の<strong>履歴</strong>（US30-10）。
      *
      * <p><strong>最新の 1 件を返す `/cancellation` とは別に置く。</strong>画面は
@@ -173,6 +192,19 @@ public class CancellationController {
      */
     private void requireTracker(String userId, String roles) {
         if (!AuthenticatedUser.of(userId, roles).hasAnyRole(Role.ROLE_TRACKER)) {
+            throw forbidden();
+        }
+    }
+
+    /**
+     * <strong>陸揚げ待ち</strong>を読むのは荷役作業員と追跡管理者（IT10 返済枠 0.3）。
+     *
+     * <p>降ろすのは荷役の担当者であり、決めたのは追跡管理者である。営業には開かない
+     * ——申請したあとの手配は営業の手番ではない。
+     */
+    private void requireHandlerOrTracker(String userId, String roles) {
+        if (!AuthenticatedUser.of(userId, roles)
+                .hasAnyRole(Role.ROLE_HANDLER, Role.ROLE_TRACKER)) {
             throw forbidden();
         }
     }

@@ -26,6 +26,13 @@ export const API_PATHS = {
    * 空になった。
    */
   cancellations: '/api/v1/cancellations',
+  /**
+   * **陸揚げ待ち**——承認済みで陸揚げ地が決まっている貨物（IT10 返済枠 0.3）。
+   *
+   * 作業指示は自動で作られない（[ADR-025] 決定 5）。荷役の担当者はここで
+   * 自分の手番に気づく——連絡を待つだけだと、貨物は指定した港を通り過ぎる。
+   */
+  awaitingDischarge: '/api/v1/cancellations/awaiting-discharge',
   /** 1 つの予約のキャンセル申請（申請・承認・却下）。 */
   cancellation: (bookingId: string) =>
     `/api/v1/bookings/${encodeURIComponent(bookingId)}/cancellation`,
