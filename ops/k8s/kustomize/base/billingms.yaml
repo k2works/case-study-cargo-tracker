@@ -29,6 +29,12 @@ spec:
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef: { name: cargo-secrets, key: DB_PASSWORD }
+            # 料金算出の入力を引く先（[ADR-027] 決定 7）。
+            # **設定しないと料金の算出だけが必ず失敗する**——コードの既定値は
+            # localhost を指しており、クラスタの中では自分自身を指すことになる
+            # （IT5 で bookingms → routingms が同じ形の欠陥を出した）
+            - name: APP_BOOKING_SERVICE_BASE_URL
+              value: http://bookingms:8082
             - name: RABBITMQ_HOST
               value: rabbitmq
             - name: RABBITMQ_PORT
