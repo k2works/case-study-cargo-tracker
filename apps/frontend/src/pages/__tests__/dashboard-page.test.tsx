@@ -88,15 +88,16 @@ describe('まだ使えない画面への導線', () => {
     expect(screen.getByRole('link', { name: /荷主を登録する/ })).toBeInTheDocument()
   })
 
-  it('下位の URL が上位のメニューに吸われて押せるようにならない', () => {
-    // /booking/estimates は準備中だが /booking は使える。前方一致で最初に
-    // 当たったものを使うと、この行動だけリンクになって公開トップに飛ばされる。
+  it('下位の URL が上位のメニューに吸われない', () => {
+    // /booking/estimates と /booking はどちらも使えるが、**別の画面である**。
+    // 前方一致で最初に当たったものを返すと、見積管理の行動が貨物予約の項目として
+    // 解決され、ロールや到達性の判定が別画面のものになる。
     //
-    // IT9 で /booking/cancellations が使えるようになったため、まだ準備中の
-    // 下位 URL で確かめる。**この性質は画面が増えても保ち続ける**
+    // IT12 で準備中の項目が無くなったため、「準備中かどうか」ではなく
+    // **どの項目に解決されるか**で確かめる。**この性質は画面が増えても保ち続ける**
     expect(resolveNavigationItem('/booking/estimates')?.to).toBe('/booking/estimates')
-    expect(resolveNavigationItem('/booking/estimates')?.available).toBe(false)
-    expect(resolveNavigationItem('/booking')?.available).toBe(true)
+    expect(resolveNavigationItem('/booking/estimates/new')?.to).toBe('/booking/estimates')
+    expect(resolveNavigationItem('/booking')?.to).toBe('/booking')
   })
 
   /**

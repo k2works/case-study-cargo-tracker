@@ -1,6 +1,6 @@
 import type React from 'react'
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   HazardousFields,
   TemperatureFields,
@@ -18,6 +18,8 @@ import {
   useLocations,
   useShippers,
 } from '../features/booking/queries'
+import { differencesFromEstimate } from '../features/booking/estimate-match'
+import { useEstimate } from '../features/booking/estimate-queries'
 import { CARGO_TYPE_LABELS, type CargoType } from '../features/booking/types'
 import { ApiError } from '../lib/api-client'
 
@@ -55,6 +57,13 @@ export function BookingRegisterPage() {
   const [temperature, setTemperature] = useState<TemperatureInput>(EMPTY_TEMPERATURE)
   const [invalid, setInvalid] = useState<string | null>(null)
   const [failed, setFailed] = useState(false)
+  /**
+   * 見積との食い違い（受入基準 01-7・US04 の未達）。
+   *
+   * <p><strong>断らない。</strong>条件が変わること自体は業務として普通に起きる
+   * （荷主が数量を増やす）。営業担当者が気づいて荷主に確かめられればよい。
+   */
+  const [mismatch, setMismatch] = useState<string[] | null>(null)
 
   const navigate = useNavigate()
   const { data: shippers = [] } = useShippers('')
@@ -63,6 +72,28 @@ export function BookingRegisterPage() {
   const { mutateAsync: book, isPending } = useBookCargo()
 
   const additional = additionalFieldsOf(type)
+
+  // **見積から来たときだけ突き合わせる。**見積を使わない予約は今までどおり
+  const [params] = useSearchParams()
+  const estimateId = params.get('estimateId') ?? ''
+  const { data: estimate } = useEstimate(estimateId)
+
+  /**
+   * 見積の条件を初期値にする。**打ち直させると、そこで食い違いが生まれる。**
+   *
+   * <p><strong>描画中に入れる</strong>（効果では入れない）。効果で入れると、
+   * 一度は空の入力欄が描かれてから値が入り、営業担当者の入力とぶつかりうる。
+   * 1 つの見積につき 1 度だけ入れる——2 度目に入れると、直した値が戻る。
+   */
+  const [seededEstimateId, setSeededEstimateId] = useState('')
+  if (estimate !== undefined && seededEstimateId !== estimate.estimateId) {
+    setSeededEstimateId(estimate.estimateId)
+    setOriginUnLocode(estimate.originUnLocode)
+    setDestinationUnLocode(estimate.destinationUnLocode)
+    setArrivalDeadline(estimate.arrivalDeadline)
+    setType(estimate.cargoType)
+    setWeightKg(String(estimate.weightKg))
+  }
 
   /**
    * 種別を変えたら、前の種別で入れた追加情報は捨てる。
@@ -92,6 +123,20 @@ export function BookingRegisterPage() {
     }
     if (arrivalDeadline === '') {
       setInvalid('到着期限を入力してください')
+      return
+    }
+
+    // **見積と食い違っていたら、まず知らせる**（受入基準 01-7・US04 の未達）。
+    // 2 度目の送信では登録する——確かめたうえで進めるのは営業担当者の判断である
+    const differences = differencesFromEstimate(estimate, {
+      originUnLocode,
+      destinationUnLocode,
+      arrivalDeadline,
+      cargoType: type,
+      weightKg,
+    })
+    if (differences.length > 0 && mismatch === null) {
+      setMismatch(differences)
       return
     }
 
@@ -133,6 +178,27 @@ export function BookingRegisterPage() {
   return (
     <div className="max-w-2xl space-y-6">
       <h1 className="text-xl font-bold text-gray-900">貨物予約の登録</h1>
+
+      {/* **どの見積から来たかを出す。**出さないと、営業担当者は突き合わせの相手を
+          確かめられない */}
+      {estimate !== undefined && (
+        <p className="rounded border border-gray-300 bg-gray-50 p-3 text-sm">
+          {`見積 ${estimate.estimateNumber} の内容で入力しています。`}
+        </p>
+      )}
+
+      {/* **断らずに知らせる**（受入基準 01-7）。条件が変わること自体は普通に起きる */}
+      {mismatch !== null && mismatch.length > 0 && (
+        <p
+          role="alert"
+          className="rounded border border-amber-300 bg-amber-50 p-3 text-sm"
+          data-testid="estimate-mismatch"
+        >
+          <strong>{`見積 ${estimate?.estimateNumber ?? ''} と食い違っています。`}</strong>
+          {`食い違っている項目: ${mismatch.join('・')}。`}
+          {'荷主にご確認のうえ、そのまま登録する場合はもう一度「登録する」を押してください。'}
+        </p>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-4 rounded border bg-white p-6">
         <div>

@@ -4,6 +4,7 @@ import { useAuthStore } from '../../stores/auth-store'
 import type { Role } from '../../types/role'
 import { loginAs, renderWithProviders } from '../../test/render'
 import { AppLayout } from '../app-layout'
+import { NAVIGATION } from '../../config/navigation'
 
 function renderAs(roles: Role[]) {
   loginAs(roles)
@@ -57,13 +58,23 @@ describe('まだ使えない画面のメニュー', () => {
     useAuthStore.getState().logout()
   })
 
-  it('準備中と示し、押せないようにする', () => {
+  /**
+   * **準備中の項目はもう無い**（IT12 で見積管理が最後だった）。
+   *
+   * <p>「準備中と示して押させない」実装は残してある——次に定義だけ先行する項目が
+   * 来たときに必要になる。<strong>いま踏める道が無いので、代わりに逆側を固定する</strong>
+   * ——準備中の印が付いた項目が現れたら、それはリンクにならないこと。
+   */
+  it('準備中の項目は無く、あればリンクにしない', () => {
     renderAs(['ROLE_SALES'])
 
-    // 押せるのにどこにも行けないメニューは、壊れていると受け取られる
-    const notReady = screen.getByText('見積管理')
-    expect(notReady.closest('a')).toBeNull()
-    expect(screen.getAllByText('準備中').length).toBeGreaterThan(0)
+    expect(
+      NAVIGATION.filter((item) => !item.available).map((item) => item.to),
+      '準備中のまま残っている項目がある。画面はあるのに navbar から到達できない',
+    ).toEqual([])
+
+    // 見積管理は IT12 で使えるようになった。**押せることを確かめる**
+    expect(screen.getByRole('link', { name: '見積管理' })).toBeInTheDocument()
   })
 
   it('使える画面はリンクのままにする', () => {

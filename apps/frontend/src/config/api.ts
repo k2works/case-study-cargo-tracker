@@ -21,6 +21,12 @@ export const API_PATHS = {
    * 経理担当者は他に気づく手段を持たない——メールの仕組みは無い。
    * ダッシュボードの件数も、精算管理の待ち行列も、ここから来る。
    */
+  /** 輸送見積（US01）。 */
+  estimates: '/api/v1/estimates',
+  estimate: (estimateId: string) => `/api/v1/estimates/${encodeURIComponent(estimateId)}`,
+  /** 候補の試算（受入基準 01-2）。**保存しない**——営業担当者は候補を見てから決める。 */
+  estimateQuotes: '/api/v1/estimates/quotes',
+
   unbilledBookings: '/api/v1/billing/unbilled',
   /** 発行済みの精算書の一覧。 */
   invoices: '/api/v1/billing/invoices',

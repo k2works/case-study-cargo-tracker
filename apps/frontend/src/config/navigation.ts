@@ -32,7 +32,7 @@ export const NAVIGATION: NavigationItem[] = [
     label: "見積管理",
     to: "/booking/estimates",
     roles: ["ROLE_SALES"],
-    available: false,
+    available: true,
   },
   // ROLE_SHIPPER には開かない（ADR-008）。利用者と荷主を結ぶキーが無く
   // 「自分の予約だけ」に絞り込めないため、開くと全荷主の予約が見える。

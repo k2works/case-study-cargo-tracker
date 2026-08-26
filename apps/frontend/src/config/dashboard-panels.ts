@@ -25,6 +25,9 @@ export const PANELS: Panel[] = [
     role: 'ROLE_SALES',
     title: '営業ダッシュボード',
     actions: [
+      // **荷主との会話はここから始まる**（US01）。予約より前に「いくらで何日か」を答える
+      { label: '輸送見積を作る', to: '/booking/estimates/new' },
+      { label: '見積管理を開く', to: '/booking/estimates' },
       { label: '荷主を登録する', to: '/booking/shippers/new' },
       { label: '荷主を探す', to: '/booking/shippers' },
       { label: '貨物予約を登録する', to: '/booking/new' },

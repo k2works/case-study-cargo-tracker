@@ -3,6 +3,24 @@ import { ROLES, type Role } from '../../types/role'
 import { NAVIGATION } from '../navigation'
 
 describe('ナビゲーション定義', () => {
+  /**
+   * **`available: false` のまま残った項目を落とす**（IT12 デモ 12）。
+   *
+   * 準備中の印は、その画面を作ったら外すためにある。外し忘れると、**画面はあるのに
+   * navbar からもダッシュボードからも到達できない**——ルートガードの検査では
+   * 捕まえられない（ガードは URL を直接叩けば通る）。
+   *
+   * 次に「先に定義だけ置く」項目を足すときは、ここに理由つきで名前を書く。
+   */
+  it('準備中のまま残っている項目が無い', () => {
+    const pending = NAVIGATION.filter((item) => !item.available).map((item) => item.to)
+
+    expect(
+      pending,
+      '画面を作ったのに準備中の印が残っている。navbar にもダッシュボードにも出ない',
+    ).toEqual([])
+  })
+
   it('遷移先が重複していない', () => {
     const paths = NAVIGATION.map((item) => item.to)
 

@@ -11,6 +11,22 @@ import type { Page } from '@playwright/test'
  * 見積と実料金が別物にならないことを統合テストで固定する（デモ 10）。
  */
 
+/**
+ * 業務タイムゾーンでの「明日」。
+ *
+ * <p><strong>`toISOString()` をそのまま使わない</strong>——CI（UTC）で 1 日ずれる。
+ * Playwright の設定で `timezoneId: 'Asia/Tokyo'` を与えているので、ブラウザではなく
+ * ここ（Node 側）で作る値を業務の暦に合わせる。
+ */
+function tomorrow() {
+  const now = new Date()
+  const business = new Date(
+    now.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }),
+  )
+  business.setDate(business.getDate() + 1)
+  return `${business.getFullYear()}-${String(business.getMonth() + 1).padStart(2, '0')}-${String(business.getDate()).padStart(2, '0')}`
+}
+
 async function logInAs(page: Page, userId: string) {
   await page.goto('/login')
   await page.getByLabel('利用者 ID').fill(userId)
@@ -56,7 +72,8 @@ test.describe('輸送見積（US01）', () => {
     await expect(candidate, '経由港が出ていない').toContainText('経由港')
     await expect(candidate, '所要日数が出ていない').toContainText(/\d+ 日/)
     await expect(candidate, '概算料金が出ていない').toContainText('¥')
-    await expect(candidate, '航海番号が出ていない').toContainText(/V\d+|VOY/)
+    // 種データの航海番号（`src/mocks/routes.ts` の DEMO-…）
+    await expect(candidate, '航海番号が出ていない').toContainText(/DEMO-/)
   })
 
   /** 01-4。**見積番号が発行され、あとから開ける。** */
@@ -70,11 +87,14 @@ test.describe('輸送見積（US01）', () => {
     const number = page.getByTestId('estimate-number')
     await expect(number, '見積番号が出ていない').toBeVisible()
 
-    await page.goto('/booking/estimates')
+    // **読み込み直さない**——モック（MSW）の状態が消え、作った見積が無かったことになる
+    const created = await number.innerText()
+    await page.getByRole('link', { name: '見積管理へ戻る' }).click()
+    await expect(page.getByRole('heading', { name: '見積管理' })).toBeVisible()
     await expect(
       page.getByTestId('estimate-list'),
       '作成した見積が一覧に出ていない',
-    ).toContainText(await number.innerText())
+    ).toContainText(created)
   })
 
   /**
@@ -84,8 +104,8 @@ test.describe('輸送見積（US01）', () => {
    */
   test('デモ 6: 期限に間に合う候補が無いとき、何日超過するかが出る', async ({ page }) => {
     await openNewEstimate(page)
-    // 明日までに太平洋を渡ることはできない
-    await fillRequirements(page, { deadline: '2027-01-02' })
+    // **明日までに太平洋を渡ることはできない。**種データの便は最短でも 2 週間かかる
+    await fillRequirements(page, { deadline: tomorrow() })
     await page.getByRole('button', { name: '候補を探す' }).click()
 
     await expect(
@@ -98,14 +118,16 @@ test.describe('輸送見積（US01）', () => {
   test('デモ 7: 危険物を選ぶと、危険物申告の入力が出る', async ({ page }) => {
     await openNewEstimate(page)
 
+    // **既存の危険物申告（US05）の項目を踏襲する**——見積と予約で項目名が違うと、
+    // 営業担当者は同じものを 2 度覚えることになる
     await expect(
-      page.getByLabel('国連番号'),
+      page.getByLabel('UN 番号'),
       '危険物を選ぶ前から危険物申告が出ている',
     ).toHaveCount(0)
 
     await page.getByLabel('貨物種別').selectOption('HAZARDOUS')
 
-    await expect(page.getByLabel('国連番号'), '危険物申告の入力が出ていない').toBeVisible()
+    await expect(page.getByLabel('UN 番号'), '危険物申告の入力が出ていない').toBeVisible()
     await expect(page.getByLabel('危険物クラス')).toBeVisible()
     await expect(page.getByLabel('正式品名')).toBeVisible()
   })
@@ -125,6 +147,8 @@ test.describe('輸送見積（US01）', () => {
     await page.getByRole('link', { name: 'この見積で予約する' }).click()
     await expect(page.getByRole('heading', { name: '貨物予約の登録' })).toBeVisible()
 
+    // 見積の条件は入っている（打ち直させない）。**荷主だけは見積に無い**ので選ぶ
+    await page.getByLabel('荷主', { exact: true }).selectOption({ index: 1 })
     // 見積と違う重量に書き換える
     await page.getByLabel('重量（kg）').fill('99000')
     await page.getByRole('button', { name: '登録する' }).click()

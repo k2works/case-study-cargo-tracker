@@ -7,6 +7,9 @@ import { CustomsNewPage } from './pages/customs-new-page'
 import { AwaitingDischargePage } from './pages/awaiting-discharge-page'
 import { BillingPage } from './pages/billing-page';
 import { BillingNewPage } from './pages/billing-new-page';
+import { EstimateDetailPage } from './pages/estimate-detail-page';
+import { EstimateListPage } from './pages/estimate-list-page';
+import { EstimateNewPage } from './pages/estimate-new-page';
 import { PaymentConfirmPage } from './pages/payment-confirm-page';
 import { InvoiceDetailPage } from './pages/invoice-detail-page';
 import { CustomsPage } from './pages/customs-page'
@@ -67,6 +70,11 @@ export default function App() {
         {/* 貨物予約も営業担当者の業務。ROLE_SHIPPER には開かない（ADR-008）。
             利用者と荷主を結ぶキーが無く「自分の予約だけ」に絞り込めないため */}
         <Route path="/booking/new" element={<BookingRegisterPage />} />
+        {/* 輸送見積（US01）。**営業担当者だけ**——荷主に「いくらで何日か」を
+            答えるのは営業の仕事である */}
+        <Route path="/booking/estimates" element={<EstimateListPage />} />
+        <Route path="/booking/estimates/new" element={<EstimateNewPage />} />
+        <Route path="/booking/estimates/:estimateId" element={<EstimateDetailPage />} />
       </Route>
 
       {/* ロックの解除はシステム管理者だけ（US32-4）。他のロールに開くと、

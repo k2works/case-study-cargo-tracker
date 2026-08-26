@@ -11,6 +11,7 @@
 import { adminHandlers } from './handlers/admin'
 import { authHandlers } from './handlers/auth'
 import { billingHandlers } from './handlers/billing'
+import { estimateHandlers } from './handlers/estimate'
 import { bookingHandlers } from './handlers/booking'
 import { routingHandlers } from './handlers/routing'
 import { shipperHandlers } from './handlers/shipper'
@@ -30,4 +31,5 @@ export const handlers = [
   ...cancellationHandlers,
   ...trackingHandlers,
   ...billingHandlers,
+  ...estimateHandlers,
 ]

@@ -70,6 +70,27 @@ function regionOf(unLocode: string) {
 /** 重量係数の下限。運ぶ手間は重量に比例しない——置かないと軽量の貨物が 0 円に近づく。 */
 const MIN_WEIGHT_FACTOR = 0.1
 
+/**
+ * 経路の基本料金（[ADR-028] 決定 6）。**見積と精算が同じ式を通る。**
+ *
+ * <p>本物では billingms の `/api/v1/billing/quotes` が同じ計算をする。式を 2 つ持つと
+ * 必ずずれ、荷主に出した見積と請求が違う金額になる。
+ */
+export function estimateBaseAmount(
+  legs: { loadRegion: string; unloadRegion: string }[],
+  weightKg: number,
+  cargoType: string,
+) {
+  const legFactor = legs.reduce(
+    (sum, leg) =>
+      sum + Math.max(REGION_FACTORS[leg.loadRegion], REGION_FACTORS[leg.unloadRegion]),
+    0,
+  )
+  const weightFactor = Math.max(weightFactorOf(weightKg), MIN_WEIGHT_FACTOR)
+  return yen(BASE_FARE * legFactor * weightFactor * (CARGO_TYPE_FACTORS[cargoType] ?? 1.0))
+    .value
+}
+
 /** 消費税率（決定 8）。 */
 const TAX_RATE = 0.1
 
