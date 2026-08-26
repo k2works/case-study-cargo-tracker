@@ -34,6 +34,24 @@ class CargoTypeTest {
     }
 
     /**
+     * <strong>すべての値が表示名を持つ</strong>。
+     *
+     * <p>表示名を `ChargeBasisResponse` の名簿で持つと、載せ忘れた値が
+     * <strong>そのまま英字で画面に出る</strong>——名簿方式は載っていないものを
+     * 通すため、載せ忘れたものほど漏れる。列挙が自分で持てば、足した瞬間に
+     * コンパイルが止まる。
+     */
+    @ParameterizedTest
+    @EnumSource(CargoType.class)
+    @DisplayName("すべての貨物種別が日本語の表示名を持つ")
+    void everyValueHasALabel(CargoType type) {
+        assertThat(type.label())
+                .as("表示名を決めていない貨物種別がある: %s", type)
+                .isNotBlank()
+                .isNotEqualTo(type.name());
+    }
+
+    /**
      * <strong>すべての値が係数を持つ</strong>（Try 3 の一般形）。
      *
      * <p>名簿を書き写さず、実体（{@code values()}）から回す。

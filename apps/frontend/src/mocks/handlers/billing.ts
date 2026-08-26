@@ -21,6 +21,15 @@ import { HttpResponse, http } from 'msw'
 
 import { API_PATHS } from '../../config/api'
 import { roundYen } from '../../features/billing/money'
+// **表示名を写さない。**画面が使っているものをそのまま使う。写すと、値を足したときに
+// 片方だけ古くなり、モックだけ英字を返す（`Record<...,string>` の索引は未登録を
+// undefined で返すため、`?? 値そのもの` で埋めると気づけない）
+import {
+  BOOKING_STATUS_LABELS,
+  CARGO_TYPE_LABELS,
+  type BookingStatus,
+  type CargoType,
+} from '../../features/booking/types'
 import { bookings, shippers } from '../data'
 import type { MockBooking } from '../data'
 
@@ -54,22 +63,6 @@ const CANCELLATION_FEE_RATES: Record<string, number> = {
   IN_TRANSIT: 0.3,
 }
 
-const BOOKING_STATUS_LABELS: Record<string, string> = {
-  PRELIMINARY: '仮受付',
-  ROUTE_PROPOSED: '経路提案中',
-  ROUTE_NOTIFIED: '荷主へ通知済',
-  CONFIRMED: '確定済',
-  TRACKING_ISSUED: '追跡番号発行済',
-  IN_TRANSIT: '輸送中',
-  DELIVERED: '配送完了',
-  CANCELLED: 'キャンセル',
-}
-
-const CARGO_TYPE_LABELS: Record<string, string> = {
-  GENERAL: '一般貨物',
-  HAZARDOUS: '危険物',
-  REFRIGERATED: '冷凍・冷蔵貨物',
-}
 
 type MockInvoice = {
   invoiceId: string
@@ -174,7 +167,7 @@ function cancellationFeeOf(booking: MockBooking) {
   const basis = basisOf(booking)
   return {
     bookingStatusAtCancel: statusAtCancel,
-    bookingStatusLabel: BOOKING_STATUS_LABELS[statusAtCancel] ?? statusAtCancel,
+    bookingStatusLabel: BOOKING_STATUS_LABELS[statusAtCancel as BookingStatus],
     feeRate,
     amount: yen(baseAmountOf(basis).value * feeRate),
   }
@@ -200,7 +193,7 @@ function calculationOf(booking: MockBooking) {
     bookingId: booking.bookingId,
     shipperName: shipper?.name ?? '（不明）',
     shipperType: shipper?.type ?? 'INDIVIDUAL',
-    basis: { ...basis, cargoTypeLabel: CARGO_TYPE_LABELS[booking.type] ?? booking.type },
+    basis: { ...basis, cargoTypeLabel: CARGO_TYPE_LABELS[booking.type as CargoType] },
     baseAmount,
     discountRate,
     discountAmount,

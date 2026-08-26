@@ -30,11 +30,6 @@ public record ChargeBasisResponse(
         String cargoTypeLabel,
         BigDecimal cargoTypeFactor) {
 
-    private static final java.util.Map<String, String> LABELS = java.util.Map.of(
-            "GENERAL", "一般貨物",
-            "HAZARDOUS", "危険物",
-            "REFRIGERATED", "冷凍・冷蔵貨物");
-
     public static ChargeBasisResponse from(TransportCharge charge) {
         return new ChargeBasisResponse(
                 MoneyResponse.from(TransportCharge.BASE_FARE),
@@ -43,7 +38,7 @@ public record ChargeBasisResponse(
                 charge.weightKg(),
                 charge.weightFactor(),
                 charge.cargoType().name(),
-                LABELS.getOrDefault(charge.cargoType().name(), charge.cargoType().name()),
+                charge.cargoType().label(),
                 charge.cargoTypeFactor());
     }
 }
