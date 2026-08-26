@@ -78,6 +78,15 @@ public class CargoRoutingController {
     }
 
     /**
+     * 港の名前を地点マスタから引く（IT10 レビュー低 15）。
+     *
+     * <p><strong>旅程からは引けない。</strong>誤配した港は定義上、予定ルートの外にある。
+     */
+    private java.util.Optional<String> locationNameOf(String unLocode) {
+        return locations.findByUnLocode(unLocode).map(location -> location.name());
+    }
+
+    /**
      * 選んだ経路を予約に割り当てる（US09 / US11・[ADR-019]）。
      *
      * <p>経路設計者の操作である。<strong>認可を入力の検査より先に置く</strong>（[ADR-016]）。
@@ -95,7 +104,8 @@ public class CargoRoutingController {
 
         CargoItinerary chosen = itineraryOf(request);
         return useCases.assignRoute().assign(bookingId, chosen, request.maxTransshipments())
-                .map(result -> BookingResponse.from(result.cargo(), result.daysBeyondDeadline()))
+                .map(result -> BookingResponse.from(result.cargo(), result.daysBeyondDeadline(),
+                        this::locationNameOf))
                 .orElseThrow(CargoRoutingController::notFound);
     }
 

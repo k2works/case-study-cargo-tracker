@@ -18,6 +18,7 @@ import {
   can,
 } from "../features/booking/types";
 import { formatBusinessDateTime } from "../lib/business-time";
+import { portLabel } from "../lib/port-label";
 import { ItineraryTable } from "../features/booking/components/itinerary-table";
 import { CancellationSection } from "../features/booking/components/cancellation-section";
 import { RouteDesignSection } from "../features/booking/components/route-design-section";
@@ -162,7 +163,15 @@ export function BookingDetailPage() {
             </p>
           )}
           <p>
-            外れた場所: <strong>{booking.misroute.locationUnLocode}</strong>／ 日時:{" "}
+            外れた場所:{" "}
+            <strong>
+              {portLabel(
+                booking.misroute.locationUnLocode,
+                booking.misroute.locationName,
+                "（不明）",
+              )}
+            </strong>
+            ／ 日時:{" "}
             {/* **業務の時刻で出す。**生の ISO（2027-09-09T00:00:00Z）を出すと、
                 担当者は自分の時刻に読み替えることになる（この画面の他の日時と同じ形） */}
             {formatBusinessDateTime(booking.misroute.at)}
@@ -171,7 +180,11 @@ export function BookingDetailPage() {
             <p>
               現在地:{" "}
               <strong>
-                {booking.lastHandlingLocationUnLocode ?? "（荷役の記録がありません）"}
+                {portLabel(
+                  booking.lastHandlingLocationUnLocode,
+                  booking.lastHandlingLocationName,
+                  "（荷役の記録がありません）",
+                )}
               </strong>
             </p>
           )}

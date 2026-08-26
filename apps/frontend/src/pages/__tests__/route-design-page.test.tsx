@@ -622,8 +622,13 @@ describe('経路設計（経路候補の一覧）', () => {
       ...BOOKING,
       bookingStatus: 'TRACKING_ISSUED',
       routingStatus: 'MISROUTED',
-      misroute: { at: '2026-09-10T12:00:00Z', locationUnLocode: 'SGSIN' },
+      misroute: {
+        at: '2026-09-10T12:00:00Z',
+        locationUnLocode: 'SGSIN',
+        locationName: 'Singapore',
+      },
       lastHandlingLocationUnLocode: 'SGSIN',
+      lastHandlingLocationName: 'Singapore',
     }
 
     beforeEach(() => {
@@ -669,8 +674,12 @@ describe('経路設計（経路候補の一覧）', () => {
       // ただし**出発地として出すのは現在地**でなければならない
       const origin = screen.getByText('出発地').parentElement!
       expect(origin.textContent, '元の出発地を出発地として出している')
-        .toMatch(/^出発地SGSIN/)
+        .toMatch(/^出発地Singapore（SGSIN）/)
       expect(origin).toHaveTextContent('現在地')
+      // **他の欄と同じ形で出す**（IT10 レビュー低 15）。目的地は「名前（符号）」で
+      // 出ているのに、誤配のときの出発地だけ符号のままだと、そこで対訳表を引くことになる
+      expect(origin, '現在地の港名が出ていない。目的地欄と形が揃わない')
+        .toHaveTextContent('Singapore')
     })
 
     /**

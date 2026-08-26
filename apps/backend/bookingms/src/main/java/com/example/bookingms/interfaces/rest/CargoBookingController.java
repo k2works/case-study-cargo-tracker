@@ -111,7 +111,20 @@ public class CargoBookingController {
         CargoSummary summary = cargoes.findByBookingId(bookingId)
                 .filter(found -> visibleTo(user, found))
                 .orElseThrow(CargoBookingController::notFound);
-        return BookingResponse.from(summary, daysBeyondDeadlineOf(summary.cargo()));
+        return BookingResponse.from(summary, daysBeyondDeadlineOf(summary.cargo()),
+                this::locationNameOf);
+    }
+
+    /**
+     * 港の名前を地点マスタから引く（IT10 レビュー低 15）。
+     *
+     * <p><strong>旅程からは引けない。</strong>誤配した港は定義上、予定ルートの外にある。
+     * 旅程の中を探しても見つからないため、地点マスタを引く。
+     *
+     * <p>引けなくても記録そのものは返す（呼び出し先で {@code null} になる）。
+     */
+    private java.util.Optional<String> locationNameOf(String unLocode) {
+        return locations.findByUnLocode(unLocode).map(location -> location.name());
     }
 
     /**

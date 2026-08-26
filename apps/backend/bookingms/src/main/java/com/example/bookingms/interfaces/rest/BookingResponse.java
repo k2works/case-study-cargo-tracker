@@ -87,6 +87,14 @@ public record BookingResponse(
          */
         String lastHandlingLocationUnLocode,
         /**
+         * 最後に荷役があった港の名前（IT10 レビュー低 15）。引けなければ {@code null}。
+         *
+         * <p><strong>符号だけでは画面が対訳表を持つことになる。</strong>この応答は
+         * 出発地・目的地・旅程の各区間を「名前（符号）」の形で返しており、誤配のバナーだけ
+         * 符号のままだと、担当者はそこで別の表を引く。
+         */
+        String lastHandlingLocationName,
+        /**
          * 到着予定が希望期限を超える日数（US28-6）。超えないなら {@code null}。
          *
          * <p><strong>経路を割り当てた応答でだけ値を持つ。</strong>誤配のあとの再設計で
@@ -166,7 +174,7 @@ public record BookingResponse(
 
     /** 一覧の 1 件。営業担当者は社名で探すため、結果にも社名を返す。 */
     public static BookingResponse from(CargoSummary summary) {
-        return from(summary.cargo(), summary.shipperName());
+        return from(summary.cargo(), summary.shipperName(), null, unresolvedLocationNames());
     }
 
     /**
@@ -175,12 +183,24 @@ public record BookingResponse(
      * <p><strong>超える分は詳細でも読める。</strong>荷主に伝えるのは営業であり、
      * 割り当てた直後の画面にしか出さないと、伝える人の手元に値が残らない。
      */
-    public static BookingResponse from(CargoSummary summary, Long daysBeyondDeadline) {
-        return from(summary.cargo(), summary.shipperName(), daysBeyondDeadline);
+    public static BookingResponse from(CargoSummary summary, Long daysBeyondDeadline,
+            java.util.function.Function<String, java.util.Optional<String>> locationNames) {
+        return from(summary.cargo(), summary.shipperName(), daysBeyondDeadline, locationNames);
     }
 
     public static BookingResponse from(Cargo cargo) {
-        return from(cargo, null, null);
+        return from(cargo, null, null, unresolvedLocationNames());
+    }
+
+    /**
+     * 港の名前を引けない場面で使う解決関数。
+     *
+     * <p>誤配の起きていない応答（登録直後など）で使う。<strong>記録が無いので引く相手も
+     * いない。</strong>
+     */
+    private static java.util.function.Function<String, java.util.Optional<String>>
+            unresolvedLocationNames() {
+        return unLocode -> java.util.Optional.empty();
     }
 
     /**
@@ -189,16 +209,14 @@ public record BookingResponse(
      * <p><strong>期限を超えるなら、何日超えるかを添える。</strong>「間に合いません」だけでは、
      * 荷主は次の手を決められない。
      */
-    public static BookingResponse from(Cargo cargo, Long daysBeyondDeadline) {
-        return from(cargo, null, daysBeyondDeadline);
-    }
-
-    private static BookingResponse from(Cargo cargo, String shipperName) {
-        return from(cargo, shipperName, null);
+    public static BookingResponse from(Cargo cargo, Long daysBeyondDeadline,
+            java.util.function.Function<String, java.util.Optional<String>> locationNames) {
+        return from(cargo, null, daysBeyondDeadline, locationNames);
     }
 
     private static BookingResponse from(Cargo cargo, String shipperName,
-            Long daysBeyondDeadline) {
+            Long daysBeyondDeadline,
+            java.util.function.Function<String, java.util.Optional<String>> locationNames) {
         var specification = cargo.specification();
         var route = cargo.routeSpecification();
         var dimensions = specification.dimensions();
@@ -236,9 +254,14 @@ public record BookingResponse(
                 availableActionsOf(cargo),
                 cargo.misroute()
                         .map(recorded -> new MisrouteResponse(
-                                recorded.at(), recorded.locationUnLocode()))
+                                recorded.at(), recorded.locationUnLocode(),
+                                // **記録は名前が引けなくても返す。**誤配は「予定していない港に
+                                // 降ろされた」事実であり、その港がマスタに載っている保証はない。
+                                // 引けないことを理由に落とすと、最も異常な誤配ほど画面から消える
+                                locationNames.apply(recorded.locationUnLocode()).orElse(null)))
                         .orElse(null),
                 cargo.lastHandlingLocation().orElse(null),
+                cargo.lastHandlingLocation().flatMap(locationNames).orElse(null),
                 daysBeyondDeadline);
     }
 
@@ -247,8 +270,9 @@ public record BookingResponse(
      *
      * @param at 予定ルート外の荷役が行われた日時
      * @param locationUnLocode その荷役が行われた港
+     * @param locationName その港の名前。地点マスタに無ければ {@code null}
      */
-    public record MisrouteResponse(Instant at, String locationUnLocode) {
+    public record MisrouteResponse(Instant at, String locationUnLocode, String locationName) {
     }
 
     private static List<ItineraryLegResponse> legsOf(CargoItinerary itinerary) {

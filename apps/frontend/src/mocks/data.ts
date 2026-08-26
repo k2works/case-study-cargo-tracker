@@ -112,8 +112,13 @@ export type MockBooking = {
    * ——同じ事実を trackingms から取りに行くと 2 ホップ先の伝聞になる。
    */
   lastHandlingLocationUnLocode?: string | null
+  lastHandlingLocationName?: string | null
   /** 誤配が起きた事実（US28）。**再設計しても消さない**。 */
-  misroute?: { at: string; locationUnLocode: string } | null
+  misroute?: {
+    at: string
+    locationUnLocode: string
+    locationName?: string | null
+  } | null
   lastHandlingAt?: string | null
 }
 
@@ -488,6 +493,7 @@ export const bookings: MockBooking[] = [
     routeNotifiedBy: 'sales01',
     trackingNumber: 'TRK-20260823-0002',
     lastHandlingLocationUnLocode: 'CNSHA',
+    lastHandlingLocationName: 'Shanghai',
     lastHandlingAt: '2027-09-08T00:00:00Z',
     itinerary: [
       {
@@ -549,8 +555,13 @@ export const bookings: MockBooking[] = [
     routeNotifiedBy: 'sales01',
     trackingNumber: 'TRK-20260823-0003',
     lastHandlingLocationUnLocode: 'SGSIN',
+    lastHandlingLocationName: 'Singapore',
     lastHandlingAt: '2027-09-09T00:00:00Z',
-    misroute: { at: '2027-09-09T00:00:00Z', locationUnLocode: 'SGSIN' },
+    misroute: {
+      at: '2027-09-09T00:00:00Z',
+      locationUnLocode: 'SGSIN',
+      locationName: 'Singapore',
+    },
     itinerary: [
       {
         voyageNumber: 'V-SEED-3',

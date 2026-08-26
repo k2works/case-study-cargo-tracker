@@ -1,3 +1,4 @@
+import { portLabel } from "../../../lib/port-label";
 import type { Booking } from "../../booking/types";
 import { ROUTING_CARGO_TYPE_LABELS, type RoutingCargoType } from "../types";
 
@@ -36,7 +37,10 @@ export function BookingConditions({
         <dd>
           {misrouted ? (
             <>
-              {searchOrigin}
+              {/* **他の欄と同じ形で出す**（IT10 レビュー低 15）。目的地は「名前（符号）」
+                  で出ているのに、誤配のときの出発地だけ符号のままだと、そこで
+                  対訳表を引くことになる */}
+              {portLabel(searchOrigin, booking.lastHandlingLocationName, searchOrigin)}
               <span className="ml-2 text-sm text-gray-600">
                 現在地（当初は {booking.originName}）
               </span>

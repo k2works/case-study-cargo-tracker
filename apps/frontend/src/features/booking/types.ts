@@ -104,9 +104,21 @@ export type Booking = {
    * **状態（routingStatus）とは別に持つ。** 再設計して ROUTED へ戻っても
    * この記録は残る——料金調整の根拠として参照される。
    */
-  misroute?: { at: string; locationUnLocode: string } | null
+  misroute?: {
+    at: string
+    locationUnLocode: string
+    /**
+     * その港の名前。地点マスタに無ければ null（IT10 レビュー低 15）。
+     *
+     * **名前が引けなくても記録は残る。** 誤配は「予定していない港に降ろされた」
+     * 事実であり、その港がマスタに載っている保証はない。
+     */
+    locationName?: string | null
+  } | null
   /** 最後に荷役があった港。**誤配のあとの再設計は、ここを出発地とする**（US28-4）。 */
   lastHandlingLocationUnLocode?: string | null
+  /** 最後に荷役があった港の名前。引けなければ null。 */
+  lastHandlingLocationName?: string | null
   /**
    * 到着予定が希望期限を超える日数（US28-6）。超えないなら null。
    *

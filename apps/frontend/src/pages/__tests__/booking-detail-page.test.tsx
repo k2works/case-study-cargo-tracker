@@ -599,9 +599,14 @@ describe('予約の詳細（US06）', () => {
       // **外れた場所と現在地を別の港にする。** 同じにすると、片方を落としても
       // もう片方が同じ文字列を出すため、検査が判別しない（最初にそう書いて空振りした）
       lastHandlingLocationUnLocode: 'HKHKG',
+      lastHandlingLocationName: 'Hong Kong',
       // **本物と同じ形（ISO）で渡す。**画面が整形することを確かめる
       // ——「2027-09-09 09:00」を渡すと、整形を外しても緑になる
-      misroute: { at: '2027-09-09T00:00:00Z', locationUnLocode: 'SGSIN' },
+      misroute: {
+        at: '2027-09-09T00:00:00Z',
+        locationUnLocode: 'SGSIN',
+        locationName: 'Singapore',
+      },
     }
 
     function renderMisrouted(roles: Role[]) {
@@ -612,6 +617,47 @@ describe('予約の詳細（US06）', () => {
       )
       return renderPage(roles)
     }
+
+    /**
+     * IT10 レビュー低 15。**誤配の港も名前で出す。**
+     *
+     * この画面は出発地・目的地・旅程の各区間を「名前（符号）」で出している。
+     * 誤配のバナーだけ符号のままだと、担当者はそこで対訳表を引くことになる。
+     */
+    it('外れた場所と現在地を、名前つきで出す', async () => {
+      renderMisrouted(['ROLE_ROUTING'])
+
+      const banner = await screen.findByRole('alert')
+      expect(banner, '外れた港の名前が出ていない。符号だけでは他の項目と形が揃わない')
+        .toHaveTextContent('Singapore')
+      expect(banner, '現在地の港の名前が出ていない')
+        .toHaveTextContent('Hong Kong')
+    })
+
+    /**
+     * **名前が引けなくても、符号は出す。**
+     *
+     * 誤配は「予定していない港に降ろされた」事実であり、その港が地点マスタに
+     * 載っている保証はない。名前が無いことを理由にバナーごと消すと、
+     * **最も異常な誤配ほど画面から消える**。
+     */
+    it('名前が引けない港でも、符号だけは出す', async () => {
+      server.use(
+        http.get(`${API_PATHS.bookings}/:bookingId`, () =>
+          HttpResponse.json(
+            bookingIn({
+              ...MISROUTED,
+              lastHandlingLocationName: null,
+              misroute: { at: '2027-09-09T00:00:00Z', locationUnLocode: 'XXUNK' },
+            } as never),
+          ),
+        ),
+      )
+      renderPage(['ROLE_ROUTING'])
+
+      const banner = await screen.findByRole('alert')
+      expect(banner, '名前が引けないと誤配そのものが消えている').toHaveTextContent('XXUNK')
+    })
 
     /**
      * **「誤配があった」だけでは足りない**（US28-3）。

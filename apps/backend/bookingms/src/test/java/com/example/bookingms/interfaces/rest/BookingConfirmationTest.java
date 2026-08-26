@@ -291,6 +291,64 @@ class BookingConfirmationTest {
     }
 
     /**
+     * IT10 レビュー低 15。<strong>誤配の港も名前で出す。</strong>
+     *
+     * <p>この画面は出発地・目的地・旅程の各区間を「名前（UN/LOCODE）」の形で出している。
+     * 誤配のバナーだけが符号のままだと、担当者はそこで対訳表を引くことになる。
+     *
+     * <p><strong>名前はサーバが解決する。</strong>画面に対訳表を持たせない（他の項目と
+     * 同じ形）。そして<strong>旅程からは引けない</strong>——誤配した港は定義上
+     * 予定ルートの外にあり、旅程の中を探しても見つからない。地点マスタから引く。
+     */
+    @Test
+    @DisplayName("誤配の港と現在地を、名前つきで返す")
+    void carriesMisrouteLocationNames() throws Exception {
+        Cargo misrouted = BookingTestCargoes.routed()
+                .misrouted("SGSIN", Instant.parse("2027-09-10T12:00:00Z"));
+        when(cargoes.findByBookingId("BKG-2026000001"))
+                .thenReturn(Optional.of(new CargoSummary(misrouted, "丸紅商事")));
+        when(locations.timeZoneOf("USLAX"))
+                .thenReturn(Optional.of(ZoneId.of("America/Los_Angeles")));
+        when(locations.findByUnLocode("SGSIN"))
+                .thenReturn(Optional.of(Location.of("SGSIN", "Singapore")));
+
+        mockMvc.perform(get("/api/v1/bookings/BKG-2026000001")
+                        .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                        .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.misroute.locationUnLocode").value("SGSIN"))
+                .andExpect(jsonPath("$.misroute.locationName").value("Singapore"))
+                .andExpect(jsonPath("$.lastHandlingLocationUnLocode").value("SGSIN"))
+                .andExpect(jsonPath("$.lastHandlingLocationName").value("Singapore"));
+    }
+
+    /**
+     * <strong>地点マスタに無い港でも、記録そのものは返す。</strong>
+     *
+     * <p>誤配は「予定していない港に降ろされた」事実であり、その港がマスタに載っている
+     * 保証はない。名前が引けないことを理由に記録ごと落とすと、<strong>最も異常な
+     * 誤配ほど画面から消える</strong>。
+     */
+    @Test
+    @DisplayName("地点マスタに無い港の誤配でも、符号は返る")
+    void keepsMisrouteWhenLocationNameIsUnknown() throws Exception {
+        Cargo misrouted = BookingTestCargoes.routed()
+                .misrouted("XXUNK", Instant.parse("2027-09-10T12:00:00Z"));
+        when(cargoes.findByBookingId("BKG-2026000001"))
+                .thenReturn(Optional.of(new CargoSummary(misrouted, "丸紅商事")));
+        when(locations.timeZoneOf("USLAX"))
+                .thenReturn(Optional.of(ZoneId.of("America/Los_Angeles")));
+        when(locations.findByUnLocode("XXUNK")).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/api/v1/bookings/BKG-2026000001")
+                        .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                        .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.misroute.locationUnLocode").value("XXUNK"))
+                .andExpect(jsonPath("$.misroute.locationName").doesNotExist());
+    }
+
+    /**
      * <strong>期限内なら値を出さない。</strong>毎回何かが出ると、超えている予約が
      * 埋もれる。
      */
