@@ -10,6 +10,17 @@
 | 前提 | [IT10 完了報告書](iteration_report-10.md)・[IT10 ふりかえり](retrospective-10.md) |
 | リリース | [Release 2.0](release_plan.md)（IT11〜IT12）——**billingms を業務として立ち上げる最初の IT** |
 
+## 局面とアプローチ
+
+**終盤（4 本目）／アウトサイドイン**（[開発戦略](development_strategy.md)）。
+
+業務の入口（経理担当者の画面）から入り、API・ACL を経てドメインへ降りる。理由は 2 つある。
+
+1. **billingms は 10 イテレーション、ヘルスチェックしか返していない。** 内側から積むと、
+   何を計算するかを決めないまま `Money` の演算だけができあがる
+2. **料金の規則が業務として決まっていない**（リスク 1）。**画面に「なぜその金額か」を
+   出すところから決める**のが最も早く誤りに気づける
+
 ## ゴール
 
 **運び終えた貨物に、いくら請求するかが決まるようになる。**
@@ -101,23 +112,38 @@ title IT11 スコープ - Billing Context
 package "billingms" {
   class Invoice <<aggregate root>> {
     -invoiceId: InvoiceId
-    -bookingId: BillingBookingId
+    -cargoBookingId: BillingBookingId
     -shipperId: BillingShipperId
     -baseAmount: Money
     -discountRate: DiscountRate
-    -adjustments: List<InvoiceLineItem>
+    -finalAmount: Money
+    -taxRate: TaxRate
+    -taxAmount: Money
+    -cancellationFee: CancellationFee
+    -lineItems: List<InvoiceLineItem>
     -paymentStatus: PaymentStatus
-    +calculate(): Money
-    +applyDiscount(rate: DiscountRate): Invoice
-    +adjust(reason: String, amount: Money): Invoice
-    +confirm(): Invoice
+    +calculateFinalAmount(): Money
+    +applyDiscount(policy: DiscountPolicy): void
+    +applyCancellationFee(fee: CancellationFee): void
   }
   class Money <<value object>>
   class DiscountRate <<value object>>
+  class TaxRate <<value object>>
+  class CancellationFee <<value object>>
+  class DiscountPolicy <<value object>> {
+    -policyType: DiscountPolicyType
+    +calculateRate(shipperType: String, amount: Money): DiscountRate
+  }
   class InvoiceLineItem <<entity>>
+  enum DiscountPolicyType {
+    CORPORATE_STANDARD
+    NONE
+  }
   enum PaymentStatus {
-    DRAFT
+    PENDING
     CONFIRMED
+    OVERDUE
+    REFUNDED
   }
   class BillingSnapshot <<ACL>> {
     -bookingId: String
@@ -133,17 +159,37 @@ package "billingms" {
 
 Invoice *-- Money
 Invoice *-- DiscountRate
+Invoice *-- TaxRate
+Invoice *-o CancellationFee
 Invoice *-- InvoiceLineItem
 Invoice *-- PaymentStatus
+Invoice ..> DiscountPolicy : applyDiscount()
+DiscountPolicy *-- DiscountPolicyType
 Invoice ..> BillingSnapshot : 算出の入力
 
 @enduml
 ```
 
-> **`PaymentStatus` は本 IT では `DRAFT` / `CONFIRMED` の 2 つだけ置く。**
-> `PENDING` / `OVERDUE` / `REFUNDED` は支払いの状態であり、支払いを扱うのは US23（IT12）である。
-> **持たない状態を先に足しても、遷移させる相手がいないうちは検査できない**（IT5 で
-> `MISROUTED` について同じ判断をしている）。
+> **`PaymentStatus` に `DRAFT` は足さない**（整合性検証の結果 D-2）。
+> [domain-model.md](../design/domain-model.md) の `PaymentStatus` は
+> `PENDING` / `CONFIRMED` / `OVERDUE` / `REFUNDED` の 4 値で、**支払いの状態**を表す。
+> ここに「金額を確定したか」を混ぜると、`CONFIRMED` が「支払い確認済み」と
+> 「金額確定済み」の 2 つの意味を持ち、US23（IT12）で支払いを扱う段で必ず揉める。
+>
+> **本 IT では、算出中の下書きを `Invoice` にしない。** 経理担当者が確定操作をした時点で
+> `Invoice` を `PENDING` で発行する（正典の `GenerateInvoiceCommand` がそう書いている）。
+> 受入基準 21-5 の「輸送料金が『確定』状態で登録される」は、**`Invoice` が発行済みで
+> あること自体**が満たす。`OVERDUE` / `REFUNDED` へ遷移させる相手は US23 まで現れない
+> ため、本 IT では**遷移させず、扱う場所すべてを回る検査だけ置く**（Try 3）。
+>
+> **この判断は ADR-027 の決定として書く**（下書きを永続化するか否かを含む）。
+>
+> **`DiscountPolicyType` は `CORPORATE_STANDARD` / `NONE` の 2 値だけ実装する。**
+> `VOLUME_DISCOUNT` / `SEASONAL` は正典に定義があるが、US22 の受入基準に無く、
+> **決める相手（契約条件）がいない**。列挙は正典どおり 4 値を宣言し、**本 IT で
+> 算定に使うのは 2 値**という形にはしない——**扱わない値を宣言すると、
+> `switch` が網羅していても業務としては空である**（IT10 Problem 3 の形）。
+> 2 値だけ宣言し、残りは US23 以降で足す旨を注に書く（注 10）。
 
 ### 状態遷移図
 
@@ -151,18 +197,28 @@ Invoice ..> BillingSnapshot : 算出の入力
 @startuml
 title 精算書の状態（IT11 のスコープ）
 
-[*] --> DRAFT : 料金を算出する（21-1）
-DRAFT --> DRAFT : 調整を入れる（21-6）
-DRAFT --> CONFIRMED : 確定する（21-4・21-5）
-CONFIRMED --> [*]
+state "算出中（永続化しない）" as calc
+[*] --> calc : 引取済の予約を選ぶ（21-1）
+calc --> calc : 割引・調整を入れ直す（21-6・22-2）
+calc --> PENDING : 確定する（21-4・21-5）\n**ここで Invoice が生まれる**
+PENDING --> CONFIRMED : 入金を確認する（**US23・IT12**）
+PENDING --> OVERDUE : 支払期限を超える（**US23・IT12**）
+CONFIRMED --> REFUNDED : 返金する（**US23・IT12**）
 
-note right of CONFIRMED
-  **確定したら金額は動かない。**
+note right of PENDING
+  **発行したら金額は動かない。**
   請求書は荷主へ出す約束であり、
   出したあとに黙って変わると
   請求の根拠が消える。
   訂正は US23（IT12）で
   「取り消して出し直す」形にする
+end note
+
+note bottom
+  **本 IT で起こす遷移は「算出中 → PENDING」の 1 本だけ。**
+  残る 3 本は US23（IT12）。列挙は 4 値すべて宣言し、
+  **扱う場所すべてを回る検査**を置く（Try 3）が、
+  遷移そのものは本 IT では起こさない
 end note
 
 @enduml
@@ -172,23 +228,32 @@ end note
 
 ```plantuml
 @startuml
-title IT11 スコープ - billing_db
+title IT11 スコープ - billing_db（既存定義に本 IT の追加分を重ねたもの）
 
 entity "invoice（精算書）" as invoice {
   * id : BIGSERIAL <<PK>>
   --
   * invoice_number : VARCHAR(30) <<UK>>
   * booking_id : VARCHAR(20) <<UK>>
-  * shipper_id : BIGINT
-  * base_amount_value : NUMERIC(15,2)
-  * base_amount_currency : VARCHAR(3)
-  * discount_rate : NUMERIC(5,4)
-  * total_amount_value : NUMERIC(15,2)
+  * total_amount_value : NUMERIC(15,2) <<変更（注 3）>>
   * total_amount_currency : VARCHAR(3)
+  * tax_rate : NUMERIC(5,4) <<DEFAULT 0.1000>>
+  * tax_amount : NUMERIC(15,2)
   * payment_status : VARCHAR(30)
   issued_at : TIMESTAMP WITH TIME ZONE
-  confirmed_at : TIMESTAMP WITH TIME ZONE
-  confirmed_by : VARCHAR(50)
+  due_date : DATE
+  discount_amount_value : NUMERIC(15,2) <<変更（注 3）>>
+  discount_amount_currency : VARCHAR(3)
+  cancellation_fee_value : NUMERIC(15,2) <<変更（注 3）>>
+  cancellation_fee_currency : VARCHAR(3)
+  cancellation_fee_rate : NUMERIC(5,4)
+  booking_status_at_cancel : VARCHAR(30)
+  --
+  ' 本 IT で追加する列（注 11）
+  base_amount_value : NUMERIC(15,2) <<追加>>
+  base_amount_currency : VARCHAR(3) <<追加>>
+  discount_rate : NUMERIC(5,4) <<追加>>
+  shipper_id : VARCHAR(20) <<追加>>
 }
 
 entity "invoice_line_item（精算明細）" as line {
@@ -196,7 +261,7 @@ entity "invoice_line_item（精算明細）" as line {
   --
   * invoice_id : BIGINT <<FK>>
   * description : VARCHAR(200)
-  * amount_value : NUMERIC(15,2)
+  * amount_value : NUMERIC(15,2) <<変更（注 3）>>
   * amount_currency : VARCHAR(3)
   * seq_number : INTEGER
 }
@@ -206,9 +271,17 @@ invoice ||--o{ line
 @enduml
 ```
 
-> **金額は `NUMERIC(15,2)` にする。** [data-model.md](../design/data-model.md) の論理モデルは
-> `INTEGER` と書いているが、**割引後の金額に端数が出る**（基本料金 × 0.85 など）。
+> **金額は `NUMERIC(15,2)` にする。** [data-model.md](../design/data-model.md) の定義は
+> `INTEGER`（最小通貨単位）と書いているが、**割引後の金額に端数が出る**（基本料金 × 0.85 など）。
 > 端数の丸め方は ADR-027 で決め、**丸めた結果を保存する**（注 3）。
+> `tax_*` は `NOT NULL` であり**書かずには行を作れない**——本 IT では消費税を業務として
+> 扱わないが、**既定値（10%）で埋めて保存し、画面にも内訳として出す**
+> （[ui_design.md](../design/ui_design.md) の請求書詳細が消費税行を持っている。注 12）。
+>
+> **`discount_rate` を列として足す**（注 11）。正典は `discount_amount_*`（割引額）だけを
+> 持つが、受入基準 22-4 は**割引率も精算書に載せる**ことを求めている。額だけでは率を
+> 復元できない（基本料金と割引額から割り戻すと丸めの分だけずれる）。
+> **`payment` テーブルは本 IT では触らない**（US23・IT12）。
 
 ### 画面遷移図
 
@@ -219,13 +292,15 @@ title IT11 スコープ - 経理担当者の画面
 state "ダッシュボード" as dash
 state "精算管理 /billing" as list
 state "料金算出 /billing/new/:bookingId" as calc
-state "精算書詳細 /billing/:invoiceId" as detail
+state "請求書詳細 /billing/:invoiceId" as detail
 
 [*] --> dash : ログイン（ROLE_ACCOUNTANT）
 dash --> list : [精算管理]
 dash --> list : 料金未算出が N 件あります
 list --> calc : 引取済の予約を選ぶ
-calc --> detail : 確定する
+calc --> calc : 入力に誤りがある（調整額・割引率）
+dash --> calc : （直接は開けない。一覧を経由する）
+calc --> detail : 確定する（POST → 303 → GET）
 list --> detail : 精算書を開く
 detail --> [*]
 
@@ -255,7 +330,7 @@ detail --> [*]
 | :--- | :--- | :--- | :--- |
 | 2.1 | 精算管理の一覧（`/billing`）——精算書の一覧と、**料金未算出の引取済予約** | 6h | 2 つの待ち行列を 1 画面に置く |
 | 2.2 | 料金算出の画面（`/billing/new/:bookingId`）——実績の表示・基本料金・割引・調整の入力 | 8h | 21-2・21-3・21-6・22-1〜22-3 |
-| 2.3 | 精算書詳細（`/billing/:invoiceId`）——確定した内容と明細 | 4h | 22-4 |
+| 2.3 | 請求書詳細（`/billing/:invoiceId`）——確定した内容と明細・金額内訳 | 4h | 22-4。**正典の名称は「請求書詳細」**。金額内訳は [ui_design.md](../design/ui_design.md) の既存定義（基本運賃・法人割引・キャンセル料・例外調整・消費税・合計）に合わせる |
 | 2.4 | ダッシュボードに件数と導線 | 3h | 横断規約。**ロール別到達性をルートガードを通る検査で**（Try 5） |
 
 ### Phase 3: API と ACL（Day 6-8）
@@ -289,7 +364,24 @@ detail --> [*]
 | :--- | :--- | :--- | :--- |
 | 6.1 | **ユーザーマニュアル 12 章（精算管理）を新設**・キャプチャ生成 | 6h | 経理担当者が初めて使う画面 |
 | 6.2 | 09 章・11 章の「キャンセル料は算定していません」を直す | 2h | 算定するようになる |
-| 6.3 | 設計文書への反映（注 1〜3） | 3h | |
+| 6.3 | 設計文書への反映（注 1〜16） | 5h | 整合性検証で 8 件増えた（注 10〜16 と注 3 の拡張） |
+
+### 見積もり合計
+
+| 区分 | 見積 |
+| :--- | :--- |
+| Phase 0（返済枠・SP 対象外） | 26h |
+| Phase 1 受け入れテストと ADR | 10h |
+| Phase 2 画面と導線 | 21h |
+| Phase 3 API と ACL | 20h |
+| Phase 4 ドメイン | 23h |
+| Phase 5 実環境 | 8h |
+| Phase 6 マニュアルと設計反映 | 13h |
+| **合計（SP 対象 = Phase 1-6）** | **95h** |
+| **総計（返済枠を含む）** | **121h** |
+
+> 9 SP に対して 95h（1 SP ≒ 10.6h）。IT10（7 SP / 87h ≒ 12.4h）より密度が高い。
+> **注 10〜16 の設計反映が増えた分を Phase 6.3 に 2h 足している。**
 
 ## スケジュール
 
@@ -340,6 +432,14 @@ detail --> [*]
 | 7 | [domain-model.md](../design/domain-model.md) の Billing Context | **`InvoiceId` は採番された請求番号を持つ**（`invoice_number` 列に対応。予約の `BookingId` と同じ形）。DB の `id` ではない旨を明記する |
 | 8 | [architecture_backend.md](../design/architecture_backend.md) の `CargoCancelledEvent` の行 | 「キャンセル料の算定は **US23・IT11**」と書いてあるが、**US23 は IT12** である。[release_plan.md](release_plan.md) の Release 1.1 注記が「キャンセル料の算定（billingms 側）は Release 2.0 の **US21** に含める」と書いており、そちらが正。**US21・IT11** に直す |
 | 9 | [architecture_backend.md](../design/architecture_backend.md) の `CargoCancelledEvent` の行 | **billingms へは本 IT でも発行しない**。料金算出の起点は経理担当者の操作であり（決めること D）、キャンセルされた予約も一覧から選ぶ。**読む側の無い配線を先に敷かない**（[ADR-025](../adr/025-customs-declaration-and-cancellation-approval.md) 決定 3）という判断はそのまま生きる——その旨に書き換える |
+| 10 | [domain-model.md](../design/domain-model.md) の `DiscountPolicyType` | 本 IT で実装するのは `CORPORATE_STANDARD` / `NONE` の 2 値。`VOLUME_DISCOUNT` / `SEASONAL` は**決める相手（契約条件）がいない**ため宣言しない。US23 以降で足す旨を明記する |
+| 11 | [data-model.md](../design/data-model.md) の `invoice` | **`base_amount_*`・`discount_rate`・`shipper_id` の 3 種を追加する。** 正典は割引を額（`discount_amount_*`）でしか持たないが、受入基準 22-4 は**率も精算書に載せる**ことを求めており、額から割り戻すと丸めの分だけずれる。`shipper_id` は正典の `Invoice` が `BillingShipperId` を持つのに列が無い |
+| 12 | [ui_design.md](../design/ui_design.md) の請求書詳細 | 金額内訳の**消費税行は本 IT でも出す**。`tax_rate`・`tax_amount` は `NOT NULL` であり書かずには行を作れない。**業務として税率を扱うのは US23** であり、本 IT は既定値（10%）で埋める旨を明記する |
+| 13 | [domain-model.md](../design/domain-model.md) の Billing Context ビジネスルール 1 | 「Invoice は `CargoDeliveredEvent` 受信後にのみ発行できる」を、**「引取済（`CLAIMED`）の予約に対して経理担当者が発行できる」**に直す。起点は経理担当者の操作であり（決めること D）、イベントは要らない。**イベント駆動と書いたまま実装すると、読む側の無い配線を敷くことになる** |
+| 14 | [domain-model.md](../design/domain-model.md) の料金計算ロジック | 「基本料金 = **距離係数** × 重量 × 貨物種別係数」の**距離係数を区間数係数に替える**。港のマスタに緯度経度が無く、航海も距離を持たない（注 2 と対）。**user_story だけ直して domain-model を残すと、式が 2 つ残る** |
+| 15 | [domain-model.md](../design/domain-model.md) の `PaymentStatus` | 4 値のまま変えない。**本 IT で起こす遷移は「発行（`PENDING`）」の 1 本だけ**で、残る 3 本は US23 である旨を明記する（列挙に値を足さない判断そのものを残す） |
+| 16-a | [data-model.md](../design/data-model.md) の `booking_status_at_cancel` | bookingms 側は IT9 で **`booking_status_at_request`**（申請時の予約状態）として持っている。billing 側の列名は `booking_status_at_cancel`。**同じ値の名前が 2 つある**——`BillingSnapshot` で運ぶ際にどちらの意味かを決め、ACL の変換で明示する |
+| 16 | [ui_design.md](../design/ui_design.md) の画面一覧 | 精算管理（`/billing`）の対象ストーリー欄が `US21-US23` になっている。本 IT で満たすのは US21・US22 であり、**US23 の支払い確認は IT12** である旨を分けて書く |
 
 ## デモ項目
 
@@ -353,7 +453,7 @@ detail --> [*]
 | 6 | 誤配した貨物では、その記録が根拠として出ることを示す | 経理担当者 | 21-6 |
 | 7 | 調整（減額・補償）を入れると、合計が変わることを示す | 経理担当者 | 21-6 |
 | 8 | 確定すると精算書が「確定」になり、**金額が動かなくなる**ことを示す | 経理担当者 | 21-4・21-5 |
-| 9 | 精算書に割引の根拠が記載されていることを示す | 経理担当者 | 22-4 |
+| 9 | 請求書詳細に割引の根拠（割引率・基本料金・割引後料金）が記載されていることを示す | 経理担当者 | 22-4 |
 | 10 | キャンセルされた予約にキャンセル料が算定されることを示す | 経理担当者 | US30-9（IT9 からの持ち越し） |
 
 ## DoD（完了の定義）
@@ -380,7 +480,7 @@ detail --> [*]
 - [ ] **IT10 時点のコメントが残っていない**（返済枠 0.9）
 - [ ] **JIG / jig-erd の出力を再生成した**
 - [ ] ユーザーマニュアル **12 章を新設**し、09 章・11 章の「算定していません」を直し、**キャプチャを再生成して目視した**
-- [ ] 注 1〜5 を設計文書に反映した
+- [ ] **注 1〜16 を設計文書に反映した**（`user_story.md` / `domain-model.md` / `data-model.md` / `ui_design.md` / `architecture_backend.md` / `release_plan.md`）
 - [ ] `docs/index.md` / `development/index.md` / `mkdocs.yml` を同期した
 
 ## 進捗
@@ -394,3 +494,51 @@ detail --> [*]
 | Phase 4 ドメイン | 未着手 |
 | Phase 5 実環境 | 未着手 |
 | Phase 6 マニュアルと設計反映 | 未着手 |
+
+## 整合性検証の結果
+
+着手前に [validating-iteration-plan](../../.claude/skills/validating-iteration-plan/SKILL.md) と
+[validating-design](../../.claude/skills/validating-design/SKILL.md) の観点で突合した。
+
+| 軸 | 対象 | 結果 | 修正した点 |
+| :--- | :--- | :--- | :--- |
+| テンプレート | [イテレーション計画.md](../template/イテレーション計画.md) | **要修正 → 修正** | 「局面とアプローチ」「見積もり合計」「整合性検証の結果」「更新履歴」「関連ドキュメント」の 5 節が抜けていた。IT10 の計画にはあり、**本計画だけが落としていた** |
+| ユーザーストーリー | [user_story.md](../requirements/user_story.md) | OK | 受入基準 21-1〜21-6・22-1〜22-4 が全文一致。22-1 に正典の「**料金算出時に**」を補った |
+| ドメインモデル | [domain-model.md](../design/domain-model.md) | **要修正 → 修正（5 件）** | ① `bookingId` → **`cargoBookingId`** ② **`PaymentStatus` に `DRAFT` を足さない**——正典の 4 値は支払いの状態であり、そこに金額確定を混ぜると `CONFIRMED` が 2 つの意味を持つ。**算出中は永続化せず、確定操作で `PENDING` として発行する** ③ `finalAmount`・`taxRate`・`taxAmount`・`cancellationFee` を集約に戻した ④ `applyDiscount(rate)` → **`applyDiscount(policy: DiscountPolicy)`**・`calculate()` → `calculateFinalAmount()` ⑤ Try 3 欄が「`DiscountPolicyType` を足す」と書きながら図にも要素表にも無かった（**内部の食い違い**） |
+| データモデル | [data-model.md](../design/data-model.md) | **要修正 → 修正（4 件）** | ① `tax_rate`・`tax_amount` は `NOT NULL`。**書かずには行を作れない**のに ER 図から落ちていた ② `due_date`・`discount_amount_*`・`cancellation_fee_*` の既存 4 種が落ちていた ③ `base_amount_*`・`discount_rate`・`shipper_id` は**新規追加**であることを注 11 に明記 ④ `confirmed_at` / `confirmed_by` は不要になった（発行＝確定のため `issued_at` で足りる） |
+| UI 設計（ビュー） | [ui_design.md](../design/ui_design.md) | **要修正 → 修正（2 件）** | ① `/billing/:invoiceId` の正典名称は「**請求書詳細**」であり「精算書詳細」ではない ② 金額内訳に**消費税行がある**（注 12）。`/billing/new/:bookingId` が画面一覧に無い点は注 5 で既出 |
+| UI 設計（インタラクション） | [ui_design.md](../design/ui_design.md) | **要修正 → 修正** | 画面遷移図に**入力誤りの自己ループ**が無かった（調整額・割引率の入力がある）。確定は **POST → 303 → GET** と明記した。取得は htmx ではなく **React Query**（本プロジェクトは React SPA）——既存パターンを踏襲する |
+| 開発戦略 | [development_strategy.md](development_strategy.md) | OK | IT11 は終盤（IT8〜IT12）・アウトサイドイン、US21・US22 で 9 SP。戦略の割当表と一致。**「終盤で新しい結合方式を発明しない」**に従い、ACL は `CargoSnapshot` と同じ形にする |
+| 過去計画の連続性 | IT6・IT9・IT10 の計画 | **要注意 → 注記** | IT6 →IT9 →IT11 と繰り越された **US30-9（キャンセル料）** を本 IT で果たす。ただし bookingms は `booking_status_at_request`、billing は `booking_status_at_cancel` と**同じ値に 2 つの名前がある**（注 16-a）。IT10 返済枠 0.6 の「受け皿の要否判断」の結論も本 IT で消化する |
+| 前 IT のレビュー指摘 | [IT10 レビュー](../review/イテレーション10_review_20260826.md) | OK | IT11 送りの低 4 件（15〜18）を返済枠 0.3〜0.6 に、懸念 2 件を 0.7・0.8 に計上済み |
+| ゴールの内部整合 | 本計画全体 | **要修正 → 修正** | DoD が「注 1〜5」、Phase 6.3 が「注 1〜3」と書いていたが、**注は 9 件あった**（検証後 17 件）。書き写した数は正典が増えても追随しない（[DoD は条件を書き写さず引用する]の形） |
+
+> **検証で 15 件の不整合が出た。うち 11 件は正典を読まずに書いた形である。**
+> 最も重かったのは **`PaymentStatus` に `DRAFT` を足そうとしていたこと**。正典の 4 値は
+> 支払いの状態を表しており、そこへ「金額を確定したか」を混ぜると、`CONFIRMED` が
+> **「支払い確認済み」と「金額確定済み」の 2 つの意味**を持つ。US23（IT12）で支払いを
+> 扱う段になって初めて破綻し、そのときには請求書がすでに発行されている。
+> **着手前に潰せた**。
+
+## 更新履歴
+
+| 日付 | 内容 | 担当 |
+| :--- | :--- | :--- |
+| 2026-08-26 | 初版作成（US21・US22／9 SP／返済枠 9 件・26h） | 開発 |
+| 2026-08-26 | **整合性検証を実施し 15 件の不整合を修正。** `PaymentStatus` の `DRAFT` を取りやめ（算出中は永続化せず、確定操作で `PENDING` 発行）、集約に `finalAmount`・`taxRate`・`taxAmount`・`cancellationFee` を戻し、ER 図に既存 7 列を戻した。画面名を「請求書詳細」に統一。テンプレート必須 5 節を追加。注を 9 件 → 17 件に増補し、DoD の参照を「注 1〜16」に直した | 開発 |
+
+## 関連ドキュメント
+
+- [リリース計画](release_plan.md)
+- [開発戦略](development_strategy.md)
+- [IT10 完了報告書](iteration_report-10.md)・[IT10 ふりかえり](retrospective-10.md)
+- [IT10 レビュー](../review/イテレーション10_review_20260826.md)
+- [ユーザーストーリー](../requirements/user_story.md)（US21・US22）
+- [ドメインモデル](../design/domain-model.md)（6. Billing Context）
+- [データモデル](../design/data-model.md)（billing_db）
+- [UI 設計](../design/ui_design.md)（精算管理・請求書詳細）
+- [ADR-011 予約 ID の採番](../adr/011-booking-id-numbering.md)
+- [ADR-012 値オブジェクトの粒度](../adr/012-value-object-granularity.md)
+- [ADR-025 通関申告とキャンセル承認](../adr/025-customs-declaration-and-cancellation-approval.md)
+- [ADR-026 誤配の検知と経路の再設計](../adr/026-misroute-detection-and-rerouting.md)
+- ADR-027 輸送料金の算定規則（本 IT で作成）
