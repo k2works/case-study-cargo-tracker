@@ -97,6 +97,9 @@ test.describe('貨物予約の登録（US04）', () => {
 
     await page.getByRole('link', { name: '新規登録' }).click()
     await expect(page).toHaveURL(/\/booking\/new/)
+    // **URL は React の描き直しより先に変わる。**「貨物種別」は予約一覧の絞り込みにも
+    // あるため、見出しで待たずに埋めると一覧側のフィールドを埋めうる
+    await expect(page.getByRole('heading', { name: '貨物予約の登録' })).toBeVisible()
 
     await page.getByLabel('荷主', { exact: true }).selectOption({ index: 1 })
     await page.getByLabel('貨物種別').selectOption('GENERAL')

@@ -55,14 +55,16 @@ async function openTrackingManagement(page: Page) {
 async function lookUpByNavigating(page: Page, trackingNumber: string) {
   await page.getByRole("link", { name: "貨物追跡", exact: true }).click();
   await expect(page).toHaveURL(/\/tracking$/);
-  // **入った値を確かめてから押す。**画面に入った直後は React が描き直す途中で
-  // あり、fill した値がその再描画で捨てられることがある。押したあとに URL だけを
-  // 見ると、空のまま送られたのか遷移が遅いのかを見分けられない（CI でだけ落ちた）
+  // **照会画面が描かれるまで待ってから埋める。**URL は React の描き直しより先に
+  // 変わる。ここへ来る前の画面（荷役の記録・貨物状態の管理）にも「追跡番号」が
+  // あるため、待たずに埋めると**前の画面のフィールドを埋めてしまう**。そのあと
+  // 「追跡する」を押すと、新しく描かれた空の照会フォームが送られ、submit は空で
+  // 何もせずに返る——遷移もエラーも起きないので、URL だけを見ても原因が残らない
+  // （CI で 4 回連続して初回に落ちていた。IT11 ふりかえり Try 3）
+  await expect(page.getByRole("heading", { name: "貨物の追跡" })).toBeVisible();
   const field = page.getByLabel("追跡番号");
-  await expect(async () => {
-    await field.fill(trackingNumber);
-    await expect(field).toHaveValue(trackingNumber);
-  }).toPass({ timeout: 10_000 });
+  await field.fill(trackingNumber);
+  await expect(field).toHaveValue(trackingNumber);
   await page.getByRole("button", { name: "追跡する" }).click();
   await expect(page).toHaveURL(new RegExp(`/tracking/${trackingNumber}$`));
 }
