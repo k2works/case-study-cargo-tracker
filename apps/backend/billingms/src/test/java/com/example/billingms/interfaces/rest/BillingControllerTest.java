@@ -329,6 +329,31 @@ class BillingControllerTest {
                     .andExpect(jsonPath("$[0].totalAmount").doesNotExist());
         }
 
+        /**
+         * <strong>引き取っていない予約に引取日時を出さない。</strong>
+         *
+         * <p>キャンセルされた予約は引き取っていない。引取日時があると、経理担当者は
+         * 「引き取ったのにキャンセルされた」と読む。並びに使っているのは最後に荷役が
+         * あった日時であり、<strong>引取日時とは別のものである</strong>
+         * （キャプチャを撮って気づいた）。
+         */
+        @Test
+        @DisplayName("キャンセルされた予約には、引取日時を返さない")
+        void omitsTheClaimedAtForCancelledBookings() throws Exception {
+            when(calculateCharge.billable()).thenReturn(List.of(
+                    new BillableCargoSnapshot("BKG-2026000010", "CANCELLED", "1",
+                            "丸紅商事株式会社", true, new BigDecimal("0.1000"),
+                            new BigDecimal("1500"), "GENERAL", "Tokyo", "Los Angeles", 1,
+                            Instant.parse("2027-09-08T00:00:00Z"), null,
+                            new BillableCargoSnapshot.Cancellation("IN_TRANSIT",
+                                    Instant.parse("2027-09-10T00:00:00Z")))));
+
+            mockMvc.perform(asAccountant(get("/api/v1/billing/unbilled")))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[0].cancelled").value(true))
+                    .andExpect(jsonPath("$[0].claimedAt").doesNotExist());
+        }
+
         @Test
         @DisplayName("発行済みの精算書を並べる")
         void listsInvoices() throws Exception {

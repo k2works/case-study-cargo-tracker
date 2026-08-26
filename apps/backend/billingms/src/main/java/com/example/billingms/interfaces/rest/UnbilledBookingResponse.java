@@ -14,7 +14,8 @@ import java.time.Instant;
  * @param shipperType 荷主種別。個人には割引の欄を出さない（22-3）
  * @param originName 出発地
  * @param destinationName 目的地
- * @param claimedAt 引取が完了した日時
+ * @param claimedAt 引取が完了した日時。<strong>キャンセルされた予約では {@code null}</strong>
+ *        ——引き取っていないのに引取日時があると、「引き取ったのにキャンセルされた」と読まれる
  * @param misrouted 誤配の記録があるか（21-6 の根拠）
  * @param cancelled キャンセルされた予約か（US30-9）
  */
@@ -35,7 +36,9 @@ public record UnbilledBookingResponse(
                 snapshot.corporate() ? "CORPORATE" : "INDIVIDUAL",
                 snapshot.originName(),
                 snapshot.destinationName(),
-                snapshot.claimedAt(),
+                // **引き取っていない予約に引取日時を出さない。** 並びに使っているのは
+                // 最後に荷役があった日時であり、引取日時とは別のものである
+                snapshot.cancellation() == null ? snapshot.claimedAt() : null,
                 snapshot.misroute() != null,
                 snapshot.cancellation() != null);
     }

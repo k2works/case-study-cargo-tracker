@@ -542,3 +542,42 @@ test('04-misroute-banner（誤配の警告）', async ({ page }) => {
 
   await page.screenshot({ path: `${ASSETS}/04-misroute-banner.png`, fullPage: true })
 })
+
+test('12-billing-list（精算管理）', async ({ page }) => {
+  await login(page, 'accountant01')
+  await page.goto('/billing')
+  await expect(page.getByRole('heading', { name: '精算管理' })).toBeVisible()
+  // **待ち行列が空のまま撮らない。** 空の一覧を載せると、この画面が何をする場所か伝わらない
+  await expect(page.getByRole('link', { name: 'BKG-2026000007' })).toBeVisible()
+
+  await page.screenshot({ path: `${ASSETS}/12-billing-list.png`, fullPage: true })
+})
+
+test('12-billing-new（料金算出）', async ({ page }) => {
+  await login(page, 'accountant01')
+  // 種データの BKG-2026000007 は法人荷主・2 区間の引取済（`src/mocks/data.ts`）
+  await page.goto('/billing/new/BKG-2026000007')
+  await expect(page.getByTestId('charge-basis')).toBeVisible()
+  // 割引が入っていることまで確かめる。入っていない状態を撮ると、手引きの説明と食い違う
+  await expect(page.getByTestId('discount-rate')).toContainText('%')
+
+  await page.screenshot({ path: `${ASSETS}/12-billing-new.png`, fullPage: true })
+})
+
+test('12-billing-invoice（請求書詳細）', async ({ page }) => {
+  await login(page, 'accountant01')
+  await page.goto('/billing/new/BKG-2026000007')
+  await expect(page.getByTestId('charge-basis')).toBeVisible()
+
+  // 調整を入れてから確定する。**明細のある請求書を撮る**——調整の行が無い請求書だと、
+  // 手引きの「調整の明細が内容つきで並びます」を示せない
+  await page.getByLabel('調整の内容').fill('遅延による減額')
+  await page.getByLabel('調整額').fill('-20000')
+  await page.getByRole('button', { name: '調整を追加' }).click()
+  await page.getByRole('button', { name: '確定する' }).click()
+
+  await expect(page).toHaveURL(/\/billing\/INV-/)
+  await expect(page.getByTestId('amount-breakdown')).toBeVisible()
+
+  await page.screenshot({ path: `${ASSETS}/12-billing-invoice.png`, fullPage: true })
+})

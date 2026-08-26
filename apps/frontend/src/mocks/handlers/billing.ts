@@ -209,11 +209,18 @@ export const billingHandlers = [
         shipperType: shipperOf(booking)?.type ?? 'INDIVIDUAL',
         originName: booking.originName,
         destinationName: booking.destinationName,
-        claimedAt: booking.lastHandlingAt ?? null,
+        // **引き取っていない予約に引取日時を出さない。** 並びに使っているのは
+        // 最後に荷役があった日時であり、引取日時とは別のものである
+        claimedAt: booking.bookingStatus === 'CANCELLED'
+          ? null
+          : (booking.lastHandlingAt ?? null),
         misrouted: booking.misroute !== null && booking.misroute !== undefined,
         cancelled: booking.bookingStatus === 'CANCELLED',
+        sortKey: booking.lastHandlingAt ?? '',
       }))
-      .sort((a, b) => (a.claimedAt ?? '').localeCompare(b.claimedAt ?? ''))
+      // **並びは最後の荷役日時で決める**（引取日時とは別）。待たせている案件が上に来る
+      .sort((a, b) => (a.sortKey ?? '').localeCompare(b.sortKey ?? ''))
+      .map(({ sortKey: _sortKey, ...rest }) => rest)
     return HttpResponse.json(unbilled)
   }),
 
