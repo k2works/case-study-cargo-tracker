@@ -632,11 +632,19 @@ Estimate *-- RouteCandidate
 | 種別 | クラス名 | 日本語名 | 責務 |
 |---|---|---|---|
 | 集約ルート | Estimate | 見積 | 輸送見積の中心エンティティ。出発地・仕向地・貨物種別・重量・ルート候補を管理 |
-| 値オブジェクト | EstimateId | 見積 ID | UUID ベースの見積一意識別子 |
-| 値オブジェクト | RouteCandidate | ルート候補 | 航海番号・経由港・輸送日数・見積コストを保持 |
-| 列挙型 | EstimateStatus | 見積状態 | CREATED / EXPIRED |
+| 値オブジェクト | EstimateId | 見積 ID | UUID ベースの見積一意識別子。**URL に出る**——推測できないことに意味がある（[ADR-028](../adr/028-settlement-and-quotation.md) 決定 7） |
+| 値オブジェクト | EstimateNumber | 見積番号 | 荷主と電話で読み合わせる番号（`EST-YYYY` + 6 桁）。受入基準 01-4 が求めるのはこちらである。IT12 |
+| 値オブジェクト | RouteCandidate | ルート候補 | 航海番号・経由港・所要日数・概算料金の 4 項目（受入基準 01-3）。**概算料金は billingms が試算する**（[ADR-028] 決定 6） |
+| 列挙型 | EstimateStatus | 見積状態 | CREATED / EXPIRED。**IT12 で起こす遷移は無い**——期限切れにする相手（バッチ）を決めるのは別のストーリーである |
 
 ### ビジネスルール
+
+#### Estimate 集約
+
+1. 見積は 5 項目（出発地・目的地・希望期限・貨物種別・重量）を持つ（受入基準 01-1）。出発地と目的地は異なる
+2. **概算料金は US21 と同じ式で出す**（[ADR-028] 決定 6）。式を 2 つ持つと、荷主に出した見積と請求が違う金額になる
+3. **候補が 0 件でも見積は作れる**。「探したが間に合う便が無かった」ことも記録である（受入基準 01-5）
+4. **予約との食い違いは、断らずに項目名で知らせる**（受入基準 01-7・US04 の未達）。条件が変わること自体は業務として普通に起きる
 
 #### Cargo 集約
 
@@ -1334,20 +1342,24 @@ DiscountPolicy *-- DiscountPolicyType
 |---|---|---|---|
 | 集約ルート | Invoice | 精算書 | 貨物輸送 1 件に対する請求書の発行・管理 |
 | エンティティ（集約内） | InvoiceLineItem | 精算明細 | 請求明細項目 |
-| エンティティ（集約内） | Payment | 支払記録 | 支払い実績の記録 |
+| 値オブジェクト | Payment | 支払記録 | 入金の記録（入金日・金額・方法・参照番号）。**請求書の属性ではなく、請求書に起きた別の出来事**（[ADR-028](../adr/028-settlement-and-quotation.md) 決定 2）。IT12 |
 | 値オブジェクト | InvoiceId | 請求書 ID | **採番された請求番号**（`INV-YYYY` + 6 桁。`invoice_number` 列に対応）。DB の `id` ではない。予約の `BookingId` と同じ形（[ADR-011]） |
 | 値オブジェクト | BillingBookingId | 予約参照 ID | Booking Context の Cargo との関連識別子（論理参照） |
 | 値オブジェクト | BillingShipperId | 荷主参照 ID | 法人判定（isCorporate）を内包 |
 | 値オブジェクト | Money | 金額 | 金額と通貨コードのペア |
 | 値オブジェクト | DiscountRate | 割引率 | 0〜30% の割引率 |
-| 値オブジェクト | TaxRate | 税率 | 消費税率 |
+| 値オブジェクト | TaxRate | 税率 | 消費税率。**出発地と目的地の国が異なれば輸出免税（0%）**（[ADR-027] 決定 8 の改訂・IT12）。不明なら課税に倒す |
 | 値オブジェクト | CancellationFee | キャンセル料 | 予約状態に応じた料率で算定（UC22） |
 | 値オブジェクト | DiscountPolicy | 割引方針 | 法人割引のロジック。**未設定は 0% ではない**（[ADR-012]） |
-| 値オブジェクト | TransportCharge | 輸送料金の根拠 | 区間数・重量・貨物種別と、そこから出る基本料金（[ADR-027] 決定 1） |
+| 値オブジェクト | TransportCharge | 輸送料金の根拠 | 区間・重量・貨物種別と、そこから出る基本料金（[ADR-027] 決定 1）。**区間係数は地域係数の合計**（IT12 の改訂） |
+| 値オブジェクト | PortRegion | 地点の地域区分 | DOMESTIC / NEAR_SEA / OCEAN と区間係数。**距離の代わり**（[ADR-027] 決定 1 の改訂・IT12） |
+| 値オブジェクト | ChargeableLeg | 課金対象の区間 | 両端の地域区分を持ち、**重いほうを採る**（向きに依らない）。IT12 |
 | 値オブジェクト | CargoType | 貨物種別 | GENERAL / HAZARDOUS / REFRIGERATED と運賃の係数。**bookingms の同名型とは別**（こちらは係数しか知らない） |
 | 値オブジェクト | CancelledAtStatus | キャンセル時の予約状態 | **キャンセルできる 6 値だけ**を持つ（配送完了・キャンセル済みからはキャンセルできない）と、状態別の料率 |
-| ACL | BillingSnapshot | 料金算出の入力 | bookingms から引く（[ADR-027] 決定 7）。予約の状態・荷主の契約・重量・貨物種別・**区間数**・**誤配の記録**・キャンセルの記録を運ぶ。handlingms 向けの `CargoSnapshot` と同じ形 |
-| 列挙型 | PaymentStatus | 支払い状態 | PENDING / CONFIRMED / OVERDUE / REFUNDED。**IT11 で起こす遷移は「発行（PENDING）」の 1 本だけ**（[ADR-027] 決定 3） |
+| ACL | BillingSnapshot | 料金算出の入力 | bookingms から引く（[ADR-027] 決定 7）。予約の状態・荷主の契約・重量・貨物種別・**区間ごとの地域区分**・**国コード**（輸出免税の判定）・**誤配の記録**・キャンセルの記録を運ぶ。handlingms 向けの `CargoSnapshot` と同じ形 |
+| ドメインサービス | QuoteChargeUseCase | 料金の試算 | 見積（bookingms）から問われて基本料金を返す（[ADR-028] 決定 6）。**式は 1 か所にある**——`TransportCharge` をそのまま通す。IT12 |
+| 列挙型 | PaymentStatus | 支払い状態 | PENDING / CONFIRMED / OVERDUE / REFUNDED。**IT12 で入金確認（PENDING → CONFIRMED）が入った**。`OVERDUE` は永続化せず日付で判定する（[ADR-028] 決定 5）。**取り消し（赤伝）は混ぜない**（決定 4——`voided_at` で表す） |
+| 列挙型 | PaymentMethod | 入金の方法 | BANK_TRANSFER / PROMISSORY_NOTE / OFFSET / OTHER。IT12 |
 | 列挙型 | PaymentMethod | 支払方法 | BANK_TRANSFER / CREDIT_CARD |
 | 列挙型 | DiscountPolicyType | 割引方針種別 | CORPORATE_STANDARD / NONE（**IT11 で実装したのはこの 2 値**）。VOLUME_DISCOUNT / SEASONAL は決める相手（契約条件）がいないため US23 以降（[ADR-027] 注 10） |
 
@@ -1357,9 +1369,13 @@ DiscountPolicy *-- DiscountPolicyType
    **イベント駆動ではない**——起点は経理担当者の操作であり、`CargoDeliveredEvent` は待たない。
    読む側の無い配線を先に敷かないため（[ADR-025] 決定 3 と同じ判断）。イベントが要るのは US23（IT12）の精算通知である
 2. 法人荷主（CORPORATE）には最大 30% の割引が適用される
-3. 支払期限（issuedAt + 30 日）を超過した場合、PaymentStatus を OVERDUE に更新する
+3. 支払期限は issuedAt + 30 日。**超過は列に書かず、`Invoice#overdue(today)` で判定する**（[ADR-028](../adr/028-settlement-and-quotation.md) 決定 5・IT12 で変更）
+   ——「更新する」相手（バッチ）がおらず、書いた列は誰にも更新されないため、期限を過ぎた請求が一覧に現れない。
+   **日付単位で比べる**（期限当日は超過ではない）。判定に使う「今日」は業務タイムゾーンで決める
 4. 支払い確定（CONFIRMED）後のキャンセルは REFUNDED 状態に遷移する
-5. `booking_id` に UNIQUE 制約を設け、同一貨物への二重請求を防止する
+5. **有効な請求書は予約ごとに 1 通**（IT12 で変更）。`(booking_id, void_marker)` の UNIQUE で守る
+   ——単独の `booking_id` UNIQUE では、取り消したあとに出し直せない（[ADR-028] 決定 3）。
+   アプリ側（`existsForBooking`）も**取り消し済みを数えない**
 6. **キャンセル料はキャンセル時点の予約状態に応じた料率で算定する**（輸送開始後は高くなる）。算定根拠（状態・料率）を CancellationFee に保持する
 7. 例外（遅延・破損等）が発生している場合、料金調整（減額・補償費用）を明細（InvoiceLineItem）として記録できる
 
@@ -1548,9 +1564,12 @@ billing -> billing : ConfirmPaymentCommand\n→ CONFIRMED
 | ポート名 | 対応外部システム | 使用サービス | 責務 |
 |---|---|---|---|
 | RouteCandidateFinder | routingms（経路候補算出） | bookingms | 出発地（現在地含む）・目的地・期限・貨物種別・積み替え上限を渡し、経路候補を取得する。**名前はポートの命名規約（何を頼むかで名付け、`Port` 接尾辞を付けない）に揃えた**（IT5。設計に 2 つの名前があった） |
-| PaymentGatewayPort | 決済機関 | billingms | 支払い処理の実行と支払い確認の受信 |
+| BillingSnapshotFinder | billingms → bookingms | billingms | 料金算出の入力（予約・荷主・旅程の区間と地域区分・誤配・キャンセル）を取得する（[ADR-027](../adr/027-transport-charge-calculation.md) 決定 7） |
+| BookingSettlementNotifier | billingms → bookingms | billingms | **入金を確認したことを予約に知らせる**（受入基準 23-4・[ADR-028](../adr/028-settlement-and-quotation.md) 決定 1）。**唯一の副作用を持つ ACL である** |
+| ChargeQuoteFinder | bookingms → billingms | bookingms | 見積の概算料金を試算する（[ADR-028] 決定 6）。**式は billingms の 1 か所にある**——2 つ持つと、荷主に出した見積と請求が違う金額になる |
+| PaymentGatewayPort | 決済機関 | billingms | 支払い処理の実行と支払い確認の受信。**実装しない**（IT12・代替）——接続先が無く、経理担当者が入金日・金額・方法・参照番号を手で入れる |
 | PortManagementPort | 港湾管理システム | handlingms | 港湾の取扱可能貨物種別の照会 |
-| NotificationPort | 通知システム | bookingms / trackingms / billingms | 荷主・荷受人へのメール / SMS 通知の送信 |
+| NotificationPort | 通知システム | bookingms / trackingms / billingms | 荷主・荷受人へのメール / SMS 通知の送信。**実装しない**（代替——画面が「送っていない」と言う。US12・US15-5・US20・受入基準 23-2 と同じ形） |
 
 各ポートはヘキサゴナルアーキテクチャの出力ポート（Secondary Port）として定義され、各マイクロサービスのインフラ層アダプターが実装を担う。
 

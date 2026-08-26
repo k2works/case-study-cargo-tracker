@@ -325,9 +325,10 @@ end note
 | 要素 | 内容 |
 | :--- | :--- |
 | 集約ルート | `Invoice` |
-| 主要概念 | `Money`（丸めを 1 か所に閉じる）, `TransportCharge`（区間数 × 重量 × 貨物種別。**距離は持っていない**）, `DiscountPolicy`（法人割引 0〜30%）, `PaymentStatus`, `CancellationFee`, `BillingSnapshot`（ACL） |
-| 料金の規則 | 基本料金 = 基準運賃 × 区間係数 × 重量係数 × 貨物種別係数（[ADR-027](../adr/027-transport-charge-calculation.md) 決定 1）。端数は 1 円で四捨五入し、**丸めは `Money` の中だけ**（決定 2） |
-| 発行の規則 | 算出中は永続化せず、確定操作で `PENDING` として発行する（決定 3）。**発行後の金額は動かない**（決定 4）。起点は**経理担当者の操作**であり、イベントは待たない（決定 5） |
+| 主要概念 | `Money`（丸めを 1 か所に閉じる）, `TransportCharge`（区間 × 重量 × 貨物種別。**距離は持っていない**）, `PortRegion` / `ChargeableLeg`（**距離の代わりの地域区分**。IT12）, `DiscountPolicy`（法人割引 0〜30%）, `PaymentStatus`, `Payment`（入金の記録。IT12）, `TaxRate`（**輸出免税**。IT12）, `CancellationFee`, `BillingSnapshot`（ACL） |
+| 料金の規則 | 基本料金 = 基準運賃 × 区間係数 × 重量係数 × 貨物種別係数（[ADR-027](../adr/027-transport-charge-calculation.md) 決定 1）。**区間係数は区間ごとの地域係数の合計**（IT12 の改訂——区間数だけだと東京 → 横浜と東京 → ロサンゼルスが同額になる）。端数は 1 円で四捨五入し、**丸めは `Money` の中だけ**（決定 2）。**式は billingms の 1 か所にあり、見積（US01）も同じ式を通る**（[ADR-028](../adr/028-settlement-and-quotation.md) 決定 6） |
+| 発行の規則 | 算出中は永続化せず、確定操作で `PENDING` として発行する（決定 3）。**発行後の金額は動かない**（決定 4）。起点は**経理担当者の操作**であり、イベントは待たない（決定 5）。訂正は**取り消して出し直す**（赤伝。[ADR-028] 決定 3） |
+| 入金の規則 | 入金は `payment` に持ち、`invoice` の金額列は動かさない（[ADR-028] 決定 2）。**決済機関とは連携しない**（代替——経理担当者が手で入れる）。`OVERDUE` は永続化せず日付で判定する（決定 5） |
 | アクター | 経理担当者、荷主、決済機関 |
 | DB | `billing_db` |
 
@@ -614,8 +615,8 @@ end note
 | `CargoCancelledEvent` | bookingms | trackingms | cargoBookingChannel（ルーティングキー `cargo.cancelled`） | キャンセル確定 → 追跡へお知らせを記録（**済**・IT9）。**理由は載せない**——公開の追跡照会に流れる経路に社内の判断を置かない。**billingms へは発行しない**（IT11 でもこの判断は変わらない）——キャンセル料の算定は **US21・IT11** で入ったが、その起点は**経理担当者の操作**であり（[ADR-027](../adr/027-transport-charge-calculation.md) 決定 5）、キャンセルされた予約も精算管理の一覧から選ぶ。**読む側の無い配線を先に敷かない**（[ADR-025](../adr/025-customs-declaration-and-cancellation-approval.md) 決定 3） |
 | `HandlingActivityRegisteredEvent` | handlingms | trackingms（済）, bookingms（**済**・IT9。[ADR-025](../adr/025-customs-declaration-and-cancellation-approval.md) 決定 1） | cargoHandlingChannel | 荷役作業登録 → 輸送ステータス同期。予定ルート外の作業場所は誤配検知の入力（US28） |
 | `CustomsStatusChangedEvent` | handlingms | trackingms | cargoHandlingChannel（ルーティングキー `cargo.customs-status-changed`） | 通関状態変更（**済**・IT9）。HELD なら例外「税関保留」を自動起票する。**理由も載せる**——行き先は追跡管理者の画面（認証の内側）であり、税関に問い合わせるときの手がかりになる。CLEARED の通知は代替（画面が「送っていない」と言う） |
-| `CargoDeliveredEvent` | trackingms | billingms | deliveryChannel | 配送完了 → 精算の**通知**（**US23・IT12**）。**IT11 では実装しない**——料金算出の起点は経理担当者の操作であり、イベントは要らない（[ADR-027](../adr/027-transport-charge-calculation.md) 決定 5） |
-| `InvoiceCreatedEvent` | billingms | （通知システム） | billingChannel | 請求書発行 → 荷主への通知 |
+| `CargoDeliveredEvent` | trackingms | billingms | deliveryChannel | **実装しない**（IT12 で決着。[ADR-028](../adr/028-settlement-and-quotation.md) 決定 1）。料金算出も精算も起点は**経理担当者の操作**であり、US23 の受入基準にも自動起票は無い。**読む側の無い配線を先に敷かない**。かわりに実装したのは**逆向きの 1 本**（下表の REST。入金確認 → 予約が精算済）——こちらには読む側がある |
+| `InvoiceCreatedEvent` | billingms | （通知システム） | billingChannel | **実装しない**（IT12）。荷主への通知は**代替で満たす**（画面が「送っていない」と言う。受入基準 23-2）——メールの仕組みが全サービスに無く、購読する相手がいない |
 
 ### Spring Cloud Stream + RabbitMQ の実装方針
 
@@ -872,6 +873,11 @@ IT1 で荷主登録画面のニーズから導出した。
 | `GET` | `/api/v1/bookings` | 予約一覧の取得 | UC03 |
 | `GET` | `/api/v1/bookings/locations` | 予約の入力に使う地点の一覧（画面に対訳表を持たせない） | UC03 |
 | `GET` | `/api/v1/bookings/hazard-classes` | 危険物クラスの一覧 | UC03 |
+| `GET` | `/api/v1/estimates` | 輸送見積の一覧（**新しい順**）。営業担当者のみ | UC01 |
+| `GET` | `/api/v1/estimates/{estimateId}` | 見積の詳細（`estimateId` は UUID。[ADR-028](../adr/028-settlement-and-quotation.md) 決定 7） | UC01 |
+| `POST` | `/api/v1/estimates/quotes` | ルート候補を探して概算料金を出す。**保存しない**——営業担当者は候補を見てから作成を決める。間に合う候補が無ければ**最短の超過日数**を返す（受入基準 01-5） | UC01 |
+| `POST` | `/api/v1/estimates` | 見積を作る。**見積番号（`EST-YYYY` + 6 桁）が発行される**（受入基準 01-4） | UC01 |
+| `POST` | `/api/v1/bookings/{bookingId}/settlement` | **精算が済んだことを受け取る**（billingms からの通知。受入基準 23-4・[ADR-028] 決定 1）。`system:billingms` のみ。**この入口だけが副作用を持つ** | UC18 |
 | `GET` | `/api/v1/bookings/by-tracking-number/{trackingNumber}` | 追跡番号で予約を引く（`CargoSnapshot` の契約。荷役作業員は予約番号を知らない。[ADR-023](../adr/023-handling-activity-validation.md) 決定 2） | UC13 |
 | `GET` | `/api/v1/bookings/billable` | 料金算出の対象になる予約（引取済・キャンセル済み）。**billingms だけが呼べる**（[ADR-027](../adr/027-transport-charge-calculation.md) 決定 7） | UC17 |
 | `GET` | `/api/v1/bookings/{bookingId}/billing-snapshot` | 料金算出の入力（`BillingSnapshot` の契約）。**誤配の記録を載せる**——IT10 までは予約詳細にしか出ておらず、経理担当者は読めなかった | UC17 |
@@ -997,7 +1003,10 @@ GET /api/v1/routes?origin=JPTYO&destination=USLAX&deadline=2026-09-30&cargoType=
 | `POST` | `/api/v1/billing/{bookingId}/calculate` | 輸送料金を確定して**精算書を発行**する（法人割引・キャンセル料・例外調整含む）。調整はここでまとめて受ける | UC17 |
 | `GET` | `/api/v1/billing/invoices` | 発行済みの精算書の一覧 | UC17 |
 | `GET` | `/api/v1/billing/invoices/{invoiceId}` | 精算書の詳細。**金額を動かす操作は無い**（決定 4） | UC17 |
-| `POST` | `/api/v1/billing/{bookingId}/settlement` | 精算処理（**US23・IT12**） | UC18 |
+| `POST` | `/api/v1/billing/invoices/{invoiceNumber}/payment` | **入金の確認**（US23-3・23-4）。**決済機関とは連携しない**——経理担当者が入金日・金額・方法・参照番号を手で入れる。確認すると予約も精算済になる | UC18 |
+| `POST` | `/api/v1/billing/invoices/{invoiceNumber}/void` | **請求書の取り消し**（赤伝・[ADR-028] 決定 3）。理由は必須。出し直しは新しい請求番号で行う | UC18 |
+| `GET` | `/api/v1/billing/invoices/overdue` | 支払期限を過ぎた請求書（受入基準 23-5 の**代替**——未払い通知のメールが無い） | UC18 |
+| `POST` | `/api/v1/billing/quotes` | **料金の試算**（見積の概算料金。[ADR-028] 決定 6）。`system:bookingms` のみ。**式は billingms の 1 か所にある** | UC01 |
 
 ## セキュリティ設計
 
