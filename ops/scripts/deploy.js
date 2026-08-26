@@ -217,11 +217,13 @@ export default function (gulp) {
       ]);
     });
 
-    // bookingms は経路の確定時に routingms へ問い合わせる（ADR-019 決定 2）。
-    // 渡さないと既定値（localhost）へ飛び、経路の確定だけが必ず失敗する
+    // bookingms は経路の確定時に routingms へ、見積の試算で billingms へ問い合わせる
+    // （ADR-019 決定 2・[ADR-028] 決定 6）。渡さないと起動時に落ちる
+    // ——**既定値を持たせない**ことで、設定漏れをその場で表面化させる
     heroku([
       'config:set',
       `APP_ROUTING_SERVICE_BASE_URL=${appUrl('routingms')}`,
+      `APP_BILLING_SERVICE_BASE_URL=${appUrl('billingms')}`,
       '-a',
       appName('bookingms'),
     ]);

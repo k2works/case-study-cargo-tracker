@@ -37,14 +37,16 @@ management:
 # 業務日付は業務タイムゾーンで判断する（UTC で判断しない）
 app:
   business-time-zone: Asia/Tokyo
+  # **相手の所在は環境ごとに上書きする。**
+  #
+  # 既定値は**開発機（localhost）を指す**。クラスタの中では自分自身を指すことになり、
+  # 入れ忘れても起動は成功して、その相手を使う操作だけが失敗する
+  # ——IT5（経路の確定）と IT12（見積の候補）で 2 度踏んだ。
+  # **デプロイの手順（k8s マニフェスト・deploy.js）が必ず渡す。**
   routing-service:
-    # 経路の確定時に候補の成立を確かめる先（ADR-019 決定 2）。
-    # **コードに既定値を持たせない。** 既定値があると、設定漏れが実行時まで表面化せず、
-    # しかも自分自身を指していた IT5 の欠陥のように「経路の確定だけが必ず失敗する」形になる。
-    # 環境ごとに APP_ROUTING_SERVICE_BASE_URL で上書きする
+    # 経路の確定時に候補の成立を確かめる先（ADR-019 決定 2）
     base-url: ${APP_ROUTING_SERVICE_BASE_URL:http://localhost:8083}
   billing-service:
     # 見積の概算料金を試算する先（[ADR-028] 決定 6）。**式は billingms の 1 か所にある**
-    # ——こちらで計算すると、荷主に出した見積と請求が違う金額になる。
-    # 環境ごとに APP_BILLING_SERVICE_BASE_URL で上書きする
+    # ——こちらで計算すると、荷主に出した見積と請求が違う金額になる
     base-url: ${APP_BILLING_SERVICE_BASE_URL:http://localhost:8086}

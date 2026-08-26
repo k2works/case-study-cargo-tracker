@@ -34,6 +34,11 @@ spec:
             # 「いま経路を確認できません」に化ける（IT6 の kind 往復で実際に踏んだ）
             - name: APP_ROUTING_SERVICE_BASE_URL
               value: http://routingms:8083
+            # 見積の概算料金を試算する先（[ADR-028] 決定 6・IT12）。**同じ形の欠陥を
+            # 3 度目に踏んだ**——入れ忘れても起動は成功し、見積の候補を探す瞬間にだけ
+            # 500 になる。実環境の往復を通すまで誰も気づかなかった
+            - name: APP_BILLING_SERVICE_BASE_URL
+              value: http://billingms:8086
             - name: RABBITMQ_HOST
               value: rabbitmq
             - name: RABBITMQ_PORT

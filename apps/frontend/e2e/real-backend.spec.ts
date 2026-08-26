@@ -1587,3 +1587,300 @@ test.describe('精算（実バックエンド）', () => {
     expect(Array.isArray(await unbilled.json())).toBeTruthy()
   })
 })
+
+/**
+ * IT12 Phase 5。**予約から精算までを実環境で 1 本通す**（成功基準）。
+ *
+ * <p>ここでしか出ない食い違いがある。
+ * <ul>
+ *   <li><strong>結合の向きが増えた。</strong>billingms → bookingms（精算完了の通知）と
+ *       bookingms → billingms（料金の試算）。契約テストは両側が同じ形を期待していること
+ *       までしか見ない——実際に繋がるかは通してみないと分からない
+ *   <li><strong>地域区分は 4 サービスに複製されている。</strong>マイグレーションが
+ *       実 DB で通ることは、ここで初めて分かる
+ * </ul>
+ *
+ * <p><strong>先にイメージを作り直すこと。</strong>同じタグのまま古いイメージが動いていると、
+ * 直したはずの経路が緑になる（IT6 で 2 度・IT11 でも踏んだ）。
+ */
+test.describe('IT12 実環境（精算と見積）', () => {
+  async function headersFor(
+    request: APIRequestContext,
+    userId: string,
+  ): Promise<{ Authorization: string }> {
+    const login = await request.post('/api/v1/auth/login', {
+      data: { userId, password: 'password' },
+    })
+    expect(login.ok(), `${userId} でログインできない`).toBeTruthy()
+    return { Authorization: `Bearer ${(await login.json()).token}` }
+  }
+
+  /** 引取まで終えた予約を作る。**精算の相手はここから始まる。** */
+  async function deliveredBooking(request: APIRequestContext): Promise<string> {
+    const { trackingNumber, bookingId } = await ensureTrackedVoyage(request)
+    const handler = await headersFor(request, 'handler01')
+    const tracker = await headersFor(request, 'tracker01')
+
+    const declared = await request.post('/api/v1/customs', {
+      headers: handler,
+      data: {
+        trackingNumber,
+        declarationNumber: `DEC-IT12-${Date.now()}`,
+        declaredAt: `${utcDate(0)}T00:00:00Z`,
+        remarks: '精算まで通す',
+      },
+    })
+    expect(declared.status(), `申告を登録できない: ${await declared.text()}`).toBe(201)
+    const cleared = await request.put(
+      `/api/v1/customs/${(await declared.json()).declarationId}/status`,
+      { headers: tracker, data: { status: 'CLEARED', reason: '審査完了' } },
+    )
+    expect(cleared.status(), `通関済にできない: ${await cleared.text()}`).toBe(200)
+
+    const claimed = await request.post('/api/v1/handling', {
+      headers: handler,
+      data: {
+        trackingNumber,
+        type: 'CLAIM',
+        locationUnLocode: 'USLAX',
+        completionTime: `${utcDate(0)}T06:00:00Z`,
+        consigneeConfirmation: '山田太郎（受取担当）',
+      },
+    })
+    expect(claimed.ok(), `引取を記録できない: ${await claimed.text()}`).toBeTruthy()
+    return bookingId
+  }
+
+  /** イベントは非同期に配られる。届くまで待つ。 */
+  async function eventually(check: () => Promise<void>): Promise<void> {
+    await expect(async () => {
+      await check()
+    }).toPass({ timeout: 20_000, intervals: [500, 1000, 2000] })
+  }
+
+  /**
+   * <strong>予約 → … → 引取 → 料金 → 入金 → 精算済</strong>（受入基準 23-3・23-4）。
+   *
+   * <p><strong>予約の画面で「精算済」を見る。</strong>billingms の中だけを見ても、
+   * 通知が届いたかは分からない——**逆向きの 1 本が実物で繋がることは、ここでしか
+   * 確かめられない**（[ADR-028] 決定 1）。
+   */
+  test('入金を確認すると、実物でも予約が精算済になる', async ({ request }) => {
+    const bookingId = await deliveredBooking(request)
+    const accountant = await headersFor(request, 'accountant01')
+
+    // 引取のイベントが bookingms に届くまで待つ（届く前は料金を算出できない）
+    await eventually(async () => {
+      const calculation = await request.get(
+        `/api/v1/billing/calculations/${encodeURIComponent(bookingId)}`,
+        { headers: accountant },
+      )
+      expect(calculation.status(), await calculation.text()).toBe(200)
+    })
+
+    const confirmed = await request.post(
+      `/api/v1/billing/${encodeURIComponent(bookingId)}/calculate`,
+      { headers: accountant, data: { adjustments: [] } },
+    )
+    expect(confirmed.status(), `精算書を発行できない: ${await confirmed.text()}`).toBe(201)
+    const invoice = await confirmed.json()
+
+    // **支払期限が入っている**（受入基準 23-1）。IT11 は列だけあって空だった
+    expect(invoice.dueDate, '支払期限が空のまま発行されている').not.toBeNull()
+
+    const paid = await request.post(
+      `/api/v1/billing/invoices/${encodeURIComponent(invoice.invoiceNumber)}/payment`,
+      {
+        headers: accountant,
+        data: {
+          amountValue: invoice.totalAmount.value,
+          paidAt: utcDate(0),
+          method: 'BANK_TRANSFER',
+          transactionReference: `FT-${Date.now()}`,
+        },
+      },
+    )
+    expect(paid.status(), `入金を確認できない: ${await paid.text()}`).toBe(200)
+    expect((await paid.json()).paymentStatus).toBe('CONFIRMED')
+
+    // **予約の側で確かめる。**billingms の中だけを見ても、届いたかは分からない
+    const sales = await headersFor(request, 'sales01')
+    const booking = await request.get(`/api/v1/bookings/${encodeURIComponent(bookingId)}`, {
+      headers: sales,
+    })
+    expect(booking.ok(), `予約を読めない: ${await booking.text()}`).toBeTruthy()
+    expect(
+      (await booking.json()).bookingStatus,
+      '入金を確認したのに予約が精算済になっていない。精算が閉じない',
+    ).toBe('SETTLED')
+  })
+
+  /**
+   * <strong>取り消して出し直せる</strong>（[ADR-028] 決定 3）。
+   *
+   * <p><strong>実 DB でしか分からない。</strong>`(booking_id, void_marker)` の UNIQUE と、
+   * 取り消し済みを数えない `existsForBooking` の両方が揃って初めて出し直せる。
+   */
+  test('取り消したあと、実物でも新しい請求番号で出し直せる', async ({ request }) => {
+    const bookingId = await deliveredBooking(request)
+    const accountant = await headersFor(request, 'accountant01')
+
+    await eventually(async () => {
+      const calculation = await request.get(
+        `/api/v1/billing/calculations/${encodeURIComponent(bookingId)}`,
+        { headers: accountant },
+      )
+      expect(calculation.status(), await calculation.text()).toBe(200)
+    })
+
+    const first = await request.post(
+      `/api/v1/billing/${encodeURIComponent(bookingId)}/calculate`,
+      { headers: accountant, data: { adjustments: [] } },
+    )
+    expect(first.status()).toBe(201)
+    const firstNumber = (await first.json()).invoiceNumber
+
+    const voided = await request.post(
+      `/api/v1/billing/invoices/${encodeURIComponent(firstNumber)}/void`,
+      { headers: accountant, data: { reason: '金額の誤りのため' } },
+    )
+    expect(voided.status(), `取り消せない: ${await voided.text()}`).toBe(200)
+    expect((await voided.json()).voidReason).toBe('金額の誤りのため')
+
+    const reissued = await request.post(
+      `/api/v1/billing/${encodeURIComponent(bookingId)}/calculate`,
+      { headers: accountant, data: { adjustments: [] } },
+    )
+    expect(
+      reissued.status(),
+      `取り消したのに出し直せない: ${await reissued.text()}`,
+    ).toBe(201)
+    expect(
+      (await reissued.json()).invoiceNumber,
+      '出し直した請求書が同じ請求番号を使っている',
+    ).not.toBe(firstNumber)
+  })
+
+  /**
+   * <strong>見積が実物で往復する</strong>（US01・[ADR-028] 決定 6）。
+   *
+   * <p>bookingms → routingms（候補）と bookingms → billingms（試算）の 2 本が
+   * 同時に通って初めて候補が出る。<strong>本 IT で増えた向き</strong>である。
+   */
+  test('見積の候補と概算料金が、実物の routingms と billingms から届く', async ({
+    request,
+  }) => {
+    // 航海が 1 本も無いと候補が出ない。**スキップせず作る**（IT5 Try 2）
+    await ensureTrackedVoyage(request)
+    const sales = await headersFor(request, 'sales01')
+
+    const quoted = await request.post('/api/v1/estimates/quotes', {
+      headers: sales,
+      data: {
+        originUnLocode: 'JPTYO',
+        destinationUnLocode: 'USLAX',
+        arrivalDeadline: businessLocalDateTime(120, '00:00').slice(0, 10),
+        cargoType: 'GENERAL',
+        weightKg: 4200,
+      },
+    })
+    expect(quoted.status(), `候補を探せない: ${await quoted.text()}`).toBe(200)
+    const quote = await quoted.json()
+    expect(
+      quote.candidates.length,
+      '実物で候補が 1 件も出ていない。routingms か billingms への往復が通っていない',
+    ).toBeGreaterThan(0)
+
+    // **4 項目が揃う**（受入基準 01-3）。1 つ欠けても字面は満たす
+    const candidate = quote.candidates[0]
+    expect(candidate.voyageNumber, '航海番号が空').toBeTruthy()
+    expect(candidate.transitDays, '所要日数が入っていない').toBeGreaterThanOrEqual(0)
+    expect(
+      Number(candidate.estimatedCost),
+      '概算料金が 0 円。billingms の試算が通っていない',
+    ).toBeGreaterThan(0)
+
+    const created = await request.post('/api/v1/estimates', {
+      headers: sales,
+      data: {
+        originUnLocode: 'JPTYO',
+        destinationUnLocode: 'USLAX',
+        arrivalDeadline: businessLocalDateTime(120, '00:00').slice(0, 10),
+        cargoType: 'GENERAL',
+        weightKg: 4200,
+      },
+    })
+    expect(created.status(), `見積を作れない: ${await created.text()}`).toBe(201)
+    const estimate = await created.json()
+    // **人が読む番号が発行される**（受入基準 01-4・[ADR-028] 決定 7）
+    expect(estimate.estimateNumber).toMatch(/^EST-\d{10}$/)
+
+    const reopened = await request.get(
+      `/api/v1/estimates/${encodeURIComponent(estimate.estimateId)}`,
+      { headers: sales },
+    )
+    expect(reopened.ok(), `見積を開き直せない: ${await reopened.text()}`).toBeTruthy()
+    expect(
+      (await reopened.json()).candidates.length,
+      '開き直すと候補が消えている。荷主に出した数字が残らない',
+    ).toBe(estimate.candidates.length)
+  })
+
+  /**
+   * <strong>見積の概算料金と実料金が一致する</strong>（デモ 10・[ADR-028] 決定 6）。
+   *
+   * <p>単体・統合では同じ式を通ることを確かめたが、<strong>実物では 2 つのサービスに
+   * またがる</strong>——bookingms が問うた試算と、billingms が請求で使う式が同じで
+   * あることは、ここでしか確かめられない。
+   *
+   * <p><strong>同じ経路・同じ重量・同じ種別で突き合わせる。</strong>見積も予約も
+   * 同じ探索（JPTYO → USLAX）から旅程を採るため、**候補の 1 本目は同じ経路になる**。
+   * 割引と税は請求だけに掛かるので、<strong>基本料金どうし</strong>を比べる。
+   */
+  test('見積の概算料金は、実物でも同じ条件の基本料金と一致する', async ({ request }) => {
+    const bookingId = await deliveredBooking(request)
+    const accountant = await headersFor(request, 'accountant01')
+    const sales = await headersFor(request, 'sales01')
+
+    let calculation: {
+      basis: { weightKg: number; cargoType: string }
+      baseAmount: { value: number }
+    } | null = null
+    await eventually(async () => {
+      const response = await request.get(
+        `/api/v1/billing/calculations/${encodeURIComponent(bookingId)}`,
+        { headers: accountant },
+      )
+      expect(response.status(), await response.text()).toBe(200)
+      calculation = await response.json()
+    })
+    expect(calculation, '料金を算出できていない').not.toBeNull()
+
+    // **請求と同じ重量・種別で見積を頼む。**違う条件で比べても何も分からない
+    const quoted = await request.post('/api/v1/estimates/quotes', {
+      headers: sales,
+      data: {
+        originUnLocode: 'JPTYO',
+        destinationUnLocode: 'USLAX',
+        arrivalDeadline: businessLocalDateTime(120, '00:00').slice(0, 10),
+        cargoType: calculation!.basis.cargoType,
+        weightKg: calculation!.basis.weightKg,
+      },
+    })
+    expect(quoted.status(), await quoted.text()).toBe(200)
+    const candidates = (await quoted.json()).candidates as Array<{
+      estimatedCost: number
+    }>
+    expect(
+      candidates.length,
+      '見積の候補が出ていない。予約と同じ経路で比べられない',
+    ).toBeGreaterThan(0)
+
+    // **どれか 1 本は、請求の基本料金と同じ金額になる。**予約に割り当てた旅程は
+    // この候補一覧から採ったものであり、式が同じなら金額も同じである
+    expect(
+      candidates.map((candidate) => Number(candidate.estimatedCost)),
+      '見積と請求で式が違う。荷主に出した数字が守れない',
+    ).toContain(calculation!.baseAmount.value)
+  })
+})
