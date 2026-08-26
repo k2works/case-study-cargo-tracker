@@ -16,7 +16,10 @@ import com.example.bookingms.application.internal.AdvanceBookingUseCase;
 import com.example.bookingms.application.internal.DecideCancellationUseCase;
 import com.example.bookingms.application.internal.RequestCancellationUseCase;
 import com.example.bookingms.application.port.CancellationRequestRepository;
+import com.example.bookingms.application.port.BillableCargoFinder;
+import com.example.bookingms.infrastructure.persistence.BillableCargoMapper;
 import com.example.bookingms.infrastructure.persistence.CancellationRequestMapper;
+import com.example.bookingms.infrastructure.persistence.MyBatisBillableCargoFinder;
 import com.example.bookingms.infrastructure.persistence.MyBatisCancellationRequestRepository;
 import com.example.bookingms.infrastructure.messaging.CargoEventChannels;
 import com.example.bookingms.infrastructure.messaging.HandlingActivityRegisteredListener;
@@ -298,6 +301,12 @@ public class BookingConfig {
     public CancellationRequestRepository cancellationRequestRepository(
             CancellationRequestMapper mapper) {
         return new MyBatisCancellationRequestRepository(mapper);
+    }
+
+    /** 料金算出の対象を引く（US21・[ADR-027] 決定 7）。読み取り専用のクエリ側。 */
+    @Bean
+    public BillableCargoFinder billableCargoFinder(BillableCargoMapper mapper) {
+        return new MyBatisBillableCargoFinder(mapper);
     }
 
     @Bean
