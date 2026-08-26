@@ -14,10 +14,10 @@ import type { ChargeBasis, Money } from '../types'
 export function ChargeBasisPanel({
   basis,
   baseAmount,
-}: {
+}: Readonly<{
   basis: ChargeBasis & { cargoTypeLabel?: string }
   baseAmount: Money
-}) {
+}>) {
   return (
     <section aria-labelledby="basis-heading" className="space-y-2">
       <h2 id="basis-heading" className="text-lg font-semibold">

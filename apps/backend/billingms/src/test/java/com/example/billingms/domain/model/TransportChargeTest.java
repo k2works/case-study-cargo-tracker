@@ -131,10 +131,9 @@ class TransportChargeTest {
         @Test
         @DisplayName("等しい根拠はハッシュも等しい")
         void hashesConsistently() {
-            assertThat(TransportCharge.of(2, new BigDecimal("4200"), CargoType.GENERAL)
-                    .hashCode())
-                    .isEqualTo(TransportCharge.of(2, new BigDecimal("4200.000"),
-                            CargoType.GENERAL).hashCode());
+            assertThat(TransportCharge.of(2, new BigDecimal("4200"), CargoType.GENERAL))
+                    .hasSameHashCodeAs(TransportCharge.of(2, new BigDecimal("4200.000"),
+                            CargoType.GENERAL));
         }
     }
 
@@ -151,8 +150,9 @@ class TransportChargeTest {
         @Test
         @DisplayName("区間が 1 本も無ければ算定できない")
         void rejectsAnItineraryWithoutLegs() {
-            assertThatThrownBy(() ->
-                    TransportCharge.of(0, new BigDecimal("1000"), CargoType.GENERAL))
+            BigDecimal weight = new BigDecimal("1000");
+
+            assertThatThrownBy(() -> TransportCharge.of(0, weight, CargoType.GENERAL))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("区間");
         }
@@ -160,20 +160,21 @@ class TransportChargeTest {
         @Test
         @DisplayName("重量が 0 以下なら算定できない")
         void rejectsNonPositiveWeight() {
-            assertThatThrownBy(() ->
-                    TransportCharge.of(1, BigDecimal.ZERO, CargoType.GENERAL))
+            BigDecimal negative = new BigDecimal("-1");
+
+            assertThatThrownBy(() -> TransportCharge.of(1, BigDecimal.ZERO, CargoType.GENERAL))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("重量");
-            assertThatThrownBy(() ->
-                    TransportCharge.of(1, new BigDecimal("-1"), CargoType.GENERAL))
+            assertThatThrownBy(() -> TransportCharge.of(1, negative, CargoType.GENERAL))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
         @Test
         @DisplayName("貨物種別が無ければ算定できない")
         void rejectsMissingCargoType() {
-            assertThatThrownBy(() ->
-                    TransportCharge.of(1, new BigDecimal("1000"), null))
+            BigDecimal weight = new BigDecimal("1000");
+
+            assertThatThrownBy(() -> TransportCharge.of(1, weight, null))
                     .isInstanceOf(IllegalArgumentException.class);
         }
     }

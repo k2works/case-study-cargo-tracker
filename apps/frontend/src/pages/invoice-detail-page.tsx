@@ -136,7 +136,7 @@ export function InvoiceDetailPage() {
           書かないと、担当者は「発行したから荷主に届いた」と受け取って連絡をしない */}
       <p className="rounded border border-gray-300 bg-gray-50 p-3 text-sm">
         <strong>荷主へは自動で通知されません。</strong>
-        請求内容は担当者からお伝えください。
+        {'請求内容は担当者からお伝えください。'}
       </p>
 
       <Link className="text-blue-700 underline" to="/billing">

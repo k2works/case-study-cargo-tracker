@@ -14,6 +14,7 @@ import com.example.billingms.domain.model.DiscountPolicy;
 import com.example.billingms.domain.model.DiscountRate;
 import com.example.billingms.domain.model.Invoice;
 import com.example.billingms.domain.model.InvoiceId;
+import com.example.billingms.domain.model.InvoiceCharges;
 import com.example.billingms.domain.model.InvoiceLineItem;
 import com.example.billingms.domain.model.Money;
 import com.example.billingms.domain.model.PaymentStatus;
@@ -66,9 +67,9 @@ class InvoicePersistenceIntegrationTest {
     private Invoice issue(String bookingId, DiscountPolicy policy,
             List<InvoiceLineItem> adjustments, CancellationFee fee) {
         return Invoice.issue(numbering.next(), BillingBookingId.of(bookingId),
-                BillingShipperId.corporate("1"), "丸紅商事株式会社", CHARGE, policy,
-                adjustments, fee, TaxRate.standard(),
-                Instant.parse("2027-10-01T00:00:00Z"));
+                BillingShipperId.corporate("1", "丸紅商事株式会社"),
+                new InvoiceCharges(CHARGE, policy, fee, TaxRate.standard()),
+                adjustments, Instant.parse("2027-10-01T00:00:00Z"));
     }
 
     private String uniqueBookingId() {

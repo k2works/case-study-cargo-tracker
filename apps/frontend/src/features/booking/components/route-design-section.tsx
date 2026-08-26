@@ -95,10 +95,9 @@ export function RouteDesignSection({
             押すべきか迷う */}
         {booking.routingStatus === "MISROUTED" && (
           <p className="text-sm text-gray-700">
-            この予約は
+            {'この予約は'}
             <strong>予定ルートから外れています。</strong>
-            {""}
-            上の警告から経路を組み直してください。
+            {'上の警告から経路を組み直してください。'}
           </p>
         )}
 

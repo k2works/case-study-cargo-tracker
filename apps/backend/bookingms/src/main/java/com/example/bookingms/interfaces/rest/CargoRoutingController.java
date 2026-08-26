@@ -83,7 +83,7 @@ public class CargoRoutingController {
      * <p><strong>旅程からは引けない。</strong>誤配した港は定義上、予定ルートの外にある。
      */
     private java.util.Optional<String> locationNameOf(String unLocode) {
-        return locations.findByUnLocode(unLocode).map(location -> location.name());
+        return locations.findByUnLocode(unLocode).map(Location::name);
     }
 
     /**

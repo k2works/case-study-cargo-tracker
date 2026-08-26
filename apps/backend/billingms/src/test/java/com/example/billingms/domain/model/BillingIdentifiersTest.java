@@ -66,16 +66,16 @@ class BillingIdentifiersTest {
         @Test
         @DisplayName("法人か個人かを自分で答える")
         void tellsWhetherTheShipperIsCorporate() {
-            assertThat(BillingShipperId.corporate("1").isCorporate()).isTrue();
-            assertThat(BillingShipperId.individual("2").isCorporate()).isFalse();
+            assertThat(BillingShipperId.corporate("1", "丸紅商事株式会社").isCorporate()).isTrue();
+            assertThat(BillingShipperId.individual("2", "山田太郎").isCorporate()).isFalse();
         }
 
         @Test
         @DisplayName("空の荷主 ID は作れない")
         void rejectsBlankValues() {
-            assertThatThrownBy(() -> BillingShipperId.corporate(" "))
+            assertThatThrownBy(() -> BillingShipperId.corporate(" ", "名前"))
                     .isInstanceOf(IllegalArgumentException.class);
-            assertThatThrownBy(() -> BillingShipperId.individual(null))
+            assertThatThrownBy(() -> BillingShipperId.individual(null, "名前"))
                     .isInstanceOf(IllegalArgumentException.class);
         }
     }
@@ -110,7 +110,9 @@ class BillingIdentifiersTest {
         @Test
         @DisplayName("負の税率は作れない")
         void rejectsNegativeRates() {
-            assertThatThrownBy(() -> TaxRate.of(new BigDecimal("-0.1")))
+            BigDecimal negative = new BigDecimal("-0.1");
+
+            assertThatThrownBy(() -> TaxRate.of(negative))
                     .isInstanceOf(IllegalArgumentException.class);
             assertThatThrownBy(() -> TaxRate.of(null))
                     .isInstanceOf(IllegalArgumentException.class);

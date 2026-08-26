@@ -138,10 +138,11 @@ export function BillingNewPage() {
           </h2>
           {/* **料率の根拠を出す**（US30-9）。IT9 は「算定していません」と書いていた */}
           <p data-testid="cancellation-fee" className="rounded border border-gray-200 p-4">
-            キャンセルを申請した時点の状態が
+            {'キャンセルを申請した時点の状態が '}
             <strong>{calculation.cancellationFee.bookingStatusLabel}</strong>
-            のため、料率 {formatRate(calculation.cancellationFee.feeRate)} で
-            <strong>{formatYen(calculation.cancellationFee.amount)}</strong> を加算します。
+            {` のため、料率 ${formatRate(calculation.cancellationFee.feeRate)} で `}
+            <strong>{formatYen(calculation.cancellationFee.amount)}</strong>
+            {' を加算します。'}
           </p>
         </section>
       )}
@@ -184,7 +185,7 @@ export function BillingNewPage() {
 
         <div className="flex flex-wrap items-end gap-3">
           <label className="flex flex-col text-sm">
-            調整の内容
+            {'調整の内容'}
             <input
               className="rounded border border-gray-300 px-2 py-1"
               onChange={(event) => setDescription(event.target.value)}
@@ -192,7 +193,7 @@ export function BillingNewPage() {
             />
           </label>
           <label className="flex flex-col text-sm">
-            調整額
+            {'調整額'}
             <input
               className="rounded border border-gray-300 px-2 py-1"
               onChange={(event) => setAmount(event.target.value)}

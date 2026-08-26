@@ -10,6 +10,7 @@ import com.example.billingms.domain.model.DiscountPolicy;
 import com.example.billingms.domain.model.DiscountRate;
 import com.example.billingms.domain.model.Invoice;
 import com.example.billingms.domain.model.InvoiceId;
+import com.example.billingms.domain.model.InvoiceCharges;
 import com.example.billingms.domain.model.InvoiceLineItem;
 import com.example.billingms.domain.model.Money;
 import com.example.billingms.domain.model.PaymentStatus;
@@ -122,12 +123,12 @@ public class MyBatisInvoiceRepository implements InvoiceRepository {
                 InvoiceId.of(row.getInvoiceNumber()),
                 BillingBookingId.of(row.getBookingId()),
                 row.isShipperCorporate()
-                        ? BillingShipperId.corporate(row.getShipperId())
-                        : BillingShipperId.individual(row.getShipperId()),
-                row.getShipperName(),
-                TransportCharge.of(row.getLegCount(), row.getWeightKg(),
-                        CargoType.of(row.getCargoType())),
-                policy, items, fee, TaxRate.of(row.getTaxRate()),
-                PaymentStatus.valueOf(row.getPaymentStatus()), row.getIssuedAt());
+                        ? BillingShipperId.corporate(row.getShipperId(), row.getShipperName())
+                        : BillingShipperId.individual(row.getShipperId(), row.getShipperName()),
+                new InvoiceCharges(
+                        TransportCharge.of(row.getLegCount(), row.getWeightKg(),
+                                CargoType.of(row.getCargoType())),
+                        policy, fee, TaxRate.of(row.getTaxRate())),
+                items, PaymentStatus.valueOf(row.getPaymentStatus()), row.getIssuedAt());
     }
 }

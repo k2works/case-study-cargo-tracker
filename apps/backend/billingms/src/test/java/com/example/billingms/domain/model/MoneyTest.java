@@ -115,9 +115,11 @@ class MoneyTest {
         @Test
         @DisplayName("通貨コードは 3 文字である")
         void requiresAThreeLetterCurrencyCode() {
-            assertThatThrownBy(() -> Money.of(BigDecimal.ONE, "JPYEN"))
+            BigDecimal one = BigDecimal.ONE;
+
+            assertThatThrownBy(() -> Money.of(one, "JPYEN"))
                     .isInstanceOf(IllegalArgumentException.class);
-            assertThatThrownBy(() -> Money.of(BigDecimal.ONE, null))
+            assertThatThrownBy(() -> Money.of(one, null))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
@@ -167,8 +169,8 @@ class MoneyTest {
         @Test
         @DisplayName("等しい金額はハッシュも等しい")
         void hashesConsistently() {
-            assertThat(Money.yen(new BigDecimal("1000")).hashCode())
-                    .isEqualTo(Money.yen(new BigDecimal("1000.0")).hashCode());
+            assertThat(Money.yen(new BigDecimal("1000")))
+                    .hasSameHashCodeAs(Money.yen(new BigDecimal("1000.0")));
         }
 
         @Test

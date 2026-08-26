@@ -248,8 +248,10 @@ class CalculateChargeUseCaseTest {
             when(snapshots.findBillable("BKG-2026000007")).thenReturn(Optional.of(corporate()));
             when(numbering.next()).thenReturn(InvoiceId.of("INV-2026000001"));
 
-            assertThatThrownBy(() -> useCase.confirm("BKG-2026000007",
-                    List.of(new AdjustmentCommand("  ", new BigDecimal("-20000")))))
+            List<AdjustmentCommand> withoutDescription =
+                    List.of(new AdjustmentCommand("  ", new BigDecimal("-20000")));
+
+            assertThatThrownBy(() -> useCase.confirm("BKG-2026000007", withoutDescription))
                     .isInstanceOf(IllegalArgumentException.class);
             verify(invoices, never()).save(any());
         }

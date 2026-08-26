@@ -25,6 +25,7 @@ import com.example.billingms.domain.model.DiscountPolicy;
 import com.example.billingms.domain.model.DiscountRate;
 import com.example.billingms.domain.model.Invoice;
 import com.example.billingms.domain.model.InvoiceId;
+import com.example.billingms.domain.model.InvoiceCharges;
 import com.example.billingms.domain.model.InvoiceLineItem;
 import com.example.billingms.domain.model.Money;
 import com.example.billingms.domain.model.TaxRate;
@@ -77,10 +78,11 @@ class BillingControllerTest {
     private static Invoice issued() {
         return Invoice.issue(InvoiceId.of("INV-2026000001"),
                 BillingBookingId.of("BKG-2026000007"),
-                BillingShipperId.corporate("1"), "丸紅商事株式会社", CHARGE,
-                DiscountPolicy.forCorporate(DiscountRate.of(new BigDecimal("0.1000"))),
+                BillingShipperId.corporate("1", "丸紅商事株式会社"),
+                InvoiceCharges.of(CHARGE, DiscountPolicy.forCorporate(
+                        DiscountRate.of(new BigDecimal("0.1000"))), TaxRate.standard()),
                 List.of(InvoiceLineItem.of("遅延による減額", Money.yen(new BigDecimal("-10000")))),
-                null, TaxRate.standard(), Instant.parse("2027-10-01T00:00:00Z"));
+                Instant.parse("2027-10-01T00:00:00Z"));
     }
 
     private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder

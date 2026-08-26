@@ -20,6 +20,29 @@ import { formatYen } from "../features/billing/money";
  * <p><strong>経理担当者は他に気づく手段を持たない。</strong>メールの仕組みは無い
  * （通知は US23 以降）。ここに出ていないものは、誰にも気づかれない。
  */
+/**
+ * 一覧の行に付ける印。
+ *
+ * <p><strong>入れ子の三項をやめて、判断の順序を読める形にする。</strong>
+ * キャンセルと誤配は同時に起こりうる——そのときはキャンセルを優先する
+ * （料率の根拠が要るのはキャンセルのほうである）。
+ */
+function unbilledKind(booking: {
+  cancelled: boolean
+  misrouted: boolean
+  shipperType: string
+}): string {
+  if (booking.cancelled) {
+    return 'unbilled-cancelled'
+  }
+  if (booking.misrouted) {
+    return 'unbilled-misrouted'
+  }
+  return booking.shipperType === 'INDIVIDUAL'
+    ? 'unbilled-individual'
+    : 'unbilled-corporate'
+}
+
 export function BillingPage() {
   const { data: unbilled = [], isLoading: loadingUnbilled } = useUnbilledBookings();
   const { data: invoices = [], isLoading: loadingInvoices } = useInvoices();
@@ -30,8 +53,8 @@ export function BillingPage() {
 
       <section aria-labelledby="unbilled-heading" className="space-y-3">
         <h2 id="unbilled-heading" className="text-lg font-semibold">
-          料金を算出していない引取済の予約
-          <span className="ml-2 text-sm font-normal text-gray-600">
+          {'料金を算出していない引取済の予約 '}
+          <span className="text-sm font-normal text-gray-600">
             {unbilled.length} 件
           </span>
         </h2>
@@ -41,13 +64,13 @@ export function BillingPage() {
           引取が終わった順に並んでいます。上から順に料金を算出してください。
         </p>
 
-        {loadingUnbilled ? (
-          <p>読み込み中です。</p>
-        ) : unbilled.length === 0 ? (
+        {loadingUnbilled && <p>読み込み中です。</p>}
+        {!loadingUnbilled && unbilled.length === 0 && (
           <p className="rounded border border-gray-200 p-4 text-gray-700">
             料金の算出を待っている予約はありません。
           </p>
-        ) : (
+        )}
+        {!loadingUnbilled && unbilled.length > 0 && (
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="border-b border-gray-300 bg-gray-50 text-left">
@@ -63,15 +86,7 @@ export function BillingPage() {
                 <tr
                   key={booking.bookingId}
                   className="border-b border-gray-200"
-                  data-testid={
-                    booking.cancelled
-                      ? "unbilled-cancelled"
-                      : booking.misrouted
-                        ? "unbilled-misrouted"
-                        : booking.shipperType === "INDIVIDUAL"
-                          ? "unbilled-individual"
-                          : "unbilled-corporate"
-                  }
+                  data-testid={unbilledKind(booking)}
                 >
                   <td className="px-3 py-2">
                     <Link
@@ -111,19 +126,19 @@ export function BillingPage() {
 
       <section aria-labelledby="invoices-heading" className="space-y-3">
         <h2 id="invoices-heading" className="text-lg font-semibold">
-          発行済みの精算書
-          <span className="ml-2 text-sm font-normal text-gray-600">
+          {'発行済みの精算書 '}
+          <span className="text-sm font-normal text-gray-600">
             {invoices.length} 件
           </span>
         </h2>
 
-        {loadingInvoices ? (
-          <p>読み込み中です。</p>
-        ) : invoices.length === 0 ? (
+        {loadingInvoices && <p>読み込み中です。</p>}
+        {!loadingInvoices && invoices.length === 0 && (
           <p className="rounded border border-gray-200 p-4 text-gray-700">
             発行済みの精算書はありません。
           </p>
-        ) : (
+        )}
+        {!loadingInvoices && invoices.length > 0 && (
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="border-b border-gray-300 bg-gray-50 text-left">

@@ -12,6 +12,7 @@ import com.example.billingms.domain.model.CargoType;
 import com.example.billingms.domain.model.DiscountPolicy;
 import com.example.billingms.domain.model.DiscountRate;
 import com.example.billingms.domain.model.Invoice;
+import com.example.billingms.domain.model.InvoiceCharges;
 import com.example.billingms.domain.model.InvoiceLineItem;
 import com.example.billingms.domain.model.Money;
 import com.example.billingms.domain.model.TaxRate;
@@ -83,12 +84,9 @@ public class CalculateChargeUseCase {
                 numbering.next(),
                 BillingBookingId.of(snapshot.bookingId()),
                 shipperIdOf(snapshot),
-                snapshot.shipperName(),
-                calculation.charge(),
-                calculation.discountPolicy(),
+                new InvoiceCharges(calculation.charge(), calculation.discountPolicy(),
+                        calculation.cancellationFee(), calculation.taxRate()),
                 lineItems,
-                calculation.cancellationFee(),
-                calculation.taxRate(),
                 clock.instant());
 
         invoices.save(invoice);
@@ -133,7 +131,7 @@ public class CalculateChargeUseCase {
 
     private static BillingShipperId shipperIdOf(BillableCargoSnapshot snapshot) {
         return snapshot.corporate()
-                ? BillingShipperId.corporate(snapshot.shipperId())
-                : BillingShipperId.individual(snapshot.shipperId());
+                ? BillingShipperId.corporate(snapshot.shipperId(), snapshot.shipperName())
+                : BillingShipperId.individual(snapshot.shipperId(), snapshot.shipperName());
     }
 }

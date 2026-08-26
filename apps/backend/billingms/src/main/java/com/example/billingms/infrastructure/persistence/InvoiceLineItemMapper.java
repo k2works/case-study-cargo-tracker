@@ -5,7 +5,6 @@ import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Result;
-import org.apache.ibatis.annotations.Results;
 import org.apache.ibatis.annotations.Select;
 
 /** 精算明細の永続化（[ADR-027] 決定 6）。 */
@@ -27,13 +26,11 @@ public interface InvoiceLineItemMapper {
              WHERE invoice_id = #{invoiceId}
              ORDER BY seq_number
             """)
-    @Results({
-            @Result(column = "id", property = "id"),
-            @Result(column = "invoice_id", property = "invoiceId"),
-            @Result(column = "description", property = "description"),
-            @Result(column = "amount_value", property = "amountValue"),
-            @Result(column = "amount_currency", property = "amountCurrency"),
-            @Result(column = "seq_number", property = "seqNumber"),
-    })
+    @Result(column = "id", property = "id")
+    @Result(column = "invoice_id", property = "invoiceId")
+    @Result(column = "description", property = "description")
+    @Result(column = "amount_value", property = "amountValue")
+    @Result(column = "amount_currency", property = "amountCurrency")
+    @Result(column = "seq_number", property = "seqNumber")
     List<InvoiceLineItemRecord> selectByInvoiceId(@Param("invoiceId") Long invoiceId);
 }

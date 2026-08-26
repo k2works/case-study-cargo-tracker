@@ -23,30 +23,20 @@ public final class Invoice {
     private final InvoiceId invoiceId;
     private final BillingBookingId cargoBookingId;
     private final BillingShipperId shipperId;
-    private final String shipperName;
-    private final TransportCharge charge;
-    private final DiscountPolicy discountPolicy;
+    private final InvoiceCharges charges;
     private final List<InvoiceLineItem> lineItems;
-    private final CancellationFee cancellationFee;
-    private final TaxRate taxRate;
     private final PaymentStatus paymentStatus;
     private final Instant issuedAt;
 
     private Invoice(InvoiceId invoiceId, BillingBookingId cargoBookingId,
-            BillingShipperId shipperId, String shipperName, TransportCharge charge,
-            DiscountPolicy discountPolicy, List<InvoiceLineItem> lineItems,
-            CancellationFee cancellationFee, TaxRate taxRate, PaymentStatus paymentStatus,
-            Instant issuedAt) {
+            BillingShipperId shipperId, InvoiceCharges charges,
+            List<InvoiceLineItem> lineItems, PaymentStatus paymentStatus, Instant issuedAt) {
         this.invoiceId = invoiceId;
         this.cargoBookingId = cargoBookingId;
         this.shipperId = shipperId;
-        this.shipperName = shipperName;
-        this.charge = charge;
-        this.discountPolicy = discountPolicy;
+        this.charges = charges;
         // **写して持つ。** 呼び出し元が渡したあとの書き換えでこちらの中身が変わらないように
         this.lineItems = List.copyOf(lineItems);
-        this.cancellationFee = cancellationFee;
-        this.taxRate = taxRate;
         this.paymentStatus = paymentStatus;
         this.issuedAt = issuedAt;
     }
@@ -57,9 +47,8 @@ public final class Invoice {
      * <p><strong>発行の時点では未入金である</strong>（決定 3）。入金の確認は US23。
      */
     public static Invoice issue(InvoiceId invoiceId, BillingBookingId cargoBookingId,
-            BillingShipperId shipperId, String shipperName, TransportCharge charge,
-            DiscountPolicy discountPolicy, List<InvoiceLineItem> lineItems,
-            CancellationFee cancellationFee, TaxRate taxRate, Instant issuedAt) {
+            BillingShipperId shipperId, InvoiceCharges charges,
+            List<InvoiceLineItem> lineItems, Instant issuedAt) {
         if (invoiceId == null) {
             throw new IllegalArgumentException("請求番号を指定してください");
         }
@@ -69,26 +58,14 @@ public final class Invoice {
         if (shipperId == null) {
             throw new IllegalArgumentException("荷主を指定してください");
         }
-        if (shipperName == null || shipperName.isBlank()) {
-            // **発行した時点の社名を残す**——荷主 ID から毎回引き直すと、社名を変えた
-            // 途端に発行済みの請求書の宛名まで変わる
-            throw new IllegalArgumentException("荷主の社名を指定してください");
-        }
-        if (charge == null) {
-            throw new IllegalArgumentException("基本料金の根拠を指定してください");
-        }
-        if (discountPolicy == null) {
-            throw new IllegalArgumentException("割引方針を指定してください");
-        }
-        if (taxRate == null) {
-            throw new IllegalArgumentException("税率を指定してください");
+        if (charges == null) {
+            throw new IllegalArgumentException("金額の材料を指定してください");
         }
         if (issuedAt == null) {
             throw new IllegalArgumentException("発行日時を指定してください");
         }
-        return new Invoice(invoiceId, cargoBookingId, shipperId, shipperName, charge,
-                discountPolicy, lineItems == null ? List.of() : lineItems, cancellationFee,
-                taxRate, PaymentStatus.PENDING, issuedAt);
+        return new Invoice(invoiceId, cargoBookingId, shipperId, charges,
+                lineItems == null ? List.of() : lineItems, PaymentStatus.PENDING, issuedAt);
     }
 
     /**
@@ -98,13 +75,10 @@ public final class Invoice {
      * 検査するのは新規に受け入れるとき（{@link #issue}）である。
      */
     public static Invoice restore(InvoiceId invoiceId, BillingBookingId cargoBookingId,
-            BillingShipperId shipperId, String shipperName, TransportCharge charge,
-            DiscountPolicy discountPolicy, List<InvoiceLineItem> lineItems,
-            CancellationFee cancellationFee, TaxRate taxRate, PaymentStatus paymentStatus,
-            Instant issuedAt) {
-        return new Invoice(invoiceId, cargoBookingId, shipperId, shipperName, charge,
-                discountPolicy, lineItems == null ? List.of() : lineItems, cancellationFee,
-                taxRate, paymentStatus, issuedAt);
+            BillingShipperId shipperId, InvoiceCharges charges,
+            List<InvoiceLineItem> lineItems, PaymentStatus paymentStatus, Instant issuedAt) {
+        return new Invoice(invoiceId, cargoBookingId, shipperId, charges,
+                lineItems == null ? List.of() : lineItems, paymentStatus, issuedAt);
     }
 
     public InvoiceId invoiceId() {
@@ -127,30 +101,35 @@ public final class Invoice {
      * （決定 4 が禁じていること）。
      */
     public String shipperName() {
-        return shipperName;
+        return shipperId.name();
+    }
+
+    /** 金額の材料（決定 1・決定 6・決定 8）。 */
+    public InvoiceCharges charges() {
+        return charges;
     }
 
     /** 基本料金の根拠（決定 1）。 */
     public TransportCharge charge() {
-        return charge;
+        return charges.charge();
     }
 
     public Money baseAmount() {
-        return charge.baseAmount();
+        return charges.baseAmount();
     }
 
     /** 割引率。**割引が無ければ {@code null}**——0% と契約なしを区別する（[ADR-012]）。 */
     public DiscountRate discountRate() {
-        return discountPolicy.rate();
+        return charges.discountRate();
     }
 
     public Money discountAmount() {
-        return discountPolicy.discountOf(baseAmount());
+        return charges.discountAmount();
     }
 
     /** キャンセル料。キャンセルされていなければ {@code null}。 */
     public CancellationFee cancellationFee() {
-        return cancellationFee;
+        return charges.cancellationFee();
     }
 
     /** 調整の明細。**発行後は足せない**（決定 4）。 */
@@ -159,15 +138,12 @@ public final class Invoice {
     }
 
     public TaxRate taxRate() {
-        return taxRate;
+        return charges.taxRate();
     }
 
     /** 税を含まない小計。 */
     public Money subtotal() {
-        Money amount = baseAmount().subtract(discountAmount());
-        if (cancellationFee != null) {
-            amount = amount.add(cancellationFee.amount());
-        }
+        Money amount = charges.subtotalBeforeAdjustments();
         for (InvoiceLineItem item : lineItems) {
             amount = amount.add(item.amount());
         }
@@ -175,7 +151,7 @@ public final class Invoice {
     }
 
     public Money taxAmount() {
-        return taxRate.taxOf(subtotal());
+        return charges.taxRate().taxOf(subtotal());
     }
 
     public Money totalAmount() {

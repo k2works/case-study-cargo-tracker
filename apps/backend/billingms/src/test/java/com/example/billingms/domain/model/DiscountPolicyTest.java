@@ -42,10 +42,13 @@ class DiscountPolicyTest {
         @Test
         @DisplayName("30% を超える割引率は断る")
         void rejectsRatesBeyondTheContract() {
-            assertThatThrownBy(() -> DiscountRate.of(new BigDecimal("0.3001")))
+            BigDecimal aboveMax = new BigDecimal("0.3001");
+            BigDecimal negative = new BigDecimal("-0.0001");
+
+            assertThatThrownBy(() -> DiscountRate.of(aboveMax))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("30");
-            assertThatThrownBy(() -> DiscountRate.of(new BigDecimal("-0.0001")))
+            assertThatThrownBy(() -> DiscountRate.of(negative))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 

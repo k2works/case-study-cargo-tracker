@@ -15,10 +15,10 @@ import type { ChargeCalculation } from '../types'
 export function AdjustmentEvidence({
   misroute,
   exceptions,
-}: {
+}: Readonly<{
   misroute: ChargeCalculation['misroute']
   exceptions: ChargeCalculation['exceptions']
-}) {
+}>) {
   const hasEvidence = misroute !== null || exceptions.length > 0
 
   if (!hasEvidence) {

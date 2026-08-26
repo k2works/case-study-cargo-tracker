@@ -307,7 +307,7 @@ Bug・Vulnerability は 0 を維持する。Code Smell のうち、次の指摘�
 | 指摘 | 対象 | 残す理由 |
 | :--- | :--- | :--- |
 | メソッド名が制限識別子と一致（`record`） | `AuthAuditLogger#record` | 「記録する」は業務の言葉である。Java の予約語事情で業務語彙を曲げない |
-| 引数が 7 個を超える | `User#restore`・`Cargo#restore` | 永続化された行からの復元であり、テーブルの列数がそのまま現れる。まとめると復元の意味が薄れる |
+| 引数が 7 個を超える | `User#restore`・`Cargo#restore`・`Invoice#restore`（と `Invoice` のプライベートコンストラクタ） | 永続化された行からの復元であり、テーブルの列数がそのまま現れる。まとめると復元の意味が薄れる。**発行（`Invoice#issue`）は業務の操作なのでまとめた**——金額の材料 4 つを `InvoiceCharges` に束ね、11 引数から 7 引数にした（IT11） |
 | `java.time` を使う指摘 | `JwtTokenIssuer` | JWT ライブラリの API が `Date` を要求する。境界で変換しており内部は `Instant` |
 
 次の指摘は**解析対象から外す**。

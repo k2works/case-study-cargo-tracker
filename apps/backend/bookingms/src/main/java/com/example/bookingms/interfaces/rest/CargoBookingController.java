@@ -11,6 +11,7 @@ import com.example.bookingms.domain.model.CargoType;
 import com.example.bookingms.domain.model.HazardClass;
 import com.example.bookingms.domain.model.RoutingStatus;
 import com.example.shared.auth.AuthenticatedUser;
+import com.example.shared.domain.model.Location;
 import com.example.shared.auth.Role;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
@@ -124,7 +125,7 @@ public class CargoBookingController {
      * <p>引けなくても記録そのものは返す（呼び出し先で {@code null} になる）。
      */
     private java.util.Optional<String> locationNameOf(String unLocode) {
-        return locations.findByUnLocode(unLocode).map(location -> location.name());
+        return locations.findByUnLocode(unLocode).map(Location::name);
     }
 
     /**

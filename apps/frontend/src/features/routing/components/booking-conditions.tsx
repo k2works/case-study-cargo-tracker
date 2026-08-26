@@ -14,14 +14,14 @@ export function BookingConditions({
   cargoType,
   misrouted,
   searchOrigin,
-}: {
+}: Readonly<{
   booking: Booking;
   cargoType: RoutingCargoType;
   /** いま経路から外れているか。**記録の有無ではなく状態で決める** */
   misrouted: boolean;
   /** 候補を探す起点。誤配なら貨物の現在地 */
   searchOrigin: string;
-}) {
+}>) {
   return (
     <dl className="grid grid-cols-2 gap-2 rounded border border-gray-200 p-4 md:grid-cols-4">
       <div>
