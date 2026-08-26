@@ -2,16 +2,34 @@ package com.example.trackingms.config;
 
 import com.example.shared.auth.AuthenticatedUserFilter;
 import com.example.trackingms.application.internal.AdvanceTrackingUseCase;
+import com.example.trackingms.application.internal.DetectCustomsHoldUseCase;
+import com.example.trackingms.application.internal.DetectMisrouteUseCase;
+import com.example.trackingms.application.internal.ManageTrackingUseCase;
+import com.example.trackingms.application.internal.NoteCancellationUseCase;
 import com.example.trackingms.application.internal.StartTrackingUseCase;
+import com.example.trackingms.application.internal.TrackingLookupUseCase;
 import com.example.trackingms.application.port.LocationRepository;
 import com.example.trackingms.application.port.TrackingActivityRepository;
+import com.example.trackingms.application.port.TrackingLookupLogger;
+import com.example.trackingms.application.port.TrackingNoticeRepository;
+import com.example.trackingms.application.port.TrackingNotifier;
+import com.example.trackingms.infrastructure.messaging.CargoCancelledListener;
+import com.example.trackingms.infrastructure.messaging.CustomsStatusChangedListener;
 import com.example.trackingms.infrastructure.messaging.HandlingActivityRegisteredListener;
 import com.example.trackingms.infrastructure.messaging.TrackingEventChannels;
 import com.example.trackingms.infrastructure.messaging.TrackingNumberIssuedListener;
+import com.example.trackingms.infrastructure.notification.RecordingTrackingNotifier;
 import com.example.trackingms.infrastructure.persistence.LocationMapper;
 import com.example.trackingms.infrastructure.persistence.MyBatisLocationRepository;
 import com.example.trackingms.infrastructure.persistence.MyBatisTrackingActivityRepository;
+import com.example.trackingms.infrastructure.persistence.MyBatisTrackingLookupLogger;
+import com.example.trackingms.infrastructure.persistence.MyBatisTrackingNoticeRepository;
 import com.example.trackingms.infrastructure.persistence.TrackingActivityMapper;
+import com.example.trackingms.infrastructure.persistence.TrackingEventMapper;
+import com.example.trackingms.infrastructure.persistence.TrackingExceptionMapper;
+import com.example.trackingms.infrastructure.persistence.TrackingLookupLogMapper;
+import com.example.trackingms.infrastructure.persistence.TrackingNoticeMapper;
+import com.example.trackingms.interfaces.rest.PublicLookupThrottleFilter;
 import java.util.Map;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
@@ -63,14 +81,13 @@ public class TrackingConfig {
      * ——一律に掛けると、過負荷のときに liveness が 429 を返して再起動ループになる。
      */
     @Bean
-    public FilterRegistrationBean<com.example.trackingms.interfaces.rest
-            .PublicLookupThrottleFilter> publicLookupThrottleFilter(
+    public FilterRegistrationBean<PublicLookupThrottleFilter> publicLookupThrottleFilter(
             @org.springframework.beans.factory.annotation.Value(
                     "${app.public-lookup.limit-per-minute:30}") int limitPerMinute,
             java.time.Clock clock) {
-        FilterRegistrationBean<com.example.trackingms.interfaces.rest.PublicLookupThrottleFilter>
+        FilterRegistrationBean<PublicLookupThrottleFilter>
                 registration = new FilterRegistrationBean<>(
-                        new com.example.trackingms.interfaces.rest.PublicLookupThrottleFilter(
+                        new PublicLookupThrottleFilter(
                                 PUBLIC_PATH_PREFIX, limitPerMinute, clock));
         // 認証フィルタの直後に置く。公開経路は認証を通らないので、順序は実質ここが先頭になる
         registration.setOrder(Ordered.HIGHEST_PRECEDENCE + 1);
@@ -79,8 +96,8 @@ public class TrackingConfig {
 
     @Bean
     public TrackingActivityRepository trackingActivityRepository(TrackingActivityMapper mapper,
-            com.example.trackingms.infrastructure.persistence.TrackingEventMapper events,
-            com.example.trackingms.infrastructure.persistence.TrackingExceptionMapper exceptions) {
+            TrackingEventMapper events,
+            TrackingExceptionMapper exceptions) {
         return new MyBatisTrackingActivityRepository(mapper, events, exceptions);
     }
 
@@ -98,7 +115,7 @@ public class TrackingConfig {
     @Bean
     public AdvanceTrackingUseCase advanceTrackingUseCase(TrackingActivityRepository activities,
             LocationRepository locations,
-            com.example.trackingms.application.port.TrackingNotifier notifier) {
+            TrackingNotifier notifier) {
         return new AdvanceTrackingUseCase(activities, locations, notifier);
     }
 
@@ -116,17 +133,15 @@ public class TrackingConfig {
     }
 
     @Bean
-    public com.example.trackingms.application.port.TrackingNoticeRepository trackingNoticeRepository(
-            com.example.trackingms.infrastructure.persistence.TrackingNoticeMapper mapper) {
-        return new com.example.trackingms.infrastructure.persistence
-                .MyBatisTrackingNoticeRepository(mapper);
+    public TrackingNoticeRepository trackingNoticeRepository(
+            TrackingNoticeMapper mapper) {
+        return new MyBatisTrackingNoticeRepository(mapper);
     }
 
     @Bean
-    public com.example.trackingms.application.port.TrackingLookupLogger trackingLookupLogger(
-            com.example.trackingms.infrastructure.persistence.TrackingLookupLogMapper mapper) {
-        return new com.example.trackingms.infrastructure.persistence
-                .MyBatisTrackingLookupLogger(mapper);
+    public TrackingLookupLogger trackingLookupLogger(
+            TrackingLookupLogMapper mapper) {
+        return new MyBatisTrackingLookupLogger(mapper);
     }
 
     /**
@@ -135,34 +150,33 @@ public class TrackingConfig {
      * <p>メール送信を実装する日は、ここを差し替える。業務のコードは動かない。
      */
     @Bean
-    public com.example.trackingms.application.port.TrackingNotifier trackingNotifier(
-            com.example.trackingms.application.port.TrackingNoticeRepository notices,
+    public TrackingNotifier trackingNotifier(
+            TrackingNoticeRepository notices,
             java.time.Clock clock) {
-        return new com.example.trackingms.infrastructure.notification
-                .RecordingTrackingNotifier(notices, clock);
+        return new RecordingTrackingNotifier(notices, clock);
     }
 
     @Bean
-    public com.example.trackingms.application.internal.TrackingLookupUseCase trackingLookupUseCase(
+    public TrackingLookupUseCase trackingLookupUseCase(
             TrackingActivityRepository activities,
-            com.example.trackingms.application.port.TrackingLookupLogger lookupLogger) {
-        return new com.example.trackingms.application.internal.TrackingLookupUseCase(
+            TrackingLookupLogger lookupLogger) {
+        return new TrackingLookupUseCase(
                 activities, lookupLogger);
     }
 
     @Bean
-    public com.example.trackingms.application.internal.ManageTrackingUseCase manageTrackingUseCase(
+    public ManageTrackingUseCase manageTrackingUseCase(
             TrackingActivityRepository activities, LocationRepository locations,
-            com.example.trackingms.application.port.TrackingNotifier notifier,
+            TrackingNotifier notifier,
             java.time.Clock clock) {
-        return new com.example.trackingms.application.internal.ManageTrackingUseCase(
+        return new ManageTrackingUseCase(
                 activities, locations, notifier, clock);
     }
 
     @Bean
     public HandlingActivityRegisteredListener handlingActivityRegisteredListener(
             AdvanceTrackingUseCase advanceTracking,
-            com.example.trackingms.application.internal.DetectMisrouteUseCase detectMisroute) {
+            DetectMisrouteUseCase detectMisroute) {
         return new HandlingActivityRegisteredListener(advanceTracking, detectMisroute);
     }
 
@@ -214,20 +228,20 @@ public class TrackingConfig {
     }
 
     @Bean
-    public com.example.trackingms.application.internal.NoteCancellationUseCase
+    public NoteCancellationUseCase
             noteCancellationUseCase(
-            com.example.trackingms.application.port.TrackingActivityRepository activities,
-            com.example.trackingms.application.port.TrackingNoticeRepository notices,
+            TrackingActivityRepository activities,
+            TrackingNoticeRepository notices,
             java.time.Clock clock) {
-        return new com.example.trackingms.application.internal.NoteCancellationUseCase(
+        return new NoteCancellationUseCase(
                 activities, notices, clock);
     }
 
     @Bean
-    public com.example.trackingms.infrastructure.messaging.CargoCancelledListener
+    public CargoCancelledListener
             cargoCancelledListener(
-            com.example.trackingms.application.internal.NoteCancellationUseCase noteCancellation) {
-        return new com.example.trackingms.infrastructure.messaging.CargoCancelledListener(
+            NoteCancellationUseCase noteCancellation) {
+        return new CargoCancelledListener(
                 noteCancellation);
     }
 
@@ -258,29 +272,28 @@ public class TrackingConfig {
     }
 
     @Bean
-    public com.example.trackingms.application.internal.DetectMisrouteUseCase
+    public DetectMisrouteUseCase
             detectMisrouteUseCase(
-            com.example.trackingms.application.port.TrackingActivityRepository activities,
-            com.example.trackingms.application.port.TrackingNotifier notifier) {
-        return new com.example.trackingms.application.internal.DetectMisrouteUseCase(
+            TrackingActivityRepository activities,
+            TrackingNotifier notifier) {
+        return new DetectMisrouteUseCase(
                 activities, notifier);
     }
 
     @Bean
-    public com.example.trackingms.application.internal.DetectCustomsHoldUseCase
+    public DetectCustomsHoldUseCase
             detectCustomsHoldUseCase(
-            com.example.trackingms.application.port.TrackingActivityRepository activities,
-            com.example.trackingms.application.port.TrackingNotifier notifier) {
-        return new com.example.trackingms.application.internal.DetectCustomsHoldUseCase(
+            TrackingActivityRepository activities,
+            TrackingNotifier notifier) {
+        return new DetectCustomsHoldUseCase(
                 activities, notifier);
     }
 
     @Bean
-    public com.example.trackingms.infrastructure.messaging.CustomsStatusChangedListener
+    public CustomsStatusChangedListener
             customsStatusChangedListener(
-            com.example.trackingms.application.internal.DetectCustomsHoldUseCase detect) {
-        return new com.example.trackingms.infrastructure.messaging
-                .CustomsStatusChangedListener(detect);
+            DetectCustomsHoldUseCase detect) {
+        return new CustomsStatusChangedListener(detect);
     }
 
     /**
