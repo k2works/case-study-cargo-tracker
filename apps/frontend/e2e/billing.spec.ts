@@ -365,6 +365,14 @@ test.describe('精算処理（US23）', () => {
       page.getByTestId('overdue-invoices'),
       '件数からたどり着いた先に、対象の請求書が並んでいない',
     ).toBeVisible()
+
+    // **全件の一覧でも見分けられる**（IT12 レビュー・user 中）。状態列は保存上
+    // ずっと「未入金」なので、超過はここでしか気づけない
+    await page.getByRole('link', { name: 'すべての精算書を見る' }).click()
+    await expect(
+      page.getByTestId('issued-invoices'),
+      '全件の一覧で、期限を過ぎた請求書を見分けられない',
+    ).toContainText('（超過）')
   })
 
   /**

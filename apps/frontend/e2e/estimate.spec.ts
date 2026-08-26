@@ -157,6 +157,15 @@ test.describe('輸送見積（US01）', () => {
       page.getByTestId('estimate-mismatch'),
       '見積と食い違ったまま予約が通っている。見積の意味が無くなる',
     ).toContainText(/見積.*食い違/)
+
+    // **直したら判定し直す。**古い警告のまま押して、直した内容が無警告で通るのは危ない
+    // （IT12 レビュー・user 中）。ここでは目的地を変えて、警告の中身が変わることを見る
+    await page.getByLabel('目的地').selectOption('CNSHA')
+    await page.getByRole('button', { name: '登録する' }).click()
+    await expect(
+      page.getByTestId('estimate-mismatch'),
+      '条件を直したのに、前の警告のままになっている',
+    ).toContainText('目的地')
   })
 })
 

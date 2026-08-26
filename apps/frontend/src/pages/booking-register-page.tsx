@@ -127,7 +127,11 @@ export function BookingRegisterPage() {
     }
 
     // **見積と食い違っていたら、まず知らせる**（受入基準 01-7・US04 の未達）。
-    // 2 度目の送信では登録する——確かめたうえで進めるのは営業担当者の判断である
+    // 2 度目の送信では登録する——確かめたうえで進めるのは営業担当者の判断である。
+    //
+    // **押す前に条件を直すのが普通の流れである。**直したら判定し直す
+    // ——出した警告をそのままにすると、**直した内容が無警告で通る**
+    // （IT12 レビュー・user 中）
     const differences = differencesFromEstimate(estimate, {
       originUnLocode,
       destinationUnLocode,
@@ -135,7 +139,10 @@ export function BookingRegisterPage() {
       cargoType: type,
       weightKg,
     })
-    if (differences.length > 0 && mismatch === null) {
+    if (differences.length === 0) {
+      setMismatch(null)
+    } else if (mismatch === null || mismatch.join() !== differences.join()) {
+      // 初めての警告、または前に出した警告と中身が変わった（条件を直した）
       setMismatch(differences)
       return
     }

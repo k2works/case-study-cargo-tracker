@@ -156,7 +156,8 @@ export function PaymentConfirmPage() {
         </div>
         <div>
           <label className="block text-sm" htmlFor="reference">
-            参照番号
+            {/* **任意であることをラベルに書く。**相殺には振込番号が無い */}
+            参照番号（任意）
           </label>
           {/* **必須にしない。**相殺には振込番号が無い。あとから裏を取る手がかりである */}
           <input

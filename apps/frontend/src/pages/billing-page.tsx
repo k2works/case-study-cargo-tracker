@@ -57,6 +57,9 @@ export function BillingPage() {
   const { data: overdueInvoices = [], isLoading: loadingOverdue } = useOverdueInvoices();
   const invoices = overdueOnly ? overdueInvoices : allInvoices;
   const loadingInvoices = overdueOnly ? loadingOverdue : loadingAll;
+  // **超過の判定はサーバの答えをそのまま使う**——画面で日付を比べ直すと、
+  // 業務タイムゾーンの扱いが 2 か所に分かれる
+  const overdueNumbers = new Set(overdueInvoices.map((invoice) => invoice.invoiceNumber));
 
   return (
     <div className="space-y-8">
@@ -207,7 +210,16 @@ export function BillingPage() {
                       <span className="ml-1 text-red-700">（取消済）</span>
                     )}
                   </td>
-                  <td className="px-3 py-2">{invoice.dueDate ?? "—"}</td>
+                  <td className="px-3 py-2">
+                    {/* **期限を過ぎた行は、全件の一覧でも見分けられるようにする。**
+                        状態列は保存上ずっと「未入金」であり（[ADR-028] 決定 5——超過は
+                        日付で判定する）、超過はここでしか気づけない
+                        （IT12 レビュー・user 中） */}
+                    {invoice.dueDate ?? "—"}
+                    {overdueNumbers.has(invoice.invoiceNumber) && (
+                      <span className="ml-1 font-medium text-red-700">（超過）</span>
+                    )}
+                  </td>
                   <td className="px-3 py-2">{formatBusinessDateTime(invoice.issuedAt)}</td>
                 </tr>
               ))}
