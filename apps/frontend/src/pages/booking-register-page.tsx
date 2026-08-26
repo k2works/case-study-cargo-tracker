@@ -141,7 +141,7 @@ export function BookingRegisterPage() {
     })
     if (differences.length === 0) {
       setMismatch(null)
-    } else if (mismatch === null || mismatch.join() !== differences.join()) {
+    } else if (mismatch?.join() !== differences.join()) {
       // 初めての警告、または前に出した警告と中身が変わった（条件を直した）
       setMismatch(differences)
       return

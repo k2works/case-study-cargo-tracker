@@ -513,11 +513,6 @@ public final class Cargo {
      *
      * @throws IllegalStateException 引取済でないとき
      */
-    /** 精算が済んでいるか。**再試行を断らないための判定**（[ADR-028] 決定 1）。 */
-    public boolean isSettled() {
-        return status.booking() == BookingStatus.SETTLED;
-    }
-
     public Cargo settle() {
         if (!status.booking().canAdvanceTo(BookingStatus.SETTLED)) {
             throw new IllegalStateException(
@@ -525,6 +520,18 @@ public final class Cargo {
         }
         return with(new CargoStatus(BookingStatus.SETTLED, status.transport(), status.routing()),
                 itinerary, notification, trackingNumber);
+    }
+
+    /**
+     * 精算が済んでいるか。
+     *
+     * <p><strong>再試行を断らないための判定である</strong>（[ADR-028] 決定 1）。
+     * 精算完了の通知は入金の記録と同じ取引の中で送られるため、届いたあとに
+     * 送り手が失敗すると、予約だけが精算済で残る——そこで断ると、経理担当者は
+     * 何度押しても入金を記録できない。
+     */
+    public boolean isSettled() {
+        return status.booking() == BookingStatus.SETTLED;
     }
 
     /**
