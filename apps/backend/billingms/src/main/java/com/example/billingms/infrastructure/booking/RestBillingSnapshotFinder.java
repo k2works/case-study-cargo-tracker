@@ -34,6 +34,18 @@ public class RestBillingSnapshotFinder implements BillingSnapshotFinder {
      */
     public static final String SYSTEM_PRINCIPAL = "system:billingms";
 
+    /**
+     * 1 件を引く経路。
+     *
+     * <p><strong>定数で持つ。</strong>本番のコードは契約フィクスチャ（テスト側）を
+     * 読めないため、経路そのものを共有できない。かわりに<strong>両側を突き合わせる
+     * 検査</strong>を契約テストに置く——どちらかを直したら赤になる。
+     */
+    public static final String SNAPSHOT_PATH = "/api/v1/bookings/{bookingId}/billing-snapshot";
+
+    /** 対象の一覧を引く経路。 */
+    public static final String BILLABLE_PATH = "/api/v1/bookings/billable";
+
     private final RestClient restClient;
 
     public RestBillingSnapshotFinder(RestClient restClient) {
@@ -48,7 +60,7 @@ public class RestBillingSnapshotFinder implements BillingSnapshotFinder {
             // 「見つかりません」に化けて原因が消える
             response = restClient.get()
                     .uri(uriBuilder -> uriBuilder
-                            .path("/api/v1/bookings/{bookingId}/billing-snapshot")
+                            .path(SNAPSHOT_PATH)
                             .build(bookingId))
                     .header(AuthenticatedUser.USER_ID_HEADER, SYSTEM_PRINCIPAL)
                     .retrieve()
@@ -66,7 +78,7 @@ public class RestBillingSnapshotFinder implements BillingSnapshotFinder {
     @Override
     public List<BillableCargoSnapshot> findAllBillable() {
         BillingSnapshotResponse[] responses = restClient.get()
-                .uri("/api/v1/bookings/billable")
+                .uri(BILLABLE_PATH)
                 .header(AuthenticatedUser.USER_ID_HEADER, SYSTEM_PRINCIPAL)
                 .retrieve()
                 .body(BillingSnapshotResponse[].class);

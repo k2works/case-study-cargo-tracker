@@ -84,17 +84,25 @@ class TransportChargeTest {
         }
 
         /**
-         * <strong>1kg でも 100kg でも下限が効く境目を確かめる。</strong>
+         * <strong>境目そのものを踏む</strong>（99 / 100 / 101）。
          *
-         * <p>100kg = 係数 0.1 でちょうど下限。101kg からは実際の重量で計算される。
+         * <p>100kg = 係数 0.1 でちょうど下限。<strong>200kg で確かめても、
+         * 比較の向きを誤っている実装（&lt; ではなく &lt;=、あるいは 100 ではなく
+         * 1000 を境目にした実装）を判別しない</strong>——離れた値はどちらでも通る。
+         *
+         * <p>切り替わるのは 100 と 101 のあいだである。99 と 100 は同じ 0.1 に
+         * なるが、<strong>下限が効いている側</strong>を 2 点で押さえておくと、
+         * 下限を外したときに 2 つとも赤くなる。
          */
         @Test
         @DisplayName("下限の境目で切り替わる")
         void switchesAtTheBoundary() {
+            assertThat(TransportCharge.of(1, new BigDecimal("99"), CargoType.GENERAL)
+                    .weightFactor()).isEqualByComparingTo("0.1");
             assertThat(TransportCharge.of(1, new BigDecimal("100"), CargoType.GENERAL)
                     .weightFactor()).isEqualByComparingTo("0.1");
-            assertThat(TransportCharge.of(1, new BigDecimal("200"), CargoType.GENERAL)
-                    .weightFactor()).isEqualByComparingTo("0.2");
+            assertThat(TransportCharge.of(1, new BigDecimal("101"), CargoType.GENERAL)
+                    .weightFactor()).isEqualByComparingTo("0.101");
         }
     }
 

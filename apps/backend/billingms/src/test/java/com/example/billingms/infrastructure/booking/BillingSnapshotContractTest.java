@@ -183,12 +183,22 @@ class BillingSnapshotContractTest {
         });
     }
 
-    /** 呼び出す経路と主体は契約が決める。**写して持つと、片方だけ直る。** */
+    /**
+     * 呼び出す経路と主体は契約が決める。**写して持つと、片方だけ直る。**
+     *
+     * <p>本番のコードは契約フィクスチャを読めないので、経路そのものは共有できない。
+     * <strong>ここで両側を突き合わせる</strong>——リテラルと比べても、契約を直した
+     * ときに呼び出し側が追随したかは分からない。
+     */
     @Test
     @DisplayName("呼び出す経路と主体は契約から取る")
     void usesThePathAndPrincipalFromTheContract() {
-        assertThat(BillingSnapshotContract.PATH)
-                .isEqualTo("/api/v1/bookings/{bookingId}/billing-snapshot");
+        assertThat(RestBillingSnapshotFinder.SNAPSHOT_PATH)
+                .as("引く経路が契約と食い違っている。相手は 404 を返す")
+                .isEqualTo(BillingSnapshotContract.PATH);
+        assertThat(RestBillingSnapshotFinder.BILLABLE_PATH)
+                .as("一覧の経路が契約と食い違っている")
+                .isEqualTo(BillingSnapshotContract.UNBILLED_PATH);
         assertThat(RestBillingSnapshotFinder.SYSTEM_PRINCIPAL)
                 .as("名乗りが契約と食い違っている。相手のフィルタが一律に断る")
                 .isEqualTo(BillingSnapshotContract.CALLER_PRINCIPAL);

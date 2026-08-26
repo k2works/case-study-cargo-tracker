@@ -30,12 +30,15 @@ import org.springframework.web.client.RestClient;
 @DisplayName("料金算出の入力の取得（ACL）")
 class RestBillingSnapshotFinderTest {
 
+    /** 相手の所在。**経路は定数から組む**——写すと、経路を直したときに片方だけ残る。 */
+    private static final String BASE = "http://booking.test";
+
     private MockRestServiceServer server;
     private RestBillingSnapshotFinder finder;
 
     @BeforeEach
     void setUp() {
-        RestClient.Builder builder = RestClient.builder().baseUrl("http://booking.test");
+        RestClient.Builder builder = RestClient.builder().baseUrl(BASE);
         server = MockRestServiceServer.bindTo(builder).build();
         finder = new RestBillingSnapshotFinder(builder.build());
     }
@@ -71,7 +74,7 @@ class RestBillingSnapshotFinderTest {
     @DisplayName("契約の経路を呼び、こちらの言葉へ変換する")
     void callsTheContractPathAndTranslates() {
         server.expect(requestTo(
-                        "http://booking.test/api/v1/bookings/BKG-2026000007/billing-snapshot"))
+                        BASE + RestBillingSnapshotFinder.SNAPSHOT_PATH.replace("{bookingId}", "BKG-2026000007")))
                 .andRespond(withSuccess(SNAPSHOT_JSON, MediaType.APPLICATION_JSON));
 
         BillableCargoSnapshot snapshot = finder.findBillable("BKG-2026000007").orElseThrow();
@@ -93,7 +96,7 @@ class RestBillingSnapshotFinderTest {
     @DisplayName("システムとして名乗り、利用者ヘッダは伝播しない")
     void identifiesItselfWithoutPropagatingTheUser() {
         server.expect(requestTo(
-                        "http://booking.test/api/v1/bookings/BKG-2026000007/billing-snapshot"))
+                        BASE + RestBillingSnapshotFinder.SNAPSHOT_PATH.replace("{bookingId}", "BKG-2026000007")))
                 .andExpect(header(AuthenticatedUser.USER_ID_HEADER,
                         BillingSnapshotContract.CALLER_PRINCIPAL))
                 // **ロールは付けない。** 利用者の代理ではない
@@ -115,7 +118,7 @@ class RestBillingSnapshotFinderTest {
     @DisplayName("料金算出の対象でなければ、空を返す")
     void returnsEmptyWhenTheCargoCannotBeBilled() {
         server.expect(requestTo(
-                        "http://booking.test/api/v1/bookings/BKG-2026000001/billing-snapshot"))
+                        BASE + RestBillingSnapshotFinder.SNAPSHOT_PATH.replace("{bookingId}", "BKG-2026000001")))
                 .andRespond(withResourceNotFound());
 
         assertThat(finder.findBillable("BKG-2026000001")).isEmpty();
@@ -132,7 +135,7 @@ class RestBillingSnapshotFinderTest {
     @DisplayName("相手の障害は空に倒さない")
     void doesNotSwallowServerErrors() {
         server.expect(requestTo(
-                        "http://booking.test/api/v1/bookings/BKG-2026000007/billing-snapshot"))
+                        BASE + RestBillingSnapshotFinder.SNAPSHOT_PATH.replace("{bookingId}", "BKG-2026000007")))
                 .andRespond(withServerError());
 
         assertThatThrownBy(() -> finder.findBillable("BKG-2026000007"))
@@ -143,7 +146,7 @@ class RestBillingSnapshotFinderTest {
     @Test
     @DisplayName("対象になる予約を並べて受け取る")
     void listsBillableCargoes() {
-        server.expect(requestTo("http://booking.test/api/v1/bookings/billable"))
+        server.expect(requestTo(BASE + RestBillingSnapshotFinder.BILLABLE_PATH))
                 .andExpect(header(AuthenticatedUser.USER_ID_HEADER,
                         BillingSnapshotContract.CALLER_PRINCIPAL))
                 .andRespond(withSuccess("[" + SNAPSHOT_JSON + "]",
@@ -160,7 +163,7 @@ class RestBillingSnapshotFinderTest {
     @Test
     @DisplayName("対象が 1 件も無くても落ちない")
     void toleratesAnEmptyList() {
-        server.expect(requestTo("http://booking.test/api/v1/bookings/billable"))
+        server.expect(requestTo(BASE + RestBillingSnapshotFinder.BILLABLE_PATH))
                 .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
 
         assertThat(finder.findAllBillable()).isEmpty();
