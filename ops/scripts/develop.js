@@ -407,12 +407,51 @@ function k8sDeployment(service) {
 }
 
 /**
+ * Deployment がいま指しているイメージ名を返す。
+ *
+ * @param {string} service サービス名
+ * @returns {string | undefined} イメージ名（取得できない場合は undefined）
+ */
+function currentDeploymentImage(service) {
+  const result = spawnCommand(
+    'kubectl',
+    [
+      '--context', K8S_CONTEXT,
+      '-n', K8S_NAMESPACE,
+      'get', k8sDeployment(service),
+      '-o', `jsonpath={.spec.template.spec.containers[?(@.name=="${service}")].image}`,
+    ],
+    { stdio: ['ignore', 'pipe', 'pipe'], env: cleanDockerEnv() },
+  );
+  if (result.status !== 0) {
+    return undefined;
+  }
+  return String(result.stdout ?? '').trim() || undefined;
+}
+
+/**
  * アプリケーション Deployment に指定タグのイメージを設定する。
+ *
+ * **タグが今と同じでも Pod を作り直す。** `kubectl set image` は spec が変わったときだけ
+ * ロールアウトを起こす。既定のタグ（0.0.1）は base のマニフェストに直書きされているため、
+ * `dev:k8s:images` でイメージを作り直しても spec は変わらず、走っている Pod は古い jar を
+ * 掴んだままになる。IT10 はこれで「反映したつもり」の実環境確認をして誤った赤を見た。
+ * タグが同じときは `rollout restart` に切り替えて、必ず新しいイメージを掴み直させる。
  *
  * @param {string} tag Docker イメージタグ
  */
 function setApplicationDeploymentImages(tag = imageTag()) {
   K8S_DEPLOYMENTS.forEach((service) => {
+    const desired = dockerImage(service, tag);
+    const current = currentDeploymentImage(service);
+
+    if (current === desired) {
+      console.log(`${service}: イメージ名が今と同じ（${desired}）ため、再起動で掴み直します。`);
+      run('kubectl', ['--context', K8S_CONTEXT, '-n', K8S_NAMESPACE, 'rollout', 'restart', k8sDeployment(service)]);
+      return;
+    }
+
+    console.log(`${service}: ${current ?? '(不明)'} → ${desired}`);
     run('kubectl', [
       '--context', K8S_CONTEXT,
       '-n',
@@ -420,9 +459,27 @@ function setApplicationDeploymentImages(tag = imageTag()) {
       'set',
       'image',
       k8sDeployment(service),
-      `${service}=${dockerImage(service, tag)}`,
+      `${service}=${desired}`,
     ]);
   });
+}
+
+/**
+ * アプリケーション Pod の起動時刻とイメージを表示する。
+ *
+ * タスクの成功メッセージは「反映できたか」を判別しない（IT10 Problem 7）。
+ * 起動時刻が今より前のままなら、その Pod は作り直されていない。
+ */
+function reportApplicationPodStartTimes() {
+  console.log('');
+  console.log('反映を確かめてください（起動時刻が今でなければ、その Pod は作り直されていません）。');
+  run('kubectl', [
+    '--context', K8S_CONTEXT,
+    '-n', K8S_NAMESPACE,
+    'get', 'pods',
+    '-l', 'app',
+    '-o', 'custom-columns=POD:.metadata.name,IMAGE:.spec.containers[0].image,STARTED:.status.startTime,STATUS:.status.phase',
+  ]);
 }
 
 /**
@@ -824,12 +881,14 @@ export default function (gulp) {
   gulp.task('dev:k8s:rollout:restart', (done) => {
     restartApplicationDeployments();
     waitApplicationRollouts();
+    reportApplicationPodStartTimes();
     done();
   });
 
   gulp.task('dev:k8s:rollout:image', (done) => {
     setApplicationDeploymentImages();
     waitApplicationRollouts();
+    reportApplicationPodStartTimes();
     done();
   });
 
