@@ -43,3 +43,8 @@ app:
     # しかも自分自身を指していた IT5 の欠陥のように「経路の確定だけが必ず失敗する」形になる。
     # 環境ごとに APP_ROUTING_SERVICE_BASE_URL で上書きする
     base-url: ${APP_ROUTING_SERVICE_BASE_URL:http://localhost:8083}
+  billing-service:
+    # 見積の概算料金を試算する先（[ADR-028] 決定 6）。**式は billingms の 1 か所にある**
+    # ——こちらで計算すると、荷主に出した見積と請求が違う金額になる。
+    # 環境ごとに APP_BILLING_SERVICE_BASE_URL で上書きする
+    base-url: ${APP_BILLING_SERVICE_BASE_URL:http://localhost:8086}

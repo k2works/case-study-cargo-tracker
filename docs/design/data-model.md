@@ -125,7 +125,8 @@ package "booking_db\n(Booking Context)" #LightBlue {
   entity "estimate\n（見積）" as estimate {
     * id : BIGINT <<PK>>
     --
-    * estimate_id : UUID <<UK>>
+    * estimate_id : VARCHAR(36) <<UK>>
+    estimate_number : VARCHAR(20) <<UK>>
     * origin_unlocode : VARCHAR(5)
     * destination_unlocode : VARCHAR(5)
     * status : VARCHAR(20)
@@ -475,7 +476,8 @@ entity "leg\n（輸送区間）" as leg {
 entity "estimate\n（見積）" as estimate {
   * id : BIGINT <<PK, BIGSERIAL>>
   --
-  * estimate_id : UUID <<UK, NOT NULL>>
+  * estimate_id : VARCHAR(36) <<UK, NOT NULL>>
+  * estimate_number : VARCHAR(20) <<UK, NOT NULL>>
   * origin_unlocode : VARCHAR(5) <<NOT NULL>>
   * destination_unlocode : VARCHAR(5) <<NOT NULL>>
   * arrival_deadline : DATE <<NOT NULL>>
@@ -517,6 +519,16 @@ estimate ||--o{ route_candidate : "ルート候補を持つ"
 
 @enduml
 ```
+
+> **識別子は 2 つ持つ**（[ADR-028](../adr/028-settlement-and-quotation.md) 決定 7）。
+> `estimate_id` は UUID で、URL と内部の識別子として使う——**推測できないこと**に意味がある
+> （連番だけにすると、URL を 1 つ増減させて他の荷主の見積が開ける）。`estimate_number` は
+> 荷主と電話で読み合わせる番号（`EST-YYYY` + 6 桁。受入基準 01-4）。
+>
+> 型を `UUID` ではなく `VARCHAR(36)` にしているのは、H2 と PostgreSQL の双方で
+> ドライバの扱いを揃えるためである（文字列として読み書きする）。
+
+
 
 ---
 

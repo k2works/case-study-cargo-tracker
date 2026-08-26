@@ -115,6 +115,43 @@ public class BookingConfig {
         return factory;
     }
 
+    /**
+     * 料金の試算を billingms に問う ACL（US01-3・[ADR-028] 決定 6）。
+     *
+     * <p><strong>本 IT で増えた結合方向である</strong>——これまで bookingms → billingms は
+     * 無かった。<strong>期限を置く</strong>のは routingms と同じ理由で、応答が返らない
+     * だけの状態で見積 1 件につきスレッドが 1 本ずつ埋まると、見積と無関係な画面まで
+     * 巻き込んで止まるからである。
+     */
+    @Bean
+    public com.example.bookingms.application.port.ChargeQuoteFinder chargeQuoteFinder(
+            @Value("${app.billing-service.base-url}") String baseUrl) {
+        return new com.example.bookingms.infrastructure.billing.RestChargeQuoteFinder(
+                RestClient.builder().baseUrl(baseUrl).requestFactory(routingRequestFactory())
+                        .build());
+    }
+
+    /** 見積の永続化（US01）。 */
+    @Bean
+    public com.example.bookingms.application.port.EstimateRepository estimateRepository(
+            com.example.bookingms.infrastructure.persistence.EstimateMapper estimates,
+            Clock clock) {
+        return new com.example.bookingms.infrastructure.persistence.MyBatisEstimateRepository(
+                estimates, clock);
+    }
+
+    /** 輸送見積を作る（US01）。 */
+    @Bean
+    public com.example.bookingms.application.internal.CreateEstimateUseCase createEstimateUseCase(
+            RouteCandidateFinder routes,
+            com.example.bookingms.application.port.ChargeQuoteFinder quotes,
+            LocationRepository locations,
+            com.example.bookingms.application.port.EstimateRepository estimates,
+            Clock clock) {
+        return new com.example.bookingms.application.internal.CreateEstimateUseCase(
+                routes, quotes, locations, estimates, clock);
+    }
+
     @Bean
     public RequestConsultationUseCase requestConsultationUseCase(CargoRepository cargoes) {
         return new RequestConsultationUseCase(cargoes);

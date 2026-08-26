@@ -79,9 +79,9 @@ class SchemaDesignConsistencyTest {
      * IT7・IT8 の「注に列挙して約束する」形が守られなかったのは、列挙を誰も判定しなかったからで、
      * 一覧そのものが悪いのではない。<strong>減る向きにしか動かせない</strong>ことが要る。
      */
-    private static final Map<String, String> PENDING_TABLES = Map.of(
-            "booking_db.estimate", "US01 輸送見積（IT12・実装中）",
-            "booking_db.route_candidate", "US01 輸送見積（IT12・実装中）");
+    // すべて実装済み（IT12 で estimate / route_candidate / payment が入った）。
+    // **空でも一覧は残す**——次に設計だけ先行するテーブルが来たときの置き場である
+    private static final Map<String, String> PENDING_TABLES = Map.of();
 
     /** 設計にあるが、その列を使うストーリーがまだ来ていないもの。扱いは {@link #PENDING_TABLES} と同じ。 */
     private static final Map<String, String> PENDING_COLUMNS = Map.of(

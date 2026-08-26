@@ -8,6 +8,9 @@ public class LocationRecord {
     private String countryCode;
     private String timeZone;
 
+    /** 地域区分（[ADR-027] 決定 1 の改訂）。**距離の代わり**であり、料金の試算に効く。 */
+    private String region;
+
     public String getUnlocode() {
         return unlocode;
     }
@@ -38,5 +41,13 @@ public class LocationRecord {
 
     public void setTimeZone(String timeZone) {
         this.timeZone = timeZone;
+    }
+
+    public String getRegion() {
+        return region;
+    }
+
+    public void setRegion(String region) {
+        this.region = region;
     }
 }

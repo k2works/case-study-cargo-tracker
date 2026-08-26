@@ -112,6 +112,17 @@ public class BillingConfig {
                         .requestFactory(bookingRequestFactory()).build());
     }
 
+    /**
+     * 料金の試算（US01-3・[ADR-028] 決定 6）。
+     *
+     * <p><strong>式は 1 か所にある。</strong>見積が自分で計算すると、荷主に出した
+     * 見積と請求が違う金額になる。
+     */
+    @Bean
+    public com.example.billingms.application.internal.QuoteChargeUseCase quoteChargeUseCase() {
+        return new com.example.billingms.application.internal.QuoteChargeUseCase();
+    }
+
     /** 精算の処理（US23）。 */
     @Bean
     public com.example.billingms.application.internal.SettleInvoiceUseCase settleInvoiceUseCase(

@@ -27,6 +27,13 @@ public class MyBatisLocationRepository implements LocationRepository {
     }
 
     @Override
+    public java.util.Map<String, String> regionsByUnLocode() {
+        // 地点マスタは 10 件程度である。1 件ずつ引くより 1 回で読む
+        return mapper.findAll().stream().collect(java.util.stream.Collectors.toMap(
+                LocationRecord::getUnlocode, LocationRecord::getRegion));
+    }
+
+    @Override
     public Optional<ZoneId> timeZoneOf(String unLocode) {
         return row(unLocode).map(LocationRecord::getTimeZone).map(ZoneId::of);
     }

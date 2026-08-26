@@ -53,6 +53,12 @@ class RestRouteCandidateFinderTest {
         }
 
         @Override
+        public java.util.Map<String, String> regionsByUnLocode() {
+            // この検査は地域区分を使わない。**空を返す**——使う経路が現れたら赤になる
+            return java.util.Map.of();
+        }
+
+        @Override
         public Optional<Location> findByUnLocode(String unLocode) {
             locationReads++;
             return List.of(TOKYO, BUSAN, LOS_ANGELES).stream()
