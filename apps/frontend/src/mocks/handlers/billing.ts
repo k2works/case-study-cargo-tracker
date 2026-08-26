@@ -30,7 +30,7 @@ import {
   type BookingStatus,
   type CargoType,
 } from '../../features/booking/types'
-import { bookings, shippers } from '../data'
+import { LOCATIONS, bookings, shippers } from '../data'
 import type { MockBooking } from '../data'
 
 /** 1 区間・1,000kg・一般貨物のときの運賃（[ADR-027] 決定 1）。 */
@@ -43,11 +43,50 @@ const CARGO_TYPE_FACTORS: Record<string, number> = {
   REFRIGERATED: 1.5,
 }
 
+/** 地域係数（正典の値をそのまま使う。[ADR-027] 決定 1 の改訂）。 */
+const REGION_FACTORS: Record<string, number> = {
+  DOMESTIC: 1.0,
+  NEAR_SEA: 2.5,
+  OCEAN: 6.0,
+}
+
+const REGION_LABELS: Record<string, string> = {
+  DOMESTIC: '国内',
+  NEAR_SEA: '近海',
+  OCEAN: '遠洋',
+}
+
+/** 地点の地域区分。**知らない港は断る**——既定値に倒すと、その港だけ安く請求される。 */
+function regionOf(unLocode: string) {
+  const location = LOCATIONS.find((item) => item.unLocode === unLocode)
+  if (location === undefined) {
+    throw new Error(`扱いを決めていない地点です: ${unLocode}`)
+  }
+  return location.region
+}
+
 /** 重量係数の下限。運ぶ手間は重量に比例しない——置かないと軽量の貨物が 0 円に近づく。 */
 const MIN_WEIGHT_FACTOR = 0.1
 
-/** 消費税率（決定 8）。**業務として扱うのは US23**。 */
+/** 消費税率（決定 8）。 */
 const TAX_RATE = 0.1
+
+/**
+ * 税率（決定 8 の改訂）。**国が異なれば輸出免税。**
+ *
+ * 分からなければ課税に倒す——免税に倒すと、国コードを引けない不具合が
+ * 「消費税を取り忘れる」形で出る。
+ */
+function taxRateOf(booking: MockBooking) {
+  const origin = LOCATIONS.find((item) => item.unLocode === booking.originUnLocode)
+  const destination = LOCATIONS.find(
+    (item) => item.unLocode === booking.destinationUnLocode,
+  )
+  if (origin === undefined || destination === undefined) {
+    return TAX_RATE
+  }
+  return origin.countryCode === destination.countryCode ? TAX_RATE : 0
+}
 
 /**
  * キャンセル料の料率（正典のビジネスルール 6）。
@@ -80,6 +119,8 @@ type MockInvoice = {
     amount: { value: number; currency: string }
   } | null
   taxRate: number
+  /** 輸出免税か。**税区分として画面に出す**——「消費税 ¥0」だけでは計算漏れと読める。 */
+  taxExempt: boolean
   taxAmount: { value: number; currency: string }
   totalAmount: { value: number; currency: string }
   paymentStatus: string
@@ -109,12 +150,27 @@ function shipperOf(booking: MockBooking) {
 
 /** 基本料金の根拠（決定 1）。**距離ではなく区間数を使う。** */
 export function basisOf(booking: MockBooking) {
-  const legCount = booking.itinerary?.length ?? 0
+  const legs = booking.itinerary ?? []
+  const legCount = legs.length
   const weightFactor = Math.max(weightFactorOf(booking.weightKg), MIN_WEIGHT_FACTOR)
+  // **両端の重いほうを採る**（決定 1 の改訂）。片端が国内でも、太平洋を渡れば
+  // 遠洋の費用がかかる
+  const legRegions = legs.map((leg) => {
+    const load = regionOf(leg.loadUnLocode)
+    const unload = regionOf(leg.unloadUnLocode)
+    return REGION_FACTORS[load] >= REGION_FACTORS[unload] ? load : unload
+  })
+  const heaviest = legRegions.reduce<string | null>(
+    (left, right) =>
+      left === null || REGION_FACTORS[right] > REGION_FACTORS[left] ? right : left,
+    null,
+  )
   return {
     baseFare: yen(BASE_FARE),
     legCount,
-    legFactor: legCount,
+    legFactor: legRegions.reduce((sum, region) => sum + REGION_FACTORS[region], 0),
+    region: heaviest,
+    regionLabel: heaviest === null ? null : REGION_LABELS[heaviest],
     weightKg: booking.weightKg,
     weightFactor,
     cargoType: booking.type,
@@ -187,7 +243,8 @@ function calculationOf(booking: MockBooking) {
 
   const beforeTax =
     baseAmount.value - (discountAmount?.value ?? 0) + (cancellationFee?.amount.value ?? 0)
-  const taxAmount = yen(beforeTax * TAX_RATE)
+  const taxRate = taxRateOf(booking)
+  const taxAmount = yen(beforeTax * taxRate)
 
   return {
     bookingId: booking.bookingId,
@@ -199,7 +256,8 @@ function calculationOf(booking: MockBooking) {
     discountAmount,
     misroute: booking.misroute ?? null,
     cancellationFee,
-    taxRate: TAX_RATE,
+    taxRate,
+    taxExempt: taxRate === 0,
     taxAmount,
     totalAmount: yen(beforeTax + taxAmount.value),
   }
@@ -312,7 +370,8 @@ export const billingHandlers = [
       (calculation.discountAmount?.value ?? 0) +
       (calculation.cancellationFee?.amount.value ?? 0) +
       adjustmentTotal
-    const taxAmount = yen(beforeTax * TAX_RATE)
+    const taxRate = calculation.taxRate
+    const taxAmount = yen(beforeTax * taxRate)
 
     invoiceSequence += 1
     const invoice: MockInvoice = {
@@ -336,7 +395,8 @@ export const billingHandlers = [
               feeRate: calculation.cancellationFee.feeRate,
               amount: calculation.cancellationFee.amount,
             },
-      taxRate: TAX_RATE,
+      taxRate,
+      taxExempt: taxRate === 0,
       taxAmount,
       totalAmount: yen(beforeTax + taxAmount.value),
       // **発行の時点では未入金**（決定 3）。入金の確認は US23

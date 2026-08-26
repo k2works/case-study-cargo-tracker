@@ -128,18 +128,22 @@ export type MockBooking = {
  * **本物の種データ（bookingms の V3）と同じ 10 件にする。** モックだけが狭いと、
  * 画面は少ない選択肢で動くまま、本番では出るはずの港が「出ていない」と報告される
  * （IT9 で 5 件しか無く、旅程が参照している CNSHA すら入っていなかった）。
+ *
+ * **国コードと地域区分も持つ**（IT12）。前者は輸出免税の判定、後者は区間係数に効く
+ * （[ADR-027] 決定 1・8 の改訂）。持たないと、モックだけが国内の運賃を返し、
+ * 画面は「動く」まま本番と違う金額を出す。
  */
 export const LOCATIONS = [
-  { unLocode: 'JPTYO', name: 'Tokyo', timeZone: 'Asia/Tokyo' },
-  { unLocode: 'JPYOK', name: 'Yokohama', timeZone: 'Asia/Tokyo' },
-  { unLocode: 'JPOSA', name: 'Osaka', timeZone: 'Asia/Tokyo' },
-  { unLocode: 'USLAX', name: 'Los Angeles', timeZone: 'America/Los_Angeles' },
-  { unLocode: 'USNYC', name: 'New York', timeZone: 'America/New_York' },
-  { unLocode: 'CNSHA', name: 'Shanghai', timeZone: 'Asia/Shanghai' },
-  { unLocode: 'SGSIN', name: 'Singapore', timeZone: 'Asia/Singapore' },
-  { unLocode: 'DEHAM', name: 'Hamburg', timeZone: 'Europe/Berlin' },
-  { unLocode: 'NLRTM', name: 'Rotterdam', timeZone: 'Europe/Amsterdam' },
-  { unLocode: 'AUMEL', name: 'Melbourne', timeZone: 'Australia/Melbourne' },
+  { unLocode: 'JPTYO', name: 'Tokyo', timeZone: 'Asia/Tokyo', countryCode: 'JP', region: 'DOMESTIC' },
+  { unLocode: 'JPYOK', name: 'Yokohama', timeZone: 'Asia/Tokyo', countryCode: 'JP', region: 'DOMESTIC' },
+  { unLocode: 'JPOSA', name: 'Osaka', timeZone: 'Asia/Tokyo', countryCode: 'JP', region: 'DOMESTIC' },
+  { unLocode: 'USLAX', name: 'Los Angeles', timeZone: 'America/Los_Angeles', countryCode: 'US', region: 'OCEAN' },
+  { unLocode: 'USNYC', name: 'New York', timeZone: 'America/New_York', countryCode: 'US', region: 'OCEAN' },
+  { unLocode: 'CNSHA', name: 'Shanghai', timeZone: 'Asia/Shanghai', countryCode: 'CN', region: 'NEAR_SEA' },
+  { unLocode: 'SGSIN', name: 'Singapore', timeZone: 'Asia/Singapore', countryCode: 'SG', region: 'NEAR_SEA' },
+  { unLocode: 'DEHAM', name: 'Hamburg', timeZone: 'Europe/Berlin', countryCode: 'DE', region: 'OCEAN' },
+  { unLocode: 'NLRTM', name: 'Rotterdam', timeZone: 'Europe/Amsterdam', countryCode: 'NL', region: 'OCEAN' },
+  { unLocode: 'AUMEL', name: 'Melbourne', timeZone: 'Australia/Melbourne', countryCode: 'AU', region: 'OCEAN' },
 ]
 
 /**

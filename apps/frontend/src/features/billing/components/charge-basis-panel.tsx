@@ -8,8 +8,8 @@ import type { ChargeBasis, Money } from '../types'
  * 経理担当者は請求の根拠を荷主に説明する。金額だけを出すと、聞かれたときに答えられない。
  *
  * <p><strong>距離は持っていない</strong>ことを画面が言う。港のマスタに緯度経度が無く、
- * 航海も距離を持たない。区間数で代替していることを黙っていると、
- * <strong>受入基準どおりに距離で計算していると読まれる</strong>。
+ * 航海も距離を持たない。<strong>区間と地域区分で代替している</strong>ことを黙っていると、
+ * 受入基準どおりに距離で計算していると読まれる。
  */
 export function ChargeBasisPanel({
   basis,
@@ -35,6 +35,10 @@ export function ChargeBasisPanel({
         <div>
           <dt className="text-sm text-gray-600">区間数</dt>
           <dd>{basis.legCount} 区間</dd>
+        </div>
+        <div>
+          <dt className="text-sm text-gray-600">地域区分</dt>
+          <dd>{basis.regionLabel ?? '—'}</dd>
         </div>
         <div>
           <dt className="text-sm text-gray-600">区間係数</dt>
@@ -66,8 +70,9 @@ export function ChargeBasisPanel({
         {/* **代用が粗いことは書ける。根拠が無いことは書けない**（[ADR-027] 決定 1） */}
         {/* **改行を空白にしない。** JSX の改行はそのまま半角空白になり、
             句点の直後に空きができる（キャプチャで気づいた） */}
-        輸送距離は保持していないため、<strong>区間数で代替</strong>
-        {'しています。東京 → 横浜と東京 → ロサンゼルスは、どちらも 1 区間として扱われます。'}
+        輸送距離は保持していないため、<strong>区間ごとの地域区分で代替</strong>
+        {'しています。区間係数は区間ごとの係数（国内 1.0・近海 2.5・遠洋 6.0）の合計で、'}
+        {'両端の区分が違う区間は重いほうを採ります。'}
       </p>
     </section>
   )

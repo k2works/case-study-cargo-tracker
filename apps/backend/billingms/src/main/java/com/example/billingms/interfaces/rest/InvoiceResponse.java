@@ -23,6 +23,8 @@ import java.util.List;
  * @param lineItems 調整の明細
  * @param cancellationFee キャンセル料
  * @param taxRate 税率
+ * @param taxExempt 輸出免税か。**税区分として画面に出す**——「消費税 ¥0」だけでは
+ *        計算漏れと読める（[ADR-027] 決定 8 の改訂）
  * @param taxAmount 消費税
  * @param totalAmount 合計
  * @param paymentStatus 支払いの状態
@@ -41,6 +43,7 @@ public record InvoiceResponse(
         List<LineItemResponse> lineItems,
         ChargeCalculationResponse.CancellationFeeResponse cancellationFee,
         BigDecimal taxRate,
+        boolean taxExempt,
         MoneyResponse taxAmount,
         MoneyResponse totalAmount,
         String paymentStatus,
@@ -83,6 +86,7 @@ public record InvoiceResponse(
                                 invoice.cancellationFee().feeRate(),
                                 MoneyResponse.from(invoice.cancellationFee().amount())),
                 invoice.taxRate().value(),
+                invoice.taxRate().exempted(),
                 MoneyResponse.from(invoice.taxAmount()),
                 MoneyResponse.from(invoice.totalAmount()),
                 invoice.paymentStatus().name(),

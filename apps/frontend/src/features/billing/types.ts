@@ -64,9 +64,14 @@ export type UnbilledBooking = {
 export type ChargeBasis = {
   /** 1 区間・1,000kg・一般貨物のときの運賃。 */
   baseFare: Money
-  /** 旅程の区間数。**距離の代わり**（決定 1）。 */
+  /** 旅程の区間数。 */
   legCount: number
+  /** 区間係数（区間ごとの地域係数の合計）。**距離の代わり**（決定 1 の改訂）。 */
   legFactor: number
+  /** 旅程で最も重い地域区分。運んでいなければ `null`。 */
+  region: string | null
+  /** 地域区分の表示名。**「なぜ 1 区間で 30 万円か」はこれが無いと読めない。** */
+  regionLabel: string | null
   weightKg: number
   weightFactor: number
   cargoType: string
@@ -109,6 +114,8 @@ export type ChargeCalculation = {
     amount: Money
   } | null
   taxRate: number
+  /** 輸出免税か（決定 8 の改訂）。 */
+  taxExempt: boolean
   taxAmount: Money
   /** 調整を入れる前の合計。 */
   totalAmount: Money
@@ -127,6 +134,13 @@ export type Invoice = {
   lineItems: LineItem[]
   cancellationFee: { bookingStatusLabel: string; feeRate: number; amount: Money } | null
   taxRate: number
+  /**
+   * 輸出免税か（決定 8 の改訂）。
+   *
+   * **税区分として画面に出す**——「消費税 ¥0」だけでは、免税なのか計算漏れなのか
+   * 読めない。荷主から問われたときに答えられない。
+   */
+  taxExempt: boolean
   taxAmount: Money
   totalAmount: Money
   paymentStatus: PaymentStatus

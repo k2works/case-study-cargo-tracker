@@ -15,7 +15,12 @@ describe("精算のモックが本物と同じ答えを返す", () => {
     return {
       weightKg,
       type: "GENERAL",
-      itinerary: Array.from({ length: legCount }, () => ({}) as never),
+      // **国内の区間で作る。**地域区分を入れる前と同じ係数（1.0）になるため、
+      // ここで見たいこと（丸めの向きと精度）だけが効く
+      itinerary: Array.from({ length: legCount }, () => ({
+        loadUnLocode: 'JPTYO',
+        unloadUnLocode: 'JPYOK',
+      })) as never,
     } as unknown as MockBooking;
   }
 

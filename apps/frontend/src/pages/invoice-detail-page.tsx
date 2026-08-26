@@ -120,7 +120,11 @@ export function InvoiceDetailPage() {
             ))}
             <tr className="border-b border-gray-200">
               <th className="px-3 py-2 text-left">
-                消費税（{formatRate(invoice.taxRate)}）
+                {/* **税区分を出す**（[ADR-027] 決定 8 の改訂）。「消費税 ¥0」だけでは、
+                    免税なのか計算漏れなのか読めない */}
+                {invoice.taxExempt
+                  ? '消費税（輸出免税）'
+                  : `消費税（${formatRate(invoice.taxRate)}）`}
               </th>
               <td className="px-3 py-2 text-right">{formatYen(invoice.taxAmount)}</td>
             </tr>

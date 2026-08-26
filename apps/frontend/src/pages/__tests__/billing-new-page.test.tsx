@@ -64,13 +64,25 @@ describe('料金算出', () => {
      *
      * 黙っていると、受入基準どおりに距離で計算していると読まれる。
      */
-    it('区間数で代替していることを画面が言う', async () => {
+    it('地域区分で代替していることを画面が言う', async () => {
       renderAt('BKG-2026000007')
 
       expect(
-        await screen.findByText(/区間数で代替/),
-        '距離の代わりに区間数を使っていることを言っていない',
+        await screen.findByText(/地域区分で代替/),
+        '距離の代わりに区間ごとの地域区分を使っていることを言っていない',
       ).toBeInTheDocument()
+    })
+
+    /**
+     * **なぜその金額かが読める**（[ADR-027] 決定 1 の改訂）。
+     *
+     * 係数だけを出しても、それが遠洋のものか国内のものかは読めない。
+     */
+    it('基本料金の根拠に地域区分が出る', async () => {
+      renderAt('BKG-2026000007')
+
+      const basis = await screen.findByTestId('charge-basis')
+      expect(basis, '地域区分が内訳に出ていない').toHaveTextContent(/遠洋|近海|国内/)
     })
   })
 
