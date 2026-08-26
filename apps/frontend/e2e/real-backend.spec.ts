@@ -1703,6 +1703,18 @@ test.describe('IT12 実環境（精算と見積）', () => {
     expect(paid.status(), `入金を確認できない: ${await paid.text()}`).toBe(200)
     expect((await paid.json()).paymentStatus).toBe('CONFIRMED')
 
+    // **発行済みの一覧にも現れる**（返済枠 0.7——実バックエンドで
+    // `unbilled` → `calculations` → `calculate` → `invoices` を 1 本通す）。
+    // 発行できても一覧に出なければ、経理担当者はその請求書を二度と開けない
+    const issued = await request.get('/api/v1/billing/invoices', { headers: accountant })
+    expect(issued.ok(), `精算書の一覧を読めない: ${await issued.text()}`).toBeTruthy()
+    expect(
+      (await issued.json()).map(
+        (candidate: { invoiceNumber: string }) => candidate.invoiceNumber,
+      ),
+      '発行した請求書が一覧に出ていない',
+    ).toContain(invoice.invoiceNumber)
+
     // **予約の側で確かめる。**billingms の中だけを見ても、届いたかは分からない
     const sales = await headersFor(request, 'sales01')
     const booking = await request.get(`/api/v1/bookings/${encodeURIComponent(bookingId)}`, {
