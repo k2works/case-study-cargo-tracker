@@ -1,5 +1,6 @@
 package com.example.billingms.domain.model;
 
+import static com.example.billingms.ChargeFixtures.domesticLegs;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -31,7 +32,7 @@ class InvoiceTest {
 
     /** 50,000 × 2 区間 × 4.2 × 1.0 = 420,000 円。 */
     private static final TransportCharge CHARGE =
-            TransportCharge.of(2, new BigDecimal("4200"), CargoType.GENERAL);
+            TransportCharge.of(domesticLegs(2), new BigDecimal("4200"), CargoType.GENERAL);
 
     /**
      * 検査の中で組み立てないための定数。

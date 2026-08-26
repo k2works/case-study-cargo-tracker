@@ -16,6 +16,7 @@ import com.example.billingms.domain.model.InvoiceCharges;
 import com.example.billingms.domain.model.InvoiceLineItem;
 import com.example.billingms.domain.model.Money;
 import com.example.billingms.domain.model.PaymentStatus;
+import com.example.billingms.domain.model.PortRegion;
 import com.example.billingms.domain.model.TaxRate;
 import com.example.billingms.domain.model.TransportCharge;
 import java.util.List;
@@ -95,6 +96,9 @@ public class MyBatisInvoiceRepository implements InvoiceRepository {
         row.setShipperName(invoice.shipperName());
         row.setShipperCorporate(invoice.shipperId().isCorporate());
         row.setLegCount(invoice.charge().legCount());
+        row.setLegFactor(invoice.charge().legFactor());
+        row.setLegRegion(invoice.charge().region() == null ? null
+                : invoice.charge().region().name());
         row.setWeightKg(invoice.charge().weightKg());
         row.setCargoType(invoice.charge().cargoType().name());
         row.setBaseAmountValue(invoice.baseAmount().amount());
@@ -167,6 +171,8 @@ public class MyBatisInvoiceRepository implements InvoiceRepository {
         CargoType cargoType = CargoType.of(row.getCargoType());
         return row.getLegCount() == 0
                 ? TransportCharge.notTransported(row.getWeightKg(), cargoType)
-                : TransportCharge.of(row.getLegCount(), row.getWeightKg(), cargoType);
+                : TransportCharge.restored(row.getLegCount(), row.getLegFactor(),
+                        row.getLegRegion() == null ? null : PortRegion.of(row.getLegRegion()),
+                        row.getWeightKg(), cargoType);
     }
 }

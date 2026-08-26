@@ -1,5 +1,6 @@
 package com.example.bookingms.interfaces.rest;
 
+import static com.example.bookingms.BillableCargoFixtures.oceanLegs;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -48,7 +49,7 @@ class BillingLookupControllerTest {
     private static BillableCargo delivered() {
         return new BillableCargo("BKG-2026000007", "DELIVERED", "1", "丸紅商事株式会社",
                 "CORPORATE", new java.math.BigDecimal("0.1000"), new java.math.BigDecimal("4200"),
-                "GENERAL", "Tokyo", "Los Angeles", 2,
+                "GENERAL", "Tokyo", "JP", "Los Angeles", "US", 2, oceanLegs(2),
                 Instant.parse("2027-09-26T00:00:00Z"), null, null);
     }
 
@@ -83,7 +84,7 @@ class BillingLookupControllerTest {
         when(billable.findBillable("BKG-2026000009")).thenReturn(Optional.of(
                 new BillableCargo("BKG-2026000009", "DELIVERED", "1", "丸紅商事株式会社",
                         "CORPORATE", new java.math.BigDecimal("0.1000"),
-                        new java.math.BigDecimal("2500"), "GENERAL", "Tokyo", "Los Angeles", 1,
+                        new java.math.BigDecimal("2500"), "GENERAL", "Tokyo", "JP", "Los Angeles", "US", 1, oceanLegs(1),
                         Instant.parse("2027-10-02T00:00:00Z"),
                         new BillableCargo.Misroute(Instant.parse("2027-09-09T00:00:00Z"),
                                 "SGSIN", "Singapore"),
@@ -123,7 +124,7 @@ class BillingLookupControllerTest {
         when(billable.findBillable("BKG-2026000010")).thenReturn(Optional.of(
                 new BillableCargo("BKG-2026000010", "CANCELLED", "1", "丸紅商事株式会社",
                         "CORPORATE", new java.math.BigDecimal("0.1000"),
-                        new java.math.BigDecimal("1500"), "GENERAL", "Tokyo", "Los Angeles", 1,
+                        new java.math.BigDecimal("1500"), "GENERAL", "Tokyo", "JP", "Los Angeles", "US", 1, oceanLegs(1),
                         null, null,
                         new BillableCargo.Cancellation("IN_TRANSIT",
                                 Instant.parse("2027-09-10T00:00:00Z")))));

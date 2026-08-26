@@ -754,6 +754,8 @@ entity "invoice\n（精算書）" as invoice {
   * shipper_name : VARCHAR(200) <<NOT NULL>>
   * shipper_corporate : BOOLEAN <<NOT NULL>>
   * leg_count : INTEGER <<NOT NULL>>
+  * leg_factor : NUMERIC(8,2) <<NOT NULL>>
+  leg_region : VARCHAR(20)
   * weight_kg : NUMERIC(10,3) <<NOT NULL>>
   * cargo_type : VARCHAR(20) <<NOT NULL>>
   * base_amount_value : NUMERIC(15,2) <<NOT NULL>>
@@ -762,6 +764,7 @@ entity "invoice\n（精算書）" as invoice {
   * total_amount_currency : VARCHAR(3) <<NOT NULL>>
   * tax_rate : NUMERIC(5,4) <<NOT NULL, DEFAULT 0.1000>>
   * tax_amount : NUMERIC(15,2) <<NOT NULL, DEFAULT 0>>
+  * tax_exempt : BOOLEAN <<NOT NULL, DEFAULT FALSE>>
   * payment_status : VARCHAR(30) <<NOT NULL>>
   issued_at : TIMESTAMP WITH TIME ZONE
   due_date : DATE

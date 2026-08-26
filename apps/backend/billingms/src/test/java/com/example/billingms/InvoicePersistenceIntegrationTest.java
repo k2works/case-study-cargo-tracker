@@ -1,5 +1,6 @@
 package com.example.billingms;
 
+import static com.example.billingms.ChargeFixtures.domesticLegs;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -63,7 +64,7 @@ class InvoicePersistenceIntegrationTest {
     private JdbcTemplate jdbcTemplate;
 
     private static final TransportCharge CHARGE =
-            TransportCharge.of(2, new BigDecimal("4200"), CargoType.GENERAL);
+            TransportCharge.of(domesticLegs(2), new BigDecimal("4200"), CargoType.GENERAL);
 
     private Invoice issue(String bookingId, DiscountPolicy policy,
             List<InvoiceLineItem> adjustments, CancellationFee fee) {

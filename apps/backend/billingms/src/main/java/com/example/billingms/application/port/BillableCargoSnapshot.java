@@ -21,8 +21,11 @@ import java.time.Instant;
  * @param weightKg 重量
  * @param cargoType 貨物種別
  * @param originName 出発地
+ * @param originCountry 出発地の国コード（<strong>輸出免税の判定</strong>）
  * @param destinationName 目的地
- * @param legCount 区間数（<strong>距離の代わり</strong>）
+ * @param destinationCountry 目的地の国コード
+ * @param legCount 区間数
+ * @param legs 旅程の区間（両端の地域区分）。<strong>距離の代わり</strong>
  * @param claimedAt 引取が完了した日時
  * @param misroute 誤配の記録。無ければ {@code null}
  * @param cancellation キャンセルの記録。無ければ {@code null}
@@ -37,11 +40,18 @@ public record BillableCargoSnapshot(
         BigDecimal weightKg,
         String cargoType,
         String originName,
+        String originCountry,
         String destinationName,
+        String destinationCountry,
         int legCount,
+        java.util.List<Leg> legs,
         Instant claimedAt,
         Misroute misroute,
         Cancellation cancellation) {
+
+    /** 旅程の 1 区間。**区分は文字列で受ける**——こちらの言葉へ移すのはユースケース。 */
+    public record Leg(String loadRegion, String unloadRegion) {
+    }
 
     /** 誤配の記録（US28-8）。**料金調整の根拠**であり、金額そのものは決めない。 */
     public record Misroute(Instant at, String locationUnLocode, String locationName) {

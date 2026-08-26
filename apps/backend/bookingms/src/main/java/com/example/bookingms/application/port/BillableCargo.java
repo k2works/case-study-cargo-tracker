@@ -30,8 +30,14 @@ import java.time.Instant;
  * @param weightKg 重量
  * @param cargoType 貨物種別
  * @param originName 出発地の名前
+ * @param originCountry 出発地の国コード。<strong>輸出免税の判定に使う</strong>
+ *        （[ADR-027] 決定 8 の改訂）
  * @param destinationName 目的地の名前
- * @param legCount 旅程の区間数。<strong>距離の代わり</strong>（[ADR-027] 決定 1）
+ * @param destinationCountry 目的地の国コード
+ * @param legCount 旅程の区間数
+ * @param legs 旅程の区間（<strong>両端の地域区分</strong>）。<strong>距離の代わり</strong>
+ *        （[ADR-027] 決定 1 の改訂）。<strong>係数は運ばない</strong>——料金の式は
+ *        billingms の 1 か所にある（[ADR-028] 決定 6）
  * @param claimedAt 引取が完了した日時。キャンセルなら {@code null}
  * @param misroute 誤配の記録。無ければ {@code null}
  * @param cancellation キャンセルの記録。無ければ {@code null}
@@ -46,11 +52,23 @@ public record BillableCargo(
         BigDecimal weightKg,
         String cargoType,
         String originName,
+        String originCountry,
         String destinationName,
+        String destinationCountry,
         int legCount,
+        java.util.List<Leg> legs,
         Instant claimedAt,
         Misroute misroute,
         Cancellation cancellation) {
+
+    /**
+     * 旅程の 1 区間。
+     *
+     * @param loadRegion 積み地の地域区分（{@code DOMESTIC} / {@code NEAR_SEA} / {@code OCEAN}）
+     * @param unloadRegion 揚げ地の地域区分
+     */
+    public record Leg(String loadRegion, String unloadRegion) {
+    }
 
     /**
      * 誤配の記録（US28-8）。

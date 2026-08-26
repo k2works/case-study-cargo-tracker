@@ -39,7 +39,9 @@ public interface BillableCargoMapper {
                    c.weight_kg                         AS weight_kg,
                    c.cargo_type                        AS cargo_type,
                    origin.name                         AS origin_name,
+                   origin.country_code                 AS origin_country,
                    destination.name                    AS destination_name,
+                   destination.country_code            AS destination_country,
                    (SELECT COUNT(*) FROM leg l WHERE l.cargo_id = c.id) AS leg_count,
                    c.last_handling_at                  AS claimed_at,
                    c.misrouted_at                      AS misrouted_at,
@@ -77,7 +79,9 @@ public interface BillableCargoMapper {
             @Result(column = "weight_kg", property = "weightKg"),
             @Result(column = "cargo_type", property = "cargoType"),
             @Result(column = "origin_name", property = "originName"),
+            @Result(column = "origin_country", property = "originCountry"),
             @Result(column = "destination_name", property = "destinationName"),
+            @Result(column = "destination_country", property = "destinationCountry"),
             @Result(column = "leg_count", property = "legCount"),
             @Result(column = "claimed_at", property = "claimedAt"),
             @Result(column = "misrouted_at", property = "misroutedAt"),
@@ -101,4 +105,49 @@ public interface BillableCargoMapper {
             """)
     @ResultMap("billableCargo")
     List<BillableCargoRecord> selectAllBillable();
+
+    /**
+     * 旅程の区間（[ADR-027] 決定 1 の改訂）。
+     *
+     * <p><strong>IN リストで渡さない。</strong>動的 SQL（{@code <foreach>}）にすると、
+     * 方言スモークが SQL を組み立てられず（引数が無いため）、<strong>全クエリの検査が
+     * その 1 本で落ちる</strong>。絞りは対象の予約と同じ条件で書ける。
+     *
+     * <p><strong>順序どおりに返す</strong>（{@code seq_number}）。旅程は
+     * 「東京 → 釜山 → ロサンゼルス」のように順序に意味がある。
+     */
+    String LEG_QUERY = """
+            SELECT c.booking_id                    AS booking_id,
+                   load_location.region            AS load_region,
+                   unload_location.region          AS unload_region
+              FROM leg l
+              JOIN cargo c
+                ON c.id = l.cargo_id
+              JOIN location load_location
+                ON load_location.unlocode = l.load_location_unlocode
+              JOIN location unload_location
+                ON unload_location.unlocode = l.unload_location_unlocode
+             WHERE c.booking_status IN ('DELIVERED', 'CANCELLED')
+            """;
+
+    @Select(LEG_QUERY + """
+             AND c.booking_id = #{bookingId}
+             ORDER BY l.seq_number
+            """)
+    @Results(id = "billableLeg", value = {
+            @Result(column = "booking_id", property = "bookingId"),
+            @Result(column = "load_region", property = "loadRegion"),
+            @Result(column = "unload_region", property = "unloadRegion"),
+    })
+    List<BillableLegRecord> selectLegsByBookingId(@Param("bookingId") String bookingId);
+
+    /**
+     * 対象すべての区間を 1 回で引く。
+     *
+     * <p><strong>1 件ずつ引かない。</strong>対象が増えるほど問い合わせが増える形にすると、
+     * 経理担当者が毎朝開く一覧が重くなる。
+     */
+    @Select(LEG_QUERY + " ORDER BY c.booking_id, l.seq_number")
+    @ResultMap("billableLeg")
+    List<BillableLegRecord> selectAllBillableLegs();
 }

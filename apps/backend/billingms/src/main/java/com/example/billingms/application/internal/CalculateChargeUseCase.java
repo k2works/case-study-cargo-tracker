@@ -9,6 +9,8 @@ import com.example.billingms.domain.model.BillingShipperId;
 import com.example.billingms.domain.model.CancellationFee;
 import com.example.billingms.domain.model.CancelledAtStatus;
 import com.example.billingms.domain.model.CargoType;
+import com.example.billingms.domain.model.ChargeableLeg;
+import com.example.billingms.domain.model.PortRegion;
 import com.example.billingms.domain.model.DiscountPolicy;
 import com.example.billingms.domain.model.DiscountRate;
 import com.example.billingms.domain.model.Invoice;
@@ -130,9 +132,14 @@ public class CalculateChargeUseCase {
                         CancelledAtStatus.of(snapshot.cancellation().bookingStatusAtRequest()),
                         charge.baseAmount());
 
+        // **国が異なれば輸出免税**（[ADR-027] 決定 8 の改訂）。国コードは地点マスタが
+        // 持っている。どちらかが不明なら課税に倒す——免税に倒すと、国コードを
+        // 引けない不具合が「消費税を取り忘れる」形で出る
+        TaxRate taxRate = TaxRate.forRoute(snapshot.originCountry(),
+                snapshot.destinationCountry());
+
         return new ChargeCalculation(snapshot.bookingId(), snapshot.shipperName(),
-                snapshot.corporate(), charge, policy, snapshot.misroute(), fee,
-                TaxRate.standard());
+                snapshot.corporate(), charge, policy, snapshot.misroute(), fee, taxRate);
     }
 
     /**
@@ -149,7 +156,17 @@ public class CalculateChargeUseCase {
     private static TransportCharge chargeOf(BillableCargoSnapshot snapshot) {
         CargoType cargoType = CargoType.of(snapshot.cargoType());
         if (snapshot.legCount() > 0) {
-            return TransportCharge.of(snapshot.legCount(), snapshot.weightKg(), cargoType);
+            // **区間の並びが無ければ断る。** 区間数だけで計算に倒すと、地域区分を
+            // 入れる前の金額（すべて国内）に黙って戻る——国際輸送を安く請求し続ける
+            if (snapshot.legs() == null || snapshot.legs().size() != snapshot.legCount()) {
+                throw new BillingNotAvailableException(
+                        "旅程の区間を取得できませんでした（地域区分が引けていません）: "
+                                + snapshot.bookingId());
+            }
+            return TransportCharge.of(snapshot.legs().stream()
+                    .map(leg -> new ChargeableLeg(PortRegion.of(leg.loadRegion()),
+                            PortRegion.of(leg.unloadRegion())))
+                    .toList(), snapshot.weightKg(), cargoType);
         }
         if (snapshot.cancellation() != null) {
             return TransportCharge.notTransported(snapshot.weightKg(), cargoType);

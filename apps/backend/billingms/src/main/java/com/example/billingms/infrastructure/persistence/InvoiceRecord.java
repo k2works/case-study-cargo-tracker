@@ -18,6 +18,12 @@ public class InvoiceRecord {
     private String shipperName;
     private boolean shipperCorporate;
     private int legCount;
+
+    private java.math.BigDecimal legFactor;
+
+    private String legRegion;
+
+    private boolean taxExempt;
     private BigDecimal weightKg;
     private String cargoType;
     private BigDecimal baseAmountValue;
@@ -86,6 +92,30 @@ public class InvoiceRecord {
 
     public int getLegCount() {
         return legCount;
+    }
+
+    public java.math.BigDecimal getLegFactor() {
+        return legFactor;
+    }
+
+    public void setLegFactor(java.math.BigDecimal legFactor) {
+        this.legFactor = legFactor;
+    }
+
+    public String getLegRegion() {
+        return legRegion;
+    }
+
+    public void setLegRegion(String legRegion) {
+        this.legRegion = legRegion;
+    }
+
+    public boolean isTaxExempt() {
+        return taxExempt;
+    }
+
+    public void setTaxExempt(boolean taxExempt) {
+        this.taxExempt = taxExempt;
     }
 
     public void setLegCount(int legCount) {

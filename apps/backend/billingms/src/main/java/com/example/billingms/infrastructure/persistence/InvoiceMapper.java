@@ -16,12 +16,12 @@ public interface InvoiceMapper {
 
     String COLUMNS = """
             id, invoice_number, booking_id, shipper_id, shipper_name, shipper_corporate,
-            leg_count, weight_kg, cargo_type,
+            leg_count, leg_factor, leg_region, weight_kg, cargo_type,
             base_amount_value, base_amount_currency,
             discount_rate, discount_amount_value, discount_amount_currency,
             cancellation_fee_value, cancellation_fee_currency, cancellation_fee_rate,
             booking_status_at_cancel,
-            tax_rate, tax_amount, total_amount_value, total_amount_currency,
+            tax_rate, tax_amount, tax_exempt, total_amount_value, total_amount_currency,
             payment_status, issued_at
             """;
 
@@ -34,21 +34,23 @@ public interface InvoiceMapper {
     @Insert("""
             INSERT INTO invoice (
                 invoice_number, booking_id, shipper_id, shipper_name, shipper_corporate,
-                leg_count, weight_kg, cargo_type,
+                leg_count, leg_factor, leg_region, weight_kg, cargo_type,
                 base_amount_value, base_amount_currency,
                 discount_rate, discount_amount_value, discount_amount_currency,
                 cancellation_fee_value, cancellation_fee_currency, cancellation_fee_rate,
                 booking_status_at_cancel,
-                tax_rate, tax_amount, total_amount_value, total_amount_currency,
+                tax_rate, tax_amount, tax_exempt, total_amount_value, total_amount_currency,
                 payment_status, issued_at)
             VALUES (
                 #{invoiceNumber}, #{bookingId}, #{shipperId}, #{shipperName},
-                #{shipperCorporate}, #{legCount}, #{weightKg}, #{cargoType},
+                #{shipperCorporate}, #{legCount}, #{legFactor}, #{legRegion},
+                #{weightKg}, #{cargoType},
                 #{baseAmountValue}, #{baseAmountCurrency},
                 #{discountRate}, #{discountAmountValue}, #{discountAmountCurrency},
                 #{cancellationFeeValue}, #{cancellationFeeCurrency}, #{cancellationFeeRate},
                 #{bookingStatusAtCancel},
-                #{taxRate}, #{taxAmount}, #{totalAmountValue}, #{totalAmountCurrency},
+                #{taxRate}, #{taxAmount}, #{taxExempt},
+                #{totalAmountValue}, #{totalAmountCurrency},
                 #{paymentStatus}, #{issuedAt})
             """)
     @Options(useGeneratedKeys = true, keyProperty = "id", keyColumn = "id")
@@ -63,6 +65,8 @@ public interface InvoiceMapper {
             @Result(column = "shipper_name", property = "shipperName"),
             @Result(column = "shipper_corporate", property = "shipperCorporate"),
             @Result(column = "leg_count", property = "legCount"),
+            @Result(column = "leg_factor", property = "legFactor"),
+            @Result(column = "leg_region", property = "legRegion"),
             @Result(column = "weight_kg", property = "weightKg"),
             @Result(column = "cargo_type", property = "cargoType"),
             @Result(column = "base_amount_value", property = "baseAmountValue"),
@@ -75,6 +79,7 @@ public interface InvoiceMapper {
             @Result(column = "cancellation_fee_rate", property = "cancellationFeeRate"),
             @Result(column = "booking_status_at_cancel", property = "bookingStatusAtCancel"),
             @Result(column = "tax_rate", property = "taxRate"),
+            @Result(column = "tax_exempt", property = "taxExempt"),
             @Result(column = "tax_amount", property = "taxAmount"),
             @Result(column = "total_amount_value", property = "totalAmountValue"),
             @Result(column = "total_amount_currency", property = "totalAmountCurrency"),

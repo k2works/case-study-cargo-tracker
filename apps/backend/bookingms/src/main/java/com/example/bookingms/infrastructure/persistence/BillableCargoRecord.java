@@ -21,6 +21,10 @@ public class BillableCargoRecord {
     private BigDecimal weightKg;
     private String cargoType;
     private String originName;
+
+    private String originCountry;
+
+    private String destinationCountry;
     private String destinationName;
     private int legCount;
     private Instant claimedAt;
@@ -36,7 +40,8 @@ public class BillableCargoRecord {
      * <p><strong>誤配もキャンセルも、無ければ項目ごと現れない。</strong>毎回 {@code null} が
      * 出ると、あるかないかを受け取り側が判定しにくい。
      */
-    public BillableCargo toBillableCargo() {
+    /** 旅程の区間。**別のクエリで引く**——1 行に畳むと区間の数だけ行が重複する。 */
+    public BillableCargo toBillableCargo(java.util.List<BillableCargo.Leg> legs) {
         BillableCargo.Misroute misroute = misroutedAt == null ? null
                 : new BillableCargo.Misroute(misroutedAt, misroutedLocationUnlocode,
                         misroutedLocationName);
@@ -44,8 +49,14 @@ public class BillableCargoRecord {
                 : new BillableCargo.Cancellation(cancelledAtStatus, cancellationRequestedAt);
 
         return new BillableCargo(bookingId, bookingStatus, shipperId, shipperName, shipperType,
-                discountRate, weightKg, cargoType, originName, destinationName, legCount,
-                claimedAt, misroute, cancellation);
+                discountRate, weightKg, cargoType, originName, originCountry,
+                destinationName, destinationCountry, legCount,
+                legs, claimedAt, misroute, cancellation);
+    }
+
+    /** 予約番号。**区間をまとめて引くときの突き合わせに使う。** */
+    public String getBookingId() {
+        return bookingId;
     }
 
     public void setBookingId(String bookingId) {
@@ -78,6 +89,14 @@ public class BillableCargoRecord {
 
     public void setCargoType(String cargoType) {
         this.cargoType = cargoType;
+    }
+
+    public void setOriginCountry(String originCountry) {
+        this.originCountry = originCountry;
+    }
+
+    public void setDestinationCountry(String destinationCountry) {
+        this.destinationCountry = destinationCountry;
     }
 
     public void setOriginName(String originName) {

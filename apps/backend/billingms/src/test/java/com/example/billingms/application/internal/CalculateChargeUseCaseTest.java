@@ -1,5 +1,6 @@
 package com.example.billingms.application.internal;
 
+import static com.example.billingms.ChargeFixtures.domesticSnapshotLegs;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -50,7 +51,7 @@ class CalculateChargeUseCaseTest {
     private static BillableCargoSnapshot corporate() {
         return new BillableCargoSnapshot("BKG-2026000007", "DELIVERED", "1",
                 "丸紅商事株式会社", true, new BigDecimal("0.1000"), new BigDecimal("4200"),
-                "GENERAL", "Tokyo", "Los Angeles", 2,
+                "GENERAL", "Tokyo", "JP", "Los Angeles", "US", 2, domesticSnapshotLegs(2),
                 Instant.parse("2027-09-26T00:00:00Z"), null, null);
     }
 
@@ -98,7 +99,7 @@ class CalculateChargeUseCaseTest {
             when(snapshots.findBillable("BKG-2026000008")).thenReturn(Optional.of(
                     new BillableCargoSnapshot("BKG-2026000008", "DELIVERED", "2", "山田太郎",
                             false, null, new BigDecimal("800"), "REFRIGERATED",
-                            "Tokyo", "Singapore", 1,
+                            "Tokyo", "JP", "Singapore", "SG", 1, domesticSnapshotLegs(1),
                             Instant.parse("2027-09-20T00:00:00Z"), null, null)));
 
             ChargeCalculation calculation = useCase.calculate("BKG-2026000008");
@@ -120,7 +121,7 @@ class CalculateChargeUseCaseTest {
             when(snapshots.findBillable("BKG-2026000007")).thenReturn(Optional.of(
                     new BillableCargoSnapshot("BKG-2026000007", "DELIVERED", "1", "丸紅商事",
                             true, null, new BigDecimal("4200"), "GENERAL",
-                            "Tokyo", "Los Angeles", 2,
+                            "Tokyo", "JP", "Los Angeles", "US", 2, domesticSnapshotLegs(2),
                             Instant.parse("2027-09-26T00:00:00Z"), null, null)));
 
             assertThat(useCase.calculate("BKG-2026000007").discountRate()).isNull();
@@ -133,7 +134,7 @@ class CalculateChargeUseCaseTest {
             when(snapshots.findBillable("BKG-2026000010")).thenReturn(Optional.of(
                     new BillableCargoSnapshot("BKG-2026000010", "CANCELLED", "1", "丸紅商事",
                             true, new BigDecimal("0.1000"), new BigDecimal("1500"), "GENERAL",
-                            "Tokyo", "Los Angeles", 1, null, null,
+                            "Tokyo", "JP", "Los Angeles", "US", 1, domesticSnapshotLegs(1), null, null,
                             new BillableCargoSnapshot.Cancellation("IN_TRANSIT",
                                     Instant.parse("2027-09-10T00:00:00Z")))));
 
@@ -155,7 +156,7 @@ class CalculateChargeUseCaseTest {
             when(snapshots.findBillable("BKG-2026000009")).thenReturn(Optional.of(
                     new BillableCargoSnapshot("BKG-2026000009", "DELIVERED", "1", "丸紅商事",
                             true, new BigDecimal("0.1000"), new BigDecimal("2500"), "GENERAL",
-                            "Tokyo", "Los Angeles", 1,
+                            "Tokyo", "JP", "Los Angeles", "US", 1, domesticSnapshotLegs(1),
                             Instant.parse("2027-10-02T00:00:00Z"),
                             new BillableCargoSnapshot.Misroute(
                                     Instant.parse("2027-09-09T00:00:00Z"), "SGSIN", "Singapore"),
@@ -189,7 +190,7 @@ class CalculateChargeUseCaseTest {
             when(snapshots.findBillable("BKG-2026000045")).thenReturn(Optional.of(
                     new BillableCargoSnapshot("BKG-2026000045", "CANCELLED", "2", "山田太郎",
                             false, null, new BigDecimal("1000"), "GENERAL",
-                            "Tokyo", "Los Angeles", 0, null, null,
+                            "Tokyo", "JP", "Los Angeles", "US", 0, List.of(), null, null,
                             new BillableCargoSnapshot.Cancellation("PRELIMINARY",
                                     Instant.parse("2027-09-01T00:00:00Z")))));
 
@@ -217,7 +218,7 @@ class CalculateChargeUseCaseTest {
             when(snapshots.findBillable("BKG-2026000046")).thenReturn(Optional.of(
                     new BillableCargoSnapshot("BKG-2026000046", "DELIVERED", "1", "丸紅商事",
                             true, new BigDecimal("0.1000"), new BigDecimal("4200"), "GENERAL",
-                            "Tokyo", "Los Angeles", 0,
+                            "Tokyo", "JP", "Los Angeles", "US", 0, domesticSnapshotLegs(0),
                             Instant.parse("2027-09-26T00:00:00Z"), null, null)));
 
             assertThatThrownBy(() -> useCase.calculate("BKG-2026000046"))
@@ -277,8 +278,36 @@ class CalculateChargeUseCaseTest {
                     List.of(new AdjustmentCommand("遅延による減額", new BigDecimal("-20000"))));
 
             assertThat(invoice.lineItems()).hasSize(1);
-            // 420,000 - 42,000 - 20,000 = 358,000。消費税 35,800。合計 393,800
-            assertThat(invoice.totalAmount()).isEqualTo(Money.yen(new BigDecimal("393800")));
+            // 420,000 - 42,000 - 20,000 = 358,000。
+            // **東京 → ロサンゼルスは輸出免税**（[ADR-027] 決定 8 の改訂）なので合計は同額
+            assertThat(invoice.totalAmount()).isEqualTo(Money.yen(new BigDecimal("358000")));
+            assertThat(invoice.taxRate().exempted())
+                    .as("国際輸送に消費税が付いている")
+                    .isTrue();
+        }
+
+        /**
+         * <strong>国内輸送には消費税が付く</strong>（決定 8 の改訂と対で見る）。
+         *
+         * <p>免税だけを見ると、常に 0% を返す実装でも緑になる。
+         */
+        @Test
+        @DisplayName("国内輸送の請求には消費税が付く")
+        void chargesTaxForDomesticTransport() {
+            when(snapshots.findBillable("BKG-2026000011")).thenReturn(Optional.of(
+                    new BillableCargoSnapshot("BKG-2026000011", "DELIVERED", "1", "丸紅商事",
+                            false, null, new BigDecimal("1000"), "GENERAL",
+                            "Tokyo", "JP", "Osaka", "JP", 1, domesticSnapshotLegs(1),
+                            Instant.parse("2027-09-26T00:00:00Z"), null, null)));
+            when(numbering.next()).thenReturn(InvoiceId.of("INV-2026000002"));
+
+            Invoice invoice = useCase.confirm("BKG-2026000011", List.of());
+
+            // 50,000 × 1 区間（国内 1.0）× 1.0 × 1.0 = 50,000。消費税 5,000
+            assertThat(invoice.taxRate().exempted())
+                    .as("国内輸送が免税になっている。取るべき消費税を取っていない")
+                    .isFalse();
+            assertThat(invoice.totalAmount()).isEqualTo(Money.yen(new BigDecimal("55000")));
         }
 
         /**

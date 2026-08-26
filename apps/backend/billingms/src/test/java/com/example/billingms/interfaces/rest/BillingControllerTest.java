@@ -1,5 +1,7 @@
 package com.example.billingms.interfaces.rest;
 
+import static com.example.billingms.ChargeFixtures.domesticSnapshotLegs;
+import static com.example.billingms.ChargeFixtures.domesticLegs;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
@@ -71,7 +73,7 @@ class BillingControllerTest {
     private InvoiceRepository invoices;
 
     private static final TransportCharge CHARGE =
-            TransportCharge.of(2, new BigDecimal("4200"), CargoType.GENERAL);
+            TransportCharge.of(domesticLegs(2), new BigDecimal("4200"), CargoType.GENERAL);
 
     private static ChargeCalculation corporateCalculation() {
         return new ChargeCalculation("BKG-2026000007", "丸紅商事株式会社", true, CHARGE,
@@ -236,7 +238,7 @@ class BillingControllerTest {
         void omitsTheDiscountForIndividuals() throws Exception {
             when(calculateCharge.calculate("BKG-2026000008")).thenReturn(
                     new ChargeCalculation("BKG-2026000008", "山田太郎", false,
-                            TransportCharge.of(1, new BigDecimal("800"), CargoType.REFRIGERATED),
+                            TransportCharge.of(domesticLegs(1), new BigDecimal("800"), CargoType.REFRIGERATED),
                             DiscountPolicy.none(), null, null, TaxRate.standard()));
 
             mockMvc.perform(asAccountant(get("/api/v1/billing/calculations/BKG-2026000008")))
@@ -403,7 +405,7 @@ class BillingControllerTest {
             when(calculateCharge.billable()).thenReturn(List.of(
                     new BillableCargoSnapshot("BKG-2026000007", "DELIVERED", "1",
                             "丸紅商事株式会社", true, new BigDecimal("0.1000"),
-                            new BigDecimal("4200"), "GENERAL", "Tokyo", "Los Angeles", 2,
+                            new BigDecimal("4200"), "GENERAL", "Tokyo", "JP", "Los Angeles", "US", 2, domesticSnapshotLegs(2),
                             Instant.parse("2027-09-26T00:00:00Z"), null, null)));
 
             mockMvc.perform(asAccountant(get("/api/v1/billing/unbilled")))
@@ -429,7 +431,7 @@ class BillingControllerTest {
             when(calculateCharge.billable()).thenReturn(List.of(
                     new BillableCargoSnapshot("BKG-2026000010", "CANCELLED", "1",
                             "丸紅商事株式会社", true, new BigDecimal("0.1000"),
-                            new BigDecimal("1500"), "GENERAL", "Tokyo", "Los Angeles", 1,
+                            new BigDecimal("1500"), "GENERAL", "Tokyo", "JP", "Los Angeles", "US", 1, domesticSnapshotLegs(1),
                             Instant.parse("2027-09-08T00:00:00Z"), null,
                             new BillableCargoSnapshot.Cancellation("IN_TRANSIT",
                                     Instant.parse("2027-09-10T00:00:00Z")))));

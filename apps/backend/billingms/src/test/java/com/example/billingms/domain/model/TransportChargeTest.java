@@ -1,5 +1,7 @@
 package com.example.billingms.domain.model;
 
+import static com.example.billingms.ChargeFixtures.domesticLegs;
+import static com.example.billingms.ChargeFixtures.oceanLegs;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -35,7 +37,7 @@ class TransportChargeTest {
         @Test
         @DisplayName("基準運賃に区間・重量・貨物種別の係数を掛ける")
         void multipliesAllFactors() {
-            TransportCharge charge = TransportCharge.of(2, new BigDecimal("4200"), CargoType.GENERAL);
+            TransportCharge charge = TransportCharge.of(domesticLegs(2), new BigDecimal("4200"), CargoType.GENERAL);
 
             assertThat(charge.baseAmount()).isEqualTo(Money.yen(new BigDecimal("420000")));
         }
@@ -48,13 +50,54 @@ class TransportChargeTest {
         @Test
         @DisplayName("区間数が増えると料金も増える")
         void chargesMoreForMoreLegs() {
-            Money direct = TransportCharge.of(1, new BigDecimal("1000"), CargoType.GENERAL)
+            Money direct = TransportCharge.of(domesticLegs(1), new BigDecimal("1000"), CargoType.GENERAL)
                     .baseAmount();
-            Money viaOnePort = TransportCharge.of(2, new BigDecimal("1000"), CargoType.GENERAL)
+            Money viaOnePort = TransportCharge.of(domesticLegs(2), new BigDecimal("1000"), CargoType.GENERAL)
                     .baseAmount();
 
             assertThat(viaOnePort.amount()).isEqualByComparingTo(direct.amount().multiply(
                     new BigDecimal("2")));
+        }
+
+        /**
+         * <strong>同じ区間数でも、遠洋なら高い</strong>（決定 1 の改訂）。
+         *
+         * <p>これが IT11 の未達（受入基準 21-2）である。区間数だけで測っていたため、
+         * 東京 → 横浜と東京 → ロサンゼルスが同額になり、経理担当者は
+         * 「これでは荷主が納得しない」と述べた。
+         *
+         * <p><strong>国内が変わらないことと対で見る</strong>——遠洋が高いことだけを
+         * 見ると、一律に値上げした実装でも緑になる。
+         */
+        @Test
+        @DisplayName("同じ 1 区間でも、国内と遠洋で金額が違う")
+        void chargesMoreForOceanLegs() {
+            Money domestic = TransportCharge.of(domesticLegs(1), new BigDecimal("1000"),
+                    CargoType.GENERAL).baseAmount();
+            Money ocean = TransportCharge.of(oceanLegs(1), new BigDecimal("1000"),
+                    CargoType.GENERAL).baseAmount();
+
+            assertThat(domestic)
+                    .as("国内の運賃まで変わっている。地域区分の追加は値上げではない")
+                    .isEqualTo(Money.yen(new BigDecimal("50000")));
+            assertThat(ocean.amount())
+                    .as("国内の積み替え 1 回と太平洋横断が同額になっている")
+                    .isEqualByComparingTo(new BigDecimal("300000"));
+        }
+
+        /** 旅程で最も重い区分を根拠として持つ。**画面に出す**（決定 1）。 */
+        @Test
+        @DisplayName("旅程で最も重い地域区分を根拠として持つ")
+        void keepsTheHeaviestRegionAsEvidence() {
+            TransportCharge charge = TransportCharge.of(
+                    java.util.List.of(
+                            new ChargeableLeg(PortRegion.DOMESTIC, PortRegion.DOMESTIC),
+                            new ChargeableLeg(PortRegion.DOMESTIC, PortRegion.OCEAN)),
+                    new BigDecimal("1000"), CargoType.GENERAL);
+
+            assertThat(charge.region()).isEqualTo(PortRegion.OCEAN);
+            // 1.0 + 6.0 = 7.0
+            assertThat(charge.legFactor()).isEqualByComparingTo("7.0");
         }
 
         /** 貨物種別係数は正典の値をそのまま使う。 */
@@ -62,7 +105,7 @@ class TransportChargeTest {
         @CsvSource({"GENERAL,1.0", "HAZARDOUS,1.8", "REFRIGERATED,1.5"})
         @DisplayName("貨物種別ごとの係数が効く")
         void appliesTheCargoTypeFactor(CargoType type, BigDecimal expected) {
-            TransportCharge charge = TransportCharge.of(1, new BigDecimal("1000"), type);
+            TransportCharge charge = TransportCharge.of(domesticLegs(1), new BigDecimal("1000"), type);
 
             assertThat(charge.cargoTypeFactor()).isEqualByComparingTo(expected);
             assertThat(charge.baseAmount())
@@ -77,7 +120,7 @@ class TransportChargeTest {
         @Test
         @DisplayName("軽い貨物でも、重量係数は下限を下回らない")
         void appliesTheMinimumWeightFactor() {
-            TransportCharge tiny = TransportCharge.of(1, new BigDecimal("1"), CargoType.GENERAL);
+            TransportCharge tiny = TransportCharge.of(domesticLegs(1), new BigDecimal("1"), CargoType.GENERAL);
 
             assertThat(tiny.weightFactor()).isEqualByComparingTo("0.1");
             assertThat(tiny.baseAmount()).isEqualTo(Money.yen(new BigDecimal("5000")));
@@ -97,11 +140,11 @@ class TransportChargeTest {
         @Test
         @DisplayName("下限の境目で切り替わる")
         void switchesAtTheBoundary() {
-            assertThat(TransportCharge.of(1, new BigDecimal("99"), CargoType.GENERAL)
+            assertThat(TransportCharge.of(domesticLegs(1), new BigDecimal("99"), CargoType.GENERAL)
                     .weightFactor()).isEqualByComparingTo("0.1");
-            assertThat(TransportCharge.of(1, new BigDecimal("100"), CargoType.GENERAL)
+            assertThat(TransportCharge.of(domesticLegs(1), new BigDecimal("100"), CargoType.GENERAL)
                     .weightFactor()).isEqualByComparingTo("0.1");
-            assertThat(TransportCharge.of(1, new BigDecimal("101"), CargoType.GENERAL)
+            assertThat(TransportCharge.of(domesticLegs(1), new BigDecimal("101"), CargoType.GENERAL)
                     .weightFactor()).isEqualByComparingTo("0.101");
         }
     }
@@ -121,17 +164,17 @@ class TransportChargeTest {
         @Test
         @DisplayName("桁数が違っても、同じ重量なら等しい")
         void comparesTheWeightByValue() {
-            assertThat(TransportCharge.of(2, new BigDecimal("4200"), CargoType.GENERAL))
+            assertThat(TransportCharge.of(domesticLegs(2), new BigDecimal("4200"), CargoType.GENERAL))
                     .as("DB から読み戻した重量が、書いた重量と違うものとして扱われる")
-                    .isEqualTo(TransportCharge.of(2, new BigDecimal("4200.000"),
+                    .isEqualTo(TransportCharge.of(domesticLegs(2), new BigDecimal("4200.000"),
                             CargoType.GENERAL));
         }
 
         @Test
         @DisplayName("重量が違えば等しくない")
         void distinguishesDifferentWeights() {
-            assertThat(TransportCharge.of(2, new BigDecimal("4200"), CargoType.GENERAL))
-                    .isNotEqualTo(TransportCharge.of(2, new BigDecimal("4201"),
+            assertThat(TransportCharge.of(domesticLegs(2), new BigDecimal("4200"), CargoType.GENERAL))
+                    .isNotEqualTo(TransportCharge.of(domesticLegs(2), new BigDecimal("4201"),
                             CargoType.GENERAL));
         }
 
@@ -139,8 +182,8 @@ class TransportChargeTest {
         @Test
         @DisplayName("等しい根拠はハッシュも等しい")
         void hashesConsistently() {
-            assertThat(TransportCharge.of(2, new BigDecimal("4200"), CargoType.GENERAL))
-                    .hasSameHashCodeAs(TransportCharge.of(2, new BigDecimal("4200.000"),
+            assertThat(TransportCharge.of(domesticLegs(2), new BigDecimal("4200"), CargoType.GENERAL))
+                    .hasSameHashCodeAs(TransportCharge.of(domesticLegs(2), new BigDecimal("4200.000"),
                             CargoType.GENERAL));
         }
     }
@@ -160,7 +203,7 @@ class TransportChargeTest {
         void rejectsAnItineraryWithoutLegs() {
             BigDecimal weight = new BigDecimal("1000");
 
-            assertThatThrownBy(() -> TransportCharge.of(0, weight, CargoType.GENERAL))
+            assertThatThrownBy(() -> TransportCharge.of(domesticLegs(0), weight, CargoType.GENERAL))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("区間");
         }
@@ -170,10 +213,10 @@ class TransportChargeTest {
         void rejectsNonPositiveWeight() {
             BigDecimal negative = new BigDecimal("-1");
 
-            assertThatThrownBy(() -> TransportCharge.of(1, BigDecimal.ZERO, CargoType.GENERAL))
+            assertThatThrownBy(() -> TransportCharge.of(domesticLegs(1), BigDecimal.ZERO, CargoType.GENERAL))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("重量");
-            assertThatThrownBy(() -> TransportCharge.of(1, negative, CargoType.GENERAL))
+            assertThatThrownBy(() -> TransportCharge.of(domesticLegs(1), negative, CargoType.GENERAL))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
@@ -182,7 +225,7 @@ class TransportChargeTest {
         void rejectsMissingCargoType() {
             BigDecimal weight = new BigDecimal("1000");
 
-            assertThatThrownBy(() -> TransportCharge.of(1, weight, null))
+            assertThatThrownBy(() -> TransportCharge.of(domesticLegs(1), weight, null))
                     .isInstanceOf(IllegalArgumentException.class);
         }
     }

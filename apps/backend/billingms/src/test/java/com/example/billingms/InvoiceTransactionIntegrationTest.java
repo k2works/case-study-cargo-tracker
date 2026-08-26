@@ -1,5 +1,6 @@
 package com.example.billingms;
 
+import static com.example.billingms.ChargeFixtures.domesticSnapshotLegs;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doThrow;
@@ -68,7 +69,7 @@ class InvoiceTransactionIntegrationTest {
         org.mockito.Mockito.doReturn(Optional.of(new BillableCargoSnapshot(
                         bookingId, "DELIVERED", "1", "丸紅商事株式会社", true,
                         new BigDecimal("0.1000"), new BigDecimal("4200"), "GENERAL",
-                        "Tokyo", "Los Angeles", 2,
+                        "Tokyo", "JP", "Los Angeles", "US", 2, domesticSnapshotLegs(2),
                         Instant.parse("2027-09-26T00:00:00Z"), null, null)))
                 .when(snapshots).findBillable(bookingId);
 

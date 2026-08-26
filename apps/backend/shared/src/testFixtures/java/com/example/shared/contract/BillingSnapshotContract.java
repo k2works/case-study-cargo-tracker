@@ -46,7 +46,19 @@ public final class BillingSnapshotContract {
     public static final List<String> FIELDS =
             List.of("bookingId", "bookingStatus", "shipperId", "shipperName", "shipperType",
                     "discountRate", "weightKg", "cargoType", "originName",
-                    "destinationName", "legCount", "claimedAt", "misroute", "cancellation");
+                    "originCountry", "destinationName", "destinationCountry",
+                    "legCount", "legs", "claimedAt", "misroute",
+                    "cancellation");
+
+    /**
+     * 区間の項目（[ADR-027] 決定 1 の改訂）。
+     *
+     * <p><strong>地域区分を運ぶ。</strong>区間数だけでは、東京 → 横浜と
+     * 東京 → ロサンゼルスが同額になる。<strong>係数は運ばない</strong>
+     * ——料金の式は billingms の 1 か所にある（[ADR-028] 決定 6）。
+     */
+    public static final List<String> LEG_FIELDS =
+            List.of("loadRegion", "unloadRegion");
 
     /** 誤配の記録の項目（US28-8）。誤配していなければ項目ごと現れない。 */
     public static final List<String> MISROUTE_FIELDS =

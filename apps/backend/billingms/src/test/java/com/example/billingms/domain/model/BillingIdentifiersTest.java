@@ -92,6 +92,35 @@ class BillingIdentifiersTest {
             assertThat(TaxRate.standard().percentage()).isEqualByComparingTo("10");
         }
 
+        /**
+         * <strong>国が異なれば免税</strong>（決定 8 の改訂・輸出免税）。
+         *
+         * <p><strong>対で見る。</strong>免税だけを見ると、常に 0% を返す実装でも緑になる。
+         */
+        @Test
+        @DisplayName("国が異なれば免税、同じ国なら課税")
+        void exemptsInternationalTransport() {
+            assertThat(TaxRate.forRoute("JP", "US").exempted())
+                    .as("国際輸送に消費税が付いている。本来かからない 10% を請求し続ける")
+                    .isTrue();
+            assertThat(TaxRate.forRoute("JP", "US").value()).isEqualByComparingTo("0");
+            assertThat(TaxRate.forRoute("JP", "JP").exempted())
+                    .as("国内輸送が免税になっている。取るべき消費税を取っていない")
+                    .isFalse();
+            assertThat(TaxRate.forRoute("JP", "JP").value()).isEqualByComparingTo("0.1000");
+        }
+
+        /**
+         * <strong>不明なら課税に倒す。</strong>免税に倒すと、国コードを引けない不具合が
+         * 「消費税を取り忘れる」形で出て、気づくのは税務調査のときになる。
+         */
+        @Test
+        @DisplayName("国が分からなければ課税に倒す")
+        void fallsBackToTaxableWhenTheCountryIsUnknown() {
+            assertThat(TaxRate.forRoute(null, "US").exempted()).isFalse();
+            assertThat(TaxRate.forRoute("JP", null).exempted()).isFalse();
+        }
+
         @Test
         @DisplayName("課税額を出せる")
         void calculatesTheTax() {

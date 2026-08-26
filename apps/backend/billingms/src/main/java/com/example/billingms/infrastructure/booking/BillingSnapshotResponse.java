@@ -24,8 +24,11 @@ import java.time.Instant;
  * @param weightKg 重量
  * @param cargoType 貨物種別
  * @param originName 出発地
+ * @param originCountry 出発地の国コード
  * @param destinationName 目的地
+ * @param destinationCountry 目的地の国コード
  * @param legCount 区間数
+ * @param legs 旅程の区間（両端の地域区分）
  * @param claimedAt 引取が完了した日時
  * @param misroute 誤配の記録
  * @param cancellation キャンセルの記録
@@ -41,11 +44,18 @@ public record BillingSnapshotResponse(
         BigDecimal weightKg,
         String cargoType,
         String originName,
+        String originCountry,
         String destinationName,
+        String destinationCountry,
         int legCount,
+        java.util.List<LegResponse> legs,
         Instant claimedAt,
         MisrouteResponse misroute,
         CancellationResponse cancellation) {
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record LegResponse(String loadRegion, String unloadRegion) {
+    }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record MisrouteResponse(Instant at, String locationUnLocode, String locationName) {
@@ -64,7 +74,13 @@ public record BillingSnapshotResponse(
     public BillableCargoSnapshot toSnapshot() {
         return new BillableCargoSnapshot(bookingId, bookingStatus, shipperId, shipperName,
                 "CORPORATE".equals(shipperType), discountRate, weightKg, cargoType,
-                originName, destinationName, legCount, claimedAt,
+                originName, originCountry, destinationName, destinationCountry, legCount,
+                legs == null ? java.util.List.of()
+                        : legs.stream()
+                                .map(leg -> new BillableCargoSnapshot.Leg(
+                                        leg.loadRegion(), leg.unloadRegion()))
+                                .toList(),
+                claimedAt,
                 misroute == null ? null : new BillableCargoSnapshot.Misroute(
                         misroute.at(), misroute.locationUnLocode(), misroute.locationName()),
                 cancellation == null ? null : new BillableCargoSnapshot.Cancellation(
