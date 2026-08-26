@@ -2,6 +2,8 @@ import { Link, useParams } from "react-router-dom";
 
 import { RouteCandidateList } from "../features/booking/components/route-candidate-list";
 import { useEstimate } from "../features/booking/estimate-queries";
+import { locationName } from "../features/booking/location-name";
+import { useLocations } from "../features/booking/queries";
 import { CARGO_TYPE_LABELS } from "../features/booking/types";
 
 /**
@@ -13,6 +15,7 @@ import { CARGO_TYPE_LABELS } from "../features/booking/types";
 export function EstimateDetailPage() {
   const { estimateId = "" } = useParams();
   const { data: estimate, isLoading, error } = useEstimate(estimateId);
+  const { data: locations = [] } = useLocations();
 
   if (isLoading) {
     return <p>読み込み中です。</p>;
@@ -39,11 +42,11 @@ export function EstimateDetailPage() {
         </div>
         <div>
           <dt className="text-sm text-gray-600">出発地</dt>
-          <dd>{estimate.originUnLocode}</dd>
+          <dd>{locationName(locations, estimate.originUnLocode)}</dd>
         </div>
         <div>
           <dt className="text-sm text-gray-600">目的地</dt>
-          <dd>{estimate.destinationUnLocode}</dd>
+          <dd>{locationName(locations, estimate.destinationUnLocode)}</dd>
         </div>
         <div>
           <dt className="text-sm text-gray-600">希望期限</dt>

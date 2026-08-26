@@ -581,3 +581,51 @@ test('12-billing-invoice（請求書詳細）', async ({ page }) => {
 
   await page.screenshot({ path: `${ASSETS}/12-billing-invoice.png`, fullPage: true })
 })
+
+test('12-billing-payment（入金の確認）', async ({ page }) => {
+  await login(page, 'accountant01')
+  // **未入金の請求書を自分で作る。**「あれば撮る」形にすると、無いときに黙って
+  // 空の画面を載せることになる
+  await page.goto('/billing/new/BKG-2026000007')
+  await page.getByRole('button', { name: '確定する' }).click()
+  await expect(page).toHaveURL(/\/billing\/INV-/)
+
+  await page.getByRole('link', { name: '入金を確認する' }).click()
+  await expect(page.getByRole('heading', { name: '入金の確認' })).toBeVisible()
+  // 請求金額が出ていることまで確かめる。空の画面を撮ると、手引きの説明と食い違う
+  await expect(page.getByTestId('billed-amount')).toContainText('¥')
+
+  await page.screenshot({ path: `${ASSETS}/12-billing-payment.png`, fullPage: true })
+})
+
+test('13-estimate-list（見積管理）', async ({ page }) => {
+  await login(page, 'sales01')
+  // **一覧が空のまま撮らない。**この画面が何をする場所か伝わらない
+  await page.goto('/booking/estimates/new')
+  await page.getByLabel('出発地').selectOption('JPTYO')
+  await page.getByLabel('目的地').selectOption('USLAX')
+  await page.getByLabel('希望期限').fill('2027-12-31')
+  await page.getByLabel('重量（kg）').fill('4200')
+  await page.getByRole('button', { name: '候補を探す' }).click()
+  await page.getByRole('button', { name: '見積を作成する' }).click()
+  await expect(page.getByTestId('estimate-number')).toBeVisible()
+
+  await page.getByRole('link', { name: '見積管理へ戻る' }).click()
+  await expect(page.getByTestId('estimate-list')).toBeVisible()
+
+  await page.screenshot({ path: `${ASSETS}/13-estimate-list.png`, fullPage: true })
+})
+
+test('13-estimate-new（見積の作成）', async ({ page }) => {
+  await login(page, 'sales01')
+  await page.goto('/booking/estimates/new')
+  await page.getByLabel('出発地').selectOption('JPTYO')
+  await page.getByLabel('目的地').selectOption('USLAX')
+  await page.getByLabel('希望期限').fill('2027-12-31')
+  await page.getByLabel('重量（kg）').fill('4200')
+  await page.getByRole('button', { name: '候補を探す' }).click()
+  // **候補が出た状態を撮る。**探す前の空のフォームだと、4 項目の説明を示せない
+  await expect(page.getByTestId('route-candidate').first()).toBeVisible()
+
+  await page.screenshot({ path: `${ASSETS}/13-estimate-new.png`, fullPage: true })
+})

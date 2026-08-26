@@ -11,6 +11,43 @@ function renderAs(roles: Role[]) {
   return renderWithProviders(<AppLayout />)
 }
 
+describe('いま開いている画面の示し方', () => {
+  beforeEach(() => {
+    useAuthStore.getState().logout()
+  })
+
+  /**
+   * **選択状態は 1 つだけ**（IT12 のキャプチャで気づいた）。
+   *
+   * <p>`NavLink` の既定は前方一致であり、`/booking/estimates/new` を開くと
+   * 「見積管理」と「貨物予約」が**同時に**選択状態になっていた——どちらが自分の
+   * 居場所か分からなくなる。
+   */
+  it('下位の画面を開いても、選択状態になる項目は 1 つだけ', () => {
+    loginAs(['ROLE_SALES'])
+    renderWithProviders(<AppLayout />, ['/booking/estimates/new'])
+
+    const selected = screen
+      .getAllByRole('link')
+      .filter((link) => link.className.includes('bg-blue-50'))
+      .map((link) => link.textContent)
+
+    expect(selected, '選択状態の項目が 1 つに定まっていない').toEqual(['見積管理'])
+  })
+
+  it('上位の画面を開いたら、上位の項目が選択状態になる', () => {
+    loginAs(['ROLE_SALES'])
+    renderWithProviders(<AppLayout />, ['/booking'])
+
+    const selected = screen
+      .getAllByRole('link')
+      .filter((link) => link.className.includes('bg-blue-50'))
+      .map((link) => link.textContent)
+
+    expect(selected).toEqual(['貨物予約'])
+  })
+})
+
 describe('共通レイアウトのナビゲーション', () => {
   beforeEach(() => {
     useAuthStore.getState().logout()

@@ -1,5 +1,5 @@
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { NAVIGATION } from '../config/navigation'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { NAVIGATION, resolveNavigationItem } from '../config/navigation'
 import { useAuthStore } from '../stores/auth-store'
 import { ROLE_LABELS } from '../types/role'
 
@@ -11,6 +11,8 @@ export function AppLayout() {
   const navigate = useNavigate()
 
   const items = NAVIGATION.filter((item) => hasAnyRole(item.roles))
+  // いま開いている画面に対応する項目（最長一致）。**ここで判定を書き直さない**
+  const current = resolveNavigationItem(useLocation().pathname)?.to
 
   function handleLogout() {
     logout()
@@ -47,10 +49,18 @@ export function AppLayout() {
             {items.map((item) => (
               <li key={item.to}>
                 {item.available ? (
+                  /*
+                    **いま開いている画面の項目だけを選択状態にする。**
+                    `NavLink` の既定は前方一致であり、`/booking/estimates/new` を開くと
+                    「見積管理」と「貨物予約」が**同時に**選択状態になる（キャプチャで
+                    気づいた）。どちらが自分の居場所か分からなくなる。
+                    判定はナビゲーションの解決規則（最長一致）に委ねる——ここで別の
+                    判定を書くと、ダッシュボードの導線と食い違う
+                  */
                   <NavLink
                     to={item.to}
-                    className={({ isActive }) =>
-                      `block rounded px-3 py-2 ${isActive ? 'bg-blue-50 font-medium text-blue-700' : 'text-gray-700 hover:bg-gray-100'}`
+                    className={() =>
+                      `block rounded px-3 py-2 ${current === item.to ? 'bg-blue-50 font-medium text-blue-700' : 'text-gray-700 hover:bg-gray-100'}`
                     }
                   >
                     {item.label}

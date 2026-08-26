@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
 
 import { useEstimates } from "../features/booking/estimate-queries";
+import { locationName } from "../features/booking/location-name";
+import { useLocations } from "../features/booking/queries";
 import { CARGO_TYPE_LABELS } from "../features/booking/types";
 
 /**
@@ -11,6 +13,8 @@ import { CARGO_TYPE_LABELS } from "../features/booking/types";
  */
 export function EstimateListPage() {
   const { data: estimates = [], isLoading } = useEstimates();
+  // 港は名前で出す。**画面ごとに書き方を変えない**
+  const { data: locations = [] } = useLocations();
 
   return (
     <div className="space-y-6">
@@ -53,8 +57,12 @@ export function EstimateListPage() {
                     {estimate.estimateNumber}
                   </Link>
                 </td>
-                <td className="px-3 py-2">{estimate.originUnLocode}</td>
-                <td className="px-3 py-2">{estimate.destinationUnLocode}</td>
+                <td className="px-3 py-2">
+                  {locationName(locations, estimate.originUnLocode)}
+                </td>
+                <td className="px-3 py-2">
+                  {locationName(locations, estimate.destinationUnLocode)}
+                </td>
                 <td className="px-3 py-2">{estimate.arrivalDeadline}</td>
                 <td className="px-3 py-2">{CARGO_TYPE_LABELS[estimate.cargoType]}</td>
                 <td className="px-3 py-2">{estimate.candidates.length} 件</td>

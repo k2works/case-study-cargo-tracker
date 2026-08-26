@@ -1,5 +1,7 @@
 import { formatYen } from "../../billing/money";
 import type { RouteCandidate } from "../estimate-types";
+import { locationName } from "../location-name";
+import { useLocations } from "../queries";
 
 /**
  * ルート候補の一覧（受入基準 01-3）。
@@ -11,6 +13,8 @@ import type { RouteCandidate } from "../estimate-types";
 export function RouteCandidateList({
   candidates,
 }: Readonly<{ candidates: RouteCandidate[] }>) {
+  const { data: locations = [] } = useLocations();
+
   if (candidates.length === 0) {
     return (
       <p className="rounded border border-gray-200 p-4 text-gray-700">
@@ -39,7 +43,9 @@ export function RouteCandidateList({
               <span className="block text-sm text-gray-600">経由港</span>
               {/* **直行も「経由港」の枠で言う。**枠ごと消すと、項目が欠けたのか
                   直行なのかを読み分けられない */}
-              {candidate.transitPort ?? "直行"}
+              {candidate.transitPort === null
+                ? "直行"
+                : locationName(locations, candidate.transitPort)}
             </div>
             <div>
               <span className="block text-sm text-gray-600">所要日数</span>
