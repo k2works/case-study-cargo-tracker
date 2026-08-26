@@ -187,6 +187,7 @@ nav:
       - ADR-024 貨物状態の手動更新・例外・公開追跡照会: adr/024-tracking-manual-update-and-exceptions.md
       - ADR-025 通関申告とキャンセル承認: adr/025-customs-declaration-and-cancellation-approval.md
       - ADR-026 誤配の検知と経路の再設計: adr/026-misroute-detection-and-rerouting.md
+      - ADR-027 輸送料金の算定規則: adr/027-transport-charge-calculation.md
   - 記事:
       - 概要: article/index.md
       - モノリスアーキテクチャ実装比較:
