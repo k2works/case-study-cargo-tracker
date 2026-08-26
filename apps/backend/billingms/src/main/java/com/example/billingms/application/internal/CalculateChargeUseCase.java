@@ -19,6 +19,7 @@ import com.example.billingms.domain.model.TaxRate;
 import com.example.billingms.domain.model.TransportCharge;
 import java.time.Clock;
 import java.util.List;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 料金を算出し、確定して精算書を発行する（US21・US22）。
@@ -75,7 +76,7 @@ public class CalculateChargeUseCase {
      * なる——決定 4 により金額を動かす手段が無く、{@code booking_id} は UNIQUE なので
      * 出し直しもできない。<strong>自力で復旧できない状態になる。</strong>
      */
-    @org.springframework.transaction.annotation.Transactional
+    @Transactional
     public Invoice confirm(String bookingId, List<AdjustmentCommand> adjustments) {
         BillableCargoSnapshot snapshot = requireBillable(bookingId);
         ChargeCalculation calculation = toCalculation(snapshot);
