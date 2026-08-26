@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { PANELS } from '../config/dashboard-panels'
+import { useUnbilledBookings } from '../features/billing/queries'
 import { resolveNavigationItem } from '../config/navigation'
 import { useAuthStore } from '../stores/auth-store'
 import { useBookings } from '../features/booking/queries'
@@ -86,6 +87,28 @@ function PendingCancellationNotice() {
   )
 }
 
+/**
+ * 料金を算出していない引取済の予約の件数（US21-1）。
+ *
+ * <p><strong>経理担当者は他に気づく手段を持たない。</strong>メールの仕組みは無い
+ * （通知は US23 以降）。ここに出ていないものは、誰にも気づかれないまま滞留する。
+ *
+ * <p>件数だけでは仕事は進まないので、同じパネルの行動から対象一覧へ行ける（横断規約）。
+ */
+function UnbilledBookingsNotice() {
+  const { data } = useUnbilledBookings()
+
+  if (data === undefined || data.length === 0) {
+    return null
+  }
+
+  return (
+    <p className="mt-2 rounded border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm text-yellow-900">
+      {`料金を算出していない引取済の予約が ${data.length} 件あります。`}
+    </p>
+  )
+}
+
 export function DashboardPage() {
   const user = useAuthStore((state) => state.user)
   const panels = PANELS.filter((panel) => user?.roles.includes(panel.role))
@@ -110,6 +133,7 @@ export function DashboardPage() {
       {panels.map((panel) => (
         <section key={panel.role} className="rounded border bg-white p-6">
           <h2 className="text-lg font-semibold text-gray-900">{panel.title}</h2>
+          {panel.role === 'ROLE_ACCOUNTANT' && <UnbilledBookingsNotice />}
           {panel.role === 'ROLE_ROUTING' && (
             <RoutingBacklogNotice
               routingStatus="ROUTING_REQUESTED"

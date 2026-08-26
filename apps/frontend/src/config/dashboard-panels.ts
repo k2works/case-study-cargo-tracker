@@ -120,6 +120,7 @@ export const PANELS: Panel[] = [
   {
     role: 'ROLE_ACCOUNTANT',
     title: '経理ダッシュボード',
-    actions: [{ label: '請求書を確認する', to: '/billing' }],
+    // **件数から対象一覧へ辿れる**（横断規約）。件数だけ出しても仕事は進まない
+    actions: [{ label: '料金を算出する', to: '/billing' }],
   },
 ]

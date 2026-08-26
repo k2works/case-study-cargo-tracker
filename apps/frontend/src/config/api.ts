@@ -15,6 +15,34 @@ export const API_PATHS = {
   /** 公開追跡照会（認証不要）。業務 API と接頭辞を分けることで公開範囲を一目で分かるようにする。 */
   publicTracking: (trackingNumber: string) => `/api/v1/public/tracking/${trackingNumber}`,
   trackingManagement: '/api/v1/tracking/manage',
+  /**
+   * **料金を算出していない引取済の予約**（US21-1）。
+   *
+   * 経理担当者は他に気づく手段を持たない——メールの仕組みは無い。
+   * ダッシュボードの件数も、精算管理の待ち行列も、ここから来る。
+   */
+  unbilledBookings: '/api/v1/billing/unbilled',
+  /** 発行済みの精算書の一覧。 */
+  invoices: '/api/v1/billing/invoices',
+  /** 発行済みの精算書 1 件。 */
+  invoice: (invoiceId: string) => `/api/v1/billing/invoices/${encodeURIComponent(invoiceId)}`,
+  /**
+   * 料金の算出結果（[ADR-027](../../../docs/adr/027-transport-charge-calculation.md) 決定 3）。
+   *
+   * **保存されない。** 算出中の精算書は存在せず、サーバが毎回計算して返す。
+   * 下書きを持つと、下書きのまま忘れられた精算書が溜まる——それを見つける手段を
+   * また作ることになる。
+   */
+  chargeCalculation: (bookingId: string) =>
+    `/api/v1/billing/calculations/${encodeURIComponent(bookingId)}`,
+  /**
+   * 料金を確定して精算書を発行する（US21-4・US21-5）。
+   *
+   * **調整はここでまとめて送る。** 算出中は保存しないため、画面が積んだ明細を
+   * 確定の瞬間に渡す。
+   */
+  calculateCharge: (bookingId: string) =>
+    `/api/v1/billing/${encodeURIComponent(bookingId)}/calculate`,
   handling: '/api/v1/handling',
   customs: '/api/v1/customs',
   /**

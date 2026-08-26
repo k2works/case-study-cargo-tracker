@@ -10,6 +10,7 @@
  */
 import { adminHandlers } from './handlers/admin'
 import { authHandlers } from './handlers/auth'
+import { billingHandlers } from './handlers/billing'
 import { bookingHandlers } from './handlers/booking'
 import { routingHandlers } from './handlers/routing'
 import { shipperHandlers } from './handlers/shipper'
@@ -28,4 +29,5 @@ export const handlers = [
   ...customsHandlers,
   ...cancellationHandlers,
   ...trackingHandlers,
+  ...billingHandlers,
 ]

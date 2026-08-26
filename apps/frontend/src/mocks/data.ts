@@ -583,6 +583,226 @@ export const bookings: MockBooking[] = [
       },
     ],
   },
+
+  /**
+   * 引取が終わった予約（US21）。**法人荷主・2 区間**。
+   *
+   * <p>精算の対象がここから始まる。IT10 まで種データに引取済の予約が 1 件も無く、
+   * <strong>経理担当者は仕事を始める相手を持っていなかった</strong>。
+   *
+   * <p>2 区間にしてあるのは、区間係数が効くことを確かめるためである
+   * （[ADR-027] 決定 1）——1 区間だと係数 1.0 になり、掛け忘れても同じ金額になる。
+   */
+  {
+    id: 7,
+    bookingId: 'BKG-2026000007',
+    shipperId: 1,
+    bookingStatus: 'DELIVERED',
+    transportStatus: 'DELIVERED',
+    routingStatus: 'ROUTED',
+    type: 'GENERAL',
+    weightKg: 4200,
+    quantity: 30,
+    description: '産業機械',
+    lengthCm: null,
+    widthCm: null,
+    heightCm: null,
+    originUnLocode: 'JPTYO',
+    originName: 'Tokyo',
+    destinationUnLocode: 'USLAX',
+    destinationName: 'Los Angeles',
+    departureDate: null,
+    arrivalDeadline: '2027-10-20',
+    hazardousClass: null,
+    unNumber: null,
+    properShippingName: null,
+    minCelsius: null,
+    maxCelsius: null,
+    routeNotifiedAt: '2026-08-22T02:00:00Z',
+    routeNotifiedBy: 'sales01',
+    trackingNumber: 'TRK-20260823-0007',
+    lastHandlingLocationUnLocode: 'USLAX',
+    lastHandlingLocationName: 'Los Angeles',
+    lastHandlingAt: '2027-09-26T00:00:00Z',
+    itinerary: [
+      {
+        voyageNumber: 'V-SEED-3',
+        loadUnLocode: 'JPTYO',
+        loadName: 'Tokyo',
+        unloadUnLocode: 'CNSHA',
+        unloadName: 'Shanghai',
+        loadTime: '2027-09-02T00:00:00Z',
+        unloadTime: '2027-09-08T00:00:00Z',
+      },
+      {
+        voyageNumber: 'V-SEED-4',
+        loadUnLocode: 'CNSHA',
+        loadName: 'Shanghai',
+        unloadUnLocode: 'USLAX',
+        unloadName: 'Los Angeles',
+        loadTime: '2027-09-10T00:00:00Z',
+        unloadTime: '2027-09-25T00:00:00Z',
+      },
+    ],
+  },
+
+  /**
+   * 引取が終わった予約（US22-3）。**個人荷主・1 区間**。
+   *
+   * <p>個人荷主には契約割引が無い。<strong>割引率 0% ではなく「契約が無い」</strong>
+   * （[ADR-012] が `DiscountRate` について同じ判断をしている）——0% を出すと
+   * 「割引が 0 だった」に読め、契約が無いことと区別できない。
+   */
+  {
+    id: 8,
+    bookingId: 'BKG-2026000008',
+    shipperId: 2,
+    bookingStatus: 'DELIVERED',
+    transportStatus: 'DELIVERED',
+    routingStatus: 'ROUTED',
+    type: 'REFRIGERATED',
+    weightKg: 800,
+    quantity: 12,
+    description: '冷凍食品',
+    lengthCm: null,
+    widthCm: null,
+    heightCm: null,
+    originUnLocode: 'JPTYO',
+    originName: 'Tokyo',
+    destinationUnLocode: 'SGSIN',
+    destinationName: 'Singapore',
+    departureDate: null,
+    arrivalDeadline: '2027-09-30',
+    hazardousClass: null,
+    unNumber: null,
+    properShippingName: null,
+    minCelsius: -18,
+    maxCelsius: -10,
+    routeNotifiedAt: '2026-08-22T02:00:00Z',
+    routeNotifiedBy: 'sales01',
+    trackingNumber: 'TRK-20260823-0008',
+    lastHandlingLocationUnLocode: 'SGSIN',
+    lastHandlingLocationName: 'Singapore',
+    lastHandlingAt: '2027-09-20T00:00:00Z',
+    itinerary: [
+      {
+        voyageNumber: 'V-SEED-5',
+        loadUnLocode: 'JPTYO',
+        loadName: 'Tokyo',
+        unloadUnLocode: 'SGSIN',
+        unloadName: 'Singapore',
+        loadTime: '2027-09-05T00:00:00Z',
+        unloadTime: '2027-09-19T00:00:00Z',
+      },
+    ],
+  },
+
+  /**
+   * 誤配のあと組み直して、引取まで終わった予約（US21-6・US28-8）。
+   *
+   * <p><strong>誤配の記録は解決しても消えない</strong>（[ADR-026] 決定 3）。
+   * IT10 はそこまでで終わっており、<strong>読む相手がいなかった</strong>。
+   * 経理担当者がここで初めてその記録を読む。
+   */
+  {
+    id: 9,
+    bookingId: 'BKG-2026000009',
+    shipperId: 1,
+    bookingStatus: 'DELIVERED',
+    transportStatus: 'DELIVERED',
+    routingStatus: 'ROUTED',
+    type: 'GENERAL',
+    weightKg: 2500,
+    quantity: 18,
+    description: '自動車部品',
+    lengthCm: null,
+    widthCm: null,
+    heightCm: null,
+    originUnLocode: 'JPTYO',
+    originName: 'Tokyo',
+    destinationUnLocode: 'USLAX',
+    destinationName: 'Los Angeles',
+    departureDate: null,
+    arrivalDeadline: '2027-09-30',
+    hazardousClass: null,
+    unNumber: null,
+    properShippingName: null,
+    minCelsius: null,
+    maxCelsius: null,
+    routeNotifiedAt: '2026-08-22T02:00:00Z',
+    routeNotifiedBy: 'sales01',
+    trackingNumber: 'TRK-20260823-0009',
+    lastHandlingLocationUnLocode: 'USLAX',
+    lastHandlingLocationName: 'Los Angeles',
+    lastHandlingAt: '2027-10-02T00:00:00Z',
+    misroute: {
+      at: '2027-09-09T00:00:00Z',
+      locationUnLocode: 'SGSIN',
+      locationName: 'Singapore',
+    },
+    itinerary: [
+      {
+        voyageNumber: 'V-SEED-6',
+        loadUnLocode: 'SGSIN',
+        loadName: 'Singapore',
+        unloadUnLocode: 'USLAX',
+        unloadName: 'Los Angeles',
+        loadTime: '2027-09-12T00:00:00Z',
+        unloadTime: '2027-10-01T00:00:00Z',
+      },
+    ],
+  },
+
+  /**
+   * 輸送中にキャンセルが承認された予約（US30-9）。
+   *
+   * <p>IT9 は画面に「キャンセル料は算定していません」と書いた。算定する場所が
+   * 無かったからである。<strong>本 IT でその一文が消える。</strong>
+   */
+  {
+    id: 10,
+    bookingId: 'BKG-2026000010',
+    shipperId: 1,
+    bookingStatus: 'CANCELLED',
+    transportStatus: 'IN_TRANSIT',
+    routingStatus: 'ROUTED',
+    type: 'GENERAL',
+    weightKg: 1500,
+    quantity: 8,
+    description: '電子部品',
+    lengthCm: null,
+    widthCm: null,
+    heightCm: null,
+    originUnLocode: 'JPTYO',
+    originName: 'Tokyo',
+    destinationUnLocode: 'USLAX',
+    destinationName: 'Los Angeles',
+    departureDate: null,
+    arrivalDeadline: '2027-10-15',
+    hazardousClass: null,
+    unNumber: null,
+    properShippingName: null,
+    minCelsius: null,
+    maxCelsius: null,
+    routeNotifiedAt: '2026-08-22T02:00:00Z',
+    routeNotifiedBy: 'sales01',
+    trackingNumber: 'TRK-20260823-0010',
+    lastHandlingLocationUnLocode: 'CNSHA',
+    lastHandlingLocationName: 'Shanghai',
+    lastHandlingAt: '2027-09-08T00:00:00Z',
+    itinerary: [
+      {
+        voyageNumber: 'V-SEED-3',
+        loadUnLocode: 'JPTYO',
+        loadName: 'Tokyo',
+        unloadUnLocode: 'CNSHA',
+        unloadName: 'Shanghai',
+        loadTime: '2027-09-02T00:00:00Z',
+        unloadTime: '2027-09-08T00:00:00Z',
+      },
+    ],
+  },
+
 ]
 
 /**

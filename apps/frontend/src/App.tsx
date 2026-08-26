@@ -5,6 +5,9 @@ import { CancellationsPage } from './pages/cancellations-page'
 import { CustomsDetailPage } from './pages/customs-detail-page'
 import { CustomsNewPage } from './pages/customs-new-page'
 import { AwaitingDischargePage } from './pages/awaiting-discharge-page'
+import { BillingPage } from './pages/billing-page';
+import { BillingNewPage } from './pages/billing-new-page';
+import { InvoiceDetailPage } from './pages/invoice-detail-page';
 import { CustomsPage } from './pages/customs-page'
 import { DashboardPage } from './pages/dashboard-page'
 import { ForbiddenPage } from './pages/forbidden-page'
@@ -67,6 +70,21 @@ export default function App() {
 
       {/* ロックの解除はシステム管理者だけ（US32-4）。他のロールに開くと、
           誰でも他人のロックを外せることになり、アカウント保護（US31）が意味を失う */}
+      {/* 精算は経理担当者の業務（US21・US22）。**営業や経路設計者には開かない**
+          ——請求の金額を決めるのは経理であり、職掌が違う。サーバも同じ規則を持つ
+          （画面に出す・出さないでは守れない） */}
+      <Route
+        element={
+          <RequireAuth allowedRoles={['ROLE_ACCOUNTANT']}>
+            <AppLayout />
+          </RequireAuth>
+        }
+      >
+        <Route path="/billing" element={<BillingPage />} />
+        <Route path="/billing/new/:bookingId" element={<BillingNewPage />} />
+        <Route path="/billing/:invoiceId" element={<InvoiceDetailPage />} />
+      </Route>
+
       <Route
         element={
           <RequireAuth allowedRoles={['ROLE_ADMIN']}>

@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { cleanup, screen } from '@testing-library/react'
 import { HttpResponse, http } from 'msw'
 import { API_PATHS } from '../../config/api'
 import { server } from '../../test/msw/server'
@@ -51,15 +51,27 @@ describe('まだ使えない画面への導線', () => {
     useAuthStore.getState().logout()
   })
 
-  it('準備中と示し、押せないようにする', () => {
-    // 経理担当者の画面（精算管理）はまだ無い。IT9 で追跡管理者の画面が
-    // すべて使えるようになったため、準備中が残っているロールで確かめる
-    renderAs(['ROLE_ACCOUNTANT'])
+  /**
+   * **IT11 でダッシュボードから「準備中」が無くなった。**
+   *
+   * 経理担当者の精算管理が最後の 1 つだった。残る準備中は見積管理
+   * （`/booking/estimates`・US01・IT12）だけで、これはナビゲーションにしかない。
+   *
+   * したがってここで確かめるのは、**押せない行動が残っていないこと**である。
+   * 押した先が存在しないと、利用者は公開トップに飛ばされて
+   * 「勝手にログアウトされた」と受け取る。
+   */
+  it('どのロールのダッシュボードにも、押せない行動が残っていない', () => {
+    for (const panel of PANELS) {
+      useAuthStore.getState().logout()
+      renderAs([panel.role])
 
-    // 押した先が存在しないと、利用者は公開トップに飛ばされて
-    // 「勝手にログアウトされた」と受け取る
-    expect(screen.queryByRole('link', { name: /請求書/ })).not.toBeInTheDocument()
-    expect(screen.getAllByText(/準備中/).length).toBeGreaterThan(0)
+      expect(
+        screen.queryByText(/準備中/),
+        `${panel.title} に準備中の行動が残っている`,
+      ).not.toBeInTheDocument()
+      cleanup()
+    }
   })
 
   /** US15。IT7 で使えるようになった。「準備中」のままだと、そこへ行けない。 */
@@ -87,12 +99,27 @@ describe('まだ使えない画面への導線', () => {
     expect(resolveNavigationItem('/booking')?.available).toBe(true)
   })
 
-  it('担当の画面がすべて準備中なら、その旨を伝える', () => {
-    // 経理担当者の画面（精算管理）は IT3 時点でまだ無い
-    renderAs(['ROLE_ACCOUNTANT'])
+  /**
+   * **どのロールにも、押せる行動が 1 つ以上ある**（ロール別到達性）。
+   *
+   * IT11 までは「担当の画面がすべて準備中なら、その旨を伝える」を確かめていたが、
+   * **そのようなロールは無くなった**（経理担当者が最後だった）。伝える実装は残して
+   * あるが、いま踏める道が無いので、代わりに**逆側**を固定する。
+   *
+   * 画面が増えるほど、あるロールだけ導線が抜ける形が起きやすい
+   * （IT7・IT9・IT10 で 3 度踏んだ）。
+   */
+  it('どのロールにも、押せる行動が 1 つ以上ある', () => {
+    for (const panel of PANELS) {
+      useAuthStore.getState().logout()
+      renderAs([panel.role])
 
-    // 何も使えないことが分かれば、待ち状態として受け取れる
-    expect(screen.getByText(/次のリリースで使えるようになります/)).toBeInTheDocument()
+      expect(
+        screen.getAllByRole('link').length,
+        `${panel.title} から行ける画面が 1 つも無い`,
+      ).toBeGreaterThan(0)
+      cleanup()
+    }
   })
 })
 

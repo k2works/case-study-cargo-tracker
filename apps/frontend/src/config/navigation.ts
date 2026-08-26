@@ -115,7 +115,7 @@ export const NAVIGATION: NavigationItem[] = [
     label: "精算管理",
     to: "/billing",
     roles: ["ROLE_ACCOUNTANT"],
-    available: false,
+    available: true,
   },
   // ロックされたアカウントの解除（US32）。**管理者以外には出さない**——出すと、
   // 押した先で 403 になる画面へ誘導することになる

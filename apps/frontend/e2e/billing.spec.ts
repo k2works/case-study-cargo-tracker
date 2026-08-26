@@ -19,7 +19,7 @@ import type { Page } from '@playwright/test'
  */
 
 /** 種データ（`src/mocks/data.ts`）。引取済で、法人荷主の予約。 */
-const CORPORATE_BOOKING = 'BKG-2026000004'
+const CORPORATE_BOOKING = 'BKG-2026000007'
 
 async function logInAs(page: Page, userId: string) {
   await page.goto('/login')
@@ -63,9 +63,12 @@ test.describe('精算管理（US21・US22）', () => {
     await page.getByRole('link', { name: new RegExp(CORPORATE_BOOKING) }).click()
     await expect(page).toHaveURL(new RegExp(`/billing/new/${CORPORATE_BOOKING}`))
 
-    await expect(page.getByText('重量'), '重量が出ていない').toBeVisible()
-    await expect(page.getByText('貨物種別'), '貨物種別が出ていない').toBeVisible()
-    await expect(page.getByText('区間数'), '区間数が出ていない').toBeVisible()
+    // **根拠の枠の中を見る。** ページ全体で `重量` を探すと `重量係数` にも一致し、
+    // どちらが出ていても緑になる
+    const basis = page.getByTestId('charge-basis')
+    await expect(basis, '重量の実績が出ていない').toContainText('4,200 kg')
+    await expect(basis, '貨物種別が出ていない').toContainText('一般貨物')
+    await expect(basis, '区間数が出ていない').toContainText('2 区間')
     await expect(
       page.getByText(/距離は保持していません|区間数で代替/),
       '距離の代わりに区間数を使っていることを画面が言っていない',
@@ -111,8 +114,7 @@ test.describe('精算管理（US21・US22）', () => {
     await logInAsAccountant(page)
     await page.goto('/billing')
 
-    const individual = page.getByTestId('unbilled-individual').first()
-    await individual.click()
+    await page.getByTestId('unbilled-individual').first().getByRole('link').click()
 
     await expect(
       page.getByTestId('discount-rate'),
@@ -130,7 +132,7 @@ test.describe('精算管理（US21・US22）', () => {
     await logInAsAccountant(page)
     await page.goto('/billing')
 
-    await page.getByTestId('unbilled-misrouted').first().click()
+    await page.getByTestId('unbilled-misrouted').first().getByRole('link').click()
 
     const evidence = page.getByTestId('adjustment-evidence')
     await expect(evidence, '誤配の記録が根拠として出ていない').toBeVisible()
@@ -171,11 +173,18 @@ test.describe('精算管理（US21・US22）', () => {
     ).toHaveCount(0)
   })
 
-  /** デモ 9。**割引の根拠が精算書に残る**（22-4）。 */
+  /**
+   * デモ 9。**割引の根拠が精算書に残る**（22-4）。
+   *
+   * **前提（発行済みの精算書）は自分で作る。** テストは 1 件ずつ独立して動くため、
+   * デモ 8 が発行したものはここには残らない。「あれば見る」形にすると、
+   * **無いときに黙って素通りする**——通っていないことに気づけない。
+   */
   test('デモ 9: 請求書詳細に、割引の根拠が記載されている', async ({ page }) => {
     await logInAsAccountant(page)
-    await page.goto('/billing')
-    await page.getByTestId('invoice-link').first().click()
+    await page.goto(`/billing/new/${CORPORATE_BOOKING}`)
+    await page.getByRole('button', { name: '確定する' }).click()
+    await expect(page).toHaveURL(/\/billing\/INV-/)
 
     const breakdown = page.getByTestId('amount-breakdown')
     await expect(breakdown, '基本料金が出ていない').toContainText('基本運賃')
@@ -193,7 +202,7 @@ test.describe('精算管理（US21・US22）', () => {
     await logInAsAccountant(page)
     await page.goto('/billing')
 
-    await page.getByTestId('unbilled-cancelled').first().click()
+    await page.getByTestId('unbilled-cancelled').first().getByRole('link').click()
 
     const fee = page.getByTestId('cancellation-fee')
     await expect(fee, 'キャンセル料が算定されていない').toBeVisible()
@@ -220,6 +229,6 @@ test.describe('経理担当者の到達性（Try 5）', () => {
   test('経理担当者以外は精算管理を開けない', async ({ page }) => {
     await logInAs(page, 'sales01')
     await page.goto('/billing')
-    await expect(page, '営業担当者が精算管理を開けている').toHaveURL(/\/forbidden/)
+    await expect(page, '営業担当者が精算管理を開けている').toHaveURL(/\/403/)
   })
 })
