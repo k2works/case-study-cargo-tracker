@@ -232,3 +232,185 @@ test.describe('経理担当者の到達性（Try 5）', () => {
     await expect(page, '営業担当者が精算管理を開けている').toHaveURL(/\/403/)
   })
 })
+
+/**
+ * IT12 の受け入れ。US23（精算を処理する）と、US21 の未達返済（距離・輸出免税）。
+ *
+ * **デモ項目 1・2・3・4・8・9・11 に対応する**（[IT12 計画](../../../docs/development/iteration_plan-12.md)）。
+ *
+ * IT12 のスコープ外（**代替で満たす**——満たしたことにしない）:
+ * - 精算書のメール通知（23-2）。画面が「送っていない」と言う
+ * - 決済機関との連携（23-3）。経理担当者が入金を手入力する
+ * - 期限超過の通知（23-5）。ダッシュボードの件数と一覧で代替する
+ */
+test.describe('精算処理（US23）', () => {
+  /** 発行済みの請求書を 1 通作る。**前提は自分で作る**（デモ 9 と同じ理由）。 */
+  async function issueInvoice(page: Page) {
+    await page.goto(`/billing/new/${CORPORATE_BOOKING}`)
+    await expect(page.getByRole('heading', { name: '料金算出' })).toBeVisible()
+    await page.getByRole('button', { name: '確定する' }).click()
+    await expect(page).toHaveURL(/\/billing\/INV-/)
+  }
+
+  /**
+   * デモ 1。**入金を確認すると「入金済」になる**（23-3・23-4）。
+   *
+   * 決済機関との連携は無い。経理担当者が入金日・金額・方法・参照番号を手で入れる。
+   * **代替であることを画面が言う**——言わないと、経理担当者は「連携が壊れている」と
+   * 受け取って待ち続ける。
+   */
+  test('デモ 1: 入金を確認すると、請求書が「入金済」になる', async ({ page }) => {
+    await logInAsAccountant(page)
+    await issueInvoice(page)
+
+    await expect(
+      page.getByText(/決済機関とは連携していません|入金は手で確認/),
+      '入金確認が手作業であることを画面が言っていない',
+    ).toBeVisible()
+
+    await page.getByRole('link', { name: '入金を確認する' }).click()
+    await expect(page).toHaveURL(/\/billing\/INV-.*\/payment$/)
+    await expect(page.getByRole('heading', { name: '入金の確認' })).toBeVisible()
+
+    await page.getByLabel('入金日').fill('2027-10-15')
+    await page.getByLabel('入金額').fill('231000')
+    await page.getByLabel('入金方法').selectOption('BANK_TRANSFER')
+    await page.getByLabel('参照番号').fill('FT27101500123')
+    await page.getByRole('button', { name: '確認する' }).click()
+
+    await expect(page).toHaveURL(/\/billing\/INV-[^/]+$/)
+    await expect(page.getByTestId('payment-status'), '入金済になっていない')
+      .toContainText('入金済')
+    // **入れた根拠が残る。**「入金済」だけでは、いつ・いくら・どの振込かが追えない
+    const payment = page.getByTestId('payment-record')
+    await expect(payment).toContainText('2027-10-15')
+    await expect(payment).toContainText('FT27101500123')
+  })
+
+  /**
+   * デモ 2。**予約が「精算済」になる**（23-4）。
+   *
+   * <strong>画面をまたぐ 1 本である。</strong>billingms で入金を確認したことが、
+   * bookingms の予約状態に届いていることを、**予約の画面で**確かめる
+   * ——billingms の中だけを見ても、届いたかどうかは分からない。
+   */
+  test('デモ 2: 入金確認後、予約が「精算済」になっている', async ({ page }) => {
+    await logInAsAccountant(page)
+    await issueInvoice(page)
+    await page.getByRole('link', { name: '入金を確認する' }).click()
+    await page.getByLabel('入金日').fill('2027-10-15')
+    await page.getByLabel('入金額').fill('231000')
+    await page.getByLabel('入金方法').selectOption('BANK_TRANSFER')
+    await page.getByRole('button', { name: '確認する' }).click()
+    await expect(page.getByTestId('payment-status')).toContainText('入金済')
+
+    await page.goto(`/booking/${CORPORATE_BOOKING}`)
+    await expect(page.getByRole('heading', { name: new RegExp(CORPORATE_BOOKING) })).toBeVisible()
+    await expect(
+      page.getByTestId('booking-status'),
+      '入金を確認したのに予約が引取済のまま。精算が閉じない',
+    ).toContainText('精算済')
+  })
+
+  /**
+   * デモ 3。**期限を過ぎた請求に気づける**（23-5 の代替）。
+   *
+   * 未払い通知のメールは無い。**件数を出すだけでは仕事は進まない**ので、
+   * そこから対象の一覧へ辿れることまでを確かめる。
+   */
+  test('デモ 3: 支払期限を過ぎた請求が件数で出て、そこから一覧へ辿れる', async ({ page }) => {
+    await logInAsAccountant(page)
+
+    const notice = page.getByText(/支払期限を過ぎた請求/)
+    await expect(notice, '期限超過に気づく手段がダッシュボードに無い').toBeVisible()
+
+    await page.getByRole('link', { name: /支払期限を過ぎた請求/ }).click()
+    await expect(page).toHaveURL(/\/billing\?.*overdue/)
+    await expect(
+      page.getByTestId('overdue-invoices'),
+      '件数からたどり着いた先に、対象の請求書が並んでいない',
+    ).toBeVisible()
+  })
+
+  /**
+   * デモ 4。**取り消して出し直せる**（経理担当者の申し送り②）。
+   *
+   * 発行した金額は動かさない（[ADR-027] 決定 4）。**間違いは赤伝で取り消し、
+   * 新しい請求番号で出し直す**——DB を直すのは監査に耐えない。
+   */
+  test('デモ 4: 請求書を取り消すと、新しい請求番号で出し直せる', async ({ page }) => {
+    await logInAsAccountant(page)
+    await issueInvoice(page)
+    const firstNumber = new URL(page.url()).pathname.split('/').pop()
+
+    await page.getByRole('button', { name: '取り消す' }).click()
+    await page.getByLabel('取り消しの理由').fill('金額の誤りのため')
+    await page.getByRole('button', { name: '取り消しを記録する' }).click()
+
+    await expect(page.getByTestId('void-reason'), '取り消した理由が残っていない')
+      .toContainText('金額の誤りのため')
+
+    // **取り消したら、同じ予約に出し直せる。**出し直せなければ請求できないまま残る
+    await page.goto(`/billing/new/${CORPORATE_BOOKING}`)
+    await page.getByRole('button', { name: '確定する' }).click()
+    await expect(page).toHaveURL(/\/billing\/INV-/)
+    expect(
+      new URL(page.url()).pathname.split('/').pop(),
+      '出し直した請求書が同じ請求番号を使っている。どちらが有効か分からなくなる',
+    ).not.toBe(firstNumber)
+  })
+
+  /**
+   * デモ 11。**画面の数字がそのまま紙になる**（経理担当者の申し送り③）。
+   *
+   * 印刷が無いと、数字を書き写して表計算で作ることになり、システムの金額と
+   * 実際に送った請求書が食い違い始める。
+   */
+  test('デモ 11: 請求書を印刷できる', async ({ page }) => {
+    await logInAsAccountant(page)
+    await issueInvoice(page)
+
+    await expect(
+      page.getByRole('button', { name: '印刷する' }),
+      '印刷の手段が無い。数字を書き写すことになる',
+    ).toBeEnabled()
+  })
+})
+
+/**
+ * US21 の未達返済。デモ 8（地域区分）・デモ 9（輸出免税）。
+ */
+test.describe('距離と輸出免税（US21 の未達返済）', () => {
+  /** 国内 1 区間と遠洋 1 区間。**同じ区間数でも金額が違う。** */
+  test('デモ 8: 国内輸送と国際輸送で、同じ区間数でも金額が違う', async ({ page }) => {
+    await logInAsAccountant(page)
+
+    await page.goto('/billing/new/BKG-2026000007')
+    const domestic = await page.getByTestId('base-amount').textContent()
+
+    await page.goto('/billing/new/BKG-2026000008')
+    const ocean = await page.getByTestId('base-amount').textContent()
+
+    expect(
+      ocean,
+      '国内の積み替えと太平洋横断が同じ金額になっている。荷主に説明できない',
+    ).not.toBe(domestic)
+
+    await expect(
+      page.getByTestId('charge-basis'),
+      '地域区分が内訳に出ていない。なぜその金額かが読めない',
+    ).toContainText(/遠洋|近海|国内/)
+  })
+
+  /** 輸出免税。**国が異なれば消費税は付かない。** */
+  test('デモ 9: 国際輸送の請求書に消費税が付かない', async ({ page }) => {
+    await logInAsAccountant(page)
+    await page.goto('/billing/new/BKG-2026000008')
+    await page.getByRole('button', { name: '確定する' }).click()
+    await expect(page).toHaveURL(/\/billing\/INV-/)
+
+    const breakdown = page.getByTestId('amount-breakdown')
+    await expect(breakdown, '税区分が出ていない').toContainText('輸出免税')
+    await expect(breakdown, '国際輸送に消費税が付いている').toContainText('消費税 ¥0')
+  })
+})
