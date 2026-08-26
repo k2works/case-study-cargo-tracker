@@ -26,7 +26,7 @@
 | IT9 | [計画](iteration_plan-9.md) | [ふりかえり](retrospective-9.md) | [完了報告書](iteration_report-9.md) | 完了 |
 | IT10 | [計画](iteration_plan-10.md) | [ふりかえり](retrospective-10.md) | [完了報告書](iteration_report-10.md) | 完了 |
 | IT11 | [計画](iteration_plan-11.md) | [ふりかえり](retrospective-11.md) | [完了報告書](iteration_report-11.md) | 完了 |
-| IT12 | [計画](iteration_plan-12.md) | - | - | **計画済み** |
+| IT12 | [計画](iteration_plan-12.md) | [ふりかえり](retrospective-12.md) | [完了報告書](iteration_report-12.md) | 完了 |
 
 ### 進捗サマリー
 
@@ -43,7 +43,10 @@
 | IT9 | 10 | 10 | 100% |
 | IT10 | 7 | 7 | 100% |
 | IT11 | 9 | 9 | 100% |
-| **累計** | **105**（計画・33US） | **97** | **92.4%** |
+| IT12 | 11（うち 3 は US21 の再実施） | 11 | 100% |
+| **累計** | **105**（計画・33US） | **105** | **100%** |
+
+> **IT12 の 11 SP のうち 3 SP は US21（IT11）の再実施**です（距離・輸出免税）。累計にはリリース計画と同じく **8 SP** として算入しています（[release_plan.md](release_plan.md) 529 行）。
 
 ### フェーズ進捗
 
