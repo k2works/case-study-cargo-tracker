@@ -1293,6 +1293,12 @@ package "Value Objects（値オブジェクト）" {
     OVERDUE
     REFUNDED
   }
+  note bottom of PaymentStatus
+    **支払いの状態であり、金額を確定したかではない**（[ADR-027] 決定 3）。
+    混ぜると CONFIRMED が 2 つの意味を持つ。
+    IT11 で起こす遷移は「発行（PENDING）」の 1 本だけで、
+    残る 3 本は US23（IT12）
+  end note
   enum PaymentMethod {
     BANK_TRANSFER
     CREDIT_CARD
@@ -1329,21 +1335,27 @@ DiscountPolicy *-- DiscountPolicyType
 | 集約ルート | Invoice | 精算書 | 貨物輸送 1 件に対する請求書の発行・管理 |
 | エンティティ（集約内） | InvoiceLineItem | 精算明細 | 請求明細項目 |
 | エンティティ（集約内） | Payment | 支払記録 | 支払い実績の記録 |
-| 値オブジェクト | InvoiceId | 請求書 ID | 精算書の一意識別子 |
+| 値オブジェクト | InvoiceId | 請求書 ID | **採番された請求番号**（`INV-YYYY` + 6 桁。`invoice_number` 列に対応）。DB の `id` ではない。予約の `BookingId` と同じ形（[ADR-011]） |
 | 値オブジェクト | BillingBookingId | 予約参照 ID | Booking Context の Cargo との関連識別子（論理参照） |
 | 値オブジェクト | BillingShipperId | 荷主参照 ID | 法人判定（isCorporate）を内包 |
 | 値オブジェクト | Money | 金額 | 金額と通貨コードのペア |
 | 値オブジェクト | DiscountRate | 割引率 | 0〜30% の割引率 |
 | 値オブジェクト | TaxRate | 税率 | 消費税率 |
 | 値オブジェクト | CancellationFee | キャンセル料 | 予約状態に応じた料率で算定（UC22） |
-| 値オブジェクト | DiscountPolicy | 割引方針 | 法人・ボリューム・シーズン割引のロジック |
-| 列挙型 | PaymentStatus | 支払い状態 | PENDING / CONFIRMED / OVERDUE / REFUNDED |
+| 値オブジェクト | DiscountPolicy | 割引方針 | 法人割引のロジック。**未設定は 0% ではない**（[ADR-012]） |
+| 値オブジェクト | TransportCharge | 輸送料金の根拠 | 区間数・重量・貨物種別と、そこから出る基本料金（[ADR-027] 決定 1） |
+| 値オブジェクト | CargoType | 貨物種別 | GENERAL / HAZARDOUS / REFRIGERATED と運賃の係数。**bookingms の同名型とは別**（こちらは係数しか知らない） |
+| 値オブジェクト | CancelledAtStatus | キャンセル時の予約状態 | **キャンセルできる 6 値だけ**を持つ（配送完了・キャンセル済みからはキャンセルできない）と、状態別の料率 |
+| ACL | BillingSnapshot | 料金算出の入力 | bookingms から引く（[ADR-027] 決定 7）。予約の状態・荷主の契約・重量・貨物種別・**区間数**・**誤配の記録**・キャンセルの記録を運ぶ。handlingms 向けの `CargoSnapshot` と同じ形 |
+| 列挙型 | PaymentStatus | 支払い状態 | PENDING / CONFIRMED / OVERDUE / REFUNDED。**IT11 で起こす遷移は「発行（PENDING）」の 1 本だけ**（[ADR-027] 決定 3） |
 | 列挙型 | PaymentMethod | 支払方法 | BANK_TRANSFER / CREDIT_CARD |
-| 列挙型 | DiscountPolicyType | 割引方針種別 | CORPORATE_STANDARD / VOLUME_DISCOUNT / SEASONAL / NONE |
+| 列挙型 | DiscountPolicyType | 割引方針種別 | CORPORATE_STANDARD / NONE（**IT11 で実装したのはこの 2 値**）。VOLUME_DISCOUNT / SEASONAL は決める相手（契約条件）がいないため US23 以降（[ADR-027] 注 10） |
 
 ### ビジネスルール
 
-1. Invoice は貨物配送完了（`CargoDeliveredEvent` 受信）またはキャンセル確定（`CargoCancelledEvent` 受信）後にのみ発行できる
+1. Invoice は**引取済（`DELIVERED`）またはキャンセル済み（`CANCELLED`）の予約に対して、経理担当者が発行できる**（[ADR-027](../adr/027-transport-charge-calculation.md) 決定 5・IT11）。
+   **イベント駆動ではない**——起点は経理担当者の操作であり、`CargoDeliveredEvent` は待たない。
+   読む側の無い配線を先に敷かないため（[ADR-025] 決定 3 と同じ判断）。イベントが要るのは US23（IT12）の精算通知である
 2. 法人荷主（CORPORATE）には最大 30% の割引が適用される
 3. 支払期限（issuedAt + 30 日）を超過した場合、PaymentStatus を OVERDUE に更新する
 4. 支払い確定（CONFIRMED）後のキャンセルは REFUNDED 状態に遷移する
@@ -1354,10 +1366,16 @@ DiscountPolicy *-- DiscountPolicyType
 料金計算ロジック：
 
 ```
-基本料金 = 距離係数 × 重量（kg） × 貨物種別係数
+基本料金 = 基準運賃 × 区間係数 × 重量係数 × 貨物種別係数
+  基準運賃   = 50,000 円（1 区間・1,000kg・一般貨物のとき）
+  区間係数   = 旅程の区間数。**距離の代わり**（[ADR-027] 決定 1。距離は保持していない）
+  重量係数   = 重量（kg）÷ 1,000（下限 0.1。運ぶ手間は重量に比例しない）
+  貨物種別係数
   - GENERAL（一般貨物）: 係数 1.0
   - HAZARDOUS（危険物）: 係数 1.8
   - REFRIGERATED（冷凍・冷蔵）: 係数 1.5
+
+  端数は 1 円単位で四捨五入する（[ADR-027] 決定 2）。丸めは Money の中 1 か所だけ
 
 割引後料金 = 基本料金 × (1 - 割引率)
   - CORPORATE 荷主: 割引率 0〜30%

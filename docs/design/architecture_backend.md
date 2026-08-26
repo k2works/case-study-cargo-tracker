@@ -101,9 +101,9 @@ package "Handling Microservice (handlingms)" {
 
 package "Billing Microservice (billingms)" {
   [REST Controller] as billing_rest
-  [Event Subscriber] as billing_sub
-  [Domain Model\n(Invoice)] as billing_domain
+  [Domain Model\n(Invoice, Money,\nTransportCharge)] as billing_domain
   [MyBatis Repository] as billing_repo
+  [BillingSnapshotFinder\n(ACL)] as billing_acl
 }
 
 queue "RabbitMQ\n(Message Broker)" as MQ
@@ -131,7 +131,7 @@ booking_acl --> routing_rest : REST API（同期）
 booking_broker --> MQ : TrackingNumberIssuedEvent / CargoRoutedEvent /\nCargoCancelledEvent
 handling_broker --> MQ : HandlingActivityRegisteredEvent /\nCustomsStatusChangedEvent
 MQ --> tracking_sub : イベント購読
-MQ --> billing_sub : イベント購読
+billing_acl --> booking_rest : REST API（同期）
 
 booking_repo --> BDB
 routing_repo --> RDB
@@ -184,8 +184,11 @@ package "Handling Context\n(handlingms)" as handling #LightCoral {
 package "Billing Context\n(billingms)" as billing #LightPink {
   class Invoice <<Aggregate Root>>
   class Money <<Value Object>>
-  class DiscountPolicy <<Entity>>
+  class TransportCharge <<Value Object>>
+  class DiscountPolicy <<Value Object>>
+  class CancellationFee <<Value Object>>
   class PaymentStatus <<Enum>>
+  class BillingSnapshot <<ACL>>
 }
 
 package "Auth Context\n(authms)" as auth #LightSkyBlue {
@@ -211,7 +214,8 @@ booking ..> routing : REST API（同期）\nroutes cargo (Conformist)
 handling ..> booking : via CargoSnapshot (ACL)
 tracking <.. booking : TrackingNumberIssuedEvent / CargoRoutedEvent /\nCargoCancelledEvent (RabbitMQ 非同期)
 tracking <.. handling : HandlingActivityRegisteredEvent /\nCustomsStatusChangedEvent (RabbitMQ 非同期)
-billing <.. tracking : CargoDeliveredEvent\n(RabbitMQ 非同期)
+billing ..> booking : via BillingSnapshot (ACL)\nREST API（同期）
+billing <.. tracking : CargoDeliveredEvent\n(US23・IT12。未実装)
 
 note top of handling
   CargoSnapshot は ACL（腐敗防止層）
@@ -321,7 +325,9 @@ end note
 | 要素 | 内容 |
 | :--- | :--- |
 | 集約ルート | `Invoice` |
-| 主要概念 | `Money`, `DiscountPolicy`（法人割引 0〜30%）, `PaymentStatus`, `CancellationFee` |
+| 主要概念 | `Money`（丸めを 1 か所に閉じる）, `TransportCharge`（区間数 × 重量 × 貨物種別。**距離は持っていない**）, `DiscountPolicy`（法人割引 0〜30%）, `PaymentStatus`, `CancellationFee`, `BillingSnapshot`（ACL） |
+| 料金の規則 | 基本料金 = 基準運賃 × 区間係数 × 重量係数 × 貨物種別係数（[ADR-027](../adr/027-transport-charge-calculation.md) 決定 1）。端数は 1 円で四捨五入し、**丸めは `Money` の中だけ**（決定 2） |
+| 発行の規則 | 算出中は永続化せず、確定操作で `PENDING` として発行する（決定 3）。**発行後の金額は動かない**（決定 4）。起点は**経理担当者の操作**であり、イベントは待たない（決定 5） |
 | アクター | 経理担当者、荷主、決済機関 |
 | DB | `billing_db` |
 
@@ -424,7 +430,7 @@ end note
 > 3. **永続化は `infrastructure/persistence`** に置きます（`repositories` / `services` / `brokers` の
 >    3 分割はしていません）。RabbitMQ を使う段階になったら `infrastructure/messaging` を足します
 >
-> **未着手のサービス**（handlingms・billingms）は `config` のみが存在します。
+> **未着手のサービスはもうありません。** handlingms は IT7、billingms は IT11 で実装しました。
 > 実装のないパッケージを図に描くと、どれが動いているか読めなくなるため書きません。
 >
 > **trackingms は IT6 で追跡の開始まで実装しました（縮小実装です）。** 集約は
@@ -605,10 +611,10 @@ end note
 | ~~`CargoBookedEvent`~~ | — | — | — | **廃止**（[ADR-022](../adr/022-domain-event-contract.md) 決定 1）。trackingms が採番する前提の設計だったが、採番は bookingms が行う（[ADR-021](../adr/021-shipper-notification-and-confirmation-transitions.md)）。「割り当てを依頼する」イベントは要らなくなった |
 | `TrackingNumberIssuedEvent` | bookingms | trackingms | cargoBookingChannel | **追跡番号を発行したとき**（US14）に発行し、trackingms が追跡を作る。ペイロードは `trackingNumber` / `bookingId` / `originUnLocode` / `destinationUnLocode` / `arrivalDeadline` / `occurredAt`（[ADR-022](../adr/022-domain-event-contract.md) 決定 2） |
 | `CargoRoutedEvent` | bookingms | trackingms | cargoRoutingChannel | 経路・旅程の確定を追跡に通知。**IT6 では発行しない**（追跡を作るのに旅程は要らず、要るのは荷役の照合＝US15・IT7）。[ADR-022](../adr/022-domain-event-contract.md) 決定 1 |
-| `CargoCancelledEvent` | bookingms | trackingms | cargoBookingChannel（ルーティングキー `cargo.cancelled`） | キャンセル確定 → 追跡へお知らせを記録（**済**・IT9）。**理由は載せない**——公開の追跡照会に流れる経路に社内の判断を置かない。**billingms へは発行しない**——キャンセル料の算定は US23・IT11 であり、読む側の無い配線を先に敷かない（[ADR-025](../adr/025-customs-declaration-and-cancellation-approval.md) 決定 3） |
+| `CargoCancelledEvent` | bookingms | trackingms | cargoBookingChannel（ルーティングキー `cargo.cancelled`） | キャンセル確定 → 追跡へお知らせを記録（**済**・IT9）。**理由は載せない**——公開の追跡照会に流れる経路に社内の判断を置かない。**billingms へは発行しない**（IT11 でもこの判断は変わらない）——キャンセル料の算定は **US21・IT11** で入ったが、その起点は**経理担当者の操作**であり（[ADR-027](../adr/027-transport-charge-calculation.md) 決定 5）、キャンセルされた予約も精算管理の一覧から選ぶ。**読む側の無い配線を先に敷かない**（[ADR-025](../adr/025-customs-declaration-and-cancellation-approval.md) 決定 3） |
 | `HandlingActivityRegisteredEvent` | handlingms | trackingms（済）, bookingms（**済**・IT9。[ADR-025](../adr/025-customs-declaration-and-cancellation-approval.md) 決定 1） | cargoHandlingChannel | 荷役作業登録 → 輸送ステータス同期。予定ルート外の作業場所は誤配検知の入力（US28） |
 | `CustomsStatusChangedEvent` | handlingms | trackingms | cargoHandlingChannel（ルーティングキー `cargo.customs-status-changed`） | 通関状態変更（**済**・IT9）。HELD なら例外「税関保留」を自動起票する。**理由も載せる**——行き先は追跡管理者の画面（認証の内側）であり、税関に問い合わせるときの手がかりになる。CLEARED の通知は代替（画面が「送っていない」と言う） |
-| `CargoDeliveredEvent` | trackingms | billingms | deliveryChannel | 配送完了 → 精算開始 |
+| `CargoDeliveredEvent` | trackingms | billingms | deliveryChannel | 配送完了 → 精算の**通知**（**US23・IT12**）。**IT11 では実装しない**——料金算出の起点は経理担当者の操作であり、イベントは要らない（[ADR-027](../adr/027-transport-charge-calculation.md) 決定 5） |
 | `InvoiceCreatedEvent` | billingms | （通知システム） | billingChannel | 請求書発行 → 荷主への通知 |
 
 ### Spring Cloud Stream + RabbitMQ の実装方針
@@ -867,6 +873,8 @@ IT1 で荷主登録画面のニーズから導出した。
 | `GET` | `/api/v1/bookings/locations` | 予約の入力に使う地点の一覧（画面に対訳表を持たせない） | UC03 |
 | `GET` | `/api/v1/bookings/hazard-classes` | 危険物クラスの一覧 | UC03 |
 | `GET` | `/api/v1/bookings/by-tracking-number/{trackingNumber}` | 追跡番号で予約を引く（`CargoSnapshot` の契約。荷役作業員は予約番号を知らない。[ADR-023](../adr/023-handling-activity-validation.md) 決定 2） | UC13 |
+| `GET` | `/api/v1/bookings/billable` | 料金算出の対象になる予約（引取済・キャンセル済み）。**billingms だけが呼べる**（[ADR-027](../adr/027-transport-charge-calculation.md) 決定 7） | UC17 |
+| `GET` | `/api/v1/bookings/{bookingId}/billing-snapshot` | 料金算出の入力（`BillingSnapshot` の契約）。**誤配の記録を載せる**——IT10 までは予約詳細にしか出ておらず、経理担当者は読めなかった | UC17 |
 | `POST` | `/api/v1/bookings/{bookingId}/routing-request` | 経路設計を依頼する（`RoutingStatus` を `ROUTING_REQUESTED` へ）。営業担当者のみ | UC06 |
 | `POST` | `/api/v1/bookings/{bookingId}/consultation-request` | 候補が無いときに営業へ相談を戻す。経路設計者のみ | UC08 |
 | `PUT` | `/api/v1/bookings/{bookingId}/schedule` | 期限・出発希望日の変更。営業担当者のみ | UC04 |
@@ -984,8 +992,12 @@ GET /api/v1/routes?origin=JPTYO&destination=USLAX&deadline=2026-09-30&cargoType=
 
 | メソッド | パス | 説明 | 対応 UC |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/api/v1/billing/{bookingId}/calculate` | 輸送料金算出（法人割引・キャンセル料・例外調整含む） | UC17 |
-| `POST` | `/api/v1/billing/{bookingId}/settlement` | 精算処理 | UC18 |
+| `GET` | `/api/v1/billing/unbilled` | 料金を算出していない引取済・キャンセル済みの予約。**経理担当者が仕事を始める場所**（他に気づく手段が無い） | UC17 |
+| `GET` | `/api/v1/billing/calculations/{bookingId}` | 料金の算出結果。**保存しない**（[ADR-027](../adr/027-transport-charge-calculation.md) 決定 3）——毎回計算して返す。対象でない予約・発行済みの予約は 409 | UC17 |
+| `POST` | `/api/v1/billing/{bookingId}/calculate` | 輸送料金を確定して**精算書を発行**する（法人割引・キャンセル料・例外調整含む）。調整はここでまとめて受ける | UC17 |
+| `GET` | `/api/v1/billing/invoices` | 発行済みの精算書の一覧 | UC17 |
+| `GET` | `/api/v1/billing/invoices/{invoiceId}` | 精算書の詳細。**金額を動かす操作は無い**（決定 4） | UC17 |
+| `POST` | `/api/v1/billing/{bookingId}/settlement` | 精算処理（**US23・IT12**） | UC18 |
 
 ## セキュリティ設計
 

@@ -131,8 +131,9 @@ IT2・IT3 のふりかえりが繰り返し「`ui_design.md` の規約」を反�
 | 通関管理 | `/customs` | 通関申告一覧・検索（**既定は未決着だけ**・留置 3 日超の警告表示・件数と切り捨ての明示。IT10） | 荷役作業員、追跡管理者 | US29 |
 | 通関申告登録 | `/customs/new` | 申告番号・日時の登録 | 荷役作業員 | US29 |
 | 通関申告詳細 | `/customs/:declarationId` | 状態更新（理由必須）・状態変更履歴 | 追跡管理者 | US29 |
-| 精算管理 | `/billing` | 請求書一覧・フィルタ | 経理担当者 | US21-US23 |
-| 請求書詳細 | `/billing/:invoiceId` | 請求書詳細・キャンセル料内訳・支払い確認 | 経理担当者 | US23 |
+| 精算管理 | `/billing` | 料金未算出の予約と発行済み精算書の 2 つの待ち行列 | 経理担当者 | US21・US22（支払い確認は US23・IT12） |
+| 料金算出 | `/billing/new/:bookingId` | 輸送実績・基本料金の根拠・割引・調整の入力・確定 | 経理担当者 | US21・US22 |
+| 請求書詳細 | `/billing/:invoiceId` | 金額内訳（割引率つき）・キャンセル料の根拠。**金額を動かす操作は無い**（[ADR-027](../adr/027-transport-charge-calculation.md) 決定 4）。支払い確認は US23 | 経理担当者 | US21・US22 |
 
 ---
 
@@ -191,6 +192,7 @@ IT2・IT3 のふりかえりが繰り返し「`ui_design.md` の規約」を反�
 | 荷役管理 | `/handling*` | `/api/v1/handling` | `ROLE_HANDLER`, `ROLE_TRACKER`（参照のみ） |
 | 通関管理 | `/customs*` | `/api/v1/customs` | `ROLE_HANDLER`（申告登録）, `ROLE_TRACKER`（状態更新） |
 | 精算管理 | `/billing*` | `/api/v1/billing` | `ROLE_ACCOUNTANT` |
+| 料金算出 | `/billing/new/:bookingId` | `/api/v1/billing/calculations` | `ROLE_ACCOUNTANT` |
 
 ### 共通レイアウト ワイヤーフレーム
 
@@ -352,7 +354,11 @@ state "精算フロー" as billing_flow {
     請求書詳細 : /billing/:invoiceId
     請求書詳細 : キャンセル料内訳含む
   }
-  精算管理 --> 請求書詳細 : 行クリック
+  精算管理 --> 料金算出 : 料金未算出の予約を選ぶ
+  料金算出 : /billing/new/:bookingId
+  料金算出 --> 料金算出 : 入力に誤りがある（調整額・割引率）
+  料金算出 --> 請求書詳細 : 確定する（POST → 303 → GET）
+  精算管理 --> 請求書詳細 : 請求番号を押す
 }
 
 予約詳細 --> 貨物追跡照会 : [追跡を表示]

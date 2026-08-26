@@ -421,6 +421,8 @@ detail --> [*]
 
 ## 設計への反映が必要な箇所（注）
 
+> **すべて反映済み**（Phase 6.3）。下表は何を直したかの記録である。
+
 | # | 箇所 | 内容 |
 | :--- | :--- | :--- |
 | 1 | [release_plan.md](release_plan.md) の Release 2.0 | 「US21 は trackingms の `CargoDeliveredEvent` 発行実装を含む」（レビュー H4）を **US23（IT12）へ送る**。US21 の起点は経理担当者の操作であり、イベントは要らない |
@@ -484,7 +486,7 @@ detail --> [*]
 - [ ] **IT10 時点のコメントが残っていない**（返済枠 0.9）
 - [ ] **JIG / jig-erd の出力を再生成した**
 - [ ] ユーザーマニュアル **12 章を新設**し、09 章・11 章の「算定していません」を直し、**キャプチャを再生成して目視した**
-- [ ] **注 1〜16 を設計文書に反映した**（`user_story.md` / `domain-model.md` / `data-model.md` / `ui_design.md` / `architecture_backend.md` / `release_plan.md`）
+- [x] **注 1〜16 を設計文書に反映した**（`user_story.md` / `domain-model.md` / `data-model.md` / `ui_design.md` / `architecture_backend.md` / `release_plan.md`）
 - [ ] `docs/index.md` / `development/index.md` / `mkdocs.yml` を同期した
 
 ## 進捗
@@ -496,8 +498,8 @@ detail --> [*]
 | Phase 2 画面と導線 | **完了**（3 画面 + ダッシュボード導線。E2E 12 件・コンポーネント 18 件・ユニット 8 件が緑） |
 | Phase 3 API と ACL | **完了**（`BillingSnapshot` 契約・両側の契約テスト・REST API・認可。bookingms 側の提供口を含む） |
 | Phase 4 ドメイン | **完了**（`Money`・`TransportCharge`・`DiscountPolicy`・`CancellationFee`・`Invoice`・永続化・採番） |
-| Phase 5 実環境 | 未着手 |
-| Phase 6 マニュアルと設計反映 | 未着手 |
+| Phase 5 実環境 | **完了**（kind で引取 → 料金算出 → 確定を 1 往復。実環境 E2E 23 件が緑） |
+| Phase 6 マニュアルと設計反映 | **完了**（12 章新設・キャプチャ 3 枚・11 章の修正・注 1〜16 の反映） |
 
 ## 整合性検証の結果
 

@@ -81,7 +81,7 @@ Release 0.1〜1.0 で「**予約から追跡までが一本つながる**」こ�
 
 > **優先度列は正典 `docs/requirements/user_story.md` の値をそのまま使います**（レビュー H1。計画側で独自の優先度を持つと、バッファ判断の根拠が正典と食い違うため）。「どの US を先に落とすか」は優先度ではなく**バッファ戦略の表**（落としたときの業務影響の小ささ）で管理します。優先度とスケジュール順序は別の概念です。
 
-> **SP 補正の内訳**: take-6（同一題材・モノリス）の実績値を基準に、サービス間結合を伴うストーリーに補正を加えています。US09 +1（bookingms ⇄ routingms 同期）、US11 +0（ACL は US09 と同経路）、US14 +1（初のイベント）、**US15 +2（handlingms→trackingms イベントに加え bookingms の snapshot API + ACL + 契約テストを含む — レビュー H3）**、**US21 +2（billingms に加え trackingms の DELIVERED 判定・CargoDeliveredEvent 発行を含む — レビュー H4）**、**US28 +2（検知 = handlingms の ACL 照合、起票 = trackingms・bookingms、再設計 = bookingms→routingms の 4 サービス — レビュー H5）**。
+> **SP 補正の内訳**: take-6（同一題材・モノリス）の実績値を基準に、サービス間結合を伴うストーリーに補正を加えています。US09 +1（bookingms ⇄ routingms 同期）、US11 +0（ACL は US09 と同経路）、US14 +1（初のイベント）、**US15 +2（handlingms→trackingms イベントに加え bookingms の snapshot API + ACL + 契約テストを含む — レビュー H3）**、**US21 +2（billingms の立ち上げ・bookingms の `BillingSnapshot` API + ACL + 契約テストを含む。**~~trackingms の `CargoDeliveredEvent` 発行~~ は **US23・IT12 へ送った** — [ADR-027](../adr/027-transport-charge-calculation.md) 決定 5・IT11 の注 1）**、**US28 +2（検知 = handlingms の ACL 照合、起票 = trackingms・bookingms、再設計 = bookingms→routingms の 4 サービス — レビュー H5）**。
 
 ### Release 0.1: 予約基盤（IT1〜IT2）
 
@@ -177,7 +177,7 @@ billingms を業務として立ち上げ、配送完了イベントからの精�
 
 | ID | ユーザーストーリー | SP | BV | C | KA | RR | 優先度（正典） | 主なサービス |
 |----|-------------------|----|----|---|----|----|--------|-------------|
-| US21 | 輸送料金を算出する | 7 | 高 | 高 | 中 | 中 | 中 | billingms + **trackingms（CargoDeliveredEvent の発行実装 — レビュー H4）**。US30 のキャンセル料算定を含む |
+| US21 | 輸送料金を算出する | 7 | 高 | 高 | 中 | 中 | 中 | billingms + **bookingms（`BillingSnapshot` API・[ADR-027] 決定 7）**。US30 のキャンセル料算定を含む。**`CargoDeliveredEvent` は US23（IT12）へ送った**——料金算出の起点は経理担当者の操作であり、イベントは要らない（決定 5） |
 | US22 | 法人割引を適用する | 2 | 中 | 低 | 低 | 低 | 中 | billingms |
 | US23 | 精算を処理する | 3 | 高 | 中 | 低 | 中 | 中 | billingms |
 | US01 | 輸送見積を作成する | 5 | 中 | 高 | 低 | 低 | 高 | bookingms + billingms |
