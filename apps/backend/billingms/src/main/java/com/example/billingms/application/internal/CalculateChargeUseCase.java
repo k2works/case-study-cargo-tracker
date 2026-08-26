@@ -111,8 +111,7 @@ public class CalculateChargeUseCase {
     }
 
     private ChargeCalculation toCalculation(BillableCargoSnapshot snapshot) {
-        TransportCharge charge = TransportCharge.of(snapshot.legCount(), snapshot.weightKg(),
-                CargoType.of(snapshot.cargoType()));
+        TransportCharge charge = chargeOf(snapshot);
 
         // **未設定は 0% ではない**（[ADR-012]）。法人でも率が無ければ割引なしに倒す
         DiscountPolicy policy = snapshot.corporate() && snapshot.discountRate() != null
@@ -127,6 +126,30 @@ public class CalculateChargeUseCase {
         return new ChargeCalculation(snapshot.bookingId(), snapshot.shipperName(),
                 snapshot.corporate(), charge, policy, snapshot.misroute(), fee,
                 TaxRate.standard());
+    }
+
+    /**
+     * 基本料金の根拠（IT11 レビュー 高 1）。
+     *
+     * <p><strong>旅程が無い理由を見分ける。</strong>経路が決まる前にキャンセルされた予約は
+     * 旅程を持たないが、精算の一覧には並ぶ——キャンセル料 0 円として締める。
+     * 一方、引取済なのに旅程が無いのは<strong>データが壊れている</strong>：0 円で通すと
+     * 運んだのに請求しないことになる。
+     *
+     * <p>実環境で確かめたところ、この見分けが無い状態では前者が 500 を返していた
+     * ——経理担当者が最初に開く画面から到達できる。
+     */
+    private static TransportCharge chargeOf(BillableCargoSnapshot snapshot) {
+        CargoType cargoType = CargoType.of(snapshot.cargoType());
+        if (snapshot.legCount() > 0) {
+            return TransportCharge.of(snapshot.legCount(), snapshot.weightKg(), cargoType);
+        }
+        if (snapshot.cancellation() != null) {
+            return TransportCharge.notTransported(snapshot.weightKg(), cargoType);
+        }
+        throw new BillingNotAvailableException(
+                "旅程を持たない予約の料金は算出できません（運んだ記録と旅程が食い違っています）: "
+                        + snapshot.bookingId());
     }
 
     private static BillingShipperId shipperIdOf(BillableCargoSnapshot snapshot) {

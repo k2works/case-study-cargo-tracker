@@ -25,3 +25,19 @@ export function formatRate(rate: number | null | undefined): string {
   }
   return `${(rate * 100).toFixed(1).replace(/\.0$/, '')}%`
 }
+
+/**
+ * 円に丸める（[ADR-027] 決定 2）。
+ *
+ * <p><strong>サーバと同じ向きに丸める。</strong>サーバは `HALF_UP`——0 から遠いほうへ
+ * 丸めるため -1.5 は -2 になる。JavaScript の `Math.round` は +∞ 方向に丸めるので
+ * -1.5 が -1 になり、<strong>小計が負になる調整</strong>（大幅な減額・補償）で
+ * プレビューと確定後の合計が 1 円ずれる。
+ *
+ * <p>そもそも画面で金額を計算しないのが筋だが、調整を入れた結果をその場で見せるには
+ * 画面で足すしかない（算出中はサーバに保存しない——決定 3）。<strong>ならばせめて
+ * 同じ向きに丸める。</strong>
+ */
+export function roundYen(value: number): number {
+  return Math.sign(value) * Math.round(Math.abs(value))
+}

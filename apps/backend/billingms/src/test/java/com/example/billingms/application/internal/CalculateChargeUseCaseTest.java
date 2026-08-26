@@ -170,6 +170,62 @@ class CalculateChargeUseCaseTest {
                     .isEqualTo(Money.yen(new BigDecimal("125000")));
         }
 
+        /**
+         * <strong>経路が決まる前にキャンセルされた予約でも、料金を出せる</strong>
+         * （IT11 レビュー 高 1）。
+         *
+         * <p>仮受付・経路提案中でキャンセルされた予約は<strong>旅程を持たない</strong>
+         * （区間数 0）。それでも精算の対象には入る——{@code CancelledAtStatus} が
+         * {@code PRELIMINARY} / {@code ROUTE_PROPOSED} に料率 0% を定義しており、
+         * <strong>業務として想定されている</strong>。
+         *
+         * <p>実環境で確かめたところ、この予約は未算出の一覧に並び、開くと
+         * <strong>500 が返っていた</strong>——経理担当者が最初に開く画面から到達できる。
+         * 運んでいない以上、基本料金もキャンセル料も 0 円である。
+         */
+        @Test
+        @DisplayName("経路が決まる前にキャンセルされた予約は、0 円として算出できる")
+        void calculatesZeroForCargoCancelledBeforeRouting() {
+            when(snapshots.findBillable("BKG-2026000045")).thenReturn(Optional.of(
+                    new BillableCargoSnapshot("BKG-2026000045", "CANCELLED", "2", "山田太郎",
+                            false, null, new BigDecimal("1000"), "GENERAL",
+                            "Tokyo", "Los Angeles", 0, null, null,
+                            new BillableCargoSnapshot.Cancellation("PRELIMINARY",
+                                    Instant.parse("2027-09-01T00:00:00Z")))));
+
+            ChargeCalculation calculation = useCase.calculate("BKG-2026000045");
+
+            assertThat(calculation.baseAmount())
+                    .as("運んでいない貨物に運賃が出ている")
+                    .isEqualTo(Money.zero());
+            assertThat(calculation.cancellationFee().amount())
+                    .as("何も手配していない段階のキャンセルに料金が出ている")
+                    .isEqualTo(Money.zero());
+            assertThat(calculation.totalAmount()).isEqualTo(Money.zero());
+        }
+
+        /**
+         * <strong>運んだ貨物の旅程が無いのは、こちらの不備である。</strong>
+         *
+         * <p>引取が終わっているのに区間が 1 本も無いのは、データが壊れている——
+         * 0 円で通すと<strong>運んだのに請求しない</strong>ことになる。
+         * キャンセル（運んでいない）とは区別する。
+         */
+        @Test
+        @DisplayName("引取済なのに旅程が無い予約は断る")
+        void rejectsDeliveredCargoWithoutAnyLeg() {
+            when(snapshots.findBillable("BKG-2026000046")).thenReturn(Optional.of(
+                    new BillableCargoSnapshot("BKG-2026000046", "DELIVERED", "1", "丸紅商事",
+                            true, new BigDecimal("0.1000"), new BigDecimal("4200"), "GENERAL",
+                            "Tokyo", "Los Angeles", 0,
+                            Instant.parse("2027-09-26T00:00:00Z"), null, null)));
+
+            assertThatThrownBy(() -> useCase.calculate("BKG-2026000046"))
+                    .as("運んだ貨物の旅程が無いのに、黙って 0 円で通している")
+                    .isInstanceOf(BillingNotAvailableException.class)
+                    .hasMessageContaining("旅程");
+        }
+
         /** 料金算出の対象でなければ断る（決定 5）。 */
         @Test
         @DisplayName("料金算出の対象でない予約は断る")

@@ -4,7 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ChargeBasisPanel } from "../features/billing/components/charge-basis-panel";
 import { AdjustmentEvidence } from "../features/billing/components/adjustment-evidence";
 import { useCalculateCharge, useChargeCalculation } from "../features/billing/queries";
-import { formatRate, formatYen } from "../features/billing/money";
+import { formatRate, formatYen, roundYen } from "../features/billing/money";
 import type { LineItem } from "../features/billing/types";
 
 /**
@@ -48,7 +48,9 @@ export function BillingNewPage() {
     (calculation.discountAmount?.value ?? 0) +
     (calculation.cancellationFee?.amount.value ?? 0) +
     adjustmentTotal;
-  const taxAmount = Math.round(beforeTax * calculation.taxRate);
+  // **サーバと同じ向きに丸める**（[ADR-027] 決定 2）。Math.round は +∞ 方向に
+  // 丸めるため、小計が負になる調整でプレビューと確定後の合計が 1 円ずれる
+  const taxAmount = roundYen(beforeTax * calculation.taxRate);
   const total = beforeTax + taxAmount;
 
   function addAdjustment() {

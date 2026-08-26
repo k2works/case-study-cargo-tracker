@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatRate, formatYen } from '../money'
+import { formatRate, formatYen, roundYen } from '../money'
 
 /**
  * 金額と率の整形（[ADR-027] 決定 2）。
@@ -26,6 +26,40 @@ describe('金額の表示', () => {
 
   it('0 円は 0 円として出す', () => {
     expect(formatYen({ value: 0, currency: 'JPY' })).toBe('¥0')
+  })
+})
+
+/**
+ * IT11 レビュー 高 2。**サーバと同じ向きに丸める。**
+ *
+ * <p>画面が `Math.round` を使うと、サーバの `HALF_UP`（0 から遠いほうへ丸める）と
+ * 向きが違う——**小計が負になる調整**（大幅な減額・補償）で 1 円ずれる。
+ * 金額を扱う画面で最も信頼を失う種類の食い違いであり、担当者は「どちらが本当の
+ * 請求額か」を確かめる手段を持たない。
+ */
+describe('円への丸め', () => {
+  it('正の端数は四捨五入する', () => {
+    expect(roundYen(100.4)).toBe(100)
+    expect(roundYen(100.5)).toBe(101)
+    expect(roundYen(100.6)).toBe(101)
+  })
+
+  /**
+   * **負の端数は 0 から遠いほうへ丸める**（サーバの HALF_UP と同じ）。
+   *
+   * `Math.round(-1.5)` は -1 を返す（+∞ 方向）。サーバは -2 を返す。
+   */
+  it('負の端数は 0 から遠いほうへ丸める', () => {
+    expect(roundYen(-1.5), 'Math.round のままだと -1 になり、サーバと 1 円ずれる').toBe(-2)
+    expect(roundYen(-2.5)).toBe(-3)
+    expect(roundYen(-1.4)).toBe(-1)
+    expect(roundYen(-1.6)).toBe(-2)
+  })
+
+  it('端数が無ければそのまま', () => {
+    expect(roundYen(0)).toBe(0)
+    expect(roundYen(-100)).toBe(-100)
+    expect(roundYen(378000)).toBe(378000)
   })
 })
 

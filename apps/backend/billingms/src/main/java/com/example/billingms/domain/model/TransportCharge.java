@@ -37,10 +37,8 @@ public record TransportCharge(int legCount, BigDecimal weightKg, CargoType cargo
     private static final BigDecimal MIN_WEIGHT_FACTOR = new BigDecimal("0.1");
 
     public TransportCharge {
-        if (legCount <= 0) {
-            // **0 を通すと料金が 0 円になる。** 運んだのに請求しないことになる
-            throw new IllegalArgumentException(
-                    "区間が 1 本も無い旅程では料金を算定できません: " + legCount);
+        if (legCount < 0) {
+            throw new IllegalArgumentException("区間数が負です: " + legCount);
         }
         if (weightKg == null || weightKg.signum() <= 0) {
             throw new IllegalArgumentException("重量は 0 より大きい値で指定してください: " + weightKg);
@@ -56,7 +54,35 @@ public record TransportCharge(int legCount, BigDecimal weightKg, CargoType cargo
     }
 
     public static TransportCharge of(int legCount, BigDecimal weightKg, CargoType cargoType) {
+        if (legCount == 0) {
+            // **運んだ貨物には旅程がある。** 0 を運賃の計算に通すと 0 円になり、
+            // 運んだのに請求しないことになる。運んでいない貨物（経路が決まる前の
+            // キャンセル）は {@link #notTransported} で作る——**同じ 0 区間でも、
+            // 「運んでいない」と「データが壊れている」は別である**
+            throw new IllegalArgumentException(
+                    "区間が 1 本も無い旅程では料金を算定できません: " + legCount);
+        }
         return new TransportCharge(legCount, weightKg, cargoType);
+    }
+
+    /**
+     * 運んでいない貨物（IT11 レビュー 高 1）。
+     *
+     * <p>経路が決まる前にキャンセルされた予約は旅程を持たない。{@code CancelledAtStatus} が
+     * {@code PRELIMINARY} / {@code ROUTE_PROPOSED} に料率 0% を定義しており、
+     * <strong>業務として想定されている</strong>——それでも精算の一覧には並ぶ
+     * （キャンセル料 0 円として締める）。
+     *
+     * <p><strong>運んだ貨物には使わない。</strong>引取済なのに旅程が無いのはデータが
+     * 壊れており、0 円で通すと運んだのに請求しないことになる。
+     */
+    public static TransportCharge notTransported(BigDecimal weightKg, CargoType cargoType) {
+        return new TransportCharge(0, weightKg, cargoType);
+    }
+
+    /** 運んでいない貨物か（区間が 1 本も無い）。 */
+    public boolean notTransported() {
+        return legCount == 0;
     }
 
     /** 区間係数。**距離の代わり**（決定 1）。 */
@@ -82,6 +108,11 @@ public record TransportCharge(int legCount, BigDecimal weightKg, CargoType cargo
      * 積み重なるほど誤差が開く。
      */
     public Money baseAmount() {
-        return BASE_FARE.multiply(legFactor().multiply(weightFactor()).multiply(cargoTypeFactor()));
+        // **運んでいなければ 0 円。** 区間係数を掛けても同じ値になるが、
+        // 「運んでいないから 0」と「掛けたら 0 になった」は別の意味である
+        return notTransported()
+                ? Money.zero()
+                : BASE_FARE.multiply(legFactor().multiply(weightFactor())
+                        .multiply(cargoTypeFactor()));
     }
 }
