@@ -61,7 +61,8 @@ export function BillingPage() {
         {/* **古い順に並ぶ**（サーバが並べる）。待たせている案件が上に来る
             ——新しい順だと、いちばん待たせている荷主への請求が下に沈む */}
         <p className="text-sm text-gray-600">
-          引取が終わった順に並んでいます。上から順に料金を算出してください。
+{'最後に荷役があった順に並んでいます。上から順に料金を算出してください。'}
+          <strong>{'荷役の記録が無い予約（経路が決まる前のキャンセル）は「—」と出て、最後に並びます。'}</strong>
         </p>
 
         {loadingUnbilled && <p>読み込み中です。</p>}
@@ -77,7 +78,10 @@ export function BillingPage() {
                 <th className="px-3 py-2">予約番号</th>
                 <th className="px-3 py-2">荷主</th>
                 <th className="px-3 py-2">区間</th>
-                <th className="px-3 py-2">引取日時</th>
+                {/* **列名を実態に合わせる**（IT11 レビュー 中。user）。
+                    値は最後に荷役があった日時であり、引取の日時とは限らない
+                    ——「いつからお待たせしているか」の判断に使う */}
+                <th className="px-3 py-2">最終荷役日時</th>
                 <th className="px-3 py-2">特記</th>
               </tr>
             </thead>
@@ -101,9 +105,9 @@ export function BillingPage() {
                     {booking.originName} → {booking.destinationName}
                   </td>
                   <td className="px-3 py-2">
-                    {booking.claimedAt === null
+                    {booking.lastHandlingAt === null
                       ? "—"
-                      : formatBusinessDateTime(booking.claimedAt)}
+                      : formatBusinessDateTime(booking.lastHandlingAt)}
                   </td>
                   <td className="px-3 py-2">
                     {/* **根拠のある案件は先に知らせる。** 開いてから気づくと、

@@ -9,6 +9,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 
 /**
@@ -62,6 +63,23 @@ class CancellationFeeTest {
                     .isEqualTo(Money.zero());
             assertThat(CancellationFee.forStatus(CancelledAtStatus.ROUTE_PROPOSED, BASE).amount())
                     .isEqualTo(Money.zero());
+        }
+
+        /**
+         * <strong>状態ごとの料率を表で固定する</strong>（IT11 レビュー 高 3）。
+         *
+         * <p>「すべての状態が料率を持つ」だけだと、{@code ROUTE_NOTIFIED} を 0.05 → 0 に
+         * 落としても緑のままである——<strong>その状態でキャンセルされた貨物だけ請求漏れに
+         * なる</strong>。値そのものを固定する。
+         */
+        @ParameterizedTest(name = "{0} の料率は {1}")
+        @CsvSource({"PRELIMINARY,0.00", "ROUTE_PROPOSED,0.00", "ROUTE_NOTIFIED,0.05",
+                "CONFIRMED,0.10", "TRACKING_ISSUED,0.10", "IN_TRANSIT,0.30"})
+        @DisplayName("状態ごとの料率が、決めたとおりである")
+        void appliesTheAgreedRate(CancelledAtStatus status, BigDecimal expected) {
+            assertThat(CancellationFee.forStatus(status, BASE).feeRate())
+                    .as("%s の料率が変わっている。この状態のキャンセルの請求額が変わる", status)
+                    .isEqualByComparingTo(expected);
         }
 
         /**

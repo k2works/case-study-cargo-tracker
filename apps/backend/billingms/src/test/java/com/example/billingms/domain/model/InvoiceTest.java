@@ -307,9 +307,15 @@ class InvoiceTest {
         @Test
         @DisplayName("永続化された行から、状態ごと復元する")
         void restoresFromAPersistedRow() {
+            // **保存された金額をそのまま渡す**（決定 4）。係数とは別の値にして、
+            // 復元が計算し直していないことを確かめる
+            InvoiceAmounts persisted = new InvoiceAmounts(
+                    Money.yen(new BigDecimal("111111")), Money.yen(new BigDecimal("11111")),
+                    Money.yen(new BigDecimal("10000")), Money.yen(new BigDecimal("110000")));
             Invoice invoice = Invoice.restore(ID, BOOKING, SHIPPER,
                     InvoiceCharges.of(CHARGE, DiscountPolicy.forCorporate(
                             DiscountRate.of(new BigDecimal("0.1000"))), TaxRate.standard()),
+                    persisted,
                     List.of(InvoiceLineItem.of("遅延による減額",
                             Money.yen(new BigDecimal("-10000")))),
                     PaymentStatus.CONFIRMED, ISSUED_AT);
@@ -322,6 +328,10 @@ class InvoiceTest {
             assertThat(invoice.cargoBookingId()).isEqualTo(BOOKING);
             assertThat(invoice.shipperId()).isEqualTo(SHIPPER);
             assertThat(invoice.taxRate().value()).isEqualByComparingTo("0.1000");
+            assertThat(invoice.totalAmount())
+                    .as("復元で金額を計算し直している。基準運賃を変えると過去の請求書が変わる")
+                    .isEqualTo(Money.yen(new BigDecimal("110000")));
+            assertThat(invoice.baseAmount()).isEqualTo(Money.yen(new BigDecimal("111111")));
         }
 
         /** 明細が無い行も復元できる。 */
@@ -329,6 +339,7 @@ class InvoiceTest {
         @DisplayName("明細の無い行も復元できる")
         void restoresARowWithoutLineItems() {
             Invoice invoice = Invoice.restore(ID, BOOKING, SHIPPER, CHARGES,
+                    InvoiceAmounts.calculate(CHARGES, java.util.List.of()),
                     null, PaymentStatus.PENDING, ISSUED_AT);
 
             assertThat(invoice.lineItems()).isEmpty();

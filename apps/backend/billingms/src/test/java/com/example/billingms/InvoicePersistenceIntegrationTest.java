@@ -165,6 +165,49 @@ class InvoicePersistenceIntegrationTest {
                     .isEmpty();
         }
 
+        /**
+         * <strong>発行した金額は、保存された値をそのまま返す</strong>（[ADR-027] 決定 4・
+         * IT11 レビュー 高 1）。
+         *
+         * <p>係数から毎回計算し直していると、<strong>基準運賃や貨物種別係数を将来変えた
+         * 瞬間に、過去に発行した請求書の金額が黙って変わる</strong>。請求書は荷主へ出す
+         * 約束であり、出したあとに変わってはならない。
+         *
+         * <p>この検査は<strong>保存された列を直接書き換えて</strong>確かめる。集約を
+         * 経由して確かめると、再計算していても同じ値が返るため判別できない。
+         */
+        @Test
+        @DisplayName("発行した金額は、保存された値を返す（再計算しない）")
+        void returnsThePersistedAmountsInsteadOfRecalculating() {
+            Invoice issued = issue(uniqueBookingId(),
+                    DiscountPolicy.forCorporate(DiscountRate.of(new BigDecimal("0.1000"))),
+                    List.of(), null);
+            invoices.save(issued);
+
+            // 保存された金額だけを別の値に書き換える（係数はそのまま）
+            jdbcTemplate.update("""
+                    UPDATE invoice
+                       SET base_amount_value = 999999, discount_amount_value = 99999,
+                           tax_amount = 90000, total_amount_value = 990000
+                     WHERE invoice_number = ?
+                    """, issued.invoiceId().value());
+
+            Invoice restored = invoices.findById(issued.invoiceId().value()).orElseThrow();
+
+            assertThat(restored.baseAmount().amount())
+                    .as("基本料金を係数から計算し直している。基準運賃を変えると過去の請求書が変わる")
+                    .isEqualByComparingTo("999999");
+            assertThat(restored.discountAmount().amount())
+                    .as("割引額を計算し直している")
+                    .isEqualByComparingTo("99999");
+            assertThat(restored.taxAmount().amount())
+                    .as("消費税を計算し直している。税率を変えると過去の請求書が変わる")
+                    .isEqualByComparingTo("90000");
+            assertThat(restored.totalAmount().amount())
+                    .as("合計を計算し直している")
+                    .isEqualByComparingTo("990000");
+        }
+
         @Test
         @DisplayName("見つからない精算書は空を返す")
         void returnsEmptyForAnUnknownInvoice() {

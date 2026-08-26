@@ -119,7 +119,13 @@ describe('料金算出', () => {
         screen.queryByTestId('adjustment-evidence'),
         '根拠が無いのに枠が出ている。根拠のある案件が埋もれる',
       ).not.toBeInTheDocument()
-      expect(screen.getByText(/誤配・例外の記録はありません/)).toBeInTheDocument()
+      expect(screen.getByText(/誤配の記録はありません/)).toBeInTheDocument()
+      // **例外を出していないことを画面が言う**（IT11 レビュー 高。tester）。
+      // 「例外の記録はありません」と断定すると、例外がある貨物でも調整が見送られる
+      expect(
+        screen.getByText(/例外は、この画面には表示されません/),
+        '例外を引いていないことを画面が言っていない。経理担当者は「例外は無かった」と読む',
+      ).toBeInTheDocument()
     })
   })
 

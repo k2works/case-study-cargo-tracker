@@ -10,6 +10,7 @@ import com.example.billingms.domain.model.DiscountPolicy;
 import com.example.billingms.domain.model.DiscountRate;
 import com.example.billingms.domain.model.Invoice;
 import com.example.billingms.domain.model.InvoiceId;
+import com.example.billingms.domain.model.InvoiceAmounts;
 import com.example.billingms.domain.model.InvoiceCharges;
 import com.example.billingms.domain.model.InvoiceLineItem;
 import com.example.billingms.domain.model.Money;
@@ -126,9 +127,29 @@ public class MyBatisInvoiceRepository implements InvoiceRepository {
                         ? BillingShipperId.corporate(row.getShipperId(), row.getShipperName())
                         : BillingShipperId.individual(row.getShipperId(), row.getShipperName()),
                 new InvoiceCharges(
-                        TransportCharge.of(row.getLegCount(), row.getWeightKg(),
-                                CargoType.of(row.getCargoType())),
+                        chargeOf(row),
                         policy, fee, TaxRate.of(row.getTaxRate())),
+                // **保存された金額をそのまま返す**（決定 4・IT11 レビュー 高 1）。
+                // 係数から計算し直すと、基準運賃や税率を将来変えた瞬間に
+                // 過去に発行した請求書の金額が黙って変わる
+                new InvoiceAmounts(
+                        Money.of(row.getBaseAmountValue(), row.getBaseAmountCurrency()),
+                        Money.of(row.getDiscountAmountValue(), row.getDiscountAmountCurrency()),
+                        Money.yen(row.getTaxAmount()),
+                        Money.of(row.getTotalAmountValue(), row.getTotalAmountCurrency())),
                 items, PaymentStatus.valueOf(row.getPaymentStatus()), row.getIssuedAt());
+    }
+
+    /**
+     * 基本料金の根拠を復元する。
+     *
+     * <p>旅程を持たない予約（経路が決まる前のキャンセル）も復元できる必要がある
+     * ——{@code TransportCharge.of} は 0 を断るため、こちらで分ける。
+     */
+    private static TransportCharge chargeOf(InvoiceRecord row) {
+        CargoType cargoType = CargoType.of(row.getCargoType());
+        return row.getLegCount() == 0
+                ? TransportCharge.notTransported(row.getWeightKg(), cargoType)
+                : TransportCharge.of(row.getLegCount(), row.getWeightKg(), cargoType);
     }
 }

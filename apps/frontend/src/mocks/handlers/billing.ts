@@ -209,17 +209,24 @@ export const billingHandlers = [
         shipperType: shipperOf(booking)?.type ?? 'INDIVIDUAL',
         originName: booking.originName,
         destinationName: booking.destinationName,
-        // **引き取っていない予約に引取日時を出さない。** 並びに使っているのは
-        // 最後に荷役があった日時であり、引取日時とは別のものである
-        claimedAt: booking.bookingStatus === 'CANCELLED'
-          ? null
-          : (booking.lastHandlingAt ?? null),
+        // **最後に荷役があった日時**（引取の日時とは限らない）。一覧の並びもこれで決まる
+        lastHandlingAt: booking.lastHandlingAt ?? null,
         misrouted: booking.misroute !== null && booking.misroute !== undefined,
         cancelled: booking.bookingStatus === 'CANCELLED',
         sortKey: booking.lastHandlingAt ?? '',
       }))
-      // **並びは最後の荷役日時で決める**（引取日時とは別）。待たせている案件が上に来る
-      .sort((a, b) => (a.sortKey ?? '').localeCompare(b.sortKey ?? ''))
+      // **並びは最後の荷役日時で決める**（引取日時とは別）。待たせている案件が上に来る。
+      // **日時を持たないもの（キャンセル）は最後に回す**——本物の SQL が
+      // `CASE WHEN c.last_handling_at IS NULL THEN 1 ELSE 0 END` でそうしている。
+      // 並べ替えないと、手引きのキャプチャが「引取が終わった順」の説明と食い違う
+      .sort((a, b) => {
+        const aNull = a.sortKey === '' ? 1 : 0
+        const bNull = b.sortKey === '' ? 1 : 0
+        if (aNull !== bNull) {
+          return aNull - bNull
+        }
+        return (a.sortKey ?? '').localeCompare(b.sortKey ?? '')
+      })
       .map(({ sortKey: _sortKey, ...rest }) => rest)
     return HttpResponse.json(unbilled)
   }),

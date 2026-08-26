@@ -43,26 +43,26 @@ describe('精算管理', () => {
   })
 
   /**
-   * <strong>キャンセルされた予約に「引取日時」を出さない。</strong>
+   * <strong>列の名前と中身を揃える</strong>（IT11 レビュー 中）。
    *
-   * <p>引き取っていないのに引取日時があると、経理担当者は「引き取ったのにキャンセル
-   * された」と読む。並びに使っているのは最後に荷役があった日時であり、
-   * <strong>引取日時とは別のものである</strong>。
+   * <p>出しているのは<strong>最後に荷役があった日時</strong>であり、引取の日時とは
+   * 限らない——キャンセルされた予約は引き取っていないが、途中まで運ばれていれば
+   * 荷役の記録を持つ。一覧の並びもこの値で決まるので、名前が「引取日時」だと
+   * 「引取の順に並んでいる」と読まれる。
    */
-  it('キャンセルされた予約には、引取日時を出さない', async () => {
+  it('列の名前が「最終荷役日時」である', async () => {
     renderPage()
 
     await screen.findByRole('heading', { name: '精算管理' })
-    const cancelled = (await screen.findAllByTestId('unbilled-cancelled'))[0]
 
     expect(
-      within(cancelled).getByText('—'),
-      '引き取っていない予約に引取日時が出ている',
+      await screen.findByRole('columnheader', { name: '最終荷役日時' }),
+      '列名が中身と食い違っている',
     ).toBeInTheDocument()
   })
 
-  /** 引取済の予約には引取日時が出る。 */
-  it('引取済の予約には、引取日時が出る', async () => {
+  /** 荷役の記録がある予約には日時が出る。 */
+  it('荷役の記録がある予約には、日時が出る', async () => {
     renderPage()
 
     await screen.findByRole('heading', { name: '精算管理' })

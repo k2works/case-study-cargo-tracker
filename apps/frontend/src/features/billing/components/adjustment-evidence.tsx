@@ -27,8 +27,13 @@ export function AdjustmentEvidence({
         <h2 id="evidence-heading" className="text-lg font-semibold">
           調整の根拠
         </h2>
+        {/* **断定しない**（IT11 レビュー 高 2）。遅延・破損の例外は trackingms にあるが、
+            本 IT では引いていない。「例外の記録はありません」と言い切ると、
+            例外がある貨物でも経理担当者はこの文言を読んで調整を見送る */}
         <p className="text-gray-700">
-          この貨物に誤配・例外の記録はありません。
+          {'この貨物に誤配の記録はありません。'}
+          <strong>{'遅延・破損などの例外は、この画面には表示されません'}</strong>
+          {'——追跡の画面で確かめてください。'}
         </p>
       </section>
     )
@@ -44,6 +49,11 @@ export function AdjustmentEvidence({
         className="space-y-2 rounded border border-amber-300 bg-amber-50 p-4"
         data-testid="adjustment-evidence"
       >
+        {/* **例外は本 IT では引いていない**（受入基準 21-6 の片肺）。
+            出していないことを言わないと、経理担当者は「例外は無かった」と読む */}
+        <p className="text-sm text-amber-900">
+          {'遅延・破損などの例外は、この画面には表示されません（追跡の画面で確かめてください）。'}
+        </p>
         {misroute !== null && (
           <p>
             <strong>誤配</strong>：

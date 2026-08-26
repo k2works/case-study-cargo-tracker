@@ -42,8 +42,13 @@ export type UnbilledBooking = {
   shipperType: 'CORPORATE' | 'INDIVIDUAL'
   originName: string
   destinationName: string
-  /** 引取が完了した日時。**古い順に並べる**——待たせている案件が上に来る。 */
-  claimedAt: string | null
+  /**
+   * **最後に荷役があった日時**（IT11 レビュー 中）。引取の日時とは限らない。
+   *
+   * **古い順に並べる**——待たせている案件が上に来る。名前と中身を揃えないと、
+   * 「引取日時」で並んでいるように読まれる。
+   */
+  lastHandlingAt: string | null
   /** 誤配の記録があるか（21-6 の根拠）。 */
   misrouted: boolean
   /** キャンセルされた予約か。キャンセル料の算定対象になる（US30-9）。 */

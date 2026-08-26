@@ -332,16 +332,15 @@ class BillingControllerTest {
         }
 
         /**
-         * <strong>引き取っていない予約に引取日時を出さない。</strong>
+         * <strong>最後に荷役があった日時を返す</strong>（IT11 レビュー 中）。
          *
-         * <p>キャンセルされた予約は引き取っていない。引取日時があると、経理担当者は
-         * 「引き取ったのにキャンセルされた」と読む。並びに使っているのは最後に荷役が
-         * あった日時であり、<strong>引取日時とは別のものである</strong>
-         * （キャプチャを撮って気づいた）。
+         * <p>引取の日時とは限らない——キャンセルされた予約は引き取っていないが、
+         * 途中まで運ばれていれば荷役の記録を持つ。<strong>一覧の並びもこの値で決まる</strong>
+         * ので、名前と中身を揃えないと「引取日時で並んでいる」と読まれる。
          */
         @Test
-        @DisplayName("キャンセルされた予約には、引取日時を返さない")
-        void omitsTheClaimedAtForCancelledBookings() throws Exception {
+        @DisplayName("キャンセルされた予約でも、最後に荷役があった日時を返す")
+        void returnsTheLastHandlingAtForCancelledBookings() throws Exception {
             when(calculateCharge.billable()).thenReturn(List.of(
                     new BillableCargoSnapshot("BKG-2026000010", "CANCELLED", "1",
                             "丸紅商事株式会社", true, new BigDecimal("0.1000"),
@@ -353,7 +352,7 @@ class BillingControllerTest {
             mockMvc.perform(asAccountant(get("/api/v1/billing/unbilled")))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$[0].cancelled").value(true))
-                    .andExpect(jsonPath("$[0].claimedAt").doesNotExist());
+                    .andExpect(jsonPath("$[0].lastHandlingAt").exists());
         }
 
         @Test

@@ -291,6 +291,45 @@ class BookingConfirmationTest {
     }
 
     /**
+     * IT11 レビュー 高（xp-user-representative）。<strong>経理担当者も予約詳細を読める。</strong>
+     *
+     * <p>請求書詳細から予約番号を押すと予約詳細へ飛ぶ。荷主から「この請求はどの貨物の
+     * ことか」と聞かれたときに押す導線であり、<strong>403 になると経理担当者はそこで
+     * 止まる</strong>——請求の根拠になる貨物の中身（区間・荷役実績）が読めない。
+     *
+     * <p><strong>読むだけである</strong>（操作の可否は集約の述語が決め、画面が出し分ける）。
+     */
+    @Test
+    @DisplayName("経理担当者も予約詳細を読める")
+    void opensTheBookingDetailToTheAccountant() throws Exception {
+        when(cargoes.findByBookingId("BKG-2026000001"))
+                .thenReturn(Optional.of(new CargoSummary(BookingTestCargoes.routed(), "丸紅商事")));
+        when(locations.timeZoneOf("USLAX"))
+                .thenReturn(Optional.of(ZoneId.of("America/Los_Angeles")));
+
+        mockMvc.perform(get("/api/v1/bookings/BKG-2026000001")
+                        .header(AuthenticatedUser.USER_ID_HEADER, "accountant01")
+                        .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ACCOUNTANT"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bookingId").value("BKG-2026000001"));
+    }
+
+    /**
+     * <strong>一覧までは開かない。</strong>
+     *
+     * <p>経理担当者が読むのは請求の根拠になる 1 件であり、営業の抱えている案件を
+     * 横断して眺めることではない（追跡管理者・荷役作業員と同じ扱い）。
+     */
+    @Test
+    @DisplayName("経理担当者は予約の一覧を開けない")
+    void doesNotOpenTheBookingListToTheAccountant() throws Exception {
+        mockMvc.perform(get("/api/v1/bookings")
+                        .header(AuthenticatedUser.USER_ID_HEADER, "accountant01")
+                        .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ACCOUNTANT"))
+                .andExpect(status().isForbidden());
+    }
+
+    /**
      * IT10 レビュー低 15。<strong>誤配の港も名前で出す。</strong>
      *
      * <p>この画面は出発地・目的地・旅程の各区間を「名前（UN/LOCODE）」の形で出している。

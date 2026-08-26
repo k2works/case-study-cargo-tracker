@@ -24,17 +24,19 @@ public final class Invoice {
     private final BillingBookingId cargoBookingId;
     private final BillingShipperId shipperId;
     private final InvoiceCharges charges;
+    private final InvoiceAmounts amounts;
     private final List<InvoiceLineItem> lineItems;
     private final PaymentStatus paymentStatus;
     private final Instant issuedAt;
 
     private Invoice(InvoiceId invoiceId, BillingBookingId cargoBookingId,
-            BillingShipperId shipperId, InvoiceCharges charges,
+            BillingShipperId shipperId, InvoiceCharges charges, InvoiceAmounts amounts,
             List<InvoiceLineItem> lineItems, PaymentStatus paymentStatus, Instant issuedAt) {
         this.invoiceId = invoiceId;
         this.cargoBookingId = cargoBookingId;
         this.shipperId = shipperId;
         this.charges = charges;
+        this.amounts = amounts;
         // **写して持つ。** 呼び出し元が渡したあとの書き換えでこちらの中身が変わらないように
         this.lineItems = List.copyOf(lineItems);
         this.paymentStatus = paymentStatus;
@@ -64,8 +66,11 @@ public final class Invoice {
         if (issuedAt == null) {
             throw new IllegalArgumentException("発行日時を指定してください");
         }
+        List<InvoiceLineItem> items = lineItems == null ? List.of() : lineItems;
+        // **発行の時点で金額を確定させる**（決定 4）。以後は係数から計算し直さない
         return new Invoice(invoiceId, cargoBookingId, shipperId, charges,
-                lineItems == null ? List.of() : lineItems, PaymentStatus.PENDING, issuedAt);
+                InvoiceAmounts.calculate(charges, items), items, PaymentStatus.PENDING,
+                issuedAt);
     }
 
     /**
@@ -75,9 +80,11 @@ public final class Invoice {
      * 検査するのは新規に受け入れるとき（{@link #issue}）である。
      */
     public static Invoice restore(InvoiceId invoiceId, BillingBookingId cargoBookingId,
-            BillingShipperId shipperId, InvoiceCharges charges,
+            BillingShipperId shipperId, InvoiceCharges charges, InvoiceAmounts amounts,
             List<InvoiceLineItem> lineItems, PaymentStatus paymentStatus, Instant issuedAt) {
-        return new Invoice(invoiceId, cargoBookingId, shipperId, charges,
+        // **保存された金額をそのまま受け取る**（決定 4）。係数から計算し直すと、
+        // 基準運賃や税率を将来変えた瞬間に過去の請求書の金額が変わる
+        return new Invoice(invoiceId, cargoBookingId, shipperId, charges, amounts,
                 lineItems == null ? List.of() : lineItems, paymentStatus, issuedAt);
     }
 
@@ -115,7 +122,7 @@ public final class Invoice {
     }
 
     public Money baseAmount() {
-        return charges.baseAmount();
+        return amounts.baseAmount();
     }
 
     /** 割引率。**割引が無ければ {@code null}**——0% と契約なしを区別する（[ADR-012]）。 */
@@ -124,7 +131,7 @@ public final class Invoice {
     }
 
     public Money discountAmount() {
-        return charges.discountAmount();
+        return amounts.discountAmount();
     }
 
     /** キャンセル料。キャンセルされていなければ {@code null}。 */
@@ -141,21 +148,22 @@ public final class Invoice {
         return charges.taxRate();
     }
 
-    /** 税を含まない小計。 */
+    /** 税を含まない小計。**発行時に確定した値から導く**（計算し直さない）。 */
     public Money subtotal() {
-        Money amount = charges.subtotalBeforeAdjustments();
-        for (InvoiceLineItem item : lineItems) {
-            amount = amount.add(item.amount());
-        }
-        return amount;
+        return amounts.subtotal();
     }
 
     public Money taxAmount() {
-        return charges.taxRate().taxOf(subtotal());
+        return amounts.taxAmount();
     }
 
     public Money totalAmount() {
-        return subtotal().add(taxAmount());
+        return amounts.totalAmount();
+    }
+
+    /** 発行した時点で確定した金額（決定 4）。 */
+    public InvoiceAmounts amounts() {
+        return amounts;
     }
 
     public PaymentStatus paymentStatus() {

@@ -103,6 +103,8 @@ public class CargoBookingController {
             @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles,
             @PathVariable String bookingId) {
         // 経路設計者も見る。引き渡された予約の中身が見えないと、経路を組む判断ができない。
+        // **経理担当者も読む**（IT11 レビュー）——請求書詳細から予約番号を押す導線があり、
+        // 荷主に「この請求はどの貨物か」を聞かれたときに辿る。403 だとそこで止まる。
         // **追跡管理者と荷役作業員も読む**（IT10 レビュー）——誤配に最初に気づくのも、
         // キャンセルを承認するのも追跡管理者であり、どちらの一覧からもここへ渡す導線が
         // ある。**読むだけである**（操作の可否は集約の述語が決め、画面が出し分ける）
@@ -290,7 +292,7 @@ public class CargoBookingController {
      */
     private void requireBookingReader(AuthenticatedUser user) {
         if (!user.hasAnyRole(Role.ROLE_SALES, Role.ROLE_ROUTING, Role.ROLE_TRACKER,
-                Role.ROLE_HANDLER)) {
+                Role.ROLE_HANDLER, Role.ROLE_ACCOUNTANT)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "この操作を行う権限がありません");
         }
     }

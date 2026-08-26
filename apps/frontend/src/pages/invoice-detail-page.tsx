@@ -139,6 +139,13 @@ export function InvoiceDetailPage() {
         {'請求内容は担当者からお伝えください。'}
       </p>
 
+      {/* **訂正の手段が無いことを、発行後の画面でも言う**（IT11 レビュー 高。writer・user）。
+          金額を動かさないのは決定 4 だが、「取り消して出し直す」手段も無い */}
+      <p className="rounded border border-gray-300 bg-gray-50 p-3 text-sm">
+        <strong>発行した請求書は訂正できません。</strong>
+        {'誤って発行した場合は、経理責任者へ報告のうえ運用担当者へご連絡ください。'}
+      </p>
+
       <Link className="text-blue-700 underline" to="/billing">
         精算管理へ戻る
       </Link>
