@@ -322,6 +322,13 @@ public class BookingConfig {
         return new DecideCancellationUseCase(cargoes, cancellations, events, clock);
     }
 
+    /** 精算の完了を受けて予約を閉じる（US23-4・[ADR-028] 決定 1）。 */
+    @Bean
+    public com.example.bookingms.application.internal.SettleBookingUseCase settleBookingUseCase(
+            CargoRepository cargoes) {
+        return new com.example.bookingms.application.internal.SettleBookingUseCase(cargoes);
+    }
+
     @Bean
     public AdvanceBookingUseCase advanceBookingUseCase(CargoRepository cargoes) {
         return new AdvanceBookingUseCase(cargoes);

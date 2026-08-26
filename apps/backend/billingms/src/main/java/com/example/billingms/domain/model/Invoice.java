@@ -1,6 +1,8 @@
 package com.example.billingms.domain.model;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 
 /**
@@ -28,10 +30,22 @@ public final class Invoice {
     private final List<InvoiceLineItem> lineItems;
     private final PaymentStatus paymentStatus;
     private final Instant issuedAt;
+    private final LocalDate dueDate;
+    private final Payment payment;
+    private final Instant voidedAt;
+    private final String voidReason;
+
+    /** 支払期限は発行日から何日後か（正典のビジネスルール 2）。 */
+    private static final int PAYMENT_TERM_DAYS = 30;
 
     private Invoice(InvoiceId invoiceId, BillingBookingId cargoBookingId,
             BillingShipperId shipperId, InvoiceCharges charges, InvoiceAmounts amounts,
-            List<InvoiceLineItem> lineItems, PaymentStatus paymentStatus, Instant issuedAt) {
+            List<InvoiceLineItem> lineItems, PaymentStatus paymentStatus, Instant issuedAt,
+            LocalDate dueDate, Payment payment, Instant voidedAt, String voidReason) {
+        this.dueDate = dueDate;
+        this.payment = payment;
+        this.voidedAt = voidedAt;
+        this.voidReason = voidReason;
         this.invoiceId = invoiceId;
         this.cargoBookingId = cargoBookingId;
         this.shipperId = shipperId;
@@ -50,7 +64,7 @@ public final class Invoice {
      */
     public static Invoice issue(InvoiceId invoiceId, BillingBookingId cargoBookingId,
             BillingShipperId shipperId, InvoiceCharges charges,
-            List<InvoiceLineItem> lineItems, Instant issuedAt) {
+            List<InvoiceLineItem> lineItems, Instant issuedAt, ZoneId businessZone) {
         if (invoiceId == null) {
             throw new IllegalArgumentException("請求番号を指定してください");
         }
@@ -70,7 +84,7 @@ public final class Invoice {
         // **発行の時点で金額を確定させる**（決定 4）。以後は係数から計算し直さない
         return new Invoice(invoiceId, cargoBookingId, shipperId, charges,
                 InvoiceAmounts.calculate(charges, items), items, PaymentStatus.PENDING,
-                issuedAt);
+                issuedAt, dueDateOf(issuedAt, businessZone), null, null, null);
     }
 
     /**
@@ -81,11 +95,122 @@ public final class Invoice {
      */
     public static Invoice restore(InvoiceId invoiceId, BillingBookingId cargoBookingId,
             BillingShipperId shipperId, InvoiceCharges charges, InvoiceAmounts amounts,
-            List<InvoiceLineItem> lineItems, PaymentStatus paymentStatus, Instant issuedAt) {
+            List<InvoiceLineItem> lineItems, PaymentStatus paymentStatus, Instant issuedAt,
+            LocalDate dueDate, Payment payment, Instant voidedAt, String voidReason) {
         // **保存された金額をそのまま受け取る**（決定 4）。係数から計算し直すと、
         // 基準運賃や税率を将来変えた瞬間に過去の請求書の金額が変わる
         return new Invoice(invoiceId, cargoBookingId, shipperId, charges, amounts,
-                lineItems == null ? List.of() : lineItems, paymentStatus, issuedAt);
+                lineItems == null ? List.of() : lineItems, paymentStatus, issuedAt,
+                dueDate, payment, voidedAt, voidReason);
+    }
+
+    /**
+     * 支払期限（受入基準 23-1）。**発行日から 30 日後**。
+     *
+     * <p><strong>業務の暦で決める。</strong>UTC で決めると、時差の分だけ期限が
+     * 1 日ずれる日が出る——日中しか動かしていないと気づかない。
+     */
+    private static LocalDate dueDateOf(Instant issuedAt, ZoneId businessZone) {
+        if (businessZone == null) {
+            throw new IllegalArgumentException("業務タイムゾーンを指定してください");
+        }
+        return LocalDate.ofInstant(issuedAt, businessZone).plusDays(PAYMENT_TERM_DAYS);
+    }
+
+    /**
+     * 入金を確認する（受入基準 23-4）。
+     *
+     * <p><strong>金額は動かない</strong>（[ADR-027] 決定 4）。入金は請求書に起きた
+     * 別の出来事であり、請求額を変えるものではない。
+     *
+     * <p><strong>二度は確認しない。</strong>2 回目を通すと、入金が 2 件あったのか
+     * 操作を重ねただけなのかが、あとから区別できない。
+     */
+    public Invoice confirmPayment(Payment confirmed) {
+        if (confirmed == null) {
+            throw new IllegalArgumentException("入金の記録を指定してください");
+        }
+        if (voided()) {
+            throw new IllegalStateException(
+                    "取り消した請求書に入金は確認できません: " + invoiceId.value());
+        }
+        if (paymentStatus == PaymentStatus.CONFIRMED) {
+            throw new IllegalStateException(
+                    "すでに入金を確認しています: " + invoiceId.value());
+        }
+        return new Invoice(invoiceId, cargoBookingId, shipperId, charges, amounts, lineItems,
+                PaymentStatus.CONFIRMED, issuedAt, dueDate, confirmed, voidedAt, voidReason);
+    }
+
+    /**
+     * 取り消す（赤伝・[ADR-028] 決定 3）。
+     *
+     * <p><strong>消さずに取り消す。</strong>経理担当者は「DB を直すのは監査に耐えない」と
+     * 明言した。行は残し、取り消したことと理由を足す。出し直しは新しい請求番号で行う。
+     *
+     * <p><strong>支払いの状態には混ぜない</strong>（決定 4）。取り消しは請求書そのものの
+     * 状態であり、支払いの状態ではない。
+     */
+    public Invoice revoke(String reason, Instant at) {
+        if (reason == null || reason.isBlank()) {
+            throw new IllegalArgumentException(
+                    "取り消しの理由を入力してください（あとから二重発行の失敗と区別できません）");
+        }
+        if (at == null) {
+            throw new IllegalArgumentException("取り消しの日時を指定してください");
+        }
+        if (voided()) {
+            throw new IllegalStateException("すでに取り消しています: " + invoiceId.value());
+        }
+        if (paymentStatus == PaymentStatus.CONFIRMED) {
+            throw new IllegalStateException(
+                    "入金済の請求書は取り消せません（返金は別の手続きです）: " + invoiceId.value());
+        }
+        return new Invoice(invoiceId, cargoBookingId, shipperId, charges, amounts, lineItems,
+                paymentStatus, issuedAt, dueDate, payment, at, reason);
+    }
+
+    /**
+     * 支払期限を過ぎているか（[ADR-028] 決定 5）。
+     *
+     * <p><strong>列に書いて溜めない。</strong>書き込む相手（バッチ）が無いため、
+     * 書いた列は誰にも更新されず、期限を過ぎた請求が一覧に現れない。
+     *
+     * <p><strong>日付単位で比べる。</strong>期限当日は超過ではない——時刻付きで比べると、
+     * 当日に払った荷主が「遅れた」ことになる。
+     */
+    public boolean overdue(LocalDate today) {
+        if (today == null) {
+            throw new IllegalArgumentException("基準の日付を指定してください");
+        }
+        if (voided() || paymentStatus == PaymentStatus.CONFIRMED || dueDate == null) {
+            return false;
+        }
+        return today.isAfter(dueDate);
+    }
+
+    /** 支払期限（受入基準 23-1）。 */
+    public LocalDate dueDate() {
+        return dueDate;
+    }
+
+    /** 入金の記録。**未入金なら {@code null}**。 */
+    public Payment payment() {
+        return payment;
+    }
+
+    /** 取り消したか（赤伝）。 */
+    public boolean voided() {
+        return voidedAt != null;
+    }
+
+    public Instant voidedAt() {
+        return voidedAt;
+    }
+
+    /** 取り消した理由。**取り消していなければ {@code null}**。 */
+    public String voidReason() {
+        return voidReason;
     }
 
     public InvoiceId invoiceId() {

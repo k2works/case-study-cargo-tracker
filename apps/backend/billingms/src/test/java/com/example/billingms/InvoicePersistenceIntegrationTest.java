@@ -23,6 +23,11 @@ import com.example.billingms.domain.model.TaxRate;
 import com.example.billingms.domain.model.TransportCharge;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.ZoneId;
+import com.example.billingms.domain.model.Payment;
+import com.example.billingms.domain.model.PaymentMethod;
+import java.time.LocalDate;
+import java.util.Map;
 import java.util.List;
 import com.example.billingms.application.internal.AlreadyInvoicedException;
 import org.junit.jupiter.api.DisplayName;
@@ -46,6 +51,9 @@ import org.testcontainers.containers.PostgreSQLContainer;
 @ActiveProfiles("integration")
 @DisplayName("精算書の永続化")
 class InvoicePersistenceIntegrationTest {
+
+    /** 業務タイムゾーン（`app.business-time-zone` の既定）。 */
+    private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Tokyo");
 
     @ServiceConnection
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
@@ -71,7 +79,7 @@ class InvoicePersistenceIntegrationTest {
         return Invoice.issue(numbering.next(), BillingBookingId.of(bookingId),
                 BillingShipperId.corporate("1", "丸紅商事株式会社"),
                 new InvoiceCharges(CHARGE, policy, fee, TaxRate.standard()),
-                adjustments, Instant.parse("2027-10-01T00:00:00Z"));
+                adjustments, Instant.parse("2027-10-01T00:00:00Z"), BUSINESS_ZONE);
     }
 
     private String uniqueBookingId() {
@@ -253,6 +261,135 @@ class InvoicePersistenceIntegrationTest {
             assertThat(invoices.existsForBooking(bookingId)).isFalse();
             invoices.save(issue(bookingId, DiscountPolicy.none(), List.of(), null));
             assertThat(invoices.existsForBooking(bookingId)).isTrue();
+        }
+    }
+
+    @Nested
+    @DisplayName("入金と取り消し（US23・[ADR-028] 決定 2・3）")
+    class SettlingAndVoiding {
+
+        private Payment payment() {
+            return Payment.of(Money.yen(new BigDecimal("462000")),
+                    LocalDate.parse("2027-10-15"), PaymentMethod.BANK_TRANSFER,
+                    "FT27101500123");
+        }
+
+        /**
+         * <strong>入金の記録は請求書の行を書き換えない</strong>（決定 2）。
+         *
+         * <p>入金は請求書に起きた別の出来事である。金額の列が 1 つでも動いていたら、
+         * [ADR-027] 決定 4 が守られていない。
+         */
+        @Test
+        @DisplayName("入金を確認しても、請求書の金額は 1 列も変わらない")
+        void keepsTheInvoiceAmountsUntouched() {
+            String bookingId = uniqueBookingId();
+            Invoice issued = issue(bookingId, DiscountPolicy.none(), List.of(), null);
+            invoices.save(issued);
+            Map<String, Object> before = amountColumnsOf(issued);
+
+            invoices.confirmPayment(issued.confirmPayment(payment()));
+
+            assertThat(amountColumnsOf(issued))
+                    .as("入金の確認が請求書の金額を書き換えている")
+                    .isEqualTo(before);
+        }
+
+        /** <strong>根拠ごと読み戻せる。</strong>「入金済」だけでは、いつ・いくらかを追えない。 */
+        @Test
+        @DisplayName("入金の記録を、根拠ごと読み戻せる")
+        void restoresThePayment() {
+            String bookingId = uniqueBookingId();
+            Invoice issued = issue(bookingId, DiscountPolicy.none(), List.of(), null);
+            invoices.save(issued);
+
+            invoices.confirmPayment(issued.confirmPayment(payment()));
+            Invoice restored = invoices.findById(issued.invoiceId().value()).orElseThrow();
+
+            assertThat(restored.paymentStatus()).isEqualTo(PaymentStatus.CONFIRMED);
+            assertThat(restored.payment())
+                    .as("入金の根拠が戻っていない。いつ・いくら・どの振込かを追えない")
+                    .isEqualTo(payment());
+        }
+
+        /** 支払期限は発行時に書かれる（受入基準 23-1）。 */
+        @Test
+        @DisplayName("支払期限を読み戻せる")
+        void restoresTheDueDate() {
+            Invoice issued = issue(uniqueBookingId(), DiscountPolicy.none(), List.of(), null);
+            invoices.save(issued);
+
+            assertThat(invoices.findById(issued.invoiceId().value()).orElseThrow().dueDate())
+                    .as("支払期限が戻っていない。期限超過の判定ができない")
+                    .isEqualTo(LocalDate.parse("2027-10-31"));
+        }
+
+        /**
+         * <strong>取り消したあと、同じ予約に出し直せる</strong>（決定 3）。
+         *
+         * <p>出し直せなければ、金額を間違えた予約には二度と請求できない。
+         * <strong>新しい請求番号であることまで見る</strong>——同じ番号を使い回すと、
+         * どちらが有効な請求書か分からなくなる。
+         */
+        @Test
+        @DisplayName("取り消したあと、同じ予約に新しい請求番号で出し直せる")
+        void reissuesAfterVoiding() {
+            String bookingId = uniqueBookingId();
+            Invoice first = issue(bookingId, DiscountPolicy.none(), List.of(), null);
+            invoices.save(first);
+
+            invoices.revoke(first.revoke("金額の誤りのため", Instant.parse("2027-10-05T00:00:00Z")));
+
+            Invoice reissued = issue(bookingId, DiscountPolicy.none(), List.of(), null);
+            invoices.save(reissued);
+
+            assertThat(reissued.invoiceId()).isNotEqualTo(first.invoiceId());
+            assertThat(invoices.existsForBooking(bookingId))
+                    .as("出し直した請求書が有効として数えられていない")
+                    .isTrue();
+            Invoice restoredFirst = invoices.findById(first.invoiceId().value()).orElseThrow();
+            assertThat(restoredFirst.voided()).isTrue();
+            assertThat(restoredFirst.voidReason()).isEqualTo("金額の誤りのため");
+        }
+
+        /**
+         * <strong>取り消し済みは「発行済み」に数えない</strong>（注 2-b）。
+         *
+         * <p>数えると、制約を出し直せる形に変えても<strong>アプリ側が先に弾く</strong>。
+         */
+        @Test
+        @DisplayName("取り消した請求書は、発行済みとして数えない")
+        void doesNotCountVoidedInvoices() {
+            String bookingId = uniqueBookingId();
+            Invoice first = issue(bookingId, DiscountPolicy.none(), List.of(), null);
+            invoices.save(first);
+            assertThat(invoices.existsForBooking(bookingId)).isTrue();
+
+            invoices.revoke(first.revoke("金額の誤りのため", Instant.parse("2027-10-05T00:00:00Z")));
+
+            assertThat(invoices.existsForBooking(bookingId))
+                    .as("取り消した請求書を数えている。その予約に二度と請求できない")
+                    .isFalse();
+        }
+
+        /** <strong>有効な請求書は予約ごとに 1 通。</strong>取り消していない 2 通目は DB が断る。 */
+        @Test
+        @DisplayName("取り消していない 2 通目は断られる")
+        void stillRejectsASecondActiveInvoice() {
+            String bookingId = uniqueBookingId();
+            invoices.save(issue(bookingId, DiscountPolicy.none(), List.of(), null));
+
+            assertThatThrownBy(() ->
+                    invoices.save(issue(bookingId, DiscountPolicy.none(), List.of(), null)))
+                    .isInstanceOf(AlreadyInvoicedException.class);
+        }
+
+        private Map<String, Object> amountColumnsOf(Invoice invoice) {
+            return jdbcTemplate.queryForMap("""
+                    SELECT base_amount_value, discount_amount_value, tax_amount,
+                           total_amount_value, leg_factor, tax_exempt
+                      FROM invoice WHERE invoice_number = ?
+                    """, invoice.invoiceId().value());
         }
     }
 

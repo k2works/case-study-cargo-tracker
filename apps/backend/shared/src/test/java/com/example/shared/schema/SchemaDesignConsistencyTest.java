@@ -80,12 +80,8 @@ class SchemaDesignConsistencyTest {
      * 一覧そのものが悪いのではない。<strong>減る向きにしか動かせない</strong>ことが要る。
      */
     private static final Map<String, String> PENDING_TABLES = Map.of(
-            "booking_db.estimate", "US01 輸送見積（未着手）",
-            "booking_db.route_candidate", "US01 輸送見積（未着手）",
-            // invoice / invoice_line_item は IT11（US21・US22）で実装した。
-            // payment は支払いを扱う US23（IT12）まで作らない
-            // ——読む側の無いテーブルを先に作らない
-            "billing_db.payment", "US23 精算・IT12");
+            "booking_db.estimate", "US01 輸送見積（IT12・実装中）",
+            "booking_db.route_candidate", "US01 輸送見積（IT12・実装中）");
 
     /** 設計にあるが、その列を使うストーリーがまだ来ていないもの。扱いは {@link #PENDING_TABLES} と同じ。 */
     private static final Map<String, String> PENDING_COLUMNS = Map.of(

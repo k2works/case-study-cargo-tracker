@@ -4,6 +4,9 @@ import com.example.billingms.application.internal.AdjustmentCommand;
 import com.example.billingms.application.internal.AlreadyInvoicedException;
 import com.example.billingms.application.internal.BillingNotAvailableException;
 import com.example.billingms.application.internal.CalculateChargeUseCase;
+import com.example.billingms.application.internal.InvoiceNotFoundException;
+import com.example.billingms.application.internal.PaymentCommand;
+import com.example.billingms.application.internal.SettleInvoiceUseCase;
 import com.example.billingms.application.port.InvoiceRepository;
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.auth.Role;
@@ -35,10 +38,13 @@ public class BillingController {
 
     private final CalculateChargeUseCase calculateCharge;
     private final InvoiceRepository invoices;
+    private final SettleInvoiceUseCase settlement;
 
-    public BillingController(CalculateChargeUseCase calculateCharge, InvoiceRepository invoices) {
+    public BillingController(CalculateChargeUseCase calculateCharge, InvoiceRepository invoices,
+            SettleInvoiceUseCase settlement) {
         this.calculateCharge = calculateCharge;
         this.invoices = invoices;
+        this.settlement = settlement;
     }
 
     /**
@@ -148,6 +154,74 @@ public class BillingController {
                 .body(java.util.Map.of("message",
                         "予約サービスに接続できないため、料金の情報を取得できません。"
                                 + "しばらく待って開き直してください。"));
+    }
+
+    /**
+     * 入金を確認する（受入基準 23-3・23-4）。
+     *
+     * <p><strong>決済機関とは連携していない</strong>（代替）。経理担当者が通帳や入金明細を
+     * 見て入れる。入れた根拠（入金日・金額・方法・参照番号）は残る。
+     */
+    @PostMapping("/invoices/{invoiceNumber}/payment")
+    public InvoiceResponse confirmPayment(
+            @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
+            @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles,
+            @PathVariable String invoiceNumber,
+            @RequestBody ConfirmPaymentRequest request) {
+        requireAccountant(userId, roles);
+
+        try {
+            return InvoiceResponse.from(settlement.confirmPayment(invoiceNumber,
+                    new PaymentCommand(request.amountValue(), request.paidAt(),
+                            request.method(), request.transactionReference())));
+        } catch (InvoiceNotFoundException notFound) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, notFound.getMessage());
+        } catch (IllegalStateException conflict) {
+            // すでに入金済・取り消し済み。**待っても変わらない**
+            throw new ResponseStatusException(HttpStatus.CONFLICT, conflict.getMessage());
+        } catch (IllegalArgumentException invalid) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, invalid.getMessage());
+        }
+    }
+
+    /**
+     * 請求書を取り消す（赤伝・[ADR-028] 決定 3）。
+     *
+     * <p><strong>理由は必須である。</strong>なぜ取り消したかが残らないと、あとから見て
+     * 「二重発行の失敗」と区別できない。
+     */
+    @PostMapping("/invoices/{invoiceNumber}/void")
+    public InvoiceResponse revoke(
+            @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
+            @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles,
+            @PathVariable String invoiceNumber,
+            @RequestBody VoidInvoiceRequest request) {
+        requireAccountant(userId, roles);
+
+        try {
+            return InvoiceResponse.from(settlement.revoke(invoiceNumber, request.reason()));
+        } catch (InvoiceNotFoundException notFound) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, notFound.getMessage());
+        } catch (IllegalStateException conflict) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, conflict.getMessage());
+        } catch (IllegalArgumentException invalid) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, invalid.getMessage());
+        }
+    }
+
+    /**
+     * 支払期限を過ぎた請求書（受入基準 23-5 の代替）。
+     *
+     * <p><strong>未払い通知のメールは無い。</strong>経理担当者はこの一覧でしか気づけない
+     * ——件数を出すだけでは仕事は進まないので、対象そのものを返す。
+     */
+    @GetMapping("/invoices/overdue")
+    public List<InvoiceResponse> overdue(
+            @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
+            @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles) {
+        requireAccountant(userId, roles);
+
+        return settlement.overdue().stream().map(InvoiceResponse::from).toList();
     }
 
     private void requireAccountant(String userId, String roles) {

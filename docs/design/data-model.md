@@ -765,6 +765,9 @@ entity "invoice\n（精算書）" as invoice {
   * tax_rate : NUMERIC(5,4) <<NOT NULL, DEFAULT 0.1000>>
   * tax_amount : NUMERIC(15,2) <<NOT NULL, DEFAULT 0>>
   * tax_exempt : BOOLEAN <<NOT NULL, DEFAULT FALSE>>
+  voided_at : TIMESTAMP WITH TIME ZONE
+  void_reason : VARCHAR(200)
+  * void_marker : VARCHAR(30) <<NOT NULL, DEFAULT ''>>
   * payment_status : VARCHAR(30) <<NOT NULL>>
   issued_at : TIMESTAMP WITH TIME ZONE
   due_date : DATE
@@ -791,9 +794,9 @@ entity "payment\n（支払記録）" as payment {
   * id : BIGINT <<PK, BIGSERIAL>>
   --
   * invoice_id : BIGINT <<FK, NOT NULL>>
-  * paid_amount_value : INTEGER <<NOT NULL>>
+  * paid_amount_value : NUMERIC(15,2) <<NOT NULL>>
   * paid_amount_currency : VARCHAR(3) <<NOT NULL>>
-  * paid_at : TIMESTAMP WITH TIME ZONE <<NOT NULL>>
+  * paid_at : DATE <<NOT NULL>>
   * payment_method : VARCHAR(30) <<NOT NULL>>
   transaction_reference : VARCHAR(100)
 }
@@ -1109,8 +1112,28 @@ IT11（US21・US22）で実装した。キャンセル料の算定根拠（UC22�
 | `amount_currency` | `VARCHAR(3)` | NOT NULL | |
 | `seq_number` | `INTEGER` | NOT NULL | 積んだ順 |
 
-> **`payment` テーブルは IT11 では作らない。** 支払いを扱うのは US23（IT12）であり、
-> 読む側の無いテーブルを先に作らない。
+### `payment`（支払記録・IT12）
+
+| カラム | 型 | 制約 | 備考 |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGSERIAL` | PK | |
+| `invoice_id` | `BIGINT` | FK, NOT NULL | |
+| `paid_amount_value` | `NUMERIC(15,2)` | NOT NULL | **`invoice` 側に揃える**（論理モデルの `INTEGER` から変更） |
+| `paid_amount_currency` | `VARCHAR(3)` | NOT NULL | |
+| `paid_at` | `DATE` | NOT NULL | **日付である**——通帳に時刻は無い |
+| `payment_method` | `VARCHAR(30)` | NOT NULL | 銀行振込 / 手形 / 相殺 / その他 |
+| `transaction_reference` | `VARCHAR(100)` | | 振込の照会番号など。**あとから裏を取るための手がかり** |
+
+> **請求書の属性にしない**（[ADR-028](../adr/028-settlement-and-quotation.md) 決定 2）。
+> 入金は請求書に起きた別の出来事であり、発行した請求書の金額は動かない
+> （[ADR-027](../adr/027-transport-charge-calculation.md) 決定 4）。分割入金を列に持つと、
+> それは列の増設になる。
+
+> **取り消し（赤伝）は 3 列で表す**（決定 3）。`voided_at` / `void_reason` に加え、
+> `void_marker` を持つ。**部分 UNIQUE は使えない**——`WHERE voided_at IS NULL` を
+> H2 が解釈できず（実測）、CI（PostgreSQL）は緑のままローカル起動だけが落ちる。
+> 有効な請求書は `void_marker = ''`、取り消した請求書は請求番号が入るため、
+> `(booking_id, void_marker)` の素の UNIQUE で「有効な請求書は予約ごとに 1 通」を守れる。
 
 ---
 

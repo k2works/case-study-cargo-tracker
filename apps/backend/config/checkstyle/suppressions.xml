@@ -48,4 +48,11 @@
       ここで message による抑制を書かないこと。指摘の文言はロケールで変わるため、
       日本語で書いた抑制は英語で動く CI に効かない（実際に IT7 で踏んだ）。
     -->
+    <!--
+      Flyway の Java マイグレーションは、クラス名が版番号そのものである
+      （`V5__drop_booking_unique`）。Flyway がその名前から版と説明を読むため、
+      Java の命名規約には合わせられない。
+    -->
+    <suppress checks="TypeName" files="[\\/]db[\\/]migration[\\/]"/>
+    <suppress checks="AbbreviationAsWordInName" files="[\\/]db[\\/]migration[\\/]"/>
 </suppressions>

@@ -30,6 +30,13 @@ public final class BillingSnapshotContract {
     public static final String UNBILLED_PATH = "/api/v1/bookings/billable";
 
     /**
+     * 精算が済んだことを知らせる経路（US23-4・[ADR-028] 決定 1）。
+     *
+     * <p><strong>ここだけが副作用を持つ。</strong>ほかの 2 本は読み取りである。
+     */
+    public static final String SETTLEMENT_PATH = "/api/v1/bookings/{bookingId}/settlement";
+
+    /**
      * 呼び出してよい主体（[ADR-019] 後日談 3）。
      *
      * <p>名乗らないと、相手の [ADR-007] フィルタが一律に断る。IT5 では名乗りを忘れ、

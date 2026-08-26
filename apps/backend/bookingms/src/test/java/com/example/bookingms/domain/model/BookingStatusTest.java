@@ -33,48 +33,50 @@ class BookingStatusTest {
     }
 
     /**
-     * <strong>{@code SETTLED} へ進める経路を作らない</strong>（IT9 計画タスク 4.4）。
+     * <strong>{@code SETTLED} は精算で到達する</strong>（US23・[ADR-028] 決定 1）。
      *
-     * <p>精算は US23（IT12）である。値だけ先に置くと、「精算まで実装済み」と読まれる。
-     * <strong>遷移の呼び出し箇所を数える</strong>——値の有無ではなく、そこへ動かす
-     * コードが無いことを見る（[ADR-024] 決定 8 と同じ形）。
+     * <p>IT9 はこの値を置かず、「そこへ動かすコードが無いこと」を検査していた
+     * （精算は US23 だったため、値だけ先に置くと「実装済み」と読まれる）。
+     * <strong>本 IT でその検査を反転させる。</strong>
      *
-     * <p>この検査は、{@code SETTLED} を足したうえで遷移を書いた瞬間に赤になる。
+     * <p><strong>入金の確認だけがここへ動かす。</strong>引取済からしか来ない
+     * ——キャンセルされた予約に「精算済」は無い。
      */
     @Test
-    @DisplayName("SETTLED へ進める経路は無い")
-    void hasNoTransitionIntoSettled() {
+    @DisplayName("精算済へは、引取済からだけ進める")
+    void advancesIntoSettledOnlyFromDelivered() {
         assertThat(Arrays.stream(BookingStatus.values()).map(Enum::name))
-                .as("SETTLED を足している。値だけ先に置くと「精算まで実装済み」と読まれる")
-                .doesNotContain("SETTLED");
+                .as("精算済が無い。入金を確認しても予約が閉じない")
+                .contains("SETTLED");
 
-        List<String> mentions = sourceFileNames()
-                .filter(name -> stripComments(read(DOMAIN.resolve(name))).contains("SETTLED"))
-                .toList();
+        assertThat(BookingStatus.DELIVERED.canAdvanceTo(BookingStatus.SETTLED)).isTrue();
 
-        assertThat(mentions)
-                .as("SETTLED へ動かすコードがある。精算は US23（IT12）であり、"
-                        + "この IT では経路を作らない")
-                .isEmpty();
+        // **対で見る。**「引取済から進める」だけを見ると、どこからでも進める実装でも緑になる
+        for (BookingStatus from : BookingStatus.values()) {
+            if (from != BookingStatus.DELIVERED) {
+                assertThat(from.canAdvanceTo(BookingStatus.SETTLED))
+                        .as("%s から精算済へ進めている。運んでいない予約が精算済になる", from)
+                        .isFalse();
+            }
+        }
     }
 
     /**
-     * コメントを落とす。
+     * <strong>精算済から先へは動かない。</strong>
      *
-     * <p><strong>コメントは検査の対象外である。</strong>「SETTLED へは進めない」と
-     * 説明を書いた瞬間に赤になる検査は、説明を書くことを罰する——書けなくなると、
-     * なぜそうなっているかが誰にも読めなくなる。見たいのは<strong>コード</strong>である。
+     * <p>精算が済んだ予約に荷役が遅れて届いても巻き戻らない——再試行やデッドレターからの
+     * 送り直しで、荷役の届く順は入れ替わる。
      */
-    private static String stripComments(String source) {
-        return source.replaceAll("(?s)/\\*.*?\\*/", "").replaceAll("(?m)//[^\n]*", "");
+    @Test
+    @DisplayName("精算済からは、どの状態へも進めない")
+    void neverAdvancesOutOfSettled() {
+        for (BookingStatus next : BookingStatus.values()) {
+            assertThat(BookingStatus.SETTLED.canAdvanceTo(next))
+                    .as("精算済から %s へ動かせている", next)
+                    .isFalse();
+        }
     }
 
-    /**
-     * <strong>キャンセルは、承認を経る道以外から起きない</strong>（US30-3）。
-     *
-     * <p>{@code CANCELLED} へ動かす箇所が集約の 1 メソッドに限られていることを見る。
-     * 別の場所から直接動かせると、輸送中の貨物が承認を経ずに止まる。
-     */
     @Test
     @DisplayName("キャンセルへ動かす箇所は、集約の 1 か所だけ")
     void cancelsOnlyThroughTheAggregate() {
@@ -96,6 +98,16 @@ class BookingStatusTest {
      *
      * <p>見るのは新しい状態の組み立て（{@code new CargoStatus(BookingStatus.CANCELLED}）である。
      */
+    /**
+     * コメントを外す。
+     *
+     * <p><strong>コメントは検査の対象外である。</strong>「〜へは進めない」と書いた
+     * 説明文まで数えると、説明を書いただけで赤になる。
+     */
+    private static String stripComments(String source) {
+        return source.replaceAll("(?s)/\\*.*?\\*/", "").replaceAll("(?m)//.*$", "");
+    }
+
     private static boolean movesIntoCancelled(String name) {
         return stripComments(read(DOMAIN.resolve(name)))
                 .contains("new CargoStatus(BookingStatus.CANCELLED");

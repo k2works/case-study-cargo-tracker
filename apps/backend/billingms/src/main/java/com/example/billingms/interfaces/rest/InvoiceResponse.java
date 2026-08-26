@@ -47,8 +47,22 @@ public record InvoiceResponse(
         MoneyResponse taxAmount,
         MoneyResponse totalAmount,
         String paymentStatus,
+        String paymentStatusLabel,
         Instant issuedAt,
-        LocalDate dueDate) {
+        LocalDate dueDate,
+        PaymentResponse payment,
+        Instant voidedAt,
+        String voidReason) {
+
+    /**
+     * 入金の記録（受入基準 23-3）。
+     *
+     * <p><strong>根拠ごと返す。</strong>「入金済」だけでは、いつ・いくら・どの振込かを
+     * 誰も追えない。
+     */
+    public record PaymentResponse(MoneyResponse amount, LocalDate paidAt, String method,
+            String methodLabel, String transactionReference) {
+    }
 
     /** 調整の明細 1 行（決定 6）。**内容つきで残す**——金額だけでは理由が分からない。 */
     public record LineItemResponse(String description, MoneyResponse amount) {
@@ -90,7 +104,16 @@ public record InvoiceResponse(
                 MoneyResponse.from(invoice.taxAmount()),
                 MoneyResponse.from(invoice.totalAmount()),
                 invoice.paymentStatus().name(),
+                invoice.paymentStatus().label(),
                 invoice.issuedAt(),
-                null);
+                invoice.dueDate(),
+                invoice.payment() == null ? null : new PaymentResponse(
+                        MoneyResponse.from(invoice.payment().amount()),
+                        invoice.payment().paidAt(),
+                        invoice.payment().method().name(),
+                        invoice.payment().method().label(),
+                        invoice.payment().transactionReference()),
+                invoice.voidedAt(),
+                invoice.voidReason());
     }
 }

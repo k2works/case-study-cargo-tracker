@@ -26,6 +26,7 @@ final class BookingStatusLabels {
             case IN_TRANSIT -> "輸送中";
             case DELIVERED -> "配送完了";
             case CANCELLED -> "キャンセル";
+            case SETTLED -> "精算済";
         };
     }
 }

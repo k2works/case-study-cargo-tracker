@@ -15,6 +15,8 @@ import com.example.billingms.domain.model.InvoiceAmounts;
 import com.example.billingms.domain.model.InvoiceCharges;
 import com.example.billingms.domain.model.InvoiceLineItem;
 import com.example.billingms.domain.model.Money;
+import com.example.billingms.domain.model.Payment;
+import com.example.billingms.domain.model.PaymentMethod;
 import com.example.billingms.domain.model.PaymentStatus;
 import com.example.billingms.domain.model.PortRegion;
 import com.example.billingms.domain.model.TaxRate;
@@ -73,6 +75,37 @@ public class MyBatisInvoiceRepository implements InvoiceRepository {
     }
 
     @Override
+    public void confirmPayment(Invoice invoice) {
+        Long id = invoices.selectIdByInvoiceNumber(invoice.invoiceId().value());
+        if (id == null) {
+            throw new IllegalStateException(
+                    "発行されていない請求書に入金は記録できません: " + invoice.invoiceId().value());
+        }
+        Payment payment = invoice.payment();
+        PaymentRecord row = new PaymentRecord();
+        row.setInvoiceId(id);
+        row.setPaidAmountValue(payment.amount().amount());
+        row.setPaidAmountCurrency(payment.amount().currency());
+        row.setPaidAt(payment.paidAt());
+        row.setPaymentMethod(payment.method().name());
+        row.setTransactionReference(payment.transactionReference());
+        invoices.insertPayment(row);
+
+        invoices.updateStatus(invoice.invoiceId().value(), invoice.paymentStatus().name());
+    }
+
+    @Override
+    public void revoke(Invoice invoice) {
+        int updated = invoices.updateVoided(invoice.invoiceId().value(),
+                invoice.voidedAt(), invoice.voidReason());
+        if (updated == 0) {
+            // **すでに取り消されている。**画面を 2 回押した・2 人が同時に押した
+            throw new IllegalStateException(
+                    "すでに取り消されています: " + invoice.invoiceId().value());
+        }
+    }
+
+    @Override
     public Optional<Invoice> findById(String invoiceId) {
         return Optional.ofNullable(invoices.selectByInvoiceNumber(invoiceId))
                 .map(this::toDomain);
@@ -95,6 +128,8 @@ public class MyBatisInvoiceRepository implements InvoiceRepository {
         row.setShipperId(invoice.shipperId().value());
         row.setShipperName(invoice.shipperName());
         row.setShipperCorporate(invoice.shipperId().isCorporate());
+        row.setDueDate(invoice.dueDate());
+        row.setTaxExempt(invoice.taxRate().exempted());
         row.setLegCount(invoice.charge().legCount());
         row.setLegFactor(invoice.charge().legFactor());
         row.setLegRegion(invoice.charge().region() == null ? null
@@ -158,7 +193,15 @@ public class MyBatisInvoiceRepository implements InvoiceRepository {
                         Money.of(row.getDiscountAmountValue(), row.getDiscountAmountCurrency()),
                         Money.yen(row.getTaxAmount()),
                         Money.of(row.getTotalAmountValue(), row.getTotalAmountCurrency())),
-                items, PaymentStatus.valueOf(row.getPaymentStatus()), row.getIssuedAt());
+                items, PaymentStatus.valueOf(row.getPaymentStatus()), row.getIssuedAt(),
+                row.getDueDate(),
+                // 入金の記録は別表にある。無ければ未入金である
+                row.getPaidAt() == null ? null
+                        : Payment.of(Money.of(row.getPaidAmountValue(),
+                                        row.getPaidAmountCurrency()),
+                                row.getPaidAt(), PaymentMethod.of(row.getPaymentMethod()),
+                                row.getTransactionReference()),
+                row.getVoidedAt(), row.getVoidReason());
     }
 
     /**

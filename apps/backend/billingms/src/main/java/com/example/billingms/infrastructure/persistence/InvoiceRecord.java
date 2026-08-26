@@ -24,6 +24,23 @@ public class InvoiceRecord {
     private String legRegion;
 
     private boolean taxExempt;
+
+    private java.time.LocalDate dueDate;
+
+    private java.time.Instant voidedAt;
+
+    private String voidReason;
+
+    /** 入金の記録（別表 payment を JOIN して読む）。未入金なら null。 */
+    private java.math.BigDecimal paidAmountValue;
+
+    private String paidAmountCurrency;
+
+    private java.time.LocalDate paidAt;
+
+    private String paymentMethod;
+
+    private String transactionReference;
     private BigDecimal weightKg;
     private String cargoType;
     private BigDecimal baseAmountValue;
@@ -116,6 +133,70 @@ public class InvoiceRecord {
 
     public void setTaxExempt(boolean taxExempt) {
         this.taxExempt = taxExempt;
+    }
+
+    public java.time.LocalDate getDueDate() {
+        return dueDate;
+    }
+
+    public void setDueDate(java.time.LocalDate dueDate) {
+        this.dueDate = dueDate;
+    }
+
+    public java.time.Instant getVoidedAt() {
+        return voidedAt;
+    }
+
+    public void setVoidedAt(java.time.Instant voidedAt) {
+        this.voidedAt = voidedAt;
+    }
+
+    public String getVoidReason() {
+        return voidReason;
+    }
+
+    public void setVoidReason(String voidReason) {
+        this.voidReason = voidReason;
+    }
+
+    public java.math.BigDecimal getPaidAmountValue() {
+        return paidAmountValue;
+    }
+
+    public void setPaidAmountValue(java.math.BigDecimal paidAmountValue) {
+        this.paidAmountValue = paidAmountValue;
+    }
+
+    public String getPaidAmountCurrency() {
+        return paidAmountCurrency;
+    }
+
+    public void setPaidAmountCurrency(String paidAmountCurrency) {
+        this.paidAmountCurrency = paidAmountCurrency;
+    }
+
+    public java.time.LocalDate getPaidAt() {
+        return paidAt;
+    }
+
+    public void setPaidAt(java.time.LocalDate paidAt) {
+        this.paidAt = paidAt;
+    }
+
+    public String getPaymentMethod() {
+        return paymentMethod;
+    }
+
+    public void setPaymentMethod(String paymentMethod) {
+        this.paymentMethod = paymentMethod;
+    }
+
+    public String getTransactionReference() {
+        return transactionReference;
+    }
+
+    public void setTransactionReference(String transactionReference) {
+        this.transactionReference = transactionReference;
     }
 
     public void setLegCount(int legCount) {

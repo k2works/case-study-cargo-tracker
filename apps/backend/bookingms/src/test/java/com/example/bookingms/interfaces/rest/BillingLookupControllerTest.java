@@ -42,6 +42,9 @@ class BillingLookupControllerTest {
     @MockitoBean
     private BillableCargoFinder billable;
 
+    @MockitoBean
+    private com.example.bookingms.application.internal.SettleBookingUseCase settlement;
+
     private static String pathFor(String bookingId) {
         return BillingSnapshotContract.PATH.replace("{bookingId}", bookingId);
     }

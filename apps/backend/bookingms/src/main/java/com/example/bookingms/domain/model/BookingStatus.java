@@ -62,7 +62,18 @@ public enum BookingStatus {
      * <p>輸送開始前は即時に、輸送中は<strong>追跡管理者の承認を経て</strong>ここへ来る。
      * 承認を迂回する経路を作らない（{@code BookingStatusTest#cancelsOnlyThroughTheAggregate}）。
      */
-    CANCELLED;
+    CANCELLED,
+
+    /**
+     * 精算済（US23・[ADR-028] 決定 1）。<strong>引取済からだけ来る。</strong>
+     *
+     * <p>入金を確認した billingms が知らせる。**bookingms は自分では知らない**
+     * ——請求と入金は経理の仕事であり、予約の側に判断材料が無い。
+     *
+     * <p>並びの最後に置いているが、{@link #canAdvanceTo} は順序では判定しない
+     * ——キャンセルされた予約に「精算済」は無い。
+     */
+    SETTLED;
 
     /**
      * その荷役で予約はどこまで進むか（[ADR-025] 決定 1）。
@@ -93,10 +104,16 @@ public enum BookingStatus {
      * 巻き戻り、荷主は「配送完了だったはずの貨物が輸送中に戻っている」を見る。
      */
     public boolean canAdvanceTo(BookingStatus next) {
+        // **精算済は順序では決めない。** 並びの最後に置いてあるため順序で判定すると、
+        // キャンセルされた予約まで精算済にできてしまう——運んでいない予約に
+        // 「精算済」は無い
+        if (next == SETTLED) {
+            return this == DELIVERED;
+        }
+        if (this == SETTLED) {
+            // 精算が済んだ予約は動かない。遅れて届いた荷役で巻き戻らない
+            return false;
+        }
         return next.ordinal() > ordinal();
     }
 }
-
-// **SETTLED はまだ置かない。** 精算は US23（IT12）であり、値だけ先に置くと
-// 「精算まで実装済み」と読まれる。BookingStatusTest#hasNoTransitionIntoSettled が
-// 遷移の呼び出し箇所を数えており、経路を書いた瞬間に赤になる。

@@ -283,19 +283,20 @@ class CargoConfirmationTest {
          * ためである（{@code Cargo#afterHandling}）。並びを入れ替えると、巻き戻さない守りが
          * 黙って壊れる。
          *
-         * <p>`SETTLED` はまだ無い。精算は US23（IT12）であり、
-         * {@code BookingStatusTest#hasNoTransitionIntoSettled} が経路の不在を見ている。
+         * <p>`SETTLED` は IT12 で足した（US23）。**並びの最後に置いてある**——
+         * 順序では判定せず、引取済からだけ進む（{@code BookingStatus#canAdvanceTo}）。
          */
         @Test
-        @DisplayName("予約の状態は 8 つで、並び順どおりに進む")
-        void hasExactlyEightBookingStatusesInOrder() {
+        @DisplayName("予約の状態は 9 つで、並び順どおりに進む")
+        void hasExactlyNineBookingStatusesInOrder() {
             assertThat(BookingStatus.values())
                     .as("状態を足すなら ADR-021 決定 5 と ADR-025 決定 1 を読み直すこと。"
                             + "並びは「進む向き」の判定に使われている")
                     .containsExactly(BookingStatus.PRELIMINARY, BookingStatus.ROUTE_PROPOSED,
                             BookingStatus.ROUTE_NOTIFIED, BookingStatus.CONFIRMED,
                             BookingStatus.TRACKING_ISSUED, BookingStatus.IN_TRANSIT,
-                            BookingStatus.DELIVERED, BookingStatus.CANCELLED);
+                            BookingStatus.DELIVERED, BookingStatus.CANCELLED,
+                            BookingStatus.SETTLED);
         }
     }
 }

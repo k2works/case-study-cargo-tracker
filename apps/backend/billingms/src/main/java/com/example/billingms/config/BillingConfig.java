@@ -97,4 +97,28 @@ public class BillingConfig {
             InvoiceRepository invoices, InvoiceNumbering numbering, Clock clock) {
         return new CalculateChargeUseCase(snapshots, invoices, numbering, clock);
     }
+
+    /**
+     * 予約に精算の完了を知らせる ACL（US23-4・[ADR-028] 決定 1）。
+     *
+     * <p><strong>読み取りと同じ相手・同じ名乗りだが、こちらは副作用を持つ。</strong>
+     * 本 IT で増えた 1 本である。
+     */
+    @Bean
+    public com.example.billingms.application.port.BookingSettlementNotifier
+            bookingSettlementNotifier(@Value("${app.booking-service.base-url}") String baseUrl) {
+        return new com.example.billingms.infrastructure.booking.RestBookingSettlementNotifier(
+                RestClient.builder().baseUrl(baseUrl)
+                        .requestFactory(bookingRequestFactory()).build());
+    }
+
+    /** 精算の処理（US23）。 */
+    @Bean
+    public com.example.billingms.application.internal.SettleInvoiceUseCase settleInvoiceUseCase(
+            InvoiceRepository invoices,
+            com.example.billingms.application.port.BookingSettlementNotifier bookings,
+            Clock clock) {
+        return new com.example.billingms.application.internal.SettleInvoiceUseCase(
+                invoices, bookings, clock);
+    }
 }

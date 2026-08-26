@@ -35,6 +35,7 @@ import com.example.billingms.domain.model.TransportCharge;
 import com.example.shared.auth.AuthenticatedUser;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
@@ -59,6 +60,9 @@ import org.springframework.test.web.servlet.MockMvc;
 @DisplayName("精算の API")
 class BillingControllerTest {
 
+    /** 業務タイムゾーン（`app.business-time-zone` の既定）。 */
+    private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Tokyo");
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -71,6 +75,9 @@ class BillingControllerTest {
 
     @MockitoBean
     private InvoiceRepository invoices;
+
+    @MockitoBean
+    private com.example.billingms.application.internal.SettleInvoiceUseCase settlement;
 
     private static final TransportCharge CHARGE =
             TransportCharge.of(domesticLegs(2), new BigDecimal("4200"), CargoType.GENERAL);
@@ -88,7 +95,7 @@ class BillingControllerTest {
                 InvoiceCharges.of(CHARGE, DiscountPolicy.forCorporate(
                         DiscountRate.of(new BigDecimal("0.1000"))), TaxRate.standard()),
                 List.of(InvoiceLineItem.of("遅延による減額", Money.yen(new BigDecimal("-10000")))),
-                Instant.parse("2027-10-01T00:00:00Z"));
+                Instant.parse("2027-10-01T00:00:00Z"), BUSINESS_ZONE);
     }
 
     private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder

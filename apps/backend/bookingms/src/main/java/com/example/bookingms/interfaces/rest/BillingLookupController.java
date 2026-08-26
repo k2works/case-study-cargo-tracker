@@ -1,5 +1,6 @@
 package com.example.bookingms.interfaces.rest;
 
+import com.example.bookingms.application.internal.SettleBookingUseCase;
 import com.example.bookingms.application.port.BillableCargo;
 import com.example.bookingms.application.port.BillableCargoFinder;
 import com.example.shared.auth.AuthenticatedUser;
@@ -7,7 +8,9 @@ import java.util.List;
 import java.util.Set;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -23,7 +26,10 @@ import org.springframework.web.server.ResponseStatusException;
  * 出ておらず、経理担当者はその画面を開けなかった——<strong>「残っている」と「読める」は
  * 別である</strong>。
  *
- * <p><strong>参照のみで副作用が無い。</strong>請求のために貨物の状態を変えることはない。
+ * <p><strong>1 つだけ副作用がある</strong>（IT12・[ADR-028] 決定 1）。入金の確認を受けて
+ * 予約を精算済にする——受入基準 23-4 が「予約状態も『精算済』になる」と定めており、
+ * 予約の側にその判断材料が無いためである。読み取りと同じ入口に置くのは、
+ * <strong>相手（billingms）と主体（{@code system:billingms}）が同じ</strong>だからである。
  */
 @RestController
 @RequestMapping("/api/v1/bookings")
@@ -42,8 +48,12 @@ public class BillingLookupController {
 
     private final BillableCargoFinder billable;
 
-    public BillingLookupController(BillableCargoFinder billable) {
+    private final SettleBookingUseCase settlement;
+
+    public BillingLookupController(BillableCargoFinder billable,
+            SettleBookingUseCase settlement) {
         this.billable = billable;
+        this.settlement = settlement;
     }
 
     /** 料金算出の対象になる予約を並べる。**経理担当者が仕事を始める相手である。** */
@@ -69,6 +79,29 @@ public class BillingLookupController {
         return billable.findBillable(bookingId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "料金算出の対象になる予約が見つかりません"));
+    }
+
+    /**
+     * 精算が済んだことを受け取る（US23-4・[ADR-028] 決定 1）。
+     *
+     * <p><strong>断ったら断ったと返す。</strong>知らない予約・引取前の予約は 404 / 409 で
+     * 返す——黙って受け取ると、billingms 側は「予約が閉じた」と信じたまま先へ進む。
+     */
+    @PostMapping("/{bookingId}/settlement")
+    public ResponseEntity<Void> settle(
+            @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
+            @PathVariable String bookingId) {
+        requireTrustedService(userId);
+
+        try {
+            settlement.settle(bookingId);
+        } catch (IllegalArgumentException notFound) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, notFound.getMessage());
+        } catch (IllegalStateException conflict) {
+            // 引取が終わっていない・すでに精算済。**待っても変わらない**
+            throw new ResponseStatusException(HttpStatus.CONFLICT, conflict.getMessage());
+        }
+        return ResponseEntity.noContent().build();
     }
 
     private void requireTrustedService(String userId) {

@@ -502,6 +502,27 @@ public final class Cargo {
     }
 
     /**
+     * 精算が済んだ（US23-4・[ADR-028] 決定 1）。
+     *
+     * <p><strong>bookingms は自分では知らない。</strong>請求と入金は経理の仕事であり、
+     * 予約の側に判断材料が無い。入金を確認した billingms が知らせてくる。
+     *
+     * <p><strong>引取済からしか来ない</strong>（{@link BookingStatus#canAdvanceTo}）。
+     * キャンセルされた予約に「精算済」は無い——キャンセル料の請求はあるが、
+     * それは予約が精算済になることを意味しない。
+     *
+     * @throws IllegalStateException 引取済でないとき
+     */
+    public Cargo settle() {
+        if (!status.booking().canAdvanceTo(BookingStatus.SETTLED)) {
+            throw new IllegalStateException(
+                    "引取が終わっていない予約は精算済にできません: " + status.booking());
+        }
+        return with(new CargoStatus(BookingStatus.SETTLED, status.transport(), status.routing()),
+                itinerary, notification, trackingNumber);
+    }
+
+    /**
      * 陸揚げ地の候補（US30-5・[ADR-025] 決定 4）。
      *
      * <p><strong>全港から選ばせない。</strong>船が寄らない港を指定できると、荷降しできない
