@@ -60,6 +60,10 @@ class BillingControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @Autowired
+    private org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping
+            handlerMappings;
+
     @MockitoBean
     private CalculateChargeUseCase calculateCharge;
 
@@ -111,6 +115,49 @@ class BillingControllerTest {
                             .header(AuthenticatedUser.USER_ID_HEADER, "someone")
                             .header(AuthenticatedUser.ROLES_HEADER, role))
                     .andExpect(status().isForbidden());
+        }
+
+        /**
+         * <strong>エンドポイントの一覧を実体から回す</strong>（IT10 Try 3 の一般形）。
+         *
+         * <p>名簿に書き写すと、<strong>足したエンドポイントは名乗り出ない</strong>
+         * ——`/unbilled` だけを見ていた IT11 は、あとから足した 4 本を一度も
+         * 断っていなかった。`RequestMappingHandlerMapping` から引けば、
+         * <strong>1 本足した瞬間にこの検査の対象になる</strong>。
+         *
+         * <p>本体を要する POST も含めて回す。**本体が壊れていても 403 が先に立つ
+         * わけではない**（変換は Spring がメソッド呼び出しの前に行う）ため、
+         * 正しい形の空の本体を送る。
+         */
+        @Test
+        @DisplayName("精算の API はすべて、経理担当者以外を断る")
+        void everyEndpointRejectsNonAccountants() throws Exception {
+            var endpoints = handlerMappings.getHandlerMethods().keySet().stream()
+                    .filter(info -> info.getPatternValues().stream()
+                            .anyMatch(pattern -> pattern.startsWith("/api/v1/billing")))
+                    .toList();
+
+            org.assertj.core.api.Assertions.assertThat(endpoints)
+                    .as("精算の API が 1 本も見つからない。検査そのものが空振りしている")
+                    .isNotEmpty();
+
+            for (var info : endpoints) {
+                String pattern = info.getPatternValues().iterator().next();
+                // パス変数は形だけ埋める。認可は本体にも変数の値にも依らない
+                String path = pattern.replaceAll("\\{[^}]+}", "BKG-2026000007");
+                String method = info.getMethodsCondition().getMethods().iterator().next().name();
+                var builder = "POST".equals(method)
+                        ? post(path).contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"adjustments\": []}")
+                        : get(path);
+                mockMvc.perform(builder
+                                .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                                .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES"))
+                        .andExpect(result -> org.assertj.core.api.Assertions
+                                .assertThat(result.getResponse().getStatus())
+                                .as("経理担当者以外に開いている: %s %s", method, path)
+                                .isEqualTo(403));
+            }
         }
 
         /**
