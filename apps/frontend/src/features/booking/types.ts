@@ -63,6 +63,7 @@ export type BookingStatus =
   | 'IN_TRANSIT'
   | 'DELIVERED'
   | 'CANCELLED'
+  | 'SETTLED'
 
 /**
  * 予約の状態の表示名。生の英字を出すと、利用者は自分の予約がどうなっているか読めない。
@@ -81,6 +82,8 @@ export const BOOKING_STATUS_LABELS: Record<BookingStatus, string> = {
   IN_TRANSIT: '輸送中',
   DELIVERED: '配送完了',
   CANCELLED: 'キャンセル',
+  /** 精算済（US23-4）。**入金の確認で billingms が知らせてくる**——予約側では決まらない。 */
+  SETTLED: '精算済',
 }
 
 /**

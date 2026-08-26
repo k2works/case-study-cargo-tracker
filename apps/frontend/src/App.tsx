@@ -7,6 +7,7 @@ import { CustomsNewPage } from './pages/customs-new-page'
 import { AwaitingDischargePage } from './pages/awaiting-discharge-page'
 import { BillingPage } from './pages/billing-page';
 import { BillingNewPage } from './pages/billing-new-page';
+import { PaymentConfirmPage } from './pages/payment-confirm-page';
 import { InvoiceDetailPage } from './pages/invoice-detail-page';
 import { CustomsPage } from './pages/customs-page'
 import { DashboardPage } from './pages/dashboard-page'
@@ -83,6 +84,8 @@ export default function App() {
         <Route path="/billing" element={<BillingPage />} />
         <Route path="/billing/new/:bookingId" element={<BillingNewPage />} />
         <Route path="/billing/:invoiceId" element={<InvoiceDetailPage />} />
+        {/* 入金の確認（US23-3）。**経理担当者だけ**——営業が入金を確認することはない */}
+        <Route path="/billing/:invoiceId/payment" element={<PaymentConfirmPage />} />
       </Route>
 
       <Route

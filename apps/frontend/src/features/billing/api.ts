@@ -2,6 +2,7 @@ import { API_PATHS } from '../../config/api'
 import { apiClient } from '../../lib/api-client'
 import type {
   CalculateChargeRequest,
+  ConfirmPaymentRequest,
   ChargeCalculation,
   Invoice,
   UnbilledBooking,
@@ -47,4 +48,34 @@ export function calculateCharge(
   request: CalculateChargeRequest,
 ): Promise<Invoice> {
   return apiClient.post<Invoice>(API_PATHS.calculateCharge(bookingId), request)
+}
+
+/**
+ * 支払期限を過ぎた請求書（受入基準 23-5 の代替）。
+ *
+ * **未払い通知のメールは無い。** 経理担当者はこの一覧でしか気づけない。
+ */
+export function fetchOverdueInvoices(): Promise<Invoice[]> {
+  return apiClient.get<Invoice[]>(API_PATHS.overdueInvoices)
+}
+
+/**
+ * 入金を確認する（受入基準 23-3・23-4）。
+ *
+ * **決済機関とは連携していない。** 経理担当者が通帳や入金明細を見て入れる。
+ */
+export function confirmPayment(
+  invoiceId: string,
+  request: ConfirmPaymentRequest,
+): Promise<Invoice> {
+  return apiClient.post<Invoice>(API_PATHS.confirmPayment(invoiceId), request)
+}
+
+/**
+ * 請求書を取り消す（赤伝・[ADR-028] 決定 3）。
+ *
+ * **理由は必須。** 残らないと、あとから見て「二重発行の失敗」と区別できない。
+ */
+export function voidInvoice(invoiceId: string, reason: string): Promise<Invoice> {
+  return apiClient.post<Invoice>(API_PATHS.voidInvoice(invoiceId), { reason })
 }

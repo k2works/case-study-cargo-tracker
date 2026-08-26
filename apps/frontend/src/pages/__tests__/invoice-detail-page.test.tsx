@@ -27,6 +27,8 @@ const ISSUED = {
     cargoType: 'GENERAL',
     cargoTypeLabel: '一般貨物',
     cargoTypeFactor: 1,
+    region: 'OCEAN',
+    regionLabel: '遠洋',
   },
   baseAmount: { value: 420_000, currency: 'JPY' },
   discountRate: 0.1,
@@ -37,8 +39,13 @@ const ISSUED = {
   taxAmount: { value: 36_800, currency: 'JPY' },
   totalAmount: { value: 404_800, currency: 'JPY' },
   paymentStatus: 'PENDING',
+  paymentStatusLabel: '未入金',
   issuedAt: '2027-10-01T00:00:00Z',
-  dueDate: null,
+  dueDate: '2027-10-31',
+  payment: null,
+  voidedAt: null,
+  voidReason: null,
+  taxExempt: false,
 }
 
 function renderInvoice(invoiceId = ISSUED.invoiceId) {

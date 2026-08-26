@@ -304,7 +304,10 @@ test.describe('精算処理（US23）', () => {
     await page.getByRole('button', { name: '確認する' }).click()
     await expect(page.getByTestId('payment-status')).toContainText('入金済')
 
-    await page.goto(`/booking/${CORPORATE_BOOKING}`)
+    // **読み込み直さない。**モック（MSW）の状態はブラウザのメモリにあり、
+    // ページを読み込み直すと入金の確認ごと消える。請求書の画面にある予約番号の
+    // リンクを辿る——実際の経理担当者もそう辿る
+    await page.getByRole('link', { name: CORPORATE_BOOKING }).click()
     await expect(page.getByRole('heading', { name: new RegExp(CORPORATE_BOOKING) })).toBeVisible()
     await expect(
       page.getByTestId('booking-status'),
@@ -350,8 +353,11 @@ test.describe('精算処理（US23）', () => {
     await expect(page.getByTestId('void-reason'), '取り消した理由が残っていない')
       .toContainText('金額の誤りのため')
 
-    // **取り消したら、同じ予約に出し直せる。**出し直せなければ請求できないまま残る
-    await page.goto(`/billing/new/${CORPORATE_BOOKING}`)
+    // **取り消したら、同じ予約に出し直せる。**出し直せなければ請求できないまま残る。
+    // **読み込み直さない**——モック（MSW）の状態が消え、取り消し自体が無かったことになる
+    await page.getByRole('link', { name: '精算管理へ戻る' }).click()
+    await page.getByRole('link', { name: new RegExp(CORPORATE_BOOKING) }).click()
+    await expect(page.getByRole('heading', { name: '料金算出' })).toBeVisible()
     await page.getByRole('button', { name: '確定する' }).click()
     await expect(page).toHaveURL(/\/billing\/INV-/)
     expect(

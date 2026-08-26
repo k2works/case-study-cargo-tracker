@@ -26,6 +26,14 @@ export const API_PATHS = {
   invoices: '/api/v1/billing/invoices',
   /** 発行済みの精算書 1 件。 */
   invoice: (invoiceId: string) => `/api/v1/billing/invoices/${encodeURIComponent(invoiceId)}`,
+  /** 支払期限を過ぎた請求書（受入基準 23-5 の代替）。 */
+  overdueInvoices: '/api/v1/billing/invoices/overdue',
+  /** 入金の確認（受入基準 23-3）。**経理担当者が手で入れる**——決済機関との連携先が無い。 */
+  confirmPayment: (invoiceId: string) =>
+    `/api/v1/billing/invoices/${encodeURIComponent(invoiceId)}/payment`,
+  /** 請求書の取り消し（赤伝・[ADR-028] 決定 3）。 */
+  voidInvoice: (invoiceId: string) =>
+    `/api/v1/billing/invoices/${encodeURIComponent(invoiceId)}/void`,
   /**
    * 料金の算出結果（[ADR-027](../../../docs/adr/027-transport-charge-calculation.md) 決定 3）。
    *

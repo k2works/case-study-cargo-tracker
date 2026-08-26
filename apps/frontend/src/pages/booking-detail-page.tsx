@@ -45,6 +45,9 @@ const TURN_LABELS: Record<string, string> = {
   IN_TRANSIT: "輸送中です。荷役の記録で状態が進みます。",
   DELIVERED: "配送が完了しました。",
   CANCELLED: "この予約はキャンセルされました。",
+  // IT12 で足した。**状態を足したら、ここも足す**——空欄の枠だけが出て、
+  // 「誰の仕事か分からない」状態に戻る
+  SETTLED: "入金を確認しました。この予約は精算済です。",
 };
 
 /**
@@ -235,7 +238,7 @@ export function BookingDetailPage() {
           <tbody>
             <tr className="border-b border-gray-200">
               <th className="w-48 px-3 py-2 text-left">予約</th>
-              <td className="px-3 py-2">
+              <td className="px-3 py-2" data-testid="booking-status">
                 {bookingStatusLabel(booking.bookingStatus)}
               </td>
             </tr>

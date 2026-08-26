@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { PANELS } from '../config/dashboard-panels'
-import { useUnbilledBookings } from '../features/billing/queries'
+import { useOverdueInvoices, useUnbilledBookings } from '../features/billing/queries'
 import { resolveNavigationItem } from '../config/navigation'
 import { useAuthStore } from '../stores/auth-store'
 import { useBookings } from '../features/booking/queries'
@@ -109,6 +109,30 @@ function UnbilledBookingsNotice() {
   )
 }
 
+/**
+ * 支払期限を過ぎた請求の件数（受入基準 23-5 の代替）。
+ *
+ * <p><strong>未払い通知のメールは無い。</strong>経理担当者はここでしか気づけない。
+ *
+ * <p><strong>気づく手段は次の行動へ繋ぐ。</strong>件数を出すだけでは仕事は進まない
+ * ので、そのまま対象の一覧へ行けるようにする（横断規約）。
+ */
+function OverdueInvoicesNotice() {
+  const { data } = useOverdueInvoices()
+
+  if (data === undefined || data.length === 0) {
+    return null
+  }
+
+  return (
+    <p className="mt-2 rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-900">
+      <Link className="underline" to="/billing?filter=overdue">
+        {`支払期限を過ぎた請求が ${data.length} 件あります。`}
+      </Link>
+    </p>
+  )
+}
+
 export function DashboardPage() {
   const user = useAuthStore((state) => state.user)
   const panels = PANELS.filter((panel) => user?.roles.includes(panel.role))
@@ -134,6 +158,7 @@ export function DashboardPage() {
         <section key={panel.role} className="rounded border bg-white p-6">
           <h2 className="text-lg font-semibold text-gray-900">{panel.title}</h2>
           {panel.role === 'ROLE_ACCOUNTANT' && <UnbilledBookingsNotice />}
+          {panel.role === 'ROLE_ACCOUNTANT' && <OverdueInvoicesNotice />}
           {panel.role === 'ROLE_ROUTING' && (
             <RoutingBacklogNotice
               routingStatus="ROUTING_REQUESTED"

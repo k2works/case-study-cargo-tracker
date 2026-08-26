@@ -1,7 +1,8 @@
+import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { ChargeBasisPanel } from "../features/billing/components/charge-basis-panel";
-import { useInvoice } from "../features/billing/queries";
+import { useInvoice, useVoidInvoice } from "../features/billing/queries";
 import { formatRate, formatYen } from "../features/billing/money";
 import { paymentStatusLabel } from "../features/billing/types";
 import { formatBusinessDateTime } from "../lib/business-time";
@@ -10,8 +11,9 @@ import { formatBusinessDateTime } from "../lib/business-time";
  * 請求書詳細（US21-5・US22-4）。
  *
  * <p><strong>金額を動かす操作を置かない</strong>（[ADR-027] 決定 4）。請求書は荷主へ出す
- * 約束であり、出したあとに黙って変わると請求の根拠が消える。訂正は US23（IT12）で
- * 「取り消して出し直す」形にする。
+ * 約束であり、出したあとに黙って変わると請求の根拠が消える。<strong>訂正は取り消して
+ * 出し直す</strong>（[ADR-028] 決定 3）——消さずに残すのは、DB を直すのが監査に
+ * 耐えないからである。
  *
  * <p><strong>割引率を出す</strong>（22-4）。額だけでは率を復元できない——基本料金と
  * 割引額から割り戻すと、丸めの分だけずれる。
@@ -19,6 +21,9 @@ import { formatBusinessDateTime } from "../lib/business-time";
 export function InvoiceDetailPage() {
   const { invoiceId = "" } = useParams();
   const { data: invoice, isLoading, error } = useInvoice(invoiceId);
+  const revoke = useVoidInvoice(invoiceId);
+  const [revoking, setRevoking] = useState(false);
+  const [reason, setReason] = useState("");
 
   if (isLoading) {
     return <p>読み込み中です。</p>;
@@ -65,7 +70,54 @@ export function InvoiceDetailPage() {
           <dt className="text-sm text-gray-600">発行日時</dt>
           <dd>{formatBusinessDateTime(invoice.issuedAt)}</dd>
         </div>
+        <div>
+          {/* **期限を出す**（受入基準 23-1）。出さないと、催促の判断ができない */}
+          <dt className="text-sm text-gray-600">支払期限</dt>
+          <dd data-testid="due-date">{invoice.dueDate ?? "—"}</dd>
+        </div>
       </dl>
+
+      {/* **取り消したことを最初に言う。**金額の話より先である */}
+      {invoice.voidedAt !== null && (
+        <p
+          role="alert"
+          className="rounded border border-amber-300 bg-amber-50 p-3 text-sm"
+          data-testid="void-reason"
+        >
+          <strong>この請求書は取り消されています。</strong>
+          {`理由: ${invoice.voidReason ?? "（記録なし）"}（`}
+          {formatBusinessDateTime(invoice.voidedAt)}
+          {"）"}
+        </p>
+      )}
+
+      {/* **入れた根拠を残す**（受入基準 23-3）。「入金済」だけでは、いつ・いくら・
+          どの振込かを誰も追えない */}
+      {invoice.payment !== null && (
+        <dl
+          className="grid grid-cols-2 gap-2 rounded border border-gray-200 p-4 md:grid-cols-4"
+          data-testid="payment-record"
+        >
+          <div>
+            <dt className="text-sm text-gray-600">入金日</dt>
+            {/* サーバが業務の暦で決めた日付。**ここで解釈し直さない**——端末の
+                タイムゾーンで読み直すと 1 日ずれる */}
+            <dd>{invoice.payment.paidAt}</dd>
+          </div>
+          <div>
+            <dt className="text-sm text-gray-600">入金額</dt>
+            <dd>{formatYen(invoice.payment.amount)}</dd>
+          </div>
+          <div>
+            <dt className="text-sm text-gray-600">入金方法</dt>
+            <dd>{invoice.payment.methodLabel}</dd>
+          </div>
+          <div>
+            <dt className="text-sm text-gray-600">参照番号</dt>
+            <dd>{invoice.payment.transactionReference ?? "—"}</dd>
+          </div>
+        </dl>
+      )}
 
       <ChargeBasisPanel basis={invoice.basis} baseAmount={invoice.baseAmount} />
 
@@ -143,16 +195,89 @@ export function InvoiceDetailPage() {
         {'請求内容は担当者からお伝えください。'}
       </p>
 
-      {/* **訂正の手段が無いことを、発行後の画面でも言う**（IT11 レビュー 高。writer・user）。
-          金額を動かさないのは決定 4 だが、「取り消して出し直す」手段も無い */}
-      <p className="rounded border border-gray-300 bg-gray-50 p-3 text-sm">
-        <strong>発行した請求書は訂正できません。</strong>
-        {'誤って発行した場合は、経理責任者へ報告のうえ運用担当者へご連絡ください。'}
-      </p>
+      {/* **入金の確認が手作業であることを言う**（受入基準 23-3 の代替）。
+          書かないと、経理担当者は「連携が壊れている」と受け取って待ち続ける */}
+      {invoice.paymentStatus === "PENDING" && invoice.voidedAt === null && (
+        <div className="space-y-2 rounded border border-gray-300 bg-gray-50 p-3 text-sm">
+          <p>
+            <strong>決済機関とは連携していません。</strong>
+            {'入金は手で確認します（通帳・入金明細を見て入力してください）。'}
+          </p>
+          <Link
+            className="inline-block rounded bg-blue-600 px-4 py-2 text-white"
+            to={`/billing/${invoice.invoiceNumber}/payment`}
+          >
+            入金を確認する
+          </Link>
+        </div>
+      )}
 
-      <Link className="text-blue-700 underline" to="/billing">
-        精算管理へ戻る
-      </Link>
+      {/* **訂正は取り消して出し直す**（[ADR-028] 決定 3）。金額は動かさない（決定 4） */}
+      {invoice.voidedAt === null && invoice.paymentStatus === "PENDING" && (
+        <section className="space-y-2 rounded border border-gray-300 p-3 text-sm">
+          <p>
+            <strong>発行した請求書の金額は変えられません。</strong>
+            {'誤って発行した場合は取り消し、正しい内容で出し直してください。'}
+          </p>
+          {revoking ? (
+            <form
+              className="space-y-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                revoke.mutate(reason, { onSuccess: () => setRevoking(false) });
+              }}
+            >
+              <label className="block" htmlFor="void-reason">
+                取り消しの理由
+              </label>
+              {/* **理由は必須。**残らないと、あとから二重発行の失敗と区別できない */}
+              <input
+                id="void-reason"
+                required
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+                className="w-full rounded border border-gray-300 px-3 py-2"
+              />
+              <button
+                type="submit"
+                className="rounded bg-red-600 px-4 py-2 text-white"
+                disabled={revoke.isPending}
+              >
+                取り消しを記録する
+              </button>
+            </form>
+          ) : (
+            <button
+              type="button"
+              className="rounded border border-red-600 px-4 py-2 text-red-700"
+              onClick={() => setRevoking(true)}
+            >
+              取り消す
+            </button>
+          )}
+          {revoke.error !== null && (
+            <p role="alert" className="text-red-700">
+              取り消せませんでした。
+            </p>
+          )}
+        </section>
+      )}
+
+      <div className="flex items-center gap-4 print:hidden">
+        {/* **画面の数字がそのまま紙になる**（経理担当者の申し送り③）。印刷が無いと、
+            数字を書き写して表計算で作ることになり、システムの金額と実際に送った
+            請求書が食い違い始める */}
+        <button
+          type="button"
+          className="rounded border border-gray-400 px-4 py-2"
+          onClick={() => window.print()}
+        >
+          印刷する
+        </button>
+        <Link className="text-blue-700 underline" to="/billing">
+          精算管理へ戻る
+        </Link>
+      </div>
     </div>
   );
 }

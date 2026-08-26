@@ -20,13 +20,13 @@ import {
  */
 describe('状態の表示名', () => {
   /**
-   * バックエンドの `BookingStatus` は 8 値（`BookingStatus.java`）。
+   * バックエンドの `BookingStatus` は 9 値（`BookingStatus.java`。IT12 で `SETTLED` を追加）。
    *
    * **書き写した一覧ではなく、実体（ラベルの鍵）から回す。** 型が網羅を守るので、
    * ここに現れる鍵は必ず `BookingStatus` の全値になる。この検査が守るのは
    * **バックエンドとの一致**であり、増減したときに向こうを見に行く合図になる。
    */
-  it('予約の状態は、バックエンドの列挙と同じ 8 値を持つ', () => {
+  it('予約の状態は、バックエンドの列挙と同じ 9 値を持つ', () => {
     expect(Object.keys(BOOKING_STATUS_LABELS)).toEqual([
       'PRELIMINARY',
       'ROUTE_PROPOSED',
@@ -36,6 +36,7 @@ describe('状態の表示名', () => {
       'IN_TRANSIT',
       'DELIVERED',
       'CANCELLED',
+      'SETTLED',
     ])
   })
 
@@ -64,12 +65,14 @@ describe('状態の表示名', () => {
    * （デプロイの順序）。そこで空欄や「不明」を出すと、利用者は自分の予約が消えたと読む。
    */
   it('知らない値が来たら、その値をそのまま出す', () => {
-    expect(bookingStatusLabel('SETTLED')).toBe('SETTLED')
+    expect(bookingStatusLabel('SOMETHING_NEW')).toBe('SOMETHING_NEW')
     expect(routingStatusLabel('SOMETHING_NEW')).toBe('SOMETHING_NEW')
   })
 
   it('知っている値は表示名に置き換える', () => {
     expect(bookingStatusLabel('IN_TRANSIT')).toBe('輸送中')
+    // IT12 で足した値。**入金の確認で到達する**（US23-4）
+    expect(bookingStatusLabel('SETTLED')).toBe('精算済')
     expect(routingStatusLabel('MISROUTED')).toBe('誤配')
   })
 })

@@ -2,12 +2,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
   calculateCharge,
+  confirmPayment,
+  fetchOverdueInvoices,
+  voidInvoice,
   fetchChargeCalculation,
   fetchInvoice,
   fetchInvoices,
   fetchUnbilledBookings,
 } from './api'
-import type { CalculateChargeRequest } from './types'
+import type { CalculateChargeRequest, ConfirmPaymentRequest } from './types'
 
 /**
  * billing コンテキストのデータ取得。
@@ -63,6 +66,57 @@ export function useCalculateCharge(bookingId: string) {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['unbilled-bookings'] })
       void queryClient.invalidateQueries({ queryKey: ['invoices'] })
+    },
+  })
+}
+
+/**
+ * 支払期限を過ぎた請求書（受入基準 23-5 の代替）。
+ *
+ * **ダッシュボードの件数もこれを使う。** 件数と一覧が別の問い合わせから来ると、
+ * 「N 件あります」を押した先が空になることが起きる。
+ */
+export function useOverdueInvoices() {
+  return useQuery({
+    queryKey: ['overdue-invoices'],
+    queryFn: fetchOverdueInvoices,
+  })
+}
+
+/**
+ * 入金を確認する（受入基準 23-3・23-4）。
+ *
+ * 確認すると**期限超過の一覧からも消える**ので、両方を取り直す。
+ */
+export function useConfirmPayment(invoiceId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (request: ConfirmPaymentRequest) => confirmPayment(invoiceId, request),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] })
+      void queryClient.invalidateQueries({ queryKey: ['invoices'] })
+      void queryClient.invalidateQueries({ queryKey: ['overdue-invoices'] })
+      // 予約が「精算済」になる（受入基準 23-4）。予約の画面も取り直す
+      void queryClient.invalidateQueries({ queryKey: ['bookings'] })
+      void queryClient.invalidateQueries({ queryKey: ['booking'] })
+    },
+  })
+}
+
+/**
+ * 請求書を取り消す（赤伝）。
+ *
+ * 取り消すと**その予約は再び「料金未算出」に戻る**ので、待ち行列も取り直す。
+ */
+export function useVoidInvoice(invoiceId: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (reason: string) => voidInvoice(invoiceId, reason),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] })
+      void queryClient.invalidateQueries({ queryKey: ['invoices'] })
+      void queryClient.invalidateQueries({ queryKey: ['overdue-invoices'] })
+      void queryClient.invalidateQueries({ queryKey: ['unbilled-bookings'] })
     },
   })
 }

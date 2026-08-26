@@ -144,8 +144,44 @@ export type Invoice = {
   taxAmount: Money
   totalAmount: Money
   paymentStatus: PaymentStatus
+  paymentStatusLabel: string
   issuedAt: string
   dueDate: string | null
+  /** 入金の記録（受入基準 23-3）。**未入金なら `null`**。 */
+  payment: Payment | null
+  /** 取り消した日時（赤伝）。取り消していなければ `null`。 */
+  voidedAt: string | null
+  /** 取り消した理由。**残らないと、二重発行の失敗と区別できない。** */
+  voidReason: string | null
+}
+
+/**
+ * 入金の記録（受入基準 23-3）。
+ *
+ * **根拠ごと持つ。**「入金済」だけでは、いつ・いくら・どの振込かを誰も追えない。
+ */
+export type Payment = {
+  amount: Money
+  paidAt: string
+  method: string
+  methodLabel: string
+  transactionReference: string | null
+}
+
+/** 入金の確認（経理担当者が手で入れる）。 */
+export type ConfirmPaymentRequest = {
+  amountValue: number
+  paidAt: string
+  method: string
+  transactionReference: string | null
+}
+
+/** 入金の方法。**サーバの `PaymentMethod` と同じ値を持つ。** */
+export const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  BANK_TRANSFER: '銀行振込',
+  PROMISSORY_NOTE: '手形',
+  OFFSET: '相殺',
+  OTHER: 'その他',
 }
 
 /** 確定の要求。**調整はここでまとめて送る**（決定 3）。 */

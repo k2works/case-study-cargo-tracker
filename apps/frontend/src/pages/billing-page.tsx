@@ -1,6 +1,10 @@
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
-import { useInvoices, useUnbilledBookings } from "../features/billing/queries";
+import {
+  useInvoices,
+  useOverdueInvoices,
+  useUnbilledBookings,
+} from "../features/billing/queries";
 import { paymentStatusLabel } from "../features/billing/types";
 import { formatBusinessDateTime } from "../lib/business-time";
 import { formatYen } from "../features/billing/money";
@@ -44,8 +48,15 @@ function unbilledKind(booking: {
 }
 
 export function BillingPage() {
+  const [params] = useSearchParams();
+  // **ダッシュボードの件数から、そのまま対象へ来られる**（受入基準 23-5 の代替）。
+  // 件数を出すだけでは仕事は進まない
+  const overdueOnly = params.get("filter") === "overdue";
   const { data: unbilled = [], isLoading: loadingUnbilled } = useUnbilledBookings();
-  const { data: invoices = [], isLoading: loadingInvoices } = useInvoices();
+  const { data: allInvoices = [], isLoading: loadingAll } = useInvoices();
+  const { data: overdueInvoices = [], isLoading: loadingOverdue } = useOverdueInvoices();
+  const invoices = overdueOnly ? overdueInvoices : allInvoices;
+  const loadingInvoices = overdueOnly ? loadingOverdue : loadingAll;
 
   return (
     <div className="space-y-8">
@@ -128,18 +139,35 @@ export function BillingPage() {
         )}
       </section>
 
-      <section aria-labelledby="invoices-heading" className="space-y-3">
+      <section
+        aria-labelledby="invoices-heading"
+        className="space-y-3"
+        data-testid={overdueOnly ? "overdue-invoices" : "issued-invoices"}
+      >
         <h2 id="invoices-heading" className="text-lg font-semibold">
-          {'発行済みの精算書 '}
+          {overdueOnly ? "支払期限を過ぎた請求 " : "発行済みの精算書 "}
           <span className="text-sm font-normal text-gray-600">
             {invoices.length} 件
           </span>
         </h2>
 
+        {/* **絞っていることを言い、外す手段を同じ場所に置く。**言わないと、
+            発行したはずの請求書が「消えた」と読まれる */}
+        {overdueOnly && (
+          <p className="text-sm text-gray-700">
+            {"支払期限を過ぎたものだけを出しています。"}
+            <Link className="ml-2 text-blue-700 underline" to="/billing">
+              すべての精算書を見る
+            </Link>
+          </p>
+        )}
+
         {loadingInvoices && <p>読み込み中です。</p>}
         {!loadingInvoices && invoices.length === 0 && (
           <p className="rounded border border-gray-200 p-4 text-gray-700">
-            発行済みの精算書はありません。
+            {overdueOnly
+              ? "支払期限を過ぎた請求はありません。"
+              : "発行済みの精算書はありません。"}
           </p>
         )}
         {!loadingInvoices && invoices.length > 0 && (
@@ -151,6 +179,7 @@ export function BillingPage() {
                 <th className="px-3 py-2">荷主</th>
                 <th className="px-3 py-2">合計</th>
                 <th className="px-3 py-2">状態</th>
+                <th className="px-3 py-2">支払期限</th>
                 <th className="px-3 py-2">発行日時</th>
               </tr>
             </thead>
@@ -169,7 +198,16 @@ export function BillingPage() {
                   <td className="px-3 py-2">{invoice.bookingId}</td>
                   <td className="px-3 py-2">{invoice.shipperName}</td>
                   <td className="px-3 py-2 text-right">{formatYen(invoice.totalAmount)}</td>
-                  <td className="px-3 py-2">{paymentStatusLabel(invoice.paymentStatus)}</td>
+                  <td className="px-3 py-2">
+                    {/* **取り消しは状態に混ぜない**（[ADR-028] 決定 4）。それでも
+                        一覧では見分けが要る——未入金の一覧に取り消し済みが並ぶと、
+                        払われていない請求として催促してしまう */}
+                    {paymentStatusLabel(invoice.paymentStatus)}
+                    {invoice.voidedAt !== null && (
+                      <span className="ml-1 text-red-700">（取消済）</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2">{invoice.dueDate ?? "—"}</td>
                   <td className="px-3 py-2">{formatBusinessDateTime(invoice.issuedAt)}</td>
                 </tr>
               ))}
