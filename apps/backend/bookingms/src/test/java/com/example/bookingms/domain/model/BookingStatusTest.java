@@ -90,15 +90,6 @@ class BookingStatusTest {
     }
 
     /**
-     * その状態へ<strong>動かしている</strong>か。
-     *
-     * <p><strong>参照と遷移を区別する。</strong>「キャンセルなら断る」と<em>判定</em>する
-     * コードは、キャンセルへ<em>動かして</em>いない。区別せずに数えると、判定を足した
-     * だけで赤になり、検査が邪魔になって外される。
-     *
-     * <p>見るのは新しい状態の組み立て（{@code new CargoStatus(BookingStatus.CANCELLED}）である。
-     */
-    /**
      * コメントを外す。
      *
      * <p><strong>コメントは検査の対象外である。</strong>「〜へは進めない」と書いた
@@ -108,6 +99,15 @@ class BookingStatusTest {
         return source.replaceAll("(?s)/\\*.*?\\*/", "").replaceAll("(?m)//.*$", "");
     }
 
+    /**
+     * その状態へ<strong>動かしている</strong>か。
+     *
+     * <p><strong>参照と遷移を区別する。</strong>「キャンセルなら断る」と<em>判定</em>する
+     * コードは、キャンセルへ<em>動かして</em>いない。区別せずに数えると、判定を足した
+     * だけで赤になり、検査が邪魔になって外される。
+     *
+     * <p>見るのは新しい状態の組み立て（{@code new CargoStatus(BookingStatus.CANCELLED}）である。
+     */
     private static boolean movesIntoCancelled(String name) {
         return stripComments(read(DOMAIN.resolve(name)))
                 .contains("new CargoStatus(BookingStatus.CANCELLED");

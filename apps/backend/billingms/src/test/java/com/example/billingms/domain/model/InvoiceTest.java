@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -55,8 +56,7 @@ class InvoiceTest {
 
     private static Invoice issue(DiscountPolicy policy, List<InvoiceLineItem> adjustments,
             CancellationFee fee) {
-        return Invoice.issue(ID, BOOKING, SHIPPER,
-                new InvoiceCharges(CHARGE, policy, fee, TAX), adjustments, ISSUED_AT, BUSINESS_ZONE);
+        return Invoice.issue(new InvoiceHeader(ID, BOOKING, SHIPPER, ISSUED_AT), new InvoiceCharges(CHARGE, policy, fee, TAX), adjustments, BUSINESS_ZONE);
     }
 
     @Nested
@@ -223,18 +223,23 @@ class InvoiceTest {
     @DisplayName("成り立たない発行")
     class InvalidIssuing {
 
+        /**
+         * <strong>宛名はラムダの外で組む。</strong>中で組むと、例外を投げたのが
+         * 宛名の組み立てか発行かを判別できない（IT11 の割引方針と同じ理由）。
+         */
         @Test
         @DisplayName("識別子・予約・荷主が無ければ発行できない")
         void requiresIdentifiers() {
-            assertThatThrownBy(() -> Invoice.issue(null, BOOKING, SHIPPER,
-                    CHARGES, NO_ADJUSTMENTS, ISSUED_AT, BUSINESS_ZONE))
-                    .isInstanceOf(IllegalArgumentException.class);
-            assertThatThrownBy(() -> Invoice.issue(ID, null, SHIPPER,
-                    CHARGES, NO_ADJUSTMENTS, ISSUED_AT, BUSINESS_ZONE))
-                    .isInstanceOf(IllegalArgumentException.class);
-            assertThatThrownBy(() -> Invoice.issue(ID, BOOKING, null,
-                    CHARGES, NO_ADJUSTMENTS, ISSUED_AT, BUSINESS_ZONE))
-                    .isInstanceOf(IllegalArgumentException.class);
+            InvoiceHeader withoutId = new InvoiceHeader(null, BOOKING, SHIPPER, ISSUED_AT);
+            InvoiceHeader withoutBooking = new InvoiceHeader(ID, null, SHIPPER, ISSUED_AT);
+            InvoiceHeader withoutShipper = new InvoiceHeader(ID, BOOKING, null, ISSUED_AT);
+
+            assertThatThrownBy(() -> Invoice.issue(withoutId, CHARGES, NO_ADJUSTMENTS,
+                    BUSINESS_ZONE)).isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> Invoice.issue(withoutBooking, CHARGES, NO_ADJUSTMENTS,
+                    BUSINESS_ZONE)).isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> Invoice.issue(withoutShipper, CHARGES, NO_ADJUSTMENTS,
+                    BUSINESS_ZONE)).isInstanceOf(IllegalArgumentException.class);
         }
 
         /**
@@ -258,8 +263,9 @@ class InvoiceTest {
         @Test
         @DisplayName("金額の材料が無ければ発行できない")
         void requiresTheCharges() {
-            assertThatThrownBy(() -> Invoice.issue(ID, BOOKING, SHIPPER, null,
-                    NO_ADJUSTMENTS, ISSUED_AT, BUSINESS_ZONE))
+            InvoiceHeader header = new InvoiceHeader(ID, BOOKING, SHIPPER, ISSUED_AT);
+
+            assertThatThrownBy(() -> Invoice.issue(header, null, NO_ADJUSTMENTS, BUSINESS_ZONE))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
@@ -267,8 +273,8 @@ class InvoiceTest {
         @Test
         @DisplayName("明細を渡さずに発行できる")
         void issuesWithoutLineItems() {
-            Invoice invoice = Invoice.issue(ID, BOOKING, SHIPPER, CHARGES,
-                    null, ISSUED_AT, BUSINESS_ZONE);
+            Invoice invoice = Invoice.issue(new InvoiceHeader(ID, BOOKING, SHIPPER, ISSUED_AT),
+                    CHARGES, null, BUSINESS_ZONE);
 
             assertThat(invoice.lineItems()).isEmpty();
         }
@@ -276,8 +282,10 @@ class InvoiceTest {
         @Test
         @DisplayName("発行日時が無ければ発行できない")
         void requiresAnIssuedAt() {
-            assertThatThrownBy(() -> Invoice.issue(ID, BOOKING, SHIPPER, CHARGES,
-                    NO_ADJUSTMENTS, null, BUSINESS_ZONE))
+            InvoiceHeader withoutIssuedAt = new InvoiceHeader(ID, BOOKING, SHIPPER, null);
+
+            assertThatThrownBy(() -> Invoice.issue(withoutIssuedAt, CHARGES, NO_ADJUSTMENTS,
+                    BUSINESS_ZONE))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
@@ -317,13 +325,14 @@ class InvoiceTest {
             InvoiceAmounts persisted = new InvoiceAmounts(
                     Money.yen(new BigDecimal("111111")), Money.yen(new BigDecimal("11111")),
                     Money.yen(new BigDecimal("10000")), Money.yen(new BigDecimal("110000")));
-            Invoice invoice = Invoice.restore(ID, BOOKING, SHIPPER,
+            Invoice invoice = Invoice.restore(new InvoiceHeader(ID, BOOKING, SHIPPER, ISSUED_AT),
                     InvoiceCharges.of(CHARGE, DiscountPolicy.forCorporate(
                             DiscountRate.of(new BigDecimal("0.1000"))), TaxRate.standard()),
                     persisted,
                     List.of(InvoiceLineItem.of("遅延による減額",
                             Money.yen(new BigDecimal("-10000")))),
-                    PaymentStatus.CONFIRMED, ISSUED_AT, null, null, null, null);
+                    new InvoiceLifecycle(PaymentStatus.CONFIRMED,
+                            LocalDate.parse("2027-10-31"), null, null, null));
 
             assertThat(invoice.paymentStatus())
                     .as("復元で状態が落ちている。入金済の請求書が未入金に戻る")
@@ -343,9 +352,9 @@ class InvoiceTest {
         @Test
         @DisplayName("明細の無い行も復元できる")
         void restoresARowWithoutLineItems() {
-            Invoice invoice = Invoice.restore(ID, BOOKING, SHIPPER, CHARGES,
-                    InvoiceAmounts.calculate(CHARGES, java.util.List.of()),
-                    null, PaymentStatus.PENDING, ISSUED_AT, null, null, null, null);
+            Invoice invoice = Invoice.restore(new InvoiceHeader(ID, BOOKING, SHIPPER, ISSUED_AT),
+                    CHARGES, InvoiceAmounts.calculate(CHARGES, java.util.List.of()),
+                    null, InvoiceLifecycle.issued(LocalDate.parse("2027-10-31")));
 
             assertThat(invoice.lineItems()).isEmpty();
         }

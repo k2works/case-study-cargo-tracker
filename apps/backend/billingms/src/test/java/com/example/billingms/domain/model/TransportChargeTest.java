@@ -202,8 +202,11 @@ class TransportChargeTest {
         @DisplayName("区間が 1 本も無ければ算定できない")
         void rejectsAnItineraryWithoutLegs() {
             BigDecimal weight = new BigDecimal("1000");
+            // **旅程はラムダの外で組む。**中で組むと、例外を投げたのが旅程の組み立てか
+            // 料金の算定かを判別できない（IT11 の `InvoiceTest` と同じ理由）
+            var noLegs = domesticLegs(0);
 
-            assertThatThrownBy(() -> TransportCharge.of(domesticLegs(0), weight, CargoType.GENERAL))
+            assertThatThrownBy(() -> TransportCharge.of(noLegs, weight, CargoType.GENERAL))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("区間");
         }
@@ -212,11 +215,13 @@ class TransportChargeTest {
         @DisplayName("重量が 0 以下なら算定できない")
         void rejectsNonPositiveWeight() {
             BigDecimal negative = new BigDecimal("-1");
+            var legs = domesticLegs(1);
 
-            assertThatThrownBy(() -> TransportCharge.of(domesticLegs(1), BigDecimal.ZERO, CargoType.GENERAL))
+            assertThatThrownBy(() -> TransportCharge.of(legs, BigDecimal.ZERO,
+                    CargoType.GENERAL))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("重量");
-            assertThatThrownBy(() -> TransportCharge.of(domesticLegs(1), negative, CargoType.GENERAL))
+            assertThatThrownBy(() -> TransportCharge.of(legs, negative, CargoType.GENERAL))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
@@ -224,8 +229,9 @@ class TransportChargeTest {
         @DisplayName("貨物種別が無ければ算定できない")
         void rejectsMissingCargoType() {
             BigDecimal weight = new BigDecimal("1000");
+            var legs = domesticLegs(1);
 
-            assertThatThrownBy(() -> TransportCharge.of(domesticLegs(1), weight, null))
+            assertThatThrownBy(() -> TransportCharge.of(legs, weight, null))
                     .isInstanceOf(IllegalArgumentException.class);
         }
     }

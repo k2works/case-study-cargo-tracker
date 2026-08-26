@@ -22,39 +22,25 @@ import java.util.List;
  */
 public final class Invoice {
 
-    private final InvoiceId invoiceId;
-    private final BillingBookingId cargoBookingId;
-    private final BillingShipperId shipperId;
+    /** 宛名（誰に・どの予約に・いつ出したか）。**発行時に確定し、以後は変わらない。** */
+    private final InvoiceHeader header;
     private final InvoiceCharges charges;
     private final InvoiceAmounts amounts;
     private final List<InvoiceLineItem> lineItems;
-    private final PaymentStatus paymentStatus;
-    private final Instant issuedAt;
-    private final LocalDate dueDate;
-    private final Payment payment;
-    private final Instant voidedAt;
-    private final String voidReason;
+    /** 発行したあとに起きたこと（支払い・取り消し）。**金額は入らない**（決定 4）。 */
+    private final InvoiceLifecycle lifecycle;
 
     /** 支払期限は発行日から何日後か（正典のビジネスルール 2）。 */
     private static final int PAYMENT_TERM_DAYS = 30;
 
-    private Invoice(InvoiceId invoiceId, BillingBookingId cargoBookingId,
-            BillingShipperId shipperId, InvoiceCharges charges, InvoiceAmounts amounts,
-            List<InvoiceLineItem> lineItems, PaymentStatus paymentStatus, Instant issuedAt,
-            LocalDate dueDate, Payment payment, Instant voidedAt, String voidReason) {
-        this.dueDate = dueDate;
-        this.payment = payment;
-        this.voidedAt = voidedAt;
-        this.voidReason = voidReason;
-        this.invoiceId = invoiceId;
-        this.cargoBookingId = cargoBookingId;
-        this.shipperId = shipperId;
+    private Invoice(InvoiceHeader header, InvoiceCharges charges, InvoiceAmounts amounts,
+            List<InvoiceLineItem> lineItems, InvoiceLifecycle lifecycle) {
+        this.header = header;
         this.charges = charges;
         this.amounts = amounts;
         // **写して持つ。** 呼び出し元が渡したあとの書き換えでこちらの中身が変わらないように
         this.lineItems = List.copyOf(lineItems);
-        this.paymentStatus = paymentStatus;
-        this.issuedAt = issuedAt;
+        this.lifecycle = lifecycle;
     }
 
     /**
@@ -62,29 +48,19 @@ public final class Invoice {
      *
      * <p><strong>発行の時点では未入金である</strong>（決定 3）。入金の確認は US23。
      */
-    public static Invoice issue(InvoiceId invoiceId, BillingBookingId cargoBookingId,
-            BillingShipperId shipperId, InvoiceCharges charges,
-            List<InvoiceLineItem> lineItems, Instant issuedAt, ZoneId businessZone) {
-        if (invoiceId == null) {
-            throw new IllegalArgumentException("請求番号を指定してください");
+    public static Invoice issue(InvoiceHeader header, InvoiceCharges charges,
+            List<InvoiceLineItem> lineItems, ZoneId businessZone) {
+        if (header == null) {
+            throw new IllegalArgumentException("請求書の宛名を指定してください");
         }
-        if (cargoBookingId == null) {
-            throw new IllegalArgumentException("予約を指定してください");
-        }
-        if (shipperId == null) {
-            throw new IllegalArgumentException("荷主を指定してください");
-        }
+        header.requireComplete();
         if (charges == null) {
             throw new IllegalArgumentException("金額の材料を指定してください");
         }
-        if (issuedAt == null) {
-            throw new IllegalArgumentException("発行日時を指定してください");
-        }
         List<InvoiceLineItem> items = lineItems == null ? List.of() : lineItems;
         // **発行の時点で金額を確定させる**（決定 4）。以後は係数から計算し直さない
-        return new Invoice(invoiceId, cargoBookingId, shipperId, charges,
-                InvoiceAmounts.calculate(charges, items), items, PaymentStatus.PENDING,
-                issuedAt, dueDateOf(issuedAt, businessZone), null, null, null);
+        return new Invoice(header, charges, InvoiceAmounts.calculate(charges, items), items,
+                InvoiceLifecycle.issued(dueDateOf(header.issuedAt(), businessZone)));
     }
 
     /**
@@ -93,15 +69,13 @@ public final class Invoice {
      * <p><strong>ここでは検査しない</strong>（新しい不変条件は既存行を壊す）。
      * 検査するのは新規に受け入れるとき（{@link #issue}）である。
      */
-    public static Invoice restore(InvoiceId invoiceId, BillingBookingId cargoBookingId,
-            BillingShipperId shipperId, InvoiceCharges charges, InvoiceAmounts amounts,
-            List<InvoiceLineItem> lineItems, PaymentStatus paymentStatus, Instant issuedAt,
-            LocalDate dueDate, Payment payment, Instant voidedAt, String voidReason) {
+    public static Invoice restore(InvoiceHeader header, InvoiceCharges charges,
+            InvoiceAmounts amounts, List<InvoiceLineItem> lineItems,
+            InvoiceLifecycle lifecycle) {
         // **保存された金額をそのまま受け取る**（決定 4）。係数から計算し直すと、
         // 基準運賃や税率を将来変えた瞬間に過去の請求書の金額が変わる
-        return new Invoice(invoiceId, cargoBookingId, shipperId, charges, amounts,
-                lineItems == null ? List.of() : lineItems, paymentStatus, issuedAt,
-                dueDate, payment, voidedAt, voidReason);
+        return new Invoice(header, charges, amounts,
+                lineItems == null ? List.of() : lineItems, lifecycle);
     }
 
     /**
@@ -132,14 +106,14 @@ public final class Invoice {
         }
         if (voided()) {
             throw new IllegalStateException(
-                    "取り消した請求書に入金は確認できません: " + invoiceId.value());
+                    "取り消した請求書に入金は確認できません: " + invoiceId().value());
         }
-        if (paymentStatus == PaymentStatus.CONFIRMED) {
+        if (lifecycle.isPaid()) {
             throw new IllegalStateException(
-                    "すでに入金を確認しています: " + invoiceId.value());
+                    "すでに入金を確認しています: " + invoiceId().value());
         }
-        return new Invoice(invoiceId, cargoBookingId, shipperId, charges, amounts, lineItems,
-                PaymentStatus.CONFIRMED, issuedAt, dueDate, confirmed, voidedAt, voidReason);
+        return new Invoice(header, charges, amounts, lineItems,
+                lifecycle.withPayment(confirmed));
     }
 
     /**
@@ -160,14 +134,13 @@ public final class Invoice {
             throw new IllegalArgumentException("取り消しの日時を指定してください");
         }
         if (voided()) {
-            throw new IllegalStateException("すでに取り消しています: " + invoiceId.value());
+            throw new IllegalStateException("すでに取り消しています: " + invoiceId().value());
         }
-        if (paymentStatus == PaymentStatus.CONFIRMED) {
+        if (lifecycle.isPaid()) {
             throw new IllegalStateException(
-                    "入金済の請求書は取り消せません（返金は別の手続きです）: " + invoiceId.value());
+                    "入金済の請求書は取り消せません（返金は別の手続きです）: " + invoiceId().value());
         }
-        return new Invoice(invoiceId, cargoBookingId, shipperId, charges, amounts, lineItems,
-                paymentStatus, issuedAt, dueDate, payment, at, reason);
+        return new Invoice(header, charges, amounts, lineItems, lifecycle.voided(at, reason));
     }
 
     /**
@@ -183,46 +156,56 @@ public final class Invoice {
         if (today == null) {
             throw new IllegalArgumentException("基準の日付を指定してください");
         }
-        if (voided() || paymentStatus == PaymentStatus.CONFIRMED || dueDate == null) {
+        if (voided() || lifecycle.isPaid() || lifecycle.dueDate() == null) {
             return false;
         }
-        return today.isAfter(dueDate);
+        return today.isAfter(lifecycle.dueDate());
+    }
+
+    /** 発行したあとに起きたこと（支払い・取り消し）。 */
+    public InvoiceLifecycle lifecycle() {
+        return lifecycle;
     }
 
     /** 支払期限（受入基準 23-1）。 */
     public LocalDate dueDate() {
-        return dueDate;
+        return lifecycle.dueDate();
     }
 
     /** 入金の記録。**未入金なら {@code null}**。 */
     public Payment payment() {
-        return payment;
+        return lifecycle.payment();
     }
 
     /** 取り消したか（赤伝）。 */
     public boolean voided() {
-        return voidedAt != null;
+        return lifecycle.isVoided();
     }
 
     public Instant voidedAt() {
-        return voidedAt;
+        return lifecycle.voidedAt();
     }
 
     /** 取り消した理由。**取り消していなければ {@code null}**。 */
     public String voidReason() {
-        return voidReason;
+        return lifecycle.voidReason();
+    }
+
+    /** 宛名（誰に・どの予約に・いつ出したか）。 */
+    public InvoiceHeader header() {
+        return header;
     }
 
     public InvoiceId invoiceId() {
-        return invoiceId;
+        return header.invoiceId();
     }
 
     public BillingBookingId cargoBookingId() {
-        return cargoBookingId;
+        return header.cargoBookingId();
     }
 
     public BillingShipperId shipperId() {
-        return shipperId;
+        return header.shipperId();
     }
 
     /**
@@ -233,7 +216,7 @@ public final class Invoice {
      * （決定 4 が禁じていること）。
      */
     public String shipperName() {
-        return shipperId.name();
+        return header.shipperId().name();
     }
 
     /** 金額の材料（決定 1・決定 6・決定 8）。 */
@@ -292,10 +275,10 @@ public final class Invoice {
     }
 
     public PaymentStatus paymentStatus() {
-        return paymentStatus;
+        return lifecycle.paymentStatus();
     }
 
     public Instant issuedAt() {
-        return issuedAt;
+        return header.issuedAt();
     }
 }

@@ -23,9 +23,18 @@ class EstimateTest {
     private static final EstimateNumber NUMBER = EstimateNumber.of("EST-2026000001");
     private static final LocalDate DEADLINE = LocalDate.parse("2027-12-31");
 
+    private static final EstimateRequirements REQUIREMENTS = new EstimateRequirements(
+            "JPTYO", "USLAX", DEADLINE, CargoType.GENERAL, new BigDecimal("4200"));
+
     private static Estimate create(List<RouteCandidate> candidates) {
-        return Estimate.create(ID, NUMBER, "JPTYO", "USLAX", DEADLINE, CargoType.GENERAL,
-                new BigDecimal("4200"), candidates);
+        return Estimate.create(ID, NUMBER, REQUIREMENTS, candidates);
+    }
+
+    /** 予約の側の要件を組み立てる。**同じ形で突き合わせる。** */
+    private static EstimateRequirements booking(String origin, String destination,
+            LocalDate deadline, CargoType cargoType, String weightKg) {
+        return new EstimateRequirements(origin, destination, deadline, cargoType,
+                new BigDecimal(weightKg));
     }
 
     @Nested
@@ -70,16 +79,20 @@ class EstimateTest {
         @Test
         @DisplayName("同じ港へは運べない")
         void rejectsTheSameOriginAndDestination() {
-            assertThatThrownBy(() -> Estimate.create(ID, NUMBER, "JPTYO", "JPTYO", DEADLINE,
-                    CargoType.GENERAL, new BigDecimal("4200"), List.of()))
+            // **重量はラムダの外で組む。**中で組むと、例外を投げたのが重量の
+            // 組み立てか要件の検査かを判別できない
+            BigDecimal weight = new BigDecimal("4200");
+
+            assertThatThrownBy(() -> new EstimateRequirements("JPTYO", "JPTYO", DEADLINE,
+                    CargoType.GENERAL, weight))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
         @Test
         @DisplayName("重量が 0 以下なら断る")
         void rejectsNonPositiveWeight() {
-            assertThatThrownBy(() -> Estimate.create(ID, NUMBER, "JPTYO", "USLAX", DEADLINE,
-                    CargoType.GENERAL, BigDecimal.ZERO, List.of()))
+            assertThatThrownBy(() -> new EstimateRequirements("JPTYO", "USLAX", DEADLINE,
+                    CargoType.GENERAL, BigDecimal.ZERO))
                     .isInstanceOf(IllegalArgumentException.class);
         }
     }
@@ -94,16 +107,17 @@ class EstimateTest {
         @Test
         @DisplayName("同じ条件なら食い違いは無い")
         void reportsNoDifferenceForTheSameRequirements() {
-            assertThat(estimate.differencesFrom("JPTYO", "USLAX", DEADLINE, CargoType.GENERAL,
-                    new BigDecimal("4200"))).isEmpty();
+            assertThat(estimate.differencesFrom(
+                    booking("JPTYO", "USLAX", DEADLINE, CargoType.GENERAL, "4200"))).isEmpty();
         }
 
         /** <strong>桁数ではなく値で比べる。</strong>4200 と 4200.000 は同じ重量である。 */
         @Test
         @DisplayName("重量の桁数が違うだけなら、食い違いとは言わない")
         void comparesWeightByValue() {
-            assertThat(estimate.differencesFrom("JPTYO", "USLAX", DEADLINE, CargoType.GENERAL,
-                    new BigDecimal("4200.000"))).isEmpty();
+            assertThat(estimate.differencesFrom(
+                    booking("JPTYO", "USLAX", DEADLINE, CargoType.GENERAL, "4200.000")))
+                    .isEmpty();
         }
 
         /**
@@ -113,8 +127,8 @@ class EstimateTest {
         @Test
         @DisplayName("食い違った項目を名前で返す")
         void namesTheDifferences() {
-            assertThat(estimate.differencesFrom("JPYOK", "USLAX", DEADLINE, CargoType.HAZARDOUS,
-                    new BigDecimal("99000")))
+            assertThat(estimate.differencesFrom(
+                    booking("JPYOK", "USLAX", DEADLINE, CargoType.HAZARDOUS, "99000")))
                     .containsExactlyInAnyOrder("出発地", "貨物種別", "重量");
         }
 
@@ -122,18 +136,21 @@ class EstimateTest {
         @Test
         @DisplayName("5 項目すべてが突き合わせの対象である")
         void comparesEveryRequirement() {
-            assertThat(estimate.differencesFrom("JPOSA", "CNSHA",
-                    LocalDate.parse("2028-01-31"), CargoType.REFRIGERATED,
-                    new BigDecimal("1")))
+            assertThat(estimate.differencesFrom(booking("JPOSA", "CNSHA",
+                    LocalDate.parse("2028-01-31"), CargoType.REFRIGERATED, "1")))
                     .containsExactlyInAnyOrder("出発地", "目的地", "到着期限", "貨物種別", "重量");
         }
 
-        /** 重量が渡らないときも食い違いとして扱う（黙って通さない）。 */
+        /**
+         * <strong>要件そのものが無ければ、食い違いは言えない。</strong>
+         *
+         * <p>見積を使わない予約もある——そのときに「全部違います」と出すと、
+         * 毎回の予約に警告が出ることになる。
+         */
         @Test
-        @DisplayName("重量が渡らなければ食い違いとして扱う")
-        void treatsAMissingWeightAsADifference() {
-            assertThat(estimate.differencesFrom("JPTYO", "USLAX", DEADLINE, CargoType.GENERAL,
-                    null)).containsExactly("重量");
+        @DisplayName("突き合わせる相手が無ければ、食い違いは無い")
+        void reportsNoDifferenceWithoutABooking() {
+            assertThat(estimate.differencesFrom(null)).isEmpty();
         }
     }
 
@@ -207,7 +224,8 @@ class EstimateTest {
                     .isInstanceOf(IllegalArgumentException.class);
             assertThatThrownBy(() -> new RouteCandidate("V001", null, -1, BigDecimal.ONE))
                     .isInstanceOf(IllegalArgumentException.class);
-            assertThatThrownBy(() -> new RouteCandidate("V001", null, 1, new BigDecimal("-1")))
+            BigDecimal negative = new BigDecimal("-1");
+            assertThatThrownBy(() -> new RouteCandidate("V001", null, 1, negative))
                     .isInstanceOf(IllegalArgumentException.class);
         }
     }

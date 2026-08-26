@@ -270,7 +270,7 @@ export function InvoiceDetailPage() {
         <button
           type="button"
           className="rounded border border-gray-400 px-4 py-2"
-          onClick={() => window.print()}
+          onClick={() => globalThis.print()}
         >
           印刷する
         </button>

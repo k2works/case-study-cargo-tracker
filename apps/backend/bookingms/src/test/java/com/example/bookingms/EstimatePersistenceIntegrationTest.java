@@ -29,8 +29,10 @@ class EstimatePersistenceIntegrationTest extends CargoPersistenceTestBase {
 
     private Estimate estimate(List<RouteCandidate> candidates) {
         return Estimate.create(EstimateId.generate(), estimates.nextNumber(),
-                "JPTYO", "USLAX", LocalDate.parse("2027-12-31"), CargoType.GENERAL,
-                new BigDecimal("4200.000"), candidates);
+                new com.example.bookingms.domain.model.EstimateRequirements(
+                        "JPTYO", "USLAX", LocalDate.parse("2027-12-31"), CargoType.GENERAL,
+                        new BigDecimal("4200.000")),
+                candidates);
     }
 
     /**

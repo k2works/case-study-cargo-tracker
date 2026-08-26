@@ -24,6 +24,10 @@ import org.springframework.web.client.RestClient;
  * 相手の [ADR-007] フィルタが一律に断る——IT5 では名乗りを忘れ、実環境の往復を通すまで
  * 誰も気づかなかった。
  */
+// **経路は設定にしない。**相手との契約であり、環境ごとに変わるものではない
+// （変わるのは所在＝ベース URL だけで、そちらは設定から受け取る）。契約テストが
+// 両側の経路を突き合わせており、片方だけ直せば赤になる
+@SuppressWarnings("java:S1075")
 public class RestBillingSnapshotFinder implements BillingSnapshotFinder {
 
     /**

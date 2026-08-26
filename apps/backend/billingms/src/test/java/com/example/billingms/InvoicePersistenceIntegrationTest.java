@@ -16,6 +16,7 @@ import com.example.billingms.domain.model.DiscountRate;
 import com.example.billingms.domain.model.Invoice;
 import com.example.billingms.domain.model.InvoiceId;
 import com.example.billingms.domain.model.InvoiceCharges;
+import com.example.billingms.domain.model.InvoiceHeader;
 import com.example.billingms.domain.model.InvoiceLineItem;
 import com.example.billingms.domain.model.Money;
 import com.example.billingms.domain.model.PaymentStatus;
@@ -76,10 +77,12 @@ class InvoicePersistenceIntegrationTest {
 
     private Invoice issue(String bookingId, DiscountPolicy policy,
             List<InvoiceLineItem> adjustments, CancellationFee fee) {
-        return Invoice.issue(numbering.next(), BillingBookingId.of(bookingId),
-                BillingShipperId.corporate("1", "丸紅商事株式会社"),
+        return Invoice.issue(
+                new InvoiceHeader(numbering.next(), BillingBookingId.of(bookingId),
+                        BillingShipperId.corporate("1", "丸紅商事株式会社"),
+                        Instant.parse("2027-10-01T00:00:00Z")),
                 new InvoiceCharges(CHARGE, policy, fee, TaxRate.standard()),
-                adjustments, Instant.parse("2027-10-01T00:00:00Z"), BUSINESS_ZONE);
+                adjustments, BUSINESS_ZONE);
     }
 
     private String uniqueBookingId() {
@@ -246,8 +249,11 @@ class InvoicePersistenceIntegrationTest {
             String bookingId = uniqueBookingId();
             invoices.save(issue(bookingId, DiscountPolicy.none(), List.of(), null));
 
-            assertThatThrownBy(() ->
-                    invoices.save(issue(bookingId, DiscountPolicy.none(), List.of(), null)))
+            // **2 通目はラムダの外で組む。**中で組むと、例外を投げたのが発行の
+            // 組み立てか保存かを判別できない
+            Invoice second = issue(bookingId, DiscountPolicy.none(), List.of(), null);
+
+            assertThatThrownBy(() -> invoices.save(second))
                     .as("同じ予約に 2 通目が通っている。荷主に二重で請求することになる")
                     .isInstanceOf(AlreadyInvoicedException.class)
                     .hasMessageContaining(bookingId);
@@ -379,8 +385,9 @@ class InvoicePersistenceIntegrationTest {
             String bookingId = uniqueBookingId();
             invoices.save(issue(bookingId, DiscountPolicy.none(), List.of(), null));
 
-            assertThatThrownBy(() ->
-                    invoices.save(issue(bookingId, DiscountPolicy.none(), List.of(), null)))
+            Invoice second = issue(bookingId, DiscountPolicy.none(), List.of(), null);
+
+            assertThatThrownBy(() -> invoices.save(second))
                     .isInstanceOf(AlreadyInvoicedException.class);
         }
 

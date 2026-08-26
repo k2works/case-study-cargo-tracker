@@ -2,6 +2,7 @@ package db.migration;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,10 +23,23 @@ import org.flywaydb.core.api.migration.Context;
  *
  * <p>落としたあとの一意性は V6 が {@code (booking_id, void_marker)} で引き受ける。
  */
+// クラス名は Flyway の版番号そのものである（`V5__…`）。Flyway がこの名前から版と
+// 説明を読むため、Java の命名規約には合わせられない
+@SuppressWarnings("java:S101")
 public class V5__drop_booking_unique extends BaseJavaMigration {
 
+    /**
+     * 制約名として受け入れる形。
+     *
+     * <p><strong>DB から読んだ値でも、SQL に混ぜる前に確かめる。</strong>
+     * 制約名は識別子であり、英数字と下線しか取らない——確かめずに連結すると、
+     * 引用符を含む名前を作れる DB で SQL の組み立てが壊れる。
+     */
+    private static final java.util.regex.Pattern SAFE_IDENTIFIER =
+            java.util.regex.Pattern.compile("^\\w+$");
+
     @Override
-    public void migrate(Context context) throws Exception {
+    public void migrate(Context context) throws SQLException {
         List<String> names = new ArrayList<>();
         try (Statement statement = context.getConnection().createStatement();
                 ResultSet rows = statement.executeQuery("""
@@ -45,6 +59,9 @@ public class V5__drop_booking_unique extends BaseJavaMigration {
 
         try (Statement statement = context.getConnection().createStatement()) {
             for (String name : names) {
+                if (!SAFE_IDENTIFIER.matcher(name).matches()) {
+                    throw new IllegalStateException("制約名の形が想定と違います: " + name);
+                }
                 // 複数列の UNIQUE は落とさない（booking_id を含むだけの制約を巻き込まない）
                 if (columnCountOf(context, name) == 1) {
                     statement.execute("ALTER TABLE invoice DROP CONSTRAINT \"" + name + "\"");
@@ -59,7 +76,7 @@ public class V5__drop_booking_unique extends BaseJavaMigration {
      * <p><strong>値は束縛する。</strong>制約名は DB から読んだ値であり、文字列連結で
      * SQL に混ぜると、名前に引用符を含む DB で壊れる（SpotBugs も止める）。
      */
-    private int columnCountOf(Context context, String name) throws Exception {
+    private int columnCountOf(Context context, String name) throws SQLException {
         try (PreparedStatement statement = context.getConnection().prepareStatement(
                 "SELECT COUNT(*) FROM information_schema.key_column_usage"
                         + " WHERE constraint_name = ? AND LOWER(table_name) = 'invoice'")) {

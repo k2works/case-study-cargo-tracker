@@ -12,6 +12,10 @@ import org.springframework.web.client.RestClient;
  * <p><strong>相手の型は持ち込まない。</strong>応答は専用の record（{@link QuoteResponse}）で
  * 受け、こちらの言葉（{@code BigDecimal}）へ移す。
  */
+// **経路は設定にしない。**相手との契約であり、環境ごとに変わるものではない
+// （変わるのは所在＝ベース URL だけで、そちらは設定から受け取る）。契約テストが
+// 両側の経路を突き合わせており、片方だけ直せば赤になる
+@SuppressWarnings("java:S1075")
 public class RestChargeQuoteFinder implements ChargeQuoteFinder {
 
     /** 呼び出す経路。**契約と突き合わせる**（契約テスト）。 */

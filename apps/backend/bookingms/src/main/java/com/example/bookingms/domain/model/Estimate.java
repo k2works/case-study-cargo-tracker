@@ -21,24 +21,17 @@ public final class Estimate {
 
     private final EstimateId estimateId;
     private final EstimateNumber estimateNumber;
-    private final String originUnLocode;
-    private final String destinationUnLocode;
-    private final LocalDate arrivalDeadline;
-    private final CargoType cargoType;
-    private final BigDecimal weightKg;
+    /** 荷主の輸送要件（5 項目）。**いつも揃って動く。** */
+    private final EstimateRequirements requirements;
     private final List<RouteCandidate> candidates;
     private final EstimateStatus status;
 
-    private Estimate(EstimateId estimateId, EstimateNumber estimateNumber, String originUnLocode,
-            String destinationUnLocode, LocalDate arrivalDeadline, CargoType cargoType,
-            BigDecimal weightKg, List<RouteCandidate> candidates, EstimateStatus status) {
+    private Estimate(EstimateId estimateId, EstimateNumber estimateNumber,
+            EstimateRequirements requirements, List<RouteCandidate> candidates,
+            EstimateStatus status) {
         this.estimateId = estimateId;
         this.estimateNumber = estimateNumber;
-        this.originUnLocode = originUnLocode;
-        this.destinationUnLocode = destinationUnLocode;
-        this.arrivalDeadline = arrivalDeadline;
-        this.cargoType = cargoType;
-        this.weightKg = weightKg;
+        this.requirements = requirements;
         // **写して持つ。** 呼び出し元が渡したあとの書き換えでこちらの中身が変わらないように
         this.candidates = List.copyOf(candidates);
         this.status = status;
@@ -50,30 +43,14 @@ public final class Estimate {
      * <p>入力は 5 項目——出発地・目的地・希望期限・貨物種別・重量。
      */
     public static Estimate create(EstimateId estimateId, EstimateNumber estimateNumber,
-            String originUnLocode, String destinationUnLocode, LocalDate arrivalDeadline,
-            CargoType cargoType, BigDecimal weightKg, List<RouteCandidate> candidates) {
+            EstimateRequirements requirements, List<RouteCandidate> candidates) {
         if (estimateId == null || estimateNumber == null) {
             throw new IllegalArgumentException("見積の識別子と見積番号を指定してください");
         }
-        if (originUnLocode == null || originUnLocode.isBlank()
-                || destinationUnLocode == null || destinationUnLocode.isBlank()) {
-            throw new IllegalArgumentException("出発地と目的地を指定してください");
+        if (requirements == null) {
+            throw new IllegalArgumentException("輸送要件を指定してください");
         }
-        if (originUnLocode.equals(destinationUnLocode)) {
-            // 同じ港へは運べない。予約（`RouteSpecification`）と同じ規則である
-            throw new IllegalArgumentException("出発地と目的地が同じです: " + originUnLocode);
-        }
-        if (arrivalDeadline == null) {
-            throw new IllegalArgumentException("希望期限を指定してください");
-        }
-        if (cargoType == null) {
-            throw new IllegalArgumentException("貨物種別を指定してください");
-        }
-        if (weightKg == null || weightKg.signum() <= 0) {
-            throw new IllegalArgumentException("重量は 0 より大きい値で指定してください: " + weightKg);
-        }
-        return new Estimate(estimateId, estimateNumber, originUnLocode, destinationUnLocode,
-                arrivalDeadline, cargoType, weightKg,
+        return new Estimate(estimateId, estimateNumber, requirements,
                 candidates == null ? List.of() : candidates, EstimateStatus.CREATED);
     }
 
@@ -83,11 +60,9 @@ public final class Estimate {
      * <p><strong>ここでは検査しない</strong>（新しい不変条件は既存行を壊す）。
      */
     public static Estimate restore(EstimateId estimateId, EstimateNumber estimateNumber,
-            String originUnLocode, String destinationUnLocode, LocalDate arrivalDeadline,
-            CargoType cargoType, BigDecimal weightKg, List<RouteCandidate> candidates,
+            EstimateRequirements requirements, List<RouteCandidate> candidates,
             EstimateStatus status) {
-        return new Estimate(estimateId, estimateNumber, originUnLocode, destinationUnLocode,
-                arrivalDeadline, cargoType, weightKg,
+        return new Estimate(estimateId, estimateNumber, requirements,
                 candidates == null ? List.of() : candidates, status);
     }
 
@@ -101,26 +76,8 @@ public final class Estimate {
      *
      * @return 食い違っている項目。無ければ空
      */
-    public List<String> differencesFrom(String bookingOrigin, String bookingDestination,
-            LocalDate bookingDeadline, CargoType bookingCargoType, BigDecimal bookingWeightKg) {
-        List<String> differences = new java.util.ArrayList<>();
-        if (!originUnLocode.equals(bookingOrigin)) {
-            differences.add("出発地");
-        }
-        if (!destinationUnLocode.equals(bookingDestination)) {
-            differences.add("目的地");
-        }
-        if (!arrivalDeadline.equals(bookingDeadline)) {
-            differences.add("到着期限");
-        }
-        if (cargoType != bookingCargoType) {
-            differences.add("貨物種別");
-        }
-        // **桁数ではなく値で比べる。** 4200 と 4200.000 は同じ重量である
-        if (bookingWeightKg == null || weightKg.compareTo(bookingWeightKg) != 0) {
-            differences.add("重量");
-        }
-        return List.copyOf(differences);
+    public List<String> differencesFrom(EstimateRequirements booking) {
+        return requirements.differencesFrom(booking);
     }
 
     public EstimateId estimateId() {
@@ -131,24 +88,29 @@ public final class Estimate {
         return estimateNumber;
     }
 
+    /** 荷主の輸送要件（5 項目）。 */
+    public EstimateRequirements requirements() {
+        return requirements;
+    }
+
     public String originUnLocode() {
-        return originUnLocode;
+        return requirements.originUnLocode();
     }
 
     public String destinationUnLocode() {
-        return destinationUnLocode;
+        return requirements.destinationUnLocode();
     }
 
     public LocalDate arrivalDeadline() {
-        return arrivalDeadline;
+        return requirements.arrivalDeadline();
     }
 
     public CargoType cargoType() {
-        return cargoType;
+        return requirements.cargoType();
     }
 
     public BigDecimal weightKg() {
-        return weightKg;
+        return requirements.weightKg();
     }
 
     /** ルート候補（01-3）。**推奨順**。 */

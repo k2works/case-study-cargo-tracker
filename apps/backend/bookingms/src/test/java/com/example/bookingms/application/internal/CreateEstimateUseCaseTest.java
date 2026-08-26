@@ -157,7 +157,11 @@ class CreateEstimateUseCaseTest {
             when(routes.find(any())).thenReturn(List.of(
                     itinerary("V003", "2027-01-20T00:00:00Z", "JPTYO", "AUMEL")));
 
-            assertThatThrownBy(() -> useCase.quote(command()))
+            // **依頼はラムダの外で組む。**中で組むと、例外を投げたのが依頼の
+            // 組み立てか試算かを判別できない
+            CreateEstimateCommand command = command();
+
+            assertThatThrownBy(() -> useCase.quote(command))
                     .isInstanceOf(IllegalStateException.class);
         }
     }
@@ -254,8 +258,10 @@ class CreateEstimateUseCaseTest {
         void rejectsTheSameOriginAndDestination() {
             when(routes.find(any())).thenReturn(List.of());
 
-            assertThatThrownBy(() -> useCase.create(new CreateEstimateCommand(
-                    "JPTYO", "JPTYO", DEADLINE, "GENERAL", new BigDecimal("4200"))))
+            CreateEstimateCommand sameHarbour = new CreateEstimateCommand(
+                    "JPTYO", "JPTYO", DEADLINE, "GENERAL", new BigDecimal("4200"));
+
+            assertThatThrownBy(() -> useCase.create(sameHarbour))
                     .isInstanceOf(IllegalArgumentException.class);
 
             verify(estimates, never()).save(any());

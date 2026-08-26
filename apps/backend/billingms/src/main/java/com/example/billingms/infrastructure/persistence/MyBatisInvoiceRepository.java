@@ -13,6 +13,7 @@ import com.example.billingms.domain.model.Invoice;
 import com.example.billingms.domain.model.InvoiceId;
 import com.example.billingms.domain.model.InvoiceAmounts;
 import com.example.billingms.domain.model.InvoiceCharges;
+import com.example.billingms.domain.model.InvoiceLifecycle;
 import com.example.billingms.domain.model.InvoiceLineItem;
 import com.example.billingms.domain.model.Money;
 import com.example.billingms.domain.model.Payment;
@@ -56,7 +57,7 @@ public class MyBatisInvoiceRepository implements InvoiceRepository {
         InvoiceRecord row = toRecord(invoice);
         try {
             invoices.insert(row);
-        } catch (DuplicateKeyException conflict) {
+        } catch (DuplicateKeyException _) {
             throw new AlreadyInvoicedException(
                     "この予約にはすでに精算書が発行されています: "
                             + invoice.cargoBookingId().value());
@@ -177,11 +178,15 @@ public class MyBatisInvoiceRepository implements InvoiceRepository {
 
         // **復元では検査しない**（新しい不変条件は既存行を壊す）
         return Invoice.restore(
-                InvoiceId.of(row.getInvoiceNumber()),
-                BillingBookingId.of(row.getBookingId()),
-                row.isShipperCorporate()
-                        ? BillingShipperId.corporate(row.getShipperId(), row.getShipperName())
-                        : BillingShipperId.individual(row.getShipperId(), row.getShipperName()),
+                new com.example.billingms.domain.model.InvoiceHeader(
+                        InvoiceId.of(row.getInvoiceNumber()),
+                        BillingBookingId.of(row.getBookingId()),
+                        row.isShipperCorporate()
+                                ? BillingShipperId.corporate(row.getShipperId(),
+                                        row.getShipperName())
+                                : BillingShipperId.individual(row.getShipperId(),
+                                        row.getShipperName()),
+                        row.getIssuedAt()),
                 new InvoiceCharges(
                         chargeOf(row),
                         policy, fee, TaxRate.of(row.getTaxRate())),
@@ -193,15 +198,21 @@ public class MyBatisInvoiceRepository implements InvoiceRepository {
                         Money.of(row.getDiscountAmountValue(), row.getDiscountAmountCurrency()),
                         Money.yen(row.getTaxAmount()),
                         Money.of(row.getTotalAmountValue(), row.getTotalAmountCurrency())),
-                items, PaymentStatus.valueOf(row.getPaymentStatus()), row.getIssuedAt(),
-                row.getDueDate(),
-                // 入金の記録は別表にある。無ければ未入金である
-                row.getPaidAt() == null ? null
-                        : Payment.of(Money.of(row.getPaidAmountValue(),
-                                        row.getPaidAmountCurrency()),
-                                row.getPaidAt(), PaymentMethod.of(row.getPaymentMethod()),
-                                row.getTransactionReference()),
-                row.getVoidedAt(), row.getVoidReason());
+                items, lifecycleOf(row));
+    }
+
+    /**
+     * 発行したあとに起きたこと（支払い・取り消し）を復元する。
+     *
+     * <p>入金の記録は別表にある。<strong>無ければ未入金である。</strong>
+     */
+    private static InvoiceLifecycle lifecycleOf(InvoiceRecord row) {
+        Payment payment = row.getPaidAt() == null ? null
+                : Payment.of(Money.of(row.getPaidAmountValue(), row.getPaidAmountCurrency()),
+                        row.getPaidAt(), PaymentMethod.of(row.getPaymentMethod()),
+                        row.getTransactionReference());
+        return new InvoiceLifecycle(PaymentStatus.valueOf(row.getPaymentStatus()),
+                row.getDueDate(), payment, row.getVoidedAt(), row.getVoidReason());
     }
 
     /**
@@ -212,10 +223,13 @@ public class MyBatisInvoiceRepository implements InvoiceRepository {
      */
     private static TransportCharge chargeOf(InvoiceRecord row) {
         CargoType cargoType = CargoType.of(row.getCargoType());
-        return row.getLegCount() == 0
-                ? TransportCharge.notTransported(row.getWeightKg(), cargoType)
-                : TransportCharge.restored(row.getLegCount(), row.getLegFactor(),
-                        row.getLegRegion() == null ? null : PortRegion.of(row.getLegRegion()),
-                        row.getWeightKg(), cargoType);
+        if (row.getLegCount() == 0) {
+            return TransportCharge.notTransported(row.getWeightKg(), cargoType);
+        }
+        // 地域区分を入れる前に発行した請求書は区分を持たない（列が無かったころの行）
+        PortRegion region = row.getLegRegion() == null ? null
+                : PortRegion.of(row.getLegRegion());
+        return TransportCharge.restored(row.getLegCount(), row.getLegFactor(), region,
+                row.getWeightKg(), cargoType);
     }
 }

@@ -81,7 +81,7 @@ public class CreateEstimateUseCase {
                 }
                 continue;
             }
-            inTime.add(toCandidate(itinerary, command, regions, businessZone));
+            inTime.add(toCandidate(itinerary, command, regions));
         }
 
         return new EstimateQuote(List.copyOf(inTime), inTime.isEmpty() ? daysExceeded : null);
@@ -97,15 +97,22 @@ public class CreateEstimateUseCase {
     public Estimate create(CreateEstimateCommand command) {
         EstimateQuote quote = quote(command);
         Estimate estimate = Estimate.create(EstimateId.generate(), estimates.nextNumber(),
-                command.originUnLocode(), command.destinationUnLocode(),
-                command.arrivalDeadline(), CargoType.valueOf(command.cargoType()),
-                command.weightKg(), quote.candidates());
+                requirementsOf(command), quote.candidates());
         estimates.save(estimate);
         return estimate;
     }
 
+    /** 依頼を輸送要件（5 項目）に移す。**検査は要件が持つ。** */
+    private static com.example.bookingms.domain.model.EstimateRequirements requirementsOf(
+            CreateEstimateCommand command) {
+        return new com.example.bookingms.domain.model.EstimateRequirements(
+                command.originUnLocode(), command.destinationUnLocode(),
+                command.arrivalDeadline(), CargoType.valueOf(command.cargoType()),
+                command.weightKg());
+    }
+
     private RouteCandidate toCandidate(CargoItinerary itinerary, CreateEstimateCommand command,
-            Map<String, String> regions, ZoneId businessZone) {
+            Map<String, String> regions) {
         List<ChargeQuoteFinder.QuoteLeg> legs = itinerary.legs().stream()
                 .map(leg -> new ChargeQuoteFinder.QuoteLeg(
                         regionOf(regions, leg.loadLocation().unLocode()),

@@ -90,13 +90,14 @@ public class CalculateChargeUseCase {
                 .toList();
 
         Invoice invoice = Invoice.issue(
-                numbering.next(),
-                BillingBookingId.of(snapshot.bookingId()),
-                shipperIdOf(snapshot),
+                new com.example.billingms.domain.model.InvoiceHeader(
+                        numbering.next(),
+                        BillingBookingId.of(snapshot.bookingId()),
+                        shipperIdOf(snapshot),
+                        clock.instant()),
                 new InvoiceCharges(calculation.charge(), calculation.discountPolicy(),
                         calculation.cancellationFee(), calculation.taxRate()),
                 lineItems,
-                clock.instant(),
                 // 支払期限は業務の暦で決める（[ADR-028] 決定 5）
                 clock.getZone());
 

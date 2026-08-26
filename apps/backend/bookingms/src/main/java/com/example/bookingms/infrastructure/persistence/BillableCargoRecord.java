@@ -39,8 +39,10 @@ public class BillableCargoRecord {
      *
      * <p><strong>誤配もキャンセルも、無ければ項目ごと現れない。</strong>毎回 {@code null} が
      * 出ると、あるかないかを受け取り側が判定しにくい。
+     *
+     * @param legs 旅程の区間。<strong>別のクエリで引く</strong>——1 行に畳むと
+     *        区間の数だけ行が重複する
      */
-    /** 旅程の区間。**別のクエリで引く**——1 行に畳むと区間の数だけ行が重複する。 */
     public BillableCargo toBillableCargo(java.util.List<BillableCargo.Leg> legs) {
         BillableCargo.Misroute misroute = misroutedAt == null ? null
                 : new BillableCargo.Misroute(misroutedAt, misroutedLocationUnlocode,

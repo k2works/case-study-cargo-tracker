@@ -76,8 +76,12 @@ class InvoiceTransactionIntegrationTest {
         doThrow(new org.springframework.dao.DataIntegrityViolationException("明細の書き込みに失敗"))
                 .when(lineItems).insert(org.mockito.ArgumentMatchers.any());
 
-        assertThatThrownBy(() -> calculateCharge.confirm(bookingId,
-                List.of(new AdjustmentCommand("遅延による減額", new BigDecimal("-10000")))))
+        // **調整はラムダの外で組む。**中で組むと、例外を投げたのが調整の組み立てか
+        // 確定かを判別できない
+        List<AdjustmentCommand> adjustments =
+                List.of(new AdjustmentCommand("遅延による減額", new BigDecimal("-10000")));
+
+        assertThatThrownBy(() -> calculateCharge.confirm(bookingId, adjustments))
                 .isInstanceOf(RuntimeException.class);
 
         assertThat(jdbcTemplate.queryForObject(

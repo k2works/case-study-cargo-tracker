@@ -89,13 +89,16 @@ class BillingControllerTest {
     }
 
     private static Invoice issued() {
-        return Invoice.issue(InvoiceId.of("INV-2026000001"),
-                BillingBookingId.of("BKG-2026000007"),
-                BillingShipperId.corporate("1", "丸紅商事株式会社"),
+        return Invoice.issue(
+                new com.example.billingms.domain.model.InvoiceHeader(
+                        InvoiceId.of("INV-2026000001"),
+                        BillingBookingId.of("BKG-2026000007"),
+                        BillingShipperId.corporate("1", "丸紅商事株式会社"),
+                        Instant.parse("2027-10-01T00:00:00Z")),
                 InvoiceCharges.of(CHARGE, DiscountPolicy.forCorporate(
                         DiscountRate.of(new BigDecimal("0.1000"))), TaxRate.standard()),
                 List.of(InvoiceLineItem.of("遅延による減額", Money.yen(new BigDecimal("-10000")))),
-                Instant.parse("2027-10-01T00:00:00Z"), BUSINESS_ZONE);
+                BUSINESS_ZONE);
     }
 
     private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder

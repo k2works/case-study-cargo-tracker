@@ -88,11 +88,10 @@ public class MyBatisEstimateRepository implements EstimateRepository {
         return Estimate.restore(
                 EstimateId.of(row.getEstimateId()),
                 EstimateNumber.of(row.getEstimateNumber()),
-                row.getOriginUnlocode(),
-                row.getDestinationUnlocode(),
-                row.getArrivalDeadline(),
-                CargoType.valueOf(row.getCargoType()),
-                row.getWeightKg(),
+                new com.example.bookingms.domain.model.EstimateRequirements(
+                        row.getOriginUnlocode(), row.getDestinationUnlocode(),
+                        row.getArrivalDeadline(), CargoType.valueOf(row.getCargoType()),
+                        row.getWeightKg()),
                 candidates.stream()
                         .map(candidate -> new RouteCandidate(candidate.getVoyageNumber(),
                                 candidate.getTransitPort(), candidate.getTransitDays(),

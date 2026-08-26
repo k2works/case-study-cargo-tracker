@@ -64,14 +64,17 @@ class SettleInvoiceUseCaseTest {
     }
 
     private static Invoice issued() {
-        return Invoice.issue(InvoiceId.of("INV-2026000001"),
-                BillingBookingId.of("BKG-2026000007"),
-                BillingShipperId.corporate("1", "丸紅商事株式会社"),
+        return Invoice.issue(
+                new com.example.billingms.domain.model.InvoiceHeader(
+                        InvoiceId.of("INV-2026000001"),
+                        BillingBookingId.of("BKG-2026000007"),
+                        BillingShipperId.corporate("1", "丸紅商事株式会社"),
+                        Instant.parse("2027-10-01T00:00:00Z")),
                 InvoiceCharges.of(
                         TransportCharge.of(domesticLegs(2), new BigDecimal("4200"),
                                 CargoType.GENERAL),
                         DiscountPolicy.none(), TaxRate.standard()),
-                List.of(), Instant.parse("2027-10-01T00:00:00Z"), ZONE);
+                List.of(), ZONE);
     }
 
     private static PaymentCommand command() {
@@ -113,7 +116,11 @@ class SettleInvoiceUseCaseTest {
                                     com.example.billingms.domain.model.PaymentMethod
                                             .BANK_TRANSFER, null))));
 
-            assertThatThrownBy(() -> useCase.confirmPayment("INV-2026000001", command()))
+            // **依頼はラムダの外で組む。**中で組むと、例外を投げたのが依頼の
+            // 組み立てか入金の確認かを判別できない
+            PaymentCommand command = command();
+
+            assertThatThrownBy(() -> useCase.confirmPayment("INV-2026000001", command))
                     .isInstanceOf(IllegalStateException.class);
 
             verify(bookings, never()).markSettled(anyString());
@@ -125,7 +132,9 @@ class SettleInvoiceUseCaseTest {
         void rejectsUnknownInvoices() {
             when(invoices.findById("INV-9999999999")).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> useCase.confirmPayment("INV-9999999999", command()))
+            PaymentCommand command = command();
+
+            assertThatThrownBy(() -> useCase.confirmPayment("INV-9999999999", command))
                     .isInstanceOf(InvoiceNotFoundException.class);
         }
 
@@ -135,9 +144,10 @@ class SettleInvoiceUseCaseTest {
         void rejectsUnknownPaymentMethods() {
             when(invoices.findById("INV-2026000001")).thenReturn(Optional.of(issued()));
 
-            assertThatThrownBy(() -> useCase.confirmPayment("INV-2026000001",
-                    new PaymentCommand(new BigDecimal("462000"),
-                            LocalDate.parse("2027-10-15"), "CRYPTO", null)))
+            PaymentCommand unknownMethod = new PaymentCommand(new BigDecimal("462000"),
+                    LocalDate.parse("2027-10-15"), "CRYPTO", null);
+
+            assertThatThrownBy(() -> useCase.confirmPayment("INV-2026000001", unknownMethod))
                     .isInstanceOf(IllegalArgumentException.class);
         }
     }

@@ -79,7 +79,7 @@ public class EstimateController {
         try {
             EstimateQuote quote = createEstimate.quote(request.toCommand());
             return EstimateQuoteResponse.from(quote);
-        } catch (RouteCandidateUnavailableException unavailable) {
+        } catch (RouteCandidateUnavailableException _) {
             // **相手に届いていないことを言う**（IT11 レビューと同じ形）。
             // 500 にすると、待てば直るのか自分の操作が悪いのかが分からない
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
@@ -100,7 +100,7 @@ public class EstimateController {
         try {
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(EstimateResponse.from(createEstimate.create(request.toCommand())));
-        } catch (RouteCandidateUnavailableException unavailable) {
+        } catch (RouteCandidateUnavailableException _) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
                     "経路の検索ができませんでした。しばらくしてからお試しください。");
         } catch (IllegalArgumentException | IllegalStateException invalid) {
