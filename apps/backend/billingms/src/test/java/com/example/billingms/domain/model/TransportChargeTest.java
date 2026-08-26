@@ -99,6 +99,46 @@ class TransportChargeTest {
     }
 
     @Nested
+    @DisplayName("等価性")
+    class Equality {
+
+        /**
+         * <strong>同じ重量なら等しい</strong>（{@link Money} と同じ扱い）。
+         *
+         * <p>DB から読み戻した重量は列の桁数どおりの端数を持つ（{@code NUMERIC(10,3)} なら
+         * {@code 4200.000}）。{@code BigDecimal} の {@code equals} は<strong>桁数まで
+         * 見る</strong>ため、そのままだと 4200 と 4200.000 が「違う」と判定される
+         * ——書いたとおりに戻ったかを確かめる検査が、書いたとおりに戻っているのに落ちる。
+         */
+        @Test
+        @DisplayName("桁数が違っても、同じ重量なら等しい")
+        void comparesTheWeightByValue() {
+            assertThat(TransportCharge.of(2, new BigDecimal("4200"), CargoType.GENERAL))
+                    .as("DB から読み戻した重量が、書いた重量と違うものとして扱われる")
+                    .isEqualTo(TransportCharge.of(2, new BigDecimal("4200.000"),
+                            CargoType.GENERAL));
+        }
+
+        @Test
+        @DisplayName("重量が違えば等しくない")
+        void distinguishesDifferentWeights() {
+            assertThat(TransportCharge.of(2, new BigDecimal("4200"), CargoType.GENERAL))
+                    .isNotEqualTo(TransportCharge.of(2, new BigDecimal("4201"),
+                            CargoType.GENERAL));
+        }
+
+        /** 同じものはハッシュも同じ。**集合や比較で壊れない。** */
+        @Test
+        @DisplayName("等しい根拠はハッシュも等しい")
+        void hashesConsistently() {
+            assertThat(TransportCharge.of(2, new BigDecimal("4200"), CargoType.GENERAL)
+                    .hashCode())
+                    .isEqualTo(TransportCharge.of(2, new BigDecimal("4200.000"),
+                            CargoType.GENERAL).hashCode());
+        }
+    }
+
+    @Nested
     @DisplayName("成り立たない入力")
     class InvalidInput {
 

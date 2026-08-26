@@ -23,6 +23,7 @@ public final class Invoice {
     private final InvoiceId invoiceId;
     private final BillingBookingId cargoBookingId;
     private final BillingShipperId shipperId;
+    private final String shipperName;
     private final TransportCharge charge;
     private final DiscountPolicy discountPolicy;
     private final List<InvoiceLineItem> lineItems;
@@ -32,12 +33,14 @@ public final class Invoice {
     private final Instant issuedAt;
 
     private Invoice(InvoiceId invoiceId, BillingBookingId cargoBookingId,
-            BillingShipperId shipperId, TransportCharge charge, DiscountPolicy discountPolicy,
-            List<InvoiceLineItem> lineItems, CancellationFee cancellationFee, TaxRate taxRate,
-            PaymentStatus paymentStatus, Instant issuedAt) {
+            BillingShipperId shipperId, String shipperName, TransportCharge charge,
+            DiscountPolicy discountPolicy, List<InvoiceLineItem> lineItems,
+            CancellationFee cancellationFee, TaxRate taxRate, PaymentStatus paymentStatus,
+            Instant issuedAt) {
         this.invoiceId = invoiceId;
         this.cargoBookingId = cargoBookingId;
         this.shipperId = shipperId;
+        this.shipperName = shipperName;
         this.charge = charge;
         this.discountPolicy = discountPolicy;
         // **写して持つ。** 呼び出し元が渡したあとの書き換えでこちらの中身が変わらないように
@@ -54,9 +57,9 @@ public final class Invoice {
      * <p><strong>発行の時点では未入金である</strong>（決定 3）。入金の確認は US23。
      */
     public static Invoice issue(InvoiceId invoiceId, BillingBookingId cargoBookingId,
-            BillingShipperId shipperId, TransportCharge charge, DiscountPolicy discountPolicy,
-            List<InvoiceLineItem> lineItems, CancellationFee cancellationFee, TaxRate taxRate,
-            Instant issuedAt) {
+            BillingShipperId shipperId, String shipperName, TransportCharge charge,
+            DiscountPolicy discountPolicy, List<InvoiceLineItem> lineItems,
+            CancellationFee cancellationFee, TaxRate taxRate, Instant issuedAt) {
         if (invoiceId == null) {
             throw new IllegalArgumentException("請求番号を指定してください");
         }
@@ -65,6 +68,11 @@ public final class Invoice {
         }
         if (shipperId == null) {
             throw new IllegalArgumentException("荷主を指定してください");
+        }
+        if (shipperName == null || shipperName.isBlank()) {
+            // **発行した時点の社名を残す**——荷主 ID から毎回引き直すと、社名を変えた
+            // 途端に発行済みの請求書の宛名まで変わる
+            throw new IllegalArgumentException("荷主の社名を指定してください");
         }
         if (charge == null) {
             throw new IllegalArgumentException("基本料金の根拠を指定してください");
@@ -78,9 +86,9 @@ public final class Invoice {
         if (issuedAt == null) {
             throw new IllegalArgumentException("発行日時を指定してください");
         }
-        return new Invoice(invoiceId, cargoBookingId, shipperId, charge, discountPolicy,
-                lineItems == null ? List.of() : lineItems, cancellationFee, taxRate,
-                PaymentStatus.PENDING, issuedAt);
+        return new Invoice(invoiceId, cargoBookingId, shipperId, shipperName, charge,
+                discountPolicy, lineItems == null ? List.of() : lineItems, cancellationFee,
+                taxRate, PaymentStatus.PENDING, issuedAt);
     }
 
     /**
@@ -90,12 +98,13 @@ public final class Invoice {
      * 検査するのは新規に受け入れるとき（{@link #issue}）である。
      */
     public static Invoice restore(InvoiceId invoiceId, BillingBookingId cargoBookingId,
-            BillingShipperId shipperId, TransportCharge charge, DiscountPolicy discountPolicy,
-            List<InvoiceLineItem> lineItems, CancellationFee cancellationFee, TaxRate taxRate,
-            PaymentStatus paymentStatus, Instant issuedAt) {
-        return new Invoice(invoiceId, cargoBookingId, shipperId, charge, discountPolicy,
-                lineItems == null ? List.of() : lineItems, cancellationFee, taxRate,
-                paymentStatus, issuedAt);
+            BillingShipperId shipperId, String shipperName, TransportCharge charge,
+            DiscountPolicy discountPolicy, List<InvoiceLineItem> lineItems,
+            CancellationFee cancellationFee, TaxRate taxRate, PaymentStatus paymentStatus,
+            Instant issuedAt) {
+        return new Invoice(invoiceId, cargoBookingId, shipperId, shipperName, charge,
+                discountPolicy, lineItems == null ? List.of() : lineItems, cancellationFee,
+                taxRate, paymentStatus, issuedAt);
     }
 
     public InvoiceId invoiceId() {
@@ -108,6 +117,17 @@ public final class Invoice {
 
     public BillingShipperId shipperId() {
         return shipperId;
+    }
+
+    /**
+     * 発行した時点の荷主の社名。
+     *
+     * <p><strong>荷主 ID から毎回引き直さない。</strong>社名を変えた途端に発行済みの
+     * 請求書の宛名まで変わるのは、出した書面が後から書き換わるのと同じである
+     * （決定 4 が禁じていること）。
+     */
+    public String shipperName() {
+        return shipperName;
     }
 
     /** 基本料金の根拠（決定 1）。 */

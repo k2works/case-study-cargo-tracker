@@ -33,10 +33,12 @@ class InvoiceTest {
     private static final TransportCharge CHARGE =
             TransportCharge.of(2, new BigDecimal("4200"), CargoType.GENERAL);
 
+    private static final String SHIPPER_NAME = "丸紅商事株式会社";
+
     private static Invoice issue(DiscountPolicy policy, List<InvoiceLineItem> adjustments,
             CancellationFee fee) {
-        return Invoice.issue(ID, BOOKING, SHIPPER, CHARGE, policy, adjustments, fee,
-                TaxRate.standard(), ISSUED_AT);
+        return Invoice.issue(ID, BOOKING, SHIPPER, SHIPPER_NAME, CHARGE, policy, adjustments,
+                fee, TaxRate.standard(), ISSUED_AT);
     }
 
     @Nested
@@ -95,6 +97,23 @@ class InvoiceTest {
             // 420,000 + 126,000 = 546,000。消費税 54,600。合計 600,600
             assertThat(invoice.cancellationFee()).isEqualTo(fee);
             assertThat(invoice.totalAmount()).isEqualTo(Money.yen(new BigDecimal("600600")));
+        }
+
+        /**
+         * <strong>発行した時点の社名を残す。</strong>
+         *
+         * <p>荷主が社名を変えても、<strong>発行済みの請求書の宛名は変わらない</strong>
+         * ——出した書面の内容が後から書き換わるのは、決定 4 が禁じていることと同じである。
+         * 荷主 ID から毎回引き直すと、そうなる。
+         */
+        @Test
+        @DisplayName("発行した時点の荷主の社名を持つ")
+        void keepsTheShipperNameAtIssuing() {
+            Invoice invoice = issue(DiscountPolicy.none(), List.of(), null);
+
+            assertThat(invoice.shipperName())
+                    .as("社名が荷主 ID で埋まっている。請求書の宛名が読めない")
+                    .isEqualTo("丸紅商事株式会社");
         }
 
         /**
@@ -187,13 +206,13 @@ class InvoiceTest {
         @Test
         @DisplayName("識別子・予約・荷主が無ければ発行できない")
         void requiresIdentifiers() {
-            assertThatThrownBy(() -> Invoice.issue(null, BOOKING, SHIPPER, CHARGE,
+            assertThatThrownBy(() -> Invoice.issue(null, BOOKING, SHIPPER, SHIPPER_NAME, CHARGE,
                     DiscountPolicy.none(), List.of(), null, TaxRate.standard(), ISSUED_AT))
                     .isInstanceOf(IllegalArgumentException.class);
-            assertThatThrownBy(() -> Invoice.issue(ID, null, SHIPPER, CHARGE,
+            assertThatThrownBy(() -> Invoice.issue(ID, null, SHIPPER, SHIPPER_NAME, CHARGE,
                     DiscountPolicy.none(), List.of(), null, TaxRate.standard(), ISSUED_AT))
                     .isInstanceOf(IllegalArgumentException.class);
-            assertThatThrownBy(() -> Invoice.issue(ID, BOOKING, null, CHARGE,
+            assertThatThrownBy(() -> Invoice.issue(ID, BOOKING, null, SHIPPER_NAME, CHARGE,
                     DiscountPolicy.none(), List.of(), null, TaxRate.standard(), ISSUED_AT))
                     .isInstanceOf(IllegalArgumentException.class);
         }
@@ -201,13 +220,13 @@ class InvoiceTest {
         @Test
         @DisplayName("根拠・割引方針・税率が無ければ発行できない")
         void requiresTheBasisOfTheAmount() {
-            assertThatThrownBy(() -> Invoice.issue(ID, BOOKING, SHIPPER, null,
+            assertThatThrownBy(() -> Invoice.issue(ID, BOOKING, SHIPPER, SHIPPER_NAME, null,
                     DiscountPolicy.none(), List.of(), null, TaxRate.standard(), ISSUED_AT))
                     .isInstanceOf(IllegalArgumentException.class);
-            assertThatThrownBy(() -> Invoice.issue(ID, BOOKING, SHIPPER, CHARGE,
+            assertThatThrownBy(() -> Invoice.issue(ID, BOOKING, SHIPPER, SHIPPER_NAME, CHARGE,
                     null, List.of(), null, TaxRate.standard(), ISSUED_AT))
                     .isInstanceOf(IllegalArgumentException.class);
-            assertThatThrownBy(() -> Invoice.issue(ID, BOOKING, SHIPPER, CHARGE,
+            assertThatThrownBy(() -> Invoice.issue(ID, BOOKING, SHIPPER, SHIPPER_NAME, CHARGE,
                     DiscountPolicy.none(), List.of(), null, null, ISSUED_AT))
                     .isInstanceOf(IllegalArgumentException.class);
         }
@@ -216,7 +235,7 @@ class InvoiceTest {
         @Test
         @DisplayName("明細を渡さずに発行できる")
         void issuesWithoutLineItems() {
-            Invoice invoice = Invoice.issue(ID, BOOKING, SHIPPER, CHARGE,
+            Invoice invoice = Invoice.issue(ID, BOOKING, SHIPPER, SHIPPER_NAME, CHARGE,
                     DiscountPolicy.none(), null, null, TaxRate.standard(), ISSUED_AT);
 
             assertThat(invoice.lineItems()).isEmpty();
@@ -225,7 +244,7 @@ class InvoiceTest {
         @Test
         @DisplayName("発行日時が無ければ発行できない")
         void requiresAnIssuedAt() {
-            assertThatThrownBy(() -> Invoice.issue(ID, BOOKING, SHIPPER, CHARGE,
+            assertThatThrownBy(() -> Invoice.issue(ID, BOOKING, SHIPPER, SHIPPER_NAME, CHARGE,
                     DiscountPolicy.none(), List.of(), null, TaxRate.standard(), null))
                     .isInstanceOf(IllegalArgumentException.class);
         }
@@ -261,7 +280,7 @@ class InvoiceTest {
         @Test
         @DisplayName("永続化された行から、状態ごと復元する")
         void restoresFromAPersistedRow() {
-            Invoice invoice = Invoice.restore(ID, BOOKING, SHIPPER, CHARGE,
+            Invoice invoice = Invoice.restore(ID, BOOKING, SHIPPER, SHIPPER_NAME, CHARGE,
                     DiscountPolicy.forCorporate(DiscountRate.of(new BigDecimal("0.1000"))),
                     List.of(InvoiceLineItem.of("遅延による減額",
                             Money.yen(new BigDecimal("-10000")))),
@@ -281,7 +300,7 @@ class InvoiceTest {
         @Test
         @DisplayName("明細の無い行も復元できる")
         void restoresARowWithoutLineItems() {
-            Invoice invoice = Invoice.restore(ID, BOOKING, SHIPPER, CHARGE,
+            Invoice invoice = Invoice.restore(ID, BOOKING, SHIPPER, SHIPPER_NAME, CHARGE,
                     DiscountPolicy.none(), null, null, TaxRate.standard(),
                     PaymentStatus.PENDING, ISSUED_AT);
 

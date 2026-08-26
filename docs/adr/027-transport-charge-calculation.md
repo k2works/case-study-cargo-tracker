@@ -223,10 +223,10 @@ testFixtures に 1 つ置き、両側が読む。
 | 2 端数は 1 円で四捨五入・丸めは `Money` の中 | `MoneyTest`（四捨五入・負の対称性・丸めた値を保持・丸め後で等価）・`money.test.ts`（画面は整形するだけ） | **済**（丸めを外すと `keepsTheRoundedValue` が赤。負の丸めを `HALF_DOWN` にすると `roundsNegativeAmountsSymmetrically` が赤） |
 | 3 算出中は永続化しない・確定で `PENDING` 発行 | `InvoiceTest#isPendingWhenIssued` / `PaymentStatus` の 4 値と表示名・`billing-new-page.test.tsx`（算出画面は保存しない）・`invoice-detail-page.test.tsx#発行直後の状態は未入金である` | **済**（`PaymentStatus` に `DRAFT` を足すと `hasTheAgreedValues` が赤。表示名を落とすと `everyStatusHasALabel` が赤） |
 | 4 発行した精算書は動かない | `InvoiceTest.Immutability`（明細を足せない・渡した一覧の書き換えが効かない）・`invoice-detail-page.test.tsx#金額を動かす操作が残っていない` | **済**（**2 通りで別々に赤**——変更可能な一覧を返すと前者、写さず参照を持つと後者。画面に「調整を追加」を戻すと 3 つ目も赤） |
-| 5 起点は経理担当者・イベントは待たない | （実装時に記入） | （実装時に記入） |
-| 6 調整は明細として積む・金額は自動で決めない | （実装時に記入） | （実装時に記入） |
-| 7 `BillingSnapshot` は `CargoSnapshot` と同じ形 | （実装時に記入） | （実装時に記入） |
-| 8 消費税は既定 10%・変える手段は置かない | （実装時に記入） | （実装時に記入） |
+| 5 起点は経理担当者・イベントは待たない | `CalculateChargeUseCaseTest#rejectsCargoThatCannotBeBilled`（算出・確定の両方）・`BillableCargoQueryIntegrationTest#selectsOnlyDeliveredAndCancelledCargoes`・`BillingControllerTest`（409）・`billing-new-page.test.tsx#引取が終わっていない予約では、料金を出さない` | **済**（**SQL の絞りを外すと 2 件が赤**。`CargoDeliveredEvent` の購読は 1 か所も無い） |
+| 6 調整は明細として積む・金額は自動で決めない | `InvoiceTest#appliesAdjustments` / `#rejectsAdjustmentsWithoutDescription`・`CalculateChargeUseCaseTest#carriesTheMisrouteWithoutDecidingTheAdjustment`・`billing-new-page.test.tsx`（内容・金額の無い調整を断る） | **済**（内容を空にすると集約が断る。**誤配があっても基本料金が変わらないことまで見る**——自動で減額する実装にすると赤） |
+| 7 `BillingSnapshot` は `CargoSnapshot` と同じ形 | `BillingSnapshotContractTest`（項目の名簿・本番の変換器・知らない項目・個人の判定）・`RestBillingSnapshotFinderTest`（経路・名乗り・404 は空・500 は隠さない）・`BillingLookupControllerTest`（プロバイダ側） | **済**（名乗りを契約と食い違わせると赤。**承認済みの絞りを外すと予約が重複して赤**） |
+| 8 消費税は既定 10%・変える手段は置かない | `BillingIdentifiersTest.Taxes`・`InvoiceTest#sumsUpTheTotal`・`invoice-detail-page.test.tsx#金額内訳に割引の根拠が載る`（消費税行） | **済**（税率を変える API も画面の入力欄も無い。`TaxRate.of` は US23 の足場として残す） |
 
 ## 関連
 

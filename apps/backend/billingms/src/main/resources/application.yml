@@ -37,3 +37,9 @@ management:
 # 業務日付は業務タイムゾーンで判断する（UTC で判断しない）
 app:
   business-time-zone: Asia/Tokyo
+  booking-service:
+    # 料金算出の入力を引く先（[ADR-027] 決定 7）。
+    # **コードに既定値を持たせない。** 既定値があると設定漏れが実行時まで表面化せず、
+    # 「料金の算出だけが必ず失敗する」形になる（IT5 で bookingms → routingms が
+    # 自分自身を指していた欠陥と同じ）。環境ごとに APP_BOOKING_SERVICE_BASE_URL で上書きする
+    base-url: ${APP_BOOKING_SERVICE_BASE_URL:http://localhost:8082}

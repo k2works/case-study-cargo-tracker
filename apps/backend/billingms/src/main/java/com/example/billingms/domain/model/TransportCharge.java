@@ -48,6 +48,11 @@ public record TransportCharge(int legCount, BigDecimal weightKg, CargoType cargo
         if (cargoType == null) {
             throw new IllegalArgumentException("貨物種別を指定してください");
         }
+        // **桁数を揃えて持つ**（{@link Money} と同じ扱い）。DB から読み戻した重量は列の
+        // 桁数どおりの端数を持つ（NUMERIC(10,3) なら 4200.000）。BigDecimal の equals は
+        // 桁数まで見るため、揃えないと「書いたとおりに戻ったか」を確かめる検査が、
+        // 書いたとおりに戻っているのに落ちる
+        weightKg = weightKg.stripTrailingZeros();
     }
 
     public static TransportCharge of(int legCount, BigDecimal weightKg, CargoType cargoType) {
