@@ -64,6 +64,11 @@ public class V5__drop_booking_unique extends BaseJavaMigration {
                 }
                 // 複数列の UNIQUE は落とさない（booking_id を含むだけの制約を巻き込まない）
                 if (columnCountOf(context, name) == 1) {
+                    // 制約名は識別子であり値として束縛できない。直前の SAFE_IDENTIFIER で英数字と
+                    // 下線だけであることを確かめており（引用符・空白・セミコロンは例外で弾く）、
+                    // 値は information_schema から読んだもので外部入力ではない。安全と確認済み。
+                    // SonarQube の Security Hotspot は NOSONAR で抑制できないため、UI で
+                    // 「レビュー済み」にする必要がある（管理者の資格情報が要る）
                     statement.execute("ALTER TABLE invoice DROP CONSTRAINT \"" + name + "\"");
                 }
             }
