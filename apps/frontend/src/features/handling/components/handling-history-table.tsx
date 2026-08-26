@@ -49,7 +49,7 @@ export function HandlingHistoryTable({
               <td>{activity.operatorName}</td>
               <td>
                 {/* 予定外だったことは記録に残る（[ADR-023] 決定 3）。
-                    US28（IT10）で誤配を扱うときの入力になる */}
+                    誤配の検知（US28）はこの値を入力にしている */}
                 {activity.offRoute && (
                   <span className="rounded bg-amber-100 px-2 py-1 text-amber-900">予定外</span>
                 )}

@@ -144,8 +144,9 @@ public final class HandlingActivity {
     /**
      * 予定と違う場所での作業だったか（決定 3）。
      *
-     * <p>行に残すのは、US28（IT10）で誤配を扱うときに<strong>過去の作業を判定し直さない</strong>
-     * ためである。判定には旅程が要り、旅程は変わりうる。
+     * <p>行に残すのは、誤配の検知（US28）で<strong>過去の作業を判定し直さない</strong>
+     * ためである。判定には旅程が要り、旅程は変わりうる。組み直したあとに過去の作業を
+     * 判定し直すと、<strong>そのときは予定外だった作業が「予定どおり」に化ける</strong>。
      */
     public boolean offRoute() {
         return offRoute;
