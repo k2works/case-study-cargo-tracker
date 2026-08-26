@@ -219,8 +219,8 @@ testFixtures に 1 つ置き、両側が読む。
 
 | 決定 | 検査 | 壊して赤を確認 |
 | :--- | :--- | :--- |
-| 1 区間数 × 重量 × 貨物種別 | （実装時に記入） | （実装時に記入） |
-| 2 端数は 1 円で四捨五入・丸めは `Money` の中 | （実装時に記入） | （実装時に記入） |
+| 1 区間数 × 重量 × 貨物種別 | `TransportChargeTest`（4 係数・区間数の効き・重量の下限と境目）・`CargoTypeTest#everyTypeHasAPositiveFactor` / `#chargesMoreForSpecialCargo`・`billing-new-page.test.tsx#基本料金の根拠に、4 つの係数がすべて出る` | **済**（**係数を 1 つずつ掛け忘れる 3 通りすべてで赤**。区間 0 本・重量 0 以下・種別なしも断る） |
+| 2 端数は 1 円で四捨五入・丸めは `Money` の中 | `MoneyTest`（四捨五入・負の対称性・丸めた値を保持・丸め後で等価）・`money.test.ts`（画面は整形するだけ） | **済**（丸めを外すと `keepsTheRoundedValue` が赤。負の丸めを `HALF_DOWN` にすると `roundsNegativeAmountsSymmetrically` が赤） |
 | 3 算出中は永続化しない・確定で `PENDING` 発行 | （実装時に記入） | （実装時に記入） |
 | 4 発行した精算書は動かない | （実装時に記入） | （実装時に記入） |
 | 5 起点は経理担当者・イベントは待たない | （実装時に記入） | （実装時に記入） |
