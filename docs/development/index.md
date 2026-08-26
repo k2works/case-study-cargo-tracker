@@ -59,6 +59,7 @@
 |---------|--------|------|
 | Release 1.0（IT7-8・19 SP） | [報告書](release_report-1_0_0.md) | 完了 |
 | Release 1.1（IT9-10・17 SP） | [報告書](release_report-1_1_0.md) | 完了 |
+| Release 2.0（IT11-12・17 SP） | [報告書](release_report-2_0_0.md) | 完了 |
 
 ## 補足
 

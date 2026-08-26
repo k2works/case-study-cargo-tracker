@@ -128,6 +128,7 @@ nav:
       - イテレーション 12 完了報告書: development/iteration_report-12.md
       - リリース 1.0 完了報告書: development/release_report-1_0_0.md
       - リリース 1.1 完了報告書: development/release_report-1_1_0.md
+      - リリース 2.0 完了報告書: development/release_report-2_0_0.md
   - 運用:
       - 概要: operation/index.md
       - アプリケーション開発環境セットアップ手順書: operation/アプリケーション開発環境セットアップ手順書.md
