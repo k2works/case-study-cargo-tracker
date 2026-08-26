@@ -2,6 +2,7 @@ package com.example.bookingms.interfaces.rest;
 
 import static com.example.bookingms.BillableCargoFixtures.oceanLegs;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.mockito.Mockito.when;
@@ -191,5 +192,72 @@ class BillingLookupControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].bookingId").value("BKG-2026000007"))
                 .andExpect(jsonPath("$[0].shipperName").value("丸紅商事株式会社"));
+    }
+
+    /**
+     * 精算の完了を受け取る（US23-4・[ADR-028] 決定 1）。
+     *
+     * <p><strong>この入口だけが副作用を持つ。</strong>ほかの 2 本は読み取りである。
+     */
+    @org.junit.jupiter.api.Nested
+    @DisplayName("精算完了の受け取り")
+    class Settlement {
+
+        private String settlementPath(String bookingId) {
+            return com.example.shared.contract.BillingSnapshotContract.SETTLEMENT_PATH
+                    .replace("{bookingId}", bookingId);
+        }
+
+        @Test
+        @DisplayName("既知のサービスからの通知で、予約を精算済にする")
+        void settlesTheBooking() throws Exception {
+            mockMvc.perform(post(settlementPath("BKG-2026000007"))
+                            .header(AuthenticatedUser.USER_ID_HEADER, "system:billingms"))
+                    .andExpect(status().isNoContent());
+
+            org.mockito.Mockito.verify(settlement).settle("BKG-2026000007");
+        }
+
+        /** <strong>知らない予約は 404。</strong>黙って受け取ると、相手は閉じたと信じる。 */
+        @Test
+        @DisplayName("知らない予約は 404 を返す")
+        void rejectsUnknownBookings() throws Exception {
+            org.mockito.Mockito.doThrow(new IllegalArgumentException("予約が見つかりません"))
+                    .when(settlement).settle("BKG-9999999999");
+
+            mockMvc.perform(post(settlementPath("BKG-9999999999"))
+                            .header(AuthenticatedUser.USER_ID_HEADER, "system:billingms"))
+                    .andExpect(status().isNotFound());
+        }
+
+        /** <strong>引取が終わっていない予約は 409。</strong>待っても変わらない。 */
+        @Test
+        @DisplayName("引取が終わっていない予約は 409 を返す")
+        void rejectsBookingsThatCannotSettle() throws Exception {
+            org.mockito.Mockito.doThrow(new IllegalStateException("引取が終わっていません"))
+                    .when(settlement).settle("BKG-2026000001");
+
+            mockMvc.perform(post(settlementPath("BKG-2026000001"))
+                            .header(AuthenticatedUser.USER_ID_HEADER, "system:billingms"))
+                    .andExpect(status().isConflict());
+        }
+
+        /**
+         * <strong>名簿に無い主体は通さない</strong>（[ADR-015] 以来の許可リスト方式）。
+         *
+         * <p>読み取りより厳しく扱う理由がある——ここは予約の状態を動かす。
+         */
+        @org.junit.jupiter.params.ParameterizedTest(name = "caller = {0}")
+        @org.junit.jupiter.params.provider.ValueSource(strings = {
+            "system:handlingms", "accountant01", "sales01"})
+        @DisplayName("名簿に無い主体は、精算完了を知らせられない")
+        void rejectsUntrustedCallers(String caller) throws Exception {
+            mockMvc.perform(post(settlementPath("BKG-2026000007"))
+                            .header(AuthenticatedUser.USER_ID_HEADER, caller))
+                    .andExpect(status().isForbidden());
+
+            org.mockito.Mockito.verify(settlement, org.mockito.Mockito.never())
+                    .settle(org.mockito.ArgumentMatchers.anyString());
+        }
     }
 }
