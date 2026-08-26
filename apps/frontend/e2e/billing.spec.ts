@@ -70,8 +70,8 @@ test.describe('精算管理（US21・US22）', () => {
     await expect(basis, '貨物種別が出ていない').toContainText('一般貨物')
     await expect(basis, '区間数が出ていない').toContainText('2 区間')
     await expect(
-      page.getByText(/距離は保持していません|区間数で代替/),
-      '距離の代わりに区間数を使っていることを画面が言っていない',
+      page.getByText(/距離は保持していません|地域区分で代替/),
+      '距離の代わりに区間ごとの地域区分を使っていることを画面が言っていない',
     ).toBeVisible()
   })
 
@@ -411,6 +411,6 @@ test.describe('距離と輸出免税（US21 の未達返済）', () => {
 
     const breakdown = page.getByTestId('amount-breakdown')
     await expect(breakdown, '税区分が出ていない').toContainText('輸出免税')
-    await expect(breakdown, '国際輸送に消費税が付いている').toContainText('消費税 ¥0')
+    await expect(breakdown, '国際輸送に消費税が付いている').toContainText('消費税（輸出免税）¥0')
   })
 })

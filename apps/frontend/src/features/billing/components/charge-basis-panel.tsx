@@ -62,7 +62,9 @@ export function ChargeBasisPanel({
         </div>
         <div>
           <dt className="text-sm text-gray-600">基本料金</dt>
-          <dd className="font-bold">{formatYen(baseAmount)}</dd>
+          <dd className="font-bold" data-testid="base-amount">
+            {formatYen(baseAmount)}
+          </dd>
         </div>
       </dl>
 
