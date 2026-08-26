@@ -105,7 +105,7 @@ IT1 から存在したが、開いている画面が 1 つも無い状態が続�
 | 実環境 E2E | 23 件 |
 | デモ項目 | 10 件 + 到達性 2 件 |
 | ドメイン層カバレッジ | **98%**（目標 90%） |
-| CI | 緑（run [32933658224](https://github.com/k2works/case-study-cargo-tracker/actions/runs/32933658224)） |
+| CI | 緑（レビュー修正を含む最終 run [32942338998](https://github.com/k2works/case-study-cargo-tracker/actions/runs/32942338998)） |
 | SonarQube | **両プロジェクト PASS**（新規カバレッジ 90.7 / 89.6・違反 0） |
 | `TZ=UTC` | 緑 |
 
