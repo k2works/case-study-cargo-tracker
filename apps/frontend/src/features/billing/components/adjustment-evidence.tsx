@@ -14,12 +14,12 @@ import type { ChargeCalculation } from '../types'
  */
 export function AdjustmentEvidence({
   misroute,
-  exceptions,
 }: Readonly<{
   misroute: ChargeCalculation['misroute']
-  exceptions: ChargeCalculation['exceptions']
 }>) {
-  const hasEvidence = misroute !== null || exceptions.length > 0
+  // **例外は本 IT では引いていない**（受入基準 21-6 の片肺）。載せる型だけ先に作ると
+  // 「実装済みに見えて誰にも届かない」形になるため、US23 で引くときに足す
+  const hasEvidence = misroute !== null
 
   if (!hasEvidence) {
     return (
@@ -61,12 +61,6 @@ export function AdjustmentEvidence({
             で予定ルートから外れました（{formatBusinessDateTime(misroute.at)}）。
           </p>
         )}
-        {exceptions.map((exception) => (
-          <p key={`${exception.type}-${exception.occurredAt}`}>
-            <strong>{exception.typeLabel}</strong>：{exception.description}（
-            {formatBusinessDateTime(exception.occurredAt)}）
-          </p>
-        ))}
       </div>
     </section>
   )

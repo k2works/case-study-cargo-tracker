@@ -69,7 +69,13 @@ public class CalculateChargeUseCase {
      *
      * <p><strong>調整はここでまとめて受ける</strong>（決定 3）。算出中は保存しないため、
      * 画面が積んだ明細を確定の瞬間に渡してもらう。
+     *
+     * <p><strong>精算書と明細はひとまとまりで書く</strong>（IT11 レビュー 高）。
+     * 明細の途中で失敗して精算書だけが残ると、調整明細を欠いた請求書が「確定済み」に
+     * なる——決定 4 により金額を動かす手段が無く、{@code booking_id} は UNIQUE なので
+     * 出し直しもできない。<strong>自力で復旧できない状態になる。</strong>
      */
+    @org.springframework.transaction.annotation.Transactional
     public Invoice confirm(String bookingId, List<AdjustmentCommand> adjustments) {
         BillableCargoSnapshot snapshot = requireBillable(bookingId);
         ChargeCalculation calculation = toCalculation(snapshot);

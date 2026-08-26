@@ -3,7 +3,6 @@ package com.example.billingms.interfaces.rest;
 import com.example.billingms.application.internal.ChargeCalculation;
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.List;
 
 /**
  * 料金の算出結果（[ADR-027] 決定 3）。
@@ -18,7 +17,10 @@ import java.util.List;
  * @param discountRate 割引率。<strong>割引が無ければ {@code null}</strong>（0% ではない）
  * @param discountAmount 割引額
  * @param misroute 誤配の記録（調整の根拠）
- * @param exceptions 例外の記録（調整の根拠）
+ * <p><strong>例外（遅延・破損）は載せない</strong>——本 IT では trackingms から引いて
+ * いない（受入基準 21-6 の片肺）。載せる型だけ先に作ると「実装済みに見えて誰にも
+ * 届かない」形になるため、US23 で引くときに足す。画面は「例外はこの画面には表示
+ * されません」と言う。
  * @param cancellationFee キャンセル料
  * @param taxRate 税率
  * @param taxAmount 消費税
@@ -33,7 +35,6 @@ public record ChargeCalculationResponse(
         BigDecimal discountRate,
         MoneyResponse discountAmount,
         MisrouteResponse misroute,
-        List<ExceptionResponse> exceptions,
         CancellationFeeResponse cancellationFee,
         BigDecimal taxRate,
         MoneyResponse taxAmount,
@@ -41,11 +42,6 @@ public record ChargeCalculationResponse(
 
     /** 誤配の記録（21-6 の根拠）。**金額は決めない**——判断は経理担当者が行う。 */
     public record MisrouteResponse(Instant at, String locationUnLocode, String locationName) {
-    }
-
-    /** 例外の記録（21-6 の根拠）。**IT11 では trackingms から引かない**。 */
-    public record ExceptionResponse(String type, String typeLabel, Instant occurredAt,
-            String description) {
     }
 
     /** キャンセル料と、その算定根拠（US30-9）。 */
@@ -76,7 +72,6 @@ public record ChargeCalculationResponse(
                         calculation.misroute().at(),
                         calculation.misroute().locationUnLocode(),
                         calculation.misroute().locationName()),
-                List.of(),
                 calculation.cancellationFee() == null ? null : new CancellationFeeResponse(
                         calculation.cancellationFee().bookingStatusAtCancel().name(),
                         STATUS_LABELS.getOrDefault(

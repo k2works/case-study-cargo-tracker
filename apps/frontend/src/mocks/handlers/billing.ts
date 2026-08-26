@@ -183,8 +183,6 @@ function calculationOf(booking: MockBooking) {
     discountRate,
     discountAmount,
     misroute: booking.misroute ?? null,
-    // 例外は trackingms から引く（Phase 3）。モックは種データを持たない
-    exceptions: [],
     cancellationFee,
     taxRate: TAX_RATE,
     taxAmount,

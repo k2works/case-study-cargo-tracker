@@ -35,16 +35,8 @@ spec:
             # （IT5 で bookingms → routingms が同じ形の欠陥を出した）
             - name: APP_BOOKING_SERVICE_BASE_URL
               value: http://bookingms:8082
-            - name: RABBITMQ_HOST
-              value: rabbitmq
-            - name: RABBITMQ_PORT
-              value: "5672"
-            - name: RABBITMQ_USERNAME
-              valueFrom:
-                secretKeyRef: { name: cargo-secrets, key: RABBITMQ_USERNAME }
-            - name: RABBITMQ_PASSWORD
-              valueFrom:
-                secretKeyRef: { name: cargo-secrets, key: RABBITMQ_PASSWORD }
+            # **RabbitMQ は使わない**（[ADR-027] 決定 5）。料金算出の起点は経理担当者の
+            # 操作であり、イベントは待たない。US23（IT12）で精算の通知を実装するときに足す
           # DB / ブローカーの起動待ちは readinessProbe の範囲で復帰させる（起動順序制御は作り込まない）
           readinessProbe:
             httpGet:

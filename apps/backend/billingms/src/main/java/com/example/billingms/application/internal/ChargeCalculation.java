@@ -7,7 +7,6 @@ import com.example.billingms.domain.model.DiscountRate;
 import com.example.billingms.domain.model.Money;
 import com.example.billingms.domain.model.TaxRate;
 import com.example.billingms.domain.model.TransportCharge;
-import java.util.List;
 
 /**
  * 料金の算出結果（[ADR-027] 決定 3）。
@@ -62,10 +61,5 @@ public record ChargeCalculation(
 
     public Money totalAmount() {
         return subtotal().add(taxAmount());
-    }
-
-    /** 例外の記録（21-6 の根拠）。**IT11 では trackingms から引かない**（注記のとおり）。 */
-    public List<String> exceptions() {
-        return List.of();
     }
 }

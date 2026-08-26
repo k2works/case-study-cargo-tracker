@@ -1,6 +1,5 @@
 package com.example.bookingms.infrastructure.persistence;
 
-import com.example.bookingms.application.port.BillableCargo;
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -102,9 +101,4 @@ public interface BillableCargoMapper {
             """)
     @ResultMap("billableCargo")
     List<BillableCargoRecord> selectAllBillable();
-
-    /** 発行済みの請求がある予約は対象から外す（billingms 側で除く）。 */
-    static BillableCargo toDomain(BillableCargoRecord row) {
-        return row == null ? null : row.toBillableCargo();
-    }
 }

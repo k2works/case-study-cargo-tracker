@@ -309,6 +309,44 @@ class BillingControllerTest {
     }
 
     @Nested
+    @DisplayName("予約サービスに届かないとき（IT11 レビュー 中）")
+    class BookingServiceDown {
+
+        /**
+         * <strong>500 にしない。</strong>
+         *
+         * <p>経理担当者には「一覧が壊れた」としか見えず、待てば直るのか自分の操作が
+         * 悪いのかが分からない。<strong>どちらの分岐で落ちたか</strong>で判定する
+         * ——経過時間では判別できない。
+         */
+        @Test
+        @DisplayName("予約サービスに届かないときは 503 と、届いていないことを返す")
+        void returnsServiceUnavailableWhenBookingServiceIsDown() throws Exception {
+            when(calculateCharge.billable()).thenThrow(
+                    new org.springframework.web.client.ResourceAccessException("接続できません"));
+
+            mockMvc.perform(asAccountant(get("/api/v1/billing/unbilled")))
+                    .andExpect(status().isServiceUnavailable())
+                    .andExpect(jsonPath("$.message").value(
+                            org.hamcrest.Matchers.containsString("予約サービスに接続できない")));
+        }
+
+        /** 相手が 5xx を返したときも同じ扱いにする。 */
+        @Test
+        @DisplayName("予約サービスが 5xx を返すときも 503 にする")
+        void returnsServiceUnavailableWhenBookingServiceFails() throws Exception {
+            when(calculateCharge.calculate("BKG-2026000007")).thenThrow(
+                    org.springframework.web.client.HttpServerErrorException.create(
+                            org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR,
+                            "boom", org.springframework.http.HttpHeaders.EMPTY,
+                            new byte[0], null));
+
+            mockMvc.perform(asAccountant(get("/api/v1/billing/calculations/BKG-2026000007")))
+                    .andExpect(status().isServiceUnavailable());
+        }
+    }
+
+    @Nested
     @DisplayName("一覧と詳細")
     class Listing {
 

@@ -101,8 +101,6 @@ export type ChargeCalculation = {
   discountAmount: Money | null
   /** 誤配の記録（21-6 の根拠）。無ければ `null`。 */
   misroute: { at: string; locationUnLocode: string; locationName: string | null } | null
-  /** 未解決・解決済みの例外（21-6 の根拠）。 */
-  exceptions: { type: string; typeLabel: string; occurredAt: string; description: string }[]
   /** キャンセル料（US30-9）。キャンセルされていなければ `null`。 */
   cancellationFee: {
     bookingStatusAtCancel: string

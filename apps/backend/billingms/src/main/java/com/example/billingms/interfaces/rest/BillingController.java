@@ -132,6 +132,24 @@ public class BillingController {
         }
     }
 
+    /**
+     * 予約サービス（bookingms）に届かないときの応答（IT11 レビュー 中・xp-architect）。
+     *
+     * <p><strong>500 にしない。</strong>経理担当者には「一覧が壊れた」としか見えず、
+     * 待てば直るのか自分の操作が悪いのかが分からない。<strong>相手に届いていない</strong>
+     * ことを言う。
+     */
+    @org.springframework.web.bind.annotation.ExceptionHandler({
+            org.springframework.web.client.ResourceAccessException.class,
+            org.springframework.web.client.HttpServerErrorException.class})
+    public ResponseEntity<java.util.Map<String, String>> bookingServiceUnavailable(
+            Exception error) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(java.util.Map.of("message",
+                        "予約サービスに接続できないため、料金の情報を取得できません。"
+                                + "しばらく待って開き直してください。"));
+    }
+
     private void requireAccountant(String userId, String roles) {
         if (!AuthenticatedUser.of(userId, roles).hasAnyRole(Role.ROLE_ACCOUNTANT)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "この操作を行う権限がありません");

@@ -14,11 +14,6 @@ spring:
     locations: classpath:db/migration
   jackson:
     time-zone: Asia/Tokyo
-  rabbitmq:
-    host: ${RABBITMQ_HOST:localhost}
-    port: ${RABBITMQ_PORT:5672}
-    username: ${RABBITMQ_USERNAME:guest}
-    password: ${RABBITMQ_PASSWORD:guest}
 
 server:
   port: ${PORT:8086}

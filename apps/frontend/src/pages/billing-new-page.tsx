@@ -149,10 +149,7 @@ export function BillingNewPage() {
         </section>
       )}
 
-      <AdjustmentEvidence
-        misroute={calculation.misroute}
-        exceptions={calculation.exceptions}
-      />
+      <AdjustmentEvidence misroute={calculation.misroute} />
 
       <section aria-labelledby="adjustment-heading" className="space-y-3">
         <h2 id="adjustment-heading" className="text-lg font-semibold">
