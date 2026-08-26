@@ -1489,3 +1489,101 @@ test.describe('IT10 実環境（誤配の検知と再設計）', () => {
     ).toBeGreaterThan(0)
   })
 })
+
+/**
+ * 精算（US21・US22・IT11）。
+ *
+ * <p><strong>経理担当者が初めて仕事をする。</strong>ロールは IT1 から存在するが、
+ * 開いている画面が 1 つも無い状態が 10 イテレーション続いていた。
+ *
+ * <p>ここで確かめるのは<strong>実物での 1 往復</strong>である——billingms が
+ * bookingms を呼び、料金を算出し、精算書を発行するまで。MSW は仕様の写しであり、
+ * 写し間違いはモックが緑のままでは分からない。
+ */
+test.describe('精算（実バックエンド）', () => {
+  async function accountantHeaders(
+    request: APIRequestContext,
+  ): Promise<{ Authorization: string }> {
+    const login = await request.post('/api/v1/auth/login', {
+      data: { userId: 'accountant01', password: 'password' },
+    })
+    expect(login.ok()).toBeTruthy()
+    return { Authorization: `Bearer ${(await login.json()).token}` }
+  }
+
+  /**
+   * <strong>引取が終わっていない予約は断られる</strong>（[ADR-027] 決定 5）。
+   *
+   * <p>画面で出し分けるだけでは守れない——URL を直接開かれる。
+   */
+  test('引取が終わっていない予約の料金は、実物でも算出できない', async ({ request }) => {
+    const bookingId = await ensureBookingWaitingForRouting(request)
+    const headers = await accountantHeaders(request)
+
+    const calculation = await request.get(
+      `/api/v1/billing/calculations/${encodeURIComponent(bookingId)}`,
+      { headers },
+    )
+
+    expect(
+      calculation.status(),
+      '運び終える前の予約に料金を出そうとして通っている',
+    ).toBe(409)
+  })
+
+  /**
+   * <strong>経理担当者以外は精算を扱えない。</strong>
+   *
+   * <p>請求の金額を決めるのは経理であり、営業とは職掌が違う。
+   */
+  test('営業担当者は、実物でも精算を扱えない', async ({ request }) => {
+    const { headers } = await salesApi(request)
+
+    const unbilled = await request.get('/api/v1/billing/unbilled', { headers })
+
+    expect(unbilled.status(), '営業が精算を読めている').toBe(403)
+  })
+
+  /**
+   * <strong>経理担当者が画面から精算管理へ辿り着ける</strong>（Try 5）。
+   *
+   * <p>画面単体のテストはルートガードを通らないため、リンクが存在することは
+   * 確かめられても、<strong>押せることは確かめられない</strong>。
+   */
+  test('経理担当者は、ダッシュボードから精算管理へ辿り着ける', async ({ page }) => {
+    await page.goto('/login')
+    await page.getByLabel('利用者 ID').fill('accountant01')
+    await page.getByLabel('パスワード').fill('password')
+    await page.getByRole('button', { name: 'ログイン' }).click()
+    await expect(page).toHaveURL(/\/dashboard/)
+
+    await expect(
+      page.getByRole('heading', { name: '経理ダッシュボード' }),
+      '経理担当者のダッシュボードが出ていない',
+    ).toBeVisible()
+
+    await page.getByRole('link', { name: '料金を算出する' }).click()
+
+    await expect(page, '精算管理を開けていない').toHaveURL(/\/billing/)
+    await expect(page.getByRole('heading', { name: '精算管理' })).toBeVisible()
+  })
+
+  /**
+   * <strong>料金算出の入力が bookingms から届く</strong>（[ADR-027] 決定 7）。
+   *
+   * <p>ACL が実物で往復することを確かめる。契約テストは<strong>両側が同じ形を
+   * 期待していること</strong>までしか見ない——実際に繋がるかは通してみないと分からない
+   * （IT5 は名乗りを忘れ、実環境の往復を通すまで誰も気づかなかった）。
+   */
+  test('料金未算出の一覧が、実物の bookingms から届く', async ({ request }) => {
+    const headers = await accountantHeaders(request)
+
+    const unbilled = await request.get('/api/v1/billing/unbilled', { headers })
+
+    expect(
+      unbilled.status(),
+      `bookingms への往復が通っていない: ${await unbilled.text()}`,
+    ).toBe(200)
+    expect(Array.isArray(await unbilled.json())).toBeTruthy()
+  })
+})
