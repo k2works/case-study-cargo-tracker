@@ -165,13 +165,18 @@ trackingms 側で「予定ルート外か」を判定し直すと、旅程の写
 | 決定 | 検査 | 壊して赤を確認 |
 | :--- | :--- | :--- |
 | 1 判定は handlingms・新しいイベントを作らない | `AdvanceBookingUseCaseTest#marksTheCargoAsMisrouted` / `#stillAdvancesTheStatusWhenMisrouted`・`DetectMisrouteUseCaseTest#ignoresPlannedHandling`・`HandlingEventSubscriptionScopeTest#doesNotCallBackIntoHandling` | **済**（誤配を記録しない／誤配だと状態を進めない／予定どおりでも起票する／handlingms を参照する、の 4 通りで赤） |
-| 2 `MISROUTED` を足す・述語がすべて扱う | `RoutingStatusTest#hasTheAgreedValues` / `#opensMisroutedCargoToTheRoutingPlanner` | **済**（値を足す前に赤・述語から落とすと赤） |
+| 2 `MISROUTED` を足す・述語がすべて扱う | `RoutingStatusTest#hasTheAgreedValues` / `#opensMisroutedCargoToTheRoutingPlanner` / `#decidesVisibilityForEveryStatus`・`RoutingStatus#visibleToRoutingPlanner` の `switch` 式 | **済**（値を足す前に赤・述語から落とすと赤・**値を足すとコンパイルが止まる**）。**IT11 で直した**——「述語がすべての値を明示的に扱う」と決めていながら、実装は `this != NOT_ROUTED` の否定リストで、**足した値が自動的に「開く」方向へ倒れていた**。`switch` 式（`default` なし）にして、値を足した時点でコンパイルが止まる形にした |
 | 3 誤配の事実は解決後も残る | `MisrouteTest#keepsTheFirstMisroute` / `#doesNotTouchCancelledCargo`・`CargoPersistenceIntegrationTest#keepsTheMisrouteAcrossAReload`・`MisrouteTest.WhenReassigning#keepsTheMisrouteRecord` | **済**（最後の誤配で上書き／キャンセル済みも動かす／`withItinerary` で落とす、の 3 通りで赤。**3 つ目は実際に落としていた**） |
 | 4 現在地を出発地とする・目的地と期限を引き継ぐ | `MisrouteTest.WhenReassigning#rejectsAnItineraryFromTheOriginalOrigin` / `#rejectsAnItineraryToAnotherDestination` | **済**（出発地を元の予約から取ると赤） |
 | 4b 再設計は `IN_TRANSIT` のまま・確定から戻さない | `MisrouteTest.WhenReassigning#keepsTheBookingStatusWhileRestoringTheRouting` | **済**（通常の割り当てと同じ動きにすると赤） |
 | 5 期限超過の差分は目的地の暦で | `MisrouteTest.WhenReassigning#tellsHowManyDaysBeyondTheDeadline` / `#judgesTheDeadlineInTheDestinationCalendar`・`route-design-page.test.tsx` の期限超過 2 件 | **済**（UTC で判断する／日数を数えない／超過を出さずに遷移する、の 3 通りで赤） |
 | 6 入口は予約詳細と例外一覧の両方・ロール別の到達性 | `booking-detail-page.test.tsx` の誤配 4 件・`tracking-exceptions-page.test.tsx` の誤配 2 件 | **済**（場所を出さない／ロールで出し分けない／例外一覧の導線を消す、の 3 通りで赤） |
-| 7 通知は代替であることを画面が言う | `route-design-page.test.tsx#期限を超えるときは、何日超えるかを出して遷移を止める` | **済**（超過を出さずに遷移すると赤） |
+| 7 通知は代替であることを画面が言う | `route-design-page.test.tsx#期限を超えるときは、何日超えるかを出して遷移を止める`・`booking-detail-page.test.tsx#期限を超えるなら、何日超えるかと、伝えるのが営業であることを出す` | **済**（**「荷主へは自動で通知されません」の一文を消すと、2 つの画面の検査がそれぞれ赤**）。**IT11 で直した**——この欄には決定 5 の壊し方（超過を出さずに遷移する）が書いてあり、決定 7 を壊したことになっていなかった |
+
+> **決定 7 の欄には、決定 5 の壊し方が書いてあった**（IT11 返済枠 0.5 で気づいた）。
+> 超過の日数を出さずに遷移させるのは決定 5 の破り方であり、通知が代替であることを
+> 画面が言うかどうか（決定 7）とは別である。**壊し方を書き写すときに、隣の行から
+> 持ってきていた。** 実際に一文を消して、2 つの画面の検査が赤になることを確かめた。
 
 > **決定 6 の検査は、最初は判別しなかった。** 外れた場所と現在地を同じ港（SGSIN）で書いて
 > いたため、片方を落としてももう片方が同じ文字列を出していた。別の港にして確認し直した。

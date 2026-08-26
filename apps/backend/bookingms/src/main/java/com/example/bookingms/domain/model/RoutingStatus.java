@@ -47,7 +47,23 @@ public enum RoutingStatus {
      * （組み直すのは経路設計者である——落とすと直す人に見えない）。
      */
     public boolean visibleToRoutingPlanner() {
-        return this != NOT_ROUTED;
+        // **すべての値を明示的に扱う**（[ADR-026] 決定 2）。default は置かない——
+        // 値を足したときにここでコンパイルが止まり、扱いを決めるまで先へ進めない。
+        // 否定リスト（this != NOT_ROUTED）に戻すと、足した値が自動的に「開く」方向へ
+        // 倒れる。開くべきでない値を足したとき、誰も気づかないまま経路設計者の一覧に
+        // 現れることになる
+        return switch (this) {
+            // 引き渡された予約。経路設計者の作業待ちであり、これが本来の対象
+            case ROUTING_REQUESTED -> true;
+            // 経路が決まった予約。差し替えのために開く
+            case ROUTED -> true;
+            // 営業へ差し戻した予約。話がついたあとに続きをするために開く
+            case CONSULTATION_REQUESTED -> true;
+            // 誤配の予約。組み直すのは経路設計者である——落とすと直す人に見えない
+            case MISROUTED -> true;
+            // まだ何も始まっていない。依頼された予約だけを取り出せることが目的なので落とす
+            case NOT_ROUTED -> false;
+        };
     }
 
     /** 経路設計者に開いてよい状態の一覧。一覧の絞り込みはここから導く。 */
