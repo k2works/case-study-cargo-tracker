@@ -20,6 +20,7 @@
 import { HttpResponse, http } from 'msw'
 
 import { API_PATHS } from '../../config/api'
+import { roundYen } from '../../features/billing/money'
 import { bookings, shippers } from '../data'
 import type { MockBooking } from '../data'
 
@@ -98,9 +99,15 @@ export const invoices: MockInvoice[] = []
 
 let invoiceSequence = 0
 
-/** 円。**丸めるのはここ 1 か所だけ**（決定 2）。呼び出し側が丸めると結果が場所ごとに変わる。 */
-function yen(value: number) {
-  return { value: Math.round(value), currency: 'JPY' }
+/**
+ * 円。**丸めるのはここ 1 か所だけ**（決定 2）。呼び出し側が丸めると結果が場所ごとに変わる。
+ *
+ * <p>向きは画面と同じ `roundYen` に委ねる——サーバの `HALF_UP` は 0 から遠いほうへ
+ * 丸めるため、`Math.round` のままでは<strong>調整で小計が負になったとき</strong>
+ * （大幅な減額・補償）にモックだけ 1 円ずれる。
+ */
+export function yen(value: number) {
+  return { value: roundYen(value), currency: 'JPY' }
 }
 
 function shipperOf(booking: MockBooking) {
@@ -108,9 +115,9 @@ function shipperOf(booking: MockBooking) {
 }
 
 /** 基本料金の根拠（決定 1）。**距離ではなく区間数を使う。** */
-function basisOf(booking: MockBooking) {
+export function basisOf(booking: MockBooking) {
   const legCount = booking.itinerary?.length ?? 0
-  const weightFactor = Math.max(booking.weightKg / 1000, MIN_WEIGHT_FACTOR)
+  const weightFactor = Math.max(weightFactorOf(booking.weightKg), MIN_WEIGHT_FACTOR)
   return {
     baseFare: yen(BASE_FARE),
     legCount,
@@ -122,7 +129,22 @@ function basisOf(booking: MockBooking) {
   }
 }
 
-function baseAmountOf(basis: ReturnType<typeof basisOf>) {
+/**
+ * 重量係数（`TransportCharge.weightFactor` と同じ）。
+ *
+ * <p><strong>小数第 4 位で丸める。</strong>サーバは `scale 4` の `HALF_UP` で持つ。
+ * 丸めずに掛けると、端数のある重量でモックだけ違う金額になる。
+ *
+ * <p><strong>丸めの境目そのものは一致させられない。</strong>サーバは `BigDecimal` で
+ * 10 進数を正確に持つが、こちらは 2 進の浮動小数であり、1000.05 のような値は
+ * そもそも正確に持てない。一致するのは境目でない値である——境目の 0.00005 単位が
+ * 効くほどの重量差は業務上意味を持たない（重量は `NUMERIC(10,3)`）。
+ */
+function weightFactorOf(weightKg: number) {
+  return Math.round((weightKg / 1000) * 10_000) / 10_000
+}
+
+export function baseAmountOf(basis: ReturnType<typeof basisOf>) {
   return yen(BASE_FARE * basis.legFactor * basis.weightFactor * basis.cargoTypeFactor)
 }
 
