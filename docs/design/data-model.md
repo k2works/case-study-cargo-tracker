@@ -41,7 +41,7 @@ take-3 のデータモデルを基礎とし、本プロジェクトの要件差�
 
 > **`location` テーブルの重複について**: Shared Domain の `Location`（UN/LOCODE）は共有カーネルとして定義されるが、Database per Service パターンでは各サービスが自身の DB 内に `location` テーブルを保持する。初期データは共通の Flyway シードスクリプトから投入し、データの同期は必要に応じてイベントで行う。
 >
-> **形（[ADR-010](../adr/010-location-master-shape.md)）**: 主キーはサロゲート（`id BIGSERIAL`）、`unlocode` に UNIQUE 制約を置く。参照側（`cargo` 等）は `unlocode` で持つ。`time_zone` は **NOT NULL**（到着期限を目的地の暦で判断するために必要で、後から必須にすると既存行が読めなくなる）。マスタの正は bookingms が持ち、他サービスへの複製の同期方法は [ADR-014](../adr/014-location-replica-sync.md) で決めた。同一内容の種データマイグレーションを地点を使う全サービスへ配り、ずれは `LocationSeedReplicaTest`（shared）が落とす。実行時のイベント同期は行わない。
+> **形（[ADR-010](../adr/010-location-master-shape.md)）**: 主キーはサロゲート（`id BIGSERIAL`）、`unlocode` に UNIQUE 制約を置く。参照側（`cargo` 等）は `unlocode` で持つ。`time_zone` は **NOT NULL**（到着期限を目的地の暦で判断するために必要で、後から必須にすると既存行が読めなくなる）。`region` は **NOT NULL**（`DOMESTIC` / `NEAR_SEA` / `OCEAN`。IT12 で追加）——**距離の代わりに区間係数を決める**（[ADR-027](../adr/027-transport-charge-calculation.md) 決定 1 の改訂）。列を足すときは既存行を埋めてから NOT NULL にする。マスタの正は bookingms が持ち、他サービスへの複製の同期方法は [ADR-014](../adr/014-location-replica-sync.md) で決めた。同一内容の種データマイグレーションを地点を使う全サービスへ配り、ずれは `LocationSeedReplicaTest`（shared）が落とす。実行時のイベント同期は行わない。
 
 ---
 
@@ -391,6 +391,7 @@ entity "location\n（場所）" as location {
   * name : VARCHAR(100) <<NOT NULL>>
   country_code : VARCHAR(2)
   * time_zone : VARCHAR(50) <<NOT NULL>>
+  * region : VARCHAR(20) <<NOT NULL>>
   * created_at : TIMESTAMPTZ <<NOT NULL>>
   * updated_at : TIMESTAMPTZ <<NOT NULL>>
 }
@@ -534,6 +535,7 @@ entity "location\n（場所）" as location {
   * name : VARCHAR(100) <<NOT NULL>>
   * country_code : VARCHAR(2) <<NOT NULL>>
   * time_zone : VARCHAR(50) <<NOT NULL>>
+  * region : VARCHAR(20) <<NOT NULL>>
   * created_at : TIMESTAMPTZ <<NOT NULL>>
   * updated_at : TIMESTAMPTZ <<NOT NULL>>
 }
@@ -593,6 +595,7 @@ entity "location\n（場所）" as location {
   * name : VARCHAR(100) <<NOT NULL>>
   * country_code : VARCHAR(2) <<NOT NULL>>
   * time_zone : VARCHAR(50) <<NOT NULL>>
+  * region : VARCHAR(20) <<NOT NULL>>
 }
 
 entity "tracking_activity\n（追跡レコード）" as tracking_activity {
@@ -687,6 +690,7 @@ entity "location\n（場所）" as location {
   * name : VARCHAR(100) <<NOT NULL>>
   * country_code : VARCHAR(2) <<NOT NULL>>
   * time_zone : VARCHAR(50) <<NOT NULL>>
+  * region : VARCHAR(20) <<NOT NULL>>
 }
 
 entity "handling_activity\n（荷役作業記録）" as handling_activity {

@@ -60,6 +60,9 @@ class LocationSeedReplicaTest {
             "(UPDATE\\s+location\\b.*?;)|(DELETE\\s+FROM\\s+location\\b.*?;)",
             Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
 
+    /** マイグレーションの版番号。 */
+    private static final Pattern VERSION = Pattern.compile("^V(\\d+)__");
+
     @Test
     @DisplayName("location を持つ全サービスの種データが正と一致する")
     void everyReplicaMatchesTheMaster() throws IOException {
@@ -162,7 +165,13 @@ class LocationSeedReplicaTest {
             return "";
         }
         try (Stream<Path> files = Files.list(dir)) {
-            List<Path> sorted = files.filter(p -> p.toString().endsWith(".sql")).sorted().toList();
+            // **版番号は数値で並べる。**文字列順だと "V10" が "V2" より前に来るため、
+            // 版番号が 2 桁になったサービスだけ、あとから足した ALTER が CREATE より
+            // 前に並ぶ。**内容は同じなのに、並びの違いだけで複製がずれたことになる**
+            List<Path> sorted = files.filter(p -> p.toString().endsWith(".sql"))
+                    .sorted(java.util.Comparator.comparingInt(
+                            LocationSeedReplicaTest::versionOf))
+                    .toList();
             StringBuilder all = new StringBuilder();
             for (Path file : sorted) {
                 all.append(Files.readString(file)).append('\n');
@@ -187,6 +196,15 @@ class LocationSeedReplicaTest {
             }
         }
         return String.join("\n", rows.stream().sorted().toList());
+    }
+
+    /** ファイル名から版番号を取り出す（`V12__foo.sql` → 12）。 */
+    private static int versionOf(Path file) {
+        Matcher matcher = VERSION.matcher(file.getFileName().toString());
+        if (!matcher.find()) {
+            throw new IllegalStateException("版番号を読み取れないマイグレーション: " + file);
+        }
+        return Integer.parseInt(matcher.group(1));
     }
 
     private String stripComments(String sql) {
