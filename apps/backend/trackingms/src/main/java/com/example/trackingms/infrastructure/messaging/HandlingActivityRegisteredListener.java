@@ -30,7 +30,9 @@ public class HandlingActivityRegisteredListener {
                 message.locationUnLocode(), message.completionTime());
 
         // **先に状態を進めてから起票する**（US28-2）。順序を逆にすると、例外を起票した
-        // 直後に荷役の状態で上書きされ、**未解決の例外が一覧から消える**
+        // 直後に荷役の状態で上書きされ、**未解決の例外が一覧から消える**。
+        // 順序は `HandlingActivityRegisteredListenerTest` が固定している——
+        // 逆にすると赤になる（コメントだけでは、逆順にしても何も落ちなかった）
         detectMisroute.onHandlingActivityRegistered(message.trackingNumber(),
                 message.locationUnLocode(), message.completionTime(), message.offRoute());
     }
