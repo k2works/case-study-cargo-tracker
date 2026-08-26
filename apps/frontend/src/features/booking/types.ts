@@ -47,7 +47,30 @@ export const CARGO_TYPE_LABELS: Record<CargoType, string> = {
   REFRIGERATED: '冷凍・冷蔵貨物',
 }
 
-export const BOOKING_STATUS_LABELS: Record<string, string> = {
+/**
+ * 予約の状態。**バックエンドの `BookingStatus` と同じ値を持つ。**
+ *
+ * ユニオン型にするのは、**ラベルの付け忘れを型検査で止めるため**（IT11 返済枠 0.7）。
+ * `Record<string, string>` だと、値を足してラベルを書き忘れても誰も気づかない
+ * ——IT10 は画面のキャプチャを撮って初めて 3 つの欠落に気づいた。
+ */
+export type BookingStatus =
+  | 'PRELIMINARY'
+  | 'ROUTE_PROPOSED'
+  | 'ROUTE_NOTIFIED'
+  | 'CONFIRMED'
+  | 'TRACKING_ISSUED'
+  | 'IN_TRANSIT'
+  | 'DELIVERED'
+  | 'CANCELLED'
+
+/**
+ * 予約の状態の表示名。生の英字を出すと、利用者は自分の予約がどうなっているか読めない。
+ *
+ * <p>**`Record<BookingStatus, string>` にしてある。** 値を足してラベルを書き忘れると
+ * `tsc -b` が止まる（`npm run verify` に入っている）。
+ */
+export const BOOKING_STATUS_LABELS: Record<BookingStatus, string> = {
   PRELIMINARY: '仮受付',
   /** 経路が決まり、荷主に提示できる状態。**確定ではない**（確定は荷主の合意を経た別の作業）。 */
   ROUTE_PROPOSED: '経路提案中',
@@ -61,11 +84,31 @@ export const BOOKING_STATUS_LABELS: Record<string, string> = {
 }
 
 /**
+ * 予約の状態の表示名を引く。
+ *
+ * **知らない値はそのまま返す。** サーバが先に新しい状態を返し始めることはありうる
+ * （デプロイの順序）。そこで空欄や「不明」を出すと、利用者は自分の予約が消えたと読む。
+ *
+ * <p>網羅は型が守っている（{@link BOOKING_STATUS_LABELS}）。この関数はその上で、
+ * **知らない値が来たときの振る舞い**を 1 か所に決めるためにある。
+ */
+export function bookingStatusLabel(status: string): string {
+  return BOOKING_STATUS_LABELS[status as BookingStatus] ?? status
+}
+
+/**
  * 経路の状態の表示名。生の英字を出すと、利用者は自分の予約がどうなっているか読めない。
  *
  * 一覧と詳細で別々に持つと、片方だけ言葉を直したときに同じ状態が 2 つの名前で呼ばれる。
  */
-export const ROUTING_STATUS_LABELS: Record<string, string> = {
+export type RoutingStatus =
+  | 'NOT_ROUTED'
+  | 'ROUTING_REQUESTED'
+  | 'ROUTED'
+  | 'CONSULTATION_REQUESTED'
+  | 'MISROUTED'
+
+export const ROUTING_STATUS_LABELS: Record<RoutingStatus, string> = {
   NOT_ROUTED: '未依頼',
   ROUTING_REQUESTED: '経路設計を依頼済み',
   ROUTED: '経路確定',
@@ -238,4 +281,9 @@ export type BookingRequest = {
   properShippingName: string | null
   minCelsius: number | null
   maxCelsius: number | null
+}
+
+/** 経路の状態の表示名を引く。知らない値はそのまま返す（{@link bookingStatusLabel} と同じ理由）。 */
+export function routingStatusLabel(status: string): string {
+  return ROUTING_STATUS_LABELS[status as RoutingStatus] ?? status
 }

@@ -3,9 +3,10 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { useBookings } from '../features/booking/queries'
 import { formatBusinessDateTime } from '../lib/business-time'
 import {
-  BOOKING_STATUS_LABELS,
+  bookingStatusLabel,
   CARGO_TYPE_LABELS,
   ROUTING_STATUS_LABELS,
+  routingStatusLabel,
   type CargoType,
 } from '../features/booking/types'
 
@@ -214,10 +215,10 @@ export function BookingListPage() {
                   </td>
                   <td className="border-b px-4 py-2">{booking.shipperName ?? '—'}</td>
                   <td className="border-b px-4 py-2">
-                    {BOOKING_STATUS_LABELS[booking.bookingStatus] ?? booking.bookingStatus}
+                    {bookingStatusLabel(booking.bookingStatus)}
                   </td>
                   <td className="border-b px-4 py-2">
-                    {ROUTING_STATUS_LABELS[booking.routingStatus] ?? booking.routingStatus}
+                    {routingStatusLabel(booking.routingStatus)}
                   </td>
                   <td className="border-b px-4 py-2">
                     {(booking.routeNotifiedAt ?? null) === null

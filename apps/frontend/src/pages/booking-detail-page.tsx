@@ -12,9 +12,9 @@ import {
   useReviseSchedule,
 } from "../features/booking/queries";
 import {
-  BOOKING_STATUS_LABELS,
+  bookingStatusLabel,
   CARGO_TYPE_LABELS,
-  ROUTING_STATUS_LABELS,
+  routingStatusLabel,
   can,
 } from "../features/booking/types";
 import { formatBusinessDateTime } from "../lib/business-time";
@@ -236,15 +236,13 @@ export function BookingDetailPage() {
             <tr className="border-b border-gray-200">
               <th className="w-48 px-3 py-2 text-left">予約</th>
               <td className="px-3 py-2">
-                {BOOKING_STATUS_LABELS[booking.bookingStatus] ??
-                  booking.bookingStatus}
+                {bookingStatusLabel(booking.bookingStatus)}
               </td>
             </tr>
             <tr className="border-b border-gray-200">
               <th className="px-3 py-2 text-left">経路</th>
               <td className="px-3 py-2">
-                {ROUTING_STATUS_LABELS[booking.routingStatus] ??
-                  booking.routingStatus}
+                {routingStatusLabel(booking.routingStatus)}
               </td>
             </tr>
           </tbody>
@@ -382,8 +380,7 @@ export function BookingDetailPage() {
             booking.routingStatus !== "CONSULTATION_REQUESTED" && (
               <p className="text-sm text-gray-700">
                 この予約はすでに引き渡し済みです（
-                {ROUTING_STATUS_LABELS[booking.routingStatus] ??
-                  booking.routingStatus}
+                {routingStatusLabel(booking.routingStatus)}
                 ）。
               </p>
             )}
