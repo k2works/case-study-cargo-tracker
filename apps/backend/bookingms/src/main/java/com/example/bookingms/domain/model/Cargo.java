@@ -513,6 +513,11 @@ public final class Cargo {
      *
      * @throws IllegalStateException 引取済でないとき
      */
+    /** 精算が済んでいるか。**再試行を断らないための判定**（[ADR-028] 決定 1）。 */
+    public boolean isSettled() {
+        return status.booking() == BookingStatus.SETTLED;
+    }
+
     public Cargo settle() {
         if (!status.booking().canAdvanceTo(BookingStatus.SETTLED)) {
             throw new IllegalStateException(

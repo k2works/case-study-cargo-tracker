@@ -45,6 +45,18 @@ export function InvoiceDetailPage() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">請求書詳細</h1>
 
+      {/* **紙に出す宛名と発行元。**画面では場所を取るだけなので、印刷のときだけ出す。
+          振込先の口座は、まだシステムが持っていない（[13 章の申し送り]）——
+          持っていないものを紙に書けないので、そこは運用で添える */}
+      <div className="hidden print:block">
+        <p className="text-lg font-bold">{`${invoice.shipperName} 御中`}</p>
+        <p className="mt-4 text-sm">CargoTracker 株式会社</p>
+        <p className="text-sm">{`請求番号 ${invoice.invoiceNumber}`}</p>
+        <p className="text-sm">
+          {`発行日 ${formatBusinessDateTime(invoice.issuedAt)} ／ 支払期限 ${invoice.dueDate ?? "—"}`}
+        </p>
+      </div>
+
       <dl className="grid grid-cols-2 gap-2 rounded border border-gray-200 p-4 md:grid-cols-4">
         <div>
           <dt className="text-sm text-gray-600">請求番号</dt>
@@ -190,7 +202,7 @@ export function InvoiceDetailPage() {
 
       {/* **通知は代替である。** メールの仕組みは無い（US23 以降）。
           書かないと、担当者は「発行したから荷主に届いた」と受け取って連絡をしない */}
-      <p className="rounded border border-gray-300 bg-gray-50 p-3 text-sm">
+      <p className="print-hide rounded border border-gray-300 bg-gray-50 p-3 text-sm">
         <strong>荷主へは自動で通知されません。</strong>
         {'請求内容は担当者からお伝えください。'}
       </p>
@@ -198,7 +210,7 @@ export function InvoiceDetailPage() {
       {/* **入金の確認が手作業であることを言う**（受入基準 23-3 の代替）。
           書かないと、経理担当者は「連携が壊れている」と受け取って待ち続ける */}
       {invoice.paymentStatus === "PENDING" && invoice.voidedAt === null && (
-        <div className="space-y-2 rounded border border-gray-300 bg-gray-50 p-3 text-sm">
+        <div className="print-hide space-y-2 rounded border border-gray-300 bg-gray-50 p-3 text-sm">
           <p>
             <strong>決済機関とは連携していません。</strong>
             {'入金は手で確認します（通帳・入金明細を見て入力してください）。'}
@@ -214,7 +226,7 @@ export function InvoiceDetailPage() {
 
       {/* **訂正は取り消して出し直す**（[ADR-028] 決定 3）。金額は動かさない（決定 4） */}
       {invoice.voidedAt === null && invoice.paymentStatus === "PENDING" && (
-        <section className="space-y-2 rounded border border-gray-300 p-3 text-sm">
+        <section className="print-hide space-y-2 rounded border border-gray-300 p-3 text-sm">
           <p>
             <strong>発行した請求書の金額は変えられません。</strong>
             {'誤って発行した場合は取り消し、正しい内容で出し直してください。'}
@@ -263,7 +275,7 @@ export function InvoiceDetailPage() {
         </section>
       )}
 
-      <div className="flex items-center gap-4 print:hidden">
+      <div className="print-hide flex items-center gap-4">
         {/* **画面の数字がそのまま紙になる**（経理担当者の申し送り③）。印刷が無いと、
             数字を書き写して表計算で作ることになり、システムの金額と実際に送った
             請求書が食い違い始める */}

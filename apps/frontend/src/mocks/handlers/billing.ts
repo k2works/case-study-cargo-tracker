@@ -58,6 +58,29 @@ const REGION_LABELS: Record<string, string> = {
   OCEAN: '遠洋',
 }
 
+/**
+ * 貨物種別の係数。**知らない種別は断る**（本物の `CargoType.of` と同じ）。
+ *
+ * `?? 1.0` で埋めると、種別を足したときに**その貨物だけ一般貨物の運賃**になる
+ * ——本物は断るので、モックだけが甘い状態になる。
+ */
+function cargoTypeFactorOf(cargoType: string) {
+  const factor = CARGO_TYPE_FACTORS[cargoType]
+  if (factor === undefined) {
+    throw new Error(`扱いを決めていない貨物種別です: ${cargoType}`)
+  }
+  return factor
+}
+
+/** 地域係数。**知らない区分は断る**（本物の `PortRegion.of` と同じ）。 */
+function regionFactorOf(region: string) {
+  const factor = REGION_FACTORS[region]
+  if (factor === undefined) {
+    throw new Error(`扱いを決めていない地域区分です: ${region}`)
+  }
+  return factor
+}
+
 /** 地点の地域区分。**知らない港は断る**——既定値に倒すと、その港だけ安く請求される。 */
 function regionOf(unLocode: string) {
   const location = LOCATIONS.find((item) => item.unLocode === unLocode)
@@ -83,12 +106,11 @@ export function estimateBaseAmount(
 ) {
   const legFactor = legs.reduce(
     (sum, leg) =>
-      sum + Math.max(REGION_FACTORS[leg.loadRegion], REGION_FACTORS[leg.unloadRegion]),
+      sum + Math.max(regionFactorOf(leg.loadRegion), regionFactorOf(leg.unloadRegion)),
     0,
   )
   const weightFactor = Math.max(weightFactorOf(weightKg), MIN_WEIGHT_FACTOR)
-  return yen(BASE_FARE * legFactor * weightFactor * (CARGO_TYPE_FACTORS[cargoType] ?? 1.0))
-    .value
+  return yen(BASE_FARE * legFactor * weightFactor * cargoTypeFactorOf(cargoType)).value
 }
 
 /** 消費税率（決定 8）。 */
@@ -242,17 +264,17 @@ export function basisOf(booking: MockBooking) {
   const legRegions = legs.map((leg) => {
     const load = regionOf(leg.loadUnLocode)
     const unload = regionOf(leg.unloadUnLocode)
-    return REGION_FACTORS[load] >= REGION_FACTORS[unload] ? load : unload
+    return regionFactorOf(load) >= regionFactorOf(unload) ? load : unload
   })
   const heaviest = legRegions.reduce<string | null>(
     (left, right) =>
-      left === null || REGION_FACTORS[right] > REGION_FACTORS[left] ? right : left,
+      left === null || regionFactorOf(right) > regionFactorOf(left) ? right : left,
     null,
   )
   return {
     baseFare: yen(BASE_FARE),
     legCount,
-    legFactor: legRegions.reduce((sum, region) => sum + REGION_FACTORS[region], 0),
+    legFactor: legRegions.reduce((sum, region) => sum + regionFactorOf(region), 0),
     region: heaviest,
     regionLabel: heaviest === null ? null : REGION_LABELS[heaviest],
     weightKg: booking.weightKg,

@@ -20,6 +20,10 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p><strong>入金を確認したら予約を閉じる</strong>（受入基準 23-4）。予約の状態を
  * 動かすのは bookingms であり、こちらは通知するだけである。
+ *
+ * <p><strong>ただしキャンセルされた予約は閉じない。</strong>精算の対象にはキャンセル済みも
+ * 並ぶ（キャンセル料を締めるため）が、予約の側は引取済からしか「精算済」へ進めない
+ * ——運んでいない予約に精算済は無い。
  */
 public class SettleInvoiceUseCase {
 
@@ -54,7 +58,14 @@ public class SettleInvoiceUseCase {
                 PaymentMethod.of(command.method()), command.transactionReference()));
 
         invoices.confirmPayment(confirmed);
-        bookings.markSettled(confirmed.cargoBookingId().value());
+
+        // **キャンセルされた予約は「精算済」にしない**（[ADR-028] 決定 1）。
+        // 予約の側は引取済からしか精算済へ進めない——知らせると相手が断り、
+        // **入金の記録ごと巻き戻って、キャンセル料を永久に記録できなくなる**
+        // （IT12 レビュー 高 1）。キャンセル料の請求は、請求書の側だけで閉じる
+        if (!confirmed.forCancelledBooking()) {
+            bookings.markSettled(confirmed.cargoBookingId().value());
+        }
         return confirmed;
     }
 

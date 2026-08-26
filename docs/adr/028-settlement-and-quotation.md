@@ -29,6 +29,17 @@ IT11 の完了報告書と経理担当者のレビューが、着手前に決め
 
 ### 決定 1: `CargoDeliveredEvent` は実装しない。実装するのは逆向きの 1 本（billingms → bookingms）
 
+> **追記（IT12 のレビューで直したこと）。** この 1 本には**2 つの落とし穴**があった。
+>
+> 1. **キャンセルされた予約には知らせない。** 精算の対象にはキャンセル済みも並ぶ
+>    （キャンセル料を締めるため。ADR-027 決定 5）が、予約の側は引取済からしか
+>    「精算済」へ進めない。知らせると相手が断り、**入金の記録ごと巻き戻って
+>    キャンセル料を永久に記録できなくなる**
+> 2. **受け手は冪等にする。** 通知は入金の記録と同じ取引の中で送るため、通知が
+>    届いたあとに送り手が失敗すると、予約だけが精算済で残る。そこで断ると
+>    経理担当者は何度押しても入金を記録できない。**「入金が 2 件か操作の重複か」を
+>    見分けるのは請求書の側の仕事**である（同じ請求書に二度は確認できない）
+
 精算の起点は経理担当者の操作である（[ADR-027](027-transport-charge-calculation.md) 決定 5）。
 US23 の受入基準にも自動起票は無い。**読む側の無い配線を先に敷かない**
 （[ADR-025](025-customs-declaration-and-cancellation-approval.md) 決定 3 の継承）。
@@ -113,7 +124,8 @@ ADR-027 決定 3 で `DRAFT` を混ぜなかったのと同じ理由である。
 
 - `estimate_id`（UUID）— URL と内部の識別子。**推測できないこと**に意味がある
 - `estimate_number`（`EST-YYYY` + 6 桁）— 人が読む番号。採番は
-  [ADR-011](011-invoice-numbering.md) と同じシーケンス方式
+  [ADR-011](011-invoice-numbering.md) と同じシーケンス方式。
+  **年で 1 に戻るわけではない**（請求番号と同じく、シーケンスは通し番号である）
 
 **破られたら**: UUID を電話で読み上げることになる。あるいは連番だけにすると、
 URL を 1 つ増減させて他の荷主の見積が開ける。
@@ -131,7 +143,10 @@ URL を 1 つ増減させて他の荷主の見積が開ける。
 - **外部連携を 3 つとも実装しない**（メール通知・決済機関・期限超過通知）。
   **代替であることを画面に書く**——書かないと、利用者は「壊れている」と受け取って待ち続ける
 - **BC 間の結合方向が増える**（決定 6）。bookingms ⇄ billingms の双方向になる。
-  片方が落ちると、もう片方の一部の画面が使えなくなる
+  片方が落ちると、もう片方の一部の画面が使えなくなる。
+  **より深刻なのは「両方生きているのに整合が壊れる」ほうである**——通知は入金の記録と
+  同じ取引の中で送るため、通知が届いたあとに送り手が失敗すると、予約だけが精算済で残る。
+  受け手を冪等にすることで、**もう一度押せば揃う**状態に留めている（決定 1 の追記）
 - **基準運賃 50,000 円は依然として置いた数字である。** 見積にもそのまま伝染する。
   **暫定値であることをマニュアルに 1 行書く**（いまは ADR にしか無い）
 
@@ -142,17 +157,17 @@ URL を 1 つ増減させて他の荷主の見積が開ける。
 
 | 決定 | 破られたら何が起きるか | それが起きないことの検査 |
 | :--- | :--- | :--- |
-| 1 逆向きの 1 本 | 引取済の予約が永久に閉じない | `billing.spec.ts#デモ 2`（**予約の画面で**精算済を見る）・`BookingStatusTest`（`SETTLED` を扱う場所すべてを `values()` から回る）・`SettleBookingUseCaseTest` |
-| 2 `payment` は別表 | 入金のたびに請求書の行を書き換える | `PaymentPersistenceIntegrationTest`（保存後に `invoice` の金額列が 1 つも変わらない）・`InvoiceTest.Immutability`（既存） |
+| 1 逆向きの 1 本 | 引取済の予約が永久に閉じない | `billing.spec.ts#デモ 2`（**予約の画面で**精算済を見る）・`BookingStatusTest`（`SETTLED` を扱う場所すべてを `values()` から回る）・`SettleBookingUseCaseTest`（**すでに精算済なら受け入れる**——冪等）・`SettleInvoiceUseCaseTest#キャンセル料の請求書では、予約に知らせずに入金だけ記録する` |
+| 2 `payment` は別表 | 入金のたびに請求書の行を書き換える | `InvoicePersistenceIntegrationTest#入金を確認しても、請求書の金額は 1 列も変わらない`（金額列を丸ごと比べる）・`InvoiceTest.Immutability`（既存） |
 | 3 赤伝 | 間違えた請求書が永久に残る / DB を直される | `InvoicePersistenceIntegrationTest#取り消したあと、同じ予約に出し直せる`（**新しい請求番号であることまで見る**）・`InvoiceTest#void_ は理由を要求する`・`billing.spec.ts#デモ 4` |
 | 4 取消は状態に混ぜない | 取り消し済みに催促する | `PaymentStatus` の値の名簿（既存）・`InvoiceRepository#findUnpaid` が取り消し済みを含まないことの検査 |
-| 5 `OVERDUE` は判定 | 期限超過が常に 0 件 | `InvoiceTest#overdue`（期限当日は超過でない・**日付単位で比べる**）・`OverdueCountIntegrationTest`（業務タイムゾーンの `Clock` を差し替えて件数が変わる）・`billing.spec.ts#デモ 3` |
-| 6 式は 1 か所 | 見積と請求が違う金額になる | `QuoteMatchesInvoiceIntegrationTest`（**同じ条件で見積と実料金が一致する**）・`EstimateArchitectureTest`（見積のユースケースが `RestClient` / `BillingSnapshotFinder` に依存しない）・`RestChargeQuoteFinderTest` + プロバイダ側 |
-| 7 UUID と見積番号 | UUID を読み上げる / 隣の見積が開ける | `EstimateIdTest`（UUID の形）・`EstimateNumberTest`（`EST-YYYY` + 6 桁・年をまたぐと 1 に戻る）・`estimate.spec.ts#見積番号が発行されて一覧から開ける` |
+| 5 `OVERDUE` は判定 | 期限超過が常に 0 件 | `InvoiceTest.Overdue`（期限当日は超過でない・払った/取り消した請求書は催促しない）・`SettleInvoiceUseCaseTest#期限当日は催促せず、翌日から催促する`（`Clock` を差し替えて境目を踏む）・`billing.spec.ts#デモ 3` |
+| 6 式は 1 か所 | 見積と請求が違う金額になる | `QuoteMatchesInvoiceIntegrationTest`（**同じ条件で見積と実料金が一致する**）・`HexagonalArchitectureRules#layerRules` の「application は HTTP クライアントに依存しない」（各サービスの `ArchitectureTest` が回す。**相手を呼ぶのは ACL だけ**）・`RestChargeQuoteFinderTest` + `QuoteControllerTest`（本物の式を通す）・`real-backend.spec.ts#見積の概算料金は、実物でも同じ条件の基本料金と一致する` |
+| 7 UUID と見積番号 | UUID を読み上げる / 隣の見積が開ける | `EstimateTest.Identifiers`（UUID の形・形が違えば断る・`EST-YYYY` + 6 桁）・`EstimatePersistenceIntegrationTest#見積番号は EST-YYYY と 6 桁で、重複しない`・`estimate.spec.ts#見積を作成すると、見積番号が発行されて一覧から開ける` |
 
 ## 関連
 
-- [ADR-027](027-transport-charge-calculation.md)（輸送料金の算定規則。**決定 8 が US23 へ送った税区分を本 ADR の追補で決める**）
+- [ADR-027](027-transport-charge-calculation.md)（輸送料金の算定規則。**決定 8 が US23 へ送った税区分は、ADR-027 側の「追補（IT12）」で決めた**——本 ADR には追補節は無い）
 - [ADR-011](011-invoice-numbering.md)（採番。見積番号も同じ形で採る）
 - [ADR-025](025-customs-declaration-and-cancellation-approval.md)（**読む側の無い配線を先に敷かない**を継承）
 - [ADR-014](014-location-replica-sync.md)（地点マスタの複製同期。`region` を 4 サービスに配る）

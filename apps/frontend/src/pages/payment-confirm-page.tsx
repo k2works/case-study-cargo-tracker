@@ -25,6 +25,22 @@ export function PaymentConfirmPage() {
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState("BANK_TRANSFER");
   const [reference, setReference] = useState("");
+  /**
+   * 請求額との差額を確かめたか。
+   *
+   * <p><strong>一致するのが普通である。</strong>違うのは、振込手数料を差し引かれたか
+   * 一部入金かのどちらかで、どちらも経理担当者が気づくべきことである
+   * ——気づかないまま「入金済」で閉じると、不足のまま完了した請求が積み上がる
+   * （IT12 レビュー・user 高 1）。
+   */
+  const [differenceAcknowledged, setDifferenceAcknowledged] = useState(false);
+  /** 請求額を初期値にする（打ち直しは桁を間違える機会を作るだけである）。 */
+  const [seededInvoiceId, setSeededInvoiceId] = useState("");
+
+  if (invoice !== undefined && seededInvoiceId !== invoice.invoiceNumber) {
+    setSeededInvoiceId(invoice.invoiceNumber);
+    setAmount(String(invoice.totalAmount.value));
+  }
 
   if (isLoading) {
     return <p>読み込み中です。</p>;
@@ -39,6 +55,9 @@ export function PaymentConfirmPage() {
       </div>
     );
   }
+
+  // 請求額との差額。**プラスは過入金、マイナスは不足**
+  const difference = amount === "" ? 0 : Number(amount) - invoice.totalAmount.value;
 
   return (
     <div className="space-y-6">
@@ -73,6 +92,12 @@ export function PaymentConfirmPage() {
         className="space-y-4"
         onSubmit={(event) => {
           event.preventDefault();
+          // **差額があれば一度止める**（受入基準 23-3 の実務）。振込手数料の差引も
+          // 一部入金も日常的に起きる——黙って通すと、不足のまま完了した請求が残る
+          if (difference !== 0 && !differenceAcknowledged) {
+            setDifferenceAcknowledged(true);
+            return;
+          }
           confirm.mutate(
             {
               amountValue: Number(amount),
@@ -141,6 +166,24 @@ export function PaymentConfirmPage() {
             className="rounded border border-gray-300 px-3 py-2"
           />
         </div>
+
+        {/* **差額をその場で見せる。**画面上部の請求額と見比べさせるより、
+            差そのものを出すほうが早く気づける */}
+        {difference !== 0 && amount !== "" && (
+          <p
+            role="alert"
+            className="rounded border border-amber-300 bg-amber-50 p-3 text-sm"
+            data-testid="payment-difference"
+          >
+            <strong>
+              {`請求額と ${formatYen({ value: Math.abs(difference), currency: "JPY" })} の差があります（${difference < 0 ? "不足" : "過入金"}）。`}
+            </strong>
+            {'振込手数料の差引か、一部入金ではありませんか。'}
+            {differenceAcknowledged
+              ? 'このまま確認する場合は、もう一度 [確認する] を押してください。'
+              : '確かめてから [確認する] を押してください。'}
+          </p>
+        )}
 
         {confirm.error !== null && (
           <p role="alert" className="rounded bg-red-50 p-3 text-sm text-red-800">

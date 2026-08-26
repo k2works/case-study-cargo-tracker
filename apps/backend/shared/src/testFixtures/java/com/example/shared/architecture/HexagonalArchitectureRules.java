@@ -100,6 +100,21 @@ public final class HexagonalArchitectureRules {
                         .should().dependOnClassesThat()
                         .resideInAnyPackage("org.springframework..", "jakarta.persistence..", "org.apache.ibatis..")
                         .as("domain はフレームワークに依存しない（純粋な業務ロジックに保つ）")
+                        .allowEmptyShould(true),
+                // **サービス間の呼び出しは ACL（infrastructure）に閉じる**（[ADR-028] 決定 6）。
+                //
+                // **ArchUnit は HTTP の向きを見ない。**経路はリテラルであり構造に映らないので、
+                // 「循環しない」は書けない約束である。**書ける形に翻訳する**——ユースケースが
+                // HTTP クライアントを直接掴まないことを検査すれば、相手を呼ぶ場所は
+                // 必ずポートの向こう側（infrastructure）になり、依存の向きが図と一致する。
+                //
+                // `application は infrastructure に依存しない` だけでは素通りする
+                // ——`RestClient` はどちらの層にも属さない（IT12 レビュー・architect 高 2）。
+                noClasses().that().resideInAPackage(application)
+                        .should().dependOnClassesThat()
+                        .resideInAnyPackage("org.springframework.web.client..",
+                                "java.net.http..")
+                        .as("application は HTTP クライアントに依存しない（相手を呼ぶのは ACL）")
                         .allowEmptyShould(true));
     }
 

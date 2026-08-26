@@ -39,6 +39,15 @@ export function EstimateNewPage() {
   // 同じものを 2 度覚えることになる
   const [hazardous, setHazardous] = useState<HazardousInput>(EMPTY_HAZARDOUS);
   const [invalid, setInvalid] = useState<string | null>(null);
+  /**
+   * 保存した内容が、画面に出した候補と違ったとき。
+   *
+   * <p><strong>候補は保存のときに引き直す。</strong>概算料金は billingms が出すと
+   * 決めており（[ADR-028] 決定 6）、画面が持っている数字をそのまま保存すると
+   * <strong>そこが 2 つ目の式になる</strong>。引き直すぶん、探してから作るまでの
+   * あいだに航海スケジュールが変われば内容が変わりうる——**変わったら黙らない**。
+   */
+  const [changed, setChanged] = useState<string | null>(null);
 
   const request = {
     originUnLocode,
@@ -226,6 +235,25 @@ export function EstimateNewPage() {
 
           <RouteCandidateList candidates={quote.data.candidates} />
 
+          {/* **変わったら黙らない。**荷主に伝えた数字と保存した数字が違うまま
+              先へ進むと、あとで「言った / 言わない」になる */}
+          {changed !== null && (
+            <p
+              role="alert"
+              className="rounded border border-amber-300 bg-amber-50 p-3 text-sm"
+              data-testid="candidates-changed"
+            >
+              <strong>候補が変わりました。</strong>
+              {'探したあとに航海スケジュールが変わった可能性があります。保存した内容をご確認のうえ、荷主にお伝えください。'}
+              <Link
+                className="ml-2 text-blue-700 underline"
+                to={`/booking/estimates/${changed}`}
+              >
+                保存した見積を開く
+              </Link>
+            </p>
+          )}
+
           {create.error !== null && (
             <p role="alert" className="rounded bg-red-50 p-3 text-sm text-red-800">
               見積を作成できませんでした。
@@ -239,8 +267,15 @@ export function EstimateNewPage() {
             disabled={create.isPending}
             onClick={() =>
               create.mutate(request, {
-                onSuccess: (created) =>
-                  navigate(`/booking/estimates/${created.estimateId}`),
+                onSuccess: (created) => {
+                  const shown = JSON.stringify(quote.data?.candidates ?? []);
+                  const saved = JSON.stringify(created.candidates);
+                  if (shown === saved) {
+                    navigate(`/booking/estimates/${created.estimateId}`);
+                    return;
+                  }
+                  setChanged(created.estimateId);
+                },
               })
             }
           >

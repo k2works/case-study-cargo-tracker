@@ -272,8 +272,12 @@ test.describe('精算処理（US23）', () => {
     await expect(page).toHaveURL(/\/billing\/INV-.*\/payment$/)
     await expect(page.getByRole('heading', { name: '入金の確認' })).toBeVisible()
 
+    // **入金額は請求額が入っている。**打ち直しは桁を間違える機会を作るだけである
+    await expect(
+      page.getByLabel('入金額'),
+      '入金額に請求額が入っていない',
+    ).not.toHaveValue('')
     await page.getByLabel('入金日').fill('2027-10-15')
-    await page.getByLabel('入金額').fill('231000')
     await page.getByLabel('入金方法').selectOption('BANK_TRANSFER')
     await page.getByLabel('参照番号').fill('FT27101500123')
     await page.getByRole('button', { name: '確認する' }).click()
@@ -288,6 +292,35 @@ test.describe('精算処理（US23）', () => {
   })
 
   /**
+   * <strong>請求額と違う入金は、一度止める</strong>（IT12 レビュー・user 高 1）。
+   *
+   * <p>振込手数料の差引も一部入金も日常的に起きる。黙って通すと、
+   * <strong>不足のまま「入金済」で閉じた請求</strong>が積み上がる——期限超過の
+   * 一覧からも消えるので、誰も気づけない。
+   */
+  test('請求額と違う入金額は、差額を出して一度止まる', async ({ page }) => {
+    await logInAsAccountant(page)
+    await issueInvoice(page)
+    await page.getByRole('link', { name: '入金を確認する' }).click()
+
+    await page.getByLabel('入金日').fill('2027-10-15')
+    await page.getByLabel('入金額').fill('1000')
+    await page.getByRole('button', { name: '確認する' }).click()
+
+    // 1 度目は止まる（画面に残る）
+    await expect(page).toHaveURL(/\/payment$/)
+    await expect(
+      page.getByTestId('payment-difference'),
+      '請求額と違う入金額が、そのまま通っている',
+    ).toContainText('不足')
+
+    // 確かめたうえで、もう一度押せば通る——判断するのは経理担当者である
+    await page.getByRole('button', { name: '確認する' }).click()
+    await expect(page).toHaveURL(/\/billing\/INV-[^/]+$/)
+    await expect(page.getByTestId('payment-status')).toContainText('入金済')
+  })
+
+  /**
    * デモ 2。**予約が「精算済」になる**（23-4）。
    *
    * <strong>画面をまたぐ 1 本である。</strong>billingms で入金を確認したことが、
@@ -299,7 +332,6 @@ test.describe('精算処理（US23）', () => {
     await issueInvoice(page)
     await page.getByRole('link', { name: '入金を確認する' }).click()
     await page.getByLabel('入金日').fill('2027-10-15')
-    await page.getByLabel('入金額').fill('231000')
     await page.getByLabel('入金方法').selectOption('BANK_TRANSFER')
     await page.getByRole('button', { name: '確認する' }).click()
     await expect(page.getByTestId('payment-status')).toContainText('入金済')

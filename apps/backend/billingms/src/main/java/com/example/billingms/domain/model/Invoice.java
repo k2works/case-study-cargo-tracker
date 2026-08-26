@@ -247,6 +247,20 @@ public final class Invoice {
         return charges.cancellationFee();
     }
 
+    /**
+     * キャンセルされた予約への請求か（[ADR-027] 決定 5）。
+     *
+     * <p><strong>精算の対象にはキャンセル済みの予約も並ぶ</strong>——キャンセル料を
+     * 締めるためである。一方、予約の側は「精算済」へ進めるのを<strong>引取済からだけ</strong>に
+     * 限っている（運んでいない予約に精算済は無い）。
+     *
+     * <p>この 2 つが噛み合わないと、<strong>キャンセル料の入金を記録できなくなる</strong>
+     * ——相手が断り、入金の記録ごと巻き戻る（IT12 レビュー 高 1）。
+     */
+    public boolean forCancelledBooking() {
+        return charges.cancellationFee() != null;
+    }
+
     /** 調整の明細。**発行後は足せない**（決定 4）。 */
     public List<InvoiceLineItem> lineItems() {
         return lineItems;

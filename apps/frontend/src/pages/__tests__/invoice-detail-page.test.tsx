@@ -125,4 +125,36 @@ describe('請求書詳細', () => {
     expect(alert).toHaveTextContent('精算書が見つかりません')
     expect(within(alert).getByRole('link', { name: '精算管理へ戻る' })).toBeInTheDocument()
   })
+
+  /**
+   * **紙に載るのは請求書だけにする**（IT12 レビュー・user 高 2）。
+   *
+   * <p>画面ごと刷ると、メニュー・社内向けの注意書き・操作ボタンが全部載る。
+   * それでは荷主に出せず、結局は数字を書き写して表計算で作ることになる。
+   *
+   * <p>`@media print` の効き目そのものは jsdom では確かめられない。ここで見るのは
+   * **印を付け忘れていないこと**——社内向けの枠が `print-hide` を持ち、宛名が
+   * 印刷のときだけ出る印を持っていること。
+   */
+  it('印刷に載せない要素と、紙にだけ出す宛名に印がある', async () => {
+    const { container } = renderInvoice()
+    await screen.findByTestId('amount-breakdown')
+
+    const internal = screen.getByText(/荷主へは自動で通知されません/)
+    expect(
+      internal.closest('.print-hide'),
+      '社内向けの注意書きが紙に載る',
+    ).not.toBeNull()
+
+    const actions = screen.getByRole('button', { name: '印刷する' })
+    expect(actions.closest('.print-hide'), '操作ボタンが紙に載る').not.toBeNull()
+
+    const addressee = screen.getByText(/御中/)
+    expect(addressee.textContent, '宛名が荷主の社名になっていない')
+      .toContain('丸紅商事株式会社')
+    expect(
+      container.querySelector('.print\\:block'),
+      '宛名が画面にも出ている（印刷のときだけ出す）',
+    ).not.toBeNull()
+  })
 })

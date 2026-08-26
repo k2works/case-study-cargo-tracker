@@ -40,6 +40,7 @@ class SettleBookingUseCaseTest {
 
     private static Cargo delivered() {
         Cargo cargo = mock(Cargo.class);
+        when(cargo.isSettled()).thenReturn(false);
         when(cargo.settle()).thenAnswer(invocation -> cargo);
         return cargo;
     }
@@ -58,6 +59,29 @@ class SettleBookingUseCaseTest {
         ArgumentCaptor<Cargo> saved = ArgumentCaptor.forClass(Cargo.class);
         verify(cargoes).save(saved.capture());
         assertThat(saved.getValue()).isSameAs(cargo);
+    }
+
+    /**
+     * <strong>すでに精算済なら、何もせず成功として返す（冪等）</strong>
+     * （[ADR-028] 決定 1・IT12 レビュー architect 高 1）。
+     *
+     * <p>相手（billingms）は入金の記録と同じ取引の中でこれを呼ぶ。通知が届いたあとに
+     * 相手側が失敗すると、予約だけが精算済で請求書は未入金のまま残る——そこで断ると、
+     * <strong>経理担当者は何度押しても入金を記録できない</strong>。
+     */
+    @Test
+    @DisplayName("すでに精算済の予約は、何もせず受け入れる")
+    void acceptsAlreadySettledBookings() {
+        Cargo cargo = mock(Cargo.class);
+        when(cargo.isSettled()).thenReturn(true);
+        CargoSummary summary = mock(CargoSummary.class);
+        when(summary.cargo()).thenReturn(cargo);
+        when(cargoes.findByBookingId("BKG-2026000007")).thenReturn(Optional.of(summary));
+
+        useCase.settle("BKG-2026000007");
+
+        verify(cargo, never()).settle();
+        verify(cargoes, never()).save(any());
     }
 
     /**
@@ -81,6 +105,7 @@ class SettleBookingUseCaseTest {
     @DisplayName("引取が終わっていない予約は、集約が断る")
     void leavesTheDecisionToTheAggregate() {
         Cargo cargo = mock(Cargo.class);
+        when(cargo.isSettled()).thenReturn(false);
         when(cargo.settle()).thenThrow(new IllegalStateException("引取が終わっていません"));
         CargoSummary summary = mock(CargoSummary.class);
         when(summary.cargo()).thenReturn(cargo);

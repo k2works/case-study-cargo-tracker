@@ -77,6 +77,27 @@ class SettleInvoiceUseCaseTest {
                 List.of(), ZONE);
     }
 
+    /** キャンセル料の請求書（[ADR-027] 決定 5——キャンセル済みの予約も精算の対象である）。 */
+    private static Invoice cancelled() {
+        return Invoice.issue(
+                new com.example.billingms.domain.model.InvoiceHeader(
+                        InvoiceId.of("INV-2026000001"),
+                        BillingBookingId.of("BKG-2026000010"),
+                        BillingShipperId.corporate("1", "丸紅商事株式会社"),
+                        Instant.parse("2027-10-01T00:00:00Z")),
+                new InvoiceCharges(
+                        TransportCharge.of(domesticLegs(1), new BigDecimal("1500"),
+                                CargoType.GENERAL),
+                        DiscountPolicy.none(),
+                        com.example.billingms.domain.model.CancellationFee.forStatus(
+                                com.example.billingms.domain.model.CancelledAtStatus.of(
+                                        "IN_TRANSIT"),
+                                com.example.billingms.domain.model.Money.yen(
+                                        new BigDecimal("75000"))),
+                        TaxRate.standard()),
+                List.of(), ZONE);
+    }
+
     private static PaymentCommand command() {
         return new PaymentCommand(new BigDecimal("462000"), LocalDate.parse("2027-10-15"),
                 "BANK_TRANSFER", "FT27101500123");
@@ -125,6 +146,30 @@ class SettleInvoiceUseCaseTest {
 
             verify(bookings, never()).markSettled(anyString());
             verify(invoices, never()).confirmPayment(any());
+        }
+
+        /**
+         * <strong>キャンセルされた予約は「精算済」にしない</strong>（[ADR-028] 決定 1）。
+         *
+         * <p>精算の対象には<strong>キャンセル済みの予約も並ぶ</strong>（キャンセル料を
+         * 締めるため。[ADR-027] 決定 5）。一方、予約の側は「精算済」へ進めるのを
+         * <strong>引取済からだけ</strong>に限っている（運んでいない予約に精算済は無い）。
+         *
+         * <p><strong>知らせると、相手が 409 で断り、入金の記録ごと巻き戻る。</strong>
+         * 経理担当者は何度押してもキャンセル料の入金を記録できない——
+         * <strong>自分で書いた 2 つの決定が噛み合っていなかった</strong>（IT12 レビュー 高 1）。
+         */
+        @Test
+        @DisplayName("キャンセル料の請求書では、予約に知らせずに入金だけ記録する")
+        void doesNotNotifyForCancellationInvoices() {
+            when(invoices.findById("INV-2026000001"))
+                    .thenReturn(Optional.of(cancelled()));
+
+            Invoice confirmed = useCase.confirmPayment("INV-2026000001", command());
+
+            assertThat(confirmed.paymentStatus()).isEqualTo(PaymentStatus.CONFIRMED);
+            verify(invoices).confirmPayment(confirmed);
+            verify(bookings, never()).markSettled(anyString());
         }
 
         @Test
@@ -208,6 +253,30 @@ class SettleInvoiceUseCaseTest {
             assertThat(useCase.overdue())
                     .as("払った請求書や取り消した請求書まで催促することになる")
                     .containsExactly(unpaid);
+        }
+
+        /**
+         * <strong>境目そのものを踏む</strong>（期限当日 / 翌日）。
+         *
+         * <p>1 か月離れた「今日」で見ても、比較の向きを取り違えた実装
+         * （`!isBefore` = 当日も超過扱い）を判別しない——<strong>離れた値は
+         * どちらでも通る</strong>（IT12 レビュー・tester 高 2）。
+         *
+         * <p>期限当日に払った荷主を催促すると、こちらの誤りとして苦情になる。
+         */
+        @Test
+        @DisplayName("期限当日は催促せず、翌日から催促する")
+        void doesNotChaseOnTheDueDate() {
+            SettleInvoiceUseCase onTheDueDate = new SettleInvoiceUseCase(invoices, bookings,
+                    Clock.fixed(Instant.parse("2027-10-31T00:00:00Z"), ZONE));
+            SettleInvoiceUseCase theDayAfter = new SettleInvoiceUseCase(invoices, bookings,
+                    Clock.fixed(Instant.parse("2027-11-01T00:00:00Z"), ZONE));
+            when(invoices.findAll()).thenReturn(List.of(issued()));
+
+            assertThat(onTheDueDate.overdue())
+                    .as("期限当日を催促している。当日に払った荷主を催促することになる")
+                    .isEmpty();
+            assertThat(theDayAfter.overdue()).hasSize(1);
         }
     }
 }
