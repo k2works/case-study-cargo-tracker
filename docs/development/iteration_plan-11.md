@@ -494,8 +494,8 @@ detail --> [*]
 | 返済枠（0.1〜0.9） | **完了**（9 件・独立コミット 9 本。`./gradlew build` 緑・`npm run verify` 緑） |
 | Phase 1 受け入れテストと ADR | **完了**（[ADR-027](../adr/027-transport-charge-calculation.md) 決定 8 件・`billing.spec.ts` 12 件を Red で確認） |
 | Phase 2 画面と導線 | **完了**（3 画面 + ダッシュボード導線。E2E 12 件・コンポーネント 18 件・ユニット 8 件が緑） |
-| Phase 3 API と ACL | 未着手 |
-| Phase 4 ドメイン | 未着手 |
+| Phase 3 API と ACL | **完了**（`BillingSnapshot` 契約・両側の契約テスト・REST API・認可。bookingms 側の提供口を含む） |
+| Phase 4 ドメイン | **完了**（`Money`・`TransportCharge`・`DiscountPolicy`・`CancellationFee`・`Invoice`・永続化・採番） |
 | Phase 5 実環境 | 未着手 |
 | Phase 6 マニュアルと設計反映 | 未着手 |
 
