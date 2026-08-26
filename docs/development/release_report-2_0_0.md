@@ -254,7 +254,7 @@ xychart-beta
 
 | 指標 | 結果 |
 |------|------|
-| SonarQube Quality Gate | **フロントエンド PASS / バックエンド ERROR**（下記） |
+| SonarQube Quality Gate | **両プロジェクト PASS**（下記） |
 | Bug | 0 |
 | Vulnerability | 0 |
 | 新規違反 | 0（両プロジェクト） |
@@ -262,15 +262,22 @@ xychart-beta
 | CI | 緑（最終 run [32985004416](https://github.com/k2works/case-study-cargo-tracker/actions/runs/32985004416)） |
 | Flaky テスト | 1 件を検知・修正（`tracking.spec.ts`。IT11 から持ち越し、IT12 で原因を特定） |
 
-> **バックエンドの Quality Gate は ERROR のまま Release 2.0 を閉じています。**
-> 原因は `new_security_hotspots_reviewed: 0.0` の 1 件のみで、**新規違反 0・Bug 0・
-> Vulnerability 0・新規カバレッジ 89.7% はすべて基準内**です。対象は Flyway の Java
-> マイグレーション（`V5__drop_booking_unique.java`）で、DB から読んだ制約名を SQL に
-> 混ぜる箇所。**中身は読んで安全と確認済み**（`^\w+$` で識別子の形を検査してから使う・
-> 件数照会は `PreparedStatement`）で、その根拠をコードにも残しました。
-> `// NOSONAR` による抑制も試しましたが**効きません**——SonarQube の NOSONAR は Issue に
-> のみ効き、Security Hotspot は対象外です（スキャンし直して確認）。UI で「レビュー済み」に
-> するには**管理者の資格情報**が要ります。**IT5・IT6 でも同じ形で止まっており、3 度目です。**
+> **バックエンドは一度 ERROR になりました。** 原因は `new_security_hotspots_reviewed: 0.0`
+> の 1 件のみで、**新規違反 0・Bug 0・Vulnerability 0・新規カバレッジ 89.7% はすべて基準内**
+> でした。対象は Flyway の Java マイグレーション（`V5__drop_booking_unique.java`）で、
+> DB から読んだ制約名を SQL に混ぜる箇所。**中身は読んで安全と確認済み**
+> （`^\w+$` で識別子の形を検査してから使う・件数照会は `PreparedStatement`）で、
+> その根拠をコードにも残しました。
+>
+> **コード側では消せないことが分かりました。** `// NOSONAR` は効きません——SonarQube の
+> NOSONAR は Issue にのみ効き、Security Hotspot は対象外です（スキャンし直して確認）。
+> V5 の書き換えも無意味です——既存 DB では適用済みとして記録されており再実行されません。
+> **最終的に利用者が UI で手動承認し、両プロジェクト PASS になりました。**
+>
+> **同じ形で止まるのは IT5・IT6 に続き 3 度目です。** Hotspot が出るたびに管理者の
+> UI 操作を待つ構造そのものが残っています（手元のスキャン用トークンでは
+> `api/hotspots/search` が `Insufficient privileges` を返し、列挙も承認もできません）。
+> 資格情報の受け渡しかゲート条件の見直しを IT13 で決めます。
 
 ### ベロシティ
 

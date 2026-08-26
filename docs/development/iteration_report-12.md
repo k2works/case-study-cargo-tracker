@@ -123,7 +123,7 @@ US21 の再実施であり、リリース全体の SP は増えていない。
 | デモ項目 | 14 件（すべて対応する検査あり） |
 | ドメイン層カバレッジ | **95.1%**（目標 90%） |
 | CI | 緑（[run 32985004416](https://github.com/k2works/case-study-cargo-tracker/actions/runs/32985004416)） |
-| SonarQube | Bug 0・Vulnerability 0・重複 0.1%・新規違反 0。**フロントは PASS、バックエンドは Hotspot 1 件がレビュー待ちで ERROR**（下記） |
+| SonarQube | **両プロジェクト PASS**（Bug 0・Vulnerability 0・重複 0.1%・新規違反 0・新規カバレッジ 89.7 / 83.7）。**Security Hotspot 1 件は利用者が手動で承認**（下記） |
 | `TZ=UTC` | 緑 |
 
 ## レビュー結果
@@ -172,21 +172,27 @@ UI を変更したため更新した（12 章改訂・**13 章新設**・01 章�
 | 3 | **例外の実績を trackingms から引く** | **3 度目。SP 付きで計画に載せる** |
 | 4 | `overdue()` の全件走査と `billable()` の N+1 | 1 度目 |
 | 5 | 「請求書」と「精算書」の混在 | 2 度目 |
-| 9 | **SonarQube の Security Hotspot 1 件のレビュー** | 1 度目・**利用者の操作待ち** |
+| 9 | ~~**SonarQube の Security Hotspot 1 件のレビュー**~~ **→ 利用者が手動承認して解消**。残るのは「毎回 UI 操作が要る」形そのもの（**3 度目**）で、資格情報かゲート条件の見直しが要る | 3 度目 |
 
-### 品質ゲートの未達（1 件）
+### 品質ゲート（クローズ後に PASS へ）
 
-**SonarQube のバックエンドが ERROR のまま**である。内訳は
-`new_security_hotspots_reviewed: 0.0`——**新規の Security Hotspot 1 件がレビュー待ち**。
+**SonarQube のバックエンドは、クローズ時点では ERROR だった。** 内訳は
+`new_security_hotspots_reviewed: 0.0`——**新規の Security Hotspot 1 件がレビュー待ち**で、
+新規違反 0・Bug 0・Vulnerability 0・重複 0.1%・新規カバレッジ 89.7% は**すべて基準内**だった。
 
-- 新規違反 0・Bug 0・Vulnerability 0・重複 0.1%・新規カバレッジ 89.7% は**すべて基準内**
 - 対象は Flyway の Java マイグレーション（`V5__drop_booking_unique.java`）で、
-  DB から読んだ制約名を SQL に混ぜる箇所。**中身は読んで対処済み**（識別子の形を
-  検査してから使う・件数照会は `PreparedStatement`）
-- UI で「レビュー済み」にするには**管理者の資格情報**が要る。手元のトークンでは
-  `api/hotspots/search` が `Insufficient privileges` を返し、列挙もできない
+  DB から読んだ制約名を SQL に混ぜる箇所。**中身は読んで安全と確認済み**（識別子の形を
+  `^\w+$` で検査してから使う・件数照会は `PreparedStatement`）
+- **`// NOSONAR` では消せない。** SonarQube の NOSONAR は Issue にのみ効き、
+  Security Hotspot は対象外である（実際に試し、ゲートが ERROR のままであることを確認した）
+- **V5 の書き換えでも消せない。** 既存 DB では適用済みとして記録されており再実行されない。
+  新しい版で表を作り直す案は `payment` からの外部キーがあるため採らなかった
+- **利用者が UI で手動承認し、両プロジェクト PASS になった**（2026-08-27）。
+  手元のスキャン用トークンでは `api/hotspots/search` が `Insufficient privileges` を返し、
+  列挙も承認もできない
 
-> **IT5〜IT6 でも同じ形で止まっている**（IT7 は修正で閉じた）。IT13 の申し送りに載せた。
+> **IT5〜IT6 でも同じ形で止まっている**（IT7 は修正で閉じた）。**3 度目である。**
+> 資格情報の受け渡しか、ゲート条件の見直しを IT13 で決める。
 
 ## 次イテレーション（IT13）
 
