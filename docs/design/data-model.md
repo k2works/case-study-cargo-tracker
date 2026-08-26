@@ -746,16 +746,25 @@ entity "invoice\n（精算書）" as invoice {
   --
   * invoice_number : VARCHAR(30) <<UK, NOT NULL>>
   * booking_id : VARCHAR(20) <<UK, NOT NULL>>
-  * total_amount_value : INTEGER <<NOT NULL>>
+  * shipper_id : VARCHAR(20) <<NOT NULL>>
+  * shipper_name : VARCHAR(200) <<NOT NULL>>
+  * shipper_corporate : BOOLEAN <<NOT NULL>>
+  * leg_count : INTEGER <<NOT NULL>>
+  * weight_kg : NUMERIC(10,3) <<NOT NULL>>
+  * cargo_type : VARCHAR(20) <<NOT NULL>>
+  * base_amount_value : NUMERIC(15,2) <<NOT NULL>>
+  * base_amount_currency : VARCHAR(3) <<NOT NULL>>
+  * total_amount_value : NUMERIC(15,2) <<NOT NULL>>
   * total_amount_currency : VARCHAR(3) <<NOT NULL>>
   * tax_rate : NUMERIC(5,4) <<NOT NULL, DEFAULT 0.1000>>
   * tax_amount : NUMERIC(15,2) <<NOT NULL, DEFAULT 0>>
   * payment_status : VARCHAR(30) <<NOT NULL>>
   issued_at : TIMESTAMP WITH TIME ZONE
   due_date : DATE
-  discount_amount_value : INTEGER
+  discount_rate : NUMERIC(5,4)
+  discount_amount_value : NUMERIC(15,2)
   discount_amount_currency : VARCHAR(3)
-  cancellation_fee_value : INTEGER
+  cancellation_fee_value : NUMERIC(15,2)
   cancellation_fee_currency : VARCHAR(3)
   cancellation_fee_rate : NUMERIC(5,4)
   booking_status_at_cancel : VARCHAR(30)
@@ -766,7 +775,7 @@ entity "invoice_line_item\n（精算明細）" as invoice_line_item {
   --
   * invoice_id : BIGINT <<FK, NOT NULL>>
   * description : VARCHAR(200) <<NOT NULL>>
-  * amount_value : INTEGER <<NOT NULL>>
+  * amount_value : NUMERIC(15,2) <<NOT NULL>>
   * amount_currency : VARCHAR(3) <<NOT NULL>>
   * seq_number : INTEGER <<NOT NULL>>
 }
@@ -1045,16 +1054,56 @@ CREATE TABLE customs_status_history (
 
 #### `invoice`（精算書）― 変更
 
-キャンセル料の算定根拠カラムを追加（UC22）。
+IT11（US21・US22）で実装した。キャンセル料の算定根拠（UC22）に加え、
+**基本料金の根拠**と**割引率**を持つ（[ADR-027](../adr/027-transport-charge-calculation.md)）。
 
-| 追加カラム名 | データ型 | 制約 | 説明 |
+| カラム名 | データ型 | 制約 | 説明 |
 | :--- | :--- | :--- | :--- |
-| `cancellation_fee_value` | `INTEGER` | | キャンセル料（最小通貨単位。NULL = キャンセルなし） |
-| `cancellation_fee_currency` | `VARCHAR(3)` | | キャンセル料通貨コード |
+| `id` | `BIGSERIAL` | PK | |
+| `invoice_number` | `VARCHAR(30)` | UK, NOT NULL | 請求番号（`INV-YYYY` + 6 桁。シーケンスで採番） |
+| `booking_id` | `VARCHAR(20)` | UK, NOT NULL | **UK が二重請求を防ぐ**（決定 4・ビジネスルール 5） |
+| `shipper_id` | `VARCHAR(20)` | NOT NULL | 荷主参照 |
+| `shipper_name` | `VARCHAR(200)` | NOT NULL | **発行した時点の社名**。荷主 ID から引き直さない——社名を変えても、発行済みの請求書の宛名は変わらない |
+| `shipper_corporate` | `BOOLEAN` | NOT NULL | 法人か |
+| `leg_count` | `INTEGER` | NOT NULL | 旅程の区間数。**距離の代わり**（決定 1） |
+| `weight_kg` | `NUMERIC(10,3)` | NOT NULL | 重量（基本料金の根拠） |
+| `cargo_type` | `VARCHAR(20)` | NOT NULL | 貨物種別（基本料金の根拠） |
+| `base_amount_value` | `NUMERIC(15,2)` | NOT NULL | 基本料金 |
+| `base_amount_currency` | `VARCHAR(3)` | NOT NULL | |
+| `discount_rate` | `NUMERIC(5,4)` | | 契約割引率。**未設定は 0% ではない**（[ADR-012]）ため NULL を許す。額から割り戻すと丸めの分ずれるため率も持つ（22-4） |
+| `discount_amount_value` | `NUMERIC(15,2)` | NOT NULL, DEFAULT 0 | 割引額 |
+| `discount_amount_currency` | `VARCHAR(3)` | NOT NULL, DEFAULT 'JPY' | |
+| `cancellation_fee_value` | `NUMERIC(15,2)` | | キャンセル料（NULL = キャンセルなし） |
+| `cancellation_fee_currency` | `VARCHAR(3)` | | |
 | `cancellation_fee_rate` | `NUMERIC(5,4)` | | 適用した料率 |
-| `booking_status_at_cancel` | `VARCHAR(30)` | | キャンセル時の予約状態（料率の根拠） |
+| `booking_status_at_cancel` | `VARCHAR(30)` | | **申請した時点**の予約状態（料率の根拠）。bookingms 側の列名は `booking_status_at_request` |
+| `tax_rate` | `NUMERIC(5,4)` | NOT NULL, DEFAULT 0.1000 | 消費税率（決定 8。業務として扱うのは US23） |
+| `tax_amount` | `NUMERIC(15,2)` | NOT NULL, DEFAULT 0 | 消費税 |
+| `total_amount_value` | `NUMERIC(15,2)` | NOT NULL | 合計 |
+| `total_amount_currency` | `VARCHAR(3)` | NOT NULL | |
+| `payment_status` | `VARCHAR(30)` | NOT NULL | 支払いの状態。**発行の時点は `PENDING`**（決定 3） |
+| `issued_at` | `TIMESTAMP WITH TIME ZONE` | NOT NULL | 発行日時 |
+| `due_date` | `DATE` | | 支払期限（US23 で使う） |
 
-その他のカラム（`invoice_number`・`booking_id`（UK・二重請求防止）・`total_amount_*`・`tax_*`・`payment_status`・`discount_*` 等）は take-3 版を踏襲する。
+> **金額は `NUMERIC(15,2)` である**（[ADR-027] 決定 2・IT11 の注 3）。take-3 版は
+> `INTEGER`（最小通貨単位）だったが、**丸めの単位（円）と保存の単位を一致させる**ほうが、
+> 読んだときに何が起きたか分かる。丸めは `Money` が済ませており、保存するのは丸めたあとの値である。
+
+#### `invoice_line_item`（精算明細）― 変更
+
+料金調整を基本料金に混ぜず、根拠つきで積む（決定 6）。金額列を `NUMERIC(15,2)` に揃えた。
+
+| カラム名 | データ型 | 制約 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGSERIAL` | PK | |
+| `invoice_id` | `BIGINT` | FK, NOT NULL | |
+| `description` | `VARCHAR(200)` | NOT NULL | **調整の内容（根拠）。空は断る**——金額だけ残ると、あとから誰も理由を言えない |
+| `amount_value` | `NUMERIC(15,2)` | NOT NULL | 減額は負、補償費用は正 |
+| `amount_currency` | `VARCHAR(3)` | NOT NULL | |
+| `seq_number` | `INTEGER` | NOT NULL | 積んだ順 |
+
+> **`payment` テーブルは IT11 では作らない。** 支払いを扱うのは US23（IT12）であり、
+> 読む側の無いテーブルを先に作らない。
 
 ---
 

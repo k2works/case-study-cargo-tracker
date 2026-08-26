@@ -82,13 +82,16 @@ class SchemaDesignConsistencyTest {
     private static final Map<String, String> PENDING_TABLES = Map.of(
             "booking_db.estimate", "US01 輸送見積（未着手）",
             "booking_db.route_candidate", "US01 輸送見積（未着手）",
-            "billing_db.invoice", "US21-US23・IT11-IT12",
-            "billing_db.invoice_line_item", "US21-US23・IT11-IT12",
-            "billing_db.payment", "US21-US23・IT11-IT12");
+            // invoice / invoice_line_item は IT11（US21・US22）で実装した。
+            // payment は支払いを扱う US23（IT12）まで作らない
+            // ——読む側の無いテーブルを先に作らない
+            "billing_db.payment", "US23 精算・IT12");
 
     /** 設計にあるが、その列を使うストーリーがまだ来ていないもの。扱いは {@link #PENDING_TABLES} と同じ。 */
     private static final Map<String, String> PENDING_COLUMNS = Map.of(
-            "booking_db.cargo.declared_value", "US21 料金算出・IT11",
+            // **US21 では使わなかった。** 料金は区間数 × 重量 × 貨物種別で算定する
+            // （[ADR-027] 決定 1）——申告価額を使う保険料の算定は本 IT の範囲に無い
+            "booking_db.cargo.declared_value", "保険料の算定（未着手）",
             "booking_db.cargo.origin_unlocode", "US28 誤配再設計・IT10",
             "booking_db.cargo.consignee_name", "US16 引取・IT10",
             "booking_db.cargo.consignee_email", "US16 引取・IT10",
