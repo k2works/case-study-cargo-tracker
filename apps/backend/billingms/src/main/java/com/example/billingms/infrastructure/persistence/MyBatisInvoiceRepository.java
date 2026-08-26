@@ -1,5 +1,6 @@
 package com.example.billingms.infrastructure.persistence;
 
+import com.example.billingms.application.internal.AlreadyInvoicedException;
 import com.example.billingms.application.port.InvoiceRepository;
 import com.example.billingms.domain.model.BillingBookingId;
 import com.example.billingms.domain.model.BillingShipperId;
@@ -19,6 +20,7 @@ import com.example.billingms.domain.model.TaxRate;
 import com.example.billingms.domain.model.TransportCharge;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.dao.DuplicateKeyException;
 
 /**
  * 精算書の永続化（US21）。
@@ -37,10 +39,25 @@ public class MyBatisInvoiceRepository implements InvoiceRepository {
         this.lineItems = lineItems;
     }
 
+    /**
+     * 発行する。
+     *
+     * <p><strong>制約に当たったときも、断る理由は「すでに発行済み」である。</strong>
+     * 発行済みかを見てから書くまでのあいだに、もう 1 本の要求が書き込むことがある
+     * （同じ画面を 2 回押す・2 人が同時に締める）。`DuplicateKeyException` のまま
+     * 外へ出すと画面に 500 が出て、経理担当者には「壊れた」としか見えない
+     * ——待っても変わらないし、先に押した側では成功している。
+     */
     @Override
     public void save(Invoice invoice) {
         InvoiceRecord row = toRecord(invoice);
-        invoices.insert(row);
+        try {
+            invoices.insert(row);
+        } catch (DuplicateKeyException conflict) {
+            throw new AlreadyInvoicedException(
+                    "この予約にはすでに精算書が発行されています: "
+                            + invoice.cargoBookingId().value());
+        }
 
         int seq = 1;
         for (InvoiceLineItem item : invoice.lineItems()) {

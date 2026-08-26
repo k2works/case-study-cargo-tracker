@@ -23,6 +23,7 @@ import com.example.billingms.domain.model.TransportCharge;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import com.example.billingms.application.internal.AlreadyInvoicedException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -222,11 +223,16 @@ class InvoicePersistenceIntegrationTest {
         /**
          * <strong>同じ予約に 2 通の請求書は出せない</strong>（正典のビジネスルール 5）。
          *
-         * <p><strong>制約と集約の両方で守る</strong>——制約だけだと画面に 500 が出て、
-         * 集約だけだと同時に 2 回押されたときに通る。
+         * <p><strong>制約と集約の両方で守る</strong>——集約だけだと同時に 2 回押された
+         * ときに通る（発行済みかを見てから書くまでのあいだに、もう 1 本が書き込む）。
+         *
+         * <p><strong>制約に当たったときも、断る理由は同じである。</strong>
+         * `DuplicateKeyException` のまま外へ出すと画面に 500 が出て、経理担当者には
+         * 「壊れた」としか見えない——実際には「すでに発行済み」であり、409 で
+         * 伝えるべき話である。先に押した側は成功しており、待っても変わらない。
          */
         @Test
-        @DisplayName("同じ予約への 2 通目は DB が断る")
+        @DisplayName("同じ予約への 2 通目は、すでに発行済みとして断られる")
         void rejectsASecondInvoiceForTheSameBooking() {
             String bookingId = uniqueBookingId();
             invoices.save(issue(bookingId, DiscountPolicy.none(), List.of(), null));
@@ -234,7 +240,8 @@ class InvoicePersistenceIntegrationTest {
             assertThatThrownBy(() ->
                     invoices.save(issue(bookingId, DiscountPolicy.none(), List.of(), null)))
                     .as("同じ予約に 2 通目が通っている。荷主に二重で請求することになる")
-                    .isInstanceOf(org.springframework.dao.DuplicateKeyException.class);
+                    .isInstanceOf(AlreadyInvoicedException.class)
+                    .hasMessageContaining(bookingId);
         }
 
         @Test
