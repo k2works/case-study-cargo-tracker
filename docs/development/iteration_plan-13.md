@@ -178,9 +178,9 @@
 
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | :--- | :--- |
-| 5.1 | `domain-model.md` に `UserShipperLink`、荷主向け追跡クエリ、タイムアウト方針を反映する | 4h | [ ] |
-| 5.2 | `data-model.md` に `user_shipper_link` と内部 API の参照関係を反映する | 3h | [ ] |
-| 5.3 | `ui_design.md` に `/shipper/tracking`、ナビゲーション、RBAC マトリクスを反映する | 5h | [ ] |
+| 5.1 | `domain-model.md` に `UserShipperLink`、荷主向け追跡クエリ、タイムアウト方針を反映する | 4h | [x] |
+| 5.2 | `data-model.md` に `user_shipper_link` と内部 API の参照関係を反映する | 3h | [x] |
+| 5.3 | `ui_design.md` に `/shipper/tracking`、ナビゲーション、RBAC マトリクスを反映する | 5h | [x] |
 | 5.4 | ユーザーマニュアルに「荷主ポータル」章を追加し、ログイン・一覧・詳細・未紐付け・タイムアウトのキャプチャを撮る | 8h | [ ] |
 | 5.5 | `ROLE_SHIPPER`・`ADR-008`・`US18` の旧注記を grep で洗い、必要箇所を更新する | 4h | [ ] |
 
@@ -209,7 +209,7 @@
 
 **1 SP あたり**: 約 22.3h
 
-**進捗率**: 0%（0 / 7 SP）
+**進捗率**: 57%（4 / 7 SP）
 
 ---
 
@@ -323,7 +323,7 @@ ShipperTrackingList *-- ShipperTrackingItem
 @enduml
 ```
 
-> **設計への反映が必要**: `UserShipperLink` と荷主向け追跡 Read Model は `domain-model.md` に未反映である。本 IT で設計ドキュメントへ追加する。
+> **設計への反映済み**: `UserShipperLink` と荷主向け追跡 Read Model は `domain-model.md` に反映した。`user_shipper_link` は `data-model.md`、`/shipper/tracking` と RBAC は `ui_design.md` に反映済みである。
 
 ### 状態遷移図
 
@@ -525,18 +525,18 @@ state NotFound : 404
 
 | # | 内容 | 反映先 | 扱い |
 | :--- | :--- | :--- | :--- |
-| 1 | `UserShipperLink` と `FindLinkedShipperUseCase` が未記載 | `domain-model.md` | Phase 5.1 |
-| 2 | 荷主向け追跡 Read Model が未記載 | `domain-model.md` | Phase 5.1 |
-| 3 | `user_shipper_link` が未記載 | `data-model.md` | Phase 5.2 |
-| 4 | `/shipper/tracking` と `/shipper/tracking/:trackingNumber` が未記載 | `ui_design.md` | Phase 5.3 |
-| 5 | `ROLE_SHIPPER` のナビゲーションが旧注記のまま | `ui_design.md`・マニュアル | Phase 5.3 / 5.5 |
+| 1 | `UserShipperLink` と荷主向け追跡クエリが未記載 | `domain-model.md` | 反映済み |
+| 2 | 荷主向け追跡 Read Model が未記載 | `domain-model.md` | 反映済み |
+| 3 | `user_shipper_link` が未記載 | `data-model.md` | 反映済み |
+| 4 | `/shipper/tracking` と `/shipper/tracking/:trackingNumber` が未記載 | `ui_design.md` | 反映済み |
+| 5 | `ROLE_SHIPPER` のナビゲーションが旧注記のまま | `ui_design.md`・マニュアル | UI 設計は反映済み。マニュアルは Phase 5.4 / 5.5 |
 
 ### 横断整合性検証（`validating-design`）
 
 | 軸 | 検証対象 | 結果 | 不整合件数 |
 | :--- | :--- | :--- | :--- |
 | A | 開発戦略 ↔ 計画 | OK | 0 |
-| B | 計画 ↔ 設計ドキュメント | 注記あり | 5 |
+| B | 計画 ↔ 設計ドキュメント | 注記あり（マニュアル更新待ち） | 1 |
 | C | 計画 ↔ 過去計画 | OK | 0 |
 
 > IT13 は予備 IT であり、Release 2.1 は終盤の延長として扱う。開発戦略の「予備 IT13 は消化する局面のアプローチに従う」に従い、アウトサイドインで進める。
@@ -552,7 +552,7 @@ state NotFound : 404
 | Phase 2 | 完了 |
 | Phase 3 | 完了 |
 | Phase 4 | 一部完了 |
-| Phase 5 | 未着手 |
+| Phase 5 | 一部完了 |
 | Phase 6 | 未着手 |
 
 ---
@@ -563,6 +563,7 @@ state NotFound : 404
 | :--- | :--- | :--- |
 | 2026-08-27 | 初版作成（`opening-iteration` ステップ 2） | - |
 | 2026-08-27 | Phase 2 の管理者向け紐付け API と内部 API 契約テストを実装済みに更新 | Codex |
+| 2026-08-27 | Phase 5.1〜5.3 の設計ドキュメント反映を完了に更新 | Codex |
 
 ## 関連ドキュメント
 
