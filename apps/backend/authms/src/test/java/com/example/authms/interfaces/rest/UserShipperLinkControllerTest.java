@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.example.authms.application.internal.FindUserShipperLinkUseCase;
 import com.example.authms.application.internal.UserShipperLinkResult;
 import com.example.shared.auth.AuthenticatedUser;
+import com.example.shared.contract.UserShipperLinkContract;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -31,13 +32,18 @@ class UserShipperLinkControllerTest {
     @MockitoBean
     private FindUserShipperLinkUseCase links;
 
+    private static String pathFor(String username) {
+        return UserShipperLinkContract.PATH.replace("{username}", username);
+    }
+
     @Test
     @DisplayName("trackingms は利用者に紐付く荷主 ID を読める")
     void returnsLinkedShipperToTrackingms() throws Exception {
         when(links.find("shipper01")).thenReturn(UserShipperLinkResult.linked(1L));
 
-        mockMvc.perform(get("/api/v1/internal/user-shipper-links/shipper01")
-                        .header(AuthenticatedUser.USER_ID_HEADER, "system:trackingms"))
+        mockMvc.perform(get(pathFor("shipper01"))
+                        .header(AuthenticatedUser.USER_ID_HEADER,
+                                UserShipperLinkContract.TRACKING_CALLER_PRINCIPAL))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.linked").value(true))
                 .andExpect(jsonPath("$.shipperId").value(1));
@@ -48,8 +54,9 @@ class UserShipperLinkControllerTest {
     void returnsLinkedShipperToBookingms() throws Exception {
         when(links.find("shipper01")).thenReturn(UserShipperLinkResult.linked(1L));
 
-        mockMvc.perform(get("/api/v1/internal/user-shipper-links/shipper01")
-                        .header(AuthenticatedUser.USER_ID_HEADER, "system:bookingms"))
+        mockMvc.perform(get(pathFor("shipper01"))
+                        .header(AuthenticatedUser.USER_ID_HEADER,
+                                UserShipperLinkContract.BOOKING_CALLER_PRINCIPAL))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.linked").value(true));
     }
@@ -59,8 +66,9 @@ class UserShipperLinkControllerTest {
     void returnsUnlinkedInsteadOfForbidden() throws Exception {
         when(links.find("sales01")).thenReturn(UserShipperLinkResult.unlinked());
 
-        mockMvc.perform(get("/api/v1/internal/user-shipper-links/sales01")
-                        .header(AuthenticatedUser.USER_ID_HEADER, "system:trackingms"))
+        mockMvc.perform(get(pathFor("sales01"))
+                        .header(AuthenticatedUser.USER_ID_HEADER,
+                                UserShipperLinkContract.TRACKING_CALLER_PRINCIPAL))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.linked").value(false))
                 .andExpect(jsonPath("$.shipperId").doesNotExist());
@@ -70,7 +78,7 @@ class UserShipperLinkControllerTest {
     @ValueSource(strings = {"sales01", "shipper01", "system:handlingms", "system:billingms"})
     @DisplayName("名簿に無い主体は紐付けを読めない")
     void rejectsUntrustedPrincipals(String caller) throws Exception {
-        mockMvc.perform(get("/api/v1/internal/user-shipper-links/shipper01")
+        mockMvc.perform(get(pathFor("shipper01"))
                         .header(AuthenticatedUser.USER_ID_HEADER, caller))
                 .andExpect(status().isForbidden());
 
@@ -80,7 +88,16 @@ class UserShipperLinkControllerTest {
     @Test
     @DisplayName("名乗らない要求は 400")
     void rejectsRequestWithoutPrincipal() throws Exception {
-        mockMvc.perform(get("/api/v1/internal/user-shipper-links/shipper01"))
+        mockMvc.perform(get(pathFor("shipper01")))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("返す項目の名簿が、DTO の要素と一致する")
+    void rosterIsDerivedFromTheDto() {
+        org.assertj.core.api.Assertions.assertThat(
+                        java.util.Arrays.stream(UserShipperLinkResponse.class.getRecordComponents())
+                                .map(java.lang.reflect.RecordComponent::getName).toList())
+                .containsExactlyElementsOf(UserShipperLinkContract.FIELDS);
     }
 }

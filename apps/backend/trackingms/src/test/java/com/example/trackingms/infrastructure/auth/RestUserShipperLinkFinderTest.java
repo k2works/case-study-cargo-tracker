@@ -9,6 +9,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import com.example.shared.auth.AuthenticatedUser;
+import com.example.shared.contract.UserShipperLinkContract;
 import com.example.trackingms.application.port.ShipperTrackingLookupUnavailableException;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,9 +36,17 @@ class RestUserShipperLinkFinderTest {
     }
 
     @Test
+    @DisplayName("authms の契約で定義された経路と主体を使う")
+    void usesUserShipperLinkContract() {
+        assertThat(RestUserShipperLinkFinder.PATH).isEqualTo(UserShipperLinkContract.PATH);
+        assertThat(RestUserShipperLinkFinder.SYSTEM_PRINCIPAL)
+                .isEqualTo(UserShipperLinkContract.TRACKING_CALLER_PRINCIPAL);
+    }
+
+    @Test
     @DisplayName("利用者名で荷主 ID を引く")
     void findsLinkedShipperId() {
-        server.expect(requestTo(BASE + "/api/v1/internal/user-shipper-links/shipper01"))
+        server.expect(requestTo(BASE + pathFor("shipper01")))
                 .andRespond(withSuccess("""
                         {"linked": true, "shipperId": 1}
                         """, MediaType.APPLICATION_JSON));
@@ -51,8 +60,9 @@ class RestUserShipperLinkFinderTest {
     @Test
     @DisplayName("システム主体として名乗る")
     void identifiesItself() {
-        server.expect(requestTo(BASE + "/api/v1/internal/user-shipper-links/shipper01"))
-                .andExpect(header(AuthenticatedUser.USER_ID_HEADER, "system:trackingms"))
+        server.expect(requestTo(BASE + pathFor("shipper01")))
+                .andExpect(header(AuthenticatedUser.USER_ID_HEADER,
+                        UserShipperLinkContract.TRACKING_CALLER_PRINCIPAL))
                 .andRespond(withSuccess("""
                         {"linked": true, "shipperId": 1}
                         """, MediaType.APPLICATION_JSON));
@@ -65,7 +75,7 @@ class RestUserShipperLinkFinderTest {
     @Test
     @DisplayName("紐付けなしは空で返す")
     void returnsEmptyWhenUnlinked() {
-        server.expect(requestTo(BASE + "/api/v1/internal/user-shipper-links/shipper01"))
+        server.expect(requestTo(BASE + pathFor("shipper01")))
                 .andRespond(withSuccess("""
                         {"linked": false, "shipperId": null}
                         """, MediaType.APPLICATION_JSON));
@@ -76,7 +86,7 @@ class RestUserShipperLinkFinderTest {
     @Test
     @DisplayName("認可されなければ、紐付けなしにはしない")
     void doesNotTreatForbiddenAsUnlinked() {
-        server.expect(requestTo(BASE + "/api/v1/internal/user-shipper-links/shipper01"))
+        server.expect(requestTo(BASE + pathFor("shipper01")))
                 .andRespond(withStatus(HttpStatus.FORBIDDEN));
 
         assertThatThrownBy(() -> finder.findLinkedShipperId("shipper01"))
@@ -86,10 +96,14 @@ class RestUserShipperLinkFinderTest {
     @Test
     @DisplayName("authms が落ちているときは、紐付けなしにはしない")
     void doesNotTreatFailureAsUnlinked() {
-        server.expect(requestTo(BASE + "/api/v1/internal/user-shipper-links/shipper01"))
+        server.expect(requestTo(BASE + pathFor("shipper01")))
                 .andRespond(withServerError());
 
         assertThatThrownBy(() -> finder.findLinkedShipperId("shipper01"))
                 .isInstanceOf(ShipperTrackingLookupUnavailableException.class);
+    }
+
+    private static String pathFor(String username) {
+        return UserShipperLinkContract.PATH.replace("{username}", username);
     }
 }

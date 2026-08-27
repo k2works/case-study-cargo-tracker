@@ -2,6 +2,8 @@ package com.example.authms.infrastructure.persistence;
 
 import java.time.Instant;
 import java.util.List;
+import org.apache.ibatis.annotations.Delete;
+import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Result;
@@ -50,6 +52,23 @@ public interface UserMapper {
             WHERE u.username = #{username}
             """)
     Long findLinkedShipperId(@Param("username") String username);
+
+    @Delete("""
+            DELETE FROM user_shipper_link
+            WHERE user_id = (
+                SELECT id FROM users WHERE username = #{username}
+            )
+            """)
+    void deleteShipperLink(@Param("username") String username);
+
+    @Insert("""
+            INSERT INTO user_shipper_link (user_id, shipper_id)
+            SELECT id, #{shipperId}
+            FROM users
+            WHERE username = #{username}
+            """)
+    void insertShipperLink(@Param("username") String username,
+            @Param("shipperId") Long shipperId);
 
     @Update("""
             UPDATE users

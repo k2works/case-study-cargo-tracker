@@ -1,6 +1,7 @@
 package com.example.authms.application.port;
 
 import com.example.authms.domain.model.User;
+import com.example.authms.domain.model.UserShipperLink;
 import java.time.Instant;
 import java.util.Optional;
 
@@ -38,4 +39,14 @@ public interface UserRepository {
      * 空として扱い、呼び出し側が「紐付けが無い」と案内できるようにする。
      */
     Optional<Long> findLinkedShipperId(String username);
+
+    /** 荷主利用者と bookingms 側の荷主 ID を紐付ける。 */
+    default UserShipperLink saveShipperLink(UserShipperLink link) {
+        throw new UnsupportedOperationException();
+    }
+
+    /** 荷主利用者と bookingms 側の荷主 ID の紐付けを解除する。 */
+    default Optional<UserShipperLink> removeShipperLink(String username) {
+        throw new UnsupportedOperationException();
+    }
 }

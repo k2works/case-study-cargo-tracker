@@ -10,6 +10,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import com.example.shared.auth.AuthenticatedUser;
+import com.example.shared.contract.ShipperCargoSnapshotContract;
 import com.example.trackingms.application.internal.ShipperCargoSnapshot;
 import com.example.trackingms.application.port.ShipperTrackingLookupUnavailableException;
 import com.example.trackingms.domain.model.TrackingNumber;
@@ -39,9 +40,17 @@ class RestShipperCargoSnapshotFinderTest {
     }
 
     @Test
+    @DisplayName("bookingms の契約で定義された経路と主体を使う")
+    void usesShipperCargoSnapshotContract() {
+        assertThat(RestShipperCargoSnapshotFinder.PATH).isEqualTo(ShipperCargoSnapshotContract.PATH);
+        assertThat(RestShipperCargoSnapshotFinder.SYSTEM_PRINCIPAL)
+                .isEqualTo(ShipperCargoSnapshotContract.CALLER_PRINCIPAL);
+    }
+
+    @Test
     @DisplayName("追跡番号で荷主境界の Snapshot を引く")
     void findsSnapshot() {
-        server.expect(requestTo(BASE + "/api/v1/bookings/shipper-snapshots/" + NUMBER.value()))
+        server.expect(requestTo(BASE + pathFor(NUMBER.value())))
                 .andRespond(withSuccess("""
                         {"bookingId": "BKG-2026000001",
                          "trackingNumber": "TRK-20260823-0001",
@@ -58,8 +67,9 @@ class RestShipperCargoSnapshotFinderTest {
     @Test
     @DisplayName("システム主体として名乗る")
     void identifiesItself() {
-        server.expect(requestTo(BASE + "/api/v1/bookings/shipper-snapshots/" + NUMBER.value()))
-                .andExpect(header(AuthenticatedUser.USER_ID_HEADER, "system:trackingms"))
+        server.expect(requestTo(BASE + pathFor(NUMBER.value())))
+                .andExpect(header(AuthenticatedUser.USER_ID_HEADER,
+                        ShipperCargoSnapshotContract.CALLER_PRINCIPAL))
                 .andRespond(withSuccess("""
                         {"bookingId": "BKG-2026000001",
                          "trackingNumber": "TRK-20260823-0001",
@@ -74,7 +84,7 @@ class RestShipperCargoSnapshotFinderTest {
     @Test
     @DisplayName("bookingms が無いと答えたら空にする")
     void treatsNotFoundAsEmpty() {
-        server.expect(requestTo(BASE + "/api/v1/bookings/shipper-snapshots/" + NUMBER.value()))
+        server.expect(requestTo(BASE + pathFor(NUMBER.value())))
                 .andRespond(withResourceNotFound());
 
         Optional<ShipperCargoSnapshot> found = finder.findByTrackingNumber(NUMBER);
@@ -85,7 +95,7 @@ class RestShipperCargoSnapshotFinderTest {
     @Test
     @DisplayName("認可されなければ、無いことにはしない")
     void doesNotTreatForbiddenAsEmpty() {
-        server.expect(requestTo(BASE + "/api/v1/bookings/shipper-snapshots/" + NUMBER.value()))
+        server.expect(requestTo(BASE + pathFor(NUMBER.value())))
                 .andRespond(withStatus(HttpStatus.FORBIDDEN));
 
         assertThatThrownBy(() -> finder.findByTrackingNumber(NUMBER))
@@ -95,10 +105,14 @@ class RestShipperCargoSnapshotFinderTest {
     @Test
     @DisplayName("bookingms が落ちているときは、無いことにはしない")
     void doesNotTreatFailureAsEmpty() {
-        server.expect(requestTo(BASE + "/api/v1/bookings/shipper-snapshots/" + NUMBER.value()))
+        server.expect(requestTo(BASE + pathFor(NUMBER.value())))
                 .andRespond(withServerError());
 
         assertThatThrownBy(() -> finder.findByTrackingNumber(NUMBER))
                 .isInstanceOf(ShipperTrackingLookupUnavailableException.class);
+    }
+
+    private static String pathFor(String trackingNumber) {
+        return ShipperCargoSnapshotContract.PATH.replace("{trackingNumber}", trackingNumber);
     }
 }

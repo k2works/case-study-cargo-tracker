@@ -1,6 +1,7 @@
 package com.example.authms.config;
 
 import com.example.authms.application.internal.LoginUseCase;
+import com.example.authms.application.internal.ManageUserShipperLinkUseCase;
 import com.example.authms.application.internal.UnlockAccountUseCase;
 import com.example.authms.application.internal.FindUserShipperLinkUseCase;
 import com.example.authms.application.port.AuthAuditLogger;
@@ -58,5 +59,10 @@ public class AuthConfig {
     @Bean
     public FindUserShipperLinkUseCase findUserShipperLinkUseCase(UserRepository users) {
         return new FindUserShipperLinkUseCase(users);
+    }
+
+    @Bean
+    public ManageUserShipperLinkUseCase manageUserShipperLinkUseCase(UserRepository users) {
+        return new ManageUserShipperLinkUseCase(users);
     }
 }

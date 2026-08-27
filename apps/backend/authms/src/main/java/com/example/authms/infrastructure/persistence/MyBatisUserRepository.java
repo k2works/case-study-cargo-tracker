@@ -5,6 +5,7 @@ import com.example.shared.auth.Role;
 import com.example.authms.domain.model.LoginState;
 import com.example.authms.domain.model.User;
 import com.example.authms.domain.model.UserIdentity;
+import com.example.authms.domain.model.UserShipperLink;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.Set;
@@ -44,6 +45,21 @@ public class MyBatisUserRepository implements UserRepository {
     @Override
     public Optional<Long> findLinkedShipperId(String username) {
         return Optional.ofNullable(mapper.findLinkedShipperId(username));
+    }
+
+    @Override
+    public UserShipperLink saveShipperLink(UserShipperLink link) {
+        mapper.deleteShipperLink(link.username());
+        mapper.insertShipperLink(link.username(), link.shipperId());
+        return link;
+    }
+
+    @Override
+    public Optional<UserShipperLink> removeShipperLink(String username) {
+        Optional<UserShipperLink> current = findLinkedShipperId(username)
+                .map(shipperId -> new UserShipperLink(username, shipperId));
+        current.ifPresent(ignored -> mapper.deleteShipperLink(username));
+        return current;
     }
 
     /** 復元では検査しない。列が無かったころの行が読めなくなる。 */

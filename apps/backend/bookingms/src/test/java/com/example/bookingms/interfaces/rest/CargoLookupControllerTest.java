@@ -12,6 +12,7 @@ import com.example.bookingms.application.port.CargoRepository;
 import com.example.bookingms.application.port.CargoSummary;
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.contract.CargoSnapshotContract;
+import com.example.shared.contract.ShipperCargoSnapshotContract;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -43,7 +44,7 @@ class CargoLookupControllerTest {
     }
 
     private static String shipperPathFor(String trackingNumber) {
-        return "/api/v1/bookings/shipper-snapshots/" + trackingNumber;
+        return ShipperCargoSnapshotContract.PATH.replace("{trackingNumber}", trackingNumber);
     }
 
     @Test
@@ -129,7 +130,8 @@ class CargoLookupControllerTest {
                         "丸紅商事")));
 
         mockMvc.perform(get(shipperPathFor("TRK-20260823-0001"))
-                        .header(AuthenticatedUser.USER_ID_HEADER, "system:trackingms"))
+                        .header(AuthenticatedUser.USER_ID_HEADER,
+                                ShipperCargoSnapshotContract.CALLER_PRINCIPAL))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.bookingId").value("BKG-2026000001"))
                 .andExpect(jsonPath("$.trackingNumber").value("TRK-20260823-0001"))
@@ -167,5 +169,15 @@ class CargoLookupControllerTest {
                                         .getRecordComponents())
                                 .map(java.lang.reflect.RecordComponent::getName).toList())
                 .containsExactlyElementsOf(CargoSnapshotContract.LEG_FIELDS);
+    }
+
+    @Test
+    @DisplayName("荷主 Snapshot の項目名簿が、DTO の要素と一致する")
+    void shipperSnapshotRosterIsDerivedFromTheDto() {
+        org.assertj.core.api.Assertions.assertThat(
+                        java.util.Arrays.stream(ShipperCargoSnapshotResponse.class
+                                        .getRecordComponents())
+                                .map(java.lang.reflect.RecordComponent::getName).toList())
+                .containsExactlyElementsOf(ShipperCargoSnapshotContract.FIELDS);
     }
 }

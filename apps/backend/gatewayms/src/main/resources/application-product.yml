@@ -9,7 +9,7 @@ spring:
             - id: authms
               uri: ${AUTHMS_URL}
               predicates:
-                - Path=/api/v1/auth/**,/api/v1/admin/accounts/**,/api/v1/internal/user-shipper-links/**
+                - Path=/api/v1/auth/**,/api/v1/admin/accounts/**,/api/v1/admin/user-shipper-links/**,/api/v1/internal/user-shipper-links/**
             - id: bookingms
               uri: ${BOOKINGMS_URL}
               predicates:

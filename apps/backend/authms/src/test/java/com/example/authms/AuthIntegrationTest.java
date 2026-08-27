@@ -7,6 +7,7 @@ import com.example.authms.application.internal.LoginUseCase;
 import com.example.authms.application.port.AuthAuditLogger;
 import com.example.authms.application.port.UserRepository;
 import com.example.authms.domain.model.AuthEventType;
+import com.example.authms.domain.model.UserShipperLink;
 import com.example.shared.auth.Role;
 import java.util.ArrayList;
 import java.util.List;
@@ -247,5 +248,18 @@ class AuthIntegrationTest {
         assertThat(users.findLinkedShipperId("sales01"))
                 .as("紐付けが無い利用者を、空の荷主一覧と取り違えない")
                 .isEmpty();
+    }
+
+    @Test
+    @DisplayName("荷主利用者の紐付けを更新して解除できる")
+    void savesAndRemovesUserShipperLink() {
+        UserShipperLink updated = users.saveShipperLink(new UserShipperLink("shipper01", 2L));
+
+        assertThat(updated).isEqualTo(new UserShipperLink("shipper01", 2L));
+        assertThat(users.findLinkedShipperId("shipper01")).contains(2L);
+
+        assertThat(users.removeShipperLink("shipper01"))
+                .contains(new UserShipperLink("shipper01", 2L));
+        assertThat(users.findLinkedShipperId("shipper01")).isEmpty();
     }
 }
