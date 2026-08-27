@@ -150,8 +150,8 @@
 
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | :--- | :--- |
-| 2.1 | `user_shipper_link` の Flyway マイグレーションと Mapper テストを追加する | 6h | [ ] |
-| 2.2 | `UserShipperLink` / `ShipperLinkedUser` のドメインモデルと紐付け照会ユースケースを TDD で実装する | 8h | [ ] |
+| 2.1 | `user_shipper_link` の Flyway マイグレーションと Mapper テストを追加する | 6h | [x] |
+| 2.2 | `UserShipperLink` / `ShipperLinkedUser` のドメインモデルと紐付け照会ユースケースを TDD で実装する | 8h | [x] |
 | 2.3 | 管理者向けの紐付け API と認可テストを実装する | 6h | [ ] |
 | 2.4 | bookingms / trackingms から参照する内部 API の契約テストを追加する | 5h | [ ] |
 
