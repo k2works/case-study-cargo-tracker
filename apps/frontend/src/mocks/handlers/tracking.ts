@@ -387,20 +387,38 @@ export function forceLookupThrottle() {
   lookupCount = LOOKUP_LIMIT_PER_WINDOW;
 }
 
+function currentUserId(request: Request) {
+  const authorization = request.headers.get("authorization") ?? "";
+  if (!authorization.startsWith("Bearer mock-token-")) {
+    return "shipper01";
+  }
+  return authorization.slice("Bearer mock-token-".length);
+}
+
 export const trackingHandlers = [
-  http.get(API_PATHS.shipperTracking, () =>
-    HttpResponse.json({
+  http.get(API_PATHS.shipperTracking, ({ request }) => {
+    const userId = currentUserId(request);
+    if (userId !== "shipper01") {
+      return HttpResponse.json({
+        linked: false,
+        contactMessage: "営業担当またはシステム管理者へ紐付けを依頼してください。",
+        cargos: [],
+      });
+    }
+
+    return HttpResponse.json({
       linked: true,
       contactMessage: null,
       cargos: trackings
-        .filter((tracking) => tracking.shipperLinkId === "shipper01")
+        .filter((tracking) => tracking.shipperLinkId === userId)
         .map(shipperSummaryView),
-    }),
-  ),
+    });
+  }),
 
-  http.get(`${API_PATHS.shipperTracking}/:trackingNumber`, ({ params }) => {
+  http.get(`${API_PATHS.shipperTracking}/:trackingNumber`, ({ params, request }) => {
+    const userId = currentUserId(request);
     const tracking = find(String(params.trackingNumber));
-    if (tracking === undefined || tracking.shipperLinkId !== "shipper01") {
+    if (tracking === undefined || tracking.shipperLinkId !== userId) {
       return HttpResponse.json(
         { message: "自社の貨物として確認できません" },
         { status: 404 },

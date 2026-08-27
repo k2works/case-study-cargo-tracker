@@ -47,7 +47,13 @@ export const DEMO_ACCOUNTS: DemoAccount[] = [
   },
   {
     userId: 'shipper01',
-    description: '荷主（自分の貨物予約の確認）',
+    description: '荷主（自分の貨物の追跡）',
+    roles: ['ROLE_SHIPPER'],
+    canLogIn: true,
+  },
+  {
+    userId: 'shipper02',
+    description: '荷主（紐付け未設定の確認）',
     roles: ['ROLE_SHIPPER'],
     canLogIn: true,
   },

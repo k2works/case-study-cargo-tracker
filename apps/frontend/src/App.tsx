@@ -69,7 +69,7 @@ export default function App() {
         <Route path="/booking/shippers/new" element={<ShipperRegisterPage />} />
         <Route path="/booking/shippers/:id/edit" element={<ShipperEditPage />} />
         {/* 貨物予約も営業担当者の業務。ROLE_SHIPPER には開かない（ADR-008）。
-            利用者と荷主を結ぶキーが無く「自分の予約だけ」に絞り込めないため */}
+            US33 で開くのは自社貨物の追跡であり、予約登録・参照ではないため */}
         <Route path="/booking/new" element={<BookingRegisterPage />} />
         {/* 輸送見積（US01）。**営業担当者だけ**——荷主に「いくらで何日か」を
             答えるのは営業の仕事である */}

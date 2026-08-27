@@ -382,6 +382,53 @@ test('09-open-exceptions（未解決の例外一覧）', async ({ page }) => {
   await page.screenshot({ path: `${ASSETS}/09-open-exceptions.png`, fullPage: true })
 })
 
+test('14-shipper-dashboard（荷主ダッシュボード）', async ({ page }) => {
+  await login(page, 'shipper01')
+  await expect(page.getByRole('heading', { name: '荷主ダッシュボード' })).toBeVisible()
+  await expect(page.getByRole('link', { name: '自分の貨物を見る' })).toBeVisible()
+
+  await page.screenshot({ path: `${ASSETS}/14-shipper-dashboard.png`, fullPage: true })
+})
+
+test('14-shipper-tracking-list（自分の貨物一覧）', async ({ page }) => {
+  await login(page, 'shipper01')
+  await page.goto('/shipper/tracking')
+  await expect(page.getByRole('heading', { name: '自分の貨物' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'TRK-20260823-0001' })).toBeVisible()
+
+  await page.screenshot({ path: `${ASSETS}/14-shipper-tracking-list.png`, fullPage: true })
+})
+
+test('14-shipper-tracking-detail（自分の貨物詳細）', async ({ page }) => {
+  await login(page, 'shipper01')
+  await page.goto('/shipper/tracking/TRK-20260823-0001')
+  await expect(page.getByRole('heading', { name: 'TRK-20260823-0001' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'これまでの経過' })).toBeVisible()
+
+  await page.screenshot({ path: `${ASSETS}/14-shipper-tracking-detail.png`, fullPage: true })
+})
+
+test('14-shipper-unlinked（荷主との紐付けなし）', async ({ page }) => {
+  await login(page, 'shipper02')
+  await page.goto('/shipper/tracking')
+  await expect(page.getByText('荷主との紐付けがありません')).toBeVisible()
+  await expect(page.getByText(/営業担当またはシステム管理者/)).toBeVisible()
+
+  await page.screenshot({ path: `${ASSETS}/14-shipper-unlinked.png`, fullPage: true })
+})
+
+test('14-shipper-timeout-warning（無操作タイムアウト警告）', async ({ page }) => {
+  await page.clock.install()
+  await login(page, 'shipper01')
+  await page.goto('/shipper/tracking')
+  await expect(page.getByRole('heading', { name: '自分の貨物' })).toBeVisible()
+
+  await page.clock.fastForward(15 * 60 * 1000)
+  await expect(page.getByRole('alert')).toContainText('まもなく自動ログアウトします')
+
+  await page.screenshot({ path: `${ASSETS}/14-shipper-timeout-warning.png`, fullPage: true })
+})
+
 test('10-customs-new（通関申告の登録）', async ({ page }) => {
   await login(page, 'handler01')
   await page.getByRole('link', { name: '通関管理' }).click()
