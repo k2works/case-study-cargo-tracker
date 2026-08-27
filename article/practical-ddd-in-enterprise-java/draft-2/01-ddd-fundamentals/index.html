@@ -1,0 +1,6355 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="DDD ケーススタディ - 貨物追跡システム">
+      
+      
+        <meta name="author" content="Project Team">
+      
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>第 1 章：ドメイン駆動設計 — 概念と、この実装での対応物 - Case Study Cargo Tracker</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../../../assets/css/extra.css">
+    
+    <script>__md_scope=new URL("../../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#1" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../../.." title="Case Study Cargo Tracker" class="md-header__button md-logo" aria-label="Case Study Cargo Tracker" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Case Study Cargo Tracker
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              第 1 章：ドメイン駆動設計 — 概念と、この実装での対応物
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/k2works/case-study-cargo-tracker" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    case-study-cargo-tracker
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../strategy/" class="md-tabs__link">
+          
+  
+  
+  戦略
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../requirements/" class="md-tabs__link">
+          
+  
+  
+  要件
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../design/" class="md-tabs__link">
+          
+  
+  
+  設計
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../development/" class="md-tabs__link">
+          
+  
+  
+  開発
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../operation/" class="md-tabs__link">
+          
+  
+  
+  運用
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../review/" class="md-tabs__link">
+          
+  
+  
+  レビュー
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../adr/" class="md-tabs__link">
+          
+  
+  
+  ADR
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../" class="md-tabs__link">
+          
+  
+  
+  記事
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../reference/" class="md-tabs__link">
+          
+  
+  
+  リファレンス
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../../template/" class="md-tabs__link">
+          
+  
+  
+  テンプレート
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--lifted md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../../.." title="Case Study Cargo Tracker" class="md-nav__button md-logo" aria-label="Case Study Cargo Tracker" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Case Study Cargo Tracker
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/k2works/case-study-cargo-tracker" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    case-study-cargo-tracker
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    戦略
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    戦略
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../strategy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../strategy/business_architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ビジネスアーキテクチャ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../strategy/inception-deck/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    インセプションデッキ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    要件
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    要件
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../requirements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../requirements/requirements_definition/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    要件定義書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../requirements/business_usecase/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ビジネスユースケース
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../requirements/system_usecase/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    システムユースケース
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../requirements/user_story/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ユーザーストーリー
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    設計
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    設計
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    開発
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    開発
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    運用
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    運用
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../operation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    レビュー
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    レビュー
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../review/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../review/%E3%83%89%E3%83%A1%E3%82%A4%E3%83%B3%E3%83%A2%E3%83%87%E3%83%AB%E5%88%86%E6%9E%90_review_20260331/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ドメインモデル分析レビュー
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ADR
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../adr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    記事
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    記事
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_9_2" id="__nav_9_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    モノリスアーキテクチャ実装比較
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_9_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    モノリスアーキテクチャ実装比較
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../monolith-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../monolith-architecture/01-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 1 章 モノリスアーキテクチャの全体像
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../monolith-architecture/02-iteration-01/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 2 章 IT1 荷主登録と貨物予約の基盤
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../monolith-architecture/03-iteration-02/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 3 章 IT2 特殊貨物と予約確定
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../monolith-architecture/04-iteration-03/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 4 章 IT3 輸送見積と経路設計への引き渡し
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../monolith-architecture/05-iteration-04/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 5 章 IT4 航海スケジュール検索と経路候補算出
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../monolith-architecture/06-iteration-05/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 6 章 IT5 経路の選択・確定・紐付け
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../monolith-architecture/07-iteration-06/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 7 章 IT6 法人割引と精算処理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../monolith-architecture/08-iteration-07/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 8 章 IT7 追跡番号発行と荷役作業記録
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../monolith-architecture/09-iteration-08/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 9 章 IT8 引取記録・追跡照会・状態手動更新
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../monolith-architecture/10-iteration-09/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 10 章 IT9 遅延・破損・紛失の例外処理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../monolith-architecture/11-iteration-10/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 11 章 IT10 輸送料金算出とリリース 2.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../monolith-architecture/12-comparison/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 12 章 10 言語横断まとめ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_9_3" id="__nav_9_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    関数型ドメインモデリング
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_9_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    関数型ドメインモデリング
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../functional-domain-modeling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../functional-domain-modeling/01-functional-domain-modeling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 1 章 関数型ドメインモデリングとは
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../functional-domain-modeling/02-iteration-01/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 2 章 IT1 型で守る土台をつくる
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../functional-domain-modeling/03-iteration-02/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 3 章 IT2 貨物予約と特殊貨物
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../functional-domain-modeling/04-iteration-03/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 4 章 IT3 航海スケジュールと経路候補算出
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../functional-domain-modeling/05-iteration-04/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 5 章 IT4 経路確定から予約確定まで
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../functional-domain-modeling/06-iteration-05/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 6 章 IT5 追跡と荷役
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../functional-domain-modeling/07-iteration-06/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 7 章 IT6 輸送例外の登録と解決
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../functional-domain-modeling/08-iteration-07/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 8 章 IT7 料金算出と精算
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../functional-domain-modeling/09-iteration-08/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 9 章 IT8 実務品質への引き上げ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../functional-domain-modeling/10-summary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 10 章 型で守れたもの・守れなかったもの
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_9_4" id="__nav_9_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    実践 AI 駆動開発
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_9_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    実践 AI 駆動開発
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../ai-driven-development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../ai-driven-development/01-overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 1 章 AI 駆動開発の全体像
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../ai-driven-development/02-skills/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 2 章 Skill 体系で開発プロセスを固定する
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../ai-driven-development/03-iteration-lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 3 章 イテレーションのライフサイクル
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../ai-driven-development/04-ralph-loop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 4 章 Ralph Loop と自律実行の境界
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../ai-driven-development/05-destructive-verification/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 5 章 TDD と破壊検証
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../ai-driven-development/06-review/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 6 章 マルチパースペクティブレビュー
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../ai-driven-development/07-rules-into-checks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 7 章 規則を検査に落とす
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../ai-driven-development/08-memory-and-debt/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 8 章 記憶と負債
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../ai-driven-development/09-startup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 9 章 立ち上げ IT1〜IT3
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../ai-driven-development/10-end-to-end/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 10 章 一気通貫 IT4〜IT10
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../ai-driven-development/11-completion-and-billing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 11 章 補完と精算 IT11〜IT15
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../ai-driven-development/12-rectification/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 12 章 整流 IT16〜IT17
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../ai-driven-development/13-shipping/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 13 章 出荷と是正 IT18〜IT20
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../ai-driven-development/14-conclusion/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 14 章 何が効き、何が効かなかったか
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_9_5" id="__nav_9_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    XP によるドメイン駆動設計の実践
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_9_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    XP によるドメイン駆動設計の実践
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../xp-domain-driven-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../xp-domain-driven-design/01-xp-and-ddd/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 1 章 XP と DDD をなぜ一緒に語るのか
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../xp-domain-driven-design/02-inception-to-contexts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 2 章 インセプションデッキから境界づけられたコンテキストへ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../xp-domain-driven-design/03-releases-and-stories/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 3 章 小さなリリースとイテレーション計画
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../xp-domain-driven-design/04-development-strategy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 4 章 開発戦略 7 局面で TDD の入口を切り替える
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../xp-domain-driven-design/05-acceptance-to-aggregates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 5 章 受入テストから集約を立ち上げる
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../xp-domain-driven-design/06-value-objects-and-invariants/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 6 章 値オブジェクトと不変条件
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../xp-domain-driven-design/07-refactoring-splits-the-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 7 章 リファクタリングでモデルが割れる
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../xp-domain-driven-design/08-guarding-boundaries/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 8 章 境界を守る五つの手段
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../xp-domain-driven-design/09-ubiquitous-language/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 9 章 ユビキタス言語はどこで離れるか
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../xp-domain-driven-design/10-executable-design-docs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 10 章 設計ドキュメントを実行可能にする
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../xp-domain-driven-design/11-continuous-integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 11 章 継続的インテグレーションが暴いたもの
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../xp-domain-driven-design/12-retrospectives/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 12 章 ふりかえりが設計を変えた
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../xp-domain-driven-design/13-conclusion/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 13 章 XP は DDD に何を与えたか
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_9_6" id="__nav_9_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    エンタープライズアーキテクチャの 4 観点
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_9_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    エンタープライズアーキテクチャの 4 観点
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../enterprise-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../enterprise-architecture/01-four-viewpoints/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 1 章 4 つの観点と貫通の地図
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../enterprise-architecture/02-business-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 2 章 ビジネスモデルとケイパビリティ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../enterprise-architecture/03-capability-to-story/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 3 章 ケイパビリティから境界づけられたコンテキストへ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../enterprise-architecture/04-context-map/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 4 章 コンテキストマップ 7 つの業務領域
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../enterprise-architecture/05-hexagonal-layers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 5 章 ヘキサゴナルの 4 層とポートの置き場所
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../enterprise-architecture/06-context-integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 6 章 コンテキスト間連携 ACL とドメインイベント
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../enterprise-architecture/07-data-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 7 章 データモデルとテーブルの所有
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../enterprise-architecture/08-persistence-and-cqrs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 8 章 CQRS の読み書き分離とスキーマの進化
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../enterprise-architecture/09-runtime-stack/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 9 章 ランタイムスタックと環境戦略
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../enterprise-architecture/10-architecture-governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 10 章 アーキテクチャを検査に落とす
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../enterprise-architecture/11-traceability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 11 章 4 観点の貫通と破れた箇所
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_9_7" id="__nav_9_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    実践 DDD in Spring Boot
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_9_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    実践 DDD in Spring Boot
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../practical-ddd-spring-boot/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../practical-ddd-spring-boot/01-overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 1 章 Spring Boot で DDD を書く土台
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../practical-ddd-spring-boot/02-iteration-01/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 2 章 IT1 ウォーキングスケルトンを 1 本通す
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../practical-ddd-spring-boot/03-iteration-02/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 3 章 IT2 Cargo 集約と最初の ACL ポート
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../practical-ddd-spring-boot/04-iteration-03/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 4 章 IT3 航海スケジュールと経路設計への引き渡し
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../practical-ddd-spring-boot/05-iteration-04/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 5 章 IT4 経路候補算出
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../practical-ddd-spring-boot/06-iteration-05/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 6 章 IT5 経路の確定と予約への紐付け
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../practical-ddd-spring-boot/07-iteration-06/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 7 章 IT6 予約確定・追跡番号・荷役記録
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../practical-ddd-spring-boot/08-iteration-07/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 8 章 IT7 追跡照会・引取・法人荷主
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../practical-ddd-spring-boot/09-iteration-08/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 9 章 IT8 うまくいかなかったときを扱う
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../practical-ddd-spring-boot/10-iteration-09/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 10 章 IT9 荷主セルフサービスと特殊貨物
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../practical-ddd-spring-boot/11-iteration-10/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 11 章 IT10 遅延・破損・紛失の例外処理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../practical-ddd-spring-boot/12-iteration-11/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 12 章 IT11 誤配の再設計と通関申告
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../practical-ddd-spring-boot/13-iteration-12/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 13 章 IT12 引取確認コードと引取記録の訂正
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../practical-ddd-spring-boot/14-iteration-13/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 14 章 IT13 Billing Context の立ち上げと金額の丸め
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../practical-ddd-spring-boot/15-iteration-14/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 15 章 IT14 請求から入金確認までを閉じる
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../practical-ddd-spring-boot/16-iteration-15/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 16 章 IT15 輸送中キャンセルの承認
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../practical-ddd-spring-boot/17-iteration-16/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 17 章 IT16 宣言した規則を検査に落とす
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../practical-ddd-spring-boot/18-iteration-17/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 18 章 IT17 数え上げた負債を返す
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../practical-ddd-spring-boot/19-iteration-18/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 19 章 IT18 Estimation Context の立ち上げ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../practical-ddd-spring-boot/20-iteration-19/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 20 章 IT19 正典に届いていない実装を返す
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../practical-ddd-spring-boot/21-iteration-20/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 21 章 IT20 育つ負債を止める
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../practical-ddd-spring-boot/22-conclusion/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 22 章 20 イテレーションで積み上がったもの
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リファレンス
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    リファレンス
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%82%88%E3%81%84%E3%82%BD%E3%83%95%E3%83%88%E3%82%A6%E3%82%A7%E3%82%A2%E3%81%A8%E3%81%AF/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    よいソフトウェアとは
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%AD%E3%82%B8%E3%82%AB%E3%83%AB%E3%82%B7%E3%83%B3%E3%82%AD%E3%83%B3%E3%82%B0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ロジカルシンキング
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E9%96%8B%E7%99%BA%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    開発ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%93%E3%82%B8%E3%83%8D%E3%82%B9%E3%82%A2%E3%83%BC%E3%82%AD%E3%83%86%E3%82%AF%E3%83%81%E3%83%A3%E5%88%86%E6%9E%90%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ビジネスアーキテクチャ分析ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E8%A6%81%E4%BB%B6%E5%AE%9A%E7%BE%A9%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    要件定義ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%A6%E3%83%BC%E3%82%B9%E3%82%B1%E3%83%BC%E3%82%B9%E4%BD%9C%E6%88%90%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ユースケース作成ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%82%A2%E3%83%BC%E3%82%AD%E3%83%86%E3%82%AF%E3%83%81%E3%83%A3%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    アーキテクチャ設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%87%E3%83%BC%E3%82%BF%E3%83%A2%E3%83%87%E3%83%AB%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    データモデル設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%89%E3%83%A1%E3%82%A4%E3%83%B3%E3%83%A2%E3%83%87%E3%83%AB%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ドメインモデル設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/UI%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI 設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%86%E3%82%B9%E3%83%88%E6%88%A6%E7%95%A5%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    テスト戦略ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E9%9D%9E%E6%A9%9F%E8%83%BD%E8%A6%81%E4%BB%B6%E5%AE%9A%E7%BE%A9%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    非機能要件定義ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E9%81%8B%E7%94%A8%E8%A6%81%E4%BB%B6%E5%AE%9A%E7%BE%A9%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    運用要件定義ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%82%A4%E3%83%B3%E3%83%95%E3%83%A9%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    インフラ設計ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%82%B3%E3%83%BC%E3%83%87%E3%82%A3%E3%83%B3%E3%82%B0%E3%81%A8%E3%83%86%E3%82%B9%E3%83%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    コーディングとテストガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%82%A8%E3%82%AF%E3%82%B9%E3%83%88%E3%83%AA%E3%83%BC%E3%83%A0%E3%83%97%E3%83%AD%E3%82%B0%E3%83%A9%E3%83%9F%E3%83%B3%E3%82%B0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    エクストリームプログラミング
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリースガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9%E3%83%BB%E3%82%A4%E3%83%86%E3%83%AC%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E8%A8%88%E7%94%BB%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリース・イテレーション計画ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E7%92%B0%E5%A2%83%E5%A4%89%E6%95%B0%E7%AE%A1%E7%90%86%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    環境変数管理ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E8%A8%80%E8%AA%9E%E5%88%A5%E9%96%8B%E7%99%BA%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    言語別開発ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/Java%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E7%92%B0%E5%A2%83%E6%A7%8B%E7%AF%89%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Java アプリケーション環境構築ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/TypeScript%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E7%92%B0%E5%A2%83%E6%A7%8B%E7%AF%89%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TypeScript アプリケーション環境構築ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E9%81%8B%E7%94%A8%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88%E4%BD%9C%E6%88%90%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    運用スクリプト作成ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/CodexCLIMCP%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E9%96%8B%E7%99%BA%E3%83%95%E3%83%AD%E3%83%BC/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Codex CLI MCP アプリケーション開発フロー
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/CodexCLIMCP%E3%82%B5%E3%83%BC%E3%83%90%E3%83%BC%E8%A8%AD%E5%AE%9A%E6%89%8B%E9%A0%86/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Codex CLI MCP サーバー設定手順
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/SonarQube%E3%83%AD%E3%83%BC%E3%82%AB%E3%83%AB%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SonarQube ローカル環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/Vim%E6%93%8D%E4%BD%9C%E3%83%9E%E3%83%8B%E3%83%A5%E3%82%A2%E3%83%AB/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vim 操作マニュアル
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E7%B5%8C%E5%96%B6%E6%88%A6%E7%95%A5%E5%88%86%E6%9E%90%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    経営戦略分析ガイド
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E4%BC%81%E6%A5%AD%E7%B5%8C%E5%96%B6%E8%AB%96/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    企業経営論
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/%E9%81%8B%E5%96%B6%E7%AE%A1%E7%90%86/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    運営管理
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    テンプレート
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    テンプレート
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%81%BE%E3%81%9A%E3%81%93%E3%82%8C%E3%82%92%E8%AA%AD%E3%82%82%E3%81%86%E3%83%AA%E3%82%B9%E3%83%88/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    まずこれを読もうリスト
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%83%93%E3%82%B8%E3%83%8D%E3%82%B9%E3%82%A2%E3%83%BC%E3%82%AD%E3%83%86%E3%82%AF%E3%83%81%E3%83%A3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ビジネスアーキテクチャ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E8%A6%81%E4%BB%B6%E5%AE%9A%E7%BE%A9/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    要件定義
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E5%AE%8C%E5%85%A8%E5%BD%A2%E5%BC%8F%E3%81%AE%E3%83%A6%E3%83%BC%E3%82%B9%E3%82%B1%E3%83%BC%E3%82%B9/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    完全形式のユースケース
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E8%A8%AD%E8%A8%88/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    設計
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/ADR/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%82%A4%E3%83%B3%E3%82%BB%E3%83%97%E3%82%B7%E3%83%A7%E3%83%B3%E3%83%87%E3%83%83%E3%82%AD/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    インセプションデッキ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%82%A4%E3%83%86%E3%83%AC%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E8%A8%88%E7%94%BB/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    イテレーション計画
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%82%A4%E3%83%86%E3%83%AC%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E5%AE%8C%E4%BA%86%E5%A0%B1%E5%91%8A%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    イテレーション完了報告書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9%E8%A8%88%E7%94%BB/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリース計画
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9%E5%AE%8C%E4%BA%86%E5%A0%B1%E5%91%8A%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリース完了報告書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E9%96%8B%E7%99%BA%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    アプリケーション開発環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E9%96%8B%E7%99%BA%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    開発環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/AWS%E3%82%B9%E3%83%86%E3%83%BC%E3%82%B8%E3%83%B3%E3%82%B0%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AWS ステージング環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/AWS%E3%83%97%E3%83%AD%E3%83%80%E3%82%AF%E3%82%B7%E3%83%A7%E3%83%B3%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AWS プロダクション環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E4%BA%8B%E4%BE%8B%E5%88%86%E6%9E%90/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    事例分析
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/%E4%BC%81%E6%A5%AD%E5%88%86%E6%9E%90/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    企業分析
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../template/README.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    README
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="1">第 1 章：ドメイン駆動設計 — 概念と、この実装での対応物<a class="headerlink" href="#1" title="Permanent link">&para;</a></h1>
+<p>このシリーズは、国際貨物輸送管理システム <strong>Cargo Tracker</strong> を題材に、DDD の概念が Java と Spring のコードとしてどこに現れるかを追います。</p>
+<p>扱うのは 1 つの実装 —— <code>docs/article/source/java-2/</code> に収録された Spring Boot 実装です。20 イテレーションを経て出荷され、7 つの業務コンテキストと支援サブドメイン、25 本の ADR を持ちます。</p>
+<p><strong>この実装は、書籍『Practical Domain-Driven Design in Enterprise Java』の構造を実際に適用したものです。</strong> 設計ドキュメントは「Practical DDD in Enterprise Java (Chapter 3) のパッケージ構造に準拠する」と明記し、ADR は同書の <code>bookingms</code> を参照実装として名指ししています。<strong>したがって本シリーズは書籍の要約ではなく、適用した結果の報告です。</strong></p>
+<p>そして報告である以上、<strong>うまくいかなかった箇所も同じ比重で扱います。</strong> 書籍の構成を写したまま使って壊れた箇所があり、設計ドキュメントが実装から離れた箇所があります。それらは瑕疵ではなく、この記事が書くに値する部分です。</p>
+<h2 id="_1">この章のゴール<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
+<ol>
+<li>DDD の各要素が、この実装のどのパッケージ・どの型に対応するかを言えること</li>
+<li><strong>対応物が無い要素については「無い」と言えること</strong></li>
+<li>第 2 章・第 3 章のどこに何が書いてあるかを把握すること</li>
+</ol>
+<p><strong>この章は地図です。</strong> 個々のモデルは<a href="../02-cargo-domain-model/">第 2 章</a>、Spring 上の配置と検査は<a href="../03-spring-modular-monolith/">第 3 章</a>で扱います。</p>
+<h2 id="_2">問題空間 — 何を解こうとしているか<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
+<p>Cargo Tracker が扱うのは、国際貨物輸送の一連の業務です。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">業務</th>
+<th style="text-align: left;">内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">見積</td>
+<td style="text-align: left;">輸送の概算を出す</td>
+</tr>
+<tr>
+<td style="text-align: left;">予約</td>
+<td style="text-align: left;">荷主から貨物を預かる</td>
+</tr>
+<tr>
+<td style="text-align: left;">経路設計</td>
+<td style="text-align: left;">航海スケジュールから経路を組む</td>
+</tr>
+<tr>
+<td style="text-align: left;">追跡</td>
+<td style="text-align: left;">輸送中の状態と例外を追う</td>
+</tr>
+<tr>
+<td style="text-align: left;">荷役</td>
+<td style="text-align: left;">積み込み・陸揚げ・引き渡しを記録する</td>
+</tr>
+<tr>
+<td style="text-align: left;">精算</td>
+<td style="text-align: left;">請求し、入金を確認する</td>
+</tr>
+</tbody>
+</table>
+<p><strong>モデルを分ける線は、この業務の切れ目に引かれています。</strong> Web 層・サービス層・DB 層といった技術の層で分けるのではありません。技術で分けると、1 つの業務変更がすべての層に波及します。</p>
+<h2 id="_3">サブドメインと境界づけられたコンテキスト<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
+<p>業務の切れ目が、そのまま境界づけられたコンテキスト（BC）になります。</p>
+<p><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyIgZGF0YS1kaWFncmFtLXR5cGU9IkNMQVNTIiBoZWlnaHQ9Ijc3M3B4IiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBzdHlsZT0id2lkdGg6MjA1MnB4O2hlaWdodDo3NzNweDtiYWNrZ3JvdW5kOiNGRkZGRkY7IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCAyMDUyIDc3MyIgd2lkdGg9IjIwNTJweCIgem9vbUFuZFBhbj0ibWFnbmlmeSI+PD9wbGFudHVtbCAxLjIwMjYuNj8+PGRlZnMvPjxnPjxnIGNsYXNzPSJ0aXRsZSIgZGF0YS1zb3VyY2UtbGluZT0iMSI+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSI3MDAiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMjUyLjYwNzgiIHg9Ijg5Ni4yOTEyIiB5PSIyMi45OTUxIj5DYXJnbyBUcmFja2VyIC0gJiMxMjQ2NzsmIzEyNTMxOyYjMTI0ODY7JiMxMjQ2MTsmIzEyNDczOyYjMTI0ODg7JiMxMjUxMDsmIzEyNDgzOyYjMTI1MDM7PC90ZXh0PjwvZz48IS0tY2x1c3RlciBib29raW5nLS0+PGcgY2xhc3M9ImNsdXN0ZXIiIGRhdGEtcXVhbGlmaWVkLW5hbWU9ImJvb2tpbmciIGRhdGEtc291cmNlLWxpbmU9IjMiIGlkPSJlbnQwMDAxIj48cGF0aCBkPSJNMTAxNy40NCwyMzUuODI2OSBMMTE0OS4wODg0LDIzNS44MjY5IEEzLjc1LDMuNzUgMCAwIDEgMTE1MS41ODg0LDIzOC4zMjY5IEwxMTU4LjU4ODQsMjU4LjEyMzggTDEyMTIuNDQsMjU4LjEyMzggQTIuNSwyLjUgMCAwIDEgMTIxNC45NCwyNjAuNjIzOCBMMTIxNC45NCwzNTYuNTg2OSBBMi41LDIuNSAwIDAgMSAxMjEyLjQ0LDM1OS4wODY5IEwxMDE3LjQ0LDM1OS4wODY5IEEyLjUsMi41IDAgMCAxIDEwMTQuOTQsMzU2LjU4NjkgTDEwMTQuOTQsMjM4LjMyNjkgQTIuNSwyLjUgMCAwIDEgMTAxNy40NCwyMzUuODI2OSIgZmlsbD0iI0FERDhFNiIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxLjU7Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxLjU7IiB4MT0iMTAxNC45NCIgeDI9IjExNTguNTg4NCIgeTE9IjI1OC4xMjM4IiB5Mj0iMjU4LjEyMzgiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9IjcwMCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMzAuNjQ4NCIgeD0iMTAxOC45NCIgeT0iMjUwLjgyMiI+Qm9va2luZyBDb250ZXh0PC90ZXh0PjwvZz48IS0tY2x1c3RlciBzaGlwcGVyLS0+PGcgY2xhc3M9ImNsdXN0ZXIiIGRhdGEtcXVhbGlmaWVkLW5hbWU9InNoaXBwZXIiIGRhdGEtc291cmNlLWxpbmU9IjciIGlkPSJlbnQwMDAzIj48cGF0aCBkPSJNMTQ5Ny40NCw0MzkuMDg2OSBMMTYyNi4zNzQ2LDQzOS4wODY5IEEzLjc1LDMuNzUgMCAwIDEgMTYyOC44NzQ2LDQ0MS41ODY5IEwxNjM1Ljg3NDYsNDYxLjM4MzcgTDE4ODIuNDQsNDYxLjM4MzcgQTIuNSwyLjUgMCAwIDEgMTg4NC45NCw0NjMuODgzNyBMMTg4NC45NCw1NTkuODU2OSBBMi41LDIuNSAwIDAgMSAxODgyLjQ0LDU2Mi4zNTY5IEwxNDk3LjQ0LDU2Mi4zNTY5IEEyLjUsMi41IDAgMCAxIDE0OTQuOTQsNTU5Ljg1NjkgTDE0OTQuOTQsNDQxLjU4NjkgQTIuNSwyLjUgMCAwIDEgMTQ5Ny40NCw0MzkuMDg2OSIgZmlsbD0iIzg3Q0VGQSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxLjU7Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxLjU7IiB4MT0iMTQ5NC45NCIgeDI9IjE2MzUuODc0NiIgeTE9IjQ2MS4zODM3IiB5Mj0iNDYxLjM4MzciLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9IjcwMCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMjcuOTM0NiIgeD0iMTQ5OC45NCIgeT0iNDU0LjA4MiI+U2hpcHBlciBDb250ZXh0PC90ZXh0PjwvZz48IS0tY2x1c3RlciByb3V0aW5nLS0+PGcgY2xhc3M9ImNsdXN0ZXIiIGRhdGEtcXVhbGlmaWVkLW5hbWU9InJvdXRpbmciIGRhdGEtc291cmNlLWxpbmU9IjEyIiBpZD0iZW50MDAwNiI+PHBhdGggZD0iTTUyOS40NCw0MzkuMDg2OSBMNjU4LjkyODMsNDM5LjA4NjkgQTMuNzUsMy43NSAwIDAgMSA2NjEuNDI4Myw0NDEuNTg2OSBMNjY4LjQyODMsNDYxLjM4MzcgTDcyNC40NCw0NjEuMzgzNyBBMi41LDIuNSAwIDAgMSA3MjYuOTQsNDYzLjg4MzcgTDcyNi45NCw1NTkuODU2OSBBMi41LDIuNSAwIDAgMSA3MjQuNDQsNTYyLjM1NjkgTDUyOS40NCw1NjIuMzU2OSBBMi41LDIuNSAwIDAgMSA1MjYuOTQsNTU5Ljg1NjkgTDUyNi45NCw0NDEuNTg2OSBBMi41LDIuNSAwIDAgMSA1MjkuNDQsNDM5LjA4NjkiIGZpbGw9IiM5MEVFOTAiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MS41OyIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MS41OyIgeDE9IjUyNi45NCIgeDI9IjY2OC40MjgzIiB5MT0iNDYxLjM4MzciIHkyPSI0NjEuMzgzNyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iNzAwIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjEyOC40ODgzIiB4PSI1MzAuOTQiIHk9IjQ1NC4wODIiPlJvdXRpbmcgQ29udGV4dDwvdGV4dD48L2c+PCEtLWNsdXN0ZXIgdHJhY2tpbmctLT48ZyBjbGFzcz0iY2x1c3RlciIgZGF0YS1xdWFsaWZpZWQtbmFtZT0idHJhY2tpbmciIGRhdGEtc291cmNlLWxpbmU9IjE2IiBpZD0iZW50MDAwOCI+PHBhdGggZD0iTTc2OS40NCw0MzkuMDg2OSBMOTA1LjM4MTQsNDM5LjA4NjkgQTMuNzUsMy43NSAwIDAgMSA5MDcuODgxNCw0NDEuNTg2OSBMOTE0Ljg4MTQsNDYxLjM4MzcgTDk3Ni40NCw0NjEuMzgzNyBBMi41LDIuNSAwIDAgMSA5NzguOTQsNDYzLjg4MzcgTDk3OC45NCw1NTkuODU2OSBBMi41LDIuNSAwIDAgMSA5NzYuNDQsNTYyLjM1NjkgTDc2OS40NCw1NjIuMzU2OSBBMi41LDIuNSAwIDAgMSA3NjYuOTQsNTU5Ljg1NjkgTDc2Ni45NCw0NDEuNTg2OSBBMi41LDIuNSAwIDAgMSA3NjkuNDQsNDM5LjA4NjkiIGZpbGw9IiNGRkZGRTAiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MS41OyIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MS41OyIgeDE9Ijc2Ni45NCIgeDI9IjkxNC44ODE0IiB5MT0iNDYxLjM4MzciIHkyPSI0NjEuMzgzNyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iNzAwIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjEzNC45NDE0IiB4PSI3NzAuOTQiIHk9IjQ1NC4wODIiPlRyYWNraW5nIENvbnRleHQ8L3RleHQ+PC9nPjwhLS1jbHVzdGVyIGhhbmRsaW5nLS0+PGcgY2xhc3M9ImNsdXN0ZXIiIGRhdGEtcXVhbGlmaWVkLW5hbWU9ImhhbmRsaW5nIiBkYXRhLXNvdXJjZS1saW5lPSIyMCIgaWQ9ImVudDAwMTAiPjxwYXRoIGQ9Ik01NDcuNDQsNDMuMjk2OSBMNjg1LjgyMTgsNDMuMjk2OSBBMy43NSwzLjc1IDAgMCAxIDY4OC4zMjE4LDQ1Ljc5NjkgTDY5NS4zMjE4LDY1LjU5MzggTDc1Ny40NCw2NS41OTM4IEEyLjUsMi41IDAgMCAxIDc1OS45NCw2OC4wOTM4IEw3NTkuOTQsMTY0LjA1NjkgQTIuNSwyLjUgMCAwIDEgNzU3LjQ0LDE2Ni41NTY5IEw1NDcuNDQsMTY2LjU1NjkgQTIuNSwyLjUgMCAwIDEgNTQ0Ljk0LDE2NC4wNTY5IEw1NDQuOTQsNDUuNzk2OSBBMi41LDIuNSAwIDAgMSA1NDcuNDQsNDMuMjk2OSIgZmlsbD0iI0YwODA4MCIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxLjU7Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxLjU7IiB4MT0iNTQ0Ljk0IiB4Mj0iNjk1LjMyMTgiIHkxPSI2NS41OTM4IiB5Mj0iNjUuNTkzOCIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iNzAwIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjEzNy4zODE4IiB4PSI1NDguOTQiIHk9IjU4LjI5MiI+SGFuZGxpbmcgQ29udGV4dDwvdGV4dD48L2c+PCEtLWNsdXN0ZXIgYmlsbGluZy0tPjxnIGNsYXNzPSJjbHVzdGVyIiBkYXRhLXF1YWxpZmllZC1uYW1lPSJiaWxsaW5nIiBkYXRhLXNvdXJjZS1saW5lPSIyNCIgaWQ9ImVudDAwMTIiPjxwYXRoIGQ9Ik0xMDM3LjQ0LDQzOS4wODY5IEwxMTU0LjkzOCw0MzkuMDg2OSBBMy43NSwzLjc1IDAgMCAxIDExNTcuNDM4LDQ0MS41ODY5IEwxMTY0LjQzOCw0NjEuMzgzNyBMMTIzMi40NCw0NjEuMzgzNyBBMi41LDIuNSAwIDAgMSAxMjM0Ljk0LDQ2My44ODM3IEwxMjM0Ljk0LDU1OS44NTY5IEEyLjUsMi41IDAgMCAxIDEyMzIuNDQsNTYyLjM1NjkgTDEwMzcuNDQsNTYyLjM1NjkgQTIuNSwyLjUgMCAwIDEgMTAzNC45NCw1NTkuODU2OSBMMTAzNC45NCw0NDEuNTg2OSBBMi41LDIuNSAwIDAgMSAxMDM3LjQ0LDQzOS4wODY5IiBmaWxsPSIjRkZCNkMxIiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjEuNTsiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjEuNTsiIHgxPSIxMDM0Ljk0IiB4Mj0iMTE2NC40MzgiIHkxPSI0NjEuMzgzNyIgeTI9IjQ2MS4zODM3Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSI3MDAiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTE2LjQ5OCIgeD0iMTAzOC45NCIgeT0iNDU0LjA4MiI+QmlsbGluZyBDb250ZXh0PC90ZXh0PjwvZz48IS0tY2x1c3RlciBlc3RpbWF0aW9uLS0+PGcgY2xhc3M9ImNsdXN0ZXIiIGRhdGEtcXVhbGlmaWVkLW5hbWU9ImVzdGltYXRpb24iIGRhdGEtc291cmNlLWxpbmU9IjI4IiBpZD0iZW50MDAxNCI+PHBhdGggZD0iTTIzMi40NCw0My4yOTY5IEwzODQuNTgyNiw0My4yOTY5IEEzLjc1LDMuNzUgMCAwIDEgMzg3LjA4MjYsNDUuNzk2OSBMMzk0LjA4MjYsNjUuNTkzOCBMNDI3LjQ0LDY1LjU5MzggQTIuNSwyLjUgMCAwIDEgNDI5Ljk0LDY4LjA5MzggTDQyOS45NCwxNjQuMDU2OSBBMi41LDIuNSAwIDAgMSA0MjcuNDQsMTY2LjU1NjkgTDIzMi40NCwxNjYuNTU2OSBBMi41LDIuNSAwIDAgMSAyMjkuOTQsMTY0LjA1NjkgTDIyOS45NCw0NS43OTY5IEEyLjUsMi41IDAgMCAxIDIzMi40NCw0My4yOTY5IiBmaWxsPSIjRjVERUIzIiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjEuNTsiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjEuNTsiIHgxPSIyMjkuOTQiIHgyPSIzOTQuMDgyNiIgeTE9IjY1LjU5MzgiIHkyPSI2NS41OTM4Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSI3MDAiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTUxLjE0MjYiIHg9IjIzMy45NCIgeT0iNTguMjkyIj5Fc3RpbWF0aW9uIENvbnRleHQ8L3RleHQ+PC9nPjwhLS1jbHVzdGVyIHNoYXJlZC0tPjxnIGNsYXNzPSJjbHVzdGVyIiBkYXRhLXF1YWxpZmllZC1uYW1lPSJzaGFyZWQiIGRhdGEtc291cmNlLWxpbmU9IjMyIiBpZD0iZW50MDAxNiI+PHBhdGggZD0iTTY4OC40NCw2MjcuMzU2OSBMODI5Ljc0MDcsNjI3LjM1NjkgQTMuNzUsMy43NSAwIDAgMSA4MzIuMjQwNyw2MjkuODU2OSBMODM5LjI0MDcsNjY1Ljk1MDYgTDk3Ni40NCw2NjUuOTUwNiBBMi41LDIuNSAwIDAgMSA5NzguOTQsNjY4LjQ1MDYgTDk3OC45NCw3NTUuODU2OSBBMi41LDIuNSAwIDAgMSA5NzYuNDQsNzU4LjM1NjkgTDY4OC40NCw3NTguMzU2OSBBMi41LDIuNSAwIDAgMSA2ODUuOTQsNzU1Ljg1NjkgTDY4NS45NCw2MjkuODU2OSBBMi41LDIuNSAwIDAgMSA2ODguNDQsNjI3LjM1NjkiIGZpbGw9IiNEM0QzRDMiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MS41OyIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MS41OyIgeDE9IjY4NS45NCIgeDI9IjgzOS4yNDA3IiB5MT0iNjY1Ljk1MDYiIHkyPSI2NjUuOTUwNiIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iNzAwIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjEyMC44MzIiIHg9IjY5OS42NzQzIiB5PSI2NDIuMzUyIj5TaGFyZWQgRG9tYWluPC90ZXh0Pjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iNzAwIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE0MC4zMDA3IiB4PSI2ODkuOTQiIHk9IjY1OC42NDg5Ij4mIzY1Mjg4O1NoYXJlZCBLZXJuZWwmIzY1Mjg5OzwvdGV4dD48L2c+PCEtLWNsdXN0ZXIgc2VjdXJpdHktLT48ZyBjbGFzcz0iY2x1c3RlciIgZGF0YS1xdWFsaWZpZWQtbmFtZT0ic2VjdXJpdHkiIGRhdGEtc291cmNlLWxpbmU9IjM3IiBpZD0iZW50MDAxOSI+PHBhdGggZD0iTTEzNjcuNDQsNDMuMjk2OSBMMTUyMi42Nzg5LDQzLjI5NjkgQTMuNzUsMy43NSAwIDAgMSAxNTI1LjE3ODksNDUuNzk2OSBMMTUzMi4xNzg5LDY1LjU5MzggTDE2NjAuNDQsNjUuNTkzOCBBMi41LDIuNSAwIDAgMSAxNjYyLjk0LDY4LjA5MzggTDE2NjIuOTQsMTY0LjA1NjkgQTIuNSwyLjUgMCAwIDEgMTY2MC40NCwxNjYuNTU2OSBMMTM2Ny40NCwxNjYuNTU2OSBBMi41LDIuNSAwIDAgMSAxMzY0Ljk0LDE2NC4wNTY5IEwxMzY0Ljk0LDQ1Ljc5NjkgQTIuNSwyLjUgMCAwIDEgMTM2Ny40NCw0My4yOTY5IiBmaWxsPSIjRTZFNkZBIiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjEuNTsiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjEuNTsiIHgxPSIxMzY0Ljk0IiB4Mj0iMTUzMi4xNzg5IiB5MT0iNjUuNTkzOCIgeTI9IjY1LjU5MzgiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9IjcwMCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxNTQuMjM4OSIgeD0iMTM2OC45NCIgeT0iNTguMjkyIj5TZWN1cml0eSAmIzEyNDY5OyYjMTI1MDI7JiMxMjQ4OTsmIzEyNTEzOyYjMTI0NTI7JiMxMjUzMTs8L3RleHQ+PC9nPjwhLS1jbGFzcyBDYXJnby0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9ImJvb2tpbmcuQ2FyZ28iIGRhdGEtc291cmNlLWxpbmU9IjQiIGlkPSJlbnQwMDAyIj48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjU2LjI2NTYiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjEzMi43ODMyIiB4PSIxMDM4LjU0IiB5PSIyNzguODI2OSIvPjxlbGxpcHNlIGN4PSIxMDUzLjU0IiBjeT0iMjk4Ljk1OTciIGZpbGw9IiNBREQxQjIiIHJ4PSIxMSIgcnk9IjExIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBhdGggZD0iTTEwNTYuNTA4OCwzMDQuNjAwMyBRMTA1NS45MzA2LDMwNC44OTcyIDEwNTUuMjksMzA1LjAzNzggUTEwNTQuNjQ5NCwzMDUuMTk0MSAxMDUzLjk0NjMsMzA1LjE5NDEgUTEwNTEuNDQ2MywzMDUuMTk0MSAxMDUwLjExODEsMzAzLjU1MzQgUTEwNDguODA1NiwzMDEuODk3MiAxMDQ4LjgwNTYsMjk4Ljc3MjIgUTEwNDguODA1NiwyOTUuNjQ3MiAxMDUwLjExODEsMjkzLjk5MDkgUTEwNTEuNDQ2MywyOTIuMzM0NyAxMDUzLjk0NjMsMjkyLjMzNDcgUTEwNTQuNjQ5NCwyOTIuMzM0NyAxMDU1LjI5LDI5Mi40OTA5IFExMDU1Ljk0NjMsMjkyLjY0NzIgMTA1Ni41MDg4LDI5Mi45NDQxIEwxMDU2LjUwODgsMjk1LjY2MjggUTEwNTUuODgzOCwyOTUuMDg0NyAxMDU1LjI5LDI5NC44MTkxIFExMDU0LjY5NjMsMjk0LjUzNzggMTA1NC4wNzEzLDI5NC41Mzc4IFExMDUyLjcyNzUsMjk0LjUzNzggMTA1Mi4wNCwyOTUuNjE1OSBRMTA1MS4zNTI1LDI5Ni42Nzg0IDEwNTEuMzUyNSwyOTguNzcyMiBRMTA1MS4zNTI1LDMwMC44NjU5IDEwNTIuMDQsMzAxLjk0NDEgUTEwNTIuNzI3NSwzMDMuMDA2NiAxMDU0LjA3MTMsMzAzLjAwNjYgUTEwNTQuNjk2MywzMDMuMDA2NiAxMDU1LjI5LDMwMi43NDA5IFExMDU1Ljg4MzgsMzAyLjQ1OTcgMTA1Ni41MDg4LDMwMS44ODE2IEwxMDU2LjUwODgsMzA0LjYwMDMgWiAiIGZpbGw9IiMwMDAwMDAiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMiIgZm9udC1zdHlsZT0iaXRhbGljIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjEwNC43ODMyIiB4PSIxMDY1LjU0IiB5PSIyOTQuOTY1NSI+JiMxNzE7YWdncmVnYXRlIHJvb3QmIzE4Nzs8L3RleHQ+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iNDEuNTYyNSIgeD0iMTA5Ny4xNTA0IiB5PSIzMTAuNzkwNyI+Q2FyZ288L3RleHQ+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB4MT0iMTAzOS41NCIgeDI9IjExNzAuMzIzMiIgeTE9IjMxOS4wOTI1IiB5Mj0iMzE5LjA5MjUiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHgxPSIxMDM5LjU0IiB4Mj0iMTE3MC4zMjMyIiB5MT0iMzI3LjA5MjUiIHkyPSIzMjcuMDkyNSIvPjwvZz48IS0tY2xhc3MgU2hpcHBlci0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9InNoaXBwZXIuU2hpcHBlciIgZGF0YS1zb3VyY2UtbGluZT0iOCIgaWQ9ImVudDAwMDQiPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iNTYuMjY1NiIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iMTMyLjc4MzIiIHg9IjE1MTguNTQiIHk9IjQ4Mi4wODY5Ii8+PGVsbGlwc2UgY3g9IjE1MzMuNTQiIGN5PSI1MDIuMjE5NyIgZmlsbD0iI0FERDFCMiIgcng9IjExIiByeT0iMTEiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cGF0aCBkPSJNMTUzNi41MDg4LDUwNy44NjAzIFExNTM1LjkzMDYsNTA4LjE1NzIgMTUzNS4yOSw1MDguMjk3OCBRMTUzNC42NDk0LDUwOC40NTQxIDE1MzMuOTQ2Myw1MDguNDU0MSBRMTUzMS40NDYzLDUwOC40NTQxIDE1MzAuMTE4MSw1MDYuODEzNCBRMTUyOC44MDU2LDUwNS4xNTcyIDE1MjguODA1Niw1MDIuMDMyMiBRMTUyOC44MDU2LDQ5OC45MDcyIDE1MzAuMTE4MSw0OTcuMjUwOSBRMTUzMS40NDYzLDQ5NS41OTQ3IDE1MzMuOTQ2Myw0OTUuNTk0NyBRMTUzNC42NDk0LDQ5NS41OTQ3IDE1MzUuMjksNDk1Ljc1MDkgUTE1MzUuOTQ2Myw0OTUuOTA3MiAxNTM2LjUwODgsNDk2LjIwNDEgTDE1MzYuNTA4OCw0OTguOTIyOCBRMTUzNS44ODM4LDQ5OC4zNDQ3IDE1MzUuMjksNDk4LjA3OTEgUTE1MzQuNjk2Myw0OTcuNzk3OCAxNTM0LjA3MTMsNDk3Ljc5NzggUTE1MzIuNzI3NSw0OTcuNzk3OCAxNTMyLjA0LDQ5OC44NzU5IFExNTMxLjM1MjUsNDk5LjkzODQgMTUzMS4zNTI1LDUwMi4wMzIyIFExNTMxLjM1MjUsNTA0LjEyNTkgMTUzMi4wNCw1MDUuMjA0MSBRMTUzMi43Mjc1LDUwNi4yNjY2IDE1MzQuMDcxMyw1MDYuMjY2NiBRMTUzNC42OTYzLDUwNi4yNjY2IDE1MzUuMjksNTA2LjAwMDkgUTE1MzUuODgzOCw1MDUuNzE5NyAxNTM2LjUwODgsNTA1LjE0MTYgTDE1MzYuNTA4OCw1MDcuODYwMyBaICIgZmlsbD0iIzAwMDAwMCIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyIiBmb250LXN0eWxlPSJpdGFsaWMiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTA0Ljc4MzIiIHg9IjE1NDUuNTQiIHk9IjQ5OC4yMjU1Ij4mIzE3MTthZ2dyZWdhdGUgcm9vdCYjMTg3OzwvdGV4dD48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI1My43OTIiIHg9IjE1NzEuMDM1NiIgeT0iNTE0LjA1MDciPlNoaXBwZXI8L3RleHQ+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB4MT0iMTUxOS41NCIgeDI9IjE2NTAuMzIzMiIgeTE9IjUyMi4zNTI1IiB5Mj0iNTIyLjM1MjUiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHgxPSIxNTE5LjU0IiB4Mj0iMTY1MC4zMjMyIiB5MT0iNTMwLjM1MjUiIHkyPSI1MzAuMzUyNSIvPjwvZz48IS0tY2xhc3MgQ29ycG9yYXRlU2hpcHBlci0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9InNoaXBwZXIuQ29ycG9yYXRlU2hpcHBlciIgZGF0YS1zb3VyY2UtbGluZT0iOSIgaWQ9ImVudDAwMDUiPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iNDgiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjE1NS43NzgzIiB4PSIxNjg2LjA1IiB5PSI0ODYuMjI2OSIvPjxlbGxpcHNlIGN4PSIxNzAxLjA1IiBjeT0iNTAyLjIyNjkiIGZpbGw9IiNBREQxQjIiIHJ4PSIxMSIgcnk9IjExIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBhdGggZD0iTTE3MDQuMDE4OCw1MDcuODY3NSBRMTcwMy40NDA2LDUwOC4xNjQ0IDE3MDIuOCw1MDguMzA1IFExNzAyLjE1OTQsNTA4LjQ2MTIgMTcwMS40NTYzLDUwOC40NjEyIFExNjk4Ljk1NjMsNTA4LjQ2MTIgMTY5Ny42MjgxLDUwNi44MjA2IFExNjk2LjMxNTYsNTA1LjE2NDQgMTY5Ni4zMTU2LDUwMi4wMzk0IFExNjk2LjMxNTYsNDk4LjkxNDQgMTY5Ny42MjgxLDQ5Ny4yNTgxIFExNjk4Ljk1NjMsNDk1LjYwMTkgMTcwMS40NTYzLDQ5NS42MDE5IFExNzAyLjE1OTQsNDk1LjYwMTkgMTcwMi44LDQ5NS43NTgxIFExNzAzLjQ1NjMsNDk1LjkxNDQgMTcwNC4wMTg4LDQ5Ni4yMTEyIEwxNzA0LjAxODgsNDk4LjkzIFExNzAzLjM5MzgsNDk4LjM1MTkgMTcwMi44LDQ5OC4wODYyIFExNzAyLjIwNjMsNDk3LjgwNSAxNzAxLjU4MTMsNDk3LjgwNSBRMTcwMC4yMzc1LDQ5Ny44MDUgMTY5OS41NSw0OTguODgzMSBRMTY5OC44NjI1LDQ5OS45NDU2IDE2OTguODYyNSw1MDIuMDM5NCBRMTY5OC44NjI1LDUwNC4xMzMxIDE2OTkuNTUsNTA1LjIxMTIgUTE3MDAuMjM3NSw1MDYuMjczNyAxNzAxLjU4MTMsNTA2LjI3MzcgUTE3MDIuMjA2Myw1MDYuMjczNyAxNzAyLjgsNTA2LjAwODEgUTE3MDMuMzkzOCw1MDUuNzI2OSAxNzA0LjAxODgsNTA1LjE0ODcgTDE3MDQuMDE4OCw1MDcuODY3NSBaICIgZmlsbD0iIzAwMDAwMCIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjEyMy43NzgzIiB4PSIxNzE1LjA1IiB5PSI1MDcuMDczNiI+Q29ycG9yYXRlU2hpcHBlcjwvdGV4dD48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHgxPSIxNjg3LjA1IiB4Mj0iMTg0MC44MjgzIiB5MT0iNTE4LjIyNjkiIHkyPSI1MTguMjI2OSIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgeDE9IjE2ODcuMDUiIHgyPSIxODQwLjgyODMiIHkxPSI1MjYuMjI2OSIgeTI9IjUyNi4yMjY5Ii8+PC9nPjwhLS1jbGFzcyBWb3lhZ2UtLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJyb3V0aW5nLlZveWFnZSIgZGF0YS1zb3VyY2UtbGluZT0iMTMiIGlkPSJlbnQwMDA3Ij48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjU2LjI2NTYiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjEzMi43ODMyIiB4PSI1NTAuNTQiIHk9IjQ4Mi4wODY5Ii8+PGVsbGlwc2UgY3g9IjU2NS41NCIgY3k9IjUwMi4yMTk3IiBmaWxsPSIjQUREMUIyIiByeD0iMTEiIHJ5PSIxMSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwYXRoIGQ9Ik01NjguNTA4OCw1MDcuODYwMyBRNTY3LjkzMDYsNTA4LjE1NzIgNTY3LjI5LDUwOC4yOTc4IFE1NjYuNjQ5NCw1MDguNDU0MSA1NjUuOTQ2Myw1MDguNDU0MSBRNTYzLjQ0NjMsNTA4LjQ1NDEgNTYyLjExODEsNTA2LjgxMzQgUTU2MC44MDU2LDUwNS4xNTcyIDU2MC44MDU2LDUwMi4wMzIyIFE1NjAuODA1Niw0OTguOTA3MiA1NjIuMTE4MSw0OTcuMjUwOSBRNTYzLjQ0NjMsNDk1LjU5NDcgNTY1Ljk0NjMsNDk1LjU5NDcgUTU2Ni42NDk0LDQ5NS41OTQ3IDU2Ny4yOSw0OTUuNzUwOSBRNTY3Ljk0NjMsNDk1LjkwNzIgNTY4LjUwODgsNDk2LjIwNDEgTDU2OC41MDg4LDQ5OC45MjI4IFE1NjcuODgzOCw0OTguMzQ0NyA1NjcuMjksNDk4LjA3OTEgUTU2Ni42OTYzLDQ5Ny43OTc4IDU2Ni4wNzEzLDQ5Ny43OTc4IFE1NjQuNzI3NSw0OTcuNzk3OCA1NjQuMDQsNDk4Ljg3NTkgUTU2My4zNTI1LDQ5OS45Mzg0IDU2My4zNTI1LDUwMi4wMzIyIFE1NjMuMzUyNSw1MDQuMTI1OSA1NjQuMDQsNTA1LjIwNDEgUTU2NC43Mjc1LDUwNi4yNjY2IDU2Ni4wNzEzLDUwNi4yNjY2IFE1NjYuNjk2Myw1MDYuMjY2NiA1NjcuMjksNTA2LjAwMDkgUTU2Ny44ODM4LDUwNS43MTk3IDU2OC41MDg4LDUwNS4xNDE2IEw1NjguNTA4OCw1MDcuODYwMyBaICIgZmlsbD0iIzAwMDAwMCIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyIiBmb250LXN0eWxlPSJpdGFsaWMiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTA0Ljc4MzIiIHg9IjU3Ny41NCIgeT0iNDk4LjIyNTUiPiYjMTcxO2FnZ3JlZ2F0ZSByb290JiMxODc7PC90ZXh0Pjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjUyLjUwNjgiIHg9IjYwMy42NzgyIiB5PSI1MTQuMDUwNyI+Vm95YWdlPC90ZXh0PjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgeDE9IjU1MS41NCIgeDI9IjY4Mi4zMjMyIiB5MT0iNTIyLjM1MjUiIHkyPSI1MjIuMzUyNSIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgeDE9IjU1MS41NCIgeDI9IjY4Mi4zMjMyIiB5MT0iNTMwLjM1MjUiIHkyPSI1MzAuMzUyNSIvPjwvZz48IS0tY2xhc3MgVHJhY2tpbmdBY3Rpdml0eS0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9InRyYWNraW5nLlRyYWNraW5nQWN0aXZpdHkiIGRhdGEtc291cmNlLWxpbmU9IjE3IiBpZD0iZW50MDAwOSI+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSI1Ni4yNjU2IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSIxNDQuOTQzNCIgeD0iNzkwLjQ2IiB5PSI0ODIuMDg2OSIvPjxlbGxpcHNlIGN4PSI4MDUuNDYiIGN5PSI1MDIuMjE5NyIgZmlsbD0iI0FERDFCMiIgcng9IjExIiByeT0iMTEiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cGF0aCBkPSJNODA4LjQyODgsNTA3Ljg2MDMgUTgwNy44NTA2LDUwOC4xNTcyIDgwNy4yMSw1MDguMjk3OCBRODA2LjU2OTQsNTA4LjQ1NDEgODA1Ljg2NjMsNTA4LjQ1NDEgUTgwMy4zNjYzLDUwOC40NTQxIDgwMi4wMzgxLDUwNi44MTM0IFE4MDAuNzI1Niw1MDUuMTU3MiA4MDAuNzI1Niw1MDIuMDMyMiBRODAwLjcyNTYsNDk4LjkwNzIgODAyLjAzODEsNDk3LjI1MDkgUTgwMy4zNjYzLDQ5NS41OTQ3IDgwNS44NjYzLDQ5NS41OTQ3IFE4MDYuNTY5NCw0OTUuNTk0NyA4MDcuMjEsNDk1Ljc1MDkgUTgwNy44NjYzLDQ5NS45MDcyIDgwOC40Mjg4LDQ5Ni4yMDQxIEw4MDguNDI4OCw0OTguOTIyOCBRODA3LjgwMzgsNDk4LjM0NDcgODA3LjIxLDQ5OC4wNzkxIFE4MDYuNjE2Myw0OTcuNzk3OCA4MDUuOTkxMyw0OTcuNzk3OCBRODA0LjY0NzUsNDk3Ljc5NzggODAzLjk2LDQ5OC44NzU5IFE4MDMuMjcyNSw0OTkuOTM4NCA4MDMuMjcyNSw1MDIuMDMyMiBRODAzLjI3MjUsNTA0LjEyNTkgODAzLjk2LDUwNS4yMDQxIFE4MDQuNjQ3NSw1MDYuMjY2NiA4MDUuOTkxMyw1MDYuMjY2NiBRODA2LjYxNjMsNTA2LjI2NjYgODA3LjIxLDUwNi4wMDA5IFE4MDcuODAzOCw1MDUuNzE5NyA4MDguNDI4OCw1MDUuMTQxNiBMODA4LjQyODgsNTA3Ljg2MDMgWiAiIGZpbGw9IiMwMDAwMDAiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMiIgZm9udC1zdHlsZT0iaXRhbGljIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjEwNC43ODMyIiB4PSI4MjMuNTQwMSIgeT0iNDk4LjIyNTUiPiYjMTcxO2FnZ3JlZ2F0ZSByb290JiMxODc7PC90ZXh0Pjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjExMi45NDM0IiB4PSI4MTkuNDYiIHk9IjUxNC4wNTA3Ij5UcmFja2luZ0FjdGl2aXR5PC90ZXh0PjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgeDE9Ijc5MS40NiIgeDI9IjkzNC40MDM0IiB5MT0iNTIyLjM1MjUiIHkyPSI1MjIuMzUyNSIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgeDE9Ijc5MS40NiIgeDI9IjkzNC40MDM0IiB5MT0iNTMwLjM1MjUiIHkyPSI1MzAuMzUyNSIvPjwvZz48IS0tY2xhc3MgSGFuZGxpbmdBY3Rpdml0eS0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9ImhhbmRsaW5nLkhhbmRsaW5nQWN0aXZpdHkiIGRhdGEtc291cmNlLWxpbmU9IjIxIiBpZD0iZW50MDAxMSI+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSI1Ni4yNjU2IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSIxNDcuMDA3OCIgeD0iNTY5LjQzIiB5PSI4Ni4yOTY5Ii8+PGVsbGlwc2UgY3g9IjU4NC40MyIgY3k9IjEwNi40Mjk3IiBmaWxsPSIjQUREMUIyIiByeD0iMTEiIHJ5PSIxMSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwYXRoIGQ9Ik01ODcuMzk4OCwxMTIuMDcwMyBRNTg2LjgyMDYsMTEyLjM2NzIgNTg2LjE4LDExMi41MDc4IFE1ODUuNTM5NCwxMTIuNjY0MSA1ODQuODM2MywxMTIuNjY0MSBRNTgyLjMzNjMsMTEyLjY2NDEgNTgxLjAwODEsMTExLjAyMzQgUTU3OS42OTU2LDEwOS4zNjcyIDU3OS42OTU2LDEwNi4yNDIyIFE1NzkuNjk1NiwxMDMuMTE3MiA1ODEuMDA4MSwxMDEuNDYwOSBRNTgyLjMzNjMsOTkuODA0NyA1ODQuODM2Myw5OS44MDQ3IFE1ODUuNTM5NCw5OS44MDQ3IDU4Ni4xOCw5OS45NjA5IFE1ODYuODM2MywxMDAuMTE3MiA1ODcuMzk4OCwxMDAuNDE0MSBMNTg3LjM5ODgsMTAzLjEzMjggUTU4Ni43NzM4LDEwMi41NTQ3IDU4Ni4xOCwxMDIuMjg5MSBRNTg1LjU4NjMsMTAyLjAwNzggNTg0Ljk2MTMsMTAyLjAwNzggUTU4My42MTc1LDEwMi4wMDc4IDU4Mi45MywxMDMuMDg1OSBRNTgyLjI0MjUsMTA0LjE0ODQgNTgyLjI0MjUsMTA2LjI0MjIgUTU4Mi4yNDI1LDEwOC4zMzU5IDU4Mi45MywxMDkuNDE0MSBRNTgzLjYxNzUsMTEwLjQ3NjYgNTg0Ljk2MTMsMTEwLjQ3NjYgUTU4NS41ODYzLDExMC40NzY2IDU4Ni4xOCwxMTAuMjEwOSBRNTg2Ljc3MzgsMTA5LjkyOTcgNTg3LjM5ODgsMTA5LjM1MTYgTDU4Ny4zOTg4LDExMi4wNzAzIFogIiBmaWxsPSIjMDAwMDAwIi8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtc3R5bGU9Iml0YWxpYyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMDQuNzgzMiIgeD0iNjAzLjU0MjMiIHk9IjEwMi40MzU1Ij4mIzE3MTthZ2dyZWdhdGUgcm9vdCYjMTg3OzwvdGV4dD48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMTUuMDA3OCIgeD0iNTk4LjQzIiB5PSIxMTguMjYwNyI+SGFuZGxpbmdBY3Rpdml0eTwvdGV4dD48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHgxPSI1NzAuNDMiIHgyPSI3MTUuNDM3OCIgeTE9IjEyNi41NjI1IiB5Mj0iMTI2LjU2MjUiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHgxPSI1NzAuNDMiIHgyPSI3MTUuNDM3OCIgeTE9IjEzNC41NjI1IiB5Mj0iMTM0LjU2MjUiLz48L2c+PCEtLWNsYXNzIEludm9pY2UtLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJiaWxsaW5nLkludm9pY2UiIGRhdGEtc291cmNlLWxpbmU9IjI1IiBpZD0iZW50MDAxMyI+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSI1Ni4yNjU2IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSIxMzIuNzgzMiIgeD0iMTA1OC41NCIgeT0iNDgyLjA4NjkiLz48ZWxsaXBzZSBjeD0iMTA3My41NCIgY3k9IjUwMi4yMTk3IiBmaWxsPSIjQUREMUIyIiByeD0iMTEiIHJ5PSIxMSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwYXRoIGQ9Ik0xMDc2LjUwODgsNTA3Ljg2MDMgUTEwNzUuOTMwNiw1MDguMTU3MiAxMDc1LjI5LDUwOC4yOTc4IFExMDc0LjY0OTQsNTA4LjQ1NDEgMTA3My45NDYzLDUwOC40NTQxIFExMDcxLjQ0NjMsNTA4LjQ1NDEgMTA3MC4xMTgxLDUwNi44MTM0IFExMDY4LjgwNTYsNTA1LjE1NzIgMTA2OC44MDU2LDUwMi4wMzIyIFExMDY4LjgwNTYsNDk4LjkwNzIgMTA3MC4xMTgxLDQ5Ny4yNTA5IFExMDcxLjQ0NjMsNDk1LjU5NDcgMTA3My45NDYzLDQ5NS41OTQ3IFExMDc0LjY0OTQsNDk1LjU5NDcgMTA3NS4yOSw0OTUuNzUwOSBRMTA3NS45NDYzLDQ5NS45MDcyIDEwNzYuNTA4OCw0OTYuMjA0MSBMMTA3Ni41MDg4LDQ5OC45MjI4IFExMDc1Ljg4MzgsNDk4LjM0NDcgMTA3NS4yOSw0OTguMDc5MSBRMTA3NC42OTYzLDQ5Ny43OTc4IDEwNzQuMDcxMyw0OTcuNzk3OCBRMTA3Mi43Mjc1LDQ5Ny43OTc4IDEwNzIuMDQsNDk4Ljg3NTkgUTEwNzEuMzUyNSw0OTkuOTM4NCAxMDcxLjM1MjUsNTAyLjAzMjIgUTEwNzEuMzUyNSw1MDQuMTI1OSAxMDcyLjA0LDUwNS4yMDQxIFExMDcyLjcyNzUsNTA2LjI2NjYgMTA3NC4wNzEzLDUwNi4yNjY2IFExMDc0LjY5NjMsNTA2LjI2NjYgMTA3NS4yOSw1MDYuMDAwOSBRMTA3NS44ODM4LDUwNS43MTk3IDEwNzYuNTA4OCw1MDUuMTQxNiBMMTA3Ni41MDg4LDUwNy44NjAzIFogIiBmaWxsPSIjMDAwMDAwIi8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtc3R5bGU9Iml0YWxpYyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMDQuNzgzMiIgeD0iMTA4NS41NCIgeT0iNDk4LjIyNTUiPiYjMTcxO2FnZ3JlZ2F0ZSByb290JiMxODc7PC90ZXh0Pjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjUwLjA1MjciIHg9IjExMTIuOTA1MiIgeT0iNTE0LjA1MDciPkludm9pY2U8L3RleHQ+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB4MT0iMTA1OS41NCIgeDI9IjExOTAuMzIzMiIgeTE9IjUyMi4zNTI1IiB5Mj0iNTIyLjM1MjUiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHgxPSIxMDU5LjU0IiB4Mj0iMTE5MC4zMjMyIiB5MT0iNTMwLjM1MjUiIHkyPSI1MzAuMzUyNSIvPjwvZz48IS0tY2xhc3MgRXN0aW1hdGUtLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJlc3RpbWF0aW9uLkVzdGltYXRlIiBkYXRhLXNvdXJjZS1saW5lPSIyOSIgaWQ9ImVudDAwMTUiPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iNTYuMjY1NiIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iMTMyLjc4MzIiIHg9IjI1My41NCIgeT0iODYuMjk2OSIvPjxlbGxpcHNlIGN4PSIyNjguNTQiIGN5PSIxMDYuNDI5NyIgZmlsbD0iI0FERDFCMiIgcng9IjExIiByeT0iMTEiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cGF0aCBkPSJNMjcxLjUwODcsMTEyLjA3MDMgUTI3MC45MzA2LDExMi4zNjcyIDI3MC4yOSwxMTIuNTA3OCBRMjY5LjY0OTQsMTEyLjY2NDEgMjY4Ljk0NjIsMTEyLjY2NDEgUTI2Ni40NDYyLDExMi42NjQxIDI2NS4xMTgxLDExMS4wMjM0IFEyNjMuODA1NiwxMDkuMzY3MiAyNjMuODA1NiwxMDYuMjQyMiBRMjYzLjgwNTYsMTAzLjExNzIgMjY1LjExODEsMTAxLjQ2MDkgUTI2Ni40NDYyLDk5LjgwNDcgMjY4Ljk0NjIsOTkuODA0NyBRMjY5LjY0OTQsOTkuODA0NyAyNzAuMjksOTkuOTYwOSBRMjcwLjk0NjIsMTAwLjExNzIgMjcxLjUwODcsMTAwLjQxNDEgTDI3MS41MDg3LDEwMy4xMzI4IFEyNzAuODgzNywxMDIuNTU0NyAyNzAuMjksMTAyLjI4OTEgUTI2OS42OTYyLDEwMi4wMDc4IDI2OS4wNzEyLDEwMi4wMDc4IFEyNjcuNzI3NSwxMDIuMDA3OCAyNjcuMDQsMTAzLjA4NTkgUTI2Ni4zNTI1LDEwNC4xNDg0IDI2Ni4zNTI1LDEwNi4yNDIyIFEyNjYuMzUyNSwxMDguMzM1OSAyNjcuMDQsMTA5LjQxNDEgUTI2Ny43Mjc1LDExMC40NzY2IDI2OS4wNzEyLDExMC40NzY2IFEyNjkuNjk2MiwxMTAuNDc2NiAyNzAuMjksMTEwLjIxMDkgUTI3MC44ODM3LDEwOS45Mjk3IDI3MS41MDg3LDEwOS4zNTE2IEwyNzEuNTA4NywxMTIuMDcwMyBaICIgZmlsbD0iIzAwMDAwMCIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyIiBmb250LXN0eWxlPSJpdGFsaWMiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTA0Ljc4MzIiIHg9IjI4MC41NCIgeT0iMTAyLjQzNTUiPiYjMTcxO2FnZ3JlZ2F0ZSByb290JiMxODc7PC90ZXh0Pjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjYxLjgzNzkiIHg9IjMwMi4wMTI3IiB5PSIxMTguMjYwNyI+RXN0aW1hdGU8L3RleHQ+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB4MT0iMjU0LjU0IiB4Mj0iMzg1LjMyMzIiIHkxPSIxMjYuNTYyNSIgeTI9IjEyNi41NjI1Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB4MT0iMjU0LjU0IiB4Mj0iMzg1LjMyMzIiIHkxPSIxMzQuNTYyNSIgeTI9IjEzNC41NjI1Ii8+PC9nPjwhLS1jbGFzcyBMb2NhdGlvbi0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9InNoYXJlZC5Mb2NhdGlvbiIgZGF0YS1zb3VyY2UtbGluZT0iMzMiIGlkPSJlbnQwMDE3Ij48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjQ4IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI5MS40NTkiIHg9IjcxMC4yMSIgeT0iNjg2LjM1NjkiLz48ZWxsaXBzZSBjeD0iNzI1LjIxIiBjeT0iNzAyLjM1NjkiIGZpbGw9IiNBREQxQjIiIHJ4PSIxMSIgcnk9IjExIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBhdGggZD0iTTcyOC4xNzg4LDcwNy45OTc1IFE3MjcuNjAwNiw3MDguMjk0NCA3MjYuOTYsNzA4LjQzNSBRNzI2LjMxOTQsNzA4LjU5MTMgNzI1LjYxNjMsNzA4LjU5MTMgUTcyMy4xMTYzLDcwOC41OTEzIDcyMS43ODgxLDcwNi45NTA2IFE3MjAuNDc1Niw3MDUuMjk0NCA3MjAuNDc1Niw3MDIuMTY5NCBRNzIwLjQ3NTYsNjk5LjA0NDQgNzIxLjc4ODEsNjk3LjM4ODEgUTcyMy4xMTYzLDY5NS43MzE5IDcyNS42MTYzLDY5NS43MzE5IFE3MjYuMzE5NCw2OTUuNzMxOSA3MjYuOTYsNjk1Ljg4ODEgUTcyNy42MTYzLDY5Ni4wNDQ0IDcyOC4xNzg4LDY5Ni4zNDEzIEw3MjguMTc4OCw2OTkuMDYgUTcyNy41NTM4LDY5OC40ODE5IDcyNi45Niw2OTguMjE2MyBRNzI2LjM2NjMsNjk3LjkzNSA3MjUuNzQxMyw2OTcuOTM1IFE3MjQuMzk3NSw2OTcuOTM1IDcyMy43MSw2OTkuMDEzMSBRNzIzLjAyMjUsNzAwLjA3NTYgNzIzLjAyMjUsNzAyLjE2OTQgUTcyMy4wMjI1LDcwNC4yNjMxIDcyMy43MSw3MDUuMzQxMyBRNzI0LjM5NzUsNzA2LjQwMzggNzI1Ljc0MTMsNzA2LjQwMzggUTcyNi4zNjYzLDcwNi40MDM4IDcyNi45Niw3MDYuMTM4MSBRNzI3LjU1MzgsNzA1Ljg1NjkgNzI4LjE3ODgsNzA1LjI3ODggTDcyOC4xNzg4LDcwNy45OTc1IFogIiBmaWxsPSIjMDAwMDAwIi8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iNTkuNDU5IiB4PSI3MzkuMjEiIHk9IjcwNy4yMDM2Ij5Mb2NhdGlvbjwvdGV4dD48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHgxPSI3MTEuMjEiIHgyPSI4MDAuNjY5IiB5MT0iNzE4LjM1NjkiIHkyPSI3MTguMzU2OSIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgeDE9IjcxMS4yMSIgeDI9IjgwMC42NjkiIHkxPSI3MjYuMzU2OSIgeTI9IjcyNi4zNTY5Ii8+PC9nPjwhLS1jbGFzcyBTaGlwcGVySWQtLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJzaGFyZWQuU2hpcHBlcklkIiBkYXRhLXNvdXJjZS1saW5lPSIzNCIgaWQ9ImVudDAwMTgiPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iNDgiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9Ijk4LjgwNzYiIHg9IjgzNi41MyIgeT0iNjg2LjM1NjkiLz48ZWxsaXBzZSBjeD0iODUxLjUzIiBjeT0iNzAyLjM1NjkiIGZpbGw9IiNBREQxQjIiIHJ4PSIxMSIgcnk9IjExIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBhdGggZD0iTTg1NC40OTg4LDcwNy45OTc1IFE4NTMuOTIwNiw3MDguMjk0NCA4NTMuMjgsNzA4LjQzNSBRODUyLjYzOTQsNzA4LjU5MTMgODUxLjkzNjMsNzA4LjU5MTMgUTg0OS40MzYzLDcwOC41OTEzIDg0OC4xMDgxLDcwNi45NTA2IFE4NDYuNzk1Niw3MDUuMjk0NCA4NDYuNzk1Niw3MDIuMTY5NCBRODQ2Ljc5NTYsNjk5LjA0NDQgODQ4LjEwODEsNjk3LjM4ODEgUTg0OS40MzYzLDY5NS43MzE5IDg1MS45MzYzLDY5NS43MzE5IFE4NTIuNjM5NCw2OTUuNzMxOSA4NTMuMjgsNjk1Ljg4ODEgUTg1My45MzYzLDY5Ni4wNDQ0IDg1NC40OTg4LDY5Ni4zNDEzIEw4NTQuNDk4OCw2OTkuMDYgUTg1My44NzM4LDY5OC40ODE5IDg1My4yOCw2OTguMjE2MyBRODUyLjY4NjMsNjk3LjkzNSA4NTIuMDYxMyw2OTcuOTM1IFE4NTAuNzE3NSw2OTcuOTM1IDg1MC4wMyw2OTkuMDEzMSBRODQ5LjM0MjUsNzAwLjA3NTYgODQ5LjM0MjUsNzAyLjE2OTQgUTg0OS4zNDI1LDcwNC4yNjMxIDg1MC4wMyw3MDUuMzQxMyBRODUwLjcxNzUsNzA2LjQwMzggODUyLjA2MTMsNzA2LjQwMzggUTg1Mi42ODYzLDcwNi40MDM4IDg1My4yOCw3MDYuMTM4MSBRODUzLjg3MzgsNzA1Ljg1NjkgODU0LjQ5ODgsNzA1LjI3ODggTDg1NC40OTg4LDcwNy45OTc1IFogIiBmaWxsPSIjMDAwMDAwIi8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iNjYuODA3NiIgeD0iODY1LjUzIiB5PSI3MDcuMjAzNiI+U2hpcHBlcklkPC90ZXh0PjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgeDE9IjgzNy41MyIgeDI9IjkzNC4zMzc2IiB5MT0iNzE4LjM1NjkiIHkyPSI3MTguMzU2OSIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgeDE9IjgzNy41MyIgeDI9IjkzNC4zMzc2IiB5MT0iNzI2LjM1NjkiIHkyPSI3MjYuMzU2OSIvPjwvZz48IS0tY2xhc3MgVXNlckFjY291bnQtLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJzZWN1cml0eS5Vc2VyQWNjb3VudCIgZGF0YS1zb3VyY2UtbGluZT0iMzgiIGlkPSJlbnQwMDIwIj48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjU2LjI2NTYiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjEzMi43ODMyIiB4PSIxMzg4LjU0IiB5PSI4Ni4yOTY5Ii8+PGVsbGlwc2UgY3g9IjE0MDMuNTQiIGN5PSIxMDYuNDI5NyIgZmlsbD0iI0FERDFCMiIgcng9IjExIiByeT0iMTEiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cGF0aCBkPSJNMTQwNi41MDg4LDExMi4wNzAzIFExNDA1LjkzMDYsMTEyLjM2NzIgMTQwNS4yOSwxMTIuNTA3OCBRMTQwNC42NDk0LDExMi42NjQxIDE0MDMuOTQ2MywxMTIuNjY0MSBRMTQwMS40NDYzLDExMi42NjQxIDE0MDAuMTE4MSwxMTEuMDIzNCBRMTM5OC44MDU2LDEwOS4zNjcyIDEzOTguODA1NiwxMDYuMjQyMiBRMTM5OC44MDU2LDEwMy4xMTcyIDE0MDAuMTE4MSwxMDEuNDYwOSBRMTQwMS40NDYzLDk5LjgwNDcgMTQwMy45NDYzLDk5LjgwNDcgUTE0MDQuNjQ5NCw5OS44MDQ3IDE0MDUuMjksOTkuOTYwOSBRMTQwNS45NDYzLDEwMC4xMTcyIDE0MDYuNTA4OCwxMDAuNDE0MSBMMTQwNi41MDg4LDEwMy4xMzI4IFExNDA1Ljg4MzgsMTAyLjU1NDcgMTQwNS4yOSwxMDIuMjg5MSBRMTQwNC42OTYzLDEwMi4wMDc4IDE0MDQuMDcxMywxMDIuMDA3OCBRMTQwMi43Mjc1LDEwMi4wMDc4IDE0MDIuMDQsMTAzLjA4NTkgUTE0MDEuMzUyNSwxMDQuMTQ4NCAxNDAxLjM1MjUsMTA2LjI0MjIgUTE0MDEuMzUyNSwxMDguMzM1OSAxNDAyLjA0LDEwOS40MTQxIFExNDAyLjcyNzUsMTEwLjQ3NjYgMTQwNC4wNzEzLDExMC40NzY2IFExNDA0LjY5NjMsMTEwLjQ3NjYgMTQwNS4yOSwxMTAuMjEwOSBRMTQwNS44ODM4LDEwOS45Mjk3IDE0MDYuNTA4OCwxMDkuMzUxNiBMMTQwNi41MDg4LDExMi4wNzAzIFogIiBmaWxsPSIjMDAwMDAwIi8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIiIGZvbnQtc3R5bGU9Iml0YWxpYyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMDQuNzgzMiIgeD0iMTQxNS41NCIgeT0iMTAyLjQzNTUiPiYjMTcxO2FnZ3JlZ2F0ZSByb290JiMxODc7PC90ZXh0Pjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9Ijg4LjY4MjYiIHg9IjE0MjMuNTkwMyIgeT0iMTE4LjI2MDciPlVzZXJBY2NvdW50PC90ZXh0PjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgeDE9IjEzODkuNTQiIHgyPSIxNTIwLjMyMzIiIHkxPSIxMjYuNTYyNSIgeTI9IjEyNi41NjI1Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB4MT0iMTM4OS41NCIgeDI9IjE1MjAuMzIzMiIgeTE9IjEzNC41NjI1IiB5Mj0iMTM0LjU2MjUiLz48L2c+PCEtLWNsYXNzIFJvbGUtLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJzZWN1cml0eS5Sb2xlIiBkYXRhLXNvdXJjZS1saW5lPSIzOSIgaWQ9ImVudDAwMjEiPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iNDgiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjYyLjc5NTkiIHg9IjE1NTYuNTQiIHk9IjkwLjQyNjkiLz48ZWxsaXBzZSBjeD0iMTU3MS41NCIgY3k9IjEwNi40MjY5IiBmaWxsPSIjRUI5MzdGIiByeD0iMTEiIHJ5PSIxMSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwYXRoIGQ9Ik0xNTc1LjY0OTQsMTEyLjQyNjkgTDE1NjcuOTMwNiwxMTIuNDI2OSBMMTU2Ny45MzA2LDEwMC4wMzYzIEwxNTc1LjY0OTQsMTAwLjAzNjMgTDE1NzUuNjQ5NCwxMDIuMTkyNSBMMTU3MC4zODM4LDEwMi4xOTI1IEwxNTcwLjM4MzgsMTA0Ljg2NDQgTDE1NzUuMTQ5NCwxMDQuODY0NCBMMTU3NS4xNDk0LDEwNy4wMjA2IEwxNTcwLjM4MzgsMTA3LjAyMDYgTDE1NzAuMzgzOCwxMTAuMjcwNiBMMTU3NS42NDk0LDExMC4yNzA2IEwxNTc1LjY0OTQsMTEyLjQyNjkgWiAiIGZpbGw9IiMwMDAwMDAiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIzMC43OTU5IiB4PSIxNTg1LjU0IiB5PSIxMTEuMjczNiI+Um9sZTwvdGV4dD48bGluZSBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHgxPSIxNTU3LjU0IiB4Mj0iMTYxOC4zMzU5IiB5MT0iMTIyLjQyNjkiIHkyPSIxMjIuNDI2OSIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgeDE9IjE1NTcuNTQiIHgyPSIxNjE4LjMzNTkiIHkxPSIxMzAuNDI2OSIgeTI9IjEzMC40MjY5Ii8+PC9nPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9IkFDTF9OT1RFIiBkYXRhLXNvdXJjZS1saW5lPSI2MSIgaWQ9ImVudDAwMzgiPjxwYXRoIGQ9Ik02LDY0LjAyNjkgTDYsMTY0LjgyMzcgTDIwNS44NzA2LDE2NC44MjM3IEwyMDUuODcwNiw3NC4wMjY5IEwxOTUuODcwNiw2NC4wMjY5IEw2LDY0LjAyNjkiIGZpbGw9IiNGRUZGREQiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIvPjxwYXRoIGQ9Ik0xOTUuODcwNiw2NC4wMjY5IEwxOTUuODcwNiw3NC4wMjY5IEwyMDUuODcwNiw3NC4wMjY5IEwxOTUuODcwNiw2NC4wMjY5IiBmaWxsPSIjRkVGRkREIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGZvbnQtd2VpZ2h0PSI3MDAiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTUzLjc1OTQiIHg9IjEyIiB5PSI4MS4wOTM4Ij4mIzIyODA2OyYjMzcwOTY7JiMxMjQ3MTsmIzEyNDczOyYjMTI0ODY7JiMxMjUxMjsgQUNMIFBvcnRzPC90ZXh0Pjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE3OC44NzA2IiB4PSIxMiIgeT0iOTYuMjI2NiI+RXh0ZXJuYWxSb3V0aW5nU2VydmljZVBvcnQ8L3RleHQ+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTQ4LjE2MDYiIHg9IjEyIiB5PSIxMTEuMzU5NCI+Q3VzdG9tc0NsZWFyYW5jZVBvcnQ8L3RleHQ+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTQxLjE1OTIiIHg9IjEyIiB5PSIxMjYuNDkyMiI+UGF5bWVudEdhdGV3YXlQb3J0PC90ZXh0Pjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjEzOC4xMDYiIHg9IjEyIiB5PSIxNDEuNjI1Ij5Qb3J0TWFuYWdlbWVudFBvcnQ8L3RleHQ+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTAwLjgyNjIiIHg9IjEyIiB5PSIxNTYuNzU3OCI+Tm90aWZpY2F0aW9uUG9ydDwvdGV4dD48L2c+PCEtLWxpbmsgYm9va2luZyB0byBzaGFyZWQtLT48ZyBjbGFzcz0ibGluayIgZGF0YS1lbnRpdHktMT0iZW50MDAwMSIgZGF0YS1lbnRpdHktMj0iZW50MDAxNiIgZGF0YS1saW5rLXR5cGU9ImRlcGVuZGVuY3kiIGRhdGEtc291cmNlLWxpbmU9IjQyIiBpZD0ibG5rMjIiPjxwYXRoIGNvZGVMaW5lPSI0MiIgZD0iTTEyMTUuMDcxOSwzMDguNDY0MiBDMTIxNS41MDY1LDMwOC40OTM3IDEyMTUuOTU3MSwzMDguNTI0NiAxMjE2LjQyMzMsMzA4LjU1NjggQzEyMTguMjg4MiwzMDguNjg1OSAxMjIwLjQwMzIsMzA4LjgzNzMgMTIyMi43NDU3LDMwOS4wMTI3IEMxMjMyLjExNTcsMzA5LjcxNDMgMTI0NS4xMjY1LDMxMC43OTk1IDEyNjAuMzM1NSwzMTIuMzcwMiBDMTI5MC43NTM0LDMxNS41MTE2IDEzMjkuOTY0NCwzMjAuNTk1IDEzNjYuNDI4OCwzMjguNDM1NiBDMTQzOS4zNTc1LDM0NC4xMTY5IDE1MDEuMywzNzAuODI2OSAxNDU5Ljk0LDQxNS4wODY5IEMxNDQxLjk5LDQzNC4yOTY5IDEzNjIuOCw0MDcuMTA2OSAxMzQxLjk0LDQyMy4wODY5IEMxMjc0LjY3LDQ3NC42MDY5IDEzMzkuODcsNTQzLjQ2NjkgMTI3OS45NCw2MDMuMzU2OSBDMTIyOS4zODUsNjUzLjg2NjkgMTE1My43NCw2ODAuMzM0NCAxMDg5Ljk1LDY5NC4xOTA2IEMxMDU4LjA1NSw3MDEuMTE4NyAxMDI5LjEyMzgsNzA0Ljg5NDEgMTAwNy43NzQ0LDcwNi45NDU1IEM5OTcuMDk5Nyw3MDcuOTcxMiA5ODguMzIwNSw3MDguNTY1OSA5ODIuMDE0LDcwOC45MDgzIEM5ODEuMjI1Nyw3MDguOTUxMSA5ODAuNDc2LDcwOC45ODk5IDk3OS43NjYxLDcwOS4wMjUyIEM5NzkuNTg4Niw3MDkuMDM0IDk4NC40MDc3LDcwOC44MDAyIDk4NC4yMzUzLDcwOC44MDg2IiBmaWxsPSJub25lIiBpZD0iYm9va2luZy10by1zaGFyZWQiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9Ijk3OS4yNDExLDcwOS4wNTA5LDk4OC40MjQ0LDcxMi42MSw5ODQuMjM1Myw3MDguODA4Niw5ODguMDM2Nyw3MDQuNjE5NCw5NzkuMjQxMSw3MDkuMDUwOSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxNTkuNDI3NyIgeD0iMTM0Mi45NCIgeT0iNTE0Ljc5MzgiPnVzZXMgTG9jYXRpb24sIFNoaXBwZXJJZDwvdGV4dD48L2c+PCEtLWxpbmsgYm9va2luZyB0byBzaGlwcGVyLS0+PGcgY2xhc3M9ImxpbmsiIGRhdGEtZW50aXR5LTE9ImVudDAwMDEiIGRhdGEtZW50aXR5LTI9ImVudDAwMDMiIGRhdGEtbGluay10eXBlPSJkZXBlbmRlbmN5IiBkYXRhLXNvdXJjZS1saW5lPSI0MyIgaWQ9ImxuazIzIj48cGF0aCBjb2RlTGluZT0iNDMiIGQ9Ik0xMjE1LjIzODYsMzA5Ljg0NTcgQzEyMTUuNTU0NiwzMDkuOTE3OCAxMjE1Ljg3OSwzMDkuOTkxOCAxMjE2LjIxMTcsMzEwLjA2NzkgQzEyMjEuNTM2MywzMTEuMjg0IDEyMjkuMDA3LDMxMi45OTc3IDEyMzguMjQwMiwzMTUuMTM0MSBDMTI1Ni43MDY2LDMxOS40MDY5IDEyODIuMjIzMSwzMjUuMzcwNiAxMzExLjcyMTMsMzMyLjQyNjkgQzEzNzAuNzE3NSwzNDYuNTM5NCAxNDQ1LjY0LDM2NS4wMjE5IDE1MTEuOTQsMzgzLjA4NjkgQzE1NTkuODMsMzk2LjE0NjkgMTU2OS45NSw0MDcuMDg2OSAxNjE4Ljk0LDQxNS4wODY5IEMxNjMyLjA1LDQxNy4yMzY5IDE4NDcuNzIsNDE0LjU5NjkgMTg1Ny45NCw0MjMuMDg2OSBDMTg2MS42NDg4LDQyNi4xNzA2IDE4NjQuNzMyMyw0MjkuNzk5NyAxODY3LjI4ODUsNDMzLjc5MzIgQzE4NjcuOTI3NSw0MzQuNzkxNSAxODY4LjUzMzYsNDM1LjgxMjcgMTg2OS4xMDgyLDQzNi44NTM4IEMxODY5LjM5NTUsNDM3LjM3NDMgMTg2OS42NzUsNDM3Ljg5OTkgMTg2OS45NDY4LDQzOC40MyBDMTg3MC4wMTQ3LDQzOC41NjI2IDE4NjcuODM0NSw0NTYuNTI2IDE4NjcuOTAxNSw0NTYuNjU5MSIgZmlsbD0ibm9uZSIgaWQ9ImJvb2tpbmctdG8tc2hpcHBlciIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6Nyw3OyIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iMTg3MC4xNDkyLDQ2MS4xMjU0LDE4NjkuNjc2NCw0NTEuMjg3OSwxODY3LjkwMTUsNDU2LjY1OTEsMTg2Mi41MzAzLDQ1NC44ODQyLDE4NzAuMTQ5Miw0NjEuMTI1NCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIyMDUuNTQzNSIgeD0iMTYxOS45NCIgeT0iNDAzLjY1MzgiPihBQ0wpIFNoaXBwZXJFeGlzdGVuY2VDaGVja2VyPC90ZXh0PjwvZz48IS0tbGluayBzaGlwcGVyIHRvIHNoYXJlZC0tPjxnIGNsYXNzPSJsaW5rIiBkYXRhLWVudGl0eS0xPSJlbnQwMDAzIiBkYXRhLWVudGl0eS0yPSJlbnQwMDE2IiBkYXRhLWxpbmstdHlwZT0iZGVwZW5kZW5jeSIgZGF0YS1zb3VyY2UtbGluZT0iNDQiIGlkPSJsbmsyNCI+PHBhdGggY29kZUxpbmU9IjQ0IiBkPSJNMTg2OS4zMzMsNTYyLjUwODEgQzE4NjguOTM4Niw1NjMuMzY0OCAxODY4LjUyNSw1NjQuMjExNyAxODY4LjA5MTQsNTY1LjA0NjcgQzE4NjcuMjI0Myw1NjYuNzE2NiAxODY2LjI3NzQsNTY4LjMzOSAxODY1LjI0MzUsNTY5Ljg5NzggQzE4NjMuMTc1Niw1NzMuMDE1MyAxODYwLjc2LDU3NS44NzgxIDE4NTcuOTQsNTc4LjM1NjkgQzE3ODMuNjc1LDY0My41OTY5IDE1NjQuNzk1LDY3Ni4zNDY5IDEzNjMuMDYyNSw2OTIuNzg2OSBDMTI2Mi4xOTYzLDcwMS4wMDY5IDExNjUuNjE2OSw3MDUuMTQ5NCAxMDkzLjU0NDcsNzA3LjIzNjkgQzEwNTcuNTA4Niw3MDguMjgwNiAxMDI3LjU5OTMsNzA4LjgxMDYgMTAwNi4zNDQzLDcwOS4wNzk3IEM5OTUuNzE2OSw3MDkuMjE0MiA5ODcuMjUzLDcwOS4yODM1IDk4MS4yNjg2LDcwOS4zMTkyIEM5ODAuNTIwNSw3MDkuMzIzNiA5ODQuODExMiw3MDkuMzAxNyA5ODQuMTQxMiw3MDkuMzA1MiIgZmlsbD0ibm9uZSIgaWQ9InNoaXBwZXItdG8tc2hhcmVkIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSI5NzkuMTQxMyw3MDkuMzMxLDk4OC4xNjE5LDcxMy4yODQ0LDk4NC4xNDEyLDcwOS4zMDUyLDk4OC4xMjA1LDcwNS4yODQ1LDk3OS4xNDEzLDcwOS4zMzEiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iOTUuOTUxMiIgeD0iMTgzOC4yNCIgeT0iNTk5LjQyMzgiPnVzZXMgU2hpcHBlcklkPC90ZXh0PjwvZz48IS0tbGluayByb3V0aW5nIHRvIHNoYXJlZC0tPjxnIGNsYXNzPSJsaW5rIiBkYXRhLWVudGl0eS0xPSJlbnQwMDA2IiBkYXRhLWVudGl0eS0yPSJlbnQwMDE2IiBkYXRhLWxpbmstdHlwZT0iZGVwZW5kZW5jeSIgZGF0YS1zb3VyY2UtbGluZT0iNDUiIGlkPSJsbmsyNSI+PHBhdGggY29kZUxpbmU9IjQ1IiBkPSJNNzI2Ljk5NCw1MjUuMzgzOSBDNzI3LjA0OTUsNTI1LjQ3MzggNzI3LjEwNTMsNTI1LjU2NCA3MjcuMTYxNCw1MjUuNjU0NiBDNzI3LjI3MzQsNTI1LjgzNTYgNzI3LjM4NjUsNTI2LjAxNzggNzI3LjUwMDcsNTI2LjIwMTIgQzcyNy45NTc0LDUyNi45MzQ3IDcyOC40MzA4LDUyNy42ODY3IDcyOC45MjA2LDUyOC40NTUxIEM3MzAuODc5Niw1MzEuNTI4OSA3MzMuMTAwMyw1MzQuODY2MiA3MzUuNTU4Nyw1MzguMzM5NCBDNzQ1LjM5MjUsNTUyLjIzMTkgNzU5LjAzLDU2OC4yOTY5IDc3NC45NCw1NzguMzU2OSBDODEyLjU2LDYwMi4xNTY5IDgyOC4xMSw1OTUuNTM2OSA4NzEuOTQsNjAzLjM1NjkgQzg4OS4zMSw2MDYuNDU2OSA5MzcuODUsNTk5LjUxNjkgOTUwLjk0LDYxMS4zNTY5IEM5NTQuOTk2Myw2MTUuMDI1NiA5NTguMzU3LDYxOS4yNzUzIDk2MS4xMzIxLDYyMy45MDc0IEM5NjEuNDc5LDYyNC40ODY0IDk2MS44MTY3LDYyNS4wNzE0IDk2Mi4xNDU1LDYyNS42NjIgQzk2Mi4zMDk5LDYyNS45NTczIDk2Mi40NzIsNjI2LjI1NCA5NjIuNjMyLDYyNi41NTIgQzk2Mi43MTIsNjI2LjcwMSA5NjAuNDYwNSw2NjEuMDIwNyA5NjAuNTM5Myw2NjEuMTcwNCIgZmlsbD0ibm9uZSIgaWQ9InJvdXRpbmctdG8tc2hhcmVkIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSI5NjIuODcwMyw2NjUuNTkzOCw5NjIuMjEzNCw2NTUuNzY2OSw5NjAuNTM5Myw2NjEuMTcwNCw5NTUuMTM1OSw2NTkuNDk2Myw5NjIuODcwMyw2NjUuNTkzOCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI4OS4xMjc0IiB4PSI4NzIuOTQiIHk9IjU5OS40MjM4Ij51c2VzIExvY2F0aW9uPC90ZXh0PjwvZz48IS0tbGluayB0cmFja2luZyB0byBzaGFyZWQtLT48ZyBjbGFzcz0ibGluayIgZGF0YS1lbnRpdHktMT0iZW50MDAwOCIgZGF0YS1lbnRpdHktMj0iZW50MDAxNiIgZGF0YS1saW5rLXR5cGU9ImRlcGVuZGVuY3kiIGRhdGEtc291cmNlLWxpbmU9IjQ2IiBpZD0ibG5rMjYiPjxwYXRoIGNvZGVMaW5lPSI0NiIgZD0iTTk3MC45NCw1NjIuNjU4MSBDOTcwLjk0LDU2My45OTE5IDk3MC45NCw1NjUuMzQwOCA5NzAuOTQsNTY2LjcwMzQgQzk3MC45NCw1NjkuNDI4NyA5NzAuOTQsNTcyLjIwODkgOTcwLjk0LDU3NS4wMzMxIEM5NzAuOTQsNTg2LjMyOTggOTcwLjk0LDU5OC4zMyA5NzAuOTQsNjEwLjMyOTQgQzk3MC45NCw2MTMuMzI5MiA5NzAuOTQsNjE2LjMyOSA5NzAuOTQsNjE5LjMxNzggQzk3MC45NCw2MjAuODEyMSA5NzAuOTQsNjIyLjMwMzcgOTcwLjk0LDYyMy43OTEyIEM5NzAuOTQsNjI0LjUzNDkgOTcwLjk0LDYyNS4yNzc2IDk3MC45NCw2MjYuMDE5MSBDOTcwLjk0LDYyNi4zODk5IDk3MC45NCw2NjAuMzU0MSA5NzAuOTQsNjYwLjcyNDIiIGZpbGw9Im5vbmUiIGlkPSJ0cmFja2luZy10by1zaGFyZWQiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9Ijk3MC45NCw2NjUuNzI0Miw5NzQuOTQsNjU2LjcyNDIsOTcwLjk0LDY2MC43MjQyLDk2Ni45NCw2NTYuNzI0Miw5NzAuOTQsNjY1LjcyNDIiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTUwLjczMTQiIHg9Ijk3MS45NCIgeT0iNTk5LjQyMzgiPihBQ0wpIFRyYWNraW5nTG9jYXRpb248L3RleHQ+PC9nPjwhLS1saW5rIGhhbmRsaW5nIHRvIHNoYXJlZC0tPjxnIGNsYXNzPSJsaW5rIiBkYXRhLWVudGl0eS0xPSJlbnQwMDEwIiBkYXRhLWVudGl0eS0yPSJlbnQwMDE2IiBkYXRhLWxpbmstdHlwZT0iZGVwZW5kZW5jeSIgZGF0YS1zb3VyY2UtbGluZT0iNDciIGlkPSJsbmsyNyI+PHBhdGggY29kZUxpbmU9IjQ3IiBkPSJNNzQ0LjY5NzUsMTY2LjY0MTQgQzc0NC42NDgyLDE2Ni43NDgxIDc0NC41OTg2LDE2Ni44NTQ3IDc0NC41NDg3LDE2Ni45NjExIEM3NDQuMTQ5NSwxNjcuODEyMiA3NDMuNzMwNSwxNjguNjUyNiA3NDMuMjkwOCwxNjkuNDgwNCBDNzQyLjQxMTQsMTcxLjEzNTggNzQxLjQ0OTMsMTcyLjc0MDQgNzQwLjM5NjksMTc0LjI3NzUgQzczOC4yOTIsMTc3LjM1MTYgNzM1LjgyNjMsMTgwLjE1NTYgNzMyLjk0LDE4Mi41NTY5IEM3MTAuMjksMjAxLjM5NjkgNjIzLjY0LDE3Ni4wNDY5IDYwMC45NCwxOTQuODI2OSBDNDY3LjY1LDMwNS4wNTY5IDQxOC45NSw0NTAuMDQ2OSA1MzQuOTQsNTc4LjM1NjkgQzU3MS45Myw2MTkuMjg2OSA3MjYuOTIsNTk5LjI3NjkgNzgxLjk0LDYwMy4zNTY5IEM3OTEuMzEsNjA0LjA1NjkgOTQzLjgsNjA1LjIzNjkgOTUwLjk0LDYxMS4zNTY5IEM5NTUuMDkzOCw2MTQuOTE1NiA5NTguNTI4LDYxOS4wODIzIDk2MS4zNTY5LDYyMy42NTM1IEM5NjIuMDY0MSw2MjQuNzk2MyA5NjAuMzg0Niw2NjAuMTQ0MiA5NjEuMDE4LDY2MS4zMzQ0IiBmaWxsPSJub25lIiBpZD0iaGFuZGxpbmctdG8tc2hhcmVkIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSI5NjMuMzY2OCw2NjUuNzQ4Myw5NjIuNjcwMSw2NTUuOTI0Miw5NjEuMDE4LDY2MS4zMzQ0LDk1NS42MDc3LDY1OS42ODIzLDk2My4zNjY4LDY2NS43NDgzIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9Ijg5LjEyNzQiIHg9IjQ3NC4yMiIgeT0iNDAzLjY1MzgiPnVzZXMgTG9jYXRpb248L3RleHQ+PC9nPjwhLS1saW5rIGJvb2tpbmcgdG8gdHJhY2tpbmctLT48ZyBjbGFzcz0ibGluayIgZGF0YS1lbnRpdHktMT0iZW50MDAwMSIgZGF0YS1lbnRpdHktMj0iZW50MDAwOCIgZGF0YS1saW5rLXR5cGU9ImRlcGVuZGVuY3kiIGRhdGEtc291cmNlLWxpbmU9IjQ5IiBpZD0ibG5rMjgiPjxwYXRoIGNvZGVMaW5lPSI0OSIgZD0iTTExOTguOTc2OSwzNTkuMjkwOCBDMTE5OC45MjU5LDM1OS4zOTcyIDExOTguODc0NiwzNTkuNTAzNCAxMTk4LjgyMywzNTkuNjA5NSBDMTE5OC40MTAyLDM2MC40NTggMTE5Ny45Nzc3LDM2MS4yOTU0IDExOTcuNTI0NSwzNjIuMTE5OCBDMTE5Ni42MTgxLDM2My43Njg1IDExOTUuNjI5MSwzNjUuMzY0NyAxMTk0LjU1MDIsMzY2Ljg5MTUgQzExOTIuMzkyMywzNjkuOTQ1MyAxMTg5Ljg3NSwzNzIuNzIxOSAxMTg2Ljk0LDM3NS4wODY5IEMxMTY4LjU0LDM4OS45MTY5IDExMDIuMjgsMzcyLjk1NjkgMTA4MC45NCwzODMuMDg2OSBDMTA0Ny44NjUsMzk4Ljc4NjkgMTAyMC43LDQyOS41ODk0IDEwMDEuNjQsNDU2LjgyNDQgQzk5Mi4xMSw0NzAuNDQxOSA5ODQuNjA2Miw0ODMuMTY3NSA5NzkuNDAzMSw0OTIuNjY3NSBDOTc5LjMyMTgsNDkyLjgxNTkgOTgxLjYzNyw0ODguNTc1IDk4MS41NTY4LDQ4OC43MjE5IiBmaWxsPSJub25lIiBpZD0iYm9va2luZy10by10cmFja2luZyIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6Nyw3OyIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iOTc5LjE2MDksNDkzLjExMDQsOTg2Ljk4NDQsNDg3LjEyNzgsOTgxLjU1NjgsNDg4LjcyMTksOTc5Ljk2MjcsNDgzLjI5NDMsOTc5LjE2MDksNDkzLjExMDQiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTI0LjQzOTUiIHg9IjEwODEuOTQiIHk9IjM5Ni4xNTM4Ij5DYXJnb0Jvb2tlZEV2ZW50PC90ZXh0Pjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjEyMi40MDgyIiB4PSIxMDgyLjk1NTYiIHk9IjQxMS4yODY2Ij5DYXJnb1JvdXRlZEV2ZW50PC90ZXh0PjwvZz48IS0tbGluayB0cmFja2luZyB0byBib29raW5nLS0+PGcgY2xhc3M9ImxpbmsiIGRhdGEtZW50aXR5LTE9ImVudDAwMDgiIGRhdGEtZW50aXR5LTI9ImVudDAwMDEiIGRhdGEtbGluay10eXBlPSJkZXBlbmRlbmN5IiBkYXRhLXNvdXJjZS1saW5lPSI1MiIgaWQ9ImxuazMxIj48cGF0aCBjb2RlTGluZT0iNTIiIGQ9Ik05NjMuMiw0NjEuMjE1NyBDOTYyLjkyNDQsNDYwLjY4MzkgOTYyLjQzNiw0MzcuNDYwMiA5NjIuMTQ1Myw0MzYuOTM3OCBDOTYxLjU2MzcsNDM1Ljg5MzEgOTYwLjk1MTYsNDM0Ljg2ODEgOTYwLjMwNzIsNDMzLjg2NTQgQzk1Ny43Myw0MjkuODU0NSA5NTQuNjM4OCw0MjYuMjAxOSA5NTAuOTQsNDIzLjA4NjkgQzkzOC45Myw0MTIuOTg2OSA4MjAuNzEsNDI2LjQ5NjkgODA5Ljk0LDQxNS4wODY5IEM4MDAuMTcsNDA0Ljc1NjkgNzk5Ljk5LDM5My4yNTY5IDgwOS45NCwzODMuMDg2OSBDODI0LjU5LDM2OC4xMTY5IDExNzAuMjcsMzg3Ljc4NjkgMTE4Ni45NCwzNzUuMDg2OSBDMTE4OS45Mzc1LDM3Mi44MDE5IDExOTIuNTAyMiwzNzAuMDg1OSAxMTk0LjY5NDksMzY3LjA3NjkgQzExOTUuNzkxMywzNjUuNTcyNCAxMTk2Ljc5NDcsMzYzLjk5NDcgMTE5Ny43MTI3LDM2Mi4zNjA5IEMxMTk4LjE3MTcsMzYxLjU0NCAxMTk4LjYwOTQsMzYwLjcxMzEgMTE5OS4wMjY3LDM1OS44NzAzIEMxMTk5LjEzMSwzNTkuNjU5NiAxMTk3LjA3MTEsMzYzLjk1NjEgMTE5Ny4xNzI5LDM2My43NDQiIGZpbGw9Im5vbmUiIGlkPSJ0cmFja2luZy10by1ib29raW5nIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWRhc2hhcnJheTo3LDc7Ii8+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSIxMTk5LjMzNTgsMzU5LjIzNiwxMTkxLjgzNjIsMzY1LjYyLDExOTcuMTcyOSwzNjMuNzQ0LDExOTkuMDQ4OSwzNjkuMDgwNywxMTk5LjMzNTgsMzU5LjIzNiIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIyMTcuMDc3MSIgeD0iODEwLjk0IiB5PSI0MDMuNjUzOCI+VHJhY2tpbmdFeGNlcHRpb25EZXRlY3RlZEV2ZW50PC90ZXh0PjwvZz48IS0tbGluayBoYW5kbGluZyB0byB0cmFja2luZy0tPjxnIGNsYXNzPSJsaW5rIiBkYXRhLWVudGl0eS0xPSJlbnQwMDEwIiBkYXRhLWVudGl0eS0yPSJlbnQwMDA4IiBkYXRhLWxpbmstdHlwZT0iZGVwZW5kZW5jeSIgZGF0YS1zb3VyY2UtbGluZT0iNTAiIGlkPSJsbmsyOSI+PHBhdGggY29kZUxpbmU9IjUwIiBkPSJNNzQxLjc1NzMsMTY3LjU2NTIgQzc0MS42NDYxLDE2OC4zMjg4IDc0MS41MzU2LDE2OS4wOTg3IDc0MS40MjU4LDE2OS44NzQ3IEM3NDAuNTQ3MiwxNzYuMDgyNSA3MzkuNzE0OCwxODIuNjgwOCA3MzguOTc4LDE4OS41OTM2IEM3MzcuNTA0MywyMDMuNDE5MSA3MzYuNDEyOCwyMTguNTAyMiA3MzYuMDk4OCwyMzQuMjMzMSBDNzM0Ljg0MjUsMjk3LjE1NjkgNzQ2LjAyNSwzNzAuNDQ2OSA3OTQuOTQsNDE1LjA4NjkgQzgyMC41Nyw0MzguNDg2OSA5MjQuMzIsNDAwLjgwNjkgOTUwLjk0LDQyMy4wODY5IEM5NTQuNjQ3NSw0MjYuMTkxOSA5NTcuNzQ1Myw0MjkuODM2OSA5NjAuMzI3Myw0MzMuODQyIEM5NjAuOTcyOSw0MzQuODQzMiA5NjEuNTg2MSw0MzUuODY3IDk2Mi4xNjg2LDQzNi45MTA1IEM5NjIuNDU5OSw0MzcuNDMyMiA5NjIuNzQzNCw0MzcuOTU4OSA5NjMuMDE5NSw0MzguNDkwMSBDOTYzLjA4ODUsNDM4LjYyMjkgOTYwLjg4MzksNDU2LjU5OTUgOTYwLjk1Miw0NTYuNzMyOSIgZmlsbD0ibm9uZSIgaWQ9ImhhbmRsaW5nLXRvLXRyYWNraW5nIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWRhc2hhcnJheTo3LDc7Ii8+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSI5NjMuMjI1MSw0NjEuMTg2Myw5NjIuNjk2Myw0NTEuMzUxNiw5NjAuOTUyLDQ1Ni43MzI5LDk1NS41NzA4LDQ1NC45ODg2LDk2My4yMjUxLDQ2MS4xODYzIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjIxNC4zOTIxIiB4PSI3NjMuOTkiIHk9IjMxMS41MjM4Ij5IYW5kbGluZ0FjdGl2aXR5UmVnaXN0ZXJlZEV2ZW50PC90ZXh0PjwvZz48IS0tbGluayBoYW5kbGluZyB0byBib29raW5nLS0+PGcgY2xhc3M9ImxpbmsiIGRhdGEtZW50aXR5LTE9ImVudDAwMTAiIGRhdGEtZW50aXR5LTI9ImVudDAwMDEiIGRhdGEtbGluay10eXBlPSJkZXBlbmRlbmN5IiBkYXRhLXNvdXJjZS1saW5lPSI1MSIgaWQ9ImxuazMwIj48cGF0aCBjb2RlTGluZT0iNTEiIGQ9Ik03NjAuMTc3OCwxMTYuMjM5NiBDNzYwLjQwOTgsMTE2LjI2MzEgNzYwLjY0NjUsMTE2LjI4NzEgNzYwLjg4NzYsMTE2LjMxMTYgQzc2MS4zNywxMTYuMzYwNiA3NjEuODcwNSwxMTYuNDExNyA3NjIuMzg5MSwxMTYuNDY0OCBDNzY0LjQ2MzEsMTE2LjY3NzIgNzY2LjgyNCwxMTYuOTIyNCA3NjkuNDUyMiwxMTcuMjAwNiBDNzc5Ljk2NDksMTE4LjMxMzIgNzk0Ljc1MzIsMTE5Ljk1MjMgODEyLjU1ODMsMTIyLjEyMzQgQzg0OC4xNjg0LDEyNi40NjU2IDg5NS44NDU2LDEzMi45MzU2IDk0NS41MTg4LDE0MS41NzY5IEMxMDQ0Ljg2NSwxNTguODU5NCAxMTUyLjE5NSwxODQuODI2OSAxMTg2Ljk0LDIxOS44MjY5IEMxMTkwLjI5MjUsMjIzLjIwNDQgMTE5My4xMjYzLDIyNy4wMjY5IDExOTUuNTE3NywyMzEuMTM3MSBDMTE5Ni4xMTU2LDIzMi4xNjQ2IDExOTYuNjg1OCwyMzMuMjEwMSAxMTk3LjIyOTYsMjM0LjI3MTIgQzExOTcuMzY1NiwyMzQuNTM2NSAxMTk3LjQ5OTksMjM0LjgwMjcgMTE5Ny42MzI1LDIzNS4wNjk5IEMxMTk3LjY5ODgsMjM1LjIwMzQgMTE5NS41NjkyLDI1My4xNDIgMTE5NS42MzQ3LDI1My4yNzYiIGZpbGw9Im5vbmUiIGlkPSJoYW5kbGluZy10by1ib29raW5nIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWRhc2hhcnJheTo3LDc7Ii8+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSIxMTk3LjgzMDMsMjU3Ljc2ODIsMTE5Ny40NzIsMjQ3LjkyNTgsMTE5NS42MzQ3LDI1My4yNzYsMTE5MC4yODQ1LDI1MS40Mzg3LDExOTcuODMwMywyNTcuNzY4MiIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIyMTQuMzkyMSIgeD0iMTE3OC4xNiIgeT0iMjA3Ljg5MzgiPkhhbmRsaW5nQWN0aXZpdHlSZWdpc3RlcmVkRXZlbnQ8L3RleHQ+PC9nPjwhLS1saW5rIGJvb2tpbmcgdG8gYmlsbGluZy0tPjxnIGNsYXNzPSJsaW5rIiBkYXRhLWVudGl0eS0xPSJlbnQwMDAxIiBkYXRhLWVudGl0eS0yPSJlbnQwMDEyIiBkYXRhLWxpbmstdHlwZT0iZGVwZW5kZW5jeSIgZGF0YS1zb3VyY2UtbGluZT0iNTMiIGlkPSJsbmszMiI+PHBhdGggY29kZUxpbmU9IjUzIiBkPSJNMTIxMi4wMjcyLDM1OS4xOTMgQzEyMTIuMDYwNiwzNTkuNTI5OCAxMjEyLjA5NDIsMzU5Ljg2NzUgMTIxMi4xMjc5LDM2MC4yMDYyIEMxMjEyLjI2MjUsMzYxLjU2MTEgMTIxMi4zOTg2LDM2Mi45MzEzIDEyMTIuNTM2MSwzNjQuMzE1NCBDMTIxMi44MTExLDM2Ny4wODM3IDEyMTMuMDkxNywzNjkuOTA3OCAxMjEzLjM3NjcsMzcyLjc3NjYgQzEyMTQuNTE2OCwzODQuMjUxOCAxMjE1LjcyNzgsMzk2LjQ0MTYgMTIxNi45Mzg4LDQwOC42MzA2IEMxMjE3LjU0NDIsNDE0LjcyNTIgMTIxOC4xNDk3LDQyMC44MTk1IDEyMTguNzQ2Miw0MjYuODI0MyBDMTIxOS4wNDQ1LDQyOS44MjY3IDEyMTkuMzQwNSw0MzIuODA2NyAxMjE5LjYzMzMsNDM1Ljc1MzEgQzEyMTkuNzA2NCw0MzYuNDg5NyAxMjE5Ljc3OTQsNDM3LjIyNDIgMTIxOS44NTIyLDQzNy45NTY0IEMxMjE5Ljg4ODUsNDM4LjMyMjUgMTIxOS40MzA1LDQ1Ni4wMDk0IDEyMTkuNDY2OCw0NTYuMzc0NCIgZmlsbD0ibm9uZSIgaWQ9ImJvb2tpbmctdG8tYmlsbGluZyIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6Nyw3OyIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iMTIxOS45NjExLDQ2MS4zNDk5LDEyMjMuMDUxOCw0NTEuOTk4NiwxMjE5LjQ2NjgsNDU2LjM3NDQsMTIxNS4wOTEsNDUyLjc4OTQsMTIxOS45NjExLDQ2MS4zNDk5IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjIzMi45MTQ2IiB4PSIxMjE4LjUzIiB5PSI0MDMuNjUzOCI+SW52b2ljZVJlcXVlc3RlZCYjNjUyODg7REVMSVZFUkVEICYjMjQ0NjA7JiM2NTI4OTs8L3RleHQ+PC9nPjwhLS1saW5rIGJpbGxpbmcgdG8gc2hhcmVkLS0+PGcgY2xhc3M9ImxpbmsiIGRhdGEtZW50aXR5LTE9ImVudDAwMTIiIGRhdGEtZW50aXR5LTI9ImVudDAwMTYiIGRhdGEtbGluay10eXBlPSJkZXBlbmRlbmN5IiBkYXRhLXNvdXJjZS1saW5lPSI1NCIgaWQ9ImxuazMzIj48cGF0aCBjb2RlTGluZT0iNTQiIGQ9Ik0xMjE2LjIzNTksNTYyLjY3IEMxMjE2LjE4NzMsNTYyLjc4MDQgMTIxNi4xMzg0LDU2Mi44OTA2IDEyMTYuMDg5Myw1NjMuMDAwOCBDMTIxNS45OTEyLDU2My4yMjEgMTIxNS44OTIxLDU2My40NDA5IDEyMTUuNzkyMiw1NjMuNjYwNCBDMTIxNC45OTI4LDU2NS40MTYgMTIxNC4xMzYsNTY3LjE0NDMgMTIxMy4yMTc5LDU2OC44MzE4IEMxMjExLjM4MTcsNTcyLjIwNjcgMTIwOS4zLDU3NS40MTgxIDEyMDYuOTQsNTc4LjM1NjkgQzExNjkuOTYsNjI0LjM4NjkgMTExMi4yMSw2NTYuODQxOSAxMDYzLjA5MzgsNjc3LjkzMzEgQzEwMzguNTM1Niw2ODguNDc4OCAxMDE2LjEzNTksNjk2LjE4MzQgOTk5LjU3MDIsNzAxLjMyMzYgQzk5MS4yODczLDcwMy44OTM3IDk4NC40NjI5LDcwNS44MjI2IDk3OS41NTYzLDcwNy4xNDUgQzk3OS40MDMsNzA3LjE4NjMgOTg0LjA4MDcsNzA1LjkzMSA5ODMuOTMxMSw3MDUuOTcxMiIgZmlsbD0ibm9uZSIgaWQ9ImJpbGxpbmctdG8tc2hhcmVkIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWRhc2hhcnJheTo3LDc7Ii8+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSI5NzkuMTAyLDcwNy4yNjcyLDk4OC44MzEyLDcwOC43OTc3LDk4My45MzExLDcwNS45NzEyLDk4Ni43NTc2LDcwMS4wNzExLDk3OS4xMDIsNzA3LjI2NzIiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iNzIuNzg4NiIgeD0iMTE5OC41MiIgeT0iNTk5LjQyMzgiPihyZWZlcmVuY2UpPC90ZXh0PjwvZz48IS0tbGluayBlc3RpbWF0aW9uIHRvIHNoYXJlZC0tPjxnIGNsYXNzPSJsaW5rIiBkYXRhLWVudGl0eS0xPSJlbnQwMDE0IiBkYXRhLWVudGl0eS0yPSJlbnQwMDE2IiBkYXRhLWxpbmstdHlwZT0iZGVwZW5kZW5jeSIgZGF0YS1zb3VyY2UtbGluZT0iNTUiIGlkPSJsbmszNCI+PHBhdGggY29kZUxpbmU9IjU1IiBkPSJNNDA3LjgzMDUsMTY3LjMyNjMgQzQwNy43MjYxLDE2Ny43MjkyIDQwNy42MjEyLDE2OC4xMzM4IDQwNy41MTYxLDE2OC41NCBDNDA3LjA5NTUsMTcwLjE2NSA0MDYuNjY5OCwxNzEuODE3MSA0MDYuMjM5MywxNzMuNDk0NiBDNDA0LjUxNzUsMTgwLjIwNDggNDAyLjcyMTMsMTg3LjMyMyA0MDAuODg3MSwxOTQuNzUzMiBDMzk3LjIxODYsMjA5LjYxMzUgMzkzLjM5ODEsMjI1LjcyMTYgMzg5LjcxNzUsMjQyLjMwODEgQzM3NC45OTUsMzA4LjY1NDQgMzYyLjUxLDM4Mi42NTY5IDM3MC45NCw0MTUuMDg2OSBDMzkxLjgzLDQ5NS40OTY5IDM5Ny44Nyw1MjUuNDc2OSA0NjEuOTQsNTc4LjM1NjkgQzQ4OS4zNiw2MDAuOTk2OSA1MDIuODgsNTk3LjM4NjkgNTM3Ljk0LDYwMy4zNTY5IEM1NDkuMjUsNjA1LjI4NjkgOTQyLjEyLDYwNC4wMTY5IDk1MC45NCw2MTEuMzU2OSBDOTU1LjE0MjUsNjE0Ljg1NjkgOTU4LjYxMzYsNjE4Ljk3OTQgOTYxLjQ2OTYsNjIzLjUxODIgQzk2Mi4xODM3LDYyNC42NTI5IDk2MC40ODM5LDY2MC4wMDc2IDk2MS4xMjI5LDY2MS4xOTExIiBmaWxsPSJub25lIiBpZD0iZXN0aW1hdGlvbi10by1zaGFyZWQiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9Ijk2My40OTgyLDY2NS41OTA5LDk2Mi43NDI0LDY1NS43NzExLDk2MS4xMjI5LDY2MS4xOTExLDk1NS43MDI4LDY1OS41NzE2LDk2My40OTgyLDY2NS41OTA5IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9Ijg5LjEyNzQiIHg9IjM3MS45NCIgeT0iNDAzLjY1MzgiPnVzZXMgTG9jYXRpb248L3RleHQ+PC9nPjwhLS1saW5rIGVzdGltYXRpb24gdG8gYm9va2luZy0tPjxnIGNsYXNzPSJsaW5rIiBkYXRhLWVudGl0eS0xPSJlbnQwMDE0IiBkYXRhLWVudGl0eS0yPSJlbnQwMDAxIiBkYXRhLWxpbmstdHlwZT0iZGVwZW5kZW5jeSIgZGF0YS1zb3VyY2UtbGluZT0iNTYiIGlkPSJsbmszNSI+PHBhdGggY29kZUxpbmU9IjU2IiBkPSJNNDMwLjA5NDQsMTIxLjExMDggQzQzMC4yODc3LDEyMS4yNDE5IDQzMC40ODQsMTIxLjM3NDkgNDMwLjY4MzQsMTIxLjUwOTkgQzQzMS4wODIzLDEyMS43Nzk3IDQzMS40OTM1LDEyMi4wNTcgNDMxLjkxNjgsMTIyLjM0MTcgQzQzMi43NjM1LDEyMi45MTA5IDQzMy42NTg1LDEyMy41MDkyIDQzNC41OTk4LDEyNC4xMzQyIEM0NDIuMTMwMywxMjkuMTM0MSA0NTIuNjIxOSwxMzUuODQxMiA0NjQuOTg2MywxNDMuMDQ1NiBDNDg5LjcxNSwxNTcuNDU0NCA1MjEuOTM1LDE3My44NTE5IDU1Mi45NCwxODIuNTU2OSBDNzIyLjQyLDIzMC4xNTY5IDc3Mi4xNSwyMDIuMzc2OSA5NDcuOTQsMjExLjgyNjkgQzk2MS4yLDIxMi41MzY5IDExNzYuNjcsMjExLjM4NjkgMTE4Ni45NCwyMTkuODI2OSBDMTE5MC42NzUsMjIyLjg5ODEgMTE5My43OTM2LDIyNi41MTc3IDExOTYuMzkwOSwyMzAuNTA0IEMxMTk3LjA0MDIsMjMxLjUwMDYgMTE5Ny42NTcsMjMyLjUyMDIgMTE5OC4yNDI3LDIzMy41NTk4IEMxMTk4LjUzNTUsMjM0LjA3OTYgMTE5OC44MjA1LDIzNC42MDQ0IDExOTkuMDk4LDIzNS4xMzM5IEMxMTk5LjE2NzQsMjM1LjI2NjMgMTE5Ni45NDgzLDI1My4yNSAxMTk3LjAxNjgsMjUzLjM4MyIgZmlsbD0ibm9uZSIgaWQ9ImVzdGltYXRpb24tdG8tYm9va2luZyIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6Nyw3OyIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iMTE5OS4zMDQ3LDI1Ny44Mjg4LDExOTguNzQzMSwyNDcuOTk2LDExOTcuMDE2OCwyNTMuMzgzLDExOTEuNjI5NywyNTEuNjU2NywxMTk5LjMwNDcsMjU3LjgyODgiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTkyLjg5MjgiIHg9Ijk0OC45NCIgeT0iMjA3Ljg5MzgiPiYjMzUyMTE7JiMzMTMwOTsmIzg1OTQ7JiMyMDEwNDsmIzMyMDA0OyYjMTI0MDg7JiMxMjM5ODsmIzI0MzQxOyYjMTIzNjU7JiMzMjE1MzsmIzEyMzY2OyYjNjUyODg7JiMyMzU1ODsmIzI2NDY5OyYjNjUyODk7PC90ZXh0PjwvZz48IS0tbGluayBzZWN1cml0eSB0byBib29raW5nLS0+PGcgY2xhc3M9ImxpbmsiIGRhdGEtZW50aXR5LTE9ImVudDAwMTkiIGRhdGEtZW50aXR5LTI9ImVudDAwMDEiIGRhdGEtbGluay10eXBlPSJkZXBlbmRlbmN5IiBkYXRhLXNvdXJjZS1saW5lPSI1NyIgaWQ9ImxuazM2Ij48cGF0aCBjb2RlTGluZT0iNTciIGQ9Ik0xNjQ1LjY4NDMsMTY2Ljc4NzcgQzE2NDUuNTgzNiwxNjcuMDA0IDE2NDUuNDgxOCwxNjcuMjE5NyAxNjQ1LjM3ODksMTY3LjQzNDkgQzE2NDUuMTczMSwxNjcuODY1MyAxNjQ0Ljk2MjksMTY4LjI5MzQgMTY0NC43NDgzLDE2OC43MTkxIEMxNjQzLjg4OTksMTcwLjQyMTYgMTY0Mi45NjAyLDE3Mi4wODQ0IDE2NDEuOTUzNCwxNzMuNjkyMSBDMTYzOS45Mzk3LDE3Ni45MDc3IDE2MzcuNjE3NSwxNzkuOTAzMSAxNjM0Ljk0LDE4Mi41NTY5IEMxNTY1LjE4NSwyNTEuNjk2OSAxNDU5LjMwNSwyODIuNjA2OSAxMzcwLjMxLDI5Ni4yMDE5IEMxMzI1LjgxMjUsMzAyLjk5OTQgMTI4NS41MzYzLDMwNS40NjgxIDEyNTYuMTA3NSwzMDYuMjIyNSBDMTI0MS4zOTMxLDMwNi41OTk3IDEyMjkuMzkwNiwzMDYuNTQ4MyAxMjIwLjkyODMsMzA2LjM5NTEgQzEyMTguODEyNywzMDYuMzU2OCAxMjIxLjkxNjUsMzA2LjQ1MDQgMTIyMC4yNTYzLDMwNi40MDQ0IiBmaWxsPSJub25lIiBpZD0ic2VjdXJpdHktdG8tYm9va2luZyIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6Nyw3OyIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iMTIxNS4yNTgyLDMwNi4yNjYyLDEyMjQuMTQ0MiwzMTAuNTEzNSwxMjIwLjI1NjMsMzA2LjQwNDQsMTIyNC4zNjU0LDMwMi41MTY2LDEyMTUuMjU4MiwzMDYuMjY2MiIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxNjkuMDAwMiIgeD0iMTYxOC4zOSIgeT0iMjA3Ljg5MzgiPiYjMzU0Njk7JiMyMTQ4NzsmIzY1Mjg4OyYjMTI1MjU7JiMxMjU0MDsmIzEyNTIzOyYjMTIzOTE7JiMyNTgwNTsmIzIwMzE2OyYjMTI0MzQ7JiMyMTA0NjsmIzM4NDgwOyYjNjUyODk7PC90ZXh0PjwvZz48IS0tbGluayBzZWN1cml0eSB0byBzaGlwcGVyLS0+PGcgY2xhc3M9ImxpbmsiIGRhdGEtZW50aXR5LTE9ImVudDAwMTkiIGRhdGEtZW50aXR5LTI9ImVudDAwMDMiIGRhdGEtbGluay10eXBlPSJkZXBlbmRlbmN5IiBkYXRhLXNvdXJjZS1saW5lPSI1OCIgaWQ9ImxuazM3Ij48cGF0aCBjb2RlTGluZT0iNTgiIGQ9Ik0xNjYzLjIyMDIsMTE3LjYyNTggQzE2NjMuNDQ3OSwxMTcuNjkwMyAxNjYzLjY3OTcsMTE3Ljc1NjIgMTY2My45MTU3LDExNy44MjM2IEMxNjY0LjM4NzUsMTE3Ljk1ODQgMTY2NC44NzU4LDExOC4wOTkgMTY2NS4zNzk4LDExOC4yNDU2IEMxNjY3LjM5NjEsMTE4LjgzMTggMTY2OS42NjU1LDExOS41MTIzIDE2NzIuMTUzNCwxMjAuMjkgQzE2ODIuMTA1LDEyMy40MDA2IDE2OTUuNTUxMywxMjguMDY0NCAxNzEwLjI2NSwxMzQuNDUxOSBDMTczOS42OTI1LDE0Ny4yMjY5IDE3NzQuMTksMTY2Ljg5NjkgMTc5NS45NCwxOTQuODI2OSBDMTgzOS41NywyNTAuODYxOSAxODU5Ljg3MjUsMzI3Ljg5OTQgMTg2OS4yNDEzLDM5MS42OTA2IEMxODcxLjU4MzQsNDA3LjYzODQgMTg3My4yNDIzLDQyMi43NTg0IDE4NzQuNDExNCw0MzYuNTE1MyBDMTg3NC40ODQ1LDQzNy4zNzUxIDE4NzQuMTQ4OSw0NTUuNTQzIDE4NzQuMjE4Miw0NTYuMzkyIiBmaWxsPSJub25lIiBpZD0ic2VjdXJpdHktdG8tc2hpcHBlciIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6Nyw3OyIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iMTg3NC42MjQ5LDQ2MS4zNzU0LDE4NzcuODc5Niw0NTIuMDc5OSwxODc0LjIxODIsNDU2LjM5MiwxODY5LjkwNjEsNDUyLjczMDYsMTg3NC42MjQ5LDQ2MS4zNzU0IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE2OS4wMDAyIiB4PSIxODY3LjE5IiB5PSIzMTEuNTIzOCI+JiMzNTQ2OTsmIzIxNDg3OyYjNjUyODg7JiMxMjUyNTsmIzEyNTQwOyYjMTI1MjM7JiMxMjM5MTsmIzI1ODA1OyYjMjAzMTY7JiMxMjQzNDsmIzIxMDQ2OyYjMzg0ODA7JiM2NTI4OTs8L3RleHQ+PC9nPjw/cGxhbnR1bWwtc3JjIFpMTFRKbkQxNTd0Vk5wNjE1c2M0N3oyRzlqMWtiOFg4Mmw5NE9lUmpQUmxmVGdSRXBmT3NuZVRzSUxFWUxPQ0hHdzk2NF9tRVFnQllId2Vfbmc0V0pfbTVQeGl4c3N2MUlqQnF1U296dnpueHZ2dlBSZDRSSzFlcGF3OTVYZXEyQzNJRUhGc3B5RUlsOFVneGVsdjNVNHRYRkhFVTl4cDdjYlFJS1RXNEQzOURRUzRZOWFmSm1nNzJIbjFzcTRnOFpUZ01jVVNoaldsZWJjUk9zNzUyYVNiOVI5ZUNKQ20xQ0tmdkFnTlR4a0RTbzVrYmFnb1hkekM5aU8zSkFMSFpqMmhaNUU5R2J4OElQSDhFOHNEd01VaG9tSHZPWTBMd2FYRDhmQlA0Z3R4VWEyd3dhbm9hdkdlQ1VBaldzdEdqOGJPZkttUXRvWFFsM2ZFdVo0ZEU3Zko4QXAyR0M2SlJUZ0lXQ2l3aEM2dFA5bUhNR1lwV0JyY2E0RDdGYTNBclpBNlpxSHJrNUo2dEE4YUhHbXlVTlNpM3ZYNWxjMDMzRG1TcG9BNENCTUFCQjlGWlRaRDRoVzBaTzEtdER5OWJ3ZUJnUmQ0cjRmZ2JIaFUwLTV4RHZFOGdPQlpDN3Z3ZVZuTlVibDBzWEZUMnI3VWFORzl3VEp2Z3VwQUdkNW5Dbk5fVDBKUGI2REdiX0JIVVdCWDViQUtzLTdoQUhrRlpBTExuNGhhRXpBZ3lzNVVXWWZ3T0k0TGNJUThCSy1kUENITWJMb283MHA0V2RHVlZ2OWdBRXdkR3VyTDYtN3lMTWhKS2lQWDBNZ3JxNTFvanZuYzRpTU9ZemNKbVVsV2wza0hxRUxZLUpCZzh4enlHd1Q0RmYwdWtWWFBDVm5aaXIzbWJGcG1qS2VZZGdReHJZVzRibHdLQ1MzMlk4bGxSS3N2QUFsRGF1UU9oZEcwdmtScVBWTlBjSVNfZzZUSnZWTFRraHdRWVdyak1hc1FtQWFrSTVwa2N6TmRlWjA3dEhTS0JfX2xncGs3UnJmXzZ2bHhGdms2TlRMN3hCY2VWRWtyN2VqT3d0RGlNak5rb2dDd2RuaTdKYnR1cnFROEZhQm5oVFV2X2I5NzJzbkxVTXRabEhVdHJtU0ZNX2d5ZGVoeFBRVXVUUkp5dWFUeFJzVkVjUXVIQXZxWV9vS014Q05UaktUU0lZU3hFcmY3dEhqSV9UUnpPM1U0enpxX0hGNk5TSUlHcWxJQmxaYzB4VkY0Tlc5TmJuRnJKQlVxd2QxUVRqMHNPT0hBMnl4WFFiMVRzSUxmcTNMUzNJRnZUbktHLTFGdjk1dmdadDVncldqNXMwVWJ2djFWdDNtMDA/PjwvZz48L3N2Zz4=" class="uml" alt="uml diagram" title="" /></p>
+<p>転記元: <a href="../../../source/java-2/docs/design/domain-model/"><code>docs/design/domain-model.md</code></a></p>
+<p><strong>この図は設計であり、いくつかの点で実装と一致しません。</strong> <code>CargoBookedEvent</code> と <code>TrackingExceptionDetectedEvent</code> は実装に存在せず、<code>InvoiceRequested</code> も同様です。実在するイベントは後述の 9 件です。</p>
+<p><strong>読み方の注意として、これを最初に置いておきます。</strong> この実装の設計ドキュメントは丁寧に書かれていますが、20 イテレーションのあいだに実装が動いた分だけ古くなっています。本シリーズは、<strong>設計ドキュメントの記述と実コードを区別して示し、食い違いは食い違いとして扱います。</strong></p>
+<h3 id="7-1">業務パッケージは 7 つ、それに支援サブドメインが 1 つ<a class="headerlink" href="#7-1" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">パッケージ</th>
+<th style="text-align: left;">位置づけ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>booking</code> / <code>shipper</code> / <code>routing</code> / <code>tracking</code> / <code>handling</code> / <code>billing</code> / <code>estimation</code></td>
+<td style="text-align: left;">業務の BC</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>security</code></td>
+<td style="text-align: left;">認証・認可の支援サブドメイン（ADR-007。業務 BC ではない）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>shared</code></td>
+<td style="text-align: left;">共有カーネル（<code>Location</code> と <code>ShipperId</code> の 2 つのみ —— ADR-005）</td>
+</tr>
+</tbody>
+</table>
+<p><code>handling</code> は当初 <code>tracking</code> の一部として設計されており（ADR-002）、後から独立した BC に昇格しました（ADR-010）。<strong>境界の数は、設計時に決めて終わりにはなりませんでした。</strong></p>
+<p>そのため、<strong>起動クラスの Javadoc も設計ドキュメントの前文も「6 つ」と書いたまま</strong>残っています。詳しくは<a href="../03-spring-modular-monolith/">第 3 章</a>と<a href="../02-cargo-domain-model/">第 2 章</a>で扱います。</p>
+<h2 id="_4">ドメインモデルの構成要素<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
+<p>各 BC の <code>domain/model</code> は、DDD の構成要素ごとにサブパッケージへ分かれています。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">サブパッケージ</th>
+<th style="text-align: left;">入れるもの</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>aggregates</code></td>
+<td style="text-align: left;">集約ルート</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>entities</code></td>
+<td style="text-align: left;">集約の内側で同一性を持つもの</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>valueobjects</code></td>
+<td style="text-align: left;">値オブジェクト・列挙・<strong>識別子</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>commands</code></td>
+<td style="text-align: left;">業務の要求を 1 つの型にまとめたもの（<strong>該当が無ければ作らない</strong>）</td>
+</tr>
+</tbody>
+</table>
+<p>出典: <a href="../../../source/java-2/docs/adr/024-domain-model-split-by-building-block/"><code>ADR-024</code></a></p>
+<p><strong>この分割は書籍の <code>bookingms</code> に倣ったものです。</strong> ただし識別子の置き場だけは書籍と異なります。理由と、写したまま使って壊れた経緯は<a href="../02-cargo-domain-model/">第 2 章</a>で扱います。</p>
+<h3 id="_5">「該当が無ければ作らない」が守られている<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
+<p>この表で注目すべきは最後の但し書きです。<strong>用意した分類を埋めることが目的ではありません。</strong></p>
+<p>実際、<code>entities</code> のサブパッケージを持つのは <code>routing</code> と <code>tracking</code> だけで、そこに入っているのは <code>ProposedRoute</code> と <code>TrackingExceptionEvent</code> の 2 つです。<strong>集約の内側で同一性を持つものは、この業務にはほとんどありませんでした。</strong> 残りはすべて値オブジェクトです。</p>
+<p>DDD の分類を並べると全部を埋めたくなりますが、この実装は空のまま残しています。</p>
+<h2 id="_6">ドメインルール<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
+<p>業務規則は集約と値オブジェクトの内側に置かれ、<strong>画面にもデータベースにも複製されません。</strong></p>
+<p>代表例が予約状態の遷移規則です。設計ドキュメントに「BookingStatus 状態遷移表（正典）」があり、<code>BookingStatus</code> 列挙型がそれを実行可能な形にしています。</p>
+<div class="highlight"><pre><span></span><code><span class="cm">/**</span>
+<span class="cm"> * 予約状態。</span>
+<span class="cm"> *</span>
+<span class="cm"> * &lt;p&gt;&lt;strong&gt;遷移の正典は {@code docs/design/domain-model.md}「BookingStatus 状態遷移表」である。&lt;/strong&gt;</span>
+<span class="cm"> * 本列挙型はその表を実行可能な形にしたものであり、表に無い遷移はすべて拒否する。</span>
+<span class="cm"> * 画面のボタン出し分け（{@code ui_design.md}）は独自の判定を持たず、</span>
+<span class="cm"> * {@link #canTransitionBy} を呼ぶ。**同じ規則を 2 か所に書くと、必ず片方だけが更新される。**</span>
+<span class="cm"> */</span>
+<span class="kd">public</span><span class="w"> </span><span class="kd">enum</span><span class="w"> </span><span class="n">BookingStatus</span><span class="w"> </span><span class="p">{</span>
+</code></pre></div>
+<p>転記元: <a href="../../../source/java-2/apps/cargo-tracker/src/main/java/com/example/cargotracker/booking/domain/model/valueobjects/BookingStatus.java"><code>booking/domain/model/valueobjects/BookingStatus.java</code></a></p>
+<p><strong>「同じ規則を 2 か所に書くと、必ず片方だけが更新される」</strong> —— この 1 文が、この実装のドメインルールの扱い方を要約しています。画面のボタン表示も、クエリ側の SQL も、独自の判定を持ちません。</p>
+<p>規則を 1 か所に集めても、その 1 か所を間違えれば業務は壊れます。実際に壊れた例（遷移表の <code>for</code> ループに状態を 1 つ足したために、輸送中の貨物を営業担当者が消せた）は<a href="../02-cargo-domain-model/">第 2 章</a>で扱います。</p>
+<h2 id="_7">コマンドとクエリ<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h2>
+<p>更新はコマンド、参照はクエリに分かれています。パッケージも別です。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">種別</th>
+<th style="text-align: left;">置き場</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">更新</td>
+<td style="text-align: left;"><code>application/internal/commandservices/</code></td>
+</tr>
+<tr>
+<td style="text-align: left;">参照</td>
+<td style="text-align: left;"><code>application/internal/queryservices/</code></td>
+</tr>
+</tbody>
+</table>
+<p>この分離は業務パッケージすべてで徹底されています。読み取り側の実装がどうなっているかは<a href="../03-spring-modular-monolith/">第 3 章</a>で扱います。</p>
+<h3 id="3">コマンドオブジェクトは 3 つしかない<a class="headerlink" href="#3" title="Permanent link">&para;</a></h3>
+<p>ここで、DDD の解説を読んで実装に入る人がつまずきやすい点があります。</p>
+<p><strong>設計ドキュメントの「コマンド一覧」には Booking だけで 10 個以上のコマンドが並びます</strong> —— <code>BookCargoCommand</code>、<code>AssignToRoutingCommand</code>、<code>RouteCargoCommand</code>、<code>ConfirmBookingCommand</code>……。ところが<strong>型として存在するコマンドオブジェクトは、システム全体で 3 つだけ</strong>です。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">型</th>
+<th style="text-align: left;">BC</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>BookCargoCommand</code></td>
+<td style="text-align: left;"><code>booking</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>RegisterVoyageCommand</code></td>
+<td style="text-align: left;"><code>routing</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>RegisterHandlingCommand</code></td>
+<td style="text-align: left;"><code>handling</code></td>
+</tr>
+</tbody>
+</table>
+<p>出典: 各 BC の <code>domain/model/commands/</code></p>
+<p>残りはコマンドサービスのメソッド引数として直接受け取られます。<strong>コマンドオブジェクトを作る基準がはっきりしています。</strong></p>
+<div class="highlight"><pre><span></span><code><span class="cm">/**</span>
+<span class="cm"> * 予約コンテキストの業務の要求を 1 つの型にまとめたもの。</span>
+<span class="cm"> *</span>
+<span class="cm"> * &lt;p&gt;&lt;strong&gt;呼び出し側が組み立て、集約が受け取る。&lt;/strong&gt; 引数を並べる代わりに型にすることで、</span>
+<span class="cm"> * 同じ型の引数を取り違えてもコンパイルが通る形を避ける。</span>
+<span class="cm"> *</span>
+<span class="cm"> *</span>
+<span class="cm"> * &lt;p&gt;他の BC のクラスを直接参照してはならない（ArchUnit ルール 4）。</span>
+<span class="cm"> */</span>
+<span class="kn">package</span><span class="w"> </span><span class="nn">com.example.cargotracker.booking.domain.model.commands</span><span class="p">;</span>
+</code></pre></div>
+<p>転記元: <a href="../../../source/java-2/apps/cargo-tracker/src/main/java/com/example/cargotracker/booking/domain/model/commands/package-info.java"><code>booking/domain/model/commands/package-info.java</code></a></p>
+<p><strong>理由は「引数の取り違えを防ぐ」ことです。</strong> 予約の登録は荷主 ID・貨物仕様・ルート仕様の 3 つを受け取ります。</p>
+<div class="highlight"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">record</span> <span class="nc">BookCargoCommand</span><span class="p">(</span>
+<span class="w">        </span><span class="n">ShipperId</span><span class="w"> </span><span class="n">shipperId</span><span class="p">,</span>
+<span class="w">        </span><span class="n">CargoSpecification</span><span class="w"> </span><span class="n">cargoSpecification</span><span class="p">,</span>
+<span class="w">        </span><span class="n">RouteSpecification</span><span class="w"> </span><span class="n">routeSpecification</span><span class="p">)</span><span class="w"> </span><span class="p">{}</span>
+</code></pre></div>
+<p>転記元: <a href="../../../source/java-2/apps/cargo-tracker/src/main/java/com/example/cargotracker/booking/domain/model/commands/BookCargoCommand.java"><code>booking/domain/model/commands/BookCargoCommand.java</code></a></p>
+<p>一方、「予約を確定する」は追加の入力を持ちません。<strong>運ぶものが無い操作に型を作っても、名前が増えるだけです。</strong></p>
+<h3 id="_8">では遷移規則はどうやってコマンドを識別するのか<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h3>
+<p><strong>コマンドの「種別」だけを列挙型で持っています。</strong></p>
+<div class="highlight"><pre><span></span><code><span class="cm">/**</span>
+<span class="cm"> * 予約に対するコマンドの種別。</span>
+<span class="cm"> *</span>
+<span class="cm"> * &lt;p&gt;{@code domain-model.md}「コマンド一覧」に対応する。状態遷移の可否は</span>
+<span class="cm"> * コマンドの種別だけで決まるため、遷移規則は本列挙型を引数に取る</span>
+<span class="cm"> * （{@link BookingStatus#transitionBy}）。</span>
+<span class="cm"> *</span>
+<span class="cm"> * &lt;p&gt;コマンドオブジェクト（{@code BookCargoCommand} 等）はイテレーションごとに</span>
+<span class="cm"> * 追加されるが、遷移表は最初から全 10 遷移が確定している。**遷移規則の実装を</span>
+<span class="cm"> * コマンドオブジェクトの実装まで待つと、その間だけ表に無い遷移が通ってしまう。**</span>
+<span class="cm"> */</span>
+<span class="kd">public</span><span class="w"> </span><span class="kd">enum</span><span class="w"> </span><span class="n">BookingCommandType</span><span class="w"> </span><span class="p">{</span>
+</code></pre></div>
+<p>転記元: <a href="../../../source/java-2/apps/cargo-tracker/src/main/java/com/example/cargotracker/booking/domain/model/valueobjects/BookingCommandType.java"><code>booking/domain/model/valueobjects/BookingCommandType.java</code></a></p>
+<p><strong>種別と実体を分けたことに、はっきりした理由があります。</strong> 遷移表は最初から全 10 遷移が決まっているのに、コマンドオブジェクトはイテレーションごとに増えます。規則の実装を実体の実装まで待つと、<strong>その間だけ表に無い遷移が通ります。</strong></p>
+<p><strong>規則は、それを起こす操作より先に実装できます。</strong> これは DDD の教科書的な分類からは出てこない、イテレーティブな開発の側から来た判断です。</p>
+<h2 id="_9">イベント<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h2>
+<p>BC を越える連携のうち、<strong>「起きた事実を他の BC が自分のモデルに反映する」ものだけ</strong>がドメインイベントです。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">種別</th>
+<th style="text-align: left;">扱い</th>
+<th style="text-align: left;">例</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>状態の伝播</strong>（起きた事実を他 BC が自分のモデルに反映する）</td>
+<td style="text-align: left;"><strong>ドメインイベント</strong></td>
+<td style="text-align: left;">荷役登録 → 追跡の輸送状態・予約の誤配と輸送開始</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>問い合わせ</strong>（読むだけ。状態を変えない）</td>
+<td style="text-align: left;">同期（ACL ポート）</td>
+<td style="text-align: left;">予定ルートの参照（<code>CargoSnapshots</code>）、便の空き容量（<code>VoyageCapacityPort</code>）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>コマンド</strong>（利用者の操作そのもので、可否をその場で返す必要がある）</td>
+<td style="text-align: left;">同期（ACL ポート）</td>
+<td style="text-align: left;">経路の割り当て（<code>CargoRouteAssignments</code>）、追跡番号の発行（<code>TrackingPort</code>）</td>
+</tr>
+</tbody>
+</table>
+<p>引用元: <a href="../../../source/java-2/docs/adr/009-domain-events-for-cross-context-propagation/"><code>ADR-009</code></a></p>
+<p>同じ ADR が、イベントにしない理由も書いています。</p>
+<blockquote>
+<p><strong>コマンドをイベントにしない理由</strong>は、拒否の理由を利用者に返せなくなるためである。経路の割り当ては「端点が予約と一致しない」「その状態では割り当てられない」を経路設計者にその場で伝える必要がある。イベントにすると、画面は「割り当てました」と表示した後に、どこにも表示されない失敗が起きる。</p>
+</blockquote>
+<p>引用元: <a href="../../../source/java-2/docs/adr/009-domain-events-for-cross-context-propagation/"><code>ADR-009</code></a></p>
+<p><strong>「すべての境界越えをイベントにする」ではありません。</strong> 判断の基準は、失敗を利用者に返す必要があるかどうかです。</p>
+<h3 id="_10">この判断は一度反転している<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h3>
+<p>ADR-009 で最も参考になるのは、<strong>この決定が改訂によって逆向きになっている</strong>ことです。</p>
+<blockquote>
+<p><strong>改訂 1（2026-08-08）</strong>: 当初は「BC 間 ACL は同期・同一トランザクションで呼ぶ」と決めた。
+<strong>本改訂で判断を反転し、状態の伝播はドメインイベントによる結果整合とする。</strong></p>
+<p>反転の理由は「<strong>1 つの操作が 3 つの集約を 1 トランザクションで更新する形が、集約境界の
+原則からの逸脱として重すぎた</strong>」ことである。当初案はその逸脱を「業務上あり得ない中間状態を
+作らないため」と正当化していたが、その代償として <strong>BC 間の結合が強く、片方の遅延が
+もう片方を止める</strong>構造を選んでいた。荷役は最も頻度の高い操作であり、<strong>追跡や予約の
+都合で荷役の記録が失敗してはならない</strong>。順序が逆だった。</p>
+<p>改訂前の記述は「代替案」の節に残す。<strong>判断の経緯を追えるようにするためである。</strong></p>
+</blockquote>
+<p>引用元: <a href="../../../source/java-2/docs/adr/009-domain-events-for-cross-context-propagation/"><code>ADR-009</code></a></p>
+<p><strong>決め手は DDD の原則ではなく、業務上どちらが落ちてはいけないかでした。</strong> 荷役の記録は現場の作業そのものであり、追跡や予約の都合で失敗してはなりません。同期にすると、その順序が逆になります。</p>
+<p>反転の前に何が起きていたかも記録されています。</p>
+<blockquote>
+<p>一方 <code>architecture_backend.md</code> の「イベント駆動設計」節は、<code>ApplicationEventPublisher</code> と <code>@TransactionalEventListener(AFTER_COMMIT)</code> による結果整合を実装方針としてコード例つきで規定していた。<strong>実装と設計書で故障モードがまるで違う。</strong></p>
+</blockquote>
+<p>引用元: <a href="../../../source/java-2/docs/adr/009-domain-events-for-cross-context-propagation/"><code>ADR-009</code></a></p>
+<p><strong>設計書と実装が、別々の故障モードを持っていました。</strong> 片方は「両方成功するか両方起きないか」、もう片方は「先に成功して後から反映される（あるいは反映されない）」です。どちらが正しいかを決めないまま実装が先行していた、と ADR は書いています。</p>
+<h3 id="9-record">イベントは 9 つ、すべて <code>record</code><a class="headerlink" href="#9-record" title="Permanent link">&para;</a></h3>
+<p>実在するドメインイベントは <code>shared/domain/event</code> にまとめられています。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">イベント</th>
+<th style="text-align: left;">発行元</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>CargoCancelledEvent</code></td>
+<td style="text-align: left;"><code>booking</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>CargoRoutedEvent</code></td>
+<td style="text-align: left;"><code>booking</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>CargoExceptionRaisedEvent</code> / <code>CargoExceptionResolvedEvent</code></td>
+<td style="text-align: left;"><code>tracking</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>CargoStatusUpdatedEvent</code></td>
+<td style="text-align: left;"><code>tracking</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>ClaimCancelledEvent</code></td>
+<td style="text-align: left;"><code>handling</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>CustomsStatusChangedEvent</code></td>
+<td style="text-align: left;"><code>handling</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>HandlingActivityRegisteredEvent</code></td>
+<td style="text-align: left;"><code>handling</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>VoyageRescheduledEvent</code></td>
+<td style="text-align: left;"><code>routing</code></td>
+</tr>
+</tbody>
+</table>
+<p>出典: <a href="../../source/java-2/apps/cargo-tracker/src/main/java/com/example/cargotracker/shared/domain/event"><code>shared/domain/event/</code></a></p>
+<p><strong>BC ごとの <code>domain/event</code> はありません。</strong> 設計ドキュメントのパッケージ構成は BC ごとの配置を規定していますが、実装は <code>shared</code> にまとめています。理由はパッケージの Javadoc が書いています。</p>
+<div class="highlight"><pre><span></span><code><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;&lt;</span><span class="n">strong</span><span class="o">&gt;</span><span class="n">共有カーネル</span><span class="err">（</span><span class="p">{</span><span class="nd">@code</span><span class="w"> </span><span class="n">shared</span><span class="p">.</span><span class="na">domain</span><span class="p">.</span><span class="na">model</span><span class="p">}</span><span class="err">）</span><span class="n">ではない</span><span class="err">。</span><span class="o">&lt;/</span><span class="n">strong</span><span class="o">&gt;</span><span class="w"> </span><span class="n">ここに置くのは</span>
+<span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="err">「</span><span class="n">起きた事実</span><span class="err">」</span><span class="n">だけであり</span><span class="err">、</span><span class="n">業務の判断は含まない</span><span class="err">。</span><span class="n">ADR</span><span class="o">-</span><span class="mo">005</span><span class="w"> </span><span class="n">が</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="n">要素に限っているのは</span>
+<span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">共有カーネルの話であり</span><span class="err">、</span><span class="n">イベントはその制限の対象ではない</span><span class="err">。</span>
+</code></pre></div>
+<p>転記元: <a href="../../../source/java-2/apps/cargo-tracker/src/main/java/com/example/cargotracker/shared/domain/event/package-info.java"><code>shared/domain/event/package-info.java</code></a></p>
+<p><strong>イベントが運ぶのは事実だけで、命令ではありません。</strong></p>
+<div class="highlight"><pre><span></span><code><span class="cm">/**</span>
+<span class="cm"> * 荷役作業が登録された（US15）。</span>
+<span class="cm"> *</span>
+<span class="cm"> * &lt;p&gt;Handling Context が発行し、Tracking Context と Booking Context が購読する。</span>
+<span class="cm"> * &lt;strong&gt;購読側は互いを知らない。&lt;/strong&gt; 追跡は輸送状態を進め、予約は誤配の反映と</span>
+<span class="cm"> * 輸送開始を行うが、どちらも相手が何をするかを知らずに自分の仕事をする。</span>
+<span class="cm"> *</span>
+<span class="cm"> * &lt;p&gt;&lt;strong&gt;運ぶのは起きた事実だけである。&lt;/strong&gt; 「輸送状態を LOADED にせよ」ではなく</span>
+<span class="cm"> * 「JPOSA で V001 に積み込んだ」を伝える。どう解釈するかは購読側が決める。</span>
+<span class="cm"> * 命令を運ぶと、発行側が購読側の都合を知ることになる。</span>
+<span class="cm"> */</span>
+<span class="kd">public</span><span class="w"> </span><span class="kd">record</span> <span class="nc">HandlingActivityRegisteredEvent</span><span class="p">(</span>
+<span class="w">        </span><span class="n">UUID</span><span class="w"> </span><span class="n">bookingId</span><span class="p">,</span>
+<span class="w">        </span><span class="n">String</span><span class="w"> </span><span class="n">trackingNumber</span><span class="p">,</span>
+<span class="w">        </span><span class="n">String</span><span class="w"> </span><span class="n">handlingType</span><span class="p">,</span>
+<span class="w">        </span><span class="n">Instant</span><span class="w"> </span><span class="n">completionTime</span><span class="p">,</span>
+<span class="w">        </span><span class="n">String</span><span class="w"> </span><span class="n">locationUnlocode</span><span class="p">,</span>
+<span class="w">        </span><span class="n">String</span><span class="w"> </span><span class="n">voyageNumber</span><span class="p">,</span>
+<span class="w">        </span><span class="kt">boolean</span><span class="w"> </span><span class="n">misrouted</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>転記元: <a href="../../../source/java-2/apps/cargo-tracker/src/main/java/com/example/cargotracker/shared/domain/event/HandlingActivityRegisteredEvent.java"><code>shared/domain/event/HandlingActivityRegisteredEvent.java</code></a></p>
+<p><strong>「輸送状態を LOADED にせよ」ではなく「JPOSA で V001 に積み込んだ」</strong> —— この違いが、イベントを命令の非同期版にしないための線です。命令を運べば、発行側は購読側が何をするかを知ることになります。</p>
+<h2 id="_11">サガ — 実装クラスは存在しない<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h2>
+<p>複数の BC にまたがる一連の処理を、DDD ではサガと呼びます。<strong>この実装に <code>Saga</code> という型はありません。</strong> <code>ProcessManager</code> もありません。</p>
+<p>代わりに、<strong>イベントの購読が連鎖します。</strong> 荷役の登録を例に、実物を追います。</p>
+<h3 id="1_1">1. 荷役が事実を発行する<a class="headerlink" href="#1_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="w">        </span><span class="c1">// **コミットしてから購読側が動く**（AFTER_COMMIT）。ここで発行するのは</span>
+<span class="w">        </span><span class="c1">// 「起きた事実」であり、誰が何をするかは知らない</span>
+<span class="w">        </span><span class="n">eventPublisher</span><span class="p">.</span><span class="na">publishEvent</span><span class="p">(</span><span class="k">new</span><span class="w"> </span><span class="n">HandlingActivityRegisteredEvent</span><span class="p">(</span>
+</code></pre></div>
+<p>転記元: <a href="../../../source/java-2/apps/cargo-tracker/src/main/java/com/example/cargotracker/handling/application/internal/commandservices/RegisterHandlingCommandService.java"><code>RegisterHandlingCommandService.java</code></a></p>
+<p><strong>発行側はこの時点で自分の仕事を終えています。</strong> 荷役作業だけを保存し、事実を発行します。</p>
+<h3 id="2-3">2. 3 つのハンドラが、互いを知らずに反応する<a class="headerlink" href="#2-3" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">購読者</th>
+<th style="text-align: left;">すること</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>TrackingHandlingEventHandler</code></td>
+<td style="text-align: left;">追跡イベントを記録し、輸送状態を進める</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>TrackingMisrouteEventHandler</code></td>
+<td style="text-align: left;">誤配なら例外を起票する</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>BookingHandlingEventHandler</code></td>
+<td style="text-align: left;">誤配の反映と輸送開始を予約に反映する</td>
+</tr>
+</tbody>
+</table>
+<p>出典: <a href="../../source/java-2/apps/cargo-tracker/src/main/java/com/example/cargotracker/tracking/interfaces/events"><code>tracking/interfaces/events/</code></a>・<a href="../../source/java-2/apps/cargo-tracker/src/main/java/com/example/cargotracker/booking/interfaces/events"><code>booking/interfaces/events/</code></a></p>
+<p><strong>翻訳はそれぞれの購読側が行います。</strong></p>
+<div class="highlight"><pre><span></span><code><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="n">荷役種別を追跡イベント種別へ翻訳するのはここである</span><span class="err">。</span><span class="n">値が同じでも</span>
+<span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="err">「</span><span class="n">荷役として何をしたか</span><span class="err">」</span><span class="n">と</span><span class="err">「</span><span class="n">追跡の上で何が起きたか</span><span class="err">」</span><span class="n">は別の事実であり</span><span class="err">、</span>
+<span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="o">&lt;</span><span class="n">strong</span><span class="o">&gt;</span><span class="n">対応づけは受け取る側の仕事</span><span class="o">&lt;/</span><span class="n">strong</span><span class="o">&gt;</span><span class="n">である</span><span class="err">。</span>
+</code></pre></div>
+<p>転記元: <a href="../../../source/java-2/apps/cargo-tracker/src/main/java/com/example/cargotracker/tracking/interfaces/events/TrackingHandlingEventHandler.java"><code>TrackingHandlingEventHandler.java</code></a></p>
+<p>誤配の起票にも、同じ形の判断があります。</p>
+<div class="highlight"><pre><span></span><code><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;&lt;</span><span class="n">strong</span><span class="o">&gt;</span><span class="n">荷役の登録から起票する</span><span class="err">。</span><span class="o">&lt;/</span><span class="n">strong</span><span class="o">&gt;</span><span class="w"> </span><span class="n">誤配は</span><span class="err">「</span><span class="n">予定ルートに無い作業が</span>
+<span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">記録された</span><span class="err">」</span><span class="n">ことで成立する</span><span class="err">。</span><span class="n">追跡管理者が手で起票するものではない</span>
+<span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="err">（</span><span class="n">手で起票できると</span><span class="err">、</span><span class="n">荷役の記録が無いのに誤配の例外だけがある状態を作れる</span><span class="err">）。</span>
+</code></pre></div>
+<p>転記元: <a href="../../../source/java-2/apps/cargo-tracker/src/main/java/com/example/cargotracker/tracking/interfaces/events/TrackingMisrouteEventHandler.java"><code>TrackingMisrouteEventHandler.java</code></a></p>
+<h3 id="_12">サガと呼べるのか<a class="headerlink" href="#_12" title="Permanent link">&para;</a></h3>
+<p><strong>この連鎖には、サガの教科書的な特徴の一部がありません。</strong></p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">サガの一般的な要素</th>
+<th style="text-align: left;">この実装</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">一連の手順を持つ調整役</td>
+<td style="text-align: left;"><strong>無い。</strong> 発行側は購読側を知らず、購読側は互いを知らない</td>
+</tr>
+<tr>
+<td style="text-align: left;">補償トランザクション</td>
+<td style="text-align: left;"><strong>無い。</strong> 失敗しても巻き戻さない</td>
+</tr>
+<tr>
+<td style="text-align: left;">進行状態の永続化</td>
+<td style="text-align: left;"><strong>無い。</strong> サガのインスタンスに相当するものが無い</td>
+</tr>
+<tr>
+<td style="text-align: left;">再試行</td>
+<td style="text-align: left;"><strong>無い。</strong> 取りこぼしは数えて記録するだけ</td>
+</tr>
+</tbody>
+</table>
+<p><strong>あるのは「事実を発行し、それぞれが自分の責務で反応する」という形だけです。</strong> これをサガと呼ぶかは定義の問題ですが、<strong>呼び方より、何が無いかを知っているほうが実務では役に立ちます。</strong></p>
+<p>失敗したときに何が起きるか（そして起きないか）は<a href="../03-spring-modular-monolith/">第 3 章</a>の「取りこぼしをどう扱うか」で扱います。</p>
+<h2 id="_13">トレードオフ — 分類は、決めただけでは足りない<a class="headerlink" href="#_13" title="Permanent link">&para;</a></h2>
+<p>ADR-009 は「状態の伝播はイベント、問い合わせとコマンドは同期」という分類を与えました。<strong>分類そのものは正しく、いまも有効です。</strong></p>
+<p>問題は、<strong>「状態の伝播」と「コマンド」の線引きが人の判断に委ねられていた</strong>ことでした。</p>
+<p>IT14 で、それが実際の欠陥になりました。入金確認の後に予約を精算済みにする同期ポートは <code>boolean</code> を返す契約なのに、呼び出し側が戻り値を捨てていました。結果として「入金確認済みだが予約が精算済みでない」請求書が、ログにも画面にも残りません。<strong>テストは全緑のままです。</strong></p>
+<p>この経験から出た ADR-021 は、判断基準を差し替えました。</p>
+<blockquote>
+<p><strong>問うべきは戻り値の使われ方ではなく、失敗が人に届くかである。</strong></p>
+</blockquote>
+<p>引用元: <a href="../../../source/java-2/docs/adr/021-cross-context-state-change-must-name-where-failure-surfaces/"><code>ADR-021</code></a></p>
+<p><strong>そして、その基準を検査に落としました。</strong> BC を越えて状態を変える同期ポートは名簿に登録され、名簿に無いものを足すとテストが赤くなります。名簿の中身は<a href="../03-spring-modular-monolith/">第 3 章</a>で見ます。</p>
+<p><strong>DDD の分類を決めることと、その分類が守られることは別の作業です。</strong> このシリーズが繰り返し扱うのはその差です。</p>
+<h2 id="_14">この実装での対応物<a class="headerlink" href="#_14" title="Permanent link">&para;</a></h2>
+<p>DDD の語彙と、この実装の対応をまとめます。<strong>対応物が無いものの行も残します。</strong></p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">DDD の概念</th>
+<th style="text-align: left;">この実装での対応物</th>
+<th style="text-align: left;">置き場</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">境界づけられたコンテキスト</td>
+<td style="text-align: left;">トップレベルパッケージ（業務 7 ＋支援 1）</td>
+<td style="text-align: left;"><code>com.example.cargotracker.&lt;bc&gt;</code></td>
+</tr>
+<tr>
+<td style="text-align: left;">共有カーネル</td>
+<td style="text-align: left;"><code>Location</code>・<code>ShipperId</code> の 2 つのみ</td>
+<td style="text-align: left;"><code>shared/domain/model/valueobjects/</code></td>
+</tr>
+<tr>
+<td style="text-align: left;">集約ルート</td>
+<td style="text-align: left;"><code>Cargo</code>・<code>Voyage</code>・<code>Invoice</code> ほか</td>
+<td style="text-align: left;"><code>&lt;bc&gt;/domain/model/aggregates/</code></td>
+</tr>
+<tr>
+<td style="text-align: left;">エンティティ</td>
+<td style="text-align: left;"><code>ProposedRoute</code>・<code>TrackingExceptionEvent</code> の<strong>2 つだけ</strong></td>
+<td style="text-align: left;"><code>&lt;bc&gt;/domain/model/entities/</code></td>
+</tr>
+<tr>
+<td style="text-align: left;">値オブジェクト</td>
+<td style="text-align: left;">大多数のモデル型（識別子・列挙を含む）</td>
+<td style="text-align: left;"><code>&lt;bc&gt;/domain/model/valueobjects/</code></td>
+</tr>
+<tr>
+<td style="text-align: left;">ドメインサービス</td>
+<td style="text-align: left;"><code>RouteSearchService</code> ほか</td>
+<td style="text-align: left;"><code>&lt;bc&gt;/domain/model/</code>（直下）</td>
+</tr>
+<tr>
+<td style="text-align: left;">リポジトリ</td>
+<td style="text-align: left;">interface はドメイン、実装はインフラ</td>
+<td style="text-align: left;"><code>&lt;bc&gt;/domain/repository/</code> ／ <code>&lt;bc&gt;/infrastructure/repositories/</code></td>
+</tr>
+<tr>
+<td style="text-align: left;">コマンド（型）</td>
+<td style="text-align: left;"><strong>3 つだけ。</strong> 種別は列挙型で別に持つ</td>
+<td style="text-align: left;"><code>&lt;bc&gt;/domain/model/commands/</code></td>
+</tr>
+<tr>
+<td style="text-align: left;">ドメインイベント</td>
+<td style="text-align: left;">9 つ。すべて <code>record</code></td>
+<td style="text-align: left;"><code>shared/domain/event/</code></td>
+</tr>
+<tr>
+<td style="text-align: left;">腐敗防止層</td>
+<td style="text-align: left;">ポートは利用側 BC、実装は提供側 BC</td>
+<td style="text-align: left;"><code>&lt;bc&gt;/application/internal/outboundservices/acl/</code> ／ <code>&lt;bc&gt;/infrastructure/acl/</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>サガ / プロセスマネージャ</strong></td>
+<td style="text-align: left;"><strong>無い。</strong> イベント購読の連鎖が役割を果たす</td>
+<td style="text-align: left;">——</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>イベントストア</strong></td>
+<td style="text-align: left;"><strong>無い。</strong> 集約は現在状態を直接 UPDATE する</td>
+<td style="text-align: left;">——</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>イベントソーシング</strong></td>
+<td style="text-align: left;"><strong>無い</strong></td>
+<td style="text-align: left;">——</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>読み取りモデル専用のテーブル</strong></td>
+<td style="text-align: left;"><strong>無い。</strong> クエリ側は書き込み側と同じテーブルを読む</td>
+<td style="text-align: left;">——</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>REST API</strong></td>
+<td style="text-align: left;"><strong>無い。</strong> 受信側は画面 Controller のみ</td>
+<td style="text-align: left;">——</td>
+</tr>
+</tbody>
+</table>
+<p><strong>下 5 行が、このシリーズの範囲を決めています。</strong> Event Sourcing や CQRS の完全な形を扱うには、それを持つ実装が要ります。<strong>無いものについて設計を語ることはしません。</strong></p>
+<h2 id="_15">この先の読み方<a class="headerlink" href="#_15" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">章</th>
+<th style="text-align: left;">扱うこと</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><a href="../02-cargo-domain-model/">第 2 章</a></td>
+<td style="text-align: left;">集約・識別子・値オブジェクト・ドメインサービスの中身。<strong>境界を分けたことで払った代金</strong>（同じ UUID を包む識別子が 4 つある、<code>Money</code> が 2 つある）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="../03-spring-modular-monolith/">第 3 章</a></td>
+<td style="text-align: left;">Spring 上の配置と、<strong>境界を守っている検査</strong>（ArchUnit・ソース走査・依存の禁止リスト）。結果整合の取りこぼしの扱い</td>
+</tr>
+</tbody>
+</table>
+<p><strong>第 3 章から読んでも構いません。</strong> むしろ、実装の現物を先に見たい場合はそちらが入口として適しています。本シリーズは実装を先に確定させてから概念の章を書いており、この章は最後に書かれています。</p>
+<p>実装アプローチの比較（EDA・CQRS/ES）は、対応する実装を参照元に収録できた時点で扱います。現時点で書けるのはここまでです。</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+    <a href="https://github.com/k2works/case-study-cargo-tracker" target="_blank" rel="noopener" title="GitHub Repository/case-study-cargo-tracker" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../../..", "features": ["navigation.tabs", "navigation.sections", "toc.integrate", "search.suggest", "search.highlight"], "search": "../../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mermaid@11.6.0/dist/mermaid.min.js"></script>
+      
+        <script src="../../../../assets/js/extra.js"></script>
+      
+    
+  </body>
+</html>
