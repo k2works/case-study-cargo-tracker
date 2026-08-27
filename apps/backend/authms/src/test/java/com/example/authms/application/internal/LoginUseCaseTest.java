@@ -58,6 +58,11 @@ class LoginUseCaseTest {
         public java.util.List<User> findLocked(Instant now) {
             throw new UnsupportedOperationException("このテストでは使わない");
         }
+
+        @Override
+        public Optional<Long> findLinkedShipperId(String username) {
+            throw new UnsupportedOperationException("このテストでは使わない");
+        }
     };
 
     private final AuthAuditLogger auditLogger =

@@ -43,6 +43,14 @@ public interface UserMapper {
     @Select("SELECT role FROM user_roles WHERE user_id = #{userId}")
     List<String> findRolesByUserId(@Param("userId") Long userId);
 
+    @Select("""
+            SELECT link.shipper_id
+            FROM user_shipper_link link
+            INNER JOIN users u ON u.id = link.user_id
+            WHERE u.username = #{username}
+            """)
+    Long findLinkedShipperId(@Param("username") String username);
+
     @Update("""
             UPDATE users
             SET failed_attempts = #{failedAttempts}, locked_until = #{lockedUntil}

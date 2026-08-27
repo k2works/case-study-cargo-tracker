@@ -30,4 +30,12 @@ public interface UserRepository {
      *     {@code Instant.now()} を呼ぶと、テストと実装で別の「いま」を見ることになる
      */
     java.util.List<User> findLocked(Instant now);
+
+    /**
+     * 荷主利用者に紐付く bookingms 側の荷主 ID を返す（US33）。
+     *
+     * <p>username やメールアドレスから推測しない。明示的な user_shipper_link が無い利用者は
+     * 空として扱い、呼び出し側が「紐付けが無い」と案内できるようにする。
+     */
+    Optional<Long> findLinkedShipperId(String username);
 }

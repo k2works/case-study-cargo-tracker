@@ -64,6 +64,11 @@ class UnlockAccountUseCaseTest {
                     ? List.of(stored)
                     : List.of();
         }
+
+        @Override
+        public Optional<Long> findLinkedShipperId(String username) {
+            throw new UnsupportedOperationException("このテストでは使わない");
+        }
     };
 
     private final AuthAuditLogger auditLogger =

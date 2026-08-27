@@ -232,4 +232,20 @@ class AuthIntegrationTest {
                 .as("誰が解除したかが残っていない。監査に答えられない")
                 .isEqualTo("admin01");
     }
+
+    @Test
+    @DisplayName("荷主利用者は authms の明示的な紐付けから荷主 ID を引ける")
+    void findsLinkedShipperId() {
+        assertThat(users.findLinkedShipperId("shipper01"))
+                .as("username と shipper_code の暗黙一致ではなく user_shipper_link から引く")
+                .contains(1L);
+    }
+
+    @Test
+    @DisplayName("紐付いていない利用者は荷主 ID を持たない")
+    void reportsUnlinkedUser() {
+        assertThat(users.findLinkedShipperId("sales01"))
+                .as("紐付けが無い利用者を、空の荷主一覧と取り違えない")
+                .isEmpty();
+    }
 }

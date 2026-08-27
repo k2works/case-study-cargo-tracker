@@ -41,6 +41,11 @@ public class MyBatisUserRepository implements UserRepository {
         return mapper.findLocked(now).stream().map(this::toDomain).toList();
     }
 
+    @Override
+    public Optional<Long> findLinkedShipperId(String username) {
+        return Optional.ofNullable(mapper.findLinkedShipperId(username));
+    }
+
     /** 復元では検査しない。列が無かったころの行が読めなくなる。 */
     private User toDomain(UserRecord row) {
         return User.restore(

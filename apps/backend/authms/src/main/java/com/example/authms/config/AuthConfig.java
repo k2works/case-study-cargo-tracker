@@ -2,6 +2,7 @@ package com.example.authms.config;
 
 import com.example.authms.application.internal.LoginUseCase;
 import com.example.authms.application.internal.UnlockAccountUseCase;
+import com.example.authms.application.internal.FindUserShipperLinkUseCase;
 import com.example.authms.application.port.AuthAuditLogger;
 import com.example.authms.application.port.PasswordVerifier;
 import com.example.authms.application.port.TokenIssuer;
@@ -52,5 +53,10 @@ public class AuthConfig {
     public UnlockAccountUseCase unlockAccountUseCase(UserRepository users,
             AuthAuditLogger auditLogger, Clock clock) {
         return new UnlockAccountUseCase(users, auditLogger, clock);
+    }
+
+    @Bean
+    public FindUserShipperLinkUseCase findUserShipperLinkUseCase(UserRepository users) {
+        return new FindUserShipperLinkUseCase(users);
     }
 }
