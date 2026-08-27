@@ -6,13 +6,18 @@ import com.example.trackingms.application.internal.DetectCustomsHoldUseCase;
 import com.example.trackingms.application.internal.DetectMisrouteUseCase;
 import com.example.trackingms.application.internal.ManageTrackingUseCase;
 import com.example.trackingms.application.internal.NoteCancellationUseCase;
+import com.example.trackingms.application.internal.ShipperTrackingQueryUseCase;
 import com.example.trackingms.application.internal.StartTrackingUseCase;
 import com.example.trackingms.application.internal.TrackingLookupUseCase;
 import com.example.trackingms.application.port.LocationRepository;
+import com.example.trackingms.application.port.ShipperCargoSnapshotFinder;
 import com.example.trackingms.application.port.TrackingActivityRepository;
 import com.example.trackingms.application.port.TrackingLookupLogger;
 import com.example.trackingms.application.port.TrackingNoticeRepository;
 import com.example.trackingms.application.port.TrackingNotifier;
+import com.example.trackingms.application.port.UserShipperLinkFinder;
+import com.example.trackingms.infrastructure.auth.RestUserShipperLinkFinder;
+import com.example.trackingms.infrastructure.booking.RestShipperCargoSnapshotFinder;
 import com.example.trackingms.infrastructure.messaging.CargoCancelledListener;
 import com.example.trackingms.infrastructure.messaging.CustomsStatusChangedListener;
 import com.example.trackingms.infrastructure.messaging.HandlingActivityRegisteredListener;
@@ -42,6 +47,9 @@ import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
+import org.springframework.http.client.ClientHttpRequestFactory;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.web.client.RestClient;
 
 @Configuration
 public class TrackingConfig {
@@ -162,6 +170,38 @@ public class TrackingConfig {
             TrackingLookupLogger lookupLogger) {
         return new TrackingLookupUseCase(
                 activities, lookupLogger);
+    }
+
+    @Bean
+    public UserShipperLinkFinder userShipperLinkFinder(
+            @org.springframework.beans.factory.annotation.Value("${app.auth-service.base-url}")
+            String baseUrl) {
+        return new RestUserShipperLinkFinder(RestClient.builder().baseUrl(baseUrl)
+                .requestFactory(internalRequestFactory()).build());
+    }
+
+    @Bean
+    public ShipperCargoSnapshotFinder shipperCargoSnapshotFinder(
+            @org.springframework.beans.factory.annotation.Value("${app.booking-service.base-url}")
+            String baseUrl) {
+        return new RestShipperCargoSnapshotFinder(RestClient.builder().baseUrl(baseUrl)
+                .requestFactory(internalRequestFactory()).build());
+    }
+
+    @Bean
+    public ShipperTrackingQueryUseCase shipperTrackingQueryUseCase(
+            TrackingActivityRepository activities,
+            UserShipperLinkFinder links,
+            ShipperCargoSnapshotFinder snapshots,
+            java.time.Clock clock) {
+        return new ShipperTrackingQueryUseCase(activities, links, snapshots, clock.getZone());
+    }
+
+    private static ClientHttpRequestFactory internalRequestFactory() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(java.time.Duration.ofSeconds(2));
+        factory.setReadTimeout(java.time.Duration.ofSeconds(5));
+        return factory;
     }
 
     @Bean

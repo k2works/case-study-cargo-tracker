@@ -33,6 +33,11 @@ public interface TrackingActivityRepository {
     /** 追跡番号から探す。照会の入口であり、二重に作らないための確認にも使う。 */
     Optional<TrackingActivity> findByTrackingNumber(TrackingNumber trackingNumber);
 
+    /** 最近の追跡を返す。荷主向け一覧では、この候補を荷主境界で絞る。 */
+    default List<TrackingActivity> findRecent(int limit) {
+        throw new UnsupportedOperationException();
+    }
+
     /**
      * 出来事を 1 件足す（US17-3・US18-3）。
      *

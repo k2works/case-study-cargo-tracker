@@ -6,6 +6,7 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Result;
 import org.apache.ibatis.annotations.Results;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.ResultMap;
 
 @Mapper
 public interface TrackingActivityMapper {
@@ -102,4 +103,8 @@ public interface TrackingActivityMapper {
         @Result(column = "estimated_arrival", property = "estimatedArrival")
     })
     TrackingActivityRecord findByTrackingNumber(@Param("trackingNumber") String trackingNumber);
+
+    @Select("SELECT " + COLUMNS + JOINS + " ORDER BY t.updated_at DESC, t.id DESC LIMIT #{limit}")
+    @ResultMap("trackingResult")
+    java.util.List<TrackingActivityRecord> findRecent(@Param("limit") int limit);
 }

@@ -21,7 +21,7 @@ spring:
             - id: trackingms
               uri: ${TRACKINGMS_URL}
               predicates:
-                - Path=/api/v1/tracking/**,/api/v1/public/tracking/**
+                - Path=/api/v1/tracking/**,/api/v1/public/tracking/**,/api/v1/shipper/tracking/**
             - id: handlingms
               uri: ${HANDLINGMS_URL}
               predicates:

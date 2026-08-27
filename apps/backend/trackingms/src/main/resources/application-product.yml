@@ -36,3 +36,9 @@ management:
     web:
       exposure:
         include: health,info
+
+app:
+  auth-service:
+    base-url: ${APP_AUTH_SERVICE_BASE_URL:http://authms:8080}
+  booking-service:
+    base-url: ${APP_BOOKING_SERVICE_BASE_URL:http://bookingms:8080}

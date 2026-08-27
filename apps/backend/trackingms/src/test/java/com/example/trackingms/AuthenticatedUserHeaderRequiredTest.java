@@ -40,6 +40,8 @@ class AuthenticatedUserHeaderRequiredTest extends TrackingIntegrationTestBase {
                 .andExpect(status().isUnauthorized());
         mockMvc.perform(get("/api/v1/tracking/manage/exception-types"))
                 .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/v1/shipper/tracking"))
+                .andExpect(status().isUnauthorized());
         mockMvc.perform(post("/api/v1/tracking/manage")
                         .contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isUnauthorized());
