@@ -38,6 +38,16 @@ describe('ダッシュボード', () => {
     expect(screen.queryByRole('heading', { name: '営業ダッシュボード' })).not.toBeInTheDocument()
   })
 
+  it('荷主は自分の貨物一覧へ進める', () => {
+    renderAs(['ROLE_SHIPPER'])
+
+    expect(screen.getByRole('heading', { name: '荷主ダッシュボード' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '自分の貨物を見る' })).toHaveAttribute(
+      'href',
+      '/shipper/tracking',
+    )
+  })
+
   it('複数ロールを持つ利用者にはすべての担当を出す', () => {
     renderAs(['ROLE_SALES', 'ROLE_TRACKER'])
 

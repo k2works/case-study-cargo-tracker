@@ -88,6 +88,15 @@ describe('共通レイアウトのナビゲーション', () => {
     // ROLE_ROUTING ではなく業務上の呼び名で示す
     expect(screen.getByText(/経路設計者/)).toBeInTheDocument()
   })
+
+  it('荷主には自分の貨物メニューを出す', () => {
+    renderAs(['ROLE_SHIPPER'])
+
+    expect(screen.getByRole('link', { name: '自分の貨物' })).toHaveAttribute(
+      'href',
+      '/shipper/tracking',
+    )
+  })
 })
 
 describe('まだ使えない画面のメニュー', () => {

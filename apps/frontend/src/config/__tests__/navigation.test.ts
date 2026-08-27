@@ -52,11 +52,7 @@ describe('ナビゲーション定義', () => {
    * 「まだ作っていない」と「開かないと決めた」は違う。並べたまま放置されないよう、
    * 解消する時期を書く。
    */
-  const ROLES_WITHOUT_OWN_MENU: Record<string, string> = {
-    // ADR-008: 利用者と荷主を結ぶキーが無く「自分の予約だけ」に絞り込めないため、
-    // 貨物予約を開かない。荷主の作業画面は貨物追跡（US18・IT6）で開く
-    ROLE_SHIPPER: 'ADR-008 により US18（IT6）まで専用メニューを持たない',
-  }
+  const ROLES_WITHOUT_OWN_MENU: Record<string, string> = {}
 
   it('業務ロールには担当業務への入口が少なくとも 1 つある', () => {
     const businessRoles = ROLES.filter((role) => ROLES_WITHOUT_OWN_MENU[role] === undefined)
@@ -75,5 +71,12 @@ describe('ナビゲーション定義', () => {
 
       expect(own, `${role} は入口を持たない前提だが ${own.length} 件ある`).toHaveLength(0)
     }
+  })
+
+  it('荷主には自社貨物一覧への専用入口がある', () => {
+    const own = NAVIGATION.filter((item) => item.roles.includes('ROLE_SHIPPER'))
+
+    expect(own.map((item) => item.to)).toContain('/shipper/tracking')
+    expect(own.map((item) => item.label)).toContain('自分の貨物')
   })
 })

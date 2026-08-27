@@ -58,8 +58,8 @@ export const PANELS: Panel[] = [
     role: 'ROLE_SHIPPER',
     title: '荷主ダッシュボード',
     // 貨物予約は営業担当者の画面であり、荷主ロールは 403 になる（ADR-008）。
-    // 開いていない画面へ誘導すると、押した先で断られる
-    actions: [{ label: '自分の貨物の状況を見る', to: '/tracking' }],
+    // 自分の貨物だけを追う入口は US33 の専用画面へ向ける
+    actions: [{ label: '自分の貨物を見る', to: '/shipper/tracking' }],
   },
   {
     role: 'ROLE_ROUTING',

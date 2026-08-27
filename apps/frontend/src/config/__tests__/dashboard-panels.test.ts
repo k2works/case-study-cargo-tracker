@@ -43,4 +43,13 @@ describe('ダッシュボードのパネル', () => {
     expect(PANELS.length).toBeGreaterThan(3)
     expect(PANELS.every((panel) => panel.actions.length > 0)).toBe(true)
   })
+
+  it('荷主ダッシュボードは自社貨物一覧へ案内する', () => {
+    const panel = PANELS.find((item) => item.role === 'ROLE_SHIPPER')
+
+    expect(panel?.actions).toContainEqual({
+      label: '自分の貨物を見る',
+      to: '/shipper/tracking',
+    })
+  })
 })
