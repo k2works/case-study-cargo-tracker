@@ -76,6 +76,7 @@ type MockException = {
 type MockTracking = {
   trackingNumber: string;
   bookingId: string;
+  shipperLinkId: string;
   status: string;
   /** **発生前の状態は行に持つ**（[ADR-024] 決定 2）。履歴から導かない */
   statusBefore: string | null;
@@ -103,11 +104,24 @@ export function resetTrackings() {
   trackings.push({
     trackingNumber: "TRK-20260823-0001",
     bookingId: "BKG-2026000004",
+    shipperLinkId: "shipper01",
     status: "NOT_RECEIVED",
     statusBefore: null,
     locationUnLocode: "JPTYO",
     locationName: "Tokyo",
     estimatedArrival: "2027-09-15",
+    manualEvents: [],
+    notices: [],
+  });
+  trackings.push({
+    trackingNumber: "TRK-20260823-9001",
+    bookingId: "BKG-2026000901",
+    shipperLinkId: "other-shipper",
+    status: "ONBOARD_CARRIER",
+    statusBefore: null,
+    locationUnLocode: "SGSIN",
+    locationName: "Singapore",
+    estimatedArrival: "2027-09-30",
     manualEvents: [],
     notices: [],
   });
@@ -278,6 +292,21 @@ function publicView(tracking: MockTracking) {
   };
 }
 
+/** 荷主向け一覧の 1 行。詳細な例外内容は管理者向けだけに出す。 */
+function shipperSummaryView(tracking: MockTracking) {
+  const active = activeExceptionOf(tracking.trackingNumber);
+  const status = currentStatusOf(tracking);
+  return {
+    trackingNumber: tracking.trackingNumber,
+    status,
+    statusLabel: STATUS_LABELS[status],
+    locationName: currentLocationOf(tracking),
+    estimatedArrival: tracking.estimatedArrival,
+    hasException: active !== undefined,
+    urgent: active?.urgent ?? false,
+  };
+}
+
 /** 通知は送らず、送った事実だけを残す（[ADR-024] 決定 9）。 */
 function notice(tracking: MockTracking, message: string) {
   tracking.notices.push({ noticedAt: new Date().toISOString(), message });
@@ -359,6 +388,30 @@ export function forceLookupThrottle() {
 }
 
 export const trackingHandlers = [
+  http.get(API_PATHS.shipperTracking, () =>
+    HttpResponse.json({
+      linked: true,
+      contactMessage: null,
+      cargos: trackings
+        .filter((tracking) => tracking.shipperLinkId === "shipper01")
+        .map(shipperSummaryView),
+    }),
+  ),
+
+  http.get(`${API_PATHS.shipperTracking}/:trackingNumber`, ({ params }) => {
+    const tracking = find(String(params.trackingNumber));
+    if (tracking === undefined || tracking.shipperLinkId !== "shipper01") {
+      return HttpResponse.json(
+        { message: "自社の貨物として確認できません" },
+        { status: 404 },
+      );
+    }
+    return HttpResponse.json({
+      ...shipperSummaryView(tracking),
+      events: eventsOf(tracking),
+    });
+  }),
+
   http.get(API_PATHS.publicTracking(":trackingNumber"), ({ params }) => {
     // 上限は見つかるかどうかより先に効く。見つからない照会こそ総当たりの本体である
     if (exceedsLookupLimit(Date.now())) {

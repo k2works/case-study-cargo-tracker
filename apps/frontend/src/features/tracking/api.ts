@@ -8,6 +8,8 @@ import type {
   PublicTracking,
   RaiseExceptionRequest,
   ResolveExceptionRequest,
+  ShipperTrackingDetail,
+  ShipperTrackingList,
   TrackingStatusChoice,
 } from "./types";
 
@@ -31,6 +33,20 @@ export function fetchManagedTracking(
 ): Promise<ManagedTracking> {
   return apiClient.get<ManagedTracking>(
     `${API_PATHS.trackingManagement}/${encodeURIComponent(trackingNumber)}`,
+  );
+}
+
+/** 荷主がログインして、自社貨物だけを一覧で見る（US33）。 */
+export function fetchShipperTracking(): Promise<ShipperTrackingList> {
+  return apiClient.get<ShipperTrackingList>(API_PATHS.shipperTracking);
+}
+
+/** 荷主向け詳細。自社貨物でなければサーバが 404 にする（US33-2）。 */
+export function fetchShipperTrackingDetail(
+  trackingNumber: string,
+): Promise<ShipperTrackingDetail> {
+  return apiClient.get<ShipperTrackingDetail>(
+    API_PATHS.shipperTrackingDetail(trackingNumber),
   );
 }
 

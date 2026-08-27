@@ -6,6 +6,8 @@ import {
   fetchOpenExceptionList,
   fetchOpenExceptions,
   fetchPublicTracking,
+  fetchShipperTracking,
+  fetchShipperTrackingDetail,
   raiseTrackingException,
   resolveTrackingException,
   updateTrackingStatus,
@@ -35,6 +37,23 @@ export function useManagedTracking(trackingNumber: string | null) {
   return useQuery({
     queryKey: ["tracking", "manage", trackingNumber],
     queryFn: () => fetchManagedTracking(trackingNumber as string),
+    enabled: trackingNumber !== null && trackingNumber !== "",
+    retry: false,
+  });
+}
+
+export function useShipperTracking() {
+  return useQuery({
+    queryKey: ["tracking", "shipper", "list"],
+    queryFn: fetchShipperTracking,
+    retry: false,
+  });
+}
+
+export function useShipperTrackingDetail(trackingNumber: string | null) {
+  return useQuery({
+    queryKey: ["tracking", "shipper", trackingNumber],
+    queryFn: () => fetchShipperTrackingDetail(trackingNumber as string),
     enabled: trackingNumber !== null && trackingNumber !== "",
     retry: false,
   });

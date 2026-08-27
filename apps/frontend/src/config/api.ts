@@ -15,6 +15,10 @@ export const API_PATHS = {
   /** 公開追跡照会（認証不要）。業務 API と接頭辞を分けることで公開範囲を一目で分かるようにする。 */
   publicTracking: (trackingNumber: string) => `/api/v1/public/tracking/${trackingNumber}`,
   trackingManagement: '/api/v1/tracking/manage',
+  /** 荷主向けの自社貨物追跡（US33）。公開照会とは URL を分け、自社境界をサーバで守る。 */
+  shipperTracking: '/api/v1/shipper/tracking',
+  shipperTrackingDetail: (trackingNumber: string) =>
+    `/api/v1/shipper/tracking/${encodeURIComponent(trackingNumber)}`,
   /**
    * **料金を算出していない引取済の予約**（US21-1）。
    *

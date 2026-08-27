@@ -32,6 +32,7 @@ import { LockedAccountsPage } from './pages/locked-accounts-page'
 import { HandlingPage } from './pages/handling-page'
 import { TrackingManagePage } from './pages/tracking-manage-page'
 import { TrackingExceptionsPage } from './pages/tracking-exceptions-page'
+import { ShipperTrackingPage } from './pages/shipper-tracking-page'
 
 export default function App() {
   return (
@@ -104,6 +105,18 @@ export default function App() {
         }
       >
         <Route path="/admin/accounts" element={<LockedAccountsPage />} />
+      </Route>
+
+      {/* 荷主向けの自社貨物追跡（US33）。公開追跡とは分け、自社境界はサーバでも守る。 */}
+      <Route
+        element={
+          <RequireAuth allowedRoles={['ROLE_SHIPPER']}>
+            <AppLayout />
+          </RequireAuth>
+        }
+      >
+        <Route path="/shipper/tracking" element={<ShipperTrackingPage />} />
+        <Route path="/shipper/tracking/:trackingNumber" element={<ShipperTrackingPage />} />
       </Route>
 
 

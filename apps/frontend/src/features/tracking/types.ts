@@ -51,6 +51,34 @@ export type PublicTracking = {
   notices: TrackingNotice[];
 };
 
+/** 荷主向けの追跡一覧 1 件。自社貨物だけを返す（US33）。 */
+export type ShipperTrackingSummary = {
+  trackingNumber: string;
+  status: TrackingStatus;
+  statusLabel: string;
+  locationName: string;
+  estimatedArrival: string | null;
+  hasException: boolean;
+  urgent: boolean;
+};
+
+/**
+ * 荷主向けの追跡一覧。
+ *
+ * 認証は通っていても利用者と荷主が紐付いていないことがある。空配列だけを返すと
+ * 「貨物が無い」のか「紐付けが無い」のか分からないため、linked を明示する。
+ */
+export type ShipperTrackingList = {
+  linked: boolean;
+  contactMessage: string | null;
+  cargos: ShipperTrackingSummary[];
+};
+
+/** 荷主向け詳細。公開照会より強い自社境界の内側で、経過まで返す。 */
+export type ShipperTrackingDetail = ShipperTrackingSummary & {
+  events: TrackingEvent[];
+};
+
 /** 追跡管理者が見る 1 件。公開照会より多くを返す。 */
 export type ManagedTracking = {
   trackingNumber: string;
