@@ -58,6 +58,12 @@ export const DEMO_ACCOUNTS: DemoAccount[] = [
     canLogIn: true,
   },
   {
+    userId: 'shipper03',
+    description: '荷主（例外ありの貨物確認）',
+    roles: ['ROLE_SHIPPER'],
+    canLogIn: true,
+  },
+  {
     userId: 'admin01',
     description: 'システム管理者（ロックされたアカウントの解除）',
     roles: ['ROLE_ADMIN'],

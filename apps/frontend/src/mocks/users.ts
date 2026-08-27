@@ -21,6 +21,7 @@ const DISPLAY_NAMES: Record<string, string> = {
   accountant01: '高橋美咲',
   shipper01: '伊藤商事',
   shipper02: '未紐付け 荷主',
+  shipper03: '例外確認 荷主',
   admin01: '管理 太郎',
   disabled01: '退職済 太郎',
 }

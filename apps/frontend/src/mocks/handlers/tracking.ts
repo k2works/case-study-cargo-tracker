@@ -389,6 +389,9 @@ export function forceLookupThrottle() {
 
 function currentUserId(request: Request) {
   const authorization = request.headers.get("authorization") ?? "";
+  if (authorization === "") {
+    return null;
+  }
   if (!authorization.startsWith("Bearer mock-token-")) {
     return "shipper01";
   }
@@ -398,6 +401,26 @@ function currentUserId(request: Request) {
 export const trackingHandlers = [
   http.get(API_PATHS.shipperTracking, ({ request }) => {
     const userId = currentUserId(request);
+    if (userId === null) {
+      return HttpResponse.json({ message: "認証が必要です" }, { status: 401 });
+    }
+    if (userId === "shipper03") {
+      return HttpResponse.json({
+        linked: true,
+        contactMessage: null,
+        cargos: [
+          {
+            trackingNumber: "TRK-20260823-0001",
+            status: "EXCEPTION",
+            statusLabel: "例外発生",
+            locationName: "Tokyo",
+            estimatedArrival: "2027-09-15",
+            hasException: true,
+            urgent: false,
+          },
+        ],
+      });
+    }
     if (userId !== "shipper01") {
       return HttpResponse.json({
         linked: false,
@@ -417,6 +440,9 @@ export const trackingHandlers = [
 
   http.get(`${API_PATHS.shipperTracking}/:trackingNumber`, ({ params, request }) => {
     const userId = currentUserId(request);
+    if (userId === null) {
+      return HttpResponse.json({ message: "認証が必要です" }, { status: 401 });
+    }
     const tracking = find(String(params.trackingNumber));
     if (tracking === undefined || tracking.shipperLinkId !== userId) {
       return HttpResponse.json(
