@@ -11,11 +11,11 @@ tags: design,data-model,microservices
 ## 概要
 
 本ドキュメントは、国際貨物輸送管理システムの永続化層データモデルを定義する。
-バックエンドアーキテクチャで定義した 7 つの境界付けられたコンテキスト（Auth / Booking / Routing / Tracking / Handling / Billing / Shared Domain）に対応する **6 つの独立データベース** と **22 テーブル** を設計する。
+バックエンドアーキテクチャで定義した 7 つの境界付けられたコンテキスト（Auth / Booking / Routing / Tracking / Handling / Billing / Shared Domain）に対応する **6 つの独立データベース** と **23 テーブル** を設計する。
 マイクロサービスアーキテクチャの **Database per Service** パターンに従い、各サービスが専用のデータベースを持つ。
 
 take-3 のデータモデルを基礎とし、本プロジェクトの要件差分として
-アカウント保護カラム・認証監査ログ（US31）・キャンセル申請（UC22）・通関申告の独立集約化と状態変更履歴（UC21）・キャンセル料（UC22）を反映している。
+アカウント保護カラム・認証監査ログ（US31）・キャンセル申請（UC22）・通関申告の独立集約化と状態変更履歴（UC21）・キャンセル料（UC22）・利用者と荷主 ID の明示的な紐付け（US33）を反映している。
 
 ### 設計方針
 
@@ -26,13 +26,13 @@ take-3 のデータモデルを基礎とし、本プロジェクトの要件差�
 - **ID 戦略**: サロゲートキー（`BIGSERIAL`）+ 業務キー（`VARCHAR`）の併用
 - **命名規則**: スネークケース（PostgreSQL 慣習）
 - **監査カラム**: 全テーブルに `created_at` / `updated_at` を付与
-- **コンテキスト間整合性**: DB 外部キー制約ではなくイベント連携で保証
+- **コンテキスト間整合性**: DB 外部キー制約ではなくイベント連携と内部 API 契約で保証
 
 ### データベース配置
 
 | サービス | データベース名 | 管理テーブル |
 | :--- | :--- | :--- |
-| authms | `auth_db` | `users`, `user_roles`, `auth_audit_log` |
+| authms | `auth_db` | `users`, `user_roles`, `auth_audit_log`, `user_shipper_link` |
 | bookingms | `booking_db` | `location`, `shipper`, `cargo`, `leg`, `estimate`, `route_candidate`, `cancellation_request` |
 | routingms | `routing_db` | `location`, `voyage`, `carrier_movement` |
 | trackingms | `tracking_db` | `location`, `tracking_activity`, `tracking_handling_event`, `tracking_exception_event` |
@@ -81,6 +81,12 @@ package "auth_db\n(Auth Context)" #LightSkyBlue {
     * username : VARCHAR(50)
     * event_type : VARCHAR(30)
     * occurred_at : TIMESTAMP
+  }
+
+  entity "user_shipper_link\n（利用者と荷主の紐付け）" as user_shipper_link {
+    * user_id : BIGINT <<FK, PK>>
+    --
+    * shipper_id : BIGINT <<UK>>
   }
 }
 
@@ -283,6 +289,7 @@ package "billing_db\n(Billing Context)" #LightPink {
 
 ' auth_db
 users ||--o{ user_roles : "ロールを持つ"
+users ||--o| user_shipper_link : "荷主 ID と紐付く"
 
 ' booking_db
 cargo }o--|| shipper : "荷主"
@@ -312,6 +319,7 @@ invoice ||--o{ payment : "支払を持つ"
 
 ' ===== コンテキスト間の論理参照（点線）=====
 cargo .right.> voyage : "voyage_number\n（論理参照）"
+user_shipper_link ..> shipper : "shipper_id\n（論理参照）"
 tracking_activity ..> cargo : "booking_id\n（論理参照）"
 handling_activity ..> cargo : "booking_id\n（論理参照）"
 customs_declaration ..> cargo : "booking_id\n（論理参照）"
@@ -332,7 +340,7 @@ invoice ..> cargo : "booking_id\n（論理参照）"
 ### auth_db — Auth Context
 
 ユーザー認証・認可テーブル。JWT トークン発行・検証のために `authms` が専有する。
-アカウント保護（US31）のため `failed_attempts` / `locked_until` を保持し、認証試行・ロック・解除は `auth_audit_log` に記録する。
+アカウント保護（US31）のため `failed_attempts` / `locked_until` を保持し、認証試行・ロック・解除は `auth_audit_log` に記録する。荷主向け追跡（US33）のため、authms の利用者と bookingms の荷主 ID は `user_shipper_link` で明示的に結ぶ。
 
 ```plantuml
 @startuml
@@ -366,7 +374,15 @@ entity "auth_audit_log\n（認証監査ログ）" as auth_audit_log {
   actor : VARCHAR(50)
 }
 
+entity "user_shipper_link\n（利用者と荷主の紐付け）" as user_shipper_link {
+  * user_id : BIGINT <<FK, PK>>
+  --
+  * shipper_id : BIGINT <<UK, NOT NULL>>
+  * created_at : TIMESTAMP WITH TIME ZONE <<NOT NULL, DEFAULT NOW()>>
+}
+
 users ||--o{ user_roles : "ロールを持つ"
+users ||--o| user_shipper_link : "荷主 ID と紐付く"
 
 @enduml
 ```
@@ -890,6 +906,29 @@ CREATE TABLE auth_audit_log (
 CREATE INDEX idx_auth_audit_log_username ON auth_audit_log (username, occurred_at);
 ```
 
+#### `user_shipper_link`（利用者と荷主の紐付け）― 追加
+
+`ROLE_SHIPPER` の利用者と bookingms 側の荷主 ID を明示的に結ぶ（US33・[ADR-029](../adr/029-shipper-tracking-boundary-and-inactivity-timeout.md)）。`shipper_id` は bookingms の `shipper.id` への論理参照であり、Database per Service を越えるため DB FK は張らない。参照整合は authms の内部 API と契約テストで守る。
+
+| カラム名 | データ型 | 制約 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `user_id` | `BIGINT` | `PK, FK → users.id, NOT NULL` | 荷主ロールの利用者 ID |
+| `shipper_id` | `BIGINT` | `UK, NOT NULL` | bookingms の荷主 ID。サービス境界を越える論理参照 |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT NOW()` | 紐付け作成日時 |
+
+##### DDL
+
+```sql
+CREATE TABLE user_shipper_link (
+    user_id    BIGINT NOT NULL REFERENCES users (id),
+    shipper_id BIGINT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    CONSTRAINT pk_user_shipper_link PRIMARY KEY (user_id),
+    CONSTRAINT uq_user_shipper_link_shipper UNIQUE (shipper_id)
+);
+CREATE INDEX idx_user_shipper_link_shipper ON user_shipper_link (shipper_id);
+```
+
 ---
 
 ### booking_db
@@ -1211,6 +1250,12 @@ IT11（US21・US22）で実装した。キャンセル料の算定根拠（UC22�
 
 **根拠**: 集約状態を履歴から再導出すると、クロスリクエストで誤復帰する偽の安全網になる。ロック判定に必要な状態は必ずカラムに永続化する。
 
+### 11. 利用者と荷主 ID の紐付け（take-7 追加）
+
+**判断**: `ROLE_SHIPPER` の利用者と bookingms の荷主 ID は authms の `user_shipper_link` で保持する。`shipper_id` は DB FK ではなく論理参照とし、authms の内部 API と shared contract test で参照契約を守る。
+
+**根拠**: bookingms の `shipper` に authms の利用者 ID を混ぜるとサービス境界が曖昧になる。username・email・shipper_code の文字列一致で推測すると、偶然一致や名称変更で他社貨物が見えるため、明示的な紐付けだけを正とする。
+
 ---
 
 ## Flyway マイグレーション方針
@@ -1227,7 +1272,9 @@ apps/backend/
 │       ├── V2__init_auth.sql          # users, user_roles, auth_audit_log
 │       ├── V3__seed_users.sql         # 初期ユーザーデータ
 │       ├── V4__seed_disabled_user.sql # 無効化アカウント（US31 の動作確認用）
-│       └── V5__add_auth_audit_actor.sql # 監査ログに「誰が操作したか」（US32）
+│       ├── V5__add_auth_audit_actor.sql # 監査ログに「誰が操作したか」（US32）
+│       ├── V6__seed_admin_user.sql    # 管理者ユーザー
+│       └── V7__add_user_shipper_link.sql # 利用者と荷主 ID の紐付け（US33）
 │
 ├── bookingms/
 │   └── src/main/resources/db/migration/
@@ -1236,7 +1283,13 @@ apps/backend/
 │       ├── V3__init_booking_cargo.sql  # location（種データ含む）, cargo
 │       ├── V4__normalize_hazard_class.sql # 危険物クラスの正規化
 │       ├── V5__add_leg.sql             # leg（旅程の輸送区間。IT5）
-│       └── V6__add_route_notification_and_tracking_number.sql # 通知の記録・追跡番号（IT6）
+│       ├── V6__add_route_notification_and_tracking_number.sql # 通知の記録・追跡番号（IT6）
+│       ├── V7__fix_tracking_number_numbering.sql # 追跡番号採番修正
+│       ├── V8__add_last_handling.sql   # 最終荷役イベント
+│       ├── V9__cancellation_request.sql # キャンセル申請
+│       ├── V10__add_misroute.sql       # 誤配状態
+│       ├── V11__add_location_region.sql # 地域区分
+│       └── V12__estimate.sql           # 見積
 │
 ├── routingms/
 │   └── src/main/resources/db/migration/
@@ -1246,8 +1299,10 @@ apps/backend/
 ├── trackingms/
 │   └── src/main/resources/db/migration/
 │       ├── V1__init.sql               # スキーマ初期化
-│       └── V2__init_tracking.sql      # location（種データ含む）, tracking_activity（IT6）
-│                                      # tracking_handling_event / tracking_exception_event は US15 以降
+│       ├── V2__init_tracking.sql      # location（種データ含む）, tracking_activity（IT6）
+│       ├── V3__rename_transport_status.sql # 状態列名の整理
+│       ├── V4__tracking_manual_update_and_exceptions.sql # 手動更新・例外
+│       └── V5__add_location_region.sql # 地域区分
 │
 ├── handlingms/
 │   └── src/main/resources/db/migration/

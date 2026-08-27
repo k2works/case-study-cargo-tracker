@@ -11,7 +11,7 @@ tags: design, ui, ux, wireframe, react, spa
 ## 概要
 
 本ドキュメントでは、国際貨物輸送管理システムの UI 設計を定義する。
-take-3 の UI 設計を基礎とし、本プロジェクトの要件差分（公開追跡照会 US18・通関管理 US29・キャンセル承認 US30・誤配再設計 US28・アカウント保護 US31）を反映している。
+take-3 の UI 設計を基礎とし、本プロジェクトの要件差分（公開追跡照会 US18・通関管理 US29・キャンセル承認 US30・誤配再設計 US28・アカウント保護 US31・荷主向け自社貨物追跡 US33・無操作タイムアウト TD-01）を反映している。
 
 ### 設計方針
 
@@ -34,7 +34,7 @@ take-3 の UI 設計を基礎とし、本プロジェクトの要件差分（公
 - **状態の可視化**: BookingStatus・TransportStatus・CustomsStatus をバッジで常時表示
 - **フィードバック**: 操作成功・失敗はトースト通知で即時フィードバック
 - **アクセシビリティ**: ARIA ラベル・キーボードナビゲーション対応
-- **導線設計**: ロール別到達性・状態軸の到達性・認証不要画面の入口を DoD に含める（フロントエンドアーキテクチャの導線設計の原則に準拠）
+- **導線設計**: ロール別到達性・状態軸の到達性・認証不要画面の入口・荷主向け自社貨物画面の入口を DoD に含める（フロントエンドアーキテクチャの導線設計の原則に準拠）
 
 ### 画面共通の規約（IT4 で新設）
 
@@ -80,6 +80,8 @@ IT2・IT3 のふりかえりが繰り返し「`ui_design.md` の規約」を反�
 - **追跡照会（`/tracking/:trackingNumber`）は認証不要の公開画面とする**（US18）。ログイン画面とポータル（トップ）にも入口を置く
 - 未ログインで業務画面にアクセスした場合はログイン画面へリダイレクトする
 - ログイン済みで権限のない画面にアクセスした場合は 403 画面を表示する
+- `ROLE_SHIPPER` は予約管理（`/booking*`）を直接読まない。自社貨物は `/shipper/tracking` と `/shipper/tracking/:trackingNumber` で追跡コンテキストから読む
+- 認証済み画面は 15 分無操作で警告を出し、20 分無操作で認証ストアを破棄してログイン画面へ戻す。警告には入力中の内容が保存されないことを明示する
 - 画面表示制御と API 実行可否は同一の RBAC マトリクスに従う
 
 ---
@@ -93,6 +95,7 @@ IT2・IT3 のふりかえりが繰り返し「`ui_design.md` の規約」を反�
 | **荷主（Shipper）** | shipperCode, 荷主名, メール, 種別（個人/法人）, 割引率 | 新規登録・一覧確認・詳細確認 | 貨物予約 |
 | **見積（Estimate）** | estimateId, 出発地, 目的地, 期限, 貨物種別, ルート候補 | 新規作成・一覧確認・詳細確認 | 貨物予約 |
 | **追跡情報（Tracking）** | trackingNumber, TransportStatus, 現在地, イベント履歴, 例外 | 追跡番号検索・履歴確認・例外解決 | 貨物予約 |
+| **自社貨物追跡（ShipperTracking）** | trackingNumber, 状態, 現在地, 到着予定, 例外有無 | 自社貨物一覧確認・詳細確認 | 追跡情報, 利用者と荷主の紐付け |
 | **例外イベント（Exception）** | 種別（遅延/破損/紛失/誤配/税関保留）, 発生場所/日時, 解決状況 | 起票・解決記録・一覧確認 | 追跡情報 |
 | **荷役作業（HandlingEvent）** | eventId, 貨物 ID, 荷役種別, 場所, 実施日時, 荷受人確認 | 新規登録・一覧確認 | 貨物予約, 通関申告 |
 | **通関申告（CustomsDeclaration）** | 申告番号, 追跡番号, CustomsStatus, 申告日時, 状態履歴 | 申告登録・状態更新（理由必須）・履歴確認 | 荷役作業 |
@@ -123,6 +126,8 @@ IT2・IT3 のふりかえりが繰り返し「`ui_design.md` の規約」を反�
 | 航海スケジュール登録 | `/routing/voyages/new` | 新規航海登録フォーム（重複時は差分確認） | 経路設計者 | US24, US25 |
 | 航海スケジュール詳細 | `/routing/voyages/:voyageNumber` | 寄港地と区間ごとの時刻の確認 | 経路設計者 | US07, US08 |
 | 貨物追跡照会（公開） | `/tracking/:trackingNumber` | 輸送ステータスタイムライン（**認証不要**） | 荷主、荷受人 | US18 |
+| 自分の貨物 | `/shipper/tracking` | ログインした荷主に紐付く自社貨物だけの一覧。状態・現在地・到着予定・例外有無を表示し、未紐付けなら問い合わせ案内を出す | 荷主 | US33 |
+| 自分の貨物詳細 | `/shipper/tracking/:trackingNumber` | 自社貨物の追跡詳細。追跡番号を知っていても他社貨物は 404 として扱う | 荷主 | US33 |
 | 貨物状態管理 | `/tracking/manage` | 状態手動更新・例外の起票と解決 | 追跡管理者、荷役作業員（参照・起票） | US17, US19, US20, US28 |
 | 未解決の例外一覧 | `/tracking/manage/exceptions` | 未解決の例外がある貨物（緊急を先に、次に発生の古い順）。**誤配の行には予約への導線**を出す（IT10・US28-7）——気づく人（追跡管理者）と直す人（経路設計者）が違う。**予約詳細を開けないロールには出さず**「（経路設計者が組み直します）」と伝える（押した先で 403 にしない） | 追跡管理者、荷役作業員、**営業担当者（読むだけ）** | US19, US20, US28 |
 | 荷役作業記録 | `/handling` | 荷役イベント登録フォーム（モバイル対応）・この貨物の作業履歴 | 荷役作業員（記録）・追跡管理者（参照のみ） | US15, US16 |
@@ -149,12 +154,13 @@ IT2・IT3 のふりかえりが繰り返し「`ui_design.md` の規約」を反�
 | ダッシュボード | `/dashboard` | 全ロール |
 | 荷主管理 | `/booking/shippers` | ROLE_SALES |
 | 見積管理 | `/booking/estimates` | ROLE_SALES |
-| 貨物予約 | `/booking` | ROLE_SALES（[ADR-008](../adr/008-no-user-shipper-link-in-it2.md) により ROLE_SHIPPER は US18 まで開かない） |
+| 貨物予約 | `/booking` | ROLE_SALES（`ROLE_SHIPPER` は開かない。自社貨物は `/shipper/tracking` で読む） |
 | キャンセル承認 | `/booking/cancellations` | ROLE_TRACKER |
 | ~~予約詳細~~ | `/booking/:bookingId` | ROLE_SALES, ROLE_ROUTING, **ROLE_TRACKER・ROLE_HANDLER（読むだけ。IT10）**。**サイドバーには置かない**（予約を選ばないと開けない）。追跡管理者・荷役に開いたのは、例外一覧・キャンセル承認・陸揚げ待ちのいずれからもここへ渡す導線があり、**押すと 403 になっていた**ため（IT10 レビュー）。**一覧（`/booking`）は広げない**——例外や承認から辿る 1 件を読むことと、営業の案件を横断して眺めることは別である。操作は集約の述語とロールで出し分ける |
 | 航海スケジュール | `/routing/voyages` | ROLE_ROUTING |
 | ~~経路設計~~ | `/routing/design/:bookingId` | ROLE_ROUTING。**サイドバーには置かない**。予約を選ばないと開けない画面であり、メニューから踏むと予約番号の無い URL になる。入口は予約詳細の [経路を割り当て] とし、経路設計者は「経路設計待ち」の予約一覧から辿る |
 | 貨物追跡 | `/tracking` | 全ロール（公開画面への導線） |
+| 自分の貨物 | `/shipper/tracking` | ROLE_SHIPPER |
 | 貨物状態管理 | `/tracking/manage` | ROLE_TRACKER, ROLE_HANDLER |
 | 未解決の例外 | `/tracking/manage/exceptions` | ROLE_TRACKER, ROLE_HANDLER, ROLE_SALES。**営業は読むだけ**——荷主は公開照会で「ご依頼元の営業担当へ」と案内されるため、営業が何も知らないままでは案内が行き止まりになる（IT9 返済枠 0.9）。起票と解決には開かない |
 | 荷役管理 | `/handling` | ROLE_HANDLER, ROLE_TRACKER |
@@ -170,10 +176,11 @@ IT2・IT3 のふりかえりが繰り返し「`ui_design.md` の規約」を反�
 > 全 7 値: `ROLE_SHIPPER` / `ROLE_SALES` / `ROLE_ROUTING` / `ROLE_HANDLER` / `ROLE_TRACKER` / `ROLE_ACCOUNTANT` / `ROLE_ADMIN`
 > （domain-model.md・architecture_backend.md・non_functional.md と同一変更で更新済み）。
 
-> **荷主ロールの予約参照について（[ADR-008](../adr/008-no-user-shipper-link-in-it2.md)・2026-08-20）**:
+> **荷主ロールの予約参照について（[ADR-008](../adr/008-no-user-shipper-link-in-it2.md)・[ADR-029](../adr/029-shipper-tracking-boundary-and-inactivity-timeout.md)）**:
 > 当初は予約参照を `ROLE_SALES` と `ROLE_SHIPPER` の両方に開く設計だったが、authms の利用者と bookingms の
-> 荷主を結ぶキーがどこにも無く、「自分の予約だけ」に絞り込めない。この状態で開くと**全荷主の予約が見える**ため、
-> 利用者と荷主の紐付けを扱うストーリーまで `ROLE_SHIPPER` には開かない。**US18 では広げ直せない**（US18 は追跡番号だけで照会するため、紐付けのキーを必要としない。[ADR-024](../adr/024-tracking-manual-update-and-exceptions.md) 決定 10）。荷主が自分の貨物を見る手段は公開追跡照会である。
+> 荷主を結ぶキーが無く、「自分の予約だけ」に絞り込めなかった。IT13 で `user_shipper_link` は追加されたが、
+> 予約管理画面そのものは営業の操作画面であり、荷主には開かない。荷主は `/shipper/tracking` で自社貨物だけを
+> 追跡し、公開追跡（US18）は追跡番号を知る人向けの別入口として残す。
 
 > **段階実装の注記**: ポータル（`/`）の追跡番号入力欄は、**IT1 では非活性**とする（追跡照会 US18 は Release 1.0）。
 > IT1 ではログイン導線と「未認証で 200 を返す入口」としての役割のみを担い、US18 の実装時に活性化する。
@@ -183,12 +190,13 @@ IT2・IT3 のふりかえりが繰り返し「`ui_design.md` の規約」を反�
 | 機能 | 画面パス | API プレフィックス | 実行ロール |
 | :--- | :--- | :--- | :--- |
 | 荷主・見積管理 | `/booking/shippers*`, `/booking/estimates*` | `/api/v1/shippers`, `/api/v1/estimates` | `ROLE_SALES` |
-| 予約管理 | `/booking*` | `/api/v1/bookings` | `ROLE_SALES`（**`ROLE_SHIPPER` は開かない**。[ADR-008](../adr/008-no-user-shipper-link-in-it2.md)） |
+| 予約管理 | `/booking*` | `/api/v1/bookings` | `ROLE_SALES`（**`ROLE_SHIPPER` は開かない**。荷主向けの自社貨物参照は `/shipper/tracking*`） |
 | 予約の参照（引き渡された分） | `/booking`, `/booking/:bookingId` | `GET /api/v1/bookings*` | `ROLE_ROUTING`（**`ROUTING_REQUESTED` と `ROUTED` に限る**。[ADR-015](../adr/015-routing-requested-state.md) 決定 5・[ADR-020](../adr/020-itinerary-assignment-transitions.md) 決定 3。見えない予約は存在しない予約と同じ 404） |
 | 経路の割り当て | `/routing/design/:bookingId` | `PUT /api/v1/bookings/{bookingId}/route` | `ROLE_ROUTING`（**営業には開かない**。営業が自分で経路を確定できると職掌分離が崩れる） |
 | キャンセル承認 | `/booking/cancellations` | `/api/v1/bookings/*/cancellation/approve|reject` | `ROLE_TRACKER` |
 | 航海・経路設計 | `/routing*` | `/api/v1/voyages`, `/api/v1/voyages/{voyageNumber}`, `/api/v1/routes` | `ROLE_ROUTING` |
 | 追跡照会（公開） | `/tracking/:trackingNumber` | `GET /api/v1/public/tracking/*` | **認証不要** |
+| 自社貨物追跡 | `/shipper/tracking*` | `GET /api/v1/shipper/tracking*` | `ROLE_SHIPPER`。authms の利用者紐付けと bookingms の荷主 Snapshot で自社貨物だけを返す。未紐付けは 200 + 問い合わせ案内、他社貨物詳細は 404 |
 | 貨物状態管理・例外 | `/tracking/manage` | `/api/v1/tracking/manage*` | 更新・起票・解決は `ROLE_TRACKER`、**参照は `ROLE_HANDLER` にも開く**（US20-1。荷役作業員が現場で状態を確かめられないと、記録の前に電話が要る）。**未解決の例外を読むだけは `ROLE_SALES` にも開く**（IT9 返済枠 0.9） |
 | 荷役管理 | `/handling*` | `/api/v1/handling` | `ROLE_HANDLER`, `ROLE_TRACKER`（参照のみ） |
 | 通関管理 | `/customs*` | `/api/v1/customs` | `ROLE_HANDLER`（申告登録）, `ROLE_TRACKER`（状態更新） |
@@ -275,6 +283,7 @@ state ダッシュボード {
 航海スケジュール管理 --> 航海スケジュール詳細 : 航海番号
 ダッシュボード --> 荷役作業記録 : [荷役管理]
 ダッシュボード --> 精算管理 : [精算管理]
+ダッシュボード --> 自分の貨物 : [自分の貨物を見る]（SHIPPER）
 
 state "予約フロー" as booking_flow {
   state 貨物予約一覧 {
@@ -332,10 +341,20 @@ state "追跡・例外フロー" as tracking_flow {
     貨物追跡照会 : /tracking/:trackingNumber
     貨物追跡照会 : 認証不要・30秒ポーリング
   }
+  state 自分の貨物 {
+    自分の貨物 : /shipper/tracking
+    自分の貨物 : 自社貨物だけの一覧\n未紐付けなら問い合わせ案内
+  }
+  state 自分の貨物詳細 {
+    自分の貨物詳細 : /shipper/tracking/:trackingNumber
+    自分の貨物詳細 : 自社境界の内側で履歴を表示\n他社貨物は 404
+  }
   state 貨物状態管理 {
     貨物状態管理 : /tracking/manage
     貨物状態管理 : 状態手動更新・例外一覧・解決
   }
+  自分の貨物 --> 自分の貨物詳細 : 追跡番号
+  自分の貨物詳細 --> 自分の貨物 : [自分の貨物に戻る]
   貨物状態管理 --> 予約詳細 : 誤配例外の行クリック
 }
 
@@ -404,12 +423,80 @@ state "見積フロー" as estimate_flow {
 > | 荷主一覧・荷主登録（法人契約情報を含む） | IT1・IT2 |
 > | 貨物予約一覧・貨物予約登録（危険物・冷凍を含む） | IT2 |
 > | 航海スケジュール一覧・航海スケジュール登録（差分確認を含む） | IT3 |
-| 航海スケジュール詳細 | IT4 |
-| 経路設計（経路候補一覧。**選択・確定は US09 / IT5**） | IT4 |
+> | 航海スケジュール詳細 | IT4 |
+> | 経路設計（経路候補一覧。**選択・確定は US09 / IT5**） | IT4 |
 > | 貨物予約詳細（経路設計への引き渡しを含む） | IT3 |
+> | 自分の貨物・自分の貨物詳細・無操作タイムアウト警告 | IT13 |
 >
 > 「踏襲する」と書いたまま実装すると、どちらが正か分からないまま両方が育つ。
 > 画面を実装した IT で、この表に足して take-7 側を正にする。
+
+### 自分の貨物一覧 (/shipper/tracking) ― IT13 で定義
+
+荷主がログイン後に自社貨物だけを追跡する画面。予約管理画面は営業担当者の操作画面であり、荷主には開かない。自社境界は画面ではなくサーバ側の `/api/v1/shipper/tracking` が守る。
+
+```plantuml
+@startsalt
+{+
+  { / <b>CargoTracker</b> | 自分の貨物 | [ログアウト] }
+  ==
+  <b>自分の貨物</b>
+  --
+  {#
+    追跡番号 | 状態 | 現在地 | 到着予定 | 例外
+    TRK-20260823-0001 | 受領済み | Tokyo | 2026-09-02 | なし
+    TRK-20260823-0002 | 輸送中 | Shanghai | 2026-09-04 | 例外あり
+  }
+}
+@endsalt
+```
+
+未紐付け利用者には「荷主との紐付けがありません」と問い合わせ先を表示する。これは空一覧ではなく業務上の設定不足であり、荷物が無い状態と区別する。
+
+### 自分の貨物詳細 (/shipper/tracking/:trackingNumber) ― IT13 で定義
+
+一覧から選んだ 1 件の追跡状態と時系列の経過を表示する。公開追跡画面とは URL を分け、認証済み荷主の自社境界をサーバ側でも検査する。他社貨物の追跡番号を直接指定した場合は 404 とし、存在有無を画面で示さない。
+
+```plantuml
+@startsalt
+{+
+  { / <b>CargoTracker</b> | 自分の貨物 | [ログアウト] }
+  ==
+  [自分の貨物に戻る]
+  --
+  <b>TRK-20260823-0001</b>
+  {#
+    現在の状態 | 現在地 | 到着予定日
+    受領済み | Tokyo | 2026-09-02
+  }
+  --
+  <b>これまでの経過</b>
+  {#
+    日時 | 状態 | 場所
+    2026-09-02 09:00 | 受領済み | Tokyo
+  }
+}
+@endsalt
+```
+
+### 無操作タイムアウト警告（TD-01）― IT13 で定義
+
+認証済みレイアウトは pointerdown・keydown・focus を操作として扱う。15 分無操作で画面上部に警告を表示し、20 分無操作で `sessionStorage` の認証状態を破棄して `/login` へ履歴置換で戻す。
+
+```plantuml
+@startsalt
+{+
+  { / <b>CargoTracker</b> | yamada@example.com | [ログアウト] }
+  {!
+    操作がないため、まもなく自動ログアウトします。入力中の内容は保存されません。 | [操作を続ける]
+  }
+  ==
+  （現在の業務画面）
+}
+@endsalt
+```
+
+警告は画面全体を覆わず、入力中のフォームを隠さない位置に出す。`操作を続ける` を押すかキーボード操作などがあれば、無操作時間を数え直す。
 
 ### 航海スケジュール一覧・検索 (/routing/voyages) ― IT3 で定義
 

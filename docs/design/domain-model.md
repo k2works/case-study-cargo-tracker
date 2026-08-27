@@ -13,11 +13,11 @@ tags: design, ddd, domain-model, microservices
 本ドキュメントは、国際貨物輸送管理システムの DDD（ドメイン駆動設計）戦術的設計を定義する。システムは 7 つの境界付けられたコンテキスト（Bounded Context）で構成され、各コンテキストが独立したマイクロサービスとしてデプロイされる。
 
 take-3 のドメインモデルを基礎とし、本プロジェクトの要件で追加された
-通関申告の集約化と監査履歴（UC21 / US29）・輸送中キャンセルの承認フロー（UC22 / US30）・誤配検知（US28）・アカウント保護（US31）を反映している。
+通関申告の集約化と監査履歴（UC21 / US29）・輸送中キャンセルの承認フロー（UC22 / US30）・誤配検知（US28）・アカウント保護（US31）・荷主向け自社貨物追跡（US33）・無操作タイムアウト（TD-01）を反映している。
 
 | コンテキスト | サービス名 | 日本語名 | 主な責務 |
 |---|---|---|---|
-| Auth Context | authms | 認証コンテキスト | ユーザー認証・認可・JWT トークン管理・アカウント保護 |
+| Auth Context | authms | 認証コンテキスト | ユーザー認証・認可・JWT トークン管理・アカウント保護・利用者と荷主 ID の紐付け |
 | Booking Context | bookingms | 予約コンテキスト | 荷主管理・貨物予約・旅程管理・見積・状態遷移・キャンセル承認 |
 | Routing Context | routingms | 経路コンテキスト | 航海スケジュール・経路情報の管理 |
 | Tracking Context | trackingms | 追跡コンテキスト | 貨物追跡・例外イベント管理（誤配・税関保留含む） |
@@ -55,6 +55,7 @@ quadrantChart
 | Role | ロール | Auth Context | ユーザーに割り当てられる権限（6 業務ロール + ADMIN） |
 | Password | パスワード | Auth Context | BCrypt ハッシュで保存される認証情報 |
 | AccountLock | アカウントロック | Auth Context | 連続認証失敗によるロック状態（失敗回数・ロック期限） |
+| UserShipperLink | 利用者と荷主の紐付け | Auth Context | `ROLE_SHIPPER` の利用者と Booking Context の荷主 ID を明示的に結ぶ値 |
 | Cargo | 貨物 | Booking Context | 予約の中心的エンティティ。荷主から荷受人へ輸送される物品 |
 | Shipper | 荷主 | Booking Context | 貨物を発送する主体。個人・法人の 2 種別を属性で持つ単一クラス（[ADR-012](../adr/012-value-object-granularity.md)） |
 | BookingId | 予約 ID | Booking Context | 予約を一意に識別する値オブジェクト |
@@ -80,6 +81,7 @@ quadrantChart
 | TrackingNumber | 追跡番号 | Tracking Context | 追跡活動を一意に識別する番号 |
 | TrackingEvent | 追跡イベント | Tracking Context | 時系列で記録される追跡の出来事（荷役由来と手動更新の両方） |
 | TrackingExceptionEvent | 追跡例外イベント | Tracking Context | 遅延・破損・紛失・誤配・税関保留の例外事象 |
+| ShipperTrackingQuery | 荷主向け追跡クエリ | Tracking Context | 認証済み荷主が自社貨物だけを一覧・詳細で読むための Read Model |
 | HandlingActivity | 荷役作業 | Handling Context | 実際に行われた荷役作業の記録 |
 | CargoSnapshot | 貨物スナップショット | Handling Context | ACL 経由で取得した貨物情報。妥当性検証に使用 |
 | CustomsDeclaration | 通関申告 | Handling Context | 通関申告の状態管理（集約ルート）。監査履歴を内包 |
@@ -108,7 +110,7 @@ quadrantChart
 | 経路設計者 | Routing Context + Booking Context | `RouteCargoCommand`・`AssignTrackingNumberCommand`・`RegisterVoyageCommand` |
 | 荷役作業員 | Handling Context | `HandlingActivityRegistrationCommand`・`RegisterCustomsDeclarationCommand` |
 | 追跡管理者 | Tracking Context + Booking Context + Handling Context | `AddTrackingEventCommand`・例外登録・`ApproveCancellationCommand`・`UpdateCustomsStatusCommand` |
-| 荷主 | Booking Context（読取）+ Tracking Context（読取） | 追跡照会・状態確認 |
+| 荷主 | Auth Context（紐付け）+ Tracking Context（読取）+ Booking Context（荷主境界の Snapshot） | 自社貨物の追跡一覧・詳細、公開追跡照会 |
 | 荷受人 | Tracking Context（読取） | 到着確認（追跡番号のみ・認証不要） |
 | 経理担当者 | Billing Context | `GenerateInvoiceCommand`・`ConfirmPaymentCommand` |
 | システム管理者 | Auth Context | `UnlockAccountCommand`・`RegisterUserCommand` |
@@ -121,6 +123,7 @@ title Cargo Tracker - コンテキストマップ（マイクロサービス境�
 
 package "Auth Context\n(authms)" as auth #LightSkyBlue {
   class User <<aggregate root>>
+  class UserShipperLink <<value object>>
 }
 
 package "Booking Context\n(bookingms)" as booking #lightblue {
@@ -135,6 +138,7 @@ package "Routing Context\n(routingms)" as routing #lightgreen {
 
 package "Tracking Context\n(trackingms)" as tracking #lightyellow {
   class TrackingActivity <<aggregate root>>
+  class ShipperTrackingQuery <<read model>>
 }
 
 package "Handling Context\n(handlingms)" as handling #lightcoral {
@@ -157,6 +161,8 @@ handling --> shared : uses Location
 
 auth <.. booking : JWT 検証（API Gateway 経由）
 auth <.. tracking : JWT 検証（API Gateway 経由）
+tracking ..> auth : UserShipperLink ACL\n（自社境界）
+tracking ..> booking : ShipperCargoSnapshot ACL\n（荷主 ID）
 booking ..> routing : REST API（同期）\nroutes cargo (Conformist)
 handling ..> booking : via CargoSnapshot (ACL)
 tracking <.. booking : TrackingNumberIssuedEvent / CargoRoutedEvent /\nCargoCancelledEvent (RabbitMQ 非同期)
@@ -248,6 +254,10 @@ package "Value Objects（値オブジェクト）" {
     +increment(now: Instant): AccountLock
     +reset(): AccountLock
   }
+  class UserShipperLink <<value object>> {
+    -username: String
+    -shipperId: Long
+  }
   enum Role {
     ROLE_SHIPPER
     ROLE_SALES
@@ -265,6 +275,7 @@ User *-- Email
 User *-- Password
 User *-- AccountLock
 User *-- Role
+UserShipperLink ..> User : username で参照
 
 @enduml
 ```
@@ -279,6 +290,7 @@ User *-- Role
 | 値オブジェクト | Email | メール | メールアドレス。一意制約あり |
 | 値オブジェクト | Password | パスワード | BCrypt ハッシュ。生パスワードからの生成と照合 |
 | 値オブジェクト | AccountLock | アカウントロック | 連続失敗回数とロック期限。5 回失敗でロック（US31） |
+| 値オブジェクト | UserShipperLink | 利用者と荷主の紐付け | `ROLE_SHIPPER` の利用者名と bookingms の荷主 ID を明示的に保持する。荷主名・メールアドレス・コードの文字列一致で推測しない（US33・[ADR-029](../adr/029-shipper-tracking-boundary-and-inactivity-timeout.md)） |
 | 列挙型 | Role | ロール | ROLE_SHIPPER / ROLE_SALES / **ROLE_ROUTING** / ROLE_HANDLER / ROLE_TRACKER / ROLE_ACCOUNTANT / ROLE_ADMIN |
 | 値オブジェクト | AuthResult | 認証結果 | 認証の成否と失敗理由（認証情報誤り / ロック中 / 無効化）を保持する。**画面へは常に同一メッセージを返す**ため、理由は監査ログにのみ使う |
 
@@ -293,6 +305,9 @@ User *-- Role
 7. ロック中・認証情報誤り・無効化アカウントで**同一のエラーメッセージ**を返す（アカウントの存在有無を攻撃者に教えない）
 8. 認証成功時に失敗回数をリセットする。ロックは一定時間の経過または管理者の解除操作（`UnlockAccountCommand`）で解除する
 9. 認証試行（成功・失敗）・ロック・解除は監査ログに記録する
+10. 利用者と荷主の紐付けは `UserShipperLink` だけを正とする。bookingms の `shipper` へ authms の利用者 ID は混ぜず、`shipperId` はコンテキスト間の論理参照として扱う
+11. 紐付けを登録できるのは `ROLE_SHIPPER` の利用者だけである。管理者以外の利用者は紐付け管理 API を呼べない
+12. UI の無操作タイムアウトは Auth Context の永続状態を変えず、フロントエンドの認証ストアを 15 分で警告、20 分で破棄する。トークンの保存先は `sessionStorage` とし、タブを閉じたら従来どおり消える（TD-01・[ADR-029](../adr/029-shipper-tracking-boundary-and-inactivity-timeout.md)）
 
 ### コマンド一覧
 
@@ -302,6 +317,8 @@ User *-- Role
 | RefreshTokenCommand | 全ユーザー | リフレッシュトークンで JWT を再発行 |
 | RegisterUserCommand | 管理者 | 新規ユーザーの登録 |
 | UnlockAccountCommand | 管理者 | ロックされたアカウントの解除 |
+| LinkUserToShipperCommand | 管理者 | `ROLE_SHIPPER` の利用者を bookingms の荷主 ID に紐付ける |
+| UnlinkUserFromShipperCommand | 管理者 | 利用者と荷主 ID の紐付けを解除する |
 
 ---
 
@@ -963,6 +980,32 @@ package "Value Objects（値オブジェクト）" {
   }
 }
 
+package "Read Models（読取専用モデル）" {
+  class ShipperTrackingSummary <<read model>> {
+    -trackingNumber: String
+    -status: String
+    -statusLabel: String
+    -locationName: String
+    -estimatedArrival: String
+    -hasException: boolean
+    -urgent: boolean
+  }
+  class ShipperTrackingDetail <<read model>> {
+    -events: List<ShipperTrackingEvent>
+  }
+  class ShipperTrackingEvent <<read model>> {
+    -occurredAt: String
+    -status: String
+    -statusLabel: String
+    -locationName: String
+  }
+  class ShipperCargoSnapshot <<value object>> {
+    -bookingId: String
+    -trackingNumber: String
+    -shipperId: Long
+  }
+}
+
 TrackingActivity *-- TrackingNumber
 TrackingActivity *-- TrackingBookingId
 TrackingActivity *-- TrackingEvent
@@ -971,6 +1014,9 @@ TrackingActivity *-- TrackingNotice
 TrackingActivity ..> Location : 共有カーネル
 TrackingEvent ..> Location : 共有カーネル
 TrackingExceptionEvent *-- ExceptionType
+ShipperTrackingDetail *-- ShipperTrackingSummary
+ShipperTrackingDetail *-- ShipperTrackingEvent
+ShipperTrackingSummary ..> ShipperCargoSnapshot : 荷主 ID で絞る
 
 @enduml
 ```
@@ -988,6 +1034,10 @@ TrackingExceptionEvent *-- ExceptionType
 | 列挙型 | TrackingStatus | 追跡状態 | 9 段階の追跡フェーズ。遷移の判定を `afterHandling` に集約する |
 | 列挙型 | ExceptionType | 例外種別 | DELAY / DAMAGE / LOST / MISROUTE / CUSTOMS_HOLD。手で起票できるのは前 3 者だけ |
 | 列挙型（集約内） | TrackingEvent.EventSource | 出来事の由来 | 荷役から来たのか、人が手で入れたのか |
+| Read Model | ShipperTrackingSummary | 荷主向け追跡一覧の 1 件 | 自社境界で絞られた貨物の状態・現在地・到着予定・例外有無を返す（US33） |
+| Read Model | ShipperTrackingDetail | 荷主向け追跡詳細 | 自社境界の内側で、追跡状態と時系列イベントを返す。公開追跡とは URL を分ける |
+| Read Model | ShipperTrackingEvent | 荷主向け追跡イベント | 荷主に見せる日時・状態・場所だけへ絞ったイベント行 |
+| 値オブジェクト | ShipperCargoSnapshot | 荷主貨物スナップショット | bookingms から ACL 経由で取得する `bookingId`・`trackingNumber`・`shipperId`。自社貨物判定にのみ使う |
 
 > **位置は共有カーネルの `Location` を使う。** 設計は当初 `TrackingLocation` という
 > コンテキスト固有型を置いていたが、実装は共有カーネルをそのまま使っている。
@@ -1006,6 +1056,9 @@ TrackingExceptionEvent *-- ExceptionType
 5. **CUSTOMS_HOLD（税関保留）例外は `CustomsStatusChangedEvent`（HELD）の受信で自動起票される**（UC21 連携）
 6. `ResolveExceptionCommand` の実行により TrackingStatus は例外発生前の状態に復帰する。解決後も例外の事実は記録として残り、料金調整の根拠として参照できる
 7. 例外の起票・解決は荷主への通知をトリガーする
+8. 荷主向け一覧・詳細は `ROLE_SHIPPER` だけに開き、authms の `UserShipperLink` と bookingms の `ShipperCargoSnapshot` を照合して自社貨物だけを返す
+9. 紐付いていない荷主利用者には、空一覧ではなく `linked=false` と問い合わせ案内を返す
+10. 他社貨物の追跡番号を指定した荷主向け詳細は 404 とし、公開追跡（認証不要）とは別経路で扱う
 
 #### TrackingStatus の遷移（IT7 で追加）
 
@@ -1039,6 +1092,7 @@ TrackingExceptionEvent *-- ExceptionType
 | AddTrackingEventCommand | 追跡管理者 | TrackingEvent を時系列で追加（手動更新。US17・IT8） |
 | RegisterExceptionCommand | 追跡管理者・システム（誤配/税関保留の自動起票） | TrackingExceptionEvent を登録 |
 | ResolveExceptionCommand | 追跡管理者 | 例外を解決し TrackingStatus を復帰 |
+| ShipperTrackingQuery | 荷主 | `UserShipperLink` と `ShipperCargoSnapshot` を ACL で参照し、自社貨物の一覧・詳細だけを返す |
 
 ---
 
