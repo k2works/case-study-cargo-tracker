@@ -37,6 +37,10 @@ class AdrComplianceTableTest {
     private static final Pattern REFERENCED_TEST = Pattern.compile(
             "`([A-Z][A-Za-z0-9]*Test|[A-Z][A-Za-z0-9]*Rules)(?:[.#][^`]*)?`");
 
+    /** バッククォートで囲まれた frontend のテストファイルパス。 */
+    private static final Pattern REFERENCED_TEST_PATH = Pattern.compile(
+            "`(apps/frontend/[^`]*(?:test|spec)\\.(?:ts|tsx))`");
+
     @Test
     @DisplayName("ADR が挙げる検査クラスは、すべて実在する")
     void everyReferencedTestExists() throws IOException {
@@ -58,6 +62,27 @@ class AdrComplianceTableTest {
                 .isEmpty();
     }
 
+    @Test
+    @DisplayName("ADR が挙げるテストファイルパスは、すべて実在する")
+    void everyReferencedTestPathExists() throws IOException {
+        Set<String> declared = referencedTestPaths();
+
+        assertThat(declared)
+                .as("ADR からテストファイルパスを 1 つも読み取れていない場合、"
+                        + "frontend 側のコンプライアンス表は実在確認されない")
+                .isNotEmpty();
+
+        List<String> missing = declared.stream()
+                .filter(path -> !Files.isRegularFile(REPOSITORY_ROOT.resolve(path)))
+                .sorted()
+                .toList();
+
+        assertThat(missing)
+                .as("ADR が挙げているテストファイルが実在しない。"
+                        + "検査名を書いた時点で辿れる形にする")
+                .isEmpty();
+    }
+
     private Set<String> referencedTestClasses() throws IOException {
         Set<String> names = new LinkedHashSet<>();
         try (Stream<Path> files = Files.list(ADR)) {
@@ -69,6 +94,19 @@ class AdrComplianceTableTest {
             }
         }
         return names;
+    }
+
+    private Set<String> referencedTestPaths() throws IOException {
+        Set<String> paths = new LinkedHashSet<>();
+        try (Stream<Path> files = Files.list(ADR)) {
+            for (Path file : files.filter(path -> path.toString().endsWith(".md")).toList()) {
+                Matcher matcher = REFERENCED_TEST_PATH.matcher(Files.readString(file));
+                while (matcher.find()) {
+                    paths.add(matcher.group(1));
+                }
+            }
+        }
+        return paths;
     }
 
     /** リポジトリにある Java の型名（テストも本体も）。 */

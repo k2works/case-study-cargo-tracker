@@ -39,6 +39,10 @@ spec:
             - name: RABBITMQ_PASSWORD
               valueFrom:
                 secretKeyRef: { name: cargo-secrets, key: RABBITMQ_PASSWORD }
+            - name: APP_AUTH_SERVICE_BASE_URL
+              value: http://authms:8081
+            - name: APP_BOOKING_SERVICE_BASE_URL
+              value: http://bookingms:8082
           # DB / ブローカーの起動待ちは readinessProbe の範囲で復帰させる（起動順序制御は作り込まない）
           readinessProbe:
             httpGet:
