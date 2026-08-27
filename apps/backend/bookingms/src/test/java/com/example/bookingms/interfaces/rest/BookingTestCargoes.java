@@ -8,6 +8,7 @@ import com.example.bookingms.domain.model.CargoSpecification;
 import com.example.bookingms.domain.model.CargoStatus;
 import com.example.bookingms.domain.model.Leg;
 import com.example.bookingms.domain.model.RouteSpecification;
+import com.example.bookingms.domain.model.TrackingNumber;
 import com.example.bookingms.domain.model.VoyageNumber;
 import com.example.shared.domain.model.Location;
 import java.math.BigDecimal;
@@ -55,5 +56,10 @@ final class BookingTestCargoes {
     /** 荷主へ経路を通知済みの予約。 */
     static Cargo notified() {
         return routed().notifyShipper(Instant.parse("2026-08-22T02:00:00Z"), "sales01");
+    }
+
+    /** 追跡番号を発行済みの予約。 */
+    static Cargo trackingIssued() {
+        return notified().confirm().issueTrackingNumber(TrackingNumber.of("TRK-20260823-0001"));
     }
 }

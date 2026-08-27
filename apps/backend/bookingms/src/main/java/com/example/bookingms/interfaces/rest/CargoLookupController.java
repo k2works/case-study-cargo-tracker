@@ -37,6 +37,8 @@ public class CargoLookupController {
      * 予約詳細（US18・IT8）で、そちらは荷主との紐付けで絞る。
      */
     private static final Set<String> TRUSTED_SERVICE_PRINCIPALS = Set.of("system:handlingms");
+    private static final Set<String> TRUSTED_SHIPPER_SNAPSHOT_PRINCIPALS =
+            Set.of("system:trackingms");
 
     private final CargoRepository cargoes;
 
@@ -64,8 +66,31 @@ public class CargoLookupController {
                         "指定された追跡番号の貨物が見つかりません"));
     }
 
+    /**
+     * 荷主境界の判定に要る Snapshot を返す（US33）。
+     *
+     * <p>trackingms だけに開く。人や他サービスに荷主 ID を返す必要はない。
+     */
+    @GetMapping("/shipper-snapshots/{trackingNumber}")
+    public ShipperCargoSnapshotResponse shipperSnapshot(
+            @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
+            @PathVariable String trackingNumber) {
+        requireTrustedShipperSnapshotService(userId);
+
+        return cargoes.findByTrackingNumber(trackingNumber)
+                .map(summary -> ShipperCargoSnapshotResponse.from(summary.cargo()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "指定された追跡番号の貨物が見つかりません"));
+    }
+
     private void requireTrustedService(String userId) {
         if (!AuthenticatedUser.of(userId, null).isOneOf(TRUSTED_SERVICE_PRINCIPALS)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "この操作を行う権限がありません");
+        }
+    }
+
+    private void requireTrustedShipperSnapshotService(String userId) {
+        if (!AuthenticatedUser.of(userId, null).isOneOf(TRUSTED_SHIPPER_SNAPSHOT_PRINCIPALS)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "この操作を行う権限がありません");
         }
     }

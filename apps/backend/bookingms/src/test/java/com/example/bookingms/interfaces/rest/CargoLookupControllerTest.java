@@ -42,11 +42,16 @@ class CargoLookupControllerTest {
         return CargoSnapshotContract.PATH.replace("{trackingNumber}", trackingNumber);
     }
 
+    private static String shipperPathFor(String trackingNumber) {
+        return "/api/v1/bookings/shipper-snapshots/" + trackingNumber;
+    }
+
     @Test
     @DisplayName("既知のサービスは、照合に要る項目を受け取れる")
     void returnsSnapshotToTrustedService() throws Exception {
         when(cargoes.findByTrackingNumber("TRK-20260823-0001"))
-                .thenReturn(Optional.of(new CargoSummary(BookingTestCargoes.routed(), "丸紅商事")));
+                .thenReturn(Optional.of(new CargoSummary(BookingTestCargoes.trackingIssued(),
+                        "丸紅商事")));
 
         mockMvc.perform(get(pathFor("TRK-20260823-0001"))
                         .header(AuthenticatedUser.USER_ID_HEADER,
@@ -114,6 +119,32 @@ class CargoLookupControllerTest {
                         .header(AuthenticatedUser.USER_ID_HEADER,
                                 CargoSnapshotContract.CALLER_PRINCIPAL))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("trackingms は自社境界の判定に要る荷主 ID を受け取れる")
+    void returnsShipperSnapshotToTrackingms() throws Exception {
+        when(cargoes.findByTrackingNumber("TRK-20260823-0001"))
+                .thenReturn(Optional.of(new CargoSummary(BookingTestCargoes.trackingIssued(),
+                        "丸紅商事")));
+
+        mockMvc.perform(get(shipperPathFor("TRK-20260823-0001"))
+                        .header(AuthenticatedUser.USER_ID_HEADER, "system:trackingms"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bookingId").value("BKG-2026000001"))
+                .andExpect(jsonPath("$.trackingNumber").value("TRK-20260823-0001"))
+                .andExpect(jsonPath("$.shipperId").value(1));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"system:handlingms", "system:bookingms", "sales01", "shipper01"})
+    @DisplayName("trackingms 以外は荷主 ID 付き Snapshot を読めない")
+    void rejectsShipperSnapshotForOtherPrincipals(String principal) throws Exception {
+        mockMvc.perform(get(shipperPathFor("TRK-20260823-0001"))
+                        .header(AuthenticatedUser.USER_ID_HEADER, principal))
+                .andExpect(status().isForbidden());
+
+        verify(cargoes, never()).findByTrackingNumber(any());
     }
 
     /**
