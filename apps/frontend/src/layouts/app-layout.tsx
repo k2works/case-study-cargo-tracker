@@ -1,7 +1,12 @@
+import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { NAVIGATION, resolveNavigationItem } from '../config/navigation'
 import { useAuthStore } from '../stores/auth-store'
 import { ROLE_LABELS } from '../types/role'
+
+const SESSION_WARNING_AFTER_MS = 15 * 60 * 1000
+const SESSION_TIMEOUT_AFTER_MS = 20 * 60 * 1000
+const ACTIVITY_EVENTS = ['pointerdown', 'keydown', 'focus'] as const
 
 /** 認証済み画面の共通レイアウト。ナビゲーションはロールに応じて出し分ける。 */
 export function AppLayout() {
@@ -9,10 +14,17 @@ export function AppLayout() {
   const hasAnyRole = useAuthStore((state) => state.hasAnyRole)
   const logout = useAuthStore((state) => state.logout)
   const navigate = useNavigate()
+  const [timeoutWarningVisible, setTimeoutWarningVisible] = useState(false)
+  const [activityVersion, setActivityVersion] = useState(0)
 
   const items = NAVIGATION.filter((item) => hasAnyRole(item.roles))
   // いま開いている画面に対応する項目（最長一致）。**ここで判定を書き直さない**
   const current = resolveNavigationItem(useLocation().pathname)?.to
+
+  function continueSession() {
+    setTimeoutWarningVisible(false)
+    setActivityVersion((currentVersion) => currentVersion + 1)
+  }
 
   function handleLogout() {
     logout()
@@ -20,6 +32,36 @@ export function AppLayout() {
     // 「ログアウトした」という利用者の理解が裏切られる。履歴を置き換える。
     navigate('/login', { replace: true })
   }
+
+  useEffect(() => {
+    if (user === null) {
+      return undefined
+    }
+
+    const warningTimer = window.setTimeout(() => {
+      setTimeoutWarningVisible(true)
+    }, SESSION_WARNING_AFTER_MS)
+    const logoutTimer = window.setTimeout(() => {
+      logout()
+      navigate('/login', { replace: true })
+    }, SESSION_TIMEOUT_AFTER_MS)
+    const recordActivity = () => {
+      setTimeoutWarningVisible(false)
+      setActivityVersion((currentVersion) => currentVersion + 1)
+    }
+
+    for (const event of ACTIVITY_EVENTS) {
+      window.addEventListener(event, recordActivity)
+    }
+
+    return () => {
+      window.clearTimeout(warningTimer)
+      window.clearTimeout(logoutTimer)
+      for (const event of ACTIVITY_EVENTS) {
+        window.removeEventListener(event, recordActivity)
+      }
+    }
+  }, [activityVersion, logout, navigate, user])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -42,6 +84,27 @@ export function AppLayout() {
           </button>
         </div>
       </header>
+
+      {timeoutWarningVisible && (
+        <div
+          role="alert"
+          className="border-b border-amber-300 bg-amber-50 px-6 py-3 text-sm text-amber-950"
+        >
+          <div className="flex items-center justify-between gap-4">
+            <p>
+              操作がないため、まもなく自動ログアウトします。
+              入力中の内容は保存されません。
+            </p>
+            <button
+              type="button"
+              onClick={continueSession}
+              className="shrink-0 rounded border border-amber-700 px-3 py-1 font-medium text-amber-950 hover:bg-amber-100"
+            >
+              操作を続ける
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="flex">
         <nav aria-label="メインナビゲーション" className="w-56 shrink-0 border-r bg-white p-4">

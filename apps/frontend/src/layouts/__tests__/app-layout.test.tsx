@@ -1,5 +1,7 @@
-import { screen } from '@testing-library/react'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { act, fireEvent, screen } from '@testing-library/react'
+import { Route, Routes } from 'react-router-dom'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { LoginPage } from '../../pages/login-page'
 import { useAuthStore } from '../../stores/auth-store'
 import type { Role } from '../../types/role'
 import { loginAs, renderWithProviders } from '../../test/render'
@@ -127,5 +129,62 @@ describe('まだ使えない画面のメニュー', () => {
     renderAs(['ROLE_SALES'])
 
     expect(screen.getByRole('link', { name: '荷主管理' })).toBeInTheDocument()
+  })
+})
+
+describe('無操作タイムアウト（TD-01）', () => {
+  beforeEach(() => {
+    useAuthStore.getState().logout()
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('15 分無操作なら、入力中の内容が保存されない警告を出す', async () => {
+    loginAs(['ROLE_SHIPPER'])
+    renderWithProviders(<AppLayout />, ['/dashboard'])
+
+    act(() => {
+      vi.advanceTimersByTime(15 * 60 * 1000)
+    })
+
+    expect(screen.getByRole('alert')).toHaveTextContent('まもなく自動ログアウトします')
+    expect(screen.getByRole('alert')).toHaveTextContent('入力中の内容は保存されません')
+  })
+
+  it('20 分無操作なら認証状態を破棄し、ログイン画面へ戻す', async () => {
+    loginAs(['ROLE_SHIPPER'])
+    renderWithProviders(
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/work" element={<AppLayout />} />
+      </Routes>,
+      ['/work'],
+    )
+
+    act(() => {
+      vi.advanceTimersByTime(20 * 60 * 1000)
+    })
+
+    expect(useAuthStore.getState().isAuthenticated()).toBe(false)
+    expect(screen.getByLabelText('利用者 ID')).toBeInTheDocument()
+  })
+
+  it('操作があれば無操作時間を数え直す', async () => {
+    loginAs(['ROLE_SHIPPER'])
+    renderWithProviders(<AppLayout />, ['/dashboard'])
+
+    act(() => {
+      vi.advanceTimersByTime(14 * 60 * 1000)
+    })
+    fireEvent.keyDown(window, { key: 'Tab' })
+    act(() => {
+      vi.advanceTimersByTime(6 * 60 * 1000)
+    })
+
+    expect(useAuthStore.getState().isAuthenticated()).toBe(true)
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 })
