@@ -1,6 +1,5 @@
 package com.example.billingms.config;
 
-import com.example.billingms.application.internal.CalculateChargeUseCase;
 import com.example.billingms.application.port.BillingSnapshotFinder;
 import com.example.billingms.application.port.InvoiceNumbering;
 import com.example.billingms.application.port.InvoiceRepository;
@@ -92,12 +91,6 @@ public class BillingConfig {
         return new SequenceInvoiceNumbering(invoices, clock);
     }
 
-    @Bean
-    public CalculateChargeUseCase calculateChargeUseCase(BillingSnapshotFinder snapshots,
-            InvoiceRepository invoices, InvoiceNumbering numbering, Clock clock) {
-        return new CalculateChargeUseCase(snapshots, invoices, numbering, clock);
-    }
-
     /**
      * 予約に精算の完了を知らせる ACL（US23-4・[ADR-028] 決定 1）。
      *
@@ -110,26 +103,5 @@ public class BillingConfig {
         return new com.example.billingms.infrastructure.booking.RestBookingSettlementNotifier(
                 RestClient.builder().baseUrl(baseUrl)
                         .requestFactory(bookingRequestFactory()).build());
-    }
-
-    /**
-     * 料金の試算（US01-3・[ADR-028] 決定 6）。
-     *
-     * <p><strong>式は 1 か所にある。</strong>見積が自分で計算すると、荷主に出した
-     * 見積と請求が違う金額になる。
-     */
-    @Bean
-    public com.example.billingms.application.internal.QuoteChargeUseCase quoteChargeUseCase() {
-        return new com.example.billingms.application.internal.QuoteChargeUseCase();
-    }
-
-    /** 精算の処理（US23）。 */
-    @Bean
-    public com.example.billingms.application.internal.SettleInvoiceUseCase settleInvoiceUseCase(
-            InvoiceRepository invoices,
-            com.example.billingms.application.port.BookingSettlementNotifier bookings,
-            Clock clock) {
-        return new com.example.billingms.application.internal.SettleInvoiceUseCase(
-                invoices, bookings, clock);
     }
 }

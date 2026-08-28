@@ -8,6 +8,7 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Optional;
+import org.springframework.stereotype.Service;
 
 /**
  * 予約の日程を訂正する（US06 の訂正・IT6 タスク 0.11）。
@@ -15,6 +16,7 @@ import java.util.Optional;
  * <p>条件協議の結果が「期限を延ばす」だったとき、予約を直せないと再依頼しても同じ結果になる。
  * 直せる範囲と可否の判定は集約が持つ。
  */
+@Service
 public class ReviseBookingScheduleUseCase {
 
     private final CargoRepository cargoes;

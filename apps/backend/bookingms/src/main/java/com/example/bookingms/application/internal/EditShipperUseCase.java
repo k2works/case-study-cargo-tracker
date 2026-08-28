@@ -5,6 +5,7 @@ import com.example.bookingms.domain.model.CorporateContract;
 import com.example.bookingms.domain.model.Shipper;
 import com.example.bookingms.domain.model.ShipperProfile;
 import java.util.Optional;
+import org.springframework.stereotype.Service;
 
 /**
  * 登録済みの荷主の内容を直す（US02 / #550）。
@@ -12,6 +13,7 @@ import java.util.Optional;
  * <p>これまで荷主は登録したら直せなかった。転居・改称・担当者の変更は実際に起こるため、
  * 直せないと**同じ荷主をもう 1 件登録する**ことになり、予約がどちらに紐づくか分からなくなる。
  */
+@Service
 public class EditShipperUseCase {
 
     private final ShipperRepository repository;

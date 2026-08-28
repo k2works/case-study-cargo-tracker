@@ -1,20 +1,12 @@
 package com.example.authms.config;
 
-import com.example.authms.application.internal.LoginUseCase;
-import com.example.authms.application.internal.ManageUserShipperLinkUseCase;
-import com.example.authms.application.internal.UnlockAccountUseCase;
-import com.example.authms.application.internal.FindUserShipperLinkUseCase;
-import com.example.authms.application.port.AuthAuditLogger;
-import com.example.authms.application.port.PasswordVerifier;
-import com.example.authms.application.port.TokenIssuer;
-import com.example.authms.application.port.UserRepository;
 import com.example.shared.auth.AuthenticatedUserFilter;
 import java.time.Clock;
-import java.util.List;
 import java.time.ZoneId;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 
@@ -42,27 +34,5 @@ public class AuthConfig {
     @Bean
     public Clock clock(@Value("${app.business-time-zone:Asia/Tokyo}") String zoneId) {
         return Clock.system(ZoneId.of(zoneId));
-    }
-
-    @Bean
-    public LoginUseCase loginUseCase(UserRepository users, AuthAuditLogger auditLogger,
-            PasswordVerifier passwordVerifier, TokenIssuer tokenIssuer, Clock clock) {
-        return new LoginUseCase(users, auditLogger, passwordVerifier, tokenIssuer, clock);
-    }
-
-    @Bean
-    public UnlockAccountUseCase unlockAccountUseCase(UserRepository users,
-            AuthAuditLogger auditLogger, Clock clock) {
-        return new UnlockAccountUseCase(users, auditLogger, clock);
-    }
-
-    @Bean
-    public FindUserShipperLinkUseCase findUserShipperLinkUseCase(UserRepository users) {
-        return new FindUserShipperLinkUseCase(users);
-    }
-
-    @Bean
-    public ManageUserShipperLinkUseCase manageUserShipperLinkUseCase(UserRepository users) {
-        return new ManageUserShipperLinkUseCase(users);
     }
 }

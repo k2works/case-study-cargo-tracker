@@ -4,11 +4,8 @@ import com.example.shared.auth.AuthenticatedUserFilter;
 import com.example.trackingms.application.internal.AdvanceTrackingUseCase;
 import com.example.trackingms.application.internal.DetectCustomsHoldUseCase;
 import com.example.trackingms.application.internal.DetectMisrouteUseCase;
-import com.example.trackingms.application.internal.ManageTrackingUseCase;
 import com.example.trackingms.application.internal.NoteCancellationUseCase;
-import com.example.trackingms.application.internal.ShipperTrackingQueryUseCase;
 import com.example.trackingms.application.internal.StartTrackingUseCase;
-import com.example.trackingms.application.internal.TrackingLookupUseCase;
 import com.example.trackingms.application.port.LocationRepository;
 import com.example.trackingms.application.port.ShipperCargoSnapshotFinder;
 import com.example.trackingms.application.port.TrackingActivityRepository;
@@ -35,6 +32,8 @@ import com.example.trackingms.infrastructure.persistence.TrackingExceptionMapper
 import com.example.trackingms.infrastructure.persistence.TrackingLookupLogMapper;
 import com.example.trackingms.infrastructure.persistence.TrackingNoticeMapper;
 import com.example.trackingms.interfaces.rest.PublicLookupThrottleFilter;
+import java.time.Clock;
+import java.time.ZoneId;
 import java.util.Map;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
@@ -114,19 +113,6 @@ public class TrackingConfig {
         return new MyBatisLocationRepository(mapper);
     }
 
-    @Bean
-    public StartTrackingUseCase startTrackingUseCase(TrackingActivityRepository activities,
-            LocationRepository locations) {
-        return new StartTrackingUseCase(activities, locations);
-    }
-
-    @Bean
-    public AdvanceTrackingUseCase advanceTrackingUseCase(TrackingActivityRepository activities,
-            LocationRepository locations,
-            TrackingNotifier notifier) {
-        return new AdvanceTrackingUseCase(activities, locations, notifier);
-    }
-
     /**
      * 時刻源は業務タイムゾーンで持つ（[ADR-010]）。
      *
@@ -134,10 +120,15 @@ public class TrackingConfig {
      * 動かさないと気づかない。
      */
     @Bean
-    public java.time.Clock businessClock(
+    public ZoneId businessZone(
             @org.springframework.beans.factory.annotation.Value("${app.business-time-zone}")
             String zone) {
-        return java.time.Clock.system(java.time.ZoneId.of(zone));
+        return ZoneId.of(zone);
+    }
+
+    @Bean
+    public Clock businessClock(ZoneId businessZone) {
+        return Clock.system(businessZone);
     }
 
     @Bean
@@ -160,16 +151,8 @@ public class TrackingConfig {
     @Bean
     public TrackingNotifier trackingNotifier(
             TrackingNoticeRepository notices,
-            java.time.Clock clock) {
+            Clock clock) {
         return new RecordingTrackingNotifier(notices, clock);
-    }
-
-    @Bean
-    public TrackingLookupUseCase trackingLookupUseCase(
-            TrackingActivityRepository activities,
-            TrackingLookupLogger lookupLogger) {
-        return new TrackingLookupUseCase(
-                activities, lookupLogger);
     }
 
     @Bean
@@ -188,29 +171,11 @@ public class TrackingConfig {
                 .requestFactory(internalRequestFactory()).build());
     }
 
-    @Bean
-    public ShipperTrackingQueryUseCase shipperTrackingQueryUseCase(
-            TrackingActivityRepository activities,
-            UserShipperLinkFinder links,
-            ShipperCargoSnapshotFinder snapshots,
-            java.time.Clock clock) {
-        return new ShipperTrackingQueryUseCase(activities, links, snapshots, clock.getZone());
-    }
-
     private static ClientHttpRequestFactory internalRequestFactory() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(java.time.Duration.ofSeconds(2));
         factory.setReadTimeout(java.time.Duration.ofSeconds(5));
         return factory;
-    }
-
-    @Bean
-    public ManageTrackingUseCase manageTrackingUseCase(
-            TrackingActivityRepository activities, LocationRepository locations,
-            TrackingNotifier notifier,
-            java.time.Clock clock) {
-        return new ManageTrackingUseCase(
-                activities, locations, notifier, clock);
     }
 
     @Bean
@@ -268,16 +233,6 @@ public class TrackingConfig {
     }
 
     @Bean
-    public NoteCancellationUseCase
-            noteCancellationUseCase(
-            TrackingActivityRepository activities,
-            TrackingNoticeRepository notices,
-            java.time.Clock clock) {
-        return new NoteCancellationUseCase(
-                activities, notices, clock);
-    }
-
-    @Bean
     public CargoCancelledListener
             cargoCancelledListener(
             NoteCancellationUseCase noteCancellation) {
@@ -309,24 +264,6 @@ public class TrackingConfig {
         return BindingBuilder.bind(customsStatusChangedQueue())
                 .to(cargoHandlingExchange())
                 .with(TrackingEventChannels.CUSTOMS_STATUS_CHANGED);
-    }
-
-    @Bean
-    public DetectMisrouteUseCase
-            detectMisrouteUseCase(
-            TrackingActivityRepository activities,
-            TrackingNotifier notifier) {
-        return new DetectMisrouteUseCase(
-                activities, notifier);
-    }
-
-    @Bean
-    public DetectCustomsHoldUseCase
-            detectCustomsHoldUseCase(
-            TrackingActivityRepository activities,
-            TrackingNotifier notifier) {
-        return new DetectCustomsHoldUseCase(
-                activities, notifier);
     }
 
     @Bean

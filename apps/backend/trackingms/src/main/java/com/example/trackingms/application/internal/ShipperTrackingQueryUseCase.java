@@ -8,8 +8,11 @@ import com.example.trackingms.domain.model.TrackingNumber;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 /** ログインした荷主が、自社貨物だけを追跡する。 */
+@Service
 public class ShipperTrackingQueryUseCase {
 
     public static final int LIST_LIMIT = 100;
@@ -25,6 +28,7 @@ public class ShipperTrackingQueryUseCase {
         this(activities, links, snapshots, ZoneId.of("Asia/Tokyo"));
     }
 
+    @Autowired
     public ShipperTrackingQueryUseCase(TrackingActivityRepository activities,
             UserShipperLinkFinder links, ShipperCargoSnapshotFinder snapshots, ZoneId zone) {
         this.activities = activities;

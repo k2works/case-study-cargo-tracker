@@ -1,5 +1,7 @@
 package com.example.bookingms.application.internal;
 
+import org.springframework.stereotype.Service;
+
 import com.example.bookingms.application.port.CargoRepository;
 import com.example.bookingms.application.port.CargoSummary;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
  * （IT12 レビュー・architect 高 1）。<strong>「入金が 2 件か操作の重複か」を
  * 見分けるのは請求書の側の仕事である</strong>（同じ請求書に二度は確認できない）。
  */
+@Service
 public class SettleBookingUseCase {
 
     private final CargoRepository cargoes;

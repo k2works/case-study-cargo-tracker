@@ -9,6 +9,8 @@ import com.example.bookingms.domain.model.CancellationRequest;
 import com.example.bookingms.domain.model.Cargo;
 import java.time.Clock;
 import java.util.List;
+import org.springframework.stereotype.Service;
+
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -17,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
  * <p><strong>追跡管理者の業務である。</strong>申請するのは営業であり、自分の申請を
  * 自分で承認できると承認の意味が無くなる（認可は入口が守る）。
  */
+@Service
 public class DecideCancellationUseCase {
 
     /** 承認待ちの一覧に出す上限。**朝の一覧としてこれ以上は読めない**。 */

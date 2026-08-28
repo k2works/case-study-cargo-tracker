@@ -14,6 +14,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
+import org.springframework.stereotype.Service;
 
 /**
  * 経路候補算出（US08）。
@@ -22,6 +23,7 @@ import java.util.List;
  * 引き、結果を推奨順に並べる。**制約の判断はドメインにある**（ここに書き足すと、画面と
  * 経路探索が別々の答えを出すようになる）。
  */
+@Service
 public class FindRouteCandidatesUseCase {
 
     private final VoyageRepository voyages;

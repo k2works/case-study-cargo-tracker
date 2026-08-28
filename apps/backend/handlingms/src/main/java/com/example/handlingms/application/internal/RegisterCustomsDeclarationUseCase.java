@@ -1,5 +1,7 @@
 package com.example.handlingms.application.internal;
 
+import org.springframework.stereotype.Service;
+
 import com.example.handlingms.application.port.CargoSnapshotFinder;
 import com.example.handlingms.application.port.CustomsDeclarationRepository;
 import com.example.handlingms.domain.model.CargoBookingId;
@@ -19,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
  * <p><strong>「最新の 1 件」を暗黙に選ぶ実装にしない。</strong>未決着が高々 1 件で
  * あることを登録側で守れば、ガードの「最新」は一意になる。
  */
+@Service
 public class RegisterCustomsDeclarationUseCase {
 
     private final CustomsDeclarationRepository declarations;

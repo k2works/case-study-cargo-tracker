@@ -1,5 +1,7 @@
 package com.example.trackingms.application.internal;
 
+import org.springframework.stereotype.Service;
+
 import com.example.shared.domain.model.Location;
 import com.example.trackingms.application.port.LocationRepository;
 import com.example.trackingms.application.port.TrackingActivityRepository;
@@ -24,6 +26,7 @@ import org.slf4j.LoggerFactory;
  * イベントがデッドレターへ回り、<strong>原因が直るまで後続の荷役も進まなくなる</strong>。
  * 取りこぼしは運用の照会（`dev:k8s:events:missing`）が拾う。
  */
+@Service
 public class AdvanceTrackingUseCase {
 
     private static final Logger log = LoggerFactory.getLogger(AdvanceTrackingUseCase.class);

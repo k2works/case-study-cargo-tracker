@@ -4,6 +4,7 @@ import com.example.bookingms.application.port.CargoRepository;
 import com.example.bookingms.application.port.CargoSummary;
 import com.example.bookingms.domain.model.Cargo;
 import java.util.Optional;
+import org.springframework.stereotype.Service;
 
 /**
  * 条件では経路が組めないことを営業へ差し戻す（US10・[ADR-020] 決定 7）。
@@ -11,6 +12,7 @@ import java.util.Optional;
  * <p>通知の仕組みが無いため、US06（経路設計の依頼）と同じ形で代替する。状態を持たせ、
  * 営業の一覧で気づけるようにする。
  */
+@Service
 public class RequestConsultationUseCase {
 
     private final CargoRepository cargoes;

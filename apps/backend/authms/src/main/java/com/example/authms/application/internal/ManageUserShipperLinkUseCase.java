@@ -5,10 +5,12 @@ import com.example.authms.domain.model.User;
 import com.example.authms.domain.model.UserShipperLink;
 import com.example.shared.auth.Role;
 import java.util.Optional;
+import org.springframework.stereotype.Service;
 
 /**
  * 管理者による利用者と荷主 ID の紐付け管理。
  */
+@Service
 public class ManageUserShipperLinkUseCase {
 
     private final UserRepository users;

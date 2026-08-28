@@ -5,6 +5,7 @@ import com.example.bookingms.application.port.CargoSummary;
 import com.example.bookingms.domain.model.Cargo;
 import java.time.Clock;
 import java.util.Optional;
+import org.springframework.stereotype.Service;
 
 /**
  * 経路を荷主へ通知する（US12・[ADR-021] 決定 1・決定 2）。
@@ -15,6 +16,7 @@ import java.util.Optional;
  * 「通知したという業務上の事実」であり、それを画面が見せる。代替であることは画面とマニュアルに
  * 明記する。
  */
+@Service
 public class NotifyShipperUseCase {
 
     private final CargoRepository cargoes;

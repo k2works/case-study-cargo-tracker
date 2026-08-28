@@ -7,6 +7,8 @@ import com.example.trackingms.domain.model.TrackingActivity;
 import com.example.trackingms.domain.model.TrackingEvent;
 import com.example.trackingms.domain.model.TrackingNumber;
 import java.time.Instant;
+import org.springframework.stereotype.Service;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
  * <p><strong>留置以外では何もしない。</strong>通関済・不可・審査中は、追跡管理者が
  * 動く事象ではない。通関済は引取のガードが通る合図であり、例外ではない。
  */
+@Service
 public class DetectCustomsHoldUseCase {
 
     private static final Logger log = LoggerFactory.getLogger(DetectCustomsHoldUseCase.class);

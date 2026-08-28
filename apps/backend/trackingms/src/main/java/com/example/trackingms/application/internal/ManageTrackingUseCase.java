@@ -16,6 +16,8 @@ import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.stereotype.Service;
+
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -25,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
  * トランザクションになると、状態は動いたのに経過に出ない行ができ、荷主は「いつ変わったか」を
  * 読めない（IT6・IT7 と同じ形）。
  */
+@Service
 public class ManageTrackingUseCase {
 
     private final TrackingActivityRepository activities;

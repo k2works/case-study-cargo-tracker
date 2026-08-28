@@ -17,6 +17,8 @@ import com.example.handlingms.domain.model.HandlingVoyageNumber;
 import com.example.shared.domain.model.Location;
 import java.time.Clock;
 import java.util.Optional;
+import org.springframework.stereotype.Service;
+
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -26,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
  * 保存とイベントの発行が別のトランザクションになり、[ADR-022] 決定 6 の「コミット後に
  * 発行する」機構が素通りする（IT6 で実際に起きた形）。
  */
+@Service
 public class RegisterHandlingActivityUseCase {
 
     private final CargoSnapshotFinder cargoes;

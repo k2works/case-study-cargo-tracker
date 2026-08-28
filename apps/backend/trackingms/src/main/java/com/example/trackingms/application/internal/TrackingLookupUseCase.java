@@ -7,6 +7,7 @@ import com.example.trackingms.domain.model.TrackingEvent;
 import com.example.trackingms.domain.model.TrackingNumber;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.stereotype.Service;
 
 /**
  * 追跡を照会する（US18・[ADR-024] 決定 5・7）。
@@ -14,6 +15,7 @@ import java.util.Optional;
  * <p><strong>認証の外にある唯一の業務経路である。</strong>照会は成否に関わらず記録する
  * ——見つからなかった照会こそ、総当たりを見つける材料である（決定 7）。
  */
+@Service
 public class TrackingLookupUseCase {
 
     /**

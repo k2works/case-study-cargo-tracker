@@ -7,6 +7,7 @@ import com.example.bookingms.domain.model.CargoType;
 import com.example.bookingms.domain.model.RoutingStatus;
 import java.util.Collection;
 import java.util.List;
+import org.springframework.stereotype.Service;
 
 /**
  * 貨物予約を探す。
@@ -14,6 +15,7 @@ import java.util.List;
  * <p>件数の上限を必ず置く。上限が無いと、予約が増えた日に一覧が開かなくなる。
  * 上限で切ったことは総件数と合わせて示す（黙って切ると「全件見た」と受け取られる）。
  */
+@Service
 public class SearchCargoUseCase {
 
     /** 一覧に返す件数の上限。 */

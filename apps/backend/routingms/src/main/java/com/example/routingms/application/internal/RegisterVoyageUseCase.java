@@ -5,6 +5,7 @@ import com.example.routingms.domain.model.Voyage;
 import com.example.routingms.domain.model.VoyageDifference;
 import java.time.ZoneId;
 import java.util.Optional;
+import org.springframework.stereotype.Service;
 
 /**
  * 航海スケジュールの登録と更新（US24・US25）。
@@ -13,6 +14,7 @@ import java.util.Optional;
  * スケジュールの差し替えであり、そこで止めると別の番号を作る（同じ航海が 2 つになる）か、
  * 一覧から探し直すことになる。差分を見せて上書きを選ばせる。
  */
+@Service
 public class RegisterVoyageUseCase {
 
     private final VoyageRepository voyages;

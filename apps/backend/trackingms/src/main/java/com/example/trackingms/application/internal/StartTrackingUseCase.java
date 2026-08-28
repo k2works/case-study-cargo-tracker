@@ -7,6 +7,7 @@ import com.example.trackingms.domain.model.TrackingActivity;
 import com.example.trackingms.domain.model.TrackingBookingId;
 import com.example.trackingms.domain.model.TrackingNumber;
 import java.time.LocalDate;
+import org.springframework.stereotype.Service;
 
 /**
  * 追跡を始める（US14-3）。
@@ -17,6 +18,7 @@ import java.time.LocalDate;
  * <p><strong>地点はマスタから引く</strong>（[ADR-014]）。イベントが運ぶのは UN/LOCODE だけで、
  * 名称はこちらのマスタが持つ。相手が返した名称をそのまま使うと、地点名の直しが 2 か所に分かれる。
  */
+@Service
 public class StartTrackingUseCase {
 
     private final TrackingActivityRepository activities;

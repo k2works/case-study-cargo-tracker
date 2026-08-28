@@ -4,6 +4,7 @@ import com.example.bookingms.application.port.CargoRepository;
 import com.example.bookingms.application.port.CargoSummary;
 import com.example.bookingms.domain.model.Cargo;
 import java.util.Optional;
+import org.springframework.stereotype.Service;
 
 /**
  * 経路設計を依頼する（US06）。
@@ -12,6 +13,7 @@ import java.util.Optional;
  * 自分のダッシュボードで「経路設計待ち」に気づけるようにする。気づく手段だけを置いて
  * そこから対象へ行けないと、件数を見ても仕事は進まない。
  */
+@Service
 public class RequestRoutingUseCase {
 
     private final CargoRepository cargoes;

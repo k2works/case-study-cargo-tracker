@@ -8,6 +8,8 @@ import com.example.bookingms.application.port.CargoSummary;
 import com.example.bookingms.domain.model.CancellationRequest;
 import com.example.bookingms.domain.model.Cargo;
 import java.time.Clock;
+import org.springframework.stereotype.Service;
+
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -20,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
  * <p><strong>判断は集約が答える</strong>（{@code Cargo#isInTransit}）。ここで状態名を
  * 見比べると、規則が 2 か所に分かれる。
  */
+@Service
 public class RequestCancellationUseCase {
 
     private final CargoRepository cargoes;

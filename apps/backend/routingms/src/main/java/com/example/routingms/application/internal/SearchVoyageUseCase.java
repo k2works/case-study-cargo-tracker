@@ -6,6 +6,7 @@ import com.example.routingms.domain.model.Voyage;
 import com.example.routingms.domain.model.VoyageNumber;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.stereotype.Service;
 
 /**
  * 航海スケジュールの検索（US07）。
@@ -14,6 +15,7 @@ import java.util.Optional;
  * 原因が「増えたこと」だと気づけない。そして<strong>切ったことを黙らない</strong>。
  * 黙って切ると、経路設計者は「条件に合う航海はこれで全部だ」と読む。
  */
+@Service
 public class SearchVoyageUseCase {
 
     /** 一覧の上限。画面で目を通せる範囲に合わせる。 */

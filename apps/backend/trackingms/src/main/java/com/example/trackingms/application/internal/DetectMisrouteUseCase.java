@@ -7,6 +7,8 @@ import com.example.trackingms.domain.model.TrackingActivity;
 import com.example.trackingms.domain.model.TrackingEvent;
 import com.example.trackingms.domain.model.TrackingNumber;
 import java.time.Instant;
+import org.springframework.stereotype.Service;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
  * ——通関は「状態が変わったとき」、誤配は<strong>荷役の記録そのもの</strong>である
  * （あとから誰かが判断するものではない）。
  */
+@Service
 public class DetectMisrouteUseCase {
 
     private static final Logger log = LoggerFactory.getLogger(DetectMisrouteUseCase.class);

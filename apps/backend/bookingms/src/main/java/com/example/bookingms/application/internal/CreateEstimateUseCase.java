@@ -19,6 +19,8 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import org.springframework.stereotype.Service;
+
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -30,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
  * <p><strong>候補は routingms から引く</strong>（US09 の ACL を再利用）。終盤で
  * 新しい結合方式を発明しない。
  */
+@Service
 public class CreateEstimateUseCase {
 
     private final RouteCandidateFinder routes;

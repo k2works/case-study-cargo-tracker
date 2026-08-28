@@ -4,6 +4,8 @@ import com.example.bookingms.application.port.CargoRepository;
 import com.example.bookingms.application.port.CargoSummary;
 import com.example.bookingms.domain.model.Cargo;
 import java.time.Instant;
+import org.springframework.stereotype.Service;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
  * 処理されなくなる。ここが守るのは「予約一覧の見え方」であり、止めるほどのものではない
  * （{@code AdvanceTrackingUseCase} と同じ立場）。
  */
+@Service
 public class AdvanceBookingUseCase {
 
     private static final Logger log = LoggerFactory.getLogger(AdvanceBookingUseCase.class);

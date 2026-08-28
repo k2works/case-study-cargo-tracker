@@ -21,6 +21,8 @@ import com.example.billingms.domain.model.TaxRate;
 import com.example.billingms.domain.model.TransportCharge;
 import java.time.Clock;
 import java.util.List;
+import org.springframework.stereotype.Service;
+
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -33,6 +35,7 @@ import org.springframework.transaction.annotation.Transactional;
  * <p><strong>算出では何も保存しない</strong>（決定 3）。下書きを持つと、下書きのまま
  * 忘れられた精算書が溜まる。
  */
+@Service
 public class CalculateChargeUseCase {
 
     private final BillingSnapshotFinder snapshots;

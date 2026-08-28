@@ -1,10 +1,5 @@
 package com.example.routingms.config;
 
-import com.example.routingms.application.internal.FindRouteCandidatesUseCase;
-import com.example.routingms.application.internal.RegisterVoyageUseCase;
-import com.example.routingms.application.internal.SearchVoyageUseCase;
-import com.example.routingms.application.port.LocationRepository;
-import com.example.routingms.application.port.VoyageRepository;
 import com.example.shared.auth.AuthenticatedUserFilter;
 import java.time.Clock;
 import java.time.ZoneId;
@@ -32,23 +27,15 @@ public class RoutingConfig {
     }
 
     @Bean
-    public RegisterVoyageUseCase registerVoyageUseCase(VoyageRepository voyages,
+    public ZoneId businessZone(
             @Value("${app.business-time-zone:Asia/Tokyo}") String businessZone) {
-        return new RegisterVoyageUseCase(voyages, ZoneId.of(businessZone));
+        return ZoneId.of(businessZone);
     }
 
     @Bean
-    public SearchVoyageUseCase searchVoyageUseCase(VoyageRepository voyages) {
-        return new SearchVoyageUseCase(voyages);
-    }
-
-    @Bean
-    public FindRouteCandidatesUseCase findRouteCandidatesUseCase(VoyageRepository voyages,
-            LocationRepository locations,
-            @Value("${app.business-time-zone:Asia/Tokyo}") String businessZone) {
-        ZoneId zone = ZoneId.of(businessZone);
+    public Clock clock(ZoneId businessZone) {
         // 「いま」は業務タイムゾーンの時計で決める。UTC で判断すると、時差の分だけ
-        // 「もう出た / まだ出ていない」の境目がずれる
-        return new FindRouteCandidatesUseCase(voyages, locations, zone, Clock.system(zone));
+        // 「もう出た / まだ出ていない」の境目がずれる。
+        return Clock.system(businessZone);
     }
 }

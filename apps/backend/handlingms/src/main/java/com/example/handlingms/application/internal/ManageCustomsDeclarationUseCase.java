@@ -12,6 +12,8 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.stereotype.Service;
+
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -20,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
  * <p><strong>「今日」は注入した時計から決める</strong>（[ADR-010]）。UTC で判断すると、
  * 時差の分だけ督促が早まったり遅れたりする。テストも同じ時計を使う。
  */
+@Service
 public class ManageCustomsDeclarationUseCase {
 
     /** 一覧に出す上限。**朝の一覧としてこれ以上は読めない**。 */

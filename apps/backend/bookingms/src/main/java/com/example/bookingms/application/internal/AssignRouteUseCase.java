@@ -11,6 +11,7 @@ import com.example.bookingms.domain.model.RouteSpecification;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.stereotype.Service;
 
 /**
  * 選んだ経路を予約に割り当てる（US09 / US11・[ADR-019]・[ADR-020]）。
@@ -18,6 +19,7 @@ import java.util.Optional;
  * <p>ここがやるのは 3 つである。**選んだ経路がまだ成立するか**を確かめ、集約に割り当てさせ、
  * 保存する。状態遷移と要件の検査は集約が持つ（ここに書き足すと、判定が 2 か所になる）。
  */
+@Service
 public class AssignRouteUseCase {
 
     private final CargoRepository cargoes;

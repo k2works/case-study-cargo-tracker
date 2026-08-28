@@ -8,6 +8,7 @@ import com.example.bookingms.domain.model.Cargo;
 import com.example.bookingms.domain.model.TrackingNumber;
 import java.time.Clock;
 import java.util.Optional;
+import org.springframework.stereotype.Service;
 
 /**
  * 追跡番号を発行する（US14・[ADR-021]・[ADR-022]）。
@@ -18,6 +19,7 @@ import java.util.Optional;
  * <p>発行できたら他のサービスへ伝える（[ADR-022] 決定 1）。<strong>伝えるのは出力ポート越し</strong>
  * であり、ここは AMQP を知らない。実際に流れるのはコミットのあとである（決定 6）。
  */
+@Service
 public class IssueTrackingNumberUseCase {
 
     private final CargoRepository cargoes;

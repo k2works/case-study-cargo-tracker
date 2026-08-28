@@ -12,6 +12,7 @@ import com.example.bookingms.domain.model.TemperatureRequirement;
 import com.example.shared.domain.model.Location;
 import java.time.Clock;
 import java.time.ZoneId;
+import org.springframework.stereotype.Service;
 
 /**
  * 貨物予約を登録する。
@@ -19,6 +20,7 @@ import java.time.ZoneId;
  * <p>荷主と地点が実在することはここで確かめる。集約は「実在するもの同士の組み合わせ」の
  * 妥当性だけを見る。存在しない荷主 ID を通すと、誰の貨物か分からない予約が保存される。
  */
+@Service
 public class BookCargoUseCase {
 
     private final CargoRepository cargoes;

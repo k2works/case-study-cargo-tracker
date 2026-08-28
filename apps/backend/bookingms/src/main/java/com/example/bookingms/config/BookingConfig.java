@@ -1,22 +1,11 @@
 package com.example.bookingms.config;
 
-import com.example.bookingms.application.internal.AssignRouteUseCase;
-import com.example.bookingms.application.internal.BookCargoUseCase;
-import com.example.bookingms.application.internal.EditShipperUseCase;
-import com.example.bookingms.application.internal.RegisterShipperUseCase;
-import com.example.bookingms.application.internal.RequestConsultationUseCase;
-import com.example.bookingms.application.internal.ConfirmBookingUseCase;
-import com.example.bookingms.application.internal.IssueTrackingNumberUseCase;
-import com.example.bookingms.application.internal.NotifyShipperUseCase;
-import com.example.bookingms.application.internal.RequestRoutingUseCase;
-import com.example.bookingms.application.internal.ReviseBookingScheduleUseCase;
-import com.example.bookingms.application.internal.ReturnToRoutingUseCase;
-import com.example.bookingms.application.port.CargoEventNotifier;
 import com.example.bookingms.application.internal.AdvanceBookingUseCase;
-import com.example.bookingms.application.internal.DecideCancellationUseCase;
-import com.example.bookingms.application.internal.RequestCancellationUseCase;
-import com.example.bookingms.application.port.CancellationRequestRepository;
 import com.example.bookingms.application.port.BillableCargoFinder;
+import com.example.bookingms.application.port.CargoEventNotifier;
+import com.example.bookingms.application.port.CancellationRequestRepository;
+import com.example.bookingms.application.port.LocationRepository;
+import com.example.bookingms.application.port.RouteCandidateFinder;
 import com.example.bookingms.infrastructure.persistence.BillableCargoMapper;
 import com.example.bookingms.infrastructure.persistence.CancellationRequestMapper;
 import com.example.bookingms.infrastructure.persistence.MyBatisBillableCargoFinder;
@@ -33,21 +22,15 @@ import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.JacksonJsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
-import com.example.bookingms.application.internal.SearchCargoUseCase;
-import com.example.bookingms.application.internal.SearchShipperUseCase;
-import com.example.bookingms.application.port.CargoRepository;
-import com.example.bookingms.application.port.LocationRepository;
-import com.example.bookingms.application.port.RouteCandidateFinder;
-import com.example.bookingms.application.port.ShipperRepository;
 import com.example.bookingms.infrastructure.routing.RestRouteCandidateFinder;
 import com.example.shared.auth.AuthenticatedUserFilter;
 import java.time.Clock;
 import java.time.Duration;
-import java.util.Map;
 import java.time.ZoneId;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.http.client.ClientHttpRequestFactory;
@@ -138,87 +121,6 @@ public class BookingConfig {
             Clock clock) {
         return new com.example.bookingms.infrastructure.persistence.MyBatisEstimateRepository(
                 estimates, clock);
-    }
-
-    /** 輸送見積を作る（US01）。 */
-    @Bean
-    public com.example.bookingms.application.internal.CreateEstimateUseCase createEstimateUseCase(
-            RouteCandidateFinder routes,
-            com.example.bookingms.application.port.ChargeQuoteFinder quotes,
-            LocationRepository locations,
-            com.example.bookingms.application.port.EstimateRepository estimates,
-            Clock clock) {
-        return new com.example.bookingms.application.internal.CreateEstimateUseCase(
-                routes, quotes, locations, estimates, clock);
-    }
-
-    @Bean
-    public RequestConsultationUseCase requestConsultationUseCase(CargoRepository cargoes) {
-        return new RequestConsultationUseCase(cargoes);
-    }
-
-    @Bean
-    public AssignRouteUseCase assignRouteUseCase(CargoRepository cargoes,
-            LocationRepository locations, RouteCandidateFinder routeCandidates) {
-        return new AssignRouteUseCase(cargoes, locations, routeCandidates);
-    }
-
-    @Bean
-    public RegisterShipperUseCase registerShipperUseCase(ShipperRepository repository) {
-        return new RegisterShipperUseCase(repository);
-    }
-
-    @Bean
-    public EditShipperUseCase editShipperUseCase(ShipperRepository repository) {
-        return new EditShipperUseCase(repository);
-    }
-
-    @Bean
-    public SearchShipperUseCase searchShipperUseCase(ShipperRepository repository) {
-        return new SearchShipperUseCase(repository);
-    }
-
-    @Bean
-    public BookCargoUseCase bookCargoUseCase(CargoRepository cargoes, ShipperRepository shippers,
-            LocationRepository locations, Clock clock) {
-        return new BookCargoUseCase(cargoes, shippers, locations, clock);
-    }
-
-    @Bean
-    public SearchCargoUseCase searchCargoUseCase(CargoRepository cargoes) {
-        return new SearchCargoUseCase(cargoes);
-    }
-
-    @Bean
-    public RequestRoutingUseCase requestRoutingUseCase(CargoRepository cargoes) {
-        return new RequestRoutingUseCase(cargoes);
-    }
-
-    @Bean
-    public ReviseBookingScheduleUseCase reviseBookingScheduleUseCase(CargoRepository cargoes,
-            LocationRepository locations, Clock clock) {
-        return new ReviseBookingScheduleUseCase(cargoes, locations, clock);
-    }
-
-    @Bean
-    public NotifyShipperUseCase notifyShipperUseCase(CargoRepository cargoes, Clock clock) {
-        return new NotifyShipperUseCase(cargoes, clock);
-    }
-
-    @Bean
-    public ConfirmBookingUseCase confirmBookingUseCase(CargoRepository cargoes) {
-        return new ConfirmBookingUseCase(cargoes);
-    }
-
-    @Bean
-    public ReturnToRoutingUseCase returnToRoutingUseCase(CargoRepository cargoes) {
-        return new ReturnToRoutingUseCase(cargoes);
-    }
-
-    @Bean
-    public IssueTrackingNumberUseCase issueTrackingNumberUseCase(CargoRepository cargoes,
-            CargoEventNotifier events, Clock clock) {
-        return new IssueTrackingNumberUseCase(cargoes, events, clock);
     }
 
     /**
@@ -344,31 +246,6 @@ public class BookingConfig {
     @Bean
     public BillableCargoFinder billableCargoFinder(BillableCargoMapper mapper) {
         return new MyBatisBillableCargoFinder(mapper);
-    }
-
-    @Bean
-    public RequestCancellationUseCase requestCancellationUseCase(CargoRepository cargoes,
-            CancellationRequestRepository cancellations, CargoEventNotifier events, Clock clock) {
-        return new RequestCancellationUseCase(cargoes, cancellations, events, clock);
-    }
-
-    @Bean
-    public DecideCancellationUseCase decideCancellationUseCase(CargoRepository cargoes,
-            CancellationRequestRepository cancellations,
-            com.example.bookingms.application.port.CargoEventNotifier events, Clock clock) {
-        return new DecideCancellationUseCase(cargoes, cancellations, events, clock);
-    }
-
-    /** 精算の完了を受けて予約を閉じる（US23-4・[ADR-028] 決定 1）。 */
-    @Bean
-    public com.example.bookingms.application.internal.SettleBookingUseCase settleBookingUseCase(
-            CargoRepository cargoes) {
-        return new com.example.bookingms.application.internal.SettleBookingUseCase(cargoes);
-    }
-
-    @Bean
-    public AdvanceBookingUseCase advanceBookingUseCase(CargoRepository cargoes) {
-        return new AdvanceBookingUseCase(cargoes);
     }
 
     @Bean

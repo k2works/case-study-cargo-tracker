@@ -9,6 +9,7 @@ import com.example.authms.domain.model.User;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Optional;
+import org.springframework.stereotype.Service;
 
 /**
  * ログイン。
@@ -17,6 +18,7 @@ import java.util.Optional;
  * 区別させない。区別できると画面や応答時間の差から「その利用者 ID は存在する」ことが漏れる（US31）。
  * 何が起きたかは監査ログにだけ残す。
  */
+@Service
 public class LoginUseCase {
 
     private final UserRepository users;

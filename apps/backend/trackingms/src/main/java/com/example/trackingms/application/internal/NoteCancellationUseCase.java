@@ -5,6 +5,8 @@ import com.example.trackingms.application.port.TrackingNoticeRepository;
 import com.example.trackingms.domain.model.TrackingNotice;
 import com.example.trackingms.domain.model.TrackingNumber;
 import java.time.Clock;
+import org.springframework.stereotype.Service;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
  * <p><strong>知らない追跡番号では止まらない。</strong>例外にすると、後続のイベントも
  * 処理されなくなる。
  */
+@Service
 public class NoteCancellationUseCase {
 
     private static final Logger log = LoggerFactory.getLogger(NoteCancellationUseCase.class);

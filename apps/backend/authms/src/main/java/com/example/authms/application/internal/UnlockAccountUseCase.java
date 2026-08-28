@@ -7,6 +7,7 @@ import com.example.authms.domain.model.User;
 import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.stereotype.Service;
 
 /**
  * 管理者がロックを解除する（US32）。
@@ -15,6 +16,7 @@ import java.util.Optional;
  * （US31）、何が起きたかを追える場所は監査ログだけである。そこに「誰が解除したか」が
  * 無いと、あとから誰にも説明できない。
  */
+@Service
 public class UnlockAccountUseCase {
 
     private final UserRepository users;

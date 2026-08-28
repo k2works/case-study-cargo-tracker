@@ -9,6 +9,8 @@ import com.example.billingms.domain.model.PaymentMethod;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
+import org.springframework.stereotype.Service;
+
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -25,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
  * 並ぶ（キャンセル料を締めるため）が、予約の側は引取済からしか「精算済」へ進めない
  * ——運んでいない予約に精算済は無い。
  */
+@Service
 public class SettleInvoiceUseCase {
 
     private final InvoiceRepository invoices;

@@ -7,6 +7,7 @@ import com.example.billingms.domain.model.PortRegion;
 import com.example.billingms.domain.model.TransportCharge;
 import java.math.BigDecimal;
 import java.util.List;
+import org.springframework.stereotype.Service;
 
 /**
  * 料金の試算（US01-3・[ADR-028] 決定 6）。
@@ -21,6 +22,7 @@ import java.util.List;
  * 決まっていても契約割引は請求の話である。<strong>基本料金だけを返す</strong>
  * ——「概算」であることを金額そのもので示す。
  */
+@Service
 public class QuoteChargeUseCase {
 
     /**

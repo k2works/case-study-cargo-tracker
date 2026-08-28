@@ -1,9 +1,6 @@
 package com.example.handlingms.config;
 
-import com.example.handlingms.application.internal.RegisterHandlingActivityUseCase;
 import com.example.handlingms.application.port.CargoSnapshotFinder;
-import com.example.handlingms.application.internal.ManageCustomsDeclarationUseCase;
-import com.example.handlingms.application.internal.RegisterCustomsDeclarationUseCase;
 import com.example.handlingms.application.port.CustomsDeclarationRepository;
 import com.example.handlingms.application.port.HandlingActivityRepository;
 import com.example.handlingms.application.port.LocationRepository;
@@ -153,19 +150,6 @@ public class HandlingConfig {
     }
 
     @Bean
-    public RegisterCustomsDeclarationUseCase registerCustomsDeclarationUseCase(
-            CustomsDeclarationRepository declarations, CargoSnapshotFinder cargoes) {
-        return new RegisterCustomsDeclarationUseCase(declarations, cargoes);
-    }
-
-    @Bean
-    public ManageCustomsDeclarationUseCase manageCustomsDeclarationUseCase(
-            CustomsDeclarationRepository declarations, HandlingEventNotifier notifier,
-            Clock clock) {
-        return new ManageCustomsDeclarationUseCase(declarations, notifier, clock);
-    }
-
-    @Bean
     public CustomsDeclarationRepository customsDeclarationRepository(
             CustomsDeclarationMapper declarations, CustomsStatusHistoryMapper histories) {
         return new MyBatisCustomsDeclarationRepository(declarations, histories);
@@ -180,14 +164,5 @@ public class HandlingConfig {
     @Bean
     public Clock businessClock(@Value("${app.business-time-zone}") String zone) {
         return Clock.system(ZoneId.of(zone));
-    }
-
-    @Bean
-    public RegisterHandlingActivityUseCase registerHandlingActivityUseCase(
-            CargoSnapshotFinder cargoes, LocationRepository locations,
-            HandlingActivityRepository activities, CustomsDeclarationRepository declarations,
-            HandlingEventNotifier notifier, Clock clock) {
-        return new RegisterHandlingActivityUseCase(cargoes, locations, activities, declarations,
-                notifier, clock);
     }
 }

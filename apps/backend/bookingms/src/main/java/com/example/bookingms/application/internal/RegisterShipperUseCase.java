@@ -4,6 +4,7 @@ import com.example.bookingms.application.port.ShipperRepository;
 import com.example.bookingms.domain.model.EmailAddress;
 import com.example.bookingms.domain.model.Shipper;
 import java.util.Optional;
+import org.springframework.stereotype.Service;
 
 /**
  * 荷主を登録する。
@@ -12,6 +13,7 @@ import java.util.Optional;
  * {@code register(command, true)} という呼び出しは、呼び出し側を読んだだけでは
  * 何が true なのか分からない。
  */
+@Service
 public class RegisterShipperUseCase {
 
     private final ShipperRepository repository;
