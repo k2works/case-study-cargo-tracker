@@ -1,4 +1,4 @@
-import { expect, type APIRequestContext, test } from '@playwright/test'
+import { expect, type APIRequestContext, type Page, test } from '@playwright/test'
 import { businessLocalDateTime, utcDate } from './support/business-time.js'
 
 type AuthenticatedApi = {
@@ -6,22 +6,25 @@ type AuthenticatedApi = {
   shipperId: number
 }
 
+const API_BASE_URL = process.env.E2E_API_BASE_URL ?? ''
+const api = (path: string) => `${API_BASE_URL}${path}`
+
 async function salesApi(request: APIRequestContext): Promise<AuthenticatedApi> {
-  const login = await request.post('/api/v1/auth/login', {
+  const login = await request.post(api('/api/v1/auth/login'), {
     data: { userId: 'sales01', password: 'password' },
   })
   expect(login.ok()).toBeTruthy()
   const session = await login.json()
   const headers = { Authorization: `Bearer ${session.token}` }
 
-  const shippers = await request.get('/api/v1/shippers', { headers })
+  const shippers = await request.get(api('/api/v1/shippers'), { headers })
   expect(shippers.ok()).toBeTruthy()
   const existing = await shippers.json()
   if (existing.length > 0) {
     return { headers, shipperId: existing[0].id }
   }
 
-  const registered = await request.post('/api/v1/shippers', {
+  const registered = await request.post(api('/api/v1/shippers'), {
     headers,
     data: {
       type: 'INDIVIDUAL',
@@ -39,12 +42,73 @@ async function salesApi(request: APIRequestContext): Promise<AuthenticatedApi> {
   return { headers, shipperId: shipper.id }
 }
 
-async function ensureBookingWaitingForRouting(request: APIRequestContext): Promise<string> {
-  const { headers, shipperId } = await salesApi(request)
-  const booked = await request.post('/api/v1/bookings', {
+async function logInPageWithApiSession(
+  page: Page,
+  request: APIRequestContext,
+  userId: string,
+): Promise<void> {
+  const login = await request.post(api('/api/v1/auth/login'), {
+    data: { userId, password: 'password' },
+  })
+  expect(login.ok()).toBeTruthy()
+  const session = await login.json()
+  await page.addInitScript((value) => {
+    sessionStorage.setItem(
+      'cargo-tracker-auth',
+      JSON.stringify({
+        state: {
+          token: value.token,
+          user: {
+            userId: value.userId,
+            displayName: value.displayName,
+            roles: value.roles,
+          },
+        },
+        version: 0,
+      }),
+    )
+  }, session)
+  await page.goto('/dashboard')
+  await expect(page).toHaveURL(/\/dashboard/)
+}
+
+async function ensureBookingShipperForLinkedUser(request: APIRequestContext): Promise<void> {
+  const { headers } = await salesApi(request)
+  const linked = await request.get(api('/api/v1/shippers/1'), { headers })
+  expect(
+    linked.ok(),
+    'shipper01 は authms で shipper_id=1 に紐付いている。bookingms の荷主 1 が必要',
+  ).toBeTruthy()
+}
+
+async function registerAdditionalShipper(request: APIRequestContext): Promise<number> {
+  const { headers } = await salesApi(request)
+  const registered = await request.post(api('/api/v1/shippers'), {
     headers,
     data: {
-      shipperId,
+      type: 'INDIVIDUAL',
+      name: '実 E2E 他社荷主',
+      email: `real-e2e-other-${Date.now()}@example.com`,
+      address: '大阪府大阪市北区 1-1-1',
+      phone: '06-0000-0000',
+      contractNumber: null,
+      discountRatePercent: null,
+      registerAnyway: true,
+    },
+  })
+  expect(registered.ok()).toBeTruthy()
+  return (await registered.json()).id as number
+}
+
+async function ensureBookingWaitingForRouting(
+  request: APIRequestContext,
+  shipperId?: number,
+): Promise<string> {
+  const sales = await salesApi(request)
+  const booked = await request.post(api('/api/v1/bookings'), {
+    headers: sales.headers,
+    data: {
+      shipperId: shipperId ?? sales.shipperId,
       type: 'GENERAL',
       weightKg: 900,
       quantity: null,
@@ -67,8 +131,8 @@ async function ensureBookingWaitingForRouting(request: APIRequestContext): Promi
   const cargo = await booked.json()
 
   const requested = await request.post(
-    `/api/v1/bookings/${encodeURIComponent(cargo.bookingId)}/routing-request`,
-    { headers, data: {} },
+    api(`/api/v1/bookings/${encodeURIComponent(cargo.bookingId)}/routing-request`),
+    { headers: sales.headers, data: {} },
   )
   expect(requested.ok()).toBeTruthy()
   return cargo.bookingId
@@ -88,18 +152,20 @@ async function ensureTrackedCargo(request: APIRequestContext): Promise<string> {
 /** 追跡番号と、割り当てた航海番号（積込の記録に要る）。 */
 async function ensureTrackedVoyage(
   request: APIRequestContext,
+  shipperId?: number,
 ): Promise<{ trackingNumber: string; voyageNumber: string; bookingId: string }> {
-  const bookingId = await ensureBookingWaitingForRouting(request)
+  const bookingId = await ensureBookingWaitingForRouting(request, shipperId)
 
-  const routing = await request.post('/api/v1/auth/login', {
+  const routing = await request.post(api('/api/v1/auth/login'), {
     data: { userId: 'routing01', password: 'password' },
   })
   expect(routing.ok()).toBeTruthy()
   const routingHeaders = { Authorization: `Bearer ${(await routing.json()).token}` }
 
   const routes = await request.get(
-    `/api/v1/routes?origin=JPTYO&destination=USLAX`
+    api(`/api/v1/routes?origin=JPTYO&destination=USLAX`
       + `&deadline=${businessLocalDateTime(120, '00:00').slice(0, 10)}&cargoType=GENERAL`,
+    ),
     { headers: routingHeaders },
   )
   expect(routes.ok()).toBeTruthy()
@@ -115,7 +181,7 @@ async function ensureTrackedVoyage(
   // **スキップせず作る**（IT5 の Try 2）。まっさらな DB では航海が 1 本も無い。
   // 「候補が無いので飛ばす」にすると、通っていないことに気づけない。
   if (candidates.length === 0) {
-    const registered = await request.post('/api/v1/voyages', {
+    const registered = await request.post(api('/api/v1/voyages'), {
       headers: routingHeaders,
       data: {
         voyageNumber: `V-E2E-${Date.now()}`,
@@ -134,8 +200,9 @@ async function ensureTrackedVoyage(
     })
     expect(registered.ok(), '航海を登録できない').toBeTruthy()
     const retried = await request.get(
-      `/api/v1/routes?origin=JPTYO&destination=USLAX`
+      api(`/api/v1/routes?origin=JPTYO&destination=USLAX`
         + `&deadline=${businessLocalDateTime(120, '00:00').slice(0, 10)}&cargoType=GENERAL`,
+      ),
       { headers: routingHeaders },
     )
     expect(retried.ok()).toBeTruthy()
@@ -146,7 +213,7 @@ async function ensureTrackedVoyage(
     '航海を登録しても候補が出ない。経路探索の条件を確認すること',
   ).toBeGreaterThan(0)
 
-  const assigned = await request.put(`/api/v1/bookings/${bookingId}/route`, {
+  const assigned = await request.put(api(`/api/v1/bookings/${bookingId}/route`), {
     headers: routingHeaders,
     data: {
       legs: candidates[0].legs.map((l) => ({
@@ -162,18 +229,18 @@ async function ensureTrackedVoyage(
   expect(assigned.status()).toBe(200)
 
   const { headers: salesHeaders } = await salesApi(request)
-  const notified = await request.post(`/api/v1/bookings/${bookingId}/route-notification`, {
+  const notified = await request.post(api(`/api/v1/bookings/${bookingId}/route-notification`), {
     headers: salesHeaders,
     data: {},
   })
   expect(notified.ok()).toBeTruthy()
-  const confirmed = await request.put(`/api/v1/bookings/${bookingId}/confirm`, {
+  const confirmed = await request.put(api(`/api/v1/bookings/${bookingId}/confirm`), {
     headers: salesHeaders,
     data: {},
   })
   expect(confirmed.ok()).toBeTruthy()
 
-  const issued = await request.post(`/api/v1/bookings/${bookingId}/tracking-number`, {
+  const issued = await request.post(api(`/api/v1/bookings/${bookingId}/tracking-number`), {
     headers: routingHeaders,
     data: {},
   })
@@ -745,6 +812,37 @@ test.describe('提示から追跡番号の発行まで（実バックエンド�
       data: { userId: 'shipper01', password: 'password' },
     })
     expect(afterUnlock.ok(), '解除したのにログインできない').toBeTruthy()
+  })
+})
+
+test.describe('IT13 実環境（荷主向け貨物追跡）', () => {
+  test('荷主は実バックエンドでも自社貨物だけを一覧と詳細で見られる', async ({
+    page,
+    request,
+  }) => {
+    await ensureBookingShipperForLinkedUser(request)
+    const own = await ensureTrackedVoyage(request, 1)
+    const otherShipperId = await registerAdditionalShipper(request)
+    const other = await ensureTrackedVoyage(request, otherShipperId)
+
+    await logInPageWithApiSession(page, request, 'shipper01')
+
+    await expect(async () => {
+      await page.goto('/dashboard')
+      await page.getByRole('link', { name: '自分の貨物を見る' }).click()
+      await expect(page).toHaveURL(/\/shipper\/tracking$/)
+      await expect(page.getByRole('heading', { name: '自分の貨物' })).toBeVisible()
+      await expect(page.getByRole('link', { name: own.trackingNumber })).toBeVisible()
+    }).toPass({ timeout: 20_000 })
+    await expect(page.getByText(other.trackingNumber)).toHaveCount(0)
+
+    await page.getByRole('link', { name: own.trackingNumber }).click()
+    await expect(page.getByRole('heading', { name: own.trackingNumber })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'これまでの経過' })).toBeVisible()
+
+    await page.goto(`/shipper/tracking/${other.trackingNumber}`)
+    await expect(page.getByRole('alert')).toContainText('自社の貨物として確認できません')
+    await expect(page.getByRole('heading', { name: other.trackingNumber })).toHaveCount(0)
   })
 })
 
