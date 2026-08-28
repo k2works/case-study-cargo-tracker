@@ -1,6 +1,6 @@
 package com.example.trackingms.infrastructure.repositories;
 
-import com.example.trackingms.application.port.TrackingLookupLogger;
+import com.example.trackingms.domain.repository.TrackingLookupLogger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

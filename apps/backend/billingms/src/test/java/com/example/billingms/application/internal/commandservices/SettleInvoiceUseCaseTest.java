@@ -10,18 +10,18 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.example.billingms.application.port.BookingSettlementNotifier;
-import com.example.billingms.application.port.InvoiceRepository;
-import com.example.billingms.domain.model.BillingBookingId;
-import com.example.billingms.domain.model.BillingShipperId;
-import com.example.billingms.domain.model.CargoType;
-import com.example.billingms.domain.model.DiscountPolicy;
-import com.example.billingms.domain.model.Invoice;
-import com.example.billingms.domain.model.InvoiceCharges;
-import com.example.billingms.domain.model.InvoiceId;
-import com.example.billingms.domain.model.PaymentStatus;
-import com.example.billingms.domain.model.TaxRate;
-import com.example.billingms.domain.model.TransportCharge;
+import com.example.billingms.application.internal.outboundservices.acl.BookingSettlementNotifier;
+import com.example.billingms.domain.repository.InvoiceRepository;
+import com.example.billingms.domain.model.valueobjects.BillingBookingId;
+import com.example.billingms.domain.model.valueobjects.BillingShipperId;
+import com.example.billingms.domain.model.valueobjects.CargoType;
+import com.example.billingms.domain.model.valueobjects.DiscountPolicy;
+import com.example.billingms.domain.model.aggregates.Invoice;
+import com.example.billingms.domain.model.valueobjects.InvoiceCharges;
+import com.example.billingms.domain.model.valueobjects.InvoiceId;
+import com.example.billingms.domain.model.valueobjects.PaymentStatus;
+import com.example.billingms.domain.model.valueobjects.TaxRate;
+import com.example.billingms.domain.model.valueobjects.TransportCharge;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -65,7 +65,7 @@ class SettleInvoiceUseCaseTest {
 
     private static Invoice issued() {
         return Invoice.issue(
-                new com.example.billingms.domain.model.InvoiceHeader(
+                new com.example.billingms.domain.model.valueobjects.InvoiceHeader(
                         InvoiceId.of("INV-2026000001"),
                         BillingBookingId.of("BKG-2026000007"),
                         BillingShipperId.corporate("1", "丸紅商事株式会社"),
@@ -80,7 +80,7 @@ class SettleInvoiceUseCaseTest {
     /** キャンセル料の請求書（[ADR-027] 決定 5——キャンセル済みの予約も精算の対象である）。 */
     private static Invoice cancelled() {
         return Invoice.issue(
-                new com.example.billingms.domain.model.InvoiceHeader(
+                new com.example.billingms.domain.model.valueobjects.InvoiceHeader(
                         InvoiceId.of("INV-2026000001"),
                         BillingBookingId.of("BKG-2026000010"),
                         BillingShipperId.corporate("1", "丸紅商事株式会社"),
@@ -89,10 +89,10 @@ class SettleInvoiceUseCaseTest {
                         TransportCharge.of(domesticLegs(1), new BigDecimal("1500"),
                                 CargoType.GENERAL),
                         DiscountPolicy.none(),
-                        com.example.billingms.domain.model.CancellationFee.forStatus(
-                                com.example.billingms.domain.model.CancelledAtStatus.of(
+                        com.example.billingms.domain.model.valueobjects.CancellationFee.forStatus(
+                                com.example.billingms.domain.model.valueobjects.CancelledAtStatus.of(
                                         "IN_TRANSIT"),
-                                com.example.billingms.domain.model.Money.yen(
+                                com.example.billingms.domain.model.valueobjects.Money.yen(
                                         new BigDecimal("75000"))),
                         TaxRate.standard()),
                 List.of(), ZONE);
@@ -130,11 +130,11 @@ class SettleInvoiceUseCaseTest {
         void doesNotNotifyWhenTheInvoiceRejectsThePayment() {
             when(invoices.findById("INV-2026000001"))
                     .thenReturn(Optional.of(issued().confirmPayment(
-                            com.example.billingms.domain.model.Payment.of(
-                                    com.example.billingms.domain.model.Money.yen(
+                            com.example.billingms.domain.model.valueobjects.Payment.of(
+                                    com.example.billingms.domain.model.valueobjects.Money.yen(
                                             new BigDecimal("462000")),
                                     LocalDate.parse("2027-10-15"),
-                                    com.example.billingms.domain.model.PaymentMethod
+                                    com.example.billingms.domain.model.valueobjects.PaymentMethod
                                             .BANK_TRANSFER, null))));
 
             // **依頼はラムダの外で組む。**中で組むと、例外を投げたのが依頼の
@@ -241,11 +241,11 @@ class SettleInvoiceUseCaseTest {
         void listsOnlyOverdueUnpaidInvoices() {
             Invoice unpaid = issued();
             Invoice paid = issued().confirmPayment(
-                    com.example.billingms.domain.model.Payment.of(
-                            com.example.billingms.domain.model.Money.yen(
+                    com.example.billingms.domain.model.valueobjects.Payment.of(
+                            com.example.billingms.domain.model.valueobjects.Money.yen(
                                     new BigDecimal("462000")),
                             LocalDate.parse("2027-10-15"),
-                            com.example.billingms.domain.model.PaymentMethod.BANK_TRANSFER,
+                            com.example.billingms.domain.model.valueobjects.PaymentMethod.BANK_TRANSFER,
                             null));
             Invoice revoked = issued().revoke("金額の誤りのため", CLOCK.instant());
             when(invoices.findAll()).thenReturn(List.of(unpaid, paid, revoked));

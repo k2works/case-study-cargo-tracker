@@ -3,12 +3,12 @@ package com.example.trackingms.application.internal.commandservices;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.shared.domain.model.Location;
-import com.example.trackingms.application.port.LocationRepository;
-import com.example.trackingms.application.port.TrackingActivityRepository;
-import com.example.trackingms.domain.model.TrackingActivity;
-import com.example.trackingms.domain.model.TrackingEvent;
-import com.example.trackingms.domain.model.TrackingExceptionEvent;
-import com.example.trackingms.domain.model.TrackingNumber;
+import com.example.trackingms.domain.repository.LocationRepository;
+import com.example.trackingms.domain.repository.TrackingActivityRepository;
+import com.example.trackingms.domain.model.aggregates.TrackingActivity;
+import com.example.trackingms.domain.model.valueobjects.TrackingEvent;
+import com.example.trackingms.domain.model.entities.TrackingExceptionEvent;
+import com.example.trackingms.domain.model.valueobjects.TrackingNumber;
 import java.time.LocalDate;
 import java.time.Month;
 import java.util.ArrayList;

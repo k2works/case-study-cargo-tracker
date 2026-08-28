@@ -1,9 +1,9 @@
 package com.example.trackingms.application.internal.commandservices;
 
-import com.example.trackingms.application.port.TrackingActivityRepository;
-import com.example.trackingms.application.port.TrackingNoticeRepository;
-import com.example.trackingms.domain.model.TrackingNotice;
-import com.example.trackingms.domain.model.TrackingNumber;
+import com.example.trackingms.domain.repository.TrackingActivityRepository;
+import com.example.trackingms.domain.repository.TrackingNoticeRepository;
+import com.example.trackingms.domain.model.valueobjects.TrackingNotice;
+import com.example.trackingms.domain.model.valueobjects.TrackingNumber;
 import java.time.Clock;
 import org.springframework.stereotype.Service;
 

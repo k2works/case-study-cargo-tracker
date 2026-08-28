@@ -2,11 +2,11 @@ package com.example.trackingms;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.trackingms.domain.model.TrackingActivity;
-import com.example.trackingms.domain.model.TrackingBookingId;
-import com.example.trackingms.domain.model.TrackingNumber;
-import com.example.trackingms.domain.model.TrackingStatus;
-import com.example.trackingms.infrastructure.messaging.TrackingEventChannels;
+import com.example.trackingms.domain.model.aggregates.TrackingActivity;
+import com.example.trackingms.domain.model.valueobjects.TrackingBookingId;
+import com.example.trackingms.domain.model.valueobjects.TrackingNumber;
+import com.example.trackingms.domain.model.valueobjects.TrackingStatus;
+import com.example.trackingms.interfaces.events.TrackingEventChannels;
 import java.time.LocalDate;
 import java.time.Month;
 import org.junit.jupiter.api.DisplayName;

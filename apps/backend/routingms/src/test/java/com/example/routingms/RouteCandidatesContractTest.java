@@ -5,12 +5,12 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.routingms.application.internal.commandservices.RegisterVoyageCommand;
+import com.example.routingms.domain.model.commands.RegisterVoyageCommand;
 import com.example.routingms.application.internal.commandservices.RegisterVoyageUseCase;
-import com.example.routingms.domain.model.CargoType;
-import com.example.routingms.domain.model.CarrierMovement;
-import com.example.routingms.domain.model.Schedule;
-import com.example.routingms.domain.model.VoyageNumber;
+import com.example.routingms.domain.model.valueobjects.CargoType;
+import com.example.routingms.domain.model.valueobjects.CarrierMovement;
+import com.example.routingms.domain.model.valueobjects.Schedule;
+import com.example.routingms.domain.model.valueobjects.VoyageNumber;
 import com.example.shared.domain.model.Location;
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.auth.AuthenticatedUserFilter;

@@ -1,11 +1,11 @@
 package com.example.billingms.application.internal.commandservices;
 
-import com.example.billingms.application.port.BookingSettlementNotifier;
-import com.example.billingms.application.port.InvoiceRepository;
-import com.example.billingms.domain.model.Invoice;
-import com.example.billingms.domain.model.Money;
-import com.example.billingms.domain.model.Payment;
-import com.example.billingms.domain.model.PaymentMethod;
+import com.example.billingms.application.internal.outboundservices.acl.BookingSettlementNotifier;
+import com.example.billingms.domain.repository.InvoiceRepository;
+import com.example.billingms.domain.model.aggregates.Invoice;
+import com.example.billingms.domain.model.valueobjects.Money;
+import com.example.billingms.domain.model.valueobjects.Payment;
+import com.example.billingms.domain.model.valueobjects.PaymentMethod;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;

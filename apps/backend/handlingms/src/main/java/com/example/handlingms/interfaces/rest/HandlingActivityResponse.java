@@ -1,8 +1,8 @@
 package com.example.handlingms.interfaces.rest;
 
-import com.example.handlingms.domain.model.ConsigneeConfirmation;
-import com.example.handlingms.domain.model.HandlingActivity;
-import com.example.handlingms.domain.model.HandlingVoyageNumber;
+import com.example.handlingms.domain.model.valueobjects.ConsigneeConfirmation;
+import com.example.handlingms.domain.model.aggregates.HandlingActivity;
+import com.example.handlingms.domain.model.valueobjects.HandlingVoyageNumber;
 import java.time.Instant;
 
 /**

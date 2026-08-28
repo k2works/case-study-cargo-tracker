@@ -1,7 +1,7 @@
 package com.example.billingms.infrastructure.acl;
 
-import com.example.billingms.application.port.BillableCargoSnapshot;
-import com.example.billingms.application.port.BillingSnapshotFinder;
+import com.example.billingms.application.internal.outboundservices.acl.BillableCargoSnapshot;
+import com.example.billingms.application.internal.outboundservices.acl.BillingSnapshotFinder;
 import com.example.shared.auth.AuthenticatedUser;
 import java.util.List;
 import java.util.Optional;

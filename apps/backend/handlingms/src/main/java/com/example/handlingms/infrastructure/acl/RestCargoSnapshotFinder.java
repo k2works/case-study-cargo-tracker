@@ -1,10 +1,10 @@
 package com.example.handlingms.infrastructure.acl;
 
-import com.example.handlingms.application.port.CargoLookupUnavailableException;
-import com.example.handlingms.application.port.CargoSnapshotFinder;
-import com.example.handlingms.domain.model.CargoSnapshot;
-import com.example.handlingms.domain.model.HandlingTrackingNumber;
-import com.example.handlingms.domain.model.LegSnapshot;
+import com.example.handlingms.application.internal.outboundservices.acl.CargoLookupUnavailableException;
+import com.example.handlingms.application.internal.outboundservices.acl.CargoSnapshotFinder;
+import com.example.handlingms.domain.model.valueobjects.CargoSnapshot;
+import com.example.handlingms.domain.model.valueobjects.HandlingTrackingNumber;
+import com.example.handlingms.domain.model.valueobjects.LegSnapshot;
 import com.example.shared.auth.AuthenticatedUser;
 import java.util.List;
 import java.util.Optional;

@@ -1,6 +1,6 @@
 package com.example.handlingms.interfaces.rest;
 
-import com.example.handlingms.domain.model.HandlingType;
+import com.example.handlingms.domain.model.valueobjects.HandlingType;
 
 /**
  * 荷役の種別と、その要件（[ADR-023] 決定 1）。

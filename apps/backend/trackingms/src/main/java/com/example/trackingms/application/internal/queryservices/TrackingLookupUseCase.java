@@ -1,10 +1,10 @@
 package com.example.trackingms.application.internal.queryservices;
 
-import com.example.trackingms.application.port.TrackingActivityRepository;
-import com.example.trackingms.application.port.TrackingLookupLogger;
-import com.example.trackingms.domain.model.TrackingActivity;
-import com.example.trackingms.domain.model.TrackingEvent;
-import com.example.trackingms.domain.model.TrackingNumber;
+import com.example.trackingms.domain.repository.TrackingActivityRepository;
+import com.example.trackingms.domain.repository.TrackingLookupLogger;
+import com.example.trackingms.domain.model.aggregates.TrackingActivity;
+import com.example.trackingms.domain.model.valueobjects.TrackingEvent;
+import com.example.trackingms.domain.model.valueobjects.TrackingNumber;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Service;

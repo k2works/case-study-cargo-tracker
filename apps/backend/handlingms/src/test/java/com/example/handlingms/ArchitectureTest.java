@@ -2,7 +2,7 @@ package com.example.handlingms;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.handlingms.domain.model.CustomsDeclaration;
+import com.example.handlingms.domain.model.aggregates.CustomsDeclaration;
 import com.example.shared.architecture.ServiceArchitectureTest;
 import java.util.Arrays;
 import java.util.List;

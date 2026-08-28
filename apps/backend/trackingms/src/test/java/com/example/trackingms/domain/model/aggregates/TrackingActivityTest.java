@@ -1,0 +1,317 @@
+package com.example.trackingms.domain.model.aggregates;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import com.example.trackingms.domain.model.valueobjects.TrackingBookingId;
+import com.example.trackingms.domain.model.valueobjects.TrackingNumber;
+import com.example.trackingms.domain.model.valueobjects.TrackingStatus;
+import com.example.shared.domain.model.Location;
+import java.time.LocalDate;
+import java.time.Month;
+import java.util.List;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+
+/** 貨物の追跡（US14-3）。IT6 で作るのは追跡の開始までである。 */
+@DisplayName("貨物の追跡")
+class TrackingActivityTest {
+
+    private static final Location TOKYO = Location.of("JPTYO", "Tokyo");
+    private static final Location LOS_ANGELES = Location.of("USLAX", "Los Angeles");
+    private static final LocalDate DEADLINE = LocalDate.of(2030, Month.SEPTEMBER, 20);
+
+    private static TrackingActivity started() {
+        return TrackingActivity.start(TrackingNumber.of("TRK-20260822-0001"),
+                TrackingBookingId.of("BKG-2026000001"), TOKYO, LOS_ANGELES, DEADLINE);
+    }
+
+    @Test
+    @DisplayName("始めると受領待ちになり、まだ動いていない状態を持つ")
+    void startsAsNotReceived() {
+        TrackingActivity activity = started();
+
+        // 「まだ受け取っていない」は空欄ではなく意味のある状態（ADR-009）
+        assertThat(activity.trackingStatus()).isEqualTo(TrackingStatus.NOT_RECEIVED);
+        assertThat(activity.trackingNumber().value()).isEqualTo("TRK-20260822-0001");
+        assertThat(activity.bookingId().value()).isEqualTo("BKG-2026000001");
+        assertThat(activity.origin()).isEqualTo(TOKYO);
+        assertThat(activity.destination()).isEqualTo(LOS_ANGELES);
+        assertThat(activity.arrivalDeadline()).isEqualTo(DEADLINE);
+        // 採番も id の付与も永続化の側が行う（ADR-022 決定 7）
+        assertThat(activity.id()).isNull();
+    }
+
+    @Test
+    @DisplayName("欠けている項目があれば始められない")
+    void rejectsMissingValues() {
+        TrackingNumber number = TrackingNumber.of("TRK-20260822-0001");
+        TrackingBookingId booking = TrackingBookingId.of("BKG-2026000001");
+
+        assertThatThrownBy(() -> TrackingActivity.start(null, booking, TOKYO, LOS_ANGELES,
+                DEADLINE)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> TrackingActivity.start(number, null, TOKYO, LOS_ANGELES,
+                DEADLINE)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> TrackingActivity.start(number, booking, null, LOS_ANGELES,
+                DEADLINE)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> TrackingActivity.start(number, booking, TOKYO, null,
+                DEADLINE)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> TrackingActivity.start(number, booking, TOKYO, LOS_ANGELES,
+                null)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    /**
+     * <strong>復元では検査しない</strong>（[ADR-012]）。
+     *
+     * <p>検査を後から足すと、その規則が無かったころの行が読めなくなる。
+     */
+    @Test
+    @DisplayName("復元では検査しない")
+    void restoreDoesNotValidate() {
+        TrackingActivity restored = TrackingActivity.restore(1L, null, null,
+                TrackingStatus.NOT_RECEIVED, null, TOKYO, LOS_ANGELES, null, DEADLINE, null, null);
+
+        assertThat(restored.id()).isEqualTo(1L);
+        assertThat(restored.trackingNumber()).isNull();
+        // 現在地の列が無かったころの行も読める。空なら出発港として扱う（[ADR-009]）
+        assertThat(restored.currentLocation()).isEqualTo(TOKYO);
+        assertThat(restored.estimatedArrival())
+                .as("経路が決まっていない行を、日付で埋めている")
+                .isEmpty();
+    }
+
+    @Nested
+    @DisplayName("値オブジェクト")
+    class ValueObjects {
+
+        /**
+         * <strong>採番しない。</strong>
+         *
+         * <p>採番するのは bookingms である（[ADR-022] 決定 7）。ここが受け取るのは採番済みの
+         * 番号であり、形式は向こうが決める。だから<strong>形式の検査はしない</strong>——
+         * ここで形式を決めると、番号の形を変えるときに 2 か所を直すことになる。
+         */
+        @Test
+        @DisplayName("追跡番号は空でなければ受け入れる（形式は採番する側が決める）")
+        void acceptsAnyNonBlankTrackingNumber() {
+            assertThat(TrackingNumber.of("TRK-20260822-0001").value())
+                    .isEqualTo("TRK-20260822-0001");
+            assertThat(TrackingNumber.of("TRK-20260822-0001")).hasToString("TRK-20260822-0001");
+
+            assertThatThrownBy(() -> TrackingNumber.of(null))
+                    .isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> TrackingNumber.of("  "))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @Test
+        @DisplayName("追跡番号の復元では検査しない")
+        void restoresTrackingNumberWithoutValidation() {
+            assertThat(TrackingNumber.restore("")).isEqualTo(new TrackingNumber(""));
+            assertThatThrownBy(() -> TrackingNumber.restore(null))
+                    .isInstanceOf(IllegalStateException.class);
+        }
+
+        @Test
+        @DisplayName("予約番号は空でなければ受け入れる")
+        void acceptsAnyNonBlankBookingId() {
+            assertThat(TrackingBookingId.of("BKG-2026000001").value())
+                    .isEqualTo("BKG-2026000001");
+            assertThat(TrackingBookingId.of("BKG-2026000001")).hasToString("BKG-2026000001");
+
+            assertThatThrownBy(() -> TrackingBookingId.of(null))
+                    .isInstanceOf(IllegalArgumentException.class);
+            assertThatThrownBy(() -> TrackingBookingId.of(" "))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @Test
+        @DisplayName("予約番号の復元では検査しない")
+        void restoresBookingIdWithoutValidation() {
+            assertThat(TrackingBookingId.restore("")).isEqualTo(new TrackingBookingId(""));
+            assertThatThrownBy(() -> TrackingBookingId.restore(null))
+                    .isInstanceOf(IllegalStateException.class);
+        }
+
+        /**
+         * IT6 で使う輸送の状況は 1 つだけ。
+         *
+         * <p><strong>値集合は設計（domain-model.md の TrackingStatus）が正である。</strong>
+         * 実装だけが独自に増えると、設計を読んだ人が知らない状態が本番に現れる。
+         */
+        @Test
+        @DisplayName("追跡の状況は設計の 9 値")
+        void matchesTheDesignedValues() {
+            assertThat(TrackingStatus.values()).containsExactly(
+                    TrackingStatus.NOT_RECEIVED, TrackingStatus.RECEIVED, TrackingStatus.LOADED,
+                    TrackingStatus.ONBOARD_CARRIER, TrackingStatus.UNLOADED,
+                    TrackingStatus.AWAITING_CLAIM, TrackingStatus.CLAIMED,
+                    TrackingStatus.EXCEPTION, TrackingStatus.UNKNOWN);
+        }
+
+        /**
+         * 荷役の種別から進む先を導く（US15-4・[ADR-023] 決定 5）。
+         *
+         * <p><strong>目的港での荷降しだけは行き先が違う。</strong>途中の港なら次の積込を待ち、
+         * 目的港なら荷受人の引取を待つ。同じ「荷降し」でも、貨物にとっての意味が違う。
+         */
+        @Test
+        @DisplayName("荷役の種別から進む先が決まる")
+        void derivesTheNextStatusFromHandling() {
+            assertThat(TrackingStatus.afterHandling("RECEIVE", false))
+                    .contains(TrackingStatus.RECEIVED);
+            assertThat(TrackingStatus.afterHandling("LOAD", false))
+                    .contains(TrackingStatus.LOADED);
+            assertThat(TrackingStatus.afterHandling("UNLOAD", false))
+                    .as("途中の港での荷降しは、次の積込を待つ")
+                    .contains(TrackingStatus.UNLOADED);
+            assertThat(TrackingStatus.afterHandling("UNLOAD", true))
+                    .as("目的港での荷降しは、荷受人の引取を待つ")
+                    .contains(TrackingStatus.AWAITING_CLAIM);
+            assertThat(TrackingStatus.afterHandling("CLAIM", true))
+                    .contains(TrackingStatus.CLAIMED);
+        }
+
+        /** 導けない種別で止めない。例外にすると、購読側が種別 1 つで止まる。 */
+        @Test
+        @DisplayName("知らない種別では進む先を決めない")
+        void doesNotGuessForUnknownHandling() {
+            assertThat(TrackingStatus.afterHandling("CUSTOMS_INSPECTION", false)).isEmpty();
+        }
+
+        /**
+         * <strong>知らない種別と、進まない種別を混ぜない。</strong>
+         *
+         * <p>どちらも「何も起きない」に落ちると、契約の食い違い（相手が新しい種別を
+         * 送り始めた）が、設計どおりの無変化と見分けられなくなる。語彙は列挙が持つ。
+         */
+        @Test
+        @DisplayName("荷役の種別の語彙を列挙が持つ")
+        void ownsTheHandlingTypeVocabulary() {
+            assertThat(TrackingStatus.isKnownHandlingType("RECEIVE")).isTrue();
+            assertThat(TrackingStatus.isKnownHandlingType("LOAD")).isTrue();
+            assertThat(TrackingStatus.isKnownHandlingType("UNLOAD")).isTrue();
+            assertThat(TrackingStatus.isKnownHandlingType("CLAIM")).isTrue();
+
+            assertThat(TrackingStatus.isKnownHandlingType("CUSTOMS_INSPECTION")).isFalse();
+            assertThat(TrackingStatus.isKnownHandlingType(null)).isFalse();
+        }
+
+        /**
+         * <strong>進行の道の外にある値は、どちらの向きにも進めない。</strong>
+         *
+         * <p>{@link TrackingStatus#EXCEPTION} と {@link TrackingStatus#UNKNOWN} は
+         * 並び順を持たない。並び順で判定していると、この 2 値にいる貨物からは
+         * <strong>どこへでも「進める」ことになり、古い荷役の再配送で巻き戻る</strong>。
+         * US20 がこの 2 値へ到達させるため、先に閉じる。
+         */
+        @Test
+        @DisplayName("例外・不明の状態からは、荷役では動かない")
+        void neverAdvancesFromOffPathStatuses() {
+            for (TrackingStatus offPath : List.of(TrackingStatus.EXCEPTION,
+                    TrackingStatus.UNKNOWN)) {
+                for (TrackingStatus next : TrackingStatus.values()) {
+                    assertThat(offPath.canAdvanceTo(next))
+                            .as("%s から %s へ荷役で動いた", offPath, next)
+                            .isFalse();
+                }
+            }
+        }
+
+        /** 道の外の値へも、荷役では動かない。例外の起票は US20 の専用の操作で行う。 */
+        @Test
+        @DisplayName("荷役では例外・不明へ動かない")
+        void neverAdvancesToOffPathStatuses() {
+            for (TrackingStatus current : TrackingStatus.values()) {
+                assertThat(current.canAdvanceTo(TrackingStatus.EXCEPTION)).isFalse();
+                assertThat(current.canAdvanceTo(TrackingStatus.UNKNOWN)).isFalse();
+            }
+        }
+    }
+
+    @Nested
+    @DisplayName("荷役に応じて進むとき（US15-4）")
+    class WhenHandlingArrives {
+
+        private static TrackingActivity started() {
+            return TrackingActivity.start(TrackingNumber.of("TRK-20260823-0001"),
+                    TrackingBookingId.of("BKG-2026000001"), TOKYO, LOS_ANGELES, DEADLINE);
+        }
+
+        @Test
+        @DisplayName("受領が届くと受領済みへ進む")
+        void advancesOnReceive() {
+            assertThat(started().afterHandling("RECEIVE", "JPTYO").trackingStatus())
+                    .isEqualTo(TrackingStatus.RECEIVED);
+        }
+
+        @Test
+        @DisplayName("目的港での荷降しは、次の積込ではなく引取待ちへ進む")
+        void awaitsClaimAtDestination() {
+            assertThat(started().afterHandling("UNLOAD", "USLAX").trackingStatus())
+                    .isEqualTo(TrackingStatus.AWAITING_CLAIM);
+        }
+
+        /**
+         * <strong>戻せる遷移は作らない。</strong>
+         *
+         * <p>再試行・デッドレターからの送り直しで、届く順は入れ替わる。**送り直す手段は
+         * IT7 で用意した**（`dev:k8s:events:redeplay`）ので、この経路は実際に存在する。
+         * 巻き戻ると、荷主は「引取済だったはずの貨物が受領待ちに戻っている」を見る。
+         */
+        @Test
+        @DisplayName("引取済のあとに古い受領が届いても巻き戻らない")
+        void doesNotRegressWhenAnOlderHandlingArrives() {
+            TrackingActivity claimed = started()
+                    .afterHandling("RECEIVE", "JPTYO")
+                    .afterHandling("LOAD", "JPTYO")
+                    .afterHandling("UNLOAD", "USLAX")
+                    .afterHandling("CLAIM", "USLAX");
+            assertThat(claimed.trackingStatus()).isEqualTo(TrackingStatus.CLAIMED);
+
+            TrackingActivity redelivered = claimed.afterHandling("RECEIVE", "JPTYO");
+
+            assertThat(redelivered.trackingStatus())
+                    .as("古い荷役の再配送で追跡が巻き戻った")
+                    .isEqualTo(TrackingStatus.CLAIMED);
+        }
+
+        /** 同じ荷役が 2 回届いても、状態は変わらない（[ADR-022] 決定 5）。 */
+        @Test
+        @DisplayName("同じ荷役が 2 回届いても状態は変わらない")
+        void isIdempotent() {
+            TrackingActivity received = started().afterHandling("RECEIVE", "JPTYO");
+
+            assertThat(received.afterHandling("RECEIVE", "JPTYO").trackingStatus())
+                    .isEqualTo(TrackingStatus.RECEIVED);
+        }
+
+        /**
+         * 進む先が決まらなければ、<strong>そのままの自分</strong>を返す。
+         *
+         * <p>呼び出し側はこれを見て「書き込まない」を判断する。ここで新しい実体を返すと、
+         * 同じ内容の更新で行を触り続けることになる。
+         */
+        @Test
+        @DisplayName("知らない種別では、同じものをそのまま返す")
+        void returnsItselfForUnknownHandling() {
+            TrackingActivity started = started();
+
+            assertThat(started.afterHandling("CUSTOMS_INSPECTION", "JPTYO")).isSameAs(started);
+        }
+
+        @Test
+        @DisplayName("進めないときも、同じものをそのまま返す")
+        void returnsItselfWhenItCannotAdvance() {
+            TrackingActivity claimed = started()
+                    .afterHandling("RECEIVE", "JPTYO")
+                    .afterHandling("LOAD", "JPTYO")
+                    .afterHandling("UNLOAD", "USLAX")
+                    .afterHandling("CLAIM", "USLAX");
+
+            assertThat(claimed.afterHandling("RECEIVE", "JPTYO")).isSameAs(claimed);
+        }
+    }
+
+}

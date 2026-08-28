@@ -1,25 +1,16 @@
 package com.example.trackingms.infrastructure.config;
 
 import com.example.shared.auth.AuthenticatedUserFilter;
-import com.example.trackingms.application.internal.commandservices.AdvanceTrackingUseCase;
-import com.example.trackingms.application.internal.commandservices.DetectCustomsHoldUseCase;
-import com.example.trackingms.application.internal.commandservices.DetectMisrouteUseCase;
-import com.example.trackingms.application.internal.commandservices.NoteCancellationUseCase;
-import com.example.trackingms.application.internal.commandservices.StartTrackingUseCase;
-import com.example.trackingms.application.port.LocationRepository;
-import com.example.trackingms.application.port.ShipperCargoSnapshotFinder;
-import com.example.trackingms.application.port.TrackingActivityRepository;
-import com.example.trackingms.application.port.TrackingLookupLogger;
-import com.example.trackingms.application.port.TrackingNoticeRepository;
-import com.example.trackingms.application.port.TrackingNotifier;
-import com.example.trackingms.application.port.UserShipperLinkFinder;
+import com.example.trackingms.domain.repository.LocationRepository;
+import com.example.trackingms.application.internal.outboundservices.acl.ShipperCargoSnapshotFinder;
+import com.example.trackingms.domain.repository.TrackingActivityRepository;
+import com.example.trackingms.domain.repository.TrackingLookupLogger;
+import com.example.trackingms.domain.repository.TrackingNoticeRepository;
+import com.example.trackingms.application.internal.outboundservices.acl.TrackingNotifier;
+import com.example.trackingms.application.internal.outboundservices.acl.UserShipperLinkFinder;
 import com.example.trackingms.infrastructure.acl.RestShipperCargoSnapshotFinder;
 import com.example.trackingms.infrastructure.acl.RestUserShipperLinkFinder;
-import com.example.trackingms.infrastructure.messaging.CargoCancelledListener;
-import com.example.trackingms.infrastructure.messaging.CustomsStatusChangedListener;
-import com.example.trackingms.infrastructure.messaging.HandlingActivityRegisteredListener;
-import com.example.trackingms.infrastructure.messaging.TrackingEventChannels;
-import com.example.trackingms.infrastructure.messaging.TrackingNumberIssuedListener;
+import com.example.trackingms.interfaces.events.TrackingEventChannels;
 import com.example.trackingms.infrastructure.acl.RecordingTrackingNotifier;
 import com.example.trackingms.infrastructure.repositories.LocationMapper;
 import com.example.trackingms.infrastructure.repositories.MyBatisLocationRepository;
@@ -155,13 +146,6 @@ public class TrackingConfig {
         return factory;
     }
 
-    @Bean
-    public HandlingActivityRegisteredListener handlingActivityRegisteredListener(
-            AdvanceTrackingUseCase advanceTracking,
-            DetectMisrouteUseCase detectMisroute) {
-        return new HandlingActivityRegisteredListener(advanceTracking, detectMisroute);
-    }
-
     /**
      * 荷役の交換機（[ADR-023] 決定 5）。
      *
@@ -209,14 +193,6 @@ public class TrackingConfig {
                 .with(TrackingEventChannels.CARGO_CANCELLED);
     }
 
-    @Bean
-    public CargoCancelledListener
-            cargoCancelledListener(
-            NoteCancellationUseCase noteCancellation) {
-        return new CargoCancelledListener(
-                noteCancellation);
-    }
-
     /** 通関のイベントを受け取るキュー（US29-5）。**購読側ごとに分ける**。 */
     @Bean
     public Queue customsStatusChangedQueue() {
@@ -241,13 +217,6 @@ public class TrackingConfig {
         return BindingBuilder.bind(customsStatusChangedQueue())
                 .to(cargoHandlingExchange())
                 .with(TrackingEventChannels.CUSTOMS_STATUS_CHANGED);
-    }
-
-    @Bean
-    public CustomsStatusChangedListener
-            customsStatusChangedListener(
-            DetectCustomsHoldUseCase detect) {
-        return new CustomsStatusChangedListener(detect);
     }
 
     /**
@@ -277,12 +246,6 @@ public class TrackingConfig {
     public Binding handlingDeadLetterBinding() {
         return BindingBuilder.bind(handlingDeadLetterQueue()).to(trackingDeadLetterExchange())
                 .with(TrackingEventChannels.HANDLING_DEAD_LETTER_QUEUE);
-    }
-
-    @Bean
-    public TrackingNumberIssuedListener trackingNumberIssuedListener(
-            StartTrackingUseCase startTracking) {
-        return new TrackingNumberIssuedListener(startTracking);
     }
 
     /**

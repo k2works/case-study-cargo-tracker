@@ -11,11 +11,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.routingms.application.internal.queryservices.FindRouteCandidatesUseCase;
-import com.example.routingms.domain.model.CargoType;
-import com.example.routingms.domain.model.RouteSearchSpecification;
-import com.example.routingms.domain.model.TransitEdge;
-import com.example.routingms.domain.model.TransitPath;
-import com.example.routingms.domain.model.VoyageNumber;
+import com.example.routingms.domain.model.valueobjects.CargoType;
+import com.example.routingms.domain.model.valueobjects.RouteSearchSpecification;
+import com.example.routingms.domain.model.valueobjects.TransitEdge;
+import com.example.routingms.domain.model.valueobjects.TransitPath;
+import com.example.routingms.domain.model.valueobjects.VoyageNumber;
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.domain.model.Location;
 import java.time.Instant;

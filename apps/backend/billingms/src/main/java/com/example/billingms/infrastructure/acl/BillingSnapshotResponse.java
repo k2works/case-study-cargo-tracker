@@ -1,6 +1,6 @@
 package com.example.billingms.infrastructure.acl;
 
-import com.example.billingms.application.port.BillableCargoSnapshot;
+import com.example.billingms.application.internal.outboundservices.acl.BillableCargoSnapshot;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.math.BigDecimal;
 import java.time.Instant;

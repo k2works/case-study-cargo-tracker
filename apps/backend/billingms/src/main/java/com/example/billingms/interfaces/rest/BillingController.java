@@ -7,7 +7,7 @@ import com.example.billingms.application.internal.commandservices.CalculateCharg
 import com.example.billingms.application.internal.commandservices.InvoiceNotFoundException;
 import com.example.billingms.application.internal.commandservices.PaymentCommand;
 import com.example.billingms.application.internal.commandservices.SettleInvoiceUseCase;
-import com.example.billingms.application.port.InvoiceRepository;
+import com.example.billingms.domain.repository.InvoiceRepository;
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.auth.Role;
 import java.util.List;

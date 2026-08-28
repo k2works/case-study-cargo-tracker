@@ -1,6 +1,6 @@
 package com.example.handlingms.infrastructure.repositories;
 
-import com.example.handlingms.application.port.LocationRepository;
+import com.example.handlingms.domain.repository.LocationRepository;
 import com.example.shared.domain.model.Location;
 import java.util.List;
 import java.util.Optional;

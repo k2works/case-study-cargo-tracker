@@ -1,11 +1,11 @@
 package com.example.handlingms.infrastructure.repositories;
 
-import com.example.handlingms.application.port.HandlingActivityRepository;
-import com.example.handlingms.domain.model.CargoBookingId;
-import com.example.handlingms.domain.model.ConsigneeConfirmation;
-import com.example.handlingms.domain.model.HandlingActivity;
-import com.example.handlingms.domain.model.HandlingType;
-import com.example.handlingms.domain.model.HandlingVoyageNumber;
+import com.example.handlingms.domain.repository.HandlingActivityRepository;
+import com.example.handlingms.domain.model.valueobjects.CargoBookingId;
+import com.example.handlingms.domain.model.valueobjects.ConsigneeConfirmation;
+import com.example.handlingms.domain.model.aggregates.HandlingActivity;
+import com.example.handlingms.domain.model.valueobjects.HandlingType;
+import com.example.handlingms.domain.model.valueobjects.HandlingVoyageNumber;
 import com.example.shared.domain.model.Location;
 import java.util.List;
 

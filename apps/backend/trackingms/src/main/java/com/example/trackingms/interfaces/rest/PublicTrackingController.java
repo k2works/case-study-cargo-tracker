@@ -1,8 +1,8 @@
 package com.example.trackingms.interfaces.rest;
 
 import com.example.trackingms.application.internal.queryservices.TrackingLookupUseCase;
-import com.example.trackingms.application.port.TrackingNoticeRepository;
-import com.example.trackingms.domain.model.TrackingActivity;
+import com.example.trackingms.domain.repository.TrackingNoticeRepository;
+import com.example.trackingms.domain.model.aggregates.TrackingActivity;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

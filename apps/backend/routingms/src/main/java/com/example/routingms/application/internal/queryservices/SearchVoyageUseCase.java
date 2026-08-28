@@ -1,9 +1,9 @@
 package com.example.routingms.application.internal.queryservices;
 
-import com.example.routingms.application.port.VoyageRepository;
-import com.example.routingms.application.port.VoyageSearchCriteria;
-import com.example.routingms.domain.model.Voyage;
-import com.example.routingms.domain.model.VoyageNumber;
+import com.example.routingms.domain.repository.VoyageRepository;
+import com.example.routingms.domain.model.valueobjects.VoyageSearchCriteria;
+import com.example.routingms.domain.model.aggregates.Voyage;
+import com.example.routingms.domain.model.valueobjects.VoyageNumber;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Service;

@@ -1,8 +1,8 @@
 package com.example.trackingms.interfaces.rest;
 
-import com.example.trackingms.domain.model.TrackingActivity;
-import com.example.trackingms.domain.model.TrackingEvent;
-import com.example.trackingms.domain.model.TrackingNotice;
+import com.example.trackingms.domain.model.aggregates.TrackingActivity;
+import com.example.trackingms.domain.model.valueobjects.TrackingEvent;
+import com.example.trackingms.domain.model.valueobjects.TrackingNotice;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;

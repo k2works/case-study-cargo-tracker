@@ -1,12 +1,12 @@
 package com.example.handlingms.infrastructure.config;
 
-import com.example.handlingms.application.port.CargoSnapshotFinder;
-import com.example.handlingms.application.port.CustomsDeclarationRepository;
-import com.example.handlingms.application.port.HandlingActivityRepository;
-import com.example.handlingms.application.port.LocationRepository;
-import com.example.handlingms.application.port.HandlingEventNotifier;
-import com.example.handlingms.infrastructure.messaging.HandlingEventChannels;
-import com.example.handlingms.infrastructure.messaging.RabbitHandlingEventNotifier;
+import com.example.handlingms.application.internal.outboundservices.acl.CargoSnapshotFinder;
+import com.example.handlingms.domain.repository.CustomsDeclarationRepository;
+import com.example.handlingms.domain.repository.HandlingActivityRepository;
+import com.example.handlingms.domain.repository.LocationRepository;
+import com.example.handlingms.application.internal.outboundservices.acl.HandlingEventNotifier;
+import com.example.handlingms.infrastructure.acl.HandlingEventChannels;
+import com.example.handlingms.infrastructure.acl.RabbitHandlingEventNotifier;
 import com.example.handlingms.infrastructure.repositories.CustomsDeclarationMapper;
 import com.example.handlingms.infrastructure.repositories.CustomsStatusHistoryMapper;
 import com.example.handlingms.infrastructure.repositories.HandlingActivityMapper;

@@ -13,15 +13,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.shared.domain.model.Location;
 import com.example.trackingms.application.internal.queryservices.TrackingLookupUseCase;
-import com.example.trackingms.application.port.TrackingActivityRepository;
-import com.example.trackingms.application.port.TrackingLookupLogger;
-import com.example.trackingms.application.port.TrackingNoticeRepository;
-import com.example.trackingms.domain.model.ExceptionType;
-import com.example.trackingms.domain.model.TrackingActivity;
-import com.example.trackingms.domain.model.TrackingBookingId;
-import com.example.trackingms.domain.model.TrackingEvent;
-import com.example.trackingms.domain.model.TrackingNotice;
-import com.example.trackingms.domain.model.TrackingNumber;
+import com.example.trackingms.domain.repository.TrackingActivityRepository;
+import com.example.trackingms.domain.repository.TrackingLookupLogger;
+import com.example.trackingms.domain.repository.TrackingNoticeRepository;
+import com.example.trackingms.domain.model.valueobjects.ExceptionType;
+import com.example.trackingms.domain.model.aggregates.TrackingActivity;
+import com.example.trackingms.domain.model.valueobjects.TrackingBookingId;
+import com.example.trackingms.domain.model.valueobjects.TrackingEvent;
+import com.example.trackingms.domain.model.valueobjects.TrackingNotice;
+import com.example.trackingms.domain.model.valueobjects.TrackingNumber;
 import java.lang.reflect.RecordComponent;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -204,7 +204,7 @@ class PublicTrackingControllerTest {
                         Instant.parse("2027-09-03T00:00:00Z"));
         when(activities.findByTrackingNumber(any())).thenReturn(Optional.of(withException));
         when(activities.findEvents(any(), anyInt())).thenReturn(List.of(new TrackingEvent(
-                com.example.trackingms.domain.model.TrackingStatus.RECEIVED, TOKYO,
+                com.example.trackingms.domain.model.valueobjects.TrackingStatus.RECEIVED, TOKYO,
                 Instant.parse("2027-09-02T00:00:00Z"), TrackingEvent.EventSource.HANDLING)));
         when(notices.findByTrackingNumber(any(), anyInt())).thenReturn(List.of());
 

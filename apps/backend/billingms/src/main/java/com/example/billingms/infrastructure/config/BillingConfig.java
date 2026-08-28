@@ -1,8 +1,8 @@
 package com.example.billingms.infrastructure.config;
 
-import com.example.billingms.application.port.BillingSnapshotFinder;
-import com.example.billingms.application.port.InvoiceNumbering;
-import com.example.billingms.application.port.InvoiceRepository;
+import com.example.billingms.application.internal.outboundservices.acl.BillingSnapshotFinder;
+import com.example.billingms.domain.repository.InvoiceNumbering;
+import com.example.billingms.domain.repository.InvoiceRepository;
 import com.example.billingms.infrastructure.acl.RestBillingSnapshotFinder;
 import com.example.billingms.infrastructure.repositories.InvoiceLineItemMapper;
 import com.example.billingms.infrastructure.repositories.InvoiceMapper;
@@ -98,7 +98,7 @@ public class BillingConfig {
      * 本 IT で増えた 1 本である。
      */
     @Bean
-    public com.example.billingms.application.port.BookingSettlementNotifier
+    public com.example.billingms.application.internal.outboundservices.acl.BookingSettlementNotifier
             bookingSettlementNotifier(@Value("${app.booking-service.base-url}") String baseUrl) {
         return new com.example.billingms.infrastructure.acl.RestBookingSettlementNotifier(
                 RestClient.builder().baseUrl(baseUrl)

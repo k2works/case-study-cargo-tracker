@@ -1,24 +1,24 @@
 package com.example.billingms.application.internal.commandservices;
 
-import com.example.billingms.application.port.BillableCargoSnapshot;
-import com.example.billingms.application.port.BillingSnapshotFinder;
-import com.example.billingms.application.port.InvoiceNumbering;
-import com.example.billingms.application.port.InvoiceRepository;
-import com.example.billingms.domain.model.BillingBookingId;
-import com.example.billingms.domain.model.BillingShipperId;
-import com.example.billingms.domain.model.CancellationFee;
-import com.example.billingms.domain.model.CancelledAtStatus;
-import com.example.billingms.domain.model.CargoType;
-import com.example.billingms.domain.model.ChargeableLeg;
-import com.example.billingms.domain.model.PortRegion;
-import com.example.billingms.domain.model.DiscountPolicy;
-import com.example.billingms.domain.model.DiscountRate;
-import com.example.billingms.domain.model.Invoice;
-import com.example.billingms.domain.model.InvoiceCharges;
-import com.example.billingms.domain.model.InvoiceLineItem;
-import com.example.billingms.domain.model.Money;
-import com.example.billingms.domain.model.TaxRate;
-import com.example.billingms.domain.model.TransportCharge;
+import com.example.billingms.application.internal.outboundservices.acl.BillableCargoSnapshot;
+import com.example.billingms.application.internal.outboundservices.acl.BillingSnapshotFinder;
+import com.example.billingms.domain.repository.InvoiceNumbering;
+import com.example.billingms.domain.repository.InvoiceRepository;
+import com.example.billingms.domain.model.valueobjects.BillingBookingId;
+import com.example.billingms.domain.model.valueobjects.BillingShipperId;
+import com.example.billingms.domain.model.valueobjects.CancellationFee;
+import com.example.billingms.domain.model.valueobjects.CancelledAtStatus;
+import com.example.billingms.domain.model.valueobjects.CargoType;
+import com.example.billingms.domain.model.valueobjects.ChargeableLeg;
+import com.example.billingms.domain.model.valueobjects.PortRegion;
+import com.example.billingms.domain.model.valueobjects.DiscountPolicy;
+import com.example.billingms.domain.model.valueobjects.DiscountRate;
+import com.example.billingms.domain.model.aggregates.Invoice;
+import com.example.billingms.domain.model.valueobjects.InvoiceCharges;
+import com.example.billingms.domain.model.valueobjects.InvoiceLineItem;
+import com.example.billingms.domain.model.valueobjects.Money;
+import com.example.billingms.domain.model.valueobjects.TaxRate;
+import com.example.billingms.domain.model.valueobjects.TransportCharge;
 import java.time.Clock;
 import java.util.List;
 import org.springframework.stereotype.Service;
@@ -93,7 +93,7 @@ public class CalculateChargeUseCase {
                 .toList();
 
         Invoice invoice = Invoice.issue(
-                new com.example.billingms.domain.model.InvoiceHeader(
+                new com.example.billingms.domain.model.valueobjects.InvoiceHeader(
                         numbering.next(),
                         BillingBookingId.of(snapshot.bookingId()),
                         shipperIdOf(snapshot),

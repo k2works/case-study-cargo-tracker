@@ -2,12 +2,12 @@ package com.example.handlingms;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.handlingms.application.port.CustomsDeclarationRepository;
-import com.example.handlingms.domain.model.CargoBookingId;
-import com.example.handlingms.domain.model.CustomsDeclaration;
-import com.example.handlingms.domain.model.CustomsStatus;
-import com.example.handlingms.domain.model.DeclarationNumber;
-import com.example.handlingms.domain.model.HandlingTrackingNumber;
+import com.example.handlingms.domain.repository.CustomsDeclarationRepository;
+import com.example.handlingms.domain.model.valueobjects.CargoBookingId;
+import com.example.handlingms.domain.model.aggregates.CustomsDeclaration;
+import com.example.handlingms.domain.model.valueobjects.CustomsStatus;
+import com.example.handlingms.domain.model.valueobjects.DeclarationNumber;
+import com.example.handlingms.domain.model.valueobjects.HandlingTrackingNumber;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;

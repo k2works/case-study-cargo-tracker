@@ -1,14 +1,14 @@
 package com.example.handlingms.interfaces.rest;
 
-import com.example.handlingms.application.internal.commandservices.RegisterHandlingActivityCommand;
 import com.example.handlingms.application.internal.commandservices.RegisterHandlingActivityUseCase;
-import com.example.handlingms.application.port.CargoLookupUnavailableException;
-import com.example.handlingms.application.port.CargoSnapshotFinder;
-import com.example.handlingms.application.port.HandlingActivityRepository;
-import com.example.handlingms.application.port.LocationRepository;
-import com.example.handlingms.domain.model.CargoBookingId;
-import com.example.handlingms.domain.model.HandlingTrackingNumber;
-import com.example.handlingms.domain.model.HandlingType;
+import com.example.handlingms.application.internal.outboundservices.acl.CargoLookupUnavailableException;
+import com.example.handlingms.application.internal.outboundservices.acl.CargoSnapshotFinder;
+import com.example.handlingms.domain.model.commands.RegisterHandlingActivityCommand;
+import com.example.handlingms.domain.model.valueobjects.CargoBookingId;
+import com.example.handlingms.domain.model.valueobjects.HandlingTrackingNumber;
+import com.example.handlingms.domain.model.valueobjects.HandlingType;
+import com.example.handlingms.domain.repository.HandlingActivityRepository;
+import com.example.handlingms.domain.repository.LocationRepository;
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.auth.Role;
 import java.time.Instant;

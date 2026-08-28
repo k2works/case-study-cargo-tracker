@@ -1,17 +1,17 @@
 package com.example.routingms.interfaces.rest;
 
-import com.example.routingms.application.internal.commandservices.RegisterVoyageCommand;
 import com.example.routingms.application.internal.commandservices.RegisterVoyageUseCase;
-import com.example.routingms.application.internal.queryservices.SearchVoyageUseCase;
 import com.example.routingms.application.internal.commandservices.VoyageOutcome;
-import com.example.routingms.domain.model.CargoType;
-import com.example.routingms.domain.model.CarrierMovement;
-import com.example.routingms.domain.model.Schedule;
-import com.example.routingms.domain.model.Voyage;
-import com.example.routingms.domain.model.VoyageDifference;
-import com.example.routingms.domain.model.VoyageNumber;
-import com.example.routingms.application.port.LocationRepository;
-import com.example.routingms.application.port.VoyageSearchCriteria;
+import com.example.routingms.application.internal.queryservices.SearchVoyageUseCase;
+import com.example.routingms.domain.model.aggregates.Voyage;
+import com.example.routingms.domain.model.commands.RegisterVoyageCommand;
+import com.example.routingms.domain.model.valueobjects.CarrierMovement;
+import com.example.routingms.domain.model.valueobjects.CargoType;
+import com.example.routingms.domain.model.valueobjects.Schedule;
+import com.example.routingms.domain.model.valueobjects.VoyageDifference;
+import com.example.routingms.domain.model.valueobjects.VoyageNumber;
+import com.example.routingms.domain.model.valueobjects.VoyageSearchCriteria;
+import com.example.routingms.domain.repository.LocationRepository;
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.auth.Role;
 import com.example.shared.domain.model.Location;

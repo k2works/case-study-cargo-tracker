@@ -1,6 +1,6 @@
 package com.example.billingms.interfaces.rest;
 
-import com.example.billingms.domain.model.TransportCharge;
+import com.example.billingms.domain.model.valueobjects.TransportCharge;
 import java.math.BigDecimal;
 
 /**

@@ -7,9 +7,9 @@ import static org.mockito.Mockito.doThrow;
 
 import com.example.billingms.application.internal.commandservices.AdjustmentCommand;
 import com.example.billingms.application.internal.commandservices.CalculateChargeUseCase;
-import com.example.billingms.application.port.BillableCargoSnapshot;
-import com.example.billingms.application.port.BillingSnapshotFinder;
-import com.example.billingms.application.port.InvoiceRepository;
+import com.example.billingms.application.internal.outboundservices.acl.BillableCargoSnapshot;
+import com.example.billingms.application.internal.outboundservices.acl.BillingSnapshotFinder;
+import com.example.billingms.domain.repository.InvoiceRepository;
 import com.example.billingms.infrastructure.repositories.InvoiceLineItemMapper;
 import java.math.BigDecimal;
 import java.time.Instant;

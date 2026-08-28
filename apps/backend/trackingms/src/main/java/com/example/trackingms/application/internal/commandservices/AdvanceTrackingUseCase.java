@@ -3,13 +3,13 @@ package com.example.trackingms.application.internal.commandservices;
 import org.springframework.stereotype.Service;
 
 import com.example.shared.domain.model.Location;
-import com.example.trackingms.application.port.LocationRepository;
-import com.example.trackingms.application.port.TrackingActivityRepository;
-import com.example.trackingms.application.port.TrackingNotifier;
-import com.example.trackingms.domain.model.TrackingEvent;
-import com.example.trackingms.domain.model.TrackingActivity;
-import com.example.trackingms.domain.model.TrackingNumber;
-import com.example.trackingms.domain.model.TrackingStatus;
+import com.example.trackingms.domain.repository.LocationRepository;
+import com.example.trackingms.domain.repository.TrackingActivityRepository;
+import com.example.trackingms.application.internal.outboundservices.acl.TrackingNotifier;
+import com.example.trackingms.domain.model.valueobjects.TrackingEvent;
+import com.example.trackingms.domain.model.aggregates.TrackingActivity;
+import com.example.trackingms.domain.model.valueobjects.TrackingNumber;
+import com.example.trackingms.domain.model.valueobjects.TrackingStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

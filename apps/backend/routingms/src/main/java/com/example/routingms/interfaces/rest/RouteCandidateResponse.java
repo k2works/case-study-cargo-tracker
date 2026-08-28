@@ -1,9 +1,9 @@
 package com.example.routingms.interfaces.rest;
 
-import com.example.routingms.domain.model.RouteRecommendation;
-import com.example.routingms.domain.model.TransitEdge;
-import com.example.routingms.domain.model.TransitPath;
-import com.example.routingms.domain.model.VoyageNumber;
+import com.example.routingms.domain.model.entities.RouteRecommendation;
+import com.example.routingms.domain.model.valueobjects.TransitEdge;
+import com.example.routingms.domain.model.valueobjects.TransitPath;
+import com.example.routingms.domain.model.valueobjects.VoyageNumber;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;

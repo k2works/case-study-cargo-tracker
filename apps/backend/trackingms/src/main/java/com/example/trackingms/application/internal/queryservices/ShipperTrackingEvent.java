@@ -1,6 +1,6 @@
 package com.example.trackingms.application.internal.queryservices;
 
-import com.example.trackingms.domain.model.TrackingEvent;
+import com.example.trackingms.domain.model.valueobjects.TrackingEvent;
 
 /** 荷主向け追跡詳細の経過 1 件。 */
 public record ShipperTrackingEvent(String occurredAt, String status, String statusLabel,

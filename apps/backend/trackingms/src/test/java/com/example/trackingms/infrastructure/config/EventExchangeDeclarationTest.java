@@ -45,8 +45,8 @@ class EventExchangeDeclarationTest {
     @Test
     @DisplayName("予備の行き先の名前が契約と一致する")
     void namesTheUnroutableExchangeAsAgreed() {
-        assertThat(com.example.trackingms.infrastructure.messaging.TrackingEventChannels.UNROUTABLE_EXCHANGE).isEqualTo(EventExchangeContract.UNROUTABLE_EXCHANGE);
-        assertThat(com.example.trackingms.infrastructure.messaging.TrackingEventChannels.UNROUTABLE_QUEUE).isEqualTo(EventExchangeContract.UNROUTABLE_QUEUE);
+        assertThat(com.example.trackingms.interfaces.events.TrackingEventChannels.UNROUTABLE_EXCHANGE).isEqualTo(EventExchangeContract.UNROUTABLE_EXCHANGE);
+        assertThat(com.example.trackingms.interfaces.events.TrackingEventChannels.UNROUTABLE_QUEUE).isEqualTo(EventExchangeContract.UNROUTABLE_QUEUE);
     }
 
     private List<TopicExchange> businessExchanges() {

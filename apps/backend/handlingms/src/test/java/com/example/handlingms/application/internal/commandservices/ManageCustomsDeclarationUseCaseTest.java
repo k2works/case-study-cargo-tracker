@@ -3,12 +3,12 @@ package com.example.handlingms.application.internal.commandservices;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.example.handlingms.application.port.CustomsDeclarationRepository;
-import com.example.handlingms.domain.model.CargoBookingId;
-import com.example.handlingms.domain.model.CustomsDeclaration;
-import com.example.handlingms.domain.model.CustomsStatus;
-import com.example.handlingms.domain.model.DeclarationNumber;
-import com.example.handlingms.domain.model.HandlingTrackingNumber;
+import com.example.handlingms.domain.repository.CustomsDeclarationRepository;
+import com.example.handlingms.domain.model.valueobjects.CargoBookingId;
+import com.example.handlingms.domain.model.aggregates.CustomsDeclaration;
+import com.example.handlingms.domain.model.valueobjects.CustomsStatus;
+import com.example.handlingms.domain.model.valueobjects.DeclarationNumber;
+import com.example.handlingms.domain.model.valueobjects.HandlingTrackingNumber;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -39,20 +39,20 @@ class ManageCustomsDeclarationUseCaseTest {
     private final CustomsDeclarationRepository declarations = new StubRepository();
 
     /** 発行されたイベント。**発行したことを検査から見る**。 */
-    private final List<com.example.handlingms.application.port.CustomsStatusChanged> published =
+    private final List<com.example.handlingms.application.internal.outboundservices.acl.CustomsStatusChanged> published =
             new ArrayList<>();
 
-    private final com.example.handlingms.application.port.HandlingEventNotifier notifier =
-            new com.example.handlingms.application.port.HandlingEventNotifier() {
+    private final com.example.handlingms.application.internal.outboundservices.acl.HandlingEventNotifier notifier =
+            new com.example.handlingms.application.internal.outboundservices.acl.HandlingEventNotifier() {
                 @Override
                 public void handlingActivityRegistered(
-                        com.example.handlingms.application.port.HandlingActivityRegistered event) {
+                        com.example.handlingms.application.internal.outboundservices.acl.HandlingActivityRegistered event) {
                     throw new UnsupportedOperationException("この検査では使わない");
                 }
 
                 @Override
                 public void customsStatusChanged(
-                        com.example.handlingms.application.port.CustomsStatusChanged event) {
+                        com.example.handlingms.application.internal.outboundservices.acl.CustomsStatusChanged event) {
                     published.add(event);
                 }
             };

@@ -52,5 +52,5 @@ public final class HandlingActivityRegisteredContract {
      * 「相手の型を共有しない」という判断の根拠であり、コンシューマ側の契約テストが確かめる。
      */
     public static final String PRODUCER_TYPE_ID =
-            "com.example.handlingms.application.port.HandlingActivityRegistered";
+            "com.example.handlingms.application.internal.outboundservices.acl.HandlingActivityRegistered";
 }

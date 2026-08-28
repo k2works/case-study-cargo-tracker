@@ -1,6 +1,6 @@
 package com.example.trackingms.application.internal.queryservices;
 
-import com.example.trackingms.domain.model.TrackingActivity;
+import com.example.trackingms.domain.model.aggregates.TrackingActivity;
 import java.time.LocalDate;
 
 /** 荷主向け追跡一覧の 1 件。 */

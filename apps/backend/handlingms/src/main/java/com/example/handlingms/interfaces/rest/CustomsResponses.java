@@ -1,8 +1,8 @@
 package com.example.handlingms.interfaces.rest;
 
-import com.example.handlingms.domain.model.CustomsDeclaration;
-import com.example.handlingms.domain.model.CustomsStatus;
-import com.example.handlingms.domain.model.CustomsStatusChange;
+import com.example.handlingms.domain.model.aggregates.CustomsDeclaration;
+import com.example.handlingms.domain.model.valueobjects.CustomsStatus;
+import com.example.handlingms.domain.model.valueobjects.CustomsStatusChange;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;

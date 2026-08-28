@@ -1,6 +1,6 @@
 package com.example.billingms.interfaces.rest;
 
-import com.example.billingms.domain.model.Invoice;
+import com.example.billingms.domain.model.aggregates.Invoice;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;

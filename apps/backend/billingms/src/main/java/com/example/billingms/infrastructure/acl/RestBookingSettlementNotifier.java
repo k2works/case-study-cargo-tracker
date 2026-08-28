@@ -1,6 +1,6 @@
 package com.example.billingms.infrastructure.acl;
 
-import com.example.billingms.application.port.BookingSettlementNotifier;
+import com.example.billingms.application.internal.outboundservices.acl.BookingSettlementNotifier;
 import com.example.shared.auth.AuthenticatedUser;
 import org.springframework.web.client.RestClient;
 

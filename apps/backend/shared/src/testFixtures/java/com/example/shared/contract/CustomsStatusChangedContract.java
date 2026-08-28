@@ -54,5 +54,5 @@ public final class CustomsStatusChangedContract {
      * <p>この名前は<strong>コンシューマのクラスパスに存在しない</strong>。
      */
     public static final String PRODUCER_TYPE_ID =
-            "com.example.handlingms.application.port.CustomsStatusChanged";
+            "com.example.handlingms.application.internal.outboundservices.acl.CustomsStatusChanged";
 }

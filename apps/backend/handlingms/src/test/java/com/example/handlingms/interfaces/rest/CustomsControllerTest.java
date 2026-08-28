@@ -14,13 +14,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.handlingms.application.internal.commandservices.ManageCustomsDeclarationUseCase;
-import com.example.handlingms.application.internal.commandservices.RegisterCustomsDeclarationCommand;
+import com.example.handlingms.domain.model.commands.RegisterCustomsDeclarationCommand;
 import com.example.handlingms.application.internal.commandservices.RegisterCustomsDeclarationUseCase;
-import com.example.handlingms.domain.model.CargoBookingId;
-import com.example.handlingms.domain.model.CustomsDeclaration;
-import com.example.handlingms.domain.model.CustomsStatus;
-import com.example.handlingms.domain.model.DeclarationNumber;
-import com.example.handlingms.domain.model.HandlingTrackingNumber;
+import com.example.handlingms.domain.model.valueobjects.CargoBookingId;
+import com.example.handlingms.domain.model.aggregates.CustomsDeclaration;
+import com.example.handlingms.domain.model.valueobjects.CustomsStatus;
+import com.example.handlingms.domain.model.valueobjects.DeclarationNumber;
+import com.example.handlingms.domain.model.valueobjects.HandlingTrackingNumber;
 import com.example.shared.auth.AuthenticatedUser;
 import java.time.Clock;
 import java.time.Instant;

@@ -1,11 +1,11 @@
 package com.example.handlingms.application.internal.commandservices;
 
-import com.example.handlingms.application.port.CustomsDeclarationRepository;
-import com.example.handlingms.application.port.CustomsStatusChanged;
-import com.example.handlingms.application.port.HandlingEventNotifier;
-import com.example.handlingms.domain.model.CargoBookingId;
-import com.example.handlingms.domain.model.CustomsDeclaration;
-import com.example.handlingms.domain.model.CustomsStatus;
+import com.example.handlingms.domain.repository.CustomsDeclarationRepository;
+import com.example.handlingms.application.internal.outboundservices.acl.CustomsStatusChanged;
+import com.example.handlingms.application.internal.outboundservices.acl.HandlingEventNotifier;
+import com.example.handlingms.domain.model.valueobjects.CargoBookingId;
+import com.example.handlingms.domain.model.aggregates.CustomsDeclaration;
+import com.example.handlingms.domain.model.valueobjects.CustomsStatus;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;

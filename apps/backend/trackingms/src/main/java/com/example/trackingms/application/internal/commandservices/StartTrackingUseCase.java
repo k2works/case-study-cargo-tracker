@@ -1,11 +1,11 @@
 package com.example.trackingms.application.internal.commandservices;
 
 import com.example.shared.domain.model.Location;
-import com.example.trackingms.application.port.LocationRepository;
-import com.example.trackingms.application.port.TrackingActivityRepository;
-import com.example.trackingms.domain.model.TrackingActivity;
-import com.example.trackingms.domain.model.TrackingBookingId;
-import com.example.trackingms.domain.model.TrackingNumber;
+import com.example.trackingms.domain.repository.LocationRepository;
+import com.example.trackingms.domain.repository.TrackingActivityRepository;
+import com.example.trackingms.domain.model.aggregates.TrackingActivity;
+import com.example.trackingms.domain.model.valueobjects.TrackingBookingId;
+import com.example.trackingms.domain.model.valueobjects.TrackingNumber;
 import java.time.LocalDate;
 import org.springframework.stereotype.Service;
 

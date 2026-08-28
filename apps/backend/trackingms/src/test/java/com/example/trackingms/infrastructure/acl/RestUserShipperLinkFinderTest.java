@@ -10,7 +10,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.contract.UserShipperLinkContract;
-import com.example.trackingms.application.port.ShipperTrackingLookupUnavailableException;
+import com.example.trackingms.application.internal.outboundservices.acl.ShipperTrackingLookupUnavailableException;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

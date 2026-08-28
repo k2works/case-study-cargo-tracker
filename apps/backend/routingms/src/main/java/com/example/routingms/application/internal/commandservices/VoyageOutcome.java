@@ -1,7 +1,7 @@
 package com.example.routingms.application.internal.commandservices;
 
-import com.example.routingms.domain.model.Voyage;
-import com.example.routingms.domain.model.VoyageDifference;
+import com.example.routingms.domain.model.aggregates.Voyage;
+import com.example.routingms.domain.model.valueobjects.VoyageDifference;
 
 /**
  * 登録・更新の結果。

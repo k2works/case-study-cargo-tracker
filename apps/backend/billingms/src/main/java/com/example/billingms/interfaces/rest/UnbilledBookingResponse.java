@@ -1,6 +1,6 @@
 package com.example.billingms.interfaces.rest;
 
-import com.example.billingms.application.port.BillableCargoSnapshot;
+import com.example.billingms.application.internal.outboundservices.acl.BillableCargoSnapshot;
 import java.time.Instant;
 
 /**

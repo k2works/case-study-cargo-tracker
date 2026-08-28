@@ -1,8 +1,8 @@
 package com.example.trackingms.infrastructure.acl;
 
 import com.example.shared.auth.AuthenticatedUser;
-import com.example.trackingms.application.port.ShipperTrackingLookupUnavailableException;
-import com.example.trackingms.application.port.UserShipperLinkFinder;
+import com.example.trackingms.application.internal.outboundservices.acl.ShipperTrackingLookupUnavailableException;
+import com.example.trackingms.application.internal.outboundservices.acl.UserShipperLinkFinder;
 import java.util.Optional;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;

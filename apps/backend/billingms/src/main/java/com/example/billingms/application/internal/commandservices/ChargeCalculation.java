@@ -1,12 +1,12 @@
 package com.example.billingms.application.internal.commandservices;
 
-import com.example.billingms.application.port.BillableCargoSnapshot;
-import com.example.billingms.domain.model.CancellationFee;
-import com.example.billingms.domain.model.DiscountPolicy;
-import com.example.billingms.domain.model.DiscountRate;
-import com.example.billingms.domain.model.Money;
-import com.example.billingms.domain.model.TaxRate;
-import com.example.billingms.domain.model.TransportCharge;
+import com.example.billingms.application.internal.outboundservices.acl.BillableCargoSnapshot;
+import com.example.billingms.domain.model.valueobjects.CancellationFee;
+import com.example.billingms.domain.model.valueobjects.DiscountPolicy;
+import com.example.billingms.domain.model.valueobjects.DiscountRate;
+import com.example.billingms.domain.model.valueobjects.Money;
+import com.example.billingms.domain.model.valueobjects.TaxRate;
+import com.example.billingms.domain.model.valueobjects.TransportCharge;
 
 /**
  * 料金の算出結果（[ADR-027] 決定 3）。

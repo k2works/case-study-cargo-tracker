@@ -1,13 +1,13 @@
 package com.example.routingms.application.internal.queryservices;
 
-import com.example.routingms.application.port.LocationRepository;
-import com.example.routingms.application.port.VoyageRepository;
-import com.example.routingms.domain.model.CargoType;
-import com.example.routingms.domain.model.RouteRecommendation;
-import com.example.routingms.domain.model.RouteSearchSpecification;
-import com.example.routingms.domain.model.TransitPath;
-import com.example.routingms.domain.model.TransitPathFinder;
-import com.example.routingms.domain.model.Voyage;
+import com.example.routingms.domain.repository.LocationRepository;
+import com.example.routingms.domain.repository.VoyageRepository;
+import com.example.routingms.domain.model.valueobjects.CargoType;
+import com.example.routingms.domain.model.entities.RouteRecommendation;
+import com.example.routingms.domain.model.valueobjects.RouteSearchSpecification;
+import com.example.routingms.domain.model.valueobjects.TransitPath;
+import com.example.routingms.domain.model.valueobjects.TransitPathFinder;
+import com.example.routingms.domain.model.aggregates.Voyage;
 import com.example.shared.domain.model.Location;
 import java.time.Clock;
 import java.time.Instant;

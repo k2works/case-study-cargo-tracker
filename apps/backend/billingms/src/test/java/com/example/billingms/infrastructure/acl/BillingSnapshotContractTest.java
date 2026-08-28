@@ -2,7 +2,7 @@ package com.example.billingms.infrastructure.acl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.billingms.application.port.BillableCargoSnapshot;
+import com.example.billingms.application.internal.outboundservices.acl.BillableCargoSnapshot;
 import com.example.shared.contract.BillingSnapshotContract;
 import tools.jackson.databind.json.JsonMapper;
 import java.lang.reflect.RecordComponent;

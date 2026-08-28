@@ -16,22 +16,22 @@ import com.example.billingms.application.internal.commandservices.AlreadyInvoice
 import com.example.billingms.application.internal.commandservices.BillingNotAvailableException;
 import com.example.billingms.application.internal.commandservices.CalculateChargeUseCase;
 import com.example.billingms.application.internal.commandservices.ChargeCalculation;
-import com.example.billingms.application.port.BillableCargoSnapshot;
-import com.example.billingms.application.port.InvoiceRepository;
-import com.example.billingms.domain.model.BillingBookingId;
-import com.example.billingms.domain.model.BillingShipperId;
-import com.example.billingms.domain.model.CancellationFee;
-import com.example.billingms.domain.model.CancelledAtStatus;
-import com.example.billingms.domain.model.CargoType;
-import com.example.billingms.domain.model.DiscountPolicy;
-import com.example.billingms.domain.model.DiscountRate;
-import com.example.billingms.domain.model.Invoice;
-import com.example.billingms.domain.model.InvoiceId;
-import com.example.billingms.domain.model.InvoiceCharges;
-import com.example.billingms.domain.model.InvoiceLineItem;
-import com.example.billingms.domain.model.Money;
-import com.example.billingms.domain.model.TaxRate;
-import com.example.billingms.domain.model.TransportCharge;
+import com.example.billingms.application.internal.outboundservices.acl.BillableCargoSnapshot;
+import com.example.billingms.domain.repository.InvoiceRepository;
+import com.example.billingms.domain.model.valueobjects.BillingBookingId;
+import com.example.billingms.domain.model.valueobjects.BillingShipperId;
+import com.example.billingms.domain.model.valueobjects.CancellationFee;
+import com.example.billingms.domain.model.valueobjects.CancelledAtStatus;
+import com.example.billingms.domain.model.valueobjects.CargoType;
+import com.example.billingms.domain.model.valueobjects.DiscountPolicy;
+import com.example.billingms.domain.model.valueobjects.DiscountRate;
+import com.example.billingms.domain.model.aggregates.Invoice;
+import com.example.billingms.domain.model.valueobjects.InvoiceId;
+import com.example.billingms.domain.model.valueobjects.InvoiceCharges;
+import com.example.billingms.domain.model.valueobjects.InvoiceLineItem;
+import com.example.billingms.domain.model.valueobjects.Money;
+import com.example.billingms.domain.model.valueobjects.TaxRate;
+import com.example.billingms.domain.model.valueobjects.TransportCharge;
 import com.example.shared.auth.AuthenticatedUser;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -90,7 +90,7 @@ class BillingControllerTest {
 
     private static Invoice issued() {
         return Invoice.issue(
-                new com.example.billingms.domain.model.InvoiceHeader(
+                new com.example.billingms.domain.model.valueobjects.InvoiceHeader(
                         InvoiceId.of("INV-2026000001"),
                         BillingBookingId.of("BKG-2026000007"),
                         BillingShipperId.corporate("1", "丸紅商事株式会社"),

@@ -2,9 +2,9 @@ package com.example.trackingms;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.trackingms.domain.model.TrackingNumber;
-import com.example.trackingms.domain.model.TrackingStatus;
-import com.example.trackingms.infrastructure.messaging.TrackingEventChannels;
+import com.example.trackingms.domain.model.valueobjects.TrackingNumber;
+import com.example.trackingms.domain.model.valueobjects.TrackingStatus;
+import com.example.trackingms.interfaces.events.TrackingEventChannels;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -18,7 +18,7 @@ class HandlingActivityRegisteredRoundTripTest extends EventRoundTripTestBase {
 
     /** handlingms の型名。<strong>こちらのクラスパスには存在しない</strong>。 */
     private static final String PRODUCER_TYPE_ID =
-            "com.example.handlingms.application.port.HandlingActivityRegistered";
+            "com.example.handlingms.application.internal.outboundservices.acl.HandlingActivityRegistered";
 
     private static final String BOOKING_ID = "BKG-2026000005";
 

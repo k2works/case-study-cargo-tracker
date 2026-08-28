@@ -1,7 +1,7 @@
 package com.example.billingms;
 
-import com.example.billingms.domain.model.ChargeableLeg;
-import com.example.billingms.domain.model.PortRegion;
+import com.example.billingms.domain.model.valueobjects.ChargeableLeg;
+import com.example.billingms.domain.model.valueobjects.PortRegion;
 import java.util.Collections;
 import java.util.List;
 
@@ -24,18 +24,18 @@ public final class ChargeFixtures {
     }
 
     /** ACL が運ぶ形の、国内の区間 {@code count} 本。 */
-    public static List<com.example.billingms.application.port.BillableCargoSnapshot.Leg>
+    public static List<com.example.billingms.application.internal.outboundservices.acl.BillableCargoSnapshot.Leg>
             domesticSnapshotLegs(int count) {
         return Collections.nCopies(count,
-                new com.example.billingms.application.port.BillableCargoSnapshot.Leg(
+                new com.example.billingms.application.internal.outboundservices.acl.BillableCargoSnapshot.Leg(
                         "DOMESTIC", "DOMESTIC"));
     }
 
     /** ACL が運ぶ形の、遠洋の区間 {@code count} 本。 */
-    public static List<com.example.billingms.application.port.BillableCargoSnapshot.Leg>
+    public static List<com.example.billingms.application.internal.outboundservices.acl.BillableCargoSnapshot.Leg>
             oceanSnapshotLegs(int count) {
         return Collections.nCopies(count,
-                new com.example.billingms.application.port.BillableCargoSnapshot.Leg(
+                new com.example.billingms.application.internal.outboundservices.acl.BillableCargoSnapshot.Leg(
                         "OCEAN", "OCEAN"));
     }
 

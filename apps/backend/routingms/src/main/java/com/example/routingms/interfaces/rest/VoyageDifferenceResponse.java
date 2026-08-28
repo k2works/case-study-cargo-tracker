@@ -1,6 +1,6 @@
 package com.example.routingms.interfaces.rest;
 
-import com.example.routingms.domain.model.VoyageDifference;
+import com.example.routingms.domain.model.valueobjects.VoyageDifference;
 import java.util.List;
 
 /**

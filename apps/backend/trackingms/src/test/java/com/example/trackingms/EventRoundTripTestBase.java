@@ -1,8 +1,8 @@
 package com.example.trackingms;
 
-import com.example.trackingms.application.port.LocationRepository;
-import com.example.trackingms.application.port.TrackingActivityRepository;
-import com.example.trackingms.infrastructure.messaging.TrackingEventChannels;
+import com.example.trackingms.domain.repository.LocationRepository;
+import com.example.trackingms.domain.repository.TrackingActivityRepository;
+import com.example.trackingms.interfaces.events.TrackingEventChannels;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import org.awaitility.Awaitility;

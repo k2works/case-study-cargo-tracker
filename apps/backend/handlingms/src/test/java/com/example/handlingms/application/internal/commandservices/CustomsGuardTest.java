@@ -4,19 +4,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.example.handlingms.application.port.CargoSnapshotFinder;
-import com.example.handlingms.application.port.CustomsDeclarationRepository;
-import com.example.handlingms.application.port.HandlingActivityRepository;
-import com.example.handlingms.application.port.HandlingEventNotifier;
-import com.example.handlingms.application.port.LocationRepository;
-import com.example.handlingms.domain.model.CargoBookingId;
-import com.example.handlingms.domain.model.CargoSnapshot;
-import com.example.handlingms.domain.model.CustomsDeclaration;
-import com.example.handlingms.domain.model.CustomsStatus;
-import com.example.handlingms.domain.model.DeclarationNumber;
-import com.example.handlingms.domain.model.HandlingActivity;
-import com.example.handlingms.domain.model.HandlingTrackingNumber;
-import com.example.handlingms.domain.model.HandlingType;
+import com.example.handlingms.application.internal.outboundservices.acl.CargoSnapshotFinder;
+import com.example.handlingms.domain.repository.CustomsDeclarationRepository;
+import com.example.handlingms.domain.repository.HandlingActivityRepository;
+import com.example.handlingms.application.internal.outboundservices.acl.HandlingEventNotifier;
+import com.example.handlingms.domain.repository.LocationRepository;
+import com.example.handlingms.domain.model.commands.RegisterHandlingActivityCommand;
+import com.example.handlingms.domain.model.valueobjects.CargoBookingId;
+import com.example.handlingms.domain.model.valueobjects.CargoSnapshot;
+import com.example.handlingms.domain.model.aggregates.CustomsDeclaration;
+import com.example.handlingms.domain.model.valueobjects.CustomsStatus;
+import com.example.handlingms.domain.model.valueobjects.DeclarationNumber;
+import com.example.handlingms.domain.model.aggregates.HandlingActivity;
+import com.example.handlingms.domain.model.valueobjects.HandlingTrackingNumber;
+import com.example.handlingms.domain.model.valueobjects.HandlingType;
 import com.example.shared.domain.model.Location;
 import java.time.Clock;
 import java.time.Instant;
@@ -71,13 +72,13 @@ class CustomsGuardTest {
         return new HandlingEventNotifier() {
             @Override
             public void handlingActivityRegistered(
-                    com.example.handlingms.application.port.HandlingActivityRegistered event) {
+                    com.example.handlingms.application.internal.outboundservices.acl.HandlingActivityRegistered event) {
                 // ガードの検査では、発行そのものは見ない
             }
 
             @Override
             public void customsStatusChanged(
-                    com.example.handlingms.application.port.CustomsStatusChanged event) {
+                    com.example.handlingms.application.internal.outboundservices.acl.CustomsStatusChanged event) {
                 // ガードの検査では、発行そのものは見ない
             }
         };

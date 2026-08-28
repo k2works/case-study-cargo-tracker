@@ -9,13 +9,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.handlingms.application.internal.commandservices.RegisterHandlingActivityCommand;
+import com.example.handlingms.domain.model.commands.RegisterHandlingActivityCommand;
 import com.example.handlingms.application.internal.commandservices.RegisterHandlingActivityUseCase;
-import com.example.handlingms.application.port.CargoLookupUnavailableException;
-import com.example.handlingms.application.port.HandlingActivityRepository;
-import com.example.handlingms.application.port.LocationRepository;
-import com.example.handlingms.domain.model.HandlingActivity;
-import com.example.handlingms.domain.model.HandlingType;
+import com.example.handlingms.application.internal.outboundservices.acl.CargoLookupUnavailableException;
+import com.example.handlingms.domain.repository.HandlingActivityRepository;
+import com.example.handlingms.domain.repository.LocationRepository;
+import com.example.handlingms.domain.model.aggregates.HandlingActivity;
+import com.example.handlingms.domain.model.valueobjects.HandlingType;
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.domain.model.Location;
 import java.time.Instant;
@@ -60,11 +60,11 @@ class HandlingActivityControllerTest {
     private LocationRepository locations;
 
     @MockitoBean
-    private com.example.handlingms.application.port.CargoSnapshotFinder cargoes;
+    private com.example.handlingms.application.internal.outboundservices.acl.CargoSnapshotFinder cargoes;
 
     private static HandlingActivity received() {
         return HandlingActivity.restore(1L,
-                com.example.handlingms.domain.model.CargoBookingId.of("BKG-2026000001"),
+                com.example.handlingms.domain.model.valueobjects.CargoBookingId.of("BKG-2026000001"),
                 HandlingType.RECEIVE, Location.of("JPTYO", "Tokyo"),
                 Instant.parse("2026-08-23T02:00:00Z"), "handler01", null, null, false);
     }
@@ -151,10 +151,10 @@ class HandlingActivityControllerTest {
         @DisplayName("予定外の作業は、予定外として応答に載る")
         void reportsOffRoute() throws Exception {
             when(registerActivity.register(any())).thenReturn(Optional.of(HandlingActivity.restore(
-                    2L, com.example.handlingms.domain.model.CargoBookingId.of("BKG-2026000001"),
+                    2L, com.example.handlingms.domain.model.valueobjects.CargoBookingId.of("BKG-2026000001"),
                     HandlingType.UNLOAD, Location.of("SGSIN", "Singapore"),
                     Instant.parse("2026-08-23T02:00:00Z"), "handler01",
-                    com.example.handlingms.domain.model.HandlingVoyageNumber.of("V0100"), null,
+                    com.example.handlingms.domain.model.valueobjects.HandlingVoyageNumber.of("V0100"), null,
                     true)));
 
             mockMvc.perform(post("/api/v1/handling")
@@ -315,7 +315,7 @@ class HandlingActivityControllerTest {
         @DisplayName("追跡管理者は、追跡番号だけで履歴を引ける")
         void trackersCanReadHistoryByTrackingNumber() throws Exception {
             when(cargoes.findByTrackingNumber(any())).thenReturn(Optional.of(
-                    com.example.handlingms.domain.model.CargoSnapshot.of("BKG-2026000001",
+                    com.example.handlingms.domain.model.valueobjects.CargoSnapshot.of("BKG-2026000001",
                             "JPTYO", "USLAX", List.of())));
             when(activities.findByBookingId(any(), org.mockito.ArgumentMatchers.anyInt()))
                     .thenReturn(List.of(received()));

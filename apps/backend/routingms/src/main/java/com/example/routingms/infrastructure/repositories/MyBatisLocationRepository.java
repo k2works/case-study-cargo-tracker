@@ -1,6 +1,6 @@
 package com.example.routingms.infrastructure.repositories;
 
-import com.example.routingms.application.port.LocationRepository;
+import com.example.routingms.domain.repository.LocationRepository;
 import com.example.shared.domain.model.Location;
 import java.time.ZoneId;
 import java.util.List;

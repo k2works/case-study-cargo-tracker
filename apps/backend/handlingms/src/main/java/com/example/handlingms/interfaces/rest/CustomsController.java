@@ -1,10 +1,10 @@
 package com.example.handlingms.interfaces.rest;
 
 import com.example.handlingms.application.internal.commandservices.ManageCustomsDeclarationUseCase;
-import com.example.handlingms.application.internal.commandservices.RegisterCustomsDeclarationCommand;
 import com.example.handlingms.application.internal.commandservices.RegisterCustomsDeclarationUseCase;
-import com.example.handlingms.domain.model.CustomsDeclaration;
-import com.example.handlingms.domain.model.CustomsStatus;
+import com.example.handlingms.domain.model.aggregates.CustomsDeclaration;
+import com.example.handlingms.domain.model.commands.RegisterCustomsDeclarationCommand;
+import com.example.handlingms.domain.model.valueobjects.CustomsStatus;
 import com.example.handlingms.interfaces.rest.CustomsRequests.RegisterCustomsDeclarationRequest;
 import com.example.handlingms.interfaces.rest.CustomsRequests.UpdateCustomsStatusRequest;
 import com.example.handlingms.interfaces.rest.CustomsResponses.CustomsDeclarationDetailResponse;

@@ -9,10 +9,10 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
-import com.example.handlingms.application.port.CargoLookupUnavailableException;
-import com.example.handlingms.domain.model.CargoSnapshot;
-import com.example.handlingms.domain.model.HandlingTrackingNumber;
-import com.example.handlingms.domain.model.HandlingType;
+import com.example.handlingms.application.internal.outboundservices.acl.CargoLookupUnavailableException;
+import com.example.handlingms.domain.model.valueobjects.CargoSnapshot;
+import com.example.handlingms.domain.model.valueobjects.HandlingTrackingNumber;
+import com.example.handlingms.domain.model.valueobjects.HandlingType;
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.contract.CargoSnapshotContract;
 import java.util.Optional;

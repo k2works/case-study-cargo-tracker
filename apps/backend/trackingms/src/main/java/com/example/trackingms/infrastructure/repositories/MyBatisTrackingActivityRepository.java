@@ -1,14 +1,14 @@
 package com.example.trackingms.infrastructure.repositories;
 
 import com.example.shared.domain.model.Location;
-import com.example.trackingms.application.port.TrackingActivityRepository;
-import com.example.trackingms.domain.model.ExceptionType;
-import com.example.trackingms.domain.model.TrackingActivity;
-import com.example.trackingms.domain.model.TrackingBookingId;
-import com.example.trackingms.domain.model.TrackingEvent;
-import com.example.trackingms.domain.model.TrackingExceptionEvent;
-import com.example.trackingms.domain.model.TrackingNumber;
-import com.example.trackingms.domain.model.TrackingStatus;
+import com.example.trackingms.domain.repository.TrackingActivityRepository;
+import com.example.trackingms.domain.model.valueobjects.ExceptionType;
+import com.example.trackingms.domain.model.aggregates.TrackingActivity;
+import com.example.trackingms.domain.model.valueobjects.TrackingBookingId;
+import com.example.trackingms.domain.model.valueobjects.TrackingEvent;
+import com.example.trackingms.domain.model.entities.TrackingExceptionEvent;
+import com.example.trackingms.domain.model.valueobjects.TrackingNumber;
+import com.example.trackingms.domain.model.valueobjects.TrackingStatus;
 import java.util.List;
 import java.util.Optional;
 

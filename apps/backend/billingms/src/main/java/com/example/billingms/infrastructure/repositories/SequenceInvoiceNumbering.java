@@ -1,7 +1,7 @@
 package com.example.billingms.infrastructure.repositories;
 
-import com.example.billingms.application.port.InvoiceNumbering;
-import com.example.billingms.domain.model.InvoiceId;
+import com.example.billingms.domain.repository.InvoiceNumbering;
+import com.example.billingms.domain.model.valueobjects.InvoiceId;
 import java.time.Clock;
 import java.time.ZoneId;
 

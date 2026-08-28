@@ -1,7 +1,7 @@
 package com.example.routingms.interfaces.rest;
 
-import com.example.routingms.domain.model.CarrierMovement;
-import com.example.routingms.domain.model.Voyage;
+import com.example.routingms.domain.model.valueobjects.CarrierMovement;
+import com.example.routingms.domain.model.aggregates.Voyage;
 import java.time.Instant;
 import java.util.List;
 

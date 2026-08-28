@@ -1,8 +1,9 @@
 package com.example.routingms.application.internal.commandservices;
 
-import com.example.routingms.application.port.VoyageRepository;
-import com.example.routingms.domain.model.Voyage;
-import com.example.routingms.domain.model.VoyageDifference;
+import com.example.routingms.domain.model.aggregates.Voyage;
+import com.example.routingms.domain.model.commands.RegisterVoyageCommand;
+import com.example.routingms.domain.model.valueobjects.VoyageDifference;
+import com.example.routingms.domain.repository.VoyageRepository;
 import java.time.ZoneId;
 import java.util.Optional;
 import org.springframework.stereotype.Service;

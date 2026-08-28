@@ -12,8 +12,8 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.contract.ShipperCargoSnapshotContract;
 import com.example.trackingms.application.internal.queryservices.ShipperCargoSnapshot;
-import com.example.trackingms.application.port.ShipperTrackingLookupUnavailableException;
-import com.example.trackingms.domain.model.TrackingNumber;
+import com.example.trackingms.application.internal.outboundservices.acl.ShipperTrackingLookupUnavailableException;
+import com.example.trackingms.domain.model.valueobjects.TrackingNumber;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

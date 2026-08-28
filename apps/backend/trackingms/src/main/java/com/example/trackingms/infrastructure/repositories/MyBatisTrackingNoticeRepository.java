@@ -1,8 +1,8 @@
 package com.example.trackingms.infrastructure.repositories;
 
-import com.example.trackingms.application.port.TrackingNoticeRepository;
-import com.example.trackingms.domain.model.TrackingNotice;
-import com.example.trackingms.domain.model.TrackingNumber;
+import com.example.trackingms.domain.repository.TrackingNoticeRepository;
+import com.example.trackingms.domain.model.valueobjects.TrackingNotice;
+import com.example.trackingms.domain.model.valueobjects.TrackingNumber;
 import java.util.List;
 
 /** 通知した事実の保存先（MyBatis）。 */

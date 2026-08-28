@@ -1,12 +1,12 @@
 package com.example.handlingms.infrastructure.repositories;
 
-import com.example.handlingms.application.port.CustomsDeclarationRepository;
-import com.example.handlingms.domain.model.CargoBookingId;
-import com.example.handlingms.domain.model.CustomsDeclaration;
-import com.example.handlingms.domain.model.CustomsStatus;
-import com.example.handlingms.domain.model.CustomsStatusChange;
-import com.example.handlingms.domain.model.DeclarationNumber;
-import com.example.handlingms.domain.model.HandlingTrackingNumber;
+import com.example.handlingms.domain.repository.CustomsDeclarationRepository;
+import com.example.handlingms.domain.model.valueobjects.CargoBookingId;
+import com.example.handlingms.domain.model.aggregates.CustomsDeclaration;
+import com.example.handlingms.domain.model.valueobjects.CustomsStatus;
+import com.example.handlingms.domain.model.valueobjects.CustomsStatusChange;
+import com.example.handlingms.domain.model.valueobjects.DeclarationNumber;
+import com.example.handlingms.domain.model.valueobjects.HandlingTrackingNumber;
 import java.util.List;
 import java.util.Optional;
 

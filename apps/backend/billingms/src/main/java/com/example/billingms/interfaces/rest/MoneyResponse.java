@@ -1,6 +1,6 @@
 package com.example.billingms.interfaces.rest;
 
-import com.example.billingms.domain.model.Money;
+import com.example.billingms.domain.model.valueobjects.Money;
 import java.math.BigDecimal;
 
 /**

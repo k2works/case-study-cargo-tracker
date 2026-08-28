@@ -1,27 +1,27 @@
 package com.example.billingms.infrastructure.repositories;
 
 import com.example.billingms.application.internal.commandservices.AlreadyInvoicedException;
-import com.example.billingms.application.port.InvoiceRepository;
-import com.example.billingms.domain.model.BillingBookingId;
-import com.example.billingms.domain.model.BillingShipperId;
-import com.example.billingms.domain.model.CancellationFee;
-import com.example.billingms.domain.model.CancelledAtStatus;
-import com.example.billingms.domain.model.CargoType;
-import com.example.billingms.domain.model.DiscountPolicy;
-import com.example.billingms.domain.model.DiscountRate;
-import com.example.billingms.domain.model.Invoice;
-import com.example.billingms.domain.model.InvoiceId;
-import com.example.billingms.domain.model.InvoiceAmounts;
-import com.example.billingms.domain.model.InvoiceCharges;
-import com.example.billingms.domain.model.InvoiceLifecycle;
-import com.example.billingms.domain.model.InvoiceLineItem;
-import com.example.billingms.domain.model.Money;
-import com.example.billingms.domain.model.Payment;
-import com.example.billingms.domain.model.PaymentMethod;
-import com.example.billingms.domain.model.PaymentStatus;
-import com.example.billingms.domain.model.PortRegion;
-import com.example.billingms.domain.model.TaxRate;
-import com.example.billingms.domain.model.TransportCharge;
+import com.example.billingms.domain.repository.InvoiceRepository;
+import com.example.billingms.domain.model.valueobjects.BillingBookingId;
+import com.example.billingms.domain.model.valueobjects.BillingShipperId;
+import com.example.billingms.domain.model.valueobjects.CancellationFee;
+import com.example.billingms.domain.model.valueobjects.CancelledAtStatus;
+import com.example.billingms.domain.model.valueobjects.CargoType;
+import com.example.billingms.domain.model.valueobjects.DiscountPolicy;
+import com.example.billingms.domain.model.valueobjects.DiscountRate;
+import com.example.billingms.domain.model.aggregates.Invoice;
+import com.example.billingms.domain.model.valueobjects.InvoiceId;
+import com.example.billingms.domain.model.valueobjects.InvoiceAmounts;
+import com.example.billingms.domain.model.valueobjects.InvoiceCharges;
+import com.example.billingms.domain.model.valueobjects.InvoiceLifecycle;
+import com.example.billingms.domain.model.valueobjects.InvoiceLineItem;
+import com.example.billingms.domain.model.valueobjects.Money;
+import com.example.billingms.domain.model.valueobjects.Payment;
+import com.example.billingms.domain.model.valueobjects.PaymentMethod;
+import com.example.billingms.domain.model.valueobjects.PaymentStatus;
+import com.example.billingms.domain.model.valueobjects.PortRegion;
+import com.example.billingms.domain.model.valueobjects.TaxRate;
+import com.example.billingms.domain.model.valueobjects.TransportCharge;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.dao.DuplicateKeyException;
@@ -178,7 +178,7 @@ public class MyBatisInvoiceRepository implements InvoiceRepository {
 
         // **復元では検査しない**（新しい不変条件は既存行を壊す）
         return Invoice.restore(
-                new com.example.billingms.domain.model.InvoiceHeader(
+                new com.example.billingms.domain.model.valueobjects.InvoiceHeader(
                         InvoiceId.of(row.getInvoiceNumber()),
                         BillingBookingId.of(row.getBookingId()),
                         row.isShipperCorporate()

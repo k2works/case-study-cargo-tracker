@@ -1,7 +1,7 @@
 package com.example.trackingms.infrastructure.repositories;
 
 import com.example.shared.domain.model.Location;
-import com.example.trackingms.application.port.LocationRepository;
+import com.example.trackingms.domain.repository.LocationRepository;
 import java.util.Optional;
 
 /** 地点マスタの複製（[ADR-014]）。 */

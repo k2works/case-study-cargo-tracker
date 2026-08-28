@@ -2,9 +2,9 @@ package com.example.trackingms.infrastructure.acl;
 
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.trackingms.application.internal.queryservices.ShipperCargoSnapshot;
-import com.example.trackingms.application.port.ShipperCargoSnapshotFinder;
-import com.example.trackingms.application.port.ShipperTrackingLookupUnavailableException;
-import com.example.trackingms.domain.model.TrackingNumber;
+import com.example.trackingms.application.internal.outboundservices.acl.ShipperCargoSnapshotFinder;
+import com.example.trackingms.application.internal.outboundservices.acl.ShipperTrackingLookupUnavailableException;
+import com.example.trackingms.domain.model.valueobjects.TrackingNumber;
 import java.util.Optional;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.client.HttpClientErrorException;

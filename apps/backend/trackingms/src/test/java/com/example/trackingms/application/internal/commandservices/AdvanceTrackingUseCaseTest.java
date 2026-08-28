@@ -8,11 +8,11 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import com.example.shared.domain.model.Location;
-import com.example.trackingms.application.port.TrackingActivityRepository;
-import com.example.trackingms.domain.model.TrackingActivity;
-import com.example.trackingms.domain.model.TrackingBookingId;
-import com.example.trackingms.domain.model.TrackingNumber;
-import com.example.trackingms.domain.model.TrackingStatus;
+import com.example.trackingms.domain.repository.TrackingActivityRepository;
+import com.example.trackingms.domain.model.aggregates.TrackingActivity;
+import com.example.trackingms.domain.model.valueobjects.TrackingBookingId;
+import com.example.trackingms.domain.model.valueobjects.TrackingNumber;
+import com.example.trackingms.domain.model.valueobjects.TrackingStatus;
 import java.time.LocalDate;
 import java.time.Month;
 import java.util.AbstractList;
@@ -40,7 +40,7 @@ class AdvanceTrackingUseCaseTest {
     private final List<TrackingStatus> written = new ArrayList<>();
 
     /** 積まれた出来事。**状態が動いたのに経過に出ない**形を捕まえるために持つ。 */
-    private final List<com.example.trackingms.domain.model.TrackingEvent> appendedEvents =
+    private final List<com.example.trackingms.domain.model.valueobjects.TrackingEvent> appendedEvents =
             new ArrayList<>();
 
     private TrackingActivity stored = TrackingActivity.start(TrackingNumber.of(NUMBER),
@@ -66,12 +66,12 @@ class AdvanceTrackingUseCaseTest {
 
         @Override
         public void appendEvent(TrackingNumber trackingNumber,
-                com.example.trackingms.domain.model.TrackingEvent event) {
+                com.example.trackingms.domain.model.valueobjects.TrackingEvent event) {
             appendedEvents.add(event);
         }
 
         @Override
-        public List<com.example.trackingms.domain.model.TrackingEvent> findEvents(
+        public List<com.example.trackingms.domain.model.valueobjects.TrackingEvent> findEvents(
                 TrackingNumber trackingNumber, int limit) {
             return List.copyOf(appendedEvents);
         }
@@ -87,21 +87,21 @@ class AdvanceTrackingUseCaseTest {
         }
 
         @Override
-        public List<com.example.trackingms.domain.model.TrackingExceptionEvent> findExceptions(
+        public List<com.example.trackingms.domain.model.entities.TrackingExceptionEvent> findExceptions(
                 TrackingNumber trackingNumber, int limit) {
             throw new UnsupportedOperationException("この検査では使わない");
         }
     };
 
     /** 地点マスタ。名前が引けないことで記録を止めないことも、ここで確かめる。 */
-    private final com.example.trackingms.application.port.LocationRepository locations =
+    private final com.example.trackingms.domain.repository.LocationRepository locations =
             unLocode -> Optional.of(Location.of(unLocode, "Tokyo"));
 
     /** 通知したという事実。**メールは送らない**（[ADR-024] 決定 9）。 */
     private final List<String> notified = new ArrayList<>();
 
-    private final com.example.trackingms.application.port.TrackingNotifier notifier =
-            new com.example.trackingms.application.port.TrackingNotifier() {
+    private final com.example.trackingms.application.internal.outboundservices.acl.TrackingNotifier notifier =
+            new com.example.trackingms.application.internal.outboundservices.acl.TrackingNotifier() {
                 @Override
                 public void statusChanged(TrackingActivity activity) {
                     notified.add(activity.trackingStatus().name());

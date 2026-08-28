@@ -1,10 +1,10 @@
 package com.example.billingms.application.internal.queryservices;
 
-import com.example.billingms.domain.model.CargoType;
-import com.example.billingms.domain.model.ChargeableLeg;
-import com.example.billingms.domain.model.Money;
-import com.example.billingms.domain.model.PortRegion;
-import com.example.billingms.domain.model.TransportCharge;
+import com.example.billingms.domain.model.valueobjects.CargoType;
+import com.example.billingms.domain.model.valueobjects.ChargeableLeg;
+import com.example.billingms.domain.model.valueobjects.Money;
+import com.example.billingms.domain.model.valueobjects.PortRegion;
+import com.example.billingms.domain.model.valueobjects.TransportCharge;
 import java.math.BigDecimal;
 import java.util.List;
 import org.springframework.stereotype.Service;

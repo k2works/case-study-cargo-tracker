@@ -1,9 +1,9 @@
 package com.example.trackingms.infrastructure.acl;
 
-import com.example.trackingms.application.port.TrackingNoticeRepository;
-import com.example.trackingms.application.port.TrackingNotifier;
-import com.example.trackingms.domain.model.TrackingActivity;
-import com.example.trackingms.domain.model.TrackingNotice;
+import com.example.trackingms.domain.repository.TrackingNoticeRepository;
+import com.example.trackingms.application.internal.outboundservices.acl.TrackingNotifier;
+import com.example.trackingms.domain.model.aggregates.TrackingActivity;
+import com.example.trackingms.domain.model.valueobjects.TrackingNotice;
 import java.time.Clock;
 
 /**

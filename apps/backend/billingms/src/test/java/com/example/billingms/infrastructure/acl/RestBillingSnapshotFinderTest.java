@@ -9,7 +9,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
-import com.example.billingms.application.port.BillableCargoSnapshot;
+import com.example.billingms.application.internal.outboundservices.acl.BillableCargoSnapshot;
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.contract.BillingSnapshotContract;
 import java.util.List;

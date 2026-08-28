@@ -1,7 +1,7 @@
 package com.example.routingms.interfaces.rest;
 
 import com.example.routingms.application.internal.queryservices.FindRouteCandidatesUseCase;
-import com.example.routingms.domain.model.CargoType;
+import com.example.routingms.domain.model.valueobjects.CargoType;
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.auth.Role;
 import java.time.LocalDate;
