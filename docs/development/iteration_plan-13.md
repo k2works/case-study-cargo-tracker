@@ -33,7 +33,7 @@
 - [x] 無操作タイムアウトは ADR で判定時間・警告有無・入力中データの扱いを決め、破るテストを置く。
 - [x] IT12 の Try 1〜6 を計画と DoD に反映している。
 - [x] 画面を伴うため、ユーザーマニュアルと画面キャプチャを更新する。
-- [ ] テストカバレッジ 80% 以上、ドメイン層 90% 以上。
+- [x] テストカバレッジ 80% 以上、ドメイン層 90% 以上。
 
 ---
 
@@ -134,8 +134,8 @@
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | :--- | :--- |
 | 0.1 | `ROLE_SHIPPER`・`ADR-008`・`US18`・`自分の貨物` を grep し、改訂が必要な設計・マニュアル箇所を一覧化する | 3h | [x] |
-| 0.2 | **例外の実績を trackingms から引く**テストを赤で置く。US33 一覧の例外表示がこの Read Model を使うことを確認する | 4h | [ ] |
-| 0.3 | 請求書検索は 7 SP 枠に入るかを Day 2 終了時に判断し、入れない場合は release_plan の次リリース候補へ明示的に送る | 1h | [ ] |
+| 0.2 | **例外の実績を trackingms から引く**テストを赤で置く。US33 一覧の例外表示がこの Read Model を使うことを確認する | 4h | [x] |
+| 0.3 | 請求書検索は 7 SP 枠に入るかを Day 2 終了時に判断し、入れない場合は release_plan の次リリース候補へ明示的に送る | 1h | [x] |
 
 ### Phase 1: 受け入れテストと ADR（US33 / TD-01）
 
@@ -188,23 +188,43 @@
 
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | :--- | :--- |
-| 6.1 | 実バックエンドで荷主ログイン → 自社貨物一覧 → 詳細 → 他社貨物拒否を通す | 6h | [ ] |
-| 6.2 | `./gradlew build`、`TZ=UTC ./gradlew test`、frontend test / build、E2E を実行する | 8h | [ ] |
-| 6.3 | JIG / jig-erd を再生成し、設計と実装の差分を確認する | 4h | [ ] |
-| 6.4 | SonarQube Hotspot の UI 手動待ちをどう扱うかを記録し、資格情報かゲート条件の見直し先を決める | 2h | [ ] |
-| 6.5 | IT13 ふりかえり・完了報告書・Release 2.1 完了報告書の下準備を行う | 5h | [ ] |
+| 6.1 | 実バックエンドで荷主ログイン → 自社貨物一覧 → 詳細 → 他社貨物拒否を通す | 6h | [x] |
+| 6.2 | `./gradlew build`、`TZ=UTC ./gradlew test`、frontend test / build、E2E を実行する | 8h | [x] |
+| 6.3 | JIG / jig-erd を再生成し、設計と実装の差分を確認する | 4h | [x] |
+| 6.4 | SonarQube Hotspot の UI 手動待ちをどう扱うかを記録し、資格情報かゲート条件の見直し先を決める | 2h | [x] |
+| 6.5 | IT13 ふりかえり・完了報告書・Release 2.1 完了報告書の下準備を行う | 5h | [x] |
+
+#### Phase 6 実行証跡
+
+| 項目 | 結果 | 証跡 |
+| :--- | :--- | :--- |
+| 実バックエンド E2E | PASS | `npm run test:e2e:real -- -g "IT13 実環境"`（1 passed）。kind は `it13-rev1` image へ更新済み。認証 API で取得した実トークンを使い、認証済み荷主セッションから自社貨物一覧・詳細・他社貨物 404 を確認した。ログイン UI 自体は既存の実バックエンド E2E と通常 E2E が担保する。 |
+| Backend 品質ゲート | PASS | `./gradlew build`、`TZ=UTC ./gradlew test`。`./gradlew build` 内で `jacocoTestCoverageVerification` 通過。 |
+| Frontend 品質ゲート | PASS | `npm run lint && npm run typecheck && npm run test && npm run build && npx playwright test`（Playwright 94 passed）。E2E 追加後に `npm run lint`、`npm run typecheck` も再実行。 |
+| JIG / ER 図 | PASS | `npm run jig`、`npm run jig-erd`。生成物差分なし。 |
+| SonarQube | PASS | `npx gulp sonar-local:gate`。Backend / Frontend とも PASS、Backend `new_security_hotspots_reviewed=100.0`。 |
+
+SonarQube Hotspot は、走査トークンで `sonar-local:gate` を読み、`new_security_hotspots_reviewed` が 100% であることを自動ゲートの完了条件にする。UI レビュー待ちが再発した場合は、クローズ冒頭で利用者へ UI 操作を依頼し、資格情報を Codex に渡す運用にはしない。ゲート条件を緩める判断は、実 Hotspot の内容とリスクを読んだ後に別タスクとして扱う。
+
+#### IT13 クローズ文書の下準備
+
+| 文書 | 出力先 | 下準備 |
+| :--- | :--- | :--- |
+| IT13 ふりかえり | `docs/development/retrospective-13.md` | Try: kind を IT13 image へ同期してから実 E2E を流す。Problem: apply 前の rollout では trackingms → authms の内部 REST が localhost を向き 500 になった。 |
+| IT13 完了報告書 | `docs/development/iteration_report-13.md` | 計画 7 SP、実績 7 SP。品質証跡は Phase 6 実行証跡を転記する。実環境 E2E は `IT13 実環境` 1 件を追加し、kind `it13-rev1` で通過。 |
+| Release 2.1 完了報告書 | `docs/development/release_report-2_1_0.md` | 対象は IT13（US33 5 SP + TD-01 2 SP）。リリース完了条件は IT13 完了報告書と 5 視点レビューを入力にする。 |
 
 ### 見積もり合計
 
 | カテゴリ | SP | 理想時間 | 状態 |
 | :--- | :--- | :--- | :--- |
-| Phase 0: 返済枠と調査 | 0 | 8h | [ ] |
+| Phase 0: 返済枠と調査 | 0 | 8h | [x] |
 | Phase 1: 受け入れテストと ADR | 1 | 21h | [x] |
 | Phase 2: 利用者と荷主の紐付け | 2 | 25h | [x] |
 | Phase 3: 自社貨物の追跡一覧 | 2 | 25h | [x] |
 | Phase 4: フロントエンド | 1 | 28h | [x] |
 | Phase 5: 設計・マニュアル反映 | 1 | 24h | [x] |
-| Phase 6: 統合・品質ゲート・同期 | 0 | 25h | [ ] |
+| Phase 6: 統合・品質ゲート・同期 | 0 | 25h | [x] |
 | **合計** | **7** | **156h** | |
 
 **1 SP あたり**: 約 22.3h
@@ -489,8 +509,8 @@ state NotFound : 404
 - [x] 無操作タイムアウトの警告とログアウトが動作し、入力中画面を隠さないことを確認している。
 - [x] `domain-model.md`、`data-model.md`、`ui_design.md`、ユーザーマニュアルを更新している。
 - [x] マニュアル用キャプチャを撮り直し、目視で UI 欠陥がないことを確認している。
-- [ ] `./gradlew build`、`TZ=UTC ./gradlew test`、frontend test / build、E2E、JIG / jig-erd が完了している。
-- [ ] 5 視点レビューを実施し、高優先度をすべて対応または明示的に送っている。
+- [x] `./gradlew build`、`TZ=UTC ./gradlew test`、frontend test / build、E2E、JIG / jig-erd が完了している。
+- [x] 5 視点レビューを実施し、高優先度をすべて対応または明示的に送っている。
 
 ### デモ項目
 
@@ -547,13 +567,13 @@ state NotFound : 404
 
 | Phase | 状態 |
 | :--- | :--- |
-| Phase 0 | 一部完了 |
+| Phase 0 | 完了 |
 | Phase 1 | 完了 |
 | Phase 2 | 完了 |
 | Phase 3 | 完了 |
 | Phase 4 | 完了 |
 | Phase 5 | 完了 |
-| Phase 6 | 未着手 |
+| Phase 6 | 完了 |
 
 ---
 
@@ -566,6 +586,8 @@ state NotFound : 404
 | 2026-08-27 | Phase 5.1〜5.3 の設計ドキュメント反映を完了に更新 | Codex |
 | 2026-08-27 | Phase 5.4〜5.5 のマニュアル更新・旧注記改訂を完了に更新 | Codex |
 | 2026-08-27 | Phase 1 と Phase 4.5 の E2E を追加し、US33 / TD-01 の受け入れ基準を完了に更新 | Codex |
+| 2026-08-28 | Phase 0.2 の trackingms 例外実績テストと 0.3 の請求書検索送り判断を完了に更新 | Codex |
+| 2026-08-28 | Phase 6 の実バックエンド E2E・品質ゲート・JIG / ER 図・SonarQube・5 視点レビューを完了に更新 | Codex |
 
 ## 関連ドキュメント
 
