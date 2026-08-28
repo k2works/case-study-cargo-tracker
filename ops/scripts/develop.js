@@ -126,7 +126,17 @@ const gradle = (args, extraEnv = {}) => run(gradleCommand(BACKEND_DIR), args, BA
  * @returns {string} npm-cli.js のパス
  */
 function npmCliPath() {
-  return process.env.npm_execpath ?? join(dirname(process.execPath), 'node_modules/npm/bin/npm-cli.js');
+  const candidates = [
+    process.env.npm_execpath,
+    join(dirname(dirname(process.execPath)), 'lib/node_modules/npm/bin/npm-cli.js'),
+    join(dirname(process.execPath), 'node_modules/npm/bin/npm-cli.js'),
+  ].filter(Boolean);
+
+  const npmCli = candidates.find((candidate) => existsSync(candidate));
+  if (!npmCli) {
+    throw new Error(`npm-cli.js が見つかりません: ${candidates.join(', ')}`);
+  }
+  return npmCli;
 }
 
 const npmRun = (args, extraEnv = {}) =>

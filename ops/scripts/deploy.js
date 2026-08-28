@@ -8,6 +8,7 @@
  */
 
 import { spawnSync } from 'child_process';
+import { existsSync } from 'fs';
 import { dirname, join } from 'path';
 import { cleanDockerEnv, gradleCommand } from './shared.js';
 
@@ -164,7 +165,17 @@ const heroku = (args) => run('heroku', args);
  * @returns {string} npm-cli.js のパス
  */
 function npmCliPath() {
-  return process.env.npm_execpath ?? join(dirname(process.execPath), 'node_modules/npm/bin/npm-cli.js');
+  const candidates = [
+    process.env.npm_execpath,
+    join(dirname(dirname(process.execPath)), 'lib/node_modules/npm/bin/npm-cli.js'),
+    join(dirname(process.execPath), 'node_modules/npm/bin/npm-cli.js'),
+  ].filter(Boolean);
+
+  const npmCli = candidates.find((candidate) => existsSync(candidate));
+  if (!npmCli) {
+    throw new Error(`npm-cli.js が見つかりません: ${candidates.join(', ')}`);
+  }
+  return npmCli;
 }
 
 const npm = (args) => run(process.execPath, [npmCliPath(), ...args], FRONTEND_DIR);
