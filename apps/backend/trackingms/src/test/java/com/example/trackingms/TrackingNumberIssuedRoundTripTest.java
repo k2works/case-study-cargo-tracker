@@ -22,7 +22,7 @@ class TrackingNumberIssuedRoundTripTest extends EventRoundTripTestBase {
 
     /** bookingms の型名。<strong>こちらのクラスパスには存在しない</strong>。 */
     private static final String PRODUCER_TYPE_ID =
-            "com.example.bookingms.application.port.TrackingNumberIssued";
+            "com.example.bookingms.application.internal.outboundservices.acl.TrackingNumberIssued";
 
     private static String payload(String trackingNumber, String bookingId, String originUnLocode) {
         return """

@@ -1,6 +1,6 @@
 package com.example.trackingms.application.port;
 
-import com.example.trackingms.application.internal.ShipperCargoSnapshot;
+import com.example.trackingms.application.internal.queryservices.ShipperCargoSnapshot;
 import com.example.trackingms.domain.model.TrackingNumber;
 import java.util.Optional;
 

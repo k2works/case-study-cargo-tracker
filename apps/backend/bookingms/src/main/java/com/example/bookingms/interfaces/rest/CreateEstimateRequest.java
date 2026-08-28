@@ -1,6 +1,6 @@
 package com.example.bookingms.interfaces.rest;
 
-import com.example.bookingms.application.internal.CreateEstimateCommand;
+import com.example.bookingms.domain.model.commands.CreateEstimateCommand;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 

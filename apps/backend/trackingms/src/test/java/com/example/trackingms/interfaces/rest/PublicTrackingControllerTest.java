@@ -12,7 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.shared.domain.model.Location;
-import com.example.trackingms.application.internal.TrackingLookupUseCase;
+import com.example.trackingms.application.internal.queryservices.TrackingLookupUseCase;
 import com.example.trackingms.application.port.TrackingActivityRepository;
 import com.example.trackingms.application.port.TrackingLookupLogger;
 import com.example.trackingms.application.port.TrackingNoticeRepository;

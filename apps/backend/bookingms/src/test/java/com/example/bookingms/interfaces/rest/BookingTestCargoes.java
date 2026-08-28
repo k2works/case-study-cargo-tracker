@@ -1,15 +1,16 @@
 package com.example.bookingms.interfaces.rest;
 
-import com.example.bookingms.domain.model.BookingId;
-import com.example.bookingms.domain.model.Cargo;
-import com.example.bookingms.domain.model.CargoRestoration;
-import com.example.bookingms.domain.model.CargoItinerary;
-import com.example.bookingms.domain.model.CargoSpecification;
-import com.example.bookingms.domain.model.CargoStatus;
-import com.example.bookingms.domain.model.Leg;
-import com.example.bookingms.domain.model.RouteSpecification;
-import com.example.bookingms.domain.model.TrackingNumber;
-import com.example.bookingms.domain.model.VoyageNumber;
+import com.example.bookingms.domain.model.aggregates.Cargo;
+import com.example.bookingms.domain.model.aggregates.CargoRestoration;
+
+import com.example.bookingms.domain.model.valueobjects.BookingId;
+import com.example.bookingms.domain.model.valueobjects.CargoItinerary;
+import com.example.bookingms.domain.model.valueobjects.CargoSpecification;
+import com.example.bookingms.domain.model.valueobjects.CargoStatus;
+import com.example.bookingms.domain.model.valueobjects.Leg;
+import com.example.bookingms.domain.model.valueobjects.RouteSpecification;
+import com.example.bookingms.domain.model.valueobjects.TrackingNumber;
+import com.example.bookingms.domain.model.valueobjects.VoyageNumber;
 import com.example.shared.domain.model.Location;
 import java.math.BigDecimal;
 import java.time.Instant;

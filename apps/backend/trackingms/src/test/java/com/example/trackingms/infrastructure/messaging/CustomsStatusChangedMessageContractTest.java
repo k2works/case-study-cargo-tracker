@@ -110,7 +110,7 @@ class CustomsStatusChangedMessageContractTest {
     void listenerPassesTheMessageThrough() {
         List<String> received = new ArrayList<>();
         CustomsStatusChangedListener listener = new CustomsStatusChangedListener(
-                new com.example.trackingms.application.internal.DetectCustomsHoldUseCase(
+                new com.example.trackingms.application.internal.commandservices.DetectCustomsHoldUseCase(
                         null, null) {
                     @Override
                     public void onCustomsStatusChanged(String trackingNumber, String toStatus,

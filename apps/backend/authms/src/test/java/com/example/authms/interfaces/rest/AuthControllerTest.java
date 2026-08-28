@@ -8,8 +8,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.authms.application.internal.LoginResult;
-import com.example.authms.application.internal.LoginUseCase;
+import com.example.authms.application.internal.commandservices.LoginResult;
+import com.example.authms.application.internal.commandservices.LoginUseCase;
 import com.example.authms.application.port.AuthAuditLogger;
 import com.example.authms.domain.model.AuthEventType;
 import com.example.shared.auth.Role;

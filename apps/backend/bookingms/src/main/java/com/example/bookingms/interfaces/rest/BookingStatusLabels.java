@@ -1,6 +1,6 @@
 package com.example.bookingms.interfaces.rest;
 
-import com.example.bookingms.domain.model.BookingStatus;
+import com.example.bookingms.domain.model.valueobjects.BookingStatus;
 
 /**
  * 予約の状態の表示名。

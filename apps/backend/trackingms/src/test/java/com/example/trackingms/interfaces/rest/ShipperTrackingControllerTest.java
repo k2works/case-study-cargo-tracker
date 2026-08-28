@@ -6,11 +6,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.shared.auth.AuthenticatedUser;
-import com.example.trackingms.application.internal.ShipperTrackingDetail;
-import com.example.trackingms.application.internal.ShipperTrackingEvent;
-import com.example.trackingms.application.internal.ShipperTrackingQueryResult;
-import com.example.trackingms.application.internal.ShipperTrackingQueryUseCase;
-import com.example.trackingms.application.internal.ShipperTrackingSummary;
+import com.example.trackingms.application.internal.queryservices.ShipperTrackingDetail;
+import com.example.trackingms.application.internal.queryservices.ShipperTrackingEvent;
+import com.example.trackingms.application.internal.queryservices.ShipperTrackingQueryResult;
+import com.example.trackingms.application.internal.queryservices.ShipperTrackingQueryUseCase;
+import com.example.trackingms.application.internal.queryservices.ShipperTrackingSummary;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;

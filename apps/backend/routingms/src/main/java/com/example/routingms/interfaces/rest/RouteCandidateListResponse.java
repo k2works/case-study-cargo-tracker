@@ -1,6 +1,6 @@
 package com.example.routingms.interfaces.rest;
 
-import com.example.routingms.application.internal.FindRouteCandidatesUseCase;
+import com.example.routingms.application.internal.queryservices.FindRouteCandidatesUseCase;
 import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;

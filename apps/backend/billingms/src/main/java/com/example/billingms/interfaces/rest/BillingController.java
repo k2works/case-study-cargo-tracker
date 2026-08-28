@@ -1,12 +1,12 @@
 package com.example.billingms.interfaces.rest;
 
-import com.example.billingms.application.internal.AdjustmentCommand;
-import com.example.billingms.application.internal.AlreadyInvoicedException;
-import com.example.billingms.application.internal.BillingNotAvailableException;
-import com.example.billingms.application.internal.CalculateChargeUseCase;
-import com.example.billingms.application.internal.InvoiceNotFoundException;
-import com.example.billingms.application.internal.PaymentCommand;
-import com.example.billingms.application.internal.SettleInvoiceUseCase;
+import com.example.billingms.application.internal.commandservices.AdjustmentCommand;
+import com.example.billingms.application.internal.commandservices.AlreadyInvoicedException;
+import com.example.billingms.application.internal.commandservices.BillingNotAvailableException;
+import com.example.billingms.application.internal.commandservices.CalculateChargeUseCase;
+import com.example.billingms.application.internal.commandservices.InvoiceNotFoundException;
+import com.example.billingms.application.internal.commandservices.PaymentCommand;
+import com.example.billingms.application.internal.commandservices.SettleInvoiceUseCase;
 import com.example.billingms.application.port.InvoiceRepository;
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.auth.Role;

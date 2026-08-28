@@ -1,6 +1,6 @@
 package com.example.billingms.interfaces.rest;
 
-import com.example.billingms.application.internal.QuoteChargeUseCase;
+import com.example.billingms.application.internal.queryservices.QuoteChargeUseCase;
 import com.example.shared.auth.AuthenticatedUser;
 import java.util.Set;
 import org.springframework.http.HttpStatus;

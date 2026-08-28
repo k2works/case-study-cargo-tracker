@@ -2,8 +2,8 @@ package com.example.authms;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.authms.application.internal.LoginResult;
-import com.example.authms.application.internal.LoginUseCase;
+import com.example.authms.application.internal.commandservices.LoginResult;
+import com.example.authms.application.internal.commandservices.LoginUseCase;
 import com.example.authms.application.port.AuthAuditLogger;
 import com.example.authms.application.port.UserRepository;
 import com.example.authms.domain.model.AuthEventType;
@@ -50,7 +50,7 @@ class AuthIntegrationTest {
     private UserRepository users;
 
     @Autowired
-    private com.example.authms.application.internal.UnlockAccountUseCase unlockAccount;
+    private com.example.authms.application.internal.commandservices.UnlockAccountUseCase unlockAccount;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;

@@ -3,8 +3,8 @@ package com.example.trackingms.infrastructure.messaging;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 
-import com.example.trackingms.application.internal.AdvanceTrackingUseCase;
-import com.example.trackingms.application.internal.DetectMisrouteUseCase;
+import com.example.trackingms.application.internal.commandservices.AdvanceTrackingUseCase;
+import com.example.trackingms.application.internal.commandservices.DetectMisrouteUseCase;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

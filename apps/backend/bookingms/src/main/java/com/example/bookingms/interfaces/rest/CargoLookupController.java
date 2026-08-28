@@ -1,6 +1,6 @@
 package com.example.bookingms.interfaces.rest;
 
-import com.example.bookingms.application.port.CargoRepository;
+import com.example.bookingms.domain.repository.CargoRepository;
 import com.example.shared.auth.AuthenticatedUser;
 import java.util.Set;
 import org.springframework.http.HttpStatus;

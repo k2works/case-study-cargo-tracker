@@ -9,7 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.domain.model.Location;
-import com.example.trackingms.application.internal.ManageTrackingUseCase;
+import com.example.trackingms.application.internal.commandservices.ManageTrackingUseCase;
 import com.example.trackingms.domain.model.ExceptionType;
 import com.example.trackingms.domain.model.TrackingActivity;
 import com.example.trackingms.domain.model.TrackingBookingId;

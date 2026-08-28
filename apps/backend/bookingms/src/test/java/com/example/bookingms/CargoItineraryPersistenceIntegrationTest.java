@@ -2,12 +2,12 @@ package com.example.bookingms;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.bookingms.domain.model.BookingId;
-import com.example.bookingms.domain.model.BookingStatus;
-import com.example.bookingms.domain.model.Cargo;
-import com.example.bookingms.domain.model.TrackingNumber;
-import com.example.bookingms.domain.model.CargoType;
-import com.example.bookingms.domain.model.RoutingStatus;
+import com.example.bookingms.domain.model.valueobjects.BookingId;
+import com.example.bookingms.domain.model.valueobjects.BookingStatus;
+import com.example.bookingms.domain.model.aggregates.Cargo;
+import com.example.bookingms.domain.model.valueobjects.TrackingNumber;
+import com.example.bookingms.domain.model.valueobjects.CargoType;
+import com.example.bookingms.domain.model.valueobjects.RoutingStatus;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

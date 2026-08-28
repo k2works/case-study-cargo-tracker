@@ -1,6 +1,6 @@
 package com.example.trackingms.infrastructure.messaging;
 
-import com.example.trackingms.application.internal.NoteCancellationUseCase;
+import com.example.trackingms.application.internal.commandservices.NoteCancellationUseCase;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 
 /**

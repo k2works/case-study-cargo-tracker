@@ -1,9 +1,9 @@
 package com.example.bookingms.interfaces.rest;
 
-import com.example.bookingms.application.port.CargoSummary;
-import com.example.bookingms.domain.model.BookingId;
-import com.example.bookingms.domain.model.CargoItinerary;
-import com.example.bookingms.domain.model.Cargo;
+import com.example.bookingms.domain.repository.CargoSummary;
+import com.example.bookingms.domain.model.valueobjects.BookingId;
+import com.example.bookingms.domain.model.valueobjects.CargoItinerary;
+import com.example.bookingms.domain.model.aggregates.Cargo;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;

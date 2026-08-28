@@ -9,8 +9,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.handlingms.application.internal.RegisterHandlingActivityCommand;
-import com.example.handlingms.application.internal.RegisterHandlingActivityUseCase;
+import com.example.handlingms.application.internal.commandservices.RegisterHandlingActivityCommand;
+import com.example.handlingms.application.internal.commandservices.RegisterHandlingActivityUseCase;
 import com.example.handlingms.application.port.CargoLookupUnavailableException;
 import com.example.handlingms.application.port.HandlingActivityRepository;
 import com.example.handlingms.application.port.LocationRepository;

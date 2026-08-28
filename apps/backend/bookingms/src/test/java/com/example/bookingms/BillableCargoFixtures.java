@@ -1,6 +1,6 @@
 package com.example.bookingms;
 
-import com.example.bookingms.application.port.BillableCargo;
+import com.example.bookingms.domain.repository.BillableCargo;
 import java.util.Collections;
 import java.util.List;
 

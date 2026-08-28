@@ -9,7 +9,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.authms.application.internal.UnlockAccountUseCase;
+import com.example.authms.application.internal.commandservices.UnlockAccountUseCase;
 import com.example.authms.domain.model.LoginState;
 import com.example.authms.domain.model.User;
 import com.example.authms.domain.model.UserIdentity;

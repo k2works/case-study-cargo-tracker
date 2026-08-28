@@ -30,7 +30,7 @@ import com.example.billingms.domain.model.PaymentMethod;
 import java.time.LocalDate;
 import java.util.Map;
 import java.util.List;
-import com.example.billingms.application.internal.AlreadyInvoicedException;
+import com.example.billingms.application.internal.commandservices.AlreadyInvoicedException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

@@ -1,6 +1,6 @@
 package com.example.trackingms.infrastructure.messaging;
 
-import com.example.trackingms.application.internal.DetectCustomsHoldUseCase;
+import com.example.trackingms.application.internal.commandservices.DetectCustomsHoldUseCase;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 
 /**

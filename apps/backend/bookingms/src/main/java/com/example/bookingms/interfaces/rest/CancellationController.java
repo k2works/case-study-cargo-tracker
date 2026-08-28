@@ -1,10 +1,10 @@
 package com.example.bookingms.interfaces.rest;
 
-import com.example.bookingms.application.internal.CancellationOutcome;
-import com.example.bookingms.application.internal.DecideCancellationUseCase;
-import com.example.bookingms.application.internal.RequestCancellationUseCase;
-import com.example.bookingms.application.port.CargoRepository;
-import com.example.bookingms.domain.model.CancellationRequest;
+import com.example.bookingms.application.internal.commandservices.CancellationOutcome;
+import com.example.bookingms.application.internal.commandservices.DecideCancellationUseCase;
+import com.example.bookingms.application.internal.commandservices.RequestCancellationUseCase;
+import com.example.bookingms.domain.repository.CargoRepository;
+import com.example.bookingms.domain.model.aggregates.CancellationRequest;
 import com.example.bookingms.interfaces.rest.CancellationResponses.CancellationOutcomeResponse;
 import com.example.bookingms.interfaces.rest.CancellationResponses.CancellationResponse;
 import com.example.bookingms.interfaces.rest.CancellationResponses.PendingCancellationResponse;

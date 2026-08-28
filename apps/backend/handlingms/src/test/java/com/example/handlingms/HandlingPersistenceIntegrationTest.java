@@ -2,8 +2,8 @@ package com.example.handlingms;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.handlingms.application.internal.RegisterHandlingActivityCommand;
-import com.example.handlingms.application.internal.RegisterHandlingActivityUseCase;
+import com.example.handlingms.application.internal.commandservices.RegisterHandlingActivityCommand;
+import com.example.handlingms.application.internal.commandservices.RegisterHandlingActivityUseCase;
 import com.example.handlingms.application.port.CargoSnapshotFinder;
 import com.example.handlingms.application.port.CustomsDeclarationRepository;
 import com.example.handlingms.application.port.HandlingActivityRegistered;

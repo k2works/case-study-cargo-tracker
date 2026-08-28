@@ -1,8 +1,8 @@
 package com.example.bookingms.interfaces.rest;
 
-import com.example.bookingms.domain.model.CancellationRequest;
-import com.example.bookingms.domain.model.Cargo;
-import com.example.bookingms.domain.model.DischargeCandidate;
+import com.example.bookingms.domain.model.aggregates.CancellationRequest;
+import com.example.bookingms.domain.model.aggregates.Cargo;
+import com.example.bookingms.domain.model.aggregates.DischargeCandidate;
 import java.util.List;
 import java.time.ZoneId;
 

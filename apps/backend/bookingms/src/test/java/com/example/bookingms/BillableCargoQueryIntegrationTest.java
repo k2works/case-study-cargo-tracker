@@ -2,15 +2,15 @@ package com.example.bookingms;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.bookingms.application.internal.RegisterShipperCommand;
-import com.example.bookingms.application.internal.RegistrationOutcome;
-import com.example.bookingms.application.port.BillableCargoFinder;
-import com.example.bookingms.domain.model.ContractNumber;
-import com.example.bookingms.domain.model.CorporateContract;
-import com.example.bookingms.domain.model.DiscountRate;
-import com.example.bookingms.domain.model.ShipperType;
+import com.example.bookingms.domain.model.commands.RegisterShipperCommand;
+import com.example.bookingms.application.internal.commandservices.RegistrationOutcome;
+import com.example.bookingms.domain.repository.BillableCargoFinder;
+import com.example.bookingms.domain.model.valueobjects.ContractNumber;
+import com.example.bookingms.domain.model.valueobjects.CorporateContract;
+import com.example.bookingms.domain.model.valueobjects.DiscountRate;
+import com.example.bookingms.domain.model.valueobjects.ShipperType;
 import java.math.BigDecimal;
-import com.example.bookingms.application.port.BillableCargo;
+import com.example.bookingms.domain.repository.BillableCargo;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;

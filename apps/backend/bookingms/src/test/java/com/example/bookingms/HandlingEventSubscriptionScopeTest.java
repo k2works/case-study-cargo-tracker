@@ -2,7 +2,7 @@ package com.example.bookingms;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.bookingms.application.internal.AdvanceBookingUseCase;
+import com.example.bookingms.application.internal.commandservices.AdvanceBookingUseCase;
 import com.example.shared.contract.HandlingActivityRegisteredContract;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -31,7 +31,7 @@ import org.junit.jupiter.api.Test;
 class HandlingEventSubscriptionScopeTest {
 
     private static final Path USE_CASE = Path.of(
-            "src/main/java/com/example/bookingms/application/internal/AdvanceBookingUseCase.java");
+            "src/main/java/com/example/bookingms/application/internal/commandservices/AdvanceBookingUseCase.java");
 
     /**
      * 経路の状態に関わる語。
@@ -48,7 +48,7 @@ class HandlingEventSubscriptionScopeTest {
     @DisplayName("契約のルーティングキーで購読している")
     void subscribesWithTheContractRoutingKey() {
         String channels = read(Path.of(
-                "src/main/java/com/example/bookingms/infrastructure/messaging/"
+                "src/main/java/com/example/bookingms/infrastructure/acl/"
                         + "CargoEventChannels.java"));
 
         assertThat(channels)

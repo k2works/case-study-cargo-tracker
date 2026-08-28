@@ -56,5 +56,5 @@ public final class CargoCancelledContract {
      * <p>この名前は<strong>コンシューマのクラスパスに存在しない</strong>。
      */
     public static final String PRODUCER_TYPE_ID =
-            "com.example.bookingms.application.port.CargoCancelled";
+            "com.example.bookingms.application.internal.outboundservices.acl.CargoCancelled";
 }

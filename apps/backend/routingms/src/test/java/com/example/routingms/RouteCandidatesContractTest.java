@@ -5,8 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.routingms.application.internal.RegisterVoyageCommand;
-import com.example.routingms.application.internal.RegisterVoyageUseCase;
+import com.example.routingms.application.internal.commandservices.RegisterVoyageCommand;
+import com.example.routingms.application.internal.commandservices.RegisterVoyageUseCase;
 import com.example.routingms.domain.model.CargoType;
 import com.example.routingms.domain.model.CarrierMovement;
 import com.example.routingms.domain.model.Schedule;

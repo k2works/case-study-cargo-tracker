@@ -1,5 +1,6 @@
 package com.example.bookingms.interfaces.rest;
 
+
 import static com.example.bookingms.BillableCargoFixtures.oceanLegs;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -7,8 +8,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.mockito.Mockito.when;
 
-import com.example.bookingms.application.port.BillableCargo;
-import com.example.bookingms.application.port.BillableCargoFinder;
+import com.example.bookingms.domain.repository.BillableCargo;
+import com.example.bookingms.domain.repository.BillableCargoFinder;
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.contract.BillingSnapshotContract;
 import com.example.shared.contract.CargoSnapshotContract;
@@ -44,7 +45,7 @@ class BillingLookupControllerTest {
     private BillableCargoFinder billable;
 
     @MockitoBean
-    private com.example.bookingms.application.internal.SettleBookingUseCase settlement;
+    private com.example.bookingms.application.internal.commandservices.SettleBookingUseCase settlement;
 
     private static String pathFor(String bookingId) {
         return BillingSnapshotContract.PATH.replace("{bookingId}", bookingId);

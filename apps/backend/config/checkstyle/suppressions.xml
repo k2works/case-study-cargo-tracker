@@ -40,7 +40,7 @@
       ——1 つ許した瞬間に基準は無くなる。
     -->
     <suppress checks="FileLength"
-              files="[\\/]bookingms[\\/].*[\\/]domain[\\/]model[\\/]Cargo\.java$"/>
+              files="[\\/]bookingms[\\/].*[\\/]domain[\\/]model[\\/]aggregates[\\/]Cargo\.java$"/>
 
     <!--
       ロガーの log は checkstyle.xml の ConstantName の format で許している。

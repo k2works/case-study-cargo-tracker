@@ -1,6 +1,6 @@
 package com.example.trackingms.interfaces.rest;
 
-import com.example.trackingms.application.internal.TrackingLookupUseCase;
+import com.example.trackingms.application.internal.queryservices.TrackingLookupUseCase;
 import com.example.trackingms.application.port.TrackingNoticeRepository;
 import com.example.trackingms.domain.model.TrackingActivity;
 import jakarta.servlet.http.HttpServletRequest;

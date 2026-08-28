@@ -8,8 +8,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.bookingms.application.port.CargoRepository;
-import com.example.bookingms.application.port.CargoSummary;
+import com.example.bookingms.domain.repository.CargoRepository;
+import com.example.bookingms.domain.repository.CargoSummary;
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.contract.CargoSnapshotContract;
 import com.example.shared.contract.ShipperCargoSnapshotContract;

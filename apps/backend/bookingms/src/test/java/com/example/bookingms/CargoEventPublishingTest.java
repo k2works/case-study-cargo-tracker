@@ -2,8 +2,8 @@ package com.example.bookingms;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.bookingms.application.port.CargoCancelled;
-import com.example.bookingms.application.port.CargoEventNotifier;
+import com.example.bookingms.application.internal.outboundservices.acl.CargoCancelled;
+import com.example.bookingms.application.internal.outboundservices.acl.CargoEventNotifier;
 import com.example.shared.contract.CargoCancelledContract;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -27,7 +27,7 @@ import org.junit.jupiter.api.Test;
 class CargoEventPublishingTest {
 
     private static final Path NOTIFIER = Path.of(
-            "src/main/java/com/example/bookingms/infrastructure/messaging/"
+            "src/main/java/com/example/bookingms/infrastructure/acl/"
                     + "RabbitCargoEventNotifier.java");
 
     /**

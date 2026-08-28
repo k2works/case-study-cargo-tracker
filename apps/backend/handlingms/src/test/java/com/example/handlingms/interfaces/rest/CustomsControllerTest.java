@@ -13,9 +13,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.handlingms.application.internal.ManageCustomsDeclarationUseCase;
-import com.example.handlingms.application.internal.RegisterCustomsDeclarationCommand;
-import com.example.handlingms.application.internal.RegisterCustomsDeclarationUseCase;
+import com.example.handlingms.application.internal.commandservices.ManageCustomsDeclarationUseCase;
+import com.example.handlingms.application.internal.commandservices.RegisterCustomsDeclarationCommand;
+import com.example.handlingms.application.internal.commandservices.RegisterCustomsDeclarationUseCase;
 import com.example.handlingms.domain.model.CargoBookingId;
 import com.example.handlingms.domain.model.CustomsDeclaration;
 import com.example.handlingms.domain.model.CustomsStatus;

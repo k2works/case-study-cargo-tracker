@@ -1,6 +1,6 @@
 package com.example.authms.interfaces.rest;
 
-import com.example.authms.application.internal.ManageUserShipperLinkUseCase;
+import com.example.authms.application.internal.commandservices.ManageUserShipperLinkUseCase;
 import com.example.authms.domain.model.UserShipperLink;
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.auth.Role;

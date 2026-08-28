@@ -1,15 +1,15 @@
 package com.example.bookingms.interfaces.rest;
 
-import com.example.bookingms.application.internal.BookCargoCommand;
-import com.example.bookingms.application.internal.SearchCargoUseCase;
-import com.example.bookingms.application.port.CargoRepository;
-import com.example.bookingms.application.port.CargoSummary;
-import com.example.bookingms.application.port.LocationRepository;
-import com.example.bookingms.domain.model.Cargo;
-import com.example.bookingms.domain.model.BookingStatus;
-import com.example.bookingms.domain.model.CargoType;
-import com.example.bookingms.domain.model.HazardClass;
-import com.example.bookingms.domain.model.RoutingStatus;
+import com.example.bookingms.domain.model.commands.BookCargoCommand;
+import com.example.bookingms.application.internal.queryservices.SearchCargoUseCase;
+import com.example.bookingms.domain.repository.CargoRepository;
+import com.example.bookingms.domain.repository.CargoSummary;
+import com.example.bookingms.domain.repository.LocationRepository;
+import com.example.bookingms.domain.model.aggregates.Cargo;
+import com.example.bookingms.domain.model.valueobjects.BookingStatus;
+import com.example.bookingms.domain.model.valueobjects.CargoType;
+import com.example.bookingms.domain.model.valueobjects.HazardClass;
+import com.example.bookingms.domain.model.valueobjects.RoutingStatus;
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.domain.model.Location;
 import com.example.shared.auth.Role;

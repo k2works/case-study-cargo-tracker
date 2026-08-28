@@ -1,6 +1,6 @@
 package com.example.bookingms.interfaces.rest;
 
-import com.example.bookingms.domain.model.ShipperType;
+import com.example.bookingms.domain.model.valueobjects.ShipperType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 

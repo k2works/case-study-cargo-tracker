@@ -1,9 +1,9 @@
 package com.example.routingms.interfaces.rest;
 
-import com.example.routingms.application.internal.RegisterVoyageCommand;
-import com.example.routingms.application.internal.RegisterVoyageUseCase;
-import com.example.routingms.application.internal.SearchVoyageUseCase;
-import com.example.routingms.application.internal.VoyageOutcome;
+import com.example.routingms.application.internal.commandservices.RegisterVoyageCommand;
+import com.example.routingms.application.internal.commandservices.RegisterVoyageUseCase;
+import com.example.routingms.application.internal.queryservices.SearchVoyageUseCase;
+import com.example.routingms.application.internal.commandservices.VoyageOutcome;
 import com.example.routingms.domain.model.CargoType;
 import com.example.routingms.domain.model.CarrierMovement;
 import com.example.routingms.domain.model.Schedule;

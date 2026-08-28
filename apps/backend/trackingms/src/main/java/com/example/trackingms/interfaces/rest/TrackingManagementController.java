@@ -2,7 +2,7 @@ package com.example.trackingms.interfaces.rest;
 
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.auth.Role;
-import com.example.trackingms.application.internal.ManageTrackingUseCase;
+import com.example.trackingms.application.internal.commandservices.ManageTrackingUseCase;
 import com.example.trackingms.domain.model.ExceptionType;
 import com.example.trackingms.domain.model.TrackingActivity;
 import com.example.trackingms.domain.model.TrackingStatus;

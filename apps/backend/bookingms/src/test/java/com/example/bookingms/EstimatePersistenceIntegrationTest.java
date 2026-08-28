@@ -2,12 +2,12 @@ package com.example.bookingms;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.bookingms.application.port.EstimateRepository;
-import com.example.bookingms.domain.model.CargoType;
-import com.example.bookingms.domain.model.Estimate;
-import com.example.bookingms.domain.model.EstimateId;
-import com.example.bookingms.domain.model.EstimateStatus;
-import com.example.bookingms.domain.model.RouteCandidate;
+import com.example.bookingms.domain.repository.EstimateRepository;
+import com.example.bookingms.domain.model.valueobjects.CargoType;
+import com.example.bookingms.domain.model.aggregates.Estimate;
+import com.example.bookingms.domain.model.valueobjects.EstimateId;
+import com.example.bookingms.domain.model.valueobjects.EstimateStatus;
+import com.example.bookingms.domain.model.valueobjects.RouteCandidate;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -29,7 +29,7 @@ class EstimatePersistenceIntegrationTest extends CargoPersistenceTestBase {
 
     private Estimate estimate(List<RouteCandidate> candidates) {
         return Estimate.create(EstimateId.generate(), estimates.nextNumber(),
-                new com.example.bookingms.domain.model.EstimateRequirements(
+                new com.example.bookingms.domain.model.valueobjects.EstimateRequirements(
                         "JPTYO", "USLAX", LocalDate.parse("2027-12-31"), CargoType.GENERAL,
                         new BigDecimal("4200.000")),
                 candidates);

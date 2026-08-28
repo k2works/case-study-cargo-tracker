@@ -1,5 +1,6 @@
 package com.example.bookingms.interfaces.rest;
 
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -9,13 +10,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.bookingms.application.internal.BookCargoUseCase;
-import com.example.bookingms.application.internal.RequestRoutingUseCase;
-import com.example.bookingms.application.internal.SearchCargoUseCase;
-import com.example.bookingms.application.port.CargoSummary;
-import com.example.bookingms.application.port.CargoRepository;
-import com.example.bookingms.application.port.LocationRepository;
-import com.example.bookingms.domain.model.CargoType;
+import com.example.bookingms.application.internal.commandservices.BookCargoUseCase;
+import com.example.bookingms.application.internal.commandservices.RequestRoutingUseCase;
+import com.example.bookingms.application.internal.queryservices.SearchCargoUseCase;
+import com.example.bookingms.domain.repository.CargoSummary;
+import com.example.bookingms.domain.repository.CargoRepository;
+import com.example.bookingms.domain.repository.LocationRepository;
+import com.example.bookingms.domain.model.valueobjects.CargoType;
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.domain.model.Location;
 import java.util.List;
@@ -55,10 +56,10 @@ class CargoBookingControllerTest {
     private RequestRoutingUseCase requestRouting;
 
     @MockitoBean
-    private com.example.bookingms.application.internal.AssignRouteUseCase assignRoute;
+    private com.example.bookingms.application.internal.commandservices.AssignRouteUseCase assignRoute;
 
     @MockitoBean
-    private com.example.bookingms.application.internal.RequestConsultationUseCase
+    private com.example.bookingms.application.internal.commandservices.RequestConsultationUseCase
             requestConsultation;
 
     /**
@@ -68,20 +69,20 @@ class CargoBookingControllerTest {
      * であって、業務上の関係ではない。
      */
     @MockitoBean
-    private com.example.bookingms.application.internal.NotifyShipperUseCase notifyShipper;
+    private com.example.bookingms.application.internal.commandservices.NotifyShipperUseCase notifyShipper;
 
     @MockitoBean
-    private com.example.bookingms.application.internal.ConfirmBookingUseCase confirmBooking;
+    private com.example.bookingms.application.internal.commandservices.ConfirmBookingUseCase confirmBooking;
 
     @MockitoBean
-    private com.example.bookingms.application.internal.ReturnToRoutingUseCase returnToRouting;
+    private com.example.bookingms.application.internal.commandservices.ReturnToRoutingUseCase returnToRouting;
 
     @MockitoBean
-    private com.example.bookingms.application.internal.IssueTrackingNumberUseCase
+    private com.example.bookingms.application.internal.commandservices.IssueTrackingNumberUseCase
             issueTrackingNumber;
 
     @MockitoBean
-    private com.example.bookingms.application.internal.ReviseBookingScheduleUseCase reviseSchedule;
+    private com.example.bookingms.application.internal.commandservices.ReviseBookingScheduleUseCase reviseSchedule;
 
     @MockitoBean
     private BookingUseCases useCases;

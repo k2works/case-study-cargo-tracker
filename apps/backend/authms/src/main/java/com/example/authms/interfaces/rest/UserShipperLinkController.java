@@ -1,6 +1,6 @@
 package com.example.authms.interfaces.rest;
 
-import com.example.authms.application.internal.FindUserShipperLinkUseCase;
+import com.example.authms.application.internal.queryservices.FindUserShipperLinkUseCase;
 import com.example.shared.auth.AuthenticatedUser;
 import java.util.Set;
 import org.springframework.http.HttpStatus;

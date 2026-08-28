@@ -1,19 +1,19 @@
 package com.example.bookingms;
 
 
-import com.example.bookingms.application.internal.BookCargoCommand;
-import com.example.bookingms.application.internal.BookCargoUseCase;
-import com.example.bookingms.application.internal.RegisterShipperCommand;
-import com.example.bookingms.application.internal.RegisterShipperUseCase;
-import com.example.bookingms.application.internal.RegistrationOutcome;
-import com.example.bookingms.application.internal.SearchCargoUseCase;
-import com.example.bookingms.application.port.CargoRepository;
-import com.example.bookingms.application.port.LocationRepository;
-import com.example.bookingms.domain.model.CargoType;
-import com.example.bookingms.domain.model.ShipperType;
-import com.example.bookingms.domain.model.CargoItinerary;
-import com.example.bookingms.domain.model.Leg;
-import com.example.bookingms.domain.model.VoyageNumber;
+import com.example.bookingms.domain.model.commands.BookCargoCommand;
+import com.example.bookingms.application.internal.commandservices.BookCargoUseCase;
+import com.example.bookingms.domain.model.commands.RegisterShipperCommand;
+import com.example.bookingms.application.internal.commandservices.RegisterShipperUseCase;
+import com.example.bookingms.application.internal.commandservices.RegistrationOutcome;
+import com.example.bookingms.application.internal.queryservices.SearchCargoUseCase;
+import com.example.bookingms.domain.repository.CargoRepository;
+import com.example.bookingms.domain.repository.LocationRepository;
+import com.example.bookingms.domain.model.valueobjects.CargoType;
+import com.example.bookingms.domain.model.valueobjects.ShipperType;
+import com.example.bookingms.domain.model.valueobjects.CargoItinerary;
+import com.example.bookingms.domain.model.valueobjects.Leg;
+import com.example.bookingms.domain.model.valueobjects.VoyageNumber;
 import com.example.shared.domain.model.Location;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -82,14 +82,14 @@ abstract class CargoPersistenceTestBase {
     protected java.time.Clock clock;
 
     @Autowired
-    protected com.example.bookingms.application.internal.IssueTrackingNumberUseCase
+    protected com.example.bookingms.application.internal.commandservices.IssueTrackingNumberUseCase
             issueTrackingNumber;
 
     /** 発行の時点でトランザクションが生きていたか。 */
     protected static boolean transactionActiveWhenPublished;
 
     /** 発行されたキャンセルのイベント。**発行したことを検査から見えるようにする**。 */
-    protected static final java.util.List<com.example.bookingms.application.port.CargoCancelled>
+    protected static final java.util.List<com.example.bookingms.application.internal.outboundservices.acl.CargoCancelled>
             CANCELLED_EVENTS = new java.util.concurrent.CopyOnWriteArrayList<>();
 
     /**
@@ -102,18 +102,18 @@ abstract class CargoPersistenceTestBase {
 
         @org.springframework.context.annotation.Bean
         @org.springframework.context.annotation.Primary
-        com.example.bookingms.application.port.CargoEventNotifier recordingCargoEventNotifier() {
-            return new com.example.bookingms.application.port.CargoEventNotifier() {
+        com.example.bookingms.application.internal.outboundservices.acl.CargoEventNotifier recordingCargoEventNotifier() {
+            return new com.example.bookingms.application.internal.outboundservices.acl.CargoEventNotifier() {
                 @Override
                 public void trackingNumberIssued(
-                        com.example.bookingms.application.port.TrackingNumberIssued event) {
+                        com.example.bookingms.application.internal.outboundservices.acl.TrackingNumberIssued event) {
                     transactionActiveWhenPublished = org.springframework.transaction
                             .support.TransactionSynchronizationManager.isSynchronizationActive();
                 }
 
                 @Override
                 public void cargoCancelled(
-                        com.example.bookingms.application.port.CargoCancelled event) {
+                        com.example.bookingms.application.internal.outboundservices.acl.CargoCancelled event) {
                     CANCELLED_EVENTS.add(event);
                 }
             };

@@ -9,7 +9,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.authms.application.internal.ManageUserShipperLinkUseCase;
+import com.example.authms.application.internal.commandservices.ManageUserShipperLinkUseCase;
 import com.example.authms.domain.model.UserShipperLink;
 import com.example.shared.auth.AuthenticatedUser;
 import java.util.Optional;

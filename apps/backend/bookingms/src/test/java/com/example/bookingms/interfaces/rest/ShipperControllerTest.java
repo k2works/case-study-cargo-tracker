@@ -11,19 +11,19 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.bookingms.application.internal.RegisterShipperCommand;
-import com.example.bookingms.domain.model.ContractNumber;
-import com.example.bookingms.domain.model.CorporateContract;
-import com.example.bookingms.domain.model.DiscountRate;
+import com.example.bookingms.domain.model.commands.RegisterShipperCommand;
+import com.example.bookingms.domain.model.valueobjects.ContractNumber;
+import com.example.bookingms.domain.model.valueobjects.CorporateContract;
+import com.example.bookingms.domain.model.valueobjects.DiscountRate;
 import java.math.BigDecimal;
 import org.mockito.ArgumentCaptor;
-import com.example.bookingms.application.internal.EditShipperUseCase;
-import com.example.bookingms.application.internal.RegisterShipperUseCase;
-import com.example.bookingms.application.internal.SearchShipperUseCase;
-import com.example.bookingms.application.internal.RegistrationOutcome;
-import com.example.bookingms.domain.model.Shipper;
-import com.example.bookingms.domain.model.ShipperProfile;
-import com.example.bookingms.domain.model.ShipperType;
+import com.example.bookingms.application.internal.commandservices.EditShipperUseCase;
+import com.example.bookingms.application.internal.commandservices.RegisterShipperUseCase;
+import com.example.bookingms.application.internal.queryservices.SearchShipperUseCase;
+import com.example.bookingms.application.internal.commandservices.RegistrationOutcome;
+import com.example.bookingms.domain.model.aggregates.Shipper;
+import com.example.bookingms.domain.model.valueobjects.ShipperProfile;
+import com.example.bookingms.domain.model.valueobjects.ShipperType;
 import com.example.shared.auth.AuthenticatedUser;
 import java.util.List;
 import java.util.Optional;
@@ -62,9 +62,9 @@ class ShipperControllerTest {
     /** 法人の荷主。種別の変更を断ることを確かめるために使う。 */
     private static Shipper corporate() {
         return Shipper.restore(1L, "SHP-000002", ShipperType.CORPORATE,
-                com.example.bookingms.domain.model.ShipperProfile.restore(
+                com.example.bookingms.domain.model.valueobjects.ShipperProfile.restore(
                         "丸紅商事", "corp@example.com", "東京都千代田区 1-1-1", null),
-                new com.example.bookingms.domain.model.CorporateContract(
+                new com.example.bookingms.domain.model.valueobjects.CorporateContract(
                         ContractNumber.of("CN-0001"), null));
     }
 

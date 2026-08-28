@@ -10,16 +10,16 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.bookingms.application.internal.ConfirmBookingUseCase;
-import com.example.bookingms.application.internal.NotifyShipperUseCase;
-import com.example.bookingms.application.internal.RequestRoutingUseCase;
-import com.example.bookingms.application.internal.SearchCargoUseCase;
-import com.example.bookingms.application.internal.ReturnToRoutingUseCase;
-import com.example.bookingms.application.internal.ReviseBookingScheduleUseCase;
-import com.example.bookingms.application.port.CargoRepository;
-import com.example.bookingms.application.port.CargoSummary;
-import com.example.bookingms.application.port.LocationRepository;
-import com.example.bookingms.domain.model.RoutingStatus;
+import com.example.bookingms.application.internal.commandservices.ConfirmBookingUseCase;
+import com.example.bookingms.application.internal.commandservices.NotifyShipperUseCase;
+import com.example.bookingms.application.internal.commandservices.RequestRoutingUseCase;
+import com.example.bookingms.application.internal.queryservices.SearchCargoUseCase;
+import com.example.bookingms.application.internal.commandservices.ReturnToRoutingUseCase;
+import com.example.bookingms.application.internal.commandservices.ReviseBookingScheduleUseCase;
+import com.example.bookingms.domain.repository.CargoRepository;
+import com.example.bookingms.domain.repository.CargoSummary;
+import com.example.bookingms.domain.repository.LocationRepository;
+import com.example.bookingms.domain.model.valueobjects.RoutingStatus;
 import com.example.shared.auth.AuthenticatedUser;
 import java.util.List;
 import java.util.Optional;

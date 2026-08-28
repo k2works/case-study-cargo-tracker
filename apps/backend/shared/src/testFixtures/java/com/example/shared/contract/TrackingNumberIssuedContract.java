@@ -52,5 +52,5 @@ public final class TrackingNumberIssuedContract {
      * 「相手の型を共有しない」という判断の根拠であり、コンシューマ側の契約テストが確かめる。
      */
     public static final String PRODUCER_TYPE_ID =
-            "com.example.bookingms.application.port.TrackingNumberIssued";
+            "com.example.bookingms.application.internal.outboundservices.acl.TrackingNumberIssued";
 }

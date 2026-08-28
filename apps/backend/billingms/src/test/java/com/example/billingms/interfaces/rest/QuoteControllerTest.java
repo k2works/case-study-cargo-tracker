@@ -4,7 +4,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.billingms.application.internal.QuoteChargeUseCase;
+import com.example.billingms.application.internal.queryservices.QuoteChargeUseCase;
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.contract.ChargeQuoteContract;
 import org.junit.jupiter.api.DisplayName;

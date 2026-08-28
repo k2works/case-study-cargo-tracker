@@ -1,6 +1,6 @@
 package com.example.bookingms.interfaces.rest;
 
-import com.example.bookingms.application.internal.EstimateQuote;
+import com.example.bookingms.application.internal.commandservices.EstimateQuote;
 import java.util.List;
 
 /**

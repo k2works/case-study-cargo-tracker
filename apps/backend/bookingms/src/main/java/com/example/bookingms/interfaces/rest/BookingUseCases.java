@@ -1,15 +1,15 @@
 package com.example.bookingms.interfaces.rest;
 
-import com.example.bookingms.application.internal.AssignRouteUseCase;
-import com.example.bookingms.application.internal.BookCargoUseCase;
-import com.example.bookingms.application.internal.ConfirmBookingUseCase;
-import com.example.bookingms.application.internal.IssueTrackingNumberUseCase;
-import com.example.bookingms.application.internal.NotifyShipperUseCase;
-import com.example.bookingms.application.internal.RequestConsultationUseCase;
-import com.example.bookingms.application.internal.RequestRoutingUseCase;
-import com.example.bookingms.application.internal.ReviseBookingScheduleUseCase;
-import com.example.bookingms.application.internal.ReturnToRoutingUseCase;
-import com.example.bookingms.application.internal.SearchCargoUseCase;
+import com.example.bookingms.application.internal.commandservices.AssignRouteUseCase;
+import com.example.bookingms.application.internal.commandservices.BookCargoUseCase;
+import com.example.bookingms.application.internal.commandservices.ConfirmBookingUseCase;
+import com.example.bookingms.application.internal.commandservices.IssueTrackingNumberUseCase;
+import com.example.bookingms.application.internal.commandservices.NotifyShipperUseCase;
+import com.example.bookingms.application.internal.commandservices.RequestConsultationUseCase;
+import com.example.bookingms.application.internal.commandservices.RequestRoutingUseCase;
+import com.example.bookingms.application.internal.commandservices.ReviseBookingScheduleUseCase;
+import com.example.bookingms.application.internal.commandservices.ReturnToRoutingUseCase;
+import com.example.bookingms.application.internal.queryservices.SearchCargoUseCase;
 import org.springframework.stereotype.Component;
 
 /**

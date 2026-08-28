@@ -1,8 +1,8 @@
 package com.example.bookingms.interfaces.rest;
 
-import com.example.bookingms.domain.model.BookingId;
-import com.example.bookingms.domain.model.Cargo;
-import com.example.bookingms.domain.model.TrackingNumber;
+import com.example.bookingms.domain.model.valueobjects.BookingId;
+import com.example.bookingms.domain.model.aggregates.Cargo;
+import com.example.bookingms.domain.model.valueobjects.TrackingNumber;
 
 /**
  * trackingms が荷主向け追跡境界を判定するための Snapshot（US33）。

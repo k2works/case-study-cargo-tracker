@@ -1,6 +1,6 @@
 package com.example.trackingms.infrastructure.messaging;
 
-import com.example.trackingms.application.internal.StartTrackingUseCase;
+import com.example.trackingms.application.internal.commandservices.StartTrackingUseCase;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 
 /**

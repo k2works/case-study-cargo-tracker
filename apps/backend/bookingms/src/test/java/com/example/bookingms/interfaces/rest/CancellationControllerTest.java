@@ -11,12 +11,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.bookingms.application.internal.CancellationOutcome;
-import com.example.bookingms.application.internal.DecideCancellationUseCase;
-import com.example.bookingms.application.internal.RequestCancellationUseCase;
-import com.example.bookingms.application.port.CargoRepository;
-import com.example.bookingms.domain.model.BookingStatus;
-import com.example.bookingms.domain.model.CancellationRequest;
+import com.example.bookingms.application.internal.commandservices.CancellationOutcome;
+import com.example.bookingms.application.internal.commandservices.DecideCancellationUseCase;
+import com.example.bookingms.application.internal.commandservices.RequestCancellationUseCase;
+import com.example.bookingms.domain.repository.CargoRepository;
+import com.example.bookingms.domain.model.valueobjects.BookingStatus;
+import com.example.bookingms.domain.model.aggregates.CancellationRequest;
 import com.example.shared.auth.AuthenticatedUser;
 import java.time.Instant;
 import java.util.List;

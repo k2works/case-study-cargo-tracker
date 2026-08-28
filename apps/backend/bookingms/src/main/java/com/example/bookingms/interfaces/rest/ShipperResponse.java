@@ -1,8 +1,8 @@
 package com.example.bookingms.interfaces.rest;
 
-import com.example.bookingms.domain.model.ContractNumber;
-import com.example.bookingms.domain.model.DiscountRate;
-import com.example.bookingms.domain.model.Shipper;
+import com.example.bookingms.domain.model.valueobjects.ContractNumber;
+import com.example.bookingms.domain.model.valueobjects.DiscountRate;
+import com.example.bookingms.domain.model.aggregates.Shipper;
 import java.math.BigDecimal;
 
 public record ShipperResponse(

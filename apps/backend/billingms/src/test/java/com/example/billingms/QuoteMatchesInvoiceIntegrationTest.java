@@ -4,8 +4,8 @@ import static com.example.billingms.ChargeFixtures.domesticSnapshotLegs;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
-import com.example.billingms.application.internal.CalculateChargeUseCase;
-import com.example.billingms.application.internal.QuoteChargeUseCase;
+import com.example.billingms.application.internal.commandservices.CalculateChargeUseCase;
+import com.example.billingms.application.internal.queryservices.QuoteChargeUseCase;
 import com.example.billingms.application.port.BillableCargoSnapshot;
 import com.example.billingms.application.port.BillingSnapshotFinder;
 import com.example.billingms.domain.model.Money;

@@ -1,7 +1,7 @@
 package com.example.bookingms.interfaces.rest;
 
-import com.example.bookingms.domain.model.BookingId;
-import com.example.bookingms.domain.model.Cargo;
+import com.example.bookingms.domain.model.valueobjects.BookingId;
+import com.example.bookingms.domain.model.aggregates.Cargo;
 import java.util.List;
 
 /**

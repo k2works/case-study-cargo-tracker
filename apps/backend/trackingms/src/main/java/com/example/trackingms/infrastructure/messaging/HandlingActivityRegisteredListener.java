@@ -1,6 +1,6 @@
 package com.example.trackingms.infrastructure.messaging;
 
-import com.example.trackingms.application.internal.AdvanceTrackingUseCase;
+import com.example.trackingms.application.internal.commandservices.AdvanceTrackingUseCase;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 
 /**
@@ -16,10 +16,10 @@ import org.springframework.amqp.rabbit.annotation.RabbitListener;
 public class HandlingActivityRegisteredListener {
 
     private final AdvanceTrackingUseCase advanceTracking;
-    private final com.example.trackingms.application.internal.DetectMisrouteUseCase detectMisroute;
+    private final com.example.trackingms.application.internal.commandservices.DetectMisrouteUseCase detectMisroute;
 
     public HandlingActivityRegisteredListener(AdvanceTrackingUseCase advanceTracking,
-            com.example.trackingms.application.internal.DetectMisrouteUseCase detectMisroute) {
+            com.example.trackingms.application.internal.commandservices.DetectMisrouteUseCase detectMisroute) {
         this.advanceTracking = advanceTracking;
         this.detectMisroute = detectMisroute;
     }

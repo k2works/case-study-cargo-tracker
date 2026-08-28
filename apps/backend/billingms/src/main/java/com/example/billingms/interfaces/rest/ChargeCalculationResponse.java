@@ -1,6 +1,6 @@
 package com.example.billingms.interfaces.rest;
 
-import com.example.billingms.application.internal.ChargeCalculation;
+import com.example.billingms.application.internal.commandservices.ChargeCalculation;
 import java.math.BigDecimal;
 import java.time.Instant;
 

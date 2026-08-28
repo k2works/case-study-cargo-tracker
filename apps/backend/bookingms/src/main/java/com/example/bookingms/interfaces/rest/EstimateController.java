@@ -1,9 +1,9 @@
 package com.example.bookingms.interfaces.rest;
 
-import com.example.bookingms.application.internal.CreateEstimateUseCase;
-import com.example.bookingms.application.internal.EstimateQuote;
-import com.example.bookingms.application.port.EstimateRepository;
-import com.example.bookingms.application.port.RouteCandidateUnavailableException;
+import com.example.bookingms.application.internal.commandservices.CreateEstimateUseCase;
+import com.example.bookingms.application.internal.commandservices.EstimateQuote;
+import com.example.bookingms.domain.repository.EstimateRepository;
+import com.example.bookingms.application.internal.outboundservices.acl.RouteCandidateUnavailableException;
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.auth.Role;
 import java.util.List;

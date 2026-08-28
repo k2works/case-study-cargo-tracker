@@ -2,9 +2,9 @@ package com.example.trackingms.interfaces.rest;
 
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.auth.Role;
-import com.example.trackingms.application.internal.ShipperTrackingDetail;
-import com.example.trackingms.application.internal.ShipperTrackingQueryResult;
-import com.example.trackingms.application.internal.ShipperTrackingQueryUseCase;
+import com.example.trackingms.application.internal.queryservices.ShipperTrackingDetail;
+import com.example.trackingms.application.internal.queryservices.ShipperTrackingQueryResult;
+import com.example.trackingms.application.internal.queryservices.ShipperTrackingQueryUseCase;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;

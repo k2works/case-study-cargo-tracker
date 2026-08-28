@@ -1,11 +1,11 @@
 package com.example.bookingms.interfaces.rest;
 
-import com.example.bookingms.application.internal.LocationMasterMissingException;
-import com.example.bookingms.application.port.LocationRepository;
-import com.example.bookingms.application.port.RouteCandidateUnavailableException;
-import com.example.bookingms.domain.model.CargoItinerary;
-import com.example.bookingms.domain.model.Leg;
-import com.example.bookingms.domain.model.VoyageNumber;
+import com.example.bookingms.application.internal.commandservices.LocationMasterMissingException;
+import com.example.bookingms.domain.repository.LocationRepository;
+import com.example.bookingms.application.internal.outboundservices.acl.RouteCandidateUnavailableException;
+import com.example.bookingms.domain.model.valueobjects.CargoItinerary;
+import com.example.bookingms.domain.model.valueobjects.Leg;
+import com.example.bookingms.domain.model.valueobjects.VoyageNumber;
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.auth.Role;
 import com.example.shared.domain.model.Location;

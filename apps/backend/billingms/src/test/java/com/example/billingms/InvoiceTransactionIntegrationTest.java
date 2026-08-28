@@ -5,12 +5,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doThrow;
 
-import com.example.billingms.application.internal.AdjustmentCommand;
-import com.example.billingms.application.internal.CalculateChargeUseCase;
+import com.example.billingms.application.internal.commandservices.AdjustmentCommand;
+import com.example.billingms.application.internal.commandservices.CalculateChargeUseCase;
 import com.example.billingms.application.port.BillableCargoSnapshot;
 import com.example.billingms.application.port.BillingSnapshotFinder;
 import com.example.billingms.application.port.InvoiceRepository;
-import com.example.billingms.infrastructure.persistence.InvoiceLineItemMapper;
+import com.example.billingms.infrastructure.repositories.InvoiceLineItemMapper;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;

@@ -1,8 +1,8 @@
 package com.example.bookingms.interfaces.rest;
 
-import com.example.bookingms.application.internal.SettleBookingUseCase;
-import com.example.bookingms.application.port.BillableCargo;
-import com.example.bookingms.application.port.BillableCargoFinder;
+import com.example.bookingms.application.internal.commandservices.SettleBookingUseCase;
+import com.example.bookingms.domain.repository.BillableCargo;
+import com.example.bookingms.domain.repository.BillableCargoFinder;
 import com.example.shared.auth.AuthenticatedUser;
 import java.util.List;
 import java.util.Set;

@@ -12,10 +12,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.billingms.application.internal.AlreadyInvoicedException;
-import com.example.billingms.application.internal.BillingNotAvailableException;
-import com.example.billingms.application.internal.CalculateChargeUseCase;
-import com.example.billingms.application.internal.ChargeCalculation;
+import com.example.billingms.application.internal.commandservices.AlreadyInvoicedException;
+import com.example.billingms.application.internal.commandservices.BillingNotAvailableException;
+import com.example.billingms.application.internal.commandservices.CalculateChargeUseCase;
+import com.example.billingms.application.internal.commandservices.ChargeCalculation;
 import com.example.billingms.application.port.BillableCargoSnapshot;
 import com.example.billingms.application.port.InvoiceRepository;
 import com.example.billingms.domain.model.BillingBookingId;
@@ -77,7 +77,7 @@ class BillingControllerTest {
     private InvoiceRepository invoices;
 
     @MockitoBean
-    private com.example.billingms.application.internal.SettleInvoiceUseCase settlement;
+    private com.example.billingms.application.internal.commandservices.SettleInvoiceUseCase settlement;
 
     private static final TransportCharge CHARGE =
             TransportCharge.of(domesticLegs(2), new BigDecimal("4200"), CargoType.GENERAL);

@@ -11,9 +11,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.routingms.application.internal.RegisterVoyageUseCase;
-import com.example.routingms.application.internal.SearchVoyageUseCase;
-import com.example.routingms.application.internal.VoyageOutcome;
+import com.example.routingms.application.internal.commandservices.RegisterVoyageUseCase;
+import com.example.routingms.application.internal.queryservices.SearchVoyageUseCase;
+import com.example.routingms.application.internal.commandservices.VoyageOutcome;
 import com.example.routingms.application.port.LocationRepository;
 import com.example.routingms.application.port.VoyageSearchCriteria;
 import com.example.routingms.domain.model.CargoType;

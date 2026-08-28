@@ -3,8 +3,8 @@ package com.example.trackingms;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.example.trackingms.application.internal.ManageTrackingUseCase;
-import com.example.trackingms.application.internal.StartTrackingUseCase;
+import com.example.trackingms.application.internal.commandservices.ManageTrackingUseCase;
+import com.example.trackingms.application.internal.commandservices.StartTrackingUseCase;
 import com.example.trackingms.application.port.TrackingActivityRepository;
 import com.example.trackingms.application.port.TrackingNoticeRepository;
 import com.example.trackingms.domain.model.TrackingActivity;

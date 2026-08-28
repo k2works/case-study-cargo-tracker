@@ -403,13 +403,13 @@ public final class HexagonalArchitectureRules {
             "org.springframework.context.ApplicationEventPublisher");
 
     /**
-     * メッセージ基盤に触ってよいのは {@code infrastructure.messaging} だけ（[ADR-022]）。
+     * メッセージ基盤に触ってよいのはイベント入口と ACL、設定だけ（[ADR-022]）。
      *
      * <p>[ADR-019] 決定 3 は「IT5 では発行しない」と決め、この検査は<strong>誰も触っていない</strong>
      * ことを見ていた。IT6 で発行を足したので、<strong>丸ごと消さずに絞る</strong>。消すと以後の
      * 発行が無検査になり、ドメイン層やコントローラから直接発行しても気づけない。
      *
-     * <p>置き場所を 1 つに決めるのは、発行が「外へ出す」操作だからである。ドメインやユースケースは
+     * <p>置き場所を境界に決めるのは、発行や購読が「外とつなぐ」操作だからである。ドメインやユースケースは
      * <strong>何を頼むか</strong>（出力ポート）だけを知り、AMQP か Kafka かは知らない。
      * 直接発行できると、集約の中からブローカーを呼ぶコードが生まれ、テストがブローカー無しでは
      * 動かなくなる。
@@ -417,12 +417,14 @@ public final class HexagonalArchitectureRules {
     public static ArchRule eventPublishingOnlyInMessagingInfrastructureRule() {
         return classes()
                 .should(new ArchCondition<JavaClass>(
-                        "メッセージ基盤に触るのは infrastructure.messaging だけ（ADR-022）") {
+                        "メッセージ基盤に触るのは境界パッケージだけ（ADR-022）") {
                     @Override
                     public void check(JavaClass javaClass, ConditionEvents events) {
                         // 合成ルート（config）は両側を知ってよい。ポートと実装を束ねる場所であり、
                         // ここを塞ぐと Bean の宣言ができない
                         if (javaClass.getPackageName().contains(".infrastructure.messaging")
+                                || javaClass.getPackageName().contains(".infrastructure.acl")
+                                || javaClass.getPackageName().contains(".interfaces.events")
                                 || javaClass.getPackageName().endsWith(".config")) {
                             return;
                         }
@@ -433,12 +435,13 @@ public final class HexagonalArchitectureRules {
                                 .distinct()
                                 .forEach(name -> events.add(SimpleConditionEvent.violated(javaClass,
                                         ("%s が %s に依存している。イベントの発行・購読は"
-                                                + " infrastructure.messaging か config に置く"
+                                                + " infrastructure.messaging、infrastructure.acl、"
+                                                + "interfaces.events、config に置く"
                                                 + "（ADR-022）")
                                                 .formatted(javaClass.getSimpleName(), name))));
                     }
                 })
-                .as("メッセージ基盤に触るのは infrastructure.messaging だけ（ADR-022）")
+                .as("メッセージ基盤に触るのは境界パッケージだけ（ADR-022）")
                 .allowEmptyShould(true);
     }
 }

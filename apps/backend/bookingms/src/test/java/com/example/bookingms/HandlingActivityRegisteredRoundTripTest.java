@@ -2,11 +2,11 @@ package com.example.bookingms;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.bookingms.application.port.CargoRepository;
-import com.example.bookingms.application.port.CargoSummary;
-import com.example.bookingms.domain.model.BookingStatus;
-import com.example.bookingms.domain.model.Cargo;
-import com.example.bookingms.domain.model.CargoType;
+import com.example.bookingms.domain.repository.CargoRepository;
+import com.example.bookingms.domain.repository.CargoSummary;
+import com.example.bookingms.domain.model.valueobjects.BookingStatus;
+import com.example.bookingms.domain.model.aggregates.Cargo;
+import com.example.bookingms.domain.model.valueobjects.CargoType;
 import com.example.shared.contract.HandlingActivityRegisteredContract;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;

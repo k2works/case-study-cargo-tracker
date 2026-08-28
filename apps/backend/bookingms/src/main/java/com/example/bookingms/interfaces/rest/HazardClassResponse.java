@@ -1,6 +1,6 @@
 package com.example.bookingms.interfaces.rest;
 
-import com.example.bookingms.domain.model.HazardClass;
+import com.example.bookingms.domain.model.valueobjects.HazardClass;
 
 /**
  * 危険物クラスの選択肢。

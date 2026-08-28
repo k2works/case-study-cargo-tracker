@@ -8,8 +8,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.authms.application.internal.FindUserShipperLinkUseCase;
-import com.example.authms.application.internal.UserShipperLinkResult;
+import com.example.authms.application.internal.queryservices.FindUserShipperLinkUseCase;
+import com.example.authms.application.internal.queryservices.UserShipperLinkResult;
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.contract.UserShipperLinkContract;
 import org.junit.jupiter.api.DisplayName;

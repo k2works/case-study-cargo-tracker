@@ -1,6 +1,6 @@
 package com.example.authms.interfaces.rest;
 
-import com.example.authms.application.internal.UnlockAccountUseCase;
+import com.example.authms.application.internal.commandservices.UnlockAccountUseCase;
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.auth.Role;
 import java.util.List;

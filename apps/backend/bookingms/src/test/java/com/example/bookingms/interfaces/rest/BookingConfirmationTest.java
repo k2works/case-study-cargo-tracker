@@ -1,5 +1,10 @@
 package com.example.bookingms.interfaces.rest;
 
+import com.example.bookingms.application.internal.commandservices.ConfirmBookingUseCase;
+import com.example.bookingms.application.internal.commandservices.NotifyShipperUseCase;
+import com.example.bookingms.application.internal.commandservices.ReturnToRoutingUseCase;
+import com.example.bookingms.application.internal.commandservices.ReviseBookingScheduleUseCase;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -10,19 +15,15 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.bookingms.application.internal.ConfirmBookingUseCase;
-import com.example.bookingms.application.internal.NotifyShipperUseCase;
-import com.example.bookingms.application.internal.ReturnToRoutingUseCase;
-import com.example.bookingms.application.internal.ReviseBookingScheduleUseCase;
-import com.example.bookingms.application.internal.SearchCargoUseCase;
-import com.example.bookingms.application.port.CargoRepository;
-import com.example.bookingms.application.port.CargoSummary;
-import com.example.bookingms.application.port.LocationRepository;
-import com.example.bookingms.domain.model.Cargo;
-import com.example.bookingms.domain.model.CargoItinerary;
-import com.example.bookingms.domain.model.Leg;
-import com.example.bookingms.domain.model.RoutingStatus;
-import com.example.bookingms.domain.model.VoyageNumber;
+import com.example.bookingms.application.internal.queryservices.SearchCargoUseCase;
+import com.example.bookingms.domain.repository.CargoRepository;
+import com.example.bookingms.domain.repository.CargoSummary;
+import com.example.bookingms.domain.repository.LocationRepository;
+import com.example.bookingms.domain.model.aggregates.Cargo;
+import com.example.bookingms.domain.model.valueobjects.CargoItinerary;
+import com.example.bookingms.domain.model.valueobjects.Leg;
+import com.example.bookingms.domain.model.valueobjects.RoutingStatus;
+import com.example.bookingms.domain.model.valueobjects.VoyageNumber;
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.domain.model.Location;
 import java.time.Instant;
@@ -256,7 +257,7 @@ class BookingConfirmationTest {
 
         // 送った値が捨てられていないこと。捨てても一覧は返るため、結果を見るだけでは分からない
         verify(searchCargo).search(null, null, RoutingStatus.openToRoutingPlanner(),
-                com.example.bookingms.domain.model.BookingStatus.CONFIRMED);
+                com.example.bookingms.domain.model.valueobjects.BookingStatus.CONFIRMED);
     }
 
     /**

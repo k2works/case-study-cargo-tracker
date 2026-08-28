@@ -1,5 +1,9 @@
 package com.example.bookingms.interfaces.rest;
 
+import com.example.bookingms.application.internal.commandservices.AssignRouteUseCase;
+import com.example.bookingms.application.internal.commandservices.IssueTrackingNumberUseCase;
+import com.example.bookingms.application.internal.commandservices.RequestConsultationUseCase;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -10,13 +14,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.bookingms.application.internal.AssignRouteUseCase;
-import com.example.bookingms.application.internal.IssueTrackingNumberUseCase;
-import com.example.bookingms.application.internal.LocationMasterMissingException;
-import com.example.bookingms.application.internal.RequestConsultationUseCase;
-import com.example.bookingms.application.internal.RouteNoLongerAvailableException;
-import com.example.bookingms.application.port.LocationRepository;
-import com.example.bookingms.domain.model.CargoItinerary;
+import com.example.bookingms.application.internal.commandservices.LocationMasterMissingException;
+import com.example.bookingms.application.internal.commandservices.RouteNoLongerAvailableException;
+import com.example.bookingms.domain.repository.LocationRepository;
+import com.example.bookingms.domain.model.valueobjects.CargoItinerary;
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.domain.model.Location;
 import java.util.Optional;
@@ -96,7 +97,7 @@ class CargoRoutingControllerTest {
     void assigns() throws Exception {
         givenKnownPorts();
         when(assignRoute.assign(any(), any(), any())).thenReturn(Optional.of(
-                new com.example.bookingms.application.internal.AssignRouteUseCase.AssignmentResult(
+                new com.example.bookingms.application.internal.commandservices.AssignRouteUseCase.AssignmentResult(
                         BookingTestCargoes.routed(), null)));
 
         mockMvc.perform(put("/api/v1/bookings/BKG-2026000001/route")
@@ -249,7 +250,7 @@ class CargoRoutingControllerTest {
     @DisplayName("経路設計者が追跡番号を発行でき、番号が応答に載る")
     void issuesTrackingNumber() throws Exception {
         when(issueTrackingNumber.issue(any())).thenReturn(Optional.of(BookingTestCargoes.notified().confirm()
-                .issueTrackingNumber(com.example.bookingms.domain.model.TrackingNumber
+                .issueTrackingNumber(com.example.bookingms.domain.model.valueobjects.TrackingNumber
                         .of("TRK-20260822-0001"))));
 
         mockMvc.perform(post("/api/v1/bookings/BKG-2026000001/tracking-number")

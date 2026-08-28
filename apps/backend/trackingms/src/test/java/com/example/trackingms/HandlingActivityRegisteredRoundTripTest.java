@@ -25,7 +25,7 @@ class HandlingActivityRegisteredRoundTripTest extends EventRoundTripTestBase {
     /** 追跡はまず 1 本目の契約で作る。荷役だけでは追う相手が無い。 */
     private void startTracking(String trackingNumber) {
         send(TrackingEventChannels.EXCHANGE, TrackingEventChannels.TRACKING_NUMBER_ISSUED,
-                "com.example.bookingms.application.port.TrackingNumberIssued", """
+                "com.example.bookingms.application.internal.outboundservices.acl.TrackingNumberIssued", """
                         {"trackingNumber": "%s", "bookingId": "%s",
                          "originUnLocode": "JPTYO", "destinationUnLocode": "USLAX",
                          "arrivalDeadline": "2030-09-20", "estimatedArrival": null,

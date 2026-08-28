@@ -2,7 +2,7 @@
  * 予約コンテキストのドメインモデル。集約ルート・値オブジェクト・列挙を置く。
  *
  * <p><strong>一貫性の境界である。</strong> 1 回の取引で守りきる範囲がここで決まる。
- * 現在の集約ルートは {@link com.example.bookingms.domain.model.Shipper} である
+ * 現在の集約ルートは {@link com.example.bookingms.domain.model.aggregates.Shipper} である
  * （貨物・旅程・見積は以降のイテレーションで加わる）。
  *
  * <p><strong>識別子の採番はここで行わない。</strong> 荷主コードは永続化の経路

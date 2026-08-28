@@ -41,7 +41,7 @@ class TrackingNumberIssuedMessageContractTest {
      * 本番と同じ経路で読む。
      *
      * <p><strong>プロデューサは自分の型名を `__TypeId__` に載せて送る</strong>
-     * （{@code com.example.bookingms.application.port.TrackingNumberIssued}）。この名前は
+     * （{@code com.example.bookingms.application.internal.outboundservices.acl.TrackingNumberIssued}）。この名前は
      * <strong>こちらのクラスパスに存在しない</strong>。それでも読めるのは、
      * {@code @RabbitListener} が引数の型を「推論した型」として渡し、変換器がヘッダより
      * そちらを優先するためである。

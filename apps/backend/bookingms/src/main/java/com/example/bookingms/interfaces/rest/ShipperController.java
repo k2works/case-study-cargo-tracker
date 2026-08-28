@@ -1,15 +1,15 @@
 package com.example.bookingms.interfaces.rest;
 
-import com.example.bookingms.application.internal.EditShipperUseCase;
-import com.example.bookingms.application.internal.RegisterShipperCommand;
-import com.example.bookingms.application.internal.RegisterShipperUseCase;
-import com.example.bookingms.application.internal.RegistrationOutcome;
-import com.example.bookingms.application.internal.SearchShipperUseCase;
-import com.example.bookingms.domain.model.ContractNumber;
-import com.example.bookingms.domain.model.CorporateContract;
-import com.example.bookingms.domain.model.DiscountRate;
-import com.example.bookingms.domain.model.ShipperProfile;
-import com.example.bookingms.domain.model.ShipperType;
+import com.example.bookingms.application.internal.commandservices.EditShipperUseCase;
+import com.example.bookingms.domain.model.commands.RegisterShipperCommand;
+import com.example.bookingms.application.internal.commandservices.RegisterShipperUseCase;
+import com.example.bookingms.application.internal.commandservices.RegistrationOutcome;
+import com.example.bookingms.application.internal.queryservices.SearchShipperUseCase;
+import com.example.bookingms.domain.model.valueobjects.ContractNumber;
+import com.example.bookingms.domain.model.valueobjects.CorporateContract;
+import com.example.bookingms.domain.model.valueobjects.DiscountRate;
+import com.example.bookingms.domain.model.valueobjects.ShipperProfile;
+import com.example.bookingms.domain.model.valueobjects.ShipperType;
 import com.example.shared.auth.AuthenticatedUser;
 import com.example.shared.auth.Role;
 import jakarta.validation.ConstraintViolation;

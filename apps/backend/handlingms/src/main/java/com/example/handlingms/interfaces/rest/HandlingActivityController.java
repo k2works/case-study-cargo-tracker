@@ -1,7 +1,7 @@
 package com.example.handlingms.interfaces.rest;
 
-import com.example.handlingms.application.internal.RegisterHandlingActivityCommand;
-import com.example.handlingms.application.internal.RegisterHandlingActivityUseCase;
+import com.example.handlingms.application.internal.commandservices.RegisterHandlingActivityCommand;
+import com.example.handlingms.application.internal.commandservices.RegisterHandlingActivityUseCase;
 import com.example.handlingms.application.port.CargoLookupUnavailableException;
 import com.example.handlingms.application.port.CargoSnapshotFinder;
 import com.example.handlingms.application.port.HandlingActivityRepository;

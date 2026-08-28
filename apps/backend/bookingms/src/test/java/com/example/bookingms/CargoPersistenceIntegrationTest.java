@@ -3,15 +3,15 @@ package com.example.bookingms;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.example.bookingms.application.internal.BookCargoCommand;
-import com.example.bookingms.application.port.CargoSummary;
-import com.example.bookingms.domain.model.BookingId;
-import com.example.bookingms.domain.model.BookingStatus;
-import com.example.bookingms.domain.model.Cargo;
-import com.example.bookingms.domain.model.CargoType;
-import com.example.bookingms.domain.model.HazardClass;
-import com.example.bookingms.domain.model.RoutingStatus;
-import com.example.bookingms.domain.model.TransportStatus;
+import com.example.bookingms.domain.model.commands.BookCargoCommand;
+import com.example.bookingms.domain.repository.CargoSummary;
+import com.example.bookingms.domain.model.valueobjects.BookingId;
+import com.example.bookingms.domain.model.valueobjects.BookingStatus;
+import com.example.bookingms.domain.model.aggregates.Cargo;
+import com.example.bookingms.domain.model.valueobjects.CargoType;
+import com.example.bookingms.domain.model.valueobjects.HazardClass;
+import com.example.bookingms.domain.model.valueobjects.RoutingStatus;
+import com.example.bookingms.domain.model.valueobjects.TransportStatus;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.Month;
@@ -73,7 +73,7 @@ class CargoPersistenceIntegrationTest extends CargoPersistenceTestBase {
         assertThat(reloaded.misroute().orElseThrow().at()).isEqualTo(at);
         assertThat(reloaded.routingStatus())
                 .as("経路の状況が誤配になっていない。経路設計者の一覧に出ない")
-                .isEqualTo(com.example.bookingms.domain.model.RoutingStatus.MISROUTED);
+                .isEqualTo(com.example.bookingms.domain.model.valueobjects.RoutingStatus.MISROUTED);
     }
 
     @Test

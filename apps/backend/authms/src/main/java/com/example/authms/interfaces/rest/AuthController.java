@@ -1,7 +1,7 @@
 package com.example.authms.interfaces.rest;
 
-import com.example.authms.application.internal.LoginResult;
-import com.example.authms.application.internal.LoginUseCase;
+import com.example.authms.application.internal.commandservices.LoginResult;
+import com.example.authms.application.internal.commandservices.LoginUseCase;
 import com.example.authms.application.port.AuthAuditLogger;
 import com.example.authms.domain.model.AuthEventType;
 import com.example.shared.auth.AnyAuthenticatedUser;
