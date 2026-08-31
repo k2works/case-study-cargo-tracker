@@ -264,6 +264,20 @@ function sonarApi(apiPath, params = {}) {
 }
 
 /**
+ * Security Hotspot の操作に使うトークン。
+ *
+ * 走査用トークンには Hotspot を列挙・承認する権限が無い（api/hotspots/search も
+ * api/hotspots/change_status も Insufficient privileges を返す）。IT5・IT6・IT12・IT13 と
+ * 4 度、そのたびに利用者へ UI 操作を頼んでいる。権限のあるトークンを別に持たせて、
+ * この待ちを無くす。
+ *
+ * @returns {string} トークン。未設定なら走査用トークンにフォールバックする
+ */
+function hotspotToken() {
+  return process.env.SONAR_ADMIN_TOKEN || requireSonarToken();
+}
+
+/**
  * SonarQube トークンの検証
  * @returns {string} トークン
  */
@@ -273,6 +287,42 @@ function requireSonarToken() {
     throw new Error('SONAR_TOKEN を .env に設定してください');
   }
   return token;
+}
+
+/**
+ * Hotspot 用の API 呼び出し（GET / POST・権限のあるトークンを使う）
+ * @param {string} apiPath - API パス
+ * @param {Object} params - クエリ／フォームパラメータ
+ * @param {string} method - 'GET' または 'POST'
+ * @returns {Object|null} 応答（POST は本文が空のことがある）
+ */
+function hotspotApi(apiPath, params = {}, method = 'GET') {
+  const hostUrl = sonarHostUrl();
+  const qs = new URLSearchParams(params).toString();
+  const auth = Buffer.from(`${hotspotToken()}:`).toString('base64');
+  const url = method === 'GET' ? `${hostUrl}${apiPath}${qs ? '?' + qs : ''}`
+    : `${hostUrl}${apiPath}`;
+  const payload = method === 'POST' ? `--data "${qs}"` : '';
+  const result = execSync(
+    `curl -s -w "\n%{http_code}" -X ${method} `
+    + `-H "Authorization: Basic ${auth}" ${payload} "${url}"`,
+    { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'], shell: true, env: cleanDockerEnv() },
+  );
+  const separator = result.lastIndexOf('\n');
+  const body = result.slice(0, separator);
+  const statusCode = result.slice(separator + 1).trim();
+
+  if (statusCode === '403') {
+    throw new Error(
+      'Security Hotspot を操作する権限がありません。'
+      + '「Administer Security」を持つ利用者のトークンを .env の SONAR_ADMIN_TOKEN に設定してください'
+      + '（走査用の SONAR_TOKEN では列挙も承認もできません）。',
+    );
+  }
+  if (statusCode !== '200' && statusCode !== '204') {
+    throw new Error(`SonarQube API が ${statusCode} を返しました（${url}）: ${body}`);
+  }
+  return body ? JSON.parse(body) : null;
 }
 
 /**
@@ -589,6 +639,58 @@ export default function (gulp) {
     }
   });
 
+  gulp.task('sonar-local:hotspots', (done) => {
+    try {
+      const projects = loadProjects();
+      let toReview = 0;
+      console.log('=== Security Hotspot（レビュー待ち） ===');
+      for (const project of projects) {
+        const result = hotspotApi('/api/hotspots/search',
+          { projectKey: project.projectKey, status: 'TO_REVIEW', ps: 100 });
+        const hotspots = result.hotspots || [];
+        toReview += hotspots.length;
+        console.log(`\n  ${project.label}: ${hotspots.length} 件`);
+        for (const hotspot of hotspots) {
+          console.log(`    [${hotspot.key}] ${hotspot.component.split(':').pop()}`
+            + `:${hotspot.line || '-'}`);
+          console.log(`      ${hotspot.message}`);
+        }
+      }
+      if (toReview === 0) {
+        console.log('\n  レビュー待ちはありません。');
+      } else {
+        console.log(`\n  中身を読んでから承認してください（実際の欠陥のことがあります）:`);
+        console.log('    npx gulp sonar-local:hotspot:review --key <キー> --comment "<理由>"');
+      }
+      done();
+    } catch (error) {
+      done(error);
+    }
+  });
+
+  gulp.task('sonar-local:hotspot:review', (done) => {
+    try {
+      const args = process.argv;
+      const key = args[args.indexOf('--key') + 1];
+      const commentIndex = args.indexOf('--comment');
+      const comment = commentIndex > 0 ? args[commentIndex + 1] : '';
+      if (!key || args.indexOf('--key') < 0) {
+        throw new Error('--key <Hotspot のキー> を指定してください'
+          + '（キーは sonar-local:hotspots で確認できます）');
+      }
+      if (!comment) {
+        throw new Error('--comment "<安全と判断した理由>" を指定してください。'
+          + '理由の無い承認は、次に同じ指摘が出たときに読み直す材料が残りません');
+      }
+      hotspotApi('/api/hotspots/change_status',
+        { hotspot: key, status: 'REVIEWED', resolution: 'SAFE', comment }, 'POST');
+      console.log(`  ${key} を「レビュー済み（安全）」にしました。`);
+      done();
+    } catch (error) {
+      done(error);
+    }
+  });
+
   gulp.task('sonar-local:issues', (done) => {
     try {
       const projectKey = sonarProjectKey();
@@ -740,6 +842,9 @@ SonarQube ローカル タスク一覧
 分析:
   sonar-local:gate           Quality Gate ステータス確認
   sonar-local:issues         メトリクス・イシュー・重複コード詳細表示
+  sonar-local:hotspots       レビュー待ちの Security Hotspot を一覧表示
+  sonar-local:hotspot:review Hotspot を「レビュー済み（安全）」にする
+                             --key <キー> --comment "<理由>"
   sonar-local:check          スキャン → Quality Gate 確認の一連フロー
 
 管理:
@@ -757,6 +862,9 @@ ${projectList}
   LOCAL_SONAR_DB_PASSWORD    DB パスワード（デフォルト: sonarqube_password）
   SONAR_HOST_URL             SonarQube URL（デフォルト: http://localhost:9001）
   SONAR_TOKEN                分析トークン（スキャン時に必須）
+  SONAR_ADMIN_TOKEN          Security Hotspot の列挙・承認に使うトークン。
+                             「Administer Security」を持つ利用者で発行する。
+                             未設定だと Hotspot の操作が 403 になり、UI 操作が要る
   SONAR_PROJECT_KEY          Quality Gate / Issues 確認対象のプロジェクトキー
 
 典型的なフロー:
