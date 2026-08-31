@@ -10,25 +10,33 @@ package com.example.simulationms.domain.model.valueobjects;
  * <strong>本番には存在しない権限の持ち主</strong>を作ることになる。
  */
 public enum ScenarioStep {
-    REGISTER_SHIPPER("荷主登録", "ROLE_SALES"),
-    REGISTER_BOOKING("予約登録", "ROLE_SALES"),
-    REQUEST_ROUTING("経路設計依頼", "ROLE_SALES"),
-    ASSIGN_ROUTE("経路割り当て", "ROLE_ROUTING"),
-    CONFIRM_BOOKING("予約確定", "ROLE_SALES"),
-    ISSUE_TRACKING_NUMBER("追跡番号発行", "ROLE_ROUTING"),
-    RECORD_HANDLING("荷役記録", "ROLE_HANDLER"),
-    DECLARE_CUSTOMS("通関申告", "ROLE_HANDLER"),
-    CLEAR_CUSTOMS("通関完了", "ROLE_TRACKER"),
-    RECORD_CLAIM("引取記録", "ROLE_HANDLER"),
-    CALCULATE_CHARGE("料金算出", "ROLE_ACCOUNTANT"),
-    SETTLE("精算", "ROLE_ACCOUNTANT");
+    REGISTER_SHIPPER("荷主登録", "ROLE_SALES", BusinessContextKey.SHIPPER_ID),
+    REGISTER_BOOKING("予約登録", "ROLE_SALES", BusinessContextKey.BOOKING_ID),
+    REQUEST_ROUTING("経路設計依頼", "ROLE_SALES", BusinessContextKey.NONE),
+    // **航海が 1 本も無い環境では候補が出ない。**「候補が無いので飛ばす」にすると、
+    // 通っていないことに気づけないまま「全工程成功」で終わる（IT5 の Try 2）。
+    // 経路設計者が実際に踏む操作でもあるため、工程として置く
+    REGISTER_VOYAGE("航海登録", "ROLE_ROUTING", BusinessContextKey.VOYAGE_NUMBER),
+    ASSIGN_ROUTE("経路割り当て", "ROLE_ROUTING", BusinessContextKey.NONE),
+    // 通知してからでないと確定できない（US12-4）。工程から落とすと、確定が必ず断られる
+    NOTIFY_ROUTE("経路通知", "ROLE_SALES", BusinessContextKey.NONE),
+    CONFIRM_BOOKING("予約確定", "ROLE_SALES", BusinessContextKey.NONE),
+    ISSUE_TRACKING_NUMBER("追跡番号発行", "ROLE_ROUTING", BusinessContextKey.TRACKING_NUMBER),
+    RECORD_HANDLING("荷役記録", "ROLE_HANDLER", BusinessContextKey.NONE),
+    DECLARE_CUSTOMS("通関申告", "ROLE_HANDLER", BusinessContextKey.NONE),
+    CLEAR_CUSTOMS("通関完了", "ROLE_TRACKER", BusinessContextKey.NONE),
+    RECORD_CLAIM("引取記録", "ROLE_HANDLER", BusinessContextKey.NONE),
+    CALCULATE_CHARGE("料金算出", "ROLE_ACCOUNTANT", BusinessContextKey.NONE),
+    SETTLE("精算", "ROLE_ACCOUNTANT", BusinessContextKey.NONE);
 
     private final String label;
     private final String role;
+    private final String producesKey;
 
-    ScenarioStep(String label, String role) {
+    ScenarioStep(String label, String role, String producesKey) {
         this.label = label;
         this.role = role;
+        this.producesKey = producesKey;
     }
 
     public String label() {
@@ -38,5 +46,20 @@ public enum ScenarioStep {
     /** その工程を踏む利用者のロール。 */
     public String role() {
         return role;
+    }
+
+    /**
+     * その工程が生む識別子の名前。生まない工程は空。
+     *
+     * <p>引き継ぎ先を工程自身が持つ。呼び出し側で対応表を書くと、工程を足したときに
+     * 書き足し忘れた工程だけが<strong>何も引き継がない</strong>まま通る。
+     */
+    public String producesKey() {
+        return producesKey;
+    }
+
+    /** 識別子を生む工程か。 */
+    public boolean produces() {
+        return !producesKey.isEmpty();
     }
 }

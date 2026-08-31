@@ -74,11 +74,13 @@ public class SimulationConfig {
      */
     @Bean
     public BusinessGateway businessGateway(
-            @Value("${app.gateway.base-url}") String baseUrl, SimulationUsers users) {
+            @Value("${app.gateway.base-url}") String baseUrl, SimulationUsers users,
+            Clock clock) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(Duration.ofSeconds(2));
         factory.setReadTimeout(Duration.ofSeconds(10));
         return new RestBusinessGateway(
-                RestClient.builder().baseUrl(baseUrl).requestFactory(factory).build(), users);
+                RestClient.builder().baseUrl(baseUrl).requestFactory(factory).build(),
+                users, clock);
     }
 }

@@ -10,8 +10,11 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import com.example.simulationms.application.internal.outboundservices.acl.BusinessCallFailedException;
-import com.example.simulationms.application.internal.outboundservices.acl.BusinessContext;
+import com.example.simulationms.domain.model.valueobjects.BusinessContextKey;
 import com.example.simulationms.domain.model.valueobjects.ScenarioStep;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -43,7 +46,9 @@ class RestBusinessGatewayTest {
         RestClient.Builder builder = RestClient.builder().baseUrl(BASE);
         server = MockRestServiceServer.bindTo(builder).build();
         gateway = new RestBusinessGateway(builder.build(), SimulationUsers.of(
-                Map.of("ROLE_SALES", "sales01", "ROLE_ROUTING", "routing01"), "password"));
+                Map.of("ROLE_SALES", "sales01", "ROLE_ROUTING", "routing01",
+                        "ROLE_HANDLER", "handler01"), "password"),
+                Clock.fixed(Instant.parse("2026-11-16T00:00:00Z"), ZoneId.of("Asia/Tokyo")));
     }
 
     private void expectLoginAs(String username, String token) {
@@ -68,7 +73,7 @@ class RestBusinessGatewayTest {
                         MediaType.APPLICATION_JSON));
 
         String identifier = gateway.execute(ScenarioStep.REGISTER_SHIPPER,
-                Map.of(BusinessContext.RUN_ID, "SIM-20261116-0001"));
+                Map.of(BusinessContextKey.RUN_ID, "SIM-20261116-0001"));
 
         assertThat(identifier).isEqualTo("42");
         server.verify();
@@ -117,12 +122,130 @@ class RestBusinessGatewayTest {
      * 確かめているつもりで何も確かめていない状態になる。
      */
     @Test
+    @DisplayName("予約を登録し、前の工程が引き継いだ荷主に紐づける")
+    void registersTheBookingForTheShipperFromTheContext() {
+        expectLoginAs("sales01", "token-sales");
+        server.expect(requestTo(BASE + RestBusinessGateway.BOOKING_PATH))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(header("Authorization", "Bearer token-sales"))
+                .andExpect(jsonPath("$.shipperId").value(42))
+                .andExpect(jsonPath("$.originUnLocode").value("JPTYO"))
+                .andExpect(jsonPath("$.destinationUnLocode").value("USLAX"))
+                // 業務タイムゾーンの暦で数える。UTC で「今日」を決めると時差の分だけずれる
+                .andExpect(jsonPath("$.arrivalDeadline").value("2027-03-16"))
+                .andRespond(withSuccess("{\"bookingId\":\"BK-0001\"}",
+                        MediaType.APPLICATION_JSON));
+
+        String identifier = gateway.execute(ScenarioStep.REGISTER_BOOKING,
+                Map.of(BusinessContextKey.SHIPPER_ID, "42"));
+
+        assertThat(identifier).isEqualTo("BK-0001");
+        server.verify();
+    }
+
+    /**
+     * <strong>引き継ぎが切れていることを、業務 API の失敗に化けさせない。</strong>
+     *
+     * <p>空のまま呼ぶと存在しない予約への操作になり、404 として現れる——
+     * 原因は前の工程にあるのに、後ろの工程が悪いように見える。
+     */
+    @Test
+    @DisplayName("前の工程が識別子を引き継いでいなければ、その名前を挙げて止まる")
+    void namesTheMissingIdentifier() {
+        expectLoginAs("sales01", "token-sales");
+
+        assertThatThrownBy(() -> gateway.execute(ScenarioStep.REQUEST_ROUTING, Map.of()))
+                .isInstanceOf(BusinessCallFailedException.class)
+                .hasMessageContaining(BusinessContextKey.BOOKING_ID);
+    }
+
+    @Test
+    @DisplayName("航海を登録し、シミュレーションと分かる番号を引き継ぐ")
+    void registersAVoyageNamedAfterTheRun() {
+        expectLoginAs("routing01", "token-routing");
+        server.expect(requestTo(BASE + RestBusinessGateway.VOYAGE_PATH))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(jsonPath("$.voyageNumber").value("V-SIM-20261116-0001"))
+                .andExpect(jsonPath("$.movements[0].departureUnLocode").value("JPTYO"))
+                .andRespond(withStatus(HttpStatus.CREATED));
+
+        String identifier = gateway.execute(ScenarioStep.REGISTER_VOYAGE,
+                Map.of(BusinessContextKey.RUN_ID, "SIM-20261116-0001"));
+
+        assertThat(identifier).isEqualTo("V-SIM-20261116-0001");
+        server.verify();
+    }
+
+    @Test
+    @DisplayName("候補を引いて先頭を割り当てる")
+    void assignsTheFirstCandidate() {
+        expectLoginAs("routing01", "token-routing");
+        server.expect(requestTo(org.hamcrest.Matchers.startsWith(
+                        BASE + RestBusinessGateway.ROUTE_PATH + "?")))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("""
+                        {"candidates":[{"legs":[{"voyageNumber":"V-1",
+                          "fromUnLocode":"JPTYO","toUnLocode":"USLAX",
+                          "departureTime":"2026-11-17T09:00:00Z",
+                          "arrivalTime":"2026-12-06T09:00:00Z"}]}]}
+                        """, MediaType.APPLICATION_JSON));
+        server.expect(requestTo(BASE + RestBusinessGateway.BOOKING_PATH + "/BK-0001/route"))
+                .andExpect(method(HttpMethod.PUT))
+                .andExpect(jsonPath("$.legs[0].voyageNumber").value("V-1"))
+                .andExpect(jsonPath("$.legs[0].loadUnLocode").value("JPTYO"))
+                .andExpect(jsonPath("$.legs[0].loadTime").value("2026-11-17T09:00:00Z"))
+                .andRespond(withSuccess());
+
+        gateway.execute(ScenarioStep.ASSIGN_ROUTE,
+                Map.of(BusinessContextKey.BOOKING_ID, "BK-0001"));
+
+        server.verify();
+    }
+
+    /**
+     * 候補 0 件は<strong>飛ばさない</strong>（[ADR-030] 拡張 3a）。
+     *
+     * <p>飛ばすと、何も運ばないまま全工程が成功で終わる。
+     */
+    @Test
+    @DisplayName("経路候補が 0 件なら、条件を添えて止まる")
+    void stopsWhenThereIsNoCandidate() {
+        expectLoginAs("routing01", "token-routing");
+        server.expect(requestTo(org.hamcrest.Matchers.startsWith(
+                        BASE + RestBusinessGateway.ROUTE_PATH + "?")))
+                .andRespond(withSuccess("{\"candidates\":[]}", MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> gateway.execute(ScenarioStep.ASSIGN_ROUTE,
+                Map.of(BusinessContextKey.BOOKING_ID, "BK-0001")))
+                .isInstanceOf(BusinessCallFailedException.class)
+                .hasMessageContaining("0 件")
+                .hasMessageContaining("JPTYO");
+    }
+
+    @Test
+    @DisplayName("追跡番号を発行して引き継ぐ")
+    void issuesTheTrackingNumber() {
+        expectLoginAs("routing01", "token-routing");
+        server.expect(requestTo(
+                        BASE + RestBusinessGateway.BOOKING_PATH + "/BK-0001/tracking-number"))
+                .andExpect(method(HttpMethod.POST))
+                .andRespond(withSuccess("{\"trackingNumber\":\"TRK-20261116-0001\"}",
+                        MediaType.APPLICATION_JSON));
+
+        String identifier = gateway.execute(ScenarioStep.ISSUE_TRACKING_NUMBER,
+                Map.of(BusinessContextKey.BOOKING_ID, "BK-0001"));
+
+        assertThat(identifier).isEqualTo("TRK-20261116-0001");
+        server.verify();
+    }
+
+    @Test
     @DisplayName("まだ実装していない工程は、成功にせず止まる")
     void doesNotPretendUnimplementedStepsSucceeded() {
-        expectLoginAs("routing01", "token-routing");
+        expectLoginAs("handler01", "token-handler");
 
-        assertThatThrownBy(() -> gateway.execute(ScenarioStep.ASSIGN_ROUTE, Map.of()))
+        assertThatThrownBy(() -> gateway.execute(ScenarioStep.RECORD_HANDLING, Map.of()))
                 .isInstanceOf(BusinessCallFailedException.class)
-                .hasMessageContaining(ScenarioStep.ASSIGN_ROUTE.label());
+                .hasMessageContaining(ScenarioStep.RECORD_HANDLING.label());
     }
 }
