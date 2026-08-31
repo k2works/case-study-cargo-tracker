@@ -23,6 +23,12 @@ public final class BusinessContextKey {
     /** 追跡番号発行が生んだ追跡番号。 */
     public static final String TRACKING_NUMBER = "trackingNumber";
 
+    /** 通関申告が生んだ申告。 */
+    public static final String DECLARATION_ID = "declarationId";
+
+    /** 料金算出が生んだ精算書。 */
+    public static final String INVOICE_NUMBER = "invoiceNumber";
+
     /** 何も生まない工程。 */
     public static final String NONE = "";
 

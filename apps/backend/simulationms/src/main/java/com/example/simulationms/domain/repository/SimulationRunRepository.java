@@ -38,4 +38,12 @@ public interface SimulationRunRepository {
      * （IT12 で実測）、DB 制約ではなくアプリケーション側の検査で守る。
      */
     Optional<SimulationRun> findRunningByScenario(String scenarioId);
+
+    /**
+     * その日に始まった実行の数（実行 ID の連番に使う）。
+     *
+     * <p><strong>日付の範囲ではなく前置きで数える。</strong>範囲検索にすると、境界の
+     * 解釈が DB の方言で変わる。
+     */
+    int countByRunIdPrefix(String prefix);
 }

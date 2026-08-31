@@ -57,6 +57,14 @@ public interface SimulationRunMapper {
     SimulationRunRecord findRunningByScenario(@Param("scenarioId") String scenarioId,
             @Param("stepCount") int stepCount);
 
+    /**
+     * その日に始まった実行の数（実行 ID の連番に使う）。
+     *
+     * <p><strong>前置きで数える。</strong>日付の範囲検索にすると、境界の解釈が方言で変わる。
+     */
+    @Select("SELECT COUNT(*) FROM simulation_run WHERE run_id LIKE #{prefix} || '%'")
+    int countByRunIdPrefix(@Param("prefix") String prefix);
+
     @Insert("INSERT INTO simulation_step_result"
             + " (run_id, step, outcome, elapsed_ms, created_identifier, failure_reason,"
             + "  recorded_at)"

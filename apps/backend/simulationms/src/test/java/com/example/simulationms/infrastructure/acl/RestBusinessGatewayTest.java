@@ -47,7 +47,8 @@ class RestBusinessGatewayTest {
         server = MockRestServiceServer.bindTo(builder).build();
         gateway = new RestBusinessGateway(builder.build(), SimulationUsers.of(
                 Map.of("ROLE_SALES", "sales01", "ROLE_ROUTING", "routing01",
-                        "ROLE_HANDLER", "handler01"), "password"),
+                        "ROLE_HANDLER", "handler01", "ROLE_TRACKER", "tracker01",
+                        "ROLE_ACCOUNTANT", "accountant01"), "password"),
                 Clock.fixed(Instant.parse("2026-11-16T00:00:00Z"), ZoneId.of("Asia/Tokyo")));
     }
 
@@ -115,137 +116,240 @@ class RestBusinessGatewayTest {
                 .hasMessageContaining("403");
     }
 
-    /**
-     * まだ実装していない工程を<strong>成功として返さない</strong>。
-     *
-     * <p>空文字を返して先へ進めると、何も呼んでいない実行が「全工程成功」で終わる——
-     * 確かめているつもりで何も確かめていない状態になる。
-     */
     @Test
-    @DisplayName("予約を登録し、前の工程が引き継いだ荷主に紐づける")
-    void registersTheBookingForTheShipperFromTheContext() {
-        expectLoginAs("sales01", "token-sales");
-        server.expect(requestTo(BASE + RestBusinessGateway.BOOKING_PATH))
+    @DisplayName("受け取り・積込・荷降しを 3 つとも記録する")
+    void recordsAllThreeHandlingActivities() {
+        expectLoginAs("handler01", "token-handler");
+        server.expect(org.springframework.test.web.client.ExpectedCount.times(3),
+                        requestTo(BASE + RestBusinessGateway.HANDLING_PATH))
                 .andExpect(method(HttpMethod.POST))
-                .andExpect(header("Authorization", "Bearer token-sales"))
-                .andExpect(jsonPath("$.shipperId").value(42))
-                .andExpect(jsonPath("$.originUnLocode").value("JPTYO"))
-                .andExpect(jsonPath("$.destinationUnLocode").value("USLAX"))
-                // 業務タイムゾーンの暦で数える。UTC で「今日」を決めると時差の分だけずれる
-                .andExpect(jsonPath("$.arrivalDeadline").value("2027-03-16"))
-                .andRespond(withSuccess("{\"bookingId\":\"BK-0001\"}",
-                        MediaType.APPLICATION_JSON));
-
-        String identifier = gateway.execute(ScenarioStep.REGISTER_BOOKING,
-                Map.of(BusinessContextKey.SHIPPER_ID, "42"));
-
-        assertThat(identifier).isEqualTo("BK-0001");
-        server.verify();
-    }
-
-    /**
-     * <strong>引き継ぎが切れていることを、業務 API の失敗に化けさせない。</strong>
-     *
-     * <p>空のまま呼ぶと存在しない予約への操作になり、404 として現れる——
-     * 原因は前の工程にあるのに、後ろの工程が悪いように見える。
-     */
-    @Test
-    @DisplayName("前の工程が識別子を引き継いでいなければ、その名前を挙げて止まる")
-    void namesTheMissingIdentifier() {
-        expectLoginAs("sales01", "token-sales");
-
-        assertThatThrownBy(() -> gateway.execute(ScenarioStep.REQUEST_ROUTING, Map.of()))
-                .isInstanceOf(BusinessCallFailedException.class)
-                .hasMessageContaining(BusinessContextKey.BOOKING_ID);
-    }
-
-    @Test
-    @DisplayName("航海を登録し、シミュレーションと分かる番号を引き継ぐ")
-    void registersAVoyageNamedAfterTheRun() {
-        expectLoginAs("routing01", "token-routing");
-        server.expect(requestTo(BASE + RestBusinessGateway.VOYAGE_PATH))
-                .andExpect(method(HttpMethod.POST))
-                .andExpect(jsonPath("$.voyageNumber").value("V-SIM-20261116-0001"))
-                .andExpect(jsonPath("$.movements[0].departureUnLocode").value("JPTYO"))
+                .andExpect(jsonPath("$.trackingNumber").value("TRK-1"))
                 .andRespond(withStatus(HttpStatus.CREATED));
 
-        String identifier = gateway.execute(ScenarioStep.REGISTER_VOYAGE,
-                Map.of(BusinessContextKey.RUN_ID, "SIM-20261116-0001"));
+        gateway.execute(ScenarioStep.RECORD_HANDLING, Map.of(
+                BusinessContextKey.TRACKING_NUMBER, "TRK-1",
+                BusinessContextKey.VOYAGE_NUMBER, "V-SIM-1"));
 
-        assertThat(identifier).isEqualTo("V-SIM-20261116-0001");
+        // **3 件そろって初めて引取が成り立つ。**途中を飛ばすと、引取が断られる形でしか
+        // 気づけない——原因は飛ばしたこちらにある
         server.verify();
     }
 
     @Test
-    @DisplayName("候補を引いて先頭を割り当てる")
-    void assignsTheFirstCandidate() {
-        expectLoginAs("routing01", "token-routing");
-        server.expect(requestTo(org.hamcrest.Matchers.startsWith(
-                        BASE + RestBusinessGateway.ROUTE_PATH + "?")))
-                .andExpect(method(HttpMethod.GET))
-                .andRespond(withSuccess("""
-                        {"candidates":[{"legs":[{"voyageNumber":"V-1",
-                          "fromUnLocode":"JPTYO","toUnLocode":"USLAX",
-                          "departureTime":"2026-11-17T09:00:00Z",
-                          "arrivalTime":"2026-12-06T09:00:00Z"}]}]}
-                        """, MediaType.APPLICATION_JSON));
-        server.expect(requestTo(BASE + RestBusinessGateway.BOOKING_PATH + "/BK-0001/route"))
+    @DisplayName("通関を申告し、申告の識別子を引き継ぐ")
+    void declaresCustoms() {
+        expectLoginAs("handler01", "token-handler");
+        server.expect(requestTo(BASE + RestBusinessGateway.CUSTOMS_PATH))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(jsonPath("$.trackingNumber").value("TRK-1"))
+                .andRespond(withSuccess("{\"declarationId\":7}", MediaType.APPLICATION_JSON));
+
+        String identifier = gateway.execute(ScenarioStep.DECLARE_CUSTOMS,
+                Map.of(BusinessContextKey.TRACKING_NUMBER, "TRK-1"));
+
+        assertThat(identifier).isEqualTo("7");
+        server.verify();
+    }
+
+    /** 通関済にするのは追跡管理者である。荷役作業員が自分で通せると、審査が形だけになる。 */
+    @Test
+    @DisplayName("通関済にするのは追跡管理者である")
+    void clearsCustomsAsTheTracker() {
+        expectLoginAs("tracker01", "token-tracker");
+        server.expect(requestTo(BASE + RestBusinessGateway.CUSTOMS_PATH + "/7/status"))
                 .andExpect(method(HttpMethod.PUT))
-                .andExpect(jsonPath("$.legs[0].voyageNumber").value("V-1"))
-                .andExpect(jsonPath("$.legs[0].loadUnLocode").value("JPTYO"))
-                .andExpect(jsonPath("$.legs[0].loadTime").value("2026-11-17T09:00:00Z"))
+                .andExpect(jsonPath("$.status").value("CLEARED"))
+                .andExpect(jsonPath("$.reason").isNotEmpty())
                 .andRespond(withSuccess());
 
-        gateway.execute(ScenarioStep.ASSIGN_ROUTE,
+        gateway.execute(ScenarioStep.CLEAR_CUSTOMS,
+                Map.of(BusinessContextKey.DECLARATION_ID, "7"));
+
+        server.verify();
+    }
+
+    @Test
+    @DisplayName("引取には荷受人の確認を添える")
+    void recordsTheClaimWithTheConsigneeConfirmation() {
+        expectLoginAs("handler01", "token-handler");
+        server.expect(requestTo(BASE + RestBusinessGateway.HANDLING_PATH))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(jsonPath("$.type").value("CLAIM"))
+                .andExpect(jsonPath("$.consigneeConfirmation").isNotEmpty())
+                .andRespond(withStatus(HttpStatus.CREATED));
+
+        gateway.execute(ScenarioStep.RECORD_CLAIM,
+                Map.of(BusinessContextKey.TRACKING_NUMBER, "TRK-1"));
+
+        server.verify();
+    }
+
+    @Test
+    @DisplayName("料金を算出し、精算書の番号を引き継ぐ")
+    void calculatesTheCharge() {
+        expectLoginAs("accountant01", "token-accountant");
+        server.expect(requestTo(BASE + RestBusinessGateway.BILLING_PATH + "/BK-0001/calculate"))
+                .andExpect(method(HttpMethod.POST))
+                .andRespond(withSuccess("{\"invoiceNumber\":\"INV-0001\"}",
+                        MediaType.APPLICATION_JSON));
+
+        String identifier = gateway.execute(ScenarioStep.CALCULATE_CHARGE,
                 Map.of(BusinessContextKey.BOOKING_ID, "BK-0001"));
+
+        assertThat(identifier).isEqualTo("INV-0001");
+        server.verify();
+    }
+
+    /**
+     * <strong>金額は精算書から読む。</strong>
+     *
+     * <p>こちらで計算し直すと、料金の式が 2 つに増える——実装が正しいかを確かめる仕組みが、
+     * 自分の式で答え合わせをすることになる。
+     */
+    @Test
+    @DisplayName("精算では、精算書に書かれた金額をそのまま入金する")
+    void paysExactlyWhatTheInvoiceSays() {
+        expectLoginAs("accountant01", "token-accountant");
+        server.expect(requestTo(BASE + RestBusinessGateway.BILLING_PATH + "/invoices/INV-0001"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("""
+                        {"invoiceNumber":"INV-0001",
+                         "totalAmount":{"value":1260000,"currency":"JPY"}}
+                        """, MediaType.APPLICATION_JSON));
+        server.expect(requestTo(
+                        BASE + RestBusinessGateway.BILLING_PATH + "/invoices/INV-0001/payment"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(jsonPath("$.amountValue").value(1260000))
+                .andExpect(jsonPath("$.method").value("BANK_TRANSFER"))
+                .andRespond(withSuccess());
+
+        gateway.execute(ScenarioStep.SETTLE, Map.of(BusinessContextKey.INVOICE_NUMBER, "INV-0001"));
 
         server.verify();
     }
 
     /**
-     * 候補 0 件は<strong>飛ばさない</strong>（[ADR-030] 拡張 3a）。
+     * 依頼・通知・確定は<strong>同じ形で呼ぶ</strong>。
      *
-     * <p>飛ばすと、何も運ばないまま全工程が成功で終わる。
+     * <p>工程ごとに書き分けると、書き分けた 1 つだけが違う経路を向いても気づけない。
+     */
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({
+            "REQUEST_ROUTING,sales01,POST,/routing-request",
+            "NOTIFY_ROUTE,sales01,POST,/route-notification",
+            "CONFIRM_BOOKING,sales01,PUT,/confirm"})
+    @DisplayName("依頼・通知・確定は、予約の経路をそのロールで踏む")
+    void callsTheBookingActions(String step, String username, String httpMethod, String suffix) {
+        expectLoginAs(username, "token");
+        server.expect(requestTo(BASE + RestBusinessGateway.BOOKING_PATH + "/BK-0001" + suffix))
+                .andExpect(method(HttpMethod.valueOf(httpMethod)))
+                .andExpect(header("Authorization", "Bearer token"))
+                .andRespond(withSuccess());
+
+        String identifier = gateway.execute(ScenarioStep.valueOf(step),
+                Map.of(BusinessContextKey.BOOKING_ID, "BK-0001"));
+
+        assertThat(identifier).isEmpty();
+        server.verify();
+    }
+
+    /**
+     * <strong>空の応答を成功にしない。</strong>
+     *
+     * <p>200 が返っても中身が無ければ、次の工程は引き継ぐものを持たない。
+     * 空文字で先へ進めると、原因の無い 404 が後ろの工程で出る。
      */
     @Test
-    @DisplayName("経路候補が 0 件なら、条件を添えて止まる")
-    void stopsWhenThereIsNoCandidate() {
-        expectLoginAs("routing01", "token-routing");
-        server.expect(requestTo(org.hamcrest.Matchers.startsWith(
-                        BASE + RestBusinessGateway.ROUTE_PATH + "?")))
-                .andRespond(withSuccess("{\"candidates\":[]}", MediaType.APPLICATION_JSON));
+    @DisplayName("応答に識別子が無ければ、成功にせず止まる")
+    void stopsWhenTheResponseCarriesNoIdentifier() {
+        expectLoginAs("sales01", "token-sales");
+        server.expect(requestTo(BASE + RestBusinessGateway.SHIPPER_PATH))
+                .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
 
-        assertThatThrownBy(() -> gateway.execute(ScenarioStep.ASSIGN_ROUTE,
-                Map.of(BusinessContextKey.BOOKING_ID, "BK-0001")))
+        assertThatThrownBy(() -> gateway.execute(ScenarioStep.REGISTER_SHIPPER, Map.of()))
                 .isInstanceOf(BusinessCallFailedException.class)
-                .hasMessageContaining("0 件")
-                .hasMessageContaining("JPTYO");
+                .hasMessageContaining("荷主");
     }
 
     @Test
-    @DisplayName("追跡番号を発行して引き継ぐ")
-    void issuesTheTrackingNumber() {
+    @DisplayName("精算書に金額が無ければ、入金を送らずに止まる")
+    void stopsWhenTheInvoiceHasNoAmount() {
+        expectLoginAs("accountant01", "token-accountant");
+        server.expect(requestTo(BASE + RestBusinessGateway.BILLING_PATH + "/invoices/INV-0001"))
+                .andRespond(withSuccess("{\"invoiceNumber\":\"INV-0001\"}",
+                        MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> gateway.execute(ScenarioStep.SETTLE,
+                Map.of(BusinessContextKey.INVOICE_NUMBER, "INV-0001")))
+                .isInstanceOf(BusinessCallFailedException.class)
+                .hasMessageContaining("INV-0001");
+
+        // 金額が読めないまま入金を送っていない（送っていれば期待していない要求として落ちる）
+        server.verify();
+    }
+
+    @Test
+    @DisplayName("ログインの応答に切符が無ければ、業務 API を呼ばずに止まる")
+    void stopsWhenTheLoginCarriesNoToken() {
+        server.expect(requestTo(BASE + RestBusinessGateway.LOGIN_PATH))
+                .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> gateway.execute(ScenarioStep.REGISTER_SHIPPER, Map.of()))
+                .isInstanceOf(BusinessCallFailedException.class)
+                .hasMessageContaining("切符");
+        server.verify();
+    }
+
+    @Test
+    @DisplayName("料金算出の応答に精算書が無ければ、成功にせず止まる")
+    void stopsWhenTheCalculationCarriesNoInvoice() {
+        expectLoginAs("accountant01", "token-accountant");
+        server.expect(requestTo(BASE + RestBusinessGateway.BILLING_PATH + "/BK-0001/calculate"))
+                .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> gateway.execute(ScenarioStep.CALCULATE_CHARGE,
+                Map.of(BusinessContextKey.BOOKING_ID, "BK-0001")))
+                .isInstanceOf(BusinessCallFailedException.class)
+                .hasMessageContaining("精算書");
+    }
+
+    @Test
+    @DisplayName("通関申告の応答に申告が無ければ、成功にせず止まる")
+    void stopsWhenTheDeclarationCarriesNoId() {
+        expectLoginAs("handler01", "token-handler");
+        server.expect(requestTo(BASE + RestBusinessGateway.CUSTOMS_PATH))
+                .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> gateway.execute(ScenarioStep.DECLARE_CUSTOMS,
+                Map.of(BusinessContextKey.TRACKING_NUMBER, "TRK-1")))
+                .isInstanceOf(BusinessCallFailedException.class)
+                .hasMessageContaining("申告");
+    }
+
+    @Test
+    @DisplayName("追跡番号発行の応答に番号が無ければ、成功にせず止まる")
+    void stopsWhenNoTrackingNumberComesBack() {
         expectLoginAs("routing01", "token-routing");
         server.expect(requestTo(
                         BASE + RestBusinessGateway.BOOKING_PATH + "/BK-0001/tracking-number"))
-                .andExpect(method(HttpMethod.POST))
-                .andRespond(withSuccess("{\"trackingNumber\":\"TRK-20261116-0001\"}",
-                        MediaType.APPLICATION_JSON));
+                .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
 
-        String identifier = gateway.execute(ScenarioStep.ISSUE_TRACKING_NUMBER,
-                Map.of(BusinessContextKey.BOOKING_ID, "BK-0001"));
-
-        assertThat(identifier).isEqualTo("TRK-20261116-0001");
-        server.verify();
+        assertThatThrownBy(() -> gateway.execute(ScenarioStep.ISSUE_TRACKING_NUMBER,
+                Map.of(BusinessContextKey.BOOKING_ID, "BK-0001")))
+                .isInstanceOf(BusinessCallFailedException.class)
+                .hasMessageContaining("追跡番号");
     }
 
     @Test
-    @DisplayName("まだ実装していない工程は、成功にせず止まる")
-    void doesNotPretendUnimplementedStepsSucceeded() {
-        expectLoginAs("handler01", "token-handler");
+    @DisplayName("予約登録の応答に予約番号が無ければ、成功にせず止まる")
+    void stopsWhenNoBookingIdComesBack() {
+        expectLoginAs("sales01", "token-sales");
+        server.expect(requestTo(BASE + RestBusinessGateway.BOOKING_PATH))
+                .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
 
-        assertThatThrownBy(() -> gateway.execute(ScenarioStep.RECORD_HANDLING, Map.of()))
+        assertThatThrownBy(() -> gateway.execute(ScenarioStep.REGISTER_BOOKING,
+                Map.of(BusinessContextKey.SHIPPER_ID, "42")))
                 .isInstanceOf(BusinessCallFailedException.class)
-                .hasMessageContaining(ScenarioStep.RECORD_HANDLING.label());
+                .hasMessageContaining("予約番号");
     }
 }

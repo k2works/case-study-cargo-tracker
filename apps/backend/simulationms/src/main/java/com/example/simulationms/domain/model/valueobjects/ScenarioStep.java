@@ -23,10 +23,10 @@ public enum ScenarioStep {
     CONFIRM_BOOKING("予約確定", "ROLE_SALES", BusinessContextKey.NONE),
     ISSUE_TRACKING_NUMBER("追跡番号発行", "ROLE_ROUTING", BusinessContextKey.TRACKING_NUMBER),
     RECORD_HANDLING("荷役記録", "ROLE_HANDLER", BusinessContextKey.NONE),
-    DECLARE_CUSTOMS("通関申告", "ROLE_HANDLER", BusinessContextKey.NONE),
+    DECLARE_CUSTOMS("通関申告", "ROLE_HANDLER", BusinessContextKey.DECLARATION_ID),
     CLEAR_CUSTOMS("通関完了", "ROLE_TRACKER", BusinessContextKey.NONE),
     RECORD_CLAIM("引取記録", "ROLE_HANDLER", BusinessContextKey.NONE),
-    CALCULATE_CHARGE("料金算出", "ROLE_ACCOUNTANT", BusinessContextKey.NONE),
+    CALCULATE_CHARGE("料金算出", "ROLE_ACCOUNTANT", BusinessContextKey.INVOICE_NUMBER),
     SETTLE("精算", "ROLE_ACCOUNTANT", BusinessContextKey.NONE);
 
     private final String label;

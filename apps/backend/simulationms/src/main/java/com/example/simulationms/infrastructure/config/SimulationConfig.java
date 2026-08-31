@@ -64,6 +64,20 @@ public class SimulationConfig {
     }
 
     /**
+     * シナリオを 1 本流す（US34）。
+     *
+     * <p><strong>{@code @Transactional} を置かない</strong>（[ADR-030] 決定 5）。
+     * まとめて 1 つのトランザクションにすると、失敗したときにどこまで進んだかの記録ごと消える。
+     */
+    @Bean
+    public com.example.simulationms.application.internal.commandservices.RunSimulationUseCase
+            runSimulationUseCase(SimulationRunRepository runs, BusinessGateway business,
+            Clock clock) {
+        return new com.example.simulationms.application.internal.commandservices
+                .RunSimulationUseCase(runs, business, clock);
+    }
+
+    /**
      * 業務 API を呼ぶ唯一の出口（[ADR-030] 決定 2）。
      *
      * <p><strong>期限を置く。</strong>応答が返らないだけの状態でも、工程は 12 個あり

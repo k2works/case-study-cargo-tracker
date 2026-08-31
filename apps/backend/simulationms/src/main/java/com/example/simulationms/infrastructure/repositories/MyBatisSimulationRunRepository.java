@@ -54,6 +54,11 @@ public class MyBatisSimulationRunRepository implements SimulationRunRepository {
     }
 
     @Override
+    public int countByRunIdPrefix(String prefix) {
+        return mapper.countByRunIdPrefix(prefix);
+    }
+
+    @Override
     public Optional<SimulationRun> findByRunId(RunId runId) {
         return Optional.ofNullable(mapper.findByRunId(runId.value())).map(this::toDomain);
     }

@@ -4,7 +4,6 @@ import com.example.simulationms.application.internal.outboundservices.acl.Busine
 import com.example.simulationms.application.internal.outboundservices.acl.BusinessGateway;
 import com.example.simulationms.domain.model.valueobjects.BusinessContextKey;
 import com.example.simulationms.domain.model.valueobjects.ScenarioStep;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -39,6 +38,9 @@ public class RestBusinessGateway implements BusinessGateway {
     public static final String BOOKING_PATH = "/api/v1/bookings";
     public static final String VOYAGE_PATH = "/api/v1/voyages";
     public static final String ROUTE_PATH = "/api/v1/routes";
+    public static final String HANDLING_PATH = "/api/v1/handling";
+    public static final String CUSTOMS_PATH = "/api/v1/customs";
+    public static final String BILLING_PATH = "/api/v1/billing";
 
     /** 通す輸送。**固定する**——毎回変えると、失敗したときに条件の違いを疑うことになる。 */
     static final String ORIGIN = "JPTYO";
@@ -75,10 +77,12 @@ public class RestBusinessGateway implements BusinessGateway {
                     bookingPath(context, "/route-notification"));
             case CONFIRM_BOOKING -> put(step, token, bookingPath(context, "/confirm"));
             case ISSUE_TRACKING_NUMBER -> issueTrackingNumber(token, context);
-            case RECORD_HANDLING, DECLARE_CUSTOMS, CLEAR_CUSTOMS, RECORD_CLAIM,
-                    CALCULATE_CHARGE, SETTLE ->
-                throw new BusinessCallFailedException(
-                        step.label() + " はまだ実装していません（IT14 Phase 3.3）");
+            case RECORD_HANDLING -> recordHandling(token, context);
+            case DECLARE_CUSTOMS -> declareCustoms(token, context);
+            case CLEAR_CUSTOMS -> clearCustoms(token, context);
+            case RECORD_CLAIM -> recordClaim(token, context);
+            case CALCULATE_CHARGE -> calculateCharge(token, context);
+            case SETTLE -> settle(token, context);
         };
     }
 
@@ -92,11 +96,11 @@ public class RestBusinessGateway implements BusinessGateway {
     private String login(String role) {
         String username = users.usernameFor(role);
         try {
-            LoginResponse response = gateway.post()
+            BusinessMessages.LoginResponse response = gateway.post()
                     .uri(LOGIN_PATH)
-                    .body(new LoginRequest(username, users.password()))
+                    .body(new BusinessMessages.LoginRequest(username, users.password()))
                     .retrieve()
-                    .body(LoginResponse.class);
+                    .body(BusinessMessages.LoginResponse.class);
 
             if (response == null || response.token() == null || response.token().isBlank()) {
                 throw new BusinessCallFailedException(
@@ -111,10 +115,10 @@ public class RestBusinessGateway implements BusinessGateway {
 
     private String registerShipper(String token, Map<String, String> context) {
         String marker = runId(context);
-        ShipperResponse response = call(ScenarioStep.REGISTER_SHIPPER, () -> gateway.post()
+        BusinessMessages.ShipperResponse response = call(ScenarioStep.REGISTER_SHIPPER, () -> gateway.post()
                 .uri(SHIPPER_PATH)
                 .header(HttpHeaders.AUTHORIZATION, bearer(token))
-                .body(new ShipperRequest(
+                .body(new BusinessMessages.ShipperRequest(
                         "CORPORATE",
                         "シミュレーション荷主 " + marker,
                         marker.toLowerCase(Locale.ROOT) + "@simulation.example.com",
@@ -122,7 +126,7 @@ public class RestBusinessGateway implements BusinessGateway {
                         "03-0000-0000",
                         true))
                 .retrieve()
-                .body(ShipperResponse.class));
+                .body(BusinessMessages.ShipperResponse.class));
 
         if (response == null || response.id() == null) {
             throw new BusinessCallFailedException("荷主登録の応答に荷主がありません");
@@ -131,15 +135,15 @@ public class RestBusinessGateway implements BusinessGateway {
     }
 
     private String registerBooking(String token, Map<String, String> context) {
-        BookingResponse response = call(ScenarioStep.REGISTER_BOOKING, () -> gateway.post()
+        BusinessMessages.BookingResponse response = call(ScenarioStep.REGISTER_BOOKING, () -> gateway.post()
                 .uri(BOOKING_PATH)
                 .header(HttpHeaders.AUTHORIZATION, bearer(token))
-                .body(new BookingRequest(
+                .body(new BusinessMessages.BookingRequest(
                         Long.valueOf(required(context, BusinessContextKey.SHIPPER_ID)),
                         CARGO_TYPE, 900, "シミュレーション " + runId(context),
                         ORIGIN, DESTINATION, today().plusDays(DEADLINE_DAYS).toString()))
                 .retrieve()
-                .body(BookingResponse.class));
+                .body(BusinessMessages.BookingResponse.class));
 
         if (response == null || response.bookingId() == null) {
             throw new BusinessCallFailedException("予約登録の応答に予約番号がありません");
@@ -161,9 +165,9 @@ public class RestBusinessGateway implements BusinessGateway {
         call(ScenarioStep.REGISTER_VOYAGE, () -> gateway.post()
                 .uri(VOYAGE_PATH)
                 .header(HttpHeaders.AUTHORIZATION, bearer(token))
-                .body(new VoyageRequest(number, "シミュレーション丸", "シミュレーション海運",
+                .body(new BusinessMessages.VoyageRequest(number, "シミュレーション丸", "シミュレーション海運",
                         List.of(CARGO_TYPE),
-                        List.of(new VoyageRequest.MovementRequest(
+                        List.of(new BusinessMessages.VoyageRequest.MovementRequest(
                                 ORIGIN, DESTINATION, departure, arrival))))
                 .retrieve()
                 .toBodilessEntity());
@@ -177,7 +181,7 @@ public class RestBusinessGateway implements BusinessGateway {
 
     private String assignRoute(String token, Map<String, String> context) {
         String deadline = today().plusDays(DEADLINE_DAYS).toString();
-        RouteCandidateListResponse candidates = call(ScenarioStep.ASSIGN_ROUTE, () -> gateway.get()
+        BusinessMessages.RouteCandidateListResponse candidates = call(ScenarioStep.ASSIGN_ROUTE, () -> gateway.get()
                 .uri(UriComponentsBuilder.fromPath(ROUTE_PATH)
                         .queryParam("origin", ORIGIN)
                         .queryParam("destination", DESTINATION)
@@ -186,7 +190,7 @@ public class RestBusinessGateway implements BusinessGateway {
                         .toUriString())
                 .header(HttpHeaders.AUTHORIZATION, bearer(token))
                 .retrieve()
-                .body(RouteCandidateListResponse.class));
+                .body(BusinessMessages.RouteCandidateListResponse.class));
 
         if (candidates == null || candidates.candidates() == null
                 || candidates.candidates().isEmpty()) {
@@ -195,31 +199,156 @@ public class RestBusinessGateway implements BusinessGateway {
                             + "・期限 " + deadline + "）。航海の登録を確かめる");
         }
 
-        List<LegRequest> legs = candidates.candidates().getFirst().legs().stream()
-                .map(leg -> new LegRequest(leg.voyageNumber(), leg.fromUnLocode(),
+        List<BusinessMessages.LegRequest> legs = candidates.candidates().getFirst().legs().stream()
+                .map(leg -> new BusinessMessages.LegRequest(leg.voyageNumber(), leg.fromUnLocode(),
                         leg.toUnLocode(), leg.departureTime(), leg.arrivalTime()))
                 .toList();
 
         call(ScenarioStep.ASSIGN_ROUTE, () -> gateway.put()
                 .uri(bookingPath(context, "/route"))
                 .header(HttpHeaders.AUTHORIZATION, bearer(token))
-                .body(new AssignRouteRequest(legs, null))
+                .body(new BusinessMessages.AssignRouteRequest(legs, null))
                 .retrieve()
                 .toBodilessEntity());
         return BusinessContextKey.NONE;
     }
 
     private String issueTrackingNumber(String token, Map<String, String> context) {
-        BookingResponse response = call(ScenarioStep.ISSUE_TRACKING_NUMBER, () -> gateway.post()
+        BusinessMessages.BookingResponse response = call(ScenarioStep.ISSUE_TRACKING_NUMBER, () -> gateway.post()
                 .uri(bookingPath(context, "/tracking-number"))
                 .header(HttpHeaders.AUTHORIZATION, bearer(token))
                 .retrieve()
-                .body(BookingResponse.class));
+                .body(BusinessMessages.BookingResponse.class));
 
         if (response == null || response.trackingNumber() == null) {
             throw new BusinessCallFailedException("追跡番号発行の応答に追跡番号がありません");
         }
         return response.trackingNumber();
+    }
+
+
+    /**
+     * 受け取り・積込・荷降しを記録する。
+     *
+     * <p><strong>3 つとも踏む。</strong>引取は荷降しの後にしか成り立たず、途中を飛ばすと
+     * 「引取が断られる」形でしか気づけない——原因は飛ばしたこちらにある。
+     */
+    private String recordHandling(String token, Map<String, String> context) {
+        String trackingNumber = required(context, BusinessContextKey.TRACKING_NUMBER);
+        String voyageNumber = required(context, BusinessContextKey.VOYAGE_NUMBER);
+        Instant at = clock.instant();
+
+        record Activity(String type, String location, String voyage, Instant at) {
+        }
+
+        List<Activity> activities = List.of(
+                new Activity("RECEIVE", ORIGIN, null, at),
+                new Activity("LOAD", ORIGIN, voyageNumber, at.plus(1, ChronoUnit.HOURS)),
+                new Activity("UNLOAD", DESTINATION, voyageNumber, at.plus(2, ChronoUnit.HOURS)));
+
+        for (Activity activity : activities) {
+            call(ScenarioStep.RECORD_HANDLING, () -> gateway.post()
+                    .uri(HANDLING_PATH)
+                    .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                    .body(new BusinessMessages.HandlingActivityRequest(trackingNumber, activity.type(),
+                            activity.location(), activity.at().toString(),
+                            "シミュレーション", activity.voyage(), null))
+                    .retrieve()
+                    .toBodilessEntity());
+        }
+        return BusinessContextKey.NONE;
+    }
+
+    private String declareCustoms(String token, Map<String, String> context) {
+        BusinessMessages.CustomsDeclarationResponse response = call(ScenarioStep.DECLARE_CUSTOMS,
+                () -> gateway.post()
+                        .uri(CUSTOMS_PATH)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                        .body(new BusinessMessages.CustomsDeclarationRequest(
+                                required(context, BusinessContextKey.TRACKING_NUMBER),
+                                "DEC-" + runId(context),
+                                clock.instant().toString(),
+                                "シミュレーション"))
+                        .retrieve()
+                        .body(BusinessMessages.CustomsDeclarationResponse.class));
+
+        if (response == null || response.declarationId() == null) {
+            throw new BusinessCallFailedException("通関申告の応答に申告がありません");
+        }
+        return String.valueOf(response.declarationId());
+    }
+
+    private String clearCustoms(String token, Map<String, String> context) {
+        call(ScenarioStep.CLEAR_CUSTOMS, () -> gateway.put()
+                .uri(CUSTOMS_PATH + "/" + required(context, BusinessContextKey.DECLARATION_ID)
+                        + "/status")
+                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                .body(new BusinessMessages.CustomsStatusRequest("CLEARED", "シミュレーションの審査完了"))
+                .retrieve()
+                .toBodilessEntity());
+        return BusinessContextKey.NONE;
+    }
+
+    /**
+     * 引取を記録する。
+     *
+     * <p><strong>荷受人の確認を添える。</strong>添えないと集約が断る（US16-2）——
+     * 断られること自体は正しい振る舞いであり、こちらの入力が足りていない。
+     */
+    private String recordClaim(String token, Map<String, String> context) {
+        call(ScenarioStep.RECORD_CLAIM, () -> gateway.post()
+                .uri(HANDLING_PATH)
+                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                .body(new BusinessMessages.HandlingActivityRequest(
+                        required(context, BusinessContextKey.TRACKING_NUMBER), "CLAIM",
+                        DESTINATION, clock.instant().plus(3, ChronoUnit.HOURS).toString(),
+                        "シミュレーション", null, "シミュレーション荷受人"))
+                .retrieve()
+                .toBodilessEntity());
+        return BusinessContextKey.NONE;
+    }
+
+    private String calculateCharge(String token, Map<String, String> context) {
+        String bookingId = required(context, BusinessContextKey.BOOKING_ID);
+        BusinessMessages.InvoiceResponse invoice = call(ScenarioStep.CALCULATE_CHARGE, () -> gateway.post()
+                .uri(BILLING_PATH + "/" + bookingId + "/calculate")
+                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                .body(new BusinessMessages.CalculateRequest(List.of()))
+                .retrieve()
+                .body(BusinessMessages.InvoiceResponse.class));
+
+        if (invoice == null || invoice.invoiceNumber() == null) {
+            throw new BusinessCallFailedException("料金算出の応答に精算書がありません");
+        }
+        return invoice.invoiceNumber();
+    }
+
+    /**
+     * 入金を記録して精算を終える。
+     *
+     * <p><strong>金額は精算書から読む。</strong>こちらで計算し直すと、料金の式が 2 つに増える。
+     */
+    private String settle(String token, Map<String, String> context) {
+        String invoiceNumber = required(context, BusinessContextKey.INVOICE_NUMBER);
+        BusinessMessages.InvoiceResponse invoice = call(ScenarioStep.SETTLE, () -> gateway.get()
+                .uri(BILLING_PATH + "/invoices/" + invoiceNumber)
+                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                .retrieve()
+                .body(BusinessMessages.InvoiceResponse.class));
+
+        if (invoice == null || invoice.totalAmount() == null
+                || invoice.totalAmount().value() == null) {
+            throw new BusinessCallFailedException("精算書に請求金額がありません: " + invoiceNumber);
+        }
+
+        call(ScenarioStep.SETTLE, () -> gateway.post()
+                .uri(BILLING_PATH + "/invoices/" + invoiceNumber + "/payment")
+                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                .body(new BusinessMessages.ConfirmPaymentRequest(invoice.totalAmount().value(), today().toString(),
+                        "BANK_TRANSFER", "SIM-" + runId(context)))
+                .retrieve()
+                .toBodilessEntity());
+        return BusinessContextKey.NONE;
     }
 
     private String post(ScenarioStep step, String token, String path) {
@@ -286,57 +415,5 @@ public class RestBusinessGateway implements BusinessGateway {
             return String.valueOf(response.getStatusCode().value());
         }
         return e.getMessage();
-    }
-
-    record LoginRequest(String userId, String password) {
-    }
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    record LoginResponse(String token) {
-    }
-
-    /** 荷主登録の依頼。相手の型は持ち込まない。 */
-    record ShipperRequest(String type, String name, String email, String address, String phone,
-            boolean registerAnyway) {
-    }
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    record ShipperResponse(Long id, String shipperCode) {
-    }
-
-    record BookingRequest(Long shipperId, String type, Integer weightKg, String description,
-            String originUnLocode, String destinationUnLocode, String arrivalDeadline) {
-    }
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    record BookingResponse(String bookingId, String trackingNumber) {
-    }
-
-    record VoyageRequest(String voyageNumber, String vesselName, String carrierName,
-            List<String> supportedCargoTypes, List<MovementRequest> movements) {
-
-        record MovementRequest(String departureUnLocode, String arrivalUnLocode,
-                Instant departureTime, Instant arrivalTime) {
-        }
-    }
-
-    record AssignRouteRequest(List<LegRequest> legs, Integer maxTransshipments) {
-    }
-
-    record LegRequest(String voyageNumber, String loadUnLocode, String unloadUnLocode,
-            String loadTime, String unloadTime) {
-    }
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    record RouteCandidateListResponse(List<Candidate> candidates) {
-
-        @JsonIgnoreProperties(ignoreUnknown = true)
-        record Candidate(List<Leg> legs) {
-        }
-
-        @JsonIgnoreProperties(ignoreUnknown = true)
-        record Leg(String voyageNumber, String fromUnLocode, String toUnLocode,
-                String departureTime, String arrivalTime) {
-        }
     }
 }
