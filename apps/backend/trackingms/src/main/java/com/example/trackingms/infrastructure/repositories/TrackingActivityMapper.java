@@ -107,4 +107,19 @@ public interface TrackingActivityMapper {
     @Select("SELECT " + COLUMNS + JOINS + " ORDER BY t.updated_at DESC, t.id DESC LIMIT #{limit}")
     @ResultMap("trackingResult")
     java.util.List<TrackingActivityRecord> findRecent(@Param("limit") int limit);
+
+    /**
+     * 追跡番号をまとめて引く（荷主向け一覧）。
+     *
+     * <p>件数の上限を掛けない。荷主境界は呼ぶ前に絞ってあり、ここで打ち切ると
+     * <strong>自社の古い貨物だけが消える</strong>。
+     */
+    @Select({"<script>SELECT " + COLUMNS + JOINS
+            + " WHERE t.tracking_number IN"
+            + "<foreach item='number' collection='trackingNumbers' open='(' separator=',' close=')'>"
+            + "#{number}</foreach>"
+            + " ORDER BY t.updated_at DESC, t.id DESC</script>"})
+    @ResultMap("trackingResult")
+    java.util.List<TrackingActivityRecord> findByTrackingNumbers(
+            @Param("trackingNumbers") java.util.Collection<String> trackingNumbers);
 }

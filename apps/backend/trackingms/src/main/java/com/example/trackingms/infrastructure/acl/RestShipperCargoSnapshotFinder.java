@@ -5,6 +5,7 @@ import com.example.trackingms.application.internal.queryservices.ShipperCargoSna
 import com.example.trackingms.application.internal.outboundservices.acl.ShipperCargoSnapshotFinder;
 import com.example.trackingms.application.internal.outboundservices.acl.ShipperTrackingLookupUnavailableException;
 import com.example.trackingms.domain.model.valueobjects.TrackingNumber;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.client.HttpClientErrorException;
@@ -23,6 +24,14 @@ public class RestShipperCargoSnapshotFinder implements ShipperCargoSnapshotFinde
      */
     @SuppressWarnings("java:S1075")
     public static final String PATH = "/api/v1/bookings/shipper-snapshots/{trackingNumber}";
+
+    /**
+     * 荷主の貨物 Snapshot をまとめて引く経路。
+     *
+     * <p>理由は {@link #PATH} と同じ。契約テストが両側で突き合わせる。
+     */
+    @SuppressWarnings("java:S1075")
+    public static final String BY_SHIPPER_PATH = "/api/v1/bookings/shipper-snapshots";
 
     private final RestClient restClient;
 
@@ -48,6 +57,28 @@ public class RestShipperCargoSnapshotFinder implements ShipperCargoSnapshotFinde
             throw unavailable(e);
         }
         return Optional.ofNullable(response).map(RestShipperCargoSnapshotFinder::toDomain);
+    }
+
+    @Override
+    public List<ShipperCargoSnapshot> findByShipperId(long shipperId) {
+        ShipperCargoSnapshotResponse[] response;
+        try {
+            response = restClient.get()
+                    .uri(builder -> builder.path(BY_SHIPPER_PATH)
+                            .queryParam("shipperId", shipperId)
+                            .build())
+                    .header(AuthenticatedUser.USER_ID_HEADER, SYSTEM_PRINCIPAL)
+                    .retrieve()
+                    .body(ShipperCargoSnapshotResponse[].class);
+        } catch (RestClientException e) {
+            throw unavailable(e);
+        }
+        if (response == null) {
+            return List.of();
+        }
+        return java.util.Arrays.stream(response)
+                .map(RestShipperCargoSnapshotFinder::toDomain)
+                .toList();
     }
 
     private static ShipperCargoSnapshot toDomain(ShipperCargoSnapshotResponse response) {

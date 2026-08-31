@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
@@ -81,6 +82,23 @@ public class CargoLookupController {
                 .map(summary -> ShipperCargoSnapshotResponse.from(summary.cargo()))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "指定された追跡番号の貨物が見つかりません"));
+    }
+
+    /**
+     * 荷主の貨物 Snapshot をまとめて返す（US33 の一覧）。
+     *
+     * <p>trackingms だけに開く。<strong>1 件ずつ引かせない</strong>——追跡側が
+     * 直近 N 件から絞る形になり、貨物が増えた荷主の古い貨物が一覧から消える。
+     */
+    @GetMapping("/shipper-snapshots")
+    public java.util.List<ShipperCargoSnapshotResponse> shipperSnapshots(
+            @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
+            @RequestParam("shipperId") Long shipperId) {
+        requireTrustedShipperSnapshotService(userId);
+
+        return cargoes.findByShipperId(shipperId).stream()
+                .map(summary -> ShipperCargoSnapshotResponse.from(summary.cargo()))
+                .toList();
     }
 
     private void requireTrustedService(String userId) {

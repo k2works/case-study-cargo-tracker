@@ -33,8 +33,19 @@ public interface TrackingActivityRepository {
     /** 追跡番号から探す。照会の入口であり、二重に作らないための確認にも使う。 */
     Optional<TrackingActivity> findByTrackingNumber(TrackingNumber trackingNumber);
 
-    /** 最近の追跡を返す。荷主向け一覧では、この候補を荷主境界で絞る。 */
+    /** 最近の追跡を返す。 */
     default List<TrackingActivity> findRecent(int limit) {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     * 指定した追跡番号の追跡をまとめて返す（荷主向け一覧の入口）。
+     *
+     * <p>荷主境界は<strong>呼ぶ前に</strong>絞ってある。直近 N 件から絞る形にすると、
+     * 貨物が増えた荷主の古い貨物が窓の外に落ちる。
+     */
+    default List<TrackingActivity> findByTrackingNumbers(
+            java.util.Collection<TrackingNumber> trackingNumbers) {
         throw new UnsupportedOperationException();
     }
 

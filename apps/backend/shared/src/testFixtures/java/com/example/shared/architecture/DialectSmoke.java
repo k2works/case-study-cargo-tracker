@@ -35,14 +35,43 @@ public final class DialectSmoke {
      * キャストが走り {@link ClassCastException} で落ちる。
      */
     public static List<String> statementsOf(Configuration configuration) {
+        return statementsOf(configuration, java.util.Map.of());
+    }
+
+    /**
+     * 動的 SQL に代表パラメータを与えて、全ステートメントの SQL を取り出す。
+     *
+     * <p>{@code <foreach>} を含むステートメントは、パラメータが無いと SQL を組み立てられない。
+     * <strong>取り出せなかったものは黙って飛ばさず落とす。</strong>飛ばすと、動的 SQL を
+     * 書いた分だけ検査の穴が広がり、方言差を見逃す範囲が増える。
+     *
+     * @param samples {@code @Param} の名前から代表値への対応。{@code <foreach>} が回す
+     *     コレクションには、空でない値を与える（空だと {@code IN ()} になり構文が壊れる）
+     */
+    public static List<String> statementsOf(Configuration configuration,
+            java.util.Map<String, Object> samples) {
         Collection<?> registered = configuration.getMappedStatements();
         List<String> sqls = new ArrayList<>();
         for (Object entry : registered) {
             if (entry instanceof MappedStatement statement) {
-                sqls.add(statement.getBoundSql(null).getSql());
+                sqls.add(sqlOf(statement, samples));
             }
         }
         return sqls;
+    }
+
+    private static String sqlOf(MappedStatement statement, java.util.Map<String, Object> samples) {
+        try {
+            return statement.getBoundSql(null).getSql();
+        } catch (RuntimeException withoutParameters) {
+            try {
+                return statement.getBoundSql(samples).getSql();
+            } catch (RuntimeException withSamples) {
+                throw new IllegalStateException(statement.getId()
+                        + " の SQL を組み立てられません。動的 SQL の代表パラメータを"
+                        + " DialectSmokeTest の samples に足してください", withSamples);
+            }
+        }
     }
 
     /**

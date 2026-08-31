@@ -67,6 +67,18 @@ public class MyBatisTrackingActivityRepository implements TrackingActivityReposi
     }
 
     @Override
+    public List<TrackingActivity> findByTrackingNumbers(
+            java.util.Collection<TrackingNumber> trackingNumbers) {
+        if (trackingNumbers.isEmpty()) {
+            return List.of();
+        }
+        List<String> values = trackingNumbers.stream().map(TrackingNumber::value).toList();
+        return mapper.findByTrackingNumbers(values).stream()
+                .map(row -> toDomain(row, exceptions.findOpen(row.getTrackingNumber())))
+                .toList();
+    }
+
+    @Override
     public void appendEvent(TrackingNumber trackingNumber, TrackingEvent event) {
         TrackingEventRecord row = new TrackingEventRecord();
         row.setTrackingNumber(trackingNumber.value());

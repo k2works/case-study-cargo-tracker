@@ -273,4 +273,16 @@ public interface CargoMapper {
     @Select("SELECT " + COLUMNS + JOINS + " WHERE c.tracking_number = #{trackingNumber}")
     @ResultMap("cargoList")
     CargoRecord findByTrackingNumber(@Param("trackingNumber") String trackingNumber);
+
+    /**
+     * 荷主の貨物のうち、追跡番号が発行済みのものを返す（US33 の一覧）。
+     *
+     * <p>追跡番号の無い貨物は返さない。追跡の一覧に載せようがなく、
+     * 呼ぶ側で捨てる行を送っても意味が無い。
+     */
+    @Select("SELECT " + COLUMNS + JOINS
+            + " WHERE c.shipper_id = #{shipperId} AND c.tracking_number IS NOT NULL"
+            + " ORDER BY c.id DESC")
+    @ResultMap("cargoList")
+    java.util.List<CargoRecord> findByShipperId(@Param("shipperId") Long shipperId);
 }

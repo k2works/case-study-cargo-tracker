@@ -113,6 +113,43 @@ class ShipperTrackingQueryUseCaseTest {
         assertThat(summary.urgent()).isTrue();
     }
 
+    @Test
+    @DisplayName("自社貨物が直近 100 件の外にあっても一覧に出る")
+    void listsOwnCargoBeyondTheRecentWindow() {
+        links.linkedShipperId = Optional.of(1L);
+        List<TrackingActivity> stored = new ArrayList<>();
+        List<ShipperCargoSnapshot> items = new ArrayList<>();
+        for (int i = 1; i <= ShipperTrackingQueryUseCase.LIST_LIMIT + 1; i++) {
+            String number = "TRK-20260823-%04d".formatted(9000 + i);
+            stored.add(received(number));
+            items.add(new ShipperCargoSnapshot("BKG-202600%04d".formatted(9000 + i), number, 99L));
+        }
+        stored.add(received(OWN_NUMBER));
+        items.add(new ShipperCargoSnapshot("BKG-2026000001", OWN_NUMBER, 1L));
+        activities.stored = stored;
+        snapshots.items = items;
+
+        ShipperTrackingQueryResult result = useCase.list("shipper01");
+
+        assertThat(result.cargos()).extracting(ShipperTrackingSummary::trackingNumber)
+                .containsExactly(OWN_NUMBER);
+    }
+
+    @Test
+    @DisplayName("一覧は荷主で絞ってから引く。他社の貨物を 1 件ずつ問い合わせない")
+    void doesNotAskSnapshotsOneByOne() {
+        links.linkedShipperId = Optional.of(1L);
+        activities.stored = List.of(received(OWN_NUMBER), received(OTHER_NUMBER));
+        snapshots.items = List.of(
+                new ShipperCargoSnapshot("BKG-2026000001", OWN_NUMBER, 1L),
+                new ShipperCargoSnapshot("BKG-2026009001", OTHER_NUMBER, 99L));
+
+        useCase.list("shipper01");
+
+        assertThat(snapshots.askedByTrackingNumber).isZero();
+        assertThat(activities.recentlyListed).isFalse();
+    }
+
     private static TrackingActivity received(String number) {
         return TrackingActivity.start(TrackingNumber.of(number),
                         TrackingBookingId.of("BKG-" + number.substring(4, 12) + number.substring(13)),
@@ -132,12 +169,19 @@ class ShipperTrackingQueryUseCaseTest {
 
     private static final class InMemorySnapshots implements ShipperCargoSnapshotFinder {
         List<ShipperCargoSnapshot> items = new ArrayList<>();
+        int askedByTrackingNumber;
 
         @Override
         public Optional<ShipperCargoSnapshot> findByTrackingNumber(TrackingNumber trackingNumber) {
+            askedByTrackingNumber++;
             return items.stream()
                     .filter(item -> item.trackingNumber().equals(trackingNumber.value()))
                     .findFirst();
+        }
+
+        @Override
+        public List<ShipperCargoSnapshot> findByShipperId(long shipperId) {
+            return items.stream().filter(item -> item.shipperId() == shipperId).toList();
         }
     }
 
@@ -167,6 +211,13 @@ class ShipperTrackingQueryUseCaseTest {
         public List<TrackingActivity> findRecent(int limit) {
             recentlyListed = true;
             return stored.stream().limit(limit).toList();
+        }
+
+        @Override
+        public List<TrackingActivity> findByTrackingNumbers(
+                java.util.Collection<TrackingNumber> trackingNumbers) {
+            return stored.stream().filter(activity ->
+                    trackingNumbers.contains(activity.trackingNumber())).toList();
         }
 
         @Override

@@ -172,6 +172,34 @@ class CargoLookupControllerTest {
     }
 
     @Test
+    @DisplayName("既知のサービスは、荷主の貨物 Snapshot をまとめて受け取れる")
+    void returnsShipperSnapshotsByShipperId() throws Exception {
+        when(cargoes.findByShipperId(1L))
+                .thenReturn(java.util.List.of(new CargoSummary(BookingTestCargoes.trackingIssued(),
+                        "丸紅商事")));
+
+        mockMvc.perform(get(ShipperCargoSnapshotContract.BY_SHIPPER_PATH)
+                        .queryParam("shipperId", "1")
+                        .header(AuthenticatedUser.USER_ID_HEADER,
+                                ShipperCargoSnapshotContract.CALLER_PRINCIPAL))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].trackingNumber").value("TRK-20260823-0001"))
+                .andExpect(jsonPath("$[0].shipperId").value(1));
+    }
+
+    @Test
+    @DisplayName("名簿に無い主体は、荷主の貨物 Snapshot 一覧を読めない")
+    void rejectsUnknownPrincipalOnShipperSnapshotList() throws Exception {
+        mockMvc.perform(get(ShipperCargoSnapshotContract.BY_SHIPPER_PATH)
+                        .queryParam("shipperId", "1")
+                        .header(AuthenticatedUser.USER_ID_HEADER, "system:handlingms"))
+                .andExpect(status().isForbidden());
+
+        verify(cargoes, never()).findByShipperId(any(Long.class));
+    }
+
+    @Test
     @DisplayName("荷主 Snapshot の項目名簿が、DTO の要素と一致する")
     void shipperSnapshotRosterIsDerivedFromTheDto() {
         org.assertj.core.api.Assertions.assertThat(

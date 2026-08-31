@@ -170,6 +170,13 @@ public class MyBatisCargoRepository implements CargoRepository {
     }
 
     @Override
+    public List<CargoSummary> findByShipperId(long shipperId) {
+        return mapper.findByShipperId(shipperId).stream()
+                .map(row -> new CargoSummary(toDomain(row), row.getShipperName()))
+                .toList();
+    }
+
+    @Override
     public List<CargoSummary> search(CargoType type, String keyword,
             Collection<RoutingStatus> routingStatuses, BookingStatus bookingStatus, int limit) {
         return mapper.search(nameOf(type), normalize(keyword), namesOf(routingStatuses),

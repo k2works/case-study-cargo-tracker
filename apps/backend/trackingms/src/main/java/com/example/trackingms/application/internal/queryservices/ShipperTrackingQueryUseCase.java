@@ -37,14 +37,26 @@ public class ShipperTrackingQueryUseCase {
         this.zone = zone;
     }
 
-    /** 自社貨物だけを一覧で返す。紐付けが無ければ候補も読まない。 */
+    /**
+     * 自社貨物だけを一覧で返す。紐付けが無ければ候補も読まない。
+     *
+     * <p><strong>先に荷主で絞ってから追跡を引く。</strong>追跡の直近 {@value #LIST_LIMIT} 件を
+     * 取ってから荷主で絞ると、貨物が増えた荷主の古い貨物が窓の外に落ちて一覧から消える
+     * ——件数だけで壊れ、受入基準は満たしたまま業務が成り立たなくなる。
+     */
     public ShipperTrackingQueryResult list(String username) {
         Optional<Long> shipperId = links.findLinkedShipperId(username);
         if (shipperId.isEmpty()) {
             return ShipperTrackingQueryResult.unlinked();
         }
-        List<ShipperTrackingSummary> cargos = activities.findRecent(LIST_LIMIT).stream()
-                .filter(activity -> ownedBy(activity, shipperId.orElseThrow()))
+        List<TrackingNumber> owned = snapshots.findByShipperId(shipperId.orElseThrow()).stream()
+                .map(ShipperCargoSnapshot::trackingNumber)
+                .flatMap(number -> restore(number).stream())
+                .toList();
+        if (owned.isEmpty()) {
+            return ShipperTrackingQueryResult.linked(List.of());
+        }
+        List<ShipperTrackingSummary> cargos = activities.findByTrackingNumbers(owned).stream()
                 .map(ShipperTrackingSummary::from)
                 .toList();
         return ShipperTrackingQueryResult.linked(cargos);

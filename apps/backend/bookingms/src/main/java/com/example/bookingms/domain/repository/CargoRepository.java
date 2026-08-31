@@ -40,6 +40,16 @@ public interface CargoRepository {
     Optional<CargoSummary> findByTrackingNumber(String trackingNumber);
 
     /**
+     * その荷主の貨物のうち、追跡番号が発行済みのものを返す（US33 の一覧）。
+     *
+     * <p><strong>件数の上限を掛けない。</strong>呼ぶ側（trackingms）は、この結果を
+     * そのまま自社貨物の一覧にする。ここで打ち切ると荷主の古い貨物だけが消える。
+     */
+    default List<CargoSummary> findByShipperId(long shipperId) {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
      * 一覧を新しい順に返す。
      *
      * @param type 貨物種別での絞り込み（null なら全種別）

@@ -43,7 +43,7 @@ class DialectSmokeTest {
     @Test
     @DisplayName("全クエリが PostgreSQL で解釈できる")
     void allStatementsAreParseableOnPostgres() {
-        List<String> sqls = DialectSmoke.statementsOf(sqlSessionFactory.getConfiguration());
+        List<String> sqls = DialectSmoke.statementsOf(sqlSessionFactory.getConfiguration(), SAMPLES);
 
         assertThat(sqls).as("1 つも SQL が集まっていない場合、この検査は何も守らない").isNotEmpty();
         assertThat(DialectSmoke.unparseable(dataSource, sqls))
@@ -52,6 +52,15 @@ class DialectSmokeTest {
     }
 
     /** H2（ローカルの手軽な起動先）での解釈を確かめる。Docker を必要としない。 */
+    /**
+     * 動的 SQL の代表パラメータ。
+     *
+     * <p>{@code <foreach>} を含むステートメントは、値が無いと SQL を組み立てられない。
+     * 足し忘れると {@link DialectSmoke#statementsOf} が落ちるため、素通りはしない。
+     */
+    private static final java.util.Map<String, Object> SAMPLES = java.util.Map.of(
+            "trackingNumbers", List.of("TRK-20260823-0001"));
+
     @SpringBootTest
     @ExtendWith(SpringExtension.class)
     @DisplayName("方言スモーク（H2）")
@@ -66,7 +75,7 @@ class DialectSmokeTest {
         @Test
         @DisplayName("全クエリが H2 で解釈できる")
         void allStatementsAreParseableOnH2() {
-            List<String> sqls = DialectSmoke.statementsOf(sqlSessionFactory.getConfiguration());
+            List<String> sqls = DialectSmoke.statementsOf(sqlSessionFactory.getConfiguration(), SAMPLES);
 
             assertThat(sqls).as("1 つも SQL が集まっていない場合、この検査は何も守らない").isNotEmpty();
             assertThat(DialectSmoke.unparseable(dataSource, sqls))

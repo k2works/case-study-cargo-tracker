@@ -13,6 +13,14 @@ public final class ShipperCargoSnapshotContract {
     /** 荷主境界の Snapshot を引く経路。{@code {trackingNumber}} は追跡番号に置き換える。 */
     public static final String PATH = "/api/v1/bookings/shipper-snapshots/{trackingNumber}";
 
+    /**
+     * 荷主の貨物 Snapshot をまとめて引く経路。{@code shipperId} をクエリで渡す。
+     *
+     * <p>一覧を先に荷主で絞るための入口である。追跡側の直近 N 件から絞ると、
+     * 貨物が増えた荷主の古い貨物が窓の外に落ちる。
+     */
+    public static final String BY_SHIPPER_PATH = "/api/v1/bookings/shipper-snapshots";
+
     /** 呼び出してよい主体。 */
     public static final String CALLER_PRINCIPAL = "system:trackingms";
 
