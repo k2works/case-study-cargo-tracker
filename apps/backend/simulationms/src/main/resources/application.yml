@@ -36,6 +36,17 @@ app:
     # **本番では真にできない。** 真かつ本番プロファイルなら起動そのものを失敗させる。
     # 設定を読んで実行時に断る形にすると、読み違いが本番のデータで表面化する
     enabled: ${APP_SIMULATION_ENABLED:true}
+  simulation-users:
+    # 工程を踏む利用者（[ADR-030] 決定 2）。
+    # **ロールごとに別の利用者を置く。** 1 人に全ロールを与えると、本番には存在しない
+    # 権限の持ち主ができ、認可の検査を素通りする。名簿に無いロールは既定へ落とさず断る
+    password: ${APP_SIMULATION_USER_PASSWORD:password}
+    usernames:
+      ROLE_SALES: ${APP_SIMULATION_USER_SALES:sales01}
+      ROLE_ROUTING: ${APP_SIMULATION_USER_ROUTING:routing01}
+      ROLE_HANDLER: ${APP_SIMULATION_USER_HANDLER:handler01}
+      ROLE_TRACKER: ${APP_SIMULATION_USER_TRACKER:tracker01}
+      ROLE_ACCOUNTANT: ${APP_SIMULATION_USER_ACCOUNTANT:accountant01}
   gateway:
     # 業務 API を呼ぶ唯一の出口（[ADR-030] 決定 2）。
     # **コードに既定値を持たせない。** 既定値があると設定漏れが実行時まで表面化しない
