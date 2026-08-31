@@ -135,9 +135,46 @@
 
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | :--- | :--- |
-| 0.1 | SonarQube 走査トークンに Hotspot の権限を与え、`sonar-local:gate` から承認できることを確かめる（**4 度目**） | 1h | [ ] |
-| 0.2 | 荷主向け一覧の所有判定を Read Model へ降ろす（`findRecent(100)` の外に自社貨物が落ちる件。**本 IT が落ちる条件を自分で作る**） | 4h | [ ] |
-| 0.3 | 既存 6 サービスの「実利用者として呼べる API」を洗い出し、シミュレーションが踏む経路の一覧を作る | 3h | [ ] |
+| 0.1 | SonarQube 走査トークンに Hotspot の権限を与え、`sonar-local:gate` から承認できることを確かめる（**4 度目**） | 1h | [x]（**仕組みは完了・資格情報は未設定**。下記） |
+| 0.2 | 荷主向け一覧の所有判定を Read Model へ降ろす（`findRecent(100)` の外に自社貨物が落ちる件。**本 IT が落ちる条件を自分で作る**） | 4h | [x] |
+| 0.3 | 既存 6 サービスの「実利用者として呼べる API」を洗い出し、シミュレーションが踏む経路の一覧を作る | 3h | [x] |
+
+#### Phase 0 の結果
+
+**0.1 — 仕組みは用意した。残るのは資格情報だけ**（コミット `0ea3bbda6`）。
+
+- `sonar-local:hotspots` でレビュー待ちを一覧表示し、`sonar-local:hotspot:review --key --comment` で承認できるようにした
+- 権限が無いときは「`SONAR_ADMIN_TOKEN` を設定せよ」と**赤の理由を一意に**返す（従来は列挙すらできず、何をすればいいか分からなかった）
+- 承認には**理由コメントを必須**にした。次に同じ指摘が出たときに読み直す材料が要る
+- **利用者への依頼**: 「Administer Security」を持つ利用者でトークンを発行し、`.env` の `SONAR_ADMIN_TOKEN` に設定する
+
+**0.2 — 完了**（コミット `6dedbfadf`）。荷主で先に絞ってから追跡を引く形にした。
+
+- bookingms に `GET /api/v1/bookings/shipper-snapshots?shipperId=` を追加（`system:trackingms` だけ・上限なし）
+- 赤で固定: 「自社貨物が直近 100 件の外にあっても一覧に出る」「一覧の経路で 1 件ずつ問い合わせない」
+- 副産物として **方言スモークが動的 SQL を扱えるようにした**。`foreach` を含むステートメントはこれまで検査から漏れる形だった
+
+**0.3 — シミュレーションが踏む経路（9 工程の対応表）**
+
+| # | 工程 | サービス | 経路 |
+| :--- | :--- | :--- | :--- |
+| 0 | ログイン | authms | `POST /api/v1/auth/login` |
+| 1 | 荷主登録 | bookingms | `POST /api/v1/shippers` |
+| 2 | 予約登録 | bookingms | `POST /api/v1/bookings` |
+| 3 | 経路設計依頼 → 割り当て | bookingms / routingms | `POST /api/v1/bookings/{id}/routing-request` → `GET /api/v1/routes` → `PUT /api/v1/bookings/{id}/route` |
+| 4 | 予約確定 → 追跡番号 | bookingms | `PUT /api/v1/bookings/{id}/confirm` → `POST /api/v1/bookings/{id}/tracking-number` |
+| 5 | 荷役（受領・積込・荷降し） | handlingms | `POST /api/v1/handling` |
+| 6 | 通関 | handlingms | `POST /api/v1/customs` → `PUT /api/v1/customs/{declarationId}/status` |
+| 7 | 引取 | handlingms | `POST /api/v1/handling`（CLAIM） |
+| 8 | 料金算出 | billingms | `POST /api/v1/billing/{bookingId}/calculate` |
+| 9 | 精算 | billingms | `POST /api/v1/billing/invoices/{invoiceNumber}/payment` |
+
+> **すべて実利用者が踏む経路である。** 内部 API（`/api/v1/internal/**`・`shipper-snapshots`・
+> `by-tracking-number`）は 1 つも使わない。使うと認可を素通りする経路を新設することになる。
+>
+> **ロールは工程ごとに違う**（営業・経路設計者・荷役作業員・追跡管理者・経理担当者）。
+> シミュレーションは**工程ごとにログインし直す**——1 つの利用者に全ロールを与えると、
+> 本番には存在しない権限の持ち主を作ることになり、認可の検査を素通りする。
 
 ### Phase 1: 受け入れテストと ADR（US34 / US35）
 
