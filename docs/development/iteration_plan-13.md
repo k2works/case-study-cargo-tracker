@@ -199,10 +199,10 @@
 | 項目 | 結果 | 証跡 |
 | :--- | :--- | :--- |
 | 実バックエンド E2E | PASS | `npm run test:e2e:real -- -g "IT13 実環境"`（1 passed）。kind は `it13-rev1` image へ更新済み。認証 API で取得した実トークンを使い、認証済み荷主セッションから自社貨物一覧・詳細・他社貨物 404 を確認した。ログイン UI 自体は既存の実バックエンド E2E と通常 E2E が担保する。 |
-| Backend 品質ゲート | PASS | `./gradlew build`、`TZ=UTC ./gradlew test`。`./gradlew build` 内で `jacocoTestCoverageVerification` 通過。 |
-| Frontend 品質ゲート | PASS | `npm run lint && npm run typecheck && npm run test && npm run build && npx playwright test`（Playwright 94 passed）。E2E 追加後に `npm run lint`、`npm run typecheck` も再実行。 |
+| Backend 品質ゲート | PASS | `./gradlew build`、`TZ=UTC ./gradlew test`。`./gradlew build` 内で `jacocoTestCoverageVerification` 通過。**クローズ時に再実行**——リファクタ後もテスト 1,509 件が緑、全体カバレッジ 92.3%・ドメイン層 95.9%。 |
+| Frontend 品質ゲート | PASS（**クローズ時に再実行**・テスト 519 件） | `npm run lint && npm run typecheck && npm run test && npm run build && npx playwright test`（Playwright 94 passed）。E2E 追加後に `npm run lint`、`npm run typecheck` も再実行。 |
 | JIG / ER 図 | PASS | `npm run jig`、`npm run jig-erd`。生成物差分なし。 |
-| SonarQube | PASS | `npx gulp sonar-local:gate`。Backend / Frontend とも PASS、Backend `new_security_hotspots_reviewed=100.0`。 |
+| SonarQube | **クローズ時に再検証して ERROR → 一部復旧** | 2026-08-28 の記録時点は Backend / Frontend とも PASS だったが、**その後に入れたパッケージ構成リファクタ 3 件**が新規違反 14 件と Security Hotspot 1 件を持ち込んでいた。クローズ作業の再スキャンで検出し、**違反 14 件は 0 件に直した**（`667516f5`）。**Security Hotspot 1 件のレビュー承認だけが残る**——走査トークンでは列挙も承認もできず、利用者の UI 操作が要る（4 度目）。詳細は [IT13 完了報告書](iteration_report-13.md)。 |
 
 SonarQube Hotspot は、走査トークンで `sonar-local:gate` を読み、`new_security_hotspots_reviewed` が 100% であることを自動ゲートの完了条件にする。UI レビュー待ちが再発した場合は、クローズ冒頭で利用者へ UI 操作を依頼し、資格情報を Codex に渡す運用にはしない。ゲート条件を緩める判断は、実 Hotspot の内容とリスクを読んだ後に別タスクとして扱う。
 
@@ -588,6 +588,7 @@ state NotFound : 404
 | 2026-08-27 | Phase 1 と Phase 4.5 の E2E を追加し、US33 / TD-01 の受け入れ基準を完了に更新 | Codex |
 | 2026-08-28 | Phase 0.2 の trackingms 例外実績テストと 0.3 の請求書検索送り判断を完了に更新 | Codex |
 | 2026-08-28 | Phase 6 の実バックエンド E2E・品質ゲート・JIG / ER 図・SonarQube・5 視点レビューを完了に更新 | Codex |
+| 2026-08-28 | クローズ時の再検証結果を反映: パッケージ構成リファクタで再燃した SonarQube 指摘 14 件の修正と、Security Hotspot 1 件の残件を記録 | - |
 
 ## 関連ドキュメント
 
