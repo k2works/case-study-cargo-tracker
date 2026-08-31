@@ -12,6 +12,7 @@ import com.example.simulationms.domain.model.valueobjects.RunStatus;
 import com.example.simulationms.domain.model.valueobjects.Scenario;
 import com.example.simulationms.domain.model.valueobjects.ScenarioStep;
 import com.example.simulationms.domain.model.valueobjects.StepResult;
+import com.example.simulationms.domain.repository.RunIdAlreadyTakenException;
 import com.example.simulationms.domain.repository.SimulationRunRepository;
 import java.time.Clock;
 import java.time.Duration;
@@ -45,8 +46,28 @@ class RunSimulationUseCaseTest {
         private final Map<String, SimulationRun> runs = new LinkedHashMap<>();
         private final List<StepResult> appended = new ArrayList<>();
 
+        /** 「別の実行に先を越される」回数。負なら毎回越される。 */
+        private int stolen;
+
+        /**
+         * 本物と同じ厳しさで断る。
+         *
+         * <p><strong>甘い記録係は、本物が断る入力を通す。</strong>黙って上書きすると、
+         * 採番が衝突しても緑のままになる——実 DB では一意制約が断る。
+         */
         @Override
         public void create(SimulationRun run) {
+            if (stolen != 0) {
+                // 同時に始まった別の実行が、この番号を先に採った。
+                if (stolen > 0) {
+                    stolen--;
+                }
+                runs.put(run.runId().value(), run);
+                throw new RunIdAlreadyTakenException(run.runId().value(), null);
+            }
+            if (runs.containsKey(run.runId().value())) {
+                throw new RunIdAlreadyTakenException(run.runId().value(), null);
+            }
             runs.put(run.runId().value(), run);
         }
 
@@ -263,6 +284,34 @@ class RunSimulationUseCaseTest {
 
             assertThat(useCase.run(shortScenario(), "admin01").status())
                     .isEqualTo(RunStatus.COMPLETED);
+        }
+    }
+
+    @Nested
+    @DisplayName("実行 ID の採番")
+    class Numbering {
+
+        @Test
+        @DisplayName("先を越されたら、次の番号で採り直す")
+        void retriesWithTheNextNumberWhenTheIdWasTaken() {
+            repository.stolen = 2;
+
+            SimulationRun run = useCase.run(shortScenario(), "admin01");
+
+            // 0001・0002 を先に採られ、3 度目の 0003 で通る。
+            assertThat(run.runId().value()).isEqualTo("SIM-20261116-0003");
+            assertThat(run.status()).isEqualTo(RunStatus.COMPLETED);
+        }
+
+        @Test
+        @DisplayName("採り直しても取れ続けるなら、理由を言って止まる")
+        void failsLoudlyWhenTheNumberKeepsBeingTaken() {
+            repository.stolen = -1;
+
+            assertThatThrownBy(() -> useCase.run(shortScenario(), "admin01"))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("採番")
+                    .hasMessageContaining("衝突");
         }
     }
 }

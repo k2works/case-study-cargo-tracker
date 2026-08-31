@@ -6,11 +6,13 @@ import com.example.simulationms.domain.model.valueobjects.Scenario;
 import com.example.simulationms.domain.model.valueobjects.ScenarioStep;
 import com.example.simulationms.domain.model.valueobjects.StepOutcome;
 import com.example.simulationms.domain.model.valueobjects.StepResult;
+import com.example.simulationms.domain.repository.RunIdAlreadyTakenException;
 import com.example.simulationms.domain.repository.SimulationRunRepository;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.dao.DuplicateKeyException;
 
 /** 実行の記録を MyBatis で永続化する。 */
 public class MyBatisSimulationRunRepository implements SimulationRunRepository {
@@ -33,7 +35,13 @@ public class MyBatisSimulationRunRepository implements SimulationRunRepository {
         row.setStatus(run.status().name());
         row.setStartedBy(run.startedBy());
         row.setStartedAt(run.startedAt());
-        mapper.insert(row);
+        try {
+            mapper.insert(row);
+        } catch (DuplicateKeyException e) {
+            // 同時に始まった別の実行が、同じ番号を先に採っていた。
+            // 呼ぶ側が次の番号で採り直せるように、永続化の例外をドメインの言葉に変える。
+            throw new RunIdAlreadyTakenException(run.runId().value(), e);
+        }
     }
 
     @Override

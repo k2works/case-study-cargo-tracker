@@ -8,6 +8,7 @@ import com.example.simulationms.domain.model.valueobjects.RunId;
 import com.example.simulationms.domain.model.valueobjects.Scenario;
 import com.example.simulationms.domain.model.valueobjects.ScenarioStep;
 import com.example.simulationms.domain.model.valueobjects.StepResult;
+import com.example.simulationms.domain.repository.RunIdAlreadyTakenException;
 import com.example.simulationms.domain.repository.SimulationRunRepository;
 import java.time.Clock;
 import java.time.Duration;
@@ -38,6 +39,14 @@ public class RunSimulationUseCase {
      */
     private static final Duration STALE_AFTER = Duration.ofMinutes(15);
 
+    /**
+     * 採番の採り直し上限。
+     *
+     * <p>同時に始まった数だけ衝突しうるので、US37 の同時実行数の上限より大きく採る。
+     * 無制限にしないのは、番号が枯れたとき（同じ日に 9999 件）に回り続けないため。
+     */
+    private static final int MAX_NUMBERING_ATTEMPTS = 20;
+
     private final SimulationRunRepository runs;
     private final BusinessGateway business;
     private final Clock clock;
@@ -55,9 +64,8 @@ public class RunSimulationUseCase {
                     throw new SimulationAlreadyRunningException(running.runId());
                 });
 
-        RunId runId = nextRunId();
-        SimulationRun run = SimulationRun.start(runId, scenario, startedBy, clock.instant());
-        runs.create(run);
+        SimulationRun run = startWithNextFreeRunId(scenario, startedBy);
+        RunId runId = run.runId();
 
         Map<String, String> context = new HashMap<>();
         context.put(BusinessContextKey.RUN_ID, runId.value());
@@ -111,10 +119,42 @@ public class RunSimulationUseCase {
     }
 
     /**
+     * まだ使われていない番号で実行を始める。
+     *
+     * <p><strong>数える側では衝突を防げない。</strong>「今日の件数 + 1」は、数えてから
+     * 書くまでの間に別の実行が入り込む。数え直しても同じ隙間が残る——US37 の継続実行は
+     * 同時に複数を始めるため、この隙間は必ず踏む。
+     *
+     * <p>そこで<strong>一意制約を裁定者にする</strong>。実際に書いてみて、断られたら
+     * 次の番号を採る。番号を決める場所と、番号が空いていることを保証する場所を
+     * 同じにしない限り、この形以外に隙間は塞げない。
+     */
+    private SimulationRun startWithNextFreeRunId(Scenario scenario, String startedBy) {
+        for (int attempt = 1; attempt <= MAX_NUMBERING_ATTEMPTS; attempt++) {
+            SimulationRun run = SimulationRun.start(
+                    nextRunId(), scenario, startedBy, clock.instant());
+            try {
+                runs.create(run);
+                return run;
+            } catch (RunIdAlreadyTakenException e) {
+                // 別の実行が先に採った。次の番号で採り直す。
+            }
+        }
+        // ここに来るのは、同時開始が上限を超えて続いた場合だけである。
+        // 黙って握りつぶすと、実行が始まらない理由が誰にも見えなくなる。
+        throw new IllegalStateException(
+                "実行 ID の採番が " + MAX_NUMBERING_ATTEMPTS + " 回続けて衝突しました。"
+                        + "同時に始めている実行が多すぎます");
+    }
+
+    /**
      * その日の連番を採る。
      *
      * <p><strong>前置きで数える。</strong>日付をまたぐ範囲検索にすると、境界の解釈が
      * DB の方言で変わる（IT12 で実測）。
+     *
+     * <p>ここで得た番号は<strong>空いていることの保証ではない</strong>。
+     * 保証するのは {@link #startWithNextFreeRunId} である。
      */
     private RunId nextRunId() {
         String prefix = "SIM-" + LocalDate.now(clock).format(DAY) + "-";
