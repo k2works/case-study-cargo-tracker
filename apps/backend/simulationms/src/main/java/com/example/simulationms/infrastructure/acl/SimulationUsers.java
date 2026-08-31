@@ -10,12 +10,28 @@ import java.util.Map;
  *
  * <p><strong>載っていないロールは断る。</strong>既定の利用者へ落とすと、名簿に載せ忘れた
  * ロールの工程ほど静かに別人として実行される。
+ *
+ * <p><strong>実業務の利用者は借りない</strong>（IT15）。借りると、その利用者本人も
+ * 「シミュレーション由来」として荷主を登録できる——精算の締めから消せる操作が
+ * 実の営業担当者の手に渡る。専用の帯（{@value #USERNAME_PREFIX}）だけを受け入れ、
+ * 設定した時点で断る。設定を間違えたら起動しない側に倒す。
  */
 public record SimulationUsers(Map<String, String> usernameByRole, String password) {
+
+    /** シミュレーション専用の利用者名の帯。 */
+    public static final String USERNAME_PREFIX = "sim-";
 
     public SimulationUsers {
         if (usernameByRole == null || usernameByRole.isEmpty()) {
             throw new IllegalArgumentException("工程を踏む利用者が 1 人も設定されていません");
+        }
+        for (Map.Entry<String, String> entry : usernameByRole.entrySet()) {
+            String username = entry.getValue();
+            if (username == null || !username.startsWith(USERNAME_PREFIX)) {
+                throw new IllegalArgumentException(
+                        "シミュレーションは専用の利用者としてのみ入れます: " + entry.getKey()
+                                + " = " + username + "（" + USERNAME_PREFIX + " で始まる名前にする）");
+            }
         }
         if (password == null || password.isBlank()) {
             throw new IllegalArgumentException("利用者の合言葉が設定されていません");

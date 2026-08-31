@@ -49,9 +49,9 @@ class RestBusinessGatewayTest {
         RestClient.Builder builder = RestClient.builder().baseUrl(BASE);
         server = MockRestServiceServer.bindTo(builder).build();
         gateway = new RestBusinessGateway(builder.build(), SimulationUsers.of(
-                Map.of("ROLE_SALES", "sales01", "ROLE_ROUTING", "routing01",
-                        "ROLE_HANDLER", "handler01", "ROLE_TRACKER", "tracker01",
-                        "ROLE_ACCOUNTANT", "accountant01"), "password"),
+                Map.of("ROLE_SALES", "sim-sales01", "ROLE_ROUTING", "sim-routing01",
+                        "ROLE_HANDLER", "sim-handler01", "ROLE_TRACKER", "sim-tracker01",
+                        "ROLE_ACCOUNTANT", "sim-accountant01"), "password"),
                 Clock.fixed(Instant.parse("2026-11-16T00:00:00Z"), ZoneId.of("Asia/Tokyo")));
     }
 
@@ -68,7 +68,7 @@ class RestBusinessGatewayTest {
     @Test
     @DisplayName("その工程を踏むロールの利用者としてログインし、受け取った切符で業務 API を呼ぶ")
     void logsInAsTheRoleOfTheStep() {
-        expectLoginAs("sales01", "token-sales");
+        expectLoginAs("sim-sales01", "token-sales");
         server.expect(requestTo(BASE + RestBusinessGateway.SHIPPER_PATH))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(header("Authorization", "Bearer token-sales"))
@@ -97,11 +97,11 @@ class RestBusinessGatewayTest {
     @Test
     @DisplayName("ロールの違う工程は、それぞれ違う利用者としてログインし直す")
     void logsInAgainForEachRole() {
-        expectLoginAs("sales01", "token-sales");
+        expectLoginAs("sim-sales01", "token-sales");
         server.expect(requestTo(BASE + RestBusinessGateway.BOOKING_PATH + "/BK-1/routing-request"))
                 .andExpect(header("Authorization", "Bearer token-sales"))
                 .andRespond(withSuccess());
-        expectLoginAs("routing01", "token-routing");
+        expectLoginAs("sim-routing01", "token-routing");
         server.expect(requestTo(BASE + RestBusinessGateway.BOOKING_PATH + "/BK-1/tracking-number"))
                 .andExpect(header("Authorization", "Bearer token-routing"))
                 .andRespond(withSuccess("{\"trackingNumber\":\"TRK-20261116-0001\"}",
@@ -123,13 +123,13 @@ class RestBusinessGatewayTest {
 
         assertThatThrownBy(() -> gateway.execute(ScenarioStep.REGISTER_SHIPPER, NO_CONTEXT))
                 .isInstanceOf(BusinessCallFailedException.class)
-                .hasMessageContaining("sales01");
+                .hasMessageContaining("sim-sales01");
     }
 
     @Test
     @DisplayName("業務 API が断ったら、その工程と応答の状態を添えて止まる")
     void namesTheStepWhenTheBusinessCallFails() {
-        expectLoginAs("sales01", "token-sales");
+        expectLoginAs("sim-sales01", "token-sales");
         server.expect(requestTo(BASE + RestBusinessGateway.SHIPPER_PATH))
                 .andRespond(withStatus(HttpStatus.BAD_REQUEST)
                         .body("{\"message\":\"契約番号は法人荷主にだけ設定できます\"}")
@@ -146,7 +146,7 @@ class RestBusinessGatewayTest {
     @Test
     @DisplayName("受け取り・積込・荷降しを 3 つとも記録する")
     void recordsAllThreeHandlingActivities() {
-        expectLoginAs("handler01", "token-handler");
+        expectLoginAs("sim-handler01", "token-handler");
         server.expect(org.springframework.test.web.client.ExpectedCount.times(3),
                         requestTo(BASE + RestBusinessGateway.HANDLING_PATH))
                 .andExpect(method(HttpMethod.POST))
@@ -165,7 +165,7 @@ class RestBusinessGatewayTest {
     @Test
     @DisplayName("通関を申告し、申告の識別子を引き継ぐ")
     void declaresCustoms() {
-        expectLoginAs("handler01", "token-handler");
+        expectLoginAs("sim-handler01", "token-handler");
         server.expect(requestTo(BASE + RestBusinessGateway.CUSTOMS_PATH))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(jsonPath("$.trackingNumber").value("TRK-1"))
@@ -182,7 +182,7 @@ class RestBusinessGatewayTest {
     @Test
     @DisplayName("通関済にするのは追跡管理者である")
     void clearsCustomsAsTheTracker() {
-        expectLoginAs("tracker01", "token-tracker");
+        expectLoginAs("sim-tracker01", "token-tracker");
         server.expect(requestTo(BASE + RestBusinessGateway.CUSTOMS_PATH + "/7/status"))
                 .andExpect(method(HttpMethod.PUT))
                 .andExpect(jsonPath("$.status").value("CLEARED"))
@@ -198,7 +198,7 @@ class RestBusinessGatewayTest {
     @Test
     @DisplayName("引取には荷受人の確認を添える")
     void recordsTheClaimWithTheConsigneeConfirmation() {
-        expectLoginAs("handler01", "token-handler");
+        expectLoginAs("sim-handler01", "token-handler");
         server.expect(requestTo(BASE + RestBusinessGateway.HANDLING_PATH))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(jsonPath("$.type").value("CLAIM"))
@@ -214,7 +214,7 @@ class RestBusinessGatewayTest {
     @Test
     @DisplayName("料金を算出し、精算書の番号を引き継ぐ")
     void calculatesTheCharge() {
-        expectLoginAs("accountant01", "token-accountant");
+        expectLoginAs("sim-accountant01", "token-accountant");
         server.expect(requestTo(BASE + RestBusinessGateway.BILLING_PATH + "/BK-0001/calculate"))
                 .andExpect(method(HttpMethod.POST))
                 .andRespond(withSuccess("{\"invoiceNumber\":\"INV-0001\"}",
@@ -236,7 +236,7 @@ class RestBusinessGatewayTest {
     @Test
     @DisplayName("精算では、精算書に書かれた金額をそのまま入金する")
     void paysExactlyWhatTheInvoiceSays() {
-        expectLoginAs("accountant01", "token-accountant");
+        expectLoginAs("sim-accountant01", "token-accountant");
         server.expect(requestTo(BASE + RestBusinessGateway.BILLING_PATH + "/invoices/INV-0001"))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess("""
@@ -262,9 +262,9 @@ class RestBusinessGatewayTest {
      */
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.CsvSource({
-            "REQUEST_ROUTING,sales01,POST,/routing-request",
-            "NOTIFY_ROUTE,sales01,POST,/route-notification",
-            "CONFIRM_BOOKING,sales01,PUT,/confirm"})
+            "REQUEST_ROUTING,sim-sales01,POST,/routing-request",
+            "NOTIFY_ROUTE,sim-sales01,POST,/route-notification",
+            "CONFIRM_BOOKING,sim-sales01,PUT,/confirm"})
     @DisplayName("依頼・通知・確定は、予約の経路をそのロールで踏む")
     void callsTheBookingActions(String step, String username, String httpMethod, String suffix) {
         expectLoginAs(username, "token");
@@ -289,7 +289,7 @@ class RestBusinessGatewayTest {
     @Test
     @DisplayName("応答に識別子が無ければ、成功にせず止まる")
     void stopsWhenTheResponseCarriesNoIdentifier() {
-        expectLoginAs("sales01", "token-sales");
+        expectLoginAs("sim-sales01", "token-sales");
         server.expect(requestTo(BASE + RestBusinessGateway.SHIPPER_PATH))
                 .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
 
@@ -301,7 +301,7 @@ class RestBusinessGatewayTest {
     @Test
     @DisplayName("精算書に金額が無ければ、入金を送らずに止まる")
     void stopsWhenTheInvoiceHasNoAmount() {
-        expectLoginAs("accountant01", "token-accountant");
+        expectLoginAs("sim-accountant01", "token-accountant");
         server.expect(requestTo(BASE + RestBusinessGateway.BILLING_PATH + "/invoices/INV-0001"))
                 .andRespond(withSuccess("{\"invoiceNumber\":\"INV-0001\"}",
                         MediaType.APPLICATION_JSON));
@@ -331,7 +331,7 @@ class RestBusinessGatewayTest {
     @Test
     @DisplayName("料金算出の応答に精算書が無ければ、成功にせず止まる")
     void stopsWhenTheCalculationCarriesNoInvoice() {
-        expectLoginAs("accountant01", "token-accountant");
+        expectLoginAs("sim-accountant01", "token-accountant");
         server.expect(requestTo(BASE + RestBusinessGateway.BILLING_PATH + "/BK-0001/calculate"))
                 .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
 
@@ -345,7 +345,7 @@ class RestBusinessGatewayTest {
     @Test
     @DisplayName("通関申告の応答に申告が無ければ、成功にせず止まる")
     void stopsWhenTheDeclarationCarriesNoId() {
-        expectLoginAs("handler01", "token-handler");
+        expectLoginAs("sim-handler01", "token-handler");
         server.expect(requestTo(BASE + RestBusinessGateway.CUSTOMS_PATH))
                 .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
 
@@ -359,7 +359,7 @@ class RestBusinessGatewayTest {
     @Test
     @DisplayName("追跡番号発行の応答に番号が無ければ、成功にせず止まる")
     void stopsWhenNoTrackingNumberComesBack() {
-        expectLoginAs("routing01", "token-routing");
+        expectLoginAs("sim-routing01", "token-routing");
         server.expect(requestTo(
                         BASE + RestBusinessGateway.BOOKING_PATH + "/BK-0001/tracking-number"))
                 .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
@@ -374,7 +374,7 @@ class RestBusinessGatewayTest {
     @Test
     @DisplayName("予約登録の応答に予約番号が無ければ、成功にせず止まる")
     void stopsWhenNoBookingIdComesBack() {
-        expectLoginAs("sales01", "token-sales");
+        expectLoginAs("sim-sales01", "token-sales");
         server.expect(requestTo(BASE + RestBusinessGateway.BOOKING_PATH))
                 .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
 
@@ -412,7 +412,7 @@ class RestBusinessGatewayTest {
     void assignsTheCandidateOnItsOwnVoyage() {
         String runId = "SIM-20261116-0007";
         String ownVoyage = RestBusinessGateway.voyageNumberOf(runId);
-        expectLoginAs("routing01", "token-routing");
+        expectLoginAs("sim-routing01", "token-routing");
         server.expect(requestTo(org.hamcrest.Matchers.startsWith(
                         BASE + RestBusinessGateway.ROUTE_PATH)))
                 .andExpect(method(HttpMethod.GET))
@@ -434,7 +434,7 @@ class RestBusinessGatewayTest {
     @DisplayName("自分の航海を通る候補が無ければ、理由を言って止まる")
     void failsWhenNoCandidateUsesItsOwnVoyage() {
         String runId = "SIM-20261116-0008";
-        expectLoginAs("routing01", "token-routing");
+        expectLoginAs("sim-routing01", "token-routing");
         server.expect(requestTo(org.hamcrest.Matchers.startsWith(
                         BASE + RestBusinessGateway.ROUTE_PATH)))
                 .andExpect(method(HttpMethod.GET))

@@ -38,7 +38,7 @@ class SimulationScenarioControllerTest {
     @DisplayName("業務の担当者は、シナリオ一覧を読めない")
     void rejectsBusinessRoles(String role) throws Exception {
         mockMvc.perform(get("/api/v1/simulations/scenarios")
-                        .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                        .header(AuthenticatedUser.USER_ID_HEADER, "sim-sales01")
                         .header(AuthenticatedUser.ROLES_HEADER, role))
                 .andExpect(status().isForbidden());
     }

@@ -52,6 +52,13 @@ simulationms は **[ADR-004](004-gateway-jwt-verification.md) の Gateway を通
 **ロールは工程ごとに違うため、工程ごとにログインし直す。** 1 つの利用者に全ロールを与えると、
 **本番には存在しない権限の持ち主**を作ることになり、認可の検査を素通りする。
 
+**シミュレーション専用の利用者を使う（IT15 で改訂）。** 当初は実業務のデモ利用者
+（`sales01` など）を借りていたが、「シミュレーション由来として荷主を登録してよい」名簿にも
+その利用者が載るため、**実の営業担当者が自分の登録を由来つきにできた**——精算の締めから
+消える操作である。`sim-` の帯でロールごとに 1 人ずつ用意し（authms の V8）、
+それ以外の名前では**起動時に断る**。権限は実利用者と同じであり、シミュレーションだけが
+通る経路は作らない——1 人に全ロールを与えないのはそのためである。
+
 出口は `BusinessGateway` の **1 ポート**に絞る。各サービスへ直接つなぐ ACL を 6 本作ると、
 そのうち 1 本でも内部 API を向いた時点でこの決定は崩れる。
 
@@ -153,6 +160,7 @@ IT12 では `@Transactional` が入金の記録ごと巻き戻し、経理担当
 | :--- | :--- | :--- |
 | 1 simulationms を独立させる | 業務サービスが呼び出し元の都合で変わる | `ArchitectureTest`（simulationms も shared の `ServiceArchitectureTest` を継承し、BC 独立性ルールの対象になる）・`ArchitectureRuleCoverageTest`（settings.gradle の全サービスが対象であることを名簿なしで確かめる） |
 | 2 Gateway 経由・実利用者として呼ぶ | 認可を素通りする経路が新設される | `SimulationArchitectureTest`（内部 API と `system:` 名乗りをどこからも参照しない／出口は `BusinessGateway` の 1 ポートだけ。**違反を入れて赤になることを確認済み**）・`ScenarioTest`（すべての工程が踏む人のロールを持つ） |
+| 2b 専用の利用者として入る | 実の営業担当者が自分の登録を由来つきにでき、精算の締めから消せる | `SimulationUsersTest`（**実業務の利用者名では組み立てられない**）・`ServiceDatabaseUrlTest`（マニフェストの値が `sim-` の帯であること。**マニフェストを入力として宣言**したので、マニフェストだけを直した変更でも走る） |
 | 3 荷主コードで識別する | 実データに混ざり、締めと対応一覧が信用できなくなる | `SimulatedShipperTest`（登録の入口が分かれ、読み出しは帯で判断する）・`SimulatedDataExclusionIntegrationTest`（実 DB で `SIM-` 帯を採番し、**営業の荷主一覧と精算の締め対象に出ない**／名指しの照会では返る）・`ShipperControllerTest`（要求本文だけでは由来を立てられない）。`TrackingManagementControllerTest`（**件数にも一覧にも出さない**。片方だけに掛けると「1 件あります」と出るのに開くと空になる）・`RestShipperCargoSnapshotFinderTest`（由来をまとめて問い、**空では問い合わせない**——絞りの無い問い合わせは全予約の一覧になる） |
 | 4 本番では起動しない | 本番に実在しない輸送の記録が残る | `SimulationDisabledInProductionTest`（**許可した環境以外**で有効にすると起動が失敗する。未知のプロファイルも落ちる）・`SimulationRunControllerTest`（無効な環境では実行を受け付けない） |
 | 5 巻き戻さない | どこまで進んだかを追えない | `SimulationRunTest`（失敗した工程で止まり、それまでの結果と識別子が残る／失敗後は続きを記録できない）・`RunSimulationUseCaseTest`（**想定していない例外も工程の失敗として記録する**——記録せずに抜けると実行中のまま残り、二重実行の拒否が永久に効く）・`SimulationRunPersistenceIntegrationTest`（実 DB で、失敗を書いてもそれまでの記録が残る） |

@@ -85,6 +85,13 @@ subprojects {
             })
                     .withPropertyName('serviceMigrations')
                     .withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
+            // 接続先とシミュレーションの利用者の取り違えは、マニフェストの実体を読んで見つける。
+            // **宣言しないと、マニフェストだけを直したときに検査が走らない**——
+            // IT14 で実際に起きたのは「マニフェストだけを写して接続先を直し忘れる」形であり、
+            // まさにその変更で up-to-date と判断されては安全装置にならない。
+            inputs.files(fileTree(rootProject.file('../../ops/k8s/kustomize/base')))
+                    .withPropertyName('deploymentManifests')
+                    .withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
             inputs.file(rootProject.file('settings.gradle'))
                     .withPropertyName('serviceList')
                     .withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)

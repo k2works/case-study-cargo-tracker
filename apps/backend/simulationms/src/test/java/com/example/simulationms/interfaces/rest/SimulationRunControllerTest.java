@@ -118,7 +118,7 @@ class SimulationRunControllerTest {
     @DisplayName("業務の担当者は、実行を指示できない（入力の誤りより先に断る）")
     void rejectsBusinessRoles(String role) throws Exception {
         mockMvc.perform(post("/api/v1/simulations")
-                        .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                        .header(AuthenticatedUser.USER_ID_HEADER, "sim-sales01")
                         .header(AuthenticatedUser.ROLES_HEADER, role)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"scenarioId\":\"\"}"))

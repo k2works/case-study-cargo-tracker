@@ -207,9 +207,11 @@ public class ShipperController {
      * <p>名簿は<strong>許可する側</strong>に置く。載っていない利用者は断る——
      * 載せ忘れは「シミュレーションが動かない」側に倒れ、実データに混ざる側には倒れない。
      *
-     * <p><strong>残る穴</strong>: シミュレーションは実在の営業利用者としてログインするため
-     * （[ADR-030] 決定 2）、その利用者本人は今も送れる。塞ぎ切るにはシミュレーション専用の
-     * 利用者が要る（IT15）。
+     * <p><strong>名簿に載せるのは専用の利用者だけ</strong>（IT15）。IT14 は実業務の
+     * 営業利用者（{@code sales01}）を載せていたため、<strong>その人自身も由来を立てられた</strong>
+     * ——精算の締めから消せる操作が実の営業担当者の手に渡っていた。シミュレーション専用の
+     * 利用者（{@code sim-} の帯）を authms に用意し、名簿をそちらへ移した。
+     * マニフェストの値が専用の帯であることは {@code ServiceDatabaseUrlTest} が検査する。
      */
     private void requireSimulationRegistrar(String userId, ShipperRequest request) {
         if (request.isSimulated() && !simulationRegistrars.contains(userId)) {

@@ -26,7 +26,7 @@ spec:
             # 送るだけで、その荷主の貨物が精算の締めに一生載らない。
             # 渡さない環境では、シミュレーションが荷主を作れずそこで止まる（安全側）
             - name: APP_SIMULATION_REGISTRAR_USERNAMES
-              value: "sales01"
+              value: "sim-sales01"
             - name: DB_URL
               value: jdbc:postgresql://postgres:5432/booking_db
             - name: DB_USERNAME
