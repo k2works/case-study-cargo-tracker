@@ -66,16 +66,16 @@ Read Model へ `shipperId` を取り込む形が正解であり、Release 2.2 �
 法人荷主では複数担当者が普通に起きる。IT13 は最小スコープとして意図的に選んだが、
 **受入基準としては切り出していない**。Release 2.2 の候補に送った（同 中 7）。
 
-#### 3. SonarQube の Backend ゲートが ERROR のままである（クローズ時点）
+#### 3. SonarQube の Backend ゲートが、クローズ作業中に ERROR へ戻っていた
 
 **クローズ作業での再スキャンで、Quality Gate が ERROR に戻っていた。**
 IT13 の品質ゲートを記録した 2026-08-28 の後に入れた**パッケージ構成リファクタ 3 件**が、
 新規違反 14 件と Security Hotspot 1 件を持ち込んでいた。
 
 - **違反 14 件は直した**（コミット `667516f5`）。Backend / Frontend とも `new_violations` は 0 になった
-- **Security Hotspot 1 件は残っている。** 走査トークンでは `api/hotspots/search` も
-  `api/issues/do_transition` も `Insufficient privileges` を返し、**列挙も承認もできない**。
-  **利用者が SonarQube の UI で承認する必要がある**
+- **Security Hotspot 1 件は、利用者が UI で承認して PASS になった。** 走査トークンでは
+  `api/hotspots/search` も `api/issues/do_transition` も `Insufficient privileges` を返し、
+  **列挙も承認もできなかった**。**承認できるのは利用者だけ**という形が残っている
 
 > **これは IT5・IT6・IT12 と同じ形で、4 度目である。** 本 IT でしたのは
 > ゲート条件を `new_security_hotspots_reviewed=100.0` の自動判定に固定すると**決めた**ことだけで、
@@ -146,7 +146,7 @@ Release 2.2 候補バックログの先頭に置いてある。**送るのは 3 
 | frontend lint / typecheck / test / build | すべて緑（クローズ時に再実行） |
 | CI | 緑（[run 33354760556](https://github.com/k2works/case-study-cargo-tracker/actions/runs/33354760556)・クローズ後の HEAD `8a571f339`） |
 | SonarQube（Frontend） | **PASS**（新規違反 0・新規カバレッジ 80.2%・重複 0.38%） |
-| SonarQube（Backend） | **ERROR**（新規違反 0・新規カバレッジ 90.3%・重複 0.05%。**`new_security_hotspots_reviewed=0.0` の 1 件のみ未達**——下記） |
+| SonarQube（Backend） | **PASS**（新規違反 0・新規カバレッジ 90.3%・重複 0.05%・`new_security_hotspots_reviewed=100.0`）。**ただしクローズ作業中は ERROR だった**——下記 |
 | JIG / jig-erd | 再生成し、生成物差分なし |
 
 ## レビュー結果
@@ -193,11 +193,11 @@ UI を追加したため更新した（**14 章「荷主ポータル」新設**�
 
 ## 次のステップ
 
-0. **SonarQube の Backend Quality Gate を PASS にする。** 残るのは Security Hotspot 1 件の
-   レビュー承認のみで、**利用者の UI 操作が要る**（<http://localhost:9001/dashboard?id=cargo-tracker-take7-backend>）。
-   対象は `V5__drop_booking_unique.java` の「DB から読んだ制約名を SQL に混ぜる」箇所と見られ、
-   **中身は読んで安全と確認済み**（`^\w+$` で識別子の形を検査してから使う・件数照会は `PreparedStatement`）。
-   あわせて走査トークンへ Hotspot の権限を与え、**4 度目の待ちを最後にする**
+0. **走査トークンへ Hotspot の権限を与える。** Quality Gate は利用者の UI 承認で PASS に
+   なったが、**承認できるのは利用者だけ**という形は残っている（4 度目）。対象は
+   `V5__drop_booking_unique.java` の「DB から読んだ制約名を SQL に混ぜる」箇所で、
+   **中身は読んで安全と確認済み**（`^\w+$` で識別子の形を検査してから使う・件数照会は
+   `PreparedStatement`）。**次に同じ待ちを作らない**
 1. **Release 2.1 完了報告書**を作成する（`creating-release-report`）。入力は本報告書・
    [ふりかえり](retrospective-13.md)・[レビュー](../review/イテレーション13_review_20260828.md)
 2. Release 2.2 を計画するなら、上の申し送り 10 件（約 31h）から選ぶ

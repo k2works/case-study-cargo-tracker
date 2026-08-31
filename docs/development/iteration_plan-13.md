@@ -202,7 +202,7 @@
 | Backend 品質ゲート | PASS | `./gradlew build`、`TZ=UTC ./gradlew test`。`./gradlew build` 内で `jacocoTestCoverageVerification` 通過。**クローズ時に再実行**——リファクタ後もテスト 1,509 件が緑、全体カバレッジ 92.3%・ドメイン層 95.9%。 |
 | Frontend 品質ゲート | PASS（**クローズ時に再実行**・テスト 519 件） | `npm run lint && npm run typecheck && npm run test && npm run build && npx playwright test`（Playwright 94 passed）。E2E 追加後に `npm run lint`、`npm run typecheck` も再実行。 |
 | JIG / ER 図 | PASS | `npm run jig`、`npm run jig-erd`。生成物差分なし。 |
-| SonarQube | **クローズ時に再検証して ERROR → 一部復旧** | 2026-08-28 の記録時点は Backend / Frontend とも PASS だったが、**その後に入れたパッケージ構成リファクタ 3 件**が新規違反 14 件と Security Hotspot 1 件を持ち込んでいた。クローズ作業の再スキャンで検出し、**違反 14 件は 0 件に直した**（`667516f5`）。**Security Hotspot 1 件のレビュー承認だけが残る**——走査トークンでは列挙も承認もできず、利用者の UI 操作が要る（4 度目）。詳細は [IT13 完了報告書](iteration_report-13.md)。 |
+| SonarQube | **クローズ時に再検証して ERROR → PASS** | 2026-08-28 の記録時点は Backend / Frontend とも PASS だったが、**その後に入れたパッケージ構成リファクタ 3 件**が新規違反 14 件と Security Hotspot 1 件を持ち込んでいた。クローズ作業の再スキャンで検出し、**違反 14 件は 0 件に直した**（`667516f5`）。**Security Hotspot 1 件は利用者が UI で承認**し、Backend / Frontend とも PASS になった（`new_security_hotspots_reviewed=100.0`）。走査トークンでは列挙も承認もできない形は残る（4 度目）。詳細は [IT13 完了報告書](iteration_report-13.md)。 |
 
 SonarQube Hotspot は、走査トークンで `sonar-local:gate` を読み、`new_security_hotspots_reviewed` が 100% であることを自動ゲートの完了条件にする。UI レビュー待ちが再発した場合は、クローズ冒頭で利用者へ UI 操作を依頼し、資格情報を Codex に渡す運用にはしない。ゲート条件を緩める判断は、実 Hotspot の内容とリスクを読んだ後に別タスクとして扱う。
 
