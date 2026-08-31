@@ -81,9 +81,37 @@ public class RestShipperCargoSnapshotFinder implements ShipperCargoSnapshotFinde
                 .toList();
     }
 
+    @Override
+    public java.util.Set<String> simulatedAmong(List<TrackingNumber> trackingNumbers) {
+        if (trackingNumbers.isEmpty()) {
+            // 空で問うと、絞り込みの無い一覧を引いてしまう入口になりうる。
+            return java.util.Set.of();
+        }
+        List<String> values = trackingNumbers.stream().map(TrackingNumber::value).toList();
+        ShipperCargoSnapshotResponse[] response;
+        try {
+            response = restClient.get()
+                    .uri(builder -> builder.path(BY_SHIPPER_PATH)
+                            .queryParam("trackingNumbers", values)
+                            .build())
+                    .header(AuthenticatedUser.USER_ID_HEADER, SYSTEM_PRINCIPAL)
+                    .retrieve()
+                    .body(ShipperCargoSnapshotResponse[].class);
+        } catch (RestClientException e) {
+            throw unavailable(e);
+        }
+        if (response == null) {
+            return java.util.Set.of();
+        }
+        return java.util.Arrays.stream(response)
+                .filter(ShipperCargoSnapshotResponse::simulated)
+                .map(ShipperCargoSnapshotResponse::trackingNumber)
+                .collect(java.util.stream.Collectors.toSet());
+    }
+
     private static ShipperCargoSnapshot toDomain(ShipperCargoSnapshotResponse response) {
         return new ShipperCargoSnapshot(response.bookingId(), response.trackingNumber(),
-                response.shipperId());
+                response.shipperId(), response.simulated());
     }
 
     private static ShipperTrackingLookupUnavailableException unavailable(Exception cause) {
@@ -91,6 +119,12 @@ public class RestShipperCargoSnapshotFinder implements ShipperCargoSnapshotFinde
                 "貨物の荷主を確認できませんでした。しばらくしてからもう一度お試しください", cause);
     }
 
-    record ShipperCargoSnapshotResponse(String bookingId, String trackingNumber, Long shipperId) {
+    /**
+     * 契約の項目。{@code simulated} は<strong>由来がシミュレーションか</strong>
+     * （[ADR-030] 決定 3）。荷主コードそのものは返さない——追跡側に荷主の採番規則を
+     * 知らせる必要はなく、知らせると規則を変えたときに両方を直すことになる。
+     */
+    record ShipperCargoSnapshotResponse(String bookingId, String trackingNumber, Long shipperId,
+            boolean simulated) {
     }
 }

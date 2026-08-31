@@ -55,8 +55,8 @@ class ShipperTrackingQueryUseCaseTest {
         links.linkedShipperId = Optional.of(1L);
         activities.stored = List.of(received(OWN_NUMBER), received(OTHER_NUMBER));
         snapshots.items = List.of(
-                new ShipperCargoSnapshot("BKG-2026000001", OWN_NUMBER, 1L),
-                new ShipperCargoSnapshot("BKG-2026009001", OTHER_NUMBER, 99L));
+                new ShipperCargoSnapshot("BKG-2026000001", OWN_NUMBER, 1L, false),
+                new ShipperCargoSnapshot("BKG-2026009001", OTHER_NUMBER, 99L, false));
 
         ShipperTrackingQueryResult result = useCase.list("shipper01");
 
@@ -75,7 +75,7 @@ class ShipperTrackingQueryUseCaseTest {
     void hidesOtherShippersDetail() {
         links.linkedShipperId = Optional.of(1L);
         activities.stored = List.of(received(OTHER_NUMBER));
-        snapshots.items = List.of(new ShipperCargoSnapshot("BKG-2026009001", OTHER_NUMBER, 99L));
+        snapshots.items = List.of(new ShipperCargoSnapshot("BKG-2026009001", OTHER_NUMBER, 99L, false));
 
         Optional<ShipperTrackingDetail> detail = useCase.detail("shipper01", OTHER_NUMBER);
 
@@ -89,7 +89,7 @@ class ShipperTrackingQueryUseCaseTest {
         activities.stored = List.of(received(OWN_NUMBER));
         activities.events = List.of(new TrackingEvent(TrackingStatus.RECEIVED, TOKYO,
                 Instant.parse("2027-09-02T00:00:00Z"), TrackingEvent.EventSource.HANDLING));
-        snapshots.items = List.of(new ShipperCargoSnapshot("BKG-2026000001", OWN_NUMBER, 1L));
+        snapshots.items = List.of(new ShipperCargoSnapshot("BKG-2026000001", OWN_NUMBER, 1L, false));
 
         ShipperTrackingDetail detail = useCase.detail("shipper01", OWN_NUMBER).orElseThrow();
 
@@ -105,7 +105,7 @@ class ShipperTrackingQueryUseCaseTest {
         links.linkedShipperId = Optional.of(1L);
         activities.stored = List.of(received(OWN_NUMBER)
                 .raiseException(ExceptionType.LOST, "所在不明", Instant.parse("2027-09-03T00:00:00Z")));
-        snapshots.items = List.of(new ShipperCargoSnapshot("BKG-2026000001", OWN_NUMBER, 1L));
+        snapshots.items = List.of(new ShipperCargoSnapshot("BKG-2026000001", OWN_NUMBER, 1L, false));
 
         ShipperTrackingSummary summary = useCase.list("shipper01").cargos().getFirst();
 
@@ -122,10 +122,11 @@ class ShipperTrackingQueryUseCaseTest {
         for (int i = 1; i <= ShipperTrackingQueryUseCase.LIST_LIMIT + 1; i++) {
             String number = "TRK-20260823-%04d".formatted(9000 + i);
             stored.add(received(number));
-            items.add(new ShipperCargoSnapshot("BKG-202600%04d".formatted(9000 + i), number, 99L));
+            items.add(new ShipperCargoSnapshot("BKG-202600%04d".formatted(9000 + i), number, 99L,
+                    false));
         }
         stored.add(received(OWN_NUMBER));
-        items.add(new ShipperCargoSnapshot("BKG-2026000001", OWN_NUMBER, 1L));
+        items.add(new ShipperCargoSnapshot("BKG-2026000001", OWN_NUMBER, 1L, false));
         activities.stored = stored;
         snapshots.items = items;
 
@@ -141,8 +142,8 @@ class ShipperTrackingQueryUseCaseTest {
         links.linkedShipperId = Optional.of(1L);
         activities.stored = List.of(received(OWN_NUMBER), received(OTHER_NUMBER));
         snapshots.items = List.of(
-                new ShipperCargoSnapshot("BKG-2026000001", OWN_NUMBER, 1L),
-                new ShipperCargoSnapshot("BKG-2026009001", OTHER_NUMBER, 99L));
+                new ShipperCargoSnapshot("BKG-2026000001", OWN_NUMBER, 1L, false),
+                new ShipperCargoSnapshot("BKG-2026009001", OTHER_NUMBER, 99L, false));
 
         useCase.list("shipper01");
 
@@ -182,6 +183,17 @@ class ShipperTrackingQueryUseCaseTest {
         @Override
         public List<ShipperCargoSnapshot> findByShipperId(long shipperId) {
             return items.stream().filter(item -> item.shipperId() == shipperId).toList();
+        }
+
+        @Override
+        public java.util.Set<String> simulatedAmong(List<TrackingNumber> trackingNumbers) {
+            java.util.Set<String> asked = trackingNumbers.stream()
+                    .map(TrackingNumber::value).collect(java.util.stream.Collectors.toSet());
+            return items.stream()
+                    .filter(ShipperCargoSnapshot::simulated)
+                    .map(ShipperCargoSnapshot::trackingNumber)
+                    .filter(asked::contains)
+                    .collect(java.util.stream.Collectors.toSet());
         }
     }
 

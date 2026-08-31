@@ -90,7 +90,7 @@ class BookingHandoverTest {
     @DisplayName("営業担当者は経路設計を依頼できる")
     void salesRequestsRouting() throws Exception {
         when(requestRouting.request("BKG-2026000001"))
-                .thenReturn(Optional.of(new CargoSummary(BookingTestCargoes.booked().requestRouting(), "丸紅商事")));
+                .thenReturn(Optional.of(new CargoSummary(BookingTestCargoes.booked().requestRouting(), "丸紅商事", "SHP-0001")));
 
         mockMvc.perform(post("/api/v1/bookings/BKG-2026000001/routing-request")
                         .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
@@ -150,7 +150,7 @@ class BookingHandoverTest {
     @DisplayName("引き渡された予約の詳細は営業担当者も経路設計者も見られる")
     void bothRolesSeeDetail() throws Exception {
         when(cargoes.findByBookingId("BKG-2026000001"))
-                .thenReturn(Optional.of(new CargoSummary(BookingTestCargoes.requested(), "丸紅商事")));
+                .thenReturn(Optional.of(new CargoSummary(BookingTestCargoes.requested(), "丸紅商事", "SHP-0001")));
 
         for (String role : List.of("ROLE_SALES", "ROLE_ROUTING")) {
             mockMvc.perform(get("/api/v1/bookings/BKG-2026000001")
@@ -173,7 +173,7 @@ class BookingHandoverTest {
     @DisplayName("経路設計者は、まだ引き渡されていない予約の詳細を見られない")
     void routingPlannerCannotOpenUnrequestedDetail() throws Exception {
         when(cargoes.findByBookingId("BKG-2026000001"))
-                .thenReturn(Optional.of(new CargoSummary(BookingTestCargoes.booked(), "丸紅商事")));
+                .thenReturn(Optional.of(new CargoSummary(BookingTestCargoes.booked(), "丸紅商事", "SHP-0001")));
 
         mockMvc.perform(get("/api/v1/bookings/BKG-2026000001")
                         .header(AuthenticatedUser.USER_ID_HEADER, "routing01")
@@ -192,7 +192,7 @@ class BookingHandoverTest {
     @DisplayName("見えない予約と存在しない予約は、応答で区別できない")
     void invisibleAndUnknownAreIndistinguishable() throws Exception {
         when(cargoes.findByBookingId("BKG-2026000001"))
-                .thenReturn(Optional.of(new CargoSummary(BookingTestCargoes.booked(), "丸紅商事")));
+                .thenReturn(Optional.of(new CargoSummary(BookingTestCargoes.booked(), "丸紅商事", "SHP-0001")));
         when(cargoes.findByBookingId("BKG-9999999999")).thenReturn(Optional.empty());
 
         String invisible = mockMvc.perform(get("/api/v1/bookings/BKG-2026000001")
@@ -218,7 +218,7 @@ class BookingHandoverTest {
     @DisplayName("経路が決まった予約も、経路設計者が開ける")
     void routingPlannerCanOpenRoutedDetail() throws Exception {
         when(cargoes.findByBookingId("BKG-2026000001"))
-                .thenReturn(Optional.of(new CargoSummary(BookingTestCargoes.routed(), "丸紅商事")));
+                .thenReturn(Optional.of(new CargoSummary(BookingTestCargoes.routed(), "丸紅商事", "SHP-0001")));
 
         mockMvc.perform(get("/api/v1/bookings/BKG-2026000001")
                         .header(AuthenticatedUser.USER_ID_HEADER, "routing01")
@@ -231,7 +231,7 @@ class BookingHandoverTest {
     @DisplayName("営業担当者は引き渡し前の予約の詳細を見られる")
     void salesSeesUnrequestedDetail() throws Exception {
         when(cargoes.findByBookingId("BKG-2026000001"))
-                .thenReturn(Optional.of(new CargoSummary(BookingTestCargoes.booked(), "丸紅商事")));
+                .thenReturn(Optional.of(new CargoSummary(BookingTestCargoes.booked(), "丸紅商事", "SHP-0001")));
 
         mockMvc.perform(get("/api/v1/bookings/BKG-2026000001")
                         .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
@@ -243,7 +243,7 @@ class BookingHandoverTest {
     @DisplayName("経路が決まっていない予約は旅程を返さない（空の配列にしない）")
     void unroutedCargoHasNoItinerary() throws Exception {
         when(cargoes.findByBookingId("BKG-2026000001"))
-                .thenReturn(Optional.of(new CargoSummary(BookingTestCargoes.booked(), "丸紅商事")));
+                .thenReturn(Optional.of(new CargoSummary(BookingTestCargoes.booked(), "丸紅商事", "SHP-0001")));
 
         // 空の配列にすると「区間が 0 件の旅程がある」と読め、画面が空の表を出す
         mockMvc.perform(get("/api/v1/bookings/BKG-2026000001")

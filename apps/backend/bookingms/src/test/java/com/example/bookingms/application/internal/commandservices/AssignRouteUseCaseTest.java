@@ -105,7 +105,7 @@ class AssignRouteUseCaseTest {
         @Override
         public Optional<CargoSummary> findByBookingId(String bookingId) {
             return "BKG-2026000001".equals(bookingId)
-                    ? Optional.of(new CargoSummary(stored, "丸紅商事"))
+                    ? Optional.of(new CargoSummary(stored, "丸紅商事", "SHP-0001"))
                     : Optional.empty();
         }
 

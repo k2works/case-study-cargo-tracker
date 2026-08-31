@@ -52,7 +52,7 @@ class CargoLookupControllerTest {
     void returnsSnapshotToTrustedService() throws Exception {
         when(cargoes.findByTrackingNumber("TRK-20260823-0001"))
                 .thenReturn(Optional.of(new CargoSummary(BookingTestCargoes.trackingIssued(),
-                        "丸紅商事")));
+                        "丸紅商事", "SHP-0001")));
 
         mockMvc.perform(get(pathFor("TRK-20260823-0001"))
                         .header(AuthenticatedUser.USER_ID_HEADER,
@@ -76,7 +76,7 @@ class CargoLookupControllerTest {
     @DisplayName("照合に要らない項目は返さない")
     void doesNotLeakUnrelatedFields() throws Exception {
         when(cargoes.findByTrackingNumber(any()))
-                .thenReturn(Optional.of(new CargoSummary(BookingTestCargoes.routed(), "丸紅商事")));
+                .thenReturn(Optional.of(new CargoSummary(BookingTestCargoes.routed(), "丸紅商事", "SHP-0001")));
 
         mockMvc.perform(get(pathFor("TRK-20260823-0001"))
                         .header(AuthenticatedUser.USER_ID_HEADER,
@@ -127,7 +127,7 @@ class CargoLookupControllerTest {
     void returnsShipperSnapshotToTrackingms() throws Exception {
         when(cargoes.findByTrackingNumber("TRK-20260823-0001"))
                 .thenReturn(Optional.of(new CargoSummary(BookingTestCargoes.trackingIssued(),
-                        "丸紅商事")));
+                        "丸紅商事", "SHP-0001")));
 
         mockMvc.perform(get(shipperPathFor("TRK-20260823-0001"))
                         .header(AuthenticatedUser.USER_ID_HEADER,
@@ -176,7 +176,7 @@ class CargoLookupControllerTest {
     void returnsShipperSnapshotsByShipperId() throws Exception {
         when(cargoes.findByShipperId(1L))
                 .thenReturn(java.util.List.of(new CargoSummary(BookingTestCargoes.trackingIssued(),
-                        "丸紅商事")));
+                        "丸紅商事", "SHP-0001")));
 
         mockMvc.perform(get(ShipperCargoSnapshotContract.BY_SHIPPER_PATH)
                         .queryParam("shipperId", "1")

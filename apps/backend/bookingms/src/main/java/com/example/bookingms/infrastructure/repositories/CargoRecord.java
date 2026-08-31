@@ -54,6 +54,8 @@ public class CargoRecord {
 
     private String shipperName;
 
+    private String shipperCode;
+
     public Long getId() {
         return id;
     }
@@ -301,6 +303,14 @@ public class CargoRecord {
 
     public void setShipperName(String shipperName) {
         this.shipperName = shipperName;
+    }
+
+    public String getShipperCode() {
+        return shipperCode;
+    }
+
+    public void setShipperCode(String shipperCode) {
+        this.shipperCode = shipperCode;
     }
     public java.time.Instant getMisroutedAt() {
         return misroutedAt;

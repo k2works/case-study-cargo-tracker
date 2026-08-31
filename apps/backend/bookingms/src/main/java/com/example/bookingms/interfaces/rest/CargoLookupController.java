@@ -79,7 +79,7 @@ public class CargoLookupController {
         requireTrustedShipperSnapshotService(userId);
 
         return cargoes.findByTrackingNumber(trackingNumber)
-                .map(summary -> ShipperCargoSnapshotResponse.from(summary.cargo()))
+                .map(ShipperCargoSnapshotResponse::from)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "指定された追跡番号の貨物が見つかりません"));
     }
@@ -93,12 +93,24 @@ public class CargoLookupController {
     @GetMapping("/shipper-snapshots")
     public java.util.List<ShipperCargoSnapshotResponse> shipperSnapshots(
             @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
-            @RequestParam("shipperId") Long shipperId) {
+            @RequestParam(name = "shipperId", required = false) Long shipperId,
+            @RequestParam(name = "trackingNumbers", required = false)
+                    java.util.List<String> trackingNumbers) {
         requireTrustedShipperSnapshotService(userId);
 
-        return cargoes.findByShipperId(shipperId).stream()
-                .map(summary -> ShipperCargoSnapshotResponse.from(summary.cargo()))
-                .toList();
+        if (shipperId != null) {
+            return cargoes.findByShipperId(shipperId).stream()
+                    .map(ShipperCargoSnapshotResponse::from)
+                    .toList();
+        }
+        if (trackingNumbers != null && !trackingNumbers.isEmpty()) {
+            return cargoes.findByTrackingNumbers(trackingNumbers).stream()
+                    .map(ShipperCargoSnapshotResponse::from)
+                    .toList();
+        }
+        // **絞りの無い問い合わせは断る。**通すと、この入口が全予約の一覧になる。
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "shipperId か trackingNumbers のどちらかが要ります");
     }
 
     private void requireTrustedService(String userId) {

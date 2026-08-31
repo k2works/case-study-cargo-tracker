@@ -21,10 +21,18 @@ public final class ShipperCargoSnapshotContract {
      */
     public static final String BY_SHIPPER_PATH = "/api/v1/bookings/shipper-snapshots";
 
+    /**
+     * 追跡番号をまとめて渡すときのクエリ名（IT15）。
+     *
+     * <p>由来（{@code simulated}）を一覧の件数だけ問うために使う。1 件ずつ確かめると、
+     * 例外が増えた日に問い合わせがその数だけ増える。
+     */
+    public static final String BY_TRACKING_NUMBERS_PARAM = "trackingNumbers";
+
     /** 呼び出してよい主体。 */
     public static final String CALLER_PRINCIPAL = "system:trackingms";
 
     /** 流れる項目。順序も含めて契約である。 */
     public static final List<String> FIELDS =
-            List.of("bookingId", "trackingNumber", "shipperId");
+            List.of("bookingId", "trackingNumber", "shipperId", "simulated");
 }

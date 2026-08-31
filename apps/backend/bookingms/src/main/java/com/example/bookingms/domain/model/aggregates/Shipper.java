@@ -56,8 +56,18 @@ public final class Shipper {
 
     /** シミュレーション由来か（[ADR-030] 決定 3）。 */
     public boolean simulated() {
-        return shipperCode == null ? simulatedRegistration
-                : shipperCode.startsWith(SIMULATED_CODE_PREFIX);
+        return shipperCode == null ? simulatedRegistration : isSimulatedCode(shipperCode);
+    }
+
+    /**
+     * その荷主コードがシミュレーションの帯か。
+     *
+     * <p>荷主の集約を組み立てずに判定したい場所（一覧の絞り込み）から使う。
+     * <strong>判定はここ 1 つに置く</strong>——同じ判定を呼ぶ側に書き直すと、
+     * 帯を変えたときに書き直した側だけが古いまま残る。
+     */
+    public static boolean isSimulatedCode(String shipperCode) {
+        return shipperCode != null && shipperCode.startsWith(SIMULATED_CODE_PREFIX);
     }
 
     /**

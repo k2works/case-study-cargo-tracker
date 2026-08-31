@@ -14,6 +14,7 @@ import com.example.shared.contract.ShipperCargoSnapshotContract;
 import com.example.trackingms.application.internal.queryservices.ShipperCargoSnapshot;
 import com.example.trackingms.application.internal.outboundservices.acl.ShipperTrackingLookupUnavailableException;
 import com.example.trackingms.domain.model.valueobjects.TrackingNumber;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -54,7 +55,8 @@ class RestShipperCargoSnapshotFinderTest {
                 .andRespond(withSuccess("""
                         {"bookingId": "BKG-2026000001",
                          "trackingNumber": "TRK-20260823-0001",
-                         "shipperId": 1}
+                         "shipperId": 1,
+                         "simulated": false}
                         """, MediaType.APPLICATION_JSON));
 
         ShipperCargoSnapshot snapshot = finder.findByTrackingNumber(NUMBER).orElseThrow();
@@ -73,7 +75,8 @@ class RestShipperCargoSnapshotFinderTest {
                 .andRespond(withSuccess("""
                         {"bookingId": "BKG-2026000001",
                          "trackingNumber": "TRK-20260823-0001",
-                         "shipperId": 1}
+                         "shipperId": 1,
+                         "simulated": false}
                         """, MediaType.APPLICATION_JSON));
 
         finder.findByTrackingNumber(NUMBER);
@@ -110,6 +113,42 @@ class RestShipperCargoSnapshotFinderTest {
 
         assertThatThrownBy(() -> finder.findByTrackingNumber(NUMBER))
                 .isInstanceOf(ShipperTrackingLookupUnavailableException.class);
+    }
+
+
+    @Test
+    @DisplayName("由来をまとめて問い、シミュレーションのものだけを返す")
+    void findsWhichAreSimulated() {
+        server.expect(requestTo(org.hamcrest.Matchers.startsWith(
+                        BASE + ShipperCargoSnapshotContract.BY_SHIPPER_PATH)))
+                .andExpect(header(AuthenticatedUser.USER_ID_HEADER,
+                        ShipperCargoSnapshotContract.CALLER_PRINCIPAL))
+                .andRespond(withSuccess("""
+                        [{"bookingId": "BKG-2026000001",
+                          "trackingNumber": "TRK-20260823-0001",
+                          "shipperId": 1, "simulated": false},
+                         {"bookingId": "BKG-2026009001",
+                          "trackingNumber": "TRK-20260823-9001",
+                          "shipperId": 9, "simulated": true}]
+                        """, MediaType.APPLICATION_JSON));
+
+        java.util.Set<String> simulated = finder.simulatedAmong(List.of(
+                NUMBER, TrackingNumber.of("TRK-20260823-9001")));
+
+        assertThat(simulated).containsExactly("TRK-20260823-9001");
+        server.verify();
+    }
+
+    /**
+     * <strong>空で問わない。</strong>絞りの無い問い合わせを送ると、bookingms 側の入口が
+     * 全予約の一覧になる。呼ぶ前に断つ。
+     */
+    @Test
+    @DisplayName("問う相手がいなければ、問い合わせない")
+    void doesNotAskWhenThereIsNothingToAsk() {
+        assertThat(finder.simulatedAmong(List.of())).isEmpty();
+
+        server.verify();
     }
 
     private static String pathFor(String trackingNumber) {

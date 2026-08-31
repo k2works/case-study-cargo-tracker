@@ -160,19 +160,30 @@ public class MyBatisCargoRepository implements CargoRepository {
     @Override
     public Optional<CargoSummary> findByBookingId(String bookingId) {
         return Optional.ofNullable(mapper.findByBookingId(bookingId))
-                .map(row -> new CargoSummary(toDomainWithItinerary(row), row.getShipperName()));
+                .map(row -> new CargoSummary(toDomainWithItinerary(row), row.getShipperName(), row.getShipperCode()));
     }
 
     @Override
     public Optional<CargoSummary> findByTrackingNumber(String trackingNumber) {
         return Optional.ofNullable(mapper.findByTrackingNumber(trackingNumber))
-                .map(row -> new CargoSummary(toDomainWithItinerary(row), row.getShipperName()));
+                .map(row -> new CargoSummary(toDomainWithItinerary(row), row.getShipperName(), row.getShipperCode()));
+    }
+
+    @Override
+    public List<CargoSummary> findByTrackingNumbers(List<String> trackingNumbers) {
+        if (trackingNumbers.isEmpty()) {
+            return List.of();
+        }
+        return mapper.findByTrackingNumbers(trackingNumbers).stream()
+                .map(row -> new CargoSummary(toDomain(row), row.getShipperName(),
+                        row.getShipperCode()))
+                .toList();
     }
 
     @Override
     public List<CargoSummary> findByShipperId(long shipperId) {
         return mapper.findByShipperId(shipperId).stream()
-                .map(row -> new CargoSummary(toDomain(row), row.getShipperName()))
+                .map(row -> new CargoSummary(toDomain(row), row.getShipperName(), row.getShipperCode()))
                 .toList();
     }
 
@@ -182,7 +193,7 @@ public class MyBatisCargoRepository implements CargoRepository {
         return mapper.search(nameOf(type), normalize(keyword), namesOf(routingStatuses),
                         bookingStatus == null ? null : bookingStatus.name(), limit)
                 .stream()
-                .map(row -> new CargoSummary(toDomain(row), row.getShipperName()))
+                .map(row -> new CargoSummary(toDomain(row), row.getShipperName(), row.getShipperCode()))
                 .toList();
     }
 

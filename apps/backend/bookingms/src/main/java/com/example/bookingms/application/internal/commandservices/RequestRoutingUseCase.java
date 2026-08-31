@@ -32,6 +32,7 @@ public class RequestRoutingUseCase {
             return Optional.empty();
         }
         Cargo requested = found.get().cargo().requestRouting();
-        return Optional.of(new CargoSummary(cargoes.save(requested), found.get().shipperName()));
+        return Optional.of(new CargoSummary(cargoes.save(requested), found.get().shipperName(),
+                found.get().shipperCode()));
     }
 }

@@ -154,7 +154,7 @@ class CargoBookingControllerTest {
         void searches() throws Exception {
             when(searchCargo.search(null, null, List.of(), null))
                     .thenReturn(new SearchCargoUseCase.Result(
-                            List.of(new CargoSummary(BookingTestCargoes.booked(), "丸紅商事")), 1L, 100));
+                            List.of(new CargoSummary(BookingTestCargoes.booked(), "丸紅商事", "SHP-0001")), 1L, 100));
 
             mockMvc.perform(get("/api/v1/bookings")
                             .header(AuthenticatedUser.USER_ID_HEADER, "sales01")

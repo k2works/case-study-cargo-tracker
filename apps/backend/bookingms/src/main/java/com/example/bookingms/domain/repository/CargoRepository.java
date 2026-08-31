@@ -50,6 +50,16 @@ public interface CargoRepository {
     }
 
     /**
+     * 追跡番号でまとめて引く（IT15）。
+     *
+     * <p>追跡側が「この中でシミュレーション由来はどれか」を 1 回で問うための入口である。
+     * <strong>1 件ずつ引かせない</strong>——例外が増えた日に問い合わせがその数だけ増える。
+     */
+    default List<CargoSummary> findByTrackingNumbers(List<String> trackingNumbers) {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
      * 一覧を新しい順に返す。
      *
      * @param type 貨物種別での絞り込み（null なら全種別）

@@ -32,7 +32,7 @@ public interface CargoMapper {
             c.route_notified_at, c.route_notified_by, c.tracking_number,
             c.last_handling_location_unlocode, c.last_handling_at,
             c.misrouted_at, c.misrouted_location_unlocode,
-            s.name AS shipper_name
+            s.name AS shipper_name, s.shipper_code
             """;
 
     String JOINS = """
@@ -140,7 +140,8 @@ public interface CargoMapper {
         @Result(column = "route_notified_at", property = "routeNotifiedAt"),
         @Result(column = "route_notified_by", property = "routeNotifiedBy"),
         @Result(column = "tracking_number", property = "trackingNumber"),
-        @Result(column = "shipper_name", property = "shipperName")
+        @Result(column = "shipper_name", property = "shipperName"),
+        @Result(column = "shipper_code", property = "shipperCode")
     })
     CargoRecord findById(@Param("id") Long id);
 
@@ -173,7 +174,7 @@ public interface CargoMapper {
                    c.hazardous_class, c.un_number, c.proper_shipping_name,
                    c.temp_min, c.temp_max, c.temp_unit,
                    c.route_notified_at, c.route_notified_by, c.tracking_number,
-                   s.name AS shipper_name
+                   s.name AS shipper_name, s.shipper_code
             FROM cargo c
             JOIN shipper s ON s.id = c.shipper_id
             JOIN location o ON o.unlocode = c.spec_origin_unlocode
@@ -226,7 +227,8 @@ public interface CargoMapper {
         @Result(column = "route_notified_at", property = "routeNotifiedAt"),
         @Result(column = "route_notified_by", property = "routeNotifiedBy"),
         @Result(column = "tracking_number", property = "trackingNumber"),
-        @Result(column = "shipper_name", property = "shipperName")
+        @Result(column = "shipper_name", property = "shipperName"),
+        @Result(column = "shipper_code", property = "shipperCode")
     })
     List<CargoRecord> search(
             @Param("cargoType") String cargoType,
@@ -285,4 +287,20 @@ public interface CargoMapper {
             + " ORDER BY c.id DESC")
     @ResultMap("cargoList")
     java.util.List<CargoRecord> findByShipperId(@Param("shipperId") Long shipperId);
+
+    /**
+     * 追跡番号でまとめて引く（IT15）。
+     *
+     * <p>由来（シミュレーションか）を一覧の件数だけ問うために使う。1 件ずつ確かめると、
+     * 例外が増えた日に問い合わせがその数だけ増える。
+     */
+    @Select({"<script>",
+        "SELECT " + COLUMNS + JOINS,
+        "WHERE c.tracking_number IN",
+        "<foreach item='number' collection='trackingNumbers'"
+                + " open='(' separator=',' close=')'>#{number}</foreach>",
+        "</script>"})
+    @ResultMap("cargoList")
+    java.util.List<CargoRecord> findByTrackingNumbers(
+            @Param("trackingNumbers") java.util.List<String> trackingNumbers);
 }

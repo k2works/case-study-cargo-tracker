@@ -71,6 +71,21 @@ class TrackingManagementControllerTest {
     @MockitoBean
     private ManageTrackingUseCase manage;
 
+    @MockitoBean
+    private com.example.trackingms.application.internal.outboundservices.acl
+            .ShipperCargoSnapshotFinder shipperSnapshots;
+
+    /** シミュレーションが作った貨物の追跡番号。 */
+    private static final String SIMULATED_NUMBER = "TRK-20260823-9001";
+
+    private static TrackingActivity simulatedActivity() {
+        return TrackingActivity.start(TrackingNumber.of(SIMULATED_NUMBER),
+                        TrackingBookingId.of("BKG-2026009001"), TOKYO, LOS_ANGELES,
+                        LocalDate.of(2027, Month.OCTOBER, 20))
+                .afterHandling("RECEIVE", "JPTYO")
+                .afterHandling("LOAD", "JPTYO");
+    }
+
     private static TrackingActivity loaded() {
         return TrackingActivity.start(TrackingNumber.of(NUMBER),
                         TrackingBookingId.of("BKG-2026000004"), TOKYO, LOS_ANGELES,
@@ -256,6 +271,41 @@ class TrackingManagementControllerTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.count").value(2))
                     .andExpect(jsonPath("$.urgentCount").value(1));
+        }
+
+        /**
+         * <strong>シミュレーション由来は外す</strong>（[ADR-030] 決定 3・IT15）。
+         *
+         * <p>追跡管理者の仕事は「対応すべき例外に気づくこと」である。US37 の継続実行は
+         * 例外を意図的に起こすため、混ぜたままにすると<strong>本物の例外が数に埋もれる</strong>。
+         * 件数が信用できなくなれば、一覧そのものが見られなくなる。
+         *
+         * <p>荷主コードを持つのは bookingms だけなので、由来は Snapshot から問う。
+         */
+        @Test
+        @DisplayName("シミュレーション由来の貨物は、件数にも一覧にも出さない")
+        void excludesSimulatedCargo() throws Exception {
+            TrackingActivity real = loaded()
+                    .raiseException(ExceptionType.LOST, "所在不明", NOW);
+            TrackingActivity simulated = simulatedActivity()
+                    .raiseException(ExceptionType.DELAY, "遅延", NOW);
+            when(manage.withOpenExceptions()).thenReturn(List.of(real, simulated));
+            when(shipperSnapshots.simulatedAmong(any()))
+                    .thenReturn(java.util.Set.of(SIMULATED_NUMBER));
+
+            mockMvc.perform(get("/api/v1/tracking/manage/exceptions/open")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "tracker01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_TRACKER"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.count").value(1))
+                    .andExpect(jsonPath("$.urgentCount").value(1));
+
+            mockMvc.perform(get("/api/v1/tracking/manage/exceptions")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "tracker01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_TRACKER"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.length()").value(1))
+                    .andExpect(jsonPath("$[0].trackingNumber").value(NUMBER));
         }
     }
 

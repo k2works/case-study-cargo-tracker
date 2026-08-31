@@ -19,4 +19,17 @@ public interface ShipperCargoSnapshotFinder {
      * 1 件ずつ {@link #findByTrackingNumber} で確かめる形も、貨物の数だけ問い合わせが増える。
      */
     List<ShipperCargoSnapshot> findByShipperId(long shipperId);
+
+    /**
+     * この中でシミュレーション由来のもの（[ADR-030] 決定 3・IT15）。
+     *
+     * <p><strong>まとめて問う。</strong>1 件ずつ確かめると、例外が増えた日に
+     * 問い合わせがその数だけ増える——US37 の継続実行は例外を意図的に起こす。
+     *
+     * <p><strong>越境点はこのポート 1 つに保つ。</strong>由来を問うためだけに別の
+     * 出口を作ると、bookingms への入口が 2 つになり、認可も契約も二重に管理することになる。
+     *
+     * @return 由来がシミュレーションである追跡番号。渡した中に無いものは含まない
+     */
+    java.util.Set<String> simulatedAmong(List<TrackingNumber> trackingNumbers);
 }

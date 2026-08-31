@@ -288,7 +288,7 @@ class CancellationUseCaseTest {
         @Override
         public Optional<CargoSummary> findByBookingId(String bookingId) {
             return BOOKING_ID.equals(bookingId)
-                    ? Optional.of(new CargoSummary(stored, "荷主")) : Optional.empty();
+                    ? Optional.of(new CargoSummary(stored, "荷主", "SHP-0001")) : Optional.empty();
         }
 
         @Override

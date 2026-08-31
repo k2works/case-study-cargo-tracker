@@ -162,7 +162,7 @@ class AdvanceBookingUseCaseTest {
                 String trackingNumber) {
             return TRACKING.equals(trackingNumber)
                     ? Optional.of(new com.example.bookingms.domain.repository.CargoSummary(
-                            stored, "荷主"))
+                            stored, "荷主", "SHP-0001"))
                     : Optional.empty();
         }
 

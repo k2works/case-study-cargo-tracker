@@ -232,7 +232,7 @@ class BookingConfirmationTest {
     @DisplayName("確定した予約も経路設計者が開ける（US14 の前提）")
     void confirmedBookingStaysVisibleToRoutingPlanner() throws Exception {
         when(cargoes.findByBookingId("BKG-2026000001"))
-                .thenReturn(Optional.of(new CargoSummary(BookingTestCargoes.notified().confirm(), "丸紅商事")));
+                .thenReturn(Optional.of(new CargoSummary(BookingTestCargoes.notified().confirm(), "丸紅商事", "SHP-0001")));
 
         mockMvc.perform(get("/api/v1/bookings/BKG-2026000001")
                         .header(AuthenticatedUser.USER_ID_HEADER, "routing01")
@@ -280,7 +280,7 @@ class BookingConfirmationTest {
                         Instant.parse("2027-09-12T09:00:00Z"),
                         Instant.parse("2027-09-25T09:00:00Z")))));
         when(cargoes.findByBookingId("BKG-2026000001"))
-                .thenReturn(Optional.of(new CargoSummary(beyond, "丸紅商事")));
+                .thenReturn(Optional.of(new CargoSummary(beyond, "丸紅商事", "SHP-0001")));
         when(locations.timeZoneOf("USLAX"))
                 .thenReturn(Optional.of(ZoneId.of("America/Los_Angeles")));
 
@@ -304,7 +304,7 @@ class BookingConfirmationTest {
     @DisplayName("経理担当者も予約詳細を読める")
     void opensTheBookingDetailToTheAccountant() throws Exception {
         when(cargoes.findByBookingId("BKG-2026000001"))
-                .thenReturn(Optional.of(new CargoSummary(BookingTestCargoes.routed(), "丸紅商事")));
+                .thenReturn(Optional.of(new CargoSummary(BookingTestCargoes.routed(), "丸紅商事", "SHP-0001")));
         when(locations.timeZoneOf("USLAX"))
                 .thenReturn(Optional.of(ZoneId.of("America/Los_Angeles")));
 
@@ -346,7 +346,7 @@ class BookingConfirmationTest {
         Cargo misrouted = BookingTestCargoes.routed()
                 .misrouted("SGSIN", Instant.parse("2027-09-10T12:00:00Z"));
         when(cargoes.findByBookingId("BKG-2026000001"))
-                .thenReturn(Optional.of(new CargoSummary(misrouted, "丸紅商事")));
+                .thenReturn(Optional.of(new CargoSummary(misrouted, "丸紅商事", "SHP-0001")));
         when(locations.timeZoneOf("USLAX"))
                 .thenReturn(Optional.of(ZoneId.of("America/Los_Angeles")));
         when(locations.findByUnLocode("SGSIN"))
@@ -375,7 +375,7 @@ class BookingConfirmationTest {
         Cargo misrouted = BookingTestCargoes.routed()
                 .misrouted("XXUNK", Instant.parse("2027-09-10T12:00:00Z"));
         when(cargoes.findByBookingId("BKG-2026000001"))
-                .thenReturn(Optional.of(new CargoSummary(misrouted, "丸紅商事")));
+                .thenReturn(Optional.of(new CargoSummary(misrouted, "丸紅商事", "SHP-0001")));
         when(locations.timeZoneOf("USLAX"))
                 .thenReturn(Optional.of(ZoneId.of("America/Los_Angeles")));
         when(locations.findByUnLocode("XXUNK")).thenReturn(Optional.empty());
@@ -396,7 +396,7 @@ class BookingConfirmationTest {
     @DisplayName("期限内の予約では、超過の日数を返さない")
     void omitsDaysBeyondDeadlineWithinDeadline() throws Exception {
         when(cargoes.findByBookingId("BKG-2026000001"))
-                .thenReturn(Optional.of(new CargoSummary(BookingTestCargoes.routed(), "丸紅商事")));
+                .thenReturn(Optional.of(new CargoSummary(BookingTestCargoes.routed(), "丸紅商事", "SHP-0001")));
         when(locations.timeZoneOf("USLAX"))
                 .thenReturn(Optional.of(ZoneId.of("America/Los_Angeles")));
 
@@ -416,7 +416,7 @@ class BookingConfirmationTest {
     @DisplayName("目的地の暦が引けなくても、詳細は開ける")
     void stillOpensWhenTimeZoneIsMissing() throws Exception {
         when(cargoes.findByBookingId("BKG-2026000001"))
-                .thenReturn(Optional.of(new CargoSummary(BookingTestCargoes.routed(), "丸紅商事")));
+                .thenReturn(Optional.of(new CargoSummary(BookingTestCargoes.routed(), "丸紅商事", "SHP-0001")));
         when(locations.timeZoneOf("USLAX")).thenReturn(Optional.empty());
 
         mockMvc.perform(get("/api/v1/bookings/BKG-2026000001")
@@ -440,7 +440,7 @@ class BookingConfirmationTest {
     @DisplayName("追跡管理者と荷役作業員は、予約の詳細を読める")
     void opensDetailToTrackerAndHandler() throws Exception {
         when(cargoes.findByBookingId("BKG-2026000001"))
-                .thenReturn(Optional.of(new CargoSummary(BookingTestCargoes.routed(), "丸紅商事")));
+                .thenReturn(Optional.of(new CargoSummary(BookingTestCargoes.routed(), "丸紅商事", "SHP-0001")));
         when(locations.timeZoneOf("USLAX"))
                 .thenReturn(Optional.of(ZoneId.of("America/Los_Angeles")));
 

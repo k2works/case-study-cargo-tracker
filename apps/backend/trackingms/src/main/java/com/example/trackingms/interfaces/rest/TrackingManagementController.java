@@ -41,11 +41,19 @@ public class TrackingManagementController {
 
     private final ManageTrackingUseCase manage;
 
+    /** 由来を問う出口。越境点はこのポート 1 つに保つ。 */
+    private final com.example.trackingms.application.internal.outboundservices.acl
+            .ShipperCargoSnapshotFinder shipperSnapshots;
+
     /** 表示の暦。日時は業務のタイムゾーンで出す（[ADR-010]）。 */
     private final java.time.ZoneId zone;
 
-    public TrackingManagementController(ManageTrackingUseCase manage, java.time.Clock clock) {
+    public TrackingManagementController(ManageTrackingUseCase manage,
+            com.example.trackingms.application.internal.outboundservices.acl
+                    .ShipperCargoSnapshotFinder shipperSnapshots,
+            java.time.Clock clock) {
         this.manage = manage;
+        this.shipperSnapshots = shipperSnapshots;
         this.zone = clock.getZone();
     }
 
@@ -66,7 +74,7 @@ public class TrackingManagementController {
             @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles) {
         requireExceptionReader(userId, roles);
 
-        List<TrackingActivity> open = manage.withOpenExceptions();
+        List<TrackingActivity> open = withoutSimulated(manage.withOpenExceptions());
         return new OpenExceptionSummary(open.size(),
                 (int) open.stream().filter(TrackingActivity::hasUrgentException).count());
     }
@@ -78,7 +86,7 @@ public class TrackingManagementController {
             @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles) {
         requireExceptionReader(userId, roles);
 
-        return manage.withOpenExceptions().stream()
+        return withoutSimulated(manage.withOpenExceptions()).stream()
                 .map(activity -> ManagedTrackingResponse.from(activity, List.of(), List.of(), zone))
                 .toList();
     }
@@ -188,6 +196,32 @@ public class TrackingManagementController {
         static TrackingStatusResponse from(TrackingStatus status) {
             return new TrackingStatusResponse(status.name(), status.label());
         }
+    }
+
+    /**
+     * シミュレーション由来を外す（[ADR-030] 決定 3・IT15）。
+     *
+     * <p>追跡管理者の仕事は<strong>対応すべき例外に気づくこと</strong>である。
+     * US37 の継続実行は例外を意図的に起こすため、混ぜたままにすると本物の例外が
+     * 数に埋もれる。件数が信用できなくなれば、一覧そのものが見られなくなる。
+     *
+     * <p><strong>件数と一覧で同じ絞りを通す。</strong>片方だけに掛けると、
+     * 「1 件あります」と出るのに開くと空、という形になる。
+     *
+     * <p>荷主コードを持つのは bookingms だけなので、由来はそこへ問う。
+     */
+    private List<TrackingActivity> withoutSimulated(List<TrackingActivity> activities) {
+        if (activities.isEmpty()) {
+            return activities;
+        }
+        java.util.Set<String> simulated = shipperSnapshots.simulatedAmong(
+                activities.stream().map(TrackingActivity::trackingNumber).toList());
+        if (simulated.isEmpty()) {
+            return activities;
+        }
+        return activities.stream()
+                .filter(activity -> !simulated.contains(activity.trackingNumber().value()))
+                .toList();
     }
 
     /** 未解決の例外の件数（横断規約）。 */

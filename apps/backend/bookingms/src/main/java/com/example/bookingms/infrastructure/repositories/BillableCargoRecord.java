@@ -16,6 +16,8 @@ public class BillableCargoRecord {
     private String bookingStatus;
     private String shipperId;
     private String shipperName;
+
+    private String shipperCode;
     private String shipperType;
     private BigDecimal discountRate;
     private BigDecimal weightKg;
@@ -75,6 +77,14 @@ public class BillableCargoRecord {
 
     public void setShipperName(String shipperName) {
         this.shipperName = shipperName;
+    }
+
+    public String getShipperCode() {
+        return shipperCode;
+    }
+
+    public void setShipperCode(String shipperCode) {
+        this.shipperCode = shipperCode;
     }
 
     public void setShipperType(String shipperType) {
