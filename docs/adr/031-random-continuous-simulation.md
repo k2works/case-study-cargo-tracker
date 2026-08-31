@@ -9,8 +9,8 @@
 
 **提案（決定 1〜6）**。IT15 で実装し、検査で固定する。
 
-**いま守られているのは決定 5・6 だけである。** 決定 1〜4 は US37（継続実行）の実装と
-同時に入る。コンプライアンス表で**まだ無い検査はバッククォートで囲んでいない**——
+**いま守られているのは決定 1・4・5・6 と、決定 3 の前半である。** 残るのは決定 2
+（スケジューラ）と決定 3 の後半（ヘルスチェックの除外）で、US37 の配線と同時に入る。コンプライアンス表で**まだ無い検査はバッククォートで囲んでいない**——
 囲むと `AdrComplianceTableTest` が「実在する」と読み、無いものを在るように見せてしまう。
 名前で追えない表は作文である。
 
@@ -143,10 +143,10 @@ US34-5 が守っているのは「押した人が、いま何が動いている�
 
 | 決定 | 破られたときに起きること | 検査 |
 | :--- | :--- | :--- |
-| 1 種から乱数器を作り直す | 落ちた実行を再現できない | ScenarioGeneratorTest（同じ種 → 同じ並び。**並行して取り出しても変わらない**）。**Phase 3.2 で置く——まだ無い** |
+| 1 種から乱数器を作り直す | 落ちた実行を再現できない | `ScenarioGeneratorTest`（同じ種 → 同じ並び。**並行して取り出しても変わらない**） |
 | 2 スケジューラは内に置く | 止められない実行が残る | ContinuousRunSchedulerTest（停止したら新規の開始が起きない）。**Phase 3.3 で置く——まだ無い** |
-| 3 上限で守りヘルスチェックは除外 | 過負荷で自分を再起動ループにする | ContinuousRunPolicyTest（上限を超えて開始しない）・SimulationHealthNotThrottledTest（**上限に達した状態で liveness / readiness が通る**）。**Phase 3.4・4.1 で置く——まだ無い** |
-| 4 停止は新規の開始だけ止める | 中途半端な貨物が残る | ContinuousRunSessionTest（`STOPPING` から、進行中が終わって初めて `STOPPED` になる）。**Phase 3.3 で置く——まだ無い** |
+| 3 上限で守りヘルスチェックは除外 | 過負荷で自分を再起動ループにする | `ContinuousRunPolicyTest`（上限を超えて開始しない。**上限の上限も置く**）・SimulationHealthNotThrottledTest（**上限に達した状態で liveness / readiness が通る**）。**後半は Phase 4.1 で置く——まだ無い** |
+| 4 停止は新規の開始だけ止める | 中途半端な貨物が残る | `ContinuousRunSessionTest`（`STOPPING` から、進行中が終わって初めて `STOPPED` になる） |
 | 5 例外は実際の操作で起こす | 検知を迂回した実装が緑になる | `SimulationArchitectureTest`（**例外注入専用の経路をどこからも参照しない**）・`ExceptionScenarioTest`（誤配は「違う港での荷役記録」として組み立てる） |
 | 6 二重実行の拒否は手押しだけ | 継続実行が 1 本目以降を開始できない | `RunSimulationUseCaseTest`（手で押す実行では断る）・`SimulationRunNumberingConcurrencyIntegrationTest`（継続実行の経路では断らない） |
 
