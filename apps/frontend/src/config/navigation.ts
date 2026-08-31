@@ -131,6 +131,14 @@ export const NAVIGATION: NavigationItem[] = [
     roles: ["ROLE_ADMIN"],
     available: true,
   },
+  // 業務シミュレーション（US34・US35）。配備直後にどこが切れているかを、
+  // 7 ロール分のログインをせずに切り分ける
+  {
+    label: "業務シミュレーション",
+    to: "/admin/simulations",
+    roles: ["ROLE_ADMIN"],
+    available: true,
+  },
 ];
 
 /**

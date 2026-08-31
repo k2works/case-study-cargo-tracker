@@ -943,3 +943,85 @@ export function differenceOf(existing: MockVoyage, incoming: MockVoyage) {
 
 
 /** 積み替えに要する最低時間（ミリ秒）。サーバの TransitPath.MINIMUM_TRANSSHIPMENT と同じ 6 時間。 */
+
+type SimulationRun = {
+  runId: string
+  scenarioId: string
+  status: 'RUNNING' | 'COMPLETED' | 'FAILED'
+  startedBy: string
+  startedAt: string
+  finishedAt: string | null
+  failureReason: string | null
+  steps: {
+    step: string
+    label: string
+    role: string
+    outcome: 'SUCCEEDED' | 'FAILED'
+    elapsedMs: number
+    createdIdentifier: string | null
+    failureReason: string | null
+    recordedAt: string | null
+  }[]
+}
+
+/**
+ * 業務シミュレーションのシナリオ（US34）。
+ *
+ * **工程の見出しと役割はサーバが持つ**。ここで持つのは、本物が返すものの写しである。
+ */
+export const simulationScenarios = [
+  {
+    id: 'standard-transport',
+    steps: [
+      { step: 'REGISTER_SHIPPER', label: '荷主登録', role: 'ROLE_SALES' },
+      { step: 'REGISTER_BOOKING', label: '予約登録', role: 'ROLE_SALES' },
+      { step: 'REQUEST_ROUTING', label: '経路設計依頼', role: 'ROLE_SALES' },
+      { step: 'REGISTER_VOYAGE', label: '航海登録', role: 'ROLE_ROUTING' },
+      { step: 'ASSIGN_ROUTE', label: '経路割り当て', role: 'ROLE_ROUTING' },
+      { step: 'NOTIFY_ROUTE', label: '経路通知', role: 'ROLE_SALES' },
+      { step: 'CONFIRM_BOOKING', label: '予約確定', role: 'ROLE_SALES' },
+      { step: 'ISSUE_TRACKING_NUMBER', label: '追跡番号発行', role: 'ROLE_ROUTING' },
+      { step: 'RECORD_HANDLING', label: '荷役記録', role: 'ROLE_HANDLER' },
+      { step: 'DECLARE_CUSTOMS', label: '通関申告', role: 'ROLE_HANDLER' },
+      { step: 'CLEAR_CUSTOMS', label: '通関完了', role: 'ROLE_TRACKER' },
+      { step: 'RECORD_CLAIM', label: '引取記録', role: 'ROLE_HANDLER' },
+      { step: 'CALCULATE_CHARGE', label: '料金算出', role: 'ROLE_ACCOUNTANT' },
+      { step: 'SETTLE', label: '精算', role: 'ROLE_ACCOUNTANT' },
+    ],
+  },
+]
+
+/** 実行の履歴（US35）。**失敗した実行も残す**——巻き戻さないことがここに表れる。 */
+export const simulationRuns: SimulationRun[] = [
+  {
+    runId: 'SIM-20261116-0001',
+    scenarioId: 'standard-transport',
+    status: 'COMPLETED',
+    startedBy: 'admin01',
+    startedAt: '2026-11-16T01:00:00Z',
+    finishedAt: '2026-11-16T01:00:12Z',
+    failureReason: null,
+    steps: [
+      {
+        step: 'REGISTER_SHIPPER',
+        label: '荷主登録',
+        role: 'ROLE_SALES',
+        outcome: 'SUCCEEDED',
+        elapsedMs: 120,
+        createdIdentifier: '42',
+        failureReason: null,
+        recordedAt: '2026-11-16T01:00:01Z',
+      },
+      {
+        step: 'ISSUE_TRACKING_NUMBER',
+        label: '追跡番号発行',
+        role: 'ROLE_ROUTING',
+        outcome: 'SUCCEEDED',
+        elapsedMs: 88,
+        createdIdentifier: 'TRK-20261116-0001',
+        failureReason: null,
+        recordedAt: '2026-11-16T01:00:08Z',
+      },
+    ],
+  },
+]

@@ -28,6 +28,8 @@ import { VoyageListPage } from './pages/voyage-list-page'
 import { VoyageDetailPage } from './pages/voyage-detail-page'
 import { VoyageRegisterPage } from './pages/voyage-register-page'
 import { RouteDesignPage } from './pages/route-design-page'
+import { SimulationDetailPage } from './pages/simulation-detail-page'
+import { SimulationsPage } from './pages/simulations-page'
 import { LockedAccountsPage } from './pages/locked-accounts-page'
 import { HandlingPage } from './pages/handling-page'
 import { TrackingManagePage } from './pages/tracking-manage-page'
@@ -105,6 +107,10 @@ export default function App() {
         }
       >
         <Route path="/admin/accounts" element={<LockedAccountsPage />} />
+        {/* 業務シミュレーション（US34・US35）。**システム管理者だけ**——
+            業務データを作る操作であり、業務の担当者が誤って踏める場所には置かない */}
+        <Route path="/admin/simulations" element={<SimulationsPage />} />
+        <Route path="/admin/simulations/:runId" element={<SimulationDetailPage />} />
       </Route>
 
       {/* 荷主向けの自社貨物追跡（US33）。公開追跡とは分け、自社境界はサーバでも守る。 */}

@@ -95,4 +95,8 @@ export const API_PATHS = {
   lockedAccounts: '/api/v1/admin/accounts/locked',
   unlockAccount: (username: string) =>
     `/api/v1/admin/accounts/${encodeURIComponent(username)}/unlock`,
+  /** 業務シミュレーション（US34・US35）。システム管理者のみ。 */
+  simulations: '/api/v1/simulations',
+  simulationScenarios: '/api/v1/simulations/scenarios',
+  simulationRun: (runId: string) => `/api/v1/simulations/${encodeURIComponent(runId)}`,
 } as const

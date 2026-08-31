@@ -118,7 +118,12 @@ export const PANELS: Panel[] = [
     role: 'ROLE_ADMIN',
     title: '管理者ダッシュボード',
     // ロックされた利用者は自分では何もできない。管理者がそこへ行けないと業務が止まる
-    actions: [{ label: 'ロックされたアカウントを解除する', to: '/admin/accounts' }],
+    actions: [
+      { label: 'ロックされたアカウントを解除する', to: '/admin/accounts' },
+      // 配備直後に「どこが切れているか」を切り分ける手段。入口が無いと、
+      // 実行できる仕組みがあっても誰も辿り着けない（US34）
+      { label: '業務シミュレーションを実行する', to: '/admin/simulations' },
+    ],
   },
   {
     role: 'ROLE_ACCOUNTANT',

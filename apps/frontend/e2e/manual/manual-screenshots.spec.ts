@@ -309,6 +309,25 @@ test('07-locked-accounts（ロックされたアカウントの解除）', async
   await page.screenshot({ path: `${ASSETS}/07-locked-accounts.png`, fullPage: true })
 })
 
+test('15-simulations（業務シミュレーションの実行）', async ({ page }) => {
+  await login(page, 'admin01')
+
+  await page.getByRole('link', { name: '業務シミュレーションを実行する' }).click()
+  await expect(page.getByRole('heading', { name: '業務シミュレーション' })).toBeVisible()
+
+  await page.screenshot({ path: `${ASSETS}/15-simulations.png`, fullPage: true })
+})
+
+test('15-simulation-detail（工程ごとの結果）', async ({ page }) => {
+  await login(page, 'admin01')
+
+  await page.getByRole('link', { name: '業務シミュレーションを実行する' }).click()
+  await page.getByRole('link', { name: /^SIM-/ }).first().click()
+  await expect(page.getByRole('heading', { name: /^実行 / })).toBeVisible()
+
+  await page.screenshot({ path: `${ASSETS}/15-simulation-detail.png`, fullPage: true })
+})
+
 test('08-handling（荷役作業の記録）', async ({ page }) => {
   await login(page, 'handler01')
 
