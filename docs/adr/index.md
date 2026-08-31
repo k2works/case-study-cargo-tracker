@@ -35,6 +35,6 @@
 | [ADR-027](027-transport-charge-calculation.md) | 輸送料金は区間数 × 重量 × 貨物種別で算定し、確定操作で精算書を発行する（距離は持っていない。**IT12 で地域区分と輸出免税を追補**） | 承認済み | 2026-08-26 |
 | [ADR-028](028-settlement-and-quotation.md) | 入金は別表に持ち、間違いは赤伝で出し直す。料金の式は billingms の 1 か所にあり、見積は ACL 経由で問う | 承認済み | 2026-08-26 |
 | [ADR-029](029-shipper-tracking-boundary-and-inactivity-timeout.md) | 荷主向け追跡は認証済みの別経路で自社貨物だけを返し、無操作 15 分で警告、20 分でログアウトする | 承認済み | 2026-08-27 |
-| [ADR-030](030-business-simulation-execution.md) | 業務シミュレーションは Gateway 経由で本番の経路を踏み、由来を荷主コードで識別する | 提案 | 2026-08-31 |
+| [ADR-030](030-business-simulation-execution.md) | 業務シミュレーションは Gateway 経由で本番の経路を踏み、由来を荷主コードで識別する | 提案（決定 3 が道半ば——追跡の未解決例外一覧は IT15） | 2026-08-31 |
 
 ADR の作成には `creating-adr` スキルを使用してください。
