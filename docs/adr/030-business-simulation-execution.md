@@ -111,8 +111,8 @@ IT12 では `@Transactional` が入金の記録ごと巻き戻し、経理担当
 
 | 決定 | 破られたら何が起きるか | それが起きないことの検査 |
 | :--- | :--- | :--- |
-| 1 simulationms を独立させる | 業務サービスが呼び出し元の都合で変わる | 未実装（Phase 2.1）: simulationms のドメイン層が他 BC の型を持ち込まないアーキテクチャ検査と、既存 6 サービスが simulationms を参照しない検査 |
-| 2 Gateway 経由・実利用者として呼ぶ | 認可を素通りする経路が新設される | 未実装（Phase 3.1）: 出口が 1 ポートだけであること・内部 API のパスを参照しないこと・工程ごとに違うロールでログインすること |
+| 1 simulationms を独立させる | 業務サービスが呼び出し元の都合で変わる | `ArchitectureTest`（simulationms も shared の `ServiceArchitectureTest` を継承し、BC 独立性ルールの対象になる）・`ArchitectureRuleCoverageTest`（settings.gradle の全サービスが対象であることを名簿なしで確かめる） |
+| 2 Gateway 経由・実利用者として呼ぶ | 認可を素通りする経路が新設される | `SimulationArchitectureTest`（内部 API と `system:` 名乗りをどこからも参照しない／出口は `BusinessGateway` の 1 ポートだけ。**違反を入れて赤になることを確認済み**）・`ScenarioTest`（すべての工程が踏む人のロールを持つ） |
 | 3 荷主コードで識別する | 実データに混ざり、締めと対応一覧が信用できなくなる | 未実装（Phase 4.1・4.3）: `SIM-` 帯の採番と、精算の締め対象・未解決例外一覧・荷主向け一覧のそれぞれで**除外する側**に置く検査 |
 | 4 本番では起動しない | 本番に実在しない輸送の記録が残る | `SimulationDisabledInProductionTest`（本番プロファイル + 有効化で起動が失敗する・無効なら起動する・本番でなければ有効にできる） |
 | 5 巻き戻さない | どこまで進んだかを追えない | `SimulationRunTest`（失敗した工程で止まり、それまでの結果と識別子が残る／失敗後は続きを記録できない）。実際の業務データが残ることは Phase 3.4 で統合テストにする |
