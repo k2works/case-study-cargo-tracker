@@ -42,6 +42,73 @@ public class SimulationConfig {
         return new MyBatisSimulationRunRepository(mapper);
     }
 
+    /** 継続実行のセッションの永続化（US37）。 */
+    @Bean
+    public com.example.simulationms.domain.repository.ContinuousRunSessionRepository
+            continuousRunSessionRepository(
+            com.example.simulationms.infrastructure.repositories.ContinuousRunSessionMapper
+                    mapper) {
+        return new com.example.simulationms.infrastructure.repositories
+                .MyBatisContinuousRunSessionRepository(mapper);
+    }
+
+    /**
+     * 継続実行を走らせるスレッド。
+     *
+     * <p><strong>数を上限に合わせて絞る。</strong>絞らないと、上限の判定をすり抜けた
+     * ときにスレッドが際限なく増える——上限は 2 か所で守る方が安い。
+     *
+     * <p><strong>ヘルスチェックはこのプールを通らない。</strong>Web の要求は Tomcat の
+     * スレッドで処理される。ここが埋まっても liveness / readiness は影響を受けない
+     * （[ADR-031] 決定 3・IT7 の再発防止）。
+     */
+    @Bean(destroyMethod = "shutdown")
+    public java.util.concurrent.ExecutorService continuousRunExecutor() {
+        return java.util.concurrent.Executors.newFixedThreadPool(
+                com.example.simulationms.domain.model.valueobjects.ContinuousRunPolicy
+                        .MAX_CONCURRENT_LIMIT,
+                Thread.ofPlatform().name("simulation-run-", 0).daemon().factory());
+    }
+
+    /** 継続実行の 1 件を別スレッドで走らせる出口（US37）。 */
+    @Bean
+    public com.example.simulationms.application.internal.commandservices.ContinuousRunner
+            continuousRunner(
+            com.example.simulationms.application.internal.commandservices.RunSimulationUseCase
+                    runSimulation,
+            java.util.concurrent.ExecutorService continuousRunExecutor) {
+        return new com.example.simulationms.infrastructure.scheduling.AsyncContinuousRunner(
+                runSimulation, continuousRunExecutor);
+    }
+
+    /** 継続実行の刻み（[ADR-031] 決定 2）。**外部のジョブ基盤を持ち込まない**。 */
+    @Bean
+    public com.example.simulationms.application.internal.commandservices.ContinuousRunScheduler
+            continuousRunScheduler(
+            com.example.simulationms.domain.repository.ContinuousRunSessionRepository sessions,
+            com.example.simulationms.application.internal.commandservices.ContinuousRunner runner,
+            Clock clock) {
+        return new com.example.simulationms.application.internal.commandservices
+                .ContinuousRunScheduler(sessions, runner, clock);
+    }
+
+    /**
+     * 刻みを回す。
+     *
+     * <p>シミュレーションを無効にした環境では登録しない——設定の名前が守っている
+     * つもりにならないよう、<strong>実際に何も動かない</strong>形にする。
+     */
+    @Bean
+    @org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
+            name = "app.simulation.enabled", havingValue = "true", matchIfMissing = true)
+    public com.example.simulationms.infrastructure.scheduling.ContinuousRunTrigger
+            continuousRunTrigger(
+            com.example.simulationms.application.internal.commandservices.ContinuousRunScheduler
+                    scheduler) {
+        return new com.example.simulationms.infrastructure.scheduling.ContinuousRunTrigger(
+                scheduler);
+    }
+
     /**
      * 業務タイムゾーンの時計。
      *

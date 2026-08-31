@@ -12,6 +12,12 @@ public class SimulationRunRecord {
     private String startedBy;
     private Instant startedAt;
 
+    /** 使った乱数の種（US37-3）。手で押した実行は 0。 */
+    private long seed;
+
+    /** 継続実行のセッション。手で押した実行は null。 */
+    private String sessionId;
+
     public Long getId() {
         return id;
     }
@@ -58,5 +64,21 @@ public class SimulationRunRecord {
 
     public void setStartedAt(Instant startedAt) {
         this.startedAt = startedAt;
+    }
+
+    public long getSeed() {
+        return seed;
+    }
+
+    public void setSeed(long seed) {
+        this.seed = seed;
+    }
+
+    public String getSessionId() {
+        return sessionId;
+    }
+
+    public void setSessionId(String sessionId) {
+        this.sessionId = sessionId;
     }
 }

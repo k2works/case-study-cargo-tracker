@@ -6,6 +6,7 @@ import com.example.simulationms.domain.model.aggregates.SimulationRun;
 import com.example.simulationms.domain.model.valueobjects.RunId;
 import com.example.simulationms.domain.model.valueobjects.RunStatus;
 import com.example.simulationms.domain.model.valueobjects.Scenario;
+import com.example.simulationms.domain.model.valueobjects.Seed;
 import com.example.simulationms.domain.model.valueobjects.ScenarioStep;
 import com.example.simulationms.domain.model.valueobjects.StepResult;
 import com.example.simulationms.domain.repository.SimulationRunRepository;
@@ -69,14 +70,14 @@ class SimulationRunPersistenceIntegrationTest {
 
     private SimulationRun create(String runId, Scenario scenario) {
         SimulationRun run = SimulationRun.start(RunId.of(runId), scenario, "admin01", STARTED);
-        runs.create(run);
+        runs.create(run, Seed.of(0L), null);
         return run;
     }
 
     private SimulationRun create(String runId) {
         SimulationRun run = SimulationRun.start(RunId.of(runId), shortScenario(),
                 "admin01", STARTED);
-        runs.create(run);
+        runs.create(run, Seed.of(0L), null);
         return run;
     }
 

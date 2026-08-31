@@ -5,6 +5,9 @@ import com.example.simulationms.application.internal.outboundservices.acl.Busine
 import com.example.simulationms.domain.model.aggregates.SimulationRun;
 import com.example.simulationms.domain.model.valueobjects.BusinessContextKey;
 import com.example.simulationms.domain.model.valueobjects.RunId;
+import com.example.simulationms.domain.model.valueobjects.ScenarioRequest;
+import com.example.simulationms.domain.model.valueobjects.Seed;
+import com.example.simulationms.domain.model.valueobjects.SessionId;
 import com.example.simulationms.domain.model.valueobjects.Scenario;
 import com.example.simulationms.domain.model.valueobjects.ScenarioStep;
 import com.example.simulationms.domain.model.valueobjects.StepResult;
@@ -58,13 +61,35 @@ public class RunSimulationUseCase {
         this.clock = clock;
     }
 
+    /**
+     * 管理者が手で押した実行（US34）。
+     *
+     * <p><strong>同じシナリオが実行中なら断る</strong>（US34-5）。押した人が
+     * いま何が動いているかを分からなくなるのを防ぐためである。
+     */
     public SimulationRun run(Scenario scenario, String startedBy) {
         runs.findRunningByScenario(scenario, clock.instant().minus(STALE_AFTER))
                 .ifPresent(running -> {
                     throw new SimulationAlreadyRunningException(running.runId());
                 });
+        return execute(scenario, startedBy, Seed.of(0L), null);
+    }
 
-        SimulationRun run = startWithNextFreeRunId(scenario, startedBy);
+    /**
+     * 継続実行が始めた 1 件（US37）。
+     *
+     * <p><strong>二重実行の拒否は通さない</strong>（[ADR-031] 決定 6）。継続実行は
+     * 同じシナリオを何本も並べて動かすため、US34-5 とそもそも噛み合わない。
+     * US34-5 が守っているのは「押した人が分からなくなる」ことであり、
+     * ここにはその読み手がいない——開始したのはセッションであって、押した人ではない。
+     */
+    public SimulationRun runForSession(ScenarioRequest request, SessionId sessionId, Seed seed) {
+        return execute(request.scenario(), sessionId.value(), seed, sessionId);
+    }
+
+    private SimulationRun execute(Scenario scenario, String startedBy, Seed seed,
+            SessionId sessionId) {
+        SimulationRun run = startWithNextFreeRunId(scenario, startedBy, seed, sessionId);
         RunId runId = run.runId();
 
         Map<String, String> context = new HashMap<>();
@@ -129,12 +154,13 @@ public class RunSimulationUseCase {
      * 次の番号を採る。番号を決める場所と、番号が空いていることを保証する場所を
      * 同じにしない限り、この形以外に隙間は塞げない。
      */
-    private SimulationRun startWithNextFreeRunId(Scenario scenario, String startedBy) {
+    private SimulationRun startWithNextFreeRunId(Scenario scenario, String startedBy,
+            Seed seed, SessionId sessionId) {
         for (int attempt = 1; attempt <= MAX_NUMBERING_ATTEMPTS; attempt++) {
             SimulationRun run = SimulationRun.start(
                     nextRunId(), scenario, startedBy, clock.instant());
             try {
-                runs.create(run);
+                runs.create(run, seed, sessionId);
                 return run;
             } catch (RunIdAlreadyTakenException e) {
                 // 別の実行が先に採った。次の番号で採り直す。

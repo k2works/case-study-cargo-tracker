@@ -14,8 +14,15 @@ public interface SimulationRunRepository {
      * <p><strong>作成と工程の追記を分ける。</strong>「常に INSERT する save」で追記まで
      * 賄うと、最初の工程を記録したときに実行の行が増える。作成しか起きないうちは
      * 表面化せず、最初の追記で壊れる（IT7 の教訓）。
+     *
+     * <p><strong>種は必ず残す</strong>（US37-3・[ADR-031] 決定 1）。手で押した実行も
+     * 例外ではない——列を NULL 可にすると、記録し忘れても行は書けてしまう。
+     *
+     * @param seed 使った乱数の種。手で押した実行は乱数を使わないので 0
+     * @param sessionId 継続実行のセッション。手で押した実行は {@code null}
      */
-    void create(SimulationRun run);
+    void create(SimulationRun run, com.example.simulationms.domain.model.valueobjects.Seed seed,
+            com.example.simulationms.domain.model.valueobjects.SessionId sessionId);
 
     /**
      * 工程の結果を 1 件足す。

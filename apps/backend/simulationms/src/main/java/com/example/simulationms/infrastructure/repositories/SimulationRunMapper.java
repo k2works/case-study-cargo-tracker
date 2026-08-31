@@ -21,10 +21,13 @@ public interface SimulationRunMapper {
      * 工程の結果から導けるものを列にも置くと、片方だけ更新された行が生まれる。
      */
     String RUN_COLUMNS = " r.id, r.run_id, r.scenario_id, r.steps, r.started_by,"
-            + " r.started_at FROM simulation_run r";
+            + " r.started_at, r.seed, s.session_id"
+            + " FROM simulation_run r LEFT JOIN simulation_session s ON s.id = r.session_id";
 
-    @Insert("INSERT INTO simulation_run (run_id, scenario_id, steps, started_by, started_at)"
-            + " VALUES (#{runId}, #{scenarioId}, #{steps}, #{startedBy}, #{startedAt})")
+    @Insert("INSERT INTO simulation_run (run_id, scenario_id, steps, started_by, started_at,"
+            + " seed, session_id)"
+            + " VALUES (#{runId}, #{scenarioId}, #{steps}, #{startedBy}, #{startedAt}, #{seed},"
+            + " (SELECT s.id FROM simulation_session s WHERE s.session_id = #{sessionId}))")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     void insert(SimulationRunRecord row);
 
@@ -35,7 +38,9 @@ public interface SimulationRunMapper {
         @Result(column = "scenario_id", property = "scenarioId"),
         @Result(column = "steps", property = "steps"),
         @Result(column = "started_by", property = "startedBy"),
-        @Result(column = "started_at", property = "startedAt")
+        @Result(column = "started_at", property = "startedAt"),
+        @Result(column = "seed", property = "seed"),
+        @Result(column = "session_id", property = "sessionId")
     })
     SimulationRunRecord findByRunId(@Param("runId") String runId);
 

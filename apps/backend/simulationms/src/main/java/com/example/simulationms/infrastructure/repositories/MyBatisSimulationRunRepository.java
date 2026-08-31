@@ -26,8 +26,11 @@ public class MyBatisSimulationRunRepository implements SimulationRunRepository {
     }
 
     @Override
-    public void create(SimulationRun run) {
+    public void create(SimulationRun run, com.example.simulationms.domain.model.valueobjects.Seed
+            seed, com.example.simulationms.domain.model.valueobjects.SessionId sessionId) {
         SimulationRunRecord row = new SimulationRunRecord();
+        row.setSeed(seed.value());
+        row.setSessionId(sessionId == null ? null : sessionId.value());
         row.setRunId(run.runId().value());
         row.setScenarioId(run.scenario().id());
         row.setSteps(run.scenario().steps().stream()

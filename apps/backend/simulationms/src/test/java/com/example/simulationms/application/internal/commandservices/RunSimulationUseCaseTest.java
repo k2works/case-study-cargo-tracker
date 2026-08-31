@@ -56,7 +56,9 @@ class RunSimulationUseCaseTest {
          * 採番が衝突しても緑のままになる——実 DB では一意制約が断る。
          */
         @Override
-        public void create(SimulationRun run) {
+        public void create(SimulationRun run,
+                com.example.simulationms.domain.model.valueobjects.Seed seed,
+                com.example.simulationms.domain.model.valueobjects.SessionId sessionId) {
             if (stolen != 0) {
                 // 同時に始まった別の実行が、この番号を先に採った。
                 if (stolen > 0) {
@@ -252,7 +254,8 @@ class RunSimulationUseCaseTest {
             gateway.failAt = null;
             // 1 本目を実行中のまま残す（工程を 1 つも終えない）
             RunId running = RunId.of("SIM-20261116-0009");
-            repository.create(SimulationRun.start(running, scenario, "admin01", CLOCK.instant()));
+            repository.create(SimulationRun.start(running, scenario, "admin01", CLOCK.instant()),
+                    com.example.simulationms.domain.model.valueobjects.Seed.of(0L), null);
 
             assertThatThrownBy(() -> useCase.run(scenario, "admin01"))
                     .isInstanceOf(SimulationAlreadyRunningException.class)
@@ -271,7 +274,8 @@ class RunSimulationUseCaseTest {
             Scenario scenario = shortScenario();
             RunId abandoned = RunId.of("SIM-20261116-0009");
             repository.create(SimulationRun.start(abandoned, scenario, "admin01",
-                    CLOCK.instant().minus(Duration.ofHours(3))));
+                    CLOCK.instant().minus(Duration.ofHours(3))),
+                    com.example.simulationms.domain.model.valueobjects.Seed.of(0L), null);
 
             assertThat(useCase.run(scenario, "admin01").status())
                     .isEqualTo(RunStatus.COMPLETED);
