@@ -144,7 +144,7 @@ Release 2.2 候補バックログの先頭に置いてある。**送るのは 3 
 | `jacocoTestCoverageVerification` | 通過（`./gradlew build` 内） |
 | `TZ=UTC ./gradlew build` | **BUILD SUCCESSFUL**（クローズ時に再実行。パッケージ構成リファクタ後も緑） |
 | frontend lint / typecheck / test / build | すべて緑（クローズ時に再実行） |
-| CI | 緑（[run 33159823994](https://github.com/k2works/case-study-cargo-tracker/actions/runs/33159823994)・HEAD `9abed15c4`） |
+| CI | 緑（[run 33354760556](https://github.com/k2works/case-study-cargo-tracker/actions/runs/33354760556)・クローズ後の HEAD `8a571f339`） |
 | SonarQube（Frontend） | **PASS**（新規違反 0・新規カバレッジ 80.2%・重複 0.38%） |
 | SonarQube（Backend） | **ERROR**（新規違反 0・新規カバレッジ 90.3%・重複 0.05%。**`new_security_hotspots_reviewed=0.0` の 1 件のみ未達**——下記） |
 | JIG / jig-erd | 再生成し、生成物差分なし |
