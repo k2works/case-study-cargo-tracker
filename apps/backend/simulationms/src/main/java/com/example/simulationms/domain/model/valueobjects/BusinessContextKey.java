@@ -32,6 +32,32 @@ public final class BusinessContextKey {
     /** 何も生まない工程。 */
     public static final String NONE = "";
 
+    /**
+     * 「何番号か」を人に伝えるための和名。
+     *
+     * <p>画面が対訳表を持つと、名前を足したときに<strong>画面だけが古いまま</strong>になる。
+     * 種別はサーバが返す。
+     *
+     * <p><strong>知らない名前は素通りさせない。</strong>名簿方式の検査は載せ忘れたものほど
+     * 漏れる。足した名前をここに書き忘れたら、その場で落ちる方が安い。
+     *
+     * @return 和名。何も生まない工程（{@link #NONE}）なら {@code null}
+     */
+    public static String labelOf(String key) {
+        return switch (key) {
+            case NONE -> null;
+            case RUN_ID -> "実行 ID";
+            case SHIPPER_ID -> "荷主 ID";
+            case BOOKING_ID -> "予約番号";
+            case VOYAGE_NUMBER -> "航海番号";
+            case TRACKING_NUMBER -> "追跡番号";
+            case DECLARATION_ID -> "通関申告 ID";
+            case INVOICE_NUMBER -> "精算書番号";
+            default -> throw new IllegalArgumentException(
+                    "和名の無い識別子です: " + key);
+        };
+    }
+
     private BusinessContextKey() {
     }
 }

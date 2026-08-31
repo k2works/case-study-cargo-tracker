@@ -210,7 +210,22 @@ public class RestBusinessGateway implements BusinessGateway {
                             + "・期限 " + deadline + "）。航海の登録を確かめる");
         }
 
-        List<BusinessMessages.LegRequest> legs = candidates.candidates().getFirst().legs().stream()
+        // **自分が登録した航海を通る候補を選ぶ。**先頭を無条件に採ると、
+        // 別の実行が登録した航海に割り当ててしまう。荷役はこの実行の航海番号で
+        // 記録するため、経路と荷役の航海が食い違い、誤配として起票される。
+        // 1 件ずつ手で流していたあいだは候補が 1 つしか無く、表面化しなかった。
+        String ownVoyage = required(context, BusinessContextKey.VOYAGE_NUMBER);
+        BusinessMessages.RouteCandidateListResponse.Candidate chosen =
+                candidates.candidates().stream()
+                        .filter(candidate -> candidate.legs() != null
+                                && candidate.legs().stream()
+                                        .allMatch(leg -> ownVoyage.equals(leg.voyageNumber())))
+                        .findFirst()
+                        .orElseThrow(() -> new BusinessCallFailedException(
+                                "自分が登録した航海（" + ownVoyage + "）を通る経路候補がありません。"
+                                        + "候補は " + candidates.candidates().size() + " 件ありました"));
+
+        List<BusinessMessages.LegRequest> legs = chosen.legs().stream()
                 .map(leg -> new BusinessMessages.LegRequest(leg.voyageNumber(), leg.fromUnLocode(),
                         leg.toUnLocode(), leg.departureTime(), leg.arrivalTime()))
                 .toList();

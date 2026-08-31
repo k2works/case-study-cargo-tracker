@@ -21,6 +21,7 @@ const RUN = {
       outcome: 'SUCCEEDED',
       elapsedMs: 120,
       createdIdentifier: 'BKG-2026000001',
+      identifierKind: '予約番号',
       failureReason: null,
       recordedAt: '2026-11-16T01:00:01Z',
     },
@@ -31,6 +32,7 @@ const RUN = {
       outcome: 'SUCCEEDED',
       elapsedMs: 88,
       createdIdentifier: 'TRK-20261116-0001',
+      identifierKind: '追跡番号',
       failureReason: null,
       recordedAt: '2026-11-16T01:00:03Z',
     },
@@ -41,6 +43,7 @@ const RUN = {
       outcome: 'FAILED',
       elapsedMs: 42,
       createdIdentifier: null,
+      identifierKind: null,
       failureReason: '経路候補が 0 件です（JPTYO → USLAX）。航海の登録を確かめる',
       recordedAt: '2026-11-16T01:00:05Z',
     },
@@ -105,5 +108,24 @@ describe('業務シミュレーションの結果（US35）', () => {
         (element.textContent ?? '').includes('終了'),
     )
     expect(summary).toBeInTheDocument()
+  })
+})
+
+describe('生成した識別子', () => {
+  it('何番号かが読める', async () => {
+    renderPage()
+
+    // 管理者は自分で開くのではなく、営業に番号を伝える。
+    // 工程名から種別を推測させない。
+    expect(await screen.findByText('予約番号')).toBeInTheDocument()
+    expect(screen.getByText('追跡番号')).toBeInTheDocument()
+  })
+
+  it('番号をコピーできる', async () => {
+    renderPage()
+
+    expect(
+      await screen.findByRole('button', { name: '予約番号 BKG-2026000001 をコピー' }),
+    ).toBeInTheDocument()
   })
 })

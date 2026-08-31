@@ -959,6 +959,8 @@ type SimulationRun = {
     outcome: 'SUCCEEDED' | 'FAILED'
     elapsedMs: number
     createdIdentifier: string | null
+    /** 何番号か。サーバが返す（画面に対訳表を持たせない）。 */
+    identifierKind: string | null
     failureReason: string | null
     recordedAt: string | null
   }[]
@@ -1011,6 +1013,7 @@ export const simulationRuns: SimulationRun[] = [
         outcome: 'SUCCEEDED',
         elapsedMs: 133,
         createdIdentifier: '41',
+        identifierKind: '荷主 ID',
         failureReason: null,
         recordedAt: '2026-11-15T02:00:01Z',
       },
@@ -1021,6 +1024,7 @@ export const simulationRuns: SimulationRun[] = [
         outcome: 'FAILED',
         elapsedMs: 42,
         createdIdentifier: null,
+        identifierKind: null,
         failureReason: '経路候補が 0 件です（JPTYO → USLAX）。航海の登録を確かめる',
         recordedAt: '2026-11-15T02:00:05Z',
       },
@@ -1042,6 +1046,7 @@ export const simulationRuns: SimulationRun[] = [
         outcome: 'SUCCEEDED',
         elapsedMs: 120,
         createdIdentifier: '42',
+        identifierKind: '荷主 ID',
         failureReason: null,
         recordedAt: '2026-11-16T01:00:01Z',
       },
@@ -1052,6 +1057,7 @@ export const simulationRuns: SimulationRun[] = [
         outcome: 'SUCCEEDED',
         elapsedMs: 88,
         createdIdentifier: 'TRK-20261116-0001',
+        identifierKind: '追跡番号',
         failureReason: null,
         recordedAt: '2026-11-16T01:00:08Z',
       },

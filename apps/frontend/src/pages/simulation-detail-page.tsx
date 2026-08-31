@@ -21,20 +21,57 @@ const TRACKING_NUMBER = /^TRK-\d{8}-\d{4}$/;
  * 気づく手段は次の行動へ繋ぐものであって、行き止まりへ送るものではない。
  */
 function Identifier({ step }: Readonly<{ step: SimulationStep }>) {
-  if (!step.createdIdentifier) {
+  const identifier = step.createdIdentifier;
+  if (!identifier) {
     return <span className="text-gray-400">—</span>;
   }
-  if (TRACKING_NUMBER.test(step.createdIdentifier)) {
-    return (
-      <Link
-        className="font-mono text-blue-700 underline"
-        to={`/tracking/${encodeURIComponent(step.createdIdentifier)}`}
-      >
-        {step.createdIdentifier}
-      </Link>
-    );
-  }
-  return <span className="font-mono">{step.createdIdentifier}</span>;
+  const kind = step.identifierKind;
+  return (
+    <div className="flex items-baseline gap-2">
+      {kind ? (
+        <span className="shrink-0 rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-700">
+          {kind}
+        </span>
+      ) : null}
+      {TRACKING_NUMBER.test(identifier) ? (
+        <Link
+          className="font-mono text-blue-700 underline"
+          to={`/tracking/${encodeURIComponent(identifier)}`}
+        >
+          {identifier}
+        </Link>
+      ) : (
+        <span className="font-mono">{identifier}</span>
+      )}
+      <CopyButton kind={kind} value={identifier} />
+    </div>
+  );
+}
+
+/**
+ * 番号をそのまま渡せる形にする。
+ *
+ * 管理者はこの画面で番号を確かめて**営業に伝える**。手で写すと、写し間違いが
+ * 相手の作業を止める——伝えるための番号なので、そのまま渡せることが要る。
+ */
+function CopyButton({
+  kind,
+  value,
+}: Readonly<{ kind: string | null; value: string }>) {
+  const label = kind ? `${kind} ${value} をコピー` : `${value} をコピー`;
+  return (
+    <button
+      aria-label={label}
+      className="shrink-0 text-xs text-blue-700 underline"
+      onClick={() => {
+        void navigator.clipboard?.writeText(value);
+      }}
+      title={label}
+      type="button"
+    >
+      コピー
+    </button>
+  );
 }
 
 /**

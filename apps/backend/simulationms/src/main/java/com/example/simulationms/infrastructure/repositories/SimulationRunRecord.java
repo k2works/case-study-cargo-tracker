@@ -9,10 +9,8 @@ public class SimulationRunRecord {
     private String runId;
     private String scenarioId;
     private String steps;
-    private String status;
     private String startedBy;
     private Instant startedAt;
-    private Instant finishedAt;
 
     public Long getId() {
         return id;
@@ -46,14 +44,6 @@ public class SimulationRunRecord {
         this.steps = steps;
     }
 
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
     public String getStartedBy() {
         return startedBy;
     }
@@ -68,13 +58,5 @@ public class SimulationRunRecord {
 
     public void setStartedAt(Instant startedAt) {
         this.startedAt = startedAt;
-    }
-
-    public Instant getFinishedAt() {
-        return finishedAt;
-    }
-
-    public void setFinishedAt(Instant finishedAt) {
-        this.finishedAt = finishedAt;
     }
 }

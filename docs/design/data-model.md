@@ -1121,13 +1121,16 @@ IT14（US34・US35）で追加した。**実行そのもの**と**工程ごと�
 | カラム名 | データ型 | 制約 | 説明 |
 | :--- | :--- | :--- | :--- |
 | `id` | `BIGSERIAL` | PK | |
-| `run_id` | `VARCHAR(20)` | UK, NOT NULL | 実行 ID（`SIM-YYYYMMDD-NNNN`。その日の連番） |
-| `scenario_id` | `VARCHAR(50)` | NOT NULL | シナリオ |
+| `run_id` | `VARCHAR(40)` | UK, NOT NULL | 実行 ID（`SIM-YYYYMMDD-NNNN`。その日の連番）。**採番を裁くのはこの一意制約である**——「今日の件数 + 1」は同時開始で衝突するため、断られたら次の番号を採る（IT15） |
+| `scenario_id` | `VARCHAR(40)` | NOT NULL | シナリオ |
 | `steps` | `VARCHAR(500)` | NOT NULL | **実行時の工程の並び**。シナリオ ID だけでは、定義を変えたあとに過去の実行を正しく復元できない |
-| `status` | `VARCHAR(20)` | NOT NULL | 開始時の状態。**読むときは工程の結果から導く**（二重に持った片方だけが更新される形を避ける） |
 | `started_by` | `VARCHAR(50)` | NOT NULL | 指示した利用者 |
 | `started_at` | `TIMESTAMP WITH TIME ZONE` | NOT NULL | |
-| `finished_at` | `TIMESTAMP WITH TIME ZONE` | | |
+
+> **状態と終了時刻は列に持たない**（IT15 の V2 で削除）。どちらも挿入時に一度書かれる
+> だけで更新されず、読み出しでは集約が工程の結果から導き直していた。残すと、DB を
+> 直接見た人は**すべての実行が RUNNING のまま**という嘘を読む。導けるものを列にも
+> 置くと、片方だけ更新された行が生まれる（[ADR-030](../adr/030-business-simulation-execution.md) 決定 5）。
 
 #### `simulation_step_result`（工程の結果）
 
@@ -1141,8 +1144,8 @@ IT14（US34・US35）で追加した。**実行そのもの**と**工程ごと�
 | `step` | `VARCHAR(40)` | NOT NULL | 工程 |
 | `outcome` | `VARCHAR(20)` | NOT NULL | `SUCCEEDED` / `FAILED` |
 | `elapsed_ms` | `INTEGER` | NOT NULL | 所要時間 |
-| `created_identifier` | `VARCHAR(50)` | | その工程が生んだ識別子（予約番号・追跡番号・精算書番号） |
-| `failure_reason` | `VARCHAR(500)` | | 止まった理由。**「失敗しました」だけにしない** |
+| `created_identifier` | `VARCHAR(40)` | | その工程が生んだ識別子（予約番号・追跡番号・精算書番号） |
+| `failure_reason` | `TEXT` | | 止まった理由。**「失敗しました」だけにしない**——応答本文まで載せるため、長さで切らない |
 | `recorded_at` | `TIMESTAMP WITH TIME ZONE` | NOT NULL | |
 
 ---

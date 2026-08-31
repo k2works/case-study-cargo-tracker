@@ -57,6 +57,11 @@ test.describe('業務シミュレーション（US34・US35）', () => {
 
     await expect(page.getByRole('heading', { name: /^実行 / })).toBeVisible()
     await expect(page.getByText('追跡番号発行')).toBeVisible()
+    // **何番号かが読める**。管理者は自分で開くのではなく、営業に番号を伝える
+    await expect(page.getByText('追跡番号', { exact: true }).first()).toBeVisible()
+    await expect(
+      page.getByRole('button', { name: /^追跡番号 TRK-.* をコピー$/ }).first(),
+    ).toBeVisible()
     // **押した先で 403 にならない**。追跡照会は認証を求めない画面である
     await page.getByRole('link', { name: /^TRK-/ }).click()
     await expect(page).toHaveURL(/\/tracking\/TRK-/)

@@ -14,6 +14,11 @@ export type SimulationStep = {
   elapsedMs: number
   /** その工程が生んだ識別子（予約番号・追跡番号・精算書番号）。無ければ null。 */
   createdIdentifier: string | null
+  /**
+   * 何番号か（「予約番号」「追跡番号」）。**サーバが返す**——画面に対訳表を持たせると、
+   * 工程を足したときに画面だけが古いままになる。識別子が無ければ null。
+   */
+  identifierKind: string | null
   /** 失敗の理由。成功なら null。「失敗しました」だけにしない。 */
   failureReason: string | null
   recordedAt: string | null

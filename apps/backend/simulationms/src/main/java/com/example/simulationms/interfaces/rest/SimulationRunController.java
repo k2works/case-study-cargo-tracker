@@ -5,6 +5,7 @@ import com.example.shared.auth.Role;
 import com.example.simulationms.application.internal.commandservices.RunSimulationUseCase;
 import com.example.simulationms.application.internal.commandservices.SimulationAlreadyRunningException;
 import com.example.simulationms.domain.model.aggregates.SimulationRun;
+import com.example.simulationms.domain.model.valueobjects.BusinessContextKey;
 import com.example.simulationms.domain.model.valueobjects.RunId;
 import com.example.simulationms.domain.model.valueobjects.Scenario;
 import com.example.simulationms.domain.model.valueobjects.StepResult;
@@ -165,8 +166,17 @@ public class SimulationRunController {
         }
     }
 
+    /**
+     * 工程 1 つの結果。
+     *
+     * <p>{@code identifierKind} は「何番号か」を人へ伝えるための和名である。
+     * <strong>画面に対訳表を持たせない</strong>——工程を足したときに画面だけが
+     * 古いままになる。現場では管理者が自分で開くのではなく営業に番号を伝えるため、
+     * 種別が読めないと伝えられない。
+     */
     record StepResponse(String step, String label, String role, String outcome, long elapsedMs,
-            String createdIdentifier, String failureReason, String recordedAt) {
+            String createdIdentifier, String identifierKind, String failureReason,
+            String recordedAt) {
 
         static StepResponse from(StepResult result) {
             return new StepResponse(
@@ -176,6 +186,8 @@ public class SimulationRunController {
                     result.outcome().name(),
                     result.elapsed().toMillis(),
                     result.createdIdentifier(),
+                    result.createdIdentifier() == null ? null
+                            : BusinessContextKey.labelOf(result.step().producesKey()),
                     result.failureReason(),
                     result.recordedAt() == null ? null : result.recordedAt().toString());
         }

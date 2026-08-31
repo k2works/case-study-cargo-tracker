@@ -14,11 +14,17 @@ import org.apache.ibatis.annotations.Select;
 @Mapper
 public interface SimulationRunMapper {
 
-    String RUN_COLUMNS = " r.id, r.run_id, r.scenario_id, r.steps, r.status, r.started_by,"
-            + " r.started_at, r.finished_at FROM simulation_run r";
+    /**
+     * 実行の列。
+     *
+     * <p><strong>状態と終了時刻は列に持たない</strong>（[ADR-030] 決定 5・V2 で削除）。
+     * 工程の結果から導けるものを列にも置くと、片方だけ更新された行が生まれる。
+     */
+    String RUN_COLUMNS = " r.id, r.run_id, r.scenario_id, r.steps, r.started_by,"
+            + " r.started_at FROM simulation_run r";
 
-    @Insert("INSERT INTO simulation_run (run_id, scenario_id, steps, status, started_by, started_at)"
-            + " VALUES (#{runId}, #{scenarioId}, #{steps}, #{status}, #{startedBy}, #{startedAt})")
+    @Insert("INSERT INTO simulation_run (run_id, scenario_id, steps, started_by, started_at)"
+            + " VALUES (#{runId}, #{scenarioId}, #{steps}, #{startedBy}, #{startedAt})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     void insert(SimulationRunRecord row);
 
@@ -28,10 +34,8 @@ public interface SimulationRunMapper {
         @Result(column = "run_id", property = "runId"),
         @Result(column = "scenario_id", property = "scenarioId"),
         @Result(column = "steps", property = "steps"),
-        @Result(column = "status", property = "status"),
         @Result(column = "started_by", property = "startedBy"),
-        @Result(column = "started_at", property = "startedAt"),
-        @Result(column = "finished_at", property = "finishedAt")
+        @Result(column = "started_at", property = "startedAt")
     })
     SimulationRunRecord findByRunId(@Param("runId") String runId);
 

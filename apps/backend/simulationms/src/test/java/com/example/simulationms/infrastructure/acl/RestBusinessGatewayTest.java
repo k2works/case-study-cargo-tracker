@@ -384,4 +384,65 @@ class RestBusinessGatewayTest {
                 .isInstanceOf(BusinessCallFailedException.class)
                 .hasMessageContaining("予約番号");
     }
+
+    /** 経路候補の応答。航海番号だけが違う 2 件を返す。 */
+    private static String candidatesOf(String... voyageNumbers) {
+        StringBuilder json = new StringBuilder("{\"candidates\":[");
+        for (int i = 0; i < voyageNumbers.length; i++) {
+            if (i > 0) {
+                json.append(',');
+            }
+            json.append("{\"legs\":[{\"voyageNumber\":\"").append(voyageNumbers[i])
+                    .append("\",\"fromUnLocode\":\"JPTYO\",\"toUnLocode\":\"USLAX\",")
+                    .append("\"departureTime\":\"2026-11-17T00:00:00Z\",")
+                    .append("\"arrivalTime\":\"2026-11-27T00:00:00Z\"}]}");
+        }
+        return json.append("]}").toString();
+    }
+
+    private Map<String, String> contextOfRun(String runId) {
+        return Map.of(BusinessContextKey.RUN_ID, runId,
+                BusinessContextKey.BOOKING_ID, "1001",
+                BusinessContextKey.VOYAGE_NUMBER,
+                RestBusinessGateway.voyageNumberOf(runId));
+    }
+
+    @Test
+    @DisplayName("経路候補が複数あっても、自分が登録した航海の候補を割り当てる")
+    void assignsTheCandidateOnItsOwnVoyage() {
+        String runId = "SIM-20261116-0007";
+        String ownVoyage = RestBusinessGateway.voyageNumberOf(runId);
+        expectLoginAs("routing01", "token-routing");
+        server.expect(requestTo(org.hamcrest.Matchers.startsWith(
+                        BASE + RestBusinessGateway.ROUTE_PATH)))
+                .andExpect(method(HttpMethod.GET))
+                // 別の実行が登録した航海が先に並んでいる。
+                .andRespond(withSuccess(
+                        candidatesOf("V-SIM-20261116-0001", ownVoyage),
+                        MediaType.APPLICATION_JSON));
+        server.expect(requestTo(BASE + "/api/v1/bookings/1001/route"))
+                .andExpect(method(HttpMethod.PUT))
+                .andExpect(jsonPath("$.legs[0].voyageNumber").value(ownVoyage))
+                .andRespond(withSuccess());
+
+        gateway.execute(ScenarioStep.ASSIGN_ROUTE, contextOfRun(runId));
+
+        server.verify();
+    }
+
+    @Test
+    @DisplayName("自分の航海を通る候補が無ければ、理由を言って止まる")
+    void failsWhenNoCandidateUsesItsOwnVoyage() {
+        String runId = "SIM-20261116-0008";
+        expectLoginAs("routing01", "token-routing");
+        server.expect(requestTo(org.hamcrest.Matchers.startsWith(
+                        BASE + RestBusinessGateway.ROUTE_PATH)))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess(candidatesOf("V-SIM-20261116-0001"),
+                        MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> gateway.execute(ScenarioStep.ASSIGN_ROUTE, contextOfRun(runId)))
+                .isInstanceOf(BusinessCallFailedException.class)
+                .hasMessageContaining(RestBusinessGateway.voyageNumberOf(runId));
+    }
 }

@@ -32,7 +32,6 @@ public class MyBatisSimulationRunRepository implements SimulationRunRepository {
         row.setScenarioId(run.scenario().id());
         row.setSteps(run.scenario().steps().stream()
                 .map(Enum::name).reduce((a, b) -> a + STEP_SEPARATOR + b).orElseThrow());
-        row.setStatus(run.status().name());
         row.setStartedBy(run.startedBy());
         row.setStartedAt(run.startedAt());
         try {

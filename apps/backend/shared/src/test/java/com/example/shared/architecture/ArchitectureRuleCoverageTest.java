@@ -34,6 +34,11 @@ import org.junit.jupiter.api.Test;
  *       規則の一覧はサービス側に写されないため、写し漏れという失敗自体が起きない
  * </ol>
  *
+ * <p>3 つ目として、<strong>マイグレーションを持つサービスに方言スモークがあるか</strong>も
+ * 見る。テスト戦略には「入口を持つ全サービスに置く」と書いてあったが、検査が無いあいだに
+ * billingms と simulationms の 2 つが抜けていた（IT15 で発見）。規則は、同じ変更で検査に
+ * 落とさなければ守られない。
+ *
  * <p>IT6 までは「各サービスの ArchitectureTest が規則名を含むか」をソース文字列で見ていた。
  * この形は規則が増えるたびに 7 サービスへ手で写す必要があり、しかも Javadoc に名前が
  * 出ているだけでも通ってしまう。適用そのものを基底クラスへ寄せて、写す作業を無くした。
@@ -111,6 +116,38 @@ class ArchitectureRuleCoverageTest {
         assertThat(problems)
                 .as("アーキテクチャ検査が未適用のサービス")
                 .isEmpty();
+    }
+
+    @Test
+    @DisplayName("マイグレーションを持つ全サービスに方言スモークがある")
+    void everyServiceWithMigrationsHasADialectSmoke() throws IOException {
+        List<String> withMigrations = services().stream()
+                .filter(service -> Files.isDirectory(migrationsOf(service)))
+                .toList();
+
+        assertThat(withMigrations)
+                .as("マイグレーションを持つサービスが 1 つも読み取れていない場合、"
+                        + "この検査は何も守らない")
+                .isNotEmpty();
+
+        List<String> missing = withMigrations.stream()
+                .filter(service -> !Files.exists(dialectSmokeOf(service)))
+                .toList();
+
+        assertThat(missing)
+                .as("方言スモークが無いサービス。DB を持つなら、その SQL とマイグレーションが"
+                        + "PostgreSQL（本番）と H2（ローカルの手軽な起動先）の両方で"
+                        + "解釈できることを確かめる")
+                .isEmpty();
+    }
+
+    private Path migrationsOf(String service) {
+        return BACKEND_ROOT.resolve(service).resolve("src/main/resources/db/migration");
+    }
+
+    private Path dialectSmokeOf(String service) {
+        return BACKEND_ROOT.resolve(service)
+                .resolve("src/test/java/com/example/%s/DialectSmokeTest.java".formatted(service));
     }
 
     /**

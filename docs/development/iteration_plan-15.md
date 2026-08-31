@@ -113,11 +113,11 @@
 
 | # | タスク | 由来 | 見積 | 状態 |
 | :--- | :--- | :--- | :--- | :--- |
-| 0.1 | IT14 のふりかえり Try 6 件を本計画の DoD に反映する | [ふりかえり](retrospective-14.md) Try 1-6 | 2h | [ ] |
-| 0.2 | 運用手順書に「素の `kubectl` は `--context kind-cargo` を必ず付ける」を追記する | Try 3 | 1h | [ ] |
-| 0.3 | ADR テンプレートに「**この決定の前提の外にあるもの**」の欄を置く | Try 6 | 1h | [ ] |
-| 0.4 | **実行 ID の採番を `COUNT(*)+1` から衝突しない方式へ**（US37 の同時開始で必ず表面化する） | 報告書 課題 5 | 4h | [ ] |
-| 0.5 | **`simulation_run.status` / `finished_at` の死んだ列**を、更新するか落とすかを決めて片付ける | 報告書 課題 4 | 3h | [ ] |
+| 0.1 | IT14 のふりかえり Try 6 件を本計画の DoD に反映する | [ふりかえり](retrospective-14.md) Try 1-6 | 2h | [x] |
+| 0.2 | 運用手順書に「素の `kubectl` は `--context kind-cargo` を必ず付ける」を追記する | Try 3 | 1h | [x] |
+| 0.3 | ADR テンプレートに「**この決定の前提の外にあるもの**」の欄を置く | Try 6 | 1h | [x] |
+| 0.4 | **実行 ID の採番を `COUNT(*)+1` から衝突しない方式へ**（US37 の同時開始で必ず表面化する） | 報告書 課題 5 | 4h | [x] |
+| 0.5 | **`simulation_run.status` / `finished_at` の死んだ列**を V2 で DROP する（導けるものを列にも置かない） | 報告書 課題 4 | 3h | [x] |
 | 0.6 | **`assignRoute` が経路候補の先頭を無条件に選ぶ**のを、自分の `V-SIM-` 航海に絞る | IT14 レビュー | 3h | [ ] |
 | 0.7 | 追跡の未解決例外一覧から `SIM-` 由来を除外する（**既存の `ShipperCargoSnapshotFinder` に由来を足す**。新しい越境点を作らない） | 報告書 課題 1・[ADR-030](../adr/030-business-simulation-execution.md) | 6h | [ ] |
 | 0.8 | シミュレーション専用の利用者を用意し、由来のフラグを要求本文から立てられる穴を塞ぐ | 報告書 課題 3 | 4h | [ ] |
@@ -324,9 +324,8 @@ skinparam linetype ortho
 entity "simulation_run\n（実行・IT14 で作成）" as run {
   * id : BIGSERIAL <<PK>>
   --
-  * run_id : VARCHAR(20) <<UK>>
-  * scenario_id : VARCHAR(50) <<NOT NULL>>
-  * status : VARCHAR(20) <<NOT NULL>>
+  * run_id : VARCHAR(40) <<UK>>
+  * scenario_id : VARCHAR(40) <<NOT NULL>>
   * seed : BIGINT <<NOT NULL, IT15 で追加>>
   session_id : BIGINT <<FK, IT15 で追加>>
 }
@@ -334,7 +333,7 @@ entity "simulation_run\n（実行・IT14 で作成）" as run {
 entity "simulation_session\n（継続実行）" as session {
   * id : BIGSERIAL <<PK>>
   --
-  * session_id : VARCHAR(20) <<UK>>
+  * session_id : VARCHAR(40) <<UK>>
   * seed : BIGINT <<NOT NULL>>
   * interval_seconds : INTEGER <<NOT NULL>>
   * max_concurrent : INTEGER <<NOT NULL>>
@@ -451,7 +450,7 @@ detail --> list : 一覧に戻る（GET）
 | 1 | テンプレートフォーマット | **修正** | 状態遷移図・画面遷移図が欠けていたため追加（4 図を揃えた） |
 | 2 | ユーザーストーリー | **修正** | US37 受入基準 7 の但し書きが省略されていたため全文一致に直した |
 | 3 | ドメインモデル | OK | `SimulationRun` 集約は IT14 で `domain-model.md` に反映済み。本 IT が足す `Seed`・`ScenarioGenerator`・`ContinuousRunPolicy`・`SimulationStatistics` は Phase 6.1 で反映する |
-| 4 | データモデル | **修正** | 4 件——`id` は `BIGSERIAL`、`run_id` は `VARCHAR(20)`、`scenario_id` は `VARCHAR(50)`、日時は `TIMESTAMPTZ` ではなく `TIMESTAMP WITH TIME ZONE`（IT14 の方言スモークで H2 が解釈しないことが判明済み）。FK は業務キーではなく `simulation_session.id` を参照する形に直した |
+| 4 | データモデル | **修正** | `id` は `BIGSERIAL`、日時は `TIMESTAMPTZ` ではなく `TIMESTAMP WITH TIME ZONE`（IT14 の方言スモークで H2 が解釈しないことが判明済み）、FK は業務キー（`simulation_session.id`）を参照。**さらに `data-model.md` の列幅が実スキーマ（V1）と食い違っていた**（`run_id`・`scenario_id`・`created_identifier`・`failure_reason` の 4 件）ため、設計側を実態へ直した——文書の数値は一度も実現していなかった |
 | 5 | UI 設計（ビュー） | OK | `/admin/simulations`・`/admin/simulations/:runId` は IT14 で定義済み。**本 IT は画面を増やさない** |
 | 6 | UI 設計（インタラクション） | **修正** | 画面遷移図を追加し、設定値が上限を超えたときの自己ループと、種を指定した再実行（PRG）を明示した |
 | 7 | ゴールの整合性 | OK | 達成状態 4 件 ↔ US36 の 4 受入基準・US37 の 8 受入基準 ↔ Phase 2〜5 のタスクが対応している |
