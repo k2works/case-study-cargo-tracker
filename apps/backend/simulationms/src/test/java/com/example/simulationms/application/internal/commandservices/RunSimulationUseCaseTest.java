@@ -19,7 +19,6 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -99,7 +98,8 @@ class RunSimulationUseCaseTest {
         private ScenarioStep breakAt;
 
         /** 受け取った引き継ぎ（最後に呼ばれた工程のもの）。 */
-        private final Map<ScenarioStep, Map<String, String>> received = new HashMap<>();
+        private final Map<ScenarioStep, Map<String, String>> received =
+                new EnumMap<>(ScenarioStep.class);
 
         @Override
         public String execute(ScenarioStep step, Map<String, String> context) {
@@ -180,6 +180,24 @@ class RunSimulationUseCaseTest {
          *
          * <p>それまでに作られた業務データは残る。消すと、どこまで通ったかが分からなくなる。
          */
+        @Test
+        @DisplayName("途中で失敗したらそこで止まり、それまでの記録は残る")
+        void stopsAtTheFailedStepAndKeepsWhatHappened() {
+            gateway.failAt = ScenarioStep.REGISTER_BOOKING;
+
+            SimulationRun run = useCase.run(shortScenario(), "admin01");
+
+            assertThat(run.status()).isEqualTo(RunStatus.FAILED);
+            assertThat(run.reachedStep()).contains(ScenarioStep.REGISTER_BOOKING);
+            assertThat(run.failureReason()).isPresent()
+                    .get().asString().contains("503");
+            // 後ろの工程は踏まない。踏むと、前提の無い操作が次々に失敗する
+            assertThat(gateway.called).doesNotContain(ScenarioStep.REQUEST_ROUTING);
+            // それまでの成功は記録に残る（Optional 相手に isNotNull を書くと常に真になる）
+            assertThat(run.results()).extracting(StepResult::step)
+                    .contains(ScenarioStep.REGISTER_SHIPPER);
+        }
+
         /**
          * <strong>想定していない失敗も記録して止まる。</strong>
          *
@@ -199,24 +217,6 @@ class RunSimulationUseCaseTest {
             assertThat(run.running())
                     .as("記録せずに抜けると実行中のまま残り、二重実行の拒否が永久に効く")
                     .isFalse();
-        }
-
-        @Test
-        @DisplayName("途中で失敗したらそこで止まり、それまでの記録は残る")
-        void stopsAtTheFailedStepAndKeepsWhatHappened() {
-            gateway.failAt = ScenarioStep.REGISTER_BOOKING;
-
-            SimulationRun run = useCase.run(shortScenario(), "admin01");
-
-            assertThat(run.status()).isEqualTo(RunStatus.FAILED);
-            assertThat(run.reachedStep()).contains(ScenarioStep.REGISTER_BOOKING);
-            assertThat(run.failureReason()).isPresent()
-                    .get().asString().contains("503");
-            // 後ろの工程は踏まない。踏むと、前提の無い操作が次々に失敗する
-            assertThat(gateway.called).doesNotContain(ScenarioStep.REQUEST_ROUTING);
-            // それまでの成功は記録に残る（Optional 相手に isNotNull を書くと常に真になる）
-            assertThat(run.results()).extracting(StepResult::step)
-                    .contains(ScenarioStep.REGISTER_SHIPPER);
         }
     }
 

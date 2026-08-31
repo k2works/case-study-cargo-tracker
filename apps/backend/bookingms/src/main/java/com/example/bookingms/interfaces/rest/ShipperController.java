@@ -191,6 +191,12 @@ public class ShipperController {
      *
      * <p>Gateway が認証（401）を担うため、ここで見るのは担当かどうか（403）だけになる。
      */
+    private void requireSales(String userId, String roles) {
+        if (!AuthenticatedUser.of(userId, roles).hasAnyRole(Role.ROLE_SALES)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "この操作を行う権限がありません");
+        }
+    }
+
     /**
      * シミュレーション由来として登録してよいのは、そう設定された利用者だけ（[ADR-030] 決定 3）。
      *
@@ -209,12 +215,6 @@ public class ShipperController {
         if (request.isSimulated() && !simulationRegistrars.contains(userId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "シミュレーション由来として登録する権限がありません");
-        }
-    }
-
-    private void requireSales(String userId, String roles) {
-        if (!AuthenticatedUser.of(userId, roles).hasAnyRole(Role.ROLE_SALES)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "この操作を行う権限がありません");
         }
     }
 
