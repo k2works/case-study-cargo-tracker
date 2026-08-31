@@ -7,7 +7,6 @@ import com.example.simulationms.domain.model.valueobjects.RunId;
 import com.example.simulationms.domain.model.valueobjects.RunStatus;
 import com.example.simulationms.domain.model.valueobjects.Scenario;
 import com.example.simulationms.domain.model.valueobjects.ScenarioStep;
-import com.example.simulationms.domain.model.valueobjects.StepOutcome;
 import com.example.simulationms.domain.model.valueobjects.StepResult;
 import java.time.Duration;
 import java.time.Instant;

@@ -47,12 +47,6 @@ public final class SimulationRun {
         return new SimulationRun(runId, scenario, startedBy, startedAt, List.of());
     }
 
-    /** 永続化された行から復元する。<strong>復元では検査しない</strong>（不変条件は受け入れ時に見る）。 */
-    public static SimulationRun restore(RunId runId, Scenario scenario, String startedBy,
-            Instant startedAt, List<StepResult> results) {
-        return new SimulationRun(runId, scenario, startedBy, startedAt, results);
-    }
-
     /**
      * 工程の結果を記録する。
      *
