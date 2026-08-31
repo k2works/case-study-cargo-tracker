@@ -68,7 +68,7 @@
 | Release 1.1（IT9-10・17 SP） | [報告書](release_report-1_1_0.md) | 完了 |
 | Release 2.0（IT11-12・17 SP） | [報告書](release_report-2_0_0.md) | 完了 |
 | Release 2.1（IT13・5 SP + バッファ 2 SP） | [報告書](release_report-2_1_0.md) | 完了 |
-| Release 2.2（IT14-15・16 SP） | - | 計画済み |
+| Release 2.2（IT14-15・16 SP） | - | 進行中（IT14 完了・IT15 計画済み） |
 
 ## 補足
 
