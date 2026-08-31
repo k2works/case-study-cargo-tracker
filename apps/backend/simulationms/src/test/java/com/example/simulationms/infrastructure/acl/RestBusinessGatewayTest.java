@@ -70,6 +70,9 @@ class RestBusinessGatewayTest {
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(header("Authorization", "Bearer token-sales"))
                 .andExpect(jsonPath("$.type").value("CORPORATE"))
+                // **由来が分かる帯で採番させる**（[ADR-030] 決定 3）。
+                // 送り忘れると、実データに混ざったまま経理の締めに乗る
+                .andExpect(jsonPath("$.simulated").value(true))
                 .andRespond(withSuccess("{\"id\":42,\"shipperCode\":\"SH-0042\"}",
                         MediaType.APPLICATION_JSON));
 

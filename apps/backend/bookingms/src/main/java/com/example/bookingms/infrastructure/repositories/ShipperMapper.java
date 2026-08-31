@@ -43,9 +43,13 @@ public interface ShipperMapper {
             SELECT id, shipper_code, shipper_type, name, email, address, phone,
                    contract_number, discount_rate
             FROM shipper
+            -- シミュレーション由来は営業の一覧に出さない（[ADR-030] 決定 3）。
+            -- 出すと、実在しない会社が営業の一覧に並ぶ。**帯で判断する**——
+            -- 列を別に持つと、帯と列が食い違う行が生まれる
+            WHERE shipper_code NOT LIKE 'SIM-%'
             <if test="keyword != null">
-            WHERE LOWER(name) LIKE LOWER(CONCAT('%', #{keyword}, '%'))
-               OR LOWER(email) LIKE LOWER(CONCAT('%', #{keyword}, '%'))
+              AND (LOWER(name) LIKE LOWER(CONCAT('%', #{keyword}, '%'))
+                OR LOWER(email) LIKE LOWER(CONCAT('%', #{keyword}, '%')))
             </if>
             -- 新しい順。営業の使い方は「登録した直後に一覧へ戻って入ったか確かめる」であり、
             -- 登録順だと今入れた 1 件が常に最下部に沈む

@@ -98,7 +98,15 @@ public interface BillableCargoMapper {
      * <p><strong>引取が終わった順に並べる。</strong>待たせている案件が上に来る。
      * キャンセルは引取日時を持たないため最後に回る（{@code NULLS LAST}）。
      */
+    /**
+     * <strong>シミュレーション由来は締め対象に出さない</strong>（[ADR-030] 決定 3）。
+     *
+     * <p>混ざると、経理担当者の締めに実在しない輸送の請求が乗る。
+     * <strong>名指しの照会（{@code selectByBookingId}）では外さない</strong>——
+     * 外すと、シミュレーション自身の料金算出が通らず、精算まで通ることを確かめられない。
+     */
     @Select(BASE_QUERY + """
+               AND s.shipper_code NOT LIKE 'SIM-%'
              ORDER BY CASE WHEN c.last_handling_at IS NULL THEN 1 ELSE 0 END,
                       c.last_handling_at,
                       c.booking_id

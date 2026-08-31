@@ -38,9 +38,14 @@ public class RegisterShipperUseCase {
      * <p>同姓同名・同一メールの別部署のような実態があるため、営業担当者の判断を尊重する。
      */
     public RegistrationOutcome registerAnyway(RegisterShipperCommand command) {
-        Shipper shipper = Shipper.register(
-                command.type(), command.name(), command.email(), command.address(), command.phone(),
-                command.contract());
+        Shipper shipper = command.simulated()
+                // **入口を分ける**（[ADR-030] 決定 3）。シミュレーション由来は荷主コードの
+                // 帯で識別する。ここで分けておかないと、実データに混ざったまま締めに乗る
+                ? Shipper.registerSimulated(command.type(), command.name(), command.email(),
+                        command.address(), command.phone())
+                : Shipper.register(
+                        command.type(), command.name(), command.email(), command.address(),
+                        command.phone(), command.contract());
         return new RegistrationOutcome.Registered(repository.save(shipper));
     }
 }

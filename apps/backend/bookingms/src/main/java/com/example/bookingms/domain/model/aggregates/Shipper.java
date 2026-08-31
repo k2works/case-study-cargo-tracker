@@ -16,19 +16,61 @@ import com.example.bookingms.domain.model.valueobjects.ShipperType;
  */
 public final class Shipper {
 
+    /**
+     * シミュレーション由来の荷主コードの帯（[ADR-030] 決定 3）。
+     *
+     * <p><strong>識別の根拠はこの帯 1 本にする。</strong>別に列を持つと、帯と列が
+     * 食い違う行が生まれ、どちらが正しいかを決める規則がまた要る。貨物・請求書・追跡は
+     * すべて荷主から辿れるため、帯だけで判断できる。
+     */
+    public static final String SIMULATED_CODE_PREFIX = "SIM-";
+
     private final Long id;
     private final String shipperCode;
     private final ShipperType type;
     private final ShipperProfile profile;
     private final CorporateContract contract;
 
+    /**
+     * シミュレーション由来か。
+     *
+     * <p>採番済みなら<strong>荷主コードの帯から読む</strong>。採番前（登録の途中）だけ、
+     * 登録時の指示を持つ——どちらの帯で採番するかを永続化の経路に伝えるためである。
+     */
+    private final boolean simulatedRegistration;
+
     private Shipper(Long id, String shipperCode, ShipperType type, ShipperProfile profile,
             CorporateContract contract) {
+        this(id, shipperCode, type, profile, contract, false);
+    }
+
+    private Shipper(Long id, String shipperCode, ShipperType type, ShipperProfile profile,
+            CorporateContract contract, boolean simulatedRegistration) {
         this.id = id;
         this.shipperCode = shipperCode;
         this.type = type;
         this.profile = profile;
         this.contract = contract;
+        this.simulatedRegistration = simulatedRegistration;
+    }
+
+    /** シミュレーション由来か（[ADR-030] 決定 3）。 */
+    public boolean simulated() {
+        return shipperCode == null ? simulatedRegistration
+                : shipperCode.startsWith(SIMULATED_CODE_PREFIX);
+    }
+
+    /**
+     * シミュレーションが作る荷主（[ADR-030] 決定 3）。
+     *
+     * <p><strong>入口を分ける。</strong>真偽値の引数で分けると、呼び出し側を読んだだけでは
+     * 何が true なのか分からない。分けておけば、実業務の登録経路からは呼べない。
+     */
+    public static Shipper registerSimulated(ShipperType type, String name, String email,
+            String address, String phone) {
+        Shipper shipper = register(type, name, email, address, phone);
+        return new Shipper(shipper.id, shipper.shipperCode, shipper.type, shipper.profile,
+                shipper.contract, true);
     }
 
     /** 契約情報を伴わない新規登録（個人、または契約情報を後で入れる場合の入口）。 */

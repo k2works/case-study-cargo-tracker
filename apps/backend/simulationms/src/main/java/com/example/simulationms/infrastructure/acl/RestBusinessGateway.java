@@ -124,6 +124,9 @@ public class RestBusinessGateway implements BusinessGateway {
                         marker.toLowerCase(Locale.ROOT) + "@simulation.example.com",
                         "東京都千代田区 1-1-1",
                         "03-0000-0000",
+                        true,
+                        // **シミュレーション由来として登録する**（[ADR-030] 決定 3）。
+                        // 送り忘れると、実データに混ざったまま経理の締めに乗る
                         true))
                 .retrieve()
                 .body(BusinessMessages.ShipperResponse.class));

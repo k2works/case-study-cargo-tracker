@@ -28,7 +28,9 @@ final class BusinessMessages {
 
     /** 荷主登録の依頼。相手の型は持ち込まない。 */
     record ShipperRequest(String type, String name, String email, String address, String phone,
-            boolean registerAnyway) {
+            boolean registerAnyway,
+            /** シミュレーション由来として登録する（[ADR-030] 決定 3）。荷主コードの帯が変わる。 */
+            boolean simulated) {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

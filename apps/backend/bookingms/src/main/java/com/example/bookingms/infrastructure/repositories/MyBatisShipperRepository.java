@@ -47,8 +47,11 @@ public class MyBatisShipperRepository implements ShipperRepository {
             row.setId(shipper.id());
             row.setShipperCode(shipper.shipperCode());
         } else {
-            // 採番はシーケンスに任せる。テストでも本番と同じ経路を通す
-            row.setShipperCode("SHP-%06d".formatted(mapper.nextShipperCodeNumber()));
+            // 採番はシーケンスに任せる。テストでも本番と同じ経路を通す。
+            // **帯だけを分ける**（[ADR-030] 決定 3）。連番は実業務と共有する——
+            // 別のシーケンスにすると、片方だけ進んだ状態で番号が衝突する
+            String prefix = shipper.simulated() ? Shipper.SIMULATED_CODE_PREFIX : "SHP-";
+            row.setShipperCode(prefix + "%06d".formatted(mapper.nextShipperCodeNumber()));
         }
         row.setShipperType(shipper.type().name());
         row.setName(shipper.name());

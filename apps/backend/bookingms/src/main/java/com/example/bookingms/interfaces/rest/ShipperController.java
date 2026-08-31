@@ -147,7 +147,7 @@ public class ShipperController {
                 request.type(), request.name(), request.email(), request.address(), request.phone(),
                 // 個人で契約情報が送られてきたら捨てずに渡す。拒否するのは集約の仕事であり、
                 // ここで黙って捨てると「送ったのに保存されない」が起きる
-                contractOf(request));
+                contractOf(request), request.isSimulated());
     }
 
     private CorporateContract contractOf(ShipperRequest request) {
