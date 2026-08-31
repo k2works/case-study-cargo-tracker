@@ -168,4 +168,26 @@ class SimulationRunControllerTest {
                         .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ADMIN"))
                 .andExpect(status().isNotFound());
     }
+
+    /** 例外シナリオも実行を指示できる（US36-1）。 */
+    @org.junit.jupiter.api.Test
+    @DisplayName("例外シナリオを指定して実行できる")
+    void runsAnExceptionScenario() throws Exception {
+        given(runSimulation.run(org.mockito.ArgumentMatchers.argThat(
+                        scenario -> scenario != null && "misroute".equals(scenario.id())),
+                org.mockito.ArgumentMatchers.eq("admin01")))
+                .willReturn(SimulationRun.start(RunId.of("SIM-20261116-0003"),
+                        Scenario.exceptionScenarios().stream()
+                                .filter(candidate -> candidate.id().equals("misroute"))
+                                .findFirst().orElseThrow(),
+                        "admin01", java.time.Instant.parse("2026-11-16T01:00:00Z")));
+
+        mockMvc.perform(post("/api/v1/simulations")
+                        .header(AuthenticatedUser.USER_ID_HEADER, "admin01")
+                        .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ADMIN")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"scenarioId\": \"misroute\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.scenarioId").value("misroute"));
+    }
 }

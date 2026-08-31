@@ -74,6 +74,39 @@ final class BusinessMessages {
     record CustomsStatusRequest(String status, String reason) {
     }
 
+    /** 例外を起票する（US19-1・US20-1）。 */
+    record RaiseExceptionRequest(String trackingNumber, String exceptionType,
+            String description) {
+    }
+
+    /** 例外を解決する（US19-4）。 */
+    record ResolveExceptionRequest(String trackingNumber, Long exceptionId,
+            String resolutionNotes, String newEstimatedArrival) {
+    }
+
+    /** 起きている例外を読むための応答。解決に要る番号を取る。 */
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record ManagedTrackingResponse(String trackingNumber, RaisedIssue activeException) {
+
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        /**
+         * 起きている例外。
+         *
+         * <p>型の名前を {@code Exception} で終わらせない。Java では例外クラスの
+         * 名前であり、読む人を惑わせる——ここでの「例外」は業務の言葉である。
+         */
+        record RaisedIssue(Long id, String exceptionType) {
+        }
+    }
+
+    /** キャンセルを申請する（US30-1）。 */
+    record RequestCancellationRequest(String reason) {
+    }
+
+    /** キャンセルを承認する（US30-5）。**陸揚げ地は必須**（[ADR-025] 決定 4）。 */
+    record ApproveCancellationRequest(String dischargeLocationUnLocode, String decisionReason) {
+    }
+
     @JsonIgnoreProperties(ignoreUnknown = true)
     record CustomsDeclarationResponse(Long declarationId) {
     }

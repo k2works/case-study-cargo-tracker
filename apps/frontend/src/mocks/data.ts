@@ -991,6 +991,50 @@ export const simulationScenarios = [
       { step: 'SETTLE', label: '精算', role: 'ROLE_ACCOUNTANT' },
     ],
   },
+  // **例外シナリオも置く**（US36）。正常系だけを置くと、画面がシナリオの選択を
+  // 一度も踏まないまま緑になる
+  {
+    id: 'misroute',
+    steps: [
+      { step: 'REGISTER_SHIPPER', label: '荷主登録', role: 'ROLE_SALES' },
+      { step: 'REGISTER_BOOKING', label: '予約登録', role: 'ROLE_SALES' },
+      { step: 'REQUEST_ROUTING', label: '経路設計依頼', role: 'ROLE_SALES' },
+      { step: 'REGISTER_VOYAGE', label: '航海登録', role: 'ROLE_ROUTING' },
+      { step: 'ASSIGN_ROUTE', label: '経路割り当て', role: 'ROLE_ROUTING' },
+      { step: 'NOTIFY_ROUTE', label: '経路通知', role: 'ROLE_SALES' },
+      { step: 'CONFIRM_BOOKING', label: '予約確定', role: 'ROLE_SALES' },
+      { step: 'ISSUE_TRACKING_NUMBER', label: '追跡番号発行', role: 'ROLE_ROUTING' },
+      {
+        step: 'RECORD_MISROUTED_HANDLING',
+        label: '予定外の港での荷役記録',
+        role: 'ROLE_HANDLER',
+      },
+      { step: 'REDESIGN_ROUTE', label: '経路の組み直し', role: 'ROLE_ROUTING' },
+      { step: 'RESOLVE_EXCEPTION', label: '例外の解決', role: 'ROLE_TRACKER' },
+      { step: 'RECORD_HANDLING', label: '荷役記録', role: 'ROLE_HANDLER' },
+      { step: 'DECLARE_CUSTOMS', label: '通関申告', role: 'ROLE_HANDLER' },
+      { step: 'CLEAR_CUSTOMS', label: '通関完了', role: 'ROLE_TRACKER' },
+      { step: 'RECORD_CLAIM', label: '引取記録', role: 'ROLE_HANDLER' },
+      { step: 'CALCULATE_CHARGE', label: '料金算出', role: 'ROLE_ACCOUNTANT' },
+      { step: 'SETTLE', label: '精算', role: 'ROLE_ACCOUNTANT' },
+    ],
+  },
+  {
+    id: 'cancellation',
+    steps: [
+      { step: 'REGISTER_SHIPPER', label: '荷主登録', role: 'ROLE_SALES' },
+      { step: 'REGISTER_BOOKING', label: '予約登録', role: 'ROLE_SALES' },
+      { step: 'REQUEST_ROUTING', label: '経路設計依頼', role: 'ROLE_SALES' },
+      { step: 'REGISTER_VOYAGE', label: '航海登録', role: 'ROLE_ROUTING' },
+      { step: 'ASSIGN_ROUTE', label: '経路割り当て', role: 'ROLE_ROUTING' },
+      { step: 'NOTIFY_ROUTE', label: '経路通知', role: 'ROLE_SALES' },
+      { step: 'CONFIRM_BOOKING', label: '予約確定', role: 'ROLE_SALES' },
+      { step: 'ISSUE_TRACKING_NUMBER', label: '追跡番号発行', role: 'ROLE_ROUTING' },
+      { step: 'RECORD_HANDLING', label: '荷役記録', role: 'ROLE_HANDLER' },
+      { step: 'REQUEST_CANCELLATION', label: 'キャンセル申請', role: 'ROLE_SALES' },
+      { step: 'APPROVE_CANCELLATION', label: 'キャンセル承認', role: 'ROLE_TRACKER' },
+    ],
+  },
 ]
 
 /** 実行の履歴（US35）。**失敗した実行も残す**——巻き戻さないことがここに表れる。 */

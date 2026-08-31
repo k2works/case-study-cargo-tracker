@@ -28,7 +28,7 @@ public class SimulationScenarioController {
             @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles) {
         requireAdmin(userId, roles);
 
-        return List.of(ScenarioResponse.from(Scenario.standardTransport()));
+        return Scenario.all().stream().map(ScenarioResponse::from).toList();
     }
 
     private void requireAdmin(String userId, String roles) {

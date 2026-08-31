@@ -19,10 +19,31 @@ class ScenarioTest {
     void standardTransportCoversEveryStep() {
         Scenario scenario = Scenario.standardTransport();
 
-        assertThat(scenario.steps()).containsExactly(ScenarioStep.values());
+        assertThat(scenario.steps()).containsExactly(
+                ScenarioStep.REGISTER_SHIPPER, ScenarioStep.REGISTER_BOOKING,
+                ScenarioStep.REQUEST_ROUTING, ScenarioStep.REGISTER_VOYAGE,
+                ScenarioStep.ASSIGN_ROUTE, ScenarioStep.NOTIFY_ROUTE,
+                ScenarioStep.CONFIRM_BOOKING, ScenarioStep.ISSUE_TRACKING_NUMBER,
+                ScenarioStep.RECORD_HANDLING, ScenarioStep.DECLARE_CUSTOMS,
+                ScenarioStep.CLEAR_CUSTOMS, ScenarioStep.RECORD_CLAIM,
+                ScenarioStep.CALCULATE_CHARGE, ScenarioStep.SETTLE);
         assertThat(scenario.steps().getFirst()).isEqualTo(ScenarioStep.REGISTER_SHIPPER);
         assertThat(scenario.last()).isEqualTo(ScenarioStep.SETTLE);
         assertThat(scenario.includes(ScenarioStep.CLEAR_CUSTOMS)).isTrue();
+    }
+
+    /**
+     * <strong>正常系に例外の工程を混ぜない</strong>（US36 で工程を足したときの検査）。
+     *
+     * <p>IT14 は {@code values()} をそのまま並べていた。その形のままだと、
+     * 例外の工程を足した瞬間に<strong>正常系のシナリオが誤配や破損を起こす</strong>。
+     */
+    @Test
+    @DisplayName("標準輸送には、例外を起こす工程も対応する工程も入らない")
+    void standardTransportHasNoExceptionSteps() {
+        assertThat(Scenario.standardTransport().steps())
+                .noneMatch(ScenarioStep::raisesException)
+                .noneMatch(ScenarioStep::respondsToException);
     }
 
     @Test

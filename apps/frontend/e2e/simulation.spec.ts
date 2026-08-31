@@ -47,6 +47,22 @@ test.describe('業務シミュレーション（US34・US35）', () => {
     await expect(page.getByRole('link', { name: /^SIM-/ }).first()).toBeVisible()
   })
 
+  /**
+   * <strong>例外シナリオを選んで実行できる</strong>（US36-1）。
+   *
+   * 正常系だけを流しても、業務が本当に難しいのは例外が起きたあとである。
+   */
+  test('例外シナリオを選んで実行できる', async ({ page }) => {
+    await logIn(page, 'admin01')
+    await page.goto('/admin/simulations')
+
+    await page.getByLabel('シナリオ').selectOption('misroute')
+    await expect(page.getByText(/工程$/)).toBeVisible()
+    await page.getByRole('button', { name: /実行する/ }).click()
+
+    await expect(page.getByRole('link', { name: /^SIM-/ }).first()).toBeVisible()
+  })
+
   test('実行を開くと、工程ごとの結果と生成した識別子が出る', async ({ page }) => {
     await logIn(page, 'admin01')
     await page.goto('/admin/simulations')

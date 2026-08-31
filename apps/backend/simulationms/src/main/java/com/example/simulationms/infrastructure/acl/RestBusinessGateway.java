@@ -11,11 +11,9 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.function.Supplier;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 /**
@@ -40,6 +38,7 @@ public class RestBusinessGateway implements BusinessGateway {
     public static final String ROUTE_PATH = "/api/v1/routes";
     public static final String HANDLING_PATH = "/api/v1/handling";
     public static final String CUSTOMS_PATH = "/api/v1/customs";
+    public static final String TRACKING_MANAGE_PATH = "/api/v1/tracking/manage";
     public static final String BILLING_PATH = "/api/v1/billing";
 
     /** 通す輸送。**固定する**——毎回変えると、失敗したときに条件の違いを疑うことになる。 */
@@ -60,10 +59,20 @@ public class RestBusinessGateway implements BusinessGateway {
     private final SimulationUsers users;
     private final Clock clock;
 
+    /**
+     * 例外を起こす・対応する工程の出口。
+     *
+     * <p>分けたのは行数の都合ではなく<strong>変わる理由が違う</strong>ためである。
+     * 出口そのものは増えていない——[ADR-030] 決定 2 の「1 ポート」は
+     * {@code BusinessGateway} の話であり、その内側の分け方は別である。
+     */
+    private final RestExceptionSteps exceptions;
+
     public RestBusinessGateway(RestClient gateway, SimulationUsers users, Clock clock) {
         this.gateway = gateway;
         this.users = users;
         this.clock = clock;
+        this.exceptions = new RestExceptionSteps(gateway, clock);
     }
 
     @Override
@@ -89,6 +98,9 @@ public class RestBusinessGateway implements BusinessGateway {
             case RECORD_CLAIM -> recordClaim(token, context);
             case CALCULATE_CHARGE -> calculateCharge(token, context);
             case SETTLE -> settle(token, context);
+            case RECORD_LATE_HANDLING, RAISE_DAMAGE, RECORD_MISROUTED_HANDLING, HOLD_CUSTOMS,
+                    REQUEST_CANCELLATION, RESOLVE_EXCEPTION, REDESIGN_ROUTE, RELEASE_CUSTOMS,
+                    APPROVE_CANCELLATION -> exceptions.execute(step, token, context);
         };
     }
 
@@ -115,15 +127,15 @@ public class RestBusinessGateway implements BusinessGateway {
             return response.token();
         } catch (RestClientException e) {
             throw new BusinessCallFailedException(
-                    "ログインできません: " + username + "（" + describe(e) + "）", e);
+                    "ログインできません: " + username + "（" + BusinessCalls.describe(e) + "）", e);
         }
     }
 
     private String registerShipper(String token, Map<String, String> context) {
-        String marker = runId(context);
-        BusinessMessages.ShipperResponse response = call(ScenarioStep.REGISTER_SHIPPER, () -> gateway.post()
+        String marker = BusinessCalls.runId(context);
+        BusinessMessages.ShipperResponse response = BusinessCalls.call(ScenarioStep.REGISTER_SHIPPER, () -> gateway.post()
                 .uri(SHIPPER_PATH)
-                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                .header(HttpHeaders.AUTHORIZATION, BusinessCalls.bearer(token))
                 .body(new BusinessMessages.ShipperRequest(
                         // **個人にする。**法人は契約番号が要り、無いと集約が断る——
                         // 確かめたいのは業務の道のりであって、契約の妥当性ではない
@@ -146,12 +158,12 @@ public class RestBusinessGateway implements BusinessGateway {
     }
 
     private String registerBooking(String token, Map<String, String> context) {
-        BusinessMessages.BookingResponse response = call(ScenarioStep.REGISTER_BOOKING, () -> gateway.post()
+        BusinessMessages.BookingResponse response = BusinessCalls.call(ScenarioStep.REGISTER_BOOKING, () -> gateway.post()
                 .uri(BOOKING_PATH)
-                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                .header(HttpHeaders.AUTHORIZATION, BusinessCalls.bearer(token))
                 .body(new BusinessMessages.BookingRequest(
-                        Long.valueOf(required(context, BusinessContextKey.SHIPPER_ID)),
-                        CARGO_TYPE, 900, OPERATOR + " " + runId(context),
+                        Long.valueOf(BusinessCalls.required(context, BusinessContextKey.SHIPPER_ID)),
+                        CARGO_TYPE, 900, OPERATOR + " " + BusinessCalls.runId(context),
                         ORIGIN, DESTINATION, today().plusDays(DEADLINE_DAYS).toString()))
                 .retrieve()
                 .body(BusinessMessages.BookingResponse.class));
@@ -169,13 +181,13 @@ public class RestBusinessGateway implements BusinessGateway {
      * すると、何も運ばないまま全工程が成功で終わる（IT5 の Try 2）。
      */
     private String registerVoyage(String token, Map<String, String> context) {
-        String number = voyageNumberOf(runId(context));
+        String number = voyageNumberOf(BusinessCalls.runId(context));
         Instant departure = clock.instant().plus(1, ChronoUnit.DAYS);
         Instant arrival = clock.instant().plus(20, ChronoUnit.DAYS);
 
-        call(ScenarioStep.REGISTER_VOYAGE, () -> gateway.post()
+        BusinessCalls.call(ScenarioStep.REGISTER_VOYAGE, () -> gateway.post()
                 .uri(VOYAGE_PATH)
-                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                .header(HttpHeaders.AUTHORIZATION, BusinessCalls.bearer(token))
                 .body(new BusinessMessages.VoyageRequest(number, "シミュレーション丸", "シミュレーション海運",
                         List.of(CARGO_TYPE),
                         List.of(new BusinessMessages.VoyageRequest.MovementRequest(
@@ -192,14 +204,14 @@ public class RestBusinessGateway implements BusinessGateway {
 
     private String assignRoute(String token, Map<String, String> context) {
         String deadline = today().plusDays(DEADLINE_DAYS).toString();
-        BusinessMessages.RouteCandidateListResponse candidates = call(ScenarioStep.ASSIGN_ROUTE, () -> gateway.get()
+        BusinessMessages.RouteCandidateListResponse candidates = BusinessCalls.call(ScenarioStep.ASSIGN_ROUTE, () -> gateway.get()
                 .uri(UriComponentsBuilder.fromPath(ROUTE_PATH)
                         .queryParam("origin", ORIGIN)
                         .queryParam("destination", DESTINATION)
                         .queryParam("deadline", deadline)
                         .queryParam("cargoType", CARGO_TYPE)
                         .toUriString())
-                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                .header(HttpHeaders.AUTHORIZATION, BusinessCalls.bearer(token))
                 .retrieve()
                 .body(BusinessMessages.RouteCandidateListResponse.class));
 
@@ -214,7 +226,7 @@ public class RestBusinessGateway implements BusinessGateway {
         // 別の実行が登録した航海に割り当ててしまう。荷役はこの実行の航海番号で
         // 記録するため、経路と荷役の航海が食い違い、誤配として起票される。
         // 1 件ずつ手で流していたあいだは候補が 1 つしか無く、表面化しなかった。
-        String ownVoyage = required(context, BusinessContextKey.VOYAGE_NUMBER);
+        String ownVoyage = BusinessCalls.required(context, BusinessContextKey.VOYAGE_NUMBER);
         BusinessMessages.RouteCandidateListResponse.Candidate chosen =
                 candidates.candidates().stream()
                         .filter(candidate -> candidate.legs() != null
@@ -230,9 +242,9 @@ public class RestBusinessGateway implements BusinessGateway {
                         leg.toUnLocode(), leg.departureTime(), leg.arrivalTime()))
                 .toList();
 
-        call(ScenarioStep.ASSIGN_ROUTE, () -> gateway.put()
+        BusinessCalls.call(ScenarioStep.ASSIGN_ROUTE, () -> gateway.put()
                 .uri(bookingPath(context, "/route"))
-                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                .header(HttpHeaders.AUTHORIZATION, BusinessCalls.bearer(token))
                 .body(new BusinessMessages.AssignRouteRequest(legs, null))
                 .retrieve()
                 .toBodilessEntity());
@@ -240,9 +252,9 @@ public class RestBusinessGateway implements BusinessGateway {
     }
 
     private String issueTrackingNumber(String token, Map<String, String> context) {
-        BusinessMessages.BookingResponse response = call(ScenarioStep.ISSUE_TRACKING_NUMBER, () -> gateway.post()
+        BusinessMessages.BookingResponse response = BusinessCalls.call(ScenarioStep.ISSUE_TRACKING_NUMBER, () -> gateway.post()
                 .uri(bookingPath(context, "/tracking-number"))
-                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                .header(HttpHeaders.AUTHORIZATION, BusinessCalls.bearer(token))
                 .retrieve()
                 .body(BusinessMessages.BookingResponse.class));
 
@@ -260,8 +272,8 @@ public class RestBusinessGateway implements BusinessGateway {
      * 「引取が断られる」形でしか気づけない——原因は飛ばしたこちらにある。
      */
     private String recordHandling(String token, Map<String, String> context) {
-        String trackingNumber = required(context, BusinessContextKey.TRACKING_NUMBER);
-        String voyageNumber = required(context, BusinessContextKey.VOYAGE_NUMBER);
+        String trackingNumber = BusinessCalls.required(context, BusinessContextKey.TRACKING_NUMBER);
+        String voyageNumber = BusinessCalls.required(context, BusinessContextKey.VOYAGE_NUMBER);
         Instant at = clock.instant();
 
         record Activity(String type, String location, String voyage, Instant at) {
@@ -273,9 +285,9 @@ public class RestBusinessGateway implements BusinessGateway {
                 new Activity("UNLOAD", DESTINATION, voyageNumber, at.plus(2, ChronoUnit.HOURS)));
 
         for (Activity activity : activities) {
-            call(ScenarioStep.RECORD_HANDLING, () -> gateway.post()
+            BusinessCalls.call(ScenarioStep.RECORD_HANDLING, () -> gateway.post()
                     .uri(HANDLING_PATH)
-                    .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                    .header(HttpHeaders.AUTHORIZATION, BusinessCalls.bearer(token))
                     .body(new BusinessMessages.HandlingActivityRequest(trackingNumber, activity.type(),
                             activity.location(), activity.at().toString(),
                             OPERATOR, activity.voyage(), null))
@@ -286,13 +298,13 @@ public class RestBusinessGateway implements BusinessGateway {
     }
 
     private String declareCustoms(String token, Map<String, String> context) {
-        BusinessMessages.CustomsDeclarationResponse response = call(ScenarioStep.DECLARE_CUSTOMS,
+        BusinessMessages.CustomsDeclarationResponse response = BusinessCalls.call(ScenarioStep.DECLARE_CUSTOMS,
                 () -> gateway.post()
                         .uri(CUSTOMS_PATH)
-                        .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                        .header(HttpHeaders.AUTHORIZATION, BusinessCalls.bearer(token))
                         .body(new BusinessMessages.CustomsDeclarationRequest(
-                                required(context, BusinessContextKey.TRACKING_NUMBER),
-                                "DEC-" + runId(context),
+                                BusinessCalls.required(context, BusinessContextKey.TRACKING_NUMBER),
+                                "DEC-" + BusinessCalls.runId(context),
                                 clock.instant().toString(),
                                 OPERATOR))
                         .retrieve()
@@ -305,10 +317,10 @@ public class RestBusinessGateway implements BusinessGateway {
     }
 
     private String clearCustoms(String token, Map<String, String> context) {
-        call(ScenarioStep.CLEAR_CUSTOMS, () -> gateway.put()
-                .uri(CUSTOMS_PATH + "/" + required(context, BusinessContextKey.DECLARATION_ID)
+        BusinessCalls.call(ScenarioStep.CLEAR_CUSTOMS, () -> gateway.put()
+                .uri(CUSTOMS_PATH + "/" + BusinessCalls.required(context, BusinessContextKey.DECLARATION_ID)
                         + "/status")
-                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                .header(HttpHeaders.AUTHORIZATION, BusinessCalls.bearer(token))
                 .body(new BusinessMessages.CustomsStatusRequest("CLEARED", "シミュレーションの審査完了"))
                 .retrieve()
                 .toBodilessEntity());
@@ -322,11 +334,11 @@ public class RestBusinessGateway implements BusinessGateway {
      * 断られること自体は正しい振る舞いであり、こちらの入力が足りていない。
      */
     private String recordClaim(String token, Map<String, String> context) {
-        call(ScenarioStep.RECORD_CLAIM, () -> gateway.post()
+        BusinessCalls.call(ScenarioStep.RECORD_CLAIM, () -> gateway.post()
                 .uri(HANDLING_PATH)
-                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                .header(HttpHeaders.AUTHORIZATION, BusinessCalls.bearer(token))
                 .body(new BusinessMessages.HandlingActivityRequest(
-                        required(context, BusinessContextKey.TRACKING_NUMBER), "CLAIM",
+                        BusinessCalls.required(context, BusinessContextKey.TRACKING_NUMBER), "CLAIM",
                         DESTINATION, clock.instant().plus(3, ChronoUnit.HOURS).toString(),
                         OPERATOR, null, "シミュレーション荷受人"))
                 .retrieve()
@@ -335,10 +347,10 @@ public class RestBusinessGateway implements BusinessGateway {
     }
 
     private String calculateCharge(String token, Map<String, String> context) {
-        String bookingId = required(context, BusinessContextKey.BOOKING_ID);
-        BusinessMessages.InvoiceResponse invoice = call(ScenarioStep.CALCULATE_CHARGE, () -> gateway.post()
+        String bookingId = BusinessCalls.required(context, BusinessContextKey.BOOKING_ID);
+        BusinessMessages.InvoiceResponse invoice = BusinessCalls.call(ScenarioStep.CALCULATE_CHARGE, () -> gateway.post()
                 .uri(BILLING_PATH + "/" + bookingId + "/calculate")
-                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                .header(HttpHeaders.AUTHORIZATION, BusinessCalls.bearer(token))
                 .body(new BusinessMessages.CalculateRequest(List.of()))
                 .retrieve()
                 .body(BusinessMessages.InvoiceResponse.class));
@@ -355,10 +367,10 @@ public class RestBusinessGateway implements BusinessGateway {
      * <p><strong>金額は精算書から読む。</strong>こちらで計算し直すと、料金の式が 2 つに増える。
      */
     private String settle(String token, Map<String, String> context) {
-        String invoiceNumber = required(context, BusinessContextKey.INVOICE_NUMBER);
-        BusinessMessages.InvoiceResponse invoice = call(ScenarioStep.SETTLE, () -> gateway.get()
+        String invoiceNumber = BusinessCalls.required(context, BusinessContextKey.INVOICE_NUMBER);
+        BusinessMessages.InvoiceResponse invoice = BusinessCalls.call(ScenarioStep.SETTLE, () -> gateway.get()
                 .uri(BILLING_PATH + "/invoices/" + invoiceNumber)
-                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                .header(HttpHeaders.AUTHORIZATION, BusinessCalls.bearer(token))
                 .retrieve()
                 .body(BusinessMessages.InvoiceResponse.class));
 
@@ -367,90 +379,40 @@ public class RestBusinessGateway implements BusinessGateway {
             throw new BusinessCallFailedException("精算書に請求金額がありません: " + invoiceNumber);
         }
 
-        call(ScenarioStep.SETTLE, () -> gateway.post()
+        BusinessCalls.call(ScenarioStep.SETTLE, () -> gateway.post()
                 .uri(BILLING_PATH + "/invoices/" + invoiceNumber + "/payment")
-                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                .header(HttpHeaders.AUTHORIZATION, BusinessCalls.bearer(token))
                 .body(new BusinessMessages.ConfirmPaymentRequest(invoice.totalAmount().value(), today().toString(),
-                        "BANK_TRANSFER", "SIM-" + runId(context)))
+                        "BANK_TRANSFER", "SIM-" + BusinessCalls.runId(context)))
                 .retrieve()
                 .toBodilessEntity());
         return BusinessContextKey.NONE;
     }
 
     private String post(ScenarioStep step, String token, String path) {
-        call(step, () -> gateway.post()
+        BusinessCalls.call(step, () -> gateway.post()
                 .uri(path)
-                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                .header(HttpHeaders.AUTHORIZATION, BusinessCalls.bearer(token))
                 .retrieve()
                 .toBodilessEntity());
         return BusinessContextKey.NONE;
     }
 
     private String put(ScenarioStep step, String token, String path) {
-        call(step, () -> gateway.put()
+        BusinessCalls.call(step, () -> gateway.put()
                 .uri(path)
-                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                .header(HttpHeaders.AUTHORIZATION, BusinessCalls.bearer(token))
                 .retrieve()
                 .toBodilessEntity());
         return BusinessContextKey.NONE;
     }
 
     private String bookingPath(Map<String, String> context, String suffix) {
-        return BOOKING_PATH + "/" + required(context, BusinessContextKey.BOOKING_ID) + suffix;
+        return BOOKING_PATH + "/" + BusinessCalls.required(context, BusinessContextKey.BOOKING_ID) + suffix;
     }
 
     private LocalDate today() {
         return LocalDate.now(clock);
     }
 
-    private static String runId(Map<String, String> context) {
-        return context.getOrDefault(BusinessContextKey.RUN_ID, "SIM");
-    }
-
-    /**
-     * 前の工程が生んだ識別子を読む。
-     *
-     * <p><strong>無いまま進めない。</strong>空文字で進めると、存在しない予約に対する
-     * 操作が 404 になり、引き継ぎが切れていることが「業務 API の失敗」に化ける。
-     */
-    private static String required(Map<String, String> context, String key) {
-        String value = context.get(key);
-        if (value == null || value.isBlank()) {
-            throw new BusinessCallFailedException(
-                    "前の工程が " + key + " を引き継いでいません");
-        }
-        return value;
-    }
-
-    private static String bearer(String token) {
-        return "Bearer " + token;
-    }
-
-    /** 業務 API の失敗に<strong>工程の名前と応答の状態</strong>を添える。 */
-    private <T> T call(ScenarioStep step, Supplier<T> call) {
-        try {
-            return call.get();
-        } catch (RestClientException e) {
-            throw new BusinessCallFailedException(
-                    step.label() + " が失敗しました（" + describe(e) + "）", e);
-        }
-    }
-
-    /**
-     * 失敗を<strong>切り分けられる形</strong>で述べる。
-     *
-     * <p>状態だけでは足りない。400 は「入力が違う」としか言わず、どの項目が違うのかは
-     * 応答の本文にしかない——実環境で 1 度、契約番号の要る法人で荷主を作ろうとして
-     * 400 になり、状態だけでは理由に辿り着けなかった。
-     */
-    private static String describe(RestClientException e) {
-        if (e instanceof RestClientResponseException response) {
-            String body = response.getResponseBodyAsString();
-            String detail = body.length() > BODY_LIMIT ? body.substring(0, BODY_LIMIT) : body;
-            return detail.isBlank()
-                    ? String.valueOf(response.getStatusCode().value())
-                    : response.getStatusCode().value() + ": " + detail;
-        }
-        return e.getMessage();
-    }
 }

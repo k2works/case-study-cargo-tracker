@@ -121,12 +121,9 @@ public class SimulationRunController {
      * 流れたことに誰も気づけない。
      */
     private static Scenario scenarioOf(String scenarioId) {
-        Scenario standard = Scenario.standardTransport();
-        if (!standard.id().equals(scenarioId)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "そのシナリオは実行できません: " + scenarioId);
-        }
-        return standard;
+        return Scenario.findById(scenarioId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "そのシナリオは実行できません: " + scenarioId));
     }
 
     private void requireAdmin(String userId, String roles) {

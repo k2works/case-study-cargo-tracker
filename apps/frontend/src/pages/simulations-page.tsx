@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ApiError } from "../lib/api-client";
 import {
@@ -11,6 +12,11 @@ import { formatBusinessDateTime } from "../lib/business-time";
 /** シナリオの名前。**画面が ID をそのまま出さない**——押したものと表示が食い違う。 */
 const SCENARIO_LABELS: Record<string, string> = {
   "standard-transport": "標準輸送",
+  delay: "遅延",
+  damage: "破損",
+  misroute: "誤配",
+  "customs-hold": "税関保留",
+  cancellation: "輸送中キャンセル",
 };
 
 function scenarioLabel(id: string): string {
@@ -35,8 +41,11 @@ export function SimulationsPage() {
   const { data: runs, isPending, isError } = useSimulationRuns();
   const start = useStartSimulation();
 
-  const scenarioId = scenarios?.[0]?.id;
-  const totalSteps = scenarios?.[0]?.steps.length ?? 0;
+  // **選んだシナリオを覚える。**一覧の先頭に固定すると、例外シナリオを選べない
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const scenarioId = selectedId ?? scenarios?.[0]?.id;
+  const selected = scenarios?.find((scenario) => scenario.id === scenarioId);
+  const totalSteps = selected?.steps.length ?? 0;
   // 二重実行を断られたとき、実行中の ID を受け取る（US34-5）。
   // 断るだけでは、指示した人はいま何が動いているかを確かめられない
   const runningRunId =
@@ -55,23 +64,36 @@ export function SimulationsPage() {
         {'順に実行します。生成した荷主・貨物・請求書は'}
         <code className="mx-1 font-mono">SIM-</code>
         {'の帯で識別され、経理の締めや荷主一覧には出ません。'}
-        <strong>追跡管理者の未解決例外一覧には出ます</strong>
-        {'（今後の課題）。実行したら追跡管理者に一報してください。'}
+        {'追跡管理者の未解決例外一覧にも出ません。'}
       </p>
 
       <div className="flex items-center gap-3">
+        <label className="text-sm text-gray-700" htmlFor="scenario">
+          シナリオ
+        </label>
+        <select
+          className="rounded border border-gray-300 px-2 py-2"
+          disabled={start.isPending}
+          id="scenario"
+          onChange={(event) => setSelectedId(event.target.value)}
+          value={scenarioId ?? ""}
+        >
+          {(scenarios ?? []).map((scenario) => (
+            <option key={scenario.id} value={scenario.id}>
+              {scenarioLabel(scenario.id)}
+            </option>
+          ))}
+        </select>
         <button
           type="button"
           className="rounded bg-blue-600 px-4 py-2 text-white disabled:bg-gray-400"
           disabled={!scenarioId || start.isPending}
           onClick={() => scenarioId && start.mutate(scenarioId)}
         >
-          {start.isPending ? "実行しています…" : "標準輸送シナリオを実行する"}
+          {start.isPending ? "実行しています…" : "実行する"}
         </button>
-        {scenarios?.[0] ? (
-          <span className="text-sm text-gray-600">
-            {scenarios[0].steps.length} 工程
-          </span>
+        {selected ? (
+          <span className="text-sm text-gray-600">{totalSteps} 工程</span>
         ) : null}
       </div>
 

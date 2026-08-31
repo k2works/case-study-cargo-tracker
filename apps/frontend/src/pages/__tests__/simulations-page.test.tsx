@@ -93,3 +93,67 @@ describe('業務シミュレーションの実行（US34）', () => {
     expect(await screen.findByText('SIM-20261116-0001')).toBeInTheDocument()
   })
 })
+
+describe('シナリオを選ぶ（US36）', () => {
+  const SCENARIOS = [
+    SCENARIO,
+    {
+      id: 'misroute',
+      steps: [
+        { step: 'REGISTER_SHIPPER', label: '荷主登録', role: 'ROLE_SALES' },
+        {
+          step: 'RECORD_MISROUTED_HANDLING',
+          label: '予定外の港での荷役記録',
+          role: 'ROLE_HANDLER',
+        },
+      ],
+    },
+  ]
+
+  it('例外シナリオを選べる', async () => {
+    server.use(
+      http.get(API_PATHS.simulationScenarios, () => HttpResponse.json(SCENARIOS)),
+      http.get(API_PATHS.simulations, () => HttpResponse.json([])),
+    )
+    renderPage()
+
+    // 選択肢が届くのを待つ。ラベルは最初から出ているので、そこで待つと早すぎる
+    expect(await screen.findByRole('option', { name: /誤配/ })).toBeInTheDocument()
+    expect(screen.getByLabelText('シナリオ')).toBeInTheDocument()
+  })
+
+  it('選んだシナリオで実行を指示する', async () => {
+    let requested: string | null = null
+    server.use(
+      http.get(API_PATHS.simulationScenarios, () => HttpResponse.json(SCENARIOS)),
+      http.get(API_PATHS.simulations, () => HttpResponse.json([])),
+      http.post(API_PATHS.simulations, async ({ request }) => {
+        requested = ((await request.json()) as { scenarioId: string }).scenarioId
+        return HttpResponse.json({ ...RUN, scenarioId: requested }, { status: 201 })
+      }),
+    )
+    renderPage()
+
+    await screen.findByRole('option', { name: /誤配/ })
+    await userEvent.selectOptions(screen.getByLabelText('シナリオ'), 'misroute')
+    await userEvent.click(screen.getByRole('button', { name: /実行する/ }))
+
+    await screen.findByText(/実行しています…|SIM-/)
+    expect(requested).toBe('misroute')
+  })
+
+  /** 選んだシナリオの工程数を出す。**シナリオごとに違う**——標準輸送だけの数を出さない。 */
+  it('選んだシナリオの工程数を出す', async () => {
+    server.use(
+      http.get(API_PATHS.simulationScenarios, () => HttpResponse.json(SCENARIOS)),
+      http.get(API_PATHS.simulations, () => HttpResponse.json([])),
+    )
+    renderPage()
+
+    expect(await screen.findByText('1 工程')).toBeInTheDocument()
+
+    await userEvent.selectOptions(screen.getByLabelText('シナリオ'), 'misroute')
+
+    expect(await screen.findByText('2 工程')).toBeInTheDocument()
+  })
+})

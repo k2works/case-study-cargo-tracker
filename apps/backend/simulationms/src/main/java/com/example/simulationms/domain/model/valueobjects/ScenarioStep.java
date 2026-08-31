@@ -27,7 +27,44 @@ public enum ScenarioStep {
     CLEAR_CUSTOMS("通関完了", Roles.ROLE_TRACKER, BusinessContextKey.NONE),
     RECORD_CLAIM("引取記録", Roles.ROLE_HANDLER, BusinessContextKey.NONE),
     CALCULATE_CHARGE("料金算出", Roles.ROLE_ACCOUNTANT, BusinessContextKey.INVOICE_NUMBER),
-    SETTLE("精算", Roles.ROLE_ACCOUNTANT, BusinessContextKey.NONE);
+    SETTLE("精算", Roles.ROLE_ACCOUNTANT, BusinessContextKey.NONE),
+
+    // ---- 例外を起こす工程（US36・[ADR-031] 決定 5）----
+    //
+    // **専用の入口は作らない。** どれも実利用者が実際に行う操作である。
+    // 専用 API を作ると [ADR-026] の検知を通らない経路が生まれ、実際には
+    // 動かない実装が緑になる。
+
+    /** 予定より遅い日時で荷役を記録する。遅延はこの記録から起きる。 */
+    RECORD_LATE_HANDLING("遅れた荷役記録", Roles.ROLE_HANDLER, BusinessContextKey.NONE,
+            Nature.RAISES),
+    /** 破損に気づいた人が例外を起票する（US20 のアクターは荷役作業員も含む）。 */
+    RAISE_DAMAGE("破損の起票", Roles.ROLE_HANDLER, BusinessContextKey.NONE, Nature.RAISES),
+    /** 予定と違う港で荷降しを記録する。誤配はこの記録から検知される（[ADR-026]）。 */
+    RECORD_MISROUTED_HANDLING("予定外の港での荷役記録", Roles.ROLE_HANDLER,
+            BusinessContextKey.NONE, Nature.RAISES),
+    /** 通関を保留にする。税関の判断は担当者の手入力である（UC21）。 */
+    HOLD_CUSTOMS("通関の保留", Roles.ROLE_TRACKER, BusinessContextKey.NONE, Nature.RAISES),
+    /** 輸送中の予約のキャンセルを申請する（US30）。申請だけでは状態は変わらない。 */
+    REQUEST_CANCELLATION("キャンセル申請", Roles.ROLE_SALES, BusinessContextKey.NONE,
+            Nature.RAISES),
+
+    // ---- 例外に対応する工程 ----
+    //
+    // **起こしただけでは仕事にならない。** US36-2 が見たいのは、例外が起きたあとの業務である。
+
+    /** 起きた例外を解決する（[ADR-024]）。 */
+    RESOLVE_EXCEPTION("例外の解決", Roles.ROLE_TRACKER, BusinessContextKey.NONE,
+            Nature.RESPONDS),
+    /** 現在地から経路を組み直す（US28・US36-3）。元の経路の割り当て直しでは再開しない。 */
+    REDESIGN_ROUTE("経路の組み直し", Roles.ROLE_ROUTING, BusinessContextKey.NONE,
+            Nature.RESPONDS),
+    /** 保留した通関を進める（UC21）。 */
+    RELEASE_CUSTOMS("通関の保留解除", Roles.ROLE_TRACKER, BusinessContextKey.NONE,
+            Nature.RESPONDS),
+    /** キャンセルを承認する。陸揚げ地の指定を伴う（US30）。 */
+    APPROVE_CANCELLATION("キャンセル承認", Roles.ROLE_TRACKER, BusinessContextKey.NONE,
+            Nature.RESPONDS);
 
     /** ロールの名前。**書き並べない**——写し間違えた 1 つだけが誰でもない者になる。 */
     private static final class Roles {
@@ -41,14 +78,45 @@ public enum ScenarioStep {
         }
     }
 
+    /**
+     * 工程の性質。
+     *
+     * <p>例外を起こす工程と対応する工程を<strong>工程自身が知る</strong>。呼ぶ側で
+     * 一覧を持つと、工程を足したときに書き足し忘れた工程だけが性質を持たないまま通る。
+     */
+    private enum Nature {
+        /** 業務の通常の流れ。 */
+        PLAIN,
+        /** 例外を起こす操作。 */
+        RAISES,
+        /** 起きた例外に対応する操作。 */
+        RESPONDS
+    }
+
     private final String label;
     private final String role;
     private final String producesKey;
+    private final Nature nature;
 
     ScenarioStep(String label, String role, String producesKey) {
+        this(label, role, producesKey, Nature.PLAIN);
+    }
+
+    ScenarioStep(String label, String role, String producesKey, Nature nature) {
         this.label = label;
         this.role = role;
         this.producesKey = producesKey;
+        this.nature = nature;
+    }
+
+    /** 例外を起こす工程か。 */
+    public boolean raisesException() {
+        return nature == Nature.RAISES;
+    }
+
+    /** 起きた例外に対応する工程か。 */
+    public boolean respondsToException() {
+        return nature == Nature.RESPONDS;
     }
 
     public String label() {

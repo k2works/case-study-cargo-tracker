@@ -42,4 +42,35 @@ class SimulationScenarioControllerTest {
                         .header(AuthenticatedUser.ROLES_HEADER, role))
                 .andExpect(status().isForbidden());
     }
+
+    /**
+     * <strong>例外シナリオも選べる</strong>（US36-1）。
+     *
+     * <p>並びを画面が持たないのと同じ理由で、<strong>シナリオの一覧も画面が持たない</strong>。
+     * 足したシナリオが画面に出ないと、実装したのに選べないという形になる。
+     */
+    @Test
+    @DisplayName("例外シナリオも一覧に出る")
+    void listsExceptionScenarios() throws Exception {
+        mockMvc.perform(get("/api/v1/simulations/scenarios")
+                        .header(AuthenticatedUser.USER_ID_HEADER, "admin01")
+                        .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ADMIN"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.id == 'delay')]").exists())
+                .andExpect(jsonPath("$[?(@.id == 'damage')]").exists())
+                .andExpect(jsonPath("$[?(@.id == 'misroute')]").exists())
+                .andExpect(jsonPath("$[?(@.id == 'customs-hold')]").exists())
+                .andExpect(jsonPath("$[?(@.id == 'cancellation')]").exists());
+    }
+
+    /** <strong>正常系が先頭にある。</strong>実演では正常系から見せる。 */
+    @Test
+    @DisplayName("正常系が先頭に出る")
+    void listsTheHappyPathFirst() throws Exception {
+        mockMvc.perform(get("/api/v1/simulations/scenarios")
+                        .header(AuthenticatedUser.USER_ID_HEADER, "admin01")
+                        .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ADMIN"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value("standard-transport"));
+    }
 }
