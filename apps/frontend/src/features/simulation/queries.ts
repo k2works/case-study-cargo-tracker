@@ -1,11 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  fetchActiveSession,
   fetchScenarios,
   fetchSimulationRun,
   fetchSimulationRuns,
   startSimulation,
+  startSimulationSession,
+  stopSimulationSession,
 } from './api'
-import type { SimulationRun } from './types'
+import type { SimulationRun, SimulationSession, StartSessionInput } from './types'
 
 export function useSimulationScenarios() {
   return useQuery({ queryKey: ['simulation-scenarios'], queryFn: fetchScenarios })
@@ -34,6 +37,44 @@ export function useStartSimulation() {
     mutationFn: (scenarioId) => startSimulation(scenarioId),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['simulation-runs'] })
+    },
+  })
+}
+
+/**
+ * 継続実行の状態と統計（US37-8）。
+ *
+ * **動いているあいだは繰り返し読む。** 一度きりだと、件数が増えていることも
+ * 止まったことも画面に出ない——「動いているのに何も起きていない」ように見える。
+ */
+export function useActiveSimulationSession() {
+  return useQuery({
+    queryKey: ['simulation-session', 'active'],
+    queryFn: fetchActiveSession,
+    refetchInterval: (query) =>
+      query.state.data?.session?.status === 'STOPPED' ? false : 5000,
+  })
+}
+
+/** 継続実行を開始したら、状態と実行の一覧を取り直す。 */
+export function useStartSimulationSession() {
+  const queryClient = useQueryClient()
+  return useMutation<SimulationSession, Error, StartSessionInput>({
+    mutationFn: (input) => startSimulationSession(input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['simulation-session'] })
+      void queryClient.invalidateQueries({ queryKey: ['simulation-runs'] })
+    },
+  })
+}
+
+/** 停止したら状態を取り直す。**「停止処理中」を出すため**——止めたと止まったは違う。 */
+export function useStopSimulationSession() {
+  const queryClient = useQueryClient()
+  return useMutation<SimulationSession, Error, string>({
+    mutationFn: (sessionId) => stopSimulationSession(sessionId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['simulation-session'] })
     },
   })
 }

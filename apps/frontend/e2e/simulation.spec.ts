@@ -100,6 +100,27 @@ test.describe('業務シミュレーション（US34・US35）', () => {
     await expect(page.getByText('航海の登録を確かめる', { exact: false })).toBeVisible()
   })
 
+  /**
+   * <strong>継続実行を開始・停止できる</strong>（US37-4）。
+   *
+   * 種が読めることまで確かめる——記録していても読めなければ、落ちた実行を
+   * 再現する手段が画面から消える。
+   */
+  test('継続実行を開始すると、種と状態が読め、停止できる', async ({ page }) => {
+    await logIn(page, 'admin01')
+    await page.goto('/admin/simulations')
+
+    await page.getByRole('button', { name: '継続実行を開始する' }).click()
+
+    await expect(page.getByText('SES-', { exact: false })).toBeVisible()
+    await expect(page.getByText('種')).toBeVisible()
+
+    await page.getByRole('button', { name: '停止する' }).click()
+
+    // **止めたと止まったは違う**——進行中の実行は最後まで走る
+    await expect(page.getByText('停止処理中')).toBeVisible()
+  })
+
   /** 業務の担当者には入口を出さない。出すと、押した先で 403 になる画面へ誘導する。 */
   test('営業担当者には、業務シミュレーションの入口が出ない', async ({ page }) => {
     await logIn(page, 'sales01')

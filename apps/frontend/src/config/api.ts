@@ -99,4 +99,8 @@ export const API_PATHS = {
   simulations: '/api/v1/simulations',
   simulationScenarios: '/api/v1/simulations/scenarios',
   simulationRun: (runId: string) => `/api/v1/simulations/${encodeURIComponent(runId)}`,
+  simulationSessions: '/api/v1/simulations/sessions',
+  simulationActiveSession: '/api/v1/simulations/sessions/active',
+  simulationSession: (sessionId: string) =>
+    `/api/v1/simulations/sessions/${encodeURIComponent(sessionId)}`,
 } as const

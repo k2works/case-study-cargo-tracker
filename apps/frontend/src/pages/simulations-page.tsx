@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { ContinuousRunPanel } from "../features/simulation/components/continuous-run-panel";
 import { ApiError } from "../lib/api-client";
 import {
   useSimulationRuns,
@@ -96,6 +97,8 @@ export function SimulationsPage() {
           <span className="text-sm text-gray-600">{totalSteps} 工程</span>
         ) : null}
       </div>
+
+      <ContinuousRunPanel />
 
       {start.isError ? (
         <p className="rounded border border-red-200 bg-red-50 p-3 text-red-700">

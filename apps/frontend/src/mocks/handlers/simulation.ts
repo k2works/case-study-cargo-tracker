@@ -1,3 +1,8 @@
+import type { SimulationSession } from '../../features/simulation/types'
+
+/** 動いている継続実行。開始・停止で書き換わる。 */
+let continuousSession: SimulationSession | null = null
+
 /**
  * 業務シミュレーションのモック（US34・US35）。
  *
@@ -52,5 +57,56 @@ export const simulationHandlers = [
     }
     simulationRuns.unshift(created)
     return HttpResponse.json(created, { status: 201 })
+  }),
+
+  /**
+   * 継続実行の状態と統計（US37）。
+   *
+   * **動いている状態も置く。** 動いていない状態だけを返すと、画面が
+   * 「開始できる」形しか一度も踏まないまま緑になる。
+   */
+  http.get(API_PATHS.simulationActiveSession, () =>
+    HttpResponse.json({
+      session: continuousSession,
+      statistics: {
+        total: simulationRuns.length,
+        succeeded: simulationRuns.filter((run) => run.status === 'COMPLETED').length,
+        failed: simulationRuns.filter((run) => run.status === 'FAILED').length,
+        running: simulationRuns.filter((run) => run.status === 'RUNNING').length,
+        failuresByStep: [
+          { step: 'ASSIGN_ROUTE', label: '経路割り当て', count: 1 },
+        ],
+      },
+    }),
+  ),
+
+  http.post(API_PATHS.simulationSessions, async ({ request }) => {
+    const body = (await request.json()) as { seed?: number }
+    continuousSession = {
+      sessionId: 'SES-20261207-0001',
+      seed: body.seed ?? 20261207,
+      intervalSeconds: 30,
+      maxConcurrent: 3,
+      exceptionRatio: 0.2,
+      status: 'RUNNING',
+      statusLabel: '実行中',
+      startedBy: 'admin01',
+      startedAt: new Date().toISOString(),
+      stoppedAt: null,
+    }
+    return HttpResponse.json(continuousSession, { status: 201 })
+  }),
+
+  http.delete(API_PATHS.simulationSession(':sessionId'), () => {
+    if (continuousSession === null) {
+      return HttpResponse.json({ message: 'そのセッションはありません' }, { status: 404 })
+    }
+    // **止めたと止まったは違う**（ADR-031 決定 4）。進行中があるうちは停止処理中
+    continuousSession = {
+      ...continuousSession,
+      status: 'STOPPING',
+      statusLabel: '停止処理中',
+    }
+    return HttpResponse.json(continuousSession)
   }),
 ]
