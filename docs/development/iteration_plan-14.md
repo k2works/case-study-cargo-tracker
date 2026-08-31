@@ -227,8 +227,8 @@
 | 6.1 | `architecture_backend.md`・`domain-model.md`・`data-model.md`・`ui_design.md` に simulationms と実行記録を反映する（**8 サービス目**） | 8h | [x] |
 | 6.2 | ユーザーマニュアルに「業務シミュレーション」章を追加し、キャプチャを撮る | 6h | [x]（15 章。索引・mkdocs ナビ・キャプチャ 2 枚まで） |
 | 6.3 | 実環境で `apply` → `rollout:image` → `rollout:restart` を踏み、シナリオ 1 本を通す | 6h | [x]（**14 工程すべて成功**。接続先が他サービスの DB を向いていた欠陥をここで検出し、検査に落とした） |
-| 6.4 | `./gradlew build`、`TZ=UTC ./gradlew test`、frontend test / build、E2E、JIG / jig-erd を実行する | 8h | [~]（backend build・frontend test / lint・E2E は緑。JIG は残り） |
-| 6.5 | **最後のコミットに対して** SonarQube を回し、Quality Gate PASS を確認する（IT13 Try 5'） | 2h | [~]（実行中） |
+| 6.4 | `./gradlew build`、`TZ=UTC ./gradlew test`、frontend test / build、E2E、JIG / jig-erd を実行する | 8h | [x] |
+| 6.5 | **最後のコミットに対して** SonarQube を回し、Quality Gate PASS を確認する（IT13 Try 5'） | 2h | [x]（Backend / Frontend とも PASS。指摘 40 件を 0 件に） |
 
 ### 見積もり合計
 
@@ -245,7 +245,7 @@
 
 **1 SP あたり**: 約 17.9h
 
-**進捗率**: 約 94%（7.5 / 8 SP。Phase 0〜6.3 完了。JIG と品質ゲートが残り）
+**進捗率**: 100%（8 / 8 SP。Phase 0〜6 完了）
 
 ---
 
