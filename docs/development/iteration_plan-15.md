@@ -85,7 +85,7 @@
 - [ ] 管理者が開始・停止でき、停止すると進行中の実行は最後まで終えてから止まる
 - [ ] 生成されたデータは、US34 と同じ印でシミュレーション由来と識別できる
 - [ ] 本番環境では起動しない
-- [ ] 実行中もヘルスチェックと実利用者の操作は劣化しない
+- [ ] 実行中も**ヘルスチェックと実利用者の操作は劣化しない**（シミュレーションの負荷が業務を止めない）
 - [ ] 実行の統計（実行件数・成功／失敗の内訳・失敗した工程の分布）が US35 と同じ形式で確認できる
 
 ---
@@ -104,13 +104,32 @@
 
 ## タスク
 
-### Phase 0: 返済枠と調査（0 SP）
+### Phase 0: IT14 から送った負債の返済枠（0 SP・**IT 序盤に独立コミットで着手する**）
 
-| # | タスク | 見積 | 状態 |
-| :--- | :--- | :--- | :--- |
-| 0.1 | IT14 のふりかえり Try を本計画と DoD に反映する | 2h | [ ] |
-| 0.2 | IT14 で送った負債のうち、本 IT が触るファイルに現れるものを洗い出す | 2h | [ ] |
-| 0.3 | 並行実行で壊れる可能性のある箇所（一覧の件数絞り込み・楽観的ロック）を調査し、赤いテストを置く | 4h | [ ] |
+> **「余力次第」にしない。** 返済枠を余力次第にすると毎 IT 繰り越されて固定化する
+> （ADR-0008 が 3 IT 連続で繰り越された）。本 IT では **0.4〜0.6 を US36 / US37 の
+> 着手より先に**片づける。落とす場合は「余力が無かった」ではなく、
+> **スコープ外**として理由とともに明記する。
+
+| # | タスク | 由来 | 見積 | 状態 |
+| :--- | :--- | :--- | :--- | :--- |
+| 0.1 | IT14 のふりかえり Try 6 件を本計画の DoD に反映する | [ふりかえり](retrospective-14.md) Try 1-6 | 2h | [ ] |
+| 0.2 | 運用手順書に「素の `kubectl` は `--context kind-cargo` を必ず付ける」を追記する | Try 3 | 1h | [ ] |
+| 0.3 | ADR テンプレートに「**この決定の前提の外にあるもの**」の欄を置く | Try 6 | 1h | [ ] |
+| 0.4 | **実行 ID の採番を `COUNT(*)+1` から衝突しない方式へ**（US37 の同時開始で必ず表面化する） | 報告書 課題 5 | 4h | [ ] |
+| 0.5 | **`simulation_run.status` / `finished_at` の死んだ列**を、更新するか落とすかを決めて片付ける | 報告書 課題 4 | 3h | [ ] |
+| 0.6 | **`assignRoute` が経路候補の先頭を無条件に選ぶ**のを、自分の `V-SIM-` 航海に絞る | IT14 レビュー | 3h | [ ] |
+| 0.7 | 追跡の未解決例外一覧から `SIM-` 由来を除外する（**既存の `ShipperCargoSnapshotFinder` に由来を足す**。新しい越境点を作らない） | 報告書 課題 1・[ADR-030](../adr/030-business-simulation-execution.md) | 6h | [ ] |
+| 0.8 | シミュレーション専用の利用者を用意し、由来のフラグを要求本文から立てられる穴を塞ぐ | 報告書 課題 3 | 4h | [ ] |
+| 0.9 | 実行詳細画面で**識別子の種別を表示し、コピーできる形にする**（管理者が営業に番号を伝えるため） | 報告書 課題 5.5 | 3h | [ ] |
+| 0.10 | 並行実行で壊れる可能性のある箇所（一覧の件数絞り込み・楽観的ロック）を調査し、赤いテストを置く | US37 の前提 | 4h | [ ] |
+
+> **0.4・0.7 は US37 の前提である。** 採番が衝突すれば継続実行は開始できず、
+> 由来の除外ができなければ継続実行の生む例外が追跡の一覧を埋める。
+> **落とす順序の対象外**とする。
+>
+> **実行の非同期化（`202 Accepted` + 取得）は Phase 3.3 に含める。**
+> 報告書 課題 2 は US37 の受入基準そのものであり、別枠にはしない。
 
 ### Phase 1: 受け入れテストと ADR（US36 / US37）
 
@@ -170,16 +189,16 @@
 
 | カテゴリ | SP | 理想時間 | 状態 |
 | :--- | :--- | :--- | :--- |
-| Phase 0: 返済枠と調査 | 0 | 8h | [ ] |
+| Phase 0: IT14 から送った負債の返済枠 | 0 | 31h | [ ] |
 | Phase 1: 受け入れテストと ADR | 1 | 20h | [ ] |
 | Phase 2: 例外シナリオ | 2 | 23h | [ ] |
 | Phase 3: ランダム実行 | 2 | 23h | [ ] |
 | Phase 4: 業務を止めない | 1 | 16h | [ ] |
 | Phase 5: 統計と画面 | 2 | 15h | [ ] |
 | Phase 6: 設計・マニュアル・品質ゲート・リリース | 0 | 31h | [ ] |
-| **合計** | **8** | **136h** | |
+| **合計** | **8** | **159h** | |
 
-**1 SP あたり**: 約 17.0h
+**1 SP あたり**: 約 19.9h（返済枠 31h を含む。**返済枠を除くと 16.0h** で IT14 実績と同水準）
 
 **進捗率**: 0%（0 / 8 SP）
 
@@ -194,7 +213,7 @@ gantt
     title イテレーション 15 - Week 1
     dateFormat  YYYY-MM-DD
     section 調査と ADR
-    返済枠と並行実行の調査        :d1, 2026-11-30, 1d
+    IT14 負債の返済枠             :d1, 2026-11-30, 2d
     受け入れテストと ADR          :d2, after d1, 2d
     section 例外
     例外シナリオ                  :d4, 2026-12-03, 2d
@@ -202,8 +221,8 @@ gantt
 
 | 日 | タスク |
 | :--- | :--- |
-| Day 1 | Phase 0（Try の反映・並行実行で壊れる箇所の赤） |
-| Day 2 | US36 / US37 の受け入れテスト Red |
+| Day 1 | Phase 0（Try の DoD 反映・**採番の衝突 0.4 と例外一覧の除外 0.7** ・並行実行で壊れる箇所の赤） |
+| Day 2 | Phase 0 の残り（死んだ列・`V-SIM-` 絞り込み・専用利用者・識別子の種別表示）、US36 / US37 の受け入れテスト Red |
 | Day 3 | ADR-031 起票、コンプライアンス検査 |
 | Day 4 | 遅延・破損・誤配シナリオ |
 | Day 5 | 税関保留・輸送中キャンセル、結果形式の統一 |
@@ -303,34 +322,93 @@ hide circle
 skinparam linetype ortho
 
 entity "simulation_run\n（実行・IT14 で作成）" as run {
-  * id : BIGINT <<PK>>
+  * id : BIGSERIAL <<PK>>
   --
-  * run_id : VARCHAR(40) <<UK>>
-  * scenario_id : VARCHAR(40) <<NOT NULL>>
+  * run_id : VARCHAR(20) <<UK>>
+  * scenario_id : VARCHAR(50) <<NOT NULL>>
   * status : VARCHAR(20) <<NOT NULL>>
   * seed : BIGINT <<NOT NULL, IT15 で追加>>
-  continuous_session_id : VARCHAR(40) <<FK, IT15 で追加>>
+  session_id : BIGINT <<FK, IT15 で追加>>
 }
 
 entity "simulation_session\n（継続実行）" as session {
-  * id : BIGINT <<PK>>
+  * id : BIGSERIAL <<PK>>
   --
-  * session_id : VARCHAR(40) <<UK>>
+  * session_id : VARCHAR(20) <<UK>>
   * seed : BIGINT <<NOT NULL>>
   * interval_seconds : INTEGER <<NOT NULL>>
   * max_concurrent : INTEGER <<NOT NULL>>
   * exception_ratio : NUMERIC(3,2) <<NOT NULL>>
   * status : VARCHAR(20) <<NOT NULL>>
-  * started_at : TIMESTAMPTZ <<NOT NULL>>
-  stopped_at : TIMESTAMPTZ
+  * started_at : TIMESTAMP WITH TIME ZONE <<NOT NULL>>
+  stopped_at : TIMESTAMP WITH TIME ZONE
 }
 
-session ||--o{ run : "1 セッションが多数の実行を生む"
+session ||--o{ run : "1 セッションが多数の実行を生む\n（FK は id を参照する）"
 @enduml
 ```
 
 > **`seed` は既存行にも必要になる。** IT14 の行には種が無いため、
 > **既定値で埋めてから NOT NULL にする**（「不変条件の追加は既存行を壊す」）。
+>
+> **型は `TIMESTAMP WITH TIME ZONE` と書く。** IT14 の方言スモークで
+> `TIMESTAMPTZ` を H2 が解釈しないことが分かっている。FK はサロゲートキー
+> （`simulation_session.id`）を参照する——[data-model](../design/data-model.md) の規約。
+
+### 状態遷移
+
+継続実行（`simulation_session`）の状態。**停止は新規の開始だけを止める**（決定 D）ため、
+「止めた」と「止まった」の間に `STOPPING` を置く。この 2 つを分けないと、進行中の実行が
+残っているのに停止済みと表示され、統計が確定していない状態で読まれる。
+
+```plantuml
+@startuml
+title IT15 スコープ - 継続実行の状態
+
+[*] --> RUNNING : 開始（種・間隔・同時実行数・例外比率）
+RUNNING --> STOPPING : 管理者が停止\n（新規の開始だけを止める）
+RUNNING --> STOPPING : 本番環境と判定\n（起動しない）
+STOPPING --> STOPPED : 進行中の実行がすべて終わった
+STOPPED --> [*]
+
+note right of STOPPING
+  進行中の実行は**中断しない**。
+  中断すると業務データが中途半端に残り、
+  ADR-030 決定 5（巻き戻さない）と噛み合わない。
+end note
+@enduml
+```
+
+> **個々の実行（`SimulationRun`）の状態は IT14 のまま**である。読むときは工程の結果から
+> 導く（[data-model](../design/data-model.md)）。本 IT で状態の種類は増やさない。
+
+### 画面遷移
+
+```plantuml
+@startuml
+title IT15 スコープ - 業務シミュレーション
+
+state "業務シミュレーション\n/admin/simulations" as list
+state "実行結果\n/admin/simulations/:runId" as detail
+state "追跡照会\n/tracking/:trackingNumber" as tracking
+
+[*] --> list : ROLE_ADMIN
+list --> list : 継続実行の開始 / 停止（PRG）
+list --> list : 設定値が上限を超える（自己ループ・エラー表示）
+list --> detail : 実行 ID を選ぶ（GET）
+list --> list : 種を指定して再実行（PRG。IT15 で追加）
+detail --> tracking : 追跡番号（GET）
+detail --> list : 一覧に戻る（GET）
+@enduml
+```
+
+**本 IT で `/admin/simulations` に足すもの**——継続実行の開始・停止、状態（実行中 / 停止中 /
+停止処理中）、統計（実行件数・成功／失敗の内訳・失敗した工程の分布）、種の表示と
+種を指定した再実行。**画面は増やさない**。増やすと、管理者は開始した実行の結果を
+見るために画面を渡り歩くことになる。
+
+> **繋ぐのは追跡照会だけ**という IT14 の判断を引き継ぐ。予約詳細・精算書は
+> システム管理者には開かれておらず、押すと 403 になる（[ui_design](../design/ui_design.md)）。
 
 ### API 設計
 
@@ -356,26 +434,40 @@ session ||--o{ run : "1 セッションが多数の実行を生む"
 | 2 | 並行実行で「たまに落ちる」テストが出る | 再実行で通ることを理由に見送り、本物の赤を見逃す | **種を記録**しているので、落ちた種で再現する。2 回目の目撃で追う |
 | 3 | 例外注入に専用 API を作りたくなる | 検知ロジックを迂回し、実際には動かない実装が緑になる | 決定 E で禁じ、**実際に起きる操作をそのまま行う**（誤配 = 違う港での荷役記録） |
 | 4 | シミュレーションのデータが溜まり続ける | 一覧が重くなり、実データが埋もれる | 継続実行のデータ量の上限と削除手段を Phase 5 に含める。IT14 の除外検査が効いていることを再確認する |
+| 6 | 返済枠 31h が US36 / US37 を圧迫する | Release 2.2 が閉じない | 0.4・0.7 以外は**落としてよい**。落とす場合は「余力が無かった」ではなくスコープ外として理由を明記し、次 IT に丸投げしない |
 | 5 | 8 SP に収まらない | Release 2.2 が閉じない | 落とす順序——(1) 統計の分布表示、(2) 税関保留・キャンセルシナリオ、(3) 種を指定した再実行の導線。**再現性（Phase 3.2）とヘルスチェック保護（Phase 4.1）は落とさない** |
 
 ---
 
 ## 整合性検証結果
 
-> **本 IT の検証は IT14 のクローズ後に再実施する。** IT14 で simulationms の設計を
-> 各ドキュメントへ反映するため、**現時点の検証結果は IT14 の反映内容に依存する**。
-> ここに記すのは、着手前に確定している分だけである。
+**実施日**: 2026-08-31（IT14 クローズ後）。`validating-iteration-plan`（8 ステップ）・
+`validating-design`（3 軸）を実施した。
 
-| 軸 | 検証対象 | 結果 | 備考 |
+### 詳細突合（上流設計との整合）
+
+| ステップ | 検証対象 | 結果 | 内容 |
 | :--- | :--- | :--- | :--- |
-| A | 開発戦略 ↔ 計画 | OK | 拡張局面の IT15 = インサイドアウトと一致 |
-| B | 設計トピックカバレッジ | **IT14 に依存** | `simulation_session`・`seed` 列・統計 Read Model は本 IT で追加。反映先は IT14 が作る節 |
-| C | 計画 ↔ 過去計画 | OK | 上限の守り方は IT7 の「ヘルスチェックを除外する」を踏襲。例外の注入は [ADR-026](../adr/026-misroute-detection-and-rerouting.md)（誤配は荷役の記録から検知）に従い、専用 API を作らない |
+| 1 | テンプレートフォーマット | **修正** | 状態遷移図・画面遷移図が欠けていたため追加（4 図を揃えた） |
+| 2 | ユーザーストーリー | **修正** | US37 受入基準 7 の但し書きが省略されていたため全文一致に直した |
+| 3 | ドメインモデル | OK | `SimulationRun` 集約は IT14 で `domain-model.md` に反映済み。本 IT が足す `Seed`・`ScenarioGenerator`・`ContinuousRunPolicy`・`SimulationStatistics` は Phase 6.1 で反映する |
+| 4 | データモデル | **修正** | 4 件——`id` は `BIGSERIAL`、`run_id` は `VARCHAR(20)`、`scenario_id` は `VARCHAR(50)`、日時は `TIMESTAMPTZ` ではなく `TIMESTAMP WITH TIME ZONE`（IT14 の方言スモークで H2 が解釈しないことが判明済み）。FK は業務キーではなく `simulation_session.id` を参照する形に直した |
+| 5 | UI 設計（ビュー） | OK | `/admin/simulations`・`/admin/simulations/:runId` は IT14 で定義済み。**本 IT は画面を増やさない** |
+| 6 | UI 設計（インタラクション） | **修正** | 画面遷移図を追加し、設定値が上限を超えたときの自己ループと、種を指定した再実行（PRG）を明示した |
+| 7 | ゴールの整合性 | OK | 達成状態 4 件 ↔ US36 の 4 受入基準・US37 の 8 受入基準 ↔ Phase 2〜5 のタスクが対応している |
+| 8 | 過去レビュー指摘 | **修正** | [IT14 レビュー](../review/イテレーション14_review_20260831.md)で IT15 へ送った高 2 件と、完了報告書の課題 7 件を Phase 0 の返済枠に明示した |
 
-**既存行への影響（着手前に確定）**: `simulation_run.seed` を NOT NULL にすると、
-IT14 で作られた行が読めなくなる。**既定値で埋めてから NOT NULL にする**
-（「不変条件の追加は既存行を壊す」）。Phase 3.1 のタスクに含める。
+### 横断整合（戦略・過去計画との連続性）
 
+| 軸 | 検証対象 | 結果 | 内容 |
+| :--- | :--- | :--- | :--- |
+| A | [開発戦略](development_strategy.md) ↔ 計画 | OK | 拡張局面 IT15 = **インサイドアウト**と一致。戦略が挙げる `Seed`・`ScenarioGenerator`・`ContinuousRunPolicy` を、本計画のドメインモデルがそのままの名前で使っている |
+| B | 設計トピックカバレッジ | OK | 新規のドメインサービス（`ScenarioGenerator`）・Read Model（`SimulationStatistics`）・テーブル（`simulation_session`）・状態（`RUNNING` / `STOPPING` / `STOPPED`）の反映先を Phase 6.1 に明示。4 図を掲載済み |
+| C | 過去計画との連続性 | **修正** | 追跡からシミュレーション由来を問う経路は、**既存の `ShipperCargoSnapshotFinder`（trackingms → bookingms の ACL ポート）に足す**。新しい越境点を作ると「ACL ポートだけが越境点」の規律が崩れる。Phase 0.7 に反映した。上限の守り方は IT7 の「ヘルスチェックを除外する」、例外の注入は [ADR-026](../adr/026-misroute-detection-and-rerouting.md)（誤配は荷役の記録から検知）を踏襲 |
+
+**既存行への影響**: `simulation_run.seed` を NOT NULL にすると、IT14 で作られた行が
+読めなくなる。**既定値で埋めてから NOT NULL にする**（「不変条件の追加は既存行を壊す」）。
+Phase 3.1 のタスクに含める。
 
 ## 完了条件
 
@@ -388,6 +480,12 @@ IT14 で作られた行が読めなくなる。**既定値で埋めてから NOT
 - [ ] 例外の注入に専用 API を使っていないことを、実際の操作を踏むテストで固定している。
 - [ ] `domain-model.md`、`data-model.md`、`ui_design.md`、ユーザーマニュアルを更新している。
 - [ ] マニュアル用キャプチャを撮り直し、目視で UI 欠陥がないことを確認している。
+- [ ] **push 前に `--tests` で絞らないフルビルド**（`TZ=UTC ./gradlew build`）を回している（Try 1）。
+- [ ] API の要求に項目を足した変更では、**その項目を送らない要求のテスト**を同じ変更の中で足している（Try 2）。
+- [ ] ADR のコンプライアンス表に書いた検査は、**書いた直後に対象を壊して赤を確かめている**（Try 5）。
+- [ ] 接続先の取り違えの検査は、**3 本目を作らず `ServiceEndpointConfigTest` / `ServiceDatabaseUrlTest` に足している**（Try 4）。
+- [ ] ADR-031 に「**この決定の前提の外にあるもの**」を書いている（Try 6）。
+- [ ] IT14 から送った負債 7 件を、返済または**スコープ外として理由つきで明記**している。
 - [ ] `./gradlew build`、`TZ=UTC ./gradlew test`、frontend test / build、E2E、JIG / jig-erd が完了している。
 - [ ] **最後のコミットに対して** SonarQube を回し、Quality Gate が PASS である。
 - [ ] 5 視点レビューを実施し、高優先度をすべて対応または明示的に送っている。
@@ -413,6 +511,8 @@ IT14 で作られた行が読めなくなる。**既定値で埋めてから NOT
 | 日付 | 内容 | 担当 |
 | :--- | :--- | :--- |
 | 2026-08-31 | 初版作成 | - |
+| 2026-08-31 | IT14 ふりかえりの Try 6 件と、IT14 から送った負債 7 件を Phase 0 の返済枠・DoD・スケジュール・リスクに反映 | - |
+| 2026-08-31 | 整合性検証（8 ステップ + 3 軸）を実施。状態遷移図・画面遷移図を追加、データモデルの型と FK を data-model.md に合わせ、受入基準を全文一致に修正 | - |
 
 ---
 
