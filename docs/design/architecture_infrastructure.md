@@ -166,7 +166,7 @@ ops/k8s/kustomize/
 │   ├── kustomization.yaml      # 束ねる定義 + configMapGenerator + images
 │   ├── namespace.yaml
 │   ├── secret.yaml             # DB 認証（ローカル用）
-│   ├── init-databases.sql      # 6 DB 作成（ConfigMap 化）
+│   ├── init-databases.sql      # 7 DB 作成（ConfigMap 化）
 │   ├── postgres.yaml
 │   ├── rabbitmq.yaml
 │   ├── authms.yaml             # ┐
@@ -184,7 +184,7 @@ ops/k8s/kustomize/
 ```
 
 - 各バックエンドサービスは Deployment + Service を 1 ファイルにまとめ、DB 接続先・RabbitMQ 要否は `env` で切り替える。DB 認証は `secretKeyRef` で参照する
-- 6 DB の初期化 SQL は `configMapGenerator` で ConfigMap 化し、postgres の初期化ボリュームにマウントする
+- 7 DB の初期化 SQL は `configMapGenerator` で ConfigMap 化し、postgres の初期化ボリュームにマウントする
 - イメージタグは `kustomization.yaml` の `images` で集中管理する
 - DB 起動待ちの再起動は `readinessProbe` の範囲で復帰させる（起動順序制御は作り込まない）
 
