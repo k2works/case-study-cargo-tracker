@@ -98,4 +98,48 @@ class SimulationRunNumberingConcurrencyIntegrationTest {
             throw new IllegalStateException("同時開始が失敗しました", e.getCause());
         }
     }
+
+    /**
+     * 二重実行の拒否は、<strong>同時に始めると効かない</strong>。
+     *
+     * <p>「実行中か」を読んでから書くまでの間に、もう一方が同じ検査を通る（TOCTOU）。
+     * 1 件ずつ手で押していたあいだは起こりようがなかった。
+     *
+     * <p><strong>この検査は US37 の設計判断を待っている。</strong>継続実行は同じシナリオを
+     * 何本も並べて動かすため、US34-5 の「同じシナリオは 1 本だけ」とそもそも噛み合わない。
+     * どちらを取るかは ADR-031 で決める（Phase 1.3）。ここでは<strong>現状が
+     * どうなっているか</strong>を固定し、決めたときに壊れる形にしておく。
+     */
+    @Test
+    @DisplayName("同じシナリオを同時に始めると、二重実行の拒否は効かない（ADR-031 で決める）")
+    void theAlreadyRunningGuardDoesNotHoldUnderConcurrency() throws Exception {
+        RunSimulationUseCase useCase =
+                new RunSimulationUseCase(runs, NO_BUSINESS, Clock.systemUTC());
+        Scenario same = Scenario.of("numbering-same", List.of(ScenarioStep.REGISTER_SHIPPER));
+        CyclicBarrier startTogether = new CyclicBarrier(2);
+
+        List<String> started = new java.util.ArrayList<>();
+        List<Throwable> refused = new java.util.ArrayList<>();
+        try (ExecutorService pool = Executors.newFixedThreadPool(2)) {
+            List<Future<String>> futures = pool.invokeAll(java.util.stream.IntStream.range(0, 2)
+                    .<Callable<String>>mapToObj(i -> () -> {
+                        startTogether.await();
+                        return useCase.run(same, "admin01").runId().value();
+                    })
+                    .toList());
+            for (Future<String> future : futures) {
+                try {
+                    started.add(future.get());
+                } catch (java.util.concurrent.ExecutionException e) {
+                    refused.add(e.getCause());
+                }
+            }
+        }
+
+        // **いまは 2 本とも通る。**採番は衝突しないが、二重実行の拒否は通り抜けている。
+        assertThat(started).hasSize(2);
+        assertThat(started).doesNotHaveDuplicates();
+        assertThat(refused).isEmpty();
+    }
+
 }
