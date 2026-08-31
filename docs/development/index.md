@@ -27,7 +27,7 @@
 | IT10 | [計画](iteration_plan-10.md) | [ふりかえり](retrospective-10.md) | [完了報告書](iteration_report-10.md) | 完了 |
 | IT11 | [計画](iteration_plan-11.md) | [ふりかえり](retrospective-11.md) | [完了報告書](iteration_report-11.md) | 完了 |
 | IT12 | [計画](iteration_plan-12.md) | [ふりかえり](retrospective-12.md) | [完了報告書](iteration_report-12.md) | 完了 |
-| IT13 | [計画](iteration_plan-13.md) | - | - | 計画済み |
+| IT13 | [計画](iteration_plan-13.md) | [ふりかえり](retrospective-13.md) | [完了報告書](iteration_report-13.md) | 完了 |
 
 ### 進捗サマリー
 
@@ -45,8 +45,8 @@
 | IT10 | 7 | 7 | 100% |
 | IT11 | 9 | 9 | 100% |
 | IT12 | 11（うち 3 は US21 の再実施） | 11 | 100% |
-| IT13 | 5（+ バッファ 2） | - | - |
-| **累計** | **110**（計画・33US） | **105** | **95.5%** |
+| IT13 | 7（US33 5 + バッファ TD-01 2） | 7 | 100% |
+| **累計** | **112**（計画・33US 110 SP + TD-01 2 SP） | **112** | **100%** |
 
 > **IT12 の 11 SP のうち 3 SP は US21（IT11）の再実施**です（距離・輸出免税）。累計にはリリース計画と同じく **8 SP** として算入しています（[release_plan.md](release_plan.md) 529 行）。
 
@@ -62,7 +62,7 @@
 | Release 1.0（IT7-8・19 SP） | [報告書](release_report-1_0_0.md) | 完了 |
 | Release 1.1（IT9-10・17 SP） | [報告書](release_report-1_1_0.md) | 完了 |
 | Release 2.0（IT11-12・17 SP） | [報告書](release_report-2_0_0.md) | 完了 |
-| Release 2.1（IT13・5 SP + バッファ 2 SP） | - | 計画済み |
+| Release 2.1（IT13・5 SP + バッファ 2 SP） | - | 実装完了（報告書は作成予定） |
 
 ## 補足
 
