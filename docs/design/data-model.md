@@ -38,6 +38,7 @@ take-3 のデータモデルを基礎とし、本プロジェクトの要件差�
 | trackingms | `tracking_db` | `location`, `tracking_activity`, `tracking_handling_event`, `tracking_exception_event` |
 | handlingms | `handling_db` | `location`, `handling_activity`, `customs_declaration`, `customs_status_history` |
 | billingms | `billing_db` | `invoice`, `invoice_line_item`, `payment` |
+| simulationms | `simulation_db` | `simulation_run`, `simulation_step_result` |
 
 > **`location` テーブルの重複について**: Shared Domain の `Location`（UN/LOCODE）は共有カーネルとして定義されるが、Database per Service パターンでは各サービスが自身の DB 内に `location` テーブルを保持する。初期データは共通の Flyway シードスクリプトから投入し、データの同期は必要に応じてイベントで行う。
 >
@@ -1111,6 +1112,41 @@ CREATE TABLE customs_status_history (
 
 ---
 
+### simulation_db
+
+IT14（US34・US35）で追加した。**実行そのもの**と**工程ごとの結果**を分けて持つ。
+
+#### `simulation_run`（実行）
+
+| カラム名 | データ型 | 制約 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGSERIAL` | PK | |
+| `run_id` | `VARCHAR(20)` | UK, NOT NULL | 実行 ID（`SIM-YYYYMMDD-NNNN`。その日の連番） |
+| `scenario_id` | `VARCHAR(50)` | NOT NULL | シナリオ |
+| `steps` | `VARCHAR(500)` | NOT NULL | **実行時の工程の並び**。シナリオ ID だけでは、定義を変えたあとに過去の実行を正しく復元できない |
+| `status` | `VARCHAR(20)` | NOT NULL | 開始時の状態。**読むときは工程の結果から導く**（二重に持った片方だけが更新される形を避ける） |
+| `started_by` | `VARCHAR(50)` | NOT NULL | 指示した利用者 |
+| `started_at` | `TIMESTAMP WITH TIME ZONE` | NOT NULL | |
+| `finished_at` | `TIMESTAMP WITH TIME ZONE` | | |
+
+#### `simulation_step_result`（工程の結果）
+
+**追記だけを行う。** 失敗しても巻き戻さない（[ADR-030](../adr/030-business-simulation-execution.md)
+決定 5）——巻き戻すと、どこまで通ったかという US35 が見たいものが、失敗したときだけ残らない。
+
+| カラム名 | データ型 | 制約 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGSERIAL` | PK | |
+| `run_id` | `BIGINT` | FK, NOT NULL | `simulation_run.id` |
+| `step` | `VARCHAR(40)` | NOT NULL | 工程 |
+| `outcome` | `VARCHAR(20)` | NOT NULL | `SUCCEEDED` / `FAILED` |
+| `elapsed_ms` | `INTEGER` | NOT NULL | 所要時間 |
+| `created_identifier` | `VARCHAR(50)` | | その工程が生んだ識別子（予約番号・追跡番号・精算書番号） |
+| `failure_reason` | `VARCHAR(500)` | | 止まった理由。**「失敗しました」だけにしない** |
+| `recorded_at` | `TIMESTAMP WITH TIME ZONE` | NOT NULL | |
+
+---
+
 ### billing_db
 
 #### `invoice`（精算書）― 変更
@@ -1249,6 +1285,22 @@ IT11（US21・US22）で実装した。キャンセル料の算定根拠（UC22�
 **判断**: 失敗回数（`failed_attempts`）とロック期限（`locked_until`）を `users` テーブルのカラムとして永続化する。ログや履歴からの再導出は行わない。
 
 **根拠**: 集約状態を履歴から再導出すると、クロスリクエストで誤復帰する偽の安全網になる。ロック判定に必要な状態は必ずカラムに永続化する。
+
+### 12. シミュレーション由来は荷主コードの帯で識別する（take-7 追加・IT14）
+
+**判断**: シミュレーションが作った荷主は荷主コードを `SIM-` の帯で採番する。
+**専用の列は持たない**（[ADR-030](../adr/030-business-simulation-execution.md) 決定 3）。
+連番は実業務と同じシーケンスを使い、**分けるのは帯だけ**である。
+
+**根拠**: 帯と列の両方を持つと、食い違う行が生まれ、どちらが正しいかを決める規則がまた要る。
+貨物・請求書・追跡はすべて荷主から辿れるため、帯 1 本で判断できる。別のシーケンスにすると、
+片方だけ進んだ状態で番号が衝突する。
+
+除外は**除外する側**の問い合わせに書く（`shipper_code NOT LIKE 'SIM-%'`）。
+**名指しの照会では外さない**——外すと、シミュレーション自身の料金算出が通らず、
+精算まで通ることを確かめる手段が消える。
+
+---
 
 ### 11. 利用者と荷主 ID の紐付け（take-7 追加）
 

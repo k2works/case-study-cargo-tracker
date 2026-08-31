@@ -168,6 +168,7 @@ IT2・IT3 のふりかえりが繰り返し「`ui_design.md` の規約」を反�
 | 通関管理 | `/customs` | ROLE_HANDLER, ROLE_TRACKER |
 | 精算管理 | `/billing` | ROLE_ACCOUNTANT |
 | アカウント管理 | `/admin/accounts` | ROLE_ADMIN。ロックされたアカウントの解除（US32）。**他のロールには出さない**——出すと、押した先で 403 になる画面へ誘導することになる |
+| 業務シミュレーション | `/admin/simulations` | ROLE_ADMIN。予約から精算までを自動で 1 本通す（US34・US35）。**業務の担当者には出さない**——業務データを作る操作である。詳細は `/admin/simulations/:runId` |
 | ログアウト | - | 全ロール |
 
 > **ロール名は IT1 で確定した（2026-08-19）**。経路設計者は独立したロール `ROLE_ROUTING` とする。

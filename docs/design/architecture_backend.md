@@ -503,8 +503,16 @@ apps/backend/                            Gradle マルチプロジェクトル�
 │       │                                TrackingNumberIssuedMessage（ACL。[ADR-022]）
 │       └── config/                      TrackingConfig
 │
-├── handlingms/                          ★ 荷役マイクロサービス（未着手・config のみ）
-├── billingms/                           ★ 請求マイクロサービス（未着手・config のみ）
+├── handlingms/                          ★ 荷役マイクロサービス（IT7 で実装）
+├── billingms/                           ★ 請求マイクロサービス（IT11・IT12 で実装）
+├── simulationms/                        ★ 業務シミュレーション（IT14。[ADR-030]）
+│   └── src/main/java/com/example/simulationms/
+│       ├── domain/model/                SimulationRun, Scenario, ScenarioStep, StepResult
+│       ├── application/internal/
+│       │   ├── commandservices/         RunSimulationUseCase
+│       │   └── outboundservices/acl/    BusinessGateway（**業務 API を呼ぶ唯一の出口**）
+│       ├── infrastructure/acl/          RestBusinessGateway, SimulationUsers, BusinessMessages
+│       └── infrastructure/config/       SimulationConfig, SimulationSafetyConfig
 │
 ├── gatewayms/                           ★ API Gateway（独立デプロイ）
 │   └── src/main/java/com/example/gatewayms/
@@ -722,6 +730,7 @@ public class RestRouteCandidateFinder implements RouteCandidateFinder {
 | trackingms | tracking_db | tracking_activity, handling_event, tracking_exception_event | PostgreSQL 16.x |
 | handlingms | handling_db | handling_activity, customs_declaration, customs_status_history | PostgreSQL 16.x |
 | billingms | billing_db | invoice, discount_policy | PostgreSQL 16.x |
+| simulationms | simulation_db | simulation_run, simulation_step_result | PostgreSQL 16.x |
 
 ### MyBatis 実装例
 
@@ -1007,6 +1016,25 @@ GET /api/v1/routes?origin=JPTYO&destination=USLAX&deadline=2026-09-30&cargoType=
 | `POST` | `/api/v1/billing/invoices/{invoiceNumber}/void` | **請求書の取り消し**（赤伝・[ADR-028] 決定 3）。理由は必須。出し直しは新しい請求番号で行う | UC18 |
 | `GET` | `/api/v1/billing/invoices/overdue` | 支払期限を過ぎた請求書（受入基準 23-5 の**代替**——未払い通知のメールが無い） | UC18 |
 | `POST` | `/api/v1/billing/quotes` | **料金の試算**（見積の概算料金。[ADR-028] 決定 6）。`system:bookingms` のみ。**式は billingms の 1 か所にある** | UC01 |
+
+#### simulationms
+
+**システム管理者（`ROLE_ADMIN`）だけに開く。** 業務データを作る操作であり、業務の担当者が
+誤って踏める場所には置かない。
+
+| メソッド | パス | 説明 | 対応 UC |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/v1/simulations/scenarios` | 実行できるシナリオと工程の並び。**工程の見出しと役割はサーバが返す**（画面に対訳表を置かない） | UC23 |
+| `POST` | `/api/v1/simulations` | シナリオを実行する。**同じシナリオが実行中なら 409** と実行中の実行 ID を返す（US34-5。断るだけでは、指示した人はいま何が動いているかを確かめられない） | UC23 |
+| `GET` | `/api/v1/simulations` | 実行の履歴（新しい順・上限あり） | UC23 |
+| `GET` | `/api/v1/simulations/{runId}` | 工程ごとの成否・所要時間・生成した識別子・失敗理由（US35） | UC23 |
+
+> **simulationms は業務サービスを直接呼ばない。** [ADR-030](../adr/030-business-simulation-execution.md)
+> 決定 2 により、Gateway を通し、**工程ごとにその工程を踏むロールの利用者としてログインして**
+> 業務 API を呼ぶ。内部 API（`/api/v1/internal/**`・`shipper-snapshots`・`by-tracking-number`）も
+> `system:` 主体も使わない。出口は `BusinessGateway` の **1 ポート**に絞り、
+> 内部 API を参照していないことをソースを読む検査で固定している（ArchUnit には
+> 文字列で書かれた URL の向き先が映らないため）。
 
 ## セキュリティ設計
 
