@@ -52,7 +52,7 @@ class RunSimulationUseCaseTest {
         @Override
         public void appendResult(RunId runId, StepResult result) {
             appended.add(result);
-            runs.computeIfPresent(runId.value(), (key, run) -> run.record(result));
+            runs.computeIfPresent(runId.value(), (key, run) -> run.withResult(result));
         }
 
         @Override

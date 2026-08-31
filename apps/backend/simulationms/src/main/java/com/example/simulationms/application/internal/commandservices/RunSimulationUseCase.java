@@ -54,7 +54,7 @@ public class RunSimulationUseCase {
 
         for (ScenarioStep step : scenario.steps()) {
             StepResult result = execute(step, context);
-            run = run.record(result);
+            run = run.withResult(result);
             runs.appendResult(runId, result);
 
             if (result.failed()) {

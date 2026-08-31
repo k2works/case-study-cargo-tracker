@@ -62,8 +62,8 @@ class SimulationRunTest {
         @DisplayName("成功した工程を順に記録し、生成した識別子を残す")
         void recordsSucceededSteps() {
             SimulationRun run = started()
-                    .record(succeeded(ScenarioStep.REGISTER_SHIPPER, "SIM-0001"))
-                    .record(succeeded(ScenarioStep.REGISTER_BOOKING, "BKG-2026000001"));
+                    .withResult(succeeded(ScenarioStep.REGISTER_SHIPPER, "SIM-0001"))
+                    .withResult(succeeded(ScenarioStep.REGISTER_BOOKING, "BKG-2026000001"));
 
             assertThat(run.status()).isEqualTo(RunStatus.RUNNING);
             assertThat(run.results()).extracting(StepResult::step)
@@ -81,7 +81,7 @@ class SimulationRunTest {
 
             StepResult settled = succeeded(ScenarioStep.SETTLE, "INV-1");
 
-            assertThatThrownBy(() -> run.record(settled))
+            assertThatThrownBy(() -> run.withResult(settled))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("SETTLE");
         }
@@ -89,11 +89,11 @@ class SimulationRunTest {
         @Test
         @DisplayName("同じ工程は二度記録できない")
         void rejectsDuplicateSteps() {
-            SimulationRun run = started().record(succeeded(ScenarioStep.REGISTER_SHIPPER, "S-1"));
+            SimulationRun run = started().withResult(succeeded(ScenarioStep.REGISTER_SHIPPER, "S-1"));
 
             StepResult again = succeeded(ScenarioStep.REGISTER_SHIPPER, "S-2");
 
-            assertThatThrownBy(() -> run.record(again))
+            assertThatThrownBy(() -> run.withResult(again))
                     .isInstanceOf(IllegalStateException.class);
         }
     }
@@ -106,8 +106,8 @@ class SimulationRunTest {
         @DisplayName("失敗した工程で止まり、それまでの結果は残る（巻き戻さない）")
         void keepsResultsWhenAStepFails() {
             SimulationRun run = started()
-                    .record(succeeded(ScenarioStep.REGISTER_SHIPPER, "SIM-0001"))
-                    .record(StepResult.failed(ScenarioStep.REGISTER_BOOKING,
+                    .withResult(succeeded(ScenarioStep.REGISTER_SHIPPER, "SIM-0001"))
+                    .withResult(StepResult.failed(ScenarioStep.REGISTER_BOOKING,
                             Duration.ofMillis(90), "500 予約の登録に失敗しました"));
 
             assertThat(run.status()).isEqualTo(RunStatus.FAILED);
@@ -120,12 +120,12 @@ class SimulationRunTest {
         @Test
         @DisplayName("失敗した実行に、続きの工程は記録できない")
         void rejectsStepsAfterFailure() {
-            SimulationRun run = started().record(StepResult.failed(ScenarioStep.REGISTER_SHIPPER,
+            SimulationRun run = started().withResult(StepResult.failed(ScenarioStep.REGISTER_SHIPPER,
                     Duration.ofMillis(90), "接続できません"));
 
             StepResult next = succeeded(ScenarioStep.REGISTER_BOOKING, "B-1");
 
-            assertThatThrownBy(() -> run.record(next))
+            assertThatThrownBy(() -> run.withResult(next))
                     .isInstanceOf(IllegalStateException.class);
         }
     }
@@ -140,8 +140,8 @@ class SimulationRunTest {
             SimulationRun run = SimulationRun.start(ID,
                     Scenario.of("short", List.of(ScenarioStep.REGISTER_SHIPPER,
                             ScenarioStep.REGISTER_BOOKING)), "admin01", STARTED)
-                    .record(succeeded(ScenarioStep.REGISTER_SHIPPER, "SIM-0001"))
-                    .record(succeeded(ScenarioStep.REGISTER_BOOKING, "BKG-2026000001"));
+                    .withResult(succeeded(ScenarioStep.REGISTER_SHIPPER, "SIM-0001"))
+                    .withResult(succeeded(ScenarioStep.REGISTER_BOOKING, "BKG-2026000001"));
 
             assertThat(run.status()).isEqualTo(RunStatus.COMPLETED);
             assertThat(run.reachedStep()).contains(ScenarioStep.REGISTER_BOOKING);
@@ -153,7 +153,7 @@ class SimulationRunTest {
             SimulationRun run = SimulationRun.start(ID,
                     Scenario.of("short", List.of(ScenarioStep.REGISTER_SHIPPER)),
                     "admin01", STARTED)
-                    .record(StepResult.succeeded(ScenarioStep.REGISTER_SHIPPER,
+                    .withResult(StepResult.succeeded(ScenarioStep.REGISTER_SHIPPER,
                             Duration.ofMillis(120), "SIM-0001",
                             Instant.parse("2026-11-16T01:00:05Z")));
 
@@ -169,7 +169,7 @@ class SimulationRunTest {
         @DisplayName("実行中は二重実行を断る材料になる")
         void tellsWhetherItIsRunning() {
             assertThat(started().running()).isTrue();
-            assertThat(started().record(StepResult.failed(ScenarioStep.REGISTER_SHIPPER,
+            assertThat(started().withResult(StepResult.failed(ScenarioStep.REGISTER_SHIPPER,
                     Duration.ofMillis(1), "だめ")).running()).isFalse();
         }
     }

@@ -64,7 +64,7 @@ public final class SimulationRun {
      * <p>シナリオが定めていない工程は受け付けない。受け付けると、実行結果が
      * 「そのシナリオを流した記録」ではなくなる。
      */
-    public SimulationRun record(StepResult result) {
+    public SimulationRun withResult(StepResult result) {
         if (result == null) {
             throw new IllegalArgumentException("工程の結果は必須です");
         }

@@ -39,12 +39,12 @@ export function SimulationsPage() {
       <h1 className="text-xl font-bold text-gray-900">業務シミュレーション</h1>
 
       <p className="text-sm text-gray-700">
-        予約登録から精算までを、
-        <strong>実際の利用者として本番と同じ API で</strong>
         {/* 改行を空白と読ませない（日本語は語間を空けない） */}
-        順に実行します。生成した荷主・貨物・請求書は
+        {'予約登録から精算までを、'}
+        <strong>実際の利用者として本番と同じ API で</strong>
+        {'順に実行します。生成した荷主・貨物・請求書は'}
         <code className="mx-1 font-mono">SIM-</code>
-        の帯で識別され、経理の締めや荷主一覧には出ません。
+        {'の帯で識別され、経理の締めや荷主一覧には出ません。'}
       </p>
 
       <div className="flex items-center gap-3">

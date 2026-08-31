@@ -91,7 +91,7 @@ public class SimulationRunController {
     private static Optional<RunId> parse(String runId) {
         try {
             return Optional.of(RunId.of(runId));
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException _) {
             return Optional.empty();
         }
     }

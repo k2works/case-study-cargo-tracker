@@ -56,7 +56,7 @@ class SimulationRunControllerTest {
         Scenario scenario = Scenario.of("short", List.of(ScenarioStep.REGISTER_SHIPPER));
         return SimulationRun.start(RunId.of("SIM-20261116-0001"), scenario, "admin01",
                         Instant.parse("2026-11-16T01:00:00Z"))
-                .record(StepResult.succeeded(ScenarioStep.REGISTER_SHIPPER,
+                .withResult(StepResult.succeeded(ScenarioStep.REGISTER_SHIPPER,
                         Duration.ofMillis(120), "42", Instant.parse("2026-11-16T01:00:01Z")));
     }
 

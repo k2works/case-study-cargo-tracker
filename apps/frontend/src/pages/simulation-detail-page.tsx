@@ -13,7 +13,7 @@ const TRACKING_NUMBER = /^TRK-\d{8}-\d{4}$/;
  * 開かれていない。システム管理者が押すと 403 になる先へは繋がない——
  * 気づく手段は次の行動へ繋ぐものであって、行き止まりへ送るものではない。
  */
-function Identifier({ step }: { step: SimulationStep }) {
+function Identifier({ step }: Readonly<{ step: SimulationStep }>) {
   if (!step.createdIdentifier) {
     return <span className="text-gray-400">—</span>;
   }
