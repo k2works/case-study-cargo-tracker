@@ -673,6 +673,36 @@ function psql(database, sql) {
 }
 
 
+
+/**
+ * 足りないデータベースを作る（既存データは消さない）。
+ *
+ * <strong>init-databases.sql は、データディレクトリが空のときにしか走らない。</strong>
+ * サービスを足して SQL に 1 行加えても、<strong>すでに動いている環境には反映されない</strong>——
+ * 新しいサービスだけが「データベースがありません」で起動に失敗する。
+ * 症状は新サービス側に出るため、原因が初期化スクリプトだと分かりにくい
+ * （RabbitMQ の交換機を宣言し直せない話と同じ形である）。
+ *
+ * db:reset は既存データを消すため、確かめたいものまで一緒に消える。ここでは
+ * <strong>足りないものだけを作る</strong>。
+ *
+ * @returns {string[]} 作成したデータベース名
+ */
+function ensureDatabases() {
+  const created = [];
+  DB_SERVICES.forEach((service) => {
+    const database = `${service.replace(/ms$/, '')}_db`;
+    const existing = psql('postgres',
+      `SELECT 1 FROM pg_database WHERE datname = '${database}'`);
+    if (existing.length > 0) {
+      return;
+    }
+    psql('postgres', `CREATE DATABASE ${database}`);
+    created.push(database);
+  });
+  return created;
+}
+
 /**
  * 交換機を作り直す。
  *
@@ -904,6 +934,14 @@ export default function (gulp) {
     done();
   });
 
+  gulp.task('dev:k8s:db:ensure', (done) => {
+    const created = ensureDatabases();
+    console.log(created.length === 0
+      ? 'すべてのデータベースがすでにあります。'
+      : `作成しました: ${created.join(', ')}（該当サービスを再起動してください）`);
+    done();
+  });
+
   gulp.task('dev:k8s:db:reset', (done) => {
     console.log('k8s ローカル統合環境の PostgreSQL を初期化します。既存データは削除されます。');
     run('kubectl', ['--context', K8S_CONTEXT, '-n', K8S_NAMESPACE, 'rollout', 'restart', 'deployment/postgres']);
@@ -1086,6 +1124,7 @@ export default function (gulp) {
     dev:k8s:events:missing      取りこぼし（発行済みだが追跡が無い予約）を照会する
     dev:k8s:events:redeclare    交換機の引数を変えたときに作り直して再起動する
     dev:k8s:events:redeliver    デッドレターのイベントを元の交換機へ送り直す（DLQ_REDELIVER_LIMIT 対応）
+    dev:k8s:db:ensure           足りないデータベースだけを作る（既存データは消さない）
     dev:k8s:db:reset            PostgreSQL を初期化し、DB 利用サービスの Flyway を再実行
     dev:k8s:status              Pod / Service / Ingress の状態
     dev:k8s:logs                全サービスの直近ログ
