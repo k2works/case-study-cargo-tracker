@@ -22,7 +22,7 @@ spec:
             - name: PORT
               value: "8087"
             - name: DB_URL
-              value: jdbc:postgresql://postgres:5432/billing_db
+              value: jdbc:postgresql://postgres:5432/simulation_db
             - name: DB_USERNAME
               valueFrom:
                 secretKeyRef: { name: cargo-secrets, key: DB_USERNAME }

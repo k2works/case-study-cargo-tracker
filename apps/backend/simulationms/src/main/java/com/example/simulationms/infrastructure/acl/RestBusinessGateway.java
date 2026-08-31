@@ -47,6 +47,9 @@ public class RestBusinessGateway implements BusinessGateway {
     static final String DESTINATION = "USLAX";
     static final String CARGO_TYPE = "GENERAL";
 
+    /** 失敗理由に載せる応答本文の長さ。列の幅（500）に収まる範囲で切る。 */
+    private static final int BODY_LIMIT = 200;
+
     /** 到着期限までの日数。航海の到着（20 日後）より十分に後へ置く。 */
     private static final int DEADLINE_DAYS = 120;
 
@@ -119,7 +122,9 @@ public class RestBusinessGateway implements BusinessGateway {
                 .uri(SHIPPER_PATH)
                 .header(HttpHeaders.AUTHORIZATION, bearer(token))
                 .body(new BusinessMessages.ShipperRequest(
-                        "CORPORATE",
+                        // **個人にする。**法人は契約番号が要り、無いと集約が断る——
+                        // 確かめたいのは業務の道のりであって、契約の妥当性ではない
+                        "INDIVIDUAL",
                         "シミュレーション荷主 " + marker,
                         marker.toLowerCase(Locale.ROOT) + "@simulation.example.com",
                         "東京都千代田区 1-1-1",
@@ -413,9 +418,20 @@ public class RestBusinessGateway implements BusinessGateway {
         }
     }
 
+    /**
+     * 失敗を<strong>切り分けられる形</strong>で述べる。
+     *
+     * <p>状態だけでは足りない。400 は「入力が違う」としか言わず、どの項目が違うのかは
+     * 応答の本文にしかない——実環境で 1 度、契約番号の要る法人で荷主を作ろうとして
+     * 400 になり、状態だけでは理由に辿り着けなかった。
+     */
     private static String describe(RestClientException e) {
         if (e instanceof RestClientResponseException response) {
-            return String.valueOf(response.getStatusCode().value());
+            String body = response.getResponseBodyAsString();
+            String detail = body.length() > BODY_LIMIT ? body.substring(0, BODY_LIMIT) : body;
+            return detail.isBlank()
+                    ? String.valueOf(response.getStatusCode().value())
+                    : response.getStatusCode().value() + ": " + detail;
         }
         return e.getMessage();
     }

@@ -69,7 +69,7 @@ class RestBusinessGatewayTest {
         server.expect(requestTo(BASE + RestBusinessGateway.SHIPPER_PATH))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(header("Authorization", "Bearer token-sales"))
-                .andExpect(jsonPath("$.type").value("CORPORATE"))
+                .andExpect(jsonPath("$.type").value("INDIVIDUAL"))
                 // **由来が分かる帯で採番させる**（[ADR-030] 決定 3）。
                 // 送り忘れると、実データに混ざったまま経理の締めに乗る
                 .andExpect(jsonPath("$.simulated").value(true))
@@ -111,12 +111,16 @@ class RestBusinessGatewayTest {
     void namesTheStepWhenTheBusinessCallFails() {
         expectLoginAs("sales01", "token-sales");
         server.expect(requestTo(BASE + RestBusinessGateway.SHIPPER_PATH))
-                .andRespond(withStatus(HttpStatus.FORBIDDEN));
+                .andRespond(withStatus(HttpStatus.BAD_REQUEST)
+                        .body("{\"message\":\"契約番号は法人荷主にだけ設定できます\"}")
+                        .contentType(MediaType.APPLICATION_JSON));
 
         assertThatThrownBy(() -> gateway.execute(ScenarioStep.REGISTER_SHIPPER, Map.of()))
                 .isInstanceOf(BusinessCallFailedException.class)
                 .hasMessageContaining(ScenarioStep.REGISTER_SHIPPER.label())
-                .hasMessageContaining("403");
+                .hasMessageContaining("400")
+                // **状態だけでは切り分けられない。**どの項目が違うのかは本文にしかない
+                .hasMessageContaining("契約番号");
     }
 
     @Test
