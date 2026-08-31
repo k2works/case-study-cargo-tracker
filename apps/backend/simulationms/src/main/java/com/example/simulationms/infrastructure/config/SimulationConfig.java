@@ -1,6 +1,9 @@
 package com.example.simulationms.infrastructure.config;
 
 import com.example.shared.auth.AuthenticatedUserFilter;
+import com.example.simulationms.domain.repository.SimulationRunRepository;
+import com.example.simulationms.infrastructure.repositories.MyBatisSimulationRunRepository;
+import com.example.simulationms.infrastructure.repositories.SimulationRunMapper;
 import java.time.Clock;
 import java.time.ZoneId;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,6 +35,11 @@ public class SimulationConfig {
      * <p><strong>UTC で「今日」を決めない。</strong>シミュレーションが作る予約の期限も、
      * 実行の開始時刻も、業務の暦で読む。
      */
+    @Bean
+    public SimulationRunRepository simulationRunRepository(SimulationRunMapper mapper) {
+        return new MyBatisSimulationRunRepository(mapper);
+    }
+
     @Bean
     public Clock clock(@Value("${app.business-time-zone:Asia/Tokyo}") String zone) {
         return Clock.system(ZoneId.of(zone));

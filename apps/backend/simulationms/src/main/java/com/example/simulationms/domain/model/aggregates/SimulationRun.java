@@ -48,6 +48,17 @@ public final class SimulationRun {
     }
 
     /**
+     * 永続化された行から復元する。
+     *
+     * <p><strong>復元では検査しない</strong>（不変条件は受け入れ時に見る）。列が無かった
+     * ころの行や、シナリオ定義を変える前の行が読めなくなる形にしない。
+     */
+    public static SimulationRun restore(RunId runId, Scenario scenario, String startedBy,
+            Instant startedAt, List<StepResult> results) {
+        return new SimulationRun(runId, scenario, startedBy, startedAt, results);
+    }
+
+    /**
      * 工程の結果を記録する。
      *
      * <p>シナリオが定めていない工程は受け付けない。受け付けると、実行結果が

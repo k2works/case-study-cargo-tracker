@@ -6,6 +6,9 @@ CREATE TABLE IF NOT EXISTS simulation_run (
     id            BIGSERIAL     NOT NULL,
     run_id        VARCHAR(40)   NOT NULL,
     scenario_id   VARCHAR(40)   NOT NULL,
+    -- そのとき流した工程の並び。**シナリオ ID だけでは復元できない**——
+    -- 定義を変えたあとに過去の実行を読むと、当時と違う並びで復元されてしまう
+    steps         VARCHAR(500)  NOT NULL,
     status        VARCHAR(20)   NOT NULL,
     started_by    VARCHAR(50)   NOT NULL,
     started_at    TIMESTAMP WITH TIME ZONE   NOT NULL,
