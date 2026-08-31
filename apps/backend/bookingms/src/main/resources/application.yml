@@ -37,6 +37,11 @@ management:
 # 業務日付は業務タイムゾーンで判断する（UTC で判断しない）
 app:
   business-time-zone: Asia/Tokyo
+  simulation:
+    # シミュレーション由来として荷主を登録してよい利用者（[ADR-030] 決定 3）。
+    # **既定は空**——載せ忘れは「シミュレーションが動かない」側に倒れ、
+    # 実データに混ざる側には倒れない。実行する環境でだけ設定する
+    registrar-usernames: ${APP_SIMULATION_REGISTRAR_USERNAMES:}
   # **相手の所在は環境ごとに上書きする。**
   #
   # 既定値は**開発機（localhost）を指す**。クラスタの中では自分自身を指すことになり、

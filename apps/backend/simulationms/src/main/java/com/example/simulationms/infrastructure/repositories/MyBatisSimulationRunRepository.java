@@ -69,27 +69,11 @@ public class MyBatisSimulationRunRepository implements SimulationRunRepository {
     }
 
     @Override
-    public Optional<SimulationRun> findRunningByScenario(String scenarioId) {
-        // 工程数はシナリオの定義から取る。実行中かどうかは「失敗が無く、全工程を
-        // 終えていない」ことで決まるため、比較の相手が要る
-        Scenario scenario = scenarioOf(scenarioId);
-        return Optional.ofNullable(
-                        mapper.findRunningByScenario(scenarioId, scenario.steps().size()))
+    public Optional<SimulationRun> findRunningByScenario(Scenario scenario,
+            java.time.Instant staleBefore) {
+        return Optional.ofNullable(mapper.findRunningByScenario(
+                        scenario.id(), scenario.steps().size(), staleBefore))
                 .map(this::toDomain);
-    }
-
-    /**
-     * シナリオ ID から定義を引く。
-     *
-     * <p>実行中の判定にしか使わない。<strong>復元には使わない</strong>——復元は
-     * 行に残した並びを読む。定義を変えたあとに過去の実行を読んでも、当時の並びで復元される。
-     */
-    private Scenario scenarioOf(String scenarioId) {
-        SimulationRunRecord latest = mapper.findRecent(Integer.MAX_VALUE).stream()
-                .filter(row -> row.getScenarioId().equals(scenarioId))
-                .findFirst()
-                .orElse(null);
-        return latest == null ? Scenario.standardTransport() : toScenario(latest);
     }
 
     private SimulationRun toDomain(SimulationRunRecord row) {

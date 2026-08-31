@@ -21,12 +21,18 @@ import org.springframework.core.env.Environment;
 public class SimulationSafetyConfig {
 
     /**
-     * 本番相当とみなすプロファイル。
+     * シミュレーションを実行してよいと<strong>明示した</strong>環境。
      *
-     * <p>名簿だが、<strong>載せ忘れれば「本番なのに動く」側に倒れる</strong>。
-     * 環境を増やすときは、ここに足すことをデプロイの手順に含める。
+     * <p><strong>名簿の向きを反転させた（IT14 レビュー）。</strong>当初は「本番相当」を
+     * 名簿にしていたが、それだと<strong>載せ忘れた環境で動いてしまう</strong>——
+     * 環境を増やす人がこのクラスを開く理由は無いので、載せ忘れは必ず起きる。
+     * 許可する側の名簿にすれば、載せ忘れは「動かない」側に倒れる。
+     *
+     * <p>プロファイル未指定（ローカルの素の起動）も許可に含める。開発機で動かないと、
+     * この仕組み自体を作れない。
      */
-    private static final List<String> PRODUCTION_PROFILES = List.of("product", "production", "prod");
+    private static final List<String> SIMULATION_ALLOWED_PROFILES =
+            List.of("local", "dev", "development", "integration", "test", "staging");
 
     @Bean
     public InitializingBean simulationProductionGuard(Environment environment,
@@ -36,12 +42,14 @@ public class SimulationSafetyConfig {
                 return;
             }
             List<String> active = Arrays.asList(environment.getActiveProfiles());
-            if (active.stream().anyMatch(PRODUCTION_PROFILES::contains)) {
-                throw new IllegalStateException(
-                        "本番相当の環境（%s）でシミュレーションを有効にはできません。"
-                                .formatted(String.join(", ", active))
-                                + "APP_SIMULATION_ENABLED を false にしてください");
+            if (active.isEmpty() || active.stream().allMatch(SIMULATION_ALLOWED_PROFILES::contains)) {
+                return;
             }
+            throw new IllegalStateException(
+                    "この環境（%s）でシミュレーションを有効にはできません。"
+                            .formatted(String.join(", ", active))
+                            + "APP_SIMULATION_ENABLED を false にするか、"
+                            + "実行を許す環境なら SimulationSafetyConfig の許可一覧に足してください");
         };
     }
 }

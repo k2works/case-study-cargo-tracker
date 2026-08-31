@@ -21,6 +21,12 @@ spec:
           env:
             - name: PORT
               value: "8082"
+            # シミュレーション由来として荷主を登録してよい利用者（[ADR-030] 決定 3）。
+            # **要求本文だけを根拠にしない**——本文を信じると、営業が誤ってこの項目を
+            # 送るだけで、その荷主の貨物が精算の締めに一生載らない。
+            # 渡さない環境では、シミュレーションが荷主を作れずそこで止まる（安全側）
+            - name: APP_SIMULATION_REGISTRAR_USERNAMES
+              value: "sales01"
             - name: DB_URL
               value: jdbc:postgresql://postgres:5432/booking_db
             - name: DB_USERNAME

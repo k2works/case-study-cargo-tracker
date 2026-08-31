@@ -47,6 +47,12 @@ class ShipperControllerTest {
              "address": "東京都千代田区 1-1-1", "phone": "03-1234-5678", "registerAnyway": false}
             """;
 
+    private static final String SIMULATED_BODY = """
+            {"type": "INDIVIDUAL", "name": "シミュレーション荷主",
+             "email": "sim@simulation.example.com", "address": "東京都千代田区 1-1-1",
+             "registerAnyway": true, "simulated": true}
+            """;
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -381,6 +387,30 @@ class ShipperControllerTest {
                     .andExpect(status().isBadRequest());
 
             verify(editUseCase, never()).edit(any(), any(), any());
+        }
+    }
+
+    /**
+     * <strong>要求本文だけを根拠に「シミュレーション由来」にはできない</strong>（[ADR-030] 決定 3）。
+     *
+     * <p>本文を信じると、営業担当者がこの項目を送るだけでその荷主の貨物は
+     * <strong>精算の締めに一生載らない</strong>——エラーも警告も出ず、請求漏れとして残る。
+     */
+    @Nested
+    @DisplayName("シミュレーション由来の登録")
+    class SimulatedRegistration {
+
+        @Test
+        @DisplayName("許可されていない利用者は、シミュレーション由来で登録できない")
+        void rejectsSimulatedRegistrationFromOrdinarySales() throws Exception {
+            mockMvc.perform(post("/api/v1/shippers")
+                            .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                            .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(SIMULATED_BODY))
+                    .andExpect(status().isForbidden());
+
+            verify(useCase, never()).register(any());
         }
     }
 }

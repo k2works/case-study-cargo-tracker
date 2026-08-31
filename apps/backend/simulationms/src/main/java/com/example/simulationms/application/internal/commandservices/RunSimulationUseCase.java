@@ -29,6 +29,15 @@ public class RunSimulationUseCase {
 
     private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("yyyyMMdd");
 
+    /**
+     * これより長く音沙汰の無い実行は、実行中とみなさない。
+     *
+     * <p>Pod の再起動や配備で途中終了した行を実行中のまま残すと、そのシナリオは
+     * <strong>二度と実行できなくなる</strong>。1 本の実行は工程ごとに期限（読み取り 10 秒）を
+     * 持つため、全 14 工程が詰まっても 3 分に届かない。余裕を見て 15 分とする。
+     */
+    private static final Duration STALE_AFTER = Duration.ofMinutes(15);
+
     private final SimulationRunRepository runs;
     private final BusinessGateway business;
     private final Clock clock;
@@ -41,9 +50,10 @@ public class RunSimulationUseCase {
     }
 
     public SimulationRun run(Scenario scenario, String startedBy) {
-        runs.findRunningByScenario(scenario.id()).ifPresent(running -> {
-            throw new SimulationAlreadyRunningException(running.runId());
-        });
+        runs.findRunningByScenario(scenario, clock.instant().minus(STALE_AFTER))
+                .ifPresent(running -> {
+                    throw new SimulationAlreadyRunningException(running.runId());
+                });
 
         RunId runId = nextRunId();
         SimulationRun run = SimulationRun.start(runId, scenario, startedBy, clock.instant());
@@ -80,6 +90,19 @@ public class RunSimulationUseCase {
             // **理由を残す。**「失敗しました」だけでは、経路候補が 0 件なのか
             // 接続先が違うのかを切り分けられない
             return StepResult.failed(step, elapsedSince(startedNanos), e.getMessage(), startedAt);
+        } catch (RuntimeException e) {
+            // **想定していない失敗も、工程の結果として記録する。**
+            //
+            // 記録せずに抜けると、その実行は工程を 1 つも終えないまま「実行中」で残り、
+            // 二重実行の拒否が永久に効いて**誰もそのシナリオを実行できなくなる**。
+            // しかも US35 が見たい「どこまで進んだか」が、失敗したときだけ残らない
+            // ——`@Transactional` を置かない理由として挙げたのと同じ結果になる。
+            //
+            // 実際に届く例: 名簿に無いロール（IllegalStateException）、
+            // 引き継いだ識別子が数値でない（NumberFormatException）
+            return StepResult.failed(step, elapsedSince(startedNanos),
+                    "想定していない失敗です（" + e.getClass().getSimpleName() + ": "
+                            + e.getMessage() + "）", startedAt);
         }
     }
 

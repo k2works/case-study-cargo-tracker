@@ -39,13 +39,20 @@ public class ShipperController {
     private final EditShipperUseCase editShipper;
     private final Validator validator;
 
+    /** シミュレーション由来として荷主を登録してよい利用者（[ADR-030] 決定 3）。 */
+    private final java.util.List<String> simulationRegistrars;
+
     public ShipperController(RegisterShipperUseCase registerShipper,
             SearchShipperUseCase searchShipper, EditShipperUseCase editShipper,
-            Validator validator) {
+            Validator validator,
+            @org.springframework.beans.factory.annotation.Value(
+                    "${app.simulation.registrar-usernames:}")
+            java.util.List<String> simulationRegistrars) {
         this.registerShipper = registerShipper;
         this.searchShipper = searchShipper;
         this.editShipper = editShipper;
         this.validator = validator;
+        this.simulationRegistrars = java.util.List.copyOf(simulationRegistrars);
     }
 
     @GetMapping
@@ -75,6 +82,7 @@ public class ShipperController {
             @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles,
             @RequestBody ShipperRequest request) {
         requireSales(userId, roles);
+        requireSimulationRegistrar(userId, request);
         validate(request);
 
         RegisterShipperCommand command = commandOf(request);
@@ -183,6 +191,27 @@ public class ShipperController {
      *
      * <p>Gateway が認証（401）を担うため、ここで見るのは担当かどうか（403）だけになる。
      */
+    /**
+     * シミュレーション由来として登録してよいのは、そう設定された利用者だけ（[ADR-030] 決定 3）。
+     *
+     * <p><strong>要求本文だけを根拠にしない。</strong>本文を信じると、営業担当者が誤って
+     * （あるいは意図的に）この項目を送るだけで、その荷主の貨物は<strong>精算の締めに
+     * 一生載らない</strong>——エラーも警告も出ず、請求漏れとして残る。
+     *
+     * <p>名簿は<strong>許可する側</strong>に置く。載っていない利用者は断る——
+     * 載せ忘れは「シミュレーションが動かない」側に倒れ、実データに混ざる側には倒れない。
+     *
+     * <p><strong>残る穴</strong>: シミュレーションは実在の営業利用者としてログインするため
+     * （[ADR-030] 決定 2）、その利用者本人は今も送れる。塞ぎ切るにはシミュレーション専用の
+     * 利用者が要る（IT15）。
+     */
+    private void requireSimulationRegistrar(String userId, ShipperRequest request) {
+        if (request.isSimulated() && !simulationRegistrars.contains(userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "シミュレーション由来として登録する権限がありません");
+        }
+    }
+
     private void requireSales(String userId, String roles) {
         if (!AuthenticatedUser.of(userId, roles).hasAnyRole(Role.ROLE_SALES)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "この操作を行う権限がありません");

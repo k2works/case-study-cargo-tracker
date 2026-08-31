@@ -52,10 +52,15 @@ public interface SimulationRunMapper {
             + "   WHERE s.run_id = r.id AND s.outcome = 'FAILED')"
             + " AND (SELECT COUNT(*) FROM simulation_step_result s2 WHERE s2.run_id = r.id)"
             + "   < #{stepCount}"
+            // **止まったきりの実行は実行中とみなさない。**開始も追記もされずに古くなった
+            // 行を実行中のまま残すと、そのシナリオは二度と実行できなくなる
+            + " AND COALESCE((SELECT MAX(s3.recorded_at) FROM simulation_step_result s3"
+            + "   WHERE s3.run_id = r.id), r.started_at) >= #{staleBefore}"
             + " ORDER BY r.id DESC LIMIT 1")
     @ResultMap("runResult")
     SimulationRunRecord findRunningByScenario(@Param("scenarioId") String scenarioId,
-            @Param("stepCount") int stepCount);
+            @Param("stepCount") int stepCount,
+            @Param("staleBefore") java.time.Instant staleBefore);
 
     /**
      * その日に始まった実行の数（実行 ID の連番に使う）。

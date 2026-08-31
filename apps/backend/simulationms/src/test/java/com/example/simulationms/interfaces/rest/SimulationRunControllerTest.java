@@ -40,6 +40,8 @@ import org.springframework.test.web.servlet.MockMvc;
  * 誤って踏める場所には置かない。
  */
 @WebMvcTest(SimulationRunController.class)
+@org.springframework.test.context.TestPropertySource(
+        properties = "app.simulation.enabled=true")
 @DisplayName("シミュレーション実行 API")
 class SimulationRunControllerTest {
 

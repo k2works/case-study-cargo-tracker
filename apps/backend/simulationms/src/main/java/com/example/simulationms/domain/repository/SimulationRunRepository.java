@@ -36,8 +36,17 @@ public interface SimulationRunRepository {
      *
      * <p>二重実行を断る根拠になる。<strong>部分 UNIQUE では H2 が解釈しない</strong>ため
      * （IT12 で実測）、DB 制約ではなくアプリケーション側の検査で守る。
+     *
+     * <p><strong>止まったきりの実行は、実行中とみなさない。</strong>Pod の再起動や配備で
+     * 途中終了した行は、放っておくと永久に「実行中」で残る——そのシナリオは二度と
+     * 実行できなくなり、復旧手段が DB を手で触ることしか無くなる。
+     * {@code staleBefore} より古い記録しか持たない実行は見切る。
+     *
+     * <p>工程数は<strong>呼ぶ側のシナリオ定義</strong>から取る。過去の実行の行から取ると、
+     * 工程を足した日に古い工程数で比較され、まだ動いている実行を「終わった」と読む。
      */
-    Optional<SimulationRun> findRunningByScenario(String scenarioId);
+    Optional<SimulationRun> findRunningByScenario(com.example.simulationms.domain.model
+            .valueobjects.Scenario scenario, java.time.Instant staleBefore);
 
     /**
      * その日に始まった実行の数（実行 ID の連番に使う）。

@@ -90,12 +90,29 @@ class RestBusinessGatewayTest {
      * <strong>工程ごとにログインし直す</strong>（[ADR-030] 決定 2）。
      *
      * <p>1 つの利用者に全ロールを与えると、本番には存在しない権限の持ち主ができる。
+     *
+     * <p><strong>実際に 2 回ログインが飛ぶことを見る。</strong>ロールの値を比べるだけでは、
+     * 切符をキャッシュして使い回す実装に戻しても緑のままになる（IT14 レビューで判明）。
      */
     @Test
-    @DisplayName("ロールの違う工程は、違う利用者としてログインする")
+    @DisplayName("ロールの違う工程は、それぞれ違う利用者としてログインし直す")
     void logsInAgainForEachRole() {
-        assertThat(ScenarioStep.REGISTER_SHIPPER.role())
-                .isNotEqualTo(ScenarioStep.ASSIGN_ROUTE.role());
+        expectLoginAs("sales01", "token-sales");
+        server.expect(requestTo(BASE + RestBusinessGateway.BOOKING_PATH + "/BK-1/routing-request"))
+                .andExpect(header("Authorization", "Bearer token-sales"))
+                .andRespond(withSuccess());
+        expectLoginAs("routing01", "token-routing");
+        server.expect(requestTo(BASE + RestBusinessGateway.BOOKING_PATH + "/BK-1/tracking-number"))
+                .andExpect(header("Authorization", "Bearer token-routing"))
+                .andRespond(withSuccess("{\"trackingNumber\":\"TRK-20261116-0001\"}",
+                        MediaType.APPLICATION_JSON));
+
+        Map<String, String> context = Map.of(BusinessContextKey.BOOKING_ID, "BK-1");
+        gateway.execute(ScenarioStep.REQUEST_ROUTING, context);
+        gateway.execute(ScenarioStep.ISSUE_TRACKING_NUMBER, context);
+
+        // ログインが 2 回・別の利用者として飛んでいる（使い回すと期待が余って落ちる）
+        server.verify();
     }
 
     @Test

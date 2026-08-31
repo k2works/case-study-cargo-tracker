@@ -14,10 +14,12 @@ import com.example.simulationms.domain.model.valueobjects.ScenarioStep;
 import com.example.simulationms.domain.model.valueobjects.StepResult;
 import com.example.simulationms.domain.repository.SimulationRunRepository;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -66,10 +68,18 @@ class RunSimulationUseCaseTest {
         }
 
         @Override
-        public Optional<SimulationRun> findRunningByScenario(String scenarioId) {
+        public Optional<SimulationRun> findRunningByScenario(Scenario scenario,
+                Instant staleBefore) {
             return runs.values().stream()
-                    .filter(run -> run.scenario().id().equals(scenarioId) && run.running())
+                    .filter(run -> run.scenario().id().equals(scenario.id()) && run.running())
+                    .filter(run -> lastActivity(run).isAfter(staleBefore)
+                            || lastActivity(run).equals(staleBefore))
                     .findFirst();
+        }
+
+        private static Instant lastActivity(SimulationRun run) {
+            return run.results().isEmpty() ? run.startedAt()
+                    : run.results().getLast().recordedAt();
         }
 
         @Override
@@ -85,9 +95,19 @@ class RunSimulationUseCaseTest {
         private final Map<ScenarioStep, String> identifiers = new EnumMap<>(ScenarioStep.class);
         private ScenarioStep failAt;
 
+        /** 想定していない失敗を注入する工程。 */
+        private ScenarioStep breakAt;
+
+        /** 受け取った引き継ぎ（最後に呼ばれた工程のもの）。 */
+        private final Map<ScenarioStep, Map<String, String>> received = new HashMap<>();
+
         @Override
         public String execute(ScenarioStep step, Map<String, String> context) {
             called.add(step);
+            received.put(step, context);
+            if (step == breakAt) {
+                throw new IllegalStateException("この工程を踏む利用者が設定されていません");
+            }
             if (step == failAt) {
                 throw new BusinessCallFailedException(step.label() + " が失敗しました（503）");
             }
@@ -144,6 +164,10 @@ class RunSimulationUseCaseTest {
             SimulationRun run = useCase.run(shortScenario(), "admin01");
 
             assertThat(run.identifierOf(ScenarioStep.REGISTER_SHIPPER)).contains("42");
+            // **受け取った側で確かめる。**生成した側だけを見ると、引き継ぎを外しても緑になる
+            assertThat(gateway.received.get(ScenarioStep.REGISTER_BOOKING))
+                    .as("荷主の識別子が次の工程へ渡っていない")
+                    .containsEntry(BusinessContextKey.SHIPPER_ID, "42");
         }
     }
 
@@ -156,6 +180,27 @@ class RunSimulationUseCaseTest {
          *
          * <p>それまでに作られた業務データは残る。消すと、どこまで通ったかが分からなくなる。
          */
+        /**
+         * <strong>想定していない失敗も記録して止まる。</strong>
+         *
+         * <p>記録せずに抜けると、その実行は工程を 1 つも終えないまま「実行中」で残り、
+         * 二重実行の拒否が永久に効いて<strong>誰もそのシナリオを実行できなくなる</strong>。
+         */
+        @Test
+        @DisplayName("想定していない例外も、その工程の失敗として記録する")
+        void recordsUnexpectedFailuresToo() {
+            gateway.breakAt = ScenarioStep.REGISTER_BOOKING;
+
+            SimulationRun run = useCase.run(shortScenario(), "admin01");
+
+            assertThat(run.status()).isEqualTo(RunStatus.FAILED);
+            assertThat(run.failureReason()).isPresent()
+                    .get().asString().contains("IllegalStateException");
+            assertThat(run.running())
+                    .as("記録せずに抜けると実行中のまま残り、二重実行の拒否が永久に効く")
+                    .isFalse();
+        }
+
         @Test
         @DisplayName("途中で失敗したらそこで止まり、それまでの記録は残る")
         void stopsAtTheFailedStepAndKeepsWhatHappened() {
@@ -169,8 +214,9 @@ class RunSimulationUseCaseTest {
                     .get().asString().contains("503");
             // 後ろの工程は踏まない。踏むと、前提の無い操作が次々に失敗する
             assertThat(gateway.called).doesNotContain(ScenarioStep.REQUEST_ROUTING);
-            // それまでの成功は記録に残る
-            assertThat(run.identifierOf(ScenarioStep.REGISTER_SHIPPER)).isNotNull();
+            // それまでの成功は記録に残る（Optional 相手に isNotNull を書くと常に真になる）
+            assertThat(run.results()).extracting(StepResult::step)
+                    .contains(ScenarioStep.REGISTER_SHIPPER);
         }
     }
 
@@ -190,6 +236,24 @@ class RunSimulationUseCaseTest {
             assertThatThrownBy(() -> useCase.run(scenario, "admin01"))
                     .isInstanceOf(SimulationAlreadyRunningException.class)
                     .hasMessageContaining("SIM-20261116-0009");
+        }
+
+        /**
+         * <strong>止まったきりの実行は、実行中とみなさない。</strong>
+         *
+         * <p>残したままにすると、そのシナリオは二度と実行できなくなり、
+         * 復旧手段が DB を手で触ることしか無くなる。
+         */
+        @Test
+        @DisplayName("長く音沙汰の無い実行は、二重実行の理由にしない")
+        void ignoresAStaleRun() {
+            Scenario scenario = shortScenario();
+            RunId abandoned = RunId.of("SIM-20261116-0009");
+            repository.create(SimulationRun.start(abandoned, scenario, "admin01",
+                    CLOCK.instant().minus(Duration.ofHours(3))));
+
+            assertThat(useCase.run(scenario, "admin01").status())
+                    .isEqualTo(RunStatus.COMPLETED);
         }
 
         @Test

@@ -42,10 +42,23 @@ public class SimulationRunController {
     private final RunSimulationUseCase runSimulation;
     private final SimulationRunRepository runs;
 
+    /**
+     * 実行してよいか（[ADR-030] 決定 4）。
+     *
+     * <p><strong>設定の名前どおりに実行を止める。</strong>起動時の検査だけに使っていると、
+     * 「安全側に倒したつもり」で {@code false} にした環境が、そのまま実行を受け付ける。
+     * 起動で落とすのは<strong>有効にしてはいけない環境</strong>のためで、
+     * この検査は<strong>無効にした環境</strong>のためである。
+     */
+    private final boolean enabled;
+
     public SimulationRunController(RunSimulationUseCase runSimulation,
-            SimulationRunRepository runs) {
+            SimulationRunRepository runs,
+            @org.springframework.beans.factory.annotation.Value("${app.simulation.enabled:false}")
+            boolean enabled) {
         this.runSimulation = runSimulation;
         this.runs = runs;
+        this.enabled = enabled;
     }
 
     @PostMapping
@@ -54,6 +67,10 @@ public class SimulationRunController {
             @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles,
             @RequestBody StartRunRequest request) {
         requireAdmin(userId, roles);
+        if (!enabled) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                    "この環境ではシミュレーションを実行できません");
+        }
 
         Scenario scenario = scenarioOf(request.scenarioId());
         return ResponseEntity.status(HttpStatus.CREATED)
