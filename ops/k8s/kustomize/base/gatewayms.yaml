@@ -33,6 +33,8 @@ spec:
               value: http://handlingms:8085
             - name: BILLINGMS_URI
               value: http://billingms:8086
+            - name: SIMULATIONMS_URI
+              value: http://simulationms:8087
             - name: CORS_ALLOWED_ORIGINS
               value: http://localhost
             - name: JWT_SECRET

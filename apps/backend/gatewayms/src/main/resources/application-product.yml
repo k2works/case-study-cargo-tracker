@@ -30,6 +30,10 @@ spring:
               uri: ${BILLINGMS_URL}
               predicates:
                 - Path=/api/v1/billing/**
+            - id: simulationms
+              uri: ${SIMULATIONMS_URL}
+              predicates:
+                - Path=/api/v1/simulations/**
   jmx:
     enabled: false
 

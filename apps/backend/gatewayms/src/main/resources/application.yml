@@ -32,6 +32,10 @@ spring:
               uri: ${BILLINGMS_URI:http://localhost:8086}
               predicates:
                 - Path=/api/v1/billing/**
+            - id: simulationms
+              uri: ${SIMULATIONMS_URI:http://localhost:8087}
+              predicates:
+                - Path=/api/v1/simulations/**
           globalcors:
             cors-configurations:
               '[/**]':

@@ -24,6 +24,7 @@ const BACKEND_SERVICES = [
   'trackingms',
   'handlingms',
   'billingms',
+  'simulationms',
 ];
 
 /** RabbitMQ（CloudAMQP）を使うサービス。イベントの publish / subscribe を行う。 */
@@ -248,6 +249,7 @@ export default function (gulp) {
       `TRACKINGMS_URL=${appUrl('trackingms')}`,
       `HANDLINGMS_URL=${appUrl('handlingms')}`,
       `BILLINGMS_URL=${appUrl('billingms')}`,
+      `SIMULATIONMS_URL=${appUrl('simulationms')}`,
       `CORS_ALLOWED_ORIGINS=${appUrl('frontend')}`,
       '-a',
       appName('gatewayms'),
