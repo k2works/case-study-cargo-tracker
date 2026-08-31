@@ -27,7 +27,7 @@ public record Scenario(String id, List<ScenarioStep> steps) {
         return new Scenario(id, steps);
     }
 
-    /** 一般貨物の標準輸送。予約から精算までの 12 工程を通す。 */
+    /** 一般貨物の標準輸送。予約から精算までの全工程（14）を通す。 */
     public static Scenario standardTransport() {
         return new Scenario("standard-transport", List.of(ScenarioStep.values()));
     }

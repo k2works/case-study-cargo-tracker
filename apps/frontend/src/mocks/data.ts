@@ -994,6 +994,39 @@ export const simulationScenarios = [
 /** 実行の履歴（US35）。**失敗した実行も残す**——巻き戻さないことがここに表れる。 */
 export const simulationRuns: SimulationRun[] = [
   {
+    // **失敗した実行も置く。**成功だけを置くと、画面が「止まった理由の見え方」を
+    // 一度も踏まないまま緑になる
+    runId: 'SIM-20261115-0002',
+    scenarioId: 'standard-transport',
+    status: 'FAILED',
+    startedBy: 'admin01',
+    startedAt: '2026-11-15T02:00:00Z',
+    finishedAt: '2026-11-15T02:00:05Z',
+    failureReason: '経路割り当て が失敗しました（経路候補が 0 件です）',
+    steps: [
+      {
+        step: 'REGISTER_SHIPPER',
+        label: '荷主登録',
+        role: 'ROLE_SALES',
+        outcome: 'SUCCEEDED',
+        elapsedMs: 133,
+        createdIdentifier: '41',
+        failureReason: null,
+        recordedAt: '2026-11-15T02:00:01Z',
+      },
+      {
+        step: 'ASSIGN_ROUTE',
+        label: '経路割り当て',
+        role: 'ROLE_ROUTING',
+        outcome: 'FAILED',
+        elapsedMs: 42,
+        createdIdentifier: null,
+        failureReason: '経路候補が 0 件です（JPTYO → USLAX）。航海の登録を確かめる',
+        recordedAt: '2026-11-15T02:00:05Z',
+      },
+    ],
+  },
+  {
     runId: 'SIM-20261116-0001',
     scenarioId: 'standard-transport',
     status: 'COMPLETED',

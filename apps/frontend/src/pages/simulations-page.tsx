@@ -8,6 +8,15 @@ import {
 import type { SimulationRun } from "../features/simulation/types";
 import { formatBusinessDateTime } from "../lib/business-time";
 
+/** シナリオの名前。**画面が ID をそのまま出さない**——押したものと表示が食い違う。 */
+const SCENARIO_LABELS: Record<string, string> = {
+  "standard-transport": "標準輸送",
+};
+
+function scenarioLabel(id: string): string {
+  return SCENARIO_LABELS[id] ?? id;
+}
+
 /** 状態の見出し。**画面が列挙の名前をそのまま出さない**。 */
 const STATUS_LABELS: Record<SimulationRun["status"], string> = {
   RUNNING: "実行中",
@@ -27,6 +36,7 @@ export function SimulationsPage() {
   const start = useStartSimulation();
 
   const scenarioId = scenarios?.[0]?.id;
+  const totalSteps = scenarios?.[0]?.steps.length ?? 0;
   // 二重実行を断られたとき、実行中の ID を受け取る（US34-5）。
   // 断るだけでは、指示した人はいま何が動いているかを確かめられない
   const runningRunId =
@@ -45,6 +55,8 @@ export function SimulationsPage() {
         {'順に実行します。生成した荷主・貨物・請求書は'}
         <code className="mx-1 font-mono">SIM-</code>
         {'の帯で識別され、経理の締めや荷主一覧には出ません。'}
+        <strong>追跡管理者の未解決例外一覧には出ます</strong>
+        {'（今後の課題）。実行したら追跡管理者に一報してください。'}
       </p>
 
       <div className="flex items-center gap-3">
@@ -117,9 +129,12 @@ export function SimulationsPage() {
                       {run.runId}
                     </Link>
                   </td>
-                  <td>{run.scenarioId}</td>
+                  <td>{scenarioLabel(run.scenarioId)}</td>
                   <td>{STATUS_LABELS[run.status]}</td>
-                  <td>{run.steps.length} 工程</td>
+                  {/* **分母を出す。**件数だけでは、どこまで進んだかを読めない */}
+                  <td>
+                    {run.steps.length} / {totalSteps} 工程
+                  </td>
                   <td>{formatBusinessDateTime(run.startedAt)}</td>
                   <td>{run.startedBy}</td>
                 </tr>

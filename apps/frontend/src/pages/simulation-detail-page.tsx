@@ -3,6 +3,13 @@ import { useSimulationRun } from "../features/simulation/queries";
 import type { SimulationStep } from "../features/simulation/types";
 import { formatBusinessDateTime } from "../lib/business-time";
 
+/** 状態の見出し。画面に対訳表を持たせない方針は一覧と同じ。 */
+const STATUS_LABELS: Record<string, string> = {
+  RUNNING: "実行中",
+  COMPLETED: "完了",
+  FAILED: "失敗",
+};
+
 /** 追跡番号の形。**この形の識別子だけ、追跡照会へ繋ぐ**。 */
 const TRACKING_NUMBER = /^TRK-\d{8}-\d{4}$/;
 
@@ -64,8 +71,9 @@ export function SimulationDetailPage() {
           実行 <span className="font-mono">{run.runId}</span>
         </h1>
         <p className="text-sm text-gray-600">
-          {run.scenarioId} ／ 実行者 {run.startedBy} ／ 開始{" "}
+          {STATUS_LABELS[run.status]} ／ 実行者 {run.startedBy} ／ 開始{" "}
           {formatBusinessDateTime(run.startedAt)}
+          {run.finishedAt ? ` ／ 終了 ${formatBusinessDateTime(run.finishedAt)}` : ""}
         </p>
       </div>
 

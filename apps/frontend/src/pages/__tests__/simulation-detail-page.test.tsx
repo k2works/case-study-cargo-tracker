@@ -15,6 +15,16 @@ const RUN = {
   failureReason: '経路割り当て が失敗しました（503）',
   steps: [
     {
+      step: 'REGISTER_BOOKING',
+      label: '予約登録',
+      role: 'ROLE_SALES',
+      outcome: 'SUCCEEDED',
+      elapsedMs: 120,
+      createdIdentifier: 'BKG-2026000001',
+      failureReason: null,
+      recordedAt: '2026-11-16T01:00:01Z',
+    },
+    {
       step: 'ISSUE_TRACKING_NUMBER',
       label: '追跡番号発行',
       role: 'ROLE_ROUTING',
@@ -76,5 +86,24 @@ describe('業務シミュレーションの結果（US35）', () => {
 
     const link = await screen.findByRole('link', { name: 'TRK-20261116-0001' })
     expect(link).toHaveAttribute('href', '/tracking/TRK-20261116-0001')
+
+    // **繋がないことまで見る。**全部リンクする実装に壊しても緑になっては意味がない。
+    // 予約詳細は営業・経路設計者にしか開かれておらず、管理者が押すと 403 になる
+    expect(screen.getByText('BKG-2026000001')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'BKG-2026000001' })).not.toBeInTheDocument()
+  })
+
+  /** 実行の状態と終了時刻は US35-4 が求めるもの。API は返すが画面が捨てていた。 */
+  it('実行の状態と終了時刻を出す', async () => {
+    renderPage()
+
+    // 見出し行は「失敗 ／ 実行者 … ／ 開始 … ／ 終了 …」の形で 1 行にまとめる
+    const summary = await screen.findByText(
+      (_, element) =>
+        element?.tagName === 'P' &&
+        (element.textContent ?? '').includes('失敗') &&
+        (element.textContent ?? '').includes('終了'),
+    )
+    expect(summary).toBeInTheDocument()
   })
 })

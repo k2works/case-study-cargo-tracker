@@ -32,7 +32,7 @@ public record SimulationUsers(Map<String, String> usernameByRole, String passwor
         if (username == null) {
             throw new IllegalStateException(
                     "この工程を踏む利用者が設定されていません: " + role
-                            + "（app.simulation.users に追加する）");
+                            + "（app.simulation-users.usernames に追加する）");
         }
         return username;
     }

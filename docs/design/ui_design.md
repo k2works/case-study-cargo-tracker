@@ -198,6 +198,7 @@ IT2・IT3 のふりかえりが繰り返し「`ui_design.md` の規約」を反�
 | 航海・経路設計 | `/routing*` | `/api/v1/voyages`, `/api/v1/voyages/{voyageNumber}`, `/api/v1/routes` | `ROLE_ROUTING` |
 | 追跡照会（公開） | `/tracking/:trackingNumber` | `GET /api/v1/public/tracking/*` | **認証不要** |
 | 自社貨物追跡 | `/shipper/tracking*` | `GET /api/v1/shipper/tracking*` | `ROLE_SHIPPER`。authms の利用者紐付けと bookingms の荷主 Snapshot で自社貨物だけを返す。未紐付けは 200 + 問い合わせ案内、他社貨物詳細は 404 |
+| 業務シミュレーション | `/admin/simulations`, `/admin/simulations/:runId` | `/api/v1/simulations*` | `ROLE_ADMIN`（**業務の担当者には開かない**。業務データを作る操作である。[ADR-030](../adr/030-business-simulation-execution.md)。実行を無効にした環境では `POST` が 503） |
 | 貨物状態管理・例外 | `/tracking/manage` | `/api/v1/tracking/manage*` | 更新・起票・解決は `ROLE_TRACKER`、**参照は `ROLE_HANDLER` にも開く**（US20-1。荷役作業員が現場で状態を確かめられないと、記録の前に電話が要る）。**未解決の例外を読むだけは `ROLE_SALES` にも開く**（IT9 返済枠 0.9） |
 | 荷役管理 | `/handling*` | `/api/v1/handling` | `ROLE_HANDLER`, `ROLE_TRACKER`（参照のみ） |
 | 通関管理 | `/customs*` | `/api/v1/customs` | `ROLE_HANDLER`（申告登録）, `ROLE_TRACKER`（状態更新） |
@@ -453,6 +454,42 @@ state "見積フロー" as estimate_flow {
 ```
 
 未紐付け利用者には「荷主との紐付けがありません」と問い合わせ先を表示する。これは空一覧ではなく業務上の設定不足であり、荷物が無い状態と区別する。
+
+### 業務シミュレーション (/admin/simulations) ― IT14 で定義
+
+システム管理者が、予約から精算までを自動で 1 本通す画面。**業務の担当者には開かない**——
+業務データを作る操作である。生成した荷主は `SIM-` 帯で識別され、営業の荷主一覧と
+精算の締め対象からは外れる（[ADR-030](../adr/030-business-simulation-execution.md) 決定 3）。
+
+```plantuml
+@startsalt
+{+
+  { / <b>CargoTracker</b> | 業務シミュレーション | [ログアウト] }
+  ==
+  <b>業務シミュレーション</b>
+  --
+  [標準輸送シナリオを実行する] | 14 工程
+  --
+  {#
+    実行 ID | シナリオ | 状態 | 進んだ工程 | 開始 | 実行者
+    SIM-20261116-0001 | 標準輸送 | 完了 | 14 / 14 工程 | 2026-11-16 10:00 | admin01
+    SIM-20261115-0002 | 標準輸送 | 失敗 | 2 / 14 工程 | 2026-11-15 11:00 | admin01
+  }
+}
+@endsalt
+```
+
+同じシナリオが実行中なら 409 で断り、**実行中の実行への導線**を出す（US34-5）。
+断るだけでは、指示した人はいま何が動いているかを確かめられない。
+
+### 業務シミュレーションの結果 (/admin/simulations/:runId) ― IT14 で定義
+
+工程ごとの成否・所要時間・生成した識別子・失敗理由を並べる。止まった実行では、
+表の上に**止まった理由**を出す——「失敗しました」だけでは、経路候補が 0 件なのか
+接続先が違うのかを切り分けられない。
+
+**繋ぐのは追跡照会だけ**である。予約詳細は営業・経路設計者、精算書は経理にしか
+開かれておらず、システム管理者が押すと 403 になる。押した先が行き止まりになる導線は置かない。
 
 ### 自分の貨物詳細 (/shipper/tracking/:trackingNumber) ― IT13 で定義
 

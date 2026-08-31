@@ -28,6 +28,14 @@ export const simulationHandlers = [
    */
   http.post(API_PATHS.simulations, async ({ request }) => {
     const { scenarioId } = (await request.json()) as { scenarioId: string }
+    // **本物より甘くしない。**本物は知らないシナリオを 400 で断る。
+    // モックが受け付けると、画面が「断られたときの見え方」を一度も踏まない
+    if (!simulationScenarios.some((scenario) => scenario.id === scenarioId)) {
+      return HttpResponse.json(
+        { message: `そのシナリオは実行できません: ${scenarioId}` },
+        { status: 400 },
+      )
+    }
     const running = simulationRuns.find(
       (run) => run.scenarioId === scenarioId && run.status === 'RUNNING',
     )

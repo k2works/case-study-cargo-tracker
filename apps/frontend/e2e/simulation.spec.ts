@@ -51,7 +51,9 @@ test.describe('業務シミュレーション（US34・US35）', () => {
     await logIn(page, 'admin01')
     await page.goto('/admin/simulations')
 
-    await page.getByRole('link', { name: /^SIM-/ }).first().click()
+    // **成功した実行を名指しで開く。**先頭を押す形にすると、一覧の並びが変わった日に
+    // 別の実行を見て落ちる（実際に失敗した実行を足した時点で起きた）
+    await page.getByRole('link', { name: 'SIM-20261116-0001' }).click()
 
     await expect(page.getByRole('heading', { name: /^実行 / })).toBeVisible()
     await expect(page.getByText('追跡番号発行')).toBeVisible()
@@ -59,6 +61,22 @@ test.describe('業務シミュレーション（US34・US35）', () => {
     await page.getByRole('link', { name: /^TRK-/ }).click()
     await expect(page).toHaveURL(/\/tracking\/TRK-/)
     await expect(page.getByText(/403|権限がありません/)).toHaveCount(0)
+  })
+
+  /**
+   * <strong>失敗した実行の見え方を踏む。</strong>
+   *
+   * 成功だけを確かめると、切り分けの道具として肝心な「止まった理由」の表示が
+   * 一度も踏まれないまま緑になる。
+   */
+  test('失敗した実行は、止まった工程と理由が読める', async ({ page }) => {
+    await logIn(page, 'admin01')
+    await page.goto('/admin/simulations')
+
+    await page.getByRole('link', { name: 'SIM-20261115-0002' }).click()
+
+    await expect(page.getByText(/経路候補が 0 件です/).first()).toBeVisible()
+    await expect(page.getByText('航海の登録を確かめる', { exact: false })).toBeVisible()
   })
 
   /** 業務の担当者には入口を出さない。出すと、押した先で 403 になる画面へ誘導する。 */
