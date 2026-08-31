@@ -168,7 +168,7 @@ IT2・IT3 のふりかえりが繰り返し「`ui_design.md` の規約」を反�
 | 通関管理 | `/customs` | ROLE_HANDLER, ROLE_TRACKER |
 | 精算管理 | `/billing` | ROLE_ACCOUNTANT |
 | アカウント管理 | `/admin/accounts` | ROLE_ADMIN。ロックされたアカウントの解除（US32）。**他のロールには出さない**——出すと、押した先で 403 になる画面へ誘導することになる |
-| 業務シミュレーション | `/admin/simulations` | ROLE_ADMIN。予約から精算までを自動で 1 本通す（US34・US35）。**業務の担当者には出さない**——業務データを作る操作である。詳細は `/admin/simulations/:runId` |
+| 業務シミュレーション | `/admin/simulations` | ROLE_ADMIN。予約から精算までを自動で 1 本通す（US34・US35）。**例外シナリオも選べる**（US36）。同じ画面で**継続実行**を開始・停止し、統計を見る（US37）。**業務の担当者には出さない**——業務データを作る操作である。詳細は `/admin/simulations/:runId` |
 | ログアウト | - | 全ロール |
 
 > **ロール名は IT1 で確定した（2026-08-19）**。経路設計者は独立したロール `ROLE_ROUTING` とする。
@@ -198,7 +198,7 @@ IT2・IT3 のふりかえりが繰り返し「`ui_design.md` の規約」を反�
 | 航海・経路設計 | `/routing*` | `/api/v1/voyages`, `/api/v1/voyages/{voyageNumber}`, `/api/v1/routes` | `ROLE_ROUTING` |
 | 追跡照会（公開） | `/tracking/:trackingNumber` | `GET /api/v1/public/tracking/*` | **認証不要** |
 | 自社貨物追跡 | `/shipper/tracking*` | `GET /api/v1/shipper/tracking*` | `ROLE_SHIPPER`。authms の利用者紐付けと bookingms の荷主 Snapshot で自社貨物だけを返す。未紐付けは 200 + 問い合わせ案内、他社貨物詳細は 404 |
-| 業務シミュレーション | `/admin/simulations`, `/admin/simulations/:runId` | `/api/v1/simulations*` | `ROLE_ADMIN`（**業務の担当者には開かない**。業務データを作る操作である。[ADR-030](../adr/030-business-simulation-execution.md)。実行を無効にした環境では `POST` が 503） |
+| 業務シミュレーション | `/admin/simulations`, `/admin/simulations/:runId` | `/api/v1/simulations*`（継続実行は `/api/v1/simulations/sessions*`） | `ROLE_ADMIN`（**業務の担当者には開かない**。業務データを作る操作である。[ADR-030](../adr/030-business-simulation-execution.md)・[ADR-031](../adr/031-random-continuous-simulation.md)。実行を無効にした環境では `POST` が 503） |
 | 貨物状態管理・例外 | `/tracking/manage` | `/api/v1/tracking/manage*` | 更新・起票・解決は `ROLE_TRACKER`、**参照は `ROLE_HANDLER` にも開く**（US20-1。荷役作業員が現場で状態を確かめられないと、記録の前に電話が要る）。**未解決の例外を読むだけは `ROLE_SALES` にも開く**（IT9 返済枠 0.9） |
 | 荷役管理 | `/handling*` | `/api/v1/handling` | `ROLE_HANDLER`, `ROLE_TRACKER`（参照のみ） |
 | 通関管理 | `/customs*` | `/api/v1/customs` | `ROLE_HANDLER`（申告登録）, `ROLE_TRACKER`（状態更新） |
@@ -455,7 +455,7 @@ state "見積フロー" as estimate_flow {
 
 未紐付け利用者には「荷主との紐付けがありません」と問い合わせ先を表示する。これは空一覧ではなく業務上の設定不足であり、荷物が無い状態と区別する。
 
-### 業務シミュレーション (/admin/simulations) ― IT14 で定義
+### 業務シミュレーション (/admin/simulations) ― IT14 で定義・IT15 で拡張
 
 システム管理者が、予約から精算までを自動で 1 本通す画面。**業務の担当者には開かない**——
 業務データを作る操作である。生成した荷主は `SIM-` 帯で識別され、営業の荷主一覧と
@@ -481,6 +481,46 @@ state "見積フロー" as estimate_flow {
 
 同じシナリオが実行中なら 409 で断り、**実行中の実行への導線**を出す（US34-5）。
 断るだけでは、指示した人はいま何が動いているかを確かめられない。
+
+**シナリオは選ぶ**（US36-1・IT15）。標準輸送に加えて遅延・破損・誤配・税関保留・
+輸送中キャンセルを選べる。選んだシナリオの工程数を横に出す——シナリオごとに違う。
+
+**継続実行は同じ画面に置く**（US37・IT15）。画面を分けると、管理者は開始した実行の
+結果を見るために画面を渡り歩くことになる。
+
+```plantuml
+@startsalt
+{+
+  <b>継続実行</b>
+  --
+  30 秒ごと・同時 3 本・例外 20% | 種（省略可）| "        " | [継続実行を開始する]
+  --
+  セッション | 状態 | 種 | 設定
+  SES-20261207-0001 | 実行中 | 20261207 | 30 秒ごと・同時 3 本・例外 20%
+  --
+  [停止する]
+  --
+  実行件数 | 成功 | 失敗 | 実行中
+  12 | 9 | 2 | 1
+  --
+  {#
+    工程 | 失敗
+    経路割り当て | 2 件
+    通関申告 | 1 件
+  }
+}
+@endsalt
+```
+
+**種をそのまま出す**（US37-3）。記録していても読めなければ、落ちた実行を再現する
+手段が画面から消える。種を指定して開始すると、同じ並びが再現される。
+
+**「停止する」を押した直後は「停止処理中」である**（[ADR-031](../adr/031-random-continuous-simulation.md) 決定 4）。
+新規の開始だけが止まり、進行中の実行は最後まで走る。分けて表示しないと、統計が
+確定していない状態で「停止しました」と読まれる。
+
+**失敗した工程の分布を出す**（US37-8）。件数だけでは「たくさん落ちている」としか
+分からず、直す場所が決まらない——気づく手段は次の行動へ繋ぐ。
 
 ### 業務シミュレーションの結果 (/admin/simulations/:runId) ― IT14 で定義
 

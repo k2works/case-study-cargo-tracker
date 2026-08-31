@@ -1700,6 +1700,37 @@ Invoice を集約ルートとし、InvoiceLineItem と Payment を集約内エ�
 **この集約は業務のドメインではない。** 業務の**呼び出し元**であり、業務の BC とは変わる理由が
 違う。そのため既存 6 サービスには置かず、独立したサービス（simulationms）に置いた（決定 1）。
 
+**工程は「例外を起こす」「例外に対応する」という性質を自分で持つ**（IT15 追加）。
+呼ぶ側で一覧を持つと、工程を足したときに書き足し忘れた工程だけが性質を持たないまま通る。
+例外シナリオは<strong>実際に起きる操作の並び</strong>として表す——誤配は「予定と違う港での
+荷役記録」、遅延は「予定より遅い日時での記録」であり、例外専用の工程は作らない
+（[ADR-031](../adr/031-random-continuous-simulation.md) 決定 5）。
+
+### Simulation Context：ContinuousRunSession 集約（IT15 追加）
+
+`ContinuousRunSession` を集約ルートとし、`Seed`（乱数の種）と `ContinuousRunPolicy`
+（実行間隔・同時実行数・例外の割合）を値オブジェクトとして持つ。
+`ScenarioGenerator` は種から作る**ドメインサービス**で、`ScenarioRequest`（実行 1 件分の
+シナリオ・出発地・目的地・貨物種別・重量・期限）を生む。
+
+**根拠 1（種）**: 乱数器は**種から作り直す**。グローバルな乱数器を共有すると、並行実行の
+順序で並びが変わり、同じ種を指定しても再現できない——再現できないランダム実行は、
+落ちても報告手段にならない（決定 1）。
+
+**根拠 2（停止）**: 状態は `RUNNING` / `STOPPING` / `STOPPED` の 3 つを持つ。
+**「止めた」と「止まった」を分ける**——分けないと、進行中の実行が残っているのに停止済みと
+表示され、統計が確定していない状態で読まれる。停止が止めるのは**新規の開始だけ**で、
+進行中の実行は最後まで走る（決定 4）。中断すると業務データが中途半端な状態で残り、
+[ADR-030](../adr/030-business-simulation-execution.md) 決定 5（巻き戻さない）と噛み合わない。
+
+**根拠 3（上限）**: 上限の判定は `ContinuousRunPolicy#allows` の 1 か所に置く。呼ぶ側で
+書き直すと、上限を変えたときに書き直した側だけが古いまま残る。**上限そのものにも上限**を
+置いている——置かないと、設定 1 つで業務を止められる（決定 3）。
+
+`SimulationStatistics` は**読むためだけの組み合わせ**（Read Model）で、実行の一覧から
+件数と**失敗した工程の分布**を導く。分布を出すのは、件数だけでは直す場所が決まらないため
+である。
+
 ---
 
 ## データモデルとの対応
@@ -1717,6 +1748,8 @@ Invoice を集約ルートとし、InvoiceLineItem と Payment を集約内エ�
 | Handling | HandlingActivity | `handling_db` | `handling_activity` |
 | Handling | CustomsDeclaration | `handling_db` | `customs_declaration`, `customs_status_history` |
 | Billing | Invoice | `billing_db` | `invoice`, `invoice_line_item`, `payment` |
+| Simulation | SimulationRun | `simulation_db` | `simulation_run`, `simulation_step_result` |
+| Simulation | ContinuousRunSession | `simulation_db` | `simulation_session` |
 | Shared | Location | 各 DB | `location`（各 DB にローカルコピー） |
 
 ---

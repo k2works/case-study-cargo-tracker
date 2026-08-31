@@ -38,7 +38,7 @@ take-3 のデータモデルを基礎とし、本プロジェクトの要件差�
 | trackingms | `tracking_db` | `location`, `tracking_activity`, `tracking_handling_event`, `tracking_exception_event` |
 | handlingms | `handling_db` | `location`, `handling_activity`, `customs_declaration`, `customs_status_history` |
 | billingms | `billing_db` | `invoice`, `invoice_line_item`, `payment` |
-| simulationms | `simulation_db` | `simulation_run`, `simulation_step_result` |
+| simulationms | `simulation_db` | `simulation_run`, `simulation_step_result`, `simulation_session` |
 
 > **`location` テーブルの重複について**: Shared Domain の `Location`（UN/LOCODE）は共有カーネルとして定義されるが、Database per Service パターンでは各サービスが自身の DB 内に `location` テーブルを保持する。初期データは共通の Flyway シードスクリプトから投入し、データの同期は必要に応じてイベントで行う。
 >
@@ -1124,13 +1124,36 @@ IT14（US34・US35）で追加した。**実行そのもの**と**工程ごと�
 | `run_id` | `VARCHAR(40)` | UK, NOT NULL | 実行 ID（`SIM-YYYYMMDD-NNNN`。その日の連番）。**採番を裁くのはこの一意制約である**——「今日の件数 + 1」は同時開始で衝突するため、断られたら次の番号を採る（IT15） |
 | `scenario_id` | `VARCHAR(40)` | NOT NULL | シナリオ |
 | `steps` | `VARCHAR(500)` | NOT NULL | **実行時の工程の並び**。シナリオ ID だけでは、定義を変えたあとに過去の実行を正しく復元できない |
-| `started_by` | `VARCHAR(50)` | NOT NULL | 指示した利用者 |
+| `started_by` | `VARCHAR(50)` | NOT NULL | 指示した利用者。継続実行が始めた実行はセッション ID が入る |
 | `started_at` | `TIMESTAMP WITH TIME ZONE` | NOT NULL | |
+| `seed` | `BIGINT` | NOT NULL | 使った乱数の種（IT15 追加）。**手で押した実行は 0**。NULL 可にすると、記録し忘れても行が書けてしまう |
+| `session_id` | `BIGINT` | FK | `simulation_session.id`（IT15 追加）。**NULL 可**——手で押した実行はセッションを持たない |
 
 > **状態と終了時刻は列に持たない**（IT15 の V2 で削除）。どちらも挿入時に一度書かれる
 > だけで更新されず、読み出しでは集約が工程の結果から導き直していた。残すと、DB を
 > 直接見た人は**すべての実行が RUNNING のまま**という嘘を読む。導けるものを列にも
 > 置くと、片方だけ更新された行が生まれる（[ADR-030](../adr/030-business-simulation-execution.md) 決定 5）。
+
+#### `simulation_session`（継続実行）
+
+**乱数で選んだシナリオを流し続ける 1 回分**（US37・[ADR-031]）。
+
+| カラム名 | データ型 | 制約 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `id` | `BIGSERIAL` | PK | |
+| `session_id` | `VARCHAR(40)` | UK, NOT NULL | セッション ID（`SES-YYYYMMDD-NNNN`） |
+| `seed` | `BIGINT` | NOT NULL | 乱数の種。**同じ種を指定すると同じ並びが再現される**（決定 1）。指定しなかった場合もシステムが作って記録する——記録しないと、指定しなかった実行だけが再現できない |
+| `interval_seconds` | `INTEGER` | NOT NULL | 実行の間隔 |
+| `max_concurrent` | `INTEGER` | NOT NULL | 同時に走らせる本数 |
+| `exception_ratio` | `NUMERIC(3,2)` | NOT NULL | 例外シナリオを選ぶ割合（0〜1） |
+| `status` | `VARCHAR(20)` | NOT NULL | `RUNNING` / `STOPPING` / `STOPPED`。**「止めた」と「止まった」を分ける**（決定 4）——分けないと、進行中が残っているのに停止済みと表示され、統計が確定していない状態で読まれる |
+| `started_by` | `VARCHAR(50)` | NOT NULL | 開始を指示した利用者 |
+| `started_at` | `TIMESTAMP WITH TIME ZONE` | NOT NULL | |
+| `stopped_at` | `TIMESTAMP WITH TIME ZONE` | | 進行中が尽きた時刻。停止処理中のあいだは NULL |
+
+> **ここは更新する。** 実行の記録（`simulation_run`）と違い、停止の指示と進行中が
+> 尽きたことは状態そのものの変化である。常に INSERT する save は、作成しか起きない
+> うちは成立し、最初の停止で行を増やす。
 
 #### `simulation_step_result`（工程の結果）
 

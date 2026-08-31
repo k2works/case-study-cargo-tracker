@@ -213,6 +213,7 @@ nav:
       - ADR-028 精算の処理と輸送見積: adr/028-settlement-and-quotation.md
       - ADR-029 荷主向け追跡境界と無操作タイムアウト: adr/029-shipper-tracking-boundary-and-inactivity-timeout.md
       - ADR-030 業務シミュレーションの実行: adr/030-business-simulation-execution.md
+      - ADR-031 ランダム継続実行: adr/031-random-continuous-simulation.md
   - 記事:
       - 概要: article/index.md
       - モノリスアーキテクチャ実装比較:
