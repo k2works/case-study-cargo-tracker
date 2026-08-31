@@ -251,10 +251,10 @@ US ではないため上の合計（110 SP）には含めず、**スケジュー
 
 | ID | ユーザーストーリー | SP | BV | C | KA | RR | 優先度（正典） | 主なサービス |
 |----|-------------------|----|----|---|----|----|--------|-------------|
-| US34 | 業務シナリオを選んで自動実行する | 5 | 中 | 高 | 中 | 高 | 中 | **simulationms（新設）** + gatewayms 経由で 6 サービス |
-| US35 | 業務シミュレーションの結果を工程ごとに確認する | 3 | 中 | 中 | 低 | 中 | 中 | simulationms + フロントエンド |
-| US36 | 例外を含む業務シナリオを自動実行する | 3 | 中 | 中 | 中 | 高 | 低 | simulationms（trackingms・handlingms・routingms の実操作を踏む） |
-| US37 | ランダムな業務シナリオをバックエンドが継続実行する | 5 | 中 | 高 | 高 | 高 | 中 | simulationms |
+| US34 | 業務シナリオを選んで自動実行する（[#559](https://github.com/k2works/case-study-cargo-tracker/issues/559)） | 5 | 中 | 高 | 中 | 高 | 中 | **simulationms（新設）** + gatewayms 経由で 6 サービス |
+| US35 | 業務シミュレーションの結果を工程ごとに確認する（[#560](https://github.com/k2works/case-study-cargo-tracker/issues/560)） | 3 | 中 | 中 | 低 | 中 | 中 | simulationms + フロントエンド |
+| US36 | 例外を含む業務シナリオを自動実行する（[#561](https://github.com/k2works/case-study-cargo-tracker/issues/561)） | 3 | 中 | 中 | 中 | 高 | 低 | simulationms（trackingms・handlingms・routingms の実操作を踏む） |
+| US37 | ランダムな業務シナリオをバックエンドが継続実行する（[#562](https://github.com/k2works/case-study-cargo-tracker/issues/562)） | 5 | 中 | 高 | 高 | 高 | 中 | simulationms |
 | **合計** | | **16** | | | | | | |
 
 > **なぜこのリリースをやるのか。** Release 2.1 までで業務は端から端まで通りましたが、
@@ -647,5 +647,6 @@ xychart-beta
 | 2026-08-24 | IT9 開始準備を反映: イテレーション 9 計画へのリンク・状態（計画済み）・IT9 の概要・Release 1.0 の実装完了を記載 | - |
 | 2026-08-27 | IT13 開始準備を反映: イテレーション 13 計画へのリンク・状態（計画済み）を追加 | - |
 | 2026-08-31 | Release 2.2（業務シミュレーション・US34〜US37・16 SP）を追加し、IT14・IT15 の計画を作成 | - |
+| 2026-08-31 | IT14 開始準備を反映: 開発戦略に拡張局面を追加、整合性検証（詳細 8 項目・横断 3 軸）を実施、GitHub Milestone 60 と Issue #559〜#562 を作成 | - |
 | 2026-08-31 | Release 2.1 完了報告書の作成を反映: 次のステップ 1 を完了に更新 | - |
 | 2026-08-28 | IT13 クローズを反映: 進捗（IT13 完了・7 SP）・バーンダウン実績・Release 2.1 の実装完了・TD-01 の消化・ベロシティ最終実績（8.6 SP）・次のステップを更新 | - |
