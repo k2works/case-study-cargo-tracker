@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.example.bookingms.application.internal.commandservices.RegistrationOutcome;
 import com.example.bookingms.domain.repository.BillableCargoFinder;
 import com.example.bookingms.application.internal.queryservices.SearchShipperUseCase;
+import com.example.bookingms.domain.model.aggregates.Shipper;
+import com.example.bookingms.domain.repository.BillableCargo;
 import com.example.bookingms.domain.model.aggregates.Cargo;
 import com.example.bookingms.domain.model.commands.RegisterShipperCommand;
 import com.example.bookingms.domain.model.valueobjects.CargoType;
@@ -56,7 +58,7 @@ class SimulatedDataExclusionIntegrationTest extends CargoPersistenceTestBase {
         Long real = shipperId("実在の荷主", "real-list@example.com");
 
         assertThat(searchShipper.search(null))
-                .extracting(shipper -> shipper.shipperCode())
+                .extracting(Shipper::shipperCode)
                 .as("実在しない会社が営業の一覧に並ぶ")
                 .noneMatch(code -> code.startsWith("SIM-"));
         assertThat(searchShipper.search(null))
@@ -77,7 +79,7 @@ class SimulatedDataExclusionIntegrationTest extends CargoPersistenceTestBase {
         Cargo delivered = deliver(shipper);
 
         assertThat(billable.findAllBillable())
-                .extracting(cargo -> cargo.bookingId())
+                .extracting(BillableCargo::bookingId)
                 .as("経理担当者の締めにシミュレーションの貨物が乗る")
                 .doesNotContain(delivered.bookingId().orElseThrow().value());
 
@@ -92,7 +94,7 @@ class SimulatedDataExclusionIntegrationTest extends CargoPersistenceTestBase {
         Cargo delivered = deliver(shipperId("実在の荷主", "real-billing@example.com"));
 
         assertThat(billable.findAllBillable())
-                .extracting(cargo -> cargo.bookingId())
+                .extracting(BillableCargo::bookingId)
                 .contains(delivered.bookingId().orElseThrow().value());
     }
 

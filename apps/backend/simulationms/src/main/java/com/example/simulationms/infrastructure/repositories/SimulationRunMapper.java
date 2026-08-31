@@ -20,7 +20,7 @@ public interface SimulationRunMapper {
     @Insert("INSERT INTO simulation_run (run_id, scenario_id, steps, status, started_by, started_at)"
             + " VALUES (#{runId}, #{scenarioId}, #{steps}, #{status}, #{startedBy}, #{startedAt})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
-    void insert(SimulationRunRecord record);
+    void insert(SimulationRunRecord row);
 
     @Select("SELECT" + RUN_COLUMNS + " WHERE r.run_id = #{runId}")
     @Results(id = "runResult", value = {
@@ -71,20 +71,18 @@ public interface SimulationRunMapper {
             + " VALUES (#{runId}, #{step}, #{outcome}, #{elapsedMs}, #{createdIdentifier},"
             + "  #{failureReason}, #{recordedAt})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
-    void insertResult(SimulationStepResultRecord record);
+    void insertResult(SimulationStepResultRecord row);
 
     @Select("SELECT s.id, s.run_id, s.step, s.outcome, s.elapsed_ms, s.created_identifier,"
             + " s.failure_reason, s.recorded_at FROM simulation_step_result s"
             + " WHERE s.run_id = #{runId} ORDER BY s.id")
-    @Results({
-        @Result(column = "id", property = "id"),
-        @Result(column = "run_id", property = "runId"),
-        @Result(column = "step", property = "step"),
-        @Result(column = "outcome", property = "outcome"),
-        @Result(column = "elapsed_ms", property = "elapsedMs"),
-        @Result(column = "created_identifier", property = "createdIdentifier"),
-        @Result(column = "failure_reason", property = "failureReason"),
-        @Result(column = "recorded_at", property = "recordedAt")
-    })
+    @Result(column = "id", property = "id")
+    @Result(column = "run_id", property = "runId")
+    @Result(column = "step", property = "step")
+    @Result(column = "outcome", property = "outcome")
+    @Result(column = "elapsed_ms", property = "elapsedMs")
+    @Result(column = "created_identifier", property = "createdIdentifier")
+    @Result(column = "failure_reason", property = "failureReason")
+    @Result(column = "recorded_at", property = "recordedAt")
     List<SimulationStepResultRecord> findResults(@Param("runId") Long runId);
 }

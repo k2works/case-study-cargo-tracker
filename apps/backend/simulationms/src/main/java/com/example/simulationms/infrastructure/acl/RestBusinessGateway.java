@@ -47,6 +47,9 @@ public class RestBusinessGateway implements BusinessGateway {
     static final String DESTINATION = "USLAX";
     static final String CARGO_TYPE = "GENERAL";
 
+    /** 業務データに残す名乗り。**誰の操作か分かる名前にする**——後から人が見分けられる。 */
+    static final String OPERATOR = "シミュレーション";
+
     /** 失敗理由に載せる応答本文の長さ。列の幅（500）に収まる範囲で切る。 */
     private static final int BODY_LIMIT = 200;
 
@@ -125,7 +128,7 @@ public class RestBusinessGateway implements BusinessGateway {
                         // **個人にする。**法人は契約番号が要り、無いと集約が断る——
                         // 確かめたいのは業務の道のりであって、契約の妥当性ではない
                         "INDIVIDUAL",
-                        "シミュレーション荷主 " + marker,
+                        OPERATOR + "荷主 " + marker,
                         marker.toLowerCase(Locale.ROOT) + "@simulation.example.com",
                         "東京都千代田区 1-1-1",
                         "03-0000-0000",
@@ -148,7 +151,7 @@ public class RestBusinessGateway implements BusinessGateway {
                 .header(HttpHeaders.AUTHORIZATION, bearer(token))
                 .body(new BusinessMessages.BookingRequest(
                         Long.valueOf(required(context, BusinessContextKey.SHIPPER_ID)),
-                        CARGO_TYPE, 900, "シミュレーション " + runId(context),
+                        CARGO_TYPE, 900, OPERATOR + " " + runId(context),
                         ORIGIN, DESTINATION, today().plusDays(DEADLINE_DAYS).toString()))
                 .retrieve()
                 .body(BusinessMessages.BookingResponse.class));
@@ -260,7 +263,7 @@ public class RestBusinessGateway implements BusinessGateway {
                     .header(HttpHeaders.AUTHORIZATION, bearer(token))
                     .body(new BusinessMessages.HandlingActivityRequest(trackingNumber, activity.type(),
                             activity.location(), activity.at().toString(),
-                            "シミュレーション", activity.voyage(), null))
+                            OPERATOR, activity.voyage(), null))
                     .retrieve()
                     .toBodilessEntity());
         }
@@ -276,7 +279,7 @@ public class RestBusinessGateway implements BusinessGateway {
                                 required(context, BusinessContextKey.TRACKING_NUMBER),
                                 "DEC-" + runId(context),
                                 clock.instant().toString(),
-                                "シミュレーション"))
+                                OPERATOR))
                         .retrieve()
                         .body(BusinessMessages.CustomsDeclarationResponse.class));
 
@@ -310,7 +313,7 @@ public class RestBusinessGateway implements BusinessGateway {
                 .body(new BusinessMessages.HandlingActivityRequest(
                         required(context, BusinessContextKey.TRACKING_NUMBER), "CLAIM",
                         DESTINATION, clock.instant().plus(3, ChronoUnit.HOURS).toString(),
-                        "シミュレーション", null, "シミュレーション荷受人"))
+                        OPERATOR, null, "シミュレーション荷受人"))
                 .retrieve()
                 .toBodilessEntity());
         return BusinessContextKey.NONE;

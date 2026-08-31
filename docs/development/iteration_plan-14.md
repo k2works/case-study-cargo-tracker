@@ -215,20 +215,20 @@
 
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | :--- | :--- |
-| 5.1 | `/admin/simulations` 一覧と `/admin/simulations/:runId` 詳細を MSW で実装する | 8h | [ ] |
-| 5.2 | 工程ごとの成否・所要時間・識別子・失敗理由を出す | 5h | [ ] |
-| 5.3 | 生成した識別子から予約詳細・追跡・請求書へ遷移する導線を作り、**押した先で 403 にならない**ことを確かめる | 4h | [ ] |
-| 5.4 | `ROLE_ADMIN` のサイドバーとダッシュボードに入口を追加し、ナビ表示テストを置く | 3h | [ ] |
+| 5.1 | `/admin/simulations` 一覧と `/admin/simulations/:runId` 詳細を MSW で実装する | 8h | [x] |
+| 5.2 | 工程ごとの成否・所要時間・識別子・失敗理由を出す | 5h | [x] |
+| 5.3 | 生成した識別子から遷移する導線を作り、**押した先で 403 にならない**ことを確かめる | 4h | [x]（**繋ぐのは追跡照会だけにした**。予約詳細は営業・経路設計者、精算書は経理にしか開かれておらず、管理者が押すと 403 になる。行き止まりへ送らない） |
+| 5.4 | `ROLE_ADMIN` のサイドバーとダッシュボードに入口を追加し、ナビ表示テストを置く | 3h | [x] |
 
 ### Phase 6: 設計・マニュアル・品質ゲート
 
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | :--- | :--- |
-| 6.1 | `architecture_backend.md`・`domain-model.md`・`data-model.md`・`ui_design.md` に simulationms と実行記録を反映する（**8 サービス目**。「未着手のサービスはもうありません」の記述も改訂する） | 8h | [ ] |
-| 6.2 | ユーザーマニュアルに「業務シミュレーション」章を追加し、キャプチャを撮る | 6h | [ ] |
-| 6.3 | 実環境で `apply` → `rollout:image` → `rollout:restart` を踏み、シナリオ 1 本を通す | 6h | [ ] |
-| 6.4 | `./gradlew build`、`TZ=UTC ./gradlew test`、frontend test / build、E2E、JIG / jig-erd を実行する | 8h | [ ] |
-| 6.5 | **最後のコミットに対して** SonarQube を回し、Quality Gate PASS を確認する（IT13 Try 5'） | 2h | [ ] |
+| 6.1 | `architecture_backend.md`・`domain-model.md`・`data-model.md`・`ui_design.md` に simulationms と実行記録を反映する（**8 サービス目**） | 8h | [x] |
+| 6.2 | ユーザーマニュアルに「業務シミュレーション」章を追加し、キャプチャを撮る | 6h | [x]（15 章。索引・mkdocs ナビ・キャプチャ 2 枚まで） |
+| 6.3 | 実環境で `apply` → `rollout:image` → `rollout:restart` を踏み、シナリオ 1 本を通す | 6h | [x]（**14 工程すべて成功**。接続先が他サービスの DB を向いていた欠陥をここで検出し、検査に落とした） |
+| 6.4 | `./gradlew build`、`TZ=UTC ./gradlew test`、frontend test / build、E2E、JIG / jig-erd を実行する | 8h | [~]（backend build・frontend test / lint・E2E は緑。JIG は残り） |
+| 6.5 | **最後のコミットに対して** SonarQube を回し、Quality Gate PASS を確認する（IT13 Try 5'） | 2h | [~]（実行中） |
 
 ### 見積もり合計
 
@@ -245,7 +245,7 @@
 
 **1 SP あたり**: 約 17.9h
 
-**進捗率**: 約 75%（6 / 8 SP。Phase 0〜4 完了。Phase 5・6 が残り）
+**進捗率**: 約 94%（7.5 / 8 SP。Phase 0〜6.3 完了。JIG と品質ゲートが残り）
 
 ---
 

@@ -25,15 +25,15 @@ public class MyBatisSimulationRunRepository implements SimulationRunRepository {
 
     @Override
     public void create(SimulationRun run) {
-        SimulationRunRecord record = new SimulationRunRecord();
-        record.setRunId(run.runId().value());
-        record.setScenarioId(run.scenario().id());
-        record.setSteps(run.scenario().steps().stream()
+        SimulationRunRecord row = new SimulationRunRecord();
+        row.setRunId(run.runId().value());
+        row.setScenarioId(run.scenario().id());
+        row.setSteps(run.scenario().steps().stream()
                 .map(Enum::name).reduce((a, b) -> a + STEP_SEPARATOR + b).orElseThrow());
-        record.setStatus(run.status().name());
-        record.setStartedBy(run.startedBy());
-        record.setStartedAt(run.startedAt());
-        mapper.insert(record);
+        row.setStatus(run.status().name());
+        row.setStartedBy(run.startedBy());
+        row.setStartedAt(run.startedAt());
+        mapper.insert(row);
     }
 
     @Override
@@ -42,15 +42,15 @@ public class MyBatisSimulationRunRepository implements SimulationRunRepository {
         if (run == null) {
             throw new IllegalStateException("実行が見つかりません: " + runId.value());
         }
-        SimulationStepResultRecord record = new SimulationStepResultRecord();
-        record.setRunId(run.getId());
-        record.setStep(result.step().name());
-        record.setOutcome(result.outcome().name());
-        record.setElapsedMs((int) result.elapsed().toMillis());
-        record.setCreatedIdentifier(result.createdIdentifier());
-        record.setFailureReason(result.failureReason());
-        record.setRecordedAt(result.recordedAt());
-        mapper.insertResult(record);
+        SimulationStepResultRecord row = new SimulationStepResultRecord();
+        row.setRunId(run.getId());
+        row.setStep(result.step().name());
+        row.setOutcome(result.outcome().name());
+        row.setElapsedMs((int) result.elapsed().toMillis());
+        row.setCreatedIdentifier(result.createdIdentifier());
+        row.setFailureReason(result.failureReason());
+        row.setRecordedAt(result.recordedAt());
+        mapper.insertResult(row);
     }
 
     @Override
@@ -86,32 +86,32 @@ public class MyBatisSimulationRunRepository implements SimulationRunRepository {
      */
     private Scenario scenarioOf(String scenarioId) {
         SimulationRunRecord latest = mapper.findRecent(Integer.MAX_VALUE).stream()
-                .filter(record -> record.getScenarioId().equals(scenarioId))
+                .filter(row -> row.getScenarioId().equals(scenarioId))
                 .findFirst()
                 .orElse(null);
         return latest == null ? Scenario.standardTransport() : toScenario(latest);
     }
 
-    private SimulationRun toDomain(SimulationRunRecord record) {
-        List<StepResult> results = mapper.findResults(record.getId()).stream()
+    private SimulationRun toDomain(SimulationRunRecord row) {
+        List<StepResult> results = mapper.findResults(row.getId()).stream()
                 .map(MyBatisSimulationRunRepository::toStepResult)
                 .toList();
-        return SimulationRun.restore(RunId.of(record.getRunId()), toScenario(record),
-                record.getStartedBy(), record.getStartedAt(), results);
+        return SimulationRun.restore(RunId.of(row.getRunId()), toScenario(row),
+                row.getStartedBy(), row.getStartedAt(), results);
     }
 
-    private static Scenario toScenario(SimulationRunRecord record) {
-        return Scenario.of(record.getScenarioId(),
-                Arrays.stream(record.getSteps().split(STEP_SEPARATOR))
+    private static Scenario toScenario(SimulationRunRecord row) {
+        return Scenario.of(row.getScenarioId(),
+                Arrays.stream(row.getSteps().split(STEP_SEPARATOR))
                         .map(ScenarioStep::valueOf)
                         .toList());
     }
 
-    private static StepResult toStepResult(SimulationStepResultRecord record) {
-        return new StepResult(ScenarioStep.valueOf(record.getStep()),
-                StepOutcome.valueOf(record.getOutcome()),
-                Duration.ofMillis(record.getElapsedMs()),
-                record.getCreatedIdentifier(), record.getFailureReason(),
-                record.getRecordedAt());
+    private static StepResult toStepResult(SimulationStepResultRecord row) {
+        return new StepResult(ScenarioStep.valueOf(row.getStep()),
+                StepOutcome.valueOf(row.getOutcome()),
+                Duration.ofMillis(row.getElapsedMs()),
+                row.getCreatedIdentifier(), row.getFailureReason(),
+                row.getRecordedAt());
     }
 }

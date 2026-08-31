@@ -17,7 +17,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -82,7 +82,7 @@ class RunSimulationUseCaseTest {
     private static final class FakeGateway implements BusinessGateway {
 
         private final List<ScenarioStep> called = new ArrayList<>();
-        private final Map<ScenarioStep, String> identifiers = new HashMap<>();
+        private final Map<ScenarioStep, String> identifiers = new EnumMap<>(ScenarioStep.class);
         private ScenarioStep failAt;
 
         @Override

@@ -28,15 +28,18 @@ class ScenarioTest {
     @Test
     @DisplayName("工程の無いシナリオは作れない")
     void rejectsEmptySteps() {
-        assertThatThrownBy(() -> Scenario.of("empty", List.of()))
+        List<ScenarioStep> none = List.of();
+
+        assertThatThrownBy(() -> Scenario.of("empty", none))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     @DisplayName("同じ工程を 2 度並べたシナリオは作れない")
     void rejectsDuplicatedSteps() {
-        assertThatThrownBy(() -> Scenario.of("dup",
-                List.of(ScenarioStep.SETTLE, ScenarioStep.SETTLE)))
+        List<ScenarioStep> twice = List.of(ScenarioStep.SETTLE, ScenarioStep.SETTLE);
+
+        assertThatThrownBy(() -> Scenario.of("dup", twice))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("2 度");
     }
@@ -45,7 +48,9 @@ class ScenarioTest {
     @ValueSource(strings = {"", " "})
     @DisplayName("名前の無いシナリオは作れない")
     void rejectsBlankId(String id) {
-        assertThatThrownBy(() -> Scenario.of(id, List.of(ScenarioStep.SETTLE)))
+        List<ScenarioStep> steps = List.of(ScenarioStep.SETTLE);
+
+        assertThatThrownBy(() -> Scenario.of(id, steps))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -85,8 +90,10 @@ class ScenarioTest {
     @Test
     @DisplayName("失敗した工程には理由が要る")
     void requiresFailureReason() {
+        Duration elapsed = Duration.ofMillis(1);
+
         assertThatThrownBy(() -> new StepResult(ScenarioStep.SETTLE, StepOutcome.FAILED,
-                Duration.ofMillis(1), null, " ", null))
+                elapsed, null, " ", null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("理由");
     }
@@ -94,7 +101,9 @@ class ScenarioTest {
     @Test
     @DisplayName("工程・結果・所要時間の無い記録は作れない")
     void requiresStepOutcomeAndElapsed() {
-        assertThatThrownBy(() -> StepResult.succeeded(null, Duration.ofMillis(1), "X-1"))
+        Duration elapsed = Duration.ofMillis(1);
+
+        assertThatThrownBy(() -> StepResult.succeeded(null, elapsed, "X-1"))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> StepResult.succeeded(ScenarioStep.SETTLE, null, "X-1"))
                 .isInstanceOf(IllegalArgumentException.class);

@@ -37,6 +37,9 @@ class RestBusinessGatewayTest {
 
     private static final String BASE = "http://gateway.test";
 
+    /** 何も引き継いでいない状態。 */
+    private static final Map<String, String> NO_CONTEXT = Map.of();
+
     private MockRestServiceServer server;
 
     private RestBusinessGateway gateway;
@@ -101,7 +104,7 @@ class RestBusinessGatewayTest {
         server.expect(requestTo(BASE + RestBusinessGateway.LOGIN_PATH))
                 .andRespond(withStatus(HttpStatus.UNAUTHORIZED));
 
-        assertThatThrownBy(() -> gateway.execute(ScenarioStep.REGISTER_SHIPPER, Map.of()))
+        assertThatThrownBy(() -> gateway.execute(ScenarioStep.REGISTER_SHIPPER, NO_CONTEXT))
                 .isInstanceOf(BusinessCallFailedException.class)
                 .hasMessageContaining("sales01");
     }
@@ -115,7 +118,7 @@ class RestBusinessGatewayTest {
                         .body("{\"message\":\"契約番号は法人荷主にだけ設定できます\"}")
                         .contentType(MediaType.APPLICATION_JSON));
 
-        assertThatThrownBy(() -> gateway.execute(ScenarioStep.REGISTER_SHIPPER, Map.of()))
+        assertThatThrownBy(() -> gateway.execute(ScenarioStep.REGISTER_SHIPPER, NO_CONTEXT))
                 .isInstanceOf(BusinessCallFailedException.class)
                 .hasMessageContaining(ScenarioStep.REGISTER_SHIPPER.label())
                 .hasMessageContaining("400")
@@ -273,7 +276,7 @@ class RestBusinessGatewayTest {
         server.expect(requestTo(BASE + RestBusinessGateway.SHIPPER_PATH))
                 .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
 
-        assertThatThrownBy(() -> gateway.execute(ScenarioStep.REGISTER_SHIPPER, Map.of()))
+        assertThatThrownBy(() -> gateway.execute(ScenarioStep.REGISTER_SHIPPER, NO_CONTEXT))
                 .isInstanceOf(BusinessCallFailedException.class)
                 .hasMessageContaining("荷主");
     }
@@ -286,8 +289,9 @@ class RestBusinessGatewayTest {
                 .andRespond(withSuccess("{\"invoiceNumber\":\"INV-0001\"}",
                         MediaType.APPLICATION_JSON));
 
-        assertThatThrownBy(() -> gateway.execute(ScenarioStep.SETTLE,
-                Map.of(BusinessContextKey.INVOICE_NUMBER, "INV-0001")))
+        Map<String, String> context = Map.of(BusinessContextKey.INVOICE_NUMBER, "INV-0001");
+
+        assertThatThrownBy(() -> gateway.execute(ScenarioStep.SETTLE, context))
                 .isInstanceOf(BusinessCallFailedException.class)
                 .hasMessageContaining("INV-0001");
 
@@ -301,7 +305,7 @@ class RestBusinessGatewayTest {
         server.expect(requestTo(BASE + RestBusinessGateway.LOGIN_PATH))
                 .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
 
-        assertThatThrownBy(() -> gateway.execute(ScenarioStep.REGISTER_SHIPPER, Map.of()))
+        assertThatThrownBy(() -> gateway.execute(ScenarioStep.REGISTER_SHIPPER, NO_CONTEXT))
                 .isInstanceOf(BusinessCallFailedException.class)
                 .hasMessageContaining("切符");
         server.verify();
@@ -314,8 +318,9 @@ class RestBusinessGatewayTest {
         server.expect(requestTo(BASE + RestBusinessGateway.BILLING_PATH + "/BK-0001/calculate"))
                 .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
 
-        assertThatThrownBy(() -> gateway.execute(ScenarioStep.CALCULATE_CHARGE,
-                Map.of(BusinessContextKey.BOOKING_ID, "BK-0001")))
+        Map<String, String> context = Map.of(BusinessContextKey.BOOKING_ID, "BK-0001");
+
+        assertThatThrownBy(() -> gateway.execute(ScenarioStep.CALCULATE_CHARGE, context))
                 .isInstanceOf(BusinessCallFailedException.class)
                 .hasMessageContaining("精算書");
     }
@@ -327,8 +332,9 @@ class RestBusinessGatewayTest {
         server.expect(requestTo(BASE + RestBusinessGateway.CUSTOMS_PATH))
                 .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
 
-        assertThatThrownBy(() -> gateway.execute(ScenarioStep.DECLARE_CUSTOMS,
-                Map.of(BusinessContextKey.TRACKING_NUMBER, "TRK-1")))
+        Map<String, String> context = Map.of(BusinessContextKey.TRACKING_NUMBER, "TRK-1");
+
+        assertThatThrownBy(() -> gateway.execute(ScenarioStep.DECLARE_CUSTOMS, context))
                 .isInstanceOf(BusinessCallFailedException.class)
                 .hasMessageContaining("申告");
     }
@@ -341,8 +347,9 @@ class RestBusinessGatewayTest {
                         BASE + RestBusinessGateway.BOOKING_PATH + "/BK-0001/tracking-number"))
                 .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
 
-        assertThatThrownBy(() -> gateway.execute(ScenarioStep.ISSUE_TRACKING_NUMBER,
-                Map.of(BusinessContextKey.BOOKING_ID, "BK-0001")))
+        Map<String, String> context = Map.of(BusinessContextKey.BOOKING_ID, "BK-0001");
+
+        assertThatThrownBy(() -> gateway.execute(ScenarioStep.ISSUE_TRACKING_NUMBER, context))
                 .isInstanceOf(BusinessCallFailedException.class)
                 .hasMessageContaining("追跡番号");
     }
@@ -354,8 +361,9 @@ class RestBusinessGatewayTest {
         server.expect(requestTo(BASE + RestBusinessGateway.BOOKING_PATH))
                 .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
 
-        assertThatThrownBy(() -> gateway.execute(ScenarioStep.REGISTER_BOOKING,
-                Map.of(BusinessContextKey.SHIPPER_ID, "42")))
+        Map<String, String> context = Map.of(BusinessContextKey.SHIPPER_ID, "42");
+
+        assertThatThrownBy(() -> gateway.execute(ScenarioStep.REGISTER_BOOKING, context))
                 .isInstanceOf(BusinessCallFailedException.class)
                 .hasMessageContaining("予約番号");
     }

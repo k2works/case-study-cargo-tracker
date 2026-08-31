@@ -51,7 +51,6 @@ class DialectSmokeTest {
                 .isEmpty();
     }
 
-    /** H2（ローカルの手軽な起動先）での解釈を確かめる。Docker を必要としない。 */
     /**
      * 動的 SQL の代表パラメータ。
      *
@@ -61,6 +60,7 @@ class DialectSmokeTest {
     private static final java.util.Map<String, Object> SAMPLES = java.util.Map.of(
             "trackingNumbers", List.of("TRK-20260823-0001"));
 
+    /** H2（ローカルの手軽な起動先）での解釈を確かめる。Docker を必要としない。 */
     @SpringBootTest
     @ExtendWith(SpringExtension.class)
     @DisplayName("方言スモーク（H2）")

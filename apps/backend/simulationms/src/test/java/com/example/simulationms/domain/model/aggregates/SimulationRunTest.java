@@ -47,8 +47,9 @@ class SimulationRunTest {
         @Test
         @DisplayName("誰が始めたか分からない実行は作れない")
         void requiresStartedBy() {
-            assertThatThrownBy(() ->
-                    SimulationRun.start(ID, Scenario.standardTransport(), " ", STARTED))
+            Scenario scenario = Scenario.standardTransport();
+
+            assertThatThrownBy(() -> SimulationRun.start(ID, scenario, " ", STARTED))
                     .isInstanceOf(IllegalArgumentException.class);
         }
     }
@@ -78,7 +79,9 @@ class SimulationRunTest {
                     Scenario.of("only-booking", List.of(ScenarioStep.REGISTER_SHIPPER)),
                     "admin01", STARTED);
 
-            assertThatThrownBy(() -> run.record(succeeded(ScenarioStep.SETTLE, "INV-1")))
+            StepResult settled = succeeded(ScenarioStep.SETTLE, "INV-1");
+
+            assertThatThrownBy(() -> run.record(settled))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("SETTLE");
         }
@@ -88,7 +91,9 @@ class SimulationRunTest {
         void rejectsDuplicateSteps() {
             SimulationRun run = started().record(succeeded(ScenarioStep.REGISTER_SHIPPER, "S-1"));
 
-            assertThatThrownBy(() -> run.record(succeeded(ScenarioStep.REGISTER_SHIPPER, "S-2")))
+            StepResult again = succeeded(ScenarioStep.REGISTER_SHIPPER, "S-2");
+
+            assertThatThrownBy(() -> run.record(again))
                     .isInstanceOf(IllegalStateException.class);
         }
     }
@@ -118,7 +123,9 @@ class SimulationRunTest {
             SimulationRun run = started().record(StepResult.failed(ScenarioStep.REGISTER_SHIPPER,
                     Duration.ofMillis(90), "接続できません"));
 
-            assertThatThrownBy(() -> run.record(succeeded(ScenarioStep.REGISTER_BOOKING, "B-1")))
+            StepResult next = succeeded(ScenarioStep.REGISTER_BOOKING, "B-1");
+
+            assertThatThrownBy(() -> run.record(next))
                     .isInstanceOf(IllegalStateException.class);
         }
     }

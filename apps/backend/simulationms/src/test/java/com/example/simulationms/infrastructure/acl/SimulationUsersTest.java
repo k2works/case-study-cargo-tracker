@@ -46,7 +46,9 @@ class SimulationUsersTest {
     @Test
     @DisplayName("合言葉の無い名簿では作れない")
     void requiresAPassword() {
-        assertThatThrownBy(() -> SimulationUsers.of(Map.of("ROLE_SALES", "sales01"), " "))
+        Map<String, String> names = Map.of("ROLE_SALES", "sales01");
+
+        assertThatThrownBy(() -> SimulationUsers.of(names, " "))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }
