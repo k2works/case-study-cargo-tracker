@@ -15,6 +15,13 @@ import org.springframework.web.client.RestClientException;
 public class RestShipperCargoSnapshotFinder implements ShipperCargoSnapshotFinder {
 
     public static final String SYSTEM_PRINCIPAL = "system:trackingms";
+    /**
+     * bookingms の内部 API の経路。
+     *
+     * <p><strong>定数で持つ。</strong>理由は {@link RestUserShipperLinkFinder#PATH} と同じで、
+     * 経路は契約テストが両側で突き合わせる。設定で差し替えられるようにはしない。
+     */
+    @SuppressWarnings("java:S1075")
     public static final String PATH = "/api/v1/bookings/shipper-snapshots/{trackingNumber}";
 
     private final RestClient restClient;

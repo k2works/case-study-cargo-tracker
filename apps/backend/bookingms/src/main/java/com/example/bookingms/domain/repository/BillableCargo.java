@@ -2,8 +2,6 @@ package com.example.bookingms.domain.repository;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import com.example.bookingms.domain.model.valueobjects.Leg;
-import com.example.bookingms.domain.model.valueobjects.Misroute;
 
 /**
  * 料金算出の入力（US21・[ADR-027] 決定 7）。

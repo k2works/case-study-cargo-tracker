@@ -11,6 +11,16 @@ import org.springframework.web.client.RestClientException;
 public class RestUserShipperLinkFinder implements UserShipperLinkFinder {
 
     public static final String SYSTEM_PRINCIPAL = "system:trackingms";
+
+    /**
+     * authms の内部 API の経路。
+     *
+     * <p><strong>定数で持つ。</strong>本番のコードは契約フィクスチャ（テスト側）を読めないため、
+     * 経路そのものを共有できない。かわりに<strong>両側を突き合わせる検査</strong>を契約テストに
+     * 置く——どちらかを直したら赤になる。設定で差し替えられるようにすると、その検査を通り抜けた
+     * まま配備先だけが契約からずれる。{@code RestBillingSnapshotFinder} と同じ扱いである。
+     */
+    @SuppressWarnings("java:S1075")
     public static final String PATH = "/api/v1/internal/user-shipper-links/{username}";
 
     private final RestClient restClient;

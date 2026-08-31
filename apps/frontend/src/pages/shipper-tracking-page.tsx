@@ -134,7 +134,7 @@ function ShipperTrackingDetailView({ trackingNumber }: Readonly<{ trackingNumber
         </dl>
         {data.hasException && (
           <p role="alert" className="rounded bg-amber-50 p-3 text-sm text-amber-900">
-            <strong>お荷物に問題が起きています。</strong>
+            <strong>お荷物に問題が起きています。</strong>{' '}
             詳しくはご依頼元の営業担当へお問い合わせください。
           </p>
         )}

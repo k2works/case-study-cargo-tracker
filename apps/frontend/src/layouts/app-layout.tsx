@@ -38,10 +38,10 @@ export function AppLayout() {
       return undefined
     }
 
-    const warningTimer = window.setTimeout(() => {
+    const warningTimer = globalThis.setTimeout(() => {
       setTimeoutWarningVisible(true)
     }, SESSION_WARNING_AFTER_MS)
-    const logoutTimer = window.setTimeout(() => {
+    const logoutTimer = globalThis.setTimeout(() => {
       logout()
       navigate('/login', { replace: true })
     }, SESSION_TIMEOUT_AFTER_MS)
@@ -51,14 +51,14 @@ export function AppLayout() {
     }
 
     for (const event of ACTIVITY_EVENTS) {
-      window.addEventListener(event, recordActivity)
+      globalThis.addEventListener(event, recordActivity)
     }
 
     return () => {
-      window.clearTimeout(warningTimer)
-      window.clearTimeout(logoutTimer)
+      globalThis.clearTimeout(warningTimer)
+      globalThis.clearTimeout(logoutTimer)
       for (const event of ACTIVITY_EVENTS) {
-        window.removeEventListener(event, recordActivity)
+        globalThis.removeEventListener(event, recordActivity)
       }
     }
   }, [activityVersion, logout, navigate, user])

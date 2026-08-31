@@ -70,7 +70,9 @@ class InvoiceLifecycleTest {
         @Test
         @DisplayName("入金記録なしでは確認できない")
         void rejectsMissingPayment() {
-            assertThatThrownBy(() -> invoice().confirmPayment(null))
+            Invoice invoice = invoice();
+
+            assertThatThrownBy(() -> invoice.confirmPayment(null))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
@@ -105,9 +107,11 @@ class InvoiceLifecycleTest {
         @Test
         @DisplayName("理由や日時なしでは取り消せない")
         void requiresReasonAndTimestamp() {
-            assertThatThrownBy(() -> invoice().revoke(" ", REVOKED_AT))
+            Invoice invoice = invoice();
+
+            assertThatThrownBy(() -> invoice.revoke(" ", REVOKED_AT))
                     .isInstanceOf(IllegalArgumentException.class);
-            assertThatThrownBy(() -> invoice().revoke("二重発行", null))
+            assertThatThrownBy(() -> invoice.revoke("二重発行", null))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
@@ -150,7 +154,9 @@ class InvoiceLifecycleTest {
         @Test
         @DisplayName("基準日が無ければ判断できない")
         void requiresToday() {
-            assertThatThrownBy(() -> invoice().overdue(null))
+            Invoice invoice = invoice();
+
+            assertThatThrownBy(() -> invoice.overdue(null))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
