@@ -14,6 +14,7 @@ resources:
   - trackingms.yaml
   - handlingms.yaml
   - billingms.yaml
+  - simulationms.yaml
   - gatewayms.yaml
   - frontend.yaml
   - www.yaml
@@ -42,6 +43,8 @@ images:
   - name: cargo-handlingms
     newTag: 0.0.1
   - name: cargo-billingms
+    newTag: 0.0.1
+  - name: cargo-simulationms
     newTag: 0.0.1
   - name: cargo-frontend
     newTag: 0.0.1

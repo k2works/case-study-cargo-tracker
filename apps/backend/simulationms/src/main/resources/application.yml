@@ -1,0 +1,43 @@
+spring:
+  application:
+    name: simulationms
+  datasource:
+    url: ${DB_URL:jdbc:h2:mem:simulation_db;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  jackson:
+    time-zone: Asia/Tokyo
+
+server:
+  port: ${PORT:8087}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when-authorized
+
+app:
+  business-time-zone: Asia/Tokyo
+  simulation:
+    # シミュレーションを実行してよいか（[ADR-030] 決定 4）。
+    # **本番では真にできない。** 真かつ本番プロファイルなら起動そのものを失敗させる。
+    # 設定を読んで実行時に断る形にすると、読み違いが本番のデータで表面化する
+    enabled: ${APP_SIMULATION_ENABLED:true}
+  gateway:
+    # 業務 API を呼ぶ唯一の出口（[ADR-030] 決定 2）。
+    # **コードに既定値を持たせない。** 既定値があると設定漏れが実行時まで表面化しない
+    # （IT5・IT12・IT13 で 3 度起きた形）。環境ごとに APP_GATEWAY_SERVICE_BASE_URL で上書きする
+    base-url: ${APP_GATEWAY_SERVICE_BASE_URL:http://localhost:8080}

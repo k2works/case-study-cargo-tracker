@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: simulationms
+  namespace: cargo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: simulationms
+  template:
+    metadata:
+      labels:
+        app: simulationms
+    spec:
+      containers:
+        - name: simulationms
+          image: cargo-simulationms:0.0.1
+          ports:
+            - containerPort: 8087
+          env:
+            - name: PORT
+              value: "8087"
+            - name: DB_URL
+              value: jdbc:postgresql://postgres:5432/billing_db
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef: { name: cargo-secrets, key: DB_USERNAME }
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: cargo-secrets, key: DB_PASSWORD }
+            # 業務 API を呼ぶ唯一の出口（[ADR-030] 決定 2）。
+            # **設定しないとシミュレーションのすべての工程が失敗する**——コードの既定値は
+            # localhost を指しており、クラスタの中では自分自身を指すことになる
+            # （IT5・IT12・IT13 で 3 度出た形）
+            - name: APP_GATEWAY_SERVICE_BASE_URL
+              value: http://gatewayms:8080
+            # シミュレーションを実行してよいか（[ADR-030] 決定 4）。
+            # 本番の overlay では真にしない。真かつ本番プロファイルなら起動そのものが失敗する
+            - name: APP_SIMULATION_ENABLED
+              value: "true"
+            # **RabbitMQ は使わない**（[ADR-030] 決定 2）。呼ぶのは Gateway 経由の REST だけである
+          # DB / ブローカーの起動待ちは readinessProbe の範囲で復帰させる（起動順序制御は作り込まない）
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8087
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 30
+          # 起動が終わるまで liveness を働かせない。10 サービスが一斉に立ち上がる環境では
+          # Spring Boot の初期化が liveness の猶予を超え、正常に起動中のコンテナが
+          # 殺されて再起動ループに入る（実際に発生した）。
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8087
+            periodSeconds: 10
+            # 既定の 1 秒では、負荷のかかった作業機で JVM が応答しきれず、
+            # 正常に起動しているコンテナが「起動できていない」と判定される
+            timeoutSeconds: 5
+            # 最大 10 分待つ。起動しないコンテナはここで初めて再起動される
+            failureThreshold: 60
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8087
+            periodSeconds: 30
+            failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: simulationms
+  namespace: cargo
+spec:
+  selector:
+    app: simulationms
+  ports:
+    - port: 8087
+      targetPort: 8087

@@ -45,11 +45,13 @@ const SERVICES = [
   'trackingms',
   'handlingms',
   'billingms',
+  'simulationms',
 ];
 const DEFAULT_IMAGE_TAG = '0.0.1';
 
 /** 専用データベースを持つサービス。jig-erd の ER 図はこの単位で生成される。 */
-const DB_SERVICES = ['authms', 'bookingms', 'routingms', 'trackingms', 'handlingms', 'billingms'];
+const DB_SERVICES = ['authms', 'bookingms', 'routingms', 'trackingms', 'handlingms', 'billingms',
+  'simulationms'];
 
 /** アプリケーションとしてロールアウト対象にする Deployment。 */
 const K8S_DEPLOYMENTS = [...SERVICES, 'frontend', 'www'];

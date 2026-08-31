@@ -6,3 +6,4 @@ CREATE DATABASE routing_db;
 CREATE DATABASE tracking_db;
 CREATE DATABASE handling_db;
 CREATE DATABASE billing_db;
+CREATE DATABASE simulation_db;
