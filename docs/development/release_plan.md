@@ -292,7 +292,7 @@ US ではないため上の合計（110 SP）には含めず、**スケジュー
 | ID | ユーザーストーリー | SP | BV | C | KA | RR | 優先度（正典） | 主なサービス |
 |----|-------------------|----|----|---|----|----|--------|-------------|
 | US38 | 請求書を検索する（[#563](https://github.com/k2works/case-study-cargo-tracker/issues/563)） | 3 | 高 | 中 | 低 | 中 | 中 | billingms + フロントエンド |
-| [TD-02](https://github.com/k2works/case-study-cargo-tracker/issues/564) | シミュレーション由来をキャンセル承認待ち・荷役・通関の一覧から外す | 2 | 中 | 中 | 低 | 高 | — | bookingms・handlingms |
+| [TD-02](https://github.com/k2works/case-study-cargo-tracker/issues/564) | シミュレーション由来を実利用者の 5 つの一覧から外す | 2 | 中 | 中 | 低 | 高 | — | bookingms・handlingms |
 | [TD-03](https://github.com/k2works/case-study-cargo-tracker/issues/565) | 落ちた実行へ翌朝辿り着ける（日付での絞り込み・過去セッションと種・実行一覧の列） | 2 | 中 | 中 | 低 | 中 | — | simulationms + フロントエンド |
 | [TD-04](https://github.com/k2works/case-study-cargo-tracker/issues/566) | 継続実行のスケジューラが単一 Pod を前提にしていることを決定として残す | 1 | 低 | 低 | 中 | 高 | — | simulationms・ops |
 | **合計** | | **8** | | | | | | |
