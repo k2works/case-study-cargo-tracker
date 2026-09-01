@@ -24,7 +24,6 @@ import com.example.billingms.domain.model.valueobjects.TaxRate;
 import com.example.billingms.domain.model.valueobjects.TransportCharge;
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.ZoneId;
 import com.example.billingms.domain.model.valueobjects.Payment;
 import com.example.billingms.domain.model.valueobjects.PaymentMethod;
 import java.time.LocalDate;
@@ -35,11 +34,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.ActiveProfiles;
-import org.testcontainers.containers.PostgreSQLContainer;
 
 /**
  * 精算書の永続化（US21）。
@@ -48,20 +43,8 @@ import org.testcontainers.containers.PostgreSQLContainer;
  * 復元は、いずれも DB の振る舞いに依存する。スタブでは<strong>列名の誤りも制約の抜けも
  * 見つからない</strong>。
  */
-@SpringBootTest
-@ActiveProfiles("integration")
 @DisplayName("精算書の永続化")
-class InvoicePersistenceIntegrationTest {
-
-    /** 業務タイムゾーン（`app.business-time-zone` の既定）。 */
-    private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Tokyo");
-
-    @ServiceConnection
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
-
-    static {
-        postgres.start();
-    }
+class InvoicePersistenceIntegrationTest extends BillingIntegrationTestBase {
 
     @Autowired
     private InvoiceRepository invoices;

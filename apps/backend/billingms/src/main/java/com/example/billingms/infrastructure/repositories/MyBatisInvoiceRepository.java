@@ -33,14 +33,25 @@ import org.springframework.dao.DuplicateKeyException;
  * ため、{@code save} は常に新規の書き込みである——「常に INSERT する save」が正しい
  * 唯一の場面である。
  */
+// 検索条件と金額の型を使う
 public class MyBatisInvoiceRepository implements InvoiceRepository {
 
     private final InvoiceMapper invoices;
     private final InvoiceLineItemMapper lineItems;
 
-    public MyBatisInvoiceRepository(InvoiceMapper invoices, InvoiceLineItemMapper lineItems) {
+    /**
+     * 業務タイムゾーン。
+     *
+     * <p>発行月で区切るために要る。<strong>UTC で切ると、月初と月末の数時間が
+     * 隣の月に入る</strong>——締めの数字が月をまたぐ（IT9 の学び）。
+     */
+    private final java.time.ZoneId zone;
+
+    public MyBatisInvoiceRepository(InvoiceMapper invoices, InvoiceLineItemMapper lineItems,
+            java.time.ZoneId zone) {
         this.invoices = invoices;
         this.lineItems = lineItems;
+        this.zone = zone;
     }
 
     /**
@@ -115,6 +126,46 @@ public class MyBatisInvoiceRepository implements InvoiceRepository {
     @Override
     public List<Invoice> findAll() {
         return invoices.selectAll().stream().map(this::toDomain).toList();
+    }
+
+    @Override
+    public List<Invoice> search(com.example.billingms.domain.model.valueobjects.InvoiceSearchCriteria criteria, int limit) {
+        return invoices.search(criteria.keyword().orElse(null), monthStart(criteria),
+                        monthEnd(criteria), limit).stream()
+                .map(this::toDomain)
+                .toList();
+    }
+
+    @Override
+    public long count(com.example.billingms.domain.model.valueobjects.InvoiceSearchCriteria criteria) {
+        return invoices.countBy(criteria.keyword().orElse(null), monthStart(criteria),
+                monthEnd(criteria));
+    }
+
+    @Override
+    public com.example.billingms.domain.model.valueobjects.Money total(com.example.billingms.domain.model.valueobjects.InvoiceSearchCriteria criteria) {
+        java.math.BigDecimal sum = invoices.sumTotalAmount(criteria.keyword().orElse(null),
+                monthStart(criteria), monthEnd(criteria));
+        return com.example.billingms.domain.model.valueobjects.Money.yen(sum == null ? java.math.BigDecimal.ZERO : sum);
+    }
+
+    /**
+     * 発行月の始まり。
+     *
+     * <p><strong>業務タイムゾーンで区切る。</strong>UTC で切ると、月初と月末の
+     * 数時間が隣の月に入る——締めの数字が月をまたぐ（IT9 の学び）。
+     */
+    private java.time.Instant monthStart(com.example.billingms.domain.model.valueobjects.InvoiceSearchCriteria criteria) {
+        return criteria.issuedMonth()
+                .map(month -> month.atDay(1).atStartOfDay(zone).toInstant())
+                .orElse(null);
+    }
+
+    /** 発行月の終わり（<strong>翌月の始まり</strong>——月末日の時刻で切らない）。 */
+    private java.time.Instant monthEnd(com.example.billingms.domain.model.valueobjects.InvoiceSearchCriteria criteria) {
+        return criteria.issuedMonth()
+                .map(month -> month.plusMonths(1).atDay(1).atStartOfDay(zone).toInstant())
+                .orElse(null);
     }
 
     @Override

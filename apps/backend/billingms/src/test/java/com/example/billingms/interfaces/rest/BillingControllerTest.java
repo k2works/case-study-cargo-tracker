@@ -77,6 +77,10 @@ class BillingControllerTest {
     private InvoiceRepository invoices;
 
     @MockitoBean
+    private com.example.billingms.application.internal.queryservices.SearchInvoiceUseCase
+            searchInvoices;
+
+    @MockitoBean
     private com.example.billingms.application.internal.commandservices.SettleInvoiceUseCase settlement;
 
     private static final TransportCharge CHARGE =
@@ -450,17 +454,6 @@ class BillingControllerTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$[0].cancelled").value(true))
                     .andExpect(jsonPath("$[0].lastHandlingAt").exists());
-        }
-
-        @Test
-        @DisplayName("発行済みの精算書を並べる")
-        void listsInvoices() throws Exception {
-            when(invoices.findAll()).thenReturn(List.of(issued()));
-
-            mockMvc.perform(asAccountant(get("/api/v1/billing/invoices")))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$[0].invoiceNumber").value("INV-2026000001"))
-                    .andExpect(jsonPath("$[0].shipperName").value("丸紅商事株式会社"));
         }
 
         @Test

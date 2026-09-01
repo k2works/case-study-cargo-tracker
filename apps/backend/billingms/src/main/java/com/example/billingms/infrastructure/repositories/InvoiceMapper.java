@@ -186,4 +186,73 @@ public interface InvoiceMapper {
      */
     @Select("SELECT NEXTVAL('invoice_number_seq')")
     long nextInvoiceNumber();
+
+    /**
+     * 検索の条件（US38）。
+     *
+     * <p><strong>1 か所で組み立てる。</strong>一覧・件数・合計で別々に書くと、
+     * 片方だけ直したときに「12 件あります」と出るのに開くと 3 件、という形になる。
+     *
+     * <p><strong>シミュレーション由来は出さない</strong>（[ADR-030] 決定 3）。
+     * <strong>取り消し済みも出さない</strong>——赤伝は締めの数字ではない。
+     */
+    String SEARCH_CONDITION = """
+             WHERE i.simulated = FALSE
+               AND i.voided_at IS NULL
+            <if test="keyword != null">
+               AND (LOWER(i.invoice_number) LIKE LOWER(CONCAT('%', #{keyword}, '%'))
+                 OR LOWER(i.shipper_name)   LIKE LOWER(CONCAT('%', #{keyword}, '%'))
+                 OR LOWER(i.booking_id)     LIKE LOWER(CONCAT('%', #{keyword}, '%')))
+            </if>
+            <if test="monthStart != null">
+               AND i.issued_at &gt;= #{monthStart}
+               AND i.issued_at &lt; #{monthEnd}
+            </if>
+            """;
+
+    /**
+     * 条件に合う請求書（新しい順）。
+     *
+     * <p><strong>絞り込みは SQL に降ろす。</strong>読んでから絞ると、請求書が増えた
+     * 月ほど窓の外に落ちる。
+     */
+    @Select("""
+            <script>
+            SELECT
+            """ + COLUMNS + FROM_INVOICE + SEARCH_CONDITION + """
+             ORDER BY i.issued_at DESC, i.id DESC
+             LIMIT #{limit}
+            </script>
+            """)
+    @ResultMap("invoice")
+    List<InvoiceRecord> search(@Param("keyword") String keyword,
+            @Param("monthStart") java.time.Instant monthStart,
+            @Param("monthEnd") java.time.Instant monthEnd, @Param("limit") int limit);
+
+    /** 同じ条件に合う総件数。 */
+    @Select("""
+            <script>
+            SELECT COUNT(*)
+            """ + FROM_INVOICE + SEARCH_CONDITION + """
+            </script>
+            """)
+    long countBy(@Param("keyword") String keyword,
+            @Param("monthStart") java.time.Instant monthStart,
+            @Param("monthEnd") java.time.Instant monthEnd);
+
+    /**
+     * 同じ条件に合う合計金額。
+     *
+     * <p><strong>集計は SQL で行う。</strong>画面で足し上げると、上限で切った瞬間に
+     * 「見えている分だけの合計」に化ける。
+     */
+    @Select("""
+            <script>
+            SELECT COALESCE(SUM(i.total_amount_value), 0)
+            """ + FROM_INVOICE + SEARCH_CONDITION + """
+            </script>
+            """)
+    java.math.BigDecimal sumTotalAmount(@Param("keyword") String keyword,
+            @Param("monthStart") java.time.Instant monthStart,
+            @Param("monthEnd") java.time.Instant monthEnd);
 }

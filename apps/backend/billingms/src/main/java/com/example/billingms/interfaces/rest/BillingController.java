@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
@@ -40,11 +41,18 @@ public class BillingController {
     private final InvoiceRepository invoices;
     private final SettleInvoiceUseCase settlement;
 
+    /** 請求書の検索（US38）。 */
+    private final com.example.billingms.application.internal.queryservices.SearchInvoiceUseCase
+            searchInvoices;
+
     public BillingController(CalculateChargeUseCase calculateCharge, InvoiceRepository invoices,
-            SettleInvoiceUseCase settlement) {
+            SettleInvoiceUseCase settlement,
+            com.example.billingms.application.internal.queryservices.SearchInvoiceUseCase
+                    searchInvoices) {
         this.calculateCharge = calculateCharge;
         this.invoices = invoices;
         this.settlement = settlement;
+        this.searchInvoices = searchInvoices;
     }
 
     /**
@@ -64,14 +72,51 @@ public class BillingController {
                 .toList();
     }
 
-    /** 発行済みの精算書の一覧。 */
+    /**
+     * 発行済みの精算書の一覧・検索（US38）。
+     *
+     * <p><strong>条件を渡さなければ、これまでどおりの一覧である。</strong>入口を
+     * 分けると、一覧と検索で結果の形が食い違う余地が生まれる。
+     *
+     * <p><strong>件数と合計を一緒に返す。</strong>月末の締めで要るのは
+     * 「その月に出した請求書の合計」であり、画面で足し上げると上限で切った瞬間に
+     * 「見えている分だけの合計」に化ける。
+     */
     @GetMapping("/invoices")
-    public List<InvoiceResponse> invoices(
+    public InvoiceSearchResponse invoices(
             @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
-            @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles) {
+            @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String issuedMonth) {
         requireAccountant(userId, roles);
 
-        return invoices.findAll().stream().map(InvoiceResponse::from).toList();
+        com.example.billingms.application.internal.queryservices.InvoiceSearchResult result =
+                searchInvoices.search(
+                        com.example.billingms.domain.model.valueobjects.InvoiceSearchCriteria
+                                .parse(keyword, issuedMonth));
+        return new InvoiceSearchResponse(
+                result.invoices().stream().map(InvoiceResponse::from).toList(),
+                result.count(), result.total().amount(), result.total().currency(),
+                com.example.billingms.application.internal.queryservices.SearchInvoiceUseCase
+                        .SEARCH_LIMIT,
+                result.count() > result.invoices().size());
+    }
+
+    /**
+     * 検索の結果（US38）。
+     *
+     * <p><strong>切ったことを黙らない。</strong>件数を知らせずに切ると、担当者は
+     * 「一覧に出ていないから無い」と読む（予約一覧・通関一覧と同じ形）。
+     *
+     * @param invoices 見つかった精算書（新しい順・上限まで）
+     * @param totalCount 条件に合う総件数
+     * @param totalAmount <strong>取り消し済みを除いた</strong>合計金額
+     * @param currency 合計の通貨
+     * @param limit 一度に返す上限
+     * @param truncated 上限で切ったか
+     */
+    public record InvoiceSearchResponse(List<InvoiceResponse> invoices, long totalCount,
+            java.math.BigDecimal totalAmount, String currency, int limit, boolean truncated) {
     }
 
     /** 発行済みの精算書 1 件。 */
@@ -136,6 +181,20 @@ public class BillingController {
             // 根拠の無い調整（決定 6）。**利用者の入力の誤りであり 400 である**
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, error.getMessage());
         }
+    }
+
+    /**
+     * 入力が読み取れないときの応答（US38）。
+     *
+     * <p><strong>黙って「指定なし」に倒さない。</strong>打ち間違えた発行月を無視すると、
+     * 担当者には全件が返り、<strong>絞ったつもりの数字を締めに使う</strong>ことになる。
+     * 何が読めなかったかを添えて断る。
+     */
+    @org.springframework.web.bind.annotation.ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<java.util.Map<String, String>> malformedInput(
+            IllegalArgumentException error) {
+        return ResponseEntity.badRequest()
+                .body(java.util.Map.of("message", error.getMessage()));
     }
 
     /**

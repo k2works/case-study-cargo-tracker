@@ -82,8 +82,10 @@ public class BillingConfig {
 
     @Bean
     public InvoiceRepository invoiceRepository(InvoiceMapper invoices,
-            InvoiceLineItemMapper lineItems) {
-        return new MyBatisInvoiceRepository(invoices, lineItems);
+            InvoiceLineItemMapper lineItems, Clock clock) {
+        // **時計から取る。**設定を 2 か所で読むと、片方だけ変えたときに
+        // 「今日」と「発行月の区切り」が別の暦になる
+        return new MyBatisInvoiceRepository(invoices, lineItems, clock.getZone());
     }
 
     @Bean
