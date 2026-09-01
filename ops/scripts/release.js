@@ -419,9 +419,10 @@ export default function (gulp, options = {}) {
     runCommandInDir('npm run build', path.join(rootDir, 'apps', 'frontend'), done);
   });
 
+  /** E2E は受け入れの最終ゲート。**フロントエンドの下で回す**——ルートには無い。 */
   gulp.task('release:preflight:e2e', (done) => {
     console.log('[5/5] E2E Test...');
-    runCommandInDir('npm run test:e2e', rootDir, done);
+    runCommandInDir('npm run test:e2e', path.join(rootDir, 'apps', 'frontend'), done);
   });
 
   gulp.task(
