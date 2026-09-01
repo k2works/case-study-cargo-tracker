@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { DEMO_LOGIN } from '../config/demo-login'
 import { login } from '../features/auth/api'
+import { destinationAfterLogin } from '../features/auth/destination-after-login'
 import { ApiError } from '../lib/api-client'
 import { useAuthStore } from '../stores/auth-store'
 
@@ -43,8 +44,13 @@ export function LoginPage() {
     try {
       const result = await login({ userId, password })
       setSession(result)
+      // **覚えていた行き先は「前に開こうとした人」のものである。**
+      // いま入った人が開けない画面へ送ると、入った直後に「この操作を行う
+      // 権限がありません」と出る（利用者からの申告）
       const from = (location.state as { from?: string } | null)?.from
-      navigate(from ?? '/dashboard', { replace: true })
+      navigate(destinationAfterLogin(from, useAuthStore.getState().hasAnyRole), {
+        replace: true,
+      })
     } catch (error) {
       // 認証の失敗（401）は理由を区別しない。サーバー側の監査ログにだけ残る。
       // それ以外は認証の問題ではないので、そう伝える

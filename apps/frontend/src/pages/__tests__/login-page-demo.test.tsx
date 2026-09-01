@@ -8,6 +8,7 @@ import { demoLoginOf } from '../../config/demo-login'
 import { useAuthStore } from '../../stores/auth-store'
 import { server } from '../../test/msw/server'
 
+
 // 有効化した状態を再現する。既定（無効）は login-page.test.tsx が担う
 vi.mock('../../config/demo-login', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../config/demo-login')>()
