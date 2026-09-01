@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 
 import { ChargeBasisPanel } from "../features/billing/components/charge-basis-panel";
 import { useInvoice, useVoidInvoice } from "../features/billing/queries";
@@ -20,6 +20,15 @@ import { formatBusinessDateTime } from "../lib/business-time";
  */
 export function InvoiceDetailPage() {
   const { invoiceId = "" } = useParams();
+  /**
+   * 一覧へ戻る先。
+   *
+   * <p>**絞り込みを持ったまま戻る。**月次照合は「その月の 180 件を上から開く」
+   * 作業であり、1 通目で条件が消えると 180 回選び直すことになる。
+   */
+  const [listParams] = useSearchParams();
+  const backToList =
+    listParams.toString() === "" ? "/billing" : `/billing?${listParams.toString()}`;
   const { data: invoice, isLoading, error } = useInvoice(invoiceId);
   const revoke = useVoidInvoice(invoiceId);
   const [revoking, setRevoking] = useState(false);
@@ -32,7 +41,11 @@ export function InvoiceDetailPage() {
     return (
       <div role="alert" className="rounded border border-red-300 bg-red-50 p-4">
         精算書が見つかりません。
-        <Link className="ml-2 text-blue-700 underline" to="/billing">
+        {/*
+          **絞り込みを保って戻る。**条件を落として戻すと、月次照合で 1 通目を
+          開いた瞬間に条件が消える（IT16 レビュー 高 2）
+        */}
+        <Link className="ml-2 text-blue-700 underline" to={backToList}>
           精算管理へ戻る
         </Link>
       </div>
@@ -286,7 +299,7 @@ export function InvoiceDetailPage() {
         >
           印刷する
         </button>
-        <Link className="text-blue-700 underline" to="/billing">
+        <Link className="text-blue-700 underline" to={backToList}>
           精算管理へ戻る
         </Link>
       </div>

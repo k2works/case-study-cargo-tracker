@@ -1,4 +1,5 @@
 import { Link, useParams } from 'react-router-dom'
+import { formatBusinessDateTime } from '../lib/business-time'
 import { TrackingEventsTable } from '../features/tracking/components/tracking-events-table'
 import {
   useShipperTracking,
@@ -143,6 +144,31 @@ function ShipperTrackingDetailView({ trackingNumber }: Readonly<{ trackingNumber
       <section className="space-y-2">
         <h2 className="text-lg font-semibold text-gray-900">これまでの経過</h2>
         <TrackingEventsTable events={data.events} />
+
+        {/*
+          **過去のお知らせを読み直せる場所。**ポップアップは出した時点で既読に
+          なるため、ここが無いと、回線が切れた・タブを閉じた・見落とした荷主は
+          その知らせに二度と到達できない（IT16 レビュー 高 3）
+        */}
+        {data.notices !== undefined && data.notices.length > 0 && (
+          <section aria-labelledby="past-notices" className="mt-6 space-y-2">
+            <h2 id="past-notices" className="text-lg font-semibold text-gray-900">
+              お知らせ
+            </h2>
+            <ul className="divide-y rounded border border-gray-200">
+              {data.notices.map((notice) => (
+                <li key={`${notice.noticedAt}-${notice.message}`} className="p-3">
+                  <p className="text-sm text-gray-900">{notice.message}</p>
+                  {/* **いつの話かを添える。**「問題が発生しました」だけでは、
+                      荷主が最初に聞くのは「それはいつですか」である */}
+                  <p className="mt-1 text-xs text-gray-600">
+                    {formatBusinessDateTime(notice.noticedAt)}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
       </section>
     </div>
   )

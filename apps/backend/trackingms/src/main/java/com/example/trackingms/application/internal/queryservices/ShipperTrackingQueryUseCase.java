@@ -18,22 +18,38 @@ public class ShipperTrackingQueryUseCase {
     public static final int LIST_LIMIT = 100;
     public static final int HISTORY_LIMIT = 200;
 
+    /**
+     * 読み直せる知らせの数。
+     *
+     * <p>1 つの貨物に届く知らせは、状態の変化と例外の分だけである——
+     * 数十件を超えることはない。
+     */
+    public static final int NOTICE_LIMIT = 50;
+
     private final TrackingActivityRepository activities;
     private final UserShipperLinkFinder links;
     private final ShipperCargoSnapshotFinder snapshots;
+
+    /** 過去の知らせ（IT16 レビュー 高 3）。**読み直せる場所が要る**。 */
+    private final com.example.trackingms.domain.repository.TrackingNoticeRepository notices;
+
     private final ZoneId zone;
 
     public ShipperTrackingQueryUseCase(TrackingActivityRepository activities,
-            UserShipperLinkFinder links, ShipperCargoSnapshotFinder snapshots) {
-        this(activities, links, snapshots, ZoneId.of("Asia/Tokyo"));
+            UserShipperLinkFinder links, ShipperCargoSnapshotFinder snapshots,
+            com.example.trackingms.domain.repository.TrackingNoticeRepository notices) {
+        this(activities, links, snapshots, notices, ZoneId.of("Asia/Tokyo"));
     }
 
     @Autowired
     public ShipperTrackingQueryUseCase(TrackingActivityRepository activities,
-            UserShipperLinkFinder links, ShipperCargoSnapshotFinder snapshots, ZoneId zone) {
+            UserShipperLinkFinder links, ShipperCargoSnapshotFinder snapshots,
+            com.example.trackingms.domain.repository.TrackingNoticeRepository notices,
+            ZoneId zone) {
         this.activities = activities;
         this.links = links;
         this.snapshots = snapshots;
+        this.notices = notices;
         this.zone = zone;
     }
 
@@ -74,6 +90,10 @@ public class ShipperTrackingQueryUseCase {
                 .map(activity -> ShipperTrackingDetail.from(ShipperTrackingSummary.from(activity),
                         activities.findEvents(activity.trackingNumber(), HISTORY_LIMIT).stream()
                                 .map(event -> ShipperTrackingEvent.from(event, zone))
+                                .toList(),
+                        notices.findByTrackingNumber(activity.trackingNumber(), NOTICE_LIMIT)
+                                .stream()
+                                .map(notice -> ShipperTrackingNotice.from(notice, zone))
                                 .toList()));
     }
 

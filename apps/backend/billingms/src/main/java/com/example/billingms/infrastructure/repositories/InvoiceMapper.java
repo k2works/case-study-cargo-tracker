@@ -194,11 +194,14 @@ public interface InvoiceMapper {
      * 片方だけ直したときに「12 件あります」と出るのに開くと 3 件、という形になる。
      *
      * <p><strong>シミュレーション由来は出さない</strong>（[ADR-030] 決定 3）。
-     * <strong>取り消し済みも出さない</strong>——赤伝は締めの数字ではない。
+     *
+     * <p><strong>取り消し済みは一覧から外さない。</strong>合計からは外すが、
+     * 一覧からも消すと<strong>赤伝を後から引けなくなる</strong>——「先月出し直した
+     * 請求の、元の番号は」「監査で取消理由を見せてほしい」は請求番号で引かれる。
+     * 消すと詳細の URL を直接叩く以外に開けない（IT16 レビュー 高 1）。
      */
     String SEARCH_CONDITION = """
              WHERE i.simulated = FALSE
-               AND i.voided_at IS NULL
             <if test="keyword != null">
                AND (LOWER(i.invoice_number) LIKE LOWER(CONCAT('%', #{keyword}, '%'))
                  OR LOWER(i.shipper_name)   LIKE LOWER(CONCAT('%', #{keyword}, '%'))
@@ -250,6 +253,9 @@ public interface InvoiceMapper {
             <script>
             SELECT COALESCE(SUM(i.total_amount_value), 0)
             """ + FROM_INVOICE + SEARCH_CONDITION + """
+               -- **合計にだけ効かせる。**赤伝を含めた合計を出すと、誤りに気づく
+               -- 手段が無いまま経理の判断に入る。一覧には残す（後から引かれる）
+               AND i.voided_at IS NULL
             </script>
             """)
     java.math.BigDecimal sumTotalAmount(@Param("keyword") String keyword,

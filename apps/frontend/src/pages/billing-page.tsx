@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import {
@@ -49,15 +48,31 @@ function unbilledKind(booking: {
 }
 
 export function BillingPage() {
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   // **ダッシュボードの件数から、そのまま対象へ来られる**（受入基準 23-5 の代替）。
   // 件数を出すだけでは仕事は進まない
   const overdueOnly = params.get("filter") === "overdue";
   const { data: unbilled = [], isLoading: loadingUnbilled } = useUnbilledBookings();
   // **締めの作業を表計算から引き上げる**（US38）。探す語と発行月は画面が持ち、
   // 絞り込み・件数・合計はサーバが同じ条件で答える
-  const [keyword, setKeyword] = useState("");
-  const [issuedMonth, setIssuedMonth] = useState("");
+  // **絞り込みは URL に載せる。**載せないと、1 通開いて戻った瞬間に条件が消える
+  // ——月次照合は「その月の 180 件を上から開く」作業であり、1 通目で消えると
+  // 180 回選び直すことになる（IT16 レビュー 高 2）。`filter=overdue` と同じ形にする
+  const keyword = params.get("keyword") ?? "";
+  const issuedMonth = params.get("issuedMonth") ?? "";
+  const setCriteria = (next: { keyword?: string; issuedMonth?: string }) => {
+    const updated = new URLSearchParams(params);
+    for (const [key, value] of Object.entries(next)) {
+      if (value === undefined || value === "") {
+        updated.delete(key);
+      } else {
+        updated.set(key, value);
+      }
+    }
+    setParams(updated, { replace: true });
+  };
+  // **開いた先へ条件を持って行く。**戻るときに同じ絞り込みへ戻れる
+  const detailQuery = params.toString() === "" ? "" : `?${params.toString()}`;
   const { data: searchResult, isLoading: loadingAll } = useInvoices({
     keyword,
     issuedMonth,
@@ -173,7 +188,7 @@ export function BillingPage() {
                 <input
                   type="search"
                   value={keyword}
-                  onChange={(event) => setKeyword(event.target.value)}
+                  onChange={(event) => setCriteria({ keyword: event.target.value })}
                   placeholder="伊藤商事 / INV-2026 / BKG-2026"
                   className="mt-1 rounded border border-gray-300 px-3 py-2"
                 />
@@ -183,17 +198,14 @@ export function BillingPage() {
                 <input
                   type="month"
                   value={issuedMonth}
-                  onChange={(event) => setIssuedMonth(event.target.value)}
+                  onChange={(event) => setCriteria({ issuedMonth: event.target.value })}
                   className="mt-1 rounded border border-gray-300 px-3 py-2"
                 />
               </label>
               {(keyword !== "" || issuedMonth !== "") && (
                 <button
                   type="button"
-                  onClick={() => {
-                    setKeyword("");
-                    setIssuedMonth("");
-                  }}
+                  onClick={() => setCriteria({ keyword: "", issuedMonth: "" })}
                   className="rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-100"
                 >
                   条件を消す
@@ -259,7 +271,7 @@ export function BillingPage() {
                     <Link
                       className="text-blue-700 underline"
                       data-testid="invoice-link"
-                      to={`/billing/${invoice.invoiceId}`}
+                      to={`/billing/${invoice.invoiceId}${detailQuery}`}
                     >
                       {invoice.invoiceNumber}
                     </Link>

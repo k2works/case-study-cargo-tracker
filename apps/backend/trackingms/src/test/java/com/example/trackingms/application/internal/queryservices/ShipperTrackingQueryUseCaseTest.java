@@ -33,8 +33,9 @@ class ShipperTrackingQueryUseCaseTest {
     private final InMemoryActivities activities = new InMemoryActivities();
     private final InMemoryLinks links = new InMemoryLinks();
     private final InMemorySnapshots snapshots = new InMemorySnapshots();
+    private final InMemoryNotices notices = new InMemoryNotices();
     private final ShipperTrackingQueryUseCase useCase =
-            new ShipperTrackingQueryUseCase(activities, links, snapshots);
+            new ShipperTrackingQueryUseCase(activities, links, snapshots, notices);
 
     @Test
     @DisplayName("荷主に紐付いていない利用者には、空配列ではなく未紐付けを返す")
@@ -256,6 +257,69 @@ class ShipperTrackingQueryUseCaseTest {
         public List<TrackingExceptionEvent> findExceptions(TrackingNumber trackingNumber,
                 int limit) {
             throw new UnsupportedOperationException();
+        }
+    }
+
+    /**
+     * <strong>過去の知らせを読み直せる</strong>（IT16 レビュー 高 3）。
+     *
+     * <p>ポップアップは<strong>出した時点で既読</strong>にする（[ADR-032] 決定 4）。
+     * 読み直せる場所が無いと、回線が切れた・タブを閉じた・見落とした荷主は
+     * その知らせに<strong>二度と到達できない</strong>——「遅延しました」を
+     * 見落とすと、何も知らないまま到着日を待つことになる。
+     */
+    @Test
+    @DisplayName("自社貨物の詳細から、過去の知らせを読み直せる")
+    void detailCarriesPastNotices() {
+        links.linkedShipperId = Optional.of(1L);
+        activities.stored = List.of(received(OWN_NUMBER));
+        snapshots.items = List.of(new ShipperCargoSnapshot("BKG-2026000001", OWN_NUMBER, 1L, false));
+        notices.byNumber.put(OWN_NUMBER, java.util.List.of(
+                new com.example.trackingms.domain.model.valueobjects.TrackingNotice(
+                        java.time.Instant.parse("2026-09-01T00:00:00Z"), "出港しました")));
+
+        ShipperTrackingDetail detail = useCase.detail("shipper01", OWN_NUMBER).orElseThrow();
+
+        assertThat(detail.notices())
+                .as("過去の知らせが読めない。見落とした荷主はどこにも到達できない")
+                .extracting(ShipperTrackingNotice::message)
+                .containsExactly("出港しました");
+    }
+
+    /** <strong>他社の貨物の知らせは、番号を知っていても読めない。</strong> */
+    @Test
+    @DisplayName("他社の貨物の詳細は開けない（知らせも読めない）")
+    void othersNoticesNeverLeak() {
+        links.linkedShipperId = Optional.of(1L);
+        activities.stored = List.of(received(OTHER_NUMBER));
+        snapshots.items = List.of(new ShipperCargoSnapshot("BKG-2026009001", OTHER_NUMBER, 9L, false));
+        notices.byNumber.put(OTHER_NUMBER, java.util.List.of(
+                new com.example.trackingms.domain.model.valueobjects.TrackingNotice(
+                        java.time.Instant.parse("2026-09-01T00:00:00Z"), "他社の知らせ")));
+
+        assertThat(useCase.detail("shipper01", OTHER_NUMBER)).isEmpty();
+    }
+
+    private static final class InMemoryNotices
+            implements com.example.trackingms.domain.repository.TrackingNoticeRepository {
+
+        private final java.util.Map<String,
+                java.util.List<com.example.trackingms.domain.model.valueobjects.TrackingNotice>>
+                byNumber = new java.util.HashMap<>();
+
+        @Override
+        public void save(com.example.trackingms.domain.model.valueobjects.TrackingNumber number,
+                com.example.trackingms.domain.model.valueobjects.TrackingNotice notice) {
+            byNumber.computeIfAbsent(number.value(), key -> new java.util.ArrayList<>())
+                    .add(notice);
+        }
+
+        @Override
+        public java.util.List<com.example.trackingms.domain.model.valueobjects.TrackingNotice>
+                findByTrackingNumber(
+                        com.example.trackingms.domain.model.valueobjects.TrackingNumber number,
+                        int limit) {
+            return byNumber.getOrDefault(number.value(), java.util.List.of());
         }
     }
 }

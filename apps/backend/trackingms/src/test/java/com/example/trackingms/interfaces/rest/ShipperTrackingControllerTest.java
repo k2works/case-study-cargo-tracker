@@ -73,13 +73,22 @@ class ShipperTrackingControllerTest {
                 new ShipperTrackingDetail(NUMBER, "RECEIVED", "受領済み", "Tokyo",
                         LocalDate.of(2027, Month.SEPTEMBER, 15), true, true,
                         List.of(new ShipperTrackingEvent("2027-09-02 09:00", "RECEIVED",
-                                "受領済み", "Tokyo")))));
+                                "受領済み", "Tokyo")),
+                        List.of(new com.example.trackingms.application.internal.queryservices
+                                .ShipperTrackingNotice("2027-09-02T09:00+09:00",
+                                "お荷物の状況が「受領済み」になりました。")))));
 
         mockMvc.perform(get("/api/v1/shipper/tracking/" + NUMBER)
                         .header(AuthenticatedUser.USER_ID_HEADER, "shipper01")
                         .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SHIPPER"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.hasException").value(true))
+                // **過去の知らせを読み直せる**（IT16 レビュー 高 3）。ポップアップは
+                // 出した時点で既読になるため、読み直せる場所が無いと見落とした荷主は
+                // その知らせに二度と到達できない
+                .andExpect(jsonPath("$.notices[0].message")
+                        .value("お荷物の状況が「受領済み」になりました。"))
+                .andExpect(jsonPath("$.notices[0].noticedAt").exists())
                 .andExpect(jsonPath("$.urgent").value(true))
                 .andExpect(jsonPath("$.events[0].statusLabel").value("受領済み"));
     }

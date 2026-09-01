@@ -77,6 +77,20 @@ export type ShipperTrackingList = {
 /** 荷主向け詳細。公開照会より強い自社境界の内側で、経過まで返す。 */
 export type ShipperTrackingDetail = ShipperTrackingSummary & {
   events: TrackingEvent[];
+  /**
+   * 過去のお知らせ（US39・IT16 レビュー 高 3）。
+   *
+   * **ポップアップは出した時点で既読になる。**読み直せる場所が無いと、
+   * 回線が切れた・タブを閉じた・見落とした荷主はその知らせに二度と到達できない。
+   */
+  notices?: ShipperTrackingNotice[];
+};
+
+/** 荷主が読み直すお知らせ 1 件。 */
+export type ShipperTrackingNotice = {
+  /** 通知の時刻（業務タイムゾーン）。**いつの話かが要る**。 */
+  noticedAt: string;
+  message: string;
 };
 
 /** 追跡管理者が見る 1 件。公開照会より多くを返す。 */

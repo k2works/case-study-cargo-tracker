@@ -136,12 +136,17 @@ class InvoiceSearchIntegrationTest extends BillingIntegrationTestBase {
     }
 
     /**
-     * <strong>取り消し済みは合計に入れない。</strong>合計は締めの数字として
-     * そのまま使われる——赤伝を含めると、誤りに気づく手段が無いまま判断に入る。
+     * <strong>取り消し済みは合計に入れない。ただし一覧からは消さない。</strong>
+     *
+     * <p>合計は締めの数字としてそのまま使われる——赤伝を含めると、誤りに気づく
+     * 手段が無いまま判断に入る。一方、<strong>赤伝こそ後から引かれる</strong>
+     * ——「先月出し直した請求の、元の番号は」「監査で取消理由を見せてほしい」は
+     * 請求番号で引かれる。一覧から消すと、詳細の URL を直接叩く以外に開けない
+     * （IT16 レビュー 高 1）。
      */
     @Test
-    @DisplayName("取り消した請求書は、合計にも件数にも入らない")
-    void excludesVoidedFromTheTotal() {
+    @DisplayName("取り消した請求書は、一覧には残るが合計には入らない")
+    void keepsVoidedListedButOutOfTheTotal() {
         String kept = issueInvoiceFor("赤伝商事", "SEARCH-0006");
         String voided = issueInvoiceFor("赤伝商事", "SEARCH-0007");
         voidInvoice(voided);
@@ -150,12 +155,24 @@ class InvoiceSearchIntegrationTest extends BillingIntegrationTestBase {
 
         assertThat(result.invoices())
                 .extracting(invoice -> invoice.invoiceId().value())
-                .as("取り消した請求書が一覧に残っている")
+                .as("取り消した請求書が一覧から消えている。後から引けない")
                 .contains(kept)
-                .doesNotContain(voided);
+                .contains(voided);
         assertThat(result.total().amount())
                 .as("取り消した分が合計に入っている")
                 .isEqualByComparingTo(amountOf(kept));
+    }
+
+    /** <strong>請求番号で名指しすれば、取り消した請求書も引ける。</strong> */
+    @Test
+    @DisplayName("取り消した請求書を、請求番号で探せる")
+    void findsVoidedByItsNumber() {
+        String voided = issueInvoiceFor("監査商事", "SEARCH-0011");
+        voidInvoice(voided);
+
+        assertThat(search.search(InvoiceSearchCriteria.of(voided, null)).invoices())
+                .as("取り消した請求書を請求番号で引けない。監査に答えられない")
+                .isNotEmpty();
     }
 
     /** <strong>シミュレーション由来は出ない</strong>（[ADR-030] 決定 3）。 */
@@ -181,6 +198,7 @@ class InvoiceSearchIntegrationTest extends BillingIntegrationTestBase {
                 .isNotEmpty();
     }
 
+    /** その請求書 1 通の合計。**取り消していないもの**にだけ使う。 */
     private BigDecimal amountOf(String invoiceNumber) {
         return search.search(InvoiceSearchCriteria.of(invoiceNumber, null)).total().amount();
     }
