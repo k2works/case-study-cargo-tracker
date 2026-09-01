@@ -84,7 +84,8 @@ public class RestCargoSnapshotFinder implements CargoSnapshotFinder {
                 .map(leg -> new LegSnapshot(leg.voyageNumber(), leg.loadUnLocode(),
                         leg.unloadUnLocode()))
                 .toList();
+        // **送られてこなければ実業務として扱う。**Boolean.TRUE.equals は null に強い
         return CargoSnapshot.of(response.bookingId(), response.originUnLocode(),
-                response.destinationUnLocode(), legs);
+                response.destinationUnLocode(), legs, Boolean.TRUE.equals(response.simulated()));
     }
 }

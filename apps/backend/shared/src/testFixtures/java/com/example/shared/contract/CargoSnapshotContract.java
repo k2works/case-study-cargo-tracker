@@ -29,7 +29,7 @@ public final class CargoSnapshotContract {
 
     /** 流れる項目。順序も含めて契約である。 */
     public static final List<String> FIELDS =
-            List.of("bookingId", "originUnLocode", "destinationUnLocode", "legs");
+            List.of("bookingId", "originUnLocode", "destinationUnLocode", "legs", "simulated");
 
     /** 旅程の区間の項目。 */
     public static final List<String> LEG_FIELDS =

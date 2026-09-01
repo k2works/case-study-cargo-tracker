@@ -40,6 +40,14 @@ public final class CustomsDeclaration {
     private final List<CustomsStatusChange> history;
 
     /**
+     * シミュレーション由来か（[ADR-030] 決定 3）。
+     *
+     * <p>待ち行列から外すために持つ。<strong>業務の振る舞いは変えない</strong>
+     * ——由来が何であれ、通関の規則は同じである。
+     */
+    private final boolean simulated;
+
+    /**
      * <strong>引数の多さは、ここでは設計の合図ではない。</strong>
      *
      * <p>復元は保存された行をそのまま集約へ戻す操作であり、引数は集約の項目数そのもの
@@ -53,7 +61,7 @@ public final class CustomsDeclaration {
     private CustomsDeclaration(Long id, DeclarationNumber declarationNumber,
             CargoBookingId cargoBookingId, HandlingTrackingNumber trackingNumber,
             Instant declaredAt, CustomsStatus status, Instant clearedAt, String remarks,
-            List<CustomsStatusChange> history) {
+            List<CustomsStatusChange> history, boolean simulated) {
         this.id = id;
         this.declarationNumber = declarationNumber;
         this.cargoBookingId = cargoBookingId;
@@ -63,6 +71,7 @@ public final class CustomsDeclaration {
         this.clearedAt = clearedAt;
         this.remarks = remarks;
         this.history = List.copyOf(history);
+        this.simulated = simulated;
     }
 
     /**
@@ -77,10 +86,24 @@ public final class CustomsDeclaration {
         return declare(declarationNumber, cargoBookingId, trackingNumber, declaredAt, null, null);
     }
 
-    /** 備考と登録者を伴う申告。 */
+    /** 備考と登録者を伴う申告。**由来は実業務**として扱う。 */
     public static CustomsDeclaration declare(DeclarationNumber declarationNumber,
             CargoBookingId cargoBookingId, HandlingTrackingNumber trackingNumber,
             Instant declaredAt, String remarks, String declaredBy) {
+        return declare(declarationNumber, cargoBookingId, trackingNumber, declaredAt,
+                remarks, declaredBy, false);
+    }
+
+    /**
+     * 由来を伴う申告（[ADR-030] 決定 3）。
+     *
+     * <p><strong>登録の時点で受け取る。</strong>後から問い合わせて絞ると、待ち行列の
+     * 件数と中身が食い違う。由来を知っているのは、貨物を引いた登録の瞬間だけである。
+     */
+    @SuppressWarnings("java:S107")
+    public static CustomsDeclaration declare(DeclarationNumber declarationNumber,
+            CargoBookingId cargoBookingId, HandlingTrackingNumber trackingNumber,
+            Instant declaredAt, String remarks, String declaredBy, boolean simulated) {
         if (declarationNumber == null || cargoBookingId == null || trackingNumber == null) {
             throw new IllegalArgumentException("申告番号・予約 ID・追跡番号は必須です");
         }
@@ -93,7 +116,8 @@ public final class CustomsDeclaration {
                 declaredBy == null || declaredBy.isBlank() ? "system" : declaredBy,
                 declaredAt, "申告を登録しました");
         return new CustomsDeclaration(null, declarationNumber, cargoBookingId, trackingNumber,
-                declaredAt, CustomsStatus.PENDING, null, remarks, List.of(declaration));
+                declaredAt, CustomsStatus.PENDING, null, remarks, List.of(declaration),
+                simulated);
     }
 
     /**
@@ -107,10 +131,10 @@ public final class CustomsDeclaration {
     public static CustomsDeclaration restore(Long id, DeclarationNumber declarationNumber,
             CargoBookingId cargoBookingId, HandlingTrackingNumber trackingNumber,
             Instant declaredAt, CustomsStatus status, Instant clearedAt, String remarks,
-            List<CustomsStatusChange> history) {
+            List<CustomsStatusChange> history, boolean simulated) {
         return new CustomsDeclaration(id, declarationNumber, cargoBookingId, trackingNumber,
                 declaredAt, status, clearedAt, remarks,
-                history == null ? List.of() : history);
+                history == null ? List.of() : history, simulated);
     }
 
     /**
@@ -139,7 +163,7 @@ public final class CustomsDeclaration {
         return new CustomsDeclaration(id, declarationNumber, cargoBookingId, trackingNumber,
                 declaredAt, newStatus,
                 newStatus == CustomsStatus.CLEARED ? changedAt : null,
-                remarks, appended);
+                remarks, appended, simulated);
     }
 
     /**
@@ -148,6 +172,11 @@ public final class CustomsDeclaration {
      * <p><strong>通関済のときだけ真である。</strong>「審査中でなければ通す」形にすると、
      * 留置・不可の貨物まで引き取れる。ガードは<strong>通してよい 1 つ</strong>を見る。
      */
+    /** シミュレーション由来か（[ADR-030] 決定 3）。 */
+    public boolean simulated() {
+        return simulated;
+    }
+
     public boolean isCleared() {
         return status == CustomsStatus.CLEARED;
     }

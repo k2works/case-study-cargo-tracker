@@ -245,7 +245,7 @@ class CustomsDeclarationTest {
         void doesNotValidateOnRestore() {
             // 履歴が空の通関済——申告そのものが履歴に残る新規の形とは食い違う
             CustomsDeclaration restored = CustomsDeclaration.restore(1L, NUMBER, BOOKING,
-                    TRACKING, DECLARED_AT, CustomsStatus.CLEARED, null, null, null);
+                    TRACKING, DECLARED_AT, CustomsStatus.CLEARED, null, null, null, false);
 
             assertThat(restored.status()).isEqualTo(CustomsStatus.CLEARED);
             assertThat(restored.history()).isEmpty();

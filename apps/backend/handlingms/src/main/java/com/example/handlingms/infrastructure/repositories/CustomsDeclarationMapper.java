@@ -14,16 +14,16 @@ public interface CustomsDeclarationMapper {
 
     String COLUMNS = """
             id, declaration_number, booking_id, tracking_number,
-            declared_at, status, cleared_at, remarks
+            declared_at, status, cleared_at, remarks, simulated
             """;
 
     @org.apache.ibatis.annotations.Insert("""
             INSERT INTO customs_declaration (
                 declaration_number, booking_id, tracking_number, declared_at, status,
-                cleared_at, remarks)
+                cleared_at, remarks, simulated)
             VALUES (
                 #{declarationNumber}, #{bookingId}, #{trackingNumber}, #{declaredAt}, #{status},
-                #{clearedAt}, #{remarks})
+                #{clearedAt}, #{remarks}, #{simulated})
             """)
     @Options(useGeneratedKeys = true, keyProperty = "id", keyColumn = "id")
     void insert(CustomsDeclarationRecord row);
@@ -98,6 +98,14 @@ public interface CustomsDeclarationMapper {
                <if test="trackingNumber != null">AND tracking_number = #{trackingNumber}</if>
                <if test="status != null">AND status = #{status}</if>
                <if test="unsettledOnly">AND status IN ('PENDING', 'HELD')</if>
+               <!--
+                 **待ち行列から架空の申告を外す**（[ADR-030] 決定 3・TD-02）。
+                 名指し（予約番号・追跡番号）のときは外さない——外すと
+                 シミュレーション自身が引取のガードを越えられなくなる
+               -->
+               <if test="bookingId == null and trackingNumber == null">
+                 AND simulated = FALSE
+               </if>
              </where>
              ORDER BY declared_at DESC, id DESC
              LIMIT #{limit}
@@ -123,6 +131,14 @@ public interface CustomsDeclarationMapper {
                <if test="trackingNumber != null">AND tracking_number = #{trackingNumber}</if>
                <if test="status != null">AND status = #{status}</if>
                <if test="unsettledOnly">AND status IN ('PENDING', 'HELD')</if>
+               <!--
+                 **待ち行列から架空の申告を外す**（[ADR-030] 決定 3・TD-02）。
+                 名指し（予約番号・追跡番号）のときは外さない——外すと
+                 シミュレーション自身が引取のガードを越えられなくなる
+               -->
+               <if test="bookingId == null and trackingNumber == null">
+                 AND simulated = FALSE
+               </if>
              </where>
             </script>
             """)

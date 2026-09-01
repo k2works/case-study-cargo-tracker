@@ -62,7 +62,7 @@ public class CargoLookupController {
         requireTrustedService(userId);
 
         return cargoes.findByTrackingNumber(trackingNumber)
-                .map(summary -> CargoSnapshotResponse.from(summary.cargo()))
+                .map(CargoSnapshotResponse::from)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "指定された追跡番号の貨物が見つかりません"));
     }

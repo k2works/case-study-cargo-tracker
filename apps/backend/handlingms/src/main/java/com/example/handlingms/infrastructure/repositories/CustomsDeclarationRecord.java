@@ -77,4 +77,14 @@ public class CustomsDeclarationRecord {
     public void setRemarks(String remarks) {
         this.remarks = remarks;
     }
+
+    private boolean simulated;
+
+    public boolean isSimulated() {
+        return simulated;
+    }
+
+    public void setSimulated(boolean simulated) {
+        this.simulated = simulated;
+    }
 }

@@ -14,7 +14,7 @@ import java.util.List;
  * @param legs 旅程の区間。経路がまだ決まっていなければ空
  */
 public record CargoSnapshot(String bookingId, String originUnLocode, String destinationUnLocode,
-        List<LegSnapshot> legs) {
+        List<LegSnapshot> legs, boolean simulated) {
 
     /**
      * <strong>検査はここに置く。</strong>
@@ -33,7 +33,13 @@ public record CargoSnapshot(String bookingId, String originUnLocode, String dest
     /** 名前のある入口。検査そのものは正準コンストラクタが持つ。 */
     public static CargoSnapshot of(String bookingId, String originUnLocode,
             String destinationUnLocode, List<LegSnapshot> legs) {
-        return new CargoSnapshot(bookingId, originUnLocode, destinationUnLocode, legs);
+        return new CargoSnapshot(bookingId, originUnLocode, destinationUnLocode, legs, false);
+    }
+
+    /** 由来を伴う入口（[ADR-030] 決定 3・TD-02）。 */
+    public static CargoSnapshot of(String bookingId, String originUnLocode,
+            String destinationUnLocode, List<LegSnapshot> legs, boolean simulated) {
+        return new CargoSnapshot(bookingId, originUnLocode, destinationUnLocode, legs, simulated);
     }
 
     private static void require(String value, String label) {

@@ -132,11 +132,34 @@ class CargoSnapshotTest {
     @Test
     @DisplayName("正準コンストラクタでも検査を素通りできない")
     void cannotBypassValidationThroughTheCanonicalConstructor() {
-        assertThatThrownBy(() -> new CargoSnapshot(null, "JPTYO", "USLAX", List.of()))
+        assertThatThrownBy(() -> new CargoSnapshot(null, "JPTYO", "USLAX", List.of(), false))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new CargoSnapshot("BKG-2026000001", " ", "USLAX", List.of()))
+        assertThatThrownBy(() -> new CargoSnapshot("BKG-2026000001", " ", "USLAX", List.of(), false))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new CargoSnapshot("BKG-2026000001", "JPTYO", null, List.of()))
+        assertThatThrownBy(() -> new CargoSnapshot("BKG-2026000001", "JPTYO", null, List.of(), false))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    /**
+     * <strong>由来が送られてこない相手も居る</strong>（[ADR-030] 決定 3・TD-02）。
+     * その場合は実業務として扱う——疑わしきを架空にすると、実在の申告が
+     * 待ち行列から消える。
+     */
+    @Test
+    @DisplayName("由来を伴わない Snapshot は、実業務として扱う")
+    void defaultsToRealBusiness() {
+        CargoSnapshot snapshot = CargoSnapshot.of("BKG-2026000001", "JPTYO", "USLAX",
+                java.util.List.of());
+
+        assertThat(snapshot.simulated()).isFalse();
+    }
+
+    @Test
+    @DisplayName("由来を伴う Snapshot は、その由来を保つ")
+    void keepsTheGivenOrigin() {
+        CargoSnapshot snapshot = CargoSnapshot.of("BKG-2026000002", "JPTYO", "USLAX",
+                java.util.List.of(), true);
+
+        assertThat(snapshot.simulated()).isTrue();
     }
 }

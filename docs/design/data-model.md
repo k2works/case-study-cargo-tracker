@@ -247,6 +247,7 @@ package "handling_db\n(Handling Context)" #LightCoral {
     * declared_at : TIMESTAMP
     * status : VARCHAR(30)
     cleared_at : TIMESTAMP
+    * simulated : BOOLEAN
   }
 
   entity "customs_status_history\n（通関状態履歴）" as customs_status_history {
@@ -312,6 +313,11 @@ tracking_handling_event }o--o| t_location : "発生場所"
 
 ' handling_db
 customs_declaration ||--o{ customs_status_history : "状態履歴を持つ"
+
+> **`customs_declaration.simulated` は登録の瞬間に受け取る**（[ADR-030] 決定 3・TD-02）。handlingms は荷主を持たないため、由来は bookingms の Snapshot から来る。**取得後にアプリ側で絞らない**——待ち行列の件数と上限が壊れ、「12 件あります」と出るのに開くと 3 件になる。
+
+> **名指しの照会では外さない。** 予約番号・追跡番号を指定した参照まで外すと、シミュレーション自身が引取のガードを越えられなくなる（決定 1）。
+
 handling_activity }o--|| h_location : "作業場所"
 
 ' billing_db
@@ -756,6 +762,7 @@ entity "customs_declaration\n（通関申告）" as customs_declaration {
   * status : VARCHAR(30) <<NOT NULL, DEFAULT 'PENDING'>>
   cleared_at : TIMESTAMP WITH TIME ZONE
   remarks : VARCHAR(500)
+  * simulated : BOOLEAN <<NOT NULL>>
 }
 
 entity "customs_status_history\n（通関状態履歴）" as customs_status_history {

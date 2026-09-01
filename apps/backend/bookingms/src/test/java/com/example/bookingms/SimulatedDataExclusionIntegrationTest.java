@@ -205,6 +205,11 @@ class SimulatedDataExclusionIntegrationTest extends CargoPersistenceTestBase {
     /** 輸送中の貨物に、キャンセル申請を 1 件置く。 */
     private Long requestCancellationFor(Long shipperId) {
         Long cargoId = bookCargo.book(command(shipperId, CargoType.GENERAL)).id();
+        // **前提を確かめる。** 予約が別の荷主に付いていると、絞りが効いていても
+        // 「混ざっている」ように見え、原因を SQL 側に探すことになる
+        assertThat(cargoRepository.findById(cargoId).orElseThrow().shipperId())
+                .as("予約が、指定した荷主に付いていない")
+                .isEqualTo(shipperId);
         cancellations.save(com.example.bookingms.domain.model.aggregates.CancellationRequest
                 .request(cargoId, "荷主都合", "sales01",
                         Instant.parse("2026-09-01T00:00:00Z"),

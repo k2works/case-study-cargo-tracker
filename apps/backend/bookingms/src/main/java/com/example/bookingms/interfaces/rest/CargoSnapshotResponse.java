@@ -20,7 +20,19 @@ import java.util.List;
  * @param legs 旅程の区間。経路がまだ決まっていなければ空
  */
 public record CargoSnapshotResponse(String bookingId, String originUnLocode,
-        String destinationUnLocode, List<LegSnapshotResponse> legs) {
+        String destinationUnLocode, List<LegSnapshotResponse> legs, Boolean simulated) {
+
+    /**
+     * 由来を伴わない応答（既存の呼び出し互換）。
+     *
+     * <p><strong>{@code Boolean} で持つ。</strong>基本型で足すと、この項目を送らない
+     * 相手の応答が「null を boolean に入れられない」で読めなくなる
+     * ——IT14・IT15 で 2 度踏んだ形である。
+     */
+    public CargoSnapshotResponse(String bookingId, String originUnLocode,
+            String destinationUnLocode, List<LegSnapshotResponse> legs) {
+        this(bookingId, originUnLocode, destinationUnLocode, legs, Boolean.FALSE);
+    }
 
     public CargoSnapshotResponse {
         legs = legs == null ? List.of() : List.copyOf(legs);
@@ -37,6 +49,14 @@ public record CargoSnapshotResponse(String bookingId, String originUnLocode,
      */
     public record LegSnapshotResponse(String voyageNumber, String loadUnLocode,
             String unloadUnLocode) {
+    }
+
+    /** 由来を伴う Snapshot（[ADR-030] 決定 3・TD-02）。 */
+    public static CargoSnapshotResponse from(
+            com.example.bookingms.domain.repository.CargoSummary summary) {
+        CargoSnapshotResponse base = from(summary.cargo());
+        return new CargoSnapshotResponse(base.bookingId(), base.originUnLocode(),
+                base.destinationUnLocode(), base.legs(), summary.simulated());
     }
 
     public static CargoSnapshotResponse from(Cargo cargo) {

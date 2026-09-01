@@ -13,9 +13,12 @@ import java.util.List;
  * @param originUnLocode 出発港
  * @param destinationUnLocode 目的港
  * @param legs 旅程の区間
+ * @param simulated シミュレーション由来か（[ADR-030] 決定 3）。<strong>{@code Boolean} で
+ *     受ける</strong>——基本型にすると、この項目を送らない相手の応答が
+ *     「null を boolean に入れられない」で読めなくなる（IT14・IT15 で 2 度踏んだ）
  */
 public record CargoSnapshotResponse(String bookingId, String originUnLocode,
-        String destinationUnLocode, List<LegResponse> legs) {
+        String destinationUnLocode, List<LegResponse> legs, Boolean simulated) {
 
     public CargoSnapshotResponse {
         legs = legs == null ? List.of() : List.copyOf(legs);

@@ -66,6 +66,9 @@ public class RegisterCustomsDeclarationUseCase {
 
         return declarations.save(CustomsDeclaration.declare(
                 DeclarationNumber.of(command.declarationNumber()), cargoBookingId, trackingNumber,
-                command.declaredAt(), command.remarks(), command.declaredBy()));
+                command.declaredAt(), command.remarks(), command.declaredBy(),
+                // **由来は登録の瞬間にしか分からない**（[ADR-030] 決定 3・TD-02）。
+                // あとから問い合わせて絞ると、待ち行列の件数と中身が食い違う
+                cargo.simulated()));
     }
 }

@@ -107,6 +107,7 @@ public class MyBatisCustomsDeclarationRepository implements CustomsDeclarationRe
         row.setStatus(declaration.status().name());
         row.setClearedAt(declaration.clearedAt().orElse(null));
         row.setRemarks(declaration.remarks().orElse(null));
+        row.setSimulated(declaration.simulated());
         return row;
     }
 
@@ -124,6 +125,6 @@ public class MyBatisCustomsDeclarationRepository implements CustomsDeclarationRe
                 CargoBookingId.of(row.getBookingId()),
                 HandlingTrackingNumber.of(row.getTrackingNumber()),
                 row.getDeclaredAt(), CustomsStatus.restore(row.getStatus()), row.getClearedAt(),
-                row.getRemarks(), history);
+                row.getRemarks(), history, row.isSimulated());
     }
 }
