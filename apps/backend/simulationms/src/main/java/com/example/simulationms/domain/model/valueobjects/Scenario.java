@@ -55,16 +55,6 @@ public record Scenario(String id, List<ScenarioStep> steps) {
             concat(UNTIL_TRACKING, HANDLING_TO_SETTLEMENT);
 
     /**
-     * 例外を含むシナリオ（US36・[ADR-031] 決定 5）。
-     *
-     * <p><strong>例外は起こすだけでは仕事にならない。</strong>US36-2 が見たいのは
-     * 「例外が起きたあとの業務」であり、対応（解決・組み直し・承認）まで並べて
-     * はじめて通したことになる。
-     *
-     * <p>キャンセルだけは精算まで進めない。キャンセルした貨物の引取は成り立たず、
-     * 並べると必ず失敗する——落ちたのは業務ではなく並べ方である。
-     */
-    /**
      * 実行できるシナリオのすべて。
      *
      * <p><strong>画面が一覧を持たない。</strong>持つと、足したシナリオが実装済みなのに
@@ -87,6 +77,16 @@ public record Scenario(String id, List<ScenarioStep> steps) {
         return all().stream().filter(scenario -> scenario.id().equals(id)).findFirst();
     }
 
+    /**
+     * 例外を含むシナリオ（US36・[ADR-031] 決定 5）。
+     *
+     * <p><strong>例外は起こすだけでは仕事にならない。</strong>US36-2 が見たいのは
+     * 「例外が起きたあとの業務」であり、対応（解決・組み直し・承認）まで並べて
+     * はじめて通したことになる。
+     *
+     * <p>キャンセルだけは精算まで進めない。キャンセルした貨物の引取は成り立たず、
+     * 並べると必ず失敗する——落ちたのは業務ではなく並べ方である。
+     */
     public static List<Scenario> exceptionScenarios() {
         return List.of(
                 // 予定より遅い日時で荷役を記録し、起きた遅延を解決してから先へ進む。

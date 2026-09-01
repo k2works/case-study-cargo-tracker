@@ -169,10 +169,13 @@ class ScenarioGeneratorTest {
         @Test
         @DisplayName("0 から 1 の外の比率は断る")
         void rejectsARatioOutsideZeroToOne() {
-            assertThatThrownBy(() -> SEED.newGenerator(BigDecimal.valueOf(1.5)))
+            BigDecimal tooHigh = BigDecimal.valueOf(1.5);
+            BigDecimal negative = BigDecimal.valueOf(-0.1);
+
+            assertThatThrownBy(() -> SEED.newGenerator(tooHigh))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("例外の割合");
-            assertThatThrownBy(() -> SEED.newGenerator(BigDecimal.valueOf(-0.1)))
+            assertThatThrownBy(() -> SEED.newGenerator(negative))
                     .isInstanceOf(IllegalArgumentException.class);
         }
     }

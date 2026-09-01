@@ -49,9 +49,6 @@ public class RestBusinessGateway implements BusinessGateway {
     /** 業務データに残す名乗り。**誰の操作か分かる名前にする**——後から人が見分けられる。 */
     static final String OPERATOR = "シミュレーション";
 
-    /** 失敗理由に載せる応答本文の長さ。列の幅（500）に収まる範囲で切る。 */
-    private static final int BODY_LIMIT = 200;
-
     /** 到着期限までの日数。航海の到着（20 日後）より十分に後へ置く。 */
     private static final int DEADLINE_DAYS = 120;
 

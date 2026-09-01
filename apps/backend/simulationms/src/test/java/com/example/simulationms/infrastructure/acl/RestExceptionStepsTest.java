@@ -190,8 +190,10 @@ class RestExceptionStepsTest {
                         {"trackingNumber": "%s", "activeException": null}
                         """.formatted(TRACKING), MediaType.APPLICATION_JSON));
 
+        Map<String, String> context = context();
+
         assertThatThrownBy(() ->
-                        steps.execute(ScenarioStep.RESOLVE_EXCEPTION, "token", context()))
+                        steps.execute(ScenarioStep.RESOLVE_EXCEPTION, "token", context))
                 .isInstanceOf(BusinessCallFailedException.class)
                 .hasMessageContaining("解決すべき例外が起きていません");
     }
@@ -273,8 +275,10 @@ class RestExceptionStepsTest {
                                      "arrivalTime": "2026-11-27T00:00:00Z"}]}]}
                         """, MediaType.APPLICATION_JSON));
 
+        Map<String, String> context = recoveryContext();
+
         assertThatThrownBy(() ->
-                        steps.execute(ScenarioStep.REDESIGN_ROUTE, "token", recoveryContext()))
+                        steps.execute(ScenarioStep.REDESIGN_ROUTE, "token", context))
                 .isInstanceOf(BusinessCallFailedException.class)
                 .hasMessageContaining("VR-20261116-0001");
     }
@@ -305,8 +309,9 @@ class RestExceptionStepsTest {
     @Test
     @DisplayName("例外の工程でなければ、名前を挙げて断る")
     void rejectsAStepThatIsNotAnException() {
-        assertThatThrownBy(() ->
-                        steps.execute(ScenarioStep.SETTLE, "token", context()))
+        Map<String, String> context = context();
+
+        assertThatThrownBy(() -> steps.execute(ScenarioStep.SETTLE, "token", context))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("SETTLE");
     }

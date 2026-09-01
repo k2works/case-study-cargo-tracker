@@ -116,8 +116,9 @@ class ContinuousRunSessionTest {
         @DisplayName("停止済みのセッションは、もう一度止められない")
         void cannotStopTwice() {
             ContinuousRunSession stopped = started().stop(0, STARTED.plusSeconds(60));
+            Instant later = STARTED.plusSeconds(90);
 
-            assertThatThrownBy(() -> stopped.stop(0, STARTED.plusSeconds(90)))
+            assertThatThrownBy(() -> stopped.stop(0, later))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("停止");
         }

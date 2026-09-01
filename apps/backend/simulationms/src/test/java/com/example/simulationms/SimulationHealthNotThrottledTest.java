@@ -59,7 +59,7 @@ class SimulationHealthNotThrottledTest {
                     occupied.countDown();
                     try {
                         release.await(30, TimeUnit.SECONDS);
-                    } catch (InterruptedException e) {
+                    } catch (InterruptedException _) {
                         Thread.currentThread().interrupt();
                     }
                 });
@@ -114,7 +114,10 @@ class SimulationHealthNotThrottledTest {
         private final CountDownLatch release;
 
         BlockingUseCase(CountDownLatch started, CountDownLatch release) {
-            super(null, null, java.time.Clock.systemUTC());
+            // **止まった時計を使う。**ここで見たいのは走っている数であって時刻ではない
+            super(null, null, java.time.Clock.fixed(
+                    java.time.Instant.parse("2026-12-07T01:00:00Z"),
+                    java.time.ZoneId.of("Asia/Tokyo")));
             this.started = started;
             this.release = release;
         }
@@ -125,7 +128,7 @@ class SimulationHealthNotThrottledTest {
             started.countDown();
             try {
                 release.await(30, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
+            } catch (InterruptedException _) {
                 Thread.currentThread().interrupt();
             }
             return null;

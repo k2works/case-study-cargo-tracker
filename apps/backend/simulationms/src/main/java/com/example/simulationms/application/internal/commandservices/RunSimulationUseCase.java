@@ -162,7 +162,7 @@ public class RunSimulationUseCase {
             try {
                 runs.create(run, seed, sessionId);
                 return run;
-            } catch (RunIdAlreadyTakenException e) {
+            } catch (RunIdAlreadyTakenException _) {
                 // 別の実行が先に採った。次の番号で採り直す。
             }
         }

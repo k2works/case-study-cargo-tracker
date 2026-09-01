@@ -312,7 +312,9 @@ class RunSimulationUseCaseTest {
         void failsLoudlyWhenTheNumberKeepsBeingTaken() {
             repository.stolen = -1;
 
-            assertThatThrownBy(() -> useCase.run(shortScenario(), "admin01"))
+            Scenario scenario = shortScenario();
+
+            assertThatThrownBy(() -> useCase.run(scenario, "admin01"))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("採番")
                     .hasMessageContaining("衝突");

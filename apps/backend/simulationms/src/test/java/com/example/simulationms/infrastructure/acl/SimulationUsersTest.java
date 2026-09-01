@@ -57,7 +57,9 @@ class SimulationUsersTest {
     void rejectsRealBusinessUsers() {
         // **実業務の利用者を借りると、その人自身も由来を立てられる**（[ADR-030] 決定 3 の穴）。
         // 精算の締めから消せる操作が、実の営業担当者の手に渡る。
-        assertThatThrownBy(() -> SimulationUsers.of(Map.of("ROLE_SALES", "sales01"), "password"))
+        Map<String, String> realBusinessUsers = Map.of("ROLE_SALES", "sales01");
+
+        assertThatThrownBy(() -> SimulationUsers.of(realBusinessUsers, "password"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("sales01")
                 .hasMessageContaining(SimulationUsers.USERNAME_PREFIX);

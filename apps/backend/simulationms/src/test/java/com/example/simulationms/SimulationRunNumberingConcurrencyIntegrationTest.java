@@ -50,6 +50,15 @@ class SimulationRunNumberingConcurrencyIntegrationTest {
     @ServiceConnection
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
 
+    /**
+     * 止まった時計。
+     *
+     * <p><strong>検査で「いま」を読まない。</strong>実行した時刻によって採番の
+     * 日付が変わり、日付をまたいだ瞬間だけ落ちるテストになる。
+     */
+    private static final Clock CLOCK = Clock.fixed(
+            java.time.Instant.parse("2026-11-16T01:00:00Z"), java.time.ZoneId.of("Asia/Tokyo"));
+
     @Autowired
     private SimulationRunRepository runs;
 
@@ -67,8 +76,7 @@ class SimulationRunNumberingConcurrencyIntegrationTest {
     @Test
     @DisplayName("同時に開始しても、実行 ID は 1 つずつ違う番号になる")
     void assignsDistinctRunIdsWhenStartedConcurrently() throws Exception {
-        RunSimulationUseCase useCase =
-                new RunSimulationUseCase(runs, NO_BUSINESS, Clock.systemUTC());
+        RunSimulationUseCase useCase = new RunSimulationUseCase(runs, NO_BUSINESS, CLOCK);
         CyclicBarrier startTogether = new CyclicBarrier(CONCURRENCY);
 
         List<String> assigned;
@@ -84,8 +92,10 @@ class SimulationRunNumberingConcurrencyIntegrationTest {
                     .toList();
         }
 
-        assertThat(assigned).doesNotContainNull().hasSize(CONCURRENCY);
-        assertThat(assigned).doesNotHaveDuplicates();
+        assertThat(assigned)
+                .doesNotContainNull()
+                .hasSize(CONCURRENCY)
+                .doesNotHaveDuplicates();
     }
 
     private static String get(Future<String> future) {
@@ -113,8 +123,7 @@ class SimulationRunNumberingConcurrencyIntegrationTest {
     @Test
     @DisplayName("同じシナリオを同時に始めると、二重実行の拒否は効かない（ADR-031 で決める）")
     void theAlreadyRunningGuardDoesNotHoldUnderConcurrency() throws Exception {
-        RunSimulationUseCase useCase =
-                new RunSimulationUseCase(runs, NO_BUSINESS, Clock.systemUTC());
+        RunSimulationUseCase useCase = new RunSimulationUseCase(runs, NO_BUSINESS, CLOCK);
         Scenario same = Scenario.of("numbering-same", List.of(ScenarioStep.REGISTER_SHIPPER));
         CyclicBarrier startTogether = new CyclicBarrier(2);
 
@@ -137,8 +146,7 @@ class SimulationRunNumberingConcurrencyIntegrationTest {
         }
 
         // **いまは 2 本とも通る。**採番は衝突しないが、二重実行の拒否は通り抜けている。
-        assertThat(started).hasSize(2);
-        assertThat(started).doesNotHaveDuplicates();
+        assertThat(started).hasSize(2).doesNotHaveDuplicates();
         assertThat(refused).isEmpty();
     }
 

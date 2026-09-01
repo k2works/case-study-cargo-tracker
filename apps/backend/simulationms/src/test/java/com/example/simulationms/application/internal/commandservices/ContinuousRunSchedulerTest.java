@@ -182,7 +182,7 @@ class ContinuousRunSchedulerTest {
             replay.start(POLICY, Seed.of(42L), "admin01");
             replay.tick();
 
-            assertThat(replayRunner.started.getLast().toString()).isEqualTo(first);
+            assertThat(replayRunner.started.getLast()).hasToString(first);
         }
     }
 
@@ -223,7 +223,9 @@ class ContinuousRunSchedulerTest {
         @Test
         @DisplayName("知らないセッションは止められない")
         void cannotStopAnUnknownSession() {
-            assertThatThrownBy(() -> scheduler.stop(SessionId.of("SES-20261207-9999")))
+            SessionId unknown = SessionId.of("SES-20261207-9999");
+
+            assertThatThrownBy(() -> scheduler.stop(unknown))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("SES-20261207-9999");
         }

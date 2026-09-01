@@ -96,7 +96,7 @@ class RestExceptionSteps {
                 at.plus(LATE_DAYS, ChronoUnit.DAYS));
 
         // 遅れは記録から読み取れるが、対応するには例外として起票されている必要がある。
-        return raiseException(token, context, "DELAY",
+        return raiseException(token, context, DELAY,
                 "シミュレーション：荷降しが予定より " + LATE_DAYS + " 日遅れ");
     }
 

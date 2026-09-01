@@ -441,7 +441,9 @@ class RestBusinessGatewayTest {
                 .andRespond(withSuccess(candidatesOf("V-SIM-20261116-0001"),
                         MediaType.APPLICATION_JSON));
 
-        assertThatThrownBy(() -> gateway.execute(ScenarioStep.ASSIGN_ROUTE, contextOfRun(runId)))
+        Map<String, String> context = contextOfRun(runId);
+
+        assertThatThrownBy(() -> gateway.execute(ScenarioStep.ASSIGN_ROUTE, context))
                 .isInstanceOf(BusinessCallFailedException.class)
                 .hasMessageContaining(RestBusinessGateway.voyageNumberOf(runId));
     }

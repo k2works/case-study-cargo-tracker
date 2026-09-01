@@ -59,8 +59,9 @@ class ContinuousRunPolicyTest {
     @Test
     @DisplayName("同時実行数には、設定できる上限がある")
     void capsHowHighTheConcurrencyCanBeSet() {
-        assertThatThrownBy(() -> ContinuousRunPolicy.of(30,
-                        ContinuousRunPolicy.MAX_CONCURRENT_LIMIT + 1, BigDecimal.ZERO))
+        int beyondLimit = ContinuousRunPolicy.MAX_CONCURRENT_LIMIT + 1;
+
+        assertThatThrownBy(() -> ContinuousRunPolicy.of(30, beyondLimit, BigDecimal.ZERO))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining(String.valueOf(ContinuousRunPolicy.MAX_CONCURRENT_LIMIT));
     }
@@ -68,7 +69,9 @@ class ContinuousRunPolicyTest {
     @Test
     @DisplayName("例外の割合は 0 から 1 の間でなければ断る")
     void rejectsARatioOutsideZeroToOne() {
-        assertThatThrownBy(() -> ContinuousRunPolicy.of(30, 3, BigDecimal.valueOf(1.5)))
+        BigDecimal tooHigh = BigDecimal.valueOf(1.5);
+
+        assertThatThrownBy(() -> ContinuousRunPolicy.of(30, 3, tooHigh))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("例外の割合");
     }
