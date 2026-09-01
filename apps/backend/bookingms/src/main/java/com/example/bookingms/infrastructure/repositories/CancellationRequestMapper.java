@@ -20,6 +20,18 @@ public interface CancellationRequestMapper {
             decided_by, decided_at, decision_reason
             """;
 
+    /**
+     * 荷主で絞る問い合わせ用の列（{@code cr} で修飾する）。
+     *
+     * <p><strong>修飾なしでは曖昧になる。</strong>{@code cargo} も {@code shipper} も
+     * {@code id} を持つため、結合した瞬間にどちらの {@code id} か決まらない。
+     */
+    String CR_COLUMNS = """
+            cr.id, cr.cargo_id, cr.reason, cr.status, cr.requested_by, cr.requested_at,
+            cr.booking_status_at_request, cr.discharge_location_unlocode,
+            cr.decided_by, cr.decided_at, cr.decision_reason
+            """;
+
     @Insert("""
             INSERT INTO cancellation_request (
                 cargo_id, reason, status, requested_by, requested_at,
@@ -104,10 +116,16 @@ public interface CancellationRequestMapper {
     /** 承認待ちの一覧（US30-4）。**古い順**——放っておくほど貨物は目的地へ近づく。 */
     @Select("""
             SELECT
-            """ + COLUMNS + """
-              FROM cancellation_request
-             WHERE status = 'REQUESTED'
-             ORDER BY requested_at, id
+            """ + CR_COLUMNS + """
+              FROM cancellation_request cr
+              JOIN cargo c ON c.id = cr.cargo_id
+              JOIN shipper s ON s.id = c.shipper_id
+             WHERE cr.status = 'REQUESTED'
+               -- **架空の申請を出さない**（TD-02・IT16）。承認するのは追跡管理者で
+               -- あり、この一覧が唯一の入口である——毎朝ここから今日やることを決める
+               AND
+               """ + SimulatedShipperFilter.EXCLUDE_SIMULATED + """
+             ORDER BY cr.requested_at, cr.id
              LIMIT #{limit}
             """)
     @ResultMap("cancellationResult")
@@ -124,11 +142,17 @@ public interface CancellationRequestMapper {
      */
     @Select("""
             SELECT
-            """ + COLUMNS + """
-              FROM cancellation_request
-             WHERE status = 'APPROVED'
-               AND discharge_location_unlocode IS NOT NULL
-             ORDER BY decided_at, id
+            """ + CR_COLUMNS + """
+              FROM cancellation_request cr
+              JOIN cargo c ON c.id = cr.cargo_id
+              JOIN shipper s ON s.id = c.shipper_id
+             WHERE cr.status = 'APPROVED'
+               AND cr.discharge_location_unlocode IS NOT NULL
+               -- **架空の案件を出さない**（TD-02・IT16）。荷役作業員はここで自分の
+               -- 手番に気づく——混ざると、実在の貨物が指定した港を通り過ぎる
+               AND
+               """ + SimulatedShipperFilter.EXCLUDE_SIMULATED + """
+             ORDER BY cr.decided_at, cr.id
              LIMIT #{limit}
             """)
     @ResultMap("cancellationResult")

@@ -38,6 +38,9 @@ class SimulatedDataExclusionIntegrationTest extends CargoPersistenceTestBase {
     @Autowired
     private SearchShipperUseCase searchShipper;
 
+    @Autowired
+    private com.example.bookingms.domain.repository.CancellationRequestRepository cancellations;
+
     /** シミュレーション由来の荷主で予約を 1 件作る。 */
     private String bookCargoFor(Long shipperId) {
         return bookCargo.book(command(shipperId,
@@ -153,5 +156,70 @@ class SimulatedDataExclusionIntegrationTest extends CargoPersistenceTestBase {
         String bookingId = bookCargoFor(shipperId);
 
         assertThat(cargoRepository.findByBookingId(bookingId)).isPresent();
+    }
+
+    /**
+     * <strong>キャンセル承認待ちの一覧</strong>（TD-02・IT16）。
+     *
+     * <p>承認するのは追跡管理者であり、**この一覧が唯一の入口**である。架空の申請が
+     * 混ざると、毎朝そこから今日やることを決める人の判断が狂う。
+     */
+    @Test
+    @DisplayName("承認待ちの一覧に、シミュレーション由来は出ない")
+    void keepsSimulatedOutOfAwaitingDecision() {
+        Long real = requestCancellationFor(
+                shipperId("実業務の荷主", "cancel-real@example.com"));
+        Long simulated = requestCancellationFor(
+                simulatedShipperId("cancel-sim@simulation.example.com"));
+
+        assertThat(cancellations.findAwaitingDecision(100))
+                .extracting(com.example.bookingms.domain.model.aggregates.CancellationRequest
+                        ::cargoId)
+                .as("承認待ちの一覧に架空の申請が混ざっている")
+                .contains(real)
+                .doesNotContain(simulated);
+    }
+
+    /**
+     * <strong>陸揚げ待ちの一覧</strong>（TD-02・IT16）。
+     *
+     * <p>荷役作業員はここで自分の手番に気づく——作業指示は自動で作られない
+     * （[ADR-025] 決定 5）。架空の案件が並ぶと、実在の貨物が指定した港を通り過ぎる。
+     */
+    @Test
+    @DisplayName("陸揚げ待ちの一覧に、シミュレーション由来は出ない")
+    void keepsSimulatedOutOfAwaitingDischarge() {
+        Long real = approveCancellationFor(
+                shipperId("実業務の荷主", "discharge-real@example.com"));
+        Long simulated = approveCancellationFor(
+                simulatedShipperId("discharge-sim@simulation.example.com"));
+
+        assertThat(cancellations.findAwaitingDischarge(100))
+                .extracting(com.example.bookingms.domain.model.aggregates.CancellationRequest
+                        ::cargoId)
+                .as("陸揚げ待ちの一覧に架空の案件が混ざっている")
+                .contains(real)
+                .doesNotContain(simulated);
+    }
+
+    /** 輸送中の貨物に、キャンセル申請を 1 件置く。 */
+    private Long requestCancellationFor(Long shipperId) {
+        Long cargoId = bookCargo.book(command(shipperId, CargoType.GENERAL)).id();
+        cancellations.save(com.example.bookingms.domain.model.aggregates.CancellationRequest
+                .request(cargoId, "荷主都合", "sales01",
+                        Instant.parse("2026-09-01T00:00:00Z"),
+                        com.example.bookingms.domain.model.valueobjects.BookingStatus.IN_TRANSIT,
+                        true));
+        return cargoId;
+    }
+
+    /** 承認済みで陸揚げ地が決まった申請を 1 件置く。 */
+    private Long approveCancellationFor(Long shipperId) {
+        Long cargoId = requestCancellationFor(shipperId);
+        com.example.bookingms.domain.model.aggregates.CancellationRequest awaiting =
+                cancellations.findLatestByCargoId(cargoId).orElseThrow();
+        cancellations.updateDecision(awaiting.approve("JPTYO", "tracker01", "承認",
+                Instant.parse("2026-09-02T00:00:00Z")));
+        return cargoId;
     }
 }
