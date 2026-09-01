@@ -11,6 +11,16 @@ package com.example.simulationms.domain.model.valueobjects;
  */
 public enum ScenarioStep {
     REGISTER_SHIPPER("荷主登録", Roles.ROLE_SALES, BusinessContextKey.SHIPPER_ID),
+    /**
+     * 作った荷主を、確認用の利用者に紐付ける（US39）。
+     *
+     * <p><strong>実業務にもある操作である。</strong>荷主の担当者がポータルを使い始めるとき、
+     * 管理者が利用者と荷主を結ぶ（US33）。シミュレーション専用の経路を作らない。
+     *
+     * <p>これが無いと、シミュレーションが作った貨物のお知らせは<strong>誰の画面にも
+     * 出ない</strong>——荷主に紐付いていない知らせは、届け先が無い。
+     */
+    LINK_SHIPPER_USER("確認用の利用者に紐付け", Roles.ROLE_ADMIN, BusinessContextKey.NONE),
     REGISTER_BOOKING("予約登録", Roles.ROLE_SALES, BusinessContextKey.BOOKING_ID),
     REQUEST_ROUTING("経路設計依頼", Roles.ROLE_SALES, BusinessContextKey.NONE),
     // **航海が 1 本も無い環境では候補が出ない。**「候補が無いので飛ばす」にすると、
@@ -83,6 +93,7 @@ public enum ScenarioStep {
         private static final String ROLE_HANDLER = "ROLE_HANDLER";
         private static final String ROLE_TRACKER = "ROLE_TRACKER";
         private static final String ROLE_ACCOUNTANT = "ROLE_ACCOUNTANT";
+        private static final String ROLE_ADMIN = "ROLE_ADMIN";
 
         private Roles() {
         }

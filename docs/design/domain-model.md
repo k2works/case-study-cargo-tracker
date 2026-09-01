@@ -951,6 +951,18 @@ package "Entities（集約内エンティティ）" {
     -noticedAt: Instant
     -message: String
   }
+  class ShipperNotice <<value object>> {
+    -id: long
+    -trackingNumber: TrackingNumber
+    -noticedAt: Instant
+    -message: String
+  }
+  class NoticeWatermark <<value object>> {
+    -lastNoticeId: long
+    +unread(): NoticeWatermark
+    +isUnread(noticeId): boolean
+    +advanceTo(noticeId): NoticeWatermark
+  }
 }
 
 package "Value Objects（値オブジェクト）" {
@@ -1029,6 +1041,8 @@ ShipperTrackingSummary ..> ShipperCargoSnapshot : 荷主 ID で絞る
 | エンティティ（集約内） | TrackingEvent | 追跡イベント | 時系列で記録される追跡の出来事（荷役由来と手動更新の両方） |
 | エンティティ（集約内） | TrackingExceptionEvent | 追跡例外イベント | 遅延・破損・紛失・誤配・税関保留の例外記録 |
 | エンティティ（集約内） | TrackingNotice | 荷主へのお知らせ | 通知の代替。公開の追跡照会で荷主が読む（[ADR-024](../adr/024-tracking-manual-update-and-exceptions.md) 決定 9） |
+| 値オブジェクト | ShipperNotice | 届ける知らせ | `TrackingNotice` に**番号を添えたもの**。番号が要るのは「どこまで読んだか」を覚えるため（[ADR-032](../adr/032-shipper-notification-delivery.md)） |
+| 値オブジェクト | NoticeWatermark | 既読の位置 | 利用者ごとの「そこまで読んだ」。**進むことしかできない**——戻ると、一度消したはずの知らせが蘇る（決定 3） |
 | 値オブジェクト | TrackingNumber | 追跡番号 | 追跡活動を一意に識別 |
 | 値オブジェクト | TrackingBookingId | 予約参照 ID | Booking Context との関連を保持（論理参照） |
 | 列挙型 | TrackingStatus | 追跡状態 | 9 段階の追跡フェーズ。遷移の判定を `afterHandling` に集約する |

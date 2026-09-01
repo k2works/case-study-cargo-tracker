@@ -670,6 +670,13 @@ entity "tracking_notice\n（荷主へのお知らせ）" as tracking_notice {
   * noticed_at : TIMESTAMP WITH TIME ZONE <<NOT NULL>>
 }
 
+entity "shipper_notice_ack\n（どこまで読んだか）" as shipper_notice_ack {
+  * username : VARCHAR(50) <<PK>>
+  --
+  * last_notice_id : BIGINT <<NOT NULL, >= 0>>
+  * updated_at : TIMESTAMP WITH TIME ZONE <<NOT NULL>>
+}
+
 entity "tracking_lookup_log\n（公開照会の記録）" as tracking_lookup_log {
   * id : BIGINT <<PK, BIGSERIAL>>
   --
@@ -697,7 +704,11 @@ tracking_activity }o--|| location : "現在地"
 
 > **`escalation_flag` は列に持たない。** 緊急かどうかは種別が答える（`ExceptionType#urgent`。決定 3）。列に持つと、種別と列が食い違った行を誰も検出できない。
 
-> **`tracking_notice` はメール送信の記録ではない。** 送信の**代替**である（決定 9）。メールの実体はまだ無く、荷主は公開の追跡照会でこれを読む。
+> **`tracking_notice` はメール送信の記録ではない。** 送信の**代替**である（決定 9）。メールの実体はまだ無く、荷主は公開の追跡照会でこれを読む。US39 からは、まだ読んでいないものが荷主の画面にポップアップで出る。
+
+> **`shipper_notice_ack` は利用者ごとに持つ**（[ADR-032](../adr/032-shipper-notification-delivery.md) 決定 2）。荷主ごとではない——同じ荷主に複数の担当者がつくとき、読んだ位置は担当者ごとに違う。**`tracking_notice` に外部キーを張らない**。読んだ位置は「そこまで読んだ」という目印であり、その番号の行が消えても意味を失わない。
+
+> **`shipper_notice_ack` に前へ進む制約は SQL 側にも置く**（決定 3）。更新は `WHERE last_notice_id < :new` で守る。ドメイン（`NoticeWatermark#advanceTo`）だけに置くと、画面を 2 つ開いたときの後着で位置が戻り、**一度消したはずの知らせが蘇る**。
 
 > **`tracking_lookup_log` は成否に関わらず残す**（決定 7）。見つからなかった照会こそ、総当たりを見つける材料である。認証が無い経路なので「誰が」は IP と `User-Agent` である。
 

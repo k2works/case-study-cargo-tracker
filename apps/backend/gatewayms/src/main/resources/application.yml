@@ -23,7 +23,7 @@ spring:
             - id: trackingms
               uri: ${TRACKINGMS_URI:http://localhost:8084}
               predicates:
-                - Path=/api/v1/tracking/**,/api/v1/public/tracking/**,/api/v1/shipper/tracking/**
+                - Path=/api/v1/tracking/**,/api/v1/public/tracking/**,/api/v1/shipper/tracking/**,/api/v1/shipper/notifications,/api/v1/shipper/notifications/**
             - id: handlingms
               uri: ${HANDLINGMS_URI:http://localhost:8085}
               predicates:

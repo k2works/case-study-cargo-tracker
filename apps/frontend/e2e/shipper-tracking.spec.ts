@@ -47,6 +47,25 @@ test.describe("荷主向け貨物追跡（IT13 / US33）", () => {
     await expect(page.getByRole("heading", { name: OTHER_TRACKING_NUMBER })).toHaveCount(0);
   });
 
+  /**
+   * **お知らせは、荷主の画面に出て初めて届いたことになる**（US39）。
+   *
+   * 記録しているだけでは、荷主は自分から一覧を開かない限り気づけない。
+   */
+  test("5. 荷主宛のお知らせがポップアップで出て、その貨物へ行ける", async ({
+    page,
+  }) => {
+    await logIn(page, "shipper01");
+
+    const toasts = page.getByLabel("お知らせ");
+    await expect(toasts).toBeVisible();
+    await expect(toasts.getByText("貨物を積み込みました")).toBeVisible();
+
+    // **気づく手段は次の行動へ繋ぐ。**文言を出すだけでは仕事が進まない
+    await toasts.getByRole("link", { name: "この貨物を開く" }).first().click();
+    await expect(page).toHaveURL(/\/shipper\/tracking\/TRK-/);
+  });
+
   test("4. 紐付いていない荷主利用者には問い合わせ先を出す", async ({ page }) => {
     await logIn(page, "shipper02");
     await page.goto("/shipper/tracking");

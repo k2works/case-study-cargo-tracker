@@ -20,7 +20,8 @@ class ScenarioTest {
         Scenario scenario = Scenario.standardTransport();
 
         assertThat(scenario.steps()).containsExactly(
-                ScenarioStep.REGISTER_SHIPPER, ScenarioStep.REGISTER_BOOKING,
+                ScenarioStep.REGISTER_SHIPPER, ScenarioStep.LINK_SHIPPER_USER,
+            ScenarioStep.REGISTER_BOOKING,
                 ScenarioStep.REQUEST_ROUTING, ScenarioStep.REGISTER_VOYAGE,
                 ScenarioStep.ASSIGN_ROUTE, ScenarioStep.NOTIFY_ROUTE,
                 ScenarioStep.CONFIRM_BOOKING, ScenarioStep.ISSUE_TRACKING_NUMBER,

@@ -9,6 +9,7 @@
  * 予約を作ったのに一覧に出ない、といった食い違いが起きる。
  */
 import { adminHandlers } from './handlers/admin'
+import { notificationHandlers } from './handlers/notification'
 import { simulationHandlers } from './handlers/simulation'
 import { authHandlers } from './handlers/auth'
 import { billingHandlers } from './handlers/billing'
@@ -27,6 +28,7 @@ export const handlers = [
   ...bookingHandlers,
   ...adminHandlers,
   ...simulationHandlers,
+  ...notificationHandlers,
   ...routingHandlers,
   ...handlingHandlers,
   ...customsHandlers,

@@ -24,7 +24,8 @@ class ExceptionScenarioTest {
 
     /** 例外シナリオは、正常系と同じく追跡番号の発行までを土台にする。 */
     private static final List<ScenarioStep> UNTIL_TRACKING = List.of(
-            ScenarioStep.REGISTER_SHIPPER, ScenarioStep.REGISTER_BOOKING,
+            ScenarioStep.REGISTER_SHIPPER, ScenarioStep.LINK_SHIPPER_USER,
+            ScenarioStep.REGISTER_BOOKING,
             ScenarioStep.REQUEST_ROUTING, ScenarioStep.REGISTER_VOYAGE,
             ScenarioStep.ASSIGN_ROUTE, ScenarioStep.NOTIFY_ROUTE,
             ScenarioStep.CONFIRM_BOOKING, ScenarioStep.ISSUE_TRACKING_NUMBER);

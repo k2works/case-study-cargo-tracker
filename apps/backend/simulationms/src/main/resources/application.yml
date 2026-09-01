@@ -51,6 +51,8 @@ app:
       ROLE_HANDLER: ${APP_SIMULATION_USER_HANDLER:sim-handler01}
       ROLE_TRACKER: ${APP_SIMULATION_USER_TRACKER:sim-tracker01}
       ROLE_ACCOUNTANT: ${APP_SIMULATION_USER_ACCOUNTANT:sim-accountant01}
+      # 作った荷主を確認用の利用者へ紐付ける（US39）。実業務でも管理者の操作である
+      ROLE_ADMIN: ${APP_SIMULATION_USER_ADMIN:sim-admin01}
   gateway:
     # 業務 API を呼ぶ唯一の出口（[ADR-030] 決定 2）。
     # **コードに既定値を持たせない。** 既定値があると設定漏れが実行時まで表面化しない

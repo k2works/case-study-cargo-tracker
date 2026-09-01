@@ -4,7 +4,7 @@ import type { Role } from '../types/role'
  * 動作確認用の利用者。
  *
  * <p>どの ID がどの担当かが画面から分からないと、ロール別の表示を確かめるたびに
- * シードの SQL を読みに行くことになる。V3__seed_users.sql と対応させる。
+ * シードの SQL を読みに行くことになる。V3__seed_users.sql・V9__seed_simulation_shipper_user.sql と対応させる。
  */
 export type DemoAccount = {
   userId: string
@@ -60,6 +60,13 @@ export const DEMO_ACCOUNTS: DemoAccount[] = [
   {
     userId: 'shipper03',
     description: '荷主（例外ありの貨物確認）',
+    roles: ['ROLE_SHIPPER'],
+    canLogIn: true,
+  },
+  {
+    userId: 'sim-shipper01',
+    description:
+      'シミュレーションの荷主（お知らせのポップアップ確認用。実行のたびに、その回の荷主へ紐付け直されます）',
     roles: ['ROLE_SHIPPER'],
     canLogIn: true,
   },

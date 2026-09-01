@@ -16,11 +16,13 @@ import com.example.trackingms.infrastructure.repositories.LocationMapper;
 import com.example.trackingms.infrastructure.repositories.MyBatisLocationRepository;
 import com.example.trackingms.infrastructure.repositories.MyBatisTrackingActivityRepository;
 import com.example.trackingms.infrastructure.repositories.MyBatisTrackingLookupLogger;
+import com.example.trackingms.infrastructure.repositories.MyBatisShipperNoticeRepository;
 import com.example.trackingms.infrastructure.repositories.MyBatisTrackingNoticeRepository;
 import com.example.trackingms.infrastructure.repositories.TrackingActivityMapper;
 import com.example.trackingms.infrastructure.repositories.TrackingEventMapper;
 import com.example.trackingms.infrastructure.repositories.TrackingExceptionMapper;
 import com.example.trackingms.infrastructure.repositories.TrackingLookupLogMapper;
+import com.example.trackingms.infrastructure.repositories.ShipperNoticeMapper;
 import com.example.trackingms.infrastructure.repositories.TrackingNoticeMapper;
 import java.time.Clock;
 import java.time.ZoneId;
@@ -103,6 +105,18 @@ public class TrackingConfig {
     public TrackingNoticeRepository trackingNoticeRepository(
             TrackingNoticeMapper mapper) {
         return new MyBatisTrackingNoticeRepository(mapper);
+    }
+
+    /**
+     * 荷主へ届ける知らせと、読んだ位置（US39）。
+     *
+     * <p><strong>1 つの実装が 2 つのポートを満たす。</strong>読む位置と読む中身は
+     * 同じ問い合わせの中で組になっており、分けると同じ表を 2 か所から触ることになる。
+     */
+    @Bean
+    public MyBatisShipperNoticeRepository shipperNoticeRepository(
+            ShipperNoticeMapper mapper, Clock clock) {
+        return new MyBatisShipperNoticeRepository(mapper, clock);
     }
 
     @Bean

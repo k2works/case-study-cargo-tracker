@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-do
 import { NAVIGATION, resolveNavigationItem } from '../config/navigation'
 import { useAuthStore } from '../stores/auth-store'
 import { ROLE_LABELS } from '../types/role'
+import { NotificationToasts } from '../features/notification/components/notification-toasts'
 
 const SESSION_WARNING_AFTER_MS = 15 * 60 * 1000
 const SESSION_TIMEOUT_AFTER_MS = 20 * 60 * 1000
@@ -145,6 +146,13 @@ export function AppLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/*
+        荷主宛のお知らせ（US39）。**レイアウトの外側に置く**——本文の中に入れると、
+        画面ごとの余白や折り返しに引きずられて出る位置が変わる。
+        荷主以外では何も読みに行かない（中で判定している）
+      */}
+      <NotificationToasts />
     </div>
   )
 }

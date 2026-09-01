@@ -17,6 +17,14 @@ export const API_PATHS = {
   trackingManagement: '/api/v1/tracking/manage',
   /** 荷主向けの自社貨物追跡（US33）。公開照会とは URL を分け、自社境界をサーバで守る。 */
   shipperTracking: '/api/v1/shipper/tracking',
+  /**
+   * 荷主宛のお知らせ（US39）。
+   *
+   * **画面はここを一定間隔で読む。**ブラウザは RabbitMQ を直接読めない
+   * ——購読するのは trackingms で、画面が読むのはその結果である。
+   */
+  shipperNotifications: '/api/v1/shipper/notifications',
+  shipperNotificationsRead: '/api/v1/shipper/notifications/read',
   shipperTrackingDetail: (trackingNumber: string) =>
     `/api/v1/shipper/tracking/${encodeURIComponent(trackingNumber)}`,
   /**

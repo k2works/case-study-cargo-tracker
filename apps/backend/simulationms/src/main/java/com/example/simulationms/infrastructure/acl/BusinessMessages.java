@@ -148,4 +148,8 @@ final class BusinessMessages {
                 String departureTime, String arrivalTime) {
         }
     }
+
+    /** 利用者と荷主の紐付け（US33 の管理者操作・US39 で使う）。 */
+    public record UserShipperLinkRequest(Long shipperId) {
+    }
 }

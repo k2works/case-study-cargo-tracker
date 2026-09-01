@@ -37,5 +37,6 @@
 | [ADR-029](029-shipper-tracking-boundary-and-inactivity-timeout.md) | 荷主向け追跡は認証済みの別経路で自社貨物だけを返し、無操作 15 分で警告、20 分でログアウトする | 承認済み | 2026-08-27 |
 | [ADR-030](030-business-simulation-execution.md) | 業務シミュレーションは Gateway 経由で本番の経路を踏み、由来を荷主コードで識別する | 提案（決定 1〜5 に検査を置いた） | 2026-08-31 |
 | [ADR-031](031-random-continuous-simulation.md) | ランダム実行は種から乱数器を作り直し、上限で業務を守る | 提案（決定 1〜6 に検査を置いた。実環境での確認が残り） | 2026-09-01 |
+| [ADR-032](032-shipper-notification-delivery.md) | 荷主への知らせは画面がポーリングし、既読はサーバが覚える | 承認（決定 1〜6 に検査を置いた） | 2026-09-01 |
 
 ADR の作成には `creating-adr` スキルを使用してください。

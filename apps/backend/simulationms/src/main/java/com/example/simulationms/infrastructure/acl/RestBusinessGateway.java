@@ -9,7 +9,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.client.RestClient;
@@ -41,6 +40,17 @@ public class RestBusinessGateway implements BusinessGateway {
     public static final String TRACKING_MANAGE_PATH = "/api/v1/tracking/manage";
     public static final String BILLING_PATH = "/api/v1/billing";
 
+    /** 利用者と荷主の紐付け（US33 の管理者操作）。 */
+    public static final String USER_SHIPPER_LINK_PATH = "/api/v1/admin/user-shipper-links";
+
+    /**
+     * お知らせを確かめるための利用者（US39）。
+     *
+     * <p><strong>この名前でログイン画面にも載せる。</strong>載せないと、シミュレーションを
+     * 流したあと「誰で入れば見えるのか」がシードの SQL を読むまで分からない。
+     */
+    public static final String NOTIFICATION_DEMO_USER = "sim-shipper01";
+
     /** 通す輸送。**固定する**——毎回変えると、失敗したときに条件の違いを疑うことになる。 */
     static final String ORIGIN = "JPTYO";
     static final String DESTINATION = "USLAX";
@@ -70,11 +80,20 @@ public class RestBusinessGateway implements BusinessGateway {
      */
     private final RestExceptionSteps exceptions;
 
+    /**
+     * 荷主を用意する工程の出口（登録と紐付け）。
+     *
+     * <p>例外の工程と同じく、<strong>変わる理由が違う</strong>ので分けている
+     * ——ここが変わるのは荷主の登録内容や紐付けの決まりが変わるときである。
+     */
+    private final RestShipperSteps shipperSteps;
+
     public RestBusinessGateway(RestClient gateway, SimulationUsers users, Clock clock) {
         this.gateway = gateway;
         this.users = users;
         this.clock = clock;
         this.exceptions = new RestExceptionSteps(gateway, clock);
+        this.shipperSteps = new RestShipperSteps(gateway);
     }
 
     @Override
@@ -84,7 +103,7 @@ public class RestBusinessGateway implements BusinessGateway {
         // **既定の分岐を置かない。**置くと、工程を足したときに何も呼ばないまま
         // 「成功」で通り抜ける。列挙を網羅させ、足した工程が必ずここへ現れるようにする
         return switch (step) {
-            case REGISTER_SHIPPER -> registerShipper(token, context);
+            case REGISTER_SHIPPER, LINK_SHIPPER_USER -> shipperSteps.execute(step, token, context);
             case REGISTER_BOOKING -> registerBooking(token, context);
             case REQUEST_ROUTING -> post(step, token,
                     bookingPath(context, "/routing-request"));
@@ -106,6 +125,8 @@ public class RestBusinessGateway implements BusinessGateway {
                     exceptions.execute(step, token, context);
         };
     }
+
+
 
     /**
      * その工程を踏むロールの利用者として入る。
@@ -134,31 +155,6 @@ public class RestBusinessGateway implements BusinessGateway {
         }
     }
 
-    private String registerShipper(String token, Map<String, String> context) {
-        String marker = BusinessCalls.runId(context);
-        BusinessMessages.ShipperResponse response = BusinessCalls.call(ScenarioStep.REGISTER_SHIPPER, () -> gateway.post()
-                .uri(SHIPPER_PATH)
-                .header(HttpHeaders.AUTHORIZATION, BusinessCalls.bearer(token))
-                .body(new BusinessMessages.ShipperRequest(
-                        // **個人にする。**法人は契約番号が要り、無いと集約が断る——
-                        // 確かめたいのは業務の道のりであって、契約の妥当性ではない
-                        "INDIVIDUAL",
-                        OPERATOR + "荷主 " + marker,
-                        marker.toLowerCase(Locale.ROOT) + "@simulation.example.com",
-                        "東京都千代田区 1-1-1",
-                        "03-0000-0000",
-                        true,
-                        // **シミュレーション由来として登録する**（[ADR-030] 決定 3）。
-                        // 送り忘れると、実データに混ざったまま経理の締めに乗る
-                        true))
-                .retrieve()
-                .body(BusinessMessages.ShipperResponse.class));
-
-        if (response == null || response.id() == null) {
-            throw new BusinessCallFailedException("荷主登録の応答に荷主がありません");
-        }
-        return String.valueOf(response.id());
-    }
 
     private String registerBooking(String token, Map<String, String> context) {
         BusinessMessages.BookingResponse response = BusinessCalls.call(ScenarioStep.REGISTER_BOOKING, () -> gateway.post()
