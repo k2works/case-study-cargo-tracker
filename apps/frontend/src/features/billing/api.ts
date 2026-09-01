@@ -5,6 +5,8 @@ import type {
   ConfirmPaymentRequest,
   ChargeCalculation,
   Invoice,
+  InvoiceSearchCriteria,
+  InvoiceSearchResult,
   UnbilledBooking,
 } from './types'
 
@@ -17,9 +19,24 @@ export function fetchUnbilledBookings(): Promise<UnbilledBooking[]> {
   return apiClient.get<UnbilledBooking[]>(API_PATHS.unbilledBookings)
 }
 
-/** 発行済みの精算書の一覧。 */
-export function fetchInvoices(): Promise<Invoice[]> {
-  return apiClient.get<Invoice[]>(API_PATHS.invoices)
+/**
+ * 発行済みの精算書の一覧・検索（US38）。
+ *
+ * **条件を渡さなければ、これまでどおりの一覧である。**入口を分けると、一覧と検索で
+ * 結果の形が食い違う余地が生まれる。
+ */
+export function fetchInvoices(criteria: InvoiceSearchCriteria = {}): Promise<InvoiceSearchResult> {
+  const params = new URLSearchParams()
+  if (criteria.keyword !== undefined && criteria.keyword.trim() !== '') {
+    params.set('keyword', criteria.keyword.trim())
+  }
+  if (criteria.issuedMonth !== undefined && criteria.issuedMonth !== '') {
+    params.set('issuedMonth', criteria.issuedMonth)
+  }
+  const query = params.toString()
+  return apiClient.get<InvoiceSearchResult>(
+    query === '' ? API_PATHS.invoices : `${API_PATHS.invoices}?${query}`,
+  )
 }
 
 /** 発行済みの精算書 1 件。 */

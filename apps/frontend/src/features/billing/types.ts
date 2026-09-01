@@ -121,6 +121,32 @@ export type ChargeCalculation = {
   totalAmount: Money
 }
 
+/**
+ * 請求書の検索結果（US38）。
+ *
+ * **件数と合計を一覧と一緒に受け取る。**画面で足し上げると、上限で切った瞬間に
+ * 「見えている分だけの合計」に化ける。
+ */
+export type InvoiceSearchResult = {
+  invoices: Invoice[]
+  /** 条件に合う総件数（上限で切る前）。 */
+  totalCount: number
+  /** **取り消し済みを除いた**合計金額。 */
+  totalAmount: number
+  currency: string
+  limit: number
+  /** 上限で切ったか。**黙って切ると「一覧に出ていないから無い」と読まれる**。 */
+  truncated: boolean
+}
+
+/** 請求書を探す条件（US38）。 */
+export type InvoiceSearchCriteria = {
+  /** 請求番号・荷主名・予約番号のいずれかに含まれる語。 */
+  keyword?: string
+  /** 発行月（`yyyy-MM`）。 */
+  issuedMonth?: string
+}
+
 /** 発行済みの精算書。 */
 export type Invoice = {
   invoiceId: string

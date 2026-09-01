@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import {
@@ -53,7 +54,15 @@ export function BillingPage() {
   // 件数を出すだけでは仕事は進まない
   const overdueOnly = params.get("filter") === "overdue";
   const { data: unbilled = [], isLoading: loadingUnbilled } = useUnbilledBookings();
-  const { data: allInvoices = [], isLoading: loadingAll } = useInvoices();
+  // **締めの作業を表計算から引き上げる**（US38）。探す語と発行月は画面が持ち、
+  // 絞り込み・件数・合計はサーバが同じ条件で答える
+  const [keyword, setKeyword] = useState("");
+  const [issuedMonth, setIssuedMonth] = useState("");
+  const { data: searchResult, isLoading: loadingAll } = useInvoices({
+    keyword,
+    issuedMonth,
+  });
+  const allInvoices = searchResult?.invoices ?? [];
   const { data: overdueInvoices = [], isLoading: loadingOverdue } = useOverdueInvoices();
   const invoices = overdueOnly ? overdueInvoices : allInvoices;
   const loadingInvoices = overdueOnly ? loadingOverdue : loadingAll;
@@ -150,9 +159,66 @@ export function BillingPage() {
         <h2 id="invoices-heading" className="text-lg font-semibold">
           {overdueOnly ? "支払期限を過ぎた請求 " : "発行済みの精算書 "}
           <span className="text-sm font-normal text-gray-600">
-            {invoices.length} 件
+            {overdueOnly ? invoices.length : (searchResult?.totalCount ?? 0)} 件
           </span>
         </h2>
+
+        {/* **締めの作業を表計算から引き上げる**（US38）。
+            期限超過の一覧は別の絞りなので、検索欄は出さない */}
+        {!overdueOnly && (
+          <div className="space-y-2 rounded border border-gray-200 p-3">
+            <div className="flex flex-wrap items-end gap-3">
+              <label className="flex flex-col text-sm">
+                <span className="text-gray-700">請求番号・荷主名・予約番号</span>
+                <input
+                  type="search"
+                  value={keyword}
+                  onChange={(event) => setKeyword(event.target.value)}
+                  placeholder="伊藤商事 / INV-2026 / BKG-2026"
+                  className="mt-1 rounded border border-gray-300 px-3 py-2"
+                />
+              </label>
+              <label className="flex flex-col text-sm">
+                <span className="text-gray-700">発行月</span>
+                <input
+                  type="month"
+                  value={issuedMonth}
+                  onChange={(event) => setIssuedMonth(event.target.value)}
+                  className="mt-1 rounded border border-gray-300 px-3 py-2"
+                />
+              </label>
+              {(keyword !== "" || issuedMonth !== "") && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setKeyword("");
+                    setIssuedMonth("");
+                  }}
+                  className="rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-100"
+                >
+                  条件を消す
+                </button>
+              )}
+            </div>
+            {/* **合計はサーバが数える。**画面で足し上げると、上限で切った瞬間に
+                「見えている分だけの合計」に化ける。取り消し済みは入らない */}
+            <p className="text-sm text-gray-800">
+              {"合計 "}
+              <strong>
+                {formatYen({
+                  value: searchResult?.totalAmount ?? 0,
+                  currency: searchResult?.currency ?? "JPY",
+                })}
+              </strong>
+              <span className="ml-2 text-gray-600">（取り消し済みを除く）</span>
+            </p>
+            {searchResult?.truncated === true && (
+              <p className="text-sm text-amber-800">
+                {`${searchResult.limit} 件まで表示しています。条件を絞ってください。`}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* **絞っていることを言い、外す手段を同じ場所に置く。**言わないと、
             発行したはずの請求書が「消えた」と読まれる */}

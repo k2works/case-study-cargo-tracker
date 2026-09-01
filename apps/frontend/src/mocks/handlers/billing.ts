@@ -425,7 +425,44 @@ export const billingHandlers = [
     return HttpResponse.json(unbilled)
   }),
 
-  http.get(API_PATHS.invoices, () => HttpResponse.json(invoices)),
+  /**
+   * 発行済みの精算書の一覧・検索（US38）。
+   *
+   * **絞り込みは本物と同じ条件で行う**——モックが本物より甘いと、本物が返さない
+   * ものを返す形のまま緑になる（[記憶]「モックを本物より甘くしない」）。
+   */
+  http.get(API_PATHS.invoices, ({ request }) => {
+    const url = new URL(request.url)
+    const keyword = url.searchParams.get('keyword')?.trim() ?? ''
+    const issuedMonth = url.searchParams.get('issuedMonth') ?? ''
+    if (issuedMonth !== '' && !/^\d{4}-\d{2}$/.test(issuedMonth)) {
+      return HttpResponse.json(
+        { message: `発行月は yyyy-MM の形式で指定してください: ${issuedMonth}` },
+        { status: 400 },
+      )
+    }
+    const matched = invoices.filter((invoice) => {
+      // **取り消し済みは出さない。**合計は締めの数字としてそのまま使われる
+      if (invoice.voidedAt != null) {
+        return false
+      }
+      const byKeyword =
+        keyword === '' ||
+        [invoice.invoiceNumber, invoice.shipperName, invoice.bookingId].some((value) =>
+          value.toLowerCase().includes(keyword.toLowerCase()),
+        )
+      const byMonth = issuedMonth === '' || invoice.issuedAt.startsWith(issuedMonth)
+      return byKeyword && byMonth
+    })
+    return HttpResponse.json({
+      invoices: matched,
+      totalCount: matched.length,
+      totalAmount: matched.reduce((sum, invoice) => sum + invoice.totalAmount.value, 0),
+      currency: 'JPY',
+      limit: 200,
+      truncated: false,
+    })
+  }),
 
   /**
    * 支払期限を過ぎた請求書（受入基準 23-5 の代替）。

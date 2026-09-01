@@ -10,7 +10,11 @@ import {
   fetchInvoices,
   fetchUnbilledBookings,
 } from './api'
-import type { CalculateChargeRequest, ConfirmPaymentRequest } from './types'
+import type {
+  CalculateChargeRequest,
+  ConfirmPaymentRequest,
+  InvoiceSearchCriteria,
+} from './types'
 
 /**
  * billing コンテキストのデータ取得。
@@ -27,11 +31,15 @@ export function useUnbilledBookings() {
   })
 }
 
-/** 発行済みの精算書の一覧。 */
-export function useInvoices() {
+/**
+ * 発行済みの精算書の一覧・検索（US38）。
+ *
+ * **条件をキーに含める。**含めないと、条件を変えても前の結果が返り続ける。
+ */
+export function useInvoices(criteria: InvoiceSearchCriteria = {}) {
   return useQuery({
-    queryKey: ['invoices'],
-    queryFn: fetchInvoices,
+    queryKey: ['invoices', criteria.keyword ?? '', criteria.issuedMonth ?? ''],
+    queryFn: () => fetchInvoices(criteria),
   })
 }
 
