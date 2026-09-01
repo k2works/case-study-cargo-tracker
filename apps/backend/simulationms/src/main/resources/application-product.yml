@@ -1,0 +1,39 @@
+# Heroku 開発環境（container stack）向けプロファイル。
+#
+# **シミュレーションはこの環境では動かない。** `product` は安全装置
+# （`SimulationSafetyConfig` の許可一覧）に載っていないため、
+# `APP_SIMULATION_ENABLED` を真にすると起動そのものが失敗する（[ADR-030] 決定 4）。
+# それでも配備するのは、Gateway が振り分け先を持っており、
+# **アプリが無いと画面から触ったときに 502 になる**ためである。
+# 配備されていれば「この環境では実行できません」と答えられる（US37-6）。
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:h2:mem:simulation_db;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
+  h2:
+    console:
+      # **共有環境では開けない。** 素の application.yml は開発機のために真にしている
+      enabled: false
+  jmx:
+    enabled: false
+
+server:
+  port: ${PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+app:
+  simulation:
+    # **この環境では有効にできない**（上記）。明示的に偽を置き、
+    # 設定を読む人がその場で分かるようにする
+    enabled: ${APP_SIMULATION_ENABLED:false}
+  gateway:
+    # **既定値に頼らない。** 素の application.yml の既定は localhost であり、
+    # 渡し忘れると「実環境だけ 500」になる——IT5・IT12・IT13 で 3 度踏んだ形である。
+    # `deploy:dev:config` が実際の Gateway の URL を渡す
+    base-url: ${APP_GATEWAY_SERVICE_BASE_URL:http://gatewayms:8080}

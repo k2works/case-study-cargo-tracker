@@ -92,6 +92,11 @@ subprojects {
             inputs.files(fileTree(rootProject.file('../../ops/k8s/kustomize/base')))
                     .withPropertyName('deploymentManifests')
                     .withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
+            // **配り先は 1 つではない。** Heroku の配布手順も読むため、
+            // その変更で検査が走らないと「片方だけ直した」状態を見逃す
+            inputs.file(rootProject.file('../../ops/scripts/deploy.js'))
+                    .withPropertyName('herokuDeployScript')
+                    .withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
             inputs.file(rootProject.file('settings.gradle'))
                     .withPropertyName('serviceList')
                     .withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)

@@ -240,6 +240,37 @@ export default function (gulp) {
       appName('bookingms'),
     ]);
 
+    // trackingms は荷主の紐付けを authms へ、貨物の所有を bookingms へ問い合わせる
+    // （US33・US39）。**渡さないと既定のコンテナ名を引きに行き、Heroku では
+    // UnknownHostException になる**——起動は成功するので、荷主の画面だけが 500 になる
+    heroku([
+      'config:set',
+      `APP_AUTH_SERVICE_BASE_URL=${appUrl('authms')}`,
+      `APP_BOOKING_SERVICE_BASE_URL=${appUrl('bookingms')}`,
+      '-a',
+      appName('trackingms'),
+    ]);
+
+    // handlingms・billingms も bookingms の Snapshot を引く（[ADR-023]・[ADR-028] 決定 6）
+    ['handlingms', 'billingms'].forEach((service) => {
+      heroku([
+        'config:set',
+        `APP_BOOKING_SERVICE_BASE_URL=${appUrl('bookingms')}`,
+        '-a',
+        appName(service),
+      ]);
+    });
+
+    // simulationms は業務 API を Gateway 経由で呼ぶ（[ADR-030] 決定 2）。
+    // **既定値に頼らない。** 渡し忘れると localhost を向いたまま動き、
+    // 「実環境だけ 500」になる——IT5・IT12・IT13 で 3 度踏んだ形である
+    heroku([
+      'config:set',
+      `APP_GATEWAY_SERVICE_BASE_URL=${appUrl('gatewayms')}`,
+      '-a',
+      appName('simulationms'),
+    ]);
+
     // Gateway には各サービスのルーティング先を渡す
     heroku([
       'config:set',

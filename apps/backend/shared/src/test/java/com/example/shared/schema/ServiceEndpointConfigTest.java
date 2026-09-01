@@ -35,6 +35,17 @@ class ServiceEndpointConfigTest {
     private static final Path MANIFESTS =
             BACKEND_ROOT.resolve("../../ops/k8s/kustomize/base").normalize();
 
+    /**
+     * Heroku へ配る手順。
+     *
+     * <p><strong>配り先は 1 つではない。</strong>k8s だけを見ていたため、Heroku では
+     * trackingms・billingms・handlingms の 3 つが相手の所在を渡されないままだった
+     * ——US33（荷主の自社貨物追跡）は共有環境で 500 を返し続けていた。
+     * <strong>守る対象を 1 つの配り先に限ると、もう一方が同じ形で壊れる。</strong>
+     */
+    private static final Path HEROKU_DEPLOY_SCRIPT =
+            BACKEND_ROOT.resolve("../../ops/scripts/deploy.js").normalize();
+
     /** {@code ${APP_XXX_SERVICE_BASE_URL:...}} の検出。 */
     private static final Pattern ENDPOINT_VARIABLE =
             Pattern.compile("\\$\\{(APP_[A-Z_]*SERVICE_BASE_URL)");
@@ -62,6 +73,32 @@ class ServiceEndpointConfigTest {
         assertThat(missing)
                 .as("既定値は開発機（localhost）を指す。クラスタの中では自分自身を指すため、"
                         + "入れ忘れても起動は成功し、その相手を使う操作だけが失敗する")
+                .isEmpty();
+    }
+
+    @Test
+    @DisplayName("設定が読む相手の所在は、すべて Heroku の配布手順でも渡している")
+    void everyServiceEndpointIsProvidedByTheHerokuDeploy() throws IOException {
+        Map<String, List<String>> required = requiredVariablesByService();
+
+        assertThat(required)
+                .as("相手の所在を読む設定が 1 つも見つからない場合、この検査は何も守らない")
+                .isNotEmpty();
+
+        String script = Files.readString(HEROKU_DEPLOY_SCRIPT);
+        List<String> missing = new ArrayList<>();
+        for (Map.Entry<String, List<String>> entry : required.entrySet()) {
+            for (String variable : entry.getValue()) {
+                if (!script.contains(variable)) {
+                    missing.add("%s: %s を Heroku の配布手順で渡していない".formatted(
+                            entry.getKey(), variable));
+                }
+            }
+        }
+
+        assertThat(missing)
+                .as("既定値はコンテナ名（k8s の中でしか引けない名前）を指す。Heroku では"
+                        + "UnknownHostException になり、その相手を使う操作だけが 500 になる")
                 .isEmpty();
     }
 
