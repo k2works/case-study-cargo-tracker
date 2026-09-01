@@ -40,7 +40,8 @@ public class RunSimulationUseCase {
      * <strong>二度と実行できなくなる</strong>。1 本の実行は工程ごとに期限（読み取り 10 秒）を
      * 持つため、全 14 工程が詰まっても 3 分に届かない。余裕を見て 15 分とする。
      */
-    private static final Duration STALE_AFTER = Duration.ofMinutes(15);
+    /** 止まったきりとみなすまでの時間。**判定は集約に 1 つ置く**（2 か所で持たない）。 */
+    private static final Duration STALE_AFTER = SimulationRun.STALE_AFTER;
 
     /**
      * 採番の採り直し上限。

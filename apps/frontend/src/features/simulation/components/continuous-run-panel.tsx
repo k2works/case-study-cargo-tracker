@@ -244,7 +244,16 @@ function Statistics({ statistics }: Readonly<{ statistics: SimulationStatistics 
         <Field label="成功" value={String(statistics.succeeded)} />
         <Field label="失敗" value={String(statistics.failed)} />
         <Field label="実行中" value={String(statistics.running)} />
+        <Field label="中断" value={String(statistics.abandoned)} />
       </dl>
+
+      {statistics.abandoned > 0 ? (
+        <p className="text-sm text-gray-700">
+          <strong>中断</strong>
+          {'は、配備や再起動で途中終了した実行です。'}
+          {'業務データはそこまでの分が残っています（巻き戻しません）。'}
+        </p>
+      ) : null}
 
       {statistics.failuresByStep.length > 0 ? (
         <table aria-label="失敗した工程" className="w-full text-sm">

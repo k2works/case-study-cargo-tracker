@@ -30,6 +30,7 @@ const STATISTICS = {
   succeeded: 9,
   failed: 2,
   running: 1,
+  abandoned: 0,
   failuresByStep: [
     { step: 'ASSIGN_ROUTE', label: '経路割り当て', count: 2 },
     { step: 'DECLARE_CUSTOMS', label: '通関申告', count: 1 },

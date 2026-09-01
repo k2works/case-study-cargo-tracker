@@ -84,6 +84,33 @@ public final class SimulationRun {
         return new SimulationRun(runId, scenario, startedBy, startedAt, appended);
     }
 
+    /**
+     * 止まったきりとみなすまでの時間。
+     *
+     * <p><strong>判定はここ 1 つに置く。</strong>二重実行の拒否・継続実行の停止の
+     * 見切り・統計の数え方が、それぞれ別の値を持つと食い違う。
+     *
+     * <p>実行 1 本は 14〜18 工程で 10 秒前後。配備や Pod の再起動で途中終了した
+     * 実行は、工程の結果から導くと永久に「実行中」で残る。
+     */
+    public static final java.time.Duration STALE_AFTER = java.time.Duration.ofMinutes(15);
+
+    /**
+     * 止まったきりか。
+     *
+     * <p>実行中のまま、最後の記録が {@code staleBefore} より古いもの。
+     * <strong>実行中と中断は区別する</strong>——「実行中 7 件」と出ていると、
+     * 管理者は止めてよいのかまだ待つのかを判断できない。
+     */
+    public boolean abandoned(Instant staleBefore) {
+        return status() == RunStatus.RUNNING && lastActivityAt().isBefore(staleBefore);
+    }
+
+    /** 最後に何かが記録された時刻。工程が 1 つも無ければ開始時刻。 */
+    public Instant lastActivityAt() {
+        return results.isEmpty() ? startedAt : results.getLast().recordedAt();
+    }
+
     public RunStatus status() {
         if (results.stream().anyMatch(StepResult::failed)) {
             return RunStatus.FAILED;

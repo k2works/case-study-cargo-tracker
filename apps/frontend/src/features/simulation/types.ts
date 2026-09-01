@@ -78,6 +78,13 @@ export type SimulationStatistics = {
   succeeded: number
   failed: number
   running: number
+  /**
+   * 止まったきりの件数。
+   *
+   * **実行中と分ける。** 配備や再起動で途中終了した実行が「実行中」に残ると、
+   * 管理者は止めてよいのかまだ待つのかを判断できない。
+   */
+  abandoned: number
   failuresByStep: SimulationStepFailure[]
 }
 

@@ -73,6 +73,7 @@ export const simulationHandlers = [
         succeeded: simulationRuns.filter((run) => run.status === 'COMPLETED').length,
         failed: simulationRuns.filter((run) => run.status === 'FAILED').length,
         running: simulationRuns.filter((run) => run.status === 'RUNNING').length,
+        abandoned: 0,
         failuresByStep: [
           { step: 'ASSIGN_ROUTE', label: '経路割り当て', count: 1 },
         ],

@@ -47,12 +47,17 @@ public class ContinuousRunController {
     /** 実行してよいか（[ADR-030] 決定 4）。**設定の名前どおりに止める**。 */
     private final boolean enabled;
 
+    /** 見切りの判定に使う時計。**業務の暦で読む**（[ADR-010]）。 */
+    private final java.time.Clock clock;
+
     public ContinuousRunController(ContinuousRunScheduler scheduler,
             ContinuousRunSessionRepository sessions, SimulationRunRepository runs,
+            java.time.Clock clock,
             @Value("${app.simulation.enabled:false}") boolean enabled) {
         this.scheduler = scheduler;
         this.sessions = sessions;
         this.runs = runs;
+        this.clock = clock;
         this.enabled = enabled;
     }
 
@@ -105,7 +110,10 @@ public class ContinuousRunController {
         requireAdmin(userId, roles);
 
         SimulationStatistics statistics =
-                SimulationStatistics.of(runs.findRecent(STATISTICS_LIMIT));
+                SimulationStatistics.of(runs.findRecent(STATISTICS_LIMIT),
+                        clock.instant().minus(
+                                com.example.simulationms.domain.model.aggregates.SimulationRun
+                                        .STALE_AFTER));
         return new ActiveSessionResponse(
                 sessions.findActive().map(SessionResponse::from).orElse(null),
                 StatisticsResponse.from(statistics));
@@ -178,12 +186,12 @@ public class ContinuousRunController {
     }
 
     /** 統計（US37-8）。**失敗した工程の分布まで返す**——件数だけでは直す場所が決まらない。 */
-    record StatisticsResponse(int total, int succeeded, int failed, int running,
+    record StatisticsResponse(int total, int succeeded, int failed, int running, int abandoned,
             List<StepFailure> failuresByStep) {
 
         static StatisticsResponse from(SimulationStatistics statistics) {
             return new StatisticsResponse(statistics.total(), statistics.succeeded(),
-                    statistics.failed(), statistics.running(),
+                    statistics.failed(), statistics.running(), statistics.abandoned(),
                     statistics.failuresByStep().entrySet().stream()
                             .map(entry -> new StepFailure(entry.getKey().name(),
                                     entry.getKey().label(), entry.getValue()))

@@ -44,12 +44,29 @@ import org.springframework.test.web.servlet.MockMvc;
  * 再現する手段が画面から消える——種を記録していても、読めなければ意味が無い。
  */
 @WebMvcTest(ContinuousRunController.class)
+@org.springframework.context.annotation.Import(
+        ContinuousRunControllerTest.FixedClock.class)
 @org.springframework.test.context.TestPropertySource(
         properties = "app.simulation.enabled=true")
 @DisplayName("継続実行 API")
 class ContinuousRunControllerTest {
 
     private static final Instant STARTED = Instant.parse("2026-12-07T01:00:00Z");
+
+    /**
+     * 止まった時計。
+     *
+     * <p><strong>検査で「いま」を読まない。</strong>見切りの判定に時刻を使うため、
+     * 実行した時刻によって結果が変わる。
+     */
+    @org.springframework.boot.test.context.TestConfiguration
+    static class FixedClock {
+
+        @org.springframework.context.annotation.Bean
+        java.time.Clock clock() {
+            return java.time.Clock.fixed(STARTED, java.time.ZoneId.of("Asia/Tokyo"));
+        }
+    }
 
     @Autowired
     private MockMvc mockMvc;
