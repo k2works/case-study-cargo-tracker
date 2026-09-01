@@ -572,7 +572,7 @@ gantt
 | IT12 | **11**（うち 3 は US21 の再実施） | **11** | 100% | [完了](iteration_report-12.md) |
 | IT13 | **7**（US33 5 + TD-01 2） | **7** | 100% | [完了](iteration_report-13.md) |
 | IT14 | 8（US34 5 + US35 3） | **8** | 100% | [完了](iteration_report-14.md) |
-| IT15 | 8（US36 3 + US37 5） | - | - | [計画済み](iteration_plan-15.md) |
+| IT15 | 8（US36 3 + US37 5） | **8** | 100% | [完了](iteration_report-15.md) |
 
 ### バーンダウンチャート
 
