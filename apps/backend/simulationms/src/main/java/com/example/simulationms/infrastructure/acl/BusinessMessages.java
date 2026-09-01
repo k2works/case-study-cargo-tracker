@@ -152,4 +152,8 @@ final class BusinessMessages {
     /** 利用者と荷主の紐付け（US33 の管理者操作・US39 で使う）。 */
     public record UserShipperLinkRequest(Long shipperId) {
     }
+
+    /** 利用者と荷主の紐付けの応答（紐付いていなければ {@code shipperId} は空）。 */
+    public record UserShipperLinkResponse(String username, Long shipperId) {
+    }
 }

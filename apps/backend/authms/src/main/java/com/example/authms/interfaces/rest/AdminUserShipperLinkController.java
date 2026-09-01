@@ -25,8 +25,33 @@ public class AdminUserShipperLinkController {
 
     private final ManageUserShipperLinkUseCase links;
 
-    public AdminUserShipperLinkController(ManageUserShipperLinkUseCase links) {
+    private final com.example.authms.application.internal.queryservices.FindUserShipperLinkUseCase
+            find;
+
+    public AdminUserShipperLinkController(ManageUserShipperLinkUseCase links,
+            com.example.authms.application.internal.queryservices.FindUserShipperLinkUseCase find) {
         this.links = links;
+        this.find = find;
+    }
+
+    /**
+     * その利用者が<strong>いま誰に紐付いているか</strong>を見る。
+     *
+     * <p>紐付けは上書きできるため、<strong>付け替える前にいまの相手を確かめられる</strong>
+     * 必要がある。見えないと、管理者は自分が何を壊すのか分からないまま上書きすることになる。
+     *
+     * <p>紐付いていない場合も 200 で返し、{@code shipperId} を空にする
+     * ——「利用者が居ない」と「紐付いていない」を、呼び出し側が取り違えないようにする。
+     */
+    @org.springframework.web.bind.annotation.GetMapping("/{username}")
+    public UserShipperLinkResponse show(
+            @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
+            @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles,
+            @PathVariable String username) {
+        requireAdmin(userId, roles);
+
+        var result = find.find(username);
+        return new UserShipperLinkResponse(username, result.shipperId());
     }
 
     @PutMapping("/{username}")

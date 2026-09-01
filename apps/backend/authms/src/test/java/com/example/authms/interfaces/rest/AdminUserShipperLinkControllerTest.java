@@ -5,6 +5,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -30,6 +31,55 @@ class AdminUserShipperLinkControllerTest {
 
     @MockitoBean
     private ManageUserShipperLinkUseCase links;
+
+    @MockitoBean
+    private com.example.authms.application.internal.queryservices.FindUserShipperLinkUseCase find;
+
+    /**
+     * <strong>付け替える前に、いまの相手を確かめられる。</strong>見えないと、
+     * 管理者は自分が何を壊すのか分からないまま上書きすることになる。
+     */
+    @Test
+    @DisplayName("管理者は、その利用者がいま誰に紐付いているかを読める")
+    void showsCurrentLink() throws Exception {
+        when(find.find("shipper01")).thenReturn(
+                com.example.authms.application.internal.queryservices.UserShipperLinkResult
+                        .linked(9001L));
+
+        mockMvc.perform(get("/api/v1/admin/user-shipper-links/shipper01")
+                        .header(AuthenticatedUser.USER_ID_HEADER, "admin01")
+                        .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ADMIN"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("shipper01"))
+                .andExpect(jsonPath("$.shipperId").value(9001));
+    }
+
+    /**
+     * <strong>「利用者が居ない」と「紐付いていない」を取り違えさせない。</strong>
+     * 404 にすると、呼び出し側は名前の綴り違いと区別できない。
+     */
+    @Test
+    @DisplayName("紐付いていない利用者は、200 で空の荷主 ID を返す")
+    void showsUnlinkedUser() throws Exception {
+        when(find.find("shipper02")).thenReturn(
+                com.example.authms.application.internal.queryservices.UserShipperLinkResult
+                        .unlinked());
+
+        mockMvc.perform(get("/api/v1/admin/user-shipper-links/shipper02")
+                        .header(AuthenticatedUser.USER_ID_HEADER, "admin01")
+                        .header(AuthenticatedUser.ROLES_HEADER, "ROLE_ADMIN"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.shipperId").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("管理者以外は、紐付けを読めない")
+    void othersCannotRead() throws Exception {
+        mockMvc.perform(get("/api/v1/admin/user-shipper-links/shipper01")
+                        .header(AuthenticatedUser.USER_ID_HEADER, "sales01")
+                        .header(AuthenticatedUser.ROLES_HEADER, "ROLE_SALES"))
+                .andExpect(status().isForbidden());
+    }
 
     @Test
     @DisplayName("管理者は利用者を荷主に紐付けられる")

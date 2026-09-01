@@ -93,7 +93,7 @@ public class RestBusinessGateway implements BusinessGateway {
         this.users = users;
         this.clock = clock;
         this.exceptions = new RestExceptionSteps(gateway, clock);
-        this.shipperSteps = new RestShipperSteps(gateway);
+        this.shipperSteps = new RestShipperSteps(gateway, this::login);
     }
 
     @Override

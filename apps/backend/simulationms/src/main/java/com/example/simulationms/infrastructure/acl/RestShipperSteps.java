@@ -20,10 +20,23 @@ class RestShipperSteps {
     /** 業務データに残す名乗り。 */
     private static final String OPERATOR = RestBusinessGateway.OPERATOR;
 
+    /** 紐付けを読む・書くロール。**実業務でも管理者の操作である**（US33）。 */
+    private static final String ADMIN_ROLE = "ROLE_ADMIN";
+
     private final RestClient gateway;
 
-    RestShipperSteps(RestClient gateway) {
+    /**
+     * ロールの利用者として入り直す手立て。
+     *
+     * <p>荷主の工程は<strong>営業として登録し、管理者として紐付けを読む</strong>
+     * ——実業務でも別の人がやる操作である。工程ごとの切符では足りないため、
+     * 入り直せる手立てを受け取る。
+     */
+    private final java.util.function.UnaryOperator<String> loginAs;
+
+    RestShipperSteps(RestClient gateway, java.util.function.UnaryOperator<String> loginAs) {
         this.gateway = gateway;
+        this.loginAs = loginAs;
     }
 
     String execute(ScenarioStep step, String token, Map<String, String> context) {
@@ -35,7 +48,41 @@ class RestShipperSteps {
         };
     }
 
+    /**
+     * 確認用の利用者にすでに紐付いている荷主があるか。
+     *
+     * <p><strong>管理者として読む。</strong>内部向けの経路（{@code system:} の名乗り）は
+     * 使わない——[ADR-030] 決定 1 が禁じている。専用の読み口を作ると、
+     * シミュレーションだけが通る経路ができる。
+     *
+     * @return 紐付いている荷主 ID。紐付いていなければ空
+     */
+    private java.util.Optional<Long> linkedDemoShipperId() {
+        BusinessMessages.UserShipperLinkResponse response = BusinessCalls.call(
+                ScenarioStep.LINK_SHIPPER_USER, () -> gateway.get()
+                        .uri(RestBusinessGateway.USER_SHIPPER_LINK_PATH + "/"
+                                + RestBusinessGateway.NOTIFICATION_DEMO_USER)
+                        .header(HttpHeaders.AUTHORIZATION,
+                                BusinessCalls.bearer(loginAs.apply(ADMIN_ROLE)))
+                        .retrieve()
+                        .body(BusinessMessages.UserShipperLinkResponse.class));
+        return response == null ? java.util.Optional.empty()
+                : java.util.Optional.ofNullable(response.shipperId());
+    }
+
     String registerShipper(String token, Map<String, String> context) {
+        // **確認用の荷主を使い回す。** 実行のたびに新しい荷主を作って紐付け直すと、
+        // 継続実行の最中は<strong>一覧を開いた時点と押した時点で荷主が変わる</strong>
+        // ——リンクを押すと「自社の貨物として確認できません」になる。
+        // 確かめたい場面（継続実行）でこそ使えなくなっていた
+        java.util.Optional<Long> reused = linkedDemoShipperId();
+        if (reused.isPresent()) {
+            return String.valueOf(reused.orElseThrow());
+        }
+        return registerNewShipper(token, context);
+    }
+
+    private String registerNewShipper(String token, Map<String, String> context) {
         String marker = BusinessCalls.runId(context);
         BusinessMessages.ShipperResponse response = BusinessCalls.call(ScenarioStep.REGISTER_SHIPPER, () -> gateway.post()
                 .uri(RestBusinessGateway.SHIPPER_PATH)

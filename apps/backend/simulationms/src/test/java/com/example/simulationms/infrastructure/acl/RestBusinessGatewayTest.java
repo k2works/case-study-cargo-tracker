@@ -51,7 +51,8 @@ class RestBusinessGatewayTest {
         gateway = new RestBusinessGateway(builder.build(), SimulationUsers.of(
                 Map.of("ROLE_SALES", "sim-sales01", "ROLE_ROUTING", "sim-routing01",
                         "ROLE_HANDLER", "sim-handler01", "ROLE_TRACKER", "sim-tracker01",
-                        "ROLE_ACCOUNTANT", "sim-accountant01"), "password"),
+                        "ROLE_ACCOUNTANT", "sim-accountant01",
+                        "ROLE_ADMIN", "sim-admin01"), "password"),
                 Clock.fixed(Instant.parse("2026-11-16T00:00:00Z"), ZoneId.of("Asia/Tokyo")));
     }
 
@@ -65,10 +66,48 @@ class RestBusinessGatewayTest {
                         MediaType.APPLICATION_JSON));
     }
 
+    /** 確認用の利用者に紐付いた荷主を照会する。**紐付いていない**と答えさせる。 */
+    private void expectNoLinkedDemoShipper() {
+        expectLoginAs("sim-admin01", "token-admin");
+        server.expect(requestTo(BASE + RestBusinessGateway.USER_SHIPPER_LINK_PATH + "/"
+                        + RestBusinessGateway.NOTIFICATION_DEMO_USER))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("{\"username\":\"sim-shipper01\",\"shipperId\":null}",
+                        MediaType.APPLICATION_JSON));
+    }
+
+    /**
+     * <strong>確認用の荷主を使い回す。</strong>
+     *
+     * <p>実行のたびに新しい荷主を作って紐付け直すと、継続実行の最中は
+     * <strong>一覧を開いた時点と押した時点で荷主が変わる</strong>——リンクを押すと
+     * 「自社の貨物として確認できません」になる。確かめたい場面でこそ使えなくなっていた。
+     */
+    @Test
+    @DisplayName("確認用の利用者に荷主が紐付いていれば、新しく登録せずそれを使う")
+    void reusesTheShipperLinkedToTheDemoUser() {
+        expectLoginAs("sim-sales01", "token-sales");
+        expectLoginAs("sim-admin01", "token-admin");
+        server.expect(requestTo(BASE + RestBusinessGateway.USER_SHIPPER_LINK_PATH + "/"
+                        + RestBusinessGateway.NOTIFICATION_DEMO_USER))
+                .andExpect(method(HttpMethod.GET))
+                .andExpect(header("Authorization", "Bearer token-admin"))
+                .andRespond(withSuccess("{\"username\":\"sim-shipper01\",\"shipperId\":77}",
+                        MediaType.APPLICATION_JSON));
+
+        String identifier = gateway.execute(ScenarioStep.REGISTER_SHIPPER,
+                Map.of(BusinessContextKey.RUN_ID, "SIM-20261116-0002"));
+
+        // **荷主の登録は飛ばない。**飛べば MockRestServiceServer が「予期しない要求」で落ちる
+        assertThat(identifier).isEqualTo("77");
+        server.verify();
+    }
+
     @Test
     @DisplayName("その工程を踏むロールの利用者としてログインし、受け取った切符で業務 API を呼ぶ")
     void logsInAsTheRoleOfTheStep() {
         expectLoginAs("sim-sales01", "token-sales");
+        expectNoLinkedDemoShipper();
         server.expect(requestTo(BASE + RestBusinessGateway.SHIPPER_PATH))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(header("Authorization", "Bearer token-sales"))
@@ -130,6 +169,7 @@ class RestBusinessGatewayTest {
     @DisplayName("業務 API が断ったら、その工程と応答の状態を添えて止まる")
     void namesTheStepWhenTheBusinessCallFails() {
         expectLoginAs("sim-sales01", "token-sales");
+        expectNoLinkedDemoShipper();
         server.expect(requestTo(BASE + RestBusinessGateway.SHIPPER_PATH))
                 .andRespond(withStatus(HttpStatus.BAD_REQUEST)
                         .body("{\"message\":\"契約番号は法人荷主にだけ設定できます\"}")
@@ -290,6 +330,7 @@ class RestBusinessGatewayTest {
     @DisplayName("応答に識別子が無ければ、成功にせず止まる")
     void stopsWhenTheResponseCarriesNoIdentifier() {
         expectLoginAs("sim-sales01", "token-sales");
+        expectNoLinkedDemoShipper();
         server.expect(requestTo(BASE + RestBusinessGateway.SHIPPER_PATH))
                 .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
 
