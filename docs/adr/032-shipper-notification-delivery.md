@@ -75,6 +75,19 @@
 > 疎通確認としては弱くなるが、`REGISTER_SHIPPER` の工程自体は残り、
 > 紐付けが無い環境（新しい DB）では必ず通る。
 
+### 決定 7: 継続実行のスケジューラは、Pod が 1 つであることを前提にする
+
+`ContinuousRunScheduler` は実行間隔（前回いつ始めたか）と停止の期限を
+**プロセスのメモリ**で覚える。Pod が 2 つになると、それぞれが自分の記憶で判断する
+——**間隔は半分になり、同時実行数の上限は 2 倍まで許される**。どちらも
+「守っているつもり」のまま破れる。
+
+`replicas: 1` を検査（`SingleReplicaSchedulerTest`）で固定する。
+**文章で残しても守られない**——ADR-009 は 7 IT のあいだ半分しか守られなかった。
+
+> **直すなら状態を DB へ移すことになる。** そのときは<strong>この検査を消す</strong>
+> ——検査が消せることが、前提が無くなったことの証である。
+
 ## 影響
 
 - trackingms に表が 1 つ増える（`shipper_notice_ack`）。知らせ本体（`tracking_notice`）は変えない
@@ -85,6 +98,8 @@
 - 管理者が紐付けを**読む**手段が要る（`GET /api/v1/admin/user-shipper-links/{username}`）。
   付け替える前にいまの相手を確かめられないと、管理者は自分が何を壊すのか分からない
 - 荷主がログインしているあいだ、15 秒ごとに 1 リクエストが増える
+- **simulationms は水平にスケールできない**（決定 7）。負荷が増えたら、
+  同時実行数の上限を上げるか、状態を DB へ移す
 
 ## この決定の前提の外にあるもの
 
@@ -105,6 +120,7 @@
 | 3（戻らない） | `NoticeWatermarkTest`「古い位置で上書きしようとしても、読んだ位置は戻らない」＋ `ShipperNoticePersistenceIntegrationTest`「読んだ位置は、古い値では戻らない」（**SQL 側の守りを外して赤を確認済み**） |
 | 4（出した時点で既読） | `notification-toasts.test.tsx`「一度出た知らせは、読み直しても二度と出ない」 |
 | 5（同じ道を通る） | `ShipperNoticeQueryUseCaseTest`「自社の貨物への知らせだけを返す」「荷主に紐付いていない利用者には、何も返さない」 |
+| 7（単一 Pod） | `SingleReplicaSchedulerTest`「継続実行を持つサービスの Pod は 1 つに固定されている」（**`replicas: 2` に変えて赤を確認済み**） |
 | 6（使い回す） | `RestBusinessGatewayTest`「確認用の利用者に荷主が紐付いていれば、新しく登録せずそれを使う」（**使い回しを外して赤を確認済み**）・`SimulationUsersConfigurationTest`・`ScenarioTest` |
 
 ## 備考
