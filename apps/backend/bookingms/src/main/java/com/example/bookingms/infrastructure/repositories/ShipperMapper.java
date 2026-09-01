@@ -53,7 +53,11 @@ public interface ShipperMapper {
             </if>
             -- 新しい順。営業の使い方は「登録した直後に一覧へ戻って入ったか確かめる」であり、
             -- 登録順だと今入れた 1 件が常に最下部に沈む
-            ORDER BY id DESC
+            --
+            -- **番号ではなく登録した時刻で並べる。** 番号で並べると、番号を予約した行
+            -- （動作確認用の荷主は 9001 番）が**いつまでも先頭に居座る**——登録した
+            -- 覚えのない荷主が毎朝いちばん上に出る。同じ時刻のときだけ番号で決める
+            ORDER BY created_at DESC, id DESC
             </script>
             """)
     @Results(id = "shipperList", value = {

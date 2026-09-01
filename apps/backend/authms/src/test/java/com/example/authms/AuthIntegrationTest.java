@@ -234,12 +234,20 @@ class AuthIntegrationTest {
                 .isEqualTo("admin01");
     }
 
+    /**
+     * <strong>番号は予約したものである。</strong>bookingms の {@code V13} が
+     * 動作確認用の荷主として 9001 番を予約し、authms の {@code V11} がそこへ紐付ける。
+     *
+     * <p>以前は 1 番へ決め打ちしていたが、bookingms は荷主の種を持たないため
+     * <strong>1 番が誰になるかはその環境で最初に登録された荷主</strong>で決まっていた
+     * ——実際、DB を初期化した直後の 1 番はシミュレーションが作った荷主だった。
+     */
     @Test
     @DisplayName("荷主利用者は authms の明示的な紐付けから荷主 ID を引ける")
     void findsLinkedShipperId() {
         assertThat(users.findLinkedShipperId("shipper01"))
                 .as("username と shipper_code の暗黙一致ではなく user_shipper_link から引く")
-                .contains(1L);
+                .contains(9001L);
     }
 
     @Test
