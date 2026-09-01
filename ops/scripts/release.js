@@ -390,21 +390,33 @@ export default function (gulp, options = {}) {
       path.join(rootDir, 'apps', 'frontend'), done);
   });
 
-  /** バックエンドとフロントエンドの両方を回す。片方だけだと、もう片方の赤を見逃す。 */
+  /**
+   * テスト。
+   *
+   * <p>バックエンドは<strong>フルビルド</strong>で回す（{@code dev:backend:full}）。
+   * {@code build -x test} だと JaCoCo の検証が実行データを持たず落ちるうえ、
+   * ArchUnit を含む構造的検証もフルテストでしか働かない。
+   */
   gulp.task('release:preflight:test', (done) => {
     console.log('[3/5] Test...');
     try {
       runCommandInDirSync('npx vitest run', path.join(rootDir, 'apps', 'frontend'));
-      runCommandInDirSync('npm run test', rootDir);
+      runCommandInDirSync('npx gulp dev:backend:full', rootDir);
       done();
     } catch (error) {
       done(error);
     }
   });
 
+  /**
+   * ビルド。
+   *
+   * <p>バックエンドは前の工程のフルビルドで済んでいるため、ここでは
+   * <strong>フロントエンドの成果物</strong>が作れることを見る。
+   */
   gulp.task('release:preflight:build', (done) => {
     console.log('[4/5] Build...');
-    runCommandInDir('npm run build', rootDir, done);
+    runCommandInDir('npm run build', path.join(rootDir, 'apps', 'frontend'), done);
   });
 
   gulp.task('release:preflight:e2e', (done) => {
