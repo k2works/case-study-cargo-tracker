@@ -115,9 +115,13 @@ test.describe('業務シミュレーション（US34・US35）', () => {
 
     await page.getByRole('button', { name: '継続実行を開始する' }).click()
 
-    await expect(page.getByText('SES-', { exact: false })).toBeVisible()
+    // **いま動いているセッションの枠の中で見る。**過去のセッションの表にも
+    // 同じ形の ID と「種」の列があり、画面全体から探すと二重に一致する（TD-03）
+    // **見出しは完全一致で選ぶ。**既定は部分一致であり、「過去の継続実行」も拾う
+    const running = page.getByRole('region', { name: '継続実行', exact: true })
+    await expect(running.getByText('SES-', { exact: false })).toBeVisible()
     // 説明文の「使った種は…」と紛れないよう、項目名として名指しで見る
-    await expect(page.getByText('種', { exact: true })).toBeVisible()
+    await expect(running.getByText('種', { exact: true })).toBeVisible()
 
     await page.getByRole('button', { name: '停止する' }).click()
 
@@ -132,5 +136,24 @@ test.describe('業務シミュレーション（US34・US35）', () => {
     await expect(
       page.getByRole('link', { name: '業務シミュレーション' }),
     ).toHaveCount(0)
+  })
+
+  /**
+   * <strong>落ちた実行へ翌朝辿り着ける</strong>（TD-03・IT16）。
+   *
+   * 継続実行を一晩回すと、昨日の失敗は朝には直近の一覧から押し出されている。
+   */
+  test('日付で絞り込め、過去のセッションの種が読める', async ({ page }) => {
+    await logIn(page, 'admin01')
+    await page.goto('/admin/simulations')
+
+    await page.getByLabel('実行した日').fill('2026-11-16')
+    await expect(page.getByRole('button', { name: '直近に戻す' })).toBeVisible()
+
+    // **停止したセッションの種が残る。**読めなければ、落ちた並びを再現できない
+    const past = page.getByRole('region', { name: '過去の継続実行' })
+    await expect(past).toBeVisible()
+    await expect(past.getByText('SES-', { exact: false }).first()).toBeVisible()
+    await expect(past.getByRole('columnheader', { name: '種' })).toBeVisible()
   })
 })

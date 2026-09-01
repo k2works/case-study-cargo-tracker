@@ -460,3 +460,41 @@ test.describe('距離と輸出免税（US21 の未達返済）', () => {
     await expect(breakdown, '国際輸送に消費税が付いている').toContainText('消費税（輸出免税）¥0')
   })
 })
+
+/**
+ * 請求書を探す（US38）。
+ *
+ * **4 度目の申し送りである。** 月末の締めが表計算に落ちたまま、IT11・IT12 の
+ * レビューで経理担当者から 2 IT 連続の指摘を受けていた。
+ */
+test.describe('請求書の検索（US38）', () => {
+  test('荷主名で絞り込み、件数と合計を読める', async ({ page }) => {
+    await logInAsAccountant(page)
+    await page.goto('/billing')
+
+    const issued = page.getByTestId('issued-invoices')
+    await expect(issued.getByRole('heading', { name: /発行済みの精算書/ })).toBeVisible()
+
+    // **合計は締めの数字である。**取り消し済みを除くことを画面が言う
+    await expect(issued.getByText('（取り消し済みを除く）')).toBeVisible()
+
+    await page.getByLabel('請求番号・荷主名・予約番号').fill('大洋物産')
+
+    // 絞った結果だけが残る
+    await expect(issued.getByTestId('invoice-link').first()).toBeVisible()
+    await expect(page.getByRole('button', { name: '条件を消す' })).toBeVisible()
+  })
+
+  /**
+   * **読めない発行月は断る。** 黙って「指定なし」に倒すと、打ち間違えた担当者には
+   * 全件が返り、絞ったつもりの数字を締めに使うことになる。
+   */
+  test('発行月で絞り込める', async ({ page }) => {
+    await logInAsAccountant(page)
+    await page.goto('/billing')
+
+    await page.getByLabel('発行月').fill('2026-06')
+
+    await expect(page.getByRole('button', { name: '条件を消す' })).toBeVisible()
+  })
+})

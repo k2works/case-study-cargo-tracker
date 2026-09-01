@@ -35,8 +35,13 @@ export function ContinuousRunPanel() {
   const active = session !== null && session.status !== 'STOPPED'
 
   return (
-    <section className="space-y-4 rounded border border-gray-200 p-4">
-      <h2 className="text-lg font-bold text-gray-900">継続実行</h2>
+    <section
+      aria-labelledby="continuous-run"
+      className="space-y-4 rounded border border-gray-200 p-4"
+    >
+      <h2 id="continuous-run" className="text-lg font-bold text-gray-900">
+        継続実行
+      </h2>
 
       <p className="text-sm text-gray-700">
         {'バックエンドが乱数でシナリオと入力を選び、一定間隔で実行し続けます。'}
