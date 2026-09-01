@@ -57,7 +57,10 @@ test.describe('業務シミュレーション（US34・US35）', () => {
     await page.goto('/admin/simulations')
 
     await page.getByLabel('シナリオ').selectOption('misroute')
-    await expect(page.getByText(/工程$/)).toBeVisible()
+    // 実行ボタンの横に出る工程数。一覧の「進んだ工程」列と紛れないよう名指しで見る
+    await expect(
+      page.getByRole('button', { name: /実行する/ }).locator('..').getByText(/^\d+ 工程$/),
+    ).toBeVisible()
     await page.getByRole('button', { name: /実行する/ }).click()
 
     await expect(page.getByRole('link', { name: /^SIM-/ }).first()).toBeVisible()
@@ -113,7 +116,8 @@ test.describe('業務シミュレーション（US34・US35）', () => {
     await page.getByRole('button', { name: '継続実行を開始する' }).click()
 
     await expect(page.getByText('SES-', { exact: false })).toBeVisible()
-    await expect(page.getByText('種')).toBeVisible()
+    // 説明文の「使った種は…」と紛れないよう、項目名として名指しで見る
+    await expect(page.getByText('種', { exact: true })).toBeVisible()
 
     await page.getByRole('button', { name: '停止する' }).click()
 

@@ -97,7 +97,9 @@ export const simulationHandlers = [
     return HttpResponse.json(continuousSession, { status: 201 })
   }),
 
-  http.delete(API_PATHS.simulationSession(':sessionId'), () => {
+  // **パスの組み立て関数を使わない。** encodeURIComponent が ':' を '%3A' に変えるため、
+  // MSW がパス変数として解釈しない——ハンドラが一度も当たらないまま緑になる
+  http.delete(`${API_PATHS.simulationSessions}/:sessionId`, () => {
     if (continuousSession === null) {
       return HttpResponse.json({ message: 'そのセッションはありません' }, { status: 404 })
     }
