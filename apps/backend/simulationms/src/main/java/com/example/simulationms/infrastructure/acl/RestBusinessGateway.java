@@ -46,6 +46,11 @@ public class RestBusinessGateway implements BusinessGateway {
     static final String DESTINATION = "USLAX";
     static final String CARGO_TYPE = "GENERAL";
 
+    /** 追加の入力が要る貨物種別。**書き写さない**——判定を 1 か所に置く。 */
+    private static final String HAZARDOUS = "HAZARDOUS";
+
+    private static final String REFRIGERATED = "REFRIGERATED";
+
     /** 業務データに残す名乗り。**誰の操作か分かる名前にする**——後から人が見分けられる。 */
     static final String OPERATOR = "シミュレーション";
 
@@ -161,8 +166,13 @@ public class RestBusinessGateway implements BusinessGateway {
                 .header(HttpHeaders.AUTHORIZATION, BusinessCalls.bearer(token))
                 .body(new BusinessMessages.BookingRequest(
                         Long.valueOf(BusinessCalls.required(context, BusinessContextKey.SHIPPER_ID)),
-                        CARGO_TYPE, 900, OPERATOR + " " + BusinessCalls.runId(context),
-                        ORIGIN, DESTINATION, today().plusDays(DEADLINE_DAYS).toString()))
+                        cargoTypeOf(context), weightOf(context),
+                        OPERATOR + " " + BusinessCalls.runId(context),
+                        originOf(context), destinationOf(context),
+                        today().plusDays(deadlineDaysOf(context)).toString(),
+                        hazardousClassOf(context), unNumberOf(context),
+                        properShippingNameOf(context),
+                        minCelsiusOf(context), maxCelsiusOf(context)))
                 .retrieve()
                 .body(BusinessMessages.BookingResponse.class));
 
@@ -186,10 +196,14 @@ public class RestBusinessGateway implements BusinessGateway {
         BusinessCalls.call(ScenarioStep.REGISTER_VOYAGE, () -> gateway.post()
                 .uri(VOYAGE_PATH)
                 .header(HttpHeaders.AUTHORIZATION, BusinessCalls.bearer(token))
+                // **受け入れる貨物種別は、この実行が運ぶものに合わせる。**
+                // 固定にすると、乱数が冷蔵や危険物を選んだ実行で経路候補が 0 件になる
+                // ——実環境で 18 件踏んだ
                 .body(new BusinessMessages.VoyageRequest(number, "シミュレーション丸", "シミュレーション海運",
-                        List.of(CARGO_TYPE),
+                        List.of(cargoTypeOf(context)),
                         List.of(new BusinessMessages.VoyageRequest.MovementRequest(
-                                ORIGIN, DESTINATION, departure, arrival))))
+                                originOf(context), destinationOf(context),
+                                departure, arrival))))
                 .retrieve()
                 .toBodilessEntity());
         return number;
@@ -201,13 +215,13 @@ public class RestBusinessGateway implements BusinessGateway {
     }
 
     private String assignRoute(String token, Map<String, String> context) {
-        String deadline = today().plusDays(DEADLINE_DAYS).toString();
+        String deadline = today().plusDays(deadlineDaysOf(context)).toString();
         BusinessMessages.RouteCandidateListResponse candidates = BusinessCalls.call(ScenarioStep.ASSIGN_ROUTE, () -> gateway.get()
                 .uri(UriComponentsBuilder.fromPath(ROUTE_PATH)
-                        .queryParam("origin", ORIGIN)
-                        .queryParam("destination", DESTINATION)
+                        .queryParam("origin", originOf(context))
+                        .queryParam("destination", destinationOf(context))
                         .queryParam("deadline", deadline)
-                        .queryParam("cargoType", CARGO_TYPE)
+                        .queryParam("cargoType", cargoTypeOf(context))
                         .toUriString())
                 .header(HttpHeaders.AUTHORIZATION, BusinessCalls.bearer(token))
                 .retrieve()
@@ -216,7 +230,7 @@ public class RestBusinessGateway implements BusinessGateway {
         if (candidates == null || candidates.candidates() == null
                 || candidates.candidates().isEmpty()) {
             throw new BusinessCallFailedException(
-                    "経路候補が 0 件です（" + ORIGIN + " → " + DESTINATION
+                    "経路候補が 0 件です（" + originOf(context) + " → " + destinationOf(context)
                             + "・期限 " + deadline + "）。航海の登録を確かめる");
         }
 
@@ -278,9 +292,11 @@ public class RestBusinessGateway implements BusinessGateway {
         }
 
         List<Activity> activities = List.of(
-                new Activity("RECEIVE", ORIGIN, null, at),
-                new Activity("LOAD", ORIGIN, voyageNumber, at.plus(1, ChronoUnit.HOURS)),
-                new Activity("UNLOAD", DESTINATION, voyageNumber, at.plus(2, ChronoUnit.HOURS)));
+                new Activity("RECEIVE", originOf(context), null, at),
+                new Activity("LOAD", originOf(context), voyageNumber,
+                        at.plus(1, ChronoUnit.HOURS)),
+                new Activity("UNLOAD", destinationOf(context), voyageNumber,
+                        at.plus(2, ChronoUnit.HOURS)));
 
         for (Activity activity : activities) {
             BusinessCalls.call(ScenarioStep.RECORD_HANDLING, () -> gateway.post()
@@ -337,7 +353,8 @@ public class RestBusinessGateway implements BusinessGateway {
                 .header(HttpHeaders.AUTHORIZATION, BusinessCalls.bearer(token))
                 .body(new BusinessMessages.HandlingActivityRequest(
                         BusinessCalls.required(context, BusinessContextKey.TRACKING_NUMBER), "CLAIM",
-                        DESTINATION, clock.instant().plus(3, ChronoUnit.HOURS).toString(),
+                        destinationOf(context),
+                        clock.instant().plus(3, ChronoUnit.HOURS).toString(),
                         OPERATOR, null, "シミュレーション荷受人"))
                 .retrieve()
                 .toBodilessEntity());
@@ -403,6 +420,63 @@ public class RestBusinessGateway implements BusinessGateway {
                 .retrieve()
                 .toBodilessEntity());
         return BusinessContextKey.NONE;
+    }
+
+    /**
+     * 乱数が選んだ入力（US37-1）。
+     *
+     * <p>継続実行は引き継ぎに載せてくる。手で押した実行は持たないので既定値へ落とす。
+     * <strong>ここで固定値を書くと、生成器が選んだ値がどこにも届かない。</strong>
+     */
+    static String originOf(Map<String, String> context) {
+        return BusinessCalls.orDefault(context, BusinessContextKey.ORIGIN, ORIGIN);
+    }
+
+    static String destinationOf(Map<String, String> context) {
+        return BusinessCalls.orDefault(context, BusinessContextKey.DESTINATION, DESTINATION);
+    }
+
+    static String cargoTypeOf(Map<String, String> context) {
+        return BusinessCalls.orDefault(context, BusinessContextKey.CARGO_TYPE, CARGO_TYPE);
+    }
+
+    static int weightOf(Map<String, String> context) {
+        return Integer.parseInt(
+                BusinessCalls.orDefault(context, BusinessContextKey.WEIGHT_KG, "900"));
+    }
+
+    static int deadlineDaysOf(Map<String, String> context) {
+        return Integer.parseInt(BusinessCalls.orDefault(context,
+                BusinessContextKey.DEADLINE_DAYS, String.valueOf(DEADLINE_DAYS)));
+    }
+
+    /**
+     * 危険物の等級。危険物以外は空。**添えないと集約が断る**（US04 の不変条件）。
+     *
+     * <p><strong>コードで送る</strong>（列挙の名前ではない）。`CLASS_3` を送ると
+     * 「危険物クラスは一覧から選んでください」で断られる——実環境で踏んだ。
+     */
+    private static String hazardousClassOf(Map<String, String> context) {
+        return HAZARDOUS.equals(cargoTypeOf(context)) ? "3" : null;
+    }
+
+    private static String unNumberOf(Map<String, String> context) {
+        return HAZARDOUS.equals(cargoTypeOf(context)) ? "UN1203" : null;
+    }
+
+    private static String properShippingNameOf(Map<String, String> context) {
+        return HAZARDOUS.equals(cargoTypeOf(context)) ? "GASOLINE" : null;
+    }
+
+    /** 保管温度。冷凍・冷蔵以外は空。**添えないと集約が断る**。 */
+    private static java.math.BigDecimal minCelsiusOf(Map<String, String> context) {
+        return REFRIGERATED.equals(cargoTypeOf(context))
+                ? java.math.BigDecimal.valueOf(-18) : null;
+    }
+
+    private static java.math.BigDecimal maxCelsiusOf(Map<String, String> context) {
+        return REFRIGERATED.equals(cargoTypeOf(context))
+                ? java.math.BigDecimal.valueOf(-10) : null;
     }
 
     private String bookingPath(Map<String, String> context, String suffix) {

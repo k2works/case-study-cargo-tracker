@@ -88,11 +88,12 @@ class RestExceptionSteps {
         Instant at = clock.instant();
 
         recordActivity(ScenarioStep.RECORD_LATE_HANDLING, token, trackingNumber,
-                "RECEIVE", RestBusinessGateway.ORIGIN, null, at);
+                "RECEIVE", RestBusinessGateway.originOf(context), null, at);
         recordActivity(ScenarioStep.RECORD_LATE_HANDLING, token, trackingNumber,
-                "LOAD", RestBusinessGateway.ORIGIN, voyageNumber, at.plus(1, ChronoUnit.HOURS));
+                "LOAD", RestBusinessGateway.originOf(context), voyageNumber,
+                at.plus(1, ChronoUnit.HOURS));
         recordActivity(ScenarioStep.RECORD_LATE_HANDLING, token, trackingNumber,
-                "UNLOAD", RestBusinessGateway.DESTINATION, voyageNumber,
+                "UNLOAD", RestBusinessGateway.destinationOf(context), voyageNumber,
                 at.plus(LATE_DAYS, ChronoUnit.DAYS));
 
         // 遅れは記録から読み取れるが、対応するには例外として起票されている必要がある。
@@ -112,9 +113,10 @@ class RestExceptionSteps {
         Instant at = clock.instant();
 
         recordActivity(ScenarioStep.RECORD_MISROUTED_HANDLING, token, trackingNumber,
-                "RECEIVE", RestBusinessGateway.ORIGIN, null, at);
+                "RECEIVE", RestBusinessGateway.originOf(context), null, at);
         recordActivity(ScenarioStep.RECORD_MISROUTED_HANDLING, token, trackingNumber,
-                "LOAD", RestBusinessGateway.ORIGIN, voyageNumber, at.plus(1, ChronoUnit.HOURS));
+                "LOAD", RestBusinessGateway.originOf(context), voyageNumber,
+                at.plus(1, ChronoUnit.HOURS));
         recordActivity(ScenarioStep.RECORD_MISROUTED_HANDLING, token, trackingNumber,
                 "UNLOAD", WRONG_PORT, voyageNumber, at.plus(2, ChronoUnit.HOURS));
         return BusinessContextKey.NONE;
@@ -213,9 +215,9 @@ class RestExceptionSteps {
                 .header(HttpHeaders.AUTHORIZATION, bearer(token))
                 .body(new BusinessMessages.VoyageRequest(number, "シミュレーション復旧丸",
                         "シミュレーション海運",
-                        java.util.List.of(RestBusinessGateway.CARGO_TYPE),
+                        java.util.List.of(RestBusinessGateway.cargoTypeOf(context)),
                         java.util.List.of(new BusinessMessages.VoyageRequest.MovementRequest(
-                                WRONG_PORT, RestBusinessGateway.DESTINATION,
+                                WRONG_PORT, RestBusinessGateway.destinationOf(context),
                                 at.plus(1, ChronoUnit.DAYS),
                                 at.plus(RECOVERY_ARRIVAL_DAYS, ChronoUnit.DAYS)))))
                 .retrieve()
@@ -242,9 +244,9 @@ class RestExceptionSteps {
                 call(ScenarioStep.REDESIGN_ROUTE, () -> gateway.get()
                         .uri(UriComponentsBuilder.fromPath(RestBusinessGateway.ROUTE_PATH)
                                 .queryParam("origin", WRONG_PORT)
-                                .queryParam("destination", RestBusinessGateway.DESTINATION)
+                                .queryParam("destination", RestBusinessGateway.destinationOf(context))
                                 .queryParam("deadline", deadline)
-                                .queryParam("cargoType", RestBusinessGateway.CARGO_TYPE)
+                                .queryParam("cargoType", RestBusinessGateway.cargoTypeOf(context))
                                 .toUriString())
                         .header(HttpHeaders.AUTHORIZATION, bearer(token))
                         .retrieve()
@@ -253,7 +255,7 @@ class RestExceptionSteps {
         if (candidates == null || candidates.candidates() == null) {
             throw new BusinessCallFailedException(
                     "組み直しの経路候補が読めません（" + WRONG_PORT + " → "
-                            + RestBusinessGateway.DESTINATION + "）");
+                            + RestBusinessGateway.destinationOf(context) + "）");
         }
         BusinessMessages.RouteCandidateListResponse.Candidate chosen =
                 candidates.candidates().stream()
@@ -319,7 +321,7 @@ class RestExceptionSteps {
                         + "/cancellation/approve")
                 .header(HttpHeaders.AUTHORIZATION, bearer(token))
                 .body(new BusinessMessages.ApproveCancellationRequest(
-                        RestBusinessGateway.DESTINATION, "シミュレーション：承認"))
+                        RestBusinessGateway.destinationOf(context), "シミュレーション：承認"))
                 .retrieve()
                 .toBodilessEntity());
         return BusinessContextKey.NONE;

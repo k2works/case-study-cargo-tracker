@@ -72,7 +72,7 @@ public class RunSimulationUseCase {
                 .ifPresent(running -> {
                     throw new SimulationAlreadyRunningException(running.runId());
                 });
-        return execute(scenario, startedBy, Seed.of(0L), null);
+        return execute(scenario, startedBy, Seed.of(0L), null, Map.of());
     }
 
     /**
@@ -84,15 +84,31 @@ public class RunSimulationUseCase {
      * ここにはその読み手がいない——開始したのはセッションであって、押した人ではない。
      */
     public SimulationRun runForSession(ScenarioRequest request, SessionId sessionId, Seed seed) {
-        return execute(request.scenario(), sessionId.value(), seed, sessionId);
+        return execute(request.scenario(), sessionId.value(), seed, sessionId,
+                generatedInput(request));
+    }
+
+    /**
+     * 乱数が選んだ入力を引き継ぎに載せる（US37-1）。
+     *
+     * <p><strong>載せなければ、生成器は選んでいるのに業務 API は固定値を受け取る。</strong>
+     * 生成器だけを見るテストは、届いていなくても緑になる。
+     */
+    private static Map<String, String> generatedInput(ScenarioRequest request) {
+        return Map.of(
+                BusinessContextKey.ORIGIN, request.origin(),
+                BusinessContextKey.DESTINATION, request.destination(),
+                BusinessContextKey.CARGO_TYPE, request.cargoType(),
+                BusinessContextKey.WEIGHT_KG, String.valueOf(request.weightKg()),
+                BusinessContextKey.DEADLINE_DAYS, String.valueOf(request.deadlineDays()));
     }
 
     private SimulationRun execute(Scenario scenario, String startedBy, Seed seed,
-            SessionId sessionId) {
+            SessionId sessionId, Map<String, String> generatedInput) {
         SimulationRun run = startWithNextFreeRunId(scenario, startedBy, seed, sessionId);
         RunId runId = run.runId();
 
-        Map<String, String> context = new HashMap<>();
+        Map<String, String> context = new HashMap<>(generatedInput);
         context.put(BusinessContextKey.RUN_ID, runId.value());
 
         for (ScenarioStep step : scenario.steps()) {

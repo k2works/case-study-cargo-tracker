@@ -73,6 +73,18 @@ final class BusinessCalls {
         return "Bearer " + token;
     }
 
+    /**
+     * 引き継がれていれば使い、無ければ既定値へ落とす。
+     *
+     * <p>乱数が選んだ入力（US37-1）は継続実行だけが持つ。手で押した実行は
+     * 持たないため、<strong>既定値へ落とす方が正しい</strong>——ここで断ると、
+     * 管理者が押す実行が動かなくなる。
+     */
+    static String orDefault(Map<String, String> context, String key, String fallback) {
+        String value = context.get(key);
+        return value == null || value.isBlank() ? fallback : value;
+    }
+
     static String runId(Map<String, String> context) {
         return context.getOrDefault(BusinessContextKey.RUN_ID, "SIM");
     }

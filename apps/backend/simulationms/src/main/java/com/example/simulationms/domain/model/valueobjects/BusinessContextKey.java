@@ -37,6 +37,28 @@ public final class BusinessContextKey {
     /** 料金算出が生んだ精算書。 */
     public static final String INVOICE_NUMBER = "invoiceNumber";
 
+    /**
+     * 乱数が選んだ実行の入力（US37-1）。
+     *
+     * <p><strong>引き継ぎに載せる。</strong>生成器が選んでも、途中の層で捨てられれば
+     * 「乱数で選んでいる」ことにならない——値は全層を生き延びなければ意味が無い。
+     *
+     * <p>手で押した実行はこれらを持たない。出口は既定値へ落とす。
+     */
+    public static final String ORIGIN = "origin";
+
+    /** 乱数が選んだ目的地。 */
+    public static final String DESTINATION = "destination";
+
+    /** 乱数が選んだ貨物種別。 */
+    public static final String CARGO_TYPE = "cargoType";
+
+    /** 乱数が選んだ重量（kg）。 */
+    public static final String WEIGHT_KG = "weightKg";
+
+    /** 乱数が選んだ、今日から到着期限までの日数。 */
+    public static final String DEADLINE_DAYS = "deadlineDays";
+
     /** 何も生まない工程。 */
     public static final String NONE = "";
 
@@ -49,7 +71,10 @@ public final class BusinessContextKey {
      * <p><strong>知らない名前は素通りさせない。</strong>名簿方式の検査は載せ忘れたものほど
      * 漏れる。足した名前をここに書き忘れたら、その場で落ちる方が安い。
      *
-     * @return 和名。何も生まない工程（{@link #NONE}）なら {@code null}
+     * <p><strong>工程が生む識別子だけが和名を持つ。</strong>乱数が選んだ入力
+     * （出発地・目的地など）は引き継ぎに載るが識別子ではないため、和名は無い。
+     *
+     * @return 和名。識別子でない名前（{@link #NONE} と乱数の入力）なら {@code null}
      */
     public static String labelOf(String key) {
         return switch (key) {
@@ -62,6 +87,7 @@ public final class BusinessContextKey {
             case TRACKING_NUMBER -> "追跡番号";
             case DECLARATION_ID -> "通関申告 ID";
             case INVOICE_NUMBER -> "精算書番号";
+            case ORIGIN, DESTINATION, CARGO_TYPE, WEIGHT_KG, DEADLINE_DAYS -> null;
             default -> throw new IllegalArgumentException(
                     "和名の無い識別子です: " + key);
         };

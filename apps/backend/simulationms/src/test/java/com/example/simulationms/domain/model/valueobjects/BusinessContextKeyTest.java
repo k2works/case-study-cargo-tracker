@@ -21,9 +21,21 @@ import org.junit.jupiter.api.Test;
 @DisplayName("引き継ぐ識別子の名前")
 class BusinessContextKeyTest {
 
+    /**
+     * 引き継ぎに載るが識別子ではない名前。
+     *
+     * <p>乱数が選んだ入力（US37-1）は工程が生むものではないため、和名を持たない。
+     * <strong>名簿にするのは、足した名前を素通りさせないためである</strong>——
+     * ここに書き忘れれば「和名が無い識別子」として落ちる側に倒れる。
+     */
+    private static final List<String> NOT_IDENTIFIERS = List.of(
+            BusinessContextKey.NONE, BusinessContextKey.ORIGIN, BusinessContextKey.DESTINATION,
+            BusinessContextKey.CARGO_TYPE, BusinessContextKey.WEIGHT_KG,
+            BusinessContextKey.DEADLINE_DAYS);
+
     @Test
-    @DisplayName("すべての名前に和名がある")
-    void everyKeyHasALabel() {
+    @DisplayName("識別子の名前には、すべて和名がある")
+    void everyIdentifierKeyHasALabel() {
         List<String> keys = declaredKeys();
 
         assertThat(keys).as("名前が 1 つも読み取れていない場合、この検査は何も守らない")
@@ -31,7 +43,7 @@ class BusinessContextKeyTest {
 
         List<String> missing = new ArrayList<>();
         for (String key : keys) {
-            if (BusinessContextKey.NONE.equals(key)) {
+            if (NOT_IDENTIFIERS.contains(key)) {
                 continue;
             }
             String label = BusinessContextKey.labelOf(key);
@@ -42,6 +54,14 @@ class BusinessContextKeyTest {
 
         assertThat(missing).as("和名が無い識別子。足した名前は名乗り出ないので、"
                 + "ここで全件を回して確かめる").isEmpty();
+    }
+
+    /** <strong>識別子でない名前は和名を持たない。</strong>持たせると画面に出てしまう。 */
+    @Test
+    @DisplayName("乱数が選んだ入力は、識別子ではないので和名を持たない")
+    void generatedInputKeysAreNotIdentifiers() {
+        assertThat(BusinessContextKey.labelOf(BusinessContextKey.ORIGIN)).isNull();
+        assertThat(BusinessContextKey.labelOf(BusinessContextKey.WEIGHT_KG)).isNull();
     }
 
     @Test

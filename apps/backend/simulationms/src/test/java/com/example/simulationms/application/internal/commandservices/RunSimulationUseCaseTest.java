@@ -10,6 +10,9 @@ import com.example.simulationms.domain.model.valueobjects.BusinessContextKey;
 import com.example.simulationms.domain.model.valueobjects.RunId;
 import com.example.simulationms.domain.model.valueobjects.RunStatus;
 import com.example.simulationms.domain.model.valueobjects.Scenario;
+import com.example.simulationms.domain.model.valueobjects.ScenarioRequest;
+import com.example.simulationms.domain.model.valueobjects.Seed;
+import com.example.simulationms.domain.model.valueobjects.SessionId;
 import com.example.simulationms.domain.model.valueobjects.ScenarioStep;
 import com.example.simulationms.domain.model.valueobjects.StepResult;
 import com.example.simulationms.domain.repository.RunIdAlreadyTakenException;
@@ -318,6 +321,51 @@ class RunSimulationUseCaseTest {
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("採番")
                     .hasMessageContaining("衝突");
+        }
+    }
+
+    @Nested
+    @DisplayName("継続実行が始めた 1 件")
+    class FromSession {
+
+        /**
+         * <strong>乱数が選んだ入力が、業務 API まで届く</strong>（US37-1）。
+         *
+         * <p>生成器が選んでも、途中の層で捨てられれば「乱数で選んでいる」ことに
+         * ならない——値は全層を生き延びるか確かめる。生成器だけを見るテストは、
+         * 届いていなくても緑になる。
+         */
+        @Test
+        @DisplayName("乱数が選んだ出発地・目的地・貨物種別・重量・期限が引き継がれる")
+        void carriesTheGeneratedInputToTheBusinessApi() {
+            ScenarioRequest request = new ScenarioRequest(shortScenario(),
+                    "DEHAM", "CNSHA", "REFRIGERATED", 12_345, 99);
+
+            useCase.runForSession(request, SessionId.of("SES-20261207-0001"), Seed.of(42L));
+
+            Map<String, String> received = gateway.received.get(ScenarioStep.REGISTER_BOOKING);
+            assertThat(received)
+                    .containsEntry(BusinessContextKey.ORIGIN, "DEHAM")
+                    .containsEntry(BusinessContextKey.DESTINATION, "CNSHA")
+                    .containsEntry(BusinessContextKey.CARGO_TYPE, "REFRIGERATED")
+                    .containsEntry(BusinessContextKey.WEIGHT_KG, "12345")
+                    .containsEntry(BusinessContextKey.DEADLINE_DAYS, "99");
+        }
+
+        /** <strong>継続実行では二重実行の拒否を通さない</strong>（[ADR-031] 決定 6）。 */
+        @Test
+        @DisplayName("同じシナリオが実行中でも、継続実行は始められる")
+        void doesNotApplyTheAlreadyRunningGuard() {
+            Scenario scenario = shortScenario();
+            repository.create(SimulationRun.start(RunId.of("SIM-20261116-0009"), scenario,
+                    "admin01", CLOCK.instant()),
+                    com.example.simulationms.domain.model.valueobjects.Seed.of(0L), null);
+            ScenarioRequest request = new ScenarioRequest(scenario, "JPTYO", "USLAX",
+                    "GENERAL", 900, 120);
+
+            assertThat(useCase.runForSession(request, SessionId.of("SES-20261207-0001"),
+                            Seed.of(42L)).status())
+                    .isEqualTo(RunStatus.COMPLETED);
         }
     }
 }

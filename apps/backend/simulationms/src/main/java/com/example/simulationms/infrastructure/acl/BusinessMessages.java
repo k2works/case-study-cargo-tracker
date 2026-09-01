@@ -37,8 +37,17 @@ final class BusinessMessages {
     record ShipperResponse(Long id, String shipperCode) {
     }
 
+    /**
+     * 予約の登録。
+     *
+     * <p><strong>貨物種別によって要る項目が変わる</strong>——冷凍・冷蔵は保管温度、
+     * 危険物は危険物申告が要る。添えないと集約が断る（実環境で 23 件落ちた）。
+     * 断られること自体は正しい振る舞いであり、こちらの入力が足りていない。
+     */
     record BookingRequest(Long shipperId, String type, Integer weightKg, String description,
-            String originUnLocode, String destinationUnLocode, String arrivalDeadline) {
+            String originUnLocode, String destinationUnLocode, String arrivalDeadline,
+            String hazardousClass, String unNumber, String properShippingName,
+            java.math.BigDecimal minCelsius, java.math.BigDecimal maxCelsius) {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
