@@ -34,13 +34,11 @@ public class RunSimulationUseCase {
     private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     /**
-     * これより長く音沙汰の無い実行は、実行中とみなさない。
+     * 止まったきりとみなすまでの時間。
      *
-     * <p>Pod の再起動や配備で途中終了した行を実行中のまま残すと、そのシナリオは
-     * <strong>二度と実行できなくなる</strong>。1 本の実行は工程ごとに期限（読み取り 10 秒）を
-     * 持つため、全 14 工程が詰まっても 3 分に届かない。余裕を見て 15 分とする。
+     * <p><strong>判定は集約に 1 つ置く</strong>（2 か所で持たない）。止まったきりの
+     * 実行を実行中とみなし続けると、そのシナリオは<strong>二度と実行できなくなる</strong>。
      */
-    /** 止まったきりとみなすまでの時間。**判定は集約に 1 つ置く**（2 か所で持たない）。 */
     private static final Duration STALE_AFTER = SimulationRun.STALE_AFTER;
 
     /**

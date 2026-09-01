@@ -12,6 +12,7 @@ import com.example.bookingms.domain.model.commands.RegisterShipperCommand;
 import com.example.bookingms.domain.model.valueobjects.CargoType;
 import com.example.bookingms.domain.model.valueobjects.ShipperType;
 import java.time.Instant;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -128,12 +129,20 @@ class SimulatedDataExclusionIntegrationTest extends CargoPersistenceTestBase {
     @Test
     @DisplayName("シミュレーションが作った予約は、営業の予約一覧に出ない")
     void excludesSimulatedCargoFromTheBookingList() {
-        Long shipperId = simulatedShipperId("booking-list@simulation.example.com");
-        String bookingId = bookCargoFor(shipperId);
+        // **実業務の予約も 1 件置く。** 置かないと一覧が空になり、
+        // 「出ない」ことを確かめているつもりで何も確かめない
+        String realBookingId = bookCargoFor(
+                shipperId("実業務の荷主", "booking-list-real@example.com"));
+        String bookingId = bookCargoFor(
+                simulatedShipperId("booking-list@simulation.example.com"));
 
-        assertThat(searchCargo.search(null, null).cargoes())
-                .extracting(summary -> summary.cargo().bookingId().orElseThrow().value())
-                .doesNotContain(bookingId);
+        List<String> listed = searchCargo.search(null, null).cargoes().stream()
+                .map(summary -> summary.cargo().bookingId().orElseThrow().value())
+                .toList();
+
+        // **空でないことを先に見る。** 一覧が丸ごと壊れていても doesNotContain は
+        // 通ってしまう——検査が判別しなくなる
+        assertThat(listed).contains(realBookingId).doesNotContain(bookingId);
     }
 
     /** <strong>名指しの照会では返る。</strong>外すと、シミュレーション自身が進めない。 */

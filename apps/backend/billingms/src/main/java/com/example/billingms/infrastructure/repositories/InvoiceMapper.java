@@ -112,13 +112,16 @@ public interface InvoiceMapper {
     })
     InvoiceRecord selectByInvoiceNumber(@Param("invoiceNumber") String invoiceNumber);
 
-    /** **新しい順に並べる。** 発行済みの一覧は「最近出したもの」から見る。 */
     /**
      * 発行済みの一覧。
+     *
+     * <p><strong>新しい順に並べる。</strong>「最近出したもの」から見る。
      *
      * <p><strong>シミュレーション由来は出さない</strong>（[ADR-030] 決定 3）。
      * 混ざると、支払期限超過の一覧に架空の未入金が積み上がる——督促の判断は
      * そこで行われるため実害がある。<strong>名指しの照会では外さない</strong>。
+     *
+     * @return 発行済みの精算書（シミュレーション由来を除く）
      */
     @Select("SELECT " + COLUMNS + FROM_INVOICE + " WHERE i.simulated = FALSE"
             + " ORDER BY i.issued_at DESC, i.id DESC")

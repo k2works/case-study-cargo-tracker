@@ -174,7 +174,27 @@ export function SimulationsPage() {
         </p>
       ) : null}
 
-      {runs && shown.length > 0 ? (
+      <RunTable runs={shown} stepsOf={stepsOf} />
+
+    </div>
+  );
+}
+
+/**
+ * 実行の履歴。
+ *
+ * **一覧を分けたのは、画面の入口が「実行の指示」と「履歴の閲覧」の 2 つを
+ * 抱えていたため**である。行ごとの分母を出す都合で条件が増え、入口そのものが
+ * 読みにくくなっていた。
+ */
+function RunTable({
+  runs,
+  stepsOf,
+}: Readonly<{ runs: SimulationRun[]; stepsOf: (run: SimulationRun) => number }>) {
+  if (runs.length === 0) {
+    return null;
+  }
+  return (
         <div className="overflow-x-auto">
           <table className="min-w-full border-collapse text-sm">
             <thead>
@@ -188,7 +208,7 @@ export function SimulationsPage() {
               </tr>
             </thead>
             <tbody>
-              {shown.map((run) => (
+              {runs.map((run) => (
                 <tr key={run.runId} className="border-b">
                   <td className="py-2 font-mono">
                     <Link
@@ -211,7 +231,5 @@ export function SimulationsPage() {
             </tbody>
           </table>
         </div>
-      ) : null}
-    </div>
   );
 }

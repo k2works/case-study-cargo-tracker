@@ -304,12 +304,8 @@ class ContinuousRunSchedulerTest {
         @Test
         @DisplayName("停止処理中が長引いたら、見切って停止済みにする")
         void givesUpWaitingAfterTheDeadline() {
-            MutableClock clock = new MutableClock(NOW);
-            ContinuousRunScheduler scheduler =
-                    new ContinuousRunScheduler(sessions, runner, clock);
             ContinuousRunSession session = scheduler.start(POLICY, Seed.of(42L), "admin01");
-            clock.advanceSeconds(POLICY.intervalSeconds());
-            scheduler.tick();
+            tickAfterInterval();
             scheduler.stop(session.sessionId());
 
             // 進行中が残ったまま。見切りの時間までは待つ
