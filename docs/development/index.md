@@ -30,6 +30,7 @@
 | IT13 | [計画](iteration_plan-13.md) | [ふりかえり](retrospective-13.md) | [完了報告書](iteration_report-13.md) | 完了 |
 | IT14 | [計画](iteration_plan-14.md) | [ふりかえり](retrospective-14.md) | [完了報告書](iteration_report-14.md) | 完了 |
 | IT15 | [計画](iteration_plan-15.md) | [ふりかえり](retrospective-15.md) | [完了報告書](iteration_report-15.md) | 完了 |
+| IT16 | [計画](iteration_plan-16.md) | - | - | 計画済み |
 
 ### 進捗サマリー
 
