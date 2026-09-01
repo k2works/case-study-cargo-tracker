@@ -172,13 +172,13 @@ public final class CustomsDeclaration {
      * <p><strong>通関済のときだけ真である。</strong>「審査中でなければ通す」形にすると、
      * 留置・不可の貨物まで引き取れる。ガードは<strong>通してよい 1 つ</strong>を見る。
      */
+    public boolean isCleared() {
+        return status == CustomsStatus.CLEARED;
+    }
+
     /** シミュレーション由来か（[ADR-030] 決定 3）。 */
     public boolean simulated() {
         return simulated;
-    }
-
-    public boolean isCleared() {
-        return status == CustomsStatus.CLEARED;
     }
 
     /** これ以上の判断を待たなくてよいか（[ADR-025] 決定 7）。 */

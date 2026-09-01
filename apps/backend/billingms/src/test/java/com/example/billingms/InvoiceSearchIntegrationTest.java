@@ -22,6 +22,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 @DisplayName("請求書の検索")
 class InvoiceSearchIntegrationTest extends BillingIntegrationTestBase {
 
+    /** 発行の時刻。**固定する**——時計を読むと、走らせた日でテストの意味が変わる。 */
+    private static final java.time.Instant ISSUED_AT =
+            java.time.Instant.parse("2027-06-15T00:00:00Z");
+
     @Autowired
     private com.example.billingms.domain.repository.InvoiceRepository invoices;
 
@@ -50,7 +54,7 @@ class InvoiceSearchIntegrationTest extends BillingIntegrationTestBase {
                                         .of(bookingId),
                                 com.example.billingms.domain.model.valueobjects.BillingShipperId
                                         .corporate("1", shipperName),
-                                java.time.Instant.now(), simulated),
+                                ISSUED_AT, simulated),
                         new com.example.billingms.domain.model.valueobjects.InvoiceCharges(
                                 com.example.billingms.domain.model.valueobjects.TransportCharge.of(
                                         ChargeFixtures.domesticLegs(2),
@@ -71,9 +75,15 @@ class InvoiceSearchIntegrationTest extends BillingIntegrationTestBase {
                 + " void_reason = '検査' WHERE invoice_number = ?", invoiceNumber);
     }
 
-    /** 業務の今日。**テストも同じ暦で決める**（CI の UTC で落ちるテストを作らない）。 */
-    private java.time.LocalDate businessToday() {
-        return java.time.LocalDate.now(BUSINESS_ZONE);
+    /**
+     * 発行月。**時計を読まない**。
+     *
+     * <p>`now()` で発行すると、月末の 23:59 に走らせたときだけ翌月へ落ちる
+     * ——テストが「絞れているか」ではなく「いつ走らせたか」を測ることになる。
+     */
+    private java.time.YearMonth issuedMonth() {
+        return java.time.YearMonth.from(
+                java.time.ZonedDateTime.ofInstant(ISSUED_AT, BUSINESS_ZONE));
     }
 
 
@@ -110,7 +120,7 @@ class InvoiceSearchIntegrationTest extends BillingIntegrationTestBase {
     void filtersByIssuedMonth() {
         issueInvoiceFor("当月商事", "SEARCH-0003");
 
-        YearMonth issued = YearMonth.from(businessToday());
+        YearMonth issued = issuedMonth();
         assertThat(search.search(InvoiceSearchCriteria.of("当月商", issued)).invoices())
                 .as("当月で絞ったのに出ない")
                 .isNotEmpty();
@@ -194,7 +204,7 @@ class InvoiceSearchIntegrationTest extends BillingIntegrationTestBase {
         issueInvoiceFor("組合せ商事", "SEARCH-0010");
 
         assertThat(search.search(InvoiceSearchCriteria.of("組合せ商事",
-                        YearMonth.from(businessToday()))).invoices())
+                        issuedMonth())).invoices())
                 .isNotEmpty();
     }
 

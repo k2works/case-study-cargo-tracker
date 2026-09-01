@@ -90,7 +90,7 @@ class ShipperNoticePersistenceIntegrationTest extends TrackingIntegrationTestBas
         activities.saveIfAbsent(com.example.trackingms.domain.model.aggregates.TrackingActivity.start(
                 number, TrackingBookingId.of("BKG-2026000099"),
                 Location.of("JPTYO", "東京"), Location.of("USLAX", "ロサンゼルス"),
-                LocalDate.of(2026, 12, 31)));
+                LocalDate.of(2026, java.time.Month.DECEMBER, 31)));
         return number;
     }
 }

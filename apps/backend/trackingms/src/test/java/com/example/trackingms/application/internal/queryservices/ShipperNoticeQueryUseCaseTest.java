@@ -88,7 +88,7 @@ class ShipperNoticeQueryUseCaseTest {
         useCase.acknowledge("shipper01", 1L);
 
         assertThat(useCase.unread("shipper01")).isEmpty();
-        assertThat(watermarks.get("shipper09")).isEqualTo(NoticeWatermark.unread());
+        assertThat(watermarks).containsEntry("shipper09", NoticeWatermark.unread());
     }
 
     private ShipperNoticeQueryUseCase useCaseWith(ShipperNotice... notices) {

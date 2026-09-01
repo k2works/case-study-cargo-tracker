@@ -611,7 +611,7 @@ gantt
 | IT13 | **7**（US33 5 + TD-01 2） | **7** | 100% | [完了](iteration_report-13.md) |
 | IT14 | 8（US34 5 + US35 3） | **8** | 100% | [完了](iteration_report-14.md) |
 | IT15 | 8（US36 3 + US37 5） | **8** | 100% | [完了](iteration_report-15.md) |
-| IT16 | 11（US38 3 + US39 3 + TD-02 2 + TD-03 2 + TD-04 1） | - | - | [計画済み](iteration_plan-16.md) |
+| IT16 | 11（US38 3 + US39 3 + TD-02 2 + TD-03 2 + TD-04 1） | **11** | 100% | [完了](iteration_report-16.md) |
 
 ### バーンダウンチャート
 

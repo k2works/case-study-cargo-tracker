@@ -123,7 +123,7 @@ public class SimulationRunController {
     private static java.time.LocalDate parseDate(String date) {
         try {
             return java.time.LocalDate.parse(date.trim());
-        } catch (java.time.format.DateTimeParseException e) {
+        } catch (java.time.format.DateTimeParseException _) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "日付は yyyy-MM-dd の形式で指定してください: " + date);
         }

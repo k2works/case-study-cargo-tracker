@@ -3,6 +3,7 @@ package com.example.billingms.domain.model.valueobjects;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.time.Month;
 import java.time.YearMonth;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -39,9 +40,9 @@ class InvoiceSearchCriteriaTest {
     @DisplayName("発行月を指定できる")
     void keepsTheIssuedMonth() {
         InvoiceSearchCriteria criteria =
-                InvoiceSearchCriteria.of(null, YearMonth.of(2026, 9));
+                InvoiceSearchCriteria.of(null, YearMonth.of(2026, Month.SEPTEMBER));
 
-        assertThat(criteria.issuedMonth()).contains(YearMonth.of(2026, 9));
+        assertThat(criteria.issuedMonth()).contains(YearMonth.of(2026, Month.SEPTEMBER));
     }
 
     /**
@@ -60,6 +61,6 @@ class InvoiceSearchCriteriaTest {
     @DisplayName("文字列の発行月を読み取れる")
     void parsesTheMonth() {
         assertThat(InvoiceSearchCriteria.parse(null, "2026-09").issuedMonth())
-                .contains(YearMonth.of(2026, 9));
+                .contains(YearMonth.of(2026, Month.SEPTEMBER));
     }
 }

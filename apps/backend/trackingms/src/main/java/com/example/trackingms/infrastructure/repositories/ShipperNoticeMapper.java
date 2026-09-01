@@ -6,7 +6,6 @@ import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Result;
-import org.apache.ibatis.annotations.Results;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
@@ -35,12 +34,10 @@ public interface ShipperNoticeMapper {
              LIMIT #{limit}
             </script>
             """)
-    @Results({
-            @Result(column = "id", property = "id"),
-            @Result(column = "tracking_number", property = "trackingNumber"),
-            @Result(column = "message", property = "message"),
-            @Result(column = "noticed_at", property = "noticedAt"),
-    })
+    @Result(column = "id", property = "id")
+    @Result(column = "tracking_number", property = "trackingNumber")
+    @Result(column = "message", property = "message")
+    @Result(column = "noticed_at", property = "noticedAt")
     List<ShipperNoticeRecord> findNewerThan(
             @Param("trackingNumbers") List<String> trackingNumbers,
             @Param("lastNoticeId") long lastNoticeId, @Param("limit") int limit);

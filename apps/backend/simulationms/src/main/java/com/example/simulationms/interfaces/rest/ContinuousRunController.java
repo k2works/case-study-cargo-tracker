@@ -37,7 +37,6 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping("/api/v1/simulations/sessions")
 public class ContinuousRunController {
 
-    /** 統計を数える範囲。上限が無いと、件数が増えた日に統計が開かなくなる。 */
     /**
      * 一覧に出す過去セッションの数。
      *
@@ -46,6 +45,7 @@ public class ContinuousRunController {
      */
     private static final int RECENT_SESSION_LIMIT = 20;
 
+    /** 統計を数える範囲。上限が無いと、件数が増えた日に統計が開かなくなる。 */
     private static final int STATISTICS_LIMIT = 500;
 
     private final ContinuousRunScheduler scheduler;

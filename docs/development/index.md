@@ -30,7 +30,7 @@
 | IT13 | [計画](iteration_plan-13.md) | [ふりかえり](retrospective-13.md) | [完了報告書](iteration_report-13.md) | 完了 |
 | IT14 | [計画](iteration_plan-14.md) | [ふりかえり](retrospective-14.md) | [完了報告書](iteration_report-14.md) | 完了 |
 | IT15 | [計画](iteration_plan-15.md) | [ふりかえり](retrospective-15.md) | [完了報告書](iteration_report-15.md) | 完了 |
-| IT16 | [計画](iteration_plan-16.md) | - | - | 計画済み |
+| IT16 | [計画](iteration_plan-16.md) | [ふりかえり](retrospective-16.md) | [完了報告書](iteration_report-16.md) | 完了 |
 
 ### 進捗サマリー
 
@@ -51,8 +51,10 @@
 | IT13 | 7（US33 5 + バッファ TD-01 2） | 7 | 100% |
 | IT14 | 8（US34 5 + US35 3） | 8 | 100% |
 | IT15 | 8（US36 3 + US37 5） | 8 | 100% |
+| IT16 | 11（US38 3 + US39 3 + TD-02〜04 5） | 11 | 100% |
 | **累計（IT1〜IT13）** | **112**（33US 110 SP + TD-01 2 SP） | **112** | **100%** |
 | **Release 2.2（IT14〜IT15）** | **16**（US34〜US37） | **16** | **100%** |
+| **Release 2.3（IT16）** | **11**（US38・US39・TD-02〜04） | **11** | **100%** |
 
 > **IT12 の 11 SP のうち 3 SP は US21（IT11）の再実施**です（距離・輸出免税）。累計にはリリース計画と同じく **8 SP** として算入しています（[release_plan.md](release_plan.md) 529 行）。
 

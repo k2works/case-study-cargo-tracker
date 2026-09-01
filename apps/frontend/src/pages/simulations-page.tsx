@@ -8,7 +8,7 @@ import {
   useSimulationScenarios,
   useStartSimulation,
 } from "../features/simulation/queries";
-import type { SimulationRun } from "../features/simulation/types";
+import type { SimulationRun, SimulationScenario } from "../features/simulation/types";
 import { formatBusinessDateTime } from "../lib/business-time";
 
 /** シナリオの名前。**画面が ID をそのまま出さない**——押したものと表示が食い違う。 */
@@ -107,35 +107,14 @@ export function SimulationsPage() {
         {'追跡管理者の未解決例外一覧にも出ません。'}
       </p>
 
-      <div className="flex items-center gap-3">
-        <label className="text-sm text-gray-700" htmlFor="scenario">
-          シナリオ
-        </label>
-        <select
-          className="rounded border border-gray-300 px-2 py-2"
-          disabled={start.isPending}
-          id="scenario"
-          onChange={(event) => setSelectedId(event.target.value)}
-          value={scenarioId ?? ""}
-        >
-          {(scenarios ?? []).map((scenario) => (
-            <option key={scenario.id} value={scenario.id}>
-              {scenarioLabel(scenario.id)}
-            </option>
-          ))}
-        </select>
-        <button
-          type="button"
-          className="rounded bg-blue-600 px-4 py-2 text-white disabled:bg-gray-400"
-          disabled={!scenarioId || start.isPending}
-          onClick={() => scenarioId && start.mutate(scenarioId)}
-        >
-          {start.isPending ? "実行しています…" : "実行する"}
-        </button>
-        {selected ? (
-          <span className="text-sm text-gray-600">{totalSteps} 工程</span>
-        ) : null}
-      </div>
+      <ScenarioPicker
+        scenarios={scenarios ?? []}
+        scenarioId={scenarioId}
+        totalSteps={selected === undefined ? null : totalSteps}
+        pending={start.isPending}
+        onSelect={setSelectedId}
+        onStart={() => scenarioId && start.mutate(scenarioId)}
+      />
 
       <ContinuousRunPanel reuseSeed={reuseSeed} />
 
@@ -206,11 +185,7 @@ export function SimulationsPage() {
       */}
       {runs && shown.length === 0 ? (
         <p className="rounded border border-gray-200 bg-gray-50 p-4 text-gray-700">
-          {failedStepLabel !== null
-            ? "その工程で止まった実行はありません。"
-            : date !== ""
-              ? `${date} に実行はありません。`
-              : "まだ実行していません。"}
+          {emptyMessage(failedStepLabel, date)}
         </p>
       ) : null}
 
@@ -344,5 +319,77 @@ function PastSessions({ onReuseSeed }: Readonly<{ onReuseSeed: (seed: string) =>
         </table>
       </div>
     </section>
+  );
+}
+
+/**
+ * 実行が 1 件も無いときの文言。
+ *
+ * <p>**絞った結果だと分かるように言う**（IT16 レビュー 中 9）。
+ * 「まだ実行していません。」だけだと、昨夜の失敗を探しに来た管理者は
+ * 「記録が消えた」と読む。
+ */
+function emptyMessage(failedStepLabel: string | null, date: string): string {
+  if (failedStepLabel !== null) {
+    return "その工程で止まった実行はありません。";
+  }
+  if (date === "") {
+    return "まだ実行していません。";
+  }
+  return `${date} に実行はありません。`;
+}
+
+/**
+ * シナリオを選んで実行する入口。
+ *
+ * <p>画面の入口から切り出したのは行数の都合ではなく<strong>変わる理由が違う</strong>
+ * ためである——ここが変わるのはシナリオの選び方が変わるときで、
+ * 一覧や絞り込みとは別である。
+ */
+function ScenarioPicker({
+  scenarios,
+  scenarioId,
+  totalSteps,
+  pending,
+  onSelect,
+  onStart,
+}: Readonly<{
+  scenarios: SimulationScenario[];
+  scenarioId: string | undefined;
+  totalSteps: number | null;
+  pending: boolean;
+  onSelect: (id: string) => void;
+  onStart: () => void;
+}>) {
+  return (
+    <div className="flex items-center gap-3">
+      <label className="text-sm text-gray-700" htmlFor="scenario">
+        シナリオ
+      </label>
+      <select
+        className="rounded border border-gray-300 px-2 py-2"
+        disabled={pending}
+        id="scenario"
+        onChange={(event) => onSelect(event.target.value)}
+        value={scenarioId ?? ""}
+      >
+        {scenarios.map((scenario) => (
+          <option key={scenario.id} value={scenario.id}>
+            {scenarioLabel(scenario.id)}
+          </option>
+        ))}
+      </select>
+      <button
+        type="button"
+        className="rounded bg-blue-600 px-4 py-2 text-white disabled:bg-gray-400"
+        disabled={!scenarioId || pending}
+        onClick={onStart}
+      >
+        {pending ? "実行しています…" : "実行する"}
+      </button>
+      {totalSteps === null ? null : (
+        <span className="text-sm text-gray-600">{totalSteps} 工程</span>
+      )}
+    </div>
   );
 }

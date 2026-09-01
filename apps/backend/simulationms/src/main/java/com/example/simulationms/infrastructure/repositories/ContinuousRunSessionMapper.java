@@ -56,6 +56,10 @@ public interface ContinuousRunSessionMapper {
      * <p><strong>停止済みは含めない。</strong>含めると、止めたはずのセッションが
      * また刻み始める。
      */
+    @Select("SELECT" + COLUMNS + " WHERE s.status <> 'STOPPED' ORDER BY s.id DESC LIMIT 1")
+    @ResultMap("sessionResult")
+    ContinuousRunSessionRecord findActive();
+
     /**
      * 直近のセッション（新しい順・TD-03）。
      *
@@ -65,10 +69,6 @@ public interface ContinuousRunSessionMapper {
     @Select("SELECT" + COLUMNS + " ORDER BY s.id DESC LIMIT #{limit}")
     @ResultMap("sessionResult")
     java.util.List<ContinuousRunSessionRecord> findRecent(@Param("limit") int limit);
-
-    @Select("SELECT" + COLUMNS + " WHERE s.status <> 'STOPPED' ORDER BY s.id DESC LIMIT 1")
-    @ResultMap("sessionResult")
-    ContinuousRunSessionRecord findActive();
 
     @Select("SELECT COUNT(*) FROM simulation_session WHERE session_id LIKE #{prefix} || '%'")
     int countStartedOn(@Param("prefix") String prefix);
