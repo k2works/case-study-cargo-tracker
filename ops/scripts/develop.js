@@ -534,6 +534,24 @@ function waitPostgresReady() {
     'deployment/postgres',
     '--timeout=180s',
   ]);
+  // **ラベルだけで待たない。** `-l app=postgres` は<strong>終了中の古い Pod にも
+  // 一致する</strong>——それは二度と Ready にならないため、rollout が成功したあとも
+  // ここで必ず 180 秒待って失敗する（実際に db:reset が 2 回続けて落ちた）。
+  // いま動いている ReplicaSet の Pod だけを待つ。
+  const newest = spawnCommand('kubectl', [
+    '--context',
+    K8S_CONTEXT,
+    '-n',
+    K8S_NAMESPACE,
+    'get',
+    'replicaset',
+    '-l',
+    'app=postgres',
+    '--sort-by=.metadata.creationTimestamp',
+    '-o',
+    'jsonpath={.items[-1:].metadata.labels.pod-template-hash}',
+  ], { stdio: ['ignore', 'pipe', 'ignore'] });
+  const hash = newest.status === 0 ? String(newest.stdout).trim() : '';
   run('kubectl', [
     '--context',
     K8S_CONTEXT,
@@ -543,7 +561,7 @@ function waitPostgresReady() {
     '--for=condition=ready',
     'pod',
     '-l',
-    'app=postgres',
+    hash === '' ? 'app=postgres' : `app=postgres,pod-template-hash=${hash}`,
     '--timeout=180s',
   ]);
 }
