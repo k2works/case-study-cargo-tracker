@@ -66,3 +66,6 @@ apps/backend/**/build/
 # apps/backend/**/build を正とし、ポータル配信用の生成物は追跡しない
 /apps/www/jig/
 /apps/www/jig-erd/
+
+# E2E の生成物。リポジトリ直下から実行したときにここへ出る
+/test-results/
