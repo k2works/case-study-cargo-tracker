@@ -14,6 +14,7 @@ import sshTasks from './ops/scripts/ssh.js';
 import sonarLocalTasks from './ops/scripts/sonar_local.js';
 import developTasks from './ops/scripts/develop.js';
 import deployTasks from './ops/scripts/deploy.js';
+import releaseTasks from './ops/scripts/release.js';
 
 // Load gulp tasks from script modules
 mkdocsTasks(gulp);
@@ -24,6 +25,9 @@ sshTasks(gulp);
 sonarLocalTasks(gulp);
 developTasks(gulp);
 deployTasks(gulp);
+// **読み込みを忘れるとタスクが存在しない。** release.js は書かれていたのに
+// gulpfile へ登録されておらず、5 リリース連続でタグと CHANGELOG が作られなかった
+releaseTasks(gulp);
 
 export const spec = gulp.series('mkdocs:serve', 'mkdocs:open');
 

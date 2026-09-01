@@ -204,24 +204,39 @@ function updateChangelog(rootDir, entry) {
 }
 
 /**
+ * タグの前置き。
+ *
+ * <p>このリポジトリは 1 つの題材を複数の言語・実装（take）で作るため、
+ * タグが take をまたいで衝突する。`RELEASE_TAG_PREFIX` で分ける
+ * （例: `java/take-7/` → `java/take-7/v2.2.0`）。
+ *
+ * <p>指定しなければ従来どおり `v<semver>` になる。
+ * @returns {string} タグの前置き
+ */
+function tagPrefix() {
+  return process.env.RELEASE_TAG_PREFIX || '';
+}
+
+/**
  * 変更ファイルをステージング → commit → tag
  * @param {string} rootDir - プロジェクトルート
  * @param {string} version - リリースバージョン
  */
 function createGitCommitAndTag(rootDir, version) {
+  const tag = `${tagPrefix()}v${version}`;
   const filesToStage = collectFilesToStage(rootDir);
 
   for (const file of filesToStage) {
     execSync(`git add "${file}"`, { cwd: rootDir, stdio: 'pipe' });
   }
 
-  execSync(`git commit -m "release: v${version}"`, {
+  execSync(`git commit -m "release: ${tag}"`, {
     cwd: rootDir,
     stdio: 'pipe',
     env: { ...process.env, USER_APPROVED_COMMIT: '1' },
   });
 
-  execSync(`git tag -a "v${version}" -m "v${version}"`, {
+  execSync(`git tag -a "${tag}" -m "${tag}"`, {
     cwd: rootDir,
     stdio: 'pipe',
   });
@@ -425,7 +440,12 @@ export default function (gulp, options = {}) {
   // release:deploy:* (release + deploy)
   // ──────────────────────────────────────────────
 
-  gulp.task('release:deploy:patch', gulp.series('release:patch', 'deploy:prd'));
-  gulp.task('release:deploy:minor', gulp.series('release:minor', 'deploy:prd'));
-  gulp.task('release:deploy:major', gulp.series('release:major', 'deploy:prd'));
+  // **本番デプロイのタスクはまだ無い。** 存在しないタスクを series に並べると、
+  // gulpfile の読み込み自体が落ちる——release:* がすべて使えなくなる。
+  // deploy:prd を実装したらここで繋ぐ。
+  if (gulp.task('deploy:prd')) {
+    gulp.task('release:deploy:patch', gulp.series('release:patch', 'deploy:prd'));
+    gulp.task('release:deploy:minor', gulp.series('release:minor', 'deploy:prd'));
+    gulp.task('release:deploy:major', gulp.series('release:major', 'deploy:prd'));
+  }
 }
