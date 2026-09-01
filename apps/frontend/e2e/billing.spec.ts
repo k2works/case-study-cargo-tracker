@@ -478,7 +478,7 @@ test.describe('請求書の検索（US38）', () => {
     // **合計は締めの数字である。**取り消し済みを除くことを画面が言う
     await expect(issued.getByText('（取り消し済みを除く）')).toBeVisible()
 
-    await page.getByLabel('請求番号・荷主名・予約番号').fill('大洋物産')
+    await page.getByLabel('精算書を探す（請求番号・荷主名・予約番号）').fill('大洋物産')
 
     // 絞った結果だけが残る
     await expect(issued.getByTestId('invoice-link').first()).toBeVisible()

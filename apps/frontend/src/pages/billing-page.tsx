@@ -184,7 +184,7 @@ export function BillingPage() {
           <div className="space-y-2 rounded border border-gray-200 p-3">
             <div className="flex flex-wrap items-end gap-3">
               <label className="flex flex-col text-sm">
-                <span className="text-gray-700">請求番号・荷主名・予約番号</span>
+                <span className="text-gray-700">精算書を探す（請求番号・荷主名・予約番号）</span>
                 <input
                   type="search"
                   value={keyword}

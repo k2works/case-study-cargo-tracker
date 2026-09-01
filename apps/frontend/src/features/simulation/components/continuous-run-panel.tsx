@@ -16,11 +16,21 @@ const DEFAULTS = { intervalSeconds: 30, maxConcurrent: 3, exceptionRatio: 0.2 }
  * 1 件を押す実行（US34）とは**手番が違う**ため分けている。押した人がその場で
  * 結果を見る操作と、しばらく回し続けて様子を見る操作は、見たいものが違う。
  */
-export function ContinuousRunPanel() {
+export function ContinuousRunPanel({ reuseSeed }: Readonly<{ reuseSeed?: string }>) {
   const { data } = useActiveSimulationSession()
   const start = useStartSimulationSession()
   const stop = useStopSimulationSession()
-  const [seed, setSeed] = useState('')
+  /**
+   * 種の入力欄。
+   *
+   * <p>**過去のセッションから受け取る**（IT16 レビュー 中 8）。利用者に紙へ
+   * 書き写させない——押すだけで入る。値を持つのは押した側（画面）で、
+   * ここは受け取って表示するだけである。**effect で同期しない**
+   * ——同期にすると、押していないときの再描画でも書き戻ってしまう。
+   */
+  const [typedSeed, setTypedSeed] = useState('')
+  const seed = typedSeed === '' ? (reuseSeed ?? '') : typedSeed
+  const setSeed = setTypedSeed
   // **設定は画面から変える**（US37-2）。固定だと「例外を多めに出して見せる」
   // 「今日は静かに回す」という実演の調整ができない
   const [intervalSeconds, setIntervalSeconds] = useState(String(DEFAULTS.intervalSeconds))

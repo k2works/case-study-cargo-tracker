@@ -47,6 +47,8 @@ export function SimulationsPage() {
    * 昨日の失敗は朝には窓の外に落ちている。
    */
   const [date, setDate] = useState("");
+  /** 過去のセッションから受け取った種（IT16 レビュー 中 8）。 */
+  const [reuseSeed, setReuseSeed] = useState("");
   const { data: runs, isPending, isError } = useSimulationRuns(date);
   const start = useStartSimulation();
 
@@ -135,7 +137,7 @@ export function SimulationsPage() {
         ) : null}
       </div>
 
-      <ContinuousRunPanel />
+      <ContinuousRunPanel reuseSeed={reuseSeed} />
 
       {start.isError ? (
         <p className="rounded border border-red-200 bg-red-50 p-3 text-red-700">
@@ -174,14 +176,6 @@ export function SimulationsPage() {
         </p>
       )}
 
-      {runs && shown.length === 0 ? (
-        <p className="rounded border border-gray-200 bg-gray-50 p-4 text-gray-700">
-          {failedStepLabel === null
-            ? "まだ実行していません。"
-            : "その工程で止まった実行はありません。"}
-        </p>
-      ) : null}
-
       {/* **日で絞れる。**絞れないと、一晩分に押し出された昨日の失敗へ手が届かない */}
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex flex-col text-sm">
@@ -204,9 +198,25 @@ export function SimulationsPage() {
         )}
       </div>
 
+      {/*
+        **絞った結果だと分かるように言う**（IT16 レビュー 中 9）。
+        「まだ実行していません。」だけだと、昨夜の失敗を探しに来た管理者は
+        「記録が消えた」と読む。**日付の入力欄より後に置く**——絞りの手がかりが
+        前に無いと、何で絞られているのか分からない
+      */}
+      {runs && shown.length === 0 ? (
+        <p className="rounded border border-gray-200 bg-gray-50 p-4 text-gray-700">
+          {failedStepLabel !== null
+            ? "その工程で止まった実行はありません。"
+            : date !== ""
+              ? `${date} に実行はありません。`
+              : "まだ実行していません。"}
+        </p>
+      ) : null}
+
       <RunTable runs={shown} stepsOf={stepsOf} />
 
-      <PastSessions />
+      <PastSessions onReuseSeed={setReuseSeed} />
 
     </div>
   );
@@ -273,7 +283,7 @@ function RunTable({
  * US37-3 が言う「同じ種を指定すると同じ並びを再現できる」は、その種を読めて
  * 初めて意味を持つ。
  */
-function PastSessions() {
+function PastSessions({ onReuseSeed }: Readonly<{ onReuseSeed: (seed: string) => void }>) {
   const { data: sessions } = useSimulationSessions();
   if (sessions === undefined || sessions.length === 0) {
     return null;
@@ -284,7 +294,7 @@ function PastSessions() {
         過去の継続実行
       </h2>
       <p className="text-sm text-gray-600">
-        {"種を控えておくと、同じ並びをもう一度流せます。"}
+        {"種を押すと、上の継続実行の入力欄に入ります。同じ並びをもう一度流せます。"}
       </p>
       <div className="overflow-x-auto">
         <table className="min-w-full border-collapse text-sm">
@@ -305,8 +315,20 @@ function PastSessions() {
               <tr key={session.sessionId} className="border-b">
                 <td className="py-2 font-mono">{session.sessionId}</td>
                 <td>{session.statusLabel}</td>
-                {/* **種は控えられる形で出す。**読めなければ再現できない */}
-                <td className="font-mono">{session.seed}</td>
+                {/*
+                  **次の行動へ繋ぐ**（IT16 レビュー 中 8）。種を表に出して
+                  「控えておくと、もう一度流せます」では、利用者に紙へ書き写させる
+                  ことになる。押すだけで同じ種を入力欄へ入れる
+                */}
+                <td className="font-mono">
+                  <button
+                    type="button"
+                    onClick={() => onReuseSeed(String(session.seed))}
+                    className="text-blue-700 underline"
+                  >
+                    {session.seed}
+                  </button>
+                </td>
                 <td>{session.intervalSeconds} 秒</td>
                 <td>{session.maxConcurrent} 本</td>
                 <td>{Math.round(session.exceptionRatio * 100)}%</td>

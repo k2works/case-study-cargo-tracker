@@ -135,7 +135,7 @@ describe('精算管理', () => {
       await screen.findByRole('heading', { name: '精算管理' })
 
       await userEvent.type(
-        screen.getByLabelText('請求番号・荷主名・予約番号'),
+        screen.getByLabelText('精算書を探す（請求番号・荷主名・予約番号）'),
         '伊藤',
       )
 
@@ -161,7 +161,7 @@ describe('精算管理', () => {
       renderPage()
       await screen.findByRole('heading', { name: '精算管理' })
 
-      await userEvent.type(screen.getByLabelText('請求番号・荷主名・予約番号'), '伊藤')
+      await userEvent.type(screen.getByLabelText('精算書を探す（請求番号・荷主名・予約番号）'), '伊藤')
       await waitFor(() => {
         expect(screen.queryByText('INV-2026000902')).not.toBeInTheDocument()
       })

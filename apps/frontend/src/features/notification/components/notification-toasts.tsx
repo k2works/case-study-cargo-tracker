@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { formatBusinessDateTime } from '../../../lib/business-time'
 import { useAuthStore } from '../../../stores/auth-store'
 import { latestNoticeId, useMarkNotificationsRead, useUnreadNotifications } from '../queries'
 import type { ShipperNotification } from '../types'
@@ -40,7 +41,17 @@ export function NotificationToasts() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [latest])
 
-  const visible = shown.filter((notice) => !dismissed.includes(notice.id))
+  const undismissed = shown.filter((notice) => !dismissed.includes(notice.id))
+  /**
+   * 同時に出す数（IT16 レビュー 中 6）。
+   *
+   * **20 件を縦に積むと画面が知らせで覆われる。**幅 320px の札が 20 枚並ぶと、
+   * 見えるのは 5 件ほどで、残りは既読のまま誰にも読まれない。
+   * あふれた分は件数で伝え、貨物の詳細のお知らせ欄で読んでもらう。
+   */
+  const AT_ONCE = 4
+  const visible = undismissed.slice(0, AT_ONCE)
+  const overflow = undismissed.length - visible.length
   if (visible.length === 0) {
     return null
   }
@@ -74,7 +85,13 @@ export function NotificationToasts() {
             同じ名前の入口が 2 つできる（E2E が strict mode で捕まえた）。
             番号は読むもの、リンクは行くものとして分ける
           */}
-          <p className="mt-1 font-mono text-xs text-gray-600">{notice.trackingNumber}</p>
+          {/* **いつの話かを添える**（IT16 レビュー 中 7）。朝ログインして
+              「問題が発生しました」だけ出たとき、荷主が最初に聞くのは
+              「それはいつですか」である */}
+          <p className="mt-1 text-xs text-gray-600">
+            {formatBusinessDateTime(notice.noticedAt)}
+          </p>
+          <p className="font-mono text-xs text-gray-600">{notice.trackingNumber}</p>
           <Link
             to={`/shipper/tracking/${encodeURIComponent(notice.trackingNumber)}`}
             className="mt-1 inline-block text-sm text-blue-700 underline"
@@ -83,6 +100,11 @@ export function NotificationToasts() {
           </Link>
         </article>
       ))}
+      {overflow > 0 && (
+        <p className="rounded border border-gray-300 bg-white p-2 text-xs text-gray-700">
+          {`他に ${overflow} 件のお知らせがあります。貨物の詳細で読めます。`}
+        </p>
+      )}
     </div>
   )
 }
