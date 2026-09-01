@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { TrackingEventsTable } from "../features/tracking/components/tracking-events-table";
 import { usePublicTracking } from "../features/tracking/queries";
 import { ApiError } from "../lib/api-client";
+import { useAuthStore } from "../stores/auth-store";
 
 /**
  * 公開の追跡照会（US18）。**認証不要**。
@@ -15,6 +16,7 @@ import { ApiError } from "../lib/api-client";
  */
 export function TrackingLookupPage() {
   const { trackingNumber } = useParams();
+  const loggedIn = useAuthStore((state) => state.user) !== null;
   const navigate = useNavigate();
   const [input, setInput] = useState(trackingNumber ?? "");
   const { data, error, isLoading } = usePublicTracking(trackingNumber ?? null);
@@ -37,11 +39,19 @@ export function TrackingLookupPage() {
   const notFound = error instanceof ApiError && error.status === 404;
 
   return (
-    <main className="mx-auto max-w-3xl space-y-6 p-8">
+    <div className="mx-auto max-w-3xl space-y-6 p-8">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">貨物の追跡</h1>
-        <Link to="/" className="text-blue-600 hover:underline">
-          トップに戻る
+        {/*
+          **戻り先は、その人が来た場所にする。** ログイン済みの利用者はサイドバーの
+          「貨物追跡」から来る——ポータル（未ログインの入口）へ送ると、もう一度
+          ログインを求められたように見える
+        */}
+        <Link
+          to={loggedIn ? "/dashboard" : "/"}
+          className="text-blue-600 hover:underline"
+        >
+          {loggedIn ? "ダッシュボードに戻る" : "トップに戻る"}
         </Link>
       </div>
 
@@ -171,6 +181,6 @@ export function TrackingLookupPage() {
           </section>
         </>
       )}
-    </main>
+    </div>
   );
 }

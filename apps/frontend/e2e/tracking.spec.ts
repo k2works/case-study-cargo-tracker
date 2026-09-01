@@ -286,6 +286,31 @@ test.describe("ロール別の到達性", () => {
   });
 
   /**
+   * **認証の外に置くことと、ログイン済みの人にメニューを出さないことは別である。**
+   *
+   * 公開の追跡照会は認証を求めない（荷主のため）。しかし業務利用者はサイドバーの
+   * 「貨物追跡」から来る——そこでメニューが消えると、戻る手段がブラウザバックしか
+   * 無くなり、次の仕事へ進めない。利用者からの申告で分かった。
+   */
+  test("ログイン済みで貨物追跡を開いても、メニューは消えない", async ({ page }) => {
+    await logIn(page, "tracker01");
+    await page.getByRole("link", { name: "貨物追跡" }).click();
+
+    await expect(
+      page.getByRole("heading", { name: "貨物の追跡" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("navigation", { name: "メインナビゲーション" }),
+    ).toBeVisible();
+
+    // **そこから次の仕事へ進めること**まで見る。メニューが「出ている」だけでは足りない
+    await page.getByRole("link", { name: "貨物状態管理" }).click();
+    await expect(
+      page.getByRole("heading", { name: "貨物状態の管理" }),
+    ).toBeVisible();
+  });
+
+  /**
    * **認証不要の画面は、入口も認証の外に置く**（IT7 の学び）。
    *
    * ロール別到達性は認証済み利用者にしか働かない。荷主はログインしない。

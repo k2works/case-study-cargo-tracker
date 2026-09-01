@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { RequireAuth } from './components/require-auth'
 import { AppLayout } from './layouts/app-layout'
+import { OptionalAuthLayout } from './layouts/optional-auth-layout'
 import { CancellationsPage } from './pages/cancellations-page'
 import { CustomsDetailPage } from './pages/customs-detail-page'
 import { CustomsNewPage } from './pages/customs-new-page'
@@ -46,8 +47,10 @@ export default function App() {
       {/* 公開の追跡照会（US18-5）。**認証の外に置く**——荷主はログインしない。
           番号なしの `/tracking` は入力欄だけを出す入口で、業務利用者もここから引ける
           （ui_design.md は全ロールの導線として定義している） */}
-      <Route path="/tracking" element={<TrackingLookupPage />} />
-      <Route path="/tracking/:trackingNumber" element={<TrackingLookupPage />} />
+      <Route element={<OptionalAuthLayout />}>
+        <Route path="/tracking" element={<TrackingLookupPage />} />
+        <Route path="/tracking/:trackingNumber" element={<TrackingLookupPage />} />
+      </Route>
 
       <Route
         element={
