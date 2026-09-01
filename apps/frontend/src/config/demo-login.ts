@@ -53,13 +53,13 @@ export const DEMO_ACCOUNTS: DemoAccount[] = [
   },
   {
     userId: 'shipper02',
-    description: '荷主（紐付け未設定の確認）',
+    description: '荷主（紐付け未設定の確認。管理者が紐付けるまで案内が出ます）',
     roles: ['ROLE_SHIPPER'],
     canLogIn: true,
   },
   {
     userId: 'shipper03',
-    description: '荷主（例外ありの貨物確認）',
+    description: '荷主（管理者が荷主に紐付けてから使います）',
     roles: ['ROLE_SHIPPER'],
     canLogIn: true,
   },
