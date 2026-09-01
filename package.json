@@ -1,6 +1,6 @@
 {
   "name": "case-study-cargo-tracker",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "main": "index.js",
   "scripts": {
     "start": "gulp spec",
