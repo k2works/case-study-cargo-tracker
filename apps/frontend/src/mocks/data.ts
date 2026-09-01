@@ -1009,6 +1009,11 @@ export const simulationScenarios = [
         label: '予定外の港での荷役記録',
         role: 'ROLE_HANDLER',
       },
+      {
+        step: 'REGISTER_RECOVERY_VOYAGE',
+        label: '組み直し用の航海登録',
+        role: 'ROLE_ROUTING',
+      },
       { step: 'REDESIGN_ROUTE', label: '経路の組み直し', role: 'ROLE_ROUTING' },
       { step: 'RESOLVE_EXCEPTION', label: '例外の解決', role: 'ROLE_TRACKER' },
       { step: 'RECORD_HANDLING', label: '荷役記録', role: 'ROLE_HANDLER' },

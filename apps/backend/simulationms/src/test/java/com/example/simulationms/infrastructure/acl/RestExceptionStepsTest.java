@@ -1,5 +1,6 @@
 package com.example.simulationms.infrastructure.acl;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
@@ -134,6 +135,50 @@ class RestExceptionStepsTest {
     }
 
     /**
+     * <strong>遅延の解決には新しい到着予定日を添える</strong>（US19-4）。
+     *
+     * <p>添えないと集約が断る——断られること自体は正しい振る舞いであり、こちらの
+     * 入力が足りていない。実環境で実際に踏んだ（400: 遅延を解決するときは、
+     * 新しい到着予定日を入れてください）。
+     */
+    @Test
+    @DisplayName("遅延の解決には、新しい到着予定日を添える")
+    void resolvingADelayCarriesTheNewArrival() {
+        server.expect(requestTo(BASE + RestBusinessGateway.TRACKING_MANAGE_PATH + "/" + TRACKING))
+                .andRespond(withSuccess("""
+                        {"trackingNumber": "%s",
+                         "activeException": {"id": 5, "exceptionType": "DELAY"}}
+                        """.formatted(TRACKING), MediaType.APPLICATION_JSON));
+        server.expect(requestTo(BASE + RestBusinessGateway.TRACKING_MANAGE_PATH
+                        + "/exceptions/5/resolve"))
+                .andExpect(jsonPath("$.newEstimatedArrival").exists())
+                .andRespond(withSuccess());
+
+        steps.execute(ScenarioStep.RESOLVE_EXCEPTION, "token", context());
+
+        server.verify();
+    }
+
+    /** 遅延以外では据え置く（空なら据え置く仕様）。 */
+    @Test
+    @DisplayName("遅延以外の解決では、到着予定日を送らない")
+    void resolvingOtherExceptionsLeavesTheArrivalAlone() {
+        server.expect(requestTo(BASE + RestBusinessGateway.TRACKING_MANAGE_PATH + "/" + TRACKING))
+                .andRespond(withSuccess("""
+                        {"trackingNumber": "%s",
+                         "activeException": {"id": 6, "exceptionType": "DAMAGE"}}
+                        """.formatted(TRACKING), MediaType.APPLICATION_JSON));
+        server.expect(requestTo(BASE + RestBusinessGateway.TRACKING_MANAGE_PATH
+                        + "/exceptions/6/resolve"))
+                .andExpect(jsonPath("$.newEstimatedArrival").doesNotExist())
+                .andRespond(withSuccess());
+
+        steps.execute(ScenarioStep.RESOLVE_EXCEPTION, "token", context());
+
+        server.verify();
+    }
+
+    /**
      * <strong>例外が起きていないことを、成功にしない。</strong>起こす工程が実際には
      * 起こしていなかった場合、ここで黙って通すと「例外シナリオが通った」と読める。
      */
@@ -152,21 +197,108 @@ class RestExceptionStepsTest {
     }
 
     /**
-     * 経路の組み直しは<strong>現在地を出発地にする</strong>（US36-3）。
-     * 元の出発地から引き直すと、運ばれた区間をもう一度運ぶ経路になる。
+     * 誤配のあとは<strong>現在地からの航海を登録する</strong>（US36-3）。
+     *
+     * <p>元の航海は誤配した港からの区間を持たないため、そのまま割り当てようとすると
+     * 409（選んだ経路はもう使えません）で断られる——<strong>実環境で実際に踏んだ</strong>。
+     * 経路設計者が現在地からの航海を探し、無ければ登録するのが実業務の手順である。
      */
     @Test
-    @DisplayName("経路の組み直しは、誤配した港を出発地にする")
-    void redesignStartsFromWhereTheCargoIs() {
+    @DisplayName("組み直し用の航海は、誤配した港から目的地へ向かう")
+    void registersARecoveryVoyageFromTheWrongPort() {
+        server.expect(requestTo(BASE + RestBusinessGateway.VOYAGE_PATH))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(jsonPath("$.movements[0].departureUnLocode").value("SGSIN"))
+                .andExpect(jsonPath("$.movements[0].arrivalUnLocode").value("USLAX"))
+                .andRespond(withSuccess());
+
+        String number = steps.execute(
+                ScenarioStep.REGISTER_RECOVERY_VOYAGE, "token", context());
+
+        assertThat(number).isEqualTo("VR-20261116-0001");
+        server.verify();
+    }
+
+    /**
+     * 経路の組み直しは<strong>現在地を出発地にする</strong>（US36-3）。
+     *
+     * <p><strong>レグは自分で組み立てない。</strong>組み立てると航海のスケジュールと
+     * 食い違い、409 で断られる（実環境で実際に踏んだ）。候補を引き、
+     * 組み直し用の航海を通る候補を選ぶ——実際の経路設計者と同じ手順である。
+     */
+    @Test
+    @DisplayName("経路の組み直しは、候補を引いて組み直し用の航海を選ぶ")
+    void redesignPicksTheCandidateOnTheRecoveryVoyage() {
+        server.expect(requestTo(org.hamcrest.Matchers.startsWith(
+                        BASE + RestBusinessGateway.ROUTE_PATH)))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("""
+                        {"candidates": [
+                          {"legs": [{"voyageNumber": "V-OTHER-0001",
+                                     "fromUnLocode": "SGSIN", "toUnLocode": "USLAX",
+                                     "departureTime": "2026-11-17T00:00:00Z",
+                                     "arrivalTime": "2026-11-27T00:00:00Z"}]},
+                          {"legs": [{"voyageNumber": "VR-20261116-0001",
+                                     "fromUnLocode": "SGSIN", "toUnLocode": "USLAX",
+                                     "departureTime": "2026-11-17T00:00:00Z",
+                                     "arrivalTime": "2026-11-27T00:00:00Z"}]}]}
+                        """, MediaType.APPLICATION_JSON));
         server.expect(requestTo(BASE + "/api/v1/bookings/1001/route"))
                 .andExpect(method(HttpMethod.PUT))
+                .andExpect(jsonPath("$.legs[0].voyageNumber")
+                        .value("VR-20261116-0001"))
                 .andExpect(jsonPath("$.legs[0].loadUnLocode").value("SGSIN"))
                 .andExpect(jsonPath("$.legs[0].unloadUnLocode").value("USLAX"))
                 .andRespond(withSuccess());
 
-        steps.execute(ScenarioStep.REDESIGN_ROUTE, "token", context());
+        steps.execute(ScenarioStep.REDESIGN_ROUTE, "token", recoveryContext());
 
         server.verify();
+    }
+
+    /**
+     * <strong>候補が無いことを、成功にしない。</strong>組み直しの航海が登録できて
+     * いないのに割り当てが通ると、輸送が再開したように見えて再開していない。
+     */
+    @Test
+    @DisplayName("組み直し用の航海を通る候補が無ければ、理由を言って止まる")
+    void failsWhenNoCandidateUsesTheRecoveryVoyage() {
+        server.expect(requestTo(org.hamcrest.Matchers.startsWith(
+                        BASE + RestBusinessGateway.ROUTE_PATH)))
+                .andRespond(withSuccess("""
+                        {"candidates": [
+                          {"legs": [{"voyageNumber": "V-OTHER-0001",
+                                     "fromUnLocode": "SGSIN", "toUnLocode": "USLAX",
+                                     "departureTime": "2026-11-17T00:00:00Z",
+                                     "arrivalTime": "2026-11-27T00:00:00Z"}]}]}
+                        """, MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() ->
+                        steps.execute(ScenarioStep.REDESIGN_ROUTE, "token", recoveryContext()))
+                .isInstanceOf(BusinessCallFailedException.class)
+                .hasMessageContaining("VR-20261116-0001");
+    }
+
+    /** 組み直しの工程は、組み直し用の航海を引き継いでいる。 */
+    private static Map<String, String> recoveryContext() {
+        Map<String, String> context = new java.util.HashMap<>(context());
+        context.put(BusinessContextKey.RECOVERY_VOYAGE_NUMBER, "VR-20261116-0001");
+        return Map.copyOf(context);
+    }
+
+    /**
+     * <strong>航海番号は 20 文字に収まる。</strong>{@code voyage_number} は
+     * {@code VARCHAR(20)} である——長い名前を送ると「value too long」で 500 になり、
+     * <strong>実環境でしか出ない</strong>。実際に踏んだので検査で固定する。
+     */
+    @Test
+    @DisplayName("シミュレーションが作る航海番号は、列の長さに収まる")
+    void voyageNumbersFitTheColumn() {
+        String runId = "SIM-20261116-0001";
+
+        assertThat(RestBusinessGateway.voyageNumberOf(runId)).hasSizeLessThanOrEqualTo(20);
+        assertThat(RestExceptionSteps.recoveryVoyageNumberOf(runId))
+                .hasSizeLessThanOrEqualTo(20);
     }
 
     /** 例外の工程でないものを渡されたら、黙って通さない。 */

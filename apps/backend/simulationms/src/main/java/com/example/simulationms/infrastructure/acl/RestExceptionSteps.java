@@ -9,10 +9,12 @@ import com.example.simulationms.domain.model.valueobjects.BusinessContextKey;
 import com.example.simulationms.domain.model.valueobjects.ScenarioStep;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.util.UriComponentsBuilder;
 
 /**
  * 例外を起こし、対応する工程の出口（US36・[ADR-031] 決定 5）。
@@ -34,6 +36,18 @@ class RestExceptionSteps {
     /** 予定と違う港。誤配はここでの荷降しから検知される。 */
     private static final String WRONG_PORT = "SGSIN";
 
+    /** 組み直し用の航海の到着まで。期限に十分間に合う位置に置く。 */
+    private static final int RECOVERY_ARRIVAL_DAYS = 20;
+
+    /** 到着期限までの日数。組み直しの候補が 0 件にならない幅を採る。 */
+    private static final int DEADLINE_DAYS = 120;
+
+    /** 遅延の例外。解決には新しい到着予定日が要る（US19-4）。 */
+    private static final String DELAY = "DELAY";
+
+    /** 遅延を解決するときに入れる新しい到着予定日までの日数。 */
+    private static final int NEW_ARRIVAL_DAYS = 30;
+
     private final RestClient gateway;
     private final Clock clock;
 
@@ -52,6 +66,7 @@ class RestExceptionSteps {
                     "シミュレーション：追加書類の確認待ち");
             case REQUEST_CANCELLATION -> requestCancellation(token, context);
             case RESOLVE_EXCEPTION -> resolveException(token, context);
+            case REGISTER_RECOVERY_VOYAGE -> registerRecoveryVoyage(token, context);
             case REDESIGN_ROUTE -> redesignRoute(token, context);
             case RELEASE_CUSTOMS -> changeCustomsStatus(step, token, context, "PENDING",
                     "シミュレーション：書類の確認完了");
@@ -152,15 +167,60 @@ class RestExceptionSteps {
         }
         Long exceptionId = tracking.activeException().id();
 
+        // **遅延の解決には新しい到着予定日が要る**（US19-4）。添えないと集約が断る
+        // ——断られること自体は正しい振る舞いであり、こちらの入力が足りていない。
+        // 実環境で実際に踏んだ（400: 遅延を解決するときは、新しい到着予定日を入れてください）。
+        String newArrival = DELAY.equals(tracking.activeException().exceptionType())
+                ? LocalDate.now(clock).plusDays(NEW_ARRIVAL_DAYS).toString()
+                : null;
+
         call(ScenarioStep.RESOLVE_EXCEPTION, () -> gateway.post()
                 .uri(RestBusinessGateway.TRACKING_MANAGE_PATH + "/exceptions/"
                         + exceptionId + "/resolve")
                 .header(HttpHeaders.AUTHORIZATION, bearer(token))
                 .body(new BusinessMessages.ResolveExceptionRequest(trackingNumber, exceptionId,
-                        "シミュレーション：対応完了", null))
+                        "シミュレーション：対応完了", newArrival))
                 .retrieve()
                 .toBodilessEntity());
         return BusinessContextKey.NONE;
+    }
+
+    /**
+     * 組み直し用の航海番号。
+     *
+     * <p><strong>20 文字に収める。</strong>{@code voyage_number} は
+     * {@code VARCHAR(20)} である（[data-model]）——長い名前を送ると
+     * 「value too long」で 500 になる。実環境で実際に踏んだ。
+     */
+    static String recoveryVoyageNumberOf(String runId) {
+        return "VR-" + runId.replace("SIM-", "");
+    }
+
+    /**
+     * 誤配した港から目的地へ向かう航海を登録する（US36-3）。
+     *
+     * <p><strong>元の航海では組み直せない。</strong>誤配した港からの区間を持たないため、
+     * そのまま割り当てようとすると 409（選んだ経路はもう使えません）で断られる
+     * ——実環境で実際に踏んだ。経路設計者が現在地からの航海を探し、無ければ登録する
+     * のが実業務の手順である。
+     */
+    private String registerRecoveryVoyage(String token, Map<String, String> context) {
+        String number = recoveryVoyageNumberOf(BusinessCalls.runId(context));
+        Instant at = clock.instant();
+
+        call(ScenarioStep.REGISTER_RECOVERY_VOYAGE, () -> gateway.post()
+                .uri(RestBusinessGateway.VOYAGE_PATH)
+                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                .body(new BusinessMessages.VoyageRequest(number, "シミュレーション復旧丸",
+                        "シミュレーション海運",
+                        java.util.List.of(RestBusinessGateway.CARGO_TYPE),
+                        java.util.List.of(new BusinessMessages.VoyageRequest.MovementRequest(
+                                WRONG_PORT, RestBusinessGateway.DESTINATION,
+                                at.plus(1, ChronoUnit.DAYS),
+                                at.plus(RECOVERY_ARRIVAL_DAYS, ChronoUnit.DAYS)))))
+                .retrieve()
+                .toBodilessEntity());
+        return number;
     }
 
     /**
@@ -168,20 +228,55 @@ class RestExceptionSteps {
      *
      * <p><strong>出発地は現在地である。</strong>元の出発地から引き直すと、
      * すでに運ばれた区間をもう一度運ぶ経路になる——輸送は再開しない。
+     *
+     * <p><strong>レグは自分で組み立てない。</strong>組み立てると航海のスケジュールと
+     * 食い違い、409 で断られる（実環境で実際に踏んだ）。経路候補を引き、
+     * <strong>組み直し用の航海を通る候補</strong>を選ぶ——実際の経路設計者と同じ手順である。
      */
     private String redesignRoute(String token, Map<String, String> context) {
         String bookingId = required(context, BusinessContextKey.BOOKING_ID);
-        String voyageNumber = required(context, BusinessContextKey.VOYAGE_NUMBER);
-        Instant at = clock.instant();
+        String recoveryVoyage = required(context, BusinessContextKey.RECOVERY_VOYAGE_NUMBER);
+        String deadline = LocalDate.now(clock).plusDays(DEADLINE_DAYS).toString();
+
+        BusinessMessages.RouteCandidateListResponse candidates =
+                call(ScenarioStep.REDESIGN_ROUTE, () -> gateway.get()
+                        .uri(UriComponentsBuilder.fromPath(RestBusinessGateway.ROUTE_PATH)
+                                .queryParam("origin", WRONG_PORT)
+                                .queryParam("destination", RestBusinessGateway.DESTINATION)
+                                .queryParam("deadline", deadline)
+                                .queryParam("cargoType", RestBusinessGateway.CARGO_TYPE)
+                                .toUriString())
+                        .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                        .retrieve()
+                        .body(BusinessMessages.RouteCandidateListResponse.class));
+
+        if (candidates == null || candidates.candidates() == null) {
+            throw new BusinessCallFailedException(
+                    "組み直しの経路候補が読めません（" + WRONG_PORT + " → "
+                            + RestBusinessGateway.DESTINATION + "）");
+        }
+        BusinessMessages.RouteCandidateListResponse.Candidate chosen =
+                candidates.candidates().stream()
+                        .filter(candidate -> candidate.legs() != null
+                                && candidate.legs().stream()
+                                        .allMatch(leg -> recoveryVoyage.equals(
+                                                leg.voyageNumber())))
+                        .findFirst()
+                        .orElseThrow(() -> new BusinessCallFailedException(
+                                "組み直し用の航海（" + recoveryVoyage + "）を通る経路候補が"
+                                        + "ありません。候補は "
+                                        + candidates.candidates().size() + " 件ありました"));
+
+        java.util.List<BusinessMessages.LegRequest> legs = chosen.legs().stream()
+                .map(leg -> new BusinessMessages.LegRequest(leg.voyageNumber(),
+                        leg.fromUnLocode(), leg.toUnLocode(), leg.departureTime(),
+                        leg.arrivalTime()))
+                .toList();
 
         call(ScenarioStep.REDESIGN_ROUTE, () -> gateway.put()
                 .uri(RestBusinessGateway.BOOKING_PATH + "/" + bookingId + "/route")
                 .header(HttpHeaders.AUTHORIZATION, bearer(token))
-                .body(new BusinessMessages.AssignRouteRequest(java.util.List.of(
-                        new BusinessMessages.LegRequest(voyageNumber, WRONG_PORT,
-                                RestBusinessGateway.DESTINATION,
-                                at.plus(1, ChronoUnit.DAYS).toString(),
-                                at.plus(5, ChronoUnit.DAYS).toString())), null))
+                .body(new BusinessMessages.AssignRouteRequest(legs, null))
                 .retrieve()
                 .toBodilessEntity());
         return BusinessContextKey.NONE;

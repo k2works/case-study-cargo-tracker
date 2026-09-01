@@ -20,6 +20,14 @@ public final class BusinessContextKey {
     /** 航海登録が生んだ航海。 */
     public static final String VOYAGE_NUMBER = "voyageNumber";
 
+    /**
+     * 誤配のあと、現在地から目的地へ向かう航海。
+     *
+     * <p><strong>元の航海では組み直せない。</strong>誤配した港からの区間を持たないため、
+     * 経路設計者は現在地からの航海を探し、無ければ登録する——実業務と同じ手順である。
+     */
+    public static final String RECOVERY_VOYAGE_NUMBER = "recoveryVoyageNumber";
+
     /** 追跡番号発行が生んだ追跡番号。 */
     public static final String TRACKING_NUMBER = "trackingNumber";
 
@@ -50,6 +58,7 @@ public final class BusinessContextKey {
             case SHIPPER_ID -> "荷主 ID";
             case BOOKING_ID -> "予約番号";
             case VOYAGE_NUMBER -> "航海番号";
+            case RECOVERY_VOYAGE_NUMBER -> "組み直し用の航海番号";
             case TRACKING_NUMBER -> "追跡番号";
             case DECLARATION_ID -> "通関申告 ID";
             case INVOICE_NUMBER -> "精算書番号";

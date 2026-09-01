@@ -99,8 +99,9 @@ public class RestBusinessGateway implements BusinessGateway {
             case CALCULATE_CHARGE -> calculateCharge(token, context);
             case SETTLE -> settle(token, context);
             case RECORD_LATE_HANDLING, RAISE_DAMAGE, RECORD_MISROUTED_HANDLING, HOLD_CUSTOMS,
-                    REQUEST_CANCELLATION, RESOLVE_EXCEPTION, REDESIGN_ROUTE, RELEASE_CUSTOMS,
-                    APPROVE_CANCELLATION -> exceptions.execute(step, token, context);
+                    REQUEST_CANCELLATION, RESOLVE_EXCEPTION, REGISTER_RECOVERY_VOYAGE,
+                    REDESIGN_ROUTE, RELEASE_CUSTOMS, APPROVE_CANCELLATION ->
+                    exceptions.execute(step, token, context);
         };
     }
 

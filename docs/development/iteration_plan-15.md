@@ -179,9 +179,9 @@
 
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | :--- | :--- |
-| 6.1 | `domain-model.md`・`data-model.md`・`ui_design.md` に継続実行と統計を反映する | 5h | [ ] |
-| 6.2 | ユーザーマニュアルの「業務シミュレーション」章に、例外シナリオと継続実行を追記する | 5h | [ ] |
-| 6.3 | 実環境で継続実行を 1 時間流し、業務が劣化しないことを確かめる | 6h | [ ] |
+| 6.1 | `domain-model.md`・`data-model.md`・`ui_design.md` に継続実行と統計を反映する | 5h | [x] |
+| 6.2 | ユーザーマニュアルの「業務シミュレーション」章に、例外シナリオと継続実行を追記する | 5h | [x] |
+| 6.3 | 実環境で継続実行を 1 時間流し、業務が劣化しないことを確かめる | 6h | [x] |
 | 6.4 | `./gradlew build`、`TZ=UTC ./gradlew test`、frontend test / build、E2E、JIG / jig-erd を実行する | 8h | [ ] |
 | 6.5 | **最後のコミットに対して** SonarQube を回し、Quality Gate PASS を確認する | 2h | [ ] |
 | 6.6 | **git タグと `CHANGELOG.md` を作る**（`developing-release`。**5 リリース連続の欠落を解消する**） | 5h | [ ] |

@@ -104,6 +104,7 @@ public record Scenario(String id, List<ScenarioStep> steps) {
                 // 予定と違う港での荷役から誤配が検知され、現在地から組み直して再開する。
                 new Scenario("misroute", concat(UNTIL_TRACKING,
                         List.of(ScenarioStep.RECORD_MISROUTED_HANDLING,
+                                ScenarioStep.REGISTER_RECOVERY_VOYAGE,
                                 ScenarioStep.REDESIGN_ROUTE, ScenarioStep.RESOLVE_EXCEPTION),
                         HANDLING_TO_SETTLEMENT)),
                 // 通関が保留になり、解除してから引取へ進む。

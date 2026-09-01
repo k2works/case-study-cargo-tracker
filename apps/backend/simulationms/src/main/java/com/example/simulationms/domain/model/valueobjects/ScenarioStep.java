@@ -56,6 +56,16 @@ public enum ScenarioStep {
     /** 起きた例外を解決する（[ADR-024]）。 */
     RESOLVE_EXCEPTION("例外の解決", Roles.ROLE_TRACKER, BusinessContextKey.NONE,
             Nature.RESPONDS),
+    /**
+     * 誤配した港から目的地へ向かう航海を登録する（US36-3）。
+     *
+     * <p><strong>元の航海では組み直せない。</strong>誤配した港からの区間を持たないため、
+     * そのまま割り当てようとすると「選んだ経路はもう使えません」で断られる
+     * ——実環境で実際に踏んだ。経路設計者が現在地からの航海を探し、無ければ
+     * 登録するのが実業務の手順である。
+     */
+    REGISTER_RECOVERY_VOYAGE("組み直し用の航海登録", Roles.ROLE_ROUTING,
+            BusinessContextKey.RECOVERY_VOYAGE_NUMBER, Nature.RESPONDS),
     /** 現在地から経路を組み直す（US28・US36-3）。元の経路の割り当て直しでは再開しない。 */
     REDESIGN_ROUTE("経路の組み直し", Roles.ROLE_ROUTING, BusinessContextKey.NONE,
             Nature.RESPONDS),
