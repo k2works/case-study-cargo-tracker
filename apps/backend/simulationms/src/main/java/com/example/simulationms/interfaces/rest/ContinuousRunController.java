@@ -38,6 +38,14 @@ import org.springframework.web.server.ResponseStatusException;
 public class ContinuousRunController {
 
     /** 統計を数える範囲。上限が無いと、件数が増えた日に統計が開かなくなる。 */
+    /**
+     * 一覧に出す過去セッションの数。
+     *
+     * <p>再現に使うのは<strong>直近の数本</strong>である。無制限に並べても、
+     * 昨日より前の種は使われない。
+     */
+    private static final int RECENT_SESSION_LIMIT = 20;
+
     private static final int STATISTICS_LIMIT = 500;
 
     private final ContinuousRunScheduler scheduler;
@@ -117,6 +125,24 @@ public class ContinuousRunController {
         return new ActiveSessionResponse(
                 sessions.findActive().map(SessionResponse::from).orElse(null),
                 StatisticsResponse.from(statistics));
+    }
+
+    /**
+     * 過去のセッションの一覧（TD-03・IT16）。
+     *
+     * <p><strong>停止したセッションも残す。</strong>停止した瞬間に種が画面から消えると、
+     * 翌朝には落ちた並びを再現する手立てが無い——US37-3 が言う「同じ種を指定すると
+     * 同じ並びを再現できる」は、その種を読めて初めて意味を持つ。
+     */
+    @GetMapping
+    public List<SessionResponse> recent(
+            @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
+            @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles) {
+        requireAdmin(userId, roles);
+
+        return sessions.findRecent(RECENT_SESSION_LIMIT).stream()
+                .map(SessionResponse::from)
+                .toList();
     }
 
     @GetMapping("/{sessionId}")

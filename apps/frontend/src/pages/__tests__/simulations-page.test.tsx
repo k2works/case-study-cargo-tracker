@@ -229,4 +229,61 @@ describe('失敗した工程での絞り込み', () => {
     // **絞っていることを画面に出す**——出さないと「1 件しかない」と読まれる
     expect(screen.getByText(/で止まった実行だけを表示/)).toBeInTheDocument()
   })
+
+  /**
+   * <strong>直近だけでは、落ちた実行へ翌朝辿り着けない</strong>（TD-03・IT16）。
+   * 継続実行を一晩回すと、昨日の失敗は朝には窓の外に落ちている。
+   */
+  it('日付を指定すると、その日の実行だけを読みに行く', async () => {
+    const asked: string[] = []
+    server.use(
+      http.get(API_PATHS.simulationScenarios, () => HttpResponse.json([SCENARIO])),
+      http.get(API_PATHS.simulations, ({ request }) => {
+        const date = new URL(request.url).searchParams.get('date') ?? ''
+        asked.push(date)
+        return HttpResponse.json(date === '' ? [RUN] : [])
+      }),
+    )
+    renderPage()
+    await screen.findByText('SIM-20261116-0001')
+
+    await userEvent.type(screen.getByLabelText('実行した日'), '2026-11-15')
+
+    await screen.findByText('直近に戻す')
+    expect(asked, '日付をサーバへ渡していない').toContain('2026-11-15')
+  })
+
+  /**
+   * <strong>停止した瞬間に種が画面から消えると、翌朝には再現の手立てが無い。</strong>
+   * US37-3 は「同じ種を指定すると同じ並びを再現できる」と言うが、その種を停止後に
+   * 読む手段が無かった。
+   */
+  it('過去のセッションを、種つきで並べる', async () => {
+    server.use(
+      http.get(API_PATHS.simulationScenarios, () => HttpResponse.json([SCENARIO])),
+      http.get(API_PATHS.simulations, () => HttpResponse.json([RUN])),
+      http.get(API_PATHS.simulationSessions, () =>
+        HttpResponse.json([
+          {
+            sessionId: 'SES-20261116-0001',
+            seed: 987654321,
+            intervalSeconds: 30,
+            maxConcurrent: 3,
+            exceptionRatio: 0.2,
+            status: 'STOPPED',
+            statusLabel: '停止済み',
+            startedBy: 'admin01',
+            startedAt: '2026-11-16T01:00:00Z',
+            stoppedAt: '2026-11-16T03:00:00Z',
+          },
+        ]),
+      ),
+    )
+    renderPage()
+
+    expect(await screen.findByRole('heading', { name: '過去の継続実行' })).toBeInTheDocument()
+    expect(screen.getByText('SES-20261116-0001')).toBeInTheDocument()
+    expect(screen.getByText('987654321'), '種が読めない').toBeInTheDocument()
+    expect(screen.getByText('停止済み')).toBeInTheDocument()
+  })
 })

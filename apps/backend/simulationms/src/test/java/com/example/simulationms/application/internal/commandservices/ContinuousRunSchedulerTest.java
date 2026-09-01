@@ -79,6 +79,15 @@ class ContinuousRunSchedulerTest {
             return Optional.ofNullable(sessions.get(sessionId.value()));
         }
 
+        /** **新しい順に返す。**本物と同じ並びにする——甘くすると本物の誤りを素通りさせる。 */
+        @Override
+        public java.util.List<ContinuousRunSession> findRecent(int limit) {
+            java.util.List<ContinuousRunSession> all =
+                    new java.util.ArrayList<>(sessions.values());
+            java.util.Collections.reverse(all);
+            return all.stream().limit(limit).toList();
+        }
+
         @Override
         public Optional<ContinuousRunSession> findActive() {
             return sessions.values().stream()

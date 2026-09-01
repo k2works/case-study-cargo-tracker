@@ -40,6 +40,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * 誤って踏める場所には置かない。
  */
 @WebMvcTest(SimulationRunController.class)
+@org.springframework.context.annotation.Import(SimulationRunControllerTest.FixedClock.class)
 @org.springframework.test.context.TestPropertySource(
         properties = "app.simulation.enabled=true")
 @DisplayName("シミュレーション実行 API")
@@ -50,6 +51,19 @@ class SimulationRunControllerTest {
 
     @MockitoBean
     private RunSimulationUseCase runSimulation;
+
+    /**
+     * 業務の時計。<strong>固定する</strong>——日付で 1 日を切る境目は、
+     * テストと実装で同じ暦を使わないと CI（UTC）でだけ落ちる。
+     */
+    @org.springframework.boot.test.context.TestConfiguration
+    static class FixedClock {
+        @org.springframework.context.annotation.Bean
+        java.time.Clock clock() {
+            return java.time.Clock.fixed(java.time.Instant.parse("2026-12-07T00:00:00Z"),
+                    java.time.ZoneId.of("Asia/Tokyo"));
+        }
+    }
 
     @MockitoBean
     private SimulationRunRepository runs;

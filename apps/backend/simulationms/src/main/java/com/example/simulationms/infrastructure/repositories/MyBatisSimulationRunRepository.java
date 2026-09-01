@@ -79,6 +79,12 @@ public class MyBatisSimulationRunRepository implements SimulationRunRepository {
     }
 
     @Override
+    public List<SimulationRun> findBetween(java.time.Instant from, java.time.Instant to,
+            int limit) {
+        return mapper.findBetween(from, to, limit).stream().map(this::toDomain).toList();
+    }
+
+    @Override
     public Optional<SimulationRun> findRunningByScenario(Scenario scenario,
             java.time.Instant staleBefore) {
         return Optional.ofNullable(mapper.findRunningByScenario(

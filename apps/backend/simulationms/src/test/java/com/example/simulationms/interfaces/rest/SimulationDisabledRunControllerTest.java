@@ -22,6 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * そのまま実行を受け付ける——設定の名前が守っていない状態になる。
  */
 @WebMvcTest(SimulationRunController.class)
+@org.springframework.context.annotation.Import(SimulationDisabledRunControllerTest.FixedClock.class)
 @TestPropertySource(properties = "app.simulation.enabled=false")
 @DisplayName("実行を無効にした環境")
 class SimulationDisabledRunControllerTest {
@@ -31,6 +32,19 @@ class SimulationDisabledRunControllerTest {
 
     @MockitoBean
     private RunSimulationUseCase runSimulation;
+
+    /**
+     * 業務の時計。<strong>固定する</strong>——日付で 1 日を切る境目は、
+     * テストと実装で同じ暦を使わないと CI（UTC）でだけ落ちる。
+     */
+    @org.springframework.boot.test.context.TestConfiguration
+    static class FixedClock {
+        @org.springframework.context.annotation.Bean
+        java.time.Clock clock() {
+            return java.time.Clock.fixed(java.time.Instant.parse("2026-12-07T00:00:00Z"),
+                    java.time.ZoneId.of("Asia/Tokyo"));
+        }
+    }
 
     @MockitoBean
     private SimulationRunRepository runs;

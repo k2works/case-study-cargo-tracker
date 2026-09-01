@@ -49,6 +49,26 @@ public interface SimulationRunMapper {
     List<SimulationRunRecord> findRecent(@Param("limit") int limit);
 
     /**
+     * 期間で絞った一覧（TD-03）。
+     *
+     * <p><strong>絞り込みは SQL に降ろす。</strong>直近 N 件を読んでから絞ると、
+     * その N 件より前に落ちた実行には永久に手が届かない——絞る意味が無くなる。
+     */
+    @Select("""
+            <script>
+            SELECT""" + RUN_COLUMNS + """
+            <where>
+              <if test="from != null">AND r.started_at &gt;= #{from}</if>
+              <if test="to != null">AND r.started_at &lt; #{to}</if>
+            </where>
+             ORDER BY r.id DESC LIMIT #{limit}
+            </script>
+            """)
+    @ResultMap("runResult")
+    List<SimulationRunRecord> findBetween(@Param("from") java.time.Instant from,
+            @Param("to") java.time.Instant to, @Param("limit") int limit);
+
+    /**
      * そのシナリオで実行中のものを引く（US34-5）。
      *
      * <p><strong>状態は工程の結果から導く。</strong>実行の行に持たせて二重管理すると、

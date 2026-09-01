@@ -11,12 +11,27 @@ let continuousSession: SimulationSession | null = null
  */
 import { HttpResponse, http } from 'msw'
 import { API_PATHS } from '../../config/api'
-import { simulationRuns, simulationScenarios } from '../data'
+import { simulationRuns, simulationScenarios, simulationSessions } from '../data'
 
 export const simulationHandlers = [
   http.get(API_PATHS.simulationScenarios, () => HttpResponse.json(simulationScenarios)),
 
-  http.get(API_PATHS.simulations, () => HttpResponse.json(simulationRuns)),
+  /**
+   * 実行の一覧（TD-03）。**日付での絞り込みも本物と同じ規則で行う**
+   * ——モックが甘いと、絞れていない実装のまま緑になる。
+   */
+  http.get(API_PATHS.simulations, ({ request }) => {
+    const date = new URL(request.url).searchParams.get('date')
+    if (date === null || date === '') {
+      return HttpResponse.json(simulationRuns)
+    }
+    return HttpResponse.json(
+      simulationRuns.filter((run) => run.startedAt.startsWith(date)),
+    )
+  }),
+
+  /** 過去のセッション（TD-03）。**停止したものも残る**。 */
+  http.get(API_PATHS.simulationSessions, () => HttpResponse.json(simulationSessions)),
 
   http.get('/api/v1/simulations/:runId', ({ params }) => {
     const run = simulationRuns.find((candidate) => candidate.runId === params.runId)

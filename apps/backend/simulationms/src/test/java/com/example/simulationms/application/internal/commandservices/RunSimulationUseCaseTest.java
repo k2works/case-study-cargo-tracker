@@ -92,6 +92,16 @@ class RunSimulationUseCaseTest {
             return List.copyOf(runs.values());
         }
 
+        /** **本物と同じ規則で絞る**——甘くすると、本物の絞り漏れを素通りさせる。 */
+        @Override
+        public List<SimulationRun> findBetween(Instant from, Instant to, int limit) {
+            return runs.values().stream()
+                    .filter(run -> from == null || !run.startedAt().isBefore(from))
+                    .filter(run -> to == null || run.startedAt().isBefore(to))
+                    .limit(limit)
+                    .toList();
+        }
+
         @Override
         public Optional<SimulationRun> findRunningByScenario(Scenario scenario,
                 Instant staleBefore) {

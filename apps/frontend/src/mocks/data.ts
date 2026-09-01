@@ -1043,6 +1043,39 @@ export const simulationScenarios = [
 ]
 
 /** 実行の履歴（US35）。**失敗した実行も残す**——巻き戻さないことがここに表れる。 */
+/**
+ * 過去の継続実行（TD-03）。
+ *
+ * **停止したものも残す。**停止した瞬間に種が読めなくなると、翌朝には
+ * 落ちた並びを再現する手立てが無い。
+ */
+export const simulationSessions: import('../features/simulation/types').SimulationSession[] = [
+  {
+    sessionId: 'SES-20261207-0002',
+    seed: 987654321,
+    intervalSeconds: 30,
+    maxConcurrent: 3,
+    exceptionRatio: 0.2,
+    status: 'STOPPED',
+    statusLabel: '停止済み',
+    startedBy: 'admin01',
+    startedAt: '2026-12-07T01:00:00Z',
+    stoppedAt: '2026-12-07T03:00:00Z',
+  },
+  {
+    sessionId: 'SES-20261206-0001',
+    seed: 123456789,
+    intervalSeconds: 60,
+    maxConcurrent: 2,
+    exceptionRatio: 0.1,
+    status: 'STOPPED',
+    statusLabel: '停止済み',
+    startedBy: 'admin01',
+    startedAt: '2026-12-06T01:00:00Z',
+    stoppedAt: '2026-12-06T02:00:00Z',
+  },
+]
+
 export const simulationRuns: SimulationRun[] = [
   {
     // **失敗した実行も置く。**成功だけを置くと、画面が「止まった理由の見え方」を

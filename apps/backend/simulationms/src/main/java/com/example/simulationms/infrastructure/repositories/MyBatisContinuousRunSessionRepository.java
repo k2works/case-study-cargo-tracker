@@ -62,6 +62,11 @@ public class MyBatisContinuousRunSessionRepository implements ContinuousRunSessi
         return row;
     }
 
+    @Override
+    public java.util.List<ContinuousRunSession> findRecent(int limit) {
+        return mapper.findRecent(limit).stream().map(this::toDomain).toList();
+    }
+
     private ContinuousRunSession toDomain(ContinuousRunSessionRecord row) {
         return ContinuousRunSession.restore(SessionId.of(row.getSessionId()),
                 Seed.of(row.getSeed()),

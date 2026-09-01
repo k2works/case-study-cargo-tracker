@@ -139,4 +139,37 @@ class ContinuousRunSessionPersistenceIntegrationTest {
 
         assertThat(runs.findByRunId(RunId.of("SIM-20261207-0102"))).isPresent();
     }
+
+    /**
+     * <strong>停止した瞬間に種が画面から消えると、翌朝には再現の手立てが無い</strong>
+     * （TD-03・IT16）。US37-3 は「同じ種を指定すると同じ並びを再現できる」と言うが、
+     * その種を停止後に読む手段が無かった。
+     */
+    @Test
+    @DisplayName("停止したセッションも、種つきで一覧に残る")
+    void listsPastSessionsWithTheirSeed() {
+        ContinuousRunSession session = start("SES-20261207-0101");
+        sessions.save(session.stop(0, STARTED.plusSeconds(60)));
+
+        ContinuousRunSession listed = sessions.findRecent(20).stream()
+                .filter(found -> found.sessionId().equals(session.sessionId()))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("停止したセッションが一覧から消えている"));
+
+        assertThat(listed.seed()).as("種が読めない。落ちた並びを再現できない")
+                .isEqualTo(Seed.of(20261207L));
+        assertThat(listed.status()).isEqualTo(SessionStatus.STOPPED);
+    }
+
+    /** <strong>新しい順に並ぶ。</strong>直前に回したセッションから読む。 */
+    @Test
+    @DisplayName("セッションの一覧は、新しい順に並ぶ")
+    void listsSessionsNewestFirst() {
+        start("SES-20261207-0102");
+        start("SES-20261207-0103");
+
+        assertThat(sessions.findRecent(20))
+                .extracting(found -> found.sessionId().value())
+                .containsSubsequence("SES-20261207-0103", "SES-20261207-0102");
+    }
 }

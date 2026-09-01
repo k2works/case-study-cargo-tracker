@@ -4,6 +4,7 @@ import {
   fetchScenarios,
   fetchSimulationRun,
   fetchSimulationRuns,
+  fetchSimulationSessions,
   startSimulation,
   startSimulationSession,
   stopSimulationSession,
@@ -14,8 +15,28 @@ export function useSimulationScenarios() {
   return useQuery({ queryKey: ['simulation-scenarios'], queryFn: fetchScenarios })
 }
 
-export function useSimulationRuns() {
-  return useQuery({ queryKey: ['simulation-runs'], queryFn: fetchSimulationRuns })
+/**
+ * 実行の一覧（TD-03）。
+ *
+ * **日付をキーに含める。**含めないと、日を変えても前の結果が返り続ける。
+ */
+export function useSimulationRuns(date = '') {
+  return useQuery({
+    queryKey: ['simulation-runs', date],
+    queryFn: () => fetchSimulationRuns(date),
+  })
+}
+
+/**
+ * 過去のセッション（TD-03）。
+ *
+ * **停止した瞬間に種が画面から消えると、翌朝には再現の手立てが無い。**
+ */
+export function useSimulationSessions() {
+  return useQuery({
+    queryKey: ['simulation-sessions'],
+    queryFn: fetchSimulationSessions,
+  })
 }
 
 export function useSimulationRun(runId: string | undefined) {

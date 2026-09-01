@@ -169,4 +169,40 @@ class SimulationRunPersistenceIntegrationTest {
         // **新しい順であることまで見る。**件数だけでは、古い順に壊しても緑になる
         assertThat(recent.getFirst().runId().value()).isEqualTo("SIM-20261116-0006");
     }
+
+    /**
+     * <strong>直近 N 件だけでは、落ちた実行へ翌朝辿り着けない</strong>（TD-03・IT16）。
+     * 継続実行を一晩回すと、昨日の失敗は朝には窓の外に落ちている。
+     */
+    @Test
+    @DisplayName("期間で絞ると、その範囲の実行だけが返る")
+    void filtersRunsByPeriod() {
+        java.time.Instant older = java.time.Instant.parse("2026-09-01T00:00:00Z");
+        java.time.Instant newer = java.time.Instant.parse("2026-09-10T00:00:00Z");
+        runs.create(SimulationRun.start(RunId.of("SIM-20260901-9101"),
+                Scenario.of("period", List.of(ScenarioStep.REGISTER_SHIPPER)),
+                "admin01", older), Seed.of(0L), null);
+        runs.create(SimulationRun.start(RunId.of("SIM-20260910-9102"),
+                Scenario.of("period", List.of(ScenarioStep.REGISTER_SHIPPER)),
+                "admin01", newer), Seed.of(0L), null);
+
+        assertThat(runs.findBetween(older, older.plusSeconds(86_400), 100))
+                .extracting(run -> run.runId().value())
+                .as("指定した日の実行だけが返らない")
+                .contains("SIM-20260901-9101")
+                .doesNotContain("SIM-20260910-9102");
+    }
+
+    /** <strong>期間を指定しなければ、これまでどおり全部が返る。</strong> */
+    @Test
+    @DisplayName("期間を指定しなければ、絞らない")
+    void doesNotFilterWithoutAPeriod() {
+        runs.create(SimulationRun.start(RunId.of("SIM-20260901-9103"),
+                Scenario.of("period", List.of(ScenarioStep.REGISTER_SHIPPER)),
+                "admin01", java.time.Instant.parse("2026-09-01T00:00:00Z")), Seed.of(0L), null);
+
+        assertThat(runs.findBetween(null, null, 100))
+                .extracting(run -> run.runId().value())
+                .contains("SIM-20260901-9103");
+    }
 }

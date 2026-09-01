@@ -12,7 +12,17 @@ export function fetchScenarios(): Promise<SimulationScenario[]> {
   return apiClient.get<SimulationScenario[]>(API_PATHS.simulationScenarios)
 }
 
-export function fetchSimulationRuns(): Promise<SimulationRun[]> {
+export function fetchSimulationRuns(date?: string): Promise<SimulationRun[]> {
+  if (date !== undefined && date !== '') {
+    return apiClient.get<SimulationRun[]>(
+      `${API_PATHS.simulations}?date=${encodeURIComponent(date)}`,
+    )
+  }
+  return fetchAllSimulationRuns()
+}
+
+/** 直近の実行（日付を指定しないとき）。 */
+function fetchAllSimulationRuns(): Promise<SimulationRun[]> {
   return apiClient.get<SimulationRun[]>(API_PATHS.simulations)
 }
 
@@ -55,4 +65,14 @@ export function stopSimulationSession(sessionId: string): Promise<SimulationSess
 /** 動いている継続実行と統計（US37-8）。動いていなくても統計は読める。 */
 export function fetchActiveSession(): Promise<SimulationActiveSession> {
   return apiClient.get<SimulationActiveSession>(API_PATHS.simulationActiveSession)
+}
+
+/**
+ * 過去のセッションの一覧（TD-03）。
+ *
+ * **停止したセッションも残る。**停止した瞬間に種が読めなくなると、翌朝には
+ * 落ちた並びを再現する手立てが無い。
+ */
+export function fetchSimulationSessions(): Promise<SimulationSession[]> {
+  return apiClient.get<SimulationSession[]>(API_PATHS.simulationSessions)
 }

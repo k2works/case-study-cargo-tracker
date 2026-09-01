@@ -53,13 +53,23 @@ public class SimulationRunController {
      */
     private final boolean enabled;
 
+    /**
+     * 業務タイムゾーン。
+     *
+     * <p>日付で 1 日を切るために要る。<strong>UTC で切ると、朝の数時間が前日に入る</strong>
+     * ——「昨日の失敗」を探しているのに出てこない（IT9 の学び）。
+     */
+    private final java.time.ZoneId zone;
+
     public SimulationRunController(RunSimulationUseCase runSimulation,
             SimulationRunRepository runs,
             @org.springframework.beans.factory.annotation.Value("${app.simulation.enabled:false}")
-            boolean enabled) {
+            boolean enabled,
+            java.time.Clock clock) {
         this.runSimulation = runSimulation;
         this.runs = runs;
         this.enabled = enabled;
+        this.zone = clock.getZone();
     }
 
     @PostMapping
@@ -78,13 +88,45 @@ public class SimulationRunController {
                 .body(RunResponse.from(runSimulation.run(scenario, userId)));
     }
 
+    /**
+     * 実行の一覧（TD-03・IT16）。
+     *
+     * <p><strong>日付で絞れる。</strong>絞れないと、継続実行を一晩回した翌朝には
+     * 昨日の失敗が窓の外に落ちている——落ちたことは統計で分かっても、どれが落ちたのかに
+     * 手が届かない。
+     *
+     * @param date 業務日（{@code yyyy-MM-dd}）。省くと直近から並べる
+     */
     @GetMapping
     public List<RunResponse> recent(
             @RequestHeader(AuthenticatedUser.USER_ID_HEADER) String userId,
-            @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles) {
+            @RequestHeader(name = AuthenticatedUser.ROLES_HEADER, required = false) String roles,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String date) {
         requireAdmin(userId, roles);
 
-        return runs.findRecent(RECENT_LIMIT).stream().map(RunResponse::from).toList();
+        if (date == null || date.isBlank()) {
+            return runs.findRecent(RECENT_LIMIT).stream().map(RunResponse::from).toList();
+        }
+        java.time.LocalDate day = parseDate(date);
+        // **業務の暦で 1 日を切る。** UTC で切ると、朝の数時間が前日に入る
+        java.time.Instant from = day.atStartOfDay(zone).toInstant();
+        return runs.findBetween(from, day.plusDays(1).atStartOfDay(zone).toInstant(),
+                        RECENT_LIMIT).stream()
+                .map(RunResponse::from)
+                .toList();
+    }
+
+    /**
+     * <strong>読めない日付は断る。</strong>黙って「指定なし」に倒すと、打ち間違えた
+     * 管理者には直近が返り、絞ったつもりで別の日を見ることになる。
+     */
+    private static java.time.LocalDate parseDate(String date) {
+        try {
+            return java.time.LocalDate.parse(date.trim());
+        } catch (java.time.format.DateTimeParseException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "日付は yyyy-MM-dd の形式で指定してください: " + date);
+        }
     }
 
     @GetMapping("/{runId}")

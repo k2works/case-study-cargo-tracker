@@ -4,6 +4,7 @@ import { ContinuousRunPanel } from "../features/simulation/components/continuous
 import { ApiError } from "../lib/api-client";
 import {
   useSimulationRuns,
+  useSimulationSessions,
   useSimulationScenarios,
   useStartSimulation,
 } from "../features/simulation/queries";
@@ -39,7 +40,14 @@ const STATUS_LABELS: Record<SimulationRun["status"], string> = {
  */
 export function SimulationsPage() {
   const { data: scenarios } = useSimulationScenarios();
-  const { data: runs, isPending, isError } = useSimulationRuns();
+  /**
+   * 見る日（TD-03）。
+   *
+   * **直近 50 件だけでは、落ちた実行へ翌朝辿り着けない。**継続実行を一晩回すと、
+   * 昨日の失敗は朝には窓の外に落ちている。
+   */
+  const [date, setDate] = useState("");
+  const { data: runs, isPending, isError } = useSimulationRuns(date);
   const start = useStartSimulation();
 
   // **選んだシナリオを覚える。**一覧の先頭に固定すると、例外シナリオを選べない
@@ -174,7 +182,31 @@ export function SimulationsPage() {
         </p>
       ) : null}
 
+      {/* **日で絞れる。**絞れないと、一晩分に押し出された昨日の失敗へ手が届かない */}
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="flex flex-col text-sm">
+          <span className="text-gray-700">実行した日</span>
+          <input
+            type="date"
+            value={date}
+            onChange={(event) => setDate(event.target.value)}
+            className="mt-1 rounded border border-gray-300 px-3 py-2"
+          />
+        </label>
+        {date !== "" && (
+          <button
+            type="button"
+            onClick={() => setDate("")}
+            className="rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-100"
+          >
+            直近に戻す
+          </button>
+        )}
+      </div>
+
       <RunTable runs={shown} stepsOf={stepsOf} />
+
+      <PastSessions />
 
     </div>
   );
@@ -231,5 +263,64 @@ function RunTable({
             </tbody>
           </table>
         </div>
+  );
+}
+
+/**
+ * 過去のセッション（TD-03）。
+ *
+ * **停止した瞬間に種が画面から消えると、翌朝には再現の手立てが無い。**
+ * US37-3 が言う「同じ種を指定すると同じ並びを再現できる」は、その種を読めて
+ * 初めて意味を持つ。
+ */
+function PastSessions() {
+  const { data: sessions } = useSimulationSessions();
+  if (sessions === undefined || sessions.length === 0) {
+    return null;
+  }
+  return (
+    <section aria-labelledby="past-sessions" className="space-y-2">
+      <h2 id="past-sessions" className="text-lg font-semibold">
+        過去の継続実行
+      </h2>
+      <p className="text-sm text-gray-600">
+        {"種を控えておくと、同じ並びをもう一度流せます。"}
+      </p>
+      <div className="overflow-x-auto">
+        <table className="min-w-full border-collapse text-sm">
+          <thead>
+            <tr className="border-b text-left">
+              <th className="py-2">セッション</th>
+              <th>状態</th>
+              <th>種</th>
+              <th>間隔</th>
+              <th>同時実行</th>
+              <th>例外の割合</th>
+              <th>開始</th>
+              <th>停止</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sessions.map((session) => (
+              <tr key={session.sessionId} className="border-b">
+                <td className="py-2 font-mono">{session.sessionId}</td>
+                <td>{session.statusLabel}</td>
+                {/* **種は控えられる形で出す。**読めなければ再現できない */}
+                <td className="font-mono">{session.seed}</td>
+                <td>{session.intervalSeconds} 秒</td>
+                <td>{session.maxConcurrent} 本</td>
+                <td>{Math.round(session.exceptionRatio * 100)}%</td>
+                <td>{formatBusinessDateTime(session.startedAt)}</td>
+                <td>
+                  {session.stoppedAt === null
+                    ? "—"
+                    : formatBusinessDateTime(session.stoppedAt)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }

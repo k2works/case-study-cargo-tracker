@@ -15,6 +15,15 @@ public interface ContinuousRunSessionRepository {
      */
     void save(ContinuousRunSession session);
 
+    /**
+     * 直近のセッションを新しい順に返す（TD-03・IT16）。
+     *
+     * <p><strong>停止したセッションも残す。</strong>停止した瞬間に種が読めなくなると、
+     * 翌朝には落ちた並びを再現する手立てが無い——US37-3 が言う「同じ種を指定すると
+     * 同じ並びを再現できる」は、その種を読めて初めて意味を持つ。
+     */
+    java.util.List<ContinuousRunSession> findRecent(int limit);
+
     Optional<ContinuousRunSession> findById(SessionId sessionId);
 
     /**

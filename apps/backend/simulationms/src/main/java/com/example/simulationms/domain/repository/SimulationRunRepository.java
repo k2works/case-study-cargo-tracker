@@ -39,6 +39,18 @@ public interface SimulationRunRepository {
     List<SimulationRun> findRecent(int limit);
 
     /**
+     * 期間で絞った一覧（TD-03・IT16）。
+     *
+     * <p><strong>直近 N 件だけでは、落ちた実行へ翌朝辿り着けない。</strong>継続実行を
+     * 一晩回すと、昨日の失敗は朝には窓の外に落ちている——落ちたことは統計で分かっても、
+     * どれが落ちたのかに手が届かない。
+     *
+     * @param from この時刻以降（{@code null} なら下限なし）
+     * @param to この時刻より前（{@code null} なら上限なし）
+     */
+    List<SimulationRun> findBetween(java.time.Instant from, java.time.Instant to, int limit);
+
+    /**
      * そのシナリオが実行中かどうか（US34-5）。
      *
      * <p>二重実行を断る根拠になる。<strong>部分 UNIQUE では H2 が解釈しない</strong>ため
