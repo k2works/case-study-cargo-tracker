@@ -289,11 +289,22 @@ function printSummary(oldVersion, newVersion) {
  */
 function runCommandInDir(command, rootDir, done) {
   try {
-    execSync(command, { cwd: rootDir, stdio: 'inherit' });
+    runCommandInDirSync(command, rootDir);
     done();
   } catch (error) {
     done(error);
   }
+}
+
+/**
+ * シェルコマンドを実行する（失敗は例外で伝える）。
+ *
+ * <p>1 つの工程で複数のコマンドを順に走らせるときに使う。
+ * @param {string} command - 実行するコマンド
+ * @param {string} cwd - 実行ディレクトリ
+ */
+function runCommandInDirSync(command, cwd) {
+  execSync(command, { cwd, stdio: 'inherit' });
 }
 
 // ============================================
@@ -365,14 +376,30 @@ export default function (gulp, options = {}) {
     }
   });
 
+  /**
+   * 静的解析。
+   *
+   * <p>バックエンドの Checkstyle / SpotBugs / ArchUnit は `dev:backend:build` に
+   * 含まれるため、ここではフロントエンドの lint と型検査を見る。
+   * <strong>ルートに `lint` は無い</strong>——無い名前を呼ぶと、リリース手順が
+   * 一度も通らないまま「用意してある」ことになる。
+   */
   gulp.task('release:preflight:lint', (done) => {
     console.log('[2/5] Lint...');
-    runCommandInDir('npm run lint', rootDir, done);
+    runCommandInDir('npm run lint && npx tsc -b',
+      path.join(rootDir, 'apps', 'frontend'), done);
   });
 
+  /** バックエンドとフロントエンドの両方を回す。片方だけだと、もう片方の赤を見逃す。 */
   gulp.task('release:preflight:test', (done) => {
     console.log('[3/5] Test...');
-    runCommandInDir('npm run test', rootDir, done);
+    try {
+      runCommandInDirSync('npx vitest run', path.join(rootDir, 'apps', 'frontend'));
+      runCommandInDirSync('npm run test', rootDir);
+      done();
+    } catch (error) {
+      done(error);
+    }
   });
 
   gulp.task('release:preflight:build', (done) => {
