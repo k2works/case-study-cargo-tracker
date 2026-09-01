@@ -17,6 +17,9 @@ public class InvoiceRecord {
     private String shipperId;
     private String shipperName;
     private boolean shipperCorporate;
+
+    /** シミュレーション由来か（[ADR-030] 決定 3）。発行時に決まり、後から変わらない。 */
+    private boolean simulated;
     private int legCount;
 
     private java.math.BigDecimal legFactor;
@@ -105,6 +108,14 @@ public class InvoiceRecord {
 
     public void setShipperCorporate(boolean shipperCorporate) {
         this.shipperCorporate = shipperCorporate;
+    }
+
+    public boolean isSimulated() {
+        return simulated;
+    }
+
+    public void setSimulated(boolean simulated) {
+        this.simulated = simulated;
     }
 
     public int getLegCount() {

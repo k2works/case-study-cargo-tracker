@@ -7,6 +7,7 @@ import com.example.simulationms.domain.model.valueobjects.Seed;
 import com.example.simulationms.domain.model.valueobjects.SessionId;
 import com.example.simulationms.domain.repository.ContinuousRunSessionRepository;
 import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
@@ -26,6 +27,16 @@ public class ContinuousRunScheduler {
 
     private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("yyyyMMdd");
 
+    /**
+     * 停止処理中を待つ上限。
+     *
+     * <p><strong>逃げ道を置く。</strong>進行中の本数はこのインスタンスのメモリ上の
+     * 数であり、1 件詰まると停止処理中から戻らない。そのあいだ新しいセッションも
+     * 始められない（動いているセッションは 1 つまで）——復旧が Pod の再起動だけに
+     * なる。実行 1 本は 14〜18 工程で 10 秒前後、上限まで並んでも数分で終わる。
+     */
+    public static final java.time.Duration STOP_DEADLINE = java.time.Duration.ofMinutes(15);
+
     private final ContinuousRunSessionRepository sessions;
     private final ContinuousRunner runner;
     private final Clock clock;
@@ -38,6 +49,18 @@ public class ContinuousRunScheduler {
      * セッションをまたいで共有はしない（[ADR-031] 決定 1）。
      */
     private final Map<String, ScenarioGenerator> generators = new ConcurrentHashMap<>();
+
+    /**
+     * セッションごとの、最後に実行を始めた時刻。
+     *
+     * <p><strong>間隔は実際に効かせる。</strong>設定を保存して表示するだけだと、
+     * 画面が「30 秒ごと」と出すのに 1 本終われば次が始まる——データが増えすぎた
+     * とき、管理者は設定を疑わず別の場所を探すことになる。
+     */
+    private final Map<String, Instant> lastStartedAt = new ConcurrentHashMap<>();
+
+    /** セッションごとの、停止を指示した時刻。見切りの判定に使う。 */
+    private final Map<String, Instant> stopRequestedAt = new ConcurrentHashMap<>();
 
     public ContinuousRunScheduler(ContinuousRunSessionRepository sessions,
             ContinuousRunner runner, Clock clock) {
@@ -73,6 +96,10 @@ public class ContinuousRunScheduler {
                         "そのセッションはありません: " + sessionId.value()));
         ContinuousRunSession stopped = session.stop(runner.running(), clock.instant());
         sessions.save(stopped);
+        if (stopped.status() == com.example.simulationms.domain.model.valueobjects
+                .SessionStatus.STOPPING) {
+            stopRequestedAt.put(sessionId.value(), clock.instant());
+        }
         return stopped;
     }
 
@@ -87,19 +114,52 @@ public class ContinuousRunScheduler {
     }
 
     private void advance(ContinuousRunSession session) {
-        int running = runner.running();
+        // **見切った本数は 0 として扱う。** 待ち続けると、止まらないまま
+        // 新しいセッションも始められない状態が残る
+        int running = stopDeadlinePassed(session) ? 0 : runner.running();
         ContinuousRunSession settled = session.settleIfFinished(running, clock.instant());
         if (settled != session) {
             sessions.save(settled);
             generators.remove(settled.sessionId().value());
+            lastStartedAt.remove(settled.sessionId().value());
+            stopRequestedAt.remove(settled.sessionId().value());
             return;
         }
-        if (!session.canStartAnotherRun(running)) {
+        if (!session.canStartAnotherRun(running) || !intervalElapsed(session)) {
             return;
         }
+        lastStartedAt.put(session.sessionId().value(), clock.instant());
         ScenarioGenerator generator = generators.computeIfAbsent(session.sessionId().value(),
                 key -> session.seed().newGenerator(session.policy().exceptionRatio()));
         runner.start(generator.next(), session.sessionId(), session.seed());
+    }
+
+    /**
+     * 停止を指示してから、待つ上限を過ぎたか。
+     *
+     * <p>過ぎたら進行中を待たずに停止済みへ移す。<strong>進行中の実行を止めるわけ
+     * ではない</strong>——最後まで走る（[ADR-031] 決定 4）。止まらないセッションを
+     * 残さないための見切りである。
+     */
+    private boolean stopDeadlinePassed(ContinuousRunSession session) {
+        Instant requestedAt = stopRequestedAt.get(session.sessionId().value());
+        return requestedAt != null
+                && !clock.instant().isBefore(requestedAt.plus(STOP_DEADLINE));
+    }
+
+    /**
+     * 前の開始から、設定した間隔が経っているか（US37-2）。
+     *
+     * <p>まだ 1 本も始めていなければ、待たずに始める——開始した直後に何も
+     * 起きないと、動いているのかどうかが分からない。
+     */
+    private boolean intervalElapsed(ContinuousRunSession session) {
+        Instant last = lastStartedAt.get(session.sessionId().value());
+        if (last == null) {
+            return true;
+        }
+        return !clock.instant().isBefore(
+                last.plusSeconds(session.policy().intervalSeconds()));
     }
 
     /**

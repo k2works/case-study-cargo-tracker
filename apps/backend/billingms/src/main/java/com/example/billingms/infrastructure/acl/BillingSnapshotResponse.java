@@ -39,6 +39,14 @@ public record BillingSnapshotResponse(
         String bookingStatus,
         String shipperId,
         String shipperName,
+        /**
+         * シミュレーション由来か（[ADR-030] 決定 3）。bookingms が判断して送る。
+         *
+         * <p><strong>省略できる形にする。</strong>基本型にすると、この項目を送らない
+         * 応答が「null を boolean に入れられない」で読めなくなる——IT14 で
+         * {@code ShipperRequest} に同じ形の欠陥を作った。
+         */
+        Boolean simulated,
         String shipperType,
         BigDecimal discountRate,
         BigDecimal weightKg,
@@ -73,6 +81,7 @@ public record BillingSnapshotResponse(
      */
     public BillableCargoSnapshot toSnapshot() {
         return new BillableCargoSnapshot(bookingId, bookingStatus, shipperId, shipperName,
+                Boolean.TRUE.equals(simulated),
                 "CORPORATE".equals(shipperType), discountRate, weightKg, cargoType,
                 originName, originCountry, destinationName, destinationCountry, legCount,
                 legs == null ? java.util.List.of()

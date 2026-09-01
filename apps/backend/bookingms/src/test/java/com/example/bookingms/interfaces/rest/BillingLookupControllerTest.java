@@ -52,7 +52,7 @@ class BillingLookupControllerTest {
     }
 
     private static BillableCargo delivered() {
-        return new BillableCargo("BKG-2026000007", "DELIVERED", "1", "丸紅商事株式会社",
+        return new BillableCargo("BKG-2026000007", "DELIVERED", "1", "丸紅商事株式会社", false,
                 "CORPORATE", new java.math.BigDecimal("0.1000"), new java.math.BigDecimal("4200"),
                 "GENERAL", "Tokyo", "JP", "Los Angeles", "US", 2, oceanLegs(2),
                 Instant.parse("2027-09-26T00:00:00Z"), null, null);
@@ -87,7 +87,7 @@ class BillingLookupControllerTest {
     @DisplayName("誤配した貨物では、いつ・どこで外れたかを運ぶ")
     void carriesTheMisrouteRecord() throws Exception {
         when(billable.findBillable("BKG-2026000009")).thenReturn(Optional.of(
-                new BillableCargo("BKG-2026000009", "DELIVERED", "1", "丸紅商事株式会社",
+                new BillableCargo("BKG-2026000009", "DELIVERED", "1", "丸紅商事株式会社", false,
                         "CORPORATE", new java.math.BigDecimal("0.1000"),
                         new java.math.BigDecimal("2500"), "GENERAL", "Tokyo", "JP", "Los Angeles", "US", 1, oceanLegs(1),
                         Instant.parse("2027-10-02T00:00:00Z"),
@@ -127,7 +127,7 @@ class BillingLookupControllerTest {
     @DisplayName("キャンセルされた貨物では、申請した時点の状態を運ぶ")
     void carriesTheStatusAtRequestNotAtApproval() throws Exception {
         when(billable.findBillable("BKG-2026000010")).thenReturn(Optional.of(
-                new BillableCargo("BKG-2026000010", "CANCELLED", "1", "丸紅商事株式会社",
+                new BillableCargo("BKG-2026000010", "CANCELLED", "1", "丸紅商事株式会社", false,
                         "CORPORATE", new java.math.BigDecimal("0.1000"),
                         new java.math.BigDecimal("1500"), "GENERAL", "Tokyo", "JP", "Los Angeles", "US", 1, oceanLegs(1),
                         null, null,

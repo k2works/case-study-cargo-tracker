@@ -180,7 +180,14 @@ public interface CargoMapper {
             JOIN location o ON o.unlocode = c.spec_origin_unlocode
             JOIN location d ON d.unlocode = c.spec_destination_unlocode
             <where>
-                <if test="cargoType != null">c.cargo_type = #{cargoType}</if>
+                -- **シミュレーション由来は出さない**（[ADR-030] 決定 3）。
+                -- 継続実行は一晩で数百件の予約を作る。翌朝の一覧がそれで埋まると、
+                -- 営業は「新しい予約を拾う」ところから始められない
+                -- ——一覧そのものが信用されなくなる。
+                -- **名指しの照会（findByBookingId）では外さない**——外すと
+                -- シミュレーション自身が進めない
+                s.shipper_code NOT LIKE 'SIM-%'
+                <if test="cargoType != null">AND c.cargo_type = #{cargoType}</if>
                 <if test="keyword != null">
                     AND (LOWER(c.booking_id) LIKE LOWER(CONCAT('%', #{keyword}, '%'))
                          OR LOWER(s.name) LIKE LOWER(CONCAT('%', #{keyword}, '%')))
@@ -244,7 +251,10 @@ public interface CargoMapper {
             FROM cargo c
             JOIN shipper s ON s.id = c.shipper_id
             <where>
-                <if test="cargoType != null">c.cargo_type = #{cargoType}</if>
+                -- **一覧と同じ絞りを通す。** 片方だけに掛けると、件数と中身が
+                -- 食い違う（「10 件あります」と出るのに開くと 3 件）
+                s.shipper_code NOT LIKE 'SIM-%'
+                <if test="cargoType != null">AND c.cargo_type = #{cargoType}</if>
                 <if test="keyword != null">
                     AND (LOWER(c.booking_id) LIKE LOWER(CONCAT('%', #{keyword}, '%'))
                          OR LOWER(s.name) LIKE LOWER(CONCAT('%', #{keyword}, '%')))

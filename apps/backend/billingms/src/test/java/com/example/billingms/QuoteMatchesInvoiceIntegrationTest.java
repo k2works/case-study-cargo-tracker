@@ -56,7 +56,7 @@ class QuoteMatchesInvoiceIntegrationTest {
     void quotesTheSameAmountAsTheInvoice(int legCount, String weight, String cargoType) {
         BigDecimal weightKg = new BigDecimal(weight);
         when(snapshots.findBillable("BKG-2026000007")).thenReturn(Optional.of(
-                new BillableCargoSnapshot("BKG-2026000007", "DELIVERED", "1", "丸紅商事",
+                new BillableCargoSnapshot("BKG-2026000007", "DELIVERED", "1", "丸紅商事", false,
                         false, null, weightKg, cargoType, "Tokyo", "JP", "Osaka", "JP",
                         legCount, domesticSnapshotLegs(legCount),
                         Instant.parse("2027-09-26T00:00:00Z"), null, null)));
@@ -77,8 +77,8 @@ class QuoteMatchesInvoiceIntegrationTest {
     @DisplayName("遠洋の経路でも、見積と実料金は一致する")
     void quotesTheSameAmountForOceanRoutes() {
         when(snapshots.findBillable("BKG-2026000008")).thenReturn(Optional.of(
-                new BillableCargoSnapshot("BKG-2026000008", "DELIVERED", "2", "山田太郎",
-                        false, null, new BigDecimal("4200"), "GENERAL",
+                new BillableCargoSnapshot("BKG-2026000008", "DELIVERED", "2", "山田太郎", false, false,
+                        null, new BigDecimal("4200"), "GENERAL",
                         "Tokyo", "JP", "Los Angeles", "US", 1,
                         List.of(new BillableCargoSnapshot.Leg("DOMESTIC", "OCEAN")),
                         Instant.parse("2027-09-26T00:00:00Z"), null, null)));

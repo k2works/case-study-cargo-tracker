@@ -97,7 +97,10 @@ public class CalculateChargeUseCase {
                         numbering.next(),
                         BillingBookingId.of(snapshot.bookingId()),
                         shipperIdOf(snapshot),
-                        clock.instant()),
+                        clock.instant(),
+                        // **発行時に決まる。**後から変わらない値であり、
+                        // 経理の一覧から外す根拠になる（[ADR-030] 決定 3）
+                        snapshot.simulated()),
                 new InvoiceCharges(calculation.charge(), calculation.discountPolicy(),
                         calculation.cancellationFee(), calculation.taxRate()),
                 lineItems,

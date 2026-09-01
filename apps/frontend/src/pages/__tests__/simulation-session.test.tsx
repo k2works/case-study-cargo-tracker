@@ -133,3 +133,45 @@ describe('継続実行（US37）', () => {
     expect(sent).toMatchObject({ seed: 20261207 })
   })
 })
+
+describe('継続実行の設定（US37-2）', () => {
+  it('間隔・同時実行数・例外の割合を画面から変えられる', async () => {
+    let sent: Record<string, unknown> | null = null
+    renderPage({ session: null, statistics: { ...STATISTICS, total: 0 } })
+    server.use(
+      http.post(API_PATHS.simulationSessions, async ({ request }) => {
+        sent = (await request.json()) as Record<string, unknown>
+        return HttpResponse.json(SESSION, { status: 201 })
+      }),
+    )
+
+    await userEvent.clear(await screen.findByLabelText('実行の間隔（秒）'))
+    await userEvent.type(screen.getByLabelText('実行の間隔（秒）'), '10')
+    await userEvent.clear(screen.getByLabelText('同時実行数'))
+    await userEvent.type(screen.getByLabelText('同時実行数'), '5')
+    await userEvent.clear(screen.getByLabelText('例外の割合（%）'))
+    await userEvent.type(screen.getByLabelText('例外の割合（%）'), '50')
+    await userEvent.click(screen.getByRole('button', { name: '継続実行を開始する' }))
+
+    await waitFor(() => expect(sent).not.toBeNull())
+    // 割合は画面では % で入れ、送るときは 0〜1 にする
+    expect(sent).toMatchObject({
+      intervalSeconds: 10,
+      maxConcurrent: 5,
+      exceptionRatio: 0.5,
+    })
+  })
+})
+
+describe('統計から次の行動へ（US37-8）', () => {
+  /**
+   * **気づく手段は次の行動へ繋ぐ。** 「経路割り当てで 12 件落ちている」と
+   * 分かった管理者が、50 件の一覧を目で開いて回ることにならないようにする。
+   */
+  it('失敗した工程から、その工程で落ちた実行へ辿れる', async () => {
+    renderPage({ session: SESSION, statistics: STATISTICS })
+
+    const link = await screen.findByRole('link', { name: /経路割り当て/ })
+    expect(link).toHaveAttribute('href', '/admin/simulations?failedStep=ASSIGN_ROUTE')
+  })
+})

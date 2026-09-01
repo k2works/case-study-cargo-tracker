@@ -50,7 +50,7 @@ class CalculateChargeUseCaseTest {
     /** 法人・2 区間・4,200kg・一般貨物。50,000 × 2 × 4.2 × 1.0 = 420,000 円。 */
     private static BillableCargoSnapshot corporate() {
         return new BillableCargoSnapshot("BKG-2026000007", "DELIVERED", "1",
-                "丸紅商事株式会社", true, new BigDecimal("0.1000"), new BigDecimal("4200"),
+                "丸紅商事株式会社", false, true, new BigDecimal("0.1000"), new BigDecimal("4200"),
                 "GENERAL", "Tokyo", "JP", "Los Angeles", "US", 2, domesticSnapshotLegs(2),
                 Instant.parse("2027-09-26T00:00:00Z"), null, null);
     }
@@ -97,8 +97,8 @@ class CalculateChargeUseCaseTest {
         @DisplayName("個人には割引が無い")
         void appliesNoDiscountToIndividuals() {
             when(snapshots.findBillable("BKG-2026000008")).thenReturn(Optional.of(
-                    new BillableCargoSnapshot("BKG-2026000008", "DELIVERED", "2", "山田太郎",
-                            false, null, new BigDecimal("800"), "REFRIGERATED",
+                    new BillableCargoSnapshot("BKG-2026000008", "DELIVERED", "2", "山田太郎", false, false,
+                            null, new BigDecimal("800"), "REFRIGERATED",
                             "Tokyo", "JP", "Singapore", "SG", 1, domesticSnapshotLegs(1),
                             Instant.parse("2027-09-20T00:00:00Z"), null, null)));
 
@@ -119,7 +119,7 @@ class CalculateChargeUseCaseTest {
         @DisplayName("法人でも割引率が未設定なら割引は無い")
         void appliesNoDiscountWhenTheRateIsUnset() {
             when(snapshots.findBillable("BKG-2026000007")).thenReturn(Optional.of(
-                    new BillableCargoSnapshot("BKG-2026000007", "DELIVERED", "1", "丸紅商事",
+                    new BillableCargoSnapshot("BKG-2026000007", "DELIVERED", "1", "丸紅商事", false,
                             true, null, new BigDecimal("4200"), "GENERAL",
                             "Tokyo", "JP", "Los Angeles", "US", 2, domesticSnapshotLegs(2),
                             Instant.parse("2027-09-26T00:00:00Z"), null, null)));
@@ -132,7 +132,7 @@ class CalculateChargeUseCaseTest {
         @DisplayName("キャンセルされた予約ではキャンセル料が算定される")
         void calculatesTheCancellationFee() {
             when(snapshots.findBillable("BKG-2026000010")).thenReturn(Optional.of(
-                    new BillableCargoSnapshot("BKG-2026000010", "CANCELLED", "1", "丸紅商事",
+                    new BillableCargoSnapshot("BKG-2026000010", "CANCELLED", "1", "丸紅商事", false,
                             true, new BigDecimal("0.1000"), new BigDecimal("1500"), "GENERAL",
                             "Tokyo", "JP", "Los Angeles", "US", 1, domesticSnapshotLegs(1), null, null,
                             new BillableCargoSnapshot.Cancellation("IN_TRANSIT",
@@ -154,7 +154,7 @@ class CalculateChargeUseCaseTest {
         @DisplayName("誤配の記録を根拠として渡すが、金額は決めない")
         void carriesTheMisrouteWithoutDecidingTheAdjustment() {
             when(snapshots.findBillable("BKG-2026000009")).thenReturn(Optional.of(
-                    new BillableCargoSnapshot("BKG-2026000009", "DELIVERED", "1", "丸紅商事",
+                    new BillableCargoSnapshot("BKG-2026000009", "DELIVERED", "1", "丸紅商事", false,
                             true, new BigDecimal("0.1000"), new BigDecimal("2500"), "GENERAL",
                             "Tokyo", "JP", "Los Angeles", "US", 1, domesticSnapshotLegs(1),
                             Instant.parse("2027-10-02T00:00:00Z"),
@@ -188,8 +188,8 @@ class CalculateChargeUseCaseTest {
         @DisplayName("経路が決まる前にキャンセルされた予約は、0 円として算出できる")
         void calculatesZeroForCargoCancelledBeforeRouting() {
             when(snapshots.findBillable("BKG-2026000045")).thenReturn(Optional.of(
-                    new BillableCargoSnapshot("BKG-2026000045", "CANCELLED", "2", "山田太郎",
-                            false, null, new BigDecimal("1000"), "GENERAL",
+                    new BillableCargoSnapshot("BKG-2026000045", "CANCELLED", "2", "山田太郎", false, false,
+                            null, new BigDecimal("1000"), "GENERAL",
                             "Tokyo", "JP", "Los Angeles", "US", 0, List.of(), null, null,
                             new BillableCargoSnapshot.Cancellation("PRELIMINARY",
                                     Instant.parse("2027-09-01T00:00:00Z")))));
@@ -216,7 +216,7 @@ class CalculateChargeUseCaseTest {
         @DisplayName("引取済なのに旅程が無い予約は断る")
         void rejectsDeliveredCargoWithoutAnyLeg() {
             when(snapshots.findBillable("BKG-2026000046")).thenReturn(Optional.of(
-                    new BillableCargoSnapshot("BKG-2026000046", "DELIVERED", "1", "丸紅商事",
+                    new BillableCargoSnapshot("BKG-2026000046", "DELIVERED", "1", "丸紅商事", false,
                             true, new BigDecimal("0.1000"), new BigDecimal("4200"), "GENERAL",
                             "Tokyo", "JP", "Los Angeles", "US", 0, domesticSnapshotLegs(0),
                             Instant.parse("2027-09-26T00:00:00Z"), null, null)));
@@ -295,7 +295,7 @@ class CalculateChargeUseCaseTest {
         @DisplayName("国内輸送の請求には消費税が付く")
         void chargesTaxForDomesticTransport() {
             when(snapshots.findBillable("BKG-2026000011")).thenReturn(Optional.of(
-                    new BillableCargoSnapshot("BKG-2026000011", "DELIVERED", "1", "丸紅商事",
+                    new BillableCargoSnapshot("BKG-2026000011", "DELIVERED", "1", "丸紅商事", false,
                             false, null, new BigDecimal("1000"), "GENERAL",
                             "Tokyo", "JP", "Osaka", "JP", 1, domesticSnapshotLegs(1),
                             Instant.parse("2027-09-26T00:00:00Z"), null, null)));

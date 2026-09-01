@@ -16,7 +16,18 @@ import java.time.Instant;
  * @param issuedAt 発行日時
  */
 public record InvoiceHeader(InvoiceId invoiceId, BillingBookingId cargoBookingId,
-        BillingShipperId shipperId, Instant issuedAt) {
+        BillingShipperId shipperId, Instant issuedAt, boolean simulated) {
+
+    /**
+     * 由来を指定しない宛名（既定は実業務）。
+     *
+     * <p>既存の呼び出しを壊さないために置く——<strong>この項目を知らない
+     * 呼び出しが既にいる</strong>（IT14 の教訓）。
+     */
+    public InvoiceHeader(InvoiceId invoiceId, BillingBookingId cargoBookingId,
+            BillingShipperId shipperId, Instant issuedAt) {
+        this(invoiceId, cargoBookingId, shipperId, issuedAt, false);
+    }
 
     /**
      * 新規に発行するときの検査。

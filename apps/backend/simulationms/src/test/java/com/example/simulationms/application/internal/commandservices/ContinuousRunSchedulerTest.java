@@ -94,8 +94,23 @@ class ContinuousRunSchedulerTest {
 
     private final RecordingRunner runner = new RecordingRunner();
     private final InMemorySessions sessions = new InMemorySessions();
+
+    /**
+     * 進む時計。
+     *
+     * <p><strong>間隔が効くようになったので、刻むだけでは次が始まらない。</strong>
+     * 刻みのたびに時計を十分に進め、ここで見たいもの（上限・停止）だけを見る。
+     */
+    private final MutableClock clock = new MutableClock(NOW);
+
     private final ContinuousRunScheduler scheduler =
-            new ContinuousRunScheduler(sessions, runner, CLOCK);
+            new ContinuousRunScheduler(sessions, runner, clock);
+
+    /** 間隔を待ってから刻む。 */
+    private void tickAfterInterval() {
+        clock.advanceSeconds(POLICY.intervalSeconds());
+        scheduler.tick();
+    }
 
     @Nested
     @DisplayName("開始と刻み")
@@ -140,7 +155,7 @@ class ContinuousRunSchedulerTest {
             scheduler.start(POLICY, Seed.of(42L), "admin01");
 
             for (int i = 0; i < 10; i++) {
-                scheduler.tick();
+                tickAfterInterval();
             }
 
             assertThat(runner.started).hasSize(POLICY.maxConcurrent());
@@ -151,11 +166,11 @@ class ContinuousRunSchedulerTest {
         void startsAgainWhenARunFinishes() {
             scheduler.start(POLICY, Seed.of(42L), "admin01");
             for (int i = 0; i < 5; i++) {
-                scheduler.tick();
+                tickAfterInterval();
             }
             runner.finishOne();
 
-            scheduler.tick();
+            tickAfterInterval();
 
             assertThat(runner.started).hasSize(POLICY.maxConcurrent() + 1);
         }
@@ -208,13 +223,13 @@ class ContinuousRunSchedulerTest {
         @DisplayName("進行中があるうちは停止処理中で、尽きたら停止済みになる")
         void settlesWhenTheLastRunFinishes() {
             ContinuousRunSession session = scheduler.start(POLICY, Seed.of(42L), "admin01");
-            scheduler.tick();
+            tickAfterInterval();
 
             assertThat(scheduler.stop(session.sessionId()).status())
                     .isEqualTo(SessionStatus.STOPPING);
 
             runner.finishOne();
-            scheduler.tick();
+            tickAfterInterval();
 
             assertThat(sessions.findById(session.sessionId()).orElseThrow().status())
                     .isEqualTo(SessionStatus.STOPPED);
@@ -228,6 +243,114 @@ class ContinuousRunSchedulerTest {
             assertThatThrownBy(() -> scheduler.stop(unknown))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("SES-20261207-9999");
+        }
+    }
+
+    @Nested
+    @DisplayName("実行の間隔")
+    class Interval {
+
+        /**
+         * <strong>設定した間隔を守る</strong>（US37-2）。
+         *
+         * <p>守らないと、画面が「30 秒ごと」と出すのに 1 本終われば次が始まる。
+         * データが増えすぎたとき、管理者は設定を疑わず別の場所を探すことになる。
+         */
+        @Test
+        @DisplayName("前の開始から間隔が経つまで、次を始めない")
+        void waitsForTheConfiguredInterval() {
+            scheduler.start(POLICY, Seed.of(42L), "admin01");
+
+            scheduler.tick();
+            assertThat(runner.started).hasSize(1);
+
+            // 間隔（30 秒）を待たずに刻んでも、次は始まらない
+            clock.advanceSeconds(29);
+            scheduler.tick();
+            assertThat(runner.started).hasSize(1);
+
+            clock.advanceSeconds(1);
+            scheduler.tick();
+            assertThat(runner.started).hasSize(2);
+        }
+
+        /** 間隔が経っていても、上限に達していれば始めない（US37-2）。 */
+        @Test
+        @DisplayName("間隔が経っていても、上限を超えては始めない")
+        void stillRespectsTheConcurrencyLimit() {
+            scheduler.start(POLICY, Seed.of(42L), "admin01");
+
+            for (int i = 0; i < 10; i++) {
+                clock.advanceSeconds(60);
+                scheduler.tick();
+            }
+
+            assertThat(runner.started).hasSize(POLICY.maxConcurrent());
+        }
+    }
+
+
+    @Nested
+    @DisplayName("停止が長引いたとき")
+    class StuckStopping {
+
+        /**
+         * <strong>逃げ道を置く</strong>（IT15 のレビュー指摘）。
+         *
+         * <p>進行中の本数はメモリ上の数であり、1 件詰まると停止処理中から戻らない。
+         * そのあいだ新しいセッションも始められない——復旧が Pod の再起動だけに
+         * なる。時間で見切る。
+         */
+        @Test
+        @DisplayName("停止処理中が長引いたら、見切って停止済みにする")
+        void givesUpWaitingAfterTheDeadline() {
+            MutableClock clock = new MutableClock(NOW);
+            ContinuousRunScheduler scheduler =
+                    new ContinuousRunScheduler(sessions, runner, clock);
+            ContinuousRunSession session = scheduler.start(POLICY, Seed.of(42L), "admin01");
+            clock.advanceSeconds(POLICY.intervalSeconds());
+            scheduler.tick();
+            scheduler.stop(session.sessionId());
+
+            // 進行中が残ったまま。見切りの時間までは待つ
+            clock.advanceSeconds(ContinuousRunScheduler.STOP_DEADLINE.toSeconds() - 1);
+            scheduler.tick();
+            assertThat(sessions.findById(session.sessionId()).orElseThrow().status())
+                    .isEqualTo(SessionStatus.STOPPING);
+
+            clock.advanceSeconds(2);
+            scheduler.tick();
+            assertThat(sessions.findById(session.sessionId()).orElseThrow().status())
+                    .isEqualTo(SessionStatus.STOPPED);
+        }
+    }
+
+    /** 進む時計。**実時計を使わない**——待つテストは遅く、脆い。 */
+    private static final class MutableClock extends Clock {
+
+        private Instant now;
+
+        MutableClock(Instant now) {
+            this.now = now;
+        }
+
+        void advanceSeconds(long seconds) {
+            now = now.plusSeconds(seconds);
+        }
+
+        @Override
+        public ZoneId getZone() {
+            return ZoneId.of("Asia/Tokyo");
+        }
+
+        @Override
+        public Clock withZone(ZoneId zone) {
+            return this;
+        }
+
+        @Override
+        public Instant instant() {
+            return now;
         }
     }
 }

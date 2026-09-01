@@ -782,6 +782,7 @@ entity "invoice\n（精算書）" as invoice {
   * shipper_id : VARCHAR(20) <<NOT NULL>>
   * shipper_name : VARCHAR(200) <<NOT NULL>>
   * shipper_corporate : BOOLEAN <<NOT NULL>>
+  * simulated : BOOLEAN <<NOT NULL>>
   * leg_count : INTEGER <<NOT NULL>>
   * leg_factor : NUMERIC(8,2) <<NOT NULL>>
   leg_region : VARCHAR(20)
@@ -1188,6 +1189,7 @@ IT11（US21・US22）で実装した。キャンセル料の算定根拠（UC22�
 | `shipper_id` | `VARCHAR(20)` | NOT NULL | 荷主参照 |
 | `shipper_name` | `VARCHAR(200)` | NOT NULL | **発行した時点の社名**。荷主 ID から引き直さない——社名を変えても、発行済みの請求書の宛名は変わらない |
 | `shipper_corporate` | `BOOLEAN` | NOT NULL | 法人か |
+| `simulated` | `BOOLEAN` | NOT NULL | シミュレーション由来か（IT15 追加）。**発行時に決まり、後から変わらない**。経理の発行済み一覧と支払期限超過から外す根拠になる——混ざると架空の未入金が積み上がり、督促の判断を誤る。billingms は荷主コードを持たないため、bookingms が判断した値を受け取って保存する |
 | `leg_count` | `INTEGER` | NOT NULL | 旅程の区間数。**距離の代わり**（決定 1） |
 | `weight_kg` | `NUMERIC(10,3)` | NOT NULL | 重量（基本料金の根拠） |
 | `cargo_type` | `VARCHAR(20)` | NOT NULL | 貨物種別（基本料金の根拠） |

@@ -414,7 +414,7 @@ class BillingControllerTest {
         void listsUnbilledBookings() throws Exception {
             when(calculateCharge.billable()).thenReturn(List.of(
                     new BillableCargoSnapshot("BKG-2026000007", "DELIVERED", "1",
-                            "丸紅商事株式会社", true, new BigDecimal("0.1000"),
+                            "丸紅商事株式会社", false, true, new BigDecimal("0.1000"),
                             new BigDecimal("4200"), "GENERAL", "Tokyo", "JP", "Los Angeles", "US", 2, domesticSnapshotLegs(2),
                             Instant.parse("2027-09-26T00:00:00Z"), null, null)));
 
@@ -440,7 +440,7 @@ class BillingControllerTest {
         void returnsTheLastHandlingAtForCancelledBookings() throws Exception {
             when(calculateCharge.billable()).thenReturn(List.of(
                     new BillableCargoSnapshot("BKG-2026000010", "CANCELLED", "1",
-                            "丸紅商事株式会社", true, new BigDecimal("0.1000"),
+                            "丸紅商事株式会社", false, true, new BigDecimal("0.1000"),
                             new BigDecimal("1500"), "GENERAL", "Tokyo", "JP", "Los Angeles", "US", 1, domesticSnapshotLegs(1),
                             Instant.parse("2027-09-08T00:00:00Z"), null,
                             new BillableCargoSnapshot.Cancellation("IN_TRANSIT",

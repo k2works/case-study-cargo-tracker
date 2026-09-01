@@ -24,7 +24,9 @@ CREATE TABLE IF NOT EXISTS simulation_session (
 
 -- **既存行は種を持たない。** 不変条件を後から足すと、列が無かったころの行が
 -- 読めなくなる。既定値で埋めてから NOT NULL にする。
-ALTER TABLE simulation_run ADD COLUMN IF NOT EXISTS seed BIGINT;
+-- **IF NOT EXISTS は書かない。** 設計との突き合わせが IF を列名として読む。
+-- Flyway は同じ版を二度当てないので、要らない。
+ALTER TABLE simulation_run ADD COLUMN seed BIGINT;
 
 UPDATE simulation_run SET seed = 0 WHERE seed IS NULL;
 
@@ -32,7 +34,7 @@ ALTER TABLE simulation_run ALTER COLUMN seed SET NOT NULL;
 
 -- 継続実行が生んだ実行は、どのセッションのものかを持つ。
 -- **NULL 可**——管理者が手で押した実行はセッションを持たない。
-ALTER TABLE simulation_run ADD COLUMN IF NOT EXISTS session_id BIGINT;
+ALTER TABLE simulation_run ADD COLUMN session_id BIGINT;
 
 ALTER TABLE simulation_run
     ADD CONSTRAINT fk_simulation_run_session FOREIGN KEY (session_id)

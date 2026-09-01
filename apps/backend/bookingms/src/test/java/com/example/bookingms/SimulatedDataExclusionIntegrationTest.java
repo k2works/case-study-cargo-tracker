@@ -32,7 +32,17 @@ class SimulatedDataExclusionIntegrationTest extends CargoPersistenceTestBase {
     private BillableCargoFinder billable;
 
     @Autowired
+    private com.example.bookingms.domain.repository.CargoRepository cargoRepository;
+
+    @Autowired
     private SearchShipperUseCase searchShipper;
+
+    /** シミュレーション由来の荷主で予約を 1 件作る。 */
+    private String bookCargoFor(Long shipperId) {
+        return bookCargo.book(command(shipperId,
+                        com.example.bookingms.domain.model.valueobjects.CargoType.GENERAL))
+                .bookingId().orElseThrow().value();
+    }
 
     private Long simulatedShipperId(String email) {
         RegistrationOutcome outcome = registerShipper.registerAnyway(new RegisterShipperCommand(
@@ -106,5 +116,33 @@ class SimulatedDataExclusionIntegrationTest extends CargoPersistenceTestBase {
                 java.sql.Timestamp.from(Instant.parse("2030-09-19T00:00:00Z")),
                 booked.bookingId().orElseThrow().value());
         return booked;
+    }
+
+    /**
+     * <strong>営業の予約一覧にも出さない</strong>（IT15 のレビュー指摘）。
+     *
+     * <p>継続実行は一晩で数百件の予約を作る。翌朝の予約一覧がシミュレーションの
+     * 予約で埋まると、営業の朝は「新しい予約を拾う」ところから始められない
+     * ——一覧そのものが信用されなくなる。
+     */
+    @Test
+    @DisplayName("シミュレーションが作った予約は、営業の予約一覧に出ない")
+    void excludesSimulatedCargoFromTheBookingList() {
+        Long shipperId = simulatedShipperId("booking-list@simulation.example.com");
+        String bookingId = bookCargoFor(shipperId);
+
+        assertThat(searchCargo.search(null, null).cargoes())
+                .extracting(summary -> summary.cargo().bookingId().orElseThrow().value())
+                .doesNotContain(bookingId);
+    }
+
+    /** <strong>名指しの照会では返る。</strong>外すと、シミュレーション自身が進めない。 */
+    @Test
+    @DisplayName("予約番号を指定した照会では返る")
+    void stillReturnsSimulatedCargoWhenAskedByBookingId() {
+        Long shipperId = simulatedShipperId("booking-detail@simulation.example.com");
+        String bookingId = bookCargoFor(shipperId);
+
+        assertThat(cargoRepository.findByBookingId(bookingId)).isPresent();
     }
 }

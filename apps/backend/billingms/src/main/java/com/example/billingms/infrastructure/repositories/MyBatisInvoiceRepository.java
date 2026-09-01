@@ -129,6 +129,7 @@ public class MyBatisInvoiceRepository implements InvoiceRepository {
         row.setShipperId(invoice.shipperId().value());
         row.setShipperName(invoice.shipperName());
         row.setShipperCorporate(invoice.shipperId().isCorporate());
+        row.setSimulated(invoice.header().simulated());
         row.setDueDate(invoice.dueDate());
         row.setTaxExempt(invoice.taxRate().exempted());
         row.setLegCount(invoice.charge().legCount());
@@ -186,7 +187,7 @@ public class MyBatisInvoiceRepository implements InvoiceRepository {
                                         row.getShipperName())
                                 : BillingShipperId.individual(row.getShipperId(),
                                         row.getShipperName()),
-                        row.getIssuedAt()),
+                        row.getIssuedAt(), row.isSimulated()),
                 new InvoiceCharges(
                         chargeOf(row),
                         policy, fee, TaxRate.of(row.getTaxRate())),

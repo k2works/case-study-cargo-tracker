@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   useActiveSimulationSession,
   useStartSimulationSession,
@@ -20,6 +21,13 @@ export function ContinuousRunPanel() {
   const start = useStartSimulationSession()
   const stop = useStopSimulationSession()
   const [seed, setSeed] = useState('')
+  // **設定は画面から変える**（US37-2）。固定だと「例外を多めに出して見せる」
+  // 「今日は静かに回す」という実演の調整ができない
+  const [intervalSeconds, setIntervalSeconds] = useState(String(DEFAULTS.intervalSeconds))
+  const [maxConcurrent, setMaxConcurrent] = useState(String(DEFAULTS.maxConcurrent))
+  const [exceptionPercent, setExceptionPercent] = useState(
+    String(Math.round(DEFAULTS.exceptionRatio * 100)),
+  )
 
   const session = data?.session ?? null
   const statistics = data?.statistics
@@ -37,13 +45,26 @@ export function ContinuousRunPanel() {
       </p>
 
       {active && session ? (
-        <RunningSession onStop={() => stop.mutate(session.sessionId)} session={session} />
+        <RunningSession
+          onStop={() => stop.mutate(session.sessionId)}
+          running={statistics?.running ?? 0}
+          session={session}
+        />
       ) : (
         <StartForm
+          exceptionPercent={exceptionPercent}
+          intervalSeconds={intervalSeconds}
+          maxConcurrent={maxConcurrent}
+          onExceptionPercentChange={setExceptionPercent}
+          onIntervalChange={setIntervalSeconds}
+          onMaxConcurrentChange={setMaxConcurrent}
           onSeedChange={setSeed}
           onStart={() =>
             start.mutate({
-              ...DEFAULTS,
+              intervalSeconds: Number(intervalSeconds),
+              maxConcurrent: Number(maxConcurrent),
+              // 画面では % で入れる。人が読む単位と、送る単位を分ける
+              exceptionRatio: Number(exceptionPercent) / 100,
               ...(seed.trim() === '' ? {} : { seed: Number(seed) }),
             })
           }
@@ -64,11 +85,23 @@ export function ContinuousRunPanel() {
 }
 
 function StartForm({
+  exceptionPercent,
+  intervalSeconds,
+  maxConcurrent,
+  onExceptionPercentChange,
+  onIntervalChange,
+  onMaxConcurrentChange,
   onSeedChange,
   onStart,
   pending,
   seed,
 }: Readonly<{
+  exceptionPercent: string
+  intervalSeconds: string
+  maxConcurrent: string
+  onExceptionPercentChange: (value: string) => void
+  onIntervalChange: (value: string) => void
+  onMaxConcurrentChange: (value: string) => void
   onSeedChange: (value: string) => void
   onStart: () => void
   pending: boolean
@@ -76,10 +109,24 @@ function StartForm({
 }>) {
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <span className="text-sm text-gray-600">
-        {DEFAULTS.intervalSeconds} 秒ごと・同時 {DEFAULTS.maxConcurrent} 本・例外{' '}
-        {Math.round(DEFAULTS.exceptionRatio * 100)}%
-      </span>
+      <NumberField
+        id="interval"
+        label="実行の間隔（秒）"
+        onChange={onIntervalChange}
+        value={intervalSeconds}
+      />
+      <NumberField
+        id="concurrent"
+        label="同時実行数"
+        onChange={onMaxConcurrentChange}
+        value={maxConcurrent}
+      />
+      <NumberField
+        id="exception"
+        label="例外の割合（%）"
+        onChange={onExceptionPercentChange}
+        value={exceptionPercent}
+      />
       <label className="text-sm text-gray-700" htmlFor="seed">
         種（省略可）
       </label>
@@ -102,6 +149,33 @@ function StartForm({
   )
 }
 
+function NumberField({
+  id,
+  label,
+  onChange,
+  value,
+}: Readonly<{
+  id: string
+  label: string
+  onChange: (value: string) => void
+  value: string
+}>) {
+  return (
+    <>
+      <label className="text-sm text-gray-700" htmlFor={id}>
+        {label}
+      </label>
+      <input
+        className="w-20 rounded border border-gray-300 px-2 py-1"
+        id={id}
+        inputMode="numeric"
+        onChange={(event) => onChange(event.target.value)}
+        value={value}
+      />
+    </>
+  )
+}
+
 /**
  * 動いているセッション。
  *
@@ -109,8 +183,9 @@ function StartForm({
  */
 function RunningSession({
   onStop,
+  running,
   session,
-}: Readonly<{ onStop: () => void; session: SimulationSession }>) {
+}: Readonly<{ onStop: () => void; running: number; session: SimulationSession }>) {
   return (
     <div className="space-y-3">
       <dl className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
@@ -135,8 +210,11 @@ function RunningSession({
       {session.status === 'STOPPING' ? (
         <p className="text-sm text-gray-700">
           {'新しい実行は始まりません。'}
-          <strong>進行中の実行は最後まで走ります</strong>
+          <strong>進行中の {running} 件は最後まで走ります</strong>
           {'——途中で止めると、業務データが中途半端な状態で残るためです。'}
+          {'進行中が尽きると「停止済み」に変わります。'}
+          <strong>15 分経っても変わらない場合は停止済みとして扱われ</strong>
+          {'、新しい継続実行を始められるようになります。'}
         </p>
       ) : null}
     </div>
@@ -179,7 +257,16 @@ function Statistics({ statistics }: Readonly<{ statistics: SimulationStatistics 
           <tbody>
             {statistics.failuresByStep.map((failure) => (
               <tr className="border-b border-gray-100" key={failure.step}>
-                <td className="py-1">{failure.label}</td>
+                <td className="py-1">
+                  {/* **次に押すものを出す。** 件数だけでは、50 件の一覧を
+                      目で開いて回ることになる */}
+                  <Link
+                    className="text-blue-700 underline"
+                    to={`/admin/simulations?failedStep=${encodeURIComponent(failure.step)}`}
+                  >
+                    {failure.label}
+                  </Link>
+                </td>
                 <td className="py-1">{failure.count} 件</td>
               </tr>
             ))}

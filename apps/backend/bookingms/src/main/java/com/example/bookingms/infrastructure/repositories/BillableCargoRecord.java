@@ -52,7 +52,12 @@ public class BillableCargoRecord {
         BillableCargo.Cancellation cancellation = cancelledAtStatus == null ? null
                 : new BillableCargo.Cancellation(cancelledAtStatus, cancellationRequestedAt);
 
-        return new BillableCargo(bookingId, bookingStatus, shipperId, shipperName, shipperType,
+        return new BillableCargo(bookingId, bookingStatus, shipperId, shipperName,
+                // 判定は Shipper に 1 つ置く。呼ぶ側に書き直すと、帯を変えたときに
+                // 書き直した側だけが古いまま残る
+                com.example.bookingms.domain.model.aggregates.Shipper
+                        .isSimulatedCode(shipperCode),
+                shipperType,
                 discountRate, weightKg, cargoType, originName, originCountry,
                 destinationName, destinationCountry, legCount,
                 legs, claimedAt, misroute, cancellation);

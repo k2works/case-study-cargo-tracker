@@ -419,4 +419,31 @@ class InvoicePersistenceIntegrationTest {
             assertThat(first.value()).matches("INV-\\d{4}\\d{6}");
         }
     }
+
+    /**
+     * <strong>シミュレーション由来は経理の一覧に出さない</strong>（[ADR-030] 決定 3・IT15）。
+     *
+     * <p>混ざると、発行済み精算書と支払期限超過の一覧に架空の未入金が積み上がる。
+     * 督促の判断はそこで行われるため実害がある。
+     * <strong>名指しの照会では返る</strong>——外すと、シミュレーション自身が
+     * 精算まで通ることを確かめられない。
+     */
+    @Test
+    @DisplayName("シミュレーション由来の精算書は、一覧に出ないが名指しでは返る")
+    void excludesSimulatedInvoicesFromTheList() {
+        String bookingId = uniqueBookingId();
+        Invoice simulated = Invoice.issue(
+                new InvoiceHeader(numbering.next(), BillingBookingId.of(bookingId),
+                        BillingShipperId.corporate("1", "シミュレーション荷主"),
+                        Instant.parse("2027-10-01T00:00:00Z"), true),
+                new InvoiceCharges(CHARGE, DiscountPolicy.none(), null, TaxRate.standard()),
+                List.of(), BUSINESS_ZONE);
+        invoices.save(simulated);
+        String invoiceNumber = simulated.invoiceId().value();
+
+        assertThat(invoices.findAll())
+                .extracting(invoice -> invoice.invoiceId().value())
+                .doesNotContain(invoiceNumber);
+        assertThat(invoices.findById(invoiceNumber)).isPresent();
+    }
 }

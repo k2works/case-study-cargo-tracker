@@ -47,6 +47,8 @@ public record BillableCargo(
         String bookingStatus,
         String shipperId,
         String shipperName,
+        /** シミュレーション由来か（[ADR-030] 決定 3）。精算書に保存し、経理の一覧から外す。 */
+        boolean simulated,
         String shipperType,
         BigDecimal discountRate,
         BigDecimal weightKg,

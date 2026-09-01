@@ -16,6 +16,7 @@ public interface InvoiceMapper {
 
     String COLUMNS = """
             i.id, i.invoice_number, i.booking_id, i.shipper_id, i.shipper_name, i.shipper_corporate,
+            i.simulated,
             i.leg_count, i.leg_factor, i.leg_region, i.weight_kg, i.cargo_type,
             i.base_amount_value, i.base_amount_currency,
             i.discount_rate, i.discount_amount_value, i.discount_amount_currency,
@@ -47,7 +48,7 @@ public interface InvoiceMapper {
      */
     @Insert("""
             INSERT INTO invoice (
-                invoice_number, booking_id, shipper_id, shipper_name, shipper_corporate,
+                invoice_number, booking_id, shipper_id, shipper_name, shipper_corporate, simulated,
                 leg_count, leg_factor, leg_region, weight_kg, cargo_type,
                 base_amount_value, base_amount_currency,
                 discount_rate, discount_amount_value, discount_amount_currency,
@@ -57,7 +58,7 @@ public interface InvoiceMapper {
                 payment_status, issued_at, due_date)
             VALUES (
                 #{invoiceNumber}, #{bookingId}, #{shipperId}, #{shipperName},
-                #{shipperCorporate}, #{legCount}, #{legFactor}, #{legRegion},
+                #{shipperCorporate}, #{simulated}, #{legCount}, #{legFactor}, #{legRegion},
                 #{weightKg}, #{cargoType},
                 #{baseAmountValue}, #{baseAmountCurrency},
                 #{discountRate}, #{discountAmountValue}, #{discountAmountCurrency},
@@ -76,6 +77,7 @@ public interface InvoiceMapper {
             @Result(column = "invoice_number", property = "invoiceNumber"),
             @Result(column = "booking_id", property = "bookingId"),
             @Result(column = "shipper_id", property = "shipperId"),
+            @Result(column = "simulated", property = "simulated"),
             @Result(column = "shipper_name", property = "shipperName"),
             @Result(column = "shipper_corporate", property = "shipperCorporate"),
             @Result(column = "leg_count", property = "legCount"),
@@ -111,7 +113,15 @@ public interface InvoiceMapper {
     InvoiceRecord selectByInvoiceNumber(@Param("invoiceNumber") String invoiceNumber);
 
     /** **新しい順に並べる。** 発行済みの一覧は「最近出したもの」から見る。 */
-    @Select("SELECT " + COLUMNS + FROM_INVOICE + " ORDER BY i.issued_at DESC, i.id DESC")
+    /**
+     * 発行済みの一覧。
+     *
+     * <p><strong>シミュレーション由来は出さない</strong>（[ADR-030] 決定 3）。
+     * 混ざると、支払期限超過の一覧に架空の未入金が積み上がる——督促の判断は
+     * そこで行われるため実害がある。<strong>名指しの照会では外さない</strong>。
+     */
+    @Select("SELECT " + COLUMNS + FROM_INVOICE + " WHERE i.simulated = FALSE"
+            + " ORDER BY i.issued_at DESC, i.id DESC")
     @ResultMap("invoice")
     List<InvoiceRecord> selectAll();
 

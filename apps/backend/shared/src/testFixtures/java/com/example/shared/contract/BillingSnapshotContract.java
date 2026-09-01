@@ -51,7 +51,8 @@ public final class BillingSnapshotContract {
      * おらず、経理担当者はその画面を開けなかった——「残っている」と「読める」は別である。
      */
     public static final List<String> FIELDS =
-            List.of("bookingId", "bookingStatus", "shipperId", "shipperName", "shipperType",
+            List.of("bookingId", "bookingStatus", "shipperId", "shipperName", "simulated",
+                    "shipperType",
                     "discountRate", "weightKg", "cargoType", "originName",
                     "originCountry", "destinationName", "destinationCountry",
                     "legCount", "legs", "claimedAt", "misroute",
