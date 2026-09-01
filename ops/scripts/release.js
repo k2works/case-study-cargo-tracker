@@ -269,8 +269,10 @@ function printSummary(oldVersion, newVersion) {
   console.log('');
   console.log('=== Release Summary ===');
   console.log(`  Version: ${oldVersion} -> ${newVersion}`);
-  console.log(`  Tag:     v${newVersion}`);
-  console.log(`  Commit:  release: v${newVersion}`);
+  // **サマリーも前置きを含める。**含めないと、打ったタグと表示が食い違い、
+  // 「打ったつもりのタグ」を探して見つからない
+  console.log(`  Tag:     ${tagPrefix()}v${newVersion}`);
+  console.log(`  Commit:  release: ${tagPrefix()}v${newVersion}`);
   console.log('');
   console.log('Next steps:');
   console.log('  git push && git push --tags');
