@@ -4,7 +4,7 @@ title: "ADR-0001 CQRS / Event Sourcing を Axon Framework 5 でマイクロサ�
 description: "CQRS / Event Sourcing を Axon Framework 5 のマイクロサービスとして実装する決定。配置の形・ES の適用範囲・Axon 5 系 API の採用・サービス間の配送経路と、着手前スパイクで確定する事項。"
 tags: [adr]
 status: draft
-generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T03:05:25Z }
+generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T07:46:35Z }
 ---
 
 # ADR-0001 CQRS / Event Sourcing を Axon Framework 5 でマイクロサービスとして実装する
@@ -67,21 +67,28 @@ generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T03:05:25Z }
 | する | bookingms（`Cargo` / `Shipper` / `Quotation`）、routingms（`Voyage`）、trackingms（`TrackingActivity`）、handlingms（`HandlingActivity` / `CustomsDeclaration`）、billingms（`Invoice`） |
 | しない | authms（`User`）：現在状態だけが業務に要る。履歴は監査ログテーブルで足りる |
 
-`take-4` は IT1 で `Shipper` を工数超過の懸念から CRUD に切り替えた経緯がある（`take-4` ADR-0007 のコンテキスト）。本プロジェクトは学習目標を優先し、業務 BC の集約はすべて Event Sourcing にする。工数の問題が出たら、集約単位でこの ADR を更新する。
+`take-4` は IT1 で `Shipper` を工数超過の懸念から CRUD に切り替えた経緯がある（`take-4` ADR-0007 のコンテキスト）。本プロジェクトは学習目標を優先し、業務 BC の集約はすべて Event Sourcing にする。
+
+**`Quotation` と `Voyage` も Event Sourcing にする理由。** 履歴が業務として要る根拠（US19・US20・US28・US29）は例外処理・誤配・通関にあり、見積と航海には無い。それでも 2 つを Event Sourcing にするのは、記事第 6 章の比較のためである。「履歴が要る集約だけ ES、他は状態保存」にすると、第 4 章との差分が集約ごとに違う形になり、Event Sourcing の代金を 1 つの表で並べられない。全集約で払って初めて「線をここで引くべきだった」と書ける。US31（authms）だけは業務上も学習上も履歴が要らないので除く。
+
+**見直しの発動条件。** 「工数の問題が出たら」では検知できないので、数値で置く。**IT2 終了時点で実績ベロシティが計画の 70% 未満なら、`Quotation` と `Voyage` を状態保存（MyBatis の UPDATE）に落とす。** 落とすときは本 ADR を改訂し、落とした理由を第 6 章の比較表に「ES を適用しなかった集約とその判断」として残す。判定は `docs/development/cargo-tracker/` のイテレーション報告書で行う。
 
 ### 3. Axon Framework 5 系（調査時点 5.3）を採用する
 
-4 系の `@Aggregate` / `@AggregateIdentifier` / `AggregateLifecycle.apply()` / `AggregateTestFixture` は 5 系に存在しない（`take-4` ADR-0007 の検証結果）。本プロジェクトは `take-4` が確定した 5 系のパターンを標準にする。
+4 系の `@Aggregate` / `@AggregateIdentifier` / `AggregateLifecycle.apply()` / `AggregateTestFixture` は 5 系に存在しない（`take-4` ADR-0007 の検証結果）。本プロジェクトは `take-4` が**最終的に**確定した 5 系のパターンを標準にする。集約の登録 API は ADR-0007 の `@EventSourcedEntity` ではなく、**ADR-0008 の `@EventSourced(idType, tagKey)`**（`org.axonframework.extension.spring.stereotype`）である。ADR-0007 の形は統合テストが `CommandGateway` をモックしていて見えず、bootJar の実機で `NoHandlerForCommandException` を出して退けられた。
 
 | 要素 | 採用する API |
 | :--- | :--- |
-| 集約 | `@EventSourcedEntity(tagKey = "...")`、`@EntityCreator` |
+| 集約の登録 | `@EventSourced(idType = String.class, tagKey = "...")`（Spring stereotype）、`@EntityCreator`。`@EventSourcedEntity` 単独は使わない |
 | コマンドハンドラ | `@CommandHandler`（作成系は `static`、更新系はインスタンス）。イベント発行は引数の `EventAppender` |
 | 状態復元 | `@EventSourcingHandler` |
 | コマンドの宛先 | `@TargetEntityId` |
-| 投影 | `@EventHandler` + Processing Group、`pooled-streaming` |
-| 問い合わせ | `@QueryHandler` + `QueryGateway` |
+| 投影 | `@EventHandler` + Processing Group、`pooled`（`PooledStreamingEventProcessor`）。投影はコマンドを送らない |
+| イベント → コマンド | `application/reaction` の Reaction Handler（`@EventHandler` + `CommandGateway`、投影と別の Processing Group）または `@Saga` |
+| 問い合わせ | `@QueryHandler` + `QueryGateway`。同期問い合わせはタイムアウト 5 秒、Saga / Reaction からは呼ばない |
 | テスト | `AxonTestFixture`（`axon-test`） |
+
+**ドメインが Spring stereotype を 1 つだけ持つことについて。** `@EventSourced` はメタアノテーションに `@Component` を持つ Spring の型であり、「ドメイン層は Spring に依存しない」の例外になる。これを許すのは、Axon 5 の Spring Boot 自動設定が `@EventSourced` Bean を経由してしか集約を Module として検出しないためである（`@Bean EventSourcedEntityModule` で代替すると二重登録になる。ADR-0008 の試行 B）。例外は ArchUnit の許可リストに **`org.axonframework.extension.spring.stereotype.EventSourced` の 1 型**として明示し、`org.springframework..` への直接依存は引き続き禁止する。IT1 スパイクの第 1 項目で 5.3 系が stereotype 無しで登録できると分かれば、許可リストから外して `@EventSourcedEntity` に戻し、本表を改訂する。
 
 4 系にダウングレードして書籍の参考実装をそのまま使う案は退ける。記事の読者が手にするのは 5 系であり、4 系の API で書いた記事は公開時点で古い。
 
@@ -91,7 +98,8 @@ generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T03:05:25Z }
 
 - 配送経路が 1 種類になり、サービスは互いの URL を知らなくてよい
 - 提供側が落ちているときに `NoHandlerForQueryException` で明示的に失敗する（REST の接続エラーと違い、Axon Server が「誰も居ない」と答える）
-- サービス越しに送るメッセージ（契約イベント・契約コマンド・契約クエリ）は `shared/contract/{event,command,query}` に置き、名簿を ArchUnit で固定する。名簿が増えることは結合が増えたことなので ADR を起こす
+- サービス越しに送るメッセージ（契約イベント・契約コマンド・契約クエリ）は `shared/contract/{event,command,query}` に置き、名簿を ArchUnit で固定する。設計時点の名簿は**契約イベント 11 本、契約コマンド 2 本、契約クエリ 1 本（`FindRouteCandidatesQuery`）**（`architecture_backend.md`「ドメインイベント一覧」）。名簿が増えることは結合が増えたことなので ADR を起こす
+- 同期の問い合わせは bookingms → routingms の経路候補 1 本に限る。billingms が要る荷主の契約情報は `FindShipperForBillingQuery` でなく `ShipperRegisteredEvent` / `CorporateContractAssignedEvent` の購読で写す。Saga と Reaction Handler は同期クエリを呼ばない（`.join()` が Processing Group を止める）
 
 REST はクライアントから Gateway を通って各サービスに入る経路にだけ使う。
 
@@ -101,11 +109,15 @@ REST はクライアントから Gateway を通って各サービスに入る経
 
 | # | 事項 | 背景 |
 | :--- | :--- | :--- |
-| 1 | Spring Boot 4.1（Jackson 3 既定）と Axon 5.3 の自動設定の整合 | `take-4` は Spring Boot 4 + Jackson 2 で JDBC 自動設定が働かず手動構成した（ADR-0009） |
-| 2 | `AxonTestFixture.with(ApplicationConfigurer)` の組み立て方 | `take-4` は Mockito で代替した |
-| 3 | Saga のアノテーションと `SagaLifecycle` の 5 系での名称 | `take-4` の設計は 4 系の名称で書かれており実装で未確認 |
-| 4 | Axon Server 経由でサービス越しにクエリ・コマンドが届くこと | `take-4` は Query Bus をサービス越しに使っていない。`shared/contract` の型で往復することを 1 本確かめる |
-| 5 | `axon-server-connector` の明示依存と、無いときのフォールバック検知 | ADR-0009。**無音で in-memory に落ちる**ため、起動時に接続を検査する |
+| 1 | **集約の登録 API**：5.3 系で `@EventSourcedEntity` 単独（stereotype 無し）で Command Bus に登録されるか。bootJar を起動し `@MockitoBean CommandGateway` 無しで確かめる | ADR-0008。統合テストのモックが登録漏れを隠した。登録されなければ `@EventSourced` を標準とし ArchUnit の許可リストに加える（決定 3） |
+| 2 | Spring Boot 4.1（Jackson 3 既定）と Axon 5.3 の自動設定の整合。`TransactionManager` Bean が 1 つであること、`SpringTransactionManager` の第 3 引数、`token_entry.mask` | `take-4` は Spring Boot 4 + Jackson 2 で JDBC 自動設定が働かず手動構成した（ADR-0009）。`TransactionManager` が複数あると `NoTransactionManager` に無音で落ちる |
+| 3 | `AxonTestFixture.with(ApplicationConfigurer)` の組み立て方 | `take-4` は Mockito で代替した |
+| 4 | Saga のアノテーションと `SagaLifecycle` の 5 系での名称 | `take-4` の設計は 4 系の名称で書かれており実装で未確認 |
+| 5 | Axon Server 経由でサービス越しにクエリ・コマンドが届くこと | `take-4` は Query Bus をサービス越しに使っていない。`shared/contract` の型で往復することを 1 本確かめる |
+| 6 | `axon-server-connector` の明示依存と、無いときのフォールバック検知。接続検査が **DCB 無効の context を赤にする**こと | ADR-0009。**無音で in-memory に落ちる**ため、起動時に接続を検査する。DCB 無効だと `AXONIQ-2308` で Coordinator が無限再試行する |
+| 7 | S3 へエクスポートした Event Store からの差分再投入 | RPO の根拠。参照元で未検証 |
+
+スパイクの結果で本 ADR の決定 3・5 と `architecture_backend.md`・`tech_stack.md` を更新することを IT1 の完了条件（DoD）に含める。
 
 ## 影響
 
@@ -139,19 +151,24 @@ REST はクライアントから Gateway を通って各サービスに入る経
 
 | 決定 | 検査 |
 | :--- | :--- |
-| サービス分割 | `settings.gradle` の `include` が上の 8 つと一致すること |
+| サービス分割 | `settings.gradle` の `include` から**テスト専用サブプロジェクト（`contract-tests`）を除いたもの**が上の 8 つと一致すること |
 | サービス間は Axon Server だけ | ビルド：各サービスの本番クラスパスに他サービスの成果物が無いこと。ArchUnit：`RestClient` / `RestTemplate` を `infrastructure/acl` で使わないこと |
-| 共有カーネルの範囲 | ArchUnit：`shared` に置けるパッケージの名簿（`domain/model`・`domain/auth`・`contract/*`・`infrastructure/axon`）を固定する |
-| サービス越しの同期状態変更を置かない | ArchUnit：`CommandGateway` の利用箇所を `interfaces` と `application/saga` に限定する |
-| ドメイン層のフレームワーク非依存 | ArchUnit：Spring・MyBatis への依存を禁止。Axon は `..annotation..` と `EventAppender` の許可リストのみ |
-| authms は Event Sourcing にしない | ArchUnit：`auth` パッケージに `@EventSourcedEntity` が無いこと |
+| 共有カーネルの範囲 | ArchUnit：`shared` に置けるパッケージの名簿（`domain/model`・`domain/auth`・`contract/*`・`infrastructure/axon`・`infrastructure/time`）を固定する |
+| 契約の名簿 | ArchUnit：送信・購読の引数型が `shared/contract` 以外のイベント・コマンド・クエリをサービス越しに使えば赤（契約イベント 11・コマンド 2・クエリ 1） |
+| サービス越しの同期状態変更を置かない | ArchUnit：`CommandGateway` の利用箇所を `interfaces`・`application/saga`・`application/reaction` に限定する。`infrastructure/projection` は `CommandGateway` に依存しない |
+| 投影がコマンドを送らない | 統合テスト `ReplayIT`：投影の Processing Group をリセットしてリプレイし、`CommandGateway` が 1 度も呼ばれないこと |
+| Saga / Reaction は同期クエリを呼ばない | ArchUnit：`application/saga` と `application/reaction` が `QueryGateway` に依存しない |
+| ドメイン層のフレームワーク非依存 | ArchUnit：Spring・MyBatis への依存を禁止。Axon は `..annotation..`・`EventAppender`・`org.axonframework.extension.spring.stereotype.EventSourced` の許可リストのみ |
+| authms は Event Sourcing にしない | ArchUnit：`auth` パッケージに `@EventSourced` / `@EventSourcedEntity` が無いこと |
 | 4 系 API を使わない | ビルド：`org.axonframework.modelling.command.AggregateLifecycle` 等への参照が無いこと（存在しないのでコンパイルで止まる） |
-| `axon-server-connector` の接続 | 起動時のヘルスチェック。接続できなければ起動を止める |
+| `axon-server-connector` の接続と DCB | 起動時のヘルスチェック。接続できない、または context が DCB でなければ起動を止める。統合テストで DCB 無効の Axon Server に対して起動が止まることを 1 本固定する |
+| スパイクの結果を ADR に戻す | IT1 の DoD：決定 5 の 7 項目それぞれの結果で本 ADR・`architecture_backend.md`・`tech_stack.md` を更新してから IT1 をクローズする |
 
 ## 備考
 
 - 著者: claude-code/claude-fable-5-1（分析フェーズ、`orchestrating-analysis` → `analyzing-architecture`）
 - 改訂: 2026-09-02 初稿はモジュラーモノリスを提案したが、ユーザーの指示によりマイクロサービスに変更した
+- 改訂: 2026-09-02 設計レビュー（`docs/review/cargo-tracker/設計_review_20260902.md` H2）で、決定 3 の集約 API が `take-4` ADR-0007 の形（`@EventSourcedEntity` 単独）のままで、ADR-0008 が実機で退けた経緯（`NoHandlerForCommandException`）を反映していないと指摘された。決定 3 を `@EventSourced(idType, tagKey)` に訂正し、Spring stereotype を 1 つ許す理由と IT1 スパイク第 1 項目を追記した。あわせて決定 2 に ES 適用範囲の理由と見直しの発動条件（M5・H8）、決定 4 に契約の数（H6・M1・M18）、コンプライアンスに DCB（H3）・Reaction Handler（H1）・`contract-tests` の除外（M13）を追加した
 - 参照元: `tmp/take-4/docs/adr/0001-axon-framework-adoption.md`、`0004-microservice-decomposition.md`、`0007-axon-5-event-sourcing-api.md`、`0008-axon-5-spring-boot-integration-pattern.md`、`0009-axon-server-connector-explicit-dependency.md`、`0014-shared-module-event-classes.md`
 - 参照元: [java-3 ADR-001](../../article/source/java-3/docs/adr/001-microservices-architecture.md)（Event Sourcing 見送りの判断）、[java-3 ADR-022](../../article/source/java-3/docs/adr/022-domain-event-contract.md)
 - 記事: [draft-2 アウトライン §5](../../article/practical-ddd-in-enterprise-java/draft-2/outline.md)

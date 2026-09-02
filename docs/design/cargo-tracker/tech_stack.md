@@ -4,7 +4,7 @@ title: "技術スタック - 国際貨物輸送管理システム（CQRS / Event
 description: "CQRS / Event Sourcing 版 Cargo Tracker の技術スタック一覧（調査時点 2026-09-02）。Java 25 / Spring Boot 4.1 / Axon Framework 5.3 / Axon Server 2026.0.4 / MyBatis / PostgreSQL 16 / React 19 と、IT1 スパイクで確認する事項、採用しないもの、バージョン管理方針。"
 tags: [design,tech-stack,axon,spring-boot,react]
 status: draft
-generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T07:12:34Z }
+generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T07:46:35Z }
 stale_after: 2026-12-01T00:00:00Z
 ---
 
@@ -23,16 +23,19 @@ stale_after: 2026-12-01T00:00:00Z
 
 ## 実装着手前の確認（IT1 スパイク）
 
-バージョンは Maven Central と Docker Hub で実在を確認してから `libs.versions.toml` に固定します。次は本書だけでは確定できず、スパイクで確かめる項目です（[ADR-0001](../../adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) の 5 事項）。
+バージョンは Maven Central と Docker Hub で実在を確認してから `libs.versions.toml` に固定します。次は本書だけでは確定できず、スパイクで確かめる項目です（[ADR-0001](../../adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) の決定 5）。結果はスパイク終了時に ADR-0001 と `architecture_backend.md` に書き戻します。
 
 | # | 確認事項 | 確認方法 |
 | :--- | :--- | :--- |
-| 1 | `axon-spring-boot-starter` 5.3 系 GA が Maven Central にあり、`axon-server-connector` と `axon-test` が **同じバージョン**で揃うこと（RC と GA の ABI が食い違う。take-4 ADR-0009） | `./gradlew dependencies` |
-| 2 | Spring Boot 4.1（Jackson 3 既定）で Axon の JDBC 自動設定（Token / Saga Store）が働くこと。働かなければ手動構成 | 起動と統合テスト |
-| 3 | `AxonTestFixture.with(...)` の組み立て方 | 集約テスト 1 本 |
-| 4 | Saga のアノテーション名（`@Saga` / `@SagaEventHandler` / `SagaLifecycle` の 5 系での名称） | Saga テスト 1 本 |
-| 5 | Axon Server 2026.0.x と Axon Framework 5.3 の組み合わせで、サービス越しの Command / Query が届くこと | 往復テスト 1 本 |
-| 6 | `PostgresqlEventStorageEngine` の公開状況（[ADR-0002](../../adr/cargo-tracker/0002-event-store-axon-server-and-postgresql-read-models.md) の再評価条件） | Maven Central |
+| 1 | **集約の登録 API**：Axon 5.3 系で `@EventSourcedEntity` 単独（Spring stereotype 無し）で集約が Command Bus に登録されるか。登録されなければ標準は `@EventSourced(idType, tagKey)`（`org.axonframework.extension.spring.stereotype`。take-4 ADR-0008 の最終決定）とし、ArchUnit の許可リストに加える | bootJar を起動して `POST` 1 本（`@MockitoBean CommandGateway` を使わない） |
+| 2 | `axon-spring-boot-starter` 5.3 系 GA が Maven Central にあり、`axon-server-connector` と `axon-test` が **同じバージョン**で揃うこと（RC と GA の ABI が食い違う。take-4 ADR-0009） | `./gradlew dependencies` |
+| 3 | Spring Boot 4.1（Jackson 3 既定）で Axon の JDBC 自動設定（Token / Saga Store）が働くこと。働かなければ手動構成。Axon の `TransactionManager` Bean が **1 つ**であること、`SpringTransactionManager` を第 3 引数 `ConnectionProvider` 付きで作ること、`token_entry` に `mask INTEGER NOT NULL` があること | 起動と統合テスト（投影の SQL を故意に失敗させトークンが進まないこと） |
+| 4 | Axon Server の context が **DCB** で作られていること（`AXONIQ_AXONSERVER_STANDALONE_DCB=true`）と、起動時の接続検査が DCB 無効の context を赤にすること | Testcontainers で DCB 無効の Axon Server を立て、起動が止まること 1 本 |
+| 5 | `AxonTestFixture.with(...)` の組み立て方 | 集約テスト 1 本 |
+| 6 | Saga のアノテーション名（`@Saga` / `@SagaEventHandler` / `SagaLifecycle` の 5 系での名称） | Saga テスト 1 本 |
+| 7 | Axon Server 2026.0.x と Axon Framework 5.3 の組み合わせで、サービス越しの Command / Query が届くこと | 往復テスト 1 本 |
+| 8 | `PostgresqlEventStorageEngine` の公開状況（[ADR-0002](../../adr/cargo-tracker/0002-event-store-axon-server-and-postgresql-read-models.md) の再評価条件） | Maven Central |
+| 9 | S3 へエクスポートした Event Store からの**差分再投入**が可能か（RPO の根拠。参照元で未検証） | エクスポート → 追記 → 差分投入 → イベント数一致 |
 
 ## バックエンド
 
@@ -48,16 +51,16 @@ stale_after: 2026-12-01T00:00:00Z
 | 技術 | バージョン | 用途 | サポート期限 | 選定理由 |
 | :--- | :--- | :--- | :--- | :--- |
 | Spring Boot | 4.1 系 | サービスの基盤 | OSS サポート 4.1 系は 2027 年前半（確認要） | Spring Framework 7、Jackson 3 既定。参照元と同系 |
-| **Axon Framework** | **5.3 系** | CQRS / Event Sourcing / Saga / 分散バス | コミュニティ | [ADR-0001](../../adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md)。5 系の Entity API（`@EventSourcedEntity` / `EventAppender`） |
-| `axon-spring-boot-starter` | Axon と同じ | Spring Boot 統合 | — | `org.axonframework.extensions.spring` |
-| `axon-server-connector` | Axon と同じ | Axon Server への gRPC 接続 | — | **明示依存**。starter の推移的依存に含まれない |
-| **Axon Server** | **2026.0.4**（Standard Edition） | Event Store / Command Bus / Event Bus / Query Bus | AxonIQ | [ADR-0002](../../adr/cargo-tracker/0002-event-store-axon-server-and-postgresql-read-models.md)。Docker `axoniq/axonserver:2026.0.4`（SE / EE は同一イメージ、ライセンスの有無で切り替わる） |
+| **Axon Framework** | **5.3 系** | CQRS / Event Sourcing / Saga / 分散バス | コミュニティ | [ADR-0001](../../adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md)。5 系の Entity API（`@EntityCreator` / `EventAppender` / `@EventSourcingHandler`）。集約の登録は `@EventSourced(idType, tagKey)`（Spring stereotype、上記 #1） |
+| `axon-spring-boot-starter` | Axon と同じ | Spring Boot 統合 | — | `org.axonframework.extensions.spring`。`@EventSourced` はこの starter が提供する（`axon-spring`） |
+| `axon-server-connector` | Axon と同じ | Axon Server への gRPC 接続 | — | **明示依存**。starter の推移的依存に含まれない。起動時に接続と **DCB context** を検査する |
+| **Axon Server** | **2026.0.4**（Standard Edition） | Event Store / Command Bus / Event Bus / Query Bus | AxonIQ | [ADR-0002](../../adr/cargo-tracker/0002-event-store-axon-server-and-postgresql-read-models.md)。Docker `axoniq/axonserver:2026.0.4`（SE / EE は同一イメージ、ライセンスの有無で切り替わる）。`AXONIQ_AXONSERVER_STANDALONE_DCB=true` が必須（クラスタは `dcb=true`） |
 | Spring Cloud Gateway | Spring Boot 4.1 対応版 | ルーティング・JWT 検証・CORS・レート制限 | — | `gatewayms` |
 | Spring Security | 7 系 | 認証・認可 | — | Spring Boot 4 と整合 |
 | jjwt | 0.12 系 | JWT 発行・検証 | — | `authms` と `shared` |
 | Jackson | 3 系（Spring Boot 4 同梱） | イベントのシリアライズ | — | Axon のシリアライザ。IT1 で Axon との整合を確認 |
 | Micrometer Tracing | Spring Boot 同梱 | サービスをまたぐ相関 | — | イベントのメタデータに `traceId` |
-| Resilience4j | 2 系 | Saga の再試行・Query Bus 呼び出しのタイムアウト | — | |
+| Resilience4j | 2 系 | Saga の再試行・Query Bus 呼び出しのタイムアウト（既定 5 秒） | — | Saga / Reaction Handler から同期クエリを呼ばない |
 
 ### データアクセス（投影・Auth）
 
@@ -68,7 +71,7 @@ stale_after: 2026-12-01T00:00:00Z
 | `mybatis-spring-boot-starter` | 3 系（Spring Boot 4 対応版） | Spring 統合 | — | |
 | Flyway | 11 系 | サービスごとのマイグレーション | — | `V<num>__<desc>.sql`。適用済みは編集しない |
 | HikariCP | Spring Boot 同梱 | 接続プール | — | |
-| Axon `JdbcTokenStore` / `JdbcSagaStore` | Axon 同梱 | Token / Saga の永続化 | — | 投影と同一 DataSource・同一トランザクション |
+| Axon `JdbcTokenStore` / `JdbcSagaStore` | Axon 同梱 | Token / Saga の永続化 | — | 投影と同一 DataSource・同一トランザクション。`TransactionManager` Bean は 1 つ、`token_entry.mask INTEGER NOT NULL` |
 | ~~H2~~ | 採らない | — | — | 方言差の検査は実 DB で行う。Testcontainers を使う |
 
 ### ビルド・API
@@ -150,7 +153,7 @@ stale_after: 2026-12-01T00:00:00Z
 | 方針 | 内容 |
 | :--- | :--- |
 | 固定 | `libs.versions.toml` と `package.json` で完全一致のバージョンを固定。範囲指定をしない |
-| Axon 系の同期 | `axon-spring-boot-starter` / `axon-server-connector` / `axon-test` は必ず同じバージョン。RC と GA を混ぜない |
+| Axon 系の同期 | `axon-spring-boot-starter` / `axon-server-connector` / `axon-test` は必ず同じバージョン。RC と GA を混ぜない。Axon 5 系は minor でも API が動く（`@EventSourcedEntity` → `@EventSourced` の経緯）ため、版を上げるときは IT1 の確認事項 #1・#3・#4 を再実行する |
 | Axon Server との整合 | Axon Framework の版を上げるときは Axon Server の互換表を確認。Axon Server の版上げは計画停止 |
 | 更新の頻度 | パッチは月次、マイナーは四半期、メジャーは ADR |
 | 脆弱性 | CI の走査で高深刻度が出たら 7 日以内に更新 |

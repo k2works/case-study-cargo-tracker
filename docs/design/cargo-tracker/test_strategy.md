@@ -4,7 +4,7 @@ title: "テスト戦略 - 国際貨物輸送管理システム（CQRS / Event So
 description: "CQRS / Event Sourcing 版 Cargo Tracker のテスト戦略。サービス内ピラミッド + サービス間ダイヤモンドのハイブリッド形で、集約・投影と Saga・契約・境界・E2E の 5 種を別々の検査として置き、それぞれが判別すること・しないことを明記する。"
 tags: [design,test-strategy,cqrs,event-sourcing,axon]
 status: draft
-generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T04:20:38Z }
+generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T07:46:35Z }
 ---
 
 # テスト戦略 - 国際貨物輸送管理システム（CQRS / Event Sourcing 版）
@@ -27,7 +27,7 @@ Event Sourcing では「集約が正しい」と「画面に出る」のあい�
 | 特性 | 評価 | テストへの含意 |
 | :--- | :--- | :--- |
 | ドメインの厚さ | 厚い（状態遷移表・料金計算・荷役の妥当性・通関） | 集約のユニットテストが土台 |
-| サービス間の結合点 | イベント 6 本・コマンド 2 本・クエリ 2 本（契約） | 結合点を Axon Server 経由で実際に往復させる検査が要る |
+| サービス間の結合点 | イベント 11 本・コマンド 2 本・クエリ 1 本（契約。名簿は `domain-model.md`） | 結合点を Axon Server 経由で実際に往復させる検査が要る |
 | 非同期の経路 | 集約 → Event Store → 投影 / Saga | 「発行した」と「届いて反映した」は別。統合テストの比重が上がる |
 | 画面の到達性 | ロール × 状態で操作が変わる | E2E は業務シナリオでなく到達性と反映待ちに絞る |
 
@@ -56,6 +56,12 @@ rectangle "サービス間" {
 
 サービス内は `java-3` と同じくピラミッドですが、統合の比率を 15% から 20% に上げます。投影と Saga は集約のユニットテストでは判別できないためです。
 
+**比率は目安であり、測定しません。** 守るのは「各レベルに判別する対象がある」ことと品質ゲートであって、件数の割合ではありません。四半期のふりかえりでレベルごとの件数を数え、あるレベルが空なら理由を書きます。
+
+### Axon 5 の API が未確定な箇所の扱い
+
+本戦略は `AxonTestFixture` の組み立て方、`@EventSourced` stereotype の登録、DCB の `tagKey` を Axon Framework 5.3 系の API として前提にしています。これらは IT1 スパイク（ADR-0001 決定 5）で確定します。スパイクが失敗した場合のフォールバックは、(1) 集約の登録は take-4 ADR-0008 の最終決定（`@EventSourced(idType, tagKey)` Spring stereotype）に戻し ArchUnit の許可リストに `EventSourced` を加える、(2) `AxonTestFixture` が組み立てられなければ集約のユニットテストを「イベント列を `@EventSourcingHandler` に直接流して状態を作り、コマンドハンドラを直接呼ぶ」素の JUnit に落とす、(3) いずれも本戦略の判別対象（不変条件・状態遷移・発行イベント）は変えない、の 3 点です。フォールバックを採ったら ADR-0001 を改訂し、本書の該当節を差し替えます。バージョンは固定し、上げるときは同じスパイクを再実行します。
+
 ## テストレベルの定義（バックエンド）
 
 ### レベル 1：ユニットテスト
@@ -65,6 +71,7 @@ rectangle "サービス間" {
 | 集約 | `AxonTestFixture`（`axon-test`）の Given-When-Then。Given にイベント列、When にコマンド、Then に発行イベントまたは例外 | 不変条件、状態遷移、発行するイベントの内容 | イベントが Event Store に書かれること、投影が動くこと |
 | 値オブジェクト | JUnit 5 + AssertJ | 生成時の検証、等価性、丸め（`Money`） | — |
 | ドメインサービス | JUnit 5 | 料金計算（式の各項）、経路探索（候補の順序・期限の日付比較） | — |
+| 期限の境界値 | `@ParameterizedTest` で **4 点 + 1 点**：期限前日 23:59、期限当日 00:00、期限当日 23:59、翌日 00:00（いずれも `Asia/Tokyo`）に加え、UTC に換算すると日付がずれる 1 点（当日 08:59 JST = 前日 23:59 UTC） | 日付単位の比較が業務タイムゾーンで行われること | — |
 | 状態遷移表 | `@ParameterizedTest` で全状態 × 全コマンドを回す | 遷移表と `canTransitionTo` の一致。**列挙に値を足したら全箇所を回る** | — |
 | `@EventSourcingHandler` | Given のイベント列から状態を復元し、次のコマンドの判定に使われることを確かめる | 復元の正しさ。**復元で判断しない**こと（例外を投げない） | — |
 
@@ -116,13 +123,17 @@ Testcontainers で **Axon Server と PostgreSQL を実際に起動**します。
 
 | 対象 | 方法 | 判別すること |
 | :--- | :--- | :--- |
-| 投影 | イベントを `EventGateway` で発行し、投影テーブルの行を待って検証（`Awaitility`） | イベントから行への写し。他サービスの契約イベントの購読。**冪等性**（同じイベントを 2 度流して結果が同じ） |
+| 投影 | イベントを `EventGateway` で発行し、投影テーブルの行を待って検証（`Awaitility`） | イベントから行への写し。他サービスの契約イベントの購読 |
+| 投影の冪等性（`ProjectionIdempotencyIT`） | 本番の重複を再現する。**同一 `event_id` の再配送**：投影が 1 件処理した後に `token_entry` を 1 件分巻き戻し、同じイベントをもう一度配送する。追記系（`tracking_event`・`handling_activity`・`payment`）は行数が増えないこと（UNIQUE で弾く）、UPDATE 系は古いイベントを後から流しても新しい値を上書きしないこと（`last_event_id` の比較） | 少なくとも 1 回配送に対する冪等性。「同じイベントを 2 度 `publish` する」だけでは判別しない（別の `event_id` になる） |
 | 投影とトークン | 投影の SQL を故意に失敗させ、`token_entry` が進まないことを確かめる | 同一トランザクション（**安全装置は破るテストで固定する**） |
-| 投影の再構築 | テーブルを TRUNCATE してトークンをリセットし、リプレイ後に同じ行が復元されること | 投影が派生データであること |
-| 一意制約の三段 | 同じメールの荷主を 2 件登録し、2 件目が `projection_rejection` に記録されること | 投影が最後の砦であること |
-| Saga | 開始イベントを流し、送られるコマンドと終了を検証。補償経路（宛先が居ない・タイムアウト）を 1 本ずつ | 業務連鎖と補償。**「例外にしない」は「記録しない」ではない**（失敗がイベントとして残ること） |
-| Query Handler | 投影テーブルに行を入れ、`QueryGateway` で問い合わせる | SQL の正しさ、期限超過の判定（`today` を業務タイムゾーンで渡す） |
-| 起動時の接続検査 | Axon Server を止めた状態で起動し、**起動が止まること** | 無音で in-memory に落ちないこと（`take-4` ADR-0009） |
+| `TransactionManager` | アプリケーションコンテキストに `TransactionManager` Bean が **1 つ**だけあり、`SpringTransactionManager` がそれを受け取っていること | `NoTransactionManager` への無音のフォールバック（take-4 の実測）。`token_entry.mask INTEGER NOT NULL` が Flyway にあること |
+| 投影の再構築（`ReplayIT`） | テーブルを TRUNCATE してトークンをリセットし、リプレイ後に同じ行が復元されること。**リプレイ中に `CommandGateway` が一度も呼ばれない**こと（`CommandGateway` をスパイに差し替え、投影 Group のみリセットし Reaction Group はリセットしない） | 投影が派生データであること。リプレイが他サービスの集約を動かさないこと |
+| Reaction Handler | 契約イベントを流し、`application/reaction` が送るコマンド（`MarkDeliveredCommand` 等）を `CommandGateway` のスパイで検証。コマンドが失敗した場合に `attention_item`（`kind = REACTION_FAILED`）に記録され、Reaction Group のトークンは進むこと | イベント購読からコマンドへの写し。失敗が投影を止めず、黙って捨てられもしないこと |
+| 一意制約の三段 | **存在確認を経由せず**、同じメールの `RegisterShipperCommand` を直接 2 件送る（レース条件の再現）。2 件目が集約には受け付けられ、投影の UNIQUE で弾かれ、`attention_item`（`kind = PROJECTION_REJECTED`、`assigned_role = ROLE_SALES`）に記録されること | 投影が最後の砦であること。逐次登録で 1 段目が止めてしまうと、2 段目と 3 段目は踏まれずに緑になる |
+| Saga | 開始イベントを流し、送られるコマンドと終了を検証。補償経路（宛先が居ない・タイムアウト）を 1 本ずつ。**再試行とタイムアウトは `Clock` とスケジューラを差し替え**、「再試行した」「補償に落ちた」のどちらの分岐に入ったかで判定する。経過時間はアサートしない | 業務連鎖と補償。**「例外にしない」は「記録しない」ではない**（失敗がイベントとして残り `attention_item` に写ること） |
+| Query Handler | 投影テーブルに行を入れ、`QueryGateway` で問い合わせる | SQL の正しさ、期限超過の判定（`today` を `BusinessClock` から業務タイムゾーン `Asia/Tokyo` で渡す） |
+| Controller と HTTP 対応 | `@WebMvcTest` で集約の例外を投げるスタブを置き、`IllegalBookingStateException` → `409`（本文に `lastEvent` と `allowedActions[]`）、業務規則違反 → `422`、未存在 → `404`、認可 → `403`、投影未反映 → `202` を Controller から踏む | 対応表（`architecture_backend.md` の API 設計方針）が実装されていること。無ければ `500` になり、集約の守りが画面から壊れて見える |
+| 起動時の接続検査 | Axon Server を止めた状態で起動し、**起動が止まること**。Axon Server は動くが context が DCB でない状態で起動し、**起動が止まること**（Testcontainers に `AXONIQ_AXONSERVER_STANDALONE_DCB=true` を付けた版と付けない版） | 無音で in-memory に落ちないこと（`take-4` ADR-0009）。DCB でない context に繋いで Coordinator が無限再試行しないこと（AXONIQ-2308） |
 | MyBatis の方言 | 全 Mapper の SQL を PostgreSQL で実行 | H2 は使わない。方言差の検査は実 DB で行う |
 
 ```java
@@ -130,7 +141,8 @@ Testcontainers で **Axon Server と PostgreSQL を実際に起動**します。
 @Testcontainers
 class CargoProjectionIT {
 
-    @Container static AxonServerContainer axon = new AxonServerContainer("axoniq/axonserver:2026.x");
+    @Container static AxonServerContainer axon = new AxonServerContainer("axoniq/axonserver:2026.x")
+            .withEnv("AXONIQ_AXONSERVER_STANDALONE_DCB", "true"); // DCB を有効にしないと tagKey の集約が動かない
     @Container static PostgreSQLContainer<?> db = new PostgreSQLContainer<>("postgres:16");
 
     @Test
@@ -154,14 +166,21 @@ class CargoProjectionIT {
 
 | 検査 | 内容 | 置き場 |
 | :--- | :--- | :--- |
-| ゴールデン JSON | 契約イベント・コマンド・クエリごとに「今の JSON 形」をファイルで固定。シリアライズして一致、デシリアライズして復元 | `shared/src/test` |
-| 発行側の契約 | 発行側の集約が出すイベントがゴールデンと一致する | 各発行サービス |
-| 購読側の契約 | 購読側の投影・Saga がゴールデンの JSON から復元して処理できる | 各購読サービス |
-| 往復 | 発行側の集約に実際のコマンドを送り、購読側の投影が更新されるまでを **Axon Server 経由**で確かめる。契約イベント 1 本につき 1 本 | `apps/backend/contract-tests`（両サービスを起動） |
+| ゴールデン JSON（丸ごと一致） | 契約イベント・コマンド・クエリごとに「今の JSON 形」をファイルで固定し、シリアライズ結果を**文字列として丸ごと**比較する（キー集合・順序・型を含む）。フィールドの追加・改名・削除はこれで赤になる | `shared/src/test` |
+| ゴールデン JSON（往復） | ゴールデンの JSON からデシリアライズし、再シリアライズして元と一致する | `shared/src/test` |
+| 全リビジョンの保持 | `Revision` を上げても旧版のゴールデンを消さない（`<Event>.r1.json`, `<Event>.r2.json`）。Upcaster の検査が旧版を読む | `shared/src/test/resources/golden/` |
+| 発行側の契約（`BookingSide<契約名>ContractTest`） | 発行側の集約が出すイベントがゴールデンと丸ごと一致する | 各発行サービス |
+| 購読側の契約（`TrackingSide<契約名>ContractTest` 等） | 購読側の投影・Saga・Reaction がゴールデンの JSON から復元して処理できる | 各購読サービス |
+| 往復 | 発行側の集約に実際のコマンドを送り、購読側の投影が更新されるまでを **Axon Server 経由**で確かめる。契約イベント 1 本につき 1 本（11 本） | `apps/backend/contract-tests`（両サービスを起動） |
 | Upcaster | 旧形式の JSON（ゴールデンの旧版）を Upcaster で読み替え、新形式で復元できる | 各サービス |
 | 名簿 | `shared/contract` の型の一覧を ArchUnit で固定。増えたら赤。ADR を起こして名簿を更新する | `shared/src/test` |
+| 個人情報の名簿 | 個人情報フィールドを持つイベントが `ShipperRegisteredEvent`・`ShipperContactUpdatedEvent` 以外に無いこと。ゴールデンは論理形（平文）と物理形（暗号化後のエンベロープ）を分けて固定する（ADR-0003） | `shared/src/test` |
 
-**両側が同じ 1 つを読む**ことと、**片側だけでは守れない**ことを同時に守ります。発行側だけのゴールデンは、購読側が別の形を期待していても緑になります。
+**両側が同じ 1 つを読む**ことと、**片側だけでは守れない**ことを同時に守ります。発行側だけのゴールデンは、購読側が別の形を期待していても緑になります。往復だけでは、フィールドを足しても両側が同じコードを使う限り緑になります。だから丸ごと一致と往復を分けます。
+
+ゴールデンを置いたら**「壊して赤」を一度確かめます**。契約の型にフィールドを 1 つ足して丸ごと一致が赤になること、ゴールデンのキーを 1 つ改名して往復が赤になることを、ゴールデンを最初に置く変更の中で確認し、コミットメッセージに書きます。
+
+`apps/backend/contract-tests` はテスト専用のサブプロジェクトで、業務サービスではありません。ADR-0001 の「`settings.gradle.kts` の include が 8 つと一致」の検査は、テスト専用（`contract-tests`）を除いた業務プロジェクトを数えます（ADR-0001 に明記）。`contract-tests` は CI の「往復」段で、対になる 2 サービスと Axon Server を起動して実行します。
 
 ### レベル 4：境界の検査（ArchUnit + ソース走査）
 
@@ -170,17 +189,23 @@ class CargoProjectionIT {
 | レイヤー依存 | `domain` は Spring・MyBatis に依存しない。Axon は `..annotation..` と `EventAppender` の許可リストのみ |
 | 共有カーネルの範囲 | `shared` に置けるパッケージの名簿（`domain/model`・`domain/auth`・`contract/*`・`infrastructure/axon`） |
 | サービス間の依存 | 各サービスは `shared` 以外の他サービスのパッケージに依存しない |
-| コマンドの送信箇所 | `CommandGateway` を使えるのは `interfaces` と `application/saga` だけ |
+| コマンドの送信箇所 | `CommandGateway` を使えるのは `interfaces`・`application/saga`・`application/reaction` だけ。`infrastructure/projection` は SQL に写すだけで、`CommandGateway` を参照しない |
+| 契約の向き | 契約イベント・コマンド・クエリを送る（`CommandGateway#send`、`EventAppender`、`QueryGateway#query`）または購読する（`@EventHandler`、`@CommandHandler`、`@QueryHandler`）メソッドの引数型が、自サービスの内部型でも `shared/contract` でもない場合は赤。サービスをまたぐものは `shared/contract` の型に限る |
+| 業務タイムゾーン | `BusinessClock` Bean（`Asia/Tokyo`）を `shared` に 1 つだけ置く。`Clock.systemUTC()`・`Clock.systemDefaultZone()`・`LocalDate.now()`・`LocalDateTime.now()`・`Instant.now()` の直呼びは `domain`・`application`・`interfaces` で赤（時刻は `BusinessClock` から取る） |
 | 同期の状態変更ポート | 名簿が空であること（`java-2` `CrossContextPortPolicyTest` の逆） |
 | `RestClient` の禁止 | `infrastructure/acl` で REST を使わない（サービス間は Axon Server だけ） |
 | 4 系 API | `org.axonframework.modelling.command..` への参照が無い（コンパイルで止まるが、念のため） |
 | authms の Event Sourcing 禁止 | `auth` パッケージに `@EventSourcedEntity` が無い |
 | Event Processor のモード | 設定ファイルを走査し、`mode` が `pooled` 以外にならない |
+| Processing Group の列挙 | 設定ファイルに `data-model.md` の対応表の全 Group（投影 + `*-reaction`）が明示的に列挙されていること。コード側の `@ProcessingGroup` と突合し、**列挙漏れ（既定値に落ちる Group）が赤** |
+| Reaction の置き場 | `@ProcessingGroup("*-reaction")` を持つクラスは `application/reaction` にだけあり、`@ProcessingGroup("*-projection")` を持つクラスは `infrastructure/projection` にだけある |
 | データソース | 各サービスの `spring.datasource.url` が自サービスの DB だけを指す |
 | Processing Group の書き手 | 1 テーブルを書く Mapper が 1 つの Processing Group からしか呼ばれない（`data-model.md` の対応表を読んで突合） |
 | Flyway | 適用済みファイルの checksum を CI で比較し、編集されていたら赤 |
 
-**名簿方式は「載っていないもの」を通さない**ように書きます。「載っているものが正しい」だけの検査は、載せ忘れたものほど漏れます。
+**名簿方式は「載っていないもの」を通さない**ように書きます。「載っているものが正しい」だけの検査は、載せ忘れたものほど漏れます。名簿の向きは「載っていれば正しい」ではなく「`shared/contract` 以外の型でサービスをまたいだら赤」です。
+
+ArchUnit ルール自体のメタテストは、**実コードと同じ形のフィクスチャ**（Spring の stereotype、Axon のアノテーション、パッケージ構成を実サービスと同じにした違反例）で行います。「最小の違反例」だけだとメタテストが緑でも実コードの違反を見逃します（Flix IT2 の教訓）。
 
 ### レベル 5：E2E（API / 画面）
 
@@ -189,8 +214,22 @@ class CargoProjectionIT {
 | 業務連鎖 | Playwright（ステージング） | 予約 → 経路 → 通知 → 確定 → 追跡番号 → 荷役 → 引取 → 請求 → 入金 → 精算済 を 1 本。**反映待ちのヘルパ**（`waitForProjected(bookingId)`）を共有し、`sleep` を書かない |
 | 到達性 | Playwright | ロール × 画面（サイドナビとダッシュボードから開けるか）、状態 × 操作（その状態のレコードからボタンが出て押せるか）、認証不要の入口（ログイン画面とポータルから公開追跡へ） |
 | 反映中 | Playwright | 登録直後の詳細で「反映中」が出て、`200` で消えること。30 秒で再読込ボタンに切り替わること（Event Processor を止めて確かめる） |
-| 409 | Playwright | 2 つのブラウザで同じ予約を開き、片方が「経路設計へ戻す」後にもう片方が「確定」を押して「状態が変わっています」が出ること |
-| 日時 | 共有ヘルパ | テストデータの日時は業務タイムゾーンで作る。CI（UTC）で 1 日中落ちる `toISOString()` を使わない。**TZ=UTC で一度回す** |
+| 409 | Playwright | 2 つのブラウザで同じ予約を開き、片方が「経路設計へ戻す」後にもう片方が「確定」を押して、`role="alert"` で「状態が変わっています」と直前の操作（誰が・いつ・何を）と押せる操作が出ること |
+| 409（キーボードのみ） | Playwright | マウスを使わず Tab / Enter だけで上記を再現し、`aria-disabled` のボタンからフォーカスが消えないこと、`alert` が読み上げ対象になること |
+| 日時 | 共有ヘルパ | テストデータの日時は業務タイムゾーン `Asia/Tokyo` で作る。CI（UTC）で 1 日中落ちる `toISOString()` を使わない。**TZ=UTC で一度回す** |
+
+到達性 E2E のうち「ロール × サイドナビ」と「認証不要の入口」のサブセットを **PR マージ時のスモーク**として回します（`reachability-smoke.spec.ts`、5 分以内）。リリース直前まで残すと手戻りが大きいためです。
+
+### レベル 6：性能・復元演習
+
+`non_functional.md` の目標値に対応する検査です。CI では回さず、頻度と手段を固定します。定義しただけの目標は守られません。
+
+| 要件 | 手段 | 頻度 | 判別すること |
+| :--- | :--- | :--- | :--- |
+| 反映の遅れ p95 < 3 秒 | k6 でコマンドを流し、詳細が `202` → `200` になるまでを計測 | リリース前 + 月次 | 投影の SQL とセグメント数が規模に合っていること |
+| 一覧 p95 < 800ms | k6（ピーク 200 req/s） | リリース前 + 四半期 | 索引の有無 |
+| RTO 4 時間・RPO 1 時間 | 復元演習（`gulp ops:drill:restore`）で所要時間を記録 | 四半期 | バックアップから復元できること |
+| 個人情報の削除 | 鍵の破棄 → リプレイ → 投影と復元集約に個人情報が無いこと | リリース前 + 年次 | ADR-0003 の決定 |
 
 ## テストレベルの定義（フロントエンド）
 
@@ -213,6 +252,8 @@ class CargoProjectionIT {
 | `interfaces` | 60% | Controller |
 | 全体 | 80% | JaCoCo。レイヤー別の閾値をビルドに置く |
 
+レイヤー別の集計は、JaCoCo の `violationRules` にパッケージの `includes`（`..domain..`、`..application..`、`..infrastructure..`、`..interfaces..`）を分けた rule を 4 つ置き、`jacocoTestReport` はユニットと統合（`integrationTest` タスク）の実行データを `executionData` で合算して 1 レポートにします。`infrastructure` の投影・Query Handler は統合テストでしか通らないため、合算しないと閾値に届きません。
+
 フロントエンドは Hooks 90%、コンポーネント 70%、全体 75%。
 
 ### 品質ゲート
@@ -223,7 +264,8 @@ class CargoProjectionIT {
 | ArchUnit・ソース走査 | 違反 0 | PR |
 | 契約（ゴールデン・名簿） | 失敗 0 | PR |
 | 統合（Testcontainers） | 失敗 0 | PR マージ |
-| 往復（Axon Server 経由） | 失敗 0 | PR マージ |
+| 往復（Axon Server 経由・`contract-tests`） | 失敗 0。**`shared` を変更する PR は全サービスの往復を通す** | PR マージ |
+| 到達性スモーク E2E | 失敗 0 | PR マージ |
 | カバレッジ | 上表 | PR マージ |
 | `./gradlew build`（SpotBugs 含む） | 成功 | PR。**ローカルも同じコマンド** |
 | SonarQube Quality Gate | Passed。Bug・Vulnerability 0。Security Hotspot は中身を読んでから判断 | リリース前 |
@@ -237,9 +279,9 @@ class CargoProjectionIT {
 | :--- | :--- |
 | Object Mother（`CargoEvents.booked(...)`、`HandlingContract.registered(...)`） | イベント列の組み立て。**契約イベントの Object Mother は `shared` の testFixtures に置き、両側が同じものを使う** |
 | Test Data Builder | 値オブジェクトの組み立て |
-| ゴールデン JSON | 契約の形の固定。バージョンごとにファイルを残す |
-| 採番 | テストデータの `ShipperCode` も本番の経路（投影のシーケンス）で採る。MAX+1 の自前採番はしない |
-| 日時 | 業務タイムゾーンのヘルパ。テストも同じ `Clock` で「今日」を決める |
+| ゴールデン JSON | 契約の形の固定。全リビジョンのファイルを残す |
+| 採番 | レベルごとに使い分ける。ユニット（`AxonTestFixture`）は Object Mother の固定値（`B-001`、`SHP-000001`）で読みやすさを優先する。統合・往復・E2E は本番の経路（投影のシーケンス、集約の採番）で採る。MAX+1 の自前採番はしない |
+| 日時 | `BusinessClock`（`Asia/Tokyo`）のテスト用実装を `shared` の testFixtures に置き、テストも同じ `Clock` で「今日」を決める |
 
 ## TDD の運用
 
@@ -269,8 +311,9 @@ fork again
 fork again
   :フロント ユニット + tsc -b;
 end fork
-:統合（Testcontainers: Axon Server + PostgreSQL）;
-:往復（2 サービス + Axon Server）;
+:統合（Testcontainers: Axon Server（DCB） + PostgreSQL）;
+:往復（contract-tests: 2 サービス + Axon Server）;
+:到達性スモーク E2E;
 :./gradlew build（SpotBugs・JaCoCo 閾値）;
 if (main?) then (yes)
   :ステージングへデプロイ;
@@ -290,19 +333,42 @@ stop
 
 ## トレーサビリティ
 
-| US / UC | 主な検査 |
-| :--- | :--- |
-| US04・US05 予約登録 | `CargoTest`（危険物・冷凍の必須項目）、`CargoProjectionIT`、E2E（反映中） |
-| US09・US11 経路確定 | `CargoTest`（期限当日着）、`RouteSearchServiceTest`、`RouteCandidatesRoundTripIT`（Query Bus 往復） |
-| US12・US13 通知・確定 | `CargoTest`（通知していない予約は確定できない）、E2E（409） |
-| US14 追跡番号発行 | `BookingSagaIT`（追跡開始と補償）、`TrackingNumberIssuedContractTest`（両側）、往復 |
-| US15・US28 荷役・誤配 | `HandlingActivityTest`（種別ごとの要件・`offRoute`）、`TrackingActivityTest`（`afterHandling`）、`HandlingActivityRegisteredRoundTripIT` |
-| US19・US20 例外 | `TrackingActivityTest`（`EXCEPTION` からの復帰）、E2E（緊急を先頭） |
-| US21〜US23 料金・精算 | `FreightChargeCalculatorTest`（各項・輸出免税・丸め）、`QuotationEstimatorConsistencyTest`（見積と請求の一致）、`BillingSagaIT`、`InvoiceQueryIT`（期限超過の日付判定） |
-| US29 通関 | `CustomsDeclarationTest`（未決着 1 件・留置 3 日超）、`HandlingActivityTest`（`CLEARED` 以外の引取拒否）、`CustomsStatusChangedRoundTripIT` |
-| US30 キャンセル | `CargoTest`（状態ごとの即時 / 申請）、`BookingSagaIT`（追跡を閉じる）、`CargoCancelledRoundTripIT` |
-| US31 アカウント保護 | `UserTest`（5 回でロック・同一メッセージ）、`AuthControllerIT`（認可が入力検証より先） |
-| 横断 | `ArchitectureTest`（名簿）、`ProjectionIdempotencyIT`、`TokenTransactionIT`、`ReplayIT`、`StartupWithoutAxonServerIT` |
+受入基準は書き写さず、`user_story.md` の項番で引用します（「US18 §受入基準 4」は US18 の受入基準の 4 番目）。正典が変わっても本表は追随し、書き写した条件が古いまま「未達」を記録し続けることを防ぎます。
+
+| US | 引用する受入基準 | 主な検査 |
+| :--- | :--- | :--- |
+| US01 見積作成 | §受入基準 2〜5 | `QuotationTest`（候補 0 件でも 1 行）、`QuotationEstimatorTest`（概算の式）、`RouteCandidatesRoundTripIT`（Query Bus 往復）、`QuotationProjectionIT` |
+| US02 荷主登録 | §受入基準 2, 3 | `ShipperTest`、`ShipperUniquenessIT`（三段：直接コマンド 2 件 → `attention_item`）、`ShipperProjectionIT`（`shipper_code` の採番）、`ShipperShredIT`（ADR-0003） |
+| US03 法人荷主 | §受入基準 2, 4 | `ShipperTest`（割引率 0〜30%）、`BillingSideCorporateContractAssignedContractTest`、`CorporateContractAssignedRoundTripIT` |
+| US04 予約登録 | §受入基準 4, 6 | `CargoTest`、`CargoProjectionIT`、E2E（反映中。予約番号はコマンド応答で即返る） |
+| US05 危険物・冷凍 | §受入基準 1〜3 | `CargoTest`（必須項目）、`RouteSearchServiceTest`（対応航海だけを候補に） |
+| US06 引き渡し | §受入基準 2, 4 | `CargoTest`（`ROUTING_REQUESTED` への遷移）、E2E（到達性：経路設計者の作業一覧） |
+| US07 航海検索 | §受入基準 3〜7 | `VoyageQueryIT`（条件・0 件・貨物種別の絞り込み）、`UnLocodeTest` |
+| US08 経路候補 | §受入基準 1, 4〜6 | `RouteSearchServiceTest`（順序・直行優先・期限内 0 件）、`RouteCandidatesRoundTripIT` |
+| US09 経路確定 | §受入基準 2, 3 | `CargoTest`（期限当日着・境界値 4+1 点）、`CargoProjectionIT`（`cargo_leg` の入れ替え） |
+| US10 条件調整 | §受入基準 2〜4 | `RouteSearchServiceTest`（期限延長）、`CargoTest`（`ROUTING_REQUESTED` へ戻す） |
+| US11 紐付け | §受入基準 2, 3 | `CargoTest`（`assignRoute` の端点・期限の不変条件） |
+| US12 通知 | §受入基準 3, 4 | `CargoTest`（`ShipperNotifiedEvent` に宛先・要約）、`CargoProjectionIT`（通知履歴） |
+| US13 確定 | §受入基準 2, 4 | `CargoTest`（通知していない予約は確定できない、戻す）、`BookingControllerTest`（409 の本文）、E2E（409・キーボードのみ） |
+| US14 追跡番号 | §受入基準 1〜3 | `BookingSagaIT`（追跡開始と補償・`Clock` 差し替え）、`BookingSideTrackingNumberIssuedContractTest` / `TrackingSideTrackingNumberIssuedContractTest`、`TrackingNumberIssuedRoundTripIT`、`TrackingInitializedRoundTripIT` |
+| US15 荷役記録 | §受入基準 1〜4, 6, 7 | `HandlingActivityTest`（種別ごとの要件・`offRoute`・冪等キー `activityId`）、`TrackingActivityTest`（`afterHandling`）、`HandlingActivityRegisteredRoundTripIT`、`HandlingActivityVoidedRoundTripIT`、`CargosOnVoyageQueryIT`（航海番号起点） |
+| US16 引取 | §受入基準 2〜4 | `HandlingActivityTest`（`CLAIM` の荷受人確認）、`TrackingActivityTest`（`CLAIMED`）、`CargoDeliveredRoundTripIT`（`booking-reaction` → `BookingDeliveredEvent`） |
+| US17 手動更新 | §受入基準 2, 3 | `TrackingActivityTest`（手動遷移表）、`TrackingProjectionIT`（`tracking_event` に `MANUAL`） |
+| US18 追跡照会 | §受入基準 1〜5 | `TrackingQueryIT`（履歴の順序・見つからない）、E2E（認証不要の入口：ログイン画面とポータルから） |
+| US19 遅延例外 | §受入基準 1, 2, 5 | `TrackingActivityTest`（`EXCEPTION` と復帰）、`TrackingProjectionIT`（残り N 件） |
+| US20 破損・紛失 | §受入基準 1〜3 | `ExceptionTypeTest`（`LOSS` は `urgent`）、`TrackingQueryIT`（LOSS → 残日数順）、E2E（`ROLE_HANDLER` が破損・紛失を起票できる） |
+| US21 料金算出 | §受入基準 1, 3, 5, 6 | `FreightChargeCalculatorTest`（各項・輸出免税・丸め）、`InvoiceTest`（調整行に `basisExceptionId`）、`BillingSagaIT` |
+| US22 法人割引 | §受入基準 1〜4 | `InvoiceTest`（割引率の複写）、`ShipperContractSnapshotProjectionIT`（契約イベント購読）、`QuotationEstimatorConsistencyTest`（見積と請求の式と料率が同一。両サービスの実際の設定ファイルを読む） |
+| US23 精算 | §受入基準 1, 4 | `InvoiceTest`、`InvoiceQueryIT`（期限超過の日付判定・境界値 4+1 点）、`PaymentRecordedRoundTripIT`（`booking-reaction` → `BookingSettledEvent`） |
+| US24 航海登録 | §受入基準 3〜5 | `VoyageTest`（日付の整合・寄港地の順序）、`VoyageUniquenessIT`（三段） |
+| US25 航海更新 | §受入基準 2, 3, 5 | `VoyageTest`（差分は丸ごと比べる）、`VoyageProjectionIT`（`carrier_movement` の入れ替え） |
+| US26 ログイン | §受入基準 1, 3, 5, 6 | `UserTest`、`AuthControllerIT`（同一メッセージ・403）、E2E（到達性：未ログインはログイン画面へ） |
+| US27 ログアウト | §受入基準 1, 2 | フロント ユニット（`sessionStorage` の破棄）、E2E（ブラウザバックで戻れない） |
+| US28 誤配 | §受入基準 1, 2, 5 | `HandlingActivityTest`（`offRoute` の警告）、`TrackingActivityTest`（`MISROUTED`）、`RouteSearchServiceTest`（`departFrom` 指定時は期限超過候補も `overdueDays` つきで返す）、E2E（S22 → S31） |
+| US29 通関 | §受入基準 3, 5, 6 | `CustomsDeclarationTest`（未決着 1 件・留置は営業日で数える・`heldBusinessDays`）、`HandlingActivityTest`（`CLEARED` 以外の引取拒否と `customsStatusAsOf`）、`CustomsStatusChangedRoundTripIT` |
+| US30 キャンセル | §受入基準 1, 5, 6, 8 | `CargoTest`（状態ごとの即時 / 申請）、`CancellationDecisionTest`（陸揚げ地は現在地または残りの寄港地）、`TrackingActivityTest`（陸揚げ地の `UNLOAD` まで閉じない）、`CargoCancelledRoundTripIT`、`TrackingClosedRoundTripIT` |
+| US31 アカウント保護 | §受入基準 1, 2, 5, 8 | `UserTest`（5 回でロック・同一メッセージ）、`AuthControllerIT`（認可が入力検証より先） |
+| 横断 | — | `ArchitectureTest`（名簿・向き・`BusinessClock`・Processing Group の列挙）、`ProjectionIdempotencyIT`、`TokenTransactionIT`、`TransactionManagerIT`、`ReplayIT`（`CommandGateway` が呼ばれない）、`StartupWithoutAxonServerIT`、`StartupWithoutDcbIT` |
 
 ## テスト命名規則
 
@@ -310,14 +376,14 @@ stop
 | :--- | :--- | :--- |
 | ユニット | `<対象>Test`、メソッドは日本語で振る舞い | `CargoTest.通知していない予約は確定できない` |
 | 統合 | `<対象>IT` | `CargoProjectionIT` |
-| 契約 | `<契約名>ContractTest`（両側に同名） | `TrackingNumberIssuedContractTest` |
+| 契約 | `<側><契約名>ContractTest`。側の接頭辞（`BookingSide` / `TrackingSide` / `HandlingSide` / `BillingSide` / `RoutingSide`）で赤の出所が一意に分かる | `BookingSideTrackingNumberIssuedContractTest`, `TrackingSideTrackingNumberIssuedContractTest` |
 | 往復 | `<契約名>RoundTripIT` | `HandlingActivityRegisteredRoundTripIT` |
-| E2E | `<画面 or シナリオ>.spec.ts` | `reachability.spec.ts`, `pending-projection.spec.ts` |
+| E2E | `<画面 or シナリオ>.spec.ts`。PR スモークは `-smoke` を付ける | `reachability.spec.ts`, `reachability-smoke.spec.ts`, `pending-projection.spec.ts` |
 
 ## 参照
 
 - [バックエンドアーキテクチャ](architecture_backend.md)、[フロントエンドアーキテクチャ](architecture_frontend.md)
 - [ドメインモデル設計](domain-model.md)（不変条件・契約の名簿）、[データモデル設計](data-model.md)（Processing Group とテーブルの対応）
-- [ADR-0001](../../adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md)（コンプライアンスの検査）
+- [ADR-0001](../../adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md)（コンプライアンスの検査）、[ADR-0003](../../adr/cargo-tracker/0003-crypto-shredding-for-personal-data.md)（crypto-shredding の検査）
 - [テスト戦略ガイド](../../reference/テスト戦略ガイド.md)
 - 参照元：`tmp/take-4/docs/design/test_strategy.md`、[java-3 テスト戦略](../../article/source/java-3/docs/design/test_strategy.md)

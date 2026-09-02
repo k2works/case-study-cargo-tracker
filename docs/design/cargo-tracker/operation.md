@@ -4,7 +4,7 @@ title: "運用要件 - 国際貨物輸送管理システム（CQRS / Event Sourc
 description: "CQRS / Event Sourcing 版 Cargo Tracker の運用要件。投影のリプレイを日常操作として置き、Event Store の復元演習、Event Processor と Saga の監視、ランブック、イベントの形を変えるリリース手順、鍵の破棄、Gulp タスクを定める。"
 tags: [design,operation,cqrs,event-sourcing,axon]
 status: draft
-generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T07:07:31Z }
+generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T07:46:35Z }
 ---
 
 # 運用要件 - 国際貨物輸送管理システム（CQRS / Event Sourcing 版）
@@ -40,8 +40,8 @@ CQRS / Event Sourcing に固有の運用は次の 4 つです。
 
 | 頻度 | 作業 |
 | :--- | :--- |
-| 日次 | SLO ダッシュボード確認（反映の遅れ・Processor 停止・Saga 滞留・5xx）、要確認一覧の未確認件数、Event Store ディスク使用率、EBS スナップショットの成功確認 |
-| 週次 | Saga 滞留の棚卸（24 時間超）、脆弱性走査の結果確認、留置 3 日超の通関申告の件数（業務側への通知が届いているか） |
+| 日次 | SLO ダッシュボード確認（反映の遅れ・Processor 停止・Saga 滞留・5xx）、要確認一覧（`attention_item`）の未確認件数と**営業日内の確認期限**を過ぎた件数、Event Store ディスク使用率、EBS スナップショットの成功確認 |
+| 週次 | Saga 滞留の棚卸（24 時間超）、脆弱性走査の結果確認、留置 3 営業日超の通関申告の件数（業務側への通知が届いているか） |
 | 月次 | Axon Server のバージョンアップ判断（計画停止）、容量計画の更新、アクセスログの確認、コストレポート |
 | 四半期 | **復元演習**（EBS スナップショットから Axon Server を復元し、全投影をリプレイ、RTO 内か計測）、Axon Server 停止時の挙動確認、アクセス権限の棚卸 |
 | 年次 | ペネトレーションテスト、保存期間満了の荷主の鍵破棄、DR 訓練（AZ 障害） |
@@ -61,7 +61,7 @@ if (Saga 滞留 > 24h?) then (yes)
   :宛先サービスの状態を確認;
   :補償済みか要確認一覧で確認;
 endif
-:要確認一覧の未確認件数を業務側へ通知;
+:要確認一覧の未確認件数（確認期限超過を含む）を担当ロールへ通知;
 :EBS スナップショットの成功を確認;
 stop
 @enduml
@@ -78,9 +78,9 @@ stop
 | **反映** | コマンド → 投影 p95 | 3 秒超が 5 分継続 | P2（画面ヘッダに表示） |
 | **Saga** | 滞留（未完了・24 時間超） | 1 件 | P3 |
 | **Saga** | 補償に至った件数 | 1 件 | P3（要確認一覧に転記済みか確認） |
-| **投影の拒否** | `projection_rejection` の未確認件数 | 1 件 | P3 |
+| **要確認** | `attention_item` の未確認件数（投影の拒否・Reaction の失敗・Saga の補償）。営業日内の確認期限を過ぎた件数 | 1 件 / 期限超過 1 件 | P3 / P2 |
 | Axon Server | 稼働 | 停止 | **P1** |
-| Axon Server | 接続サービス数 | 期待数（7 サービス × 台数）未満 | P2 |
+| Axon Server | 接続数 | 期待数（**業務 5 サービス × 台数**。authms・gatewayms は接続しない）未満、または上限（サービスあたり 50・合計 250）の 80% 超 | P2 |
 | Axon Server | Event Store ディスク使用率 | 70% / 85% | P3 / P2 |
 | Axon Server | コマンド処理の待ち時間 p95 | 500ms | P3 |
 | サービス | 5xx 率 | 1% | P2 |
@@ -96,7 +96,7 @@ stop
 | :--- | :--- |
 | SLO | 稼働率、反映の遅れ p95、Processor の遅れ、5xx 率、エラーバジェット残 |
 | Event Sourcing | Processing Group ごとの位置と遅れ、Saga の滞留数、Event Store の書き込み速度とディスク |
-| 業務 | 要確認一覧の未確認件数、留置 3 日超の通関申告、承認待ちのキャンセル申請、期限超過の請求 |
+| 業務 | 要確認一覧の未確認件数（ロール別）、留置 3 営業日超の通関申告、承認待ちのキャンセル申請、期限超過の請求 |
 
 ### 3.3 エスカレーション
 
@@ -104,7 +104,7 @@ stop
 | :--- | :--- | :--- | :--- |
 | P1 | Axon Server 停止、Processor 停止、業務画面の全断 | 15 分以内 | 電話 + チャット |
 | P2 | 反映の遅れ、5xx、接続数の減少、バックアップ失敗 | 1 時間以内 | チャット |
-| P3 | Saga 滞留、拒否の未確認、容量 70% | 翌営業日 | チケット |
+| P3 | Saga 滞留、要確認の未確認、容量 70% | 翌営業日 | チケット |
 
 ## 4. バックアップと復元
 
@@ -129,12 +129,12 @@ stop
 gulp projection:replay --env staging --service bookingms --group booking-cargo-projection
 ```
 
-1. 対象の Processing Group が書くテーブルを `data-model.md` の対応表で確認する
-2. Event Processor を停止し、対象テーブルを TRUNCATE、トークンをリセット
+1. 対象の Processing Group が書くテーブルを `data-model.md` の対応表で確認する。**`*-reaction` の Group は対象にしない**（`projection:replay` は `--group` が `-reaction` で終わる場合に拒否する）。Reaction をリセットするとコマンドが再送され、他サービスの集約が動く
+2. Event Processor を停止し、対象テーブルを TRUNCATE、トークンをリセット。`attention_item` は投影ではないので TRUNCATE しない
 3. Event Processor を再開。遅れが 0 になるまで監視
 4. 投影の行数がイベント列から導いた期待値と一致することを確認
 
-所要時間の目安は 100 万イベントで 1.5 時間（200 evt/s）。リプレイ中は該当画面が「反映中」になるため、業務時間外に行います。
+所要時間の目安は 100 万イベントで 1.5 時間（200 evt/s）。TRUNCATE 方式ではリプレイ中に該当画面が「反映中」になるため、業務時間外に行います。業務時間内に行う必要がある場合は、新しい投影を別テーブル（`<table>_next`）に作って完了後に切り替え、**古い投影が読める状態を保ちます**（`non_functional.md` 2.3）。
 
 #### B. Axon Server インスタンス障害
 
@@ -147,8 +147,8 @@ gulp projection:replay --env staging --service bookingms --group booking-cargo-p
 
 1. 最新の EBS スナップショットから新ボリュームを作成
 2. 新タスクでマウントして起動
-3. S3 エクスポートから、スナップショット以降のイベントを再投入（Axon Server の REST API）
-4. 全サービスの投影をリプレイ（A の手順を全 Processing Group で）
+3. S3 エクスポートから、スナップショット以降のイベントを再投入（Axon Server の REST API）。**この差分再投入が可能であることは IT1 スパイクで確認済みであることを前提にする**（参照元では未検証。確認できなければ RPO は EBS スナップショットの 1 時間とし、`non_functional.md` を改訂する）
+4. 全サービスの投影をリプレイ（A の手順を全投影 Group で。Reaction Group は除く）
 5. RPO・RTO の実績を記録
 
 #### D. AZ 障害
@@ -162,6 +162,15 @@ gulp projection:replay --env staging --service bookingms --group booking-cargo-p
 1. 物理削除はしない。補正コマンドで打ち消しイベント（例：`CargoRoutedEvent` に対する `RouteCorrectedEvent`）を発行
 2. 集約の `@EventSourcingHandler` が補正イベントを扱えることを確認（無ければ実装が先）
 3. 投影は通常どおり追随する。追随しない投影はリプレイ
+
+#### F. Axon Server 停止中の荷役（紙 → 後入力）
+
+Axon Server の停止中はコマンドを受け付けません。荷役作業員は現行どおり**紙（荷役記録票）に作業種別・場所・完了日時・航海番号を書き**、復旧後に S50 から入力します。
+
+1. 停止を荷役の現場に連絡する（P1 の通知先に荷役責任者を含める）
+2. 復旧後、記録票の順に S50 で入力する。**完了日時には記録票の過去日時を入れる**（既定の「今」を上書きする）。`RegisterHandlingActivityCommand` は過去日時を受け付ける（集約が弾くのは未来日時と 5 分以内の重複だけ）
+3. 入力順が実際の順序と違っても、追跡は `completed_at` 順に並び直す。ただし `CLAIM` は通関状態の判定を伴うため、通関状態の更新を先に入力する
+4. 入力済みの記録票に印を付け、二重入力を防ぐ。誤入力は `VoidHandlingActivityCommand` で無効化する（元の記録は残る）
 
 ### 4.3 復元演習
 
@@ -184,8 +193,8 @@ gulp projection:replay --env staging --service bookingms --group booking-cargo-p
 | P2 | 反映の遅れ p95 > 3 秒 | Axon Server の負荷、投影 SQL の遅延、台数を確認 | セグメント数と台数の調整、SQL の計測 |
 | P3 | Saga 滞留 | 宛先サービスの稼働と `NoHandlerForCommandException` を確認 | 宛先の復旧後に Saga の再試行を確認。補償済みなら要確認一覧の対応を業務側へ |
 | P4 | Axon Server 停止 | 4.2 B | ボリューム破損なら 4.2 C |
-| P5 | サービスが起動しない（接続検査で停止） | Axon Server の稼働と `axon-server-connector` の依存を確認 | **無音で in-memory に落ちる構成に戻さない** |
-| P6 | 投影の拒否が急増 | 拒否理由（UNIQUE 違反）を確認。業務側に問い合わせ | 事前の存在確認が働いていない経路を修正 |
+| P5 | サービスが起動しない（接続検査で停止） | Axon Server の稼働、context が DCB か（`AXONIQ_AXONSERVER_STANDALONE_DCB=true`）、`axon-server-connector` の依存を確認 | **無音で in-memory に落ちる構成に戻さない** |
+| P6 | 要確認（`attention_item`）が急増 | `kind` で切り分ける。`PROJECTION_REJECTED` は UNIQUE 違反の理由を確認し業務側に問い合わせ、`REACTION_FAILED` は宛先集約の状態を確認 | 事前の存在確認が働いていない経路、または Reaction の前提が崩れた状態遷移を修正 |
 | P7 | 契約イベントが読めない（購読側で例外） | 発行側の直近リリースで契約が変わったか確認 | 発行側を戻すか、購読側に Upcaster を追加 |
 | P8 | 公開追跡照会のスパイク | CloudFront のキャッシュとレート制限を確認 | リードレプリカの追加 |
 
@@ -229,7 +238,8 @@ gulp projection:replay --env staging --service bookingms --group booking-cargo-p
 | :--- | :--- |
 | 列の追加 | Flyway で NULL 許容の列を追加 → デプロイ → 該当 Group をリプレイ（4.2 A）。**既存行を UPDATE で埋めない** |
 | 列の削除 | 次のリリースまで残す（Blue/Green の同時稼働中に Blue が書く） |
-| テーブルの追加（新しい読み取りモデル） | Flyway → 新しい Processing Group を追加 → 最初からリプレイ |
+| テーブルの追加（新しい読み取りモデル） | Flyway → 新しい Processing Group を追加（設定に明示列挙。列挙漏れは CI で赤） → 最初からリプレイ |
+| Reaction Handler の追加 | `*-reaction` の Group を設定に列挙し、**初期トークンを最新（head）に置く**。最初からにするとコマンドが過去分まで送られる |
 
 ### 6.4 Axon Server のバージョンアップ
 
@@ -259,7 +269,7 @@ gulp projection:replay --env staging --service bookingms --group booking-cargo-p
 | :--- | :--- |
 | アクセス管理 | Axon Server 管理 UI と RDS は踏み台経由。四半期に権限を棚卸 |
 | 脆弱性 | CI の走査結果を週次で確認。高深刻度は 7 日以内に対応 |
-| **鍵の破棄（crypto-shredding）** | 削除要求または保存期間満了で、セキュリティ担当の承認のもと KMS の荷主鍵を破棄 → 該当荷主に関わる Processing Group をリプレイ → 投影と復元した集約に個人情報が無いことを確認 → 監査ログに記録 |
+| **鍵の破棄（crypto-shredding）** | 削除要求または保存期間満了で、セキュリティ担当の承認のもと KMS の荷主鍵（`alias/cargo-tracker/shipper/<shipperId>`）を破棄 → `booking-shipper-projection`・`booking-cargo-projection`・`billing-projection` を**全件リプレイ**（荷主単位の部分リプレイはできない） → 投影と復元した集約に個人情報が無いことを確認 → 監査ログに記録。所要時間は 100 万イベントで 1.5 時間（ADR-0003）。削除要求は月に 1 度まとめて業務時間外に処理する |
 | 監査ログ | イベントのメタデータ（操作者・`traceId`）と `auth_audit_log` を保持期間まで保存 |
 | インシデント | 認証失敗の急増はロックの状況と送信元を確認。必要なら Gateway でレート制限を強化 |
 
@@ -269,7 +279,7 @@ gulp projection:replay --env staging --service bookingms --group booking-cargo-p
 
 | タスク | 内容 |
 | :--- | :--- |
-| `gulp projection:replay --env --service --group` | Processing Group のトークンをリセットしてリプレイ。終了後に行数を検証 |
+| `gulp projection:replay --env --service --group` | 投影の Processing Group のトークンをリセットしてリプレイ。終了後に行数を検証。`-reaction` の Group は拒否する |
 | `gulp projection:status --env` | 全 Processing Group の位置・遅れ・停止の一覧 |
 | `gulp saga:list --env --older-than 24h` | 滞留している Saga の一覧 |
 | `gulp axon:backup:snapshot --env` | Axon Server EBS の手動スナップショット（リリース前・バージョンアップ前） |
@@ -277,7 +287,7 @@ gulp projection:replay --env staging --service bookingms --group booking-cargo-p
 | `gulp axon:export:verify --env` | S3 エクスポートに欠落が無いことの検証 |
 | `gulp ops:health --env` | 全サービスのヘルスと Axon Server 接続の確認 |
 | `gulp ops:drill:restore --env staging` | 復元演習の一括実行（復元 → 全リプレイ → 検証 → 所要時間の記録） |
-| `gulp shipper:shred --env --shipper-id` | 荷主鍵の破棄と関連 Group のリプレイ |
+| `gulp shipper:shred --env --shipper-id` | 荷主鍵の破棄と関連 3 Group の全件リプレイ。所要時間の目安 1.5 時間 / 100 万イベント。開始前に確認プロンプトで所要時間を出す |
 | `gulp ops:logs:tail --env --service` | ログの tail |
 
 ## 10. 運用 KPI
@@ -288,12 +298,12 @@ gulp projection:replay --env staging --service bookingms --group booking-cargo-p
 | Processor 停止の MTTR | < 30 分 |
 | Saga の補償率 | < 0.1% |
 | 復元演習の RTO 実績 | < 4 時間（四半期） |
-| 拒否の未確認滞留 | 翌営業日までに 0 |
+| 要確認の未確認滞留 | 営業日内の確認期限までに 0。3 営業日超は 0 |
 | エラーバジェット消費 | 月の 50% を超えたら機能リリースを止め、信頼性の改善を優先 |
 
 ## 参照
 
 - [インフラストラクチャ](architecture_infrastructure.md)、[非機能要件](non_functional.md)、[データモデル設計](data-model.md)（Processing Group とテーブルの対応）
-- [ADR-0002](../../adr/cargo-tracker/0002-event-store-axon-server-and-postgresql-read-models.md)
+- [ADR-0002](../../adr/cargo-tracker/0002-event-store-axon-server-and-postgresql-read-models.md)、[ADR-0003](../../adr/cargo-tracker/0003-crypto-shredding-for-personal-data.md)
 - [運用要件定義ガイド](../../reference/運用要件定義ガイド.md)
 - 参照元：`tmp/take-4/docs/design/operation.md`、[java-3 運用要件](../../article/source/java-3/docs/design/operation.md)

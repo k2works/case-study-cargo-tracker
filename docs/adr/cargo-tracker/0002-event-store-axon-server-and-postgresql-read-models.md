@@ -4,7 +4,7 @@ title: "ADR-0002 Event Store は Axon Server SE、Read Model は PostgreSQL + My
 description: "Event Store は Axon Server SE 単一ノード、Read Model・Token Store・Saga Store・Auth は PostgreSQL + MyBatis + Flyway に置く決定と、PostgresqlEventStorageEngine 公開時の再評価条件。"
 tags: [adr]
 status: draft
-generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T03:05:25Z }
+generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T07:46:35Z }
 ---
 
 # ADR-0002 Event Store は Axon Server SE、Read Model は PostgreSQL + MyBatis にする
@@ -31,7 +31,7 @@ Axon Framework 5 の Event Storage Engine には、調査時点（2026-09-02）�
 | `InMemoryEventStorageEngine` | なし | テスト専用 |
 | `JdbcEventStorageEngine` | — | 5 系に後継なし |
 
-DCB（Dynamic Consistency Boundary）は `@EventSourcedEntity(tagKey = ...)` の前提であり、DCB 非対応のエンジンでは `take-4` ADR-0007 が確定した集約のパターンをそのまま使えない。
+DCB（Dynamic Consistency Boundary）は `@EventSourced(tagKey = ...)` の前提であり、DCB 非対応のエンジンでは `take-4` ADR-0007 / 0008 が確定した集約のパターンをそのまま使えない。Axon Server 側でも context を DCB 形式で作る必要があり（standalone は `AXONIQ_AXONSERVER_STANDALONE_DCB=true`、クラスタは `dcb=true`）、無いと `AXONIQ-2308` で Coordinator が無限再試行する（`take-4` ADR-0009 の実測）。
 
 読み取り側については、参照元 2 つ（`java-2` ADR-004、`take-4` ADR-0002）がいずれも MyBatis を採用し、JPA を退けている。
 
@@ -46,7 +46,7 @@ DCB（Dynamic Consistency Boundary）は `@EventSourcedEntity(tagKey = ...)` の
 3. `PostgresqlEventStorageEngine` は DCB 対応の唯一の RDB 案だが、公開状況を確認できていない。公開されても分散バスの役割は残る
 4. JPA を持ち込む案は、参照元との一貫性（MyBatis）を崩す
 
-Enterprise Edition は採らない。単一ノードで学習目標を満たし、可用性は `non_functional.md` で要件化してから再評価する。
+Enterprise Edition は採らない。単一ノードで学習目標を満たし、可用性は `non_functional.md` で要件化してから再評価する。再評価の発動条件は「**計画停止を除いた実績が 3 か月連続で SLO（可用性 99.9%）を割ったら**」とする。単一ノードは月 1 回 10 分の計画停止だけで SLO の余裕をほぼ使い切るため、計画停止を含めて測ると常に再評価が発動してしまう。
 
 ### Read Model・管理テーブル：サービスごとの PostgreSQL + MyBatis + Flyway
 
@@ -63,7 +63,11 @@ Token Store と Saga Store を Axon Server ではなく PostgreSQL に置くの�
 
 ### ローカル開発でも Axon Server を立てる
 
-`take-4` ADR-0008 は H2 プロファイルで `subscribing` モードに逃げ、投影が同期実行される構成を一時的に許した。その結果、Axon Server を止めても正常応答する構成不全に気づくのが遅れた（ADR-0009）。本プロジェクトは Docker Compose / kind で Axon Server SE と PostgreSQL を常に立て、**プロファイルによる Event Processor のモード切り替えをしない**。テストも Testcontainers で同じ構成を使う。
+`take-4` ADR-0008 は H2 プロファイルで `subscribing` モードに逃げ、投影が同期実行される構成を一時的に許した。その結果、Axon Server を止めても正常応答する構成不全に気づくのが遅れた（ADR-0009）。本プロジェクトは kind + Kustomize（`ops/k8s/base/axonserver/`）で Axon Server SE と PostgreSQL を常に立て、**プロファイルによる Event Processor のモード切り替えをしない**。テストも Testcontainers で同じ構成（DCB 有効）を使う。
+
+### `shared` の変更は全サービスの再ビルド
+
+契約イベント・コマンド・クエリと Axon の共通設定は `shared` に置く（ADR-0001）。`shared` を上げる PR は業務 5 サービス全部を再ビルドすることになり、片方だけ古い契約で動く窓ができる。**`shared` を上げる PR は全サービスの往復テスト（Axon Server を実際に経由する契約テスト）を通すことを品質ゲートにする。**
 
 ### 再評価の条件
 
@@ -81,8 +85,13 @@ Token Store と Saga Store を Axon Server ではなく PostgreSQL に置くの�
 | 決定 | 検査 |
 | :--- | :--- |
 | Axon Server に接続していること | 起動時に接続を確認し、失敗したら起動を止める。統合テストで「Axon Server 停止時に起動しない」ことを 1 本固定する |
+| context が DCB であること | 起動時の接続検査に含める。統合テストで DCB 無効の Axon Server（`STANDALONE_DCB` 未設定）に対して起動が止まることを 1 本固定する。Testcontainers・kind・ECS の Axon Server 定義に `AXONIQ_AXONSERVER_STANDALONE_DCB=true` があることを設定ファイルの走査で検査する |
+| ローカルでも Axon Server を立てる | `ops/k8s/base/axonserver/` が存在し、kind の Kustomize に含まれていることを検査する。`docker-compose.yml` に Axon Server を置かない（ローカルは kind） |
+| Axon Server に接続するのは業務 5 サービスだけ | 設定ファイルの走査：authms・gatewayms に `axon.axonserver` が無いこと。監視の期待接続数は「5 × 台数」、上限はサービスあたり 50・合計 250 |
+| `shared` を上げる PR は全サービスの往復テストを通す | CI：`shared/**` に差分があるとき、業務 5 サービスの契約往復テスト（`contract-tests`）を必ず実行する |
 | JPA を使わない | ビルド：本番実行クラスパスに `jakarta.persistence` と Hibernate が無いこと（`java-2` の `verifyProductionDependencies` を移植） |
-| モード切り替えをしない | 設定ファイルの走査：`axon.eventhandling.processors.*.mode` が `pooled` 以外にならないこと |
+| モード切り替えをしない | 設定ファイルの走査：`axon.eventhandling.processors.*.mode` が `pooled` 以外にならないこと。全 Processing Group（投影 8 + Reaction 3）が明示列挙されていること（列挙漏れが赤） |
+| 投影とトークンが同一トランザクション（構成） | 起動時の検査：Axon の `TransactionManager` Bean が 1 つだけで、`SpringTransactionManager` が `ConnectionProvider` 付きで作られていること。`token_entry` に `mask INTEGER NOT NULL` があること（Flyway の DDL 検査） |
 | 投影とトークンが同一トランザクション | 統合テスト：投影の SQL を故意に失敗させ、トークンが進まないことを固定する |
 | 投影が再構築できること | 統合テスト：投影テーブルを空にしてトークンをリセットし、リプレイ後に同じ行が復元されること |
 | Database per Service | 設定ファイルの走査：各サービスの `spring.datasource.url` が自サービスの DB だけを指すこと |
@@ -90,6 +99,7 @@ Token Store と Saga Store を Axon Server ではなく PostgreSQL に置くの�
 ## 備考
 
 - 著者: claude-code/claude-fable-5-1
+- 改訂: 2026-09-02 設計レビュー（H3・M2・M4・アーキテクトの懸念事項）を反映。DCB の接続検査、EE 再評価の発動条件、ローカル Axon Server の存在検査、`shared` を上げる PR の品質ゲートを追加した
 - 参照: Axon Framework 5.2 リファレンス「Event Store Migration」<https://docs.axoniq.io/axon-framework-reference/5.2/migration/paths/event-store/>
 - 参照元: `tmp/take-4/docs/adr/0002-mybatis-adoption.md`、`0008-axon-5-spring-boot-integration-pattern.md`、`0009-axon-server-connector-explicit-dependency.md`
 - 関連: [ADR-0001](0001-cqrs-es-with-axon-in-microservices.md)

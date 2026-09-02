@@ -4,7 +4,7 @@ title: "インフラストラクチャアーキテクチャ - 国際貨物輸送
 description: "CQRS / Event Sourcing 版 Cargo Tracker のインフラストラクチャ設計。ローカルは kind + Kustomize、ステージング・本番は AWS ECS + EC2（Axon Server）+ RDS。Axon Server を全環境で動かし、Event Store のバックアップ・復元・投影のリプレイを中心に据える。"
 tags: [design,architecture,infrastructure,axon-server,kubernetes,aws]
 status: draft
-generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T03:59:57Z }
+generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T07:46:35Z }
 ---
 
 # インフラストラクチャアーキテクチャ - 国際貨物輸送管理システム（CQRS / Event Sourcing 版）
@@ -119,9 +119,9 @@ ops/k8s/
 
 | 項目 | 内容 |
 | :--- | :--- |
-| Axon Server | `axoniq/axonserver:2026.x`（Standard Edition）。PVC で `/axonserver/events` を永続化。`kind delete cluster` でも消えないよう hostPath を overlay で当てる |
+| Axon Server | `axoniq/axonserver:2026.x`（Standard Edition）。`AXONIQ_AXONSERVER_STANDALONE_DCB=true` で **DCB を有効化**する（`tagKey` の集約は DCB 前提。無いと `AXONIQ-2308` で Coordinator が無限再試行し全業務サービスが起動しない）。PVC で `/axonserver/events` を永続化。`kind delete cluster` でも消えないよう hostPath を overlay で当てる |
 | PostgreSQL | `postgres:16`。1 Pod に 6 DB。初期化 SQL で DB と接続ユーザーを作る |
-| サービス | 7 サービスの Deployment。`AXON_AXONSERVER_SERVERS=axonserver:8124`。起動時に Axon Server への接続を確認し、失敗したら起動を止める |
+| サービス | 7 サービスの Deployment。`AXON_AXONSERVER_SERVERS=axonserver:8124`。起動時に Axon Server への接続と **context が DCB であること**を確認し、どちらかに失敗したら起動を止める |
 | 起動順 | Axon Server と PostgreSQL の readiness を待ってからサービスを起動（initContainer） |
 | 反映 | イメージを作り直したら `images → rollout:image → rollout:restart` の 3 つを踏む。タグが同じだと `rollout:image` は Pod を作り直さない |
 | Pod の待機 | ラベルだけで待たない。終了中の Pod にも一致する |
@@ -130,13 +130,15 @@ ops/k8s/
 
 ### プロファイル構成
 
-| プロファイル | 用途 | Event Processor | 備考 |
-| :--- | :--- | :--- | :--- |
-| `local` | kind | `pooled-streaming` | Axon Server あり |
-| `test` | Testcontainers | `pooled-streaming` | Axon Server あり（コンテナ） |
-| `staging` / `production` | AWS | `pooled-streaming` | Axon Server あり |
+| プロファイル | 用途 | Event Processor | DCB の有効化 | 備考 |
+| :--- | :--- | :--- | :--- | :--- |
+| `local` | kind | `pooled` | `AXONIQ_AXONSERVER_STANDALONE_DCB=true`（StatefulSet の env） | Axon Server あり |
+| `test` | Testcontainers | `pooled` | `AxonServerContainer#withEnv("AXONIQ_AXONSERVER_STANDALONE_DCB", "true")` | Axon Server あり（コンテナ） |
+| `staging` / `production` | AWS | `pooled` | `AXONIQ_AXONSERVER_STANDALONE_DCB=true`（ECS タスク定義の env。EE クラスタへ移行した場合は context 作成時に `dcb=true`） | Axon Server あり |
 
-**Event Processor のモードをプロファイルで切り替えません。** `subscribing` に切り替えると投影が同期実行され、本番と挙動が変わります。
+**Event Processor のモードをプロファイルで切り替えません。** `subscribing` に切り替えると投影が同期実行され、本番と挙動が変わります。モードの表記は設定の実値 `pooled`（`PooledStreamingEventProcessor`）に統一し、設定ファイルには `data-model.md` の対応表の全 Processing Group（投影 + `*-reaction`）を明示的に列挙します（列挙漏れは CI で赤）。
+
+**DCB はすべての環境で有効にします。** 集約の登録に `tagKey` を使う以上、DCB でない context に繋ぐと起動しません。設定漏れを無音にしないため、各サービスは起動時の接続検査で「接続できる」に加えて「接続先 context が DCB である」ことを確かめ、失敗したら起動を止めます。
 
 ## コンテナ設計
 
@@ -163,8 +165,11 @@ Volumes:
 - /axonserver/config  : 設定
 環境変数:
 - AXONIQ_AXONSERVER_STANDALONE=true
+- AXONIQ_AXONSERVER_STANDALONE_DCB=true（全環境。DCB を有効化）
 - AXONIQ_AXONSERVER_ACCESSCONTROL_ENABLED=true（ステージング・本番）
 ```
+
+Axon Server に接続するのは業務 5 サービス（bookingms・routingms・trackingms・handlingms・billingms）です。authms と gatewayms は接続しません。期待接続数は **5 × 台数**（初期は 2 台で 10）、上限はサービスあたり 50・合計 250 です。
 
 管理 UI（8024）は VPC 内からだけ到達できるようにし、ALB には公開しません。
 
@@ -201,12 +206,15 @@ fork
 fork again
   :ArchUnit（レイヤー・共有カーネル・契約の名簿）;
 fork again
-  :イベント契約テスト（ゴールデンファイル）;
+  :イベント契約テスト（ゴールデンファイル・丸ごと一致 + 往復）;
 fork again
   :静的解析（SonarQube）・脆弱性走査;
 end fork
-:統合テスト（Testcontainers: Axon Server + PostgreSQL）;
-note right : 投影・Saga・サービス越しの往復を実際の Axon Server で確かめる
+:統合テスト（Testcontainers: Axon Server（DCB） + PostgreSQL）;
+note right : 投影・Saga・Reaction を実際の Axon Server で確かめる
+:往復テスト（contract-tests: 対になる 2 サービス + Axon Server）;
+note right : 契約イベント 11 本につき 1 本。shared を変更する PR は全サービス分
+:到達性スモーク E2E;
 :Gradle build（SpotBugs 含む）;
 :Docker イメージビルド → GHCR;
 if (main?) then (yes)
@@ -226,6 +234,7 @@ stop
 | 項目 | 方針 |
 | :--- | :--- |
 | ローカルの品質ゲート | CI と同じコマンド（`./gradlew build`）。`test` だけでは SpotBugs が抜ける |
+| `contract-tests` | テスト専用サブプロジェクト（`apps/backend/contract-tests`）。業務サービスの数には数えない。CI の「往復テスト」段で対になる 2 サービスと Axon Server（DCB）を Testcontainers で起動して回す。`shared` を変更する PR は全サービス分を回す |
 | セキュリティ走査 | 公式イメージの直実行。導入失敗と検出が同じ赤にならないようにする |
 | 静的解析の抑制 | 指摘メッセージでなくルール ID で絞る（ロケールに依存させない） |
 | イメージタグ | コミット SHA。同一タグの上書きをしない |
@@ -248,19 +257,20 @@ Blue と Green が同時に動く間、同じ Processing Group の Event Process
 | 初回 | EC2 起動タイプの ECS サービスを 1 タスクで作成、EBS をアタッチ |
 | バージョンアップ | メンテナンス時間帯にタスクを差し替え。EBS は同一ボリュームを再アタッチ。**この間、全サービスのコマンドが止まる**（SE の制約。`non_functional.md` の可用性要件で扱う） |
 | 停止時のサービス挙動 | 各サービスは接続を失うとコマンドを `503` で返す。**無音で in-memory に落ちない**ことを起動時と定期のヘルスチェックで確かめる |
+| 起動時の接続検査 | (1) Axon Server に接続できる、(2) 接続先 context が DCB である、の 2 点。どちらかに失敗したら起動を止める（`take-4` ADR-0009 の接続検査に DCB を加える） |
 
 ### データベースマイグレーション
 
-各サービスが起動時に Flyway を適用します。適用済みのファイルは編集しません（CI は緑のまま、既存環境だけが checksum mismatch で止まる）。投影への列追加は Flyway で列を足し、トークンをリセットしてリプレイします。リプレイは Gulp タスク（`projection:replay --service bookingms --group booking-cargo-projection`）にし、`operation.md` に手順を置きます。
+各サービスが起動時に Flyway を適用します。適用済みのファイルは編集しません（CI は緑のまま、既存環境だけが checksum mismatch で止まる）。投影への列追加は Flyway で列を足し、トークンをリセットしてリプレイします。リプレイは Gulp タスク（`projection:replay --service bookingms --group booking-cargo-projection`）にし、`operation.md` に手順を置きます。**リプレイの対象は投影の Processing Group だけ**で、`*-reaction`（イベント購読からコマンドを送る Reaction Handler の Group）はリセットしません。リセットするとコマンドが再送され、他サービスの集約が動きます。
 
 ## 監視・ログ
 
 | 対象 | 監視項目 | 閾値・通知 |
 | :--- | :--- | :--- |
-| Axon Server | 稼働、gRPC 接続数（= 接続しているサービス数）、Event Store のディスク使用率 | 接続数がサービス数を下回ったら警告。ディスク 70% で警告 |
+| Axon Server | 稼働、gRPC 接続数、Event Store のディスク使用率、context が DCB であること | 接続数が期待値（業務 5 サービス × 台数）を下回ったら警告。上限（サービスあたり 50・合計 250）の 80% で警告。ディスク 70% で警告 |
 | Event Processor | **トークンの遅れ**（最新イベントとの差）、エラーで止まった Processor | 遅れが 1,000 イベントまたは 5 分を超えたら警告。停止は即通知 |
 | Saga | 未完了 Saga の滞留数・滞留時間 | 24 時間を超えた Saga を一覧化 |
-| 投影の拒否 | `projection_rejection` の未確認件数 | 1 件以上で作業一覧に表示 |
+| 要確認 | `attention_item` の未確認件数（投影の拒否・Reaction の失敗・Saga の補償） | 1 件以上で担当ロールの要確認一覧（S70）に表示 |
 | サービス | CPU、メモリ、5xx 率、応答時間 | 5xx 1% 超で警告 |
 | RDS | 接続数、ディスク、レプリカ遅延 | — |
 | ログ | CloudWatch Logs。構造化 JSON。`traceId` と `bookingId` / `trackingNumber` を必ず載せる | Micrometer Tracing でサービスをまたぐ相関 |
@@ -283,7 +293,7 @@ Event Processor の遅れは CQRS / Event Sourcing 固有の監視項目です�
 
 | シナリオ | 手順 |
 | :--- | :--- |
-| 投影の不整合・破損 | 該当 Processing Group のトークンをリセット → リプレイ（Gulp タスク） |
+| 投影の不整合・破損 | 該当投影 Processing Group のトークンをリセット → リプレイ（Gulp タスク）。Reaction の Group は対象外 |
 | Axon Server インスタンス障害 | EBS を新タスクにアタッチして再起動 |
 | Axon Server ボリューム破損 | 最新の EBS スナップショットから復元 → S3 エクスポートから差分を再投入 |
 | AZ 障害 | 別 AZ でスナップショットから復元（SE は手動。EE ならクラスタで自動） |
@@ -309,7 +319,7 @@ Event Processor の遅れは CQRS / Event Sourcing 固有の監視項目です�
 | 認証・認可 | `authms` の JWT を `gatewayms` が検証。認可は入力検証より先 |
 | シークレット | AWS Secrets Manager。ECS タスク定義から参照 |
 | イメージ | 脆弱性走査を CI で実施。非 root で実行 |
-| Event Store の個人情報 | イベントは削除できない。削除要求への対応は `non_functional.md` |
+| Event Store の個人情報 | イベントは削除できない。削除要求への対応は crypto-shredding（ADR-0003）。荷主ごとの鍵は KMS のエイリアス `alias/cargo-tracker/shipper/<shipperId>` |
 
 ## コスト見積（月額概算・本番）
 

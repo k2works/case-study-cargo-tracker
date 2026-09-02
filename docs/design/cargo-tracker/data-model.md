@@ -4,7 +4,7 @@ title: "データモデル設計 - 国際貨物輸送管理システム（CQRS /
 description: "CQRS / Event Sourcing 版 Cargo Tracker のデータモデル設計。Event Store は Axon Server に任せ、サービスごとの投影テーブル・Axon 管理テーブル・Auth の状態テーブルを ER 図とテーブル定義で示し、Processing Group との対応とリプレイ前提のマイグレーション方針を定める。"
 tags: [design,data-model,cqrs,event-sourcing,axon]
 status: draft
-generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T03:18:12Z }
+generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T07:46:35Z }
 ---
 
 # データモデル設計 - 国際貨物輸送管理システム（CQRS / Event Sourcing 版）
@@ -37,7 +37,9 @@ generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T03:18:12Z }
 | :--- | :--- | :--- |
 | Database per Service | サービスごとに PostgreSQL の DB を分ける。他サービスの DB へ接続しない | サービスの独立デプロイ。JOIN が要る時点で投影の設計が画面と合っていない |
 | 投影は捨てられる | 投影テーブルに `NOT NULL` と UNIQUE 以外の業務制約（CHECK）を置かない。制約は集約が守る | 投影の CHECK が集約と食い違うと、リプレイが途中で止まる |
-| 一意制約は投影で最終的に弾く | `shipper.email`、`voyage.voyage_number`、`invoice(booking_id, void_marker)` の UNIQUE | 集約 1 つでは全体の一意性を守れない。投影で弾いた事実は拒否イベントとして残す |
+| 一意制約は投影で最終的に弾く | `shipper.email`、`voyage.voyage_number`、`invoice(booking_id, void_marker)` の UNIQUE。「事前の存在確認 + 投影の UNIQUE + 拒否の記録（`attention_item`）」の三段 | 集約 1 つでは全体の一意性を守れない。投影で弾いた事実は要確認として残す |
+| 追記系投影は元イベントの識別子を UNIQUE にする | `tracking_event.event_id`、`handling_activity.activity_id`、`payment.payment_id` を PK（= UNIQUE）にする。UPDATE 系は `last_event_id` より古いイベントで上書きしない | 少なくとも 1 回配送の再配送で同じ行が二度入らない。冪等性の検査は同一 `event_id` の再配送で行う（`test_strategy.md`） |
+| 個人情報の列は NULL 許容 | `shipper` の `name` / `email` / `phone` / `address`。`UNIQUE(email)` は NULL を許す | crypto-shredding（ADR-0003）で鍵を破棄した荷主はリプレイで個人情報が `NULL` になる。`NOT NULL` だとリプレイが止まる |
 | 投影とトークンは同一トランザクション | `token_entry` を投影と同じ DB に置く | 分けると「投影は書けたがトークンは進まない」窓ができ、同じイベントが二度投影される |
 | 履歴テーブルを作らない | 荷役履歴・状態変更履歴・通関状態履歴は Event Store が持つ。画面に要る履歴だけ投影する | 履歴の真実は 1 か所（イベント列） |
 | 金額は `NUMERIC(14,2)` + ISO 4217 の `VARCHAR(3)` | 通貨混在を許さない | `Money` の JSON 形と一致させる |
@@ -84,11 +86,11 @@ bi --> bidb
 | :--- | :--- | :--- | :--- |
 | Axon Server | （専用ボリューム） | Event Store | イベント列、スナップショット |
 | authms | `auth_db` | 状態保存 | `users`, `user_roles`, `user_shipper_link`, `auth_audit_log` |
-| bookingms | `booking_read_db` | 投影 + Axon 管理 | `shipper`, `cargo_summary`, `cargo_leg`, `cancellation_request`, `quotation`, `quotation_candidate`, `projection_rejection`, `token_entry`, `saga_entry`, `association_value_entry` |
+| bookingms | `booking_read_db` | 投影 + 受け皿 + Axon 管理 | `shipper`, `cargo_summary`, `cargo_leg`, `cancellation_request`, `quotation`, `quotation_candidate`, `attention_item`, `token_entry`, `saga_entry`, `association_value_entry` |
 | routingms | `routing_read_db` | 投影 + Axon 管理 | `voyage`, `carrier_movement`, `voyage_accepted_cargo_type`, `token_entry` |
-| trackingms | `tracking_read_db` | 投影 + Axon 管理 | `tracking_summary`, `tracking_event`, `tracking_exception`, `shipper_cargo_snapshot`, `token_entry` |
+| trackingms | `tracking_read_db` | 投影 + 受け皿 + Axon 管理 | `tracking_summary`, `tracking_event`, `tracking_exception`, `shipper_cargo_snapshot`, `attention_item`, `token_entry` |
 | handlingms | `handling_read_db` | 投影 + Axon 管理 | `cargo_snapshot`, `cargo_snapshot_leg`, `handling_activity`, `customs_declaration`, `token_entry` |
-| billingms | `billing_read_db` | 投影 + Axon 管理 | `invoice`, `invoice_line_item`, `payment`, `shipper_contract_snapshot`, `token_entry`, `saga_entry`, `association_value_entry` |
+| billingms | `billing_read_db` | 投影 + 受け皿 + Axon 管理 | `invoice`, `invoice_line_item`, `payment`, `shipper_contract_snapshot`, `attention_item`, `token_entry`, `saga_entry`, `association_value_entry` |
 
 `location` のマスタは各 DB に置きません。UN/LOCODE は共有カーネルの値オブジェクトであり、港名の表示に要る対応表は `shared` のリソース（CSV）から読みます。マスタを各 DB に複製すると更新の同期が要ります。
 
@@ -250,10 +252,10 @@ entity "shipper" as shipper {
   --
   shipper_code: VARCHAR(10) NOT NULL <<UNIQUE>>
   shipper_type: VARCHAR(30) NOT NULL
-  name: VARCHAR(200) NOT NULL
-  email: VARCHAR(255) NOT NULL <<UNIQUE>>
+  name: VARCHAR(200)
+  email: VARCHAR(255) <<UNIQUE>>
   phone: VARCHAR(30)
-  address: VARCHAR(400) NOT NULL
+  address: VARCHAR(400)
   country_code: VARCHAR(2) NOT NULL
   contract_number: VARCHAR(50)
   discount_rate: NUMERIC(5,4)
@@ -349,15 +351,18 @@ entity "quotation_candidate" as qc {
   estimated_currency: VARCHAR(3) NOT NULL
 }
 
-entity "projection_rejection" as rej {
-  * **rejection_id**: BIGSERIAL <<PK>>
+entity "attention_item" as att {
+  * **item_id**: VARCHAR(36) <<PK>>
   --
-  event_id: VARCHAR(36) NOT NULL
-  event_type: VARCHAR(100) NOT NULL
-  aggregate_id: VARCHAR(36) NOT NULL
+  kind: VARCHAR(30) NOT NULL
+  target_type: VARCHAR(30) NOT NULL
+  target_id: VARCHAR(36) NOT NULL
+  assigned_role: VARCHAR(30) NOT NULL
   reason: VARCHAR(200) NOT NULL
-  rejected_at: TIMESTAMPTZ NOT NULL
-  acknowledged: BOOLEAN NOT NULL DEFAULT FALSE
+  payload: JSONB
+  occurred_at: TIMESTAMPTZ NOT NULL
+  acknowledged_at: TIMESTAMPTZ
+  acknowledged_by: VARCHAR(50)
 }
 
 shipper ||--o{ cargo
@@ -369,12 +374,12 @@ q ||--o{ qc
 
 | テーブル | 元になるイベント | 制約・インデックス | 備考 |
 | :--- | :--- | :--- | :--- |
-| `shipper` | `ShipperRegisteredEvent`, `ShipperContactUpdatedEvent`, `CorporateContractAssignedEvent` | `UNIQUE(email)`, `UNIQUE(shipper_code)` | `shipper_code` は投影側のシーケンス（`SHP-` + 連番 6 桁）で採番。UNIQUE 違反は `projection_rejection` に記録 |
-| `cargo_summary` | `CargoBookedEvent` ほか Cargo の全イベント、`HandlingActivityRegisteredEvent`（契約）、`CargoDeliveredEvent`（契約） | `UNIQUE(tracking_number)`, `INDEX(shipper_id)`, `INDEX(booking_status)`, `INDEX(routing_status)` | `shipper_name` を非正規化して持つ（一覧が JOIN しない）。`last_handling_*` は荷役の契約イベントから写す同期投影 |
+| `shipper` | `ShipperRegisteredEvent`, `ShipperContactUpdatedEvent`, `CorporateContractAssignedEvent` | `UNIQUE(email)`（NULL を許す）, `UNIQUE(shipper_code)` | `shipper_code` は投影側のシーケンス（`SHP-` + 連番 6 桁）で採番。UNIQUE 違反は `attention_item` に記録。`name` / `email` / `phone` / `address` は crypto-shredding 後に `NULL` になる（ADR-0003）。表示既定値は「（削除済み）」（`ui_design.md`） |
+| `cargo_summary` | `CargoBookedEvent` ほか Cargo の全イベント（`booking_status` の書き手は `BookingDeliveredEvent`・`BookingSettledEvent` を含む Cargo 自身のイベントだけ）、`HandlingActivityRegisteredEvent`・`HandlingActivityVoidedEvent`（契約、`last_handling_*` のみ） | `UNIQUE(tracking_number)`, `INDEX(shipper_id)`, `INDEX(booking_status)`, `INDEX(routing_status)` | `shipper_name` を非正規化して持つ（一覧が JOIN しない）。`last_handling_*` は荷役の契約イベントから写す。他サービスの `CargoDeliveredEvent`・`PaymentRecordedEvent` は投影が写さず、`booking-reaction` が Cargo へコマンドを送り、Cargo のイベントで `booking_status` が変わる。`INDEX(shipper_id)` は荷主向け一覧（`FindShipperBookingsQuery`）の索引を兼ねる |
 | `cargo_leg` | `CargoRoutedEvent` | `INDEX(voyage_number)` | 再設計時は全行を入れ替える |
 | `cancellation_request` | `CancellationRequestedEvent`, `CancellationApprovedEvent`, `CancellationRejectedEvent` | `INDEX(booking_id)`, `INDEX(decision)`（`NULL` = 承認待ち） | `decision` は `APPROVED` / `REJECTED` / `NULL` |
 | `quotation` / `quotation_candidate` | `QuotationCreatedEvent` | `INDEX(created_at)` | 候補 0 件の見積も 1 行残る |
-| `projection_rejection` | 投影が UNIQUE 違反で書けなかった事実 | `INDEX(acknowledged, rejected_at)` | 営業担当者の作業一覧に出す。「事前の存在確認 + 投影の UNIQUE + 拒否の記録」の三段の最後 |
+| `attention_item` | 投影が UNIQUE 違反で書けなかった事実（`kind = PROJECTION_REJECTED`）、Reaction Handler のコマンド失敗（`kind = REACTION_FAILED`）、Saga の補償（`kind = SAGA_COMPENSATED`） | `INDEX(assigned_role, acknowledged_at, occurred_at)`, `INDEX(target_type, target_id)` | 要確認一覧（S70）の受け皿。`assigned_role` で自ロール宛に絞り、`payload` に受け付けた内容を持ち「修正して再登録」の初期値にする。`target_type` / `target_id` は詳細への導線（投影に無い行でも `payload` から開ける）。**投影ではなく追記専用の受け皿**であり、リプレイで TRUNCATE しない。同じ定義を `tracking_read_db`・`billing_read_db` にも置く（「事前の存在確認 + 投影の UNIQUE + 拒否の記録」の三段の最後） |
 
 ### `routing_read_db`（routingms）
 
@@ -451,6 +456,7 @@ entity "tracking_summary" as ts {
   open_exception_count: INTEGER NOT NULL DEFAULT 0
   urgent_exception_count: INTEGER NOT NULL DEFAULT 0
   closed: BOOLEAN NOT NULL DEFAULT FALSE
+  cancellation_discharge_unlocode: VARCHAR(5)
   initialized_at: TIMESTAMPTZ NOT NULL
   last_status_changed_at: TIMESTAMPTZ NOT NULL
   delivered_at: TIMESTAMPTZ
@@ -502,10 +508,11 @@ ts ||--o{ tx
 
 | テーブル | 元になるイベント | 制約・インデックス | 備考 |
 | :--- | :--- | :--- | :--- |
-| `tracking_summary` | `TrackingInitializedEvent`, `TransportStatusUpdatedEvent`, `CargoMisroutedEvent`, `TrackingException*Event`, `TrackingClosedEvent` | `UNIQUE(booking_id)`, `INDEX(shipper_id)`, `INDEX(transport_status)`, `INDEX(urgent_exception_count DESC, last_status_changed_at)` | 例外の件数を非正規化して持ち、一覧が `tracking_exception` を数えない |
-| `tracking_event` | `TransportStatusUpdatedEvent`（荷役由来・手動由来）、`CargoMisroutedEvent` | `INDEX(tracking_number, occurred_at)` | 画面の履歴用。`event_type` は `HANDLING` / `MANUAL` / `MISROUTE` / `EXCEPTION` / `RESOLVED`。真実は Event Store |
+| `tracking_summary` | `TrackingInitializedEvent`, `TransportStatusUpdatedEvent`, `CargoMisroutedEvent`, `TrackingException*Event`, `CancellationDischargePlannedEvent`, `TrackingClosedEvent` | `UNIQUE(booking_id)`, `INDEX(shipper_id)`, `INDEX(transport_status)`, `INDEX(urgent_exception_count DESC, last_status_changed_at)` | 例外の件数を非正規化して持ち、一覧が `tracking_exception` を数えない。`cancellation_discharge_unlocode` はキャンセル承認後の陸揚げ地（`CargoCancelledEvent.dischargeLocation` を `tracking-reaction` 経由で写す）。当該港の `UNLOAD` で `closed` になる |
+| `tracking_event` | `TransportStatusUpdatedEvent`（荷役由来・手動由来）、`CargoMisroutedEvent` | `UNIQUE(event_id)`（PK。元イベントの識別子）, `INDEX(tracking_number, occurred_at)` | 画面の履歴用。`event_type` は `HANDLING` / `MANUAL` / `MISROUTE` / `EXCEPTION` / `RESOLVED` / `VOIDED`。追記系なので再配送は UNIQUE で弾く。真実は Event Store |
 | `tracking_exception` | `TrackingExceptionRegisteredEvent`, `ExceptionResponseStartedEvent`, `TrackingExceptionResolvedEvent` | `INDEX(response_status, urgent DESC, occurred_at)` | `urgent` は `ExceptionType#urgent` の結果を写す |
 | `shipper_cargo_snapshot` | `TrackingNumberIssuedEvent`（契約） | `INDEX(shipper_id)` | 荷主向け一覧・詳細の絞り込み。authms の `user_shipper_link` と突き合わせる |
+| `attention_item` | `tracking-projection` の拒否、`tracking-reaction` のコマンド失敗 | `booking_read_db` と同じ | 定義は `booking_read_db` の `attention_item` と同一 |
 
 ### `handling_read_db`（handlingms）
 
@@ -549,6 +556,9 @@ entity "handling_activity" as ha {
   off_route: BOOLEAN NOT NULL
   operator: VARCHAR(50) NOT NULL
   completed_at: TIMESTAMPTZ NOT NULL
+  voided: BOOLEAN NOT NULL DEFAULT FALSE
+  voided_at: TIMESTAMPTZ
+  void_reason: TEXT
   projected_at: TIMESTAMPTZ NOT NULL
 }
 
@@ -560,6 +570,7 @@ entity "customs_declaration" as cd {
   declared_at: TIMESTAMPTZ NOT NULL
   last_status_changed_at: TIMESTAMPTZ NOT NULL
   last_held_at: TIMESTAMPTZ
+  held_business_days: INTEGER NOT NULL DEFAULT 0
   last_reason: TEXT
   changed_by: VARCHAR(50)
   projected_at: TIMESTAMPTZ NOT NULL
@@ -575,8 +586,8 @@ cs ||--o{ cd
 | テーブル | 元になるイベント | 制約・インデックス | 備考 |
 | :--- | :--- | :--- | :--- |
 | `cargo_snapshot` / `cargo_snapshot_leg` | `TrackingNumberIssuedEvent`, `CargoCancelledEvent`（いずれも契約） | — | ACL の読み取りモデル。`HandlingActivity` の登録時に `isOffRoute` の判定に使う。Booking の型を持ち込まない |
-| `handling_activity` | `HandlingActivityRegisteredEvent` | `INDEX(tracking_number, completed_at)`, `UNIQUE(tracking_number, handling_type, unlocode, completed_at)` | 重複登録の 5 分規則は集約が守る。UNIQUE は完全一致の二重投影を防ぐため |
-| `customs_declaration` | `CustomsDeclarationRegisteredEvent`, `CustomsStatusUpdatedEvent` | `INDEX(tracking_number, status)`, `INDEX(status, last_held_at)` | 状態変更の履歴は Event Store が持つ。画面の履歴表示は Event Store から読む（`FindCustomsDeclarationQuery` が最新状態、履歴はイベント列） |
+| `handling_activity` | `HandlingActivityRegisteredEvent`, `HandlingActivityVoidedEvent` | `UNIQUE(activity_id)`（PK。クライアント生成の冪等キー）, `INDEX(tracking_number, completed_at)`, `INDEX(voyage_number, unlocode)` | `activity_id` は `RegisterHandlingActivityCommand` の冪等キー（クライアント生成 UUID）。再送信は集約が同一 `activityId` で弾き、投影は PK で弾く。重複登録の 5 分規則は集約が守る。訂正は `voided` を立てるだけで元の行は残る（`VoidHandlingActivityCommand`）。`completed_at` は港のローカル時刻で入力し `TIMESTAMPTZ` で保存。`INDEX(voyage_number, unlocode)` は `FindCargosOnVoyageQuery` 用（`cargo_snapshot_leg` と合わせる） |
+| `customs_declaration` | `CustomsDeclarationRegisteredEvent`, `CustomsStatusUpdatedEvent` | `INDEX(tracking_number, status)`, `INDEX(status, held_business_days DESC)` | 状態変更の履歴は Event Store が持つ。画面の履歴表示は Event Store から読む（`FindCustomsDeclarationQuery` が最新状態、履歴はイベント列）。`held_business_days` は留置の営業日数（港の所在国の休日カレンダーで数え、`CustomsStatusChangedEvent.heldBusinessDays` から写す）。一覧は留置営業日の多い順 |
 
 java-3 の `customs_status_history`（追記専用テーブル）は作りません。追記専用の履歴はイベント列そのものです。
 
@@ -604,6 +615,8 @@ entity "invoice" as inv {
   total_amount: NUMERIC(14,2) NOT NULL
   currency: VARCHAR(3) NOT NULL
   discount_rate: NUMERIC(5,4)
+  quoted_amount: NUMERIC(14,2)
+  quoted_currency: VARCHAR(3)
   billing_status: VARCHAR(30) NOT NULL
   calculated_at: TIMESTAMPTZ NOT NULL
   issued_on: DATE
@@ -622,6 +635,7 @@ entity "invoice_line_item" as li {
   description: VARCHAR(200) NOT NULL
   amount: NUMERIC(14,2) NOT NULL
   currency: VARCHAR(3) NOT NULL
+  basis_exception_id: VARCHAR(36)
 }
 
 entity "payment" as pay {
@@ -640,7 +654,9 @@ entity "shipper_contract_snapshot" as scs {
   shipper_name: VARCHAR(200) NOT NULL
   shipper_type: VARCHAR(30) NOT NULL
   discount_rate: NUMERIC(5,4)
+  contract_number: VARCHAR(50)
   projected_at: TIMESTAMPTZ NOT NULL
+  last_event_id: VARCHAR(36)
 }
 
 inv ||--o{ li
@@ -650,10 +666,11 @@ inv ||--o{ pay
 
 | テーブル | 元になるイベント | 制約・インデックス | 備考 |
 | :--- | :--- | :--- | :--- |
-| `invoice` | `InvoiceCalculatedEvent`, `DiscountAppliedEvent`, `InvoiceAdjustedEvent`, `InvoiceIssuedEvent`, `PaymentRecordedEvent`, `InvoiceVoidedEvent`, `CancellationFeeAppliedEvent` | `UNIQUE(booking_id, void_marker)`, `INDEX(billing_status, due_on)`, `INDEX(shipper_id)` | `void_marker` は有効中 `''`、取り消し時に `invoice_id` を入れる。有効な請求書は予約ごとに 1 通。**`overdue` 列は持たず**、一覧の SQL が `due_on < :today AND billing_status = 'INVOICED'` で判定する |
-| `invoice_line_item` | 同上 | — | `item_type` は `BASE` / `DISCOUNT` / `ADJUSTMENT` / `CANCELLATION_FEE` / `TAX` |
+| `invoice` | `InvoiceCalculatedEvent`, `DiscountAppliedEvent`, `InvoiceAdjustedEvent`, `InvoiceIssuedEvent`, `PaymentRecordedEvent`, `InvoiceVoidedEvent`, `CancellationFeeAppliedEvent` | `UNIQUE(booking_id, void_marker)`, `INDEX(billing_status, due_on)`, `INDEX(shipper_id)` | `void_marker` は有効中 `''`、取り消し時に `invoice_id` を入れる。有効な請求書は予約ごとに 1 通。**`overdue` 列は持たず**、一覧の SQL が `due_on < :today AND billing_status = 'INVOICED'` で判定する。`quoted_amount` / `quoted_currency` は見積時の概算（任意。見積を経ない予約は `NULL`）で、S61 が「見積時の概算 → 請求 → 差額」を出す。`INDEX(shipper_id)` は荷主向け請求書（`FindShipperInvoiceQuery`）の索引を兼ねる |
+| `invoice_line_item` | 同上 | — | `item_type` は `BASE` / `DISCOUNT` / `ADJUSTMENT` / `CANCELLATION_FEE` / `TAX`。`basis_exception_id` は調整行の根拠になった例外 ID（任意。trackingms への論理参照）で、S61 から例外へリンクする |
 | `payment` | `PaymentRecordedEvent` | `INDEX(invoice_id)` | |
-| `shipper_contract_snapshot` | `FindShipperForBillingQuery` の応答を保存（クエリ結果のキャッシュではなく、Saga が請求書作成時に写す） | — | 請求書作成後に荷主の割引率が変わっても請求書は変わらない。作成時点の値を保持する |
+| `shipper_contract_snapshot` | `ShipperRegisteredEvent`, `CorporateContractAssignedEvent`（いずれも契約）の購読 | — | billingms が bookingms に同期問い合わせをしないための ACL の読み取りモデル（`FindShipperForBillingQuery` は廃止）。荷主の最新の契約を写し、請求書作成時に `invoice.discount_rate` へ複写する。作成後に割引率が変わっても請求書は変わらない。`shipper_name` は crypto-shredding 後に `NULL`（ADR-0003） |
+| `attention_item` | `billing-projection` の拒否、`billing-reaction` のコマンド失敗、`BillingSaga` の補償 | `booking_read_db` と同じ | 定義は `booking_read_db` の `attention_item` と同一 |
 
 ### Axon 管理テーブル（各 Read Model DB 共通）
 
@@ -673,6 +690,7 @@ entity "token_entry" as te {
   token_type: VARCHAR(255)
   timestamp: VARCHAR(255)
   owner: VARCHAR(255)
+  mask: INTEGER NOT NULL
 }
 
 entity "saga_entry" as se {
@@ -698,7 +716,7 @@ se ||--o{ ave
 
 | テーブル | 置く DB | 用途 |
 | :--- | :--- | :--- |
-| `token_entry` | 全 Read Model DB | Processing Group ごとの処理位置。`INDEX(processor_name)` |
+| `token_entry` | 全 Read Model DB | Processing Group ごとの処理位置。`mask INTEGER NOT NULL` はセグメントのマスク（take-4 の実測スキーマ。無いと起動時に落ちる）。`INDEX(processor_name)` |
 | `saga_entry` / `association_value_entry` | `booking_read_db`, `billing_read_db` | Saga の状態。`INDEX(association_key, association_value, saga_type)` |
 
 ## Processing Group とテーブルの対応
@@ -707,16 +725,23 @@ se ||--o{ ave
 
 | サービス | Processing Group | 購読するイベント | 書くテーブル |
 | :--- | :--- | :--- | :--- |
-| bookingms | `booking-shipper-projection` | Shipper のイベント | `shipper`, `projection_rejection` |
-| bookingms | `booking-cargo-projection` | Cargo のイベント、`HandlingActivityRegisteredEvent`、`CargoDeliveredEvent`、`PaymentRecordedEvent` | `cargo_summary`, `cargo_leg`, `cancellation_request` |
+| bookingms | `booking-shipper-projection` | Shipper のイベント | `shipper` |
+| bookingms | `booking-cargo-projection` | Cargo のイベント、`HandlingActivityRegisteredEvent`、`HandlingActivityVoidedEvent` | `cargo_summary`, `cargo_leg`, `cancellation_request` |
 | bookingms | `booking-quotation-projection` | Quotation のイベント | `quotation`, `quotation_candidate` |
+| bookingms | `booking-reaction` | `CargoDeliveredEvent`、`PaymentRecordedEvent`、`HandlingActivityVoidedEvent`（契約） | **投影テーブルを書かない**。Cargo へコマンドを送る（`MarkDeliveredCommand`、`SettleBookingCommand` 等）。失敗だけを `attention_item` に書く |
 | routingms | `routing-voyage-projection` | Voyage のイベント | `voyage`, `carrier_movement`, `voyage_accepted_cargo_type` |
 | trackingms | `tracking-projection` | TrackingActivity のイベント、`TrackingNumberIssuedEvent` | `tracking_summary`, `tracking_event`, `tracking_exception`, `shipper_cargo_snapshot` |
+| trackingms | `tracking-reaction` | `HandlingActivityRegisteredEvent`、`HandlingActivityVoidedEvent`、`CargoCancelledEvent`（契約）、`UNLOAD` 後の陸揚げ完了 | **投影テーブルを書かない**。TrackingActivity へコマンドを送る（`AdvanceTrackingCommand`、`CloseTrackingCommand` 等）。失敗だけを `attention_item` に書く |
 | handlingms | `handling-snapshot-projection` | `TrackingNumberIssuedEvent`, `CargoCancelledEvent` | `cargo_snapshot`, `cargo_snapshot_leg` |
 | handlingms | `handling-activity-projection` | HandlingActivity / CustomsDeclaration のイベント | `handling_activity`, `customs_declaration` |
-| billingms | `billing-projection` | Invoice のイベント | `invoice`, `invoice_line_item`, `payment`, `shipper_contract_snapshot` |
+| billingms | `billing-projection` | Invoice のイベント、`ShipperRegisteredEvent`、`CorporateContractAssignedEvent`（契約） | `invoice`, `invoice_line_item`, `payment`, `shipper_contract_snapshot` |
+| billingms | `billing-reaction` | `CargoDeliveredEvent`、`CustomsStatusChangedEvent`（契約） | **投影テーブルを書かない**。Invoice へコマンドを送る。失敗だけを `attention_item` に書く |
 
-1 つのテーブルを複数の Processing Group が書かないようにします。書き手が 1 つなら、リプレイの単位とテーブルの単位が一致します。
+1 つの投影テーブルを複数の Processing Group が書かないようにします。書き手が 1 つなら、リプレイの単位とテーブルの単位が一致します。`*-reaction` は `application/reaction` の Reaction Handler（イベント購読からコマンドを送る役割）の Group で、投影とは分けます。投影が SQL に写すだけであること、コマンドを送るのが Reaction だけであることを ArchUnit で固定します（`CommandGateway` を使えるのは `interfaces`・`application/saga`・`application/reaction`）。
+
+`attention_item` は投影ではなく追記専用の受け皿です。同じサービスの投影 Group（UNIQUE 拒否）・Reaction Group（コマンド失敗）・Saga（補償）が INSERT し、人が `acknowledged_*` を更新します。リプレイの対象ではないため TRUNCATE せず、1 テーブル 1 書き手の規則からも除きます。Reaction の Group はリプレイでリセットしません。リセットするとコマンドが再送され、他サービスの集約が動きます（`operation.md`、`ReplayIT`）。
+
+設定ファイルには全 Group を明示的に列挙します（列挙漏れは `test_strategy.md` のソース走査で赤）。
 
 ## ドメインモデルとの対応
 
@@ -732,6 +757,8 @@ se ||--o{ ave
 | `Invoice` | `invoice`, `invoice_line_item`, `payment` | 1 対 1 |
 | `User` | `users`, `user_roles`, `user_shipper_link` | 書き込みモデル（状態保存） |
 | `CargoSnapshot`（ACL） | `cargo_snapshot`, `cargo_snapshot_leg` | 他 BC の契約イベントから作る読み取りモデル |
+| `ShipperContractSnapshot`（ACL） | `shipper_contract_snapshot` | 他 BC の契約イベント（`ShipperRegisteredEvent`・`CorporateContractAssignedEvent`）から作る読み取りモデル |
+| （集約なし） | `attention_item` | 要確認一覧の受け皿。投影でも書き込みモデルでもない追記専用 |
 
 ## 命名規則
 
@@ -764,19 +791,19 @@ apps/backend/bookingms/src/main/resources/db/migration/
 ├── V004__create_cargo_leg.sql
 ├── V005__create_cancellation_request.sql
 ├── V006__create_quotation.sql
-└── V007__create_projection_rejection.sql
+└── V007__create_attention_item.sql
 ```
 
 ## 非機能要件への対応
 
 | 観点 | 対応 |
 | :--- | :--- |
-| 性能 | 一覧の絞り込みキー（状態・荷主・期限）にインデックス。一覧が JOIN しないよう非正規化（`shipper_name`、`last_handling_*`、例外件数） |
+| 性能 | 一覧の絞り込みキー（状態・荷主・期限）にインデックス。一覧が JOIN しないよう非正規化（`shipper_name`、`last_handling_*`、例外件数）。荷主向け画面（S45 / S46 / S62）は `cargo_summary(shipper_id)`・`invoice(shipper_id)`・`shipper_cargo_snapshot(shipper_id)` の既存索引で足り、追加の索引は置かない |
 | データ量 | `tracking_event` は時系列で増える。月単位のパーティショニングは実トラフィックの計測後に判断 |
 | 監査 | Event Store のイベント列が監査ログ。投影は監査に使わない |
 | 災害復旧 | Read Model DB が壊れても Event Store から再構築できる。Event Store のバックアップが唯一の必須バックアップ |
 | 削除 | 投影テーブルは物理削除しない。状態で表す（`CANCELLED`、`VOID`）。Event Store のイベントは削除しない |
-| 個人情報 | 荷主のメール・住所はイベントに載る。削除要求への対応（暗号化キーの破棄など）は `non_functional.md` で扱う |
+| 個人情報 | 荷主の氏名・メール・電話・住所はイベントに載る。削除要求は crypto-shredding（ADR-0003）で対応し、投影の該当列は NULL 許容にする。Flyway で `NOT NULL` に戻されないことを検査する |
 
 ## トレーサビリティ（UC ↔ テーブル）
 
@@ -793,7 +820,7 @@ apps/backend/bookingms/src/main/resources/db/migration/
 | UC10 確定経路通知 | `cargo_summary`（`ROUTE_NOTIFIED`） | `cargo_summary`, `cargo_leg`, `shipper` |
 | UC11 予約確定 | `cargo_summary` | — |
 | UC12 追跡番号発行 | `cargo_summary`, `tracking_summary`, `shipper_cargo_snapshot`, `cargo_snapshot`, `cargo_snapshot_leg` | — |
-| UC13 荷役作業記録 | `handling_activity`, `tracking_summary`, `tracking_event`, `cargo_summary`（`last_handling_*`） | `cargo_snapshot`, `customs_declaration` |
+| UC13 荷役作業記録 | `handling_activity`, `tracking_summary`, `tracking_event`, `cargo_summary`（`last_handling_*`） | `cargo_snapshot`, `cargo_snapshot_leg`（航海番号起点の一覧）, `customs_declaration` |
 | UC14 貨物状態更新 | `tracking_summary`, `tracking_event` | — |
 | UC15 追跡情報照会 | — | `tracking_summary`, `tracking_event`, `tracking_exception`, `shipper_cargo_snapshot` |
 | UC16 例外処理 | `tracking_exception`, `tracking_summary` | — |
@@ -802,7 +829,7 @@ apps/backend/bookingms/src/main/resources/db/migration/
 | UC19 航海登録 | `voyage`, `carrier_movement`, `voyage_accepted_cargo_type` | `voyage`（存在確認） |
 | UC20 認証 | `users`, `auth_audit_log` | `users`, `user_roles` |
 | UC21 通関申告 | `customs_declaration`, `tracking_exception` | `customs_declaration`（未決着の確認） |
-| UC22 キャンセル | `cancellation_request`, `cargo_summary`, `tracking_summary`, `cargo_snapshot`, `invoice` | `cancellation_request`（承認待ち一覧） |
+| UC22 キャンセル | `cancellation_request`, `cargo_summary`, `tracking_summary`（`cancellation_discharge_unlocode`）, `cargo_snapshot`, `invoice` | `cancellation_request`（承認待ち一覧） |
 
 ## 設計判断
 
@@ -812,7 +839,7 @@ apps/backend/bookingms/src/main/resources/db/migration/
 
 ### 2. 一意制約は投影が最後の砦
 
-`shipper.email` の一意性は、コマンド受付前の存在確認（`ExistsShipperEmailQuery`）と投影の UNIQUE の二段で守ります。二段目で弾かれた事実は `projection_rejection` に記録し、営業担当者の作業一覧に出します。黙って捨てると、集約には登録済みなのに一覧に出ない荷主ができます。
+`shipper.email` の一意性は、コマンド受付前の存在確認（`ExistsShipperEmailQuery`）、投影の UNIQUE、拒否の記録（`attention_item`）の三段で守ります。二段目で弾かれた事実は三段目の `attention_item` に `assigned_role = ROLE_SALES` で記録し、要確認一覧（S70）に出します。黙って捨てると、集約には登録済みなのに一覧に出ない荷主ができます。三段目を踏む検査は、存在確認を経由せず直接コマンドを 2 件送る経路で行います（`test_strategy.md`）。
 
 ### 3. 履歴テーブルは作らない
 
@@ -828,7 +855,7 @@ java-3 の `customs_status_history` や take-4 の `handling_event_projection` �
 
 ### 6. 削除要求への備え
 
-イベントは削除できません。荷主の個人情報がイベントに載る以上、削除要求には「暗号化キーの破棄で読めなくする」などの手段が要ります。本書では扱わず、`non_functional.md` の課題として引き渡します。
+イベントは削除できません。荷主の個人情報がイベントに載る以上、削除要求には「暗号化キーの破棄で読めなくする」手段が要ります。**ADR-0003（crypto-shredding）で解決済み**です。本書での対応は、`shipper` の個人情報列（`name` / `email` / `phone` / `address`）と `shipper_contract_snapshot.shipper_name` を NULL 許容にし、`UNIQUE(email)` が NULL を許すことです。鍵の破棄後にリプレイすると該当列が `NULL` になり、画面は「（削除済み）」を出します。
 
 ## 参照
 
@@ -836,5 +863,6 @@ java-3 の `customs_status_history` や take-4 の `handling_event_projection` �
 - [バックエンドアーキテクチャ](architecture_backend.md)
 - [ドメインモデル設計](domain-model.md)
 - [ADR-0002 Event Store は Axon Server SE、Read Model は PostgreSQL + MyBatis](../../adr/cargo-tracker/0002-event-store-axon-server-and-postgresql-read-models.md)
+- [ADR-0003 個人情報の crypto-shredding](../../adr/cargo-tracker/0003-crypto-shredding-for-personal-data.md)
 - [データモデル設計ガイド](../../reference/データモデル設計ガイド.md)
 - 参照元：`tmp/take-4/docs/design/data-model.md`、[java-3 データモデル設計](../../article/source/java-3/docs/design/data-model.md)

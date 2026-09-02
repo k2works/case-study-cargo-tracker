@@ -1,6 +1,8 @@
 # Docs Update Log
 
 ## 2026-09-02
+* **Update**: 設計レビュー（2026-09-02）の高 17・中 24・低 8 件を設計 10 件と ADR-0001/0002 に反映。集約の登録 API を take-4 ADR-0008 の @EventSourced に訂正、DCB 有効化、Reaction Handler の導入、契約イベント 11 本、Processing Group 名の統一、要確認一覧 attention_item、荷役の航海番号起点と港のローカル時刻、キャンセル承認後の陸揚げまで追跡を開く、見積と請求の差額表示、テストの判別力の修正。
+* **Creation**: Creation: ADR-0003 個人情報の crypto-shredding（設計レビュー H4 の対応）。
 * **Creation**: Creation: cargo-tracker の設計レビュー（2026-09-02）。XP エージェント 5 名の並列レビューを統合。高 20 件のうち 17 件を修正、通知の送信基盤はスコープ外と明記、段階導入計画は次工程へ引き渡す。
 * **Creation**: Creation: cargo-tracker の技術スタックを新規作成（stale_after 90 日）。Axon 系のバージョン同期と Axon Server 2026.0.4 を正典とした。
 * **Creation**: Creation: cargo-tracker の運用要件を新規作成。リプレイを障害対応でなく日常操作に置き直し、四半期の復元演習と crypto-shredding の手順を加えた。

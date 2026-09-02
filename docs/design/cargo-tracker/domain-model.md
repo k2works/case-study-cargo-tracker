@@ -4,7 +4,7 @@ title: "ドメインモデル設計 - 国際貨物輸送管理システム（CQR
 description: "CQRS / Event Sourcing 版 Cargo Tracker のドメインモデル設計。6 コンテキストの集約・不変条件・コマンド・イベント（内部 / 契約）・状態遷移・Saga を、イベントを永続化フォーマットとして定義する。"
 tags: [design,domain-model,ddd,cqrs,event-sourcing,axon]
 status: draft
-generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T03:12:59Z }
+generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T07:46:35Z }
 ---
 
 # ドメインモデル設計 - 国際貨物輸送管理システム（CQRS / Event Sourcing 版）
@@ -98,26 +98,26 @@ quadrantChart
 | | 予約確定 | `CONFIRMED` | ここから経路設計へは戻せない |
 | | 追跡番号発行済 | `TRACKING_ISSUED` | |
 | | 輸送中 | `IN_TRANSIT` | キャンセルは承認が要る |
-| | 配送完了 | `DELIVERED` | 以降キャンセル不可 |
+| | 配送完了 | `DELIVERED` | 以降キャンセル不可。画面では文脈語を添えて「予約: 配送完了」 |
 | | 精算済 | `SETTLED` | |
 | | キャンセル | `CANCELLED` | 以降コマンドを受けない |
 | 経路設定状態 `RoutingStatus` | 未設定 | `NOT_ROUTED` | |
 | | 設計依頼中 | `ROUTING_REQUESTED` | 経路設計者の作業待ちに現れる |
 | | 設定済 | `ROUTED` | |
-| | 誤配 | `MISROUTED` | 予定ルート外の荷役を受けた（US28） |
-| 輸送ステータス `TransportStatus` | 未受領 | `NOT_RECEIVED` | |
+| | 誤配 | `MISROUTED` | 予定ルート外の荷役を受けた（US28）。画面では「経路: 誤配」 |
+| 輸送ステータス `TransportStatus` | 未受領 | `NOT_RECEIVED` | 9 値の日本語はこの表を正典とし、画面のバッジもこれに従う |
 | | 受領済 | `RECEIVED` | |
 | | 積込済 | `LOADED` | |
 | | 輸送中 | `IN_TRANSIT` | 荷役では起きない。手動更新（US17） |
 | | 荷降し済 | `UNLOADED` | 途中の港 |
-| | 引取待ち | `AWAITING_CLAIM` | 目的港 |
-| | 引取済 | `DELIVERED` | 精算の開始条件 |
-| | 誤配 | `MISROUTED` | |
-| | 例外発生 | `EXCEPTION` | |
+| | 引取待ち | `AWAITING_CLAIM` | 目的港で荷降しされ、荷受人の引取を待つ |
+| | 引取済 | `DELIVERED` | 精算の開始条件。`BookingStatus.DELIVERED` と区別するため画面では「輸送: 引取済」 |
+| | 誤配 | `MISROUTED` | `RoutingStatus.MISROUTED` と区別するため画面では「輸送: 誤配」 |
+| | 例外発生 | `EXCEPTION` | 未解決の例外があるあいだ |
 | 荷役種別 `HandlingType` | 受領 / 積込 / 荷降し / 引取 | `RECEIVE` / `LOAD` / `UNLOAD` / `CLAIM` | 税関は荷役ではなく `CustomsDeclaration` で扱う |
-| 例外種別 `ExceptionType` | 遅延 / 破損 / 紛失 / 誤配 / 税関保留 | `DELAY` / `DAMAGE` / `LOSS` / `MISROUTE` / `CUSTOMS_HOLD` | 緊急かどうかは種別が答える（`LOSS` のみ） |
+| 例外種別 `ExceptionType` | 遅延 / 破損 / 紛失 / 誤配 / 税関保留 | `DELAY` / `DAMAGE` / `LOSS` / `MISROUTE` / `CUSTOMS_HOLD` | 緊急かどうかは種別が答える（`LOSS` のみ）。一覧の並びは `LOSS` → 期限までの残日数が少ない順 |
 | 例外対応状態 `ResponseStatus` | 起票 / 対応中 / 解決 | `REPORTED` / `RESPONDING` / `RESOLVED` | |
-| 通関状態 `CustomsStatus` | 審査中 / 通関済 / 留置 / 却下 | `PENDING` / `CLEARED` / `HELD` / `REJECTED` | 引取を許すのは `CLEARED` だけ |
+| 通関状態 `CustomsStatus` | 審査中 / 通関済 / 留置 / 不可 | `PENDING` / `CLEARED` / `HELD` / `REJECTED` | 引取を許すのは `CLEARED` だけ。`REJECTED` の日本語は「不可」に統一（行動を要する赤） |
 | 精算状態 `BillingStatus` | 算出待ち / 算出済 / 請求済 / 入金済 / 取消 | `PENDING` / `CALCULATED` / `INVOICED` / `PAID` / `VOID` | 期限超過は列に持たず `overdue(today)` で判定 |
 | 荷主種別 `ShipperType` | 個人 / 法人 | `INDIVIDUAL` / `CORPORATE` | |
 | 貨物種別 `CargoType` | 一般 / 危険物 / 冷凍 | `GENERAL` / `HAZARDOUS` / `REFRIGERATED` | |
@@ -190,11 +190,13 @@ auth --> shared
 
 booking ..> routing : FindRouteCandidatesQuery\n(ACL, Axon Query Bus)
 tracking <.. booking : TrackingNumberIssuedEvent\nCargoCancelledEvent
-tracking <.. handling : HandlingActivityRegisteredEvent\nCustomsStatusChangedEvent
-booking <.. handling : HandlingActivityRegisteredEvent
+tracking <.. handling : HandlingActivityRegisteredEvent\nHandlingActivityVoidedEvent\nCustomsStatusChangedEvent
+booking <.. handling : HandlingActivityRegisteredEvent\nHandlingActivityVoidedEvent
 billing <.. tracking : CargoDeliveredEvent
-booking <.. tracking : CargoDeliveredEvent
+billing <.. handling : CustomsStatusChangedEvent\n（留置営業日の調整根拠）
+booking <.. tracking : CargoDeliveredEvent\nTrackingInitializedEvent\nTrackingClosedEvent
 booking <.. billing : PaymentRecordedEvent
+billing <.. booking : ShipperRegisteredEvent\nCorporateContractAssignedEvent\nCargoCancelledEvent
 handling <.. booking : TrackingNumberIssuedEvent\n（CargoSnapshot の材料）
 
 note bottom of handling
@@ -205,7 +207,7 @@ end note
 @enduml
 ```
 
-実線はイベント（Axon Event Bus）、点線の Query は Axon Query Bus です。サービス越しに状態を変える同期呼び出しはありません。
+実線はイベント（Axon Event Bus）、点線の Query は Axon Query Bus です。サービス越しに状態を変える同期呼び出しはありません。契約は**イベント 11 本、コマンド 2 本、クエリ 1 本**（`FindRouteCandidatesQuery`）で、名簿は「ドメインイベント一覧（サービス横断）」を正典とします。billingms が要る荷主情報（種別・割引率）は同期クエリで取りに行かず、`ShipperRegisteredEvent` / `CorporateContractAssignedEvent` を購読して自前の `shipper_contract_snapshot` に写します。
 
 ## Shared Kernel（共有カーネル）
 
@@ -281,7 +283,7 @@ end note
 @startuml
 title Booking Context
 
-class Cargo <<Aggregate Root>> <<@EventSourcedEntity(tagKey="bookingId")>> {
+class Cargo <<Aggregate Root>> <<@EventSourced(tagKey="bookingId")>> {
   - bookingId: BookingId
   - shipperId: ShipperId
   - cargoSpec: CargoSpecification
@@ -306,6 +308,7 @@ class Cargo <<Aggregate Root>> <<@EventSourcedEntity(tagKey="bookingId")>> {
   + approveCancellation(ApproveCancellationCommand)
   + rejectCancellation(RejectCancellationCommand)
   + recordHandling(RecordHandlingCommand)
+  + revertHandling(RevertHandlingCommand)
   + markDelivered(MarkDeliveredCommand)
   + settle(SettleBookingCommand)
   .. @EventSourcingHandler ..
@@ -372,6 +375,7 @@ class CancellationDecision <<Value Object>> {
   - reason: String
   - decidedBy: String
   - decidedAt: Instant
+  + {static} approve(dischargeLocation, current: Location, remainingPorts: List<Location>, ...)
 }
 
 class HandlingSnapshot <<Value Object>> {
@@ -402,7 +406,7 @@ enum RoutingStatus {
 }
 enum CargoType
 
-class Shipper <<Aggregate Root>> <<@EventSourcedEntity(tagKey="shipperId")>> {
+class Shipper <<Aggregate Root>> <<@EventSourced(tagKey="shipperId")>> {
   - shipperId: ShipperId
   - shipperCode: ShipperCode
   - shipperType: ShipperType
@@ -426,7 +430,7 @@ class DiscountRate <<Value Object>> {
 }
 enum ShipperType
 
-class Quotation <<Aggregate Root>> <<@EventSourcedEntity(tagKey="quotationId")>> {
+class Quotation <<Aggregate Root>> <<@EventSourced(tagKey="quotationId")>> {
   - quotationId: QuotationId
   - routeSpec: RouteSpecification
   - cargoType: CargoType
@@ -515,9 +519,11 @@ CANCELLED --> [*]
 | 7 | `CONFIRMED` 以降は経路設計へ戻せない | `returnToRouting` |
 | 8 | 追跡番号は `CONFIRMED` の予約にだけ発行し、二重に発行しない | `issueTrackingNumber` |
 | 9 | `IN_TRANSIT` のキャンセルは申請 → 承認（陸揚げ地必須）の 2 段階。`DELIVERED` 以降はキャンセル不可 | `requestCancellation` / `approveCancellation` |
+| 9-2 | `CancellationDecision.dischargeLocation` は**現在地（`lastHandling.location`）または旅程の残りの寄港地のいずれか**。旅程に無い港や通過済みの港は指定できない | `CancellationDecision.approve` |
 | 10 | 未決着の `CancellationRequest` は高々 1 件 | `requestCancellation` |
 | 11 | `CANCELLED` の集約は以降のコマンドを拒否する | 全ハンドラ |
-| 12 | 予定ルート外の荷役（`offRoute`）を受けたら `RoutingStatus = MISROUTED`。現在地起点の再設計（`assignRoute`）で `ROUTED` に復帰 | `recordHandling` / `assignRoute` |
+| 12 | 予定ルート外の荷役（`offRoute`）を受けたら `RoutingStatus = MISROUTED` にし `BookingMisroutedEvent` を出す。現在地起点の再設計（`assignRoute`）で `ROUTED` に復帰。再設計では期限超過の候補も選べる（US28） | `recordHandling` / `assignRoute` |
+| 13 | 取り消された荷役（`HandlingActivityVoidedEvent`）を受けたら `lastHandling` を直前の荷役に戻す。`MISROUTED` の原因が取り消された荷役だけなら `ROUTED` に戻す | `revertHandling` |
 
 ### Cargo 集約のコマンドとイベント
 
@@ -534,33 +540,38 @@ CANCELLED --> [*]
 | `RequestCancellationCommand` | 営業担当者 | `CancellationRequestedEvent` または `CargoCancelledEvent`（即時） | ○（後者） | UC22 / US30 |
 | `ApproveCancellationCommand` | 追跡管理者 | `CancellationApprovedEvent` + `CargoCancelledEvent` | ○（後者） | UC22 / US30 |
 | `RejectCancellationCommand` | 追跡管理者 | `CancellationRejectedEvent` | — | UC22 / US30 |
-| `RecordHandlingCommand` | Saga / 投影（`HandlingActivityRegisteredEvent` 購読） | `HandlingRecordedEvent`、`CargoMisroutedEvent`（`offRoute` のとき） | — | US15・US28 |
-| `MarkDeliveredCommand` | イベント購読（`CargoDeliveredEvent`） | `BookingDeliveredEvent` | — | UC14 |
-| `SettleBookingCommand` | イベント購読（`PaymentRecordedEvent`） | `BookingSettledEvent` | — | UC18 / US23 |
+| `RecordHandlingCommand` | `BookingReactionHandler`（`HandlingActivityRegisteredEvent` 購読） | `HandlingRecordedEvent`、`BookingMisroutedEvent`（`offRoute` のとき） | — | US15・US28 |
+| `RevertHandlingCommand` | `BookingReactionHandler`（`HandlingActivityVoidedEvent` 購読） | `HandlingRevertedEvent` | — | UC13 |
+| `MarkDeliveredCommand` | `BookingReactionHandler`（`CargoDeliveredEvent` 購読） | `BookingDeliveredEvent` | — | UC14 |
+| `SettleBookingCommand` | `BookingReactionHandler`（`PaymentRecordedEvent` 購読） | `BookingSettledEvent` | — | UC18 / US23 |
+
+イベント購読からコマンドを送るのは `application/reaction/BookingReactionHandler`（Processing Group `booking-reaction`）です。投影（`infrastructure/projection`）は SQL に写すだけでコマンドを送りません。リプレイは投影の Group だけを対象にし、Reaction の Group はリセットしないので、リプレイで他サービスの集約が動くことはありません。`cargo_summary.booking_status` の書き手は `Cargo` 自身のイベント（`BookingDeliveredEvent`、`BookingSettledEvent`）だけです。
+
+`ShipperNotifiedEvent(bookingId, recipientEmail, summary, notifiedBy, notifiedAt)` は「荷主へ経路を提示した」という事実の記録です。宛先と要約を載せ、予約詳細（S22）に通知履歴（いつ・誰に・何を）として写します。**メール等の送信基盤は本リリースのスコープ外**です。通知は現行の手作業（電話・メール）で行い、システムは通知した事実だけを記録します。
 
 ### Shipper 集約
 
 | 不変条件 | 守る場所 |
 | :--- | :--- |
-| `Email` はシステム全体で一意（投影テーブルの UNIQUE と、登録前の `QueryGateway` による存在確認の二段） | `register` + 投影 |
+| `Email` はシステム全体で一意（登録前の存在確認 + 投影テーブルの UNIQUE + 拒否の記録 `attention_item` の三段） | `register` + 投影 |
 | `CORPORATE` は `contractNumber` 必須、`INDIVIDUAL` は `corporateContract` を持てない | `register` / `assignCorporateContract` |
 | `DiscountRate` は 0.0000〜0.3000 | `DiscountRate` の生成 |
 | `ShipperCode` は投影側の採番（`SHP-` + 連番 6 桁）を使い、集約で MAX+1 しない | 投影 |
 
-| コマンド | 発行イベント | UC / US |
-| :--- | :--- | :--- |
-| `RegisterShipperCommand` | `ShipperRegisteredEvent` | UC02 / US02・US03 |
-| `UpdateShipperContactCommand` | `ShipperContactUpdatedEvent` | UC02 |
-| `AssignCorporateContractCommand` | `CorporateContractAssignedEvent` | UC02 / US03・US22 |
+| コマンド | 発行イベント | 契約 | UC / US |
+| :--- | :--- | :--- | :--- |
+| `RegisterShipperCommand` | `ShipperRegisteredEvent` | **○**（billingms が `shipper_contract_snapshot` に写す） | UC02 / US02・US03 |
+| `UpdateShipperContactCommand` | `ShipperContactUpdatedEvent` | — | UC02 |
+| `AssignCorporateContractCommand` | `CorporateContractAssignedEvent` | **○**（billingms が割引率を写す） | UC02 / US03・US22 |
 
-Event Sourcing での一意制約は集約 1 つでは守れません。`Email` の一意性は、コマンド受付前に投影へ問い合わせて存在確認し、投影テーブルの UNIQUE で最終的に弾きます。投影で弾かれた場合は `ShipperRegistrationRejectedEvent` を投影側が出し、営業担当者の作業一覧に写します。
+Event Sourcing での一意制約は集約 1 つでは守れません。`Email` の一意性は三段で守ります。（1）コマンド受付前に投影へ問い合わせて存在確認する、（2）投影テーブルの UNIQUE で最終的に弾く、（3）投影で弾かれた行は投影側が `attention_item` に記録し、営業担当者の要確認一覧（S70）に写す。同時登録のレース条件では 1 段目を素通りするので、2 段目と 3 段目が本当に踏まれることをテストで固定します。
 
 ### Quotation 集約
 
 | 不変条件 | 守る場所 |
 | :--- | :--- |
 | 見積は出発地・目的地・希望期限・貨物種別・重量の 5 項目を持つ。出発地と目的地は異なる | `create` |
-| 概算料金は Billing の `FreightCharge` と同じ式で出す（見積と請求が違う金額にならない） | `QuotationEstimator`（ドメインサービス）。式は `shared` に置かず、Billing の `RateTable` と同じ値を `application.yml` から読む。両者の一致は契約テストで固定 |
+| 概算料金は Billing の `FreightCharge` と**同じ式・同じ料率**で出す。式と料率の同一性は契約テストで固定する。ただし見積は候補経路、請求は実際の区間を入力にするので、**金額は入力で変わる**（区間数の増減・誤配・留置）。差は請求書が `quotedAmount` と並べて説明する | `QuotationEstimator`（ドメインサービス）。式は `shared` に置かず、Billing の `RateTable` と同じ値を `application.yml` から読む。両者の一致は契約テストで固定 |
 | 候補が 0 件でも見積は作れる | `create` |
 | 予約との食い違いは断らず項目名で知らせる | `diffAgainst` |
 
@@ -578,7 +589,7 @@ Event Sourcing での一意制約は集約 1 つでは守れません。`Email` 
 @startuml
 title Routing Context
 
-class Voyage <<Aggregate Root>> <<@EventSourcedEntity(tagKey="voyageNumber")>> {
+class Voyage <<Aggregate Root>> <<@EventSourced(tagKey="voyageNumber")>> {
   - voyageNumber: VoyageNumber
   - carrier: Carrier
   - schedule: Schedule
@@ -611,7 +622,9 @@ class RouteSearchSpecification <<Value Object>> {
 }
 class TransitPath <<Value Object>> {
   - edges: List<TransitEdge>
+  - overdueDays: int
   + totalDuration(): Duration
+  + meetsDeadline(): boolean
 }
 class TransitEdge <<Value Object>>
 
@@ -636,7 +649,7 @@ RouteSearchService ..> TransitPath
 
 | # | 不変条件 |
 | :--- | :--- |
-| 1 | `VoyageNumber` は不変。同一番号の再登録は投影の存在確認で拒否 |
+| 1 | `VoyageNumber` は不変。同一番号の再登録は三段（登録前の存在確認 + 投影の UNIQUE + 拒否の記録 `attention_item`）で拒否 |
 | 2 | `Schedule.movements` は時刻昇順、連続する移動の `arrival` と次の `departure` は同一港 |
 | 3 | `arrivalTime > departureTime` |
 | 4 | `acceptedCargoTypes` が空なら一般貨物のみ |
@@ -654,6 +667,8 @@ RouteSearchService ..> TransitPath
 
 制約は [要件定義の経路設計の制約条件](../../requirements/requirements_definition.md) に従います。危険物・冷凍貨物は `acceptedCargoTypes` に含む航海だけを通し、到着期限は日付単位で比較します。
 
+期限の扱いは `departFrom` の有無で変えます。通常の設計（`departFrom` 無し）では期限に間に合う候補だけを返します。誤配の再設計（`departFrom` 指定）では、すでに期限に間に合わないことが普通なので、**期限超過の候補も返し**、各候補に `overdueDays`（最終到着日 − 到着期限、日付単位。間に合う候補は 0）を持たせます。経路設計者は超過日数を見て選び、選んだ候補は `AssignRouteCommand` に載せます。`Cargo` 不変条件 5（旅程は期限を満たす）は再設計時に限り `overdueDays > 0` を許し、その事実を `CargoRoutedEvent` に載せて荷主への説明に使います。
+
 ## Tracking Context（中核）— trackingms
 
 貨物の位置・状態の追跡と例外管理を担います。履歴そのものが価値であり、Event Sourcing の効果が最も出るコンテキストです。
@@ -664,7 +679,7 @@ RouteSearchService ..> TransitPath
 @startuml
 title Tracking Context
 
-class TrackingActivity <<Aggregate Root>> <<@EventSourcedEntity(tagKey="trackingNumber")>> {
+class TrackingActivity <<Aggregate Root>> <<@EventSourced(tagKey="trackingNumber")>> {
   - trackingNumber: TrackingNumber
   - bookingId: TrackingBookingId
   - status: TransportStatus
@@ -672,9 +687,12 @@ class TrackingActivity <<Aggregate Root>> <<@EventSourcedEntity(tagKey="tracking
   - currentLocation: Location [0..1]
   - expectedRoute: ExpectedRoute
   - exceptions: List<TrackingException>
+  - cancellationDischargeLocation: Location [0..1]
   - closed: boolean
   + {static} initialize(InitializeTrackingCommand)
   + advance(AdvanceTrackingCommand)
+  + revert(RevertTrackingCommand)
+  + planCancellationDischarge(PlanCancellationDischargeCommand)
   + updateStatusManually(UpdateTransportStatusCommand)
   + registerException(RegisterTrackingExceptionCommand)
   + startResponding(StartExceptionResponseCommand)
@@ -787,22 +805,28 @@ EXCEPTION --> DELIVERED : 解決・引取完了
 | 4 | `CustomsStatusChangedEvent(HELD)` を受けたら `CUSTOMS_HOLD` 例外を自動起票する（UC21） |
 | 5 | `EXCEPTION` から復帰するときは、必ず起票中の例外がすべて `RESOLVED` であり、`statusBeforeException` へ戻る |
 | 6 | 例外は追記のみ。解決しても事実は消えず、料金調整の根拠として残る |
-| 7 | 緊急かどうかは `ExceptionType#urgent`（`LOSS` のみ真）が答える。属性には持たない |
+| 7 | 緊急かどうかは `ExceptionType#urgent`（`LOSS` のみ真）が答える。属性には持たない。一覧の並びは `urgent` を先頭に、以降は到着期限までの残日数が少ない順（M16） |
 | 8 | **知らない追跡番号の荷役では止まらない**。集約が無ければ `AdvanceTrackingCommand` は `UnknownTrackingRejectedEvent` に相当する記録を投影側に残し、後続の荷役を止めない |
-| 9 | `closed` の集約はコマンドを拒否する（予約キャンセル時） |
+| 9 | キャンセル承認（`CargoCancelledEvent`）を受けても**追跡は閉じない**。`dischargeLocation` を `cancellationDischargeLocation` に記録し（`CancellationDischargePlannedEvent`）、その港での `UNLOAD` を受けた後に `CloseTrackingCommand` で閉じる（`TrackingClosedEvent(reason = CANCELLED)`）。貨物が船の上にある間、陸揚げの荷役を記録できる |
+| 10 | `closed` の集約はコマンドを拒否する |
+| 11 | 取り消された荷役（`HandlingActivityVoidedEvent`）を受けたら、その荷役で進めた状態を直前の状態に戻す（`RevertTrackingCommand`）。取り消しの事実はイベントとして残る |
 
 | コマンド | アクター | 発行イベント | 契約 | UC / US |
 | :--- | :--- | :--- | :--- | :--- |
 | `InitializeTrackingCommand` | `BookingSaga`（`shared/contract/command`） | `TrackingInitializedEvent` | ○ | UC12 / US14 |
-| `AdvanceTrackingCommand` | 投影（`HandlingActivityRegisteredEvent` 購読） | `TransportStatusUpdatedEvent`、`CargoMisroutedEvent` | — | UC14 / US15・US28 |
+| `AdvanceTrackingCommand` | `TrackingReactionHandler`（`HandlingActivityRegisteredEvent` 購読） | `TransportStatusUpdatedEvent`、`CargoMisroutedEvent` | — | UC14 / US15・US28 |
+| `RevertTrackingCommand` | `TrackingReactionHandler`（`HandlingActivityVoidedEvent` 購読） | `TransportStatusRevertedEvent` | — | UC13 |
+| `PlanCancellationDischargeCommand` | `TrackingReactionHandler`（`CargoCancelledEvent` 購読） | `CancellationDischargePlannedEvent` | — | UC22 / US30 |
 | `UpdateTransportStatusCommand` | 追跡管理者 | `TransportStatusUpdatedEvent` | — | UC14 / US17 |
 | `RegisterTrackingExceptionCommand` | 追跡管理者 / 自動起票 | `TrackingExceptionRegisteredEvent` | — | UC16 / US19・US20 |
 | `StartExceptionResponseCommand` | 追跡管理者 | `ExceptionResponseStartedEvent` | — | UC16 |
 | `ResolveTrackingExceptionCommand` | 追跡管理者 | `TrackingExceptionResolvedEvent` | — | UC16 |
 | （`advance` が `CLAIM` を受けたとき） | — | `CargoDeliveredEvent` | **○** | UC14 → UC17 |
-| `CloseTrackingCommand` | `BookingSaga` | `TrackingClosedEvent` | ○ | UC22 |
+| `CloseTrackingCommand`（`shared/contract/command`） | `TrackingReactionHandler`（`cancellationDischargeLocation` での `UNLOAD` を受けた後） | `TrackingClosedEvent` | ○ | UC22 |
 
 `CargoDeliveredEvent` はコマンドに 1 対 1 で対応しません。`AdvanceTrackingCommand(CLAIM)` が `TransportStatusUpdatedEvent(DELIVERED)` と `CargoDeliveredEvent` の 2 つを発行します。前者は Tracking 内部の永続化フォーマット、後者は Billing と Booking への契約です。1 つのイベントに両方の役割を持たせると、内部の形を変えるたびに契約が動きます。
+
+`CargoMisroutedEvent` は trackingms の内部イベントです。bookingms 側の同じ意味のイベントは `BookingMisroutedEvent` と名付け、同名クラスが契約に昇格した瞬間に衝突するのを避けます。イベント購読からコマンドを送るのは `application/reaction/TrackingReactionHandler`（Processing Group `tracking-reaction`）で、投影はコマンドを送りません。
 
 ## Handling Context（補完）— handlingms
 
@@ -814,7 +838,7 @@ EXCEPTION --> DELIVERED : 解決・引取完了
 @startuml
 title Handling Context
 
-class HandlingActivity <<Aggregate Root>> <<@EventSourcedEntity(tagKey="activityId")>> {
+class HandlingActivity <<Aggregate Root>> <<@EventSourced(tagKey="activityId")>> {
   - activityId: HandlingActivityId
   - trackingNumber: HandlingTrackingNumber
   - bookingId: CargoBookingId
@@ -825,7 +849,16 @@ class HandlingActivity <<Aggregate Root>> <<@EventSourcedEntity(tagKey="activity
   - consigneeConfirmation: ConsigneeConfirmation [0..1]
   - offRoute: boolean
   - operator: String
-  + {static} register(RegisterHandlingActivityCommand, snapshot: CargoSnapshot, customs: CustomsStatus)
+  - voided: boolean
+  + {static} register(RegisterHandlingActivityCommand)
+  + void(VoidHandlingActivityCommand)
+}
+class RegisterHandlingActivityCommand <<Command>> {
+  - activityId: UUID（クライアント生成の冪等キー）
+  - trackingNumber, bookingId, type, location, completedAt, voyageNumber?, consigneeConfirmation?, operator
+  - offRoute: boolean（application 層が CargoSnapshot で解決）
+  - customsStatus: CustomsStatus（application 層が投影で解決）
+  - customsStatusAsOf: Instant（その通関状態の時点）
 }
 class HandlingActivityId <<Value Object>>
 class HandlingTrackingNumber <<Value Object>>
@@ -854,7 +887,7 @@ class CargoSnapshot <<Read Model / ACL>> {
 }
 class LegSnapshot <<Value Object>>
 
-class CustomsDeclaration <<Aggregate Root>> <<@EventSourcedEntity(tagKey="declarationNumber")>> {
+class CustomsDeclaration <<Aggregate Root>> <<@EventSourced(tagKey="declarationNumber")>> {
   - declarationNumber: DeclarationNumber
   - trackingNumber: HandlingTrackingNumber
   - declaredAt: Instant
@@ -862,7 +895,8 @@ class CustomsDeclaration <<Aggregate Root>> <<@EventSourcedEntity(tagKey="declar
   - lastHeldAt: Instant [0..1]
   + {static} register(RegisterCustomsDeclarationCommand)
   + updateStatus(UpdateCustomsStatusCommand)
-  + heldOver(days, today): boolean
+  + heldBusinessDays(today, calendar: HolidayCalendar): int
+  + heldOver(days, today, calendar): boolean
 }
 class DeclarationNumber <<Value Object>>
 enum CustomsStatus {
@@ -877,7 +911,8 @@ HandlingActivity *-- HandlingActivityId
 HandlingActivity *-- HandlingType
 HandlingActivity *-- "0..1" HandlingVoyageNumber
 HandlingActivity *-- "0..1" ConsigneeConfirmation
-HandlingActivity ..> CargoSnapshot : 検証に使う
+RegisterHandlingActivityCommand ..> CargoSnapshot : application 層が\noffRoute の解決に使う
+HandlingActivity ..> RegisterHandlingActivityCommand
 CargoSnapshot "1" *-- "0..*" LegSnapshot
 CustomsDeclaration *-- DeclarationNumber
 CustomsDeclaration *-- CustomsStatus
@@ -900,11 +935,12 @@ CustomsDeclaration *-- CustomsStatus
 | # | 不変条件 |
 | :--- | :--- |
 | 1 | 種別ごとの必須項目（上表）を満たす |
-| 2 | 場所の照合は `CargoSnapshot#isOffRoute` が答える。**一致しなくても記録は拒まない**（現場ではすでに作業が終わっている） |
+| 2 | 場所の照合は `CargoSnapshot#isOffRoute` が答え、application 層が結果を `RegisterHandlingActivityCommand.offRoute` に載せる（Axon のコマンドハンドラは読み取りモデルを引数に取れない）。集約は載った値を再検査し（種別と場所の組がスナップショットの旅程と食い違えば拒否）、**一致しなくても記録は拒まない**（現場ではすでに作業が終わっている） |
 | 3 | 旅程が無い貨物の `LOAD` / `UNLOAD` は `offRoute` とする（分からないときは予定外に倒す） |
-| 4 | `CLAIM` は対象貨物の `CustomsDeclaration` が `CLEARED` のときだけ登録できる。拒否時は現在の通関状態を提示する（US29） |
-| 5 | 同一追跡番号・同一種別・同一場所・5 分以内の重複登録は拒否する |
-| 6 | `completedAt` は登録時刻以前 |
+| 4 | `CLAIM` はコマンドに載った `customsStatus` が `CLEARED` のときだけ登録できる。**拒否時は判定に使った通関状態と時点（`customsStatus`, `customsStatusAsOf`）を返す**。画面はこれを「直近で変わった可能性があります」と再確認ボタンに使う（US29・H17） |
+| 5 | 同一 `activityId` の再送は冪等（二重登録せず、同じ応答を返す）。`activityId` が違っても同一追跡番号・同一種別・同一場所・5 分以内の重複登録は拒否する |
+| 6 | `completedAt` は登録時刻以前。港のローカル時刻で受け取り、`Instant` に変換して保持する |
+| 7 | 取り消し（`void`）は元の記録を残したまま `voided = true` にする。取り消し済みの再取り消しは拒否する。理由は必須 |
 
 ### CustomsDeclaration 集約の不変条件
 
@@ -913,15 +949,17 @@ CustomsDeclaration *-- CustomsStatus
 | 1 | 追跡番号・申告番号・申告日時は必須。初期状態は `PENDING`。**申告番号の書式は検査しない**（採番するのは税関） |
 | 2 | 状態更新には理由が必須。登録も含め、変更はすべてイベントとして残る（監査履歴） |
 | 3 | 未決着（`PENDING` / `HELD`）の申告は貨物あたり高々 1 件。`REJECTED` の後は出し直せる。`CLEARED` の後は断る |
-| 4 | 留置 3 日超の判定は最新の `HELD` 遷移日時から、日付単位で、業務タイムゾーンで数える |
+| 4 | 留置 3 日超の判定は最新の `HELD` 遷移日時から、**営業日**（港の所在国の休日カレンダー `HolidayCalendar`）で、日付単位で、業務タイムゾーンで数える。留置営業日数は `HELD` から次の状態へ変わるときの `CustomsStatusChangedEvent.heldBusinessDays` に載せ、Billing の調整根拠に渡す（M14） |
+| 5 | 通関申告は**輸入港（目的港）での輸入通関のみ**を想定する。輸出通関は扱わない。不変条件 3 の「貨物あたり高々 1 件」はこの前提に立つ（M15） |
 
 | コマンド | アクター | 発行イベント | 契約 | UC / US |
 | :--- | :--- | :--- | :--- | :--- |
 | `RegisterHandlingActivityCommand` | 荷役作業員 | `HandlingActivityRegisteredEvent` | **○** | UC13 / US15・US16 |
+| `VoidHandlingActivityCommand(activityId, reason)` | 荷役作業員 | `HandlingActivityVoidedEvent` | **○**（trackingms / bookingms が購読して戻す） | UC13 |
 | `RegisterCustomsDeclarationCommand` | 荷役作業員 | `CustomsDeclarationRegisteredEvent` | — | UC21 / US29 |
 | `UpdateCustomsStatusCommand` | 追跡管理者 | `CustomsStatusUpdatedEvent`、`CustomsStatusChangedEvent` | ○（後者） | UC21 / US29 |
 
-`CargoSnapshot` は Booking の契約イベント（`TrackingNumberIssuedEvent`、`CargoCancelledEvent`）を購読して Handling 側が作る読み取りモデルです。旅程の情報は `TrackingNumberIssuedEvent` に載せます。Booking の型は持ち込みません。
+`CargoSnapshot` は Booking の契約イベント（`TrackingNumberIssuedEvent`、`CargoCancelledEvent`）を購読して Handling 側が作る読み取りモデルです。旅程の情報は `TrackingNumberIssuedEvent` に載せます。Booking の型は持ち込みません。荷役画面（S50）は航海番号を起点に「この船から降ろす貨物」を出すので、投影 `cargo_snapshot_leg` に航海番号と港で引ける形で写します（`FindCargosOnVoyageQuery`）。
 
 ## Billing Context（補完）— billingms
 
@@ -933,7 +971,7 @@ CustomsDeclaration *-- CustomsStatus
 @startuml
 title Billing Context
 
-class Invoice <<Aggregate Root>> <<@EventSourcedEntity(tagKey="invoiceId")>> {
+class Invoice <<Aggregate Root>> <<@EventSourced(tagKey="invoiceId")>> {
   - invoiceId: InvoiceId
   - bookingId: BillingBookingId
   - shipperId: BillingShipperId
@@ -943,6 +981,7 @@ class Invoice <<Aggregate Root>> <<@EventSourcedEntity(tagKey="invoiceId")>> {
   - adjustment: Money
   - tax: Money
   - total: Money
+  - quotedAmount: Money [0..1]
   - status: BillingStatus
   - issuedAt: LocalDate [0..1]
   - dueDate: LocalDate [0..1]
@@ -956,7 +995,11 @@ class Invoice <<Aggregate Root>> <<@EventSourcedEntity(tagKey="invoiceId")>> {
   + overdue(today: LocalDate): boolean
 }
 class InvoiceId <<Value Object>>
-class InvoiceLineItem <<Value Object>>
+class InvoiceLineItem <<Value Object>> {
+  - description: String
+  - amount: Money
+  - basisExceptionId: String [0..1]
+}
 class Money <<Value Object>> {
   - amount: BigDecimal
   - currency: Currency
@@ -1019,22 +1062,23 @@ FreightChargeCalculator ..> FreightCharge
 端数は 1 円単位で四捨五入。丸めは Money の中 1 か所だけ
 ```
 
-Booking の `Quotation` はこの式と同じ値で概算を出します。両者の一致は、同じ入力に対する出力を突き合わせる契約テストで固定します。
+Booking の `Quotation` はこの式と同じ料率で概算を出します。式と料率の同一性は、同じ入力に対する出力を突き合わせる契約テストで固定します。ただし見積の入力は候補経路、請求の入力は実際に通った区間なので、金額そのものは一致しません。困るのは差ではなく説明できないことなので、`Invoice` は見積時の概算 `quotedAmount`（任意）を持ち、請求詳細（S61）に「見積時の概算 → 請求 → 差額」と差の理由（区間数の増減・誤配・留置）を出します。調整行 `InvoiceLineItem` は根拠となる例外の ID（`basisExceptionId`、任意）を持ち、Tracking の例外へリンクします。留置による調整は `CustomsStatusChangedEvent.heldBusinessDays` を根拠にします。
 
 ### Invoice 集約の不変条件
 
 | # | 不変条件 |
 | :--- | :--- |
 | 1 | `total = base − discount + adjustment + tax`。通貨は集約内で一貫 |
-| 2 | 有効な請求書は予約ごとに 1 通。`VOID` は数えない（投影の `(booking_id, void_marker)` UNIQUE と、作成前の存在確認） |
+| 2 | 有効な請求書は予約ごとに 1 通。`VOID` は数えない。三段（作成前の存在確認 + 投影の `(booking_id, void_marker)` UNIQUE + 拒否の記録 `attention_item`）で守る |
 | 3 | `INVOICED` になるとき `issuedAt` と `dueDate = issuedAt + 30 日` が確定する |
 | 4 | 期限超過は列に持たず `overdue(today)` で判定する。期限当日は超過ではない。`today` は業務タイムゾーンで決める |
 | 5 | `PAID` になるとき `paidAt` は必須 |
 | 6 | `VOID` の請求書は再発行しない。新規に発行する |
+| 7 | `quotedAmount` は `CalculateInvoiceCommand` に載った見積時の概算をそのまま持つ。計算し直さない |
 
 | コマンド | アクター | 発行イベント | 契約 | UC / US |
 | :--- | :--- | :--- | :--- | :--- |
-| `CalculateInvoiceCommand` | `BillingSaga`（`CargoDeliveredEvent` 購読）/ 経理担当者 | `InvoiceCalculatedEvent` | — | UC17 / US21 |
+| `CalculateInvoiceCommand` | `BillingSaga`（`CargoDeliveredEvent` 購読。荷主の種別・割引率は自前の `shipper_contract_snapshot` から）/ 経理担当者 | `InvoiceCalculatedEvent` | — | UC17 / US21 |
 | `ApplyDiscountCommand` | Saga / 経理担当者 | `DiscountAppliedEvent` | — | UC17 / US22 |
 | `AdjustInvoiceCommand` | 経理担当者 | `InvoiceAdjustedEvent` | — | UC17 |
 | `IssueInvoiceCommand` | 経理担当者 | `InvoiceIssuedEvent` | — | UC18 / US23 |
@@ -1110,27 +1154,35 @@ User *-- "0..1" UserShipperLink
 | イベント | 発行 | 購読と用途 | 主なフィールド |
 | :--- | :--- | :--- | :--- |
 | `TrackingNumberIssuedEvent` | bookingms | trackingms（Saga → 追跡開始）、handlingms（`CargoSnapshot`） | `bookingId`, `trackingNumber`, `origin`, `destination`, `cargoType`, `legs[]`, `issuedAt` |
-| `CargoCancelledEvent` | bookingms | trackingms（追跡を閉じる）、handlingms（`CargoSnapshot` 更新）、billingms（キャンセル料） | `bookingId`, `trackingNumber?`, `statusAtCancel`, `dischargeLocation?`, `cancelledAt` |
-| `HandlingActivityRegisteredEvent` | handlingms | trackingms（状態を進める・誤配検知）、bookingms（一覧の同期投影・`MISROUTED`） | `activityId`, `trackingNumber`, `bookingId`, `type`, `location`, `voyageNumber?`, `completedAt`, `offRoute` |
-| `CustomsStatusChangedEvent` | handlingms | trackingms（`HELD` で例外起票） | `declarationNumber`, `trackingNumber`, `from`, `to`, `reason`, `changedAt` |
+| `CargoCancelledEvent` | bookingms | trackingms（陸揚げ地を記録。閉じるのは当該港の `UNLOAD` 後）、handlingms（`CargoSnapshot` 更新）、billingms（キャンセル料） | `bookingId`, `trackingNumber?`, `statusAtCancel`, `dischargeLocation?`, `cancelledAt` |
+| `HandlingActivityRegisteredEvent` | handlingms | trackingms（`TrackingReactionHandler` が状態を進める・誤配検知）、bookingms（投影に写す。`BookingReactionHandler` が `RecordHandlingCommand`） | `activityId`, `trackingNumber`, `bookingId`, `type`, `location`, `voyageNumber?`, `completedAt`, `offRoute` |
+| `HandlingActivityVoidedEvent` | handlingms | trackingms（`RevertTrackingCommand`）、bookingms（`RevertHandlingCommand`）。元の記録は残る | `activityId`, `trackingNumber`, `bookingId`, `type`, `location`, `reason`, `voidedBy`, `voidedAt` |
+| `CustomsStatusChangedEvent` | handlingms | trackingms（`HELD` で例外起票）、billingms（留置の調整根拠） | `declarationNumber`, `trackingNumber`, `from`, `to`, `reason`, `heldBusinessDays?`（`HELD` から出るとき）, `changedAt` |
 | `CargoDeliveredEvent` | trackingms | billingms（`BillingSaga` 開始）、bookingms（`DELIVERED`） | `trackingNumber`, `bookingId`, `deliveredAt`, `location` |
+| `TrackingInitializedEvent` | trackingms | bookingms（`BookingSaga` の `@EndSaga`） | `bookingId`, `trackingNumber`, `initializedAt` |
+| `TrackingClosedEvent` | trackingms | bookingms（キャンセル完了を投影に写す） | `bookingId`, `trackingNumber`, `closedAt`, `reason` |
 | `PaymentRecordedEvent` | billingms | bookingms（`SETTLED`） | `invoiceId`, `bookingId`, `paidAt`, `amount` |
+| `ShipperRegisteredEvent` | bookingms | billingms（`shipper_contract_snapshot` を作る） | `shipperId`, `shipperCode`, `shipperType`, `name`, `email`, `phone`, `address`, `corporateContract?`, `registeredAt`。`name` / `email` / `phone` / `address` は荷主ごとの鍵で暗号化して載せる（crypto-shredding、ADR-0003） |
+| `CorporateContractAssignedEvent` | bookingms | billingms（`shipper_contract_snapshot` の割引率を更新） | `shipperId`, `contractNumber`, `discountRate`, `assignedAt` |
+
+契約イベントは **11 本**です。ArchUnit の名簿はこの表と一致させ、増やすときは本書と ADR を同じ変更で更新します。
 
 ### 契約コマンド（`shared/contract/command`）
 
-Saga が他サービスの集約へ送るコマンドです。数が増えることは結合が増えたことなので、ArchUnit で名簿を固定し、増やすときは ADR を起こします。
+Saga または Reaction Handler が送る、サービス境界をまたぐ意味を持つコマンドです。数が増えることは結合が増えたことなので、ArchUnit で名簿を固定し、増やすときは ADR を起こします。契約コマンドは **2 本**です。
 
 | コマンド | 送信 | 宛先 | 用途 |
 | :--- | :--- | :--- | :--- |
 | `InitializeTrackingCommand` | bookingms `BookingSaga` | trackingms `TrackingActivity` | 追跡開始 |
-| `CloseTrackingCommand` | bookingms `BookingSaga` | trackingms `TrackingActivity` | キャンセル時に追跡を閉じる |
+| `CloseTrackingCommand` | trackingms `TrackingReactionHandler`（`cancellationDischargeLocation` での `UNLOAD` を受けた後） | trackingms `TrackingActivity` | キャンセル承認後、陸揚げの荷降しが記録されてから追跡を閉じる。`BookingSaga` からは送らない |
 
 ### 契約クエリ（`shared/contract/query`）
 
 | クエリ | 送信 | 応答側 | 応答 |
 | :--- | :--- | :--- | :--- |
-| `FindRouteCandidatesQuery` | bookingms（ACL `RouteCandidateFinder`） | routingms | `List<RouteCandidateDto>` |
-| `FindShipperForBillingQuery` | billingms（ACL `ShipperContractFinder`） | bookingms | `ShipperContractDto`（種別・割引率） |
+| `FindRouteCandidatesQuery` | bookingms（ACL `RouteCandidateFinder`。Controller から呼ぶ。Saga からは呼ばない） | routingms | `List<RouteCandidateDto>` |
+
+契約クエリは **1 本**です。billingms が要る荷主の種別・割引率は同期クエリ（旧 `FindShipperForBillingQuery`）で取りに行かず、`ShipperRegisteredEvent` / `CorporateContractAssignedEvent` を購読して `shipper_contract_snapshot` を作ります。請求が bookingms の稼働に依存しなくなります。同期クエリのタイムアウト既定は 5 秒です。
 
 ### イベントの流れ
 
@@ -1144,39 +1196,50 @@ participant "trackingms" as T
 participant "handlingms" as H
 participant "billingms" as Bi
 
+== 荷主登録 ==
+B -> B : ShipperRegisteredEvent / CorporateContractAssignedEvent（契約）
+B -> Bi : （購読）shipper_contract_snapshot に写す
+
 == 予約から追跡開始 ==
 B -> B : CargoBookedEvent（BookingSaga 開始）
-B -> R : FindRouteCandidatesQuery（Query Bus）
+B -> R : FindRouteCandidatesQuery（Query Bus, Controller から）
 R --> B : RouteCandidateDto[]
 B -> B : AssignRouteCommand → CargoRoutedEvent
 B -> B : NotifyShipperCommand → ShipperNotifiedEvent
 B -> B : ConfirmBookingCommand → BookingConfirmedEvent
 B -> B : IssueTrackingNumberCommand → TrackingNumberIssuedEvent（契約）
 B -> T : InitializeTrackingCommand（契約コマンド）
-T -> T : TrackingInitializedEvent
+T -> T : TrackingInitializedEvent（契約）
+T -> B : （購読）BookingSaga @EndSaga
 B -> H : （TrackingNumberIssuedEvent 購読）CargoSnapshot 作成
 
 == 輸送中 ==
 H -> H : HandlingActivityRegisteredEvent（契約）
-H -> T : （購読）AdvanceTrackingCommand → TransportStatusUpdatedEvent / CargoMisroutedEvent
-H -> B : （購読）RecordHandlingCommand → HandlingRecordedEvent / CargoMisroutedEvent
-H -> H : CustomsStatusChangedEvent（契約, HELD）
-H -> T : （購読）RegisterTrackingExceptionCommand(CUSTOMS_HOLD)
+H -> T : （TrackingReactionHandler）AdvanceTrackingCommand → TransportStatusUpdatedEvent / CargoMisroutedEvent
+H -> B : （BookingReactionHandler）RecordHandlingCommand → HandlingRecordedEvent / BookingMisroutedEvent
+H -> H : HandlingActivityVoidedEvent（契約, 誤記録の取り消し）
+H -> T : （TrackingReactionHandler）RevertTrackingCommand
+H -> B : （BookingReactionHandler）RevertHandlingCommand
+H -> H : CustomsStatusChangedEvent（契約, HELD / heldBusinessDays）
+H -> T : （TrackingReactionHandler）RegisterTrackingExceptionCommand(CUSTOMS_HOLD)
+H -> Bi : （購読）留置営業日を調整根拠に写す
 
 == 配送完了から精算 ==
 T -> T : AdvanceTrackingCommand(CLAIM) → TransportStatusUpdatedEvent(DELIVERED) + CargoDeliveredEvent（契約）
-T -> Bi : （購読）BillingSaga 開始 → CalculateInvoiceCommand
-Bi -> B : FindShipperForBillingQuery（Query Bus）
+T -> Bi : （購読）BillingSaga 開始 → CalculateInvoiceCommand（shipper_contract_snapshot を読む）
 Bi -> Bi : ApplyDiscountCommand → DiscountAppliedEvent
 Bi -> Bi : IssueInvoiceCommand → InvoiceIssuedEvent（経理担当者）
 Bi -> Bi : RecordPaymentCommand → PaymentRecordedEvent（契約）
-Bi -> B : （購読）SettleBookingCommand → BookingSettledEvent
-T -> B : （CargoDeliveredEvent 購読）MarkDeliveredCommand → BookingDeliveredEvent
+Bi -> B : （BookingReactionHandler）SettleBookingCommand → BookingSettledEvent
+T -> B : （BookingReactionHandler）MarkDeliveredCommand → BookingDeliveredEvent
 
 == キャンセル ==
-B -> B : ApproveCancellationCommand → CargoCancelledEvent（契約）
-B -> T : CloseTrackingCommand（契約コマンド）
-B -> Bi : （購読）ApplyCancellationFeeCommand
+B -> B : ApproveCancellationCommand → CargoCancelledEvent（契約, dischargeLocation）
+B -> T : （TrackingReactionHandler）PlanCancellationDischargeCommand → CancellationDischargePlannedEvent
+B -> Bi : （BillingSaga）ApplyCancellationFeeCommand
+H -> T : （TrackingReactionHandler）AdvanceTrackingCommand(UNLOAD @ dischargeLocation)
+T -> T : CloseTrackingCommand（契約コマンド, TrackingReactionHandler）→ TrackingClosedEvent（契約）
+T -> B : （購読）キャンセル完了を投影に写す
 @enduml
 ```
 
@@ -1188,31 +1251,30 @@ B -> Bi : （購読）ApplyCancellationFeeCommand
 @startuml
 title BookingSaga
 
-[*] --> 開始 : @StartSaga CargoBookedEvent\n(associationProperty = bookingId)
-開始 --> 候補確認済 : FindRouteCandidatesQuery\n候補 0 件なら RouteCandidatesUnavailableEvent
-候補確認済 --> 確定待ち : （人の操作を待つ）
+[*] --> 確定待ち : @StartSaga CargoBookedEvent\n(associationProperty = bookingId)
 確定待ち --> 追跡番号待ち : BookingConfirmedEvent\n→ IssueTrackingNumberCommand
 追跡番号待ち --> 追跡開始待ち : TrackingNumberIssuedEvent\n→ InitializeTrackingCommand（trackingms）
-追跡開始待ち --> 完了 : TrackingInitializedEvent\n@EndSaga
+追跡開始待ち --> 完了 : TrackingInitializedEvent（契約）\n@EndSaga
 追跡開始待ち --> 補償 : タイムアウト（再試行上限）\n→ RevertTrackingNumberCommand
 補償 --> [*]
 完了 --> [*]
-開始 --> 終了 : CargoCancelledEvent\n→ CloseTrackingCommand（追跡があれば）
-候補確認済 --> 終了 : CargoCancelledEvent
-確定待ち --> 終了 : CargoCancelledEvent
+確定待ち --> 終了 : CargoCancelledEvent\n@EndSaga
+追跡番号待ち --> 終了 : CargoCancelledEvent\n@EndSaga
 終了 --> [*]
 @enduml
 ```
 
 | 起動 | 完了 | 補償 |
 | :--- | :--- | :--- |
-| `CargoBookedEvent` | `TrackingInitializedEvent` | 追跡の初期化が届かない → 再試行、上限超過で `RevertTrackingNumberCommand`。予約は `CONFIRMED` に留まり、追跡管理者の作業一覧に警告を投影 |
+| `CargoBookedEvent` | `TrackingInitializedEvent`（契約）。`CargoCancelledEvent` でも終了 | 追跡の初期化が届かない → 再試行（`Clock` 差し替えで検査）、上限超過で `RevertTrackingNumberCommand`。予約は `CONFIRMED` に留まり、追跡管理者の要確認一覧（`attention_item`）に写す |
+
+`BookingSaga` は同期クエリを呼びません。経路候補の存在確認（候補 0 件の検知）は `RequestRoutingCommand` を受ける Controller が `FindRouteCandidatesQuery` で行い、Saga の外に置きます。Saga の中で `.join()` すると Processing Group が止まるためです。`CloseTrackingCommand` も Saga から送らず、trackingms の `TrackingReactionHandler` が陸揚げ地での `UNLOAD` を受けた後に送ります（`TrackingActivity` 不変条件 9）。
 
 ### BillingSaga（billingms）
 
 | 起動 | 完了 | 補償 |
 | :--- | :--- | :--- |
-| `CargoDeliveredEvent` | `InvoiceCalculatedEvent` + `DiscountAppliedEvent`（以降の発行・入金は経理担当者の操作） | 荷主情報の問い合わせに失敗 → 再試行、上限超過で `InvoiceCreationFailedEvent` を出し経理担当者の作業一覧に写す |
+| `CargoDeliveredEvent` | `InvoiceCalculatedEvent` + `DiscountAppliedEvent`（以降の発行・入金は経理担当者の操作） | `shipper_contract_snapshot` に荷主が無い（購読が遅れている）→ 再試行、上限超過で `InvoiceCreationFailedEvent` を出し経理担当者の要確認一覧（`attention_item`）に写す |
 | `CargoCancelledEvent` | `CancellationFeeAppliedEvent` | 同上 |
 
 Saga の再試行と補償は「例外にしない」ではなく「イベントとして残す」で扱います。戻り値を捨てて黙ると、失敗が誰にも見えないまま業務の守りが外れます。
@@ -1227,15 +1289,19 @@ Saga の再試行と補償は「例外にしない」ではなく「イベント
 | bookingms | `FindCancellationRequestsQuery()` | `List<CancellationRequestView>` | UC22 |
 | bookingms | `FindShipperQuery(shipperId)` / `ExistsShipperEmailQuery(email)` | `ShipperView` / `boolean` | UC02 |
 | bookingms | `FindQuotationQuery(quotationId)` | `QuotationView` | UC01 |
+| bookingms | `FindShipperBookingsQuery(shipperId, page)` | `List<ShipperBookingSummaryView>`（荷主向け S45。authms の紐付けで絞る） | UC03・UC15 |
+| bookingms | `FindShipperBookingProgressQuery(shipperId, bookingId)` | `ShipperBookingProgressView`（状態バッジ・進み具合・確定旅程・通知履歴のみ。金額・社内メモ無し。S46） | UC10・UC11 |
 | routingms | `FindVoyagesQuery(filter)` / `FindVoyageQuery(voyageNumber)` | `List<VoyageView>` / `VoyageView` | UC05・UC19 |
 | routingms | `FindRouteCandidatesQuery(spec)`（契約） | `List<RouteCandidateDto>` | UC06 |
 | trackingms | `FindTrackingQuery(trackingNumber)` | `TrackingView`（現在状態 + 履歴 + 例外） | UC15 |
 | trackingms | `FindPublicTrackingQuery(trackingNumber)` | `PublicTrackingView`（認証不要・荷受人向け） | UC15 |
 | trackingms | `FindShipperTrackingsQuery(shipperId)` | `List<TrackingSummaryView>`（自社貨物のみ） | UC15 |
-| trackingms | `FindOpenExceptionsQuery()` | `List<ExceptionView>`（緊急を先頭） | UC16 |
-| handlingms | `FindHandlingHistoryQuery(trackingNumber)` | `List<HandlingActivityView>` | UC13 |
+| trackingms | `FindOpenExceptionsQuery()` | `List<ExceptionView>`（`ExceptionType#urgent` を先頭、以降は到着期限までの残日数が少ない順） | UC16 |
+| handlingms | `FindHandlingHistoryQuery(trackingNumber)` | `List<HandlingActivityView>`（取り消し済みも `voided` 付きで残す） | UC13 |
+| handlingms | `FindCargosOnVoyageQuery(voyageNumber, unlocode)` | `List<CargoOnVoyageView>`（航海番号起点の荷役 S50。投影 `cargo_snapshot_leg` から） | UC13 |
 | handlingms | `FindCustomsDeclarationQuery(trackingNumber)` / `FindHeldDeclarationsQuery()` | `CustomsDeclarationView` / `List<...>`（留置 3 日超を強調） | UC21 |
-| billingms | `FindInvoiceQuery(invoiceId)` / `FindInvoicesQuery(filter)` | `InvoiceView` / `List<InvoiceView>`（`overdue` を今日で判定） | UC17・UC18 |
+| billingms | `FindInvoiceQuery(invoiceId)` / `FindInvoicesQuery(filter)` | `InvoiceView` / `List<InvoiceView>`（`overdue` を今日で判定。`quotedAmount` と差額・理由を含む） | UC17・UC18 |
+| billingms | `FindShipperInvoiceQuery(shipperId, invoiceId)` | `ShipperInvoiceView`（荷主向け S62。自社の請求書のみ） | UC18 |
 
 読み取りモデルは画面ごとに作り、他サービスの DB を JOIN しません。予約一覧に荷役の最新状態が要るなら、`HandlingActivityRegisteredEvent` を購読して `cargo_summary` に列を足します。
 
@@ -1255,7 +1321,7 @@ Saga の再試行と補償は「例外にしない」ではなく「イベント
 | UC10 確定経路通知 | `Cargo` | `NotifyShipperCommand` | `ShipperNotifiedEvent` |
 | UC11 予約確定 | `Cargo` | `ConfirmBookingCommand` | `BookingConfirmedEvent` |
 | UC12 追跡番号発行 | `Cargo` → `TrackingActivity` | `IssueTrackingNumberCommand`, `InitializeTrackingCommand` | `TrackingNumberIssuedEvent`, `TrackingInitializedEvent` |
-| UC13 荷役作業記録 | `HandlingActivity` | `RegisterHandlingActivityCommand` | `HandlingActivityRegisteredEvent` |
+| UC13 荷役作業記録 | `HandlingActivity` | `RegisterHandlingActivityCommand`, `VoidHandlingActivityCommand` | `HandlingActivityRegisteredEvent`, `HandlingActivityVoidedEvent` |
 | UC14 貨物状態更新 | `TrackingActivity` | `AdvanceTrackingCommand`, `UpdateTransportStatusCommand` | `TransportStatusUpdatedEvent`, `CargoDeliveredEvent` |
 | UC15 追跡情報照会 | — | `FindTrackingQuery`, `FindPublicTrackingQuery` | — |
 | UC16 例外処理 | `TrackingActivity` | `RegisterTrackingExceptionCommand`, `ResolveTrackingExceptionCommand` | `TrackingExceptionRegisteredEvent`, `TrackingExceptionResolvedEvent` |
@@ -1264,8 +1330,8 @@ Saga の再試行と補償は「例外にしない」ではなく「イベント
 | UC19 航海スケジュール登録 | `Voyage` | `RegisterVoyageCommand`, `UpdateVoyageScheduleCommand` | `VoyageRegisteredEvent`, `VoyageScheduleUpdatedEvent` |
 | UC20 ユーザー認証 | `User` | `LoginCommand`, `UnlockAccountCommand` | （状態保存・監査ログ） |
 | UC21 通関申告管理 | `CustomsDeclaration` → `TrackingActivity` | `RegisterCustomsDeclarationCommand`, `UpdateCustomsStatusCommand` | `CustomsStatusChangedEvent`, `TrackingExceptionRegisteredEvent(CUSTOMS_HOLD)` |
-| UC22 予約キャンセル | `Cargo` → `TrackingActivity` / `Invoice` | `RequestCancellationCommand`, `ApproveCancellationCommand`, `CloseTrackingCommand`, `ApplyCancellationFeeCommand` | `CargoCancelledEvent`, `TrackingClosedEvent`, `CancellationFeeAppliedEvent` |
-| US28 誤配検知・再設計 | `HandlingActivity` → `TrackingActivity` / `Cargo` | `RegisterHandlingActivityCommand`（`offRoute`）, `AssignRouteCommand`（現在地起点） | `CargoMisroutedEvent`, `CargoRoutedEvent` |
+| UC22 予約キャンセル | `Cargo` → `TrackingActivity` / `Invoice` | `RequestCancellationCommand`, `ApproveCancellationCommand`, `PlanCancellationDischargeCommand`, `CloseTrackingCommand`（陸揚げ地の `UNLOAD` 後）, `ApplyCancellationFeeCommand` | `CargoCancelledEvent`, `CancellationDischargePlannedEvent`, `TrackingClosedEvent`, `CancellationFeeAppliedEvent` |
+| US28 誤配検知・再設計 | `HandlingActivity` → `TrackingActivity` / `Cargo` | `RegisterHandlingActivityCommand`（`offRoute`）, `AssignRouteCommand`（現在地起点、期限超過候補も可） | `CargoMisroutedEvent`（trackingms）, `BookingMisroutedEvent`（bookingms）, `CargoRoutedEvent` |
 | US31 アカウント保護 | `User` | `LoginCommand`（失敗）, `UnlockAccountCommand` | （状態保存・監査ログ） |
 
 ## 設計判断
@@ -1283,7 +1349,7 @@ Saga の再試行と補償は「例外にしない」ではなく「イベント
 - すべて値オブジェクト。BC ごとに別の型（`BookingId` / `TrackingBookingId` / `CargoBookingId` / `BillingBookingId`）
 - `BookingId` と `TrackingNumber` は bookingms が採番する。`TrackingNumber` は荷主に共有されるため推測されにくい形式（`TRK-` + 大文字英数字 10 桁）
 - `ShipperCode` は投影側の採番。集約で MAX+1 しない
-- Axon 5 の `@EventSourcedEntity(tagKey)` には識別子の**文字列値**を渡す。イベントの `record` には値オブジェクトでなく文字列として載せ、`@EventSourcingHandler` で値オブジェクトに包み直す（イベントの JSON 形を値オブジェクトの実装から切り離す）
+- Axon 5 の `@EventSourced(tagKey)` には識別子の**文字列値**を渡す。イベントの `record` には値オブジェクトでなく文字列として載せ、`@EventSourcingHandler` で値オブジェクトに包み直す（イベントの JSON 形を値オブジェクトの実装から切り離す）
 
 ### イベントの設計規則
 
@@ -1294,20 +1360,22 @@ Saga の再試行と補償は「例外にしない」ではなく「イベント
 | イベントには判断結果だけを載せ、判断材料を載せない | 再生時に判断をやり直さない |
 | `occurredAt` はイベントに載せる。Axon のタイムスタンプに頼らない | リプレイしても業務上の時刻が変わらない |
 | 値オブジェクトは JSON 形を固定して載せる。`Money` は `{amount, currency}`、`Location` は UN/LOCODE の文字列 | Upcaster なしで読み続けられる形にする |
-| 一意制約（`Email`・`VoyageNumber`・請求書 1 通）は「事前の存在確認 + 投影の UNIQUE + 拒否イベント」の三段で守る | 集約 1 つでは全体の一意性を守れない |
+| 一意制約（`Email`・`VoyageNumber`・請求書 1 通）は「事前の存在確認 + 投影の UNIQUE + 拒否の記録（`attention_item`）」の三段で守る | 集約 1 つでは全体の一意性を守れない。レース条件では 1 段目を素通りするので 2・3 段目を踏むテストを置く |
+| イベント購読からコマンドを送るのは `application/reaction` の Reaction Handler だけ。投影はコマンドを送らない | リプレイでコマンドが再送されない。コマンドの失敗が投影のトークンを止めない |
 
 ### Axon Framework 5 との対応
 
 | モデル要素 | Axon 5 |
 | :--- | :--- |
-| 集約ルート | `@EventSourcedEntity(tagKey = "<識別子>")` + `@EntityCreator` |
+| 集約ルート | `@org.axonframework.extension.spring.stereotype.EventSourced(idType = String.class, tagKey = "<識別子>")`（Spring stereotype、take-4 ADR-0008 の最終決定）+ `@EntityCreator`。`@EventSourcedEntity` 単独は実機で `NoHandlerForCommandException` を出して退けられた。**IT1 スパイクの第 1 項目で、5.3 系で stereotype 無し（`@EventSourcedEntity` 単独）で登録できるかを確かめ**、できなければ ArchUnit の許可リストに `EventSourced` を明示的に加え、ドメインが Spring stereotype を 1 つだけ持つ理由を ADR-0001 に書く |
 | 作成系コマンド | `static @CommandHandler`。`EventAppender` で発行 |
 | 更新系コマンド | インスタンス `@CommandHandler` |
 | 状態復元 | `@EventSourcingHandler`。判断を書かない |
 | 集約内エンティティ | 集約のフィールド。イベントで作成・更新 |
 | 値オブジェクト | `record`。イベントには JSON 形を固定して載せる |
 | ドメインサービス | Spring Bean にせず、コマンドハンドラの引数か Query Handler から呼ぶ純粋なクラス |
-| 読み取りモデル | `@EventHandler` 投影 + MyBatis + `@QueryHandler` |
+| 読み取りモデル | `@EventHandler` 投影（`infrastructure/projection`、Processing Group `<service>-*-projection`）+ MyBatis + `@QueryHandler`。コマンドは送らない |
+| Reaction Handler | `application/reaction/<Name>ReactionHandler`（`BookingReactionHandler` / `TrackingReactionHandler` / `BillingReactionHandler`）。契約イベントの `@EventHandler` から `CommandGateway` でコマンドを送る。Processing Group は投影と分けて `booking-reaction` / `tracking-reaction` / `billing-reaction`。リプレイではリセットしない（`ReplayIT` で `CommandGateway` が呼ばれないことを固定） |
 | Saga | `@Saga`（API 名は IT1 スパイクで確定） |
 | 契約 | `shared/contract/{event,command,query}` の `record` |
 
