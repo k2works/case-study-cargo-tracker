@@ -4,7 +4,7 @@ title: "イテレーション計画 1 - 基盤・認証・荷主登録"
 description: "IT1 の計画。Axon 5 のスパイク 7 項目・ビルドと kind 環境・品質ゲートの実配線・フロント基盤と全ルートのスケルトン・US26/US27/US02（荷主登録の縦切りと crypto-shredding）。デモ項目 7 件。"
 tags: [plan,iteration,cargo-tracker]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-02T14:05:34Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-02T14:17:11Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T12:47:29Z }
 ---
@@ -170,7 +170,7 @@ IT1 は画面を伴う IT なので、マニュアルの更新をここで見積
 
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | :--: | :--: |
-| 6.1 | `Shipper` 集約（`@EventSourced` または 0.1 の結論に従う）、`RegisterShipperCommand` → `ShipperRegisteredEvent`。`AxonTestFixture` で不変条件を固定 | 5h | [ ] |
+| 6.1 | `Shipper` 集約（`@EventSourced` または 0.1 の結論に従う）、`RegisterShipperCommand` → `ShipperRegisteredEvent`。`AxonTestFixture` で不変条件を固定 | 5h | [x] |
 | 6.2 | crypto-shredding：荷主ごとの KMS 鍵で name/email/phone/address を暗号化し、鍵が無ければ復号結果を `null` にする（ADR-0003） | 5h | [ ] |
 | 6.3 | 投影 `booking-shipper-projection` → `shipper` テーブル（個人情報列は NULL 許容）。`attention_item` テーブルと拒否の記録 | 4h | [ ] |
 | 6.4 | `ExistsShipperEmailQuery` と `FindShipperQuery`（`@QueryHandler` + MyBatis）。一意性の三段（存在確認 + UNIQUE + `attention_item`） | 3h | [ ] |
