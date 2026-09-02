@@ -95,6 +95,9 @@ nav:
   - レビュー:
       - 概要: review/index.md
       - ドメインモデル分析レビュー: review/ドメインモデル分析_review_20260331.md
+      - cargo-tracker:
+          - 概要: review/cargo-tracker/index.md
+          - 設計レビュー（2026-09-02）: review/cargo-tracker/設計_review_20260902.md
   - ADR:
       - 概要: adr/index.md
       - cargo-tracker:

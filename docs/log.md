@@ -1,6 +1,7 @@
 # Docs Update Log
 
 ## 2026-09-02
+* **Creation**: Creation: cargo-tracker の設計レビュー（2026-09-02）。XP エージェント 5 名の並列レビューを統合。高 20 件のうち 17 件を修正、通知の送信基盤はスコープ外と明記、段階導入計画は次工程へ引き渡す。
 * **Creation**: Creation: cargo-tracker の技術スタックを新規作成（stale_after 90 日）。Axon 系のバージョン同期と Axon Server 2026.0.4 を正典とした。
 * **Creation**: Creation: cargo-tracker の運用要件を新規作成。リプレイを障害対応でなく日常操作に置き直し、四半期の復元演習と crypto-shredding の手順を加えた。
 * **Creation**: Creation: cargo-tracker の非機能要件を新規作成。反映の遅れを SLO に置き、Axon Server SE の停止を可用性の前提として明記し、イベントが削除できない前提で個人情報の削除要件を定めた。
