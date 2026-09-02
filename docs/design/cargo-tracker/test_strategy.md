@@ -4,7 +4,7 @@ title: "テスト戦略 - 国際貨物輸送管理システム（CQRS / Event So
 description: "CQRS / Event Sourcing 版 Cargo Tracker のテスト戦略。サービス内ピラミッド + サービス間ダイヤモンドのハイブリッド形で、集約・投影と Saga・契約・境界・E2E の 5 種を別々の検査として置き、それぞれが判別すること・しないことを明記する。"
 tags: [design,test-strategy,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T07:46:35Z }
+generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T12:45:54Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -15,12 +15,14 @@ verified:
 
 [CQRS / Event Sourcing のマイクロサービス](architecture_backend.md)（Axon Framework 5、7 サービス + Gateway）と React SPA のテスト戦略を定めます。
 
-Event Sourcing では「集約が正しい」と「画面に出る」のあいだに投影と Saga が挟まります。集約のユニットテストが全緑でも、投影が動かなければ一覧は空のままで、Saga が届かなければ追跡は始まりません。したがって本戦略は、**集約・投影・Saga・イベント契約・境界**の 5 種を別々の検査として置き、それぞれが何を判別し何を判別しないかを明記します。
+Event Sourcing では「集約が正しい」と「画面に出る」のあいだに投影と Saga が挟まります。集約のユニットテストが全緑でも、投影が動かなければ一覧は空のままで、Saga が届かなければ追跡は始まりません。したがって本戦略は、**集約・投影・Saga・イベント契約・境界・受け入れ（デモ項目）**の 6 種を別々の検査として置き、それぞれが何を判別し何を判別しないかを明記します。
 
 | 参照元 | 採るもの | 変えるもの |
 | :--- | :--- | :--- |
 | `tmp/take-4/docs/design/test_strategy.md` | Axon Test（`AxonTestFixture`）のレベル、Object Mother、CI 統合、Flaky 対策 | `subscribing` モードやプロファイル除外で投影を「テストから外す」構成をやめる |
 | `docs/article/source/java-3/docs/design/test_strategy.md` | ハイブリッド形（サービス内ピラミッド + サービス間ダイヤモンド）、品質ゲート、契約テストと往復テスト、Testcontainers、命名規則 | REST / RabbitMQ の契約を Axon のイベント・コマンド・クエリの契約に置き換える |
+
+**受け入れテスト（Cucumber）は参照元 2 つのどちらにもありません。** 本プロジェクトで足します。[開発戦略](../../development/cargo-tracker/development_strategy.md) が「デモ項目を受け入れ基準とし、緑でなければイテレーションをクローズしない」と定めた以上、デモ項目を実行できる形にする層が要ります。参照元は画面 E2E だけでその役を担わせていましたが、画面を触るたびに業務ルールの検査が巻き添えで落ちます。
 
 ## テスト形状の選択
 
@@ -47,10 +49,12 @@ rectangle "サービス内（各マイクロサービス）" {
   i1 -[hidden]down-> u1
 }
 rectangle "サービス間" {
-  rectangle "E2E：業務連鎖 1 本ずつ（20%）" as e2 #4CAF50
+  rectangle "E2E：画面の業務連鎖 1 本（10%）" as e2 #4CAF50
+  rectangle "受け入れ：デモ項目（Cucumber・API）（15%）" as a2 #8BC34A
   rectangle "契約 + 往復（Axon Server 経由）（50%）" as i2 #FFC107
-  rectangle "契約の形（ゴールデン JSON）・名簿（ArchUnit）（30%）" as u2 #1E88E5
-  e2 -[hidden]down-> i2
+  rectangle "契約の形（ゴールデン JSON）・名簿（ArchUnit）（25%）" as u2 #1E88E5
+  e2 -[hidden]down-> a2
+  a2 -[hidden]down-> i2
   i2 -[hidden]down-> u2
 }
 @enduml
@@ -209,11 +213,45 @@ class CargoProjectionIT {
 
 ArchUnit ルール自体のメタテストは、**実コードと同じ形のフィクスチャ**（Spring の stereotype、Axon のアノテーション、パッケージ構成を実サービスと同じにした違反例）で行います。「最小の違反例」だけだとメタテストが緑でも実コードの違反を見逃します（Flix IT2 の教訓）。
 
-### レベル 5：E2E（API / 画面）
+### レベル 5：受け入れテスト（Cucumber・API）
+
+**デモ項目をそのまま実行できる形にする層です。** 各 `iteration_plan-N.md` のデモ項目は「誰が・何を操作し・何が起きるか」で書かれているので、Gherkin の Feature にほぼそのまま写せます。イテレーションのクローズ判定（デモ項目テストが全緑）をここで自動化します。
+
+**なぜ画面 E2E と分けるか。** Playwright は画面の到達性・反映中・`409` の**見え方**を判別します。Cucumber は業務ルールと連鎖（通知していない予約は確定できない、通関済でないと引取できない、承認後の陸揚げまで追跡が閉じない）を判別します。壊れ方が違うので、画面を触るたびに業務ルールの検査が巻き添えで落ちる形にしません。画面 E2E はステージングでリリース前に回りますが、Cucumber は CI の Testcontainers で回るため、フィードバックも早くなります。
+
+| 項目 | 内容 |
+| :--- | :--- |
+| 実行対象 | `gatewayms` 経由の REST API。画面を通さない |
+| 実行環境 | Testcontainers（Axon Server（DCB 有効）+ PostgreSQL）+ 対象サービスの起動。デモ項目が複数サービスに跨るため、専用サブプロジェクト `apps/backend/acceptance-tests` に置く |
+| 記法 | Gherkin。`# language: ja` で日本語（`前提` / `もし` / `ならば` / `かつ`）。用語は [ドメインモデル設計](domain-model.md) のユビキタス言語に揃える |
+| 反映の待ち | `Awaitility` で投影の反映を待つ。**`sleep` を書かない。** 共通ステップ「`ならば N 秒以内に ...`」に閉じ、個々のシナリオに待ち方を書かせない |
+| 判別すること | 業務ルール、サービス越しの連鎖、拒否の理由（`409` / `422` の本文）、反映が起きること |
+| 判別しないこと | 画面の見え方、到達性、アクセシビリティ（レベル 6） |
+
+```gherkin
+# language: ja
+機能: 荷主の登録
+
+  シナリオ: 同じメールアドレスの荷主は要確認一覧に出る
+    前提 営業担当者 "sales01" でログインしている
+    かつ メールアドレス "shipper@example.com" の荷主 "山田商事" が登録されている
+    もし メールアドレス "shipper@example.com" で荷主 "山田商事（新）" を登録する
+    ならば 受付は成功する
+    かつ 5 秒以内に要確認一覧に "メールアドレスの重複" が 1 件現れる
+    かつ その要確認の担当ロールは "ROLE_SALES" である
+```
+
+**デモ項目と Feature は 1 対 1 に対応させます。** `iteration_plan-1.md` のデモ項目 #4 が `shipper-registration.feature` のシナリオ 1 本、という形です。対応は各イテレーション計画の完了条件に置き、**緑でなければイテレーションをクローズしません**。
+
+**追加した Feature は以降のすべての IT で回します。** 過去のデモ項目が壊れたら、それは新しい変更の責任です。IT が進むと Feature が積み上がるので、実行時間が 10 分を超えたらタグ（`@it1` `@it7`）で分割し、PR では変更に関わるサービスのタグだけ、マージ時は全件を回します。
+
+**失敗する側も書きます。** デモ項目が「拒否 → 成功」のペアで書かれているので、シナリオもその順で並べます。拒否のシナリオが無い Feature は、安全装置が働くことを検査していません。
+
+### レベル 6：E2E（画面）
 
 | 対象 | 方法 | 内容 |
 | :--- | :--- | :--- |
-| 業務連鎖 | Playwright（ステージング） | 予約 → 経路 → 通知 → 確定 → 追跡番号 → 荷役 → 引取 → 請求 → 入金 → 精算済 を 1 本。**反映待ちのヘルパ**（`waitForProjected(bookingId)`）を共有し、`sleep` を書かない |
+| 業務連鎖（画面） | Playwright（ステージング） | 予約 → 経路 → 通知 → 確定 → 追跡番号 → 荷役 → 引取 → 請求 → 入金 → 精算済 を **画面から** 1 本。業務ルールそのものはレベル 5（Cucumber）が判別済みなので、ここは**画面から通しで操作できること**だけを見る。**反映待ちのヘルパ**（`waitForProjected(bookingId)`）を共有し、`sleep` を書かない |
 | 到達性 | Playwright | ロール × 画面（サイドナビとダッシュボードから開けるか）、状態 × 操作（その状態のレコードからボタンが出て押せるか）、認証不要の入口（ログイン画面とポータルから公開追跡へ） |
 | 反映中 | Playwright | 登録直後の詳細で「反映中」が出て、`200` で消えること。30 秒で再読込ボタンに切り替わること（Event Processor を止めて確かめる） |
 | 409 | Playwright | 2 つのブラウザで同じ予約を開き、片方が「経路設計へ戻す」後にもう片方が「確定」を押して、`role="alert"` で「状態が変わっています」と直前の操作（誰が・いつ・何を）と押せる操作が出ること |
@@ -222,7 +260,7 @@ ArchUnit ルール自体のメタテストは、**実コードと同じ形のフ
 
 到達性 E2E のうち「ロール × サイドナビ」と「認証不要の入口」のサブセットを **PR マージ時のスモーク**として回します（`reachability-smoke.spec.ts`、5 分以内）。リリース直前まで残すと手戻りが大きいためです。
 
-### レベル 6：性能・復元演習
+### レベル 7：性能・復元演習
 
 `non_functional.md` の目標値に対応する検査です。CI では回さず、頻度と手段を固定します。定義しただけの目標は守られません。
 
@@ -267,6 +305,7 @@ ArchUnit ルール自体のメタテストは、**実コードと同じ形のフ
 | 契約（ゴールデン・名簿） | 失敗 0 | PR |
 | 統合（Testcontainers） | 失敗 0 | PR マージ |
 | 往復（Axon Server 経由・`contract-tests`） | 失敗 0。**`shared` を変更する PR は全サービスの往復を通す** | PR マージ |
+| **受け入れ（Cucumber・当該 IT のデモ項目）** | 失敗 0。**緑でなければイテレーションをクローズしない** | PR マージ |
 | 到達性スモーク E2E | 失敗 0 | PR マージ |
 | カバレッジ | 上表 | PR マージ |
 | `./gradlew build`（SpotBugs 含む） | 成功 | PR。**ローカルも同じコマンド** |
@@ -315,6 +354,7 @@ fork again
 end fork
 :統合（Testcontainers: Axon Server（DCB） + PostgreSQL）;
 :往復（contract-tests: 2 サービス + Axon Server）;
+:受け入れ（acceptance-tests: Cucumber + Testcontainers）;
 :到達性スモーク E2E;
 :./gradlew build（SpotBugs・JaCoCo 閾値）;
 if (main?) then (yes)
@@ -330,12 +370,15 @@ stop
 | :--- | :--- |
 | ユニット + Axon Test | 3 分以内（サービスごと） |
 | 統合 + 往復 | 10 分以内 |
+| 受け入れ（Cucumber） | 10 分以内。超えたらタグで分割する |
 | E2E | 15 分以内 |
 | 失敗時 | 赤の原因が一意に分かること。セキュリティ走査の導入失敗と検出を同じ赤にしない |
 
 ## トレーサビリティ
 
 受入基準は書き写さず、`user_story.md` の項番で引用します（「US18 §受入基準 4」は US18 の受入基準の 4 番目）。正典が変わっても本表は追随し、書き写した条件が古いまま「未達」を記録し続けることを防ぎます。
+
+受入基準からの追跡がこの表、**デモ項目からの追跡は `iteration_plan-N.md` のデモ項目 ↔ `.feature` のシナリオの 1 対 1 対応**（レベル 5）です。前者は「ストーリーが満たされたか」、後者は「イテレーションをクローズしてよいか」を見ます。
 
 | US | 引用する受入基準 | 主な検査 |
 | :--- | :--- | :--- |
@@ -380,6 +423,7 @@ stop
 | 統合 | `<対象>IT` | `CargoProjectionIT` |
 | 契約 | `<側><契約名>ContractTest`。側の接頭辞（`BookingSide` / `TrackingSide` / `HandlingSide` / `BillingSide` / `RoutingSide`）で赤の出所が一意に分かる | `BookingSideTrackingNumberIssuedContractTest`, `TrackingSideTrackingNumberIssuedContractTest` |
 | 往復 | `<契約名>RoundTripIT` | `HandlingActivityRegisteredRoundTripIT` |
+| 受け入れ | `<機能>.feature`（`acceptance-tests/src/test/resources/features/`）。ステップ定義は `<機能>Steps`。IT のタグ（`@it1`）を Feature に付ける | `shipper-registration.feature`, `ShipperRegistrationSteps` |
 | E2E | `<画面 or シナリオ>.spec.ts`。PR スモークは `-smoke` を付ける | `reachability.spec.ts`, `reachability-smoke.spec.ts`, `pending-projection.spec.ts` |
 
 ## 参照

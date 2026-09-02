@@ -4,7 +4,7 @@ title: "開発戦略 - 国際貨物輸送管理システム（CQRS / Event Sourc
 description: "CQRS / Event Sourcing 版 Cargo Tracker の開発戦略。15 イテレーションを序盤（アウトサイドイン）・中盤（インサイドアウト）・終盤（アウトサイドイン）の 3 局面に割り当て、共通の TDD サイクル・デモ項目を受け入れ基準とする方針・ウォーキングスケルトン・局面移行時の一貫性を定める。"
 tags: [plan,development-strategy,tdd,cqrs]
 status: draft
-generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T12:39:41Z }
+generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T12:46:24Z }
 ---
 
 # 開発戦略 - 国際貨物輸送管理システム（CQRS / Event Sourcing 版）
@@ -58,7 +58,7 @@ start
 :イベントを決める;
 :投影とクエリを作る;
 :画面をつなぐ;
-:デモ項目の E2E を足す;
+:デモ項目の Feature を足す（Cucumber）;
 
 |終盤 IT11-IT15（アウトサイドイン）|
 :業務シナリオの E2E を赤で置く;
@@ -102,7 +102,8 @@ stop
 | 統合（Testcontainers） | 投影・Saga・Reaction・Query | イベントから行への写し、冪等性、トークンの同一トランザクション、リプレイ | 画面での見え方 |
 | 契約（ゴールデン + 往復） | `shared/contract` | JSON の形（丸ごと一致）、両側が同じ 1 つを読むこと | 業務の正しさ |
 | 境界（ArchUnit・ソース走査） | パッケージ・名簿・設定 | 依存方向、契約の名簿、Processing Group の列挙 | 実行時の振る舞い |
-| E2E（Playwright） | 画面 | 到達性、反映中、409、デモ項目のシナリオ | 個々の不変条件 |
+| 受け入れ（Cucumber・API） | デモ項目 | 業務ルール、サービス越しの連鎖、拒否の理由 | 画面の見え方 |
+| E2E（Playwright） | 画面 | 到達性、反映中、409 の見え方 | 個々の不変条件、業務ルール |
 
 詳細は [テスト戦略](../../design/cargo-tracker/test_strategy.md) を正典とします。
 
@@ -115,6 +116,7 @@ stop
 | バックエンド | `./gradlew build`（SpotBugs・JaCoCo のレイヤー別閾値を含む） |
 | バックエンド（時刻） | `TZ=UTC ./gradlew test` |
 | フロントエンド | `npm run test`、`npx tsc -b`、`npm run build` |
+| 受け入れ | `./gradlew :acceptance-tests:test`（Cucumber + Testcontainers） |
 | E2E | Playwright |
 | ドキュメント | `npx gulp okf:check`、`mkdocs build` |
 
@@ -134,8 +136,9 @@ stop
 
 各 `iteration_plan-N.md` のデモ項目は、イテレーションレビューで実演するシナリオです。これを**そのままパスする受け入れテストに翻訳し、当該 IT の受け入れ基準とします**。
 
-- **序盤（IT1）**: まず E2E 基盤（Playwright）を立て、スモークを **Day 2 に赤で置きます**。ウォーキングスケルトンの成立を最後まで判定できない状態を作らないためです。IT1 のデモ項目は「ログインから荷主登録の縦切り」と「全ルートの到達性」が中心になります
-- **序盤（IT2・IT3）以降**: 各 IT のデモ項目を「操作の系列」に翻訳して E2E に足します
+- **翻訳先は 2 つ**です。業務ルールと連鎖は **Cucumber の Feature**（`# language: ja` の Gherkin、Gateway 経由の API）に、画面の到達性・反映中・`409` の見え方は **Playwright** に翻訳します。デモ項目 1 件が Feature のシナリオ 1 本に対応します（[テスト戦略](../../design/cargo-tracker/test_strategy.md) レベル 5）
+- **序盤（IT1）**: 受け入れ基盤（Cucumber + `acceptance-tests`）と E2E 基盤（Playwright）の両方を立て、**Day 2 に赤で置きます**。ウォーキングスケルトンの成立を最後まで判定できない状態を作らないためです
+- **序盤（IT2・IT3）以降**: 各 IT のデモ項目を「操作の系列」に翻訳して Feature に足します
 - **判定**: 当該 IT のデモ項目テストがすべて緑であることを DoD に含めます。**緑でなければイテレーションはクローズしません**
 - **回帰**: 追加したテストは以降のすべての IT で回します。過去のデモ項目が壊れたら、それは新しい変更の責任です
 
@@ -172,7 +175,7 @@ stop
 @startuml
 title 序盤：アウトサイドイン
 
-participant "E2E\n(Playwright)" as e2e
+participant "受け入れ / E2E\n(Cucumber / Playwright)" as e2e
 participant "画面" as ui
 participant "Controller" as ctrl
 participant "集約" as agg
@@ -203,7 +206,7 @@ e2e -> e2e : モックを実物に差し替え、Phase 1 の赤が緑になる
 
 ### 手順
 
-1. **E2E を赤で置く。** デモ項目のシナリオを Playwright に書く。この時点で必ず落ちる
+1. **受け入れの入口を赤で置く。** デモ項目の業務シナリオを Cucumber の Feature に、画面の到達性を Playwright に書く。どちらもこの時点で必ず落ちる
 2. **画面を先に作り、API の形を決める。** MSW でモックする。**モックは本物より甘くしない**（型・日付形式を OpenAPI に合わせ、`202` / `409` / `422` を返せるようにする）
 3. **入口から内側へ薄く貫通させる。** Controller → CommandGateway → 集約（最小）→ QueryGateway → 投影（スタブ）
 4. **集約の不変条件を `AxonTestFixture` で固定する。** ここで初めてドメインの判断を書く
@@ -279,7 +282,7 @@ ui -> e2e : デモ項目のシナリオを足す
 2. **集約のテストから書く。** Given にイベント列、When にコマンド、Then に発行イベントまたは例外。不変条件 1 つにつきテスト 1 つ。**壊して赤になることを確かめる**
 3. **イベントの形を決める。** イベントには判断の**結果**だけを載せ、判断材料を載せない。再生時に判断をやり直さないため
 4. **投影とクエリを Testcontainers で作る。** 冪等性（同一イベントの再配送）とトークンの同一トランザクションを一緒に確かめる
-5. **画面をつなぎ、デモ項目の E2E を足す。** 画面は投影が返す形に合わせる。投影に無い値を画面で作らない
+5. **画面をつなぎ、デモ項目の Feature（Cucumber）を足す。** 画面は投影が返す形に合わせる。投影に無い値を画面で作らない
 
 ### 完了条件
 
@@ -343,7 +346,7 @@ ui -> e2e : 連鎖が端から端まで通る
 
 ### 手順
 
-1. **業務シナリオの E2E を赤で置く。** 4 サービスの連鎖を 1 本のシナリオとして書く
+1. **業務シナリオの Feature を赤で置く。** 4 サービスの連鎖を Gherkin のシナリオ 1 本として書く（画面からの通しは Playwright で別に 1 本）
 2. **足りない契約を足す。** ゴールデン JSON を両側に置き、Axon Server 経由の往復テストを書く。契約が増えるときは名簿の ArchUnit が赤くなるので、ADR を起こして名簿を更新する
 3. **Saga または Reaction Handler で連鎖をつなぐ。** 補償の経路も 1 本ずつ書く。**失敗は「例外にしない」ではなく「イベントとして残す」**（要確認一覧に出る）
 4. **足りない不変条件だけ集約に足す。** 既存の集約を壊さない。追加した判断は「壊して赤」を確かめる

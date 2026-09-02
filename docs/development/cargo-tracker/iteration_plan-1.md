@@ -4,7 +4,7 @@ title: "イテレーション計画 1 - 基盤・認証・荷主登録"
 description: "IT1 の計画。Axon 5 のスパイク 7 項目・ビルドと kind 環境・品質ゲートの実配線・フロント基盤と全ルートのスケルトン・US26/US27/US02（荷主登録の縦切りと crypto-shredding）。デモ項目 7 件。"
 tags: [plan,iteration,cargo-tracker]
 status: draft
-generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T12:39:41Z }
+generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T12:45:54Z }
 ---
 
 # イテレーション 1 計画 - 基盤・認証・荷主登録
@@ -26,12 +26,12 @@ generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T12:39:41Z }
 1. **Axon 5 の未確定事項が実機で確定している。** [ADR-0001](../../adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) 決定 5 の 7 項目に答えが出て、ADR と設計文書が更新されている
 2. **ウォーキングスケルトンが通っている。** 荷主の登録が「画面 → Gateway → bookingms → Axon Server（Event Store）→ 投影 → Query → 画面」の順に流れ、E2E で緑になる
 3. **全ロールがログインでき、行ける画面と行けない画面が決まっている。** 全ルートのプレースホルダ画面とロール別ナビが揃い、到達性が E2E で固定されている
-4. **品質ゲートが実配線されている。** ArchUnit・JaCoCo のレイヤー別閾値・Testcontainers（Axon Server + PostgreSQL, DCB 有効）・契約のゴールデン・Playwright が CI で回る
+4. **品質ゲートが実配線されている。** ArchUnit・JaCoCo のレイヤー別閾値・Testcontainers（Axon Server + PostgreSQL, DCB 有効）・契約のゴールデン・受け入れ（Cucumber）・Playwright が CI で回る
 5. **個人情報が鍵で暗号化されている。** [ADR-0003](../../adr/cargo-tracker/0003-crypto-shredding-for-personal-data.md) の crypto-shredding が最初のイベント（`ShipperRegisteredEvent`）から効いている
 
 ### 成功基準
 
-- [ ] デモ項目 7 件の受け入れテストがすべて緑
+- [ ] デモ項目 7 件の受け入れテスト（Cucumber の Feature・画面の到達性は Playwright）がすべて緑
 - [ ] `./gradlew build` と `TZ=UTC ./gradlew test` が緑
 - [ ] フロントの `npm run test`・`npx tsc -b`・`npm run build` が緑
 - [ ] ADR-0001 決定 5 の 7 項目に結論が書かれ、外れた前提が設計文書に反映されている
@@ -117,9 +117,10 @@ US02 は縦切りの本体です。認証（US26）と基盤が通ってから�
 | 2.3 | JaCoCo のレイヤー別閾値（domain 90 / application 85 / infrastructure 70 / interfaces 60 / 全体 80）を `check` に紐付け | 2h | [ ] |
 | 2.4 | Testcontainers の基底クラス（Axon Server + PostgreSQL、DCB 有効） | 3h | [ ] |
 | 2.5 | 契約のゴールデン JSON の型（丸ごと一致 + 往復を分ける）と `contract-tests` サブプロジェクト | 3h | [ ] |
-| 2.6 | **E2E 基盤（Playwright）とスモーク 1 本を Day 2 に「赤で置く」** | 3h | [ ] |
-| 2.7 | CI（`./gradlew build`・`TZ=UTC ./gradlew test`・フロント・E2E・`gulp okf:check`） | 3h | [ ] |
-| | 小計 | 23h | |
+| 2.6 | **受け入れテスト基盤（Cucumber + `acceptance-tests` サブプロジェクト）**。`# language: ja` の Gherkin、Testcontainers（Axon Server（DCB）+ PostgreSQL）、`Awaitility` に閉じた「N 秒以内に」共通ステップ。**デモ項目 #3 の Feature を Day 2 に「赤で置く」** | 4h | [ ] |
+| 2.7 | **E2E 基盤（Playwright）と到達性スモーク 1 本を Day 2 に「赤で置く」** | 3h | [ ] |
+| 2.8 | CI（`./gradlew build`・`TZ=UTC ./gradlew test`・`:acceptance-tests:test`・フロント・E2E・`gulp okf:check`） | 3h | [ ] |
+| | 小計 | 27h | |
 
 #### 3. フロント基盤とスケルトン画面（SP 対象外）
 
@@ -141,7 +142,7 @@ IT1 は画面を伴う IT なので、マニュアルの更新をここで見積
 | :--- | :--- | :--: | :--: |
 | 7.1 | マニュアルの構成・執筆テンプレート・キャプチャ方針を決める（`creating-manual`） | 2h | [ ] |
 | 7.2 | 「ログインする」「ログアウトする」「荷主を登録する」「要確認一覧を確認する」の 4 節を執筆 | 4h | [ ] |
-| 7.3 | 画面キャプチャを Playwright（2.6 の基盤）で自動生成する仕組み | 3h | [ ] |
+| 7.3 | 画面キャプチャを Playwright（2.7 の基盤）で自動生成する仕組み | 3h | [ ] |
 | | 小計 | 9h | |
 
 #### 4. US26 システムにログインする（3 SP）
@@ -181,11 +182,11 @@ IT1 は画面を伴う IT なので、マニュアルの更新をここで見積
 | カテゴリ | SP | 理想時間 | 備考 |
 | :--- | :--: | :--: | :--- |
 | ユーザーストーリー（US26・US27・US02） | 9 | 46h | 1 SP ≒ 5.1h |
-| 基盤投資（0〜3） | — | 71h | SP 対象外。以降の IT で再利用する |
+| 基盤投資（0〜3） | — | 75h | SP 対象外。以降の IT で再利用する |
 | ユーザーマニュアル（7） | — | 9h | SP 対象外。画面を伴う IT では毎回計上する |
-| **合計** | **9** | **126h** | |
+| **合計** | **9** | **130h** | |
 
-**126h は 2 週間（10 営業日）に収まりません。** 1 日 12.6h の計算になります。基盤投資が本体の 2 倍以上ある IT1 の性質上これは避けられないので、**入りきらないときに何を落とすかを先に決めます**（下の「スコープを落とす順序」）。落とす判断は Day 5 の時点で行い、ふりかえりに理由を書きます。
+**130h は 2 週間（10 営業日）に収まりません。** 1 日 13h の計算になります。基盤投資が本体の 2 倍以上ある IT1 の性質上これは避けられないので、**入りきらないときに何を落とすかを先に決めます**（下の「スコープを落とす順序」）。落とす判断は Day 5 の時点で行い、ふりかえりに理由を書きます。
 
 #### スコープを落とす順序
 
@@ -207,9 +208,9 @@ IT1 は画面を伴う IT なので、マニュアルの更新をここで見積
 | 日 | タスク | アウトサイドインの位置づけ |
 | :--- | :--- | :--- |
 | Day 1 | 0. スパイク（7 項目）→ ADR と設計へ反映 | 着手前の不確実性の除去 |
-| Day 2 | 2.6 **E2E スモークを赤で置く**、2.1〜2.3 検査の土台 | Phase 1：受け入れの入口を先に作る |
+| Day 2 | 2.6 **デモ項目 #3 の Feature（Cucumber）** と 2.7 **E2E スモーク**を赤で置く、2.1〜2.3 検査の土台 | Phase 1：受け入れの入口を先に作る |
 | Day 3 | 1.1〜1.3 ビルドと環境（kind・Axon Server・PostgreSQL・Flyway） | Phase 1 |
-| Day 4 | 1.4〜1.5、2.4〜2.5、2.7 CI | Phase 1 |
+| Day 4 | 1.4〜1.5、2.4〜2.5、2.8 CI | Phase 1 |
 | Day 5 | 3.1〜3.3 フロント基盤とスケルトン画面（API はモック） | Phase 2：UI から API の契約を決める |
 
 ### Week 2
@@ -515,7 +516,7 @@ S02_ダッシュボード --> S403 : 権限のない画面を直打ち
 | スパイクで集約の登録 API が確定しない | 高 | `@EventSourced`（ADR-0008 の形）を既定として進める。それも動かなければ Mockito + `EventAppender` モックで代替し、「イベント列からの復元は判別しない」と検査の限界を明記する |
 | DCB の設定漏れで全サービスが起動しない | 高 | 1.4 の接続検査を Day 3 に置き、以降のタスクが止まらないようにする |
 | crypto-shredding が投影のリプレイと両立しない | 中 | 6.3 で個人情報列を NULL 許容にし、6.7 の統合テストで鍵破棄後のリプレイを確かめる |
-| 基盤投資 71h + マニュアル 9h が 2 週間に収まらない（合計 126h / 10 日） | **高** | Day 5 に進捗を確認し、「スコープを落とす順序」の上から IT2 の枠へ送る。**US02 の縦切りとスパイクは落とさない**。落とした分はふりかえりに理由とともに記録する |
+| 基盤投資 75h + マニュアル 9h が 2 週間に収まらない（合計 130h / 10 日） | **高** | Day 5 に進捗を確認し、「スコープを落とす順序」の上から IT2 の枠へ送る。**US02 の縦切りとスパイクは落とさない**。落とした分はふりかえりに理由とともに記録する |
 | Jackson 3 と Axon のシリアライザが噛み合わない | 中 | 0.2 のスパイクで先に確かめ、噛み合わなければ手動構成する（take-4 ADR-0009 と同じ経路） |
 
 ## 完了条件

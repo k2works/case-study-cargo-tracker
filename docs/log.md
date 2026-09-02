@@ -1,6 +1,11 @@
 # Docs Update Log
 
 ## 2026-09-02
+* **Update**: Update: バックエンドの受け入れテストに Cucumber を追加。テスト戦略にレベル 5（受け入れテスト・Cucumber / API）を新設し E2E を画面に絞る、技術スタックに Cucumber JVM 7.34 系と REST Assured を追加、ADR-0001 の include 検査に acceptance-tests を追加、開発戦略と IT1 計画のデモ項目の翻訳先を Cucumber と Playwright の 2 つに分けた。
+* **Update**: Update: バックエンドの受け入れテストに Cucumber を追加。テスト戦略にレベル 5（受け入れテスト・Cucumber / API）を新設し E2E を画面に絞る、技術スタックに Cucumber JVM 7.34 系と REST Assured を追加、ADR-0001 の include 検査に acceptance-tests を追加、開発戦略と IT1 計画のデモ項目の翻訳先を Cucumber と Playwright の 2 つに分けた。
+* **Update**: Update: バックエンドの受け入れテストに Cucumber を追加。テスト戦略にレベル 5（受け入れテスト・Cucumber / API）を新設し E2E を画面に絞る、技術スタックに Cucumber JVM 7.34 系と REST Assured を追加、ADR-0001 の include 検査に acceptance-tests を追加、開発戦略と IT1 計画のデモ項目の翻訳先を Cucumber と Playwright の 2 つに分けた。
+* **Update**: Update: バックエンドの受け入れテストに Cucumber を追加。テスト戦略にレベル 5（受け入れテスト・Cucumber / API）を新設し E2E を画面に絞る、技術スタックに Cucumber JVM 7.34 系と REST Assured を追加、ADR-0001 の include 検査に acceptance-tests を追加、開発戦略と IT1 計画のデモ項目の翻訳先を Cucumber と Playwright の 2 つに分けた。
+* **Update**: Update: バックエンドの受け入れテストに Cucumber を追加。テスト戦略にレベル 5（受け入れテスト・Cucumber / API）を新設し E2E を画面に絞る、技術スタックに Cucumber JVM 7.34 系と REST Assured を追加、ADR-0001 の include 検査に acceptance-tests を追加、開発戦略と IT1 計画のデモ項目の翻訳先を Cucumber と Playwright の 2 つに分けた。
 * **Update**: Update: IT1 の開始準備。イテレーション計画に設計 4 図・ストーリー詳細・ナビゲーション整合・ユーザーマニュアル・アクセシビリティの型を追加し、検証で見つかった salt 欠落を「設計への反映が必要な事項」として明記した。
 * **Update**: Update: IT1 の開始準備。イテレーション計画に設計 4 図・ストーリー詳細・ナビゲーション整合・ユーザーマニュアル・アクセシビリティの型を追加し、検証で見つかった salt 欠落を「設計への反映が必要な事項」として明記した。
 * **Update**: Update: IT1 の開始準備。イテレーション計画に設計 4 図・ストーリー詳細・ナビゲーション整合・ユーザーマニュアル・アクセシビリティの型を追加し、検証で見つかった salt 欠落を「設計への反映が必要な事項」として明記した。

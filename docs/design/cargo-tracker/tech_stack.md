@@ -4,7 +4,7 @@ title: "技術スタック - 国際貨物輸送管理システム（CQRS / Event
 description: "CQRS / Event Sourcing 版 Cargo Tracker の技術スタック一覧（調査時点 2026-09-02）。Java 25 / Spring Boot 4.1 / Axon Framework 5.3 / Axon Server 2026.0.4 / MyBatis / PostgreSQL 16 / React 19 と、IT1 スパイクで確認する事項、採用しないもの、バージョン管理方針。"
 tags: [design,tech-stack,axon,spring-boot,react]
 status: stable
-generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T07:46:35Z }
+generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T12:45:54Z }
 stale_after: 2026-12-01T00:00:00Z
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
@@ -93,7 +93,9 @@ verified:
 | Mockito | 5 系 | モック（ドメイン外の依存に限る） |
 | `axon-test` | Axon と同じ | `AxonTestFixture`（集約・Saga） |
 | Testcontainers | 1.20 以上 | PostgreSQL・Axon Server の起動 |
-| Awaitility | 4 系 | 投影の反映待ち |
+| Awaitility | 4 系 | 投影の反映待ち。受け入れテストの「N 秒以内に」ステップもこれに閉じる |
+| **Cucumber JVM** | **7.34 系** | 受け入れテスト（デモ項目の Gherkin 実行）。`cucumber-java`・`cucumber-junit-platform-engine`・`cucumber-spring` を**同一バージョンで揃える** |
+| REST Assured | 5 系 | 受け入れテストのステップ定義から Gateway 経由の REST を叩く |
 | ArchUnit | 1.4 以上 | レイヤー・共有カーネル・契約の名簿 |
 | JaCoCo | Gradle プラグイン | レイヤー別カバレッジ閾値 |
 | SpotBugs | Gradle プラグイン | `./gradlew build` に含める |
@@ -156,6 +158,7 @@ verified:
 | :--- | :--- |
 | 固定 | `libs.versions.toml` と `package.json` で完全一致のバージョンを固定。範囲指定をしない |
 | Axon 系の同期 | `axon-spring-boot-starter` / `axon-server-connector` / `axon-test` は必ず同じバージョン。RC と GA を混ぜない。Axon 5 系は minor でも API が動く（`@EventSourcedEntity` → `@EventSourced` の経緯）ため、版を上げるときは IT1 の確認事項 #1・#3・#4 を再実行する |
+| Cucumber 系の同期 | `cucumber-java` / `cucumber-junit-platform-engine` / `cucumber-spring` も同じバージョンで揃える。JUnit Platform 経由で動くので、JUnit 5 の版を上げるときは Cucumber の対応表を確認する |
 | Axon Server との整合 | Axon Framework の版を上げるときは Axon Server の互換表を確認。Axon Server の版上げは計画停止 |
 | 更新の頻度 | パッチは月次、マイナーは四半期、メジャーは ADR |
 | 脆弱性 | CI の走査で高深刻度が出たら 7 日以内に更新 |

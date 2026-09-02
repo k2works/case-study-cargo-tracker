@@ -4,7 +4,7 @@ title: "ADR-0001 CQRS / Event Sourcing を Axon Framework 5 でマイクロサ�
 description: "CQRS / Event Sourcing を Axon Framework 5 のマイクロサービスとして実装する決定。配置の形・ES の適用範囲・Axon 5 系 API の採用・サービス間の配送経路と、着手前スパイクで確定する事項。"
 tags: [adr]
 status: stable
-generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T07:46:35Z }
+generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T12:45:54Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -153,7 +153,7 @@ REST はクライアントから Gateway を通って各サービスに入る経
 
 | 決定 | 検査 |
 | :--- | :--- |
-| サービス分割 | `settings.gradle` の `include` から**テスト専用サブプロジェクト（`contract-tests`）を除いたもの**が上の 8 つと一致すること |
+| サービス分割 | `settings.gradle` の `include` から**テスト専用サブプロジェクト（`contract-tests`・`acceptance-tests`）を除いたもの**が上の 8 つと一致すること |
 | サービス間は Axon Server だけ | ビルド：各サービスの本番クラスパスに他サービスの成果物が無いこと。ArchUnit：`RestClient` / `RestTemplate` を `infrastructure/acl` で使わないこと |
 | 共有カーネルの範囲 | ArchUnit：`shared` に置けるパッケージの名簿（`domain/model`・`domain/auth`・`contract/*`・`infrastructure/axon`・`infrastructure/time`）を固定する |
 | 契約の名簿 | ArchUnit：送信・購読の引数型が `shared/contract` 以外のイベント・コマンド・クエリをサービス越しに使えば赤（契約イベント 11・コマンド 2・クエリ 1） |
