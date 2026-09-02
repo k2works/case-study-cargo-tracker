@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import datetime as dt
 import re
 import subprocess
@@ -184,9 +185,41 @@ class Report:
         self.warns.append(f"{path}: {msg}")
 
 
-def iter_md(root: Path):
+def load_ignore(root: Path):
+    """バンドルルートの .okfignore を読む。1 行 1 パターン、# 以降はコメント。
+
+    パターンは バンドル相対パスの前方一致（末尾 / でディレクトリ配下すべて）と
+    fnmatch のグロブの両方を受け付ける。
+    """
+    f = root / ".okfignore"
+    if not f.exists():
+        return []
+    pats = []
+    for line in f.read_text(encoding="utf-8").splitlines():
+        line = line.split("#", 1)[0].strip()
+        if line:
+            pats.append(line)
+    return pats
+
+
+def is_ignored(rel: str, patterns) -> bool:
+    for pat in patterns:
+        if pat.endswith("/"):
+            if rel.startswith(pat):
+                return True
+        elif rel == pat or fnmatch.fnmatch(rel, pat):
+            return True
+    return False
+
+
+def iter_md(root: Path, patterns=None):
+    if patterns is None:
+        patterns = load_ignore(root)
     for p in sorted(root.rglob("*.md")):
-        if any(part.startswith(".") for part in p.relative_to(root).parts):
+        rel = p.relative_to(root)
+        if any(part.startswith(".") for part in rel.parts):
+            continue
+        if is_ignored(rel.as_posix(), patterns):
             continue
         yield p
 
