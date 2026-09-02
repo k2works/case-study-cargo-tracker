@@ -1,0 +1,52 @@
+name: OKF Check
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/**'
+      - '.claude/skills/migrating-okf/scripts/**'
+      - 'ops/scripts/okf.js'
+      - 'gulpfile.js'
+      - 'package.json'
+      - '.github/workflows/docs-okf.yml'
+  pull_request:
+    paths:
+      - 'docs/**'
+      - '.claude/skills/migrating-okf/scripts/**'
+      - 'ops/scripts/okf.js'
+      - 'gulpfile.js'
+      - 'package.json'
+      - '.github/workflows/docs-okf.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: 知識バンドルの適合性検証
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js latest
+        uses: actions/setup-node@v4
+        with:
+          node-version: latest
+          cache: 'npm'
+
+      # okf_check.py は PEP 604 の型注釈（str | None）を使うため 3.10 以上が要る
+      - name: Use Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: npm install
+
+      # ERROR があれば非ゼロ終了する。WARN は仕様上の適合なので落とさない
+      - name: Check OKF conformance
+        run: npm run okf:check
