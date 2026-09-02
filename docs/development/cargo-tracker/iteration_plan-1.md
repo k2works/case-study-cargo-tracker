@@ -4,7 +4,7 @@ title: "イテレーション計画 1 - 基盤・認証・荷主登録"
 description: "IT1 の計画。Axon 5 のスパイク 7 項目・ビルドと kind 環境・品質ゲートの実配線・フロント基盤と全ルートのスケルトン・US26/US27/US02（荷主登録の縦切りと crypto-shredding）。デモ項目 7 件。"
 tags: [plan,iteration,cargo-tracker]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-02T16:00:06Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-02T16:06:21Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T12:47:29Z }
 ---
@@ -130,7 +130,7 @@ US02 は縦切りの本体です。認証（US26）と基盤が通ってから�
 | :--- | :--- | :--: | :--: |
 | 3.1 | Vite + React + TypeScript、`features/` のディレクトリ型、ESLint の `import/no-restricted-paths` | 3h | [x] |
 | 3.2 | 共通レイアウト（左サイドナビ + トップヘッダ）、認可ガード（`RequireRole`）、403 画面、ポータル（`/portal`）。**アクセシビリティの型**：送信中は `disabled` でなく `aria-disabled` でフォーカスを保つ、状態の変化は `role="status"`・エラーは `role="alert"`、反映中の経過秒数は live region の外、色トークンをコントラスト比つきで定義 | 6h | [~] レイアウト・認可ガード・403・到達性は完了。アクセシビリティの型（aria-disabled・role=status・色トークン）は 6.6 の画面と対で入れる |
-| 3.3 | [UI 設計](../../design/cargo-tracker/ui_design.md) の全ルートにプレースホルダ画面を置く。**ナビゲーション整合**：サイドナビ（ロール条件付き）とダッシュボード（S02）の「今日の作業」の両方に IT1 の実画面（S10・S11・S70）を出し、ロール × 画面の到達性を E2E で固定する | 6h | [ ] |
+| 3.3 | [UI 設計](../../design/cargo-tracker/ui_design.md) の全ルートにプレースホルダ画面を置く。**ナビゲーション整合**：サイドナビ（ロール条件付き）とダッシュボード（S02）の「今日の作業」の両方に IT1 の実画面（S10・S11・S70）を出し、ロール × 画面の到達性を E2E で固定する | 6h | [~] 画面とナビ・到達性は完了（Vitest で固定）。E2E は 2.7 と対で入れる |
 | 3.4 | API クライアント（`queryClient` / `commandClient`）、`202` を `pending` に変える `api/pending.ts`、`BusinessClock` に対応する日付ヘルパ | 3h | [ ] |
 | 3.5 | 認証ストア（Zustand + `sessionStorage`）、無操作 15/20 分（荷役画面は 60 分） | 2h | [~] ストアと sessionStorage は完了。無操作タイムアウトは US26 と対で入れる |
 | 3.6 | **設計への反映**：`ui_design.md` に S00・S03・S10・S11 の salt ワイヤーフレームを追加する（後述「設計への反映が必要な事項」） | 3h | [ ] |
@@ -175,7 +175,7 @@ IT1 は画面を伴う IT なので、マニュアルの更新をここで見積
 | 6.3 | 投影 `booking-shipper-projection` → `shipper` テーブル（個人情報列は NULL 許容）。`attention_item` テーブルと拒否の記録 | 4h | [x] |
 | 6.4 | `ExistsShipperEmailQuery` と `FindShipperQuery`（`@QueryHandler` + MyBatis）。一意性の三段（存在確認 + UNIQUE + `attention_item`） | 3h | [x] |
 | 6.5 | `ShipperController`（`POST /api/v1/booking/shippers`・`GET`）。`201` + 識別子、詳細は投影が無ければ `202` | 3h | [x] |
-| 6.6 | 荷主一覧（S10）・登録（S11）・要確認一覧（S70）の画面。「受け付けました」と反映中の案内 | 5h | [ ] |
+| 6.6 | 荷主一覧（S10）・登録（S11）・要確認一覧（S70）の画面。「受け付けました」と反映中の案内 | 5h | [x] |
 | 6.7 | 鍵の破棄 → リプレイ → 個人情報が消えることの統合テストと `gulp shipper:shred` の雛形 | 3h | [~] 雛形と鍵破棄の単体・Converter 検査は完了。実 Event Store からのリプレイ演習は残り |
 | | 小計 | 28h | |
 

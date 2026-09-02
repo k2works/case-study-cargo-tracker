@@ -3,6 +3,14 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 import reactHooks from 'eslint-plugin-react-hooks';
 import importPlugin from 'eslint-plugin-import';
+import fs from 'node:fs';
+
+// 機能ディレクトリを実際に読む。手で並べると、機能を足したときに
+// 書き忘れたものだけが検査されないまま残る。
+const FEATURES = fs
+  .readdirSync('./src/features', { withFileTypes: true })
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => entry.name);
 
 export default tseslint.config(
   { ignores: ['dist', 'node_modules', 'playwright-report', 'test-results'] },
@@ -26,12 +34,15 @@ export default tseslint.config(
         'error',
         {
           zones: [
-            {
-              target: './src/features',
+            // 機能どうしは直接 import しない。ただし同じ機能の中は自由。
+            // 一律に禁じると自分のファイルさえ読めなくなる。
+            ...FEATURES.map((feature) => ({
+              target: `./src/features/${feature}`,
               from: './src/features',
+              except: [`./${feature}`],
               message:
                 '機能どうしを直接 import しない。共通のものは src/shared に上げる',
-            },
+            })),
             {
               target: './src/shared',
               from: './src/features',
