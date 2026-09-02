@@ -1,6 +1,8 @@
 # Docs Update Log
 
 ## 2026-09-02
+* **Creation**: [エンタープライズ Java における実践的 DDD（draft-2）](/article/practical-ddd-in-enterprise-java/draft-2/index.md) の第 4 章「プロセスを越えるイベント — マイクロサービス版の Cargo Tracker」を執筆。参照元は新たに収録した `source/java-3`（`java/take-7`。8 サービス + 共有ライブラリ・RabbitMQ）。索引・アウトライン（§4〜§7）・第 3 章末尾の誘導もあわせて更新した。
+* **Creation**: 第 4 章の参照元として `docs/article/source/java-3/` を収録（実装 1,186 ファイル・一次資料 199 ファイル）。アウトライン §5 の着手条件「メッセージングを使う実装が `docs/article/source/` に収録されること」を満たすため。`source/README.md` に節を追加した。
 * **Creation**: [Docker/Kubernetes 実践コンテナ解説](/article/getting-start-docker-kubernetes/index.md) と [実践データベース設計](/article/practical-database-design/index.md) のシリーズ索引を新規作成。各章から張られていたリンク切れ 13 件を解消した。
 * **Migration**: 前回移行以降に追加された 104 件を OKF v0.2 に適合させた。記事 97 件（practical-ddd-spring-boot 23・ai-driven-development 15・xp-domain-driven-design 14・monolith-architecture 12・enterprise-architecture 12・practical-ddd-in-enterprise-java 11・functional-domain-modeling 10）に `type: Article` を、[ビジネスアーキテクチャ](/strategy/business_architecture.md)・[インセプションデッキ](/strategy/inception-deck.md) に `type: Strategy` を付与。requirements 4 件と review 1 件は Wiki.js 由来のフロントマター（`published`・`editor`・`date`）を OKF 形式に併合し、`type: Requirements` / `type: Review` を与えた。本文は変更していない。
 * **Update**: 検査・移行の対象外パスを宣言する `docs/.okfignore` を追加し、`article/source/` を除外した。mkdocs.yml の `exclude_docs` と対応する。配下は記事のサンプル実装ソースツリーで、入れ子の docs やサードパーティ由来の README を含むため知識バンドルの対象にしない。`okf_check.py` に `.okfignore` 対応を追加した。
