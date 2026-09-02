@@ -109,9 +109,11 @@ graph TD
 - タスク項目（リスト）の前には空行を入れる（Markdown Lint 準拠）
 - バッファ確保: フィーチャバッファ 30%、スケジュールバッファを必ず設定する
 - 感覚ではなく実績データに基づいて計画を調整する
+- `docs/` が OKF バンドルなら、作成・更新した `release_plan.md` / `iteration_plan-N.md` / `retrospective-N.md` に `apply-okf` を実行する（`apply docs --changed --by <agent>`）。計画は「生きた文書」として何度も更新されるので、`generated.at` が最終更新を正しく指していることが、古い計画を信頼しないための手掛かりになる
 
 ## 関連スキル
 
+- `apply-okf` — 計画・ふりかえり・報告書への OKF 規約適用
 - `creating-iteration-report` — イテレーション完了報告書の作成
 - `creating-release-report` — リリース完了報告書の作成
 - `syncing-github-project` — GitHub Project への同期

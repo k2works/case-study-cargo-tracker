@@ -112,6 +112,20 @@ KPT（Keep / Problem / Try）で振り返り、`docs/development/retrospective-N
 - `mkdocs.yml`: ふりかえり・完了報告書・新規レビュー・新規 ADR・マニュアルの新規章をナビゲーションに追加
 - 追加行のインデントが既存ナビと一致しているか確認する
 
+### ステップ 7.5: OKF 適用（`apply-okf`）
+
+`docs/` が OKF バンドルなら、クローズで生まれた・更新された文書に規約を適用する。クローズは 1 イテレーションで最も多くの文書が動く局面（計画の実績更新・ふりかえり・報告書・レビューレポート・ADR・マニュアル）なので、`--changed` でまとめて掛ける。
+
+```bash
+python .claude/skills/apply-okf/scripts/okf_apply.py apply docs --changed --by <agent>
+gulp okf:check
+```
+
+- `retrospective-N.md`・`iteration_report-N.md`・レビューレポートは新規 → `draft` で登録。ユーザーが報告書を承認したら `verify --by human:<id>`
+- `iteration_plan-N.md` は実績で本文が変わるので `generated` が更新される。計画自体は `stable` のまま残す（後継は報告書であり、計画は廃止ではない）
+- 置き換えた ADR や旧手順があれば `deprecate --replaced-by` で後継に繋ぐ
+- `gulp okf:check` が ERROR 0 であることを確認してからコミットする
+
 ### （任意）ステップ 8: ジャーナル（`creating-journal`）
 
 長いセッションや区切りとして、判断・詰まり・学びを `docs/journal/YYYYMMDD.md` に残すと、コミットログに載らない意思決定の経緯を追跡できる。
@@ -130,6 +144,7 @@ KPT（Keep / Problem / Try）で振り返り、`docs/development/retrospective-N
 - [ ] GitHub Issue クローズ・Project Status 更新
 - [ ] **ユーザーマニュアルが実装と一致**（UI 変更ありなら本文・キャプチャを更新／変更なしならその旨を報告書に記録）
 - [ ] `docs/index.md` / `docs/development/index.md` / `mkdocs.yml` 同期
+- [ ] OKF バンドルなら `apply-okf` を変更分に適用・報告書承認後に `verify`・`gulp okf:check` ERROR 0
 - [ ] 各ステップの成果を意味のある単位でコミット（`git-commit`）
 
 ## コミットの区切り
@@ -156,5 +171,6 @@ KPT（Keep / Problem / Try）で振り返り、`docs/development/retrospective-N
 - `syncing-github-project` — GitHub 同期（ステップ 6）
 - `creating-manual` — ユーザーマニュアルの更新・画面キャプチャ再生成（ステップ 6.5）
 - `operating-docs` — ドキュメントインデックス更新・Lint（ステップ 7）
+- `apply-okf` — クローズで動いた文書への OKF 規約適用（ステップ 7.5）
 - `creating-journal` — セッション記録（任意ステップ 8）
 - `git-commit` — 各ステップ成果のコミット

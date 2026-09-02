@@ -82,7 +82,17 @@ description: その日の Skill 実行と意思決定を物語形式で `docs/jo
 
 このセッション中のコミットを `git log --oneline` で抽出し、テーブル化する。フェーズ別に分けるとさらに読みやすい。
 
-### 6. コミット
+### 6. OKF バンドルに登録
+
+`docs/` が OKF バンドル（ルート `index.md` に `okf_version` がある）なら、`apply-okf` スキルでジャーナルにフロントマターを付ける。
+
+```bash
+python .claude/skills/apply-okf/scripts/okf_apply.py apply docs docs/journal/<today>.md --by <agent>
+```
+
+ジャーナルは本文をエージェントが書くので `--by` は `claude-code/<model>` のようなエージェント形式。`type` は `journal/` から `Journal` と推定される。追記の場合も本文が変わるので `generated.at` が更新される（これが「最後に書いた日時」を正しく表す）。`journal/index.md` へのエントリ追加と `log.md` への記録はスクリプトが行う。
+
+### 7. コミット
 
 ```text
 docs(journal): YYYY-MM-DD のセッション記録を追加
@@ -126,4 +136,5 @@ docs(journal): YYYY-MM-DD のジャーナルに <セクション名> を追記
 - `creating-iteration-report` — イテレーション完了時のフォーマル報告書 (ジャーナルとは別)
 - `creating-release-report` — リリース完了時のフォーマル報告書
 - `tracking-progress` — 進捗の定量分析
+- `apply-okf` — ジャーナルへの OKF フロントマター付与と `journal/index.md`・`log.md` 更新
 - `operating-docs` — ジャーナル追加後のインデックス更新 (`--update` で `docs/index.md` 同期)

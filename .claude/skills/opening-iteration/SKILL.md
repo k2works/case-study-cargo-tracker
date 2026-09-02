@@ -73,6 +73,19 @@ description: イテレーション（IT）を開発着手できる状態まで�
 - `mkdocs.yml`: イテレーション計画をナビゲーションに追加
 - 追加行のインデントが既存ナビと一致しているか確認する
 
+### ステップ 6.5: OKF 適用（`apply-okf`）
+
+`docs/` が OKF バンドル（ルート `index.md` に `okf_version`）なら、このフローで作成・更新した文書に規約を適用する。
+
+```bash
+python .claude/skills/apply-okf/scripts/okf_apply.py apply docs --changed --by <agent>
+gulp okf:check
+```
+
+- `iteration_plan-N.md` は新規なので `type: Plan`・`status: draft` で登録される。ステップ 3・4 の検証を通し、ユーザーが計画を承認したら `verify --by human:<id>` で `stable` に昇格させる（検証済みの計画だけが開発の根拠になる）
+- ステップ 1 で更新した前イテレーションの文書は本文が変わっているので `generated` が更新される
+- `gulp okf:check` が ERROR 0 であることを確認してからコミットする
+
 ## 開始準備完了チェックリスト
 
 すべて満たしたらイテレーションは開発着手可能な状態とみなす。
@@ -84,6 +97,7 @@ description: イテレーション（IT）を開発着手できる状態まで�
 - [ ] `validating-design` 実施・3 軸の不整合を修正（BC 独立性・設計反映漏れ含む）
 - [ ] GitHub Issue 確認・Project イテレーション割当
 - [ ] `docs/development/index.md` / `release_plan.md` / `mkdocs.yml` 同期
+- [ ] OKF バンドルなら `apply-okf` 適用・計画承認後に `verify`・`gulp okf:check` ERROR 0
 - [ ] 各ステップの成果を意味のある単位でコミット（`git-commit`）
 
 これらが揃ったら、`orchestrating-development` で開発フェーズ（TDD サイクル）に進む。
@@ -105,5 +119,6 @@ description: イテレーション（IT）を開発着手できる状態まで�
 - `validating-design` — 開発戦略・過去計画との横断整合検証（ステップ 4）
 - `syncing-github-project` — GitHub 同期（ステップ 5）
 - `operating-docs` — ドキュメントインデックス更新・Lint（ステップ 6）
+- `apply-okf` — 計画への OKF 規約適用と承認後の `verify`（ステップ 6.5）
 - `orchestrating-development` — 開始準備完了後の開発フェーズ
 - `git-commit` — 各ステップ成果のコミット

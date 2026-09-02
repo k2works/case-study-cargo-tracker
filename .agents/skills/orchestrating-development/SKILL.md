@@ -30,6 +30,8 @@ description: 開発フェーズ全体の TDD ワークフローをオーケス�
 | TODO 完了時（コードレビュー） | `developing-review` | TDD サイクルで TODO を完了するたびにコード品質・テスト品質・設計整合性をレビュー |
 | 受け入れ前（品質チェック） | `operating-qt` | SonarQube によるコード品質分析・Quality Gate 確認を実施し、品質基準を満たしていることを検証 |
 | イテレーション完了時（ユーザーレビュー） | `analyzing-review` | 受け入れフェーズでユーザー視点・プロダクト視点からの成果物レビュー |
+| 設計ドキュメント新規作成の直前 | `apply-docs-structure` | 開発中に設計ドキュメント・ADR を新規に書く前に配置先（プロジェクト別カテゴリの `<project>/` 配下）を判断する。配置を誤ると docs と apps のトレーサビリティが壊れ、後からの移動は索引・リンク・来歴すべての修正になる |
+| 設計ドキュメント更新時 | `apply-okf` | 開発中に `docs/design/` や ADR を更新したら OKF フロントマター（`generated`）と `log.md` を追従させる。実装で設計が変わったのに文書の来歴が古いままだと、次のイテレーションで古い設計を信頼してしまう |
 
 ## TDD サイクル
 
@@ -166,3 +168,5 @@ codex:codex-rescue に以下を委譲:
 - `analyzing-review` — 分析成果物のマルチパースペクティブレビュー（イテレーション完了時のユーザーレビュー）
 - `operating-qt` — コード品質管理（受け入れ前の SonarQube 品質チェック）
 - `developing-release` — リリースワークフロー（品質ゲート・バージョン管理・CHANGELOG）
+- `apply-docs-structure` — 設計ドキュメント・ADR を新規に書く直前の配置先判断（プロジェクト別カテゴリ）
+- `apply-okf` — 開発中に更新した設計ドキュメント・ADR への OKF 規約適用

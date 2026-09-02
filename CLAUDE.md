@@ -108,6 +108,9 @@
 | `creating-article` | 技術記事・連載シリーズの執筆（記事とサンプルコードの同期） |
 | `creating-release-report` | リリース完了報告書作成 |
 | `creating-iteration-report` | イテレーション完了報告書作成 |
+| `migrating-okf` | プロジェクトドキュメントの OKF 知識バンドルへの移行・仕様バージョンアップ・適合性検証 |
+| `apply-okf` | 文書の作成・更新・レビュー・廃止時に OKF 規約（フロントマター・verified・index/log）を適用 |
+| `apply-docs-structure` | ドキュメント構成ガイド（単一企業・統合戦略・複数プロジェクト）に基づく配置判断・新プロジェクトのディレクトリ一式作成・構成検証 |
 
 ### 学習
 

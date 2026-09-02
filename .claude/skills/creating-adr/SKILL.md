@@ -79,12 +79,14 @@ ADR の価値は「決定そのもの」ではなく「なぜその決定に至�
 1. `docs/adr/` ディレクトリ内の既存 ADR の最大番号を確認する
 2. 次の連番でテンプレートに基づいて ADR を作成する
 3. `docs/index.md` と `mkdocs.yml` を更新する
+4. `apply-okf` スキルで OKF バンドルに登録する（`docs/` が OKF バンドルの場合）。ADR 本文を自分が書いたので `--by` はエージェント、`status` は未レビューの `draft` になる。置換した旧 ADR があれば `deprecate --replaced-by adr/NNN-new.md` で `deprecated` にする
 
 ### 既存設計からの ADR 抽出
 
 1. アーキテクチャ設計ドキュメントを読み込む
 2. 主要な技術的意思決定を識別する
 3. 各決定を ADR として記録する
+4. 記録した ADR をまとめて `apply-okf` に掛ける（`apply docs --changed --by <agent>`）
 
 ## 途中から再開・更新
 
@@ -105,9 +107,11 @@ ADR の価値は「決定そのもの」ではなく「なぜその決定に至�
 - 配置場所は必ず `docs/adr/`。新規作成時は `docs/index.md` と `mkdocs.yml` も更新する
 - ユーザーの指示があるまでコミットしない
 - コンテキストの明確化・代替案の記録・影響の両面記載・コンプライアンス項目を必ず含める
+- ADR 本文の「ステータス」と OKF の `status` は別物。本文のステータス（提案中 / 承認済み / 廃止 / 置換）は意思決定の状態、フロントマターの `status`（draft / stable / deprecated）は文書の消費可否。承認されたら `apply-okf` の `verify --by human:<id>` で `stable` に昇格させ、置換・廃止されたら `deprecate` で `deprecated` にする
 
 ## 関連スキル
 
 - `analyzing-architecture` — アーキテクチャ設計（ADR の主な発生源）
 - `analyzing-tech-stack` — 技術スタック選定（ADR として記録すべき決定）
+- `apply-okf` — 作成・承認・置換した ADR を OKF バンドルに反映
 - `git-commit` — ADR 作成後のコミット
