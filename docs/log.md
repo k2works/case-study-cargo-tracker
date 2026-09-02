@@ -1,6 +1,7 @@
 # Docs Update Log
 
 ## 2026-09-02
+* **Creation**: Creation: cargo-tracker の非機能要件を新規作成。反映の遅れを SLO に置き、Axon Server SE の停止を可用性の前提として明記し、イベントが削除できない前提で個人情報の削除要件を定めた。
 * **Creation**: Creation: cargo-tracker のテスト戦略を新規作成。投影をプロファイルで除外せず Testcontainers の Axon Server で確かめ、契約は両側のゴールデン JSON と往復で守り、名簿は載っていないものを通さない形にした。
 * **Creation**: Creation: cargo-tracker の UI 設計を新規作成。反映中・楽観的更新・409 の扱いを画面共通の規約にし、要確認一覧（反映の拒否・失敗した Saga）を画面として置いた。
 * **Creation**: Creation: cargo-tracker のインフラストラクチャアーキテクチャを新規作成。Axon Server を無効化する開発環境（Heroku）は採らず、結合テストは Testcontainers とステージングで行う。

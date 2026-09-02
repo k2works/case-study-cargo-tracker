@@ -30,7 +30,7 @@ cargo-tracker プロジェクトの設計ドキュメントです。
 | ドキュメント | 概要 | 状況 |
 | :--- | :--- | :--- |
 | [テスト戦略](test_strategy.md) | ハイブリッド形。集約（AxonTestFixture）・投影と Saga（Testcontainers）・契約（ゴールデン JSON と往復）・境界（ArchUnit の名簿）・E2E（到達性と反映中）の 5 種と品質ゲート | 作成済み（draft） |
-| 非機能要件 | 性能、可用性、セキュリティ、保守性、拡張性を整理 | 未作成 |
+| [非機能要件](non_functional.md) | 反映の遅れの目標値、Axon Server SE の単一障害点を前提にした可用性、crypto-shredding による個人情報の削除、SLI / SLO / SLA、復元演習 | 作成済み（draft） |
 | 運用要件 | Event Store のバックアップ、リプレイ、監視、障害対応を整理 | 未作成 |
 
 ### その他
