@@ -4,7 +4,7 @@
 
 国際貨物輸送管理システム（Cargo Tracker）を題材に、**DDD の概念が Java と Spring のコードとしてどこに現れるか**を追うシリーズです。
 
-扱うのは 1 つの実装 —— `docs/article/source/java-2/` に収録された Spring Boot 実装です。**この実装は書籍『Practical Domain-Driven Design in Enterprise Java』の構造を実際に適用したもの**であり、設計ドキュメントは「Practical DDD in Enterprise Java (Chapter 3) のパッケージ構造に準拠する」と明記し、ADR は同書の `bookingms` を参照実装として名指ししています。
+主に扱うのは 1 つの実装 —— `docs/article/source/java-2/` に収録された Spring Boot 実装です（第 4 章のみ、プロセスを越える配送を扱うために別実装 `docs/article/source/java-3/` を引きます）。**この実装は書籍『Practical Domain-Driven Design in Enterprise Java』の構造を実際に適用したもの**であり、設計ドキュメントは「Practical DDD in Enterprise Java (Chapter 3) のパッケージ構造に準拠する」と明記し、ADR は同書の `bookingms` を参照実装として名指ししています。
 
 **したがって本シリーズは書籍の要約ではなく、適用した結果の報告です。** 報告である以上、次の 2 つを同じ比重で扱います。
 
@@ -18,6 +18,7 @@
 | [第 1 章](01-ddd-fundamentals.md) | ドメイン駆動設計 — 概念と、この実装での対応物 | DDD の語彙とパッケージ・型の対応表。**対応物が無いもの**（サガ・イベントストア・REST）の一覧 |
 | [第 2 章](02-cargo-domain-model.md) | Cargo Tracker のドメインモデル | 集約・識別子・値オブジェクト・ドメインサービス。**境界を分けて払った代金** |
 | [第 3 章](03-spring-modular-monolith.md) | Spring Platform 上のモジュラーモノリス | Spring 上の配置と、**境界を守っている検査**。結果整合の取りこぼしの扱い |
+| [第 4 章](04-spring-eda.md) | プロセスを越えるイベント — マイクロサービス版の Cargo Tracker | BC をプロセスに分けたときイベント駆動が**新しく要求するもの**。契約・到達・冪等・コミット順序と、それを守る検査 |
 
 ## 読む順序
 
@@ -28,14 +29,18 @@
 | DDD の語彙と実装の対応を先に押さえたい | [第 1 章](01-ddd-fundamentals.md) |
 | モデルの設計判断とその代償を見たい | [第 2 章](02-cargo-domain-model.md) |
 | Spring 上の配置と検査の実物を見たい | [第 3 章](03-spring-modular-monolith.md) |
+| プロセスを越えるイベント連携の実物を見たい | [第 4 章](04-spring-eda.md) |
 
 ## 参照元
 
 | 種別 | パス |
 | :--- | :--- |
-| 実装 | [`docs/article/source/java-2/apps/cargo-tracker/`](../../source/java-2/apps/cargo-tracker) |
-| 設計ドキュメント | [`docs/article/source/java-2/docs/design/`](../../source/java-2/docs/design) |
-| ADR（25 本） | [`docs/article/source/java-2/docs/adr/`](../../source/java-2/docs/adr) |
+| 実装（第 1〜3 章） | [`docs/article/source/java-2/apps/cargo-tracker/`](../../source/java-2/apps/cargo-tracker) |
+| 設計ドキュメント（第 1〜3 章） | [`docs/article/source/java-2/docs/design/`](../../source/java-2/docs/design) |
+| ADR（第 1〜3 章・25 本） | [`docs/article/source/java-2/docs/adr/`](../../source/java-2/docs/adr) |
+| 実装（第 4 章） | [`docs/article/source/java-3/apps/backend/`](../../source/java-3/apps/backend) |
+| 設計ドキュメント（第 4 章） | [`docs/article/source/java-3/docs/design/`](../../source/java-3/docs/design) |
+| ADR（第 4 章・32 本） | [`docs/article/source/java-3/docs/adr/`](../../source/java-3/docs/adr) |
 
 **記事中のコードはすべて上記の実ファイルから転記しています。** 本体を `{ ... }` で省略した引用はありません。設計ドキュメントからの引用と実コードからの引用は、記事中で区別して示しています。
 
@@ -47,17 +52,17 @@
 | 20 イテレーションの時系列 | [実践 DDD in Spring Boot](../../practical-ddd-spring-boot/index.md) が扱う |
 | XP プラクティスとモデルの関係 | [XP によるドメイン駆動設計の実践](../../xp-domain-driven-design/index.md) が扱う |
 | 多言語比較 | [モノリスアーキテクチャ実装比較](../../monolith-architecture/index.md) が扱う |
-| **Axon Framework / Event Sourcing** | **参照元実装に存在しない。** 構想で章を埋めることはしない |
+| **Axon Framework / Event Sourcing** | **どちらの参照元実装にも存在しない。** 構想で章を埋めることはしない |
 
 ## 現在の範囲
 
-**本稿は第 3 章までです。** 実装アプローチの比較（EDA・CQRS/ES）は、対応する実装を参照元に収録できた時点で扱います。
+**本稿は第 4 章までです。** 残りは、対応する実装を参照元に収録できた時点で扱います。
 
 | 章 | 状態 | 着手条件 |
 | :--- | :--- | :--- |
-| 第 4 章（EDA） | 保留 | メッセージングを使う実装の収録 |
-| 第 5 章（CQRS / Event Sourcing） | 保留 | Event Sourcing 実装の収録 |
-| 第 6 章（比較と選択指針） | 保留 | 第 4 章・第 5 章のいずれかの成立 |
+| 第 4 章（EDA） | **執筆済** | RabbitMQ で連携するマイクロサービス実装を `source/java-3/` に収録して成立 |
+| 第 5 章（CQRS / Event Sourcing） | 保留 | Event Sourcing 実装の収録。**java-3 にもイベントストアは無い** |
+| 第 6 章（比較と選択指針） | 保留 | 第 5 章の成立。第 4 章だけでは比較軸が 2 つに届かない |
 
 保留の理由は [アウトライン](outline.md) §5 に記録しています。
 
