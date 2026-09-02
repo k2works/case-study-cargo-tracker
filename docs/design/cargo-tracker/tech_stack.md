@@ -1,10 +1,10 @@
 ---
 type: Design
 title: "技術スタック - 国際貨物輸送管理システム（CQRS / Event Sourcing 版）"
-description: "CQRS / Event Sourcing 版 Cargo Tracker の技術スタック一覧（調査時点 2026-09-02）。Java 25 / Spring Boot 4.1 / Axon Framework 5.1.0-RC2 / Axon Server 2026.0.4 / MyBatis / PostgreSQL 16 / React 19 と、IT1 スパイクの結果、採用しないもの、バージョン管理方針。"
+description: "CQRS / Event Sourcing 版 Cargo Tracker の技術スタック一覧（調査時点 2026-09-02）。Java 25 / Spring Boot 4.0.6 / Axon Framework 5.1.0-RC2 / Axon Server 2026.0.4 / MyBatis / PostgreSQL 16 / React 19 と、IT1 スパイクの結果、採用しないもの、バージョン管理方針。"
 tags: [design,tech-stack,axon,spring-boot,react]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-02T13:43:02Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-02T15:57:22Z }
 stale_after: 2026-12-01T00:00:00Z
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
@@ -32,7 +32,7 @@ verified:
 | :--- | :--- | :--- |
 | 1 | **集約の登録 API**：`@EventSourcedEntity` 単独（Spring stereotype 無し）で集約が Command Bus に登録されるか | **登録されない**（`@EventSourcedEntity` が 5.1.0-RC2 に存在しない）。`@EventSourced(idType, tagKey)` を標準とし ArchUnit の許可リストに入れる。bootJar・実 Axon Server・`CommandGateway` のモック無しで、コマンド受理 → イベント保存 → 投影受信まで到達することを確認した |
 | 2 | starter・`axon-server-connector`・`axon-test` が **同じバージョン**で揃うこと | **5.3 系では揃わない。** connector は 5.0.0 と 5.1.0-RC2 しか公開されていない。コア 5.3.1 + connector 5.1.0-RC2 は `CommandBusConnector` / `QueryBusConnector` / `AxonServerConfigurationEnhancer` を解決できず Axon Server に接続できない（jar のリンク検査で実測）。**全 Axon を 5.1.0-RC2 に固定する** |
-| 3 | Spring Boot 4.1（Jackson 3 既定）で Axon の自動設定が働くこと | **Spring Boot 4.1.1 + Java 25 で起動する**が、`spring.main.allow-circular-references=true` と**明示的な `TokenStore` Bean** が必要（`TokenStore` が無いと `Could not find a mandatory TokenStore` で起動失敗）。`TransactionManager` の重複・`SpringTransactionManager` の第 3 引数・`token_entry.mask` は DB を伴う IT1 タスク 1.3 で確認する |
+| 3 | Spring Boot 4.1（Jackson 3 既定）で Axon の自動設定が働くこと | **Spring Boot 4.1.1 + Java 25 で起動する**（ただし後に Spring Cloud Gateway の都合で 4.0.6 に固定。タスク 4.4）が、`spring.main.allow-circular-references=true` と**明示的な `TokenStore` Bean** が必要（`TokenStore` が無いと `Could not find a mandatory TokenStore` で起動失敗）。`TransactionManager` の重複・`SpringTransactionManager` の第 3 引数・`token_entry.mask` は DB を伴う IT1 タスク 1.3 で確認する |
 | 4 | 起動時の接続検査が DCB 無効の context を赤にすること | **既定では赤にならない。** DCB 無効の context に繋ぐと `AXONIQ-1302 default: not found in any replication group` が出るが、**起動は止まらず無限に再接続を試み続ける**。設計が想定した `AXONIQ-2308` は 2026.0.4 では出ない。検査はログ検出でなく context への問い合わせで実装する（IT1 タスク 1.4） |
 | 5 | `AxonTestFixture.with(...)` の組み立て方 | **`AxonTestFixture.with(ApplicationConfigurer)`**。あわせて `axon-test` に `org.axonframework.test.server.AxonServerContainer`（Testcontainers）が同梱されていることが分かった。IT1 タスク 2.4 はこれを使う |
 | 6 | Saga のアノテーション名（5 系での名称） | **Axon 5 に Saga は無い。** 5.0.0・5.1.0-RC2・5.3.1 のどの jar にも `Saga`・`Deadline`・`@ProcessingGroup` を含むクラスが存在しない。調整役は Reaction Handler で実装する（ADR-0001 決定 6）。Processing Group は `axon.eventhandling.processors."[<パッケージ名>]"` のパッケージキーで指定する |
@@ -53,12 +53,12 @@ verified:
 
 | 技術 | バージョン | 用途 | サポート期限 | 選定理由 |
 | :--- | :--- | :--- | :--- | :--- |
-| Spring Boot | **4.1.1**（固定） | サービスの基盤 | OSS サポート 4.1 系は 2027 年前半（確認要） | Spring Framework 7、Jackson 3 既定。**全サービスで `spring.main.allow-circular-references=true` が必要**（Axon の `axon.axonserver` ConfigurationProperties が Bean 循環を作る。Boot 4.0.6 でも同じ。IT1 スパイク） |
+| Spring Boot | **4.0.6**（固定） | サービスの基盤 | OSS サポート 4.0 系は 2026 年後半（確認要） | Spring Framework 7、Jackson 3 既定。**版は Spring Cloud Gateway が決める**：Spring Cloud Gateway 5.0.x は Spring Boot 4.0.x にしか対応せず、4.1 では「not compatible with this Spring Cloud release train」で起動しない（IT1 タスク 4.4 で実測）。**全サービスで `spring.main.allow-circular-references=true` が必要**（Axon の `axon.axonserver` ConfigurationProperties が Bean 循環を作る。Boot 4.0.6 でも同じ。IT1 スパイク） |
 | **Axon Framework** | **5.1.0-RC2**（固定） | CQRS / Event Sourcing / 分散バス（**Saga は無い**） | コミュニティ | [ADR-0001](../../adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md)。5 系の Entity API（`@EntityCreator` / `EventAppender` / `@EventSourcingHandler`）。集約の登録は `@EventSourced(idType, tagKey)`（Spring stereotype。IT1 スパイクで実機確認済み）。**5.3 系は採らない**：`axon-server-connector` が 5.2 以降 Maven Central に無く、コアだけ上げると `CommandBusConnector` / `QueryBusConnector` を欠いて Axon Server に接続できない |
 | `axon-spring-boot-starter` | Axon と同じ | Spring Boot 統合 | — | `org.axonframework.extensions.spring`。`@EventSourced` はこの starter が提供する（`axon-spring`） |
 | `axon-server-connector` | Axon と同じ（5.1.0-RC2） | Axon Server への gRPC 接続 | — | **明示依存**。starter の推移的依存に含まれない（5.1・5.3 とも確認）。**この成果物が版の上限を決める**（公開は 5.0.0 と 5.1.0-RC2 のみ）。起動時に接続と **DCB context** を検査する（既定では DCB 無効でも起動が止まらず `AXONIQ-1302` で無限再試行する） |
 | **Axon Server** | **2026.0.4**（Standard Edition） | Event Store / Command Bus / Event Bus / Query Bus | AxonIQ | [ADR-0002](../../adr/cargo-tracker/0002-event-store-axon-server-and-postgresql-read-models.md)。Docker `axoniq/axonserver:2026.0.4`（SE / EE は同一イメージ、ライセンスの有無で切り替わる）。`AXONIQ_AXONSERVER_STANDALONE_DCB=true` が必須（クラスタは `dcb=true`） |
-| Spring Cloud Gateway | Spring Boot 4.1 対応版 | ルーティング・JWT 検証・CORS・レート制限 | — | `gatewayms` |
+| Spring Cloud Gateway | **5.0.1** | ルーティング・JWT 検証・CORS・レート制限 | — | `gatewayms`。成果物は `spring-cloud-starter-gateway-server-webmvc`。**この依存が Spring Boot の版の上限を決める**（5.0.x は Boot 4.0.x のみ。IT1 タスク 4.4 で実測） |
 | Spring Security | 7 系 | 認証・認可 | — | Spring Boot 4 と整合 |
 | jjwt | 0.12 系 | JWT 発行・検証 | — | `authms` と `shared` |
 | Jackson | 3 系（Spring Boot 4 同梱） | イベントのシリアライズ | — | Axon のシリアライザ。IT1 で Axon との整合を確認 |

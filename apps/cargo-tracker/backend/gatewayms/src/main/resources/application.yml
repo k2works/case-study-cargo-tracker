@@ -14,6 +14,26 @@ axon:
   axonserver:
     servers: ${AXON_SERVER:localhost:8124}
 
+spring.cloud.gateway.server.webmvc.routes:
+  - id: auth
+    uri: ${AUTHMS_URI:http://localhost:8081}
+    predicates: [Path=/api/v1/auth/**]
+  - id: booking
+    uri: ${BOOKINGMS_URI:http://localhost:8082}
+    predicates: [Path=/api/v1/booking/**]
+  - id: routing
+    uri: ${ROUTINGMS_URI:http://localhost:8083}
+    predicates: [Path=/api/v1/routing/**]
+  - id: tracking
+    uri: ${TRACKINGMS_URI:http://localhost:8084}
+    predicates: [Path=/api/v1/tracking/**]
+  - id: handling
+    uri: ${HANDLINGMS_URI:http://localhost:8085}
+    predicates: [Path=/api/v1/handling/**]
+  - id: billing
+    uri: ${BILLINGMS_URI:http://localhost:8086}
+    predicates: [Path=/api/v1/billing/**]
+
 management:
   endpoints:
     web:
