@@ -34,7 +34,7 @@
   "homepage": "https://github.com/k2works/case-study-cargo-tracker#readme",
   "type": "module",
   "dependencies": {
-    "@k2works/claude-code-booster": "^4.17.0",
+    "@k2works/claude-code-booster": "^5.1.0",
     "dotenv": "^17.2.3",
     "gulp": "^5.0.0"
   }
