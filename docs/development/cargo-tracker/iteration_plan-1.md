@@ -4,7 +4,7 @@ title: "イテレーション計画 1 - 基盤・認証・荷主登録"
 description: "IT1 の計画。Axon 5 のスパイク 7 項目・ビルドと kind 環境・品質ゲートの実配線・フロント基盤と全ルートのスケルトン・US26/US27/US02（荷主登録の縦切りと crypto-shredding）。デモ項目 7 件。"
 tags: [plan,iteration,cargo-tracker]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-02T14:59:51Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-02T15:01:33Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T12:47:29Z }
 ---
@@ -107,7 +107,7 @@ US02 は縦切りの本体です。認証（US26）と基盤が通ってから�
 | 1.2 | kind + Kustomize（`ops/k8s/base/axonserver/`・`postgres/`・各サービス）。Axon Server は `AXONIQ_AXONSERVER_STANDALONE_DCB=true` | 6h | [ ] |
 | 1.3 | PostgreSQL の 6 DB と接続ユーザー、各サービスの Flyway（`V001__create_axon_tables.sql` を含む） | 3h | [x] |
 | 1.4 | 起動時の接続検査（Axon Server に繋がること・context が DCB であること。失敗したら起動を止める） | 2h | [x] |
-| 1.5 | 運用スクリプトの雛形（`gulp ops:health`・`projection:status`） | 2h | [ ] |
+| 1.5 | 運用スクリプトの雛形（`gulp ops:health`・`projection:status`） | 2h | [x] |
 | | 小計 | 17h | |
 
 #### 2. 品質ゲートの実配線（SP 対象外）
@@ -176,7 +176,7 @@ IT1 は画面を伴う IT なので、マニュアルの更新をここで見積
 | 6.4 | `ExistsShipperEmailQuery` と `FindShipperQuery`（`@QueryHandler` + MyBatis）。一意性の三段（存在確認 + UNIQUE + `attention_item`） | 3h | [x] |
 | 6.5 | `ShipperController`（`POST /api/v1/booking/shippers`・`GET`）。`201` + 識別子、詳細は投影が無ければ `202` | 3h | [x] |
 | 6.6 | 荷主一覧（S10）・登録（S11）・要確認一覧（S70）の画面。「受け付けました」と反映中の案内 | 5h | [ ] |
-| 6.7 | 鍵の破棄 → リプレイ → 個人情報が消えることの統合テストと `gulp shipper:shred` の雛形 | 3h | [ ] |
+| 6.7 | 鍵の破棄 → リプレイ → 個人情報が消えることの統合テストと `gulp shipper:shred` の雛形 | 3h | [~] 雛形と鍵破棄の単体・Converter 検査は完了。実 Event Store からのリプレイ演習は残り |
 | | 小計 | 28h | |
 
 ### タスク合計

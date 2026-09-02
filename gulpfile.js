@@ -13,6 +13,7 @@ import vaultTasks from './ops/scripts/vault.js';
 import sshTasks from './ops/scripts/ssh.js';
 import sonarLocalTasks from './ops/scripts/sonar_local.js';
 import okfTasks from './ops/scripts/okf.js';
+import cargoTrackerTasks from './ops/scripts/cargo_tracker.js';
 
 // Load gulp tasks from script modules
 mkdocsTasks(gulp);
@@ -22,6 +23,7 @@ vaultTasks(gulp);
 sshTasks(gulp);
 sonarLocalTasks(gulp);
 okfTasks(gulp);
+cargoTrackerTasks(gulp);
 
 export const spec = gulp.series('mkdocs:serve', 'mkdocs:open');
 
