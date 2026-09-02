@@ -14,5 +14,5 @@ dependencies {
     implementation(libs.bundles.axon)
 
     testImplementation(libs.axon.test)
-    testImplementation(libs.archunit.junit5)
+    testImplementation(testFixtures(project(":shared")))
 }

@@ -4,7 +4,7 @@ title: "イテレーション計画 1 - 基盤・認証・荷主登録"
 description: "IT1 の計画。Axon 5 のスパイク 7 項目・ビルドと kind 環境・品質ゲートの実配線・フロント基盤と全ルートのスケルトン・US26/US27/US02（荷主登録の縦切りと crypto-shredding）。デモ項目 7 件。"
 tags: [plan,iteration,cargo-tracker]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-02T13:50:48Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-02T13:59:09Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T12:47:29Z }
 ---
@@ -114,8 +114,8 @@ US02 は縦切りの本体です。認証（US26）と基盤が通ってから�
 
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | :--: | :--: |
-| 2.1 | ArchUnit を `shared` の testFixtures に置き全サービスへ適用。**未適用のサービスがあること自体を落とすメタテスト**を含む | 4h | [ ] |
-| 2.2 | ルールの実装：レイヤー依存・共有カーネルの範囲・`CommandGateway` の許可箇所（`interfaces`・`application/saga`・`application/reaction`）・契約の名簿（送信/購読の引数型が `shared/contract` 以外なら赤）・`BusinessClock`（`Clock.systemUTC()` 直呼び禁止）。**違反フィクスチャは実コードと同じ形**で書き、ルールが赤を出すことを確かめる | 5h | [ ] |
+| 2.1 | ArchUnit を `shared` の testFixtures に置き全サービスへ適用。**未適用のサービスがあること自体を落とすメタテスト**を含む | 4h | [x] |
+| 2.2 | ルールの実装：レイヤー依存・共有カーネルの範囲・`CommandGateway` の許可箇所（`interfaces`・`application/saga`・`application/reaction`）・契約の名簿（送信/購読の引数型が `shared/contract` 以外なら赤）・`BusinessClock`（`Clock.systemUTC()` 直呼び禁止）。**違反フィクスチャは実コードと同じ形**で書き、ルールが赤を出すことを確かめる | 5h | [x] |
 | 2.3 | JaCoCo のレイヤー別閾値（domain 90 / application 85 / infrastructure 70 / interfaces 60 / 全体 80）を `check` に紐付け | 2h | [ ] |
 | 2.4 | Testcontainers の基底クラス（Axon Server + PostgreSQL、DCB 有効） | 3h | [ ] |
 | 2.5 | 契約のゴールデン JSON の型（丸ごと一致 + 往復を分ける）と `contract-tests` サブプロジェクト | 3h | [ ] |
