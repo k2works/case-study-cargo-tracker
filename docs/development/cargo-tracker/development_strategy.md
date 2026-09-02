@@ -3,8 +3,10 @@ type: Plan
 title: "開発戦略 - 国際貨物輸送管理システム（CQRS / Event Sourcing 版）"
 description: "CQRS / Event Sourcing 版 Cargo Tracker の開発戦略。15 イテレーションを序盤（アウトサイドイン）・中盤（インサイドアウト）・終盤（アウトサイドイン）の 3 局面に割り当て、共通の TDD サイクル・デモ項目を受け入れ基準とする方針・ウォーキングスケルトン・局面移行時の一貫性を定める。"
 tags: [plan,development-strategy,tdd,cqrs]
-status: draft
+status: stable
 generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T12:46:24Z }
+verified:
+  - { by: human:kakimomokuri, at: 2026-09-02T12:47:29Z }
 ---
 
 # 開発戦略 - 国際貨物輸送管理システム（CQRS / Event Sourcing 版）

@@ -1,6 +1,12 @@
 # Docs Update Log
 
 ## 2026-09-02
+* **Verification**: [iteration_plan-1](/development/cargo-tracker/iteration_plan-1.md) を human:kakimomokuri が検証
+* **Verification**: [development_strategy](/development/cargo-tracker/development_strategy.md) を human:kakimomokuri が検証
+* **Verification**: [release_plan](/development/cargo-tracker/release_plan.md) を human:kakimomokuri が検証
+* **Verification**: [0001-cqrs-es-with-axon-in-microservices](/adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) を human:kakimomokuri が検証
+* **Verification**: [tech_stack](/design/cargo-tracker/tech_stack.md) を human:kakimomokuri が検証
+* **Verification**: [test_strategy](/design/cargo-tracker/test_strategy.md) を human:kakimomokuri が検証
 * **Update**: Update: バックエンドの受け入れテストに Cucumber を追加。テスト戦略にレベル 5（受け入れテスト・Cucumber / API）を新設し E2E を画面に絞る、技術スタックに Cucumber JVM 7.34 系と REST Assured を追加、ADR-0001 の include 検査に acceptance-tests を追加、開発戦略と IT1 計画のデモ項目の翻訳先を Cucumber と Playwright の 2 つに分けた。
 * **Update**: Update: バックエンドの受け入れテストに Cucumber を追加。テスト戦略にレベル 5（受け入れテスト・Cucumber / API）を新設し E2E を画面に絞る、技術スタックに Cucumber JVM 7.34 系と REST Assured を追加、ADR-0001 の include 検査に acceptance-tests を追加、開発戦略と IT1 計画のデモ項目の翻訳先を Cucumber と Playwright の 2 つに分けた。
 * **Update**: Update: バックエンドの受け入れテストに Cucumber を追加。テスト戦略にレベル 5（受け入れテスト・Cucumber / API）を新設し E2E を画面に絞る、技術スタックに Cucumber JVM 7.34 系と REST Assured を追加、ADR-0001 の include 検査に acceptance-tests を追加、開発戦略と IT1 計画のデモ項目の翻訳先を Cucumber と Playwright の 2 つに分けた。

@@ -8,6 +8,7 @@ generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T12:45:54Z }
 stale_after: 2026-12-01T00:00:00Z
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
+  - { by: human:kakimomokuri, at: 2026-09-02T12:47:29Z }
 ---
 
 # 技術スタック - 国際貨物輸送管理システム（CQRS / Event Sourcing 版）

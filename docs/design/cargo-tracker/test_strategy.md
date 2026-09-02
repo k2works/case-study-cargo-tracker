@@ -7,6 +7,7 @@ status: stable
 generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T12:45:54Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
+  - { by: human:kakimomokuri, at: 2026-09-02T12:47:29Z }
 ---
 
 # テスト戦略 - 国際貨物輸送管理システム（CQRS / Event Sourcing 版）

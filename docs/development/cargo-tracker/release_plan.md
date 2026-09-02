@@ -3,8 +3,10 @@ type: Plan
 title: "リリース計画 - 国際貨物輸送管理システム（CQRS / Event Sourcing 版）"
 description: "CQRS / Event Sourcing 版 Cargo Tracker のリリース計画。US01〜US31 を 15 イテレーション・5 リリース（120 SP）に配分し、ストーリーポイント・ベロシティ・バッファ・順序の根拠・リスクを定める。"
 tags: [plan,release,cargo-tracker]
-status: draft
+status: stable
 generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T12:39:41Z }
+verified:
+  - { by: human:kakimomokuri, at: 2026-09-02T12:47:29Z }
 ---
 
 # リリース計画 - 国際貨物輸送管理システム（CQRS / Event Sourcing 版）
