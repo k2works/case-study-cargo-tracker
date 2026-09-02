@@ -80,6 +80,7 @@ nav:
           - 概要: design/cargo-tracker/index.md
           - バックエンドアーキテクチャ: design/cargo-tracker/architecture_backend.md
           - ドメインモデル設計: design/cargo-tracker/domain-model.md
+          - データモデル設計: design/cargo-tracker/data-model.md
   - 開発:
       - 概要: development/index.md
   - 運用:

@@ -6,7 +6,7 @@
 
 | プロジェクト | 概要 | 状況 |
 | :--- | :--- | :--- |
-| [cargo-tracker](./cargo-tracker/index.md) | 国際貨物輸送管理システム。Axon Framework 5 による CQRS / Event Sourcing 版 | バックエンドアーキテクチャ・ドメインモデル作成済み |
+| [cargo-tracker](./cargo-tracker/index.md) | 国際貨物輸送管理システム。Axon Framework 5 による CQRS / Event Sourcing 版 | バックエンドアーキテクチャ・ドメインモデル・データモデル作成済み |
 
 ## ドキュメント一覧（旧・プロジェクト別に移行済み）
 
