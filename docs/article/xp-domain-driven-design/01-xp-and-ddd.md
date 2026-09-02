@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 1 章：XP と DDD をなぜ一緒に語るのか"
+description: "DDD にはモデルを動かす力が無いという出発点と、XP のプラクティスで補うという本シリーズの立て方。"
+tags: [article, xp-domain-driven-design]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-13T03:38:12Z }
+---
+
 # 第 1 章：XP と DDD をなぜ一緒に語るのか
 
 | 項目 | 内容 |

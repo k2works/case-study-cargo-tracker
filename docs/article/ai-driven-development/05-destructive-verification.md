@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 5 章：TDD と「破壊検証」"
+description: "実装をわざと壊してテストが赤くなるか確かめる破壊検証を TDD に足し、空振りする安全装置を炙り出す規律。"
+tags: [article, ai-driven-development]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-13T00:31:01Z }
+---
+
 # 第 5 章：TDD と「破壊検証」
 
 ## 解こうとした問題

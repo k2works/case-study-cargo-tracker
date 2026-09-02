@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 3 章：IT2 貨物予約と特殊貨物"
+description: "IT2。貨物予約と特殊貨物を題材に、条件付き必須を和型へ昇格させコンテキスト境界を型で守る。"
+tags: [article, functional-domain-modeling]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-06T02:33:18Z }
+---
+
 # 第 3 章：IT2 貨物予約と特殊貨物
 
 ## このイテレーションのゴール

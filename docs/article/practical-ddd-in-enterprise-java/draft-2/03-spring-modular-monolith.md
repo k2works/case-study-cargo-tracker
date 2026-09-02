@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 3 章：Spring Platform 上のモジュラーモノリス"
+description: "Spring 上のモジュラーモノリスとして、パッケージ構成の正典と実際・ドメインモデル・アプリケーションサービス・読み取り側を示す。"
+tags: [article, practical-ddd-in-enterprise-java]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-27T09:30:34Z }
+---
+
 # 第 3 章：Spring Platform 上のモジュラーモノリス
 
 前章までで、Cargo Tracker の業務をどう分割し、どの型に何を置いたかを見ました。この章はそれを **Spring Boot のコードとして配置する**話です。

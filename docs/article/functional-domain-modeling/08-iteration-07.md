@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 8 章：IT7 料金算出と精算"
+description: "IT7。料金算出と精算。金額と支払状態を型で守り、コンテキストをまたぐ精算ワークフローを組む。"
+tags: [article, functional-domain-modeling]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-06T02:33:18Z }
+---
+
 # 第 8 章：IT7 料金算出と精算
 
 ## このイテレーションのゴール

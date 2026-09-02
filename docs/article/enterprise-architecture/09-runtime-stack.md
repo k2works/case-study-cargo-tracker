@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 9 章：ランタイムスタックと環境戦略"
+description: "ランタイムスタックと環境戦略。SSR + htmx の画面、用途別 3 種の DB、設計（AWS）と実配備（Heroku）の差。"
+tags: [article, enterprise-architecture]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-14T09:07:33Z }
+---
+
 # 第 9 章：ランタイムスタックと環境戦略
 
 | 項目 | 内容 |

@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 9 章：IT8 引取記録・追跡照会・状態手動更新"
+description: "IT8。引取記録・追跡照会・状態手動更新を Java と他 9 言語で比較する。"
+tags: [article, monolith-architecture]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-06T01:40:03Z }
+---
+
 # 第 9 章：IT8 引取記録・追跡照会・状態手動更新
 
 ## このイテレーションのゴール

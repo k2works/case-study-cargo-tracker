@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 18 章：IT17 数え上げた負債を返す"
+description: "IT17。数え上げた技術的負債を返す回と、そこでの DDD の観点・設計判断。"
+tags: [article, practical-ddd-spring-boot]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-19T10:33:55Z }
+---
+
 # 第 18 章：IT17 数え上げた負債を返す
 
 ## このイテレーションのゴール

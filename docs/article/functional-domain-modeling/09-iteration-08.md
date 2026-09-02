@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 9 章：IT8 実務品質への引き上げ"
+description: "IT8。外部契約・通知・起動権限・アーキテクチャ維持という、型で守れない 4 領域への対処。"
+tags: [article, functional-domain-modeling]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-06T02:33:18Z }
+---
+
 # 第 9 章：IT8 実務品質への引き上げ
 
 ## このイテレーションのゴール

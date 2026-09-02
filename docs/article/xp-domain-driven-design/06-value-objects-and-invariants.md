@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 6 章：値オブジェクトと不変条件"
+description: "値オブジェクトに不変条件を閉じ込める進め方を、識別子と金額の 2 例で辿る。"
+tags: [article, xp-domain-driven-design]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-13T02:08:22Z }
+---
+
 # 第 6 章：値オブジェクトと不変条件
 
 | 項目 | 内容 |

@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 10 章：設計ドキュメントを実行可能にする"
+description: "設計ドキュメントの記述を実行可能な検査に落とす方法と、その検査が開発の邪魔にならなかったか。"
+tags: [article, xp-domain-driven-design]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-13T02:17:02Z }
+---
+
 # 第 10 章：設計ドキュメントを実行可能にする
 
 | 項目 | 内容 |

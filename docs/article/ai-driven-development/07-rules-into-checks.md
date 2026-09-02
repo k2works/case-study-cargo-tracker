@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 7 章：規則を検査に落とす"
+description: "ADR や設計ドキュメントで宣言した規則を自動検査に落とさなければ守られないという、本シリーズ最頻の失敗。"
+tags: [article, ai-driven-development]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-13T00:31:01Z }
+---
+
 # 第 7 章：規則を検査に落とす
 
 ## 解こうとした問題

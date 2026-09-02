@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 5 章：Spring Platform × CQRS/ES（Axon）"
+description: "Axon Framework によるイベントソーシングと CQRS で Cargo Tracker を構成する（draft-1）。"
+tags: [article, practical-ddd-in-enterprise-java]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-27T08:25:38Z }
+---
+
 # 第 5 章：Spring Platform × CQRS/ES（Axon）
 
 この章では、Cargo Tracker を CQRS/ES（Axon）として再構成する観点を整理します。  

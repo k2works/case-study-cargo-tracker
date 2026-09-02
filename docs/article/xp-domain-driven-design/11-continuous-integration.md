@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 11 章：継続的インテグレーションが暴いたもの"
+description: "継続的インテグレーションがローカルの緑では見えなかった何を暴いたか。"
+tags: [article, xp-domain-driven-design]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-13T02:17:02Z }
+---
+
 # 第 11 章：継続的インテグレーションが暴いたもの
 
 | 項目 | 内容 |

@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 7 章：リファクタリングでモデルが割れる"
+description: "リファクタリングでモデルが割れるときに失うものと、その代償を検査で返す方法。"
+tags: [article, xp-domain-driven-design]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-13T02:17:02Z }
+---
+
 # 第 7 章：リファクタリングでモデルが割れる
 
 | 項目 | 内容 |

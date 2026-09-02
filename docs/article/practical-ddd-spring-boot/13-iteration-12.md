@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 13 章：IT12 引取確認コードと引取記録の訂正"
+description: "IT12。引取確認コードと引取記録の訂正の実装と、そこでの DDD の観点・設計判断。"
+tags: [article, practical-ddd-spring-boot]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-19T09:02:41Z }
+---
+
 # 第 13 章：IT12 引取確認コードと引取記録の訂正
 
 ## このイテレーションのゴール

@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 10 章：IT9 荷主セルフサービスと特殊貨物"
+description: "IT9。荷主セルフサービスと特殊貨物の実装と、そこでの DDD の観点・設計判断。"
+tags: [article, practical-ddd-spring-boot]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-19T09:02:41Z }
+---
+
 # 第 10 章：IT9 荷主セルフサービスと特殊貨物
 
 ## このイテレーションのゴール

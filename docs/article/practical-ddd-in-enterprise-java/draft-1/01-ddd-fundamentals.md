@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 1 章：ドメイン駆動設計"
+description: "ドメイン駆動設計の概念とドメインモデルの構成要素（draft-1）。"
+tags: [article, practical-ddd-in-enterprise-java]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-27T08:25:38Z }
+---
+
 # 第 1 章：ドメイン駆動設計
 
 この章では、Cargo Tracker を題材に、DDD の最小セットを実装と対応づけて整理します。ここでの目的は用語の暗記ではなく、**業務の境界とモデルをコード上でどこに置くか**を明確にすることです。

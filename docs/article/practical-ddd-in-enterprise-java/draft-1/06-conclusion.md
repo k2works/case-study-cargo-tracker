@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 6 章：まとめ"
+description: "モジュラーモノリス・EDA・CQRS/ES の 3 アプローチを比較し、適用判断の観点と現行実装への結論を示す（draft-1）。"
+tags: [article, practical-ddd-in-enterprise-java]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-27T08:25:38Z }
+---
+
 # 第 6 章：まとめ
 
 本シリーズでは、Cargo Tracker を同じ題材のまま 3 つの実装観点で整理しました。

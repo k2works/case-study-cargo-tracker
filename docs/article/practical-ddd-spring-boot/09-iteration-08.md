@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 9 章：IT8 うまくいかなかったときを扱う"
+description: "IT8。うまくいかなかったときの業務（例外系）を扱う実装と、そこでの DDD の観点・設計判断。"
+tags: [article, practical-ddd-spring-boot]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-19T09:02:41Z }
+---
+
 # 第 9 章：IT8 うまくいかなかったときを扱う
 
 ## このイテレーションのゴール

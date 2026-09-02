@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 16 章：IT15 輸送中キャンセルの承認"
+description: "IT15。輸送中キャンセルの承認の実装と、そこでの DDD の観点・設計判断。"
+tags: [article, practical-ddd-spring-boot]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-19T10:03:36Z }
+---
+
 # 第 16 章：IT15 輸送中キャンセルの承認
 
 ## このイテレーションのゴール

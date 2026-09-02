@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 1 章：関数型ドメインモデリングとは"
+description: "不正な状態を作れなくするための 5 技法（単一ケース DU・和型・状態機械・Railway Oriented Programming・ポート注入）。"
+tags: [article, functional-domain-modeling]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-06T02:33:18Z }
+---
+
 # 第 1 章：関数型ドメインモデリングとは
 
 ## この章の狙い

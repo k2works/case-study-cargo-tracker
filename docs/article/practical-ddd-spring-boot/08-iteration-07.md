@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 8 章：IT7 追跡照会・引取・法人荷主"
+description: "IT7。追跡照会・引取・法人荷主の実装と、そこでの DDD の観点・設計判断。"
+tags: [article, practical-ddd-spring-boot]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-19T09:02:41Z }
+---
+
 # 第 8 章：IT7 追跡照会・引取・法人荷主
 
 ## このイテレーションのゴール

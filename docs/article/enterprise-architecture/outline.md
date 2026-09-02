@@ -1,3 +1,12 @@
+---
+type: Article
+title: "アウトライン — エンタープライズアーキテクチャの 4 観点"
+description: "エンタープライズアーキテクチャの 4 観点シリーズの執筆計画。対象・執筆方針・章別計画・ファイル構成。"
+tags: [article, enterprise-architecture]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-14T09:07:33Z }
+---
+
 # アウトライン — エンタープライズアーキテクチャの 4 観点
 
 ## 対象

@@ -1,3 +1,12 @@
+---
+type: Article
+title: "実践 AI 駆動開発 — 執筆アウトライン"
+description: "実践 AI 駆動開発シリーズの執筆計画。章構成・通底する主題・引用元の対応・執筆順序。"
+tags: [article, ai-driven-development]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-13T00:32:50Z }
+---
+
 # 実践 AI 駆動開発 — 執筆アウトライン
 
 本ドキュメントは記事シリーズ **「実践 AI 駆動開発」** の計画書です。章立て・各章の主題・引用元・執筆順序を定めます。記事本文ではありません。

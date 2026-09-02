@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 3 章：IT2 特殊貨物と予約確定"
+description: "IT2。特殊貨物と予約確定。IT1 の負債返済を含む実装を Java と他 9 言語で比較する。"
+tags: [article, monolith-architecture]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-06T01:40:03Z }
+---
+
 # 第 3 章：IT2 特殊貨物と予約確定
 
 ## このイテレーションのゴール

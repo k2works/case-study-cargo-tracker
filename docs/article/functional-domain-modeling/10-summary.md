@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 10 章：型で守れたもの・守れなかったもの"
+description: "8 イテレーションを終えて、関数型ドメインモデリングが型で守れたもの・守れなかったものと運用コストを整理する。"
+tags: [article, functional-domain-modeling]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-06T03:16:32Z }
+---
+
 # 第 10 章：型で守れたもの・守れなかったもの
 
 ## この章の狙い

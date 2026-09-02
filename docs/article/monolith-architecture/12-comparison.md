@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 12 章：10 言語横断まとめ"
+description: "10 言語横断のまとめ。言語で決まったこと・設計判断で決まったこと・言語に関係なく起きたことを切り分ける。"
+tags: [article, monolith-architecture]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-06T03:16:32Z }
+---
+
 # 第 12 章：10 言語横断まとめ
 
 ## この章の狙い

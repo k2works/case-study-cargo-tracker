@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 5 章：IT4 経路確定から予約確定まで"
+description: "IT4。状態がデータを持つ設計で経路確定から予約確定までを表し、永続化との往復で失われるものを扱う。"
+tags: [article, functional-domain-modeling]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-06T02:33:18Z }
+---
+
 # 第 5 章：IT4 経路確定から予約確定まで
 
 ## このイテレーションのゴール

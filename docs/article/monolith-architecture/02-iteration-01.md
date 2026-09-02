@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 2 章：IT1 荷主登録と貨物予約の基盤"
+description: "IT1。荷主登録と貨物予約でウォーキングスケルトンを一本通す実装を、Java と他 9 言語で比較する。"
+tags: [article, monolith-architecture]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-06T01:40:03Z }
+---
+
 # 第 2 章：IT1 荷主登録と貨物予約の基盤
 
 ## このイテレーションのゴール

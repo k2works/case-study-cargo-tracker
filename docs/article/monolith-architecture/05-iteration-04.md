@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 5 章：IT4 航海スケジュール検索と経路候補算出"
+description: "IT4。航海スケジュール検索と経路候補算出を Java と他 9 言語で比較する。"
+tags: [article, monolith-architecture]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-06T01:40:03Z }
+---
+
 # 第 5 章：IT4 航海スケジュール検索と経路候補算出
 
 ## このイテレーションのゴール

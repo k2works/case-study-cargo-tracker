@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 2 章：Cargo Tracker のドメインモデル"
+description: "Cargo Tracker のコアドメイン・共有カーネル・集約と集約識別子を、書籍の構成を写して直した形で示す。"
+tags: [article, practical-ddd-in-enterprise-java]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-27T09:30:34Z }
+---
+
 # 第 2 章：Cargo Tracker のドメインモデル
 
 前章では、Cargo Tracker を Spring Boot 上へ配置する方法を見ました。この章はその内側 —— **どの業務ルールが、どの型に入っているか**の話です。

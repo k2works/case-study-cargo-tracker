@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 13 章：出荷と是正（IT18〜IT20）"
+description: "IT18〜IT20。Estimation Context の実装と出荷、そして育ってしまった負債の是正。"
+tags: [article, ai-driven-development]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-13T00:31:01Z }
+---
+
 # 第 13 章：出荷と是正（IT18〜IT20）
 
 ## この局面のゴール

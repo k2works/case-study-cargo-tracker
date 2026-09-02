@@ -1,3 +1,12 @@
+---
+type: Article
+title: "実践 DDD in Spring Boot — 執筆アウトライン"
+description: "実践 DDD in Spring Boot シリーズの執筆計画。章構成・通底する主題・各章の共通フォーマット。"
+tags: [article, practical-ddd-spring-boot]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-19T08:07:45Z }
+---
+
 # 実践 DDD in Spring Boot — 執筆アウトライン
 
 本ドキュメントは記事シリーズ **「実践 DDD in Spring Boot」** の計画書です。章立て・各章の主題・引用元・執筆順序を定めます。記事本文ではありません。

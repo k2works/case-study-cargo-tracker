@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 6 章：IT5 追跡と荷役"
+description: "IT5。追跡と荷役を題材に、デシジョンテーブルの純粋関数化・状態の導出・コンテキスト間の状態写像を扱う。"
+tags: [article, functional-domain-modeling]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-06T02:33:18Z }
+---
+
 # 第 6 章：IT5 追跡と荷役
 
 ## このイテレーションのゴール

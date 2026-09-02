@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 19 章：IT18 Estimation Context の立ち上げ"
+description: "IT18。Estimation Context の立ち上げと、そこでの DDD の観点・設計判断。"
+tags: [article, practical-ddd-spring-boot]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-19T10:33:55Z }
+---
+
 # 第 19 章：IT18 Estimation Context の立ち上げ
 
 ## このイテレーションのゴール

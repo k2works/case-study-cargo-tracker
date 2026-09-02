@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 11 章：IT10 輸送料金算出とリリース 2.0"
+description: "IT10。輸送料金算出とリリース 2.0 までの実装、およびプロジェクト全体の実績。"
+tags: [article, monolith-architecture]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-06T01:40:03Z }
+---
+
 # 第 11 章：IT10 輸送料金算出とリリース 2.0
 
 ## このイテレーションのゴール

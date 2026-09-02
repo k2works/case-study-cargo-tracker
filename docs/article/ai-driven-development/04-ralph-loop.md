@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 4 章：Ralph Loop と自律実行の境界"
+description: "Stop hook で自律的にイテレーションを回す Ralph Loop と、AI に任せてよい範囲の境界。"
+tags: [article, ai-driven-development]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-13T00:31:01Z }
+---
+
 # 第 4 章：Ralph Loop と自律実行の境界
 
 ## 解こうとした問題

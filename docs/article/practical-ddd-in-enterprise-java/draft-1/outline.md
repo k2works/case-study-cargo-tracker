@@ -1,3 +1,12 @@
+---
+type: Article
+title: "エンタープライズ Java における実践的ドメイン駆動設計 — アウトライン"
+description: "エンタープライズ Java における実践的 DDD（draft-1）の執筆計画。章構成・共通フォーマット・執筆順序。"
+tags: [article, practical-ddd-in-enterprise-java]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-27T08:25:38Z }
+---
+
 # エンタープライズ Java における実践的ドメイン駆動設計 — アウトライン
 
 ```plantuml

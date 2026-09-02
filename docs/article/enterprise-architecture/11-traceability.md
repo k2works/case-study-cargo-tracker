@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 11 章：4 観点の貫通と、破れた箇所"
+description: "業務プリンシプルから実装まで縦串を通し、4 観点を貫通した 5 点と破れた 5 点を確かめる。"
+tags: [article, enterprise-architecture]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-14T09:07:33Z }
+---
+
 # 第 11 章：4 観点の貫通と、破れた箇所
 
 | 項目 | 内容 |

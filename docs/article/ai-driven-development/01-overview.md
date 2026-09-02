@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 1 章：AI 駆動開発の全体像"
+description: "開発者 1 名と AI エージェントで 20 イテレーションを 8 日で回した体制・実績・用意した仕組みと、結論の先出し。"
+tags: [article, ai-driven-development]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-13T00:31:01Z }
+---
+
 # 第 1 章：AI 駆動開発の全体像
 
 ## この章の狙い

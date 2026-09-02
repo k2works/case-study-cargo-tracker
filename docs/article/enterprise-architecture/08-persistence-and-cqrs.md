@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 8 章：CQRS の読み書き分離とスキーマの進化"
+description: "CQRS で読み書きの通る道を分ける実装と、MyBatis の採用理由・Flyway 46 本によるスキーマ進化。"
+tags: [article, enterprise-architecture]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-14T09:07:33Z }
+---
+
 # 第 8 章：CQRS の読み書き分離とスキーマの進化
 
 | 項目 | 内容 |

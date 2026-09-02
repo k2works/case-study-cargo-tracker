@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 4 章：IT3 航海スケジュールと経路設計への引き渡し"
+description: "IT3。航海スケジュールと経路設計への引き渡しの実装と、そこでの DDD の観点・設計判断。"
+tags: [article, practical-ddd-spring-boot]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-19T08:19:51Z }
+---
+
 # 第 4 章：IT3 航海スケジュールと経路設計への引き渡し
 
 ## このイテレーションのゴール

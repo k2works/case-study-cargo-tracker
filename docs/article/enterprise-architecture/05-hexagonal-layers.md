@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 5 章：ヘキサゴナルの 4 層とポートの置き場所"
+description: "ヘキサゴナルの 4 層の責務と、駆動ポート／被駆動ポートの置き場所および共有領域の 3 分割。"
+tags: [article, enterprise-architecture]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-14T09:07:33Z }
+---
+
 # 第 5 章：ヘキサゴナルの 4 層とポートの置き場所
 
 | 項目 | 内容 |

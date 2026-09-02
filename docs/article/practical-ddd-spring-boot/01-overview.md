@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 1 章：Spring Boot で DDD を書く土台"
+description: "モジュラーモノリス・パッケージ構成・ACL ポート・技術選定と、宣言した規則を検査に落とす方針という土台。"
+tags: [article, practical-ddd-spring-boot]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-19T08:07:45Z }
+---
+
 # 第 1 章：Spring Boot で DDD を書く土台
 
 本シリーズは、国際貨物輸送管理システム（Cargo Tracker）を Spring Boot で実装した 20 イテレーションを、そのままの順で辿ります。第 2 章以降が 1 イテレーション 1 章です。

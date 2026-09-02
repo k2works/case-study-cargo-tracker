@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 17 章：IT16 宣言した規則を検査に落とす"
+description: "IT16。宣言した規則を検査に落とし、何がどこで守るかを整理する回。"
+tags: [article, practical-ddd-spring-boot]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-19T10:33:55Z }
+---
+
 # 第 17 章：IT16 宣言した規則を検査に落とす
 
 ## このイテレーションのゴール

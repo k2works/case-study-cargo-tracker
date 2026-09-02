@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 10 章：アーキテクチャを検査に落とす"
+description: "静的解析・ArchUnit 12 ルール・独自構造テスト・生成物突き合わせという 4 層でアーキテクチャを検査に落とす。"
+tags: [article, enterprise-architecture]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-14T09:07:33Z }
+---
+
 # 第 10 章：アーキテクチャを検査に落とす
 
 | 項目 | 内容 |

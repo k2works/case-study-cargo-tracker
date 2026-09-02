@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 12 章：整流（IT16〜IT17）— ストーリーを書かない回"
+description: "IT16〜IT17。新しいストーリーを書かず、宣言した規則を検査に落として数え上げた負債を返した整流の局面。"
+tags: [article, ai-driven-development]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-13T00:31:01Z }
+---
+
 # 第 12 章：整流（IT16〜IT17）— ストーリーを書かない回
 
 ## この局面のゴール

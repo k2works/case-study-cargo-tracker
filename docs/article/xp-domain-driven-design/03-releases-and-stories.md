@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 3 章：小さなリリースとイテレーション計画"
+description: "小さなリリースとイテレーション計画がモデルに与えた影響と、データモデルだけ先に全体を作った理由。"
+tags: [article, xp-domain-driven-design]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-13T02:08:22Z }
+---
+
 # 第 3 章：小さなリリースとイテレーション計画
 
 | 項目 | 内容 |

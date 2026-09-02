@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 3 章：ケイパビリティから境界づけられたコンテキストへ"
+description: "ビジネスケイパビリティをシステムコンテキスト・ユーザーストーリー・境界づけられたコンテキストへ 4 段で落とし込む。"
+tags: [article, enterprise-architecture]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-14T09:07:33Z }
+---
+
 # 第 3 章：ケイパビリティから境界づけられたコンテキストへ
 
 | 項目 | 内容 |

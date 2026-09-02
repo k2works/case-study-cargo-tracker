@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 2 章：IT1 型で守る土台をつくる"
+description: "IT1。値オブジェクトと判別共用体で荷主を表し、Railway Oriented Programming と副作用の締め出しで土台を作る。"
+tags: [article, functional-domain-modeling]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-06T02:33:18Z }
+---
+
 # 第 2 章：IT1 型で守る土台をつくる
 
 ## このイテレーションのゴール

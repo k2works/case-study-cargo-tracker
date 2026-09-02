@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 6 章：IT5 経路の確定と予約への紐付け"
+description: "IT5。経路の確定と予約への紐付けの実装と、そこでの DDD の観点・設計判断。"
+tags: [article, practical-ddd-spring-boot]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-19T08:19:51Z }
+---
+
 # 第 6 章：IT5 経路の確定と予約への紐付け
 
 ## このイテレーションのゴール

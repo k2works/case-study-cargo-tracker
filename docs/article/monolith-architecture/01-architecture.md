@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 1 章：モノリスアーキテクチャの全体像"
+description: "10 言語すべてが共有する設計方針。モノリスの選択理由・Bounded Context・レイヤ構成・CQRS の適用範囲。"
+tags: [article, monolith-architecture]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-06T01:40:03Z }
+---
+
 # 第 1 章：モノリスアーキテクチャの全体像
 
 ## この章の狙い

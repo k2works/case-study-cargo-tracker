@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 21 章：IT20 育つ負債を止める"
+description: "IT20。育つ負債を止める回と、そこでの DDD の観点・設計判断。"
+tags: [article, practical-ddd-spring-boot]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-19T10:33:55Z }
+---
+
 # 第 21 章：IT20 育つ負債を止める
 
 ## このイテレーションのゴール

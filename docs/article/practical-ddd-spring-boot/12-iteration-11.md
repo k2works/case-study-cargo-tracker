@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 12 章：IT11 誤配の再設計と通関申告"
+description: "IT11。誤配の再設計と通関申告の実装と、そこでの DDD の観点・設計判断。"
+tags: [article, practical-ddd-spring-boot]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-19T09:02:41Z }
+---
+
 # 第 12 章：IT11 誤配の再設計と通関申告
 
 ## このイテレーションのゴール

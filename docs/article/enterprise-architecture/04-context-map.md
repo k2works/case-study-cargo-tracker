@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 4 章：コンテキストマップ — 7 つの業務領域"
+description: "7 つの Bounded Context の分割と、共有カーネルの限定・Security の扱い・依存の一方通行を定めた ADR 群。"
+tags: [article, enterprise-architecture]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-14T09:07:33Z }
+---
+
 # 第 4 章：コンテキストマップ — 7 つの業務領域
 
 | 項目 | 内容 |

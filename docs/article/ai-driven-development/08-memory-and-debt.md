@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 8 章：記憶と負債 — 失敗を資産にする"
+description: "セッションをまたいで失敗を持ち越すための記憶の仕組みと、技術的負債の記録・返済の実際。"
+tags: [article, ai-driven-development]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-13T00:31:01Z }
+---
+
 # 第 8 章：記憶と負債 — 失敗を資産にする
 
 ## 解こうとした問題

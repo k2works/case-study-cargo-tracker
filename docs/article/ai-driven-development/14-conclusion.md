@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 14 章：何が効き、何が効かなかったか"
+description: "20 イテレーション・36 ストーリー・テスト 1,578 件の実績から、AI 駆動開発で効いた規律・効かなかった規律とアンチパターンを総括する。"
+tags: [article, ai-driven-development]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-13T00:31:01Z }
+---
+
 # 第 14 章：何が効き、何が効かなかったか
 
 ## この章の狙い

@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 2 章：インセプションデッキから境界づけられたコンテキストへ"
+description: "インセプションデッキから境界づけられたコンテキストを導くまでに、モデルが何によって変わったか。"
+tags: [article, xp-domain-driven-design]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-13T02:08:22Z }
+---
+
 # 第 2 章：インセプションデッキから境界づけられたコンテキストへ
 
 | 項目 | 内容 |

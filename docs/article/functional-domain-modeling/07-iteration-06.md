@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 7 章：IT6 輸送例外の登録と解決"
+description: "IT6。輸送例外の解決状態を判別共用体で表し、遷移を書かずに状態を導出する。"
+tags: [article, functional-domain-modeling]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-06T02:33:18Z }
+---
+
 # 第 7 章：IT6 輸送例外の登録と解決
 
 ## このイテレーションのゴール

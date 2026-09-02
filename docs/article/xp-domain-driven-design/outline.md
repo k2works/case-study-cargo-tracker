@@ -1,3 +1,12 @@
+---
+type: Article
+title: "XP によるドメイン駆動設計の実践 — 執筆アウトライン"
+description: "XP によるドメイン駆動設計の実践シリーズの執筆計画。章構成・通底する主題・引用元の対応。"
+tags: [article, xp-domain-driven-design]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-13T02:17:02Z }
+---
+
 # XP によるドメイン駆動設計の実践 — 執筆アウトライン
 
 本ドキュメントは記事シリーズ **「XP によるドメイン駆動設計の実践」** の計画書です。章立て・各章の主題・引用元・執筆順序を定めます。記事本文ではありません。

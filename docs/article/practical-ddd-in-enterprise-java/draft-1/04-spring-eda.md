@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 4 章：Spring Platform × EDA"
+description: "Spring プラットフォーム上でイベント駆動アーキテクチャとして Cargo Tracker を構成する（draft-1）。"
+tags: [article, practical-ddd-in-enterprise-java]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-27T08:25:38Z }
+---
+
 # 第 4 章：Spring Platform × EDA
 
 この章では、Cargo Tracker を EDA（Event-Driven Architecture）として読み解きます。ポイントは「イベントを使っているか」ではなく、**境界を越える通信をイベントと ACL ポートに限定し、各 BC が自分のモデルだけを更新する**設計です。

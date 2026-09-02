@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 9 章：立ち上げ（IT1〜IT3）— ウォーキングスケルトンを貫通させる"
+description: "IT1〜IT3。ウォーキングスケルトンを縦に一本通し、設計が実装として成立するかを最初に確かめた局面。"
+tags: [article, ai-driven-development]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-13T00:31:01Z }
+---
+
 # 第 9 章：立ち上げ（IT1〜IT3）— ウォーキングスケルトンを貫通させる
 
 ## この局面のゴール

@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 8 章：境界を守る五つの手段"
+description: "共有カーネルの限定・腐敗防止層・ドメインイベント・依存の一方通行・失敗の届け先という、境界を守る 5 手段。"
+tags: [article, xp-domain-driven-design]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-13T02:17:02Z }
+---
+
 # 第 8 章：境界を守る五つの手段
 
 | 項目 | 内容 |

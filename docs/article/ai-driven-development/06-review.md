@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 6 章：マルチパースペクティブレビュー"
+description: "XP の役割別エージェントを並列に走らせるマルチパースペクティブレビューが、全緑の状態から何を見つけたか。"
+tags: [article, ai-driven-development]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-13T00:31:01Z }
+---
+
 # 第 6 章：マルチパースペクティブレビュー
 
 ## 解こうとした問題

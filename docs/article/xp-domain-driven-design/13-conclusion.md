@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 13 章：XP は DDD に何を与えたか"
+description: "XP が DDD に与えたもの。イテレーションで育てられたものと最初に決めるしかなかったもの、残った未達とコスト。"
+tags: [article, xp-domain-driven-design]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-13T02:08:22Z }
+---
+
 # 第 13 章：XP は DDD に何を与えたか
 
 | 項目 | 内容 |

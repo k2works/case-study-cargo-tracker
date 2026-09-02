@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 2 章：IT1 ウォーキングスケルトンを 1 本通す"
+description: "IT1。ウォーキングスケルトンを 1 本通す実装と、そこでの DDD の観点・設計判断。"
+tags: [article, practical-ddd-spring-boot]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-19T08:07:45Z }
+---
+
 # 第 2 章：IT1 ウォーキングスケルトンを 1 本通す
 
 ## このイテレーションのゴール

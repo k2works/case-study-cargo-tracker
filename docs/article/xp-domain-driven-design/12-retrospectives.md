@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 12 章：ふりかえりが設計を変えた"
+description: "ふりかえりが設計判断を変えた経路と、働かなかったケース。"
+tags: [article, xp-domain-driven-design]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-13T02:08:22Z }
+---
+
 # 第 12 章：ふりかえりが設計を変えた
 
 | 項目 | 内容 |

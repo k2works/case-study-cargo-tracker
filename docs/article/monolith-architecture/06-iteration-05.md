@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 6 章：IT5 経路の選択・確定・紐付け"
+description: "IT5。経路の選択・確定・予約への紐付けを Java と他 9 言語で比較する。"
+tags: [article, monolith-architecture]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-06T01:40:03Z }
+---
+
 # 第 6 章：IT5 経路の選択・確定・紐付け
 
 ## このイテレーションのゴール

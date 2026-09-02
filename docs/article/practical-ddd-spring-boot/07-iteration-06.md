@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 7 章：IT6 予約確定・追跡番号・荷役記録"
+description: "IT6。予約確定・追跡番号発行・荷役記録の実装と、そこでの DDD の観点・設計判断。"
+tags: [article, practical-ddd-spring-boot]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-19T08:19:51Z }
+---
+
 # 第 7 章：IT6 予約確定・追跡番号・荷役記録
 
 ## このイテレーションのゴール

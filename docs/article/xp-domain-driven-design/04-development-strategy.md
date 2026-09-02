@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 4 章：開発戦略 — 7 局面で TDD の入口を切り替える"
+description: "7 局面で TDD の入口（アウトサイドイン／インサイドアウト）を切り替える開発戦略と、その効果。"
+tags: [article, xp-domain-driven-design]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-13T02:08:22Z }
+---
+
 # 第 4 章：開発戦略 — 7 局面で TDD の入口を切り替える
 
 | 項目 | 内容 |

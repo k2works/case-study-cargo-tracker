@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 14 章：IT13 Billing Context の立ち上げと金額の丸め"
+description: "IT13。Billing Context の立ち上げと金額の丸めの実装と、そこでの DDD の観点・設計判断。"
+tags: [article, practical-ddd-spring-boot]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-19T10:03:36Z }
+---
+
 # 第 14 章：IT13 Billing Context の立ち上げと金額の丸め
 
 ## このイテレーションのゴール

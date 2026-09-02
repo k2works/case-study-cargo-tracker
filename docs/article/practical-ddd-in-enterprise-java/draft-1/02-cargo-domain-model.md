@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 2 章：Cargo Tracker のドメインモデル"
+description: "Cargo Tracker のコアドメイン・サブドメイン・集約・ドメインサービスとサガ（draft-1）。"
+tags: [article, practical-ddd-in-enterprise-java]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-27T08:25:38Z }
+---
+
 # 第 2 章：Cargo Tracker のドメインモデル
 
 この章では、Cargo Tracker のドメインモデルを、実装クラスに対応づけて整理します。第 1 章の DDD 概念を、**どの BC に何を置いたか**へ具体化する章です。

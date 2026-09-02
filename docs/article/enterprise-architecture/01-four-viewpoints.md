@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 1 章：4 つの観点と、貫通の地図"
+description: "ビジネス・アプリケーション・データ・テクノロジーの 4 観点に分けて記述する理由と、各観点で何を見るかの地図。"
+tags: [article, enterprise-architecture]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-14T09:07:33Z }
+---
+
 # 第 1 章：4 つの観点と、貫通の地図
 
 | 項目 | 内容 |

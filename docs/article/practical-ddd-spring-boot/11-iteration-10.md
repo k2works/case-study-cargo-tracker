@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 11 章：IT10 遅延・破損・紛失の例外処理"
+description: "IT10。遅延・破損・紛失の例外処理の実装と、そこでの DDD の観点・設計判断。"
+tags: [article, practical-ddd-spring-boot]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-19T09:02:41Z }
+---
+
 # 第 11 章：IT10 遅延・破損・紛失の例外処理
 
 ## このイテレーションのゴール

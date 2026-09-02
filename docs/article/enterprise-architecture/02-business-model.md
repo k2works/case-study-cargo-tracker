@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 2 章：ビジネスモデルとケイパビリティ"
+description: "ビジネスモデルキャンバス・バリューストリーム・ケイパビリティマップ・組織マップ・情報マップで業務側の構造を示す。"
+tags: [article, enterprise-architecture]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-14T09:07:33Z }
+---
+
 # 第 2 章：ビジネスモデルとケイパビリティ
 
 | 項目 | 内容 |

@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 15 章：IT14 請求から入金確認までを閉じる"
+description: "IT14。請求から入金確認までを閉じる実装と、そこでの DDD の観点・設計判断。"
+tags: [article, practical-ddd-spring-boot]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-19T10:03:36Z }
+---
+
 # 第 15 章：IT14 請求から入金確認までを閉じる
 
 ## このイテレーションのゴール

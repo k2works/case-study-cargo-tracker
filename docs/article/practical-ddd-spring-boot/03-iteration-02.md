@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 3 章：IT2 Cargo 集約と最初の ACL ポート"
+description: "IT2。Cargo 集約と最初の ACL ポートを作る実装と、そこでの DDD の観点・設計判断。"
+tags: [article, practical-ddd-spring-boot]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-19T08:07:45Z }
+---
+
 # 第 3 章：IT2 Cargo 集約と最初の ACL ポート
 
 ## このイテレーションのゴール

@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 2 章：Skill 体系で開発プロセスを固定する"
+description: "手順を Skill として固定し開発プロセスの再現性を確保する仕組みと、それが働いた場面・働かなかった場面。"
+tags: [article, ai-driven-development]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-13T00:31:01Z }
+---
+
 # 第 2 章：Skill 体系で開発プロセスを固定する
 
 ## 解こうとした問題

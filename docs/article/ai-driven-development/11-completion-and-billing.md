@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 11 章：補完と精算（IT11〜IT15）— 幅を広げる局面"
+description: "IT11〜IT15。誤配・通関・引取確認といった例外業務を補完し、Billing Context をゼロから立ち上げた局面。"
+tags: [article, ai-driven-development]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-13T00:31:01Z }
+---
+
 # 第 11 章：補完と精算（IT11〜IT15）— 幅を広げる局面
 
 ## この局面のゴール

@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 10 章：IT9 遅延・破損・紛失の例外処理"
+description: "IT9。遅延・破損・紛失の例外処理を Java と他 9 言語で比較する。"
+tags: [article, monolith-architecture]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-06T01:40:03Z }
+---
+
 # 第 10 章：IT9 遅延・破損・紛失の例外処理
 
 ## このイテレーションのゴール

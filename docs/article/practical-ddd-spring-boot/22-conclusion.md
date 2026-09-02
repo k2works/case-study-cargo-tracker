@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 22 章：20 イテレーションで積み上がったもの"
+description: "20 イテレーションの実績と、6 回動いた境界・繰り返し効いた戦術的 DDD・同期と非同期の判断基準・検査の階層。"
+tags: [article, practical-ddd-spring-boot]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-19T10:33:55Z }
+---
+
 # 第 22 章：20 イテレーションで積み上がったもの
 
 20 イテレーション、36 ユーザーストーリー、117 ストーリーポイント。実装 553 ファイル、テスト 1,578 件、ADR 25 本。v2.1.0 として出荷済み。

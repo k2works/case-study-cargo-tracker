@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 5 章：受入テストから集約を立ち上げる"
+description: "受入テストから書き始めて集約を立ち上げる進め方を、実際の業務ルールで辿る。"
+tags: [article, xp-domain-driven-design]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-13T02:17:02Z }
+---
+
 # 第 5 章：受入テストから集約を立ち上げる
 
 | 項目 | 内容 |

@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 9 章：ユビキタス言語はどこで離れるか"
+description: "ユビキタス言語が業務とコードのあいだでどこから離れ始めるか、そして何が離脱を戻したか。"
+tags: [article, xp-domain-driven-design]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-13T03:38:12Z }
+---
+
 # 第 9 章：ユビキタス言語はどこで離れるか
 
 | 項目 | 内容 |

@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 10 章：一気通貫（IT4〜IT10）— 予約から追跡まで"
+description: "IT4〜IT10。予約から追跡までを E2E で貫通させ Release 1.0 に到達した局面と、記録が 1 日欠けた事情。"
+tags: [article, ai-driven-development]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-13T00:31:01Z }
+---
+
 # 第 10 章：一気通貫（IT4〜IT10）— 予約から追跡まで
 
 ## この局面のゴール

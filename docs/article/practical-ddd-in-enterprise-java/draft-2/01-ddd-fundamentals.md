@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 1 章：ドメイン駆動設計 — 概念と、この実装での対応物"
+description: "DDD の概念を、この実装での対応物（サブドメイン・集約・ドメインルール・コマンド／クエリ・イベント）と対にして示す。"
+tags: [article, practical-ddd-in-enterprise-java]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-27T09:30:34Z }
+---
+
 # 第 1 章：ドメイン駆動設計 — 概念と、この実装での対応物
 
 このシリーズは、国際貨物輸送管理システム **Cargo Tracker** を題材に、DDD の概念が Java と Spring のコードとしてどこに現れるかを追います。

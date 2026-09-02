@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 5 章：IT4 経路候補算出"
+description: "IT4。経路候補算出の実装と、そこでの DDD の観点・設計判断。"
+tags: [article, practical-ddd-spring-boot]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-19T08:19:51Z }
+---
+
 # 第 5 章：IT4 経路候補算出
 
 ## このイテレーションのゴール

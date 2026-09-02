@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 8 章：IT7 追跡番号発行と荷役作業記録"
+description: "IT7。追跡番号発行と荷役作業記録を Java と他 9 言語で比較する。"
+tags: [article, monolith-architecture]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-06T01:40:03Z }
+---
+
 # 第 8 章：IT7 追跡番号発行と荷役作業記録
 
 ## このイテレーションのゴール

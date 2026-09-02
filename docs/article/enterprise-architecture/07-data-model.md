@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 7 章：データモデルとテーブルの所有"
+description: "25 テーブルの所有 BC・集約との対応・BC 境界に外部キーを引かない判断と、型・楽観的ロックの選択。"
+tags: [article, enterprise-architecture]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-14T09:07:33Z }
+---
+
 # 第 7 章：データモデルとテーブルの所有
 
 | 項目 | 内容 |

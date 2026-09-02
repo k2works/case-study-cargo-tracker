@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 3 章：イテレーションのライフサイクル"
+description: "opening-iteration から closing-iteration までを定型化し、報告書・GitHub 同期・ドキュメント同期の抜けを防ぐ仕組み。"
+tags: [article, ai-driven-development]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-13T00:31:01Z }
+---
+
 # 第 3 章：イテレーションのライフサイクル
 
 ## 解こうとした問題

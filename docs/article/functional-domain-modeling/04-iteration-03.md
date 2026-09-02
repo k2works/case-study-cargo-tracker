@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 4 章：IT3 航海スケジュールと経路候補算出"
+description: "IT3。航海スケジュールの入れ子になった不変条件と、経路候補算出を純粋関数として書く。"
+tags: [article, functional-domain-modeling]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-06T02:33:18Z }
+---
+
 # 第 4 章：IT3 航海スケジュールと経路候補算出
 
 ## このイテレーションのゴール

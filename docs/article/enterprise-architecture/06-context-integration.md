@@ -1,3 +1,12 @@
+---
+type: Article
+title: "第 6 章：コンテキスト間連携 — ACL とドメインイベント"
+description: "コンテキスト間の越境手段である ACL ポート 27 本とドメインイベント 9 種、そして結果整合の代償。"
+tags: [article, enterprise-architecture]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-14T09:07:33Z }
+---
+
 # 第 6 章：コンテキスト間連携 — ACL とドメインイベント
 
 | 項目 | 内容 |
