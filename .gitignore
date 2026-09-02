@@ -52,3 +52,11 @@ docs/article/source/**/.gradle/
 apps/cargo-tracker/backend/.gradle/
 apps/cargo-tracker/backend/build/
 apps/cargo-tracker/backend/*/build/
+
+# フロントエンド（apps/cargo-tracker/frontend）
+apps/cargo-tracker/frontend/node_modules/
+apps/cargo-tracker/frontend/dist/
+apps/cargo-tracker/frontend/playwright-report/
+apps/cargo-tracker/frontend/test-results/
+apps/cargo-tracker/backend/.keys/
+apps/cargo-tracker/frontend/*.tsbuildinfo
