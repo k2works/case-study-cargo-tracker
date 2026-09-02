@@ -15,3 +15,4 @@ RDRA 2.0 に基づく要件定義ドキュメントです。
 
 - 実ドキュメントを追加したら、この一覧と `docs/index.md` を更新します。
 - テンプレートは [template/要件定義.md](../template/要件定義.md) と [template/完全形式のユースケース.md](../template/完全形式のユースケース.md) を利用できます。
+- [cargo-tracker](./cargo-tracker/index.md)

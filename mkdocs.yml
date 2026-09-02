@@ -76,6 +76,9 @@ nav:
       - ユーザーストーリー: requirements/user_story.md
   - 設計:
       - 概要: design/index.md
+      - cargo-tracker:
+          - 概要: design/cargo-tracker/index.md
+          - バックエンドアーキテクチャ: design/cargo-tracker/architecture_backend.md
   - 開発:
       - 概要: development/index.md
   - 運用:
@@ -85,6 +88,10 @@ nav:
       - ドメインモデル分析レビュー: review/ドメインモデル分析_review_20260331.md
   - ADR:
       - 概要: adr/index.md
+      - cargo-tracker:
+          - 概要: adr/cargo-tracker/index.md
+          - ADR-0001 CQRS/ES を Axon 5 でモジュラーモノリスとして実装する: adr/cargo-tracker/0001-cqrs-es-with-axon-in-modular-monolith.md
+          - ADR-0002 Event Store は Axon Server SE、Read Model は PostgreSQL: adr/cargo-tracker/0002-event-store-axon-server-and-postgresql-read-models.md
   - 記事:
       - 概要: article/index.md
       - モノリスアーキテクチャ実装比較:

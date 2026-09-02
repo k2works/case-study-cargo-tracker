@@ -4,7 +4,8 @@
 
 ## ADR 一覧
 
-| ADR | 決定内容 | ステータス |
+| プロジェクト | ADR 数 | 概要 |
 | :--- | :--- | :--- |
+| [cargo-tracker](./cargo-tracker/index.md) | 2 | Axon Framework 5 による CQRS / Event Sourcing の採用と Event Store の選定 |
 
 ADR の作成には `creating-adr` スキルを使用してください。
