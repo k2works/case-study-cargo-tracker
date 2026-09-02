@@ -1,3 +1,12 @@
+---
+type: Strategy
+title: "インセプションデッキ - 国際貨物輸送管理システム"
+description: "国際貨物輸送管理システムのインセプションデッキ。目的・ビジョン・スコープ・ステークホルダー・リスク・見積り。"
+tags: [strategy]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-04-04T00:50:18Z }
+---
+
 # インセプションデッキ - 国際貨物輸送管理システム
 
 ## 1. なぜやるのか？

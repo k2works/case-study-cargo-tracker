@@ -1,10 +1,10 @@
 ---
-title: 要件定義 - 国際貨物輸送管理システム
-description: RDRA 2.0 に基づく要件定義書
-published: true
-date: 2026-04-04T00:00:00.000Z
-tags: requirements, RDRA
-editor: markdown
+type: Requirements
+title: "要件定義 - 国際貨物輸送管理システム"
+description: "RDRA 2.0 の 4 層（システム価値・外部環境・境界・システム）で整理した国際貨物輸送管理システムの要件定義。"
+tags: [requirements, RDRA]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-04-24T01:45:45Z }
 ---
 
 # 要件定義 - 国際貨物輸送管理システム

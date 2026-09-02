@@ -1,3 +1,12 @@
+---
+type: Strategy
+title: "ビジネスアーキテクチャ - 国際貨物輸送会社"
+description: "国際貨物輸送会社のプリンシプル・ビジネスモデル・バリューストリーム・ケイパビリティ・組織／情報マップ。"
+tags: [strategy]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-04-04T00:50:18Z }
+---
+
 # ビジネスアーキテクチャ - 国際貨物輸送会社
 
 ## プリンシプル

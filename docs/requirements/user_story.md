@@ -1,8 +1,10 @@
 ---
-title: ユーザーストーリー - 国際貨物輸送管理システム
-description: システムユースケースから導出したユーザーストーリーと受け入れ基準
-published: true
-date: 2026-04-04T00:00:00.000Z
+type: Requirements
+title: "ユーザーストーリー - 国際貨物輸送管理システム"
+description: "US01〜US36 のユーザーストーリーと受け入れ基準の一覧。"
+tags: [requirements]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-06T05:41:36Z }
 ---
 
 # ユーザーストーリー - 国際貨物輸送管理システム

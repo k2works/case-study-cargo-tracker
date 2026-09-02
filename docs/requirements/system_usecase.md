@@ -1,8 +1,10 @@
 ---
-title: システムユースケース - 国際貨物輸送管理システム
-description: システム境界視点のユースケース（完全形式）
-published: true
-date: 2026-04-04T00:00:00.000Z
+type: Requirements
+title: "システムユースケース - 国際貨物輸送管理システム"
+description: "UC01 以降のシステムユースケースを、アクター・事前事後条件・基本フローとともに定義する。"
+tags: [requirements]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-06T05:41:36Z }
 ---
 
 # システムユースケース - 国際貨物輸送管理システム

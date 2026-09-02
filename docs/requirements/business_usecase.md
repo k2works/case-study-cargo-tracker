@@ -1,8 +1,10 @@
 ---
-title: ビジネスユースケース - 国際貨物輸送管理システム
-description: 業務視点のユースケース一覧と図
-published: true
-date: 2026-04-04T00:00:00.000Z
+type: Requirements
+title: "ビジネスユースケース - 国際貨物輸送管理システム"
+description: "業務視点のビジネスユースケース一覧・全体図とアクター・目的リスト。"
+tags: [requirements]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-08-06T05:41:36Z }
 ---
 
 # ビジネスユースケース - 国際貨物輸送管理システム
