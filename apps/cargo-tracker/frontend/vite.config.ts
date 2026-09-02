@@ -1,4 +1,6 @@
-import { defineConfig } from 'vite';
+// Vitest の設定を同じファイルに書くので vitest/config の defineConfig を使う。
+// vite の defineConfig だと test キーが型で弾かれる。
+import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
