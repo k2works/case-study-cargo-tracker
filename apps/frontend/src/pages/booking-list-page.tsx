@@ -221,9 +221,9 @@ export function BookingListPage() {
                     {routingStatusLabel(booking.routingStatus)}
                   </td>
                   <td className="border-b px-4 py-2">
-                    {(booking.routeNotifiedAt ?? null) === null
+                    {!booking.routeNotifiedAt
                       ? '—'
-                      : formatBusinessDateTime(booking.routeNotifiedAt ?? '')}
+                      : formatBusinessDateTime(booking.routeNotifiedAt)}
                   </td>
                   <td className="border-b px-4 py-2">
                     {/* 危険物・冷凍は取り違えると事故になる。一覧で分かるようにする */}

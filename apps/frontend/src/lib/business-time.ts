@@ -93,7 +93,13 @@ export function businessDateEndInstant(date: string): string {
 }
 
 /** 表示用。業務タイムゾーンでの日時を「YYYY-MM-DD HH:mm」で返す。 */
-export function formatBusinessDateTime(isoInstant: string): string {
+export function formatBusinessDateTime(isoInstant: string | null | undefined): string {
+  if (isoInstant === null || isoInstant === undefined || isoInstant.trim() === '') {
+    return '—'
+  }
+  if (Number.isNaN(new Date(isoInstant).getTime())) {
+    return '—'
+  }
   return instantToBusinessLocal(isoInstant).replace('T', ' ')
 }
 

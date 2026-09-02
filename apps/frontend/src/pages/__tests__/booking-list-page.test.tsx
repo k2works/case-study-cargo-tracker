@@ -107,6 +107,14 @@ describe('貨物予約の一覧', () => {
     expect(screen.getByText(/250 件/)).toBeInTheDocument()
   })
 
+  it('通知日時が空文字でも一覧を落とさず未通知として扱う', async () => {
+    respondWith([booking({ routeNotifiedAt: '' })])
+    renderPage()
+
+    expect(await screen.findByRole('cell', { name: 'BKG-2026000001' })).toBeInTheDocument()
+    expect(screen.getByRole('cell', { name: '—' })).toBeInTheDocument()
+  })
+
   it('条件に合う予約が無ければ、次にできることを示す', async () => {
     respondWith([])
     renderPage()

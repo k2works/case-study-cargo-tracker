@@ -411,10 +411,10 @@ export function BookingDetailPage() {
 
       {/* 通知の記録（US12-4）。メールは送っていないため、これが唯一の証跡である。
           null も未設定も「記録が無い」。項目ごと省く応答もありうる（旅程と同じ扱い） */}
-      {(booking.routeNotifiedAt ?? null) !== null && (
+      {booking.routeNotifiedAt && (
         <p className="text-sm text-gray-700">
           荷主へ通知しました（
-          {formatBusinessDateTime(booking.routeNotifiedAt ?? "")}・
+          {formatBusinessDateTime(booking.routeNotifiedAt)}・
           {booking.routeNotifiedBy}）。
         </p>
       )}

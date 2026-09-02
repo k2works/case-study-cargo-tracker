@@ -37,6 +37,12 @@ describe('業務タイムゾーンでの日時', () => {
   it('表示は業務タイムゾーンの日時になる', () => {
     expect(formatBusinessDateTime('2026-10-01T00:00:00Z')).toBe('2026-10-01 09:00')
   })
+
+  it('表示用の日時は読めない値で画面を落とさない', () => {
+    expect(formatBusinessDateTime('')).toBe('—')
+    expect(formatBusinessDateTime(null)).toBe('—')
+    expect(formatBusinessDateTime('きのう')).toBe('—')
+  })
 })
 
 /**
