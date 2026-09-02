@@ -19,6 +19,8 @@ gulp okf:help               # okf:upgrade・okf:viz などの一覧
 python3 .claude/skills/migrating-okf/scripts/okf_check.py --check docs
 ```
 
+CI では `.github/workflows/docs-okf.yml` が `docs/**` とスクリプトの変更を対象に `npm run okf:check` を実行します。ERROR があればジョブが落ちます（WARN では落ちません）。
+
 `.claude/skills/` と `.agents/skills/` に同じスクリプトの複製があります。スクリプトを直したら**両方に反映**してください（Gulp タスクが参照するのは `.claude/` 側です）。
 
 ## 除外パス
