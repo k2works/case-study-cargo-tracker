@@ -84,6 +84,7 @@ nav:
           - ドメインモデル設計: design/cargo-tracker/domain-model.md
           - データモデル設計: design/cargo-tracker/data-model.md
           - UI 設計: design/cargo-tracker/ui_design.md
+          - テスト戦略: design/cargo-tracker/test_strategy.md
   - 開発:
       - 概要: development/index.md
   - 運用:
