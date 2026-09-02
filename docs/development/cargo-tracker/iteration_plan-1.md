@@ -4,7 +4,7 @@ title: "イテレーション計画 1 - 基盤・認証・荷主登録"
 description: "IT1 の計画。Axon 5 のスパイク 7 項目・ビルドと kind 環境・品質ゲートの実配線・フロント基盤と全ルートのスケルトン・US26/US27/US02（荷主登録の縦切りと crypto-shredding）。デモ項目 7 件。"
 tags: [plan,iteration,cargo-tracker]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-02T15:57:22Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-02T16:00:06Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T12:47:29Z }
 ---
@@ -155,7 +155,7 @@ IT1 は画面を伴う IT なので、マニュアルの更新をここで見積
 | 4.2 | authms の `User`（状態保存・MyBatis）、`users` / `user_roles` / `auth_audit_log` の Flyway | 4h | [x] |
 | 4.3 | JWT 発行（jjwt）と `LoginCommand`。失敗理由を問わず同一メッセージ | 3h | [x] |
 | 4.4 | gatewayms の JWT 検証フィルタとロール伝播。**public-paths の破壊検証**（公開追跡が 401 にならない） | 3h | [x] |
-| 4.5 | ログイン画面（S00）と認証エラー表示 | 2h | [ ] |
+| 4.5 | ログイン画面（S00）と認証エラー表示 | 2h | [x] |
 | 4.6 | 後段サービスが署名を再検証しないこと（Gateway に任せる分担）を統合テストで固定 | 1h | [ ] |
 | | 小計 | 15h | |
 
@@ -163,7 +163,7 @@ IT1 は画面を伴う IT なので、マニュアルの更新をここで見積
 
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | :--: | :--: |
-| 5.1 | ヘッダの `[ログアウト]`（S03）。認証ストアの破棄、`no-store`、ブラウザバックで戻れないこと | 3h | [ ] |
+| 5.1 | ヘッダの `[ログアウト]`（S03）。認証ストアの破棄、`no-store`、ブラウザバックで戻れないこと | 3h | [x] |
 | | 小計 | 3h | |
 
 #### 6. US02 荷主を登録する（5 SP・ウォーキングスケルトンの本体）
