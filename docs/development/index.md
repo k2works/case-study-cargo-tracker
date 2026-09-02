@@ -6,9 +6,9 @@
 
 ### リリース計画
 
-| ドキュメント | 説明 |
-|-------------|------|
-| リリース計画 | リリース全体のスコープ、スケジュール、ベロシティ、バッファ戦略 |
+| プロジェクト | 概要 | 状況 |
+| :--- | :--- | :--- |
+| [cargo-tracker](./cargo-tracker/index.md) | Axon Framework 5 による CQRS / Event Sourcing 版 | リリース計画・開発戦略・IT1 計画を作成済み（15 IT / 120 SP） |
 
 ### イテレーション計画
 
@@ -37,4 +37,3 @@
 
 - 現在はカテゴリ索引のみ存在します。
 - テンプレートは [template/リリース計画.md](../template/リリース計画.md)、[template/イテレーション計画.md](../template/イテレーション計画.md)、[template/イテレーション完了報告書.md](../template/イテレーション完了報告書.md)、[template/リリース完了報告書.md](../template/リリース完了報告書.md) を利用できます。
-- [cargo-tracker](./cargo-tracker/index.md)

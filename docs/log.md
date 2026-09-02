@@ -1,6 +1,15 @@
 # Docs Update Log
 
 ## 2026-09-02
+* **Update**: Update: IT1 の開始準備。イテレーション計画に設計 4 図・ストーリー詳細・ナビゲーション整合・ユーザーマニュアル・アクセシビリティの型を追加し、検証で見つかった salt 欠落を「設計への反映が必要な事項」として明記した。
+* **Update**: Update: IT1 の開始準備。イテレーション計画に設計 4 図・ストーリー詳細・ナビゲーション整合・ユーザーマニュアル・アクセシビリティの型を追加し、検証で見つかった salt 欠落を「設計への反映が必要な事項」として明記した。
+* **Update**: Update: IT1 の開始準備。イテレーション計画に設計 4 図・ストーリー詳細・ナビゲーション整合・ユーザーマニュアル・アクセシビリティの型を追加し、検証で見つかった salt 欠落を「設計への反映が必要な事項」として明記した。
+* **Update**: Update: 開発計画の作成にともない索引を同期。
+* **Update**: Update: 開発計画の作成にともない索引を同期。
+* **Update**: Update: 開発計画の作成にともない索引を同期。
+* **Creation**: Creation: cargo-tracker の IT1 計画を新規作成。ウォーキングスケルトンは荷主登録の縦切り、E2E は Day 2 に赤で置く。
+* **Creation**: Creation: cargo-tracker の開発戦略を新規作成。Event Sourcing ではインサイドアウトの起点が集約になること、契約が第 3 の入口になることを明記した。
+* **Creation**: Creation: cargo-tracker のリリース計画を新規作成。15 IT・120 SP・実効ベロシティ 8 SP/IT。
 * **Update**: MkDocs のビルドで確認したところ、[UI 設計](/design/cargo-tracker/ui_design.md) の日本語見出しへのアンカーリンク 7 件が解決していなかった（toc が Unicode スラッグを使わない設定のため、見出し ID が `_3` のような連番になる）。他の設計文書と同じく本文で節名を書く形に直した。
 * **Verification**: [設計_review_20260902](/review/cargo-tracker/設計_review_20260902.md) を human:kakimomokuri が検証
 * **Verification**: [0003-crypto-shredding-for-personal-data](/adr/cargo-tracker/0003-crypto-shredding-for-personal-data.md) を human:kakimomokuri が検証

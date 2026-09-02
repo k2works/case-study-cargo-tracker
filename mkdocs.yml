@@ -90,6 +90,11 @@ nav:
           - 技術スタック: design/cargo-tracker/tech_stack.md
   - 開発:
       - 概要: development/index.md
+      - cargo-tracker:
+          - 概要: development/cargo-tracker/index.md
+          - リリース計画: development/cargo-tracker/release_plan.md
+          - 開発戦略: development/cargo-tracker/development_strategy.md
+          - イテレーション計画 1: development/cargo-tracker/iteration_plan-1.md
   - 運用:
       - 概要: operation/index.md
   - レビュー:
