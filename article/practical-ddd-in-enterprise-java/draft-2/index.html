@@ -6691,7 +6691,7 @@
 <h1 id="java-draft-2">エンタープライズ Java における実践的ドメイン駆動設計（draft-2）<a class="headerlink" href="#java-draft-2" title="Permanent link">&para;</a></h1>
 <h2 id="_1">概要<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
 <p>国際貨物輸送管理システム（Cargo Tracker）を題材に、<strong>DDD の概念が Java と Spring のコードとしてどこに現れるか</strong>を追うシリーズです。</p>
-<p>扱うのは 1 つの実装 —— <code>docs/article/source/java-2/</code> に収録された Spring Boot 実装です。<strong>この実装は書籍『Practical Domain-Driven Design in Enterprise Java』の構造を実際に適用したもの</strong>であり、設計ドキュメントは「Practical DDD in Enterprise Java (Chapter 3) のパッケージ構造に準拠する」と明記し、ADR は同書の <code>bookingms</code> を参照実装として名指ししています。</p>
+<p>主に扱うのは 1 つの実装 —— <code>docs/article/source/java-2/</code> に収録された Spring Boot 実装です（第 4 章のみ、プロセスを越える配送を扱うために別実装 <code>docs/article/source/java-3/</code> を引きます）。<strong>この実装は書籍『Practical Domain-Driven Design in Enterprise Java』の構造を実際に適用したもの</strong>であり、設計ドキュメントは「Practical DDD in Enterprise Java (Chapter 3) のパッケージ構造に準拠する」と明記し、ADR は同書の <code>bookingms</code> を参照実装として名指ししています。</p>
 <p><strong>したがって本シリーズは書籍の要約ではなく、適用した結果の報告です。</strong> 報告である以上、次の 2 つを同じ比重で扱います。</p>
 <ul>
 <li><strong>書籍の構成を写したまま使って壊れた箇所</strong> —— 識別子の置き場を写したために、分割が狙った利得が最初の 1 回で失われた（第 2 章）</li>
@@ -6722,6 +6722,11 @@
 <td style="text-align: left;">Spring Platform 上のモジュラーモノリス</td>
 <td style="text-align: left;">Spring 上の配置と、<strong>境界を守っている検査</strong>。結果整合の取りこぼしの扱い</td>
 </tr>
+<tr>
+<td style="text-align: left;"><a href="04-spring-eda/">第 4 章</a></td>
+<td style="text-align: left;">プロセスを越えるイベント — マイクロサービス版の Cargo Tracker</td>
+<td style="text-align: left;">BC をプロセスに分けたときイベント駆動が<strong>新しく要求するもの</strong>。契約・到達・冪等・コミット順序と、それを守る検査</td>
+</tr>
 </tbody>
 </table>
 <h2 id="_3">読む順序<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
@@ -6746,6 +6751,10 @@
 <td style="text-align: left;">Spring 上の配置と検査の実物を見たい</td>
 <td style="text-align: left;"><a href="03-spring-modular-monolith/">第 3 章</a></td>
 </tr>
+<tr>
+<td style="text-align: left;">プロセスを越えるイベント連携の実物を見たい</td>
+<td style="text-align: left;"><a href="04-spring-eda/">第 4 章</a></td>
+</tr>
 </tbody>
 </table>
 <h2 id="_4">参照元<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
@@ -6758,16 +6767,28 @@
 </thead>
 <tbody>
 <tr>
-<td style="text-align: left;">実装</td>
+<td style="text-align: left;">実装（第 1〜3 章）</td>
 <td style="text-align: left;"><a href="../../source/java-2/apps/cargo-tracker"><code>docs/article/source/java-2/apps/cargo-tracker/</code></a></td>
 </tr>
 <tr>
-<td style="text-align: left;">設計ドキュメント</td>
+<td style="text-align: left;">設計ドキュメント（第 1〜3 章）</td>
 <td style="text-align: left;"><a href="../../source/java-2/docs/design"><code>docs/article/source/java-2/docs/design/</code></a></td>
 </tr>
 <tr>
-<td style="text-align: left;">ADR（25 本）</td>
+<td style="text-align: left;">ADR（第 1〜3 章・25 本）</td>
 <td style="text-align: left;"><a href="../../source/java-2/docs/adr"><code>docs/article/source/java-2/docs/adr/</code></a></td>
+</tr>
+<tr>
+<td style="text-align: left;">実装（第 4 章）</td>
+<td style="text-align: left;"><a href="../../source/java-3/apps/backend"><code>docs/article/source/java-3/apps/backend/</code></a></td>
+</tr>
+<tr>
+<td style="text-align: left;">設計ドキュメント（第 4 章）</td>
+<td style="text-align: left;"><a href="../../source/java-3/docs/design"><code>docs/article/source/java-3/docs/design/</code></a></td>
+</tr>
+<tr>
+<td style="text-align: left;">ADR（第 4 章・32 本）</td>
+<td style="text-align: left;"><a href="../../source/java-3/docs/adr"><code>docs/article/source/java-3/docs/adr/</code></a></td>
 </tr>
 </tbody>
 </table>
@@ -6799,12 +6820,12 @@
 </tr>
 <tr>
 <td style="text-align: left;"><strong>Axon Framework / Event Sourcing</strong></td>
-<td style="text-align: left;"><strong>参照元実装に存在しない。</strong> 構想で章を埋めることはしない</td>
+<td style="text-align: left;"><strong>どちらの参照元実装にも存在しない。</strong> 構想で章を埋めることはしない</td>
 </tr>
 </tbody>
 </table>
 <h2 id="_6">現在の範囲<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
-<p><strong>本稿は第 3 章までです。</strong> 実装アプローチの比較（EDA・CQRS/ES）は、対応する実装を参照元に収録できた時点で扱います。</p>
+<p><strong>本稿は第 4 章までです。</strong> 残りは、対応する実装を参照元に収録できた時点で扱います。</p>
 <table>
 <thead>
 <tr>
@@ -6816,18 +6837,18 @@
 <tbody>
 <tr>
 <td style="text-align: left;">第 4 章（EDA）</td>
-<td style="text-align: left;">保留</td>
-<td style="text-align: left;">メッセージングを使う実装の収録</td>
+<td style="text-align: left;"><strong>執筆済</strong></td>
+<td style="text-align: left;">RabbitMQ で連携するマイクロサービス実装を <code>source/java-3/</code> に収録して成立</td>
 </tr>
 <tr>
 <td style="text-align: left;">第 5 章（CQRS / Event Sourcing）</td>
 <td style="text-align: left;">保留</td>
-<td style="text-align: left;">Event Sourcing 実装の収録</td>
+<td style="text-align: left;">Event Sourcing 実装の収録。<strong>java-3 にもイベントストアは無い</strong></td>
 </tr>
 <tr>
 <td style="text-align: left;">第 6 章（比較と選択指針）</td>
 <td style="text-align: left;">保留</td>
-<td style="text-align: left;">第 4 章・第 5 章のいずれかの成立</td>
+<td style="text-align: left;">第 5 章の成立。第 4 章だけでは比較軸が 2 つに届かない</td>
 </tr>
 </tbody>
 </table>
