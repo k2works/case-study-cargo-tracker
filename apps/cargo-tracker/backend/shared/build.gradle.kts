@@ -18,6 +18,12 @@ dependencies {
     testFixturesApi(libs.assertj.core)
     testFixturesApi(platform(libs.junit.bom))
     testFixturesApi(libs.junit.jupiter)
+    // 統合テストの基底クラス（Axon Server（DCB 有効）+ PostgreSQL）。
+    testFixturesApi(libs.axon.test)
+    testFixturesApi(libs.testcontainers.junit.jupiter)
+    testFixturesApi(libs.testcontainers.postgresql)
+    testFixturesApi(libs.spring.boot.starter.test)
+    testFixturesApi(libs.awaitility)
 
     // 違反フィクスチャは実コードと同じ形で書く。そのために Spring / MyBatis / Axon を
     // テスト側にも入れる。最小の違反例だけだと、ここが緑でも実コードの違反を見逃す。
