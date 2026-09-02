@@ -1,10 +1,10 @@
 ---
 type: Design
 title: "バックエンドアーキテクチャ - 国際貨物輸送管理システム（CQRS / Event Sourcing 版）"
-description: "Axon Framework 5 による CQRS / Event Sourcing 版 Cargo Tracker のバックエンドアーキテクチャ。マイクロサービス構成で BC ごとにサービスを分け、Axon Server を Command / Event / Query Bus と Event Store に使い、投影・Saga・イベント契約を定める。"
+description: "Axon Framework 5 による CQRS / Event Sourcing 版 Cargo Tracker のバックエンドアーキテクチャ。マイクロサービス構成で BC ごとにサービスを分け、Axon Server を Command / Event / Query Bus と Event Store に使い、投影・Reaction Handler・イベント契約を定める。"
 tags: [design, architecture, backend, cqrs, event-sourcing, axon, microservices]
 status: stable
-generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T07:46:35Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-02T13:24:08Z }
 stale_after: 2026-12-01T00:00:00Z
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
@@ -20,7 +20,7 @@ verified:
 
 | 参照元 | 実装の形 | 本設計が採るもの | 本設計が変えるもの |
 | :--- | :--- | :--- | :--- |
-| `tmp/take-4/docs/design/`（`java/take-4`） | マイクロサービス 7 + Gateway、Axon Framework 5 + Axon Server、MyBatis Read Model | サービス分割、Axon 5 の Entity API・Event Store・Projection・Saga の設計、ADR-0007〜0009 で実機検証された統合パターン | サービス間の同期問い合わせを REST から **Axon Query Bus** に変え、ローカル環境での Event Processor のモード切り替えをやめる |
+| `tmp/take-4/docs/design/`（`java/take-4`） | マイクロサービス 7 + Gateway、Axon Framework 5 + Axon Server、MyBatis Read Model | サービス分割、Axon 5 の Entity API・Event Store・Projection の設計、ADR-0007〜0009 で実機検証された統合パターン | サービス間の同期問い合わせを REST から **Axon Query Bus** に変え、ローカル環境での Event Processor のモード切り替えをやめる |
 | `docs/article/source/java-3/docs/design/`（`java/take-7`） | マイクロサービス 8 + 共有ライブラリ、RabbitMQ、現在状態を直接 UPDATE | BC の切り方、ヘキサゴナルの配置、ACL ポートの置き場、ドメインイベント契約の考え方（ADR-022）、「読む側の無い配線を先に敷かない」判断 | RabbitMQ と手書きの発行・購読を Axon の Event Bus に置き換え、集約の永続化を **イベント列** にする |
 
 **なぜマイクロサービスなのか。** 記事シリーズ「エンタープライズ Java における実践的 DDD」の第 4 章は、マイクロサービス版（`java-3`）で「プロセスを越えるイベント」を扱いました。第 5 章の主題は CQRS / Event Sourcing です。**プロセスの形を第 4 章と揃える**ことで、第 4 章との差分がそのまま Event Sourcing の代金になります。`java-3` が「初期フェーズには複雑すぎる」として見送った Event Sourcing を、同じサービス分割の上で実際に払い、第 6 章の比較表で並べられるようにします。判断の記録は [ADR-0001](../../adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) です。
@@ -31,11 +31,11 @@ verified:
 | :--- | :--- | :--- |
 | 言語 / ランタイム | Java 25 LTS | 参照元 2 つと同じ |
 | フレームワーク | Spring Boot 4.1 系（Spring Framework 7 系） | 参照元と同系。Jackson 3 が既定 |
-| CQRS / ES / 分散バス | Axon Framework 5.3 系 | 4 系の `@Aggregate` / `AggregateLifecycle` は **存在しない**（take-4 ADR-0007 の検証結果を引き継ぐ） |
+| CQRS / ES / 分散バス | Axon Framework 5.1.0-RC2（固定） | 4 系の `@Aggregate` / `AggregateLifecycle` は **存在しない**（take-4 ADR-0007）。**Saga・Deadline・`@ProcessingGroup` も Axon 5 には存在しない**（IT1 スパイク）。版が 5.1.0-RC2 なのは `axon-server-connector` の公開が 5.1.0-RC2 までのためです（ADR-0001 決定 3） |
 | Event Store / メッセージバス | Axon Server 2026.x Standard Edition（単一ノード） | Command / Event / Query Bus をサービス間で配送する。判断は [ADR-0002](../../adr/cargo-tracker/0002-event-store-axon-server-and-postgresql-read-models.md) |
 | API Gateway | Spring Cloud Gateway | ルーティング、JWT 検証、CORS |
 | Read Model | PostgreSQL 16（サービスごとに DB）+ MyBatis 3 + Flyway | 参照元 2 つと同じ。JPA は採らない |
-| ビルド | Gradle 9 系、マルチプロジェクト（`apps/backend/`） | サービスごとに Gradle サブプロジェクト |
+| ビルド | Gradle 9 系、マルチプロジェクト（`apps/cargo-tracker/backend/`） | サービスごとに Gradle サブプロジェクト |
 
 バージョンは調査時点の値です。実装着手時に `analyzing-tech-stack` で確定し、`tech_stack.md` を正とします。
 
@@ -63,7 +63,7 @@ verified:
 | ポートとアダプター（ヘキサゴナル） | 全サービス | ドメインを Spring / Axon / MyBatis から切り離す |
 | CQRS | 全サービス | コマンド側は集約、クエリ側は投影テーブルの MyBatis |
 | Event Sourcing | bookingms・routingms・trackingms・handlingms・billingms | 履歴と監査が要る集約。**authms と共有カーネルには適用しない** |
-| Saga（プロセスマネージャ） | bookingms（予約〜追跡開始）、billingms（配送完了〜精算） | 複数サービスにまたがる業務連鎖を補償つきで調整する |
+| Reaction Handler（調整役） | bookingms（予約〜追跡開始）、billingms（配送完了〜精算） | 複数サービスにまたがる業務連鎖を調整する。**Axon 5 に Saga が無い**ため、連鎖の段数ぶん Reaction Handler を並べ、途中経過が要る場合はその BC の集約か専用の投影テーブルに持つ（ADR-0001 決定 6） |
 | マイクロサービス | 配置 | BC ごとに独立デプロイ。Database per Service。サービス間は Axon Server 経由のメッセージだけ |
 
 ### 採用しないものと理由
@@ -103,7 +103,7 @@ node "authms" as auth {
 node "bookingms" as booking {
   [Cargo / Shipper / Quotation\n@EventSourced] as bagg
   [Projection / QueryHandler] as bproj
-  [BookingSaga / BookingReactionHandler] as bsaga
+  [BookingReactionHandler] as bsaga
 }
 node "routingms" as routing {
   [Voyage\n@EventSourced] as ragg
@@ -121,7 +121,7 @@ node "handlingms" as handling {
 node "billingms" as billing {
   [Invoice\n@EventSourced] as biagg
   [Projection / QueryHandler] as biproj
-  [BillingSaga / BillingReactionHandler] as bisaga
+  [BillingReactionHandler] as bisaga
 }
 
 cloud "Axon Server SE\nCommand Bus / Event Bus / Query Bus / Event Store" as AS
@@ -225,7 +225,7 @@ auth ..> shared
 @enduml
 ```
 
-矢印の実線は **イベント**（Axon Event Bus）、点線は **同期の問い合わせ**（Axon Query Bus 経由の ACL）です。サービス越しに状態を変える同期呼び出しは置きません。サービスをまたぐ状態変更はすべてイベント、またはイベントを受けた Saga / Reaction Handler が発行するコマンドです。サービス越しに通るメッセージの名簿は **契約イベント 11 本、契約コマンド 2 本、契約クエリ 1 本（`FindRouteCandidatesQuery`）** です（「ドメインイベント一覧」参照）。同期の問い合わせは bookingms → routingms の 1 本だけで、billingms が請求時に要る荷主の契約情報は問い合わせでなく `ShipperRegisteredEvent` / `CorporateContractAssignedEvent` の購読で `shipper_contract_snapshot` に写します。この線引きは `java-2` ADR-009・`java-3` ADR-022 と同じで、違いは「同期の問い合わせ」も REST でなく Axon の Query Bus を通ることです。
+矢印の実線は **イベント**（Axon Event Bus）、点線は **同期の問い合わせ**（Axon Query Bus 経由の ACL）です。サービス越しに状態を変える同期呼び出しは置きません。サービスをまたぐ状態変更はすべてイベント、またはイベントを受けた Reaction Handler が発行するコマンドです。サービス越しに通るメッセージの名簿は **契約イベント 11 本、契約コマンド 2 本、契約クエリ 1 本（`FindRouteCandidatesQuery`）** です（「ドメインイベント一覧」参照）。同期の問い合わせは bookingms → routingms の 1 本だけで、billingms が請求時に要る荷主の契約情報は問い合わせでなく `ShipperRegisteredEvent` / `CorporateContractAssignedEvent` の購読で `shipper_contract_snapshot` に写します。この線引きは `java-2` ADR-009・`java-3` ADR-022 と同じで、違いは「同期の問い合わせ」も REST でなく Axon の Query Bus を通ることです。
 
 ### 各コンテキストの説明
 
@@ -266,7 +266,7 @@ package "interfaces（駆動側アダプター）" {
 package "application" {
   interface "CommandGateway" as cgw
   interface "QueryGateway" as qgw
-  [BookingSaga] as saga
+  [BookingReactionHandler] as saga
   [BookingReactionHandler\n@EventHandler → CommandGateway] as reaction
   interface "RouteCandidateFinder\n(ACL ポート)" as aclport
 }
@@ -297,7 +297,7 @@ reaction --> cgw
 proj --> mapper
 qgw --> qh
 qh --> mapper
-api --> aclport : 経路候補の存在確認\n（Saga からは呼ばない）
+api --> aclport : 経路候補の存在確認\n（Reaction Handler からは呼ばない）
 aclport <|.. aclimpl
 aclimpl --> qgw : routingms の QueryHandler へ\n（Axon Server 経由）
 @enduml
@@ -308,27 +308,27 @@ aclimpl --> qgw : routingms の QueryHandler へ\n（Axon Server 経由）
 | レイヤー | 責務 | 置くもの | 置かないもの |
 | :--- | :--- | :--- | :--- |
 | `domain` | 業務ルール。イベントを生む | `@EventSourced`、コマンド / イベントの `record`、値オブジェクト、ドメインサービス | Spring・MyBatis・Axon の設定。Axon の**アノテーションだけ**は許す（後述） |
-| `application` | ユースケースの順序、Saga、Reaction Handler、ACL ポートの定義 | `@Saga`、`application/reaction` の Reaction Handler（`@EventHandler` → `CommandGateway`）、出力ポート（interface）、Command / Query Gateway の利用 | SQL、HTTP |
+| `application` | ユースケースの順序、Reaction Handler、ACL ポートの定義 | `application/reaction` の Reaction Handler（`@EventHandler` → `CommandGateway`）、出力ポート（interface）、Command / Query Gateway の利用 | SQL、HTTP、`application/saga`（置かない） |
 | `infrastructure` | 投影、問い合わせ、ACL の実装、Axon の設定 | `@EventHandler` の Projection、`@QueryHandler`、MyBatis Mapper、`AxonConfig` | 業務ルール、コマンドの送信（投影は `CommandGateway` を持たない） |
 | `interfaces` | 入出力 | REST Controller、DTO、DTO とコマンドの変換 | ドメインの直接操作（必ず Gateway を通す） |
 
-**ドメイン層が Axon のアノテーションに依存すること**は、参照元 `take-4` と同じく許容します。`@EventSourced` / `@CommandHandler` / `@EventSourcingHandler` はコンパイル時依存だけで、実行時のフレームワーク呼び出しをドメインに持ち込みません。ArchUnit では「ドメイン層は Spring に依存しない」「ドメイン層は MyBatis に依存しない」を守り、Axon については `org.axonframework..annotation..` と `EventAppender`、それに **`org.axonframework.extension.spring.stereotype.EventSourced` の 1 型だけ**を許可リストにします。`@EventSourced` は Spring stereotype（メタアノテーションに `@Component`）を含みますが、take-4 ADR-0008 が実機で確定したとおり、これ無しでは集約が Command Bus に登録されません。ドメインが持つ Spring 由来の型はこの 1 つに限り、`org.springframework..` への直接依存は引き続き禁止します。許可リストに無い Axon の型をドメインが使えば赤になります。IT1 スパイクで 5.3 系が stereotype 無しで登録できると分かれば、許可リストから外して `@EventSourcedEntity` に戻します（「設計上の注意」#1）。
+**ドメイン層が Axon のアノテーションに依存すること**は、参照元 `take-4` と同じく許容します。`@EventSourced` / `@CommandHandler` / `@EventSourcingHandler` はコンパイル時依存だけで、実行時のフレームワーク呼び出しをドメインに持ち込みません。ArchUnit では「ドメイン層は Spring に依存しない」「ドメイン層は MyBatis に依存しない」を守り、Axon については `org.axonframework..annotation..` と `EventAppender`、それに **`org.axonframework.extension.spring.stereotype.EventSourced` の 1 型だけ**を許可リストにします。`@EventSourced` は Spring stereotype（メタアノテーションに `@Component`）を含みますが、take-4 ADR-0008 が実機で確定したとおり、これ無しでは集約が Command Bus に登録されません。ドメインが持つ Spring 由来の型はこの 1 つに限り、`org.springframework..` への直接依存は引き続き禁止します。許可リストに無い Axon の型をドメインが使えば赤になります。IT1 スパイクで実機検証した結果、`@EventSourced` 単独で登録されること、`@EventSourcedEntity` は 5.1.0-RC2 に存在しないことが確認できたため、この許可リストは恒久です。
 
 ### パッケージ構成（正典）
 
 ```text
-apps/backend/                                   Gradle マルチプロジェクトルート
+apps/cargo-tracker/backend/                     Gradle マルチプロジェクトルート
 ├── settings.gradle                             include: shared, gatewayms, authms, bookingms, routingms, trackingms, handlingms, billingms
 ├── shared/                                     共有カーネル（ライブラリ、デプロイしない）
 │   └── src/main/java/com/example/cargotracker/shared/
 │       ├── domain/model/{Location, UnLocode}
 │       ├── domain/auth/{AuthenticatedUser, Role}
 │       ├── contract/event/                     サービス間イベント契約（record）
-│       ├── contract/command/                   サービス越しに送るコマンド（Saga 用）
+│       ├── contract/command/                   サービス越しに送るコマンド（Reaction Handler 用）
 │       ├── contract/query/                     サービス越しの問い合わせと応答 DTO
-│       └── infrastructure/axon/                共通の AxonConfig 断片、JDBC TokenStore / SagaStore、Jackson シリアライザ
+│       └── infrastructure/axon/                共通の AxonConfig 断片、JDBC TokenStore（SagaStore は無い）、Jackson シリアライザ
 ├── gatewayms/                                  Spring Cloud Gateway（ルーティング・JWT 検証・CORS）
-├── authms/                                     状態保存。projection/ と saga/ を持たない
+├── authms/                                     状態保存。projection/ を持たない
 │   └── src/main/java/com/example/cargotracker/auth/
 │       ├── domain/model/{aggregates, valueobjects}
 │       ├── application/
@@ -345,7 +345,7 @@ apps/backend/                                   Gradle マルチプロジェク�
 │       │   │   └── valueobjects/{BookingId, BookingStatus, CargoSpecification, ...}
 │       │   └── service/                        # ドメインサービス（集約に入らない計算）
 │       ├── application/
-│       │   ├── saga/BookingSaga.java
+│       │   ├── reaction/BookingReactionHandler.java
 │       │   ├── reaction/BookingReactionHandler.java  # 契約イベント → 自集約へのコマンド（Processing Group: booking-reaction）
 │       │   └── port/RouteCandidateFinder.java  # ACL ポート（利用側が定義）
 │       ├── infrastructure/
@@ -414,7 +414,7 @@ qh --> rm : SELECT
 | 一覧・詳細・検索 | クエリ | Controller → `QueryGateway` → `@QueryHandler` → MyBatis | 予約一覧・追跡照会・航海スケジュール検索 |
 | 経路候補の算出 | クエリ | routingms の `@QueryHandler` がドメインサービスを呼ぶ | US08（算出は状態を変えない） |
 | サービス越しの参照 | クエリ | ACL ポート → `QueryGateway` → Axon Server → 提供側の `@QueryHandler` | bookingms が routingms に経路候補を要求する |
-| サービス越しの状態変更 | イベント → Saga / Reaction Handler → コマンド | 購読側の `@Saga`（複数段の業務連鎖・補償）または `application/reaction` の Reaction Handler（1 イベント → 1 コマンド）。**投影はコマンドを送らない** | 荷役登録 → 追跡と予約の更新 |
+| サービス越しの状態変更 | イベント → Reaction Handler → コマンド | `application/reaction` の Reaction Handler（1 イベント → 1 コマンド）。**投影はコマンドを送らない** | 荷役登録 → 追跡と予約の更新 |
 
 画面のボタン表示条件は、投影テーブルに写した `status` を読みますが、**遷移してよいかの判定は集約だけが持ちます**。投影で表示を絞っても、集約のコマンドハンドラが同じ規則で拒否します。二重の検査ではなく、表示は投影・判定は集約という分業です。
 
@@ -502,7 +502,7 @@ public record CargoBookedEvent(
 
 | 規則 | 内容 | 由来 |
 | :--- | :--- | :--- |
-| 登録は `@EventSourced(idType, tagKey)`（Spring stereotype） | `@EventSourcedEntity` 単独は実機で `NoHandlerForCommandException`。ArchUnit の許可リストにこの 1 型を明示的に加える。5.3 系で stereotype 無しで登録できるかは **IT1 スパイクの第 1 項目** | take-4 ADR-0008 |
+| 登録は `@EventSourced(idType, tagKey)`（Spring stereotype） | `@EventSourcedEntity` は 5.1.0-RC2 に存在しない。ArchUnit の許可リストにこの 1 型を明示的に加える。IT1 スパイクで実機確認済み（恒久） | take-4 ADR-0008 |
 | 作成系は `static`、更新系はインスタンス | Axon 5 の公式パターン | take-4 ADR-0007 |
 | `AggregateLifecycle.apply()` は使わない | 5 系に存在しない。`EventAppender` を引数で受ける | take-4 ADR-0007 |
 | `@EntityCreator` を必ず宣言 | リフレクションで生成される。コレクション初期化はここ | take-4 ADR-0007 |
@@ -517,7 +517,9 @@ public record CargoBookedEvent(
 package com.example.cargotracker.booking.infrastructure.projection;
 
 @Component
-@ProcessingGroup("booking-cargo-projection")  // 名前の正典は data-model.md「Processing Group とテーブルの対応」
+// Processing Group は @ProcessingGroup（Axon 5 に無い）ではなく application.yml の
+// axon.eventhandling.processors."[<このクラスのパッケージ名>]" で指定する。
+// 名前の正典は data-model.md「Processing Group とテーブルの対応」
 public class CargoProjection {
 
     private final CargoSummaryMapper mapper;
@@ -552,13 +554,13 @@ public class CargoProjection {
 
 ### Reaction Handler 実装パターン（イベント → コマンド）
 
-他サービスの契約イベントを受けて**自サービスの集約にコマンドを送る**役割は、投影ではなく `application/reaction/<Name>ReactionHandler` に置きます。Saga との違いは、Saga が複数段の連鎖と補償・タイムアウトを状態つきで扱うのに対し、Reaction Handler は「1 イベントを受けたら 1 コマンドを送る」だけで状態を持たないことです。
+他サービスの契約イベントを受けて**自サービスの集約にコマンドを送る**役割は、投影ではなく `application/reaction/<Name>ReactionHandler` に置きます。Reaction Handler は「1 イベントを受けたら 1 コマンドを送る」だけで状態を持ちません。Axon 5 に Saga が無いため、複数段の連鎖はこの Handler を段のぶん並べて表し、途中経過が要る場合はその BC の集約か専用の投影テーブルに持ちます（ADR-0001 決定 6）。
 
 ```java
 package com.example.cargotracker.booking.application.reaction;
 
 @Component
-@ProcessingGroup("booking-reaction")  // 投影とは別の Group。リプレイの対象にしない
+// 投影とは別パッケージに置き、application.yml で別 Processing Group にする。リプレイの対象にしない
 public class BookingReactionHandler {
 
     private final CommandGateway commandGateway;
@@ -582,9 +584,9 @@ public class BookingReactionHandler {
 
 | 規則 | 内容 |
 | :--- | :--- |
-| 置き場は `application/reaction` | `CommandGateway` を使えるのは `interfaces`・`application/saga`・`application/reaction` の 3 か所だけ（ArchUnit） |
+| 置き場は `application/reaction` | `CommandGateway` を使えるのは `interfaces`・`application/reaction` の 2 か所だけ（ArchUnit） |
 | Processing Group は投影と分ける | `booking-reaction` / `tracking-reaction` / `billing-reaction`。投影の Group をリセットしてリプレイしても Reaction の Group は**リセットしない**。`ReplayIT` で、リプレイ中に `CommandGateway` が 1 度も呼ばれないことを固定する |
-| 送るのは自サービスの集約へのコマンド | 他サービスの集約へ送るなら Saga にする（契約コマンドの名簿が増える） |
+| 送るのは自サービスの集約へのコマンド | 他サービスの集約へ送るなら契約コマンドになり、名簿が増える（ADR を起こす） |
 | 失敗は要確認へ | コマンドが拒否されたら `attention_item` に記録して Group を進める。投影のトークンを止めない |
 | 担当 | bookingms：`RecordHandlingCommand` / `MarkDeliveredCommand` / `SettleBookingCommand`、trackingms：`AdvanceTrackingCommand`（荷役由来）・`UNLOAD` 後の `CloseTrackingCommand`（キャンセル時）、billingms：`shipper_contract_snapshot` は投影で足りるため当面空 |
 
@@ -657,7 +659,7 @@ take-4 の `ExternalCargoRoutingService`（REST）と役割は同じです。違
 | `ShipperContactUpdatedEvent` | bookingms | — | bookingms 投影（暗号化フィールドを持つ 2 本目） | 本設計 |
 | `CorporateContractAssignedEvent` | bookingms | **○** | bookingms 投影、billingms：`shipper_contract_snapshot`（割引率） | 本設計（`FindShipperForBillingQuery` の代替） |
 | `QuotationCreatedEvent` | bookingms | — | bookingms 投影 | take-4 |
-| `CargoBookedEvent` | bookingms | — | bookingms 投影、`BookingSaga` 開始 | take-4（java-3 では廃止） |
+| `CargoBookedEvent` | bookingms | — | bookingms 投影、`BookingReactionHandler` 起点 | take-4（java-3 では廃止） |
 | `CargoRoutedEvent` | bookingms | — | bookingms 投影 | take-4 |
 | `TrackingNumberIssuedEvent` | bookingms | **○** | trackingms：`TrackingActivity` 作成（Saga 経由）、handlingms：`cargo_snapshot` | java-3 ADR-022 の主イベント |
 | `BookingConfirmedEvent` / `ShipperNotifiedEvent` | bookingms | — | bookingms 投影（通知履歴は宛先・要約を持つ。送信基盤はスコープ外） | take-4 |
@@ -724,7 +726,7 @@ axon:
 | 項目 | 方針 | 由来 |
 | :--- | :--- | :--- |
 | `axon-server-connector` を全サービスで明示依存にする | starter の推移的依存に含まれず、無いと**無音で** in-memory にフォールバックする。起動時に接続を検査し、失敗したら起動を止める | take-4 ADR-0009 |
-| 起動時の接続検査は **context が DCB であること** まで見る | `@EventSourced(tagKey)` は DCB 前提。Axon Server 側は `AXONIQ_AXONSERVER_STANDALONE_DCB=true`（クラスタは `dcb=true`）。無いと `AXONIQ-2308` で Coordinator が無限再試行し、接続はできるのに投影が永久に進まない。接続だけでなく DCB を検査して起動を止める | take-4 ADR-0009 |
+| 起動時の接続検査は **context が DCB であること** まで見る | `@EventSourced(tagKey)` は DCB 前提。Axon Server 側は `AXONIQ_AXONSERVER_STANDALONE_DCB=true`（クラスタは `dcb=true`）。無いと接続が確立せず（2026.0.4 の実測は `AXONIQ-1302 default: not found in any replication group`）、**アプリケーションは起動を止めずに無限再接続する**。ログの検出に頼らず、接続後に context の DCB 可否を問い合わせて起動を止める | take-4 ADR-0009 |
 | Axon Server に接続するのは業務 5 サービスだけ | authms・gatewayms は接続しない。期待接続数は「5 × 台数」、接続数上限はサービスあたり 50・合計 250 で監視する | 本設計（M4） |
 | Token Store / Saga Store はサービスごとの Read Model DB（JDBC） | 投影と同じトランザクションに参加させる。`token_entry`（`mask INTEGER NOT NULL` を含む take-4 実測スキーマ）/ `saga_entry` / `association_value_entry` は各サービスの Flyway で作る | take-4 ADR-0009 |
 | Axon の `TransactionManager` Bean は **1 つだけ** | `SpringTransactionManager` は第 3 引数の `ConnectionProvider` を渡して作る（無いと Coordinator の `initializeTokenStore` で失敗）。`TransactionManager` 型の Bean が複数あると `getIfUnique()` が外れて `NoTransactionManager` に**無音で**落ちる。Bean が 1 つであることを起動時に検査する | take-4 ADR-0009 |

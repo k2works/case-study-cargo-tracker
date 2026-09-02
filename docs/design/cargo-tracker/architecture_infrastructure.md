@@ -4,7 +4,7 @@ title: "インフラストラクチャアーキテクチャ - 国際貨物輸送
 description: "CQRS / Event Sourcing 版 Cargo Tracker のインフラストラクチャ設計。ローカルは kind + Kustomize、ステージング・本番は AWS ECS + EC2（Axon Server）+ RDS。Axon Server を全環境で動かし、Event Store のバックアップ・復元・投影のリプレイを中心に据える。"
 tags: [design,architecture,infrastructure,axon-server,kubernetes,aws]
 status: stable
-generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T07:46:35Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-02T13:24:08Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -121,7 +121,7 @@ ops/k8s/
 
 | 項目 | 内容 |
 | :--- | :--- |
-| Axon Server | `axoniq/axonserver:2026.x`（Standard Edition）。`AXONIQ_AXONSERVER_STANDALONE_DCB=true` で **DCB を有効化**する（`tagKey` の集約は DCB 前提。無いと `AXONIQ-2308` で Coordinator が無限再試行し全業務サービスが起動しない）。PVC で `/axonserver/events` を永続化。`kind delete cluster` でも消えないよう hostPath を overlay で当てる |
+| Axon Server | `axoniq/axonserver:2026.x`（Standard Edition）。`AXONIQ_AXONSERVER_STANDALONE_DCB=true` で **DCB を有効化**する（`tagKey` の集約は DCB 前提。無いと接続が確立せず（実測は `AXONIQ-1302`）、業務サービスは起動を止めないまま無限再接続する）。PVC で `/axonserver/events` を永続化。`kind delete cluster` でも消えないよう hostPath を overlay で当てる |
 | PostgreSQL | `postgres:16`。1 Pod に 6 DB。初期化 SQL で DB と接続ユーザーを作る |
 | サービス | 7 サービスの Deployment。`AXON_AXONSERVER_SERVERS=axonserver:8124`。起動時に Axon Server への接続と **context が DCB であること**を確認し、どちらかに失敗したら起動を止める |
 | 起動順 | Axon Server と PostgreSQL の readiness を待ってからサービスを起動（initContainer） |
@@ -236,7 +236,7 @@ stop
 | 項目 | 方針 |
 | :--- | :--- |
 | ローカルの品質ゲート | CI と同じコマンド（`./gradlew build`）。`test` だけでは SpotBugs が抜ける |
-| `contract-tests` | テスト専用サブプロジェクト（`apps/backend/contract-tests`）。業務サービスの数には数えない。CI の「往復テスト」段で対になる 2 サービスと Axon Server（DCB）を Testcontainers で起動して回す。`shared` を変更する PR は全サービス分を回す |
+| `contract-tests` | テスト専用サブプロジェクト（`apps/cargo-tracker/backend/contract-tests`）。業務サービスの数には数えない。CI の「往復テスト」段で対になる 2 サービスと Axon Server（DCB）を Testcontainers で起動して回す。`shared` を変更する PR は全サービス分を回す |
 | セキュリティ走査 | 公式イメージの直実行。導入失敗と検出が同じ赤にならないようにする |
 | 静的解析の抑制 | 指摘メッセージでなくルール ID で絞る（ロケールに依存させない） |
 | イメージタグ | コミット SHA。同一タグの上書きをしない |
@@ -271,8 +271,8 @@ Blue と Green が同時に動く間、同じ Processing Group の Event Process
 | :--- | :--- | :--- |
 | Axon Server | 稼働、gRPC 接続数、Event Store のディスク使用率、context が DCB であること | 接続数が期待値（業務 5 サービス × 台数）を下回ったら警告。上限（サービスあたり 50・合計 250）の 80% で警告。ディスク 70% で警告 |
 | Event Processor | **トークンの遅れ**（最新イベントとの差）、エラーで止まった Processor | 遅れが 1,000 イベントまたは 5 分を超えたら警告。停止は即通知 |
-| Saga | 未完了 Saga の滞留数・滞留時間 | 24 時間を超えた Saga を一覧化 |
-| 要確認 | `attention_item` の未確認件数（投影の拒否・Reaction の失敗・Saga の補償） | 1 件以上で担当ロールの要確認一覧（S70）に表示 |
+| 連鎖（Reaction Handler） | 未完了の連鎖の滞留数・滞留時間 | 24 時間を超えたものを一覧化（Axon に Saga が無いため投影テーブルの走査で検知する） |
+| 要確認 | `attention_item` の未確認件数（投影の拒否・Reaction Handler の失敗・補償） | 1 件以上で担当ロールの要確認一覧（S70）に表示 |
 | サービス | CPU、メモリ、5xx 率、応答時間 | 5xx 1% 超で警告 |
 | RDS | 接続数、ディスク、レプリカ遅延 | — |
 | ログ | CloudWatch Logs。構造化 JSON。`traceId` と `bookingId` / `trackingNumber` を必ず載せる | Micrometer Tracing でサービスをまたぐ相関 |

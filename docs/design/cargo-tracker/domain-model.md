@@ -1,10 +1,10 @@
 ---
 type: Design
 title: "ドメインモデル設計 - 国際貨物輸送管理システム（CQRS / Event Sourcing 版）"
-description: "CQRS / Event Sourcing 版 Cargo Tracker のドメインモデル設計。6 コンテキストの集約・不変条件・コマンド・イベント（内部 / 契約）・状態遷移・Saga を、イベントを永続化フォーマットとして定義する。"
+description: "CQRS / Event Sourcing 版 Cargo Tracker のドメインモデル設計。6 コンテキストの集約・不変条件・コマンド・イベント（内部 / 契約）・状態遷移・Reaction Handler を、イベントを永続化フォーマットとして定義する。"
 tags: [design,domain-model,ddd,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T07:46:35Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-02T13:24:08Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -13,7 +13,7 @@ verified:
 
 ## 概要
 
-国際貨物輸送管理システム（Cargo Tracker）のドメインモデルを、[バックエンドアーキテクチャ](architecture_backend.md) が定めた 6 つの業務コンテキスト（Booking / Routing / Tracking / Handling / Billing / Auth）と共有カーネルに対して定義します。前提は Axon Framework 5 による CQRS + Event Sourcing + Saga で、Auth を除く集約はイベント列として永続化されます。
+国際貨物輸送管理システム（Cargo Tracker）のドメインモデルを、[バックエンドアーキテクチャ](architecture_backend.md) が定めた 6 つの業務コンテキスト（Booking / Routing / Tracking / Handling / Billing / Auth）と共有カーネルに対して定義します。前提は Axon Framework 5 による CQRS + Event Sourcing で、Auth を除く集約はイベント列として永続化されます。
 
 Event Sourcing では**イベントが集約の永続化フォーマット**です。従来の設計書がエンティティと値オブジェクトを中心に書くのに対し、本書は各集約について **コマンド → 不変条件 → イベント → 状態復元** の 4 つを対にして書きます。イベントは追記専用であり、一度 Event Store に書いたイベントは書き換えられません。したがって本書のイベント定義は、テーブル定義と同じ重さで扱います。
 
@@ -21,7 +21,7 @@ Event Sourcing では**イベントが集約の永続化フォーマット**で�
 
 | 参照元 | 採るもの | 変えるもの |
 | :--- | :--- | :--- |
-| `tmp/take-4/docs/design/domain-model.md` | Axon 5 前提の集約・コマンド・イベント・Saga の構成、レビュー指摘 28 件の反映結果（9 値の `TransportStatus`、`Money`、`CargoSnapshot` ACL など） | 4 系の `@Aggregate` 表記を 5 系の Entity API に読み替える。REST の ACL を Query Bus に置き換える |
+| `tmp/take-4/docs/design/domain-model.md` | Axon 5 前提の集約・コマンド・イベント・調整役の構成、レビュー指摘 28 件の反映結果（9 値の `TransportStatus`、`Money`、`CargoSnapshot` ACL など） | 4 系の `@Aggregate` 表記を 5 系の Entity API に読み替える。REST の ACL を Query Bus に置き換える |
 | `docs/article/source/java-3/docs/design/domain-model.md` | 参照元 take-4 に無い業務（UC21 通関申告、UC22 輸送中キャンセルの承認、US28 誤配検知、US31 アカウント保護）、`HandlingType` が要件を自分で持つ設計、`ROUTE_NOTIFIED` の導入理由 | 現在状態の UPDATE をイベント列に置き換える |
 
 ## 戦略的設計（業務領域の分類）
@@ -49,7 +49,7 @@ quadrantChart
 | コンテキスト | 分類 | 理由 | Event Sourcing |
 | :--- | :--- | :--- | :--- |
 | Routing | 中核 | 航海スケジュール・寄港地接続・貨物種別を考慮した経路候補算出は競合優位性そのもの | 適用（`Voyage`） |
-| Booking | 中核 | 予約状態遷移と Saga（確定 → 追跡番号 → 追跡開始）は基幹プロセス | 適用 |
+| Booking | 中核 | 予約状態遷移と連鎖（確定 → 追跡番号 → 追跡開始）は基幹プロセス | 適用 |
 | Tracking | 中核 | 追跡・例外管理は荷主との信頼を作る。**履歴そのものが価値**であり Event Sourcing の効果が最も出る | 適用 |
 | Handling | 補完 | 荷役記録は基盤だが業界共通。通関申告は監査履歴が要る | 適用 |
 | Billing | 補完 | 法人割引は固有だが精算自体は業界共通。金額を扱うため監査が要る | 適用 |
@@ -277,7 +277,7 @@ end note
 
 ## Booking Context（中核）— bookingms
 
-予約・荷主・見積を担います。`BookingSaga` が確定 → 追跡番号発行 → 追跡開始を調整します。
+予約・荷主・見積を担います。`BookingReactionHandler` が確定 → 追跡番号発行 → 追跡開始を調整します。
 
 ### ドメインモデル図
 
@@ -538,7 +538,7 @@ CANCELLED --> [*]
 | `NotifyShipperCommand` | 営業担当者 | `ShipperNotifiedEvent` | — | UC10 / US12 |
 | `ReturnToRoutingCommand` | 営業担当者 | `ReturnedToRoutingEvent` | — | UC08 |
 | `ConfirmBookingCommand` | 営業担当者 | `BookingConfirmedEvent` | — | UC11 / US13 |
-| `IssueTrackingNumberCommand` | 経路設計者 / Saga | `TrackingNumberIssuedEvent` | **○** | UC12 / US14 |
+| `IssueTrackingNumberCommand` | 経路設計者 / Reaction Handler | `TrackingNumberIssuedEvent` | **○** | UC12 / US14 |
 | `RequestCancellationCommand` | 営業担当者 | `CancellationRequestedEvent` または `CargoCancelledEvent`（即時） | ○（後者） | UC22 / US30 |
 | `ApproveCancellationCommand` | 追跡管理者 | `CancellationApprovedEvent` + `CargoCancelledEvent` | ○（後者） | UC22 / US30 |
 | `RejectCancellationCommand` | 追跡管理者 | `CancellationRejectedEvent` | — | UC22 / US30 |
@@ -815,7 +815,7 @@ EXCEPTION --> DELIVERED : 解決・引取完了
 
 | コマンド | アクター | 発行イベント | 契約 | UC / US |
 | :--- | :--- | :--- | :--- | :--- |
-| `InitializeTrackingCommand` | `BookingSaga`（`shared/contract/command`） | `TrackingInitializedEvent` | ○ | UC12 / US14 |
+| `InitializeTrackingCommand` | `BookingReactionHandler`（`shared/contract/command`） | `TrackingInitializedEvent` | ○ | UC12 / US14 |
 | `AdvanceTrackingCommand` | `TrackingReactionHandler`（`HandlingActivityRegisteredEvent` 購読） | `TransportStatusUpdatedEvent`、`CargoMisroutedEvent` | — | UC14 / US15・US28 |
 | `RevertTrackingCommand` | `TrackingReactionHandler`（`HandlingActivityVoidedEvent` 購読） | `TransportStatusRevertedEvent` | — | UC13 |
 | `PlanCancellationDischargeCommand` | `TrackingReactionHandler`（`CargoCancelledEvent` 購読） | `CancellationDischargePlannedEvent` | — | UC22 / US30 |
@@ -1080,13 +1080,13 @@ Booking の `Quotation` はこの式と同じ料率で概算を出します。�
 
 | コマンド | アクター | 発行イベント | 契約 | UC / US |
 | :--- | :--- | :--- | :--- | :--- |
-| `CalculateInvoiceCommand` | `BillingSaga`（`CargoDeliveredEvent` 購読。荷主の種別・割引率は自前の `shipper_contract_snapshot` から）/ 経理担当者 | `InvoiceCalculatedEvent` | — | UC17 / US21 |
-| `ApplyDiscountCommand` | Saga / 経理担当者 | `DiscountAppliedEvent` | — | UC17 / US22 |
+| `CalculateInvoiceCommand` | `BillingReactionHandler`（`CargoDeliveredEvent` 購読。荷主の種別・割引率は自前の `shipper_contract_snapshot` から）/ 経理担当者 | `InvoiceCalculatedEvent` | — | UC17 / US21 |
+| `ApplyDiscountCommand` | Reaction Handler / 経理担当者 | `DiscountAppliedEvent` | — | UC17 / US22 |
 | `AdjustInvoiceCommand` | 経理担当者 | `InvoiceAdjustedEvent` | — | UC17 |
 | `IssueInvoiceCommand` | 経理担当者 | `InvoiceIssuedEvent` | — | UC18 / US23 |
 | `RecordPaymentCommand` | 経理担当者 | `PaymentRecordedEvent` | **○** | UC18 / US23 |
 | `VoidInvoiceCommand` | 経理担当者 | `InvoiceVoidedEvent` | — | UC18 |
-| `ApplyCancellationFeeCommand` | Saga（`CargoCancelledEvent` 購読） | `CancellationFeeAppliedEvent` | — | UC22 |
+| `ApplyCancellationFeeCommand` | Reaction Handler（`CargoCancelledEvent` 購読） | `CancellationFeeAppliedEvent` | — | UC22 |
 
 ## Auth Context（支援）— authms
 
@@ -1155,13 +1155,13 @@ User *-- "0..1" UserShipperLink
 
 | イベント | 発行 | 購読と用途 | 主なフィールド |
 | :--- | :--- | :--- | :--- |
-| `TrackingNumberIssuedEvent` | bookingms | trackingms（Saga → 追跡開始）、handlingms（`CargoSnapshot`） | `bookingId`, `trackingNumber`, `origin`, `destination`, `cargoType`, `legs[]`, `issuedAt` |
+| `TrackingNumberIssuedEvent` | bookingms | trackingms（Reaction Handler → 追跡開始）、handlingms（`CargoSnapshot`） | `bookingId`, `trackingNumber`, `origin`, `destination`, `cargoType`, `legs[]`, `issuedAt` |
 | `CargoCancelledEvent` | bookingms | trackingms（陸揚げ地を記録。閉じるのは当該港の `UNLOAD` 後）、handlingms（`CargoSnapshot` 更新）、billingms（キャンセル料） | `bookingId`, `trackingNumber?`, `statusAtCancel`, `dischargeLocation?`, `cancelledAt` |
 | `HandlingActivityRegisteredEvent` | handlingms | trackingms（`TrackingReactionHandler` が状態を進める・誤配検知）、bookingms（投影に写す。`BookingReactionHandler` が `RecordHandlingCommand`） | `activityId`, `trackingNumber`, `bookingId`, `type`, `location`, `voyageNumber?`, `completedAt`, `offRoute` |
 | `HandlingActivityVoidedEvent` | handlingms | trackingms（`RevertTrackingCommand`）、bookingms（`RevertHandlingCommand`）。元の記録は残る | `activityId`, `trackingNumber`, `bookingId`, `type`, `location`, `reason`, `voidedBy`, `voidedAt` |
 | `CustomsStatusChangedEvent` | handlingms | trackingms（`HELD` で例外起票）、billingms（留置の調整根拠） | `declarationNumber`, `trackingNumber`, `from`, `to`, `reason`, `heldBusinessDays?`（`HELD` から出るとき）, `changedAt` |
-| `CargoDeliveredEvent` | trackingms | billingms（`BillingSaga` 開始）、bookingms（`DELIVERED`） | `trackingNumber`, `bookingId`, `deliveredAt`, `location` |
-| `TrackingInitializedEvent` | trackingms | bookingms（`BookingSaga` の `@EndSaga`） | `bookingId`, `trackingNumber`, `initializedAt` |
+| `CargoDeliveredEvent` | trackingms | billingms（`BillingReactionHandler` 開始）、bookingms（`DELIVERED`） | `trackingNumber`, `bookingId`, `deliveredAt`, `location` |
+| `TrackingInitializedEvent` | trackingms | bookingms（`BookingReactionHandler`。連鎖の終わり） | `bookingId`, `trackingNumber`, `initializedAt` |
 | `TrackingClosedEvent` | trackingms | bookingms（キャンセル完了を投影に写す） | `bookingId`, `trackingNumber`, `closedAt`, `reason` |
 | `PaymentRecordedEvent` | billingms | bookingms（`SETTLED`） | `invoiceId`, `bookingId`, `paidAt`, `amount` |
 | `ShipperRegisteredEvent` | bookingms | billingms（`shipper_contract_snapshot` を作る） | `shipperId`, `shipperCode`, `shipperType`, `name`, `email`, `phone`, `address`, `corporateContract?`, `registeredAt`。`name` / `email` / `phone` / `address` は荷主ごとの鍵で暗号化して載せる（crypto-shredding、ADR-0003） |
@@ -1171,18 +1171,18 @@ User *-- "0..1" UserShipperLink
 
 ### 契約コマンド（`shared/contract/command`）
 
-Saga または Reaction Handler が送る、サービス境界をまたぐ意味を持つコマンドです。数が増えることは結合が増えたことなので、ArchUnit で名簿を固定し、増やすときは ADR を起こします。契約コマンドは **2 本**です。
+Reaction Handler が送る、サービス境界をまたぐ意味を持つコマンドです。数が増えることは結合が増えたことなので、ArchUnit で名簿を固定し、増やすときは ADR を起こします。契約コマンドは **2 本**です。
 
 | コマンド | 送信 | 宛先 | 用途 |
 | :--- | :--- | :--- | :--- |
-| `InitializeTrackingCommand` | bookingms `BookingSaga` | trackingms `TrackingActivity` | 追跡開始 |
-| `CloseTrackingCommand` | trackingms `TrackingReactionHandler`（`cancellationDischargeLocation` での `UNLOAD` を受けた後） | trackingms `TrackingActivity` | キャンセル承認後、陸揚げの荷降しが記録されてから追跡を閉じる。`BookingSaga` からは送らない |
+| `InitializeTrackingCommand` | bookingms `BookingReactionHandler` | trackingms `TrackingActivity` | 追跡開始 |
+| `CloseTrackingCommand` | trackingms `TrackingReactionHandler`（`cancellationDischargeLocation` での `UNLOAD` を受けた後） | trackingms `TrackingActivity` | キャンセル承認後、陸揚げの荷降しが記録されてから追跡を閉じる。`BookingReactionHandler` からは送らない |
 
 ### 契約クエリ（`shared/contract/query`）
 
 | クエリ | 送信 | 応答側 | 応答 |
 | :--- | :--- | :--- | :--- |
-| `FindRouteCandidatesQuery` | bookingms（ACL `RouteCandidateFinder`。Controller から呼ぶ。Saga からは呼ばない） | routingms | `List<RouteCandidateDto>` |
+| `FindRouteCandidatesQuery` | bookingms（ACL `RouteCandidateFinder`。Controller から呼ぶ。Reaction Handler からは呼ばない） | routingms | `List<RouteCandidateDto>` |
 
 契約クエリは **1 本**です。billingms が要る荷主の種別・割引率は同期クエリ（旧 `FindShipperForBillingQuery`）で取りに行かず、`ShipperRegisteredEvent` / `CorporateContractAssignedEvent` を購読して `shipper_contract_snapshot` を作ります。請求が bookingms の稼働に依存しなくなります。同期クエリのタイムアウト既定は 5 秒です。
 
@@ -1190,7 +1190,7 @@ Saga または Reaction Handler が送る、サービス境界をまたぐ意味
 
 ```plantuml
 @startuml
-title ドメインイベントの流れ（Saga と購読者）
+title ドメインイベントの流れ（連鎖と購読者）
 
 participant "bookingms" as B
 participant "routingms" as R
@@ -1203,7 +1203,7 @@ B -> B : ShipperRegisteredEvent / CorporateContractAssignedEvent（契約）
 B -> Bi : （購読）shipper_contract_snapshot に写す
 
 == 予約から追跡開始 ==
-B -> B : CargoBookedEvent（BookingSaga 開始）
+B -> B : CargoBookedEvent（連鎖の起点）
 B -> R : FindRouteCandidatesQuery（Query Bus, Controller から）
 R --> B : RouteCandidateDto[]
 B -> B : AssignRouteCommand → CargoRoutedEvent
@@ -1212,7 +1212,7 @@ B -> B : ConfirmBookingCommand → BookingConfirmedEvent
 B -> B : IssueTrackingNumberCommand → TrackingNumberIssuedEvent（契約）
 B -> T : InitializeTrackingCommand（契約コマンド）
 T -> T : TrackingInitializedEvent（契約）
-T -> B : （購読）BookingSaga @EndSaga
+T -> B : （購読）BookingReactionHandler：連鎖の終わり
 B -> H : （TrackingNumberIssuedEvent 購読）CargoSnapshot 作成
 
 == 輸送中 ==
@@ -1228,7 +1228,7 @@ H -> Bi : （購読）留置営業日を調整根拠に写す
 
 == 配送完了から精算 ==
 T -> T : AdvanceTrackingCommand(CLAIM) → TransportStatusUpdatedEvent(DELIVERED) + CargoDeliveredEvent（契約）
-T -> Bi : （購読）BillingSaga 開始 → CalculateInvoiceCommand（shipper_contract_snapshot を読む）
+T -> Bi : （購読）BillingReactionHandler → CalculateInvoiceCommand（shipper_contract_snapshot を読む）
 Bi -> Bi : ApplyDiscountCommand → DiscountAppliedEvent
 Bi -> Bi : IssueInvoiceCommand → InvoiceIssuedEvent（経理担当者）
 Bi -> Bi : RecordPaymentCommand → PaymentRecordedEvent（契約）
@@ -1238,48 +1238,57 @@ T -> B : （BookingReactionHandler）MarkDeliveredCommand → BookingDeliveredEv
 == キャンセル ==
 B -> B : ApproveCancellationCommand → CargoCancelledEvent（契約, dischargeLocation）
 B -> T : （TrackingReactionHandler）PlanCancellationDischargeCommand → CancellationDischargePlannedEvent
-B -> Bi : （BillingSaga）ApplyCancellationFeeCommand
+B -> Bi : （BillingReactionHandler）ApplyCancellationFeeCommand
 H -> T : （TrackingReactionHandler）AdvanceTrackingCommand(UNLOAD @ dischargeLocation)
 T -> T : CloseTrackingCommand（契約コマンド, TrackingReactionHandler）→ TrackingClosedEvent（契約）
 T -> B : （購読）キャンセル完了を投影に写す
 @enduml
 ```
 
-## Saga（業務プロセス）
+## 業務プロセスの連鎖（Reaction Handler）
 
-### BookingSaga（bookingms）
+Axon 5 には Saga がありません（`Saga`・`Deadline`・`@ProcessingGroup` を含むクラスが 1 つも無いことを IT1 スパイクで確認済み。[ADR-0001](../../adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) 決定 6）。複数段の業務連鎖は `application/reaction` の Reaction Handler を段のぶん並べて表し、**連鎖の途中経過は集約そのものが持ちます**。フレームワークが関連付けと終了を面倒見てくれないので、「今どの段か」は `Cargo` / `Invoice` の状態から読めることが条件になります。
+
+### 予約 → 追跡開始の連鎖（bookingms → trackingms）
 
 ```plantuml
 @startuml
-title BookingSaga
+title 予約〜追跡開始の連鎖（各段は独立した Reaction Handler）
 
-[*] --> 確定待ち : @StartSaga CargoBookedEvent\n(associationProperty = bookingId)
-確定待ち --> 追跡番号待ち : BookingConfirmedEvent\n→ IssueTrackingNumberCommand
-追跡番号待ち --> 追跡開始待ち : TrackingNumberIssuedEvent\n→ InitializeTrackingCommand（trackingms）
-追跡開始待ち --> 完了 : TrackingInitializedEvent（契約）\n@EndSaga
-追跡開始待ち --> 補償 : タイムアウト（再試行上限）\n→ RevertTrackingNumberCommand
-補償 --> [*]
+[*] --> BOOKED : CargoBookedEvent
+BOOKED --> CONFIRMED : 予約担当者の確定操作\n→ BookingConfirmedEvent
+CONFIRMED --> 追跡番号発行済 : BookingReactionHandler\nBookingConfirmedEvent → IssueTrackingNumberCommand
+追跡番号発行済 --> 追跡開始待ち : TrackingNumberIssuedEvent（契約）\n→ InitializeTrackingCommand（trackingms）
+追跡開始待ち --> 完了 : TrackingInitializedEvent（契約）を bookingms が購読
+追跡開始待ち --> 要確認 : 再試行の上限超過\n→ RevertTrackingNumberCommand + attention_item
+CONFIRMED --> 終了 : CargoCancelledEvent
+追跡番号発行済 --> 終了 : CargoCancelledEvent
 完了 --> [*]
-確定待ち --> 終了 : CargoCancelledEvent\n@EndSaga
-追跡番号待ち --> 終了 : CargoCancelledEvent\n@EndSaga
+要確認 --> [*]
 終了 --> [*]
 @enduml
 ```
 
-| 起動 | 完了 | 補償 |
+| 段 | 購読するイベント | 送るコマンド | 途中経過の置き場 |
+| :--- | :--- | :--- | :--- |
+| 1 | `BookingConfirmedEvent`（自サービス） | `IssueTrackingNumberCommand` | `Cargo.bookingStatus` |
+| 2 | `TrackingNumberIssuedEvent`（契約） | `InitializeTrackingCommand`（trackingms） | `Cargo.trackingNumber` の有無 |
+| 3 | `TrackingInitializedEvent`（契約） | 無し（連鎖の終わり） | `Cargo` に「追跡開始済み」を記録する |
+
+**Saga が持っていた「終了」と「タイムアウト」の代わり。** 終了は 3 段目のイベントを受け取ったことを `Cargo` に記録して表します。タイムアウトは Axon に Deadline が無いため、**`cargo_summary` の「追跡開始済みでない確定済み予約」を定期に走査する運用ジョブ**（`gulp reaction:stuck`）で検知し、上限を超えたものに `RevertTrackingNumberCommand` を送って `attention_item` に写します。予約は `CONFIRMED` に留まります。
+
+`BookingReactionHandler` は同期クエリを呼びません。経路候補の存在確認（候補 0 件の検知）は `RequestRoutingCommand` を受ける Controller が `FindRouteCandidatesQuery` で行い、Reaction Handler の外に置きます。Reaction Handler の中で `.join()` すると Processing Group が止まるためです。`CloseTrackingCommand` も bookingms から送らず、trackingms の `TrackingReactionHandler` が陸揚げ地での `UNLOAD` を受けた後に送ります（`TrackingActivity` 不変条件 9）。
+
+### 配送完了 → 精算の連鎖（billingms）
+
+| 購読するイベント | 送るコマンド | 失敗時 |
 | :--- | :--- | :--- |
-| `CargoBookedEvent` | `TrackingInitializedEvent`（契約）。`CargoCancelledEvent` でも終了 | 追跡の初期化が届かない → 再試行（`Clock` 差し替えで検査）、上限超過で `RevertTrackingNumberCommand`。予約は `CONFIRMED` に留まり、追跡管理者の要確認一覧（`attention_item`）に写す |
+| `CargoDeliveredEvent` | `CalculateInvoiceCommand`（`shipper_contract_snapshot` から荷主の種別・割引率を読む） | 荷主が無い（購読が遅れている）→ 再試行、上限超過で `InvoiceCreationFailedEvent` を出し経理担当者の要確認一覧（`attention_item`）に写す |
+| `CargoCancelledEvent` | `ApplyCancellationFeeCommand` | 同上 |
 
-`BookingSaga` は同期クエリを呼びません。経路候補の存在確認（候補 0 件の検知）は `RequestRoutingCommand` を受ける Controller が `FindRouteCandidatesQuery` で行い、Saga の外に置きます。Saga の中で `.join()` すると Processing Group が止まるためです。`CloseTrackingCommand` も Saga から送らず、trackingms の `TrackingReactionHandler` が陸揚げ地での `UNLOAD` を受けた後に送ります（`TrackingActivity` 不変条件 9）。
+以降の発行・入金は経理担当者の操作です。再試行の回数と打ち切りは Resilience4j で自前に組みます（Axon 5 が面倒を見ないため）。
 
-### BillingSaga（billingms）
-
-| 起動 | 完了 | 補償 |
-| :--- | :--- | :--- |
-| `CargoDeliveredEvent` | `InvoiceCalculatedEvent` + `DiscountAppliedEvent`（以降の発行・入金は経理担当者の操作） | `shipper_contract_snapshot` に荷主が無い（購読が遅れている）→ 再試行、上限超過で `InvoiceCreationFailedEvent` を出し経理担当者の要確認一覧（`attention_item`）に写す |
-| `CargoCancelledEvent` | `CancellationFeeAppliedEvent` | 同上 |
-
-Saga の再試行と補償は「例外にしない」ではなく「イベントとして残す」で扱います。戻り値を捨てて黙ると、失敗が誰にも見えないまま業務の守りが外れます。
+Reaction Handler の再試行と補償は「例外にしない」ではなく「イベントとして残す」で扱います。戻り値を捨てて黙ると、失敗が誰にも見えないまま業務の守りが外れます。
 
 ## クエリ一覧（読み取りモデル）
 
@@ -1378,7 +1387,7 @@ Saga の再試行と補償は「例外にしない」ではなく「イベント
 | ドメインサービス | Spring Bean にせず、コマンドハンドラの引数か Query Handler から呼ぶ純粋なクラス |
 | 読み取りモデル | `@EventHandler` 投影（`infrastructure/projection`、Processing Group `<service>-*-projection`）+ MyBatis + `@QueryHandler`。コマンドは送らない |
 | Reaction Handler | `application/reaction/<Name>ReactionHandler`（`BookingReactionHandler` / `TrackingReactionHandler` / `BillingReactionHandler`）。契約イベントの `@EventHandler` から `CommandGateway` でコマンドを送る。Processing Group は投影と分けて `booking-reaction` / `tracking-reaction` / `billing-reaction`。リプレイではリセットしない（`ReplayIT` で `CommandGateway` が呼ばれないことを固定） |
-| Saga | `@Saga`（API 名は IT1 スパイクで確定） |
+| 連鎖の調整役 | `@EventHandler` + `CommandGateway` の Reaction Handler（Axon 5 に Saga は無い。IT1 スパイクで確定） |
 | 契約 | `shared/contract/{event,command,query}` の `record` |
 
 ## データモデルとの対応

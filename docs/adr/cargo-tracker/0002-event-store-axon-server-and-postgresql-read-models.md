@@ -4,7 +4,7 @@ title: "ADR-0002 Event Store は Axon Server SE、Read Model は PostgreSQL + My
 description: "Event Store は Axon Server SE 単一ノード、Read Model・Token Store・Saga Store・Auth は PostgreSQL + MyBatis + Flyway に置く決定と、PostgresqlEventStorageEngine 公開時の再評価条件。"
 tags: [adr]
 status: stable
-generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T07:46:35Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-02T13:24:08Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -33,7 +33,7 @@ Axon Framework 5 の Event Storage Engine には、調査時点（2026-09-02）�
 | `InMemoryEventStorageEngine` | なし | テスト専用 |
 | `JdbcEventStorageEngine` | — | 5 系に後継なし |
 
-DCB（Dynamic Consistency Boundary）は `@EventSourced(tagKey = ...)` の前提であり、DCB 非対応のエンジンでは `take-4` ADR-0007 / 0008 が確定した集約のパターンをそのまま使えない。Axon Server 側でも context を DCB 形式で作る必要があり（standalone は `AXONIQ_AXONSERVER_STANDALONE_DCB=true`、クラスタは `dcb=true`）、無いと `AXONIQ-2308` で Coordinator が無限再試行する（`take-4` ADR-0009 の実測）。
+DCB（Dynamic Consistency Boundary）は `@EventSourced(tagKey = ...)` の前提であり、DCB 非対応のエンジンでは `take-4` ADR-0007 / 0008 が確定した集約のパターンをそのまま使えない。Axon Server 側でも context を DCB 形式で作る必要があり（standalone は `AXONIQ_AXONSERVER_STANDALONE_DCB=true`、クラスタは `dcb=true`）、無いと接続が確立しない（IT1 スパイクの実測は `AXONIQ-1302 default: not found in any replication group`。アプリケーションは起動を止めず無限再接続する）。
 
 読み取り側については、参照元 2 つ（`java-2` ADR-004、`take-4` ADR-0002）がいずれも MyBatis を採用し、JPA を退けている。
 

@@ -1,10 +1,10 @@
 ---
 type: ADR
 title: "ADR-0001 CQRS / Event Sourcing を Axon Framework 5 でマイクロサービスとして実装する"
-description: "CQRS / Event Sourcing を Axon Framework 5 のマイクロサービスとして実装する決定。配置の形・ES の適用範囲・Axon 5 系 API の採用・サービス間の配送経路と、着手前スパイクで確定する事項。"
+description: "CQRS / Event Sourcing を Axon Framework 5 のマイクロサービスとして実装する決定。配置の形・ES の適用範囲・Axon 5 系 API の採用・サービス間の配送経路と、IT1 スパイクの結果（採用版 5.1.0-RC2・Saga 廃止）。"
 tags: [adr]
 status: stable
-generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T12:45:54Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-02T13:24:08Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
   - { by: human:kakimomokuri, at: 2026-09-02T12:47:29Z }
@@ -76,7 +76,9 @@ verified:
 
 **見直しの発動条件。** 「工数の問題が出たら」では検知できないので、数値で置く。**IT2 終了時点で実績ベロシティが計画の 70% 未満なら、`Quotation` と `Voyage` を状態保存（MyBatis の UPDATE）に落とす。** 落とすときは本 ADR を改訂し、落とした理由を第 6 章の比較表に「ES を適用しなかった集約とその判断」として残す。判定は `docs/development/cargo-tracker/` のイテレーション報告書で行う。
 
-### 3. Axon Framework 5 系（調査時点 5.3）を採用する
+### 3. Axon Framework 5 系（採用版 5.1.0-RC2）を採用する
+
+**版は 5.1.0-RC2 に固定する（IT1 スパイクで確定）。** 調査時点では 5.3 系を想定していたが、`org.axonframework:axon-server-connector` は Maven Central に **5.0.0 と 5.1.0-RC2 しか公開されていない**（5.2・5.3 は非公開）。starter・`axon-test` などコア側は 5.3.1 まで出ているが、コア 5.3.1 に connector 5.1.0-RC2 を載せると `CommandBusConnector` / `QueryBusConnector` / `AxonServerConfigurationEnhancer` が解決できず **Axon Server に接続できない**（IT1 スパイクで jar のリンク検査により実測。`take-4` ADR-0009 と同型）。決定 4 が Axon Server 一本を配送経路にしている以上、connector が存在する版に全体を揃えるほかない。RC を本番構成に採るのは望ましくないが、GA の connector は 5.0.0 のみで、`take-4` の実績があるのは 5.1.0-RC2 である。**connector の 5.2 以降が GA で公開された時点で昇格を検討し、本 ADR を改訂する。**
 
 4 系の `@Aggregate` / `@AggregateIdentifier` / `AggregateLifecycle.apply()` / `AggregateTestFixture` は 5 系に存在しない（`take-4` ADR-0007 の検証結果）。本プロジェクトは `take-4` が**最終的に**確定した 5 系のパターンを標準にする。集約の登録 API は ADR-0007 の `@EventSourcedEntity` ではなく、**ADR-0008 の `@EventSourced(idType, tagKey)`**（`org.axonframework.extension.spring.stereotype`）である。ADR-0007 の形は統合テストが `CommandGateway` をモックしていて見えず、bootJar の実機で `NoHandlerForCommandException` を出して退けられた。
 
@@ -86,12 +88,12 @@ verified:
 | コマンドハンドラ | `@CommandHandler`（作成系は `static`、更新系はインスタンス）。イベント発行は引数の `EventAppender` |
 | 状態復元 | `@EventSourcingHandler` |
 | コマンドの宛先 | `@TargetEntityId` |
-| 投影 | `@EventHandler` + Processing Group、`pooled`（`PooledStreamingEventProcessor`）。投影はコマンドを送らない |
-| イベント → コマンド | `application/reaction` の Reaction Handler（`@EventHandler` + `CommandGateway`、投影と別の Processing Group）または `@Saga` |
-| 問い合わせ | `@QueryHandler` + `QueryGateway`。同期問い合わせはタイムアウト 5 秒、Saga / Reaction からは呼ばない |
-| テスト | `AxonTestFixture`（`axon-test`） |
+| 投影 | `@EventHandler` + Processing Group、`pooled`（`PooledStreamingEventProcessor`）。投影はコマンドを送らない。**Processing Group は `@ProcessingGroup` ではなく `axon.eventhandling.processors."[<パッケージ名>]"` のパッケージキーで指定する**（`@ProcessingGroup` は Axon 5 に存在しない） |
+| イベント → コマンド | `application/reaction` の Reaction Handler（`@EventHandler` + `CommandGateway`、投影と別の Processing Group）。**`@Saga` は使わない**（Axon 5 に存在しない。決定 6） |
+| 問い合わせ | `@QueryHandler` + `QueryGateway`。同期問い合わせはタイムアウト 5 秒、Reaction からは呼ばない |
+| テスト | `AxonTestFixture.with(ApplicationConfigurer)`（`axon-test`）。統合テストの Axon Server は `axon-test` 同梱の `org.axonframework.test.server.AxonServerContainer` を使う（自作しない） |
 
-**ドメインが Spring stereotype を 1 つだけ持つことについて。** `@EventSourced` はメタアノテーションに `@Component` を持つ Spring の型であり、「ドメイン層は Spring に依存しない」の例外になる。これを許すのは、Axon 5 の Spring Boot 自動設定が `@EventSourced` Bean を経由してしか集約を Module として検出しないためである（`@Bean EventSourcedEntityModule` で代替すると二重登録になる。ADR-0008 の試行 B）。例外は ArchUnit の許可リストに **`org.axonframework.extension.spring.stereotype.EventSourced` の 1 型**として明示し、`org.springframework..` への直接依存は引き続き禁止する。IT1 スパイクの第 1 項目で 5.3 系が stereotype 無しで登録できると分かれば、許可リストから外して `@EventSourcedEntity` に戻し、本表を改訂する。
+**ドメインが Spring stereotype を 1 つだけ持つことについて。** `@EventSourced` はメタアノテーションに `@Component` を持つ Spring の型であり、「ドメイン層は Spring に依存しない」の例外になる。これを許すのは、Axon 5 の Spring Boot 自動設定が `@EventSourced` Bean を経由してしか集約を Module として検出しないためである（`@Bean EventSourcedEntityModule` で代替すると二重登録になる。ADR-0008 の試行 B）。例外は ArchUnit の許可リストに **`org.axonframework.extension.spring.stereotype.EventSourced` の 1 型**として明示し、`org.springframework..` への直接依存は引き続き禁止する。IT1 スパイクの第 1 項目で実機検証した結果、**`@EventSourced` 単独で Command Bus に登録される**ことが確認できた（bootJar・実 Axon Server・`CommandGateway` のモック無しで、コマンド受理 → イベント保存 → 投影受信まで到達）。`@EventSourcedEntity` は 5.1.0-RC2 に存在しないため、この例外は恒久的に維持する。
 
 4 系にダウングレードして書籍の参考実装をそのまま使う案は退ける。記事の読者が手にするのは 5 系であり、4 系の API で書いた記事は公開時点で古い。
 
@@ -106,21 +108,30 @@ verified:
 
 REST はクライアントから Gateway を通って各サービスに入る経路にだけ使う。
 
-### 5. 実装着手前にスパイクで確定する事項
+### 5. 実装着手前のスパイク（IT1 実施済み・結果）
 
-`take-4` の ADR が解決していない、または本プロジェクトで条件が変わる事項は IT1 のスパイク（タイムボックス 4h）で確定し、本 ADR を更新する。
+`take-4` の ADR が解決していない、または本プロジェクトで条件が変わる事項を IT1 のスパイク（タイムボックス 4h）で確定した。実施日 2026-09-02、環境は Java 25.0.2・Docker 29.7.2・`axoniq/axonserver:2026.0.4`（`AXONIQ_AXONSERVER_STANDALONE_DCB=true`）。**スパイクのコードは残していない。**
 
-| # | 事項 | 背景 |
+| # | 事項 | 結果 |
 | :--- | :--- | :--- |
-| 1 | **集約の登録 API**：5.3 系で `@EventSourcedEntity` 単独（stereotype 無し）で Command Bus に登録されるか。bootJar を起動し `@MockitoBean CommandGateway` 無しで確かめる | ADR-0008。統合テストのモックが登録漏れを隠した。登録されなければ `@EventSourced` を標準とし ArchUnit の許可リストに加える（決定 3） |
-| 2 | Spring Boot 4.1（Jackson 3 既定）と Axon 5.3 の自動設定の整合。`TransactionManager` Bean が 1 つであること、`SpringTransactionManager` の第 3 引数、`token_entry.mask` | `take-4` は Spring Boot 4 + Jackson 2 で JDBC 自動設定が働かず手動構成した（ADR-0009）。`TransactionManager` が複数あると `NoTransactionManager` に無音で落ちる |
-| 3 | `AxonTestFixture.with(ApplicationConfigurer)` の組み立て方 | `take-4` は Mockito で代替した |
-| 4 | Saga のアノテーションと `SagaLifecycle` の 5 系での名称 | `take-4` の設計は 4 系の名称で書かれており実装で未確認 |
-| 5 | Axon Server 経由でサービス越しにクエリ・コマンドが届くこと | `take-4` は Query Bus をサービス越しに使っていない。`shared/contract` の型で往復することを 1 本確かめる |
-| 6 | `axon-server-connector` の明示依存と、無いときのフォールバック検知。接続検査が **DCB 無効の context を赤にする**こと | ADR-0009。**無音で in-memory に落ちる**ため、起動時に接続を検査する。DCB 無効だと `AXONIQ-2308` で Coordinator が無限再試行する |
-| 7 | S3 へエクスポートした Event Store からの差分再投入 | RPO の根拠。参照元で未検証 |
+| 1 | **集約の登録 API**：stereotype 無しで Command Bus に登録されるか | **`@EventSourced` が必要。** `@EventSourcedEntity` は 5.1.0-RC2 に存在しない。`@EventSourced(idType, tagKey)` 単独で登録され、bootJar・実 Axon Server・`CommandGateway` のモック無しで、コマンド受理 → イベント保存 → 投影受信まで通った。決定 3 の許可リストは恒久化する |
+| 2 | Spring Boot と Axon の自動設定の整合 | **Spring Boot 4.1.1 + Java 25 で成立するが、2 つの制約がある。**(a) `spring.main.allow-circular-references=true` が必須（`axon.axonserver` の `@ConfigurationProperties` と Boot の `BoundConfigurationProperties` が Bean 循環を作る。Boot 4.0.6 でも同じで、Boot の版を下げても回避できない）。(b) `TokenStore` Bean が無いと `Could not find a mandatory TokenStore` で起動失敗する（自動設定されない）。`TransactionManager` の重複・`token_entry.mask` は DB を伴う IT1 タスク 1.3 で確認する |
+| 3 | `AxonTestFixture` の組み立て方 | **`AxonTestFixture.with(ApplicationConfigurer)`** が正。あわせて `axon-test` に **`org.axonframework.test.server.AxonServerContainer`**（Testcontainers）が同梱されていることが分かった。IT1 タスク 2.4 の基底クラスはこれを使い、自作しない |
+| 4 | Saga のアノテーションと `SagaLifecycle` の 5 系での名称 | **Axon 5 に Saga は存在しない。** 5.0.0・5.1.0-RC2・5.3.1 のいずれの jar にも `Saga`・`Deadline`・`@ProcessingGroup` を含むクラスが 1 つも無い（Axon 4 の概念）。設計の Saga はすべて Reaction Handler で実装する（決定 6） |
+| 5 | Axon Server 経由でサービス越しにコマンド・クエリが届くこと | **届く。** 集約を持たない JVM から送ったコマンドを、集約を持つ別 JVM が処理し、その投影までイベントが到達することを 2 JVM で確認した。なお接続直後に出る `CommandChannel ... 0 command handlers registered` のログは登録前の時点を映しているだけで、異常ではない |
+| 6 | `axon-server-connector` の明示依存と DCB 無効時の検知 | **明示依存が必要**（starter は 5.1・5.3 とも connector を推移的に含まない）。**DCB 無効の context に繋ぐと `AXONIQ-1302 default: not found in any replication group` が出る**（設計が想定した `AXONIQ-2308` ではない。2026.0.4 での実測値）。さらに**アプリケーションは起動を止めず無限に再接続を試み続ける**ため、IT1 タスク 1.4 の起動時接続検査は必須である |
+| 7 | S3 へエクスポートした Event Store からの差分再投入 | **未実施。** 1〜6 で版の前提が崩れ、その確定に時間を使った。RPO の根拠が未検証のまま残るため、IT2 のリスクとして持ち越す（`non_functional.md` の RPO 記述に「未検証」を明記する） |
 
-スパイクの結果で本 ADR の決定 3・5 と `architecture_backend.md`・`tech_stack.md` を更新することを IT1 の完了条件（DoD）に含める。
+**副産物として分かったこと。** コマンドの戻り値が `byte[]` のまま返る（`CommandGateway.sendAndWait` の結果を型で受けるには変換の指定が要る）。IT1 タスク 6.5 で `201` に識別子を載せるときに効くため、実装時に変換方式を決める。
+
+### 6. Saga を使わず Reaction Handler に一本化する
+
+決定 5 の第 4 項でスパイクが示したとおり、Axon 5 には Saga の API が無い。設計（`domain-model.md`）が Saga と呼んでいた「イベントを受けて別の集約にコマンドを送る」調整役は、すべて `application/reaction` の Reaction Handler として実装する。
+
+- 調整役は投影と**別の Processing Group** に置き、リプレイ対象から外す（H1 の判断は変えない）
+- Saga が持っていた「関連付け（association）」と「終了（`@EndSaga`）」に相当する状態は、必要なら**その BC の集約か専用の投影テーブル**に持つ。フレームワークは面倒を見ない
+- タイムアウト起点の処理（Deadline）も無いため、期限で動く業務は**投影テーブルを定期に走査する運用ジョブ**として設計する。該当は `operation.md` の要確認一覧の督促
+
 
 ## 影響
 
@@ -138,6 +149,9 @@ REST はクライアントから Gateway を通って各サービスに入る経
 - Axon Server というミドルウェアが 1 つ増え、全サービスの単一障害点になる（[ADR-0002](0002-event-store-axon-server-and-postgresql-read-models.md)）
 - サービスごとの DB・デプロイ・監視が 7 つ分要る（`java-3` と同じ代金）
 - Axon 5 系の公開情報が少なく、API の確認にスパイクが要る
+- **connector が公開されている版に全体が縛られる。** `axon-server-connector` は 5.0.0 と 5.1.0-RC2 しか無く、コアだけ新しくすると Axon Server に繋がらない。RC 版を本番構成に採る（決定 3）
+- **Saga と Deadline をフレームワークが持たない。** 調整役の状態管理と期限起動を自前で設計する（決定 6）
+- **`spring.main.allow-circular-references=true` を全サービスで有効にする。** Axon 由来の循環を通すために、本来検出したい他の循環まで通ってしまう
 
 ### 設計ドキュメントへの波及
 
@@ -146,8 +160,8 @@ REST はクライアントから Gateway を通って各サービスに入る経
 | `architecture_backend.md` | 本 ADR の判断を前提に作成済み |
 | `architecture_infrastructure.md` | 7 サービス + Gateway + Axon Server + PostgreSQL × 6 の配置。`java-3` の kind / Heroku / ECS 構成を参照 |
 | `domain-model.md` | 集約ごとにコマンド・イベント・状態遷移を定義する。イベントは集約の永続化フォーマットとして設計し、契約イベントを区別する |
-| `data-model.md` | サービスごとの投影テーブルと Axon の管理テーブル（`token_entry` / `saga_entry` / `association_value_entry`）を定義する。Event Store のスキーマは Axon Server が持つ |
-| `test_strategy.md` | 集約・投影・Saga・イベント契約・ArchUnit の 5 種と、サービス間ダイヤモンドを定める |
+| `data-model.md` | サービスごとの投影テーブルと Axon の管理テーブル（`token_entry`。**`saga_entry` / `association_value_entry` は Axon 5 に Saga が無いため作らない**）を定義する。Event Store のスキーマは Axon Server が持つ |
+| `test_strategy.md` | 集約・投影・Reaction Handler・イベント契約・ArchUnit の 5 種と、サービス間ダイヤモンドを定める |
 | `operation.md` | Event Store のバックアップとサービス単位のリプレイ手順を定める |
 
 ## コンプライアンス
@@ -158,14 +172,17 @@ REST はクライアントから Gateway を通って各サービスに入る経
 | サービス間は Axon Server だけ | ビルド：各サービスの本番クラスパスに他サービスの成果物が無いこと。ArchUnit：`RestClient` / `RestTemplate` を `infrastructure/acl` で使わないこと |
 | 共有カーネルの範囲 | ArchUnit：`shared` に置けるパッケージの名簿（`domain/model`・`domain/auth`・`contract/*`・`infrastructure/axon`・`infrastructure/time`）を固定する |
 | 契約の名簿 | ArchUnit：送信・購読の引数型が `shared/contract` 以外のイベント・コマンド・クエリをサービス越しに使えば赤（契約イベント 11・コマンド 2・クエリ 1） |
-| サービス越しの同期状態変更を置かない | ArchUnit：`CommandGateway` の利用箇所を `interfaces`・`application/saga`・`application/reaction` に限定する。`infrastructure/projection` は `CommandGateway` に依存しない |
+| サービス越しの同期状態変更を置かない | ArchUnit：`CommandGateway` の利用箇所を `interfaces`・`application/reaction` に限定する。`infrastructure/projection` は `CommandGateway` に依存しない |
 | 投影がコマンドを送らない | 統合テスト `ReplayIT`：投影の Processing Group をリセットしてリプレイし、`CommandGateway` が 1 度も呼ばれないこと |
-| Saga / Reaction は同期クエリを呼ばない | ArchUnit：`application/saga` と `application/reaction` が `QueryGateway` に依存しない |
+| Reaction は同期クエリを呼ばない | ArchUnit：`application/reaction` が `QueryGateway` に依存しない |
+| Saga を使わない（決定 6） | ArchUnit：`org.axonframework..saga..` への依存と `application/saga` パッケージの存在を禁止する。名簿方式にせず「その名前の型・パッケージがあれば赤」にする |
+| Axon の版が揃っている（決定 3） | ビルド：`libs.versions.toml` の `axon` は単一の version.ref であり、starter・connector・`axon-test` がすべてそれを参照すること。参照していない Axon 依存があれば赤にするテストを置く |
+| `@ProcessingGroup` を使わない（決定 3） | ArchUnit：`@ProcessingGroup` 相当の型参照が無いこと（存在しないのでコンパイルで止まる）。Processing Group の割当は `application.yml` のパッケージキーで行い、投影のパッケージごとに 1 件あることを統合テストで数える |
 | ドメイン層のフレームワーク非依存 | ArchUnit：Spring・MyBatis への依存を禁止。Axon は `..annotation..`・`EventAppender`・`org.axonframework.extension.spring.stereotype.EventSourced` の許可リストのみ |
 | authms は Event Sourcing にしない | ArchUnit：`auth` パッケージに `@EventSourced` / `@EventSourcedEntity` が無いこと |
 | 4 系 API を使わない | ビルド：`org.axonframework.modelling.command.AggregateLifecycle` 等への参照が無いこと（存在しないのでコンパイルで止まる） |
-| `axon-server-connector` の接続と DCB | 起動時のヘルスチェック。接続できない、または context が DCB でなければ起動を止める。統合テストで DCB 無効の Axon Server に対して起動が止まることを 1 本固定する |
-| スパイクの結果を ADR に戻す | IT1 の DoD：決定 5 の 7 項目それぞれの結果で本 ADR・`architecture_backend.md`・`tech_stack.md` を更新してから IT1 をクローズする |
+| `axon-server-connector` の接続と DCB | 起動時のヘルスチェック。接続できない、または context が DCB でなければ**起動を止める**（既定では止まらず無限再試行することをスパイクで確認済み）。統合テストで DCB 無効の Axon Server に対して起動が止まることを 1 本固定する。判定は `AXONIQ-1302` のログ検出に頼らず、接続後に context の DCB 可否を問い合わせて行う |
+| スパイクの結果を ADR に戻す | IT1 の DoD：決定 5 の 7 項目それぞれの結果で本 ADR・`architecture_backend.md`・`tech_stack.md` を更新してから IT1 をクローズする（2026-09-02 実施。第 7 項目のみ IT2 へ持ち越し） |
 
 ## 備考
 
@@ -176,3 +193,4 @@ REST はクライアントから Gateway を通って各サービスに入る経
 - 参照元: [java-3 ADR-001](../../article/source/java-3/docs/adr/001-microservices-architecture.md)（Event Sourcing 見送りの判断）、[java-3 ADR-022](../../article/source/java-3/docs/adr/022-domain-event-contract.md)
 - 記事: [draft-2 アウトライン §5](../../article/practical-ddd-in-enterprise-java/draft-2/outline.md)
 - Axon Framework の版は調査時点（2026-09-02）で 5.3 系。確定は `tech_stack.md`
+- 改訂: 2026-09-02 IT1 のスパイクを実施し、決定 5 を「確定する事項」から「結果」に書き換えた。前提が 3 つ崩れたため決定を改めた。(1) `axon-server-connector` が 5.2 以降に無く、コアだけ 5.3 にすると Axon Server に接続できないため、**採用版を 5.3 系から 5.1.0-RC2 に変更**した（決定 3）。(2) **Axon 5 に Saga・Deadline・`@ProcessingGroup` が存在しない**ため、Saga を Reaction Handler に一本化する決定 6 を追加した。(3) Spring Boot と Axon の同居に `spring.main.allow-circular-references=true` と明示的な `TokenStore` Bean が要ることが分かった。DCB 無効時のエラーは `AXONIQ-2308` ではなく `AXONIQ-1302` で、かつ起動が止まらないことも実測した

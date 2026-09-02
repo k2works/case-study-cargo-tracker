@@ -4,7 +4,7 @@ title: "データモデル設計 - 国際貨物輸送管理システム（CQRS /
 description: "CQRS / Event Sourcing 版 Cargo Tracker のデータモデル設計。Event Store は Axon Server に任せ、サービスごとの投影テーブル・Axon 管理テーブル・Auth の状態テーブルを ER 図とテーブル定義で示し、Processing Group との対応とリプレイ前提のマイグレーション方針を定める。"
 tags: [design,data-model,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T07:46:35Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-02T13:24:08Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -21,7 +21,7 @@ verified:
 | :--- | :--- | :--- |
 | Event Store | 集約のイベント列・スナップショット | **扱わない**。Axon Server が管理し、アプリは SQL を発行しない。スキーマは参考として 1 節だけ載せる |
 | 投影テーブル | 画面・API が読む読み取りモデル。サービスごとの DB | 扱う。**派生データであり、いつでも捨ててリプレイで再構築できる**ことが設計条件 |
-| Axon 管理テーブル | `token_entry` / `saga_entry` / `association_value_entry` | 扱う。投影と同じ DB に置き、同一トランザクションで更新する |
+| Axon 管理テーブル | `token_entry` のみ | 扱う。投影と同じ DB に置き、同一トランザクションで更新する。**`saga_entry` / `association_value_entry` は作らない**（Axon 5 に Saga が無い。ADR-0001 決定 6） |
 | Auth の状態 | `users` など | 扱う。唯一の「書き込みモデルとしてのテーブル」 |
 
 **投影テーブルは真実の情報源ではありません。** 真実は Event Store のイベント列です。したがって本書のテーブルは、ドメインモデルの集約と 1 対 1 に対応しません。画面ごとに必要な形で設計し、他サービスの DB を JOIN しません。
@@ -88,11 +88,11 @@ bi --> bidb
 | :--- | :--- | :--- | :--- |
 | Axon Server | （専用ボリューム） | Event Store | イベント列、スナップショット |
 | authms | `auth_db` | 状態保存 | `users`, `user_roles`, `user_shipper_link`, `auth_audit_log` |
-| bookingms | `booking_read_db` | 投影 + 受け皿 + Axon 管理 | `shipper`, `cargo_summary`, `cargo_leg`, `cancellation_request`, `quotation`, `quotation_candidate`, `attention_item`, `token_entry`, `saga_entry`, `association_value_entry` |
+| bookingms | `booking_read_db` | 投影 + 受け皿 + Axon 管理 | `shipper`, `cargo_summary`, `cargo_leg`, `cancellation_request`, `quotation`, `quotation_candidate`, `attention_item`, `token_entry` |
 | routingms | `routing_read_db` | 投影 + Axon 管理 | `voyage`, `carrier_movement`, `voyage_accepted_cargo_type`, `token_entry` |
 | trackingms | `tracking_read_db` | 投影 + 受け皿 + Axon 管理 | `tracking_summary`, `tracking_event`, `tracking_exception`, `shipper_cargo_snapshot`, `attention_item`, `token_entry` |
 | handlingms | `handling_read_db` | 投影 + Axon 管理 | `cargo_snapshot`, `cargo_snapshot_leg`, `handling_activity`, `customs_declaration`, `token_entry` |
-| billingms | `billing_read_db` | 投影 + 受け皿 + Axon 管理 | `invoice`, `invoice_line_item`, `payment`, `shipper_contract_snapshot`, `attention_item`, `token_entry`, `saga_entry`, `association_value_entry` |
+| billingms | `billing_read_db` | 投影 + 受け皿 + Axon 管理 | `invoice`, `invoice_line_item`, `payment`, `shipper_contract_snapshot`, `attention_item`, `token_entry` |
 
 `location` のマスタは各 DB に置きません。UN/LOCODE は共有カーネルの値オブジェクトであり、港名の表示に要る対応表は `shared` のリソース（CSV）から読みます。マスタを各 DB に複製すると更新の同期が要ります。
 
@@ -695,35 +695,18 @@ entity "token_entry" as te {
   mask: INTEGER NOT NULL
 }
 
-entity "saga_entry" as se {
-  * **saga_id**: VARCHAR(255) <<PK>>
-  --
-  saga_type: VARCHAR(255)
-  revision: VARCHAR(255)
-  serialized_saga: BYTEA
-}
-
-entity "association_value_entry" as ave {
-  * **id**: BIGSERIAL <<PK>>
-  --
-  association_key: VARCHAR(255)
-  association_value: VARCHAR(255)
-  saga_id: VARCHAR(255)
-  saga_type: VARCHAR(255)
-}
-
-se ||--o{ ave
 @enduml
 ```
 
 | テーブル | 置く DB | 用途 |
 | :--- | :--- | :--- |
 | `token_entry` | 全 Read Model DB | Processing Group ごとの処理位置。`mask INTEGER NOT NULL` はセグメントのマスク（take-4 の実測スキーマ。無いと起動時に落ちる）。`INDEX(processor_name)` |
-| `saga_entry` / `association_value_entry` | `booking_read_db`, `billing_read_db` | Saga の状態。`INDEX(association_key, association_value, saga_type)` |
 
 ## Processing Group とテーブルの対応
 
 投影のリプレイは Processing Group 単位です。「どのテーブルを空にしてどのトークンをリセットするか」を固定します。
+
+Processing Group は `@ProcessingGroup`（Axon 5 に存在しません）ではなく、`application.yml` の `axon.eventhandling.processors."[<ハンドラのパッケージ名>]"` で指定します。したがって**下表の Group 名はパッケージの分け方と 1:1 で対応させます**（IT1 スパイク・[ADR-0001](../../adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) 決定 3）。
 
 | サービス | Processing Group | 購読するイベント | 書くテーブル |
 | :--- | :--- | :--- | :--- |
@@ -739,7 +722,7 @@ se ||--o{ ave
 | billingms | `billing-projection` | Invoice のイベント、`ShipperRegisteredEvent`、`CorporateContractAssignedEvent`（契約） | `invoice`, `invoice_line_item`, `payment`, `shipper_contract_snapshot` |
 | billingms | `billing-reaction` | `CargoDeliveredEvent`、`CustomsStatusChangedEvent`（契約） | **投影テーブルを書かない**。Invoice へコマンドを送る。失敗だけを `attention_item` に書く |
 
-1 つの投影テーブルを複数の Processing Group が書かないようにします。書き手が 1 つなら、リプレイの単位とテーブルの単位が一致します。`*-reaction` は `application/reaction` の Reaction Handler（イベント購読からコマンドを送る役割）の Group で、投影とは分けます。投影が SQL に写すだけであること、コマンドを送るのが Reaction だけであることを ArchUnit で固定します（`CommandGateway` を使えるのは `interfaces`・`application/saga`・`application/reaction`）。
+1 つの投影テーブルを複数の Processing Group が書かないようにします。書き手が 1 つなら、リプレイの単位とテーブルの単位が一致します。`*-reaction` は `application/reaction` の Reaction Handler（イベント購読からコマンドを送る役割）の Group で、投影とは分けます。投影が SQL に写すだけであること、コマンドを送るのが Reaction だけであることを ArchUnit で固定します（`CommandGateway` を使えるのは `interfaces`・`application/reaction` の 2 か所）。
 
 `attention_item` は投影ではなく追記専用の受け皿です。同じサービスの投影 Group（UNIQUE 拒否）・Reaction Group（コマンド失敗）・Saga（補償）が INSERT し、人が `acknowledged_*` を更新します。リプレイの対象ではないため TRUNCATE せず、1 テーブル 1 書き手の規則からも除きます。Reaction の Group はリプレイでリセットしません。リセットするとコマンドが再送され、他サービスの集約が動きます（`operation.md`、`ReplayIT`）。
 
@@ -786,8 +769,8 @@ se ||--o{ ave
 | 投影の作り直し | テーブルを TRUNCATE → トークンをリセット | サービス単位で `operation.md` の手順と Gulp タスクにする |
 
 ```text
-apps/backend/bookingms/src/main/resources/db/migration/
-├── V001__create_axon_tables.sql        # token_entry, saga_entry, association_value_entry
+apps/cargo-tracker/backend/bookingms/src/main/resources/db/migration/
+├── V001__create_axon_tables.sql        # token_entry のみ（Axon 5 に Saga は無い）
 ├── V002__create_shipper.sql
 ├── V003__create_cargo_summary.sql
 ├── V004__create_cargo_leg.sql

@@ -4,7 +4,7 @@ title: "UI 設計 - 国際貨物輸送管理システム（CQRS / Event Sourcing
 description: "CQRS / Event Sourcing 版 Cargo Tracker の UI 設計。画面一覧・ロール別ナビゲーション・画面遷移・salt 画面イメージ・インタラクションを定め、投影の「反映中」を画面共通の規約として扱う。"
 tags: [design,ui,ux,cqrs]
 status: stable
-generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T07:46:35Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-02T13:24:08Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -152,7 +152,7 @@ UI 設計で CQRS / Event Sourcing に固有なのは **「反映中」という
 | S60 | 請求一覧 | `/invoices` | 経理 | UC17・UC18 | 期限超過は今日で判定 |
 | S61 | 請求詳細・算出・入金 | `/invoices/:id` | 経理 | UC17・UC18 | 入金記録・取消は送信中表示。見積時概算との差額と理由 |
 | S62 | 自社請求書 | `/shipper/invoices/:id` | 荷主 | UC18 | ポーリング。自社分のみ |
-| S70 | 要確認一覧（反映の拒否・失敗した Saga） | `/worklist/attention` | 営業、経理、追跡 | — | ポーリング。既定は自ロール宛。3 日超を強調 |
+| S70 | 要確認一覧（反映の拒否・失敗した連鎖） | `/worklist/attention` | 営業、経理、追跡 | — | ポーリング。既定は自ロール宛。3 日超を強調 |
 | S90 | 利用者管理 | `/admin/users` | 管理者 | US31 | — |
 
 ## ロール別ナビゲーション
@@ -731,7 +731,7 @@ CANCELLED : [追跡を見る]（陸揚げ地で荷降しが記録されるまで
 @endsalt
 ```
 
-集約は受け付けたが投影が弾いたもの、Saga が補償に至ったものを `attention_item`（bookingms・trackingms・billingms の各 Read DB）から出します。「例外にしない」は「記録しない」ではありません。
+集約は受け付けたが投影が弾いたもの、連鎖が補償に至ったものを `attention_item`（bookingms・trackingms・billingms の各 Read DB）から出します。「例外にしない」は「記録しない」ではありません。
 
 | 観点 | 規則 |
 | :--- | :--- |

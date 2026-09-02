@@ -4,7 +4,7 @@ title: "イテレーション計画 1 - 基盤・認証・荷主登録"
 description: "IT1 の計画。Axon 5 のスパイク 7 項目・ビルドと kind 環境・品質ゲートの実配線・フロント基盤と全ルートのスケルトン・US26/US27/US02（荷主登録の縦切りと crypto-shredding）。デモ項目 7 件。"
 tags: [plan,iteration,cargo-tracker]
 status: stable
-generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T12:45:54Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-02T13:24:08Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T12:47:29Z }
 ---
@@ -87,14 +87,14 @@ US02 は縦切りの本体です。認証（US26）と基盤が通ってから�
 
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | :--: | :--: |
-| 0.1 | 集約の登録 API：5.3 系で `@EventSourcedEntity` 単独が Command Bus に登録されるか、bootJar の実機で確かめる（`CommandGateway` をモックしない） | 1h | [ ] |
-| 0.2 | Spring Boot 4.1（Jackson 3）と Axon 5.3 の自動設定。`TransactionManager` Bean が 1 つ・`SpringTransactionManager` の第 3 引数・`token_entry.mask` | 1h | [ ] |
-| 0.3 | `AxonTestFixture.with(...)` の組み立て方 | 0.5h | [ ] |
-| 0.4 | Saga のアノテーションと `SagaLifecycle` の 5 系での名称 | 0.5h | [ ] |
-| 0.5 | Axon Server 経由でサービス越しにクエリ・コマンドが届くこと（`shared/contract` の型で 1 往復） | 0.5h | [ ] |
-| 0.6 | `axon-server-connector` の明示依存と DCB 無効時の検知（`AXONIQ-2308`） | 0.25h | [ ] |
-| 0.7 | S3 へエクスポートした Event Store からの差分再投入の可否 | 0.25h | [ ] |
-| 0.8 | 結果を ADR-0001 決定 3・5 と `architecture_backend.md`・`tech_stack.md` に反映 | — | [ ] |
+| 0.1 | 集約の登録 API：`@EventSourcedEntity` 単独が Command Bus に登録されるか、bootJar の実機で確かめる（`CommandGateway` をモックしない） | 1h | [x] 結論：`@EventSourced` が必要 |
+| 0.2 | Spring Boot 4.1（Jackson 3）と Axon の自動設定。`TransactionManager` Bean が 1 つ・`SpringTransactionManager` の第 3 引数・`token_entry.mask` | 1h | [x] 起動可。`allow-circular-references` と `TokenStore` Bean が必須。DB 側は 1.3 で確認 |
+| 0.3 | `AxonTestFixture.with(...)` の組み立て方 | 0.5h | [x] `with(ApplicationConfigurer)`。`AxonServerContainer` 同梱を発見 |
+| 0.4 | Saga のアノテーションと `SagaLifecycle` の 5 系での名称 | 0.5h | [x] **Axon 5 に Saga・Deadline・`@ProcessingGroup` は無い** |
+| 0.5 | Axon Server 経由でサービス越しにクエリ・コマンドが届くこと（`shared/contract` の型で 1 往復） | 0.5h | [x] 2 JVM で届くことを確認 |
+| 0.6 | `axon-server-connector` の明示依存と DCB 無効時の検知 | 0.25h | [x] 明示依存が必要。DCB 無効は `AXONIQ-1302` で**起動が止まらない** |
+| 0.7 | S3 へエクスポートした Event Store からの差分再投入の可否 | 0.25h | [ ] **IT2 へ持ち越し**（0.1〜0.6 で版の前提が崩れ、その確定に時間を使った） |
+| 0.8 | 結果を ADR-0001 決定 3・5 と `architecture_backend.md`・`tech_stack.md` に反映 | — | [x] ADR-0001（決定 6 を追加）・tech_stack・architecture_backend/infrastructure・domain-model・data-model・test_strategy・operation・ui_design・ADR-0002 |
 | | 小計 | 4h | |
 
 **スパイクのコードは残しません。** 結論だけを ADR と設計に書き、実装は本タスクでゼロから書きます。
@@ -103,7 +103,7 @@ US02 は縦切りの本体です。認証（US26）と基盤が通ってから�
 
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | :--: | :--: |
-| 1.1 | `apps/backend` の Gradle マルチプロジェクト（shared・gatewayms・authms・bookingms・routingms・trackingms・handlingms・billingms）と `libs.versions.toml` | 4h | [ ] |
+| 1.1 | `apps/cargo-tracker/backend` の Gradle マルチプロジェクト（shared・gatewayms・authms・bookingms・routingms・trackingms・handlingms・billingms）と `libs.versions.toml` | 4h | [ ] |
 | 1.2 | kind + Kustomize（`ops/k8s/base/axonserver/`・`postgres/`・各サービス）。Axon Server は `AXONIQ_AXONSERVER_STANDALONE_DCB=true` | 6h | [ ] |
 | 1.3 | PostgreSQL の 6 DB と接続ユーザー、各サービスの Flyway（`V001__create_axon_tables.sql` を含む） | 3h | [ ] |
 | 1.4 | 起動時の接続検査（Axon Server に繋がること・context が DCB であること。失敗したら起動を止める） | 2h | [ ] |
@@ -458,7 +458,7 @@ users ||--|{ roles
 @enduml
 ```
 
-**注**: `shipper` の `name` / `email` / `phone` / `address` は NULL 許容です（[ADR-0003](../../adr/cargo-tracker/0003-crypto-shredding-for-personal-data.md)。鍵を破棄したあとのリプレイで `NOT NULL` 違反が起きないようにするため）。`email` の UNIQUE は NULL を許します。`saga_entry` / `association_value_entry` は Saga を使う IT7 で作ります。
+**注**: `shipper` の `name` / `email` / `phone` / `address` は NULL 許容です（[ADR-0003](../../adr/cargo-tracker/0003-crypto-shredding-for-personal-data.md)。鍵を破棄したあとのリプレイで `NOT NULL` 違反が起きないようにするため）。`email` の UNIQUE は NULL を許します。`saga_entry` / `association_value_entry` は**作りません**（Axon 5 に Saga が無いことが IT1 スパイクで判明。ADR-0001 決定 6）。
 
 #### 画面遷移図（IT1 スコープ）
 

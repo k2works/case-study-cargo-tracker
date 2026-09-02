@@ -1,10 +1,10 @@
 ---
 type: Design
 title: "運用要件 - 国際貨物輸送管理システム（CQRS / Event Sourcing 版）"
-description: "CQRS / Event Sourcing 版 Cargo Tracker の運用要件。投影のリプレイを日常操作として置き、Event Store の復元演習、Event Processor と Saga の監視、ランブック、イベントの形を変えるリリース手順、鍵の破棄、Gulp タスクを定める。"
+description: "CQRS / Event Sourcing 版 Cargo Tracker の運用要件。投影のリプレイを日常操作として置き、Event Store の復元演習、Event Processor と Reaction Handler の監視、ランブック、イベントの形を変えるリリース手順、鍵の破棄、Gulp タスクを定める。"
 tags: [design,operation,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T07:46:35Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-02T13:24:08Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -20,12 +20,12 @@ CQRS / Event Sourcing に固有の運用は次の 4 つです。
 1. **投影のリプレイ**。列の追加・投影の不整合・新しい読み取りモデルの追加はすべてリプレイで対応する。リプレイは日常の操作であり、障害対応ではない
 2. **Event Store の復元演習**。Event Store が唯一の真実であり、投影は再構築できる。復元できて初めてバックアップである
 3. **Event Processor の遅れと停止**。遅れは利用者から障害に見え、停止は投影が古いまま止まる。どちらも固有の監視項目
-4. **Saga の滞留と補償**。宛先サービスの停止で Saga が止まる。滞留の一覧化と補償後の要確認一覧への転記
+4. **連鎖の滞留と補償**。宛先サービスの停止で連鎖が止まる。滞留の一覧化と補償後の要確認一覧への転記
 
 | 参照元 | 採るもの | 変えるもの |
 | :--- | :--- | :--- |
 | `tmp/take-4/docs/design/operation.md` | 運用体制、日次〜年次の運用フロー、監視カテゴリ、エスカレーション、Axon Server の復元手順、Gulp タスクの一覧、ポストモーテム | Token リセットを「障害対応」でなく日常操作に置き直す。鍵の破棄（crypto-shredding）の手順を追加 |
-| `docs/article/source/java-3/docs/design/operation.md` | リリースフロー、ロールバック、セキュリティ運用、アクセス権限棚卸 | RabbitMQ のデッドレター運用を Event Processor と Saga の運用に置き換える |
+| `docs/article/source/java-3/docs/design/operation.md` | リリースフロー、ロールバック、セキュリティ運用、アクセス権限棚卸 | RabbitMQ のデッドレター運用を Event Processor と Reaction Handler の運用に置き換える |
 
 ## 1. 運用体制
 
@@ -42,8 +42,8 @@ CQRS / Event Sourcing に固有の運用は次の 4 つです。
 
 | 頻度 | 作業 |
 | :--- | :--- |
-| 日次 | SLO ダッシュボード確認（反映の遅れ・Processor 停止・Saga 滞留・5xx）、要確認一覧（`attention_item`）の未確認件数と**営業日内の確認期限**を過ぎた件数、Event Store ディスク使用率、EBS スナップショットの成功確認 |
-| 週次 | Saga 滞留の棚卸（24 時間超）、脆弱性走査の結果確認、留置 3 営業日超の通関申告の件数（業務側への通知が届いているか） |
+| 日次 | SLO ダッシュボード確認（反映の遅れ・Processor 停止・連鎖の滞留・5xx）、要確認一覧（`attention_item`）の未確認件数と**営業日内の確認期限**を過ぎた件数、Event Store ディスク使用率、EBS スナップショットの成功確認 |
+| 週次 | 連鎖の滞留の棚卸（24 時間超）、脆弱性走査の結果確認、留置 3 営業日超の通関申告の件数（業務側への通知が届いているか） |
 | 月次 | Axon Server のバージョンアップ判断（計画停止）、容量計画の更新、アクセスログの確認、コストレポート |
 | 四半期 | **復元演習**（EBS スナップショットから Axon Server を復元し、全投影をリプレイ、RTO 内か計測）、Axon Server 停止時の挙動確認、アクセス権限の棚卸 |
 | 年次 | ペネトレーションテスト、保存期間満了の荷主の鍵破棄、DR 訓練（AZ 障害） |
@@ -59,7 +59,7 @@ endif
 if (反映の遅れ p95 > 3s?) then (yes)
   :遅れの原因を切り分け（投影 SQL / Axon Server / 台数）;
 endif
-if (Saga 滞留 > 24h?) then (yes)
+if (連鎖の滞留 > 24h?) then (yes)
   :宛先サービスの状態を確認;
   :補償済みか要確認一覧で確認;
 endif
@@ -78,9 +78,9 @@ stop
 | **Event Processor** | 停止（エラーで止まった Processing Group） | 1 件 | **P1** |
 | **Event Processor** | 遅れ（最新イベントとの差） | 1,000 イベントまたは 5 分 | P2 |
 | **反映** | コマンド → 投影 p95 | 3 秒超が 5 分継続 | P2（画面ヘッダに表示） |
-| **Saga** | 滞留（未完了・24 時間超） | 1 件 | P3 |
-| **Saga** | 補償に至った件数 | 1 件 | P3（要確認一覧に転記済みか確認） |
-| **要確認** | `attention_item` の未確認件数（投影の拒否・Reaction の失敗・Saga の補償）。営業日内の確認期限を過ぎた件数 | 1 件 / 期限超過 1 件 | P3 / P2 |
+| **連鎖** | 滞留（未完了・24 時間超） | 1 件 | P3 |
+| **連鎖** | 補償に至った件数 | 1 件 | P3（要確認一覧に転記済みか確認） |
+| **要確認** | `attention_item` の未確認件数（投影の拒否・Reaction Handler の失敗・補償）。営業日内の確認期限を過ぎた件数 | 1 件 / 期限超過 1 件 | P3 / P2 |
 | Axon Server | 稼働 | 停止 | **P1** |
 | Axon Server | 接続数 | 期待数（**業務 5 サービス × 台数**。authms・gatewayms は接続しない）未満、または上限（サービスあたり 50・合計 250）の 80% 超 | P2 |
 | Axon Server | Event Store ディスク使用率 | 70% / 85% | P3 / P2 |
@@ -97,7 +97,7 @@ stop
 | ダッシュボード | 内容 |
 | :--- | :--- |
 | SLO | 稼働率、反映の遅れ p95、Processor の遅れ、5xx 率、エラーバジェット残 |
-| Event Sourcing | Processing Group ごとの位置と遅れ、Saga の滞留数、Event Store の書き込み速度とディスク |
+| Event Sourcing | Processing Group ごとの位置と遅れ、連鎖の滞留数、Event Store の書き込み速度とディスク |
 | 業務 | 要確認一覧の未確認件数（ロール別）、留置 3 営業日超の通関申告、承認待ちのキャンセル申請、期限超過の請求 |
 
 ### 3.3 エスカレーション
@@ -106,7 +106,7 @@ stop
 | :--- | :--- | :--- | :--- |
 | P1 | Axon Server 停止、Processor 停止、業務画面の全断 | 15 分以内 | 電話 + チャット |
 | P2 | 反映の遅れ、5xx、接続数の減少、バックアップ失敗 | 1 時間以内 | チャット |
-| P3 | Saga 滞留、要確認の未確認、容量 70% | 翌営業日 | チケット |
+| P3 | 連鎖の滞留、要確認の未確認、容量 70% | 翌営業日 | チケット |
 
 ## 4. バックアップと復元
 
@@ -193,7 +193,7 @@ Axon Server の停止中はコマンドを受け付けません。荷役作業�
 | :--- | :--- | :--- | :--- |
 | P1 | Processing Group が停止 | ログで失敗したイベントと SQL を確認。投影の不具合ならサービスを一段戻す | 投影の修正 → デプロイ → 該当 Group をリプレイ |
 | P2 | 反映の遅れ p95 > 3 秒 | Axon Server の負荷、投影 SQL の遅延、台数を確認 | セグメント数と台数の調整、SQL の計測 |
-| P3 | Saga 滞留 | 宛先サービスの稼働と `NoHandlerForCommandException` を確認 | 宛先の復旧後に Saga の再試行を確認。補償済みなら要確認一覧の対応を業務側へ |
+| P3 | 連鎖の滞留 | 宛先サービスの稼働と `NoHandlerForCommandException` を確認 | 宛先の復旧後に Reaction Handler の再試行を確認。補償済みなら要確認一覧の対応を業務側へ |
 | P4 | Axon Server 停止 | 4.2 B | ボリューム破損なら 4.2 C |
 | P5 | サービスが起動しない（接続検査で停止） | Axon Server の稼働、context が DCB か（`AXONIQ_AXONSERVER_STANDALONE_DCB=true`）、`axon-server-connector` の依存を確認 | **無音で in-memory に落ちる構成に戻さない** |
 | P6 | 要確認（`attention_item`）が急増 | `kind` で切り分ける。`PROJECTION_REJECTED` は UNIQUE 違反の理由を確認し業務側に問い合わせ、`REACTION_FAILED` は宛先集約の状態を確認 | 事前の存在確認が働いていない経路、または Reaction の前提が崩れた状態遷移を修正 |
@@ -283,7 +283,7 @@ Axon Server の停止中はコマンドを受け付けません。荷役作業�
 | :--- | :--- |
 | `gulp projection:replay --env --service --group` | 投影の Processing Group のトークンをリセットしてリプレイ。終了後に行数を検証。`-reaction` の Group は拒否する |
 | `gulp projection:status --env` | 全 Processing Group の位置・遅れ・停止の一覧 |
-| `gulp saga:list --env --older-than 24h` | 滞留している Saga の一覧 |
+| `gulp reaction:stuck --env --older-than 24h` | 滞留している連鎖の一覧 |
 | `gulp axon:backup:snapshot --env` | Axon Server EBS の手動スナップショット（リリース前・バージョンアップ前） |
 | `gulp axon:restore --env --snapshot-id` | スナップショットからの復元と S3 差分の再投入 |
 | `gulp axon:export:verify --env` | S3 エクスポートに欠落が無いことの検証 |
@@ -298,7 +298,7 @@ Axon Server の停止中はコマンドを受け付けません。荷役作業�
 | :--- | :--- |
 | 反映の遅れ p95 | < 3 秒（月次） |
 | Processor 停止の MTTR | < 30 分 |
-| Saga の補償率 | < 0.1% |
+| 補償の発生率 | < 0.1% |
 | 復元演習の RTO 実績 | < 4 時間（四半期） |
 | 要確認の未確認滞留 | 営業日内の確認期限までに 0。3 営業日超は 0 |
 | エラーバジェット消費 | 月の 50% を超えたら機能リリースを止め、信頼性の改善を優先 |

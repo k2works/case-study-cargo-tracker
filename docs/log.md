@@ -1,6 +1,19 @@
 # Docs Update Log
 
 ## 2026-09-02
+* **Update**: [iteration_plan-1](/development/cargo-tracker/iteration_plan-1.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+* **Update**: [test_strategy](/design/cargo-tracker/test_strategy.md) を更新（claude-code/claude-opus-5）
+* **Update**: [tech_stack](/design/cargo-tracker/tech_stack.md) を更新（claude-code/claude-opus-5）
+* **Update**: [operation](/design/cargo-tracker/operation.md) を更新（claude-code/claude-opus-5）
+* **Update**: [non_functional](/design/cargo-tracker/non_functional.md) を更新（claude-code/claude-opus-5）
+* **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [architecture_infrastructure](/design/cargo-tracker/architecture_infrastructure.md) を更新（claude-code/claude-opus-5）
+* **Update**: [architecture_frontend](/design/cargo-tracker/architecture_frontend.md) を更新（claude-code/claude-opus-5）
+* **Update**: [architecture_backend](/design/cargo-tracker/architecture_backend.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0002-event-store-axon-server-and-postgresql-read-models](/adr/cargo-tracker/0002-event-store-axon-server-and-postgresql-read-models.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0001-cqrs-es-with-axon-in-microservices](/adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) を更新（claude-code/claude-opus-5）
 * **Verification**: [iteration_plan-1](/development/cargo-tracker/iteration_plan-1.md) を human:kakimomokuri が検証
 * **Verification**: [development_strategy](/development/cargo-tracker/development_strategy.md) を human:kakimomokuri が検証
 * **Verification**: [release_plan](/development/cargo-tracker/release_plan.md) を human:kakimomokuri が検証
