@@ -6,6 +6,7 @@
 * **Update**: [iteration_plan-1](/development/cargo-tracker/iteration_plan-1.md) を更新（claude-code/claude-opus-5）
 * **Update**: [iteration_plan-1](/development/cargo-tracker/iteration_plan-1.md) を更新（claude-code/claude-opus-5）
 * **Update**: [iteration_plan-1](/development/cargo-tracker/iteration_plan-1.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-1](/development/cargo-tracker/iteration_plan-1.md) を更新（claude-code/claude-opus-5）
 * **Update**: [0001-cqrs-es-with-axon-in-microservices](/adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) を更新（claude-code/claude-opus-5）
 * **Update**: [iteration_plan-1](/development/cargo-tracker/iteration_plan-1.md) を更新（claude-code/claude-opus-5）
 * **Update**: [iteration_plan-1](/development/cargo-tracker/iteration_plan-1.md) を更新（claude-code/claude-opus-5）

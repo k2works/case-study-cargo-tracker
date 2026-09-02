@@ -19,6 +19,10 @@ dependencies {
 
 dependencies {
     implementation(libs.spring.boot.starter.jdbc)
+    implementation(libs.spring.boot.starter.security)
+    implementation(libs.jjwt.api)
+    runtimeOnly(libs.jjwt.impl)
+    runtimeOnly(libs.jjwt.jackson)
     implementation(libs.mybatis.spring.boot.starter)
     implementation(libs.spring.boot.starter.flyway)
     implementation(libs.flyway.postgresql)
@@ -26,4 +30,5 @@ dependencies {
 
     testImplementation(libs.testcontainers.junit.jupiter)
     testImplementation(libs.testcontainers.postgresql)
+    testImplementation(libs.awaitility)
 }

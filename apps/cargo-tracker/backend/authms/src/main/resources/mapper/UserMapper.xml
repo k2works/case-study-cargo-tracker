@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.auth.infrastructure.persistence.UserMapper">
+
+    <resultMap id="userRow"
+               type="com.example.cargotracker.auth.infrastructure.persistence.UserMapper$UserRow">
+        <constructor>
+            <idArg column="username" javaType="string"/>
+            <arg column="password_hash" javaType="string"/>
+            <arg column="display_name" javaType="string"/>
+            <arg column="shipper_id" javaType="string"/>
+            <arg column="enabled" javaType="_boolean"/>
+            <arg column="failed_attempts" javaType="_int"/>
+            <arg column="locked_until" javaType="java.time.Instant"/>
+        </constructor>
+    </resultMap>
+
+    <select id="findByUsername" resultMap="userRow">
+        SELECT * FROM users WHERE username = #{username}
+    </select>
+
+    <insert id="insertAuditLog">
+        INSERT INTO auth_audit_log (username, event, succeeded, remote_addr, occurred_at)
+        VALUES (#{username}, #{event}, #{succeeded}, #{remoteAddr}, #{occurredAt})
+    </insert>
+</mapper>
