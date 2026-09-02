@@ -1,0 +1,76 @@
+# 国際貨物輸送管理システム（CQRS / ES 版）バージョンカタログ
+#
+# 正典: docs/design/cargo-tracker/tech_stack.md
+#
+# Axon の版について（ADR-0001 決定 3・IT1 スパイク）:
+#   axon-server-connector は Maven Central に 5.0.0 と 5.1.0-RC2 しか公開されていない。
+#   コアだけ 5.3 に上げると CommandBusConnector / QueryBusConnector を解決できず
+#   Axon Server に接続できない。starter / connector / axon-test は必ず同じ版で揃える。
+#   版の上限は connector の公開状況が決めるので、上げるときはまず connector を確認する。
+
+[versions]
+java = "25"
+
+spring-boot = "4.1.1"
+spring-dependency-management = "1.1.7"
+
+# Axon 系はこの 1 つの ref だけを参照する（ArchUnit/ビルド検査で固定）
+axon = "5.1.0-RC2"
+
+mybatis-spring-boot = "3.0.5"
+flyway = "11.16.0"
+postgresql = "42.7.9"
+
+jjwt = "0.12.6"
+
+junit = "5.14.0"
+assertj = "3.27.7"
+mockito = "5.20.0"
+testcontainers = "1.20.6"
+archunit = "1.4.1"
+awaitility = "4.3.0"
+cucumber = "7.34.7"
+rest-assured = "5.5.6"
+
+[libraries]
+spring-boot-starter-web = { module = "org.springframework.boot:spring-boot-starter-web", version.ref = "spring-boot" }
+spring-boot-starter-jdbc = { module = "org.springframework.boot:spring-boot-starter-jdbc", version.ref = "spring-boot" }
+spring-boot-starter-validation = { module = "org.springframework.boot:spring-boot-starter-validation", version.ref = "spring-boot" }
+spring-boot-starter-actuator = { module = "org.springframework.boot:spring-boot-starter-actuator", version.ref = "spring-boot" }
+spring-boot-starter-security = { module = "org.springframework.boot:spring-boot-starter-security", version.ref = "spring-boot" }
+spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test", version.ref = "spring-boot" }
+
+# Axon（すべて version.ref = "axon"）
+axon-spring-boot-starter = { module = "org.axonframework.extensions.spring:axon-spring-boot-starter", version.ref = "axon" }
+axon-server-connector = { module = "org.axonframework:axon-server-connector", version.ref = "axon" }
+axon-test = { module = "org.axonframework:axon-test", version.ref = "axon" }
+
+mybatis-spring-boot-starter = { module = "org.mybatis.spring.boot:mybatis-spring-boot-starter", version.ref = "mybatis-spring-boot" }
+flyway-core = { module = "org.flywaydb:flyway-core", version.ref = "flyway" }
+flyway-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flyway" }
+postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
+
+jjwt-api = { module = "io.jsonwebtoken:jjwt-api", version.ref = "jjwt" }
+jjwt-impl = { module = "io.jsonwebtoken:jjwt-impl", version.ref = "jjwt" }
+jjwt-jackson = { module = "io.jsonwebtoken:jjwt-jackson", version.ref = "jjwt" }
+
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
+mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockito" }
+archunit-junit5 = { module = "com.tngtech.archunit:archunit-junit5", version.ref = "archunit" }
+awaitility = { module = "org.awaitility:awaitility", version.ref = "awaitility" }
+testcontainers-junit-jupiter = { module = "org.testcontainers:junit-jupiter", version.ref = "testcontainers" }
+testcontainers-postgresql = { module = "org.testcontainers:postgresql", version.ref = "testcontainers" }
+cucumber-java = { module = "io.cucumber:cucumber-java", version.ref = "cucumber" }
+cucumber-spring = { module = "io.cucumber:cucumber-spring", version.ref = "cucumber" }
+cucumber-junit-platform-engine = { module = "io.cucumber:cucumber-junit-platform-engine", version.ref = "cucumber" }
+rest-assured = { module = "io.rest-assured:rest-assured", version.ref = "rest-assured" }
+
+[bundles]
+axon = ["axon-spring-boot-starter", "axon-server-connector"]
+
+[plugins]
+spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
+spring-dependency-management = { id = "io.spring.dependency-management", version.ref = "spring-dependency-management" }

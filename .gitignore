@@ -47,3 +47,8 @@ docs/article/getting-start-docker-kubernetes/
 docs/article/source/**/.gradle/
 # IDE 生成物
 *.iml
+
+# Gradle（apps/cargo-tracker/backend）
+apps/cargo-tracker/backend/.gradle/
+apps/cargo-tracker/backend/build/
+apps/cargo-tracker/backend/*/build/

@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: billingms
+  main:
+    # Axon の axon.axonserver ConfigurationProperties が Spring Boot の
+    # BoundConfigurationProperties と Bean 循環を作るため必須（IT1 スパイクで実測）。
+    # Spring Boot の版を下げても回避できない。
+    allow-circular-references: true
+
+server:
+  port: ${SERVER_PORT:8086}
+
+axon:
+  axonserver:
+    servers: ${AXON_SERVER:localhost:8124}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
