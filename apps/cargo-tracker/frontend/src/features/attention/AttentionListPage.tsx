@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
+import { formatBusinessDateTime } from '@/shared/api/businessDate';
 import { fetchAttentionItems } from './api';
 
 /**
@@ -41,7 +42,7 @@ export function AttentionListPage() {
           <tbody>
             {data.value.items.map((item) => (
               <tr key={item.itemId}>
-                <td>{item.occurredAt}</td>
+                <td>{formatBusinessDateTime(item.occurredAt)}</td>
                 <td>{item.reason}</td>
                 <td>{item.targetId}</td>
                 <td>

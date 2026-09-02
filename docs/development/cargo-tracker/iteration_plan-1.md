@@ -4,7 +4,7 @@ title: "イテレーション計画 1 - 基盤・認証・荷主登録"
 description: "IT1 の計画。Axon 5 のスパイク 7 項目・ビルドと kind 環境・品質ゲートの実配線・フロント基盤と全ルートのスケルトン・US26/US27/US02（荷主登録の縦切りと crypto-shredding）。デモ項目 7 件。"
 tags: [plan,iteration,cargo-tracker]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-02T17:09:15Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-02T18:00:01Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T12:47:29Z }
 ---
@@ -33,11 +33,11 @@ verified:
 
 ### 成功基準
 
-- [ ] デモ項目 7 件の受け入れテスト（Cucumber の Feature・画面の到達性は Playwright）がすべて緑
-- [ ] `./gradlew build` と `TZ=UTC ./gradlew test` が緑
-- [ ] フロントの `npm run test`・`npx tsc -b`・`npm run build` が緑
-- [ ] ADR-0001 決定 5 の 7 項目に結論が書かれ、外れた前提が設計文書に反映されている
-- [ ] `npx gulp okf:check` が ERROR 0
+- [x] デモ項目 7 件の受け入れテスト（Cucumber の Feature・画面の到達性は Playwright）がすべて緑
+- [x] `./gradlew build` と `TZ=UTC ./gradlew test` が緑
+- [x] フロントの `npm run test`・`npx tsc -b`・`npm run build` が緑
+- [x] ADR-0001 決定 5 の 7 項目に結論が書かれ、外れた前提が設計文書に反映されている
+- [x] `npx gulp okf:check` が ERROR 0
 
 ## ユーザーストーリー
 
@@ -131,9 +131,9 @@ US02 は縦切りの本体です。認証（US26）と基盤が通ってから�
 | 3.1 | Vite + React + TypeScript、`features/` のディレクトリ型、ESLint の `import/no-restricted-paths` | 3h | [x] |
 | 3.2 | 共通レイアウト（左サイドナビ + トップヘッダ）、認可ガード（`RequireRole`）、403 画面、ポータル（`/portal`）。**アクセシビリティの型**：送信中は `disabled` でなく `aria-disabled` でフォーカスを保つ、状態の変化は `role="status"`・エラーは `role="alert"`、反映中の経過秒数は live region の外、色トークンをコントラスト比つきで定義 | 6h | [~] レイアウト・認可ガード・403・到達性は完了。アクセシビリティの型（aria-disabled・role=status・色トークン）は 6.6 の画面と対で入れる |
 | 3.3 | [UI 設計](../../design/cargo-tracker/ui_design.md) の全ルートにプレースホルダ画面を置く。**ナビゲーション整合**：サイドナビ（ロール条件付き）とダッシュボード（S02）の「今日の作業」の両方に IT1 の実画面（S10・S11・S70）を出し、ロール × 画面の到達性を E2E で固定する | 6h | [~] 画面とナビ・到達性は完了（Vitest で固定）。E2E は 2.7 と対で入れる |
-| 3.4 | API クライアント（`queryClient` / `commandClient`）、`202` を `pending` に変える `api/pending.ts`、`BusinessClock` に対応する日付ヘルパ | 3h | [ ] |
+| 3.4 | API クライアント（`queryClient` / `commandClient`）、`202` を `pending` に変える `api/pending.ts`、`BusinessClock` に対応する日付ヘルパ | 3h | [x] |
 | 3.5 | 認証ストア（Zustand + `sessionStorage`）、無操作 15/20 分（荷役画面は 60 分） | 2h | [~] ストアと sessionStorage は完了。無操作タイムアウトは US26 と対で入れる |
-| 3.6 | **設計への反映**：`ui_design.md` に S00・S03・S10・S11 の salt ワイヤーフレームを追加する（後述「設計への反映が必要な事項」） | 3h | [ ] |
+| 3.6 | **設計への反映**：`ui_design.md` に S00・S03・S10・S11 の salt ワイヤーフレームを追加する（後述「設計への反映が必要な事項」） | 3h | [x] |
 | | 小計 | 23h | |
 
 #### 7. ユーザーマニュアル初版（SP 対象外）
@@ -156,7 +156,7 @@ IT1 は画面を伴う IT なので、マニュアルの更新をここで見積
 | 4.3 | JWT 発行（jjwt）と `LoginCommand`。失敗理由を問わず同一メッセージ | 3h | [x] |
 | 4.4 | gatewayms の JWT 検証フィルタとロール伝播。**public-paths の破壊検証**（公開追跡が 401 にならない） | 3h | [x] |
 | 4.5 | ログイン画面（S00）と認証エラー表示 | 2h | [x] |
-| 4.6 | 後段サービスが署名を再検証しないこと（Gateway に任せる分担）を統合テストで固定 | 1h | [ ] |
+| 4.6 | 後段サービスが署名を再検証しないこと（Gateway に任せる分担）を統合テストで固定 | 1h | [x] |
 | | 小計 | 15h | |
 
 #### 5. US27 システムからログアウトする（1 SP）
@@ -507,7 +507,7 @@ S02_ダッシュボード --> S403 : 権限のない画面を直打ち
 
 | # | 欠落 | 対象 | 対応 |
 | :--- | :--- | :--- | :--- |
-| 1 | S00（ログイン）・S03（ログアウト）・S10（荷主一覧）・S11（荷主登録）の salt ワイヤーフレームが `ui_design.md` に無い（画面一覧の行はある） | [UI 設計](../../design/cargo-tracker/ui_design.md) | タスク 3.6 で追加する。実装より先に描き、実装がそれに従う |
+| 1 | S00（ログイン）・S03（ログアウト）・S10（荷主一覧）・S11（荷主登録）の salt ワイヤーフレームが `ui_design.md` に無い（画面一覧の行はある） | [UI 設計](../../design/cargo-tracker/ui_design.md) | **反映済み**（タスク 3.6）。ただし実装より後に描いた。順序が逆だったので、次の IT では画面のあるストーリーの着手前に描く |
 
 **受入基準を複写しないことについて。** `validating-iteration-plan` のステップ 2 は「受入基準の項目数と内容が一致」を求めますが、本計画は意図的に複写せず件数と参照だけを持ちます。書き写した条件は正典が変わっても追随せず、達成判定を誤らせるためです（同シリーズで実際に 3 イテレーション連続の誤記録がありました）。件数（US26 6・US27 3・US02 4）の一致だけを検証項目とします。
 
@@ -526,14 +526,14 @@ S02_ダッシュボード --> S403 : 権限のない画面を直打ち
 ### Definition of Done
 
 - [ ] US26・US27・US02 の受入基準（`user_story.md`）を満たす
-- [ ] デモ項目 7 件の受け入れテストがすべて緑
+- [x] デモ項目 7 件の受け入れテストがすべて緑
 - [ ] `./gradlew build`（SpotBugs・JaCoCo のレイヤー別閾値を含む）が緑
 - [ ] `TZ=UTC ./gradlew test` が緑
-- [ ] フロントの `npm run test`・`npx tsc -b`・`npm run build` が緑
+- [x] フロントの `npm run test`・`npx tsc -b`・`npm run build` が緑
 - [ ] ArchUnit の未適用サービスを落とすメタテストが働いている
 - [ ] ADR-0001 決定 5 の 7 項目に結論があり、ADR と設計文書に反映されている
 - [ ] UI 設計・navbar・ダッシュボード・到達性テストの 4 点が一致している
-- [ ] `npx gulp okf:check` が ERROR 0、`mkdocs build` が成功する
+- [x] `npx gulp okf:check` が ERROR 0、`mkdocs build` が成功する
 - [ ] ユーザーマニュアルの 4 節が執筆され、画面キャプチャが自動生成されている
 - [ ] ふりかえり（`retrospective-1.md`）と完了報告書（`iteration_report-1.md`）を作成した
 

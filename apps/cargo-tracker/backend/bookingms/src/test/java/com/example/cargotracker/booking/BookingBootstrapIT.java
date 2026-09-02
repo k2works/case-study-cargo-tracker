@@ -8,6 +8,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
@@ -18,6 +19,10 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * 単体テストでは見えず、実際に立ち上げて初めて分かった。だから統合テストで固定する。</p>
  */
 @SpringBootTest
+// クラスが終わったらコンテキストを閉じる。閉じないと複数のコンテキストが同時に
+// 生きたまま同じ Axon Server にハンドラを登録し、二重登録で起動に失敗する
+// （DuplicateQueryHandlerSubscriptionException）。落ちるテストが実行順で変わる。
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class BookingBootstrapIT extends AbstractAxonIntegrationTest {
 
     @Autowired

@@ -11,6 +11,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -22,6 +23,10 @@ import javax.sql.DataSource;
 
 /** ログイン（US26）。失敗理由を出し分けないことと、ロックが効くことを固定する。 */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+// クラスが終わったらコンテキストを閉じる。閉じないと複数のコンテキストが同時に
+// 生きたまま同じ Axon Server にハンドラを登録し、二重登録で起動に失敗する
+// （DuplicateQueryHandlerSubscriptionException）。落ちるテストが実行順で変わる。
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class AuthControllerIT extends AbstractAxonIntegrationTest {
 
     static class JsonMap extends LinkedHashMap<String, Object> {

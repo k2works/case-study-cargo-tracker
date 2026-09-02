@@ -10,6 +10,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.DirtiesContext;
 
 /**
  * 投影の振る舞いを実 DB で固定する。
@@ -19,6 +20,10 @@ import org.springframework.boot.test.context.SpringBootTest;
  * 素通りするので、この 2 本が本当に踏まれることを固定する（domain-model.md）。</p>
  */
 @SpringBootTest
+// クラスが終わったらコンテキストを閉じる。閉じないと複数のコンテキストが同時に
+// 生きたまま同じ Axon Server にハンドラを登録し、二重登録で起動に失敗する
+// （DuplicateQueryHandlerSubscriptionException）。落ちるテストが実行順で変わる。
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class ShipperProjectionIT extends AbstractAxonIntegrationTest {
 
     @Autowired

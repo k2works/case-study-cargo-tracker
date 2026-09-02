@@ -29,3 +29,21 @@ dependencies {
     testImplementation(libs.spring.boot.starter.jdbc)
     testImplementation(libs.awaitility)
 }
+
+// 依存ミドルウェアを止めるテストは別タスクに隔離する。同じ JVM で回すと、
+// 止めた影響が後のテストに出て「たまに落ちる」ようになり、実行順で結果が変わる。
+// 原因がこのテストにあることに気づきにくいので、最初から分けておく。
+val outageTest = tasks.register<Test>("outageTest") {
+    description = "Axon Server を止める統合テスト（デモ項目 5）"
+    group = "verification"
+    testClassesDirs = sourceSets["test"].output.classesDirs
+    classpath = sourceSets["test"].runtimeClasspath
+    useJUnitPlatform()
+    filter { includeTestsMatching("*AxonServerOutageIT") }
+}
+
+tasks.named<Test>("test") {
+    filter { excludeTestsMatching("*AxonServerOutageIT") }
+}
+
+tasks.named("check") { dependsOn(outageTest) }

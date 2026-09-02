@@ -9,6 +9,7 @@ import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +22,10 @@ import org.springframework.web.client.RestClient;
  * 反映までを 1 本通し、状態コードの分け方（201 / 202 / 409 / 422）を固定する。</p>
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+// クラスが終わったらコンテキストを閉じる。閉じないと複数のコンテキストが同時に
+// 生きたまま同じ Axon Server にハンドラを登録し、二重登録で起動に失敗する
+// （DuplicateQueryHandlerSubscriptionException）。落ちるテストが実行順で変わる。
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class ShipperControllerIT extends AbstractAxonIntegrationTest {
 
     @LocalServerPort

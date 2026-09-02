@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import org.axonframework.test.server.AxonServerContainer;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -57,6 +58,19 @@ class AxonServerOutageIT {
         registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
         registry.add("spring.datasource.username", POSTGRES::getUsername);
         registry.add("spring.datasource.password", POSTGRES::getPassword);
+    }
+
+    /**
+     * 止めたコンテナは必ず戻す。
+     *
+     * <p>戻さないと、同じ JVM で後から動くテストが「たまに」落ちる。落ちるのは
+     * 実行順で変わるので、原因がこのテストにあることに気づきにくい。</p>
+     */
+    @AfterAll
+    static void restartAxonServer() {
+        if (!AXON_SERVER.isRunning()) {
+            AXON_SERVER.start();
+        }
     }
 
     @LocalServerPort

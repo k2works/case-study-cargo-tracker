@@ -1,5 +1,6 @@
 package com.example.cargotracker.shared.testing;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.axonframework.test.server.AxonServerContainer;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -14,6 +15,12 @@ import org.testcontainers.containers.PostgreSQLContainer;
  * <p><b>DCB を有効にする理由。</b> {@code @EventSourced(tagKey)} は DCB 前提で、
  * 無効な context では接続そのものが確立しない（IT1 スパイクで実測）。本番と同じ形で
  * 立てないと、統合テストが緑でも本番だけ動かない。</p>
+ *
+ * <p><b>スキーマを分ける理由。</b> 投影は {@code token_entry} のセグメントを
+ * 掴んで動く。複数のテストクラスが同じスキーマを見ると、前のコンテキストが掴んだ
+ * ままのセグメントを次が取れず、{@code Failed to start bean 'axon-start-lifecycle-handler'}
+ * で起動に失敗する。落ちるテストが実行順で変わるので、原因が追いにくい形で出る。
+ * クラスごとにスキーマを分けて、掴み合いを起こさないようにする。</p>
  */
 public abstract class AbstractAxonIntegrationTest {
 
@@ -25,6 +32,8 @@ public abstract class AbstractAxonIntegrationTest {
     protected static final PostgreSQLContainer<?> POSTGRES =
             new PostgreSQLContainer<>("postgres:16-alpine");
 
+    private static final AtomicInteger SCHEMA_SEQUENCE = new AtomicInteger();
+
     static {
         AXON_SERVER.start();
         POSTGRES.start();
@@ -32,9 +41,14 @@ public abstract class AbstractAxonIntegrationTest {
 
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
+        String schema = "it_" + SCHEMA_SEQUENCE.incrementAndGet();
         registry.add("axon.axonserver.servers", AXON_SERVER::getAxonServerAddress);
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
+        registry.add("spring.datasource.url",
+                () -> POSTGRES.getJdbcUrl() + "&currentSchema=" + schema);
         registry.add("spring.datasource.username", POSTGRES::getUsername);
         registry.add("spring.datasource.password", POSTGRES::getPassword);
+        registry.add("spring.flyway.schemas", () -> schema);
+        registry.add("spring.flyway.default-schema", () -> schema);
+        registry.add("spring.flyway.create-schemas", () -> "true");
     }
 }
