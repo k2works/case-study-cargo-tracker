@@ -8,7 +8,7 @@ cargo-tracker プロジェクトの設計ドキュメントです。
 
 | ドキュメント | 概要 | 状況 |
 | :--- | :--- | :--- |
-| [バックエンドアーキテクチャ](architecture_backend.md) | Axon Framework 5 による CQRS / Event Sourcing をモジュラーモノリスとして構成。BC・ヘキサゴナル・投影・Saga・イベント契約 | 作成済み（draft） |
+| [バックエンドアーキテクチャ](architecture_backend.md) | Axon Framework 5 による CQRS / Event Sourcing をマイクロサービスとして構成。サービス分割・ヘキサゴナル・投影・Saga・イベント契約 | 作成済み（draft） |
 | フロントエンドアーキテクチャ | UI 構成、状態管理、画面遷移を整理 | 未作成 |
 | インフラストラクチャ | 実行環境、ネットワーク、デプロイ構成を整理 | 未作成 |
 

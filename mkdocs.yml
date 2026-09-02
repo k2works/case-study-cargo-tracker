@@ -90,7 +90,7 @@ nav:
       - 概要: adr/index.md
       - cargo-tracker:
           - 概要: adr/cargo-tracker/index.md
-          - ADR-0001 CQRS/ES を Axon 5 でモジュラーモノリスとして実装する: adr/cargo-tracker/0001-cqrs-es-with-axon-in-modular-monolith.md
+          - ADR-0001 CQRS/ES を Axon 5 でマイクロサービスとして実装する: adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md
           - ADR-0002 Event Store は Axon Server SE、Read Model は PostgreSQL: adr/cargo-tracker/0002-event-store-axon-server-and-postgresql-read-models.md
   - 記事:
       - 概要: article/index.md

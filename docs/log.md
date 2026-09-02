@@ -2,7 +2,8 @@
 
 ## 2026-09-02
 * **Creation**: ADR-0002 Event Store は Axon Server SE、Read Model は PostgreSQL + MyBatis にする。
-* **Creation**: ADR-0001 CQRS / Event Sourcing を Axon Framework 5 でモジュラーモノリスとして実装する。
+* **Update**: ユーザーの指示により配置をモジュラーモノリスからマイクロサービス（7 サービス + Gateway + shared）に変更。バックエンドアーキテクチャ・ADR-0001（改名）・ADR-0002 を改訂。サービス間の同期問い合わせは REST でなく Axon Query Bus を通す。
+* **Creation**: ADR-0001 CQRS / Event Sourcing を Axon Framework 5 でモジュラーモノリスとして実装する（同日マイクロサービスに改訂）。
 * **Creation**: cargo-tracker のバックエンドアーキテクチャ（Axon Framework 5 による CQRS / Event Sourcing 版）を新規作成。tmp/take-4 と source/java-3 の設計を参照元とし、プロセス境界は第 3 章のモジュラーモノリスに戻して永続化と読み書きの分離だけを変える。
 * **Creation**: [エンタープライズ Java における実践的 DDD（draft-2）](/article/practical-ddd-in-enterprise-java/draft-2/index.md) の第 4 章「プロセスを越えるイベント — マイクロサービス版の Cargo Tracker」を執筆。参照元は新たに収録した `source/java-3`（`java/take-7`。8 サービス + 共有ライブラリ・RabbitMQ）。索引・アウトライン（§4〜§7）・第 3 章末尾の誘導もあわせて更新した。
 * **Creation**: 第 4 章の参照元として `docs/article/source/java-3/` を収録（実装 1,186 ファイル・一次資料 199 ファイル）。アウトライン §5 の着手条件「メッセージングを使う実装が `docs/article/source/` に収録されること」を満たすため。`source/README.md` に節を追加した。
