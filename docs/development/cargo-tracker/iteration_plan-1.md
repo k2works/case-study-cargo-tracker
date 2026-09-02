@@ -4,7 +4,7 @@ title: "イテレーション計画 1 - 基盤・認証・荷主登録"
 description: "IT1 の計画。Axon 5 のスパイク 7 項目・ビルドと kind 環境・品質ゲートの実配線・フロント基盤と全ルートのスケルトン・US26/US27/US02（荷主登録の縦切りと crypto-shredding）。デモ項目 7 件。"
 tags: [plan,iteration,cargo-tracker]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-02T16:44:42Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-02T16:55:55Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T12:47:29Z }
 ---
@@ -176,7 +176,7 @@ IT1 は画面を伴う IT なので、マニュアルの更新をここで見積
 | 6.4 | `ExistsShipperEmailQuery` と `FindShipperQuery`（`@QueryHandler` + MyBatis）。一意性の三段（存在確認 + UNIQUE + `attention_item`） | 3h | [x] |
 | 6.5 | `ShipperController`（`POST /api/v1/booking/shippers`・`GET`）。`201` + 識別子、詳細は投影が無ければ `202` | 3h | [x] |
 | 6.6 | 荷主一覧（S10）・登録（S11）・要確認一覧（S70）の画面。「受け付けました」と反映中の案内 | 5h | [x] |
-| 6.7 | 鍵の破棄 → リプレイ → 個人情報が消えることの統合テストと `gulp shipper:shred` の雛形 | 3h | [~] 雛形と鍵破棄の単体・Converter 検査は完了。実 Event Store からのリプレイ演習は残り |
+| 6.7 | 鍵の破棄 → リプレイ → 個人情報が消えることの統合テストと `gulp shipper:shred` の雛形 | 3h | [x] デモ項目 6 を受け入れテストで固定（鍵破棄 → リプレイ → 個人情報のみ null） |
 | | 小計 | 28h | |
 
 ### タスク合計

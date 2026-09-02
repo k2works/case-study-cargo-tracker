@@ -25,6 +25,8 @@ dependencies {
     testImplementation(project(":bookingms"))
     testImplementation(libs.spring.boot.starter.web)
     testImplementation(libs.spring.boot.starter.jdbc)
+    // ステップ定義が Mapper を注入するので、注釈の定義もクラスパスに要る。
+    testImplementation(libs.mybatis.spring.boot.starter)
 }
 
 tasks.withType<Test>().configureEach {
