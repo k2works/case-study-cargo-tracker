@@ -1,6 +1,8 @@
 # Docs Update Log
 
 ## 2026-09-02
+* **Creation**: Creation: cargo-tracker のインフラストラクチャアーキテクチャを新規作成。Axon Server を無効化する開発環境（Heroku）は採らず、結合テストは Testcontainers とステージングで行う。
+* **Creation**: Creation: cargo-tracker のフロントエンドアーキテクチャを新規作成。結果整合性を隠さず 202 + 後追い確認を既定にした。
 * **Creation**: Creation: cargo-tracker のデータモデル設計を新規作成。投影テーブルは派生データとして業務 CHECK を置かず、一意制約は投影を最後の砦とし、履歴テーブルはイベント列に置き換える方針で 6 DB を定義した。
 * **Creation**: Creation: cargo-tracker のドメインモデル設計を新規作成。take-4 の Axon 5 前提モデルに java-3 の UC21 通関・UC22 キャンセル承認・US28 誤配・US31 アカウント保護を取り込み、内部イベントと契約イベントを分けて定義した。
 * **Creation**: ADR-0002 Event Store は Axon Server SE、Read Model は PostgreSQL + MyBatis にする。
