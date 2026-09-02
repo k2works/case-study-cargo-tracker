@@ -33,7 +33,7 @@ export function AppRoutes() {
           <Route
             key={item.path}
             path={item.path}
-            element={<RequireRole allow={item.path === '/shippers' ? ['ROLE_ADMIN'] : item.allow}>{PAGES[item.path]}</RequireRole>}
+            element={<RequireRole allow={item.allow}>{PAGES[item.path]}</RequireRole>}
           />
         ))}
       </Route>
