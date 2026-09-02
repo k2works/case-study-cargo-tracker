@@ -1,4 +1,4 @@
-// テスト専用サブプロジェクト。業務サービスの数（8）には数えない（ADR-0001）。
+// 契約テスト（ゴールデン JSON と往復）。業務サービスの数（8）には数えない（ADR-0001）。
 plugins { java }
 
 dependencies {
@@ -7,4 +7,5 @@ dependencies {
     testImplementation(libs.testcontainers.junit.jupiter)
     testImplementation(libs.testcontainers.postgresql)
     testImplementation(libs.awaitility)
+    testImplementation(libs.assertj.core)
 }
