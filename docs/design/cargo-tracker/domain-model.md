@@ -4,7 +4,7 @@ title: "ドメインモデル設計 - 国際貨物輸送管理システム（CQR
 description: "CQRS / Event Sourcing 版 Cargo Tracker のドメインモデル設計。6 コンテキストの集約・不変条件・コマンド・イベント（内部 / 契約）・状態遷移・Reaction Handler を、イベントを永続化フォーマットとして定義する。"
 tags: [design,domain-model,ddd,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-02T13:24:08Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-02T21:30:39Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -1247,7 +1247,7 @@ T -> B : （購読）キャンセル完了を投影に写す
 
 ## 業務プロセスの連鎖（Reaction Handler）
 
-Axon 5 には Saga がありません（`Saga`・`Deadline`・`@ProcessingGroup` を含むクラスが 1 つも無いことを IT1 スパイクで確認済み。[ADR-0001](../../adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) 決定 6）。複数段の業務連鎖は `application/reaction` の Reaction Handler を段のぶん並べて表し、**連鎖の途中経過は集約そのものが持ちます**。フレームワークが関連付けと終了を面倒見てくれないので、「今どの段か」は `Cargo` / `Invoice` の状態から読めることが条件になります。
+Axon 5 には Saga がありません（`Saga`・`Deadline`・`@ProcessingGroup` を含むクラスが 1 つも無いことを IT1 スパイクで確認済み。公式リファレンスの Sagas は 4 系の解説が残っていますが、冒頭に "Sagas do not have a replacement yet in Axon Framework 5." と書かれています。[ADR-0001](../../adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) 決定 6）。**Axon が Saga を出したら本節を見直します。** 発動条件と判定方法は ADR-0001 決定 6「再評価の発動条件」にあります。複数段の業務連鎖は `application/reaction` の Reaction Handler を段のぶん並べて表し、**連鎖の途中経過は集約そのものが持ちます**。フレームワークが関連付けと終了を面倒見てくれないので、「今どの段か」は `Cargo` / `Invoice` の状態から読めることが条件になります。
 
 ### 予約 → 追跡開始の連鎖（bookingms → trackingms）
 

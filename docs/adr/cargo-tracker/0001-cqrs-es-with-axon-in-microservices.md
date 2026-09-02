@@ -4,7 +4,7 @@ title: "ADR-0001 CQRS / Event Sourcing を Axon Framework 5 でマイクロサ�
 description: "CQRS / Event Sourcing を Axon Framework 5 のマイクロサービスとして実装する決定。配置の形・ES の適用範囲・Axon 5 系 API の採用・サービス間の配送経路と、IT1 スパイクの結果（採用版 5.1.0-RC2・Saga 廃止）。"
 tags: [adr]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-02T14:17:27Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-02T21:30:39Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
   - { by: human:kakimomokuri, at: 2026-09-02T12:47:29Z }
@@ -132,6 +132,32 @@ REST はクライアントから Gateway を通って各サービスに入る経
 - Saga が持っていた「関連付け（association）」と「終了（`@EndSaga`）」に相当する状態は、必要なら**その BC の集約か専用の投影テーブル**に持つ。フレームワークは面倒を見ない
 - タイムアウト起点の処理（Deadline）も無いため、期限で動く業務は**投影テーブルを定期に走査する運用ジョブ**として設計する。該当は `operation.md` の要確認一覧の督促
 
+**「無い」ことの確かめ方（2026-09-03 実施）。** 公式リファレンスの [Sagas](https://docs.axoniq.io/axon-framework-reference/5.1/sagas/) は 4 ページとも冒頭に "Sagas do not have a replacement yet in Axon Framework 5." と書いており、本文は Axon 4 の API 解説がそのまま残っている。載っているクラスが実在するかを成果物で照合した結果が次のとおり。
+
+| ページに出てくるもの | Axon 4.11.2 | Axon 5.1.0-RC2（全 9 成果物・1417 クラス） |
+| :--- | :--- | :--- |
+| `AnnotatedSagaManager` / `SagaLifecycle` / `AssociationValue` | あり（`org.axonframework.modelling.saga`） | **なし** |
+| `JdbcSagaStore` / `JpaSagaStore` / `InMemorySagaStore` / `CachingSagaStore` | あり | **なし** |
+| `EventProcessingConfigurer.registerSaga()` | あり | クラスは別パッケージにあるが saga を含むメソッドは 0 個 |
+
+あわせて `org.axonframework:axon-saga` という成果物が 5.0.0・5.1.0・5.2.0・5.3.1 のいずれにも存在しないこと、最新の 5.3.1 のコア 10 jar にも `saga` を含むクラスが 0 件であることを確認した。infrastructure のページには依存の記載自体が無い。
+
+### 再評価の発動条件
+
+「代替が出たら考える」では検知できないので、**判定できる条件**にする。次のどちらかが成り立ったら本決定を再評価し、必要なら ADR を改訂する。
+
+| # | 発動条件 | 判定方法 |
+| :--- | :--- | :--- |
+| 1 | 採用中の Axon の成果物に Saga のクラスが公開された | `SagaIsStillAbsentTest`（Axon のクラスパスに `saga` を含むクラスが現れたら**赤**にする）。版を上げたときに落ちて気づける |
+| 2 | 公式リファレンスの Sagas から "do not have a replacement yet" の断り書きが消えた | 版を上げるときに [Sagas](https://docs.axoniq.io/axon-framework-reference/5.1/sagas/) を読む。`tech_stack.md` の版上げ手順に含める |
+
+**検査を置く理由。** 発動条件を文章だけで持つと、版を上げたときに誰も読み返さない（同シリーズで、ADR の規則が 7 イテレーションのあいだ半分守られなかったことがある）。条件 1 は検査に落とし、条件 2 は版上げの手順に載せる。
+
+再評価では次を比べる。**Saga が公開されても自動では移らない。**
+
+- Reaction Handler が抱えている自前の状態管理（連鎖の途中経過を集約や投影に持つこと）と、Saga の関連付けのどちらが読みやすいか
+- Deadline の有無。運用ジョブでの定期走査を置き換えられるか
+- 移行の代金。`saga_entry` / `association_value_entry` の追加と、既存の Reaction Handler の書き換え
 
 ## 影響
 
@@ -176,6 +202,7 @@ REST はクライアントから Gateway を通って各サービスに入る経
 | 投影がコマンドを送らない | 統合テスト `ReplayIT`：投影の Processing Group をリセットしてリプレイし、`CommandGateway` が 1 度も呼ばれないこと |
 | Reaction は同期クエリを呼ばない | ArchUnit：`application/reaction` が `QueryGateway` に依存しない |
 | Saga を使わない（決定 6） | ArchUnit：`org.axonframework..saga..` への依存と `application/saga` パッケージの存在を禁止する。名簿方式にせず「その名前の型・パッケージがあれば赤」にする |
+| Saga の再評価の発動条件（決定 6） | `SagaIsStillAbsentTest`：Axon のクラスパスに `saga` を含むクラスが現れたら赤にする。版を上げたときに落ちて気づける。あわせて「Axon の jar を実際に開いているか」も見る（開けていなければ「無い」でなく「調べていない」で緑になる） |
 | Axon の版が揃っている（決定 3） | ビルド：`libs.versions.toml` の `axon` は単一の version.ref であり、starter・connector・`axon-test` がすべてそれを参照すること。参照していない Axon 依存があれば赤にするテストを置く |
 | `@ProcessingGroup` を使わない（決定 3） | ArchUnit：`@ProcessingGroup` 相当の型参照が無いこと（存在しないのでコンパイルで止まる）。Processing Group の割当は `application.yml` のパッケージキーで行い、投影のパッケージごとに 1 件あることを統合テストで数える |
 | ドメイン層のフレームワーク非依存 | ArchUnit：Spring・MyBatis への依存を禁止。Axon は `..annotation..`・`EventAppender`・`org.axonframework.extension.spring.stereotype.EventSourced` の許可リストのみ |
@@ -194,3 +221,4 @@ REST はクライアントから Gateway を通って各サービスに入る経
 - 記事: [draft-2 アウトライン §5](../../article/practical-ddd-in-enterprise-java/draft-2/outline.md)
 - Axon Framework の版は調査時点（2026-09-02）で 5.3 系。確定は `tech_stack.md`
 - 改訂: 2026-09-02 IT1 のスパイクを実施し、決定 5 を「確定する事項」から「結果」に書き換えた。前提が 3 つ崩れたため決定を改めた。(1) `axon-server-connector` が 5.2 以降に無く、コアだけ 5.3 にすると Axon Server に接続できないため、**採用版を 5.3 系から 5.1.0-RC2 に変更**した（決定 3）。(2) **Axon 5 に Saga・Deadline・`@ProcessingGroup` が存在しない**ため、Saga を Reaction Handler に一本化する決定 6 を追加した。(3) Spring Boot と Axon の同居に `spring.main.allow-circular-references=true` と明示的な `TokenStore` Bean が要ることが分かった。DCB 無効時のエラーは `AXONIQ-2308` ではなく `AXONIQ-1302` で、かつ起動が止まらないことも実測した
+- 改訂: 2026-09-03 決定 6 に再評価の発動条件を追記した。公式リファレンスの Sagas に 4 系の API 解説が残っているため「5 系にも Saga がある」と読めるが、4 ページとも冒頭に "Sagas do not have a replacement yet in Axon Framework 5." と書かれており、載っているクラス（`AnnotatedSagaManager`・`SagaLifecycle`・`AssociationValue`・各 `SagaStore`）は Axon 4.11.2 には存在し 5.1.0-RC2 の全 9 成果物には存在しない。`org.axonframework:axon-saga` も 5.x のどの版にも無い。「代替が出たら考える」では検知できないので、発動条件 1（Axon に Saga のクラスが公開されたら）を `SagaIsStillAbsentTest` として検査に落とし、発動条件 2（リファレンスの断り書きが消えたら）は版上げの手順に載せた

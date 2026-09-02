@@ -4,7 +4,7 @@ title: "技術スタック - 国際貨物輸送管理システム（CQRS / Event
 description: "CQRS / Event Sourcing 版 Cargo Tracker の技術スタック一覧（調査時点 2026-09-02）。Java 25 / Spring Boot 4.0.6 / Axon Framework 5.1.0-RC2 / Axon Server 2026.0.4 / MyBatis / PostgreSQL 16 / React 19 と、IT1 スパイクの結果、採用しないもの、バージョン管理方針。"
 tags: [design,tech-stack,axon,spring-boot,react]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-02T15:57:22Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-02T21:30:39Z }
 stale_after: 2026-12-01T00:00:00Z
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
@@ -158,7 +158,7 @@ verified:
 | 方針 | 内容 |
 | :--- | :--- |
 | 固定 | `libs.versions.toml` と `package.json` で完全一致のバージョンを固定。範囲指定をしない |
-| Axon 系の同期 | `axon-spring-boot-starter` / `axon-server-connector` / `axon-test` は必ず同じバージョン。RC と GA を混ぜない（混ぜると Axon Server に接続できないことを IT1 スパイクで実測）。**版の上限は `axon-server-connector` の公開状況が決める**ので、上げるときはまず connector の公開版を確認する。Axon 5 系は minor でも API が動くため、版を上げるときは IT1 スパイクの #1・#2・#4 を再実行する |
+| Axon 系の同期 | `axon-spring-boot-starter` / `axon-server-connector` / `axon-test` は必ず同じバージョン。RC と GA を混ぜない（混ぜると Axon Server に接続できないことを IT1 スパイクで実測）。**版の上限は `axon-server-connector` の公開状況が決める**ので、上げるときはまず connector の公開版を確認する。Axon 5 系は minor でも API が動くため、版を上げるときは IT1 スパイクの #1・#2・#4 を再実行する。**版を上げるときは [Sagas のリファレンス](https://docs.axoniq.io/axon-framework-reference/5.1/sagas/) も読む**："Sagas do not have a replacement yet in Axon Framework 5." の断り書きが消えていたら ADR-0001 決定 6 の再評価の発動条件 2 に当たる |
 | Cucumber 系の同期 | `cucumber-java` / `cucumber-junit-platform-engine` / `cucumber-spring` も同じバージョンで揃える。JUnit Platform 経由で動くので、JUnit 5 の版を上げるときは Cucumber の対応表を確認する |
 | Axon Server との整合 | Axon Framework の版を上げるときは Axon Server の互換表を確認。Axon Server の版上げは計画停止 |
 | 更新の頻度 | パッチは月次、マイナーは四半期、メジャーは ADR |
