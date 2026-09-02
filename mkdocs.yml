@@ -63,6 +63,13 @@ exclude_docs: |
   article/source/
 
 nav:
+  - ユーザーマニュアル:
+      - 概要: manual/index.md
+      - はじめに: manual/00-はじめに.md
+      - 業務フロー: manual/01-業務フロー.md
+      - ログインとログアウト: manual/02-ログインとログアウト.md
+      - 荷主を登録する: manual/03-荷主を登録する.md
+      - 要確認一覧を確認する: manual/04-要確認一覧を確認する.md
   - Home: index.md
   - 戦略:
       - 概要: strategy/index.md

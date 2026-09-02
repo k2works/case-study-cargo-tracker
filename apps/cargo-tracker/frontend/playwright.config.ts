@@ -6,6 +6,8 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './e2e',
+  // キャプチャ生成は CI の到達性スモークとは別に回す（画面を変えたときだけ）。
+  testIgnore: process.env.MANUAL_CAPTURE ? [] : ['**/manual-capture.spec.ts'],
   timeout: 30_000,
   expect: { timeout: 10_000 },
   // CI で 1 度でも落ちたら赤にする。再試行で緑にすると、たまに落ちるテストを

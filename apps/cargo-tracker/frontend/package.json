@@ -11,7 +11,8 @@
     "typecheck": "tsc -b",
     "test": "vitest run",
     "test:watch": "vitest",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "manual:capture": "MANUAL_CAPTURE=1 playwright test manual-capture"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.62.0",

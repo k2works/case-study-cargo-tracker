@@ -79,6 +79,12 @@ export default function (gulp) {
     done();
   });
 
+  /** マニュアルの画面キャプチャを撮り直す（creating-manual）。手で配置しない。 */
+  gulp.task('manual:capture', (done) => {
+    console.log(sh('npm run manual:capture', { cwd: 'apps/cargo-tracker/frontend', stdio: 'inherit' }) ?? '');
+    done();
+  });
+
   /** kind クラスタを消す。取り消せないので名前を明示する。 */
   gulp.task('k8s:down', (done) => {
     console.log(sh(`kind delete cluster --name ${KIND_CLUSTER}`));
