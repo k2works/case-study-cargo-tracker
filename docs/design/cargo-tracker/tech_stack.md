@@ -3,9 +3,11 @@ type: Design
 title: "技術スタック - 国際貨物輸送管理システム（CQRS / Event Sourcing 版）"
 description: "CQRS / Event Sourcing 版 Cargo Tracker の技術スタック一覧（調査時点 2026-09-02）。Java 25 / Spring Boot 4.1 / Axon Framework 5.3 / Axon Server 2026.0.4 / MyBatis / PostgreSQL 16 / React 19 と、IT1 スパイクで確認する事項、採用しないもの、バージョン管理方針。"
 tags: [design,tech-stack,axon,spring-boot,react]
-status: draft
+status: stable
 generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T07:46:35Z }
 stale_after: 2026-12-01T00:00:00Z
+verified:
+  - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
 
 # 技術スタック - 国際貨物輸送管理システム（CQRS / Event Sourcing 版）

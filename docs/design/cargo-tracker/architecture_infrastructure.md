@@ -3,8 +3,10 @@ type: Design
 title: "インフラストラクチャアーキテクチャ - 国際貨物輸送管理システム（CQRS / Event Sourcing 版）"
 description: "CQRS / Event Sourcing 版 Cargo Tracker のインフラストラクチャ設計。ローカルは kind + Kustomize、ステージング・本番は AWS ECS + EC2（Axon Server）+ RDS。Axon Server を全環境で動かし、Event Store のバックアップ・復元・投影のリプレイを中心に据える。"
 tags: [design,architecture,infrastructure,axon-server,kubernetes,aws]
-status: draft
+status: stable
 generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T07:46:35Z }
+verified:
+  - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
 
 # インフラストラクチャアーキテクチャ - 国際貨物輸送管理システム（CQRS / Event Sourcing 版）

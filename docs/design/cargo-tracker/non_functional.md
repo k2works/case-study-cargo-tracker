@@ -3,8 +3,10 @@ type: Design
 title: "非機能要件 - 国際貨物輸送管理システム（CQRS / Event Sourcing 版）"
 description: "CQRS / Event Sourcing 版 Cargo Tracker の非機能要件。反映の遅れの目標値、Axon Server SE の単一障害点を前提にした稼働率と RPO / RTO、crypto-shredding による個人情報の削除、SLI / SLO / SLA、検証方法とリスクを定める。"
 tags: [design,non-functional,cqrs,event-sourcing,axon]
-status: draft
+status: stable
 generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T07:46:35Z }
+verified:
+  - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
 
 # 非機能要件 - 国際貨物輸送管理システム（CQRS / Event Sourcing 版）

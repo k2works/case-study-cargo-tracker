@@ -3,8 +3,10 @@ type: ADR
 title: "ADR-0002 Event Store は Axon Server SE、Read Model は PostgreSQL + MyBatis にする"
 description: "Event Store は Axon Server SE 単一ノード、Read Model・Token Store・Saga Store・Auth は PostgreSQL + MyBatis + Flyway に置く決定と、PostgresqlEventStorageEngine 公開時の再評価条件。"
 tags: [adr]
-status: draft
+status: stable
 generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T07:46:35Z }
+verified:
+  - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
 
 # ADR-0002 Event Store は Axon Server SE、Read Model は PostgreSQL + MyBatis にする

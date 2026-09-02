@@ -1,6 +1,21 @@
 # Docs Update Log
 
 ## 2026-09-02
+* **Update**: MkDocs のビルドで確認したところ、[UI 設計](/design/cargo-tracker/ui_design.md) の日本語見出しへのアンカーリンク 7 件が解決していなかった（toc が Unicode スラッグを使わない設定のため、見出し ID が `_3` のような連番になる）。他の設計文書と同じく本文で節名を書く形に直した。
+* **Verification**: [設計_review_20260902](/review/cargo-tracker/設計_review_20260902.md) を human:kakimomokuri が検証
+* **Verification**: [0003-crypto-shredding-for-personal-data](/adr/cargo-tracker/0003-crypto-shredding-for-personal-data.md) を human:kakimomokuri が検証
+* **Verification**: [0002-event-store-axon-server-and-postgresql-read-models](/adr/cargo-tracker/0002-event-store-axon-server-and-postgresql-read-models.md) を human:kakimomokuri が検証
+* **Verification**: [0001-cqrs-es-with-axon-in-microservices](/adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) を human:kakimomokuri が検証
+* **Verification**: [ui_design](/design/cargo-tracker/ui_design.md) を human:kakimomokuri が検証
+* **Verification**: [test_strategy](/design/cargo-tracker/test_strategy.md) を human:kakimomokuri が検証
+* **Verification**: [tech_stack](/design/cargo-tracker/tech_stack.md) を human:kakimomokuri が検証
+* **Verification**: [operation](/design/cargo-tracker/operation.md) を human:kakimomokuri が検証
+* **Verification**: [non_functional](/design/cargo-tracker/non_functional.md) を human:kakimomokuri が検証
+* **Verification**: [domain-model](/design/cargo-tracker/domain-model.md) を human:kakimomokuri が検証
+* **Verification**: [data-model](/design/cargo-tracker/data-model.md) を human:kakimomokuri が検証
+* **Verification**: [architecture_infrastructure](/design/cargo-tracker/architecture_infrastructure.md) を human:kakimomokuri が検証
+* **Verification**: [architecture_frontend](/design/cargo-tracker/architecture_frontend.md) を human:kakimomokuri が検証
+* **Verification**: [architecture_backend](/design/cargo-tracker/architecture_backend.md) を human:kakimomokuri が検証
 * **Update**: 設計レビュー（2026-09-02）の高 17・中 24・低 8 件を設計 10 件と ADR-0001/0002 に反映。集約の登録 API を take-4 ADR-0008 の @EventSourced に訂正、DCB 有効化、Reaction Handler の導入、契約イベント 11 本、Processing Group 名の統一、要確認一覧 attention_item、荷役の航海番号起点と港のローカル時刻、キャンセル承認後の陸揚げまで追跡を開く、見積と請求の差額表示、テストの判別力の修正。
 * **Creation**: Creation: ADR-0003 個人情報の crypto-shredding（設計レビュー H4 の対応）。
 * **Creation**: Creation: cargo-tracker の設計レビュー（2026-09-02）。XP エージェント 5 名の並列レビューを統合。高 20 件のうち 17 件を修正、通知の送信基盤はスコープ外と明記、段階導入計画は次工程へ引き渡す。

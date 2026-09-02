@@ -3,8 +3,10 @@ type: Design
 title: "運用要件 - 国際貨物輸送管理システム（CQRS / Event Sourcing 版）"
 description: "CQRS / Event Sourcing 版 Cargo Tracker の運用要件。投影のリプレイを日常操作として置き、Event Store の復元演習、Event Processor と Saga の監視、ランブック、イベントの形を変えるリリース手順、鍵の破棄、Gulp タスクを定める。"
 tags: [design,operation,cqrs,event-sourcing,axon]
-status: draft
+status: stable
 generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T07:46:35Z }
+verified:
+  - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
 
 # 運用要件 - 国際貨物輸送管理システム（CQRS / Event Sourcing 版）

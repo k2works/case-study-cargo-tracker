@@ -3,8 +3,10 @@ type: Design
 title: "ドメインモデル設計 - 国際貨物輸送管理システム（CQRS / Event Sourcing 版）"
 description: "CQRS / Event Sourcing 版 Cargo Tracker のドメインモデル設計。6 コンテキストの集約・不変条件・コマンド・イベント（内部 / 契約）・状態遷移・Saga を、イベントを永続化フォーマットとして定義する。"
 tags: [design,domain-model,ddd,cqrs,event-sourcing,axon]
-status: draft
+status: stable
 generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T07:46:35Z }
+verified:
+  - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
 
 # ドメインモデル設計 - 国際貨物輸送管理システム（CQRS / Event Sourcing 版）

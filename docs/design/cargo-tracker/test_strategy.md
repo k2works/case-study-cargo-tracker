@@ -3,8 +3,10 @@ type: Design
 title: "テスト戦略 - 国際貨物輸送管理システム（CQRS / Event Sourcing 版）"
 description: "CQRS / Event Sourcing 版 Cargo Tracker のテスト戦略。サービス内ピラミッド + サービス間ダイヤモンドのハイブリッド形で、集約・投影と Saga・契約・境界・E2E の 5 種を別々の検査として置き、それぞれが判別すること・しないことを明記する。"
 tags: [design,test-strategy,cqrs,event-sourcing,axon]
-status: draft
+status: stable
 generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T07:46:35Z }
+verified:
+  - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
 
 # テスト戦略 - 国際貨物輸送管理システム（CQRS / Event Sourcing 版）

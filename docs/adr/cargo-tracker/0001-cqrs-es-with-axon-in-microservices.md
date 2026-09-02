@@ -3,8 +3,10 @@ type: ADR
 title: "ADR-0001 CQRS / Event Sourcing を Axon Framework 5 でマイクロサービスとして実装する"
 description: "CQRS / Event Sourcing を Axon Framework 5 のマイクロサービスとして実装する決定。配置の形・ES の適用範囲・Axon 5 系 API の採用・サービス間の配送経路と、着手前スパイクで確定する事項。"
 tags: [adr]
-status: draft
+status: stable
 generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T07:46:35Z }
+verified:
+  - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
 
 # ADR-0001 CQRS / Event Sourcing を Axon Framework 5 でマイクロサービスとして実装する

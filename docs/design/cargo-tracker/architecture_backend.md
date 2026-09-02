@@ -3,9 +3,11 @@ type: Design
 title: "バックエンドアーキテクチャ - 国際貨物輸送管理システム（CQRS / Event Sourcing 版）"
 description: "Axon Framework 5 による CQRS / Event Sourcing 版 Cargo Tracker のバックエンドアーキテクチャ。マイクロサービス構成で BC ごとにサービスを分け、Axon Server を Command / Event / Query Bus と Event Store に使い、投影・Saga・イベント契約を定める。"
 tags: [design, architecture, backend, cqrs, event-sourcing, axon, microservices]
-status: draft
+status: stable
 generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T07:46:35Z }
 stale_after: 2026-12-01T00:00:00Z
+verified:
+  - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
 
 # バックエンドアーキテクチャ - 国際貨物輸送管理システム（CQRS / Event Sourcing 版）

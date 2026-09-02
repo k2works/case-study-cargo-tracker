@@ -3,8 +3,10 @@ type: ADR
 title: "ADR-0003 荷主の個人情報は crypto-shredding で削除可能にする"
 description: "個人情報（荷主の氏名・メール・電話・住所）を荷主ごとの KMS 鍵で暗号化してイベントに載せ、削除要求には鍵の破棄で応じる決定。対象イベントの名簿、投影列の NULL 許容、ゴールデン JSON の論理形と物理形、導入時期（US02 の IT）と検査。"
 tags: [adr]
-status: draft
+status: stable
 generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T07:46:35Z }
+verified:
+  - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
 
 # ADR-0003 荷主の個人情報は crypto-shredding で削除可能にする

@@ -3,8 +3,10 @@ type: Design
 title: "フロントエンドアーキテクチャ - 国際貨物輸送管理システム（CQRS / Event Sourcing 版）"
 description: "CQRS / Event Sourcing 版 Cargo Tracker のフロントエンドアーキテクチャ。React SPA で Command / Query を分けた API クライアントを持ち、投影の遅延を 202 Accepted の「反映中」として扱う UX とロール別・状態別の到達性を定める。"
 tags: [design,architecture,frontend,react,cqrs]
-status: draft
+status: stable
 generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T07:46:35Z }
+verified:
+  - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
 
 # フロントエンドアーキテクチャ - 国際貨物輸送管理システム（CQRS / Event Sourcing 版）
