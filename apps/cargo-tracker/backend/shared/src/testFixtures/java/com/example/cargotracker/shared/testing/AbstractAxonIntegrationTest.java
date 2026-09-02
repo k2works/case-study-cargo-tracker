@@ -27,7 +27,12 @@ public abstract class AbstractAxonIntegrationTest {
     protected static final AxonServerContainer AXON_SERVER =
             new AxonServerContainer("axoniq/axonserver:2026.0.4")
                     .withDevMode(true)
-                    .withDcbContext(true);
+                    .withDcbContext(true)
+                    // Axon Server は起動が遅い（設定の初期化だけで数十秒）。開発機が
+                    // 混んでいると Testcontainers の既定 60 秒を超えて落ちる。落ちると
+                    // 「壊れた」ように見えるが、待てば上がる。k8s の
+                    // initialDelaySeconds: 120 と同じ理由で長めに取る。
+                    .withStartupTimeout(java.time.Duration.ofMinutes(3));
 
     protected static final PostgreSQLContainer<?> POSTGRES =
             new PostgreSQLContainer<>("postgres:16-alpine");

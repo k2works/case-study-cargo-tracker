@@ -79,6 +79,32 @@ export default function (gulp) {
     done();
   });
 
+  /**
+   * 滞留している連鎖の一覧（ADR-0001 決定 6 / data-model.md）。
+   *
+   * Axon 5 に Saga（と Deadline）が無いので、止まった連鎖はこのテーブルを
+   * 走査して見つける。件数を出すだけでなく、どの段で止まったかまで出す。
+   */
+  gulp.task('reaction:stuck', (done) => {
+    const hours = (() => {
+      const i = process.argv.indexOf('--older-than-hours');
+      return i > -1 ? Number(process.argv[i + 1]) : 24;
+    })();
+    try {
+      console.log(
+        sh(
+          `docker exec cargo-tracker-postgres psql -U postgres -d booking_read_db -c ` +
+            `"SELECT process_type, process_id, current_step, completed_steps || '/' || total_steps AS steps, ` +
+            `updated_at FROM process_state WHERE status = 'RUNNING' ` +
+            `AND updated_at < now() - interval '${hours} hours' ORDER BY updated_at"`,
+        ),
+      );
+    } catch (e) {
+      console.log(`  読めません: ${e.message.split('\n')[0]}`);
+    }
+    done();
+  });
+
   /** マニュアルの画面キャプチャを撮り直す（creating-manual）。手で配置しない。 */
   gulp.task('manual:capture', (done) => {
     console.log(sh('npm run manual:capture', { cwd: 'apps/cargo-tracker/frontend', stdio: 'inherit' }) ?? '');

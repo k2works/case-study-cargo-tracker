@@ -34,7 +34,10 @@ class BookingBootstrapIT extends AbstractAxonIntegrationTest {
         JdbcTemplate jdbc = new JdbcTemplate(dataSource);
 
         Integer tokenEntry = jdbc.queryForObject(
-                "SELECT count(*) FROM information_schema.tables WHERE table_name = 'token_entry'",
+                // スキーマはテストクラスごとに分けているので、現在のスキーマに限る。
+                // 限らないと他のクラスが作った表まで数えて、増えるたびに落ちる。
+                "SELECT count(*) FROM information_schema.tables"
+                        + " WHERE table_schema = current_schema() AND table_name = 'token_entry'",
                 Integer.class);
         assertThat(tokenEntry)
                 .as("マイグレーションが 1 本も走らないまま起動が成功したことが実際にあった")
@@ -42,8 +45,8 @@ class BookingBootstrapIT extends AbstractAxonIntegrationTest {
 
         Integer mask = jdbc.queryForObject(
                 "SELECT count(*) FROM information_schema.columns"
-                        + " WHERE table_name = 'token_entry' AND column_name = 'mask'"
-                        + " AND is_nullable = 'NO'",
+                        + " WHERE table_schema = current_schema() AND table_name = 'token_entry'"
+                        + " AND column_name = 'mask' AND is_nullable = 'NO'",
                 Integer.class);
         assertThat(mask).as("token_entry.mask は NOT NULL。無いと起動時に落ちる").isEqualTo(1);
     }

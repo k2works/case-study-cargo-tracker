@@ -4,7 +4,7 @@ title: "データモデル設計 - 国際貨物輸送管理システム（CQRS /
 description: "CQRS / Event Sourcing 版 Cargo Tracker のデータモデル設計。Event Store は Axon Server に任せ、サービスごとの投影テーブル・Axon 管理テーブル・Auth の状態テーブルを ER 図とテーブル定義で示し、Processing Group との対応とリプレイ前提のマイグレーション方針を定める。"
 tags: [design,data-model,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-02T21:34:44Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-02T22:30:07Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -713,6 +713,17 @@ entity "process_state" as ps {
 **滞留の検知。** Axon に Deadline が無いので、`status = 'RUNNING'` かつ `updated_at` が 24 時間より古い行を定期に走査します（`gulp reaction:stuck`）。超過したものは補償して `attention_item` に写します（`operation.md`）。
 
 置く DB は連鎖の起点を持つサービスの Read Model DB です（予約 → 追跡開始なら `booking_read_db`）。**連鎖ごとに 1 つのサービスが持ち主になります。** 複数サービスで同じ連鎖の状態を持つと、どちらが正かが曖昧になります。
+
+**イベントの再配信に耐えること。** Saga のインフラが隠していた冪等性を自分で持つ必要があるので、窓口（`ProcessStateService`）で次を守ります。実装は bookingms、検査は `ProcessStateServiceIT`。
+
+| 守ること | なぜ |
+| :--- | :--- |
+| 同じ連鎖を 2 度始めても作り直さない | 作り直すと進んだ段が巻き戻る |
+| 同じ段を 2 度受け取っても進めない | 進めると段が飛び、届いていない段を終えたことにする |
+| 終わった連鎖は遅れて届いたイベントで再開しない | 完了が取り消される |
+| 始まっていない連鎖は進められない（例外にする） | 黙って作ると、始まっていない連鎖が進んだことになる |
+
+**制約は DB 側にも置きます。** `status` の値域、`completed_steps <= total_steps`、そして「`RUNNING` でないなら `completed_at` がある」を CHECK 制約にします。最後の 1 つが無いと、完了しているのに「いつ終わったか」を問えない行が作れてしまいます。
 
 ### Axon 管理テーブル（各 Read Model DB 共通）
 
