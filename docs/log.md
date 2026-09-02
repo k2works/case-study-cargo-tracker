@@ -1,6 +1,7 @@
 # Docs Update Log
 
 ## 2026-09-02
+* **Creation**: Creation: cargo-tracker のドメインモデル設計を新規作成。take-4 の Axon 5 前提モデルに java-3 の UC21 通関・UC22 キャンセル承認・US28 誤配・US31 アカウント保護を取り込み、内部イベントと契約イベントを分けて定義した。
 * **Creation**: ADR-0002 Event Store は Axon Server SE、Read Model は PostgreSQL + MyBatis にする。
 * **Update**: ユーザーの指示により配置をモジュラーモノリスからマイクロサービス（7 サービス + Gateway + shared）に変更。バックエンドアーキテクチャ・ADR-0001（改名）・ADR-0002 を改訂。サービス間の同期問い合わせは REST でなく Axon Query Bus を通す。
 * **Creation**: ADR-0001 CQRS / Event Sourcing を Axon Framework 5 でモジュラーモノリスとして実装する（同日マイクロサービスに改訂）。
