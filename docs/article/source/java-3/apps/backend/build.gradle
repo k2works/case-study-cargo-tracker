@@ -1,0 +1,268 @@
+plugins {
+    id 'org.springframework.boot' version '4.0.5' apply false
+    id 'io.spring.dependency-management' version '1.1.7' apply false
+    id 'com.github.spotbugs' version '6.1.3' apply false
+    id 'org.sonarqube' version '6.3.1.5724'
+    // コードから設計ドキュメントを生成する（docs/design と実装の乖離を検出する手段）
+    id 'org.dddjava.jig-gradle-plugin' version '2026.7.4' apply false
+}
+
+ext {
+    jigErdVersion = '0.2.2'
+    testcontainersVersion = '1.21.4'
+}
+
+allprojects {
+    group = 'com.example'
+    version = '0.0.1-SNAPSHOT'
+
+    repositories {
+        mavenCentral()
+    }
+}
+
+
+/**
+ * Docker を使うテストを直列化するためのビルドサービス。
+ *
+ * <p>サブプロジェクトを並列に走らせる（`org.gradle.parallel=true`）と、Testcontainers の
+ * PostgreSQL・RabbitMQ が同時に何個も立ち上がる。開発機でも CI でも資源は有限で、
+ * <strong>起動が間に合わずコンテナの初期化に失敗する</strong>（IT7 のクローズで 4 回踏んだ）。
+ *
+ * <p>症状は毎回違うテストの `initializationError` として出るため、原因が資源だと分かりにくい。
+ * 再実行すると通ることが多く、<strong>「たまに落ちるテスト」として放置されやすい</strong>。
+ *
+ * <p>コンパイルや静的解析は並列のままで、テストだけを 1 プロジェクトずつ走らせる。
+ */
+abstract class DockerTestLock implements org.gradle.api.services.BuildService<org.gradle.api.services.BuildServiceParameters.None> {
+}
+
+def dockerTestLock = gradle.sharedServices.registerIfAbsent('dockerTestLock', DockerTestLock) {
+    // Docker を使うテストは、同時に 1 プロジェクトだけ
+    maxParallelUsages = 1
+}
+ext.dockerTestLock = dockerTestLock
+
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'checkstyle'
+    apply plugin: 'com.github.spotbugs'
+    apply plugin: 'jacoco'
+    apply plugin: 'org.sonarqube'
+    apply plugin: 'org.dddjava.jig-gradle-plugin'
+
+    // --- JIG（コードからの設計ドキュメント生成）---
+    // docs/design は「こう設計した」、JIG の出力は「こう実装されている」を示す。
+    // 両者を突き合わせることで、設計と実装の乖離を目視ではなく生成物で検出する。
+    jig {
+        // BC ごとの構造を見たいので、全パッケージを対象にする
+        modelPattern = '.+'
+        outputDirectory = layout.buildDirectory.dir('jig').get().asFile.toString()
+    }
+
+    // アーキテクチャ規則は shared の testFixtures で全サービスに配る。
+    // サービス個別に依存を書くと、書き忘れたサービスだけ無検査になる（未適用は
+    // shared の ArchitectureRuleCoverageTest が落とす）。
+    if (project.name != 'shared') {
+        dependencies {
+            testImplementation testFixtures(project(':shared'))
+        }
+    } else {
+        // shared のメタテストは他サービスのテストソースを走査して検査の適用漏れを見つける。
+        // 入力として宣言しないと、shared 自体が変わらない限り Gradle が up-to-date と判断し、
+        // 検査が実行されないまま緑になる（安全装置が働かないことに気づけない）。
+        tasks.named('test') {
+            inputs.files(rootProject.subprojects.collect { fileTree("${it.projectDir}/src/test/java") })
+                    .withPropertyName('serviceTestSources')
+                    .withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
+            // 利用者ヘッダの検査（ADR-007）の登録漏れは本番ソースを走査して見つける。
+            inputs.files(rootProject.subprojects.collect { fileTree("${it.projectDir}/src/main/java") })
+                    .withPropertyName('serviceMainSources')
+                    .withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
+            // 地点マスタ複製のずれ（ADR-014）はマイグレーションの実体を突き合わせて見つける。
+            inputs.files(rootProject.subprojects.collect {
+                fileTree("${it.projectDir}/src/main/resources/db/migration")
+            })
+                    .withPropertyName('serviceMigrations')
+                    .withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
+            // 接続先とシミュレーションの利用者の取り違えは、マニフェストの実体を読んで見つける。
+            // **宣言しないと、マニフェストだけを直したときに検査が走らない**——
+            // IT14 で実際に起きたのは「マニフェストだけを写して接続先を直し忘れる」形であり、
+            // まさにその変更で up-to-date と判断されては安全装置にならない。
+            inputs.files(fileTree(rootProject.file('../../ops/k8s/kustomize/base')))
+                    .withPropertyName('deploymentManifests')
+                    .withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
+            // **配り先は 1 つではない。** Heroku の配布手順も読むため、
+            // その変更で検査が走らないと「片方だけ直した」状態を見逃す
+            inputs.file(rootProject.file('../../ops/scripts/deploy.js'))
+                    .withPropertyName('herokuDeployScript')
+                    .withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
+            inputs.file(rootProject.file('settings.gradle'))
+                    .withPropertyName('serviceList')
+                    .withPathSensitivity(org.gradle.api.tasks.PathSensitivity.RELATIVE)
+        }
+    }
+
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(25)
+        }
+    }
+
+    // Spring Boot を適用するサービスでは plain jar を生成しない。
+    // Dockerfile の COPY build/libs/*.jar が 2 つの jar を拾って曖昧になるのを防ぐ。
+    plugins.withId('org.springframework.boot') {
+        tasks.named('jar') {
+            enabled = false
+        }
+    }
+
+    checkstyle {
+        toolVersion = '10.21.4'
+        configFile = file("${rootProject.projectDir}/config/checkstyle/checkstyle.xml")
+        configDirectory = file("${rootProject.projectDir}/config/checkstyle")
+        // 指摘でビルドを止める。見逃す設定のままだと、レポートに出ても誰も直さない
+        // （IT6 では二重 import が検出されていたのにビルドが緑だった）
+        ignoreFailures = false
+        maxWarnings = 0
+    }
+
+    spotbugs {
+        // 指摘でビルドを止める。除外は config/spotbugs/exclude-filter.xml に理由つきで置く
+        ignoreFailures = false
+        // Java 25（クラスファイル 69）を読める版。古い版は全クラスの解析に失敗し、
+        // ignoreFailures = true のもとでは「1 件も指摘が無い」ように見えていた
+        toolVersion = '4.9.8'
+        excludeFilter = file("${rootProject.projectDir}/config/spotbugs/exclude-filter.xml")
+    }
+
+    tasks.withType(com.github.spotbugs.snom.SpotBugsTask).configureEach {
+        reports {
+            html.required = true
+            xml.required = false
+        }
+    }
+
+    jacocoTestReport {
+        dependsOn test
+        reports {
+            html.required = true
+            xml.required = true
+        }
+    }
+
+    // --- カバレッジ検証（テスト戦略のカバレッジ目標を check に紐付ける）---
+    // 目標値をドキュメントに書くだけでは守られない。閾値割れでビルドを落とすことで、
+    // 「カバレッジは後で上げる」が固定化するのを防ぐ。閾値はテスト戦略のレイヤー別目標に一致させる。
+    // 対象クラスが 0 件のレイヤーは JaCoCo が評価をスキップするため、実装が進むにつれて自然に効き始める。
+    def coverageExcludes = [
+            '**/*Application.class',
+            '**/config/**',
+            '**/package-info.class'
+    ]
+
+    jacocoTestCoverageVerification {
+        dependsOn test
+        afterEvaluate {
+            classDirectories.setFrom(files(classDirectories.files.collect {
+                fileTree(dir: it, exclude: coverageExcludes)
+            }))
+        }
+        violationRules {
+            rule {
+                element = 'BUNDLE'
+                limit {
+                    counter = 'INSTRUCTION'
+                    value = 'COVEREDRATIO'
+                    minimum = 0.80
+                }
+            }
+            rule {
+                element = 'PACKAGE'
+                includes = ['*.domain.model', '*.domain.model.*']
+                limit { counter = 'INSTRUCTION'; value = 'COVEREDRATIO'; minimum = 0.90 }
+            }
+            rule {
+                element = 'PACKAGE'
+                includes = ['*.application.internal', '*.application.internal.*']
+                limit { counter = 'INSTRUCTION'; value = 'COVEREDRATIO'; minimum = 0.85 }
+            }
+            rule {
+                element = 'PACKAGE'
+                includes = ['*.infrastructure', '*.infrastructure.*']
+                limit { counter = 'INSTRUCTION'; value = 'COVEREDRATIO'; minimum = 0.70 }
+            }
+            rule {
+                element = 'PACKAGE'
+                includes = ['*.interfaces.rest', '*.interfaces.rest.*']
+                limit { counter = 'INSTRUCTION'; value = 'COVEREDRATIO'; minimum = 0.60 }
+            }
+        }
+    }
+
+    tasks.named('check') {
+        dependsOn jacocoTestCoverageVerification
+    }
+
+    // --- jig-erd（DB スキーマからの ER 図生成）---
+    // Testcontainers 上に Flyway で構築したスキーマから ER 図を出力する。
+    // data-model.md の ER 図は設計、jig-erd の出力は実際のスキーマである。
+    // Database per Service のため、図はサービスごとに生成される。
+    if (file("${projectDir}/src/test/resources/jig.properties").exists()) {
+        tasks.register('jigErd', Test) {
+            group = 'documentation'
+            description = 'Flyway で構築したスキーマから ER 図を生成する（Docker と Graphviz が必要）'
+            // Test タスクを register する場合、クラスパスは明示しないと NO-SOURCE になる
+            testClassesDirs = sourceSets.test.output.classesDirs
+            classpath = sourceSets.test.runtimeClasspath
+            useJUnitPlatform()
+            filter {
+                includeTestsMatching "com.example.${project.name}.SchemaErdDocument"
+            }
+            systemProperty 'jig.erd.enabled', 'true'
+            outputs.upToDateWhen { false }
+        }
+    }
+
+    tasks.named('test') {
+        useJUnitPlatform()
+        // コンテナの起動が競合しないよう、テストは 1 プロジェクトずつ走らせる
+        usesService(rootProject.ext.dockerTestLock)
+        finalizedBy jacocoTestReport
+        maxParallelForks = 1
+        // ER 図生成は検証ではないため通常のテストから除外する（Graphviz と Docker に依存する）
+        filter {
+            excludeTestsMatching "com.example.${project.name}.SchemaErdDocument"
+        }
+        reports {
+            // SonarQube にテスト結果を渡すため XML も出す。無いと「テストが 0 件」として
+            // 扱われ、品質ゲートの判断材料が欠ける
+            junitXml.required = true
+            html.required = true
+        }
+        // 業務タイムゾーンを本体と揃える。CI（UTC）でも同じ日付判定になることを確認するため
+        // TZ=UTC で一度実行する運用と併用する（テスト戦略を参照）。
+        systemProperty 'user.timezone', System.getProperty('user.timezone', 'Asia/Tokyo')
+        jvmArgs '-Dnet.bytebuddy.experimental=true'
+    }
+
+    sonarqube {
+        properties {
+            // JaCoCo のレポートを SonarQube に渡す。渡さないとカバレッジ 0% と表示され、
+            // 品質ゲートのカバレッジ条件が常に赤になる
+            property 'sonar.coverage.jacoco.xmlReportPaths',
+                    layout.buildDirectory.file('reports/jacoco/test/jacocoTestReport.xml')
+                            .get().asFile.absolutePath
+            property 'sonar.junit.reportPaths',
+                    layout.buildDirectory.dir('test-results/test').get().asFile.absolutePath
+            // SchemaErdDocument はテストではなく ER 図の生成タスクである
+            // （通常のテスト実行からも除外している）。アサートが無いのは意図どおり
+            property 'sonar.test.exclusions', '**/SchemaErdDocument.java'
+            property 'sonar.coverage.exclusions', [
+                    '**/*Application.java',
+                    '**/config/**',
+                    '**/package-info.java'
+            ].join(',')
+        }
+    }
+}

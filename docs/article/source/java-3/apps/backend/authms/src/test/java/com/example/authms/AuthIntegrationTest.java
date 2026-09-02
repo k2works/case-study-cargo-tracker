@@ -1,0 +1,273 @@
+package com.example.authms;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.example.authms.application.internal.commandservices.LoginResult;
+import com.example.authms.application.internal.commandservices.LoginUseCase;
+import com.example.authms.application.port.AuthAuditLogger;
+import com.example.authms.application.port.UserRepository;
+import com.example.authms.domain.model.AuthEventType;
+import com.example.authms.domain.model.UserShipperLink;
+import com.example.shared.auth.Role;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.ActiveProfiles;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+
+/**
+ * Flyway で構築した実スキーマに対してログインが成立することを確認する。
+ *
+ * <p>ユニットテストが緑でも、マイグレーション・マッピング・シードのいずれかが噛み合わなければ
+ * 誰もログインできない。実際の DB（PostgreSQL）で通しておく。
+ */
+@SpringBootTest
+@Testcontainers
+@ActiveProfiles("integration")
+@DisplayName("認証の結合")
+class AuthIntegrationTest {
+
+    @Container
+    @ServiceConnection
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
+
+    @Autowired
+    private LoginUseCase loginUseCase;
+
+    @Autowired
+    private UserRepository users;
+
+    @Autowired
+    private com.example.authms.application.internal.commandservices.UnlockAccountUseCase unlockAccount;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    private long auditCount(String username, AuthEventType eventType) {
+        return jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM auth_audit_log WHERE username = ? AND event_type = ?",
+                Long.class, username, eventType.name());
+    }
+
+    @Test
+    @DisplayName("初期利用者はシードのパスワードでログインできる")
+    void seedUserCanLogIn() {
+        Optional<LoginResult> result = loginUseCase.login("sales01", "password");
+
+        assertThat(result).as("シードの BCrypt ハッシュが実際のパスワードと一致していない").isPresent();
+        assertThat(result.orElseThrow().roles()).containsExactly(Role.ROLE_SALES);
+        assertThat(result.orElseThrow().displayName()).isEqualTo("山田太郎");
+        assertThat(result.orElseThrow().token()).isNotBlank();
+    }
+
+    @Test
+    @DisplayName("誤ったパスワードでは失敗し、失敗回数が永続化される")
+    void persistsFailedAttempts() {
+        loginUseCase.login("tracker01", "wrong");
+
+        assertThat(users.findByUsername("tracker01").orElseThrow().failedAttempts()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("無効化された初期利用者はログインできない")
+    void disabledSeedUserCannotLogIn() {
+        // ログイン画面の一覧に「無効化されたアカウント」として載せている以上、
+        // 実際にログインできないことまで確かめる。載せただけで挙動が違えば確認の役に立たない
+        assertThat(loginUseCase.login("disabled01", "password")).isEmpty();
+        assertThat(auditCount("disabled01", AuthEventType.DISABLED_ATTEMPT)).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("認証事象が監査ログの行として実際に書かれる")
+    void writesAuditLogRows() {
+        // 記録の失敗を握り潰す実装のため、「例外が出ない」ことは「記録された」ことを意味しない。
+        // 画面に理由を出さない以上、ここが唯一の手がかりになるので行の存在で確かめる。
+        long before = auditCount("accountant01", AuthEventType.LOGIN_SUCCESS);
+
+        loginUseCase.login("accountant01", "password");
+
+        assertThat(auditCount("accountant01", AuthEventType.LOGIN_SUCCESS)).isEqualTo(before + 1);
+    }
+
+    @Autowired
+    private AuthAuditLogger auditLogger;
+
+    @Test
+    @DisplayName("ログアウトも監査ログの行として書かれる")
+    void writesLogoutAuditRow() {
+        // 他の事象は行で確認しているのに LOGOUT だけモックの verify で済ませると、
+        // 列長や制約の不一致で「ログアウトの証跡だけが消える」状態に気づけない
+        long before = auditCount("routing01", AuthEventType.LOGOUT);
+
+        auditLogger.log("routing01", AuthEventType.LOGOUT, null);
+
+        assertThat(auditCount("routing01", AuthEventType.LOGOUT)).isEqualTo(before + 1);
+    }
+
+    @Test
+    @DisplayName("未登録の利用者名での試行も監査ログに残る")
+    void writesAuditLogForUnknownUser() {
+        loginUseCase.login("no-such-user", "password");
+
+        assertThat(auditCount("no-such-user", AuthEventType.LOGIN_FAILURE)).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("ロック中は正しいパスワードでも拒否する")
+    void rejectsCorrectPasswordWhileLocked() {
+        for (int i = 0; i < 5; i++) {
+            loginUseCase.login("shipper01", "wrong");
+        }
+
+        assertThat(loginUseCase.login("shipper01", "password"))
+                .as("ロック中に正しいパスワードで入れてしまう")
+                .isEmpty();
+        assertThat(auditCount("shipper01", AuthEventType.LOCKED)).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("5 回連続で失敗するとロック期限が永続化される")
+    void persistsLock() {
+        for (int i = 0; i < 5; i++) {
+            loginUseCase.login("handler01", "wrong");
+        }
+
+        assertThat(users.findByUsername("handler01").orElseThrow().lockedUntil())
+                .as("ロック期限が保存されていない。プロセスをまたぐと保護が消える")
+                .isNotNull();
+    }
+
+    @Test
+    @DisplayName("同時に 5 回失敗してもロックが成立する")
+    void locksUnderConcurrentFailures() throws Exception {
+        // 攻撃者は 1 本ずつ順番に試さない。失敗回数を「読んで足して書く」と、
+        // 5 本が同じ 0 を読んで全員が 1 を書き、何度試してもロックされない
+        int attempts = 5;
+        ExecutorService pool = Executors.newFixedThreadPool(attempts);
+        CountDownLatch ready = new CountDownLatch(attempts);
+        CountDownLatch start = new CountDownLatch(1);
+        try {
+            List<Future<?>> futures = new ArrayList<>();
+            for (int i = 0; i < attempts; i++) {
+                futures.add(pool.submit(() -> {
+                    ready.countDown();
+                    start.await();
+                    return loginUseCase.login("accountant01", "wrong");
+                }));
+            }
+            ready.await();
+            start.countDown();
+            for (Future<?> future : futures) {
+                future.get();
+            }
+        } finally {
+            pool.shutdown();
+        }
+
+        assertThat(users.findByUsername("accountant01").orElseThrow().lockedUntil())
+                .as("同時に失敗するとロックが成立しない。失敗回数の加算が DB 側で行われていない")
+                .isNotNull();
+        assertThat(loginUseCase.login("accountant01", "password"))
+                .as("ロックが働いていれば正しいパスワードでも入れない")
+                .isEmpty();
+    }
+
+    /**
+     * US32-2。<strong>解除した直後にログインできる</strong>ところまでを 1 本で通す。
+     *
+     * <p>「解除した」と言えるのは、対象がログインできたときだけである。列を書き換えた
+     * ことと、受け付けが戻ったことは別である（IT6 タスク 6.3）。
+     */
+    @Test
+    @DisplayName("ロック → 解除 → ログイン成功、が実 DB で通る")
+    void unlockLetsTheUserLogInAgain() {
+        String username = "sales01";
+        // 5 回失敗させてロックする（規則は User が持つ。ここで書き写さない）
+        for (int attempt = 0; attempt < 5; attempt++) {
+            loginUseCase.login(username, "wrong-password");
+        }
+
+        assertThat(loginUseCase.login(username, "password"))
+                .as("ロックされていない。5 回失敗の規則が働いていない")
+                .isEmpty();
+        assertThat(unlockAccount.lockedAccounts())
+                .as("ロック中の一覧に出ていない")
+                .extracting(com.example.authms.domain.model.User::username)
+                .contains(username);
+
+        unlockAccount.unlock(username, "admin01");
+
+        assertThat(loginUseCase.login(username, "password"))
+                .as("解除したのにログインできない")
+                .isPresent();
+    }
+
+    /**
+     * US32-3。<strong>誰が解除したかが実 DB の行に残る</strong>。
+     *
+     * <p>列を足しただけでは残らない。書き込む経路まで通す。
+     */
+    @Test
+    @DisplayName("解除の記録に、解除した管理者が残る")
+    void recordsTheAdminWhoUnlocked() {
+        unlockAccount.unlock("routing01", "admin01");
+
+        String actor = jdbcTemplate.queryForObject(
+                "SELECT actor FROM auth_audit_log WHERE username = ? AND event_type = ?"
+                        + " ORDER BY id DESC LIMIT 1",
+                String.class, "routing01", AuthEventType.UNLOCKED.name());
+
+        assertThat(actor)
+                .as("誰が解除したかが残っていない。監査に答えられない")
+                .isEqualTo("admin01");
+    }
+
+    /**
+     * <strong>番号は予約したものである。</strong>bookingms の {@code V13} が
+     * 動作確認用の荷主として 9001 番を予約し、authms の {@code V11} がそこへ紐付ける。
+     *
+     * <p>以前は 1 番へ決め打ちしていたが、bookingms は荷主の種を持たないため
+     * <strong>1 番が誰になるかはその環境で最初に登録された荷主</strong>で決まっていた
+     * ——実際、DB を初期化した直後の 1 番はシミュレーションが作った荷主だった。
+     */
+    @Test
+    @DisplayName("荷主利用者は authms の明示的な紐付けから荷主 ID を引ける")
+    void findsLinkedShipperId() {
+        assertThat(users.findLinkedShipperId("shipper01"))
+                .as("username と shipper_code の暗黙一致ではなく user_shipper_link から引く")
+                .contains(9001L);
+    }
+
+    @Test
+    @DisplayName("紐付いていない利用者は荷主 ID を持たない")
+    void reportsUnlinkedUser() {
+        assertThat(users.findLinkedShipperId("sales01"))
+                .as("紐付けが無い利用者を、空の荷主一覧と取り違えない")
+                .isEmpty();
+    }
+
+    @Test
+    @DisplayName("荷主利用者の紐付けを更新して解除できる")
+    void savesAndRemovesUserShipperLink() {
+        UserShipperLink updated = users.saveShipperLink(new UserShipperLink("shipper01", 2L));
+
+        assertThat(updated).isEqualTo(new UserShipperLink("shipper01", 2L));
+        assertThat(users.findLinkedShipperId("shipper01")).contains(2L);
+
+        assertThat(users.removeShipperLink("shipper01"))
+                .contains(new UserShipperLink("shipper01", 2L));
+        assertThat(users.findLinkedShipperId("shipper01")).isEmpty();
+    }
+}

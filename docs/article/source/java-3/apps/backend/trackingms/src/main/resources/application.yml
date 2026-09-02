@@ -1,0 +1,61 @@
+spring:
+  application:
+    name: trackingms
+  datasource:
+    url: ${DB_URL:jdbc:h2:mem:tracking_db;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  jackson:
+    time-zone: Asia/Tokyo
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    listener:
+      simple:
+        # 受け取れなかったイベントは捨てず、3 回試してからデッドレターへ送る（ADR-022 決定 4）。
+        # default-requeue-rejected を false にしないと、失敗したメッセージが同じキューへ
+        # 戻り続け、デッドレターに届かないまま無限に再処理される
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 1s
+          multiplier: 2
+
+server:
+  port: ${PORT:8084}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when-authorized
+
+# 業務日付は業務タイムゾーンで判断する（UTC で判断しない）
+app:
+  business-time-zone: Asia/Tokyo
+  auth-service:
+    # 荷主利用者の紐付けを引く先（US33）。環境ごとに APP_AUTH_SERVICE_BASE_URL で上書きする
+    base-url: ${APP_AUTH_SERVICE_BASE_URL:http://localhost:8081}
+  booking-service:
+    # 追跡番号から荷主境界の Snapshot を引く先（US33）。
+    # 環境ごとに APP_BOOKING_SERVICE_BASE_URL で上書きする
+    base-url: ${APP_BOOKING_SERVICE_BASE_URL:http://localhost:8082}
+  public-lookup:
+    # 公開の追跡照会の上限（ADR-024 決定 6）。荷主 1 人の使い方（1 日数回）から十分に離す。
+    # **実運用の数字が無いため当て推量である。** 変え方は運用手順書に書く
+    limit-per-minute: 30

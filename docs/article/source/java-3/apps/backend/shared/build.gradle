@@ -1,0 +1,53 @@
+plugins {
+    id 'java-library'
+    // 全サービス共通のアーキテクチャ規則を testFixtures として配布する。
+    // 規則を 1 箇所に集約することで、サービスごとに検査内容がずれるのを防ぐ。
+    id 'java-test-fixtures'
+    id 'io.spring.dependency-management'
+}
+
+dependencyManagement {
+    imports {
+        mavenBom 'org.springframework.boot:spring-boot-dependencies:4.0.5'
+    }
+}
+
+// shared は共有カーネル（Location のみ）。デプロイ単位ではないため bootJar は生成しない。
+dependencies {
+    api 'org.mybatis:mybatis:3.5.19'
+    api 'org.mybatis.spring.boot:mybatis-spring-boot-autoconfigure:4.0.1'
+    compileOnly 'org.springframework:spring-context'
+    // ADR-007 の AuthenticatedUserFilter。サーブレット API はサービス側の starter-web が持ち込む
+    compileOnly 'jakarta.servlet:jakarta.servlet-api'
+
+    testFixturesApi 'com.tngtech.archunit:archunit-junit5:1.4.1'
+    // 全サービス共通のアーキテクチャ検査の基底（ServiceArchitectureTest）を testFixtures で配布する。
+    // 適用を基底へ寄せることで、規則を足しても各サービスへ写す作業が発生しない
+    testFixturesApi 'org.junit.jupiter:junit-jupiter-api'
+    // 方言スモークで MyBatis の登録済みステートメントを列挙するため
+    testFixturesApi 'org.mybatis:mybatis:3.5.19'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testImplementation 'org.assertj:assertj-core'
+    // AuthenticatedUserFilter（ADR-007）の単体テスト用
+    testImplementation 'jakarta.servlet:jakarta.servlet-api'
+    testImplementation 'org.springframework:spring-test'
+    testImplementation 'org.springframework:spring-web'
+    testImplementation(testFixtures(project(':shared')))
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+
+// SchemaDesignConsistencyTest と LocationSeedReplicaTest は、この本文の外
+// （設計ドキュメントと各サービスのマイグレーション）を読む。入力として宣言しないと、
+// Gradle はタスクを UP-TO-DATE と判断し、**設計だけを変えたときに検査が走らない**。
+// 検査があるのに沈黙する形なので、宣言そのものを規律として置く。
+tasks.named('test') {
+    inputs.file(rootProject.file('../../docs/design/data-model.md'))
+            .withPropertyName('dataModelDesign')
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.files(rootProject.subprojects.collect { it.file('src/main/resources/db/migration') })
+            .withPropertyName('flywayMigrations')
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+            .optional()
+}

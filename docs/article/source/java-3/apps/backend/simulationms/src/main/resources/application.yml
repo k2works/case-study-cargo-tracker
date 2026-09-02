@@ -1,0 +1,60 @@
+spring:
+  application:
+    name: simulationms
+  datasource:
+    url: ${DB_URL:jdbc:h2:mem:simulation_db;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  jackson:
+    time-zone: Asia/Tokyo
+
+server:
+  port: ${PORT:8087}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when-authorized
+
+app:
+  business-time-zone: Asia/Tokyo
+  simulation:
+    # シミュレーションを実行してよいか（[ADR-030] 決定 4）。
+    # **本番では真にできない。** 真かつ本番プロファイルなら起動そのものを失敗させる。
+    # 設定を読んで実行時に断る形にすると、読み違いが本番のデータで表面化する
+    enabled: ${APP_SIMULATION_ENABLED:true}
+  simulation-users:
+    # 工程を踏む利用者（[ADR-030] 決定 2）。
+    # **ロールごとに別の利用者を置く。** 1 人に全ロールを与えると、本番には存在しない
+    # 権限の持ち主ができ、認可の検査を素通りする。名簿に無いロールは既定へ落とさず断る
+    #
+    # **実業務の利用者は借りない**（IT15）。借りると、その利用者本人も「シミュレーション
+    # 由来」として荷主を登録でき、精算の締めから消せる操作が実の営業担当者の手に渡る。
+    # sim- の帯以外は起動時に断る
+    password: ${APP_SIMULATION_USER_PASSWORD:password}
+    usernames:
+      ROLE_SALES: ${APP_SIMULATION_USER_SALES:sim-sales01}
+      ROLE_ROUTING: ${APP_SIMULATION_USER_ROUTING:sim-routing01}
+      ROLE_HANDLER: ${APP_SIMULATION_USER_HANDLER:sim-handler01}
+      ROLE_TRACKER: ${APP_SIMULATION_USER_TRACKER:sim-tracker01}
+      ROLE_ACCOUNTANT: ${APP_SIMULATION_USER_ACCOUNTANT:sim-accountant01}
+      # 作った荷主を確認用の利用者へ紐付ける（US39）。実業務でも管理者の操作である
+      ROLE_ADMIN: ${APP_SIMULATION_USER_ADMIN:sim-admin01}
+  gateway:
+    # 業務 API を呼ぶ唯一の出口（[ADR-030] 決定 2）。
+    # **コードに既定値を持たせない。** 既定値があると設定漏れが実行時まで表面化しない
+    # （IT5・IT12・IT13 で 3 度起きた形）。環境ごとに APP_GATEWAY_SERVICE_BASE_URL で上書きする
+    base-url: ${APP_GATEWAY_SERVICE_BASE_URL:http://localhost:8080}

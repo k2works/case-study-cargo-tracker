@@ -1,0 +1,14 @@
+server {
+    listen ${PORT};
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # SPA のクライアントサイドルーティングを index.html にフォールバックさせる。
+    # API へのプロキシはここでは行わない。kind では Ingress が /api を Gateway に
+    # 振り分け、Heroku ではビルド時の VITE_API_BASE_URL が Gateway を直接指す。
+    # frontend を Gateway の起動に依存させないための構成。
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

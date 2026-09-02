@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Case Study Cargo Tracker — ドキュメントポータル</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="hero">
+  <div class="hero-inner">
+    <p class="eyebrow">Case Study / Java take-7</p>
+    <h1>国際貨物輸送管理システム</h1>
+    <p class="lead">
+      分析から実装までの成果物をまとめた入口です。
+      <strong>設計</strong>（こう設計した）と<strong>生成物</strong>（こう実装されている）を
+      並べて置いています。突き合わせることで、両者の乖離を差分として確認できます。
+      本 take はマイクロサービス構成（7 サービス）のため、生成物はサービス単位に分かれます。
+    </p>
+  </div>
+</header>
+
+<main>
+  <section>
+    <h2>設計ドキュメント</h2>
+    <p class="section-note">人が書いたドキュメント。プロジェクトの正典です。</p>
+    <div class="cards">
+      <a class="card primary" href="docs/" target="_blank" rel="noopener noreferrer">
+        <h3>ドキュメントサイト</h3>
+        <p>戦略・要件・設計・開発・運用・ADR を横断できます。</p>
+        <span class="cta">開く</span>
+      </a>
+      <a class="card" href="docs/design/" target="_blank" rel="noopener noreferrer">
+        <h3>設計</h3>
+        <p>アーキテクチャ・ドメインモデル・データモデル・UI・テスト戦略・非機能・運用。</p>
+        <span class="cta">開く</span>
+      </a>
+      <a class="card" href="docs/requirements/" target="_blank" rel="noopener noreferrer">
+        <h3>要件</h3>
+        <p>RDRA 2.0 に基づく要件定義、ユースケース、ユーザーストーリー。</p>
+        <span class="cta">開く</span>
+      </a>
+      <a class="card" href="docs/adr/" target="_blank" rel="noopener noreferrer">
+        <h3>ADR</h3>
+        <p>技術的意思決定の記録。マイクロサービス採用・ローカル Kubernetes・Heroku 開発環境。</p>
+        <span class="cta">開く</span>
+      </a>
+      <a class="card" href="docs/operation/" target="_blank" rel="noopener noreferrer">
+        <h3>運用手順書</h3>
+        <p>アプリケーション開発環境（kind + Kustomize）と開発環境（Heroku）の構築手順。</p>
+        <span class="cta">開く</span>
+      </a>
+    </div>
+  </section>
+
+  <section>
+    <h2>コードから生成したドキュメント</h2>
+    <p class="section-note">
+      毎回生成するものであり、リポジトリにはコミットしていません。
+      生成物をコミットすると「コードを変えたのに図が古い」状態が固定されるためです。
+    </p>
+    <div class="cards">
+      <a class="card generated" href="jig/" target="_blank" rel="noopener noreferrer">
+        <h3>JIG</h3>
+        <p>バイトコードから可視化したドメインモデル・パッケージ関連・用語集。</p>
+        <span class="meta">突き合わせ先: ドメインモデル設計 / バックエンドアーキテクチャ</span>
+        <span class="cta">サービスを選ぶ</span>
+      </a>
+      <a class="card generated" href="jig-erd/" target="_blank" rel="noopener noreferrer">
+        <h3>ER 図</h3>
+        <p>Flyway が実際に構築したスキーマの ER 図（概要 / サマリー / 詳細）。</p>
+        <span class="meta">突き合わせ先: データモデル設計。Database per Service のためサービス単位</span>
+        <span class="cta">サービスを選ぶ</span>
+      </a>
+      <a class="card generated" href="manual/" target="_blank" rel="noopener noreferrer">
+        <h3>ユーザーマニュアル</h3>
+        <p>業務担当者向けの操作手順。業務フローから各画面へ辿れる。</p>
+        <span class="meta">突き合わせ先: UI 設計・画面の実装</span>
+        <span class="cta">開く</span>
+      </a>
+    </div>
+  </section>
+
+  <section>
+    <h2>稼働環境</h2>
+    <p class="section-note">開発環境（Heroku）で動いているアプリケーションです。</p>
+    <div class="cards">
+      <a class="card app" href="https://take7-frontend-988c39c6c982.herokuapp.com/" target="_blank" rel="noopener noreferrer">
+        <h3>フロントエンド（開発環境）</h3>
+        <p>React 19 + Vite。API Gateway 経由で各マイクロサービスを呼びます。</p>
+        <span class="meta">画面は開発フェーズで UI 設計に従って実装します</span>
+        <span class="cta">開く</span>
+      </a>
+      <!--
+        公開追跡（UC15 / US18 相当）。**ログイン不要の画面はここから直接開けるようにする。**
+
+        アプリケーションのカードから入るとログイン画面に着くため、
+        アカウントを持たない相手には「入れない」ように見える。
+        認証を持たない相手に開いた唯一の経路であり、入口も認証の外に置く。
+      -->
+      <a class="card app" href="https://take7-gatewayms-16d54f79c155.herokuapp.com/api/v1/tracking/" target="_blank" rel="noopener noreferrer">
+        <h3>公開貨物追跡 API（ログイン不要）</h3>
+        <p>追跡番号だけで貨物の現在状況を照会できる唯一の公開経路です。</p>
+        <span class="meta">末尾に追跡番号を付けて開きます。画面は開発フェーズで実装します</span>
+        <span class="cta">開く</span>
+      </a>
+      <a class="card app" href="https://take7-gatewayms-16d54f79c155.herokuapp.com/actuator/health" target="_blank" rel="noopener noreferrer">
+        <h3>API Gateway ヘルスチェック</h3>
+        <p>7 マイクロサービスへのルーティングを担う入口の稼働状況。</p>
+        <span class="meta">各サービスの健全性は運用要件定義の監視項目を参照</span>
+        <span class="cta">開く</span>
+      </a>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <p>Case Study Cargo Tracker — Java take-7（マイクロサービス）</p>
+  <p class="small">
+    設計ドキュメントは <code>docs/</code>、生成物は <code>gulp deploy:docs</code> で毎回生成しています。
+  </p>
+</footer>
+</body>
+</html>

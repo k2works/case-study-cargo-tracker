@@ -1,0 +1,38 @@
+# Heroku 開発環境（container stack）向けプロファイル。
+# DB は H2 メモリ、メッセージブローカーは CloudAMQP（AMQPS）を使う。
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:h2:mem:handling_db;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
+  h2:
+    console:
+      enabled: false
+  rabbitmq:
+    # CLOUDAMQP_URL 単一変数では spring.rabbitmq.* は埋まらないため、
+    # 個別環境変数に分解して渡す（deploy:dev:amqp:setup が実施する）。
+    host: ${RABBITMQ_HOST:rabbitmq}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    virtual-host: ${RABBITMQ_VIRTUAL_HOST:/}
+    ssl:
+      enabled: ${RABBITMQ_SSL_ENABLED:false}
+    listener:
+      simple:
+        missing-queues-fatal: false
+  jmx:
+    enabled: false
+
+# spring.main.lazy-initialization は有効化しない。
+# @RabbitListener のリスナーコンテナまで遅延初期化され、起動時にキューを
+# subscribe しないためイベントを取りこぼす。
+
+server:
+  port: ${PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

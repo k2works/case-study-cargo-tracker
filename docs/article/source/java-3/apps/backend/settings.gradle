@@ -1,0 +1,11 @@
+rootProject.name = 'cargo-tracker-microservices'
+
+include 'shared'
+include 'gatewayms'
+include 'authms'
+include 'bookingms'
+include 'routingms'
+include 'trackingms'
+include 'handlingms'
+include 'billingms'
+include 'simulationms'

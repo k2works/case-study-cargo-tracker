@@ -1,0 +1,52 @@
+plugins {
+    id 'org.springframework.boot'
+    id 'io.spring.dependency-management'
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.2'
+    implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:4.0.1'
+    implementation 'org.springframework.boot:spring-boot-starter-flyway'
+    implementation 'org.flywaydb:flyway-database-postgresql'
+    implementation 'org.springframework.boot:spring-boot-starter-amqp'
+    runtimeOnly 'org.springframework.boot:spring-boot-h2console'
+    runtimeOnly 'com.h2database:h2'
+    runtimeOnly 'org.postgresql:postgresql'
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+    implementation project(':shared')
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.boot:spring-boot-webmvc-test'
+    testImplementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter-test:4.0.1'
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+    testImplementation 'org.testcontainers:junit-jupiter'
+    testImplementation 'org.testcontainers:postgresql'
+    testImplementation 'org.testcontainers:rabbitmq'
+    testImplementation "com.github.irof:jig-erd:${rootProject.ext.jigErdVersion}"
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.testcontainers:testcontainers-bom:${rootProject.ext.testcontainersVersion}"
+    }
+}
+
+/**
+ * 画面側のファイルを検査の入力として宣言する。
+ *
+ * 宣言しないと Gradle はテストを UP-TO-DATE と見なし、**画面やモックだけを変えたときに
+ * 検査が動かない**。BookingActionRosterTest は画面の型とモックを読むため、
+ * 宣言を欠くと「壊しても緑」になる（IT9 の返済枠 0.1 で同じ落とし穴を踏んだ）。
+ */
+tasks.named('test') {
+    inputs.files(
+            rootProject.file('../frontend/src/features/booking/types.ts'),
+            rootProject.file('../frontend/src/mocks/data.ts'))
+            .withPropertyName('frontendBookingContract')
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+}

@@ -1,0 +1,460 @@
+import { useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { ApiError } from "../lib/api-client";
+import { useAuthStore } from "../stores/auth-store";
+import {
+  useBooking,
+  useConfirmBooking,
+  useIssueTrackingNumber,
+  useNotifyShipper,
+  useRequestRouting,
+  useReturnToRouting,
+  useReviseSchedule,
+} from "../features/booking/queries";
+import {
+  bookingStatusLabel,
+  CARGO_TYPE_LABELS,
+  routingStatusLabel,
+  can,
+} from "../features/booking/types";
+import { formatBusinessDateTime } from "../lib/business-time";
+import { portLabel } from "../lib/port-label";
+import { ItineraryTable } from "../features/booking/components/itinerary-table";
+import { CancellationSection } from "../features/booking/components/cancellation-section";
+import { RouteDesignSection } from "../features/booking/components/route-design-section";
+import { ScheduleRevisionSection } from "../features/booking/components/schedule-revision-section";
+import { ShipperDialogueSection } from "../features/booking/components/shipper-dialogue-section";
+
+
+/**
+ * 状態ごとの手番（[ADR-021] 決定 6）。
+ *
+ * 出さないと、一覧に並んだ予約のどれが自分の仕事か分からず、状態を足した意味が無くなる。
+ * **判定を画面に散らかさない**——ここ 1 か所に置く。
+ */
+const TURN_LABELS: Record<string, string> = {
+  PRELIMINARY:
+    "営業担当者の手番です。内容を確かめて経路設計を依頼してください。",
+  ROUTE_PROPOSED:
+    "営業担当者の手番です。経路が決まりました。荷主へ通知してください。",
+  ROUTE_NOTIFIED: "荷主の手番です。返事を待っています。",
+  CONFIRMED: "経路設計者の手番です。追跡番号の発行を待っています。",
+  TRACKING_ISSUED: "荷役の手番です。貨物の受け取りを待っています。",
+  // IT9 で足した 3 つ。**状態を足したら、ここも足す**——空欄の枠だけが出て、
+  // 「誰の仕事か分からない」状態に戻る（IT10 のキャプチャで気づいた）
+  IN_TRANSIT: "輸送中です。荷役の記録で状態が進みます。",
+  DELIVERED: "配送が完了しました。",
+  CANCELLED: "この予約はキャンセルされました。",
+  // IT12 で足した。**状態を足したら、ここも足す**——空欄の枠だけが出て、
+  // 「誰の仕事か分からない」状態に戻る
+  SETTLED: "入金を確認しました。この予約は精算済です。",
+};
+
+/**
+ * 予約の詳細（US06）。
+ *
+ * 営業担当者が引き渡す前に内容を確かめ、経路設計者が受け取った予約の中身を見る画面。
+ * 中身が見えないまま引き渡すと、経路設計者は不備に気づけないまま経路を組むことになる。
+ */
+export function BookingDetailPage() {
+  const { bookingId = "" } = useParams();
+  const { data: booking, isLoading, isError } = useBooking(bookingId);
+  const request = useRequestRouting(bookingId);
+  const notify = useNotifyShipper(bookingId);
+  const confirm = useConfirmBooking(bookingId);
+  const returnToRouting = useReturnToRouting(bookingId);
+  const issueTracking = useIssueTrackingNumber(bookingId);
+  const revise = useReviseSchedule(bookingId);
+  const [revising, setRevising] = useState(false);
+  // 本番と同じ判定を使う。ここで独自に書くと、検査だけが正しく本番の誤りを素通りさせる
+  const isSales = useAuthStore((state) => state.hasAnyRole(["ROLE_SALES"]));
+  const isRoutingPlanner = useAuthStore((state) =>
+    state.hasAnyRole(["ROLE_ROUTING"]),
+  );
+
+  function requestFailureMessage(): string | null {
+    if (request.error === null || request.error === undefined) {
+      return null;
+    }
+    // 409 は入力の誤りではない。予約の状態がその操作を許さないという返事である
+    if (request.error instanceof ApiError && request.error.status === 409) {
+      const body = request.error.body as { message?: string } | undefined;
+      return body?.message ?? "この予約は経路設計を依頼できません。";
+    }
+    return "経路設計を依頼できませんでした。時間をおいて再度お試しください。";
+  }
+
+  if (isLoading) {
+    return <p className="text-gray-600">読み込んでいます…</p>;
+  }
+
+  if (isError || booking === undefined) {
+    return (
+      <div className="space-y-4">
+        <p className="rounded border border-red-200 bg-red-50 p-3 text-red-700">
+          予約を表示できませんでした。予約番号を確かめてください。
+        </p>
+        <Link to="/booking" className="text-blue-600 hover:underline">
+          貨物予約の一覧に戻る
+        </Link>
+      </div>
+    );
+  }
+
+  const failure = requestFailureMessage();
+  /**
+   * <strong>いま</strong>経路から外れているか。
+   *
+   * <p>誤配の記録は組み直しても消えない（US28-8。料金調整の根拠）。<strong>記録の有無で
+   * 指示を出すと、直したのに「直してください」と言われ続ける</strong>——サーバ側の
+   * `Cargo#isMisrouted` と同じく、分岐は状態で決める。
+   */
+  const offRoute = booking.routingStatus === "MISROUTED";
+  /**
+   * いま誰の手番か。
+   *
+   * <p><strong>誤配は予約の状態を動かさない</strong>ので、状態だけで決めると
+   * 「輸送中です。荷役の記録で状態が進みます。」と出る——<strong>進まない</strong>。
+   * 経路を組み直すまで止まったままであり、バナーの赤い指示とも矛盾して読める。
+   */
+  const turnLabel = offRoute
+    ? "経路設計者の手番です。予定ルートから外れているため、経路の組み直しを待っています。"
+    : TURN_LABELS[booking.bookingStatus];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-900">
+          予約 {booking.bookingId}
+        </h1>
+        <Link to="/booking" className="text-blue-600 hover:underline">
+          一覧に戻る
+        </Link>
+      </div>
+
+      {request.isSuccess && (
+        <p className="rounded border border-green-200 bg-green-50 p-3 text-green-800">
+          経路設計を依頼しました。経路設計者の一覧に表示されます。
+        </p>
+      )}
+
+      {/* **誤配のバナー**（US28-3）。いつ・どこで外れたかと、いまどこにいるかを出す
+          ——「誤配があった」だけでは、経路設計者は組み直す起点が分からない。
+          **気づく人（追跡管理者）と直す人（経路設計者）の両方が読む**。
+
+          **「一度でも外れた」と「いま外れている」は別である**（[ADR-026] 決定 3 と 4b）。
+          記録は料金調整の根拠として残るが、組み直したあとも赤い指示が出続けると、
+          経路設計者は済んだ仕事をやり直す。**指示は状態で、記録の表示は事実で決める** */}
+      {booking.misroute !== null && booking.misroute !== undefined && (
+        <div
+          role={offRoute ? "alert" : undefined}
+          className={
+            offRoute
+              ? "space-y-1 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-900"
+              : "space-y-1 rounded border border-gray-300 bg-gray-50 p-3 text-sm text-gray-800"
+          }
+        >
+          {offRoute ? (
+            <p>
+              <strong>この貨物は予定ルートから外れています。</strong>
+              {'目的地までの経路を組み直してください。'}
+            </p>
+          ) : (
+            <p>
+              <strong>誤配の記録</strong>
+              {'（経路は組み直し済みです。料金調整の根拠として残しています）'}
+            </p>
+          )}
+          <p>
+            外れた場所:{" "}
+            <strong>
+              {portLabel(
+                booking.misroute.locationUnLocode,
+                booking.misroute.locationName,
+                "（不明）",
+              )}
+            </strong>
+            ／ 日時:{" "}
+            {/* **業務の時刻で出す。**生の ISO（2027-09-09T00:00:00Z）を出すと、
+                担当者は自分の時刻に読み替えることになる（この画面の他の日時と同じ形） */}
+            {formatBusinessDateTime(booking.misroute.at)}
+          </p>
+          {offRoute && (
+            <p>
+              現在地:{" "}
+              <strong>
+                {portLabel(
+                  booking.lastHandlingLocationUnLocode,
+                  booking.lastHandlingLocationName,
+                  "（荷役の記録がありません）",
+                )}
+              </strong>
+            </p>
+          )}
+          {/* **超える分は営業が読める場所に残す**（US28-6・[ADR-026] 決定 5）。
+              荷主へ伝えるのは営業であり、経路を割り当てた直後の画面にしか
+              出さないと、**伝える人の手元に値が残らない** */}
+          {booking.daysBeyondDeadline !== null &&
+            booking.daysBeyondDeadline !== undefined && (
+              <p>
+                <strong>
+                  {`到着予定が当初の希望期限を ${booking.daysBeyondDeadline} 日超えます。`}
+                </strong>
+                {'荷主へは自動で通知されません——超過の日数もあわせてお伝えください。'}
+              </p>
+            )}
+          {can(booking, "REASSIGN_ROUTE") && isRoutingPlanner && (
+            <p>
+              <Link
+                to={`/routing/design/${encodeURIComponent(booking.bookingId)}`}
+                className="text-blue-700 underline"
+              >
+                経路を再設計する
+              </Link>
+              {'（現在地を出発地として候補を探します）'}
+            </p>
+          )}
+          {/* **読む人には次に何が起きるかを書く**。再設計の入口は経路設計者にしか
+              出ないため、営業や追跡管理者には「組み直してください」だけが残る
+              ——誰が直すのか分からないと、連絡すべきか待つべきかを決められない */}
+          {offRoute && !isRoutingPlanner && (
+            <p>{'経路設計者が組み直します。'}</p>
+          )}
+        </div>
+      )}
+
+      {failure !== null && (
+        <p
+          role="alert"
+          className="rounded border border-red-200 bg-red-50 p-3 text-red-700"
+        >
+          {failure}
+        </p>
+      )}
+
+      <section className="space-y-2">
+        <h2 className="text-lg font-semibold text-gray-900">予約の状態</h2>
+        <table className="w-full border-collapse text-sm">
+          <tbody>
+            <tr className="border-b border-gray-200">
+              <th className="w-48 px-3 py-2 text-left">予約</th>
+              <td className="px-3 py-2" data-testid="booking-status">
+                {bookingStatusLabel(booking.bookingStatus)}
+              </td>
+            </tr>
+            <tr className="border-b border-gray-200">
+              <th className="px-3 py-2 text-left">経路</th>
+              <td className="px-3 py-2">
+                {routingStatusLabel(booking.routingStatus)}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section className="space-y-2">
+        <h2 className="text-lg font-semibold text-gray-900">輸送の条件</h2>
+        <table className="w-full border-collapse text-sm">
+          <tbody>
+            <tr className="border-b border-gray-200">
+              <th className="w-48 px-3 py-2 text-left">荷主</th>
+              <td className="px-3 py-2">{booking.shipperName ?? "（不明）"}</td>
+            </tr>
+            <tr className="border-b border-gray-200">
+              <th className="px-3 py-2 text-left">出発地</th>
+              <td className="px-3 py-2">
+                {booking.originName}（{booking.originUnLocode}）
+              </td>
+            </tr>
+            <tr className="border-b border-gray-200">
+              <th className="px-3 py-2 text-left">目的地</th>
+              <td className="px-3 py-2">
+                {booking.destinationName}（{booking.destinationUnLocode}）
+              </td>
+            </tr>
+            <tr className="border-b border-gray-200">
+              <th className="px-3 py-2 text-left">到着期限</th>
+              <td className="px-3 py-2">{booking.arrivalDeadline}</td>
+            </tr>
+            <tr className="border-b border-gray-200">
+              <th className="px-3 py-2 text-left">出発希望日</th>
+              <td className="px-3 py-2">
+                {booking.departureDate ?? "（指定なし）"}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section className="space-y-2">
+        <h2 className="text-lg font-semibold text-gray-900">貨物の仕様</h2>
+        <table className="w-full border-collapse text-sm">
+          <tbody>
+            <tr className="border-b border-gray-200">
+              <th className="w-48 px-3 py-2 text-left">種別</th>
+              <td className="px-3 py-2">{CARGO_TYPE_LABELS[booking.type]}</td>
+            </tr>
+            <tr className="border-b border-gray-200">
+              <th className="px-3 py-2 text-left">重量</th>
+              <td className="px-3 py-2">{booking.weightKg} kg</td>
+            </tr>
+            <tr className="border-b border-gray-200">
+              <th className="px-3 py-2 text-left">個数</th>
+              <td className="px-3 py-2">
+                {booking.quantity ?? "（指定なし）"}
+              </td>
+            </tr>
+            <tr className="border-b border-gray-200">
+              <th className="px-3 py-2 text-left">品名</th>
+              <td className="px-3 py-2">
+                {booking.description ?? "（指定なし）"}
+              </td>
+            </tr>
+            {booking.hazardousClass !== null && (
+              <>
+                <tr className="border-b border-gray-200">
+                  <th className="px-3 py-2 text-left">危険物クラス</th>
+                  <td className="px-3 py-2">{booking.hazardousClass}</td>
+                </tr>
+                <tr className="border-b border-gray-200">
+                  <th className="px-3 py-2 text-left">UN 番号</th>
+                  <td className="px-3 py-2">{booking.unNumber}</td>
+                </tr>
+                <tr className="border-b border-gray-200">
+                  <th className="px-3 py-2 text-left">正式品名</th>
+                  <td className="px-3 py-2">{booking.properShippingName}</td>
+                </tr>
+              </>
+            )}
+            {booking.minCelsius !== null && (
+              <tr className="border-b border-gray-200">
+                <th className="px-3 py-2 text-left">保管温度</th>
+                <td className="px-3 py-2">
+                  {booking.minCelsius}℃ 〜 {booking.maxCelsius}℃
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </section>
+
+      {/* 引き渡しは営業担当者の操作。経路設計者が自分で依頼を立てられると、
+          引き渡しの記録が「誰が渡したか」を表さなくなる */}
+      {isSales && (
+        <section className="space-y-2 rounded border border-gray-200 bg-gray-50 p-4">
+          <h2 className="text-lg font-semibold text-gray-900">
+            経路設計への引き渡し
+          </h2>
+          {can(booking, "REQUEST_ROUTING") && booking.routingStatus === "NOT_ROUTED" && (
+            <>
+              <p className="text-sm text-gray-700">
+                内容を確かめてから引き渡してください。引き渡すと、経路設計者の一覧に表示されます。
+              </p>
+              <button
+                type="button"
+                onClick={() => request.mutate()}
+                disabled={request.isPending}
+                className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                経路設計を依頼する
+              </button>
+            </>
+          )}
+          {/* 差し戻された予約を営業が返せないと、荷主と話がついても予約が止まったままになる
+              （ADR-020 決定 7 の裏側） */}
+          {can(booking, "REQUEST_ROUTING") &&
+            booking.routingStatus === "CONSULTATION_REQUESTED" && (
+            <>
+              <p className="text-sm text-gray-700">
+                経路設計者から条件の協議を求められています。荷主と条件が決まったら、
+                もう一度引き渡してください。
+              </p>
+              <button
+                type="button"
+                onClick={() => request.mutate()}
+                disabled={request.isPending}
+                className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                経路設計に再依頼する
+              </button>
+            </>
+          )}
+          {booking.routingStatus !== "NOT_ROUTED" &&
+            booking.routingStatus !== "CONSULTATION_REQUESTED" && (
+              <p className="text-sm text-gray-700">
+                この予約はすでに引き渡し済みです（
+                {routingStatusLabel(booking.routingStatus)}
+                ）。
+              </p>
+            )}
+        </section>
+      )}
+
+      <ItineraryTable booking={booking} />
+
+      <ScheduleRevisionSection
+        booking={booking}
+        isSales={isSales}
+        revise={revise}
+        revising={revising}
+        setRevising={setRevising}
+      />
+
+      {/* 手番。いまの状態で誰が動くかを 1 行で出す（ADR-021 決定 6）。
+          **言葉が無いなら枠ごと出さない**——空の枠は「何か出るはずのものが出ていない」
+          と読まれる（IT10 のキャプチャで実際にそう見えた） */}
+      {turnLabel !== undefined && (
+        <p className="rounded border border-gray-200 bg-blue-50 p-3 text-sm text-gray-800">
+          {turnLabel}
+        </p>
+      )}
+
+      {/* 通知の記録（US12-4）。メールは送っていないため、これが唯一の証跡である。
+          null も未設定も「記録が無い」。項目ごと省く応答もありうる（旅程と同じ扱い） */}
+      {booking.routeNotifiedAt && (
+        <p className="text-sm text-gray-700">
+          荷主へ通知しました（
+          {formatBusinessDateTime(booking.routeNotifiedAt)}・
+          {booking.routeNotifiedBy}）。
+        </p>
+      )}
+
+      {/* 発行済みの追跡番号（US14-4 の代替）。荷主には届いていないため、営業が伝える */}
+      {(booking.trackingNumber ?? null) !== null && (
+        <section className="space-y-1 rounded border border-cyan-200 bg-cyan-50 p-4">
+          <h2 className="text-lg font-semibold text-gray-900">追跡番号</h2>
+          <p className="font-mono text-lg text-gray-900">
+            {booking.trackingNumber}
+          </p>
+          <p className="text-sm text-gray-700">
+            <strong>荷主には自動で送られていません。</strong>
+            {""}
+            この番号を電話・メールで伝えてください。荷主が自分で照会する画面は次のリリースで
+            使えるようになります。
+          </p>
+        </section>
+      )}
+
+      <ShipperDialogueSection
+        booking={booking}
+        isSales={isSales}
+        notify={notify}
+        confirm={confirm}
+        returnToRouting={returnToRouting}
+      />
+
+      <RouteDesignSection
+        booking={booking}
+        isRoutingPlanner={isRoutingPlanner}
+        issueTracking={issueTracking}
+      />
+
+      <CancellationSection booking={booking} isSales={isSales} />
+
+      <p className="text-sm text-gray-600">
+        出発地・目的地・貨物の内容に不備があるときは、予約を作り直してください。
+        日程（到着期限・出発希望日）は、経路設計に引き渡す前と、営業へ戻された予約なら直せます。
+      </p>
+    </div>
+  );
+}

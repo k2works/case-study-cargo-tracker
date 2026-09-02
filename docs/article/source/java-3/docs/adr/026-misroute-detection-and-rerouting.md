@@ -1,0 +1,192 @@
+# ADR-026: 誤配の検知と経路の再設計
+
+予定ルート外の荷役を誤配として扱い（US28）、貨物の現在地から経路を組み直せるようにするときに、
+**誤配をどこが検知し、どう表し、解決後に何を残すか**を決める。
+
+日付: 2026-08-25
+
+## ステータス
+
+承認済み（決定 1〜7）
+
+## コンテキスト
+
+IT7 で「予定ルート外の作業は、警告を出したうえで記録に残す」ところまでは実装した
+（[ADR-023](023-handling-activity-validation.md) 決定 3）。**しかしその警告は、記録の瞬間に
+画面へ出るだけで、どこにも残らない。** 誤配のフラグ（`off_route`）は荷役の行に立つが、
+**予約はそれを知らず、追跡管理者の一覧にも現れず、経路を組み直す導線も無い。**
+
+IT10 は検知 → 起票 → 再設計 → 記録を業務として繋ぐ。着手前に決めておくことが 5 つある
+（[IT10 計画](../development/iteration_plan-10.md)の「決めること A〜E」）。
+
+### 前提: 過去の決定を覆さない
+
+計画の初版は「`MISROUTED` を `RoutingStatus` に足すか、別の軸で持つか」を未決として書いた。
+**これは誤りだった。**
+
+- [ADR-023](023-handling-activity-validation.md) 決定 3 が「**`RoutingStatus` を `MISROUTED` へ
+  動かすのは US28（IT10）である**」と明記している
+- [domain-model.md](../design/domain-model.md) の要素表にも `MISROUTED` が載っている
+- IT7・IT8・IT9 の計画も一貫して「`MISROUTED` は US28」と書いてきた
+
+**4 つの文書が積み上げた決定を、着手前に作り直すところだった。** 決めるのは「足すかどうか」
+ではなく、**足したときに何が壊れうるか**である。
+
+## 決定
+
+### 決定 1: 誤配の判定は handlingms が持つ。検知の起点は荷役の記録そのものである
+
+`off_route` の判定は既に handlingms にある——`CargoSnapshot` の旅程と作業場所を照合して立てる
+（[ADR-023](023-handling-activity-validation.md) 決定 3）。**判定を 2 か所に分けない。**
+
+trackingms 側で「予定ルート外か」を判定し直すと、旅程の写しをもう 1 つ持つことになり、
+片方だけが古い旅程で判定する状態が生まれる。
+
+**起点は状態の変更ではなく、荷役の記録そのものである。** IT9 の `CUSTOMS_HOLD`
+（通関状態が「留置」になったら起票）とはここが違う——誤配は記録した瞬間に確定しており、
+あとから誰かが判断するものではない。
+
+したがって、**既存の `HandlingActivityRegistered` イベントに項目を足さない**。`offRoute` は
+[ADR-022](022-domain-event-contract.md) の契約に既に含まれている。**新しいイベントも作らない。**
+
+> **なぜ新しいイベントを作らないか。** 交換機とルーティングキーが増えるたび、購読側の宣言と
+> 結びつけが増える。既存環境では交換機の引数を宣言し直せないため、**増やすほど移行の手順が
+> 要る**（IT9 で踏んだ）。`offRoute` の真偽で分岐すれば足りる。
+
+### 決定 2: `RoutingStatus` に `MISROUTED` を足す。ただし進行の並びには置かない
+
+[ADR-023](023-handling-activity-validation.md) 決定 3 のとおり `MISROUTED` を足す。
+
+**`RoutingStatus` には進行の並び（`canAdvanceTo` のような ordinal 比較）が無い。** 判定は
+`visibleToRoutingPlanner()` のような**述語**で行っている。したがって、IT8 で
+`BookingStatus` の `EXCEPTION` / `UNKNOWN` が「どこへでも進める」実バグを生んだ形は、
+ここでは**構造的に起こらない**。
+
+**それでも検査を先に置く。** 述語で判定している以上、値を足したときに
+「どの述語がこの値をどう扱うか」を決め忘れることはありうる——`visibleToRoutingPlanner()` が
+`MISROUTED` を落とすと、**誤配の予約が経路設計者の一覧から消える**（直す人に見えない）。
+
+**列挙に値を足したら、既存の述語すべてがその値を明示的に扱っていることを検査する。**
+
+### 決定 3: 誤配の事実は `cargo` の列に残す。例外の解決では消えない
+
+受入基準 28-8 は「誤配の事実は解決後も記録として残り、**料金調整の根拠**として参照できる」で
+ある。
+
+置き場所の候補は 3 つあった。
+
+| 置き場所 | 採らない理由 |
+| :--- | :--- |
+| 例外の履歴（trackingms） | **解決時の扱い次第で消える。** 解決は「対応が終わった」という記録であり、起きた事実の保存を目的にしていない。料金調整は bookingms・billingms の関心であり、追跡へ問い合わせるのは 2 ホップ遠い |
+| 荷役の行（handlingms） | `off_route` は既にある。ただし**予約から引くには追跡番号経由で 2 ホップ**であり、予約詳細のバナー（受入基準 28-3）で毎回それを引くことになる |
+| `cargo` の列（bookingms） | **採用。** 料金調整の主体（bookingms → billingms）と同じ場所にあり、予約詳細から直接読める |
+
+`cargo` に `misrouted_at` と `misrouted_location_unlocode` を足す。
+
+**`RoutingStatus` が `ROUTED` へ戻っても、この 2 列は消さない。** 状態は「いまどうなって
+いるか」であり、**「何が起きたか」は別に持つ**。消す実装にすると、再設計を終えた瞬間に
+料金調整の根拠が失われる。
+
+### 決定 4: 再設計は現在地を出発地とする。目的地と期限は元の予約から引き継ぐ
+
+受入基準 28-4・28-5。
+
+**新しい API を作らない。** [ADR-019](019-route-assignment-api.md) の経路候補の入口
+（`RouteCandidateQuery`）は既に出発地を引数に取る——**貨物の現在地を渡せばよい**。
+
+現在地は `cargo.last_handling_location_unlocode`（IT9 で追加済み）である。
+
+> **当初の出発地を起点にすると、貨物が今いない港からの経路を組むことになる。** 現場は
+> 動けない。**当初の出発地を起点にすると赤になる**検査を置く。
+
+#### 再設計は、通常の経路割り当てとは別の操作である（実装時に判明）
+
+既存の `assignItinerary`（US09）をそのまま使えないことが実装で分かった。
+
+| | 通常の割り当て（US09） | 誤配からの再設計（US28） |
+| :--- | :--- | :--- |
+| いつ | 経路設計の依頼に応えて | 輸送中の貨物が経路から外れたとき |
+| 予約の状態 | `PRELIMINARY` → **`ROUTE_PROPOSED`**（荷主に見せる手番へ移る） | **`IN_TRANSIT` のまま**（貨物は動いている） |
+| 経路の状況 | `ROUTING_REQUESTED` → `ROUTED` | **`MISROUTED` → `ROUTED`** |
+| 通知の記録 | 消す（古い経路の説明が残るため） | 消す（同じ理由） |
+
+**通常の割り当てを通すと、輸送中の貨物が `ROUTE_PROPOSED` へ戻る。** 荷主が合意して
+確定した記録が消え、追跡番号を持つ貨物が「経路を提示した」状態になる——
+[ADR-021](021-booking-status-transitions.md) 決定 3 が塞いだ「確定から戻す」を、
+裏口から破ることになる。
+
+したがって**集約に別の操作を置く**（`reassignItinerary`）。**API と画面は 1 つのまま**で
+ある（決定 4 のとおり新しい入口は作らない）——サーバが状態を見て、どちらの操作かを決める。
+
+### 決定 5: 期限超過の差分は bookingms が算出する。目的地の暦で判断する
+
+受入基準 28-6。到着予定は routingms の候補が持ち、希望期限は bookingms の
+`RouteSpecification` が持つ。**突き合わせるのは bookingms** である——期限は予約の約束であり、
+経路探索の関心ではない。
+
+判断は[ADR-017](017-arrival-deadline-in-destination-calendar.md)を踏襲し、**目的地の暦**で
+行う。日付の境目を UTC で判断すると、時差の分だけ「1 日超過」が増減する。
+
+### 決定 6: 再設計の入口は予約詳細と例外一覧の両方に置く
+
+**気づく人（追跡管理者）と直す人（経路設計者）が違う。**
+
+- 追跡管理者は例外一覧で誤配に気づく（受入基準 28-7）。そこから予約へ辿れないと、
+  「気づいたが何もできない」で終わる
+- 経路設計者は予約詳細から再設計へ進む（受入基準 28-4）
+
+**ロール別の到達性を確かめる。** 画面が受入基準を満たしていても、そのロールのダッシュボード
+やメニューから辿れなければ利用者はそこへ行けない（IT7 以降の横断規約）。
+
+### 決定 7: 荷主への通知は代替とする
+
+受入基準 28-6 の「荷主への通知内容に含まれる」は、IT8・IT9 と同じ形で**代替**する
+（[ADR-024](024-tracking-manual-update-and-exceptions.md) 決定 9）。メールは送らず、
+**送られていないことを画面が言う**。
+
+書かないと、担当者は「更新したから相手に届いた」と受け取って連絡をしない。
+
+## 影響
+
+- `cargo` に 2 列（`misrouted_at`・`misrouted_location_unlocode`）が入る。
+  [data-model.md](../design/data-model.md) への反映は `SchemaDesignConsistencyTest` が守る
+- `RoutingStatus` に `MISROUTED` が入る。[domain-model.md](../design/domain-model.md) の要素表
+  とは**既に一致している**（実装が追いつく形）
+- bookingms が `HandlingActivityRegistered` の `offRoute` を見るようになる。購読自体は
+  IT9 で始まっている（`AdvanceBookingUseCase`）
+- trackingms が `MISROUTE` を自動起票する。手で起票できる種別は増やさない
+  （[ADR-024](024-tracking-manual-update-and-exceptions.md) 決定 11）
+
+## コンプライアンス
+
+**決定ごとに検査を置き、1 件ずつ実装を壊して赤になることを確かめる。** 表に検査名を書いた
+時点では完了としない——IT8 は 11 決定のうち 3 件が空振りだった。
+
+| 決定 | 検査 | 壊して赤を確認 |
+| :--- | :--- | :--- |
+| 1 判定は handlingms・新しいイベントを作らない | `AdvanceBookingUseCaseTest#marksTheCargoAsMisrouted` / `#stillAdvancesTheStatusWhenMisrouted`・`DetectMisrouteUseCaseTest#ignoresPlannedHandling`・`HandlingEventSubscriptionScopeTest#doesNotCallBackIntoHandling` | **済**（誤配を記録しない／誤配だと状態を進めない／予定どおりでも起票する／handlingms を参照する、の 4 通りで赤） |
+| 2 `MISROUTED` を足す・述語がすべて扱う | `RoutingStatusTest#hasTheAgreedValues` / `#opensMisroutedCargoToTheRoutingPlanner` / `#decidesVisibilityForEveryStatus`・`RoutingStatus#visibleToRoutingPlanner` の `switch` 式 | **済**（値を足す前に赤・述語から落とすと赤・**値を足すとコンパイルが止まる**）。**IT11 で直した**——「述語がすべての値を明示的に扱う」と決めていながら、実装は `this != NOT_ROUTED` の否定リストで、**足した値が自動的に「開く」方向へ倒れていた**。`switch` 式（`default` なし）にして、値を足した時点でコンパイルが止まる形にした |
+| 3 誤配の事実は解決後も残る | `MisrouteTest#keepsTheFirstMisroute` / `#doesNotTouchCancelledCargo`・`CargoPersistenceIntegrationTest#keepsTheMisrouteAcrossAReload`・`MisrouteTest.WhenReassigning#keepsTheMisrouteRecord` | **済**（最後の誤配で上書き／キャンセル済みも動かす／`withItinerary` で落とす、の 3 通りで赤。**3 つ目は実際に落としていた**） |
+| 4 現在地を出発地とする・目的地と期限を引き継ぐ | `MisrouteTest.WhenReassigning#rejectsAnItineraryFromTheOriginalOrigin` / `#rejectsAnItineraryToAnotherDestination` | **済**（出発地を元の予約から取ると赤） |
+| 4b 再設計は `IN_TRANSIT` のまま・確定から戻さない | `MisrouteTest.WhenReassigning#keepsTheBookingStatusWhileRestoringTheRouting` | **済**（通常の割り当てと同じ動きにすると赤） |
+| 5 期限超過の差分は目的地の暦で | `MisrouteTest.WhenReassigning#tellsHowManyDaysBeyondTheDeadline` / `#judgesTheDeadlineInTheDestinationCalendar`・`route-design-page.test.tsx` の期限超過 2 件 | **済**（UTC で判断する／日数を数えない／超過を出さずに遷移する、の 3 通りで赤） |
+| 6 入口は予約詳細と例外一覧の両方・ロール別の到達性 | `booking-detail-page.test.tsx` の誤配 4 件・`tracking-exceptions-page.test.tsx` の誤配 2 件 | **済**（場所を出さない／ロールで出し分けない／例外一覧の導線を消す、の 3 通りで赤） |
+| 7 通知は代替であることを画面が言う | `route-design-page.test.tsx#期限を超えるときは、何日超えるかを出して遷移を止める`・`booking-detail-page.test.tsx#期限を超えるなら、何日超えるかと、伝えるのが営業であることを出す` | **済**（**「荷主へは自動で通知されません」の一文を消すと、2 つの画面の検査がそれぞれ赤**）。**IT11 で直した**——この欄には決定 5 の壊し方（超過を出さずに遷移する）が書いてあり、決定 7 を壊したことになっていなかった |
+
+> **決定 7 の欄には、決定 5 の壊し方が書いてあった**（IT11 返済枠 0.5 で気づいた）。
+> 超過の日数を出さずに遷移させるのは決定 5 の破り方であり、通知が代替であることを
+> 画面が言うかどうか（決定 7）とは別である。**壊し方を書き写すときに、隣の行から
+> 持ってきていた。** 実際に一文を消して、2 つの画面の検査が赤になることを確かめた。
+
+> **決定 6 の検査は、最初は判別しなかった。** 外れた場所と現在地を同じ港（SGSIN）で書いて
+> いたため、片方を落としてももう片方が同じ文字列を出していた。別の港にして確認し直した。
+
+## 関連
+
+- [ADR-017](017-arrival-deadline-in-destination-calendar.md)（到着期限は目的地の暦で判断する）
+- [ADR-019](019-route-assignment-api.md)（経路割り当て API）
+- [ADR-022](022-domain-event-contract.md)（ドメインイベント契約）
+- [ADR-023](023-handling-activity-validation.md)（荷役の検証。**決定 3 が `MISROUTED` を US28 に預けた**）
+- [ADR-024](024-tracking-manual-update-and-exceptions.md)（追跡の手動更新と例外。決定 11 が手動起票の種別を限定）
+- [ADR-025](025-customs-declaration-and-cancellation-approval.md)（通関申告とキャンセル承認）
+- 関連ストーリー: US28（誤配・IT10）, US15（荷役の記録）, US09〜US11（経路設計）, US21（精算・IT11）

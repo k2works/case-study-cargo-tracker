@@ -1,0 +1,214 @@
+package com.example.handlingms;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.example.handlingms.domain.repository.CustomsDeclarationRepository;
+import com.example.handlingms.domain.model.valueobjects.CargoBookingId;
+import com.example.handlingms.domain.model.aggregates.CustomsDeclaration;
+import com.example.handlingms.domain.model.valueobjects.CustomsStatus;
+import com.example.handlingms.domain.model.valueobjects.DeclarationNumber;
+import com.example.handlingms.domain.model.valueobjects.HandlingTrackingNumber;
+import java.time.Instant;
+import java.util.List;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+
+/**
+ * 通関申告が実際の DB で成立することを確認する（US29）。
+ *
+ * <p><strong>保存して読み直してから検証する。</strong>手元の集約を見ても、行に
+ * 残っていないことに気づけない（[ADR-024] 決定 2 と同じ立場）。特に履歴は
+ * 「積んだつもり」で落ちやすい。
+ *
+ * <p>土台（{@link HandlingIntegrationTestBase}）を継承する。テストごとに Postgres を
+ * 立てると、資源が足りずに<strong>関係のないテストが落ちる</strong>（IT7 で 4 回踏んだ）。
+ */
+@DisplayName("通関申告の永続化")
+class CustomsDeclarationPersistenceIntegrationTest extends HandlingIntegrationTestBase {
+
+    private static final Instant DECLARED_AT = Instant.parse("2027-09-02T00:00:00Z");
+
+    @Autowired
+    private CustomsDeclarationRepository declarations;
+
+    /**
+     * 予約 ID は<strong>この検査だけのものを使う</strong>。
+     *
+     * <p>DB は他の検査と共有している（{@link HandlingIntegrationTestBase}）。同じ予約 ID を
+     * 使うと、ここで作った審査中の申告が<strong>引取のガードから見て「最新の申告」</strong>に
+     * なり、荷役の検査が「通関が完了していない」で落ちる。実際にそうなった——
+     * 単体で走らせると緑、フルで走らせると赤、という形だった。
+     *
+     * <p>ここは永続化そのものを見る検査であり、登録の規則（[ADR-025] 決定 7）を通さずに
+     * 保存先へ直接書く。だからこそ<strong>他の検査の前提を壊さない ID</strong>を選ぶ。
+     */
+    private static final String BOOKING_ID = "BKG-2026009001";
+
+    private CustomsDeclaration declare(String number, String trackingNumber) {
+        return declarations.save(CustomsDeclaration.declare(
+                DeclarationNumber.of(number), CargoBookingId.of(BOOKING_ID),
+                HandlingTrackingNumber.of(trackingNumber), DECLARED_AT, "初回申告", "handler01"));
+    }
+
+    @Test
+    @DisplayName("申告した内容が、読み直しても全項目そろっている")
+    void keepsEveryFieldAcrossAReload() {
+        CustomsDeclaration saved = declare("DEC-P0001", "TRK-20260823-1001");
+
+        CustomsDeclaration reloaded = declarations.findById(saved.id()).orElseThrow();
+
+        // 項目ごとに比べる形にすると、属性が増えたときに比較を足し忘れる（IT6 の欠陥 5）
+        assertThat(reloaded).usingRecursiveComparison().isEqualTo(saved);
+    }
+
+    /** 登録そのものも履歴の 1 行目として残る。**何も無い状態からは始まらない**。 */
+    @Test
+    @DisplayName("登録が履歴の 1 行目として行に残る")
+    void persistsTheDeclarationItselfAsHistory() {
+        CustomsDeclaration saved = declare("DEC-P0002", "TRK-20260823-1002");
+
+        CustomsDeclaration reloaded = declarations.findById(saved.id()).orElseThrow();
+
+        assertThat(reloaded.history()).hasSize(1);
+        assertThat(reloaded.history().getFirst().reason()).isEqualTo("申告を登録しました");
+        assertThat(reloaded.history().getFirst().changedBy()).isEqualTo("handler01");
+    }
+
+    /** US29-8。**状態と履歴は同じ呼び出しで書く。** */
+    @Test
+    @DisplayName("状態を更新すると、履歴が行に積まれる")
+    void appendsHistoryWhenStatusChanges() {
+        CustomsDeclaration saved = declare("DEC-P0003", "TRK-20260823-1003");
+
+        declarations.updateStatus(saved.updateStatus(
+                CustomsStatus.HELD, "tracker01", "書類不備", Instant.parse("2027-09-03T00:00:00Z")));
+
+        CustomsDeclaration reloaded = declarations.findById(saved.id()).orElseThrow();
+        assertThat(reloaded.status()).isEqualTo(CustomsStatus.HELD);
+        assertThat(reloaded.history()).hasSize(2);
+        assertThat(reloaded.history().getLast().reason()).isEqualTo("書類不備");
+    }
+
+    /**
+     * <strong>更新で行が増えない。</strong>「常に INSERT する save」で更新まで賄うと、
+     * 最初の更新のときに行が増える。作成しか起きないうちは表面化しない。
+     */
+    @Test
+    @DisplayName("更新しても、申告の行は増えない")
+    void doesNotInsertARowOnUpdate() {
+        CustomsDeclaration saved = declare("DEC-P0004", "TRK-20260823-1004");
+
+        declarations.updateStatus(saved.updateStatus(
+                CustomsStatus.CLEARED, "tracker01", "通関完了",
+                Instant.parse("2027-09-03T00:00:00Z")));
+
+        List<CustomsDeclaration> found =
+                declarations.search(null, "TRK-20260823-1004", null, false, 100);
+        assertThat(found).hasSize(1);
+        assertThat(found.getFirst().status()).isEqualTo(CustomsStatus.CLEARED);
+    }
+
+    /** [ADR-025] 決定 7。**決着していない申告を引ける**。登録側がこれで 2 通目を断る。 */
+    @Test
+    @DisplayName("決着していない申告だけを引ける")
+    void findsOnlyUnsettledDeclarations() {
+        CustomsDeclaration pending = declare("DEC-P0005", "TRK-20260823-1005");
+
+        assertThat(declarations
+                .findUnsettledByTrackingNumber(HandlingTrackingNumber.of("TRK-20260823-1005")))
+                .isPresent();
+
+        declarations.updateStatus(pending.updateStatus(
+                CustomsStatus.REJECTED, "tracker01", "不備", Instant.parse("2027-09-03T00:00:00Z")));
+
+        assertThat(declarations
+                .findUnsettledByTrackingNumber(HandlingTrackingNumber.of("TRK-20260823-1005")))
+                .as("不可になった申告が、まだ決着していない扱いになっている")
+                .isEmpty();
+    }
+
+    /** US29-7。3 条件で絞れる。**絞り込みは SQL で行う**。 */
+    @Test
+    @DisplayName("追跡番号と状態で絞り込める")
+    void searchesByTrackingNumberAndStatus() {
+        declare("DEC-P0006", "TRK-20260823-1006");
+        CustomsDeclaration other = declare("DEC-P0007", "TRK-20260823-1007");
+        declarations.updateStatus(other.updateStatus(
+                CustomsStatus.HELD, "tracker01", "書類不備", Instant.parse("2027-09-03T00:00:00Z")));
+
+        assertThat(declarations.search(null, "TRK-20260823-1006", null, false, 100))
+                .extracting(declaration -> declaration.declarationNumber().value())
+                .containsExactly("DEC-P0006");
+        assertThat(declarations.search(null, null, CustomsStatus.HELD, false, 100))
+                .extracting(declaration -> declaration.declarationNumber().value())
+                .contains("DEC-P0007")
+                .doesNotContain("DEC-P0006");
+    }
+
+    /**
+     * US29-7・IT10 返済枠 0.1。<strong>未決着（審査中・留置）だけに絞れる</strong>。
+     *
+     * <p>追跡管理者の朝の仕事は「未決着を上から片付ける」ことだが、状態の絞り込みは
+     * <strong>単一選択</strong>のため、この 2 つを同時に見る手段が別に要る。
+     *
+     * <p><strong>総件数も返す。</strong>上限で切ったことを黙ると、担当者は
+     * 「一覧に出ていないから無い」と読む。
+     */
+    @Test
+    @DisplayName("未決着（審査中・留置）だけに絞れる")
+    void searchesOnlyUnsettledDeclarations() {
+        declare("DEC-P0008", "TRK-20260823-1008");
+        CustomsDeclaration held = declare("DEC-P0009", "TRK-20260823-1009");
+        declarations.updateStatus(held.updateStatus(
+                CustomsStatus.HELD, "tracker01", "書類不備", Instant.parse("2027-09-03T00:00:00Z")));
+        CustomsDeclaration cleared = declare("DEC-P0010", "TRK-20260823-1010");
+        declarations.updateStatus(cleared.updateStatus(
+                CustomsStatus.CLEARED, "tracker01", "審査完了",
+                Instant.parse("2027-09-03T00:00:00Z")));
+
+        assertThat(declarations.search(null, null, null, true, 100))
+                .extracting(declaration -> declaration.declarationNumber().value())
+                .as("決着済みが混ざっている。毎朝の待ち行列にならない")
+                .contains("DEC-P0008", "DEC-P0009")
+                .doesNotContain("DEC-P0010");
+
+        // **件数は同じ条件で数える。**一覧と件数が違う条件で出ると、担当者は数えなおす
+        assertThat(declarations.count(null, "TRK-20260823-1010", null, true))
+                .as("未決着の条件が件数に効いていない")
+                .isZero();
+        assertThat(declarations.count(null, "TRK-20260823-1010", null, false)).isEqualTo(1);
+    }
+
+    /**
+     * IT10 返済枠 0.5。<strong>通関済から審査中へ戻しても、「未決着は高々 1 件」が崩れない</strong>。
+     *
+     * <p>誤操作の訂正手段は要るため、巻き戻し自体は禁じていない。確かめるのは
+     * <strong>戻したあとに 2 通目を出せてしまわないか</strong>である——出せると、
+     * 同じ貨物に未決着の申告が 2 件並び、どちらを処理すればよいか決まらなくなる。
+     *
+     * <p>戻すと引取のガードも閉じる（最新が通関済でなくなる）。これは正しい
+     * ——通関を取り消したなら引き取れない。
+     */
+    @Test
+    @DisplayName("通関済から審査中へ戻しても、未決着は高々 1 件のままである")
+    void keepsAtMostOneUnsettledAfterRollingBack() {
+        CustomsDeclaration declared = declare("DEC-P0011", "TRK-20260823-1011");
+        CustomsDeclaration cleared = declarations.updateStatus(declared.updateStatus(
+                CustomsStatus.CLEARED, "tracker01", "審査完了",
+                Instant.parse("2027-09-03T00:00:00Z")));
+
+        // 誤って通関済にしたので、審査中へ戻す
+        declarations.updateStatus(cleared.updateStatus(
+                CustomsStatus.PENDING, "tracker01", "誤操作の訂正",
+                Instant.parse("2027-09-03T01:00:00Z")));
+
+        assertThat(declarations
+                .findUnsettledByTrackingNumber(HandlingTrackingNumber.of("TRK-20260823-1011")))
+                .as("戻した申告が未決着として引けない。2 通目を出せてしまう")
+                .isPresent();
+        assertThat(declarations.search(null, "TRK-20260823-1011", null, true, 100))
+                .as("未決着が 2 件ある。どちらを処理すればよいか決まらない")
+                .hasSize(1);
+    }
+}

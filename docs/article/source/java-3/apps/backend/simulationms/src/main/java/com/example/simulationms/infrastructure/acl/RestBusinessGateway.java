@@ -1,0 +1,486 @@
+package com.example.simulationms.infrastructure.acl;
+
+import com.example.simulationms.application.internal.outboundservices.acl.BusinessCallFailedException;
+import com.example.simulationms.application.internal.outboundservices.acl.BusinessGateway;
+import com.example.simulationms.domain.model.valueobjects.BusinessContextKey;
+import com.example.simulationms.domain.model.valueobjects.ScenarioStep;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.Map;
+import org.springframework.http.HttpHeaders;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.util.UriComponentsBuilder;
+
+/**
+ * 業務 API を Gateway 経由で踏む出口（[ADR-030] 決定 2）。
+ *
+ * <p><strong>工程ごとにログインし直す。</strong>切符を使い回すと、1 つの利用者に
+ * 全ロールを与えたのと同じ状態になる——本番には存在しない権限の持ち主が生まれる。
+ * ログインの往復は増えるが、確かめたいのは「そのロールでその操作が通るか」である。
+ *
+ * <p><strong>経路は設定にしない。</strong>相手との契約であり、環境ごとに変わるのは
+ * 所在（ベース URL）だけである。
+ */
+@SuppressWarnings("java:S1075")
+public class RestBusinessGateway implements BusinessGateway {
+
+    /** ログインの経路。Gateway が認証不要で通す唯一の POST である。 */
+    public static final String LOGIN_PATH = "/api/v1/auth/login";
+
+    public static final String SHIPPER_PATH = "/api/v1/shippers";
+    public static final String BOOKING_PATH = "/api/v1/bookings";
+    public static final String VOYAGE_PATH = "/api/v1/voyages";
+    public static final String ROUTE_PATH = "/api/v1/routes";
+    public static final String HANDLING_PATH = "/api/v1/handling";
+    public static final String CUSTOMS_PATH = "/api/v1/customs";
+    public static final String TRACKING_MANAGE_PATH = "/api/v1/tracking/manage";
+    public static final String BILLING_PATH = "/api/v1/billing";
+
+    /** 利用者と荷主の紐付け（US33 の管理者操作）。 */
+    public static final String USER_SHIPPER_LINK_PATH = "/api/v1/admin/user-shipper-links";
+
+    /**
+     * お知らせを確かめるための利用者（US39）。
+     *
+     * <p><strong>この名前でログイン画面にも載せる。</strong>載せないと、シミュレーションを
+     * 流したあと「誰で入れば見えるのか」がシードの SQL を読むまで分からない。
+     */
+    public static final String NOTIFICATION_DEMO_USER = "sim-shipper01";
+
+    /** 通す輸送。**固定する**——毎回変えると、失敗したときに条件の違いを疑うことになる。 */
+    static final String ORIGIN = "JPTYO";
+    static final String DESTINATION = "USLAX";
+    static final String CARGO_TYPE = "GENERAL";
+
+    /** 追加の入力が要る貨物種別。**書き写さない**——判定を 1 か所に置く。 */
+    private static final String HAZARDOUS = "HAZARDOUS";
+
+    private static final String REFRIGERATED = "REFRIGERATED";
+
+    /** 業務データに残す名乗り。**誰の操作か分かる名前にする**——後から人が見分けられる。 */
+    static final String OPERATOR = "シミュレーション";
+
+    /** 到着期限までの日数。航海の到着（20 日後）より十分に後へ置く。 */
+    private static final int DEADLINE_DAYS = 120;
+
+    private final RestClient gateway;
+    private final SimulationUsers users;
+    private final Clock clock;
+
+    /**
+     * 例外を起こす・対応する工程の出口。
+     *
+     * <p>分けたのは行数の都合ではなく<strong>変わる理由が違う</strong>ためである。
+     * 出口そのものは増えていない——[ADR-030] 決定 2 の「1 ポート」は
+     * {@code BusinessGateway} の話であり、その内側の分け方は別である。
+     */
+    private final RestExceptionSteps exceptions;
+
+    /**
+     * 荷主を用意する工程の出口（登録と紐付け）。
+     *
+     * <p>例外の工程と同じく、<strong>変わる理由が違う</strong>ので分けている
+     * ——ここが変わるのは荷主の登録内容や紐付けの決まりが変わるときである。
+     */
+    private final RestShipperSteps shipperSteps;
+
+    public RestBusinessGateway(RestClient gateway, SimulationUsers users, Clock clock) {
+        this.gateway = gateway;
+        this.users = users;
+        this.clock = clock;
+        this.exceptions = new RestExceptionSteps(gateway, clock);
+        this.shipperSteps = new RestShipperSteps(gateway, this::login);
+    }
+
+    @Override
+    public String execute(ScenarioStep step, Map<String, String> context) {
+        String token = login(step.role());
+
+        // **既定の分岐を置かない。**置くと、工程を足したときに何も呼ばないまま
+        // 「成功」で通り抜ける。列挙を網羅させ、足した工程が必ずここへ現れるようにする
+        return switch (step) {
+            case REGISTER_SHIPPER, LINK_SHIPPER_USER -> shipperSteps.execute(step, token, context);
+            case REGISTER_BOOKING -> registerBooking(token, context);
+            case REQUEST_ROUTING -> post(step, token,
+                    bookingPath(context, "/routing-request"));
+            case REGISTER_VOYAGE -> registerVoyage(token, context);
+            case ASSIGN_ROUTE -> assignRoute(token, context);
+            case NOTIFY_ROUTE -> post(step, token,
+                    bookingPath(context, "/route-notification"));
+            case CONFIRM_BOOKING -> put(step, token, bookingPath(context, "/confirm"));
+            case ISSUE_TRACKING_NUMBER -> issueTrackingNumber(token, context);
+            case RECORD_HANDLING -> recordHandling(token, context);
+            case DECLARE_CUSTOMS -> declareCustoms(token, context);
+            case CLEAR_CUSTOMS -> clearCustoms(token, context);
+            case RECORD_CLAIM -> recordClaim(token, context);
+            case CALCULATE_CHARGE -> calculateCharge(token, context);
+            case SETTLE -> settle(token, context);
+            case RECORD_LATE_HANDLING, RAISE_DAMAGE, RECORD_MISROUTED_HANDLING, HOLD_CUSTOMS,
+                    REQUEST_CANCELLATION, RESOLVE_EXCEPTION, REGISTER_RECOVERY_VOYAGE,
+                    REDESIGN_ROUTE, RELEASE_CUSTOMS, APPROVE_CANCELLATION ->
+                    exceptions.execute(step, token, context);
+        };
+    }
+
+
+
+    /**
+     * その工程を踏むロールの利用者として入る。
+     *
+     * <p>失敗したら<strong>誰として入ろうとしたか</strong>を添える。
+     * 「ログインに失敗しました」だけでは、名簿の設定が違うのか利用者が消えているのかを
+     * 切り分けられない。
+     */
+    private String login(String role) {
+        String username = users.usernameFor(role);
+        try {
+            BusinessMessages.LoginResponse response = gateway.post()
+                    .uri(LOGIN_PATH)
+                    .body(new BusinessMessages.LoginRequest(username, users.password()))
+                    .retrieve()
+                    .body(BusinessMessages.LoginResponse.class);
+
+            if (response == null || response.token() == null || response.token().isBlank()) {
+                throw new BusinessCallFailedException(
+                        "ログインの応答に切符がありません: " + username);
+            }
+            return response.token();
+        } catch (RestClientException e) {
+            throw new BusinessCallFailedException(
+                    "ログインできません: " + username + "（" + BusinessCalls.describe(e) + "）", e);
+        }
+    }
+
+
+    private String registerBooking(String token, Map<String, String> context) {
+        BusinessMessages.BookingResponse response = BusinessCalls.call(ScenarioStep.REGISTER_BOOKING, () -> gateway.post()
+                .uri(BOOKING_PATH)
+                .header(HttpHeaders.AUTHORIZATION, BusinessCalls.bearer(token))
+                .body(new BusinessMessages.BookingRequest(
+                        Long.valueOf(BusinessCalls.required(context, BusinessContextKey.SHIPPER_ID)),
+                        cargoTypeOf(context), weightOf(context),
+                        OPERATOR + " " + BusinessCalls.runId(context),
+                        originOf(context), destinationOf(context),
+                        today().plusDays(deadlineDaysOf(context)).toString(),
+                        hazardousClassOf(context), unNumberOf(context),
+                        properShippingNameOf(context),
+                        minCelsiusOf(context), maxCelsiusOf(context)))
+                .retrieve()
+                .body(BusinessMessages.BookingResponse.class));
+
+        if (response == null || response.bookingId() == null) {
+            throw new BusinessCallFailedException("予約登録の応答に予約番号がありません");
+        }
+        return response.bookingId();
+    }
+
+    /**
+     * 航海を登録する。
+     *
+     * <p><strong>まっさらな環境では航海が 1 本も無い。</strong>「候補が無いので飛ばす」に
+     * すると、何も運ばないまま全工程が成功で終わる（IT5 の Try 2）。
+     */
+    private String registerVoyage(String token, Map<String, String> context) {
+        String number = voyageNumberOf(BusinessCalls.runId(context));
+        Instant departure = clock.instant().plus(1, ChronoUnit.DAYS);
+        Instant arrival = clock.instant().plus(20, ChronoUnit.DAYS);
+
+        BusinessCalls.call(ScenarioStep.REGISTER_VOYAGE, () -> gateway.post()
+                .uri(VOYAGE_PATH)
+                .header(HttpHeaders.AUTHORIZATION, BusinessCalls.bearer(token))
+                // **受け入れる貨物種別は、この実行が運ぶものに合わせる。**
+                // 固定にすると、乱数が冷蔵や危険物を選んだ実行で経路候補が 0 件になる
+                // ——実環境で 18 件踏んだ
+                .body(new BusinessMessages.VoyageRequest(number, "シミュレーション丸", "シミュレーション海運",
+                        List.of(cargoTypeOf(context)),
+                        List.of(new BusinessMessages.VoyageRequest.MovementRequest(
+                                originOf(context), destinationOf(context),
+                                departure, arrival))))
+                .retrieve()
+                .toBodilessEntity());
+        return number;
+    }
+
+    /** シミュレーションが登録した航海と分かる名前にする（[ADR-030] 決定 3）。 */
+    static String voyageNumberOf(String runId) {
+        return "V-" + runId;
+    }
+
+    private String assignRoute(String token, Map<String, String> context) {
+        String deadline = today().plusDays(deadlineDaysOf(context)).toString();
+        BusinessMessages.RouteCandidateListResponse candidates = BusinessCalls.call(ScenarioStep.ASSIGN_ROUTE, () -> gateway.get()
+                .uri(UriComponentsBuilder.fromPath(ROUTE_PATH)
+                        .queryParam("origin", originOf(context))
+                        .queryParam("destination", destinationOf(context))
+                        .queryParam("deadline", deadline)
+                        .queryParam("cargoType", cargoTypeOf(context))
+                        .toUriString())
+                .header(HttpHeaders.AUTHORIZATION, BusinessCalls.bearer(token))
+                .retrieve()
+                .body(BusinessMessages.RouteCandidateListResponse.class));
+
+        if (candidates == null || candidates.candidates() == null
+                || candidates.candidates().isEmpty()) {
+            throw new BusinessCallFailedException(
+                    "経路候補が 0 件です（" + originOf(context) + " → " + destinationOf(context)
+                            + "・期限 " + deadline + "）。航海の登録を確かめる");
+        }
+
+        // **自分が登録した航海を通る候補を選ぶ。**先頭を無条件に採ると、
+        // 別の実行が登録した航海に割り当ててしまう。荷役はこの実行の航海番号で
+        // 記録するため、経路と荷役の航海が食い違い、誤配として起票される。
+        // 1 件ずつ手で流していたあいだは候補が 1 つしか無く、表面化しなかった。
+        String ownVoyage = BusinessCalls.required(context, BusinessContextKey.VOYAGE_NUMBER);
+        BusinessMessages.RouteCandidateListResponse.Candidate chosen =
+                candidates.candidates().stream()
+                        .filter(candidate -> candidate.legs() != null
+                                && candidate.legs().stream()
+                                        .allMatch(leg -> ownVoyage.equals(leg.voyageNumber())))
+                        .findFirst()
+                        .orElseThrow(() -> new BusinessCallFailedException(
+                                "自分が登録した航海（" + ownVoyage + "）を通る経路候補がありません。"
+                                        + "候補は " + candidates.candidates().size() + " 件ありました"));
+
+        List<BusinessMessages.LegRequest> legs = chosen.legs().stream()
+                .map(leg -> new BusinessMessages.LegRequest(leg.voyageNumber(), leg.fromUnLocode(),
+                        leg.toUnLocode(), leg.departureTime(), leg.arrivalTime()))
+                .toList();
+
+        BusinessCalls.call(ScenarioStep.ASSIGN_ROUTE, () -> gateway.put()
+                .uri(bookingPath(context, "/route"))
+                .header(HttpHeaders.AUTHORIZATION, BusinessCalls.bearer(token))
+                .body(new BusinessMessages.AssignRouteRequest(legs, null))
+                .retrieve()
+                .toBodilessEntity());
+        return BusinessContextKey.NONE;
+    }
+
+    private String issueTrackingNumber(String token, Map<String, String> context) {
+        BusinessMessages.BookingResponse response = BusinessCalls.call(ScenarioStep.ISSUE_TRACKING_NUMBER, () -> gateway.post()
+                .uri(bookingPath(context, "/tracking-number"))
+                .header(HttpHeaders.AUTHORIZATION, BusinessCalls.bearer(token))
+                .retrieve()
+                .body(BusinessMessages.BookingResponse.class));
+
+        if (response == null || response.trackingNumber() == null) {
+            throw new BusinessCallFailedException("追跡番号発行の応答に追跡番号がありません");
+        }
+        return response.trackingNumber();
+    }
+
+
+    /**
+     * 受け取り・積込・荷降しを記録する。
+     *
+     * <p><strong>3 つとも踏む。</strong>引取は荷降しの後にしか成り立たず、途中を飛ばすと
+     * 「引取が断られる」形でしか気づけない——原因は飛ばしたこちらにある。
+     */
+    private String recordHandling(String token, Map<String, String> context) {
+        String trackingNumber = BusinessCalls.required(context, BusinessContextKey.TRACKING_NUMBER);
+        String voyageNumber = BusinessCalls.required(context, BusinessContextKey.VOYAGE_NUMBER);
+        Instant at = clock.instant();
+
+        record Activity(String type, String location, String voyage, Instant at) {
+        }
+
+        List<Activity> activities = List.of(
+                new Activity("RECEIVE", originOf(context), null, at),
+                new Activity("LOAD", originOf(context), voyageNumber,
+                        at.plus(1, ChronoUnit.HOURS)),
+                new Activity("UNLOAD", destinationOf(context), voyageNumber,
+                        at.plus(2, ChronoUnit.HOURS)));
+
+        for (Activity activity : activities) {
+            BusinessCalls.call(ScenarioStep.RECORD_HANDLING, () -> gateway.post()
+                    .uri(HANDLING_PATH)
+                    .header(HttpHeaders.AUTHORIZATION, BusinessCalls.bearer(token))
+                    .body(new BusinessMessages.HandlingActivityRequest(trackingNumber, activity.type(),
+                            activity.location(), activity.at().toString(),
+                            OPERATOR, activity.voyage(), null))
+                    .retrieve()
+                    .toBodilessEntity());
+        }
+        return BusinessContextKey.NONE;
+    }
+
+    private String declareCustoms(String token, Map<String, String> context) {
+        BusinessMessages.CustomsDeclarationResponse response = BusinessCalls.call(ScenarioStep.DECLARE_CUSTOMS,
+                () -> gateway.post()
+                        .uri(CUSTOMS_PATH)
+                        .header(HttpHeaders.AUTHORIZATION, BusinessCalls.bearer(token))
+                        .body(new BusinessMessages.CustomsDeclarationRequest(
+                                BusinessCalls.required(context, BusinessContextKey.TRACKING_NUMBER),
+                                "DEC-" + BusinessCalls.runId(context),
+                                clock.instant().toString(),
+                                OPERATOR))
+                        .retrieve()
+                        .body(BusinessMessages.CustomsDeclarationResponse.class));
+
+        if (response == null || response.declarationId() == null) {
+            throw new BusinessCallFailedException("通関申告の応答に申告がありません");
+        }
+        return String.valueOf(response.declarationId());
+    }
+
+    private String clearCustoms(String token, Map<String, String> context) {
+        BusinessCalls.call(ScenarioStep.CLEAR_CUSTOMS, () -> gateway.put()
+                .uri(CUSTOMS_PATH + "/" + BusinessCalls.required(context, BusinessContextKey.DECLARATION_ID)
+                        + "/status")
+                .header(HttpHeaders.AUTHORIZATION, BusinessCalls.bearer(token))
+                .body(new BusinessMessages.CustomsStatusRequest("CLEARED", "シミュレーションの審査完了"))
+                .retrieve()
+                .toBodilessEntity());
+        return BusinessContextKey.NONE;
+    }
+
+    /**
+     * 引取を記録する。
+     *
+     * <p><strong>荷受人の確認を添える。</strong>添えないと集約が断る（US16-2）——
+     * 断られること自体は正しい振る舞いであり、こちらの入力が足りていない。
+     */
+    private String recordClaim(String token, Map<String, String> context) {
+        BusinessCalls.call(ScenarioStep.RECORD_CLAIM, () -> gateway.post()
+                .uri(HANDLING_PATH)
+                .header(HttpHeaders.AUTHORIZATION, BusinessCalls.bearer(token))
+                .body(new BusinessMessages.HandlingActivityRequest(
+                        BusinessCalls.required(context, BusinessContextKey.TRACKING_NUMBER), "CLAIM",
+                        destinationOf(context),
+                        clock.instant().plus(3, ChronoUnit.HOURS).toString(),
+                        OPERATOR, null, "シミュレーション荷受人"))
+                .retrieve()
+                .toBodilessEntity());
+        return BusinessContextKey.NONE;
+    }
+
+    private String calculateCharge(String token, Map<String, String> context) {
+        String bookingId = BusinessCalls.required(context, BusinessContextKey.BOOKING_ID);
+        BusinessMessages.InvoiceResponse invoice = BusinessCalls.call(ScenarioStep.CALCULATE_CHARGE, () -> gateway.post()
+                .uri(BILLING_PATH + "/" + bookingId + "/calculate")
+                .header(HttpHeaders.AUTHORIZATION, BusinessCalls.bearer(token))
+                .body(new BusinessMessages.CalculateRequest(List.of()))
+                .retrieve()
+                .body(BusinessMessages.InvoiceResponse.class));
+
+        if (invoice == null || invoice.invoiceNumber() == null) {
+            throw new BusinessCallFailedException("料金算出の応答に精算書がありません");
+        }
+        return invoice.invoiceNumber();
+    }
+
+    /**
+     * 入金を記録して精算を終える。
+     *
+     * <p><strong>金額は精算書から読む。</strong>こちらで計算し直すと、料金の式が 2 つに増える。
+     */
+    private String settle(String token, Map<String, String> context) {
+        String invoiceNumber = BusinessCalls.required(context, BusinessContextKey.INVOICE_NUMBER);
+        BusinessMessages.InvoiceResponse invoice = BusinessCalls.call(ScenarioStep.SETTLE, () -> gateway.get()
+                .uri(BILLING_PATH + "/invoices/" + invoiceNumber)
+                .header(HttpHeaders.AUTHORIZATION, BusinessCalls.bearer(token))
+                .retrieve()
+                .body(BusinessMessages.InvoiceResponse.class));
+
+        if (invoice == null || invoice.totalAmount() == null
+                || invoice.totalAmount().value() == null) {
+            throw new BusinessCallFailedException("精算書に請求金額がありません: " + invoiceNumber);
+        }
+
+        BusinessCalls.call(ScenarioStep.SETTLE, () -> gateway.post()
+                .uri(BILLING_PATH + "/invoices/" + invoiceNumber + "/payment")
+                .header(HttpHeaders.AUTHORIZATION, BusinessCalls.bearer(token))
+                .body(new BusinessMessages.ConfirmPaymentRequest(invoice.totalAmount().value(), today().toString(),
+                        "BANK_TRANSFER", "SIM-" + BusinessCalls.runId(context)))
+                .retrieve()
+                .toBodilessEntity());
+        return BusinessContextKey.NONE;
+    }
+
+    private String post(ScenarioStep step, String token, String path) {
+        BusinessCalls.call(step, () -> gateway.post()
+                .uri(path)
+                .header(HttpHeaders.AUTHORIZATION, BusinessCalls.bearer(token))
+                .retrieve()
+                .toBodilessEntity());
+        return BusinessContextKey.NONE;
+    }
+
+    private String put(ScenarioStep step, String token, String path) {
+        BusinessCalls.call(step, () -> gateway.put()
+                .uri(path)
+                .header(HttpHeaders.AUTHORIZATION, BusinessCalls.bearer(token))
+                .retrieve()
+                .toBodilessEntity());
+        return BusinessContextKey.NONE;
+    }
+
+    /**
+     * 乱数が選んだ入力（US37-1）。
+     *
+     * <p>継続実行は引き継ぎに載せてくる。手で押した実行は持たないので既定値へ落とす。
+     * <strong>ここで固定値を書くと、生成器が選んだ値がどこにも届かない。</strong>
+     */
+    static String originOf(Map<String, String> context) {
+        return BusinessCalls.orDefault(context, BusinessContextKey.ORIGIN, ORIGIN);
+    }
+
+    static String destinationOf(Map<String, String> context) {
+        return BusinessCalls.orDefault(context, BusinessContextKey.DESTINATION, DESTINATION);
+    }
+
+    static String cargoTypeOf(Map<String, String> context) {
+        return BusinessCalls.orDefault(context, BusinessContextKey.CARGO_TYPE, CARGO_TYPE);
+    }
+
+    static int weightOf(Map<String, String> context) {
+        return Integer.parseInt(
+                BusinessCalls.orDefault(context, BusinessContextKey.WEIGHT_KG, "900"));
+    }
+
+    static int deadlineDaysOf(Map<String, String> context) {
+        return Integer.parseInt(BusinessCalls.orDefault(context,
+                BusinessContextKey.DEADLINE_DAYS, String.valueOf(DEADLINE_DAYS)));
+    }
+
+    /**
+     * 危険物の等級。危険物以外は空。**添えないと集約が断る**（US04 の不変条件）。
+     *
+     * <p><strong>コードで送る</strong>（列挙の名前ではない）。`CLASS_3` を送ると
+     * 「危険物クラスは一覧から選んでください」で断られる——実環境で踏んだ。
+     */
+    private static String hazardousClassOf(Map<String, String> context) {
+        return HAZARDOUS.equals(cargoTypeOf(context)) ? "3" : null;
+    }
+
+    private static String unNumberOf(Map<String, String> context) {
+        return HAZARDOUS.equals(cargoTypeOf(context)) ? "UN1203" : null;
+    }
+
+    private static String properShippingNameOf(Map<String, String> context) {
+        return HAZARDOUS.equals(cargoTypeOf(context)) ? "GASOLINE" : null;
+    }
+
+    /** 保管温度。冷凍・冷蔵以外は空。**添えないと集約が断る**。 */
+    private static java.math.BigDecimal minCelsiusOf(Map<String, String> context) {
+        return REFRIGERATED.equals(cargoTypeOf(context))
+                ? java.math.BigDecimal.valueOf(-18) : null;
+    }
+
+    private static java.math.BigDecimal maxCelsiusOf(Map<String, String> context) {
+        return REFRIGERATED.equals(cargoTypeOf(context))
+                ? java.math.BigDecimal.valueOf(-10) : null;
+    }
+
+    private String bookingPath(Map<String, String> context, String suffix) {
+        return BOOKING_PATH + "/" + BusinessCalls.required(context, BusinessContextKey.BOOKING_ID) + suffix;
+    }
+
+    private LocalDate today() {
+        return LocalDate.now(clock);
+    }
+
+}

@@ -1,0 +1,58 @@
+<?xml version="1.0"?>
+<!DOCTYPE suppressions PUBLIC
+    "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
+    "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+<!--
+  検査を実際に落とす（ignoreFailures = false）にあたって、構造的に成り立たない指摘だけを外す。
+
+  「いま出ているから外す」形にはしない。それは基準を実装に合わせることであり、
+  抑制した瞬間に負債が見えなくなる。ここに並ぶのは、規則の前提がこのコードベースに
+  当てはまらないものだけである。
+-->
+<suppressions>
+    <!--
+      Spring Boot の起動クラスは main しか持たないため、ユーティリティクラスに見える。
+      だがコンストラクタを private にすると Spring がインスタンス化できず起動しない。
+    -->
+    <suppress checks="HideUtilityClassConstructor" files=".*Application\.java$"/>
+
+    <!--
+      テストのメソッド名は日本語で書く。何を確かめているかは、テストの唯一の説明である。
+      識別子の規約を優先して英語に直すと、失敗したときに読めるものが減る。
+    -->
+    <suppress checks="MethodName" files="[\\/]src[\\/]test[\\/]"/>
+
+    <!--
+      予約の集約ルート（Cargo）だけ FileLength を外す。
+
+      **「いま出ているから外す」ではない。** 500 行は「割る基準を決めていない」ことの
+      合図であり、実際に合図として働いた。受けて責務で 3 つ切り出している。
+
+        - CargoRestoration      — 永続化された行からの復元（業務の検査が 1 つも無い）
+        - CargoSpecificationRules — 貨物仕様の不変条件（守る対象が予約ではなく貨物）
+        - CargoTransitionPolicy  — 遷移の可否と理由（判定を 1 か所に集める）
+
+      残るのは集約本来の責務——状態を変える操作と、その状態への問い合わせである。
+      これ以上割ると、**関係のあるものが分かれる**。予約は業務の中心であり、
+      ストーリーが増えるたびに操作が増えるのは設計の欠陥ではない。
+
+      **外すのはこの 1 ファイルだけである。** 他のファイルには 500 行を課したままにする
+      ——1 つ許した瞬間に基準は無くなる。
+    -->
+    <suppress checks="FileLength"
+              files="[\\/]bookingms[\\/].*[\\/]domain[\\/]model[\\/]aggregates[\\/]Cargo\.java$"/>
+
+    <!--
+      ロガーの log は checkstyle.xml の ConstantName の format で許している。
+
+      ここで message による抑制を書かないこと。指摘の文言はロケールで変わるため、
+      日本語で書いた抑制は英語で動く CI に効かない（実際に IT7 で踏んだ）。
+    -->
+    <!--
+      Flyway の Java マイグレーションは、クラス名が版番号そのものである
+      （`V5__drop_booking_unique`）。Flyway がその名前から版と説明を読むため、
+      Java の命名規約には合わせられない。
+    -->
+    <suppress checks="TypeName" files="[\\/]db[\\/]migration[\\/]"/>
+    <suppress checks="AbbreviationAsWordInName" files="[\\/]db[\\/]migration[\\/]"/>
+</suppressions>

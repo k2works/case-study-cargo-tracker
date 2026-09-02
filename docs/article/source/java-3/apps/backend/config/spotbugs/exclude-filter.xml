@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+    <!-- Spring Boot auto-generated code -->
+    <Match>
+        <Class name="~.*Application"/>
+    </Match>
+    <!-- Test files -->
+    <Match>
+        <Source name="~.*Test\.java"/>
+    </Match>
+    <Match>
+        <Source name="~.*Tests\.java"/>
+    </Match>
+    <!--
+      EI_EXPOSE_REP / EI_EXPOSE_REP2（可変オブジェクトの参照を出し入れする）は除外する。
+
+      この検出器は、コンストラクタ注入と record という**このコードベースの標準的な形**に
+      構造的に鳴る。リポジトリが Mapper を受け取る、通知の実装が RabbitTemplate を受け取る、
+      応答の record が一覧を返す——いずれも写しを作ることはできない（Spring の Bean は
+      複製できない）か、意味がない。
+
+      実害があるのは「呼び出し元が持っている一覧をそのまま抱える」形だけであり、そこは
+      除外ではなく、record の簡潔コンストラクタで List.copyOf して直してある。
+
+      なお、この除外は「いま出ているから外す」ではない。ignoreFailures = true を外すまで、
+      SpotBugs は Java 25 のクラスファイルを読めておらず**1 クラスも解析していなかった**。
+      ツール版を上げて初めて中身が見えた（IT7 返済枠 0.11）。
+    -->
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+</FindBugsFilter>

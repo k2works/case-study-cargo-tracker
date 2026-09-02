@@ -7,7 +7,8 @@
 | ツリー | 引用元シリーズ |
 | :--- | :--- |
 | 10 言語の `apps/` | [モノリスアーキテクチャ実装比較](../monolith-architecture/index.md) / [関数型ドメインモデリング](../functional-domain-modeling/index.md) |
-| [`java-2/`](java-2) | [実践 AI 駆動開発](../ai-driven-development/index.md) / [XP によるドメイン駆動設計の実践](../xp-domain-driven-design/index.md) / [エンタープライズアーキテクチャの 4 観点](../enterprise-architecture/index.md) / [実践 DDD in Spring Boot](../practical-ddd-spring-boot/index.md) |
+| [`java-2/`](java-2) | [実践 AI 駆動開発](../ai-driven-development/index.md) / [XP によるドメイン駆動設計の実践](../xp-domain-driven-design/index.md) / [エンタープライズアーキテクチャの 4 観点](../enterprise-architecture/index.md) / [実践 DDD in Spring Boot](../practical-ddd-spring-boot/index.md) / [エンタープライズ Java における実践的 DDD](../practical-ddd-in-enterprise-java/draft-2/index.md)（第 1〜3 章） |
+| [`java-3/`](java-3) | [エンタープライズ Java における実践的 DDD](../practical-ddd-in-enterprise-java/draft-2/index.md)（第 4 章） |
 
 ## 収録内容
 
@@ -56,6 +57,27 @@
 `e2e/` は `manual/manual-screenshots.spec.js` の 1 本のみを収録しています。アプリケーションの E2E（`e2e/app/` の 11 本）は引用予定が無いため収録していません。
 
 Skill の定義（`.claude/skills/`）も収録していません。**本リポジトリの `.claude/skills/` が同一の Skill 体系**です。
+
+## java-3（エンタープライズ Java における実践的 DDD 第 4 章）
+
+`java/take-7`（マイクロサービス版）の実装と一次資料です。上の `java-2`（モジュラーモノリス）とは**別の実装**であり、同じ業務を BC ごとの独立したサービスに分けたものです。
+
+第 4 章がプロセスを越えるイベント配送を扱うために収録しました。`java-2` にはプロセスを跨ぐメッセージ基盤が無く、それが第 4 章を保留していた理由です（[アウトライン](../practical-ddd-in-enterprise-java/draft-2/outline.md) §5）。
+
+| 種別 | パス | ファイル数 | 内容 |
+| :--- | :--- | ---: | :--- |
+| 実装 | [java-3/apps](java-3/apps) | 1,186 | backend（8 サービス + 共有ライブラリ）・frontend・www |
+| 一次資料 | [java-3/docs](java-3/docs) | 199 | ADR 32 本・設計 11 本・計画／完了報告／ふりかえり・レビュー・要件・運用・マニュアル |
+
+| 項目 | 値 |
+| :--- | :--- |
+| サービス | gatewayms / authms / bookingms / routingms / trackingms / handlingms / billingms / simulationms（+ 共有ライブラリ `shared`） |
+| データベース | Database per Service（PostgreSQL 16。gatewayms は状態を持たない） |
+| サービス間の非同期 | RabbitMQ（`spring-boot-starter-amqp`。**Spring Cloud Stream は使っていない**） |
+| サービス間の同期 | REST（ACL 経由） |
+| フロントエンド | 独立した SPA（`apps/frontend`） |
+
+`docs/article/`・`reference/`・`template/`・`assets/` は収録していません（`java-2` と同じ方針）。
 
 ## 収録していないもの
 
