@@ -4,7 +4,7 @@ title: "イテレーション計画 1 - 基盤・認証・荷主登録"
 description: "IT1 の計画。Axon 5 のスパイク 7 項目・ビルドと kind 環境・品質ゲートの実配線・フロント基盤と全ルートのスケルトン・US26/US27/US02（荷主登録の縦切りと crypto-shredding）。デモ項目 7 件。"
 tags: [plan,iteration,cargo-tracker]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-02T13:43:02Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-02T13:50:48Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T12:47:29Z }
 ---
@@ -106,7 +106,7 @@ US02 は縦切りの本体です。認証（US26）と基盤が通ってから�
 | 1.1 | `apps/cargo-tracker/backend` の Gradle マルチプロジェクト（shared・gatewayms・authms・bookingms・routingms・trackingms・handlingms・billingms）と `libs.versions.toml` | 4h | [x] |
 | 1.2 | kind + Kustomize（`ops/k8s/base/axonserver/`・`postgres/`・各サービス）。Axon Server は `AXONIQ_AXONSERVER_STANDALONE_DCB=true` | 6h | [ ] |
 | 1.3 | PostgreSQL の 6 DB と接続ユーザー、各サービスの Flyway（`V001__create_axon_tables.sql` を含む） | 3h | [x] |
-| 1.4 | 起動時の接続検査（Axon Server に繋がること・context が DCB であること。失敗したら起動を止める） | 2h | [ ] |
+| 1.4 | 起動時の接続検査（Axon Server に繋がること・context が DCB であること。失敗したら起動を止める） | 2h | [x] |
 | 1.5 | 運用スクリプトの雛形（`gulp ops:health`・`projection:status`） | 2h | [ ] |
 | | 小計 | 17h | |
 

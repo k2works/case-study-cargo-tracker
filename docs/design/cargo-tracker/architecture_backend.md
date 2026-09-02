@@ -4,7 +4,7 @@ title: "バックエンドアーキテクチャ - 国際貨物輸送管理シス
 description: "Axon Framework 5 による CQRS / Event Sourcing 版 Cargo Tracker のバックエンドアーキテクチャ。マイクロサービス構成で BC ごとにサービスを分け、Axon Server を Command / Event / Query Bus と Event Store に使い、投影・Reaction Handler・イベント契約を定める。"
 tags: [design, architecture, backend, cqrs, event-sourcing, axon, microservices]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-02T13:24:08Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-02T13:50:48Z }
 stale_after: 2026-12-01T00:00:00Z
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
@@ -726,7 +726,7 @@ axon:
 | 項目 | 方針 | 由来 |
 | :--- | :--- | :--- |
 | `axon-server-connector` を全サービスで明示依存にする | starter の推移的依存に含まれず、無いと**無音で** in-memory にフォールバックする。起動時に接続を検査し、失敗したら起動を止める | take-4 ADR-0009 |
-| 起動時の接続検査は **context が DCB であること** まで見る | `@EventSourced(tagKey)` は DCB 前提。Axon Server 側は `AXONIQ_AXONSERVER_STANDALONE_DCB=true`（クラスタは `dcb=true`）。無いと接続が確立せず（2026.0.4 の実測は `AXONIQ-1302 default: not found in any replication group`）、**アプリケーションは起動を止めずに無限再接続する**。ログの検出に頼らず、接続後に context の DCB 可否を問い合わせて起動を止める | take-4 ADR-0009 |
+| 起動時の接続検査は **context が DCB であること** まで見る | `@EventSourced(tagKey)` は DCB 前提。Axon Server 側は `AXONIQ_AXONSERVER_STANDALONE_DCB=true`（クラスタは `dcb=true`）。無いと接続が確立せず（2026.0.4 の実測は `AXONIQ-1302 default: not found in any replication group`）、**アプリケーションは起動を止めずに無限再接続する**。ログの検出に頼らず、接続後に context の DCB 可否を問い合わせて起動を止める（`dcbEventChannel().head()` の読み取り 1 回。Event Store を汚さない）。なお DCB を無効にした Axon Server では接続そのものが確立しないため、実環境では接続の検査が先に働き DCB の分岐は踏まれない。踏まない守りは壊れても気づけないので、DCB の分岐は単体テストで直接固定する（IT1 タスク 1.4） | take-4 ADR-0009 |
 | Axon Server に接続するのは業務 5 サービスだけ | authms・gatewayms は接続しない。期待接続数は「5 × 台数」、接続数上限はサービスあたり 50・合計 250 で監視する | 本設計（M4） |
 | Token Store / Saga Store はサービスごとの Read Model DB（JDBC） | 投影と同じトランザクションに参加させる。`token_entry`（`mask INTEGER NOT NULL` を含む take-4 実測スキーマ）/ `saga_entry` / `association_value_entry` は各サービスの Flyway で作る | take-4 ADR-0009 |
 | Axon の `TransactionManager` Bean は **1 つだけ** | `SpringTransactionManager` は第 3 引数の `ConnectionProvider` を渡して作る（無いと Coordinator の `initializeTokenStore` で失敗）。`TransactionManager` 型の Bean が複数あると `getIfUnique()` が外れて `NoTransactionManager` に**無音で**落ちる。Bean が 1 つであることを起動時に検査する | take-4 ADR-0009 |
