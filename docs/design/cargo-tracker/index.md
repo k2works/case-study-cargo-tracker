@@ -37,7 +37,7 @@ cargo-tracker プロジェクトの設計ドキュメントです。
 
 | ドキュメント | 概要 | 状況 |
 | :--- | :--- | :--- |
-| 技術スタック選定 | 技術スタック一覧とバージョン管理方針を整理 | 未作成 |
+| [技術スタック](tech_stack.md) | Java 25 / Spring Boot 4.1 / Axon Framework 5.3 / Axon Server 2026.0.4 / MyBatis / PostgreSQL 16 / React 19。IT1 スパイクの確認事項と採用しないもの。90 日で見直し | 作成済み（draft） |
 
 ## 補足
 
