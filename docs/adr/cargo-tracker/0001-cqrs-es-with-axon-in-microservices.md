@@ -4,7 +4,7 @@ title: "ADR-0001 CQRS / Event Sourcing を Axon Framework 5 でマイクロサ�
 description: "CQRS / Event Sourcing を Axon Framework 5 のマイクロサービスとして実装する決定。配置の形・ES の適用範囲・Axon 5 系 API の採用・サービス間の配送経路と、IT1 スパイクの結果（採用版 5.1.0-RC2・Saga 廃止）。"
 tags: [adr]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-02T13:24:08Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-02T14:17:27Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
   - { by: human:kakimomokuri, at: 2026-09-02T12:47:29Z }
@@ -116,7 +116,7 @@ REST はクライアントから Gateway を通って各サービスに入る経
 | :--- | :--- | :--- |
 | 1 | **集約の登録 API**：stereotype 無しで Command Bus に登録されるか | **`@EventSourced` が必要。** `@EventSourcedEntity` は 5.1.0-RC2 に存在しない。`@EventSourced(idType, tagKey)` 単独で登録され、bootJar・実 Axon Server・`CommandGateway` のモック無しで、コマンド受理 → イベント保存 → 投影受信まで通った。決定 3 の許可リストは恒久化する |
 | 2 | Spring Boot と Axon の自動設定の整合 | **Spring Boot 4.1.1 + Java 25 で成立するが、2 つの制約がある。**(a) `spring.main.allow-circular-references=true` が必須（`axon.axonserver` の `@ConfigurationProperties` と Boot の `BoundConfigurationProperties` が Bean 循環を作る。Boot 4.0.6 でも同じで、Boot の版を下げても回避できない）。(b) `TokenStore` Bean が無いと `Could not find a mandatory TokenStore` で起動失敗する（自動設定されない）。`TransactionManager` の重複・`token_entry.mask` は DB を伴う IT1 タスク 1.3 で確認する |
-| 3 | `AxonTestFixture` の組み立て方 | **`AxonTestFixture.with(ApplicationConfigurer)`** が正。あわせて `axon-test` に **`org.axonframework.test.server.AxonServerContainer`**（Testcontainers）が同梱されていることが分かった。IT1 タスク 2.4 の基底クラスはこれを使い、自作しない |
+| 3 | `AxonTestFixture` の組み立て方 | **`AxonTestFixture.with(ApplicationConfigurer)`** が正。`EventSourcingConfigurer.create().registerEntity(EventSourcedEntityModule.autodetected(idType, entityType))` で集約を登録する。**集約の単体テストでは `with(configurer, c -> c.disableAxonServer())` が要る**：既定のままだと発行イベントが記録されず、集約が正しくても「イベントが 1 本も出ていない」形で落ちる（IT1 タスク 6.1 で実測）。例外は `CommandExecutionException` に包まれる。あわせて `axon-test` に **`org.axonframework.test.server.AxonServerContainer`**（Testcontainers、`withDcbContext(true)` を持つ）が同梱されていることが分かった。IT1 タスク 2.4 の基底クラスはこれを使い、自作しない |
 | 4 | Saga のアノテーションと `SagaLifecycle` の 5 系での名称 | **Axon 5 に Saga は存在しない。** 5.0.0・5.1.0-RC2・5.3.1 のいずれの jar にも `Saga`・`Deadline`・`@ProcessingGroup` を含むクラスが 1 つも無い（Axon 4 の概念）。設計の Saga はすべて Reaction Handler で実装する（決定 6） |
 | 5 | Axon Server 経由でサービス越しにコマンド・クエリが届くこと | **届く。** 集約を持たない JVM から送ったコマンドを、集約を持つ別 JVM が処理し、その投影までイベントが到達することを 2 JVM で確認した。なお接続直後に出る `CommandChannel ... 0 command handlers registered` のログは登録前の時点を映しているだけで、異常ではない |
 | 6 | `axon-server-connector` の明示依存と DCB 無効時の検知 | **明示依存が必要**（starter は 5.1・5.3 とも connector を推移的に含まない）。**DCB 無効の context に繋ぐと `AXONIQ-1302 default: not found in any replication group` が出る**（設計が想定した `AXONIQ-2308` ではない。2026.0.4 での実測値）。さらに**アプリケーションは起動を止めず無限に再接続を試み続ける**ため、IT1 タスク 1.4 の起動時接続検査は必須である |
