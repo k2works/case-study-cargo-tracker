@@ -4,7 +4,7 @@ title: "運用要件 - 国際貨物輸送管理システム（CQRS / Event Sourc
 description: "CQRS / Event Sourcing 版 Cargo Tracker の運用要件。投影のリプレイを日常操作として置き、Event Store の復元演習、Event Processor と Reaction Handler の監視、ランブック、イベントの形を変えるリリース手順、鍵の破棄、Gulp タスクを定める。"
 tags: [design,operation,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-02T13:24:08Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-02T21:34:44Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -78,7 +78,7 @@ stop
 | **Event Processor** | 停止（エラーで止まった Processing Group） | 1 件 | **P1** |
 | **Event Processor** | 遅れ（最新イベントとの差） | 1,000 イベントまたは 5 分 | P2 |
 | **反映** | コマンド → 投影 p95 | 3 秒超が 5 分継続 | P2（画面ヘッダに表示） |
-| **連鎖** | 滞留（未完了・24 時間超） | 1 件 | P3 |
+| **連鎖** | 滞留（`process_state.status = 'RUNNING'` が 24 時間超） | 1 件 | P3 |
 | **連鎖** | 補償に至った件数 | 1 件 | P3（要確認一覧に転記済みか確認） |
 | **要確認** | `attention_item` の未確認件数（投影の拒否・Reaction Handler の失敗・補償）。営業日内の確認期限を過ぎた件数 | 1 件 / 期限超過 1 件 | P3 / P2 |
 | Axon Server | 稼働 | 停止 | **P1** |

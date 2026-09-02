@@ -4,7 +4,7 @@ title: "ドメインモデル設計 - 国際貨物輸送管理システム（CQR
 description: "CQRS / Event Sourcing 版 Cargo Tracker のドメインモデル設計。6 コンテキストの集約・不変条件・コマンド・イベント（内部 / 契約）・状態遷移・Reaction Handler を、イベントを永続化フォーマットとして定義する。"
 tags: [design,domain-model,ddd,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-02T21:30:39Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-02T21:34:44Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -1271,11 +1271,17 @@ CONFIRMED --> 終了 : CargoCancelledEvent
 
 | 段 | 購読するイベント | 送るコマンド | 途中経過の置き場 |
 | :--- | :--- | :--- | :--- |
-| 1 | `BookingConfirmedEvent`（自サービス） | `IssueTrackingNumberCommand` | `Cargo.bookingStatus` |
-| 2 | `TrackingNumberIssuedEvent`（契約） | `InitializeTrackingCommand`（trackingms） | `Cargo.trackingNumber` の有無 |
-| 3 | `TrackingInitializedEvent`（契約） | 無し（連鎖の終わり） | `Cargo` に「追跡開始済み」を記録する |
+| 1 | `BookingConfirmedEvent`（自サービス） | `IssueTrackingNumberCommand` | `process_state` の行を作る（`RUNNING`） |
+| 2 | `TrackingNumberIssuedEvent`（契約） | `InitializeTrackingCommand`（trackingms） | `process_state.completed_steps` を進める |
+| 3 | `TrackingInitializedEvent`（契約） | 無し（連鎖の終わり） | `process_state.status = 'COMPLETED'` にする |
 
-**Saga が持っていた「終了」と「タイムアウト」の代わり。** 終了は 3 段目のイベントを受け取ったことを `Cargo` に記録して表します。タイムアウトは Axon に Deadline が無いため、**`cargo_summary` の「追跡開始済みでない確定済み予約」を定期に走査する運用ジョブ**（`gulp reaction:stuck`）で検知し、上限を超えたものに `RevertTrackingNumberCommand` を送って `attention_item` に写します。予約は `CONFIRMED` に留まります。
+**Saga が持っていた「関連付け」「終了」「タイムアウト」の代わり。** 3 段にまたがるので、途中経過は `process_state`（`process_type = 'BOOKING_TO_TRACKING'`、`process_id = bookingId`）に明示的に持ちます（[データモデル](data-model.md)「連鎖の途中経過」）。Saga のストアに直列化して埋めるのと違い、止まった位置がそのまま SQL で読めます。
+
+- **関連付け** = `process_state` の行そのもの（`SagaLifecycle.associateWith()` の代わりに行を作る）
+- **終了** = 3 段目のイベントで `status = 'COMPLETED'` にする（`@EndSaga` の代わり。行は消さず、いつ終わったかを残す）
+- **タイムアウト** = Axon に Deadline が無いため、`status = 'RUNNING'` かつ `updated_at` が 24 時間より古い行を定期に走査する運用ジョブ（`gulp reaction:stuck`）で検知します。上限を超えたものに `RevertTrackingNumberCommand` を送り、`status = 'COMPENSATED'` にして `attention_item` に写します。予約は `CONFIRMED` に留まります
+
+一方、配送完了 → 精算のように **1 段で終わる連鎖には `process_state` を置きません。** `Invoice` の有無から「今どの段か」が読めるので、増やすと持ち主が二重になります。
 
 `BookingReactionHandler` は同期クエリを呼びません。経路候補の存在確認（候補 0 件の検知）は `RequestRoutingCommand` を受ける Controller が `FindRouteCandidatesQuery` で行い、Reaction Handler の外に置きます。Reaction Handler の中で `.join()` すると Processing Group が止まるためです。`CloseTrackingCommand` も bookingms から送らず、trackingms の `TrackingReactionHandler` が陸揚げ地での `UNLOAD` を受けた後に送ります（`TrackingActivity` 不変条件 9）。
 

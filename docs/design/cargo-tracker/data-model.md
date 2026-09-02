@@ -4,7 +4,7 @@ title: "データモデル設計 - 国際貨物輸送管理システム（CQRS /
 description: "CQRS / Event Sourcing 版 Cargo Tracker のデータモデル設計。Event Store は Axon Server に任せ、サービスごとの投影テーブル・Axon 管理テーブル・Auth の状態テーブルを ER 図とテーブル定義で示し、Processing Group との対応とリプレイ前提のマイグレーション方針を定める。"
 tags: [design,data-model,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-02T13:43:02Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-02T21:34:44Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -88,7 +88,7 @@ bi --> bidb
 | :--- | :--- | :--- | :--- |
 | Axon Server | （専用ボリューム） | Event Store | イベント列、スナップショット |
 | authms | `auth_db` | 状態保存 | `users`, `user_roles`, `user_shipper_link`, `auth_audit_log` |
-| bookingms | `booking_read_db` | 投影 + 受け皿 + Axon 管理 | `shipper`, `cargo_summary`, `cargo_leg`, `cancellation_request`, `quotation`, `quotation_candidate`, `attention_item`, `token_entry` |
+| bookingms | `booking_read_db` | 投影 + 受け皿 + Axon 管理 | `shipper`, `cargo_summary`, `cargo_leg`, `cancellation_request`, `quotation`, `quotation_candidate`, `attention_item`, `process_state`, `token_entry` |
 | routingms | `routing_read_db` | 投影 + Axon 管理 | `voyage`, `carrier_movement`, `voyage_accepted_cargo_type`, `token_entry` |
 | trackingms | `tracking_read_db` | 投影 + 受け皿 + Axon 管理 | `tracking_summary`, `tracking_event`, `tracking_exception`, `shipper_cargo_snapshot`, `attention_item`, `token_entry` |
 | handlingms | `handling_read_db` | 投影 + Axon 管理 | `cargo_snapshot`, `cargo_snapshot_leg`, `handling_activity`, `customs_declaration`, `token_entry` |
@@ -673,6 +673,46 @@ inv ||--o{ pay
 | `payment` | `PaymentRecordedEvent` | `INDEX(invoice_id)` | |
 | `shipper_contract_snapshot` | `ShipperRegisteredEvent`, `CorporateContractAssignedEvent`（いずれも契約）の購読 | — | billingms が bookingms に同期問い合わせをしないための ACL の読み取りモデル（`FindShipperForBillingQuery` は廃止）。荷主の最新の契約を写し、請求書作成時に `invoice.discount_rate` へ複写する。作成後に割引率が変わっても請求書は変わらない。`shipper_name` は crypto-shredding 後に `NULL`（ADR-0003） |
 | `attention_item` | `billing-projection` の拒否、`billing-reaction` のコマンド失敗、補償 | `booking_read_db` と同じ | 定義は `booking_read_db` の `attention_item` と同一 |
+
+### 連鎖の途中経過（`process_state`）
+
+Axon 5 に Saga が無いので、複数段にまたがる連鎖の途中経過は**自分のテーブルに明示的に持ちます**（[ADR-0001](../../adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) 決定 6）。Saga のストアに直列化して埋めるのと違い、滞留の一覧化も管理画面もふつうの SQL で書けます。フィールドの型を変えても、リプレイの復元ではなくマイグレーションの問題になります。
+
+**すべての連鎖に置くわけではありません。** 1 段で終わる連鎖は集約の状態から「今どの段か」が読めるので作りません。置くのは**複数段にまたがり、途中で止まったことを一覧にしたい連鎖**だけです。現時点の該当は予約 → 追跡番号発行 → 追跡開始（3 段、bookingms）。
+
+```plantuml
+@startuml
+title 連鎖の途中経過
+
+hide circle
+
+entity "process_state" as ps {
+  * **process_type**: VARCHAR(50) <<PK>>
+  * **process_id**: VARCHAR(36) <<PK>>
+  --
+  current_step: VARCHAR(50) NOT NULL
+  total_steps: INTEGER NOT NULL
+  completed_steps: INTEGER NOT NULL
+  status: VARCHAR(20) NOT NULL
+  metadata: JSONB
+  started_at: TIMESTAMPTZ NOT NULL
+  updated_at: TIMESTAMPTZ NOT NULL
+  completed_at: TIMESTAMPTZ
+}
+
+@enduml
+```
+
+| 列 | 用途 |
+| :--- | :--- |
+| `process_type` / `process_id` | 連鎖の種類と対象（例：`BOOKING_TO_TRACKING` と `bookingId`）。Saga の関連付けに相当する |
+| `current_step` / `completed_steps` / `total_steps` | 今どの段か。止まった位置がそのまま読める |
+| `status` | `RUNNING` / `COMPLETED` / `COMPENSATED`。完了で行を消さずに残すのは、あとから「いつ終わったか」を問えるようにするため |
+| `metadata` | 連鎖の再開・補償に要る値。個人情報は入れない（消せなくなる） |
+
+**滞留の検知。** Axon に Deadline が無いので、`status = 'RUNNING'` かつ `updated_at` が 24 時間より古い行を定期に走査します（`gulp reaction:stuck`）。超過したものは補償して `attention_item` に写します（`operation.md`）。
+
+置く DB は連鎖の起点を持つサービスの Read Model DB です（予約 → 追跡開始なら `booking_read_db`）。**連鎖ごとに 1 つのサービスが持ち主になります。** 複数サービスで同じ連鎖の状態を持つと、どちらが正かが曖昧になります。
 
 ### Axon 管理テーブル（各 Read Model DB 共通）
 

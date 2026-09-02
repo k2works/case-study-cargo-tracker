@@ -4,7 +4,7 @@ title: "ADR-0001 CQRS / Event Sourcing を Axon Framework 5 でマイクロサ�
 description: "CQRS / Event Sourcing を Axon Framework 5 のマイクロサービスとして実装する決定。配置の形・ES の適用範囲・Axon 5 系 API の採用・サービス間の配送経路と、IT1 スパイクの結果（採用版 5.1.0-RC2・Saga 廃止）。"
 tags: [adr]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-02T21:30:39Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-02T21:34:44Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
   - { by: human:kakimomokuri, at: 2026-09-02T12:47:29Z }
@@ -124,12 +124,25 @@ REST はクライアントから Gateway を通って各サービスに入る経
 
 **副産物として分かったこと。** コマンドの戻り値が `byte[]` のまま返る（`CommandGateway.sendAndWait` の結果を型で受けるには変換の指定が要る）。IT1 タスク 6.5 で `201` に識別子を載せるときに効くため、実装時に変換方式を決める。
 
-### 6. Saga を使わず Reaction Handler に一本化する
+### 6. Saga を使わず、状態を自分で持つイベントハンドラに一本化する
 
 決定 5 の第 4 項でスパイクが示したとおり、Axon 5 には Saga の API が無い。設計（`domain-model.md`）が Saga と呼んでいた「イベントを受けて別の集約にコマンドを送る」調整役は、すべて `application/reaction` の Reaction Handler として実装する。
 
+**これは代替品ではなく、Axon 5 が勧めている形である。** Axon 4 からの移行事例でも、Saga を素の `@Component` + `@EventHandler` に書き直し、Saga のインフラが持っていた状態を**自分のデータベースに明示的に持つ**（`ProcessStateService` のような専用の窓口を置く）のが推奨とされている。`SagaLifecycle.associateWith()` / `end()` は、その状態の作成・更新・削除に置き換わる。
+
+自分で持つほうがよい理由は 4 つある。**Saga が戻ってきても、この 4 つを上回らない限り移らない**（後述「再評価の発動条件」）。
+
+| # | 理由 |
+| :--- | :--- |
+| 1 | **状態が見える・引ける。** Saga のストアに直列化されて埋まるのではなく、自分のテーブルに載る。滞留の一覧化（`gulp reaction:stuck`）も管理画面も、ふつうの SQL で書ける |
+| 2 | **直列化の事故が起きない。** Saga は状態を丸ごと直列化して持つので、フィールドの型を変えるとリプレイで復元に失敗する。テーブルに持てばマイグレーションの問題に落ちる |
+| 3 | **テストが単純。** Saga 専用のフィクスチャが要らない。依存を差し替えるだけの、ふつうの Spring コンポーネントとして書ける |
+| 4 | **枠組みに合わせなくてよい。** 連鎖の途中経過をどこに置くか（集約か専用テーブルか）を、業務の都合で選べる |
+
 - 調整役は投影と**別の Processing Group** に置き、リプレイ対象から外す（H1 の判断は変えない）
-- Saga が持っていた「関連付け（association）」と「終了（`@EndSaga`）」に相当する状態は、必要なら**その BC の集約か専用の投影テーブル**に持つ。フレームワークは面倒を見ない
+- Saga が持っていた「関連付け（association）」と「終了（`@EndSaga`）」に相当する状態は、**その BC の集約か専用のテーブル**に持つ。フレームワークは面倒を見ない
+  - 1 段で終わる連鎖（`CargoDeliveredEvent` → `CalculateInvoiceCommand` など）は、集約の状態から「今どの段か」が読めるので専用テーブルを作らない
+  - **複数段にまたがり、途中で止まったことを一覧にしたい連鎖**は、専用の `process_state` テーブルを置く（`data-model.md`）。該当は予約 → 追跡開始（3 段）。滞留の検知（24 時間超）をこのテーブルの走査で行う
 - タイムアウト起点の処理（Deadline）も無いため、期限で動く業務は**投影テーブルを定期に走査する運用ジョブ**として設計する。該当は `operation.md` の要確認一覧の督促
 
 **「無い」ことの確かめ方（2026-09-03 実施）。** 公式リファレンスの [Sagas](https://docs.axoniq.io/axon-framework-reference/5.1/sagas/) は 4 ページとも冒頭に "Sagas do not have a replacement yet in Axon Framework 5." と書いており、本文は Axon 4 の API 解説がそのまま残っている。載っているクラスが実在するかを成果物で照合した結果が次のとおり。
@@ -155,7 +168,7 @@ REST はクライアントから Gateway を通って各サービスに入る経
 
 再評価では次を比べる。**Saga が公開されても自動では移らない。**
 
-- Reaction Handler が抱えている自前の状態管理（連鎖の途中経過を集約や投影に持つこと）と、Saga の関連付けのどちらが読みやすいか
+- 上の 4 つの理由（状態が見える・直列化の事故が無い・テストが単純・置き場を選べる）を、Saga の関連付けが上回るか。**上回らないなら移らない**
 - Deadline の有無。運用ジョブでの定期走査を置き換えられるか
 - 移行の代金。`saga_entry` / `association_value_entry` の追加と、既存の Reaction Handler の書き換え
 
@@ -222,3 +235,4 @@ REST はクライアントから Gateway を通って各サービスに入る経
 - Axon Framework の版は調査時点（2026-09-02）で 5.3 系。確定は `tech_stack.md`
 - 改訂: 2026-09-02 IT1 のスパイクを実施し、決定 5 を「確定する事項」から「結果」に書き換えた。前提が 3 つ崩れたため決定を改めた。(1) `axon-server-connector` が 5.2 以降に無く、コアだけ 5.3 にすると Axon Server に接続できないため、**採用版を 5.3 系から 5.1.0-RC2 に変更**した（決定 3）。(2) **Axon 5 に Saga・Deadline・`@ProcessingGroup` が存在しない**ため、Saga を Reaction Handler に一本化する決定 6 を追加した。(3) Spring Boot と Axon の同居に `spring.main.allow-circular-references=true` と明示的な `TokenStore` Bean が要ることが分かった。DCB 無効時のエラーは `AXONIQ-2308` ではなく `AXONIQ-1302` で、かつ起動が止まらないことも実測した
 - 改訂: 2026-09-03 決定 6 に再評価の発動条件を追記した。公式リファレンスの Sagas に 4 系の API 解説が残っているため「5 系にも Saga がある」と読めるが、4 ページとも冒頭に "Sagas do not have a replacement yet in Axon Framework 5." と書かれており、載っているクラス（`AnnotatedSagaManager`・`SagaLifecycle`・`AssociationValue`・各 `SagaStore`）は Axon 4.11.2 には存在し 5.1.0-RC2 の全 9 成果物には存在しない。`org.axonframework:axon-saga` も 5.x のどの版にも無い。「代替が出たら考える」では検知できないので、発動条件 1（Axon に Saga のクラスが公開されたら）を `SagaIsStillAbsentTest` として検査に落とし、発動条件 2（リファレンスの断り書きが消えたら）は版上げの手順に載せた
+- 改訂: 2026-09-03 決定 6 を「Saga を使わず、状態を自分で持つイベントハンドラに一本化する」に改めた。Axon 4 からの移行事例で、Saga を素の `@Component` + `@EventHandler` に書き直し、Saga のインフラが持っていた状態を自分のデータベースに明示的に持つ（`ProcessStateService` のような専用の窓口を置く）のが推奨とされていることを確認したため。これは「Saga が無いので仕方なく」ではなく Axon 5 が勧めている形である。自分で持つほうがよい理由（状態が見える・直列化の事故が無い・テストが単純・置き場を選べる）を明記し、再評価は「Saga が戻ってきてもこの 4 つを上回らない限り移らない」と条件を強めた。あわせて、複数段にまたがる連鎖の途中経過を置く `process_state` テーブルを `data-model.md` に定義し、`domain-model.md` の予約 → 追跡開始（3 段）をそれに合わせた
