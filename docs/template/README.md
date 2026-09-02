@@ -1,3 +1,12 @@
+---
+type: Template
+title: "プロジェクト名"
+description: "docs/template 配下のテンプレート一覧と使い方。"
+tags: [template]
+status: stable
+generated: { by: human:kakimomokuri, at: 2025-09-03T06:27:58Z }
+---
+
 # プロジェクト名
 
 ## 概要

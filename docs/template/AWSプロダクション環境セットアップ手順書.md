@@ -1,3 +1,12 @@
+---
+type: Template
+title: "AWS プロダクション環境セットアップ手順書"
+description: "Terraform を使用して AWS 上に{プロジェクト名}のプロダクション環境を構築するための手順を説明します。"
+tags: [template]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-03-16T05:10:11Z }
+---
+
 # AWS プロダクション環境セットアップ手順書
 
 ## 概要

@@ -1,3 +1,13 @@
+---
+type: Reference
+title: "SonarQube ローカル開発環境セットアップ手順書"
+description: "ローカル開発 PC 上に SonarQube（Community Build）を Docker ベースで構築し、プロジェクトの静的コード解析環境を提供するための手順を説明します。"
+tags: [reference]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-03-27T04:43:33Z }
+stale_after: 2027-02-23T00:00:00Z
+---
+
 # SonarQube ローカル開発環境セットアップ手順書
 
 ## 概要

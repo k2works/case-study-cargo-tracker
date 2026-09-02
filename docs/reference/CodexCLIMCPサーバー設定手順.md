@@ -1,3 +1,13 @@
+---
+type: Reference
+title: "Codex CLI MCP サーバー設定手順"
+description: "Codex CLI を MCP（Model Context Protocol）サーバーとして動作させ、Claude Code からプロジェクトのコンテキストを効率的に検索・参照できるようにする手順です。"
+tags: [reference]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-01-19T02:31:36Z }
+stale_after: 2027-02-23T00:00:00Z
+---
+
 # Codex CLI MCP サーバー設定手順
 
 ## 概要

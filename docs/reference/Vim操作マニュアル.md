@@ -1,3 +1,12 @@
+---
+type: Reference
+title: "Vim操作マニュアル"
+description: "このドキュメントは、本プロジェクトで設定されている .vimrc に基づく操作ガイドです。"
+tags: [reference]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-04-14T02:45:36Z }
+---
+
 # Vim操作マニュアル
 
 このドキュメントは、本プロジェクトで設定されている `.vimrc` に基づく操作ガイドです。

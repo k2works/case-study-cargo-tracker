@@ -1,3 +1,13 @@
+---
+type: Reference
+title: "アプリケーション開発フロー"
+description: "本ドキュメントは、Claude（AI アシスタント）と Codex（実装エージェント）を活用した開発フローを定義します。"
+tags: [reference]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-04-07T05:40:09Z }
+stale_after: 2027-02-23T00:00:00Z
+---
+
 # アプリケーション開発フロー
 
 ## 概要
@@ -535,10 +545,9 @@ npm run check
 
 ## 関連ドキュメント
 
-- [開発環境セットアップ](dev_app_instruction.md)
-- [Codex CLI MCP サーバー設定](codex_instruction.md)
-- [イテレーション計画](../development/iteration_plan-3.md)
-- [コーディングとテストガイド](../reference/コーディングとテストガイド.md)
+- [TypeScript アプリケーション環境構築ガイド](TypeScriptアプリケーション環境構築ガイド.md)
+- [Codex CLI MCP サーバー設定手順](CodexCLIMCPサーバー設定手順.md)
+- [コーディングとテストガイド](コーディングとテストガイド.md)
 
 ---
 

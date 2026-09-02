@@ -1,3 +1,13 @@
+---
+type: Reference
+title: "Java アプリケーション環境構築ガイド"
+description: "本ガイドは、Java アプリケーション開発環境をゼロから構築し、ソフトウェア開発の三種の神器（バージョン管理、テスティング、自動化）を実践するための手順書です。"
+tags: [reference]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-04-06T03:31:33Z }
+stale_after: 2027-02-23T00:00:00Z
+---
+
 # Java アプリケーション環境構築ガイド
 
 ## 概要

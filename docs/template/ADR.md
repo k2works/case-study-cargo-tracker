@@ -1,3 +1,12 @@
+---
+type: Template
+title: "Sample"
+description: "アーキテクチャ決定の簡単な説明"
+tags: [template]
+status: stable
+generated: { by: human:kakimomokuri, at: 2025-09-03T06:27:58Z }
+---
+
 # Sample
 
 アーキテクチャ決定の簡単な説明

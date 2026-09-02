@@ -1,3 +1,12 @@
+---
+type: Reference
+title: "UI設計ガイド"
+description: "オブジェクト指向 UI（OOUI）の考え方に基づく画面設計の指針と、画面遷移図・画面イメージの作成手順。"
+tags: [reference]
+status: stable
+generated: { by: human:kakimomokuri, at: 2026-03-27T04:43:33Z }
+---
+
 # UI設計ガイド
 
 ## オブジェクト指向UI設計（OOUX）
