@@ -2,8 +2,6 @@ package com.example.cargotracker.booking.infrastructure.projection;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.cargotracker.booking.application.port.ShipperKeyRepository;
-import com.example.cargotracker.booking.infrastructure.crypto.ShipperDataCipher;
 import com.example.cargotracker.booking.infrastructure.persistence.AttentionItemMapper;
 import com.example.cargotracker.booking.infrastructure.persistence.ShipperMapper;
 import com.example.cargotracker.shared.contract.event.ShipperRegisteredEvent;
@@ -32,18 +30,18 @@ class ShipperProjectionIT extends AbstractAxonIntegrationTest {
     @Autowired
     private AttentionItemMapper attentionItems;
 
-    @Autowired
-    private ShipperDataCipher cipher;
-
-    @Autowired
-    private ShipperKeyRepository keys;
-
+    /**
+     * 投影に届く時点では復号済み（ADR-0003 決定 1。復号は Converter の責務）。
+     * 鍵が破棄されていれば、届く値が null になる。
+     */
     private ShipperRegisteredEvent event(String shipperId, String name, String email) {
-        return new ShipperRegisteredEvent(shipperId, "CORPORATE",
-                cipher.encrypt(shipperId, name),
-                cipher.encrypt(shipperId, email),
-                cipher.encrypt(shipperId, "03-0000-0000"),
-                cipher.encrypt(shipperId, "東京都港区"),
+        return new ShipperRegisteredEvent(shipperId, "CORPORATE", name, email,
+                "03-0000-0000", "東京都港区", "CT-0001", "0.1000");
+    }
+
+    /** 鍵を破棄したあとに Converter が渡してくる形（個人情報が null）。 */
+    private ShipperRegisteredEvent shreddedEvent(String shipperId) {
+        return new ShipperRegisteredEvent(shipperId, "CORPORATE", null, null, null, null,
                 "CT-0001", "0.1000");
     }
 
@@ -107,10 +105,7 @@ class ShipperProjectionIT extends AbstractAxonIntegrationTest {
     void projectsIndividualWithoutContract() {
         String id = "SHP-IT-I" + System.nanoTime();
         projection.on(new ShipperRegisteredEvent(id, "INDIVIDUAL",
-                cipher.encrypt(id, "山田太郎"),
-                cipher.encrypt(id, id + "@example.com"),
-                cipher.encrypt(id, "03-0000-0000"),
-                cipher.encrypt(id, "東京都港区"),
+                "山田太郎", id + "@example.com", "03-0000-0000", "東京都港区",
                 null, null));
 
         ShipperMapper.ShipperRow row = shippers.findById(id);
@@ -123,11 +118,8 @@ class ShipperProjectionIT extends AbstractAxonIntegrationTest {
     @DisplayName("鍵を破棄したあとにリプレイすると個人情報が消える（投影は止まらない）")
     void personalDataDisappearsAfterKeyIsDestroyed() {
         String id = "SHP-IT-S" + System.nanoTime();
-        ShipperRegisteredEvent stored = event(id, "山田商事", id + "@example.com");
 
-        keys.destroy(id);
-
-        projection.on(stored);
+        projection.on(shreddedEvent(id));
 
         ShipperMapper.ShipperRow row = shippers.findById(id);
         assertThat(row).as("鍵が無くても投影は止まらない").isNotNull();

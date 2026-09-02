@@ -1,6 +1,5 @@
 package com.example.cargotracker.booking.infrastructure.projection;
 
-import com.example.cargotracker.booking.infrastructure.crypto.ShipperDataCipher;
 import com.example.cargotracker.booking.infrastructure.persistence.AttentionItemMapper;
 import com.example.cargotracker.booking.infrastructure.persistence.ShipperMapper;
 import com.example.cargotracker.shared.contract.event.ShipperRegisteredEvent;
@@ -33,14 +32,12 @@ public class ShipperProjection {
 
     private final ShipperMapper shippers;
     private final AttentionItemMapper attentionItems;
-    private final ShipperDataCipher cipher;
     private final Clock clock;
 
     public ShipperProjection(ShipperMapper shippers, AttentionItemMapper attentionItems,
-            ShipperDataCipher cipher, Clock clock) {
+            Clock clock) {
         this.shippers = shippers;
         this.attentionItems = attentionItems;
-        this.cipher = cipher;
         this.clock = clock;
     }
 
@@ -49,11 +46,12 @@ public class ShipperProjection {
         String shipperId = event.shipperId();
         Instant now = clock.instant();
 
-        // 鍵が破棄されていれば復号結果は null。列が NULL 許容なのはこのため（ADR-0003）。
-        String name = cipher.decrypt(shipperId, event.name());
-        String email = cipher.decrypt(shipperId, event.email());
-        String phone = cipher.decrypt(shipperId, event.phone());
-        String address = cipher.decrypt(shipperId, event.address());
+        // 復号は Converter が済ませている（ADR-0003 決定 1）。鍵が破棄されていれば
+        // ここに届く時点で null。列が NULL 許容なのはこのため。
+        String name = event.name();
+        String email = event.email();
+        String phone = event.phone();
+        String address = event.address();
 
         if (shippers.findById(shipperId) != null) {
             return; // リプレイで同じイベントを読み直しただけ。
