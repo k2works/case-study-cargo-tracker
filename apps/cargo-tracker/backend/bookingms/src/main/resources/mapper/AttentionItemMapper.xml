@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.booking.infrastructure.persistence.AttentionItemMapper">
+
+    <resultMap id="attentionRow"
+               type="com.example.cargotracker.booking.infrastructure.persistence.AttentionItemMapper$AttentionItemRow">
+        <constructor>
+            <idArg column="item_id" javaType="string"/>
+            <arg column="kind" javaType="string"/>
+            <arg column="target_type" javaType="string"/>
+            <arg column="target_id" javaType="string"/>
+            <arg column="assigned_role" javaType="string"/>
+            <arg column="reason" javaType="string"/>
+            <arg column="payload" javaType="string"/>
+            <arg column="occurred_at" javaType="java.time.Instant"/>
+            <arg column="acknowledged_at" javaType="java.time.Instant"/>
+            <arg column="acknowledged_by" javaType="string"/>
+        </constructor>
+    </resultMap>
+
+    <insert id="insert">
+        INSERT INTO attention_item (item_id, kind, target_type, target_id, assigned_role,
+                                    reason, payload, occurred_at, acknowledged_at, acknowledged_by)
+        VALUES (#{itemId}, #{kind}, #{targetType}, #{targetId}, #{assignedRole},
+                #{reason}, #{payload}::jsonb, #{occurredAt}, #{acknowledgedAt}, #{acknowledgedBy})
+    </insert>
+
+    <select id="findOpenByRole" resultMap="attentionRow">
+        SELECT * FROM attention_item
+        WHERE assigned_role = #{assignedRole} AND acknowledged_at IS NULL
+        ORDER BY occurred_at DESC
+    </select>
+</mapper>

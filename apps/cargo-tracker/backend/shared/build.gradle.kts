@@ -12,6 +12,8 @@ dependencies {
     // 起動時接続検査が AxonServerConnectionManager / AxonServerConnection を使う。
     // 各サービスも ADR-0001 決定 3 に従って明示依存を持つ（BuildConventionTest で固定）。
     api(libs.axon.server.connector)
+    // AxonJdbcConfiguration が DataSource / PlatformTransactionManager を使う。
+    compileOnly(libs.spring.boot.starter.jdbc)
 
     // testFixtures 側でルールを組み立てる。各サービスは testFixtures(project(":shared")) で取り込む。
     testFixturesApi(libs.archunit.junit5)

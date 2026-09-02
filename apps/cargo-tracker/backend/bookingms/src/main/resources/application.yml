@@ -18,9 +18,23 @@ spring:
 server:
   port: ${SERVER_PORT:8082}
 
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+
 axon:
   axonserver:
     servers: ${AXON_SERVER:localhost:8124}
+  eventhandling:
+    processors:
+      # Processing Group はパッケージ名キーで指定する（@ProcessingGroup は Axon 5 に無い）。
+      # 投影と Reaction Handler を別 Group にするため、パッケージを分けている。
+      # 名前の正典は data-model.md「Processing Group とテーブルの対応」。
+      "[com.example.cargotracker.booking.infrastructure.projection]":
+        mode: pooled
+      "[com.example.cargotracker.booking.application.reaction]":
+        mode: pooled
 
 management:
   endpoints:

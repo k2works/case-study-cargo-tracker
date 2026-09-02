@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.booking.infrastructure.persistence.ShipperMapper">
+
+    <resultMap id="shipperRow"
+               type="com.example.cargotracker.booking.infrastructure.persistence.ShipperMapper$ShipperRow">
+        <constructor>
+            <idArg column="shipper_id" javaType="string"/>
+            <arg column="shipper_code" javaType="string"/>
+            <arg column="shipper_type" javaType="string"/>
+            <arg column="name" javaType="string"/>
+            <arg column="email" javaType="string"/>
+            <arg column="phone" javaType="string"/>
+            <arg column="address" javaType="string"/>
+            <arg column="country_code" javaType="string"/>
+            <arg column="contract_number" javaType="string"/>
+            <arg column="discount_rate" javaType="java.math.BigDecimal"/>
+            <arg column="registered_at" javaType="java.time.Instant"/>
+            <arg column="projected_at" javaType="java.time.Instant"/>
+            <arg column="last_event_id" javaType="string"/>
+        </constructor>
+    </resultMap>
+
+    <insert id="insert">
+        INSERT INTO shipper (shipper_id, shipper_code, shipper_type, name, email, phone, address,
+                             country_code, contract_number, discount_rate,
+                             registered_at, projected_at, last_event_id)
+        VALUES (#{shipperId}, #{shipperCode}, #{shipperType}, #{name}, #{email}, #{phone}, #{address},
+                #{countryCode}, #{contractNumber}, #{discountRate},
+                #{registeredAt}, #{projectedAt}, #{lastEventId})
+    </insert>
+
+    <select id="findById" resultMap="shipperRow">
+        SELECT * FROM shipper WHERE shipper_id = #{shipperId}
+    </select>
+
+    <select id="findAll" resultMap="shipperRow">
+        SELECT * FROM shipper ORDER BY shipper_code LIMIT #{limit} OFFSET #{offset}
+    </select>
+</mapper>
