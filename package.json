@@ -8,10 +8,13 @@
     "docs:serve": "gulp mkdocs:serve",
     "docs:stop": "gulp mkdocs:stop",
     "docs:build": "gulp mkdocs:build",
+    "manual:build": "gulp manual:build",
     "vault:encrypt": "gulp vault:encrypt",
     "vault:decrypt": "gulp vault:decrypt",
     "vault:view": "gulp vault:view",
     "vault:rekey": "gulp vault:rekey",
+    "okf:check": "gulp okf:check",
+    "okf:viz": "gulp okf:viz",
     "claude:yolo": "claude --dangerously-skip-permissions",
     "copilot:yolo": "copilot --allow-all-tools",
     "codex:yolo": "codex --yolo",
@@ -36,6 +39,8 @@
   "dependencies": {
     "@k2works/claude-code-booster": "^5.1.0",
     "dotenv": "^17.2.3",
-    "gulp": "^5.0.0"
+    "gulp": "^5.0.0",
+    "marked": "^18.0.11",
+    "plantuml-encoder": "^1.4.0"
   }
 }
