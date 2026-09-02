@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: axonserver
+spec:
+  serviceName: axonserver
+  replicas: 1
+  selector:
+    matchLabels: { app: axonserver }
+  template:
+    metadata:
+      labels: { app: axonserver }
+    spec:
+      containers:
+        - name: axonserver
+          image: axoniq/axonserver:2026.0.4
+          env:
+            # DCB を有効にする。無効だと接続が確立せず（実測は AXONIQ-1302）、
+            # 業務サービスは起動を止めないまま無限再接続する（IT1 スパイク）。
+            - { name: AXONIQ_AXONSERVER_STANDALONE_DCB, value: "true" }
+            - { name: AXONIQ_AXONSERVER_DEVMODE_ENABLED, value: "true" }
+          ports:
+            - { name: http, containerPort: 8024 }
+            - { name: grpc, containerPort: 8124 }
+          volumeMounts:
+            - { name: events, mountPath: /axonserver/events }
+          readinessProbe:
+            httpGet: { path: /actuator/health, port: http }
+            initialDelaySeconds: 20
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /actuator/health, port: http }
+            initialDelaySeconds: 60
+            periodSeconds: 20
+  volumeClaimTemplates:
+    - metadata: { name: events }
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources: { requests: { storage: 5Gi } }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: axonserver
+spec:
+  selector: { app: axonserver }
+  ports:
+    - { name: http, port: 8024, targetPort: http }
+    - { name: grpc, port: 8124, targetPort: grpc }

@@ -1,0 +1,338 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gatewayms
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: gatewayms }
+  template:
+    metadata:
+      labels: { app: gatewayms }
+    spec:
+      containers:
+        - name: gatewayms
+          image: cargo-tracker/gatewayms:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - { name: SERVER_PORT, value: "8080" }
+            - { name: AXON_SERVER, value: "axonserver:8124" }
+            - name: CARGO_TRACKER_JWT_SECRET
+              valueFrom:
+                secretKeyRef: { name: cargo-tracker-jwt, key: secret }
+            - { name: AUTHMS_URI, value: "http://authms:8081" }
+            - { name: BOOKINGMS_URI, value: "http://bookingms:8082" }
+            - { name: ROUTINGMS_URI, value: "http://routingms:8083" }
+            - { name: TRACKINGMS_URI, value: "http://trackingms:8084" }
+            - { name: HANDLINGMS_URI, value: "http://handlingms:8085" }
+            - { name: BILLINGMS_URI, value: "http://billingms:8086" }
+          ports:
+            - { name: http, containerPort: 8080 }
+          # ヘルスチェックは認証を求めない経路に置く。守ると 401 で再起動ループに入る。
+          readinessProbe:
+            httpGet: { path: /actuator/health, port: http }
+            initialDelaySeconds: 30
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /actuator/health, port: http }
+            # 起動時に Axon Server への接続を検査するので、起動は遅い。
+            # 短くすると、検査が終わる前に殺されて上がらなくなる。
+            initialDelaySeconds: 120
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gatewayms
+spec:
+  selector: { app: gatewayms }
+  ports:
+    - { port: 8080, targetPort: http }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: authms
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: authms }
+  template:
+    metadata:
+      labels: { app: authms }
+    spec:
+      containers:
+        - name: authms
+          image: cargo-tracker/authms:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - { name: SERVER_PORT, value: "8081" }
+            - { name: AXON_SERVER, value: "axonserver:8124" }
+            - name: CARGO_TRACKER_JWT_SECRET
+              valueFrom:
+                secretKeyRef: { name: cargo-tracker-jwt, key: secret }
+            - { name: DB_URL, value: "jdbc:postgresql://postgres:5432/auth_db" }
+            - { name: DB_USER, value: "authms" }
+            - { name: DB_PASSWORD, value: "authms" }
+          ports:
+            - { name: http, containerPort: 8081 }
+          # ヘルスチェックは認証を求めない経路に置く。守ると 401 で再起動ループに入る。
+          readinessProbe:
+            httpGet: { path: /actuator/health, port: http }
+            initialDelaySeconds: 30
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /actuator/health, port: http }
+            # 起動時に Axon Server への接続を検査するので、起動は遅い。
+            # 短くすると、検査が終わる前に殺されて上がらなくなる。
+            initialDelaySeconds: 120
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: authms
+spec:
+  selector: { app: authms }
+  ports:
+    - { port: 8081, targetPort: http }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookingms
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: bookingms }
+  template:
+    metadata:
+      labels: { app: bookingms }
+    spec:
+      containers:
+        - name: bookingms
+          image: cargo-tracker/bookingms:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - { name: SERVER_PORT, value: "8082" }
+            - { name: AXON_SERVER, value: "axonserver:8124" }
+            - name: CARGO_TRACKER_JWT_SECRET
+              valueFrom:
+                secretKeyRef: { name: cargo-tracker-jwt, key: secret }
+            - { name: DB_URL, value: "jdbc:postgresql://postgres:5432/booking_read_db" }
+            - { name: DB_USER, value: "bookingms" }
+            - { name: DB_PASSWORD, value: "bookingms" }
+          ports:
+            - { name: http, containerPort: 8082 }
+          # ヘルスチェックは認証を求めない経路に置く。守ると 401 で再起動ループに入る。
+          readinessProbe:
+            httpGet: { path: /actuator/health, port: http }
+            initialDelaySeconds: 30
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /actuator/health, port: http }
+            # 起動時に Axon Server への接続を検査するので、起動は遅い。
+            # 短くすると、検査が終わる前に殺されて上がらなくなる。
+            initialDelaySeconds: 120
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookingms
+spec:
+  selector: { app: bookingms }
+  ports:
+    - { port: 8082, targetPort: http }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: routingms
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: routingms }
+  template:
+    metadata:
+      labels: { app: routingms }
+    spec:
+      containers:
+        - name: routingms
+          image: cargo-tracker/routingms:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - { name: SERVER_PORT, value: "8083" }
+            - { name: AXON_SERVER, value: "axonserver:8124" }
+            - name: CARGO_TRACKER_JWT_SECRET
+              valueFrom:
+                secretKeyRef: { name: cargo-tracker-jwt, key: secret }
+            - { name: DB_URL, value: "jdbc:postgresql://postgres:5432/routing_read_db" }
+            - { name: DB_USER, value: "routingms" }
+            - { name: DB_PASSWORD, value: "routingms" }
+          ports:
+            - { name: http, containerPort: 8083 }
+          # ヘルスチェックは認証を求めない経路に置く。守ると 401 で再起動ループに入る。
+          readinessProbe:
+            httpGet: { path: /actuator/health, port: http }
+            initialDelaySeconds: 30
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /actuator/health, port: http }
+            # 起動時に Axon Server への接続を検査するので、起動は遅い。
+            # 短くすると、検査が終わる前に殺されて上がらなくなる。
+            initialDelaySeconds: 120
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: routingms
+spec:
+  selector: { app: routingms }
+  ports:
+    - { port: 8083, targetPort: http }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trackingms
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: trackingms }
+  template:
+    metadata:
+      labels: { app: trackingms }
+    spec:
+      containers:
+        - name: trackingms
+          image: cargo-tracker/trackingms:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - { name: SERVER_PORT, value: "8084" }
+            - { name: AXON_SERVER, value: "axonserver:8124" }
+            - name: CARGO_TRACKER_JWT_SECRET
+              valueFrom:
+                secretKeyRef: { name: cargo-tracker-jwt, key: secret }
+            - { name: DB_URL, value: "jdbc:postgresql://postgres:5432/tracking_read_db" }
+            - { name: DB_USER, value: "trackingms" }
+            - { name: DB_PASSWORD, value: "trackingms" }
+          ports:
+            - { name: http, containerPort: 8084 }
+          # ヘルスチェックは認証を求めない経路に置く。守ると 401 で再起動ループに入る。
+          readinessProbe:
+            httpGet: { path: /actuator/health, port: http }
+            initialDelaySeconds: 30
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /actuator/health, port: http }
+            # 起動時に Axon Server への接続を検査するので、起動は遅い。
+            # 短くすると、検査が終わる前に殺されて上がらなくなる。
+            initialDelaySeconds: 120
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: trackingms
+spec:
+  selector: { app: trackingms }
+  ports:
+    - { port: 8084, targetPort: http }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: handlingms
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: handlingms }
+  template:
+    metadata:
+      labels: { app: handlingms }
+    spec:
+      containers:
+        - name: handlingms
+          image: cargo-tracker/handlingms:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - { name: SERVER_PORT, value: "8085" }
+            - { name: AXON_SERVER, value: "axonserver:8124" }
+            - name: CARGO_TRACKER_JWT_SECRET
+              valueFrom:
+                secretKeyRef: { name: cargo-tracker-jwt, key: secret }
+            - { name: DB_URL, value: "jdbc:postgresql://postgres:5432/handling_read_db" }
+            - { name: DB_USER, value: "handlingms" }
+            - { name: DB_PASSWORD, value: "handlingms" }
+          ports:
+            - { name: http, containerPort: 8085 }
+          # ヘルスチェックは認証を求めない経路に置く。守ると 401 で再起動ループに入る。
+          readinessProbe:
+            httpGet: { path: /actuator/health, port: http }
+            initialDelaySeconds: 30
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /actuator/health, port: http }
+            # 起動時に Axon Server への接続を検査するので、起動は遅い。
+            # 短くすると、検査が終わる前に殺されて上がらなくなる。
+            initialDelaySeconds: 120
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: handlingms
+spec:
+  selector: { app: handlingms }
+  ports:
+    - { port: 8085, targetPort: http }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: billingms
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: billingms }
+  template:
+    metadata:
+      labels: { app: billingms }
+    spec:
+      containers:
+        - name: billingms
+          image: cargo-tracker/billingms:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - { name: SERVER_PORT, value: "8086" }
+            - { name: AXON_SERVER, value: "axonserver:8124" }
+            - name: CARGO_TRACKER_JWT_SECRET
+              valueFrom:
+                secretKeyRef: { name: cargo-tracker-jwt, key: secret }
+            - { name: DB_URL, value: "jdbc:postgresql://postgres:5432/billing_read_db" }
+            - { name: DB_USER, value: "billingms" }
+            - { name: DB_PASSWORD, value: "billingms" }
+          ports:
+            - { name: http, containerPort: 8086 }
+          # ヘルスチェックは認証を求めない経路に置く。守ると 401 で再起動ループに入る。
+          readinessProbe:
+            httpGet: { path: /actuator/health, port: http }
+            initialDelaySeconds: 30
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /actuator/health, port: http }
+            # 起動時に Axon Server への接続を検査するので、起動は遅い。
+            # 短くすると、検査が終わる前に殺されて上がらなくなる。
+            initialDelaySeconds: 120
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: billingms
+spec:
+  selector: { app: billingms }
+  ports:
+    - { port: 8086, targetPort: http }

@@ -30,7 +30,9 @@ services:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - ./ops/postgres/init-databases.sql:/docker-entrypoint-initdb.d/10-init-databases.sql:ro
+      # DB とユーザーの定義は 1 か所（ops/k8s/base/postgres）に置く。compose と
+      # Kustomize で別々に持つと、片方だけ直したときに環境で食い違う。
+      - ../../ops/k8s/base/postgres/init-databases.sql:/docker-entrypoint-initdb.d/10-init-databases.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s

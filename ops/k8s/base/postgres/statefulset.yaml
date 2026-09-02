@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels: { app: postgres }
+  template:
+    metadata:
+      labels: { app: postgres }
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: postgres-credentials, key: password }
+            # 業務タイムゾーンは Asia/Tokyo。UTC で判断すると、時差の分だけ
+            # 「当日」の受付が拒否される時間帯ができる。
+            - { name: TZ, value: Asia/Tokyo }
+          ports:
+            - { name: postgres, containerPort: 5432 }
+          volumeMounts:
+            - { name: data, mountPath: /var/lib/postgresql/data }
+            - { name: init, mountPath: /docker-entrypoint-initdb.d }
+          readinessProbe:
+            exec: { command: ["pg_isready", "-U", "postgres"] }
+            initialDelaySeconds: 10
+            periodSeconds: 5
+      volumes:
+        - name: init
+          configMap: { name: postgres-init }
+  volumeClaimTemplates:
+    - metadata: { name: data }
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources: { requests: { storage: 5Gi } }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+spec:
+  selector: { app: postgres }
+  ports:
+    - { port: 5432, targetPort: postgres }

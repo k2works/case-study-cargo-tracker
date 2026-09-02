@@ -35,7 +35,56 @@ function tryFetch(url) {
   }
 }
 
+/** kind クラスタ名と名前空間。手順書と揃える。 */
+const KIND_CLUSTER = 'cargo-tracker';
+const NAMESPACE = 'cargo-tracker';
+const OVERLAY = 'ops/k8s/overlays/local';
+
 export default function (gulp) {
+  /** マニフェストを描画して構文と参照を確かめる（クラスタが無くても回せる）。 */
+  gulp.task('k8s:render', (done) => {
+    console.log(sh(`kubectl kustomize ${OVERLAY}`).split('\n').length + ' 行を描画しました');
+    done();
+  });
+
+  /** kind クラスタを作る。既にあれば作り直さない。 */
+  gulp.task('k8s:up', (done) => {
+    const clusters = (() => {
+      try {
+        return sh('kind get clusters');
+      } catch {
+        return '';
+      }
+    })();
+    if (!clusters.split('\n').includes(KIND_CLUSTER)) {
+      console.log(sh(`kind create cluster --name ${KIND_CLUSTER}`, { stdio: 'inherit' }) ?? '');
+    }
+    console.log(sh(`kubectl --context kind-${KIND_CLUSTER} apply -k ${OVERLAY}`));
+    done();
+  });
+
+  /**
+   * ビルドしたイメージを kind に載せる。
+   *
+   * タグを据え置いたまま載せ直しても Pod は作り直されないので、rollout restart まで踏む。
+   * ここを飛ばすと、古いイメージのまま「反映した」と思い込む。
+   */
+  gulp.task('k8s:load', (done) => {
+    const services = Object.keys(SERVICES);
+    for (const name of services) {
+      sh(`kind load docker-image cargo-tracker/${name}:latest --name ${KIND_CLUSTER}`);
+      sh(`kubectl --context kind-${KIND_CLUSTER} -n ${NAMESPACE} rollout restart deployment/${name}`);
+    }
+    console.log(`${services.length} サービスのイメージを載せ直しました`);
+    done();
+  });
+
+  /** kind クラスタを消す。取り消せないので名前を明示する。 */
+  gulp.task('k8s:down', (done) => {
+    console.log(sh(`kind delete cluster --name ${KIND_CLUSTER}`));
+    done();
+  });
+
   /**
    * 依存ミドルウェアとサービスの生死を 1 画面で見る。
    *
