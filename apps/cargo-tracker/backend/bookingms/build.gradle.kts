@@ -20,7 +20,7 @@ dependencies {
 dependencies {
     implementation(libs.spring.boot.starter.jdbc)
     implementation(libs.mybatis.spring.boot.starter)
-    implementation(libs.flyway.core)
+    implementation(libs.spring.boot.starter.flyway)
     implementation(libs.flyway.postgresql)
     runtimeOnly(libs.postgresql)
 

@@ -4,7 +4,7 @@ title: "データモデル設計 - 国際貨物輸送管理システム（CQRS /
 description: "CQRS / Event Sourcing 版 Cargo Tracker のデータモデル設計。Event Store は Axon Server に任せ、サービスごとの投影テーブル・Axon 管理テーブル・Auth の状態テーブルを ER 図とテーブル定義で示し、Processing Group との対応とリプレイ前提のマイグレーション方針を定める。"
 tags: [design,data-model,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-02T13:24:08Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-02T13:43:02Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -672,11 +672,11 @@ inv ||--o{ pay
 | `invoice_line_item` | 同上 | — | `item_type` は `BASE` / `DISCOUNT` / `ADJUSTMENT` / `CANCELLATION_FEE` / `TAX`。`basis_exception_id` は調整行の根拠になった例外 ID（任意。trackingms への論理参照）で、S61 から例外へリンクする |
 | `payment` | `PaymentRecordedEvent` | `INDEX(invoice_id)` | |
 | `shipper_contract_snapshot` | `ShipperRegisteredEvent`, `CorporateContractAssignedEvent`（いずれも契約）の購読 | — | billingms が bookingms に同期問い合わせをしないための ACL の読み取りモデル（`FindShipperForBillingQuery` は廃止）。荷主の最新の契約を写し、請求書作成時に `invoice.discount_rate` へ複写する。作成後に割引率が変わっても請求書は変わらない。`shipper_name` は crypto-shredding 後に `NULL`（ADR-0003） |
-| `attention_item` | `billing-projection` の拒否、`billing-reaction` のコマンド失敗、`BillingSaga` の補償 | `booking_read_db` と同じ | 定義は `booking_read_db` の `attention_item` と同一 |
+| `attention_item` | `billing-projection` の拒否、`billing-reaction` のコマンド失敗、補償 | `booking_read_db` と同じ | 定義は `booking_read_db` の `attention_item` と同一 |
 
 ### Axon 管理テーブル（各 Read Model DB 共通）
 
-各サービスの Flyway で作ります。列名は Axon 5 の `JdbcTokenStore` / `JdbcSagaStore` の既定に合わせ、`TokenSchema` / `SagaSchema` で明示します（take-4 ADR-0009）。
+各サービスの Flyway で作ります。列名は Axon 5 の `JdbcTokenStore` の既定に合わせ、`TokenSchema` で明示します（take-4 ADR-0009）。`JdbcSagaStore` は Axon 5 に存在しません（ADR-0001 決定 6）。
 
 ```plantuml
 @startuml

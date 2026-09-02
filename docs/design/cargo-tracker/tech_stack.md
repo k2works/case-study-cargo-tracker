@@ -4,7 +4,7 @@ title: "技術スタック - 国際貨物輸送管理システム（CQRS / Event
 description: "CQRS / Event Sourcing 版 Cargo Tracker の技術スタック一覧（調査時点 2026-09-02）。Java 25 / Spring Boot 4.1 / Axon Framework 5.1.0-RC2 / Axon Server 2026.0.4 / MyBatis / PostgreSQL 16 / React 19 と、IT1 スパイクの結果、採用しないもの、バージョン管理方針。"
 tags: [design,tech-stack,axon,spring-boot,react]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-02T13:24:08Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-02T13:43:02Z }
 stale_after: 2026-12-01T00:00:00Z
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
@@ -71,8 +71,8 @@ verified:
 | :--- | :--- | :--- | :--- | :--- |
 | PostgreSQL | 16 系 | 投影 DB × 5、`auth_db` | 2028-11 | 参照元と同じ。RDS で Multi-AZ |
 | MyBatis | 3.5 系 | 投影の書き込み・Query Handler の SQL | — | SQL を自分で持つ。JPA は採らない |
-| `mybatis-spring-boot-starter` | 3 系（Spring Boot 4 対応版） | Spring 統合 | — | |
-| Flyway | 11 系 | サービスごとのマイグレーション | — | `V<num>__<desc>.sql`。適用済みは編集しない |
+| `mybatis-spring-boot-starter` | **4.0.1** | Spring 統合 | — | Spring Boot 4 対応は 4 系。3.0.5 は Boot 3 向けで、Boot 4 では `DataSourceAutoConfiguration` のパッケージ移動に追随できず警告だけ出して黙る（IT1 タスク 1.3 で実測） |
+| Flyway | 11 系 | サービスごとのマイグレーション | — | `V<num>__<desc>.sql`。適用済みは編集しない。**Spring Boot 4 は自動設定をモジュールに分割したので `spring-boot-starter-flyway` を使う。`flyway-core` だけだと `FlywayAutoConfiguration` が classpath に無く、マイグレーションが無音で走らないまま起動が成功する**（IT1 タスク 1.3 で実測） |
 | HikariCP | Spring Boot 同梱 | 接続プール | — | |
 | Axon `JdbcTokenStore` | Axon 同梱 | Token の永続化（**`JdbcSagaStore` は Axon 5 に無い**） | — | 投影と同一 DataSource・同一トランザクション。**`TokenStore` Bean は自動設定されないので明示的に登録する**（無いと起動失敗。IT1 スパイク）。`TransactionManager` Bean は 1 つ、`token_entry.mask INTEGER NOT NULL` |
 | ~~H2~~ | 採らない | — | — | 方言差の検査は実 DB で行う。Testcontainers を使う |

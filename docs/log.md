@@ -2,6 +2,9 @@
 
 ## 2026-09-02
 * **Update**: [iteration_plan-1](/development/cargo-tracker/iteration_plan-1.md) を更新（claude-code/claude-opus-5）
+* **Update**: [tech_stack](/design/cargo-tracker/tech_stack.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-1](/development/cargo-tracker/iteration_plan-1.md) を更新（claude-code/claude-opus-5）
 * **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
 * **Update**: [test_strategy](/design/cargo-tracker/test_strategy.md) を更新（claude-code/claude-opus-5）
 * **Update**: [tech_stack](/design/cargo-tracker/tech_stack.md) を更新（claude-code/claude-opus-5）

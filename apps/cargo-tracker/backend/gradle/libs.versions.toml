@@ -17,7 +17,7 @@ spring-dependency-management = "1.1.7"
 # Axon 系はこの 1 つの ref だけを参照する（ArchUnit/ビルド検査で固定）
 axon = "5.1.0-RC2"
 
-mybatis-spring-boot = "3.0.5"
+mybatis-spring-boot = "4.0.1"
 flyway = "11.16.0"
 postgresql = "42.7.9"
 
@@ -46,7 +46,9 @@ axon-server-connector = { module = "org.axonframework:axon-server-connector", ve
 axon-test = { module = "org.axonframework:axon-test", version.ref = "axon" }
 
 mybatis-spring-boot-starter = { module = "org.mybatis.spring.boot:mybatis-spring-boot-starter", version.ref = "mybatis-spring-boot" }
-flyway-core = { module = "org.flywaydb:flyway-core", version.ref = "flyway" }
+# Spring Boot 4 は自動設定をモジュールに分割した。flyway-core だけを入れても
+# FlywayAutoConfiguration が classpath に無く、マイグレーションが「無音で走らない」。
+spring-boot-starter-flyway = { module = "org.springframework.boot:spring-boot-starter-flyway", version.ref = "spring-boot" }
 flyway-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flyway" }
 postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
 
