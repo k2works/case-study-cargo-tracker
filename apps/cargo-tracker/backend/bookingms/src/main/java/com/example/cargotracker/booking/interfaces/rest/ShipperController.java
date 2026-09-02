@@ -47,9 +47,11 @@ public class ShipperController {
             @Valid @RequestBody RegisterShipperRequest request) {
         Email email = new Email(request.email());
 
-        // 一意の三段の 1 段目。同時登録のレースでは素通りするので、
-        // 2 段目（投影の UNIQUE）と 3 段目（要確認一覧）が本当の砦。
-        if (Boolean.TRUE.equals(query(new ExistsShipperEmailQuery(email.value()), Boolean.class))) {
+        // 一意の三段の 1 段目。断定ではなく問いかけなので、利用者が「続ける」と
+        // 答えていれば通す。同時登録のレースでは素通りするため、2 段目（投影の
+        // UNIQUE）と 3 段目（要確認一覧）が本当の砦になる。
+        if (!request.duplicateAcknowledged()
+                && Boolean.TRUE.equals(query(new ExistsShipperEmailQuery(email.value()), Boolean.class))) {
             throw new DuplicateShipperEmailException(email.value());
         }
 

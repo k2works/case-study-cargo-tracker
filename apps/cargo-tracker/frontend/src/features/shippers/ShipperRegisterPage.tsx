@@ -10,6 +10,9 @@ type ShipperType = 'INDIVIDUAL' | 'CORPORATE';
 export function ShipperRegisterPage() {
   const [shipperType, setShipperType] = useState<ShipperType>('INDIVIDUAL');
   const [error, setError] = useState<string | null>(null);
+  // 重複は断らずに問いかける。営業が同名・同メールで登録したい事情もあるので、
+  // 「続ける」を選べるようにする（一意性の最後の砦は投影と要確認一覧）。
+  const [duplicateAsked, setDuplicateAsked] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -26,6 +29,7 @@ export function ShipperRegisterPage() {
         email: String(form.get('email') ?? ''),
         phone: String(form.get('phone') ?? ''),
         address: String(form.get('address') ?? ''),
+        acknowledgedDuplicate: duplicateAsked,
         contractNumber:
           shipperType === 'CORPORATE' ? String(form.get('contractNumber') ?? '') : undefined,
         discountRate:
@@ -35,9 +39,14 @@ export function ShipperRegisterPage() {
       await queryClient.invalidateQueries({ queryKey: ['shippers'] });
       navigate('/shippers', { state: { justRegistered: true } });
     } catch (e) {
-      setError(
-        e instanceof ApiError ? e.body.message : '登録できませんでした。もう一度お試しください',
-      );
+      if (e instanceof ApiError && e.body.code === 'SHIPPER_EMAIL_DUPLICATE') {
+        setDuplicateAsked(true);
+        setError(`${e.body.message}。同じ内容で続けるなら、もう一度「登録する」を押してください`);
+      } else {
+        setError(
+          e instanceof ApiError ? e.body.message : '登録できませんでした。もう一度お試しください',
+        );
+      }
     } finally {
       setSubmitting(false);
     }

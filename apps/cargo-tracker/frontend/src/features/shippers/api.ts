@@ -22,6 +22,8 @@ export interface RegisterShipperInput {
   readonly address?: string;
   readonly contractNumber?: string;
   readonly discountRate?: string;
+  /** 重複の問いかけに「続ける」と答えたか。省略は続行の意思なし。 */
+  readonly acknowledgedDuplicate?: boolean;
 }
 
 export function fetchShippers(): Promise<Pending<{ items: ShipperView[] }>> {

@@ -122,6 +122,31 @@ describe('S11 荷主登録', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('既に登録されています');
   });
 
+  it('重複のあとにもう一度押すと続行の意思を送る', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ code: 'SHIPPER_EMAIL_DUPLICATE', message: '既に登録されています' }),
+          { status: 409 },
+        ),
+      )
+      .mockResolvedValueOnce(new Response(JSON.stringify({ shipperId: 'x' }), { status: 201 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    withQuery(<ShipperRegisterPage />);
+    await userEvent.type(screen.getByLabelText('名称'), '山田商事');
+    await userEvent.type(screen.getByLabelText('メールアドレス'), 'c@example.com');
+    await userEvent.click(screen.getByRole('button', { name: '登録する' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('もう一度');
+
+    await userEvent.click(screen.getByRole('button', { name: '登録する' }));
+
+    const secondCall = fetchMock.mock.calls[1];
+    const secondBody = JSON.parse(String((secondCall?.[1] as RequestInit).body));
+    expect(secondBody.acknowledgedDuplicate).toBe(true);
+  });
+
   it('成功すると一覧へ移る', async () => {
     respond(201, { shipperId: 'new-id' });
 

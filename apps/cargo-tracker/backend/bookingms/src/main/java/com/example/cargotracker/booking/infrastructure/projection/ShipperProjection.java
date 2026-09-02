@@ -1,12 +1,10 @@
 package com.example.cargotracker.booking.infrastructure.projection;
 
-import com.example.cargotracker.booking.infrastructure.persistence.AttentionItemMapper;
 import com.example.cargotracker.booking.infrastructure.persistence.ShipperMapper;
 import com.example.cargotracker.shared.contract.event.ShipperRegisteredEvent;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
-import java.util.UUID;
 import org.axonframework.messaging.eventhandling.annotation.EventHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,10 +29,10 @@ public class ShipperProjection {
     private static final Logger log = LoggerFactory.getLogger(ShipperProjection.class);
 
     private final ShipperMapper shippers;
-    private final AttentionItemMapper attentionItems;
+    private final AttentionItemRecorder attentionItems;
     private final Clock clock;
 
-    public ShipperProjection(ShipperMapper shippers, AttentionItemMapper attentionItems,
+    public ShipperProjection(ShipperMapper shippers, AttentionItemRecorder attentionItems,
             Clock clock) {
         this.shippers = shippers;
         this.attentionItems = attentionItems;
@@ -81,17 +79,10 @@ public class ShipperProjection {
 
     private void recordAttention(String shipperId, String email, Instant occurredAt) {
         log.warn("荷主の投影を一意制約で弾いた: shipperId={}", shipperId);
-        attentionItems.insert(new AttentionItemMapper.AttentionItemRow(
-                UUID.randomUUID().toString(),
-                "PROJECTION_REJECTED",
-                "SHIPPER",
-                shipperId,
-                "ROLE_SALES",
-                "メールアドレスの重複",
-                "{\"email\":" + jsonString(email) + "}",
-                occurredAt,
-                null,
-                null));
+        // 別トランザクションで書く。弾かれた直後の接続は中断状態で、同じ
+        // トランザクションでは書き込めない。
+        attentionItems.record("PROJECTION_REJECTED", "SHIPPER", shipperId, "ROLE_SALES",
+                "メールアドレスの重複", "{\"email\":" + jsonString(email) + "}", occurredAt);
     }
 
     private static String jsonString(String value) {

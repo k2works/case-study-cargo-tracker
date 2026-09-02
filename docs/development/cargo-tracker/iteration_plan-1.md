@@ -4,7 +4,7 @@ title: "イテレーション計画 1 - 基盤・認証・荷主登録"
 description: "IT1 の計画。Axon 5 のスパイク 7 項目・ビルドと kind 環境・品質ゲートの実配線・フロント基盤と全ルートのスケルトン・US26/US27/US02（荷主登録の縦切りと crypto-shredding）。デモ項目 7 件。"
 tags: [plan,iteration,cargo-tracker]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-02T16:06:21Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-02T16:30:12Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T12:47:29Z }
 ---
@@ -119,7 +119,7 @@ US02 は縦切りの本体です。認証（US26）と基盤が通ってから�
 | 2.3 | JaCoCo のレイヤー別閾値（domain 90 / application 85 / infrastructure 70 / interfaces 60 / 全体 80）を `check` に紐付け | 2h | [x] |
 | 2.4 | Testcontainers の基底クラス（Axon Server + PostgreSQL、DCB 有効） | 3h | [x] |
 | 2.5 | 契約のゴールデン JSON の型（丸ごと一致 + 往復を分ける）と `contract-tests` サブプロジェクト | 3h | [ ] |
-| 2.6 | **受け入れテスト基盤（Cucumber + `acceptance-tests` サブプロジェクト）**。`# language: ja` の Gherkin、Testcontainers（Axon Server（DCB）+ PostgreSQL）、`Awaitility` に閉じた「N 秒以内に」共通ステップ。**デモ項目 #3 の Feature を Day 2 に「赤で置く」** | 4h | [ ] |
+| 2.6 | **受け入れテスト基盤（Cucumber + `acceptance-tests` サブプロジェクト）**。`# language: ja` の Gherkin、Testcontainers（Axon Server（DCB）+ PostgreSQL）、`Awaitility` に閉じた「N 秒以内に」共通ステップ。**デモ項目 #3 の Feature を Day 2 に「赤で置く」** | 4h | [x] デモ項目 3・4 の Feature が緑 |
 | 2.7 | **E2E 基盤（Playwright）と到達性スモーク 1 本を Day 2 に「赤で置く」** | 3h | [ ] |
 | 2.8 | CI（`./gradlew build`・`TZ=UTC ./gradlew test`・`:acceptance-tests:test`・フロント・E2E・`gulp okf:check`） | 3h | [ ] |
 | | 小計 | 27h | |
