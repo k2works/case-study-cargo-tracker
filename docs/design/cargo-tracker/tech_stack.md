@@ -99,7 +99,10 @@ verified:
 | REST Assured | 5 系 | 受け入れテストのステップ定義から Gateway 経由の REST を叩く |
 | ArchUnit | 1.4 以上 | レイヤー・共有カーネル・契約の名簿 |
 | JaCoCo | Gradle プラグイン | レイヤー別カバレッジ閾値 |
-| SpotBugs | Gradle プラグイン | `./gradlew build` に含める |
+| Checkstyle | 10.21.4 | コーディング規約。`ignoreFailures = false` / `maxWarnings = 0` で指摘がビルドを止める |
+| SpotBugs | プラグイン 6.1.9 / ツール **4.9.8** | バグパターン。ツール版は Java 25（クラスファイル 69）を読める版であること。古い版は全クラスの解析に失敗し、**指摘が 1 件も無いように見える** |
+| JIG | 2026.7.4 | バイトコードからの設計ドキュメント生成（`jigReports`）。`docs/design` との乖離を生成物として検出する |
+| jig-erd | 0.2.2 | Flyway が構築した実スキーマからの ER 図生成（`jigErd`）。Docker と Graphviz が要る |
 | ~~Spring Cloud Contract~~ | 採らない | 契約はゴールデン JSON と Axon Server 経由の往復で守る |
 | ~~WireMock~~ | 採らない | REST の外部連携が無い |
 
