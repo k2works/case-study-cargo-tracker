@@ -10,10 +10,10 @@ const SRC_DIR = path.join(process.cwd(), 'docs', 'manual');
 /**
  * 変換先（静的マニュアルサイト）.
  *
- * ドキュメントポータル（`apps/www`）の配下に出す。ポータルはこの
+ * ドキュメントポータル（`apps/cargo-tracker/www`）の配下に出す。ポータルはこの
  * ディレクトリごとイメージに焼くので、離すと「リンクはあるが 404」になる。
  */
-const OUT_DIR = path.join(process.cwd(), 'apps', 'www', 'manual');
+const OUT_DIR = path.join(process.cwd(), 'apps', 'cargo-tracker', 'www', 'manual');
 /** PlantUML レンダリングサーバ（mkdocs と同じ既定値）. */
 const PLANTUML_SERVER = (
   process.env.PLANTUML_SERVER_URL || 'http://www.plantuml.com/plantuml'
@@ -151,7 +151,7 @@ body { margin: 0; color: var(--fg); font-family: -apple-system, "Segoe UI", "Hir
 `;
 
 /**
- * docs/manual の Markdown を HTML へ変換し apps/www/manual へ出力する Gulp タスクを登録する.
+ * docs/manual の Markdown を HTML へ変換し apps/cargo-tracker/www/manual へ出力する Gulp タスクを登録する.
  * @param {import('gulp').Gulp} gulp Gulp インスタンス
  */
 export default function (gulp) {

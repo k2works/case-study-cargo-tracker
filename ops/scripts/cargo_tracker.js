@@ -56,7 +56,7 @@ const FRONTEND = { name: 'frontend', dir: 'frontend' };
  * ドキュメントポータル。ビルド工程を持たず、生成済みの静的ファイルを配るだけ。
  * apps/cargo-tracker の外に置いてあるので COMPOSE_DIR を使わない。
  */
-const PORTAL = { name: 'www', dir: 'apps/www' };
+const PORTAL = { name: 'www', dir: 'apps/cargo-tracker/www' };
 
 /** k8s:open が転送する先。クラスタに Ingress が無いので、ホストからはここだけが見える。 */
 const GATEWAY_PORT = 8080;
