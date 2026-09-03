@@ -29,6 +29,10 @@ npm-debug.log*
 # Coverage
 coverage/
 
+# 荷主ごとの暗号鍵（ADR-0003）。ローカル・CI のファイル置き場で、テストを回すと生える。
+# 鍵はコミットしない。
+.keys/
+
 # Temporary
 tmp/
 .tmp/

@@ -115,7 +115,8 @@ public final class CargoTrackerArchRules {
                         "com.example.cargotracker.shared.infrastructure.security..",
                         "com.example.cargotracker.shared.archunit..",
                         "com.example.cargotracker.shared.testing..",
-                        "com.example.cargotracker.shared.conventions..")
+                        "com.example.cargotracker.shared.conventions..",
+                        "com.example.cargotracker.shared.docs..")
                 .because("共有カーネルが太ると、変更のたびに全サービスを巻き込む。"
                         + "置き場を増やすなら ADR-0001 のコンプライアンス欄も同じ変更で直す");
     }

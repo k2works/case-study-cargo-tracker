@@ -247,6 +247,7 @@ auth ..> shared
 | `Location` / `UnLocode` | 全 BC が同じ意味で使う唯一の値オブジェクト |
 | `AuthenticatedUser` / `Role` と JWT 検証フィルタ | 認証契約。java-3 と同じ |
 | **サービス間イベント契約**（`TrackingNumberIssuedEvent` など、他サービスが購読するイベントの `record`） | Axon はペイロードの型名で復元する。両側が同じクラスを持たないと購読側で読めない。take-4 ADR-0014 と同じ判断 |
+| **テストフィクスチャ**（ArchUnit の規則集、統合テストの基底、ER 図の生成器） | 全サービスに同じ規則と同じ土台を配る。サービスごとに書くと、書き忘れたサービスだけ無検査になる |
 | 置かないもの | `VoyageNumber` / `BookingId` などの識別子、サービス内で閉じるイベント、集約、ドメインサービス |
 
 共有カーネルの範囲は ArchUnit（java-3 `SharedKernelScopeTest` 相当）で固定します。「サービス内で閉じるイベント」が後から他サービスに購読されるときは、`shared` に**移すのではなくコピーして契約にし**、元のイベントは Upcaster で契約型へ変換します。移すと既存の Event Store 上の型名と食い違うためです。

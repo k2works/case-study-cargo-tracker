@@ -26,6 +26,11 @@ dependencies {
     testFixturesApi(libs.testcontainers.postgresql)
     testFixturesApi(libs.spring.boot.starter.test)
     testFixturesApi(libs.awaitility)
+    // jig-erd（実スキーマからの ER 図生成）。SchemaErdGenerator が使う。
+    testFixturesApi(libs.jig.erd)
+    testFixturesApi(libs.flyway.core)
+    testFixturesApi(libs.flyway.postgresql)
+    testFixturesApi(libs.postgresql)
 
     // 違反フィクスチャは実コードと同じ形で書く。そのために Spring / MyBatis / Axon を
     // テスト側にも入れる。最小の違反例だけだと、ここが緑でも実コードの違反を見逃す。
