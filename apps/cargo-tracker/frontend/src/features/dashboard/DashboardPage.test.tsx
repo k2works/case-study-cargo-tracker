@@ -1,39 +1,60 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { DashboardPage } from './DashboardPage';
 import { useAuthStore } from '@/shared/auth/authStore';
 import type { Role } from '@/shared/auth/roles';
-import { DashboardPage } from './DashboardPage';
 
 function renderAs(roles: readonly Role[]) {
-  useAuthStore.setState({ user: { username: 'u', roles: [...roles], token: 't' } });
+  useAuthStore.setState({ user: { username: 'u', roles, token: 't' } });
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <MemoryRouter>
-      <DashboardPage />
-    </MemoryRouter>,
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <DashboardPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 
 beforeEach(() => {
-  sessionStorage.clear();
-  useAuthStore.setState({ user: null });
+  vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    new Response(JSON.stringify({ preliminary: 3 }), { status: 200 }),
+  );
 });
+afterEach(() => vi.restoreAllMocks());
 
 describe('S02 ダッシュボード', () => {
-  it('そのロールで開ける画面を「今日の作業」に並べる', () => {
-    renderAs(['ROLE_SALES']);
+  it('経路設計には引き渡し待ちの件数と、そこから行ける導線を出す', async () => {
+    // US04 §受入基準 5 の通知は送信基盤がスコープ外。経路設計者はここで気づく。
+    // 件数を出すだけでは仕事が進まないので、対象へ行けることまで確かめる。
+    renderAs(['ROLE_ROUTING']);
 
-    expect(screen.getByRole('link', { name: '荷主一覧' })).toHaveAttribute('href', '/shippers');
-    expect(screen.getByRole('link', { name: '荷主登録' })).toBeInTheDocument();
-    // ダッシュボード自身は入口に並べない。今いる画面へのリンクは仕事を進めない。
-    expect(screen.queryByRole('link', { name: 'ダッシュボード' })).not.toBeInTheDocument();
+    const notice = await screen.findByText(/引き渡し待ちの予約が 3 件/);
+    // 知らせの中から直接行けること。「今日の作業」の一覧にもリンクはあるが、
+    // 件数を読んだその場から行けなければ、気づきが次の行動に繋がらない。
+    const link = within(notice.closest('output') as HTMLElement)
+      .getByRole('link', { name: '予約一覧' });
+    expect(link).toHaveAttribute('href', '/bookings');
   });
 
-  it('入口が無いロールには理由を出す', () => {
-    // 空の一覧を黙って出すと「読み込みに失敗した」と受け取られる。
-    renderAs(['ROLE_HANDLER']);
+  it('0 件のときは知らせない', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ preliminary: 0 }), { status: 200 }),
+    );
 
-    expect(screen.getByText(/次のイテレーションから増えていきます/)).toBeInTheDocument();
-    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    renderAs(['ROLE_ROUTING']);
+    await screen.findByRole('heading', { name: '今日の作業' });
+
+    // 0 件を強調すると、毎朝「0 件」を読み飛ばす習慣がついて、件数が出た日も見落とす。
+    expect(screen.queryByText(/引き渡し待ちの予約が/)).not.toBeInTheDocument();
+  });
+
+  it('経路設計以外には出さない', async () => {
+    renderAs(['ROLE_SALES']);
+    await screen.findByRole('heading', { name: '今日の作業' });
+
+    expect(screen.queryByText(/引き渡し待ちの予約が/)).not.toBeInTheDocument();
   });
 });

@@ -11,6 +11,9 @@ import { ShipperListPage } from '@/features/shippers/ShipperListPage';
 import { ShipperRegisterPage } from '@/features/shippers/ShipperRegisterPage';
 import { AttentionListPage } from '@/features/attention/AttentionListPage';
 import { AdminUserListPage } from '@/features/admin/AdminUserListPage';
+import { BookingListPage } from '@/features/bookings/BookingListPage';
+import { BookingRegisterPage } from '@/features/bookings/BookingRegisterPage';
+import { BookingDetailPage } from '@/features/bookings/BookingDetailPage';
 
 /**
  * ルートと画面の対応。
@@ -22,6 +25,8 @@ const PAGES: Record<string, ReactElement> = {
   '/': <DashboardPage />,
   '/shippers': <ShipperListPage />,
   '/shippers/new': <ShipperRegisterPage />,
+  '/bookings': <BookingListPage />,
+  '/bookings/new': <BookingRegisterPage />,
   '/worklist/attention': <AttentionListPage />,
   '/admin/users': <AdminUserListPage />,
 };
@@ -36,6 +41,16 @@ export function AppRoutes() {
       <Route path="/track" element={<PublicTrackingPage />} />
       <Route path="/track/:trackingNumber" element={<PublicTrackingPage />} />
       <Route element={<AppLayout />}>
+        {/* 一覧から開く画面はナビに載せない。載せると「予約詳細」という
+            行き先の無い項目がサイドナビに出る。到達性は一覧のリンクで担保する。 */}
+        <Route
+          path="/bookings/:bookingId"
+          element={
+            <RequireRole allow={['ROLE_SALES', 'ROLE_ROUTING', 'ROLE_TRACKER']}>
+              <BookingDetailPage />
+            </RequireRole>
+          }
+        />
         {NAVIGATION.map((item) => (
           <Route
             key={item.path}

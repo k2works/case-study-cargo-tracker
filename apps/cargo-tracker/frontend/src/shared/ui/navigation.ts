@@ -17,6 +17,8 @@ export const NAVIGATION: readonly NavigationItem[] = [
   { path: '/', label: 'ダッシュボード', allow: ['ROLE_SHIPPER', 'ROLE_SALES', 'ROLE_ROUTING', 'ROLE_TRACKER', 'ROLE_HANDLER', 'ROLE_ACCOUNTANT', 'ROLE_ADMIN'] },
   { path: '/shippers', label: '荷主一覧', allow: ['ROLE_SALES', 'ROLE_ACCOUNTANT'] },
   { path: '/shippers/new', label: '荷主登録', allow: ['ROLE_SALES'] },
+  { path: '/bookings', label: '予約一覧', allow: ['ROLE_SALES', 'ROLE_ROUTING', 'ROLE_TRACKER'] },
+  { path: '/bookings/new', label: '予約登録', allow: ['ROLE_SALES'] },
   { path: '/worklist/attention', label: '要確認一覧', allow: ['ROLE_SALES', 'ROLE_ACCOUNTANT', 'ROLE_TRACKER'] },
   { path: '/admin/users', label: '利用者管理', allow: ['ROLE_ADMIN'] },
 ];
