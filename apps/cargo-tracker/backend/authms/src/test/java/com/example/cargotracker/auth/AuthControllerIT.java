@@ -2,6 +2,7 @@ package com.example.cargotracker.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.cargotracker.auth.infrastructure.config.DemoUserSeedConfiguration;
 import com.example.cargotracker.shared.testing.AbstractAxonIntegrationTest;
 import java.time.OffsetDateTime;
 import java.util.LinkedHashMap;
@@ -40,6 +41,9 @@ class AuthControllerIT extends AbstractAxonIntegrationTest {
     private DataSource dataSource;
 
     @Autowired
+    private org.springframework.context.ApplicationContext context;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     private final RestClient rest = RestClient.builder()
@@ -47,6 +51,15 @@ class AuthControllerIT extends AbstractAxonIntegrationTest {
             .build();
 
     private JdbcTemplate jdbc;
+
+    @Test
+    @DisplayName("動作確認用の利用者は既定では読み込まない")
+    void doesNotSeedDemoUsersByDefault() {
+        // 既定を安全側に倒していることを、設定ファイルの字面ではなく実際の
+        // コンテキストで確かめる。パスワードが分かっている利用者が業務環境に
+        // 入る経路は、書き忘れでは開かない（ADR-0004 決定 1）。
+        assertThat(context.getBeanNamesForType(DemoUserSeedConfiguration.class)).isEmpty();
+    }
 
     @BeforeEach
     void setUp() {

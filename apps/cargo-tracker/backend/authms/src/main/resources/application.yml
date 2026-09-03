@@ -15,6 +15,15 @@ spring:
     # Spring Boot の版を下げても回避できない。
     allow-circular-references: true
 
+cargo-tracker:
+  # 動作確認用の利用者を読み込むか（ADR-0004）。既定は無効。有効にすると
+  # classpath:db/seed が Flyway の場所に加わる（DemoUserSeedConfiguration）。
+  #
+  # 環境変数は名前を推測させず、ここで明示的に受ける。リラックスバインディングが
+  # どの環境変数名に対応するかは規則を知らないと読めず、外したときは
+  # 「既定のまま静かに無効」になって気づけない（実測: kind クラスタで空振りした）。
+  demo-users: ${CARGOTRACKER_DEMOUSERS:false}
+
 server:
   port: ${SERVER_PORT:8081}
 

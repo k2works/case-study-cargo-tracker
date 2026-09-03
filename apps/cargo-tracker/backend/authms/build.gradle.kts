@@ -32,3 +32,11 @@ dependencies {
     testImplementation(libs.testcontainers.postgresql)
     testImplementation(libs.awaitility)
 }
+
+// DemoAccountsMatchSeedTest は画面の一覧（TypeScript）とシードの SQL を読む。
+// 入力として宣言しないと Gradle が UP-TO-DATE と判断し、片方だけ直しても
+// 検査が走らない（空振りする）。
+tasks.named<Test>("test") {
+    inputs.file(rootProject.file("../frontend/src/features/auth/demoAccounts.ts"))
+    inputs.file(file("src/main/resources/db/seed/R__demo_users.sql"))
+}

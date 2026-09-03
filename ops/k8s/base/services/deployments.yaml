@@ -122,6 +122,10 @@ spec:
             - { name: DB_URL, value: "jdbc:postgresql://postgres:5432/auth_db" }
             - { name: DB_USER, value: "authms" }
             - { name: DB_PASSWORD, value: "authms" }
+            # 動作確認用の利用者を入れる（ADR-0004）。**ローカルの kind クラスタ限定**で、
+            # 既定は無効。この overlay は開発者の手元だけで動くもので、業務データは置かない。
+            # cargo-tracker.demo-users に対応する環境変数（ハイフンは落ちる）。
+            - { name: CARGOTRACKER_DEMOUSERS, value: "true" }
           ports:
             - { name: http, containerPort: 8081 }
           # ヘルスチェックは認証を求めない経路に置く。守ると 401 で再起動ループに入る。

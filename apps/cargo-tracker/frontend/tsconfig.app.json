@@ -11,7 +11,9 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
     "skipLibCheck": true,
-    "types": ["vitest/globals", "@testing-library/jest-dom"],
+    // vite/client は import.meta.env の型。types を明示しているので、書かないと
+    // ビルド時に注入される値が型の上では存在しないことになる。
+    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"],
     "noEmit": true,
     "baseUrl": ".",
     "paths": { "@/*": ["./src/*"] }

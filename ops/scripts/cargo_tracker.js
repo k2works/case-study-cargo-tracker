@@ -120,8 +120,13 @@ export default function (gulp) {
         { cwd: backend, stdio: 'inherit' });
     });
     // フロントはビルドコンテキストが自分のディレクトリなので、まとめて回さない。
+    //
+    // 動作確認用の利用者の事前入力（ADR-0004）はここで明示的に有効にする。
+    // SPA の設定はビルド時に焼き込まれ、実行時には取り消せない。Dockerfile 側の
+    // 既定は無効なので、渡し忘れた成果物は認証情報を持たない。
     console.log(`[${total}/${total}] cargo-tracker/${FRONTEND.name}:latest`);
-    sh(`docker build -t cargo-tracker/${FRONTEND.name}:latest .`,
+    sh(`docker build --build-arg VITE_DEMO_LOGIN_ENABLED=true `
+      + `-t cargo-tracker/${FRONTEND.name}:latest .`,
       { cwd: `${COMPOSE_DIR}/${FRONTEND.dir}`, stdio: 'inherit' });
     console.log(`${total} 個のイメージを作りました`);
     done();

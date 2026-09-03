@@ -77,14 +77,27 @@ const npmRun = (args) => run('npm', args, FRONTEND_DIR);
 export default function (gulp) {
   // --- バックエンド ---
 
+  /**
+   * 動作確認用の利用者を入れる（ADR-0004）。
+   *
+   * <p>dev:* タスクは定義からして開発環境である。ここで明示的に渡す一方、
+   * アプリケーション側の既定は無効のままにしてある。bootJar をそのまま
+   * 別の環境で起動しても、この利用者は入らない。</p>
+   *
+   * <p>環境変数ではなく起動引数で渡す。bootRun が起こす JVM は Gradle
+   * デーモンの環境を継ぐが、デーモンは呼び出しをまたいで生き残るので、
+   * 環境変数だと「最初に立てたときの値」が効いてしまう。</p>
+   */
+  const DEMO_USERS_ARG = '--args=--cargo-tracker.demo-users=true';
+
   gulp.task('dev:backend', (done) => {
-    gradle([`:${DEFAULT_SERVICE}:bootRun`]);
+    gradle([`:${DEFAULT_SERVICE}:bootRun`, DEMO_USERS_ARG]);
     done();
   });
 
   SERVICES.forEach((service) => {
     gulp.task(`dev:backend:${service}`, (done) => {
-      gradle([`:${service}:bootRun`]);
+      gradle([`:${service}:bootRun`, DEMO_USERS_ARG]);
       done();
     });
   });
