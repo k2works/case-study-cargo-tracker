@@ -4,7 +4,7 @@ title: "イテレーション計画 2 - 貨物予約・法人荷主・アカウ�
 description: "IT2 の計画。US31/US03/US04（9 SP）に加え、IT1 の持ち越し 5 件とレビュー指摘 10 件を先に枠へ入れる。状態遷移を持つ集約 Cargo を Event Sourcing で書き、IT2 終了時に ADR-0001 決定 2 の発動条件を判定する。デモ項目 8 件。"
 tags: [plan,iteration,cargo-tracker]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-03T11:45:46Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-03T12:31:44Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-03T11:47:28Z }
 ---
@@ -137,15 +137,16 @@ US03 は IT1 の `Shipper` 集約に契約情報を足すだけなので短く�
 
 #### 2. US03 法人荷主を登録する（2 SP）
 
+**着手時に分かったこと。** US03 のドメイン側は **IT1 で先に実装されていました**。`DiscountRate`（0.0000〜0.3000）・`CorporateContract`・`Shipper` の不変条件（`CORPORATE` は契約番号必須／`INDIVIDUAL` は法人契約を持てない）・S11 の法人フィールドの出し分け・投影の 2 列・受け入れシナリオの法人登録は、いずれも US02 の実装に含まれていました。**残っているのは受入基準 2（割引率 0〜30%）と 4（US22 から参照される）だけです。** 見積を 9h から 4h に改め、浮いた 5h は返済枠と US04 に回します。
+
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | :--: | :--: |
-| 2.1 | 受け入れの入口を赤で置く：`荷主の登録.feature` に法人のシナリオを足す（契約番号・割引率・0〜30%） | 1h | [ ] |
-| 2.2 | S11 の法人フィールドを**法人を選んだときだけ**出す（UI 設計 S11）。個人を選ぶと消える | 2h | [ ] |
-| 2.3 | `DiscountRate` 値オブジェクト（0.0000〜0.3000）と `Shipper` の不変条件（`CORPORATE` は `contractNumber` 必須、`INDIVIDUAL` は `corporateContract` を持てない） | 2h | [ ] |
-| 2.4 | `AssignCorporateContractCommand` / `CorporateContractAssignedEvent`（**契約イベント**。billingms が割引率を写す） | 2h | [ ] |
-| 2.5 | 投影：`shipper.contract_number` / `discount_rate` | 1h | [ ] |
-| 2.6 | 契約のゴールデン JSON を `CorporateContractAssignedEvent` に追加し、R.3 の往復に載せる | 1h | [ ] |
-| | 小計 | 9h | |
+| 2.1 | 受け入れの入口を赤で置く：`荷主の登録.feature` に **割引率 31% が断られる**シナリオを足す（受入基準 2。現状 REST 層・受け入れ層に検査が無い） | 1h | [ ] |
+| 2.2 | 割引率の範囲検査を REST の入口から集約まで通す。**壊して赤を見る**（Q.1） | 1h | [ ] |
+| 2.3 | **billingms が `ShipperRegisteredEvent`（契約イベント）を購読し `shipper_contract_snapshot` に写す**（受入基準 4「US22 で参照される」の実体。現状 billingms は購読していない） | 2h | [ ] |
+| | 小計 | 4h | |
+
+**`AssignCorporateContractCommand` は US03 の受入基準に無いので入れません。** [ドメインモデル](../../design/cargo-tracker/domain-model.md) では UC02 / US03・US22 に紐づいていますが、受入基準が求めるのは「法人として**登録**できること」であり、契約の後付け・変更は US22（IT13）の話です。読む側の無い配線を先に敷きません（[リリース計画](release_plan.md) の順序の根拠と同じ判断）。
 
 #### 3. US04 貨物予約を登録する（5 SP・状態を持つ集約の初回）
 
@@ -176,14 +177,14 @@ US03 は IT1 の `Shipper` 集約に契約情報を足すだけなので短く�
 
 | カテゴリ | SP | 理想時間 | 備考 |
 | :--- | :--: | :--: | :--- |
-| ユーザーストーリー（US31・US03・US04） | 9 | 58h | 1 SP ≒ 6.4h |
+| ユーザーストーリー（US31・US03・US04） | 9 | 53h | 1 SP ≒ 5.9h（US03 は IT1 で先行実装されていた分を差し引いた） |
 | スパイク（S） | — | 2h | IT1 からの持ち越し |
 | IT1 返済枠（R） | — | 26.5h | 「余力次第」にしない |
 | 検査の確認（Q） | — | 5h | ふりかえり T1 |
 | ユーザーマニュアル（4） | — | 7h | 画面を伴う IT では毎回計上 |
-| **合計** | **9** | **98.5h** | |
+| **合計** | **9** | **93.5h** | |
 
-**98.5h も 2 週間（10 営業日）に収まりません。** IT1 の 130h より軽くなりましたが、返済枠が 26.5h あります。落とす順序を先に決めます。
+**93.5h も 2 週間（10 営業日）に収まりません。** IT1 の 130h より軽くなりましたが、返済枠が 26.5h あります。落とす順序を先に決めます。
 
 #### スコープを落とす順序
 

@@ -18,6 +18,7 @@ export const NAVIGATION: readonly NavigationItem[] = [
   { path: '/shippers', label: '荷主一覧', allow: ['ROLE_SALES', 'ROLE_ACCOUNTANT'] },
   { path: '/shippers/new', label: '荷主登録', allow: ['ROLE_SALES'] },
   { path: '/worklist/attention', label: '要確認一覧', allow: ['ROLE_SALES', 'ROLE_ACCOUNTANT', 'ROLE_TRACKER'] },
+  { path: '/admin/users', label: '利用者管理', allow: ['ROLE_ADMIN'] },
 ];
 
 /**

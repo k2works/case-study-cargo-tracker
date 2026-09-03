@@ -10,6 +10,7 @@ import { NAVIGATION } from '@/shared/ui/navigation';
 import { ShipperListPage } from '@/features/shippers/ShipperListPage';
 import { ShipperRegisterPage } from '@/features/shippers/ShipperRegisterPage';
 import { AttentionListPage } from '@/features/attention/AttentionListPage';
+import { AdminUserListPage } from '@/features/admin/AdminUserListPage';
 
 /**
  * ルートと画面の対応。
@@ -22,6 +23,7 @@ const PAGES: Record<string, ReactElement> = {
   '/shippers': <ShipperListPage />,
   '/shippers/new': <ShipperRegisterPage />,
   '/worklist/attention': <AttentionListPage />,
+  '/admin/users': <AdminUserListPage />,
 };
 
 export function AppRoutes() {

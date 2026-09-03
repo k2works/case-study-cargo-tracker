@@ -22,6 +22,16 @@ export const ROLE_LABELS: Record<Role, string> = {
   ROLE_ADMIN: '管理者',
 };
 
+/**
+ * 画面に出す呼び名。知らないロールはそのまま出す。
+ *
+ * <p>空にすると、ロールを足してラベルを書き忘れたときに欄が消え、
+ * 「担当が無い利用者」に見える。</p>
+ */
+export function roleLabel(role: string): string {
+  return isRole(role) ? ROLE_LABELS[role] : role;
+}
+
 export function isRole(value: string): value is Role {
   return (ROLES as readonly string[]).includes(value);
 }
