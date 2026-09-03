@@ -148,6 +148,12 @@ export default function (gulp) {
     if (!clusters.split('\n').includes(KIND_CLUSTER)) {
       console.log(sh(`kind create cluster --name ${KIND_CLUSTER}`, { stdio: 'inherit' }) ?? '');
     }
+    // クラスタがあっても kubeconfig に context が無いことがある（作成を途中で
+    // 止めた、別の kubeconfig で作った、他のツールに current-context を奪われた）。
+    // context は何度書き出しても同じものになるので、存在を確かめずに毎回書く。
+    // ここを飛ばすと apply が `context "kind-..." does not exist` で落ち、
+    // クラスタが無いのか context が無いのかが読み取れない。
+    sh(`kind export kubeconfig --name ${KIND_CLUSTER}`);
     console.log(sh(`kubectl --context kind-${KIND_CLUSTER} apply -k ${OVERLAY}`));
     done();
   });
