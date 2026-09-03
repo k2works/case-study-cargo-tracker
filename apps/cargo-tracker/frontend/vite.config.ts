@@ -14,6 +14,10 @@ export default defineConfig({
     proxy: {
       // 開発中は Gateway 経由で叩く。フロントは各サービスの URL を知らない。
       '/api': { target: 'http://localhost:8080', changeOrigin: true },
+      // ドキュメントポータルは別コンテナ（www）が配る。開発サーバからも
+      // 同じパスで開けるようにして、ナビのリンクを環境ごとに分けない。
+      // 転送先は k8s:open が張る www の port-forward（3001）。
+      '/docs-portal': { target: 'http://localhost:3001', changeOrigin: true },
     },
   },
   test: {

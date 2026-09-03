@@ -68,6 +68,7 @@ nav:
       - cargo-tracker:
           - 概要: operation/cargo-tracker/index.md
           - アプリケーション開発環境セットアップ手順書: operation/cargo-tracker/アプリケーション開発環境セットアップ手順書.md
+          - ドキュメント環境セットアップ手順書: operation/cargo-tracker/ドキュメント環境セットアップ手順書.md
   - ユーザーマニュアル:
       - 概要: manual/index.md
       - はじめに: manual/00-はじめに.md

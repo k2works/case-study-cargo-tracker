@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: www
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app: www }
+  template:
+    metadata:
+      labels: { app: www }
+    spec:
+      # 業務サービスにも Axon Server にも依存しない。ドキュメントは
+      # アプリが落ちているときこそ読まれる（手順書と運用要件がここにある）。
+      containers:
+        - name: www
+          image: cargo-tracker/www:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - { name: http, containerPort: 80 }
+          # /docs-portal/ ではなく /healthz を見る。index.html は中身が
+          # 空でも 200 を返すため、生死の判定にならない。
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: www
+spec:
+  selector: { app: www }
+  ports:
+    - { port: 80, targetPort: http }

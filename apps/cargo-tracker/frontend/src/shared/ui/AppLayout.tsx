@@ -1,7 +1,7 @@
 import { Link, NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router';
 import { useAuthStore } from '../auth/authStore';
 import { ROLE_LABELS } from '../auth/roles';
-import { navigationFor } from './navigation';
+import { EXTERNAL_LINKS, navigationFor } from './navigation';
 
 /** 左サイドナビ + トップヘッダ（ui_design.md）。 */
 export function AppLayout() {
@@ -27,6 +27,21 @@ export function AppLayout() {
               <NavLink to={item.path} end>
                 {item.label}
               </NavLink>
+            </li>
+          ))}
+        </ul>
+
+        {/* ポータルは SPA の外にある。NavLink ではなく <a> で開く。
+            別タブにするのは、作業中の画面を閉じずに手順を引けるようにするため。 */}
+        <h2 className="mt-6 border-t pt-4 text-xs font-semibold text-gray-500">
+          資料
+        </h2>
+        <ul>
+          {EXTERNAL_LINKS.map((link) => (
+            <li key={link.href}>
+              <a href={link.href} target="_blank" rel="noopener noreferrer">
+                {link.label}
+              </a>
             </li>
           ))}
         </ul>

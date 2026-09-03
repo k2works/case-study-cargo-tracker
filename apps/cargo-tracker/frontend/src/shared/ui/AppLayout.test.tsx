@@ -52,6 +52,25 @@ describe('S03 ログアウト（US27）', () => {
     );
   });
 
+  it('ロールを問わずドキュメントとマニュアルへ行ける', () => {
+    // 荷主（最も権限の狭いロール）でも資料に辿り着けることを確かめる。
+    // 業務画面の到達性と違い、資料は職掌で隠さない。
+    useAuthStore.setState({
+      user: { username: 'shipper01', roles: ['ROLE_SHIPPER'], token: 't' },
+    });
+    renderLayout('/');
+
+    for (const [label, href] of [
+      ['ドキュメント', '/docs-portal/'],
+      ['マニュアル', '/docs-portal/manual/'],
+    ]) {
+      const link = screen.getByRole('link', { name: label });
+      expect(link).toHaveAttribute('href', href);
+      // 作業中の画面を閉じさせない。閉じると入力途中の内容が失われる。
+      expect(link).toHaveAttribute('target', '_blank');
+    }
+  });
+
   it('ヘッダに利用者名とロールが出る', () => {
     useAuthStore.setState({ user: { username: 'sales01', roles: ['ROLE_SALES'], token: 't' } });
     renderLayout();

@@ -20,6 +20,25 @@ export const NAVIGATION: readonly NavigationItem[] = [
   { path: '/worklist/attention', label: '要確認一覧', allow: ['ROLE_SALES', 'ROLE_ACCOUNTANT', 'ROLE_TRACKER'] },
 ];
 
+/**
+ * SPA の外にある資料への導線（ドキュメントポータル）。
+ *
+ * <p>ロールで出し分けない。設計・手順書・マニュアルは職掌に関わらず
+ * 読めてよく、隠すと「どこかにあるらしい」状態のまま問い合わせになる。</p>
+ *
+ * <p>絶対 URL を焼き込まないのは、環境ごとにホストが変わるため。nginx
+ * （本番相当）と Vite（開発）が同じパスでポータルへ中継する。</p>
+ */
+export interface ExternalLink {
+  readonly href: string;
+  readonly label: string;
+}
+
+export const EXTERNAL_LINKS: readonly ExternalLink[] = [
+  { href: '/docs-portal/', label: 'ドキュメント' },
+  { href: '/docs-portal/manual/', label: 'マニュアル' },
+];
+
 export function navigationFor(roles: readonly Role[]): readonly NavigationItem[] {
   return NAVIGATION.filter((item) => item.allow.some((role) => roles.includes(role)));
 }

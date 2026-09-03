@@ -64,3 +64,8 @@ apps/cargo-tracker/frontend/playwright-report/
 apps/cargo-tracker/frontend/test-results/
 apps/cargo-tracker/backend/.keys/
 apps/cargo-tracker/frontend/*.tsbuildinfo
+
+# ドキュメントポータル（apps/www）が配る生成物。
+# 毎回 `npx gulp portal:artifacts` で作り直すのでコミットしない。
+apps/www/docs/
+apps/www/manual/

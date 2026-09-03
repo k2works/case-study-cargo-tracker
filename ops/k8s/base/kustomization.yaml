@@ -9,6 +9,7 @@ resources:
   - postgres/statefulset.yaml
   - services/deployments.yaml
   - services/frontend.yaml
+  - www.yaml
 
 configMapGenerator:
   - name: postgres-init

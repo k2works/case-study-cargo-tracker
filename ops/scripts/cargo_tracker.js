@@ -9,6 +9,8 @@
  */
 
 import { execSync, spawn } from 'child_process';
+import fs from 'fs';
+import path from 'path';
 import { openUrl } from './shared.js';
 
 const COMPOSE_DIR = 'apps/cargo-tracker';
@@ -42,15 +44,26 @@ function tryFetch(url) {
  */
 const FRONTEND = { name: 'frontend', dir: 'frontend' };
 
+/**
+ * ドキュメントポータル。ビルド工程を持たず、生成済みの静的ファイルを配るだけ。
+ * apps/cargo-tracker の外に置いてあるので COMPOSE_DIR を使わない。
+ */
+const PORTAL = { name: 'www', dir: 'apps/www' };
+
 /** k8s:open が転送する先。クラスタに Ingress が無いので、ホストからはここだけが見える。 */
 const GATEWAY_PORT = 8080;
 const FRONTEND_PORT = 3000;
+const PORTAL_PORT = 3001;
 const FORWARDS = [
   // フロントは自分の nginx で /api を Gateway に中継するので、画面を触るだけなら
   // ここ 1 つで足りる。5173 を避けているのは、ローカルの Vite 開発サーバと
   // 取り違えないためである。
   { label: 'フロントエンド        ', service: 'frontend', port: FRONTEND_PORT, target: 8080 },
   { label: 'API Gateway        ', service: 'gatewayms', port: GATEWAY_PORT },
+  // ポータルはフロントの nginx が /docs-portal/ で中継するので、画面から
+  // 辿るだけならこの転送は要らない。直接開く場合と、Vite 開発サーバ
+  // （5173）から中継させる場合のために張っておく。
+  { label: 'ドキュメントポータル  ', service: 'www', port: PORTAL_PORT, target: 80 },
   { label: 'Axon Server コンソール', service: 'axonserver', port: 8024 },
 ];
 
@@ -81,6 +94,34 @@ const NAMESPACE = 'cargo-tracker';
 const OVERLAY = 'ops/k8s/overlays/local';
 
 export default function (gulp) {
+  /**
+   * MkDocs の出力（site/）をポータル配下へ置く。
+   *
+   * <p>生成物はコミットしない。コミットすると「コードを変えたのに図が古い」
+   * 状態がリポジトリに固定される。配るたびに作り直す。</p>
+   */
+  gulp.task('portal:docs', (done) => {
+    const site = 'site';
+    if (!fs.existsSync(site)) {
+      done(new Error('site/ がありません。npx gulp mkdocs:build を先に実行してください'));
+      return;
+    }
+    const out = path.join(PORTAL.dir, 'docs');
+    fs.rmSync(out, { recursive: true, force: true });
+    fs.cpSync(site, out, { recursive: true });
+    console.log(`${site} を ${out} に置きました`);
+    done();
+  });
+
+  /** ポータルが配る生成物（ドキュメントサイト・ユーザーマニュアル）を作り直す。 */
+  gulp.task('portal:artifacts', gulp.series('mkdocs:build', 'portal:docs', 'manual:build'));
+
+  /** ポータルをブラウザで開く（k8s:open で転送を張っている間だけ開ける）。 */
+  gulp.task('portal:open', (done) => {
+    openUrl(`http://localhost:${FRONTEND_PORT}/docs-portal/`);
+    done();
+  });
+
   /** マニフェストを描画して構文と参照を確かめる（クラスタが無くても回せる）。 */
   gulp.task('k8s:render', (done) => {
     console.log(sh(`kubectl kustomize ${OVERLAY}`).split('\n').length + ' 行を描画しました');
@@ -113,7 +154,7 @@ export default function (gulp) {
   gulp.task('k8s:images', (done) => {
     const services = Object.keys(SERVICES);
     const backend = `${COMPOSE_DIR}/backend`;
-    const total = services.length + 1;
+    const total = services.length + 2;
     services.forEach((name, i) => {
       console.log(`[${i + 1}/${total}] cargo-tracker/${name}:latest`);
       sh(`docker build -t cargo-tracker/${name}:latest -f ${name}/Dockerfile .`,
@@ -124,10 +165,22 @@ export default function (gulp) {
     // 動作確認用の利用者の事前入力（ADR-0004）はここで明示的に有効にする。
     // SPA の設定はビルド時に焼き込まれ、実行時には取り消せない。Dockerfile 側の
     // 既定は無効なので、渡し忘れた成果物は認証情報を持たない。
-    console.log(`[${total}/${total}] cargo-tracker/${FRONTEND.name}:latest`);
+    console.log(`[${total - 1}/${total}] cargo-tracker/${FRONTEND.name}:latest`);
     sh(`docker build --build-arg VITE_DEMO_LOGIN_ENABLED=true `
       + `-t cargo-tracker/${FRONTEND.name}:latest .`,
       { cwd: `${COMPOSE_DIR}/${FRONTEND.dir}`, stdio: 'inherit' });
+    // ポータルは docs / manual を焼き込む。生成してから作らないと、
+    // リンクだけあって中身が 404 のポータルができる。
+    if (!fs.existsSync(path.join(PORTAL.dir, 'docs'))
+      || !fs.existsSync(path.join(PORTAL.dir, 'manual'))) {
+      done(new Error(
+        'ポータルの配信物がありません。npx gulp portal:artifacts を先に実行してください',
+      ));
+      return;
+    }
+    console.log(`[${total}/${total}] cargo-tracker/${PORTAL.name}:latest`);
+    sh(`docker build -t cargo-tracker/${PORTAL.name}:latest .`,
+      { cwd: PORTAL.dir, stdio: 'inherit' });
     console.log(`${total} 個のイメージを作りました`);
     done();
   });
@@ -139,7 +192,7 @@ export default function (gulp) {
    * ここを飛ばすと、古いイメージのまま「反映した」と思い込む。
    */
   gulp.task('k8s:load', (done) => {
-    const deployments = [...Object.keys(SERVICES), FRONTEND.name];
+    const deployments = [...Object.keys(SERVICES), FRONTEND.name, PORTAL.name];
     for (const name of deployments) {
       sh(`kind load docker-image cargo-tracker/${name}:latest --name ${KIND_CLUSTER}`);
       sh(`kubectl --context kind-${KIND_CLUSTER} -n ${NAMESPACE} rollout restart deployment/${name}`);

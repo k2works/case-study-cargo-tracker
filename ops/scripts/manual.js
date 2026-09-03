@@ -7,8 +7,13 @@ import plantumlEncoder from 'plantuml-encoder';
 
 /** 変換元（ユーザーマニュアルの Markdown）. */
 const SRC_DIR = path.join(process.cwd(), 'docs', 'manual');
-/** 変換先（静的マニュアルサイト）. */
-const OUT_DIR = path.join(process.cwd(), 'apps', 'manual');
+/**
+ * 変換先（静的マニュアルサイト）.
+ *
+ * ドキュメントポータル（`apps/www`）の配下に出す。ポータルはこの
+ * ディレクトリごとイメージに焼くので、離すと「リンクはあるが 404」になる。
+ */
+const OUT_DIR = path.join(process.cwd(), 'apps', 'www', 'manual');
 /** PlantUML レンダリングサーバ（mkdocs と同じ既定値）. */
 const PLANTUML_SERVER = (
   process.env.PLANTUML_SERVER_URL || 'http://www.plantuml.com/plantuml'
@@ -17,8 +22,13 @@ const PLANTUML_SERVER = (
 const MANUAL_TITLE = process.env.MANUAL_TITLE || 'ユーザーマニュアル';
 /** フッターの著作権表示（未設定なら出力しない。`.env` の MANUAL_COPYRIGHT で指定する）. */
 const MANUAL_COPYRIGHT = process.env.MANUAL_COPYRIGHT || '';
-/** 上位ポータルへの戻り先（未設定ならヘッダーにリンクを出さない）. */
-const MANUAL_PORTAL_URL = process.env.MANUAL_PORTAL_URL || '';
+/**
+ * 上位ポータルへの戻り先（`.env` の MANUAL_PORTAL_URL で上書きする）.
+ *
+ * マニュアルはポータル配下に置くので、既定で戻り先がある。空にすると
+ * 読者はブラウザの戻るしか手段がなく、別タブで開いた場合は戻れない。
+ */
+const MANUAL_PORTAL_URL = process.env.MANUAL_PORTAL_URL || '/docs-portal/';
 
 /**
  * 見出しテキストから HTML の id（アンカー）を生成する.
@@ -141,7 +151,7 @@ body { margin: 0; color: var(--fg); font-family: -apple-system, "Segoe UI", "Hir
 `;
 
 /**
- * docs/manual の Markdown を HTML へ変換し apps/manual へ出力する Gulp タスクを登録する.
+ * docs/manual の Markdown を HTML へ変換し apps/www/manual へ出力する Gulp タスクを登録する.
  * @param {import('gulp').Gulp} gulp Gulp インスタンス
  */
 export default function (gulp) {
