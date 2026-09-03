@@ -93,6 +93,25 @@ export default function (gulp) {
   });
 
   /**
+   * 全サービスのイメージを作る。
+   *
+   * <p>ビルドは各サービスの Dockerfile の中で行う（ホストの build/ は
+   * .dockerignore で持ち込まない）。ローカルで何を回したかによって
+   * イメージの中身が変わるのを防ぐためである。</p>
+   */
+  gulp.task('k8s:images', (done) => {
+    const services = Object.keys(SERVICES);
+    const backend = `${COMPOSE_DIR}/backend`;
+    services.forEach((name, i) => {
+      console.log(`[${i + 1}/${services.length}] cargo-tracker/${name}:latest`);
+      sh(`docker build -t cargo-tracker/${name}:latest -f ${name}/Dockerfile .`,
+        { cwd: backend, stdio: 'inherit' });
+    });
+    console.log(`${services.length} 個のイメージを作りました`);
+    done();
+  });
+
+  /**
    * ビルドしたイメージを kind に載せる。
    *
    * タグを据え置いたまま載せ直しても Pod は作り直されないので、rollout restart まで踏む。
