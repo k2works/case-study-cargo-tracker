@@ -63,19 +63,6 @@ exclude_docs: |
   article/source/
 
 nav:
-  - 運用:
-      - 概要: operation/index.md
-      - cargo-tracker:
-          - 概要: operation/cargo-tracker/index.md
-          - アプリケーション開発環境セットアップ手順書: operation/cargo-tracker/アプリケーション開発環境セットアップ手順書.md
-          - ドキュメント環境セットアップ手順書: operation/cargo-tracker/ドキュメント環境セットアップ手順書.md
-  - ユーザーマニュアル:
-      - 概要: manual/index.md
-      - はじめに: manual/00-はじめに.md
-      - 業務フロー: manual/01-業務フロー.md
-      - ログインとログアウト: manual/02-ログインとログアウト.md
-      - 荷主を登録する: manual/03-荷主を登録する.md
-      - 要確認一覧を確認する: manual/04-要確認一覧を確認する.md
   - Home: index.md
   - 戦略:
       - 概要: strategy/index.md
@@ -112,6 +99,17 @@ nav:
           - イテレーション 1 完了報告書: development/cargo-tracker/iteration_report-1.md
   - 運用:
       - 概要: operation/index.md
+      - cargo-tracker:
+          - 概要: operation/cargo-tracker/index.md
+          - アプリケーション開発環境セットアップ手順書: operation/cargo-tracker/アプリケーション開発環境セットアップ手順書.md
+          - ドキュメント環境セットアップ手順書: operation/cargo-tracker/ドキュメント環境セットアップ手順書.md
+  - ユーザーマニュアル:
+      - 概要: manual/index.md
+      - はじめに: manual/00-はじめに.md
+      - 業務フロー: manual/01-業務フロー.md
+      - ログインとログアウト: manual/02-ログインとログアウト.md
+      - 荷主を登録する: manual/03-荷主を登録する.md
+      - 要確認一覧を確認する: manual/04-要確認一覧を確認する.md
   - レビュー:
       - 概要: review/index.md
       - ドメインモデル分析レビュー: review/ドメインモデル分析_review_20260331.md
