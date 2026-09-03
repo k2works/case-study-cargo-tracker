@@ -8,6 +8,12 @@ export interface AttentionItemView {
   readonly targetId: string;
   readonly assignedRole: string;
   readonly reason: string;
+  /**
+   * 重複相手の荷主。サーバが payload のメールアドレスから引いた識別子だけを返す。
+   * payload そのものは応答に載らない（ADR-0003。載せると鍵を破棄しても
+   * 要確認一覧に平文の個人情報が残る）。
+   */
+  readonly relatedShipperId: string | null;
   readonly occurredAt: string;
 }
 

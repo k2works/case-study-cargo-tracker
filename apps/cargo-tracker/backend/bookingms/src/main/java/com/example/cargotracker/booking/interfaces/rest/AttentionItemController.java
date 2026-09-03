@@ -1,6 +1,9 @@
 package com.example.cargotracker.booking.interfaces.rest;
 
 import com.example.cargotracker.booking.infrastructure.persistence.AttentionItemMapper;
+import com.example.cargotracker.booking.infrastructure.persistence.ShipperMapper;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
@@ -20,14 +23,29 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/booking/attention-items")
 public class AttentionItemController {
 
-    private final AttentionItemMapper attentionItems;
+    private static final ObjectMapper JSON = new ObjectMapper();
 
-    public AttentionItemController(AttentionItemMapper attentionItems) {
+    private final AttentionItemMapper attentionItems;
+    private final ShipperMapper shippers;
+
+    public AttentionItemController(AttentionItemMapper attentionItems, ShipperMapper shippers) {
         this.attentionItems = attentionItems;
+        this.shippers = shippers;
     }
 
+    /**
+     * 画面に出す 1 件。
+     *
+     * <p><b>{@code payload} は載せない。</b> 受け付けた内容には氏名・メール・電話・
+     * 住所が入っており、これを応答に出すと、鍵を破棄しても要確認一覧に平文の個人情報が
+     * 残る。削除要求に応えられなくなり、[ADR-0003] の目的が崩れる。</p>
+     *
+     * <p>代わりに {@code relatedShipperId} を返す。サーバの中だけで payload の
+     * メールアドレスから重複相手を引き、<b>識別子だけ</b>を渡す。画面はそこから
+     * 既存の荷主を開ける。</p>
+     */
     public record AttentionItemView(String itemId, String kind, String targetType, String targetId,
-            String assignedRole, String reason, Instant occurredAt) {
+            String assignedRole, String reason, String relatedShipperId, Instant occurredAt) {
     }
 
     public record AttentionItemListView(List<AttentionItemView> items) {
@@ -42,8 +60,30 @@ public class AttentionItemController {
                 .flatMap(role -> attentionItems.findOpenByRole(role).stream())
                 .distinct()
                 .map(row -> new AttentionItemView(row.itemId(), row.kind(), row.targetType(),
-                        row.targetId(), row.assignedRole(), row.reason(), row.occurredAt()))
+                        row.targetId(), row.assignedRole(), row.reason(),
+                        relatedShipperId(row.payload()), row.occurredAt()))
                 .toList());
+    }
+
+    /**
+     * 重複相手の荷主 ID。payload のメールアドレスはサーバの中だけで使う。
+     *
+     * <p>引けなければ {@code null}。相手が居ないことは起こりうる（相手のほうが
+     * 先に削除された、payload の形が古い）ので、ここで落とさない。</p>
+     */
+    private String relatedShipperId(String payloadJson) {
+        if (payloadJson == null || payloadJson.isBlank()) {
+            return null;
+        }
+        try {
+            JsonNode email = JSON.readTree(payloadJson).get("email");
+            if (email == null || email.isNull()) {
+                return null;
+            }
+            return shippers.findIdByEmail(email.asText());
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private static List<String> rolesOf(String header) {

@@ -52,6 +52,7 @@ export function AttentionListPage() {
       )}
 
       {data?.state === 'ready' && data.value.items.length > 0 && (
+        <>
         <div className={`${CARD} mt-4 overflow-x-auto`}>
           <table className={TABLE}>
             <caption className={TABLE_CAPTION}>確認が必要なもの</caption>
@@ -80,16 +81,30 @@ export function AttentionListPage() {
                   <td className={TD}>{item.reason}</td>
                   <td className={`${TD} font-mono`}>{item.targetId}</td>
                   <td className={TD}>
-                    {/* 気づく手段で終わらせず、次の行動へ繋ぐ。 */}
-                    <Link to="/shippers/new" className={LINK}>
-                      修正して再登録する
-                    </Link>
+                    {/* 気づく手段で終わらせず、次の行動へ繋ぐ。重複なのだから、
+                        多くの場合は既存の荷主を使えば済む。 */}
+                    <div className="flex flex-col gap-1">
+                      {item.relatedShipperId !== null && (
+                        <Link to="/shippers" className={LINK}>
+                          既存の荷主を見る
+                        </Link>
+                      )}
+                      <Link to="/shippers/new" className={LINK}>
+                        修正して再登録する
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        {/* なぜ空のフォームが開くのかを言う。黙って空だと「消えた」と受け取られる。 */}
+        <p className="mt-3 text-sm text-gray-600">
+          「修正して再登録する」は空のフォームを開きます。受け付けた内容には個人情報が含まれるため、
+          鍵を破棄したときに消えない場所へ写していません。お手元の資料をご用意ください。
+        </p>
+        </>
       )}
     </section>
   );

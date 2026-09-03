@@ -16,6 +16,14 @@ public interface ShipperMapper {
     @Select("SELECT count(*) FROM shipper WHERE email = #{email}")
     int countByEmail(@Param("email") String email);
 
+    /**
+     * 重複相手の荷主 ID。要確認一覧が「既存の荷主を見る」の行き先に使う。
+     *
+     * <p>返すのは識別子だけ。メールアドレスは個人情報なので、応答に載せない。</p>
+     */
+    @Select("SELECT shipper_id FROM shipper WHERE email = #{email}")
+    String findIdByEmail(@Param("email") String email);
+
     int insert(ShipperRow row);
 
     ShipperRow findById(@Param("shipperId") String shipperId);

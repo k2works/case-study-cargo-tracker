@@ -4,7 +4,7 @@ title: "ADR-0003 荷主の個人情報は crypto-shredding で削除可能にす
 description: "個人情報（荷主の氏名・メール・電話・住所）を荷主ごとの KMS 鍵で暗号化してイベントに載せ、削除要求には鍵の破棄で応じる決定。対象イベントの名簿、投影列の NULL 許容、ゴールデン JSON の論理形と物理形、導入時期（US02 の IT）と検査。"
 tags: [adr]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-03T12:50:10Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-03T21:54:36Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -69,6 +69,7 @@ Event Store は追記専用で書き換えられないため、荷主の個人�
 | 復元集約 `Shipper` | `@EventSourcingHandler` は `null` を受け入れ、`name` などを `Optional.empty()` で持つ。判断を書かないので例外が出ない。以後の `UpdateShipperContactCommand` は「削除済み」として `409` で拒否する |
 | 投影 `shipper`（bookingms） | `name` / `email` / `phone` / `address` を **`NULL` 許容**にする。`UNIQUE(email)` は `NULL` を複数許す（PostgreSQL の既定）。`shipper_code` は個人情報でないので `NOT NULL` のまま |
 | 投影 `cargo_summary.shipper_name`、`shipper_contract_snapshot`（billingms）、`shipper_cargo_snapshot`（trackingms） | 同じく `NULL` 許容。billingms は `ShipperRegisteredEvent` を購読して写すので、鍵破棄後のリプレイでは `NULL` が入る |
+| `attention_item.payload`（要確認一覧の受け皿） | **API の応答に載せない**（IT2 で判断）。詳細は下記 |
 | 画面 | `NULL` の個人情報は既定値 **「（削除済み）」** で表示する（`ui_design.md` の画面共通規約）。請求書・追跡照会は荷主コードと予約番号で業務を続けられる |
 | リプレイ | 鍵破棄後に Group 全件をリプレイしても、上の `NULL` 許容によって止まらない。リプレイで投影から個人情報が消える |
 | 契約テスト（ゴールデン JSON） | **論理形**（平文の `record`）と**物理形**（暗号化後のエンベロープ）を別のゴールデンファイルで固定する。論理形は「フィールドの集合が変わらないこと」、物理形は「エンベロープの形（`alg` / `keyRef` / `iv` / `ciphertext`）と平文のままのフィールドが変わらないこと」を検査する。`ciphertext` の値は毎回変わるので形だけ比べる |
@@ -90,6 +91,22 @@ Event Store は追記専用で書き換えられないため、荷主の個人�
 ### 5. 導入時期
 
 初回リリース前、**US02（荷主登録）を実装するイテレーション**で導入する。荷主登録より後に足すと、平文で書いたイベントが Event Store に残り、それを消す手段が無くなる。「リリース前に入れる」ではなく、`ShipperRegisteredEvent` を初めて発行する IT の完了条件にする。
+
+### 6. 要確認一覧の `payload` は API の応答に載せない（IT2 で追加）
+
+[UI 設計](../../design/cargo-tracker/ui_design.md) S70 は「`[修正して再登録]` で受け付けた内容（`payload`）を初期値にした S11 を開く」と定めていた。しかし `payload` には氏名・メール・電話・住所が**平文で**入る。`attention_item` は投影ではなく追記専用の受け皿でリプレイでも消えないので、**鍵を破棄しても要確認一覧に平文の個人情報が残る**。削除要求に応えられなくなり、この ADR の目的が崩れる。
+
+`payload` も同じ鍵で暗号化する案は採らない。弾かれた登録の荷主は `shipper` テーブルに行が無く、削除要求を処理する担当がその `shipperId` に辿り着けない。「鍵を破棄したのに、誰も覚えていないテーブルに個人情報が残る」という、いちばん気づきにくい形になる。
+
+代わりに次の形にする。
+
+| 何を | どうする |
+| :--- | :--- |
+| `payload` | サーバの中だけで使う。API の応答には出さない |
+| `[既存の荷主を見る]` | サーバが `payload` のメールアドレスから重複相手を引き、**識別子だけ**を `relatedShipperId` として返す。重複なのだから、多くの場合は既存の荷主を使えば済む |
+| `[修正して再登録]` | 空の S11 を開く。**なぜ空なのかを画面に書く**（黙って空だと「消えた」と受け取られる） |
+
+**再入力の手間より、削除要求に応えられる状態を保つほうを採る。**
 
 ## 影響
 
