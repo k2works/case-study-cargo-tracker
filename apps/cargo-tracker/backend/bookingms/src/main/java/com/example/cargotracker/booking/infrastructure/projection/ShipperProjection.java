@@ -81,7 +81,7 @@ public class ShipperProjection {
         log.warn("荷主の投影を一意制約で弾いた: shipperId={}", shipperId);
         // 別トランザクションで書く。弾かれた直後の接続は中断状態で、同じ
         // トランザクションでは書き込めない。
-        attentionItems.record("PROJECTION_REJECTED", "SHIPPER", shipperId, "ROLE_SALES",
+        attentionItems.add("PROJECTION_REJECTED", "SHIPPER", shipperId, "ROLE_SALES",
                 "メールアドレスの重複", "{\"email\":" + jsonString(email) + "}", occurredAt);
     }
 

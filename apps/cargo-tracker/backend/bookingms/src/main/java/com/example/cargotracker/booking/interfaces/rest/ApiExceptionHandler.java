@@ -17,17 +17,21 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class ApiExceptionHandler {
 
+    private static final String CODE = "code";
+    private static final String MESSAGE = "message";
+
+
     @ExceptionHandler(DuplicateShipperEmailException.class)
     public ResponseEntity<Map<String, Object>> onDuplicateEmail(DuplicateShipperEmailException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(Map.of("code", "SHIPPER_EMAIL_DUPLICATE", "message", e.getMessage()));
+                .body(Map.of(CODE, "SHIPPER_EMAIL_DUPLICATE", MESSAGE, e.getMessage()));
     }
 
     /** 値オブジェクトと集約が弾いた業務規則違反。 */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, Object>> onBusinessRuleViolation(IllegalArgumentException e) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT)
-                .body(Map.of("code", "BUSINESS_RULE_VIOLATION", "message", e.getMessage()));
+                .body(Map.of(CODE, "BUSINESS_RULE_VIOLATION", MESSAGE, e.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -37,6 +41,6 @@ public class ApiExceptionHandler {
                 .reduce((a, b) -> a + ", " + b)
                 .orElse("入力が正しくありません");
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT)
-                .body(Map.of("code", "INVALID_REQUEST", "message", message));
+                .body(Map.of(CODE, "INVALID_REQUEST", MESSAGE, message));
     }
 }

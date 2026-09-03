@@ -20,12 +20,12 @@ export function AttentionListPage() {
     <section>
       <h1>要確認一覧</h1>
 
-      {isPending && <p role="status">読み込み中…</p>}
+      {isPending && <output>読み込み中…</output>}
       {isError && <p role="alert">要確認一覧を取得できませんでした</p>}
-      {data?.state === 'pending' && <p role="status">{data.message}</p>}
+      {data?.state === 'pending' && <output>{data.message}</output>}
 
       {data?.state === 'ready' && data.value.items.length === 0 && (
-        <p role="status">確認が必要なものはありません</p>
+        <output>確認が必要なものはありません</output>
       )}
 
       {data?.state === 'ready' && data.value.items.length > 0 && (

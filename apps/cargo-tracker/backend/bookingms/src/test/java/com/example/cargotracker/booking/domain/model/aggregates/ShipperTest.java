@@ -107,6 +107,34 @@ class ShipperTest {
     }
 
     @Test
+    @DisplayName("復元した集約は法人契約を持つ（イベントが運んでいる値を捨てない）")
+    void restoresCorporateContract() {
+        Shipper shipper = new Shipper();
+
+        shipper.on(new ShipperRegisteredEvent("SHP-000011", "CORPORATE", "山田商事",
+                "sales@example.com", "03-1111-1111", "東京都中央区", "CT-0001", "0.1000"));
+
+        assertThat(shipper.corporateContract())
+                .as("捨てると、リプレイした集約だけが契約を持たず、契約変更や割引の"
+                        + "不変条件を足した瞬間に誤判断する")
+                .hasValueSatisfying(contract ->
+                        assertThat(contract.contractNumber()).isEqualTo("CT-0001"));
+        assertThat(shipper.shipperType()).isEqualTo(ShipperType.CORPORATE);
+        assertThat(shipper.shipperId()).isEqualTo("SHP-000011");
+    }
+
+    @Test
+    @DisplayName("個人の荷主は復元しても法人契約を持たない")
+    void restoresIndividualWithoutContract() {
+        Shipper shipper = new Shipper();
+
+        shipper.on(new ShipperRegisteredEvent("SHP-000012", "INDIVIDUAL", "山田太郎",
+                "yamada@example.com", "03-0000-0000", "東京都港区", null, null));
+
+        assertThat(shipper.corporateContract()).isEmpty();
+    }
+
+    @Test
     @DisplayName("個人情報が読める荷主は削除済みではない")
     void isNotShreddedWhenReadable() {
         Shipper shipper = new Shipper();

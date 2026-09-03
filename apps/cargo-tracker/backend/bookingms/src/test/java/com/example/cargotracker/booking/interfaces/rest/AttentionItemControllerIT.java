@@ -53,9 +53,9 @@ class AttentionItemControllerIT extends AbstractAxonIntegrationTest {
     void showsOnlyItemsForCallerRoles() {
         String salesTarget = "sales-" + System.nanoTime();
         String accountantTarget = "acct-" + System.nanoTime();
-        recorder.record("PROJECTION_REJECTED", "SHIPPER", salesTarget, "ROLE_SALES",
+        recorder.add("PROJECTION_REJECTED", "SHIPPER", salesTarget, "ROLE_SALES",
                 "メールアドレスの重複", "{}", Instant.now());
-        recorder.record("PROJECTION_REJECTED", "INVOICE", accountantTarget, "ROLE_ACCOUNTANT",
+        recorder.add("PROJECTION_REJECTED", "INVOICE", accountantTarget, "ROLE_ACCOUNTANT",
                 "荷主が見つからない", "{}", Instant.now());
 
         String forSales = String.valueOf(listAs("ROLE_SALES").getBody().get("items"));
@@ -71,9 +71,9 @@ class AttentionItemControllerIT extends AbstractAxonIntegrationTest {
     void mergesItemsForMultipleRoles() {
         String salesTarget = "sales-" + System.nanoTime();
         String trackerTarget = "trk-" + System.nanoTime();
-        recorder.record("PROJECTION_REJECTED", "SHIPPER", salesTarget, "ROLE_SALES",
+        recorder.add("PROJECTION_REJECTED", "SHIPPER", salesTarget, "ROLE_SALES",
                 "メールアドレスの重複", "{}", Instant.now());
-        recorder.record("REACTION_FAILED", "CARGO", trackerTarget, "ROLE_TRACKER",
+        recorder.add("REACTION_FAILED", "CARGO", trackerTarget, "ROLE_TRACKER",
                 "追跡の初期化が届かない", "{}", Instant.now());
 
         String body = String.valueOf(listAs("ROLE_SALES,ROLE_TRACKER").getBody().get("items"));
@@ -84,7 +84,7 @@ class AttentionItemControllerIT extends AbstractAxonIntegrationTest {
     @Test
     @DisplayName("ロールが伝わっていなければ何も出さない")
     void showsNothingWithoutRoles() {
-        recorder.record("PROJECTION_REJECTED", "SHIPPER", "orphan-" + System.nanoTime(),
+        recorder.add("PROJECTION_REJECTED", "SHIPPER", "orphan-" + System.nanoTime(),
                 "ROLE_SALES", "メールアドレスの重複", "{}", Instant.now());
 
         ResponseEntity<JsonMap> response = listAs(null);

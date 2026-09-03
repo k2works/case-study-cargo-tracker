@@ -18,10 +18,10 @@ export function ShipperListPage() {
         <Link to="/shippers/new">荷主を登録する</Link>
       </p>
 
-      {isPending && <p role="status">読み込み中…</p>}
+      {isPending && <output>読み込み中…</output>}
       {isError && <p role="alert">一覧を取得できませんでした</p>}
 
-      {data?.state === 'pending' && <p role="status">{data.message}</p>}
+      {data?.state === 'pending' && <output>{data.message}</output>}
 
       {data?.state === 'ready' && (
         <table>

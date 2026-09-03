@@ -2,6 +2,7 @@ package com.example.cargotracker.booking.domain.model.aggregates;
 
 import com.example.cargotracker.booking.domain.model.commands.RegisterShipperCommand;
 import com.example.cargotracker.booking.domain.model.valueobjects.CorporateContract;
+import com.example.cargotracker.booking.domain.model.valueobjects.DiscountRate;
 import com.example.cargotracker.booking.domain.model.valueobjects.Email;
 import com.example.cargotracker.booking.domain.model.valueobjects.ShipperType;
 import com.example.cargotracker.shared.contract.event.ShipperRegisteredEvent;
@@ -79,11 +80,31 @@ public class Shipper {
         this.shipperType = ShipperType.valueOf(event.shipperType());
         // 検査しない。鍵を破棄した荷主では null が届く（ADR-0003）。
         this.email = event.email();
-        this.corporateContract = null;
+        // 契約はイベントが運んでいる。捨てると、リプレイした集約だけが法人契約を
+        // 持たず、契約変更や割引の不変条件を足した瞬間に誤判断する。
+        this.corporateContract = event.contractNumber() == null
+                ? null
+                : new CorporateContract(event.contractNumber(),
+                        new DiscountRate(new java.math.BigDecimal(event.discountRate())));
     }
 
     /** 個人情報が読めるか。読めない＝削除済み。 */
     public boolean isShredded() {
         return email == null;
+    }
+
+    /** 復元した荷主の識別子。 */
+    public String shipperId() {
+        return shipperId;
+    }
+
+    /** 復元した荷主種別。契約変更の不変条件で使う。 */
+    public ShipperType shipperType() {
+        return shipperType;
+    }
+
+    /** 復元した法人契約。個人なら空。 */
+    public java.util.Optional<CorporateContract> corporateContract() {
+        return java.util.Optional.ofNullable(corporateContract);
     }
 }

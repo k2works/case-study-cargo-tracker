@@ -25,7 +25,7 @@ public class AttentionItemRecorder {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void record(String kind, String targetType, String targetId, String assignedRole,
+    public void add(String kind, String targetType, String targetId, String assignedRole,
             String reason, String payloadJson, Instant occurredAt) {
         attentionItems.insert(new AttentionItemMapper.AttentionItemRow(
                 UUID.randomUUID().toString(), kind, targetType, targetId, assignedRole,

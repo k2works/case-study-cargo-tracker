@@ -16,10 +16,10 @@ export function PublicTrackingPage() {
     <main>
       <h1>荷物の追跡</h1>
       {trackingNumber !== undefined && <p>追跡番号: {trackingNumber}</p>}
-      <p role="status">
+      <output>
         追跡番号による照会は、次のイテレーションで使えるようになります。
         お急ぎの場合は担当の営業までお問い合わせください。
-      </p>
+      </output>
       <p>
         <Link to="/login">ログイン画面へ戻る</Link>
       </p>
