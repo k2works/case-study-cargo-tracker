@@ -8,6 +8,7 @@ resources:
   - axonserver/statefulset.yaml
   - postgres/statefulset.yaml
   - services/deployments.yaml
+  - services/frontend.yaml
 
 configMapGenerator:
   - name: postgres-init

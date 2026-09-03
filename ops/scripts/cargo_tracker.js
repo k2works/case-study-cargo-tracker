@@ -36,9 +36,20 @@ function tryFetch(url) {
   }
 }
 
+/**
+ * k8s に配るフロントエンド。SERVICES と分けているのは、フロントに
+ * /actuator/health が無く、ops:health のポート表と同じ形で扱えないためである。
+ */
+const FRONTEND = { name: 'frontend', dir: 'frontend' };
+
 /** k8s:open が転送する先。クラスタに Ingress が無いので、ホストからはここだけが見える。 */
 const GATEWAY_PORT = 8080;
+const FRONTEND_PORT = 3000;
 const FORWARDS = [
+  // フロントは自分の nginx で /api を Gateway に中継するので、画面を触るだけなら
+  // ここ 1 つで足りる。5173 を避けているのは、ローカルの Vite 開発サーバと
+  // 取り違えないためである。
+  { label: 'フロントエンド        ', service: 'frontend', port: FRONTEND_PORT, target: 8080 },
   { label: 'API Gateway        ', service: 'gatewayms', port: GATEWAY_PORT },
   { label: 'Axon Server コンソール', service: 'axonserver', port: 8024 },
 ];
@@ -102,12 +113,17 @@ export default function (gulp) {
   gulp.task('k8s:images', (done) => {
     const services = Object.keys(SERVICES);
     const backend = `${COMPOSE_DIR}/backend`;
+    const total = services.length + 1;
     services.forEach((name, i) => {
-      console.log(`[${i + 1}/${services.length}] cargo-tracker/${name}:latest`);
+      console.log(`[${i + 1}/${total}] cargo-tracker/${name}:latest`);
       sh(`docker build -t cargo-tracker/${name}:latest -f ${name}/Dockerfile .`,
         { cwd: backend, stdio: 'inherit' });
     });
-    console.log(`${services.length} 個のイメージを作りました`);
+    // フロントはビルドコンテキストが自分のディレクトリなので、まとめて回さない。
+    console.log(`[${total}/${total}] cargo-tracker/${FRONTEND.name}:latest`);
+    sh(`docker build -t cargo-tracker/${FRONTEND.name}:latest .`,
+      { cwd: `${COMPOSE_DIR}/${FRONTEND.dir}`, stdio: 'inherit' });
+    console.log(`${total} 個のイメージを作りました`);
     done();
   });
 
@@ -118,12 +134,12 @@ export default function (gulp) {
    * ここを飛ばすと、古いイメージのまま「反映した」と思い込む。
    */
   gulp.task('k8s:load', (done) => {
-    const services = Object.keys(SERVICES);
-    for (const name of services) {
+    const deployments = [...Object.keys(SERVICES), FRONTEND.name];
+    for (const name of deployments) {
       sh(`kind load docker-image cargo-tracker/${name}:latest --name ${KIND_CLUSTER}`);
       sh(`kubectl --context kind-${KIND_CLUSTER} -n ${NAMESPACE} rollout restart deployment/${name}`);
     }
-    console.log(`${services.length} サービスのイメージを載せ直しました`);
+    console.log(`${deployments.length} 個のイメージを載せ直しました`);
     done();
   });
 
@@ -184,9 +200,9 @@ export default function (gulp) {
       return;
     }
 
-    const children = FORWARDS.map(({ service, port }) => spawn('kubectl', [
+    const children = FORWARDS.map(({ service, port, target }) => spawn('kubectl', [
       '--context', context, '-n', NAMESPACE,
-      'port-forward', `svc/${service}`, `${port}:${port}`,
+      'port-forward', `svc/${service}`, `${port}:${target ?? port}`,
     ], { stdio: 'inherit' }));
 
     const stopAll = () => children.forEach((child) => child.kill());
@@ -208,9 +224,9 @@ export default function (gulp) {
           return;
         }
         FORWARDS.forEach(({ label, port }) => console.log(`${label}\thttp://localhost:${port}`));
-        console.log('\nフロントエンドは npm run dev（5173）で、/api がこの Gateway に繋がります。');
+        console.log('\nローカルの Vite 開発サーバ（5173）も、/api がこの Gateway に繋がります。');
         console.log('Ctrl+C で転送を終了します。');
-        openUrl(`http://localhost:${GATEWAY_PORT}/actuator/health`);
+        openUrl(`http://localhost:${FRONTEND_PORT}`);
         process.on('SIGINT', () => {
           stopAll();
           resolve();

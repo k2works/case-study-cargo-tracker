@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app: frontend }
+  template:
+    metadata:
+      labels: { app: frontend }
+    spec:
+      # 業務サービスと違い、Axon Server を待たない。フロントは静的配信と
+      # /api の中継だけで、後段が落ちていても画面は出る。出したうえで
+      # API のエラーを見せるほうが、白い画面より原因に近い。
+      containers:
+        - name: frontend
+          image: cargo-tracker/frontend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - { name: http, containerPort: 8080 }
+          # SPA の index.html ではなく /healthz を見る。index.html は
+          # 中身が壊れていても 200 を返すので、生死の判定にならない。
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+spec:
+  selector: { app: frontend }
+  ports:
+    - { port: 8080, targetPort: http }
