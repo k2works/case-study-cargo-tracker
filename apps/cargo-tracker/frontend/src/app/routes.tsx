@@ -2,6 +2,7 @@ import type { ReactElement } from 'react';
 import { Navigate, Route, Routes } from 'react-router';
 import { LoginPage } from '@/features/auth/LoginPage';
 import { PublicTrackingPage } from '@/features/tracking/PublicTrackingPage';
+import { PortalPage } from '@/features/portal/PortalPage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
 import { RequireRole } from '@/shared/auth/RequireRole';
 import { AppLayout } from '@/shared/ui/AppLayout';
@@ -35,12 +36,15 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/403" element={<ForbiddenPage />} />
       {/* 公開追跡は認証の外。ロール別の到達性は認証済みの利用者にしか働かないので、
           荷受人が使う経路は NAVIGATION ではなくここに置く（ui_design.md）。 */}
+      <Route path="/portal" element={<PortalPage />} />
       <Route path="/track" element={<PublicTrackingPage />} />
       <Route path="/track/:trackingNumber" element={<PublicTrackingPage />} />
       <Route element={<AppLayout />}>
+        {/* 403 はシェルの内側に置く。権限の無い画面を開いただけでサイドナビまで
+            失うと、戻る手段が本文のリンク 1 本になる。 */}
+        <Route path="/403" element={<ForbiddenPage />} />
         {/* 一覧から開く画面はナビに載せない。載せると「予約詳細」という
             行き先の無い項目がサイドナビに出る。到達性は一覧のリンクで担保する。 */}
         <Route

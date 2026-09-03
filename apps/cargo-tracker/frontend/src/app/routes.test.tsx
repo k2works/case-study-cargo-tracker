@@ -94,3 +94,19 @@ describe('ダッシュボードの「今日の作業」', () => {
     expect(within(main).queryByRole('link', { name: '荷主一覧' })).not.toBeInTheDocument();
   });
 });
+
+describe('403 の見え方', () => {
+  it('認証済みの利用者はサイドナビを失わない', () => {
+    // 権限の無い画面を開いただけで、その利用者が本来行ける画面への導線まで
+    // 消えると、戻る手段が本文のリンク 1 本になる（IT1 レビュー M2）。
+    loginAs(['ROLE_SALES']);
+    renderAt('/admin/users');
+
+    expect(screen.getByText('この画面を開く権限がありません')).toBeInTheDocument();
+    expect(
+      screen.getByRole('navigation'),
+      '403 でもサイドナビは残る',
+    ).toBeInTheDocument();
+    expect(within(screen.getByRole('navigation')).getByText('荷主一覧')).toBeInTheDocument();
+  });
+});

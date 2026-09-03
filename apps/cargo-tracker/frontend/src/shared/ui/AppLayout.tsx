@@ -1,4 +1,5 @@
 import { Link, NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router';
+import { IdleTimeout } from '@/shared/auth/IdleTimeout';
 import { useAuthStore } from '../auth/authStore';
 import { ROLE_LABELS } from '../auth/roles';
 import { EXTERNAL_LINKS, navigationFor } from './navigation';
@@ -29,6 +30,9 @@ export function AppLayout() {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
+      {/* 共用端末に開きっぱなしの画面を残さない（non_functional.md「セッション」）。
+          認証済みの画面すべてに効かせるため、シェルに置く。 */}
+      <IdleTimeout />
       <nav
         aria-label="メインナビゲーション"
         className="w-56 shrink-0 border-r border-gray-200 bg-white p-4"

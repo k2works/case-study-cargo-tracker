@@ -36,6 +36,11 @@ export function PublicTrackingPage() {
         </output>
 
         <p className="mt-6 text-sm text-gray-600">
+          <Link to="/portal" className={LINK}>
+            別の追跡番号で照会する
+          </Link>
+        </p>
+        <p className="mt-2 text-sm text-gray-600">
           <Link to="/login" className={LINK}>
             ログイン画面へ戻る
           </Link>

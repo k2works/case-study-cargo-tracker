@@ -175,7 +175,7 @@ export function LoginPage() {
 
         <p className="mt-6 text-sm text-gray-600">
           荷物の追跡は
-          <Link to="/track" className={LINK}>
+          <Link to="/portal" className={LINK}>
             ログインなしで照会できます
           </Link>
           。

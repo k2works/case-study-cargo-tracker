@@ -21,8 +21,20 @@ test('ログイン画面から認証なしの追跡照会へ行ける', async ({
   // 遷移先が無くてログイン画面へ戻る状態を見逃す。
   await page.getByRole('link', { name: /ログインなしで照会/ }).click();
 
+  await expect(page.getByRole('heading', { name: '荷物の追跡照会' })).toBeVisible();
+  await expect(page).toHaveURL(/\/portal$/);
+});
+
+test('ポータルから追跡番号を入れて公開追跡へ行ける', async ({ page }) => {
+  // 荷受人はロールを持たない。認証の外の入口が閉じていると、社外からは
+  // どこからも入れない（IT1 の持ち越し）。
+  await page.goto('/portal');
+
+  await page.getByLabel('追跡番号').fill('ABC12345');
+  await page.getByRole('button', { name: '照会する' }).click();
+
   await expect(page.getByRole('heading', { name: '荷物の追跡' })).toBeVisible();
-  await expect(page).toHaveURL(/\/track$/);
+  await expect(page.getByText('ABC12345')).toBeVisible();
 });
 
 test('追跡番号つきの公開追跡も認証なしで開ける', async ({ page }) => {
