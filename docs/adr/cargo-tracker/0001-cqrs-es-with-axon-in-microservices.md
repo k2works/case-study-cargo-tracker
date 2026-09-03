@@ -4,7 +4,7 @@ title: "ADR-0001 CQRS / Event Sourcing を Axon Framework 5 でマイクロサ�
 description: "CQRS / Event Sourcing を Axon Framework 5 のマイクロサービスとして実装する決定。配置の形・ES の適用範囲・Axon 5 系 API の採用・サービス間の配送経路と、IT1 スパイクの結果（採用版 5.1.0-RC2・Saga 廃止）。"
 tags: [adr]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-03T12:05:14Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-03T13:09:18Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
   - { by: human:kakimomokuri, at: 2026-09-02T12:47:29Z }
@@ -121,6 +121,20 @@ REST はクライアントから Gateway を通って各サービスに入る経
 | 5 | Axon Server 経由でサービス越しにコマンド・クエリが届くこと | **届く。** 集約を持たない JVM から送ったコマンドを、集約を持つ別 JVM が処理し、その投影までイベントが到達することを 2 JVM で確認した。なお接続直後に出る `CommandChannel ... 0 command handlers registered` のログは登録前の時点を映しているだけで、異常ではない |
 | 6 | `axon-server-connector` の明示依存と DCB 無効時の検知 | **明示依存が必要**（starter は 5.1・5.3 とも connector を推移的に含まない）。**DCB 無効の context に繋ぐと `AXONIQ-1302 default: not found in any replication group` が出る**（設計が想定した `AXONIQ-2308` ではない。2026.0.4 での実測値）。さらに**アプリケーションは起動を止めず無限に再接続を試み続ける**ため、IT1 タスク 1.4 の起動時接続検査は必須である |
 | 7 | S3 へエクスポートした Event Store からの差分再投入 | **差分再投入は成立する。ただしそのままでは集約が復元できない**（IT2 で実施。下の「第 7 項の詳細」を参照） |
+
+#### IT2 で分かったこと（DCB のタグと集約の復元）
+
+IT1 の集約（`Shipper`）は登録しかせず、**イベント列から復元した状態を見る判断が 1 つも無かった**。IT2 で状態を持つ `Cargo` を書いて初めて次が分かった。
+
+| # | 分かったこと | 付け忘れるとどうなるか |
+| :--- | :--- | :--- |
+| 8 | **イベント側に `@EventTag(key = ...)` が要る。** `@EventSourced(tagKey = ...)` は集約側の宣言でしかなく、イベントで「どの項目がそのタグか」を言わないとタグが書かれない | 集約は**毎回空のまま復元される**。状態を見る守り（2 度目の受付を断る・状態遷移の検査）が丸ごと素通りし、**それでもテストは緑になる** |
+| 9 | **同じコマンドに static（作る側）と instance（既にある側）のハンドラを両方置くと、集約が既にあっても static が呼ばれる。** インスタンスのハンドラ 1 つにまとめ、`@EntityCreator` が用意する空の集約を自分で判別する | 2 度目の受付が通る |
+| 10 | **インスタンスのハンドラにはコマンド側の `@TargetEntityId` が要る** | `EntityIdResolutionException: found no identifiers` で落ちる（これは落ちるので気づける） |
+| 11 | **`AxonTestFixture` の `disableAxonServer()` では、タグによる復元が働かない。** `given().event(...)` も `given().command(...)` も、`when()` の集約からは見えない | 「復元した状態を見る守り」は集約の単体テストでは**判別できない**。外しても緑になる。実 Axon Server の統合テストに置く |
+| 12 | サービス越しの例外は `AxonServerRemoteCommandHandlingException` に包まれ、根の例外の型が置き換わる | 型でアサートすると落ちる。文言で見る |
+
+**8 と 11 は組み合わさると危険である。** タグを付け忘れた集約は空のまま復元され、その守りは集約の単体テストでも判別できない。**状態を見る守りを足したら、必ず実 Axon Server の統合テストで「壊して赤」を確かめる。**
 
 #### 第 7 項の詳細（IT2 で実施）
 

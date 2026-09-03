@@ -4,7 +4,7 @@ title: "ドメインモデル設計 - 国際貨物輸送管理システム（CQR
 description: "CQRS / Event Sourcing 版 Cargo Tracker のドメインモデル設計。6 コンテキストの集約・不変条件・コマンド・イベント（内部 / 契約）・状態遷移・Reaction Handler を、イベントを永続化フォーマットとして定義する。"
 tags: [design,domain-model,ddd,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-02T21:34:44Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-03T13:09:18Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -1369,6 +1369,10 @@ Reaction Handler の再試行と補償は「例外にしない」ではなく「
 - Axon 5 の `@EventSourced(tagKey)` には識別子の**文字列値**を渡す。イベントの `record` には値オブジェクトでなく文字列として載せ、`@EventSourcingHandler` で値オブジェクトに包み直す（イベントの JSON 形を値オブジェクトの実装から切り離す）
 
 ### イベントの設計規則
+
+**イベントは自分のタグを宣言する。** 集約の識別子に当たる項目へ `@EventTag(key = "<tagKey>")` を付ける。`@EventSourced(tagKey)` は集約側の宣言でしかなく、これが無いとイベントにタグが書かれない。タグの無いイベントは復元時に引けないので、**集約は毎回空のまま復元され、状態を見る不変条件が丸ごと素通りする**（[ADR-0001](../../adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) 決定 5 第 8 項）。集約の単体テストでは判別できないため、状態を見る守りは実 Axon Server の統合テストで固定する。
+
+
 
 | 規則 | 理由 |
 | :--- | :--- |

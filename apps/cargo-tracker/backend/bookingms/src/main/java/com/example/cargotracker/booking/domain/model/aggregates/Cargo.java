@@ -1,0 +1,112 @@
+package com.example.cargotracker.booking.domain.model.aggregates;
+
+import com.example.cargotracker.booking.domain.model.commands.BookCargoCommand;
+import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
+import com.example.cargotracker.booking.domain.model.valueobjects.CargoSpecification;
+import com.example.cargotracker.booking.domain.model.valueobjects.RoutingStatus;
+import org.axonframework.eventsourcing.annotation.EventSourcingHandler;
+import org.axonframework.eventsourcing.annotation.reflection.EntityCreator;
+import org.axonframework.extension.spring.stereotype.EventSourced;
+import org.axonframework.messaging.commandhandling.annotation.CommandHandler;
+import org.axonframework.messaging.eventhandling.gateway.EventAppender;
+
+/**
+ * 貨物予約（UC03 / US04・US05）。
+ *
+ * <p>状態を持つ最初の集約であり、イベント列からの復元が判断に効く。IT2 で到達するのは
+ * {@code PRELIMINARY} までだが、遷移の判定は {@link BookingStatus#canTransitionTo} に
+ * 置き、あとの IT で足すたびに書き足す場所が増えないようにする。</p>
+ *
+ * <p>不変条件（domain-model.md「Cargo 集約の不変条件」）:</p>
+ * <ul>
+ *   <li>1: BookingId は不変。ShipperId は登録時に必須</li>
+ *   <li>2: 出発地と目的地は異なる（RouteSpecification が守る）</li>
+ *   <li>3: 危険物は申告、冷凍・冷蔵は温度条件が必須（CargoSpecification が守る）</li>
+ * </ul>
+ */
+@EventSourced(idType = String.class, tagKey = "bookingId")
+public class Cargo {
+
+    private String bookingId;
+    private BookingStatus bookingStatus;
+    private RoutingStatus routingStatus;
+
+    @EntityCreator
+    public Cargo() {
+        // Axon がイベント再生で呼ぶ。
+    }
+
+    /**
+     * 予約を受け付ける。
+     *
+     * <p><b>static ではなくインスタンスのハンドラにしている。</b> static（作る側）と
+     * インスタンス（既にある側）を両方置くと、集約が既に存在しても static のほうが
+     * 呼ばれ、2 度目の受付が通ってしまう（IT2 で実測）。{@code @EntityCreator} が
+     * 空の集約を用意するので、インスタンス側だけで両方を扱える。</p>
+     */
+    @CommandHandler
+    public String book(BookCargoCommand command, EventAppender appender) {
+        if (bookingId != null) {
+            // 復元した集約が既に予約を持っているのに受け付けると、イベント列に
+            // 予約が 2 本並び、どちらが正か決まらない。
+            throw new IllegalStateException("予約 " + bookingId + " は既に受け付けています");
+        }
+        validate(command);
+        CargoSpecification spec = command.cargoSpecification();
+        appender.append(new CargoBookedEvent(
+                command.bookingId(),
+                command.shipperId(),
+                command.routeSpecification().origin().unLocode().value(),
+                command.routeSpecification().destination().unLocode().value(),
+                command.routeSpecification().arrivalDeadline(),
+                spec.cargoType().name(),
+                spec.weight().kilograms(),
+                spec.dimensions().lengthCm(),
+                spec.dimensions().widthCm(),
+                spec.dimensions().heightCm(),
+                spec.quantity(),
+                spec.productName(),
+                spec.hazardousDeclaration() == null ? null : spec.hazardousDeclaration().imoClass(),
+                spec.hazardousDeclaration() == null ? null : spec.hazardousDeclaration().unNumber(),
+                spec.temperatureRequirement() == null
+                        ? null : spec.temperatureRequirement().minCelsius(),
+                spec.temperatureRequirement() == null
+                        ? null : spec.temperatureRequirement().maxCelsius(),
+                command.bookedBy()));
+        return command.bookingId();
+    }
+
+    private static void validate(BookCargoCommand command) {
+        if (command.bookingId() == null || command.bookingId().isBlank()) {
+            throw new IllegalArgumentException("予約 ID は必須です");
+        }
+        if (command.shipperId() == null || command.shipperId().isBlank()) {
+            // 荷主の分からない予約は、通知も請求も宛先が無い。
+            throw new IllegalArgumentException("荷主 ID は必須です");
+        }
+        if (command.cargoSpecification() == null) {
+            throw new IllegalArgumentException("貨物仕様は必須です");
+        }
+        if (command.routeSpecification() == null) {
+            throw new IllegalArgumentException("輸送条件は必須です");
+        }
+    }
+
+    @EventSourcingHandler
+    void on(CargoBookedEvent event) {
+        this.bookingId = event.bookingId();
+        this.bookingStatus = BookingStatus.PRELIMINARY;
+        this.routingStatus = RoutingStatus.NOT_ROUTED;
+    }
+
+    /** 復元した予約の状態。画面のボタン出し分けはこの値と述語で決める。 */
+    public BookingStatus bookingStatus() {
+        return bookingStatus;
+    }
+
+    /** 復元した経路設計の進み具合。 */
+    public RoutingStatus routingStatus() {
+        return routingStatus;
+    }
+}

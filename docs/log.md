@@ -1,6 +1,8 @@
 # Docs Update Log
 
 ## 2026-09-03
+* **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0001-cqrs-es-with-axon-in-microservices](/adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) を更新（claude-code/claude-opus-5）
 * **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
 * **Update**: [0003-crypto-shredding-for-personal-data](/adr/cargo-tracker/0003-crypto-shredding-for-personal-data.md) を更新（claude-code/claude-opus-5）
 * **Update**: [user_story](/requirements/user_story.md) を更新（claude-code/claude-opus-5）
