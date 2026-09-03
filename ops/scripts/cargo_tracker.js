@@ -215,6 +215,31 @@ export default function (gulp) {
     done();
   });
 
+  /** クラスタ側の Pod の状態。ホストからは何も見えないので、まずここを見る。 */
+  gulp.task('k8s:status', (done) => {
+    console.log(sh(`kubectl --context kind-${KIND_CLUSTER} -n ${NAMESPACE} get pods -o wide`));
+    done();
+  });
+
+  /**
+   * kind をゼロから立ち上げる（手順をこの順で固定する）。
+   *
+   * <p>`k8s:up` が踏むのはクラスタ作成とマニフェストの適用だけである。イメージを
+   * 作らずに適用すると Pod は ImagePullBackOff で止まるが、`kubectl logs` が
+   * 返すのは完了済みの init コンテナが残した「Axon Server を待っています」で、
+   * 原因がイメージ側にあることが読み取れない。順序を落とせないようにする。</p>
+   *
+   * <p>先頭に `portal:artifacts` を置くのは、`k8s:images` がポータルの配信物を
+   * 要求するためである。ここを外に出すと、立ち上げのたびに「先に何を回すか」を
+   * 思い出す必要が残る。</p>
+   *
+   * <p>コードを直して反映したいだけなら `k8s:images` → `k8s:load` で足りる。
+   * `k8s:up` の適用は繰り返しても安全なので、ここでは分岐させない。</p>
+   */
+  gulp.task('k8s:setup', gulp.series(
+    'portal:artifacts', 'k8s:images', 'k8s:up', 'k8s:load', 'k8s:status',
+  ));
+
   /**
    * 滞留している連鎖の一覧（ADR-0001 決定 6 / data-model.md）。
    *
@@ -411,6 +436,26 @@ export default function (gulp) {
     console.log('  2. 投影をリプレイする（個人情報の列が NULL になる）');
     console.log('  3. 投影に残っている個人情報を消す（リプレイまでの間の露出を短くする）');
     console.log('\n取り消せません。実行は手順書の確認を経てから行ってください。');
+    done();
+  });
+
+  /** kind 上のローカル統合環境の操作一覧。 */
+  gulp.task('k8s:help', (done) => {
+    console.log(`
+=== ローカル統合環境（kind）コマンド ===
+
+  k8s:setup    ゼロから立ち上げる（portal:artifacts -> images -> up -> load -> status）
+  k8s:images   9 イメージを作る（7 サービス + フロントエンド + ポータル。初回は 25 分程度）
+  k8s:up       kind クラスタを作ってマニフェストを適用する
+  k8s:load     イメージを kind に載せ直して rollout restart する
+  k8s:status   Pod の状態を表示する
+  k8s:render   マニフェストを描画する（クラスタが無くても回せる）
+  k8s:open     port-forward を張って画面を開く（Ctrl+C まで待つ）
+  k8s:down     kind クラスタを消す
+  k8s:help     このヘルプを表示する
+
+手順書: docs/operation/cargo-tracker/アプリケーション開発環境セットアップ手順書.md
+`);
     done();
   });
 }
