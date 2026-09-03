@@ -8,7 +8,8 @@
  * ここに置くのは「運用手順書に載っている操作」だけ。調査用の使い捨てはスクラッチパッドに置く。
  */
 
-import { execSync } from 'child_process';
+import { execSync, spawn } from 'child_process';
+import { openUrl } from './shared.js';
 
 const COMPOSE_DIR = 'apps/cargo-tracker';
 
@@ -33,6 +34,34 @@ function tryFetch(url) {
   } catch {
     return '000';
   }
+}
+
+/** k8s:open が転送する先。クラスタに Ingress が無いので、ホストからはここだけが見える。 */
+const GATEWAY_PORT = 8080;
+const FORWARDS = [
+  { label: 'API Gateway        ', service: 'gatewayms', port: GATEWAY_PORT },
+  { label: 'Axon Server コンソール', service: 'axonserver', port: 8024 },
+];
+
+/** ポートが既に使われているか。docker compose と取り合うのを先に見つける。 */
+function isPortInUse(port) {
+  try {
+    execSync(`lsof -i :${port} -sTCP:LISTEN -t`, { stdio: 'pipe' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** port-forward が張れて Gateway が応答するまで待つ（最大 30 秒）。 */
+async function waitForGateway() {
+  for (let i = 0; i < 30; i += 1) {
+    if (tryFetch(`http://localhost:${GATEWAY_PORT}/actuator/health`) === '200') {
+      return true;
+    }
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+  return false;
 }
 
 /** kind クラスタ名と名前空間。手順書と揃える。 */
@@ -110,6 +139,69 @@ export default function (gulp) {
     console.log(sh('npm run manual:capture', { cwd: 'apps/cargo-tracker/frontend', stdio: 'inherit' }) ?? '');
     done();
   });
+
+  /**
+   * ローカル統合環境（kind）の画面をブラウザで開く。
+   *
+   * <p>クラスタには Ingress が無く、Service はすべて ClusterIP である。ホストからは
+   * 何も見えないので、port-forward を張ってから開く。</p>
+   *
+   * <p>port-forward はこのタスクが生きているあいだだけ有効である。ブラウザを開いて
+   * すぐ終わると転送も切れるため、Ctrl+C まで待ち続ける。**バックグラウンドに
+   * 逃がさない**のは、切り忘れた転送が残ると「どのクラスタを見ているか」が
+   * 分からなくなるためである。</p>
+   */
+  gulp.task('k8s:open', () => new Promise((resolve, reject) => {
+    const context = `kind-${KIND_CLUSTER}`;
+
+    // 依存ミドルウェアを docker compose で上げたままだと、同じポートを取り合って
+    // port-forward が「address already in use」で落ちる。先に言う。
+    const occupied = FORWARDS.filter(({ port }) => isPortInUse(port));
+    if (occupied.length > 0) {
+      reject(new Error(
+        `ポート ${occupied.map((f) => f.port).join(', ')} は使用中です。`
+        + ' docker compose down で依存ミドルウェアを止めてから実行してください',
+      ));
+      return;
+    }
+
+    const children = FORWARDS.map(({ service, port }) => spawn('kubectl', [
+      '--context', context, '-n', NAMESPACE,
+      'port-forward', `svc/${service}`, `${port}:${port}`,
+    ], { stdio: 'inherit' }));
+
+    const stopAll = () => children.forEach((child) => child.kill());
+    children.forEach((child) => child.on('exit', (code) => {
+      if (code !== 0 && code !== null) {
+        stopAll();
+        reject(new Error(`kubectl port-forward が終了コード ${code} で失敗しました`));
+      }
+    }));
+
+    waitForGateway()
+      .then((ready) => {
+        if (!ready) {
+          stopAll();
+          reject(new Error(
+            'Gateway が応答しません。npx gulp k8s:up で適用したか、'
+            + ' kubectl -n ' + NAMESPACE + ' get pods で Pod が Running かを確認してください',
+          ));
+          return;
+        }
+        FORWARDS.forEach(({ label, port }) => console.log(`${label}\thttp://localhost:${port}`));
+        console.log('\nフロントエンドは npm run dev（5173）で、/api がこの Gateway に繋がります。');
+        console.log('Ctrl+C で転送を終了します。');
+        openUrl(`http://localhost:${GATEWAY_PORT}/actuator/health`);
+        process.on('SIGINT', () => {
+          stopAll();
+          resolve();
+        });
+      })
+      .catch((e) => {
+        stopAll();
+        reject(e);
+      });
+  }));
 
   /** kind クラスタを消す。取り消せないので名前を明示する。 */
   gulp.task('k8s:down', (done) => {
