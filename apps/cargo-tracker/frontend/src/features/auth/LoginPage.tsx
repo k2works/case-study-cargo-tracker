@@ -60,8 +60,7 @@ export function LoginPage() {
             {/* 事前入力していることを隠さない。気づかないまま本番同様の画面だと
               思われるのが最も危ない。 */}
             <p className={NOTICE}>
-              <strong>開発環境</strong>
-              です。動作確認用の利用者で事前入力しています。
+              <strong>開発環境です。</strong> 動作確認用の利用者で事前入力しています。
             </p>
 
             <div className="rounded border border-gray-200 bg-white p-4">

@@ -24,7 +24,11 @@ class DemoAccountsMatchSeedTest {
     /** 利用者 ID を含む行だけでなく、対象になりうる行を全部拾ってから形を見る。 */
     private static final Pattern SEED_USER = Pattern.compile("^\\s*\\('([a-z0-9]+)',", Pattern.MULTILINE);
 
-    private static final Pattern LIST_USER = Pattern.compile("username:\\s*'([a-z0-9]+)'");
+    /**
+     * 一覧側は {@code account('sales01', ...)} の形で書かれている。書き方を変えた
+     * ときにここが 0 件になると、両方 0 件でない検査に引っかかって赤になる。
+     */
+    private static final Pattern LIST_USER = Pattern.compile("account\\('([a-z0-9]+)'");
 
     private static Path repositoryFile(String relative) {
         Path dir = Path.of("").toAbsolutePath();
