@@ -42,8 +42,13 @@ left side
 right side
 ** Cargo Tracker: Spring プラットフォーム
 *** Spring プラットフォーム
+**** モジュラーモノリスプラットフォームへの要求
 **** Spring Boot: 機能
-**** Spring Cloud
+***** 自動構成とスターター
+***** 起動クラスとコンポーネントスキャン
+***** 外部化された設定
+***** 成果物の切り分け
+***** 運用エンドポイント（Actuator）
 **** Spring Framework のまとめ
 *** モジュラーモノリスとしての Cargo Tracker
 **** 境界づけられたコンテキスト
@@ -242,8 +247,13 @@ right side
 ### 第 3 章：Spring Platform × モジュラーモノリス
 
 - Spring プラットフォーム
+  - モジュラーモノリスプラットフォームへの要求
   - Spring Boot: 機能
-  - Spring Cloud
+    - 自動構成とスターター
+    - 起動クラスとコンポーネントスキャン
+    - 外部化された設定
+    - 成果物の切り分け
+    - 運用エンドポイント（Actuator）
   - Spring Framework のまとめ
 - モジュラーモノリスとしての Cargo Tracker
   - 境界づけられたコンテキスト
