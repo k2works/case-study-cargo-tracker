@@ -227,6 +227,50 @@ const KIND_CLUSTER = 'cargo-tracker';
 const NAMESPACE = 'cargo-tracker';
 const OVERLAY = 'ops/k8s/overlays/local';
 
+/** ミリ秒だけ止める。Gulp のタスクを async にせずに待つための最小の道具。 */
+function sleep(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+/**
+ * 止まっている kind のノードを起こす。
+ *
+ * <p>`kind get clusters` は**止まっているノードも列挙する**。Docker Desktop を
+ * 再起動するとノードは `Exited (128)` で残り、この状態で kubeconfig を書き出すと
+ * `container ... is not running` で落ちる。クラスタは壊れておらず、起こせば
+ * 中の Pod ごと戻るので、作り直しには倒さない。</p>
+ *
+ * <p>`docker start` は動いているコンテナには何もしないため、状態は調べない。</p>
+ */
+function startNodes() {
+  const nodes = sh(`kind get nodes --name ${KIND_CLUSTER}`).trim().split('\n').filter(Boolean);
+  if (nodes.length === 0) {
+    return;
+  }
+  console.log(sh(`docker start ${nodes.join(' ')}`));
+}
+
+/**
+ * API server が応答するまで待つ。
+ *
+ * <p>ノードを起こした直後は、コンテナが動いていても API はしばらく応答しない。
+ * ここで待たないと続く apply が接続エラーで落ち、ノードが停止していたことが
+ * 読み取れない。</p>
+ *
+ * @param {number} [seconds] 待つ秒数
+ */
+function waitForApiServer(seconds = 180) {
+  for (let waited = 0; waited < seconds; waited += 3) {
+    try {
+      sh(`kubectl --context kind-${KIND_CLUSTER} get --raw /readyz`);
+      return;
+    } catch {
+      sleep(3000);
+    }
+  }
+  throw new Error(`API server が ${seconds} 秒のあいだ応答しません`);
+}
+
 export default function (gulp) {
   /**
    * MkDocs の出力（site/）をポータル配下へ置く。
@@ -296,6 +340,9 @@ export default function (gulp) {
     })();
     if (!clusters.split('\n').includes(KIND_CLUSTER)) {
       console.log(sh(`kind create cluster --name ${KIND_CLUSTER}`, { stdio: 'inherit' }) ?? '');
+    } else {
+      startNodes();
+      waitForApiServer();
     }
     // クラスタがあっても kubeconfig に context が無いことがある（作成を途中で
     // 止めた、別の kubeconfig で作った、他のツールに current-context を奪われた）。
