@@ -4,7 +4,7 @@ title: "運用要件 - 国際貨物輸送管理システム（CQRS / Event Sourc
 description: "CQRS / Event Sourcing 版 Cargo Tracker の運用要件。投影のリプレイを日常操作として置き、Event Store の復元演習、Event Processor と Reaction Handler の監視、ランブック、イベントの形を変えるリリース手順、鍵の破棄、Gulp タスクを定める。"
 tags: [design,operation,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-02T21:34:44Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-03T12:05:14Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -45,7 +45,7 @@ CQRS / Event Sourcing に固有の運用は次の 4 つです。
 | 日次 | SLO ダッシュボード確認（反映の遅れ・Processor 停止・連鎖の滞留・5xx）、要確認一覧（`attention_item`）の未確認件数と**営業日内の確認期限**を過ぎた件数、Event Store ディスク使用率、EBS スナップショットの成功確認 |
 | 週次 | 連鎖の滞留の棚卸（24 時間超）、脆弱性走査の結果確認、留置 3 営業日超の通関申告の件数（業務側への通知が届いているか） |
 | 月次 | Axon Server のバージョンアップ判断（計画停止）、容量計画の更新、アクセスログの確認、コストレポート |
-| 四半期 | **復元演習**（EBS スナップショットから Axon Server を復元し、全投影をリプレイ、RTO 内か計測）、Axon Server 停止時の挙動確認、アクセス権限の棚卸 |
+| 四半期 | **復元演習**（EBS スナップショットから Axon Server を復元し、S3 差分を再投入、全投影をリプレイ、**復元した集約へコマンドを 1 本送って通ること**、RTO 内か計測）、Axon Server 停止時の挙動確認、アクセス権限の棚卸 |
 | 年次 | ペネトレーションテスト、保存期間満了の荷主の鍵破棄、DR 訓練（AZ 障害） |
 
 ```plantuml
@@ -115,12 +115,18 @@ stop
 | 対象 | 方式 | 頻度 | 保持 |
 | :--- | :--- | :--- | :--- |
 | Event Store（Axon Server EBS） | AWS Backup のスナップショット | 1 時間 | 24 時間分 + 日次 7 日 + リリース前 30 日 |
-| Event Store（エクスポート） | Axon Server REST API → Lambda → S3（JSON Lines） | 5 分間隔 | 1 年 + Glacier 7 年 |
+| Event Store（エクスポート） | Axon Server REST API → Lambda → S3（JSON Lines）。**タグを別に書き出す**（下の注） | 5 分間隔 | 1 年 + Glacier 7 年 |
 | 投影 DB（RDS） | 自動スナップショット | 日次 | 7 日 |
 | `auth_db`（RDS） | 自動スナップショット | 日次 | 7 日 |
 | 荷主ごとの暗号化鍵（KMS） | KMS の管理。破棄は監査ログに残す | — | 保存期間満了まで |
 
 **Event Store のイベントは物理削除しない。** 誤ったイベントは補正イベントで打ち消します。
+
+**エクスポートはタグ（DCB の label）を別に書き出します。** Axon Server 2026.0.4 は、書き込んだタグを読み返す口を持ちません（REST の `/v2/dcbEvents/source` も gRPC の `SourceEventsResponse` / `StreamEventsResponse` も、タグを含まない `Event` を返す。[ADR-0001](../../adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) 決定 5 第 7 項）。**タグの無いイベントを復元しても、集約は読めません。** 件数も内容も一致し、投影のリプレイも成功するのに、その集約に次のコマンドを送った瞬間に空の状態から始まります。
+
+そのため、エクスポートは各イベントの `payload` から集約の識別子を取り出してタグを組み立てて併記します。`payloadContentType=application/json` を指定して取り出します（既定の `application/octet-stream` は payload が base64 になり、識別子を取り出せません）。**タグの組み立ては集約ごとに違うので、集約を足したらエクスポートにも足します。** 対応は `domain-model.md` の `@EventSourced(tagKey)` の一覧を正とします。
+
+**再投入は `id` で重複を除きます。** スナップショットと 5 分間隔のエクスポートは必ず重なりますが、Axon Server の追記は冪等ではなく、同じ `id` のイベントがそのまま 2 件になります。
 
 ### 4.2 復元手順
 
@@ -149,9 +155,10 @@ gulp projection:replay --env staging --service bookingms --group booking-cargo-p
 
 1. 最新の EBS スナップショットから新ボリュームを作成
 2. 新タスクでマウントして起動
-3. S3 エクスポートから、スナップショット以降のイベントを再投入（Axon Server の REST API）。**この差分再投入が可能であることは IT1 スパイクで確認済みであることを前提にする**（参照元では未検証。確認できなければ RPO は EBS スナップショットの 1 時間とし、`non_functional.md` を改訂する）
+3. S3 エクスポートから、スナップショット以降のイベントを再投入（`POST /v2/dcbEvents`）。**`minSequence` による差分の切り出しと再投入は実測済み**（[ADR-0001](../../adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) 決定 5 第 7 項）。**タグを併記し、`id` で重複を除く**（4.1 の注）
 4. 全サービスの投影をリプレイ（A の手順を全投影 Group で。Reaction Group は除く）
-5. RPO・RTO の実績を記録
+5. **復元した集約へコマンドを 1 本送り、通ることを確かめる。** ここを省くと、タグの欠落に気づけない。件数の突き合わせも投影のリプレイも成功してしまう
+6. RPO・RTO の実績を記録
 
 #### D. AZ 障害
 
@@ -179,7 +186,7 @@ Axon Server の停止中はコマンドを受け付けません。荷役作業�
 | 演習 | 頻度 | 内容 |
 | :--- | :--- | :--- |
 | 投影のリプレイ | 四半期 | ステージングで全 Processing Group をリプレイし、行数と所要時間を記録 |
-| Event Store の復元 | 四半期 | EBS スナップショットから復元し、S3 から差分を再投入。RPO・RTO を計測 |
+| Event Store の復元 | 四半期 | EBS スナップショットから復元し、S3 から差分を再投入。**復元した集約へコマンドを 1 本送って通ること**を合格条件に含める。RPO・RTO を計測 |
 | Axon Server 停止時の挙動 | 四半期 | 停止してコマンド `503`・クエリ応答・再接続・再開を確認 |
 | DR（AZ 障害） | 年次 | 別 AZ で再構築 |
 

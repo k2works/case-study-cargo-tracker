@@ -4,7 +4,7 @@ title: "非機能要件 - 国際貨物輸送管理システム（CQRS / Event So
 description: "CQRS / Event Sourcing 版 Cargo Tracker の非機能要件。反映の遅れの目標値、Axon Server SE の単一障害点を前提にした稼働率と RPO / RTO、crypto-shredding による個人情報の削除、SLI / SLO / SLA、検証方法とリスクを定める。"
 tags: [design,non-functional,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-02T13:24:08Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-03T12:05:14Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -122,12 +122,12 @@ CQRS / Event Sourcing に固有の非機能要件は次の 3 つです。それ�
 | 一次切り分け | 15 分以内 |
 | RTO（軽微） | 30 分 |
 | RTO（重大・Axon Server 再構築） | **4 時間** |
-| RPO（Event Store） | **1 時間**（EBS スナップショット 1 時間 + S3 連続エクスポートで実質 5 分） |
+| RPO（Event Store） | **1 時間**（EBS スナップショット 1 時間 + S3 連続エクスポートで実質 5 分）。差分再投入が成立することは実測済み（[ADR-0001](../../adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) 決定 5 第 7 項）。**ただしエクスポートがタグを併記していることが条件**で、タグが欠けると件数が合っていても集約が復元できない |
 | RPO（投影） | Event Store に従う。再構築で回復 |
 | RPO（`auth_db`） | 24 時間 |
 | 投影の再構築（全サービス・300 万イベント） | 4 時間以内（200 evt/s）。**再構築中も古い投影が読めること**（新しい投影は別スキーマまたは別テーブルに作り、完了後に切り替える。画面が「見えなくなる」時間を作らない。TRUNCATE 方式は該当 Group の画面が「反映中」になるため業務時間外に限る） |
 
-**復元演習を四半期に 1 度**ステージングで行い、EBS スナップショットからの復元と全投影のリプレイが RTO 内に終わることを確かめます。演習をしていないバックアップは要件を満たしていません。
+**復元演習を四半期に 1 度**ステージングで行い、EBS スナップショットからの復元と全投影のリプレイが RTO 内に終わることを確かめます。演習をしていないバックアップは要件を満たしていません。**合格条件には「復元した集約へコマンドを 1 本送って通ること」を含めます。** 件数の突き合わせと投影のリプレイは、タグが欠けていても成功してしまいます（`operation.md` 4.1）。
 
 ### 2.4 データ整合性
 

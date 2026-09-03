@@ -4,7 +4,7 @@ title: "ADR-0001 CQRS / Event Sourcing を Axon Framework 5 でマイクロサ�
 description: "CQRS / Event Sourcing を Axon Framework 5 のマイクロサービスとして実装する決定。配置の形・ES の適用範囲・Axon 5 系 API の採用・サービス間の配送経路と、IT1 スパイクの結果（採用版 5.1.0-RC2・Saga 廃止）。"
 tags: [adr]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-03T00:53:51Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-03T12:05:14Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
   - { by: human:kakimomokuri, at: 2026-09-02T12:47:29Z }
@@ -120,7 +120,25 @@ REST はクライアントから Gateway を通って各サービスに入る経
 | 4 | Saga のアノテーションと `SagaLifecycle` の 5 系での名称 | **Axon 5 に Saga は存在しない。** 5.0.0・5.1.0-RC2・5.3.1 のいずれの jar にも `Saga`・`Deadline`・`@ProcessingGroup` を含むクラスが 1 つも無い（Axon 4 の概念）。設計の Saga はすべて Reaction Handler で実装する（決定 6） |
 | 5 | Axon Server 経由でサービス越しにコマンド・クエリが届くこと | **届く。** 集約を持たない JVM から送ったコマンドを、集約を持つ別 JVM が処理し、その投影までイベントが到達することを 2 JVM で確認した。なお接続直後に出る `CommandChannel ... 0 command handlers registered` のログは登録前の時点を映しているだけで、異常ではない |
 | 6 | `axon-server-connector` の明示依存と DCB 無効時の検知 | **明示依存が必要**（starter は 5.1・5.3 とも connector を推移的に含まない）。**DCB 無効の context に繋ぐと `AXONIQ-1302 default: not found in any replication group` が出る**（設計が想定した `AXONIQ-2308` ではない。2026.0.4 での実測値）。さらに**アプリケーションは起動を止めず無限に再接続を試み続ける**ため、IT1 タスク 1.4 の起動時接続検査は必須である |
-| 7 | S3 へエクスポートした Event Store からの差分再投入 | **未実施。** 1〜6 で版の前提が崩れ、その確定に時間を使った。RPO の根拠が未検証のまま残るため、IT2 のリスクとして持ち越す（`non_functional.md` の RPO 記述に「未検証」を明記する） |
+| 7 | S3 へエクスポートした Event Store からの差分再投入 | **差分再投入は成立する。ただしそのままでは集約が復元できない**（IT2 で実施。下の「第 7 項の詳細」を参照） |
+
+#### 第 7 項の詳細（IT2 で実施）
+
+実施日 2026-09-03。稼働中の kind クラスタ（`axoniq/axonserver:2026.0.4`・DCB 有効・実イベント 3 件）からエクスポートし、同じイメージの別インスタンスへ投入して確かめた。
+
+| 確かめたこと | 結果 |
+| :--- | :--- |
+| 差分の切り出し | **できる。** `POST /v2/dcbEvents/source?minSequence=N` が N 以降だけを返す。`consistencyMarker` が全体の位置を示すので、これをエクスポートの栞にできる |
+| 再投入 | **できる。** `POST /v2/dcbEvents` に投入した順で並び、`id`・`dateTime`・`metaData`・`payload` が原本と**完全一致**した（3 件を 1 件ずつ突き合わせ） |
+| **集約の復元** | **できない。** エクスポートにタグ（DCB の label）が含まれない。タグ無しで投入したイベントは、集約のタグ（`shipperId`）で検索すると **0 件**になる。件数と内容は一致しているのに、`@EventSourced(tagKey)` の集約だけが読めない |
+| タグを作り直したら | **復元できる。** payload の `shipperId` からタグを組み立てて投入すると、タグ検索で正しく引ける。ただしこれは**アプリケーション固有の知識**であり、汎用のエクスポート・復元ツールには書けない |
+| 重複投入 | **冪等ではない。** 同じ `id` のイベントをもう一度投入すると 2 件に増え、集約のタグ検索も 2 件返す。スナップショットと連続エクスポートの重なりは必ず起きるので、**投入側が `id` で重複を除く**必要がある |
+
+**タグが取れないのは REST の都合ではない。** gRPC の DCB API でも、書き込み側の `TaggedEvent` はタグを持つ一方、読み出し側の `SourceEventsResponse`・`StreamEventsResponse` はいずれも `SequencedEvent`（= `Event` のみ）を返し、タグを含まない。**Axon Server から書いたタグを読み返す口が無い。**
+
+**これは「緑に見えるが何も見ていない」種類の落とし穴である。** 復元後にイベント件数と内容を突き合わせると完全に一致するので、検証としては合格に見える。投影のリプレイも全件走査なので成功する。壊れるのは**復元後に初めてその集約へコマンドを送ったとき**で、集約が空の状態から始まるため二重登録になり、楽観的並行制御も効かない。**復元演習の合格条件に「復元した集約へコマンドを 1 本送って通ること」を必ず入れる。**
+
+**あわせて分かったこと。** `GET /v1/public/context` の `dcbContext` フィールドは standalone では DCB context でも `false` を返す。DCB かどうかの判定に使えない。IT1 タスク 1.4 の起動時検査が `dcbEventChannel().head()` という機能的な呼び出しで判定しているのは正しい。
 
 **副産物として分かったこと。** コマンドの戻り値が `byte[]` のまま返る（`CommandGateway.sendAndWait` の結果を型で受けるには変換の指定が要る）。IT1 タスク 6.5 で `201` に識別子を載せるときに効くため、実装時に変換方式を決める。
 
