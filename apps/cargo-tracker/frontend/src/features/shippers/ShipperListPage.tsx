@@ -1,5 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
+import {
+  ALERT,
+  CARD,
+  LINK,
+  NOTICE,
+  PAGE_TITLE,
+  TABLE,
+  TABLE_CAPTION,
+  TD,
+  TH,
+} from '@/shared/ui/styles';
 import { display, fetchShippers } from './api';
 
 /** S10 荷主一覧（UC02）。 */
@@ -13,38 +24,64 @@ export function ShipperListPage() {
 
   return (
     <section>
-      <h1>荷主一覧</h1>
-      <p>
-        <Link to="/shippers/new">荷主を登録する</Link>
+      <h1 className={PAGE_TITLE}>荷主一覧</h1>
+      <p className="mt-2 text-sm">
+        <Link to="/shippers/new" className={LINK}>
+          荷主を登録する
+        </Link>
       </p>
 
-      {isPending && <output>読み込み中…</output>}
-      {isError && <p role="alert">一覧を取得できませんでした</p>}
+      {isPending && <output className={`${NOTICE} mt-4`}>読み込み中…</output>}
+      {isError && (
+        <p role="alert" className={`${ALERT} mt-4`}>
+          一覧を取得できませんでした
+        </p>
+      )}
 
-      {data?.state === 'pending' && <output>{data.message}</output>}
+      {data?.state === 'pending' && <output className={`${NOTICE} mt-4`}>{data.message}</output>}
 
-      {data?.state === 'ready' && (
-        <table>
-          <caption>登録済みの荷主</caption>
-          <thead>
-            <tr>
-              <th scope="col">荷主コード</th>
-              <th scope="col">名称</th>
-              <th scope="col">種別</th>
-              <th scope="col">メールアドレス</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.value.items.map((shipper) => (
-              <tr key={shipper.shipperId}>
-                <td>{shipper.shipperCode}</td>
-                <td>{display(shipper.name)}</td>
-                <td>{shipper.shipperType === 'CORPORATE' ? '法人' : '個人'}</td>
-                <td>{display(shipper.email)}</td>
+      {/* 見出しだけの表を出すと「読み込みに失敗した」と受け取られる。
+          0 件であることを文で言う。 */}
+      {data?.state === 'ready' && data.value.items.length === 0 && (
+        <output className={`${NOTICE} mt-4`}>
+          登録済みの荷主はまだありません。
+        </output>
+      )}
+
+      {data?.state === 'ready' && data.value.items.length > 0 && (
+        // 画面幅に収まらない表は、ページ全体でなくこの中だけを横に流す。
+        // ページごと横スクロールすると、ナビや見出しまで隠れる。
+        <div className={`${CARD} mt-4 overflow-x-auto`}>
+          <table className={TABLE}>
+            <caption className={TABLE_CAPTION}>登録済みの荷主</caption>
+            <thead>
+              <tr>
+                <th scope="col" className={TH}>
+                  荷主コード
+                </th>
+                <th scope="col" className={TH}>
+                  名称
+                </th>
+                <th scope="col" className={TH}>
+                  種別
+                </th>
+                <th scope="col" className={TH}>
+                  メールアドレス
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {data.value.items.map((shipper) => (
+                <tr key={shipper.shipperId}>
+                  <td className={TD}>{shipper.shipperCode}</td>
+                  <td className={TD}>{display(shipper.name)}</td>
+                  <td className={TD}>{shipper.shipperType === 'CORPORATE' ? '法人' : '個人'}</td>
+                  <td className={TD}>{display(shipper.email)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </section>
   );

@@ -2,11 +2,16 @@ import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { ApiError } from '@/shared/api/client';
 import { useAuthStore } from '@/shared/auth/authStore';
+import {
+  BUTTON_PRIMARY,
+  FIELD,
+  LABEL,
+  LINK,
+  NOTICE,
+  PAGE_TITLE,
+} from '@/shared/ui/styles';
 import { login } from './api';
 import { DEMO_LOGIN } from './demoLogin';
-
-const FIELD_CLASS =
-  'mt-1 w-full rounded border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none';
 
 /** S00 ログイン（UC20 / US26）。 */
 export function LoginPage() {
@@ -47,14 +52,14 @@ export function LoginPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <main className="mx-auto max-w-md p-8">
-        <h1 className="text-2xl font-bold text-gray-900">ログイン</h1>
+        <h1 className={PAGE_TITLE}>ログイン</h1>
         <p className="mt-1 text-gray-600">国際貨物輸送管理システム</p>
 
         {DEMO_LOGIN.enabled && (
           <section className="mt-6 space-y-3" aria-labelledby="demo-accounts">
             {/* 事前入力していることを隠さない。気づかないまま本番同様の画面だと
               思われるのが最も危ない。 */}
-            <p className="rounded border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-gray-800">
+            <p className={NOTICE}>
               <strong>開発環境</strong>
               です。動作確認用の利用者で事前入力しています。
             </p>
@@ -82,7 +87,7 @@ export function LoginPage() {
                         setPassword(DEMO_LOGIN.password);
                         setError(null);
                       }}
-                      className="w-32 shrink-0 text-left text-blue-700 underline"
+                      className={`${LINK} w-32 shrink-0 text-left`}
                     >
                       {account.username}
                     </button>
@@ -107,7 +112,7 @@ export function LoginPage() {
           <div>
             <label
               htmlFor="username"
-              className="block text-sm font-medium text-gray-700"
+              className={LABEL}
             >
               利用者名
             </label>
@@ -118,14 +123,14 @@ export function LoginPage() {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
-              className={FIELD_CLASS}
+              className={FIELD}
             />
           </div>
 
           <div>
             <label
               htmlFor="password"
-              className="block text-sm font-medium text-gray-700"
+              className={LABEL}
             >
               パスワード
             </label>
@@ -137,7 +142,7 @@ export function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className={FIELD_CLASS}
+              className={FIELD}
             />
           </div>
 
@@ -152,7 +157,7 @@ export function LoginPage() {
           <button
             type="submit"
             aria-disabled={submitting}
-            className="w-full rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 aria-disabled:bg-gray-300"
+            className={`${BUTTON_PRIMARY} w-full`}
           >
             {submitting ? 'ログイン中…' : 'ログイン'}
           </button>
@@ -160,7 +165,7 @@ export function LoginPage() {
 
         <p className="mt-6 text-sm text-gray-600">
           荷物の追跡は
-          <Link to="/track" className="text-blue-700 underline">
+          <Link to="/track" className={LINK}>
             ログインなしで照会できます
           </Link>
           。

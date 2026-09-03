@@ -1,4 +1,5 @@
 import { Link, useParams } from 'react-router';
+import { LINK, NOTICE, PAGE_TITLE } from '@/shared/ui/styles';
 
 /**
  * 公開追跡照会（`/track/:trackingNumber`）。**認証不要**。
@@ -18,7 +19,7 @@ export function PublicTrackingPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <main className="mx-auto max-w-md p-8">
-        <h1 className="text-2xl font-bold text-gray-900">荷物の追跡</h1>
+        <h1 className={PAGE_TITLE}>荷物の追跡</h1>
         <p className="mt-1 text-gray-600">国際貨物輸送管理システム</p>
 
         {trackingNumber !== undefined && (
@@ -29,13 +30,13 @@ export function PublicTrackingPage() {
 
         {/* 「まだ使えない」ことは目立たせる。本文に紛れさせると、番号を打ち込んで
             反応が無いのを不具合と受け取られる。 */}
-        <output className="mt-4 block rounded border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-gray-800">
+        <output className={`${NOTICE} mt-4`}>
           追跡番号による照会は、次のイテレーションで使えるようになります。
           お急ぎの場合は担当の営業までお問い合わせください。
         </output>
 
         <p className="mt-6 text-sm text-gray-600">
-          <Link to="/login" className="text-blue-700 underline">
+          <Link to="/login" className={LINK}>
             ログイン画面へ戻る
           </Link>
         </p>
