@@ -108,6 +108,8 @@ nav:
           - リリース計画: development/cargo-tracker/release_plan.md
           - 開発戦略: development/cargo-tracker/development_strategy.md
           - イテレーション計画 1: development/cargo-tracker/iteration_plan-1.md
+          - イテレーション 1 ふりかえり: development/cargo-tracker/retrospective-1.md
+          - イテレーション 1 完了報告書: development/cargo-tracker/iteration_report-1.md
   - 運用:
       - 概要: operation/index.md
   - レビュー:
@@ -116,6 +118,7 @@ nav:
       - cargo-tracker:
           - 概要: review/cargo-tracker/index.md
           - 設計レビュー（2026-09-02）: review/cargo-tracker/設計_review_20260902.md
+          - IT1 実装レビュー（2026-09-03）: review/cargo-tracker/IT1実装_review_20260903.md
   - ADR:
       - 概要: adr/index.md
       - cargo-tracker:
