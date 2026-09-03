@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { ApiError } from '@/shared/api/client';
 import { useAuthStore } from '@/shared/auth/authStore';
 import { login } from './api';
@@ -68,7 +68,7 @@ export function LoginPage() {
       {error !== null && <p role="alert">{error}</p>}
 
       <p>
-        荷物の追跡は<a href="/tracking/public">ログインなしで照会できます</a>。
+        荷物の追跡は<Link to="/track">ログインなしで照会できます</Link>。
       </p>
     </main>
   );

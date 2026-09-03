@@ -12,7 +12,10 @@ export function ShipperRegisterPage() {
   const [error, setError] = useState<string | null>(null);
   // 重複は断らずに問いかける。営業が同名・同メールで登録したい事情もあるので、
   // 「続ける」を選べるようにする（一意性の最後の砦は投影と要確認一覧）。
-  const [duplicateAsked, setDuplicateAsked] = useState(false);
+  //
+  // 「どのメールアドレスについて確認したか」を持つ。真偽値だけだと、別の（これも
+  // 重複する）メールアドレスに直して送ったときに、問いかけを素通りして登録される。
+  const [acknowledgedEmail, setAcknowledgedEmail] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -22,14 +25,15 @@ export function ShipperRegisterPage() {
     setError(null);
     setSubmitting(true);
     const form = new FormData(event.currentTarget);
+    const email = String(form.get('email') ?? '');
     try {
       await registerShipper({
         name: String(form.get('name') ?? ''),
         shipperType,
-        email: String(form.get('email') ?? ''),
+        email,
         phone: String(form.get('phone') ?? ''),
         address: String(form.get('address') ?? ''),
-        acknowledgedDuplicate: duplicateAsked,
+        acknowledgedDuplicate: acknowledgedEmail === email,
         contractNumber:
           shipperType === 'CORPORATE' ? String(form.get('contractNumber') ?? '') : undefined,
         discountRate:
@@ -40,7 +44,7 @@ export function ShipperRegisterPage() {
       navigate('/shippers', { state: { justRegistered: true } });
     } catch (e) {
       if (e instanceof ApiError && e.body.code === 'SHIPPER_EMAIL_DUPLICATE') {
-        setDuplicateAsked(true);
+        setAcknowledgedEmail(email);
         setError(`${e.body.message}。同じ内容で続けるなら、もう一度「登録する」を押してください`);
       } else {
         setError(
@@ -101,7 +105,9 @@ export function ShipperRegisterPage() {
           </>
         )}
 
-        <button type="submit" aria-disabled={submitting}>
+        {/* 送信中は押せなくする。aria-disabled は支援技術への通知だけで
+            クリックを止めないため、通信が遅いと 2 回押して荷主が 2 件登録される。 */}
+        <button type="submit" disabled={submitting} aria-disabled={submitting}>
           {submitting ? '登録中…' : '登録する'}
         </button>
       </form>

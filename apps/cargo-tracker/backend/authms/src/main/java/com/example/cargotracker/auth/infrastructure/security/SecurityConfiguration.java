@@ -1,5 +1,6 @@
 package com.example.cargotracker.auth.infrastructure.security;
 
+import com.example.cargotracker.shared.infrastructure.security.JwtSecret;
 import java.time.Clock;
 import java.time.Duration;
 import org.springframework.beans.factory.annotation.Value;
@@ -27,11 +28,13 @@ public class SecurityConfiguration {
 
     @Bean
     public JwtIssuer jwtIssuer(
-            @Value("${cargo-tracker.jwt.secret:cargo-tracker-development-secret-key-32bytes!}")
-            String secret,
+            @Value("${cargo-tracker.jwt.secret:}") String secret,
             @Value("${cargo-tracker.jwt.validity-minutes:60}") long validityMinutes,
+            @Value("${cargo-tracker.production-like:false}") boolean productionLike,
             Clock clock) {
-        return new JwtIssuer(secret, Duration.ofMinutes(validityMinutes), clock);
+        // 既定値を持たせない。渡し忘れても既知の鍵で起動が成功してしまう。
+        return new JwtIssuer(JwtSecret.of(secret, productionLike).value(),
+                Duration.ofMinutes(validityMinutes), clock);
     }
 
     @Bean

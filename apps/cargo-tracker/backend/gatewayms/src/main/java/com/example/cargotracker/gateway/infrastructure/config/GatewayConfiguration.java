@@ -1,5 +1,6 @@
 package com.example.cargotracker.gateway.infrastructure.config;
 
+import com.example.cargotracker.shared.infrastructure.security.JwtSecret;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -17,9 +18,12 @@ public class GatewayConfiguration {
 
     @Bean
     public FilterRegistrationBean<JwtAuthenticationFilter> jwtAuthenticationFilter(
-            @Value("${cargo-tracker.jwt.secret:cargo-tracker-development-secret-key-32bytes!}")
-            String secret) {
-        var registration = new FilterRegistrationBean<>(new JwtAuthenticationFilter(secret));
+            @Value("${cargo-tracker.jwt.secret:}") String secret,
+            @Value("${cargo-tracker.production-like:false}") boolean productionLike) {
+        // 既定値を持たせない。gateway と authms が同じ既定値に落ちると署名検証は通り、
+        // クラスタは正常に見えたまま既知の鍵で運用される。
+        var registration = new FilterRegistrationBean<>(
+                new JwtAuthenticationFilter(JwtSecret.of(secret, productionLike).value()));
         registration.addUrlPatterns("/*");
         registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
         return registration;

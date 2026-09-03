@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react';
 import { Navigate, Route, Routes } from 'react-router';
 import { LoginPage } from '@/features/auth/LoginPage';
+import { PublicTrackingPage } from '@/features/tracking/PublicTrackingPage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
 import { RequireRole } from '@/shared/auth/RequireRole';
 import { AppLayout } from '@/shared/ui/AppLayout';
@@ -28,6 +29,10 @@ export function AppRoutes() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/403" element={<ForbiddenPage />} />
+      {/* 公開追跡は認証の外。ロール別の到達性は認証済みの利用者にしか働かないので、
+          荷受人が使う経路は NAVIGATION ではなくここに置く（ui_design.md）。 */}
+      <Route path="/track" element={<PublicTrackingPage />} />
+      <Route path="/track/:trackingNumber" element={<PublicTrackingPage />} />
       <Route element={<AppLayout />}>
         {NAVIGATION.map((item) => (
           <Route

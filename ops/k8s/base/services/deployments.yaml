@@ -17,9 +17,14 @@ spec:
           env:
             - { name: SERVER_PORT, value: "8080" }
             - { name: AXON_SERVER, value: "axonserver:8124" }
-            - name: CARGO_TRACKER_JWT_SECRET
+            # Spring のリラックスバインディングはハイフンを除くので
+            # cargo-tracker.jwt.secret に対応する環境変数は CARGOTRACKER_JWT_SECRET。
+            # CARGO_TRACKER_JWT_SECRET は cargo.tracker.jwt.secret に束縛され、誰も読まない。
+            - name: CARGOTRACKER_JWT_SECRET
               valueFrom:
                 secretKeyRef: { name: cargo-tracker-jwt, key: secret }
+            # 本番相当では開発用の既定鍵で起動しない。
+            - { name: CARGOTRACKER_PRODUCTIONLIKE, value: "true" }
             - { name: AUTHMS_URI, value: "http://authms:8081" }
             - { name: BOOKINGMS_URI, value: "http://bookingms:8082" }
             - { name: ROUTINGMS_URI, value: "http://routingms:8083" }
@@ -68,9 +73,14 @@ spec:
           env:
             - { name: SERVER_PORT, value: "8081" }
             - { name: AXON_SERVER, value: "axonserver:8124" }
-            - name: CARGO_TRACKER_JWT_SECRET
+            # Spring のリラックスバインディングはハイフンを除くので
+            # cargo-tracker.jwt.secret に対応する環境変数は CARGOTRACKER_JWT_SECRET。
+            # CARGO_TRACKER_JWT_SECRET は cargo.tracker.jwt.secret に束縛され、誰も読まない。
+            - name: CARGOTRACKER_JWT_SECRET
               valueFrom:
                 secretKeyRef: { name: cargo-tracker-jwt, key: secret }
+            # 本番相当では開発用の既定鍵で起動しない。
+            - { name: CARGOTRACKER_PRODUCTIONLIKE, value: "true" }
             - { name: DB_URL, value: "jdbc:postgresql://postgres:5432/auth_db" }
             - { name: DB_USER, value: "authms" }
             - { name: DB_PASSWORD, value: "authms" }
@@ -116,9 +126,8 @@ spec:
           env:
             - { name: SERVER_PORT, value: "8082" }
             - { name: AXON_SERVER, value: "axonserver:8124" }
-            - name: CARGO_TRACKER_JWT_SECRET
-              valueFrom:
-                secretKeyRef: { name: cargo-tracker-jwt, key: secret }
+            # 署名鍵は配らない。後段サービスは署名を再検証しない分担なので
+            # （ADR-0001 決定 4）、読まないサービスに秘密を配ると漏洩面が増えるだけ。
             - { name: DB_URL, value: "jdbc:postgresql://postgres:5432/booking_read_db" }
             - { name: DB_USER, value: "bookingms" }
             - { name: DB_PASSWORD, value: "bookingms" }
@@ -164,9 +173,8 @@ spec:
           env:
             - { name: SERVER_PORT, value: "8083" }
             - { name: AXON_SERVER, value: "axonserver:8124" }
-            - name: CARGO_TRACKER_JWT_SECRET
-              valueFrom:
-                secretKeyRef: { name: cargo-tracker-jwt, key: secret }
+            # 署名鍵は配らない。後段サービスは署名を再検証しない分担なので
+            # （ADR-0001 決定 4）、読まないサービスに秘密を配ると漏洩面が増えるだけ。
             - { name: DB_URL, value: "jdbc:postgresql://postgres:5432/routing_read_db" }
             - { name: DB_USER, value: "routingms" }
             - { name: DB_PASSWORD, value: "routingms" }
@@ -212,9 +220,8 @@ spec:
           env:
             - { name: SERVER_PORT, value: "8084" }
             - { name: AXON_SERVER, value: "axonserver:8124" }
-            - name: CARGO_TRACKER_JWT_SECRET
-              valueFrom:
-                secretKeyRef: { name: cargo-tracker-jwt, key: secret }
+            # 署名鍵は配らない。後段サービスは署名を再検証しない分担なので
+            # （ADR-0001 決定 4）、読まないサービスに秘密を配ると漏洩面が増えるだけ。
             - { name: DB_URL, value: "jdbc:postgresql://postgres:5432/tracking_read_db" }
             - { name: DB_USER, value: "trackingms" }
             - { name: DB_PASSWORD, value: "trackingms" }
@@ -260,9 +267,8 @@ spec:
           env:
             - { name: SERVER_PORT, value: "8085" }
             - { name: AXON_SERVER, value: "axonserver:8124" }
-            - name: CARGO_TRACKER_JWT_SECRET
-              valueFrom:
-                secretKeyRef: { name: cargo-tracker-jwt, key: secret }
+            # 署名鍵は配らない。後段サービスは署名を再検証しない分担なので
+            # （ADR-0001 決定 4）、読まないサービスに秘密を配ると漏洩面が増えるだけ。
             - { name: DB_URL, value: "jdbc:postgresql://postgres:5432/handling_read_db" }
             - { name: DB_USER, value: "handlingms" }
             - { name: DB_PASSWORD, value: "handlingms" }
@@ -308,9 +314,8 @@ spec:
           env:
             - { name: SERVER_PORT, value: "8086" }
             - { name: AXON_SERVER, value: "axonserver:8124" }
-            - name: CARGO_TRACKER_JWT_SECRET
-              valueFrom:
-                secretKeyRef: { name: cargo-tracker-jwt, key: secret }
+            # 署名鍵は配らない。後段サービスは署名を再検証しない分担なので
+            # （ADR-0001 決定 4）、読まないサービスに秘密を配ると漏洩面が増えるだけ。
             - { name: DB_URL, value: "jdbc:postgresql://postgres:5432/billing_read_db" }
             - { name: DB_USER, value: "billingms" }
             - { name: DB_PASSWORD, value: "billingms" }

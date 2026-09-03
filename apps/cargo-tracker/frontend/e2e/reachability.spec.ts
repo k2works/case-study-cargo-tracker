@@ -17,7 +17,19 @@ test('ログイン画面から認証なしの追跡照会へ行ける', async ({
   await page.goto('/login');
 
   // ロール別の到達性は認証済みの利用者にしか働かない。認証の外にも入口が要る。
-  await expect(page.getByRole('link', { name: /ログインなしで照会/ })).toBeVisible();
+  // リンクが見えることだけでなく、**押した先**まで確かめる。見えるだけの検査だと、
+  // 遷移先が無くてログイン画面へ戻る状態を見逃す。
+  await page.getByRole('link', { name: /ログインなしで照会/ }).click();
+
+  await expect(page.getByRole('heading', { name: '荷物の追跡' })).toBeVisible();
+  await expect(page).toHaveURL(/\/track$/);
+});
+
+test('追跡番号つきの公開追跡も認証なしで開ける', async ({ page }) => {
+  await page.goto('/track/ABC12345');
+
+  await expect(page.getByRole('heading', { name: '荷物の追跡' })).toBeVisible();
+  await expect(page.getByText('ABC12345')).toBeVisible();
 });
 
 test('ログインの失敗は理由を言わない', async ({ page }) => {
@@ -67,10 +79,39 @@ test('営業でログインすると経理専用の導線は出ず、直打ち�
 
   await expect(page.getByRole('heading', { name: 'ダッシュボード' })).toBeVisible();
   await expect(page.getByRole('navigation')).toContainText('荷主一覧');
+});
 
-  // 営業は要確認一覧に入れる。入れない画面の例として、権限外の URL を直打ちする。
+test('経理でログインすると荷主登録はナビに出ず、直打ちすると 403 になる', async ({ page }) => {
+  await page.route('**/api/v1/auth/login', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        token: 'token',
+        username: 'acct01',
+        displayName: '経理 花子',
+        roles: ['ROLE_ACCOUNTANT'],
+        shipperId: null,
+      }),
+    }),
+  );
+  await page.route('**/api/v1/booking/**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: '{"items":[]}' }),
+  );
+
+  await page.goto('/login');
+  await page.getByLabel('利用者名').fill('acct01');
+  await page.getByLabel('パスワード').fill('secret1234');
+  await page.getByRole('button', { name: 'ログイン' }).click();
+  await expect(page.getByRole('heading', { name: 'ダッシュボード' })).toBeVisible();
+
+  // 経理は荷主登録に入れない。ナビにも出ない。
+  await expect(page.getByRole('navigation')).not.toContainText('荷主登録');
+
+  // URL を直打ちしても入れないことを、画面から踏んで確かめる。
   await page.goto('/shippers/new');
-  await expect(page.getByRole('heading', { name: '荷主登録' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'この画面を開く権限がありません' }))
+    .toBeVisible();
 });
 
 test('ログアウトするとブラウザバックで業務画面に戻れない', async ({ page }) => {

@@ -147,6 +147,50 @@ describe('S11 荷主登録', () => {
     expect(secondBody.acknowledgedDuplicate).toBe(true);
   });
 
+  it('別のメールアドレスに直したら、確認をやり直す', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({ code: 'SHIPPER_EMAIL_DUPLICATE', message: '既に登録されています' }),
+        { status: 409 },
+      ),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    withQuery(<ShipperRegisterPage />);
+    await userEvent.type(screen.getByLabelText('名称'), '山田商事');
+    await userEvent.type(screen.getByLabelText('メールアドレス'), 'first@example.com');
+    await userEvent.click(screen.getByRole('button', { name: '登録する' }));
+    await screen.findByRole('alert');
+
+    // 別の（これも重複する）メールアドレスに直して送る。
+    await userEvent.clear(screen.getByLabelText('メールアドレス'));
+    await userEvent.type(screen.getByLabelText('メールアドレス'), 'second@example.com');
+    await userEvent.click(screen.getByRole('button', { name: '登録する' }));
+
+    const lastBody = JSON.parse(
+      String((fetchMock.mock.calls.at(-1)?.[1] as RequestInit).body),
+    );
+    expect(lastBody.acknowledgedDuplicate)
+      .toBe(false);
+  });
+
+  it('送信中はボタンを押せない（二重登録を防ぐ）', async () => {
+    let release: (value: Response) => void = () => {};
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockReturnValue(new Promise<Response>((resolve) => (release = resolve))),
+    );
+
+    withQuery(<ShipperRegisterPage />);
+    await userEvent.type(screen.getByLabelText('名称'), '山田商事');
+    await userEvent.type(screen.getByLabelText('メールアドレス'), 'slow@example.com');
+    await userEvent.click(screen.getByRole('button', { name: '登録する' }));
+
+    // 応答が返る前に、もう一度押せない状態になっていること。
+    expect(await screen.findByRole('button', { name: '登録中…' })).toBeDisabled();
+    release(new Response(JSON.stringify({ shipperId: 'x' }), { status: 201 }));
+  });
+
   it('成功すると一覧へ移る', async () => {
     respond(201, { shipperId: 'new-id' });
 
