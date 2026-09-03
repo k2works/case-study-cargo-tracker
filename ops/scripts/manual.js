@@ -48,6 +48,74 @@ function slugify(text) {
 }
 
 /**
+ * OKF のフロントマターを取り除く.
+ *
+ * <p>`---` で囲んだメタ情報は文書の管理情報であり、読者向けの本文ではない。
+ * 付けたまま marked に渡すと、区切り線と「type: Manual」の羅列が本文の
+ * 先頭に出る。<strong>読者は最初の 1 画面でそれを読む</strong>ので、
+ * マニュアルが未完成に見える。</p>
+ *
+ * @param {string} md Markdown 本文
+ * @returns {string} フロントマターを除いた本文
+ */
+function stripFrontMatter(md) {
+  // 先頭にあるものだけを対象にする。本文中の `---`（水平線）は残す。
+  const match = md.match(/^---\r?\n[\s\S]*?\r?\n---\r?\n/);
+  return match ? md.slice(match[0].length) : md;
+}
+
+/**
+ * 本文から節（h2）の見出しを拾う。サイドメニューの子項目に使う.
+ * @param {string} md フロントマターを除いた Markdown 本文
+ * @returns {{text: string, id: string}[]} 節の一覧
+ */
+function collectSections(md) {
+  const sections = [];
+  // コードブロックの中の `## ` を拾わないよう、フェンスを先に落とす。
+  const withoutFences = md.replace(/```[\s\S]*?```/g, '');
+  for (const line of withoutFences.split(/\r?\n/)) {
+    const m = line.match(/^##\s+(.+?)\s*$/);
+    if (m) {
+      sections.push({ text: m[1], id: slugify(m[1]) });
+    }
+  }
+  return sections;
+}
+
+/**
+ * サイドメニューを組み立てる.
+ *
+ * <p>目次ページへ戻らないと隣の章へ行けない状態にしない。マニュアルは
+ * 手順の途中で「前の章の言葉」を確かめに戻る読み方をされる。</p>
+ *
+ * @param {{file: string, title: string, sections: {text: string, id: string}[]}[]} pages 全ページ
+ * @param {string} currentFile 表示中のページのファイル名
+ * @returns {string} nav 要素の HTML
+ */
+function sidebar(pages, currentFile) {
+  const items = pages.map((page) => {
+    const current = page.file === currentFile;
+    const link = `<a class="manual-menu-link${current ? ' is-current' : ''}"`
+      + `${current ? ' aria-current="page"' : ''} href="${page.file}">${page.title}</a>`;
+    // 節は開いているページの分だけ出す。全ページ分を並べると、
+    // 一覧が長くなって「今どこにいるか」が読み取れなくなる。
+    const sub = current && page.sections.length > 0
+      ? '\n        <ul class="manual-menu-sub">'
+        + page.sections
+          .map((sec) => `<li><a href="#${sec.id}">${sec.text}</a></li>`)
+          .join('')
+        + '</ul>'
+      : '';
+    return `      <li>${link}${sub}</li>`;
+  });
+  return `<nav class="manual-menu" aria-label="マニュアル目次">
+    <ul>
+${items.join('\n')}
+    </ul>
+  </nav>`;
+}
+
+/**
  * ```plantuml フェンスを PlantUML サーバの SVG 画像 img に置き換える.
  * @param {string} md Markdown 本文
  * @returns {string} 置換後の Markdown（img は生 HTML）
@@ -88,9 +156,10 @@ function injectHeadingIds(html) {
  * @param {string} title ページタイトル
  * @param {string} bodyHtml 本文 HTML
  * @param {boolean} isIndex 目次ページかどうか
+ * @param {string} menuHtml サイドメニューの HTML
  * @returns {string} 完全な HTML ドキュメント
  */
-function pageTemplate(title, bodyHtml, isIndex) {
+function pageTemplate(title, bodyHtml, isIndex, menuHtml) {
   const tocLink = isIndex
     ? ''
     : '<a class="manual-nav-link" href="index.html">← マニュアル目次</a>';
@@ -112,11 +181,14 @@ function pageTemplate(title, bodyHtml, isIndex) {
   <header class="manual-header">
     <a class="manual-home" href="index.html">${MANUAL_TITLE}</a>${portalLink}
   </header>
+  <div class="manual-layout">
+  ${menuHtml}
   <main class="manual-content">
     ${tocLink}
     ${bodyHtml}
     ${tocLink}
   </main>
+  </div>
   <footer class="manual-footer">${footer}</footer>
 </body>
 </html>
@@ -131,7 +203,22 @@ body { margin: 0; color: var(--fg); font-family: -apple-system, "Segoe UI", "Hir
 .manual-header a { color: #fff; text-decoration: none; }
 .manual-home { font-weight: bold; }
 .manual-portal { font-size: 0.85rem; opacity: 0.9; }
-.manual-content { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+.manual-layout { display: grid; grid-template-columns: 16rem minmax(0, 1fr); gap: 2rem; max-width: 1200px; margin: 0 auto; }
+.manual-menu { border-right: 1px solid var(--border); padding: 1.5rem 0.5rem 4rem 1rem; position: sticky; top: 3rem; align-self: start; max-height: calc(100vh - 3rem); overflow-y: auto; }
+.manual-menu ul { list-style: none; margin: 0; padding: 0; }
+.manual-menu li { margin: 0.15rem 0; }
+.manual-menu-link { display: block; padding: 0.3rem 0.5rem; border-radius: 4px; color: var(--fg); text-decoration: none; font-size: 0.9rem; }
+.manual-menu-link:hover { background: var(--bg-soft); }
+.manual-menu-link.is-current { background: #e8eaf6; color: var(--accent); font-weight: bold; }
+.manual-menu-sub { margin: 0.2rem 0 0.5rem 0.75rem; border-left: 1px solid var(--border); }
+.manual-menu-sub a { display: block; padding: 0.2rem 0.6rem; color: var(--muted); text-decoration: none; font-size: 0.82rem; }
+.manual-menu-sub a:hover { color: var(--accent); }
+.manual-content { min-width: 0; padding: 2rem 1.5rem 4rem; }
+/* 画面が狭いときはメニューを本文の上に畳む。横に並べたままだと本文が読めない。 */
+@media (max-width: 820px) {
+  .manual-layout { grid-template-columns: 1fr; gap: 0; }
+  .manual-menu { position: static; max-height: none; border-right: none; border-bottom: 1px solid var(--border); padding: 1rem; }
+}
 .manual-nav-link { display: inline-block; margin: 0.5rem 0; color: var(--accent); text-decoration: none; font-size: 0.9rem; }
 .manual-content h1 { font-size: 1.8rem; border-bottom: 2px solid var(--border); padding-bottom: 0.3rem; }
 .manual-content h2 { font-size: 1.4rem; border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; margin-top: 2.5rem; }
@@ -183,16 +270,35 @@ export default function (gulp) {
         .filter((f) => f.endsWith('.md'))
         .sort();
 
-      let converted = 0;
-      for (const mdFile of mdFiles) {
-        const raw = fs.readFileSync(path.join(SRC_DIR, mdFile), 'utf8');
-        const titleMatch = raw.match(/^#\s+(.+)$/m);
-        const title = titleMatch ? titleMatch[1].trim() : path.basename(mdFile, '.md');
+      // メニューは全ページを知っている必要があるので、先に読み切ってから描く。
+      const pages = mdFiles.map((mdFile) => {
+        const body = stripFrontMatter(fs.readFileSync(path.join(SRC_DIR, mdFile), 'utf8'));
+        const titleMatch = body.match(/^#\s+(.+)$/m);
+        return {
+          file: path.basename(mdFile, '.md') + '.html',
+          source: mdFile,
+          title: titleMatch ? titleMatch[1].trim() : path.basename(mdFile, '.md'),
+          sections: collectSections(body),
+          body,
+        };
+      });
 
-        const bodyHtml = injectHeadingIds(rewriteLinks(marked.parse(renderPlantuml(raw))));
-        const isIndex = mdFile === 'index.md';
-        const outName = path.basename(mdFile, '.md') + '.html';
-        fs.writeFileSync(path.join(OUT_DIR, outName), pageTemplate(title, bodyHtml, isIndex), 'utf8');
+      // 目次を先頭に置く。ファイル名順だと index.md が数字の後に来て、
+      // 「全体像へ戻る」入口が一覧の末尾に沈む。
+      pages.sort((a, b) => {
+        if (a.source === 'index.md') return -1;
+        if (b.source === 'index.md') return 1;
+        return a.source.localeCompare(b.source);
+      });
+
+      let converted = 0;
+      for (const page of pages) {
+        const bodyHtml = injectHeadingIds(rewriteLinks(marked.parse(renderPlantuml(page.body))));
+        fs.writeFileSync(
+          path.join(OUT_DIR, page.file),
+          pageTemplate(page.title, bodyHtml, page.source === 'index.md', sidebar(pages, page.file)),
+          'utf8',
+        );
         converted += 1;
       }
 

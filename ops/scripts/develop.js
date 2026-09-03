@@ -13,14 +13,14 @@
 import { spawnSync } from 'child_process';
 import { cleanDockerEnv, openUrl } from './shared.js';
 
-const BACKEND_DIR = 'apps/cargo-tracker/backend';
+export const BACKEND_DIR = 'apps/cargo-tracker/backend';
 const FRONTEND_DIR = 'apps/cargo-tracker/frontend';
 
 /** 既定で起動するバックエンドサービス。 */
 const DEFAULT_SERVICE = 'bookingms';
 
 /** 業務サービス（architecture_backend.md）。 */
-const SERVICES = [
+export const SERVICES = [
   'gatewayms',
   'authms',
   'bookingms',
@@ -36,8 +36,16 @@ const SERVICES = [
  */
 const JIG_MODULE_COUNT = 10;
 
+/**
+ * ポータルに載せる JIG の対象。
+ *
+ * <p>テスト専用の 2 つ（contract-tests・acceptance-tests）は載せない。読み手が
+ * 探しているのは業務の構造であり、テストの足場が並ぶと見つけにくくなる。</p>
+ */
+export const JIG_SERVICES = ['shared', ...SERVICES];
+
 /** 専用データベースを持つサービス。jig-erd の ER 図はこの単位で生成される。 */
-const DB_SERVICES = ['authms', 'bookingms', 'routingms', 'trackingms', 'handlingms', 'billingms'];
+export const DB_SERVICES = ['authms', 'bookingms', 'routingms', 'trackingms', 'handlingms', 'billingms'];
 
 /**
  * Windows shell に渡す引数を引用する。

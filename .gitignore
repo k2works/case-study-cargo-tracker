@@ -69,3 +69,5 @@ apps/cargo-tracker/frontend/*.tsbuildinfo
 # 毎回 `npx gulp portal:artifacts` で作り直すのでコミットしない。
 apps/cargo-tracker/www/docs/
 apps/cargo-tracker/www/manual/
+apps/cargo-tracker/www/jig/
+apps/cargo-tracker/www/jig-erd/

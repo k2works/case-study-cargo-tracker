@@ -12,6 +12,7 @@ import { execSync, spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { openUrl } from './shared.js';
+import { BACKEND_DIR, DB_SERVICES, JIG_SERVICES } from './develop.js';
 
 const COMPOSE_DIR = 'apps/cargo-tracker';
 
@@ -96,6 +97,116 @@ async function waitForGateway() {
   return false;
 }
 
+/**
+ * 入口を持たない生成物（SVG の並び）に、ファイル一覧の index.html を作る。
+ *
+ * @param {string} dir 対象ディレクトリ
+ * @param {string} service サービス名
+ * @param {string} title 種類の名前
+ */
+function writeFileIndex(dir, service, title) {
+  const files = fs.readdirSync(dir).filter((f) => f !== 'index.html').sort();
+  const links = files
+    .map((file) => `      <li><a href="${file}">${file}</a></li>`)
+    .join('\n');
+  fs.writeFileSync(path.join(dir, 'index.html'), `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${service} — ${title}</title>
+<link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+<header class="hero"><div class="hero-inner">
+  <p class="eyebrow">生成ドキュメント</p>
+  <h1>${service}</h1>
+  <p class="lead">${title}。概要・サマリー・詳細の 3 枚が出ます。</p>
+</div></header>
+<main>
+  <section>
+    <ul>
+${links}
+    </ul>
+    <p class="section-note"><a href="../">サービスの一覧へ戻る</a></p>
+  </section>
+</main>
+</body>
+</html>
+`, 'utf8');
+}
+
+/**
+ * ビルドディレクトリに出た生成物をサービスごとにポータル配下へ写し、入口を作る。
+ *
+ * <p>1 つも見つからないときは失敗させる。黙って空の入口を置くと、ポータルには
+ * リンクがあるのに開くと 404 という状態が、生成を忘れた側から見えなくなる。</p>
+ *
+ * @param {string} kind 生成物の種類（build/<kind> と www/<kind> に対応）
+ * @param {string[]} services 対象サービス
+ * @param {string} title 入口ページの見出し
+ * @param {string} description 入口ページの説明
+ * @param {(error?: Error) => void} done Gulp のコールバック
+ */
+function copyGenerated(kind, services, title, description, done) {
+  const outDir = path.join(PORTAL.dir, kind);
+  fs.rmSync(outDir, { recursive: true, force: true });
+  fs.mkdirSync(outDir, { recursive: true });
+
+  const copied = services.filter((service) => {
+    const from = path.join(BACKEND_DIR, service, 'build', kind);
+    if (!fs.existsSync(from)) {
+      return false;
+    }
+    const to = path.join(outDir, service);
+    fs.cpSync(from, to, { recursive: true });
+    // jig-erd は SVG を並べるだけで入口を作らない。作らないと、
+    // ディレクトリ一覧を返さない nginx では開いた瞬間 403/404 になる。
+    if (!fs.existsSync(path.join(to, 'index.html'))) {
+      writeFileIndex(to, service, title);
+    }
+    return true;
+  });
+
+  if (copied.length === 0) {
+    done(new Error(`${kind} の出力がありません。先に生成タスクを実行してください`));
+    return;
+  }
+
+  const links = copied
+    .map((service) => `      <li><a href="${service}/">${service}</a></li>`)
+    .join('\n');
+  fs.writeFileSync(path.join(outDir, 'index.html'), `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${title} — Cargo Tracker</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<header class="hero"><div class="hero-inner">
+  <p class="eyebrow">生成ドキュメント</p>
+  <h1>${title}</h1>
+  <p class="lead">${description}</p>
+</div></header>
+<main>
+  <section>
+    <h2>サービスを選ぶ</h2>
+    <ul>
+${links}
+    </ul>
+    <p class="section-note"><a href="../">ポータルへ戻る</a></p>
+  </section>
+</main>
+</body>
+</html>
+`, 'utf8');
+
+  console.log(`${kind}: ${copied.length} 件を ${outDir} に置きました`);
+  done();
+}
+
 /** kind クラスタ名と名前空間。手順書と揃える。 */
 const KIND_CLUSTER = 'cargo-tracker';
 const NAMESPACE = 'cargo-tracker';
@@ -121,8 +232,31 @@ export default function (gulp) {
     done();
   });
 
-  /** ポータルが配る生成物（ドキュメントサイト・ユーザーマニュアル）を作り直す。 */
-  gulp.task('portal:artifacts', gulp.series('mkdocs:build', 'portal:docs', 'manual:build'));
+  /**
+   * JIG（バイトコードから起こした設計ドキュメント）をポータル配下へ置く。
+   *
+   * <p>サービスごとに 1 つずつ出るので、入口の index.html を生成して束ねる。
+   * サービス名の一覧を手書きの HTML に持たせると、サービスを増やしたときに
+   * 片方だけ直され、リンクの無いサービスができる。</p>
+   */
+  gulp.task('portal:jig', (done) => {
+    copyGenerated('jig', JIG_SERVICES, 'JIG',
+      'バイトコードから起こしたドメインモデル・パッケージ関連・用語集。'
+      + '突き合わせ先はドメインモデル設計とバックエンドアーキテクチャ。', done);
+  });
+
+  /** jig-erd（実スキーマから起こした ER 図）をポータル配下へ置く。 */
+  gulp.task('portal:jig-erd', (done) => {
+    copyGenerated('jig-erd', DB_SERVICES, 'ER 図',
+      'Flyway が実際に構築したスキーマの ER 図。突き合わせ先はデータモデル設計。'
+      + 'Database per Service なのでサービス単位に分かれる。', done);
+  });
+
+  /** ポータルが配る生成物（ドキュメントサイト・マニュアル・JIG・ER 図）を作り直す。 */
+  gulp.task('portal:artifacts', gulp.series(
+    'mkdocs:build', 'portal:docs', 'manual:build',
+    'dev:jig', 'portal:jig', 'dev:jig-erd', 'portal:jig-erd',
+  ));
 
   /** ポータルをブラウザで開く（k8s:open で転送を張っている間だけ開ける）。 */
   gulp.task('portal:open', (done) => {
@@ -185,10 +319,12 @@ export default function (gulp) {
       { cwd: `${COMPOSE_DIR}/${FRONTEND.dir}`, stdio: 'inherit' });
     // ポータルは docs / manual を焼き込む。生成してから作らないと、
     // リンクだけあって中身が 404 のポータルができる。
-    if (!fs.existsSync(path.join(PORTAL.dir, 'docs'))
-      || !fs.existsSync(path.join(PORTAL.dir, 'manual'))) {
+    const missing = ['docs', 'manual', 'jig', 'jig-erd']
+      .filter((dir) => !fs.existsSync(path.join(PORTAL.dir, dir)));
+    if (missing.length > 0) {
       done(new Error(
-        'ポータルの配信物がありません。npx gulp portal:artifacts を先に実行してください',
+        `ポータルの配信物がありません（${missing.join(', ')}）。`
+        + ' npx gulp portal:artifacts を先に実行してください',
       ));
       return;
     }

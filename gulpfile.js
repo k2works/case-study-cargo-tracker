@@ -24,8 +24,11 @@ vaultTasks(gulp);
 sshTasks(gulp);
 sonarLocalTasks(gulp);
 okfTasks(gulp);
-cargoTrackerTasks(gulp);
+// develop を先に登録する。cargo_tracker の portal:artifacts が dev:jig を
+// gulp.series で参照しており、series は呼び出し時に名前を解決するため、
+// 逆順だと「Task never defined」で起動できない。
 developTasks(gulp);
+cargoTrackerTasks(gulp);
 
 export const spec = gulp.series('mkdocs:serve', 'mkdocs:open');
 
