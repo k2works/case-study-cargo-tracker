@@ -27,6 +27,31 @@ public interface UserMapper {
 
     int insertAuditLog(AuditLogRow row);
 
+    /** 利用者管理（S90）の一覧。パスワードハッシュは載せない。 */
+    List<AdminUserRow> findAllForAdmin();
+
+    /**
+     * ロックを解く（US31 §受入基準 4）。
+     *
+     * <p>失敗回数も 0 に戻す。戻さないと、解除した直後の 1 回の打ち間違いで
+     * また 5 回目に達してロックされる。</p>
+     */
+    @Update("""
+            UPDATE users SET failed_attempts = 0, locked_until = NULL, updated_at = #{updatedAt}
+             WHERE username = #{username}
+            """)
+    int unlock(@Param("username") String username, @Param("updatedAt") Instant updatedAt);
+
+    /** S90 の 1 行。ロールは "," 区切り（利用者は 1 ロール以上を持つ）。 */
+    record AdminUserRow(
+            String username,
+            String displayName,
+            boolean enabled,
+            int failedAttempts,
+            Instant lockedUntil,
+            String roles) {
+    }
+
     record UserRow(
             String username,
             String passwordHash,

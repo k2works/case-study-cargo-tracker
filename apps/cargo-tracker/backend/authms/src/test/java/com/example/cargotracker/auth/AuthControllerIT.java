@@ -230,6 +230,71 @@ class AuthControllerIT extends AbstractAxonIntegrationTest {
         assertThat(reasons("retired01")).containsExactly("DISABLED");
     }
 
+    private ResponseEntity<JsonMap> unlock(String username, String roles) {
+        return rest.post()
+                .uri("http://localhost:" + port + "/api/v1/auth/admin/users/" + username + "/unlock")
+                .header("X-Auth-Roles", roles)
+                .retrieve()
+                .toEntity(JsonMap.class);
+    }
+
+    private ResponseEntity<JsonMap> adminUsers(String roles) {
+        return rest.get()
+                .uri("http://localhost:" + port + "/api/v1/auth/admin/users")
+                .header("X-Auth-Roles", roles)
+                .retrieve()
+                .toEntity(JsonMap.class);
+    }
+
+    @Test
+    @DisplayName("管理者が解除すると入れるようになる")
+    void adminUnlocksAccount() {
+        // 時間経過だけが解除の手段だと、業務中にロックされた担当者は 15 分待つしかない
+        // （US31 §受入基準 4）。
+        for (int i = 0; i < 5; i++) {
+            login("sales01", "wrong-password");
+        }
+        assertThat(login("sales01", "secret1234").getStatusCode())
+                .isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        assertThat(unlock("sales01", "ROLE_ADMIN").getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+
+        assertThat(login("sales01", "secret1234").getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(events("sales01")).contains("UNLOCKED");
+    }
+
+    @Test
+    @DisplayName("管理者以外は解除できない")
+    void rejectsUnlockByNonAdmin() {
+        assertThat(unlock("sales01", "ROLE_SALES").getStatusCode())
+                .isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(unlock("sales01", null).getStatusCode())
+                .as("ヘッダが無いのは「ロールが無い」であって「全部許す」ではない")
+                .isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    @DisplayName("居ない利用者の解除は 404 ではなく 204 で返す")
+    void unlockIsIdempotentForUnknownUser() {
+        // 404 と 204 を出し分けると、管理画面を踏み台に利用者名を総当たりできる。
+        // 解除は「その利用者がロックされていない状態にする」ことなので、
+        // 居なければ既にその状態である。
+        assertThat(unlock("nosuchuser", "ROLE_ADMIN").getStatusCode())
+                .isEqualTo(HttpStatus.NO_CONTENT);
+        assertThat(events("nosuchuser")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("利用者管理は管理者だけが読める")
+    void listsUsersForAdminOnly() {
+        assertThat(adminUsers("ROLE_SALES").getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        ResponseEntity<JsonMap> response = adminUsers("ROLE_ADMIN");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().get("users").toString()).contains("sales01");
+    }
+
     @Test
     @DisplayName("無効化されたアカウントは正しいパスワードでも入れない")
     void rejectsDisabledAccount() {

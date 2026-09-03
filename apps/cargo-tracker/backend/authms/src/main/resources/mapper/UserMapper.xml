@@ -20,6 +20,19 @@
         SELECT * FROM users WHERE username = #{username}
     </select>
 
+    <select id="findAllForAdmin"
+            resultType="com.example.cargotracker.auth.infrastructure.persistence.UserMapper$AdminUserRow">
+        SELECT u.username        AS username,
+               u.display_name    AS displayName,
+               u.enabled         AS enabled,
+               u.failed_attempts AS failedAttempts,
+               u.locked_until    AS lockedUntil,
+               (SELECT string_agg(r.role, ',' ORDER BY r.role)
+                  FROM user_roles r WHERE r.username = u.username) AS roles
+          FROM users u
+         ORDER BY u.username
+    </select>
+
     <insert id="insertAuditLog">
         INSERT INTO auth_audit_log (username, event_type, reason, remote_addr, occurred_at)
         VALUES (#{username}, #{eventType}, #{reason}, #{remoteAddr}, #{occurredAt})
