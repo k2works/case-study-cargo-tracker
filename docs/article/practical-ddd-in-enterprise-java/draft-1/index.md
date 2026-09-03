@@ -14,3 +14,4 @@ Cargo Tracker を題材に、DDD の概念から Spring Platform での実装戦
 ## 執筆計画
 
 - [アウトライン](outline.md)
+- [用語対応表](glossary.md)
