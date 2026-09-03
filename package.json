@@ -18,7 +18,18 @@
     "claude:yolo": "claude --dangerously-skip-permissions",
     "copilot:yolo": "copilot --allow-all-tools",
     "codex:yolo": "codex --yolo",
-    "gemini:yolo": "gemini --yolo"
+    "gemini:yolo": "gemini --yolo",
+    "tdd": "gulp dev:backend:tdd",
+    "test": "gulp dev:backend:test",
+    "build": "gulp dev:backend:build",
+    "check": "gulp dev:backend:check",
+    "dev:backend": "gulp dev:backend",
+    "dev:frontend": "gulp dev:frontend",
+    "dev:help": "gulp dev:help",
+    "jig": "gulp dev:jig",
+    "jig:open": "gulp dev:jig:open",
+    "jig-erd": "gulp dev:jig-erd",
+    "prepare": "husky"
   },
   "repository": {
     "type": "git",
@@ -42,5 +53,17 @@
     "gulp": "^5.0.0",
     "marked": "^18.0.11",
     "plantuml-encoder": "^1.4.0"
+  },
+  "lint-staged": {
+    "apps/cargo-tracker/backend/**/*.java": [
+      "bash ops/hooks/backend-check.sh"
+    ],
+    "apps/cargo-tracker/frontend/**/*.{ts,tsx}": [
+      "bash ops/hooks/frontend-check.sh"
+    ]
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^17.4.1"
   }
 }

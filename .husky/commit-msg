@@ -1,0 +1,19 @@
+# Conventional Commits に従わないメッセージを弾く。
+# 規約は docs/operation/cargo-tracker/アプリケーション開発環境セットアップ手順書.md「Git 規約」。
+message=$(head -n 1 "$1")
+
+# fixup!/squash!/revert! とマージコミットは対象外
+case "$message" in
+  fixup!*|squash!*|Revert\ *|Merge\ *) exit 0 ;;
+esac
+
+if ! printf '%s' "$message" |
+  grep -Eq '^(feat|fix|docs|style|refactor|perf|test|build|ci|chore)(\([a-z0-9_/-]+\))?!?: .+'; then
+  echo "コミットメッセージが Conventional Commits に従っていません:" >&2
+  echo "  $message" >&2
+  echo >&2
+  echo "形式: <type>(<scope>): <説明>" >&2
+  echo "type: feat fix docs style refactor perf test build ci chore" >&2
+  echo "例:   feat(booking): 荷主を登録する" >&2
+  exit 1
+fi
