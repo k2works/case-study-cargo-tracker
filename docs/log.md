@@ -1,6 +1,12 @@
 # Docs Update Log
 
 ## 2026-09-03
+* **Creation**: [06-利用者を管理する](/manual/06-利用者を管理する.md) を作成（claude-code/claude-opus-5）
+* **Creation**: [05-貨物予約を登録する](/manual/05-貨物予約を登録する.md) を作成（claude-code/claude-opus-5）
+* **Update**: [04-要確認一覧を確認する](/manual/04-要確認一覧を確認する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [03-荷主を登録する](/manual/03-荷主を登録する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [02-ログインとログアウト](/manual/02-ログインとログアウト.md) を更新（claude-code/claude-opus-5）
+* **Update**: [01-業務フロー](/manual/01-業務フロー.md) を更新（claude-code/claude-opus-5）
 * **Update**: [user_story](/requirements/user_story.md) を更新（claude-code/claude-opus-5）
 * **Update**: [iteration_plan-2](/development/cargo-tracker/iteration_plan-2.md) を更新（claude-code/claude-opus-5）
 * **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
