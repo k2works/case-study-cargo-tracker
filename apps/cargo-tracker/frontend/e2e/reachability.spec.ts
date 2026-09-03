@@ -54,7 +54,17 @@ test('ログインの失敗は理由を言わない', async ({ page }) => {
   await expect(alert).not.toContainText('ロック');
 });
 
-test('営業でログインすると経理専用の導線は出ず、直打ちは 403 になる', async ({ page }) => {
+/**
+ * デモ項目 7 の片方向。**IT1 に「経理だけが開ける画面」はありません**
+ * （経理が見られる荷主一覧・要確認一覧は営業も見られます）。そのため
+ * 営業から見て「出ない画面」は存在せず、この向きで確かめられるのは
+ * 「自分の担当の画面が過不足なく出ること」までです。
+ *
+ * デモ項目 7 の「出ない・直打ちは 403」は次のテスト（経理 → 荷主登録）が
+ * 担います。**テスト名が謳っていない内容を検証していない状態にしない**ため、
+ * 名前を実際に確かめていることに合わせています。
+ */
+test('営業でログインすると担当の画面が過不足なくナビに出る', async ({ page }) => {
   await page.route('**/api/v1/auth/login', (route) =>
     route.fulfill({
       status: 200,
@@ -78,7 +88,16 @@ test('営業でログインすると経理専用の導線は出ず、直打ち�
   await page.getByRole('button', { name: 'ログイン' }).click();
 
   await expect(page.getByRole('heading', { name: 'ダッシュボード' })).toBeVisible();
-  await expect(page.getByRole('navigation')).toContainText('荷主一覧');
+
+  const nav = page.getByRole('navigation');
+  for (const label of ['ダッシュボード', '荷主一覧', '荷主登録', '要確認一覧']) {
+    await expect(nav).toContainText(label);
+  }
+
+  // ナビに出た画面はすべて開ける。出ているのに開けないと、利用者は
+  // 「押しても何も起きない」を不具合と受け取る。
+  await page.goto('/shippers/new');
+  await expect(page.getByRole('heading', { name: '荷主登録' })).toBeVisible();
 });
 
 test('経理でログインすると荷主登録はナビに出ず、直打ちすると 403 になる', async ({ page }) => {

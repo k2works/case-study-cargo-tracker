@@ -53,4 +53,11 @@ tasks.named<Test>("test") {
     inputs.files(rootProject.subprojects.map { it.file("build.gradle.kts") })
             .withPropertyName("subprojectBuildScripts")
             .withPathSensitivity(PathSensitivity.RELATIVE)
+    // ReplayCheckAccompaniesReactionTest は各サービスの本番ソースと ADR を読む。
+    // 宣言しないと、Reaction Handler を足しても検査が走らずに緑のままになる。
+    inputs.files(rootProject.subprojects.map { it.file("src/main/java") })
+            .withPropertyName("serviceMainSources")
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.file(rootProject.file(
+            "../../../docs/adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md"))
 }

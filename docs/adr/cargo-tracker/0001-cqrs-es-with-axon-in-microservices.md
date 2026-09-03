@@ -212,7 +212,7 @@ REST はクライアントから Gateway を通って各サービスに入る経
 | 共有カーネルの範囲 | ArchUnit：`SharedKernelScopeTest`。置けるパッケージの名簿を固定し、名簿を狭めると赤になること・`shared` が空でないことも併せて検査する（空なら「守っている」でなく「調べていない」で緑になる） |
 | 契約の名簿 | `ContractEventGoldenTest`：名簿は `shared/contract/event` を**走査して導出**し、ゴールデンが無い契約と、検査していないゴールデンの両方を赤にする。手書きの名簿にすると、契約を足して書き忘れたものが素通りする |
 | サービス越しの同期状態変更を置かない | ArchUnit：`CommandGateway` の利用箇所を `interfaces`・`application/reaction` に限定する。`infrastructure/projection` は `CommandGateway` に依存しない |
-| 投影がコマンドを送らない | 統合テスト `ReplayIT`：投影の Processing Group をリセットしてリプレイし、`CommandGateway` が 1 度も呼ばれないこと |
+| 投影がコマンドを送らない | 統合テスト `ReplayIT`：投影の Processing Group をリセットしてリプレイし、`CommandGateway` が 1 度も呼ばれないこと。**IT1 時点では未実装**（下記） |
 | Reaction は同期クエリを呼ばない | ArchUnit：`reactionDoesNotCallQueryGateway`。違反フィクスチャで赤になることを確認済み |
 | Saga を使わない（決定 6） | ArchUnit：`sagaIsNotUsed`（パッケージ）と `doesNotDependOnAxonSaga`（型）。後者は Axon 5 に Saga の型が無いため違反フィクスチャを書けない。その事実自体を `ArchRulesAreEffectiveTest` に固定し、`SagaIsStillAbsentTest` が赤になった日に同じ変更でフィクスチャを書く |
 | Saga の再評価の発動条件（決定 6） | `SagaIsStillAbsentTest`：Axon のクラスパスに `saga` を含むクラスが現れたら赤にする。版を上げたときに落ちて気づける。あわせて「Axon の jar を実際に開いているか」も見る（開けていなければ「無い」でなく「調べていない」で緑になる） |
@@ -222,6 +222,7 @@ REST はクライアントから Gateway を通って各サービスに入る経
 | authms は Event Sourcing にしない | `AuthIsNotEventSourcedTest`。authms にクラスが実在することも併せて検査する |
 | 4 系 API を使わない | ビルド：`org.axonframework.modelling.command.AggregateLifecycle` 等への参照が無いこと（存在しないのでコンパイルで止まる） |
 | `axon-server-connector` の接続と DCB | 起動時のヘルスチェック。接続できない、または context が DCB でなければ**起動を止める**（既定では止まらず無限再試行することをスパイクで確認済み）。統合テストで DCB 無効の Axon Server に対して起動が止まることを 1 本固定する。判定は `AXONIQ-1302` のログ検出に頼らず、接続後に context の DCB 可否を問い合わせて行う |
+| `ReplayIT` の未実装（2026-09-03） | **この表の 1 行が文章のまま残っている。** IT1 には Reaction Handler が 1 つも無く（連鎖を伴うストーリーが IT2 以降）、「リプレイで再送されるコマンド」がまだ存在しない。ただし ArchUnit の `onlyInterfacesAndReactionSendCommands` はコンパイル時の依存しか見ておらず、**実行時に呼ばれないことの保証ではない**。最初の Reaction Handler を入れる変更で同時に `ReplayIT` を書く。書かずに Reaction Handler だけ入れることを禁じる |
 | スパイクの結果を ADR に戻す | IT1 の DoD：決定 5 の 7 項目それぞれの結果で本 ADR・`architecture_backend.md`・`tech_stack.md` を更新してから IT1 をクローズする（2026-09-02 実施。第 7 項目のみ IT2 へ持ち越し） |
 
 ## 備考
