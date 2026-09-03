@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Spring プラットフォーム上でイベント駆動アーキテクチャとして Cargo Tracker を構成する（draft-1）。">
+        <meta name="description" content="Spring プラットフォーム上でイベント駆動アーキテクチャとして Cargo Tracker を構成する（draft-1）。サービス分割、REST とメッセージング、イベント契約。">
       
       
         <meta name="author" content="Project Team">
@@ -6689,147 +6689,745 @@
 
 
 <h1 id="4-spring-platform-eda">第 4 章：Spring Platform × EDA<a class="headerlink" href="#4-spring-platform-eda" title="Permanent link">&para;</a></h1>
-<p>この章では、Cargo Tracker を EDA（Event-Driven Architecture）として読み解きます。ポイントは「イベントを使っているか」ではなく、<strong>境界を越える通信をイベントと ACL ポートに限定し、各 BC が自分のモデルだけを更新する</strong>設計です。</p>
+<p>第 3 章では、BC の境界を 1 つのプロセスの中に保ちました。この章では BC をプロセスごと分け、境界を越える通信をイベントとサービス間 API に置き換えます。</p>
+<p><strong>参照元の実装が変わります。</strong>第 3 章までが <code>docs/article/source/java-2</code>（モジュラーモノリス）だったのに対し、本章は <code>docs/article/source/java-3</code>（マイクロサービス）です。<strong>続きではなく別実装であり、設計判断がそのまま引き継がれているわけではありません。</strong>同じ Cargo Tracker を別の構成で実装したものとして読んでください。</p>
+<p>以降のパスは <code>docs/article/source/java-3/apps/backend/</code> からの相対です。Java のパスは <code>&lt;サービス&gt;/src/main/java/com/example/</code> を省いて記します（<code>bookingms/domain/...</code> は <code>bookingms/src/main/java/com/example/bookingms/domain/...</code> を指します）。</p>
 <h2 id="spring">Spring プラットフォーム<a class="headerlink" href="#spring" title="Permanent link">&para;</a></h2>
 <h3 id="spring-boot">Spring Boot: 機能<a class="headerlink" href="#spring-boot" title="Permanent link">&para;</a></h3>
-<p>基盤は Spring Boot です。単一プロセスで起動しつつ、BC ごとにパッケージ分割してモジュラーモノリスを形成します。</p>
+<p><strong>サービスごとに独立した Spring Boot アプリケーション</strong>になります。起動クラスは各サービスに 1 つずつあり、第 3 章のような BC 一覧の宣言はありません。<strong>サービスの一覧はビルドの構成が持ちます。</strong></p>
 <div class="highlight"><pre><span></span><code><span class="nd">@SpringBootApplication</span>
-<span class="nd">@ConfigurationPropertiesScan</span>
-<span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">CargoTrackerApplication</span><span class="w"> </span><span class="p">{</span>
+<span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">BookingApplication</span><span class="w"> </span><span class="p">{</span>
+
 <span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="n">String</span><span class="o">[]</span><span class="w"> </span><span class="n">args</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">SpringApplication</span><span class="p">.</span><span class="na">run</span><span class="p">(</span><span class="n">CargoTrackerApplication</span><span class="p">.</span><span class="na">class</span><span class="p">,</span><span class="w"> </span><span class="n">args</span><span class="p">);</span>
+<span class="w">        </span><span class="n">SpringApplication</span><span class="p">.</span><span class="na">run</span><span class="p">(</span><span class="n">BookingApplication</span><span class="p">.</span><span class="na">class</span><span class="p">,</span><span class="w"> </span><span class="n">args</span><span class="p">);</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div>
-<p>参照: <code>docs/article/source/java-2/apps/cargo-tracker/src/main/java/com/example/cargotracker/CargoTrackerApplication.java</code></p>
+<p>転記元: <code>bookingms/BookingApplication.java</code></p>
+<p>デプロイの単位は Gradle のモジュールです。第 3 章の実装が単一モジュールだったのに対し、こちらは <strong>8 つのサービスと共有ライブラリ 1 つ</strong>に分かれます。</p>
+<div class="highlight"><pre><span></span><code><span class="n">rootProject</span><span class="o">.</span><span class="na">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'cargo-tracker-microservices'</span>
+
+<span class="n">include</span><span class="w"> </span><span class="s1">'shared'</span>
+<span class="n">include</span><span class="w"> </span><span class="s1">'gatewayms'</span>
+<span class="n">include</span><span class="w"> </span><span class="s1">'authms'</span>
+<span class="n">include</span><span class="w"> </span><span class="s1">'bookingms'</span>
+<span class="n">include</span><span class="w"> </span><span class="s1">'routingms'</span>
+<span class="n">include</span><span class="w"> </span><span class="s1">'trackingms'</span>
+<span class="n">include</span><span class="w"> </span><span class="s1">'handlingms'</span>
+<span class="n">include</span><span class="w"> </span><span class="s1">'billingms'</span>
+<span class="n">include</span><span class="w"> </span><span class="s1">'simulationms'</span>
+</code></pre></div>
+<p>転記元: <code>settings.gradle</code></p>
+<p>各サービスが使う starter は、第 3 章とほぼ同じ顔ぶれに 1 つだけ加わります。</p>
+<div class="highlight"><pre><span></span><code><span class="n">implementation</span><span class="w"> </span><span class="s1">'org.springframework.boot:spring-boot-starter-web'</span>
+<span class="n">implementation</span><span class="w"> </span><span class="s1">'org.springframework.boot:spring-boot-starter-validation'</span>
+<span class="n">implementation</span><span class="w"> </span><span class="s1">'org.springframework.boot:spring-boot-starter-actuator'</span>
+<span class="n">implementation</span><span class="w"> </span><span class="s1">'org.mybatis.spring.boot:mybatis-spring-boot-starter:4.0.1'</span>
+<span class="n">implementation</span><span class="w"> </span><span class="s1">'org.springframework.boot:spring-boot-starter-flyway'</span>
+<span class="n">implementation</span><span class="w"> </span><span class="s1">'org.springframework.boot:spring-boot-starter-amqp'</span>
+</code></pre></div>
+<p>転記元: <code>bookingms/build.gradle</code></p>
+<p>加わったのは <code>spring-boot-starter-amqp</code> です。<strong>プロセスが分かれた瞬間に、メッセージングが必要になります。</strong>第 3 章では BC 間の通知が <code>ApplicationEventPublisher</code> で足りていましたが、それは購読側が同じ JVM にいたからです。</p>
+<p>画面用の starter（Thymeleaf）は消えています。画面は別のフロントエンドが担い、各サービスは REST を提供する側に回ります。</p>
+<h3 id="spring-cloud">Spring Cloud<a class="headerlink" href="#spring-cloud" title="Permanent link">&para;</a></h3>
+<p>第 3 章では採用していなかった Spring Cloud が、ここで初めて登場します。ただし<strong>使うのは Gateway だけ</strong>です。</p>
+<div class="highlight"><pre><span></span><code><span class="n">implementation</span><span class="w"> </span><span class="s1">'org.springframework.cloud:spring-cloud-starter-gateway-server-webflux:5.0.1'</span>
+</code></pre></div>
+<p>転記元: <code>gatewayms/build.gradle</code></p>
+<p>Gateway は入口を 1 つにまとめ、パスでサービスへ振り分けます。</p>
+<div class="highlight"><pre><span></span><code><span class="w">          </span><span class="nt">routes</span><span class="p">:</span>
+<span class="w">            </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">authms</span>
+<span class="w">              </span><span class="nt">uri</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${AUTHMS_URI:http://localhost:8081}</span>
+<span class="w">            </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bookingms</span>
+<span class="w">              </span><span class="nt">uri</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${BOOKINGMS_URI:http://localhost:8082}</span>
+<span class="w">            </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">routingms</span>
+<span class="w">              </span><span class="nt">uri</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${ROUTINGMS_URI:http://localhost:8083}</span>
+<span class="w">              </span><span class="nt">predicates</span><span class="p">:</span>
+<span class="w">                </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Path=/api/v1/voyages/**,/api/v1/routes/**</span>
+</code></pre></div>
+<p>転記元: <code>gatewayms/src/main/resources/application.yml</code></p>
+<p>Gateway が担うのは<strong>認証と JWT の署名検証</strong>です。各サービスは Gateway が付与した検証済みのヘッダを信頼し、<strong>ロールに基づく認可だけ</strong>を行います。</p>
+<div class="highlight"><pre><span></span><code><span class="cm">/**</span>
+<span class="cm"> * 予約コンテキストの REST エンドポイント。</span>
+<span class="cm"> *</span>
+<span class="cm"> * &lt;p&gt;HTTP と業務の境界である。&lt;strong&gt;ここで行うのはロールに基づく認可（403）だけ&lt;/strong&gt;で、</span>
+<span class="cm"> * 認証（401）と JWT の署名検証は API Gateway が担う（ADR-004）。Gateway が付与した</span>
+<span class="cm"> * 検証済みクレーム（{@code X-Authenticated-*}）を信頼する。</span>
+<span class="cm"> *</span>
+<span class="cm"> * &lt;p&gt;&lt;strong&gt;業務の不変条件をここに書かない。&lt;/strong&gt; 入力検証は利用者への案内であり、</span>
+<span class="cm"> * モデルの正しさはドメイン層が担保する。</span>
+<span class="cm"> */</span>
+<span class="kn">package</span><span class="w"> </span><span class="nn">com.example.bookingms.interfaces.rest</span><span class="p">;</span>
+</code></pre></div>
+<p>転記元: <code>bookingms/interfaces/rest/package-info.java</code></p>
+<p><strong>Spring Cloud Stream は使っていません。</strong>メッセージングは <code>spring-boot-starter-amqp</code>、つまり素の AMQP です。抽象化のレイヤを 1 枚重ねる代わりに、交換機とルーティングキーを自分で名指しする形を採っています。この選択の代償は、あとの「送信サービス：メッセージブローカー」で見ます。</p>
 <h3 id="spring-framework">Spring Framework のまとめ<a class="headerlink" href="#spring-framework" title="Permanent link">&para;</a></h3>
-<p>EDA の実装で使う主要機能は次の 3 つです。</p>
-<ol>
-<li><code>ApplicationEventPublisher</code> によるイベント発行</li>
-<li><code>@TransactionalEventListener(AFTER_COMMIT)</code> による購読</li>
-<li><code>@Service</code> / <code>@Component</code> によるユースケースとアダプタの結線</li>
-</ol>
+<p>Spring の役割は第 3 章と変わりません。変わったのは<strong>イベントの運び方</strong>だけです。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">機能</th>
+<th style="text-align: left;">第 3 章（モジュラーモノリス）</th>
+<th style="text-align: left;">本章（マイクロサービス）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">DI</td>
+<td style="text-align: left;">同じ</td>
+<td style="text-align: left;">同じ</td>
+</tr>
+<tr>
+<td style="text-align: left;">宣言的トランザクション</td>
+<td style="text-align: left;">同じ（1 DB）</td>
+<td style="text-align: left;">サービスごとの DB に閉じる</td>
+</tr>
+<tr>
+<td style="text-align: left;">イベント</td>
+<td style="text-align: left;"><code>ApplicationEventPublisher</code></td>
+<td style="text-align: left;">RabbitMQ（<code>RabbitTemplate</code> / <code>@RabbitListener</code>）</td>
+</tr>
+<tr>
+<td style="text-align: left;">Web</td>
+<td style="text-align: left;"><code>@Controller</code>（画面）</td>
+<td style="text-align: left;"><code>@RestController</code>（API）</td>
+</tr>
+</tbody>
+</table>
+<p>ドメイン層がフレームワークを知らない点も変わりません。</p>
+<div class="highlight"><pre><span></span><code><span class="cm">/**</span>
+<span class="cm"> * 業務の言葉と規則を置く層。もっとも内側であり、どの層にも依存しない。</span>
+<span class="cm"> *</span>
+<span class="cm"> * &lt;p&gt;構成の詳細は各サブパッケージの説明を参照。依存は常に外から内へ向かう。</span>
+<span class="cm"> */</span>
+<span class="kn">package</span><span class="w"> </span><span class="nn">com.example.bookingms.domain</span><span class="p">;</span>
+</code></pre></div>
+<p>転記元: <code>bookingms/domain/package-info.java</code></p>
+<p><strong>この一貫性が、実装方式の切り替えを可能にしています。</strong>第 3 章のドメイン層と本章のドメイン層は、置かれている技術基盤が違っても同じ規律で書かれています。</p>
 <h2 id="eda-cargo-tracker">EDA としての Cargo Tracker<a class="headerlink" href="#eda-cargo-tracker" title="Permanent link">&para;</a></h2>
 <h3 id="_1">境界づけられたコンテキスト<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h3>
-<p>トップレベルパッケージが BC と 1 対 1 です。BC 間通信はイベントか ACL ポートに限定されます。</p>
+<p>BC の切り方は第 3 章と同じです。変わったのは<strong>境界の強度</strong>です。</p>
 <div class="highlight"><pre><span></span><code><span class="cm">/**</span>
-<span class="cm"> * BC 間の通信はドメインイベントか ACL ポートに限る</span>
+<span class="cm"> * 予約コンテキスト（bookingms）。荷主管理・貨物予約・旅程管理・見積・状態遷移・キャンセル承認を責務とする。</span>
+<span class="cm"> *</span>
+<span class="cm"> * &lt;p&gt;本パッケージは境界付けられたコンテキストのルートである。マイクロサービスと BC は</span>
+<span class="cm"> * 1 対 1 に対応し、独立した Spring Boot アプリケーションとしてデプロイする（ADR-001）。</span>
+<span class="cm"> *</span>
+<span class="cm"> * &lt;p&gt;&lt;strong&gt;他のサービスのクラスを直接参照してはならない。&lt;/strong&gt; 連携は HTTP または</span>
+<span class="cm"> * メッセージング経由であり、共有してよいのは共有カーネル（{@code com.example.shared}）に</span>
+<span class="cm"> * 限る。この前提は ArchUnit の {@code serviceIsolationRule} が検証する。</span>
 <span class="cm"> */</span>
-<span class="kn">package</span><span class="w"> </span><span class="nn">com.example.cargotracker</span><span class="p">;</span>
+<span class="kn">package</span><span class="w"> </span><span class="nn">com.example.bookingms</span><span class="p">;</span>
 </code></pre></div>
-<p>参照: <code>docs/article/source/java-2/apps/cargo-tracker/src/main/java/com/example/cargotracker/package-info.java</code></p>
+<p>転記元: <code>bookingms/package-info.java</code></p>
+<p>第 3 章では「他の BC を直接参照してはならない」が<strong>規律</strong>でした。ここでは<strong>クラスパスが分かれているため、参照しようとしてもコンパイルが通りません</strong>。境界を守るコストは下がり、代わりに越境の手段を自分で作る必要が生まれます。</p>
 <h4 id="_2">境界づけられたコンテキスト：パッケージング<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h4>
-<ul>
-<li><code>booking</code></li>
-<li><code>shipper</code></li>
-<li><code>routing</code></li>
-<li><code>tracking</code></li>
-<li><code>handling</code></li>
-<li><code>billing</code></li>
-<li><code>estimation</code></li>
-<li><code>shared</code></li>
-</ul>
+<p>1 つの BC が 1 つの Gradle モジュールであり、1 つのデプロイ単位です。<strong>データベースもサービスごとに分かれます</strong>（Database per Service）。</p>
+<p><code>shared</code> モジュールだけが全サービスから参照されます。中身は 2 種類に限られます。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">中身</th>
+<th style="text-align: left;">置き場所</th>
+<th style="text-align: left;">例</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">共有カーネル</td>
+<td style="text-align: left;"><code>shared/domain/model</code></td>
+<td style="text-align: left;"><code>Location</code></td>
+</tr>
+<tr>
+<td style="text-align: left;">認証の約束</td>
+<td style="text-align: left;"><code>shared/auth</code></td>
+<td style="text-align: left;"><code>AuthenticatedUser</code>・<code>Role</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>業務の型は入りません。</strong>ここに集約や業務イベントを置くと、片方の都合による変更が全サービスの再デプロイになります。</p>
 <h4 id="_3">境界づけられたコンテキスト：パッケージ構造<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h4>
-<p><code>booking</code> BC を例にすると、EDA の責務は以下の 4 層に分離されています。</p>
-<div class="highlight"><pre><span></span><code>com.example.cargotracker.booking
-├─ interfaces
-│  ├─ web
-│  └─ events
-├─ application
-│  └─ internal
-│     ├─ commandservices
-│     ├─ queryservices
-│     └─ outboundservices/acl
-├─ domain
-│  ├─ model
-│  └─ repository
-└─ infrastructure
-   ├─ repositories
-   └─ acl
+<p>各サービスの内側は、第 3 章と同じ 4 層です。<strong>プロセスを分けても、層の構成は変える理由がありません。</strong></p>
+<p><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyIgZGF0YS1kaWFncmFtLXR5cGU9IkRFU0NSSVBUSU9OIiBoZWlnaHQ9Ijc1OXB4IiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBzdHlsZT0id2lkdGg6MTk0NnB4O2hlaWdodDo3NTlweDtiYWNrZ3JvdW5kOiNGRkZGRkY7IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCAxOTQ2IDc1OSIgd2lkdGg9IjE5NDZweCIgem9vbUFuZFBhbj0ibWFnbmlmeSI+PD9wbGFudHVtbCAxLjIwMjYuNj8+PGRlZnMvPjxnPjxnIGNsYXNzPSJ0aXRsZSIgZGF0YS1zb3VyY2UtbGluZT0iMSI+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSI3MDAiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMjczLjc2NDkiIHg9IjgzMi44MDM4IiB5PSIyMi45OTUxIj4mIzEyNDY5OyYjMTI1NDA7JiMxMjQ5OTsmIzEyNDczOyAxICYjMTIzODg7JiMxMjM5ODsmIzIwODY5OyYjMzcwOTY7JiMyNzA4MzsmIzI1MTA0OyYjNjUyODg7Ym9va2luZ21zJiM2NTI4OTs8L3RleHQ+PC9nPjwhLS1jbHVzdGVyIGJvb2tpbmdtcy0tPjxnIGNsYXNzPSJjbHVzdGVyIiBkYXRhLXF1YWxpZmllZC1uYW1lPSJib29raW5nbXMiIGRhdGEtc291cmNlLWxpbmU9IjMiIGlkPSJlbnQwMDAxIj48cGF0aCBkPSJNOC41LDQzLjI5NjkgTDk1Ljc3NjQsNDMuMjk2OSBBMy43NSwzLjc1IDAgMCAxIDk4LjI3NjQsNDUuNzk2OSBMMTA1LjI3NjQsNjUuNTkzOCBMMTUyNi41LDY1LjU5MzggQTIuNSwyLjUgMCAwIDEgMTUyOSw2OC4wOTM4IEwxNTI5LDc0MS45ODY5IEEyLjUsMi41IDAgMCAxIDE1MjYuNSw3NDQuNDg2OSBMOC41LDc0NC40ODY5IEEyLjUsMi41IDAgMCAxIDYsNzQxLjk4NjkgTDYsNDUuNzk2OSBBMi41LDIuNSAwIDAgMSA4LjUsNDMuMjk2OSIgZmlsbD0ibm9uZSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxLjU7Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxLjU7IiB4MT0iNiIgeDI9IjEwNS4yNzY0IiB5MT0iNjUuNTkzOCIgeTI9IjY1LjU5MzgiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9IjcwMCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI4Ni4yNzY0IiB4PSIxMCIgeT0iNTguMjkyIj5ib29raW5nbXM8L3RleHQ+PC9nPjwhLS1jbHVzdGVyIGktLT48ZyBjbGFzcz0iY2x1c3RlciIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iYm9va2luZ21zLmkiIGRhdGEtc291cmNlLWxpbmU9IjQiIGlkPSJlbnQwMDAyIj48cGF0aCBkPSJNNDAuNSw5NC4yOTY5IEwxMjEuMDIyNSw5NC4yOTY5IEEzLjc1LDMuNzUgMCAwIDEgMTIzLjUyMjUsOTYuNzk2OSBMMTMwLjUyMjUsMTE2LjU5MzggTDYzMi41LDExNi41OTM4IEEyLjUsMi41IDAgMCAxIDYzNSwxMTkuMDkzOCBMNjM1LDIyNC4wOTY5IEEyLjUsMi41IDAgMCAxIDYzMi41LDIyNi41OTY5IEw0MC41LDIyNi41OTY5IEEyLjUsMi41IDAgMCAxIDM4LDIyNC4wOTY5IEwzOCw5Ni43OTY5IEEyLjUsMi41IDAgMCAxIDQwLjUsOTQuMjk2OSIgZmlsbD0ibm9uZSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxLjU7Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxLjU7IiB4MT0iMzgiIHgyPSIxMzAuNTIyNSIgeTE9IjExNi41OTM4IiB5Mj0iMTE2LjU5MzgiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9IjcwMCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI3OS41MjI1IiB4PSI0MiIgeT0iMTA5LjI5MiI+aW50ZXJmYWNlczwvdGV4dD48L2c+PCEtLWNsdXN0ZXIgYS0tPjxnIGNsYXNzPSJjbHVzdGVyIiBkYXRhLXF1YWxpZmllZC1uYW1lPSJib29raW5nbXMuYSIgZGF0YS1zb3VyY2UtbGluZT0iOCIgaWQ9ImVudDAwMDUiPjxwYXRoIGQ9Ik00NTYuNSwyOTEuNTk2OSBMNTQ1LjQxMDIsMjkxLjU5NjkgQTMuNzUsMy43NSAwIDAgMSA1NDcuOTEwMiwyOTQuMDk2OSBMNTU0LjkxMDIsMzEzLjg5MzggTDkyMS41LDMxMy44OTM4IEEyLjUsMi41IDAgMCAxIDkyNCwzMTYuMzkzOCBMOTI0LDU4NC42ODY5IEEyLjUsMi41IDAgMCAxIDkyMS41LDU4Ny4xODY5IEw0NTYuNSw1ODcuMTg2OSBBMi41LDIuNSAwIDAgMSA0NTQsNTg0LjY4NjkgTDQ1NCwyOTQuMDk2OSBBMi41LDIuNSAwIDAgMSA0NTYuNSwyOTEuNTk2OSIgZmlsbD0ibm9uZSIgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxLjU7Ii8+PGxpbmUgc3R5bGU9InN0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDoxLjU7IiB4MT0iNDU0IiB4Mj0iNTU0LjkxMDIiIHkxPSIzMTMuODkzOCIgeTI9IjMxMy44OTM4Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSI3MDAiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iODcuOTEwMiIgeD0iNDU4IiB5PSIzMDYuNTkyIj5hcHBsaWNhdGlvbjwvdGV4dD48L2c+PCEtLWNsdXN0ZXIgZC0tPjxnIGNsYXNzPSJjbHVzdGVyIiBkYXRhLXF1YWxpZmllZC1uYW1lPSJib29raW5nbXMuZCIgZGF0YS1zb3VyY2UtbGluZT0iMTQiIGlkPSJlbnQwMDEwIj48cGF0aCBkPSJNNDAuNSw0NTQuODk2OSBMOTkuOTQwNCw0NTQuODk2OSBBMy43NSwzLjc1IDAgMCAxIDEwMi40NDA0LDQ1Ny4zOTY5IEwxMDkuNDQwNCw0NzcuMTkzOCBMNDExLjUsNDc3LjE5MzggQTIuNSwyLjUgMCAwIDEgNDE0LDQ3OS42OTM4IEw0MTQsNzA5Ljk4NjkgQTIuNSwyLjUgMCAwIDEgNDExLjUsNzEyLjQ4NjkgTDQwLjUsNzEyLjQ4NjkgQTIuNSwyLjUgMCAwIDEgMzgsNzA5Ljk4NjkgTDM4LDQ1Ny4zOTY5IEEyLjUsMi41IDAgMCAxIDQwLjUsNDU0Ljg5NjkiIGZpbGw9Im5vbmUiIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MS41OyIvPjxsaW5lIHN0eWxlPSJzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MS41OyIgeDE9IjM4IiB4Mj0iMTA5LjQ0MDQiIHkxPSI0NzcuMTkzOCIgeTI9IjQ3Ny4xOTM4Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSI3MDAiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iNTguNDQwNCIgeD0iNDIiIHk9IjQ2OS44OTIiPmRvbWFpbjwvdGV4dD48L2c+PCEtLWNsdXN0ZXIgZi0tPjxnIGNsYXNzPSJjbHVzdGVyIiBkYXRhLXF1YWxpZmllZC1uYW1lPSJib29raW5nbXMuZiIgZGF0YS1zb3VyY2UtbGluZT0iMTkiIGlkPSJlbnQwMDE0Ij48cGF0aCBkPSJNOTY2LjUsMjkxLjU5NjkgTDEwNzcuOTYxOSwyOTEuNTk2OSBBMy43NSwzLjc1IDAgMCAxIDEwODAuNDYxOSwyOTQuMDk2OSBMMTA4Ny40NjE5LDMxMy44OTM4IEwxNDk0LjUsMzEzLjg5MzggQTIuNSwyLjUgMCAwIDEgMTQ5NywzMTYuMzkzOCBMMTQ5Nyw1ODQuNjg2OSBBMi41LDIuNSAwIDAgMSAxNDk0LjUsNTg3LjE4NjkgTDk2Ni41LDU4Ny4xODY5IEEyLjUsMi41IDAgMCAxIDk2NCw1ODQuNjg2OSBMOTY0LDI5NC4wOTY5IEEyLjUsMi41IDAgMCAxIDk2Ni41LDI5MS41OTY5IiBmaWxsPSJub25lIiBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjEuNTsiLz48bGluZSBzdHlsZT0ic3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjEuNTsiIHgxPSI5NjQiIHgyPSIxMDg3LjQ2MTkiIHkxPSIzMTMuODkzOCIgeTI9IjMxMy44OTM4Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSI3MDAiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTEwLjQ2MTkiIHg9Ijk2OCIgeT0iMzA2LjU5MiI+aW5mcmFzdHJ1Y3R1cmU8L3RleHQ+PC9nPjwhLS1lbnRpdHkgQ2FyZ29Cb29raW5nQ29udHJvbGxlci0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9ImJvb2tpbmdtcy5pLkNhcmdvQm9va2luZ0NvbnRyb2xsZXIiIGRhdGEtc291cmNlLWxpbmU9IjUiIGlkPSJlbnQwMDAzIj48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjQ2LjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjIwNy4yMjc1IiB4PSI2Mi4zOSIgeT0iMTU2LjI5NjkiLz48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjEwIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSIxNSIgeD0iMjQ5LjYxNzUiIHk9IjE2MS4yOTY5Ii8+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSIyIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI0IiB4PSIyNDcuNjE3NSIgeT0iMTYzLjI5NjkiLz48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjIiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjQiIHg9IjI0Ny42MTc1IiB5PSIxNjcuMjk2OSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE2Ny4yMjc1IiB4PSI3Ny4zOSIgeT0iMTg5LjI5MiI+Q2FyZ29Cb29raW5nQ29udHJvbGxlcjwvdGV4dD48L2c+PCEtLWVudGl0eSBIYW5kbGluZ0FjdGl2aXR5UmVnaXN0ZXJlZExpc3RlbmVyLS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iYm9va2luZ21zLmkuSGFuZGxpbmdBY3Rpdml0eVJlZ2lzdGVyZWRMaXN0ZW5lciIgZGF0YS1zb3VyY2UtbGluZT0iNiIgaWQ9ImVudDAwMDQiPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iNDYuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iMjg3LjEwNTUiIHg9IjMwNC40NSIgeT0iMTU2LjI5NjkiLz48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjEwIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSIxNSIgeD0iNTcxLjU1NTUiIHk9IjE2MS4yOTY5Ii8+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSIyIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI0IiB4PSI1NjkuNTU1NSIgeT0iMTYzLjI5NjkiLz48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjIiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjQiIHg9IjU2OS41NTU1IiB5PSIxNjcuMjk2OSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjI0Ny4xMDU1IiB4PSIzMTkuNDUiIHk9IjE4OS4yOTIiPkhhbmRsaW5nQWN0aXZpdHlSZWdpc3RlcmVkTGlzdGVuZXI8L3RleHQ+PC9nPjwhLS1lbnRpdHkgQm9va0NhcmdvVXNlQ2FzZS0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9ImJvb2tpbmdtcy5hLkJvb2tDYXJnb1VzZUNhc2UiIGRhdGEtc291cmNlLWxpbmU9IjkiIGlkPSJlbnQwMDA2Ij48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjQ2LjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjE3Ni44MjEzIiB4PSI3MjMuNTkiIHk9IjM1My41OTY5Ii8+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSIxMCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iMTUiIHg9Ijg4MC40MTEzIiB5PSIzNTguNTk2OSIvPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iMiIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iNCIgeD0iODc4LjQxMTMiIHk9IjM2MC41OTY5Ii8+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSIyIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI0IiB4PSI4NzguNDExMyIgeT0iMzY0LjU5NjkiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMzYuODIxMyIgeD0iNzM4LjU5IiB5PSIzODYuNTkyIj5Cb29rQ2FyZ29Vc2VDYXNlPC90ZXh0PjwvZz48IS0tZW50aXR5IFNlYXJjaENhcmdvVXNlQ2FzZS0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9ImJvb2tpbmdtcy5hLlNlYXJjaENhcmdvVXNlQ2FzZSIgZGF0YS1zb3VyY2UtbGluZT0iMTAiIGlkPSJlbnQwMDA3Ij48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjQ2LjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjE5MC4zODM4IiB4PSI0OTcuODEiIHk9IjM1My41OTY5Ii8+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSIxMCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iMTUiIHg9IjY2OC4xOTM4IiB5PSIzNTguNTk2OSIvPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iMiIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iNCIgeD0iNjY2LjE5MzgiIHk9IjM2MC41OTY5Ii8+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSIyIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI0IiB4PSI2NjYuMTkzOCIgeT0iMzY0LjU5NjkiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxNTAuMzgzOCIgeD0iNTEyLjgxIiB5PSIzODYuNTkyIj5TZWFyY2hDYXJnb1VzZUNhc2U8L3RleHQ+PC9nPjwhLS1lbnRpdHkgQ2FyZ29FdmVudE5vdGlmaWVyLS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iYm9va2luZ21zLmEuQ2FyZ29FdmVudE5vdGlmaWVyIiBkYXRhLXNvdXJjZS1saW5lPSIxMSIgaWQ9ImVudDAwMDgiPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iNDYuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iMTczLjI3MzQiIHg9IjQ5NS4zNiIgeT0iNTE2Ljg5NjkiLz48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjEwIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSIxNSIgeD0iNjQ4LjYzMzQiIHk9IjUyMS44OTY5Ii8+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSIyIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI0IiB4PSI2NDYuNjMzNCIgeT0iNTIzLjg5NjkiLz48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjIiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjQiIHg9IjY0Ni42MzM0IiB5PSI1MjcuODk2OSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjEzMy4yNzM0IiB4PSI1MTAuMzYiIHk9IjU0OS44OTIiPkNhcmdvRXZlbnROb3RpZmllcjwvdGV4dD48L2c+PCEtLWVudGl0eSBSb3V0ZUNhbmRpZGF0ZUZpbmRlci0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9ImJvb2tpbmdtcy5hLlJvdXRlQ2FuZGlkYXRlRmluZGVyIiBkYXRhLXNvdXJjZS1saW5lPSIxMiIgaWQ9ImVudDAwMDkiPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iNDYuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iMTk2LjkxMjEiIHg9IjcwMy41NCIgeT0iNTE2Ljg5NjkiLz48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjEwIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSIxNSIgeD0iODgwLjQ1MjEiIHk9IjUyMS44OTY5Ii8+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSIyIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI0IiB4PSI4NzguNDUyMSIgeT0iNTIzLjg5NjkiLz48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjIiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjQiIHg9Ijg3OC40NTIxIiB5PSI1MjcuODk2OSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE1Ni45MTIxIiB4PSI3MTguNTQiIHk9IjU0OS44OTIiPlJvdXRlQ2FuZGlkYXRlRmluZGVyPC90ZXh0PjwvZz48IS0tZW50aXR5IENhcmdvLS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iYm9va2luZ21zLmQuQ2FyZ28iIGRhdGEtc291cmNlLWxpbmU9IjE1IiBpZD0iZW50MDAxMSI+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSI0Ni4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI4MS41NjI1IiB4PSI2Mi4yMiIgeT0iNTE2Ljg5NjkiLz48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjEwIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSIxNSIgeD0iMTIzLjc4MjUiIHk9IjUyMS44OTY5Ii8+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSIyIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI0IiB4PSIxMjEuNzgyNSIgeT0iNTIzLjg5NjkiLz48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjIiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjQiIHg9IjEyMS43ODI1IiB5PSI1MjcuODk2OSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjQxLjU2MjUiIHg9Ijc3LjIyIiB5PSI1NDkuODkyIj5DYXJnbzwvdGV4dD48L2c+PCEtLWVudGl0eSBDYXJnb1RyYW5zaXRpb25Qb2xpY3ktLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJib29raW5nbXMuZC5DYXJnb1RyYW5zaXRpb25Qb2xpY3kiIGRhdGEtc291cmNlLWxpbmU9IjE2IiBpZD0iZW50MDAxMiI+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSI0Ni4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSIxOTIuMDkyOCIgeD0iMTc4Ljk1IiB5PSI1MTYuODk2OSIvPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iMTAiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjE1IiB4PSIzNTEuMDQyOCIgeT0iNTIxLjg5NjkiLz48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjIiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjQiIHg9IjM0OS4wNDI4IiB5PSI1MjMuODk2OSIvPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iMiIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iNCIgeD0iMzQ5LjA0MjgiIHk9IjUyNy44OTY5Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTUyLjA5MjgiIHg9IjE5My45NSIgeT0iNTQ5Ljg5MiI+Q2FyZ29UcmFuc2l0aW9uUG9saWN5PC90ZXh0PjwvZz48IS0tZW50aXR5IENhcmdvUmVwb3NpdG9yeS0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9ImJvb2tpbmdtcy5kLkNhcmdvUmVwb3NpdG9yeSIgZGF0YS1zb3VyY2UtbGluZT0iMTciIGlkPSJlbnQwMDEzIj48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjQ2LjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjE1Ni42MzQ4IiB4PSI2MS42OCIgeT0iNjQyLjE4NjkiLz48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjEwIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSIxNSIgeD0iMTk4LjMxNDgiIHk9IjY0Ny4xODY5Ii8+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSIyIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI0IiB4PSIxOTYuMzE0OCIgeT0iNjQ5LjE4NjkiLz48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjIiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjQiIHg9IjE5Ni4zMTQ4IiB5PSI2NTMuMTg2OSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjExNi42MzQ4IiB4PSI3Ni42OCIgeT0iNjc1LjE4MiI+Q2FyZ29SZXBvc2l0b3J5PC90ZXh0PjwvZz48IS0tZW50aXR5IE15QmF0aXNDYXJnb1JlcG9zaXRvcnktLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJib29raW5nbXMuZi5NeUJhdGlzQ2FyZ29SZXBvc2l0b3J5IiBkYXRhLXNvdXJjZS1saW5lPSIyMCIgaWQ9ImVudDAwMTUiPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iNDYuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iMjExLjg1NTUiIHg9Ijk4OC4wNyIgeT0iMzUzLjU5NjkiLz48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjEwIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSIxNSIgeD0iMTE3OS45MjU1IiB5PSIzNTguNTk2OSIvPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iMiIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iNCIgeD0iMTE3Ny45MjU1IiB5PSIzNjAuNTk2OSIvPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iMiIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iNCIgeD0iMTE3Ny45MjU1IiB5PSIzNjQuNTk2OSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE3MS44NTU1IiB4PSIxMDAzLjA3IiB5PSIzODYuNTkyIj5NeUJhdGlzQ2FyZ29SZXBvc2l0b3J5PC90ZXh0PjwvZz48IS0tZW50aXR5IFJhYmJpdENhcmdvRXZlbnROb3RpZmllci0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9ImJvb2tpbmdtcy5mLlJhYmJpdENhcmdvRXZlbnROb3RpZmllciIgZGF0YS1zb3VyY2UtbGluZT0iMjEiIGlkPSJlbnQwMDE2Ij48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjQ2LjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjIxOC43MzI0IiB4PSIxMjM0LjYzIiB5PSIzNTMuNTk2OSIvPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iMTAiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjE1IiB4PSIxNDMzLjM2MjQiIHk9IjM1OC41OTY5Ii8+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSIyIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI0IiB4PSIxNDMxLjM2MjQiIHk9IjM2MC41OTY5Ii8+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSIyIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI0IiB4PSIxNDMxLjM2MjQiIHk9IjM2NC41OTY5Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTc4LjczMjQiIHg9IjEyNDkuNjMiIHk9IjM4Ni41OTIiPlJhYmJpdENhcmdvRXZlbnROb3RpZmllcjwvdGV4dD48L2c+PCEtLWVudGl0eSBSZXN0Um91dGVDYW5kaWRhdGVGaW5kZXItLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJib29raW5nbXMuZi5SZXN0Um91dGVDYW5kaWRhdGVGaW5kZXIiIGRhdGEtc291cmNlLWxpbmU9IjIyIiBpZD0iZW50MDAxNyI+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSI0Ni4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSIyMjguMDM2MSIgeD0iOTg3Ljk4IiB5PSI1MTYuODk2OSIvPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iMTAiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjE1IiB4PSIxMTk2LjAxNjEiIHk9IjUyMS44OTY5Ii8+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSIyIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI0IiB4PSIxMTk0LjAxNjEiIHk9IjUyMy44OTY5Ii8+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSIyIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI0IiB4PSIxMTk0LjAxNjEiIHk9IjUyNy44OTY5Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTg4LjAzNjEiIHg9IjEwMDIuOTgiIHk9IjU0OS44OTIiPlJlc3RSb3V0ZUNhbmRpZGF0ZUZpbmRlcjwvdGV4dD48L2c+PCEtLWVudGl0eSBtcS0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9Im1xIiBkYXRhLXNvdXJjZS1saW5lPSIyNiIgaWQ9ImVudDAwMTgiPjxwYXRoIGQ9Ik0xNTQ5LjcyLDUyNi44OTY5IEwxNjI4LjI3NzYsNTI2Ljg5NjkgQzE2MzMuMjc3Niw1MjYuODk2OSAxNjMzLjI3NzYsNTQwLjA0NTMgMTYzMy4yNzc2LDU0MC4wNDUzIEMxNjMzLjI3NzYsNTQwLjA0NTMgMTYzMy4yNzc2LDU1My4xOTM4IDE2MjguMjc3Niw1NTMuMTkzOCBMMTU0OS43Miw1NTMuMTkzOCBDMTU0NC43Miw1NTMuMTkzOCAxNTQ0LjcyLDU0MC4wNDUzIDE1NDQuNzIsNTQwLjA0NTMgQzE1NDQuNzIsNTQwLjA0NTMgMTU0NC43Miw1MjYuODk2OSAxNTQ5LjcyLDUyNi44OTY5IiBmaWxsPSIjRjFGMUYxIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiLz48cGF0aCBkPSJNMTYyOC4yNzc2LDUyNi44OTY5IEMxNjIzLjI3NzYsNTI2Ljg5NjkgMTYyMy4yNzc2LDU0MC4wNDUzIDE2MjMuMjc3Niw1NDAuMDQ1MyBDMTYyMy4yNzc2LDU1My4xOTM4IDE2MjguMjc3Niw1NTMuMTkzOCAxNjI4LjI3NzYsNTUzLjE5MzgiIGZpbGw9Im5vbmUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjY4LjU1NzYiIHg9IjE1NDkuNzIiIHk9IjU0NC44OTIiPlJhYmJpdE1RPC90ZXh0PjwvZz48IS0tZW50aXR5IGRiLS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iZGIiIGRhdGEtc291cmNlLWxpbmU9IjI3IiBpZD0iZW50MDAxOSI+PHBhdGggZD0iTTE2NjguMjMsNTI3LjM5NjkgQzE2NjguMjMsNTE3LjM5NjkgMTcyOS4wMDA1LDUxNy4zOTY5IDE3MjkuMDAwNSw1MTcuMzk2OSBDMTcyOS4wMDA1LDUxNy4zOTY5IDE3ODkuNzcxLDUxNy4zOTY5IDE3ODkuNzcxLDUyNy4zOTY5IEwxNzg5Ljc3MSw1NTIuNjkzOCBDMTc4OS43NzEsNTYyLjY5MzggMTcyOS4wMDA1LDU2Mi42OTM4IDE3MjkuMDAwNSw1NjIuNjkzOCBDMTcyOS4wMDA1LDU2Mi42OTM4IDE2NjguMjMsNTYyLjY5MzggMTY2OC4yMyw1NTIuNjkzOCBMMTY2OC4yMyw1MjcuMzk2OSIgZmlsbD0iI0YxRjFGMSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7Ii8+PHBhdGggZD0iTTE2NjguMjMsNTI3LjM5NjkgQzE2NjguMjMsNTM3LjM5NjkgMTcyOS4wMDA1LDUzNy4zOTY5IDE3MjkuMDAwNSw1MzcuMzk2OSBDMTcyOS4wMDA1LDUzNy4zOTY5IDE3ODkuNzcxLDUzNy4zOTY5IDE3ODkuNzcxLDUyNy4zOTY5IiBmaWxsPSJub25lIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxMDEuNTQxIiB4PSIxNjc4LjIzIiB5PSI1NTQuMzkyIj5ib29raW5nbXMgREI8L3RleHQ+PC9nPjwhLS1lbnRpdHkgcm1zLS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0icm1zIiBkYXRhLXNvdXJjZS1saW5lPSIyOCIgaWQ9ImVudDAwMjAiPjxwYXRoIGQ9Ik0xODMyLjU3MzgsNTI1LjUwMyBDMTgzNi43ODQyLDUxNi43NzI1IDE4NDQuMDMwNSw1MTcuOTQ2MiAxODQ4LjYwODcsNTI1LjEzMjUgQzE4NTIuNDY2NSw1MTguNDI5OSAxODU2LjcwODksNTE3LjQ1MjMgMTg2Mi4zMjQzLDUyMy4xOTU1IEMxODY1Ljg2ODcsNTE1LjcyNSAxODcyLjg2MjgsNTE1LjgzMDQgMTg3Ni43Mjg4LDUyMi44NzYzIEMxODc5Ljk0NzYsNTE3LjEyMDUgMTg4Ni4yNzEzLDUxNy4xNzE3IDE4ODkuNDU2NSw1MjIuOTEzNCBDMTg5NC42MDY4LDUxNS4zNDY1IDE5MDEuMTQyOSw1MTYuNzkzMyAxOTA1LjEwMjUsNTI0LjE2MDkgQzE5MTAuMzExNCw1MTcuMTkyNiAxOTE0Ljk2NCw1MTkuMTU5NyAxOTE4LjczNDQsNTI1LjYyMTEgQzE5MjguOTczNiw1MjcuMjkwOSAxOTMxLjM3MjYsNTM0LjM1NDEgMTkyNC4zNDA1LDU0MS45NTI2IEMxOTI5LjAwNjQsNTQ3Ljc3MTggMTkyNy4xODc1LDU1NC4xNzI2IDE5MTkuNzkyMyw1NTYuMTE5NyBDMTkxNi42NDg5LDU2My41ODA4IDE5MTEuMzcxOSw1NjUuNTc1NyAxOTA1LjM4NCw1NTkuMDQ5OSBDMTkwMS4xNDE3LDU2Ni41NDYxIDE4OTQuNTM3Miw1NjYuNDUyNiAxODkwLjI2NzYsNTU5LjA3NzcgQzE4ODcuNzIwNyw1NjUuNjc0NyAxODgxLjM3Miw1NjcuNTI0NCAxODc2LjcxOTUsNTYxLjMwMzMgQzE4NzEuOTc0Nyw1NjguNjQzOSAxODY1LjAzNTEsNTY2LjgwMSAxODYxLjI2MzMsNTYwLjIyMjggQzE4NTcuMDcxNyw1NjcuMjMyMyAxODUwLjQwMTEsNTY1LjM2NDcgMTg0Ny41NjIyLDU1OC44NTIyIEMxODQyLjcwODMsNTYzLjk0NDcgMTgzNi4yNzA1LDU2Mi45ODMzIDE4MzMuNTI1Nyw1NTYuMzMxNiBDMTgyNS45MTE2LDU1My4wNTA2IDE4MjUuMDA0MSw1NDcuNjIzMSAxODMxLjM3NzMsNTQyLjIxMzYgQzE4MjMuNzkwNSw1MzcuMjYxOCAxODIzLjI3NDYsNTI5LjI0NTggMTgzMi41NzM4LDUyNS41MDMiIGZpbGw9IiNGMUYxRjEiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjcxLjI2NDYiIHg9IjE4MzkuMzciIHk9IjU0NC44OTIiPnJvdXRpbmdtczwvdGV4dD48L2c+PCEtLWxpbmsgaSB0byBhLS0+PGcgY2xhc3M9ImxpbmsiIGRhdGEtZW50aXR5LTE9ImVudDAwMDIiIGRhdGEtZW50aXR5LTI9ImVudDAwMDUiIGRhdGEtbGluay10eXBlPSJkZXBlbmRlbmN5IiBkYXRhLXNvdXJjZS1saW5lPSIzMCIgaWQ9ImxuazIxIj48cGF0aCBkPSJNNjE4Ljg2MTcsMjI2LjYyNzUgQzYxOC44MTY0LDIyNi43Mjg0IDYxOC43NzEsMjI2LjgyOTIgNjE4LjcyNTMsMjI2LjkyOTkgQzYxOC42MzM4LDIyNy4xMzEzIDYxOC41NDE0LDIyNy4zMzIyIDYxOC40NDgsMjI3LjUzMjcgQzYxOC4wNzQzLDIyOC4zMzQ0IDYxNy42ODQ1LDIyOS4xMjgyIDYxNy4yNzc5LDIyOS45MTI0IEM2MTYuNDY0NywyMzEuNDgwOCA2MTUuNTg0NCwyMzMuMDEwNCA2MTQuNjMxNiwyMzQuNDg3MSBDNjEyLjcyNTksMjM3LjQ0MDUgNjEwLjUzLDI0MC4xODE5IDYwOCwyNDIuNTk2OSBDNTY1LjIsMjgzLjQ2NjkgNTE5LjA5LDIzMi4wNjY5IDQ3OSwyNzUuNTk2OSBDNDc1LjIzNjMsMjc5LjY4MzEgNDcyLjE0MTQsMjg0LjI4IDQ2OS42MDc4LDI4OS4yIEM0NjkuMjkxMSwyODkuODE1IDQ2OC45ODMyLDI5MC40MzUgNDY4LjY4MzgsMjkxLjA1OTggQzQ2OC42MDksMjkxLjIxNTkgNDcwLjY2MzgsMjg2Ljg0ODQgNDcwLjU5LDI4Ny4wMDUxIiBmaWxsPSJub25lIiBpZD0iaS10by1hIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSI0NjguNDYwOSwyOTEuNTI5Miw0NzUuOTEyNSwyODUuMDg5Miw0NzAuNTksMjg3LjAwNTEsNDY4LjY3NDEsMjgxLjY4MjYsNDY4LjQ2MDksMjkxLjUyOTIiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PC9nPjwhLS1saW5rIGEgdG8gZC0tPjxnIGNsYXNzPSJsaW5rIiBkYXRhLWVudGl0eS0xPSJlbnQwMDA1IiBkYXRhLWVudGl0eS0yPSJlbnQwMDEwIiBkYXRhLWxpbmstdHlwZT0iZGVwZW5kZW5jeSIgZGF0YS1zb3VyY2UtbGluZT0iMzEiIGlkPSJsbmsyMiI+PHBhdGggZD0iTTQ1My45MzU3LDQwMC45Njg5IEM0NTMuODU4Niw0MDEuMTkwOSA0NTMuNzgxMSw0MDEuNDE0MiA0NTMuNzAzMiw0MDEuNjM4NyBDNDUzLjM5MTUsNDAyLjUzNjUgNDUzLjA3MzEsNDAzLjQ1MzQgNDUyLjc0ODYsNDA0LjM4ODEgQzQ0Ny41NTU5LDQxOS4zNDQ0IDQ0MC43NzE5LDQzOC44ODQ0IDQzMy45ODg4LDQ1OC40MjE5IEM0MjcuMjA1Niw0NzcuOTU5NCA0MjAuNDIzNCw0OTcuNDk0NCA0MTUuMjM0NSw1MTIuNDQwNiBDNDE0LjkxMDIsNTEzLjM3NDggNDE0LjU5MjEsNTE0LjI5MSA0MTQuMjgwNyw1MTUuMTg4MiBDNDE0LjIwMjgsNTE1LjQxMjQgNDE1Ljc2NTIsNTEwLjkxMjEgNDE1LjY4ODEsNTExLjEzNCIgZmlsbD0ibm9uZSIgaWQ9ImEtdG8tZCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iNDE0LjA0ODMsNTE1Ljg1NzQsNDIwLjc3ODgsNTA4LjY2NzEsNDE1LjY4ODEsNTExLjEzNCw0MTMuMjIxMyw1MDYuMDQzNCw0MTQuMDQ4Myw1MTUuODU3NCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48L2c+PCEtLWxpbmsgZiB0byBkLS0+PGcgY2xhc3M9ImxpbmsiIGRhdGEtZW50aXR5LTE9ImVudDAwMTQiIGRhdGEtZW50aXR5LTI9ImVudDAwMTAiIGRhdGEtbGluay10eXBlPSJkZXBlbmRlbmN5IiBkYXRhLXNvdXJjZS1saW5lPSIzMiIgaWQ9ImxuazIzIj48cGF0aCBkPSJNOTYyLjc3NDYsNDE0LjgzODMgQzk1OS42NzY5LDQxNC42MDY3IDk1Ni41Nzk4LDQxNC4zNzU4IDk1My40ODM2LDQxNC4xNDU2IEM5NDcuMjkxMyw0MTMuNjg1MiA5NDEuMTAyNiw0MTMuMjI4IDkzNC45MjA2LDQxMi43NzYxIEM5MjIuNTU2Nyw0MTEuODcyMSA5MTAuMjE5Niw0MTAuOTg4OCA4OTcuOTMzOSw0MTAuMTQxOCBDODczLjM2MjMsNDA4LjQ0NzkgODQ4Ljk5NTksNDA2Ljg5OTQgODI1LjAyOTgsNDA1LjYyMTUgQzc3Ny4wOTc1LDQwMy4wNjU2IDczMC43NjYsNDAxLjU5MjIgNjg3LjU5NjEsNDAyLjIwMzEgQzYwMS4yNTYzLDQwMy40MjUgNTI3LjU2MjUsNDEyLjk4NDQgNDc5LDQzOC44OTY5IEM0NTUuMDgsNDUxLjY1NjkgNDM3LjAyMjUsNDc2LjExNjkgNDI0Ljg1MTMsNDk3LjY2ODEgQzQyMS44MDg0LDUwMy4wNTU5IDQxOS4xMzM1LDUwOC4yNjIgNDE2LjgyNjksNTEzLjA1NzkgQzQxNi4yNTAyLDUxNC4yNTY5IDQxNS42OTY1LDUxNS40MzAzIDQxNS4xNjU5LDUxNi41NzQ0IEM0MTQuOTAwNiw1MTcuMTQ2NSA0MTQuNjQxLDUxNy43MTEzIDQxNC4zODcyLDUxOC4yNjgzIEM0MTQuMjYwMyw1MTguNTQ2OSA0MTYuMTkzLDUxNC4yNjY3IDQxNi4wNjksNTE0LjU0MTMiIGZpbGw9Im5vbmUiIGlkPSJmLXRvLWQiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjQxNC4wMTA5LDUxOS4wOTgsNDIxLjM2MDksNTEyLjU0MjMsNDE2LjA2OSw1MTQuNTQxMyw0MTQuMDcwMSw1MDkuMjQ5Myw0MTQuMDEwOSw1MTkuMDk4IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjwvZz48IS0tbGluayBmIHRvIGEtLT48ZyBjbGFzcz0ibGluayIgZGF0YS1lbnRpdHktMT0iZW50MDAxNCIgZGF0YS1lbnRpdHktMj0iZW50MDAwNSIgZGF0YS1saW5rLXR5cGU9ImRlcGVuZGVuY3kiIGRhdGEtc291cmNlLWxpbmU9IjMzIiBpZD0ibG5rMjQiPjxwYXRoIGQ9Ik0xNDc2Ljk2NDksMzEzLjc3MTIgQzE0NzYuMjIwNiwzMTIuODA1OSAxNDc1LjE2MzYsMjg5LjIwNjggMTQ3NC4zNDc2LDI4OC4yOTY5IEMxNDcyLjcxNTQsMjg2LjQ3NyAxNDcwLjkzNjksMjg0Ljc3MzEgMTQ2OSwyODMuMjA2OSBDMTQyNi4yNCwyNDguNjE2OSA1MjEuMjMsMjQ3Ljk1NjkgNDc5LDI4My4yMDY5IEM0NzcuMDk5NCwyODQuNzkzMSA0NzUuMzYzMSwyODYuNTE0NiA0NzMuNzc4NSwyODguMzUgQzQ3Mi45ODYyLDI4OS4yNjc3IDQ3Mi4yMzE4LDI5MC4yMTM5IDQ3MS41MTM3LDI5MS4xODYgQzQ3MS40MjQsMjkxLjMwNzUgNDc0LjI2ODcsMjg3LjM4MDcgNDc0LjE4MDEsMjg3LjUwMyIgZmlsbD0ibm9uZSIgaWQ9ImYtdG8tYSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1kYXNoYXJyYXk6Nyw3OyIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iNDcxLjI0NjEsMjkxLjU1MTcsNDc5Ljc2NjIsMjg2LjYxMTEsNDc0LjE4MDEsMjg3LjUwMyw0NzMuMjg4MiwyODEuOTE2OSw0NzEuMjQ2MSwyOTEuNTUxNyIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIyNiIgeD0iOTYyIiB5PSIyNjMuNjYzOCI+JiMyMzQ1NTsmIzM1MDEzOzwvdGV4dD48L2c+PCEtLWxpbmsgZiB0byBtcS0tPjxnIGNsYXNzPSJsaW5rIiBkYXRhLWVudGl0eS0xPSJlbnQwMDE0IiBkYXRhLWVudGl0eS0yPSJlbnQwMDE4IiBkYXRhLWxpbmstdHlwZT0iZGVwZW5kZW5jeSIgZGF0YS1zb3VyY2UtbGluZT0iMzQiIGlkPSJsbmsyNSI+PHBhdGggZD0iTTE0OTcuMDY2NiwzOTAuNzU3NiBDMTQ5Ny4yNDk2LDM5MS4wNTI5IDE0OTcuNDM1MywzOTEuMzUyMyAxNDk3LjYyMzUsMzkxLjY1NTkgQzE0OTgsMzkyLjI2MzIgMTQ5OC4zODY3LDM5Mi44ODcgMTQ5OC43ODM0LDM5My41MjY4IEMxNDk5LjU3NjcsMzk0LjgwNjUgMTUwMC40MDk3LDM5Ni4xNSAxNTAxLjI3ODksMzk3LjU1MiBDMTUwOC4yMzI4LDQwOC43Njg0IDE1MTcuNTEwNiw0MjMuNzMyNSAxNTI3LjQzMTMsNDM5LjczMzEgQzE1NDcuMjcyNSw0NzEuNzM0NCAxNTY3LjA1MDMsNTAzLjYzMjQgMTU3OC41ODUzLDUyMi4yMzc0IiBmaWxsPSJub25lIiBpZD0iZi10by1tcSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iMTU4MS4yMiw1MjYuNDg2OSwxNTc5Ljg3NzIsNTE2LjczLDE1NzguNTg1Myw1MjIuMjM3NCwxNTczLjA3OCw1MjAuOTQ1NSwxNTgxLjIyLDUyNi40ODY5IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjwvZz48IS0tbGluayBmIHRvIGRiLS0+PGcgY2xhc3M9ImxpbmsiIGRhdGEtZW50aXR5LTE9ImVudDAwMTQiIGRhdGEtZW50aXR5LTI9ImVudDAwMTkiIGRhdGEtbGluay10eXBlPSJkZXBlbmRlbmN5IiBkYXRhLXNvdXJjZS1saW5lPSIzNSIgaWQ9ImxuazI2Ij48cGF0aCBkPSJNMTQ5Ny4yOTIyLDM3OS4yMTc2IEMxNDk3LjQwOTYsMzc5LjI0IDE0OTcuNTI4MSwzNzkuMjYyNiAxNDk3LjY0NzcsMzc5LjI4NTUgQzE0OTcuODg2OSwzNzkuMzMxMiAxNDk4LjEzMDcsMzc5LjM3ODEgMTQ5OC4zNzg4LDM3OS40MjYgQzE0OTguODc1LDM3OS41MjE4IDE0OTkuMzg4OSwzNzkuNjIxOSAxNDk5LjkxOTksMzc5LjcyNjQgQzE1MDIuMDQzOCwzODAuMTQ0MyAxNTA0LjQ0MTgsMzgwLjYzMiAxNTA3LjA4MTYsMzgxLjE5MjggQzE1MTcuNjQwNiwzODMuNDM2MyAxNTMyLjA2ODgsMzg2Ljg1MDYgMTU0OC4zMDc1LDM5MS42NTQ0IEMxNTgwLjc4NSw0MDEuMjYxOSAxNjIwLjUwNSw0MTYuNDI2OSAxNjUxLDQzOC44OTY5IEMxNjc5Ljc0LDQ2MC4wNjY5IDE3MDAuNzcwNiw0OTAuMjU3NiAxNzE0LjIzMDYsNTEyLjcyNzYiIGZpbGw9Im5vbmUiIGlkPSJmLXRvLWRiIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7Ii8+PHBvbHlnb24gZmlsbD0iIzE4MTgxOCIgcG9pbnRzPSIxNzE2LjgsNTE3LjAxNjksMTcxNS42MDY2LDUwNy4yNDA2LDE3MTQuMjMwNiw1MTIuNzI3NiwxNzA4Ljc0MzYsNTExLjM1MTYsMTcxNi44LDUxNy4wMTY5IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjwvZz48IS0tbGluayBmIHRvIHJtcy0tPjxnIGNsYXNzPSJsaW5rIiBkYXRhLWVudGl0eS0xPSJlbnQwMDE0IiBkYXRhLWVudGl0eS0yPSJlbnQwMDIwIiBkYXRhLWxpbmstdHlwZT0iZGVwZW5kZW5jeSIgZGF0YS1zb3VyY2UtbGluZT0iMzYiIGlkPSJsbmsyNyI+PHBhdGggZD0iTTE0OTcuNTQxLDM3OC41MDMxIEMxNDk3LjkzMzUsMzc4LjUzOTIgMTQ5OC4zMzg1LDM3OC41NzY1IDE0OTguNzU1OCwzNzguNjE1MSBDMTQ5OS41OTA0LDM3OC42OTIyIDE1MDAuNDc0MiwzNzguNzc0NCAxNTAxLjQwNTYsMzc4Ljg2MTggQzE1MDguODU2NiwzNzkuNTYwMiAxNTE5LjM1MDQsMzgwLjU4MzMgMTUzMi4wMTc3LDM4MS45MjQxIEMxNTU3LjM1MjIsMzg0LjYwNTYgMTU5MS4zODA2LDM4OC41NTgxIDE2MjcuMTQ4NywzOTMuNzI2OSBDMTY5OC42ODUsNDA0LjA2NDQgMTc3Ny4xOCw0MTkuMjY2OSAxODA3LDQzOC44OTY5IEMxODM1LjYxLDQ1Ny43MjY5IDE4NTMuMjkyMiw0ODguNjI0NSAxODYzLjg2MjIsNTExLjg5NDUiIGZpbGw9Im5vbmUiIGlkPSJmLXRvLXJtcyIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iMTg2NS45Myw1MTYuNDQ2OSwxODY1Ljg0OTgsNTA2LjU5ODMsMTg2My44NjIyLDUxMS44OTQ1LDE4NTguNTY2LDUwOS45MDY5LDE4NjUuOTMsNTE2LjQ0NjkiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PC9nPjw/cGxhbnR1bWwtc3JjIFRQNG5KbThuNUNWdFZlZzY3SDlOMW5EMVpPQ09IUHM4bXhqaDNyeXVNY1h4OUNHbTBDNVdONHB5MDB3UXdDSmNPQ0F0a0sxcXVZbHV4WlgwS1FWTl9sbGx4X3pVd3oyNWFpVnpqdFdtWUdTRlNWLVRSXzZ1em5wdG5qRVJ1VVZXVFZQb0RubFRwb1NaSi1pd2diaDNwWVV0WjNOMWhxRER5am5BcGw3aGpPaEFJSEUwQnFhNm92N0VnWUttRExyU3M0alFFUUYzSzlmQkxacTQ5SzhJVHRzN1JOSVRZZ29YZlZqSTcyTEw5UVJrY1d0RFBlVy1FREdnWEtDMkp4WGZtOE1MOVIySWk2U0laNy1yOFFSUl9SUEt4Yld4MzMxamVBOFpIbU9iSzgySjF3WjRIZ0pHM1MxNWNiWURpZ0lUNnIwTWF0UEVEM05NTVVlTHNUSWFRekZ2bUs4TDZCM0VIQndCWjRvUEdTOGlUdWVxYV9ycmpMZTFwcUZ0VC1GSWtsLVF4cEJNWWNINFlHajAtSkpEUWhHTy1TMlp2X1pzVU5vbGs5WkVPdHdlOHk1cFhoM1BsdjlrNmZPbnZGZHkzV1M2UUhLaU1ETDJXTkktcFFWWm51LWRPTlAwSVBkM29uUDQtRzgwPz48L2c+PC9zdmc+" class="uml" alt="uml diagram" title="" /></p>
+<h5 id="interfaces">インターフェース層（interfaces）<a class="headerlink" href="#interfaces" title="Permanent link">&para;</a></h5>
+<p>外部からの入口です。<strong>入口が 2 種類に増えます。</strong></p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">パッケージ</th>
+<th style="text-align: left;">入口</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>interfaces/rest</code></td>
+<td style="text-align: left;">画面・他サービスからの HTTP</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>interfaces/events</code></td>
+<td style="text-align: left;">メッセージブローカーからのイベント</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code><span class="cm">/**</span>
+<span class="cm"> * イベント購読とメッセージ変換を置く package。</span>
+<span class="cm"> * 他サービスから届く契約メッセージをユースケース呼び出しへ変換する。</span>
+<span class="cm"> */</span>
+<span class="kn">package</span><span class="w"> </span><span class="nn">com.example.bookingms.interfaces.events</span><span class="p">;</span>
 </code></pre></div>
-<p>参照:</p>
-<ul>
-<li><code>.../booking/domain/model/package-info.java</code></li>
-<li><code>.../booking/application/internal/queryservices/package-info.java</code></li>
-<li><code>.../booking/interfaces/events/package-info.java</code></li>
-<li><code>.../booking/infrastructure/acl/package-info.java</code></li>
-<li><code>.../booking/infrastructure/repositories/package-info.java</code></li>
-</ul>
-<h3 id="cargo-tracker">Cargo Tracker の実装<a class="headerlink" href="#cargo-tracker" title="Permanent link">&para;</a></h3>
+<p>転記元: <code>bookingms/interfaces/events/package-info.java</code></p>
+<p><strong>イベントの購読は「入口」です。</strong>インフラ層ではなくインターフェース層に置かれているのは、外から来る要求を受ける点で REST と同じ役割だからです。</p>
+<h5 id="application">アプリケーション層（application）<a class="headerlink" href="#application" title="Permanent link">&para;</a></h5>
+<p>ユースケースと出力ポートを置きます。構成は第 3 章と同じ 3 つですが、クラス名の付け方が違います。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">パッケージ</th>
+<th style="text-align: left;">命名</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>commandservices</code></td>
+<td style="text-align: left;"><code>BookCargoUseCase</code>・<code>AssignRouteUseCase</code>（<code>UseCase</code> 接尾辞）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>queryservices</code></td>
+<td style="text-align: left;"><code>SearchCargoUseCase</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>outboundservices/acl</code></td>
+<td style="text-align: left;"><code>CargoEventNotifier</code>・<code>RouteCandidateFinder</code>（<code>Port</code> 接尾辞は付けない）</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code><span class="cm">/**</span>
+<span class="cm"> * 他サービスやメッセージングへ出るための ACL port を置く package。</span>
+<span class="cm"> * 外部の型や通信方式をユースケースから隠す。</span>
+<span class="cm"> */</span>
+<span class="kn">package</span><span class="w"> </span><span class="nn">com.example.bookingms.application.internal.outboundservices.acl</span><span class="p">;</span>
+</code></pre></div>
+<p>転記元: <code>bookingms/application/internal/outboundservices/acl/package-info.java</code></p>
+<p><strong>「外部の型や通信方式をユースケースから隠す」がこの層の役目です。</strong>ユースケースは「追跡番号を発行したことを伝える」としか知らず、それが AMQP なのか HTTP なのかを知りません。</p>
+<h5 id="domain">ドメイン層（domain）<a class="headerlink" href="#domain" title="Permanent link">&para;</a></h5>
+<p>業務の言葉と規則だけを置きます。第 3 章と同じく、フレームワークに依存しません。</p>
+<p>サブパッケージの構成も第 3 章と同じです。<code>entities</code> を持つのは <strong>routingms と trackingms の 2 つだけ</strong>であり、bookingms の集約は値オブジェクトだけで足ります。<strong>サービスに分けても、集約の内側に同一性が要るかどうかは業務が決めます。</strong></p>
+<h5 id="infrastructure">インフラストラクチャ層（infrastructure）<a class="headerlink" href="#infrastructure" title="Permanent link">&para;</a></h5>
+<p>技術との接点です。<strong>接点が 3 つに増えます。</strong></p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">パッケージ</th>
+<th style="text-align: left;">相手</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>infrastructure/repositories</code></td>
+<td style="text-align: left;">自分のデータベース（MyBatis）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>infrastructure/acl</code></td>
+<td style="text-align: left;">他サービス（REST）・メッセージブローカー（AMQP）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>infrastructure/config</code></td>
+<td style="text-align: left;">Bean の組み立て・交換機とキューの宣言</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code><span class="cm">/**</span>
+<span class="cm"> * 外側の技術（DB・メッセージング・暗号）とのアダプタを置く層。</span>
+<span class="cm"> *</span>
+<span class="cm"> * &lt;p&gt;構成の詳細は各サブパッケージの説明を参照。依存は常に外から内へ向かう。</span>
+<span class="cm"> */</span>
+<span class="kn">package</span><span class="w"> </span><span class="nn">com.example.bookingms.infrastructure</span><span class="p">;</span>
+</code></pre></div>
+<p>転記元: <code>bookingms/infrastructure/package-info.java</code></p>
 <h3 id="_4">ドメインモデル：実装<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
 <h4 id="_5">コアドメインモデル：実装<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h4>
-<p><code>booking</code> の集約・値オブジェクトは Spring 依存を持たず、業務規則を自己完結で保持します。</p>
-<h4 id="_6">ドメインモデルの操作<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h4>
-<h5 id="_7">コマンド<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h5>
-<p>更新系はアプリケーションサービスで受け、集約を進めます。BC 越境が必要な確認（荷主存在確認など）は ACL ポート経由です。</p>
-<div class="highlight"><pre><span></span><code><span class="nd">@Service</span>
-<span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">BookCargoCommandService</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="nd">@Transactional</span>
-<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="n">Result</span><span class="w"> </span><span class="nf">book</span><span class="p">(</span><span class="n">BookCargoCommand</span><span class="w"> </span><span class="n">command</span><span class="p">,</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">actor</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">shipperExistenceChecker</span><span class="p">.</span><span class="na">exists</span><span class="p">(</span><span class="n">command</span><span class="p">.</span><span class="na">shipperId</span><span class="p">()))</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="n">Result</span><span class="p">.</span><span class="na">shipperNotFound</span><span class="p">();</span>
-<span class="w">        </span><span class="p">}</span>
-<span class="w">        </span><span class="p">...</span>
+<h5 id="_6">集約／エンティティ／値オブジェクト<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h5>
+<h6 id="_7">集約クラスの実装<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h6>
+<p>Booking Context の集約ルートは第 3 章と同じ <code>Cargo</code> ですが、<strong>実装が不変クラスになっています</strong>。</p>
+<div class="highlight"><pre><span></span><code><span class="cm">/**</span>
+<span class="cm"> * 貨物予約（集約ルート）。</span>
+<span class="cm"> *</span>
+<span class="cm"> * &lt;p&gt;予約番号は永続化の経路（DB シーケンス）で採番する。集約側で組み立てると、</span>
+<span class="cm"> * シーケンスと衝突した番号を発行できてしまう（[ADR-011]）。</span>
+<span class="cm"> *</span>
+<span class="cm"> * &lt;p&gt;&lt;strong&gt;可否の判定は {@link CargoTransitionPolicy} が持つ。&lt;/strong&gt;集約に散らすと、</span>
+<span class="cm"> * 状態を足したときに直す場所が増える。復元は {@link CargoRestoration}、貨物仕様の</span>
+<span class="cm"> * 不変条件は {@code CargoSpecificationRules} にある——どちらも責務が違う。</span>
+<span class="cm"> */</span>
+<span class="kd">public</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="kd">class</span> <span class="nc">Cargo</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">Long</span><span class="w"> </span><span class="n">id</span><span class="p">;</span>
+<span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">BookingId</span><span class="w"> </span><span class="n">bookingId</span><span class="p">;</span>
+<span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">Long</span><span class="w"> </span><span class="n">shipperId</span><span class="p">;</span>
+<span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">CargoStatus</span><span class="w"> </span><span class="n">status</span><span class="p">;</span>
+<span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">CargoSpecification</span><span class="w"> </span><span class="n">specification</span><span class="p">;</span>
+<span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">RouteSpecification</span><span class="w"> </span><span class="n">routeSpecification</span><span class="p">;</span>
+</code></pre></div>
+<p>転記元: <code>bookingms/domain/model/aggregates/Cargo.java</code></p>
+<p><strong>フィールドがすべて <code>final</code> です。</strong>状態を変える操作は自身を書き換えず、新しい <code>Cargo</code> を返します。</p>
+<div class="highlight"><pre><span></span><code><span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="n">Cargo</span><span class="w"> </span><span class="nf">requestRouting</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// 理由ごとに文言を分ける。断りの文言は「何を直せばよいか」を伝えるものであり、</span>
+<span class="w">        </span><span class="c1">// 1 つにまとめると利用者は次に何をすればよいか分からない</span>
+<span class="w">        </span><span class="n">transitions</span><span class="p">().</span><span class="na">reasonCannotRequestRouting</span><span class="p">().</span><span class="na">ifPresent</span><span class="p">(</span><span class="n">reason</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">IllegalStateException</span><span class="p">(</span><span class="n">reason</span><span class="p">);</span>
+<span class="w">        </span><span class="p">});</span>
+</code></pre></div>
+<p>転記元: <code>bookingms/domain/model/aggregates/Cargo.java</code></p>
+<p>第 3 章の <code>Cargo</code> は可変で、<code>void assignToRouting()</code> が自身の状態を進めていました。<strong>同じ業務、同じ集約でも、実装の選択は 1 つに定まりません。</strong>不変にすると、途中の状態を持つインスタンスが存在しなくなる代わりに、全項目を運ぶ写しの生成が必要になります。</p>
+<div class="highlight"><pre><span></span><code><span class="w">    </span><span class="cm">/**</span>
+<span class="cm">     * &lt;p&gt;&lt;strong&gt;書き忘れると、その項目だけが読み戻しで消える。&lt;/strong&gt;写しを作る道具は</span>
+<span class="cm">     * 全項目を運ぶ責任を持つ。</span>
+<span class="cm">     */</span>
+<span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="n">Cargo</span><span class="w"> </span><span class="nf">withHandling</span><span class="p">(</span><span class="n">CargoStatus</span><span class="w"> </span><span class="n">newStatus</span><span class="p">,</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">locationUnLocode</span><span class="p">,</span><span class="w"> </span><span class="n">Instant</span><span class="w"> </span><span class="n">at</span><span class="p">,</span>
+<span class="w">            </span><span class="n">Misroute</span><span class="w"> </span><span class="n">newMisroute</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</code></pre></div>
+<p>転記元: <code>bookingms/domain/model/aggregates/Cargo.java</code></p>
+<h6 id="_8">業務属性によるドメインの豊かさ<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h6>
+<p>集約は業務の操作と、その可否を答える述語を対で持ちます。ここは第 3 章と同じ形です。</p>
+<div class="highlight"><pre><span></span><code><span class="w">    </span><span class="cm">/**</span>
+<span class="cm">     * いま経路設計を依頼できるか。</span>
+<span class="cm">     *</span>
+<span class="cm">     * &lt;p&gt;&lt;strong&gt;可否は集約が答える。&lt;/strong&gt;画面やモックが状態名を見比べて同じ判断を</span>
+<span class="cm">     * 組み立てると、規則が 3 か所に分かれ、片方だけ直る形になる（IT6 ふりかえり Try 5）。</span>
+<span class="cm">     */</span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kt">boolean</span><span class="w"> </span><span class="nf">canRequestRouting</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">transitions</span><span class="p">().</span><span class="na">reasonCannotRequestRouting</span><span class="p">().</span><span class="na">isEmpty</span><span class="p">();</span>
 <span class="w">    </span><span class="p">}</span>
-<span class="p">}</span>
 </code></pre></div>
-<p>参照: <code>.../booking/application/internal/commandservices/BookCargoCommandService.java</code></p>
-<h5 id="_8">クエリ<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h5>
-<p>参照系は <code>queryservices</code> へ分離し、画面に必要なビューを返します。</p>
-<div class="highlight"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">interface</span> <span class="nc">BookingQueryService</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">Page</span><span class="o">&lt;</span><span class="n">BookingView</span><span class="o">&gt;</span><span class="w"> </span><span class="nf">search</span><span class="p">(</span><span class="n">BookingSearchCriteria</span><span class="w"> </span><span class="n">criteria</span><span class="p">,</span><span class="w"> </span><span class="n">PageRequest</span><span class="w"> </span><span class="n">page</span><span class="p">);</span>
-<span class="w">    </span><span class="n">Page</span><span class="o">&lt;</span><span class="n">BookingView</span><span class="o">&gt;</span><span class="w"> </span><span class="nf">findAwaitingRouting</span><span class="p">(</span><span class="n">PageRequest</span><span class="w"> </span><span class="n">page</span><span class="p">);</span>
-<span class="w">    </span><span class="n">Optional</span><span class="o">&lt;</span><span class="n">BookingView</span><span class="o">&gt;</span><span class="w"> </span><span class="nf">findById</span><span class="p">(</span><span class="n">String</span><span class="w"> </span><span class="n">bookingId</span><span class="p">);</span>
-<span class="p">}</span>
+<p>転記元: <code>bookingms/domain/model/aggregates/Cargo.java</code></p>
+<p><strong>分散すると、この規律の重みが増します。</strong>画面が別のプロセスにいる以上、画面側で状態名を見比べて判断を組み立てることは技術的に容易です。それをやると、規則がサービスとフロントエンドの 2 か所に分かれ、片方だけが更新されます。</p>
+<p>もう 1 つ、分散ならではの工夫があります。<strong>できない理由を返す述語</strong>です。</p>
+<div class="highlight"><pre><span></span><code><span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="n">Optional</span><span class="o">&lt;</span><span class="n">String</span><span class="o">&gt;</span><span class="w"> </span><span class="nf">reasonCannotCancel</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
 </code></pre></div>
-<p>参照: <code>.../booking/application/internal/queryservices/BookingQueryService.java</code></p>
-<h5 id="_9">ドメインイベント<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h5>
-<p>イベントは「起きた事実」だけを運ぶ <code>record</code> で定義します。</p>
-<div class="highlight"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">record</span> <span class="nc">CargoStatusUpdatedEvent</span><span class="p">(</span>
-<span class="w">        </span><span class="n">UUID</span><span class="w"> </span><span class="n">bookingId</span><span class="p">,</span>
+<p>転記元: <code>bookingms/domain/model/aggregates/Cargo.java</code></p>
+<p><code>boolean</code> ではなく理由の文字列を返します。API の向こう側にいる利用者は、断られたときに<strong>何を直せばよいか</strong>を画面から知る必要があります。</p>
+<h6 id="_9">エンティティ／値オブジェクトの実装<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h6>
+<p>値オブジェクトは <code>record</code> です。第 3 章と同じ方針であり、集約の状態の大半を値オブジェクトが占めます。</p>
+<p>エンティティを持つのは routingms（<code>RouteRecommendation</code>）と trackingms（<code>TrackingExceptionEvent</code>）です。<strong>第 3 章と同じ 2 つの BC</strong> であり、プロセスを分けたことによる変化はありません。</p>
+<p>共有カーネルはさらに絞られ、<strong><code>Location</code> の 1 つだけ</strong>になりました。第 3 章では <code>ShipperId</code> も共有していましたが、荷主が bookingms の内側に入ったため共有する理由が消えています。</p>
+<div class="highlight"><pre><span></span><code><span class="kn">package</span><span class="w"> </span><span class="nn">com.example.shared.domain.model</span><span class="p">;</span>
+</code></pre></div>
+<p>転記元: <code>shared/src/main/java/com/example/shared/domain/model/Location.java</code></p>
+<h4 id="_10">ドメインモデルの操作<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h4>
+<h5 id="_11">コマンド<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h5>
+<p>コマンドは<strong>素の値で受けます</strong>。</p>
+<div class="highlight"><pre><span></span><code><span class="cm">/**</span>
+<span class="cm"> * 貨物予約の登録要求。</span>
+<span class="cm"> *</span>
+<span class="cm"> * &lt;p&gt;地点は UN/LOCODE のまま受け取り、実在の確認と業務タイムゾーンの解決はユースケースが行う。</span>
+<span class="cm"> * ここで {@code Location} に変換すると、存在しない地点コードが「名称不明の地点」として通る。</span>
+<span class="cm"> */</span>
+<span class="kd">public</span><span class="w"> </span><span class="kd">record</span> <span class="nc">BookCargoCommand</span><span class="p">(</span>
+<span class="w">        </span><span class="n">Long</span><span class="w"> </span><span class="n">shipperId</span><span class="p">,</span>
+<span class="w">        </span><span class="n">CargoType</span><span class="w"> </span><span class="n">type</span><span class="p">,</span>
+<span class="w">        </span><span class="n">BigDecimal</span><span class="w"> </span><span class="n">weightKg</span><span class="p">,</span>
+<span class="w">        </span><span class="n">Integer</span><span class="w"> </span><span class="n">quantity</span><span class="p">,</span>
+<span class="w">        </span><span class="n">String</span><span class="w"> </span><span class="n">description</span><span class="p">,</span>
+</code></pre></div>
+<p>転記元: <code>bookingms/domain/model/commands/BookCargoCommand.java</code></p>
+<p>第 3 章の <code>BookCargoCommand</code> が <code>CargoSpecification</code> や <code>RouteSpecification</code> という値オブジェクトを受け取っていたのに対し、こちらは <code>BigDecimal</code> と <code>String</code> で受けます。<strong>組み立ては境界の外で行い、検証はユースケースが行う</strong>という分担です。</p>
+<p>理由は Javadoc にあるとおりで、<strong>実在の確認がデータベースを要する</strong>ためです。地点マスタを引かずに <code>Location</code> を作ると、存在しないコードが型の上では正しいものとして通ってしまいます。</p>
+<h5 id="_12">クエリ<a class="headerlink" href="#_12" title="Permanent link">&para;</a></h5>
+<p>読み取りは専用のユースケースです。</p>
+<div class="highlight"><pre><span></span><code><span class="cm">/**</span>
+<span class="cm"> * 貨物予約を探す。</span>
+<span class="cm"> *</span>
+<span class="cm"> * &lt;p&gt;件数の上限を必ず置く。上限が無いと、予約が増えた日に一覧が開かなくなる。</span>
+<span class="cm"> * 上限で切ったことは総件数と合わせて示す（黙って切ると「全件見た」と受け取られる）。</span>
+<span class="cm"> */</span>
+<span class="nd">@Service</span>
+<span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">SearchCargoUseCase</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">    </span><span class="cm">/** 一覧に返す件数の上限。 */</span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">DEFAULT_LIMIT</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">100</span><span class="p">;</span>
+</code></pre></div>
+<p>転記元: <code>bookingms/application/internal/queryservices/SearchCargoUseCase.java</code></p>
+<p>返すのは集約ではなく <code>CargoSummary</code> の一覧です。第 3 章の <code>BookingView</code> と同じ考え方であり、<strong>集約を API の向こうへ出しません</strong>。</p>
+<p>分散で新しく要るのが<strong>上限と切り捨ての明示</strong>です。</p>
+<div class="highlight"><pre><span></span><code><span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kd">record</span> <span class="nc">Result</span><span class="p">(</span><span class="n">List</span><span class="o">&lt;</span><span class="n">CargoSummary</span><span class="o">&gt;</span><span class="w"> </span><span class="n">cargoes</span><span class="p">,</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">totalCount</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">limit</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">        </span><span class="cm">/** 上限で切られているか。画面が「全件ではない」ことを示せるようにする。 */</span>
+<span class="w">        </span><span class="kd">public</span><span class="w"> </span><span class="kt">boolean</span><span class="w"> </span><span class="nf">truncated</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="n">totalCount</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">cargoes</span><span class="p">.</span><span class="na">size</span><span class="p">();</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+</code></pre></div>
+<p>転記元: <code>bookingms/application/internal/queryservices/SearchCargoUseCase.java</code></p>
+<p><strong>黙って切ると「全件見た」と受け取られます。</strong>同一プロセスなら呼び出し側がページングの都合を知っていますが、API の向こう側は知りません。</p>
+<h5 id="_13">ドメインイベント<a class="headerlink" href="#_13" title="Permanent link">&para;</a></h5>
+<p>BC をまたぐ通知はイベントです。ここが第 3 章から最も大きく変わります。</p>
+<p>イベントの型は <code>shared</code> ではなく、<strong>発行側のアプリケーション層</strong>に置かれます。</p>
+<div class="highlight"><pre><span></span><code><span class="cm">/**</span>
+<span class="cm"> * 追跡番号を発行したことを、他のサービスへ伝える中身（[ADR-022] 決定 2）。</span>
+<span class="cm"> *</span>
+<span class="cm"> * &lt;p&gt;載せるのは&lt;strong&gt;相手が自分の集約を作るのに要るもの&lt;/strong&gt;だけである。ID だけだと</span>
+<span class="cm"> * trackingms が bookingms へ問い合わせることになり、非同期にした意味が消える</span>
+<span class="cm"> * （同期の依存が戻り、bookingms が落ちていると追跡が作れない）。予約の全部も載せない——</span>
+<span class="cm"> * 載せるほど受け手が Booking の言葉に縛られる。</span>
+<span class="cm"> *</span>
+<span class="cm"> * &lt;p&gt;ここは &lt;strong&gt;application/port&lt;/strong&gt; にある。ドメインもユースケースも「何を伝えるか」</span>
+<span class="cm"> * だけを知り、AMQP か Kafka かは知らない。</span>
+<span class="cm"> */</span>
+<span class="kd">public</span><span class="w"> </span><span class="kd">record</span> <span class="nc">TrackingNumberIssued</span><span class="p">(</span>
 <span class="w">        </span><span class="n">String</span><span class="w"> </span><span class="n">trackingNumber</span><span class="p">,</span>
-<span class="w">        </span><span class="n">String</span><span class="w"> </span><span class="n">transportStatusLabel</span><span class="p">,</span>
-<span class="w">        </span><span class="n">Instant</span><span class="w"> </span><span class="n">occurredAt</span><span class="p">,</span>
-<span class="w">        </span><span class="n">String</span><span class="w"> </span><span class="n">locationUnlocode</span><span class="p">,</span>
-<span class="w">        </span><span class="n">String</span><span class="w"> </span><span class="n">updatedBy</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">String</span><span class="w"> </span><span class="n">bookingId</span><span class="p">,</span>
+<span class="w">        </span><span class="n">String</span><span class="w"> </span><span class="n">originUnLocode</span><span class="p">,</span>
+<span class="w">        </span><span class="n">String</span><span class="w"> </span><span class="n">destinationUnLocode</span><span class="p">,</span>
+<span class="w">        </span><span class="n">LocalDate</span><span class="w"> </span><span class="n">arrivalDeadline</span><span class="p">,</span>
+<span class="w">        </span><span class="n">LocalDate</span><span class="w"> </span><span class="n">estimatedArrival</span><span class="p">,</span>
+<span class="w">        </span><span class="n">Instant</span><span class="w"> </span><span class="n">occurredAt</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="p">}</span>
 </code></pre></div>
-<p>参照: <code>.../shared/domain/event/CargoStatusUpdatedEvent.java</code></p>
-<p>購読側は <code>AFTER_COMMIT</code> で受けて、自 BC の操作へ翻訳します。</p>
-<div class="highlight"><pre><span></span><code><span class="nd">@TransactionalEventListener</span><span class="p">(</span><span class="n">phase</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">TransactionPhase</span><span class="p">.</span><span class="na">AFTER_COMMIT</span><span class="p">)</span>
-<span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">on</span><span class="p">(</span><span class="n">CargoStatusUpdatedEvent</span><span class="w"> </span><span class="n">event</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">recordService</span><span class="p">.</span><span class="na">recordNotification</span><span class="p">(</span><span class="n">event</span><span class="p">);</span>
-<span class="w">    </span><span class="p">...</span>
+<p>転記元: <code>bookingms/application/internal/outboundservices/acl/TrackingNumberIssued.java</code></p>
+<p><strong>何を載せるかが設計判断になります。</strong>ID だけだと受け手が問い合わせに来るため、非同期にした意味が消えます。全部載せると、受け手が発行側の語彙に縛られます。その中間を選ぶのがイベントの設計です。</p>
+<p>型を共有しない代わりに、<strong>契約を共有します</strong>。</p>
+<div class="highlight"><pre><span></span><code><span class="cm">/**</span>
+<span class="cm"> * 追跡番号を発行したことのイベント契約（[ADR-022]）。</span>
+<span class="cm"> *</span>
+<span class="cm"> * &lt;p&gt;&lt;strong&gt;両側が同じ 1 つを読む。&lt;/strong&gt;これまでは項目の名簿と交換機・ルーティングキーが</span>
+<span class="cm"> * プロデューサ側（bookingms）とコンシューマ側（trackingms）の両方に写しとして置かれていた。</span>
+<span class="cm"> * 写しがずれると「送っているのに届かない」形で壊れ、しかも&lt;strong&gt;送り手はエラーにならない&lt;/strong&gt;。</span>
+<span class="cm"> *</span>
+<span class="cm"> * &lt;p&gt;ここに置くのは&lt;strong&gt;契約であって実装ではない&lt;/strong&gt;。イベントの DTO は BC ごとに</span>
+<span class="cm"> * 持つ（相手の型を持ち込まない）。共有するのは「両者が合意した名前と項目」だけである。</span>
+<span class="cm"> */</span>
+<span class="kd">public</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="kd">class</span> <span class="nc">TrackingNumberIssuedContract</span><span class="w"> </span><span class="p">{</span>
+</code></pre></div>
+<p>転記元: <code>shared/src/testFixtures/java/com/example/shared/contract/TrackingNumberIssuedContract.java</code></p>
+<p>置き場所が <code>testFixtures</code> である点が重要です。<strong>本番のコードはこれを読みません。</strong>読ませると業務の契約が共有カーネルに入り込み、片方の変更が両サービスの再デプロイになります。</p>
+<p>契約は項目だけではありません。<strong>交換機そのものも契約です。</strong></p>
+<div class="highlight"><pre><span></span><code><span class="cm">/**</span>
+<span class="cm"> * 交換機そのものの契約（[ADR-022] 決定 4）。</span>
+<span class="cm"> *</span>
+<span class="cm"> * &lt;p&gt;&lt;strong&gt;名前が一致しているだけでは足りない。&lt;/strong&gt;交換機は、耐久性・自動削除・引数まで</span>
+<span class="cm"> * 含めて同じでなければ再宣言できない。食い違うと、後から接続したほうが</span>
+<span class="cm"> * {@code PRECONDITION_FAILED - inequivalent arg} で落ちる。しかも既存の交換機は</span>
+<span class="cm"> * &lt;strong&gt;宣言し直せない&lt;/strong&gt;ため、落ちたサービスは後続のキュー宣言まで止まる。</span>
+<span class="cm"> *</span>
+<span class="cm"> * &lt;p&gt;IT7 の kind 統合で実際に踏んだ。Testcontainers は毎回まっさらな交換機を作るので、</span>
+<span class="cm"> * &lt;strong&gt;この壊れ方はテストでは出ない&lt;/strong&gt;。守っているのが各サービスのコメントだけ</span>
+<span class="cm"> * だったため、契約として置き直す。</span>
+<span class="cm"> */</span>
+<span class="kd">public</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="kd">class</span> <span class="nc">EventExchangeContract</span><span class="w"> </span><span class="p">{</span>
+</code></pre></div>
+<p>転記元: <code>shared/src/testFixtures/java/com/example/shared/contract/EventExchangeContract.java</code></p>
+<p><strong>テストが通ることと、実環境で動くことは同じではありません。</strong>毎回まっさらな環境を作るテストでは、既存の交換機と食い違うという壊れ方が原理的に起きません。</p>
+<h4 id="_14">ドメインモデルサービス<a class="headerlink" href="#_14" title="Permanent link">&para;</a></h4>
+<h5 id="_15">受信サービス<a class="headerlink" href="#_15" title="Permanent link">&para;</a></h5>
+<h6 id="rest-api">REST API<a class="headerlink" href="#rest-api" title="Permanent link">&para;</a></h6>
+<p>第 3 章では<strong>存在しなかった</strong> REST API が、ここでは中心的な入口になります。</p>
+<div class="highlight"><pre><span></span><code><span class="nd">@RestController</span>
+<span class="nd">@RequestMapping</span><span class="p">(</span><span class="s">"/api/v1/bookings"</span><span class="p">)</span>
+<span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">CargoBookingController</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">BookingUseCases</span><span class="w"> </span><span class="n">useCases</span><span class="p">;</span>
+<span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">CargoRepository</span><span class="w"> </span><span class="n">cargoes</span><span class="p">;</span>
+<span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">LocationRepository</span><span class="w"> </span><span class="n">locations</span><span class="p">;</span>
+<span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">Validator</span><span class="w"> </span><span class="n">validator</span><span class="p">;</span>
+</code></pre></div>
+<p>転記元: <code>bookingms/interfaces/rest/CargoBookingController.java</code></p>
+<p>利用者の情報は Gateway が付けたヘッダから受け取ります。</p>
+<div class="highlight"><pre><span></span><code><span class="w">    </span><span class="nd">@GetMapping</span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="n">BookingListResponse</span><span class="w"> </span><span class="nf">search</span><span class="p">(</span>
+<span class="w">            </span><span class="nd">@RequestHeader</span><span class="p">(</span><span class="n">AuthenticatedUser</span><span class="p">.</span><span class="na">USER_ID_HEADER</span><span class="p">)</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">userId</span><span class="p">,</span>
+<span class="w">            </span><span class="nd">@RequestHeader</span><span class="p">(</span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">AuthenticatedUser</span><span class="p">.</span><span class="na">ROLES_HEADER</span><span class="p">,</span><span class="w"> </span><span class="n">required</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span><span class="p">)</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">roles</span><span class="p">,</span>
+</code></pre></div>
+<p>転記元: <code>bookingms/interfaces/rest/CargoBookingController.java</code></p>
+<p>入口が使うユースケースは 1 つにまとめて注入します。</p>
+<div class="highlight"><pre><span></span><code><span class="cm">/**</span>
+<span class="cm"> * 貨物予約の入口が使うユースケースをまとめる。</span>
+<span class="cm"> *</span>
+<span class="cm"> * &lt;p&gt;予約は 1 つの画面から複数の操作（登録・検索・引き渡し・経路の割り当て・差し戻し）を</span>
+<span class="cm"> * 行うため、入口が扱うユースケースが増え続ける。**引数の並びで受け取ると、足すたびに</span>
+<span class="cm"> * コンストラクタが伸び、テストの組み立ても壊れる**。まとめて 1 つで受ける。</span>
+<span class="cm"> *</span>
+<span class="cm"> * &lt;p&gt;まとめるのは「入口が使うもの」であって、業務上の関係ではない。ユースケースどうしは</span>
+<span class="cm"> * ここでも互いを知らない。</span>
+<span class="cm"> */</span>
+<span class="nd">@Component</span>
+<span class="kd">public</span><span class="w"> </span><span class="kd">record</span> <span class="nc">BookingUseCases</span><span class="p">(</span>
+<span class="w">        </span><span class="n">BookCargoUseCase</span><span class="w"> </span><span class="n">bookCargo</span><span class="p">,</span>
+<span class="w">        </span><span class="n">SearchCargoUseCase</span><span class="w"> </span><span class="n">searchCargo</span><span class="p">,</span>
+</code></pre></div>
+<p>転記元: <code>bookingms/interfaces/rest/BookingUseCases.java</code></p>
+<h6 id="_16">イベントハンドラ<a class="headerlink" href="#_16" title="Permanent link">&para;</a></h6>
+<p>もう 1 つの入口がメッセージの購読です。<strong>相手の型は使いません。</strong></p>
+<div class="highlight"><pre><span></span><code><span class="cm">/**</span>
+<span class="cm"> * handlingms のイベントを受ける、&lt;strong&gt;bookingms 側の&lt;/strong&gt;受け皿</span>
+<span class="cm"> * （[ADR-023] 決定 5・[ADR-025] 決定 1）。</span>
+<span class="cm"> *</span>
+<span class="cm"> * &lt;p&gt;相手の型を直接デシリアライズすると、相手のドメインの変更がこちらのコンパイルを壊す。</span>
+<span class="cm"> * &lt;strong&gt;知らない項目は無視する&lt;/strong&gt;（相手が項目を足しても、こちらは壊れない）。</span>
+<span class="cm"> *</span>
+<span class="cm"> * &lt;p&gt;trackingms にも同じ形の受け皿がある。&lt;strong&gt;共有しない&lt;/strong&gt;——共有すると、</span>
+<span class="cm"> * 片方の都合で項目を足したときにもう片方が巻き込まれる（BC の独立性）。</span>
+<span class="cm"> */</span>
+<span class="kd">public</span><span class="w"> </span><span class="kd">record</span> <span class="nc">HandlingActivityRegisteredMessage</span><span class="p">(</span><span class="n">String</span><span class="w"> </span><span class="n">trackingNumber</span><span class="p">,</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">bookingId</span><span class="p">,</span>
+<span class="w">        </span><span class="n">String</span><span class="w"> </span><span class="n">type</span><span class="p">,</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">locationUnLocode</span><span class="p">,</span><span class="w"> </span><span class="n">Instant</span><span class="w"> </span><span class="n">completionTime</span><span class="p">,</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">voyageNumber</span><span class="p">,</span>
+<span class="w">        </span><span class="kt">boolean</span><span class="w"> </span><span class="n">offRoute</span><span class="p">,</span><span class="w"> </span><span class="n">Instant</span><span class="w"> </span><span class="n">occurredAt</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
 <span class="p">}</span>
 </code></pre></div>
-<p>参照: <code>.../booking/interfaces/events/BookingStatusNotificationHandler.java</code></p>
-<h3 id="_10">ドメインモデルサービス<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h3>
-<p>ドメインサービス（例: <code>RouteSearchService</code>）は業務計算を担当し、イベント駆動の流れでも集約の責務を肥大化させない役割を持ちます。</p>
-<h3 id="_11">送信サービス<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h3>
-<p>送信側の契約は利用側 BC が定義し、提供側 BC が実装します。</p>
-<div class="highlight"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">interface</span> <span class="nc">ShipperExistenceChecker</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="kt">boolean</span><span class="w"> </span><span class="nf">exists</span><span class="p">(</span><span class="n">ShipperId</span><span class="w"> </span><span class="n">shipperId</span><span class="p">);</span>
-<span class="w">    </span><span class="n">Optional</span><span class="o">&lt;</span><span class="n">ShipperId</span><span class="o">&gt;</span><span class="w"> </span><span class="nf">findIdByShipperCode</span><span class="p">(</span><span class="n">String</span><span class="w"> </span><span class="n">shipperCode</span><span class="p">);</span>
-<span class="p">}</span>
+<p>転記元: <code>bookingms/interfaces/events/HandlingActivityRegisteredMessage.java</code></p>
+<p><strong>同じイベントに対して、購読側の数だけ受け皿があります。</strong>重複に見えますが、共有すると片方の都合がもう片方を巻き込みます。第 3 章で値オブジェクトの重複を「境界を分けた代金」と呼んだのと同じ構図です。</p>
+<p>購読そのものは薄く保ちます。</p>
+<div class="highlight"><pre><span></span><code><span class="w">    </span><span class="nd">@RabbitListener</span><span class="p">(</span><span class="n">queues</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">CargoEventChannels</span><span class="p">.</span><span class="na">HANDLING_QUEUE</span><span class="p">)</span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">onHandlingActivityRegistered</span><span class="p">(</span><span class="n">HandlingActivityRegisteredMessage</span><span class="w"> </span><span class="n">message</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// **offRoute はイベントが運ぶ**（[ADR-022] の契約に既にある・[ADR-026] 決定 1）。</span>
+<span class="w">        </span><span class="c1">// 新しいイベントを作らない——交換機を増やすほど移行の手順が要る</span>
+<span class="w">        </span><span class="n">advanceBooking</span><span class="p">.</span><span class="na">advance</span><span class="p">(</span><span class="n">message</span><span class="p">.</span><span class="na">trackingNumber</span><span class="p">(),</span><span class="w"> </span><span class="n">message</span><span class="p">.</span><span class="na">type</span><span class="p">(),</span>
+<span class="w">                </span><span class="n">message</span><span class="p">.</span><span class="na">locationUnLocode</span><span class="p">(),</span><span class="w"> </span><span class="n">message</span><span class="p">.</span><span class="na">completionTime</span><span class="p">(),</span><span class="w"> </span><span class="n">message</span><span class="p">.</span><span class="na">offRoute</span><span class="p">());</span>
+<span class="w">    </span><span class="p">}</span>
 </code></pre></div>
-<div class="highlight"><pre><span></span><code><span class="nd">@Component</span>
-<span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">ShipperExistenceCheckerAdapter</span><span class="w"> </span><span class="kd">implements</span><span class="w"> </span><span class="n">ShipperExistenceChecker</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">...</span><span class="w"> </span><span class="p">}</span>
+<p>転記元: <code>bookingms/interfaces/events/HandlingActivityRegisteredListener.java</code></p>
+<p>例外の扱いが第 3 章と対照的です。</p>
+<div class="highlight"><pre><span></span><code><span class="cm">/**</span>
+<span class="cm"> * 「荷役作業を記録した」を受け取って予約を進める（US30・[ADR-025] 決定 1）。</span>
+<span class="cm"> *</span>
+<span class="cm"> * &lt;p&gt;&lt;strong&gt;例外を握りつぶさない。&lt;/strong&gt;握りつぶすと、受け取れなかったイベントが</span>
+<span class="cm"> * 正常に処理されたことになり、デッドレターにも届かない（[ADR-022] 決定 4）。</span>
+<span class="cm"> */</span>
+<span class="nd">@Component</span>
+<span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">HandlingActivityRegisteredListener</span><span class="w"> </span><span class="p">{</span>
 </code></pre></div>
-<p>参照:</p>
+<p>転記元: <code>bookingms/interfaces/events/HandlingActivityRegisteredListener.java</code></p>
+<p>第 3 章では、取りこぼしを捕まえて件数に記録していました。ここでは<strong>捕まえないことが正解</strong>です。例外がブローカーまで伝わることで、メッセージがデッドレターキューへ回されます。<strong>失敗を引き受ける仕組みが基盤側にあるかどうかで、正しい書き方が反転します。</strong></p>
+<h5 id="_17">アプリケーションサービス<a class="headerlink" href="#_17" title="Permanent link">&para;</a></h5>
+<h6 id="_18">アプリケーションサービス：コマンド／クエリの委譲<a class="headerlink" href="#_18" title="Permanent link">&para;</a></h6>
+<p>ユースケースの役割は第 3 章と同じです。<strong>入力の実在確認・集約の生成・保存</strong>を順に行い、業務のルールは集約に委ねます。</p>
+<div class="highlight"><pre><span></span><code><span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="n">Cargo</span><span class="w"> </span><span class="nf">book</span><span class="p">(</span><span class="n">BookCargoCommand</span><span class="w"> </span><span class="n">command</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">command</span><span class="p">.</span><span class="na">shipperId</span><span class="p">()</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="kc">null</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">shippers</span><span class="p">.</span><span class="na">findById</span><span class="p">(</span><span class="n">command</span><span class="p">.</span><span class="na">shipperId</span><span class="p">()).</span><span class="na">isEmpty</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">IllegalArgumentException</span><span class="p">(</span><span class="s">"指定された荷主が見つかりません: "</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">command</span><span class="p">.</span><span class="na">shipperId</span><span class="p">());</span>
+<span class="w">        </span><span class="p">}</span>
+
+<span class="w">        </span><span class="n">Location</span><span class="w"> </span><span class="n">origin</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">locationOf</span><span class="p">(</span><span class="n">command</span><span class="p">.</span><span class="na">originUnLocode</span><span class="p">(),</span><span class="w"> </span><span class="s">"出発地"</span><span class="p">);</span>
+<span class="w">        </span><span class="n">Location</span><span class="w"> </span><span class="n">destination</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">locationOf</span><span class="p">(</span><span class="n">command</span><span class="p">.</span><span class="na">destinationUnLocode</span><span class="p">(),</span><span class="w"> </span><span class="s">"目的地"</span><span class="p">);</span>
+
+<span class="w">        </span><span class="c1">// 到着期限は目的地の暦で判断する。UTC で判断すると、時差の分だけ</span>
+<span class="w">        </span><span class="c1">// 受付が拒否される時間帯ができる（ADR-010）</span>
+<span class="w">        </span><span class="n">ZoneId</span><span class="w"> </span><span class="n">destinationZone</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">locations</span><span class="p">.</span><span class="na">timeZoneOf</span><span class="p">(</span><span class="n">command</span><span class="p">.</span><span class="na">destinationUnLocode</span><span class="p">())</span>
+<span class="w">                </span><span class="p">.</span><span class="na">orElseThrow</span><span class="p">(()</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">IllegalArgumentException</span><span class="p">(</span>
+<span class="w">                        </span><span class="s">"目的地の業務タイムゾーンが登録されていません: "</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">command</span><span class="p">.</span><span class="na">destinationUnLocode</span><span class="p">()));</span>
+
+<span class="w">        </span><span class="n">RouteSpecification</span><span class="w"> </span><span class="n">route</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">RouteSpecification</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="n">origin</span><span class="p">,</span><span class="w"> </span><span class="n">destination</span><span class="p">,</span>
+<span class="w">                </span><span class="n">command</span><span class="p">.</span><span class="na">departureDate</span><span class="p">(),</span><span class="w"> </span><span class="n">command</span><span class="p">.</span><span class="na">arrivalDeadline</span><span class="p">(),</span><span class="w"> </span><span class="n">destinationZone</span><span class="p">,</span><span class="w"> </span><span class="n">clock</span><span class="p">);</span>
+
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">cargoes</span><span class="p">.</span><span class="na">save</span><span class="p">(</span><span class="n">Cargo</span><span class="p">.</span><span class="na">book</span><span class="p">(</span><span class="n">command</span><span class="p">.</span><span class="na">shipperId</span><span class="p">(),</span><span class="w"> </span><span class="n">specificationOf</span><span class="p">(</span><span class="n">command</span><span class="p">),</span><span class="w"> </span><span class="n">route</span><span class="p">));</span>
+<span class="w">    </span><span class="p">}</span>
+</code></pre></div>
+<p>転記元: <code>bookingms/application/internal/commandservices/BookCargoUseCase.java</code></p>
+<p>役割分担も明文化されています。</p>
+<div class="highlight"><pre><span></span><code><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="n">荷主と地点が実在することはここで確かめる</span><span class="err">。</span><span class="n">集約は</span><span class="err">「</span><span class="n">実在するもの同士の組み合わせ</span><span class="err">」</span><span class="n">の</span>
+<span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">妥当性だけを見る</span><span class="err">。</span><span class="n">存在しない荷主</span><span class="w"> </span><span class="n">ID</span><span class="w"> </span><span class="n">を通すと</span><span class="err">、</span><span class="n">誰の貨物か分からない予約が保存される</span><span class="err">。</span>
+<span class="w"> </span><span class="o">*/</span>
+<span class="nd">@Service</span>
+<span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">BookCargoUseCase</span><span class="w"> </span><span class="p">{</span>
+</code></pre></div>
+<p>転記元: <code>bookingms/application/internal/commandservices/BookCargoUseCase.java</code></p>
+<p><strong>第 3 章で「BC をまたぐ確認だから集約の外」と説明した境目が、ここでは「自分の DB を引く必要があるから集約の外」に変わっています。</strong>理由は違いますが、結論は同じです。集約は自分が持つ値だけで判断できることを判断します。</p>
+<h5 id="_19">送信サービス<a class="headerlink" href="#_19" title="Permanent link">&para;</a></h5>
+<p>出力ポートはアプリケーション層に定義し、実装をインフラ層に置きます。この形も第 3 章と同じです。<strong>相手が 3 種類に増えます。</strong></p>
+<h6 id="_20">送信サービス：リポジトリクラス<a class="headerlink" href="#_20" title="Permanent link">&para;</a></h6>
+<p>自分のデータベースへの永続化です。実装は MyBatis で、第 3 章と同じ構成です。</p>
+<div class="highlight"><pre><span></span><code><span class="kn">package</span><span class="w"> </span><span class="nn">com.example.bookingms.infrastructure.repositories</span><span class="p">;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">com.example.bookingms.domain.repository.CargoRepository</span><span class="p">;</span>
+</code></pre></div>
+<p>転記元: <code>bookingms/infrastructure/repositories/MyBatisCargoRepository.java</code></p>
+<p>変わったのは<strong>データベースがサービス専用になった</strong>ことです。第 3 章では 1 つのデータベースに全 BC のテーブルがあり、JOIN しようと思えばできました。ここでは他サービスのテーブルは接続先にすら存在しません。</p>
+<h6 id="rest-api_1">送信サービス：REST API<a class="headerlink" href="#rest-api_1" title="Permanent link">&para;</a></h6>
+<p>他サービスへの同期呼び出しです。<strong>イベント駆動にしても、すべてが非同期になるわけではありません。</strong></p>
+<div class="highlight"><pre><span></span><code><span class="cm">/**</span>
+<span class="cm"> * 経路候補を routingms へ取りに行く ACL（[ADR-019]）。</span>
+<span class="cm"> *</span>
+<span class="cm"> * &lt;p&gt;routingms の型はここから先へ出さない。{@link RouteCandidateResponse} で受け、</span>
+<span class="cm"> * Booking Context の {@link CargoItinerary} へ変換する。</span>
+<span class="cm"> *</span>
+<span class="cm"> * &lt;p&gt;&lt;strong&gt;利用者ヘッダ（[ADR-007]）は伝播しない。&lt;/strong&gt;この呼び出しは</span>
+<span class="cm"> * 「システムが経路候補を引く」ものであり、利用者の代理ではない。伝播すると、</span>
+<span class="cm"> * routingms 側の認可が「呼び出し元の利用者が経路設計者か」を見ることになり、</span>
+<span class="cm"> * bookingms の中で完結する処理（確定時の再検証）がロールに依存する。</span>
+<span class="cm"> * サービス間の信頼はネットワーク境界（Gateway より内側）で担保する。</span>
+<span class="cm"> */</span>
+<span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">RestRouteCandidateFinder</span><span class="w"> </span><span class="kd">implements</span><span class="w"> </span><span class="n">RouteCandidateFinder</span><span class="w"> </span><span class="p">{</span>
+</code></pre></div>
+<p>転記元: <code>bookingms/infrastructure/acl/RestRouteCandidateFinder.java</code></p>
+<p><strong>問い合わせは同期、通知は非同期</strong>という分け方です。経路候補は「いま答えが要る」ものであり、イベントで解決できません。</p>
+<p>呼び出し元が誰かという問題も生まれます。</p>
+<div class="highlight"><pre><span></span><code><span class="w">    </span><span class="cm">/**</span>
+<span class="cm">     * このサービス自身を表す主体。</span>
+<span class="cm">     *</span>
+<span class="cm">     * &lt;p&gt;利用者 ID と取り違えられない形にする。利用者と同じ見た目にすると、監査ログで</span>
+<span class="cm">     * 「誰がやったのか」が分からなくなる。</span>
+<span class="cm">     */</span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">SYSTEM_PRINCIPAL</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"system:bookingms"</span><span class="p">;</span>
+</code></pre></div>
+<p>転記元: <code>bookingms/infrastructure/acl/RestRouteCandidateFinder.java</code></p>
+<p><strong>同一プロセスなら存在しなかった問題です。</strong>メソッド呼び出しに「誰として呼ぶか」はありません。</p>
+<h6 id="_21">送信サービス：メッセージブローカー<a class="headerlink" href="#_21" title="Permanent link">&para;</a></h6>
+<p>イベントの発行です。<strong>ここだけがメッセージ基盤を知ります。</strong></p>
+<div class="highlight"><pre><span></span><code><span class="cm">/**</span>
+<span class="cm"> * 予約のイベントを RabbitMQ へ流す（[ADR-022]）。</span>
+<span class="cm"> *</span>
+<span class="cm"> * &lt;p&gt;&lt;strong&gt;ここだけがメッセージ基盤を知る。&lt;/strong&gt;ドメインもユースケースも</span>
+<span class="cm"> * {@link CargoEventNotifier} という「何を頼むか」しか知らない</span>
+<span class="cm"> * （`eventPublishingOnlyInMessagingInfrastructureRule` が検査する）。</span>
+<span class="cm"> */</span>
+<span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">RabbitCargoEventNotifier</span><span class="w"> </span><span class="kd">implements</span><span class="w"> </span><span class="n">CargoEventNotifier</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">RabbitTemplate</span><span class="w"> </span><span class="n">rabbitTemplate</span><span class="p">;</span>
+</code></pre></div>
+<p>転記元: <code>bookingms/infrastructure/acl/RabbitCargoEventNotifier.java</code></p>
+<p>発行のタイミングが重要です。</p>
+<div class="highlight"><pre><span></span><code><span class="w">    </span><span class="cm">/**</span>
+<span class="cm">     * コミットしたあとに送る（[ADR-022] 決定 6）。</span>
+<span class="cm">     *</span>
+<span class="cm">     * &lt;p&gt;コミット前に出すと、&lt;strong&gt;ロールバックした予約のイベントが飛ぶ&lt;/strong&gt;。</span>
+<span class="cm">     * 存在しない予約の追跡ができ、荷主は追えるのに貨物が無い状態になる。</span>
+<span class="cm">     *</span>
+<span class="cm">     * &lt;p&gt;&lt;strong&gt;ここで決めるのは、トランザクションの境目がインフラの関心だからである。&lt;/strong&gt;</span>
+<span class="cm">     * ユースケースに「コミット後に呼べ」と作法を課すと、入口が増えた数だけ破られる。</span>
+<span class="cm">     */</span>
+<span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">afterCommit</span><span class="p">(</span><span class="n">Runnable</span><span class="w"> </span><span class="n">send</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">TransactionSynchronizationManager</span><span class="p">.</span><span class="na">isSynchronizationActive</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">send</span><span class="p">.</span><span class="na">run</span><span class="p">();</span>
+<span class="w">            </span><span class="k">return</span><span class="p">;</span>
+<span class="w">        </span><span class="p">}</span>
+</code></pre></div>
+<p>転記元: <code>bookingms/infrastructure/acl/RabbitCargoEventNotifier.java</code></p>
+<p>第 3 章の <code>@TransactionalEventListener(AFTER_COMMIT)</code> と<strong>同じ判断を、自分で書いています</strong>。Spring が購読側で用意していた仕組みが、プロセスをまたぐと発行側の責務になります。</p>
+<p>流れ先の名前は定数にまとめます。</p>
+<div class="highlight"><pre><span></span><code><span class="cm">/**</span>
+<span class="cm"> * イベントの流れ先の名前（[ADR-022]）。</span>
+<span class="cm"> *</span>
+<span class="cm"> * &lt;p&gt;文字列を配線のあちこちに書くと、片方だけ直したときに「送っているのに届かない」形で壊れる。</span>
+<span class="cm"> * 送り手と受け手は別のサービスなので、&lt;strong&gt;名前は写しになる&lt;/strong&gt;。写しであることを</span>
+<span class="cm"> * 契約テストが突き合わせる。</span>
+<span class="cm"> */</span>
+<span class="kd">public</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="kd">class</span> <span class="nc">CargoEventChannels</span><span class="w"> </span><span class="p">{</span>
+
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">EXCHANGE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"cargoBookingChannel"</span><span class="p">;</span>
+
+<span class="w">    </span><span class="cm">/** 追跡番号を発行したことのルーティングキー。 */</span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">TRACKING_NUMBER_ISSUED</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"cargo.tracking-number-issued"</span><span class="p">;</span>
+</code></pre></div>
+<p>転記元: <code>bookingms/infrastructure/acl/CargoEventChannels.java</code></p>
+<p><strong>「届かない」を防ぐ仕掛けが 2 段あります。</strong></p>
+<div class="highlight"><pre><span></span><code><span class="w">    </span><span class="cm">/** 荷役のイベントのデッドレター。 */</span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">HANDLING_DEAD_LETTER_QUEUE</span><span class="w"> </span><span class="o">=</span>
+<span class="w">            </span><span class="s">"bookingms.handling-activity-registered.dlq"</span><span class="p">;</span>
+
+<span class="w">    </span><span class="cm">/**</span>
+<span class="cm">     * どのキューにも結びつかなかったイベントの行き先（[ADR-022] 決定 4）。</span>
+<span class="cm">     *</span>
+<span class="cm">     * &lt;p&gt;デッドレターが守るのは「受け取ったが処理できなかった」だけである。ルーティングキーの</span>
+<span class="cm">     * 綴りが違う・購読側がまだ配線されていない場合、イベントは&lt;strong&gt;どのキューにも入らず</span>
+<span class="cm">     * 黙って消える&lt;/strong&gt;。しかも発行側は成功を返すため、どこにも異常が残らない。</span>
+<span class="cm">     *</span>
+<span class="cm">     * &lt;p&gt;交換機に予備の行き先（alternate-exchange）を持たせ、行き場のないイベントをここへ流す。</span>
+<span class="cm">     */</span>
+<span class="w">    </span><span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">UNROUTABLE_EXCHANGE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"cargo.unroutable"</span><span class="p">;</span>
+</code></pre></div>
+<p>転記元: <code>bookingms/infrastructure/acl/CargoEventChannels.java</code></p>
+<p>デッドレターが守るのは「受け取ったが処理できなかった」だけです。<strong>綴り違いや配線漏れは、デッドレターに入る前に消えます。</strong>この 2 つは守る範囲が違うため、両方が要ります。</p>
+<h4 id="_22">実装のまとめ<a class="headerlink" href="#_22" title="Permanent link">&para;</a></h4>
+<p>第 3 章と本章で、DDD の成果物の実装がどう変わったかを並べます。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">成果物</th>
+<th style="text-align: left;">第 3 章（モジュラーモノリス）</th>
+<th style="text-align: left;">本章（マイクロサービス）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">BC の単位</td>
+<td style="text-align: left;">トップレベルパッケージ</td>
+<td style="text-align: left;">Gradle モジュール = デプロイ単位</td>
+</tr>
+<tr>
+<td style="text-align: left;">BC 間の境界</td>
+<td style="text-align: left;">ArchUnit で守る規律</td>
+<td style="text-align: left;">クラスパスが分かれ、参照できない</td>
+</tr>
+<tr>
+<td style="text-align: left;">集約</td>
+<td style="text-align: left;">可変クラス</td>
+<td style="text-align: left;">不変クラス（操作が新インスタンスを返す）</td>
+</tr>
+<tr>
+<td style="text-align: left;">エンティティ</td>
+<td style="text-align: left;">2 BC に存在（routing・tracking）</td>
+<td style="text-align: left;">同じ 2 サービスに存在</td>
+</tr>
+<tr>
+<td style="text-align: left;">共有カーネル</td>
+<td style="text-align: left;"><code>Location</code>・<code>ShipperId</code> の 2 つ</td>
+<td style="text-align: left;"><code>Location</code> の 1 つ</td>
+</tr>
+<tr>
+<td style="text-align: left;">コマンド</td>
+<td style="text-align: left;">値オブジェクトを受ける</td>
+<td style="text-align: left;">素の値を受ける（実在確認が DB を要する）</td>
+</tr>
+<tr>
+<td style="text-align: left;">BC 間の問い合わせ</td>
+<td style="text-align: left;">ACL ポート（メソッド呼び出し）</td>
+<td style="text-align: left;">ACL ポート（REST）</td>
+</tr>
+<tr>
+<td style="text-align: left;">BC 間の通知</td>
+<td style="text-align: left;"><code>ApplicationEventPublisher</code></td>
+<td style="text-align: left;">RabbitMQ（交換機・ルーティングキー）</td>
+</tr>
+<tr>
+<td style="text-align: left;">発行のタイミング</td>
+<td style="text-align: left;"><code>@TransactionalEventListener(AFTER_COMMIT)</code></td>
+<td style="text-align: left;">発行側で <code>afterCommit</code> を自作</td>
+</tr>
+<tr>
+<td style="text-align: left;">購読の失敗</td>
+<td style="text-align: left;">捕まえて件数に記録する</td>
+<td style="text-align: left;">捕まえない（デッドレターへ回す）</td>
+</tr>
+<tr>
+<td style="text-align: left;">イベントの型</td>
+<td style="text-align: left;"><code>shared/domain/event</code> に 1 つ</td>
+<td style="text-align: left;">発行側と購読側が別々に持つ</td>
+</tr>
+<tr>
+<td style="text-align: left;">型の共有</td>
+<td style="text-align: left;">同じ <code>record</code> を参照</td>
+<td style="text-align: left;">契約（<code>testFixtures</code>）だけを共有</td>
+</tr>
+<tr>
+<td style="text-align: left;">入口</td>
+<td style="text-align: left;">画面（Thymeleaf + htmx）</td>
+<td style="text-align: left;">REST + イベント購読</td>
+</tr>
+<tr>
+<td style="text-align: left;">データベース</td>
+<td style="text-align: left;">1 つ（全 BC 共通）</td>
+<td style="text-align: left;">サービスごと</td>
+</tr>
+</tbody>
+</table>
+<p><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiBjb250ZW50U3R5bGVUeXBlPSJ0ZXh0L2NzcyIgZGF0YS1kaWFncmFtLXR5cGU9IkRFU0NSSVBUSU9OIiBoZWlnaHQ9IjU0N3B4IiBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBzdHlsZT0id2lkdGg6NzgxcHg7aGVpZ2h0OjU0N3B4O2JhY2tncm91bmQ6I0ZGRkZGRjsiIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDc4MSA1NDciIHdpZHRoPSI3ODFweCIgem9vbUFuZFBhbj0ibWFnbmlmeSI+PD9wbGFudHVtbCAxLjIwMjYuNj8+PGRlZnMvPjxnPjxnIGNsYXNzPSJ0aXRsZSIgZGF0YS1zb3VyY2UtbGluZT0iMSI+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSI3MDAiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMzAxLjE0OTUiIHg9IjIzNi44MTU1IiB5PSIyMi45OTUxIj4mIzEyNDY5OyYjMTI1NDA7JiMxMjQ5OTsmIzEyNDczOyYjMzgyOTE7JiMxMjM5ODsmIzM2ODk5OyYjMjU2NTg7JiM2NTI4ODtib29raW5nbXMgJiMxMjM2MzsmIzEyNDI1OyYjMzUyMTE7JiMxMjM4MzsmIzIyMjU5OyYjNjUyODk7PC90ZXh0PjwvZz48IS0tZW50aXR5IGd3LS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iZ3ciIGRhdGEtc291cmNlLWxpbmU9IjMiIGlkPSJlbnQwMDAxIj48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjM2LjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjEwMC44MTQ1IiB4PSIyNzIuMjMiIHk9IjE1Ny41ODY5Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iODAuODE0NSIgeD0iMjgyLjIzIiB5PSIxODAuNTgyIj5nYXRld2F5bXM8L3RleHQ+PC9nPjwhLS1lbnRpdHkgYi0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9ImIiIGRhdGEtc291cmNlLWxpbmU9IjQiIGlkPSJlbnQwMDAyIj48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjM2LjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9Ijk2LjcwNjEiIHg9IjI3NC4yOCIgeT0iMjcwLjg4NjkiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI3Ni43MDYxIiB4PSIyODQuMjgiIHk9IjI5My44ODIiPmJvb2tpbmdtczwvdGV4dD48L2c+PCEtLWVudGl0eSByLS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iciIgZGF0YS1zb3VyY2UtbGluZT0iNSIgaWQ9ImVudDAwMDMiPjxyZWN0IGZpbGw9IiNGMUYxRjEiIGhlaWdodD0iMzYuMjk2OSIgcng9IjIuNSIgcnk9IjIuNSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7IiB3aWR0aD0iOTEuMjY0NiIgeD0iNyIgeT0iMzg0LjE4NjkiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI3MS4yNjQ2IiB4PSIxNyIgeT0iNDA3LjE4MiI+cm91dGluZ21zPC90ZXh0PjwvZz48IS0tZW50aXR5IHQtLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJ0IiBkYXRhLXNvdXJjZS1saW5lPSI2IiBpZD0iZW50MDAwNCI+PHJlY3QgZmlsbD0iI0YxRjFGMSIgaGVpZ2h0PSIzNi4yOTY5IiByeD0iMi41IiByeT0iMi41IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiIHdpZHRoPSI5OC4yMSIgeD0iNDI2LjUzIiB5PSI0OTcuNDc2OSIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9Ijc4LjIxIiB4PSI0MzYuNTMiIHk9IjUyMC40NzIiPnRyYWNraW5nbXM8L3RleHQ+PC9nPjwhLS1lbnRpdHkgaC0tPjxnIGNsYXNzPSJlbnRpdHkiIGRhdGEtcXVhbGlmaWVkLW5hbWU9ImgiIGRhdGEtc291cmNlLWxpbmU9IjciIGlkPSJlbnQwMDA1Ij48cmVjdCBmaWxsPSIjRjFGMUYxIiBoZWlnaHQ9IjM2LjI5NjkiIHJ4PSIyLjUiIHJ5PSIyLjUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIgd2lkdGg9IjEwMS42ODI2IiB4PSI1MzYuNzkiIHk9IjQ0LjI5NjkiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSI4MS42ODI2IiB4PSI1NDYuNzkiIHk9IjY3LjI5MiI+aGFuZGxpbmdtczwvdGV4dD48L2c+PCEtLWVudGl0eSBleDEtLT48ZyBjbGFzcz0iZW50aXR5IiBkYXRhLXF1YWxpZmllZC1uYW1lPSJleDEiIGRhdGEtc291cmNlLWxpbmU9IjgiIGlkPSJlbnQwMDA2Ij48cGF0aCBkPSJNMzA0LjkxLDM4OS4xODY5IEw0NjguMzYzMSwzODkuMTg2OSBDNDczLjM2MzEsMzg5LjE4NjkgNDczLjM2MzEsNDAyLjMzNTMgNDczLjM2MzEsNDAyLjMzNTMgQzQ3My4zNjMxLDQwMi4zMzUzIDQ3My4zNjMxLDQxNS40ODM4IDQ2OC4zNjMxLDQxNS40ODM4IEwzMDQuOTEsNDE1LjQ4MzggQzI5OS45MSw0MTUuNDgzOCAyOTkuOTEsNDAyLjMzNTMgMjk5LjkxLDQwMi4zMzUzIEMyOTkuOTEsNDAyLjMzNTMgMjk5LjkxLDM4OS4xODY5IDMwNC45MSwzODkuMTg2OSIgZmlsbD0iI0YxRjFGMSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDowLjU7Ii8+PHBhdGggZD0iTTQ2OC4zNjMxLDM4OS4xODY5IEM0NjMuMzYzMSwzODkuMTg2OSA0NjMuMzYzMSw0MDIuMzM1MyA0NjMuMzYzMSw0MDIuMzM1MyBDNDYzLjM2MzEsNDE1LjQ4MzggNDY4LjM2MzEsNDE1LjQ4MzggNDY4LjM2MzEsNDE1LjQ4MzgiIGZpbGw9Im5vbmUiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjE1My40NTMxIiB4PSIzMDQuOTEiIHk9IjQwNy4xODIiPmNhcmdvQm9va2luZ0NoYW5uZWw8L3RleHQ+PC9nPjwhLS1lbnRpdHkgZXgyLS0+PGcgY2xhc3M9ImVudGl0eSIgZGF0YS1xdWFsaWZpZWQtbmFtZT0iZXgyIiBkYXRhLXNvdXJjZS1saW5lPSI5IiBpZD0iZW50MDAwNyI+PHBhdGggZD0iTTUwMi45NSwxNjIuNTg2OSBMNjcyLjMxNjIsMTYyLjU4NjkgQzY3Ny4zMTYyLDE2Mi41ODY5IDY3Ny4zMTYyLDE3NS43MzUzIDY3Ny4zMTYyLDE3NS43MzUzIEM2NzcuMzE2MiwxNzUuNzM1MyA2NzcuMzE2MiwxODguODgzOCA2NzIuMzE2MiwxODguODgzOCBMNTAyLjk1LDE4OC44ODM4IEM0OTcuOTUsMTg4Ljg4MzggNDk3Ljk1LDE3NS43MzUzIDQ5Ny45NSwxNzUuNzM1MyBDNDk3Ljk1LDE3NS43MzUzIDQ5Ny45NSwxNjIuNTg2OSA1MDIuOTUsMTYyLjU4NjkiIGZpbGw9IiNGMUYxRjEiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MC41OyIvPjxwYXRoIGQ9Ik02NzIuMzE2MiwxNjIuNTg2OSBDNjY3LjMxNjIsMTYyLjU4NjkgNjY3LjMxNjIsMTc1LjczNTMgNjY3LjMxNjIsMTc1LjczNTMgQzY2Ny4zMTYyLDE4OC44ODM4IDY3Mi4zMTYyLDE4OC44ODM4IDY3Mi4zMTYyLDE4OC44ODM4IiBmaWxsPSJub25lIiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjAuNTsiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxNTkuMzY2MiIgeD0iNTAyLjk1IiB5PSIxODAuNTgyIj5jYXJnb0hhbmRsaW5nQ2hhbm5lbDwvdGV4dD48L2c+PCEtLWxpbmsgZ3cgdG8gYi0tPjxnIGNsYXNzPSJsaW5rIiBkYXRhLWVudGl0eS0xPSJlbnQwMDAxIiBkYXRhLWVudGl0eS0yPSJlbnQwMDAyIiBkYXRhLWxpbmstdHlwZT0iZGVwZW5kZW5jeSIgZGF0YS1zb3VyY2UtbGluZT0iMTEiIGlkPSJsbms4Ij48cGF0aCBkPSJNMzIyLjYzLDE5NC4xMjY5IEMzMjIuNjMsMjE0LjkxNjkgMzIyLjYzLDI0NC41MDY5IDMyMi42MywyNjUuMzk2OSIgZmlsbD0ibm9uZSIgaWQ9Imd3LXRvLWIiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjMyMi42MywyNzAuMzk2OSwzMjYuNjMsMjYxLjM5NjksMzIyLjYzLDI2NS4zOTY5LDMxOC42MywyNjEuMzk2OSwzMjIuNjMsMjcwLjM5NjkiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMTUwLjQzOTYiIHg9IjMyMy42MyIgeT0iMjM2Ljk1MzgiPlJFU1QmIzY1Mjg4OyYjMzU0Njk7JiMzNTM4ODsmIzI4MTY4OyYjMTI0MTU7JiMxMjUwNDsmIzEyNDgzOyYjMTI0ODA7JiM2NTI4OTs8L3RleHQ+PC9nPjwhLS1saW5rIGIgdG8gci0tPjxnIGNsYXNzPSJsaW5rIiBkYXRhLWVudGl0eS0xPSJlbnQwMDAyIiBkYXRhLWVudGl0eS0yPSJlbnQwMDAzIiBkYXRhLWxpbmstdHlwZT0iZGVwZW5kZW5jeSIgZGF0YS1zb3VyY2UtbGluZT0iMTIiIGlkPSJsbms5Ij48cGF0aCBkPSJNMjczLjg4LDI5My43NjY5IEMyMTAuODgsMjk5LjUwNjkgMTA1LjgzLDMxMi41MzY5IDc2LjYzLDMzNy4xODY5IEM2Mi44MiwzNDguODM2OSA1Ny43ODYxLDM2NC4zMzczIDU1LjI5NjEsMzc5LjAxNzMiIGZpbGw9Im5vbmUiIGlkPSJiLXRvLXIiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjU0LjQ2LDM4My45NDY5LDU5LjkwODcsMzc1Ljc0MjUsNTUuMjk2MSwzNzkuMDE3Myw1Mi4wMjE0LDM3NC40MDQ3LDU0LjQ2LDM4My45NDY5IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjIyOC40Mzk3IiB4PSI3Ny42MyIgeT0iMzUwLjI1MzgiPlJFU1QmIzY1Mjg4OyYjMzIwNzY7JiMzNjMzNTsmIzIwNTA1OyYjMzUwMzY7JiMxMjM5ODsmIzIxODM5OyYjMTIzNTY7JiMyMTUxMjsmIzEyNDMxOyYjMTIzNzk7JiMxMjUzOTsmIzIxNTE2OyYjMjYzOTk7JiM2NTI4OTs8L3RleHQ+PC9nPjwhLS1saW5rIGIgdG8gZXgxLS0+PGcgY2xhc3M9ImxpbmsiIGRhdGEtZW50aXR5LTE9ImVudDAwMDIiIGRhdGEtZW50aXR5LTI9ImVudDAwMDYiIGRhdGEtbGluay10eXBlPSJkZXBlbmRlbmN5IiBkYXRhLXNvdXJjZS1saW5lPSIxMyIgaWQ9ImxuazEwIj48cGF0aCBkPSJNMzE3LjIzLDMwNy42NjY5IEMzMTQuMTQsMzIxLjE1NjkgMzEyLjE4LDMzOS44MzY5IDMxOS42MywzNTQuMTg2OSBDMzI3LjYzLDM2OS41ODY5IDMzOC44MzQ4LDM3OC42MTQ4IDM1Mi45NjQ4LDM4Ni4zNTQ4IiBmaWxsPSJub25lIiBpZD0iYi10by1leDEiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjM1Ny4zNSwzODguNzU2OSwzNTEuMzc4MywzODAuOTI1LDM1Mi45NjQ4LDM4Ni4zNTQ4LDM0Ny41MzUsMzg3Ljk0MTMsMzU3LjM1LDM4OC43NTY5IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjI2NS4yNjIyIiB4PSIzMjAuNjMiIHk9IjM1MC4yNTM4Ij5UcmFja2luZ051bWJlcklzc3VlZCAvIENhcmdvQ2FuY2VsbGVkPC90ZXh0PjwvZz48IS0tbGluayBleDEgdG8gdC0tPjxnIGNsYXNzPSJsaW5rIiBkYXRhLWVudGl0eS0xPSJlbnQwMDA2IiBkYXRhLWVudGl0eS0yPSJlbnQwMDA0IiBkYXRhLWxpbmstdHlwZT0iZGVwZW5kZW5jeSIgZGF0YS1zb3VyY2UtbGluZT0iMTQiIGlkPSJsbmsxMSI+PHBhdGggZD0iTTM5Ni41LDQxNS42NjY5IEM0MTIuMzQsNDM1LjQ3NjkgNDQwLjM3NjksNDcwLjU0MjIgNDU4LjUxNjksNDkzLjIyMjIiIGZpbGw9Im5vbmUiIGlkPSJleDEtdG8tdCIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iNDYxLjY0LDQ5Ny4xMjY5LDQ1OS4xNDIyLDQ4Ny42LDQ1OC41MTY5LDQ5My4yMjIyLDQ1Mi44OTQ4LDQ5Mi41OTY5LDQ2MS42NCw0OTcuMTI2OSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIyNiIgeD0iNDM3LjQ2IiB5PSI0NjMuNTQzOCI+JiMzNjA5MjsmIzM1NTAxOzwvdGV4dD48L2c+PCEtLWxpbmsgaCB0byBleDItLT48ZyBjbGFzcz0ibGluayIgZGF0YS1lbnRpdHktMT0iZW50MDAwNSIgZGF0YS1lbnRpdHktMj0iZW50MDAwNyIgZGF0YS1saW5rLXR5cGU9ImRlcGVuZGVuY3kiIGRhdGEtc291cmNlLWxpbmU9IjE1IiBpZD0ibG5rMTIiPjxwYXRoIGQ9Ik01ODcuNjMsODAuODI2OSBDNTg3LjYzLDEwMy40NTY5IDU4Ny42MywxMzcuNDE2OSA1ODcuNjMsMTU3LjI5NjkiIGZpbGw9Im5vbmUiIGlkPSJoLXRvLWV4MiIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxOyIvPjxwb2x5Z29uIGZpbGw9IiMxODE4MTgiIHBvaW50cz0iNTg3LjYzLDE2Mi4yOTY5LDU5MS42MywxNTMuMjk2OSw1ODcuNjMsMTU3LjI5NjksNTgzLjYzLDE1My4yOTY5LDU4Ny42MywxNjIuMjk2OSIgc3R5bGU9InN0cm9rZTojMTgxODE4O3N0cm9rZS13aWR0aDoxO3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDoxMDsiLz48dGV4dCBmaWxsPSIjMDAwMDAwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMyIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nIiB0ZXh0TGVuZ3RoPSIxNzcuMTUwNCIgeD0iNTg4LjYzIiB5PSIxMjMuNjUzOCI+SGFuZGxpbmdBY3Rpdml0eVJlZ2lzdGVyZWQ8L3RleHQ+PC9nPjwhLS1saW5rIGV4MiB0byBiLS0+PGcgY2xhc3M9ImxpbmsiIGRhdGEtZW50aXR5LTE9ImVudDAwMDciIGRhdGEtZW50aXR5LTI9ImVudDAwMDIiIGRhdGEtbGluay10eXBlPSJkZXBlbmRlbmN5IiBkYXRhLXNvdXJjZS1saW5lPSIxNiIgaWQ9ImxuazEzIj48cGF0aCBkPSJNNTcwLjIxLDE4OS4zNTY5IEM1NDkuOTksMjAzLjUyNjkgNTE1LjI0LDIyNi40MTY5IDQ4Mi42MywyNDAuODg2OSBDNDQ2LjYzLDI1Ni44NTY5IDQwOC41ODI1LDI2Ny45NjEzIDM3Ni4yNjI1LDI3NS45OTEzIiBmaWxsPSJub25lIiBpZD0iZXgyLXRvLWIiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjM3MS40MSwyNzcuMTk2OSwzODEuMTA4OSwyNzguOTA4OCwzNzYuMjYyNSwyNzUuOTkxMywzNzkuMTgsMjcxLjE0NDgsMzcxLjQxLDI3Ny4xOTY5IiBzdHlsZT0ic3Ryb2tlOiMxODE4MTg7c3Ryb2tlLXdpZHRoOjE7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjEwOyIvPjx0ZXh0IGZpbGw9IiMwMDAwMDAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEzIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmciIHRleHRMZW5ndGg9IjI2IiB4PSI1MTYuNzIiIHk9IjIzNi45NTM4Ij4mIzM2MDkyOyYjMzU1MDE7PC90ZXh0PjwvZz48IS0tbGluayBleDIgdG8gdC0tPjxnIGNsYXNzPSJsaW5rIiBkYXRhLWVudGl0eS0xPSJlbnQwMDA3IiBkYXRhLWVudGl0eS0yPSJlbnQwMDA0IiBkYXRhLWxpbmstdHlwZT0iZGVwZW5kZW5jeSIgZGF0YS1zb3VyY2UtbGluZT0iMTciIGlkPSJsbmsxNCI+PHBhdGggZD0iTTU5MC41MiwxODkuMTg2OSBDNTk2LjgsMjE4LjcwNjkgNjA5LjY3LDI5NC45MjY5IDU5MC42MywzNTQuMTg2OSBDNTcxLjU1LDQxMy41NjY5IDUyNC45OTk3LDQ2Ni4wNjU1IDQ5Ny42NDk3LDQ5My41MDU1IiBmaWxsPSJub25lIiBpZD0iZXgyLXRvLXQiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTsiLz48cG9seWdvbiBmaWxsPSIjMTgxODE4IiBwb2ludHM9IjQ5NC4xMiw0OTcuMDQ2OSw1MDMuMzA2Niw0OTMuNDk2Miw0OTcuNjQ5Nyw0OTMuNTA1NSw0OTcuNjQwNCw0ODcuODQ4Nyw0OTQuMTIsNDk3LjA0NjkiIHN0eWxlPSJzdHJva2U6IzE4MTgxODtzdHJva2Utd2lkdGg6MTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTA7Ii8+PHRleHQgZmlsbD0iIzAwMDAwMCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTMiIGxlbmd0aEFkanVzdD0ic3BhY2luZyIgdGV4dExlbmd0aD0iMjYiIHg9IjU5NS45MyIgeT0iMzUwLjI1MzgiPiYjMzYwOTI7JiMzNTUwMTs8L3RleHQ+PC9nPjw/cGxhbnR1bWwtc3JjIExQM0RJaUQwNThOdFVPZ1gtbzlzd0tCRzhrWjZIVXFCSkQ4WDNRTzlKWVI2eGZnQ1l2UE1CMUg1UVE2QldhWDFOUEpZTnkyN2tRSEVMdHE1OXA1anFqcm1wX2RFdDdFUG1LbzI4OVczM3U0RjhGWFN0V18wVnJzczllbC1yb2ZpZ3hQelJiWHdtcTdXVG83ZVlBU2stRURlRTVrNTdLTVhINkZPcWNMNEdTVUNVQlpQUzBlOEVxWnR5amVjOUQ3S2w0SGpic0tJcEtrQ09ZczdpUm5NbnJSRHBCSXdTazRJTHl1cko3Tnh5Ri14aVpIUG40bUN2NmZ0b3RBU3lqa1VhZ0JlN1llTXp2NkF6YjNid0FtZ0JvMmNELTh2TjdvcW1WeTFfVzJTMHNfNXhUTjRJSkZkeHhtZHRqLVlyZ0VPWkVHRGV4alJ5QS1aVlhpMi1IVzJfdXh3bFNMZWRCNW9BcWJOcXZ3ZFJhQ2J6Q0huTjU5M0V3V1N4cmQ2YmFQQ2F6SUtzMWlwSjE5WTVlaGZZcjlGR3Fmb2oydnFlMzdacWMzRDJqNERYbjZRYUFMRGZ2SFNaeEFtRm0wMD8+PC9nPjwvc3ZnPg==" class="uml" alt="uml diagram" title="" /></p>
+<p><strong>左で 1 行だったものが、右では 1 節になります。</strong>同じ「BC 間の通知」が、片方では 1 つのアノテーションで済み、もう片方では交換機・ルーティングキー・受け皿・契約・デッドレター・予備の行き先を要します。</p>
+<h3 id="_23">まとめ<a class="headerlink" href="#_23" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>.../booking/application/internal/outboundservices/acl/ShipperExistenceChecker.java</code></li>
-<li><code>.../shipper/infrastructure/acl/ShipperExistenceCheckerAdapter.java</code></li>
+<li>参照元が第 3 章と異なり、8 つのサービスに分かれたマイクロサービス実装です。<strong>続きではなく別実装</strong>であり、同じ業務を別の構成で実装したものとして読む必要があります。</li>
+<li>4 層のパッケージ構造は変わりません。<strong>プロセスを分けても、層の構成を変える理由はありません。</strong>変わったのは外側との接点の数（DB・他サービス・ブローカー）です。</li>
+<li>境界を守るコストは下がりました。他サービスのクラスは参照しようとしてもコンパイルが通りません。代わりに、越境の手段（REST・イベント・契約）を自分で作る必要が生まれます。</li>
+<li>第 3 章でフレームワークが与えていた保証が、いくつか手作業に変わりました。コミット後の発行、イベントの型の一致、失敗の記録がその例です。<strong>保証が消えたのではなく、誰が引き受けるかが変わっています。</strong></li>
+<li>購読の失敗に対する正しい書き方は、第 3 章と<strong>逆になりました</strong>。基盤が失敗を引き受ける仕組み（デッドレター）を持つかどうかで、例外を捕まえるべきかが反転します。<strong>プラクティスは文脈を伴って初めて意味を持ちます。</strong></li>
 </ul>
-<h3 id="_12">実装のまとめ<a class="headerlink" href="#_12" title="Permanent link">&para;</a></h3>
-<p>Cargo Tracker の EDA 実装は、次の 4 点で成立しています。</p>
-<ol>
-<li>事実はイベントで通知し、判断は購読側 BC で行う</li>
-<li>イベントは <code>AFTER_COMMIT</code> で購読し、整合性の境界を守る</li>
-<li>参照はクエリ、更新はコマンドへ分離する</li>
-<li>BC 越境の同期連携は ACL ポートで明示する</li>
-</ol>
-<h2 id="_13">まとめ<a class="headerlink" href="#_13" title="Permanent link">&para;</a></h2>
-<p>Spring Platform 上でも、EDA は「イベントを増やすこと」ではなく、境界と責務を固定するための設計手段として機能します。次章では、同じ題材を CQRS/ES（Axon）として再構成し、イベント中心設計をさらに進めます。</p>
+<p>イベント駆動にしても、集約の現在状態を直接読み書きする点は第 3 章と同じです。次章では、状態そのものをイベントの列として保存する方式（Event Sourcing）と、読み書きを別のモデルに分ける CQRS を扱います。</p>
 
 
 
