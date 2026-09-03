@@ -8,21 +8,38 @@ import { Link, useParams } from 'react-router';
  *
  * <p>照会そのものは US18 で実装する。ここで place holder を置くのは、繋がらない
  * リンクを見せないため。押しても同じ画面に戻ると、利用者は壊れていると受け取る。</p>
+ *
+ * <p>見た目はログイン画面と揃える。認証の外にある 2 画面は、社外の荷受人が最初に
+ * 見る画面である。ここだけ未装飾だと、同じシステムの画面だと受け取ってもらえない。</p>
  */
 export function PublicTrackingPage() {
   const { trackingNumber } = useParams();
 
   return (
-    <main>
-      <h1>荷物の追跡</h1>
-      {trackingNumber !== undefined && <p>追跡番号: {trackingNumber}</p>}
-      <output>
-        追跡番号による照会は、次のイテレーションで使えるようになります。
-        お急ぎの場合は担当の営業までお問い合わせください。
-      </output>
-      <p>
-        <Link to="/login">ログイン画面へ戻る</Link>
-      </p>
-    </main>
+    <div className="min-h-screen bg-gray-50">
+      <main className="mx-auto max-w-md p-8">
+        <h1 className="text-2xl font-bold text-gray-900">荷物の追跡</h1>
+        <p className="mt-1 text-gray-600">国際貨物輸送管理システム</p>
+
+        {trackingNumber !== undefined && (
+          <p className="mt-6 text-sm text-gray-700">
+            追跡番号: <code className="font-mono">{trackingNumber}</code>
+          </p>
+        )}
+
+        {/* 「まだ使えない」ことは目立たせる。本文に紛れさせると、番号を打ち込んで
+            反応が無いのを不具合と受け取られる。 */}
+        <output className="mt-4 block rounded border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-gray-800">
+          追跡番号による照会は、次のイテレーションで使えるようになります。
+          お急ぎの場合は担当の営業までお問い合わせください。
+        </output>
+
+        <p className="mt-6 text-sm text-gray-600">
+          <Link to="/login" className="text-blue-700 underline">
+            ログイン画面へ戻る
+          </Link>
+        </p>
+      </main>
+    </div>
   );
 }
