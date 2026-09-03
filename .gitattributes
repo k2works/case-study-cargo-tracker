@@ -2,3 +2,8 @@
 *.sh text eol=lf
 Dockerfile text eol=lf
 .vimrc text eol=lf
+# Gradle Wrapper は Linux コンテナの中で sh から起動する。CRLF だと
+# shebang の行末に CR が残って /bin/sh を解決できず、exit 127 で落ちる。
+# 拡張子が無く *.sh に当たらないので、名前で明示する。
+gradlew text eol=lf
+*.bat text eol=crlf
