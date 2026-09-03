@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.booking.infrastructure.persistence.CargoSummaryMapper">
+
+    <resultMap id="cargoSummaryRow"
+               type="com.example.cargotracker.booking.infrastructure.persistence.CargoSummaryMapper$CargoSummaryRow">
+        <constructor>
+            <idArg column="booking_id" javaType="string"/>
+            <arg column="booking_number" javaType="string"/>
+            <arg column="shipper_id" javaType="string"/>
+            <arg column="shipper_name" javaType="string"/>
+            <arg column="tracking_number" javaType="string"/>
+            <arg column="origin_unlocode" javaType="string"/>
+            <arg column="destination_unlocode" javaType="string"/>
+            <arg column="arrival_deadline" javaType="java.time.LocalDate"/>
+            <arg column="cargo_type" javaType="string"/>
+            <arg column="weight_kg" javaType="java.math.BigDecimal"/>
+            <arg column="length_cm" javaType="java.math.BigDecimal"/>
+            <arg column="width_cm" javaType="java.math.BigDecimal"/>
+            <arg column="height_cm" javaType="java.math.BigDecimal"/>
+            <arg column="quantity" javaType="_int"/>
+            <arg column="product_name" javaType="string"/>
+            <arg column="hazard_imo_class" javaType="string"/>
+            <arg column="hazard_un_number" javaType="string"/>
+            <arg column="temperature_min_c" javaType="java.math.BigDecimal"/>
+            <arg column="temperature_max_c" javaType="java.math.BigDecimal"/>
+            <arg column="booking_status" javaType="string"/>
+            <arg column="routing_status" javaType="string"/>
+            <arg column="booked_at" javaType="java.time.Instant"/>
+            <arg column="projected_at" javaType="java.time.Instant"/>
+            <arg column="last_event_id" javaType="string"/>
+        </constructor>
+    </resultMap>
+
+    <sql id="visible">
+        <if test="!includeFinished">
+            WHERE booking_status NOT IN ('SETTLED', 'CANCELLED')
+        </if>
+    </sql>
+
+    <select id="findById" resultMap="cargoSummaryRow">
+        SELECT * FROM cargo_summary WHERE booking_id = #{bookingId}
+    </select>
+
+    <select id="findAll" resultMap="cargoSummaryRow">
+        SELECT * FROM cargo_summary
+        <include refid="visible"/>
+        ORDER BY arrival_deadline, booking_number
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countAll" resultType="_int">
+        SELECT count(*) FROM cargo_summary
+        <include refid="visible"/>
+    </select>
+
+    <insert id="insert">
+        INSERT INTO cargo_summary
+            (booking_id, booking_number, shipper_id, shipper_name, tracking_number,
+             origin_unlocode, destination_unlocode, arrival_deadline, cargo_type, weight_kg,
+             length_cm, width_cm, height_cm, quantity, product_name,
+             hazard_imo_class, hazard_un_number, temperature_min_c, temperature_max_c,
+             booking_status, routing_status, booked_at, projected_at, last_event_id)
+        VALUES (#{bookingId}, #{bookingNumber}, #{shipperId}, #{shipperName}, #{trackingNumber},
+                #{originUnlocode}, #{destinationUnlocode}, #{arrivalDeadline}, #{cargoType},
+                #{weightKg}, #{lengthCm}, #{widthCm}, #{heightCm}, #{quantity}, #{productName},
+                #{hazardImoClass}, #{hazardUnNumber}, #{temperatureMinC}, #{temperatureMaxC},
+                #{bookingStatus}, #{routingStatus}, #{bookedAt}, #{projectedAt}, #{lastEventId})
+        ON CONFLICT (booking_id) DO NOTHING
+    </insert>
+</mapper>

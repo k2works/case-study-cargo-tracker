@@ -29,6 +29,11 @@
         VALUES (#{shipperId}, #{shipperCode}, #{shipperType}, #{name}, #{email}, #{phone}, #{address},
                 #{countryCode}, #{contractNumber}, #{discountRate},
                 #{registeredAt}, #{projectedAt}, #{lastEventId})
+        -- 一意制約を例外にしない。PostgreSQL は制約違反でトランザクションを
+        -- 中断させるので、例外を捕まえても外側（投影 + トークン）が書けなくなり、
+        -- **投影がその 1 件で止まったまま二度と進まない**。0 件で返して、
+        -- 弾いたことは呼び出し側が判断する。
+        ON CONFLICT DO NOTHING
     </insert>
 
     <select id="findById" resultMap="shipperRow">

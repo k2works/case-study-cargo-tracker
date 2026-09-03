@@ -1,0 +1,77 @@
+package com.example.cargotracker.booking.infrastructure.projection;
+
+import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
+import com.example.cargotracker.booking.domain.model.valueobjects.RoutingStatus;
+import com.example.cargotracker.booking.infrastructure.persistence.CargoSummaryMapper;
+import com.example.cargotracker.booking.infrastructure.persistence.ShipperMapper;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import org.axonframework.messaging.eventhandling.annotation.EventHandler;
+import org.springframework.stereotype.Component;
+
+/**
+ * 貨物予約の投影（Processing Group: booking-cargo-projection）。
+ *
+ * <p>荷主名を非正規化して持つ。一覧が JOIN しないため（data-model.md）。荷主が
+ * 見つからないときは {@code null} のまま書く。予約そのものは受け付けられている
+ * ので、荷主の投影が遅れていることを理由に予約を落とさない。</p>
+ *
+ * <p><b>投影はコマンドを送らない。</b> 送るとリプレイのたびに副作用が再実行される。</p>
+ */
+@Component
+public class CargoProjection {
+
+    private final CargoSummaryMapper cargos;
+    private final ShipperMapper shippers;
+    private final Clock clock;
+
+    public CargoProjection(CargoSummaryMapper cargos, ShipperMapper shippers, Clock clock) {
+        this.cargos = cargos;
+        this.shippers = shippers;
+        this.clock = clock;
+    }
+
+    @EventHandler
+    public void on(CargoBookedEvent event) {
+        Instant now = clock.instant();
+        // 業務日付で採番する。UTC で採ると、日本時間の朝 9 時より前に受け付けた
+        // 予約の番号が前日の日付になる。
+        LocalDate bookedOn = LocalDate.ofInstant(now, clock.getZone());
+
+        ShipperMapper.ShipperRow shipper = shippers.findById(event.shipperId());
+
+        cargos.insert(new CargoSummaryMapper.CargoSummaryRow(
+                event.bookingId(),
+                cargos.nextBookingNumber(bookedOn),
+                event.shipperId(),
+                shipper == null ? null : shipper.name(),
+                null,
+                event.originUnLocode(),
+                event.destinationUnLocode(),
+                event.arrivalDeadline(),
+                event.cargoType(),
+                event.weightKg(),
+                event.lengthCm(),
+                event.widthCm(),
+                event.heightCm(),
+                event.quantity(),
+                event.productName(),
+                event.hazardImoClass(),
+                event.hazardUnNumber(),
+                event.temperatureMinC(),
+                event.temperatureMaxC(),
+                BookingStatus.PRELIMINARY.name(),
+                RoutingStatus.NOT_ROUTED.name(),
+                now,
+                now,
+                null));
+    }
+
+    /** 業務タイムゾーン。Clock が持つ（BusinessClockConfiguration）。 */
+    ZoneId zone() {
+        return clock.getZone();
+    }
+}

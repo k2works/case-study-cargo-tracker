@@ -4,7 +4,7 @@ title: "データモデル設計 - 国際貨物輸送管理システム（CQRS /
 description: "CQRS / Event Sourcing 版 Cargo Tracker のデータモデル設計。Event Store は Axon Server に任せ、サービスごとの投影テーブル・Axon 管理テーブル・Auth の状態テーブルを ER 図とテーブル定義で示し、Processing Group との対応とリプレイ前提のマイグレーション方針を定める。"
 tags: [design,data-model,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-03T12:50:10Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-03T21:37:26Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -874,6 +874,9 @@ apps/cargo-tracker/backend/bookingms/src/main/resources/db/migration/
 `discount_rate BETWEEN 0 AND 0.3` のような CHECK は集約の不変条件と重複します。両者が食い違うと、正しいイベントを投影できずリプレイが止まります。投影に置く制約は `NOT NULL` と、全体の一意性を守るための UNIQUE だけです。
 
 ### 2. 一意制約は投影が最後の砦
+
+**弾き方は例外ではなく `ON CONFLICT DO NOTHING` の戻り値で見ます。** PostgreSQL は制約違反でトランザクションを中断させるので、例外を捕まえても外側（投影とトークンの書き込み）が巻き添えになります。トークンが進まないため、**その 1 件で Processing Group 全体が止まり、以降のイベントが 1 件も反映されなくなります**（IT2 で実測。IT1 の受け入れテストは「要確認一覧に出る」ことだけを見ていて、その後も投影が動き続けることを見ていませんでした）。
+
 
 `shipper.email` の一意性は、コマンド受付前の存在確認（`ExistsShipperEmailQuery`）、投影の UNIQUE、拒否の記録（`attention_item`）の三段で守ります。二段目で弾かれた事実は三段目の `attention_item` に `assigned_role = ROLE_SALES` で記録し、要確認一覧（S70）に出します。黙って捨てると、集約には登録済みなのに一覧に出ない荷主ができます。三段目を踏む検査は、存在確認を経由せず直接コマンドを 2 件送る経路で行います（`test_strategy.md`）。
 

@@ -8,7 +8,6 @@ import java.time.Instant;
 import org.axonframework.messaging.eventhandling.annotation.EventHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Component;
 
 /**
@@ -55,23 +54,26 @@ public class ShipperProjection {
             return; // リプレイで同じイベントを読み直しただけ。
         }
 
-        try {
-            shippers.insert(new ShipperMapper.ShipperRow(
-                    shipperId,
-                    shippers.nextShipperCode(),
-                    event.shipperType(),
-                    name,
-                    email,
-                    phone,
-                    address,
-                    "JP",
-                    event.contractNumber(),
-                    event.discountRate() == null ? null : new BigDecimal(event.discountRate()),
-                    now,
-                    now,
-                    null));
-        } catch (DuplicateKeyException e) {
-            // 一意制約で弾かれた。集約は受け付けているので、ここで黙ると
+        // 一意制約は例外ではなく戻り値で見る。例外にすると PostgreSQL が
+        // トランザクションを中断し、捕まえても外側（投影とトークンの書き込み）が
+        // 巻き添えになる。トークンが進まないので、その 1 件で投影全体が止まる。
+        int inserted = shippers.insert(new ShipperMapper.ShipperRow(
+                shipperId,
+                shippers.nextShipperCode(),
+                event.shipperType(),
+                name,
+                email,
+                phone,
+                address,
+                "JP",
+                event.contractNumber(),
+                event.discountRate() == null ? null : new BigDecimal(event.discountRate()),
+                now,
+                now,
+                null));
+
+        if (inserted == 0) {
+            // 弾かれた。集約は受け付けているので、ここで黙ると
             // 「登録したのに一覧に出ない」が誰にも見えないまま残る。
             recordAttention(shipperId, email, now);
         }
