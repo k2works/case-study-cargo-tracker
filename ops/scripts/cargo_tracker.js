@@ -30,9 +30,17 @@ function sh(command, options = {}) {
   return execSync(command, { stdio: 'pipe', encoding: 'utf8', ...options });
 }
 
+/**
+ * curl に本文を捨てさせる先。
+ *
+ * Windows に `/dev/null` は無く、渡すと curl が書き込みエラー（23）で落ちる。
+ * 生死の判定がすべて `000` に倒れ、「動いていない」と誤って報告することになる。
+ */
+const NULL_DEVICE = process.platform === 'win32' ? 'NUL' : '/dev/null';
+
 function tryFetch(url) {
   try {
-    return sh(`curl -sS -m 5 -o /dev/null -w '%{http_code}' ${url}`).trim();
+    return sh(`curl -sS -m 5 -o ${NULL_DEVICE} -w %{http_code} ${url}`).trim();
   } catch {
     return '000';
   }
