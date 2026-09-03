@@ -5,6 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Import;
 import com.example.cargotracker.shared.infrastructure.axon.AxonJdbcConfiguration;
 import com.example.cargotracker.shared.infrastructure.axon.AxonServerStartupCheckConfiguration;
+import com.example.cargotracker.shared.infrastructure.crypto.CryptoConfiguration;
 import com.example.cargotracker.shared.infrastructure.time.BusinessClockConfiguration;
 
 /** Billing サービスの起動クラス。 */
@@ -15,6 +16,9 @@ import com.example.cargotracker.shared.infrastructure.time.BusinessClockConfigur
     AxonJdbcConfiguration.class,
     AxonServerStartupCheckConfiguration.class,
     BusinessClockConfiguration.class,
+    // ADR-0003。ShipperRegisteredEvent の氏名は暗号化されて届く。同じ変換を
+    // 入れないと、契約スナップショットにエンベロープの JSON がそのまま入る。
+    CryptoConfiguration.class,
 })
 public class BillingApplication {
 

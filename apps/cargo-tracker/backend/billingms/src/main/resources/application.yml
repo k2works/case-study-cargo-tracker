@@ -26,6 +26,12 @@ mybatis:
 axon:
   axonserver:
     servers: ${AXON_SERVER:localhost:8124}
+  eventhandling:
+    processors:
+      # Processing Group はパッケージ名キーで指定する（@ProcessingGroup は Axon 5 に無い）。
+      # 名前の正典は data-model.md「Processing Group とテーブルの対応」。
+      "[com.example.cargotracker.billing.infrastructure.projection]":
+        mode: pooled
 
 management:
   endpoints:

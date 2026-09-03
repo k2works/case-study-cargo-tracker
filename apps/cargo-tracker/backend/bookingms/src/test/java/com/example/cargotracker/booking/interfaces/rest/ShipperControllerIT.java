@@ -117,6 +117,22 @@ class ShipperControllerIT extends AbstractAxonIntegrationTest {
     }
 
     @Test
+    @DisplayName("割引率の境目は 30% ちょうどまで通る")
+    void acceptsDiscountRateAtUpperBound() {
+        // 0.9 だけを試すと、境目が 0.3 なのか 0.5 なのか分からない。US03 は
+        // 「0〜30% の範囲で設定できる」なので、通る側の端も固定する。
+        Map<String, Object> ok = Map.of("name", "満額割引", "shipperType", "CORPORATE",
+                "email", "max-" + System.nanoTime() + "@example.com",
+                "contractNumber", "CT-30", "discountRate", "0.3000");
+        Map<String, Object> ng = Map.of("name", "超過割引", "shipperType", "CORPORATE",
+                "email", "over1-" + System.nanoTime() + "@example.com",
+                "contractNumber", "CT-31", "discountRate", "0.3001");
+
+        assertThat(post("", ok).getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(post("", ng).getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
+    }
+
+    @Test
     @DisplayName("一覧に登録した荷主が出る")
     void listsShippers() {
         String email = "list-" + System.nanoTime() + "@example.com";

@@ -1,9 +1,8 @@
-package com.example.cargotracker.booking.infrastructure.crypto;
+package com.example.cargotracker.shared.infrastructure.crypto;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.example.cargotracker.booking.application.port.ShipperKeyRepository;
 import java.nio.file.Path;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

@@ -4,7 +4,7 @@ title: "ADR-0003 荷主の個人情報は crypto-shredding で削除可能にす
 description: "個人情報（荷主の氏名・メール・電話・住所）を荷主ごとの KMS 鍵で暗号化してイベントに載せ、削除要求には鍵の破棄で応じる決定。対象イベントの名簿、投影列の NULL 許容、ゴールデン JSON の論理形と物理形、導入時期（US02 の IT）と検査。"
 tags: [adr]
 status: stable
-generated: { by: claude-code/claude-fable-5-1, at: 2026-09-02T07:46:35Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-03T12:50:10Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -49,7 +49,7 @@ Event Store は追記専用で書き換えられないため、荷主の個人�
 
 個人情報を載せてよいイベントはこの 2 本に限る。`CargoBookedEvent` や `TrackingNumberIssuedEvent` は `shipperId` だけを持ち、荷主名を非正規化して持つ投影（`cargo_summary.shipper_name`）は `ShipperRegisteredEvent` を購読して自分で埋める。他のイベントに個人情報のフィールドを足すことは ArchUnit の名簿で禁止する。
 
-暗号化はイベントのシリアライズ時に行う。Axon のシリアライザ（Jackson 3）の前段に `ShipperDataEncryptingConverter` を置き、対象フィールドを **エンベロープ**（`{ "alg": "AES-256-GCM", "keyRef": "alias/cargo-tracker/shipper/<shipperId>", "iv": "...", "ciphertext": "..." }`）に置き換える。復号は逆順で、鍵が無ければフィールドを `null` にして例外を投げない。
+暗号化はイベントのシリアライズ時に行う。**変換の実体は `shared/infrastructure/crypto` に置く**（IT2 で bookingms から移した。契約イベントを読む側も同じ変換が要る。billingms が持たないと、契約スナップショットの氏名にエンベロープの JSON がそのまま入る）。Axon のシリアライザ（Jackson 3）の前段に `ShipperDataEncryptingConverter` を置き、対象フィールドを **エンベロープ**（`{ "alg": "AES-256-GCM", "keyRef": "alias/cargo-tracker/shipper/<shipperId>", "iv": "...", "ciphertext": "..." }`）に置き換える。復号は逆順で、鍵が無ければフィールドを `null` にして例外を投げない。
 
 ### 2. 鍵は KMS のエイリアスで決定的に引く。対応表を持たない
 

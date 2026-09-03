@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.billing.infrastructure.persistence.ShipperContractSnapshotMapper">
+
+    <resultMap id="snapshotRow"
+               type="com.example.cargotracker.billing.infrastructure.persistence.ShipperContractSnapshotMapper$SnapshotRow">
+        <constructor>
+            <idArg column="shipper_id" javaType="string"/>
+            <arg column="shipper_name" javaType="string"/>
+            <arg column="shipper_type" javaType="string"/>
+            <arg column="discount_rate" javaType="java.math.BigDecimal"/>
+            <arg column="contract_number" javaType="string"/>
+            <arg column="projected_at" javaType="java.time.Instant"/>
+            <arg column="last_event_id" javaType="string"/>
+        </constructor>
+    </resultMap>
+
+    <select id="find" resultMap="snapshotRow">
+        SELECT * FROM shipper_contract_snapshot WHERE shipper_id = #{shipperId}
+    </select>
+
+    <insert id="upsert">
+        INSERT INTO shipper_contract_snapshot
+            (shipper_id, shipper_name, shipper_type, discount_rate, contract_number,
+             projected_at, last_event_id)
+        VALUES (#{shipperId}, #{shipperName}, #{shipperType}, #{discountRate}, #{contractNumber},
+                #{projectedAt}, #{lastEventId})
+        ON CONFLICT (shipper_id) DO UPDATE SET
+            shipper_name    = EXCLUDED.shipper_name,
+            shipper_type    = EXCLUDED.shipper_type,
+            discount_rate   = EXCLUDED.discount_rate,
+            contract_number = EXCLUDED.contract_number,
+            projected_at    = EXCLUDED.projected_at,
+            last_event_id   = EXCLUDED.last_event_id
+    </insert>
+</mapper>

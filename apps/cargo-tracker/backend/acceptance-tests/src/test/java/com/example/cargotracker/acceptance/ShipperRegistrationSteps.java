@@ -93,6 +93,25 @@ public class ShipperRegistrationSteps {
         lastResponse = registerCorporate(name, email, true);
     }
 
+    @もし("メールアドレス {string} で割引率 {string} の法人の荷主 {string} を登録する")
+    public void 割引率つきで登録する(String email, String discountRate, String name) {
+        lastResponse = rest.post().uri(url("/api/v1/booking/shippers"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("name", name, "shipperType", "CORPORATE", "email", email,
+                        "phone", "03-0000-0000", "address", "東京都中央区",
+                        "contractNumber", "CT-0002", "discountRate", discountRate,
+                        "acknowledgedDuplicate", false))
+                .retrieve().toEntity(JsonMap.class);
+    }
+
+    @ならば("受付は断られる")
+    public void 受付は断られる() {
+        // 断ったことだけでなく、業務規則で断ったことまで見る。500 で落ちても
+        // 「登録されなかった」ことは同じだが、画面には「壊れた」と映る。
+        assertThat(lastResponse.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
+        assertThat(lastResponse.getBody().get("code")).isEqualTo("BUSINESS_RULE_VIOLATION");
+    }
+
     @ならば("受付は成功する")
     public void 受付は成功する() {
         assertThat(lastResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);

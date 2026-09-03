@@ -5,6 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Import;
 import com.example.cargotracker.shared.infrastructure.axon.AxonJdbcConfiguration;
 import com.example.cargotracker.shared.infrastructure.axon.AxonServerStartupCheckConfiguration;
+import com.example.cargotracker.shared.infrastructure.crypto.CryptoConfiguration;
 import com.example.cargotracker.shared.infrastructure.time.BusinessClockConfiguration;
 
 /** Booking サービスの起動クラス。 */
@@ -15,6 +16,8 @@ import com.example.cargotracker.shared.infrastructure.time.BusinessClockConfigur
     AxonJdbcConfiguration.class,
     AxonServerStartupCheckConfiguration.class,
     BusinessClockConfiguration.class,
+    // ADR-0003。契約イベントを読む側も同じ変換が要る（billingms も取り込む）。
+    CryptoConfiguration.class,
 })
 public class BookingApplication {
 

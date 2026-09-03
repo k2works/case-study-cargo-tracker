@@ -1,6 +1,5 @@
-package com.example.cargotracker.booking.infrastructure.crypto;
+package com.example.cargotracker.shared.infrastructure.crypto;
 
-import com.example.cargotracker.booking.application.port.ShipperKeyRepository;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;

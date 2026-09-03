@@ -1,8 +1,7 @@
-package com.example.cargotracker.booking.infrastructure.crypto;
+package com.example.cargotracker.shared.infrastructure.crypto;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.cargotracker.booking.application.port.ShipperKeyRepository;
 import com.example.cargotracker.shared.contract.event.ShipperRegisteredEvent;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;

@@ -1,4 +1,4 @@
-package com.example.cargotracker.booking.infrastructure.crypto;
+package com.example.cargotracker.shared.infrastructure.crypto;
 
 import com.example.cargotracker.shared.contract.event.ShipperRegisteredEvent;
 import java.lang.reflect.Type;

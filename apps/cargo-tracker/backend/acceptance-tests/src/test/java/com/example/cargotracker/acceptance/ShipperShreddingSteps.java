@@ -2,7 +2,7 @@ package com.example.cargotracker.acceptance;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.cargotracker.booking.application.port.ShipperKeyRepository;
+import com.example.cargotracker.shared.infrastructure.crypto.ShipperKeyRepository;
 import com.example.cargotracker.booking.infrastructure.persistence.ShipperMapper;
 import com.example.cargotracker.booking.infrastructure.projection.ShipperProjection;
 import com.example.cargotracker.shared.contract.event.ShipperRegisteredEvent;

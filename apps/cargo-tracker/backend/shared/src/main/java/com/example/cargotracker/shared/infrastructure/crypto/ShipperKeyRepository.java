@@ -1,4 +1,4 @@
-package com.example.cargotracker.booking.application.port;
+package com.example.cargotracker.shared.infrastructure.crypto;
 
 import java.util.Optional;
 
