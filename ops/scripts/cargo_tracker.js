@@ -207,6 +207,21 @@ ${links}
   done();
 }
 
+/**
+ * 業務サービスが依存する土台（StatefulSet）。Deployment ではないので
+ * rollout status の指定が異なる。
+ */
+const INFRASTRUCTURE = ['axonserver', 'postgres'];
+
+/**
+ * 1 つのリソースが Ready になるまで待つ上限。
+ *
+ * <p>業務サービスは init コンテナで Axon Server を待ち、起動後も投影の
+ * 追いつきがある。実測では入れ替え全体で 5 分ほどかかるので、1 つあたりは
+ * それより長く取る。短くすると、正常に立ち上がっている最中に失敗と表示される。</p>
+ */
+const READY_TIMEOUT_SECONDS = 600;
+
 /** kind クラスタ名と名前空間。手順書と揃える。 */
 const KIND_CLUSTER = 'cargo-tracker';
 const NAMESPACE = 'cargo-tracker';
@@ -351,6 +366,43 @@ export default function (gulp) {
     done();
   });
 
+  /**
+   * すべての Pod が Ready になるまで待つ。
+   *
+   * <p>`rollout restart` は投げるだけで待たない。待たずに一覧を出すと、
+   * 立ち上げに成功していても最後の画面は `Init:0/1` と `Terminating` で
+   * 埋まり、<strong>失敗したように見える</strong>。</p>
+   *
+   * <p>`kubectl wait --for=condition=Ready pod -l app=...` は使わない。
+   * ラベルは終了中の Pod にも一致するため、入れ替えの最中に張ると
+   * 消えていく Pod を待ち続けて必ずタイムアウトする。世代を見ている
+   * `rollout status` で待つ。</p>
+   *
+   * <p>依存の順に待つ。業務サービスは init コンテナで Axon Server を
+   * 待つので、先に土台が上がっていないと待ち時間の内訳が読めない。</p>
+   */
+  gulp.task('k8s:wait', (done) => {
+    const context = `kind-${KIND_CLUSTER}`;
+    const resources = [
+      ...INFRASTRUCTURE.map((name) => `statefulset/${name}`),
+      ...Object.keys(SERVICES).map((name) => `deployment/${name}`),
+      `deployment/${FRONTEND.name}`,
+      `deployment/${PORTAL.name}`,
+    ];
+    for (const resource of resources) {
+      process.stdout.write(`${resource.padEnd(28)} `);
+      try {
+        sh(`kubectl --context ${context} -n ${NAMESPACE} rollout status ${resource}`
+          + ` --timeout=${READY_TIMEOUT_SECONDS}s`);
+        console.log('Ready');
+      } catch (e) {
+        // 1 つ落ちても残りを見る。どこまで上がったかが分かるほうが原因に近い。
+        console.log(`NG (${e.message.split('\n')[0]})`);
+      }
+    }
+    done();
+  });
+
   /** クラスタ側の Pod の状態。ホストからは何も見えないので、まずここを見る。 */
   gulp.task('k8s:status', (done) => {
     console.log(sh(`kubectl --context kind-${KIND_CLUSTER} -n ${NAMESPACE} get pods -o wide`));
@@ -373,7 +425,7 @@ export default function (gulp) {
    * `k8s:up` の適用は繰り返しても安全なので、ここでは分岐させない。</p>
    */
   gulp.task('k8s:setup', gulp.series(
-    'portal:artifacts', 'k8s:images', 'k8s:up', 'k8s:load', 'k8s:status',
+    'portal:artifacts', 'k8s:images', 'k8s:up', 'k8s:load', 'k8s:wait', 'k8s:status',
   ));
 
   /**
@@ -580,10 +632,11 @@ export default function (gulp) {
     console.log(`
 === ローカル統合環境（kind）コマンド ===
 
-  k8s:setup    ゼロから立ち上げる（portal:artifacts -> images -> up -> load -> status）
+  k8s:setup    ゼロから立ち上げる（portal:artifacts -> images -> up -> load -> wait -> status）
   k8s:images   9 イメージを作る（7 サービス + フロントエンド + ポータル。初回は 25 分程度）
   k8s:up       kind クラスタを作ってマニフェストを適用する
   k8s:load     イメージを kind に載せ直して rollout restart する
+  k8s:wait     全 Pod が Ready になるまで待つ
   k8s:status   Pod の状態を表示する
   k8s:render   マニフェストを描画する（クラスタが無くても回せる）
   k8s:open     port-forward を張って画面を開く（Ctrl+C まで待つ）
