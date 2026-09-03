@@ -24,13 +24,20 @@ spec:
             - { name: grpc, containerPort: 8124 }
           volumeMounts:
             - { name: events, mountPath: /axonserver/events }
+          # 起動を待つのは startupProbe に任せ、liveness は「上がったあとに死んだか」
+          # だけを見る。liveness の initialDelaySeconds で起動を待たせると、
+          # 機械が混んで起動が延びたときに**正常なコンテナが殺され続ける**
+          # （実測: 60 秒では間に合わず exit 137 で再起動ループに入った）。
+          startupProbe:
+            httpGet: { path: /actuator/health, port: http }
+            periodSeconds: 5
+            # 5 秒 × 60 = 最大 5 分。Testcontainers 側の待ちも 3 分に取っている。
+            failureThreshold: 60
           readinessProbe:
             httpGet: { path: /actuator/health, port: http }
-            initialDelaySeconds: 20
             periodSeconds: 5
           livenessProbe:
             httpGet: { path: /actuator/health, port: http }
-            initialDelaySeconds: 60
             periodSeconds: 20
   volumeClaimTemplates:
     - metadata: { name: events }

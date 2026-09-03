@@ -4,12 +4,31 @@ metadata:
   name: gatewayms
 spec:
   replicas: 1
+  # 入れ替えは「先に消してから作る」。既定の RollingUpdate だと、新しい Pod が
+  # Ready になるまで古い Pod が残り、単一ノードの kind では JVM が 2 倍立つ。
+  # 実測では CPU が飽和し、Axon Server の起動が 2 分以上に延びて全体が上がらなかった。
+  strategy: { type: Recreate }
   selector:
     matchLabels: { app: gatewayms }
   template:
     metadata:
       labels: { app: gatewayms }
     spec:
+      # Axon Server が上がるまで待つ。業務サービスは起動時に接続を検査して、
+      # 繋がらなければ**起動を止める**（AxonServerStartupCheck）。待たずに一斉に
+      # 立てると、7 サービスが同時に落ちては再起動を繰り返し、単一ノードの kind では
+      # その CPU で Axon Server 自身の起動がさらに遅れる（実測: CPU 681%、起動 2 分超）。
+      initContainers:
+        - name: wait-for-axonserver
+          image: curlimages/curl:8.11.1
+          command:
+            - sh
+            - -c
+            - |
+              until curl -fsS http://axonserver:8024/actuator/health > /dev/null; do
+                echo "Axon Server を待っています..."
+                sleep 5
+              done
       containers:
         - name: gatewayms
           image: cargo-tracker/gatewayms:latest
@@ -60,12 +79,31 @@ metadata:
   name: authms
 spec:
   replicas: 1
+  # 入れ替えは「先に消してから作る」。既定の RollingUpdate だと、新しい Pod が
+  # Ready になるまで古い Pod が残り、単一ノードの kind では JVM が 2 倍立つ。
+  # 実測では CPU が飽和し、Axon Server の起動が 2 分以上に延びて全体が上がらなかった。
+  strategy: { type: Recreate }
   selector:
     matchLabels: { app: authms }
   template:
     metadata:
       labels: { app: authms }
     spec:
+      # Axon Server が上がるまで待つ。業務サービスは起動時に接続を検査して、
+      # 繋がらなければ**起動を止める**（AxonServerStartupCheck）。待たずに一斉に
+      # 立てると、7 サービスが同時に落ちては再起動を繰り返し、単一ノードの kind では
+      # その CPU で Axon Server 自身の起動がさらに遅れる（実測: CPU 681%、起動 2 分超）。
+      initContainers:
+        - name: wait-for-axonserver
+          image: curlimages/curl:8.11.1
+          command:
+            - sh
+            - -c
+            - |
+              until curl -fsS http://axonserver:8024/actuator/health > /dev/null; do
+                echo "Axon Server を待っています..."
+                sleep 5
+              done
       containers:
         - name: authms
           image: cargo-tracker/authms:latest
@@ -113,12 +151,31 @@ metadata:
   name: bookingms
 spec:
   replicas: 1
+  # 入れ替えは「先に消してから作る」。既定の RollingUpdate だと、新しい Pod が
+  # Ready になるまで古い Pod が残り、単一ノードの kind では JVM が 2 倍立つ。
+  # 実測では CPU が飽和し、Axon Server の起動が 2 分以上に延びて全体が上がらなかった。
+  strategy: { type: Recreate }
   selector:
     matchLabels: { app: bookingms }
   template:
     metadata:
       labels: { app: bookingms }
     spec:
+      # Axon Server が上がるまで待つ。業務サービスは起動時に接続を検査して、
+      # 繋がらなければ**起動を止める**（AxonServerStartupCheck）。待たずに一斉に
+      # 立てると、7 サービスが同時に落ちては再起動を繰り返し、単一ノードの kind では
+      # その CPU で Axon Server 自身の起動がさらに遅れる（実測: CPU 681%、起動 2 分超）。
+      initContainers:
+        - name: wait-for-axonserver
+          image: curlimages/curl:8.11.1
+          command:
+            - sh
+            - -c
+            - |
+              until curl -fsS http://axonserver:8024/actuator/health > /dev/null; do
+                echo "Axon Server を待っています..."
+                sleep 5
+              done
       containers:
         - name: bookingms
           image: cargo-tracker/bookingms:latest
@@ -133,6 +190,12 @@ spec:
             - { name: DB_PASSWORD, value: "bookingms" }
           ports:
             - { name: http, containerPort: 8082 }
+          volumeMounts:
+            # 荷主ごとの鍵置き場（ADR-0003 決定 2 のローカル実装）。
+            # **Pod の寿命に載せない。** 鍵を失うと、暗号化済みの荷主データは
+            # 二度と読めない——破棄したのと同じことになる。
+            # 本番は KMS の実装を当てるので、この PVC はローカル・CI 限りである。
+            - { name: shipper-keys, mountPath: /app/.keys }
           # ヘルスチェックは認証を求めない経路に置く。守ると 401 で再起動ループに入る。
           readinessProbe:
             httpGet: { path: /actuator/health, port: http }
@@ -144,6 +207,17 @@ spec:
             # 短くすると、検査が終わる前に殺されて上がらなくなる。
             initialDelaySeconds: 120
             periodSeconds: 20
+      volumes:
+        - name: shipper-keys
+          persistentVolumeClaim: { claimName: bookingms-shipper-keys }
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: bookingms-shipper-keys
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: { requests: { storage: 1Gi } }
 ---
 apiVersion: v1
 kind: Service
@@ -160,12 +234,31 @@ metadata:
   name: routingms
 spec:
   replicas: 1
+  # 入れ替えは「先に消してから作る」。既定の RollingUpdate だと、新しい Pod が
+  # Ready になるまで古い Pod が残り、単一ノードの kind では JVM が 2 倍立つ。
+  # 実測では CPU が飽和し、Axon Server の起動が 2 分以上に延びて全体が上がらなかった。
+  strategy: { type: Recreate }
   selector:
     matchLabels: { app: routingms }
   template:
     metadata:
       labels: { app: routingms }
     spec:
+      # Axon Server が上がるまで待つ。業務サービスは起動時に接続を検査して、
+      # 繋がらなければ**起動を止める**（AxonServerStartupCheck）。待たずに一斉に
+      # 立てると、7 サービスが同時に落ちては再起動を繰り返し、単一ノードの kind では
+      # その CPU で Axon Server 自身の起動がさらに遅れる（実測: CPU 681%、起動 2 分超）。
+      initContainers:
+        - name: wait-for-axonserver
+          image: curlimages/curl:8.11.1
+          command:
+            - sh
+            - -c
+            - |
+              until curl -fsS http://axonserver:8024/actuator/health > /dev/null; do
+                echo "Axon Server を待っています..."
+                sleep 5
+              done
       containers:
         - name: routingms
           image: cargo-tracker/routingms:latest
@@ -207,12 +300,31 @@ metadata:
   name: trackingms
 spec:
   replicas: 1
+  # 入れ替えは「先に消してから作る」。既定の RollingUpdate だと、新しい Pod が
+  # Ready になるまで古い Pod が残り、単一ノードの kind では JVM が 2 倍立つ。
+  # 実測では CPU が飽和し、Axon Server の起動が 2 分以上に延びて全体が上がらなかった。
+  strategy: { type: Recreate }
   selector:
     matchLabels: { app: trackingms }
   template:
     metadata:
       labels: { app: trackingms }
     spec:
+      # Axon Server が上がるまで待つ。業務サービスは起動時に接続を検査して、
+      # 繋がらなければ**起動を止める**（AxonServerStartupCheck）。待たずに一斉に
+      # 立てると、7 サービスが同時に落ちては再起動を繰り返し、単一ノードの kind では
+      # その CPU で Axon Server 自身の起動がさらに遅れる（実測: CPU 681%、起動 2 分超）。
+      initContainers:
+        - name: wait-for-axonserver
+          image: curlimages/curl:8.11.1
+          command:
+            - sh
+            - -c
+            - |
+              until curl -fsS http://axonserver:8024/actuator/health > /dev/null; do
+                echo "Axon Server を待っています..."
+                sleep 5
+              done
       containers:
         - name: trackingms
           image: cargo-tracker/trackingms:latest
@@ -254,12 +366,31 @@ metadata:
   name: handlingms
 spec:
   replicas: 1
+  # 入れ替えは「先に消してから作る」。既定の RollingUpdate だと、新しい Pod が
+  # Ready になるまで古い Pod が残り、単一ノードの kind では JVM が 2 倍立つ。
+  # 実測では CPU が飽和し、Axon Server の起動が 2 分以上に延びて全体が上がらなかった。
+  strategy: { type: Recreate }
   selector:
     matchLabels: { app: handlingms }
   template:
     metadata:
       labels: { app: handlingms }
     spec:
+      # Axon Server が上がるまで待つ。業務サービスは起動時に接続を検査して、
+      # 繋がらなければ**起動を止める**（AxonServerStartupCheck）。待たずに一斉に
+      # 立てると、7 サービスが同時に落ちては再起動を繰り返し、単一ノードの kind では
+      # その CPU で Axon Server 自身の起動がさらに遅れる（実測: CPU 681%、起動 2 分超）。
+      initContainers:
+        - name: wait-for-axonserver
+          image: curlimages/curl:8.11.1
+          command:
+            - sh
+            - -c
+            - |
+              until curl -fsS http://axonserver:8024/actuator/health > /dev/null; do
+                echo "Axon Server を待っています..."
+                sleep 5
+              done
       containers:
         - name: handlingms
           image: cargo-tracker/handlingms:latest
@@ -301,12 +432,31 @@ metadata:
   name: billingms
 spec:
   replicas: 1
+  # 入れ替えは「先に消してから作る」。既定の RollingUpdate だと、新しい Pod が
+  # Ready になるまで古い Pod が残り、単一ノードの kind では JVM が 2 倍立つ。
+  # 実測では CPU が飽和し、Axon Server の起動が 2 分以上に延びて全体が上がらなかった。
+  strategy: { type: Recreate }
   selector:
     matchLabels: { app: billingms }
   template:
     metadata:
       labels: { app: billingms }
     spec:
+      # Axon Server が上がるまで待つ。業務サービスは起動時に接続を検査して、
+      # 繋がらなければ**起動を止める**（AxonServerStartupCheck）。待たずに一斉に
+      # 立てると、7 サービスが同時に落ちては再起動を繰り返し、単一ノードの kind では
+      # その CPU で Axon Server 自身の起動がさらに遅れる（実測: CPU 681%、起動 2 分超）。
+      initContainers:
+        - name: wait-for-axonserver
+          image: curlimages/curl:8.11.1
+          command:
+            - sh
+            - -c
+            - |
+              until curl -fsS http://axonserver:8024/actuator/health > /dev/null; do
+                echo "Axon Server を待っています..."
+                sleep 5
+              done
       containers:
         - name: billingms
           image: cargo-tracker/billingms:latest

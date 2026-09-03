@@ -20,8 +20,11 @@ secretGenerator:
       - password=postgres
   - name: cargo-tracker-jwt
     literals:
-      # 開発用。ステージング以降は overlay で外部シークレットに差し替える。
-      - secret=cargo-tracker-development-secret-key-32bytes!
+      # クラスタ用の鍵。**JwtSecret.DEVELOPMENT_SECRET と同じ値を置かないこと。**
+      # サービスは CARGOTRACKER_PRODUCTIONLIKE=true で開発用の既定鍵を拒むため、
+      # 同じ値を置くと gatewayms と authms が起動できない（CrashLoopBackOff）。
+      # ステージング以降は overlay で外部シークレットに差し替える。
+      - secret=cargo-tracker-local-cluster-signing-key-48bytes-long
 
 generatorOptions:
   disableNameSuffixHash: false
