@@ -104,6 +104,17 @@ public class ShipperRegistrationSteps {
                 .retrieve().toEntity(JsonMap.class);
     }
 
+    @もし("メールアドレス {string} で個人の荷主 {string} を登録する")
+    public void 個人の荷主を登録する(String email, String name) {
+        // 個人の経路は REST と受け入れで確かめられていなかった（IT1 レビュー M8）。
+        lastResponse = rest.post().uri(url("/api/v1/booking/shippers"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("name", name, "shipperType", "INDIVIDUAL", "email", email,
+                        "phone", "03-0000-0000", "address", "東京都中央区",
+                        "acknowledgedDuplicate", false))
+                .retrieve().toEntity(JsonMap.class);
+    }
+
     @ならば("受付は断られる")
     public void 受付は断られる() {
         // 断ったことだけでなく、業務規則で断ったことまで見る。500 で落ちても

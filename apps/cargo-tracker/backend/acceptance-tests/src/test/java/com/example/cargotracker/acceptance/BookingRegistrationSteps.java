@@ -83,6 +83,15 @@ public class BookingRegistrationSteps {
         lastResponse = book(Map.of("cargoType", "HAZARDOUS"));
     }
 
+    @もし("その荷主の予約を数量 {int} で登録する")
+    public void 数量を指定して登録する(int quantity) {
+        // 入口（@NotNull）は通り、集約の中の検査で断られる経路を選ぶ。集約が
+        // 投げた例外は CommandExecutionException に包まれ、包みを解かないと
+        // 500 になる。断ったのは業務の判断なので、画面には「壊れた」ではなく
+        // 理由が出なければならない。
+        lastResponse = book(Map.of("quantity", quantity));
+    }
+
     @ならば("受付は成功し、予約番号が返る")
     public void 受付は成功する() {
         assertThat(lastResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);

@@ -117,6 +117,39 @@ class ShipperControllerIT extends AbstractAxonIntegrationTest {
     }
 
     @Test
+    @DisplayName("個人の荷主も REST から登録でき、一覧に出る")
+    void registersIndividual() {
+        // ドメイン単体とフロント単体はあったが、REST と受け入れは CORPORATE 固定
+        // だった（IT1 レビュー M8）。JSON → enum の配線ミスは下 2 層だけでは
+        // 判別しない。
+        String email = "ind-" + System.nanoTime() + "@example.com";
+        Map<String, Object> body = Map.of("name", "山田 太郎", "shipperType", "INDIVIDUAL",
+                "email", email, "phone", "03-1111-1111", "address", "東京都中央区");
+
+        assertThat(post("", body).getStatusCode()).isEqualTo(HttpStatus.CREATED);
+
+        await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
+            ResponseEntity<JsonMap> list = get("?page=0&size=200");
+            assertThat(list.getBody().get("items").toString())
+                    .contains(email)
+                    .contains("INDIVIDUAL");
+        });
+    }
+
+    @Test
+    @DisplayName("個人に法人契約は付けられない")
+    void rejectsIndividualWithContract() {
+        Map<String, Object> body = Map.of("name", "山田 太郎", "shipperType", "INDIVIDUAL",
+                "email", "ind-ng-" + System.nanoTime() + "@example.com",
+                "contractNumber", "CT-1", "discountRate", "0.1000");
+
+        ResponseEntity<JsonMap> response = post("", body);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
+        assertThat(response.getBody().get("code")).isEqualTo("BUSINESS_RULE_VIOLATION");
+    }
+
+    @Test
     @DisplayName("割引率の境目は 30% ちょうどまで通る")
     void acceptsDiscountRateAtUpperBound() {
         // 0.9 だけを試すと、境目が 0.3 なのか 0.5 なのか分からない。US03 は

@@ -2,6 +2,7 @@ package com.example.cargotracker.booking.interfaces.rest;
 
 import com.example.cargotracker.booking.interfaces.rest.ShipperController.DuplicateShipperEmailException;
 import java.util.Map;
+import org.axonframework.messaging.commandhandling.CommandExecutionException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -32,6 +33,39 @@ public class ApiExceptionHandler {
     public ResponseEntity<Map<String, Object>> onBusinessRuleViolation(IllegalArgumentException e) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT)
                 .body(Map.of(CODE, "BUSINESS_RULE_VIOLATION", MESSAGE, e.getMessage()));
+    }
+
+    /**
+     * 集約が断った業務規則違反。
+     *
+     * <p>集約の中で投げた例外は {@code CommandExecutionException} に包まれ、
+     * サービス越しでは根の型まで {@code AxonServerRemoteCommandHandlingException} に
+     * 置き換わる。包みを解かないと <b>500 になる</b>。断ったのは業務の判断なので、
+     * 画面には「壊れた」ではなく理由が出なければならない。</p>
+     *
+     * <p>状態遷移違反（{@code IllegalStateException}）は 409、それ以外の業務規則は
+     * 422（architecture_backend.md「例外と HTTP の対応」）。</p>
+     */
+    @ExceptionHandler(CommandExecutionException.class)
+    public ResponseEntity<Map<String, Object>> onCommandFailed(CommandExecutionException e) {
+        Throwable cause = e.getCause();
+        String message = cause == null ? e.getMessage() : cause.getMessage();
+        if (message == null) {
+            message = "処理できませんでした";
+        }
+        if (cause instanceof IllegalStateException) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of(CODE, "ILLEGAL_STATE", MESSAGE, message));
+        }
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT)
+                .body(Map.of(CODE, "BUSINESS_RULE_VIOLATION", MESSAGE, message));
+    }
+
+    /** 状態遷移違反。集約の外（Controller）で判断したもの。 */
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<Map<String, Object>> onIllegalState(IllegalStateException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of(CODE, "ILLEGAL_STATE", MESSAGE, e.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

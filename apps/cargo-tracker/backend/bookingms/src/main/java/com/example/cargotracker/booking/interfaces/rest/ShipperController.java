@@ -67,13 +67,25 @@ public class ShipperController {
                 email,
                 request.phone(),
                 request.address(),
-                type == ShipperType.CORPORATE
-                        ? new CorporateContract(request.contractNumber(),
-                                new DiscountRate(request.discountRate()))
-                        : null));
+                corporateContract(request)));
 
         return ResponseEntity.created(URI.create("/api/v1/booking/shippers/" + shipperId))
                 .body(new RegisterShipperResponse(shipperId));
+    }
+
+    /**
+     * 契約情報を組み立てる。
+     *
+     * <p><b>種別で捨てない。</b> 個人を選んだまま契約番号が送られてきたら、そのまま
+     * 集約へ渡して断らせる。入口で黙って落とすと「登録できたのに割引が効かない」
+     * という形で後から出る。不変条件は集約が持つ（domain-model.md「Shipper 集約」）。</p>
+     */
+    private static CorporateContract corporateContract(RegisterShipperRequest request) {
+        if (request.contractNumber() == null && request.discountRate() == null) {
+            return null;
+        }
+        return new CorporateContract(request.contractNumber(),
+                new DiscountRate(request.discountRate()));
     }
 
     /**
