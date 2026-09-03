@@ -36,8 +36,9 @@ verified:
 - [x] デモ項目 7 件の受け入れテスト（Cucumber の Feature・画面の到達性は Playwright）がすべて緑
 - [x] `./gradlew build` と `TZ=UTC ./gradlew test` が緑
 - [x] フロントの `npm run test`・`npx tsc -b`・`npm run build` が緑
-- [x] ADR-0001 決定 5 の 7 項目に結論が書かれ、外れた前提が設計文書に反映されている
+- [~] ADR-0001 決定 5 の **6 項目**に結論が書かれ、外れた前提が設計文書に反映されている（第 7 項は未実施。下の DoD 参照）
 - [x] `npx gulp okf:check` が ERROR 0
+- [x] SonarQube の Quality Gate がバックエンド・フロントエンドとも PASS（クローズ時に配線の欠陥を 2 件見つけて修正した。[IT1 実装レビュー](../../review/cargo-tracker/IT1実装_review_20260903.md) H1・H2）
 
 ## ユーザーストーリー
 
@@ -129,10 +130,10 @@ US02 は縦切りの本体です。認証（US26）と基盤が通ってから�
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | :--: | :--: |
 | 3.1 | Vite + React + TypeScript、`features/` のディレクトリ型、ESLint の `import/no-restricted-paths` | 3h | [x] |
-| 3.2 | 共通レイアウト（左サイドナビ + トップヘッダ）、認可ガード（`RequireRole`）、403 画面、ポータル（`/portal`）。**アクセシビリティの型**：送信中は `disabled` でなく `aria-disabled` でフォーカスを保つ、状態の変化は `role="status"`・エラーは `role="alert"`、反映中の経過秒数は live region の外、色トークンをコントラスト比つきで定義 | 6h | [~] レイアウト・認可ガード・403・到達性は完了。アクセシビリティの型（aria-disabled・role=status・色トークン）は 6.6 の画面と対で入れる |
-| 3.3 | [UI 設計](../../design/cargo-tracker/ui_design.md) の全ルートにプレースホルダ画面を置く。**ナビゲーション整合**：サイドナビ（ロール条件付き）とダッシュボード（S02）の「今日の作業」の両方に IT1 の実画面（S10・S11・S70）を出し、ロール × 画面の到達性を E2E で固定する | 6h | [~] 画面とナビ・到達性は完了（Vitest で固定）。E2E は 2.7 と対で入れる |
+| 3.2 | 共通レイアウト（左サイドナビ + トップヘッダ）、認可ガード（`RequireRole`）、403 画面、ポータル（`/portal`）。**アクセシビリティの型**：送信中は `disabled` でなく `aria-disabled` でフォーカスを保つ、状態の変化は `role="status"`・エラーは `role="alert"`、反映中の経過秒数は live region の外、色トークンをコントラスト比つきで定義 | 6h | [~] レイアウト・認可ガード・403・到達性・アクセシビリティの型・色トークン（`shared/ui/styles.ts`。値は検査で固定）は完了。**S01 ポータル（`/portal`）は未実装**（レビュー H4。IT2 へ） |
+| 3.3 | [UI 設計](../../design/cargo-tracker/ui_design.md) の全ルートにプレースホルダ画面を置く。**ナビゲーション整合**：サイドナビ（ロール条件付き）とダッシュボード（S02）の「今日の作業」の両方に IT1 の実画面（S10・S11・S70）を出し、ロール × 画面の到達性を E2E で固定する | 6h | [~] IT1 の 4 ルート（S02・S10・S11・S70）とナビ・ダッシュボード・到達性は完了（Vitest + E2E 7 本）。**全ルートのプレースホルダは置いていない**（レビュー M1・矛盾事項 C1。中身の無い画面は動くと誤解されるため、画面を足す IT でナビと対で入れる方針に変更） |
 | 3.4 | API クライアント（`queryClient` / `commandClient`）、`202` を `pending` に変える `api/pending.ts`、`BusinessClock` に対応する日付ヘルパ | 3h | [x] |
-| 3.5 | 認証ストア（Zustand + `sessionStorage`）、無操作 15/20 分（荷役画面は 60 分） | 2h | [~] ストアと sessionStorage は完了。無操作タイムアウトは US26 と対で入れる |
+| 3.5 | 認証ストア（Zustand + `sessionStorage`）、無操作 15/20 分（荷役画面は 60 分） | 2h | [~] ストアと sessionStorage は完了。**無操作タイムアウトは未実装**（IT2 へ。荷役画面が入る IT まで待つと共用端末の放置が先に起きるため、IT2 の冒頭で入れる） |
 | 3.6 | **設計への反映**：`ui_design.md` に S00・S03・S10・S11 の salt ワイヤーフレームを追加する（後述「設計への反映が必要な事項」） | 3h | [x] |
 | | 小計 | 23h | |
 
@@ -525,17 +526,18 @@ S02_ダッシュボード --> S403 : 権限のない画面を直打ち
 
 ### Definition of Done
 
-- [ ] US26・US27・US02 の受入基準（`user_story.md`）を満たす
+- [x] US26・US27・US02 の受入基準（`user_story.md`）を満たす（US02 §受入基準 2 は「重複は拒否せず問いかける」形で実装。既存荷主の一覧表示は S10 側で行う）
 - [x] デモ項目 7 件の受け入れテストがすべて緑
-- [ ] `./gradlew build`（SpotBugs・JaCoCo のレイヤー別閾値を含む）が緑
-- [ ] `TZ=UTC ./gradlew test` が緑
+- [x] `./gradlew build`（SpotBugs・JaCoCo のレイヤー別閾値を含む）が緑
+- [x] `TZ=UTC ./gradlew test` が緑（`cleanTest` を付けて再実行を強制した。付けないと前回の結果を再利用して**タイムゾーンを変えた意味が無くなる**）
 - [x] フロントの `npm run test`・`npx tsc -b`・`npm run build` が緑
-- [ ] ArchUnit の未適用サービスを落とすメタテストが働いている
-- [ ] ADR-0001 決定 5 の 7 項目に結論があり、ADR と設計文書に反映されている
-- [ ] UI 設計・navbar・ダッシュボード・到達性テストの 4 点が一致している
-- [x] `npx gulp okf:check` が ERROR 0、`mkdocs build` が成功する
-- [ ] ユーザーマニュアルの 4 節が執筆され、画面キャプチャが自動生成されている
-- [ ] ふりかえり（`retrospective-1.md`）と完了報告書（`iteration_report-1.md`）を作成した
+- [x] ArchUnit の未適用サービスを落とすメタテストが働いている（クローズ時にサービスの名簿が書き写しだったのを `settings.gradle.kts` 由来に直した。レビュー H3）
+- [~] ADR-0001 決定 5 の 7 項目のうち **6 項目**に結論があり反映済み。第 7 項（S3 からの差分再投入）は未実施で IT2 へ持ち越し（ADR と `non_functional.md` に「未検証」と明記済み）
+- [x] UI 設計・navbar・ダッシュボード・到達性テストの 4 点が一致している（**IT1 で実装した 4 画面について**。設計の全ルートに対する一致はタスク 3.3 の方針変更により対象外）
+- [x] `npx gulp okf:check` が ERROR 0
+- [x] SonarQube の Quality Gate がバックエンド・フロントエンドとも PASS（クローズ時に配線の欠陥を 2 件見つけて修正した。[IT1 実装レビュー](../../review/cargo-tracker/IT1実装_review_20260903.md) H1・H2）、`mkdocs build` が成功する
+- [x] ユーザーマニュアルが執筆され、画面キャプチャが自動生成されている（**5 章**。「4 節」は計画時に数を書き写した記述で、業務フローの章が増えた。数は索引を正とする）
+- [x] ふりかえり（[retrospective-1.md](retrospective-1.md)）と完了報告書（[iteration_report-1.md](iteration_report-1.md)）を作成した
 
 ### デモ項目
 
@@ -558,6 +560,7 @@ S02_ダッシュボード --> S403 : 権限のない画面を直打ち
 | 日付 | 更新内容 | 更新者 |
 | :--- | :--- | :--- |
 | 2026-09-02 | 初版作成 | claude-code/claude-fable-5-1 |
+| 2026-09-03 | IT1 クローズ。実績でタスクの状態・成功基準・DoD を更新。未達（S01 ポータル・全ルートのプレースホルダ・無操作タイムアウト・スパイク 0.7・契約の往復）を明記 | claude-code/claude-opus-5 |
 
 ## 関連ドキュメント
 

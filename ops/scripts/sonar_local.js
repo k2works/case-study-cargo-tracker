@@ -219,12 +219,38 @@ function waitForSonarHealthy() {
 
 /**
  * SonarQube プロジェクトキーを取得
- * 環境変数 SONAR_PROJECT_KEY で指定可能
+ *
+ * <p>`sonarqube.config.json` があるときは、そこに書かれたキーを正とする。
+ * 環境変数 SONAR_PROJECT_KEY は設定ファイルが無い場合のフォールバックに
+ * 限る。<strong>逆にすると、`.env` に古いキーが残っているだけでゲートが
+ * 存在しないプロジェクトを見に行く。</strong>実測では take-7 のキーが残って
+ * いて、スキャンは成功しているのにゲートだけが 404 で落ちた。</p>
+ *
  * @returns {string} プロジェクトキー
  */
 function sonarProjectKey() {
   const projects = loadProjects();
-  return process.env.SONAR_PROJECT_KEY || (projects.length > 0 ? projects[0].projectKey : 'my-project');
+  if (projects.length > 0) {
+    return projects[0].projectKey;
+  }
+  return process.env.SONAR_PROJECT_KEY || 'my-project';
+}
+
+/**
+ * ゲートとサマリーの対象プロジェクト。
+ *
+ * <p><strong>スキャンした数だけ確かめる。</strong>1 つ目だけを見ると、
+ * 2 つ目（フロントエンド）が赤でも「PASS」と表示され、誰も見ていない
+ * プロジェクトができる。</p>
+ *
+ * @returns {{projectKey: string, label: string}[]} 対象プロジェクト
+ */
+function sonarProjects() {
+  const projects = loadProjects();
+  if (projects.length > 0) {
+    return projects.map((p) => ({ projectKey: p.projectKey, label: p.label || p.name }));
+  }
+  return [{ projectKey: sonarProjectKey(), label: 'Application' }];
 }
 
 /**
@@ -259,6 +285,19 @@ function requireSonarToken() {
 }
 
 /**
+ * 解析の取り込み完了を待つスキャナ側の設定。
+ *
+ * <p><strong>待たないと、直後のゲート確認が前回の解析結果を読む。</strong>
+ * 実測では、指摘を直してスキャンし直したのに重複率も指摘件数も修正前の値が
+ * 返り、もう一度ゲートを実行して初めて下がった。直っていないように見えるので、
+ * 直し方を探す時間がそのまま無駄になる。</p>
+ *
+ * <p>API 側（/api/ce/*）で待てないのは、解析トークンではその API が 403 に
+ * なるためである。</p>
+ */
+const GATE_WAIT_ARGS = '-Dsonar.qualitygate.wait=true -Dsonar.qualitygate.timeout=300';
+
+/**
  * スキャンタイプに応じたスキャンコマンドを実行
  * @param {Object} project - プロジェクト定義
  * @param {string} token - SonarQube トークン
@@ -270,7 +309,7 @@ function runScan(project, token, hostUrl) {
   switch (project.scanType) {
     case 'sbt':
       execSync(
-        `sbt -Dsonar.host.url=${hostUrl} -Dsonar.token=${token} sonarScan`,
+        `sbt -Dsonar.host.url=${hostUrl} -Dsonar.token=${token} ${GATE_WAIT_ARGS} sonarScan`,
         { stdio: 'inherit', cwd, shell: true, env: cleanDockerEnv() },
       );
       break;
@@ -281,7 +320,7 @@ function runScan(project, token, hostUrl) {
         `-Dsonar.projectKey=${project.projectKey} ` +
         `-Dsonar.projectName="${project.label}" ` +
         `-Dsonar.host.url=${hostUrl} ` +
-        `-Dsonar.token=${token}`,
+        `-Dsonar.token=${token} ${GATE_WAIT_ARGS}`,
         { stdio: 'inherit', cwd, shell: true, env: cleanDockerEnv() },
       );
       break;
@@ -292,7 +331,7 @@ function runScan(project, token, hostUrl) {
         `-Dsonar.projectKey=${project.projectKey} ` +
         `-Dsonar.projectName="${project.label}" ` +
         `-Dsonar.host.url=${hostUrl} ` +
-        `-Dsonar.token=${token}`,
+        `-Dsonar.token=${token} ${GATE_WAIT_ARGS}`,
         { stdio: 'inherit', cwd, shell: true, env: cleanDockerEnv() },
       );
       break;
@@ -307,7 +346,7 @@ function runScan(project, token, hostUrl) {
         `-Dsonar.tests=src ` +
         `-Dsonar.test.inclusions="**/*.test.ts,**/*.test.tsx,**/*.spec.ts,**/*.spec.tsx" ` +
         `-Dsonar.host.url=${hostUrl} ` +
-        `-Dsonar.token=${token}`,
+        `-Dsonar.token=${token} ${GATE_WAIT_ARGS}`,
         { stdio: 'inherit', cwd, env: cleanDockerEnv() },
       );
       break;
@@ -512,19 +551,31 @@ export default function (gulp) {
   // ──────────────────────────────────────────────
 
   gulp.task('sonar-local:gate', (done) => {
-    try {
-      const projectKey = sonarProjectKey();
-      console.log('=== Quality Gate ステータス確認 ===');
-
-      const data = sonarApi('/api/qualitygates/project_status', { projectKey });
+    console.log('=== Quality Gate ステータス確認 ===');
+    // 取り込みの完了はスキャン側（sonar.qualitygate.wait）で待っている。
+    // ここで待たないのは、解析トークンでは /api/ce/* が 403 になるためである。
+    const failed = [];
+    for (const { projectKey, label } of sonarProjects()) {
+      console.log('');
+      console.log(`--- ${label}（${projectKey}） ---`);
+      let data;
+      try {
+        data = sonarApi('/api/qualitygates/project_status', { projectKey });
+      } catch (error) {
+        // 1 つ落ちても残りを見る。どこまで通っているかが分かるほうが原因に近い。
+        console.log(`  取得できません: ${String(error.message).split('\n')[0]}`);
+        failed.push(label);
+        continue;
+      }
       const status = data.projectStatus?.status || 'UNKNOWN';
       const conditions = data.projectStatus?.conditions || [];
 
-      const icon = status === 'OK' ? 'PASS' : 'FAIL';
-      console.log(`  Quality Gate: ${icon} (${status})`);
+      console.log(`  Quality Gate: ${status === 'OK' ? 'PASS' : 'FAIL'} (${status})`);
+      if (status !== 'OK') {
+        failed.push(label);
+      }
 
       if (conditions.length > 0) {
-        console.log('');
         console.log('  条件:');
         for (const c of conditions) {
           const condIcon = c.status === 'OK' ? 'o' : 'x';
@@ -533,15 +584,18 @@ export default function (gulp) {
           console.log(`    [${condIcon}] ${c.metricKey}: ${actual} (閾値: ${threshold})`);
         }
       }
-
-      console.log('');
-      if (status !== 'OK') {
-        console.log('  Quality Gate を通過していません。sonar-local:issues で詳細を確認してください。');
-      }
-      done();
-    } catch (error) {
-      done(error);
     }
+
+    console.log('');
+    if (failed.length > 0) {
+      done(new Error(
+        `Quality Gate を通過していません: ${failed.join(', ')}。`
+        + ' sonar-local:issues で詳細を確認してください',
+      ));
+      return;
+    }
+    console.log('すべてのプロジェクトが Quality Gate を通過しました。');
+    done();
   });
 
   gulp.task('sonar-local:issues', (done) => {

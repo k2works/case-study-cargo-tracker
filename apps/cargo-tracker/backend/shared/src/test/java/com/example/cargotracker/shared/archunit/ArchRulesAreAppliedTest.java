@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -25,10 +26,32 @@ class ArchRulesAreAppliedTest {
         return Path.of("").toAbsolutePath().getParent();
     }
 
-    /** 業務サービス（shared とテスト専用を除く）。BuildConventionTest の名簿と対にする。 */
-    static Stream<String> services() {
-        return Stream.of("gatewayms", "authms", "bookingms", "routingms",
-                "trackingms", "handlingms", "billingms");
+    /** 規則を当てる対象から外すサブプロジェクト（規則そのものの置き場とテスト専用）。 */
+    private static final List<String> NOT_A_SERVICE =
+            List.of("shared", "contract-tests", "acceptance-tests");
+
+    /**
+     * 業務サービスの一覧を <b>settings.gradle.kts から導く</b>。
+     *
+     * <p>ここに名簿を書き写すと、サービスを増やしたときに書き写した側だけが古くなり、
+     * <b>増えたサービスがこの検査を素通りする</b>。素通りしたサービスは規則が当たって
+     * いないので、いちばん検査してほしいものが検査されない。</p>
+     */
+    static Stream<String> services() throws IOException {
+        String settings = Files.readString(
+                backendRoot().resolve("settings.gradle.kts"), StandardCharsets.UTF_8);
+        List<String> included = Pattern.compile("^include\\(\"([^\"]+)\"\\)", Pattern.MULTILINE)
+                .matcher(settings)
+                .results()
+                .map(r -> r.group(1))
+                .filter(name -> !NOT_A_SERVICE.contains(name))
+                .toList();
+
+        assertThat(included)
+                .as("settings.gradle.kts からサービスを 1 つも読めていない。"
+                        + "読めないと、この検査は 0 件で緑になる")
+                .isNotEmpty();
+        return included.stream();
     }
 
     @ParameterizedTest(name = "{0}")

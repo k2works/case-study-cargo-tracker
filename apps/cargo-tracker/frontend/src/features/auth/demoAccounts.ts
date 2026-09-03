@@ -16,56 +16,44 @@ export interface DemoAccount {
   readonly canSignIn: boolean;
 }
 
-/** 一覧の利用者すべてで共通のパスワード。画面にもそう書く。 */
-export const DEMO_PASSWORD = 'secret1234';
+/**
+ * 一覧の利用者すべてで共通のパスワード。画面にもそう書く。
+ *
+ * 開発環境の動作確認用であり、本番の利用者には存在しない（ADR-0004）。埋め込みは
+ * 意図したもので、この値を知られても本番の利用者にはならない。抑止のコメントは
+ * **指摘された行と同じ行**に置く（別の行に書いても効かない）。
+ */
+export const DEMO_PASSWORD = 'secret1234'; // NOSONAR: 開発環境の動作確認用（ADR-0004）
+
+/**
+ * 1 行 1 利用者で書けるようにする。
+ *
+ * <p>オブジェクトリテラルを 8 つ並べると、同じ形が繰り返されて名簿の差分が
+ * 読み取りにくい。シードの SQL と突き合わせるときに見るのは利用者名・担当・
+ * ログインの可否の 3 つだけなので、その 3 つが 1 行に並ぶ形にする。</p>
+ *
+ * @param username 利用者名
+ * @param roles 担当（ロール）
+ * @param description 画面に出す説明
+ * @param canSignIn ログインできるか（無効化された利用者は false）
+ * @returns 動作確認用の利用者
+ */
+function account(
+  username: string,
+  roles: readonly Role[],
+  description: string,
+  canSignIn = true,
+): DemoAccount {
+  return { username, description, roles, canSignIn };
+}
 
 export const DEMO_ACCOUNTS: readonly DemoAccount[] = [
-  {
-    username: 'sales01',
-    description: '営業担当者（荷主の登録・検索・要確認一覧）',
-    roles: ['ROLE_SALES'],
-    canSignIn: true,
-  },
-  {
-    username: 'accountant01',
-    description: '経理担当者（荷主一覧・要確認一覧）',
-    roles: ['ROLE_ACCOUNTANT'],
-    canSignIn: true,
-  },
-  {
-    username: 'tracker01',
-    description: '追跡管理者（要確認一覧）',
-    roles: ['ROLE_TRACKER'],
-    canSignIn: true,
-  },
-  {
-    username: 'routing01',
-    description: '経路設計者（IT1 時点では専用の画面はまだありません）',
-    roles: ['ROLE_ROUTING'],
-    canSignIn: true,
-  },
-  {
-    username: 'handler01',
-    description: '荷役担当者（IT1 時点では専用の画面はまだありません）',
-    roles: ['ROLE_HANDLER'],
-    canSignIn: true,
-  },
-  {
-    username: 'shipper01',
-    description: '荷主（IT1 時点では専用の画面はまだありません）',
-    roles: ['ROLE_SHIPPER'],
-    canSignIn: true,
-  },
-  {
-    username: 'admin01',
-    description: '管理者（IT1 時点では専用の画面はまだありません）',
-    roles: ['ROLE_ADMIN'],
-    canSignIn: true,
-  },
-  {
-    username: 'disabled01',
-    description: '無効化されたアカウント（ログインできないことの確認用）',
-    roles: ['ROLE_SALES'],
-    canSignIn: false,
-  },
+  account('sales01', ['ROLE_SALES'], '営業担当者（荷主の登録・検索・要確認一覧）'),
+  account('accountant01', ['ROLE_ACCOUNTANT'], '経理担当者（荷主一覧・要確認一覧）'),
+  account('tracker01', ['ROLE_TRACKER'], '追跡管理者（要確認一覧）'),
+  account('routing01', ['ROLE_ROUTING'], '経路設計者（IT1 時点では専用の画面はまだありません）'),
+  account('handler01', ['ROLE_HANDLER'], '荷役担当者（IT1 時点では専用の画面はまだありません）'),
+  account('shipper01', ['ROLE_SHIPPER'], '荷主（IT1 時点では専用の画面はまだありません）'),
+  account('admin01', ['ROLE_ADMIN'], '管理者（IT1 時点では専用の画面はまだありません）'),
+  account('disabled01', ['ROLE_SALES'], '無効化されたアカウント（ログインできないことの確認用）', false),
 ];
