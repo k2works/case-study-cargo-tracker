@@ -87,4 +87,16 @@ public abstract class AbstractServiceArchitectureTest {
     void aclDoesNotUseHttpClients() {
         allowEmpty(CargoTrackerArchRules.aclDoesNotUseHttpClients()).check(classes());
     }
+
+    @Test
+    @DisplayName("Reaction Handler は同期クエリを呼ばない")
+    void reactionDoesNotCallQueryGateway() {
+        allowEmpty(CargoTrackerArchRules.reactionDoesNotCallQueryGateway()).check(classes());
+    }
+
+    @Test
+    @DisplayName("Saga の型に依存しない（ADR-0001 決定 6）")
+    void doesNotDependOnAxonSaga() {
+        allowEmpty(CargoTrackerArchRules.doesNotDependOnAxonSaga()).check(classes());
+    }
 }

@@ -10,6 +10,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Stream;
+import com.tngtech.archunit.core.domain.JavaClass;
+import com.tngtech.archunit.core.importer.ClassFileImporter;
 import org.axonframework.conversion.Converter;
 import org.axonframework.conversion.jackson.JacksonConverter;
 import org.junit.jupiter.api.DisplayName;
@@ -31,9 +33,20 @@ class ContractEventGoldenTest {
 
     private static final Path GOLDEN_DIR = Path.of("src/test/resources/golden");
 
-    /** 契約イベントの名簿。ADR-0001 決定 4 の「契約イベント 11 本」の正典と対にする。 */
-    private static final List<String> CONTRACT_EVENT_NAMES = List.of(
-            "ShipperRegisteredEvent");
+    /**
+     * 契約イベントの名簿は<b>パッケージを走査して導出する</b>。
+     *
+     * <p>手書きの名簿にすると、契約を足してゴールデンも名簿も書かなければ検査は緑の
+     * ままになる。載せ忘れたものほど漏れるので、名簿方式にしない。</p>
+     */
+    private static List<String> contractEventNames() {
+        return new ClassFileImporter()
+                .importPackages("com.example.cargotracker.shared.contract.event").stream()
+                .filter(JavaClass::isRecord)
+                .map(JavaClass::getSimpleName)
+                .sorted()
+                .toList();
+    }
 
     private final Converter converter = new JacksonConverter();
 
@@ -79,9 +92,15 @@ class ContractEventGoldenTest {
     }
 
     @Test
-    @DisplayName("名簿の契約イベントすべてにゴールデンがある")
+    @DisplayName("shared/contract/event の契約イベントすべてにゴールデンがある")
     void everyContractEventHasGolden() {
-        for (String name : CONTRACT_EVENT_NAMES) {
+        List<String> names = contractEventNames();
+        assertThat(names)
+                .as("契約イベントが 1 つも見つからないなら、検査は「揃っている」ではなく"
+                        + "「調べていない」で緑になる")
+                .isNotEmpty();
+
+        for (String name : names) {
             assertThat(GOLDEN_DIR.resolve(name + ".json"))
                     .as("%s のゴールデンが無い。契約を足したら同じ変更でここにも置く", name)
                     .exists();
@@ -100,7 +119,7 @@ class ContractEventGoldenTest {
             assertThat(onDisk)
                     .as("契約を消したらゴールデンも消す。残しておくと、検査していない形が"
                             + "「固定されている」ように見える")
-                    .containsExactlyInAnyOrderElementsOf(CONTRACT_EVENT_NAMES);
+                    .containsExactlyInAnyOrderElementsOf(contractEventNames());
         }
     }
 }

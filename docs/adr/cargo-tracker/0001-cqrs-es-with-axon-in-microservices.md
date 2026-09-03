@@ -4,7 +4,7 @@ title: "ADR-0001 CQRS / Event Sourcing を Axon Framework 5 でマイクロサ�
 description: "CQRS / Event Sourcing を Axon Framework 5 のマイクロサービスとして実装する決定。配置の形・ES の適用範囲・Axon 5 系 API の採用・サービス間の配送経路と、IT1 スパイクの結果（採用版 5.1.0-RC2・Saga 廃止）。"
 tags: [adr]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-02T21:34:44Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-03T00:53:51Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
   - { by: human:kakimomokuri, at: 2026-09-02T12:47:29Z }
@@ -208,18 +208,18 @@ REST はクライアントから Gateway を通って各サービスに入る経
 | 決定 | 検査 |
 | :--- | :--- |
 | サービス分割 | `settings.gradle` の `include` から**テスト専用サブプロジェクト（`contract-tests`・`acceptance-tests`）を除いたもの**が上の 8 つと一致すること |
-| サービス間は Axon Server だけ | ビルド：各サービスの本番クラスパスに他サービスの成果物が無いこと。ArchUnit：`RestClient` / `RestTemplate` を `infrastructure/acl` で使わないこと |
-| 共有カーネルの範囲 | ArchUnit：`shared` に置けるパッケージの名簿（`domain/model`・`domain/auth`・`contract/*`・`infrastructure/axon`・`infrastructure/time`）を固定する |
-| 契約の名簿 | ArchUnit：送信・購読の引数型が `shared/contract` 以外のイベント・コマンド・クエリをサービス越しに使えば赤（契約イベント 11・コマンド 2・クエリ 1） |
+| サービス間は Axon Server だけ | ビルド：`BuildConventionTest#servicesDoNotDependOnEachOther`。ArchUnit：`aclDoesNotUseHttpClients` はパッケージで禁じる（`RestTemplate` / `RestClient` の名簿方式だと `WebClient` や `java.net.http` が素通りする） |
+| 共有カーネルの範囲 | ArchUnit：`SharedKernelScopeTest`。置けるパッケージの名簿を固定し、名簿を狭めると赤になること・`shared` が空でないことも併せて検査する（空なら「守っている」でなく「調べていない」で緑になる） |
+| 契約の名簿 | `ContractEventGoldenTest`：名簿は `shared/contract/event` を**走査して導出**し、ゴールデンが無い契約と、検査していないゴールデンの両方を赤にする。手書きの名簿にすると、契約を足して書き忘れたものが素通りする |
 | サービス越しの同期状態変更を置かない | ArchUnit：`CommandGateway` の利用箇所を `interfaces`・`application/reaction` に限定する。`infrastructure/projection` は `CommandGateway` に依存しない |
 | 投影がコマンドを送らない | 統合テスト `ReplayIT`：投影の Processing Group をリセットしてリプレイし、`CommandGateway` が 1 度も呼ばれないこと |
-| Reaction は同期クエリを呼ばない | ArchUnit：`application/reaction` が `QueryGateway` に依存しない |
-| Saga を使わない（決定 6） | ArchUnit：`org.axonframework..saga..` への依存と `application/saga` パッケージの存在を禁止する。名簿方式にせず「その名前の型・パッケージがあれば赤」にする |
+| Reaction は同期クエリを呼ばない | ArchUnit：`reactionDoesNotCallQueryGateway`。違反フィクスチャで赤になることを確認済み |
+| Saga を使わない（決定 6） | ArchUnit：`sagaIsNotUsed`（パッケージ）と `doesNotDependOnAxonSaga`（型）。後者は Axon 5 に Saga の型が無いため違反フィクスチャを書けない。その事実自体を `ArchRulesAreEffectiveTest` に固定し、`SagaIsStillAbsentTest` が赤になった日に同じ変更でフィクスチャを書く |
 | Saga の再評価の発動条件（決定 6） | `SagaIsStillAbsentTest`：Axon のクラスパスに `saga` を含むクラスが現れたら赤にする。版を上げたときに落ちて気づける。あわせて「Axon の jar を実際に開いているか」も見る（開けていなければ「無い」でなく「調べていない」で緑になる） |
 | Axon の版が揃っている（決定 3） | ビルド：`libs.versions.toml` の `axon` は単一の version.ref であり、starter・connector・`axon-test` がすべてそれを参照すること。参照していない Axon 依存があれば赤にするテストを置く |
 | `@ProcessingGroup` を使わない（決定 3） | ArchUnit：`@ProcessingGroup` 相当の型参照が無いこと（存在しないのでコンパイルで止まる）。Processing Group の割当は `application.yml` のパッケージキーで行い、投影のパッケージごとに 1 件あることを統合テストで数える |
 | ドメイン層のフレームワーク非依存 | ArchUnit：Spring・MyBatis への依存を禁止。Axon は `..annotation..`・`EventAppender`・`org.axonframework.extension.spring.stereotype.EventSourced` の許可リストのみ |
-| authms は Event Sourcing にしない | ArchUnit：`auth` パッケージに `@EventSourced` / `@EventSourcedEntity` が無いこと |
+| authms は Event Sourcing にしない | `AuthIsNotEventSourcedTest`。authms にクラスが実在することも併せて検査する |
 | 4 系 API を使わない | ビルド：`org.axonframework.modelling.command.AggregateLifecycle` 等への参照が無いこと（存在しないのでコンパイルで止まる） |
 | `axon-server-connector` の接続と DCB | 起動時のヘルスチェック。接続できない、または context が DCB でなければ**起動を止める**（既定では止まらず無限再試行することをスパイクで確認済み）。統合テストで DCB 無効の Axon Server に対して起動が止まることを 1 本固定する。判定は `AXONIQ-1302` のログ検出に頼らず、接続後に context の DCB 可否を問い合わせて行う |
 | スパイクの結果を ADR に戻す | IT1 の DoD：決定 5 の 7 項目それぞれの結果で本 ADR・`architecture_backend.md`・`tech_stack.md` を更新してから IT1 をクローズする（2026-09-02 実施。第 7 項目のみ IT2 へ持ち越し） |

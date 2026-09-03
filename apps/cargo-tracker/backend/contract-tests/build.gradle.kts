@@ -8,4 +8,6 @@ dependencies {
     testImplementation(libs.testcontainers.postgresql)
     testImplementation(libs.awaitility)
     testImplementation(libs.assertj.core)
+    // 契約の名簿はパッケージ走査で導出する（手書きにすると載せ忘れが素通りする）。
+    testImplementation(libs.archunit.junit5)
 }

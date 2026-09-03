@@ -1,5 +1,9 @@
 # Docs Update Log
 
+## 2026-09-03
+* **Update**: [architecture_backend](/design/cargo-tracker/architecture_backend.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0001-cqrs-es-with-axon-in-microservices](/adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) を更新（claude-code/claude-opus-5）
+
 ## 2026-09-02
 * **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
 * **Update**: [operation](/design/cargo-tracker/operation.md) を更新（claude-code/claude-opus-5）

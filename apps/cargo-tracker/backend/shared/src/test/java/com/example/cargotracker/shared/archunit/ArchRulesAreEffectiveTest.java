@@ -9,6 +9,7 @@ import com.tngtech.archunit.lang.ArchRule;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -48,7 +49,9 @@ class ArchRulesAreEffectiveTest {
                 Arguments.of("Clock.systemUTC() を直接呼ばない",
                         (Supplier<ArchRule>) CargoTrackerArchRules::doesNotCallSystemUtcClockDirectly),
                 Arguments.of("ACL は HTTP を使わない",
-                        (Supplier<ArchRule>) CargoTrackerArchRules::aclDoesNotUseHttpClients));
+                        (Supplier<ArchRule>) CargoTrackerArchRules::aclDoesNotUseHttpClients),
+                Arguments.of("Reaction は同期クエリを呼ばない",
+                        (Supplier<ArchRule>) CargoTrackerArchRules::reactionDoesNotCallQueryGateway));
     }
 
     @ParameterizedTest(name = "{0}")
@@ -66,6 +69,22 @@ class ArchRulesAreEffectiveTest {
     void rulesAcceptCompliantCode(String name, Supplier<ArchRule> rule) {
         assertThatCode(() -> rule.get().allowEmptyShould(true).check(compliant()))
                 .as("%s: 正しい書き方まで赤にしている", name)
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("Saga の型に依存しない規則は、いまは違反を作れない（型が存在しない）")
+    void sagaRuleCannotHaveAViolationFixtureYet() {
+        // Axon 5 に Saga のクラスが 1 つも無いので、違反フィクスチャを書けない
+        // （書こうとするとコンパイルが通らない）。したがってこの規則は、
+        // 版を上げて Saga が現れた日に初めて意味を持つ受け皿である。
+        //
+        // 「赤を出せることを確かめていない規則」を黙って持たないために、
+        // その事実をここに固定する。SagaIsStillAbsentTest が赤になったら、
+        // 同じ変更でこの規則の違反フィクスチャを書くこと。
+        assertThatCode(() -> CargoTrackerArchRules.doesNotDependOnAxonSaga()
+                        .allowEmptyShould(true)
+                        .check(compliant()))
                 .doesNotThrowAnyException();
     }
 }

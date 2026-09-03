@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -93,6 +94,54 @@ class BuildConventionTest {
                 .contains("axon-spring-boot-starter")
                 .contains("axon-server-connector")
                 .contains("axon-test");
+    }
+
+    @Test
+    @DisplayName("ADR-0001 決定 1: 業務サービスは他サービスに依存しない（配送経路は Axon Server 一本）")
+    void servicesDoNotDependOnEachOther() throws IOException {
+        List<String> services = BUSINESS_PROJECTS.stream()
+                .filter(p -> !p.equals("shared"))
+                .toList();
+
+        for (String service : services) {
+            String script = read(service + "/build.gradle.kts");
+            for (String other : services) {
+                if (other.equals(service)) {
+                    continue;
+                }
+                assertThat(script)
+                        .as("%s が %s に依存している。サービス間は Axon Server 経由だけにする"
+                                + "（ADR-0001 決定 4）。依存を張ると、片方の変更でもう片方が"
+                                + "壊れる経路が静かにできる", service, other)
+                        .doesNotContain("project(\":" + other + "\")");
+            }
+        }
+    }
+
+    @Test
+    @DisplayName("ADR-0001 決定 3: 全業務サービスが共有の起動時設定を取り込む")
+    void everyServiceImportsSharedConfiguration() throws IOException {
+        for (String service : BUSINESS_PROJECTS) {
+            if (service.equals("shared")) {
+                continue;
+            }
+            String applicationClass = findApplicationClass(service);
+            assertThat(applicationClass)
+                    .as("%s: 起動時接続検査を取り込んでいない。取り込み忘れても赤にならないと、"
+                            + "そのサービスだけ Axon Server に繋がらないまま起動する", service)
+                    .contains("AxonServerStartupCheckConfiguration.class")
+                    .contains("BusinessClockConfiguration.class");
+        }
+    }
+
+    private static String findApplicationClass(String service) throws IOException {
+        Path root = backendRoot().resolve(service).resolve("src/main/java");
+        try (Stream<Path> paths = Files.walk(root)) {
+            Path found = paths.filter(p -> p.getFileName().toString().endsWith("Application.java"))
+                    .findFirst()
+                    .orElseThrow(() -> new AssertionError(service + " に起動クラスが無い"));
+            return Files.readString(found, StandardCharsets.UTF_8);
+        }
     }
 
     @Test

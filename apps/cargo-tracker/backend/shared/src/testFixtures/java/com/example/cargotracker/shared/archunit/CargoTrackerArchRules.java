@@ -81,19 +81,82 @@ public final class CargoTrackerArchRules {
                         + " Reaction Handler で実装する（ADR-0001 決定 6）");
     }
 
-    /** 業務の「今日」は業務タイムゾーンで決める。Clock.systemUTC() の直呼びを禁じる。 */
+    /**
+     * 業務の「今日」は業務タイムゾーンで決める。
+     *
+     * <p>{@code Clock.systemUTC()} だけでなく {@code LocalDate.now()} /
+     * {@code LocalDateTime.now()} も禁じる。同じ 1 つの失敗（UTC や JVM 既定で
+     * 「今日」を決める）なので、規則も揃えないと最も踏みやすい書き方が素通りする。</p>
+     */
     public static ArchRule doesNotCallSystemUtcClockDirectly() {
         return noClasses().that().resideOutsideOfPackage("..shared.infrastructure.time..")
                 .should().callMethod(java.time.Clock.class, "systemUTC")
-                .because("業務日付を UTC で判断すると、時差の分だけ「当日」の受付が拒否される"
-                        + "時間帯ができる。BusinessClock を通す");
+                .orShould().callMethod(java.time.LocalDate.class, "now")
+                .orShould().callMethod(java.time.LocalDateTime.class, "now")
+                .orShould().callMethod(java.time.Instant.class, "now")
+                .because("業務日付を UTC や JVM 既定で判断すると、時差の分だけ「当日」の"
+                        + "受付が拒否される時間帯ができる。BusinessClock を通す");
+    }
+
+    /**
+     * 共有カーネルに置けるパッケージの名簿（ADR-0001 コンプライアンス）。
+     *
+     * <p>名簿方式にせず「名簿に無ければ赤」にする。載せ忘れたものほど漏れるため。</p>
+     */
+    public static ArchRule sharedKernelStaysWithinItsScope() {
+        return noClasses().that().resideInAPackage("com.example.cargotracker.shared..")
+                .should().resideOutsideOfPackages(
+                        "com.example.cargotracker.shared",
+                        "com.example.cargotracker.shared.domain.model..",
+                        "com.example.cargotracker.shared.domain.auth..",
+                        "com.example.cargotracker.shared.contract..",
+                        "com.example.cargotracker.shared.infrastructure.axon..",
+                        "com.example.cargotracker.shared.infrastructure.time..",
+                        "com.example.cargotracker.shared.infrastructure.security..",
+                        "com.example.cargotracker.shared.archunit..",
+                        "com.example.cargotracker.shared.testing..",
+                        "com.example.cargotracker.shared.conventions..")
+                .because("共有カーネルが太ると、変更のたびに全サービスを巻き込む。"
+                        + "置き場を増やすなら ADR-0001 のコンプライアンス欄も同じ変更で直す");
+    }
+
+    /** Reaction Handler は同期クエリを呼ばない（`.join()` が Processing Group を止める）。 */
+    public static ArchRule reactionDoesNotCallQueryGateway() {
+        return noClasses().that().resideInAPackage("..application.reaction..")
+                .should().dependOnClassesThat()
+                .haveFullyQualifiedName(
+                        "org.axonframework.messaging.queryhandling.gateway.QueryGateway")
+                .because("Reaction Handler の中で同期クエリを待つと Processing Group が"
+                        + "止まる（ADR-0001 決定 4）");
+    }
+
+    /** authms は Event Sourcing にしない（ADR-0001 決定 2）。 */
+    public static ArchRule authIsNotEventSourced() {
+        return noClasses().that().resideInAPackage("com.example.cargotracker.auth..")
+                .should().beAnnotatedWith(
+                        "org.axonframework.extension.spring.stereotype.EventSourced")
+                .because("authms は履歴が業務上も学習上も要らないので状態保存にする"
+                        + "（ADR-0001 決定 2）");
+    }
+
+    /** Saga の型に依存しない（ADR-0001 決定 6）。パッケージ禁止だけでは足りない。 */
+    public static ArchRule doesNotDependOnAxonSaga() {
+        return noClasses().should().dependOnClassesThat()
+                .resideInAnyPackage("org.axonframework..saga..", "org.axonframework.modelling.saga..")
+                .because("Axon 5 に Saga は無い。版を上げて現れたときに、"
+                        + "気づかないまま使い始めるのを防ぐ（ADR-0001 決定 6）");
     }
 
     /** ACL は HTTP を直接使わない。サービス間の配送経路は Axon Server 一本（ADR-0001 決定 4）。 */
     public static ArchRule aclDoesNotUseHttpClients() {
         return noClasses().that().resideInAPackage("..infrastructure.acl..")
-                .should().dependOnClassesThat().haveSimpleNameEndingWith("RestTemplate")
-                .orShould().dependOnClassesThat().haveSimpleNameEndingWith("RestClient")
-                .because("サービス間の配送経路は Axon Server 一本にする（ADR-0001 決定 4）");
+                .should().dependOnClassesThat().resideInAnyPackage(
+                        "org.springframework.web.client..",
+                        "org.springframework.web.reactive.function.client..",
+                        "java.net.http..",
+                        "okhttp3..")
+                .because("サービス間の配送経路は Axon Server 一本にする（ADR-0001 決定 4）。"
+                        + "名簿方式（RestTemplate/RestClient だけ）にすると WebClient や"
+                        + "HttpClient が素通りする");
     }
 }

@@ -4,7 +4,7 @@ title: "バックエンドアーキテクチャ - 国際貨物輸送管理シス
 description: "Axon Framework 5 による CQRS / Event Sourcing 版 Cargo Tracker のバックエンドアーキテクチャ。マイクロサービス構成で BC ごとにサービスを分け、Axon Server を Command / Event / Query Bus と Event Store に使い、投影・Reaction Handler・イベント契約を定める。"
 tags: [design, architecture, backend, cqrs, event-sourcing, axon, microservices]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-02T13:50:48Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-03T00:53:51Z }
 stale_after: 2026-12-01T00:00:00Z
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
@@ -308,7 +308,7 @@ aclimpl --> qgw : routingms の QueryHandler へ\n（Axon Server 経由）
 | レイヤー | 責務 | 置くもの | 置かないもの |
 | :--- | :--- | :--- | :--- |
 | `domain` | 業務ルール。イベントを生む | `@EventSourced`、コマンド / イベントの `record`、値オブジェクト、ドメインサービス | Spring・MyBatis・Axon の設定。Axon の**アノテーションだけ**は許す（後述） |
-| `application` | ユースケースの順序、Reaction Handler、ACL ポートの定義 | `application/reaction` の Reaction Handler（`@EventHandler` → `CommandGateway`）、出力ポート（interface）、Command / Query Gateway の利用 | SQL、HTTP、`application/saga`（置かない） |
+| `application` | ユースケースの順序、Reaction Handler、ACL ポートの定義 | `application/reaction` の Reaction Handler（`@EventHandler` → `CommandGateway`）、出力ポート（interface）、Command / Query Gateway の利用 | SQL、HTTP、`application/reaction`（置かない） |
 | `infrastructure` | 投影、問い合わせ、ACL の実装、Axon の設定 | `@EventHandler` の Projection、`@QueryHandler`、MyBatis Mapper、`AxonConfig` | 業務ルール、コマンドの送信（投影は `CommandGateway` を持たない） |
 | `interfaces` | 入出力 | REST Controller、DTO、DTO とコマンドの変換 | ドメインの直接操作（必ず Gateway を通す） |
 
@@ -642,7 +642,7 @@ public class QueryBusRouteCandidateFinder implements RouteCandidateFinder {
 | 規則 | 内容 |
 | :--- | :--- |
 | タイムアウト既定 5 秒 | Query Bus の同期問い合わせは Resilience4j の TimeLimiter で 5 秒。超えたら `503` を返し、画面は再試行を促す |
-| Saga から同期クエリを呼ばない | Saga の中で `.join()` すると Processing Group が止まる。経路候補の存在確認は Controller（US08 の経路検索）で行い、Saga と Reaction Handler は同期クエリを持たない（ArchUnit：`application/saga` と `application/reaction` は `QueryGateway` に依存しない） |
+| Saga から同期クエリを呼ばない | Saga の中で `.join()` すると Processing Group が止まる。経路候補の存在確認は Controller（US08 の経路検索）で行い、Saga と Reaction Handler は同期クエリを持たない（ArchUnit：`application/reaction` と `application/reaction` は `QueryGateway` に依存しない） |
 | 契約クエリは 1 本 | `FindRouteCandidatesQuery` だけ。`FindShipperForBillingQuery` は廃止し、billingms は `ShipperRegisteredEvent` / `CorporateContractAssignedEvent` を購読して `shipper_contract_snapshot` を作る |
 
 take-4 の `ExternalCargoRoutingService`（REST）と役割は同じです。違いは、配送を Axon Server に任せることで、サービスの所在（URL）を bookingms が知らなくてよくなることと、routingms が落ちているときに `NoHandlerForQueryException` で**明示的に**失敗することです。
@@ -833,7 +833,7 @@ Axon 5 の Saga API は 4 系から変わっている可能性があります。
 | イベント購読（Saga） | 他サービスの事実を受けて自サービスまたは他サービスの集約にコマンドを送る。複数段・補償あり | `@Saga` + `CommandGateway`、サービス越しのコマンドは `shared/contract/command` | 同じ |
 | イベント購読（Reaction） | 他サービスの事実を受けて**自サービスの集約**にコマンドを 1 つ送る。状態を持たない | `application/reaction` の `@EventHandler` + `CommandGateway`。Processing Group は `<service>-reaction` | **新設**（take-4 は投影から送っていた） |
 | 同期問い合わせ（ACL） | 業務判断のために他サービスの情報が今要る | ACL ポート → `QueryGateway` → Axon Server → 提供側 `@QueryHandler`。タイムアウト 5 秒。Saga / Reaction からは呼ばない | **REST から Query Bus へ** |
-| 同期の状態変更 | **使わない** | サービス越しのコマンド送信は Saga だけに許す。ArchUnit で `CommandGateway` の利用箇所を `interfaces`・`application/saga`・`application/reaction` に限定する | 同じ |
+| 同期の状態変更 | **使わない** | サービス越しのコマンド送信は Saga だけに許す。ArchUnit で `CommandGateway` の利用箇所を `interfaces`・`application/reaction` に限定する | 同じ |
 | クライアントからの入口 | Gateway 経由の REST | `gatewayms` がルーティングと JWT 検証を行う | 同じ |
 
 `java-2` の `CrossContextPortPolicyTest` は「状態を変える同期ポートの名簿」を固定していました。本設計ではその名簿が**空**であることと、`shared/contract/command` の名簿を検査します。
@@ -922,7 +922,7 @@ Axon 5 の Saga API は 4 系から変わっている可能性があります。
 | Saga | Saga 用フィクスチャ、無ければ Testcontainers 統合テスト | 補償経路を必ず 1 本ずつ |
 | イベント契約 | JSON ゴールデンファイル + 発行側・購読側の契約テスト | 形が変わったら赤。java-3 の往復テストに相当する「Axon Server を実際に経由する」テストを契約イベント 1 本につき 1 本 |
 | サービス間 | 契約イベント・契約コマンドの名簿を ArchUnit で固定 | 名簿方式は「載っていないもの」を通さない |
-| 境界 | ArchUnit：レイヤー依存、共有カーネルの範囲、Axon 型の許可リスト（`EventSourced` を含む）、`CommandGateway` の利用箇所（`interfaces` / `application/saga` / `application/reaction`）、`Clock` の直呼び禁止 | サービスごとに同じルールセットを `shared` の testFixtures から適用する |
+| 境界 | ArchUnit：レイヤー依存、共有カーネルの範囲、Axon 型の許可リスト（`EventSourced` を含む）、`CommandGateway` の利用箇所（`interfaces` / `application/reaction` / `application/reaction`）、`Clock` の直呼び禁止 | サービスごとに同じルールセットを `shared` の testFixtures から適用する |
 | リプレイ | `ReplayIT`：投影の Group をリセットして再生し、Reaction の Group が動かず `CommandGateway` が呼ばれないこと | 投影がコマンドを送っていないことの裏返し |
 | API | Playwright / REST Assured | 投影の遅延を待つヘルパを共有する |
 
