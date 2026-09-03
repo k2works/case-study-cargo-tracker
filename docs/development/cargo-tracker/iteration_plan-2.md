@@ -3,8 +3,10 @@ type: Plan
 title: "イテレーション計画 2 - 貨物予約・法人荷主・アカウント保護"
 description: "IT2 の計画。US31/US03/US04（9 SP）に加え、IT1 の持ち越し 5 件とレビュー指摘 10 件を先に枠へ入れる。状態遷移を持つ集約 Cargo を Event Sourcing で書き、IT2 終了時に ADR-0001 決定 2 の発動条件を判定する。デモ項目 8 件。"
 tags: [plan,iteration,cargo-tracker]
-status: draft
+status: stable
 generated: { by: claude-code/claude-opus-5, at: 2026-09-03T11:45:46Z }
+verified:
+  - { by: human:kakimomokuri, at: 2026-09-03T11:47:28Z }
 ---
 
 # イテレーション計画 2 - 貨物予約・法人荷主・アカウント保護

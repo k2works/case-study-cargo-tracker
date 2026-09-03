@@ -1,6 +1,7 @@
 # Docs Update Log
 
 ## 2026-09-03
+* **Verification**: [iteration_plan-2](/development/cargo-tracker/iteration_plan-2.md) を human:kakimomokuri が検証
 * **Creation**: [イテレーション計画 2](/development/cargo-tracker/iteration_plan-2.md) を新規作成。US31・US03・US04（9 SP）と IT1 返済枠 9 件。検証で 7 件の不整合を修正（claude-code/claude-opus-5）
 * **Update**: [開発戦略](/development/cargo-tracker/development_strategy.md) の序盤完了条件と骨格から「全ルートのプレースホルダ」を外し、画面はストーリーの IT でナビと対に足す方針へ改めた（claude-code/claude-opus-5）
 * **Update**: [リリース計画](/development/cargo-tracker/release_plan.md) の進捗表に IT2「計画済み」を追加（claude-code/claude-opus-5）
