@@ -1,6 +1,9 @@
 # Docs Update Log
 
 ## 2026-09-03
+* **Creation**: [イテレーション計画 2](/development/cargo-tracker/iteration_plan-2.md) を新規作成。US31・US03・US04（9 SP）と IT1 返済枠 9 件。検証で 7 件の不整合を修正（claude-code/claude-opus-5）
+* **Update**: [開発戦略](/development/cargo-tracker/development_strategy.md) の序盤完了条件と骨格から「全ルートのプレースホルダ」を外し、画面はストーリーの IT でナビと対に足す方針へ改めた（claude-code/claude-opus-5）
+* **Update**: [リリース計画](/development/cargo-tracker/release_plan.md) の進捗表に IT2「計画済み」を追加（claude-code/claude-opus-5）
 * **Creation**: [イテレーション 1 完了報告書](/development/cargo-tracker/iteration_report-1.md) を新規作成。IT1 の実績 9 SP・達成率 100%、品質指標、未達 5 件と技術的負債 3 件（claude-code/claude-opus-5）
 * **Creation**: [イテレーション 1 ふりかえり](/development/cargo-tracker/retrospective-1.md) を新規作成。KPT。検査が空振りしていた 4 件と、落とす順序が実態と合わなかったこと（claude-code/claude-opus-5）
 * **Creation**: [IT1 実装レビュー（2026-09-03）](/review/cargo-tracker/IT1実装_review_20260903.md) を新規作成。5 視点・高 4 / 中 6 / 低 3（claude-code/claude-opus-5）
