@@ -6,10 +6,15 @@ import io.jsonwebtoken.Jwts;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Enumeration;
 import java.util.List;
+import java.util.stream.Collectors;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import org.springframework.util.AntPathMatcher;
@@ -33,6 +38,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             "/actuator/health",
             "/actuator/health/**",
             "/actuator/info");
+
+    /** 後段へ利用者とロールを伝えるヘッダ。後段は署名を再検証せず、これを信じる。 */
+    public static final String USERNAME_HEADER = "X-Auth-Username";
+    public static final String ROLES_HEADER = "X-Auth-Roles";
+    public static final String SHIPPER_ID_HEADER = "X-Auth-Shipper-Id";
+
+    private static final List<String> IDENTITY_HEADERS =
+            List.of(USERNAME_HEADER, ROLES_HEADER, SHIPPER_ID_HEADER);
 
     private static final AntPathMatcher MATCHER = new AntPathMatcher();
 
@@ -66,12 +79,68 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     .getPayload();
 
             // 後段サービスはこのヘッダを信じる。だからこのフィルタを通らない経路を作らない。
-            request.setAttribute("cargo-tracker.username", claims.getSubject());
-            request.setAttribute("cargo-tracker.roles", claims.get("roles"));
-            chain.doFilter(request, response);
+            //
+            // リクエスト属性ではなくヘッダに載せる。属性は Gateway の JVM 内に閉じて
+            // おり、後段へ HTTP 転送されない。属性に置いたままだと、後段は利用者も
+            // ロールも受け取れないのに「伝えている」と読めるコードが残る。
+            chain.doFilter(withIdentity(request, claims), response);
         } catch (JwtException | IllegalArgumentException e) {
             unauthorized(response);
         }
+    }
+
+    /**
+     * 利用者とロールをヘッダに載せた要求を返す。
+     *
+     * <p>外から来た同名のヘッダは必ず上書きする。上書きしないと、利用者が自分で
+     * {@code X-Auth-Roles: ROLE_ADMIN} を付けるだけで権限を偽れる。</p>
+     */
+    private static HttpServletRequest withIdentity(HttpServletRequest request, Claims claims) {
+        String username = claims.getSubject();
+        Object roles = claims.get("roles");
+        String rolesHeader = roles instanceof List<?> list
+                ? list.stream().map(String::valueOf).collect(Collectors.joining(","))
+                : "";
+        Object shipperId = claims.get("shipperId");
+
+        return new HttpServletRequestWrapper(request) {
+            @Override
+            public String getHeader(String name) {
+                if (USERNAME_HEADER.equalsIgnoreCase(name)) {
+                    return username;
+                }
+                if (ROLES_HEADER.equalsIgnoreCase(name)) {
+                    return rolesHeader;
+                }
+                if (SHIPPER_ID_HEADER.equalsIgnoreCase(name)) {
+                    return shipperId == null ? null : String.valueOf(shipperId);
+                }
+                return super.getHeader(name);
+            }
+
+            @Override
+            public Enumeration<String> getHeaders(String name) {
+                String value = getHeader(name);
+                if (IDENTITY_HEADERS.stream().anyMatch(h -> h.equalsIgnoreCase(name))) {
+                    return value == null
+                            ? Collections.emptyEnumeration()
+                            : Collections.enumeration(List.of(value));
+                }
+                return super.getHeaders(name);
+            }
+
+            @Override
+            public Enumeration<String> getHeaderNames() {
+                List<String> names = new ArrayList<>(Collections.list(super.getHeaderNames()));
+                IDENTITY_HEADERS.forEach(h -> {
+                    names.removeIf(existing -> existing.equalsIgnoreCase(h));
+                    if (getHeader(h) != null) {
+                        names.add(h);
+                    }
+                });
+                return Collections.enumeration(names);
+            }
+        };
     }
 
     private static void unauthorized(HttpServletResponse response) throws IOException {

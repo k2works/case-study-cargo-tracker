@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.example.cargotracker.gateway.infrastructure.config.JwtAuthenticationFilter;
 import io.jsonwebtoken.Jwts;
 import jakarta.servlet.FilterChain;
+import jakarta.servlet.http.HttpServletRequest;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.List;
@@ -41,14 +42,29 @@ class JwtAuthenticationFilterTest {
     }
 
     private MockHttpServletResponse run(String uri, String authorization) throws Exception {
+        return run(uri, authorization, Mockito.mock(FilterChain.class), java.util.Map.of());
+    }
+
+    private MockHttpServletResponse run(String uri, String authorization, FilterChain chain,
+            java.util.Map<String, String> extraHeaders) throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", uri);
         request.setRequestURI(uri);
         if (authorization != null) {
             request.addHeader("Authorization", authorization);
         }
+        extraHeaders.forEach(request::addHeader);
         MockHttpServletResponse response = new MockHttpServletResponse();
-        filter.doFilter(request, response, Mockito.mock(FilterChain.class));
+        filter.doFilter(request, response, chain);
         return response;
+    }
+
+    /** フィルタが後段へ渡した要求を捕まえる。 */
+    private HttpServletRequest forwarded(String authorization,
+            java.util.Map<String, String> extraHeaders) throws Exception {
+        var captured = new java.util.concurrent.atomic.AtomicReference<HttpServletRequest>();
+        FilterChain chain = (req, res) -> captured.set((HttpServletRequest) req);
+        run("/api/v1/booking/shippers", authorization, chain, extraHeaders);
+        return captured.get();
     }
 
     @ParameterizedTest
@@ -115,6 +131,72 @@ class JwtAuthenticationFilterTest {
         String body = run("/api/v1/booking/shippers", null).getContentAsString();
 
         assertThat(body).isEqualTo("{\"code\":\"UNAUTHENTICATED\"}");
+    }
+
+    @Test
+    @DisplayName("利用者とロールをヘッダで後段へ伝える")
+    void propagatesIdentityAsHeaders() throws Exception {
+        HttpServletRequest forwarded = forwarded("Bearer " + validToken(), java.util.Map.of());
+
+        // 属性でなくヘッダに載せる。属性は Gateway の JVM 内に閉じており、
+        // 後段へ HTTP 転送されない（後段は何も受け取れない）。
+        assertThat(forwarded.getHeader(JwtAuthenticationFilter.USERNAME_HEADER))
+                .isEqualTo("sales01");
+        assertThat(forwarded.getHeader(JwtAuthenticationFilter.ROLES_HEADER))
+                .isEqualTo("ROLE_SALES");
+        assertThat(java.util.Collections.list(forwarded.getHeaderNames()))
+                .contains(JwtAuthenticationFilter.USERNAME_HEADER,
+                        JwtAuthenticationFilter.ROLES_HEADER);
+    }
+
+    @Test
+    @DisplayName("外から付けられた身元ヘッダは上書きする（権限の偽装を通さない）")
+    void overwritesSpoofedIdentityHeaders() throws Exception {
+        HttpServletRequest forwarded = forwarded("Bearer " + validToken(), java.util.Map.of(
+                JwtAuthenticationFilter.USERNAME_HEADER, "attacker",
+                JwtAuthenticationFilter.ROLES_HEADER, "ROLE_ADMIN"));
+
+        assertThat(forwarded.getHeader(JwtAuthenticationFilter.ROLES_HEADER))
+                .as("上書きしないと、利用者が自分でヘッダを付けるだけで権限を偽れる")
+                .isEqualTo("ROLE_SALES");
+        assertThat(forwarded.getHeader(JwtAuthenticationFilter.USERNAME_HEADER))
+                .isEqualTo("sales01");
+    }
+
+    @Test
+    @DisplayName("荷主なら荷主 ID も伝える。荷主でなければ伝えない")
+    void propagatesShipperIdOnlyWhenPresent() throws Exception {
+        String shipperToken = Jwts.builder().subject("shipper01")
+                .claim("roles", List.of("ROLE_SHIPPER"))
+                .claim("shipperId", "SHP-000001")
+                .expiration(new Date(System.currentTimeMillis() + 60_000))
+                .signWith(new SecretKeySpec(SECRET.getBytes(StandardCharsets.UTF_8), "HmacSHA256"))
+                .compact();
+
+        HttpServletRequest withShipper = forwarded("Bearer " + shipperToken, java.util.Map.of());
+        assertThat(withShipper.getHeader(JwtAuthenticationFilter.SHIPPER_ID_HEADER))
+                .isEqualTo("SHP-000001");
+
+        HttpServletRequest withoutShipper = forwarded("Bearer " + validToken(), java.util.Map.of());
+        assertThat(withoutShipper.getHeader(JwtAuthenticationFilter.SHIPPER_ID_HEADER))
+                .as("荷主でないのに荷主 ID があると、絞り込みが誤って効く")
+                .isNull();
+        assertThat(java.util.Collections.list(withoutShipper.getHeaderNames()))
+                .doesNotContain(JwtAuthenticationFilter.SHIPPER_ID_HEADER);
+    }
+
+    @Test
+    @DisplayName("身元以外のヘッダはそのまま後段へ通す")
+    void passesOtherHeadersThrough() throws Exception {
+        HttpServletRequest forwarded = forwarded("Bearer " + validToken(),
+                java.util.Map.of("X-Request-Id", "req-1"));
+
+        assertThat(forwarded.getHeader("X-Request-Id")).isEqualTo("req-1");
+        assertThat(java.util.Collections.list(forwarded.getHeaders("X-Request-Id")))
+                .containsExactly("req-1");
+        assertThat(java.util.Collections.list(
+                forwarded.getHeaders(JwtAuthenticationFilter.ROLES_HEADER)))
+                .containsExactly("ROLE_SALES");
     }
 
     @Test

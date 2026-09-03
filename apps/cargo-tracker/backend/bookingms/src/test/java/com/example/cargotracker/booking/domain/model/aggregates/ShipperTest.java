@@ -5,6 +5,9 @@ import com.example.cargotracker.booking.domain.model.valueobjects.CorporateContr
 import com.example.cargotracker.booking.domain.model.valueobjects.DiscountRate;
 import com.example.cargotracker.booking.domain.model.valueobjects.Email;
 import com.example.cargotracker.booking.domain.model.valueobjects.ShipperType;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+
 import com.example.cargotracker.shared.contract.event.ShipperRegisteredEvent;
 import java.math.BigDecimal;
 import org.axonframework.eventsourcing.configuration.EventSourcedEntityModule;
@@ -82,6 +85,36 @@ class ShipperTest {
         fixture.given().noPriorActivity()
                 .when().command(command)
                 .then().exception(IllegalArgumentException.class, "個人は法人契約を持てません");
+    }
+
+    @Test
+    @DisplayName("鍵を破棄したあとでも集約を復元できる（個人情報が null で届く）")
+    void restoresAfterShredding() {
+        // ADR-0003。鍵を破棄すると Converter が個人情報に null を渡す。復元で検査すると、
+        // 削除要求に応えた荷主への後続コマンドがすべて失敗する。
+        //
+        // AxonTestFixture の given().event() では確かめられない。IT1 の唯一のコマンドは
+        // 生成系（static）で、集約を読み込まないため復元経路を通らないため。
+        // 更新系コマンドが入るまでは、復元そのものを直接呼んで固定する。
+        ShipperRegisteredEvent shredded = new ShipperRegisteredEvent(
+                "SHP-000009", "CORPORATE", null, null, null, null, "CT-0001", "0.1000");
+        Shipper shipper = new Shipper();
+
+        assertThatCode(() -> shipper.on(shredded))
+                .as("復元で例外が出ると、削除済み荷主への後続コマンドがすべて失敗する")
+                .doesNotThrowAnyException();
+        assertThat(shipper.isShredded()).isTrue();
+    }
+
+    @Test
+    @DisplayName("個人情報が読める荷主は削除済みではない")
+    void isNotShreddedWhenReadable() {
+        Shipper shipper = new Shipper();
+
+        shipper.on(new ShipperRegisteredEvent("SHP-000010", "CORPORATE", "山田商事",
+                "sales@example.com", "03-1111-1111", "東京都中央区", "CT-0001", "0.1000"));
+
+        assertThat(shipper.isShredded()).isFalse();
     }
 
     @Test

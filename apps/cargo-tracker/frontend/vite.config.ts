@@ -22,5 +22,13 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     // E2E は Playwright が回すので Vitest の対象から外す。
     exclude: ['e2e/**', 'node_modules/**'],
+    coverage: {
+      provider: 'v8',
+      // SonarQube に渡す形。出さないとカバレッジ 0% として「新規コードが
+      // 基準を満たさない」で落ちるか、逆に測っていないまま緑になる。
+      reporter: ['text-summary', 'lcov'],
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: ['src/test/**', 'src/**/*.test.{ts,tsx}', 'src/main.tsx'],
+    },
   },
 });

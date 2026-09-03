@@ -44,6 +44,16 @@ public class ShipperRegistrationSteps {
         return rest.get().uri(url(path)).retrieve().toEntity(JsonMap.class);
     }
 
+    /**
+     * 営業として読む。ロールは本来 Gateway が JWT から取り出して伝える。
+     * この受け入れテストは bookingms を直接叩くので、同じヘッダを自分で付ける。
+     */
+    private ResponseEntity<JsonMap> getAsSales(String path) {
+        return rest.get().uri(url(path))
+                .header("X-Auth-Roles", "ROLE_SALES")
+                .retrieve().toEntity(JsonMap.class);
+    }
+
     private ResponseEntity<JsonMap> registerCorporate(String name, String email) {
         return registerCorporate(name, email, false);
     }
@@ -114,7 +124,7 @@ public class ShipperRegistrationSteps {
 
     @SuppressWarnings("unchecked")
     private List<Map<String, Object>> attentionItems() {
-        ResponseEntity<JsonMap> response = get("/api/v1/booking/attention-items?role=ROLE_SALES");
+        ResponseEntity<JsonMap> response = getAsSales("/api/v1/booking/attention-items");
         Object items = response.getBody() == null ? null : response.getBody().get("items");
         return items instanceof List ? (List<Map<String, Object>>) items : List.of();
     }

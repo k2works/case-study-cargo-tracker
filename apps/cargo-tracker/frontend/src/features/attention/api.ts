@@ -11,6 +11,12 @@ export interface AttentionItemView {
   readonly occurredAt: string;
 }
 
+/**
+ * 自分の担当宛の要確認だけを取る。
+ *
+ * <p>ロールは送らない。Gateway が JWT から取り出して伝える。クライアントが
+ * 指定できると、他ロール宛の要確認まで見えてしまう。</p>
+ */
 export function fetchAttentionItems(): Promise<Pending<{ items: AttentionItemView[] }>> {
   return queryClient('/booking/attention-items');
 }

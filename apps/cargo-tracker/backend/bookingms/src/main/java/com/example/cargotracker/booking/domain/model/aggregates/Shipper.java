@@ -26,7 +26,12 @@ public class Shipper {
 
     private String shipperId;
     private ShipperType shipperType;
-    private Email email;
+    /**
+     * 復元した時点のメールアドレス。値オブジェクトにしないのは、鍵を破棄した荷主では
+     * {@code null} が届くためである（ADR-0003）。復元で検査すると、削除要求に応えた
+     * 荷主に対する後続のコマンドがすべて失敗する。<b>検査するのは新規受け付け時だけ。</b>
+     */
+    private String email;
     private CorporateContract corporateContract;
 
     @EntityCreator
@@ -72,7 +77,13 @@ public class Shipper {
     void on(ShipperRegisteredEvent event) {
         this.shipperId = event.shipperId();
         this.shipperType = ShipperType.valueOf(event.shipperType());
-        this.email = new Email(event.email());
+        // 検査しない。鍵を破棄した荷主では null が届く（ADR-0003）。
+        this.email = event.email();
         this.corporateContract = null;
+    }
+
+    /** 個人情報が読めるか。読めない＝削除済み。 */
+    public boolean isShredded() {
+        return email == null;
     }
 }
