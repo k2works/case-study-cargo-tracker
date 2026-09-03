@@ -21,7 +21,7 @@
     </select>
 
     <insert id="insertAuditLog">
-        INSERT INTO auth_audit_log (username, event, succeeded, remote_addr, occurred_at)
-        VALUES (#{username}, #{event}, #{succeeded}, #{remoteAddr}, #{occurredAt})
+        INSERT INTO auth_audit_log (username, event_type, reason, remote_addr, occurred_at)
+        VALUES (#{username}, #{eventType}, #{reason}, #{remoteAddr}, #{occurredAt})
     </insert>
 </mapper>

@@ -35,7 +35,21 @@ public class AuthController {
      */
     private static final String SIGN_IN_FAILED = "利用者名またはパスワードが正しくありません";
 
-    private static final Duration LOCK_DURATION = Duration.ofMinutes(30);
+    /**
+     * ロックの長さ。<b>非機能要件（`non_functional.md`「認証失敗 5 回で 15 分ロック」）が正典。</b>
+     * ここを実装の都合で伸ばすと、設計の数字を誰も見なくなる。
+     */
+    private static final Duration LOCK_DURATION = Duration.ofMinutes(15);
+
+    /** 監査ログの種別（`data-model.md`「auth_db」）。 */
+    private static final String LOGIN_SUCCESS = "LOGIN_SUCCESS";
+    private static final String LOGIN_FAILURE = "LOGIN_FAILURE";
+    private static final String LOCKED = "LOCKED";
+
+    /** 断った理由。画面には出さず、記録にだけ残す。 */
+    private static final String BAD_CREDENTIALS = "BAD_CREDENTIALS";
+    private static final String REASON_LOCKED = "LOCKED";
+    private static final String DISABLED = "DISABLED";
 
     private final UserMapper users;
     private final PasswordEncoder passwordEncoder;
@@ -64,7 +78,9 @@ public class AuthController {
         UserMapper.UserRow row = users.findByUsername(request.username());
 
         if (row == null) {
-            audit(request.username(), false, httpRequest, now);
+            // 居ない利用者も「資格情報が違う」として残す。DISABLED や LOCKED と
+            // 書き分けると、記録を見られたときに実在する利用者名が漏れる。
+            auditFailure(request.username(), BAD_CREDENTIALS, httpRequest, now);
             return failed();
         }
 
@@ -75,22 +91,27 @@ public class AuthController {
                 row.shipperId(), roles, row.enabled(), row.failedAttempts(), row.lockedUntil());
 
         if (!user.canSignInAt(now)) {
-            audit(user.username(), false, httpRequest, now);
+            auditFailure(user.username(),
+                    user.isLockedAt(now) ? REASON_LOCKED : DISABLED, httpRequest, now);
             return failed();
         }
 
         if (!passwordEncoder.matches(request.password(), user.passwordHash())) {
             int attempts = user.failedAttempts() + 1;
-            Instant lockedUntil = attempts >= User.MAX_FAILED_ATTEMPTS
-                    ? now.plus(LOCK_DURATION)
-                    : user.lockedUntil();
+            boolean locksNow = attempts >= User.MAX_FAILED_ATTEMPTS;
+            Instant lockedUntil = locksNow ? now.plus(LOCK_DURATION) : user.lockedUntil();
             users.updateSignInState(user.username(), attempts, lockedUntil, now);
-            audit(user.username(), false, httpRequest, now);
+            auditFailure(user.username(), BAD_CREDENTIALS, httpRequest, now);
+            if (locksNow) {
+                // 「失敗が 5 件ある」と「ロックした」は別の事実。後者を残さないと、
+                // 運用が「いつロックされたのか」に答えられない。
+                audit(user.username(), LOCKED, REASON_LOCKED, httpRequest, now);
+            }
             return failed();
         }
 
         users.updateSignInState(user.username(), 0, null, now);
-        audit(user.username(), true, httpRequest, now);
+        audit(user.username(), LOGIN_SUCCESS, null, httpRequest, now);
 
         return ResponseEntity.ok(new LoginResponse(
                 jwtIssuer.issue(user.username(), user.roles(), user.shipperId()),
@@ -105,8 +126,14 @@ public class AuthController {
                 .body(Map.of("code", "SIGN_IN_FAILED", "message", SIGN_IN_FAILED));
     }
 
-    private void audit(String username, boolean succeeded, HttpServletRequest request, Instant at) {
-        users.insertAuditLog(new UserMapper.AuditLogRow(username, "SIGN_IN", succeeded,
+    private void auditFailure(String username, String reason, HttpServletRequest request,
+            Instant at) {
+        audit(username, LOGIN_FAILURE, reason, request, at);
+    }
+
+    private void audit(String username, String eventType, String reason,
+            HttpServletRequest request, Instant at) {
+        users.insertAuditLog(new UserMapper.AuditLogRow(username, eventType, reason,
                 request.getRemoteAddr(), at));
     }
 }

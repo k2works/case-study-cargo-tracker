@@ -37,7 +37,16 @@ public interface UserMapper {
             Instant lockedUntil) {
     }
 
-    record AuditLogRow(String username, String event, boolean succeeded, String remoteAddr,
+    /**
+     * 認証の試行・ロック・解除の記録（US31 §受入基準 7）。
+     *
+     * <p>{@code eventType} は {@code LOGIN_SUCCESS} / {@code LOGIN_FAILURE} /
+     * {@code LOCKED} / {@code UNLOCKED}。{@code reason} は断った理由
+     * （{@code BAD_CREDENTIALS} / {@code LOCKED} / {@code DISABLED}）で、
+     * <b>画面には出さない</b>。利用者に返すメッセージは同一にする一方、
+     * 記録では区別できなければ、総当たりと打ち間違いを見分けられない。</p>
+     */
+    record AuditLogRow(String username, String eventType, String reason, String remoteAddr,
             Instant occurredAt) {
     }
 }

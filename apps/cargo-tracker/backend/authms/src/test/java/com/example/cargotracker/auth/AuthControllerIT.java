@@ -145,11 +145,101 @@ class AuthControllerIT extends AbstractAxonIntegrationTest {
         login("sales01", "wrong-password");
         login("sales01", "secret1234");
 
-        assertThat(jdbc.queryForObject(
-                "SELECT count(*) FROM auth_audit_log WHERE username = 'sales01' AND succeeded = FALSE",
-                Integer.class)).isEqualTo(1);
-        assertThat(jdbc.queryForObject(
-                "SELECT count(*) FROM auth_audit_log WHERE username = 'sales01' AND succeeded = TRUE",
-                Integer.class)).isEqualTo(1);
+        assertThat(events("sales01")).containsExactly("LOGIN_FAILURE", "LOGIN_SUCCESS");
+    }
+
+    // --- US31 ここから -------------------------------------------------------
+
+    /** 監査ログの種別を発生順に返す。 */
+    private java.util.List<String> events(String username) {
+        return jdbc.queryForList(
+                "SELECT event_type FROM auth_audit_log WHERE username = ? ORDER BY audit_id",
+                String.class, username);
+    }
+
+    /** 監査ログの理由を発生順に返す。{@code null} も含める。 */
+    private java.util.List<String> reasons(String username) {
+        return jdbc.queryForList(
+                "SELECT reason FROM auth_audit_log WHERE username = ? ORDER BY audit_id",
+                String.class, username);
+    }
+
+    private void insertDisabledUser() {
+        jdbc.update("""
+                INSERT INTO users (username, password_hash, display_name, shipper_id, enabled,
+                                   failed_attempts, locked_until, created_at, updated_at)
+                VALUES (?, ?, ?, NULL, FALSE, 0, NULL, ?, ?)
+                """, "retired01", passwordEncoder.encode("secret1234"), "退職 済",
+                OffsetDateTime.now(), OffsetDateTime.now());
+        jdbc.update("INSERT INTO user_roles (username, role) VALUES (?, ?)",
+                "retired01", "ROLE_SALES");
+    }
+
+    @Test
+    @DisplayName("ロックの長さは非機能要件どおり 15 分")
+    void locksForFifteenMinutes() {
+        // 長さを実装の都合で決めると、設計の数字が守られているか誰も見なくなる。
+        // 30 分に戻すとこのテストが赤になる。
+        for (int i = 0; i < 5; i++) {
+            login("sales01", "wrong-password");
+        }
+
+        java.time.OffsetDateTime lockedUntil = jdbc.queryForObject(
+                "SELECT locked_until FROM users WHERE username = 'sales01'",
+                java.time.OffsetDateTime.class);
+        long minutes = java.time.Duration.between(java.time.OffsetDateTime.now(), lockedUntil)
+                .toMinutes();
+
+        assertThat(minutes)
+                .as("non_functional.md「認証失敗 5 回で 15 分ロック」")
+                .isBetween(13L, 15L);
+    }
+
+    @Test
+    @DisplayName("ロックしたこと自体が記録に残る")
+    void writesLockedToAuditLog() {
+        // 「失敗が 5 件ある」と「ロックした」は別の事実。前者だけだと、
+        // 運用が「この利用者はいつロックされたのか」に答えられない。
+        for (int i = 0; i < 5; i++) {
+            login("sales01", "wrong-password");
+        }
+
+        assertThat(events("sales01")).containsExactly(
+                "LOGIN_FAILURE", "LOGIN_FAILURE", "LOGIN_FAILURE", "LOGIN_FAILURE",
+                "LOGIN_FAILURE", "LOCKED");
+    }
+
+    @Test
+    @DisplayName("断った理由は記録にだけ残す")
+    void writesReasonToAuditLogOnly() {
+        // 利用者に返すメッセージは同一だが、記録では区別できなければならない
+        // （US31 §受入基準 7）。区別が付かないと、総当たりと打ち間違いを
+        // 見分けられない。
+        insertDisabledUser();
+
+        login("sales01", "wrong-password");
+        for (int i = 0; i < 5; i++) {
+            login("sales01", "wrong-password");
+        }
+        login("sales01", "secret1234");
+        login("retired01", "secret1234");
+
+        assertThat(reasons("sales01"))
+                .as("6 回目以降はロック中なので理由が変わる")
+                .containsSubsequence("BAD_CREDENTIALS", "LOCKED");
+        assertThat(reasons("retired01")).containsExactly("DISABLED");
+    }
+
+    @Test
+    @DisplayName("無効化されたアカウントは正しいパスワードでも入れない")
+    void rejectsDisabledAccount() {
+        insertDisabledUser();
+
+        ResponseEntity<JsonMap> response = login("retired01", "secret1234");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(response.getBody())
+                .as("無効化を教えると、生きている利用者名を探る手がかりになる")
+                .isEqualTo(login("sales01", "wrong-password").getBody());
     }
 }
