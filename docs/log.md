@@ -1,6 +1,13 @@
 # Docs Update Log
 
 ## 2026-09-03
+* **Creation**: [イテレーション 1 完了報告書](/development/cargo-tracker/iteration_report-1.md) を新規作成。IT1 の実績 9 SP・達成率 100%、品質指標、未達 5 件と技術的負債 3 件（claude-code/claude-opus-5）
+* **Creation**: [イテレーション 1 ふりかえり](/development/cargo-tracker/retrospective-1.md) を新規作成。KPT。検査が空振りしていた 4 件と、落とす順序が実態と合わなかったこと（claude-code/claude-opus-5）
+* **Creation**: [IT1 実装レビュー（2026-09-03）](/review/cargo-tracker/IT1実装_review_20260903.md) を新規作成。5 視点・高 4 / 中 6 / 低 3（claude-code/claude-opus-5）
+* **Creation**: [ドキュメント環境セットアップ手順書](/operation/cargo-tracker/ドキュメント環境セットアップ手順書.md) を新規作成。MkDocs・マニュアル・JIG・ER 図とドキュメントポータルの構築手順（claude-code/claude-opus-5）
+* **Update**: [イテレーション計画 1](/development/cargo-tracker/iteration_plan-1.md) をクローズの実績で更新。タスクの状態・成功基準・DoD を訂正し、未達を明記（claude-code/claude-opus-5）
+* **Update**: [リリース計画](/development/cargo-tracker/release_plan.md) の進捗状況に IT1 の実績（9 SP・100%）と持ち越し 5 件を記録（claude-code/claude-opus-5）
+* **Update**: [ユーザーマニュアル 01 業務フロー](/manual/01-業務フロー.md) を要件定義の 4 業務から書き起こし、いま使える範囲を表にした（claude-code/claude-opus-5）
 * **Update**: [アプリケーション開発環境セットアップ手順書](/operation/cargo-tracker/アプリケーション開発環境セットアップ手順書.md) を更新（claude-code/claude-opus-5）
 * **Update**: [architecture_backend](/design/cargo-tracker/architecture_backend.md) を更新（claude-code/claude-opus-5）
 * **Update**: [0001-cqrs-es-with-axon-in-microservices](/adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) を更新（claude-code/claude-opus-5）
