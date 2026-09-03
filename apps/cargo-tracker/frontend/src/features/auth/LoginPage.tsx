@@ -146,9 +146,20 @@ export function LoginPage() {
           </div>
 
           {error !== null && (
-            <p role="alert" className="text-sm text-red-700">
-              {error}
-            </p>
+            <>
+              <p role="alert" className="text-sm text-red-700">
+                {error}
+              </p>
+              {/* US31 §受入基準 3・6。ロックされたことも、アカウントが無効で
+                  あることも、その人にだけ伝えることはできない。伝えると、
+                  利用者名が実在するかどうかを教えてしまう（同一メッセージに
+                  している理由がそれ）。そこで「起こりうること」と「次に何を
+                  すればよいか」を、失敗した全員に同じ文で出す。 */}
+              <p className="text-sm text-gray-600">
+                続けて 5 回失敗すると、アカウントは 15 分間ロックされます。
+                心当たりがないのに入れないときは、システム管理者にお問い合わせください。
+              </p>
+            </>
           )}
 
           {/* 送信中は disabled でなく aria-disabled にしてフォーカスを保つ。

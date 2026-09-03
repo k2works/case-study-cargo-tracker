@@ -4,7 +4,7 @@ title: "イテレーション計画 2 - 貨物予約・法人荷主・アカウ�
 description: "IT2 の計画。US31/US03/US04（9 SP）に加え、IT1 の持ち越し 5 件とレビュー指摘 10 件を先に枠へ入れる。状態遷移を持つ集約 Cargo を Event Sourcing で書き、IT2 終了時に ADR-0001 決定 2 の発動条件を判定する。デモ項目 8 件。"
 tags: [plan,iteration,cargo-tracker]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-03T12:31:44Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-03T12:33:06Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-03T11:47:28Z }
 ---
@@ -469,7 +469,7 @@ S02_ダッシュボード --> [*] : ログアウト / 無操作 20 分
 | 1 | S90（利用者管理）の salt ワイヤーフレームが無い（画面一覧の行はある） | [UI 設計](../../design/cargo-tracker/ui_design.md) | **1.5 の着手前に描く**（IT1 では実装後に描いて順序が逆になった） |
 | 2 | S20（予約一覧）の salt ワイヤーフレームが無い | [UI 設計](../../design/cargo-tracker/ui_design.md) | 3.3 の着手前に描く |
 | 3 | US04 §受入基準 6（見積との整合性確認）は見積（US01・IT14）が無いと成立しない。IT2 では S21 に見積欄を出さない | [ユーザーストーリー](../../requirements/user_story.md)・UI 設計 S21 | US04 の受入基準に「US01 実装後」の但し書きを追記するか、US01 と同じ IT で判定する。**IT2 のふりかえりで決める** |
-| 4 | US31 §受入基準 3（ロックが利用者に通知される）は送信基盤がスコープ外。監査ログと S90 での可視化で満たす解釈を明示する必要がある | [ユーザーストーリー](../../requirements/user_story.md) の通知に関する注記 | 注記の対象に US31 を含める |
+| 4 | US31 §受入基準 3（ロックが利用者に通知される）・6（無効化で管理者への問い合わせが案内される）は、**同一メッセージを返す方針（受入基準 8）と真正面から衝突する。** その人にだけ伝えれば利用者名の存在を教えることになる | [ユーザーストーリー](../../requirements/user_story.md)・[UI 設計](../../design/cargo-tracker/ui_design.md) S00 | **解決済み。** 失敗した全員に同じ文で「続けて 5 回失敗すると 15 分ロックされる」「心当たりがなければ管理者へ」を出す。起こりうることと次の行動を、存在を漏らさずに伝えられる唯一の形。受入基準 3 の「通知」をこの解釈で満たす旨を `user_story.md` の通知に関する注記へ追記する |
 | 5 | R.4 で個人情報を要確認一覧の応答に載せる是非 | [ADR-0003](../../adr/cargo-tracker/0003-crypto-shredding-for-personal-data.md) | 判断を ADR-0003 に追記する |
 | 6 | **`CargoSpecification.dimensions`（寸法）が投影と画面に無い。** ドメインモデルは `dimensions: Dimensions` を持ち US04 §受入基準 2 も「寸法」を求めるが、`cargo_summary` に列が無く S21 の salt にも欄が無い | [データモデル](../../design/cargo-tracker/data-model.md)・[UI 設計](../../design/cargo-tracker/ui_design.md) | **IT2 で反映する。** `cargo_summary` に `length_cm` / `width_cm` / `height_cm`（`NUMERIC(8,2)`）を足し、S21 に入力欄と salt を足す。集約が持つ値を投影が落とすと、US04 の受入基準を満たせない |
 | 7 | **US04 §受入基準 3 の「希望引渡日」に置き場が無い。** `RouteSpecification` は `arrivalDeadline`（希望着日）だけを持つ | [ドメインモデル](../../design/cargo-tracker/domain-model.md)・ユーザーストーリー | **IT2 のふりかえりで決める。** 経路探索（US08）の入力になるのは着日側なので、引渡日を持つ必要があるかを判断し、不要なら受入基準側を直す。決まるまで S21 に欄を出さない |

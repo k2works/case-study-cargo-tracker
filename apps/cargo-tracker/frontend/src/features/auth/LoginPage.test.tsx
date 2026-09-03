@@ -101,4 +101,22 @@ describe('S00 ログイン', () => {
 
     expect(screen.getByRole('link', { name: /ログインなしで照会/ })).toBeInTheDocument();
   });
+
+  it('失敗したときだけ、ロックのことと問い合わせ先を出す', async () => {
+    // US31 §受入基準 3・6。ロックされたことも無効化されていることも、
+    // その人にだけ伝えると利用者名の存在を教えてしまう。失敗した全員に
+    // 同じ文を出すのが、漏らさずに伝えられる唯一の形。
+    mockFetch(401, { code: 'SIGN_IN_FAILED', message: '利用者名またはパスワードが正しくありません' });
+
+    renderLogin();
+    expect(screen.queryByText(/続けて 5 回失敗すると/)).not.toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText('利用者名'), 'sales01');
+    await userEvent.type(screen.getByLabelText('パスワード'), 'wrong');
+    await userEvent.click(screen.getByRole('button', { name: 'ログイン' }));
+
+    expect(await screen.findByText(/続けて 5 回失敗すると、アカウントは 15 分間ロックされます/))
+      .toBeInTheDocument();
+    expect(screen.getByText(/システム管理者にお問い合わせください/)).toBeInTheDocument();
+  });
 });
