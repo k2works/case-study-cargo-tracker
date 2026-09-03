@@ -11,7 +11,7 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
 /** JWT の発行。検証は Gateway が行う（ADR-0001 決定 4 の分担）。 */
-public class JwtIssuer {
+public final class JwtIssuer {
 
     private final SecretKey key;
     private final Duration validity;

@@ -11,6 +11,17 @@
 [versions]
 java = "25"
 
+# 静的コード解析。SpotBugs のツール版は Java 25（クラスファイル 69）を読める版であること。
+# 古い版は全クラスの解析に失敗し、指摘が 1 件も無いように見える。
+checkstyle = "10.21.4"
+spotbugs-plugin = "6.1.9"
+spotbugs-tool = "4.9.8"
+
+# JIG（バイトコードからの設計ドキュメント生成）。docs/design が「こう設計した」、
+# JIG の出力が「こう実装されている」を示す。
+jig = "2026.7.4"
+jig-erd = "0.2.2"
+
 # Spring Cloud Gateway 5.0.x は Spring Boot 4.0.x にしか対応しない（4.1 では
 # 「not compatible with this Spring Cloud release train」で起動しない。IT1 タスク 4.4 で実測）。
 # gatewayms が Spring Cloud Gateway を使う以上、全サービスを 4.0.x に揃える。
@@ -70,6 +81,8 @@ archunit-junit5 = { module = "com.tngtech.archunit:archunit-junit5", version.ref
 awaitility = { module = "org.awaitility:awaitility", version.ref = "awaitility" }
 testcontainers-junit-jupiter = { module = "org.testcontainers:junit-jupiter", version.ref = "testcontainers" }
 testcontainers-postgresql = { module = "org.testcontainers:postgresql", version.ref = "testcontainers" }
+jig-erd = { module = "com.github.irof:jig-erd", version.ref = "jig-erd" }
+flyway-core = { module = "org.flywaydb:flyway-core", version.ref = "flyway" }
 cucumber-java = { module = "io.cucumber:cucumber-java", version.ref = "cucumber" }
 cucumber-spring = { module = "io.cucumber:cucumber-spring", version.ref = "cucumber" }
 cucumber-junit-platform-engine = { module = "io.cucumber:cucumber-junit-platform-engine", version.ref = "cucumber" }
@@ -80,4 +93,6 @@ axon = ["axon-spring-boot-starter", "axon-server-connector"]
 
 [plugins]
 spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
+spotbugs = { id = "com.github.spotbugs", version.ref = "spotbugs-plugin" }
+jig = { id = "org.dddjava.jig-gradle-plugin", version.ref = "jig" }
 spring-dependency-management = { id = "io.spring.dependency-management", version.ref = "spring-dependency-management" }

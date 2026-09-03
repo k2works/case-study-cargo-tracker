@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<!DOCTYPE suppressions PUBLIC
+    "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
+    "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+<!--
+  検査を実際に落とす（ignoreFailures = false）にあたって、構造的に成り立たない指摘だけを外す。
+
+  「いま出ているから外す」形にはしない。それは基準を実装に合わせることであり、
+  抑制した瞬間に負債が見えなくなる。ここに並ぶのは、規則の前提がこのコードベースに
+  当てはまらないものだけである。
+
+  ここで message（指摘の文言）による抑制を書かないこと。文言はロケールで変わるため、
+  日本語で書いた抑制は英語で動く CI に効かない。
+-->
+<suppressions>
+    <!--
+      Spring Boot の起動クラスは main しか持たないため、ユーティリティクラスに見える。
+      だがコンストラクタを private にすると Spring がインスタンス化できず起動しない。
+    -->
+    <suppress checks="HideUtilityClassConstructor" files=".*Application\.java$"/>
+
+    <!--
+      Cucumber の設定クラスは、コンテナを static で保持するためユーティリティクラスに見える。
+      だが Cucumber は @CucumberContextConfiguration を付けたクラスを Spring に
+      インスタンス化させる。private コンストラクタにすると受け入れテストが起動しない。
+    -->
+    <suppress checks="HideUtilityClassConstructor" files=".*CucumberSpringConfiguration\.java$"/>
+
+    <!--
+      テストのメソッド名は日本語で書く。何を確かめているかは、テストの唯一の説明である。
+      識別子の規約を優先して英語に直すと、失敗したときに読めるものが減る。
+    -->
+    <suppress checks="MethodName" files="[\\/]src[\\/]test[\\/]"/>
+</suppressions>

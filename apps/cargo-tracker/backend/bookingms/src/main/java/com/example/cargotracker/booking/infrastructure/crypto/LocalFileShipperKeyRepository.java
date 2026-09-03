@@ -14,7 +14,7 @@ import java.util.Optional;
  * <p>破棄はファイルの削除。KMS の {@code ScheduleKeyDeletion}（7 日待機）に相当する
  * 猶予はここには無いので、削除演習の所要時間は本番と違う。</p>
  */
-public class LocalFileShipperKeyRepository implements ShipperKeyRepository {
+public final class LocalFileShipperKeyRepository implements ShipperKeyRepository {
 
     private static final int KEY_LENGTH = 32; // AES-256
     private final Path directory;

@@ -3,7 +3,6 @@ package com.example.cargotracker.booking.domain.model.aggregates;
 import com.example.cargotracker.booking.domain.model.commands.RegisterShipperCommand;
 import com.example.cargotracker.booking.domain.model.valueobjects.CorporateContract;
 import com.example.cargotracker.booking.domain.model.valueobjects.DiscountRate;
-import com.example.cargotracker.booking.domain.model.valueobjects.Email;
 import com.example.cargotracker.booking.domain.model.valueobjects.ShipperType;
 import com.example.cargotracker.shared.contract.event.ShipperRegisteredEvent;
 import org.axonframework.eventsourcing.annotation.EventSourcingHandler;
