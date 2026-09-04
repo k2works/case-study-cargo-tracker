@@ -9,6 +9,7 @@ import org.axonframework.messaging.commandhandling.CommandExecutionException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.http.ResponseEntity;
 
 /**
@@ -77,6 +78,39 @@ class ApiExceptionHandlerTest {
     void mapsIllegalTransitionFromController() {
         assertThat(handler.onIllegalTransition(new IllegalTransition("競合")).getStatusCode())
                 .isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    @DisplayName("必須項目が欠けていると、どの項目かが分かる 422 を返す")
+    void mapsMissingFieldsToUnprocessable() throws Exception {
+        // US24 §受入基準 3「未入力箇所を明示したエラーが表示される」のサーバ側。
+        // 必須項目の欠落は集約ではなくここで落ちる。
+        //
+        // **文言でなく項目名でアサートする。** Bean Validation の既定文言は
+        // ロケール依存で、日本語の手元では通り英語の CI で落ちる。
+        var target = new Object();
+        var binding = new org.springframework.validation.BeanPropertyBindingResult(
+                target, "registerVoyageRequest");
+        binding.addError(new org.springframework.validation.FieldError(
+                "registerVoyageRequest", "voyageNumber", "must not be blank"));
+        binding.addError(new org.springframework.validation.FieldError(
+                "registerVoyageRequest", "vesselName", "must not be blank"));
+        var exception = new MethodArgumentNotValidException(
+                new org.springframework.core.MethodParameter(
+                        ApiExceptionHandlerTest.class.getDeclaredMethod("dummy", String.class), 0),
+                binding);
+
+        var response = handler.onInvalidRequest(exception);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
+        assertThat(String.valueOf(response.getBody().get("message")))
+                .contains("voyageNumber")
+                .contains("vesselName");
+    }
+
+    @SuppressWarnings("unused")
+    private void dummy(String value) {
+        // MethodParameter を作るための足場。
     }
 
     @Test

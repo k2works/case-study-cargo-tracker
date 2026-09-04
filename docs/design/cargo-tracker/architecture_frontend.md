@@ -4,7 +4,7 @@ title: "フロントエンドアーキテクチャ - 国際貨物輸送管理シ
 description: "CQRS / Event Sourcing 版 Cargo Tracker のフロントエンドアーキテクチャ。React SPA で Command / Query を分けた API クライアントを持ち、投影の遅延を 202 Accepted の「反映中」として扱う UX とロール別・状態別の到達性を定める。"
 tags: [design,architecture,frontend,react,cqrs]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-02T13:24:08Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-04T13:38:40Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -85,6 +85,19 @@ apps/cargo-tracker/frontend/
 フィーチャーは BC に対応します。フィーチャー間の依存は `shared` 経由だけに限り、`booking` が `tracking` のコンポーネントを直接 import しません。ESLint の `import/no-restricted-paths` で固定します。
 
 ## API 連携
+
+### BC 横断の画面はフロントで合成する
+
+**他の BC の読み取り用の写しを作りません。** ある機能の画面が別の BC のデータを要るときは、フロントがその BC の API を直接呼んで束ねます。
+
+- 経路設計作業一覧（S30）は経路設計者の画面ですが、供給元は予約（bookingms）の `/booking/bookings/routing-worklist` です
+- 要確認一覧（S70）は booking と routing の `attention-items` を画面が束ねます
+
+`routing_read_db` に予約の写しを作ると、Booking の状態と二重管理になります。写しを最新に保つ仕組み（購読・補償・順序）が要り、ずれたときは「一覧では引き渡し済みなのに予約詳細では仮受付」という形で利用者に出ます。**読むだけなら束ねるほうが安い**、というのがこの判断です。
+
+書き込みが複数 BC にまたがる場合は別で、その調整はイベントと Reaction Handler が担います（[ADR-0001](../../adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) 決定 4）。フロントで複数の書き込みを順に呼んで整合を取る形にはしません。
+
+なお、経路ごとの認可は Gateway の 1 か所で見ます（[ADR-0006](../../adr/cargo-tracker/0006-role-authorization-at-the-gateway.md)）。画面側の `RequireRole` はナビと誤操作を減らすためのもので、守りではありません。
 
 ### Command / Query の分離
 

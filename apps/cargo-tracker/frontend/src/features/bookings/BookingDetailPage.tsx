@@ -10,6 +10,7 @@ import {
   SECTION_TITLE,
 } from '@/shared/ui/styles';
 import { ApiError } from '@/shared/api/client';
+import { useAuthStore } from '@/shared/auth/authStore';
 import { canRequestRouting } from './transitions';
 import { requestRouting } from '@/features/routing/api';
 import { display } from '@/features/shippers/api';
@@ -24,6 +25,10 @@ import { bookingStatusLabel, cargoTypeLabel, fetchBooking } from './api';
 export function BookingDetailPage() {
   const { bookingId = '' } = useParams();
   const queries = useQueryClient();
+  // 引き渡すのは営業の仕事（US06）。詳細画面は経路設計・追跡にも開いているので、
+  // 状態だけで出し分けると、見に来ただけの人が引き渡せる。
+  // これは表示の話で、守りは Gateway の認可（ADR-0006）が担う。
+  const isSales = useAuthStore((state) => state.user?.roles.includes('ROLE_SALES') ?? false);
   const { data, isPending, isError } = useQuery({
     queryKey: ['booking', bookingId],
     queryFn: () => fetchBooking(bookingId),
@@ -79,7 +84,7 @@ export function BookingDetailPage() {
           {/* ボタンの出し分けは状態の述語をそのまま呼ぶ。ここで
               status === 'PRELIMINARY' と書くと、集約の遷移表と判断が二重になり、
               片方だけ直したときに食い違う。 */}
-          {canRequestRouting(data.value.bookingStatus) && (
+          {isSales && canRequestRouting(data.value.bookingStatus) && (
             <div>
               <button
                 type="button"
@@ -92,6 +97,13 @@ export function BookingDetailPage() {
               {handOver.error instanceof ApiError && (
                 <p role="alert" className={`${ALERT} mt-2`}>
                   {handOver.error.body.message}
+                </p>
+              )}
+              {/* 通信断のように応答が返らない場合も黙らない。押しても何も
+                  起きないように見えると、利用者は同じ操作を繰り返す。 */}
+              {handOver.error !== null && !(handOver.error instanceof ApiError) && (
+                <p role="alert" className={`${ALERT} mt-2`}>
+                  引き渡せませんでした。通信の状態を確かめて、もう一度お試しください
                 </p>
               )}
             </div>

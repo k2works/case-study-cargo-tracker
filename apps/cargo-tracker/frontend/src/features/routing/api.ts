@@ -1,3 +1,4 @@
+import type { BookingView } from '@/features/bookings/api';
 import { commandClient, queryClient } from '@/shared/api/client';
 import type { Pending } from '@/shared/api/pending';
 
@@ -81,7 +82,7 @@ export function registerVoyage(input: RegisterVoyageInput): Promise<{ voyageNumb
  */
 export function fetchRoutingWorklist(
   includeRouted = false,
-): Promise<Pending<{ items: unknown[]; total: number }>> {
+): Promise<Pending<{ items: BookingView[]; total: number }>> {
   return queryClient(
     `/booking/bookings/routing-worklist?page=0&size=200&includeRouted=${includeRouted ? 'true' : 'false'}`,
   );
@@ -107,7 +108,7 @@ export function acceptedCargoTypeLabel(cargoType: string): string {
 }
 
 /**
- * 港のローカル時刻で見せる（non_functional.md）。
+ * 当面は UTC を明示して見せる。港のローカル時刻は港の時間帯を持ってから。
  *
  * <p>保存は絶対時刻（TIMESTAMPTZ）。利用者の居る場所の時刻に揃えると、出港に
  * 間に合うかの判断を誤る。港の時間帯が分かるまでは、どの時刻かを明示して出す。</p>

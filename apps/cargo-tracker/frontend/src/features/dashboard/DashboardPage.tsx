@@ -10,17 +10,24 @@ export function DashboardPage() {
   const user = useAuthStore((state) => state.user);
   const items = user ? navigationFor(user.roles).filter((i) => i.path !== '/') : [];
   const isRouting = user?.roles.includes('ROLE_ROUTING') ?? false;
+  const isSales = user?.roles.includes('ROLE_SALES') ?? false;
 
-  // US04 §受入基準 5 の「経路設計者への通知」。送信基盤はスコープ外なので、
-  // 経路設計者はここで気づく（ユーザーストーリーの通知に関する注記）。
+  // US04 §受入基準 5・US06 §受入基準 3 の「通知」。送信基盤はスコープ外なので、
+  // 担当者はここで気づく（ユーザーストーリーの通知に関する注記）。
+  //
+  // **件数は担当の仕事に合わせる。** 引き渡していない予約（仮受付）は営業の
+  // 仕事で、経路設計者はその件数に対して打てる手が無い。設計を待っている件数は
+  // 経路設計者の仕事である。
   const { data: summary } = useQuery({
     queryKey: ['booking-summary'],
     queryFn: fetchBookingSummary,
-    enabled: isRouting,
+    enabled: isRouting || isSales,
     refetchInterval: 10000,
   });
   const preliminary =
     summary?.state === 'ready' ? summary.value.preliminary : 0;
+  const routingWorklist =
+    summary?.state === 'ready' ? summary.value.routingWorklist : 0;
 
   return (
     <section>
@@ -28,12 +35,22 @@ export function DashboardPage() {
 
       {/* 0 件のときは出さない。毎朝「0 件」を読み飛ばす習慣がつくと、
           件数が出た日も見落とす。 */}
-      {isRouting && preliminary > 0 && (
+      {isSales && preliminary > 0 && (
         <output className={`${NOTICE} mt-4 block`}>
-          引き渡し待ちの予約が {preliminary} 件あります。
+          経路設計者へ引き渡していない予約が {preliminary} 件あります。
           {/* 件数を出すだけでは仕事が進まない。対象へ行ける導線を添える。 */}
           <Link to="/bookings" className={`${LINK} ml-1`}>
             予約一覧
+          </Link>
+          で確認してください。
+        </output>
+      )}
+
+      {isRouting && routingWorklist > 0 && (
+        <output className={`${NOTICE} mt-4 block`}>
+          経路設計を待っている予約が {routingWorklist} 件あります。
+          <Link to="/routing/worklist" className={`${LINK} ml-1`}>
+            経路設計作業一覧
           </Link>
           で確認してください。
         </output>

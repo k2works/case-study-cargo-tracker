@@ -11,6 +11,8 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import org.axonframework.messaging.eventhandling.annotation.EventHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
@@ -24,6 +26,8 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class CargoProjection {
+
+    private static final Logger log = LoggerFactory.getLogger(CargoProjection.class);
 
     private final CargoSummaryMapper cargos;
     private final ShipperMapper shippers;
@@ -76,13 +80,20 @@ public class CargoProjection {
      *
      * <p>状態は集約のイベントだけが書く。画面のボタン出し分けはこの値を読むが、
      * 判定は書き直さず {@code BookingStatus} の述語を呼ぶ。</p>
+     *
+     * <p><b>更新できなかったことを黙らない。</b> 戻り値を捨てると、対象の行が
+     * 無かったこと（投影の取りこぼし・順序の入れ替わり）が誰にも見えないまま
+     * 残り、経路設計者の一覧に出ないだけになる。</p>
      */
     @EventHandler
     public void on(RoutingRequestedEvent event) {
-        cargos.updateRoutingRequested(event.bookingId(),
+        int updated = cargos.updateRoutingRequested(event.bookingId(),
                 BookingStatus.ROUTE_PROPOSED.name(),
                 RoutingStatus.ROUTING_REQUESTED.name(),
                 clock.instant());
+        if (updated == 0) {
+            log.warn("経路設計の依頼を書ける予約が投影に無い: bookingId={}", event.bookingId());
+        }
     }
 
     /** 業務タイムゾーン。Clock が持つ（BusinessClockConfiguration）。 */

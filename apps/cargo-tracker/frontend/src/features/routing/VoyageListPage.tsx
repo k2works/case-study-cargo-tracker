@@ -24,6 +24,19 @@ import { acceptedCargoTypeLabel, fetchVoyages, formatVoyageTime } from './api';
  * <p>検索条件（出発地・目的地・期間）は US07（IT4）で入れる。ここに先に置くと
  * 二度手間になる。</p>
  */
+/**
+ * 一覧に出す状態。キャンセルが最優先で、次に出港したかどうかを見る。
+ *
+ * <p>「出港済み・キャンセルも表示」を選んだときに混ざるのはこの 2 つなので、
+ * 「予定」しか出さないと、何が混ざったのかが分からない。</p>
+ */
+function voyageStateLabel(voyage: { cancelled: boolean; departureAt: string }): string {
+  if (voyage.cancelled) {
+    return 'キャンセル';
+  }
+  return new Date(voyage.departureAt).getTime() < Date.now() ? '出港済み' : '予定';
+}
+
 export function VoyageListPage() {
   const [includeFinished, setIncludeFinished] = useState(false);
   const justRegistered =
@@ -113,7 +126,10 @@ export function VoyageListPage() {
                   <td className={TD}>
                     {item.acceptedCargoTypes.map(acceptedCargoTypeLabel).join(' / ')}
                   </td>
-                  <td className={TD}>{item.cancelled ? 'キャンセル' : '予定'}</td>
+                  {/* 「出港済みも表示」にしても状態が「予定」のままだと、
+                      混ざっているのに見分けられない。出港したかどうかは
+                      最初の出港日時で決まる。 */}
+                  <td className={TD}>{voyageStateLabel(item)}</td>
                 </tr>
               ))}
             </tbody>

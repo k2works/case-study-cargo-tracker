@@ -165,13 +165,15 @@ test.describe('kind クラスタでの通し確認', () => {
     return (await booking.json()).bookingId as string;
   }
 
-  test('経路設計には引き渡し待ちの件数と導線が出る', async ({ page, request }) => {
+  test('営業には引き渡していない予約の件数と導線が出る', async ({ page, request }) => {
     // 前提は自分で作る。前のテストに頼ると、単独で回したときに落ちる。
     await bookCargo(request, `件数確認-${Date.now()}`);
 
-    await signIn(page, 'routing01');
+    // 引き渡すのは営業の仕事（US06）。経路設計者にこの件数を出しても、
+    // その件数に対して打てる手が無い。
+    await signIn(page, 'sales01');
 
-    const notice = page.getByText(/引き渡し待ちの予約が \d+ 件/);
+    const notice = page.getByText(/経路設計者へ引き渡していない予約が \d+ 件/);
     await expect(notice).toBeVisible({ timeout: 20_000 });
     await notice.getByRole('link', { name: '予約一覧' }).click();
 
@@ -212,8 +214,8 @@ test.describe('kind クラスタでの通し確認', () => {
     await page.getByLabel('出発地').fill('JPTYO');
     await page.getByLabel('到着地').fill('USNYC');
     // 出港済みを既定で外すので、未来の日付にしないと一覧に出ない。
-    await page.getByLabel('出発日時').fill(`${businessDate(30)}T09:00`);
-    await page.getByLabel('到着日時').fill(`${businessDate(45)}T18:00`);
+    await page.getByLabel('出発日時（UTC）').fill(`${businessDate(30)}T09:00`);
+    await page.getByLabel('到着日時（UTC）').fill(`${businessDate(45)}T18:00`);
     await page.getByRole('button', { name: '登録する' }).click();
 
     await expect(page.getByRole('heading', { name: '航海スケジュール一覧' })).toBeVisible();

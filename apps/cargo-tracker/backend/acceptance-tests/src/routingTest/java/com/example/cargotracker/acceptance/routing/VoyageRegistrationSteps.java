@@ -79,6 +79,12 @@ public class VoyageRegistrationSteps {
         return (List<Map<String, Object>>) body.get("items");
     }
 
+    /** 単体の航海。一覧は端点しか返さないので、寄港地の順序はこちらで見る。 */
+    private Map<String, Object> detail(String voyageNumber) {
+        return rest.get().uri(url("/api/v1/routing/voyages/" + voyageNumber))
+                .retrieve().body(JsonMap.class);
+    }
+
     private Map<String, Object> find(String voyageNumber) {
         return voyages(null).stream()
                 .filter(v -> voyageNumber.equals(v.get("voyageNumber")))
@@ -154,6 +160,33 @@ public class VoyageRegistrationSteps {
     public void 船名を確かめる(String vesselName) {
         assertThat(find("V-MOL-001")).isNotNull();
         assertThat(find("V-MOL-001").get("vesselName")).isEqualTo(vesselName);
+    }
+
+    @もし("航海 {string} を、{string} と {string} を経由して {string} まで登録する")
+    public void 多区間の航海を登録する(String voyageNumber, String from, String via, String to) {
+        lastResponse = register(voyageNumber, "商船三井", "MOL EXPRESS",
+                List.of(movement(from, via, "2026-09-10T09:00:00Z", "2026-09-16T08:00:00Z"),
+                        movement(via, to, "2026-09-17T06:00:00Z", "2026-09-24T18:00:00Z")),
+                List.of("GENERAL"));
+    }
+
+    @ならば("航海 {string} の寄港地は {string} の順に読める")
+    public void 寄港地の順序を確かめる(String voyageNumber, String expectedRoute) {
+        // **表示のためだけに運ぶ値は、どこか一層で潰しても「登録できた」までは緑になる。**
+        // 投影の movementSeq を見るテストは、画面まで順序が届くかを判別しない。
+        Map<String, Object> voyage = detail(voyageNumber);
+        assertThat(voyage).as("航海 %s が読めない", voyageNumber).isNotNull();
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> movements =
+                (List<Map<String, Object>>) voyage.get("movements");
+        assertThat(movements).as("寄港地が返っていない").isNotEmpty();
+
+        List<String> ports = new java.util.ArrayList<>();
+        ports.add(String.valueOf(movements.get(0).get("departureUnLocode")));
+        movements.forEach(m -> ports.add(String.valueOf(m.get("arrivalUnLocode"))));
+
+        assertThat(String.join(" → ", ports)).isEqualTo(expectedRoute);
     }
 
     @ならば("その航海の対応貨物種別は {string} だけである")

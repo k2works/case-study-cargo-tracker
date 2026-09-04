@@ -150,6 +150,46 @@ describe('S22 予約詳細', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('予約を取得できませんでした');
   });
 
+  it('営業以外には「経路設計を依頼する」を出さない', async () => {
+    // 引き渡すのは営業の仕事。詳細画面は経路設計・追跡にも開いているので、
+    // 状態だけで出し分けると、見に来ただけの人が引き渡せる。
+    useAuthStore.setState({
+      user: { username: 'routing01', roles: ['ROLE_ROUTING'], token: 't' },
+    });
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(booking()), { status: 200 }),
+    );
+
+    renderDetail();
+    await screen.findByText('仮受付');
+
+    expect(
+      screen.queryByRole('button', { name: '経路設計を依頼する' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('押すと状態が「経路提案中」に変わる（US06 の成功経路）', async () => {
+    // 成功経路をクラスタ E2E だけに頼らない。クラスタが無い回でも守られる形にする。
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    fetchSpy.mockResolvedValueOnce(
+      new Response(JSON.stringify(booking()), { status: 200 }),
+    );
+    fetchSpy.mockResolvedValueOnce(
+      new Response(JSON.stringify({ bookingId: 'b-1' }), { status: 202 }),
+    );
+    fetchSpy.mockResolvedValue(
+      new Response(
+        JSON.stringify(booking({ bookingStatus: 'ROUTE_PROPOSED' })),
+        { status: 200 },
+      ),
+    );
+
+    renderDetail();
+    (await screen.findByRole('button', { name: '経路設計を依頼する' })).click();
+
+    expect(await screen.findByText('経路提案中')).toBeInTheDocument();
+  });
+
   it('仮受付の予約には「経路設計を依頼する」が出る（US06）', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(JSON.stringify(booking()), { status: 200 }),

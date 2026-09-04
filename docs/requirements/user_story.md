@@ -4,7 +4,7 @@ title: "ユーザーストーリー - 国際貨物輸送管理システム"
 description: "US01〜US32 のユーザーストーリーと受け入れ基準の一覧。"
 tags: [requirements]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-04T12:39:20Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-04T13:38:40Z }
 ---
 
 # ユーザーストーリー - 国際貨物輸送管理システム
@@ -741,7 +741,8 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-04T12:39:20Z }
 | US21, US22 | UC17 | BUC18, BUC19 | 精算業務の正確化 |
 | US23 | UC18 | BUC20 | 精算業務の正確化 |
 | US24, US25 | UC19 | BUC21 | 経路候補算出の精度向上 |
-| US26, US27, US31 | UC20 | BUC22 | 業務データの保護・監査証跡の確保 |
+| US26, US27 | UC20 | BUC22 | 業務データの保護・監査証跡の確保 |
+| US31 | UC20 | BUC22 | 業務データの保護（認証失敗が続いたアカウントの保護） |
 | US28 | UC16, UC08 | BUC17, BUC11 | 例外対応の迅速化、最適ルート自動設計 |
 | US29 | UC21 | BUC23 | リアルタイム貨物追跡、例外対応の迅速化 |
 | US30 | UC22 | BUC24 | 予約業務の効率化 |

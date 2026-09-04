@@ -84,6 +84,18 @@ public interface CargoSummaryMapper {
             "UPDATE cargo_summary SET routing_status = 'MISROUTED' WHERE booking_id = #{bookingId}")
     int markMisroutedForTest(@Param("bookingId") String bookingId);
 
+    /**
+     * 誤配は輸送中に起きる。**その状態の組み合わせでも作業一覧に出ること**を
+     * 確かめるための更新。
+     *
+     * <p>{@code booking_status = 'ROUTE_PROPOSED'} だけで絞っていたころは、
+     * 並び順に「誤配が先」と書いてあるのに誤配が 1 件も出なかった。
+     * <b>本番の経路では使わない。</b></p>
+     */
+    @org.apache.ibatis.annotations.Update("UPDATE cargo_summary SET booking_status = 'IN_TRANSIT',"
+            + " routing_status = 'MISROUTED' WHERE booking_id = #{bookingId}")
+    int markMisroutedInTransitForTest(@Param("bookingId") String bookingId);
+
     /** 状態ごとの件数（S02 の「今日の作業」）。仮受付は引き渡し待ちを意味する。 */
     @Select("SELECT count(*) FROM cargo_summary WHERE booking_status = #{bookingStatus}")
     int countByStatus(@Param("bookingStatus") String bookingStatus);

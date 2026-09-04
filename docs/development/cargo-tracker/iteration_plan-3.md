@@ -4,7 +4,7 @@ title: "イテレーション計画 3 - 危険物・引き渡し・航海登録"
 description: "IT3 の計画。US05/US06/US24（9 SP）に加え、IT2 の引き継ぎ 12 件を返済枠に置く。2 つ目のサービス routingms を bookingms と同じ型で立ち上げ、型が同じであることを検査で固定して Release 0.1 を閉じる。デモ項目 7 件。"
 tags: [plan,iteration,cargo-tracker]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-04T11:39:39Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-04T13:38:40Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-04T08:44:22Z }
 ---
@@ -29,6 +29,7 @@ verified:
 2. **予約が経路設計へ渡っている。** 営業が引き渡すと `ROUTE_PROPOSED` になり、経路設計者の作業一覧（S30）に出る。**状態遷移を持つ最初のコマンド**（IT2 は `[*] → PRELIMINARY` だけだった）
 3. **危険物・冷凍の予約が正しく扱われている。** 申告なしでは登録できず、対応可能な航海だけが候補になる素地ができている
 4. **IT2 の引き継ぎ 12 件が返済されている。** とくに並列レビューの運び（T1）とクラスタ E2E の順序依存
+
 **前提（IT2 クローズ時に確定）。** ADR-0001 決定 2（実績が続かなければ Event Sourcing をやめる）は **発動しませんでした**（IT2 実績 9 SP・100%）。`Voyage` も Event Sourcing 集約として作ります。
 
 5. **Release 0.1 が閉じている。** 全ロールがログインでき、営業担当者が荷主と貨物予約を登録し、経路設計者へ渡せる

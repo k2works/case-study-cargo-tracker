@@ -31,8 +31,17 @@ import org.junit.jupiter.api.Test;
  */
 class EveryServiceEndpointIsRoutedAndProtectedTest {
 
-    private static final Pattern REQUEST_MAPPING =
-            Pattern.compile("@RequestMapping\\(\"(/api/[^\"]+)\"\\)");
+    /**
+     * {@code /api/} を含む文字列を持つマッピング注釈を<b>全部</b>拾う。
+     *
+     * <p>{@code @RequestMapping("...")} の形だけを拾うと、
+     * {@code @RequestMapping(value = "...")} やクラスレベル注釈を持たない
+     * {@code @GetMapping("/api/...")} は「存在しないこと」になり、
+     * ルートに載っていなくても緑になる。対象になりうるものを全部拾ってから、
+     * 書き方を見る。</p>
+     */
+    private static final Pattern ANY_MAPPING = Pattern.compile(
+            "@(?:Request|Get|Post|Put|Delete|Patch)Mapping\\s*\\([^)]*?\"(/api/[^\"]+)\"");
     private static final Pattern ROUTE_PREDICATE =
             Pattern.compile("Path=(/api/[^\\]\\s,]+)");
 
@@ -52,9 +61,11 @@ class EveryServiceEndpointIsRoutedAndProtectedTest {
         try (Stream<Path> paths = Files.walk(backendRoot())) {
             for (Path file : paths
                     .filter(p -> p.toString().replace('\\', '/').contains("/src/main/java/"))
-                    .filter(p -> p.getFileName().toString().endsWith("Controller.java"))
+                    // 名前で絞らない。*Controller.java 以外に書かれた経路は
+                    // 「存在しないこと」になり、検査を素通りする。
+                    .filter(p -> p.getFileName().toString().endsWith(".java"))
                     .toList()) {
-                Matcher matcher = REQUEST_MAPPING.matcher(
+                Matcher matcher = ANY_MAPPING.matcher(
                         Files.readString(file, StandardCharsets.UTF_8));
                 while (matcher.find()) {
                     endpoints.add(matcher.group(1));

@@ -128,6 +128,22 @@ class VoyageValueObjectsTest {
     }
 
     @Test
+    @DisplayName("前の便の到着と同時刻に出発するのは許す（停泊 0 分）")
+    void allowsDepartureAtTheSameInstantAsPreviousArrival() {
+        // 同じ船が着いてそのまま次の区間へ出るのは実際に起きる。
+        // CarrierMovement が同時刻を断るのとは別の判断なので、ここで固定する。
+        java.time.Instant t0 = java.time.Instant.parse("2026-09-10T09:00:00Z");
+        java.time.Instant t1 = java.time.Instant.parse("2026-09-16T08:00:00Z");
+        java.time.Instant t2 = java.time.Instant.parse("2026-09-24T18:00:00Z");
+
+        Schedule schedule = new Schedule(List.of(
+                new CarrierMovement(Location.of("JPTYO"), Location.of("SGSIN"), t0, t1),
+                new CarrierMovement(Location.of("SGSIN"), Location.of("USNYC"), t1, t2)));
+
+        assertThat(schedule.movements()).hasSize(2);
+    }
+
+    @Test
     @DisplayName("運送会社はコードも名称も null を断る")
     void carrierRejectsNull() {
         assertThat(new Carrier("MOL", "商船三井").carrierCode()).isEqualTo("MOL");

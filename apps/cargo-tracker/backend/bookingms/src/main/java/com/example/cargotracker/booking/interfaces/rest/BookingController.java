@@ -126,12 +126,22 @@ public class BookingController {
                 new FindRoutingWorklistQuery(page, size, includeRouted), BookingListView.class));
     }
 
-    /** 経路設計の「今日の作業」に出す件数。件数だけでなく、そこから一覧へ行ける。 */
+    /**
+     * ダッシュボード（S02）の「今日の作業」の件数。
+     *
+     * <p>ロールごとに見るものが違う。{@code preliminary}（まだ引き渡していない予約）は
+     * <b>営業の仕事</b>で、{@code routingWorklist}（設計待ち・誤配）は経路設計者の仕事。
+     * 経路設計者に {@code preliminary} を出しても、その件数に対して打てる手が無い。</p>
+     */
     @GetMapping("/summary")
     public ResponseEntity<Map<String, Integer>> summary() {
-        return ResponseEntity.ok(Map.of("preliminary",
+        BookingListView worklist = query(new FindRoutingWorklistQuery(0, 1, false),
+                BookingListView.class);
+        return ResponseEntity.ok(Map.of(
+                "preliminary",
                 query(new CountBookingsByStatusQuery(BookingStatus.PRELIMINARY.name()),
-                        Integer.class)));
+                        Integer.class),
+                "routingWorklist", worklist.total()));
     }
 
     /**

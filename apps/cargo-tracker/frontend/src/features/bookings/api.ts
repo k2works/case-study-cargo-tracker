@@ -69,7 +69,9 @@ export function bookCargo(input: BookCargoInput): Promise<{ bookingId: string }>
 }
 
 /** 経路設計の「今日の作業」に出す件数。 */
-export function fetchBookingSummary(): Promise<Pending<{ preliminary: number }>> {
+export function fetchBookingSummary(): Promise<
+  Pending<{ preliminary: number; routingWorklist: number }>
+> {
   return queryClient('/booking/bookings/summary');
 }
 

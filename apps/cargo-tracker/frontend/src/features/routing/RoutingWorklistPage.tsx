@@ -13,7 +13,7 @@ import {
   TH,
 } from '@/shared/ui/styles';
 import { display } from '@/features/shippers/api';
-import { bookingStatusLabel, cargoTypeLabel, type BookingView } from '@/features/bookings/api';
+import { bookingStatusLabel, cargoTypeLabel } from '@/features/bookings/api';
 import { fetchRoutingWorklist } from './api';
 
 /**
@@ -35,7 +35,7 @@ export function RoutingWorklistPage() {
     refetchInterval: 3000,
   });
 
-  const items = data?.state === 'ready' ? (data.value.items as BookingView[]) : [];
+  const items = data?.state === 'ready' ? data.value.items : [];
 
   return (
     <section>
@@ -47,7 +47,9 @@ export function RoutingWorklistPage() {
           checked={includeRouted}
           onChange={(event) => setIncludeRouted(event.target.checked)}
         />
-        {'設計済みも表示'}
+        {/* この一覧が扱うのは同じ依頼の中の設計済み。経路を確定して荷主に
+            通知した予約（ROUTE_NOTIFIED）はこの一覧を離れる。 */}
+        {'同じ依頼で設計済みのものも表示'}
       </label>
 
       {isPending && <output className={`${NOTICE} mt-4`}>読み込み中…</output>}
@@ -60,6 +62,14 @@ export function RoutingWorklistPage() {
 
       {data?.state === 'ready' && items.length === 0 && (
         <output className={`${NOTICE} mt-4`}>経路設計を待っている予約はありません</output>
+      )}
+
+      {/* 上限で切れていることを黙らない。無音で切れると、載らなかった予約は
+          誰の目にも入らないまま残る（S32 と同じ扱いにする）。 */}
+      {data?.state === 'ready' && data.value.total > items.length && (
+        <output className={`${NOTICE} mt-4 block`}>
+          {data.value.total} 件のうち {items.length} 件を表示しています
+        </output>
       )}
 
       {items.length > 0 && (

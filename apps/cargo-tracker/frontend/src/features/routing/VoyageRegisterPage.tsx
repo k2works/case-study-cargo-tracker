@@ -36,9 +36,11 @@ function toInstant(local: string): string {
 /**
  * S33 航海スケジュール登録（UC19 / US24）。
  *
- * <p>寄港地は順序つきで 1 件以上。港の連結と時刻の前後は集約が最終的に見る。
- * ここで出すのは、送る前に気づけるようにするため。<b>画面の検査は集約の代わりに
- * ならない</b>ので、同じ判断を両方に置く。</p>
+ * <p>寄港地は順序つきで 1 件以上。<b>港の連結と時刻の前後は集約だけが見る。</b>
+ * 画面は必須項目（{@code required}）と入力の形しか見ておらず、繋がっていない
+ * 寄港地はサーバの 422 で分かる。同じ判断を 2 か所に置くと片方が古くなるため、
+ * 判断はドメインの 1 か所に置いている。送る前に気づける形にするかは US25 で
+ * 画面を編集可能にするときに決める。</p>
  *
  * <p>更新（/voyages/:no/edit）は US25（IT4）。IT3 は登録だけを作る。</p>
  */
@@ -155,6 +157,13 @@ export function VoyageRegisterPage() {
           <h2 className={SECTION_TITLE}>寄港地（上から順に回ります）</h2>
           <p className="mt-1 text-sm text-gray-600">
             2 行目以降の出発地は前の行の到着地と同じにしてください。到着日時は出発日時より後です。
+            {/* 運送会社の公開スケジュールは港の現地時刻。そのまま入れると時差の分
+                ずれた航海が登録され、経路候補の所要日数までずれる。エラーは出ない
+                ので、荷主に誤った到着日を出すまで誰も気づかない。 */}
+            <strong className="block mt-1">
+              日時は協定世界時（UTC）で入力してください。運送会社の公開スケジュールは
+              港の現地時刻なので、換算してから入れてください。
+            </strong>
           </p>
           {movements.map((movement, index) => (
             // 並び順そのものが業務の意味を持つので、位置を鍵にする。
@@ -172,7 +181,7 @@ export function VoyageRegisterPage() {
                 />
               </label>
               <label className={LABEL}>
-                出発日時
+                出発日時（UTC）
                 <input
                   className={FIELD}
                   type="datetime-local"
@@ -193,7 +202,7 @@ export function VoyageRegisterPage() {
                 />
               </label>
               <label className={LABEL}>
-                到着日時
+                到着日時（UTC）
                 <input
                   className={FIELD}
                   type="datetime-local"

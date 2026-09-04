@@ -55,6 +55,23 @@ class CargoValueObjectsTest {
     }
 
     @Test
+    @DisplayName("危険物申告は書式まで見る（表記ゆれは経路設計と通関で効く）")
+    void hazardousDeclarationChecksFormat() {
+        // マニュアルには「IMO クラスは 1〜9、UN 番号は UN に続く 4 桁」と
+        // 書いてあったのに、システムは空白しか見ていなかった。
+        assertThatThrownBy(() -> new HazardousDeclaration("3.1", "UN1263"))
+                .hasMessageContaining("IMO クラスは 1 から 9 の数字です");
+        assertThatThrownBy(() -> new HazardousDeclaration("0", "UN1263"))
+                .hasMessageContaining("IMO クラスは 1 から 9 の数字です");
+        assertThatThrownBy(() -> new HazardousDeclaration("3", "UN 1263"))
+                .hasMessageContaining("UN 番号は UN に続く 4 桁です");
+        assertThatThrownBy(() -> new HazardousDeclaration("3", "un1263"))
+                .hasMessageContaining("UN 番号は UN に続く 4 桁です");
+        assertThatThrownBy(() -> new HazardousDeclaration("3", "UN126"))
+                .hasMessageContaining("UN 番号は UN に続く 4 桁です");
+    }
+
+    @Test
     @DisplayName("温度条件は下限が上限を超えない")
     void temperatureRangeIsOrdered() {
         assertThatCode(() -> TemperatureRequirement.of("-20", "-10")).doesNotThrowAnyException();

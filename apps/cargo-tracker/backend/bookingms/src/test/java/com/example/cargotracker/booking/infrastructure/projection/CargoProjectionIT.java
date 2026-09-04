@@ -183,6 +183,15 @@ class CargoProjectionIT extends AbstractAxonIntegrationTest {
     @DisplayName("経路設計作業一覧は誤配が先、そのあと到着期限が近い順に並ぶ")
     void worklistPutsMisroutedFirst() {
         // 並び順を消すとここが赤くなる。誤配は放っておくほど選べる航海が減る。
+        //
+        // **この組み合わせは本番ではまだ起こらない。** 作業一覧は
+        // booking_status = 'ROUTE_PROPOSED' で絞るが、誤配になるのは輸送中で、
+        // 遷移表に IN_TRANSIT → ROUTE_PROPOSED は無い。markMisroutedForTest は
+        // ROUTE_PROPOSED の行を直接書き換えて、その状態を作っている。
+        //
+        // したがってこの並び順は**仮置き**である。誤配のときに状態をどう戻すかは
+        // US28（IT11）で決める。決めたら、作業一覧の絞りをその決定に合わせ、
+        // ここも本番で起こりうる経路で組み直す。
         String far = "B-WL-FAR-" + System.nanoTime();
         String near = "B-WL-NEAR-" + System.nanoTime();
         String misrouted = "B-WL-MIS-" + System.nanoTime();
@@ -200,6 +209,24 @@ class CargoProjectionIT extends AbstractAxonIntegrationTest {
                 .toList();
 
         assertThat(order).containsExactly(misrouted, near, far);
+    }
+
+    @Test
+    @DisplayName("輸送中に誤配になった予約も経路設計作業一覧に出る")
+    void worklistIncludesMisroutedInTransit() {
+        // 誤配の再設計は急ぐ仕事で、S30 が唯一の入口。ここに出ないと
+        // 経路設計者は気づく手段を持たない。
+        String misrouted = "B-WL-MIT-" + System.nanoTime();
+        projection.on(bookedWithDeadline(misrouted, LocalDate.of(2027, Month.MARCH, 1)));
+        projection.on(new RoutingRequestedEvent(misrouted, "sales01"));
+        cargos.markMisroutedInTransitForTest(misrouted);
+
+        List<String> ids = queries.handle(new FindRoutingWorklistQuery(0, 200, false)).items()
+                .stream().map(BookingView::bookingId).toList();
+
+        assertThat(ids)
+                .as("誤配は輸送中に起きる。ROUTE_PROPOSED だけで絞ると 1 件も出ない")
+                .contains(misrouted);
     }
 
     private static CargoBookedEvent bookedWithDeadline(String bookingId, LocalDate deadline) {

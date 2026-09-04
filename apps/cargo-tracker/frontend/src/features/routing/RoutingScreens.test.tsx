@@ -94,6 +94,28 @@ describe('S32 航海スケジュール一覧', () => {
     expect(screen.queryByText('GENERAL')).not.toBeInTheDocument();
   });
 
+  it('出港済みが混ざったとき、状態の欄でそれと分かる', async () => {
+    // 「出港済み・キャンセルも表示」を選んでも状態が「予定」のままだと、
+    // 混ざっているのに見分けられない。
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          items: [
+            voyage({ voyageNumber: 'V-PAST-1', departureAt: '2020-01-01T00:00:00Z' }),
+            voyage({ voyageNumber: 'V-CANCEL', cancelled: true }),
+          ],
+          total: 2,
+        }),
+        { status: 200 },
+      ),
+    );
+
+    renderAt('/voyages-list', <VoyageListPage />);
+
+    expect(await screen.findByText('出港済み')).toBeInTheDocument();
+    expect(screen.getByText('キャンセル')).toBeInTheDocument();
+  });
+
   it('既定では出港済み・キャンセルを外して問い合わせる', async () => {
     // 既定の絞りが消えると、出港してしまった便が混ざって一覧全体が信用されなくなる。
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
@@ -131,8 +153,8 @@ describe('S33 航海スケジュール登録', () => {
     await userEvent.type(screen.getByLabelText('船名'), 'MOL EXPRESS');
     await userEvent.type(screen.getByLabelText('出発地'), 'JPTYO');
     await userEvent.type(screen.getByLabelText('到着地'), 'USNYC');
-    await userEvent.type(screen.getByLabelText('出発日時'), '2026-09-10T09:00');
-    await userEvent.type(screen.getByLabelText('到着日時'), '2026-09-24T18:00');
+    await userEvent.type(screen.getByLabelText('出発日時（UTC）'), '2026-09-10T09:00');
+    await userEvent.type(screen.getByLabelText('到着日時（UTC）'), '2026-09-24T18:00');
     await userEvent.click(screen.getByLabelText('危険物'));
     await userEvent.click(screen.getByRole('button', { name: '登録する' }));
 
@@ -168,8 +190,8 @@ describe('S33 航海スケジュール登録', () => {
     await userEvent.type(screen.getByLabelText('船名'), 'MOL EXPRESS');
     await userEvent.type(screen.getByLabelText('出発地'), 'JPTYO');
     await userEvent.type(screen.getByLabelText('到着地'), 'USNYC');
-    await userEvent.type(screen.getByLabelText('出発日時'), '2026-09-10T09:00');
-    await userEvent.type(screen.getByLabelText('到着日時'), '2026-09-24T18:00');
+    await userEvent.type(screen.getByLabelText('出発日時（UTC）'), '2026-09-10T09:00');
+    await userEvent.type(screen.getByLabelText('到着日時（UTC）'), '2026-09-24T18:00');
     await userEvent.click(screen.getByRole('button', { name: '登録する' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('既に登録されています');

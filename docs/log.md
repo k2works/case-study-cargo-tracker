@@ -1,6 +1,13 @@
 # Docs Update Log
 
 ## 2026-09-04
+* **Update**: [user_story](/requirements/user_story.md) を更新（claude-code/claude-opus-5）
+* **Update**: [08-経路設計に引き渡す](/manual/08-経路設計に引き渡す.md) を更新（claude-code/claude-opus-5）
+* **Update**: [07-航海スケジュールを登録する](/manual/07-航海スケジュールを登録する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [05-貨物予約を登録する](/manual/05-貨物予約を登録する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-3](/development/cargo-tracker/iteration_plan-3.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+* **Update**: [architecture_frontend](/design/cargo-tracker/architecture_frontend.md) を更新（claude-code/claude-opus-5）
 * **Update**: [0006-role-authorization-at-the-gateway](/adr/cargo-tracker/0006-role-authorization-at-the-gateway.md) を更新（claude-code/claude-opus-5）
 * **Update**: [0005-flyway-locations-per-service](/adr/cargo-tracker/0005-flyway-locations-per-service.md) を更新（claude-code/claude-opus-5）
 * **Update**: [user_story](/requirements/user_story.md) を更新（claude-code/claude-opus-5）

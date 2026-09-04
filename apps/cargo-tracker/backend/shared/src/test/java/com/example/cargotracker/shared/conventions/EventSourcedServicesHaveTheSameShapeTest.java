@@ -42,9 +42,15 @@ class EventSourcedServicesHaveTheSameShapeTest {
     // イベントやユーティリティを集約と取り違えない。
     private static final Pattern EVENT_SOURCED =
             Pattern.compile("(?m)^@EventSourced\\s*\\(");
+    /**
+     * 修飾子は順不同でまとめて拾ってから {@code static} の有無を見る。
+     * {@code (public)?\\s*(static)?} の形にすると {@code static public} の順で
+     * 書かれたときに素通りする。この検査が守っているのは「2 度目の受付が通る」
+     * という IT2 の実測欠陥そのものなので、書き方の違いで空振りしてはいけない。
+     */
     private static final Pattern COMMAND_HANDLER_SIGNATURE = Pattern.compile(
-            "@CommandHandler\\s*(?://[^\\n]*\\n\\s*)*(public|protected|private)?\\s*"
-                    + "(static\\s+)?");
+            "@CommandHandler\\s*(?://[^\\n]*\\n\\s*)*"
+                    + "((?:(?:public|protected|private|static|final|synchronized)\\s+)*)");
 
     private static Path backendRoot() {
         Path dir = Path.of("").toAbsolutePath();
@@ -102,7 +108,7 @@ class EventSourcedServicesHaveTheSameShapeTest {
             String body = Files.readString(aggregate.file(), StandardCharsets.UTF_8);
             Matcher matcher = COMMAND_HANDLER_SIGNATURE.matcher(body);
             while (matcher.find()) {
-                if (matcher.group(2) != null) {
+                if (matcher.group(1).contains("static")) {
                     offenders.add(aggregate.file().getFileName().toString());
                 }
             }
@@ -110,6 +116,36 @@ class EventSourcedServicesHaveTheSameShapeTest {
         assertThat(offenders)
                 .as("static の作成ハンドラを置くと、集約が既に存在しても static が呼ばれ、"
                         + "2 度目の受付が通る（IT2 で実測）")
+                .isEmpty();
+    }
+
+    @Test
+    @DisplayName("Event Sourcing のサービスは例外の対応表を同じ形で持つ")
+    void servicesMapExceptionsTheSameWay() throws IOException {
+        // 「連鎖の途中の包みまで見る」（containsMarker / deepestMessage）は IT3 で
+        // 受け入れテストが初めて出した知見で、いまは 2 サービスに写している。
+        // **3 つ目のサービスで同じ失敗を繰り返さない**ために、写しの有無を機械的に見る。
+        // 抽出（shared の基底クラス）に変えるときは、この検査も同じ変更で直す。
+        List<String> missing = new ArrayList<>();
+        for (Aggregate aggregate : eventSourcedAggregates()) {
+            Path handler = aggregate.serviceDir().resolve("src/main/java")
+                    .resolve(aggregate.servicePackage().replace('.', '/'))
+                    .resolve("interfaces/rest/ApiExceptionHandler.java");
+            if (!Files.exists(handler)) {
+                missing.add(aggregate.serviceDir().getFileName() + ": ApiExceptionHandler が無い");
+                continue;
+            }
+            String body = Files.readString(handler, StandardCharsets.UTF_8);
+            for (String required : List.of("containsMarker", "deepestMessage",
+                    "@ExceptionHandler(BusinessRuleViolation.class)")) {
+                if (!body.contains(required)) {
+                    missing.add(aggregate.serviceDir().getFileName() + ": " + required);
+                }
+            }
+        }
+
+        assertThat(missing)
+                .as("包みを 1 枚しか見ないと 409 が 422 に化ける（IT3 で実測）")
                 .isEmpty();
     }
 
