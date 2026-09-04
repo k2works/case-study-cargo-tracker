@@ -1,5 +1,6 @@
 package com.example.cargotracker.booking.domain.model.valueobjects;
 
+import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import java.math.BigDecimal;
 
 /**
@@ -18,7 +19,7 @@ public record Dimensions(BigDecimal lengthCm, BigDecimal widthCm, BigDecimal hei
 
     private static void require(BigDecimal value, String name) {
         if (value == null || value.signum() <= 0) {
-            throw new IllegalArgumentException(name + "は 0 より大きい値です: " + value);
+            throw new BusinessRuleViolation(name + "は 0 より大きい値です: " + value);
         }
     }
 

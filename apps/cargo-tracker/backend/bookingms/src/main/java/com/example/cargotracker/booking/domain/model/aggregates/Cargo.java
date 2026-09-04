@@ -1,5 +1,6 @@
 package com.example.cargotracker.booking.domain.model.aggregates;
 
+import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.booking.domain.model.commands.BookCargoCommand;
 import com.example.cargotracker.booking.domain.model.commands.RequestRoutingCommand;
 import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
@@ -106,24 +107,24 @@ public class Cargo {
 
     private static void validate(BookCargoCommand command, LocalDate today) {
         if (command.bookingId() == null || command.bookingId().isBlank()) {
-            throw new IllegalArgumentException("予約 ID は必須です");
+            throw new BusinessRuleViolation("予約 ID は必須です");
         }
         if (command.shipperId() == null || command.shipperId().isBlank()) {
             // 荷主の分からない予約は、通知も請求も宛先が無い。
-            throw new IllegalArgumentException("荷主 ID は必須です");
+            throw new BusinessRuleViolation("荷主 ID は必須です");
         }
         if (command.cargoSpecification() == null) {
-            throw new IllegalArgumentException("貨物仕様は必須です");
+            throw new BusinessRuleViolation("貨物仕様は必須です");
         }
         if (command.routeSpecification() == null) {
-            throw new IllegalArgumentException("輸送条件は必須です");
+            throw new BusinessRuleViolation("輸送条件は必須です");
         }
         // 期限は日付で比較する。当日着は間に合う扱い（不変条件 5）。
         //
         // **新規の受け付けでだけ検査する。** 復元（@EventSourcingHandler）では見ない。
         // 見ると、受け付けたあとに期限を過ぎた予約が読めなくなる。
         if (command.routeSpecification().arrivalDeadline().isBefore(today)) {
-            throw new IllegalArgumentException(
+            throw new BusinessRuleViolation(
                     "到着期限が過去の日付です: " + command.routeSpecification().arrivalDeadline());
         }
     }

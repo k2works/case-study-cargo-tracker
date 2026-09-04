@@ -1,5 +1,6 @@
 package com.example.cargotracker.booking.domain.model.aggregates;
 
+import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.booking.domain.model.commands.RegisterShipperCommand;
 import com.example.cargotracker.booking.domain.model.valueobjects.CorporateContract;
 import com.example.cargotracker.booking.domain.model.valueobjects.DiscountRate;
@@ -72,7 +73,9 @@ class ShipperTest {
 
         fixture.given().noPriorActivity()
                 .when().command(command)
-                .then().exception(IllegalArgumentException.class, "法人は契約番号が必須です");
+                .then().exceptionSatisfies(e -> assertThat(e)
+                        .isInstanceOf(BusinessRuleViolation.class)
+                        .hasMessageContaining("法人は契約番号が必須です"));
     }
 
     @Test
@@ -84,7 +87,9 @@ class ShipperTest {
 
         fixture.given().noPriorActivity()
                 .when().command(command)
-                .then().exception(IllegalArgumentException.class, "個人は法人契約を持てません");
+                .then().exceptionSatisfies(e -> assertThat(e)
+                        .isInstanceOf(BusinessRuleViolation.class)
+                        .hasMessageContaining("個人は法人契約を持てません"));
     }
 
     @Test
@@ -154,7 +159,9 @@ class ShipperTest {
 
         fixture.given().noPriorActivity()
                 .when().command(command)
-                .then().exception(IllegalArgumentException.class, "荷主 ID は必須です");
+                .then().exceptionSatisfies(e -> assertThat(e)
+                        .isInstanceOf(BusinessRuleViolation.class)
+                        .hasMessageContaining("荷主 ID は必須です"));
     }
 
     @Test
@@ -165,7 +172,9 @@ class ShipperTest {
 
         fixture.given().noPriorActivity()
                 .when().command(command)
-                .then().exception(IllegalArgumentException.class, "荷主種別は必須です");
+                .then().exceptionSatisfies(e -> assertThat(e)
+                        .isInstanceOf(BusinessRuleViolation.class)
+                        .hasMessageContaining("荷主種別は必須です"));
     }
 
     @Test
@@ -177,6 +186,8 @@ class ShipperTest {
 
         fixture.given().noPriorActivity()
                 .when().command(command)
-                .then().exception(IllegalArgumentException.class, "荷主名は必須です");
+                .then().exceptionSatisfies(e -> assertThat(e)
+                        .isInstanceOf(BusinessRuleViolation.class)
+                        .hasMessageContaining("荷主名は必須です"));
     }
 }

@@ -1,5 +1,6 @@
 package com.example.cargotracker.booking.domain.model.aggregates;
 
+import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.booking.domain.model.commands.RegisterShipperCommand;
 import com.example.cargotracker.booking.domain.model.valueobjects.CorporateContract;
 import com.example.cargotracker.booking.domain.model.valueobjects.DiscountRate;
@@ -70,19 +71,19 @@ public class Shipper {
 
     private static void validate(RegisterShipperCommand command) {
         if (command.shipperId() == null || command.shipperId().isBlank()) {
-            throw new IllegalArgumentException("荷主 ID は必須です");
+            throw new BusinessRuleViolation("荷主 ID は必須です");
         }
         if (command.name() == null || command.name().isBlank()) {
-            throw new IllegalArgumentException("荷主名は必須です");
+            throw new BusinessRuleViolation("荷主名は必須です");
         }
         if (command.shipperType() == null) {
-            throw new IllegalArgumentException("荷主種別は必須です");
+            throw new BusinessRuleViolation("荷主種別は必須です");
         }
         if (command.shipperType() == ShipperType.CORPORATE && command.corporateContract() == null) {
-            throw new IllegalArgumentException("法人は契約番号が必須です");
+            throw new BusinessRuleViolation("法人は契約番号が必須です");
         }
         if (command.shipperType() == ShipperType.INDIVIDUAL && command.corporateContract() != null) {
-            throw new IllegalArgumentException("個人は法人契約を持てません");
+            throw new BusinessRuleViolation("個人は法人契約を持てません");
         }
     }
 

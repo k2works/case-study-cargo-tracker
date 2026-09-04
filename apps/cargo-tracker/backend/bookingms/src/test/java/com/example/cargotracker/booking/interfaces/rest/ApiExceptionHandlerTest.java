@@ -92,8 +92,19 @@ class ApiExceptionHandlerTest {
 
     @Test
     @DisplayName("値オブジェクトが投げた業務規則違反は 422")
-    void mapsIllegalArgument() {
-        assertThat(handler.onBusinessRuleViolation(new IllegalArgumentException("範囲外"))
+    void mapsValueObjectViolation() {
+        assertThat(handler.onBusinessRuleViolation(new BusinessRuleViolation("範囲外"))
                 .getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
+    }
+
+    @Test
+    @DisplayName("素の IllegalArgumentException は業務規則違反として受けない")
+    void doesNotCatchRawIllegalArgument() {
+        // UUID.fromString のようなプログラミングエラーが 422 に化けると、利用者は
+        // 直しようのない入力を直そうとし、こちらは不具合に気づけない。
+        assertThat(ApiExceptionHandler.class.getDeclaredMethods())
+                .filteredOn(method -> method.getName().equals("onBusinessRuleViolation"))
+                .allSatisfy(method -> assertThat(method.getParameterTypes()[0])
+                        .isEqualTo(BusinessRuleViolation.class));
     }
 }

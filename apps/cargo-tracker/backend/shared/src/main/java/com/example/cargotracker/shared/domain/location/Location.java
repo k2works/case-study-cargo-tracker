@@ -1,5 +1,6 @@
 package com.example.cargotracker.shared.domain.location;
 
+import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 /**
  * 場所（domain-model.md「Shared Kernel」）。
  *
@@ -10,7 +11,7 @@ public record Location(UnLocode unLocode, String name) {
 
     public Location {
         if (unLocode == null) {
-            throw new IllegalArgumentException("UN/LOCODE は必須です");
+            throw new BusinessRuleViolation("UN/LOCODE は必須です");
         }
     }
 

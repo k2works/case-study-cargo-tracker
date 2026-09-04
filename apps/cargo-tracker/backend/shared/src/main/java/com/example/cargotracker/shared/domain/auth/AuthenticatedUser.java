@@ -1,5 +1,6 @@
 package com.example.cargotracker.shared.domain.auth;
 
+import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import java.util.Set;
 
 /**
@@ -12,7 +13,7 @@ public record AuthenticatedUser(String username, Set<Role> roles, String shipper
 
     public AuthenticatedUser {
         if (username == null || username.isBlank()) {
-            throw new IllegalArgumentException("利用者名は必須です");
+            throw new BusinessRuleViolation("利用者名は必須です");
         }
         roles = roles == null ? Set.of() : Set.copyOf(roles);
     }

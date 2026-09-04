@@ -1,5 +1,6 @@
 package com.example.cargotracker.booking.domain.model.valueobjects;
 
+import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.shared.domain.location.Location;
 import java.time.LocalDate;
 
@@ -13,14 +14,14 @@ public record RouteSpecification(Location origin, Location destination, LocalDat
 
     public RouteSpecification {
         if (origin == null || destination == null) {
-            throw new IllegalArgumentException("出発地と目的地は必須です");
+            throw new BusinessRuleViolation("出発地と目的地は必須です");
         }
         if (origin.equals(destination)) {
-            throw new IllegalArgumentException(
+            throw new BusinessRuleViolation(
                     "出発地と目的地が同じです: " + origin.unLocode());
         }
         if (arrivalDeadline == null) {
-            throw new IllegalArgumentException("到着期限は必須です");
+            throw new BusinessRuleViolation("到着期限は必須です");
         }
     }
 }

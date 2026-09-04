@@ -1,5 +1,6 @@
 package com.example.cargotracker.booking.domain.model.valueobjects;
 
+import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 /**
  * 予約の識別子。
  *
@@ -10,7 +11,7 @@ public record BookingId(String value) {
 
     public BookingId {
         if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException("予約 ID は必須です");
+            throw new BusinessRuleViolation("予約 ID は必須です");
         }
     }
 }

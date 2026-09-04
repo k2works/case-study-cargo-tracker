@@ -1,5 +1,6 @@
 package com.example.cargotracker.shared.domain.location;
 
+import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import java.util.regex.Pattern;
 
 /**
@@ -14,7 +15,7 @@ public record UnLocode(String value) {
     public UnLocode {
         if (value == null || !FORMAT.matcher(value).matches()) {
             // 小文字を通すと、同じ港が 2 通りの書き方で入り、一覧の突き合わせが合わなくなる。
-            throw new IllegalArgumentException("UN/LOCODE は英大文字 5 文字です: " + value);
+            throw new BusinessRuleViolation("UN/LOCODE は英大文字 5 文字です: " + value);
         }
     }
 

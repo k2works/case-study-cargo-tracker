@@ -27,12 +27,12 @@ public class ApiExceptionHandler {
     /**
      * 値オブジェクトと集約が弾いた業務規則違反。
      *
-     * <p>routingms の値オブジェクトは最初から {@link BusinessRuleViolation} を投げる
-     * （{@code BusinessRuleViolation} は {@code IllegalArgumentException} を継承する）。
-     * bookingms 側を寄せるのは返済枠 R.4。</p>
+     * <p><b>{@code IllegalArgumentException} を広く受けない。</b> 広く受けると
+     * {@code UUID.fromString} のようなプログラミングエラーまで業務規則違反に化ける。
+     * ドメイン層は {@link BusinessRuleViolation} だけを投げる（規約テストで固定）。</p>
      */
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<Map<String, Object>> onBusinessRuleViolation(IllegalArgumentException e) {
+    @ExceptionHandler(BusinessRuleViolation.class)
+    public ResponseEntity<Map<String, Object>> onBusinessRuleViolation(BusinessRuleViolation e) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT)
                 .body(Map.of(CODE, "BUSINESS_RULE_VIOLATION", MESSAGE,
                         BusinessRuleViolation.strip(e.getMessage())));

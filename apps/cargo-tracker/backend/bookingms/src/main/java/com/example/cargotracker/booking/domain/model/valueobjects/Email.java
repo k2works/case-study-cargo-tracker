@@ -1,5 +1,6 @@
 package com.example.cargotracker.booking.domain.model.valueobjects;
 
+import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 /**
  * 連絡先メールアドレス。
  *
@@ -12,13 +13,13 @@ public record Email(String value) {
 
     public Email {
         if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException("メールアドレスは必須です");
+            throw new BusinessRuleViolation("メールアドレスは必須です");
         }
         if (value.length() > MAX_LENGTH) {
-            throw new IllegalArgumentException("メールアドレスが長すぎます: " + value.length() + " 文字");
+            throw new BusinessRuleViolation("メールアドレスが長すぎます: " + value.length() + " 文字");
         }
         if (!hasValidShape(value)) {
-            throw new IllegalArgumentException("メールアドレスの形式が正しくありません: " + value);
+            throw new BusinessRuleViolation("メールアドレスの形式が正しくありません: " + value);
         }
     }
 
