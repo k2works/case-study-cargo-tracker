@@ -49,8 +49,9 @@ class VoyageProjectionIT extends AbstractAxonIntegrationTest {
                 cargoTypes, "routing01");
     }
 
+    /** 航海番号は 20 文字まで。ナノ秒をそのまま繋ぐと桁あふれする。 */
     private static String uniqueNumber() {
-        return ("V-" + System.nanoTime());
+        return "V-" + Long.toString(System.nanoTime(), 36);
     }
 
     @Test

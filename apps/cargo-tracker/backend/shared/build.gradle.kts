@@ -60,4 +60,9 @@ tasks.named<Test>("test") {
             .withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.file(rootProject.file(
             "../../../docs/adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md"))
+    // EventSourcedServicesHaveTheSameShapeTest は各サービスの application.yml を読む。
+    // 宣言しないと、Processing Group の列挙を消しても検査が走らずに緑のままになる。
+    inputs.files(rootProject.subprojects.map { it.file("src/main/resources") })
+            .withPropertyName("serviceMainResources")
+            .withPathSensitivity(PathSensitivity.RELATIVE)
 }
