@@ -4,7 +4,7 @@ title: "リリース計画 - 国際貨物輸送管理システム（CQRS / Event
 description: "CQRS / Event Sourcing 版 Cargo Tracker のリリース計画。US01〜US32 を 15 イテレーション・5 リリース（122 SP）に配分し、ストーリーポイント・ベロシティ・バッファ・順序の根拠・リスクを定める。"
 tags: [plan,release,cargo-tracker]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-04T14:32:26Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-04T21:21:35Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T12:47:29Z }
 ---
@@ -270,7 +270,8 @@ IT4・IT10・IT12・IT15 に SP 対象外の枠を置きます。**「余力次�
 | IT1 | 9 | 9 | 100% | **完了**（[計画](iteration_plan-1.md)・[ふりかえり](retrospective-1.md)・[報告書](iteration_report-1.md)） |
 | IT2 | 9 | 9 | 100% | **完了**（[計画](iteration_plan-2.md)・[ふりかえり](retrospective-2.md)・[報告書](iteration_report-2.md)） |
 | IT3 | 9 | 9 | 100% | **完了**（[計画](iteration_plan-3.md) / [ふりかえり](retrospective-3.md) / [完了報告書](iteration_report-3.md)）。欠陥 34 件を発見・修正 |
-| IT4〜IT15 | 95 | — | — | 未着手 |
+| IT4 | 8 | — | — | **計画済み**（[計画](iteration_plan-4.md)）。負債枠 2 |
+| IT5〜IT15 | 87 | — | — | 未着手 |
 | **累計** | **122** | **27** | **100%**（IT1〜IT3 の 27 SP に対して） | |
 
 **実績 SP は 9 です。** US26（3）・US27（1）・US02（5）の受入基準を満たし、デモ項目 7 件の受け入れテストが緑です。ただし **SP 対象外の基盤投資に持ち越しが 5 件あります**（S01 ポータル・全ルートのプレースホルダ・無操作タイムアウト・スパイク 0.7・契約テストの往復）。ベロシティは 9 と読めますが、基盤の未完了分を IT2 が負う点は [ふりかえり](retrospective-1.md) を参照してください。

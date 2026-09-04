@@ -4,7 +4,7 @@ title: "ドメインモデル設計 - 国際貨物輸送管理システム（CQR
 description: "CQRS / Event Sourcing 版 Cargo Tracker のドメインモデル設計。6 コンテキストの集約・不変条件・コマンド・イベント（内部 / 契約）・状態遷移・Reaction Handler を、イベントを永続化フォーマットとして定義する。"
 tags: [design,domain-model,ddd,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-04T08:58:20Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-04T21:21:35Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -76,6 +76,7 @@ quadrantChart
 | 運送会社 | Carrier | `Carrier` | 航海を運航する会社（コードと名称） |
 | 船名 | Vessel Name | `VesselName` | 航海に就く船の名前。運送会社ではなく航海が持つ |
 | 航海スケジュール | Schedule | `Schedule` | 航海の運搬移動の並び。時刻昇順・港の連結を自分で守る |
+| 航海の検索条件 | Voyage Search Criteria | `VoyageSearchCriteria` | 出発地・目的地・出発期間・貨物種別。空の条件は「指定なし」として扱い、その判断をここ 1 か所に置く（US07） |
 | 経路探索 | Route Search | `RouteSearchService` | 航海グラフから経路候補を探すドメインサービス。状態を変えないので Query 側 |
 | 航海グラフ | Voyage Graph | `VoyageGraph` | 投影 `voyage` / `carrier_movement` から組む探索用の読み取りモデル |
 | 経路 | Transit Path | `TransitPath` | 経路探索が返す 1 本の経路。期限超過日数を持つ |
@@ -305,7 +306,8 @@ class Cargo <<Aggregate Root>> <<@EventSourced(tagKey="bookingId")>> {
   - cancellationRequest: CancellationRequest
   - lastHandling: HandlingSnapshot
   .. @CommandHandler ..
-  + {static} book(BookCargoCommand)
+  + book(BookCargoCommand)
+  + updateSpecification(UpdateCargoSpecificationCommand)
   + requestRouting(RequestRoutingCommand)
   + assignRoute(AssignRouteCommand)
   + adjustRouteSpecification(AdjustRouteSpecificationCommand)
@@ -531,6 +533,7 @@ CANCELLED --> [*]
 | 9-2 | `CancellationDecision.dischargeLocation` は**現在地（`lastHandling.location`）または旅程の残りの寄港地のいずれか**。旅程に無い港や通過済みの港は指定できない | `CancellationDecision.approve` |
 | 10 | 未決着の `CancellationRequest` は高々 1 件 | `requestCancellation` |
 | 11 | `CANCELLED` の集約は以降のコマンドを拒否する | 全ハンドラ |
+| 11-2 | 貨物仕様・経路仕様を修正できるのは `PRELIMINARY` の予約だけ。修正時も登録時と同じ検査を通す（危険物なら申告、冷凍・冷蔵なら温度管理条件が必須） | `updateSpecification` |
 | 12 | 予定ルート外の荷役（`offRoute`）を受けたら `RoutingStatus = MISROUTED` にし `BookingMisroutedEvent` を出す。現在地起点の再設計（`assignRoute`）で `ROUTED` に復帰。再設計では期限超過の候補も選べる（US28） | `recordHandling` / `assignRoute` |
 | 13 | 取り消された荷役（`HandlingActivityVoidedEvent`）を受けたら `lastHandling` を直前の荷役に戻す。`MISROUTED` の原因が取り消された荷役だけなら `ROUTED` に戻す | `revertHandling` |
 
@@ -539,6 +542,7 @@ CANCELLED --> [*]
 | コマンド | アクター | 発行イベント | 契約 | UC / US |
 | :--- | :--- | :--- | :--- | :--- |
 | `BookCargoCommand` | 営業担当者 | `CargoBookedEvent` | — | UC03 / US04・US05 |
+| `UpdateCargoSpecificationCommand` | 営業担当者 | `CargoSpecificationUpdatedEvent` | — | UC03 / US32 |
 | `RequestRoutingCommand` | 営業担当者 | `RoutingRequestedEvent` | — | UC04 / US06 |
 | `AssignRouteCommand` | 経路設計者 | `CargoRoutedEvent` | — | UC07・UC09 / US09・US11・US28 |
 | `AdjustRouteSpecificationCommand` | 経路設計者 | `RouteSpecificationAdjustedEvent` | — | UC08 / US10 |

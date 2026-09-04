@@ -4,7 +4,7 @@ title: "データモデル設計 - 国際貨物輸送管理システム（CQRS /
 description: "CQRS / Event Sourcing 版 Cargo Tracker のデータモデル設計。Event Store は Axon Server に任せ、サービスごとの投影テーブル・Axon 管理テーブル・Auth の状態テーブルを ER 図とテーブル定義で示し、Processing Group との対応とリプレイ前提のマイグレーション方針を定める。"
 tags: [design,data-model,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-04T12:39:20Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-04T21:21:35Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -286,6 +286,8 @@ entity "cargo_summary" as cargo {
   booking_status: VARCHAR(30) NOT NULL
   routing_status: VARCHAR(30) NOT NULL
   booked_at: TIMESTAMPTZ NOT NULL
+  updated_at: TIMESTAMPTZ
+  updated_by: VARCHAR(50)
   last_notified_at: TIMESTAMPTZ
   confirmed_at: TIMESTAMPTZ
   tracking_issued_at: TIMESTAMPTZ
@@ -377,7 +379,7 @@ q ||--o{ qc
 | テーブル | 元になるイベント | 制約・インデックス | 備考 |
 | :--- | :--- | :--- | :--- |
 | `shipper` | `ShipperRegisteredEvent`, `ShipperContactUpdatedEvent`, `CorporateContractAssignedEvent` | `UNIQUE(email)`（NULL を許す）, `UNIQUE(shipper_code)` | `shipper_code` は投影側のシーケンス（`SHP-` + 連番 6 桁）で採番。UNIQUE 違反は `attention_item` に記録。`name` / `email` / `phone` / `address` は crypto-shredding 後に `NULL` になる（ADR-0003）。表示既定値は「（削除済み）」（`ui_design.md`） |
-| `cargo_summary` | `CargoBookedEvent` ほか Cargo の全イベント（`booking_status` の書き手は `BookingDeliveredEvent`・`BookingSettledEvent` を含む Cargo 自身のイベントだけ）、`HandlingActivityRegisteredEvent`・`HandlingActivityVoidedEvent`（契約、`last_handling_*` のみ） | `UNIQUE(tracking_number)`, `INDEX(shipper_id)`, `INDEX(booking_status)`, `INDEX(routing_status)` | `shipper_name` を非正規化して持つ（一覧が JOIN しない）。`last_handling_*` は荷役の契約イベントから写す。他サービスの `CargoDeliveredEvent`・`PaymentRecordedEvent` は投影が写さず、`booking-reaction` が Cargo へコマンドを送り、Cargo のイベントで `booking_status` が変わる。`INDEX(shipper_id)` は荷主向け一覧（`FindShipperBookingsQuery`）の索引を兼ねる |
+| `cargo_summary` | `CargoBookedEvent` ほか Cargo の全イベント（`booking_status` の書き手は `BookingDeliveredEvent`・`BookingSettledEvent` を含む Cargo 自身のイベントだけ）、`HandlingActivityRegisteredEvent`・`HandlingActivityVoidedEvent`（契約、`last_handling_*` のみ） | `UNIQUE(tracking_number)`, `INDEX(shipper_id)`, `INDEX(booking_status)`, `INDEX(routing_status)` | `shipper_name` を非正規化して持つ（一覧が JOIN しない）。`last_handling_*` は荷役の契約イベントから写す。他サービスの `CargoDeliveredEvent`・`PaymentRecordedEvent` は投影が写さず、`booking-reaction` が Cargo へコマンドを送り、Cargo のイベントで `booking_status` が変わる。`INDEX(shipper_id)` は荷主向け一覧（`FindShipperBookingsQuery`）の索引を兼ねる。`updated_at` / `updated_by` は**最終更新だけ**を持つ（US32。変更内容の履歴は Event Store が持つ） |
 | `cargo_leg` | `CargoRoutedEvent` | `INDEX(voyage_number)` | 再設計時は全行を入れ替える |
 | `cancellation_request` | `CancellationRequestedEvent`, `CancellationApprovedEvent`, `CancellationRejectedEvent` | `INDEX(booking_id)`, `INDEX(decision)`（`NULL` = 承認待ち） | `decision` は `APPROVED` / `REJECTED` / `NULL` |
 | `quotation` / `quotation_candidate` | `QuotationCreatedEvent` | `INDEX(created_at)` | 候補 0 件の見積も 1 行残る |
@@ -404,6 +406,8 @@ entity "voyage" as v {
   arrival_at: TIMESTAMPTZ NOT NULL
   cancelled: BOOLEAN NOT NULL DEFAULT FALSE
   registered_at: TIMESTAMPTZ NOT NULL
+  updated_at: TIMESTAMPTZ
+  updated_by: VARCHAR(50)
   projected_at: TIMESTAMPTZ NOT NULL
   last_event_id: VARCHAR(36)
 }
@@ -445,7 +449,7 @@ v ||--o{ act
 
 | テーブル | 元になるイベント | 制約・インデックス | 備考 |
 | :--- | :--- | :--- | :--- |
-| `voyage` | `VoyageRegisteredEvent`, `VoyageScheduleUpdatedEvent`, `VoyageCancelledEvent` | `INDEX(departure_unlocode, departure_at)`, `INDEX(arrival_unlocode, arrival_at)` | 航海番号は自然キー。`departure_*` / `arrival_*` は最初と最後の移動を非正規化（一覧の検索用） |
+| `voyage` | `VoyageRegisteredEvent`, `VoyageScheduleUpdatedEvent`, `VoyageCancelledEvent` | `INDEX(departure_unlocode, departure_at)`, `INDEX(arrival_unlocode, arrival_at)` | 航海番号は自然キー。`departure_*` / `arrival_*` は最初と最後の移動を非正規化（一覧の検索用）。`updated_at` / `updated_by` は**最終更新だけ**を持つ。変更内容の履歴は Event Store が持ち、履歴テーブルは作らない（US25） |
 | `carrier_movement` | 同上 | — | 経路探索の `VoyageGraph` はこのテーブルから組む。更新時は全行入れ替え |
 | `voyage_accepted_cargo_type` | 同上 | — | 空なら一般貨物のみ |
 | `attention_item` | 投影が UNIQUE 違反で書けなかった事実（`kind = PROJECTION_REJECTED`） | `INDEX(assigned_role, occurred_at) WHERE acknowledged_at IS NULL` | `booking_read_db` と同じ定義。**記録するだけでは誰にも見えない**ので、読み口（`GET /api/v1/routing/attention-items`）を対で置く。S70 は booking と routing の両方を束ねて出す |
