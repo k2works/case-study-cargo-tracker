@@ -103,15 +103,122 @@ test.describe('kind クラスタでの通し確認', () => {
     await expect(page.getByRole('alert')).toContainText('出発地と目的地が同じ');
   });
 
-  test('経路設計には引き渡し待ちの件数と導線が出る', async ({ page }) => {
+  /**
+   * 資格情報を取る。画面から入り直すより速く、前提づくりの手順が本文から消える。
+   */
+  async function tokenOf(
+    request: import('@playwright/test').APIRequestContext,
+    username: string,
+  ): Promise<string> {
+    const response = await request.post('/api/v1/auth/login', {
+      data: { username, password: 'secret1234' },
+    });
+    expect(response.status()).toBe(200);
+    return (await response.json()).token as string;
+  }
+
+  /**
+   * 仮受付の予約を 1 件作る。
+   *
+   * <p><b>各テストが自分で前提を作る</b>（IT2 引き継ぎ 7）。前のテストが残したものに
+   * 頼ると、実行順を変えたときに落ち、<b>前回実行の残骸でも緑になる</b>。残骸で緑に
+   * なる検査は、壊れていることを教えてくれない。</p>
+   */
+  async function bookCargo(
+    request: import('@playwright/test').APIRequestContext,
+    product: string,
+  ): Promise<string> {
+    const token = await tokenOf(request, 'sales01');
+    const headers = { Authorization: `Bearer ${token}` };
+    const stamp = Date.now();
+
+    const shipper = await request.post('/api/v1/booking/shippers', {
+      headers,
+      data: {
+        name: `前提商事 ${stamp}`,
+        shipperType: 'INDIVIDUAL',
+        email: `precondition-${stamp}@example.com`,
+        phone: '03-0000-0000',
+        address: '東京都中央区',
+        acknowledgedDuplicate: false,
+      },
+    });
+    expect(shipper.status()).toBe(201);
+
+    const booking = await request.post('/api/v1/booking/bookings', {
+      headers,
+      data: {
+        shipperId: (await shipper.json()).shipperId,
+        originUnLocode: 'JPTYO',
+        destinationUnLocode: 'USNYC',
+        arrivalDeadline: businessDate(60),
+        cargoType: 'GENERAL',
+        weightKg: '1200',
+        lengthCm: '120',
+        widthCm: '80',
+        heightCm: '100',
+        quantity: 10,
+        productName: product,
+      },
+    });
+    expect(booking.status()).toBe(201);
+    return (await booking.json()).bookingId as string;
+  }
+
+  test('経路設計には引き渡し待ちの件数と導線が出る', async ({ page, request }) => {
+    // 前提は自分で作る。前のテストに頼ると、単独で回したときに落ちる。
+    await bookCargo(request, `件数確認-${Date.now()}`);
+
     await signIn(page, 'routing01');
 
-    // 上のテストで仮受付が 1 件以上ある。件数からその場で一覧へ行けること。
     const notice = page.getByText(/引き渡し待ちの予約が \d+ 件/);
     await expect(notice).toBeVisible({ timeout: 20_000 });
     await notice.getByRole('link', { name: '予約一覧' }).click();
 
     await expect(page.getByRole('heading', { name: '予約一覧' })).toBeVisible();
+  });
+
+  test('営業が経路設計へ引き渡すと、経路設計者の作業一覧に出る（US06）', async ({
+    page,
+    request,
+  }) => {
+    const product = `引き渡し-${Date.now()}`;
+    const bookingId = await bookCargo(request, product);
+
+    await signIn(page, 'sales01');
+    await page.goto(`/bookings/${bookingId}`);
+    await page.getByRole('button', { name: '経路設計を依頼する' }).click();
+    await expect(page.getByText('経路提案中')).toBeVisible({ timeout: 20_000 });
+
+    await page.goto('/logout');
+    await signIn(page, 'routing01');
+    await page.getByRole('link', { name: '経路設計作業' }).first().click();
+
+    await expect(page.getByRole('heading', { name: '経路設計作業一覧' })).toBeVisible();
+    await expect(page.getByText(product)).toBeVisible({ timeout: 20_000 });
+  });
+
+  test('経路設計者が航海を登録すると、一覧に出る（US24）', async ({ page }) => {
+    const voyageNumber = `V-E2E-${String(Date.now()).slice(-6)}`;
+
+    await signIn(page, 'routing01');
+    await page.getByRole('link', { name: '航海登録' }).first().click();
+    await expect(page.getByRole('heading', { name: '航海スケジュールを登録する' })).toBeVisible();
+
+    await page.getByLabel('航海番号').fill(voyageNumber);
+    await page.getByLabel('運送会社コード').fill('MOL');
+    await page.getByLabel('運送会社').fill('商船三井');
+    await page.getByLabel('船名').fill('E2E EXPRESS');
+    await page.getByLabel('出発地').fill('JPTYO');
+    await page.getByLabel('到着地').fill('USNYC');
+    // 出港済みを既定で外すので、未来の日付にしないと一覧に出ない。
+    await page.getByLabel('出発日時').fill(`${businessDate(30)}T09:00`);
+    await page.getByLabel('到着日時').fill(`${businessDate(45)}T18:00`);
+    await page.getByRole('button', { name: '登録する' }).click();
+
+    await expect(page.getByRole('heading', { name: '航海スケジュール一覧' })).toBeVisible();
+    await expect(page.getByText(voyageNumber)).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText('E2E EXPRESS')).toBeVisible();
   });
 
   test('管理者は利用者の状態を見てロックを解除できる', async ({ page, request }) => {

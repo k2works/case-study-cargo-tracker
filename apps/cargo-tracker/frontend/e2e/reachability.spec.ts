@@ -176,3 +176,74 @@ test('ログアウトするとブラウザバックで業務画面に戻れな�
   await page.goBack();
   await expect(page.getByRole('heading', { name: '荷主一覧' })).not.toBeVisible();
 });
+
+/**
+ * 経路設計者の到達性（IT3）。ロール軸の両方向を見る。
+ *
+ * <p>ナビに出るのに開けない（あるいはその逆）を片方だけの検査では捕まえられない。
+ * 出ること・開けること・他のロールには出ないこと・直打ちが 403 になることを揃える。</p>
+ */
+async function signInAs(
+  page: import('@playwright/test').Page,
+  username: string,
+  roles: readonly string[],
+): Promise<void> {
+  await page.route('**/api/v1/auth/login', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ token: 'token', username, displayName: username, roles, shipperId: null }),
+    }),
+  );
+  await page.route('**/api/v1/booking/**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: '{"items":[],"total":0}' }),
+  );
+  await page.route('**/api/v1/routing/**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: '{"items":[],"total":0}' }),
+  );
+
+  await page.goto('/login');
+  await page.getByLabel('利用者名').fill(username);
+  await page.getByLabel('パスワード').fill('secret1234');
+  await page.getByRole('button', { name: 'ログイン' }).click();
+  await expect(page.getByRole('heading', { name: 'ダッシュボード' })).toBeVisible();
+}
+
+test('経路設計でログインすると経路設計の画面がナビに出て、すべて開ける', async ({ page }) => {
+  await signInAs(page, 'routing01', ['ROLE_ROUTING']);
+
+  const nav = page.getByRole('navigation');
+  for (const label of ['経路設計作業', '航海スケジュール', '航海登録']) {
+    await expect(nav).toContainText(label);
+  }
+
+  // ナビに出た画面はすべて開ける。出ているのに開けないと、利用者は
+  // 「押しても何も起きない」を不具合と受け取る。
+  await page.goto('/routing/worklist');
+  await expect(page.getByRole('heading', { name: '経路設計作業一覧' })).toBeVisible();
+  await page.goto('/voyages');
+  await expect(page.getByRole('heading', { name: '航海スケジュール一覧' })).toBeVisible();
+  await page.goto('/voyages/new');
+  await expect(page.getByRole('heading', { name: '航海スケジュールを登録する' })).toBeVisible();
+});
+
+test('営業には航海の画面がナビに出ず、直打ちすると 403 になる', async ({ page }) => {
+  await signInAs(page, 'sales01', ['ROLE_SALES']);
+
+  const nav = page.getByRole('navigation');
+  await expect(nav).not.toContainText('航海スケジュール');
+  await expect(nav).not.toContainText('経路設計作業');
+
+  await page.goto('/voyages/new');
+  await expect(page.getByRole('heading', { name: 'この画面を開く権限がありません' }))
+    .toBeVisible();
+});
+
+test('経路設計はダッシュボードから作業一覧へ入れる', async ({ page }) => {
+  // 件数を出すだけでは仕事が進まない。0 件の日でも入口は要る。
+  await signInAs(page, 'routing01', ['ROLE_ROUTING']);
+
+  await page.getByRole('link', { name: '経路設計作業一覧を開く' }).click();
+
+  await expect(page.getByRole('heading', { name: '経路設計作業一覧' })).toBeVisible();
+});
