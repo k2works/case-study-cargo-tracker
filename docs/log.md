@@ -1,6 +1,7 @@
 # Docs Update Log
 
 ## 2026-09-04
+* **Creation**: [IT3実装_review_20260904](/review/cargo-tracker/IT3実装_review_20260904.md) を作成（claude-code/claude-opus-5）
 * **Update**: [user_story](/requirements/user_story.md) を更新（claude-code/claude-opus-5）
 * **Update**: [08-経路設計に引き渡す](/manual/08-経路設計に引き渡す.md) を更新（claude-code/claude-opus-5）
 * **Update**: [07-航海スケジュールを登録する](/manual/07-航海スケジュールを登録する.md) を更新（claude-code/claude-opus-5）

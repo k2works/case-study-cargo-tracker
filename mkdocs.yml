@@ -126,6 +126,7 @@ nav:
           - 設計レビュー（2026-09-02）: review/cargo-tracker/設計_review_20260902.md
           - IT1 実装レビュー（2026-09-03）: review/cargo-tracker/IT1実装_review_20260903.md
           - IT2 実装レビュー（2026-09-04）: review/cargo-tracker/IT2実装_review_20260904.md
+          - IT3 実装レビュー（2026-09-04）: review/cargo-tracker/IT3実装_review_20260904.md
   - ADR:
       - 概要: adr/index.md
       - cargo-tracker:
