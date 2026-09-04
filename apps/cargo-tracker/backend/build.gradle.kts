@@ -121,7 +121,17 @@ subprojects {
 
     // 閾値は check に紐付ける。report だけ出して verify を回さないと、
     // 数字が下がっても誰も止まらない。
-    tasks.named("check") { dependsOn(tasks.named("jacocoTestCoverageVerification")) }
+    //
+    // **レポートも check に紐付ける。** verify だけだと XML が古いまま残り、
+    // SonarQube が前のイテレーションのレポートを読む。新しく足したクラスは
+    // レポートに載っていないので「未カバー」として数えられ、**実際には
+    // テストがあるのに new_coverage が実際の半分以下になる**（IT2 で実測。
+    // 各モジュールの JaCoCo は 68〜97% なのに Sonar は 28.6%）。
+    // 「読めている」ことと「今のものを読んでいる」ことは別である。
+    tasks.named("check") {
+        dependsOn(tasks.named("jacocoTestCoverageVerification"))
+        dependsOn(tasks.named("jacocoTestReport"))
+    }
 
     tasks.named<JacocoCoverageVerification>("jacocoTestCoverageVerification") {
         dependsOn(tasks.named("test"))

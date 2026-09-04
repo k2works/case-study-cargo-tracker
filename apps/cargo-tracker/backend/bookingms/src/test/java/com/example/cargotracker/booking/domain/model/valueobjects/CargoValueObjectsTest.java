@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.example.cargotracker.shared.domain.location.Location;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Month;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -91,7 +92,7 @@ class CargoValueObjectsTest {
     @Test
     @DisplayName("経路仕様は端点と期限を欠かさない")
     void routeSpecificationRequiresEndpoints() {
-        LocalDate deadline = LocalDate.of(2026, 12, 1);
+        LocalDate deadline = LocalDate.of(2026, Month.DECEMBER, 1);
         assertThatThrownBy(() -> new RouteSpecification(null, Location.of("USNYC"), deadline))
                 .hasMessageContaining("出発地と目的地は必須");
         assertThatThrownBy(() -> new RouteSpecification(Location.of("JPTYO"), null, deadline))

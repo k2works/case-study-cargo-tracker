@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { ApiError } from '@/shared/api/client';
 import { useAuthStore } from '@/shared/auth/authStore';
@@ -23,7 +23,7 @@ export function LoginPage() {
   const signIn = useAuthStore((state) => state.login);
   const navigate = useNavigate();
 
-  async function onSubmit(event: FormEvent) {
+  async function onSubmit(event: SubmitEvent) {
     event.preventDefault();
     setError(null);
     setSubmitting(true);

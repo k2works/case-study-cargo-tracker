@@ -4,7 +4,7 @@ title: "イテレーション計画 2 - 貨物予約・法人荷主・アカウ�
 description: "IT2 の計画。US31/US03/US04（9 SP）に加え、IT1 の持ち越し 5 件とレビュー指摘 10 件を先に枠へ入れる。状態遷移を持つ集約 Cargo を Event Sourcing で書き、IT2 終了時に ADR-0001 決定 2 の発動条件を判定する。デモ項目 8 件。"
 tags: [plan,iteration,cargo-tracker]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-04T01:19:05Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-04T03:04:59Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-03T11:47:28Z }
 ---
@@ -122,7 +122,14 @@ US03 は IT1 の `Shipper` 集約に契約情報を足すだけなので短く�
 | :--- | :--- | :--: | :--: |
 | Q.1 | **実装を壊して赤を見る** | 3h | [x] ロック 3 通り・解除 2 通り・契約投影 2 通り・`@EventTag`・フロント 3 通り。すべて赤になった |
 | Q.2 | デモ項目との対応表 | 1h | [x] 計画のデモ項目節に本文のアサーションつきで記載 |
-| Q.3 | Quality Gate の対象と鮮度の再確認（スキャンした数だけ確かめる・前回の解析結果を読まない） | 1h | [~] スキャンを実行し **FAILED を 2 件の実在する指摘として受け取った**（空パッケージ・引数なしのクエリ record）。両方直した。`new_coverage` は JaCoCo レポートの鮮度に依存するので、`build` 完走後に再スキャンする |
+| Q.3 | Quality Gate の対象と鮮度の再確認（スキャンした数だけ確かめる・前回の解析結果を読まない） | 1h | [x] **配線の欠陥を 2 件見つけた**（下記）。指摘 17 件も実在するものとして全部直した。両プロジェクトとも PASSED |
+
+**Q.3 で見つけた配線の欠陥。** IT1 のレビュー H1・H2 と同じ種類で、どちらも「緑に見えて何も見ていない」ではなく「**赤く見えて実態と違う**」形だった。
+
+| # | 欠陥 | どう間違っていたか |
+| :--- | :--- | :--- |
+| 1 | **`check` が `jacocoTestReport` を呼んでいなかった。** `jacocoTestCoverageVerification` だけを呼んでいた | XML レポートが前のイテレーションのまま残り、SonarQube が古いレポートを読む。**新しく足したクラスはレポートに載っていないので「未カバー」として数えられ**、実際にはテストがあるのに `new_coverage` が 28.6% と出た（各モジュールの JaCoCo は 68〜97%）。「読めている」ことと「今のものを読んでいる」ことは別 |
+| 2 | **`sonar-local:scan` が TypeScript 向けの引数でバックエンドの `sonar-project.properties` を上書きしていた**（`sonar.sources=src`・`sonar.tests=src`・TS だけの `test.inclusions`） | コマンドラインの `-D` は properties より強い。Java のテストが「テスト」と見なされていなかった。設定ファイルがあるときは渡さない形に直した |
 | | 小計 | 5h | |
 
 #### 1. US31 認証失敗が続いたアカウントを保護する（2 SP）

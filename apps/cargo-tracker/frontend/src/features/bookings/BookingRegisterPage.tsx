@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { ApiError } from '@/shared/api/client';
 import { display, fetchShippers } from '@/features/shippers/api';
@@ -26,12 +26,17 @@ export function BookingRegisterPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function onSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     setSubmitting(true);
     const form = new FormData(event.currentTarget);
-    const text = (name: string) => String(form.get(name) ?? '');
+    // FormData.get は File も返しうる。String() で包むだけだと
+    // '[object Object]' が業務の値として送られる。文字列のときだけ採る。
+    const text = (name: string) => {
+      const value = form.get(name);
+      return typeof value === 'string' ? value : '';
+    };
     try {
       await bookCargo({
         shipperId: text('shipperId'),

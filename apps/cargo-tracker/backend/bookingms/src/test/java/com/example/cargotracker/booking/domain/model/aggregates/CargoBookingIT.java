@@ -12,6 +12,7 @@ import com.example.cargotracker.booking.domain.model.valueobjects.Weight;
 import com.example.cargotracker.shared.domain.location.Location;
 import com.example.cargotracker.shared.testing.AbstractAxonIntegrationTest;
 import java.time.LocalDate;
+import java.time.Month;
 import org.axonframework.messaging.commandhandling.gateway.CommandGateway;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -38,7 +39,7 @@ class CargoBookingIT extends AbstractAxonIntegrationTest {
                 new CargoSpecification(CargoType.GENERAL, Weight.ofKilograms("1200"),
                         Dimensions.of("120", "80", "100"), 10, "自動車部品", null, null),
                 new RouteSpecification(Location.of("JPTYO"), Location.of("USNYC"),
-                        LocalDate.of(2026, 12, 1)),
+                        LocalDate.of(2026, Month.DECEMBER, 1)),
                 "sales01");
     }
 

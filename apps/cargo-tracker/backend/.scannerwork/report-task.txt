@@ -2,5 +2,5 @@ projectKey=cargo-tracker-java-take-8-backend
 serverUrl=http://localhost:9001
 serverVersion=26.6.0.123539
 dashboardUrl=http://localhost:9001/dashboard?id=cargo-tracker-java-take-8-backend
-ceTaskId=f1168024-ea87-485d-8f70-0738bc6145c7
-ceTaskUrl=http://localhost:9001/api/ce/task?id=f1168024-ea87-485d-8f70-0738bc6145c7
+ceTaskId=41cc5124-a1aa-40a6-b20e-4106914632f4
+ceTaskUrl=http://localhost:9001/api/ce/task?id=41cc5124-a1aa-40a6-b20e-4106914632f4

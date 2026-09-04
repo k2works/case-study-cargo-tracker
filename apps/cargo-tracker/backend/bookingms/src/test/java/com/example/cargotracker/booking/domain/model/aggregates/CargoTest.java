@@ -16,6 +16,7 @@ import com.example.cargotracker.booking.domain.model.valueobjects.Weight;
 import com.example.cargotracker.shared.domain.location.Location;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Month;
 import org.axonframework.eventsourcing.configuration.EventSourcedEntityModule;
 import org.axonframework.eventsourcing.configuration.EventSourcingConfigurer;
 import org.axonframework.test.fixture.AxonTestFixture;
@@ -26,7 +27,7 @@ import org.junit.jupiter.api.Test;
 /** Cargo 集約の不変条件（domain-model.md「Cargo 集約の不変条件」1・2・3）。 */
 class CargoTest {
 
-    private static final LocalDate DEADLINE = LocalDate.of(2026, 12, 1);
+    private static final LocalDate DEADLINE = LocalDate.of(2026, Month.DECEMBER, 1);
 
     private AxonTestFixture fixture;
 

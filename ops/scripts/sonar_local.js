@@ -337,19 +337,35 @@ function runScan(project, token, hostUrl) {
       break;
 
     case 'sonar-scanner':
-    default:
+    default: {
+      // sonar-project.properties があればそれを正とし、ここからは上書きしない。
+      //
+      // **コマンドラインの -D は properties より強い。** 以前はここで
+      // `sonar.sources=src` `sonar.tests=src` と TypeScript 向けの
+      // `sonar.test.inclusions` を無条件に渡していた。Java のプロジェクトでは
+      // テストが「テスト」と見なされず、**テストコードが未カバーのソースとして
+      // 数えられて** new_coverage が実際の半分以下になっていた（IT2 で実測。
+      // 各モジュールの JaCoCo は 68〜97% なのに Sonar は 28.6%）。
+      //
+      // 指摘が 0 件でも「見ていない」ことがあるのと同じで、カバレッジも
+      // 「読めている」ことと「正しく数えている」ことは別である。
+      const hasProperties = fs.existsSync(path.join(cwd, 'sonar-project.properties'));
+      const layout = hasProperties
+        ? ''
+        : `-Dsonar.sources=src `
+          + `-Dsonar.tests=src `
+          + `-Dsonar.test.inclusions="**/*.test.ts,**/*.test.tsx,**/*.spec.ts,**/*.spec.tsx" `;
       execSync(
         `npx sonarqube-scanner ` +
         `-Dsonar.projectKey=${project.projectKey} ` +
         `-Dsonar.projectName="${project.label}" ` +
-        `-Dsonar.sources=src ` +
-        `-Dsonar.tests=src ` +
-        `-Dsonar.test.inclusions="**/*.test.ts,**/*.test.tsx,**/*.spec.ts,**/*.spec.tsx" ` +
+        layout +
         `-Dsonar.host.url=${hostUrl} ` +
         `-Dsonar.token=${token} ${GATE_WAIT_ARGS}`,
         { stdio: 'inherit', cwd, env: cleanDockerEnv() },
       );
       break;
+    }
   }
 }
 

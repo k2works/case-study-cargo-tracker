@@ -47,11 +47,11 @@ export function IdleTimeout() {
     // 操作のたびに数え直す。消えるだけの実装にすると、警告が出たあと
     // 操作しても切れる時刻が変わらない。
     for (const event of ACTIVITY_EVENTS) {
-      window.addEventListener(event, schedule, { passive: true });
+      globalThis.addEventListener(event, schedule, { passive: true });
     }
     return () => {
       for (const event of ACTIVITY_EVENTS) {
-        window.removeEventListener(event, schedule);
+        globalThis.removeEventListener(event, schedule);
       }
       if (warnTimer.current) {
         clearTimeout(warnTimer.current);
@@ -77,9 +77,9 @@ export function IdleTimeout() {
         + ' text-sm text-amber-800'
       }
     >
-      操作がないため、あと {remaining} 分でログアウトします。
+      {`操作がないため、あと ${remaining} 分でログアウトします。`}
       <strong className="ml-1">入力中の内容は保存されません。</strong>
-      画面を操作すると延長されます。
+      {' 画面を操作すると延長されます。'}
     </div>
   );
 }

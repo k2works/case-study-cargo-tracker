@@ -46,7 +46,7 @@ export function BookingListPage() {
           checked={includeFinished}
           onChange={(event) => setIncludeFinished(event.target.checked)}
         />
-        終了したものも表示
+        {'終了したものも表示'}
       </label>
 
       {isPending && <output className={`${NOTICE} mt-4`}>読み込み中…</output>}

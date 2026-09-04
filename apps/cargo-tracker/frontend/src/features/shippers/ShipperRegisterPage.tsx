@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { ApiError } from '@/shared/api/client';
 import { ALERT, BUTTON_PRIMARY, CARD, FIELD, LABEL, PAGE_TITLE } from '@/shared/ui/styles';
@@ -21,7 +21,7 @@ export function ShipperRegisterPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+  async function onSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     setSubmitting(true);

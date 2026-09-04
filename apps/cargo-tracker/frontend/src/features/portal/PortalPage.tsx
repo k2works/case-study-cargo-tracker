@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { BUTTON_PRIMARY, FIELD, LABEL, LINK, PAGE_TITLE } from '@/shared/ui/styles';
 
@@ -15,7 +15,7 @@ export function PortalPage() {
   const [trackingNumber, setTrackingNumber] = useState('');
   const navigate = useNavigate();
 
-  function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+  function onSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     const value = trackingNumber.trim();
     // 空のまま送ると追跡番号のない詳細画面に着く。押しても何も起きないほうがよい。

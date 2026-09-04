@@ -7,14 +7,11 @@ import { expect, test } from '@playwright/test';
  * イメージの作り忘れ・マイグレーションの失敗・サービス間の配線ミスは、
  * ここでしか出ない。</p>
  *
- * <p>`E2E_BASE_URL` が無いときは飛ばす。ローカルの Vite 開発サーバには
- * バックエンドが繋がっていないので、走らせても意味がない。</p>
+ * <p>`E2E_BASE_URL` が無いときは<b>読み込まない</b>（`playwright.config.ts` の
+ * `testIgnore`）。skip にすると「飛ばした」のか「無い」のかが実行結果から
+ * 読み取れず、0 件で緑の回が混じる。</p>
  */
-const CLUSTER = process.env.E2E_BASE_URL !== undefined;
-
 test.describe('kind クラスタでの通し確認', () => {
-  test.skip(!CLUSTER, 'E2E_BASE_URL が無いので飛ばす（gulp k8s:open で転送を張る）');
-
   /** 業務タイムゾーンで作る。toISOString() は CI（UTC）で 1 日ずれる。 */
   function businessDate(offsetDays: number): string {
     const formatter = new Intl.DateTimeFormat('en-CA', {

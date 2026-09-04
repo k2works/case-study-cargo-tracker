@@ -46,6 +46,14 @@ class AuthControllerIT extends AbstractAxonIntegrationTest {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    /**
+     * 本番と同じ時計を使う。テストが {@code now()} を直接呼ぶと、本番が業務
+     * タイムゾーンで動いていてもテストだけが JVM 既定で判断する。ロックの残り時間の
+     * ように時刻の差を見る検査では、その食い違いがそのまま誤判定になる。
+     */
+    @Autowired
+    private java.time.Clock clock;
+
     private final RestClient rest = RestClient.builder()
             .defaultStatusHandler(status -> true, (request, response) -> { })
             .build();
@@ -74,7 +82,7 @@ class AuthControllerIT extends AbstractAxonIntegrationTest {
                                    failed_attempts, locked_until, created_at, updated_at)
                 VALUES (?, ?, ?, NULL, TRUE, 0, NULL, ?, ?)
                 """, "sales01", passwordEncoder.encode("secret1234"), "営業 太郎",
-                OffsetDateTime.now(), OffsetDateTime.now());
+                OffsetDateTime.now(clock), OffsetDateTime.now(clock));
         jdbc.update("INSERT INTO user_roles (username, role) VALUES (?, ?)", "sales01", "ROLE_SALES");
     }
 
@@ -170,7 +178,7 @@ class AuthControllerIT extends AbstractAxonIntegrationTest {
                                    failed_attempts, locked_until, created_at, updated_at)
                 VALUES (?, ?, ?, NULL, FALSE, 0, NULL, ?, ?)
                 """, "retired01", passwordEncoder.encode("secret1234"), "退職 済",
-                OffsetDateTime.now(), OffsetDateTime.now());
+                OffsetDateTime.now(clock), OffsetDateTime.now(clock));
         jdbc.update("INSERT INTO user_roles (username, role) VALUES (?, ?)",
                 "retired01", "ROLE_SALES");
     }
@@ -187,7 +195,7 @@ class AuthControllerIT extends AbstractAxonIntegrationTest {
         java.time.OffsetDateTime lockedUntil = jdbc.queryForObject(
                 "SELECT locked_until FROM users WHERE username = 'sales01'",
                 java.time.OffsetDateTime.class);
-        long minutes = java.time.Duration.between(java.time.OffsetDateTime.now(), lockedUntil)
+        long minutes = java.time.Duration.between(OffsetDateTime.now(clock), lockedUntil)
                 .toMinutes();
 
         assertThat(minutes)
