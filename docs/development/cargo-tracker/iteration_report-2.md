@@ -3,7 +3,7 @@ type: Plan
 title: "イテレーション 2 完了報告書"
 tags: [plan]
 status: draft
-generated: { by: claude-code/claude-opus-5, at: 2026-09-04T06:38:36Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-04T08:43:13Z }
 ---
 
 # イテレーション 2 完了報告書
@@ -167,7 +167,7 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-04T06:38:36Z }
 
 ## 次イテレーション引き継ぎ
 
-[ふりかえり](retrospective-2.md) の「次イテレーションへの引き継ぎ」を参照してください。Try は 8 件、引き継ぎは 6 件です。
+[ふりかえり](retrospective-2.md) の「次イテレーションへの引き継ぎ」を参照してください。Try は 8 件、引き継ぎは 12 件です。
 
 とくに **T1（並列レビューを開発の終盤に起動し、クローズ作業と並行させる）** は、IT1 の Try 6 を訂正するものです。10 分の無応答を「返らない」と読んだのが誤りで、結果は 35〜40 分で届きます。
 

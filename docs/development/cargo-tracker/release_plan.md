@@ -4,7 +4,7 @@ title: "リリース計画 - 国際貨物輸送管理システム（CQRS / Event
 description: "CQRS / Event Sourcing 版 Cargo Tracker のリリース計画。US01〜US31 を 15 イテレーション・5 リリース（120 SP）に配分し、ストーリーポイント・ベロシティ・バッファ・順序の根拠・リスクを定める。"
 tags: [plan,release,cargo-tracker]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-04T05:01:01Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-04T08:43:13Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T12:47:29Z }
 ---
@@ -266,7 +266,8 @@ IT4・IT10・IT12・IT15 に SP 対象外の枠を置きます。**「余力次�
 | :--- | :--: | :--: | :--: | :--- |
 | IT1 | 9 | 9 | 100% | **完了**（[計画](iteration_plan-1.md)・[ふりかえり](retrospective-1.md)・[報告書](iteration_report-1.md)） |
 | IT2 | 9 | 9 | 100% | **完了**（[計画](iteration_plan-2.md)・[ふりかえり](retrospective-2.md)・[報告書](iteration_report-2.md)） |
-| IT3〜IT15 | 102 | — | — | 未着手 |
+| IT3 | 9 | — | — | **計画済み**（[計画](iteration_plan-3.md)） |
+| IT4〜IT15 | 93 | — | — | 未着手 |
 | **累計** | **120** | **9** | **100%** | |
 
 **実績 SP は 9 です。** US26（3）・US27（1）・US02（5）の受入基準を満たし、デモ項目 7 件の受け入れテストが緑です。ただし **SP 対象外の基盤投資に持ち越しが 5 件あります**（S01 ポータル・全ルートのプレースホルダ・無操作タイムアウト・スパイク 0.7・契約テストの往復）。ベロシティは 9 と読めますが、基盤の未完了分を IT2 が負う点は [ふりかえり](retrospective-1.md) を参照してください。
@@ -279,7 +280,7 @@ IT4・IT10・IT12・IT15 に SP 対象外の枠を置きます。**「余力次�
 
 ## 次のステップ
 
-1. IT3 の計画を作る（`opening-iteration`）。**IT2 の引き継ぎ 6 件を先に枠へ入れる**
+1. ~~IT3 の計画を作る（`opening-iteration`）~~ **完了**。引き継ぎは 6 件ではなく **12 件**（[ふりかえり](retrospective-2.md) の表は 12 行）で、うち 8 件を返済枠 R.1〜R.11、3 件を設計反映事項、1 件（Reaction）を「発動せず」として配分した
 2. IT3 の Day 8 あたりで **kind クラスタに対する E2E を 1 度回す**（IT2 では終わりにだけ回し、見つかった食い違いの修正がクローズを押した）
 3. `syncing-github-project` で IT2 の Issue をクローズし、IT3 の Status を更新する
 4. IT3 終了時点でベロシティを再度見る（routingms の立ち上げコストが乗る）
@@ -291,6 +292,7 @@ IT4・IT10・IT12・IT15 に SP 対象外の枠を置きます。**「余力次�
 | 2026-09-02 | 初版作成。US01〜US31 を 15 イテレーション・5 リリースに配分 | claude-code/claude-fable-5-1 |
 | 2026-09-03 | IT1 クローズ。実績 SP 9（達成率 100%）と持ち越し 5 件を記録 | claude-code/claude-opus-5 |
 | 2026-09-03 | IT2 開始準備。計画を作成し進捗表を「計画済み」に更新 | claude-code/claude-opus-5 |
+| 2026-09-04 | IT3 開始準備。進捗表を「計画済み」に更新。IT2 の引き継ぎ件数を 6 件 → 12 件に訂正（ふりかえりが正） | claude-code/claude-opus-5 |
 | 2026-09-04 | IT2 クローズ。実績 SP 9（達成率 100%）と ADR-0001 決定 2 の判定（発動せず）を記録 | claude-code/claude-opus-5 |
 
 ## 関連ドキュメント

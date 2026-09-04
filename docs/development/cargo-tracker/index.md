@@ -17,7 +17,8 @@ cargo-tracker プロジェクトの開発ドキュメントです。
 | :--- | :--- | :--- | :--- | :--- |
 | IT1 基盤・認証・荷主登録 | [計画](iteration_plan-1.md) | [ふりかえり](retrospective-1.md) | [完了報告書](iteration_report-1.md) | **完了**（実績 9 SP・達成率 100%。持ち越し 5 件） |
 | IT2 貨物予約・法人荷主・アカウント保護 | [計画](iteration_plan-2.md) | [ふりかえり](retrospective-2.md) | [完了報告書](iteration_report-2.md) | **完了**（実績 9 SP・達成率 100%。欠陥 12 件を発見・修正） |
-| IT3〜IT15 | 未作成 | — | — | 未着手 |
+| IT3 危険物・引き渡し・航海登録 | [計画](iteration_plan-3.md) | — | — | **計画済み**（US05 3・US06 2・US24 4 = 9 SP。Release 0.1 の締め） |
+| IT4〜IT15 | 未作成 | — | — | 未着手 |
 
 ## 補足
 
