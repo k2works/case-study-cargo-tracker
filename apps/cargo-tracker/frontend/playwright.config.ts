@@ -7,7 +7,14 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './e2e',
   // キャプチャ生成は CI の到達性スモークとは別に回す（画面を変えたときだけ）。
-  testIgnore: process.env.MANUAL_CAPTURE ? [] : ['**/manual-capture.spec.ts'],
+  // クラスタ確認は E2E_BASE_URL があるときだけ。無いときに読み込むと、
+  // 中で skip していても「0 件で緑」に見える回が混じる。
+  testIgnore: process.env.MANUAL_CAPTURE
+    ? []
+    : [
+        '**/manual-capture.spec.ts',
+        ...(process.env.E2E_BASE_URL ? [] : ['**/cluster.spec.ts']),
+      ],
   timeout: 30_000,
   expect: { timeout: 10_000 },
   // CI で 1 度でも落ちたら赤にする。再試行で緑にすると、たまに落ちるテストを

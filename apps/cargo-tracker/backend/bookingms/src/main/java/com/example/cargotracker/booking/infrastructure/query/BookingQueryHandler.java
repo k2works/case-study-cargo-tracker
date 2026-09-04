@@ -3,7 +3,7 @@ package com.example.cargotracker.booking.infrastructure.query;
 import com.example.cargotracker.booking.infrastructure.persistence.CargoSummaryMapper;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.BookingListView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.BookingView;
-import com.example.cargotracker.booking.infrastructure.query.BookingQueries.CountPreliminaryBookingsQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.CountBookingsByStatusQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingsQuery;
 import org.axonframework.messaging.queryhandling.annotation.QueryHandler;
@@ -36,8 +36,8 @@ public class BookingQueryHandler {
     }
 
     @QueryHandler
-    public Integer handle(CountPreliminaryBookingsQuery query) {
-        return cargos.countPreliminary();
+    public Integer handle(CountBookingsByStatusQuery query) {
+        return cargos.countByStatus(query.bookingStatus());
     }
 
     private static BookingView toView(CargoSummaryMapper.CargoSummaryRow row) {

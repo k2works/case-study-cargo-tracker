@@ -6,7 +6,7 @@ import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
 import com.example.cargotracker.booking.infrastructure.persistence.CargoSummaryMapper;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.BookingListView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.BookingView;
-import com.example.cargotracker.booking.infrastructure.query.BookingQueries.CountPreliminaryBookingsQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.CountBookingsByStatusQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingsQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueryHandler;
@@ -126,6 +126,9 @@ class CargoProjectionIT extends AbstractAxonIntegrationTest {
     void countsPreliminary() {
         projection.on(booked("B-CNT-" + System.nanoTime(), "SHP-X", "数える荷"));
 
-        assertThat(queries.handle(new CountPreliminaryBookingsQuery())).isPositive();
+        assertThat(queries.handle(new CountBookingsByStatusQuery("PRELIMINARY"))).isPositive();
+        assertThat(queries.handle(new CountBookingsByStatusQuery("CANCELLED")))
+                .as("状態を引数で受けるので、別の状態でも数えられる")
+                .isNotNull();
     }
 }

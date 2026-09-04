@@ -98,6 +98,45 @@ describe('S20 予約一覧', () => {
 });
 
 describe('S21 予約登録', () => {
+  /** 荷主の一覧と、そのあとの登録の応答を順に返す。 */
+  function mockShippersThen(response: Response) {
+    return vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            items: [
+              {
+                shipperId: 's-1',
+                shipperCode: 'SHP-000001',
+                shipperType: 'INDIVIDUAL',
+                name: '山田商事',
+                email: 'a@example.com',
+                phone: null,
+                address: null,
+                contractNumber: null,
+                discountRate: null,
+              },
+            ],
+          }),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValue(response);
+  }
+
+  it('荷主は一覧から選ぶ（識別子を打たせない）', async () => {
+    // 識別子を打たせると、営業は一覧を開いて UUID を書き写すことになる。
+    mockShippersThen(new Response('{}', { status: 200 }));
+
+    renderAt('/bookings-new', <BookingRegisterPage />);
+
+    const select = await screen.findByLabelText('荷主');
+    expect(select.tagName).toBe('SELECT');
+    expect(await screen.findByRole('option', { name: '山田商事（SHP-000001）' }))
+      .toBeInTheDocument();
+  });
+
   it('危険物を選んだときだけ IMO クラスを出す', async () => {
     renderAt('/bookings-new', <BookingRegisterPage />);
 
@@ -120,12 +159,14 @@ describe('S21 予約登録', () => {
   });
 
   it('寸法を送る', async () => {
-    const fetchMock = vi
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(new Response(JSON.stringify({ bookingId: 'b-1' }), { status: 201 }));
+    const fetchMock = mockShippersThen(
+      new Response(JSON.stringify({ bookingId: 'b-1' }), { status: 201 }),
+    );
 
     renderAt('/bookings-new', <BookingRegisterPage />);
-    await userEvent.type(screen.getByLabelText('荷主 ID'), 's-1');
+    // 一覧が届いてから選ぶ。届く前に選ぶと、選択肢が空の select を触ることになる。
+    await screen.findByRole('option', { name: '山田商事（SHP-000001）' });
+    await userEvent.selectOptions(screen.getByLabelText('荷主'), 's-1');
     await userEvent.type(screen.getByLabelText('出発地'), 'JPTYO');
     await userEvent.type(screen.getByLabelText('目的地'), 'USNYC');
     await userEvent.type(screen.getByLabelText('到着期限'), '2026-12-01');
@@ -139,14 +180,15 @@ describe('S21 予約登録', () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
     // 集約が持つ値を画面が落とすと、US04 §受入基準 2 を満たせない。
-    const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
+    const post = fetchMock.mock.calls.find((c) => c[1]?.method === 'POST');
+    const body = JSON.parse(String(post?.[1]?.body));
     expect(body.lengthCm).toBe('120');
     expect(body.widthCm).toBe('80');
     expect(body.heightCm).toBe('100');
   });
 
   it('業務規則で断られたら理由を出す', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    mockShippersThen(
       new Response(
         JSON.stringify({ code: 'BUSINESS_RULE_VIOLATION', message: '出発地と目的地が同じです: JPTYO' }),
         { status: 422 },
@@ -154,7 +196,9 @@ describe('S21 予約登録', () => {
     );
 
     renderAt('/bookings-new', <BookingRegisterPage />);
-    await userEvent.type(screen.getByLabelText('荷主 ID'), 's-1');
+    // 一覧が届いてから選ぶ。届く前に選ぶと、選択肢が空の select を触ることになる。
+    await screen.findByRole('option', { name: '山田商事（SHP-000001）' });
+    await userEvent.selectOptions(screen.getByLabelText('荷主'), 's-1');
     await userEvent.type(screen.getByLabelText('出発地'), 'JPTYO');
     await userEvent.type(screen.getByLabelText('目的地'), 'JPTYO');
     await userEvent.type(screen.getByLabelText('到着期限'), '2026-12-01');

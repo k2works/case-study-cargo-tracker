@@ -47,9 +47,9 @@ public interface CargoSummaryMapper {
             "UPDATE cargo_summary SET booking_status = 'SETTLED' WHERE booking_id = #{bookingId}")
     int markSettledForTest(@Param("bookingId") String bookingId);
 
-    /** 経路設計の作業量（S02 の「今日の作業」）。仮受付は引き渡し待ちを意味する。 */
-    @Select("SELECT count(*) FROM cargo_summary WHERE booking_status = 'PRELIMINARY'")
-    int countPreliminary();
+    /** 状態ごとの件数（S02 の「今日の作業」）。仮受付は引き渡し待ちを意味する。 */
+    @Select("SELECT count(*) FROM cargo_summary WHERE booking_status = #{bookingStatus}")
+    int countByStatus(@Param("bookingStatus") String bookingStatus);
 
     /** 投影の行。shipper_name は鍵破棄後に null になる（ADR-0003）。 */
     record CargoSummaryRow(

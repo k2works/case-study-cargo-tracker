@@ -24,8 +24,13 @@ public final class BookingQueries {
     public record FindBookingsQuery(int page, int size, boolean includeFinished) {
     }
 
-    /** 経路設計の作業量（S02 の「今日の作業」）。 */
-    public record CountPreliminaryBookingsQuery() {
+    /**
+     * 状態ごとの件数（S02 の「今日の作業」）。
+     *
+     * <p>「仮受付の件数」に限定しない。誤配の件数（S30）も同じ形で数えるので、
+     * 状態を引数に取る。専用のクエリを状態の数だけ足すと、増やすたびに配線が増える。</p>
+     */
+    public record CountBookingsByStatusQuery(String bookingStatus) {
     }
 
     /** 画面に出す予約。荷主名は鍵破棄後に {@code null} になる。 */

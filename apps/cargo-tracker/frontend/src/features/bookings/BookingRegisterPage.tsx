@@ -1,7 +1,8 @@
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { ApiError } from '@/shared/api/client';
+import { display, fetchShippers } from '@/features/shippers/api';
 import { ALERT, BUTTON_PRIMARY, CARD, FIELD, LABEL, PAGE_TITLE } from '@/shared/ui/styles';
 import { bookCargo, type CargoType } from './api';
 
@@ -16,6 +17,10 @@ import { bookCargo, type CargoType } from './api';
  */
 export function BookingRegisterPage() {
   const [cargoType, setCargoType] = useState<CargoType>('GENERAL');
+  // 荷主は選ぶ（UI 設計 S21）。識別子を打たせると、営業は一覧を開いて
+  // UUID を書き写すことになる。荷主コードは画面に出ているが、予約が要るのは
+  // 識別子なので、対応づけを人にやらせない。
+  const { data: shippers } = useQuery({ queryKey: ['shippers'], queryFn: fetchShippers });
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
@@ -64,7 +69,20 @@ export function BookingRegisterPage() {
       <h1 className={PAGE_TITLE}>貨物予約の登録</h1>
 
       <form onSubmit={onSubmit} className={`${CARD} mt-4 space-y-4`}>
-        <Field id="shipperId" label="荷主 ID" required />
+        <div>
+          <label htmlFor="shipperId" className={LABEL}>
+            荷主
+          </label>
+          <select id="shipperId" name="shipperId" required className={FIELD}>
+            <option value="">選んでください</option>
+            {shippers?.state === 'ready'
+              && shippers.value.items.map((shipper) => (
+                <option key={shipper.shipperId} value={shipper.shipperId}>
+                  {display(shipper.name)}（{shipper.shipperCode}）
+                </option>
+              ))}
+          </select>
+        </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field id="originUnLocode" label="出発地" required placeholder="JPTYO" />

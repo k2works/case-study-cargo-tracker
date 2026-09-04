@@ -10,7 +10,8 @@ import com.example.cargotracker.booking.domain.model.valueobjects.TemperatureReq
 import com.example.cargotracker.booking.domain.model.valueobjects.Weight;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.BookingListView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.BookingView;
-import com.example.cargotracker.booking.infrastructure.query.BookingQueries.CountPreliminaryBookingsQuery;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.CountBookingsByStatusQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingsQuery;
 import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos.BookCargoRequest;
@@ -97,7 +98,8 @@ public class BookingController {
     @GetMapping("/summary")
     public ResponseEntity<Map<String, Integer>> summary() {
         return ResponseEntity.ok(Map.of("preliminary",
-                query(new CountPreliminaryBookingsQuery(), Integer.class)));
+                query(new CountBookingsByStatusQuery(BookingStatus.PRELIMINARY.name()),
+                        Integer.class)));
     }
 
     /**
