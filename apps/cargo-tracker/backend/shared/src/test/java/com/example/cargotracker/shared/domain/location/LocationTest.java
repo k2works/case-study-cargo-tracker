@@ -42,6 +42,47 @@ class LocationTest {
     }
 
     @Test
+    @DisplayName("国コードも英大文字 2 文字")
+    void validatesCountryCodeFormat() {
+        assertThat(new CountryCode("JP").value()).isEqualTo("JP");
+        assertThat(new CountryCode("JP").toString()).isEqualTo("JP");
+
+        assertThatThrownBy(() -> new CountryCode(null)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new CountryCode("jp")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new CountryCode("JPN")).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("UN/LOCODE は必須")
+    void locationRequiresUnLocode() {
+        assertThatThrownBy(() -> new Location(null, "東京"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("of は港名なしの場所を作る")
+    void createsWithoutName() {
+        Location location = Location.of("JPTYO");
+
+        assertThat(location.name()).isNull();
+        assertThat(location.country()).isEqualTo(new CountryCode("JP"));
+        assertThat(location.unLocode().toString()).isEqualTo("JPTYO");
+    }
+
+    @Test
+    @DisplayName("場所以外とは等しくない")
+    void isNotEqualToOtherTypes() {
+        // equals を型で分岐させているので、その分岐も踏む。踏まないと、
+        // 別の型を渡したときに ClassCastException になる実装でも緑になる。
+        Location tokyo = Location.of("JPTYO");
+
+        assertThat(tokyo.equals(null)).isFalse();
+        assertThat(tokyo.equals("JPTYO")).isFalse();
+        assertThat(tokyo.equals(Location.of("USNYC"))).isFalse();
+        assertThat(tokyo.hashCode()).isEqualTo(Location.of("JPTYO").hashCode());
+    }
+
+    @Test
     @DisplayName("同一性は UN/LOCODE で決まる")
     void identityIsUnLocode() {
         // 港名は表示のための情報で、同じ港でも表記が揺れる。名前まで見て比較すると

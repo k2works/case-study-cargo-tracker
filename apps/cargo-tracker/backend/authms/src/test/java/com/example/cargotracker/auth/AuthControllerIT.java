@@ -296,6 +296,36 @@ class AuthControllerIT extends AbstractAxonIntegrationTest {
     }
 
     @Test
+    @DisplayName("複数ロールの管理者も解除できる")
+    void allowsUnlockWhenAdminAmongRoles() {
+        // ロールは "," 区切りで届く。1 つ目だけを見る実装だと、管理者を兼ねる
+        // 利用者が解除できない。
+        assertThat(unlock("sales01", "ROLE_SALES,ROLE_ADMIN").getStatusCode())
+                .isEqualTo(HttpStatus.NO_CONTENT);
+        assertThat(unlock("sales01", " ROLE_ADMIN ").getStatusCode())
+                .as("前後の空白で弾かない")
+                .isEqualTo(HttpStatus.NO_CONTENT);
+    }
+
+    @Test
+    @DisplayName("利用者管理はロールと状態を出す")
+    void showsRolesAndLockState() {
+        insertDisabledUser();
+        for (int i = 0; i < 5; i++) {
+            login("sales01", "wrong-password");
+        }
+
+        ResponseEntity<JsonMap> response = adminUsers("ROLE_ADMIN");
+
+        String body = response.getBody().toString();
+        assertThat(body).contains("ROLE_SALES");
+        assertThat(body)
+                .as("ロック中であることが画面で判断できないと、解除ボタンを出せない")
+                .contains("locked=true");
+        assertThat(body).contains("retired01").contains("enabled=false");
+    }
+
+    @Test
     @DisplayName("無効化されたアカウントは正しいパスワードでも入れない")
     void rejectsDisabledAccount() {
         insertDisabledUser();

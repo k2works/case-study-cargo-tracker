@@ -1,6 +1,13 @@
 # Docs Update Log
 
+## 2026-09-04
+* **Update**: [iteration_plan-2](/development/cargo-tracker/iteration_plan-2.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0001-cqrs-es-with-axon-in-microservices](/adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) を更新（claude-code/claude-opus-5）
+
 ## 2026-09-03
+* **Update**: [iteration_plan-2](/development/cargo-tracker/iteration_plan-2.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0001-cqrs-es-with-axon-in-microservices](/adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-2](/development/cargo-tracker/iteration_plan-2.md) を更新（claude-code/claude-opus-5）
 * **Creation**: [06-利用者を管理する](/manual/06-利用者を管理する.md) を作成（claude-code/claude-opus-5）
 * **Creation**: [05-貨物予約を登録する](/manual/05-貨物予約を登録する.md) を作成（claude-code/claude-opus-5）
 * **Update**: [04-要確認一覧を確認する](/manual/04-要確認一覧を確認する.md) を更新（claude-code/claude-opus-5）

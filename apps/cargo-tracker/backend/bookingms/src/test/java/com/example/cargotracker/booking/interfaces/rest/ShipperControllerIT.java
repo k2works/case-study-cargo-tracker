@@ -166,6 +166,48 @@ class ShipperControllerIT extends AbstractAxonIntegrationTest {
     }
 
     @Test
+    @DisplayName("要確認一覧はロールが伝わらなければ何も出さない")
+    void attentionItemsNeedRoles() {
+        // 既定で営業宛を出すと、伝達が壊れていることに気づかないまま他ロールの
+        // 担当分が見える。
+        String base = "http://localhost:" + port + "/api/v1/booking/attention-items";
+        assertThat(rest.get().uri(base).retrieve().toEntity(JsonMap.class)
+                .getBody().get("items").toString()).isEqualTo("[]");
+        assertThat(rest.get().uri(base).header("X-Auth-Roles", "  ")
+                .retrieve().toEntity(JsonMap.class).getBody().get("items").toString())
+                .isEqualTo("[]");
+        assertThat(rest.get().uri(base).header("X-Auth-Roles", "ROLE_HANDLER")
+                .retrieve().toEntity(JsonMap.class).getBody().get("items").toString())
+                .as("担当外のロールには自分宛が無い")
+                .isEqualTo("[]");
+    }
+
+    @Test
+    @DisplayName("重複で弾いた行から既存の荷主を辿れる")
+    void attentionItemPointsToExistingShipper() {
+        String email = "dup-" + System.nanoTime() + "@example.com";
+        post("", corporate(email));
+        await().atMost(Duration.ofSeconds(10)).untilAsserted(() ->
+                assertThat(get("?page=0&size=200").getBody().get("items").toString())
+                        .contains(email));
+
+        Map<String, Object> again = new java.util.HashMap<>(corporate(email));
+        again.put("acknowledgedDuplicate", true);
+        post("", again);
+
+        await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
+            String body = rest.get()
+                    .uri("http://localhost:" + port + "/api/v1/booking/attention-items")
+                    .header("X-Auth-Roles", "ROLE_SALES")
+                    .retrieve().toEntity(JsonMap.class).getBody().get("items").toString();
+            assertThat(body).contains("メールアドレスの重複");
+            // 応答に payload（個人情報）は載せない。載せるのは識別子だけ（ADR-0003 決定 6）。
+            assertThat(body).doesNotContain(email);
+            assertThat(body).contains("relatedShipperId=");
+        });
+    }
+
+    @Test
     @DisplayName("一覧に登録した荷主が出る")
     void listsShippers() {
         String email = "list-" + System.nanoTime() + "@example.com";

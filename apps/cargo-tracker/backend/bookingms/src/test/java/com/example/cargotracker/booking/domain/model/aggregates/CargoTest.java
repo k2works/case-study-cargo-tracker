@@ -137,6 +137,41 @@ class CargoTest {
     // （IT2 で実測）。実 Axon Server で確かめる（CargoBookingIT）。
 
     @Test
+    @DisplayName("必須の入力が欠けた予約は受け付けない")
+    void rejectsMissingFields() {
+        // 入口の @NotBlank を通り抜けた要求でも、集約が最後に断る。
+        //
+        // 予約 ID が空のときは集約まで届かない。@TargetEntityId が解決できず
+        // EntityIdResolutionException で先に落ちる（IT2 で実測）。集約側の検査は
+        // 残すが、ここで確かめられるのは届く経路だけ。
+        fixture.given().noPriorActivity()
+                .when().command(new BookCargoCommand("B-0001", " ", general(), route(), "sales01"))
+                .then().exception(IllegalArgumentException.class);
+        fixture.given().noPriorActivity()
+                .when().command(new BookCargoCommand("B-0001", "SHP-1", null, route(), "sales01"))
+                .then().exception(IllegalArgumentException.class);
+        fixture.given().noPriorActivity()
+                .when().command(new BookCargoCommand("B-0001", "SHP-1", general(), null, "sales01"))
+                .then().exception(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("冷凍の予約は温度条件つきで受け付ける")
+    void booksRefrigerated() {
+        CargoSpecification spec = new CargoSpecification(CargoType.REFRIGERATED,
+                Weight.ofKilograms("500"), Dimensions.of("50", "40", "30"), 3, "冷凍食品",
+                null, TemperatureRequirement.of("-20", "-10"));
+
+        fixture.given().noPriorActivity()
+                .when().command(book(spec, route()))
+                .then().success()
+                .events(new CargoBookedEvent("B-0001", "SHP-000001", "JPTYO", "USNYC", DEADLINE,
+                        "REFRIGERATED", new BigDecimal("500"), new BigDecimal("50"),
+                        new BigDecimal("40"), new BigDecimal("30"), 3, "冷凍食品",
+                        null, null, new BigDecimal("-20"), new BigDecimal("-10"), "sales01"));
+    }
+
+    @Test
     @DisplayName("状態遷移の判定は 1 か所に置く")
     void transitionsFromPreliminary() {
         // 画面のボタン出し分けはこの述語を呼ぶ。判定を書き直すと、片方だけ

@@ -108,6 +108,20 @@ describe('S11 荷主登録', () => {
     expect(screen.getByLabelText('割引率（0.0000〜0.3000）')).toBeInTheDocument();
   });
 
+  it('個人に戻すと契約情報の欄が消える', async () => {
+    // 出すことだけを確かめると、切り替えても残る実装で緑になる。個人に戻したのに
+    // 欄が残ると「個人なのに契約番号を求められる」ことになり、消し忘れた値が
+    // そのまま送られる。
+    withQuery(<ShipperRegisterPage />);
+    await userEvent.click(screen.getByLabelText('法人'));
+    expect(screen.getByLabelText('契約番号')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByLabelText('個人'));
+
+    expect(screen.queryByLabelText('契約番号')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('割引率（0.0000〜0.3000）')).not.toBeInTheDocument();
+  });
+
   it('重複メールは API の理由をそのまま出す', async () => {
     respond(409, {
       code: 'SHIPPER_EMAIL_DUPLICATE',

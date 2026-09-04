@@ -4,7 +4,7 @@ title: "ADR-0001 CQRS / Event Sourcing を Axon Framework 5 でマイクロサ�
 description: "CQRS / Event Sourcing を Axon Framework 5 のマイクロサービスとして実装する決定。配置の形・ES の適用範囲・Axon 5 系 API の採用・サービス間の配送経路と、IT1 スパイクの結果（採用版 5.1.0-RC2・Saga 廃止）。"
 tags: [adr]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-03T13:09:18Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-04T00:15:03Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
   - { by: human:kakimomokuri, at: 2026-09-02T12:47:29Z }
@@ -241,7 +241,7 @@ IT1 の集約（`Shipper`）は登録しかせず、**イベント列から復�
 | :--- | :--- |
 | サービス分割 | `settings.gradle` の `include` から**テスト専用サブプロジェクト（`contract-tests`・`acceptance-tests`）を除いたもの**が上の 8 つと一致すること |
 | サービス間は Axon Server だけ | ビルド：`BuildConventionTest#servicesDoNotDependOnEachOther`。ArchUnit：`aclDoesNotUseHttpClients` はパッケージで禁じる（`RestTemplate` / `RestClient` の名簿方式だと `WebClient` や `java.net.http` が素通りする） |
-| 共有カーネルの範囲 | ArchUnit：`SharedKernelScopeTest`。置けるパッケージの名簿を固定し、名簿を狭めると赤になること・`shared` が空でないことも併せて検査する（空なら「守っている」でなく「調べていない」で緑になる） |
+| 共有カーネルの範囲 | ArchUnit：`SharedKernelScopeTest`。置けるパッケージの名簿を固定し、名簿を狭めると赤になること・`shared` が空でないことも併せて検査する（空なら「守っている」でなく「調べていない」で緑になる）。**IT2 で 2 つ足した**：`domain.location`（`Location` / `UnLocode` / `CountryCode`。全 BC が同じ意味で使い、輸出免税の判定にも国コードを使う）と `infrastructure.crypto`（crypto-shredding の変換。契約イベントを読む側も同じ変換が要る。[ADR-0003](0003-crypto-shredding-for-personal-data.md) 決定 1） |
 | 契約の名簿 | `ContractEventGoldenTest`：名簿は `shared/contract/event` を**走査して導出**し、ゴールデンが無い契約と、検査していないゴールデンの両方を赤にする。手書きの名簿にすると、契約を足して書き忘れたものが素通りする |
 | サービス越しの同期状態変更を置かない | ArchUnit：`CommandGateway` の利用箇所を `interfaces`・`application/reaction` に限定する。`infrastructure/projection` は `CommandGateway` に依存しない |
 | 投影がコマンドを送らない | 統合テスト `ReplayIT`：投影の Processing Group をリセットしてリプレイし、`CommandGateway` が 1 度も呼ばれないこと。**IT1 時点では未実装**（下記） |

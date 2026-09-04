@@ -109,10 +109,16 @@ public final class CargoTrackerArchRules {
                         "com.example.cargotracker.shared",
                         "com.example.cargotracker.shared.domain.model..",
                         "com.example.cargotracker.shared.domain.auth..",
+                        // 場所（Location / UnLocode / CountryCode）。全 BC が同じ意味で使い、
+                        // 輸出免税の判定（Billing）にも国コードを使う（domain-model.md）。
+                        "com.example.cargotracker.shared.domain.location..",
                         "com.example.cargotracker.shared.contract..",
                         "com.example.cargotracker.shared.infrastructure.axon..",
                         "com.example.cargotracker.shared.infrastructure.time..",
                         "com.example.cargotracker.shared.infrastructure.security..",
+                        // crypto-shredding の変換。契約イベントを読む側も同じ変換が要る
+                        // （ADR-0003 決定 1）。持たないと暗号文がそのまま投影に入る。
+                        "com.example.cargotracker.shared.infrastructure.crypto..",
                         "com.example.cargotracker.shared.archunit..",
                         "com.example.cargotracker.shared.testing..",
                         "com.example.cargotracker.shared.conventions..",

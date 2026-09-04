@@ -36,6 +36,17 @@ public interface CargoSummaryMapper {
 
     int countAll(@Param("includeFinished") boolean includeFinished);
 
+    /**
+     * 一覧の既定条件を検査するためだけの更新。
+     *
+     * <p>本来 {@code booking_status} は集約のイベントだけが書く。ここで直に更新するのは、
+     * 精算まで到達する経路（US23・IT14）がまだ無く、「終了したものを既定で外す」ことを
+     * 確かめられないため。<b>本番の経路では使わない。</b></p>
+     */
+    @org.apache.ibatis.annotations.Update(
+            "UPDATE cargo_summary SET booking_status = 'SETTLED' WHERE booking_id = #{bookingId}")
+    int markSettledForTest(@Param("bookingId") String bookingId);
+
     /** 経路設計の作業量（S02 の「今日の作業」）。仮受付は引き渡し待ちを意味する。 */
     @Select("SELECT count(*) FROM cargo_summary WHERE booking_status = 'PRELIMINARY'")
     int countPreliminary();
