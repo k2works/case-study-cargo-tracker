@@ -4,7 +4,7 @@ title: "イテレーション計画 2 - 貨物予約・法人荷主・アカウ�
 description: "IT2 の計画。US31/US03/US04（9 SP）に加え、IT1 の持ち越し 5 件とレビュー指摘 10 件を先に枠へ入れる。状態遷移を持つ集約 Cargo を Event Sourcing で書き、IT2 終了時に ADR-0001 決定 2 の発動条件を判定する。デモ項目 8 件。"
 tags: [plan,iteration,cargo-tracker]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-04T03:04:59Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-04T03:36:09Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-03T11:47:28Z }
 ---
@@ -33,15 +33,15 @@ verified:
 
 ### 成功基準
 
-- [ ] デモ項目 8 件の受け入れテスト（Cucumber の Feature・到達性は Playwright）がすべて緑
-- [ ] `./gradlew build` と `TZ=UTC ./gradlew cleanTest test` が緑（`cleanTest` を外さない。Gradle は TZ を入力と見ない）
-- [ ] フロントの `npm run test`・`npx tsc -b`・`npm run build` が緑
-- [ ] 契約テストが 2 サービス起動で往復し、ゴールデンの丸ごと一致だけでなく**実際に届くこと**を検査している
-- [ ] **kind クラスタで動く**：`npx gulp k8s:images` でイメージを作り直し、`k8s:load`（載せ直し + `rollout restart`）→ `k8s:wait` で全 Pod が Ready になる
-- [ ] **クラスタに対して E2E が緑**：`E2E_BASE_URL` を kind の frontend に向けて Playwright を回す。単体とモックだけでは、実際に配ったものが動くかを判別しない（同じタグのイメージは作り直す。作り直さないと古い成果物のまま緑になる）
-- [ ] `npx gulp okf:check` が ERROR 0
-- [ ] SonarQube の Quality Gate がバックエンド・フロントエンドとも PASS
-- [ ] ADR-0001 決定 2 の発動条件を判定し、結果を ADR に追記した
+- [x] デモ項目 8 件の受け入れテスト（Cucumber の Feature・到達性は Playwright）がすべて緑
+- [x] `./gradlew build` と `TZ=UTC ./gradlew cleanTest test` が緑（`cleanTest` を外さない。Gradle は TZ を入力と見ない）
+- [x] フロントの `npm run test`・`npx tsc -b`・`npm run build` が緑（20 ファイル・122 テスト。カバレッジ 98.6%）
+- [ ] 契約テストが 2 サービス起動で往復し、ゴールデンの丸ごと一致だけでなく**実際に届くこと**を検査している → **IT3 へ送った**（「落とす順序」1）。代わりに `ShipperContractProjectionIT` で契約イベントが billingms に届くことを実測した
+- [x] **kind クラスタで動く**：9 イメージを作り直し、Axon Server を含む 10 個を載せ直して全 Pod が Ready
+- [x] **クラスタに対して E2E が緑**：13 件（クラスタ通し 5 件 + 到達性 8 件）。**S21 の荷主入力が UI 設計と食い違っていたのをここで見つけた**
+- [x] `npx gulp okf:check` が ERROR 0
+- [x] SonarQube の Quality Gate がバックエンド・フロントエンドとも PASS（**配線の欠陥を 2 件見つけて直した**。Q.3 参照）
+- [ ] ADR-0001 決定 2 の発動条件を判定し、結果を ADR に追記した → **ふりかえりで判定する**
 
 ## ユーザーストーリー
 
@@ -504,13 +504,13 @@ S02_ダッシュボード --> [*] : ログアウト / 無操作 20 分
 - [ ] 画面は**ナビゲーションと到達性テストに対で**足した（プレースホルダは置かない。[開発戦略](development_strategy.md) の骨格）
 - [ ] IT1 の持ち越し 5 件（S01 ポータル・無操作タイムアウト・スパイク 0.7・契約の往復・修正して再登録）が返済されている、または「落とす順序」に従って送った理由がふりかえりに書かれている
 - [ ] 本 IT で足した検査を壊して赤を見た（Q.1）
-- [ ] `./gradlew build` が緑
-- [ ] `TZ=UTC ./gradlew cleanTest test` が緑
+- [x] `./gradlew build` が緑
+- [x] `TZ=UTC ./gradlew cleanTest test` が緑
 - [ ] フロントの `npm run test`・`npx tsc -b`・`npm run build` が緑
 - [ ] UI 設計・navbar・ダッシュボード・到達性テストの 4 点が一致している（**本 IT で足した S01・S20・S21・S22・S90 について**）
 - [ ] 追加した各画面を、**そのロールで実際に 1 回開いた**（T7）
-- [ ] **kind クラスタで動く**：`npx gulp k8s:images` でイメージを作り直し、`k8s:load` で載せ直して `rollout restart` し、`k8s:wait` で全 Pod が Ready になる。**同じタグのイメージは必ず作り直す**（作り直さないと古い成果物のまま緑になる）
-- [ ] **クラスタに対して E2E が緑**：`E2E_BASE_URL` を kind の frontend に向けて Playwright を回す。単体とモックは「実際に配ったものが動くか」を判別しない
+- [x] **kind クラスタで動く**（Axon Server は評価版なので毎回取り直す。`operation.md` 9.1）
+- [x] **クラスタに対して E2E が緑**（13 件）
 - [ ] `npx gulp okf:check` が ERROR 0
 - [ ] SonarQube の Quality Gate がバックエンド・フロントエンドとも PASS、`mkdocs build` が成功する
 - [ ] ユーザーマニュアルの該当章が更新され、画面キャプチャが再生成されている（**章は索引を正とする**）

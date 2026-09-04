@@ -31,8 +31,17 @@ spec:
           startupProbe:
             httpGet: { path: /actuator/health, port: http }
             periodSeconds: 5
-            # 5 秒 × 60 = 最大 5 分。Testcontainers 側の待ちも 3 分に取っている。
-            failureThreshold: 60
+            # 5 秒 × 120 = 最大 10 分。
+            #
+            # 5 分では足りなかった（IT2 で実測。6 回の再起動ループに入り、
+            # 業務サービスが軒並み Axon Server に繋がらなくなった）。同じ Docker で
+            # kind クラスタや SonarQube、ビルドが動いていると、設定の初期化だけで
+            # 90 秒を超える。**待ち時間の長さは検査ではないので、長く取って困らない。**
+            # 短く取ると、正常なコンテナが殺され続ける形で出る。
+            #
+            # テスト側（AbstractAxonIntegrationTest）は 6 分。あちらは 1 つ立てるだけ、
+            # こちらは PersistentVolume の復元を伴うので長く取る。
+            failureThreshold: 120
           readinessProbe:
             httpGet: { path: /actuator/health, port: http }
             periodSeconds: 5
