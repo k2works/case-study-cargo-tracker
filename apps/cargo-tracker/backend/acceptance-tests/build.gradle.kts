@@ -33,3 +33,43 @@ tasks.withType<Test>().configureEach {
     useJUnitPlatform()
     systemProperty("cucumber.junit-platform.naming-strategy", "long")
 }
+
+// routingms の受け入れテストは別のソースセットに置く。
+// 同じクラスパスに 2 つのサービスを載せると、双方の db/migration/V001 が衝突して
+// Flyway が起動しない。サービスを増やすたびにソースセットを増やす形にすることで、
+// V001 の番号取りをサービス間で調整しなくて済む。
+val routingTest: SourceSet by sourceSets.creating
+
+dependencies {
+    "routingTestImplementation"(project(":shared"))
+    "routingTestImplementation"(testFixtures(project(":shared")))
+    "routingTestImplementation"(project(":routingms"))
+    "routingTestImplementation"(libs.axon.test)
+    "routingTestImplementation"(libs.testcontainers.junit.jupiter)
+    "routingTestImplementation"(libs.testcontainers.postgresql)
+    "routingTestImplementation"(libs.awaitility)
+    "routingTestImplementation"(libs.cucumber.java)
+    "routingTestImplementation"(libs.cucumber.spring)
+    "routingTestImplementation"(libs.cucumber.junit.platform.engine)
+    "routingTestImplementation"(libs.assertj.core)
+    "routingTestImplementation"(platform(libs.junit.bom))
+    "routingTestImplementation"("org.junit.platform:junit-platform-suite")
+    "routingTestImplementation"(libs.spring.boot.starter.test)
+    "routingTestImplementation"(libs.spring.boot.starter.web)
+    "routingTestImplementation"(libs.spring.boot.starter.jdbc)
+    "routingTestImplementation"(libs.mybatis.spring.boot.starter)
+    "routingTestRuntimeOnly"(libs.junit.platform.launcher)
+}
+
+val routingAcceptanceTest = tasks.register<Test>("routingAcceptanceTest") {
+    description = "航海スケジュール（routingms）のデモ項目を回す"
+    group = "verification"
+    testClassesDirs = routingTest.output.classesDirs
+    classpath = routingTest.runtimeClasspath
+    useJUnitPlatform()
+    systemProperty("cucumber.junit-platform.naming-strategy", "long")
+}
+
+// `./gradlew :acceptance-tests:test` で両方回る。片方だけ回ると、
+// 増えたサービスの受け入れが黙って走らなくなる。
+tasks.named("test") { dependsOn(routingAcceptanceTest) }

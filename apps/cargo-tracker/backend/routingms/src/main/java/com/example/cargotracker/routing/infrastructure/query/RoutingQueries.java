@@ -1,0 +1,54 @@
+package com.example.cargotracker.routing.infrastructure.query;
+
+import java.time.Instant;
+import java.util.List;
+
+/** 航海の読み取りモデル（domain-model.md「クエリ一覧」）。 */
+public final class RoutingQueries {
+
+    private RoutingQueries() {
+    }
+
+    public record FindVoyageQuery(String voyageNumber) {
+    }
+
+    /**
+     * 一覧（S32）。
+     *
+     * <p>{@code includeFinished} は「出港済み・キャンセルも表示」の操作に対応する。
+     * 既定を false にしているのは、出港してしまった便が混ざると一覧全体が
+     * 「これから使える航海」として信用されなくなるため（ui_design.md）。</p>
+     *
+     * <p>{@code cargoType} は US05 の絞り込み。危険物・冷凍の予約は、その種別を
+     * 受け入れる航海だけが候補になる。</p>
+     */
+    public record FindVoyagesQuery(int page, int size, boolean includeFinished, String cargoType) {
+    }
+
+    /** 画面に出す航海。 */
+    public record VoyageView(
+            String voyageNumber,
+            String carrierCode,
+            String carrierName,
+            String vesselName,
+            String departureUnLocode,
+            String arrivalUnLocode,
+            Instant departureAt,
+            Instant arrivalAt,
+            boolean cancelled,
+            List<String> acceptedCargoTypes,
+            List<MovementView> movements) {
+    }
+
+    /** 寄港地。並び順そのものが業務の意味を持つ。 */
+    public record MovementView(
+            int movementSeq,
+            String departureUnLocode,
+            String arrivalUnLocode,
+            Instant departureAt,
+            Instant arrivalAt) {
+    }
+
+    public record VoyageListView(List<VoyageView> items, int total) {
+    }
+}

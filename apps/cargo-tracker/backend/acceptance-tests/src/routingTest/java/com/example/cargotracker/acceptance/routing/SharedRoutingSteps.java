@@ -1,0 +1,25 @@
+package com.example.cargotracker.acceptance.routing;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
+
+import java.time.Duration;
+import java.util.concurrent.Callable;
+
+/** 「N 秒以内に」を 1 か所に閉じる（bookingms 側の SharedSteps と同じ形）。 */
+final class SharedRoutingSteps {
+
+    private SharedRoutingSteps() {
+    }
+
+    static void awaitWithin(int seconds, Callable<Boolean> condition, String description) {
+        try {
+            await(description)
+                    .atMost(Duration.ofSeconds(seconds))
+                    .pollInterval(Duration.ofMillis(300))
+                    .until(condition);
+        } catch (org.awaitility.core.ConditionTimeoutException e) {
+            assertThat(false).as("%s（%d 秒以内に起きなかった）", description, seconds).isTrue();
+        }
+    }
+}

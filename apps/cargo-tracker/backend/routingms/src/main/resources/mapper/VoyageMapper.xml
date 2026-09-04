@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.routing.infrastructure.persistence.VoyageMapper">
+
+    <resultMap id="voyageRow"
+               type="com.example.cargotracker.routing.infrastructure.persistence.VoyageMapper$VoyageRow">
+        <constructor>
+            <idArg column="voyage_number" javaType="string"/>
+            <arg column="carrier_code" javaType="string"/>
+            <arg column="carrier_name" javaType="string"/>
+            <arg column="vessel_name" javaType="string"/>
+            <arg column="departure_unlocode" javaType="string"/>
+            <arg column="arrival_unlocode" javaType="string"/>
+            <arg column="departure_at" javaType="java.time.Instant"/>
+            <arg column="arrival_at" javaType="java.time.Instant"/>
+            <arg column="cancelled" javaType="_boolean"/>
+            <arg column="registered_at" javaType="java.time.Instant"/>
+            <arg column="projected_at" javaType="java.time.Instant"/>
+            <arg column="last_event_id" javaType="string"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="movementRow"
+               type="com.example.cargotracker.routing.infrastructure.persistence.VoyageMapper$MovementRow">
+        <constructor>
+            <idArg column="voyage_number" javaType="string"/>
+            <arg column="movement_seq" javaType="_int"/>
+            <arg column="departure_unlocode" javaType="string"/>
+            <arg column="arrival_unlocode" javaType="string"/>
+            <arg column="departure_at" javaType="java.time.Instant"/>
+            <arg column="arrival_at" javaType="java.time.Instant"/>
+        </constructor>
+    </resultMap>
+
+    <!--
+      一覧の既定条件はここ 1 か所に置く。画面とクエリの両方に書くと、
+      片方だけ緩めても検査が気づかない（IT2 T6）。
+    -->
+    <sql id="visible">
+        WHERE 1 = 1
+        <if test="!includeFinished">
+            AND cancelled = FALSE
+            AND departure_at &gt; #{now}
+        </if>
+        <if test="cargoType != null">
+            AND EXISTS (
+                SELECT 1 FROM voyage_accepted_cargo_type t
+                WHERE t.voyage_number = voyage.voyage_number
+                  AND t.cargo_type = #{cargoType}
+            )
+        </if>
+    </sql>
+
+    <insert id="insert">
+        INSERT INTO voyage (
+            voyage_number, carrier_code, carrier_name, vessel_name,
+            departure_unlocode, arrival_unlocode, departure_at, arrival_at,
+            cancelled, registered_at, projected_at, last_event_id
+        ) VALUES (
+            #{voyageNumber}, #{carrierCode}, #{carrierName}, #{vesselName},
+            #{departureUnlocode}, #{arrivalUnlocode}, #{departureAt}, #{arrivalAt},
+            #{cancelled}, #{registeredAt}, #{projectedAt}, #{lastEventId}
+        )
+        ON CONFLICT (voyage_number) DO NOTHING
+    </insert>
+
+    <insert id="insertMovement">
+        INSERT INTO carrier_movement (
+            voyage_number, movement_seq, departure_unlocode, arrival_unlocode,
+            departure_at, arrival_at
+        ) VALUES (
+            #{voyageNumber}, #{movementSeq}, #{departureUnlocode}, #{arrivalUnlocode},
+            #{departureAt}, #{arrivalAt}
+        )
+        ON CONFLICT (voyage_number, movement_seq) DO NOTHING
+    </insert>
+
+    <insert id="insertAcceptedCargoType">
+        INSERT INTO voyage_accepted_cargo_type (voyage_number, cargo_type)
+        VALUES (#{voyageNumber}, #{cargoType})
+        ON CONFLICT (voyage_number, cargo_type) DO NOTHING
+    </insert>
+
+    <select id="findByNumber" resultMap="voyageRow">
+        SELECT * FROM voyage WHERE voyage_number = #{voyageNumber}
+    </select>
+
+    <select id="findAll" resultMap="voyageRow">
+        SELECT * FROM voyage
+        <include refid="visible"/>
+        ORDER BY departure_at, voyage_number
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countAll" resultType="_int">
+        SELECT count(*) FROM voyage
+        <include refid="visible"/>
+    </select>
+
+    <select id="findAcceptedCargoTypes" resultType="string">
+        SELECT cargo_type FROM voyage_accepted_cargo_type
+        WHERE voyage_number = #{voyageNumber}
+        ORDER BY cargo_type
+    </select>
+
+    <select id="findMovements" resultMap="movementRow">
+        SELECT * FROM carrier_movement
+        WHERE voyage_number = #{voyageNumber}
+        ORDER BY movement_seq
+    </select>
+</mapper>

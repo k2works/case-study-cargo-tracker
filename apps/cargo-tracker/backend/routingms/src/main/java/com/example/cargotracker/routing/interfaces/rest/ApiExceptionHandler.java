@@ -1,0 +1,89 @@
+package com.example.cargotracker.routing.interfaces.rest;
+
+import java.util.Map;
+import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
+import com.example.cargotracker.shared.domain.error.IllegalTransition;
+import org.axonframework.messaging.commandhandling.CommandExecutionException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+/**
+ * API のエラー対応表（architecture_backend.md「例外と HTTP の対応」）。
+ *
+ * <p>状態遷移違反は 409、業務規則違反は 422、投影に未反映は 202 と分ける。
+ * どれも 500 にすると、利用者は「やり直せばよいのか」「入力が悪いのか」を判断できない。</p>
+ */
+@RestControllerAdvice
+public class ApiExceptionHandler {
+
+    private static final String CODE = "code";
+    private static final String MESSAGE = "message";
+
+
+
+    /**
+     * 値オブジェクトと集約が弾いた業務規則違反。
+     *
+     * <p>routingms の値オブジェクトは最初から {@link BusinessRuleViolation} を投げる
+     * （{@code BusinessRuleViolation} は {@code IllegalArgumentException} を継承する）。
+     * bookingms 側を寄せるのは返済枠 R.4。</p>
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, Object>> onBusinessRuleViolation(IllegalArgumentException e) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT)
+                .body(Map.of(CODE, "BUSINESS_RULE_VIOLATION", MESSAGE,
+                        BusinessRuleViolation.strip(e.getMessage())));
+    }
+
+    /**
+     * 集約が断った業務規則違反。
+     *
+     * <p>集約の中で投げた例外は {@code CommandExecutionException} に包まれ、
+     * サービス越しでは根の型まで {@code AxonServerRemoteCommandHandlingException} に
+     * 置き換わる。包みを解かないと <b>500 になる</b>。断ったのは業務の判断なので、
+     * 画面には「壊れた」ではなく理由が出なければならない。</p>
+     *
+     * <p>状態遷移違反（{@code IllegalStateException}）は 409、それ以外の業務規則は
+     * 422（architecture_backend.md「例外と HTTP の対応」）。</p>
+     */
+    @ExceptionHandler(CommandExecutionException.class)
+    public ResponseEntity<Map<String, Object>> onCommandFailed(CommandExecutionException e) {
+        Throwable cause = e.getCause();
+        String message = cause == null ? e.getMessage() : cause.getMessage();
+        if (message == null) {
+            message = "処理できませんでした";
+        }
+        // **型で見ない。** サービス越しに来た例外は根の型が置き換わるので、
+        // instanceof で分けるとコマンドがサービスを越えた瞬間に 409 が 422 に
+        // 劣化する（ADR-0001 決定 5 第 12 項）。種類は文言の印で運ぶ。
+        if (message.contains(IllegalTransition.MARKER)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of(CODE, "ILLEGAL_STATE", MESSAGE,
+                            BusinessRuleViolation.strip(message)));
+        }
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT)
+                .body(Map.of(CODE, "BUSINESS_RULE_VIOLATION", MESSAGE,
+                        BusinessRuleViolation.strip(message)));
+    }
+
+    /** 状態遷移違反。集約の外（Controller）で判断したもの。 */
+    @ExceptionHandler(IllegalTransition.class)
+    public ResponseEntity<Map<String, Object>> onIllegalTransition(IllegalTransition e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of(CODE, "ILLEGAL_STATE", MESSAGE,
+                        BusinessRuleViolation.strip(e.getMessage())));
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Map<String, Object>> onInvalidRequest(MethodArgumentNotValidException e) {
+        String message = e.getBindingResult().getFieldErrors().stream()
+                .map(f -> f.getField() + ": " + f.getDefaultMessage())
+                .reduce((a, b) -> a + ", " + b)
+                .orElse("入力が正しくありません");
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT)
+                .body(Map.of(CODE, "INVALID_REQUEST", MESSAGE, message));
+    }
+}
