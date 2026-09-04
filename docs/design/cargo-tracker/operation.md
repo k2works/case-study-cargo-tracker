@@ -4,7 +4,7 @@ title: "運用要件 - 国際貨物輸送管理システム（CQRS / Event Sourc
 description: "CQRS / Event Sourcing 版 Cargo Tracker の運用要件。投影のリプレイを日常操作として置き、Event Store の復元演習、Event Processor と Reaction Handler の監視、ランブック、イベントの形を変えるリリース手順、鍵の破棄、Gulp タスクを定める。"
 tags: [design,operation,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-03T12:05:14Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-04T02:23:42Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -298,6 +298,20 @@ Axon Server の停止中はコマンドを受け付けません。荷役作業�
 | `gulp ops:drill:restore --env staging` | 復元演習の一括実行（復元 → 全リプレイ → 検証 → 所要時間の記録） |
 | `gulp shipper:shred --env --shipper-id` | 荷主鍵の破棄と関連 3 Group の全件リプレイ。所要時間の目安 1.5 時間 / 100 万イベント。開始前に確認プロンプトで所要時間を出す |
 | `gulp ops:logs:tail --env --service` | ログの tail |
+
+### 9.1 ローカル（kind）の Axon Server は評価版である
+
+**評価版は起動から 12 時間で自分を止めます。** ログに `[LICENSE] No license detected. Running in unregistered mode. Trial access is limited to 12 hours. Shutdown scheduled at ...` が出ます。止まると全サービスが Axon Server に繋がらなくなりますが、**画面に出るのは「投影が進まない」**なので、原因がライセンスだと気づくまでに時間がかかります。
+
+| いつ | 何をする |
+| :--- | :--- |
+| 立ち上げ・載せ直しのたび | `gulp k8s:images` と `gulp k8s:load` が **Axon Server のイメージをノードの中で取り直し**、StatefulSet を `rollout restart` します。猶予はここで引き直されます |
+| 状態を見るとき | `gulp k8s:status` が Pod の一覧といっしょに **停止予定時刻と残り時間**を出します |
+| 止まっていたら | `gulp k8s:load` で取り直します。業務サービスは Axon Server の再起動で一度落ちますが、init コンテナが待って自分で復帰します（`k8s:wait` で確認） |
+
+**`kind load docker-image` は使いません。** 公開イメージはマルチプラットフォームのマニフェストリストで配られており、ホストの Docker から取り込むと `content digest ... not found` で失敗します（自分で作ったイメージは単一プラットフォームなので通ります）。ノードの containerd に `crictl pull` で直接引かせます。
+
+**本番・ステージングは評価版を使いません。** ライセンスを取得して配ります（[非機能要件](non_functional.md)「Axon Server SE の単一障害点」）。この節はローカルの kind に限った話です。
 
 ## 10. 運用 KPI
 

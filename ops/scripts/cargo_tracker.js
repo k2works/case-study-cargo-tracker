@@ -54,6 +54,46 @@ function tryFetch(url) {
 const FRONTEND = { name: 'frontend', dir: 'frontend' };
 
 /**
+ * Axon Server（評価版）。
+ *
+ * <p><b>毎回イメージを取り直して載せ直す。</b> 評価版のライセンスは起動時に発行され、
+ * 一定期間で切れる。kind のノードに残った古いイメージで起動すると、ある日突然
+ * 全サービスが繋がらなくなる。原因はライセンスなのに、見えるのは「投影が進まない」
+ * という形なので、当日の朝に慌てて追うことになる。</p>
+ *
+ * <p>タグは `docs/design/cargo-tracker/tech_stack.md` を正典とし、ここでは
+ * マニフェスト（`ops/k8s/base/axonserver/statefulset.yaml`）から読む。2 か所に
+ * 書くと、片方だけ上げたときに「載せたのは新しい版、起動するのは古い版」になる。</p>
+ */
+const AXON_SERVER = {
+  name: 'axonserver',
+  manifest: 'ops/k8s/base/axonserver/statefulset.yaml',
+};
+
+/**
+ * Axon Server をノードの中で取り直す。
+ *
+ * <p><b>`kind load docker-image` は使えない。</b> 公開イメージはマルチプラットフォームの
+ * マニフェストリストで配られており、ホストの Docker から取り込むと
+ * `content digest ... not found` で失敗する（自分で作ったイメージは単一プラットフォーム
+ * なので通る）。ノードの containerd に直接引かせれば、そのノードのアーキだけが降りてくる。</p>
+ */
+function pullAxonServerIntoNode() {
+  sh(`docker exec ${KIND_CLUSTER}-control-plane crictl pull ${axonServerImage()}`,
+    { stdio: 'inherit' });
+}
+
+/** マニフェストに書いてある Axon Server のイメージ。 */
+function axonServerImage() {
+  const manifest = fs.readFileSync(AXON_SERVER.manifest, 'utf8');
+  const match = /image:\s*(\S*axonserver\S*)/.exec(manifest);
+  if (match === null) {
+    throw new Error(`${AXON_SERVER.manifest} に axonserver のイメージが見つかりません`);
+  }
+  return match[1];
+}
+
+/**
  * ドキュメントポータル。ビルド工程を持たず、生成済みの静的ファイルを配るだけ。
  * apps/cargo-tracker の外に置いてあるので COMPOSE_DIR を使わない。
  */
@@ -364,9 +404,13 @@ export default function (gulp) {
   gulp.task('k8s:images', (done) => {
     const services = Object.keys(SERVICES);
     const backend = `${COMPOSE_DIR}/backend`;
-    const total = services.length + 2;
+    const total = services.length + 3;
+    // Axon Server は評価版なので取り直す。ノードに残った古いイメージで起動すると、
+    // ライセンス切れで全サービスが繋がらなくなる（見えるのは「投影が進まない」）。
+    console.log(`[1/${total}] ${axonServerImage()}（評価版なので毎回取り直す）`);
+    pullAxonServerIntoNode();
     services.forEach((name, i) => {
-      console.log(`[${i + 1}/${total}] cargo-tracker/${name}:latest`);
+      console.log(`[${i + 2}/${total}] cargo-tracker/${name}:latest`);
       sh(`docker build -t cargo-tracker/${name}:latest -f ${name}/Dockerfile .`,
         { cwd: backend, stdio: 'inherit' });
     });
@@ -404,12 +448,20 @@ export default function (gulp) {
    * ここを飛ばすと、古いイメージのまま「反映した」と思い込む。
    */
   gulp.task('k8s:load', (done) => {
+    // Axon Server も取り直す。評価版のライセンスは起動時に発行され一定期間で切れる。
+    // ここを飛ばすと、ノードに残った古いイメージのまま起動して、ある日突然
+    // 全サービスが繋がらなくなる。StatefulSet なので restart の対象が違う。
+    pullAxonServerIntoNode();
+    sh(`kubectl --context kind-${KIND_CLUSTER} -n ${NAMESPACE} `
+      + `rollout restart statefulset/${AXON_SERVER.name}`);
+
     const deployments = [...Object.keys(SERVICES), FRONTEND.name, PORTAL.name];
     for (const name of deployments) {
       sh(`kind load docker-image cargo-tracker/${name}:latest --name ${KIND_CLUSTER}`);
       sh(`kubectl --context kind-${KIND_CLUSTER} -n ${NAMESPACE} rollout restart deployment/${name}`);
     }
-    console.log(`${deployments.length} 個のイメージを載せ直しました`);
+    console.log(`${deployments.length + 1} 個のイメージを載せ直しました`
+      + `（Axon Server を含む）`);
     done();
   });
 
@@ -453,8 +505,45 @@ export default function (gulp) {
   /** クラスタ側の Pod の状態。ホストからは何も見えないので、まずここを見る。 */
   gulp.task('k8s:status', (done) => {
     console.log(sh(`kubectl --context kind-${KIND_CLUSTER} -n ${NAMESPACE} get pods -o wide`));
+    reportAxonServerTrial();
     done();
   });
+
+  /**
+   * Axon Server の評価版の期限を出す。
+   *
+   * <p>評価版は<b>起動から 12 時間で自分を止める</b>（`Shutdown scheduled at ...`）。
+   * 止まると全サービスが繋がらなくなるが、画面に出るのは「投影が進まない」なので、
+   * 原因がライセンスだと気づくまでに時間がかかる。Pod の一覧といっしょに残り時間を
+   * 出して、朝に気づけるようにする。</p>
+   *
+   * <p>止まったら {@code k8s:load} で取り直す（起動し直せば猶予も引き直される）。</p>
+   */
+  function reportAxonServerTrial() {
+    const logs = (() => {
+      try {
+        return sh(`kubectl --context kind-${KIND_CLUSTER} -n ${NAMESPACE} `
+          + `logs statefulset/${AXON_SERVER.name} --tail=2000`);
+      } catch {
+        return '';
+      }
+    })();
+    // 末尾の句点まで拾わない。`...Z.` を Date に渡すと Invalid Date になり、
+    // 「期限が読めない」ではなく「例外で status ごと落ちる」形で出る。
+    const match = /Shutdown scheduled at (\d{4}-\d{2}-\d{2}T[\d:.]+Z)/.exec(logs);
+    if (match === null) {
+      return;
+    }
+    const at = new Date(match[1]);
+    if (Number.isNaN(at.getTime())) {
+      return;
+    }
+    const hours = (at.getTime() - Date.now()) / 3_600_000;
+    const remaining = hours <= 0
+      ? '期限切れ。npx gulp k8s:load で取り直してください'
+      : `あと ${hours.toFixed(1)} 時間`;
+    console.log(`Axon Server（評価版）の停止予定: ${at.toISOString()}（${remaining}）`);
+  }
 
   /**
    * kind をゼロから立ち上げる（手順をこの順で固定する）。
@@ -680,9 +769,9 @@ export default function (gulp) {
 === ローカル統合環境（kind）コマンド ===
 
   k8s:setup    ゼロから立ち上げる（portal:artifacts -> images -> up -> load -> wait -> status）
-  k8s:images   9 イメージを作る（7 サービス + フロントエンド + ポータル。初回は 25 分程度）
+  k8s:images   Axon Server を取り直し、9 イメージを作る（7 サービス + フロントエンド + ポータル。初回は 25 分程度）
   k8s:up       kind クラスタを作ってマニフェストを適用する
-  k8s:load     イメージを kind に載せ直して rollout restart する
+  k8s:load     イメージ（Axon Server を含む）を kind に載せ直して rollout restart する
   k8s:wait     全 Pod が Ready になるまで待つ
   k8s:status   Pod の状態を表示する
   k8s:render   マニフェストを描画する（クラスタが無くても回せる）
