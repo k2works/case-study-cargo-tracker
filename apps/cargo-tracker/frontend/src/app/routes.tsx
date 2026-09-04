@@ -15,6 +15,9 @@ import { AdminUserListPage } from '@/features/admin/AdminUserListPage';
 import { BookingListPage } from '@/features/bookings/BookingListPage';
 import { BookingRegisterPage } from '@/features/bookings/BookingRegisterPage';
 import { BookingDetailPage } from '@/features/bookings/BookingDetailPage';
+import { RoutingWorklistPage } from '@/features/routing/RoutingWorklistPage';
+import { VoyageListPage } from '@/features/routing/VoyageListPage';
+import { VoyageRegisterPage } from '@/features/routing/VoyageRegisterPage';
 
 /**
  * ルートと画面の対応。
@@ -28,6 +31,9 @@ const PAGES: Record<string, ReactElement> = {
   '/shippers/new': <ShipperRegisterPage />,
   '/bookings': <BookingListPage />,
   '/bookings/new': <BookingRegisterPage />,
+  '/routing/worklist': <RoutingWorklistPage />,
+  '/voyages': <VoyageListPage />,
+  '/voyages/new': <VoyageRegisterPage />,
   '/worklist/attention': <AttentionListPage />,
   '/admin/users': <AdminUserListPage />,
 };

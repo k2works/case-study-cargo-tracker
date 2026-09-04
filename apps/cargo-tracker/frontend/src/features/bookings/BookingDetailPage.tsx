@@ -1,6 +1,17 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router';
-import { ALERT, CARD, LINK, NOTICE, PAGE_TITLE, SECTION_TITLE } from '@/shared/ui/styles';
+import {
+  ALERT,
+  BUTTON_PRIMARY,
+  CARD,
+  LINK,
+  NOTICE,
+  PAGE_TITLE,
+  SECTION_TITLE,
+} from '@/shared/ui/styles';
+import { ApiError } from '@/shared/api/client';
+import { canRequestRouting } from './transitions';
+import { requestRouting } from '@/features/routing/api';
 import { display } from '@/features/shippers/api';
 import { bookingStatusLabel, cargoTypeLabel, fetchBooking } from './api';
 
@@ -12,11 +23,17 @@ import { bookingStatusLabel, cargoTypeLabel, fetchBooking } from './api';
  */
 export function BookingDetailPage() {
   const { bookingId = '' } = useParams();
+  const queries = useQueryClient();
   const { data, isPending, isError } = useQuery({
     queryKey: ['booking', bookingId],
     queryFn: () => fetchBooking(bookingId),
     // 登録直後は投影がまだなので 202 が返る。反映されるまで取り直す。
     refetchInterval: (query) => (query.state.data?.state === 'pending' ? 2000 : false),
+  });
+
+  const handOver = useMutation({
+    mutationFn: () => requestRouting(bookingId),
+    onSuccess: () => queries.invalidateQueries({ queryKey: ['booking', bookingId] }),
   });
 
   return (
@@ -58,6 +75,27 @@ export function BookingDetailPage() {
               <Row label="到着期限" value={data.value.arrivalDeadline} />
             </dl>
           </div>
+
+          {/* ボタンの出し分けは状態の述語をそのまま呼ぶ。ここで
+              status === 'PRELIMINARY' と書くと、集約の遷移表と判断が二重になり、
+              片方だけ直したときに食い違う。 */}
+          {canRequestRouting(data.value.bookingStatus) && (
+            <div>
+              <button
+                type="button"
+                className={BUTTON_PRIMARY}
+                disabled={handOver.isPending}
+                onClick={() => handOver.mutate()}
+              >
+                {handOver.isPending ? '送信中…' : '経路設計を依頼する'}
+              </button>
+              {handOver.error instanceof ApiError && (
+                <p role="alert" className={`${ALERT} mt-2`}>
+                  {handOver.error.body.message}
+                </p>
+              )}
+            </div>
+          )}
 
           <div>
             <h2 className={SECTION_TITLE}>貨物</h2>

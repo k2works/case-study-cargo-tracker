@@ -39,6 +39,17 @@ export function DashboardPage() {
         </output>
       )}
 
+      {/* 経路設計者の作業の入口は S30。予約一覧（S20）は予約全体を横断して
+          見たいときに開く（ui_design.md S20 の注記）。0 件でも導線は出す。
+          件数が 0 の日でも「どこへ行けばよいか」は変わらない。 */}
+      {isRouting && (
+        <p className="mt-4 text-sm">
+          <Link to="/routing/worklist" className={LINK}>
+            経路設計作業一覧を開く
+          </Link>
+        </p>
+      )}
+
       <h2 className={`${SECTION_TITLE} mt-6`}>今日の作業</h2>
 
       {/* 入口が 1 つも無いロールがある（IT1 時点の荷役・荷主など）。空の一覧を
