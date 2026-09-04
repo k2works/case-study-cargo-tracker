@@ -202,7 +202,12 @@ class ShipperControllerIT extends AbstractAxonIntegrationTest {
                     .retrieve().toEntity(JsonMap.class).getBody().get("items").toString();
             assertThat(body).contains("メールアドレスの重複");
             // 応答に payload（個人情報）は載せない。載せるのは識別子だけ（ADR-0003 決定 6）。
+            //
+            // メールアドレスが出ないことだけを見ると、氏名や住所を載せる変更を
+            // 素通りさせる。**payload という項目そのものが応答に無いこと**を見る。
             assertThat(body).doesNotContain(email);
+            assertThat(body).doesNotContain("payload");
+            assertThat(body).doesNotContain("山田商事");
             assertThat(body).contains("relatedShipperId=");
         });
     }

@@ -110,3 +110,33 @@ describe('403 の見え方', () => {
     expect(within(screen.getByRole('navigation')).getByText('荷主一覧')).toBeInTheDocument();
   });
 });
+
+describe('一覧から開く画面（ナビに載せない）', () => {
+  // ナビに載せない画面は、上のロール別到達性の検査から外れる。**外れた画面ほど
+  // 権限の設定を間違えても気づけない**ので、ここで明示的に確かめる。
+  // 許可ロールは一覧（/bookings）と揃える。一覧に出ている行を開けないと、
+  // 「一覧には出るのに詳細は 403」になる。
+  const DETAIL_PATH = '/bookings/b-1';
+  const ALLOWED: readonly Role[] = ['ROLE_SALES', 'ROLE_ROUTING', 'ROLE_TRACKER'];
+
+  it.each(ALLOWED)('%s: 予約詳細を開ける', (role) => {
+    loginAs([role]);
+    renderAt(DETAIL_PATH);
+
+    expect(screen.queryByText('この画面を開く権限がありません')).not.toBeInTheDocument();
+  });
+
+  it.each(ROLES.filter((r) => !ALLOWED.includes(r)))('%s: 予約詳細は 403 になる', (role) => {
+    loginAs([role]);
+    renderAt(DETAIL_PATH);
+
+    expect(screen.getByText('この画面を開く権限がありません')).toBeInTheDocument();
+  });
+
+  it('予約一覧を開けるロールは、その詳細も開ける', () => {
+    // 一覧と詳細で許可がずれると「一覧には出るのに開くと 403」になる。
+    const listAllow = NAVIGATION.find((i) => i.path === '/bookings')?.allow ?? [];
+
+    expect([...ALLOWED].sort()).toEqual([...listAllow].sort());
+  });
+});
