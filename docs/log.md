@@ -1,6 +1,9 @@
 # Docs Update Log
 
 ## 2026-09-04
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-3](/development/cargo-tracker/iteration_plan-3.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-3](/development/cargo-tracker/iteration_plan-3.md) を更新（claude-code/claude-opus-5）
 * **Creation**: [08-経路設計に引き渡す](/manual/08-経路設計に引き渡す.md) を作成（claude-code/claude-opus-5）
 * **Creation**: [07-航海スケジュールを登録する](/manual/07-航海スケジュールを登録する.md) を作成（claude-code/claude-opus-5）
 * **Update**: [05-貨物予約を登録する](/manual/05-貨物予約を登録する.md) を更新（claude-code/claude-opus-5）

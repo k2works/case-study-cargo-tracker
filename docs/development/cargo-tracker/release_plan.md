@@ -4,7 +4,7 @@ title: "リリース計画 - 国際貨物輸送管理システム（CQRS / Event
 description: "CQRS / Event Sourcing 版 Cargo Tracker のリリース計画。US01〜US32 を 15 イテレーション・5 リリース（122 SP）に配分し、ストーリーポイント・ベロシティ・バッファ・順序の根拠・リスクを定める。"
 tags: [plan,release,cargo-tracker]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-04T08:53:39Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-04T11:39:39Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T12:47:29Z }
 ---
@@ -267,9 +267,9 @@ IT4・IT10・IT12・IT15 に SP 対象外の枠を置きます。**「余力次�
 | :--- | :--: | :--: | :--: | :--- |
 | IT1 | 9 | 9 | 100% | **完了**（[計画](iteration_plan-1.md)・[ふりかえり](retrospective-1.md)・[報告書](iteration_report-1.md)） |
 | IT2 | 9 | 9 | 100% | **完了**（[計画](iteration_plan-2.md)・[ふりかえり](retrospective-2.md)・[報告書](iteration_report-2.md)） |
-| IT3 | 9 | — | — | **計画済み**（[計画](iteration_plan-3.md)） |
+| IT3 | 9 | 9 | 100% | **開発完了**（[計画](iteration_plan-3.md)）。クローズ（クラスタ E2E・SonarQube・ふりかえり・報告書）は未実施 |
 | IT4〜IT15 | 95 | — | — | 未着手 |
-| **累計** | **122** | **18** | **100%**（完了した IT1・IT2 の 18 SP に対して） | |
+| **累計** | **122** | **27** | **100%**（IT1〜IT3 の 27 SP に対して） | |
 
 **実績 SP は 9 です。** US26（3）・US27（1）・US02（5）の受入基準を満たし、デモ項目 7 件の受け入れテストが緑です。ただし **SP 対象外の基盤投資に持ち越しが 5 件あります**（S01 ポータル・全ルートのプレースホルダ・無操作タイムアウト・スパイク 0.7・契約テストの往復）。ベロシティは 9 と読めますが、基盤の未完了分を IT2 が負う点は [ふりかえり](retrospective-1.md) を参照してください。
 
@@ -295,6 +295,7 @@ IT4・IT10・IT12・IT15 に SP 対象外の枠を置きます。**「余力次�
 | 2026-09-03 | IT2 開始準備。計画を作成し進捗表を「計画済み」に更新 | claude-code/claude-opus-5 |
 | 2026-09-04 | IT3 開始準備。進捗表を「計画済み」に更新。IT2 の引き継ぎ件数を 6 件 → 12 件に訂正（ふりかえりが正） | claude-code/claude-opus-5 |
 | 2026-09-04 | IT3 Day 1（返済枠 R.11）。US06 §受入基準 4 を **US32「仮受付の予約情報を修正する」**（2 SP）に切り出し、IT4 に配分（6 → 8 SP）。総 SP 120 → 122 | claude-code/claude-opus-5 |
+| 2026-09-04 | IT3 の開発完了。US05・US06・US24 の 9 SP。進捗表を更新。クローズはこれから | claude-code/claude-opus-5 |
 | 2026-09-04 | IT2 クローズ。実績 SP 9（達成率 100%）と ADR-0001 決定 2 の判定（発動せず）を記録 | claude-code/claude-opus-5 |
 
 ## 関連ドキュメント

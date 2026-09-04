@@ -4,7 +4,7 @@ title: "イテレーション計画 3 - 危険物・引き渡し・航海登録"
 description: "IT3 の計画。US05/US06/US24（9 SP）に加え、IT2 の引き継ぎ 12 件を返済枠に置く。2 つ目のサービス routingms を bookingms と同じ型で立ち上げ、型が同じであることを検査で固定して Release 0.1 を閉じる。デモ項目 7 件。"
 tags: [plan,iteration,cargo-tracker]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-04T10:23:19Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-04T11:39:39Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-04T08:44:22Z }
 ---
@@ -35,18 +35,20 @@ verified:
 
 ### 成功基準
 
-- [ ] デモ項目の受け入れテストがすべて緑
-- [ ] `./gradlew build` と `TZ=UTC ./gradlew cleanTest test` が緑
-- [ ] フロントの `npm run test`・`npx tsc -b`・`npm run build` が緑
-- [ ] **契約テストが 2 サービス起動で往復する**（IT2 から送った 1 件）
-- [ ] **kind クラスタで動き、クラスタに対する E2E が緑**（Day 8 に 1 度、クローズ前にもう 1 度）
-- [ ] `./gradlew :acceptance-tests:test`（Cucumber + Testcontainers）が緑
-- [ ] **Gateway に足した経路が保護されていることを検査した**（IT2 レビュー L3）
+- [x] デモ項目の受け入れテストがすべて緑（21 シナリオ：routing 6・booking 15）
+- [x] `TZ=UTC ./gradlew build` が緑（jacoco の閾値も含む）
+- [x] フロントの `npm run test`（23 ファイル 152 テスト）・`npx tsc -b`・`npm run build` が緑
+- [x] **契約テストが 2 サービス起動で往復する**（IT2 から送った 1 件）
+- [ ] **kind クラスタで動き、クラスタに対する E2E が緑**（Day 8 に 1 度、クローズ前にもう 1 度）。**E2E は書いた**（引き渡し・航海登録の 2 本と順序依存の解消）が、クラスタへの反映と実行はまだ
+- [x] `./gradlew :acceptance-tests:test`（Cucumber + Testcontainers）が緑
+- [x] **Gateway に足した経路が保護されていることを検査した**（IT2 レビュー L3）
 - [ ] **局面移行（IT3 序盤 → IT4 中盤・インサイドアウト）の 5 観点を確かめた**（ユビキタス言語・契約の名簿・検査・品質・負債。[開発戦略](development_strategy.md)）
-- [ ] **正典の数字と突き合わせた**（IT2 T2）。**赤いゲートも配線を疑った**（T5）
-- [ ] `npx gulp okf:check` が ERROR 0
+- [~] **正典の数字と突き合わせた**（IT2 T2。リリース計画の累計実績 SP が 9 のままだったのを 18 に訂正）。**赤いゲートも配線を疑った**（T5。カバレッジの赤は配線ではなく実際の穴だった）
+- [x] `npx gulp okf:check` が ERROR 0
 - [ ] SonarQube の Quality Gate がバックエンド・フロントエンドとも PASS
 - [ ] **IT3 終了時点でベロシティを再評価した**（routingms の立ち上げコストが乗る。[リリース計画](release_plan.md) の検証計画）
+
+**未達の 4 件はクローズ（`closing-iteration`）の工程です。** クラスタ E2E・SonarQube・局面移行の確認・ベロシティ再評価は、開発が一段落してから回します。
 
 ## ユーザーストーリー
 
