@@ -8,7 +8,11 @@ spring:
     password: ${DB_PASSWORD:handlingms}
   flyway:
     enabled: true
-    locations: classpath:db/migration
+    # サービスごとに置き場を分ける。同じ classpath:db/migration に置くと、
+    # 2 つのサービスを同じ JVM に載せた瞬間に双方の V001 が衝突して起動しない
+    # （Found more than one migration with version 001）。契約テストの往復は
+    # 2 サービスを同時に起動するので、番号取りをサービス間で調整しない形にする。
+    locations: classpath:db/migration/handling
   main:
     # Axon の axon.axonserver ConfigurationProperties が Spring Boot の
     # BoundConfigurationProperties と Bean 循環を作るため必須（IT1 スパイクで実測）。

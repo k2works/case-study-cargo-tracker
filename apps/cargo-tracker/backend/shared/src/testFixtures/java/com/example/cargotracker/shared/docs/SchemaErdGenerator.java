@@ -29,6 +29,10 @@ public final class SchemaErdGenerator {
      *
      * <p>出力先と接頭辞は、呼び出し側サービスの {@code src/test/resources/jig.properties} が決める。</p>
      *
+     * <p>各サービスのマイグレーションは {@code db/migration/<サービス名>/} に置く。Flyway は
+     * 位置の下を再帰的に探すので、ここは {@code db/migration} のままでよい。呼び出し側の
+     * クラスパスにはそのサービスの分しか無いため、他サービスの表は混ざらない。</p>
+     *
      * @param databaseName 図の対象となるデータベース名（サービスごとに分ける）
      */
     public static void generate(String databaseName) {
