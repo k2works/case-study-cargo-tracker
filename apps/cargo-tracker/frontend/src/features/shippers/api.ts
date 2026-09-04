@@ -26,7 +26,7 @@ export interface RegisterShipperInput {
   readonly acknowledgedDuplicate?: boolean;
 }
 
-export function fetchShippers(): Promise<Pending<{ items: ShipperView[] }>> {
+export function fetchShippers(): Promise<Pending<{ items: ShipperView[]; total: number }>> {
   return queryClient('/booking/shippers?page=0&size=200');
 }
 

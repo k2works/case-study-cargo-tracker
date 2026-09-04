@@ -34,7 +34,9 @@ public class ShipperQueryHandler {
     public ShipperListView handle(FindShippersQuery query) {
         int size = Math.clamp(query.size(), 1, 200);
         int offset = Math.max(query.page(), 0) * size;
-        return new ShipperListView(shippers.findAll(size, offset).stream().map(ShipperQueryHandler::toView).toList());
+        return new ShipperListView(
+                shippers.findAll(size, offset).stream().map(ShipperQueryHandler::toView).toList(),
+                shippers.countAll());
     }
 
     private static ShipperView toView(ShipperMapper.ShipperRow row) {

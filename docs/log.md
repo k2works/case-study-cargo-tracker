@@ -1,6 +1,7 @@
 # Docs Update Log
 
 ## 2026-09-04
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
 * **Creation**: [20260904](/journal/cargo-tracker/20260904.md) を作成（claude-code/claude-opus-5）
 * **Update**: [retrospective-2](/development/cargo-tracker/retrospective-2.md) を更新（claude-code/claude-opus-5）
 * **Update**: [iteration_report-2](/development/cargo-tracker/iteration_report-2.md) を更新（claude-code/claude-opus-5）

@@ -16,6 +16,10 @@ public interface ShipperMapper {
     @Select("SELECT count(*) FROM shipper WHERE email = #{email}")
     int countByEmail(@Param("email") String email);
 
+    /** 全件数。一覧が上限で切れていることを画面が知らせるために使う。 */
+    @Select("SELECT count(*) FROM shipper")
+    int countAll();
+
     /**
      * 重複相手の荷主 ID。要確認一覧が「既存の荷主を見る」の行き先に使う。
      *

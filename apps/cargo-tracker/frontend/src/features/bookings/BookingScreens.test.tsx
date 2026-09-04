@@ -69,6 +69,57 @@ describe('S20 予約一覧', () => {
     expect(screen.queryByText('GENERAL')).not.toBeInTheDocument();
   });
 
+  it('登録直後は「受け付けました」を出す', async () => {
+    // 投影は非同期なので、登録直後の一覧に自分の予約は無い。何も出さないと
+    // 「登録できていない」と判断して二重に入力される。
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ items: [], total: 0 }), { status: 200 }),
+    );
+
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={[{ pathname: '/bookings', state: { justBooked: true } }]}>
+          <Routes>
+            <Route path="/bookings" element={<BookingListPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByText(/登録を受け付けました。反映までしばらくお待ちください/))
+      .toBeInTheDocument();
+  });
+
+  it('登録を経ていないときは出さない', async () => {
+    // 常に出すと、一覧を普通に開いた人が「何を登録したのか」と迷う。
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ items: [], total: 0 }), { status: 200 }),
+    );
+
+    renderAt('/bookings-list', <BookingListPage />);
+
+    await screen.findByText(/予約はありません/);
+    expect(screen.queryByText(/登録を受け付けました/)).not.toBeInTheDocument();
+  });
+
+  it('件数が上限に達したら、そのことを伝える', async () => {
+    // 一覧は 200 件で切れる。無音で切れると、201 件目の予約は誰の目にも
+    // 入らないまま残る。API は total を返しているので、それを出す。
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({ items: Array.from({ length: 200 }, (_, i) => booking({
+          bookingId: `b-${i}`, bookingNumber: `B-2026-0903-${String(i).padStart(4, '0')}`,
+        })), total: 250 }),
+        { status: 200 },
+      ),
+    );
+
+    renderAt('/bookings-list', <BookingListPage />);
+
+    expect(await screen.findByText(/250 件のうち 200 件を表示/)).toBeInTheDocument();
+  });
+
   it('0 件は失敗と区別して伝える', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(JSON.stringify({ items: [], total: 0 }), { status: 200 }),
@@ -105,6 +156,7 @@ describe('S21 予約登録', () => {
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
+            total: 1,
             items: [
               {
                 shipperId: 's-1',
@@ -156,6 +208,35 @@ describe('S21 予約登録', () => {
 
     expect(screen.getByLabelText('温度条件（下限 ℃）')).toBeInTheDocument();
     expect(screen.queryByLabelText('IMO クラス')).not.toBeInTheDocument();
+  });
+
+  it('荷主が 1 件も無いときは理由と次の行動を出す', async () => {
+    // 初日や新しい拠点では必ずこの状態から始まる。空のプルダウンだけだと、
+    // 読み込み中なのか取得に失敗したのか区別できない。
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ items: [], total: 0 }), { status: 200 }),
+    );
+
+    renderAt('/bookings-new', <BookingRegisterPage />);
+
+    expect(await screen.findByText(/登録されている荷主がありません/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '荷主を登録' })).toHaveAttribute(
+      'href',
+      '/shippers/new',
+    );
+  });
+
+  it('過去の日付は選べない', async () => {
+    // 年の打ち間違いは、経路設計者が「間に合う経路が 1 本も出ない」と
+    // 気づくまで進んでしまう。集約も断るが、画面でも防ぐ。
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date('2026-09-04T00:00:00+09:00'));
+    mockShippersThen(new Response('{}', { status: 200 }));
+
+    renderAt('/bookings-new', <BookingRegisterPage />);
+
+    expect(await screen.findByLabelText('到着期限')).toHaveAttribute('min', '2026-09-04');
+    vi.useRealTimers();
   });
 
   it('寸法を送る', async () => {

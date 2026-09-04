@@ -4,7 +4,7 @@ title: "UI 設計 - 国際貨物輸送管理システム（CQRS / Event Sourcing
 description: "CQRS / Event Sourcing 版 Cargo Tracker の UI 設計。画面一覧・ロール別ナビゲーション・画面遷移・salt 画面イメージ・インタラクションを定め、投影の「反映中」を画面共通の規約として扱う。"
 tags: [design,ui,ux,cqrs]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-03T21:54:36Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-04T05:47:24Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -73,6 +73,7 @@ UI 設計で CQRS / Event Sourcing に固有なのは **「反映中」という
 - 件数の上限で切ったときは、総件数とともにその事実を伝える
 - 0 件のときは、どの条件が効いているかを示し、その条件を外す操作を置く
 - 件数や警告を出すときは、そこから対象へ行けるようにする
+- **一覧が上限で切れたら、そのことを出す。** 件数の上限は画面の都合であって業務の都合ではない。無音で切ると、載らなかったものは誰の目にも入らないまま残る。応答の全件数と表示件数を並べて出す（IT2 で荷主一覧・予約一覧に適用。荷主が切れると予約登録の選択肢からも消え、その日から予約が取れなくなる）
 
 #### 一覧の既定条件
 

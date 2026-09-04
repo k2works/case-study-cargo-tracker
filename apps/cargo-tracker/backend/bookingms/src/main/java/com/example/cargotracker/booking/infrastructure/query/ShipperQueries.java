@@ -37,6 +37,13 @@ public final class ShipperQueries {
             BigDecimal discountRate) {
     }
 
-    public record ShipperListView(List<ShipperView> items) {
+    /**
+     * 一覧。
+     *
+     * <p><b>{@code total} を返す。</b> ページの大きさで切れていることを画面が知らせ
+     * られないと、載らなかった荷主は誰の目にも入らないまま残る。予約登録の選択肢も
+     * この一覧から作るので、切れた荷主はその日から予約が取れなくなる。</p>
+     */
+    public record ShipperListView(List<ShipperView> items, int total) {
     }
 }

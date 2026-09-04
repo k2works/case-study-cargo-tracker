@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import {
   ALERT,
   CARD,
@@ -24,6 +24,9 @@ import { bookingStatusLabel, cargoTypeLabel, fetchBookings } from './api';
  */
 export function BookingListPage() {
   const [includeFinished, setIncludeFinished] = useState(false);
+  // 登録直後は投影がまだなので、自分が入れた予約が一覧に無い。何も出さないと
+  // 「登録できていない」と判断して二重に入力される（ui_design.md S20 の salt）。
+  const justBooked = (useLocation().state as { justBooked?: boolean } | null)?.justBooked === true;
   const { data, isPending, isError } = useQuery({
     queryKey: ['bookings', includeFinished],
     queryFn: () => fetchBookings(includeFinished),
@@ -49,6 +52,12 @@ export function BookingListPage() {
         {'終了したものも表示'}
       </label>
 
+      {justBooked && (
+        <output className={`${NOTICE} mt-4 block`}>
+          登録を受け付けました。反映までしばらくお待ちください
+        </output>
+      )}
+
       {isPending && <output className={`${NOTICE} mt-4`}>読み込み中…</output>}
       {isError && (
         <p role="alert" className={`${ALERT} mt-4`}>
@@ -60,6 +69,15 @@ export function BookingListPage() {
       {/* 見出しだけの表を出すと「読み込みに失敗した」と受け取られる。 */}
       {data?.state === 'ready' && data.value.items.length === 0 && (
         <output className={`${NOTICE} mt-4`}>予約はありません</output>
+      )}
+
+      {/* 上限で切れていることを黙らない。無音で切れると、載らなかった予約は
+          誰の目にも入らないまま残る。 */}
+      {data?.state === 'ready' && data.value.total > data.value.items.length && (
+        <output className={`${NOTICE} mt-4 block`}>
+          {data.value.total} 件のうち {data.value.items.length} 件を表示しています。
+          絞り込みは次のイテレーションで入ります
+        </output>
       )}
 
       {data?.state === 'ready' && data.value.items.length > 0 && (

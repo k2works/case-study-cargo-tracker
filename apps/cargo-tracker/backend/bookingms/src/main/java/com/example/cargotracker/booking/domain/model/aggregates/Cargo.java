@@ -5,6 +5,8 @@ import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoSpecification;
 import com.example.cargotracker.booking.domain.model.valueobjects.RoutingStatus;
+import java.time.Clock;
+import java.time.LocalDate;
 import org.axonframework.eventsourcing.annotation.EventSourcingHandler;
 import org.axonframework.eventsourcing.annotation.reflection.EntityCreator;
 import org.axonframework.extension.spring.stereotype.EventSourced;
@@ -46,13 +48,15 @@ public class Cargo {
      * 空の集約を用意するので、インスタンス側だけで両方を扱える。</p>
      */
     @CommandHandler
-    public String book(BookCargoCommand command, EventAppender appender) {
+    public String book(BookCargoCommand command, EventAppender appender, Clock clock) {
         if (bookingId != null) {
             // 復元した集約が既に予約を持っているのに受け付けると、イベント列に
             // 予約が 2 本並び、どちらが正か決まらない。
             throw new IllegalStateException("予約 " + bookingId + " は既に受け付けています");
         }
-        validate(command);
+        // 業務タイムゾーンの「今日」で判断する。JVM 既定だと、日本時間の朝 9 時より
+        // 前に受け付けた予約で当日の期限が「過去」になる時間帯ができる。
+        validate(command, LocalDate.now(clock));
         CargoSpecification spec = command.cargoSpecification();
         appender.append(new CargoBookedEvent(
                 command.bookingId(),
@@ -77,7 +81,7 @@ public class Cargo {
         return command.bookingId();
     }
 
-    private static void validate(BookCargoCommand command) {
+    private static void validate(BookCargoCommand command, LocalDate today) {
         if (command.bookingId() == null || command.bookingId().isBlank()) {
             throw new IllegalArgumentException("予約 ID は必須です");
         }
@@ -90,6 +94,14 @@ public class Cargo {
         }
         if (command.routeSpecification() == null) {
             throw new IllegalArgumentException("輸送条件は必須です");
+        }
+        // 期限は日付で比較する。当日着は間に合う扱い（不変条件 5）。
+        //
+        // **新規の受け付けでだけ検査する。** 復元（@EventSourcingHandler）では見ない。
+        // 見ると、受け付けたあとに期限を過ぎた予約が読めなくなる。
+        if (command.routeSpecification().arrivalDeadline().isBefore(today)) {
+            throw new IllegalArgumentException(
+                    "到着期限が過去の日付です: " + command.routeSpecification().arrivalDeadline());
         }
     }
 

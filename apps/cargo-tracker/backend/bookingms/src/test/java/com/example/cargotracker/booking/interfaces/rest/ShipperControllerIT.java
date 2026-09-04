@@ -213,6 +213,23 @@ class ShipperControllerIT extends AbstractAxonIntegrationTest {
     }
 
     @Test
+    @DisplayName("一覧は全件数を返す（上限で切れていることを画面が知らせられる）")
+    void reportsTotalCount() {
+        // total を返さないと、上限で切れた荷主は誰の目にも入らないまま残る。
+        // 予約登録の選択肢もこの一覧から作るので、その日から予約が取れなくなる。
+        post("", corporate("total-" + System.nanoTime() + "@example.com"));
+
+        await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
+            ResponseEntity<JsonMap> list = get("?page=0&size=1");
+            assertThat(list.getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(((java.util.List<?>) list.getBody().get("items"))).hasSize(1);
+            assertThat(((Number) list.getBody().get("total")).intValue())
+                    .as("返した件数ではなく、全件数を返す")
+                    .isGreaterThan(1);
+        });
+    }
+
+    @Test
     @DisplayName("一覧に登録した荷主が出る")
     void listsShippers() {
         String email = "list-" + System.nanoTime() + "@example.com";

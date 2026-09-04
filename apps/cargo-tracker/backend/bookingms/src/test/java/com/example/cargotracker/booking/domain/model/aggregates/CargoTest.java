@@ -34,7 +34,14 @@ class CargoTest {
     @BeforeEach
     void setUp() {
         EventSourcingConfigurer configurer = EventSourcingConfigurer.create()
-                .registerEntity(EventSourcedEntityModule.autodetected(String.class, Cargo.class));
+                .registerEntity(EventSourcedEntityModule.autodetected(String.class, Cargo.class))
+                // 集約が「今日」を決めるのに使う時計。固定しないと、期限の検査が
+                // テストを回した日で結果を変える。
+                .componentRegistry(registry -> registry.registerComponent(
+                        java.time.Clock.class,
+                        c -> java.time.Clock.fixed(
+                                java.time.Instant.parse("2026-09-04T00:00:00Z"),
+                                java.time.ZoneId.of("Asia/Tokyo"))));
         fixture = AxonTestFixture.with(configurer, c -> c.disableAxonServer());
     }
 
@@ -170,6 +177,30 @@ class CargoTest {
                         "REFRIGERATED", new BigDecimal("500"), new BigDecimal("50"),
                         new BigDecimal("40"), new BigDecimal("30"), 3, "冷凍食品",
                         null, null, new BigDecimal("-20"), new BigDecimal("-10"), "sales01"));
+    }
+
+    @Test
+    @DisplayName("到着期限が過去の予約は受け付けない")
+    void rejectsPastDeadline() {
+        // 年を打ち間違えた予約が仮受付として一覧に載ると、経路設計者が
+        // 「間に合う経路が 1 本も出ない」と気づくまで進む。
+        fixture.given().noPriorActivity()
+                .when().command(book(general(), new RouteSpecification(
+                        Location.of("JPTYO"), Location.of("USNYC"),
+                        LocalDate.of(2025, Month.DECEMBER, 1))))
+                .then().exception(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("到着期限が当日の予約は受け付ける")
+    void acceptsTodayAsDeadline() {
+        // 当日着は「間に合う」扱い（不変条件 5）。境目を過去側に含めると、
+        // その日のうちに着く便を断ることになる。
+        fixture.given().noPriorActivity()
+                .when().command(book(general(), new RouteSpecification(
+                        Location.of("JPTYO"), Location.of("USNYC"),
+                        LocalDate.of(2026, Month.SEPTEMBER, 4))))
+                .then().success();
     }
 
     @Test

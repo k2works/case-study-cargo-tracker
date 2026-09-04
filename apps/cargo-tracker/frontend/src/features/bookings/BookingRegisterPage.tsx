@@ -3,7 +3,9 @@ import { useState, type SubmitEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { ApiError } from '@/shared/api/client';
 import { display, fetchShippers } from '@/features/shippers/api';
-import { ALERT, BUTTON_PRIMARY, CARD, FIELD, LABEL, PAGE_TITLE } from '@/shared/ui/styles';
+import { businessDate } from '@/shared/api/businessDate';
+import { Link } from 'react-router';
+import { ALERT, BUTTON_PRIMARY, CARD, FIELD, LABEL, LINK, PAGE_TITLE } from '@/shared/ui/styles';
 import { bookCargo, type CargoType } from './api';
 
 /**
@@ -87,6 +89,27 @@ export function BookingRegisterPage() {
                 </option>
               ))}
           </select>
+          {/* 荷主が 1 件も無いときは、空の選択肢だけを出さずに理由を言う。
+              初日や新しい拠点では必ずこの状態から始まる。 */}
+          {shippers?.state === 'ready' && shippers.value.items.length === 0 && (
+            <p className="mt-1 text-sm text-gray-600">
+              登録されている荷主がありません。先に
+              <Link to="/shippers/new" className={LINK}>
+                荷主を登録
+              </Link>
+              してください。
+            </p>
+          )}
+          {shippers === undefined && (
+            <p className="mt-1 text-sm text-gray-600">荷主を読み込んでいます…</p>
+          )}
+          {shippers?.state === 'ready'
+            && shippers.value.total > shippers.value.items.length && (
+              <p className="mt-1 text-sm text-gray-600">
+                荷主は {shippers.value.total} 件のうち {shippers.value.items.length} 件を
+                表示しています
+              </p>
+            )}
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -98,7 +121,17 @@ export function BookingRegisterPage() {
           <label htmlFor="arrivalDeadline" className={LABEL}>
             到着期限
           </label>
-          <input id="arrivalDeadline" name="arrivalDeadline" type="date" required className={FIELD} />
+          {/* 過去の日付を選べないようにする。年の打ち間違いは、経路設計者が
+              「間に合う経路が 1 本も出ない」と気づくまで進んでしまう。
+              業務タイムゾーンの今日を使う（toISOString() は UTC で 1 日ずれる）。 */}
+          <input
+            id="arrivalDeadline"
+            name="arrivalDeadline"
+            type="date"
+            min={businessDate()}
+            required
+            className={FIELD}
+          />
           <p className="mt-1 text-sm text-gray-600">当日に着く便は間に合う扱いです</p>
         </div>
 
