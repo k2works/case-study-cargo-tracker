@@ -3,8 +3,10 @@ type: Plan
 title: "イテレーション計画 3 - 危険物・引き渡し・航海登録"
 description: "IT3 の計画。US05/US06/US24（9 SP）に加え、IT2 の引き継ぎ 12 件を返済枠に置く。2 つ目のサービス routingms を bookingms と同じ型で立ち上げ、型が同じであることを検査で固定して Release 0.1 を閉じる。デモ項目 7 件。"
 tags: [plan,iteration,cargo-tracker]
-status: draft
+status: stable
 generated: { by: claude-code/claude-opus-5, at: 2026-09-04T08:43:13Z }
+verified:
+  - { by: human:kakimomokuri, at: 2026-09-04T08:44:22Z }
 ---
 
 # イテレーション 3 計画 - 危険物・引き渡し・航海登録

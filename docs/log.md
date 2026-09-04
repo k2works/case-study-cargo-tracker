@@ -1,6 +1,7 @@
 # Docs Update Log
 
 ## 2026-09-04
+* **Verification**: [iteration_plan-3](/development/cargo-tracker/iteration_plan-3.md) を human:kakimomokuri が検証
 * **Update**: [iteration_plan-3](/development/cargo-tracker/iteration_plan-3.md) を更新（claude-code/claude-opus-5）
 * **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
 * **Update**: [iteration_report-2](/development/cargo-tracker/iteration_report-2.md) を更新（claude-code/claude-opus-5）
