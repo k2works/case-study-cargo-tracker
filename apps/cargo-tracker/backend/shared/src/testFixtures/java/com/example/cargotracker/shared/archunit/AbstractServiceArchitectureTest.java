@@ -95,6 +95,13 @@ public abstract class AbstractServiceArchitectureTest {
     }
 
     @Test
+    @DisplayName("他の BC のパッケージに依存しない")
+    void serviceDoesNotDependOnAnotherService() {
+        allowEmpty(CargoTrackerArchRules.serviceDoesNotDependOnAnotherService(servicePackage()))
+                .check(classes());
+    }
+
+    @Test
     @DisplayName("Saga の型に依存しない（ADR-0001 決定 6）")
     void doesNotDependOnAxonSaga() {
         allowEmpty(CargoTrackerArchRules.doesNotDependOnAxonSaga()).check(classes());

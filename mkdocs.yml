@@ -134,6 +134,8 @@ nav:
           - ADR-0002 Event Store は Axon Server SE、Read Model は PostgreSQL: adr/cargo-tracker/0002-event-store-axon-server-and-postgresql-read-models.md
           - ADR-0003 個人情報の crypto-shredding: adr/cargo-tracker/0003-crypto-shredding-for-personal-data.md
           - ADR-0004 開発環境の動作確認用ログイン: adr/cargo-tracker/0004-demo-login-for-development.md
+          - ADR-0005 Flyway のサービス別ロケーション: adr/cargo-tracker/0005-flyway-locations-per-service.md
+          - ADR-0006 Gateway でのロール認可: adr/cargo-tracker/0006-role-authorization-at-the-gateway.md
   - 記事:
       - 概要: article/index.md
       - モノリスアーキテクチャ実装比較:

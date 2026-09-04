@@ -65,7 +65,7 @@ public class VoyageProjection {
         // 巻き添えになる。トークンが進まないので、その 1 件で投影全体が止まる。
         int inserted = voyages.insert(row);
 
-        if (inserted == 0 && !sameAsStored(row)) {
+        if (inserted == 0 && !sameAsStored(row, movements, event.acceptedCargoTypes())) {
             // 弾かれた。集約は受け付けているので、ここで黙ると
             // 「登録したのに一覧に出ない」が誰にも見えないまま残る。
             log.warn("航海の投影を一意制約で弾いた: voyageNumber={}", event.voyageNumber());
@@ -101,8 +101,16 @@ public class VoyageProjection {
      *
      * <p>投影の時刻（{@code registeredAt} / {@code projectedAt} / {@code lastEventId}）は
      * 業務の内容ではないので、比べる前に既存の行の値へ揃える。</p>
+     *
+     * <p><b>ヘッダの行だけでは足りない。</b> {@code voyage} が持つのは最初の出発と
+     * 最後の到着だけで、途中の寄港地と受入貨物種別は別の表にある。ヘッダだけを比べると、
+     * 「同じ区間だが途中の寄港地が違う」「同じ区間だが危険物も受けると言っている」2 件目が
+     * 読み直し扱いになり、そのまま {@code insertAcceptedCargoType} まで進んで
+     * <b>既存の航海の受入種別が黙って広がる</b>。要確認一覧にも載らない。
+     * 比べるのは投影が保持する内容の全部である。</p>
      */
-    private boolean sameAsStored(VoyageMapper.VoyageRow candidate) {
+    private boolean sameAsStored(VoyageMapper.VoyageRow candidate,
+            List<VoyageRegisteredEvent.Movement> movements, List<String> acceptedCargoTypes) {
         VoyageMapper.VoyageRow stored = voyages.findByNumber(candidate.voyageNumber());
         if (stored == null) {
             return false;
@@ -113,6 +121,37 @@ public class VoyageProjection {
                 candidate.arrivalUnlocode(), candidate.departureAt(), candidate.arrivalAt(),
                 candidate.cancelled(),
                 stored.registeredAt(), stored.projectedAt(), stored.lastEventId());
-        return normalized.equals(stored);
+        return normalized.equals(stored)
+                && sameMovements(candidate.voyageNumber(), movements)
+                && sameAcceptedCargoTypes(candidate.voyageNumber(), acceptedCargoTypes);
+    }
+
+    /** 寄港地は順序も内容のうち。並びが違えば別の航海である。 */
+    private boolean sameMovements(String voyageNumber,
+            List<VoyageRegisteredEvent.Movement> movements) {
+        List<VoyageMapper.MovementRow> stored = voyages.findMovements(voyageNumber);
+        if (stored.size() != movements.size()) {
+            return false;
+        }
+        for (int i = 0; i < movements.size(); i++) {
+            VoyageRegisteredEvent.Movement movement = movements.get(i);
+            VoyageMapper.MovementRow expected = new VoyageMapper.MovementRow(
+                    voyageNumber, i + 1,
+                    movement.departureUnLocode(), movement.arrivalUnLocode(),
+                    movement.departureAt(), movement.arrivalAt());
+            if (!expected.equals(stored.get(i))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * 受入貨物種別は集合として比べる。並びは意味を持たないが、
+     * <b>数が違えば別物</b>である（追記しかしないので、広がったことに気づけない）。
+     */
+    private boolean sameAcceptedCargoTypes(String voyageNumber, List<String> acceptedCargoTypes) {
+        return new java.util.TreeSet<>(voyages.findAcceptedCargoTypes(voyageNumber))
+                .equals(new java.util.TreeSet<>(acceptedCargoTypes));
     }
 }

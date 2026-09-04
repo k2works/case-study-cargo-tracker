@@ -4,7 +4,7 @@ title: "データモデル設計 - 国際貨物輸送管理システム（CQRS /
 description: "CQRS / Event Sourcing 版 Cargo Tracker のデータモデル設計。Event Store は Axon Server に任せ、サービスごとの投影テーブル・Axon 管理テーブル・Auth の状態テーブルを ER 図とテーブル定義で示し、Processing Group との対応とリプレイ前提のマイグレーション方針を定める。"
 tags: [design,data-model,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-04T08:58:20Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-04T12:39:20Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -89,7 +89,7 @@ bi --> bidb
 | Axon Server | （専用ボリューム） | Event Store | イベント列、スナップショット |
 | authms | `auth_db` | 状態保存 | `users`, `user_roles`, `user_shipper_link`, `auth_audit_log` |
 | bookingms | `booking_read_db` | 投影 + 受け皿 + Axon 管理 | `shipper`, `cargo_summary`, `cargo_leg`, `cancellation_request`, `quotation`, `quotation_candidate`, `attention_item`, `process_state`, `token_entry` |
-| routingms | `routing_read_db` | 投影 + Axon 管理 | `voyage`, `carrier_movement`, `voyage_accepted_cargo_type`, `token_entry` |
+| routingms | `routing_read_db` | 投影 + 受け皿 + Axon 管理 | `voyage`, `carrier_movement`, `voyage_accepted_cargo_type`, `attention_item`, `token_entry` |
 | trackingms | `tracking_read_db` | 投影 + 受け皿 + Axon 管理 | `tracking_summary`, `tracking_event`, `tracking_exception`, `shipper_cargo_snapshot`, `attention_item`, `token_entry` |
 | handlingms | `handling_read_db` | 投影 + Axon 管理 | `cargo_snapshot`, `cargo_snapshot_leg`, `handling_activity`, `customs_declaration`, `token_entry` |
 | billingms | `billing_read_db` | 投影 + 受け皿 + Axon 管理 | `invoice`, `invoice_line_item`, `payment`, `shipper_contract_snapshot`, `attention_item`, `token_entry` |
@@ -381,7 +381,7 @@ q ||--o{ qc
 | `cargo_leg` | `CargoRoutedEvent` | `INDEX(voyage_number)` | 再設計時は全行を入れ替える |
 | `cancellation_request` | `CancellationRequestedEvent`, `CancellationApprovedEvent`, `CancellationRejectedEvent` | `INDEX(booking_id)`, `INDEX(decision)`（`NULL` = 承認待ち） | `decision` は `APPROVED` / `REJECTED` / `NULL` |
 | `quotation` / `quotation_candidate` | `QuotationCreatedEvent` | `INDEX(created_at)` | 候補 0 件の見積も 1 行残る |
-| `attention_item` | 投影が UNIQUE 違反で書けなかった事実（`kind = PROJECTION_REJECTED`）、Reaction Handler のコマンド失敗（`kind = REACTION_FAILED`）、Saga の補償（`kind = SAGA_COMPENSATED`） | `INDEX(assigned_role, acknowledged_at, occurred_at)`, `INDEX(target_type, target_id)` | 要確認一覧（S70）の受け皿。`assigned_role` で自ロール宛に絞り、`payload` に受け付けた内容を持ち「修正して再登録」の初期値にする。`target_type` / `target_id` は詳細への導線（投影に無い行でも `payload` から開ける）。**投影ではなく追記専用の受け皿**であり、リプレイで TRUNCATE しない。同じ定義を `tracking_read_db`・`billing_read_db` にも置く（「事前の存在確認 + 投影の UNIQUE + 拒否の記録」の三段の最後） |
+| `attention_item` | 投影が UNIQUE 違反で書けなかった事実（`kind = PROJECTION_REJECTED`）、Reaction Handler のコマンド失敗（`kind = REACTION_FAILED`）、Saga の補償（`kind = SAGA_COMPENSATED`） | `INDEX(assigned_role, occurred_at) WHERE acknowledged_at IS NULL`（部分インデックス） | 要確認一覧（S70）の受け皿。`assigned_role` で自ロール宛に絞り、`payload` に受け付けた内容を持ち「修正して再登録」の初期値にする。`target_type` / `target_id` は詳細への導線（投影に無い行でも `payload` から開ける）。**投影ではなく追記専用の受け皿**であり、リプレイで TRUNCATE しない。同じ定義を `routing_read_db`・`tracking_read_db`・`billing_read_db` にも置く（「事前の存在確認 + 投影の UNIQUE + 拒否の記録」の三段の最後） |
 
 ### `routing_read_db`（routingms）
 
@@ -423,6 +423,21 @@ entity "voyage_accepted_cargo_type" as act {
   * **cargo_type**: VARCHAR(30) <<PK>>
 }
 
+' 追記専用の受け皿。投影ではないので voyage とは関連を張らない
+entity "attention_item" as ai {
+  * **item_id**: UUID <<PK>>
+  --
+  kind: VARCHAR(30) NOT NULL
+  target_type: VARCHAR(30) NOT NULL
+  target_id: VARCHAR(64) NOT NULL
+  assigned_role: VARCHAR(30) NOT NULL
+  reason: TEXT NOT NULL
+  payload: JSONB
+  occurred_at: TIMESTAMPTZ NOT NULL
+  acknowledged_at: TIMESTAMPTZ
+  acknowledged_by: VARCHAR(64)
+}
+
 v ||--|{ cm
 v ||--o{ act
 @enduml
@@ -433,6 +448,7 @@ v ||--o{ act
 | `voyage` | `VoyageRegisteredEvent`, `VoyageScheduleUpdatedEvent`, `VoyageCancelledEvent` | `INDEX(departure_unlocode, departure_at)`, `INDEX(arrival_unlocode, arrival_at)` | 航海番号は自然キー。`departure_*` / `arrival_*` は最初と最後の移動を非正規化（一覧の検索用） |
 | `carrier_movement` | 同上 | — | 経路探索の `VoyageGraph` はこのテーブルから組む。更新時は全行入れ替え |
 | `voyage_accepted_cargo_type` | 同上 | — | 空なら一般貨物のみ |
+| `attention_item` | 投影が UNIQUE 違反で書けなかった事実（`kind = PROJECTION_REJECTED`） | `INDEX(assigned_role, occurred_at) WHERE acknowledged_at IS NULL` | `booking_read_db` と同じ定義。**記録するだけでは誰にも見えない**ので、読み口（`GET /api/v1/routing/attention-items`）を対で置く。S70 は booking と routing の両方を束ねて出す |
 
 経路候補（`RouteCandidate`）はテーブルに持ちません。`FindRouteCandidatesQuery` のたびに `carrier_movement` から探索します。候補を保存するのは Booking の `quotation_candidate` と `cargo_leg` です。
 
@@ -821,15 +837,28 @@ Processing Group は `@ProcessingGroup`（Axon 5 に存在しません）では�
 | 投影の作り直し | テーブルを TRUNCATE → トークンをリセット | サービス単位で `operation.md` の手順と Gulp タスクにする |
 
 ```text
-apps/cargo-tracker/backend/bookingms/src/main/resources/db/migration/
+apps/cargo-tracker/backend/bookingms/src/main/resources/db/migration/booking/
 ├── V001__create_axon_tables.sql        # token_entry のみ（Axon 5 に Saga は無い）
-├── V002__create_shipper.sql
-├── V003__create_cargo_summary.sql
-├── V004__create_cargo_leg.sql
-├── V005__create_cancellation_request.sql
-├── V006__create_quotation.sql
-└── V007__create_attention_item.sql
+├── V002__create_shipper_and_attention.sql
+├── V003__create_process_state.sql
+└── V004__create_cargo_summary.sql
+
+apps/cargo-tracker/backend/routingms/src/main/resources/db/migration/routing/
+├── V001__create_axon_tables.sql
+├── V002__create_voyage.sql
+├── V003__create_carrier_movement.sql
+├── V004__create_voyage_accepted_cargo_type.sql
+└── V005__create_attention_item.sql
 ```
+
+**置き場をサービス名のサブディレクトリに分けているのは、番号の取り合いを避けるためです。**
+`classpath:db/migration` を全サービスで共有すると、2 つのサービスを同じ JVM に載せた
+瞬間に双方の `V001` が衝突して起動しません（`Found more than one migration with version 001`）。
+契約テストの往復（`contract-tests` の `roundTripTest`）は bookingms と billingms を同じ
+JVM で起動するため、番号をサービス間で調整しない形が要ります。各サービスの
+`application.yml` で `spring.flyway.locations: classpath:db/migration/<サービス名>` を
+指定します。**ファイル名は変えていない**ので、`flyway_schema_history.script`（ファイル名のみを
+保持する）は既存環境と食い違いません。詳細は [ADR-0005](../../adr/cargo-tracker/0005-flyway-locations-per-service.md)。
 
 ## 非機能要件への対応
 

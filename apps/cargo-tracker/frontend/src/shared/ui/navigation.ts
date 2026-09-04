@@ -22,7 +22,13 @@ export const NAVIGATION: readonly NavigationItem[] = [
   { path: '/routing/worklist', label: '経路設計作業', allow: ['ROLE_ROUTING'] },
   { path: '/voyages', label: '航海スケジュール', allow: ['ROLE_ROUTING'] },
   { path: '/voyages/new', label: '航海登録', allow: ['ROLE_ROUTING'] },
-  { path: '/worklist/attention', label: '要確認一覧', allow: ['ROLE_SALES', 'ROLE_ACCOUNTANT', 'ROLE_TRACKER'] },
+  {
+    path: '/worklist/attention',
+    label: '要確認一覧',
+    // 経路設計者も宛先になる。航海の投影が一意制約で弾いた事実は
+    // ROLE_ROUTING 宛に記録されるので、ここに入れないと本人が開けない。
+    allow: ['ROLE_SALES', 'ROLE_ACCOUNTANT', 'ROLE_TRACKER', 'ROLE_ROUTING'],
+  },
   { path: '/admin/users', label: '利用者管理', allow: ['ROLE_ADMIN'] },
 ];
 

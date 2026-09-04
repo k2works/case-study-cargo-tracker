@@ -36,6 +36,13 @@ class ReplayIT extends AbstractAxonIntegrationTest {
     private static final Instant DEPART = Instant.parse("2026-09-10T09:00:00Z");
     private static final Instant ARRIVE = Instant.parse("2026-09-24T18:00:00Z");
 
+    /**
+     * 件数を数えるときの「いま」。実時計を使うと、出港済みを含めるかどうかの判定が
+     * 実行した時刻で変わる。何を数えているかがテスト自身から読み取れなくなるので、
+     * 固定した時刻を渡す。
+     */
+    private static final Instant COUNTED_AT = Instant.parse("2026-09-01T00:00:00Z");
+
     @Autowired
     private VoyageProjection projection;
 
@@ -67,10 +74,10 @@ class ReplayIT extends AbstractAxonIntegrationTest {
         VoyageRegisteredEvent event = voyage(number, "MOL EXPRESS");
 
         projection.on(event);
-        int before = voyages.countAll(true, null, Instant.now());
+        int before = voyages.countAll(true, null, COUNTED_AT);
         projection.on(event);
 
-        assertThat(voyages.countAll(true, null, Instant.now())).isEqualTo(before);
+        assertThat(voyages.countAll(true, null, COUNTED_AT)).isEqualTo(before);
         assertThat(voyages.findMovements(number)).hasSize(1);
         assertThat(voyages.findAcceptedCargoTypes(number)).containsExactly("GENERAL");
     }

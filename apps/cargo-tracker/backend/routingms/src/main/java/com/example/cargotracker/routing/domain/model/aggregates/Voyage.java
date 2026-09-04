@@ -4,6 +4,7 @@ import com.example.cargotracker.routing.domain.model.commands.RegisterVoyageComm
 import com.example.cargotracker.routing.domain.model.events.VoyageRegisteredEvent;
 import com.example.cargotracker.routing.domain.model.valueobjects.CargoType;
 import com.example.cargotracker.routing.domain.model.valueobjects.CarrierMovement;
+import com.example.cargotracker.routing.domain.model.valueobjects.VoyageNumber;
 import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.shared.domain.error.IllegalTransition;
 import java.util.List;
@@ -90,9 +91,11 @@ public class Voyage {
     }
 
     private static void validate(RegisterVoyageCommand command) {
-        if (command.voyageNumber() == null || command.voyageNumber().isBlank()) {
-            throw new BusinessRuleViolation("航海番号は必須です");
-        }
+        // 値オブジェクトを通す。ここで文字列のまま空白だけを見ていると、
+        // 長さの規則は VoyageNumber に書いてあるのに本番経路に載らない。
+        // 20 文字を超える番号は集約を素通りしてイベントになり、投影の
+        // voyage_number VARCHAR(20) で落ちて Processing Group が止まる。
+        new VoyageNumber(command.voyageNumber());
         if (command.carrier() == null) {
             throw new BusinessRuleViolation("運送会社は必須です");
         }

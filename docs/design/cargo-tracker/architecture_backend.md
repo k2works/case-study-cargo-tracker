@@ -4,7 +4,7 @@ title: "バックエンドアーキテクチャ - 国際貨物輸送管理シス
 description: "Axon Framework 5 による CQRS / Event Sourcing 版 Cargo Tracker のバックエンドアーキテクチャ。マイクロサービス構成で BC ごとにサービスを分け、Axon Server を Command / Event / Query Bus と Event Store に使い、投影・Reaction Handler・イベント契約を定める。"
 tags: [design, architecture, backend, cqrs, event-sourcing, axon, microservices]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-03T00:53:51Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-04T12:39:20Z }
 stale_after: 2026-12-01T00:00:00Z
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
@@ -912,7 +912,7 @@ Axon 5 の Saga API は 4 系から変わっている可能性があります。
 
 ## セキュリティ設計
 
-`java-3` authms の設計を引き継ぎます。`authms` が JWT を発行し、`gatewayms` が検証してユーザーとロールをヘッダーで後段に渡します。各サービスは `shared` の `AuthenticatedUserFilter` で `AuthenticatedUser` / `Role` に復元し、Controller の認可に使います。US31（認証失敗が続いたアカウントの保護）は `User` を状態保存で実装し、失敗回数とロック期限を `users` に持ちます。認可は入力検証より先に置きます。
+`java-3` authms の設計を引き継ぎます。`authms` が JWT を発行し、`gatewayms` が検証してユーザーとロールをヘッダーで後段に渡します。**経路ごとに許すロールは `gatewayms` の宣言表（`RoleAuthorization`）1 か所で定め、そこで通らないものは後段へ渡しません（[ADR-0006](../../adr/cargo-tracker/0006-role-authorization-at-the-gateway.md)）。宣言の無い `/api/` の経路は通しません。** 画面側の `RequireRole` はナビと誤操作を減らすためのもので、守りではありません（ブラウザを介さずに叩けば素通りします）。後段のサービスは `X-Auth-Roles` を信じ、応答の中身を宛先ロールで絞る用途にだけ使います。US31（認証失敗が続いたアカウントの保護）は `User` を状態保存で実装し、失敗回数とロック期限を `users` に持ちます。認可は入力検証より先に置きます。
 
 ## テスト戦略（概要）
 

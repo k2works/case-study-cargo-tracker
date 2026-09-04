@@ -4,8 +4,26 @@ import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AttentionListPage } from './AttentionListPage';
 
+/**
+ * 要確認は booking と routing の 2 か所から取る。**同じ本文を両方に返すと
+ * 重複して数が合わなくなる**ので、既定では booking にだけ本文を、routing には
+ * 空を返す。routing 側を見るテストは `respondPerService` を使う。
+ */
 function respond(status: number, body: unknown) {
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status })));
+  respondPerService({ booking: [status, body], routing: [200, { items: [] }] });
+}
+
+type ServiceResponse = readonly [number, unknown];
+
+function respondPerService(bodies: { booking: ServiceResponse; routing: ServiceResponse }) {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      const [status, body] = url.includes('/routing/') ? bodies.routing : bodies.booking;
+      return Promise.resolve(new Response(JSON.stringify(body), { status }));
+    }),
+  );
 }
 
 function renderPage() {
@@ -139,5 +157,34 @@ describe('S70 要確認一覧', () => {
 
     expect(await screen.findByText('確認が必要なものはありません')).toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
+  });
+  it('経路設計の要確認も同じ一覧に出る', async () => {
+    // 記録するサービスが増えたら、読み口にも足さないと誰にも見えない。
+    // routingms は IT3 の途中まで attention_item に書くだけで読み口が無かった。
+    respondPerService({
+      booking: [200, { items: [] }],
+      routing: [
+        200,
+        {
+          items: [
+            {
+              itemId: 'i-9',
+              kind: 'PROJECTION_REJECTED',
+              targetType: 'VOYAGE',
+              targetId: 'V-0001',
+              assignedRole: 'ROLE_ROUTING',
+              reason: '航海番号の重複',
+              relatedShipperId: null,
+              occurredAt: '2026-09-04T09:00:00Z',
+            },
+          ],
+        },
+      ],
+    });
+
+    renderPage();
+
+    expect(await screen.findByText('航海番号の重複')).toBeInTheDocument();
+    expect(screen.getByText('V-0001')).toBeInTheDocument();
   });
 });

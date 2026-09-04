@@ -136,4 +136,17 @@ class VoyageValueObjectsTest {
         assertThatThrownBy(() -> new Carrier("MOL", null))
                 .isInstanceOf(BusinessRuleViolation.class).hasMessageContaining("運送会社名");
     }
+
+    @Test
+    @DisplayName("運送会社は投影の列に入らない長さを断る")
+    void carrierRejectsTooLongValues() {
+        // ここで断らないと、集約を通ったイベントが投影の VARCHAR で落ちて
+        // Processing Group が止まる。利用者には「登録したのに一覧に出ない」に見える。
+        assertThatThrownBy(() -> new Carrier("C".repeat(21), "商船三井"))
+                .isInstanceOf(BusinessRuleViolation.class)
+                .hasMessageContaining("運送会社コードは 20 文字以内です");
+        assertThatThrownBy(() -> new Carrier("MOL", "名".repeat(101)))
+                .isInstanceOf(BusinessRuleViolation.class)
+                .hasMessageContaining("運送会社名は 100 文字以内です");
+    }
 }

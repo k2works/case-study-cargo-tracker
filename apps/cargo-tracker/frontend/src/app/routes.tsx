@@ -25,7 +25,12 @@ import { VoyageRegisterPage } from '@/features/routing/VoyageRegisterPage';
  * <p>許可ロールは NAVIGATION を正典にする。ナビと画面で別々に書くと、
  * ナビには出るのに開くと 403、あるいはその逆が起きる。</p>
  */
-const PAGES: Record<string, ReactElement> = {
+/**
+ * 画面の実体。**キーは NAVIGATION の path と一致していなければならない。**
+ * ここにあってナビに無い画面は、実装されているのに誰も辿り着けない。
+ * 一致は `navigationMatchesUiDesign.test.ts` が見る。
+ */
+export const PAGES: Record<string, ReactElement> = {
   '/': <DashboardPage />,
   '/shippers': <ShipperListPage />,
   '/shippers/new': <ShipperRegisterPage />,

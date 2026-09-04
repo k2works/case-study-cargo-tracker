@@ -76,8 +76,10 @@ export function VoyageListPage() {
           誰の目にも入らないまま残る。 */}
       {data?.state === 'ready' && data.value.total > data.value.items.length && (
         <output className={`${NOTICE} mt-4 block`}>
+          {/* 内部のストーリー ID は画面に出さない。利用者には意味が無く、
+              「US07 とは何か」という問い合わせになる。 */}
           {data.value.total} 件のうち {data.value.items.length} 件を表示しています。
-          絞り込みは US07 で入ります
+          条件を指定した絞り込みは今後追加されます
         </output>
       )}
 

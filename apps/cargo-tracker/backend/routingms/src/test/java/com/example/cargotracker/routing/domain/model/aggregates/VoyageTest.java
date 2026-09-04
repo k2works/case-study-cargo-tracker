@@ -97,6 +97,19 @@ class VoyageTest {
     }
 
     @Test
+    @DisplayName("航海番号が 20 文字を超えるなら集約が断る")
+    void rejectsTooLongVoyageNumber() {
+        // 値オブジェクトに書いてあるだけでは守られない。集約を素通りすると
+        // イベントになり、投影の VARCHAR(20) で落ちて投影全体が止まる。
+        fixture.given().noPriorActivity()
+                .when().command(new RegisterVoyageCommand("V".repeat(21),
+                        new Carrier("MOL", "商船三井"), new VesselName("MOL EXPRESS"),
+                        tokyoToNewYork(), Set.of(), "routing01"))
+                .then().exceptionSatisfies(e ->
+                        assertThat(e.getMessage()).contains("航海番号は 20 文字以内です"));
+    }
+
+    @Test
     @DisplayName("運送会社・船名・寄港地はいずれも欠かせない")
     void rejectsMissingParts() {
         fixture.given().noPriorActivity()

@@ -130,6 +130,51 @@ public final class CargoTrackerArchRules {
                         + "置き場を増やすなら ADR-0001 のコンプライアンス欄も同じ変更で直す");
     }
 
+    /**
+     * 業務サービスの名簿（BC の境界）。
+     *
+     * <p><b>名簿に無いものを通さない</b>ため、ここは列挙で持つ。サービスを増やしたら
+     * 同じ変更でここにも足す。足し忘れると、その BC への依存だけが検査を素通りする。</p>
+     */
+    private static final java.util.List<String> SERVICES = java.util.List.of(
+            "auth", "booking", "routing", "tracking", "handling", "billing");
+
+    /**
+     * BC は他の BC のパッケージに依存しない。
+     *
+     * <p>いまは Gradle の依存宣言が無いのでコンパイルできず、この規則を破れない。
+     * それでも置くのは、<b>共有カーネルに業務の型が漏れたときに壊れ方が変わる</b>ためである。
+     * {@code shared} 経由なら依存宣言は増えず、`BuildConventionTest` は素通りする。
+     * 越境してよいのは共有カーネル（`shared.contract` の契約イベントと ACL）だけで、
+     * 相手の BC のパッケージを直接見ることはどの層からも許さない。</p>
+     *
+     * @param servicePackage 検査するサービスのパッケージ（{@code com.example.cargotracker.booking} など）
+     */
+    public static ArchRule serviceDoesNotDependOnAnotherService(String servicePackage) {
+        return serviceDoesNotDependOnAnotherService(servicePackage, SERVICES.stream()
+                .map(name -> "com.example.cargotracker." + name)
+                .toList());
+    }
+
+    /**
+     * 名簿を差し替えられる形。**実サービスには違反が 1 つも無い**ので、これが無いと
+     * 規則が赤を出せるかどうかを確かめられない（`ArchRulesAreEffectiveTest`）。
+     *
+     * @param servicePackage 検査するサービスのパッケージ
+     * @param allServicePackages 境界を張る全サービスのパッケージ
+     */
+    public static ArchRule serviceDoesNotDependOnAnotherService(
+            String servicePackage, java.util.List<String> allServicePackages) {
+        String[] others = allServicePackages.stream()
+                .filter(pkg -> !pkg.equals(servicePackage))
+                .map(pkg -> pkg + "..")
+                .toArray(String[]::new);
+        return noClasses().that().resideInAPackage(servicePackage + "..")
+                .should().dependOnClassesThat().resideInAnyPackage(others)
+                .because("BC が別の BC の型を直接見ると境界が消える。"
+                        + "越境してよいのは共有カーネルの契約イベントと ACL だけ（ADR-0001 決定 2）");
+    }
+
     /** Reaction Handler は同期クエリを呼ばない（`.join()` が Processing Group を止める）。 */
     public static ArchRule reactionDoesNotCallQueryGateway() {
         return noClasses().that().resideInAPackage("..application.reaction..")

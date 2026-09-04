@@ -108,6 +108,49 @@ class VoyageProjectionIT extends AbstractAxonIntegrationTest {
     }
 
     @Test
+    @DisplayName("ヘッダが同じでも受入貨物種別が違えば弾く（黙って広がらない）")
+    void rejectsDuplicateThatOnlyDiffersInAcceptedCargoTypes() {
+        String number = uniqueNumber();
+        projection.on(registered(number, List.of("GENERAL")));
+
+        // 運送会社も船名も区間も同じ。違うのは「危険物も受ける」と言っている点だけ。
+        // ヘッダの行だけを比べるとリプレイに見え、そのまま追記されて
+        // 既存の航海が危険物を受け入れることになる。
+        projection.on(registered(number, List.of("GENERAL", "HAZARDOUS")));
+
+        VoyageView view = queries.handle(new FindVoyageQuery(number));
+        assertThat(view.acceptedCargoTypes())
+                .as("2 件目の申告で既存の航海の受入種別が広がってはいけない")
+                .containsExactly("GENERAL");
+        assertThat(attentionItems.findOpenByRole("ROLE_ROUTING"))
+                .anyMatch(item -> item.targetId().equals(number)
+                        && item.reason().equals("航海番号の重複"));
+    }
+
+    @Test
+    @DisplayName("ヘッダが同じでも途中の寄港地が違えば弾く")
+    void rejectsDuplicateThatOnlyDiffersInIntermediatePort() {
+        String number = uniqueNumber();
+        projection.on(registered(number, List.of("GENERAL")));
+
+        // 端点（JPTYO → USNYC）は同じで、経由地だけが違う。voyage の行は
+        // 最初の出発と最後の到着しか持たないので、ヘッダでは見分けられない。
+        projection.on(new VoyageRegisteredEvent(number, "MOL", "商船三井", "MOL EXPRESS",
+                List.of(new VoyageRegisteredEvent.Movement("JPTYO", "HKHKG", DEPART,
+                                Instant.parse("2026-09-16T08:00:00Z")),
+                        new VoyageRegisteredEvent.Movement("HKHKG", "USNYC",
+                                Instant.parse("2026-09-17T06:00:00Z"), ARRIVE)),
+                List.of("GENERAL"), "routing02"));
+
+        VoyageView view = queries.handle(new FindVoyageQuery(number));
+        assertThat(view.movements().get(0).arrivalUnLocode())
+                .as("先に入った経路が残る").isEqualTo("SGSIN");
+        assertThat(attentionItems.findOpenByRole("ROLE_ROUTING"))
+                .anyMatch(item -> item.targetId().equals(number)
+                        && item.reason().equals("航海番号の重複"));
+    }
+
+    @Test
     @DisplayName("弾かれた登録を読み直しても要確認一覧は増えない")
     void attentionItemIsNotDuplicatedOnReplay() {
         String number = uniqueNumber();

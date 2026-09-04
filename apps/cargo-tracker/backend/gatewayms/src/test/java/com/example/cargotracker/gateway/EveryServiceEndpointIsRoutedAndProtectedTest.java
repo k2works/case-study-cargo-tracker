@@ -3,6 +3,7 @@ package com.example.cargotracker.gateway;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.cargotracker.gateway.infrastructure.config.JwtAuthenticationFilter;
+import com.example.cargotracker.gateway.infrastructure.config.RoleAuthorization;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -105,13 +106,38 @@ class EveryServiceEndpointIsRoutedAndProtectedTest {
     @Test
     @DisplayName("後段サービスの経路は認証で守られている（公開は明示した分だけ）")
     void everyEndpointIsProtected() throws IOException {
+        // 除外リストをテスト側に持たない。持つと、次に公開経路が増えたとき
+        // 検査を無効化する側に働く。公開してよいものは PUBLIC_PATHS が決める。
         List<String> unprotected = serviceEndpoints().stream()
                 .filter(endpoint -> JwtAuthenticationFilter.isPublic(endpoint + "/x"))
-                .filter(endpoint -> !endpoint.startsWith("/api/v1/tracking/public"))
+                .filter(endpoint -> JwtAuthenticationFilter.PUBLIC_PATHS.stream()
+                        .noneMatch(pattern -> pattern.startsWith(endpoint)))
                 .toList();
 
         assertThat(unprotected)
                 .as("公開してよい経路は PUBLIC_PATHS の 1 か所だけで決める")
                 .isEmpty();
+    }
+
+    @Test
+    @DisplayName("後段サービスの経路にはすべて要求ロールが宣言されている")
+    void everyEndpointDeclaresRequiredRoles() throws IOException {
+        // 認証だけでは足りない。宣言が無い経路は「認証済みなら誰でも」に
+        // なってしまう（IT3 のレビューまで全経路がその状態だった）。
+        List<String> undeclared = serviceEndpoints().stream()
+                .filter(endpoint -> !JwtAuthenticationFilter.isPublic(endpoint + "/x"))
+                .filter(endpoint -> !RoleAuthorization.isDeclared(endpoint)
+                        || !RoleAuthorization.isDeclared(endpoint + "/x"))
+                .toList();
+
+        assertThat(undeclared)
+                .as("要求ロールを宣言していない経路は、認証済みなら誰でも叩ける")
+                .isEmpty();
+    }
+
+    @Test
+    @DisplayName("宣言が実際にある（検査が空振りしていない）")
+    void thereAreRoleDeclarations() {
+        assertThat(RoleAuthorization.declaredPatterns()).hasSizeGreaterThanOrEqualTo(5);
     }
 }

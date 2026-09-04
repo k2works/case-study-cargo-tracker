@@ -73,6 +73,37 @@ class ArchRulesAreEffectiveTest {
     }
 
     @Test
+    @DisplayName("BC は他の BC のパッケージに依存しない規則が赤を出す")
+    void crossBoundaryRuleRejectsDependencyOnAnotherService() {
+        JavaClasses crossbc = new ClassFileImporter().importPackages(FIXTURES + ".crossbc");
+        java.util.List<String> services = java.util.List.of(
+                FIXTURES + ".crossbc.alpha", FIXTURES + ".crossbc.beta");
+
+        assertThatThrownBy(() -> CargoTrackerArchRules
+                        .serviceDoesNotDependOnAnotherService(FIXTURES + ".crossbc.alpha", services)
+                        .check(crossbc))
+                .as("別 BC の値オブジェクトを直接持つ集約を見逃している")
+                .isInstanceOf(AssertionError.class)
+                .hasMessageContaining("BetaVoyageNumber");
+    }
+
+    @Test
+    @DisplayName("共有カーネルだけを使う BC は通す")
+    void crossBoundaryRuleAcceptsSharedKernel() {
+        JavaClasses onlyCompliant = new ClassFileImporter()
+                .importPackages(FIXTURES + ".crossbc.beta");
+        java.util.List<String> services = java.util.List.of(
+                FIXTURES + ".crossbc.alpha", FIXTURES + ".crossbc.beta");
+
+        assertThatCode(() -> CargoTrackerArchRules
+                        .serviceDoesNotDependOnAnotherService(FIXTURES + ".crossbc.beta", services)
+                        .allowEmptyShould(true)
+                        .check(onlyCompliant))
+                .as("共有カーネルまで赤にしている")
+                .doesNotThrowAnyException();
+    }
+
+    @Test
     @DisplayName("Saga の型に依存しない規則は、いまは違反を作れない（型が存在しない）")
     void sagaRuleCannotHaveAViolationFixtureYet() {
         // Axon 5 に Saga のクラスが 1 つも無いので、違反フィクスチャを書けない

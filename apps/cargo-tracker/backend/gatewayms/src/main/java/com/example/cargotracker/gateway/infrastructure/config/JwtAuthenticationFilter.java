@@ -78,6 +78,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     .parseSignedClaims(header.substring("Bearer ".length()))
                     .getPayload();
 
+            // 認可は入力検証より先に置く。後段の @Valid が先に走ると、権限の
+            // 無い相手に入力仕様を教えることになる。
+            //
+            // 名簿に無い経路は通さない。「載っていないものを許す」形にすると、
+            // 載せ忘れた経路ほど無防備になる。
+            String path = request.getRequestURI();
+            if (isApi(path) && !RoleAuthorization.isAllowed(path, rolesOf(claims))) {
+                forbidden(response);
+                return;
+            }
+
             // 後段サービスはこのヘッダを信じる。だからこのフィルタを通らない経路を作らない。
             //
             // リクエスト属性ではなくヘッダに載せる。属性は Gateway の JVM 内に閉じて
@@ -141,6 +152,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 return Collections.enumeration(names);
             }
         };
+    }
+
+    /** 認可の対象は業務 API だけ。actuator は公開経路の表で扱う。 */
+    private static boolean isApi(String path) {
+        return path.startsWith("/api/");
+    }
+
+    private static List<String> rolesOf(Claims claims) {
+        Object roles = claims.get("roles");
+        return roles instanceof List<?> list
+                ? list.stream().map(String::valueOf).toList()
+                : List.of();
+    }
+
+    private static void forbidden(HttpServletResponse response) throws IOException {
+        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+        response.setContentType("application/json;charset=UTF-8");
+        // 何が足りないかは返さない。権限の無い相手に構成を教えない。
+        response.getWriter().write("{\"code\":\"FORBIDDEN\"}");
     }
 
     private static void unauthorized(HttpServletResponse response) throws IOException {

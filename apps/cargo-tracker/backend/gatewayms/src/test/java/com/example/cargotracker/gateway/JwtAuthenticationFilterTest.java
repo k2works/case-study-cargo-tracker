@@ -61,9 +61,18 @@ class JwtAuthenticationFilterTest {
     /** フィルタが後段へ渡した要求を捕まえる。 */
     private HttpServletRequest forwarded(String authorization,
             java.util.Map<String, String> extraHeaders) throws Exception {
+        return forwarded("/api/v1/booking/shippers", authorization, extraHeaders);
+    }
+
+    /**
+     * 経路を選べる形。**認可が経路ごとに効く**ので、ロールに許されていない経路を
+     * 使うと後段まで届かず、身元の伝達そのものを確かめられない。
+     */
+    private HttpServletRequest forwarded(String uri, String authorization,
+            java.util.Map<String, String> extraHeaders) throws Exception {
         var captured = new java.util.concurrent.atomic.AtomicReference<HttpServletRequest>();
         FilterChain chain = (req, res) -> captured.set((HttpServletRequest) req);
-        run("/api/v1/booking/shippers", authorization, chain, extraHeaders);
+        run(uri, authorization, chain, extraHeaders);
         return captured.get();
     }
 
@@ -164,6 +173,46 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
+    @DisplayName("権限の無いロールは後段へ届かず 403 になる")
+    void rejectsCallerWithoutRequiredRole() throws Exception {
+        // 画面の RequireRole は守りではない。ブラウザを介さずに叩けば素通りする。
+        // IT3 のレビューまで、認証さえ通れば誰でも航海を登録できた。
+        String salesToken = tokenWithRoles("ROLE_SALES");
+
+        assertThat(run("/api/v1/routing/voyages", "Bearer " + salesToken).getStatus())
+                .as("営業が航海を登録できてはいけない")
+                .isEqualTo(403);
+        assertThat(run("/api/v1/booking/bookings/routing-worklist", "Bearer " + salesToken)
+                        .getStatus())
+                .as("経路設計の作業一覧は全荷主の予約が見える")
+                .isEqualTo(403);
+    }
+
+    @Test
+    @DisplayName("宣言されたロールを持っていれば後段へ届く")
+    void allowsCallerWithRequiredRole() throws Exception {
+        assertThat(run("/api/v1/routing/voyages", "Bearer " + tokenWithRoles("ROLE_ROUTING"))
+                        .getStatus())
+                .isNotEqualTo(403);
+    }
+
+    @Test
+    @DisplayName("宣言の無い経路は通さない（載せ忘れを素通りさせない）")
+    void rejectsUndeclaredPath() throws Exception {
+        // 「載っていないものを許す」形にすると、載せ忘れた経路ほど無防備になる。
+        assertThat(run("/api/v1/booking/unknown-resource", "Bearer " + validToken()).getStatus())
+                .isEqualTo(403);
+    }
+
+    private String tokenWithRoles(String... roles) {
+        return Jwts.builder().subject("tester")
+                .claim("roles", List.of(roles))
+                .expiration(new Date(System.currentTimeMillis() + 60_000))
+                .signWith(new SecretKeySpec(SECRET.getBytes(StandardCharsets.UTF_8), "HmacSHA256"))
+                .compact();
+    }
+
+    @Test
     @DisplayName("荷主なら荷主 ID も伝える。荷主でなければ伝えない")
     void propagatesShipperIdOnlyWhenPresent() throws Exception {
         String shipperToken = Jwts.builder().subject("shipper01")
@@ -173,7 +222,9 @@ class JwtAuthenticationFilterTest {
                 .signWith(new SecretKeySpec(SECRET.getBytes(StandardCharsets.UTF_8), "HmacSHA256"))
                 .compact();
 
-        HttpServletRequest withShipper = forwarded("Bearer " + shipperToken, java.util.Map.of());
+        // 荷主は荷主一覧を開けないので、荷主にも許された経路で確かめる。
+        HttpServletRequest withShipper = forwarded("/api/v1/booking/attention-items",
+                "Bearer " + shipperToken, java.util.Map.of());
         assertThat(withShipper.getHeader(JwtAuthenticationFilter.SHIPPER_ID_HEADER))
                 .isEqualTo("SHP-000001");
 
