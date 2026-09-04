@@ -22,3 +22,13 @@ dependencies {
     testImplementation(libs.mockito.core)
     testImplementation(testFixtures(project(":shared")))
 }
+
+tasks.named<Test>("test") {
+    // EveryServiceEndpointIsRoutedAndProtectedTest は各サービスの本番ソースと
+    // Gateway のルート定義を読む。入力として宣言しないと Gradle が UP-TO-DATE と
+    // 判断し、経路を足しても検査が走らない。
+    inputs.files(rootProject.subprojects.map { it.file("src/main/java") })
+            .withPropertyName("serviceMainSources")
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.file(file("src/main/resources/application.yml"))
+}
