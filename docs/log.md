@@ -1,6 +1,7 @@
 # Docs Update Log
 
 ## 2026-09-04
+* **Update**: [20260904](/journal/cargo-tracker/20260904.md) を更新（claude-code/claude-opus-5）
 * **Update**: [07-航海スケジュールを登録する](/manual/07-航海スケジュールを登録する.md) を更新（claude-code/claude-opus-5）
 * **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
 * **Update**: [iteration_plan-3](/development/cargo-tracker/iteration_plan-3.md) を更新（claude-code/claude-opus-5）
