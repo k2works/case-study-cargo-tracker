@@ -15,8 +15,11 @@ import org.junit.jupiter.api.Test;
  * Reaction Handler を入れるなら、同じ変更で {@code ReplayIT} も入れる（ADR-0001 決定 4）。
  *
  * <p>ADR のコンプライアンス欄は「リプレイ中に {@code CommandGateway} が 1 度も
- * 呼ばれないこと」を統合テストで固定すると約束している。IT1 時点では Reaction
- * Handler が 1 つも無いため書けず、約束が文章のまま残っている。</p>
+ * 呼ばれないこと」を統合テストで固定すると約束している。</p>
+ *
+ * <p><b>{@code ReplayIT} は IT2 で先に書いた</b>（Reaction Handler より前）。投影が
+ * 3 つに増え、投影が {@code attention_item} への書き込みという副作用を持つに至った
+ * ためである。書いた時点で実在の欠陥が出た（読み直しのたびに要確認一覧が増えていた）。</p>
  *
  * <p><strong>ArchUnit の規則では代われない。</strong>{@code CommandGateway} の
  * 利用箇所をパッケージで限定する規則はコンパイル時の依存しか見ておらず、
@@ -57,36 +60,51 @@ class ReplayCheckAccompaniesReactionTest {
     }
 
     @Test
-    @DisplayName("ADR-0001 決定 4: Reaction Handler があるなら ReplayIT もある")
-    void replayCheckExistsOnceReactionHandlersDo() throws IOException {
-        List<Path> handlers = reactionHandlers();
-        if (handlers.isEmpty()) {
-            // まだ 1 つも無い＝ ADR に「未実装」と書いてある状態と一致する。
-            assertThat(replayChecks())
-                    .as("Reaction Handler が無いのに ReplayIT がある。"
-                            + "ADR-0001 のコンプライアンス欄から『IT1 時点では未実装』を消すこと")
-                    .isEmpty();
-            return;
-        }
-
+    @DisplayName("ADR-0001 決定 4: ReplayIT が実在する")
+    void replayCheckExists() throws IOException {
+        // Reaction Handler の有無に関わらず要る。投影が副作用（attention_item への
+        // 書き込み）を持つ以上、リプレイで何が起きるかは常に検査の対象である。
         assertThat(replayChecks())
-                .as("Reaction Handler を入れたら ReplayIT も入れる（ADR-0001 決定 4）。"
-                        + "対象: %s", handlers)
+                .as("ADR-0001 のコンプライアンス欄が約束している検査が無い")
                 .isNotEmpty();
     }
 
     @Test
-    @DisplayName("ADR-0001 の未実装の記述が、実際の状態と一致している")
+    @DisplayName("Reaction Handler を入れたら、コマンドの再送を見る検査も入れる")
+    void replayCheckCoversCommandsOnceReactionHandlersExist() throws IOException {
+        List<Path> handlers = reactionHandlers();
+        if (handlers.isEmpty()) {
+            return;
+        }
+
+        // Reaction Handler が現れたら、ReplayIT が「リプレイ中にコマンドが送られない」
+        // ことまで見ていなければならない。行が増えないことだけでは足りない。
+        boolean checksCommands = false;
+        for (Path check : replayChecks()) {
+            String body = Files.readString(check, StandardCharsets.UTF_8);
+            if (body.contains("CommandGateway")) {
+                checksCommands = true;
+                break;
+            }
+        }
+
+        assertThat(checksCommands)
+                .as("Reaction Handler があるのに、ReplayIT がコマンドの再送を見ていない"
+                        + "（ADR-0001 決定 4）。対象: %s", handlers)
+                .isTrue();
+    }
+
+    @Test
+    @DisplayName("ADR-0001 の記述が、実際の状態と一致している")
     void theAdrSaysWhetherTheCheckExists() throws IOException {
         String adr = Files.readString(
                 backendRoot().getParent().getParent().getParent()
                         .resolve("docs/adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md"),
                 StandardCharsets.UTF_8);
 
-        boolean adrSaysUnimplemented = adr.contains("**IT1 時点では未実装**");
-        assertThat(adrSaysUnimplemented)
-                .as("ReplayIT の有無（%s）と ADR の記述が食い違っている。"
-                        + "検査を書いたら ADR の『未実装』も同じ変更で消す", replayChecks())
-                .isEqualTo(replayChecks().isEmpty());
+        assertThat(adr.contains("**IT1 時点では未実装**"))
+                .as("ReplayIT を書いたのに ADR に『未実装』が残っている。"
+                        + "検査を書いたら ADR の記述も同じ変更で直す")
+                .isFalse();
     }
 }

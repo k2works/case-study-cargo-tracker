@@ -4,7 +4,7 @@ title: "リリース計画 - 国際貨物輸送管理システム（CQRS / Event
 description: "CQRS / Event Sourcing 版 Cargo Tracker のリリース計画。US01〜US31 を 15 イテレーション・5 リリース（120 SP）に配分し、ストーリーポイント・ベロシティ・バッファ・順序の根拠・リスクを定める。"
 tags: [plan,release,cargo-tracker]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-03T11:45:46Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-04T05:01:01Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T12:47:29Z }
 ---
@@ -265,18 +265,24 @@ IT4・IT10・IT12・IT15 に SP 対象外の枠を置きます。**「余力次�
 | イテレーション | 計画 SP | 実績 SP | 達成率 | 状態 |
 | :--- | :--: | :--: | :--: | :--- |
 | IT1 | 9 | 9 | 100% | **完了**（[計画](iteration_plan-1.md)・[ふりかえり](retrospective-1.md)・[報告書](iteration_report-1.md)） |
-| IT2 | 9 | — | — | **計画済み**（[計画](iteration_plan-2.md)） |
+| IT2 | 9 | 9 | 100% | **完了**（[計画](iteration_plan-2.md)・[ふりかえり](retrospective-2.md)・[報告書](iteration_report-2.md)） |
 | IT3〜IT15 | 102 | — | — | 未着手 |
 | **累計** | **120** | **9** | **100%** | |
 
 **実績 SP は 9 です。** US26（3）・US27（1）・US02（5）の受入基準を満たし、デモ項目 7 件の受け入れテストが緑です。ただし **SP 対象外の基盤投資に持ち越しが 5 件あります**（S01 ポータル・全ルートのプレースホルダ・無操作タイムアウト・スパイク 0.7・契約テストの往復）。ベロシティは 9 と読めますが、基盤の未完了分を IT2 が負う点は [ふりかえり](retrospective-1.md) を参照してください。
 
+**IT2 の実績 SP も 9 です。** US31（2）・US03（2）・US04（5）を完了し、デモ項目 8 件の受け入れテストが緑です。**IT1 の持ち越し 9 件のうち 8 件を返しました**（契約テストの往復のみ IT3 へ。理由と代替は [ふりかえり](retrospective-2.md)）。
+
+**2 イテレーションの平均は 9 SP** で、計画の 9 SP と一致しています。[ADR-0001](../../adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) 決定 2 の発動条件（6.3 SP 未満）は**満たしません**。
+
+ただし IT1・IT2 とも**基盤と返済が本体と同じかそれ以上の重さ**でした（IT2 は US 58h に対し返済枠・検査・マニュアルで 40.5h）。IT3 で routingms が立ち上がると 2 つ目のサービスの立ち上げコストが乗るので、**IT3 終了時点でもう一度ベロシティを見ます**。
+
 ## 次のステップ
 
-1. IT2 の計画を作る（`opening-iteration`）。**持ち越し 5 件を先に枠へ入れる**（余力次第にすると固定化する）
-2. IT2 の冒頭でスパイク 0.7（S3 からの差分再投入）を実施し、RPO の根拠を確定する
-3. `syncing-github-project` で IT1 の Issue をクローズし、IT2 の Status を更新する
-4. IT2 終了時に ADR-0001 決定 2 の発動条件（実績ベロシティが計画の 70% 未満なら `Quotation` / `Voyage` を状態保存に落とす）を判定する
+1. IT3 の計画を作る（`opening-iteration`）。**IT2 の引き継ぎ 6 件を先に枠へ入れる**
+2. IT3 の Day 8 あたりで **kind クラスタに対する E2E を 1 度回す**（IT2 では終わりにだけ回し、見つかった食い違いの修正がクローズを押した）
+3. `syncing-github-project` で IT2 の Issue をクローズし、IT3 の Status を更新する
+4. IT3 終了時点でベロシティを再度見る（routingms の立ち上げコストが乗る）
 
 ## 更新履歴
 
@@ -285,11 +291,13 @@ IT4・IT10・IT12・IT15 に SP 対象外の枠を置きます。**「余力次�
 | 2026-09-02 | 初版作成。US01〜US31 を 15 イテレーション・5 リリースに配分 | claude-code/claude-fable-5-1 |
 | 2026-09-03 | IT1 クローズ。実績 SP 9（達成率 100%）と持ち越し 5 件を記録 | claude-code/claude-opus-5 |
 | 2026-09-03 | IT2 開始準備。計画を作成し進捗表を「計画済み」に更新 | claude-code/claude-opus-5 |
+| 2026-09-04 | IT2 クローズ。実績 SP 9（達成率 100%）と ADR-0001 決定 2 の判定（発動せず）を記録 | claude-code/claude-opus-5 |
 
 ## 関連ドキュメント
 
 - [開発戦略](development_strategy.md)
 - [イテレーション計画 1](iteration_plan-1.md)、[イテレーション計画 2](iteration_plan-2.md)
+- [ふりかえり 2](retrospective-2.md)、[完了報告書 2](iteration_report-2.md)
 - [ユーザーストーリー](../../requirements/user_story.md)
 - [設計](../../design/cargo-tracker/index.md)、[ADR](../../adr/cargo-tracker/index.md)
 - [リリース・イテレーション計画ガイド](../../reference/リリース・イテレーション計画ガイド.md)

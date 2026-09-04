@@ -4,7 +4,7 @@ title: "ADR-0001 CQRS / Event Sourcing を Axon Framework 5 でマイクロサ�
 description: "CQRS / Event Sourcing を Axon Framework 5 のマイクロサービスとして実装する決定。配置の形・ES の適用範囲・Axon 5 系 API の採用・サービス間の配送経路と、IT1 スパイクの結果（採用版 5.1.0-RC2・Saga 廃止）。"
 tags: [adr]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-04T04:06:19Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-04T05:01:01Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
   - { by: human:kakimomokuri, at: 2026-09-02T12:47:29Z }
@@ -75,6 +75,10 @@ verified:
 **`Quotation` と `Voyage` も Event Sourcing にする理由。** 履歴が業務として要る根拠（US19・US20・US28・US29）は例外処理・誤配・通関にあり、見積と航海には無い。それでも 2 つを Event Sourcing にするのは、記事第 6 章の比較のためである。「履歴が要る集約だけ ES、他は状態保存」にすると、第 4 章との差分が集約ごとに違う形になり、Event Sourcing の代金を 1 つの表で並べられない。全集約で払って初めて「線をここで引くべきだった」と書ける。US31（authms）だけは業務上も学習上も履歴が要らないので除く。
 
 **見直しの発動条件。** 「工数の問題が出たら」では検知できないので、数値で置く。**IT2 終了時点で実績ベロシティが計画の 70% 未満なら、`Quotation` と `Voyage` を状態保存（MyBatis の UPDATE）に落とす。** 落とすときは本 ADR を改訂し、落とした理由を第 6 章の比較表に「ES を適用しなかった集約とその判断」として残す。判定は `docs/development/cargo-tracker/` のイテレーション報告書で行う。
+
+**判定（2026-09-04・IT2 終了時点）：発動しない。** 実績ベロシティは IT1・IT2 とも 9 SP（計画どおり 100%）で、閾値の 6.3 SP を上回る。`Cargo`（状態を持つ最初の集約）を Event Sourcing で書き切り、`@EventTag`・`@TargetEntityId`・インスタンスのコマンドハンドラという作法も確定した（決定 5 第 8〜12 項）。**Event Sourcing の実装コストは見積もりの範囲に収まっている。**
+
+ただし IT1・IT2 とも基盤と持ち越しの返済が本体と同じかそれ以上の重さだった。IT3 で routingms が立ち上がると 2 つ目のサービスの立ち上げコストが乗るので、**IT3 終了時点でもう一度見る**（[IT2 ふりかえり](../../development/cargo-tracker/retrospective-2.md)）。
 
 ### 3. Axon Framework 5 系（採用版 5.1.0-RC2）を採用する
 
