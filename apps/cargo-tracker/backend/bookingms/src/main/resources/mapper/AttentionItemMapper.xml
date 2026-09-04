@@ -24,6 +24,9 @@
                                     reason, payload, occurred_at, acknowledged_at, acknowledged_by)
         VALUES (#{itemId}, #{kind}, #{targetType}, #{targetId}, #{assignedRole},
                 #{reason}, #{payload}::jsonb, #{occurredAt}, #{acknowledgedAt}, #{acknowledgedBy})
+        -- 同じ事実は 1 行。投影を読み直しても増やさない（識別子は内容から導く）。
+        -- 上書きもしない。確認済み（acknowledged_at）を消してしまう。
+        ON CONFLICT (item_id) DO NOTHING
     </insert>
 
     <select id="findOpenByRole" resultMap="attentionRow">
