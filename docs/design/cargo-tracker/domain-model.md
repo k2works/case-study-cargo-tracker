@@ -4,7 +4,7 @@ title: "ドメインモデル設計 - 国際貨物輸送管理システム（CQR
 description: "CQRS / Event Sourcing 版 Cargo Tracker のドメインモデル設計。6 コンテキストの集約・不変条件・コマンド・イベント（内部 / 契約）・状態遷移・Reaction Handler を、イベントを永続化フォーマットとして定義する。"
 tags: [design,domain-model,ddd,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-03T13:09:18Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-04T08:58:20Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -73,6 +73,13 @@ quadrantChart
 | 航海 | Voyage | `Voyage` | 運送会社が運航する 1 つの航海。集約ルート |
 | 航海番号 | Voyage Number | `VoyageNumber` | 航海を識別する番号。**BC ごとに別の型** |
 | 運搬移動 | Carrier Movement | `CarrierMovement` | 航海内の港間移動 |
+| 運送会社 | Carrier | `Carrier` | 航海を運航する会社（コードと名称） |
+| 船名 | Vessel Name | `VesselName` | 航海に就く船の名前。運送会社ではなく航海が持つ |
+| 航海スケジュール | Schedule | `Schedule` | 航海の運搬移動の並び。時刻昇順・港の連結を自分で守る |
+| 経路探索 | Route Search | `RouteSearchService` | 航海グラフから経路候補を探すドメインサービス。状態を変えないので Query 側 |
+| 航海グラフ | Voyage Graph | `VoyageGraph` | 投影 `voyage` / `carrier_movement` から組む探索用の読み取りモデル |
+| 経路 | Transit Path | `TransitPath` | 経路探索が返す 1 本の経路。期限超過日数を持つ |
+| 貨物種別 | Cargo Type | `CargoType` | 一般貨物・危険物・冷凍冷蔵。**Booking と Routing で別の型**（Routing は航海が受け入れる種別として使う） |
 | 経路候補 | Route Candidate | `RouteCandidate` | 経路仕様を満たす旅程の候補。Routing の読み取りモデル |
 | 港湾コード | UN/LOCODE | `UnLocode` | 国連が定める港湾識別コード（例: `JPTYO`）。共有カーネル |
 | 荷主 | Shipper | `Shipper` | 貨物の依頼主。個人または法人。集約ルート |
@@ -269,7 +276,7 @@ end note
 | `Location` / `UnLocode` / `CountryCode` | 全 BC が同じ意味で使う。輸出免税の判定（Billing）にも国コードを使う |
 | `AuthenticatedUser` / `Role` | Gateway が復元した認証情報の契約 |
 | `contract/event/*`、`contract/command/*`、`contract/query/*` | サービス越しに送るメッセージ。両側が同じクラスを持つ必要がある |
-| **置かないもの** | `VoyageNumber` / `BookingId` / `TrackingNumber` などの識別子、`Money`、集約、ドメインサービス |
+| **置かないもの** | `VoyageNumber` / `BookingId` / `TrackingNumber` などの識別子、`Money`、集約、ドメインサービス、**列挙型**（`CargoType` / `BookingStatus` / `HandlingType` など。同じ名前でも BC ごとに値と意味が違う） |
 
 - `UnLocode` は `^[A-Z]{5}$` を満たす
 - `Location` の同一性は `UnLocode` の値で判定する
@@ -359,8 +366,8 @@ class Leg <<Value Object>> {
   - voyageNumber: VoyageNumber
   - loadLocation: Location
   - unloadLocation: Location
-  - loadTime: LocalDateTime
-  - unloadTime: LocalDateTime
+  - loadTime: Instant
+  - unloadTime: Instant
 }
 class VoyageNumber <<Value Object>>
 
@@ -594,15 +601,22 @@ title Routing Context
 class Voyage <<Aggregate Root>> <<@EventSourced(tagKey="voyageNumber")>> {
   - voyageNumber: VoyageNumber
   - carrier: Carrier
+  - vesselName: VesselName
   - schedule: Schedule
   - acceptedCargoTypes: Set<CargoType>
   - cancelled: boolean
-  + {static} register(RegisterVoyageCommand)
+  + register(RegisterVoyageCommand)
   + updateSchedule(UpdateVoyageScheduleCommand)
   + cancel(CancelVoyageCommand)
 }
 class VoyageNumber <<Value Object>>
-class Carrier <<Value Object>>
+class Carrier <<Value Object>> {
+  - carrierCode: String
+  - carrierName: String
+}
+class VesselName <<Value Object>> {
+  - value: String
+}
 class Schedule <<Value Object>> {
   - movements: List<CarrierMovement>
   + isInternallyConsistent(): boolean
@@ -610,8 +624,8 @@ class Schedule <<Value Object>> {
 class CarrierMovement <<Value Object>> {
   - departure: Location
   - arrival: Location
-  - departureTime: LocalDateTime
-  - arrivalTime: LocalDateTime
+  - departureTime: Instant
+  - arrivalTime: Instant
 }
 
 class RouteSearchSpecification <<Value Object>> {
@@ -639,6 +653,7 @@ class VoyageGraph <<Read Model>> {
 
 Voyage *-- VoyageNumber
 Voyage *-- Carrier
+Voyage *-- VesselName
 Voyage *-- Schedule
 Schedule "1" *-- "1..*" CarrierMovement
 TransitPath "1" *-- "1..*" TransitEdge
@@ -656,6 +671,12 @@ RouteSearchService ..> TransitPath
 | 3 | `arrivalTime > departureTime` |
 | 4 | `acceptedCargoTypes` が空なら一般貨物のみ |
 | 5 | キャンセル済みの航海は更新できない |
+
+**`register` は static ではなくインスタンスのコマンドハンドラにします。** static（作る側）とインスタンス（既にある側）を両方置くと、集約が既に存在しても static のほうが呼ばれ、2 度目の登録が通ります（IT2 に `Cargo` で実測。同 IT の H1）。`@EntityCreator` が空の集約を用意するので、インスタンス側だけで不変条件 1 の「同一番号の再登録を拒否する」が書けます。
+
+**航海の時刻は `Instant` で持ちます。** [非機能要件](non_functional.md) が既に「港のローカル時刻で入力・表示し、保存は `TIMESTAMPTZ`」と決めており、`HandlingActivity.completedAt`（不変条件 6）も同じ形です。`LocalDateTime` は時間帯を持たないので、出発港と到着港の時間帯が違う航海では「どちらの時刻か」が決まりません。旅程の `Leg.loadTime` / `unloadTime` も同じ理由で `Instant` に揃えました。新たな判断ではなく、既決の規約を航海に適用したものです。
+
+**船名（`VesselName`）は航海が持ちます。** 運送会社（`Carrier`）は船を複数持ち、同じ船が別の航海に就くので、船名は運送会社側ではなく航海側の属性です（US24 の入力項目）。
 
 | コマンド | 発行イベント | UC / US |
 | :--- | :--- | :--- |

@@ -4,7 +4,7 @@ title: "イテレーション計画 3 - 危険物・引き渡し・航海登録"
 description: "IT3 の計画。US05/US06/US24（9 SP）に加え、IT2 の引き継ぎ 12 件を返済枠に置く。2 つ目のサービス routingms を bookingms と同じ型で立ち上げ、型が同じであることを検査で固定して Release 0.1 を閉じる。デモ項目 7 件。"
 tags: [plan,iteration,cargo-tracker]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-04T08:53:39Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-04T08:58:20Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-04T08:44:22Z }
 ---
@@ -143,8 +143,8 @@ IT2 のふりかえり T1〜T8 と引き継ぎ 12 件から。**IT の序盤に�
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | :--: | :--: |
 | 1.1 | 受け入れの入口を赤で置く：`航海スケジュールの登録.feature`（登録 → 一覧に出る → 同一番号は要確認一覧） | 2h | [ ] |
-| 1.2 | S33 航海スケジュール登録（`/voyages/new`）の salt を `ui_design.md` に描く（**実装より先に**）。正典の画面名は「登録・更新」だが **IT3 は登録側のみ**（更新は US25 / IT4） | 1h | [ ] |
-| 1.3 | S32 航海スケジュール一覧（`/voyages`）の salt を描く | 1h | [ ] |
+| 1.2 | S33 航海スケジュール登録（`/voyages/new`）の salt を `ui_design.md` に描く（**実装より先に**）。正典の画面名は「登録・更新」だが **IT3 は登録側のみ**（更新は US25 / IT4） | 1h | [x] |
+| 1.3 | S32 航海スケジュール一覧（`/voyages`）の salt を描く | 1h | [x] |
 | 1.4 | S33 の画面（API は MSW でモック。寄港地を複数・順序つきで入力する）。**モックは本物より甘くしない**（型・日付形式を OpenAPI に合わせ、`202`/`409`/`422` を返せる） | 5h | [ ] |
 | 1.5 | S32 の画面（既定は出港済み・キャンセルを外し、出発日が近い順） | 3h | [ ] |
 | 1.6 | `Voyage` 集約：`register`。不変条件 1〜4 を `AxonTestFixture` で固定。**`@EventTag(key = "voyageNumber")` を最初から付ける** | 5h | [ ] |
@@ -161,7 +161,7 @@ IT2 のふりかえり T1〜T8 と引き継ぎ 12 件から。**IT の序盤に�
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | :--: | :--: |
 | 2.1 | 受け入れの入口を赤で置く：`貨物予約の登録.feature` に「引き渡すと経路提案中になる」を足す | 1h | [ ] |
-| 2.2 | S30 経路設計作業一覧（`/routing/worklist`）と **S02 ダッシュボード（経路設計ロール版）** の salt を描く（**実装より先に**）。正典の S02 salt は営業版・荷役版の 2 枚しかなく、向け直す先の仕様が無い | 2h | [ ] |
+| 2.2 | S30 経路設計作業一覧（`/routing/worklist`）と **S02 ダッシュボード（経路設計ロール版）** の salt を描く（**実装より先に**）。正典の S02 salt は営業版・荷役版の 2 枚しかなく、向け直す先の仕様が無い | 2h | [x] |
 | 2.3 | `Cargo.requestRouting`：`PRELIMINARY → ROUTE_PROPOSED`、`RoutingStatus = ROUTING_REQUESTED`。**`canTransitionTo` を通す**（IT2 で置いた遷移表を初めて使う） | 3h | [ ] |
 | 2.4 | `RequestRoutingCommand` / `RoutingRequestedEvent`。投影が `booking_status` / `routing_status` を更新 | 3h | [ ] |
 | 2.5 | S22 予約詳細に `[経路設計を依頼する]`。**ボタンの出し分けは `BookingStatus` の述語をそのまま呼ぶ**（判定を書き直さない） | 3h | [ ] |
@@ -529,20 +529,20 @@ apps/cargo-tracker/backend/routingms/src/main/java/com/example/cargotracker/rout
 
 | # | 事項 | 対象 | 対応 |
 | :--- | :--- | :--- | :--- |
-| 1 | S30・S32・S33 の salt が `ui_design.md` に無い（画面一覧の行はある） | [UI 設計](../../design/cargo-tracker/ui_design.md) | **実装より先に描く**（タスク 1.2・1.3・2.2）。IT1・IT2 とも実装後に描いて順序が逆だった |
-| 2 | **航海の時刻の型が 3 文書で食い違う。** `domain-model` は `LocalDateTime`、`data-model` は `TIMESTAMPTZ`、`non_functional` は「港のローカル時刻で入力・表示し JST を併記、**保存は `TIMESTAMPTZ`**」と既に決めている | [ドメインモデル](../../design/cargo-tracker/domain-model.md)・[データモデル](../../design/cargo-tracker/data-model.md)・[非機能要件](../../design/cargo-tracker/non_functional.md) | **既決規約を航海に適用し、2 文書の食い違いを解消する**（新たな判断ではない）。US08（IT5）の経路探索が入る前に閉じる |
+| 1 | S30・S32・S33 の salt が `ui_design.md` に無い（画面一覧の行はある） | [UI 設計](../../design/cargo-tracker/ui_design.md) | **反映済み（2026-09-04）。** **実装より先に**描いた（S02 経路設計版・S30・S32・S33 の 4 枚） |
+| 2 | **航海の時刻の型が 3 文書で食い違う。** `domain-model` は `LocalDateTime`、`data-model` は `TIMESTAMPTZ`、`non_functional` は「港のローカル時刻で入力・表示し JST を併記、**保存は `TIMESTAMPTZ`**」と既に決めている | [ドメインモデル](../../design/cargo-tracker/domain-model.md)・[データモデル](../../design/cargo-tracker/data-model.md)・[非機能要件](../../design/cargo-tracker/non_functional.md) | **反映済み（2026-09-04）。** `CarrierMovement` と `Leg` の時刻を `Instant` に揃えた（`HandlingActivity.completedAt` と同じ形）。新たな判断ではなく既決規約の適用 |
 | 3 | **危険物かつ冷凍**の貨物が実務にある。`CargoSpecification` は種別 1 つしか持てない | ドメインモデル・ユーザーストーリー | **IT3 で判断だけする。** 実装は US08 以降。種別を集合にするか、危険物申告と温度条件を独立させるか |
 | 4 | UN/LOCODE は形式しか見ておらず `AAAAA` でも通る | 共有カーネル | **港のマスタを持つ IT で。** `shared` のリソース（CSV）から読む方針は `data-model.md` にある。US07（IT4）で航海を検索するときに要る |
 | 5 | US04 §受入基準 3「希望引渡日」の置き場 | ユーザーストーリー・システムユースケース | **反映済み（2026-09-04）。** 受入基準から落とした（経路探索の入力は着日側だけで、引渡日を使う業務がない）。UC03 のステップ 3 も直した |
-| 6 | US04 §受入基準 6（見積との整合）の但し書き | ユーザーストーリー | R.6 で判断する |
-| 7 | **経路設計者のダッシュボード導線。** `ui_design.md` は「経路設計担当も S20 を開く」と書いており、S30 を足す本 IT の変更と食い違う | [UI 設計](../../design/cargo-tracker/ui_design.md) | **タスク 2.7 と同じ変更で正典を書き換える。** 書き換えないと DoD の「4 点一致」が正典と食い違ったまま緑になる |
+| 6 | US04 §受入基準 6（見積との整合）の但し書き | ユーザーストーリー | **反映済み（2026-09-04）。** 「**US01 実装後**」を付けた |
+| 7 | **経路設計者のダッシュボード導線。** `ui_design.md` は「経路設計担当も S20 を開く」と書いており、S30 を足す本 IT の変更と食い違う | [UI 設計](../../design/cargo-tracker/ui_design.md) | **反映済み（2026-09-04）。** S20 の注記を「経路設計者の入口は S30、S20 は横断して見るとき」に書き換えた |
 | 8 | **`attention_item` の複製先に `routing_read_db` が無い。** テーブル一覧・備考・`routing-voyage-projection` の書き込み先の 3 か所 | [データモデル](../../design/cargo-tracker/data-model.md) | **タスク 1.9 と同じ変更で追記する** |
-| 9 | **`Carrier` の要素表がフィールド未定義。** 投影の `carrier_code` / `carrier_name` に対応する `code` / `name` を持つ | [ドメインモデル](../../design/cargo-tracker/domain-model.md) | タスク 1.7 と同じ変更で追記する |
-| 11 | **`Voyage.register` が `{static}` のまま。** IT2 の H1（static ハンドラが勝つと 2 度目の受付が素通りする）と衝突し、`Shipper` では同じ直しを済ませたのに正典が未更新 | [ドメインモデル](../../design/cargo-tracker/domain-model.md) | **タスク 1.6 と同じ変更で `{static}` を外す** |
-| 12 | **船名の置き場が設計に一切無い**（4 文書で「船名 / vessel」0 件）。US24 §受入基準 1 は必須入力として要求 | ドメインモデル・データモデル・[UI 設計](../../design/cargo-tracker/ui_design.md) | **IT3 で判断する。** `Voyage` に `vessel` を持つか受入基準側を直すか。持つなら要素表・ER 図・S33 salt の 3 つに同じ変更で反映 |
-| 13 | **要素表のドリフト。** `RouteSearchService`・`VoyageGraph`・`TransitPath`・`Carrier`・`Schedule` がクラス図にしか無く、コア概念表に定義行が無い。Routing の `CargoType` も BC 固有の列挙として登録されていない | [ドメインモデル](../../design/cargo-tracker/domain-model.md) | **タスク 1.6・1.7 と同じ変更でコア概念表に足す。** あわせて「共有カーネルに置かないもの」の列挙に**列挙型**を明記する（計画が引いていた根拠が本文に無かった） |
-| 14 | **画面一覧に「サイドナビ掲載」列が無い。** 表示ロール列はあるが、ナビに載る画面と載らない画面を正典から読み取れず、DoD の 4 点一致を機械的に確かめられない | [UI 設計](../../design/cargo-tracker/ui_design.md) | **タスク 2.8 と同じ変更で列を足し、`navigation.ts` と 1 対 1 で突合できるようにする** |
-| 10 | **US06 §受入基準 3（経路設計者への通知）が「通知はスコープ外・記録だけ」の対象 US に入っていない**（列挙は US12・US14・US23・US29・US30） | ユーザーストーリー・[UI 設計](../../design/cargo-tracker/ui_design.md) | **IT3 で判断する。** US06 を同じ扱いに加えるか、S30 の件数表示を通知の代替と位置づけるかを決め、同じ変更で正典に書く |
+| 9 | **`Carrier` の要素表がフィールド未定義。** 投影の `carrier_code` / `carrier_name` に対応する `code` / `name` を持つ | [ドメインモデル](../../design/cargo-tracker/domain-model.md) | **反映済み（2026-09-04）。** `carrierCode` / `carrierName` を定義した |
+| 11 | **`Voyage.register` が `{static}` のまま。** IT2 の H1（static ハンドラが勝つと 2 度目の受付が素通りする）と衝突し、`Shipper` では同じ直しを済ませたのに正典が未更新 | [ドメインモデル](../../design/cargo-tracker/domain-model.md) | **反映済み（2026-09-04）。** `{static}` を外し、理由（IT2 H1）を本文に書いた |
+| 12 | **船名の置き場が設計に一切無い**（4 文書で「船名 / vessel」0 件）。US24 §受入基準 1 は必須入力として要求 | ドメインモデル・データモデル・[UI 設計](../../design/cargo-tracker/ui_design.md) | **反映済み（2026-09-04）。** `Voyage` に `VesselName` を持たせた。要素表・クラス図・ER 図（`vessel_name`）・S33 salt の 4 つに反映 |
+| 13 | **要素表のドリフト。** `RouteSearchService`・`VoyageGraph`・`TransitPath`・`Carrier`・`Schedule` がクラス図にしか無く、コア概念表に定義行が無い。Routing の `CargoType` も BC 固有の列挙として登録されていない | [ドメインモデル](../../design/cargo-tracker/domain-model.md) | **反映済み（2026-09-04）。** コア概念表に 7 行（`Carrier`・`VesselName`・`Schedule`・`RouteSearchService`・`VoyageGraph`・`TransitPath`・Routing の `CargoType`）を足し、「置かないもの」に**列挙型**を明記した |
+| 14 | **画面一覧に「サイドナビ掲載」列が無い。** 表示ロール列はあるが、ナビに載る画面と載らない画面を正典から読み取れず、DoD の 4 点一致を機械的に確かめられない | [UI 設計](../../design/cargo-tracker/ui_design.md) | **反映済み（2026-09-04）。** 列ではなく「サイドナビに載る 15 画面」の表を置き、`navigation.ts` と 1 対 1 で突合できるようにした（35 行の表に列を足すより、載る側だけを数えられる形が確かめやすい） |
+| 10 | **US06 §受入基準 3（経路設計者への通知）が「通知はスコープ外・記録だけ」の対象 US に入っていない**（列挙は US12・US14・US23・US29・US30） | ユーザーストーリー・[UI 設計](../../design/cargo-tracker/ui_design.md) | **反映済み（2026-09-04）。** US04 §5・US06 §3 を「送信ではなく**気づく手段**で満たす」と位置づけ、通知の注記に追記した。件数から S30 へ辿れることを条件にした |
 
 ## リスクと対策
 
