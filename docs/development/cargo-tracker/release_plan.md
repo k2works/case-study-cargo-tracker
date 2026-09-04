@@ -4,7 +4,7 @@ title: "リリース計画 - 国際貨物輸送管理システム（CQRS / Event
 description: "CQRS / Event Sourcing 版 Cargo Tracker のリリース計画。US01〜US32 を 15 イテレーション・5 リリース（122 SP）に配分し、ストーリーポイント・ベロシティ・バッファ・順序の根拠・リスクを定める。"
 tags: [plan,release,cargo-tracker]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-04T11:39:39Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-04T14:32:26Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T12:47:29Z }
 ---
@@ -125,6 +125,8 @@ Event Sourcing とマイクロサービスの分を、コンシューマ側の�
 推定の根拠は同シリーズの実績です（`java-3` 8.6・`haskell` 10.6・`scala` 10.1・`take-6` 12）。take-8 は Event Sourcing の分を各ストーリーの SP に上乗せ済みなので、ベロシティ自体は 10 に据えます。
 
 **検証計画**: IT1〜IT3 の実績で再調整します。IT3 終了時点の平均が 8 SP を下回ったら、以降のコミットメントを実績平均に合わせ、リリース 2.0 の期日を後ろにずらします。ストーリーを削るのではなく期日を動かします。
+
+**判定（IT3 クローズ時）**: 3 イテレーション連続で 9 SP・達成率 100%。平均 9 SP なので**再調整は不要**です。ただし 3 回とも基盤と返済が本体と同じかそれ以上の重さでした。**「9 SP」は「9 SP 分の新機能＋同程度の基盤・返済」**の意味であり、新機能だけに 9 SP を割り当てられるという意味ではありません（[IT3 ふりかえり](retrospective-3.md)）。
 
 ## 段階的リリース戦略
 
@@ -256,7 +258,7 @@ IT4・IT10・IT12・IT15 に SP 対象外の枠を置きます。**「余力次�
 
 | 指標 | 目標 |
 | :--- | :--- |
-| ベロシティ | 8 SP / IT（IT3 で再調整） |
+| ベロシティ | **9 SP / IT**（IT1〜IT3 で 3 回連続 9 SP・100%。IT4 終了時点で再確認） |
 | カバレッジ | 全体 80%、`domain` 90%（[テスト戦略](../../design/cargo-tracker/test_strategy.md)） |
 | 予定達成率 | 90% 以上 |
 | デモ項目の受け入れテスト | 全緑（緑でなければクローズしない） |
@@ -267,7 +269,7 @@ IT4・IT10・IT12・IT15 に SP 対象外の枠を置きます。**「余力次�
 | :--- | :--: | :--: | :--: | :--- |
 | IT1 | 9 | 9 | 100% | **完了**（[計画](iteration_plan-1.md)・[ふりかえり](retrospective-1.md)・[報告書](iteration_report-1.md)） |
 | IT2 | 9 | 9 | 100% | **完了**（[計画](iteration_plan-2.md)・[ふりかえり](retrospective-2.md)・[報告書](iteration_report-2.md)） |
-| IT3 | 9 | 9 | 100% | **開発完了**（[計画](iteration_plan-3.md)）。クローズ（クラスタ E2E・SonarQube・ふりかえり・報告書）は未実施 |
+| IT3 | 9 | 9 | 100% | **完了**（[計画](iteration_plan-3.md) / [ふりかえり](retrospective-3.md) / [完了報告書](iteration_report-3.md)）。欠陥 34 件を発見・修正 |
 | IT4〜IT15 | 95 | — | — | 未着手 |
 | **累計** | **122** | **27** | **100%**（IT1〜IT3 の 27 SP に対して） | |
 

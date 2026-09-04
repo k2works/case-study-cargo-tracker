@@ -148,7 +148,7 @@ export function VoyageRegisterPage() {
             />
           </label>
           <label className={LABEL}>
-            <span>運送会社</span>
+            <span>運送会社名</span>
             <input
               className={FIELD}
               required

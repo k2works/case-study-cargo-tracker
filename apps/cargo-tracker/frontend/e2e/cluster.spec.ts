@@ -209,7 +209,7 @@ test.describe('kind クラスタでの通し確認', () => {
 
     await page.getByLabel('航海番号').fill(voyageNumber);
     await page.getByLabel('運送会社コード').fill('MOL');
-    await page.getByLabel('運送会社').fill('商船三井');
+    await page.getByLabel('運送会社名', { exact: true }).fill('商船三井');
     await page.getByLabel('船名').fill('E2E EXPRESS');
     await page.getByLabel('出発地').fill('JPTYO');
     await page.getByLabel('到着地').fill('USNYC');

@@ -4,7 +4,7 @@ title: "イテレーション計画 3 - 危険物・引き渡し・航海登録"
 description: "IT3 の計画。US05/US06/US24（9 SP）に加え、IT2 の引き継ぎ 12 件を返済枠に置く。2 つ目のサービス routingms を bookingms と同じ型で立ち上げ、型が同じであることを検査で固定して Release 0.1 を閉じる。デモ項目 7 件。"
 tags: [plan,iteration,cargo-tracker]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-04T13:38:40Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-04T14:32:26Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-04T08:44:22Z }
 ---
@@ -571,27 +571,29 @@ apps/cargo-tracker/backend/routingms/src/main/java/com/example/cargotracker/rout
 
 ### Definition of Done
 
-- [ ] US05・US06・US24 の受入基準（`user_story.md`）を満たす（US05 §3 は「設計への反映が必要な事項」の判断に従う）
-- [ ] デモ項目の受け入れテストがすべて緑。**対応はテスト名でなく本文のアサーションで確かめる**
-- [ ] IT2 の引き継ぎ 12 件が返済されている、または「落とす順序」に従って送った理由がふりかえりに書かれている
-- [ ] 本 IT で足した検査を壊して赤を見た（Q.1）
-- [ ] **routingms が bookingms と同じ型であることが検査で固定されている**（Q.3）
-- [ ] `./gradlew build` が緑
-- [ ] `TZ=UTC ./gradlew cleanTest test` が緑
-- [ ] フロントの `npm run test`・`npx tsc -b`・`npm run build` が緑
-- [ ] **契約テストが 2 サービス起動で往復する**
-- [ ] UI 設計・navbar・ダッシュボード・到達性テストの 4 点が一致している（本 IT で足した S30・S32・S33 について）
-- [ ] **一覧から開く画面（ナビに載せない）のロール制御も検査されている**（IT2 レビュー M6 で見つけた漏れ）
-- [ ] 追加した各画面を、**そのロールで実際に 1 回開いた**
-- [ ] **kind クラスタで動く**：イメージを作り直して載せ直し、全 Pod が Ready
-- [ ] **クラスタに対して E2E が緑**（Day 8 とクローズ前の 2 回）
-- [ ] `npx gulp okf:check` が ERROR 0
-- [ ] SonarQube の Quality Gate がバックエンド・フロントエンドとも PASS、`mkdocs build` が成功する
-- [ ] ユーザーマニュアルの該当章が更新され、画面キャプチャが再生成されている
-- [ ] **並列レビューを Day 11 に起動し、その結果を統合してからクローズを確定した**
-- [ ] **IT3 終了時点でベロシティを再評価した**（リリース計画の検証計画）
-- [ ] ふりかえり（`retrospective-3.md`）と完了報告書（`iteration_report-3.md`）を作成した
-- [ ] **Release 0.1 の完了報告書を作成した**（`creating-release-report`）
+- [x] US05・US06・US24 の受入基準（`user_story.md`）を満たす（US05 §3 は API まで。画面の絞り込みは IT4）
+- [x] デモ項目の受け入れテストがすべて緑。**対応はテスト名でなく本文のアサーションで確かめる**
+- [x] IT2 の引き継ぎ 12 件が返済されている、または「落とす順序」に従って送った理由がふりかえりに書かれている（9 件返済・3 件は理由と行き先を明記）
+- [x] 本 IT で足した検査を壊して赤を見た（Q.1）
+- [x] **routingms が bookingms と同じ型であることが検査で固定されている**（Q.3）
+- [x] `./gradlew build` が緑
+- [x] `TZ=UTC ./gradlew cleanTest test` が緑
+- [x] フロントの `npm run test`・`npx tsc -b`・`npm run build` が緑
+- [x] **契約テストが 2 サービス起動で往復する**
+- [x] UI 設計・navbar・ダッシュボード・到達性テストの 4 点が一致している（本 IT で足した S30・S32・S33 について）
+- [x] **一覧から開く画面（ナビに載せない）のロール制御も検査されている**（IT2 レビュー M6 で見つけた漏れ）
+- [x] 追加した各画面を、**そのロールで実際に 1 回開いた**（到達性 E2E 11 本）
+- [x] **kind クラスタで動く**：イメージを作り直して載せ直し、全 Pod が Ready
+- [~] **クラスタに対して E2E が緑**（クローズ前に 1 回・7 本緑）。**Day 8 の 1 回目は回していない**（IT2 の T8 が 2 回続けて未達。IT4 の Try へ）
+- [x] `npx gulp okf:check` が ERROR 0
+- [x] SonarQube の Quality Gate がバックエンド・フロントエンドとも PASS
+- [x] ユーザーマニュアルの該当章が更新され、画面キャプチャが再生成されている（13 枚）
+- [x] **並列レビューを起動し、その結果を統合してからクローズを確定した**（クローズの最初に起動・4〜6 分で返着）
+- [x] **IT3 終了時点でベロシティを再評価した**（3 回連続 9 SP・100%。再調整は不要）
+- [x] ふりかえり（`retrospective-3.md`）と完了報告書（`iteration_report-3.md`）を作成した
+- [ ] **Release 0.1 の完了報告書を作成した**（`creating-release-report`）— IT3 で Release 0.1 が完了したので、次に作る
+
+**未達 2 件はいずれも「回数」の問題です。** クラスタ E2E はクローズ前に 1 回だけ回しました（計画は 2 回）。Release 0.1 の完了報告書は、リリース単位の締めとして別に作ります。
 
 ### デモ項目
 

@@ -149,7 +149,7 @@ describe('S33 航海スケジュール登録', () => {
 
     await userEvent.type(screen.getByLabelText('航海番号'), 'V-MOL-001');
     await userEvent.type(screen.getByLabelText('運送会社コード'), 'MOL');
-    await userEvent.type(screen.getByLabelText('運送会社'), '商船三井');
+    await userEvent.type(screen.getByLabelText('運送会社名'), '商船三井');
     await userEvent.type(screen.getByLabelText('船名'), 'MOL EXPRESS');
     await userEvent.type(screen.getByLabelText('出発地'), 'JPTYO');
     await userEvent.type(screen.getByLabelText('到着地'), 'USNYC');
@@ -186,7 +186,7 @@ describe('S33 航海スケジュール登録', () => {
     renderAt('/voyages/new', <VoyageRegisterPage />);
     await userEvent.type(screen.getByLabelText('航海番号'), 'V-MOL-001');
     await userEvent.type(screen.getByLabelText('運送会社コード'), 'MOL');
-    await userEvent.type(screen.getByLabelText('運送会社'), '商船三井');
+    await userEvent.type(screen.getByLabelText('運送会社名'), '商船三井');
     await userEvent.type(screen.getByLabelText('船名'), 'MOL EXPRESS');
     await userEvent.type(screen.getByLabelText('出発地'), 'JPTYO');
     await userEvent.type(screen.getByLabelText('到着地'), 'USNYC');
