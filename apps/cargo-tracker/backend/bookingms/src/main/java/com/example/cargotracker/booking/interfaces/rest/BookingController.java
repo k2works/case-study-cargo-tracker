@@ -1,6 +1,7 @@
 package com.example.cargotracker.booking.interfaces.rest;
 
 import com.example.cargotracker.booking.domain.model.commands.BookCargoCommand;
+import com.example.cargotracker.booking.domain.model.commands.RequestRoutingCommand;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoSpecification;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;
 import com.example.cargotracker.booking.domain.model.valueobjects.Dimensions;
@@ -14,6 +15,7 @@ import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.CountBookingsByStatusQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingsQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindRoutingWorklistQuery;
 import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos.BookCargoRequest;
 import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos.BookCargoResponse;
 import com.example.cargotracker.booking.interfaces.rest.dto.ShipperDtos.PendingResponse;
@@ -92,6 +94,36 @@ public class BookingController {
             @RequestParam(defaultValue = "false") boolean includeFinished) {
         return ResponseEntity.ok(
                 query(new FindBookingsQuery(page, size, includeFinished), BookingListView.class));
+    }
+
+    /**
+     * 経路設計者に引き渡す（US06）。
+     *
+     * <p>遷移できるかは集約が {@code BookingStatus} の述語で判断する。ここでは
+     * 判定を書き直さない。書き直すと、片方だけ直したときに画面と集約の判断が
+     * 食い違う。</p>
+     */
+    @PostMapping("/{bookingId}/routing-request")
+    public ResponseEntity<BookCargoResponse> requestRouting(@PathVariable String bookingId,
+            @RequestHeader(name = "X-Auth-Username", required = false) String username) {
+        commandGateway.sendAndWait(new RequestRoutingCommand(bookingId, username));
+        return ResponseEntity.accepted().body(new BookCargoResponse(bookingId));
+    }
+
+    /**
+     * 経路設計作業一覧（S30）。
+     *
+     * <p>routingms ではなくここに置く。{@code routing_read_db} に予約の表は無く、
+     * 一覧のために写しも作らない（写しを作ると Booking の状態と二重管理になる）。
+     * 経路設計ロールへの開放は Gateway のルートとロールで行う。</p>
+     */
+    @GetMapping("/routing-worklist")
+    public ResponseEntity<BookingListView> routingWorklist(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size,
+            @RequestParam(defaultValue = "false") boolean includeRouted) {
+        return ResponseEntity.ok(query(
+                new FindRoutingWorklistQuery(page, size, includeRouted), BookingListView.class));
     }
 
     /** 経路設計の「今日の作業」に出す件数。件数だけでなく、そこから一覧へ行ける。 */

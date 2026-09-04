@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.cargotracker.booking.domain.model.commands.BookCargoCommand;
+import com.example.cargotracker.booking.domain.model.commands.RequestRoutingCommand;
 import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
+import com.example.cargotracker.booking.domain.model.events.RoutingRequestedEvent;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoSpecification;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;
@@ -220,5 +222,41 @@ class CargoTest {
         assertThat(BookingStatus.DELIVERED.canTransitionTo(BookingStatus.CANCELLED))
                 .as("引取済以降はキャンセルできない")
                 .isFalse();
+    }
+
+    private static CargoBookedEvent bookedEvent() {
+        return new CargoBookedEvent("B-0001", "SHP-000001", "JPTYO", "USNYC", DEADLINE,
+                "GENERAL", new BigDecimal("1200"), new BigDecimal("120"),
+                new BigDecimal("80"), new BigDecimal("100"), 10, "自動車部品",
+                null, null, null, null, "sales01");
+    }
+
+    @Test
+    @DisplayName("仮受付の予約は経路設計へ引き渡せる（US06）")
+    void requestsRouting() {
+        fixture.given().event(bookedEvent())
+                .when().command(new RequestRoutingCommand("B-0001", "sales01"))
+                .then().success()
+                .events(new RoutingRequestedEvent("B-0001", "sales01"));
+    }
+
+    @Test
+    @DisplayName("受け付けていない予約は引き渡せない")
+    void rejectsRoutingForUnknownBooking() {
+        // @EventTag が抜けていると空のまま復元され、この検査は素通りする。
+        fixture.given().noPriorActivity()
+                .when().command(new RequestRoutingCommand("B-0001", "sales01"))
+                .then().exceptionSatisfies(e ->
+                        assertThat(e.getMessage()).contains("受け付けていません"));
+    }
+
+    @Test
+    @DisplayName("2 度目の引き渡しも受け付ける（ROUTE_PROPOSED → ROUTE_PROPOSED）")
+    void routingCanBeRequestedAgain() {
+        // 遷移表が ROUTE_PROPOSED → ROUTE_PROPOSED を許している。判定を書き直さず
+        // 述語を呼んでいるので、表を変えればここも変わる。
+        fixture.given().event(bookedEvent()).event(new RoutingRequestedEvent("B-0001", "s"))
+                .when().command(new RequestRoutingCommand("B-0001", "sales01"))
+                .then().success();
     }
 }

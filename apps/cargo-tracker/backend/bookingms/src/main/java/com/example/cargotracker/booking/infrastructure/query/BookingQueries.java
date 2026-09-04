@@ -33,6 +33,16 @@ public final class BookingQueries {
     public record CountBookingsByStatusQuery(String bookingStatus) {
     }
 
+    /**
+     * 経路設計作業一覧（S30）。
+     *
+     * <p>{@code includeRouted} は「設計済みも表示」の操作に対応する。既定を false に
+     * しているのは、設計の済んだ予約が混ざると一覧全体が「今日やること」として
+     * 信用されなくなるため。誤配は既定でも含める（現在地からの再設計が要る）。</p>
+     */
+    public record FindRoutingWorklistQuery(int page, int size, boolean includeRouted) {
+    }
+
     /** 画面に出す予約。荷主名は鍵破棄後に {@code null} になる。 */
     public record BookingView(
             String bookingId,

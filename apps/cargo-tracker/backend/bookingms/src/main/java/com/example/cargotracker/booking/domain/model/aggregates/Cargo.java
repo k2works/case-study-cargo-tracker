@@ -1,7 +1,9 @@
 package com.example.cargotracker.booking.domain.model.aggregates;
 
 import com.example.cargotracker.booking.domain.model.commands.BookCargoCommand;
+import com.example.cargotracker.booking.domain.model.commands.RequestRoutingCommand;
 import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
+import com.example.cargotracker.booking.domain.model.events.RoutingRequestedEvent;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoSpecification;
 import com.example.cargotracker.booking.domain.model.valueobjects.RoutingStatus;
@@ -82,6 +84,26 @@ public class Cargo {
         return command.bookingId();
     }
 
+    /**
+     * 経路設計者に引き渡す（UC04 / US06）。
+     *
+     * <p><b>遷移の判定は書き直さず {@link BookingStatus#canTransitionTo} を呼ぶ。</b>
+     * IT2 で置いた遷移表を初めて使う場所。ここで {@code if (status == PRELIMINARY)} と
+     * 書くと、遷移表と集約の判断が二重になり、片方だけ直したときに食い違う。</p>
+     */
+    @CommandHandler
+    public String requestRouting(RequestRoutingCommand command, EventAppender appender) {
+        if (bookingId == null) {
+            throw new IllegalTransition("予約 " + command.bookingId() + " は受け付けていません");
+        }
+        if (!bookingStatus.canTransitionTo(BookingStatus.ROUTE_PROPOSED)) {
+            throw new IllegalTransition(
+                    "状態 " + bookingStatus + " の予約は経路設計へ引き渡せません");
+        }
+        appender.append(new RoutingRequestedEvent(command.bookingId(), command.requestedBy()));
+        return command.bookingId();
+    }
+
     private static void validate(BookCargoCommand command, LocalDate today) {
         if (command.bookingId() == null || command.bookingId().isBlank()) {
             throw new IllegalArgumentException("予約 ID は必須です");
@@ -111,6 +133,12 @@ public class Cargo {
         this.bookingId = event.bookingId();
         this.bookingStatus = BookingStatus.PRELIMINARY;
         this.routingStatus = RoutingStatus.NOT_ROUTED;
+    }
+
+    @EventSourcingHandler
+    void on(RoutingRequestedEvent event) {
+        this.bookingStatus = BookingStatus.ROUTE_PROPOSED;
+        this.routingStatus = RoutingStatus.ROUTING_REQUESTED;
     }
 
     /** 復元した予約の状態。画面のボタン出し分けはこの値と述語で決める。 */

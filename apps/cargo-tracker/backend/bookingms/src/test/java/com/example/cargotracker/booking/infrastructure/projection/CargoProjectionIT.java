@@ -3,12 +3,14 @@ package com.example.cargotracker.booking.infrastructure.projection;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
+import com.example.cargotracker.booking.domain.model.events.RoutingRequestedEvent;
 import com.example.cargotracker.booking.infrastructure.persistence.CargoSummaryMapper;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.BookingListView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.BookingView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.CountBookingsByStatusQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingsQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindRoutingWorklistQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueryHandler;
 import com.example.cargotracker.shared.contract.event.ShipperRegisteredEvent;
 import com.example.cargotracker.shared.testing.AbstractAxonIntegrationTest;
@@ -160,5 +162,50 @@ class CargoProjectionIT extends AbstractAxonIntegrationTest {
         assertThat(ids)
                 .as("期限が近いものが先。あとから登録しても順序は期限で決まる")
                 .containsExactly(near, far);
+    }
+
+    @Test
+    @DisplayName("引き渡すと経路提案中になり、経路設計作業一覧に出る（US06）")
+    void appearsInRoutingWorklist() {
+        String bookingId = "B-WL-" + System.nanoTime();
+        projection.on(booked(bookingId, "SHP-WL", "自動車部品"));
+
+        projection.on(new RoutingRequestedEvent(bookingId, "sales01"));
+
+        BookingView view = queries.handle(new FindBookingQuery(bookingId));
+        assertThat(view.bookingStatus()).isEqualTo("ROUTE_PROPOSED");
+        assertThat(view.routingStatus()).isEqualTo("ROUTING_REQUESTED");
+        assertThat(queries.handle(new FindRoutingWorklistQuery(0, 200, false)).items())
+                .extracting(BookingView::bookingId).contains(bookingId);
+    }
+
+    @Test
+    @DisplayName("経路設計作業一覧は誤配が先、そのあと到着期限が近い順に並ぶ")
+    void worklistPutsMisroutedFirst() {
+        // 並び順を消すとここが赤くなる。誤配は放っておくほど選べる航海が減る。
+        String far = "B-WL-FAR-" + System.nanoTime();
+        String near = "B-WL-NEAR-" + System.nanoTime();
+        String misrouted = "B-WL-MIS-" + System.nanoTime();
+        projection.on(bookedWithDeadline(far, LocalDate.of(2027, Month.JANUARY, 31)));
+        projection.on(bookedWithDeadline(near, LocalDate.of(2026, Month.OCTOBER, 1)));
+        projection.on(bookedWithDeadline(misrouted, LocalDate.of(2027, Month.DECEMBER, 31)));
+        for (String id : List.of(far, near, misrouted)) {
+            projection.on(new RoutingRequestedEvent(id, "sales01"));
+        }
+        cargos.markMisroutedForTest(misrouted);
+
+        List<String> order = queries.handle(new FindRoutingWorklistQuery(0, 200, false)).items()
+                .stream().map(BookingView::bookingId)
+                .filter(id -> id.equals(far) || id.equals(near) || id.equals(misrouted))
+                .toList();
+
+        assertThat(order).containsExactly(misrouted, near, far);
+    }
+
+    private static CargoBookedEvent bookedWithDeadline(String bookingId, LocalDate deadline) {
+        return new CargoBookedEvent(bookingId, "SHP-WL", "JPTYO", "USNYC", deadline,
+                "GENERAL", new BigDecimal("1200"), new BigDecimal("120"),
+                new BigDecimal("80"), new BigDecimal("100"), 10, "自動車部品",
+                null, null, null, null, "sales01");
     }
 }

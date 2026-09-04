@@ -58,15 +58,15 @@ public class ApiExceptionHandler {
      */
     @ExceptionHandler(CommandExecutionException.class)
     public ResponseEntity<Map<String, Object>> onCommandFailed(CommandExecutionException e) {
-        Throwable cause = e.getCause();
-        String message = cause == null ? e.getMessage() : cause.getMessage();
-        if (message == null) {
-            message = "処理できませんでした";
-        }
+        String message = deepestMessage(e);
         // **型で見ない。** サービス越しに来た例外は根の型が置き換わるので、
         // instanceof で分けるとコマンドがサービスを越えた瞬間に 409 が 422 に
         // 劣化する（ADR-0001 決定 5 第 12 項）。種類は文言の印で運ぶ。
-        if (message.contains(IllegalTransition.MARKER)) {
+        //
+        // **連鎖のいちばん外側だけを見ない。** 包みは 2 枚以上になることがあり、
+        // 直下の cause だけを読むと印が付いた文言に届かず、409 が 422 に化ける
+        // （IT3 の受け入れテストで実測。集約の単体テストでは判別できない）。
+        if (containsMarker(e, IllegalTransition.MARKER)) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(Map.of(CODE, "ILLEGAL_STATE", MESSAGE,
                             BusinessRuleViolation.strip(message)));
@@ -74,6 +74,27 @@ public class ApiExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT)
                 .body(Map.of(CODE, "BUSINESS_RULE_VIOLATION", MESSAGE,
                         BusinessRuleViolation.strip(message)));
+    }
+
+    /** 連鎖のどこかに印があるか。包みの枚数に依存しない。 */
+    private static boolean containsMarker(Throwable throwable, String marker) {
+        for (Throwable t = throwable; t != null; t = t.getCause() == t ? null : t.getCause()) {
+            if (t.getMessage() != null && t.getMessage().contains(marker)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** 連鎖のいちばん内側の文言。無ければ外側から順に探す。 */
+    private static String deepestMessage(Throwable throwable) {
+        String message = null;
+        for (Throwable t = throwable; t != null; t = t.getCause() == t ? null : t.getCause()) {
+            if (t.getMessage() != null && !t.getMessage().isBlank()) {
+                message = t.getMessage();
+            }
+        }
+        return message == null ? "処理できませんでした" : message;
     }
 
     /** 状態遷移違反。集約の外（Controller）で判断したもの。 */

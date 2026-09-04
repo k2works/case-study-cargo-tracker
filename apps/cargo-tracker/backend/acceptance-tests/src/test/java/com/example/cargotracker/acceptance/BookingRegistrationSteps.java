@@ -162,4 +162,51 @@ public class BookingRegistrationSteps {
                 .filter(item -> product.equals(item.get("productName")))
                 .findFirst().orElse(null);
     }
+
+    @もし("その予約を経路設計者に引き渡す")
+    public void 引き渡す() {
+        Map<String, Object> row = findByProduct(lastProduct);
+        assertThat(row).as("先に登録した予約が一覧に出ている").isNotNull();
+        lastResponse = rest.post()
+                .uri(url("/api/v1/booking/bookings/" + row.get("bookingId") + "/routing-request"))
+                .retrieve().toEntity(JsonMap.class);
+    }
+
+    @もし("受け付けていない予約番号で経路設計者に引き渡す")
+    public void 受け付けていない予約を引き渡す() {
+        // 集約は空のまま復元される。@EventTag が抜けていると、受け付けた予約でも
+        // 同じく空で復元されるので、この検査だけでは足りない（CargoTest と対にする）。
+        lastResponse = rest.post()
+                .uri(url("/api/v1/booking/bookings/B-NOT-EXIST/routing-request"))
+                .retrieve().toEntity(JsonMap.class);
+    }
+
+    @ならば("{int} 秒以内にその予約の状態は {string} になる")
+    public void 状態が変わる(int seconds, String label) {
+        assertThat(STATUS_OF_LABEL).containsKey(label);
+        SharedSteps.awaitWithin(seconds, () -> {
+            Map<String, Object> row = findByProduct(lastProduct);
+            return row != null && STATUS_OF_LABEL.get(label).equals(row.get("bookingStatus"));
+        }, "予約の状態が「" + label + "」になる");
+    }
+
+    @かつ("経路設計作業一覧にその予約が出る")
+    @SuppressWarnings("unchecked")
+    public void 作業一覧に出る() {
+        ResponseEntity<JsonMap> response = rest.get()
+                .uri(url("/api/v1/booking/bookings/routing-worklist?page=0&size=200"))
+                .retrieve().toEntity(JsonMap.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        List<Map<String, Object>> items =
+                (List<Map<String, Object>>) response.getBody().get("items");
+        assertThat(items).extracting(item -> item.get("productName")).contains(lastProduct);
+    }
+
+    @ならば("引き渡しは状態の誤りとして断られる")
+    public void 引き渡しは状態の誤りで断られる() {
+        // 業務規則違反（422）ではなく状態遷移違反（409）。利用者が「入力が悪い」のか
+        // 「もうその段階ではない」のかを判断できるように分ける。
+        assertThat(lastResponse.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(lastResponse.getBody().get("code")).isEqualTo("ILLEGAL_STATE");
+    }
 }

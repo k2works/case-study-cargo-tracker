@@ -1,6 +1,7 @@
 package com.example.cargotracker.booking.infrastructure.projection;
 
 import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
+import com.example.cargotracker.booking.domain.model.events.RoutingRequestedEvent;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.booking.domain.model.valueobjects.RoutingStatus;
 import com.example.cargotracker.booking.infrastructure.persistence.CargoSummaryMapper;
@@ -68,6 +69,20 @@ public class CargoProjection {
                 now,
                 now,
                 null));
+    }
+
+    /**
+     * 経路設計を依頼した（US06）。予約と経路設計の状態を進める。
+     *
+     * <p>状態は集約のイベントだけが書く。画面のボタン出し分けはこの値を読むが、
+     * 判定は書き直さず {@code BookingStatus} の述語を呼ぶ。</p>
+     */
+    @EventHandler
+    public void on(RoutingRequestedEvent event) {
+        cargos.updateRoutingRequested(event.bookingId(),
+                BookingStatus.ROUTE_PROPOSED.name(),
+                RoutingStatus.ROUTING_REQUESTED.name(),
+                clock.instant());
     }
 
     /** 業務タイムゾーン。Clock が持つ（BusinessClockConfiguration）。 */

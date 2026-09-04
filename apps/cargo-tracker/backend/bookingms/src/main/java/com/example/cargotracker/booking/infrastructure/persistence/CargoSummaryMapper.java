@@ -37,6 +37,33 @@ public interface CargoSummaryMapper {
     int countAll(@Param("includeFinished") boolean includeFinished);
 
     /**
+     * 経路設計の依頼を投影に反映する（US06）。
+     *
+     * <p>常に INSERT する形にしない。状態の更新で行を増やすと、作成しかない
+     * イテレーションでは成立し、最初の更新ストーリーで壊れる。</p>
+     */
+    @org.apache.ibatis.annotations.Update(
+            "UPDATE cargo_summary SET booking_status = #{bookingStatus}, "
+            + "routing_status = #{routingStatus}, projected_at = #{projectedAt} "
+            + "WHERE booking_id = #{bookingId}")
+    int updateRoutingRequested(@Param("bookingId") String bookingId,
+            @Param("bookingStatus") String bookingStatus,
+            @Param("routingStatus") String routingStatus,
+            @Param("projectedAt") Instant projectedAt);
+
+    /**
+     * 経路設計作業一覧（S30）。
+     *
+     * <p>並び順は<b>誤配が先、そのあと到着期限が近い順</b>（ui_design.md）。誤配は
+     * 現在地からの再設計が要り、放っておくほど選べる航海が減る。既定では設計済み
+     * （{@code ROUTED}）を外し、誤配は含める。</p>
+     */
+    List<CargoSummaryRow> findRoutingWorklist(@Param("includeRouted") boolean includeRouted,
+            @Param("limit") int limit, @Param("offset") int offset);
+
+    int countRoutingWorklist(@Param("includeRouted") boolean includeRouted);
+
+    /**
      * 一覧の既定条件を検査するためだけの更新。
      *
      * <p>本来 {@code booking_status} は集約のイベントだけが書く。ここで直に更新するのは、
@@ -46,6 +73,16 @@ public interface CargoSummaryMapper {
     @org.apache.ibatis.annotations.Update(
             "UPDATE cargo_summary SET booking_status = 'SETTLED' WHERE booking_id = #{bookingId}")
     int markSettledForTest(@Param("bookingId") String bookingId);
+
+    /**
+     * 並び順を検査するためだけの更新。
+     *
+     * <p>誤配になる経路（US28・IT11）がまだ無く、「誤配が先に出る」ことを確かめられない
+     * ため。<b>本番の経路では使わない。</b></p>
+     */
+    @org.apache.ibatis.annotations.Update(
+            "UPDATE cargo_summary SET routing_status = 'MISROUTED' WHERE booking_id = #{bookingId}")
+    int markMisroutedForTest(@Param("bookingId") String bookingId);
 
     /** 状態ごとの件数（S02 の「今日の作業」）。仮受付は引き渡し待ちを意味する。 */
     @Select("SELECT count(*) FROM cargo_summary WHERE booking_status = #{bookingStatus}")

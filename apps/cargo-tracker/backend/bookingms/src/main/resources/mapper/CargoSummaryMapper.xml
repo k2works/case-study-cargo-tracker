@@ -43,6 +43,30 @@
         SELECT * FROM cargo_summary WHERE booking_id = #{bookingId}
     </select>
 
+    <!--
+      経路設計作業一覧（S30）。並び順は誤配が先、そのあと到着期限が近い順。
+      並び順を消したら赤になる検査を CargoProjectionIT に置いている。
+    -->
+    <sql id="worklistVisible">
+        WHERE booking_status = 'ROUTE_PROPOSED'
+        <if test="!includeRouted">
+            AND routing_status &lt;&gt; 'ROUTED'
+        </if>
+    </sql>
+
+    <select id="findRoutingWorklist" resultMap="cargoSummaryRow">
+        SELECT * FROM cargo_summary
+        <include refid="worklistVisible"/>
+        ORDER BY CASE WHEN routing_status = 'MISROUTED' THEN 0 ELSE 1 END,
+                 arrival_deadline, booking_number
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countRoutingWorklist" resultType="_int">
+        SELECT count(*) FROM cargo_summary
+        <include refid="worklistVisible"/>
+    </select>
+
     <select id="findAll" resultMap="cargoSummaryRow">
         SELECT * FROM cargo_summary
         <include refid="visible"/>

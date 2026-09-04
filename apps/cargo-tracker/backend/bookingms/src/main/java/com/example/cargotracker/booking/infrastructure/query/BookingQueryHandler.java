@@ -6,6 +6,7 @@ import com.example.cargotracker.booking.infrastructure.query.BookingQueries.Book
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.CountBookingsByStatusQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingsQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindRoutingWorklistQuery;
 import org.axonframework.messaging.queryhandling.annotation.QueryHandler;
 import org.springframework.stereotype.Component;
 
@@ -33,6 +34,16 @@ public class BookingQueryHandler {
                 cargos.findAll(query.includeFinished(), size, offset).stream()
                         .map(BookingQueryHandler::toView).toList(),
                 cargos.countAll(query.includeFinished()));
+    }
+
+    @QueryHandler
+    public BookingListView handle(FindRoutingWorklistQuery query) {
+        int size = Math.clamp(query.size(), 1, 200);
+        int offset = Math.max(query.page(), 0) * size;
+        return new BookingListView(
+                cargos.findRoutingWorklist(query.includeRouted(), size, offset).stream()
+                        .map(BookingQueryHandler::toView).toList(),
+                cargos.countRoutingWorklist(query.includeRouted()));
     }
 
     @QueryHandler
