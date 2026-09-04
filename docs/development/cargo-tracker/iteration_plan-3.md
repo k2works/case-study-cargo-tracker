@@ -4,7 +4,7 @@ title: "イテレーション計画 3 - 危険物・引き渡し・航海登録"
 description: "IT3 の計画。US05/US06/US24（9 SP）に加え、IT2 の引き継ぎ 12 件を返済枠に置く。2 つ目のサービス routingms を bookingms と同じ型で立ち上げ、型が同じであることを検査で固定して Release 0.1 を閉じる。デモ項目 7 件。"
 tags: [plan,iteration,cargo-tracker]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-04T08:58:20Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-04T10:23:19Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-04T08:44:22Z }
 ---
@@ -105,8 +105,8 @@ IT2 のふりかえり T1〜T8 と引き継ぎ 12 件から。**IT の序盤に�
 | :--- | :--- | :--- | :--: | :--: |
 | R.1 | **契約テストの往復（2 サービス起動）。** 対象は **bookingms ↔ billingms**（ゴールデンは `ShipperRegisteredEvent.json` 1 本）。**routingms は購読側なので契約は増えません**（契約イベント 11 本の発行元は bookingms/handlingms/trackingms/billingms）。ゴールデンの一致だけでなく**実際に届くこと**を検査する | 引き継ぎ 1 | 6h | [ ] |
 | R.2 | **クラスタ E2E の順序依存を外す。** 各テストが自分で前提を作る。**前回実行の残骸でも緑になる**箇所がある | 引き継ぎ 7 | 3h | [ ] |
-| R.3 | 規約テストの入力宣言（他モジュールの `.java`）。Gradle の up-to-date でスキップされうる | 引き継ぎ 8 | 2h | [ ] |
-| R.4 | 値オブジェクトの検査を `BusinessRuleViolation` に寄せる。いま `IllegalArgumentException` を広く受けているので、`UUID.fromString` のようなプログラミングエラーが業務規則違反に化ける | 引き継ぎ 9 | 3h | [ ] |
+| R.3 | 規約テストの入力宣言（他モジュールの `.java`）。Gradle の up-to-date でスキップされうる | 引き継ぎ 8 | 2h | [x] |
+| R.4 | 値オブジェクトの検査を `BusinessRuleViolation` に寄せる。いま `IllegalArgumentException` を広く受けているので、`UUID.fromString` のようなプログラミングエラーが業務規則違反に化ける | 引き継ぎ 9 | 3h | [x] |
 | R.5 | US04 §受入基準 3「希望引渡日」の扱いを決める（設計に置き場が無い）。**US08 の入力になるのは着日側**なので、持つ必要があるかを判断し、不要なら受入基準側を直す | 引き継ぎ 2 | 1h | [x] |
 | R.6 | US04 §受入基準 6（見積との整合）に「US01 実装後」の但し書きを付けるか判断する | 引き継ぎ 3 | 0.5h | [x] |
 | R.7 | `attention_item` の識別子の形（内容から導いた値を UUID の見た目に整形している） | 引き継ぎ 4 | 1h | [ ] |
@@ -132,53 +132,53 @@ IT2 のふりかえり T1〜T8 と引き継ぎ 12 件から。**IT の序盤に�
 
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | :--: | :--: |
-| Q.1 | 本 IT で足す検査すべてについて、**実装を壊して赤を見る** | 3h | [ ] |
-| Q.2 | デモ項目とテストの対応表を、**テスト名ではなく本文のアサーション**で作る | 1h | [ ] |
+| Q.1 | 本 IT で足す検査すべてについて、**実装を壊して赤を見る** | 3h | [x] |
+| Q.2 | デモ項目とテストの対応表を、**テスト名ではなく本文のアサーション**で作る | 1h | [x] |
 | Q.4 | **値を捨てる分岐を探す**（IT2 T3：表示のためだけに運ぶ値はどこか一層で潰しても緑になる）。**設定の重複を探す**（T6：同じ絞りが複数層にあると 1 か所緩めても効かない） | 2h | [ ] |
-| Q.3 | **routingms が bookingms と同じ型であることを検査で固定する。** bookingms にある 4 本の IT を routingms にも置く：`ProjectionIdempotencyIT`・`TokenTransactionIT`・`TransactionManagerIT`・`ReplayIT`。あわせて `@EventTag`・`@TargetEntityId`・インスタンスのコマンドハンドラ・Processing Group の列挙を規約テストで固定する。**3 つ目の ES サービス（trackingms / IT8）で同じ失敗を繰り返さない** | 5h | [ ] |
+| Q.3 | **routingms が bookingms と同じ型であることを検査で固定する。** bookingms にある 4 本の IT を routingms にも置く：`ProjectionIdempotencyIT`・`TokenTransactionIT`・`TransactionManagerIT`・`ReplayIT`。あわせて `@EventTag`・`@TargetEntityId`・インスタンスのコマンドハンドラ・Processing Group の列挙を規約テストで固定する。**3 つ目の ES サービス（trackingms / IT8）で同じ失敗を繰り返さない** | 5h | [x] |
 | | 小計 | 11h | |
 
 #### 1. US24 航海スケジュールを新規登録する（4 SP）
 
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | :--: | :--: |
-| 1.1 | 受け入れの入口を赤で置く：`航海スケジュールの登録.feature`（登録 → 一覧に出る → 同一番号は要確認一覧） | 2h | [ ] |
+| 1.1 | 受け入れの入口を赤で置く：`航海スケジュールの登録.feature`（登録 → 一覧に出る → 同一番号は要確認一覧） | 2h | [x] |
 | 1.2 | S33 航海スケジュール登録（`/voyages/new`）の salt を `ui_design.md` に描く（**実装より先に**）。正典の画面名は「登録・更新」だが **IT3 は登録側のみ**（更新は US25 / IT4） | 1h | [x] |
 | 1.3 | S32 航海スケジュール一覧（`/voyages`）の salt を描く | 1h | [x] |
-| 1.4 | S33 の画面（API は MSW でモック。寄港地を複数・順序つきで入力する）。**モックは本物より甘くしない**（型・日付形式を OpenAPI に合わせ、`202`/`409`/`422` を返せる） | 5h | [ ] |
-| 1.5 | S32 の画面（既定は出港済み・キャンセルを外し、出発日が近い順） | 3h | [ ] |
-| 1.6 | `Voyage` 集約：`register`。不変条件 1〜4 を `AxonTestFixture` で固定。**`@EventTag(key = "voyageNumber")` を最初から付ける** | 5h | [ ] |
-| 1.7 | `VoyageNumber` / `Carrier` / `Schedule` / `CarrierMovement` の値オブジェクト。時刻昇順と港の連結（不変条件 2）、`arrivalTime > departureTime`（3） | 4h | [ ] |
-| 1.8 | 投影：`voyage`（V002） / `carrier_movement`（V003） / `voyage_accepted_cargo_type`（V004）。**1 テーブル 1 ファイル**（`data-model.md` の規約）。`V001__create_axon_tables.sql` が `token_entry`。適用済みファイルは編集できないので初回の番号取りを間違えない。**Processing Group `routing-voyage-projection` を `application.yml` に明示列挙する**（列挙漏れは設定ファイル走査で赤。いま `processors:` があるのは bookingms/billingms だけ） | 5h | [ ] |
-| 1.9 | 一意性の三段（登録前の存在確認 + 投影の UNIQUE + `attention_item`）。**bookingms と同じ形にする** | 3h | [ ] |
-| 1.10 | クエリ：`FindVoyagesQuery` / `FindVoyageQuery`。一覧の既定条件は UI 設計の表に従う | 3h | [ ] |
-| 1.11 | REST（`/api/v1/routing/voyages`）と Gateway のルート。**新しく足した経路が保護されていることを検査する**（IT2 レビュー L3：足した経路が未検査だった） | 2h | [ ] |
-| 1.12 | モックを実物に差し替え、1.1 の赤が緑になることで縦切りの成立を判定 | 2h | [ ] |
+| 1.4 | S33 の画面（API は MSW でモック。寄港地を複数・順序つきで入力する）。**モックは本物より甘くしない**（型・日付形式を OpenAPI に合わせ、`202`/`409`/`422` を返せる） | 5h | [x] |
+| 1.5 | S32 の画面（既定は出港済み・キャンセルを外し、出発日が近い順） | 3h | [x] |
+| 1.6 | `Voyage` 集約：`register`。不変条件 1〜4 を `AxonTestFixture` で固定。**`@EventTag(key = "voyageNumber")` を最初から付ける** | 5h | [x] |
+| 1.7 | `VoyageNumber` / `Carrier` / `Schedule` / `CarrierMovement` の値オブジェクト。時刻昇順と港の連結（不変条件 2）、`arrivalTime > departureTime`（3） | 4h | [x] |
+| 1.8 | 投影：`voyage`（V002） / `carrier_movement`（V003） / `voyage_accepted_cargo_type`（V004）。**1 テーブル 1 ファイル**（`data-model.md` の規約）。`V001__create_axon_tables.sql` が `token_entry`。適用済みファイルは編集できないので初回の番号取りを間違えない。**Processing Group `routing-voyage-projection` を `application.yml` に明示列挙する**（列挙漏れは設定ファイル走査で赤。いま `processors:` があるのは bookingms/billingms だけ） | 5h | [x] |
+| 1.9 | 一意性の三段（登録前の存在確認 + 投影の UNIQUE + `attention_item`）。**bookingms と同じ形にする** | 3h | [x] |
+| 1.10 | クエリ：`FindVoyagesQuery` / `FindVoyageQuery`。一覧の既定条件は UI 設計の表に従う | 3h | [x] |
+| 1.11 | REST（`/api/v1/routing/voyages`）と Gateway のルート。**新しく足した経路が保護されていることを検査する**（IT2 レビュー L3：足した経路が未検査だった） | 2h | [x] |
+| 1.12 | モックを実物に差し替え、1.1 の赤が緑になることで縦切りの成立を判定 | 2h | [x] |
 | | 小計 | 36h | |
 
 #### 2. US06 予約情報を経路設計者に引き渡す（2 SP）
 
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | :--: | :--: |
-| 2.1 | 受け入れの入口を赤で置く：`貨物予約の登録.feature` に「引き渡すと経路提案中になる」を足す | 1h | [ ] |
+| 2.1 | 受け入れの入口を赤で置く：`貨物予約の登録.feature` に「引き渡すと経路提案中になる」を足す | 1h | [x] |
 | 2.2 | S30 経路設計作業一覧（`/routing/worklist`）と **S02 ダッシュボード（経路設計ロール版）** の salt を描く（**実装より先に**）。正典の S02 salt は営業版・荷役版の 2 枚しかなく、向け直す先の仕様が無い | 2h | [x] |
-| 2.3 | `Cargo.requestRouting`：`PRELIMINARY → ROUTE_PROPOSED`、`RoutingStatus = ROUTING_REQUESTED`。**`canTransitionTo` を通す**（IT2 で置いた遷移表を初めて使う） | 3h | [ ] |
-| 2.4 | `RequestRoutingCommand` / `RoutingRequestedEvent`。投影が `booking_status` / `routing_status` を更新 | 3h | [ ] |
-| 2.5 | S22 予約詳細に `[経路設計を依頼する]`。**ボタンの出し分けは `BookingStatus` の述語をそのまま呼ぶ**（判定を書き直さない） | 3h | [ ] |
-| 2.6 | S30 経路設計作業一覧（経路設計ロール）。**データ供給元は bookingms の `/api/v1/bookings` を経路設計ロールに開放する形**（`routing_read_db` に予約の表は無い。ACL は作らず Gateway のルートとロールで開ける）。既定は設計済（`ROUTED`）を外し、誤配は含める。**並び順は誤配 → 到着期限が近い順**（`ui_design.md` 画面一覧）。並び順を消したら赤になる検査を置く | 4h | [ ] |
-| 2.7 | ダッシュボードに S30 への導線を足す（S20 への導線は残す）。**同じ変更で `ui_design.md` の該当記述も直す**（設計反映 7） | 1h | [ ] |
-| 2.8 | **サイドナビ（`shared/ui/navigation.ts`）に S30・S32・S33 を経路設計ロール限定で足す。** `AppLayout.test.tsx` にロール別の表示検証を置き、`routes.tsx` のロールガードと突き合わせる。**画面の到達性の正典は `navigation.ts`** | 2h | [ ] |
+| 2.3 | `Cargo.requestRouting`：`PRELIMINARY → ROUTE_PROPOSED`、`RoutingStatus = ROUTING_REQUESTED`。**`canTransitionTo` を通す**（IT2 で置いた遷移表を初めて使う） | 3h | [x] |
+| 2.4 | `RequestRoutingCommand` / `RoutingRequestedEvent`。投影が `booking_status` / `routing_status` を更新 | 3h | [x] |
+| 2.5 | S22 予約詳細に `[経路設計を依頼する]`。**ボタンの出し分けは `BookingStatus` の述語をそのまま呼ぶ**（判定を書き直さない） | 3h | [x] |
+| 2.6 | S30 経路設計作業一覧（経路設計ロール）。**データ供給元は bookingms の `/api/v1/bookings` を経路設計ロールに開放する形**（`routing_read_db` に予約の表は無い。ACL は作らず Gateway のルートとロールで開ける）。既定は設計済（`ROUTED`）を外し、誤配は含める。**並び順は誤配 → 到着期限が近い順**（`ui_design.md` 画面一覧）。並び順を消したら赤になる検査を置く | 4h | [x] |
+| 2.7 | ダッシュボードに S30 への導線を足す（S20 への導線は残す）。**同じ変更で `ui_design.md` の該当記述も直す**（設計反映 7） | 1h | [x] |
+| 2.8 | **サイドナビ（`shared/ui/navigation.ts`）に S30・S32・S33 を経路設計ロール限定で足す。** `AppLayout.test.tsx` にロール別の表示検証を置き、`routes.tsx` のロールガードと突き合わせる。**画面の到達性の正典は `navigation.ts`** | 2h | [x] |
 | | 小計 | 19h | |
 
 #### 3. US05 危険物・冷凍の絞り込みの素地（3 SP）
 
 | # | タスク | 見積 | 状態 |
 | :--- | :--- | :--: | :--: |
-| 3.1 | 受け入れの入口を赤で置く：「危険物に対応しない航海は候補に出ない」 | 1h | [ ] |
-| 3.2 | 航海の対応貨物種別を S33 で入力し、投影に持つ（1.8 と同時） | 2h | [ ] |
-| 3.3 | `FindVoyagesQuery` に貨物種別の絞り込みを足す。**空なら一般貨物のみ**（不変条件 4） | 3h | [ ] |
+| 3.1 | 受け入れの入口を赤で置く：「危険物に対応しない航海は候補に出ない」 | 1h | [x] |
+| 3.2 | 航海の対応貨物種別を S33 で入力し、投影に持つ（1.8 と同時） | 2h | [x] |
+| 3.3 | `FindVoyagesQuery` に貨物種別の絞り込みを足す。**空なら一般貨物のみ**（不変条件 4） | 3h | [x] |
 | 3.4 | 危険物・冷凍の予約から S30 → 航海一覧へ行くと、対応する航海だけが出ることを画面から確かめる | 3h | [ ] |
-| 3.5 | US05 §受入基準 1・2 が IT2 の実装で満たされていることを、受け入れ層で確かめる（**実装済みでも固定されているとは限らない**） | 2h | [ ] |
+| 3.5 | US05 §受入基準 1・2 が IT2 の実装で満たされていることを、受け入れ層で確かめる（**実装済みでも固定されているとは限らない**） | 2h | [x] |
 | | 小計 | 11h | |
 
 #### 4. ユーザーマニュアル（SP 対象外・画面を伴う IT なので毎回計上）
@@ -595,6 +595,22 @@ apps/cargo-tracker/backend/routingms/src/main/java/com/example/cargotracker/rout
 | 7 | 危険物に対応しない航海は、危険物の絞り込みで候補に出ない | 経路設計者 | US05 §受入基準 3。**受け入れ層はタスク 3.3（`FindVoyagesQuery` の絞り込み）で固定する。**「落とす順序」1 で 3.4（画面から確かめる）を IT5 へ送っても、この項目の検査は残る |
 
 デモ項目 2・3・4・6 は「拒否・失敗する側」です。**安全装置は働くことを見せて初めて入ったと言えます。**
+
+#### デモ項目と検査の対応（2026-09-04・Q.2）
+
+**テスト名では作りません。** 名前は実体より広くなりがちで（IT2 レビュー L7）、名前が合っていても中身が別のことを見ていることがあります。下表は**アサーションの中身**で対応させています。
+
+| # | 検査 | 何をアサートしているか |
+| :--- | :--- | :--- |
+| 1 | `航海スケジュールの登録.feature`「登録した航海が数秒後に一覧へ出る」 | 201 と航海番号の返却、10 秒以内に一覧へ出ること、船名が `MOL EXPRESS` であること。`VoyageProjectionIT#projects` が寄港地 2 件の並びと端点（最初の出発・最後の到着）を見る |
+| 2 | `VoyageValueObjectsTest#arrivalMustBeAfterDeparture` | `BusinessRuleViolation` と「到着日時は出発日時より後」。**同時刻も断る**ことを別のアサートで見る。受け入れ層は同 feature「到着が出発より前の寄港地は断られる」が 4xx を見る |
+| 3 | `VoyageValueObjectsTest#portsMustConnect` | 「寄港地が繋がっていません」。加えて `#timesMustNotGoBackwards` が、港は繋がっているが時刻が前後する場合を見る（港だけ見ると乗り継げない航海が通る）。受け入れ層は同 feature「港が繋がっていない寄港地は断られる」 |
+| 4 | `VoyageTest#rejectsDuplicate`（1 段目）・`VoyageProjectionIT#rejectsDuplicateAndRecordsAttention`（2・3 段目） | 集約は「既に登録されています」で断る。投影は先に入った行が残ること（`vesselName` が `MOL EXPRESS` のまま）と、`ROLE_ROUTING` の要確認一覧に理由「航海番号の重複」が載ることを見る。画面は `RoutingScreens.test.tsx`「同じ航海番号は問いかけとして出す」が 409 の文言と「番号を直してください」を見る |
+| 5 | `貨物予約の登録.feature`「引き渡すと経路提案中になり、経路設計作業一覧に出る」 | 状態が `ROUTE_PROPOSED` になること、`/routing-worklist` の応答にその品名が含まれること。`CargoProjectionIT#appearsInRoutingWorklist` が `booking_status` と `routing_status` の両方を見る |
+| 6 | `BookingDetailPage.test.tsx`「精算済の予約には『経路設計を依頼する』が出ない」・`貨物予約の登録.feature`「受け付けていない予約は引き渡せない」 | 前者はボタンが DOM に無いこと、後者は 409 と `ILLEGAL_STATE`。**422 ではない**ことまで見る（利用者が「入力が悪い」のか「もうその段階ではない」のかを判断できる） |
+| 7 | `航海スケジュールの登録.feature`「危険物に対応しない航海は危険物の候補に出ない」 | `cargoType=HAZARDOUS` で絞った一覧に対応航海が含まれ、非対応航海が含まれないこと。`VoyageProjectionIT#filtersByCargoType` が同じ絞りを投影の側で見る |
+
+**US05 §受入基準 1・2（IT2 実装済み）も受け入れ層で固定しました**（タスク 3.5）。危険物は申告なしで断られ、冷凍・冷蔵は温度管理条件なしで断られること、および**登録した付帯情報が一覧から読み直せる**ことを見ます。表示のためだけに運ぶ値は、どこか一層で潰しても「登録できた」までは緑になるためです。
 
 ## 更新履歴
 

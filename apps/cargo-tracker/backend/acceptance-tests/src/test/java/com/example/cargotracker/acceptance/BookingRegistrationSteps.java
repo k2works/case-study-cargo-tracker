@@ -95,6 +95,45 @@ public class BookingRegistrationSteps {
                 "arrivalDeadline", deadline, "productName", product));
     }
 
+    @もし("その荷主の冷凍・冷蔵の予約を温度管理条件無しで登録する")
+    public void 冷凍を温度条件なしで登録する() {
+        // US05 §受入基準 2。IT2 で実装済みだが、受け入れ層では固定されていなかった。
+        // 実装済みであることと、固定されていることは別。
+        lastResponse = book(Map.of("cargoType", "REFRIGERATED"));
+    }
+
+    @もし("その荷主の危険物の予約を IMO クラス {string}、UN 番号 {string}、品名 {string} で登録する")
+    public void 危険物を申告つきで登録する(String imoClass, String unNumber, String product) {
+        lastResponse = book(Map.of("cargoType", "HAZARDOUS", "hazardImoClass", imoClass,
+                "hazardUnNumber", unNumber, "productName", product));
+    }
+
+    @もし("その荷主の冷凍・冷蔵の予約を温度 {string} 〜 {string} ℃、品名 {string} で登録する")
+    public void 冷凍を温度条件つきで登録する(String min, String max, String product) {
+        lastResponse = book(Map.of("cargoType", "REFRIGERATED", "temperatureMinC", min,
+                "temperatureMaxC", max, "productName", product));
+    }
+
+    @かつ("その予約の危険物申告は IMO クラス {string}、UN 番号 {string} である")
+    public void 危険物申告を確かめる(String imoClass, String unNumber) {
+        // 付帯情報は表示のためだけに運ぶ値なので、どこか一層で潰しても
+        // 「登録できた」までは緑になる。一覧から読み直して確かめる。
+        Map<String, Object> row = findByProduct(lastProduct);
+        assertThat(row).isNotNull();
+        assertThat(row.get("hazardImoClass")).isEqualTo(imoClass);
+        assertThat(row.get("hazardUnNumber")).isEqualTo(unNumber);
+    }
+
+    @かつ("その予約の温度管理条件は {string} 〜 {string} ℃ である")
+    public void 温度条件を確かめる(String min, String max) {
+        Map<String, Object> row = findByProduct(lastProduct);
+        assertThat(row).isNotNull();
+        assertThat(new java.math.BigDecimal(String.valueOf(row.get("temperatureMinC"))))
+                .isEqualByComparingTo(min);
+        assertThat(new java.math.BigDecimal(String.valueOf(row.get("temperatureMaxC"))))
+                .isEqualByComparingTo(max);
+    }
+
     @もし("その荷主の危険物の予約を IMO クラス無しで登録する")
     public void 危険物を申告なしで登録する() {
         lastResponse = book(Map.of("cargoType", "HAZARDOUS"));

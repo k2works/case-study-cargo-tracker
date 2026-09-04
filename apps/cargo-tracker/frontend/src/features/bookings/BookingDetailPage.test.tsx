@@ -149,4 +149,47 @@ describe('S22 予約詳細', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('予約を取得できませんでした');
   });
+
+  it('仮受付の予約には「経路設計を依頼する」が出る（US06）', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(booking()), { status: 200 }),
+    );
+
+    renderDetail();
+
+    expect(
+      await screen.findByRole('button', { name: '経路設計を依頼する' }),
+    ).toBeInTheDocument();
+  });
+
+  it('精算済の予約には「経路設計を依頼する」が出ない（デモ項目 6）', async () => {
+    // 出し分けは集約と同じ遷移表の述語を通す。ここで status を直に見ると、
+    // 遷移表が変わったときに画面だけが古い判断のまま残る。
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(booking({ bookingStatus: 'SETTLED' })), { status: 200 }),
+    );
+
+    renderDetail();
+
+    expect(await screen.findByText('精算済')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: '経路設計を依頼する' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('引き渡しが断られたら理由を出す（500 に見せない）', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify(booking()), { status: 200 }));
+    fetchSpy.mockResolvedValue(
+      new Response(
+        JSON.stringify({ code: 'ILLEGAL_STATE', message: '状態 SETTLED の予約は引き渡せません' }),
+        { status: 409 },
+      ),
+    );
+
+    renderDetail();
+    (await screen.findByRole('button', { name: '経路設計を依頼する' })).click();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('引き渡せません');
+  });
 });
