@@ -1,7 +1,6 @@
 package com.example.cargotracker.booking.interfaces.rest;
 
 import com.example.cargotracker.booking.infrastructure.persistence.AttentionItemMapper;
-import com.example.cargotracker.booking.infrastructure.persistence.ShipperMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
@@ -26,11 +25,9 @@ public class AttentionItemController {
     private static final ObjectMapper JSON = new ObjectMapper();
 
     private final AttentionItemMapper attentionItems;
-    private final ShipperMapper shippers;
 
-    public AttentionItemController(AttentionItemMapper attentionItems, ShipperMapper shippers) {
+    public AttentionItemController(AttentionItemMapper attentionItems) {
         this.attentionItems = attentionItems;
-        this.shippers = shippers;
     }
 
     /**
@@ -66,24 +63,27 @@ public class AttentionItemController {
     }
 
     /**
-     * 重複相手の荷主 ID。payload のメールアドレスはサーバの中だけで使う。
+     * 重複相手の荷主 ID。
      *
-     * <p>引けなければ {@code null}。相手が居ないことは起こりうる（相手のほうが
-     * 先に削除された、payload の形が古い）ので、ここで落とさない。</p>
+     * <p>{@code payload} には個人情報を入れず、投影が弾いた時点で引いた識別子だけを
+     * 持たせている（ADR-0003 決定 6）。ここでメールアドレスから引き直しません。</p>
+     *
+     * <p><b>catch は解析だけを囲む。</b> DB 読み出しまで広げると、障害が
+     * 「重複相手が居ない」に化けて原因が残りません。</p>
      */
-    private String relatedShipperId(String payloadJson) {
+    private static String relatedShipperId(String payloadJson) {
         if (payloadJson == null || payloadJson.isBlank()) {
             return null;
         }
+        JsonNode node;
         try {
-            JsonNode email = JSON.readTree(payloadJson).get("email");
-            if (email == null || email.isNull()) {
-                return null;
-            }
-            return shippers.findIdByEmail(email.asText());
+            node = JSON.readTree(payloadJson);
         } catch (Exception e) {
+            // 古い形の payload。読めないことは起こりうるので落とさない。
             return null;
         }
+        JsonNode existing = node.get("existingShipperId");
+        return existing == null || existing.isNull() ? null : existing.asText();
     }
 
     private static List<String> rolesOf(String header) {

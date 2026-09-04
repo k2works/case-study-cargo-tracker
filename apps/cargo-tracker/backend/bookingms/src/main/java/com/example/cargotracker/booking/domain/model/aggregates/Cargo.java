@@ -5,6 +5,7 @@ import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoSpecification;
 import com.example.cargotracker.booking.domain.model.valueobjects.RoutingStatus;
+import com.example.cargotracker.shared.domain.error.IllegalTransition;
 import java.time.Clock;
 import java.time.LocalDate;
 import org.axonframework.eventsourcing.annotation.EventSourcingHandler;
@@ -52,7 +53,7 @@ public class Cargo {
         if (bookingId != null) {
             // 復元した集約が既に予約を持っているのに受け付けると、イベント列に
             // 予約が 2 本並び、どちらが正か決まらない。
-            throw new IllegalStateException("予約 " + bookingId + " は既に受け付けています");
+            throw new IllegalTransition("予約 " + bookingId + " は既に受け付けています");
         }
         // 業務タイムゾーンの「今日」で判断する。JVM 既定だと、日本時間の朝 9 時より
         // 前に受け付けた予約で当日の期限が「過去」になる時間帯ができる。

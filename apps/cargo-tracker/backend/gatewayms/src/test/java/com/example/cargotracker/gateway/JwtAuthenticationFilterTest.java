@@ -208,4 +208,32 @@ class JwtAuthenticationFilterTest {
         assertThat(JwtAuthenticationFilter.isPublic("/api/v1/auth/login/../booking/shippers"))
                 .isFalse();
     }
+
+    /**
+     * 保護されるべき経路。**IT で足した経路をここに書き足す。**
+     *
+     * <p>1 本だけ見ていると、あとから足した経路が {@code PUBLIC_PATHS} に紛れ込んでも
+     * 気づけない。とくに {@code /api/v1/auth/**} をまとめて公開にすると、
+     * {@code X-Auth-Roles: ROLE_ADMIN} を自分で付けるだけで誰でもロックを解除できる
+     * （ヘッダの上書きは JWT を通った要求にしか働かない）。</p>
+     */
+    private static final java.util.List<String> PROTECTED_PATHS = java.util.List.of(
+            "/api/v1/booking/shippers",
+            "/api/v1/booking/bookings",
+            "/api/v1/auth/admin/users",
+            "/api/v1/auth/admin/users/sales01/unlock",
+            "/api/v1/booking/attention-items");
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.MethodSource("protectedPaths")
+    @DisplayName("保護経路は公開扱いにならない")
+    void protectedPathsAreNotPublic(String path) {
+        assertThat(JwtAuthenticationFilter.isPublic(path))
+                .as("%s が公開扱いになると、認証なしで通る", path)
+                .isFalse();
+    }
+
+    static java.util.stream.Stream<String> protectedPaths() {
+        return PROTECTED_PATHS.stream();
+    }
 }

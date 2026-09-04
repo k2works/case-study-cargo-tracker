@@ -112,6 +112,9 @@ public final class CargoTrackerArchRules {
                         // 場所（Location / UnLocode / CountryCode）。全 BC が同じ意味で使い、
                         // 輸出免税の判定（Billing）にも国コードを使う（domain-model.md）。
                         "com.example.cargotracker.shared.domain.location..",
+                        // 業務の断り方（422 / 409）。サービス越しに型が置き換わるので、
+                        // 種類を文言の接頭辞として運ぶ（ADR-0001 決定 5 第 12 項）。
+                        "com.example.cargotracker.shared.domain.error..",
                         "com.example.cargotracker.shared.contract..",
                         "com.example.cargotracker.shared.infrastructure.axon..",
                         "com.example.cargotracker.shared.infrastructure.time..",
@@ -156,7 +159,13 @@ public final class CargoTrackerArchRules {
 
     /** ACL は HTTP を直接使わない。サービス間の配送経路は Axon Server 一本（ADR-0001 決定 4）。 */
     public static ArchRule aclDoesNotUseHttpClients() {
-        return noClasses().that().resideInAPackage("..infrastructure.acl..")
+        // **投影も対象にする。** 他サービスの事実を写す読み取りモデル（ACL）は
+        // `infrastructure/acl` にあるとは限らない。billingms の
+        // `shipper_contract_snapshot` は契約イベントの購読なので
+        // `infrastructure/projection` にある。パッケージ名だけで絞ると、
+        // 実際に他サービスの事実を扱う場所が規則の外に出る（IT2 で実測）。
+        return noClasses().that().resideInAnyPackage(
+                        "..infrastructure.acl..", "..infrastructure.projection..")
                 .should().dependOnClassesThat().resideInAnyPackage(
                         "org.springframework.web.client..",
                         "org.springframework.web.reactive.function.client..",

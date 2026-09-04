@@ -29,26 +29,15 @@ class SharedKernelScopeTest {
         CargoTrackerArchRules.sharedKernelStaysWithinItsScope().check(sharedClasses());
     }
 
-    @Test
-    @DisplayName("名簿の外にクラスを置くと赤になる")
-    void rejectsClassesOutsideTheScope() {
-        // 実コードと同じ形（shared の中に業務ロジックを置く）の違反を食わせる。
-        JavaClasses outside = new ClassFileImporter()
-                .importPackages("com.example.cargotracker.archfixture.violating");
-
-        assertThatThrownBy(() -> CargoTrackerArchRules.sharedKernelStaysWithinItsScope()
-                        .check(rename(outside)))
-                .as("名簿の外を許すと、共有カーネルが黙って太る")
-                .isInstanceOf(AssertionError.class);
-    }
-
-    /** 違反フィクスチャを shared のパッケージとして扱えないので、対象を明示して確かめる。 */
-    private static JavaClasses rename(JavaClasses classes) {
-        // ArchUnit はパッケージ名で判定するため、フィクスチャをそのまま食わせても
-        // 「shared に属さない」で素通りする。ここでは shared 実体を使い、
-        // 名簿から 1 つ外したときに赤になることを別途確かめる（下のテスト）。
-        return classes;
-    }
+    // 「名簿の外にクラスを置くと赤になる」という検査は置かない。
+    //
+    // ArchUnit はパッケージ名で判定するので、`shared` の外にあるフィクスチャを
+    // 食わせても対象 0 件になる。以前ここに置いていたテストは、違反を検出した
+    // のではなく **対象 0 件で ArchUnit が投げた例外**を捕まえていた
+    // （`allowEmptyShould(false)` の既定）。緑だが何も判別していない。
+    //
+    // 判別できるのは下の `discriminatesWhenScopeIsNarrowed` である。実際の
+    // `shared` に対して名簿を狭め、そこにあるクラスが赤になることを見る。
 
     @Test
     @DisplayName("名簿から 1 つ外すと、そこにあるクラスが赤になる")

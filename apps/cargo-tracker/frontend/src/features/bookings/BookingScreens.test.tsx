@@ -268,6 +268,67 @@ describe('S21 予約登録', () => {
     expect(body.heightCm).toBe('100');
   });
 
+  it('危険物の申告を送る', async () => {
+    // 寸法で潰した「値が一層で落ちる」形が付帯情報側に残っていた。
+    const fetchMock = mockShippersThen(
+      new Response(JSON.stringify({ bookingId: 'b-1' }), { status: 201 }),
+    );
+
+    renderAt('/bookings-new', <BookingRegisterPage />);
+    await screen.findByRole('option', { name: '山田商事（SHP-000001）' });
+    await userEvent.selectOptions(screen.getByLabelText('荷主'), 's-1');
+    await userEvent.click(screen.getByLabelText('危険物'));
+    await userEvent.type(screen.getByLabelText('出発地'), 'JPTYO');
+    await userEvent.type(screen.getByLabelText('目的地'), 'USNYC');
+    await userEvent.type(screen.getByLabelText('到着期限'), '2026-12-01');
+    await userEvent.type(screen.getByLabelText('重量 (kg)'), '100');
+    await userEvent.type(screen.getByLabelText('長さ (cm)'), '10');
+    await userEvent.type(screen.getByLabelText('幅 (cm)'), '10');
+    await userEvent.type(screen.getByLabelText('高さ (cm)'), '10');
+    await userEvent.type(screen.getByLabelText('数量'), '1');
+    await userEvent.type(screen.getByLabelText('品名'), '塗料');
+    await userEvent.type(screen.getByLabelText('IMO クラス'), '3');
+    await userEvent.type(screen.getByLabelText('UN 番号'), 'UN1263');
+    await userEvent.click(screen.getByRole('button', { name: '登録する' }));
+
+    await waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThan(1));
+    const post = fetchMock.mock.calls.find((c) => c[1]?.method === 'POST');
+    const body = JSON.parse(String(post?.[1]?.body));
+    expect(body.cargoType).toBe('HAZARDOUS');
+    expect(body.hazardImoClass).toBe('3');
+    expect(body.hazardUnNumber).toBe('UN1263');
+  });
+
+  it('冷凍の温度条件を送る', async () => {
+    const fetchMock = mockShippersThen(
+      new Response(JSON.stringify({ bookingId: 'b-1' }), { status: 201 }),
+    );
+
+    renderAt('/bookings-new', <BookingRegisterPage />);
+    await screen.findByRole('option', { name: '山田商事（SHP-000001）' });
+    await userEvent.selectOptions(screen.getByLabelText('荷主'), 's-1');
+    await userEvent.click(screen.getByLabelText('冷凍・冷蔵'));
+    await userEvent.type(screen.getByLabelText('出発地'), 'JPTYO');
+    await userEvent.type(screen.getByLabelText('目的地'), 'USNYC');
+    await userEvent.type(screen.getByLabelText('到着期限'), '2026-12-01');
+    await userEvent.type(screen.getByLabelText('重量 (kg)'), '500');
+    await userEvent.type(screen.getByLabelText('長さ (cm)'), '50');
+    await userEvent.type(screen.getByLabelText('幅 (cm)'), '40');
+    await userEvent.type(screen.getByLabelText('高さ (cm)'), '30');
+    await userEvent.type(screen.getByLabelText('数量'), '3');
+    await userEvent.type(screen.getByLabelText('品名'), '冷凍食品');
+    await userEvent.type(screen.getByLabelText('温度条件（下限 ℃）'), '-20');
+    await userEvent.type(screen.getByLabelText('温度条件（上限 ℃）'), '-10');
+    await userEvent.click(screen.getByRole('button', { name: '登録する' }));
+
+    await waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThan(1));
+    const post = fetchMock.mock.calls.find((c) => c[1]?.method === 'POST');
+    const body = JSON.parse(String(post?.[1]?.body));
+    expect(body.cargoType).toBe('REFRIGERATED');
+    expect(body.temperatureMinC).toBe('-20');
+    expect(body.temperatureMaxC).toBe('-10');
+  });
+
   it('業務規則で断られたら理由を出す', async () => {
     mockShippersThen(
       new Response(

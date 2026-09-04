@@ -4,6 +4,7 @@ import com.example.cargotracker.booking.domain.model.commands.RegisterShipperCom
 import com.example.cargotracker.booking.domain.model.valueobjects.CorporateContract;
 import com.example.cargotracker.booking.domain.model.valueobjects.DiscountRate;
 import com.example.cargotracker.booking.domain.model.valueobjects.ShipperType;
+import com.example.cargotracker.shared.domain.error.IllegalTransition;
 import com.example.cargotracker.shared.contract.event.ShipperRegisteredEvent;
 import org.axonframework.eventsourcing.annotation.EventSourcingHandler;
 import org.axonframework.eventsourcing.annotation.reflection.EntityCreator;
@@ -51,7 +52,7 @@ public class Shipper {
         if (shipperId != null) {
             // 復元した集約が既に登録を持っているのに受け付けると、イベント列に
             // 登録が 2 本並び、どちらが正か決まらない。
-            throw new IllegalStateException("荷主 " + shipperId + " は既に登録されています");
+            throw new IllegalTransition("荷主 " + shipperId + " は既に登録されています");
         }
         validate(command);
         CorporateContract contract = command.corporateContract();

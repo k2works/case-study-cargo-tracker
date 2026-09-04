@@ -33,7 +33,24 @@ public class BookingRegistrationSteps {
             .defaultStatusHandler(status -> true, (request, response) -> { })
             .build();
 
+    /**
+     * 業務の言葉と API が返す値の対応（`ui_design.md`「付録：ステータスバッジ」）。
+     *
+     * <p>画面のラベルはフロントが持つ。ここでは受け入れテストが業務の言葉で書けて、
+     * かつ実装を壊したら赤になるようにするために持つ。</p>
+     */
+    private static final Map<String, String> STATUS_OF_LABEL = Map.of(
+            "仮受付", "PRELIMINARY",
+            "経路提案中", "ROUTE_PROPOSED",
+            "通知済み", "ROUTE_NOTIFIED",
+            "確定", "CONFIRMED",
+            "輸送中", "IN_TRANSIT",
+            "引取済", "DELIVERED",
+            "精算済", "SETTLED",
+            "キャンセル", "CANCELLED");
+
     private String lastShipperId;
+    private String lastProduct;
     private ResponseEntity<JsonMap> lastResponse;
 
     private String url(String path) {
@@ -110,14 +127,22 @@ public class BookingRegistrationSteps {
     public void 一覧に現れる(int seconds, String product) {
         SharedSteps.awaitWithin(seconds, () -> findByProduct(product) != null,
                 "予約一覧に「" + product + "」が出る");
+        // 次の手順が同じ予約を見られるように覚えておく。品名を固定で書くと、
+        // 品名の違うシナリオを足したときに別の予約を見て緑になる。
+        lastProduct = product;
     }
 
     @かつ("その予約の状態は {string} である")
     public void 状態を確かめる(String label) {
-        Map<String, Object> row = findByProduct("自動車部品");
+        Map<String, Object> row = findByProduct(lastProduct);
         assertThat(row).isNotNull();
-        assertThat(row.get("bookingStatus")).isEqualTo("PRELIMINARY");
-        assertThat(label).isEqualTo("仮受付");
+        // **業務の言葉と API の値を対応表で突き合わせる。**
+        // `assertThat(label).isEqualTo("仮受付")` は feature の文字列を自分と
+        // 比べているだけで、実装を壊しても赤にならない。
+        assertThat(STATUS_OF_LABEL)
+                .as("feature が使う状態の呼び名は対応表に載せる")
+                .containsKey(label);
+        assertThat(row.get("bookingStatus")).isEqualTo(STATUS_OF_LABEL.get(label));
         assertThat(String.valueOf(row.get("bookingNumber")))
                 .as("US04 §受入基準 4。UUID では人が読めない")
                 .startsWith("B-");

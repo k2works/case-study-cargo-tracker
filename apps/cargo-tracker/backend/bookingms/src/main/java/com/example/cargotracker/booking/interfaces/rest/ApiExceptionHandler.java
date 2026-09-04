@@ -2,6 +2,8 @@ package com.example.cargotracker.booking.interfaces.rest;
 
 import com.example.cargotracker.booking.interfaces.rest.ShipperController.DuplicateShipperEmailException;
 import java.util.Map;
+import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
+import com.example.cargotracker.shared.domain.error.IllegalTransition;
 import org.axonframework.messaging.commandhandling.CommandExecutionException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -28,11 +30,19 @@ public class ApiExceptionHandler {
                 .body(Map.of(CODE, "SHIPPER_EMAIL_DUPLICATE", MESSAGE, e.getMessage()));
     }
 
-    /** 値オブジェクトと集約が弾いた業務規則違反。 */
+    /**
+     * 値オブジェクトと集約が弾いた業務規則違反。
+     *
+     * <p>{@code IllegalArgumentException} を広く受けている。値オブジェクトの検査が
+     * これを投げるためだが、{@code UUID.fromString} のようなプログラミングエラーも
+     * 同じ型で来るので、業務規則違反に化ける。<b>値オブジェクトの検査を
+     * {@link BusinessRuleViolation} に寄せるのは IT3 の課題</b>として記録する。</p>
+     */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, Object>> onBusinessRuleViolation(IllegalArgumentException e) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT)
-                .body(Map.of(CODE, "BUSINESS_RULE_VIOLATION", MESSAGE, e.getMessage()));
+                .body(Map.of(CODE, "BUSINESS_RULE_VIOLATION", MESSAGE,
+                        BusinessRuleViolation.strip(e.getMessage())));
     }
 
     /**
@@ -53,19 +63,25 @@ public class ApiExceptionHandler {
         if (message == null) {
             message = "処理できませんでした";
         }
-        if (cause instanceof IllegalStateException) {
+        // **型で見ない。** サービス越しに来た例外は根の型が置き換わるので、
+        // instanceof で分けるとコマンドがサービスを越えた瞬間に 409 が 422 に
+        // 劣化する（ADR-0001 決定 5 第 12 項）。種類は文言の印で運ぶ。
+        if (message.contains(IllegalTransition.MARKER)) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(Map.of(CODE, "ILLEGAL_STATE", MESSAGE, message));
+                    .body(Map.of(CODE, "ILLEGAL_STATE", MESSAGE,
+                            BusinessRuleViolation.strip(message)));
         }
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT)
-                .body(Map.of(CODE, "BUSINESS_RULE_VIOLATION", MESSAGE, message));
+                .body(Map.of(CODE, "BUSINESS_RULE_VIOLATION", MESSAGE,
+                        BusinessRuleViolation.strip(message)));
     }
 
     /** 状態遷移違反。集約の外（Controller）で判断したもの。 */
-    @ExceptionHandler(IllegalStateException.class)
-    public ResponseEntity<Map<String, Object>> onIllegalState(IllegalStateException e) {
+    @ExceptionHandler(IllegalTransition.class)
+    public ResponseEntity<Map<String, Object>> onIllegalTransition(IllegalTransition e) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(Map.of(CODE, "ILLEGAL_STATE", MESSAGE, e.getMessage()));
+                .body(Map.of(CODE, "ILLEGAL_STATE", MESSAGE,
+                        BusinessRuleViolation.strip(e.getMessage())));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

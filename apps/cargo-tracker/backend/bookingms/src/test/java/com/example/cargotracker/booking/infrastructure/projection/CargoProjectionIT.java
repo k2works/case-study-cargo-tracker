@@ -15,6 +15,7 @@ import com.example.cargotracker.shared.testing.AbstractAxonIntegrationTest;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.Month;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -131,5 +132,33 @@ class CargoProjectionIT extends AbstractAxonIntegrationTest {
         assertThat(queries.handle(new CountBookingsByStatusQuery("CANCELLED")))
                 .as("状態を引数で受けるので、別の状態でも数えられる")
                 .isNotNull();
+    }
+
+    @Test
+    @DisplayName("一覧は到着期限が近い順に並ぶ")
+    void ordersByArrivalDeadline() {
+        // UI 設計「一覧の既定条件」。ORDER BY を丸ごと消しても、除外の検査だけでは
+        // 緑のままになる。営業が上から片付ける前提が崩れる。
+        String stamp = String.valueOf(System.nanoTime());
+        String far = "B-ORDER-FAR-" + stamp;
+        String near = "B-ORDER-NEAR-" + stamp;
+
+        projection.on(new CargoBookedEvent(far, "SHP-ORDER", "JPTYO", "USNYC",
+                LocalDate.of(2027, Month.DECEMBER, 1), "GENERAL", new BigDecimal("1"),
+                new BigDecimal("1"), new BigDecimal("1"), new BigDecimal("1"), 1,
+                "遠い期限-" + stamp, null, null, null, null, "sales01"));
+        projection.on(new CargoBookedEvent(near, "SHP-ORDER", "JPTYO", "USNYC",
+                LocalDate.of(2027, Month.JANUARY, 1), "GENERAL", new BigDecimal("1"),
+                new BigDecimal("1"), new BigDecimal("1"), new BigDecimal("1"), 1,
+                "近い期限-" + stamp, null, null, null, null, "sales01"));
+
+        List<String> ids = queries.handle(new FindBookingsQuery(0, 200, true)).items().stream()
+                .map(BookingView::bookingId)
+                .filter(id -> id.endsWith(stamp))
+                .toList();
+
+        assertThat(ids)
+                .as("期限が近いものが先。あとから登録しても順序は期限で決まる")
+                .containsExactly(near, far);
     }
 }

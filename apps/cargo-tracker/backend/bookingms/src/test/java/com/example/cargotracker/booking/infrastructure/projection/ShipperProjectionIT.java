@@ -134,4 +134,30 @@ class ShipperProjectionIT extends AbstractAxonIntegrationTest {
         assertThat(row.address()).isNull();
         assertThat(row.shipperType()).as("個人情報でない列は残る").isEqualTo("CORPORATE");
     }
+
+    @Test
+    @DisplayName("弾いた記録に個人情報を書かない")
+    void doesNotWritePersonalDataIntoAttentionItem() {
+        // attention_item は追記専用でリプレイでも消さない。ここに平文で書くと
+        // **鍵を破棄しても消えない**。弾かれた荷主は shipper に行が無いので、
+        // 削除要求を処理する担当がその shipperId に辿り着けない（ADR-0003 決定 6）。
+        String email = "attention-pii-" + System.nanoTime() + "@example.com";
+        String firstId = "SHP-PII-1-" + System.nanoTime();
+        projection.on(event(firstId, "山田商事", email));
+
+        String rejectedId = "SHP-PII-2-" + System.nanoTime();
+        projection.on(event(rejectedId, "重複商事", email));
+
+        AttentionItemMapper.AttentionItemRow row = attentionItems.findOpenByRole("ROLE_SALES")
+                .stream()
+                .filter(item -> rejectedId.equals(item.targetId()))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("弾いた記録が残っていない"));
+
+        assertThat(row.payload())
+                .as("メールアドレスも氏名も書かない。識別子だけを持つ")
+                .doesNotContain(email)
+                .doesNotContain("重複商事")
+                .contains(firstId);
+    }
 }

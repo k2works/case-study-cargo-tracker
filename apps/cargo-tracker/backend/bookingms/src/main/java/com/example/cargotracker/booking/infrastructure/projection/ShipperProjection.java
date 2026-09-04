@@ -79,18 +79,32 @@ public class ShipperProjection {
         }
     }
 
+    /**
+     * 弾いた事実を要確認一覧に残す。
+     *
+     * <p><b>メールアドレスそのものは書かない。</b> {@code attention_item} は追記専用で
+     * リプレイでも消さないため、ここに平文で書くと<b>鍵を破棄しても消えません</b>。
+     * 弾かれた荷主は {@code shipper} テーブルに行が無いので、削除要求を処理する担当が
+     * その {@code shipperId} に辿り着けません。ADR-0003 が「いちばん気づきにくい形」と
+     * 呼んだ状態そのものです（決定 6）。</p>
+     *
+     * <p>代わりに<b>重複相手の荷主 ID</b> を書きます。要確認一覧はここから既存の荷主を
+     * 開きます。識別子は個人情報ではなく、鍵を破棄しても意味を持ちません。</p>
+     */
     private void recordAttention(String shipperId, String email, Instant occurredAt) {
         log.warn("荷主の投影を一意制約で弾いた: shipperId={}", shipperId);
+        String existingShipperId = email == null ? null : shippers.findIdByEmail(email);
         // 別トランザクションで書く。弾かれた直後の接続は中断状態で、同じ
         // トランザクションでは書き込めない。
         attentionItems.add("PROJECTION_REJECTED", "SHIPPER", shipperId, "ROLE_SALES",
-                "メールアドレスの重複", "{\"email\":" + jsonString(email) + "}", occurredAt);
+                "メールアドレスの重複", jsonPayload(existingShipperId), occurredAt);
     }
 
-    private static String jsonString(String value) {
-        if (value == null) {
-            return "null";
+    /** 個人情報を含まない payload。識別子だけを持つ。 */
+    private static String jsonPayload(String existingShipperId) {
+        if (existingShipperId == null) {
+            return "{}";
         }
-        return "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
+        return "{\"existingShipperId\":\"" + existingShipperId.replace("\"", "") + "\"}";
     }
 }

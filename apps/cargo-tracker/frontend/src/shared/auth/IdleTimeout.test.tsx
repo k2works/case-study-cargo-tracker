@@ -69,6 +69,17 @@ describe('無操作タイムアウト', () => {
     expect(screen.getByRole('alert')).toBeInTheDocument();
   });
 
+  it('荷役ロールは 55 分で警告する', () => {
+    // 警告の時刻も守る。失効だけを見ると、警告が出ないまま切れる実装でも緑になる。
+    renderWith(['ROLE_HANDLER']);
+
+    advanceMinutes(54);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+    advanceMinutes(2);
+    expect(screen.getByRole('alert')).toHaveTextContent(/あと 5 分/);
+  });
+
   it('荷役ロールは 20 分では切れない', () => {
     renderWith(['ROLE_HANDLER']);
 

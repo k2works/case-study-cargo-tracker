@@ -4,7 +4,7 @@ title: "イテレーション計画 2 - 貨物予約・法人荷主・アカウ�
 description: "IT2 の計画。US31/US03/US04（9 SP）に加え、IT1 の持ち越し 5 件とレビュー指摘 10 件を先に枠へ入れる。状態遷移を持つ集約 Cargo を Event Sourcing で書き、IT2 終了時に ADR-0001 決定 2 の発動条件を判定する。デモ項目 8 件。"
 tags: [plan,iteration,cargo-tracker]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-04T05:01:01Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-04T06:38:36Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-03T11:47:28Z }
 ---
@@ -541,7 +541,7 @@ S02_ダッシュボード --> [*] : ログアウト / 無操作 20 分
 
 | # | 受け入れテスト | 何をアサートしているか |
 | :--- | :--- | :--- |
-| 1 | `貨物予約の登録.feature`「登録した予約が数秒後に一覧へ出る」<br>`BookingControllerIT.booksAndBecomesReadable` | `201` → 一覧に品名が出る → `bookingStatus` が `PRELIMINARY` → 予約番号が `B-` で始まる |
+| 1 | `貨物予約の登録.feature`「登録した予約が数秒後に一覧へ出る」<br>`BookingControllerIT.booksAndBecomesReadable`<br>`CargoProjectionIT.denormalizesShipperName` | feature: `201` → 一覧に品名が出る → 状態の呼び名を対応表で `PRELIMINARY` と突き合わせる → 予約番号が `B-` で始まる<br>`BookingControllerIT`: `201` → 詳細が `PRELIMINARY` → 一覧に品名が出る（**予約番号は見ていない**）<br>`CargoProjectionIT`: 予約番号が `B-` で始まる |
 | 2 | `貨物予約の登録.feature`「出発地と目的地が同じ予約は断られる」<br>`BookingControllerIT.rejectsSameOriginAndDestination` | `422` かつ `code` が `BUSINESS_RULE_VIOLATION`（500 でないこと） |
 | 3 | `貨物予約の登録.feature`「申告のない危険物の予約は断られる」<br>`BookingControllerIT.rejectsHazardousWithoutDeclaration` | `422` かつ本文に「危険物申告」 |
 | 4 | `ShipperScreens.test.tsx`「法人を選ぶと契約番号と割引率を求める」「個人に戻すと契約情報の欄が消える」<br>`荷主の登録.feature`「割引率が 30% を超える法人は断られる」<br>`ShipperControllerIT.acceptsDiscountRateAtUpperBound` | 法人で欄が現れ、個人に戻すと消える。`0.3000` は通り `0.3001` は `422` |
