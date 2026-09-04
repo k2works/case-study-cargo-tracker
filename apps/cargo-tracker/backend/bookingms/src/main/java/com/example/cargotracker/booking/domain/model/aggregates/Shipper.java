@@ -39,8 +39,20 @@ public class Shipper {
         // Axon がイベント再生で呼ぶ。
     }
 
+    /**
+     * 荷主を登録する。
+     *
+     * <p><b>static ではなくインスタンスのハンドラにする。</b> static（作る側）と
+     * インスタンス（既にある側）を両方置くと、集約が既に存在しても static のほうが
+     * 呼ばれ、2 度目の登録が通る（[ADR-0001] 決定 5 第 9 項）。</p>
+     */
     @CommandHandler
-    public static String register(RegisterShipperCommand command, EventAppender appender) {
+    public String register(RegisterShipperCommand command, EventAppender appender) {
+        if (shipperId != null) {
+            // 復元した集約が既に登録を持っているのに受け付けると、イベント列に
+            // 登録が 2 本並び、どちらが正か決まらない。
+            throw new IllegalStateException("荷主 " + shipperId + " は既に登録されています");
+        }
         validate(command);
         CorporateContract contract = command.corporateContract();
         appender.append(new ShipperRegisteredEvent(

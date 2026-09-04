@@ -6,6 +6,7 @@ import com.example.cargotracker.auth.infrastructure.config.DemoUserSeedConfigura
 import com.example.cargotracker.shared.testing.AbstractAxonIntegrationTest;
 import java.time.OffsetDateTime;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -181,6 +182,35 @@ class AuthControllerIT extends AbstractAxonIntegrationTest {
                 OffsetDateTime.now(clock), OffsetDateTime.now(clock));
         jdbc.update("INSERT INTO user_roles (username, role) VALUES (?, ?)",
                 "retired01", "ROLE_SALES");
+    }
+
+    @Test
+    @DisplayName("4 つの経路すべてで応答が完全一致する")
+    void returnsIdenticalResponseForEveryRejection() {
+        // US31 §受入基準 8。計画（iteration_plan-2.md リスクと対策）で
+        // 「4 経路を 1 つのテストで並べ、応答が完全一致することを検査する」と
+        // 宣言したのに実施していなかった。**ロック中だけメッセージを変えても
+        // 全緑になる状態だった。**
+        insertDisabledUser();
+
+        ResponseEntity<JsonMap> unknownUser = login("nosuchuser", "secret1234");
+        ResponseEntity<JsonMap> wrongPassword = login("sales01", "wrong-password");
+        ResponseEntity<JsonMap> disabled = login("retired01", "secret1234");
+
+        // ロック中を作る。ここまでの失敗 1 回を含めて 5 回にする。
+        for (int i = 0; i < 4; i++) {
+            login("sales01", "wrong-password");
+        }
+        ResponseEntity<JsonMap> locked = login("sales01", "secret1234");
+
+        assertThat(locked.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(List.of(unknownUser, wrongPassword, disabled, locked))
+                .as("居ない・誤り・無効・ロック中で応答が変わると、"
+                        + "アカウントの存在有無を攻撃者に教える")
+                .allSatisfy(response -> {
+                    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+                    assertThat(response.getBody()).isEqualTo(wrongPassword.getBody());
+                });
     }
 
     @Test
