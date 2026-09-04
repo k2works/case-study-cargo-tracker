@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router';
 import { ApiError } from '@/shared/api/client';
@@ -21,12 +21,26 @@ import {
 
 const CARGO_TYPES: readonly AcceptedCargoType[] = ['GENERAL', 'HAZARDOUS', 'REEFER'];
 
-const EMPTY_MOVEMENT: MovementInput = {
-  departureUnLocode: '',
-  arrivalUnLocode: '',
-  departureAt: '',
-  arrivalAt: '',
-};
+/**
+ * 入力中の区間。**鍵は位置ではなく行そのものが持つ。** 位置を鍵にすると、
+ * 途中に行を挿したときに入力中の値が別の行へ移る。
+ */
+interface MovementRow extends MovementInput {
+  readonly rowId: string;
+}
+
+let nextRowId = 0;
+
+function emptyMovement(): MovementRow {
+  nextRowId += 1;
+  return {
+    rowId: `movement-${nextRowId}`,
+    departureUnLocode: '',
+    arrivalUnLocode: '',
+    departureAt: '',
+    arrivalAt: '',
+  };
+}
 
 /** 入力欄の値（datetime-local）を絶対時刻へ。港の時間帯が入るまでは UTC で送る。 */
 function toInstant(local: string): string {
@@ -50,7 +64,7 @@ export function VoyageRegisterPage() {
   const [carrierCode, setCarrierCode] = useState('');
   const [carrierName, setCarrierName] = useState('');
   const [vesselName, setVesselName] = useState('');
-  const [movements, setMovements] = useState<MovementInput[]>([EMPTY_MOVEMENT]);
+  const [movements, setMovements] = useState<MovementRow[]>([emptyMovement()]);
   // 既定で一般貨物を選んでおく。選び忘れるとその航海が候補から消える。
   const [cargoTypes, setCargoTypes] = useState<AcceptedCargoType[]>(['GENERAL']);
 
@@ -73,7 +87,7 @@ export function VoyageRegisterPage() {
     );
   }
 
-  function submit(event: React.FormEvent) {
+  function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     mutation.mutate({
       voyageNumber,
@@ -116,7 +130,7 @@ export function VoyageRegisterPage() {
       <form onSubmit={submit} className={`${CARD} mt-4 space-y-6`}>
         <div className="grid gap-4 sm:grid-cols-2">
           <label className={LABEL}>
-            航海番号
+            <span>航海番号</span>
             <input
               className={FIELD}
               required
@@ -125,7 +139,7 @@ export function VoyageRegisterPage() {
             />
           </label>
           <label className={LABEL}>
-            運送会社コード
+            <span>運送会社コード</span>
             <input
               className={FIELD}
               required
@@ -134,7 +148,7 @@ export function VoyageRegisterPage() {
             />
           </label>
           <label className={LABEL}>
-            運送会社
+            <span>運送会社</span>
             <input
               className={FIELD}
               required
@@ -143,7 +157,7 @@ export function VoyageRegisterPage() {
             />
           </label>
           <label className={LABEL}>
-            船名
+            <span>船名</span>
             <input
               className={FIELD}
               required
@@ -166,11 +180,10 @@ export function VoyageRegisterPage() {
             </strong>
           </p>
           {movements.map((movement, index) => (
-            // 並び順そのものが業務の意味を持つので、位置を鍵にする。
-            <fieldset key={`movement-${index}`} className="mt-3 grid gap-3 sm:grid-cols-4">
+            <fieldset key={movement.rowId} className="mt-3 grid gap-3 sm:grid-cols-4">
               <legend className="text-sm font-medium text-gray-700">{index + 1} 区間目</legend>
               <label className={LABEL}>
-                出発地
+                <span>出発地</span>
                 <input
                   className={FIELD}
                   required
@@ -181,7 +194,7 @@ export function VoyageRegisterPage() {
                 />
               </label>
               <label className={LABEL}>
-                出発日時（UTC）
+                <span>出発日時（UTC）</span>
                 <input
                   className={FIELD}
                   type="datetime-local"
@@ -191,7 +204,7 @@ export function VoyageRegisterPage() {
                 />
               </label>
               <label className={LABEL}>
-                到着地
+                <span>到着地</span>
                 <input
                   className={FIELD}
                   required
@@ -202,7 +215,7 @@ export function VoyageRegisterPage() {
                 />
               </label>
               <label className={LABEL}>
-                到着日時（UTC）
+                <span>到着日時（UTC）</span>
                 <input
                   className={FIELD}
                   type="datetime-local"
@@ -216,7 +229,7 @@ export function VoyageRegisterPage() {
           <button
             type="button"
             className="mt-3 text-sm text-blue-700 underline"
-            onClick={() => setMovements((current) => [...current, EMPTY_MOVEMENT])}
+            onClick={() => setMovements((current) => [...current, emptyMovement()])}
           >
             寄港地を追加する
           </button>

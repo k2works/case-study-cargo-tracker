@@ -3,6 +3,7 @@ package com.example.cargotracker.gateway.infrastructure.config;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import org.springframework.util.AntPathMatcher;
 
@@ -29,6 +30,12 @@ public final class RoleAuthorization {
     /** 認証済みなら誰でもよい、を表す。応答の中身は各サービスがロールで絞る。 */
     public static final Set<String> ANY_AUTHENTICATED = Set.of("*");
 
+    private static final String SALES = "ROLE_SALES";
+    private static final String ROUTING = "ROLE_ROUTING";
+    private static final String TRACKER = "ROLE_TRACKER";
+    private static final String ACCOUNTANT = "ROLE_ACCOUNTANT";
+    private static final String ADMIN = "ROLE_ADMIN";
+
     private static final AntPathMatcher MATCHER = new AntPathMatcher();
 
     /**
@@ -42,7 +49,7 @@ public final class RoleAuthorization {
         Map<String, Set<String>> rules = new LinkedHashMap<>();
 
         // 認証そのもの。ログインは公開経路（PUBLIC_PATHS）なのでここには要らない。
-        rules.put("/api/v1/auth/admin/**", Set.of("ROLE_ADMIN"));
+        rules.put("/api/v1/auth/admin/**", Set.of(ADMIN));
         rules.put("/api/v1/auth/**", ANY_AUTHENTICATED);
 
         // 要確認一覧は宛先ロールでサービス側が絞る。ここで絞ると、ロールが増える
@@ -53,23 +60,21 @@ public final class RoleAuthorization {
         rules.put("/api/v1/routing/attention-items", ANY_AUTHENTICATED);
 
         // 荷主（S10 / S11）は営業と経理。
-        rules.put("/api/v1/booking/shippers/**", Set.of("ROLE_SALES", "ROLE_ACCOUNTANT"));
-        rules.put("/api/v1/booking/shippers", Set.of("ROLE_SALES", "ROLE_ACCOUNTANT"));
+        rules.put("/api/v1/booking/shippers/**", Set.of(SALES, ACCOUNTANT));
+        rules.put("/api/v1/booking/shippers", Set.of(SALES, ACCOUNTANT));
 
         // 経路設計作業一覧（S30）と引き渡しは経路設計者だけ。
         // **/bookings/** より先に置く。** 後ろに置くと広いほうに吸われる。
-        rules.put("/api/v1/booking/bookings/routing-worklist", Set.of("ROLE_ROUTING"));
-        rules.put("/api/v1/booking/bookings/*/routing-request", Set.of("ROLE_SALES"));
+        rules.put("/api/v1/booking/bookings/routing-worklist", Set.of(ROUTING));
+        rules.put("/api/v1/booking/bookings/*/routing-request", Set.of(SALES));
 
         // 予約（S20 / S21）は営業・経路設計・追跡。
-        rules.put("/api/v1/booking/bookings/**", Set.of("ROLE_SALES", "ROLE_ROUTING",
-                "ROLE_TRACKER"));
-        rules.put("/api/v1/booking/bookings", Set.of("ROLE_SALES", "ROLE_ROUTING",
-                "ROLE_TRACKER"));
+        rules.put("/api/v1/booking/bookings/**", Set.of(SALES, ROUTING, TRACKER));
+        rules.put("/api/v1/booking/bookings", Set.of(SALES, ROUTING, TRACKER));
 
         // 航海（S32 / S33）は経路設計者だけ。
-        rules.put("/api/v1/routing/voyages/**", Set.of("ROLE_ROUTING"));
-        rules.put("/api/v1/routing/voyages", Set.of("ROLE_ROUTING"));
+        rules.put("/api/v1/routing/voyages/**", Set.of(ROUTING));
+        rules.put("/api/v1/routing/voyages", Set.of(ROUTING));
 
         // Map.copyOf にしない。順序が失われると「細かい経路を先に」が壊れる。
         return java.util.Collections.unmodifiableMap(rules);
@@ -77,28 +82,28 @@ public final class RoleAuthorization {
 
     /** その経路に宣言があるか。無ければ通さない。 */
     public static boolean isDeclared(String path) {
-        return matching(path) != null;
+        return matching(path).isPresent();
     }
 
     /** 宣言されたロールのどれかを持っているか。 */
     public static boolean isAllowed(String path, List<String> roles) {
-        Set<String> allowed = matching(path);
-        if (allowed == null) {
-            return false;
-        }
-        if (allowed.equals(ANY_AUTHENTICATED)) {
-            return true;
-        }
-        return roles.stream().anyMatch(allowed::contains);
+        return matching(path)
+                .map(allowed -> allowed.equals(ANY_AUTHENTICATED)
+                        || roles.stream().anyMatch(allowed::contains))
+                .orElse(false);
     }
 
-    private static Set<String> matching(String path) {
+    /**
+     * 最初に当たった宣言。**空の集合を返さない。** 「宣言が無い」と
+     * 「宣言はあるが誰も許さない」は意味が違い、前者は通さない側に倒す。
+     */
+    private static Optional<Set<String>> matching(String path) {
         for (Map.Entry<String, Set<String>> entry : RULES.entrySet()) {
             if (MATCHER.match(entry.getKey(), path)) {
-                return entry.getValue();
+                return Optional.of(entry.getValue());
             }
         }
-        return null;
+        return Optional.empty();
     }
 
     /** 宣言している経路パターン（検査が空振りしていないことの確認に使う）。 */
