@@ -4,7 +4,7 @@ title: "イテレーション計画 3 - 危険物・引き渡し・航海登録"
 description: "IT3 の計画。US05/US06/US24（9 SP）に加え、IT2 の引き継ぎ 12 件を返済枠に置く。2 つ目のサービス routingms を bookingms と同じ型で立ち上げ、型が同じであることを検査で固定して Release 0.1 を閉じる。デモ項目 7 件。"
 tags: [plan,iteration,cargo-tracker]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-04T08:43:13Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-04T08:53:39Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-04T08:44:22Z }
 ---
@@ -107,16 +107,26 @@ IT2 のふりかえり T1〜T8 と引き継ぎ 12 件から。**IT の序盤に�
 | R.2 | **クラスタ E2E の順序依存を外す。** 各テストが自分で前提を作る。**前回実行の残骸でも緑になる**箇所がある | 引き継ぎ 7 | 3h | [ ] |
 | R.3 | 規約テストの入力宣言（他モジュールの `.java`）。Gradle の up-to-date でスキップされうる | 引き継ぎ 8 | 2h | [ ] |
 | R.4 | 値オブジェクトの検査を `BusinessRuleViolation` に寄せる。いま `IllegalArgumentException` を広く受けているので、`UUID.fromString` のようなプログラミングエラーが業務規則違反に化ける | 引き継ぎ 9 | 3h | [ ] |
-| R.5 | US04 §受入基準 3「希望引渡日」の扱いを決める（設計に置き場が無い）。**US08 の入力になるのは着日側**なので、持つ必要があるかを判断し、不要なら受入基準側を直す | 引き継ぎ 2 | 1h | [ ] |
-| R.6 | US04 §受入基準 6（見積との整合）に「US01 実装後」の但し書きを付けるか判断する | 引き継ぎ 3 | 0.5h | [ ] |
+| R.5 | US04 §受入基準 3「希望引渡日」の扱いを決める（設計に置き場が無い）。**US08 の入力になるのは着日側**なので、持つ必要があるかを判断し、不要なら受入基準側を直す | 引き継ぎ 2 | 1h | [x] |
+| R.6 | US04 §受入基準 6（見積との整合）に「US01 実装後」の但し書きを付けるか判断する | 引き継ぎ 3 | 0.5h | [x] |
 | R.7 | `attention_item` の識別子の形（内容から導いた値を UUID の見た目に整形している） | 引き継ぎ 4 | 1h | [ ] |
-| R.8 | `everyStatusHasTransitions` の名前が実体より広い（例外が出ないことしか見ない） | レビュー L7 | 0.5h | [ ] |
+| R.8 | `everyStatusHasTransitions` の名前が実体より広い（例外が出ないことしか見ない） | レビュー L7 | 0.5h | [x] |
 | R.9 | ADR-0004（デモログイン）の承認と `verify` | 引き継ぎ 5 | 0.5h | [ ] |
-| R.10 | **Reaction Handler を入れるなら `ReplayIT` にコマンドの再送を見る検査を足す。** 対応は `ReplayCheckAccompaniesReactionTest` で機械化済みなので、IT3 が Reaction Handler を入れなければ発動しません。**「発動せず」とふりかえりに書く**（黙って数から外さない） | 引き継ぎ 6 | 0.5h | [ ] |
-| R.11 | US06 §受入基準 4（不備を修正してから引き渡す）の扱いを決める（予約編集画面が設計に無い） | US06 の未達 | 0.5h | [ ] |
+| R.10 | **Reaction Handler を入れるなら `ReplayIT` にコマンドの再送を見る検査を足す。** 対応は `ReplayCheckAccompaniesReactionTest` で機械化済みなので、IT3 が Reaction Handler を入れなければ発動しません。**「発動せず」とふりかえりに書く**（黙って数から外さない） | 引き継ぎ 6 | 0.5h | [x] |
+| R.11 | US06 §受入基準 4（不備を修正してから引き渡す）の扱いを決める（予約編集画面が設計に無い） | US06 の未達 | 0.5h | [x] |
 | | 小計 | | 18.5h | |
 
 **引き継ぎ 10・11・12（港のローカル時刻・危険物かつ冷凍・UN/LOCODE のマスタ）は設計の判断が要るので、下の「設計への反映が必要な事項」で扱います。**
+
+**Day 1 に決めた 5 件（2026-09-04）。**
+
+| # | 決めたこと | 反映先 |
+| :--- | :--- | :--- |
+| R.5 | 「希望引渡日」を受入基準から落とす。経路探索（US08）の入力になるのは着日側だけで、引渡日を使う業務が本リリースに無い。置き場のない項目を残すと毎 IT 繰り越される | `user_story.md` US04・`system_usecase.md` UC03 |
+| R.6 | 「見積情報との整合性」に **US01 実装後**の但し書きを付けた | `user_story.md` US04 |
+| R.8 | `everyStatusHasATransitionTableEntry` に改名し、**終端以外は行き先を 1 つ以上持つ**ことを実際に見るようにした。壊して赤も確認した | `CargoValueObjectsTest` |
+| R.10 | **発動せず。** IT3 は Reaction Handler を入れない（routingms は購読側だが、S30 のデータ供給元は bookingms の REST で、routingms に購読は置かない）。`ReplayCheckAccompaniesReactionTest` が機械化しているので、入れた瞬間に赤くなる | — |
+| R.11 | US06 §受入基準 4 を **US32「仮受付の予約情報を修正する」として切り出した**。US06 の中に但し書きで畳むと実装されないまま「一部未達」が繰り返される。独立して見積もり、リリース計画で順番を決める | `user_story.md` US06・US32（新規） |
 
 #### Q. 検査が働くことの確認（SP 対象外）
 
@@ -523,7 +533,7 @@ apps/cargo-tracker/backend/routingms/src/main/java/com/example/cargotracker/rout
 | 2 | **航海の時刻の型が 3 文書で食い違う。** `domain-model` は `LocalDateTime`、`data-model` は `TIMESTAMPTZ`、`non_functional` は「港のローカル時刻で入力・表示し JST を併記、**保存は `TIMESTAMPTZ`**」と既に決めている | [ドメインモデル](../../design/cargo-tracker/domain-model.md)・[データモデル](../../design/cargo-tracker/data-model.md)・[非機能要件](../../design/cargo-tracker/non_functional.md) | **既決規約を航海に適用し、2 文書の食い違いを解消する**（新たな判断ではない）。US08（IT5）の経路探索が入る前に閉じる |
 | 3 | **危険物かつ冷凍**の貨物が実務にある。`CargoSpecification` は種別 1 つしか持てない | ドメインモデル・ユーザーストーリー | **IT3 で判断だけする。** 実装は US08 以降。種別を集合にするか、危険物申告と温度条件を独立させるか |
 | 4 | UN/LOCODE は形式しか見ておらず `AAAAA` でも通る | 共有カーネル | **港のマスタを持つ IT で。** `shared` のリソース（CSV）から読む方針は `data-model.md` にある。US07（IT4）で航海を検索するときに要る |
-| 5 | US04 §受入基準 3「希望引渡日」の置き場 | ユーザーストーリー・ドメインモデル | R.5 で判断する |
+| 5 | US04 §受入基準 3「希望引渡日」の置き場 | ユーザーストーリー・システムユースケース | **反映済み（2026-09-04）。** 受入基準から落とした（経路探索の入力は着日側だけで、引渡日を使う業務がない）。UC03 のステップ 3 も直した |
 | 6 | US04 §受入基準 6（見積との整合）の但し書き | ユーザーストーリー | R.6 で判断する |
 | 7 | **経路設計者のダッシュボード導線。** `ui_design.md` は「経路設計担当も S20 を開く」と書いており、S30 を足す本 IT の変更と食い違う | [UI 設計](../../design/cargo-tracker/ui_design.md) | **タスク 2.7 と同じ変更で正典を書き換える。** 書き換えないと DoD の「4 点一致」が正典と食い違ったまま緑になる |
 | 8 | **`attention_item` の複製先に `routing_read_db` が無い。** テーブル一覧・備考・`routing-voyage-projection` の書き込み先の 3 か所 | [データモデル](../../design/cargo-tracker/data-model.md) | **タスク 1.9 と同じ変更で追記する** |

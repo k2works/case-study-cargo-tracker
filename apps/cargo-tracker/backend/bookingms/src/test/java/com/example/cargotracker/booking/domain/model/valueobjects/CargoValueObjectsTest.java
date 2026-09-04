@@ -118,11 +118,24 @@ class CargoValueObjectsTest {
      */
     @ParameterizedTest
     @EnumSource(BookingStatus.class)
-    @DisplayName("すべての状態が遷移表を持つ")
-    void everyStatusHasTransitions(BookingStatus status) {
+    @DisplayName("すべての状態が遷移表に載っている（終端以外は行き先が 1 つ以上ある）")
+    void everyStatusHasATransitionTableEntry(BookingStatus status) {
+        // 表に無い状態は canTransitionTo が落ちる。まず「載っていること」を見る。
         assertThatCode(() -> status.canTransitionTo(BookingStatus.CANCELLED))
                 .doesNotThrowAnyException();
         assertThatCode(status::cancellableImmediately).doesNotThrowAnyException();
+
+        // 例外が出ないことしか見ないと、行き先が空の状態を足しても緑になる（IT2 レビュー L7）。
+        // 終端は SETTLED・CANCELLED の 2 つだけで、それ以外は必ず行き先を持つ。
+        boolean hasAnyNext = false;
+        for (BookingStatus next : BookingStatus.values()) {
+            hasAnyNext |= status.canTransitionTo(next);
+        }
+        if (status == BookingStatus.SETTLED || status == BookingStatus.CANCELLED) {
+            assertThat(hasAnyNext).as("終端の状態 %s は行き先を持たない", status).isFalse();
+        } else {
+            assertThat(hasAnyNext).as("%s は行き先を 1 つ以上持つ", status).isTrue();
+        }
     }
 
     @Test
