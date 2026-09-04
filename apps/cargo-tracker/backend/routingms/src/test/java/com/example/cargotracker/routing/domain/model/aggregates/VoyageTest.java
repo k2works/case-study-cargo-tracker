@@ -83,4 +83,50 @@ class VoyageTest {
                 .then().exceptionSatisfies(e ->
                         assertThat(e.getMessage()).contains("既に登録されています"));
     }
+
+    @Test
+    @DisplayName("航海番号が空白なら受け付けない")
+    void rejectsBlankVoyageNumber() {
+        // null は @TargetEntityId の解決で先に落ちるので、コマンドバス越しには
+        // ここまで届かない。届く形（空白）だけを見る。
+        fixture.given().noPriorActivity()
+                .when().command(new RegisterVoyageCommand(" ", new Carrier("MOL", "商船三井"),
+                        new VesselName("MOL EXPRESS"), tokyoToNewYork(), Set.of(), "routing01"))
+                .then().exceptionSatisfies(e ->
+                        assertThat(e.getMessage()).contains("航海番号は必須です"));
+    }
+
+    @Test
+    @DisplayName("運送会社・船名・寄港地はいずれも欠かせない")
+    void rejectsMissingParts() {
+        fixture.given().noPriorActivity()
+                .when().command(new RegisterVoyageCommand("V-MOL-001", null,
+                        new VesselName("MOL EXPRESS"), tokyoToNewYork(), Set.of(), "routing01"))
+                .then().exceptionSatisfies(e ->
+                        assertThat(e.getMessage()).contains("運送会社は必須です"));
+
+        fixture.given().noPriorActivity()
+                .when().command(new RegisterVoyageCommand("V-MOL-001",
+                        new Carrier("MOL", "商船三井"), null, tokyoToNewYork(), Set.of(),
+                        "routing01"))
+                .then().exceptionSatisfies(e ->
+                        assertThat(e.getMessage()).contains("船名は必須です"));
+
+        fixture.given().noPriorActivity()
+                .when().command(new RegisterVoyageCommand("V-MOL-001",
+                        new Carrier("MOL", "商船三井"), new VesselName("MOL EXPRESS"), null,
+                        Set.of(), "routing01"))
+                .then().exceptionSatisfies(e ->
+                        assertThat(e.getMessage()).contains("寄港地を 1 件以上"));
+    }
+
+    @Test
+    @DisplayName("対応貨物種別が null でも一般貨物のみになる")
+    void nullCargoTypesDefaultsToGeneral() {
+        // 空集合と null は別の分岐。片方だけ見ると、もう片方を消しても緑になる。
+        fixture.given().noPriorActivity()
+                .when().command(register(null))
+                .then().success()
+                .events(registered(List.of("GENERAL")));
+    }
 }

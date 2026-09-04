@@ -259,4 +259,28 @@ class CargoTest {
                 .when().command(new RequestRoutingCommand("B-0001", "sales01"))
                 .then().success();
     }
+
+    @Test
+    @DisplayName("予約 ID が空白なら受け付けない")
+    void rejectsBlankBookingId() {
+        // null は @TargetEntityId の解決で先に落ちるので、コマンドバス越しには
+        // ここまで届かない。届く形（空白）だけを見る。
+        fixture.given().noPriorActivity()
+                .when().command(new BookCargoCommand(" ", "SHP-000001",
+                        general(), route(), "sales01"))
+                .then().exceptionSatisfies(e ->
+                        assertThat(e.getMessage()).contains("予約 ID は必須です"));
+    }
+
+    @Test
+    @DisplayName("荷主 ID が空でも空白でも受け付けない")
+    void rejectsBlankShipperId() {
+        for (String shipperId : new String[] {null, " "}) {
+            fixture.given().noPriorActivity()
+                    .when().command(new BookCargoCommand("B-0001", shipperId,
+                            general(), route(), "sales01"))
+                    .then().exceptionSatisfies(e ->
+                            assertThat(e.getMessage()).contains("荷主 ID は必須です"));
+        }
+    }
 }

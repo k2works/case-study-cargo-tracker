@@ -14,6 +14,7 @@ dependencies {
     implementation(libs.bundles.axon)
 
     testImplementation(libs.axon.test)
+    testImplementation(libs.mockito.core)
     testImplementation(testFixtures(project(":shared")))
 }
 

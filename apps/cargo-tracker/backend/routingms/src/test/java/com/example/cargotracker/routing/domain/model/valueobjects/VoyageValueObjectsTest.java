@@ -95,4 +95,45 @@ class VoyageValueObjectsTest {
         assertThatThrownBy(() -> new Carrier("MOL", " "))
                 .isInstanceOf(BusinessRuleViolation.class);
     }
+
+    @Test
+    @DisplayName("移動は出発地・到着地・日時のいずれが欠けても断る")
+    void movementRejectsMissingParts() {
+        // null と空白は別の分岐。片方だけ見ると、もう片方を消しても緑になる。
+        assertThatThrownBy(() -> new CarrierMovement(null, Location.of("USNYC"), T0, T3))
+                .isInstanceOf(BusinessRuleViolation.class).hasMessageContaining("出発地と到着地");
+        assertThatThrownBy(() -> new CarrierMovement(Location.of("JPTYO"), null, T0, T3))
+                .isInstanceOf(BusinessRuleViolation.class).hasMessageContaining("出発地と到着地");
+        assertThatThrownBy(() -> movement("JPTYO", "USNYC", null, T3))
+                .isInstanceOf(BusinessRuleViolation.class).hasMessageContaining("出発日時と到着日時");
+        assertThatThrownBy(() -> movement("JPTYO", "USNYC", T0, null))
+                .isInstanceOf(BusinessRuleViolation.class).hasMessageContaining("出発日時と到着日時");
+    }
+
+    @Test
+    @DisplayName("航海番号は null も空白も断る")
+    void voyageNumberRejectsNull() {
+        assertThatThrownBy(() -> new VoyageNumber(null))
+                .isInstanceOf(BusinessRuleViolation.class).hasMessageContaining("必須");
+    }
+
+    @Test
+    @DisplayName("船名は null・空白・長すぎを断る")
+    void vesselNameRejects() {
+        assertThat(new VesselName("MOL EXPRESS").value()).isEqualTo("MOL EXPRESS");
+        assertThatThrownBy(() -> new VesselName(" "))
+                .isInstanceOf(BusinessRuleViolation.class).hasMessageContaining("必須");
+        assertThatThrownBy(() -> new VesselName("A".repeat(101)))
+                .isInstanceOf(BusinessRuleViolation.class).hasMessageContaining("100 文字以内");
+    }
+
+    @Test
+    @DisplayName("運送会社はコードも名称も null を断る")
+    void carrierRejectsNull() {
+        assertThat(new Carrier("MOL", "商船三井").carrierCode()).isEqualTo("MOL");
+        assertThatThrownBy(() -> new Carrier(null, "商船三井"))
+                .isInstanceOf(BusinessRuleViolation.class).hasMessageContaining("運送会社コード");
+        assertThatThrownBy(() -> new Carrier("MOL", null))
+                .isInstanceOf(BusinessRuleViolation.class).hasMessageContaining("運送会社名");
+    }
 }
