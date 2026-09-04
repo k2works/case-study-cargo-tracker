@@ -68,6 +68,68 @@ const SAMPLE_BOOKINGS = {
   total: 1,
 };
 
+const SAMPLE_VOYAGES = {
+  items: [
+    {
+      voyageNumber: 'V-MOL-001',
+      carrierCode: 'MOL',
+      carrierName: '商船三井',
+      vesselName: 'MOL EXPRESS',
+      departureUnLocode: 'JPTYO',
+      arrivalUnLocode: 'USNYC',
+      departureAt: '2026-09-10T09:00:00Z',
+      arrivalAt: '2026-09-24T18:00:00Z',
+      cancelled: false,
+      acceptedCargoTypes: ['GENERAL', 'HAZARDOUS'],
+      movements: [
+        {
+          movementSeq: 1,
+          departureUnLocode: 'JPTYO',
+          arrivalUnLocode: 'USNYC',
+          departureAt: '2026-09-10T09:00:00Z',
+          arrivalAt: '2026-09-24T18:00:00Z',
+        },
+      ],
+    },
+    {
+      voyageNumber: 'V-ONE-118',
+      carrierCode: 'ONE',
+      carrierName: 'ONE',
+      vesselName: 'ONE HARMONY',
+      departureUnLocode: 'JPTYO',
+      arrivalUnLocode: 'SGSIN',
+      departureAt: '2026-09-12T15:30:00Z',
+      arrivalAt: '2026-09-19T08:00:00Z',
+      cancelled: false,
+      acceptedCargoTypes: ['GENERAL', 'REEFER'],
+      movements: [],
+    },
+  ],
+  total: 2,
+};
+
+/** 経路設計作業一覧に出す予約。誤配を先頭に置いて並び順も写す。 */
+const SAMPLE_WORKLIST = {
+  items: [
+    {
+      ...SAMPLE_BOOKINGS.items[0],
+      bookingId: '66666666-6666-6666-6666-666666666666',
+      bookingNumber: 'B-2026-0902-0007',
+      productName: '塗料',
+      cargoType: 'HAZARDOUS',
+      bookingStatus: 'ROUTE_PROPOSED',
+      routingStatus: 'MISROUTED',
+      arrivalDeadline: '2026-09-30',
+    },
+    {
+      ...SAMPLE_BOOKINGS.items[0],
+      bookingStatus: 'ROUTE_PROPOSED',
+      routingStatus: 'ROUTING_REQUESTED',
+    },
+  ],
+  total: 2,
+};
+
 const SAMPLE_ADMIN_USERS = {
   users: [
     {
@@ -169,6 +231,20 @@ test.describe('マニュアルの画面キャプチャ', () => {
         body: JSON.stringify({ preliminary: 3 }),
       }),
     );
+    await page.route('**/api/v1/routing/voyages**', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(SAMPLE_VOYAGES),
+      }),
+    );
+    await page.route('**/api/v1/booking/bookings/routing-worklist**', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(SAMPLE_WORKLIST),
+      }),
+    );
     await page.route('**/api/v1/auth/admin/users**', (route) =>
       route.fulfill({
         status: 200,
@@ -265,6 +341,59 @@ test.describe('マニュアルの画面キャプチャ', () => {
     await page.goto('/admin/users');
     await expect(page.getByText('routing01')).toBeVisible();
     await page.screenshot({ path: `${OUT}/06-S90-admin-users.png`, fullPage: true });
+  });
+
+  /** 経路設計者としてログインする。航海と作業一覧はこのロールの画面。 */
+  async function signInAsRouting(page: import('@playwright/test').Page) {
+    await page.route('**/api/v1/auth/login', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          token: 'token',
+          username: 'routing01',
+          displayName: '経路 次郎',
+          roles: ['ROLE_ROUTING'],
+          shipperId: null,
+        }),
+      }),
+    );
+    await page.goto('/login');
+    await page.getByLabel('利用者名').fill('routing01');
+    await page.getByLabel('パスワード').fill('secret1234');
+    await page.getByRole('button', { name: 'ログイン' }).click();
+    await expect(page.getByRole('heading', { name: 'ダッシュボード' })).toBeVisible();
+  }
+
+  test('07 航海スケジュール一覧', async ({ page }) => {
+    await signInAsRouting(page);
+    await page.goto('/voyages');
+    await expect(page.getByText('V-MOL-001')).toBeVisible();
+    await page.screenshot({ path: `${OUT}/07-S32-voyage-list.png`, fullPage: true });
+  });
+
+  test('07 航海スケジュール登録', async ({ page }) => {
+    await signInAsRouting(page);
+    await page.goto('/voyages/new');
+    await expect(page.getByRole('heading', { name: '航海スケジュールを登録する' })).toBeVisible();
+    // 寄港地を 2 区間にした状態で写す。マニュアルが「行を増やす」を説明するため。
+    await page.getByRole('button', { name: '寄港地を追加する' }).click();
+    await page.screenshot({ path: `${OUT}/07-S33-voyage-register.png`, fullPage: true });
+  });
+
+  test('08 経路設計作業一覧', async ({ page }) => {
+    await signInAsRouting(page);
+    await page.goto('/routing/worklist');
+    await expect(page.getByText('B-2026-0902-0007')).toBeVisible();
+    await page.screenshot({ path: `${OUT}/08-S30-routing-worklist.png`, fullPage: true });
+  });
+
+  test('08 予約詳細（引き渡し）', async ({ page }) => {
+    await signIn(page);
+    await page.goto('/bookings/55555555-5555-5555-5555-555555555555');
+    // 仮受付の予約なので、引き渡しのボタンが出た状態で写す。
+    await expect(page.getByRole('button', { name: '経路設計を依頼する' })).toBeVisible();
+    await page.screenshot({ path: `${OUT}/08-S22-request-routing.png`, fullPage: true });
   });
 
   test('04 要確認一覧', async ({ page }) => {

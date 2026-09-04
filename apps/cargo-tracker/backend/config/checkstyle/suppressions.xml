@@ -25,10 +25,11 @@
       インスタンス化させる。private コンストラクタにすると受け入れテストが起動しない。
     -->
     <suppress checks="HideUtilityClassConstructor" files=".*CucumberSpringConfiguration\.java$"/>
+    <suppress checks="HideUtilityClassConstructor" files=".*RoutingCucumberConfiguration\.java$"/>
 
     <!--
       テストのメソッド名は日本語で書く。何を確かめているかは、テストの唯一の説明である。
       識別子の規約を優先して英語に直すと、失敗したときに読めるものが減る。
     -->
-    <suppress checks="MethodName" files="[\\/]src[\\/]test[\\/]"/>
+    <suppress checks="MethodName" files="[\\/]src[\\/][a-zA-Z]*[Tt]est[\\/]"/>
 </suppressions>
