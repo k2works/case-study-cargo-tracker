@@ -1,5 +1,18 @@
 # Docs Update Log
 
+## 2026-09-05
+* **Creation**: [release_report-0_1_0](/development/cargo-tracker/release_report-0_1_0.md) を作成（claude-code/claude-opus-5）
+* **Creation**: [iteration_report-4](/development/cargo-tracker/iteration_report-4.md) を作成（claude-code/claude-opus-5）
+* **Creation**: [retrospective-4](/development/cargo-tracker/retrospective-4.md) を作成（claude-code/claude-opus-5）
+* **Creation**: [IT4実装_review_20260905](/review/cargo-tracker/IT4実装_review_20260905.md) を作成（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-4](/development/cargo-tracker/iteration_plan-4.md) を更新（claude-code/claude-opus-5）
+* **Update**: [05-貨物予約を登録する](/manual/05-貨物予約を登録する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [07-航海スケジュールを登録する](/manual/07-航海スケジュールを登録する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [08-経路設計に引き渡す](/manual/08-経路設計に引き渡す.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+
 ## 2026-09-04
 * **Update**: [iteration_plan-4](/development/cargo-tracker/iteration_plan-4.md) を更新（claude-code/claude-opus-5）
 * **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）

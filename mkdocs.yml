@@ -94,16 +94,19 @@ nav:
           - 概要: development/cargo-tracker/index.md
           - リリース計画: development/cargo-tracker/release_plan.md
           - 開発戦略: development/cargo-tracker/development_strategy.md
+          - リリース完了報告書 0.1: development/cargo-tracker/release_report-0_1_0.md
           - イテレーション計画 1: development/cargo-tracker/iteration_plan-1.md
           - イテレーション 1 ふりかえり: development/cargo-tracker/retrospective-1.md
           - イテレーション 1 完了報告書: development/cargo-tracker/iteration_report-1.md
           - イテレーション計画 2: development/cargo-tracker/iteration_plan-2.md
           - イテレーション 2 ふりかえり: development/cargo-tracker/retrospective-2.md
-          - イテレーション 4 計画: development/cargo-tracker/iteration_plan-4.md
-          - イテレーション 3 ふりかえり: development/cargo-tracker/retrospective-3.md
           - イテレーション 2 完了報告書: development/cargo-tracker/iteration_report-2.md
-          - イテレーション 3 完了報告書: development/cargo-tracker/iteration_report-3.md
           - イテレーション計画 3: development/cargo-tracker/iteration_plan-3.md
+          - イテレーション 3 ふりかえり: development/cargo-tracker/retrospective-3.md
+          - イテレーション 3 完了報告書: development/cargo-tracker/iteration_report-3.md
+          - イテレーション計画 4: development/cargo-tracker/iteration_plan-4.md
+          - イテレーション 4 ふりかえり: development/cargo-tracker/retrospective-4.md
+          - イテレーション 4 完了報告書: development/cargo-tracker/iteration_report-4.md
   - 運用:
       - 概要: operation/index.md
       - cargo-tracker:
@@ -130,6 +133,7 @@ nav:
           - IT1 実装レビュー（2026-09-03）: review/cargo-tracker/IT1実装_review_20260903.md
           - IT2 実装レビュー（2026-09-04）: review/cargo-tracker/IT2実装_review_20260904.md
           - IT3 実装レビュー（2026-09-04）: review/cargo-tracker/IT3実装_review_20260904.md
+          - IT4 実装レビュー（2026-09-05）: review/cargo-tracker/IT4実装_review_20260905.md
   - ADR:
       - 概要: adr/index.md
       - cargo-tracker:
