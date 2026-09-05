@@ -20,6 +20,7 @@ import com.example.cargotracker.booking.infrastructure.query.BookingQueries.Revi
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingsQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindRoutingWorklistQuery;
 import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos;
+import com.example.cargotracker.shared.infrastructure.axon.QueryDispatcher;
 import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos.BookCargoRequest;
 import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos.BookCargoResponse;

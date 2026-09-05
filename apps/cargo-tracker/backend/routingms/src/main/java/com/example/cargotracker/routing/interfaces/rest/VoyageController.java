@@ -20,6 +20,7 @@ import com.example.cargotracker.routing.interfaces.rest.dto.VoyageDtos.RegisterV
 import com.example.cargotracker.routing.interfaces.rest.dto.VoyageDtos.RegisterVoyageResponse;
 import com.example.cargotracker.routing.interfaces.rest.dto.VoyageDtos.UpdateVoyageRequest;
 import com.example.cargotracker.routing.interfaces.rest.dto.VoyageDtos.VoyageDiffResponse;
+import com.example.cargotracker.shared.infrastructure.axon.QueryDispatcher;
 import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.shared.domain.location.Location;
 import jakarta.validation.Valid;

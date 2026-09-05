@@ -1,4 +1,4 @@
-package com.example.cargotracker.routing.interfaces.rest;
+package com.example.cargotracker.shared.infrastructure.axon;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

@@ -20,6 +20,7 @@ import com.example.cargotracker.routing.interfaces.rest.dto.VoyageDtos.UpdateVoy
 import com.example.cargotracker.routing.interfaces.rest.dto.VoyageDtos.VoyageDiffResponse;
 import com.example.cargotracker.routing.interfaces.rest.dto.VoyageDtos.PendingResponse;
 import com.example.cargotracker.routing.interfaces.rest.dto.VoyageDtos.RegisterVoyageRequest;
+import com.example.cargotracker.shared.infrastructure.axon.QueryDispatcher;
 import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import java.time.Instant;
 import java.util.List;

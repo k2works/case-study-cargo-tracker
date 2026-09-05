@@ -1,12 +1,11 @@
-package com.example.cargotracker.booking.interfaces.rest;
+package com.example.cargotracker.shared.infrastructure.axon;
 
 import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.shared.domain.error.IllegalTransition;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import org.axonframework.messaging.queryhandling.gateway.QueryGateway;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
+
 
 /**
  * 問い合わせの送り口。<b>業務の断りを 500 に化けさせない。</b>
@@ -14,26 +13,30 @@ import org.springframework.stereotype.Component;
  * <p>各 Controller が {@code try / catch (Exception)} を持つと、問い合わせ側が業務の判断で
  * 断ったことまで {@code IllegalStateException} に包まれ、画面には 500 が出る。利用者は
  * 「壊れた」のか「入力が悪い」のかを判断できない（IT4 R.3）。同じ包み方が Controller の
- * 数だけ書かれていたので、ここへ寄せる（IT4 R.2）。</p>
+ * 数だけ書かれていたので、ここへ寄せた（IT4 R.2）。</p>
+ *
+ * <p><b>bookingms と routingms でバイト単位に同じものが 2 本あった</b>（IT4 引き継ぎ 3）。
+ * 片方だけ直すと、同じ問い合わせが画面によって違う応答になる。共有カーネルに 1 本置く。
+ * <b>これは業務の型ではない</b>（各 BC の型は持ち込まない決まりは変えていない）。</p>
+ *
+ * <p><b>Reaction Handler から呼ばない。</b> ここで同期に待つと Processing Group が
+ * 止まる（ADR-0001 決定 4）。{@code QueryGateway} を直に禁じるだけの検査は、この
+ * クラス越しの呼び出しを見逃すので、ArchUnit の規則をこのクラスにも広げてある。</p>
  *
  * <p><b>型で見分けない。</b> サービスを越えた例外は根の型が置き換わるので、種類は文言の
- * 印で運ぶ（ADR-0001 決定 5 第 12 項。{@link ApiExceptionHandler} と同じ判断）。</p>
+ * 印で運ぶ（ADR-0001 決定 5 第 12 項。各 BC の {@code ApiExceptionHandler} と同じ判断）。</p>
  */
-@Component
 public class QueryDispatcher {
 
     private static final long TIMEOUT_SECONDS = 5;
 
     /** 問い合わせの送出。テストから差し替えられるように切り出す。 */
-    interface Gateway {
+    public interface Gateway {
         <R> CompletableFuture<R> query(Object query, Class<R> responseType);
     }
 
     private final Gateway gateway;
 
-    // コンストラクタが 2 つあるので、どちらで組み立てるかを明示する。
-    // 明示しないと既定コンストラクタを探しに行き、起動時に落ちる。
-    @Autowired
     public QueryDispatcher(QueryGateway queryGateway) {
         this(new Gateway() {
             @Override
@@ -43,7 +46,7 @@ public class QueryDispatcher {
         });
     }
 
-    QueryDispatcher(Gateway gateway) {
+    public QueryDispatcher(Gateway gateway) {
         this.gateway = gateway;
     }
 

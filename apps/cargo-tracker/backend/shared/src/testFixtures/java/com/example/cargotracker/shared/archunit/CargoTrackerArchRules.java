@@ -180,10 +180,15 @@ public final class CargoTrackerArchRules {
 
     /** Reaction Handler は同期クエリを呼ばない（`.join()` が Processing Group を止める）。 */
     public static ArchRule reactionDoesNotCallQueryGateway() {
+        // QueryGateway だけを名指しすると、それを包んだ QueryDispatcher 越しの
+        // 呼び出しを見逃す（IT5 R.4 で共有カーネルへ寄せた）。包みも一緒に禁じる。
         return noClasses().that().resideInAPackage("..application.reaction..")
                 .should().dependOnClassesThat()
                 .haveFullyQualifiedName(
                         "org.axonframework.messaging.queryhandling.gateway.QueryGateway")
+                .orShould().dependOnClassesThat()
+                .haveFullyQualifiedName(
+                        "com.example.cargotracker.shared.infrastructure.axon.QueryDispatcher")
                 .because("Reaction Handler の中で同期クエリを待つと Processing Group が"
                         + "止まる（ADR-0001 決定 4）");
     }

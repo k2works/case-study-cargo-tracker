@@ -1,6 +1,7 @@
 package com.example.cargotracker.booking.interfaces.rest;
 
 import com.example.cargotracker.booking.domain.model.commands.RegisterShipperCommand;
+import com.example.cargotracker.shared.infrastructure.axon.QueryDispatcher;
 import com.example.cargotracker.booking.domain.model.valueobjects.CorporateContract;
 import com.example.cargotracker.booking.domain.model.valueobjects.DiscountRate;
 import com.example.cargotracker.booking.domain.model.valueobjects.Email;

@@ -5,6 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Import;
 import com.example.cargotracker.shared.infrastructure.axon.AxonJdbcConfiguration;
 import com.example.cargotracker.shared.infrastructure.axon.AxonServerStartupCheckConfiguration;
+import com.example.cargotracker.shared.infrastructure.axon.QueryDispatcherConfiguration;
 import com.example.cargotracker.shared.infrastructure.crypto.CryptoConfiguration;
 import com.example.cargotracker.shared.infrastructure.time.BusinessClockConfiguration;
 
@@ -16,6 +17,8 @@ import com.example.cargotracker.shared.infrastructure.time.BusinessClockConfigur
     AxonJdbcConfiguration.class,
     AxonServerStartupCheckConfiguration.class,
     BusinessClockConfiguration.class,
+    // 問い合わせの送り口（IT4 引き継ぎ 3。BC ごとに同じものを持たない）。
+    QueryDispatcherConfiguration.class,
     // ADR-0003。契約イベントを読む側も同じ変換が要る（billingms も取り込む）。
     CryptoConfiguration.class,
 })
