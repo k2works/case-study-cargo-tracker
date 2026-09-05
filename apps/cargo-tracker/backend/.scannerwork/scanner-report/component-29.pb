@@ -1,1 +1,0 @@
- (2javaX>hrMauthms/src/test/java/com/example/cargotracker/auth/domain/model/UserTest.java

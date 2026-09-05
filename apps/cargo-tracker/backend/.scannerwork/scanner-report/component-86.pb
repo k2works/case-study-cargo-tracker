@@ -1,1 +1,0 @@
-V 2javaXhrbbookingms/src/main/java/com/example/cargotracker/booking/domain/model/valueobjects/Dimensions.java

@@ -1,1 +1,0 @@
-h (2javaX>hrPbookingms/src/test/java/com/example/cargotracker/booking/BookingBootstrapIT.java

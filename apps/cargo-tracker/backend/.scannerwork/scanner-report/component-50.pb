@@ -1,1 +1,0 @@
-2 2javaXhr[bookingms/src/main/java/com/example/cargotracker/booking/application/port/package-info.java

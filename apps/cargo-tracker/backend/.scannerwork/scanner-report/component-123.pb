@@ -1,1 +1,0 @@
-{ (2javaXbhrgbookingms/src/test/java/com/example/cargotracker/booking/interfaces/rest/AttentionItemControllerIT.java

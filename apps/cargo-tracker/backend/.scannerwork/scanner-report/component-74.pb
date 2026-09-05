@@ -1,1 +1,0 @@
-J 2javaX&hrpbookingms/src/main/java/com/example/cargotracker/booking/domain/model/events/CargoSpecificationUpdatedEvent.java

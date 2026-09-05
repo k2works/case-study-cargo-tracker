@@ -1,1 +1,0 @@
-ç 2javaXhrYhandlingms/src/main/java/com/example/cargotracker/handling/domain/model/package-info.java

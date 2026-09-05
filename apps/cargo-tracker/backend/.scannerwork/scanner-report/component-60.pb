@@ -1,1 +1,0 @@
-< 2javaXAhrfbookingms/src/main/java/com/example/cargotracker/booking/infrastructure/query/BookingQueryHandler.java

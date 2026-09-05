@@ -1,1 +1,0 @@
-B 2javaXhrdbookingms/src/main/java/com/example/cargotracker/booking/infrastructure/projection/package-info.java

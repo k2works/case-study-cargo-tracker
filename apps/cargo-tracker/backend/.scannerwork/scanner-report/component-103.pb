@@ -1,1 +1,0 @@
-g (2javaXhrUbookingms/src/test/java/com/example/cargotracker/booking/BookingArchitectureTest.java

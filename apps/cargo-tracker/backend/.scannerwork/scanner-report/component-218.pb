@@ -1,1 +1,0 @@
-Ú (2javaX hrYshared/src/test/java/com/example/cargotracker/shared/conventions/BuildConventionTest.java

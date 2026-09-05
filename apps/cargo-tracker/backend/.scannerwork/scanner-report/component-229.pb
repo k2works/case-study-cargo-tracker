@@ -1,1 +1,0 @@
-å (2javaX.hr[shared/src/test/java/com/example/cargotracker/shared/domain/auth/AuthenticatedUserTest.java

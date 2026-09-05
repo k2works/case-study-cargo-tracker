@@ -1,1 +1,0 @@
-R 2javaXhrnbookingms/src/main/java/com/example/cargotracker/booking/domain/model/valueobjects/TemperatureRequirement.java

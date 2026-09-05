@@ -1,1 +1,0 @@
-¦ 2javaXhrWroutingms/src/main/java/com/example/cargotracker/routing/domain/model/package-info.java

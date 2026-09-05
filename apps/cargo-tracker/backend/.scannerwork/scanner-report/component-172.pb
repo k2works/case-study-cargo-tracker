@@ -1,1 +1,0 @@
-¬ 2javaX!hraroutingms/src/main/java/com/example/cargotracker/routing/domain/model/valueobjects/CargoType.java

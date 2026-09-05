@@ -1,1 +1,0 @@
-ù 2javaXhrbtrackingms/src/main/java/com/example/cargotracker/tracking/infrastructure/config/package-info.java

@@ -1,1 +1,0 @@
-ë (2javaXhrsshared/src/test/java/com/example/cargotracker/archfixture/violating/infrastructure/acl/RestTemplateRouteFinder.java

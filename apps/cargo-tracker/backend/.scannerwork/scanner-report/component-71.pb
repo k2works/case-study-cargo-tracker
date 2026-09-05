@@ -1,1 +1,0 @@
-G 2javaXhrsbookingms/src/main/java/com/example/cargotracker/booking/domain/model/commands/UpdateCargoSpecificationCommand.java

@@ -1,1 +1,0 @@
-C 2javaXØhr[bookingms/src/main/java/com/example/cargotracker/booking/domain/model/aggregates/Cargo.java

@@ -1,1 +1,0 @@
-r (2javaX<hrdbookingms/src/test/java/com/example/cargotracker/booking/domain/model/aggregates/CargoBookingIT.java

@@ -1,1 +1,0 @@
-õ (2javaXhrhshared/src/test/java/com/example/cargotracker/archfixture/compliant/domain/model/CompliantAggregate.java

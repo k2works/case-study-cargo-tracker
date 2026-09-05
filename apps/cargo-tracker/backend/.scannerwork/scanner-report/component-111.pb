@@ -1,1 +1,0 @@
-o (2javaXîhr_bookingms/src/test/java/com/example/cargotracker/booking/domain/model/aggregates/CargoTest.java

@@ -1,1 +1,0 @@
-Ø (2javaXhrishared/src/test/java/com/example/cargotracker/shared/conventions/EventTagAccompaniesEventSourcedTest.java

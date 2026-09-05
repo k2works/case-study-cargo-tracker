@@ -1,1 +1,0 @@
-* 2javaXhrZbillingms/src/main/java/com/example/cargotracker/billing/interfaces/rest/package-info.java

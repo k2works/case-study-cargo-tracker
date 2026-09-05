@@ -1,1 +1,0 @@
-Œ 2javaXhrfhandlingms/src/main/java/com/example/cargotracker/handling/infrastructure/projection/package-info.java

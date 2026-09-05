@@ -1,1 +1,0 @@
-N 2javaXhribookingms/src/main/java/com/example/cargotracker/booking/domain/model/valueobjects/CorporateContract.java

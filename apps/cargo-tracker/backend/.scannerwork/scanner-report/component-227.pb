@@ -1,1 +1,0 @@
-ã (2javaXzhr\shared/src/test/java/com/example/cargotracker/shared/archunit/ArchRulesAreEffectiveTest.java

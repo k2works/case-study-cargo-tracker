@@ -1,1 +1,0 @@
- (2javaXhrLauthms/src/test/java/com/example/cargotracker/auth/AuthArchitectureTest.java

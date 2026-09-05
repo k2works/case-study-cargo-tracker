@@ -1,1 +1,0 @@
-£ 2javaXhrfroutingms/src/main/java/com/example/cargotracker/routing/domain/model/events/VoyageCancelledEvent.java

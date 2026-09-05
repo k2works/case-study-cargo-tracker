@@ -1,1 +1,0 @@
-u (2javaX+hrmbookingms/src/test/java/com/example/cargotracker/booking/domain/model/valueobjects/CorporateContractTest.java

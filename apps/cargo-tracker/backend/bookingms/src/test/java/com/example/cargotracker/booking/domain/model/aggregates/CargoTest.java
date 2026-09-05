@@ -362,4 +362,49 @@ class CargoTest {
                 .then().exceptionSatisfies(e ->
                         assertThat(e.getMessage()).contains("到着期限"));
     }
+
+    @Test
+    @DisplayName("US32: 危険物に直すと申告がイベントに載る")
+    void updateCarriesHazardousDeclaration() {
+        // 付帯情報は表示のためだけに運ぶ値なので、どこか一層で潰しても
+        // 「修正できた」までは緑になる。イベントに載ることを固定する。
+        CargoSpecification hazardous = new CargoSpecification(CargoType.HAZARDOUS,
+                Weight.ofKilograms("100"), Dimensions.of("10", "10", "10"), 1, "塗料",
+                new HazardousDeclaration("3", "UN1263"), null);
+
+        fixture.given().event(booked())
+                .when().command(update(hazardous, route()))
+                .then().success()
+                .events(new CargoSpecificationUpdatedEvent("B-0001", "JPTYO", "USNYC", DEADLINE,
+                        "HAZARDOUS", new BigDecimal("100"), new BigDecimal("10"),
+                        new BigDecimal("10"), new BigDecimal("10"), 1, "塗料",
+                        "3", "UN1263", null, null, "sales02"));
+    }
+
+    @Test
+    @DisplayName("US32: 冷凍・冷蔵に直すと温度条件がイベントに載る")
+    void updateCarriesTemperatureRequirement() {
+        CargoSpecification refrigerated = new CargoSpecification(CargoType.REFRIGERATED,
+                Weight.ofKilograms("100"), Dimensions.of("10", "10", "10"), 1, "冷凍食品",
+                null, new TemperatureRequirement(new BigDecimal("-20"), new BigDecimal("-5")));
+
+        fixture.given().event(booked())
+                .when().command(update(refrigerated, route()))
+                .then().success()
+                .events(new CargoSpecificationUpdatedEvent("B-0001", "JPTYO", "USNYC", DEADLINE,
+                        "REFRIGERATED", new BigDecimal("100"), new BigDecimal("10"),
+                        new BigDecimal("10"), new BigDecimal("10"), 1, "冷凍食品",
+                        null, null, new BigDecimal("-20"), new BigDecimal("-5"), "sales02"));
+    }
+
+    @Test
+    @DisplayName("受け付けていない予約は引き渡せない")
+    void rejectsRoutingRequestOfUnknownBooking() {
+        // 空のまま復元された集約に引き渡しを通すと、受付を経ていない予約が
+        // イベントだけで経路提案中になる。
+        fixture.given().noPriorActivity()
+                .when().command(new RequestRoutingCommand("B-0001", "sales01"))
+                .then().exceptionSatisfies(e ->
+                        assertThat(e.getMessage()).contains("受け付けていません"));
+    }
 }

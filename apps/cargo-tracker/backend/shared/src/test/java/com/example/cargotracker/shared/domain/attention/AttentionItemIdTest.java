@@ -64,6 +64,23 @@ class AttentionItemIdTest {
     }
 
     @Test
+    @DisplayName("導出でない値を識別子として受け取らない")
+    void rejectsValueThatIsNotADigest() {
+        // 採番した値・UUID の見た目に整形した値を持ち込ませない。持ち込めると、
+        // 同じ事実に別の識別子が付いた行が並ぶ（IT2 で実在した欠陥に戻る）。
+        assertThatThrownBy(() -> new AttentionItemId(null))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new AttentionItemId("9f86d081884c7d65-9a2feaa0c55ad015"))
+                .as("ハイフン入りは UUID の見た目に整形した値")
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new AttentionItemId("9F86D081884C7D659A2FEAA0C55AD015"))
+                .as("大文字は導出と食い違う（同じ事実が 2 行になる）")
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new AttentionItemId("9f86d081"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     @DisplayName("欠けた要素を受け取らない")
     void rejectsMissingComponents() {
         assertThatThrownBy(() -> AttentionItemId.of(null, "TYPE", "ID", "REASON"))

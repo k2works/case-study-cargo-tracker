@@ -76,6 +76,20 @@ class VoyageSearchCriteriaTest {
     }
 
     @Test
+    @DisplayName("条件が 1 つでもあれば「条件なし」ではない")
+    void isNotEmptyWithAnySingleCondition() {
+        // 0 件の案内を「条件に合う航海はありません」と「航海はありません」で
+        // 出し分ける判断がこれに乗る。どれか 1 つでも見落とすと、条件を入れた
+        // のに「航海はありません」と出て、条件を疑えなくなる。
+        assertThat(VoyageSearchCriteria.of("JPTYO", null, null, null, null).isEmpty()).isFalse();
+        assertThat(VoyageSearchCriteria.of(null, "USNYC", null, null, null).isEmpty()).isFalse();
+        assertThat(VoyageSearchCriteria.of(null, null, FROM, null, null).isEmpty()).isFalse();
+        assertThat(VoyageSearchCriteria.of(null, null, null, TO, null).isEmpty()).isFalse();
+        assertThat(VoyageSearchCriteria.of(null, null, null, null, "HAZARDOUS").isEmpty())
+                .isFalse();
+    }
+
+    @Test
     @DisplayName("貨物種別は列挙の名前で持つ")
     void keepsCargoTypeName() {
         assertThat(VoyageSearchCriteria.of(null, null, null, null, "HAZARDOUS").cargoType())

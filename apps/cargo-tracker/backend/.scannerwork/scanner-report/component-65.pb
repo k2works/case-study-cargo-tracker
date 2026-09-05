@@ -1,1 +1,0 @@
-A 2javaX*hrmbookingms/src/main/java/com/example/cargotracker/booking/infrastructure/projection/AttentionItemRecorder.java

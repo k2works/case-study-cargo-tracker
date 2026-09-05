@@ -1,1 +1,0 @@
-% 2javaX-hrqbillingms/src/main/java/com/example/cargotracker/billing/infrastructure/projection/ShipperContractProjection.java

@@ -1,1 +1,0 @@
-x (2javaXõhrabookingms/src/test/java/com/example/cargotracker/booking/interfaces/rest/ShipperControllerIT.java

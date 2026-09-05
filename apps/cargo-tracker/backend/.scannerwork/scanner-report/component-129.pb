@@ -1,1 +1,0 @@
-Å 2javaXhrPgatewayms/src/main/java/com/example/cargotracker/gateway/GatewayApplication.java

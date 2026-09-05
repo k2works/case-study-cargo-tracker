@@ -1,1 +1,0 @@
-l (2javaXªhrkbookingms/src/test/java/com/example/cargotracker/booking/infrastructure/projection/ShipperProjectionIT.java
