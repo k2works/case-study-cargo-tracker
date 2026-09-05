@@ -70,7 +70,7 @@ public class VoyageProjection {
         // 巻き添えになる。トークンが進まないので、その 1 件で投影全体が止まる。
         int inserted = voyages.insert(row);
 
-        if (inserted == 0 && !sameAsStored(row, movements, event.acceptedCargoTypes())) {
+        if (inserted == 0 && !alreadyKnown(row, movements, event.acceptedCargoTypes())) {
             // 弾かれた。集約は受け付けているので、ここで黙ると
             // 「登録したのに一覧に出ない」が誰にも見えないまま残る。
             log.warn("航海の投影を一意制約で弾いた: voyageNumber={}", event.voyageNumber());
@@ -127,7 +127,9 @@ public class VoyageProjection {
                 // registeredAt と lastEventId は UPDATE 文が触らない。
                 // 行の値をここで作り直すと、登録日時が更新のたびに動く。
                 now, now, null,
-                now, event.updatedBy()));
+                // 「いつ直したか」はイベントが持つ。ここで現在時刻を書くと、
+                // 読み直しのたびに最終更新が動く。
+                event.updatedAt(), event.updatedBy()));
 
         if (updated == 0) {
             log.warn("更新を書ける航海が投影に無い: voyageNumber={}", event.voyageNumber());
@@ -151,6 +153,26 @@ public class VoyageProjection {
         for (String cargoType : event.acceptedCargoTypes()) {
             voyages.insertAcceptedCargoType(event.voyageNumber(), cargoType);
         }
+    }
+
+    /**
+     * 既に投影が知っている航海か。
+     *
+     * <p><b>更新済みの行は、登録イベントと中身が違って当たり前である。</b> 投影を
+     * 読み直すと登録イベントがもう一度届くので、丸ごと比較だけで判断すると
+     * 「航海番号の重複」が偽で積まれ、経路設計者の要確認一覧に身に覚えのない
+     * 警告が残る（行は既にあるので画面は正常に見える）。</p>
+     *
+     * <p>更新された行（{@code updated_at} が入っている）は、登録イベントより新しい
+     * 事実を持っている。読み直しでそこへ書き戻さないためにも、ここで止める。</p>
+     */
+    private boolean alreadyKnown(VoyageMapper.VoyageRow candidate,
+            List<VoyageRegisteredEvent.Movement> movements, List<String> acceptedCargoTypes) {
+        VoyageMapper.VoyageRow stored = voyages.findByNumber(candidate.voyageNumber());
+        if (stored != null && stored.updatedAt() != null) {
+            return true;
+        }
+        return sameAsStored(candidate, movements, acceptedCargoTypes);
     }
 
     /**

@@ -3,6 +3,7 @@ package com.example.cargotracker.routing.infrastructure.projection;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.cargotracker.routing.domain.model.events.VoyageRegisteredEvent;
+import com.example.cargotracker.routing.domain.model.events.VoyageScheduleUpdatedEvent;
 import com.example.cargotracker.routing.infrastructure.persistence.AttentionItemMapper;
 import com.example.cargotracker.routing.infrastructure.persistence.VoyageMapper;
 import com.example.cargotracker.shared.testing.AbstractAxonIntegrationTest;
@@ -78,6 +79,30 @@ class ReplayIT extends AbstractAxonIntegrationTest {
         projection.on(event);
 
         assertThat(voyages.countAll(true, null, COUNTED_AT)).isEqualTo(before);
+        assertThat(voyages.findMovements(number)).hasSize(1);
+        assertThat(voyages.findAcceptedCargoTypes(number)).containsExactly("GENERAL");
+    }
+
+    @Test
+    @DisplayName("更新を読み直しても、いつ直したかは動かない")
+    void replayingUpdateKeepsUpdatedAt() {
+        // 「いつ直したか」を投影が現在時刻で書き直すと、読み直しのたびに値が動く。
+        // US25 の画面はこの値を「最終更新」として出すので、読み直した日時が
+        // 「直した日時」として利用者に見える。
+        String number = uniqueNumber("VU");
+        projection.on(voyage(number, "MOL EXPRESS"));
+        VoyageScheduleUpdatedEvent update = new VoyageScheduleUpdatedEvent(number, "MOL",
+                "商船三井", "MOL VOYAGER",
+                List.of(new VoyageScheduleUpdatedEvent.Movement("JPTYO", "USNYC", DEPART, ARRIVE)),
+                List.of("GENERAL"), "routing02", Instant.parse("2026-09-05T00:00:00Z"));
+
+        projection.on(update);
+        java.time.Instant first = voyages.findByNumber(number).updatedAt();
+        projection.on(update);
+
+        assertThat(voyages.findByNumber(number).updatedAt())
+                .as("読み直しで「いつ直したか」が現在時刻へ動いてはいけない")
+                .isEqualTo(first);
         assertThat(voyages.findMovements(number)).hasSize(1);
         assertThat(voyages.findAcceptedCargoTypes(number)).containsExactly("GENERAL");
     }

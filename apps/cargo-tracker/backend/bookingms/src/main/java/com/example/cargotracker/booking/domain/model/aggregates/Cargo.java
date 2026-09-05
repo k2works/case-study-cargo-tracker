@@ -40,6 +40,8 @@ public class Cargo {
     private String bookingId;
     private BookingStatus bookingStatus;
     private RoutingStatus routingStatus;
+    /** 受け付けたときの到着期限。修正で期限を触ったかどうかの判断に要る。 */
+    private LocalDate arrivalDeadline;
 
     @EntityCreator
     public Cargo() {
@@ -128,8 +130,11 @@ public class Cargo {
         if (!bookingStatus.canUpdateSpecification()) {
             throw new IllegalTransition("状態 " + bookingStatus + " の予約は修正できません");
         }
+        // **期限は「変えたときだけ」検査する。** 据え置きにも今日以降を求めると、
+        // 期限を過ぎた仮受付の予約は品名すら直せなくなる（誤りに気づくのは
+        // たいてい期限が近づいてからで、そのときには直せない）。
         validate(command.cargoSpecification(), command.routeSpecification(),
-                LocalDate.now(clock));
+                LocalDate.now(clock), arrivalDeadline);
 
         CargoSpecification spec = command.cargoSpecification();
         appender.append(new CargoSpecificationUpdatedEvent(
@@ -150,7 +155,8 @@ public class Cargo {
                         ? null : spec.temperatureRequirement().minCelsius(),
                 spec.temperatureRequirement() == null
                         ? null : spec.temperatureRequirement().maxCelsius(),
-                command.updatedBy()));
+                command.updatedBy(),
+                clock.instant()));
         return command.bookingId();
     }
 
@@ -162,12 +168,17 @@ public class Cargo {
             // 荷主の分からない予約は、通知も請求も宛先が無い。
             throw new BusinessRuleViolation("荷主 ID は必須です");
         }
-        validate(command.cargoSpecification(), command.routeSpecification(), today);
+        validate(command.cargoSpecification(), command.routeSpecification(), today, null);
     }
 
-    /** 受付と修正で同じ検査を通す。分けて書くと片方だけが古くなる。 */
+    /**
+     * 受付と修正で同じ検査を通す。分けて書くと片方だけが古くなる。
+     *
+     * <p>{@code currentDeadline} は据え置きを見分けるためのもの（受付では null）。
+     * 期限を動かさない修正は、その期限が過去でも通す。</p>
+     */
     private static void validate(CargoSpecification cargoSpecification,
-            RouteSpecification routeSpecification, LocalDate today) {
+            RouteSpecification routeSpecification, LocalDate today, LocalDate currentDeadline) {
         if (cargoSpecification == null) {
             throw new BusinessRuleViolation("貨物仕様は必須です");
         }
@@ -178,6 +189,9 @@ public class Cargo {
         //
         // **新規の受け付けでだけ検査する。** 復元（@EventSourcingHandler）では見ない。
         // 見ると、受け付けたあとに期限を過ぎた予約が読めなくなる。
+        if (routeSpecification.arrivalDeadline().equals(currentDeadline)) {
+            return;
+        }
         if (routeSpecification.arrivalDeadline().isBefore(today)) {
             throw new BusinessRuleViolation(
                     "到着期限が過去の日付です: " + routeSpecification.arrivalDeadline());
@@ -188,6 +202,7 @@ public class Cargo {
     void on(CargoSpecificationUpdatedEvent event) {
         // 状態は変わらない。仮受付のまま内容だけが差し替わる。
         this.bookingId = event.bookingId();
+        this.arrivalDeadline = event.arrivalDeadline();
     }
 
     @EventSourcingHandler
@@ -195,6 +210,7 @@ public class Cargo {
         this.bookingId = event.bookingId();
         this.bookingStatus = BookingStatus.PRELIMINARY;
         this.routingStatus = RoutingStatus.NOT_ROUTED;
+        this.arrivalDeadline = event.arrivalDeadline();
     }
 
     @EventSourcingHandler

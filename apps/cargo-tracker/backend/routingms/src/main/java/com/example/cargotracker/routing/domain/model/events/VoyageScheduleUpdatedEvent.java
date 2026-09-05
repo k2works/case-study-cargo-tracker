@@ -21,7 +21,10 @@ public record VoyageScheduleUpdatedEvent(
         String vesselName,
         List<Movement> movements,
         List<String> acceptedCargoTypes,
-        String updatedBy) {
+        String updatedBy,
+        // 直した時刻。投影が現在時刻で決めない。決めると、投影を読み直すたびに
+        // 「いつ直したか」が動き、読み直した日時が最終更新として画面に出る。
+        java.time.Instant updatedAt) {
 
     /** 航海内の港間移動。順序は並び順そのもの。 */
     public record Movement(

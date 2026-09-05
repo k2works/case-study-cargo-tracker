@@ -80,7 +80,8 @@ public class Voyage {
      * 判断を持ち、画面にも投影にも置かない。</p>
      */
     @CommandHandler
-    public void updateSchedule(UpdateVoyageScheduleCommand command, EventAppender appender) {
+    public void updateSchedule(UpdateVoyageScheduleCommand command, EventAppender appender,
+            java.time.Clock clock) {
         if (voyageNumber == null) {
             throw new IllegalTransition(
                     "航海 " + command.voyageNumber() + " は登録されていません");
@@ -101,7 +102,8 @@ public class Voyage {
                         .map(Voyage::toUpdatedMovement)
                         .toList(),
                 CargoType.resolveAcceptedNames(command.acceptedCargoTypes()),
-                command.updatedBy()));
+                command.updatedBy(),
+                clock.instant()));
     }
 
     private static VoyageRegisteredEvent.Movement toMovement(CarrierMovement movement) {

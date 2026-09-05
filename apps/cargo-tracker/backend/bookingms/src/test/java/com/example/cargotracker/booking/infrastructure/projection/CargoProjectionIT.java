@@ -260,7 +260,8 @@ class CargoProjectionIT extends AbstractAxonIntegrationTest {
         return new CargoSpecificationUpdatedEvent(bookingId, "JPTYO", "GBLON",
                 LocalDate.of(2026, Month.DECEMBER, 20), "HAZARDOUS",
                 new BigDecimal("1500.00"), new BigDecimal("130.00"), new BigDecimal("80.00"),
-                new BigDecimal("100.00"), 12, "塗料", "3", "UN1263", null, null, "sales02");
+                new BigDecimal("100.00"), 12, "塗料", "3", "UN1263", null, null, "sales02",
+                java.time.Instant.parse("2026-09-05T00:00:00Z"));
     }
 
     @Test
@@ -296,7 +297,8 @@ class CargoProjectionIT extends AbstractAxonIntegrationTest {
         projection.on(new CargoSpecificationUpdatedEvent(bookingId, "JPTYO", "USNYC",
                 LocalDate.of(2026, Month.DECEMBER, 1), "GENERAL",
                 new BigDecimal("1200.00"), new BigDecimal("120.00"), new BigDecimal("80.00"),
-                new BigDecimal("100.00"), 10, "自動車部品", null, null, null, null, "sales02"));
+                new BigDecimal("100.00"), 10, "自動車部品", null, null, null, null, "sales02",
+                java.time.Instant.parse("2026-09-05T01:00:00Z")));
 
         BookingView view = queries.handle(new FindBookingQuery(bookingId));
         assertThat(view.cargoType()).isEqualTo("GENERAL");

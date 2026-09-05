@@ -34,7 +34,12 @@ class VoyageTest {
     @BeforeEach
     void setUp() {
         EventSourcingConfigurer configurer = EventSourcingConfigurer.create()
-                .registerEntity(EventSourcedEntityModule.autodetected(String.class, Voyage.class));
+                .registerEntity(EventSourcedEntityModule.autodetected(String.class, Voyage.class))
+                // 「いつ直したか」は集約が時計から採ってイベントに載せる。固定しないと
+                // 期待するイベントを書けない（投影が現在時刻で決めると読み直しで動く）。
+                .componentRegistry(registry -> registry.registerComponent(
+                        java.time.Clock.class,
+                        c -> java.time.Clock.fixed(UPDATED_AT, java.time.ZoneOffset.UTC)));
         fixture = AxonTestFixture.with(configurer, c -> c.disableAxonServer());
     }
 
@@ -146,6 +151,8 @@ class VoyageTest {
                 .events(registered(List.of("GENERAL")));
     }
 
+    private static final Instant UPDATED_AT = Instant.parse("2026-09-05T00:00:00Z");
+
     private static final Instant DEPART_LATER = Instant.parse("2026-09-12T09:00:00Z");
     private static final Instant ARRIVE_LATER = Instant.parse("2026-09-26T18:00:00Z");
 
@@ -174,7 +181,7 @@ class VoyageTest {
                         "MOL EXPRESS",
                         List.of(new VoyageScheduleUpdatedEvent.Movement(
                                 "JPTYO", "USNYC", DEPART_LATER, ARRIVE_LATER)),
-                        List.of("GENERAL"), "routing01"));
+                        List.of("GENERAL"), "routing01", UPDATED_AT));
     }
 
     @Test
@@ -226,6 +233,6 @@ class VoyageTest {
                         "MOL EXPRESS",
                         List.of(new VoyageScheduleUpdatedEvent.Movement(
                                 "JPTYO", "USNYC", DEPART_LATER, ARRIVE_LATER)),
-                        List.of("GENERAL"), "routing01"));
+                        List.of("GENERAL"), "routing01", UPDATED_AT));
     }
 }

@@ -231,6 +231,28 @@ class VoyageProjectionIT extends AbstractAxonIntegrationTest {
     }
 
     @Test
+    @DisplayName("更新したあとに登録イベントを読み直しても、重複として記録しない")
+    void doesNotReportDuplicateAfterUpdate() {
+        // 投影を読み直すと、更新済みの行に対して登録イベントがもう一度届く。
+        // 行の中身は更新後のものなので「丸ごと比べる」は一致せず、そのままだと
+        // 「航海番号の重複」が偽で積まれる。経路設計者の要確認一覧には、
+        // 身に覚えのない警告だけが残る。
+        String number = uniqueNumber();
+        VoyageRegisteredEvent registration = registered(number, List.of("GENERAL"));
+        projection.on(registration);
+        projection.on(updated(number, List.of("GENERAL")));
+
+        projection.on(registration);
+
+        assertThat(attentionItems.findOpenByRole("ROLE_ROUTING"))
+                .as("読み直しは重複登録ではない")
+                .noneSatisfy(item -> assertThat(item.targetId()).isEqualTo(number));
+        assertThat(queries.handle(new FindVoyageQuery(number)).vesselName())
+                .as("読み直しで更新前の値へ巻き戻さない")
+                .isEqualTo("MOL VOYAGER");
+    }
+
+    @Test
     @DisplayName("US07: 出発地・目的地で絞れる")
     void filtersByPorts() {
         Instant future = clock.instant().plusSeconds(30 * 24 * 3600);
@@ -285,7 +307,7 @@ class VoyageProjectionIT extends AbstractAxonIntegrationTest {
                 List.of(new VoyageScheduleUpdatedEvent.Movement("JPTYO", "USNYC",
                         Instant.parse("2026-09-12T09:00:00Z"),
                         Instant.parse("2026-09-26T18:00:00Z"))),
-                cargoTypes, "routing02");
+                cargoTypes, "routing02", Instant.parse("2026-09-05T00:00:00Z"));
     }
 
     @Test

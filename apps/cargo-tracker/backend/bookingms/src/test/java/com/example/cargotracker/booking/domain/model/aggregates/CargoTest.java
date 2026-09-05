@@ -33,6 +33,10 @@ class CargoTest {
 
     private static final LocalDate DEADLINE = LocalDate.of(2026, Month.DECEMBER, 1);
 
+    /** 集約が「いつ直したか」を採る時計。固定しないと期待するイベントを書けない。 */
+    private static final java.time.Instant UPDATED_AT =
+            java.time.Instant.parse("2026-09-04T00:00:00Z");
+
     private AxonTestFixture fixture;
 
     @BeforeEach
@@ -312,7 +316,7 @@ class CargoTest {
                 .events(new CargoSpecificationUpdatedEvent("B-0001", "JPTYO", "USNYC", DEADLINE,
                         "GENERAL", new BigDecimal("1500"), new BigDecimal("130"),
                         new BigDecimal("80"), new BigDecimal("100"), 12, "自動車部品（訂正）",
-                        null, null, null, null, "sales02"));
+                        null, null, null, null, "sales02", UPDATED_AT));
     }
 
     @Test
@@ -353,6 +357,23 @@ class CargoTest {
     }
 
     @Test
+    @DisplayName("US32: 期限を過ぎた予約でも、期限を据え置けば中身を直せる")
+    void allowsUpdateOfExpiredBookingWhenDeadlineIsUnchanged() {
+        // 入力の誤りに気づくのはたいてい期限が近づいてから。据え置きにも
+        // 「今日以降」を求めると、期限を過ぎた仮受付は品名すら直せない。
+        LocalDate past = LocalDate.of(2026, Month.AUGUST, 1);
+        CargoBookedEvent bookedWithPastDeadline = new CargoBookedEvent("B-0001", "SHP-000001",
+                "JPTYO", "USNYC", past, "GENERAL", new BigDecimal("1200"),
+                new BigDecimal("120"), new BigDecimal("80"), new BigDecimal("100"), 10,
+                "自動車部品", null, null, null, null, "sales01");
+
+        fixture.given().event(bookedWithPastDeadline)
+                .when().command(update(corrected(),
+                        new RouteSpecification(Location.of("JPTYO"), Location.of("USNYC"), past)))
+                .then().success();
+    }
+
+    @Test
     @DisplayName("US32: 修正で到着期限を過去にはできない")
     void rejectsPastDeadlineOnUpdate() {
         fixture.given().event(booked())
@@ -361,6 +382,20 @@ class CargoTest {
                         LocalDate.of(2020, Month.JANUARY, 1))))
                 .then().exceptionSatisfies(e ->
                         assertThat(e.getMessage()).contains("到着期限"));
+    }
+
+    @Test
+    @DisplayName("US32: 危険物なら申告、冷凍なら温度条件が修正でも要る")
+    void updateKeepsTypeSpecificRequirements() {
+        // 受入基準 3 の本体。値オブジェクトが守っているが、修正の経路でも
+        // 同じ検査を通ることを最も安い場所で固定する。
+        assertThatThrownBy(() -> new CargoSpecification(CargoType.HAZARDOUS,
+                Weight.ofKilograms("100"), Dimensions.of("10", "10", "10"), 1, "塗料", null, null))
+                .hasMessageContaining("危険物申告");
+        assertThatThrownBy(() -> new CargoSpecification(CargoType.REFRIGERATED,
+                Weight.ofKilograms("100"), Dimensions.of("10", "10", "10"), 1, "冷凍食品",
+                null, null))
+                .hasMessageContaining("温度管理条件");
     }
 
     @Test
@@ -378,7 +413,7 @@ class CargoTest {
                 .events(new CargoSpecificationUpdatedEvent("B-0001", "JPTYO", "USNYC", DEADLINE,
                         "HAZARDOUS", new BigDecimal("100"), new BigDecimal("10"),
                         new BigDecimal("10"), new BigDecimal("10"), 1, "塗料",
-                        "3", "UN1263", null, null, "sales02"));
+                        "3", "UN1263", null, null, "sales02", UPDATED_AT));
     }
 
     @Test
@@ -394,7 +429,8 @@ class CargoTest {
                 .events(new CargoSpecificationUpdatedEvent("B-0001", "JPTYO", "USNYC", DEADLINE,
                         "REFRIGERATED", new BigDecimal("100"), new BigDecimal("10"),
                         new BigDecimal("10"), new BigDecimal("10"), 1, "冷凍食品",
-                        null, null, new BigDecimal("-20"), new BigDecimal("-5"), "sales02"));
+                        null, null, new BigDecimal("-20"), new BigDecimal("-5"),
+                        "sales02", UPDATED_AT));
     }
 
     @Test

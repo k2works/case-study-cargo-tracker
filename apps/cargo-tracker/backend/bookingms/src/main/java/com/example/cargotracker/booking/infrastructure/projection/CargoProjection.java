@@ -129,7 +129,9 @@ public class CargoProjection {
                 // 状態と受付日時は UPDATE 文が触らない。行の値をここで作り直すと、
                 // 受付日時が修正のたびに動く。
                 null, null, null, null,
-                now, event.updatedBy(), now, null));
+                // 「いつ直したか」はイベントが持つ。ここで現在時刻を書くと、
+                // 読み直しのたびに最終更新が動く。
+                event.updatedAt(), event.updatedBy(), now, null));
 
         if (updated == 0) {
             log.warn("修正を書ける予約が投影に無い: bookingId={}", event.bookingId());
