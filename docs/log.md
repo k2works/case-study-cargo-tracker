@@ -1,6 +1,10 @@
 # Docs Update Log
 
 ## 2026-09-05
+* **Update**: [retrospective-5](/development/cargo-tracker/retrospective-5.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_report-5](/development/cargo-tracker/iteration_report-5.md) を更新（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-5](/development/cargo-tracker/iteration_plan-5.md) を更新（claude-code/claude-opus-5）
 * **Creation**: [09-経路を設計する](/manual/09-経路を設計する.md) を作成（claude-code/claude-opus-5）。IT5 の S31 経路設計ワークベンチ
 * **Creation**: [ADR-0008 予約の修正内容は投影として持つ](/adr/cargo-tracker/0008-cargo-revision-as-a-projection.md) を作成（claude-code/claude-opus-5）。IT4 の「履歴テーブルは作らない」判断を改めた
 * **Creation**: [ADR-0007 経路探索の打ち切り](/adr/cargo-tracker/0007-route-search-cutoff.md) を作成（claude-code/claude-opus-5）
