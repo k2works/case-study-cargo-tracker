@@ -44,11 +44,13 @@ public interface CargoSummaryMapper {
      */
     @org.apache.ibatis.annotations.Update(
             "UPDATE cargo_summary SET booking_status = #{bookingStatus}, "
-            + "routing_status = #{routingStatus}, projected_at = #{projectedAt} "
+            + "routing_status = #{routingStatus}, "
+            + "routing_requested_at = #{requestedAt}, projected_at = #{projectedAt} "
             + "WHERE booking_id = #{bookingId}")
     int updateRoutingRequested(@Param("bookingId") String bookingId,
             @Param("bookingStatus") String bookingStatus,
             @Param("routingStatus") String routingStatus,
+            @Param("requestedAt") Instant requestedAt,
             @Param("projectedAt") Instant projectedAt);
 
     /**
@@ -124,6 +126,7 @@ public interface CargoSummaryMapper {
             String bookingStatus,
             String routingStatus,
             Instant bookedAt,
+            Instant routingRequestedAt,
             Instant projectedAt,
             String lastEventId) {
     }

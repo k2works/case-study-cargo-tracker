@@ -71,6 +71,8 @@ public class CargoProjection {
                 BookingStatus.PRELIMINARY.name(),
                 RoutingStatus.NOT_ROUTED.name(),
                 now,
+                // 引き渡しはまだ。受け付けた時点で入れると、放置の判断ができない。
+                null,
                 now,
                 null));
     }
@@ -87,10 +89,12 @@ public class CargoProjection {
      */
     @EventHandler
     public void on(RoutingRequestedEvent event) {
+        Instant now = clock.instant();
         int updated = cargos.updateRoutingRequested(event.bookingId(),
                 BookingStatus.ROUTE_PROPOSED.name(),
                 RoutingStatus.ROUTING_REQUESTED.name(),
-                clock.instant());
+                now,
+                now);
         if (updated == 0) {
             log.warn("経路設計の依頼を書ける予約が投影に無い: bookingId={}", event.bookingId());
         }

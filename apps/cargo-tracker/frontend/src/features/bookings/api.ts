@@ -26,6 +26,8 @@ export interface BookingView {
   readonly bookingStatus: string;
   readonly routingStatus: string;
   readonly bookedAt: string;
+  /** 経路設計者へ引き渡した日時（US06）。引き渡していなければ null。 */
+  readonly routingRequestedAt: string | null;
 }
 
 export interface BookCargoInput {

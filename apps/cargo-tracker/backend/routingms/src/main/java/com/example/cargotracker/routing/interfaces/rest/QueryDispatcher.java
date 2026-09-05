@@ -5,6 +5,7 @@ import com.example.cargotracker.shared.domain.error.IllegalTransition;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import org.axonframework.messaging.queryhandling.gateway.QueryGateway;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
@@ -31,6 +32,9 @@ public class QueryDispatcher {
 
     private final Gateway gateway;
 
+    // コンストラクタが 2 つあるので、どちらで組み立てるかを明示する。
+    // 明示しないと既定コンストラクタを探しに行き、起動時に落ちる。
+    @Autowired
     public QueryDispatcher(QueryGateway queryGateway) {
         this(queryGateway::query);
     }

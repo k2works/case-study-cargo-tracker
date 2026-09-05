@@ -12,6 +12,7 @@ import {
   TD,
   TH,
 } from '@/shared/ui/styles';
+import { formatBusinessDateTime } from '@/shared/api/businessDate';
 import { display } from '@/features/shippers/api';
 import { bookingStatusLabel, cargoTypeLabel } from '@/features/bookings/api';
 import { fetchRoutingWorklist } from './api';
@@ -82,6 +83,9 @@ export function RoutingWorklistPage() {
                 <th scope="col" className={TH}>荷主</th>
                 <th scope="col" className={TH}>出発地 → 目的地</th>
                 <th scope="col" className={TH}>到着期限</th>
+                {/* 一覧は到着期限が近い順なので、期限が遠い案件は下に沈む。
+                    引き渡しからどれだけ経ったかが読めないと放置に気づけない。 */}
+                <th scope="col" className={TH}>引き渡し</th>
                 <th scope="col" className={TH}>貨物</th>
                 <th scope="col" className={TH}>状態</th>
               </tr>
@@ -99,6 +103,11 @@ export function RoutingWorklistPage() {
                     {item.originUnLocode} → {item.destinationUnLocode}
                   </td>
                   <td className={TD}>{item.arrivalDeadline}</td>
+                  <td className={TD} data-testid={`routing-requested-at-${item.bookingId}`}>
+                    {item.routingRequestedAt
+                      ? formatBusinessDateTime(item.routingRequestedAt)
+                      : '—'}
+                  </td>
                   <td className={TD}>
                     {item.productName}（{cargoTypeLabel(item.cargoType)}）
                   </td>

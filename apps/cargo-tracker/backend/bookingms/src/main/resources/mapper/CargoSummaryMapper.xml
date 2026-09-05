@@ -28,6 +28,7 @@
             <arg column="booking_status" javaType="string"/>
             <arg column="routing_status" javaType="string"/>
             <arg column="booked_at" javaType="java.time.Instant"/>
+            <arg column="routing_requested_at" javaType="java.time.Instant"/>
             <arg column="projected_at" javaType="java.time.Instant"/>
             <arg column="last_event_id" javaType="string"/>
         </constructor>
@@ -98,12 +99,14 @@
              origin_unlocode, destination_unlocode, arrival_deadline, cargo_type, weight_kg,
              length_cm, width_cm, height_cm, quantity, product_name,
              hazard_imo_class, hazard_un_number, temperature_min_c, temperature_max_c,
-             booking_status, routing_status, booked_at, projected_at, last_event_id)
+             booking_status, routing_status, booked_at, routing_requested_at,
+             projected_at, last_event_id)
         VALUES (#{bookingId}, #{bookingNumber}, #{shipperId}, #{shipperName}, #{trackingNumber},
                 #{originUnlocode}, #{destinationUnlocode}, #{arrivalDeadline}, #{cargoType},
                 #{weightKg}, #{lengthCm}, #{widthCm}, #{heightCm}, #{quantity}, #{productName},
                 #{hazardImoClass}, #{hazardUnNumber}, #{temperatureMinC}, #{temperatureMaxC},
-                #{bookingStatus}, #{routingStatus}, #{bookedAt}, #{projectedAt}, #{lastEventId})
+                #{bookingStatus}, #{routingStatus}, #{bookedAt}, #{routingRequestedAt},
+                #{projectedAt}, #{lastEventId})
         ON CONFLICT (booking_id) DO NOTHING
     </insert>
 </mapper>

@@ -56,6 +56,7 @@ function booking(over: Record<string, unknown> = {}) {
     bookingStatus: 'ROUTE_PROPOSED',
     routingStatus: 'ROUTING_REQUESTED',
     bookedAt: '2026-09-03T01:00:00Z',
+    routingRequestedAt: '2026-09-03T02:30:00Z',
     ...over,
   };
 }
@@ -224,6 +225,33 @@ describe('S30 経路設計作業一覧', () => {
     renderAt('/routing/worklist', <RoutingWorklistPage />);
 
     expect(await screen.findByText('誤配')).toBeInTheDocument();
+  });
+
+  it('いつ引き渡されたかが行から読める', async () => {
+    // 一覧は到着期限が近い順。期限が遠い案件は下に沈むので、引き渡しから
+    // どれだけ経ったかが読めないと放置に気づけない（IT3 レビュー R.4）。
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ items: [booking()], total: 1 }), { status: 200 }),
+    );
+
+    renderAt('/routing/worklist', <RoutingWorklistPage />);
+
+    expect(await screen.findByRole('columnheader', { name: '引き渡し' })).toBeInTheDocument();
+    expect(screen.getByText('2026/09/03 11:30')).toBeInTheDocument();
+  });
+
+  it('引き渡し前の予約は引き渡し日時を空欄にする', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({ items: [booking({ routingRequestedAt: null })], total: 1 }),
+        { status: 200 },
+      ),
+    );
+
+    renderAt('/routing/worklist', <RoutingWorklistPage />);
+
+    expect(await screen.findByText('B-2026-0903-0001')).toBeInTheDocument();
+    expect(screen.getByTestId('routing-requested-at-b-1')).toHaveTextContent('—');
   });
 
   it('航海スケジュール一覧へ行ける', async () => {

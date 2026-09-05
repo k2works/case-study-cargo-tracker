@@ -65,7 +65,10 @@ public final class BookingQueries {
             BigDecimal temperatureMaxC,
             String bookingStatus,
             String routingStatus,
-            Instant bookedAt) {
+            Instant bookedAt,
+            // 経路設計者へ引き渡した日時（US06）。引き渡していなければ null。
+            // 期限が遠い案件が S30 の下に沈んで放置されたことに気づく手立て。
+            Instant routingRequestedAt) {
     }
 
     public record BookingListView(List<BookingView> items, int total) {

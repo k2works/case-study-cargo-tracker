@@ -177,6 +177,21 @@ class CargoProjectionIT extends AbstractAxonIntegrationTest {
         assertThat(view.routingStatus()).isEqualTo("ROUTING_REQUESTED");
         assertThat(queries.handle(new FindRoutingWorklistQuery(0, 200, false)).items())
                 .extracting(BookingView::bookingId).contains(bookingId);
+        assertThat(view.routingRequestedAt())
+                .as("いつ引き渡されたかが読めないと、期限が遠く放置された案件が"
+                        + "一覧の下に埋もれたまま気づかれない（IT3 レビュー R.4）")
+                .isNotNull();
+    }
+
+    @Test
+    @DisplayName("引き渡していない予約に引き渡し日時は入らない")
+    void hasNoRoutingRequestedAtBeforeHandover() {
+        String bookingId = "B-NOWL-" + System.nanoTime();
+        projection.on(booked(bookingId, "SHP-NOWL", "自動車部品"));
+
+        assertThat(queries.handle(new FindBookingQuery(bookingId)).routingRequestedAt())
+                .as("受け付けただけで日時が入ると、放置の判断ができない")
+                .isNull();
     }
 
     @Test
