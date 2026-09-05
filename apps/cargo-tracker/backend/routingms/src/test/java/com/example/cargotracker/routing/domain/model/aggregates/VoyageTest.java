@@ -3,6 +3,9 @@ package com.example.cargotracker.routing.domain.model.aggregates;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.cargotracker.routing.domain.model.commands.RegisterVoyageCommand;
+import com.example.cargotracker.routing.domain.model.commands.UpdateVoyageScheduleCommand;
+import com.example.cargotracker.routing.domain.model.events.VoyageCancelledEvent;
+import com.example.cargotracker.routing.domain.model.events.VoyageScheduleUpdatedEvent;
 import com.example.cargotracker.routing.domain.model.events.VoyageRegisteredEvent;
 import com.example.cargotracker.routing.domain.model.valueobjects.CargoType;
 import com.example.cargotracker.routing.domain.model.valueobjects.Carrier;
@@ -20,7 +23,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-/** Voyage 集約の不変条件（domain-model.md「Voyage 集約の不変条件」1・4）。 */
+/** Voyage 集約の不変条件（domain-model.md「Voyage 集約の不変条件」1・4・5）。 */
 class VoyageTest {
 
     private static final Instant DEPART = Instant.parse("2026-09-10T09:00:00Z");
@@ -141,5 +144,88 @@ class VoyageTest {
                 .when().command(register(null))
                 .then().success()
                 .events(registered(List.of("GENERAL")));
+    }
+
+    private static final Instant DEPART_LATER = Instant.parse("2026-09-12T09:00:00Z");
+    private static final Instant ARRIVE_LATER = Instant.parse("2026-09-26T18:00:00Z");
+
+    private static Schedule delayedSchedule() {
+        return new Schedule(List.of(new CarrierMovement(
+                Location.of("JPTYO"), Location.of("USNYC"), DEPART_LATER, ARRIVE_LATER)));
+    }
+
+    private static UpdateVoyageScheduleCommand update(Schedule schedule,
+            Set<CargoType> cargoTypes) {
+        return new UpdateVoyageScheduleCommand("V-MOL-001",
+                new Carrier("MOL", "商船三井"),
+                new VesselName("MOL EXPRESS"),
+                schedule,
+                cargoTypes,
+                "routing01");
+    }
+
+    @Test
+    @DisplayName("US25: 登録済みの航海はスケジュールを更新できる")
+    void updatesSchedule() {
+        fixture.given().event(registered(List.of("GENERAL")))
+                .when().command(update(delayedSchedule(), Set.of(CargoType.GENERAL)))
+                .then().success()
+                .events(new VoyageScheduleUpdatedEvent("V-MOL-001", "MOL", "商船三井",
+                        "MOL EXPRESS",
+                        List.of(new VoyageScheduleUpdatedEvent.Movement(
+                                "JPTYO", "USNYC", DEPART_LATER, ARRIVE_LATER)),
+                        List.of("GENERAL"), "routing01"));
+    }
+
+    @Test
+    @DisplayName("登録していない航海は更新できない")
+    void rejectsUpdateOfUnknownVoyage() {
+        // 空のまま復元された集約に更新を通すと、登録を経ていない航海が
+        // イベントだけで生まれる。
+        fixture.given().noPriorActivity()
+                .when().command(update(delayedSchedule(), Set.of(CargoType.GENERAL)))
+                .then().exceptionSatisfies(e ->
+                        assertThat(e.getMessage()).contains("登録されていません"));
+    }
+
+    @Test
+    @DisplayName("不変条件 5: キャンセル済みの航海は更新できない")
+    void rejectsUpdateOfCancelledVoyage() {
+        fixture.given().events(registered(List.of("GENERAL")),
+                        new VoyageCancelledEvent("V-MOL-001", "運航中止", "routing01"))
+                .when().command(update(delayedSchedule(), Set.of(CargoType.GENERAL)))
+                .then().exceptionSatisfies(e ->
+                        assertThat(e.getMessage()).contains("キャンセル"));
+    }
+
+    @Test
+    @DisplayName("更新は登録と同じ検査を通る")
+    void updateIsValidatedLikeRegistration() {
+        // 「登録では断るのに更新では通る」を作らない。検査を 2 か所に書くと必ずずれる。
+        fixture.given().event(registered(List.of("GENERAL")))
+                .when().command(new UpdateVoyageScheduleCommand("V-MOL-001", null,
+                        new VesselName("MOL EXPRESS"), delayedSchedule(), Set.of(), "routing01"))
+                .then().exceptionSatisfies(e ->
+                        assertThat(e.getMessage()).contains("運送会社は必須です"));
+
+        fixture.given().event(registered(List.of("GENERAL")))
+                .when().command(new UpdateVoyageScheduleCommand("V-MOL-001",
+                        new Carrier("MOL", "商船三井"), null, delayedSchedule(), Set.of(),
+                        "routing01"))
+                .then().exceptionSatisfies(e ->
+                        assertThat(e.getMessage()).contains("船名は必須です"));
+    }
+
+    @Test
+    @DisplayName("更新でも対応貨物種別を選ばないと一般貨物のみになる")
+    void updateDefaultsToGeneral() {
+        fixture.given().event(registered(List.of("GENERAL", "HAZARDOUS")))
+                .when().command(update(delayedSchedule(), Set.of()))
+                .then().success()
+                .events(new VoyageScheduleUpdatedEvent("V-MOL-001", "MOL", "商船三井",
+                        "MOL EXPRESS",
+                        List.of(new VoyageScheduleUpdatedEvent.Movement(
+                                "JPTYO", "USNYC", DEPART_LATER, ARRIVE_LATER)),
+                        List.of("GENERAL"), "routing01"));
     }
 }

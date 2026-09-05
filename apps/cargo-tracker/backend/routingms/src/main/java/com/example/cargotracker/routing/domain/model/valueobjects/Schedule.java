@@ -26,14 +26,17 @@ public record Schedule(List<CarrierMovement> movements) {
             CarrierMovement previous = movements.get(i - 1);
             CarrierMovement current = movements.get(i);
             if (!previous.arrival().equals(current.departure())) {
+                // どの区間かを言う。5 区間の航海で「繋がっていません」とだけ出ても、
+                // どこを直すか分からない（IT3 レビュー）。番号は入力欄と同じ 1 始まり。
                 throw new BusinessRuleViolation(
-                        "寄港地が繋がっていません: " + previous.arrival().unLocode().value()
+                        (i + 1) + " 区間目の寄港地が繋がっていません: "
+                                + previous.arrival().unLocode().value()
                                 + " に着いたあと " + current.departure().unLocode().value()
                                 + " から出ることはできません");
             }
             if (current.departureTime().isBefore(previous.arrivalTime())) {
                 throw new BusinessRuleViolation(
-                        "寄港地の時刻が前後しています: " + previous.arrivalTime()
+                        (i + 1) + " 区間目の寄港地の時刻が前後しています: " + previous.arrivalTime()
                                 + " に着く前の " + current.departureTime() + " に出ることはできません");
             }
         }

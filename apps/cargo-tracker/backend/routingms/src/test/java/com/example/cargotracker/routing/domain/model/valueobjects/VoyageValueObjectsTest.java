@@ -63,6 +63,23 @@ class VoyageValueObjectsTest {
     }
 
     @Test
+    @DisplayName("整合性のエラーはどの区間かを示す")
+    void scheduleErrorsPointAtTheMovement() {
+        // 5 区間の航海で「到着日時は出発日時より後に」とだけ出ても、どこを直すか
+        // 分からない（IT3 レビュー）。区間番号は入力欄の並びと同じ 1 始まり。
+        assertThatThrownBy(() -> new Schedule(List.of(
+                movement("JPTYO", "SGSIN", T0, T1),
+                movement("SGSIN", "USNYC", T1, T2),
+                movement("GBLON", "FRPAR", T2, T3))))
+                .hasMessageContaining("3 区間目");
+
+        assertThatThrownBy(() -> new Schedule(List.of(
+                movement("JPTYO", "SGSIN", T2, T3),
+                movement("SGSIN", "USNYC", T0, T1))))
+                .hasMessageContaining("2 区間目");
+    }
+
+    @Test
     @DisplayName("寄港地は 1 件以上")
     void scheduleNeedsAtLeastOneMovement() {
         assertThatThrownBy(() -> new Schedule(List.of()))
