@@ -42,7 +42,7 @@ class VoyageControllerTest {
     void setUp() {
         commands = mock(CommandGateway.class);
         queries = mock(QueryGateway.class);
-        controller = new VoyageController(commands, queries);
+        controller = new VoyageController(commands, new QueryDispatcher(queries));
     }
 
     private static RegisterVoyageRequest request(List<String> cargoTypes) {

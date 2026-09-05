@@ -16,9 +16,7 @@ import com.example.cargotracker.booking.interfaces.rest.dto.ShipperDtos.Register
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 import org.axonframework.messaging.commandhandling.gateway.CommandGateway;
-import org.axonframework.messaging.queryhandling.gateway.QueryGateway;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -33,13 +31,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/booking/shippers")
 public class ShipperController {
 
-    private static final long QUERY_TIMEOUT_SECONDS = 5;
 
     private final CommandGateway commandGateway;
-    private final QueryGateway queryGateway;
-    public ShipperController(CommandGateway commandGateway, QueryGateway queryGateway) {
+    private final QueryDispatcher queries;
+    public ShipperController(CommandGateway commandGateway, QueryDispatcher queries) {
         this.commandGateway = commandGateway;
-        this.queryGateway = queryGateway;
+        this.queries = queries;
     }
 
     @PostMapping
@@ -51,7 +48,7 @@ public class ShipperController {
         // 答えていれば通す。同時登録のレースでは素通りするため、2 段目（投影の
         // UNIQUE）と 3 段目（要確認一覧）が本当の砦になる。
         if (!request.duplicateAcknowledged()
-                && Boolean.TRUE.equals(query(new ExistsShipperEmailQuery(email.value()), Boolean.class))) {
+                && Boolean.TRUE.equals(queries.query(new ExistsShipperEmailQuery(email.value()), Boolean.class))) {
             throw new DuplicateShipperEmailException(email.value());
         }
 
@@ -96,7 +93,7 @@ public class ShipperController {
      */
     @GetMapping("/{shipperId}")
     public ResponseEntity<?> find(@PathVariable String shipperId) {
-        ShipperView view = query(new FindShipperQuery(shipperId), ShipperView.class);
+        ShipperView view = queries.query(new FindShipperQuery(shipperId), ShipperView.class);
         if (view == null) {
             return ResponseEntity.accepted()
                     .body(new PendingResponse(shipperId, "登録を受け付けました。反映までしばらくお待ちください"));
@@ -108,18 +105,7 @@ public class ShipperController {
     public ShipperListView list(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
-        return query(new FindShippersQuery(page, size), ShipperListView.class);
-    }
-
-    private <R> R query(Object query, Class<R> responseType) {
-        try {
-            return queryGateway.query(query, responseType).get(QUERY_TIMEOUT_SECONDS, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException("問い合わせが中断されました", e);
-        } catch (Exception e) {
-            throw new IllegalStateException("問い合わせに失敗しました", e);
-        }
+        return queries.query(new FindShippersQuery(page, size), ShipperListView.class);
     }
 
     /** メールアドレスが既に使われている（409）。 */

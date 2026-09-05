@@ -21,9 +21,7 @@ import java.net.URI;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import org.axonframework.messaging.commandhandling.gateway.CommandGateway;
-import org.axonframework.messaging.queryhandling.gateway.QueryGateway;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -39,14 +37,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/routing/voyages")
 public class VoyageController {
 
-    private static final long QUERY_TIMEOUT_SECONDS = 5;
-
     private final CommandGateway commandGateway;
-    private final QueryGateway queryGateway;
+    private final QueryDispatcher queries;
 
-    public VoyageController(CommandGateway commandGateway, QueryGateway queryGateway) {
+    public VoyageController(CommandGateway commandGateway, QueryDispatcher queries) {
         this.commandGateway = commandGateway;
-        this.queryGateway = queryGateway;
+        this.queries = queries;
     }
 
     @PostMapping
@@ -76,7 +72,7 @@ public class VoyageController {
      */
     @GetMapping("/{voyageNumber}")
     public ResponseEntity<?> find(@PathVariable String voyageNumber) {
-        VoyageView view = query(new FindVoyageQuery(voyageNumber), VoyageView.class);
+        VoyageView view = queries.query(new FindVoyageQuery(voyageNumber), VoyageView.class);
         if (view == null) {
             return ResponseEntity.accepted().body(new PendingResponse(
                     voyageNumber, "登録を受け付けました。反映までしばらくお待ちください"));
@@ -90,7 +86,7 @@ public class VoyageController {
             @RequestParam(defaultValue = "50") int size,
             @RequestParam(defaultValue = "false") boolean includeFinished,
             @RequestParam(required = false) String cargoType) {
-        return ResponseEntity.ok(query(
+        return ResponseEntity.ok(queries.query(
                 new FindVoyagesQuery(page, size, includeFinished, normalize(cargoType)),
                 VoyageListView.class));
     }
@@ -141,14 +137,4 @@ public class VoyageController {
         return types;
     }
 
-    private <T> T query(Object query, Class<T> type) {
-        try {
-            return queryGateway.query(query, type).get(QUERY_TIMEOUT_SECONDS, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException("問い合わせが中断されました", e);
-        } catch (Exception e) {
-            throw new IllegalStateException("問い合わせに失敗しました", e);
-        }
-    }
 }
