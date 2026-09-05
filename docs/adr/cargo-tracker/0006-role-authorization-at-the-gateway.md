@@ -4,7 +4,7 @@ title: "ADR-0006 ロールの認可を Gateway の 1 か所で宣言する"
 description: "経路ごとに許すロールを Gateway の宣言表（RoleAuthorization）で定め、そこで通らないものは後段へ渡さない。"
 tags: [adr]
 status: draft
-generated: { by: claude-code/claude-opus-5, at: 2026-09-04T12:39:20Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-05T01:40:00Z }
 ---
 
 # ADR-0006 ロールの認可を Gateway の 1 か所で宣言する
