@@ -54,6 +54,16 @@ public interface CargoSummaryMapper {
             @Param("projectedAt") Instant projectedAt);
 
     /**
+     * 仮受付の予約情報の修正を投影に反映する（US32）。
+     *
+     * <p>付帯情報（危険物申告・温度条件）も含めて<b>丸ごと書き換える</b>。残すと、
+     * 一般貨物に直したのに危険物申告が付いたままの行ができる。</p>
+     *
+     * <p>戻り値で「書けたか」を見る。0 なら投影にその予約が無い。</p>
+     */
+    int updateSpecification(CargoSummaryRow row);
+
+    /**
      * 経路設計作業一覧（S30）。
      *
      * <p>並び順は<b>誤配が先、そのあと到着期限が近い順</b>（ui_design.md）。誤配は
@@ -127,6 +137,8 @@ public interface CargoSummaryMapper {
             String routingStatus,
             Instant bookedAt,
             Instant routingRequestedAt,
+            Instant updatedAt,
+            String updatedBy,
             Instant projectedAt,
             String lastEventId) {
     }

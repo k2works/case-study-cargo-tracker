@@ -59,6 +59,6 @@ public class BookingQueryHandler {
                 row.quantity(), row.productName(), row.hazardImoClass(), row.hazardUnNumber(),
                 row.temperatureMinC(), row.temperatureMaxC(),
                 row.bookingStatus(), row.routingStatus(), row.bookedAt(),
-                row.routingRequestedAt());
+                row.routingRequestedAt(), row.updatedAt(), row.updatedBy());
     }
 }

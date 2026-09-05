@@ -21,6 +21,11 @@ import org.springframework.util.AntPathMatcher;
  *
  * <p>表示ロールの正典は {@code ui_design.md} の画面一覧である。ここはその画面が
  * 使う API に翻訳したもので、画面より広くしない。</p>
+ *
+ * <p><b>宣言はメソッドも見る（IT4）。</b> 同じ経路でも読みと書きで許すロールが違う。
+ * 予約詳細（{@code GET /bookings/{id}}）は営業・経路設計・追跡が読むが、修正
+ * （{@code PUT /bookings/{id}}）は営業だけである（US32）。経路だけで宣言すると、
+ * 読める人が全員書けることになる。</p>
  */
 public final class RoleAuthorization {
 
@@ -38,14 +43,28 @@ public final class RoleAuthorization {
 
     private static final AntPathMatcher MATCHER = new AntPathMatcher();
 
-    /**
-     * 経路パターン → 許すロール。**上から順に、最初に当たったものを使う**ので、
-     * 細かい経路を先に置く（{@code /bookings/routing-worklist} は
-     * {@code /bookings/**} より前）。
-     */
-    private static final Map<String, Set<String>> RULES = rules();
+    /** どのメソッドにも当てはまる宣言。 */
+    private static final String ANY_METHOD = "*";
 
-    private static Map<String, Set<String>> rules() {
+    /**
+     * 経路の宣言 1 件。メソッドを絞らないときは {@link #ANY_METHOD}。
+     */
+    private record Rule(String method, String pattern, Set<String> allowed) {
+
+        boolean matches(String requestMethod, String path) {
+            return (ANY_METHOD.equals(method) || method.equalsIgnoreCase(requestMethod))
+                    && MATCHER.match(pattern, path);
+        }
+    }
+
+    /**
+     * 宣言の並び。**上から順に、最初に当たったものを使う**ので、細かいものを先に置く
+     * （{@code /bookings/routing-worklist} は {@code /bookings/**} より前、
+     * {@code PUT /bookings/*} は経路だけの宣言より前）。
+     */
+    private static final List<Rule> RULES = rules();
+
+    private static List<Rule> rules() {
         Map<String, Set<String>> rules = new LinkedHashMap<>();
 
         // 認証そのもの。ログインは公開経路（PUBLIC_PATHS）なのでここには要らない。
@@ -68,7 +87,7 @@ public final class RoleAuthorization {
         rules.put("/api/v1/booking/bookings/routing-worklist", Set.of(ROUTING));
         rules.put("/api/v1/booking/bookings/*/routing-request", Set.of(SALES));
 
-        // 予約（S20 / S21）は営業・経路設計・追跡。
+        // 予約（S20 / S21）は営業・経路設計・追跡が読む。
         rules.put("/api/v1/booking/bookings/**", Set.of(SALES, ROUTING, TRACKER));
         rules.put("/api/v1/booking/bookings", Set.of(SALES, ROUTING, TRACKER));
 
@@ -76,18 +95,27 @@ public final class RoleAuthorization {
         rules.put("/api/v1/routing/voyages/**", Set.of(ROUTING));
         rules.put("/api/v1/routing/voyages", Set.of(ROUTING));
 
-        // Map.copyOf にしない。順序が失われると「細かい経路を先に」が壊れる。
-        return java.util.Collections.unmodifiableMap(rules);
+        List<Rule> ordered = new java.util.ArrayList<>();
+        // メソッドを絞る宣言を先に置く。後ろに置くと、経路だけの宣言に吸われる
+        // （予約の修正（US32）は営業だけだが、参照は経路設計・追跡にも開く）。
+        ordered.add(new Rule("PUT", "/api/v1/booking/bookings/*", Set.of(SALES)));
+        rules.forEach((pattern, allowed) -> ordered.add(new Rule(ANY_METHOD, pattern, allowed)));
+        return List.copyOf(ordered);
     }
 
     /** その経路に宣言があるか。無ければ通さない。 */
     public static boolean isDeclared(String path) {
-        return matching(path).isPresent();
+        return matching(ANY_METHOD, path).isPresent();
+    }
+
+    /** 宣言されたロールのどれかを持っているか（メソッドを見ない従来の形）。 */
+    public static boolean isAllowed(String path, List<String> roles) {
+        return isAllowed("GET", path, roles);
     }
 
     /** 宣言されたロールのどれかを持っているか。 */
-    public static boolean isAllowed(String path, List<String> roles) {
-        return matching(path)
+    public static boolean isAllowed(String method, String path, List<String> roles) {
+        return matching(method, path)
                 .map(allowed -> allowed.equals(ANY_AUTHENTICATED)
                         || roles.stream().anyMatch(allowed::contains))
                 .orElse(false);
@@ -96,11 +124,16 @@ public final class RoleAuthorization {
     /**
      * 最初に当たった宣言。**空の集合を返さない。** 「宣言が無い」と
      * 「宣言はあるが誰も許さない」は意味が違い、前者は通さない側に倒す。
+     *
+     * <p>{@link #ANY_METHOD} を渡した場合は「どれかのメソッドに宣言があるか」を見る。
+     * 経路の存在を確かめる用途（{@link #isDeclared}）にだけ使う。</p>
      */
-    private static Optional<Set<String>> matching(String path) {
-        for (Map.Entry<String, Set<String>> entry : RULES.entrySet()) {
-            if (MATCHER.match(entry.getKey(), path)) {
-                return Optional.of(entry.getValue());
+    private static Optional<Set<String>> matching(String method, String path) {
+        for (Rule rule : RULES) {
+            if (ANY_METHOD.equals(method)
+                    ? MATCHER.match(rule.pattern(), path)
+                    : rule.matches(method, path)) {
+                return Optional.of(rule.allowed());
             }
         }
         return Optional.empty();
@@ -108,6 +141,6 @@ public final class RoleAuthorization {
 
     /** 宣言している経路パターン（検査が空振りしていないことの確認に使う）。 */
     public static List<String> declaredPatterns() {
-        return List.copyOf(RULES.keySet());
+        return RULES.stream().map(Rule::pattern).distinct().toList();
     }
 }

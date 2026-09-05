@@ -2,6 +2,7 @@ package com.example.cargotracker.booking.interfaces.rest;
 
 import com.example.cargotracker.booking.domain.model.commands.BookCargoCommand;
 import com.example.cargotracker.booking.domain.model.commands.RequestRoutingCommand;
+import com.example.cargotracker.booking.domain.model.commands.UpdateCargoSpecificationCommand;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoSpecification;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;
 import com.example.cargotracker.booking.domain.model.valueobjects.Dimensions;
@@ -16,6 +17,8 @@ import com.example.cargotracker.booking.infrastructure.query.BookingQueries.Coun
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingsQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindRoutingWorklistQuery;
+import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos;
+import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos.BookCargoRequest;
 import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos.BookCargoResponse;
 import com.example.cargotracker.booking.interfaces.rest.dto.ShipperDtos.PendingResponse;
@@ -29,6 +32,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -66,6 +70,28 @@ public class BookingController {
 
         return ResponseEntity.created(URI.create("/api/v1/booking/bookings/" + bookingId))
                 .body(new BookCargoResponse(bookingId));
+    }
+
+    /**
+     * 仮受付の予約情報を修正する（US32）。
+     *
+     * <p>修正できる状態かは集約が遷移表の述語で判断する。ここで先に問い合わせて
+     * 分岐すると、同じ判断が 2 か所になって片方が古くなる。</p>
+     */
+    @PutMapping("/{bookingId}")
+    public ResponseEntity<BookCargoResponse> update(@PathVariable String bookingId,
+            @Valid @RequestBody BookingDtos.UpdateBookingRequest request,
+            @RequestHeader(name = "X-Auth-Username", required = false) String username) {
+        commandGateway.sendAndWait(new UpdateCargoSpecificationCommand(
+                bookingId,
+                cargoSpecification(request),
+                new RouteSpecification(
+                        Location.of(request.originUnLocode()),
+                        Location.of(request.destinationUnLocode()),
+                        request.arrivalDeadline()),
+                username));
+
+        return ResponseEntity.ok(new BookCargoResponse(bookingId));
     }
 
     /**
@@ -147,9 +173,9 @@ public class BookingController {
      * <p>空文字は「入力していない」として {@code null} に寄せる。空文字のまま渡すと、
      * 「危険物申告がある」と判断されて集約の検査を素通りする。</p>
      */
-    private static CargoSpecification cargoSpecification(BookCargoRequest request) {
+    private static CargoSpecification cargoSpecification(BookingDtos.CargoFields request) {
         return new CargoSpecification(
-                CargoType.valueOf(request.cargoType()),
+                cargoType(request.cargoType()),
                 new Weight(request.weightKg()),
                 new Dimensions(request.lengthCm(), request.widthCm(), request.heightCm()),
                 request.quantity(),
@@ -162,6 +188,21 @@ public class BookingController {
                         ? null
                         : new TemperatureRequirement(request.temperatureMinC(),
                                 request.temperatureMaxC()));
+    }
+
+    /**
+     * 知らない貨物種別を素の例外にしない。
+     *
+     * <p>{@code CargoType.valueOf} の {@code IllegalArgumentException} は
+     * {@code ApiExceptionHandler} の対象外なので 500 に化ける。入力の誤りは
+     * 業務規則違反として 422 で返す。</p>
+     */
+    private static CargoType cargoType(String name) {
+        try {
+            return CargoType.valueOf(name);
+        } catch (IllegalArgumentException e) {
+            throw new BusinessRuleViolation("知らない貨物種別です: " + name);
+        }
     }
 
     private static boolean blank(String value) {

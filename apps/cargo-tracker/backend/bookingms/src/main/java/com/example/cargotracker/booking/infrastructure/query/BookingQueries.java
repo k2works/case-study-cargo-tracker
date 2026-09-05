@@ -68,7 +68,10 @@ public final class BookingQueries {
             Instant bookedAt,
             // 経路設計者へ引き渡した日時（US06）。引き渡していなければ null。
             // 期限が遠い案件が S30 の下に沈んで放置されたことに気づく手立て。
-            Instant routingRequestedAt) {
+            Instant routingRequestedAt,
+            // 最終更新（US32）。変更内容の履歴は Event Store が持つ。
+            Instant updatedAt,
+            String updatedBy) {
     }
 
     public record BookingListView(List<BookingView> items, int total) {

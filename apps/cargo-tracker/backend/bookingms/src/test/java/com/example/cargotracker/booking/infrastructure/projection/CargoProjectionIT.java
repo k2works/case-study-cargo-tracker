@@ -3,6 +3,7 @@ package com.example.cargotracker.booking.infrastructure.projection;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
+import com.example.cargotracker.booking.domain.model.events.CargoSpecificationUpdatedEvent;
 import com.example.cargotracker.booking.domain.model.events.RoutingRequestedEvent;
 import com.example.cargotracker.booking.infrastructure.persistence.CargoSummaryMapper;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.BookingListView;
@@ -37,6 +38,10 @@ class CargoProjectionIT extends AbstractAxonIntegrationTest {
 
     @Autowired
     private BookingQueryHandler queries;
+
+    @Autowired
+    private com.example.cargotracker.booking.infrastructure.persistence.AttentionItemMapper
+            attentionItems;
 
     @Autowired
     private CargoSummaryMapper cargos;
@@ -249,5 +254,68 @@ class CargoProjectionIT extends AbstractAxonIntegrationTest {
                 "GENERAL", new BigDecimal("1200"), new BigDecimal("120"),
                 new BigDecimal("80"), new BigDecimal("100"), 10, "自動車部品",
                 null, null, null, null, "sales01");
+    }
+
+    private static CargoSpecificationUpdatedEvent corrected(String bookingId) {
+        return new CargoSpecificationUpdatedEvent(bookingId, "JPTYO", "GBLON",
+                LocalDate.of(2026, Month.DECEMBER, 20), "HAZARDOUS",
+                new BigDecimal("1500.00"), new BigDecimal("130.00"), new BigDecimal("80.00"),
+                new BigDecimal("100.00"), 12, "塗料", "3", "UN1263", null, null, "sales02");
+    }
+
+    @Test
+    @DisplayName("US32: 修正が投影に反映され、最終更新が残る")
+    void appliesSpecificationUpdate() {
+        String bookingId = "B-UPD-" + System.nanoTime();
+        projection.on(booked(bookingId, "SHP-UPD", "自動車部品"));
+
+        projection.on(corrected(bookingId));
+
+        BookingView view = queries.handle(new FindBookingQuery(bookingId));
+        assertThat(view.productName()).isEqualTo("塗料");
+        assertThat(view.cargoType()).isEqualTo("HAZARDOUS");
+        assertThat(view.hazardImoClass()).isEqualTo("3");
+        assertThat(view.destinationUnLocode()).isEqualTo("GBLON");
+        assertThat(view.arrivalDeadline()).isEqualTo(LocalDate.of(2026, Month.DECEMBER, 20));
+        assertThat(view.updatedAt()).isNotNull();
+        assertThat(view.updatedBy()).isEqualTo("sales02");
+        assertThat(view.bookingStatus())
+                .as("修正で状態は動かない。仮受付のまま内容だけが差し替わる")
+                .isEqualTo("PRELIMINARY");
+    }
+
+    @Test
+    @DisplayName("US32: 一般貨物へ直すと危険物の申告は残らない")
+    void clearsExtrasWhenTypeChanges() {
+        // 上書きせずに残すと、一般貨物なのに危険物申告が付いた行になり、
+        // 経路設計が「危険物対応の航海だけ」に絞るべきか判断できない。
+        String bookingId = "B-UPD2-" + System.nanoTime();
+        projection.on(booked(bookingId, "SHP-UPD", "自動車部品"));
+        projection.on(corrected(bookingId));
+
+        projection.on(new CargoSpecificationUpdatedEvent(bookingId, "JPTYO", "USNYC",
+                LocalDate.of(2026, Month.DECEMBER, 1), "GENERAL",
+                new BigDecimal("1200.00"), new BigDecimal("120.00"), new BigDecimal("80.00"),
+                new BigDecimal("100.00"), 10, "自動車部品", null, null, null, null, "sales02"));
+
+        BookingView view = queries.handle(new FindBookingQuery(bookingId));
+        assertThat(view.cargoType()).isEqualTo("GENERAL");
+        assertThat(view.hazardImoClass()).isNull();
+        assertThat(view.hazardUnNumber()).isNull();
+    }
+
+    @Test
+    @DisplayName("投影に無い予約の修正は黙って捨てない")
+    void recordsUpdateWithoutRow() {
+        String bookingId = "B-NOROW-" + System.nanoTime();
+
+        projection.on(corrected(bookingId));
+
+        assertThat(queries.handle(new FindBookingQuery(bookingId)))
+                .as("行を作らない。受け付けを経ていない予約が投影にだけ生まれる")
+                .isNull();
+        assertThat(attentionItems.findOpenByRole("ROLE_SALES"))
+                .as("黙って捨てると、直したのに反映されないことが誰にも見えない")
+                .anySatisfy(item -> assertThat(item.targetId()).isEqualTo(bookingId));
     }
 }

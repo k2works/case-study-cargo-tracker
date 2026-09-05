@@ -84,7 +84,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             // 名簿に無い経路は通さない。「載っていないものを許す」形にすると、
             // 載せ忘れた経路ほど無防備になる。
             String path = request.getRequestURI();
-            if (isApi(path) && !RoleAuthorization.isAllowed(path, rolesOf(claims))) {
+            // メソッドも渡す。読みと書きで許すロールが違う経路がある（US32）。
+            if (isApi(path)
+                    && !RoleAuthorization.isAllowed(request.getMethod(), path, rolesOf(claims))) {
                 forbidden(response);
                 return;
             }

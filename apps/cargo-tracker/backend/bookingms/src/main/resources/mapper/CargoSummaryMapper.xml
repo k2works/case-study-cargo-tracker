@@ -29,6 +29,8 @@
             <arg column="routing_status" javaType="string"/>
             <arg column="booked_at" javaType="java.time.Instant"/>
             <arg column="routing_requested_at" javaType="java.time.Instant"/>
+            <arg column="updated_at" javaType="java.time.Instant"/>
+            <arg column="updated_by" javaType="string"/>
             <arg column="projected_at" javaType="java.time.Instant"/>
             <arg column="last_event_id" javaType="string"/>
         </constructor>
@@ -39,6 +41,33 @@
             WHERE booking_status NOT IN ('SETTLED', 'CANCELLED')
         </if>
     </sql>
+
+    <!--
+      修正（US32）。付帯情報も含めて丸ごと書き換える。残すと、一般貨物に直したのに
+      危険物申告が付いたままの行ができ、経路設計が絞り込みを判断できない。
+      状態（booking_status / routing_status）は動かさない。
+    -->
+    <update id="updateSpecification">
+        UPDATE cargo_summary SET
+            origin_unlocode = #{originUnlocode},
+            destination_unlocode = #{destinationUnlocode},
+            arrival_deadline = #{arrivalDeadline},
+            cargo_type = #{cargoType},
+            weight_kg = #{weightKg},
+            length_cm = #{lengthCm},
+            width_cm = #{widthCm},
+            height_cm = #{heightCm},
+            quantity = #{quantity},
+            product_name = #{productName},
+            hazard_imo_class = #{hazardImoClass},
+            hazard_un_number = #{hazardUnNumber},
+            temperature_min_c = #{temperatureMinC},
+            temperature_max_c = #{temperatureMaxC},
+            updated_at = #{updatedAt},
+            updated_by = #{updatedBy},
+            projected_at = #{projectedAt}
+        WHERE booking_id = #{bookingId}
+    </update>
 
     <select id="findById" resultMap="cargoSummaryRow">
         SELECT * FROM cargo_summary WHERE booking_id = #{bookingId}
@@ -100,13 +129,13 @@
              length_cm, width_cm, height_cm, quantity, product_name,
              hazard_imo_class, hazard_un_number, temperature_min_c, temperature_max_c,
              booking_status, routing_status, booked_at, routing_requested_at,
-             projected_at, last_event_id)
+             updated_at, updated_by, projected_at, last_event_id)
         VALUES (#{bookingId}, #{bookingNumber}, #{shipperId}, #{shipperName}, #{trackingNumber},
                 #{originUnlocode}, #{destinationUnlocode}, #{arrivalDeadline}, #{cargoType},
                 #{weightKg}, #{lengthCm}, #{widthCm}, #{heightCm}, #{quantity}, #{productName},
                 #{hazardImoClass}, #{hazardUnNumber}, #{temperatureMinC}, #{temperatureMaxC},
                 #{bookingStatus}, #{routingStatus}, #{bookedAt}, #{routingRequestedAt},
-                #{projectedAt}, #{lastEventId})
+                #{updatedAt}, #{updatedBy}, #{projectedAt}, #{lastEventId})
         ON CONFLICT (booking_id) DO NOTHING
     </insert>
 </mapper>

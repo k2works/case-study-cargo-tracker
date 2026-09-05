@@ -45,9 +45,21 @@ class JwtAuthenticationFilterTest {
         return run(uri, authorization, Mockito.mock(FilterChain.class), java.util.Map.of());
     }
 
+    /** メソッドで許すロールが変わる経路（US32）を踏むため。 */
+    private MockHttpServletResponse run(String uri, String authorization, String method)
+            throws Exception {
+        return run(uri, authorization, Mockito.mock(FilterChain.class), java.util.Map.of(),
+                method);
+    }
+
     private MockHttpServletResponse run(String uri, String authorization, FilterChain chain,
             java.util.Map<String, String> extraHeaders) throws Exception {
-        MockHttpServletRequest request = new MockHttpServletRequest("GET", uri);
+        return run(uri, authorization, chain, extraHeaders, "GET");
+    }
+
+    private MockHttpServletResponse run(String uri, String authorization, FilterChain chain,
+            java.util.Map<String, String> extraHeaders, String method) throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest(method, uri);
         request.setRequestURI(uri);
         if (authorization != null) {
             request.addHeader("Authorization", authorization);
@@ -186,6 +198,31 @@ class JwtAuthenticationFilterTest {
                         .getStatus())
                 .as("経路設計の作業一覧は全荷主の予約が見える")
                 .isEqualTo(403);
+    }
+
+    @Test
+    @DisplayName("予約の修正は営業だけに開く（US32）")
+    void restrictsBookingUpdateToSales() throws Exception {
+        // /bookings/** は営業・経路設計・追跡に開いている。修正はそのうち営業だけ。
+        // 細かい経路を先に置かないと、広いほうに吸われて経路設計者も直せる。
+        String bookingPath = "/api/v1/booking/bookings/b-1";
+        assertThat(run(bookingPath, "Bearer " + tokenWithRoles("ROLE_ROUTING"), "PUT").getStatus())
+                .as("経路設計者が予約の内容を直せてはいけない")
+                .isEqualTo(403);
+        assertThat(run(bookingPath, "Bearer " + tokenWithRoles("ROLE_TRACKER"), "PUT").getStatus())
+                .isEqualTo(403);
+        assertThat(run(bookingPath, "Bearer " + tokenWithRoles("ROLE_SALES"), "PUT").getStatus())
+                .as("営業は直せる")
+                .isNotEqualTo(403);
+    }
+
+    @Test
+    @DisplayName("予約の参照は営業以外にも開いたままにする")
+    void keepsBookingReadOpen() throws Exception {
+        // 修正を絞ったついでに参照まで絞ると、経路設計者が予約の詳細を開けなくなる。
+        assertThat(run("/api/v1/booking/bookings/b-1", "Bearer " + tokenWithRoles("ROLE_ROUTING"))
+                        .getStatus())
+                .isNotEqualTo(403);
     }
 
     @Test
