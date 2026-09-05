@@ -248,4 +248,74 @@ public class BookingRegistrationSteps {
         assertThat(lastResponse.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
         assertThat(lastResponse.getBody().get("code")).isEqualTo("ILLEGAL_STATE");
     }
+
+    /**
+     * 仮受付の予約情報を修正する（US32）。
+     *
+     * <p>直す項目以外は<b>今の値を送り直す</b>。差し替えなので、送らなかった項目は
+     * 消える。画面も同じように今の値を入れた状態で開く。</p>
+     */
+    private ResponseEntity<JsonMap> update(Map<String, Object> overrides) {
+        Map<String, Object> row = findByProduct(lastProduct);
+        assertThat(row).as("先に登録した予約が一覧に出ている").isNotNull();
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("originUnLocode", row.get("originUnLocode"));
+        body.put("destinationUnLocode", row.get("destinationUnLocode"));
+        body.put("arrivalDeadline", row.get("arrivalDeadline"));
+        body.put("cargoType", row.get("cargoType"));
+        body.put("weightKg", row.get("weightKg"));
+        body.put("lengthCm", row.get("lengthCm"));
+        body.put("widthCm", row.get("widthCm"));
+        body.put("heightCm", row.get("heightCm"));
+        body.put("quantity", row.get("quantity"));
+        body.put("productName", row.get("productName"));
+        body.putAll(overrides);
+
+        return rest.put().uri(url("/api/v1/booking/bookings/" + row.get("bookingId")))
+                .contentType(MediaType.APPLICATION_JSON)
+                // Gateway が載せるヘッダ。誰が直したかを投影に残す。
+                .header("X-Auth-Username", "sales01")
+                .body(body)
+                .retrieve().toEntity(JsonMap.class);
+    }
+
+    @もし("その予約の品名を {string} に直す")
+    public void 品名を直す(String product) {
+        lastResponse = update(Map.of("productName", product));
+        if (lastResponse.getStatusCode() == HttpStatus.OK) {
+            lastProduct = product;
+        }
+    }
+
+    @もし("その予約を危険物に、申告無しで直す")
+    public void 申告無しで危険物に直す() {
+        lastResponse = update(Map.of("cargoType", "HAZARDOUS"));
+    }
+
+    @ならば("修正は成功する")
+    public void 修正は成功する() {
+        assertThat(lastResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @ならば("修正は状態の誤りとして断られる")
+    public void 修正は状態の誤りで断られる() {
+        assertThat(lastResponse.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(lastResponse.getBody().get("code")).isEqualTo("ILLEGAL_STATE");
+    }
+
+    @ならば("修正は予約として断られる")
+    public void 修正は業務規則で断られる() {
+        assertThat(lastResponse.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
+        assertThat(lastResponse.getBody().get("code")).isEqualTo("BUSINESS_RULE_VIOLATION");
+    }
+
+    @かつ("その予約には最終更新が残っている")
+    public void 最終更新が残る() {
+        // 誰がいつ直したかが残らないと、修正の履歴（US32 §受入基準 4）が読めない。
+        Map<String, Object> row = findByProduct(lastProduct);
+        assertThat(row).isNotNull();
+        assertThat(row.get("updatedAt")).isNotNull();
+        assertThat(row.get("updatedBy")).isEqualTo("sales01");
+    }
 }
