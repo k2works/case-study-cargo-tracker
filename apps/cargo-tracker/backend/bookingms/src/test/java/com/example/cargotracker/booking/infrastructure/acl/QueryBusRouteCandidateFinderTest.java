@@ -14,6 +14,7 @@ import com.example.cargotracker.shared.domain.location.Location;
 import com.example.cargotracker.shared.infrastructure.axon.QueryDispatcher;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.DisplayName;
@@ -27,7 +28,7 @@ class QueryBusRouteCandidateFinderTest {
 
     private static RouteSearchRequest request() {
         return new RouteSearchRequest(Location.of("JPTYO"), Location.of("USNYC"),
-                LocalDate.of(2026, 12, 1), CargoType.HAZARDOUS,
+                LocalDate.of(2026, Month.DECEMBER, 1), CargoType.HAZARDOUS,
                 List.of(Location.of("SGSIN")), Location.of("NLRTM"));
     }
 
@@ -61,7 +62,7 @@ class QueryBusRouteCandidateFinderTest {
         FindRouteCandidatesQuery sent = (FindRouteCandidatesQuery) captured[0];
         assertThat(sent.originUnLocode()).isEqualTo("JPTYO");
         assertThat(sent.destinationUnLocode()).isEqualTo("USNYC");
-        assertThat(sent.arrivalDeadline()).isEqualTo(LocalDate.of(2026, 12, 1));
+        assertThat(sent.arrivalDeadline()).isEqualTo(LocalDate.of(2026, Month.DECEMBER, 1));
         // 種別を落とすと、危険物を運べない航海が候補に混ざる。
         assertThat(sent.cargoType()).isEqualTo("HAZARDOUS");
         assertThat(sent.excludeUnLocodes()).containsExactly("SGSIN");
@@ -134,7 +135,7 @@ class QueryBusRouteCandidateFinderTest {
                 dispatcherReturning(new RouteCandidatesResponse(List.of(), false), captured));
 
         finder.find(new RouteSearchRequest(Location.of("JPTYO"), Location.of("USNYC"),
-                LocalDate.of(2026, 12, 1), CargoType.GENERAL, List.of(), null));
+                LocalDate.of(2026, Month.DECEMBER, 1), CargoType.GENERAL, List.of(), null));
 
         assertThat(((FindRouteCandidatesQuery) captured[0]).departFromUnLocode()).isNull();
     }

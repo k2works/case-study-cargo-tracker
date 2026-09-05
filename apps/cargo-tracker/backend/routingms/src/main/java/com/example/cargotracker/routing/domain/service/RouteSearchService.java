@@ -82,31 +82,11 @@ public class RouteSearchService {
         // 担う（ADR-0007）。件数の上限は**並べたあとに**効かせる。
         while (!frontier.isEmpty()) {
             List<TransitEdge> path = frontier.poll();
-            Location at = path.isEmpty()
-                    ? specification.searchOrigin()
-                    : path.get(path.size() - 1).unload();
-
             if (path.size() > MAX_TRANSFERS) {
                 // ここで捨てた枝は、探せば目的地に着いたかもしれない。
                 depthLimited = true;
-                continue;
-            }
-            for (TransitEdge edge : graph.edgesFrom(at)) {
-                if (!connects(path, edge, specification, graph)) {
-                    continue;
-                }
-                List<TransitEdge> extended = new ArrayList<>(path);
-                extended.add(edge);
-
-                if (edge.unload().equals(specification.destination())) {
-                    TransitPath candidate = new TransitPath(extended);
-                    if (candidate.meetsDeadline(specification, businessZone)) {
-                        found.add(candidate);
-                    }
-                    // 目的地に着いた経路をさらに伸ばさない。通り過ぎる経路は候補にしない。
-                    continue;
-                }
-                frontier.add(extended);
+            } else {
+                expand(path, specification, graph, frontier, found);
             }
         }
 
@@ -125,6 +105,38 @@ public class RouteSearchService {
                 || (ordered.isEmpty() && depthLimited);
         return new RouteSearchResult(
                 ordered.stream().limit(MAX_CANDIDATES).toList(), truncated);
+    }
+
+    /**
+     * 経路を 1 本伸ばす。目的地に着いたものは候補へ、途中のものは次の探索へ。
+     *
+     * <p>目的地に着いた経路はそれ以上伸ばさない。通り過ぎる経路は候補にしない。</p>
+     */
+    private void expand(List<TransitEdge> path, RouteSearchSpecification specification,
+            VoyageGraph graph, Deque<List<TransitEdge>> frontier, List<TransitPath> found) {
+        Location at = path.isEmpty()
+                ? specification.searchOrigin()
+                : path.get(path.size() - 1).unload();
+
+        for (TransitEdge edge : graph.edgesFrom(at)) {
+            if (connects(path, edge, specification, graph)) {
+                List<TransitEdge> extended = new ArrayList<>(path);
+                extended.add(edge);
+                if (edge.unload().equals(specification.destination())) {
+                    collectIfInTime(extended, specification, found);
+                } else {
+                    frontier.add(extended);
+                }
+            }
+        }
+    }
+
+    private void collectIfInTime(List<TransitEdge> edges,
+            RouteSearchSpecification specification, List<TransitPath> found) {
+        TransitPath candidate = new TransitPath(edges);
+        if (candidate.meetsDeadline(specification, businessZone)) {
+            found.add(candidate);
+        }
     }
 
     /**

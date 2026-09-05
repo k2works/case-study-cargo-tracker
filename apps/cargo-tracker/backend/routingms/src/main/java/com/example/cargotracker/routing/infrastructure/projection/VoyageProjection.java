@@ -29,6 +29,11 @@ public class VoyageProjection {
 
     private static final Logger log = LoggerFactory.getLogger(VoyageProjection.class);
 
+    /** 気付き項目の種別・対象・宛先。3 か所で同じものを書くと、片方だけ直る。 */
+    private static final String REJECTED = "PROJECTION_REJECTED";
+    private static final String TARGET = "VOYAGE";
+    private static final String ROUTING_ROLE = "ROLE_ROUTING";
+
     private final VoyageMapper voyages;
     private final AttentionItemRecorder attentionItems;
     private final Clock clock;
@@ -77,8 +82,8 @@ public class VoyageProjection {
             // 弾かれた。集約は受け付けているので、ここで黙ると
             // 「登録したのに一覧に出ない」が誰にも見えないまま残る。
             log.warn("航海の投影を一意制約で弾いた: voyageNumber={}", event.voyageNumber());
-            attentionItems.add("PROJECTION_REJECTED", "VOYAGE", event.voyageNumber(),
-                    "ROLE_ROUTING", "航海番号の重複", "{}", now);
+            attentionItems.add(REJECTED, TARGET, event.voyageNumber(),
+                    ROUTING_ROLE, "航海番号の重複", "{}", now);
             return;
         }
 
@@ -138,8 +143,8 @@ public class VoyageProjection {
 
         if (updated == 0) {
             log.warn("更新を書ける航海が投影に無い: voyageNumber={}", event.voyageNumber());
-            attentionItems.add("PROJECTION_REJECTED", "VOYAGE", event.voyageNumber(),
-                    "ROLE_ROUTING", "更新の対象が投影に無い", "{}", now);
+            attentionItems.add(REJECTED, TARGET, event.voyageNumber(),
+                    ROUTING_ROLE, "更新の対象が投影に無い", "{}", now);
             return;
         }
 
@@ -176,8 +181,8 @@ public class VoyageProjection {
                 event.cancelledBy(), now);
         if (cancelled == 0) {
             log.warn("キャンセルを書ける航海が投影に無い: voyageNumber={}", event.voyageNumber());
-            attentionItems.add("PROJECTION_REJECTED", "VOYAGE", event.voyageNumber(),
-                    "ROLE_ROUTING", "キャンセルの対象が投影に無い", "{}", now);
+            attentionItems.add(REJECTED, TARGET, event.voyageNumber(),
+                    ROUTING_ROLE, "キャンセルの対象が投影に無い", "{}", now);
         }
     }
 

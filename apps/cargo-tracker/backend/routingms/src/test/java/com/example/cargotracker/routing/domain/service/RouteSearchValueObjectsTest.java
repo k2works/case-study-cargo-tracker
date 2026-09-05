@@ -12,6 +12,7 @@ import com.example.cargotracker.shared.domain.location.Location;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.Month;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Set;
@@ -101,7 +102,7 @@ class RouteSearchValueObjectsTest {
     void deadlineIsComparedByDate() {
         TransitPath path = new TransitPath(List.of(edge("JPTYO", "USNYC", DEPART, ARRIVE)));
         // ARRIVE は業務タイムゾーンでは 2026-09-24 18:00。
-        LocalDate sameDay = LocalDate.of(2026, 9, 24);
+        LocalDate sameDay = LocalDate.of(2026, Month.SEPTEMBER, 24);
 
         assertThat(path.overdueDays(spec(sameDay), ZONE)).isZero();
         assertThat(path.meetsDeadline(spec(sameDay), ZONE)).isTrue();
@@ -113,7 +114,7 @@ class RouteSearchValueObjectsTest {
     @DisplayName("探索条件は端点が同じでは成り立たない")
     void specificationRejectsSameEndpoints() {
         assertThatThrownBy(() -> new RouteSearchSpecification(Location.of("JPTYO"),
-                Location.of("JPTYO"), LocalDate.of(2026, 12, 1), CargoType.GENERAL,
+                Location.of("JPTYO"), LocalDate.of(2026, Month.DECEMBER, 1), CargoType.GENERAL,
                 Set.of(), null))
                 .isInstanceOf(BusinessRuleViolation.class);
     }
@@ -122,11 +123,11 @@ class RouteSearchValueObjectsTest {
     @DisplayName("探索の起点は departFrom があればそれ（誤配の再設計・IT11 で使う）")
     void searchStartsFromDepartFromWhenGiven() {
         RouteSearchSpecification fromSingapore = new RouteSearchSpecification(
-                Location.of("JPTYO"), Location.of("USNYC"), LocalDate.of(2026, 12, 1),
+                Location.of("JPTYO"), Location.of("USNYC"), LocalDate.of(2026, Month.DECEMBER, 1),
                 CargoType.GENERAL, Set.of(), Location.of("SGSIN"));
 
         assertThat(fromSingapore.searchOrigin()).isEqualTo(Location.of("SGSIN"));
-        assertThat(spec(LocalDate.of(2026, 12, 1)).searchOrigin())
+        assertThat(spec(LocalDate.of(2026, Month.DECEMBER, 1)).searchOrigin())
                 .isEqualTo(Location.of("JPTYO"));
     }
 
@@ -134,7 +135,7 @@ class RouteSearchValueObjectsTest {
     @DisplayName("除外港は経路の途中にも端点にも使えない")
     void excludedPortsAreRejectedAsEndpoints() {
         assertThatThrownBy(() -> new RouteSearchSpecification(Location.of("JPTYO"),
-                Location.of("USNYC"), LocalDate.of(2026, 12, 1), CargoType.GENERAL,
+                Location.of("USNYC"), LocalDate.of(2026, Month.DECEMBER, 1), CargoType.GENERAL,
                 Set.of(Location.of("USNYC")), null))
                 .isInstanceOf(BusinessRuleViolation.class);
     }

@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.example.cargotracker.booking.domain.service.CargoSpecificationDiff.CargoSnapshot;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Month;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -13,7 +14,7 @@ import org.junit.jupiter.api.Test;
 class CargoSpecificationDiffTest {
 
     private static CargoSnapshot snapshot() {
-        return new CargoSnapshot("JPTYO", "USNYC", LocalDate.of(2026, 12, 1), "GENERAL",
+        return new CargoSnapshot("JPTYO", "USNYC", LocalDate.of(2026, Month.DECEMBER, 1), "GENERAL",
                 new BigDecimal("1200.00"), null, null, null, 3, "自動車部品",
                 null, null, null, null);
     }
@@ -28,7 +29,7 @@ class CargoSpecificationDiffTest {
     @DisplayName("変わった項目だけが、利用者の言葉で並ぶ")
     void reportsChangedFields() {
         CargoSnapshot after = new CargoSnapshot("JPTYO", "NLRTM",
-                LocalDate.of(2026, 12, 1), "GENERAL",
+                LocalDate.of(2026, Month.DECEMBER, 1), "GENERAL",
                 new BigDecimal("1500.00"), null, null, null, 3, "自動車部品",
                 null, null, null, null);
 
@@ -47,7 +48,7 @@ class CargoSpecificationDiffTest {
         // 投影は NUMERIC の位取りで返すので、1200 と 1200.00 が並ぶ。
         // equals で比べると、直していない重量が毎回差分に出る。
         CargoSnapshot after = new CargoSnapshot("JPTYO", "USNYC",
-                LocalDate.of(2026, 12, 1), "GENERAL",
+                LocalDate.of(2026, Month.DECEMBER, 1), "GENERAL",
                 new BigDecimal("1200"), null, null, null, 3, "自動車部品",
                 null, null, null, null);
 
@@ -58,7 +59,7 @@ class CargoSpecificationDiffTest {
     @DisplayName("未入力になった項目も差分に出る（空欄と読める形で）")
     void reportsClearedFields() {
         CargoSnapshot before = new CargoSnapshot("JPTYO", "USNYC",
-                LocalDate.of(2026, 12, 1), "HAZARDOUS",
+                LocalDate.of(2026, Month.DECEMBER, 1), "HAZARDOUS",
                 new BigDecimal("1200.00"), null, null, null, 3, "自動車部品",
                 "3", "UN1993", null, null);
 

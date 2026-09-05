@@ -7,6 +7,7 @@ import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.shared.domain.location.Location;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,7 +20,7 @@ import org.junit.jupiter.api.Test;
  */
 class RoutingValueObjectsTest {
 
-    private static final LocalDate DEADLINE = LocalDate.of(2026, 10, 31);
+    private static final LocalDate DEADLINE = LocalDate.of(2026, Month.OCTOBER, 31);
     private static final Instant LOAD = Instant.parse("2026-09-10T00:00:00Z");
     private static final Instant UNLOAD = Instant.parse("2026-09-24T00:00:00Z");
     private static final Location TOKYO = Location.of("JPTYO");

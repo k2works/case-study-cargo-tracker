@@ -9,6 +9,7 @@ import com.example.cargotracker.routing.domain.model.valueobjects.TransitPath;
 import com.example.cargotracker.shared.domain.location.Location;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.Month;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -27,7 +28,7 @@ import org.junit.jupiter.api.Test;
 class RouteSearchServiceTest {
 
     private static final ZoneId ZONE = ZoneId.of("Asia/Tokyo");
-    private static final LocalDate DEADLINE = LocalDate.of(2026, 10, 31);
+    private static final LocalDate DEADLINE = LocalDate.of(2026, Month.OCTOBER, 31);
 
     private final RouteSearchService service = new RouteSearchService(ZONE);
 

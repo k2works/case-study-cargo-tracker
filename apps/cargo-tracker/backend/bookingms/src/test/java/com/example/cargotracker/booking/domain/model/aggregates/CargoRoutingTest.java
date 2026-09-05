@@ -8,11 +8,7 @@ import com.example.cargotracker.booking.domain.model.events.CargoRoutedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoSpecificationUpdatedEvent;
 import com.example.cargotracker.booking.domain.model.events.RoutingRequestedEvent;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoItinerary;
-import com.example.cargotracker.booking.domain.model.valueobjects.CargoSpecification;
-import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;
-import com.example.cargotracker.booking.domain.model.valueobjects.Dimensions;
 import com.example.cargotracker.booking.domain.model.valueobjects.Leg;
-import com.example.cargotracker.booking.domain.model.valueobjects.Weight;
 import com.example.cargotracker.shared.domain.location.Location;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -55,11 +51,6 @@ class CargoRoutingTest {
                 .componentRegistry(registry -> registry.registerComponent(
                         Clock.class, c -> Clock.fixed(ASSIGNED_AT, ZONE)));
         fixture = AxonTestFixture.with(configurer, c -> c.disableAxonServer());
-    }
-
-    private static CargoSpecification general() {
-        return new CargoSpecification(CargoType.GENERAL, Weight.ofKilograms("1200"),
-                Dimensions.of("120", "80", "100"), 10, "自動車部品", null, null);
     }
 
     private static CargoBookedEvent booked() {
@@ -177,7 +168,7 @@ class CargoRoutingTest {
     @DisplayName("期限を修正したあとは、新しい期限で旅程を判断する")
     void usesTheUpdatedDeadline() {
         // 修正で期限を縮めたのに古い期限で通すと、間に合わない経路が確定する。
-        var narrowed = corrected("USNYC", LocalDate.of(2026, 9, 20));
+        var narrowed = corrected("USNYC", LocalDate.of(2026, Month.SEPTEMBER, 20));
 
         fixture.given().events(booked(), narrowed,
                         new RoutingRequestedEvent("B-0001", "sales01"))

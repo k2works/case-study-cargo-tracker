@@ -7,6 +7,7 @@ import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.shared.domain.location.Location;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.Month;
 import java.time.ZoneId;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -75,15 +76,15 @@ class CargoItineraryTest {
     @Test
     @DisplayName("不変条件 5: 起点・終点・期限を満たす旅程は受け入れる")
     void acceptsItineraryThatSatisfiesTheSpecification() {
-        assertThat(spec(LocalDate.of(2026, 9, 30)).isSatisfiedBy(direct(), ZONE)).isTrue();
+        assertThat(spec(LocalDate.of(2026, Month.SEPTEMBER, 30)).isSatisfiedBy(direct(), ZONE)).isTrue();
     }
 
     @Test
     @DisplayName("不変条件 5: 期限当日に着く旅程は満たす（日付で比べる）")
     void arrivalOnTheDeadlineSatisfies() {
         // 時刻付きで素朴に比べると、期限当日に着く旅程を落とす。
-        assertThat(spec(LocalDate.of(2026, 9, 24)).isSatisfiedBy(direct(), ZONE)).isTrue();
-        assertThat(spec(LocalDate.of(2026, 9, 23)).isSatisfiedBy(direct(), ZONE)).isFalse();
+        assertThat(spec(LocalDate.of(2026, Month.SEPTEMBER, 24)).isSatisfiedBy(direct(), ZONE)).isTrue();
+        assertThat(spec(LocalDate.of(2026, Month.SEPTEMBER, 23)).isSatisfiedBy(direct(), ZONE)).isFalse();
     }
 
     @Test
@@ -94,7 +95,7 @@ class CargoItineraryTest {
         CargoItinerary toLondon = new CargoItinerary(
                 List.of(leg("JPTYO", "GBLON", LOAD, UNLOAD)));
 
-        assertThat(spec(LocalDate.of(2026, 9, 30)).isSatisfiedBy(fromOsaka, ZONE)).isFalse();
-        assertThat(spec(LocalDate.of(2026, 9, 30)).isSatisfiedBy(toLondon, ZONE)).isFalse();
+        assertThat(spec(LocalDate.of(2026, Month.SEPTEMBER, 30)).isSatisfiedBy(fromOsaka, ZONE)).isFalse();
+        assertThat(spec(LocalDate.of(2026, Month.SEPTEMBER, 30)).isSatisfiedBy(toLondon, ZONE)).isFalse();
     }
 }

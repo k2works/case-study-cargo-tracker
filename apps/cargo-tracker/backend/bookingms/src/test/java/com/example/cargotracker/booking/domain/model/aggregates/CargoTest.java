@@ -148,9 +148,9 @@ class CargoTest {
     }
 
     // 「同じ予約を 2 度受け付けない」は AxonTestFixture では判別できない。
-    // disableAxonServer() の器では DCB のタグ復元が働かず、given() で積んだ
-    // 事前活動を when() の集約が見ないため、守っていてもいなくても緑になる
-    // （IT2 で実測）。実 Axon Server で確かめる（CargoBookingIT）。
+    // Axon Server を止めた器では DCB のタグ復元が働かず、事前に積んだ活動を
+    // 対象の集約が見ないため、守っていてもいなくても緑になる（IT2 で実測）。
+    // 実 Axon Server で確かめる：CargoBookingIT。
 
     @Test
     @DisplayName("必須の入力が欠けた予約は受け付けない")
