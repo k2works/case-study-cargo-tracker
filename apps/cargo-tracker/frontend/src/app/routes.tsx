@@ -18,6 +18,7 @@ import { BookingDetailPage } from '@/features/bookings/BookingDetailPage';
 import { RoutingWorklistPage } from '@/features/routing/RoutingWorklistPage';
 import { VoyageListPage } from '@/features/routing/VoyageListPage';
 import { VoyageRegisterPage } from '@/features/routing/VoyageRegisterPage';
+import { VoyageDetailPage } from '@/features/routing/VoyageDetailPage';
 
 /**
  * ルートと画面の対応。
@@ -63,6 +64,25 @@ export function AppRoutes() {
           element={
             <RequireRole allow={['ROLE_SALES', 'ROLE_ROUTING', 'ROLE_TRACKER']}>
               <BookingDetailPage />
+            </RequireRole>
+          }
+        />
+        {/* 航海詳細（S34）と更新（S33 の編集）は一覧・詳細から開く。
+            ナビに載せると「航海詳細」という行き先の無い項目が出る。
+            ロールは一覧（S32）と同じ経路設計者に揃える。 */}
+        <Route
+          path="/voyages/:voyageNumber"
+          element={
+            <RequireRole allow={['ROLE_ROUTING']}>
+              <VoyageDetailPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/voyages/:voyageNumber/edit"
+          element={
+            <RequireRole allow={['ROLE_ROUTING']}>
+              <VoyageRegisterPage />
             </RequireRole>
           }
         />

@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { VoyageListPage } from './VoyageListPage';
 import { VoyageRegisterPage } from './VoyageRegisterPage';
 import { RoutingWorklistPage } from './RoutingWorklistPage';
+import { VoyageDetailPage } from './VoyageDetailPage';
 import { useAuthStore } from '@/shared/auth/authStore';
 
 function voyage(over: Record<string, unknown> = {}) {
@@ -68,6 +69,22 @@ function renderAt(path: string, element: React.ReactElement) {
       <MemoryRouter initialEntries={[path]}>
         <Routes>
           <Route path={path} element={element} />
+          <Route path="/voyages" element={<h1>航海スケジュール一覧</h1>} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
+/** 航海番号をパスに持つ画面（S34 / S33 更新）。実際の経路の形で描く。 */
+function renderVoyage(path: string, element: React.ReactElement) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route path="/voyages/:voyageNumber" element={element} />
+          <Route path="/voyages/:voyageNumber/edit" element={element} />
           <Route path="/voyages" element={<h1>航海スケジュール一覧</h1>} />
         </Routes>
       </MemoryRouter>
@@ -264,5 +281,225 @@ describe('S30 経路設計作業一覧', () => {
     expect(
       await screen.findByRole('link', { name: '航海スケジュール一覧へ' }),
     ).toBeInTheDocument();
+  });
+});
+
+describe('S34 航海詳細', () => {
+  it('寄港地が順に読める', async () => {
+    // IT3 では登録した中身を確認する画面が無く、409 の案内が指す先も無かった。
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify(
+          voyage({
+            movements: [
+              {
+                movementSeq: 1,
+                departureUnLocode: 'JPTYO',
+                arrivalUnLocode: 'SGSIN',
+                departureAt: '2026-09-10T09:00:00Z',
+                arrivalAt: '2026-09-16T08:00:00Z',
+              },
+              {
+                movementSeq: 2,
+                departureUnLocode: 'SGSIN',
+                arrivalUnLocode: 'USNYC',
+                departureAt: '2026-09-17T06:00:00Z',
+                arrivalAt: '2026-09-24T18:00:00Z',
+              },
+            ],
+          }),
+        ),
+        { status: 200 },
+      ),
+    );
+
+    renderVoyage('/voyages/V-MOL-001', <VoyageDetailPage />);
+
+    expect(await screen.findByRole('heading', { name: /V-MOL-001/ })).toBeInTheDocument();
+    const rows = await screen.findAllByTestId(/^movement-/);
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveTextContent('JPTYO → SGSIN');
+    expect(rows[1]).toHaveTextContent('SGSIN → USNYC');
+  });
+
+  it('対応貨物種別と最終更新が読める', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify(
+          voyage({
+            acceptedCargoTypes: ['GENERAL', 'HAZARDOUS'],
+            updatedAt: '2026-09-05T02:00:00Z',
+            updatedBy: 'routing02',
+          }),
+        ),
+        { status: 200 },
+      ),
+    );
+
+    renderVoyage('/voyages/V-MOL-001', <VoyageDetailPage />);
+
+    expect(await screen.findByText(/一般貨物 \/ 危険物/)).toBeInTheDocument();
+    expect(screen.getByText(/routing02/)).toBeInTheDocument();
+  });
+
+  it('一度も更新していなければ最終更新は出さない', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(voyage()), { status: 200 }),
+    );
+
+    renderVoyage('/voyages/V-MOL-001', <VoyageDetailPage />);
+
+    expect(await screen.findByRole('heading', { name: /V-MOL-001/ })).toBeInTheDocument();
+    expect(screen.queryByText('最終更新')).not.toBeInTheDocument();
+  });
+
+  it('更新画面へ行ける', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(voyage()), { status: 200 }),
+    );
+
+    renderVoyage('/voyages/V-MOL-001', <VoyageDetailPage />);
+
+    expect(await screen.findByRole('link', { name: '更新する' })).toHaveAttribute(
+      'href',
+      '/voyages/V-MOL-001/edit',
+    );
+  });
+
+  it('キャンセル済みの航海には更新の導線を出さない', async () => {
+    // 集約が断る（不変条件 5）。画面に出しておくと、押してから 409 で気づく。
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(voyage({ cancelled: true })), { status: 200 }),
+    );
+
+    renderVoyage('/voyages/V-MOL-001', <VoyageDetailPage />);
+
+    expect(await screen.findByText('キャンセル済み')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: '更新する' })).not.toBeInTheDocument();
+  });
+
+  it('投影がまだなら「反映中」と伝える（見つかりませんにしない）', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({ voyageNumber: 'V-MOL-001', message: '反映までしばらくお待ちください' }),
+        { status: 202 },
+      ),
+    );
+
+    renderVoyage('/voyages/V-MOL-001', <VoyageDetailPage />);
+
+    expect(await screen.findByText(/反映まで/)).toBeInTheDocument();
+  });
+});
+
+describe('S33 航海スケジュール更新', () => {
+  it('既登録の内容が入った状態で開く', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(voyage()), { status: 200 }),
+    );
+
+    renderVoyage('/voyages/V-MOL-001/edit', <VoyageRegisterPage />);
+
+    await waitFor(() =>
+      expect(screen.getByLabelText('船名')).toHaveValue('MOL EXPRESS'),
+    );
+    // 航海番号は変えられない（不変条件 1）。直せる欄として出すと、
+    // 別の航海を作ったつもりで既存を壊す操作に見える。
+    expect(screen.queryByLabelText('航海番号')).not.toBeInTheDocument();
+    expect(screen.getByText('V-MOL-001')).toBeInTheDocument();
+  });
+
+  it('差分を確かめてから更新する', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
+      const url = String(input);
+      if (url.includes('/diff')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              voyageNumber: 'V-MOL-001',
+              changes: [{ label: '船名', before: 'MOL EXPRESS', after: 'MOL VOYAGER' }],
+            }),
+            { status: 200 },
+          ),
+        );
+      }
+      if (init?.method === 'PUT') {
+        return Promise.resolve(
+          new Response(JSON.stringify({ voyageNumber: 'V-MOL-001' }), { status: 200 }),
+        );
+      }
+      return Promise.resolve(new Response(JSON.stringify(voyage()), { status: 200 }));
+    });
+
+    renderVoyage('/voyages/V-MOL-001/edit', <VoyageRegisterPage />);
+
+    await waitFor(() => expect(screen.getByLabelText('船名')).toHaveValue('MOL EXPRESS'));
+    await userEvent.clear(screen.getByLabelText('船名'));
+    await userEvent.type(screen.getByLabelText('船名'), 'MOL VOYAGER');
+    await userEvent.click(screen.getByRole('button', { name: '差分を確認する' }));
+
+    expect(await screen.findByText('MOL EXPRESS → MOL VOYAGER')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: '更新する' }));
+
+    await waitFor(() =>
+      expect(
+        fetchSpy.mock.calls.some(([, init]) => (init as RequestInit | undefined)?.method === 'PUT'),
+      ).toBe(true),
+    );
+  });
+
+  it('「キャンセル」を選ぶと更新を送らない', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      const url = String(input);
+      if (url.includes('/diff')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              voyageNumber: 'V-MOL-001',
+              changes: [{ label: '船名', before: 'MOL EXPRESS', after: 'MOL VOYAGER' }],
+            }),
+            { status: 200 },
+          ),
+        );
+      }
+      return Promise.resolve(new Response(JSON.stringify(voyage()), { status: 200 }));
+    });
+
+    renderVoyage('/voyages/V-MOL-001/edit', <VoyageRegisterPage />);
+
+    await waitFor(() => expect(screen.getByLabelText('船名')).toHaveValue('MOL EXPRESS'));
+    await userEvent.clear(screen.getByLabelText('船名'));
+    await userEvent.type(screen.getByLabelText('船名'), 'MOL VOYAGER');
+    await userEvent.click(screen.getByRole('button', { name: '差分を確認する' }));
+    await screen.findByText('MOL EXPRESS → MOL VOYAGER');
+
+    await userEvent.click(screen.getByRole('button', { name: 'キャンセル' }));
+
+    expect(
+      fetchSpy.mock.calls.some(([, init]) => (init as RequestInit | undefined)?.method === 'PUT'),
+    ).toBe(false);
+  });
+
+  it('変えていなければ更新を送らせない', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      const url = String(input);
+      if (url.includes('/diff')) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ voyageNumber: 'V-MOL-001', changes: [] }), {
+            status: 200,
+          }),
+        );
+      }
+      return Promise.resolve(new Response(JSON.stringify(voyage()), { status: 200 }));
+    });
+
+    renderVoyage('/voyages/V-MOL-001/edit', <VoyageRegisterPage />);
+
+    await waitFor(() => expect(screen.getByLabelText('船名')).toHaveValue('MOL EXPRESS'));
+    await userEvent.click(screen.getByRole('button', { name: '差分を確認する' }));
+
+    expect(await screen.findByText('変更はありません')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '更新する' })).not.toBeInTheDocument();
   });
 });

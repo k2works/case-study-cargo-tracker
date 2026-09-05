@@ -30,6 +30,25 @@ export interface VoyageView {
   readonly cancelled: boolean;
   readonly acceptedCargoTypes: readonly AcceptedCargoType[];
   readonly movements: readonly MovementView[];
+  /** 最終更新（US25）。一度も更新していなければ null。 */
+  readonly updatedAt: string | null;
+  readonly updatedBy: string | null;
+}
+
+/** 更新前後の差分 1 件（US25 §受入基準 2）。サーバが出す。 */
+export interface FieldChange {
+  readonly label: string;
+  readonly before: string;
+  readonly after: string;
+}
+
+/** 更新の入力。航海番号は経路が持つので本文に入れない（不変条件 1）。 */
+export interface UpdateVoyageInput {
+  readonly carrierCode: string;
+  readonly carrierName: string;
+  readonly vesselName: string;
+  readonly movements: readonly MovementInput[];
+  readonly acceptedCargoTypes: readonly AcceptedCargoType[];
 }
 
 export interface MovementInput {
@@ -72,6 +91,38 @@ export function fetchVoyage(voyageNumber: string): Promise<Pending<VoyageView>> 
 
 export function registerVoyage(input: RegisterVoyageInput): Promise<{ voyageNumber: string }> {
   return commandClient('/routing/voyages', input);
+}
+
+/**
+ * 更新前後の差分を問い合わせる（US25 §受入基準 2）。
+ *
+ * <p><b>差分はサーバが出す。</b> 画面で 2 つの値を並べて if を積み上げると、
+ * 航海に属性が増えるたびに比べ忘れが生まれる。</p>
+ */
+export function diffVoyage(
+  voyageNumber: string,
+  input: UpdateVoyageInput,
+): Promise<VoyageDiff> {
+  return commandClient<VoyageDiff>(
+    `/routing/voyages/${encodeURIComponent(voyageNumber)}/diff`,
+    input,
+  );
+}
+
+/**
+ * 差分の応答。投影がまだなら比べる相手が無いので、変更 0 件ではなく案内が返る。
+ * 0 件と同じ形にすると、「反映待ち」が「変更なし」に見える。
+ */
+export type VoyageDiff =
+  | { readonly voyageNumber: string; readonly changes: FieldChange[] }
+  | { readonly voyageNumber: string; readonly message: string };
+
+/** スケジュールを更新する（US25）。 */
+export function updateVoyage(
+  voyageNumber: string,
+  input: UpdateVoyageInput,
+): Promise<{ voyageNumber: string }> {
+  return commandClient(`/routing/voyages/${encodeURIComponent(voyageNumber)}`, input, 'PUT');
 }
 
 /**

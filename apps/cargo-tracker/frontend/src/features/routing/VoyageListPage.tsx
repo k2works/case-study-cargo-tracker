@@ -115,7 +115,12 @@ export function VoyageListPage() {
             <tbody>
               {data.value.items.map((item) => (
                 <tr key={item.voyageNumber}>
-                  <td className={TD}>{item.voyageNumber}</td>
+                  <td className={TD}>
+                    {/* 登録した中身を確認できる先を持たせる（IT3 レビュー）。 */}
+                    <Link to={`/voyages/${encodeURIComponent(item.voyageNumber)}`} className={LINK}>
+                      {item.voyageNumber}
+                    </Link>
+                  </td>
                   <td className={TD}>{item.carrierName}</td>
                   <td className={TD}>{item.vesselName}</td>
                   <td className={TD}>
