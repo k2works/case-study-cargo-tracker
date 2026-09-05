@@ -124,16 +124,16 @@ export function RoutingWorkbenchPage() {
           「条件を絞る」が同時に出て、逆のことを勧めることになる（IT5 レビュー 高 1）。
           0 件で打ち切りに当たったのは、乗り継ぎの上限で枝を捨てたときだけなので、
           条件を変えても候補は増えない。 */}
-      {found && found.candidates.length === 0 && !found.truncated && (
+      {found?.candidates.length === 0 && !found.truncated && (
         <output className={`${NOTICE} mt-2 block`}>
           期限内に到着できる経路が見つかりませんでした。到着期限を延ばすか、経由できる港を
           広げると候補が出ることがあります
         </output>
       )}
 
-      {found && found.candidates.length === 0 && found.truncated && (
+      {found?.candidates.length === 0 && found.truncated && (
         <output className={`${NOTICE} mt-2 block`}>
-          乗り継ぎを 4 回以上必要とする経路しかありません。
+          乗り継ぎを 4 回以上必要とする経路しかありません。{' '}
           <b>条件を変えても候補は増えません。</b>手配の相談が要ります
         </output>
       )}
@@ -261,7 +261,7 @@ export function RoutingWorkbenchPage() {
 /** 最初の出発から最後の到着まで。区間が 1 本でも同じ形で読める。 */
 function journeyOf(candidate: RouteCandidateView): string {
   const first = candidate.legs[0];
-  const last = candidate.legs[candidate.legs.length - 1];
+  const last = candidate.legs.at(-1);
   if (!first || !last) {
     return '—';
   }

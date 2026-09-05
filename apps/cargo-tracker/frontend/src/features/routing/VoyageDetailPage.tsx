@@ -18,6 +18,7 @@ import {
   TH,
 } from '@/shared/ui/styles';
 import { acceptedCargoTypeLabel, cancelVoyage, fetchVoyage, formatVoyageTime } from './api';
+import type { VoyageView } from './api';
 import { canCancel, canUpdateSchedule } from './voyageRules';
 
 /**
@@ -75,11 +76,7 @@ export function VoyageDetailPage() {
               <p>
                 キャンセル済み
                 {data.value.cancelReason ? `: ${data.value.cancelReason}` : ''}
-                {data.value.cancelledAt
-                  ? `（${formatVoyageTime(data.value.cancelledAt)}${
-                      data.value.cancelledBy ? ` / ${data.value.cancelledBy}` : ''
-                    }）`
-                  : ''}
+                {cancelledStamp(data.value)}
               </p>
             )}
             {/* 一度も更新していない航海に「最終更新」を出すと、登録日時と
@@ -207,4 +204,13 @@ export function VoyageDetailPage() {
       )}
     </section>
   );
+}
+
+/** キャンセルの日時と実行者。止めた記録が無ければ何も出さない。 */
+function cancelledStamp(voyage: VoyageView): string {
+  if (!voyage.cancelledAt) {
+    return '';
+  }
+  const by = voyage.cancelledBy ? ` / ${voyage.cancelledBy}` : '';
+  return `（${formatVoyageTime(voyage.cancelledAt)}${by}）`;
 }
