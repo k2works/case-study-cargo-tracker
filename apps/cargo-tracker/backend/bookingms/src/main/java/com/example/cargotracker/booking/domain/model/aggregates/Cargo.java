@@ -116,7 +116,7 @@ public class Cargo {
         }
         if (!bookingStatus.canTransitionTo(BookingStatus.ROUTE_PROPOSED)) {
             throw new IllegalTransition(
-                    "状態 " + bookingStatus + " の予約は経路設計へ引き渡せません");
+                    "状態 " + bookingStatus.label() + " の予約は経路設計へ引き渡せません");
         }
         appender.append(new RoutingRequestedEvent(command.bookingId(), command.requestedBy()));
         return command.bookingId();
@@ -140,7 +140,7 @@ public class Cargo {
             throw new IllegalTransition("予約 " + command.bookingId() + " は受け付けていません");
         }
         if (!bookingStatus.canUpdateSpecification()) {
-            throw new IllegalTransition("状態 " + bookingStatus + " の予約は修正できません");
+            throw new IllegalTransition("状態 " + bookingStatus.label() + " の予約は修正できません");
         }
         // **期限は「変えたときだけ」検査する。** 据え置きにも今日以降を求めると、
         // 期限を過ぎた仮受付の予約は品名すら直せなくなる（誤りに気づくのは
@@ -193,7 +193,8 @@ public class Cargo {
             // 引き渡していない予約に経路が付くと、営業の知らないところで設計が進む。
             // 誤配（MISROUTED）からの再設計は許す（US28）。
             throw new IllegalTransition(
-                    "経路設計を依頼していない予約には経路を確定できません（" + routingStatus + "）");
+                    "経路設計を依頼していない予約には経路を確定できません（"
+                            + routingStatus.label() + "）");
         }
         if (command.itinerary() == null) {
             throw new BusinessRuleViolation("旅程は必須です");

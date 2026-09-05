@@ -16,23 +16,34 @@ import java.util.Set;
  */
 public enum BookingStatus {
     /** 仮受付。BookCargoCommand で始まる。 */
-    PRELIMINARY,
+    PRELIMINARY("仮受付"),
     /** 経路提案中。 */
-    ROUTE_PROPOSED,
+    ROUTE_PROPOSED("経路提案中"),
     /** 荷主へ経路を通知済み。 */
-    ROUTE_NOTIFIED,
+    ROUTE_NOTIFIED("通知済み"),
     /** 予約確定。 */
-    CONFIRMED,
+    CONFIRMED("確定"),
     /** 追跡番号発行済み。 */
-    TRACKING_ISSUED,
+    TRACKING_ISSUED("追跡番号発行済み"),
     /** 輸送中。 */
-    IN_TRANSIT,
+    IN_TRANSIT("輸送中"),
     /** 引取済。 */
-    DELIVERED,
+    DELIVERED("引取済"),
     /** 精算済。 */
-    SETTLED,
+    SETTLED("精算済"),
     /** キャンセル。 */
-    CANCELLED;
+    CANCELLED("キャンセル");
+
+    private final String label;
+
+    BookingStatus(String label) {
+        this.label = label;
+    }
+
+    /** 利用者に見せる呼び名。列挙名は見せない。 */
+    public String label() {
+        return label;
+    }
 
     private static final Map<BookingStatus, Set<BookingStatus>> NEXT = Map.of(
             PRELIMINARY, EnumSet.of(ROUTE_PROPOSED, CANCELLED),

@@ -10,7 +10,6 @@ import {
   PAGE_TITLE,
   SECTION_TITLE,
   TABLE,
-  TABLE_CAPTION,
   TD,
   TH,
 } from '@/shared/ui/styles';
@@ -150,7 +149,11 @@ export function RoutingWorkbenchPage() {
       {found && found.candidates.length > 0 && (
         <div className={`${CARD} mt-2 overflow-x-auto`}>
           <table className={TABLE}>
-            <caption className={TABLE_CAPTION}>推奨順に並んでいます</caption>
+            {/* 並び順の根拠は目でも読めるようにする。読み上げにしか無いと、
+                なぜこの順なのかが分からないまま上から選ばれる。 */}
+            <caption className="caption-top pb-2 text-left text-sm text-gray-600">
+              直行便を先に、そのあと所要時間の短い順に並んでいます
+            </caption>
             <thead>
               <tr>
                 <th scope="col" className={TH}>選択</th>
