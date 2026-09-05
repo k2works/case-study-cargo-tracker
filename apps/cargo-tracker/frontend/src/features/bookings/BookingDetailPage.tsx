@@ -23,6 +23,7 @@ import {
   bookingStatusLabel,
   cargoTypeLabel,
   fetchBooking,
+  fetchBookingItinerary,
   fetchBookingRevisions,
 } from './api';
 
@@ -53,6 +54,15 @@ export function BookingDetailPage() {
     queryKey: ['booking', bookingId, 'revisions'],
     queryFn: () => fetchBookingRevisions(bookingId),
     enabled: updated,
+  });
+
+  // 旅程（US09）。経路が決まっていなければ問い合わせない。
+  // 記録（cargo_leg）だけあって読み口が無いと、誰も区間を確かめられない。
+  const routed = data?.state === 'ready' && data.value.routingStatus === 'ROUTED';
+  const itinerary = useQuery({
+    queryKey: ['booking', bookingId, 'itinerary'],
+    queryFn: () => fetchBookingItinerary(bookingId),
+    enabled: routed,
   });
 
   const handOver = useMutation({
@@ -177,6 +187,41 @@ export function BookingDetailPage() {
               )}
             </dl>
           </div>
+
+          {routed
+            && itinerary.data?.state === 'ready'
+            && itinerary.data.value.legs.length > 0 && (
+            <div>
+              <h2 className={SECTION_TITLE}>旅程</h2>
+              <div className="mt-2 overflow-x-auto">
+                <table className={TABLE}>
+                  <caption className={TABLE_CAPTION}>積む順に並んでいます</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col" className={TH}>区間</th>
+                      <th scope="col" className={TH}>航海</th>
+                      <th scope="col" className={TH}>積地 → 揚地</th>
+                      <th scope="col" className={TH}>積込</th>
+                      <th scope="col" className={TH}>荷揚</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {itinerary.data.value.legs.map((leg) => (
+                      <tr key={leg.legSeq} data-testid={`leg-${leg.legSeq}`}>
+                        <td className={TD}>{leg.legSeq}</td>
+                        <td className={TD}>{leg.voyageNumber}</td>
+                        <td className={TD}>
+                          {leg.loadUnLocode} → {leg.unloadUnLocode}
+                        </td>
+                        <td className={TD}>{formatBusinessDateTime(leg.loadAt)}</td>
+                        <td className={TD}>{formatBusinessDateTime(leg.unloadAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           {updated
             && revisions.data?.state === 'ready'

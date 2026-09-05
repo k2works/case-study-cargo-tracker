@@ -54,6 +54,20 @@ public interface CargoSummaryMapper {
             @Param("projectedAt") Instant projectedAt);
 
     /**
+     * 経路の確定を投影に反映する（US09）。
+     *
+     * <p><b>{@code booking_status} は触らない。</b> 経路が付いても、荷主に通知する
+     * まで予約は提案中である（US12）。ここで確定にすると、荷主が知らないうちに
+     * 予約が確定したことになる。</p>
+     */
+    @org.apache.ibatis.annotations.Update(
+            "UPDATE cargo_summary SET routing_status = #{routingStatus}, "
+            + "projected_at = #{projectedAt} WHERE booking_id = #{bookingId}")
+    int updateRoutingStatus(@Param("bookingId") String bookingId,
+            @Param("routingStatus") String routingStatus,
+            @Param("projectedAt") Instant projectedAt);
+
+    /**
      * 仮受付の予約情報の修正を投影に反映する（US32）。
      *
      * <p>付帯情報（危険物申告・温度条件）も含めて<b>丸ごと書き換える</b>。残すと、

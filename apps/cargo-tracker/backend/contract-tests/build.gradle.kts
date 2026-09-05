@@ -22,6 +22,8 @@ dependencies {
     "roundTripTestImplementation"(testFixtures(project(":shared")))
     "roundTripTestImplementation"(project(":bookingms"))
     "roundTripTestImplementation"(project(":billingms"))
+    // 契約クエリの往復（US08）。bookingms → routingms を同じ JVM で確かめる。
+    "roundTripTestImplementation"(project(":routingms"))
     "roundTripTestImplementation"(libs.spring.boot.starter.test)
     "roundTripTestImplementation"(libs.spring.boot.starter.web)
     "roundTripTestImplementation"(libs.spring.boot.starter.jdbc)

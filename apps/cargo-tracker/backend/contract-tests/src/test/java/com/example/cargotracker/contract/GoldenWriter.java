@@ -21,6 +21,19 @@ class GoldenWriter {
         var converter = new JacksonConverter();
         Path dir = Path.of("src/test/resources/golden");
         Files.createDirectories(dir);
+        Path queryDir = Path.of("src/test/resources/golden-query");
+        Files.createDirectories(queryDir);
+        ContractQueryGoldenTest.contractQueries().forEach(message -> {
+            try {
+                Files.writeString(
+                        queryDir.resolve(message.getClass().getSimpleName() + ".json"),
+                        new String(converter.convert(message, byte[].class),
+                                StandardCharsets.UTF_8),
+                        StandardCharsets.UTF_8);
+            } catch (Exception e) {
+                throw new IllegalStateException(e);
+            }
+        });
         ContractEventGoldenTest.contractEvents().forEach(event -> {
             try {
                 Files.writeString(dir.resolve(event.getClass().getSimpleName() + ".json"),

@@ -98,6 +98,64 @@ public final class BookingDtos {
             BigDecimal temperatureMaxC) implements CargoFields {
     }
 
+    /**
+     * 経路候補の応答（US08）。
+     *
+     * <p><b>費用の欄を持たない。</b> 料金表は US21（料金算出・IT13）が正典で、現時点で
+     * 存在しない。0 を返すと「費用 0 円の経路」と読める（US08 §受入基準 3 の未達）。</p>
+     *
+     * @param truncated 探索の上限で切ったか（ADR-0007）。0 件と言い分けるために出す
+     */
+    public record RouteCandidatesResponse(
+            java.util.List<RouteCandidateResponse> candidates, boolean truncated) {
+    }
+
+    /** 経路候補 1 件。区間の順序が業務の意味を持つ。 */
+    public record RouteCandidateResponse(
+            java.util.List<LegResponse> legs, int transitDays, boolean direct) {
+
+        /** 区間 1 つ。航海番号を出す（US08 §受入基準 3）。 */
+        public record LegResponse(
+                String voyageNumber,
+                String loadUnLocode,
+                String unloadUnLocode,
+                java.time.Instant loadTime,
+                java.time.Instant unloadTime) {
+        }
+    }
+
+    /**
+     * 経路の確定（US09）。
+     *
+     * <p><b>候補 ID ではなく旅程そのものを送る。</b> 経路候補はテーブルに持たないので、
+     * 選んでから送るまでの間に航海が更新されうる。</p>
+     */
+    public record AssignRouteRequest(
+            @jakarta.validation.constraints.NotEmpty @jakarta.validation.Valid
+            java.util.List<LegRequest> legs) {
+
+        public record LegRequest(
+                @jakarta.validation.constraints.NotBlank String voyageNumber,
+                @jakarta.validation.constraints.NotBlank String loadUnLocode,
+                @jakarta.validation.constraints.NotBlank String unloadUnLocode,
+                @jakarta.validation.constraints.NotNull java.time.Instant loadTime,
+                @jakarta.validation.constraints.NotNull java.time.Instant unloadTime) {
+        }
+    }
+
+    /** 確定した旅程（S22 / US09）。並び順が業務の意味を持つ。 */
+    public record ItineraryResponse(java.util.List<ItineraryLegResponse> legs) {
+    }
+
+    public record ItineraryLegResponse(
+            int legSeq,
+            String voyageNumber,
+            String loadUnLocode,
+            String unloadUnLocode,
+            java.time.Instant loadAt,
+            java.time.Instant unloadAt) {
+    }
+
     public record BookCargoResponse(String bookingId) {
     }
 }

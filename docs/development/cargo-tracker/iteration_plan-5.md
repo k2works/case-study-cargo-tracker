@@ -300,11 +300,12 @@ state "経路設計" as routing {
 
 ### ADR
 
-| 論点 | 現時点の方針 | ADR にするか |
+| 論点 | 現時点の方針 | 結果 |
 | :--- | :--- | :--- |
-| 探索の打ち切り（乗り継ぎ回数・候補数の上限） | 乗り継ぎ 3 回・候補 20 件で打ち切る。無制限だと航海が増えたときに応答が返らない | **起票する**（ADR-0007。上限は業務の判断であり、コメントに書くと次に増やすとき根拠が残らない） |
-| `QueryDispatcher` が 2 BC でバイト一致（IT4 引き継ぎ 3） | `shared.infrastructure.axon` へ寄せる | **ADR-0007 に併記**するか、寄せない理由をコメントに残す |
-| `POST /diff` が読み取りに POST を使う（IT4 引き継ぎ 7） | 入力が大きく URL に載らないため | ADR-0006 に一行足す（新規 ADR にしない） |
+| 探索の打ち切り（乗り継ぎ回数・候補数の上限） | 乗り継ぎ 3 回・候補 20 件で打ち切る。無制限だと航海が増えたときに応答が返らない | **[ADR-0007](../../adr/cargo-tracker/0007-route-search-cutoff.md) を起票**。打ち切りを候補件数だけで判断しない点も決定に含めた |
+| `QueryDispatcher` が 2 BC でバイト一致（IT4 引き継ぎ 3） | `shared.infrastructure.axon` へ寄せる | **寄せた**（R.4）。ADR にはせず、寄せると空振りする ArchUnit の規則を同じ変更で広げた |
+| `POST /diff` が読み取りに POST を使う（IT4 引き継ぎ 7） | 入力が大きく URL に載らないため | **ADR-0006 決定 7** に追記（R.5） |
+| 予約の修正内容を投影に持つか（R.2） | IT4 は「履歴テーブルは作らない」と決めたが、読み口がどこにも無かった | **[ADR-0008](../../adr/cargo-tracker/0008-cargo-revision-as-a-projection.md) を起票**して判断を改めた |
 
 ### 設計への反映が必要な事項
 
@@ -318,8 +319,10 @@ state "経路設計" as routing {
 | 4 | `ui_design.md` S31 節 | **既存節の改訂**（新規作成ではない）。候補一覧から**概算（費用）の列を外す**（US21・IT13 まで出せない）、航海番号の列を足す、0 件と 503 の言い分け・打ち切りの表示を書く | **反映済み**（概算列・言い分け・打ち切り） |
 | 4-2 | `architecture_backend.md` | `FindRouteCandidatesQuery` の引数が端点と期限の 3 つしかない。貨物種別で絞れないと、危険物を運べない航海が候補に混ざる。`cargoType`・`excludePorts`・`departFrom` を足す | **反映済み** |
 | 4-3 | `domain-model.md` 要素表 | `RouteSearchSpecification` と `TransitEdge` が載っていない | **反映済み** |
-| 5 | `data-model.md` | `cargo_leg` の定義は済んでいるが、**マイグレーションがまだ無い**（bookingms は V007 まで）。`V008__create_cargo_leg.sql` を Day 7 に作る | 実装（Day 7） |
-| 6 | `domain-model.md` Voyage のコマンド表 | `CancelVoyageCommand` は表にあるが実装が無い（IT4 で `VoyageCancelledEvent` だけ先に置いた）。引き継ぎ枠で実装する | 引き継ぎ枠 |
+| 5 | `data-model.md` | `cargo_leg` の定義は済んでいるが、**マイグレーションがまだ無い**。R.2 で `V008__create_cargo_revision.sql` を使ったので、**`cargo_leg` は V009** になる | 実装（Day 7） |
+| 6 | `domain-model.md` Voyage のコマンド表 | `CancelVoyageCommand` は表にあるが実装が無い（IT4 で `VoyageCancelledEvent` だけ先に置いた）。引き継ぎ枠で実装する | **反映済み**（R.1。`data-model.md` に `cancelled_at` / `cancel_reason` / `cancelled_by`、`ui_design.md` S34 にキャンセルの導線） |
+| 7 | `architecture_backend.md`・`domain-model.md` | ACL ポートの入力が集約の `RouteSpecification`（端点と期限）と同じ名前になっていたが、探索は貨物種別・除外港・起点を持つ。**別の型（`RouteSearchRequest`）に分けた**。集約に探索の都合を足すのは US10 の仕事 | **反映済み**（Day 5） |
+| 8 | `architecture_backend.md` | 同期問い合わせのタイムアウトを「Resilience4j の TimeLimiter」と書いていたが、`QueryDispatcher`（共有カーネル）が既に 5 秒で切っている。**待ち方を決める仕組みを 2 つ持たない**ため Resilience4j は導入しない | **反映済み**（Day 5） |
 
 ## スケジュール
 
@@ -329,12 +332,14 @@ state "経路設計" as routing {
 
 | # | 内容 | 出所 | 見積 |
 | :--- | :--- | :--- | :--- |
-| R.1 | **航海キャンセル**（`CancelVoyageCommand` + REST + S34 のボタン）。不変条件 5 への到達手段がイベントの直接適用しかない | IT4 引き継ぎ 1（高） | 3h |
-| R.2 | **US32 §受入基準 4「何を変えたか」の読み口**。記録はあるが誰にも見えない | IT4 引き継ぎ 2（高） | 3h |
+| R.1 | **航海キャンセル**（`CancelVoyageCommand` + REST + S34 のボタン）。不変条件 5 への到達手段がイベントの直接適用しかない | IT4 引き継ぎ 1（高） | 3h → **返済済み**（2cf3e9e43） |
+| R.2 | **US32 §受入基準 4「何を変えたか」の読み口**。記録はあるが誰にも見えない | IT4 引き継ぎ 2（高） | 3h → **返済済み**（71958f42c。ADR-0008 で IT4 の判断を改めた） |
 | R.3 | ~~`ui_design.md` の全体遷移図・S30・S22 節を IT4 の導線に合わせる~~ | IT4 引き継ぎ 4 | **開始準備で消化済み**（8e2593fac） |
-| R.4 | `QueryDispatcher` の重複を寄せるか決め、ADR かコメントに残す | IT4 引き継ぎ 3 | 2h |
-| R.5 | `POST /diff` の理由を ADR-0006 に一行足す | IT4 引き継ぎ 7 | 0.5h |
-| R.6 | 検査コードの未使用要素を棚卸しする（IT4 の T7） | IT4 引き継ぎ 14 | 2h |
+| R.4 | `QueryDispatcher` の重複を寄せるか決め、ADR かコメントに残す | IT4 引き継ぎ 3 | 2h → **返済済み**（2e7abafc8。共有カーネルへ 1 本化し、ArchUnit の規則を包みにも広げた） |
+| R.5 | `POST /diff` の理由を ADR-0006 に一行足す | IT4 引き継ぎ 7 | 0.5h → **返済済み**（決定 7） |
+| R.6 | 検査コードの未使用要素を棚卸しする（IT4 の T7） | IT4 引き継ぎ 14 | 2h → **返済済み**（`serialVersionUID` 以外 0 件） |
+
+**枠は 6 件すべて返済しました。** 落とす順序は使いませんでした。
 
 **落とす順序**（消化できないときは上から落とす）: R.6 → R.5 → R.4 → R.3 → R.2 → R.1。R.1・R.2 は高で、落とすなら理由をふりかえりに書きます。
 
@@ -355,20 +360,20 @@ state "経路設計" as routing {
 
 インサイドアウトで進みます。**探索 → クエリハンドラ → 契約 → ACL → Controller → 画面**の順です。
 
-| Day | 内容 |
-| :--- | :--- |
-| 2 | `VoyageGraph`・`TransitEdge`・`TransitPath`・`RouteSearchSpecification`（値オブジェクトの単体。**期限は日付単位・当日着は間に合う**を赤で固定） |
-| 3 | `RouteSearchService.findCandidates`（接続・種別・出港済み・打ち切り・推奨順・直行便優先。**候補 0 件は例外にしない**） |
-| 4 | `FindRouteCandidatesQuery` の `@QueryHandler` と `VoyageGraph` の組み立て（投影から）。契約テストで往復を確かめる |
-| 5 | bookingms の ACL（ポート・実装・タイムアウト・503）と Controller、S31 の候補表示。**S30 の行リンクを `/bookings/:id` から `/routing/bookings/:id` に切り替え**、到達性のテストを更新する（IT4 までは S31 が無いので S22 を開いていた） |
+| Day | 内容 | 実績 |
+| :--- | :--- | :--- |
+| 2 | `VoyageGraph`・`TransitEdge`・`TransitPath`・`RouteSearchSpecification`（値オブジェクトの単体。**期限は日付単位・当日着は間に合う**を赤で固定） | 完了（83388a3ba） |
+| 3 | `RouteSearchService.findCandidates`（接続・種別・出港済み・打ち切り・推奨順・直行便優先。**候補 0 件は例外にしない**） | 完了。**打ち切りは候補件数だけで判断しない**形に変えた（乗り継ぎ上限で捨てた枝は件数に現れず、「候補 0 件」と同じ見え方になる） |
+| 4 | `FindRouteCandidatesQuery` の `@QueryHandler` と `VoyageGraph` の組み立て（投影から）。契約テストで往復を確かめる | 完了。ゴールデン 3 本（`RouteCandidateDto` を含む。名簿の検査が欠落を捕まえた）+ `ContractQueryRoundTripIT` |
+| 5 | bookingms の ACL（ポート・実装・タイムアウト・503）と Controller、S31 の候補表示。**S30 の行リンクを `/bookings/:id` から `/routing/bookings/:id` に切り替え**、到達性のテストを更新する（IT4 までは S31 が無いので S22 を開いていた） | 完了。**`RouteSearchRequest` を新設**して集約の `RouteSpecification` と分けた。Resilience4j は入れず `QueryDispatcher` の 5 秒を使う |
 
 ### Day 6-8: US09 経路を選択・確定する（4 SP）
 
-| Day | 内容 |
-| :--- | :--- |
-| 6 | `CargoItinerary`・`Leg` の不変条件 4（連結・時刻昇順）と `RouteSpecification.isSatisfiedBy`（不変条件 5） |
-| 7 | `Cargo.assignRoute` と `AssignRouteCommand` → `CargoRoutedEvent`、**`V008__create_cargo_leg.sql`** と `cargo_leg` の投影（全行入れ替え） |
-| 8 | S31 の確定（送信中表示・確定後は S22 へ）、REST と認可の宣言 |
+| Day | 内容 | 実績 |
+| :--- | :--- | :--- |
+| 6 | `CargoItinerary`・`Leg` の不変条件 4（連結・時刻昇順）と `RouteSpecification.isSatisfiedBy`（不変条件 5） | 完了。期限の比較に**業務タイムゾーンを渡す** |
+| 7 | `Cargo.assignRoute` と `AssignRouteCommand` → `CargoRoutedEvent`、**`V009__create_cargo_leg.sql`**（R.2 が V008 を使ったため繰り上がり）と `cargo_leg` の投影（全行入れ替え） | 完了。**集約が端点も覚える**ようにした（期限だけでは、目的地を直した予約に古い目的地の経路が付く） |
+| 8 | S31 の確定（送信中表示・確定後は S22 へ）、REST と認可の宣言 | 完了。S22 に旅程の読み口も同じ変更で出した |
 
 ### Day 9: クラスタ E2E（1 回目）
 
@@ -444,15 +449,19 @@ state "経路設計" as routing {
 
 イテレーションレビューで実演します。**この 7 件をそのままパスする受け入れテストが、IT5 の受け入れ基準です。**
 
-| # | 見せるもの | 役割 | 何をアサートするか |
-| :--- | :--- | :--- | :--- |
-| 1 | 作業一覧から予約を開くと、候補が推奨順に出る | 経路設計 | 所要日数の短い順。経由港・航海番号が各候補に出る |
-| 2 | 直行便があるときは最優先で出る | 経路設計 | 乗り継ぎのある候補より上 |
-| 3 | 危険物の予約では、対応しない航海を含む候補が出ない | 経路設計 | `acceptedCargoTypes` に `HAZARDOUS` を含む航海だけ |
-| 4 | 期限内に着けないときは、その旨と条件調整の案内が出る | 経路設計 | 空リスト + 案内。**エラー表示ではない** |
-| 5 | routingms が落ちているときは「候補が無い」と言わない | 経路設計 | 503 の案内。空の候補一覧を出さない |
-| 6 | 候補を選んで確定すると、経路設定状態が「設計済」になる | 経路設計 | `RoutingStatus = ROUTED`。予約詳細に区間が順に出る |
-| 7 | 期限を満たさない旅程は、API を直接叩いても断られる | 経路設計 | 集約が 409。画面の検査を通さない経路でも守られる |
+| # | 見せるもの | 役割 | 何をアサートするか | 対応する検査 |
+| :--- | :--- | :--- | :--- | :--- |
+| 1 | 作業一覧から予約を開くと、候補が推奨順に出る | 経路設計 | 所要日数の短い順。経由港・航海番号が各候補に出る | `RouteSearchServiceTest#ordersByDuration`・`RoutingWorkbenchPage.test.tsx`・クラスタ E2E |
+| 2 | 直行便があるときは最優先で出る | 経路設計 | 乗り継ぎのある候補より上 | `RouteSearchServiceTest#directRouteComesFirst` |
+| 3 | 危険物の予約では、対応しない航海を含む候補が出ない | 経路設計 | `acceptedCargoTypes` に `HAZARDOUS` を含む航海だけ | `RouteSearchServiceTest#skipsVoyagesThatRejectTheCargoType`・`RouteCandidateQueryIT#excludesVoyagesThatRejectTheCargoType` |
+| 4 | 期限内に着けないときは、その旨と条件調整の案内が出る | 経路設計 | 空リスト + 案内。**エラー表示ではない** | `RouteCandidateQueryIT#returnsEmptyWhenNothingMeetsTheDeadline`・`RoutingWorkbenchPage.test.tsx`（`queryByRole('alert')` が無いことも見る） |
+| 5 | routingms が落ちているときは「候補が無い」と言わない | 経路設計 | 503 の案内。空の候補一覧を出さない | `QueryBusRouteCandidateFinderTest#unavailableIsNotEmpty`・`RoutingWorkbenchPage.test.tsx`（503） |
+| 6 | 候補を選んで確定すると、経路設定状態が「設計済」になる | 経路設計 | `RoutingStatus = ROUTED`。予約詳細に区間が順に出る | `経路の確定.feature` シナリオ 1・`CargoProjectionIT#projectsItinerary`・クラスタ E2E |
+| 7 | 期限を満たさない旅程は、API を直接叩いても断られる | 経路設計 | 集約が断る。画面の検査を通さない経路でも守られる | `経路の確定.feature` シナリオ 2・3（**画面を通さず API を直接叩く**）・`CargoRoutingTest` |
+
+**デモ項目に対応する検査を表に書き出しました**（IT4 の T6・「実演で緑になるものは、実装済みでも固定されていないことがある」）。7 件とも本文のアサーションで対応を確かめています。
+
+**受入基準 3 の「費用」は未達です。** 料金表は US21（IT13）が正典で、現時点で存在しません。0 を返すと「費用 0 円の経路」と読めるので、応答にも画面にも欄を置いていません。US09 §受入基準 1 の「費用」も同じ理由で未達です。
 
 ## 局面の確認（中盤の継続）
 

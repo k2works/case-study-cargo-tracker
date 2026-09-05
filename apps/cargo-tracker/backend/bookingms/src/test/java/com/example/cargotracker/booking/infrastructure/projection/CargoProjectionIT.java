@@ -3,6 +3,7 @@ package com.example.cargotracker.booking.infrastructure.projection;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
+import com.example.cargotracker.booking.domain.model.events.CargoRoutedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoSpecificationUpdatedEvent;
 import com.example.cargotracker.booking.domain.model.events.RoutingRequestedEvent;
 import com.example.cargotracker.booking.infrastructure.persistence.CargoSummaryMapper;
@@ -10,8 +11,10 @@ import com.example.cargotracker.booking.infrastructure.query.BookingQueries.Book
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.BookingView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.CountBookingsByStatusQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingItineraryQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingRevisionsQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingsQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.ItineraryLegView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.RevisionView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindRoutingWorklistQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueryHandler;
@@ -370,5 +373,102 @@ class CargoProjectionIT extends AbstractAxonIntegrationTest {
         projection.on(booked(bookingId, "SHP-REV3", "自動車部品"));
 
         assertThat(queries.handle(new FindBookingRevisionsQuery(bookingId)).items()).isEmpty();
+    }
+
+    private static final Instant ROUTED_AT = Instant.parse("2026-09-06T00:00:00Z");
+
+    private static CargoRoutedEvent routed(String bookingId, List<CargoRoutedEvent.Leg> legs) {
+        return new CargoRoutedEvent(bookingId, legs, "routing01", ROUTED_AT);
+    }
+
+    private static CargoRoutedEvent.Leg leg(String voyage, String from, String to,
+            String load, String unload) {
+        return new CargoRoutedEvent.Leg(voyage, from, to,
+                Instant.parse(load), Instant.parse(unload));
+    }
+
+    @Test
+    @DisplayName("US09: 経路が投影され、区間が積む順に読める")
+    void projectsItinerary() {
+        String bookingId = "B-RT-" + System.nanoTime();
+        projection.on(booked(bookingId, "SHP-RT", "自動車部品"));
+        projection.on(new RoutingRequestedEvent(bookingId, "sales01"));
+
+        projection.on(routed(bookingId, List.of(
+                leg("V-1", "JPTYO", "SGSIN", "2026-09-10T00:00:00Z", "2026-09-16T00:00:00Z"),
+                leg("V-2", "SGSIN", "USNYC", "2026-09-17T00:00:00Z", "2026-09-25T00:00:00Z"))));
+
+        // **行を丸ごと比べる。** 列ごとに積み上げると、区間に属性が増えたときに
+        // 増えた分の検査が抜ける。
+        assertThat(queries.handle(new FindBookingItineraryQuery(bookingId)).legs())
+                .containsExactly(
+                        new ItineraryLegView(1, "V-1", "JPTYO", "SGSIN",
+                                Instant.parse("2026-09-10T00:00:00Z"),
+                                Instant.parse("2026-09-16T00:00:00Z")),
+                        new ItineraryLegView(2, "V-2", "SGSIN", "USNYC",
+                                Instant.parse("2026-09-17T00:00:00Z"),
+                                Instant.parse("2026-09-25T00:00:00Z")));
+
+        BookingView view = queries.handle(new FindBookingQuery(bookingId));
+        assertThat(view.routingStatus()).isEqualTo("ROUTED");
+        // 荷主に通知するまでは提案中（US12）。ここが CONFIRMED になってはいけない。
+        assertThat(view.bookingStatus()).isEqualTo("ROUTE_PROPOSED");
+    }
+
+    @Test
+    @DisplayName("US09: 設計し直すと区間は入れ替わる（古い区間が残らない）")
+    void replacesLegsOnReassignment() {
+        String bookingId = "B-RT2-" + System.nanoTime();
+        projection.on(booked(bookingId, "SHP-RT2", "自動車部品"));
+        projection.on(new RoutingRequestedEvent(bookingId, "sales01"));
+        projection.on(routed(bookingId, List.of(
+                leg("V-1", "JPTYO", "SGSIN", "2026-09-10T00:00:00Z", "2026-09-16T00:00:00Z"),
+                leg("V-2", "SGSIN", "USNYC", "2026-09-17T00:00:00Z", "2026-09-25T00:00:00Z"))));
+
+        // 短い旅程に置き換える。足すだけだと、行かないはずの SGSIN が残る。
+        projection.on(routed(bookingId, List.of(
+                leg("V-9", "JPTYO", "USNYC", "2026-09-11T00:00:00Z", "2026-09-24T00:00:00Z"))));
+
+        assertThat(queries.handle(new FindBookingItineraryQuery(bookingId)).legs())
+                .containsExactly(new ItineraryLegView(1, "V-9", "JPTYO", "USNYC",
+                        Instant.parse("2026-09-11T00:00:00Z"),
+                        Instant.parse("2026-09-24T00:00:00Z")));
+    }
+
+    @Test
+    @DisplayName("US09: 同じイベントを読み直しても区間は増えない（リプレイの冪等性）")
+    void itineraryIsIdempotentOnReplay() {
+        String bookingId = "B-RT3-" + System.nanoTime();
+        projection.on(booked(bookingId, "SHP-RT3", "自動車部品"));
+        projection.on(new RoutingRequestedEvent(bookingId, "sales01"));
+        CargoRoutedEvent event = routed(bookingId, List.of(
+                leg("V-1", "JPTYO", "USNYC", "2026-09-10T00:00:00Z", "2026-09-24T00:00:00Z")));
+
+        projection.on(event);
+        projection.on(event);
+
+        assertThat(queries.handle(new FindBookingItineraryQuery(bookingId)).legs()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("US09: 投影に無い予約の経路は要確認一覧に残る（黙らない）")
+    void recordsAttentionWhenRoutingUnknownBooking() {
+        String bookingId = "B-RT4-" + System.nanoTime();
+
+        projection.on(routed(bookingId, List.of(
+                leg("V-1", "JPTYO", "USNYC", "2026-09-10T00:00:00Z", "2026-09-24T00:00:00Z"))));
+
+        assertThat(attentionItems.findOpenByRole("ROLE_ROUTING"))
+                .anyMatch(item -> item.targetId().equals(bookingId)
+                        && item.reason().equals("経路の対象が投影に無い"));
+    }
+
+    @Test
+    @DisplayName("US09: 経路が決まっていない予約の旅程は空（404 にしない）")
+    void noItineraryWhenNotRouted() {
+        String bookingId = "B-RT5-" + System.nanoTime();
+        projection.on(booked(bookingId, "SHP-RT5", "自動車部品"));
+
+        assertThat(queries.handle(new FindBookingItineraryQuery(bookingId)).legs()).isEmpty();
     }
 }

@@ -1,5 +1,6 @@
 package com.example.cargotracker.booking.interfaces.rest;
 
+import com.example.cargotracker.booking.application.port.RouteCandidateFinder;
 import com.example.cargotracker.booking.interfaces.rest.ShipperController.DuplicateShipperEmailException;
 import java.util.Map;
 import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
@@ -104,6 +105,22 @@ public class ApiExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(Map.of(CODE, "ILLEGAL_STATE", MESSAGE,
                         BusinessRuleViolation.strip(e.getMessage())));
+    }
+
+    /**
+     * 経路設計サービスに問い合わせられなかった（US08）。
+     *
+     * <p><b>500 にも 200 の空一覧にもしない。</b> 空にすると「候補が無い」と読まれ、
+     * 経路設計者は条件を変え続ける。503 は「あとでもう一度」を意味するので、
+     * 次にすべきことが伝わる。</p>
+     */
+    @ExceptionHandler(RouteCandidateFinder.RouteSearchUnavailable.class)
+    public ResponseEntity<Map<String, Object>> onRouteSearchUnavailable(
+            RouteCandidateFinder.RouteSearchUnavailable e) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(Map.of(CODE, "ROUTE_SEARCH_UNAVAILABLE", MESSAGE,
+                        "経路設計サービスに問い合わせできませんでした。"
+                                + "しばらくしてからもう一度お試しください"));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

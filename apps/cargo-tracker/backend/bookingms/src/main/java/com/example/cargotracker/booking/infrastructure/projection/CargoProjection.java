@@ -2,10 +2,12 @@ package com.example.cargotracker.booking.infrastructure.projection;
 
 import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoSpecificationUpdatedEvent;
+import com.example.cargotracker.booking.domain.model.events.CargoRoutedEvent;
 import com.example.cargotracker.booking.domain.model.events.RoutingRequestedEvent;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.booking.domain.model.valueobjects.RoutingStatus;
 import com.example.cargotracker.booking.domain.service.CargoSpecificationDiff;
+import com.example.cargotracker.booking.infrastructure.persistence.CargoLegMapper;
 import com.example.cargotracker.booking.infrastructure.persistence.CargoRevisionMapper;
 import com.example.cargotracker.booking.infrastructure.persistence.CargoSummaryMapper;
 import com.example.cargotracker.booking.infrastructure.persistence.ShipperMapper;
@@ -35,14 +37,17 @@ public class CargoProjection {
 
     private final CargoSummaryMapper cargos;
     private final CargoRevisionMapper revisions;
+    private final CargoLegMapper legs;
     private final ShipperMapper shippers;
     private final AttentionItemRecorder attentionItems;
     private final Clock clock;
 
     public CargoProjection(CargoSummaryMapper cargos, CargoRevisionMapper revisions,
-            ShipperMapper shippers, AttentionItemRecorder attentionItems, Clock clock) {
+            CargoLegMapper legs, ShipperMapper shippers, AttentionItemRecorder attentionItems,
+            Clock clock) {
         this.cargos = cargos;
         this.revisions = revisions;
+        this.legs = legs;
         this.shippers = shippers;
         this.attentionItems = attentionItems;
         this.clock = clock;
@@ -155,6 +160,37 @@ public class CargoProjection {
     /** 業務タイムゾーン。Clock が持つ（BusinessClockConfiguration）。 */
     ZoneId zone() {
         return clock.getZone();
+    }
+
+    /**
+     * 経路が決まった（US09）。
+     *
+     * <p><b>区間は全行を入れ替える</b>（data-model.md）。足すだけにすると、経路を
+     * 設計し直した予約に古い区間が残り、旅程が二重に見える。短くなった旅程では、
+     * 行かないはずの港が残る。</p>
+     *
+     * <p>{@code booking_status} は動かさない。荷主に通知するまでは提案中（US12）。</p>
+     */
+    @EventHandler
+    public void on(CargoRoutedEvent event) {
+        Instant now = clock.instant();
+        int updated = cargos.updateRoutingStatus(event.bookingId(),
+                RoutingStatus.ROUTED.name(), now);
+        if (updated == 0) {
+            log.warn("経路を書ける予約が投影に無い: bookingId={}", event.bookingId());
+            attentionItems.add("PROJECTION_REJECTED", "BOOKING", event.bookingId(),
+                    "ROLE_ROUTING", "経路の対象が投影に無い", "{}", now);
+            return;
+        }
+
+        legs.deleteByBooking(event.bookingId());
+        for (int i = 0; i < event.legs().size(); i++) {
+            CargoRoutedEvent.Leg leg = event.legs().get(i);
+            legs.insert(new CargoLegMapper.CargoLegRow(
+                    event.bookingId(), i + 1, leg.voyageNumber(),
+                    leg.loadUnLocode(), leg.unloadUnLocode(),
+                    leg.loadTime(), leg.unloadTime()));
+        }
     }
 
     /**

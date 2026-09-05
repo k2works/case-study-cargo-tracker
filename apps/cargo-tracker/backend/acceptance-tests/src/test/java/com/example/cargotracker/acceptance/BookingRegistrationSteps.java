@@ -53,7 +53,31 @@ public class BookingRegistrationSteps {
     private String lastProduct;
     private ResponseEntity<JsonMap> lastResponse;
 
-    private String url(String path) {
+    /**
+     * いま扱っている予約の行。経路の確定（US09）のステップも同じ予約を見る。
+     *
+     * <p>ステップ定義をまたいで予約 ID を持ち回すと、どちらが正か分からなくなる。
+     * 見つけ方は 1 か所（品名で引く）に置く。</p>
+     */
+    Map<String, Object> currentBooking() {
+        return findByProduct(lastProduct);
+    }
+
+    /** 予約の API を叩く口。経路の確定のステップも同じ土台を使う。 */
+    org.springframework.web.client.RestClient rest() {
+        return rest;
+    }
+
+    /** 状態のラベル → 投影の値。ラベルの対応表を 2 か所に書かない。 */
+    static String statusOf(String label) {
+        String status = STATUS_OF_LABEL.get(label);
+        if (status == null) {
+            throw new IllegalArgumentException("知らない予約の状態です: " + label);
+        }
+        return status;
+    }
+
+    String url(String path) {
         return "http://localhost:" + bookingPort + path;
     }
 

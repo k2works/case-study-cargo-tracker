@@ -126,6 +126,7 @@ nav:
       - 利用者を管理する: manual/06-利用者を管理する.md
       - 航海スケジュールを登録・更新する: manual/07-航海スケジュールを登録する.md
       - 経路設計に引き渡す: manual/08-経路設計に引き渡す.md
+      - 経路を設計する: manual/09-経路を設計する.md
   - レビュー:
       - 概要: review/index.md
       - ドメインモデル分析レビュー: review/ドメインモデル分析_review_20260331.md
@@ -146,6 +147,7 @@ nav:
           - ADR-0004 開発環境の動作確認用ログイン: adr/cargo-tracker/0004-demo-login-for-development.md
           - ADR-0005 Flyway のサービス別ロケーション: adr/cargo-tracker/0005-flyway-locations-per-service.md
           - ADR-0006 Gateway でのロール認可: adr/cargo-tracker/0006-role-authorization-at-the-gateway.md
+          - ADR-0007 経路探索の打ち切り: adr/cargo-tracker/0007-route-search-cutoff.md
           - ADR-0008 予約の修正内容は投影として持つ: adr/cargo-tracker/0008-cargo-revision-as-a-projection.md
   - 記事:
       - 概要: article/index.md

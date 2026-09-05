@@ -476,4 +476,70 @@ test.describe('マニュアルの画面キャプチャ', () => {
     await expect(page.getByText('メールアドレスの重複')).toBeVisible();
     await page.screenshot({ path: `${OUT}/04-S70-attention-list.png`, fullPage: true });
   });
+
+  test('09 経路設計ワークベンチ', async ({ page }) => {
+    // 引き渡したあとの予約に候補が並んだ状態を写す。**1 件の読み口より後に置く**
+    // （`*` は `/` をまたがないので、広いパターンが先だと候補の経路に当たらない）。
+    await page.route('**/api/v1/booking/bookings/*', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ...SAMPLE_BOOKINGS.items[0],
+          bookingStatus: 'ROUTE_PROPOSED',
+          routingStatus: 'ROUTING_REQUESTED',
+          routingRequestedAt: '2026-09-04T05:10:00Z',
+        }),
+      }),
+    );
+    await page.route('**/api/v1/booking/bookings/*/route-candidates', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          candidates: [
+            {
+              legs: [
+                {
+                  voyageNumber: 'V-MOL-001',
+                  loadUnLocode: 'JPTYO',
+                  unloadUnLocode: 'USNYC',
+                  loadTime: '2026-09-20T09:00:00Z',
+                  unloadTime: '2026-10-09T18:00:00Z',
+                },
+              ],
+              transitDays: 19,
+              direct: true,
+            },
+            {
+              legs: [
+                {
+                  voyageNumber: 'V-MOL-002',
+                  loadUnLocode: 'JPTYO',
+                  unloadUnLocode: 'SGSIN',
+                  loadTime: '2026-09-20T09:00:00Z',
+                  unloadTime: '2026-09-28T08:00:00Z',
+                },
+                {
+                  voyageNumber: 'V-MSK-220',
+                  loadUnLocode: 'SGSIN',
+                  unloadUnLocode: 'USNYC',
+                  loadTime: '2026-09-29T06:00:00Z',
+                  unloadTime: '2026-10-12T18:00:00Z',
+                },
+              ],
+              transitDays: 22,
+              direct: false,
+            },
+          ],
+          truncated: false,
+        }),
+      }),
+    );
+    await signInAsRouting(page);
+    await page.goto('/routing/bookings/55555555-5555-5555-5555-555555555555');
+    await expect(page.getByRole('heading', { name: '経路候補' })).toBeVisible();
+    await expect(page.getByTestId('candidate-1')).toBeVisible();
+    await page.screenshot({ path: `${OUT}/09-S31-routing-workbench.png`, fullPage: true });
+  });
 });

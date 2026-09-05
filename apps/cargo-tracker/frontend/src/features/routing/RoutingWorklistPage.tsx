@@ -140,7 +140,10 @@ export function RoutingWorklistPage() {
               {items.map((item) => (
                 <tr key={item.bookingId}>
                   <td className={TD}>
-                    <Link to={`/bookings/${item.bookingId}`} className={LINK}>
+                    {/* 経路設計者の作業はここから始まる。予約詳細（S22）ではなく
+                        経路設計ワークベンチ（S31）を開く。IT4 までは S31 が
+                        無かったので S22 を開いていた。 */}
+                    <Link to={`/routing/bookings/${item.bookingId}`} className={LINK}>
                       {item.bookingNumber}
                     </Link>
                   </td>

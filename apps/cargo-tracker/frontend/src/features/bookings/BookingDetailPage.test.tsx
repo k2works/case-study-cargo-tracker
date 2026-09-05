@@ -363,3 +363,59 @@ describe('S22 修正履歴（US32 §受入基準 4）', () => {
     expect(screen.queryByRole('heading', { name: '修正履歴' })).not.toBeInTheDocument();
   });
 });
+
+describe('S22 旅程（US09）', () => {
+  it('経路が決まっていれば区間が積む順に読める', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      const url = String(input);
+      if (url.includes('/itinerary')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              legs: [
+                {
+                  legSeq: 1,
+                  voyageNumber: 'V-1',
+                  loadUnLocode: 'JPTYO',
+                  unloadUnLocode: 'SGSIN',
+                  loadAt: '2026-09-10T00:00:00Z',
+                  unloadAt: '2026-09-16T00:00:00Z',
+                },
+                {
+                  legSeq: 2,
+                  voyageNumber: 'V-2',
+                  loadUnLocode: 'SGSIN',
+                  unloadUnLocode: 'USNYC',
+                  loadAt: '2026-09-17T00:00:00Z',
+                  unloadAt: '2026-09-25T00:00:00Z',
+                },
+              ],
+            }),
+            { status: 200 },
+          ),
+        );
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify(booking({ routingStatus: 'ROUTED' })), { status: 200 }),
+      );
+    });
+
+    renderDetail();
+
+    expect(await screen.findByRole('heading', { name: '旅程' })).toBeInTheDocument();
+    expect(screen.getByTestId('leg-1')).toHaveTextContent('JPTYO');
+    expect(screen.getByTestId('leg-1')).toHaveTextContent('SGSIN');
+    expect(screen.getByTestId('leg-2')).toHaveTextContent('V-2');
+  });
+
+  it('経路が決まっていなければ旅程を出さない', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(booking()), { status: 200 }),
+    );
+
+    renderDetail();
+
+    expect(await screen.findByRole('heading', { name: '状態' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: '旅程' })).not.toBeInTheDocument();
+  });
+});

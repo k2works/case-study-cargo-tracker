@@ -140,6 +140,49 @@ export function cancelVoyage(
   return commandClient(`/routing/voyages/${encodeURIComponent(voyageNumber)}/cancel`, { reason });
 }
 
+/**
+ * 経路候補（US08）。<b>予約 ID で問い合わせる。</b>
+ *
+ * <p>条件を画面で組み立てて送らない。組むと、予約の期限を直したのに古い期限で
+ * 探すことになる。</p>
+ *
+ * <p>問い合わせられないときはサーバが 503 を返す（空の候補一覧は返らない）。
+ * 「候補が無い」と「探せなかった」を画面が言い分けられるようにするため。</p>
+ */
+export function fetchRouteCandidates(
+  bookingId: string,
+): Promise<Pending<RouteCandidatesView>> {
+  return queryClient(
+    `/booking/bookings/${encodeURIComponent(bookingId)}/route-candidates`,
+  );
+}
+
+/** 経路候補の一覧。`truncated` は探索の上限で切ったことを表す（ADR-0007）。 */
+export interface RouteCandidatesView {
+  readonly candidates: readonly RouteCandidateView[];
+  readonly truncated: boolean;
+}
+
+/**
+ * 経路候補 1 件。
+ *
+ * <p><b>費用の欄は無い。</b> 料金表は US21（IT13）が正典で、現時点で存在しない
+ * （US08 §受入基準 3 の未達）。</p>
+ */
+export interface RouteCandidateView {
+  readonly legs: readonly RouteLegView[];
+  readonly transitDays: number;
+  readonly direct: boolean;
+}
+
+export interface RouteLegView {
+  readonly voyageNumber: string;
+  readonly loadUnLocode: string;
+  readonly unloadUnLocode: string;
+  readonly loadTime: string;
+  readonly unloadTime: string;
+}
+
 export function registerVoyage(input: RegisterVoyageInput): Promise<{ voyageNumber: string }> {
   return commandClient('/routing/voyages', input);
 }

@@ -618,7 +618,16 @@ public class CargoQueryHandler {
 ```java
 // bookingms/application/port
 public interface RouteCandidateFinder {
-    List<RouteCandidate> find(RouteSpecification spec);
+    // 探索の条件は集約の RouteSpecification（端点と期限）とは別の型にする。
+    // 探索は貨物種別・除外港・起点を持ち、集約は持たない（IT5 で実装時に分けた）
+    RouteCandidates find(RouteSearchRequest request);
+
+    // 候補だけを返さない。上限で切ったことを一緒に返さないと、
+    // 「上限まで探した」と「候補が無い」が同じ見え方になる（ADR-0007）
+    record RouteCandidates(List<RouteCandidate> candidates, boolean truncated) {}
+
+    // 問い合わせられなかった。**空リストにしない**（「候補が無い」と読まれる）
+    class RouteSearchUnavailable extends RuntimeException {}
 }
 
 // bookingms/infrastructure/acl
@@ -631,22 +640,31 @@ public class QueryBusRouteCandidateFinder implements RouteCandidateFinder {
     public List<RouteCandidate> find(RouteSpecification spec) {
         // クエリ型と応答 DTO は shared/contract/query に置く。routingms の型は持ち込まず自 BC の型に変換する
         // 同期問い合わせのタイムアウトは既定 5 秒（Resilience4j の TimeLimiter）。join() で無期限に待たない
-        var response = queryGateway.query(
+        // 待ち方は QueryDispatcher（共有カーネル）が 1 か所で決める。5 秒で切る。
+        // ここで独自に待つと、同じ問い合わせが呼ぶ場所によって別の待ち方になる
+        var response = queries.query(
                 // 貨物種別・除外港・departFrom も渡す。端点と期限だけでは、危険物を運べない
                 // 航海が候補に混ざる（domain-model.md「ドメインサービス：RouteSearchService」）
                 new FindRouteCandidatesQuery(
-                        spec.origin().code(), spec.destination().code(), spec.arrivalDeadline(),
-                        spec.cargoType().name(), excludePortCodes, departFromCode),
-                ResponseTypes.multipleInstancesOf(RouteCandidateDto.class))
-                .orTimeout(5, TimeUnit.SECONDS).join();
-        return response.stream().map(RouteCandidate::from).toList();
+                        request.origin().unLocode().value(),
+                        request.destination().unLocode().value(),
+                        request.arrivalDeadline(), request.cargoType().name(),
+                        excludePortCodes, departFromCode),
+                RouteCandidatesResponse.class);
+        // 相手が居ない・時間切れは RouteSearchUnavailable にして 503 にする。
+        // 空リストで返すと「候補が無い」と読まれ、条件を変え続けさせる
+        return new RouteCandidates(
+                response.candidates().stream().map(RouteCandidate::from).toList(),
+                response.truncated());
     }
 }
 ```
 
 | 規則 | 内容 |
 | :--- | :--- |
-| タイムアウト既定 5 秒 | Query Bus の同期問い合わせは Resilience4j の TimeLimiter で 5 秒。超えたら `503` を返し、画面は再試行を促す |
+| タイムアウト既定 5 秒 | Query Bus の同期問い合わせは **`QueryDispatcher`（共有カーネル）が 5 秒**で切る。超えたら `503` を返し、画面は再試行を促す。Resilience4j は導入しない（同じ待ち方を決める仕組みが 2 つになる） |
+| 落ちているときは 503 | `NoHandlerForQueryException`・時間切れ・通信の失敗は `RouteSearchUnavailable` に変換し、Controller が `503` を返す。**空の候補一覧にしない**（「候補が無い」と読まれ、経路設計者は直らない条件を変え続ける） |
+| 業務の断りは通す | 経路設計側が「知らない港・種別」と断ったときは 422 のまま通す。503 にすると、直せる入力の誤りが「あとで試して」に化ける |
 | Saga から同期クエリを呼ばない | Saga の中で `.join()` すると Processing Group が止まる。経路候補の存在確認は Controller（US08 の経路検索）で行い、Saga と Reaction Handler は同期クエリを持たない（ArchUnit：`application/reaction` と `application/reaction` は `QueryGateway` に依存しない） |
 | 契約クエリは 1 本 | `FindRouteCandidatesQuery` だけ。`FindShipperForBillingQuery` は廃止し、billingms は `ShipperRegisteredEvent` / `CorporateContractAssignedEvent` を購読して `shipper_contract_snapshot` を作る |
 

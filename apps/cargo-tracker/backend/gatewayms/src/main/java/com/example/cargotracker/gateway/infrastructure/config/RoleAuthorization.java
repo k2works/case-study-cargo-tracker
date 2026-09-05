@@ -86,6 +86,11 @@ public final class RoleAuthorization {
         // **/bookings/** より先に置く。** 後ろに置くと広いほうに吸われる。
         rules.put("/api/v1/booking/bookings/routing-worklist", Set.of(ROUTING));
         rules.put("/api/v1/booking/bookings/*/routing-request", Set.of(SALES));
+        // 経路候補の算出と経路の確定（US08・US09）は経路設計者だけ。
+        // **/bookings/** より先に置く。** GET は既存の広い宣言と同じメソッドなので、
+        // 順序でしか絞れない（後ろに置くと営業・追跡にも開いたままになる）。
+        rules.put("/api/v1/booking/bookings/*/route-candidates", Set.of(ROUTING));
+        rules.put("/api/v1/booking/bookings/*/route", Set.of(ROUTING));
 
         // 予約（S20 / S21）は営業・経路設計・追跡が読む。
         rules.put("/api/v1/booking/bookings/**", Set.of(SALES, ROUTING, TRACKER));

@@ -225,6 +225,65 @@ test.describe('kind クラスタでの通し確認', () => {
     await expect(page.locator('tr', { hasText: voyageNumber })).toContainText('E2E EXPRESS');
   });
 
+  test('経路設計者が候補を見て経路を確定する（US08・US09・IT5）', async ({ page, request }) => {
+    // **サービス越しの問い合わせは、この確認でしか出ない失敗の宝庫。**
+    // 単体もモックも「届く」ことは見ていない。
+    const stamp = String(Date.now()).slice(-6);
+    const voyageNumber = `V-RT${stamp}`;
+    const product = `経路設計-${Date.now()}`;
+
+    // 候補になる航海を先に登録する。無いと候補 0 件になり、
+    // 「届いていない」のか「便が無い」のか分からない。
+    const routingToken = await tokenOf(request, 'routing01');
+    const voyage = await request.post('/api/v1/routing/voyages', {
+      headers: { Authorization: `Bearer ${routingToken}` },
+      data: {
+        voyageNumber,
+        carrierCode: 'MOL',
+        carrierName: '商船三井',
+        vesselName: 'ROUTE EXPRESS',
+        movements: [
+          {
+            departureUnLocode: 'JPTYO',
+            arrivalUnLocode: 'USNYC',
+            // 業務タイムゾーンで作る。UTC で作ると CI の時間帯で 1 日ずれる。
+            departureAt: `${businessDate(5)}T00:00:00Z`,
+            arrivalAt: `${businessDate(25)}T00:00:00Z`,
+          },
+        ],
+        acceptedCargoTypes: ['GENERAL'],
+      },
+    });
+    expect(voyage.status()).toBe(201);
+
+    const bookingId = await bookCargo(request, product);
+
+    // 引き渡す（US06）。引き渡していない予約には経路を確定できない。
+    await signIn(page, 'sales01');
+    await page.goto(`/bookings/${bookingId}`);
+    await page.getByRole('button', { name: '経路設計を依頼する' }).click();
+    await expect(page.getByText('経路提案中')).toBeVisible({ timeout: 20_000 });
+
+    await page.goto('/logout');
+    await signIn(page, 'routing01');
+    await page.getByRole('link', { name: '経路設計作業' }).first().click();
+    // 作業一覧の予約番号は経路設計ワークベンチ（S31）を開く。
+    await page.locator('tr', { hasText: product }).getByRole('link').first().click();
+
+    await expect(page.getByRole('heading', { name: '経路候補' })).toBeVisible();
+    // 登録した航海が候補に出る。出なければ、届いていないか探索が落としている。
+    await expect(page.getByText(voyageNumber)).toBeVisible({ timeout: 30_000 });
+
+    await page.getByRole('radio', { name: '候補 1' }).check();
+    await page.getByRole('button', { name: 'この経路で確定' }).click();
+
+    // 確定すると予約詳細へ戻り、旅程が読める（US09）。
+    await expect(page.getByRole('heading', { name: '旅程' })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId('leg-1')).toContainText(voyageNumber);
+    // 荷主に通知するまでは提案中（US12）。ここが確定になってはいけない。
+    await expect(page.getByText('経路提案中')).toBeVisible();
+  });
+
   test('管理者は利用者の状態を見てロックを解除できる', async ({ page, request }) => {
     // 先に API で 5 回失敗させてロックする。画面から 5 回打つと、E2E が
     // 「ロックの再現手順」ではなく「入力の反復」を測ることになる。

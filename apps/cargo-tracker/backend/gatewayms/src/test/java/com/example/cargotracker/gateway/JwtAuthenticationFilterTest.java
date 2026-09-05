@@ -217,6 +217,33 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
+    @DisplayName("経路候補の算出と経路の確定は経路設計者だけに開く（US08・US09）")
+    void restrictsRouteDesignToRoutingRole() throws Exception {
+        // GET /bookings/*/route-candidates は既存の広い宣言（/bookings/**）と
+        // **同じメソッド**なので、順序でしか絞れない。後ろに置くと営業・追跡にも
+        // 開いたままになり、この検査だけが緑になる。
+        String candidates = "/api/v1/booking/bookings/b-1/route-candidates";
+        assertThat(run(candidates, "Bearer " + tokenWithRoles("ROLE_SALES")).getStatus())
+                .as("営業が経路候補を算出できてはいけない")
+                .isEqualTo(403);
+        assertThat(run(candidates, "Bearer " + tokenWithRoles("ROLE_TRACKER")).getStatus())
+                .isEqualTo(403);
+        assertThat(run(candidates, "Bearer " + tokenWithRoles("ROLE_ROUTING")).getStatus())
+                .as("経路設計者は算出できる")
+                .isNotEqualTo(403);
+
+        String assign = "/api/v1/booking/bookings/b-1/route";
+        assertThat(run(assign, "Bearer " + tokenWithRoles("ROLE_SALES"), "POST").getStatus())
+                .as("営業が経路を確定できてはいけない")
+                .isEqualTo(403);
+        assertThat(run(assign, "Bearer " + tokenWithRoles("ROLE_TRACKER"), "POST").getStatus())
+                .isEqualTo(403);
+        assertThat(run(assign, "Bearer " + tokenWithRoles("ROLE_ROUTING"), "POST").getStatus())
+                .as("経路設計者は確定できる")
+                .isNotEqualTo(403);
+    }
+
+    @Test
     @DisplayName("予約の参照は営業以外にも開いたままにする")
     void keepsBookingReadOpen() throws Exception {
         // 修正を絞ったついでに参照まで絞ると、経路設計者が予約の詳細を開けなくなる。

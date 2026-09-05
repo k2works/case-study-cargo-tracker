@@ -1,14 +1,18 @@
 package com.example.cargotracker.booking.infrastructure.query;
 
+import com.example.cargotracker.booking.infrastructure.persistence.CargoLegMapper;
 import com.example.cargotracker.booking.infrastructure.persistence.CargoRevisionMapper;
 import com.example.cargotracker.booking.infrastructure.persistence.CargoSummaryMapper;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.BookingListView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.BookingView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.CountBookingsByStatusQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingItineraryQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingRevisionsQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingsQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindRoutingWorklistQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.ItineraryLegView;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.ItineraryView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.RevisionListView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.RevisionView;
 import org.axonframework.messaging.queryhandling.annotation.QueryHandler;
@@ -20,10 +24,22 @@ public class BookingQueryHandler {
 
     private final CargoSummaryMapper cargos;
     private final CargoRevisionMapper revisions;
+    private final CargoLegMapper legs;
 
-    public BookingQueryHandler(CargoSummaryMapper cargos, CargoRevisionMapper revisions) {
+    public BookingQueryHandler(CargoSummaryMapper cargos, CargoRevisionMapper revisions,
+            CargoLegMapper legs) {
         this.cargos = cargos;
         this.revisions = revisions;
+        this.legs = legs;
+    }
+
+    /** 確定した旅程（US09）。まだ決まっていなければ空。 */
+    @QueryHandler
+    public ItineraryView handle(FindBookingItineraryQuery query) {
+        return new ItineraryView(legs.findByBooking(query.bookingId()).stream()
+                .map(row -> new ItineraryLegView(row.legSeq(), row.voyageNumber(),
+                        row.loadUnlocode(), row.unloadUnlocode(), row.loadAt(), row.unloadAt()))
+                .toList());
     }
 
     /** 修正履歴（US32 §受入基準 4）。一度も直していなければ空。 */

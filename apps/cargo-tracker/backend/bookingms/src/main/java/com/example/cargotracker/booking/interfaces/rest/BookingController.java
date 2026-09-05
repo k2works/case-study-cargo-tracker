@@ -1,5 +1,11 @@
 package com.example.cargotracker.booking.interfaces.rest;
 
+import com.example.cargotracker.booking.application.port.RouteCandidateFinder;
+import com.example.cargotracker.booking.domain.model.commands.AssignRouteCommand;
+import com.example.cargotracker.booking.domain.model.valueobjects.CargoItinerary;
+import com.example.cargotracker.booking.domain.model.valueobjects.Leg;
+import com.example.cargotracker.booking.application.port.RouteSearchRequest;
+import com.example.cargotracker.booking.domain.model.valueobjects.RouteCandidate;
 import com.example.cargotracker.booking.domain.model.commands.BookCargoCommand;
 import com.example.cargotracker.booking.domain.model.commands.RequestRoutingCommand;
 import com.example.cargotracker.booking.domain.model.commands.UpdateCargoSpecificationCommand;
@@ -15,7 +21,9 @@ import com.example.cargotracker.booking.infrastructure.query.BookingQueries.Book
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.CountBookingsByStatusQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingItineraryQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingRevisionsQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.ItineraryView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.RevisionListView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingsQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindRoutingWorklistQuery;
@@ -23,7 +31,12 @@ import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos;
 import com.example.cargotracker.shared.infrastructure.axon.QueryDispatcher;
 import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos.BookCargoRequest;
+import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos.AssignRouteRequest;
 import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos.BookCargoResponse;
+import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos.ItineraryLegResponse;
+import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos.ItineraryResponse;
+import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos.RouteCandidateResponse;
+import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos.RouteCandidatesResponse;
 import com.example.cargotracker.booking.interfaces.rest.dto.ShipperDtos.PendingResponse;
 import com.example.cargotracker.shared.domain.location.Location;
 import jakarta.validation.Valid;
@@ -50,10 +63,13 @@ public class BookingController {
 
     private final CommandGateway commandGateway;
     private final QueryDispatcher queries;
+    private final RouteCandidateFinder routeCandidates;
 
-    public BookingController(CommandGateway commandGateway, QueryDispatcher queries) {
+    public BookingController(CommandGateway commandGateway, QueryDispatcher queries,
+            RouteCandidateFinder routeCandidates) {
         this.commandGateway = commandGateway;
         this.queries = queries;
+        this.routeCandidates = routeCandidates;
     }
 
     @PostMapping
@@ -111,6 +127,94 @@ public class BookingController {
                     .body(new PendingResponse(bookingId, "登録を受け付けました。反映までしばらくお待ちください"));
         }
         return ResponseEntity.ok(view);
+    }
+
+    /**
+     * 経路候補（US08）。<b>予約 ID で問い合わせる。</b>
+     *
+     * <p>条件を画面から組み立てて送らない。画面が組むと、予約の期限を直したのに
+     * 古い期限で探すことが起きる。条件は投影から組む（候補算出は Query 側なので
+     * 集約を読み出さない）。</p>
+     *
+     * <p><b>問い合わせられないときは 503。</b> 空の候補一覧を返すと「候補が無い」と
+     * 読まれ、経路設計者は条件を変え続けることになる。</p>
+     */
+    @GetMapping("/{bookingId}/route-candidates")
+    public ResponseEntity<?> routeCandidates(@PathVariable String bookingId) {
+        BookingView booking = queries.query(new FindBookingQuery(bookingId), BookingView.class);
+        if (booking == null) {
+            return ResponseEntity.accepted().body(new PendingResponse(bookingId,
+                    "登録を受け付けました。反映までしばらくお待ちください"));
+        }
+
+        RouteCandidateFinder.RouteCandidates found = routeCandidates.find(
+                RouteSearchRequest.of(
+                        Location.of(booking.originUnLocode()),
+                        Location.of(booking.destinationUnLocode()),
+                        booking.arrivalDeadline(),
+                        CargoType.valueOf(booking.cargoType())));
+
+        return ResponseEntity.ok(new RouteCandidatesResponse(
+                found.candidates().stream()
+                        .map(BookingController::toCandidateResponse)
+                        .toList(),
+                found.truncated()));
+    }
+
+    private static RouteCandidateResponse toCandidateResponse(RouteCandidate candidate) {
+        return new RouteCandidateResponse(
+                candidate.legs().stream()
+                        .map(leg -> new RouteCandidateResponse.LegResponse(
+                                leg.voyageNumber(),
+                                leg.load().unLocode().value(),
+                                leg.unload().unLocode().value(),
+                                leg.loadTime(),
+                                leg.unloadTime()))
+                        .toList(),
+                candidate.transitDays(),
+                candidate.direct());
+    }
+
+    /**
+     * 経路を確定する（US09）。
+     *
+     * <p>旅程が予約の経路仕様を満たすかは<b>集約が見る</b>。ここで先に確かめると、
+     * 同じ判断が 2 か所になって片方が古くなる。</p>
+     */
+    @PostMapping("/{bookingId}/route")
+    public ResponseEntity<BookCargoResponse> assignRoute(
+            @PathVariable String bookingId,
+            @Valid @RequestBody AssignRouteRequest request,
+            @RequestHeader(name = "X-Auth-Username", required = false) String username) {
+        commandGateway.sendAndWait(new AssignRouteCommand(bookingId,
+                new CargoItinerary(request.legs().stream()
+                        .map(BookingController::toLeg)
+                        .toList()),
+                username));
+
+        return ResponseEntity.ok(new BookCargoResponse(bookingId));
+    }
+
+    private static Leg toLeg(AssignRouteRequest.LegRequest leg) {
+        return new Leg(leg.voyageNumber(), Location.of(leg.loadUnLocode()),
+                Location.of(leg.unloadUnLocode()), leg.loadTime(), leg.unloadTime());
+    }
+
+    /**
+     * 確定した旅程（S22 / US09）。
+     *
+     * <p>まだ決まっていなければ空の一覧を返す。{@code 404} にすると「予約が無い」と
+     * 読める。読む相手は予約詳細と同じなので、認可の宣言は {@code /bookings/**} が
+     * そのまま当たる。</p>
+     */
+    @GetMapping("/{bookingId}/itinerary")
+    public ResponseEntity<ItineraryResponse> itinerary(@PathVariable String bookingId) {
+        ItineraryView view = queries.query(
+                new FindBookingItineraryQuery(bookingId), ItineraryView.class);
+        return ResponseEntity.ok(new ItineraryResponse(view.legs().stream()
+                .map(leg -> new ItineraryLegResponse(leg.legSeq(), leg.voyageNumber(),
+                        leg.loadUnLocode(), leg.unloadUnLocode(), leg.loadAt(), leg.unloadAt()))
+                .toList()));
     }
 
     /**

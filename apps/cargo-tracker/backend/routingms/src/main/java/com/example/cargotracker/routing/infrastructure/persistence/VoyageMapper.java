@@ -69,6 +69,28 @@ public interface VoyageMapper {
             @Param("criteria") VoyageSearchCriteria criteria,
             @Param("now") Instant now);
 
+    /**
+     * 経路探索が見る区間（US08）。
+     *
+     * <p><b>既定の絞り込みと同じ条件を使う。</b> キャンセル済み・出港済みの航海を
+     * 候補に出すと、走らない船で経路を組むことになる。条件をここに書き直すと、
+     * 一覧だけを直したときに探索が古い判断のまま残る（{@code visible} を共有する）。</p>
+     *
+     * <p>受入貨物種別はここでは返さない。集約関数で 1 行に畳むと方言に寄る。
+     * 呼ぶ側（{@code ProjectionVoyageGraph}）が航海ごとに 1 度だけ引いて覚える。</p>
+     */
+    List<TransitEdgeRow> findEdgesFrom(@Param("unLocode") String unLocode,
+            @Param("now") Instant now);
+
+    /** 探索が見る 1 区間。{@code voyage} と {@code carrier_movement} を結んだ形。 */
+    record TransitEdgeRow(
+            String voyageNumber,
+            String departureUnlocode,
+            String arrivalUnlocode,
+            Instant departureAt,
+            Instant arrivalAt) {
+    }
+
     List<String> findAcceptedCargoTypes(@Param("voyageNumber") String voyageNumber);
 
     List<MovementRow> findMovements(@Param("voyageNumber") String voyageNumber);

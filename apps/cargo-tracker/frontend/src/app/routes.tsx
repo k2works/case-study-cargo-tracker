@@ -16,6 +16,7 @@ import { BookingListPage } from '@/features/bookings/BookingListPage';
 import { BookingRegisterPage } from '@/features/bookings/BookingRegisterPage';
 import { BookingDetailPage } from '@/features/bookings/BookingDetailPage';
 import { BookingEditPage } from '@/features/bookings/BookingEditPage';
+import { RoutingWorkbenchPage } from '@/features/routing/RoutingWorkbenchPage';
 import { RoutingWorklistPage } from '@/features/routing/RoutingWorklistPage';
 import { VoyageListPage } from '@/features/routing/VoyageListPage';
 import { VoyageRegisterPage } from '@/features/routing/VoyageRegisterPage';
@@ -75,6 +76,16 @@ export function AppRoutes() {
           element={
             <RequireRole allow={['ROLE_SALES']}>
               <BookingEditPage />
+            </RequireRole>
+          }
+        />
+        {/* 経路設計ワークベンチ（S31）は作業一覧（S30）から開く。
+            ナビには載せない（一覧から開く画面）。経路設計者だけ。 */}
+        <Route
+          path="/routing/bookings/:bookingId"
+          element={
+            <RequireRole allow={['ROLE_ROUTING']}>
+              <RoutingWorkbenchPage />
             </RequireRole>
           }
         />

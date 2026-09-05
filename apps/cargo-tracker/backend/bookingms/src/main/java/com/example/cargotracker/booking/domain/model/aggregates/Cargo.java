@@ -1,6 +1,7 @@
 package com.example.cargotracker.booking.domain.model.aggregates;
 
 import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
+import com.example.cargotracker.shared.domain.location.Location;
 import com.example.cargotracker.booking.domain.model.commands.BookCargoCommand;
 import com.example.cargotracker.booking.domain.model.commands.RequestRoutingCommand;
 import com.example.cargotracker.booking.domain.model.commands.UpdateCargoSpecificationCommand;
@@ -10,6 +11,9 @@ import com.example.cargotracker.booking.domain.model.events.RoutingRequestedEven
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoSpecification;
 import com.example.cargotracker.booking.domain.model.valueobjects.RouteSpecification;
+import com.example.cargotracker.booking.domain.model.commands.AssignRouteCommand;
+import com.example.cargotracker.booking.domain.model.events.CargoRoutedEvent;
+import com.example.cargotracker.booking.domain.model.valueobjects.CargoItinerary;
 import com.example.cargotracker.booking.domain.model.valueobjects.RoutingStatus;
 import com.example.cargotracker.shared.domain.error.IllegalTransition;
 import java.time.Clock;
@@ -42,6 +46,14 @@ public class Cargo {
     private RoutingStatus routingStatus;
     /** 受け付けたときの到着期限。修正で期限を触ったかどうかの判断に要る。 */
     private LocalDate arrivalDeadline;
+    /**
+     * 経路仕様の端点。旅程が仕様を満たすかの判断（不変条件 5）に要る。
+     *
+     * <p><b>修正（US32）でも書き換える。</b> 受付時の値だけを覚えていると、
+     * 目的地を直した予約に古い目的地の経路が付く。</p>
+     */
+    private Location origin;
+    private Location destination;
 
     @EntityCreator
     public Cargo() {
@@ -160,6 +172,60 @@ public class Cargo {
         return command.bookingId();
     }
 
+    /**
+     * 選んだ経路を確定する（UC07 / US09）。
+     *
+     * <p><b>旅程が経路仕様を満たすかは集約が見る</b>（不変条件 5）。画面は候補を
+     * そのまま送るだけで、「候補は探索が作ったのだから正しい」としない。探索と集約は
+     * 別の判断であり、API を直接叩く経路もある。</p>
+     *
+     * <p>区間の連結と時刻の昇順は {@link CargoItinerary} が守る（不変条件 4）。</p>
+     *
+     * <p><b>{@code BookingStatus} は動かさない。</b> 荷主に通知するまでは提案中である。</p>
+     */
+    @CommandHandler
+    public String assignRoute(AssignRouteCommand command, EventAppender appender, Clock clock) {
+        if (bookingId == null) {
+            throw new IllegalTransition("予約 " + command.bookingId() + " は受け付けていません");
+        }
+        if (routingStatus != RoutingStatus.ROUTING_REQUESTED
+                && routingStatus != RoutingStatus.MISROUTED) {
+            // 引き渡していない予約に経路が付くと、営業の知らないところで設計が進む。
+            // 誤配（MISROUTED）からの再設計は許す（US28）。
+            throw new IllegalTransition(
+                    "経路設計を依頼していない予約には経路を確定できません（" + routingStatus + "）");
+        }
+        if (command.itinerary() == null) {
+            throw new BusinessRuleViolation("旅程は必須です");
+        }
+        if (!routeSpecification().isSatisfiedBy(command.itinerary(), clock.getZone())) {
+            // 不変条件 5。期限も端点も、いま集約が持っている値で見る。
+            throw new BusinessRuleViolation(
+                    "選んだ旅程は予約の経路仕様を満たしません（期限 " + arrivalDeadline
+                            + " / " + origin.unLocode().value() + " → "
+                            + destination.unLocode().value() + "）");
+        }
+
+        appender.append(new CargoRoutedEvent(
+                command.bookingId(),
+                command.itinerary().legs().stream()
+                        .map(leg -> new CargoRoutedEvent.Leg(
+                                leg.voyageNumber(),
+                                leg.load().unLocode().value(),
+                                leg.unload().unLocode().value(),
+                                leg.loadTime(),
+                                leg.unloadTime()))
+                        .toList(),
+                command.assignedBy(),
+                clock.instant()));
+        return command.bookingId();
+    }
+
+    /** いま集約が持っている経路仕様。修正（US32）を反映した値になる。 */
+    private RouteSpecification routeSpecification() {
+        return new RouteSpecification(origin, destination, arrivalDeadline);
+    }
+
     private static void validate(BookCargoCommand command, LocalDate today) {
         if (command.bookingId() == null || command.bookingId().isBlank()) {
             throw new BusinessRuleViolation("予約 ID は必須です");
@@ -203,6 +269,8 @@ public class Cargo {
         // 状態は変わらない。仮受付のまま内容だけが差し替わる。
         this.bookingId = event.bookingId();
         this.arrivalDeadline = event.arrivalDeadline();
+        this.origin = Location.of(event.originUnLocode());
+        this.destination = Location.of(event.destinationUnLocode());
     }
 
     @EventSourcingHandler
@@ -211,12 +279,20 @@ public class Cargo {
         this.bookingStatus = BookingStatus.PRELIMINARY;
         this.routingStatus = RoutingStatus.NOT_ROUTED;
         this.arrivalDeadline = event.arrivalDeadline();
+        this.origin = Location.of(event.originUnLocode());
+        this.destination = Location.of(event.destinationUnLocode());
     }
 
     @EventSourcingHandler
     void on(RoutingRequestedEvent event) {
         this.bookingStatus = BookingStatus.ROUTE_PROPOSED;
         this.routingStatus = RoutingStatus.ROUTING_REQUESTED;
+    }
+
+    @EventSourcingHandler
+    void on(CargoRoutedEvent event) {
+        this.routingStatus = RoutingStatus.ROUTED;
+        // BookingStatus は動かさない。荷主に通知するまでは提案中（US12）。
     }
 
     /** 復元した予約の状態。画面のボタン出し分けはこの値と述語で決める。 */

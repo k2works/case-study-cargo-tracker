@@ -1,0 +1,1 @@
+{"candidates":[{"legs":[{"voyageNumber":"V-MOL-001","loadUnLocode":"JPTYO","unloadUnLocode":"SGSIN","loadTime":"2026-09-10T09:00:00Z","unloadTime":"2026-09-16T08:00:00Z"},{"voyageNumber":"V-ONE-002","loadUnLocode":"SGSIN","unloadUnLocode":"USNYC","loadTime":"2026-09-17T06:00:00Z","unloadTime":"2026-09-24T18:00:00Z"}],"transitDays":15,"direct":false}],"truncated":true}

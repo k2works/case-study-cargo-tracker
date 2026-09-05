@@ -100,6 +100,43 @@ export interface RevisionView {
   readonly after: string;
 }
 
+/**
+ * 経路を確定する（US09）。
+ *
+ * <p><b>候補 ID ではなく旅程そのものを送る。</b> 経路候補はテーブルに持たないので、
+ * 選んでから送るまでの間に航海が更新されうる。</p>
+ */
+export function assignRoute(
+  bookingId: string,
+  legs: readonly AssignRouteLeg[],
+): Promise<{ bookingId: string }> {
+  return commandClient(`/booking/bookings/${encodeURIComponent(bookingId)}/route`, { legs });
+}
+
+export interface AssignRouteLeg {
+  readonly voyageNumber: string;
+  readonly loadUnLocode: string;
+  readonly unloadUnLocode: string;
+  readonly loadTime: string;
+  readonly unloadTime: string;
+}
+
+/** 確定した旅程（S22 / US09）。まだ決まっていなければ空。 */
+export function fetchBookingItinerary(
+  bookingId: string,
+): Promise<Pending<{ legs: ItineraryLegView[] }>> {
+  return queryClient(`/booking/bookings/${encodeURIComponent(bookingId)}/itinerary`);
+}
+
+export interface ItineraryLegView {
+  readonly legSeq: number;
+  readonly voyageNumber: string;
+  readonly loadUnLocode: string;
+  readonly unloadUnLocode: string;
+  readonly loadAt: string;
+  readonly unloadAt: string;
+}
+
 export function bookCargo(input: BookCargoInput): Promise<{ bookingId: string }> {
   return commandClient('/booking/bookings', input);
 }

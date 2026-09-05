@@ -157,6 +157,38 @@
         <include refid="visible"/>
     </select>
 
+    <resultMap id="transitEdgeRow"
+               type="com.example.cargotracker.routing.infrastructure.persistence.VoyageMapper$TransitEdgeRow">
+        <constructor>
+            <idArg column="voyage_number" javaType="string"/>
+            <arg column="departure_unlocode" javaType="string"/>
+            <arg column="arrival_unlocode" javaType="string"/>
+            <arg column="departure_at" javaType="java.time.Instant"/>
+            <arg column="arrival_at" javaType="java.time.Instant"/>
+        </constructor>
+    </resultMap>
+
+    <!--
+      探索が見る区間（US08）。キャンセル済み・出港済みの航海は外す（一覧の既定と
+      同じ理由。走らない船で経路を組ませない）。**航海の出港ではなく区間の出発**で
+      見る。航海はもう出ていても、まだ出ていない後半の区間には積める。
+      受入貨物種別はここでは取らない。集約関数で 1 行に畳むと方言に寄る
+      （string_agg は PostgreSQL）。呼ぶ側が航海ごとに 1 度だけ引いて覚える。
+    -->
+    <select id="findEdgesFrom" resultMap="transitEdgeRow">
+        SELECT cm.voyage_number,
+               cm.departure_unlocode,
+               cm.arrival_unlocode,
+               cm.departure_at,
+               cm.arrival_at
+          FROM carrier_movement cm
+          JOIN voyage v ON v.voyage_number = cm.voyage_number
+         WHERE cm.departure_unlocode = #{unLocode}
+           AND v.cancelled = FALSE
+           AND cm.departure_at &gt; #{now}
+         ORDER BY cm.departure_at, cm.voyage_number, cm.movement_seq
+    </select>
+
     <select id="findAcceptedCargoTypes" resultType="string">
         SELECT cargo_type FROM voyage_accepted_cargo_type
         WHERE voyage_number = #{voyageNumber}

@@ -77,7 +77,9 @@ quadrantChart
 | 船名 | Vessel Name | `VesselName` | 航海に就く船の名前。運送会社ではなく航海が持つ |
 | 航海スケジュール | Schedule | `Schedule` | 航海の運搬移動の並び。時刻昇順・港の連結を自分で守る |
 | 航海の検索条件 | Voyage Search Criteria | `VoyageSearchCriteria` | 出発地・目的地・出発期間・貨物種別。空の条件は「指定なし」として扱い、その判断をここ 1 か所に置く（US07） |
-| 経路探索 | Route Search | `RouteSearchService` | 航海グラフから経路候補を探すドメインサービス。状態を変えないので Query 側 |
+| 経路探索 | Route Search | `RouteSearchService` | 航海グラフから経路候補を探すドメインサービス。状態を変えないので Query 側。乗り継ぎ 3 回・候補 20 件で打ち切る（[ADR-0007](../../adr/cargo-tracker/0007-route-search-cutoff.md)） |
+| 経路探索の結果 | Route Search Result | `RouteSearchResult` | 候補と「上限で切ったか」の組。候補件数だけでは、乗り継ぎ上限で捨てた枝が「候補 0 件」と同じ見え方になる |
+| 経路探索の依頼 | Route Search Request | `RouteSearchRequest` | **bookingms 側**の探索条件（ACL ポートの入力）。集約の `RouteSpecification`（端点と期限）とは別の型。探索は貨物種別・除外港・起点を持ち、集約は持たない |
 | 航海グラフ | Voyage Graph | `VoyageGraph` | 投影 `voyage` / `carrier_movement` から組む探索用の読み取りモデル |
 | 経路の探索条件 | Route Search Specification | `RouteSearchSpecification` | 出発地・目的地・到着期限・貨物種別・除外港・起点（誤配の再設計）。探索の入力を 1 か所にまとめる |
 | 経路 | Transit Path | `TransitPath` | 経路探索が返す 1 本の経路。期限超過日数を持つ |
@@ -357,17 +359,24 @@ class RouteSpecification <<Value Object>> {
   - origin: Location
   - destination: Location
   - arrivalDeadline: LocalDate
-  + isSatisfiedBy(itinerary: CargoItinerary): boolean
+  ' 期限は日付で比べる。業務タイムゾーンを渡す（UTC で判断すると
+  ' 時差の分だけ「期限当日」がずれる）
+  + isSatisfiedBy(itinerary: CargoItinerary, zone: ZoneId): boolean
 }
 
 class CargoItinerary <<Value Object>> {
   - legs: List<Leg>
-  + finalArrivalDate(): LocalDate
-  + finalDestination(): Location
+  ' 連結と時刻の昇順はここで守る（不変条件 4）。探索に置くと、
+  ' 別の作り方で組まれた旅程が素通りする
+  + origin(): Location
+  + destination(): Location
+  + finalArrival(): Instant
   + expects(type: HandlingType, location: Location): boolean
 }
 class Leg <<Value Object>> {
-  - voyageNumber: VoyageNumber
+  ' 航海番号は文字列で持つ。VoyageNumber は Routing の識別子型で、
+  ' 共有カーネルには置かない（持ち込むと採番規則の変更に巻き込まれる）
+  - voyageNumber: String
   - loadLocation: Location
   - unloadLocation: Location
   - loadTime: Instant
@@ -644,17 +653,37 @@ class RouteSearchSpecification <<Value Object>> {
 }
 class TransitPath <<Value Object>> {
   - edges: List<TransitEdge>
-  - overdueDays: int
+  ' 連結と時刻の昇順はここで守る（探索に置くと別の作り方が素通りする）
   + totalDuration(): Duration
-  + meetsDeadline(): boolean
+  ' 期限は日付で比べる。業務タイムゾーンを渡す
+  + overdueDays(spec, zone): int
+  + meetsDeadline(spec, zone): boolean
+  + isDirect(): boolean
+  + viaPorts(): List<Location>
 }
-class TransitEdge <<Value Object>>
+class TransitEdge <<Value Object>> {
+  - voyageNumber: String
+  - load: Location
+  - unload: Location
+  - loadTime: Instant
+  - unloadTime: Instant
+}
 
 class RouteSearchService <<Domain Service>> {
   + findCandidates(spec, graph: VoyageGraph): List<TransitPath>
+  ' 打ち切りに当たったかも返す。候補件数だけでは、乗り継ぎ上限で
+  ' 捨てた枝が「候補 0 件」と同じ見え方になる（ADR-0007）
+  + search(spec, graph: VoyageGraph): RouteSearchResult
+}
+class RouteSearchResult <<Value Object>> {
+  - candidates: List<TransitPath>
+  - truncated: boolean
 }
 class VoyageGraph <<Read Model>> {
   ' 投影テーブル voyage / carrier_movement から組む
+  ' キャンセル済み・出発済みの区間は含めない
+  + edgesFrom(location): List<TransitEdge>
+  + acceptedCargoTypes(voyageNumber): Set<CargoType>
 }
 
 Voyage *-- VoyageNumber
@@ -665,6 +694,7 @@ Schedule "1" *-- "1..*" CarrierMovement
 TransitPath "1" *-- "1..*" TransitEdge
 RouteSearchService ..> VoyageGraph
 RouteSearchService ..> TransitPath
+RouteSearchService ..> RouteSearchResult
 @enduml
 ```
 

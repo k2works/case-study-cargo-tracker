@@ -64,6 +64,27 @@ public final class BookingQueries {
     public record RevisionListView(List<RevisionView> items) {
     }
 
+    /**
+     * 確定した旅程（S22 / US09）。
+     *
+     * <p>一覧には載せない。全件ぶんの区間を読むことになるうえ、一覧では読まない。</p>
+     */
+    public record FindBookingItineraryQuery(String bookingId) {
+    }
+
+    /** 旅程の区間 1 つ。<b>並び順が業務の意味を持つ。</b> */
+    public record ItineraryLegView(
+            int legSeq,
+            String voyageNumber,
+            String loadUnLocode,
+            String unloadUnLocode,
+            Instant loadAt,
+            Instant unloadAt) {
+    }
+
+    public record ItineraryView(List<ItineraryLegView> legs) {
+    }
+
     /** 画面に出す予約。荷主名は鍵破棄後に {@code null} になる。 */
     public record BookingView(
             String bookingId,
