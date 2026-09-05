@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.example.cargotracker.booking.infrastructure.persistence.AttentionItemMapper;
 import com.example.cargotracker.booking.infrastructure.persistence.ShipperMapper;
 import com.example.cargotracker.shared.contract.event.ShipperRegisteredEvent;
+import com.example.cargotracker.shared.domain.attention.AttentionItemId;
 import com.example.cargotracker.shared.testing.AbstractAxonIntegrationTest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -84,6 +85,11 @@ class ShipperProjectionIT extends AbstractAxonIntegrationTest {
                     assertThat(item.targetId()).isEqualTo(second);
                     assertThat(item.reason()).isEqualTo("メールアドレスの重複");
                     assertThat(item.assignedRole()).isEqualTo("ROLE_SALES");
+                    assertThat(item.itemId())
+                            .as("識別子は採番でなく事実からの導出。本番経路が共有カーネルの"
+                                    + "導出を通っていなければ、投影を読み直すたびに行が積み上がる")
+                            .isEqualTo(AttentionItemId.of(item.kind(), item.targetType(),
+                                    item.targetId(), item.reason()).value());
                 });
     }
 

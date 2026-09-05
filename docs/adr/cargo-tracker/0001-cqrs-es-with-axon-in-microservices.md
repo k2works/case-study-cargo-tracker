@@ -245,7 +245,7 @@ IT1 の集約（`Shipper`）は登録しかせず、**イベント列から復�
 | :--- | :--- |
 | サービス分割 | `settings.gradle` の `include` から**テスト専用サブプロジェクト（`contract-tests`・`acceptance-tests`）を除いたもの**が上の 8 つと一致すること |
 | サービス間は Axon Server だけ | ビルド：`BuildConventionTest#servicesDoNotDependOnEachOther`。ArchUnit：`aclDoesNotUseHttpClients` はパッケージで禁じる（`RestTemplate` / `RestClient` の名簿方式だと `WebClient` や `java.net.http` が素通りする） |
-| 共有カーネルの範囲 | ArchUnit：`SharedKernelScopeTest`。置けるパッケージの名簿を固定し、名簿を狭めると赤になること・`shared` が空でないことも併せて検査する（空なら「守っている」でなく「調べていない」で緑になる）。**IT2 で 2 つ足した**：`domain.location`（`Location` / `UnLocode` / `CountryCode`。全 BC が同じ意味で使い、輸出免税の判定にも国コードを使う）と `infrastructure.crypto`（crypto-shredding の変換。契約イベントを読む側も同じ変換が要る。[ADR-0003](0003-crypto-shredding-for-personal-data.md) 決定 1） |
+| 共有カーネルの範囲 | ArchUnit：`SharedKernelScopeTest`。置けるパッケージの名簿を固定し、名簿を狭めると赤になること・`shared` が空でないことも併せて検査する（空なら「守っている」でなく「調べていない」で緑になる）。**IT2 で 2 つ足した**：`domain.location`（`Location` / `UnLocode` / `CountryCode`。全 BC が同じ意味で使い、輸出免税の判定にも国コードを使う）と `infrastructure.crypto`（crypto-shredding の変換。契約イベントを読む側も同じ変換が要る。[ADR-0003](0003-crypto-shredding-for-personal-data.md) 決定 1） 。**IT4 で 1 つ足した**：`domain.attention`（`AttentionItemId`。要確認一覧の識別子を採番せず事実から導く。IT2 の修正では導出が bookingms と routingms に 1 本ずつ書かれ、区切り文字が食い違ったまま残っていた。同じ表に同じ意味で書く値なので、片方だけ直せる場所に置くと次に直す人が食い違いに気づけない） |
 | 契約の名簿 | `ContractEventGoldenTest`：名簿は `shared/contract/event` を**走査して導出**し、ゴールデンが無い契約と、検査していないゴールデンの両方を赤にする。手書きの名簿にすると、契約を足して書き忘れたものが素通りする |
 | サービス越しの同期状態変更を置かない | ArchUnit：`CommandGateway` の利用箇所を `interfaces`・`application/reaction` に限定する。`infrastructure/projection` は `CommandGateway` に依存しない |
 | 投影がコマンドを送らない | 統合テスト `ReplayIT`（IT2 で実装）：投影のハンドラを読み直し、行も要確認一覧も増えないことを確かめる。ArchUnit はコンパイル時の依存しか見ておらず、実行時に呼ばれないことの保証にならない |

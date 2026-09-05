@@ -383,7 +383,7 @@ q ||--o{ qc
 | `cargo_leg` | `CargoRoutedEvent` | `INDEX(voyage_number)` | 再設計時は全行を入れ替える |
 | `cancellation_request` | `CancellationRequestedEvent`, `CancellationApprovedEvent`, `CancellationRejectedEvent` | `INDEX(booking_id)`, `INDEX(decision)`（`NULL` = 承認待ち） | `decision` は `APPROVED` / `REJECTED` / `NULL` |
 | `quotation` / `quotation_candidate` | `QuotationCreatedEvent` | `INDEX(created_at)` | 候補 0 件の見積も 1 行残る |
-| `attention_item` | 投影が UNIQUE 違反で書けなかった事実（`kind = PROJECTION_REJECTED`）、Reaction Handler のコマンド失敗（`kind = REACTION_FAILED`）、Saga の補償（`kind = SAGA_COMPENSATED`） | `INDEX(assigned_role, occurred_at) WHERE acknowledged_at IS NULL`（部分インデックス） | 要確認一覧（S70）の受け皿。`assigned_role` で自ロール宛に絞り、`payload` に受け付けた内容を持ち「修正して再登録」の初期値にする。`target_type` / `target_id` は詳細への導線（投影に無い行でも `payload` から開ける）。**投影ではなく追記専用の受け皿**であり、リプレイで TRUNCATE しない。同じ定義を `routing_read_db`・`tracking_read_db`・`billing_read_db` にも置く（「事前の存在確認 + 投影の UNIQUE + 拒否の記録」の三段の最後） |
+| `attention_item` | 投影が UNIQUE 違反で書けなかった事実（`kind = PROJECTION_REJECTED`）、Reaction Handler のコマンド失敗（`kind = REACTION_FAILED`）、Saga の補償（`kind = SAGA_COMPENSATED`） | `INDEX(assigned_role, occurred_at) WHERE acknowledged_at IS NULL`（部分インデックス） | 要確認一覧（S70）の受け皿。`assigned_role` で自ロール宛に絞り、`payload` に受け付けた内容を持ち「修正して再登録」の初期値にする。`target_type` / `target_id` は詳細への導線（投影に無い行でも `payload` から開ける）。**投影ではなく追記専用の受け皿**であり、リプレイで TRUNCATE しない。同じ定義を `routing_read_db`・`tracking_read_db`・`billing_read_db` にも置く（「事前の存在確認 + 投影の UNIQUE + 拒否の記録」の三段の最後） **`item_id` は採番せず「何が・どの対象で・なぜ」から導きます**（SHA-256 の先頭 128 ビットを 16 進 32 文字。導出は共有カーネルの `AttentionItemId` 1 か所）。採番すると、投影を読み直すたびに同じ内容の行が積み上がります（IT2 で実在した欠陥）。**UUID の見た目に整形しません**（導出値であることが読めなくなり、採番された値だと誤解した変更を招く。IT4 R.1）。 |
 
 ### `routing_read_db`（routingms）
 
@@ -429,7 +429,7 @@ entity "voyage_accepted_cargo_type" as act {
 
 ' 追記専用の受け皿。投影ではないので voyage とは関連を張らない
 entity "attention_item" as ai {
-  * **item_id**: UUID <<PK>>
+  * **item_id**: VARCHAR(36) <<PK>>
   --
   kind: VARCHAR(30) NOT NULL
   target_type: VARCHAR(30) NOT NULL
@@ -452,7 +452,7 @@ v ||--o{ act
 | `voyage` | `VoyageRegisteredEvent`, `VoyageScheduleUpdatedEvent`, `VoyageCancelledEvent` | `INDEX(departure_unlocode, departure_at)`, `INDEX(arrival_unlocode, arrival_at)` | 航海番号は自然キー。`departure_*` / `arrival_*` は最初と最後の移動を非正規化（一覧の検索用）。`updated_at` / `updated_by` は**最終更新だけ**を持つ。変更内容の履歴は Event Store が持ち、履歴テーブルは作らない（US25） |
 | `carrier_movement` | 同上 | — | 経路探索の `VoyageGraph` はこのテーブルから組む。更新時は全行入れ替え |
 | `voyage_accepted_cargo_type` | 同上 | — | 空なら一般貨物のみ |
-| `attention_item` | 投影が UNIQUE 違反で書けなかった事実（`kind = PROJECTION_REJECTED`） | `INDEX(assigned_role, occurred_at) WHERE acknowledged_at IS NULL` | `booking_read_db` と同じ定義。**記録するだけでは誰にも見えない**ので、読み口（`GET /api/v1/routing/attention-items`）を対で置く。S70 は booking と routing の両方を束ねて出す |
+| `attention_item` | 投影が UNIQUE 違反で書けなかった事実（`kind = PROJECTION_REJECTED`） | `INDEX(assigned_role, occurred_at) WHERE acknowledged_at IS NULL` | `booking_read_db` と同じ定義。**記録するだけでは誰にも見えない**ので、読み口（`GET /api/v1/routing/attention-items`）を対で置く。S70 は booking と routing の両方を束ねて出す **`item_id` は採番せず「何が・どの対象で・なぜ」から導きます**（SHA-256 の先頭 128 ビットを 16 進 32 文字。導出は共有カーネルの `AttentionItemId` 1 か所）。採番すると、投影を読み直すたびに同じ内容の行が積み上がります（IT2 で実在した欠陥）。**UUID の見た目に整形しません**（導出値であることが読めなくなり、採番された値だと誤解した変更を招く。IT4 R.1）。 |
 
 経路候補（`RouteCandidate`）はテーブルに持ちません。`FindRouteCandidatesQuery` のたびに `carrier_movement` から探索します。候補を保存するのは Booking の `quotation_candidate` と `cargo_leg` です。
 

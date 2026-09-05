@@ -115,6 +115,9 @@ public final class CargoTrackerArchRules {
                         // 業務の断り方（422 / 409）。サービス越しに型が置き換わるので、
                         // 種類を文言の接頭辞として運ぶ（ADR-0001 決定 5 第 12 項）。
                         "com.example.cargotracker.shared.domain.error..",
+                        // 要確認一覧の識別子。どの BC も同じ表に同じ意味で書き、採番せず
+                        // 事実から導く。各 BC に写すと導出が食い違う（IT4 R.1・R.2）。
+                        "com.example.cargotracker.shared.domain.attention..",
                         "com.example.cargotracker.shared.contract..",
                         "com.example.cargotracker.shared.infrastructure.axon..",
                         "com.example.cargotracker.shared.infrastructure.time..",
