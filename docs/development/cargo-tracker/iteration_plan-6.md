@@ -3,7 +3,7 @@ type: Plan
 title: "イテレーション 6 計画 - 条件調整と荷主への通知"
 tags: [plan]
 status: draft
-generated: { by: claude-code/claude-opus-5, at: 2026-09-05T15:00:59Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-05T15:05:36Z }
 ---
 
 # イテレーション 6 計画 - 条件調整と荷主への通知
@@ -68,7 +68,7 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-05T15:00:59Z }
 | ストーリー | 受入基準 | 本 IT | 備考 |
 | :--- | :--- | :--- | :--- |
 | US10 | 1. 現在の制約条件を確認できる | **満たす** | S31 の「条件」欄。出発港・除外港・期限・貨物種別 |
-| US10 | 2. 条件を調整して再算出を実行できる | **満たす** | 出発港・除外港。**期限延長・貨物種別変更は予約の修正（US32・S24）が正典**なので、S31 からは触らず S24 へ導く |
+| US10 | 2. 条件を調整して再算出を実行できる | **一部未達** | **期限延長・貨物種別変更・除外港・出発港は満たす**（`AdjustRouteSpecificationCommand`）。**「経由地追加」＝必ず通る港の指定は未達**（探索の条件に無い。`RouteSearchSpecification` は除外しか持たない）。この 1 件は US28（誤配の再設計・IT11）で経由の指定が要るので、そこで足す |
 | US10 | 3. 調整後の条件で新たな候補が算出・提示される | **満たす** | IT5 の探索に条件を渡すだけ |
 | US10 | 4. 営業担当者に条件協議を依頼できる | **満たす** | 「営業へ差し戻す」。営業のダッシュボードに現れる |
 | US11 | 1. 確定経路と予約番号を確認できる | **満たす（IT5 で実装済み）** | 予約詳細の旅程。本 IT で受入基準と対応する検査を置く |
@@ -79,7 +79,12 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-05T15:00:59Z }
 | US12 | 3. 荷主への経路通知を送信できる | **記録で満たす** | 送信基盤はスコープ外（[UI 設計](../../design/cargo-tracker/ui_design.md)）。通知した事実を記録し、送信は手作業 |
 | US12 | 4. 通知送信記録が登録される | **満たす** | 通知履歴（宛先・要約・記録者・日時） |
 
-**未達は 1 件です**（US12 §2 の「料金概算」）。IT5 の US08 §3・US09 §1 と同じ理由（US21・IT13 が前提）で、**数を合わせるために「完了」にはしません**。
+**未達は 2 件です。**
+
+1. **US10 §2 の「経由地追加」**（必ず通る港の指定）。探索は除外しか持たず、足すには `RouteSearchSpecification` と探索の変更が要ります。US28（IT11）で経由の指定が必要になるので、そこで足します
+2. **US12 §2 の「料金概算」**（US21・IT13 が前提）
+
+**IT5 は US09 §4 を計画時に見落としました。** 今回は着手前の検証で 1 件目が見つかっています。**数を合わせるために「完了」にはしません。**
 
 ### US11 の扱い（着手前の調査結果）
 
@@ -88,6 +93,33 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-05T15:00:59Z }
 **そこで本 IT の US11 は「受入基準に対応する検査を置くこと」を成果とします。** IT5 の学び（P2「書いた保証が空手形だった」）のとおり、**動いていることと固定されていることは別**です。受け入れシナリオを 3 本置き、`経路の紐付け.feature` として残します。
 
 **浮いた工数は IT5 の引き継ぎ枠に充てます**（Day 1）。実績 SP は 8 のまま記録します（受入基準は満たしているため）。
+
+### ストーリー詳細
+
+**受入基準は書き写しません**（[テスト戦略](../../design/cargo-tracker/test_strategy.md) `:380`「正典が変わっても本表は追随する」）。項番で引用し、割り当ては上の表に置きます。
+
+| ID | として | したい | なぜなら | 中核の判断 |
+| :--- | :--- | :--- | :--- | :--- |
+| US10 | 経路設計者 | 条件を調整して経路候補を再算出したい | 実現可能な経路を見つけ、輸送を実現できるから | **調整を集約に記録する**（誰がいつ期限を延ばしたかが残る）。差し戻せる状態の判断 |
+| US11 | 経路設計者 | 確定した経路情報を予約に紐付けたい | 営業が荷主にルート提案できるから | **紐付けで状態は動かない**（引き渡しの時点で既に経路提案中） |
+| US12 | 営業担当者 | 確定経路の詳細を荷主に通知したい | 荷主が承認・変更依頼を行えるから | **通知できるのは経路が決まっている予約だけ**。通知は記録で、送信は手作業 |
+
+### タスク
+
+| # | タスク | ストーリー | 見積 |
+| :--- | :--- | :--- | :--: |
+| T1 | `Cargo.adjustRouteSpecification`（期限・貨物種別・除外港・出発港） | US10 | 4h |
+| T2 | `Cargo.requestConditionReview` と ADR-0009 | US10 | 4h |
+| T3 | 投影（条件の更新・`condition_review_*`）と営業ダッシュボードの読み口 | US10 | 4h |
+| T4 | `PUT /route-specification`・`POST /condition-review`・`GET /route-candidates` の配線 | US10 | 3h |
+| T5 | S31 の条件欄・再算出・差し戻し、S02 の行 | US10 | 2h |
+| T6 | `経路の紐付け.feature`（3 シナリオ）と赤の確認 | US11 | 6h |
+| T7 | `Cargo.notifyShipper`・再通知・`Cargo.returnToRouting` | US12 | 5h |
+| T8 | `cargo_notification` の投影とマイグレーション（データモデルへの反映を含む） | US12 | 4h |
+| T9 | `POST`/`GET /notifications`・`POST /return-to-routing` と認可の宣言 | US12 | 4h |
+| T10 | S22 の通知内容の確認・通知履歴・操作、S02 の行 | US12 | 5h |
+| T11 | 引き継ぎ枠 H.1〜H.3 | — | 9h |
+| T12 | クラスタ E2E・受け入れテスト・マニュアル | — | 10h |
 
 ### 依存関係
 
@@ -118,37 +150,47 @@ package "Cargo 集約" {
     + bookingId
     + bookingStatus : BookingStatus
     + routingStatus : RoutingStatus
+    + routeSpecification : RouteSpecification
     + itinerary : CargoItinerary
     --
-    + requestConditionReview(cmd) : 営業へ差し戻す（US10）
-    + notifyShipper(cmd) : 荷主へ通知（US12）
+    + adjustRouteSpecification(cmd) : 条件を調整（US10）
+    + requestConditionReview(cmd) : 営業へ差し戻す（US10 §4）
+    + notifyShipper(cmd) : 荷主へ通知・再通知（US12）
     + returnToRouting(cmd) : 経路設計へ戻す（US12）
-  }
-
-  class ShipperNotification <<ValueObject>> {
-    + recipientEmail
-    + summary
-    + notifiedBy
-    + notifiedAt
   }
 }
 
 package "イベント" {
+  class RouteSpecificationAdjustedEvent <<Event>>
   class ConditionReviewRequestedEvent <<Event>>
   class ShipperNotifiedEvent <<Event>>
-  class RoutingRequestedEvent <<Event>>
+  class ReturnedToRoutingEvent <<Event>>
 }
 
-Cargo *-- ShipperNotification
-Cargo ..> ConditionReviewRequestedEvent : 差し戻し
-Cargo ..> ShipperNotifiedEvent : 通知
-Cargo ..> RoutingRequestedEvent : 経路設計へ戻す（再利用）
+class ShipperNotification <<ValueObject>> {
+  + recipientEmail
+  + summary
+  + notifiedBy
+  + notifiedAt
+}
+
+Cargo ..> RouteSpecificationAdjustedEvent
+Cargo ..> ConditionReviewRequestedEvent
+Cargo ..> ShipperNotifiedEvent
+Cargo ..> ReturnedToRoutingEvent
+ShipperNotifiedEvent ..> ShipperNotification : ペイロードの形
 @enduml
 ```
 
-**「経路設計へ戻す」は既存の `RoutingRequestedEvent` を再利用します。** 引き渡しと同じ事実（経路設計を依頼した）だからです。新しいイベントを足すと、`routing_requested_at` の書き手が 2 つになります。
+**コマンドとイベントの名前は正典に合わせます**（[ドメインモデル](../../design/cargo-tracker/domain-model.md) の `:317-319`・`:557-561`・`:1393`）。当初の計画では「経路設計へ戻す」に既存の `RoutingRequestedEvent` を再利用し、条件調整は集約に記録しない設計にしていましたが、**正典は `ReturnToRoutingCommand` / `ReturnedToRoutingEvent` と `AdjustRouteSpecificationCommand` / `RouteSpecificationAdjustedEvent` を定義済み**でした。着手前の検証で見つかったので、**正典に合わせます**（設計が正）。
 
-**再利用したときに何が起きるかを確かめました**（`CargoProjection.java:109-114`）。この投影は `booking_status = ROUTE_PROPOSED`・`routing_status = ROUTING_REQUESTED`・`routing_requested_at = now` を書きます。つまり**経路設計へ戻すと、確定済みだった `routing_status` が `ROUTING_REQUESTED` に戻り、作業一覧に再び出ます**。これは望む振る舞いです。遷移表（`BookingStatus`）も `ROUTE_NOTIFIED → ROUTE_PROPOSED` を許しているので、集約側の変更は要りません。**確定した旅程（`cargo_leg`）は消しません**（再設計で入れ替わるまで残す）。
+**`ShipperNotification` は集約が持ちません。** 通知履歴は投影が持ちます（`domain-model.md:574`「通知履歴として写します」）。値オブジェクトはイベントのペイロードの形として置きます。
+
+**条件調整を集約に記録する理由が業務にあります。** 経路設計に入った予約（`ROUTE_PROPOSED`）は**修正（US32・S24）が使えません**（`Cargo.java:143` が状態で断る）。期限を延ばす手段が他に無いので、`AdjustRouteSpecificationCommand` が唯一の経路です。当初の計画が「期限は S24 が正典」としていたのは誤りでした。
+
+**「経路設計へ戻す」は `ReturnToRoutingCommand` → `ReturnedToRoutingEvent` です**（正典どおり。主アクターは営業担当者）。既存の `RoutingRequestedEvent` を再利用すると、`routing_requested_at` の書き手が 2 つになるうえ、**「引き渡した」と「通知後に戻した」が履歴で区別できなくなります**。投影の結果（`routing_status = ROUTING_REQUESTED`・作業一覧に再び出る）は同じにしますが、**確定済みの旅程（`cargo_leg`）は消しません**（再設計で入れ替わるまで残す）。
+
+**契約の名簿は変わりません。** 新しいイベント 2 本（`RouteSpecificationAdjustedEvent`・`ReturnedToRoutingEvent`）は bookingms 内で完結し、`shared/contract` には置きません。
 
 #### 状態遷移（本 IT で通る経路）
 
@@ -160,19 +202,24 @@ state "PRELIMINARY 仮受付" as P
 state "ROUTE_PROPOSED 経路提案中" as RP
 state "ROUTE_NOTIFIED 通知済み" as RN
 
-P --> RP : 経路設計を依頼（US06・IT3）
-RP --> RN : 荷主へ通知（US12・**本 IT**）
-RN --> RP : 経路設計へ戻す（US12・**本 IT**）
-RN --> RN : 再通知（**本 IT**）
+P --> RP : RequestRoutingCommand（US06・IT3）
+RP --> RP : AssignRouteCommand（US09・IT5）\n(RoutingStatus=ROUTED)
+RP --> RP : AdjustRouteSpecificationCommand（US10・**本 IT**）\n(RoutingStatus=ROUTING_REQUESTED)
+RP --> RN : NotifyShipperCommand（US12・**本 IT**）\n(ROUTED のときだけ)
+RN --> RN : NotifyShipperCommand（再通知・**本 IT**）
+RN --> RP : ReturnToRoutingCommand（US12・**本 IT**）\n(RoutingStatus=ROUTING_REQUESTED)
 
 note right of RP
-  routingStatus は別の軸で動く:
-  ROUTING_REQUESTED → ROUTED（US09・IT5）
-  ROUTED → NOT_ROUTED は**しない**
-  （差し戻しの表し方は ADR-0009）
+  条件を調整すると RoutingStatus は
+  ROUTED → ROUTING_REQUESTED に戻る。
+  **確定済みの旅程（cargo_leg）は残す**
+  （新しい経路が決まるまで、何が組まれて
+  いたかを読めなくしない）
 end note
 @enduml
 ```
+
+**この図は正典（`domain-model.md:505-511`）をそのまま写しています。** 当初の計画は `AdjustRouteSpecificationCommand` による自己遷移を欠いていました。
 
 **通知できるのは `bookingStatus = ROUTE_PROPOSED` かつ `routingStatus = ROUTED` のときだけです。** 経路が決まっていない予約を通知できると、荷主に空の旅程が届きます。判定は集約の述語に置き、画面はそれを呼びます。
 
@@ -244,24 +291,28 @@ S22 --> S24 : 期限・貨物を直す（US32・IT4）
 | `POST` | `/api/v1/booking/bookings/{bookingId}/condition-review` | 営業へ差し戻す（US10 §4） | ROLE_ROUTING |
 | `POST` | `/api/v1/booking/bookings/{bookingId}/notifications` | 荷主へ通知（US12） | ROLE_SALES |
 | `GET` | `/api/v1/booking/bookings/{bookingId}/notifications` | 通知履歴（US12 §4） | ROLE_SALES, ROLE_ROUTING, ROLE_TRACKER |
-| `POST` | `/api/v1/booking/bookings/{bookingId}/routing-request` | 経路設計へ戻す（**既存の経路を再利用**） | ROLE_SALES |
+| `PUT` | `/api/v1/booking/bookings/{bookingId}/route-specification` | 条件の調整（US10。期限・貨物種別・除外港・出発港） | ROLE_ROUTING |
+| `POST` | `/api/v1/booking/bookings/{bookingId}/return-to-routing` | 経路設計へ戻す（US12） | ROLE_SALES |
 
 **新しい経路は `RoleAuthorization` に宣言し、順序を確かめます**（[ADR-0006](../../adr/cargo-tracker/0006-role-authorization-at-the-gateway.md) 決定 6・IT4 の T5）。**実装を読んで確かめた並びの規則は次のとおりです**（`RoleAuthorization.java:106-107`）。
 
 - **メソッドを絞る宣言は、経路だけの宣言より必ず前に置かれる**（`ordered.add(new Rule("PUT", ...))` をマップの展開より先に積んでいる）。したがって `POST /bookings/*/notifications`（営業だけ）はメソッド込みで宣言すれば順序を気にしなくてよい
 - **`GET /bookings/*/notifications` は宣言を足しません。** 広い `/bookings/**` が `{SALES, ROUTING, TRACKER}` で、通知履歴に許したいロールと同じだからです。**同じ集合の宣言を重ねると、片方だけ直したときに食い違います**
 - `POST /bookings/*/condition-review`（経路設計者だけ）もメソッド込みで宣言します
-- `POST /bookings/*/routing-request`（経路設計へ戻す）は**既にある宣言をそのまま使います**（`SALES`。`RoleAuthorization.java:88`）
+- `POST /bookings/*/return-to-routing`（営業）と `PUT /bookings/*/route-specification`（経路設計者）もメソッド込みで宣言します。**`POST /bookings/*/routing-request` は再利用しません**（引き渡しと戻しを履歴で区別するため）
+- **`PUT /bookings/*` は既に営業だけに宣言されています**（`RoleAuthorization.java:106`）。`PUT .../route-specification` はより細かい経路ですが、**メソッド込みの宣言どうしは追加順で決まる**ので、`PUT /bookings/*` より**前**に積む必要があります。ここだけは順序を確かめます
 
 **「宣言を足さない」判断も検査で固定します。** `GET /notifications` が営業・経路設計・追跡で通り、それ以外で 403 になることを確かめます（宣言が無いことと、広い宣言に当たっていることは別）。
 
-**条件はクエリパラメータで渡します。** 予約の経路仕様（期限・端点・貨物種別）はサーバが `cargo_summary` から組み、**画面から送るのは「調整分」だけ**です（出発港・除外港）。全部を画面から送ると、予約の期限を直したのに古い期限で探すことが起きます。
+**条件の調整は集約に記録し、再算出はその結果を読みます。** 経路設計者が `PUT /route-specification` で条件を直すと `RouteSpecificationAdjustedEvent` が出て投影が更新され、`GET /route-candidates` は**更新後の `cargo_summary` から条件を組みます**。画面が条件を組み立てて送るのではありません。
+
+**なぜ集約に記録するのか。** 条件を画面の一時的な絞り込みにすると、(a) 誰がいつ期限を延ばしたかが残らない（UC08 の最低保証「調整条件と再算出結果が記録される」を満たさない）、(b) 経路設計に入った予約は修正（US32・S24）が使えないので期限を延ばす手段が他に無い、の 2 点で行き詰まります。
 
 ### 契約への影響
 
-**ありません。** 契約の名簿（イベント 11・コマンド 2・クエリ 1）は変わりません。`FindRouteCandidatesQuery` は IT5 の時点で `excludePortCodes` と `departFromUnLocode` を持っており、**IT5 では画面から使っていなかっただけ**です。本 IT でその配線を通します。
+**ありません。** 契約の名簿（イベント 11・コマンド 2・クエリ 1）は変わりません。`FindRouteCandidatesQuery` は IT5 の時点で `excludeUnLocodes` と `departFromUnLocode` を持っており、**IT5 では画面から使っていなかっただけ**です。本 IT でその配線を通します。
 
-**「定義済み未使用は配線漏れのサイン」**（IT3 の T5）。契約に置いた 2 項目が 1 IT のあいだ使われていなかったことを、ふりかえりで確認します。
+**「定義済み未使用は配線漏れのサイン」**（IT3 の T5）。契約に置いた 2 項目が 1 IT のあいだ使われていなかったことを、ふりかえりで確認します。**この規律は自分の逸脱にも適用します**——着手前の検証では、正典に定義済みの `AdjustRouteSpecificationCommand` を計画が黙って外していました（下記「着手前の検証」）。
 
 ### ADR
 
@@ -269,40 +320,54 @@ S22 --> S24 : 期限・貨物を直す（US32・IT4）
 
 差し戻したときに `routingStatus` を `NOT_ROUTED` へ戻すか、記録だけを残すかを決めます。戻すと「一度も設計していない予約」と区別が付かなくなり、S30 の一覧と誤配（`MISROUTED`）の扱いにも波及します。**記録（`condition_review_requested_at` / `reason`）で表し、状態は動かさない**案を軸に、決定と影響を残します。
 
-決定ごとに検査を対応させます（IT5 の architect 指摘。決定が 2 つなら検査も 2 つ）。
+**決定は 3 つです。** (1) 差し戻しを状態遷移にしない（記録で表す）、(2) 差し戻せるのは `ROUTING_REQUESTED` のときだけで **`MISROUTED` は含めない**（誤配の再設計は US28・IT11 が持つ）、(3) 条件の調整は集約に記録し、`routingStatus` を `ROUTED` から戻す。**決定ごとに検査を対応させます**（IT5 の architect 指摘。決定が 3 つなら検査も 3 つ）。
 
 ### 設計への反映が必要な事項
 
 | # | 反映先 | 内容 |
 | :--- | :--- | :--- |
-| 1 | `data-model.md` | **`cargo_notification` テーブルが無い**（通知履歴を S22 に出すと決めているのに受け皿が無い）。ER 図と投影の表に追加。`cargo_summary` の 3 列も |
-| 2 | `domain-model.md` | **「営業へ差し戻す」のコマンド・イベントが無い**（`ui_design.md` の S31 には `[営業へ差し戻す（条件調整）]` がある）。コマンド一覧・イベント一覧・状態遷移に追加 |
-| 3 | `ui_design.md`（648 行付近） | S02 の「条件の見直し依頼」の対応ストーリーが **US10（IT5）** になっている。**IT6** に直す |
-| 4 | `ui_design.md`（S02 営業） | 「荷主へ通知していない経路確定済みの予約」「条件の見直し依頼」の行が、実装の対象として計画に挙がっていなかった。本 IT の対象に含める |
-| 5 | `domain-model.md` 要素表 | `ShipperNotification` 値オブジェクトを追加 |
-| 6 | `architecture_backend.md` | 契約の名簿は変わらないが、**IT5 で契約に置いた `excludePortCodes` / `departFromUnLocode` が本 IT で初めて使われる**ことを一行残す |
+| 1 | `data-model.md` | **`cargo_notification` テーブルが無い**（通知履歴を S22 に出すと決めているのに受け皿が無い）。ER 図と投影の表に追加。`cargo_summary` には **`condition_review_requested_at` / `condition_review_reason` の 2 列**を足す（`last_notified_at` は `:292` に既にある） |
+| 2 | `domain-model.md` | **「営業へ差し戻す」のコマンド・イベントだけが無い**（`AdjustRouteSpecificationCommand` と `ReturnToRoutingCommand` は `:559-561` に定義済み）。`RequestConditionReviewCommand` / `ConditionReviewRequestedEvent` をコマンド一覧・イベント一覧・UC 対応表に追加 |
+| 3 | `ui_design.md`（648 行付近） | 「条件の見直し依頼」の対応ストーリーが **US10（IT5）** になっている。**IT6** に直す |
+| 4 | `ui_design.md`（S02） | **「条件の見直し依頼」の行が経路設計者の S02（`:631`）に置かれている。** 差し戻された予約に打てる手を持つのは営業（荷主と条件を協議する）なので、**営業の S02（`:560` 付近）へ移す**。同じ節の「引き渡していない予約の件数は営業に出す」（`:655`）と同じ理屈 |
+| 5 | `domain-model.md` 要素表 | `ShipperNotification` 値オブジェクトを追加（イベントのペイロードの形として） |
+| 6 | `architecture_backend.md` | 契約の名簿は変わらないが、**IT5 で契約に置いた `excludeUnLocodes` / `departFromUnLocode` が本 IT で初めて使われる**ことを一行残す |
+| 7 | `domain-model.md`・`ui_design.md` | `AdjustRouteSpecificationCommand` が **`routingStatus` を `ROUTED` から戻す**ことを、S22・S31 の表示（旅程は残るが「再算出待ち」になる）と揃えて書く |
 
 ### 着手前の検証（ステップ 3・4）
 
-**並列の検証エージェントは 55 分応答しなかったため、要点を直接確かめました。** 確かめた内容と根拠は次のとおりです。
+**並列の検証エージェント 2 体から結果を受け取りました**（起動から約 55 分・直接依頼のあと再送）。**自分で先に確かめた 12 観点では見つからなかった不整合が高 4 件ありました。** 見つかった順に、すべて計画側を直しています（設計が正）。
+
+| # | 重要度 | 指摘 | 対応 |
+| :--- | :--: | :--- | :--- |
+| 1 | 高 | **正典に `AdjustRouteSpecificationCommand` / `RouteSpecificationAdjustedEvent` があるのに、計画が黙って外していた**（条件をクエリパラメータだけで渡す設計にしていた） | 正典に合わせた。**経路設計に入った予約は修正（S24）が使えないので、期限を延ばす手段が他に無い**ことも確かめた |
+| 2 | 高 | **正典に `ReturnToRoutingCommand` / `ReturnedToRoutingEvent` があるのに、既存の `RoutingRequestedEvent` を再利用する設計にしていた** | 正典に合わせた。再利用すると「引き渡した」と「通知後に戻した」が履歴で区別できない |
+| 3 | 高 | **US10 §受入基準 2 を「満たす」としていたが、正典は「期限延長・経由地追加・貨物種別変更等」。** 当初の計画は出発港・除外港だけ | **「一部未達」に格下げ**。未達は 1 件から 2 件へ。IT5 の US09 §4 と同型の見落としだった |
+| 4 | 高 | **「条件の見直し依頼」は経路設計者の S02 に描かれている**（計画は一貫して営業と書いていた） | 業務上は営業が正しい（打てる手を持つ側）ので、**`ui_design.md` を直す事項として明記**（反映事項 4） |
+| 5 | 中 | 契約のフィールド名が `excludePortCodes` だった（実体は `excludeUnLocodes`） | 訂正 |
+| 6 | 中 | 反映事項 1 の「`cargo_summary` の 3 列」のうち `last_notified_at` は既存 | 「2 列」に訂正 |
+| 7 | 中 | 反映事項 2「UC08 のコマンドが無い」は不正確（無いのは差し戻しだけ） | 書き直した |
+| 8 | 中 | 状態遷移図に `AdjustRouteSpecificationCommand` の自己遷移が無い | 正典（`domain-model.md:505-511`）を写した |
+| 9 | 中 | テンプレートの「ストーリー詳細」節と「タスク」表が無い | 追加した |
+| 10 | 低 | 図で集約が通知履歴を保持していた（`*--`） | イベントのペイロードの形（`..>`）に直した |
+| 11 | 低 | 差し戻せる条件が `MISROUTED` を考慮していない | ADR-0009 で 1 行決める、と DoD に追加 |
+
+**BC 独立性の違反はありません**（本 IT はサービス越しの新しいメッセージを足さない）。**軸 A（開発戦略との整合）も不整合なしです。**
+
+**自分で先に確かめた分も残します**（重複は上の表が優先）。
 
 | # | 観点 | 結果 | 根拠 |
 | :--- | :--- | :--- | :--- |
-| 1 | ストーリー ID・SP・対応 UC | **一致**（US10→UC08・US11→UC09・US12→UC10、3+2+3=8） | `release_plan.md:185`／`user_story.md:28-30` |
-| 2 | US11 が IT5 で実装済みか | **実装済み**（旅程・`assignRoute`・`ROUTE_PROPOSED` は引き渡し時点） | `Cargo.java:117,187,289`／`BookingDetailPage.tsx` |
-| 3 | `RoleAuthorization` の並び | **メソッド込みの宣言が必ず先**。上記「API 設計」に反映済み | `RoleAuthorization.java:106-107` |
-| 4 | `RoutingRequestedEvent` の再利用 | **成立**（投影が状態と日時を書き直す。遷移表も許す） | `CargoProjection.java:109-114`／`BookingStatus.java:51` |
-| 5 | `cargo_notification` の不在 | **不在を確認**（ER 図にも投影の表にも無い） | `data-model.md:307-330,395-398` |
-| 6 | 「営業へ差し戻す」のコマンド・イベントの不在 | **不在を確認**（画面には `[営業へ差し戻す（条件調整）]` がある） | `domain-model.md`（該当なし）／`ui_design.md:1068` |
-| 7 | `ShipperNotification` が要素表に無い | **不在を確認** | `domain-model.md:71` 付近（旅程はあるが通知は無い） |
-| 8 | `ui_design.md` の「条件の見直し依頼」 | **US10（IT5）と書かれている**（IT6 に直す） | `ui_design.md:648` |
-| 9 | BC 独立性 | **違反なし**。本 IT はサービス越しの新しいメッセージを足さない | `CargoTrackerArchRules.java` の BC 分離規則 |
-| 10 | 契約の名簿 | **変わらない**（イベント 11・コマンド 2・クエリ 1） | `architecture_backend.md` |
+| 1 | ストーリー ID・SP・対応 UC | **一致** | `release_plan.md:185`／`user_story.md:28-30` |
+| 2 | US11 が IT5 で実装済みか | **実装済み**（検証エージェントも同じ結論） | `Cargo.java:187,289`／`BookingController.java:210` |
+| 3 | `RoleAuthorization` の並び | **メソッド込みの宣言が先**。ただし**メソッド宣言どうしは追加順**なので `PUT` の細かい経路だけ順序を確かめる | `RoleAuthorization.java:106-107` |
+| 4 | `cargo_notification` の不在 | **不在を確認** | `data-model.md`（該当なし） |
+| 5 | `ShipperNotification` が要素表に無い | **不在を確認** | `domain-model.md:71` 付近 |
+| 6 | `ui_design.md:648` の IT 番号 | **US10（IT5）と書かれている** | `ui_design.md:648` |
+| 7 | サイドナビの突合表 | **影響なし**（本 IT で足す画面は無い） | `navigationMatchesUiDesign.test.ts:68-79` |
+| 8 | テスト戦略との整合 | **1 件直した**（API から観測できるデモ項目に Gherkin を割り当て） | `test_strategy.md:245` |
 
-| 11 | サイドナビの突合表 | **影響なし**。本 IT で足す画面は無く、S31 は一覧から開く画面なので突合表に載らない | `navigationMatchesUiDesign.test.ts:68-79` |
-| 12 | テスト戦略との整合 | **1 件直した**。「デモ項目と Feature は 1 対 1」なので、API から観測できるデモ項目にはすべて Gherkin のシナリオを割り当てた（下記デモ項目表） | `test_strategy.md:245` |
-
-**画面でしか観測できないデモ項目（#1）だけは Gherkin を持ちません。** 「条件が画面から読める」は API では判別できないためで、フロントの検査で固定します。この 1 件は `test_strategy.md:245` の 1 対 1 から外れるので、理由をここに残します。
+**教訓を 1 つ残します。** 自前の確認は「計画に書いたことが正しいか」を見ましたが、**「計画が正典から落としたものはないか」を見ていませんでした。** 落ちたものは名乗り出ません。検証エージェントは正典の側から突き合わせて 2 件のコマンドの欠落を見つけています。
 
 ## スケジュール
 
@@ -337,10 +402,10 @@ S22 --> S24 : 期限・貨物を直す（US32・IT4）
 
 インサイドアウト。既にある探索に条件を渡す配線が主なので、集約に足すのは差し戻しだけです。
 
-1. **集約**（Day 2）：`Cargo.requestConditionReview`。差し戻せる状態の判断（`ROUTING_REQUESTED` のときだけ。設計済みの予約は差し戻さない）。`AxonTestFixture` で赤→緑
-2. **投影・読み口**（Day 2-3）：`condition_review_requested_at` / `reason`、営業ダッシュボードの件数と一覧
-3. **Controller**（Day 3）：`POST /condition-review`、`GET /route-candidates` に条件を足す。**HTTP の層で 1 本通す**（IT5 の T3）
-4. **画面**（Day 3-4）：S31 の「条件」欄と `[営業へ差し戻す]`、S02 の「条件の見直し依頼」
+1. **集約**（Day 2）：`Cargo.adjustRouteSpecification`（期限・貨物種別・除外港・出発港。`routingStatus` を `ROUTING_REQUESTED` へ戻す）と `Cargo.requestConditionReview`（営業へ差し戻す）。**差し戻せる状態の判断**は ADR-0009 で決める（`MISROUTED` を含めるかも 1 行で決める。誤配は US28・IT11 なので「含めない」で可）。`AxonTestFixture` で赤→緑
+2. **投影・読み口**（Day 2-3）：`RouteSpecificationAdjustedEvent` で `cargo_summary` の期限・貨物種別・除外港を更新、`condition_review_requested_at` / `reason`、営業ダッシュボードの件数と一覧
+3. **Controller**（Day 3）：`PUT /route-specification`・`POST /condition-review`、`GET /route-candidates` が更新後の条件を読む。**HTTP の層で 1 本通す**（IT5 の T3）
+4. **画面**（Day 3-4）：S31 の「条件」欄（編集できる）と `[候補を再算出]`・`[営業へ差し戻す]`、S02 の「条件の見直し依頼」
 5. **品質ゲート**（Day 4）：層別カバレッジと SonarQube を 1 度回す（IT5 の T4）
 
 ### Day 5: US11 経路情報を予約に紐付ける（2 SP）
@@ -353,9 +418,9 @@ S22 --> S24 : 期限・貨物を直す（US32・IT4）
 
 ### Day 6-8: US12 確定経路を荷主に通知する（3 SP）
 
-1. **集約**（Day 6）：`Cargo.notifyShipper`（`ROUTE_PROPOSED` かつ `ROUTED` のときだけ）・再通知・`returnToRouting`
+1. **集約**（Day 6）：`Cargo.notifyShipper`（`ROUTE_PROPOSED` かつ `ROUTED` のときだけ）・再通知・`Cargo.returnToRouting`（`ReturnToRoutingCommand` → `ReturnedToRoutingEvent`）
 2. **投影**（Day 6-7）：`cargo_notification`、`last_notified_at`
-3. **Controller**（Day 7）：`POST` / `GET /notifications`、`RoleAuthorization` の宣言と順序
+3. **Controller**（Day 7）：`POST` / `GET /notifications`・`POST /return-to-routing`、`RoleAuthorization` の宣言と順序
 4. **画面**（Day 7-8）：S22 の通知内容の確認・`[荷主へ通知]`・`[再通知]`・`[経路設計へ戻す]`・通知履歴、S02 の「荷主へ通知していない予約」
 5. **品質ゲート**（Day 8）
 
@@ -420,7 +485,9 @@ S22 --> S24 : 期限・貨物を直す（US32・IT4）
 - [ ] **ユーザーマニュアルが更新され、05 章のキャプチャが撮り直されている**
 - [ ] **並列レビューをクローズの最初に起動し、結果が切れていないか確かめてから統合した**
 - [ ] **設計への反映が必要な事項 6 件が `docs/design/` に反映されている**
-- [ ] ADR-0009 を作成し、**決定の数だけ検査を対応させた**
+- [ ] ADR-0009 を作成し、**決定の数だけ検査を対応させた**（差し戻しの表し方・`MISROUTED` の扱い）
+- [ ] **条件を調整すると `routingStatus` が `ROUTED` から戻り、確定済みの旅程は残ることを検査した**
+- [ ] **「引き渡した」と「通知後に戻した」がイベント履歴で区別できることを検査した**（同じイベントを再利用していない）
 - [ ] ふりかえり（`retrospective-6.md`）と完了報告書（`iteration_report-6.md`）を作成した
 
 ### デモ項目
@@ -454,6 +521,7 @@ IT5 に続き中盤（インサイドアウト）です。移行ではないの�
 | 日付 | 更新内容 | 更新者 |
 | :--- | :--- | :--- |
 | 2026-09-05 | IT6 計画を作成。US11 が IT5 で実装済みであることを調査し、検査で固定する方針に。4 回繰越の 2 件に行き先を決めて引き継ぎ表から落とす | claude-code/claude-opus-5 |
+| 2026-09-06 | 着手前の検証（ステップ 3・4）の結果を反映。**正典に定義済みのコマンド 2 本を計画が黙って外していた**のを直し、US10 §受入基準 2 を「一部未達」に格下げ。ストーリー詳細・タスク表を追加 | claude-code/claude-opus-5 |
 
 ## 関連ドキュメント
 
