@@ -81,6 +81,8 @@ const SAMPLE_VOYAGES = {
       arrivalAt: '2026-09-24T18:00:00Z',
       cancelled: false,
       acceptedCargoTypes: ['GENERAL', 'HAZARDOUS'],
+      updatedAt: '2026-09-05T02:00:00Z',
+      updatedBy: 'routing01',
       movements: [
         {
           movementSeq: 1,
@@ -102,6 +104,8 @@ const SAMPLE_VOYAGES = {
       arrivalAt: '2026-09-19T08:00:00Z',
       cancelled: false,
       acceptedCargoTypes: ['GENERAL', 'REEFER'],
+      updatedAt: null,
+      updatedBy: null,
       movements: [],
     },
   ],
@@ -120,11 +124,13 @@ const SAMPLE_WORKLIST = {
       bookingStatus: 'ROUTE_PROPOSED',
       routingStatus: 'MISROUTED',
       arrivalDeadline: '2026-09-30',
+      routingRequestedAt: '2026-09-02T00:30:00Z',
     },
     {
       ...SAMPLE_BOOKINGS.items[0],
       bookingStatus: 'ROUTE_PROPOSED',
       routingStatus: 'ROUTING_REQUESTED',
+      routingRequestedAt: '2026-09-04T05:10:00Z',
     },
   ],
   total: 2,
@@ -236,6 +242,26 @@ test.describe('マニュアルの画面キャプチャ', () => {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify(SAMPLE_VOYAGES),
+      }),
+    );
+    // 航海 1 件（S34・S33 の更新）。**広いパターンより後に置く**。逆にすると
+    // 詳細の要求に一覧の形が返り、画面が「取得できません」になる。
+    await page.route('**/api/v1/routing/voyages/*', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(SAMPLE_VOYAGES.items[0]),
+      }),
+    );
+    // 更新前の差分。**1 件の読み口より後**に置く（`*` は `/` をまたがない）。
+    await page.route('**/api/v1/routing/voyages/*/diff', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          voyageNumber: 'V-MOL-001',
+          changes: [{ label: '船名', before: 'MOL EXPRESS', after: 'MOL VICTORY' }],
+        }),
       }),
     );
     await page.route('**/api/v1/booking/bookings/routing-worklist**', (route) =>
@@ -397,12 +423,51 @@ test.describe('マニュアルの画面キャプチャ', () => {
     await page.screenshot({ path: `${OUT}/08-S30-routing-worklist.png`, fullPage: true });
   });
 
-  test('08 予約詳細（引き渡し）', async ({ page }) => {
+  test('08 予約詳細（引き渡したあと）', async ({ page }) => {
+    // **05 章と同じ状態を撮らない。** 同じ画面の同じ状態を 2 章に貼ると、
+    // 読者はどちらの説明を見ているのか分からなくなる（IT3 レビュー R.6）。
+    // 05 章は仮受付（引き渡しのボタンが出ている）、この章は押したあとを写す。
+    await page.route('**/api/v1/booking/bookings/*', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ...SAMPLE_BOOKINGS.items[0],
+          bookingStatus: 'ROUTE_PROPOSED',
+          routingStatus: 'ROUTING_REQUESTED',
+          routingRequestedAt: '2026-09-04T05:10:00Z',
+        }),
+      }),
+    );
     await signIn(page);
     await page.goto('/bookings/55555555-5555-5555-5555-555555555555');
-    // 仮受付の予約なので、引き渡しのボタンが出た状態で写す。
-    await expect(page.getByRole('button', { name: '経路設計を依頼する' })).toBeVisible();
+    await expect(page.getByText('経路提案中')).toBeVisible();
     await page.screenshot({ path: `${OUT}/08-S22-request-routing.png`, fullPage: true });
+  });
+
+  test('05 予約修正', async ({ page }) => {
+    await signIn(page);
+    await page.goto('/bookings/55555555-5555-5555-5555-555555555555/edit');
+    await expect(page.getByRole('heading', { name: '予約を修正する' })).toBeVisible();
+    await page.screenshot({ path: `${OUT}/05-S24-booking-edit.png`, fullPage: true });
+  });
+
+  test('07 航海詳細', async ({ page }) => {
+    await signInAsRouting(page);
+    await page.goto('/voyages/V-MOL-001');
+    await expect(page.getByRole('heading', { name: '航海 V-MOL-001' })).toBeVisible();
+    await page.screenshot({ path: `${OUT}/07-S34-voyage-detail.png`, fullPage: true });
+  });
+
+  test('07 航海スケジュール更新（差分の確認）', async ({ page }) => {
+    await signInAsRouting(page);
+    await page.goto('/voyages/V-MOL-001/edit');
+    await expect(page.getByRole('heading', { name: '航海スケジュールを更新する' })).toBeVisible();
+    // 差分を出した状態で写す。マニュアルが「確かめてから送る」を説明するため。
+    await page.getByLabel('船名').fill('MOL VICTORY');
+    await page.getByRole('button', { name: '差分を確認する' }).click();
+    await expect(page.getByText('更新の内容')).toBeVisible();
+    await page.screenshot({ path: `${OUT}/07-S33-voyage-update.png`, fullPage: true });
   });
 
   test('04 要確認一覧', async ({ page }) => {
