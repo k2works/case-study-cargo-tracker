@@ -53,7 +53,9 @@ class RouteSearchServiceTest {
 
         @Override
         public Set<CargoType> acceptedCargoTypes(String voyageNumber) {
-            return accepted.getOrDefault(voyageNumber, Set.of());
+            // 本番（ProjectionVoyageGraph）と同じ既定にする。ここだけ空集合を
+            // 返すと、テストダブルが本物と逆の振る舞いをすることになる。
+            return accepted.getOrDefault(voyageNumber, Set.of(CargoType.GENERAL));
         }
     }
 
@@ -236,5 +238,70 @@ class RouteSearchServiceTest {
                 service.search(spec(CargoType.GENERAL, Set.of()), new Graph());
         assertThat(empty.candidates()).isEmpty();
         assertThat(empty.truncated()).isFalse();
+    }
+
+    @Test
+    @DisplayName("受入基準 4・5: 候補が上限を超えても、返るのは推奨順の上位（先に見つかった順ではない）")
+    void ordersBeforeApplyingTheCandidateLimit() {
+        // **探索の途中で件数を切ると、返るのは「先に見つかった 20 件」になる。**
+        // 出発の遅い直行便が、先に見つかる乗り継ぎ候補に押し出されて一覧から消える
+        // （クラスタ E2E で実測した症状の原因）。
+        Graph graph = new Graph();
+        // 乗り継ぎ候補を上限より多く作る。どれも直行便より早く出る。
+        for (int i = 0; i < RouteSearchService.MAX_CANDIDATES + 5; i++) {
+            // UN/LOCODE は英大文字 5 文字。連番を英字 2 文字で作る。
+            String via = "VI" + (char) ('A' + i / 26) + (char) ('A' + i % 26) + "X";
+            graph.add("V-VIA" + i, "JPTYO", via,
+                    "2026-09-10T00:00:00Z", "2026-09-11T00:00:00Z");
+            graph.add("V-VIB" + i, via, "USNYC",
+                    "2026-09-12T00:00:00Z", "2026-10-20T00:00:00Z");
+        }
+        // 直行便は**最後に**足す。出発も遅い。推奨順では 1 位になる。
+        graph.add("V-DIRECT", "JPTYO", "USNYC",
+                "2026-09-15T00:00:00Z", "2026-09-25T00:00:00Z");
+
+        RouteSearchService.RouteSearchResult result =
+                service.search(spec(CargoType.GENERAL, Set.of()), graph);
+
+        assertThat(result.candidates()).hasSize(RouteSearchService.MAX_CANDIDATES);
+        assertThat(result.candidates().get(0).isDirect())
+                .as("直行便は最優先。件数の上限は並べたあとに効かせる")
+                .isTrue();
+        assertThat(voyagesOf(result.candidates().get(0))).containsExactly("V-DIRECT");
+        // 実際に落とした候補があるので打ち切り。
+        assertThat(result.truncated()).isTrue();
+    }
+
+    @Test
+    @DisplayName("ADR-0007: 候補が出ているなら、行き止まりの深い枝があっても打ち切りとは言わない")
+    void doesNotReportTruncationWhenCandidatesAreEnough() {
+        // 常時点灯すると、本当に打ち切られたときの合図として働かなくなる。
+        Graph graph = new Graph()
+                .add("V-OK", "JPTYO", "USNYC", "2026-09-10T00:00:00Z", "2026-09-25T00:00:00Z")
+                // 目的地に着かない深い枝。乗り継ぎ上限に当たる。
+                .add("V-D1", "JPTYO", "SGSIN", "2026-09-10T00:00:00Z", "2026-09-12T00:00:00Z")
+                .add("V-D2", "SGSIN", "NLRTM", "2026-09-13T00:00:00Z", "2026-09-15T00:00:00Z")
+                .add("V-D3", "NLRTM", "GBLON", "2026-09-16T00:00:00Z", "2026-09-18T00:00:00Z")
+                .add("V-D4", "GBLON", "DEHAM", "2026-09-19T00:00:00Z", "2026-09-21T00:00:00Z")
+                .add("V-D5", "DEHAM", "FRPAR", "2026-09-22T00:00:00Z", "2026-09-24T00:00:00Z");
+
+        RouteSearchService.RouteSearchResult result =
+                service.search(spec(CargoType.GENERAL, Set.of()), graph);
+
+        assertThat(result.candidates()).isNotEmpty();
+        assertThat(result.truncated())
+                .as("候補が出ているなら、深い行き止まりは利用者の判断を変えない")
+                .isFalse();
+    }
+
+    @Test
+    @DisplayName("期限の翌日に着く経路は候補にしない（境界の反対側）")
+    void excludesRoutesArrivingTheDayAfterTheDeadline() {
+        Graph graph = new Graph()
+                // 業務タイムゾーンで 2026-11-01 09:00。期限は 2026-10-31。
+                .add("V-LATE1", "JPTYO", "USNYC", "2026-09-10T00:00:00Z",
+                        "2026-11-01T00:00:00Z");
+
+        assertThat(service.findCandidates(spec(CargoType.GENERAL, Set.of()), graph)).isEmpty();
     }
 }

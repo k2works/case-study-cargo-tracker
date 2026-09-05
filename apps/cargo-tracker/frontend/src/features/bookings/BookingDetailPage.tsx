@@ -44,7 +44,19 @@ export function BookingDetailPage() {
     queryKey: ['booking', bookingId],
     queryFn: () => fetchBooking(bookingId),
     // 登録直後は投影がまだなので 202 が返る。反映されるまで取り直す。
-    refetchInterval: (query) => (query.state.data?.state === 'pending' ? 2000 : false),
+    //
+    // **経路を確定した直後もここを通る。** 確定してから S22 へ来ると、投影が
+    // 追いつくまで routingStatus は ROUTING_REQUESTED のままで、旅程の欄が
+    // 現れない。確定を待っている間だけ取り直す（IT5 レビュー 高 1）。
+    refetchInterval: (query) => {
+      const state = query.state.data;
+      if (state?.state === 'pending') {
+        return 2000;
+      }
+      return state?.state === 'ready' && state.value.routingStatus === 'ROUTING_REQUESTED'
+        ? 3000
+        : false;
+    },
   });
 
   // 修正履歴（US32 §受入基準 4）。一度も直していない予約では問い合わせない。
@@ -65,6 +77,12 @@ export function BookingDetailPage() {
     queryKey: ['booking', bookingId, 'itinerary'],
     queryFn: () => fetchBookingItinerary(bookingId),
     enabled: routed,
+    // 経路を確定した直後は投影が数秒遅れる。1 回で諦めると、旅程の欄ごと
+    // 現れないまま「失敗した」と読まれる（IT5 レビュー 高 1）。
+    refetchInterval: (query) =>
+      query.state.data?.state === 'ready' && query.state.data.value.legs.length > 0
+        ? false
+        : 2000,
   });
 
   const handOver = useMutation({
@@ -189,6 +207,21 @@ export function BookingDetailPage() {
               )}
             </dl>
           </div>
+
+          {/* 経路が決まっているのに旅程が読めないことを黙らない。黙ると
+              「まだ決まっていない予約」と同じ見た目になる（IT5 レビュー 中 7）。 */}
+          {routed && itinerary.isError && (
+            <p role="alert" className={ALERT}>
+              旅程を取得できませんでした
+            </p>
+          )}
+          {routed
+            && !itinerary.isError
+            && (itinerary.isPending
+              || (itinerary.data?.state === 'ready'
+                && itinerary.data.value.legs.length === 0)) && (
+            <output className={NOTICE}>経路の反映を待っています</output>
+          )}
 
           {routed
             && itinerary.data?.state === 'ready'

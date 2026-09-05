@@ -58,6 +58,17 @@ class RouteCandidateQueryIT extends AbstractAxonIntegrationTest {
                 cargoTypes, "routing01"));
     }
 
+    /** 2 区間の航海。前半が出発済みでも、後半にはまだ積める。 */
+    private void registerTwoLegs(String number, String from, String via, String to,
+            int firstDepart, int firstArrive, int secondDepart, int secondArrive) {
+        projection.on(new VoyageRegisteredEvent(number, "MOL", "商船三井", "MOL EXPRESS",
+                List.of(new VoyageRegisteredEvent.Movement(from, via,
+                                future(firstDepart), future(firstArrive)),
+                        new VoyageRegisteredEvent.Movement(via, to,
+                                future(secondDepart), future(secondArrive))),
+                List.of("GENERAL"), "routing01"));
+    }
+
     private FindRouteCandidatesQuery query(String from, String to, String cargoType,
             int deadlineInDays) {
         return new FindRouteCandidatesQuery(from, to,
@@ -152,5 +163,46 @@ class RouteCandidateQueryIT extends AbstractAxonIntegrationTest {
                 new FindRouteCandidatesQuery("JPTYO", "USNYC", LocalDate.of(2026, 12, 1),
                         null, List.of(), null)))
                 .isInstanceOf(BusinessRuleViolation.class);
+    }
+
+    @Test
+    @DisplayName("出発済みの区間は候補に出ない（走ってしまった便に積ませない）")
+    void excludesDepartedMovements() {
+        String number = uniqueNumber("V-PS-");
+        // 出発が過去。到着はまだ先。
+        register(number, "JPTYO", "USNYC", -2, 16, List.of("GENERAL"));
+
+        assertThat(queries.handle(query("JPTYO", "USNYC", "GENERAL", 30)).candidates())
+                .filteredOn(c -> c.legs().get(0).voyageNumber().equals(number))
+                .isEmpty();
+    }
+
+    @Test
+    @DisplayName("航海が出港済みでも、まだ出ていない後半の区間には積める")
+    void keepsLaterMovementsOfDepartedVoyage() {
+        String number = uniqueNumber("V-HF-");
+        // JPTYO → SGSIN は出発済み。SGSIN → USNYC はこれから。
+        registerTwoLegs(number, "JPTYO", "SGSIN", "USNYC", -5, -1, 3, 20);
+
+        // 前半（JPTYO 発）は候補に出ない。
+        assertThat(queries.handle(query("JPTYO", "USNYC", "GENERAL", 40)).candidates())
+                .filteredOn(c -> c.legs().get(0).voyageNumber().equals(number))
+                .isEmpty();
+        // 後半（SGSIN 発）は候補に出る。航海の出港ではなく区間の出発で見るため。
+        assertThat(queries.handle(query("SGSIN", "USNYC", "GENERAL", 40)).candidates())
+                .filteredOn(c -> c.legs().get(0).voyageNumber().equals(number))
+                .hasSize(1);
+    }
+
+    @Test
+    @DisplayName("投影が知らない港は断る（黙って 0 件にしない）")
+    void rejectsUnknownPort() {
+        // 書式は正しいが、どの航海も通らない港。打ち間違いを「経路が無い」と
+        // 読ませると、条件を変えても直らないものを変え続けることになる。
+        register(uniqueNumber("V-KP-"), "JPTYO", "USNYC", 2, 16, List.of("GENERAL"));
+
+        assertThatThrownBy(() -> queries.handle(query("JPTYO", "ZZZZZ", "GENERAL", 30)))
+                .isInstanceOf(BusinessRuleViolation.class)
+                .hasMessageContaining("ZZZZZ");
     }
 }

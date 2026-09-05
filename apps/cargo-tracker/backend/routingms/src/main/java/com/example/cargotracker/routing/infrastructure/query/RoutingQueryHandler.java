@@ -51,14 +51,39 @@ public class RoutingQueryHandler {
     @QueryHandler
     public RouteCandidatesResponse handle(FindRouteCandidatesQuery query) {
         RouteSearchSpecification specification = toSpecification(query);
-        RouteSearchService.RouteSearchResult result = routeSearch.search(specification,
-                new ProjectionVoyageGraph(voyages, clock.instant()));
+        ProjectionVoyageGraph graph = new ProjectionVoyageGraph(voyages, clock.instant());
+        // 書いた保証は実装する。港は書式だけを見ていたので、登録の無い港が
+        // 黙って候補 0 件になっていた（IT5 レビュー 高 2）。
+        rejectUnknownPorts(specification, graph);
+
+        RouteSearchService.RouteSearchResult result = routeSearch.search(specification, graph);
 
         return new RouteCandidatesResponse(
                 result.candidates().stream()
                         .map(this::toDto)
                         .toList(),
                 result.truncated());
+    }
+
+    /**
+     * 投影が知らない港を断る。
+     *
+     * <p>除外港は見ない。「通したくない港」なので、登録が無くても条件として成り立つ。</p>
+     */
+    private static void rejectUnknownPorts(RouteSearchSpecification specification,
+            ProjectionVoyageGraph graph) {
+        Set<Location> ports = new java.util.LinkedHashSet<>();
+        ports.add(specification.origin());
+        ports.add(specification.destination());
+        if (specification.departFrom() != null) {
+            ports.add(specification.departFrom());
+        }
+        for (Location port : ports) {
+            if (!graph.knowsPort(port)) {
+                throw new BusinessRuleViolation(
+                        "その港を通る航海が登録されていません: " + port.unLocode().value());
+            }
+        }
     }
 
     private static RouteSearchSpecification toSpecification(FindRouteCandidatesQuery query) {

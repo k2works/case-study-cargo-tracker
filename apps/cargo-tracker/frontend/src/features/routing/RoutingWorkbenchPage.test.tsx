@@ -137,14 +137,74 @@ describe('S31 経路設計ワークベンチ', () => {
     expect(screen.queryByText(/経路が見つかりませんでした/)).not.toBeInTheDocument();
   });
 
-  it('打ち切りに当たったことを出す（0 件と区別する）', async () => {
+  it('0 件で打ち切りに当たったら「条件を変えても増えない」と伝える', async () => {
+    // 期限を延ばす・港を広げるという逆の案内を重ねて出さない
+    // （IT5 レビュー 高 1）。乗り継ぎの上限で捨てた枝は条件では戻らない。
     mockApi(
       new Response(JSON.stringify({ candidates: [], truncated: true }), { status: 200 }),
     );
 
     renderWorkbench();
 
+    expect(await screen.findByText(/条件を変えても候補は増えません/)).toBeInTheDocument();
+    expect(screen.queryByText(/到着期限を延ばすか/)).not.toBeInTheDocument();
+  });
+
+  it('候補が出ていて打ち切りに当たったら「上限まで探した」と伝える', async () => {
+    mockApi(
+      new Response(
+        JSON.stringify({
+          candidates: [
+            {
+              legs: [leg('V-MOL-001', 'JPTYO', 'USNYC', '2026-09-10T09:00:00Z',
+                '2026-09-24T18:00:00Z')],
+              transitDays: 14,
+              direct: true,
+            },
+          ],
+          truncated: true,
+        }),
+        { status: 200 },
+      ),
+    );
+
+    renderWorkbench();
+
     expect(await screen.findByText(/上限まで探しました/)).toBeInTheDocument();
+    expect(screen.queryByText(/条件を変えても候補は増えません/)).not.toBeInTheDocument();
+  });
+
+  it('経路が確定済みの予約では確定ボタンを出さない（押してから断らせない）', async () => {
+    // S30 の「設計済みも表示」から開いたときに起きる。押すと集約が断るが、
+    // その文言（経路設計を依頼していない…）は状況の説明として的外れ。
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      if (String(input).includes('/route-candidates')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              candidates: [
+                {
+                  legs: [leg('V-MOL-001', 'JPTYO', 'USNYC', '2026-09-10T09:00:00Z',
+                    '2026-09-24T18:00:00Z')],
+                  transitDays: 14,
+                  direct: true,
+                },
+              ],
+              truncated: false,
+            }),
+            { status: 200 },
+          ),
+        );
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify({ ...booking(), routingStatus: 'ROUTED' }), { status: 200 }),
+      );
+    });
+
+    renderWorkbench();
+
+    expect(await screen.findByText(/この予約は経路が確定しています/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'この経路で確定' })).not.toBeInTheDocument();
   });
 
   it('費用は出さず、どこで出るかを書く', async () => {

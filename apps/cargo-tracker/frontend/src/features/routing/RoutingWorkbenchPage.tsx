@@ -22,6 +22,7 @@ import {
   cargoTypeLabel,
   fetchBooking,
 } from '@/features/bookings/api';
+import { canAssignRoute } from '@/features/bookings/transitions';
 import { fetchRouteCandidates, type RouteCandidateView } from './api';
 
 /**
@@ -60,6 +61,10 @@ export function RoutingWorkbenchPage() {
       navigate(`/bookings/${bookingId}`);
     },
   });
+
+  // 経路を確定できる状態か。集約が受けるのは ROUTING_REQUESTED と MISROUTED だけ。
+  const assignable = booking.data?.state === 'ready'
+    && canAssignRoute(booking.data.value.routingStatus);
 
   const unavailable =
     candidates.error instanceof ApiError && candidates.error.status === 503;
@@ -116,15 +121,26 @@ export function RoutingWorkbenchPage() {
         </p>
       )}
 
-      {found && found.candidates.length === 0 && (
+      {/* **0 件と打ち切りを重ねて出さない。** 重ねると「期限を延ばす・港を広げる」と
+          「条件を絞る」が同時に出て、逆のことを勧めることになる（IT5 レビュー 高 1）。
+          0 件で打ち切りに当たったのは、乗り継ぎの上限で枝を捨てたときだけなので、
+          条件を変えても候補は増えない。 */}
+      {found && found.candidates.length === 0 && !found.truncated && (
         <output className={`${NOTICE} mt-2 block`}>
           期限内に到着できる経路が見つかりませんでした。到着期限を延ばすか、経由できる港を
           広げると候補が出ることがあります
         </output>
       )}
 
+      {found && found.candidates.length === 0 && found.truncated && (
+        <output className={`${NOTICE} mt-2 block`}>
+          乗り継ぎを 4 回以上必要とする経路しかありません。
+          <b>条件を変えても候補は増えません。</b>手配の相談が要ります
+        </output>
+      )}
+
       {/* 上限まで探したことを黙らない（ADR-0007）。黙ると「候補が無い」と読まれる。 */}
-      {found?.truncated && (
+      {found && found.candidates.length > 0 && found.truncated && (
         <output className={`${NOTICE} mt-2 block`}>
           上限まで探しました。乗り継ぎの多い経路は出していません。条件を絞ると別の候補が
           出ることがあります
@@ -178,7 +194,19 @@ export function RoutingWorkbenchPage() {
         </div>
       )}
 
-      {found && found.candidates.length > 0 && (
+      {/* 確定できない状態で押せるボタンを出さない。押してから断られる導線にしない
+          （IT5 レビュー 中 5・7）。判定は集約と同じ述語を呼ぶ。 */}
+      {found && found.candidates.length > 0 && !assignable && (
+        <output className={`${NOTICE} mt-4 block`}>
+          この予約は経路が確定しています。確定した旅程は
+          <Link to={`/bookings/${bookingId}`} className={LINK}>
+            予約詳細
+          </Link>
+          で読めます
+        </output>
+      )}
+
+      {found && found.candidates.length > 0 && assignable && (
         <div className="mt-4 space-y-2">
           {selectionError && (
             <p role="alert" className={ALERT}>

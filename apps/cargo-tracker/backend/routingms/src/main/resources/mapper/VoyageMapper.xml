@@ -189,6 +189,18 @@
          ORDER BY cm.departure_at, cm.voyage_number, cm.movement_seq
     </select>
 
+    <!--
+      投影が知っている港か。EXISTS で止める（件数は要らない）。
+      出発側・到着側の両方を見る。終着港は departure_unlocode に現れない。
+    -->
+    <select id="existsPort" resultType="_boolean">
+        SELECT EXISTS (
+            SELECT 1 FROM carrier_movement
+             WHERE departure_unlocode = #{unLocode}
+                OR arrival_unlocode = #{unLocode}
+        )
+    </select>
+
     <select id="findAcceptedCargoTypes" resultType="string">
         SELECT cargo_type FROM voyage_accepted_cargo_type
         WHERE voyage_number = #{voyageNumber}

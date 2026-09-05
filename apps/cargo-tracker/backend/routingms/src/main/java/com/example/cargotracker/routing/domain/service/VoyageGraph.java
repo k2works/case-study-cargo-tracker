@@ -21,6 +21,11 @@ public interface VoyageGraph {
     /** その港から出る区間。出港済み・キャンセル済みの航海は含まない。 */
     List<TransitEdge> edgesFrom(Location location);
 
-    /** その航海が受け入れる貨物種別。知らない航海には空集合を返す。 */
+    /**
+     * その航海が受け入れる貨物種別。
+     *
+     * <p><b>1 行も無い航海は一般貨物のみ</b>（不変条件 4 の既定）。空集合を返すと、
+     * 種別を選ばなかった航海が候補から全部消える。</p>
+     */
     Set<CargoType> acceptedCargoTypes(String voyageNumber);
 }

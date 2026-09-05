@@ -43,6 +43,18 @@ public class ProjectionVoyageGraph implements VoyageGraph {
                 .toList();
     }
 
+    /**
+     * 投影が知っている港か（US08）。
+     *
+     * <p>書式が正しくても登録の無い港は、黙って候補 0 件になる。条件の打ち間違いが
+     * 「経路が無い」と読めると、経路設計者は直らない条件を変え続ける。</p>
+     *
+     * <p>キャンセル・出港済みは見ない。<b>港の存在は航海の状態と別</b>である。</p>
+     */
+    public boolean knowsPort(Location location) {
+        return voyages.existsPort(location.unLocode().value());
+    }
+
     @Override
     public Set<CargoType> acceptedCargoTypes(String voyageNumber) {
         return acceptedCache.computeIfAbsent(voyageNumber, number -> {

@@ -32,7 +32,12 @@ public class RouteSearchService {
     /** 乗り継ぎ回数の上限（ADR-0007）。区間数はこれ + 1 まで。 */
     public static final int MAX_TRANSFERS = 3;
 
-    /** 返す候補数の上限（ADR-0007）。 */
+    /**
+     * 返す候補数の上限（ADR-0007）。
+     *
+     * <p><b>探索の打ち切りではなく、並べたあとの表示の上限である。</b> 探索の途中で
+     * 切ると、返るのが「推奨順の上位 20 件」でなく「先に見つかった 20 件」になる。</p>
+     */
     public static final int MAX_CANDIDATES = 20;
 
     private final ZoneId businessZone;
@@ -70,7 +75,12 @@ public class RouteSearchService {
         Deque<List<TransitEdge>> frontier = new ArrayDeque<>();
         frontier.add(List.of());
 
-        while (!frontier.isEmpty() && found.size() < MAX_CANDIDATES) {
+        // **件数で探索を打ち切らない。** 打ち切ってから並べると、返るのは
+        // 「推奨順の上位 20 件」ではなく「先に見つかった 20 件」になり、
+        // 出発の遅い直行便が乗り継ぎ候補に押し出される（受入基準 4・5 が破れる）。
+        // 探索が有限に終わることは、乗り継ぎ回数の上限と「同じ港を 2 度通らない」が
+        // 担う（ADR-0007）。件数の上限は**並べたあとに**効かせる。
+        while (!frontier.isEmpty()) {
             List<TransitEdge> path = frontier.poll();
             Location at = path.isEmpty()
                     ? specification.searchOrigin()
@@ -103,10 +113,18 @@ public class RouteSearchService {
         List<TransitPath> ordered = found.stream()
                 .sorted(Comparator.comparing((TransitPath p) -> !p.isDirect())
                         .thenComparing(TransitPath::totalDuration))
-                .limit(MAX_CANDIDATES)
                 .toList();
-        return new RouteSearchResult(ordered,
-                depthLimited || ordered.size() >= MAX_CANDIDATES);
+
+        // **上限に達しただけでは打ち切りと言わない。** ちょうど 20 件で自然に
+        // 尽きたときも真にすると、警告が常時点灯して合図として働かなくなる。
+        //
+        // 深さで枝を捨てたことは、**候補が 1 件も無いときだけ**意味を持つ。
+        // 候補が出ているなら、行き止まりの深い枝があったことは利用者の判断を
+        // 変えない（実データでは、そういう枝はほぼ必ずある）。
+        boolean truncated = ordered.size() > MAX_CANDIDATES
+                || (ordered.isEmpty() && depthLimited);
+        return new RouteSearchResult(
+                ordered.stream().limit(MAX_CANDIDATES).toList(), truncated);
     }
 
     /**

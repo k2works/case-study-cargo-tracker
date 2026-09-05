@@ -41,3 +41,16 @@ export function canUpdateSpecification(status: string): boolean {
 export function canRequestRouting(status: string): boolean {
   return canTransitionTo(status, 'ROUTE_PROPOSED');
 }
+
+/**
+ * 経路を確定できるか（US09）。
+ *
+ * <p>集約（{@code Cargo.assignRoute}）は `ROUTING_REQUESTED` と `MISROUTED` だけを
+ * 受ける。画面が持たないと、確定できない予約でボタンが出て、押してから断られる
+ * （IT5 レビュー 中 5・7）。</p>
+ *
+ * <p>これは <b>routingStatus</b> の判断で、予約の状態（bookingStatus）とは別の軸。</p>
+ */
+export function canAssignRoute(routingStatus: string): boolean {
+  return routingStatus === 'ROUTING_REQUESTED' || routingStatus === 'MISROUTED';
+}

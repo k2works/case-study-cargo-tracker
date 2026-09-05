@@ -72,15 +72,32 @@ public interface VoyageMapper {
     /**
      * 経路探索が見る区間（US08）。
      *
-     * <p><b>既定の絞り込みと同じ条件を使う。</b> キャンセル済み・出港済みの航海を
-     * 候補に出すと、走らない船で経路を組むことになる。条件をここに書き直すと、
-     * 一覧だけを直したときに探索が古い判断のまま残る（{@code visible} を共有する）。</p>
+     * <p><b>一覧（{@code visible}）とは別の条件である。</b> 一覧は航海の出港
+     * （{@code voyage.departure_at}）で見るが、探索は<b>区間の出発</b>で見る。
+     * 航海はもう出ていても、まだ出ていない後半の区間には積めるためで、
+     * {@code visible} をそのまま使うと積める区間まで落とす。</p>
+     *
+     * <p>両方で守るのは「キャンセル済みを外す」だけである。走らない船で経路を
+     * 組ませない。<b>一覧に絞り込みを足しても、ここは自動では追随しない。</b>
+     * 追随させるべき条件かどうかを、足すときに判断すること。</p>
      *
      * <p>受入貨物種別はここでは返さない。集約関数で 1 行に畳むと方言に寄る。
      * 呼ぶ側（{@code ProjectionVoyageGraph}）が航海ごとに 1 度だけ引いて覚える。</p>
      */
     List<TransitEdgeRow> findEdgesFrom(@Param("unLocode") String unLocode,
             @Param("now") Instant now);
+
+    /**
+     * 投影が知っている港か（US08）。
+     *
+     * <p>書式が正しくても登録の無い港（{@code JPXXX} など）は、黙って候補 0 件に
+     * なる。条件の打ち間違いが「経路が無い」と読めると、経路設計者は直らない条件を
+     * 変え続けることになる。</p>
+     *
+     * <p>キャンセル・出港済みは見ない。<b>港の存在は航海の状態と別</b>である
+     * （止まった便しか無い港も、港としては知っている）。</p>
+     */
+    boolean existsPort(@Param("unLocode") String unLocode);
 
     /** 探索が見る 1 区間。{@code voyage} と {@code carrier_movement} を結んだ形。 */
     record TransitEdgeRow(
