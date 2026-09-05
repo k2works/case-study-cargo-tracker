@@ -49,7 +49,9 @@ export function BookingDetailPage() {
 
   // 修正履歴（US32 §受入基準 4）。一度も直していない予約では問い合わせない。
   // 「修正した」とだけ残っていて中身が読めない状態を作らないための読み口。
-  const updated = data?.state === 'ready' && data.value.updatedAt !== null;
+  // `!== null` にしない。項目が欠けた応答では undefined になり、「一度も直して
+  // いない予約」が「直した予約」として扱われる（マニュアルのキャプチャで実測）。
+  const updated = data?.state === 'ready' && Boolean(data.value.updatedAt);
   const revisions = useQuery({
     queryKey: ['booking', bookingId, 'revisions'],
     queryFn: () => fetchBookingRevisions(bookingId),
@@ -247,7 +249,9 @@ export function BookingDetailPage() {
                         data-testid={`revision-${item.label}`}
                       >
                         <td className={TD}>{formatBusinessDateTime(item.updatedAt)}</td>
-                        <td className={TD}>{display(item.updatedBy)}</td>
+                        {/* display() は鍵破棄で読めないことを表す（荷主名）。
+                            修正した利用者が分からないのは別の意味なので使わない。 */}
+                        <td className={TD}>{item.updatedBy ?? '—'}</td>
                         <td className={TD}>{item.label}</td>
                         <td className={TD}>{item.before}</td>
                         <td className={TD}>{item.after}</td>

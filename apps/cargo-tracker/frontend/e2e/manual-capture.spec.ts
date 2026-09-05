@@ -349,6 +349,26 @@ test.describe('マニュアルの画面キャプチャ', () => {
   });
 
   test('05 予約詳細', async ({ page }) => {
+    // **一覧のモックより後に置く。** `**/api/v1/booking/bookings**` は `/` を
+    // またぐので、明示しないと修正履歴の問い合わせにも一覧が返り、予約の行が
+    // 「変更前も変更後も空の修正」として表に並ぶ（実測）。
+    await page.route('**/api/v1/booking/bookings/*/revisions', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: [
+            {
+              updatedAt: '2026-09-05T02:00:00Z',
+              updatedBy: 'sales02',
+              label: '品名',
+              before: '自動車部品（誤記）',
+              after: '自動車部品',
+            },
+          ],
+        }),
+      }),
+    );
     await signIn(page);
     await page.goto('/bookings/55555555-5555-5555-5555-555555555555');
     await expect(page.getByRole('heading', { name: /予約 B-2026-0903-0001/ })).toBeVisible();

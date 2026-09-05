@@ -352,6 +352,36 @@ describe('S22 修正履歴（US32 §受入基準 4）', () => {
     expect(screen.getByTestId('revision-品名')).toHaveTextContent('塗料');
   });
 
+  it('R.2: 最終更新の項目が欠けている応答でも修正履歴を出さない', async () => {
+    // `!== null` で見ると undefined が「直した」になり、一度も直していない予約に
+    // 空の修正履歴が出る（マニュアルのキャプチャで実測）。
+    // 応答から最終更新の項目そのものを落とす（null ではなく「無い」状態）。
+    const withoutUpdate = Object.fromEntries(
+      Object.entries(booking()).filter(([key]) => key !== 'updatedAt' && key !== 'updatedBy'),
+    );
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      if (String(input).includes('/revisions')) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ items: [{ label: '品名' }] }), { status: 200 }),
+        );
+      }
+      return Promise.resolve(new Response(JSON.stringify(withoutUpdate), { status: 200 }));
+    });
+
+    renderDetail();
+
+    // **表示の有無で見ない。** 問い合わせが返る前にアサートすると、条件が壊れて
+    // いても「まだ出ていない」だけで緑になる（実測: 条件を戻しても赤にならなかった）。
+    // 直していない予約には**問い合わせ自体を出さない**ことを見る。
+    expect(await screen.findByRole('heading', { name: '貨物' })).toBeInTheDocument();
+    await new Promise((resolve) => {
+      setTimeout(resolve, 50);
+    });
+    expect(
+      fetchSpy.mock.calls.filter(([url]) => String(url).includes('/revisions')),
+    ).toHaveLength(0);
+  });
+
   it('R.2: 一度も直していなければ修正履歴を出さない', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(JSON.stringify(booking()), { status: 200 }),
