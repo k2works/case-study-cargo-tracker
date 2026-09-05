@@ -61,6 +61,7 @@ plugins:
 exclude_docs: |
   wiki
   article/source/
+  template/README.md
 
 nav:
   - Home: index.md
@@ -291,4 +292,3 @@ nav:
       - AWS プロダクション環境セットアップ手順書: template/AWSプロダクション環境セットアップ手順書.md
       - 事例分析: template/事例分析.md
       - 企業分析: template/企業分析.md
-      - README: template/README.md
