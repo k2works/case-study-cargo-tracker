@@ -36,10 +36,12 @@ public class RoutingQueryHandler {
         // 「出港済みを外す」の基準時刻はここで 1 度だけ決める。行ごとに now() を
         // 引くと、ページの途中で境界が動く。
         java.time.Instant now = clock.instant();
+        // 条件は既定の絞り込みと組み合わせる。条件で置き換えると、出港済みの航海が
+        // 検索結果にだけ戻る（一覧では外しているのに、絞り込むと出てくる）。
         return new VoyageListView(
-                voyages.findAll(query.includeFinished(), query.cargoType(), now, size, offset)
+                voyages.findAll(query.includeFinished(), query.criteria(), now, size, offset)
                         .stream().map(this::toView).toList(),
-                voyages.countAll(query.includeFinished(), query.cargoType(), now));
+                voyages.countAll(query.includeFinished(), query.criteria(), now));
     }
 
     private VoyageView toView(VoyageMapper.VoyageRow row) {

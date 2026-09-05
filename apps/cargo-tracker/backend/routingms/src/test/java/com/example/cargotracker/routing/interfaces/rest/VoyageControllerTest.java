@@ -133,18 +133,19 @@ class VoyageControllerTest {
         when(queries.query(any(), any(Class.class)))
                 .thenReturn(CompletableFuture.completedFuture(new VoyageListView(List.of(), 0)));
 
-        controller.list(0, 50, false, "  ");
+        controller.list(0, 50, false, null, null, null, null, "  ");
 
         ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
         org.mockito.Mockito.verify(queries).query(captor.capture(), any(Class.class));
-        assertThat(((FindVoyagesQuery) captor.getValue()).cargoType()).isNull();
+        assertThat(((FindVoyagesQuery) captor.getValue()).criteria().cargoType()).isNull();
     }
 
     @Test
     @DisplayName("一覧の絞り込みに知らない種別を渡すと断る")
     void rejectsUnknownFilter() {
         // 0 件は「無い」と読める。入力が誤っていることを伝える。
-        assertThatThrownBy(() -> controller.list(0, 50, false, "UNKNOWN"))
+        assertThatThrownBy(() -> controller.list(0, 50, false, null, null, null, null,
+                "UNKNOWN"))
                 .isInstanceOf(BusinessRuleViolation.class);
     }
 

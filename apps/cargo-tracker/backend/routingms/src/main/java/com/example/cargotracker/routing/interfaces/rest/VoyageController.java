@@ -6,6 +6,7 @@ import com.example.cargotracker.routing.domain.model.valueobjects.CargoType;
 import com.example.cargotracker.routing.domain.model.valueobjects.Carrier;
 import com.example.cargotracker.routing.domain.model.valueobjects.CarrierMovement;
 import com.example.cargotracker.routing.domain.model.valueobjects.Schedule;
+import com.example.cargotracker.routing.domain.model.valueobjects.VoyageSearchCriteria;
 import com.example.cargotracker.routing.domain.model.valueobjects.VesselName;
 import com.example.cargotracker.routing.infrastructure.query.RoutingQueries.FindVoyageQuery;
 import com.example.cargotracker.routing.infrastructure.query.RoutingQueries.FindVoyagesQuery;
@@ -21,6 +22,7 @@ import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.shared.domain.location.Location;
 import jakarta.validation.Valid;
 import java.net.URI;
+import java.time.Instant;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -155,14 +157,27 @@ public class VoyageController {
         return ResponseEntity.ok(view);
     }
 
+    /**
+     * 一覧と検索（S32 / US07）。
+     *
+     * <p>条件の解釈（空文字は指定なし・知らない種別は断る）は
+     * {@link VoyageSearchCriteria} が持つ。ここで判断すると、同じ規則が画面・
+     * Controller・クエリの 3 か所に散る。</p>
+     */
     @GetMapping
     public ResponseEntity<VoyageListView> list(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size,
             @RequestParam(defaultValue = "false") boolean includeFinished,
+            @RequestParam(required = false) String departure,
+            @RequestParam(required = false) String arrival,
+            @RequestParam(required = false) Instant departFrom,
+            @RequestParam(required = false) Instant departTo,
             @RequestParam(required = false) String cargoType) {
         return ResponseEntity.ok(queries.query(
-                new FindVoyagesQuery(page, size, includeFinished, normalize(cargoType)),
+                new FindVoyagesQuery(page, size, includeFinished,
+                        VoyageSearchCriteria.of(departure, arrival, departFrom, departTo,
+                                cargoType)),
                 VoyageListView.class));
     }
 
@@ -172,25 +187,6 @@ public class VoyageController {
                 Location.of(request.arrivalUnLocode()),
                 request.departureAt(),
                 request.arrivalAt());
-    }
-
-    /**
-     * 空文字は「絞り込まない」に寄せる。
-     *
-     * <p>空文字のまま渡すと、どの航海の {@code voyage_accepted_cargo_type} にも
-     * 一致せず一覧が黙って空になる。</p>
-     */
-    private static String normalize(String cargoType) {
-        if (cargoType == null || cargoType.isBlank()) {
-            return null;
-        }
-        try {
-            return CargoType.valueOf(cargoType).name();
-        } catch (IllegalArgumentException e) {
-            // 知らない種別で絞ると 0 件になる。0 件は「無い」と読めるので、
-            // 入力が誤っていることを業務規則違反として返す。
-            throw new BusinessRuleViolation("知らない貨物種別です: " + cargoType);
-        }
     }
 
     /** 未選択は集約が一般貨物のみに決める（不変条件 4）。ここでは変換だけする。 */

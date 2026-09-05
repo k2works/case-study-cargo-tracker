@@ -3,6 +3,7 @@ package com.example.cargotracker.routing.infrastructure.projection;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.cargotracker.routing.domain.model.events.VoyageRegisteredEvent;
+import com.example.cargotracker.routing.domain.model.valueobjects.VoyageSearchCriteria;
 import com.example.cargotracker.routing.domain.model.events.VoyageScheduleUpdatedEvent;
 import com.example.cargotracker.routing.infrastructure.persistence.AttentionItemMapper;
 import com.example.cargotracker.routing.infrastructure.query.RoutingQueries.FindVoyageQuery;
@@ -178,7 +179,8 @@ class VoyageProjectionIT extends AbstractAxonIntegrationTest {
         projection.on(registered(hazardous, List.of("GENERAL", "HAZARDOUS")));
 
         VoyageListView view = queries.handle(
-                new FindVoyagesQuery(0, 200, true, "HAZARDOUS"));
+                new FindVoyagesQuery(0, 200, true,
+                        VoyageSearchCriteria.of(null, null, null, null, "HAZARDOUS")));
 
         List<String> numbers = view.items().stream().map(VoyageView::voyageNumber).toList();
         assertThat(numbers).contains(hazardous).doesNotContain(general);
@@ -203,6 +205,61 @@ class VoyageProjectionIT extends AbstractAxonIntegrationTest {
 
         assertThat(visible).doesNotContain(departed);
         assertThat(all).contains(departed);
+    }
+
+    private static VoyageRegisteredEvent registeredFrom(String voyageNumber, String from,
+            String to, Instant departAt) {
+        return new VoyageRegisteredEvent(voyageNumber, "MOL", "商船三井", "MOL EXPRESS",
+                List.of(new VoyageRegisteredEvent.Movement(from, to, departAt,
+                        departAt.plusSeconds(14 * 24 * 3600))),
+                List.of("GENERAL"), "routing01");
+    }
+
+    private List<String> search(VoyageSearchCriteria criteria) {
+        return queries.handle(new FindVoyagesQuery(0, 200, false, criteria))
+                .items().stream().map(VoyageView::voyageNumber).toList();
+    }
+
+    @Test
+    @DisplayName("US07: 出発地・目的地で絞れる")
+    void filtersByPorts() {
+        Instant future = Instant.now().plusSeconds(30 * 24 * 3600);
+        String tokyoNewYork = uniqueNumber();
+        String tokyoLondon = uniqueNumber();
+        projection.on(registeredFrom(tokyoNewYork, "JPTYO", "USNYC", future));
+        projection.on(registeredFrom(tokyoLondon, "JPTYO", "GBLON", future));
+
+        assertThat(search(VoyageSearchCriteria.of("JPTYO", "USNYC", null, null, null)))
+                .contains(tokyoNewYork).doesNotContain(tokyoLondon);
+    }
+
+    @Test
+    @DisplayName("US07: 出発期間で絞れる")
+    void filtersByDeparturePeriod() {
+        Instant soon = Instant.now().plusSeconds(10 * 24 * 3600);
+        Instant later = Instant.now().plusSeconds(60 * 24 * 3600);
+        String early = uniqueNumber();
+        String late = uniqueNumber();
+        projection.on(registeredFrom(early, "JPTYO", "USNYC", soon));
+        projection.on(registeredFrom(late, "JPTYO", "USNYC", later));
+
+        assertThat(search(VoyageSearchCriteria.of(null, null,
+                soon.minusSeconds(3600), soon.plusSeconds(3600), null)))
+                .contains(early).doesNotContain(late);
+    }
+
+    @Test
+    @DisplayName("US07: 検索条件は既定の絞り込みを消さない")
+    void searchKeepsDefaultFilter() {
+        // 条件で置き換えると、出港済みの航海が検索結果にだけ戻る。一覧では
+        // 外しているのに絞り込むと出てくる、という食い違いになる。
+        String departed = uniqueNumber();
+        projection.on(registeredFrom(departed, "JPTYO", "USNYC",
+                Instant.parse("2020-01-01T00:00:00Z")));
+
+        assertThat(search(VoyageSearchCriteria.of("JPTYO", "USNYC", null, null, null)))
+                .as("出港済みは条件に合っていても既定では出さない")
+                .doesNotContain(departed);
     }
 
     @Test

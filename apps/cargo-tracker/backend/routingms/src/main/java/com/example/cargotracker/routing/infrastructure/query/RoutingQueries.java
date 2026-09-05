@@ -1,5 +1,6 @@
 package com.example.cargotracker.routing.infrastructure.query;
 
+import com.example.cargotracker.routing.domain.model.valueobjects.VoyageSearchCriteria;
 import java.time.Instant;
 import java.util.List;
 
@@ -22,7 +23,22 @@ public final class RoutingQueries {
      * <p>{@code cargoType} は US05 の絞り込み。危険物・冷凍の予約は、その種別を
      * 受け入れる航海だけが候補になる。</p>
      */
-    public record FindVoyagesQuery(int page, int size, boolean includeFinished, String cargoType) {
+    public record FindVoyagesQuery(int page, int size, boolean includeFinished,
+            VoyageSearchCriteria criteria) {
+
+        public FindVoyagesQuery {
+            // 条件なしを null で表さない。null のまま渡すと、条件を読む側が
+            // 「条件が無い」と「条件が空」を別々に扱うことになり、片方で落ちる。
+            criteria = criteria == null
+                    ? VoyageSearchCriteria.of(null, null, null, null, null)
+                    : criteria;
+        }
+
+        /** 条件なしの一覧。既定の絞り込み（出港済み・キャンセルを外す）は残る。 */
+        public static FindVoyagesQuery of(int page, int size, boolean includeFinished) {
+            return new FindVoyagesQuery(page, size, includeFinished,
+                    VoyageSearchCriteria.of(null, null, null, null, null));
+        }
     }
 
     /** 画面に出す航海。 */

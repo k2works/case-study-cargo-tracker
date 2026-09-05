@@ -1,5 +1,6 @@
 package com.example.cargotracker.routing.infrastructure.persistence;
 
+import com.example.cargotracker.routing.domain.model.valueobjects.VoyageSearchCriteria;
 import java.time.Instant;
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
@@ -43,16 +44,17 @@ public interface VoyageMapper {
      * （ui_design.md）。出港してしまった便が混ざると、一覧全体が「これから使える航海」
      * として信用されなくなる。
      *
-     * <p>{@code cargoType} を与えると、その種別を受け入れる航海だけに絞る（US05）。</p>
+     * <p>検索条件（US07）は<b>既定の絞り込みと組み合わせる</b>。条件で置き換えると、
+     * 出港済みの航海が検索結果にだけ戻る。</p>
      */
     List<VoyageRow> findAll(@Param("includeFinished") boolean includeFinished,
-            @Param("cargoType") String cargoType,
+            @Param("criteria") VoyageSearchCriteria criteria,
             @Param("now") Instant now,
             @Param("limit") int limit,
             @Param("offset") int offset);
 
     int countAll(@Param("includeFinished") boolean includeFinished,
-            @Param("cargoType") String cargoType,
+            @Param("criteria") VoyageSearchCriteria criteria,
             @Param("now") Instant now);
 
     List<String> findAcceptedCargoTypes(@Param("voyageNumber") String voyageNumber);

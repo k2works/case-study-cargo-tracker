@@ -45,12 +45,28 @@
             AND cancelled = FALSE
             AND departure_at &gt; #{now}
         </if>
-        <if test="cargoType != null">
+        <if test="criteria.cargoType != null">
             AND EXISTS (
                 SELECT 1 FROM voyage_accepted_cargo_type t
                 WHERE t.voyage_number = voyage.voyage_number
-                  AND t.cargo_type = #{cargoType}
+                  AND t.cargo_type = #{criteria.cargoType}
             )
+        </if>
+        <!--
+          検索条件（US07）。出発地と目的地は非正規化した端点で見る。
+          途中の寄港地は US08（経路探索）の仕事で、ここでは扱わない。
+        -->
+        <if test="criteria.departure != null">
+            AND departure_unlocode = #{criteria.departure}
+        </if>
+        <if test="criteria.arrival != null">
+            AND arrival_unlocode = #{criteria.arrival}
+        </if>
+        <if test="criteria.departFrom != null">
+            AND departure_at &gt;= #{criteria.departFrom}
+        </if>
+        <if test="criteria.departTo != null">
+            AND departure_at &lt;= #{criteria.departTo}
         </if>
     </sql>
 
