@@ -36,6 +36,30 @@ public final class VoyageDtos {
             @NotNull Instant arrivalAt) {
     }
 
+    /**
+     * 更新の入力（US25）。
+     *
+     * <p>航海番号は経路（{@code PUT /voyages/{voyageNumber}}）が持つ。本文にも置くと、
+     * 2 つが食い違ったときにどちらを正とするかを決めなければならない。</p>
+     *
+     * <p><b>差し替えであって部分更新ではない。</b> 寄港地は順序を持つ列なので、
+     * 一部だけ送る形にすると連結と時刻の検査を集約が通しで行えない。</p>
+     */
+    public record UpdateVoyageRequest(
+            @NotBlank String carrierCode,
+            @NotBlank String carrierName,
+            @NotBlank String vesselName,
+            @NotEmpty @Valid List<MovementRequest> movements,
+            List<String> acceptedCargoTypes) {
+    }
+
+    /** 更新前後の差分（US25 §受入基準 2）。変わった項目だけが並ぶ。 */
+    public record VoyageDiffResponse(
+            String voyageNumber,
+            List<com.example.cargotracker.routing.interfaces.rest.VoyageScheduleDiff.FieldChange>
+                    changes) {
+    }
+
     public record RegisterVoyageResponse(String voyageNumber) {
     }
 

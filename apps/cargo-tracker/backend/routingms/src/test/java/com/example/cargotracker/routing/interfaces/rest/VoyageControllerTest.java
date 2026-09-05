@@ -9,9 +9,13 @@ import static org.mockito.Mockito.when;
 import com.example.cargotracker.routing.domain.model.commands.RegisterVoyageCommand;
 import com.example.cargotracker.routing.domain.model.valueobjects.CargoType;
 import com.example.cargotracker.routing.infrastructure.query.RoutingQueries.FindVoyagesQuery;
+import com.example.cargotracker.routing.infrastructure.query.RoutingQueries.MovementView;
 import com.example.cargotracker.routing.infrastructure.query.RoutingQueries.VoyageListView;
 import com.example.cargotracker.routing.infrastructure.query.RoutingQueries.VoyageView;
+import com.example.cargotracker.routing.domain.model.commands.UpdateVoyageScheduleCommand;
 import com.example.cargotracker.routing.interfaces.rest.dto.VoyageDtos.MovementRequest;
+import com.example.cargotracker.routing.interfaces.rest.dto.VoyageDtos.UpdateVoyageRequest;
+import com.example.cargotracker.routing.interfaces.rest.dto.VoyageDtos.VoyageDiffResponse;
 import com.example.cargotracker.routing.interfaces.rest.dto.VoyageDtos.PendingResponse;
 import com.example.cargotracker.routing.interfaces.rest.dto.VoyageDtos.RegisterVoyageRequest;
 import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
@@ -52,7 +56,8 @@ class VoyageControllerTest {
 
     private static VoyageView view() {
         return new VoyageView("V-MOL-001", "MOL", "商船三井", "MOL EXPRESS", "JPTYO", "USNYC",
-                DEPART, ARRIVE, false, List.of("GENERAL"), List.of(), null, null);
+                DEPART, ARRIVE, false, List.of("GENERAL"),
+                List.of(new MovementView(1, "JPTYO", "USNYC", DEPART, ARRIVE)), null, null);
     }
 
     @Test
@@ -140,6 +145,76 @@ class VoyageControllerTest {
     void rejectsUnknownFilter() {
         // 0 件は「無い」と読める。入力が誤っていることを伝える。
         assertThatThrownBy(() -> controller.list(0, 50, false, "UNKNOWN"))
+                .isInstanceOf(BusinessRuleViolation.class);
+    }
+
+    private static UpdateVoyageRequest updateRequest(String vesselName) {
+        return new UpdateVoyageRequest("MOL", "商船三井", vesselName,
+                List.of(new MovementRequest("JPTYO", "USNYC", DEPART, ARRIVE)),
+                List.of("GENERAL"));
+    }
+
+    @Test
+    @DisplayName("US25: 更新はコマンドに値を載せ、更新した人を残す")
+    void updates() {
+        ResponseEntity<?> response = controller.update("V-MOL-001",
+                updateRequest("MOL VOYAGER"), "routing02");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+        org.mockito.Mockito.verify(commands).sendAndWait(captor.capture());
+        UpdateVoyageScheduleCommand command = (UpdateVoyageScheduleCommand) captor.getValue();
+        assertThat(command.voyageNumber()).isEqualTo("V-MOL-001");
+        assertThat(command.vesselName().value()).isEqualTo("MOL VOYAGER");
+        assertThat(command.updatedBy())
+                .as("誰が直したかが残らないと、運航変更の反映を追えない")
+                .isEqualTo("routing02");
+    }
+
+    @Test
+    @DisplayName("US25: 差分は変わった項目だけを返す")
+    void returnsDiff() {
+        when(queries.query(any(), any(Class.class)))
+                .thenReturn(CompletableFuture.completedFuture(view()));
+
+        ResponseEntity<?> response = controller.diff("V-MOL-001", updateRequest("MOL VOYAGER"));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        VoyageDiffResponse body = (VoyageDiffResponse) response.getBody();
+        assertThat(body.changes()).extracting(VoyageScheduleDiff.FieldChange::label)
+                .containsExactly("船名");
+    }
+
+    @Test
+    @DisplayName("US25: 変えていなければ差分は空で返る")
+    void returnsEmptyDiffWhenUnchanged() {
+        when(queries.query(any(), any(Class.class)))
+                .thenReturn(CompletableFuture.completedFuture(view()));
+
+        VoyageDiffResponse body = (VoyageDiffResponse)
+                controller.diff("V-MOL-001", updateRequest("MOL EXPRESS")).getBody();
+
+        assertThat(body.changes()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("投影がまだの航海の差分は 202 を返す（比べる相手が無い）")
+    void returnsPendingDiff() {
+        when(queries.query(any(), any(Class.class)))
+                .thenReturn(CompletableFuture.completedFuture(null));
+
+        ResponseEntity<?> response = controller.diff("V-MOL-001", updateRequest("MOL VOYAGER"));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+    }
+
+    @Test
+    @DisplayName("更新でも知らない貨物種別は断る")
+    void rejectsUnknownCargoTypeOnUpdate() {
+        assertThatThrownBy(() -> controller.update("V-MOL-001",
+                new UpdateVoyageRequest("MOL", "商船三井", "MOL EXPRESS",
+                        List.of(new MovementRequest("JPTYO", "USNYC", DEPART, ARRIVE)),
+                        List.of("UNKNOWN")), "routing02"))
                 .isInstanceOf(BusinessRuleViolation.class);
     }
 }

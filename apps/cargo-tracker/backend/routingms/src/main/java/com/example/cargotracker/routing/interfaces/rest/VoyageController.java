@@ -1,6 +1,7 @@
 package com.example.cargotracker.routing.interfaces.rest;
 
 import com.example.cargotracker.routing.domain.model.commands.RegisterVoyageCommand;
+import com.example.cargotracker.routing.domain.model.commands.UpdateVoyageScheduleCommand;
 import com.example.cargotracker.routing.domain.model.valueobjects.CargoType;
 import com.example.cargotracker.routing.domain.model.valueobjects.Carrier;
 import com.example.cargotracker.routing.domain.model.valueobjects.CarrierMovement;
@@ -14,6 +15,8 @@ import com.example.cargotracker.routing.interfaces.rest.dto.VoyageDtos.MovementR
 import com.example.cargotracker.routing.interfaces.rest.dto.VoyageDtos.PendingResponse;
 import com.example.cargotracker.routing.interfaces.rest.dto.VoyageDtos.RegisterVoyageRequest;
 import com.example.cargotracker.routing.interfaces.rest.dto.VoyageDtos.RegisterVoyageResponse;
+import com.example.cargotracker.routing.interfaces.rest.dto.VoyageDtos.UpdateVoyageRequest;
+import com.example.cargotracker.routing.interfaces.rest.dto.VoyageDtos.VoyageDiffResponse;
 import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.shared.domain.location.Location;
 import jakarta.validation.Valid;
@@ -26,6 +29,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -62,6 +66,77 @@ public class VoyageController {
         return ResponseEntity
                 .created(URI.create("/api/v1/routing/voyages/" + request.voyageNumber()))
                 .body(new RegisterVoyageResponse(request.voyageNumber()));
+    }
+
+    /**
+     * スケジュールを更新する（US25）。
+     *
+     * <p>更新できる条件（登録済みか・キャンセル済みでないか）は集約が見る。ここで
+     * 先に問い合わせて分岐すると、同じ判断が 2 か所になって片方が古くなる。</p>
+     */
+    @PutMapping("/{voyageNumber}")
+    public ResponseEntity<RegisterVoyageResponse> update(
+            @PathVariable String voyageNumber,
+            @Valid @RequestBody UpdateVoyageRequest request,
+            @RequestHeader(name = "X-Auth-Username", required = false) String username) {
+        commandGateway.sendAndWait(new UpdateVoyageScheduleCommand(
+                voyageNumber,
+                new Carrier(request.carrierCode(), request.carrierName()),
+                new VesselName(request.vesselName()),
+                new Schedule(request.movements().stream()
+                        .map(VoyageController::toMovement)
+                        .toList()),
+                acceptedCargoTypes(request.acceptedCargoTypes()),
+                username));
+
+        return ResponseEntity.ok(new RegisterVoyageResponse(voyageNumber));
+    }
+
+    /**
+     * 更新前後の差分（US25 §受入基準 2）。
+     *
+     * <p><b>サーバが出す。</b> 画面で 2 つの値を並べて {@code if} を積み上げると、
+     * 航海に属性が増えるたびに比べ忘れが生まれる。</p>
+     *
+     * <p>問い合わせなので副作用は無い。POST にしているのは、比べる相手（更新内容）を
+     * 本文で送るためである。</p>
+     */
+    @PostMapping("/{voyageNumber}/diff")
+    public ResponseEntity<?> diff(@PathVariable String voyageNumber,
+            @Valid @RequestBody UpdateVoyageRequest request) {
+        VoyageView stored = queries.query(new FindVoyageQuery(voyageNumber), VoyageView.class);
+        if (stored == null) {
+            // 比べる相手が無い。404 にすると「登録に失敗した」と読める。
+            return ResponseEntity.accepted().body(new PendingResponse(
+                    voyageNumber, "登録を受け付けました。反映までしばらくお待ちください"));
+        }
+        return ResponseEntity.ok(new VoyageDiffResponse(voyageNumber,
+                VoyageScheduleDiff.between(snapshotOf(stored), snapshotOf(request))));
+    }
+
+    private static VoyageScheduleDiff.VoyageSnapshot snapshotOf(VoyageView view) {
+        return new VoyageScheduleDiff.VoyageSnapshot(
+                view.carrierCode(), view.carrierName(), view.vesselName(),
+                view.acceptedCargoTypes(),
+                view.movements().stream()
+                        .map(m -> new VoyageScheduleDiff.VoyageSnapshot.Movement(
+                                m.departureUnLocode(), m.arrivalUnLocode(),
+                                m.departureAt(), m.arrivalAt()))
+                        .toList());
+    }
+
+    private static VoyageScheduleDiff.VoyageSnapshot snapshotOf(UpdateVoyageRequest request) {
+        // 入力も集約と同じ既定（空なら一般貨物のみ）に寄せてから比べる。
+        // 寄せずに比べると、何も選ばなかっただけで「対応貨物種別が変わった」と出る。
+        return new VoyageScheduleDiff.VoyageSnapshot(
+                request.carrierCode(), request.carrierName(), request.vesselName(),
+                CargoType.resolveAcceptedNames(acceptedCargoTypes(
+                        request.acceptedCargoTypes())),
+                request.movements().stream()
+                        .map(m -> new VoyageScheduleDiff.VoyageSnapshot.Movement(
+                                m.departureUnLocode(), m.arrivalUnLocode(),
+                                m.departureAt(), m.arrivalAt()))
+                        .toList());
     }
 
     /**

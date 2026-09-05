@@ -13,9 +13,6 @@ import com.example.cargotracker.routing.domain.model.valueobjects.VesselName;
 import com.example.cargotracker.routing.domain.model.valueobjects.VoyageNumber;
 import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.shared.domain.error.IllegalTransition;
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
 import org.axonframework.eventsourcing.annotation.EventSourcingHandler;
 import org.axonframework.eventsourcing.annotation.reflection.EntityCreator;
 import org.axonframework.extension.spring.stereotype.EventSourced;
@@ -70,7 +67,7 @@ public class Voyage {
                 command.schedule().movements().stream()
                         .map(Voyage::toMovement)
                         .toList(),
-                acceptedCargoTypeNames(command.acceptedCargoTypes()),
+                CargoType.resolveAcceptedNames(command.acceptedCargoTypes()),
                 command.registeredBy()));
         return command.voyageNumber();
     }
@@ -103,7 +100,7 @@ public class Voyage {
                 command.schedule().movements().stream()
                         .map(Voyage::toUpdatedMovement)
                         .toList(),
-                acceptedCargoTypeNames(command.acceptedCargoTypes()),
+                CargoType.resolveAcceptedNames(command.acceptedCargoTypes()),
                 command.updatedBy()));
     }
 
@@ -113,20 +110,6 @@ public class Voyage {
                 movement.arrival().unLocode().value(),
                 movement.departureTime(),
                 movement.arrivalTime());
-    }
-
-    /**
-     * 不変条件 4。空なら一般貨物のみ。
-     *
-     * <p>空のまま保存すると、読む側が「制限なし」と「一般貨物のみ」を区別できない。
-     * 集約の側で {@code GENERAL} に決めておけば、絞り込みのクエリは値の有無を
-     * 気にせず書ける。</p>
-     */
-    private static List<String> acceptedCargoTypeNames(Set<CargoType> types) {
-        Set<CargoType> resolved = types == null || types.isEmpty()
-                ? Set.of(CargoType.GENERAL)
-                : new TreeSet<>(types);
-        return resolved.stream().map(Enum::name).toList();
     }
 
     private static VoyageScheduleUpdatedEvent.Movement toUpdatedMovement(
