@@ -37,7 +37,11 @@ public final class RoutingQueries {
             Instant arrivalAt,
             boolean cancelled,
             List<String> acceptedCargoTypes,
-            List<MovementView> movements) {
+            List<MovementView> movements,
+            // 最終更新（US25）。一度も更新していなければ null。
+            // 変更内容の履歴は Event Store が持つ（投影には持たせない）。
+            Instant updatedAt,
+            String updatedBy) {
     }
 
     /** 寄港地。並び順そのものが業務の意味を持つ。 */

@@ -1,6 +1,7 @@
 package com.example.cargotracker.routing.infrastructure.projection;
 
 import com.example.cargotracker.routing.domain.model.events.VoyageRegisteredEvent;
+import com.example.cargotracker.routing.domain.model.events.VoyageScheduleUpdatedEvent;
 import com.example.cargotracker.routing.infrastructure.persistence.VoyageMapper;
 import java.time.Clock;
 import java.time.Instant;
@@ -58,6 +59,10 @@ public class VoyageProjection {
                 false,
                 now,
                 now,
+                null,
+                // 登録時点では更新されていない。登録日時を入れると
+                // 「一度も直していない航海」と「直した航海」が見分けられない。
+                null,
                 null);
 
         // 一意制約は例外ではなく戻り値で見る。例外にすると PostgreSQL が
@@ -78,6 +83,63 @@ public class VoyageProjection {
         // 寄港地と貨物種別は書き続ける。1 度目が途中で落ちていたら、ここで揃う。
         for (int i = 0; i < movements.size(); i++) {
             VoyageRegisteredEvent.Movement movement = movements.get(i);
+            voyages.insertMovement(new VoyageMapper.MovementRow(
+                    event.voyageNumber(),
+                    i + 1,
+                    movement.departureUnLocode(),
+                    movement.arrivalUnLocode(),
+                    movement.departureAt(),
+                    movement.arrivalAt()));
+        }
+        for (String cargoType : event.acceptedCargoTypes()) {
+            voyages.insertAcceptedCargoType(event.voyageNumber(), cargoType);
+        }
+    }
+
+    /**
+     * スケジュールの更新（US25）。
+     *
+     * <p><b>寄港地と受入種別は全行を入れ替える</b>（data-model.md）。足すだけにすると、
+     * 短くなった航海に古い区間が残り、外した貨物種別も残る。残った種別は
+     * 「対応しない貨物の航海」を経路候補に出す。</p>
+     *
+     * <p><b>更新できなかったことを黙らない。</b> 戻り値を捨てると、投影に行が無い
+     * ことが誰にも見えないまま「更新したのに反映されない」だけが残る。</p>
+     */
+    @EventHandler
+    public void on(VoyageScheduleUpdatedEvent event) {
+        Instant now = clock.instant();
+
+        List<VoyageScheduleUpdatedEvent.Movement> movements = event.movements();
+        VoyageScheduleUpdatedEvent.Movement first = movements.get(0);
+        VoyageScheduleUpdatedEvent.Movement last = movements.get(movements.size() - 1);
+
+        int updated = voyages.updateSchedule(new VoyageMapper.VoyageRow(
+                event.voyageNumber(),
+                event.carrierCode(),
+                event.carrierName(),
+                event.vesselName(),
+                first.departureUnLocode(),
+                last.arrivalUnLocode(),
+                first.departureAt(),
+                last.arrivalAt(),
+                false,
+                // registeredAt と lastEventId は UPDATE 文が触らない。
+                // 行の値をここで作り直すと、登録日時が更新のたびに動く。
+                now, now, null,
+                now, event.updatedBy()));
+
+        if (updated == 0) {
+            log.warn("更新を書ける航海が投影に無い: voyageNumber={}", event.voyageNumber());
+            attentionItems.add("PROJECTION_REJECTED", "VOYAGE", event.voyageNumber(),
+                    "ROLE_ROUTING", "更新の対象が投影に無い", "{}", now);
+            return;
+        }
+
+        voyages.deleteMovements(event.voyageNumber());
+        voyages.deleteAcceptedCargoTypes(event.voyageNumber());
+        for (int i = 0; i < movements.size(); i++) {
+            VoyageScheduleUpdatedEvent.Movement movement = movements.get(i);
             voyages.insertMovement(new VoyageMapper.MovementRow(
                     event.voyageNumber(),
                     i + 1,
@@ -120,7 +182,8 @@ public class VoyageProjection {
                 candidate.vesselName(), candidate.departureUnlocode(),
                 candidate.arrivalUnlocode(), candidate.departureAt(), candidate.arrivalAt(),
                 candidate.cancelled(),
-                stored.registeredAt(), stored.projectedAt(), stored.lastEventId());
+                stored.registeredAt(), stored.projectedAt(), stored.lastEventId(),
+                stored.updatedAt(), stored.updatedBy());
         return normalized.equals(stored)
                 && sameMovements(candidate.voyageNumber(), movements)
                 && sameAcceptedCargoTypes(candidate.voyageNumber(), acceptedCargoTypes);

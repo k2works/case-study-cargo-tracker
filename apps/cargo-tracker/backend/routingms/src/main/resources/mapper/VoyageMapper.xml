@@ -18,6 +18,8 @@
             <arg column="registered_at" javaType="java.time.Instant"/>
             <arg column="projected_at" javaType="java.time.Instant"/>
             <arg column="last_event_id" javaType="string"/>
+            <arg column="updated_at" javaType="java.time.Instant"/>
+            <arg column="updated_by" javaType="string"/>
         </constructor>
     </resultMap>
 
@@ -56,11 +58,12 @@
         INSERT INTO voyage (
             voyage_number, carrier_code, carrier_name, vessel_name,
             departure_unlocode, arrival_unlocode, departure_at, arrival_at,
-            cancelled, registered_at, projected_at, last_event_id
+            cancelled, registered_at, projected_at, last_event_id, updated_at, updated_by
         ) VALUES (
             #{voyageNumber}, #{carrierCode}, #{carrierName}, #{vesselName},
             #{departureUnlocode}, #{arrivalUnlocode}, #{departureAt}, #{arrivalAt},
-            #{cancelled}, #{registeredAt}, #{projectedAt}, #{lastEventId}
+            #{cancelled}, #{registeredAt}, #{projectedAt}, #{lastEventId},
+            #{updatedAt}, #{updatedBy}
         )
         ON CONFLICT (voyage_number) DO NOTHING
     </insert>
@@ -81,6 +84,29 @@
         VALUES (#{voyageNumber}, #{cargoType})
         ON CONFLICT (voyage_number, cargo_type) DO NOTHING
     </insert>
+
+    <update id="updateSchedule">
+        UPDATE voyage SET
+            carrier_code = #{carrierCode},
+            carrier_name = #{carrierName},
+            vessel_name = #{vesselName},
+            departure_unlocode = #{departureUnlocode},
+            arrival_unlocode = #{arrivalUnlocode},
+            departure_at = #{departureAt},
+            arrival_at = #{arrivalAt},
+            projected_at = #{projectedAt},
+            updated_at = #{updatedAt},
+            updated_by = #{updatedBy}
+        WHERE voyage_number = #{voyageNumber}
+    </update>
+
+    <delete id="deleteMovements">
+        DELETE FROM carrier_movement WHERE voyage_number = #{voyageNumber}
+    </delete>
+
+    <delete id="deleteAcceptedCargoTypes">
+        DELETE FROM voyage_accepted_cargo_type WHERE voyage_number = #{voyageNumber}
+    </delete>
 
     <select id="findByNumber" resultMap="voyageRow">
         SELECT * FROM voyage WHERE voyage_number = #{voyageNumber}

@@ -3,6 +3,7 @@ package com.example.cargotracker.routing.infrastructure.projection;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.cargotracker.routing.domain.model.events.VoyageRegisteredEvent;
+import com.example.cargotracker.routing.domain.model.events.VoyageScheduleUpdatedEvent;
 import com.example.cargotracker.routing.infrastructure.persistence.AttentionItemMapper;
 import com.example.cargotracker.routing.infrastructure.query.RoutingQueries.FindVoyageQuery;
 import com.example.cargotracker.routing.infrastructure.query.RoutingQueries.FindVoyagesQuery;
@@ -208,5 +209,81 @@ class VoyageProjectionIT extends AbstractAxonIntegrationTest {
     @DisplayName("見つからない航海は null を返す")
     void returnsNullForUnknown() {
         assertThat(queries.handle(new FindVoyageQuery("V-NOT-EXIST"))).isNull();
+    }
+
+    private static VoyageScheduleUpdatedEvent updated(String voyageNumber,
+            List<String> cargoTypes) {
+        // 途中の寄港地を 1 つに減らし、日付も動かす。運航変更はこの形で来る。
+        return new VoyageScheduleUpdatedEvent(voyageNumber, "MOL", "商船三井", "MOL VOYAGER",
+                List.of(new VoyageScheduleUpdatedEvent.Movement("JPTYO", "USNYC",
+                        Instant.parse("2026-09-12T09:00:00Z"),
+                        Instant.parse("2026-09-26T18:00:00Z"))),
+                cargoTypes, "routing02");
+    }
+
+    @Test
+    @DisplayName("US25: 更新すると寄港地が入れ替わり、最終更新が残る")
+    void appliesScheduleUpdate() {
+        String number = uniqueNumber();
+        projection.on(registered(number, List.of("GENERAL")));
+
+        projection.on(updated(number, List.of("GENERAL", "HAZARDOUS")));
+
+        VoyageView view = queries.handle(new FindVoyageQuery(number));
+        assertThat(view.vesselName()).isEqualTo("MOL VOYAGER");
+        assertThat(view.departureAt()).isEqualTo(Instant.parse("2026-09-12T09:00:00Z"));
+        assertThat(view.arrivalAt()).isEqualTo(Instant.parse("2026-09-26T18:00:00Z"));
+        assertThat(view.movements())
+                .as("寄港地は全行を入れ替える。足すだけだと古い区間が残る")
+                .hasSize(1);
+        assertThat(view.movements().get(0).arrivalUnLocode()).isEqualTo("USNYC");
+        assertThat(view.acceptedCargoTypes())
+                .as("受入種別も入れ替える。追記だけだと外した種別が残り、"
+                        + "対応しない貨物の航海が候補に出る")
+                .containsExactly("GENERAL", "HAZARDOUS");
+        assertThat(view.updatedAt()).isNotNull();
+        assertThat(view.updatedBy()).isEqualTo("routing02");
+    }
+
+    @Test
+    @DisplayName("受入種別を減らす更新でも、外した種別は残らない")
+    void narrowsAcceptedCargoTypes() {
+        String number = uniqueNumber();
+        projection.on(registered(number, List.of("GENERAL", "HAZARDOUS")));
+
+        projection.on(updated(number, List.of("GENERAL")));
+
+        assertThat(queries.handle(new FindVoyageQuery(number)).acceptedCargoTypes())
+                .containsExactly("GENERAL");
+    }
+
+    @Test
+    @DisplayName("同じ更新を 2 度読んでも行は増えない（リプレイの冪等性）")
+    void updateIsIdempotent() {
+        String number = uniqueNumber();
+        projection.on(registered(number, List.of("GENERAL")));
+        VoyageScheduleUpdatedEvent event = updated(number, List.of("GENERAL"));
+
+        projection.on(event);
+        projection.on(event);
+
+        VoyageView view = queries.handle(new FindVoyageQuery(number));
+        assertThat(view.movements()).hasSize(1);
+        assertThat(view.acceptedCargoTypes()).containsExactly("GENERAL");
+    }
+
+    @Test
+    @DisplayName("投影に無い航海の更新は黙って捨てない")
+    void recordsUpdateWithoutRow() {
+        String number = uniqueNumber();
+
+        projection.on(updated(number, List.of("GENERAL")));
+
+        assertThat(queries.handle(new FindVoyageQuery(number)))
+                .as("行を作らない。登録を経ていない航海が投影にだけ生まれる")
+                .isNull();
+        assertThat(attentionItems.findOpenByRole("ROLE_ROUTING"))
+                .as("黙って捨てると、更新したのに反映されないことが誰にも見えない")
+                .anySatisfy(item -> assertThat(item.targetId()).isEqualTo(number));
     }
 }

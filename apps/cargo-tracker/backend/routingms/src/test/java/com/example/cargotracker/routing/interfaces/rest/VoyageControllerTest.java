@@ -52,7 +52,7 @@ class VoyageControllerTest {
 
     private static VoyageView view() {
         return new VoyageView("V-MOL-001", "MOL", "商船三井", "MOL EXPRESS", "JPTYO", "USNYC",
-                DEPART, ARRIVE, false, List.of("GENERAL"), List.of());
+                DEPART, ARRIVE, false, List.of("GENERAL"), List.of(), null, null);
     }
 
     @Test

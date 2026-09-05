@@ -51,6 +51,7 @@ public class RoutingQueryHandler {
         return new VoyageView(
                 row.voyageNumber(), row.carrierCode(), row.carrierName(), row.vesselName(),
                 row.departureUnlocode(), row.arrivalUnlocode(), row.departureAt(),
-                row.arrivalAt(), row.cancelled(), cargoTypes, movements);
+                row.arrivalAt(), row.cancelled(), cargoTypes, movements,
+                row.updatedAt(), row.updatedBy());
     }
 }

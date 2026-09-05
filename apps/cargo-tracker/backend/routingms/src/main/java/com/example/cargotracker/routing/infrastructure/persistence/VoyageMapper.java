@@ -19,6 +19,20 @@ public interface VoyageMapper {
 
     int insertMovement(MovementRow row);
 
+    /**
+     * 更新を反映する（US25）。<b>常に INSERT する形にしない。</b> 状態の更新で行を
+     * 増やすと、作成しかないイテレーションでは成立し、最初の更新ストーリーで壊れる。
+     *
+     * <p>戻り値で「書けたか」を見る。0 なら投影にその航海が無い。</p>
+     */
+    int updateSchedule(VoyageRow row);
+
+    /** 寄港地は全行を入れ替える（data-model.md）。足すだけだと古い区間が残る。 */
+    int deleteMovements(@Param("voyageNumber") String voyageNumber);
+
+    /** 受入種別も入れ替える。追記だけだと外した種別が残る。 */
+    int deleteAcceptedCargoTypes(@Param("voyageNumber") String voyageNumber);
+
     int insertAcceptedCargoType(@Param("voyageNumber") String voyageNumber,
             @Param("cargoType") String cargoType);
 
@@ -58,7 +72,9 @@ public interface VoyageMapper {
             boolean cancelled,
             Instant registeredAt,
             Instant projectedAt,
-            String lastEventId) {
+            String lastEventId,
+            Instant updatedAt,
+            String updatedBy) {
     }
 
     /** 港間移動の行。並び順は {@code movementSeq}。 */
