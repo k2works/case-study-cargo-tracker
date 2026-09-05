@@ -77,12 +77,47 @@ export interface RegisterVoyageInput {
  */
 export function fetchVoyages(
   includeFinished = false,
-  cargoType?: AcceptedCargoType,
+  criteria: VoyageSearchInput = {},
 ): Promise<Pending<{ items: VoyageView[]; total: number }>> {
-  const filter = cargoType ? `&cargoType=${cargoType}` : '';
-  return queryClient(
-    `/routing/voyages?page=0&size=200&includeFinished=${includeFinished ? 'true' : 'false'}${filter}`,
-  );
+  const query = new URLSearchParams({
+    page: '0',
+    size: '200',
+    includeFinished: includeFinished ? 'true' : 'false',
+  });
+  // 空の条件は送らない。空文字を送ると「その値で絞る」と読める経路が増える
+  // （解釈はサーバの VoyageSearchCriteria が正典なので、ここでは送らないだけ）。
+  for (const [key, value] of Object.entries(criteria)) {
+    if (value) {
+      query.set(key, value);
+    }
+  }
+  return queryClient(`/routing/voyages?${query.toString()}`);
+}
+
+/** 検索条件（US07）。解釈の正典はサーバの VoyageSearchCriteria。 */
+export interface VoyageSearchInput {
+  readonly departure?: string;
+  readonly arrival?: string;
+  /** 絶対時刻（ISO）。画面は日付で入力し、送る前に時刻へ広げる。 */
+  readonly departFrom?: string;
+  readonly departTo?: string;
+  readonly cargoType?: string;
+}
+
+/**
+ * 出発日の入力（YYYY-MM-DD）を絶対時刻に広げる。
+ *
+ * <p>終了日はその日の終わりまで含める。日付の 00:00 で切ると、指定した日に出る
+ * 航海が結果から落ちる（利用者は「その日まで」と読む）。</p>
+ */
+export function departurePeriod(from: string, to: string): {
+  departFrom?: string;
+  departTo?: string;
+} {
+  return {
+    departFrom: from ? `${from}T00:00:00Z` : undefined,
+    departTo: to ? `${to}T23:59:59Z` : undefined,
+  };
 }
 
 export function fetchVoyage(voyageNumber: string): Promise<Pending<VoyageView>> {

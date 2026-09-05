@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -68,7 +68,8 @@ function renderAt(path: string, element: React.ReactElement) {
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[path]}>
         <Routes>
-          <Route path={path} element={element} />
+          {/* 検索条件はクエリ文字列で持つので、経路はパスだけで組む。 */}
+          <Route path={path.split('?')[0] as string} element={element} />
           <Route path="/voyages" element={<h1>航海スケジュール一覧</h1>} />
         </Routes>
       </MemoryRouter>
@@ -108,7 +109,7 @@ describe('S32 航海スケジュール一覧', () => {
     expect(await screen.findByText('V-MOL-001')).toBeInTheDocument();
     expect(screen.getByText('MOL EXPRESS')).toBeInTheDocument();
     // 列挙名のまま見せない（ui_design.md の画面共通の規約）。
-    expect(screen.getByText('一般貨物')).toBeInTheDocument();
+    expect(within(screen.getByRole('table')).getByText('一般貨物')).toBeInTheDocument();
     expect(screen.queryByText('GENERAL')).not.toBeInTheDocument();
   });
 
@@ -154,6 +155,87 @@ describe('S32 航海スケジュール一覧', () => {
     renderAt('/voyages-list', <VoyageListPage />);
 
     expect(await screen.findByText('航海はありません')).toBeInTheDocument();
+  });
+});
+
+describe('S32 航海スケジュールの検索', () => {
+  it('条件を入れて絞り込むと、その条件で問い合わせる', async () => {
+    // Response の本体は 1 度しか読めない。絞り込みで 2 度目の問い合わせが
+    // 走るので、毎回作り直す。
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ items: [voyage()], total: 1 }), { status: 200 }),
+      ),
+    );
+
+    renderAt('/voyages-list', <VoyageListPage />);
+    await screen.findByText('V-MOL-001');
+
+    await userEvent.type(screen.getByLabelText('出発地'), 'JPTYO');
+    await userEvent.type(screen.getByLabelText('目的地'), 'USNYC');
+    await userEvent.type(screen.getByLabelText('出発日（開始）'), '2026-09-01');
+    await userEvent.type(screen.getByLabelText('出発日（終了）'), '2026-09-30');
+    await userEvent.selectOptions(screen.getByLabelText('対応貨物種別'), 'HAZARDOUS');
+    await userEvent.click(screen.getByRole('button', { name: '絞り込む' }));
+
+    await waitFor(() => {
+      const url = String(fetchSpy.mock.calls.at(-1)?.[0]);
+      expect(url).toContain('departure=JPTYO');
+      expect(url).toContain('arrival=USNYC');
+      expect(url).toContain('cargoType=HAZARDOUS');
+      // 期間は日付で入れて絶対時刻で送る。終了日はその日の終わりまで含める。
+      expect(url).toContain('departFrom=2026-09-01T00%3A00%3A00Z');
+      expect(url).toContain('departTo=2026-09-30T23%3A59%3A59Z');
+    });
+  });
+
+  it('条件に合う航海が無いときは、条件を外して探し直せる', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ items: [], total: 0 }), { status: 200 })),
+    );
+
+    renderAt('/voyages-list', <VoyageListPage />);
+    await userEvent.type(screen.getByLabelText('出発地'), 'JPTYO');
+    await userEvent.click(screen.getByRole('button', { name: '絞り込む' }));
+
+    expect(await screen.findByText('条件に合う航海はありません')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: '条件を消して探し直す' }));
+
+    await waitFor(() => expect(screen.getByLabelText('出発地')).toHaveValue(''));
+    expect(await screen.findByText('航海はありません')).toBeInTheDocument();
+  });
+
+  it('入力の誤りは断りとして出す（0 件に見せない）', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            code: 'BUSINESS_RULE_VIOLATION',
+            message: 'UN/LOCODE は英大文字 5 文字です: jptyo',
+          }),
+          { status: 422 },
+        ),
+      ),
+    );
+
+    renderAt('/voyages-list', <VoyageListPage />);
+    await userEvent.type(screen.getByLabelText('出発地'), 'jptyo');
+    await userEvent.click(screen.getByRole('button', { name: '絞り込む' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('UN/LOCODE');
+  });
+
+  it('経路設計作業一覧から来たときは貨物種別を引き継ぐ', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ items: [], total: 0 }), { status: 200 })),
+    );
+
+    renderAt('/voyages-list?cargoType=HAZARDOUS', <VoyageListPage />);
+
+    await waitFor(() =>
+      expect(String(fetchSpy.mock.calls.at(-1)?.[0])).toContain('cargoType=HAZARDOUS'),
+    );
+    expect(screen.getByLabelText('対応貨物種別')).toHaveValue('HAZARDOUS');
   });
 });
 
@@ -269,6 +351,39 @@ describe('S30 経路設計作業一覧', () => {
 
     expect(await screen.findByText('B-2026-0903-0001')).toBeInTheDocument();
     expect(screen.getByTestId('routing-requested-at-b-1')).toHaveTextContent('—');
+  });
+
+  it('危険物の予約から、その種別を引き継いで航海を探せる', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ items: [booking()], total: 1 }), { status: 200 })),
+    );
+
+    renderAt('/routing/worklist', <RoutingWorklistPage />);
+
+    expect(await screen.findByRole('link', { name: '対応する航海を探す' })).toHaveAttribute(
+      'href',
+      '/voyages?cargoType=HAZARDOUS',
+    );
+  });
+
+  it('冷凍の予約は航海側の呼び名に翻訳して引き継ぐ', async () => {
+    // Booking は REFRIGERATED、Routing は REEFER。写さずに渡すと
+    // 「知らない貨物種別です」で断られる。
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({ items: [booking({ cargoType: 'REFRIGERATED' })], total: 1 }),
+          { status: 200 },
+        ),
+      ),
+    );
+
+    renderAt('/routing/worklist', <RoutingWorklistPage />);
+
+    expect(await screen.findByRole('link', { name: '対応する航海を探す' })).toHaveAttribute(
+      'href',
+      '/voyages?cargoType=REEFER',
+    );
   });
 
   it('航海スケジュール一覧へ行ける', async () => {

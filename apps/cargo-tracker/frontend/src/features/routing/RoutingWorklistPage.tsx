@@ -28,6 +28,17 @@ import { fetchRoutingWorklist } from './api';
  *
  * <p>供給元は予約（bookingms）。routing_read_db に予約の写しは作らない。</p>
  */
+/**
+ * 予約の貨物種別を航海の受入種別に翻訳する。
+ *
+ * <p>Booking の CargoType と Routing の CargoType は<b>別の型</b>で、冷凍の名前が
+ * 違う（domain-model.md）。写さずに渡すと、冷凍の予約から探した航海一覧が
+ * 「知らない貨物種別です」で断られる。</p>
+ */
+function voyageCargoTypeOf(cargoType: string): string {
+  return cargoType === 'REFRIGERATED' ? 'REEFER' : cargoType;
+}
+
 export function RoutingWorklistPage() {
   const [includeRouted, setIncludeRouted] = useState(false);
   const { data, isPending, isError } = useQuery({
@@ -110,6 +121,16 @@ export function RoutingWorklistPage() {
                   </td>
                   <td className={TD}>
                     {item.productName}（{cargoTypeLabel(item.cargoType)}）
+                    {/* 種別を引き継いで航海を探す。引き継がないとここで選び直す
+                        ことになり、選び忘れれば対応しない航海まで候補に見える。
+                        危険物・冷凍は Booking と Routing で呼び名が違う
+                        （REFRIGERATED / REEFER）ので、ここで翻訳する。 */}
+                    <Link
+                      to={`/voyages?cargoType=${voyageCargoTypeOf(item.cargoType)}`}
+                      className={`${LINK} ml-2`}
+                    >
+                      対応する航海を探す
+                    </Link>
                   </td>
                   <td className={TD}>
                     {item.routingStatus === 'MISROUTED'
