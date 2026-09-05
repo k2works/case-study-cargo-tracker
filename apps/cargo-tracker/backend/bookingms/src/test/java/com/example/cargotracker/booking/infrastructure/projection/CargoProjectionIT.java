@@ -10,12 +10,15 @@ import com.example.cargotracker.booking.infrastructure.query.BookingQueries.Book
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.BookingView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.CountBookingsByStatusQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingRevisionsQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingsQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.RevisionView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindRoutingWorklistQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueryHandler;
 import com.example.cargotracker.shared.contract.event.ShipperRegisteredEvent;
 import com.example.cargotracker.shared.testing.AbstractAxonIntegrationTest;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Month;
 import java.util.List;
@@ -319,5 +322,53 @@ class CargoProjectionIT extends AbstractAxonIntegrationTest {
         assertThat(attentionItems.findOpenByRole("ROLE_SALES"))
                 .as("黙って捨てると、直したのに反映されないことが誰にも見えない")
                 .anySatisfy(item -> assertThat(item.targetId()).isEqualTo(bookingId));
+    }
+
+    @Test
+    @DisplayName("R.2: 何を変えたかが読める（記録と読み口を対で出す）")
+    void recordsWhatChanged() {
+        String bookingId = "B-REV-" + System.nanoTime();
+        projection.on(booked(bookingId, "SHP-REV", "自動車部品"));
+
+        projection.on(corrected(bookingId));
+
+        List<RevisionView> items =
+                queries.handle(new FindBookingRevisionsQuery(bookingId)).items();
+        assertThat(items).isNotEmpty();
+        assertThat(items).allSatisfy(item -> {
+            assertThat(item.updatedBy()).isEqualTo("sales02");
+            assertThat(item.updatedAt()).isEqualTo(Instant.parse("2026-09-05T00:00:00Z"));
+        });
+        assertThat(items).extracting(RevisionView::label)
+                .contains("目的地", "希望着日", "貨物種別", "品名", "IMO クラス", "国連番号");
+        assertThat(items).filteredOn(item -> item.label().equals("目的地"))
+                .extracting(RevisionView::before, RevisionView::after)
+                .containsExactly(org.assertj.core.groups.Tuple.tuple("USNYC", "GBLON"));
+        // 変えていない項目は出さない。全項目が並ぶと「何を変えたか」が読めない。
+        assertThat(items).extracting(RevisionView::label).doesNotContain("出発地");
+    }
+
+    @Test
+    @DisplayName("R.2: 修正イベントを読み直しても履歴は増えない")
+    void revisionsAreIdempotentOnReplay() {
+        String bookingId = "B-REV2-" + System.nanoTime();
+        projection.on(booked(bookingId, "SHP-REV2", "自動車部品"));
+
+        projection.on(corrected(bookingId));
+        int afterFirst = queries.handle(new FindBookingRevisionsQuery(bookingId)).items().size();
+        projection.on(corrected(bookingId));
+
+        // 2 度目は投影がもう新しい値なので差分は出ない。1 度目の行も増えない。
+        assertThat(queries.handle(new FindBookingRevisionsQuery(bookingId)).items())
+                .hasSize(afterFirst);
+    }
+
+    @Test
+    @DisplayName("R.2: 一度も直していない予約の履歴は空（404 にしない）")
+    void noRevisionsWhenNeverUpdated() {
+        String bookingId = "B-REV3-" + System.nanoTime();
+        projection.on(booked(bookingId, "SHP-REV3", "自動車部品"));
+
+        assertThat(queries.handle(new FindBookingRevisionsQuery(bookingId)).items()).isEmpty();
     }
 }

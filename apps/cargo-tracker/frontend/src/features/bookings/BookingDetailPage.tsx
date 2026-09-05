@@ -8,6 +8,10 @@ import {
   NOTICE,
   PAGE_TITLE,
   SECTION_TITLE,
+  TABLE,
+  TABLE_CAPTION,
+  TD,
+  TH,
 } from '@/shared/ui/styles';
 import { ApiError } from '@/shared/api/client';
 import { useAuthStore } from '@/shared/auth/authStore';
@@ -15,7 +19,12 @@ import { canRequestRouting, canUpdateSpecification } from './transitions';
 import { requestRouting } from '@/features/routing/api';
 import { formatBusinessDateTime } from '@/shared/api/businessDate';
 import { display } from '@/features/shippers/api';
-import { bookingStatusLabel, cargoTypeLabel, fetchBooking } from './api';
+import {
+  bookingStatusLabel,
+  cargoTypeLabel,
+  fetchBooking,
+  fetchBookingRevisions,
+} from './api';
 
 /**
  * S22 予約詳細（UC04）。
@@ -35,6 +44,15 @@ export function BookingDetailPage() {
     queryFn: () => fetchBooking(bookingId),
     // 登録直後は投影がまだなので 202 が返る。反映されるまで取り直す。
     refetchInterval: (query) => (query.state.data?.state === 'pending' ? 2000 : false),
+  });
+
+  // 修正履歴（US32 §受入基準 4）。一度も直していない予約では問い合わせない。
+  // 「修正した」とだけ残っていて中身が読めない状態を作らないための読み口。
+  const updated = data?.state === 'ready' && data.value.updatedAt !== null;
+  const revisions = useQuery({
+    queryKey: ['booking', bookingId, 'revisions'],
+    queryFn: () => fetchBookingRevisions(bookingId),
+    enabled: updated,
   });
 
   const handOver = useMutation({
@@ -159,6 +177,42 @@ export function BookingDetailPage() {
               )}
             </dl>
           </div>
+
+          {updated
+            && revisions.data?.state === 'ready'
+            && revisions.data.value.items.length > 0 && (
+            <div>
+              <h2 className={SECTION_TITLE}>修正履歴</h2>
+              <div className="mt-2 overflow-x-auto">
+                <table className={TABLE}>
+                  <caption className={TABLE_CAPTION}>新しい修正が先に並んでいます</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col" className={TH}>いつ</th>
+                      <th scope="col" className={TH}>誰が</th>
+                      <th scope="col" className={TH}>項目</th>
+                      <th scope="col" className={TH}>変更前</th>
+                      <th scope="col" className={TH}>変更後</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {revisions.data.value.items.map((item) => (
+                      <tr
+                        key={`${item.updatedAt}-${item.label}`}
+                        data-testid={`revision-${item.label}`}
+                      >
+                        <td className={TD}>{formatBusinessDateTime(item.updatedAt)}</td>
+                        <td className={TD}>{display(item.updatedBy)}</td>
+                        <td className={TD}>{item.label}</td>
+                        <td className={TD}>{item.before}</td>
+                        <td className={TD}>{item.after}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </section>

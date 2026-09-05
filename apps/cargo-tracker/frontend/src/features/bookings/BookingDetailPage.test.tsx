@@ -308,3 +308,58 @@ describe('S22 から S24 への導線（US32）', () => {
     expect(screen.queryByText('最終更新')).not.toBeInTheDocument();
   });
 });
+
+describe('S22 修正履歴（US32 §受入基準 4）', () => {
+  function mockBookingAnd(revisions: unknown[]) {
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      const url = String(input);
+      if (url.includes('/revisions')) {
+        return Promise.resolve(new Response(JSON.stringify({ items: revisions }), { status: 200 }));
+      }
+      return Promise.resolve(
+        new Response(
+          JSON.stringify(booking({ updatedAt: '2026-09-05T00:00:00Z', updatedBy: 'sales02' })),
+          { status: 200 },
+        ),
+      );
+    });
+  }
+
+  it('R.2: 何を変えたかが読める', async () => {
+    mockBookingAnd([
+      {
+        updatedAt: '2026-09-05T00:00:00Z',
+        updatedBy: 'sales02',
+        label: '目的地',
+        before: 'USNYC',
+        after: 'GBLON',
+      },
+      {
+        updatedAt: '2026-09-05T00:00:00Z',
+        updatedBy: 'sales02',
+        label: '品名',
+        before: '自動車部品',
+        after: '塗料',
+      },
+    ]);
+
+    renderDetail();
+
+    expect(await screen.findByRole('heading', { name: '修正履歴' })).toBeInTheDocument();
+    const row = await screen.findByTestId('revision-目的地');
+    expect(row).toHaveTextContent('USNYC');
+    expect(row).toHaveTextContent('GBLON');
+    expect(screen.getByTestId('revision-品名')).toHaveTextContent('塗料');
+  });
+
+  it('R.2: 一度も直していなければ修正履歴を出さない', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(booking()), { status: 200 }),
+    );
+
+    renderDetail();
+
+    expect(await screen.findByRole('heading', { name: '状態' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: '修正履歴' })).not.toBeInTheDocument();
+  });
+});

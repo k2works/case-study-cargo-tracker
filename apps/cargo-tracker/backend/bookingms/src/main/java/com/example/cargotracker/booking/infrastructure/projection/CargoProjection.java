@@ -5,12 +5,15 @@ import com.example.cargotracker.booking.domain.model.events.CargoSpecificationUp
 import com.example.cargotracker.booking.domain.model.events.RoutingRequestedEvent;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.booking.domain.model.valueobjects.RoutingStatus;
+import com.example.cargotracker.booking.domain.service.CargoSpecificationDiff;
+import com.example.cargotracker.booking.infrastructure.persistence.CargoRevisionMapper;
 import com.example.cargotracker.booking.infrastructure.persistence.CargoSummaryMapper;
 import com.example.cargotracker.booking.infrastructure.persistence.ShipperMapper;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.List;
 import org.axonframework.messaging.eventhandling.annotation.EventHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,13 +34,15 @@ public class CargoProjection {
     private static final Logger log = LoggerFactory.getLogger(CargoProjection.class);
 
     private final CargoSummaryMapper cargos;
+    private final CargoRevisionMapper revisions;
     private final ShipperMapper shippers;
     private final AttentionItemRecorder attentionItems;
     private final Clock clock;
 
-    public CargoProjection(CargoSummaryMapper cargos, ShipperMapper shippers,
-            AttentionItemRecorder attentionItems, Clock clock) {
+    public CargoProjection(CargoSummaryMapper cargos, CargoRevisionMapper revisions,
+            ShipperMapper shippers, AttentionItemRecorder attentionItems, Clock clock) {
         this.cargos = cargos;
+        this.revisions = revisions;
         this.shippers = shippers;
         this.attentionItems = attentionItems;
         this.clock = clock;
@@ -119,6 +124,9 @@ public class CargoProjection {
     @EventHandler
     public void on(CargoSpecificationUpdatedEvent event) {
         Instant now = clock.instant();
+        // 何を変えたかは、書き換える前の行としか比べられない（US32 §受入基準 4）。
+        // 更新してから読むと、before が after と同じになる。
+        CargoSummaryMapper.CargoSummaryRow before = cargos.findById(event.bookingId());
         int updated = cargos.updateSpecification(new CargoSummaryMapper.CargoSummaryRow(
                 event.bookingId(), null, null, null, null,
                 event.originUnLocode(), event.destinationUnLocode(), event.arrivalDeadline(),
@@ -133,6 +141,10 @@ public class CargoProjection {
                 // 読み直しのたびに最終更新が動く。
                 event.updatedAt(), event.updatedBy(), now, null));
 
+        if (before != null) {
+            recordRevision(before, event);
+        }
+
         if (updated == 0) {
             log.warn("修正を書ける予約が投影に無い: bookingId={}", event.bookingId());
             attentionItems.add("PROJECTION_REJECTED", "BOOKING", event.bookingId(),
@@ -143,5 +155,40 @@ public class CargoProjection {
     /** 業務タイムゾーン。Clock が持つ（BusinessClockConfiguration）。 */
     ZoneId zone() {
         return clock.getZone();
+    }
+
+    /**
+     * 何を変えたかを残す（US32 §受入基準 4）。
+     *
+     * <p>変わっていなければ 1 行も書かない。「修正した」とだけ残っていて中身が空の
+     * 履歴は、読む側に何も伝えない。</p>
+     *
+     * <p>行は修正イベントから決まりきった形で導くので、<b>リプレイで増えない</b>
+     * （主キーに修正時刻を含め、{@code ON CONFLICT DO NOTHING} で入れる）。</p>
+     */
+    private void recordRevision(CargoSummaryMapper.CargoSummaryRow before,
+            CargoSpecificationUpdatedEvent event) {
+        List<CargoSpecificationDiff.FieldChange> changes = CargoSpecificationDiff.between(
+                new CargoSpecificationDiff.CargoSnapshot(
+                        before.originUnlocode(), before.destinationUnlocode(),
+                        before.arrivalDeadline(), before.cargoType(), before.weightKg(),
+                        before.lengthCm(), before.widthCm(), before.heightCm(),
+                        before.quantity(), before.productName(), before.hazardImoClass(),
+                        before.hazardUnNumber(), before.temperatureMinC(),
+                        before.temperatureMaxC()),
+                new CargoSpecificationDiff.CargoSnapshot(
+                        event.originUnLocode(), event.destinationUnLocode(),
+                        event.arrivalDeadline(), event.cargoType(), event.weightKg(),
+                        event.lengthCm(), event.widthCm(), event.heightCm(),
+                        event.quantity(), event.productName(), event.hazardImoClass(),
+                        event.hazardUnNumber(), event.temperatureMinC(),
+                        event.temperatureMaxC()));
+
+        for (int i = 0; i < changes.size(); i++) {
+            CargoSpecificationDiff.FieldChange change = changes.get(i);
+            revisions.insert(new CargoRevisionMapper.CargoRevisionRow(
+                    event.bookingId(), event.updatedAt(), change.label(), i + 1,
+                    change.before(), change.after(), event.updatedBy()));
+        }
     }
 }

@@ -146,6 +146,7 @@ nav:
           - ADR-0004 開発環境の動作確認用ログイン: adr/cargo-tracker/0004-demo-login-for-development.md
           - ADR-0005 Flyway のサービス別ロケーション: adr/cargo-tracker/0005-flyway-locations-per-service.md
           - ADR-0006 Gateway でのロール認可: adr/cargo-tracker/0006-role-authorization-at-the-gateway.md
+          - ADR-0008 予約の修正内容は投影として持つ: adr/cargo-tracker/0008-cargo-revision-as-a-projection.md
   - 記事:
       - 概要: article/index.md
       - モノリスアーキテクチャ実装比較:

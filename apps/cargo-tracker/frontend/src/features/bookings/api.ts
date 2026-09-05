@@ -80,6 +80,26 @@ export function fetchBooking(bookingId: string): Promise<Pending<BookingView>> {
   return queryClient(`/booking/bookings/${encodeURIComponent(bookingId)}`);
 }
 
+/**
+ * 修正履歴（US32 §受入基準 4「何を変えたか」）。
+ *
+ * <p>一度も直していなければ空の一覧が返る。</p>
+ */
+export function fetchBookingRevisions(
+  bookingId: string,
+): Promise<Pending<{ items: RevisionView[] }>> {
+  return queryClient(`/booking/bookings/${encodeURIComponent(bookingId)}/revisions`);
+}
+
+/** 1 回の修正で変わった項目 1 つ。 */
+export interface RevisionView {
+  readonly updatedAt: string;
+  readonly updatedBy: string | null;
+  readonly label: string;
+  readonly before: string;
+  readonly after: string;
+}
+
 export function bookCargo(input: BookCargoInput): Promise<{ bookingId: string }> {
   return commandClient('/booking/bookings', input);
 }

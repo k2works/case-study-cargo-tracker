@@ -1,12 +1,16 @@
 package com.example.cargotracker.booking.infrastructure.query;
 
+import com.example.cargotracker.booking.infrastructure.persistence.CargoRevisionMapper;
 import com.example.cargotracker.booking.infrastructure.persistence.CargoSummaryMapper;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.BookingListView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.BookingView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.CountBookingsByStatusQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingRevisionsQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingsQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindRoutingWorklistQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.RevisionListView;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.RevisionView;
 import org.axonframework.messaging.queryhandling.annotation.QueryHandler;
 import org.springframework.stereotype.Component;
 
@@ -15,9 +19,20 @@ import org.springframework.stereotype.Component;
 public class BookingQueryHandler {
 
     private final CargoSummaryMapper cargos;
+    private final CargoRevisionMapper revisions;
 
-    public BookingQueryHandler(CargoSummaryMapper cargos) {
+    public BookingQueryHandler(CargoSummaryMapper cargos, CargoRevisionMapper revisions) {
         this.cargos = cargos;
+        this.revisions = revisions;
+    }
+
+    /** 修正履歴（US32 §受入基準 4）。一度も直していなければ空。 */
+    @QueryHandler
+    public RevisionListView handle(FindBookingRevisionsQuery query) {
+        return new RevisionListView(revisions.findByBooking(query.bookingId()).stream()
+                .map(row -> new RevisionView(row.updatedAt(), row.updatedBy(),
+                        row.fieldLabel(), row.beforeValue(), row.afterValue()))
+                .toList());
     }
 
     @QueryHandler

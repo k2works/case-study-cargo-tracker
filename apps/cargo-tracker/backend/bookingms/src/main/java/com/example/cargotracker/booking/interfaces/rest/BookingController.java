@@ -15,6 +15,8 @@ import com.example.cargotracker.booking.infrastructure.query.BookingQueries.Book
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.CountBookingsByStatusQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingRevisionsQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.RevisionListView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingsQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindRoutingWorklistQuery;
 import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos;
@@ -108,6 +110,21 @@ public class BookingController {
                     .body(new PendingResponse(bookingId, "登録を受け付けました。反映までしばらくお待ちください"));
         }
         return ResponseEntity.ok(view);
+    }
+
+    /**
+     * 修正履歴（US32 §受入基準 4「何を変えたか」）。
+     *
+     * <p>一度も直していなければ空の一覧を返す。{@code 404} にすると「予約が無い」と
+     * 読める。</p>
+     *
+     * <p>読む相手は予約詳細と同じ（営業・経路設計・追跡）なので、認可の宣言は
+     * {@code /bookings/**} がそのまま当たる。絞る必要が出たら宣言を先に置く。</p>
+     */
+    @GetMapping("/{bookingId}/revisions")
+    public ResponseEntity<RevisionListView> revisions(@PathVariable String bookingId) {
+        return ResponseEntity.ok(queries.query(
+                new FindBookingRevisionsQuery(bookingId), RevisionListView.class));
     }
 
     @GetMapping

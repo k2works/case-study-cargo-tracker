@@ -43,6 +43,27 @@ public final class BookingQueries {
     public record FindRoutingWorklistQuery(int page, int size, boolean includeRouted) {
     }
 
+    /**
+     * 修正履歴（S22 / US32 §受入基準 4）。
+     *
+     * <p>一覧（{@code FindBookingsQuery}）には載せない。全件ぶんの履歴を読むことに
+     * なるうえ、一覧では読まない。</p>
+     */
+    public record FindBookingRevisionsQuery(String bookingId) {
+    }
+
+    /** 1 回の修正で変わった項目 1 つ。新しい修正が先に並ぶ。 */
+    public record RevisionView(
+            Instant updatedAt,
+            String updatedBy,
+            String label,
+            String before,
+            String after) {
+    }
+
+    public record RevisionListView(List<RevisionView> items) {
+    }
+
     /** 画面に出す予約。荷主名は鍵破棄後に {@code null} になる。 */
     public record BookingView(
             String bookingId,

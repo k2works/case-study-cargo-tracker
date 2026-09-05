@@ -12,6 +12,7 @@ cargo-tracker プロジェクトのADRドキュメントです。
 | [ADR-0004](0004-demo-login-for-development.md) | 開発環境のログイン画面に動作確認用の利用者を事前入力する | 提案 |
 | [ADR-0005](0005-flyway-locations-per-service.md) | Flyway のマイグレーションをサービス名のサブディレクトリに分ける | 提案 |
 | [ADR-0006](0006-role-authorization-at-the-gateway.md) | ロールの認可を Gateway の 1 か所で宣言する | 提案 |
+| [ADR-0008](0008-cargo-revision-as-a-projection.md) | 予約の修正内容は投影として持つ | 提案 |
 
 ## 補足
 

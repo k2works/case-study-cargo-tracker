@@ -88,7 +88,7 @@ bi --> bidb
 | :--- | :--- | :--- | :--- |
 | Axon Server | （専用ボリューム） | Event Store | イベント列、スナップショット |
 | authms | `auth_db` | 状態保存 | `users`, `user_roles`, `user_shipper_link`, `auth_audit_log` |
-| bookingms | `booking_read_db` | 投影 + 受け皿 + Axon 管理 | `shipper`, `cargo_summary`, `cargo_leg`, `cancellation_request`, `quotation`, `quotation_candidate`, `attention_item`, `process_state`, `token_entry` |
+| bookingms | `booking_read_db` | 投影 + 受け皿 + Axon 管理 | `shipper`, `cargo_summary`, `cargo_revision`, `cargo_leg`, `cancellation_request`, `quotation`, `quotation_candidate`, `attention_item`, `process_state`, `token_entry` |
 | routingms | `routing_read_db` | 投影 + 受け皿 + Axon 管理 | `voyage`, `carrier_movement`, `voyage_accepted_cargo_type`, `attention_item`, `token_entry` |
 | trackingms | `tracking_read_db` | 投影 + 受け皿 + Axon 管理 | `tracking_summary`, `tracking_event`, `tracking_exception`, `shipper_cargo_snapshot`, `attention_item`, `token_entry` |
 | handlingms | `handling_read_db` | 投影 + Axon 管理 | `cargo_snapshot`, `cargo_snapshot_leg`, `handling_activity`, `customs_declaration`, `token_entry` |
@@ -304,6 +304,17 @@ entity "cargo_summary" as cargo {
   last_event_id: VARCHAR(36)
 }
 
+entity "cargo_revision" as rev {
+  * **booking_id**: VARCHAR(36) <<PK>> <<FK>>
+  * **updated_at**: TIMESTAMPTZ <<PK>>
+  * **field_label**: VARCHAR(50) <<PK>>
+  --
+  field_seq: INTEGER NOT NULL
+  before_value: VARCHAR(200) NOT NULL
+  after_value: VARCHAR(200) NOT NULL
+  updated_by: VARCHAR(50)
+}
+
 entity "cargo_leg" as leg {
   * **booking_id**: VARCHAR(36) <<PK>> <<FK>>
   * **leg_seq**: INTEGER <<PK>>
@@ -371,6 +382,7 @@ entity "attention_item" as att {
 }
 
 shipper ||--o{ cargo
+cargo ||--o{ rev
 cargo ||--o{ leg
 cargo ||--o{ cr
 q ||--o{ qc
@@ -380,7 +392,8 @@ q ||--o{ qc
 | テーブル | 元になるイベント | 制約・インデックス | 備考 |
 | :--- | :--- | :--- | :--- |
 | `shipper` | `ShipperRegisteredEvent`, `ShipperContactUpdatedEvent`, `CorporateContractAssignedEvent` | `UNIQUE(email)`（NULL を許す）, `UNIQUE(shipper_code)` | `shipper_code` は投影側のシーケンス（`SHP-` + 連番 6 桁）で採番。UNIQUE 違反は `attention_item` に記録。`name` / `email` / `phone` / `address` は crypto-shredding 後に `NULL` になる（ADR-0003）。表示既定値は「（削除済み）」（`ui_design.md`） |
-| `cargo_summary` | `CargoBookedEvent` ほか Cargo の全イベント（`booking_status` の書き手は `BookingDeliveredEvent`・`BookingSettledEvent` を含む Cargo 自身のイベントだけ）、`HandlingActivityRegisteredEvent`・`HandlingActivityVoidedEvent`（契約、`last_handling_*` のみ） | `UNIQUE(tracking_number)`, `INDEX(shipper_id)`, `INDEX(booking_status)`, `INDEX(routing_status)` | `shipper_name` を非正規化して持つ（一覧が JOIN しない）。`last_handling_*` は荷役の契約イベントから写す。他サービスの `CargoDeliveredEvent`・`PaymentRecordedEvent` は投影が写さず、`booking-reaction` が Cargo へコマンドを送り、Cargo のイベントで `booking_status` が変わる。`INDEX(shipper_id)` は荷主向け一覧（`FindShipperBookingsQuery`）の索引を兼ねる。`updated_at` / `updated_by` は**最終更新だけ**を持つ（US32。変更内容の履歴は Event Store が持つ） 。`routing_requested_at` は経路設計者へ引き渡した日時（US06）。S30 は到着期限が近い順に並ぶので、期限が遠い案件は下に沈む。引き渡しからどれだけ経ったかが読めないと放置に気づけない |
+| `cargo_revision` | `CargoSpecificationUpdatedEvent` | `PK(booking_id, updated_at, field_label)`, `INDEX(booking_id, updated_at DESC)` | 修正で変わった項目（US32 §受入基準 4「何を変えたか」）。1 行 = 1 回の修正で変わった 1 項目。**投影の直前の行と修正イベントを丸ごと比べて作る**（項目の名簿を手で書くと、要素を足したときに書き忘れが黙って差分から消える）。主キーに修正時刻を含めるので、リプレイしても行が増えない。判断の経緯は [ADR-0008](../../adr/cargo-tracker/0008-cargo-revision-as-a-projection.md) |
+| `cargo_summary` | `CargoBookedEvent` ほか Cargo の全イベント（`booking_status` の書き手は `BookingDeliveredEvent`・`BookingSettledEvent` を含む Cargo 自身のイベントだけ）、`HandlingActivityRegisteredEvent`・`HandlingActivityVoidedEvent`（契約、`last_handling_*` のみ） | `UNIQUE(tracking_number)`, `INDEX(shipper_id)`, `INDEX(booking_status)`, `INDEX(routing_status)` | `shipper_name` を非正規化して持つ（一覧が JOIN しない）。`last_handling_*` は荷役の契約イベントから写す。他サービスの `CargoDeliveredEvent`・`PaymentRecordedEvent` は投影が写さず、`booking-reaction` が Cargo へコマンドを送り、Cargo のイベントで `booking_status` が変わる。`INDEX(shipper_id)` は荷主向け一覧（`FindShipperBookingsQuery`）の索引を兼ねる。`updated_at` / `updated_by` は**最終更新だけ**を持つ（US32）。何を変えたかは `cargo_revision` が持つ（[ADR-0008](../../adr/cargo-tracker/0008-cargo-revision-as-a-projection.md)）。`routing_requested_at` は経路設計者へ引き渡した日時（US06）。S30 は到着期限が近い順に並ぶので、期限が遠い案件は下に沈む。引き渡しからどれだけ経ったかが読めないと放置に気づけない |
 | `cargo_leg` | `CargoRoutedEvent` | `INDEX(voyage_number)` | 再設計時は全行を入れ替える |
 | `cancellation_request` | `CancellationRequestedEvent`, `CancellationApprovedEvent`, `CancellationRejectedEvent` | `INDEX(booking_id)`, `INDEX(decision)`（`NULL` = 承認待ち） | `decision` は `APPROVED` / `REJECTED` / `NULL` |
 | `quotation` / `quotation_candidate` | `QuotationCreatedEvent` | `INDEX(created_at)` | 候補 0 件の見積も 1 行残る |
@@ -787,7 +800,7 @@ Processing Group は `@ProcessingGroup`（Axon 5 に存在しません）では�
 | サービス | Processing Group | 購読するイベント | 書くテーブル |
 | :--- | :--- | :--- | :--- |
 | bookingms | `booking-shipper-projection` | Shipper のイベント | `shipper` |
-| bookingms | `booking-cargo-projection` | Cargo のイベント、`HandlingActivityRegisteredEvent`、`HandlingActivityVoidedEvent` | `cargo_summary`, `cargo_leg`, `cancellation_request` |
+| bookingms | `booking-cargo-projection` | Cargo のイベント、`HandlingActivityRegisteredEvent`、`HandlingActivityVoidedEvent` | `cargo_summary`, `cargo_revision`, `cargo_leg`, `cancellation_request` |
 | bookingms | `booking-quotation-projection` | Quotation のイベント | `quotation`, `quotation_candidate` |
 | bookingms | `booking-reaction` | `CargoDeliveredEvent`、`PaymentRecordedEvent`、`HandlingActivityVoidedEvent`（契約） | **投影テーブルを書かない**。Cargo へコマンドを送る（`MarkDeliveredCommand`、`SettleBookingCommand` 等）。失敗だけを `attention_item` に書く |
 | routingms | `routing-voyage-projection` | Voyage のイベント | `voyage`, `carrier_movement`, `voyage_accepted_cargo_type` |
@@ -808,7 +821,7 @@ Processing Group は `@ProcessingGroup`（Axon 5 に存在しません）では�
 
 | 集約 | 投影テーブル | 対応の性質 |
 | :--- | :--- | :--- |
-| `Cargo` | `cargo_summary`, `cargo_leg`, `cancellation_request` | 集約の現在状態 + 一覧に要る他 BC の事実（荷役・配送・入金） |
+| `Cargo` | `cargo_summary`, `cargo_revision`, `cargo_leg`, `cancellation_request` | 集約の現在状態 + 一覧に要る他 BC の事実（荷役・配送・入金） |
 | `Shipper` | `shipper` | 1 対 1 |
 | `Quotation` | `quotation`, `quotation_candidate` | 1 対 1 |
 | `Voyage` | `voyage`, `carrier_movement`, `voyage_accepted_cargo_type` | 1 対 1 |
