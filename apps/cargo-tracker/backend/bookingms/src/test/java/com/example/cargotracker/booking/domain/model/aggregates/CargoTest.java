@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.cargotracker.booking.domain.model.commands.BookCargoCommand;
 import com.example.cargotracker.booking.domain.model.commands.RequestRoutingCommand;
+import com.example.cargotracker.booking.domain.model.commands.UpdateCargoSpecificationCommand;
+import com.example.cargotracker.booking.domain.model.events.CargoSpecificationUpdatedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
 import com.example.cargotracker.booking.domain.model.events.RoutingRequestedEvent;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
@@ -282,5 +284,82 @@ class CargoTest {
                     .then().exceptionSatisfies(e ->
                             assertThat(e.getMessage()).contains("荷主 ID は必須です"));
         }
+    }
+
+    private static CargoSpecification corrected() {
+        return new CargoSpecification(CargoType.GENERAL, Weight.ofKilograms("1500"),
+                Dimensions.of("130", "80", "100"), 12, "自動車部品（訂正）", null, null);
+    }
+
+    private static UpdateCargoSpecificationCommand update(CargoSpecification spec,
+            RouteSpecification route) {
+        return new UpdateCargoSpecificationCommand("B-0001", spec, route, "sales02");
+    }
+
+    private static CargoBookedEvent booked() {
+        return new CargoBookedEvent("B-0001", "SHP-000001", "JPTYO", "USNYC", DEADLINE,
+                "GENERAL", new BigDecimal("1200"), new BigDecimal("120"),
+                new BigDecimal("80"), new BigDecimal("100"), 10, "自動車部品",
+                null, null, null, null, "sales01");
+    }
+
+    @Test
+    @DisplayName("US32: 仮受付の予約は貨物仕様と輸送条件を修正できる")
+    void updatesSpecificationWhilePreliminary() {
+        fixture.given().event(booked())
+                .when().command(update(corrected(), route()))
+                .then().success()
+                .events(new CargoSpecificationUpdatedEvent("B-0001", "JPTYO", "USNYC", DEADLINE,
+                        "GENERAL", new BigDecimal("1500"), new BigDecimal("130"),
+                        new BigDecimal("80"), new BigDecimal("100"), 12, "自動車部品（訂正）",
+                        null, null, null, null, "sales02"));
+    }
+
+    @Test
+    @DisplayName("US32: 経路提案中より先へ進んだ予約は修正できない")
+    void rejectsUpdateAfterRoutingRequested() {
+        // 判定は遷移表の述語を呼ぶ。ここで if (status == PRELIMINARY) と書くと、
+        // 状態が増えたときに集約と遷移表の判断が食い違う。
+        fixture.given().events(booked(), new RoutingRequestedEvent("B-0001", "sales01"))
+                .when().command(update(corrected(), route()))
+                .then().exceptionSatisfies(e ->
+                        assertThat(e.getMessage()).contains("修正できません"));
+    }
+
+    @Test
+    @DisplayName("受け付けていない予約は修正できない")
+    void rejectsUpdateOfUnknownBooking() {
+        fixture.given().noPriorActivity()
+                .when().command(update(corrected(), route()))
+                .then().exceptionSatisfies(e ->
+                        assertThat(e.getMessage()).contains("受け付けていません"));
+    }
+
+    @Test
+    @DisplayName("US32: 修正でも登録と同じ検査が働く")
+    void updateIsValidatedLikeBooking() {
+        // 「登録では断るのに修正では通る」を作らない。
+        fixture.given().event(booked())
+                .when().command(new UpdateCargoSpecificationCommand("B-0001", null, route(),
+                        "sales02"))
+                .then().exceptionSatisfies(e ->
+                        assertThat(e.getMessage()).contains("貨物仕様は必須です"));
+
+        fixture.given().event(booked())
+                .when().command(new UpdateCargoSpecificationCommand("B-0001", corrected(), null,
+                        "sales02"))
+                .then().exceptionSatisfies(e ->
+                        assertThat(e.getMessage()).contains("輸送条件は必須です"));
+    }
+
+    @Test
+    @DisplayName("US32: 修正で到着期限を過去にはできない")
+    void rejectsPastDeadlineOnUpdate() {
+        fixture.given().event(booked())
+                .when().command(update(corrected(), new RouteSpecification(
+                        Location.of("JPTYO"), Location.of("USNYC"),
+                        LocalDate.of(2020, Month.JANUARY, 1))))
+                .then().exceptionSatisfies(e ->
+                        assertThat(e.getMessage()).contains("到着期限"));
     }
 }

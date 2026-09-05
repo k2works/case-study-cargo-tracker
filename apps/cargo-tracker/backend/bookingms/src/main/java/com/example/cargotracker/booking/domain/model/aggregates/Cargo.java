@@ -3,10 +3,13 @@ package com.example.cargotracker.booking.domain.model.aggregates;
 import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.booking.domain.model.commands.BookCargoCommand;
 import com.example.cargotracker.booking.domain.model.commands.RequestRoutingCommand;
+import com.example.cargotracker.booking.domain.model.commands.UpdateCargoSpecificationCommand;
 import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
+import com.example.cargotracker.booking.domain.model.events.CargoSpecificationUpdatedEvent;
 import com.example.cargotracker.booking.domain.model.events.RoutingRequestedEvent;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoSpecification;
+import com.example.cargotracker.booking.domain.model.valueobjects.RouteSpecification;
 import com.example.cargotracker.booking.domain.model.valueobjects.RoutingStatus;
 import com.example.cargotracker.shared.domain.error.IllegalTransition;
 import java.time.Clock;
@@ -105,6 +108,52 @@ public class Cargo {
         return command.bookingId();
     }
 
+    /**
+     * 入力の誤りを直す（UC03・UC04 / US32）。
+     *
+     * <p><b>直せるかどうかは遷移表の述語を呼ぶ</b>（{@link BookingStatus#canUpdateSpecification}）。
+     * ここで {@code if (status == PRELIMINARY)} と書くと、状態が増えたときに集約と
+     * 遷移表の判断が食い違う。</p>
+     *
+     * <p><b>登録と同じ検査を通す。</b> 修正用に検査を書き直すと「登録では断るのに
+     * 修正では通る」が生まれる。危険物の申告も冷凍の温度条件も
+     * {@code CargoSpecification} が同じように守る。</p>
+     */
+    @CommandHandler
+    public String updateSpecification(UpdateCargoSpecificationCommand command,
+            EventAppender appender, Clock clock) {
+        if (bookingId == null) {
+            throw new IllegalTransition("予約 " + command.bookingId() + " は受け付けていません");
+        }
+        if (!bookingStatus.canUpdateSpecification()) {
+            throw new IllegalTransition("状態 " + bookingStatus + " の予約は修正できません");
+        }
+        validate(command.cargoSpecification(), command.routeSpecification(),
+                LocalDate.now(clock));
+
+        CargoSpecification spec = command.cargoSpecification();
+        appender.append(new CargoSpecificationUpdatedEvent(
+                command.bookingId(),
+                command.routeSpecification().origin().unLocode().value(),
+                command.routeSpecification().destination().unLocode().value(),
+                command.routeSpecification().arrivalDeadline(),
+                spec.cargoType().name(),
+                spec.weight().kilograms(),
+                spec.dimensions().lengthCm(),
+                spec.dimensions().widthCm(),
+                spec.dimensions().heightCm(),
+                spec.quantity(),
+                spec.productName(),
+                spec.hazardousDeclaration() == null ? null : spec.hazardousDeclaration().imoClass(),
+                spec.hazardousDeclaration() == null ? null : spec.hazardousDeclaration().unNumber(),
+                spec.temperatureRequirement() == null
+                        ? null : spec.temperatureRequirement().minCelsius(),
+                spec.temperatureRequirement() == null
+                        ? null : spec.temperatureRequirement().maxCelsius(),
+                command.updatedBy()));
+        return command.bookingId();
+    }
+
     private static void validate(BookCargoCommand command, LocalDate today) {
         if (command.bookingId() == null || command.bookingId().isBlank()) {
             throw new BusinessRuleViolation("予約 ID は必須です");
@@ -113,20 +162,32 @@ public class Cargo {
             // 荷主の分からない予約は、通知も請求も宛先が無い。
             throw new BusinessRuleViolation("荷主 ID は必須です");
         }
-        if (command.cargoSpecification() == null) {
+        validate(command.cargoSpecification(), command.routeSpecification(), today);
+    }
+
+    /** 受付と修正で同じ検査を通す。分けて書くと片方だけが古くなる。 */
+    private static void validate(CargoSpecification cargoSpecification,
+            RouteSpecification routeSpecification, LocalDate today) {
+        if (cargoSpecification == null) {
             throw new BusinessRuleViolation("貨物仕様は必須です");
         }
-        if (command.routeSpecification() == null) {
+        if (routeSpecification == null) {
             throw new BusinessRuleViolation("輸送条件は必須です");
         }
         // 期限は日付で比較する。当日着は間に合う扱い（不変条件 5）。
         //
         // **新規の受け付けでだけ検査する。** 復元（@EventSourcingHandler）では見ない。
         // 見ると、受け付けたあとに期限を過ぎた予約が読めなくなる。
-        if (command.routeSpecification().arrivalDeadline().isBefore(today)) {
+        if (routeSpecification.arrivalDeadline().isBefore(today)) {
             throw new BusinessRuleViolation(
-                    "到着期限が過去の日付です: " + command.routeSpecification().arrivalDeadline());
+                    "到着期限が過去の日付です: " + routeSpecification.arrivalDeadline());
         }
+    }
+
+    @EventSourcingHandler
+    void on(CargoSpecificationUpdatedEvent event) {
+        // 状態は変わらない。仮受付のまま内容だけが差し替わる。
+        this.bookingId = event.bookingId();
     }
 
     @EventSourcingHandler

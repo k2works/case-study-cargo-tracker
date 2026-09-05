@@ -50,6 +50,17 @@ public enum BookingStatus {
     }
 
     /**
+     * 入力の誤りを直せるか（US32。不変条件「修正できるのは仮受付の予約だけ」）。
+     *
+     * <p>経路提案中より先へ進むと、経路設計者が既にその内容で作業している。直せると、
+     * 設計の前提が黙って変わる。<b>遷移ではないので canTransitionTo では表せない。</b>
+     * 画面のボタン出し分けもこの述語を呼ぶ（判定を書き直さない）。</p>
+     */
+    public boolean canUpdateSpecification() {
+        return this == PRELIMINARY;
+    }
+
+    /**
      * 申請を挟まずその場でキャンセルできるか。
      *
      * <p>{@code IN_TRANSIT} だけは荷物が動いているので、申請 → 承認（陸揚げ地の指定）の
