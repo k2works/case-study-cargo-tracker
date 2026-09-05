@@ -1,0 +1,1 @@
+8 2javaXhrebookingms/src/main/java/com/example/cargotracker/booking/infrastructure/persistence/package-info.java

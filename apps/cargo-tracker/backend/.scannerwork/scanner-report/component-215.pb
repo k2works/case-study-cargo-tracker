@@ -1,0 +1,1 @@
+× (2javaXØhrnshared/src/test/java/com/example/cargotracker/shared/conventions/EventSourcedServicesHaveTheSameShapeTest.java

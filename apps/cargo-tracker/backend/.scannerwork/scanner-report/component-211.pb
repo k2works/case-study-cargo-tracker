@@ -1,0 +1,1 @@
+Ó 2javaXhrXshared/src/main/java/com/example/cargotracker/shared/domain/error/IllegalTransition.java

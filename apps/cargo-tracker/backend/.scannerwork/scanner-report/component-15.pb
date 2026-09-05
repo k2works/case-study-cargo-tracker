@@ -1,0 +1,1 @@
+ 2javaXNhr]authms/src/main/java/com/example/cargotracker/auth/infrastructure/persistence/UserMapper.java

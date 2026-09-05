@@ -1,0 +1,1 @@
+á (2javaXDhrXshared/src/test/java/com/example/cargotracker/shared/archunit/SharedKernelScopeTest.java

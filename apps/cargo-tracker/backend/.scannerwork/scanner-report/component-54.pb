@@ -1,0 +1,1 @@
+6 2javaX6hrfbookingms/src/main/java/com/example/cargotracker/booking/infrastructure/persistence/ShipperMapper.java

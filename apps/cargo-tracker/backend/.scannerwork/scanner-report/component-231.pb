@@ -1,0 +1,1 @@
+ç (2javaX:hrXshared/src/test/java/com/example/cargotracker/shared/domain/error/BusinessErrorTest.java

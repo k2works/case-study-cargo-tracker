@@ -1,0 +1,1 @@
+Ô 2javaX!hr\shared/src/main/java/com/example/cargotracker/shared/domain/error/BusinessRuleViolation.java

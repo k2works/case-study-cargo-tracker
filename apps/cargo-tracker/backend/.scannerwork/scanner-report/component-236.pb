@@ -1,0 +1,1 @@
+ì (2javaXhr{shared/src/test/java/com/example/cargotracker/archfixture/violating/infrastructure/projection/CommandSendingProjection.java

@@ -1,0 +1,1 @@
+ª 2javaX#hrgroutingms/src/main/java/com/example/cargotracker/routing/domain/model/valueobjects/CarrierMovement.java

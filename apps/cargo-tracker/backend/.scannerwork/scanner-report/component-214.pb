@@ -1,0 +1,1 @@
+Ö (2javaXvhrkshared/src/test/java/com/example/cargotracker/shared/conventions/DomainThrowsBusinessRuleViolationTest.java

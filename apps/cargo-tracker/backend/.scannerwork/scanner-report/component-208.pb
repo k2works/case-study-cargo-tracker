@@ -1,0 +1,1 @@
+Ð 2javaX*hrRshared/src/main/java/com/example/cargotracker/shared/domain/location/Location.java

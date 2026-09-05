@@ -1,0 +1,1 @@
+‚ (2javaX›hrjgatewayms/src/test/java/com/example/cargotracker/gateway/EveryServiceEndpointIsRoutedAndProtectedTest.java

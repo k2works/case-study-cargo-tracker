@@ -1,0 +1,1 @@
+: 2javaX2hrabookingms/src/main/java/com/example/cargotracker/booking/infrastructure/query/ShipperQueries.java

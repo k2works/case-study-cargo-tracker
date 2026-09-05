@@ -1,0 +1,1 @@
+ 2javaX hrhgatewayms/src/main/java/com/example/cargotracker/gateway/infrastructure/config/GatewayConfiguration.java

@@ -1,0 +1,1 @@
+P 2javaX5hrjbookingms/src/main/java/com/example/cargotracker/booking/domain/model/valueobjects/CargoSpecification.java

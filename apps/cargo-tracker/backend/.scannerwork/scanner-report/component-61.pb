@@ -1,0 +1,1 @@
+= 2javaXhr_bookingms/src/main/java/com/example/cargotracker/booking/infrastructure/query/package-info.java

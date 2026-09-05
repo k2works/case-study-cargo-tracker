@@ -1,0 +1,1 @@
+¼ (2javaXUhrproutingms/src/test/java/com/example/cargotracker/routing/domain/model/valueobjects/VoyageSearchCriteriaTest.java

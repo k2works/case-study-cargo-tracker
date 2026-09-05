@@ -1,0 +1,1 @@
+ 2javaX'hrIauthms/src/main/java/com/example/cargotracker/auth/domain/model/User.java

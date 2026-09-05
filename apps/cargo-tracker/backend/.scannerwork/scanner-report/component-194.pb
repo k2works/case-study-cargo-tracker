@@ -1,0 +1,1 @@
+Â 2javaXhr_shared/src/main/java/com/example/cargotracker/shared/contract/event/ShipperRegisteredEvent.java

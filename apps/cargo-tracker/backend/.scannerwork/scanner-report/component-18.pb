@@ -1,0 +1,1 @@
+ 2javaXhrQauthms/src/main/java/com/example/cargotracker/auth/domain/model/package-info.java

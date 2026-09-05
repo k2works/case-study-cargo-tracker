@@ -1,0 +1,1 @@
+€ 2javaXhrZgatewayms/src/main/java/com/example/cargotracker/gateway/interfaces/rest/package-info.java

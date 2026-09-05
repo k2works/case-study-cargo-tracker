@@ -1,0 +1,1 @@
+© 2javaX7hr`routingms/src/main/java/com/example/cargotracker/routing/domain/model/valueobjects/Schedule.java

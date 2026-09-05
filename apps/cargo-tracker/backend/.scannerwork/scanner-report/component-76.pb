@@ -1,0 +1,1 @@
+L 2javaXhrWbookingms/src/main/java/com/example/cargotracker/booking/domain/model/package-info.java

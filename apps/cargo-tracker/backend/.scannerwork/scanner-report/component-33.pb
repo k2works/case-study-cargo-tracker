@@ -1,0 +1,1 @@
+! 2javaX"hrvbillingms/src/main/java/com/example/cargotracker/billing/infrastructure/persistence/ShipperContractSnapshotMapper.java

@@ -1,0 +1,1 @@
+- (2javaXahrsbillingms/src/test/java/com/example/cargotracker/billing/infrastructure/projection/ShipperContractProjectionIT.java

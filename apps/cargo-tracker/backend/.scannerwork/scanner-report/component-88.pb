@@ -1,0 +1,1 @@
+X 2javaXhrabookingms/src/main/java/com/example/cargotracker/booking/domain/model/valueobjects/CargoType.java

@@ -1,0 +1,1 @@
+t (2javaX%hrhbookingms/src/test/java/com/example/cargotracker/booking/domain/model/valueobjects/DiscountRateTest.java

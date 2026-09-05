@@ -1,0 +1,1 @@
+™ 2javaXKhraroutingms/src/main/java/com/example/cargotracker/routing/infrastructure/query/RoutingQueries.java

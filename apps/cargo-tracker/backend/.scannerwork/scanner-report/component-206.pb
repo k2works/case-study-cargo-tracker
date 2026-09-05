@@ -1,0 +1,1 @@
+Î 2javaX"hrWshared/src/main/java/com/example/cargotracker/shared/domain/auth/AuthenticatedUser.java

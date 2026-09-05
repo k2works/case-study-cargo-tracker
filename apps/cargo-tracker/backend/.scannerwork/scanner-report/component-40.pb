@@ -1,0 +1,1 @@
+( 2javaXhrWbillingms/src/main/java/com/example/cargotracker/billing/domain/model/package-info.java

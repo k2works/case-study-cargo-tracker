@@ -1,0 +1,1 @@
+s (2javaXHhrabookingms/src/test/java/com/example/cargotracker/booking/domain/model/valueobjects/EmailTest.java
