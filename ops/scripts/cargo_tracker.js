@@ -108,7 +108,7 @@ const FORWARDS = [
   // ここ 1 つで足りる。5173 を避けているのは、ローカルの Vite 開発サーバと
   // 取り違えないためである。
   { label: 'フロントエンド        ', service: 'frontend', port: FRONTEND_PORT, target: 8080 },
-  { label: 'API Gateway        ', service: 'gatewayms', port: GATEWAY_PORT },
+  { label: 'API Gateway        ', service: 'gatewayms', port: GATEWAY_PORT, target: GATEWAY_PORT, fallbackPorts: [18080] },
   // ポータルはフロントの nginx が /docs-portal/ で中継するので、画面から
   // 辿るだけならこの転送は要らない。直接開く場合と、Vite 開発サーバ
   // （5173）から中継させる場合のために張っておく。
@@ -117,19 +117,45 @@ const FORWARDS = [
 ];
 
 /** ポートが既に使われているか。docker compose と取り合うのを先に見つける。 */
-function isPortInUse(port) {
+function listeningPortPids(port) {
+  if (process.platform === 'win32') {
+    return sh('netstat -ano -p tcp').split('\n')
+      .flatMap((line) => {
+        const columns = line.trim().split(/\s+/);
+        if (columns[0] === 'TCP'
+          && columns[1]?.endsWith(`:${port}`)
+          && columns[3] === 'LISTENING') {
+          return [columns[4]];
+        }
+        return [];
+      });
+  }
   try {
-    execSync(`lsof -i :${port} -sTCP:LISTEN -t`, { stdio: 'pipe' });
-    return true;
+    return execSync(`lsof -i :${port} -sTCP:LISTEN -t`, { stdio: 'pipe', encoding: 'utf8' })
+      .trim()
+      .split('\n')
+      .filter(Boolean);
   } catch {
-    return false;
+    return [];
   }
 }
 
+function isPortInUse(port) {
+  return listeningPortPids(port).length > 0;
+}
+
+function assignAvailablePorts(forwards) {
+  return forwards.map((forward) => {
+    const candidates = [forward.port, ...(forward.fallbackPorts ?? [])];
+    const port = candidates.find((candidate) => !isPortInUse(candidate));
+    return { ...forward, preferredPort: forward.port, port };
+  });
+}
+
 /** port-forward が張れて Gateway が応答するまで待つ（最大 30 秒）。 */
-async function waitForGateway() {
+async function waitForGateway(port) {
   for (let i = 0; i < 30; i += 1) {
-    if (tryFetch(`http://localhost:${GATEWAY_PORT}/actuator/health`) === '200') {
+    if (tryFetch(`http://localhost:${port}/actuator/health`) === '200') {
       return true;
     }
     await new Promise((r) => setTimeout(r, 1000));
@@ -613,19 +639,26 @@ export default function (gulp) {
    */
   gulp.task('k8s:open', () => new Promise((resolve, reject) => {
     const context = `kind-${KIND_CLUSTER}`;
+    const forwards = assignAvailablePorts(FORWARDS);
 
     // 依存ミドルウェアを docker compose で上げたままだと、同じポートを取り合って
     // port-forward が「address already in use」で落ちる。先に言う。
-    const occupied = FORWARDS.filter(({ port }) => isPortInUse(port));
+    const occupied = forwards.filter(({ port }) => port === undefined);
     if (occupied.length > 0) {
       reject(new Error(
-        `ポート ${occupied.map((f) => f.port).join(', ')} は使用中です。`
-        + ' docker compose down で依存ミドルウェアを止めてから実行してください',
+        'port-forward に使うポートが使用中です: '
+        + occupied.map((f) => {
+          const candidates = [f.preferredPort, ...(f.fallbackPorts ?? [])];
+          return candidates.map((port) => `${port}（PID ${listeningPortPids(port).join(', ')}）`).join(', ');
+        }).join(', ')
+        + '。該当プロセスを止めてから実行してください',
       ));
       return;
     }
 
-    const children = FORWARDS.map(({ service, port, target }) => spawn('kubectl', [
+    const gateway = forwards.find(({ service }) => service === 'gatewayms');
+
+    const children = forwards.map(({ service, port, target }) => spawn('kubectl', [
       '--context', context, '-n', NAMESPACE,
       'port-forward', `svc/${service}`, `${port}:${target ?? port}`,
     ], { stdio: 'inherit' }));
@@ -638,7 +671,7 @@ export default function (gulp) {
       }
     }));
 
-    waitForGateway()
+    waitForGateway(gateway.port)
       .then((ready) => {
         if (!ready) {
           stopAll();
@@ -648,10 +681,15 @@ export default function (gulp) {
           ));
           return;
         }
-        FORWARDS.forEach(({ label, port }) => console.log(`${label}\thttp://localhost:${port}`));
-        console.log('\nローカルの Vite 開発サーバ（5173）も、/api がこの Gateway に繋がります。');
+        forwards.forEach(({ label, port }) => console.log(`${label}\thttp://localhost:${port}`));
+        const viteNote = gateway.port === GATEWAY_PORT
+          ? '\nローカルの Vite 開発サーバ（5173）も、/api がこの Gateway に繋がります。'
+          : `\nAPI Gateway は ${GATEWAY_PORT} が使用中のため ${gateway.port} に退避しました。`
+            + ' ローカルの Vite 開発サーバ（5173）の /api proxy は既定の 8080 を見ます。';
+        console.log(viteNote);
         console.log('Ctrl+C で転送を終了します。');
-        openUrl(`http://localhost:${FRONTEND_PORT}`);
+        const frontend = forwards.find(({ service }) => service === 'frontend');
+        openUrl(`http://localhost:${frontend.port}`);
         process.on('SIGINT', () => {
           stopAll();
           resolve();
