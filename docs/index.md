@@ -18,7 +18,7 @@
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | cargo-tracker: 設計 10 件作成済み（draft） |
-| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | cargo-tracker: **IT4 完了**（累計 35 SP・達成率 100%）。**Release 0.1 完了**。リリース計画・開発戦略・IT1〜IT4 の計画/ふりかえり/完了報告書・リリース完了報告書 0.1 |
+| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | cargo-tracker: **IT4 完了**（累計 35 SP・達成率 100%）・**IT5 計画済み**。**Release 0.1 完了**。リリース計画・開発戦略・IT1〜IT5 の計画・IT1〜IT4 のふりかえり/完了報告書・リリース完了報告書 0.1 |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | `index.md` を整備済み |
 | [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 6 件作成済み（cargo-tracker の設計レビュー・IT1〜IT4 実装レビューを含む） |
 | [ADR](./adr/index.md) | Architecture Decision Records の管理 | cargo-tracker: 6 件作成済み |

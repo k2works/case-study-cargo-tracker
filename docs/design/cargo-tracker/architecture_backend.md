@@ -632,7 +632,11 @@ public class QueryBusRouteCandidateFinder implements RouteCandidateFinder {
         // クエリ型と応答 DTO は shared/contract/query に置く。routingms の型は持ち込まず自 BC の型に変換する
         // 同期問い合わせのタイムアウトは既定 5 秒（Resilience4j の TimeLimiter）。join() で無期限に待たない
         var response = queryGateway.query(
-                new FindRouteCandidatesQuery(spec.origin().code(), spec.destination().code(), spec.arrivalDeadline()),
+                // 貨物種別・除外港・departFrom も渡す。端点と期限だけでは、危険物を運べない
+                // 航海が候補に混ざる（domain-model.md「ドメインサービス：RouteSearchService」）
+                new FindRouteCandidatesQuery(
+                        spec.origin().code(), spec.destination().code(), spec.arrivalDeadline(),
+                        spec.cargoType().name(), excludePortCodes, departFromCode),
                 ResponseTypes.multipleInstancesOf(RouteCandidateDto.class))
                 .orTimeout(5, TimeUnit.SECONDS).join();
         return response.stream().map(RouteCandidate::from).toList();

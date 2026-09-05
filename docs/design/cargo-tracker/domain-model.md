@@ -79,9 +79,11 @@ quadrantChart
 | 航海の検索条件 | Voyage Search Criteria | `VoyageSearchCriteria` | 出発地・目的地・出発期間・貨物種別。空の条件は「指定なし」として扱い、その判断をここ 1 か所に置く（US07） |
 | 経路探索 | Route Search | `RouteSearchService` | 航海グラフから経路候補を探すドメインサービス。状態を変えないので Query 側 |
 | 航海グラフ | Voyage Graph | `VoyageGraph` | 投影 `voyage` / `carrier_movement` から組む探索用の読み取りモデル |
+| 経路の探索条件 | Route Search Specification | `RouteSearchSpecification` | 出発地・目的地・到着期限・貨物種別・除外港・起点（誤配の再設計）。探索の入力を 1 か所にまとめる |
 | 経路 | Transit Path | `TransitPath` | 経路探索が返す 1 本の経路。期限超過日数を持つ |
+| 経路の区間 | Transit Edge | `TransitEdge` | 経路 1 本を構成する 1 区間（航海番号・積込港・荷降港・日時）。`Leg`（Booking の確定旅程）と同じ形だが**別の型**で、探索の結果は確定していない |
 | 貨物種別 | Cargo Type | `CargoType` | 一般貨物・危険物・冷凍冷蔵。**Booking と Routing で別の型**（Routing は航海が受け入れる種別として使う） |
-| 経路候補 | Route Candidate | `RouteCandidate` | 経路仕様を満たす旅程の候補。Routing の読み取りモデル |
+| 経路候補 | Route Candidate | `RouteCandidate` | 経路仕様を満たす旅程の候補。**Booking と Routing で別の型**（`CargoType` と同じ）。Routing 側は探索の結果（`TransitPath` から組む読み取りモデル）、Booking 側は ACL が契約 DTO から変換した自 BC の型で、画面に出すのはこちら |
 | 港湾コード | UN/LOCODE | `UnLocode` | 国連が定める港湾識別コード（例: `JPTYO`）。共有カーネル |
 | 荷主 | Shipper | `Shipper` | 貨物の依頼主。個人または法人。集約ルート |
 | 荷受人 | Consignee | `Consignee` | 貨物を受け取る人 |
