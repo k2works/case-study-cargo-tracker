@@ -68,6 +68,14 @@ function toLocalInput(instant: string): string {
  *
  * <p>更新（/voyages/:no/edit）は US25（IT4）。IT3 は登録だけを作る。</p>
  */
+/** 送信ボタンの文言。更新は差分の確認が先で、登録は送信中を出す。 */
+function submitLabel(isEdit: boolean, isSubmitting: boolean): string {
+  if (isEdit) {
+    return '差分を確認する';
+  }
+  return isSubmitting ? '送信中…' : '登録する';
+}
+
 export function VoyageRegisterPage() {
   const navigate = useNavigate();
   // 経路に航海番号があれば更新（/voyages/:no/edit）。画面 ID は S33 のまま
@@ -385,7 +393,7 @@ export function VoyageRegisterPage() {
           className={BUTTON_PRIMARY}
           disabled={mutation.isPending || diff.isPending}
         >
-          {isEdit ? '差分を確認する' : mutation.isPending ? '送信中…' : '登録する'}
+          {submitLabel(isEdit, mutation.isPending)}
         </button>
 
         {/* 差分を確かめてから更新する。ここで初めて PUT を送る。
