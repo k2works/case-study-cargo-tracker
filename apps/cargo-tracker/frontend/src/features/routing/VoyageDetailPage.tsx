@@ -13,6 +13,7 @@ import {
   TH,
 } from '@/shared/ui/styles';
 import { acceptedCargoTypeLabel, fetchVoyage, formatVoyageTime } from './api';
+import { canUpdateSchedule } from './voyageRules';
 
 /**
  * S34 航海詳細（UC19 / US24・US25）。
@@ -20,8 +21,9 @@ import { acceptedCargoTypeLabel, fetchVoyage, formatVoyageTime } from './api';
  * <p>IT3 のレビューで「登録した中身を確認できない」「重複の案内が指す先が無い」と
  * 指摘された受け皿。更新（S33 の編集）はここから入る。</p>
  *
- * <p><b>更新の導線はキャンセル済みには出さない。</b> 出せるかどうかは集約の不変条件 5
- * と同じ条件で決める。画面が独自に判断を持つと、集約を直したときにここが古くなる。</p>
+ * <p><b>更新の導線はキャンセル済みには出さない。</b> 判定は {@code voyageRules} の述語を
+ * 呼ぶ。画面に条件を書き直すと、集約を直したときにここが古くなる（予約側の
+ * {@code transitions.ts} と同じ形）。</p>
  */
 export function VoyageDetailPage() {
   const { voyageNumber = '' } = useParams();
@@ -91,7 +93,8 @@ export function VoyageDetailPage() {
           </div>
 
           <p className="mt-4 flex gap-4 text-sm">
-            {!data.value.cancelled && (
+            {/* 判定は書き直さず述語を呼ぶ（不変条件 5）。 */}
+            {canUpdateSchedule(data.value) && (
               <Link to={`/voyages/${encodeURIComponent(voyageNumber)}/edit`} className={LINK}>
                 更新する
               </Link>

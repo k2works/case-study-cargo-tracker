@@ -5,7 +5,7 @@ import { ApiError } from '@/shared/api/client';
 import { display, fetchShippers } from '@/features/shippers/api';
 import { ALERT, BUTTON_PRIMARY, CARD, FIELD, LABEL, LINK, PAGE_TITLE } from '@/shared/ui/styles';
 import { bookCargo, type CargoType } from './api';
-import { CargoFields } from './CargoFields';
+import { CargoFields, cargoFieldsPayload } from './CargoFields';
 
 /**
  * S21 予約登録（UC03 / US04）。
@@ -16,6 +16,12 @@ import { CargoFields } from './CargoFields';
  * <p>見積の欄は出さない。見積（US01）が未実装のうちは、選べない欄を置いても
  * 「使えない機能がある」ようにしか見えない。</p>
  */
+/** 荷主は選ぶ（S21）。入力欄が無い修正画面と共通化しないのはこの 1 項目だけ。 */
+function shipperIdOf(form: FormData): string {
+  const value = form.get('shipperId');
+  return typeof value === 'string' ? value : '';
+}
+
 export function BookingRegisterPage() {
   const [cargoType, setCargoType] = useState<CargoType>('GENERAL');
   // 荷主は選ぶ（UI 設計 S21）。識別子を打たせると、営業は一覧を開いて
@@ -32,30 +38,10 @@ export function BookingRegisterPage() {
     setError(null);
     setSubmitting(true);
     const form = new FormData(event.currentTarget);
-    // FormData.get は File も返しうる。String() で包むだけだと
-    // '[object Object]' が業務の値として送られる。文字列のときだけ採る。
-    const text = (name: string) => {
-      const value = form.get(name);
-      return typeof value === 'string' ? value : '';
-    };
     try {
       await bookCargo({
-        shipperId: text('shipperId'),
-        originUnLocode: text('originUnLocode').toUpperCase(),
-        destinationUnLocode: text('destinationUnLocode').toUpperCase(),
-        arrivalDeadline: text('arrivalDeadline'),
-        cargoType,
-        weightKg: text('weightKg'),
-        // 寸法は集約が持つ値。画面が落とすと US04 §受入基準 2 を満たせない。
-        lengthCm: text('lengthCm'),
-        widthCm: text('widthCm'),
-        heightCm: text('heightCm'),
-        quantity: Number(text('quantity')),
-        productName: text('productName'),
-        hazardImoClass: cargoType === 'HAZARDOUS' ? text('hazardImoClass') : undefined,
-        hazardUnNumber: cargoType === 'HAZARDOUS' ? text('hazardUnNumber') : undefined,
-        temperatureMinC: cargoType === 'REFRIGERATED' ? text('temperatureMinC') : undefined,
-        temperatureMaxC: cargoType === 'REFRIGERATED' ? text('temperatureMaxC') : undefined,
+        shipperId: shipperIdOf(form),
+        ...cargoFieldsPayload(form, cargoType),
       });
       // 受け付けただけで一覧にはまだ出ない。一覧側が取り直せるようにしてから移る。
       await queryClient.invalidateQueries({ queryKey: ['bookings'] });

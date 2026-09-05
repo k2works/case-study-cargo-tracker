@@ -144,7 +144,19 @@ public class VoyageUpdateSteps {
 
     @ならば("航海 {string} の船名は {string} のままである")
     public void 船名は変わらない(String voyageNumber, String vesselName) {
+        // **投影が追いつく時間を置いてから見る。** 直後に読むと「まだ反映されて
+        // いないだけ」と区別が付かない。差分の問い合わせが更新まで送る実装に
+        // 壊れても、その瞬間の値は古いままで緑になる。
+        //
+        // 「変わらないこと」は待っても確かめられないので、他のシナリオが更新の
+        // 反映に使っている時間（10 秒の上限に対して実測 1 秒未満）より長く待つ。
+        SharedRoutingSteps.awaitWithin(3,
+                () -> "MOL VOYAGER".equals(detail(voyageNumber).get("vesselName")),
+                "更新が反映されない（差分の問い合わせに副作用が無い）", false);
         assertThat(detail(voyageNumber).get("vesselName")).isEqualTo(vesselName);
+        assertThat(detail(voyageNumber).get("updatedAt"))
+                .as("確かめただけで最終更新が入るなら、差分の問い合わせに副作用がある")
+                .isNull();
     }
 
     @ならば("航海 {string} には最終更新が残っている")

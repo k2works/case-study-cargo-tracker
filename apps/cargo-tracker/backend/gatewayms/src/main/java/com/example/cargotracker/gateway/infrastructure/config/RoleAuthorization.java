@@ -103,14 +103,15 @@ public final class RoleAuthorization {
         return List.copyOf(ordered);
     }
 
-    /** その経路に宣言があるか。無ければ通さない。 */
-    public static boolean isDeclared(String path) {
-        return matching(ANY_METHOD, path).isPresent();
-    }
-
-    /** 宣言されたロールのどれかを持っているか（メソッドを見ない従来の形）。 */
-    public static boolean isAllowed(String path, List<String> roles) {
-        return isAllowed("GET", path, roles);
+    /**
+     * その経路に、そのメソッドの宣言があるか。無ければ通さない。
+     *
+     * <p><b>メソッドを渡す。</b> 決定 6 で認可は（メソッド, 経路）の 2 次元になった。
+     * 経路だけで見ると、書き込みの経路を足しても「読み向けの広い宣言」に当たって
+     * 「宣言がある」と読めてしまう（載せ忘れた書き込みほど無防備になる）。</p>
+     */
+    public static boolean isDeclared(String method, String path) {
+        return matching(method, path).isPresent();
     }
 
     /** 宣言されたロールのどれかを持っているか。 */

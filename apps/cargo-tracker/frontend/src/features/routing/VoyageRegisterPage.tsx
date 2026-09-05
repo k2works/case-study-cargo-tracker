@@ -15,6 +15,7 @@ import {
 } from '@/shared/ui/styles';
 import {
   acceptedCargoTypeLabel,
+  formatVoyageTime,
   diffVoyage,
   fetchVoyage,
   registerVoyage,
@@ -22,6 +23,7 @@ import {
   type AcceptedCargoType,
   type FieldChange,
   type MovementInput,
+  type UpdateVoyageInput,
 } from './api';
 
 const CARGO_TYPES: readonly AcceptedCargoType[] = ['GENERAL', 'HAZARDOUS', 'REEFER'];
@@ -63,11 +65,28 @@ function toLocalInput(instant: string): string {
  * <p>寄港地は順序つきで 1 件以上。<b>港の連結と時刻の前後は集約だけが見る。</b>
  * 画面は必須項目（{@code required}）と入力の形しか見ておらず、繋がっていない
  * 寄港地はサーバの 422 で分かる。同じ判断を 2 か所に置くと片方が古くなるため、
- * 判断はドメインの 1 か所に置いている。送る前に気づける形にするかは US25 で
- * 画面を編集可能にするときに決める。</p>
+ * 判断はドメインの 1 か所に置いている。<b>送る前に気づける形にはしない</b>
+ * （IT4 で決定）。区間番号を載せたエラー文で「どこを直すか」は分かる。</p>
  *
- * <p>更新（/voyages/:no/edit）は US25（IT4）。IT3 は登録だけを作る。</p>
+ * <p>更新（/voyages/:no/edit）もこの画面が兼ねる（ui_design.md の画面一覧どおり
+ * S33 が登録・更新の両方）。更新では差分を確かめてから送る。</p>
  */
+/**
+ * 差分に出す値を、画面の他の場所と同じ言葉にする。
+ *
+ * <p>差分は送信直前のいちばん慎重に読む場面なので、ここだけ列挙名と ISO 時刻が
+ * 出ると読み違える。一覧・詳細と同じ「一般貨物」「2026-09-10 09:00 UTC」に揃える。</p>
+ */
+function displayValue(value: string): string {
+  return value
+    .split(' / ')
+    .map((part) =>
+      part.replace(/(\d{4}-\d{2}-\d{2}T[\d:]+Z)/g, (iso) => formatVoyageTime(iso)),
+    )
+    .map((part) => (/^[A-Z_]+$/.test(part) ? acceptedCargoTypeLabel(part) : part))
+    .join(' / ');
+}
+
 /** 送信ボタンの文言。更新は差分の確認が先で、登録は送信中を出す。 */
 function submitLabel(isEdit: boolean, isSubmitting: boolean): string {
   if (isEdit) {
@@ -140,9 +159,16 @@ export function VoyageRegisterPage() {
   });
 
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
+  const [confirmedPayload, setConfirmedPayload] = useState<UpdateVoyageInput | null>(null);
 
   const diff = useMutation({
-    mutationFn: () => diffVoyage(editing ?? '', payload()),
+    mutationFn: () => {
+      // 確認した内容をそのまま送るために、この時点の入力を控える。
+      // 押した瞬間に組み立て直すと、確認のあとに直した値が黙って送られる。
+      const confirmed = payload();
+      setConfirmedPayload(confirmed);
+      return diffVoyage(editing ?? '', confirmed);
+    },
     onSuccess: (result) => {
       if ('changes' in result) {
         setPendingMessage(null);
@@ -156,17 +182,31 @@ export function VoyageRegisterPage() {
   });
 
   const update = useMutation({
-    mutationFn: () => updateVoyage(editing ?? '', payload()),
+    // 確認した内容をそのまま送る（US25 §受入基準 3）。
+    mutationFn: () => updateVoyage(editing ?? '', confirmedPayload ?? payload()),
     onSuccess: () => navigate(`/voyages/${encodeURIComponent(editing ?? '')}`),
   });
 
+  /**
+   * 入力が変わったら、確認した差分を捨てる。
+   *
+   * <p>残したままにすると「確認した内容」と「送る内容」が食い違い、差分の確認が
+   * 形だけになる。運航変更の入力は、確認のあとにもう一桁直す操作が普通に起きる。</p>
+   */
+  function invalidateConfirmation() {
+    setChanges(null);
+    setConfirmedPayload(null);
+  }
+
   function updateMovement(index: number, patch: Partial<MovementInput>) {
+    invalidateConfirmation();
     setMovements((current) =>
       current.map((movement, at) => (at === index ? { ...movement, ...patch } : movement)),
     );
   }
 
   function toggleCargoType(cargoType: AcceptedCargoType) {
+    invalidateConfirmation();
     setCargoTypes((current) =>
       current.includes(cargoType)
         ? current.filter((type) => type !== cargoType)
@@ -269,7 +309,10 @@ export function VoyageRegisterPage() {
               className={FIELD}
               required
               value={carrierCode}
-              onChange={(event) => setCarrierCode(event.target.value)}
+              onChange={(event) => {
+                invalidateConfirmation();
+                setCarrierCode(event.target.value);
+              }}
             />
           </label>
           <label className={LABEL}>
@@ -278,7 +321,10 @@ export function VoyageRegisterPage() {
               className={FIELD}
               required
               value={carrierName}
-              onChange={(event) => setCarrierName(event.target.value)}
+              onChange={(event) => {
+                invalidateConfirmation();
+                setCarrierName(event.target.value);
+              }}
             />
           </label>
           <label className={LABEL}>
@@ -287,7 +333,10 @@ export function VoyageRegisterPage() {
               className={FIELD}
               required
               value={vesselName}
-              onChange={(event) => setVesselName(event.target.value)}
+              onChange={(event) => {
+                invalidateConfirmation();
+                setVesselName(event.target.value);
+              }}
             />
           </label>
         </div>
@@ -402,14 +451,23 @@ export function VoyageRegisterPage() {
           <div className={`${CARD} mt-2 space-y-2 text-sm`}>
             <h2 className={SECTION_TITLE}>更新の内容</h2>
             {changes.length === 0 ? (
-              <p>変更はありません</p>
+              <>
+                <p>変更はありません</p>
+                <button
+                  type="button"
+                  className="text-sm text-blue-700 underline"
+                  onClick={() => setChanges(null)}
+                >
+                  閉じる
+                </button>
+              </>
             ) : (
               <>
                 <ul className="list-disc pl-5">
                   {changes.map((change) => (
                     <li key={change.label}>
                       <span className="font-medium">{change.label}</span>{' '}
-                      <span>{`${change.before} → ${change.after}`}</span>
+                      <span>{`${displayValue(change.before)} → ${displayValue(change.after)}`}</span>
                     </li>
                   ))}
                 </ul>

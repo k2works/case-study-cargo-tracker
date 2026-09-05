@@ -173,8 +173,8 @@ describe('S32 航海スケジュールの検索', () => {
 
     await userEvent.type(screen.getByLabelText('出発地'), 'JPTYO');
     await userEvent.type(screen.getByLabelText('目的地'), 'USNYC');
-    await userEvent.type(screen.getByLabelText('出発日（開始）'), '2026-09-01');
-    await userEvent.type(screen.getByLabelText('出発日（終了）'), '2026-09-30');
+    await userEvent.type(screen.getByLabelText('出発日（開始・UTC）'), '2026-09-01');
+    await userEvent.type(screen.getByLabelText('出発日（終了・UTC）'), '2026-09-30');
     await userEvent.selectOptions(screen.getByLabelText('対応貨物種別'), 'HAZARDOUS');
     await userEvent.click(screen.getByRole('button', { name: '絞り込む' }));
 
@@ -230,12 +230,20 @@ describe('S32 航海スケジュールの検索', () => {
       Promise.resolve(new Response(JSON.stringify({ items: [], total: 0 }), { status: 200 })),
     );
 
-    renderAt('/voyages-list?cargoType=HAZARDOUS', <VoyageListPage />);
-
-    await waitFor(() =>
-      expect(String(fetchSpy.mock.calls.at(-1)?.[0])).toContain('cargoType=HAZARDOUS'),
+    renderAt(
+      '/voyages-list?cargoType=HAZARDOUS&departure=JPTYO&arrival=USNYC&departTo=2026-12-01',
+      <VoyageListPage />,
     );
+
+    await waitFor(() => {
+      const url = String(fetchSpy.mock.calls.at(-1)?.[0]);
+      expect(url).toContain('cargoType=HAZARDOUS');
+      expect(url).toContain('departure=JPTYO');
+    });
     expect(screen.getByLabelText('対応貨物種別')).toHaveValue('HAZARDOUS');
+    expect(screen.getByLabelText('出発地')).toHaveValue('JPTYO');
+    expect(screen.getByLabelText('目的地')).toHaveValue('USNYC');
+    expect(screen.getByLabelText('出発日（終了・UTC）')).toHaveValue('2026-12-01');
   });
 });
 
@@ -360,10 +368,15 @@ describe('S30 経路設計作業一覧', () => {
 
     renderAt('/routing/worklist', <RoutingWorklistPage />);
 
-    expect(await screen.findByRole('link', { name: '対応する航海を探す' })).toHaveAttribute(
-      'href',
-      '/voyages?cargoType=HAZARDOUS',
-    );
+    // 種別だけでは足りない。行に出ている出発地・目的地・到着期限も引き継がないと、
+    // 経路設計者は毎回 JPTYO / USNYC を打ち直し、打ち間違えれば 0 件を
+    // 「航海が無い」と読む。
+    const link = await screen.findByRole('link', { name: '対応する航海を探す' });
+    const href = link.getAttribute('href') ?? '';
+    expect(href).toContain('cargoType=HAZARDOUS');
+    expect(href).toContain('departure=JPTYO');
+    expect(href).toContain('arrival=USNYC');
+    expect(href).toContain('departTo=2026-12-01');
   });
 
   it('冷凍の予約は航海側の呼び名に翻訳して引き継ぐ', async () => {
@@ -380,10 +393,8 @@ describe('S30 経路設計作業一覧', () => {
 
     renderAt('/routing/worklist', <RoutingWorklistPage />);
 
-    expect(await screen.findByRole('link', { name: '対応する航海を探す' })).toHaveAttribute(
-      'href',
-      '/voyages?cargoType=REEFER',
-    );
+    const link = await screen.findByRole('link', { name: '対応する航海を探す' });
+    expect(link.getAttribute('href') ?? '').toContain('cargoType=REEFER');
   });
 
   it('航海スケジュール一覧へ行ける', async () => {
@@ -562,6 +573,38 @@ describe('S33 航海スケジュール更新', () => {
         fetchSpy.mock.calls.some(([, init]) => (init as RequestInit | undefined)?.method === 'PUT'),
       ).toBe(true),
     );
+  });
+
+  it('差分を出したあとに入力を変えたら、確認をやり直させる', async () => {
+    // 確認した内容と違うものが送られると、差分の確認が形だけになる。
+    // 運航変更の入力はもう一桁直す操作が普通に起きる。
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      const url = String(input);
+      if (url.includes('/diff')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              voyageNumber: 'V-MOL-001',
+              changes: [{ label: '船名', before: 'MOL EXPRESS', after: 'MOL VOYAGER' }],
+            }),
+            { status: 200 },
+          ),
+        );
+      }
+      return Promise.resolve(new Response(JSON.stringify(voyage()), { status: 200 }));
+    });
+
+    renderVoyage('/voyages/V-MOL-001/edit', <VoyageRegisterPage />);
+    await waitFor(() => expect(screen.getByLabelText('船名')).toHaveValue('MOL EXPRESS'));
+    await userEvent.clear(screen.getByLabelText('船名'));
+    await userEvent.type(screen.getByLabelText('船名'), 'MOL VOYAGER');
+    await userEvent.click(screen.getByRole('button', { name: '差分を確認する' }));
+    await screen.findByText('MOL EXPRESS → MOL VOYAGER');
+
+    await userEvent.type(screen.getByLabelText('船名'), ' II');
+
+    expect(screen.queryByRole('button', { name: '更新する' })).not.toBeInTheDocument();
+    expect(screen.queryByText('MOL EXPRESS → MOL VOYAGER')).not.toBeInTheDocument();
   });
 
   it('「キャンセル」を選ぶと更新を送らない', async () => {

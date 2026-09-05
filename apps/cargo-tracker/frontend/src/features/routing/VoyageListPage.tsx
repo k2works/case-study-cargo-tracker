@@ -60,9 +60,13 @@ function toCriteria(form: SearchForm): VoyageSearchInput {
  * 出港してしまった便が混ざると、一覧全体が「これから使える航海」として
  * 信用されなくなる。</p>
  *
- * <p>検索条件（出発地・目的地・期間）は US07（IT4）で入れる。ここに先に置くと
- * 二度手間になる。</p>
+ * <p>検索条件（出発地・目的地・出発期間・対応貨物種別）はこの画面が持つ（US07）。
+ * 条件の解釈はサーバの VoyageSearchCriteria が正典で、ここでは組み立てるだけ。</p>
+ *
+ * <p>S30 から「対応する航海を探す」で来たときは、予約の条件をクエリ文字列で
+ * 受け取って初期値にする。</p>
  */
+
 /**
  * 一覧に出す状態。キャンセルが最優先で、次に出港したかどうかを見る。
  *
@@ -84,7 +88,13 @@ export function VoyageListPage() {
   // 引き継がないと、危険物の予約を見ていた経路設計者が、ここで種別を
   // 選び直すことになり、選び忘れれば対応しない航海まで候補に見える。
   const [params] = useSearchParams();
-  const initial: SearchForm = { ...EMPTY_FORM, cargoType: params.get('cargoType') ?? '' };
+  const initial: SearchForm = {
+    departure: params.get('departure') ?? '',
+    arrival: params.get('arrival') ?? '',
+    departFrom: params.get('departFrom') ?? '',
+    departTo: params.get('departTo') ?? '',
+    cargoType: params.get('cargoType') ?? '',
+  };
   const [form, setForm] = useState<SearchForm>(initial);
   // 「絞り込む」を押したときの条件。入力のたびに問い合わせると、
   // 打っている途中の港で 0 件が出て「無い」と読めてしまう。
@@ -137,11 +147,18 @@ export function VoyageListPage() {
       {/* 条件で絞る（US07）。港湾制約と経路探索は US08。 */}
       <form onSubmit={search} className={`${CARD} mt-4 space-y-3`}>
         <h2 className={SECTION_TITLE}>条件で絞り込む</h2>
+        {/* 端点だけで絞ることを言う。途中の寄港地で探して 0 件が出ると、
+            「その港へ行く便が無い」と読まれる（経路の探索は US08）。 */}
+        <p className="text-sm text-gray-600">
+          始発港と最終港で絞り込みます。途中の寄港地では絞り込めません。
+          出発日は協定世界時（UTC）で判定します。
+        </p>
         <div className="grid gap-3 sm:grid-cols-3">
           <label className={LABEL}>
             <span>出発地</span>
             <input
               className={FIELD}
+              placeholder="JPTYO"
               value={form.departure}
               onChange={(event) => setForm({ ...form, departure: event.target.value })}
             />
@@ -150,6 +167,7 @@ export function VoyageListPage() {
             <span>目的地</span>
             <input
               className={FIELD}
+              placeholder="USNYC"
               value={form.arrival}
               onChange={(event) => setForm({ ...form, arrival: event.target.value })}
             />
@@ -170,7 +188,7 @@ export function VoyageListPage() {
             </select>
           </label>
           <label className={LABEL}>
-            <span>出発日（開始）</span>
+            <span>出発日（開始・UTC）</span>
             <input
               className={FIELD}
               type="date"
@@ -179,7 +197,7 @@ export function VoyageListPage() {
             />
           </label>
           <label className={LABEL}>
-            <span>出発日（終了）</span>
+            <span>出発日（終了・UTC）</span>
             <input
               className={FIELD}
               type="date"

@@ -14,7 +14,24 @@ import {
 } from '@/shared/ui/styles';
 import { formatBusinessDateTime } from '@/shared/api/businessDate';
 import { display } from '@/features/shippers/api';
-import { bookingStatusLabel, cargoTypeLabel } from '@/features/bookings/api';
+import {
+  bookingStatusLabel,
+  cargoTypeLabel,
+  type BookingView,
+  type CargoType,
+} from '@/features/bookings/api';
+
+/**
+ * Booking の種別 → Routing の受入種別。<b>全数の対応表にする。</b>
+ * 「知らないものはそのまま渡す」形にすると、種別が増えたときにその値が
+ * routingms へ渡り「知らない貨物種別です」で断られる。表にしておけば、
+ * 増やした瞬間に型で落ちる。
+ */
+const VOYAGE_CARGO_TYPE: Record<CargoType, string> = {
+  GENERAL: 'GENERAL',
+  HAZARDOUS: 'HAZARDOUS',
+  REFRIGERATED: 'REEFER',
+};
 import { fetchRoutingWorklist } from './api';
 
 /**
@@ -36,7 +53,25 @@ import { fetchRoutingWorklist } from './api';
  * 「知らない貨物種別です」で断られる。</p>
  */
 function voyageCargoTypeOf(cargoType: string): string {
-  return cargoType === 'REFRIGERATED' ? 'REEFER' : cargoType;
+  return VOYAGE_CARGO_TYPE[cargoType as CargoType] ?? cargoType;
+}
+
+/**
+ * 予約の条件をそのまま航海の検索条件にする。
+ *
+ * <p>種別だけを引き継ぐと、経路設計者は行に出ている出発地・目的地・期限を毎回
+ * 打ち直すことになる。打ち間違えれば 0 件が出て「航海が無い」と読む。</p>
+ *
+ * <p>到着期限は「その日までに出る便」の上限として渡す。期限より後に出る便では
+ * 間に合わない。</p>
+ */
+function voyageSearchQuery(item: BookingView): string {
+  return new URLSearchParams({
+    cargoType: voyageCargoTypeOf(item.cargoType),
+    departure: item.originUnLocode,
+    arrival: item.destinationUnLocode,
+    departTo: item.arrivalDeadline,
+  }).toString();
 }
 
 export function RoutingWorklistPage() {
@@ -125,10 +160,7 @@ export function RoutingWorklistPage() {
                         ことになり、選び忘れれば対応しない航海まで候補に見える。
                         危険物・冷凍は Booking と Routing で呼び名が違う
                         （REFRIGERATED / REEFER）ので、ここで翻訳する。 */}
-                    <Link
-                      to={`/voyages?cargoType=${voyageCargoTypeOf(item.cargoType)}`}
-                      className={`${LINK} ml-2`}
-                    >
+                    <Link to={`/voyages?${voyageSearchQuery(item)}`} className={`${LINK} ml-2`}>
                       対応する航海を探す
                     </Link>
                   </td>

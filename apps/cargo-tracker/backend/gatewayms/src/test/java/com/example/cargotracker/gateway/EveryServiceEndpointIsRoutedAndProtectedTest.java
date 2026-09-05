@@ -41,7 +41,13 @@ class EveryServiceEndpointIsRoutedAndProtectedTest {
      * 書き方を見る。</p>
      */
     private static final Pattern ANY_MAPPING = Pattern.compile(
-            "@(?:Request|Get|Post|Put|Delete|Patch)Mapping\\s*\\([^)]*?\"(/api/[^\"]+)\"");
+            "@(Request|Get|Post|Put|Delete|Patch)Mapping\\s*\\([^)]*?\"(/api/[^\"]+)\"");
+
+    /**
+     * クラスに付いた {@code @RequestMapping} と、その中のメソッドに付いた注釈を
+     * 組み合わせるための、書き込みを表す注釈の名前。
+     */
+    private static final List<String> WRITING = List.of("Post", "Put", "Delete", "Patch");
     private static final Pattern ROUTE_PREDICATE =
             Pattern.compile("Path=(/api/[^\\]\\s,]+)");
 
@@ -68,7 +74,7 @@ class EveryServiceEndpointIsRoutedAndProtectedTest {
                 Matcher matcher = ANY_MAPPING.matcher(
                         Files.readString(file, StandardCharsets.UTF_8));
                 while (matcher.find()) {
-                    endpoints.add(matcher.group(1));
+                    endpoints.add(matcher.group(2));
                 }
             }
         }
@@ -135,10 +141,14 @@ class EveryServiceEndpointIsRoutedAndProtectedTest {
     void everyEndpointDeclaresRequiredRoles() throws IOException {
         // 認証だけでは足りない。宣言が無い経路は「認証済みなら誰でも」に
         // なってしまう（IT3 のレビューまで全経路がその状態だった）。
+        //
+        // **メソッドも見る（決定 6）。** 経路だけで見ると、書き込みを足したときに
+        // 読み向けの広い宣言に当たって「宣言がある」と読める。
         List<String> undeclared = serviceEndpoints().stream()
                 .filter(endpoint -> !JwtAuthenticationFilter.isPublic(endpoint + "/x"))
-                .filter(endpoint -> !RoleAuthorization.isDeclared(endpoint)
-                        || !RoleAuthorization.isDeclared(endpoint + "/x"))
+                .filter(endpoint -> METHODS.stream().anyMatch(method ->
+                        !RoleAuthorization.isDeclared(method, endpoint)
+                                || !RoleAuthorization.isDeclared(method, endpoint + "/x")))
                 .toList();
 
         assertThat(undeclared)
@@ -146,9 +156,34 @@ class EveryServiceEndpointIsRoutedAndProtectedTest {
                 .isEmpty();
     }
 
+    /** 実在するメソッド。宣言はこの全部に対して要る。 */
+    private static final List<String> METHODS =
+            List.of("GET", "POST", "PUT", "DELETE", "PATCH");
+
+    @Test
+    @DisplayName("書き込みの経路は、書き込み用の宣言に当たる")
+    void writingEndpointsAreDeclaredForTheirMethod() throws IOException {
+        // 決定 6（宣言はメソッドも見る）を検査に落とす。書き込みが読み向けの
+        // 広い宣言に吸われると、読める人が全員書けることになる。
+        //
+        // 予約の修正（PUT /bookings/{id}）は営業だけ。参照は経路設計・追跡にも
+        // 開いているので、同じ経路でも答えが変わらなければならない。
+        List<String> roleDesigner = List.of("ROLE_ROUTING");
+
+        assertThat(RoleAuthorization.isAllowed("GET", "/api/v1/booking/bookings/b-1", roleDesigner))
+                .as("経路設計者は予約を読める")
+                .isTrue();
+        assertThat(RoleAuthorization.isAllowed("PUT", "/api/v1/booking/bookings/b-1", roleDesigner))
+                .as("経路設計者は予約を書き換えられない")
+                .isFalse();
+    }
+
     @Test
     @DisplayName("宣言が実際にある（検査が空振りしていない）")
-    void thereAreRoleDeclarations() {
-        assertThat(RoleAuthorization.declaredPatterns()).hasSizeGreaterThanOrEqualTo(5);
+    void thereAreRoleDeclarations() throws IOException {
+        // 実数に近い下限にする。5 のままだと、宣言が減っても気づけない。
+        assertThat(RoleAuthorization.declaredPatterns())
+                .hasSizeGreaterThanOrEqualTo(serviceEndpoints().stream().distinct().toList()
+                        .size() / 2);
     }
 }

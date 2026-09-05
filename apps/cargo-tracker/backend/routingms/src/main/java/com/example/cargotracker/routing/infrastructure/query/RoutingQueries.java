@@ -33,12 +33,6 @@ public final class RoutingQueries {
                     ? VoyageSearchCriteria.of(null, null, null, null, null)
                     : criteria;
         }
-
-        /** 条件なしの一覧。既定の絞り込み（出港済み・キャンセルを外す）は残る。 */
-        public static FindVoyagesQuery of(int page, int size, boolean includeFinished) {
-            return new FindVoyagesQuery(page, size, includeFinished,
-                    VoyageSearchCriteria.of(null, null, null, null, null));
-        }
     }
 
     /** 画面に出す航海。 */

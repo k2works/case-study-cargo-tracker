@@ -28,6 +28,39 @@ export interface CargoFieldDefaults {
   readonly temperatureMaxC?: string;
 }
 
+/**
+ * 入力欄から貨物仕様と輸送条件を読み取る。登録（US04）と修正（US32）で共用する。
+ *
+ * <p>入力欄を共通にしても読み取りを写すと、片方にだけ項目を足したときに
+ * 「登録では入れられるのに修正では消える」が戻ってくる。</p>
+ *
+ * <p>{@code FormData.get} は File も返しうる。{@code String()} で包むだけだと
+ * '[object Object]' が業務の値として送られるので、文字列のときだけ採る。</p>
+ */
+export function cargoFieldsPayload(form: FormData, cargoType: CargoType) {
+  const text = (name: string) => {
+    const value = form.get(name);
+    return typeof value === 'string' ? value : '';
+  };
+  return {
+    originUnLocode: text('originUnLocode').toUpperCase(),
+    destinationUnLocode: text('destinationUnLocode').toUpperCase(),
+    arrivalDeadline: text('arrivalDeadline'),
+    cargoType,
+    weightKg: text('weightKg'),
+    // 寸法は集約が持つ値。画面が落とすと US04 §受入基準 2 を満たせない。
+    lengthCm: text('lengthCm'),
+    widthCm: text('widthCm'),
+    heightCm: text('heightCm'),
+    quantity: Number(text('quantity')),
+    productName: text('productName'),
+    hazardImoClass: cargoType === 'HAZARDOUS' ? text('hazardImoClass') : undefined,
+    hazardUnNumber: cargoType === 'HAZARDOUS' ? text('hazardUnNumber') : undefined,
+    temperatureMinC: cargoType === 'REFRIGERATED' ? text('temperatureMinC') : undefined,
+    temperatureMaxC: cargoType === 'REFRIGERATED' ? text('temperatureMaxC') : undefined,
+  };
+}
+
 export function CargoFields({
   cargoType,
   onCargoTypeChange,

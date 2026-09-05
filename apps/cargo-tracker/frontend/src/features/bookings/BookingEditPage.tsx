@@ -5,7 +5,7 @@ import { ApiError } from '@/shared/api/client';
 import { display } from '@/features/shippers/api';
 import { ALERT, BUTTON_PRIMARY, CARD, LINK, NOTICE, PAGE_TITLE } from '@/shared/ui/styles';
 import { fetchBooking, updateBooking, type CargoType } from './api';
-import { CargoFields } from './CargoFields';
+import { CargoFields, cargoFieldsPayload } from './CargoFields';
 import { canUpdateSpecification } from './transitions';
 
 /**
@@ -48,27 +48,8 @@ export function BookingEditPage() {
     setError(null);
     setSubmitting(true);
     const form = new FormData(event.currentTarget);
-    const text = (name: string) => {
-      const value = form.get(name);
-      return typeof value === 'string' ? value : '';
-    };
     try {
-      await updateBooking(bookingId, {
-        originUnLocode: text('originUnLocode').toUpperCase(),
-        destinationUnLocode: text('destinationUnLocode').toUpperCase(),
-        arrivalDeadline: text('arrivalDeadline'),
-        cargoType,
-        weightKg: text('weightKg'),
-        lengthCm: text('lengthCm'),
-        widthCm: text('widthCm'),
-        heightCm: text('heightCm'),
-        quantity: Number(text('quantity')),
-        productName: text('productName'),
-        hazardImoClass: cargoType === 'HAZARDOUS' ? text('hazardImoClass') : undefined,
-        hazardUnNumber: cargoType === 'HAZARDOUS' ? text('hazardUnNumber') : undefined,
-        temperatureMinC: cargoType === 'REFRIGERATED' ? text('temperatureMinC') : undefined,
-        temperatureMaxC: cargoType === 'REFRIGERATED' ? text('temperatureMaxC') : undefined,
-      });
+      await updateBooking(bookingId, cargoFieldsPayload(form, cargoType));
       await queryClient.invalidateQueries({ queryKey: ['booking', bookingId] });
       navigate(`/bookings/${encodeURIComponent(bookingId)}`);
     } catch (e) {
