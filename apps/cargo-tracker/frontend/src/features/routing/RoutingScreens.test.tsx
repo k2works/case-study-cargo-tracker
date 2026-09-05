@@ -535,6 +535,34 @@ describe('S33 航海スケジュール更新', () => {
     expect(screen.getByText('V-MOL-001')).toBeInTheDocument();
   });
 
+  it('読み込み直しても、入力中の値を巻き戻さない', async () => {
+    // 既登録の値を入れるのは 1 度だけ。問い合わせが返るたびに入れ直すと、
+    // 打っている途中の値が既登録の値へ戻る（クラスタ E2E で実際に起きた）。
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify(voyage()), { status: 200 })),
+    );
+
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={['/voyages/V-MOL-001/edit']}>
+          <Routes>
+            <Route path="/voyages/:voyageNumber/edit" element={<VoyageRegisterPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByLabelText('船名')).toHaveValue('MOL EXPRESS'));
+    await userEvent.clear(screen.getByLabelText('船名'));
+    await userEvent.type(screen.getByLabelText('船名'), 'MOL VOYAGER');
+
+    // 画面を離れず、同じ問い合わせが返り直した状況を作る。
+    await client.refetchQueries({ queryKey: ['voyage', 'V-MOL-001'] });
+
+    await waitFor(() => expect(screen.getByLabelText('船名')).toHaveValue('MOL VOYAGER'));
+  });
+
   it('差分を確かめてから更新する', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
       const url = String(input);
