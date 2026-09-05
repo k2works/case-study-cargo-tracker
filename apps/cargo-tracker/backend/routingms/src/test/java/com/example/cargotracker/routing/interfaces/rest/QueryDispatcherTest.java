@@ -23,16 +23,27 @@ import org.junit.jupiter.api.Test;
 class QueryDispatcherTest {
 
     private static QueryDispatcher failingWith(Throwable cause) {
-        return new QueryDispatcher((query, type) -> CompletableFuture.failedFuture(cause));
+        return new QueryDispatcher(new QueryDispatcher.Gateway() {
+            @Override
+            public <R> CompletableFuture<R> query(Object query, Class<R> responseType) {
+                return CompletableFuture.failedFuture(cause);
+            }
+        });
+    }
+
+    private static QueryDispatcher answering(Object answer) {
+        return new QueryDispatcher(new QueryDispatcher.Gateway() {
+            @Override
+            public <R> CompletableFuture<R> query(Object query, Class<R> responseType) {
+                return CompletableFuture.completedFuture(responseType.cast(answer));
+            }
+        });
     }
 
     @Test
     @DisplayName("問い合わせの答えをそのまま返す")
     void returnsTheAnswer() {
-        QueryDispatcher dispatcher =
-                new QueryDispatcher((query, type) -> CompletableFuture.completedFuture("答え"));
-
-        assertThat(dispatcher.query("問い合わせ", String.class)).isEqualTo("答え");
+        assertThat(answering("答え").query("問い合わせ", String.class)).isEqualTo("答え");
     }
 
     @Test
@@ -83,9 +94,12 @@ class QueryDispatcherTest {
     @Test
     @DisplayName("待っているあいだに中断されたら割り込みを立て直す")
     void restoresInterruptFlag() {
-        QueryDispatcher dispatcher = new QueryDispatcher((query, type) -> {
-            Thread.currentThread().interrupt();
-            return new CompletableFuture<>();
+        QueryDispatcher dispatcher = new QueryDispatcher(new QueryDispatcher.Gateway() {
+            @Override
+            public <R> CompletableFuture<R> query(Object query, Class<R> responseType) {
+                Thread.currentThread().interrupt();
+                return new CompletableFuture<>();
+            }
         });
 
         assertThatThrownBy(() -> dispatcher.query("問い合わせ", String.class))

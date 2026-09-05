@@ -42,6 +42,16 @@ class VoyageProjectionIT extends AbstractAxonIntegrationTest {
     @Autowired
     private AttentionItemMapper attentionItems;
 
+    /**
+     * 「今」は本番と同じ時計で決める（BusinessClockConfiguration）。
+     *
+     * <p>{@code Instant.now()} で作ると、テストだけが JVM 既定の時計を見ることになり、
+     * 業務タイムゾーンを変えたときにここだけ食い違う。既定の絞り込み（出港済みを
+     * 外す）はクエリ側が同じ時計で判断している。</p>
+     */
+    @Autowired
+    private java.time.Clock clock;
+
     private static VoyageRegisteredEvent registered(String voyageNumber, List<String> cargoTypes) {
         return new VoyageRegisteredEvent(voyageNumber, "MOL", "商船三井", "MOL EXPRESS",
                 List.of(new VoyageRegisteredEvent.Movement("JPTYO", "SGSIN", DEPART,
@@ -223,7 +233,7 @@ class VoyageProjectionIT extends AbstractAxonIntegrationTest {
     @Test
     @DisplayName("US07: 出発地・目的地で絞れる")
     void filtersByPorts() {
-        Instant future = Instant.now().plusSeconds(30 * 24 * 3600);
+        Instant future = clock.instant().plusSeconds(30 * 24 * 3600);
         String tokyoNewYork = uniqueNumber();
         String tokyoLondon = uniqueNumber();
         projection.on(registeredFrom(tokyoNewYork, "JPTYO", "USNYC", future));
@@ -236,8 +246,8 @@ class VoyageProjectionIT extends AbstractAxonIntegrationTest {
     @Test
     @DisplayName("US07: 出発期間で絞れる")
     void filtersByDeparturePeriod() {
-        Instant soon = Instant.now().plusSeconds(10 * 24 * 3600);
-        Instant later = Instant.now().plusSeconds(60 * 24 * 3600);
+        Instant soon = clock.instant().plusSeconds(10 * 24 * 3600);
+        Instant later = clock.instant().plusSeconds(60 * 24 * 3600);
         String early = uniqueNumber();
         String late = uniqueNumber();
         projection.on(registeredFrom(early, "JPTYO", "USNYC", soon));

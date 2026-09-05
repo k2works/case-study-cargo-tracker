@@ -318,8 +318,8 @@ class CargoTest {
     @Test
     @DisplayName("US32: 経路提案中より先へ進んだ予約は修正できない")
     void rejectsUpdateAfterRoutingRequested() {
-        // 判定は遷移表の述語を呼ぶ。ここで if (status == PRELIMINARY) と書くと、
-        // 状態が増えたときに集約と遷移表の判断が食い違う。
+        // 判定は遷移表の述語を呼ぶ。集約の側で状態を直に比べると、状態が増えた
+        // ときに集約と遷移表の判断が食い違う。
         fixture.given().events(booked(), new RoutingRequestedEvent("B-0001", "sales01"))
                 .when().command(update(corrected(), route()))
                 .then().exceptionSatisfies(e ->

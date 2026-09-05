@@ -25,9 +25,8 @@ public class QueryDispatcher {
     private static final long TIMEOUT_SECONDS = 5;
 
     /** 問い合わせの送出。テストから差し替えられるように切り出す。 */
-    @FunctionalInterface
     interface Gateway {
-        CompletableFuture<?> query(Object query, Class<?> responseType);
+        <R> CompletableFuture<R> query(Object query, Class<R> responseType);
     }
 
     private final Gateway gateway;
@@ -36,7 +35,12 @@ public class QueryDispatcher {
     // 明示しないと既定コンストラクタを探しに行き、起動時に落ちる。
     @Autowired
     public QueryDispatcher(QueryGateway queryGateway) {
-        this(queryGateway::query);
+        this(new Gateway() {
+            @Override
+            public <R> CompletableFuture<R> query(Object query, Class<R> responseType) {
+                return queryGateway.query(query, responseType);
+            }
+        });
     }
 
     QueryDispatcher(Gateway gateway) {
@@ -45,8 +49,7 @@ public class QueryDispatcher {
 
     public <T> T query(Object query, Class<T> responseType) {
         try {
-            return responseType.cast(
-                    gateway.query(query, responseType).get(TIMEOUT_SECONDS, TimeUnit.SECONDS));
+            return gateway.query(query, responseType).get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             // 飲み込むと上位が止まれない。
             Thread.currentThread().interrupt();
