@@ -125,4 +125,27 @@ class QueryBusRouteCandidateFinderTest {
                 .find(request()))
                 .isInstanceOf(BusinessRuleViolation.class);
     }
+
+    @Test
+    @DisplayName("起点を指定しないときは departFrom を空にして送る")
+    void omitsDepartFromWhenNotGiven() {
+        Object[] captured = new Object[1];
+        var finder = new QueryBusRouteCandidateFinder(
+                dispatcherReturning(new RouteCandidatesResponse(List.of(), false), captured));
+
+        finder.find(new RouteSearchRequest(Location.of("JPTYO"), Location.of("USNYC"),
+                LocalDate.of(2026, 12, 1), CargoType.GENERAL, List.of(), null));
+
+        assertThat(((FindRouteCandidatesQuery) captured[0]).departFromUnLocode()).isNull();
+    }
+
+    @Test
+    @DisplayName("応答が無いのは 0 件ではない（空リストにしない）")
+    void nullResponseIsNotEmpty() {
+        Object[] captured = new Object[1];
+        var finder = new QueryBusRouteCandidateFinder(dispatcherReturning(null, captured));
+
+        assertThatThrownBy(() -> finder.find(request()))
+                .isInstanceOf(RouteCandidateFinder.RouteSearchUnavailable.class);
+    }
 }
