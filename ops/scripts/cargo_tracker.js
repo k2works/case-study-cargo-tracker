@@ -311,6 +311,27 @@ function waitForApiServer(seconds = 180) {
   throw new Error(`API server が ${seconds} 秒のあいだ応答しません`);
 }
 
+/** kind クラスタを作成または起動し、kubectl の context を使える状態にする。 */
+function ensureKindCluster() {
+  const clusters = (() => {
+    try {
+      return sh('kind get clusters');
+    } catch {
+      return '';
+    }
+  })();
+  if (!clusters.split('\n').includes(KIND_CLUSTER)) {
+    console.log(sh(`kind create cluster --name ${KIND_CLUSTER}`, { stdio: 'inherit' }) ?? '');
+  } else {
+    startNodes();
+    waitForApiServer();
+  }
+  // クラスタがあっても kubeconfig に context が無いことがある（作成を途中で
+  // 止めた、別の kubeconfig で作った、他のツールに current-context を奪われた）。
+  // context は何度書き出しても同じものになるので、存在を確かめずに毎回書く。
+  sh(`kind export kubeconfig --name ${KIND_CLUSTER}`);
+}
+
 export default function (gulp) {
   /**
    * MkDocs の出力（site/）をポータル配下へ置く。
@@ -371,25 +392,7 @@ export default function (gulp) {
 
   /** kind クラスタを作る。既にあれば作り直さない。 */
   gulp.task('k8s:up', (done) => {
-    const clusters = (() => {
-      try {
-        return sh('kind get clusters');
-      } catch {
-        return '';
-      }
-    })();
-    if (!clusters.split('\n').includes(KIND_CLUSTER)) {
-      console.log(sh(`kind create cluster --name ${KIND_CLUSTER}`, { stdio: 'inherit' }) ?? '');
-    } else {
-      startNodes();
-      waitForApiServer();
-    }
-    // クラスタがあっても kubeconfig に context が無いことがある（作成を途中で
-    // 止めた、別の kubeconfig で作った、他のツールに current-context を奪われた）。
-    // context は何度書き出しても同じものになるので、存在を確かめずに毎回書く。
-    // ここを飛ばすと apply が `context "kind-..." does not exist` で落ち、
-    // クラスタが無いのか context が無いのかが読み取れない。
-    sh(`kind export kubeconfig --name ${KIND_CLUSTER}`);
+    ensureKindCluster();
     console.log(sh(`kubectl --context kind-${KIND_CLUSTER} apply -k ${OVERLAY}`));
     done();
   });
@@ -408,6 +411,7 @@ export default function (gulp) {
     // Axon Server は評価版なので取り直す。ノードに残った古いイメージで起動すると、
     // ライセンス切れで全サービスが繋がらなくなる（見えるのは「投影が進まない」）。
     console.log(`[1/${total}] ${axonServerImage()}（評価版なので毎回取り直す）`);
+    ensureKindCluster();
     pullAxonServerIntoNode();
     services.forEach((name, i) => {
       console.log(`[${i + 2}/${total}] cargo-tracker/${name}:latest`);
