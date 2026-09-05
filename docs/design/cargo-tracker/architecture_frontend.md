@@ -171,7 +171,7 @@ export const commandClient = {
 | 見積作成 | `/quotations/new` | 営業 | `CreateQuotationCommand` | 202 + 後追い |
 | 予約一覧 / 登録 / 詳細 | `/bookings`, `/bookings/new`, `/bookings/:id` | 営業、経路設計、追跡 | `FindCargoSummariesQuery`, `BookCargoCommand`, `ConfirmBookingCommand` ほか | 202 + 後追い。状態遷移は送信中表示。誤配バナーと通知履歴（`ShipperNotifiedEvent`） |
 | 経路設計作業一覧 | `/routing/worklist` | 経路設計 | `FindRoutingWorklistQuery` | ポーリング |
-| 経路設計（候補選択） | `/routing/bookings/:id` | 経路設計 | `GET /api/v1/booking/bookings/:id/route-candidates`（`departFrom` 指定で誤配の再設計。`overdueDays` を含む）, `AssignRouteCommand` | 候補算出は同期。確定は送信中表示 |
+| 経路設計（候補選択） | `/routing/bookings/:id` | 経路設計 | `GET /api/v1/booking/bookings/:id/route-candidates`（`departFrom` 指定で誤配の再設計。`overdueDays` を含む）, `POST /api/v1/booking/bookings/:id/route`（`AssignRouteCommand`） | 候補算出は同期。確定は送信中表示 |
 | 航海スケジュール一覧 / 登録 / 更新 | `/voyages` | 経路設計 | `FindVoyagesQuery`, `RegisterVoyageCommand` | invalidate |
 | 追跡一覧 / 詳細 | `/tracking`, `/tracking/:trackingNumber` | 追跡、荷主（自社のみ） | `FindTrackingQuery`, `UpdateTransportStatusCommand` | ポーリング。手動更新は楽観的更新 |
 | 自社予約一覧 / 進み具合 | `/shipper/bookings`, `/shipper/bookings/:id` | 荷主 | `FindShipperBookingsQuery`, `FindShipperBookingProgressQuery` | ポーリング。状態・進み具合・確定旅程・通知履歴のみ（金額・社内メモ無し） |

@@ -107,6 +107,7 @@ nav:
           - イテレーション計画 4: development/cargo-tracker/iteration_plan-4.md
           - イテレーション 4 ふりかえり: development/cargo-tracker/retrospective-4.md
           - イテレーション 4 完了報告書: development/cargo-tracker/iteration_report-4.md
+          - イテレーション計画 5: development/cargo-tracker/iteration_plan-5.md
   - 運用:
       - 概要: operation/index.md
       - cargo-tracker:

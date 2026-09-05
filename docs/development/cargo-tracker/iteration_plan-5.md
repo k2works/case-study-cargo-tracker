@@ -36,9 +36,9 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-05T06:00:00Z }
 - [ ] `TZ=UTC ./gradlew build` が緑（JaCoCo の層別閾値を含む）
 - [ ] フロントの `npm run test`・`npx tsc -b`・`npm run build` が緑
 - [ ] `./gradlew :acceptance-tests:test` が緑
-- [ ] **契約テストで `FindRouteCandidatesQuery` の往復を確かめた**（ゴールデン一致ではなく、bookingms と routingms を同じ JVM に起動して実際に届くこと。IT3 の R.1 と同じ形）
+- [ ] **契約テストで `FindRouteCandidatesQuery` の「ゴールデン一致」と「往復」を両方置いた**（[テスト戦略](../../design/cargo-tracker/test_strategy.md) は契約イベント・コマンド・**クエリごと**に丸ごと一致を求める）。往復は bookingms と routingms を同じ JVM に起動して実際に届くことで確かめる（IT3 の R.1 と同じ形）。**ゴールデンは壊して赤を見る**
 - [ ] **routingms が落ちているときの振る舞いを検査した**（`NoHandlerForQueryException` → 503。黙って 0 件にしない）
-- [ ] **クラスタ E2E を Day 8 に 1 度、クローズ前にもう 1 度回した**（IT4 の T3）
+- [ ] **クラスタ E2E を Day 9 に 1 度、クローズ前にもう 1 度回した**（IT4 の T3）
 - [ ] **「確認してから送る」を作ったら、確認のあとに入力を変える経路を赤で固定した**（IT4 の T1）
 - [ ] **不変条件を足すときは「据え置き（変えない）」をテストに入れた**（IT4 の T2）
 - [ ] **層別カバレッジと SonarQube をストーリー完了ごとに 1 度回した**（IT4 の T4）
@@ -56,7 +56,7 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-05T06:00:00Z }
 | ID | ストーリー | SP | 対応 UC | サービス |
 | :--- | :--- | :--: | :--- | :--- |
 | US08 | 経路候補を算出する | 6 | UC06 | routingms（探索）+ bookingms（ACL・画面） |
-| US09 | 経路を選択・確定する | 4 | UC07・UC09 | bookingms |
+| US09 | 経路を選択・確定する | 4 | UC07 | bookingms |
 | | **合計** | **10** | | |
 
 ### ストーリー詳細
@@ -74,11 +74,14 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-05T06:00:00Z }
 | 期限の比較 | **日付単位**。期限当日着は間に合う（IT4 で `Voyage` に入れたのと同じ判断） |
 | 貨物種別 | `acceptedCargoTypes` に含む航海だけを通す |
 | 出港済み | 探索の対象から外す（S32 の既定と同じ理由。走らない船を候補に出さない） |
+| キャンセル済み | 探索の対象から外す（`cancelled = TRUE` は既存の一覧でも外している。IT4 の不変条件 5 と同じ理由で「走らない船」） |
 | 期限超過 | `departFrom` 指定のときだけ返す（誤配の再設計・US28 は IT11）。通常は返さない |
 | 推奨順 | 所要時間の短い順。**直行便は最優先**（受入基準 5） |
 | 候補 0 件 | 空リストを返す。エラーにしない。**「探索できなかった」と「候補が無い」を言い分ける**のは画面と Controller の責務 |
 
 **費用は算出しません。** 受入基準 3 の「費用」は US21（料金算出・IT13）が正典で、現時点で料金表がありません。**候補に費用欄を出さないことを受入基準の未達として記録します**（数を合わせるために「完了」にしません）。所要日数・経由港・航海番号は出します。
+
+**同じ理由で US09 §受入基準 1 の「費用」も未達です。** 候補一覧は US08 が作るものを US09 が使うので、片方だけ満たすことはありません。両方を未達として記録します。
 
 #### US09 経路を選択・確定する（4 SP）
 
@@ -152,7 +155,7 @@ package "shared/contract/query" {
 
 package "bookingms" {
   interface RouteCandidateFinder <<ACL ポート>> {
-    + find(spec: RouteSpecification): List<BookingRouteCandidate>
+    + find(spec: RouteSpecification): List<RouteCandidate>
   }
   class QueryBusRouteCandidateFinder <<ACL 実装>>
   class Cargo <<Aggregate Root>> {
@@ -205,37 +208,42 @@ title IT5 が読み書きする投影
 entity "voyage（routing・読むだけ）" as v {
   * voyage_number: VARCHAR(20) <<PK>>
   --
-  cancelled: BOOLEAN
-  departure_at: TIMESTAMPTZ
+  cancelled: BOOLEAN NOT NULL
+  departure_at: TIMESTAMPTZ NOT NULL
 }
 entity "carrier_movement（routing・読むだけ）" as cm {
   * voyage_number: VARCHAR(20) <<PK>> <<FK>>
   * movement_seq: INTEGER <<PK>>
   --
-  departure_unlocode: VARCHAR(5)
-  arrival_unlocode: VARCHAR(5)
-  departure_at: TIMESTAMPTZ
-  arrival_at: TIMESTAMPTZ
+  departure_unlocode: VARCHAR(5) NOT NULL
+  arrival_unlocode: VARCHAR(5) NOT NULL
+  departure_at: TIMESTAMPTZ NOT NULL
+  arrival_at: TIMESTAMPTZ NOT NULL
 }
 entity "voyage_accepted_cargo_type（routing・読むだけ）" as vt {
   * voyage_number: VARCHAR(20) <<PK>> <<FK>>
-  * cargo_type: VARCHAR(20) <<PK>>
+  * cargo_type: VARCHAR(30) <<PK>>
 }
 entity "cargo_summary（booking）" as cs {
   * booking_id: VARCHAR(36) <<PK>>
   --
-  routing_status: VARCHAR(20)
+  ' 探索条件はここから組む（集約から読まない）
+  origin_unlocode: VARCHAR(5) NOT NULL
+  destination_unlocode: VARCHAR(5) NOT NULL
+  arrival_deadline: DATE NOT NULL
+  cargo_type: VARCHAR(30) NOT NULL
+  routing_status: VARCHAR(30) NOT NULL
   updated_at: TIMESTAMPTZ
 }
 entity "cargo_leg（booking・**本 IT で初めて書く**）" as cl {
   * booking_id: VARCHAR(36) <<PK>> <<FK>>
   * leg_seq: INTEGER <<PK>>
   --
-  voyage_number: VARCHAR(20)
-  load_unlocode: VARCHAR(5)
-  unload_unlocode: VARCHAR(5)
-  load_at: TIMESTAMPTZ
-  unload_at: TIMESTAMPTZ
+  voyage_number: VARCHAR(20) NOT NULL
+  load_unlocode: VARCHAR(5) NOT NULL
+  unload_unlocode: VARCHAR(5) NOT NULL
+  load_at: TIMESTAMPTZ NOT NULL
+  unload_at: TIMESTAMPTZ NOT NULL
 }
 
 v ||--o{ cm
@@ -254,12 +262,12 @@ state "経路設計" as routing {
   S30_作業一覧 --> S31_ワークベンチ : 予約番号を押す
   S31_ワークベンチ --> S31_ワークベンチ : 候補を算出する
   S31_ワークベンチ --> S22_予約詳細 : 経路を確定する
-  S31_ワークベンチ --> S32_航海一覧 : 対応する航海を探す（IT4）
+  S30_作業一覧 --> S32_航海一覧 : 対応する航海を探す（IT4）
 }
 @enduml
 ```
 
-**S31 経路設計ワークベンチが新規です。** [UI 設計](../../design/cargo-tracker/ui_design.md) の画面一覧には既にありますが、節（salt）がありません。実装と同時に描きます。
+**S31 経路設計ワークベンチが新規実装です。** [UI 設計](../../design/cargo-tracker/ui_design.md) には節も salt もあります（新規作成ではなく改訂）。IT4 までは S30 から S22 を開いていました。
 
 ### API 設計
 
@@ -270,9 +278,13 @@ state "経路設計" as routing {
 
 **候補の REST は bookingms に置きます。** [バックエンドアーキテクチャ](../../design/cargo-tracker/architecture_backend.md) が「bookingms の Controller が ACL を通して問い合わせる」と決めているためです。フロントエンドアーキテクチャに `/api/v1/routing/route-candidates` と書かれているのは食い違いなので、正典（バックエンド側）に合わせて直します（下記「設計への反映が必要な事項」1）。
 
-**予約 ID を経路に含めます。** 候補は「その予約の経路仕様に対する候補」なので、条件を画面から組み立てて送るのではなく、集約が持つ経路仕様をサーバが使います。画面が条件を組むと、予約の期限を直したのに古い期限で探すことが起きます。
+**予約 ID を経路に含めます。** 候補は「その予約の経路仕様に対する候補」なので、条件を画面から組み立てて送りません。画面が条件を組むと、予約の期限を直したのに古い期限で探すことが起きます。
+
+**条件は `cargo_summary` から組みます**（`origin_unlocode`・`destination_unlocode`・`arrival_deadline`・`cargo_type`）。候補算出は Query 側なので、集約を読み出しません。`Cargo` は経路仕様をフィールドに持たない（IT4 時点では `arrivalDeadline` だけ）ので、集約から取ろうとすると経路仕様を集約に足す変更が要ります。**それは US10（条件調整・IT6）の仕事**で、本 IT では投影を読みます。
 
 **新しい経路を足したら `RoleAuthorization` の宣言表にも足します**（[ADR-0006](../../adr/cargo-tracker/0006-role-authorization-at-the-gateway.md) 決定 6）。どちらも `/api/v1/booking/bookings/**` に含まれますが、**経路設計者だけに絞る宣言**が要ります（`GET /bookings/{id}` は営業・追跡にも開いているため）。IT4 の `PUT /bookings/{id}` と同じ形です。
+
+**宣言の順序を先に決めます**（IT4 レビューの懸念 8・ふりかえりの T5）。`/bookings/*` は `/bookings/routing-worklist` にも当たるので、**細かい経路を先に置きます**。`POST /bookings/{id}/route` は `/bookings/*/routing-request` と同じ形なので、既存の並びのすぐ隣に置きます。
 
 ### 契約への影響
 
@@ -284,6 +296,7 @@ state "経路設計" as routing {
 | 落ちているとき | `NoHandlerForQueryException` → 503。**黙って 0 件にしない**（「候補が無い」と読まれる） |
 | 呼ぶ場所 | Controller のみ。Reaction Handler からは呼ばない（Processing Group が止まる） |
 | 型の持ち込み | しない。ACL が契約 DTO から自 BC の型へ変換する |
+| DTO の中身 | **文字列・数値・日時だけ**。識別子型（`VoyageNumber`）と列挙型（`CargoType`）は共有カーネルに置かない決まりなので、各 BC で組み直す（`TransitEdge` をそのまま写さない） |
 
 ### ADR
 
@@ -299,11 +312,13 @@ state "経路設計" as routing {
 
 | # | 反映先 | 内容 | 状態 |
 | :--- | :--- | :--- | :--- |
-| 1 | `architecture_frontend.md` | 経路候補の REST が `/api/v1/routing/route-candidates` になっている。バックエンド側の正典（bookingms の Controller が ACL 経由）と食い違う。`/api/v1/booking/bookings/:id/route-candidates` に直す | 開始準備で反映 |
-| 2 | `domain-model.md` 要素表 | `RouteCandidate` が Routing の読み取りモデルとして 1 行しかないが、bookingms 側にも同名の型が要る（ACL の変換先）。`CargoType` と同じく**BC ごとに別の型**であることを明記する | 開始準備で反映 |
-| 3 | `ui_design.md` 全体遷移図・S30・S22 節 | IT4 の導線（S34 航海詳細・S24 予約修正・S30 の引き渡し列）に追いついていない（IT4 引き継ぎ 4） | 開始準備で反映 |
-| 4 | `ui_design.md` S31 節 | 経路設計ワークベンチの salt（候補一覧・0 件の案内・確定ボタン） | 実装と同時 |
-| 5 | `data-model.md` | `cargo_leg` は定義済み。**本 IT が初めて書く**ことと、再設計時に全行入れ替えである旨は記載済み。追加なし | 反映不要 |
+| 1 | `architecture_frontend.md`・`ui_design.md` S31 | 経路候補の REST が `/api/v1/routing/route-candidates` になっていた。バックエンド側の正典（bookingms の Controller が ACL 経由）と食い違う。両方を `/api/v1/booking/bookings/:id/route-candidates` に直し、確定の REST も明記する | **反映済み**（8e2593fac ほか） |
+| 2 | `domain-model.md` 要素表 | `RouteCandidate` が Routing の読み取りモデルとして 1 行しかないが、bookingms 側にも同名の型が要る（ACL の変換先）。`CargoType` と同じく**BC ごとに別の型**であることを明記する | **反映済み**（8e2593fac） |
+| 3 | `ui_design.md` 全体遷移図・S30・S22 節 | IT4 の導線（S34 航海詳細・S24 予約修正・S30 の引き渡し列）に追いついていない（IT4 引き継ぎ 4） | **反映済み**（8e2593fac）。R.3 はこれで消化 |
+| 4 | `ui_design.md` S31 節 | **既存節の改訂**（新規作成ではない）。候補一覧から**概算（費用）の列を外す**（US21・IT13 まで出せない）、航海番号の列を足す、0 件と 503 の言い分け・打ち切りの表示を書く | **反映済み**（概算列・言い分け・打ち切り） |
+| 4-2 | `architecture_backend.md` | `FindRouteCandidatesQuery` の引数が端点と期限の 3 つしかない。貨物種別で絞れないと、危険物を運べない航海が候補に混ざる。`cargoType`・`excludePorts`・`departFrom` を足す | **反映済み** |
+| 4-3 | `domain-model.md` 要素表 | `RouteSearchSpecification` と `TransitEdge` が載っていない | **反映済み** |
+| 5 | `data-model.md` | `cargo_leg` の定義は済んでいるが、**マイグレーションがまだ無い**（bookingms は V007 まで）。`V008__create_cargo_leg.sql` を Day 7 に作る | 実装（Day 7） |
 | 6 | `domain-model.md` Voyage のコマンド表 | `CancelVoyageCommand` は表にあるが実装が無い（IT4 で `VoyageCancelledEvent` だけ先に置いた）。引き継ぎ枠で実装する | 引き継ぎ枠 |
 
 ## スケジュール
@@ -316,7 +331,7 @@ state "経路設計" as routing {
 | :--- | :--- | :--- | :--- |
 | R.1 | **航海キャンセル**（`CancelVoyageCommand` + REST + S34 のボタン）。不変条件 5 への到達手段がイベントの直接適用しかない | IT4 引き継ぎ 1（高） | 3h |
 | R.2 | **US32 §受入基準 4「何を変えたか」の読み口**。記録はあるが誰にも見えない | IT4 引き継ぎ 2（高） | 3h |
-| R.3 | `ui_design.md` の全体遷移図・S30・S22 節を IT4 の導線に合わせる | IT4 引き継ぎ 4 | 2h |
+| R.3 | ~~`ui_design.md` の全体遷移図・S30・S22 節を IT4 の導線に合わせる~~ | IT4 引き継ぎ 4 | **開始準備で消化済み**（8e2593fac） |
 | R.4 | `QueryDispatcher` の重複を寄せるか決め、ADR かコメントに残す | IT4 引き継ぎ 3 | 2h |
 | R.5 | `POST /diff` の理由を ADR-0006 に一行足す | IT4 引き継ぎ 7 | 0.5h |
 | R.6 | 検査コードの未使用要素を棚卸しする（IT4 の T7） | IT4 引き継ぎ 14 | 2h |
@@ -345,14 +360,14 @@ state "経路設計" as routing {
 | 2 | `VoyageGraph`・`TransitEdge`・`TransitPath`・`RouteSearchSpecification`（値オブジェクトの単体。**期限は日付単位・当日着は間に合う**を赤で固定） |
 | 3 | `RouteSearchService.findCandidates`（接続・種別・出港済み・打ち切り・推奨順・直行便優先。**候補 0 件は例外にしない**） |
 | 4 | `FindRouteCandidatesQuery` の `@QueryHandler` と `VoyageGraph` の組み立て（投影から）。契約テストで往復を確かめる |
-| 5 | bookingms の ACL（ポート・実装・タイムアウト・503）と Controller、S31 の候補表示 |
+| 5 | bookingms の ACL（ポート・実装・タイムアウト・503）と Controller、S31 の候補表示。**S30 の行リンクを `/bookings/:id` から `/routing/bookings/:id` に切り替え**、到達性のテストを更新する（IT4 までは S31 が無いので S22 を開いていた） |
 
 ### Day 6-8: US09 経路を選択・確定する（4 SP）
 
 | Day | 内容 |
 | :--- | :--- |
 | 6 | `CargoItinerary`・`Leg` の不変条件 4（連結・時刻昇順）と `RouteSpecification.isSatisfiedBy`（不変条件 5） |
-| 7 | `Cargo.assignRoute` と `AssignRouteCommand` → `CargoRoutedEvent`、`cargo_leg` の投影（全行入れ替え） |
+| 7 | `Cargo.assignRoute` と `AssignRouteCommand` → `CargoRoutedEvent`、**`V008__create_cargo_leg.sql`** と `cargo_leg` の投影（全行入れ替え） |
 | 8 | S31 の確定（送信中表示・確定後は S22 へ）、REST と認可の宣言 |
 
 ### Day 9: クラスタ E2E（1 回目）
@@ -379,12 +394,12 @@ state "経路設計" as routing {
 
 | 区分 | 見積 |
 | :--- | :--- |
-| 引き継ぎ枠（SP 対象外） | 12.5h |
+| 引き継ぎ枠（SP 対象外） | 10.5h（R.3 は開始準備で消化） |
 | US08（6 SP） | 32h |
 | US09（4 SP） | 22h |
 | クラスタ E2E・受け入れ・マニュアル | 14h |
 | クローズ | 16h |
-| **合計** | **96.5h** |
+| **合計** | **94.5h** |
 
 ## リスクと対策
 
@@ -400,17 +415,20 @@ state "経路設計" as routing {
 
 ### Definition of Done
 
-- [ ] US08・US09 の受入基準（`user_story.md`）を満たす。**ただし US08 §受入基準 3 の「費用」は未達**（US21・IT13 が前提。理由を完了報告書に記録）
+- [ ] US08・US09 の受入基準（`user_story.md`）を満たす。**ただし US08 §受入基準 3 と US09 §受入基準 1 の「費用」は未達**（US21・IT13 が前提。料金表が無い。理由を完了報告書に記録）
 - [ ] デモ項目の受け入れテストがすべて緑。**対応はテスト名でなく本文のアサーションで確かめる**
 - [ ] 引き継ぎ枠 R.1〜R.6 が返済されている、または「落とす順序」に従って送った理由がふりかえりに書かれている
 - [ ] **R.1・R.2（IT4 の高 2 件）が返済されている**
 - [ ] 本 IT で足した検査を壊して赤を見た
+- [ ] **`cargo_leg` の投影テストは行を丸ごと比べた**（列ごとに積み上げない。IT3 でヘッダだけ比べていた欠陥・IT4 で差分に同じ規律を入れた経緯）。**再設計で行が増えないこと**も含める
 - [ ] **契約クエリの往復を、同じ JVM に 2 サービスを起動して確かめた**
 - [ ] **routingms が落ちているときに 503 になり、0 件と区別できることを検査した**
 - [ ] **探索の打ち切りに当たったことが画面に出ることを検査した**
 - [ ] `./gradlew build` が緑・`TZ=UTC ./gradlew cleanTest test` が緑
 - [ ] フロントの `npm run test`・`npx tsc -b`・`npm run build` が緑
 - [ ] **新しい経路が `RoleAuthorization` にメソッド込みで宣言され、そのロール以外は 403 になることを検査した**
+- [ ] **宣言の順序を確かめた**（IT4 の T5）。`GET /bookings/*/route-candidates` と `POST /bookings/*/route` は、いずれも `/bookings/**`（営業・経路設計・追跡）より**前**に置かないと広い宣言に吸われる。とくに **`GET` は既存の広い宣言と同じメソッドなので、順序でしか絞れない**
+- [ ] **候補算出と経路確定が、営業・追跡のどちらのロールでも 403 になることを検査した**（経路設計者だけ）
 - [ ] UI 設計・navbar・ダッシュボード・到達性テストの 4 点が一致している。**S31 は一覧から開く画面なのでサイドナビに載せない**
 - [ ] 追加した画面を、**そのロールで実際に 1 回開いた**
 - [ ] **kind クラスタで動く**：イメージを作り直して載せ直し、全 Pod が Ready
