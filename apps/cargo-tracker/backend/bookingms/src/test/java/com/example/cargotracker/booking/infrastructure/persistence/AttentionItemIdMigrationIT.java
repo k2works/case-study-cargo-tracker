@@ -39,6 +39,9 @@ class AttentionItemIdMigrationIT extends AbstractAxonIntegrationTest {
                 1, 32)
             """;
 
+    /** 発生時刻は固定する。テストが実時計を読むと、実行した時刻で結果が変わる。 */
+    private static final Instant OCCURRED_AT = Instant.parse("2026-09-05T00:00:00Z");
+
     @Autowired
     private DataSource dataSource;
 
@@ -78,7 +81,7 @@ class AttentionItemIdMigrationIT extends AbstractAxonIntegrationTest {
                 + "assigned_role, reason, payload, occurred_at) "
                 + "VALUES (?, ?, ?, ?, ?, ?, '{}'::jsonb, ?)",
                 expected, kind, "SHIPPER", targetId, "ROLE_SALES", reason,
-                java.sql.Timestamp.from(Instant.now()));
+                java.sql.Timestamp.from(OCCURRED_AT));
 
         Integer found = jdbc.queryForObject(
                 "SELECT count(*) FROM attention_item WHERE item_id = ?", Integer.class, expected);

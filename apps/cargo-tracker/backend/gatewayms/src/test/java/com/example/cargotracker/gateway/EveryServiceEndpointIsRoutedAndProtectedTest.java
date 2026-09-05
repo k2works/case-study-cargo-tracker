@@ -41,13 +41,19 @@ class EveryServiceEndpointIsRoutedAndProtectedTest {
      * 書き方を見る。</p>
      */
     private static final Pattern ANY_MAPPING = Pattern.compile(
-            "@(Request|Get|Post|Put|Delete|Patch)Mapping\\s*\\([^)]*?\"(/api/[^\"]+)\"");
+            "@(?:Request|Get|Post|Put|Delete|Patch)Mapping\\s*\\([^)]*?\"(/[^\"]*)\"");
 
     /**
-     * クラスに付いた {@code @RequestMapping} と、その中のメソッドに付いた注釈を
-     * 組み合わせるための、書き込みを表す注釈の名前。
+     * クラスに付いた {@code @RequestMapping}。メソッド側は
+     * {@code @PutMapping("/{bookingId}")} のように<b>相対で書かれる</b>ので、
+     * ここを前置きにしないと経路として復元できない。
+     *
+     * <p><b>これが無い間、検査は method 側の経路を 1 本も見ていなかった。</b>
+     * {@code /api/} を含む文字列だけを拾っていたため、相対のものは「存在しない
+     * こと」になり、ルートにも宣言にも無いまま緑になる。</p>
      */
-    private static final List<String> WRITING = List.of("Post", "Put", "Delete", "Patch");
+    private static final Pattern CLASS_MAPPING = Pattern.compile(
+            "@RequestMapping\\s*\\([^)]*?\"(/api/[^\"]+)\"");
     private static final Pattern ROUTE_PREDICATE =
             Pattern.compile("Path=(/api/[^\\]\\s,]+)");
 
@@ -71,10 +77,18 @@ class EveryServiceEndpointIsRoutedAndProtectedTest {
                     // 「存在しないこと」になり、検査を素通りする。
                     .filter(p -> p.getFileName().toString().endsWith(".java"))
                     .toList()) {
-                Matcher matcher = ANY_MAPPING.matcher(
-                        Files.readString(file, StandardCharsets.UTF_8));
+                String source = Files.readString(file, StandardCharsets.UTF_8);
+                Matcher classMapping = CLASS_MAPPING.matcher(source);
+                String prefix = classMapping.find() ? classMapping.group(1) : null;
+                Matcher matcher = ANY_MAPPING.matcher(source);
                 while (matcher.find()) {
-                    endpoints.add(matcher.group(2));
+                    String path = matcher.group(1);
+                    if (path.startsWith("/api/")) {
+                        endpoints.add(path);
+                    } else if (prefix != null) {
+                        // 相対の経路を前置きと繋ぐ。"/" だけの指定は前置きそのもの。
+                        endpoints.add("/".equals(path) ? prefix : prefix + path);
+                    }
                 }
             }
         }
@@ -104,6 +118,11 @@ class EveryServiceEndpointIsRoutedAndProtectedTest {
     @DisplayName("検査する経路が実際にある（空振りしていない）")
     void thereAreEndpointsToCheck() throws IOException {
         assertThat(serviceEndpoints()).hasSizeGreaterThanOrEqualTo(3);
+        // 相対で書かれた経路を拾えているか。これが 0 なら、method 側の注釈を
+        // 1 本も見ていない（IT4 まで実際にそうだった）。
+        assertThat(serviceEndpoints())
+                .as("クラスの @RequestMapping とメソッドの相対経路を繋げている")
+                .contains("/api/v1/booking/bookings/routing-worklist");
         assertThat(gatewayRoutes()).hasSizeGreaterThanOrEqualTo(3);
     }
 
