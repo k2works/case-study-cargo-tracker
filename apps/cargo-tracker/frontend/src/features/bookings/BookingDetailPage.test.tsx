@@ -28,6 +28,9 @@ function booking(over: Record<string, unknown> = {}) {
     bookingStatus: 'PRELIMINARY',
     routingStatus: 'NOT_ROUTED',
     bookedAt: '2026-09-03T01:00:00Z',
+    routingRequestedAt: null,
+    updatedAt: null,
+    updatedBy: null,
     ...over,
   };
 }
@@ -39,6 +42,7 @@ function renderDetail() {
       <MemoryRouter initialEntries={['/bookings/b-1']}>
         <Routes>
           <Route path="/bookings/:bookingId" element={<BookingDetailPage />} />
+          <Route path="/bookings/:bookingId/edit" element={<h1>予約を修正する</h1>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -231,5 +235,76 @@ describe('S22 予約詳細', () => {
     (await screen.findByRole('button', { name: '経路設計を依頼する' })).click();
 
     expect(await screen.findByRole('alert')).toHaveTextContent('引き渡せません');
+  });
+});
+
+describe('S22 から S24 への導線（US32）', () => {
+  it('仮受付の予約は営業が修正できる', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify(booking()), { status: 200 })),
+    );
+
+    renderDetail();
+
+    expect(await screen.findByRole('link', { name: '修正する' })).toHaveAttribute(
+      'href',
+      '/bookings/b-1/edit',
+    );
+  });
+
+  it('経路提案中の予約には修正の導線を出さない', async () => {
+    // 集約が断る（US32 §受入基準 1）。出しておくと、押してから 409 で気づく。
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+      Promise.resolve(
+        new Response(JSON.stringify(booking({ bookingStatus: 'ROUTE_PROPOSED' })), {
+          status: 200,
+        }),
+      ),
+    );
+
+    renderDetail();
+
+    await screen.findByText('経路提案中');
+    expect(screen.queryByRole('link', { name: '修正する' })).not.toBeInTheDocument();
+  });
+
+  it('営業以外には修正の導線を出さない', async () => {
+    useAuthStore.setState({
+      user: { username: 'routing01', roles: ['ROLE_ROUTING'], token: 't' },
+    });
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify(booking()), { status: 200 })),
+    );
+
+    renderDetail();
+
+    await screen.findByText('仮受付');
+    expect(screen.queryByRole('link', { name: '修正する' })).not.toBeInTheDocument();
+  });
+
+  it('修正した予約は「いつ・誰が」が読める', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify(booking({ updatedAt: '2026-09-05T02:00:00Z', updatedBy: 'sales02' })),
+          { status: 200 },
+        ),
+      ),
+    );
+
+    renderDetail();
+
+    expect(await screen.findByText(/sales02/)).toBeInTheDocument();
+  });
+
+  it('一度も修正していない予約に最終更新は出さない', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify(booking()), { status: 200 })),
+    );
+
+    renderDetail();
+
+    await screen.findByText('仮受付');
+    expect(screen.queryByText('最終更新')).not.toBeInTheDocument();
   });
 });

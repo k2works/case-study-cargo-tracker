@@ -15,6 +15,7 @@ import { AdminUserListPage } from '@/features/admin/AdminUserListPage';
 import { BookingListPage } from '@/features/bookings/BookingListPage';
 import { BookingRegisterPage } from '@/features/bookings/BookingRegisterPage';
 import { BookingDetailPage } from '@/features/bookings/BookingDetailPage';
+import { BookingEditPage } from '@/features/bookings/BookingEditPage';
 import { RoutingWorklistPage } from '@/features/routing/RoutingWorklistPage';
 import { VoyageListPage } from '@/features/routing/VoyageListPage';
 import { VoyageRegisterPage } from '@/features/routing/VoyageRegisterPage';
@@ -64,6 +65,16 @@ export function AppRoutes() {
           element={
             <RequireRole allow={['ROLE_SALES', 'ROLE_ROUTING', 'ROLE_TRACKER']}>
               <BookingDetailPage />
+            </RequireRole>
+          }
+        />
+        {/* 予約修正（S24）は詳細から開く。修正は営業だけ（US32）。
+            参照（S22）は経路設計・追跡にも開いたままにする。 */}
+        <Route
+          path="/bookings/:bookingId/edit"
+          element={
+            <RequireRole allow={['ROLE_SALES']}>
+              <BookingEditPage />
             </RequireRole>
           }
         />

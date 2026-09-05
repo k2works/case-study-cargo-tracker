@@ -11,8 +11,9 @@ import {
 } from '@/shared/ui/styles';
 import { ApiError } from '@/shared/api/client';
 import { useAuthStore } from '@/shared/auth/authStore';
-import { canRequestRouting } from './transitions';
+import { canRequestRouting, canUpdateSpecification } from './transitions';
 import { requestRouting } from '@/features/routing/api';
+import { formatBusinessDateTime } from '@/shared/api/businessDate';
 import { display } from '@/features/shippers/api';
 import { bookingStatusLabel, cargoTypeLabel, fetchBooking } from './api';
 
@@ -69,6 +70,16 @@ export function BookingDetailPage() {
             <dl className="mt-2 grid gap-2 sm:grid-cols-2">
               <Row label="予約の状態" value={bookingStatusLabel(data.value.bookingStatus)} />
               <Row label="荷主" value={display(data.value.shipperName)} />
+              {/* 一度も直していない予約に最終更新を出すと、受付日時と
+                  区別が付かない。直したことのある予約だけに出す（US32）。 */}
+              {data.value.updatedAt && (
+                <Row
+                  label="最終更新"
+                  value={`${formatBusinessDateTime(data.value.updatedAt)}${
+                    data.value.updatedBy ? `（${data.value.updatedBy}）` : ''
+                  }`}
+                />
+              )}
             </dl>
           </div>
 
@@ -84,6 +95,16 @@ export function BookingDetailPage() {
           {/* ボタンの出し分けは状態の述語をそのまま呼ぶ。ここで
               status === 'PRELIMINARY' と書くと、集約の遷移表と判断が二重になり、
               片方だけ直したときに食い違う。 */}
+          {/* 修正できるのは仮受付だけ（US32）。判定は集約と同じ述語を呼ぶ。
+              営業以外に出すと、押してから Gateway の 403 で気づくことになる。 */}
+          {isSales && canUpdateSpecification(data.value.bookingStatus) && (
+            <p className="text-sm">
+              <Link to={`/bookings/${encodeURIComponent(bookingId)}/edit`} className={LINK}>
+                修正する
+              </Link>
+            </p>
+          )}
+
           {isSales && canRequestRouting(data.value.bookingStatus) && (
             <div>
               <button

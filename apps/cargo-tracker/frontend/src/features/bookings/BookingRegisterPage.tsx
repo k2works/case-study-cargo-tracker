@@ -3,9 +3,9 @@ import { useState, type SubmitEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { ApiError } from '@/shared/api/client';
 import { display, fetchShippers } from '@/features/shippers/api';
-import { businessDate } from '@/shared/api/businessDate';
 import { ALERT, BUTTON_PRIMARY, CARD, FIELD, LABEL, LINK, PAGE_TITLE } from '@/shared/ui/styles';
 import { bookCargo, type CargoType } from './api';
+import { CargoFields } from './CargoFields';
 
 /**
  * S21 予約登録（UC03 / US04）。
@@ -111,82 +111,7 @@ export function BookingRegisterPage() {
             )}
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field id="originUnLocode" label="出発地" required placeholder="JPTYO" />
-          <Field id="destinationUnLocode" label="目的地" required placeholder="USNYC" />
-        </div>
-
-        <div>
-          <label htmlFor="arrivalDeadline" className={LABEL}>
-            到着期限
-          </label>
-          {/* 過去の日付を選べないようにする。年の打ち間違いは、経路設計者が
-              「間に合う経路が 1 本も出ない」と気づくまで進んでしまう。
-              業務タイムゾーンの今日を使う（toISOString() は UTC で 1 日ずれる）。 */}
-          <input
-            id="arrivalDeadline"
-            name="arrivalDeadline"
-            type="date"
-            min={businessDate()}
-            required
-            className={FIELD}
-          />
-          <p className="mt-1 text-sm text-gray-600">当日に着く便は間に合う扱いです</p>
-        </div>
-
-        <fieldset>
-          <legend className={LABEL}>貨物種別</legend>
-          <div className="mt-1 flex gap-4">
-            {(
-              [
-                ['GENERAL', '一般'],
-                ['HAZARDOUS', '危険物'],
-                ['REFRIGERATED', '冷凍・冷蔵'],
-              ] as const
-            ).map(([value, label]) => (
-              <label key={value} className="flex items-center gap-1 text-sm">
-                <input
-                  type="radio"
-                  name="cargoType"
-                  value={value}
-                  checked={cargoType === value}
-                  onChange={() => setCargoType(value)}
-                  aria-label={label}
-                />
-                {label}
-              </label>
-            ))}
-          </div>
-        </fieldset>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field id="weightKg" label="重量 (kg)" required inputMode="decimal" />
-          <Field id="quantity" label="数量" required inputMode="numeric" />
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Field id="lengthCm" label="長さ (cm)" required inputMode="decimal" />
-          <Field id="widthCm" label="幅 (cm)" required inputMode="decimal" />
-          <Field id="heightCm" label="高さ (cm)" required inputMode="decimal" />
-        </div>
-
-        <Field id="productName" label="品名" required />
-
-        {/* 危険物を選んだときだけ現れる。 */}
-        {cargoType === 'HAZARDOUS' && (
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field id="hazardImoClass" label="IMO クラス" required />
-            <Field id="hazardUnNumber" label="UN 番号" required />
-          </div>
-        )}
-
-        {/* 冷凍・冷蔵を選んだときだけ現れる。 */}
-        {cargoType === 'REFRIGERATED' && (
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field id="temperatureMinC" label="温度条件（下限 ℃）" required inputMode="decimal" />
-            <Field id="temperatureMaxC" label="温度条件（上限 ℃）" required inputMode="decimal" />
-          </div>
-        )}
+        <CargoFields cargoType={cargoType} onCargoTypeChange={setCargoType} />
 
         {error !== null && (
           <p role="alert" className={ALERT}>
@@ -200,35 +125,5 @@ export function BookingRegisterPage() {
         </button>
       </form>
     </section>
-  );
-}
-
-function Field({
-  id,
-  label,
-  required,
-  placeholder,
-  inputMode,
-}: {
-  readonly id: string;
-  readonly label: string;
-  readonly required?: boolean;
-  readonly placeholder?: string;
-  readonly inputMode?: 'decimal' | 'numeric';
-}) {
-  return (
-    <div>
-      <label htmlFor={id} className={LABEL}>
-        {label}
-      </label>
-      <input
-        id={id}
-        name={id}
-        required={required}
-        placeholder={placeholder}
-        inputMode={inputMode}
-        className={FIELD}
-      />
-    </div>
   );
 }

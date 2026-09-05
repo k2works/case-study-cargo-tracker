@@ -28,6 +28,20 @@ export interface BookingView {
   readonly bookedAt: string;
   /** 経路設計者へ引き渡した日時（US06）。引き渡していなければ null。 */
   readonly routingRequestedAt: string | null;
+  /** 最終更新（US32）。一度も直していなければ null。 */
+  readonly updatedAt: string | null;
+  readonly updatedBy: string | null;
+}
+
+/** 修正の入力（US32）。荷主は変えられない（不変条件 1）。 */
+export type UpdateBookingInput = Omit<BookCargoInput, 'shipperId'>;
+
+/** 仮受付の予約情報を修正する（US32）。 */
+export function updateBooking(
+  bookingId: string,
+  input: UpdateBookingInput,
+): Promise<{ bookingId: string }> {
+  return commandClient(`/booking/bookings/${encodeURIComponent(bookingId)}`, input, 'PUT');
 }
 
 export interface BookCargoInput {

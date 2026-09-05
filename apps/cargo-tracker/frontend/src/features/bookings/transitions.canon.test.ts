@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { BOOKING_TRANSITIONS } from './transitions';
+import { BOOKING_TRANSITIONS, canUpdateSpecification } from './transitions';
 
 /**
  * 画面が持つ遷移表は、バックエンドの正典と同じ内容である。
@@ -40,5 +40,19 @@ describe('予約の状態遷移表', () => {
 
   it('画面の写しは正典と丸ごと一致する', () => {
     expect(BOOKING_TRANSITIONS).toEqual(canonTransitions());
+  });
+
+  it('修正できる状態は正典と一致する（US32）', () => {
+    // 遷移ではないので遷移表には出ない。Java 側の述語の本体を読み取って
+    // 突き合わせる。正典が「仮受付だけ」でなくなったらここが赤くなる。
+    const source = readFileSync(CANON, 'utf-8');
+    const body = source.slice(source.indexOf('canUpdateSpecification()'));
+    const canon = /return this == (\w+);/.exec(body)?.[1];
+
+    expect(canon, '正典の述語を読めていない').toBeDefined();
+    expect(canUpdateSpecification(canon as string)).toBe(true);
+    for (const status of Object.keys(BOOKING_TRANSITIONS)) {
+      expect(canUpdateSpecification(status)).toBe(status === canon);
+    }
   });
 });

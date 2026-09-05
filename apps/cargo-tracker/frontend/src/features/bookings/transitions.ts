@@ -26,6 +26,17 @@ export function canTransitionTo(status: string, next: string): boolean {
   return (BOOKING_TRANSITIONS[status] ?? []).includes(next);
 }
 
+/**
+ * 入力の誤りを直せるか（US32）。集約と同じ述語を通す。
+ *
+ * <p>遷移ではないので BOOKING_TRANSITIONS では表せない。Java 側の
+ * BookingStatus.canUpdateSpecification と同じ判断であることは
+ * transitions.canon.test.ts が正典を読んで突き合わせる。</p>
+ */
+export function canUpdateSpecification(status: string): boolean {
+  return status === 'PRELIMINARY';
+}
+
 /** 経路設計へ引き渡せるか（US06）。集約と同じ述語を通す。 */
 export function canRequestRouting(status: string): boolean {
   return canTransitionTo(status, 'ROUTE_PROPOSED');
