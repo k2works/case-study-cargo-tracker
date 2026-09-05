@@ -24,6 +24,19 @@ test.describe('kind クラスタでの通し確認', () => {
     return formatter.format(at);
   }
 
+  /**
+   * 実行ごとに違う航海番号を作る。
+   *
+   * <p><b>epoch の下 6 桁にしない。</b> 約 16.7 分で一巡するので、短い間に何度も
+   * 回すと過去の実行と衝突する。衝突した登録は集約が断り（不変条件 1）、その回の
+   * テストは前の回の航海を触ることになる（実測: US25 が 1 度落ちた）。</p>
+   *
+   * <p>航海番号は 20 文字まで。基数 36 にすると 8 文字で収まる。</p>
+   */
+  function uniqueVoyageNumber(prefix: string): string {
+    return `${prefix}${Date.now().toString(36)}${Math.floor(Math.random() * 36).toString(36)}`;
+  }
+
   async function signIn(page: import('@playwright/test').Page, username: string) {
     await page.goto('/login');
     await page.getByLabel('利用者名').fill(username);
@@ -201,7 +214,7 @@ test.describe('kind クラスタでの通し確認', () => {
   });
 
   test('経路設計者が航海を登録すると、一覧に出る（US24）', async ({ page }) => {
-    const voyageNumber = `V-E2E-${String(Date.now()).slice(-6)}`;
+    const voyageNumber = uniqueVoyageNumber('V-E2E-');
 
     await signIn(page, 'routing01');
     await page.getByRole('link', { name: '航海登録' }).first().click();
@@ -228,8 +241,7 @@ test.describe('kind クラスタでの通し確認', () => {
   test('経路設計者が候補を見て経路を確定する（US08・US09・IT5）', async ({ page, request }) => {
     // **サービス越しの問い合わせは、この確認でしか出ない失敗の宝庫。**
     // 単体もモックも「届く」ことは見ていない。
-    const stamp = String(Date.now()).slice(-6);
-    const voyageNumber = `V-RT${stamp}`;
+    const voyageNumber = uniqueVoyageNumber('V-RT-');
     const product = `経路設計-${Date.now()}`;
 
     // 候補になる航海を先に登録する。無いと候補 0 件になり、
@@ -247,8 +259,13 @@ test.describe('kind クラスタでの通し確認', () => {
             departureUnLocode: 'JPTYO',
             arrivalUnLocode: 'USNYC',
             // 業務タイムゾーンで作る。UTC で作ると CI の時間帯で 1 日ずれる。
-            departureAt: `${businessDate(5)}T00:00:00Z`,
-            arrivalAt: `${businessDate(25)}T00:00:00Z`,
+            //
+            // **どの候補より速くする。** 過去の実行で JPTYO → USNYC の航海が
+            // 積み上がっており、候補は 20 件で打ち切られる（ADR-0007）。
+            // 遅い便を登録すると、届いているのに押し出されて「出ない」になる
+            // （実測: 所要 20 日で登録し、既存の 16 日の便 20 件に押し出された）。
+            departureAt: `${businessDate(2)}T00:00:00Z`,
+            arrivalAt: `${businessDate(5)}T00:00:00Z`,
           },
         ],
         acceptedCargoTypes: ['GENERAL'],
@@ -271,10 +288,13 @@ test.describe('kind クラスタでの通し確認', () => {
     await page.locator('tr', { hasText: product }).getByRole('link').first().click();
 
     await expect(page.getByRole('heading', { name: '経路候補' })).toBeVisible();
-    // 登録した航海が候補に出る。出なければ、届いていないか探索が落としている。
-    await expect(page.getByText(voyageNumber)).toBeVisible({ timeout: 30_000 });
 
-    await page.getByRole('radio', { name: '候補 1' }).check();
+    // **順位で当てない。** 過去の実行で同じ所要日数の便が積み上がっており、
+    // 同着の並びは決まらない（実測: 1 位が前回の回の便だった）。登録した
+    // 航海の行を名指しで探す。出なければ、届いていないか探索が落としている。
+    const candidate = page.locator('tr', { hasText: voyageNumber });
+    await expect(candidate).toBeVisible({ timeout: 30_000 });
+    await candidate.getByRole('radio').check();
     await page.getByRole('button', { name: 'この経路で確定' }).click();
 
     // 確定すると予約詳細へ戻り、旅程が読める（US09）。
@@ -323,7 +343,7 @@ test.describe('kind クラスタでの通し確認', () => {
   test('経路設計者が航海を更新すると、差分を確かめて反映できる（US25・IT4）', async ({
     page,
   }) => {
-    const voyageNumber = `V-UPD-${String(Date.now()).slice(-6)}`;
+    const voyageNumber = uniqueVoyageNumber('V-UPD-');
 
     await signIn(page, 'routing01');
     await page.goto('/voyages/new');
@@ -360,7 +380,7 @@ test.describe('kind クラスタでの通し確認', () => {
   });
 
   test('経路設計者が条件で航海を絞り込める（US07・IT4）', async ({ page }) => {
-    const voyageNumber = `V-SRC-${String(Date.now()).slice(-6)}`;
+    const voyageNumber = uniqueVoyageNumber('V-SRC-');
 
     await signIn(page, 'routing01');
     await page.goto('/voyages/new');
@@ -433,8 +453,16 @@ test.describe('kind クラスタでの通し確認', () => {
     await page.getByLabel('品名').fill(`${product}（訂正）`);
     await page.getByRole('button', { name: '修正する' }).click();
 
-    await expect(page.getByText(`${product}（訂正）`)).toBeVisible({ timeout: 20_000 });
+    // 「貨物」欄の値を見る。IT5 で修正履歴の表が付き、同じ文字列が
+    // 「変更後」の欄にも出るようになった（US32 §受入基準 4 の読み口）。
+    // 画面のどこかに出ていることだけを見ると、どちらを確かめたのか分からない。
+    await expect(page.getByRole('definition').filter({ hasText: `${product}（訂正）` }))
+      .toBeVisible({ timeout: 20_000 });
     await expect(page.getByText(/最終更新/)).toBeVisible();
+
+    // 何を変えたかが読める（US32 §受入基準 4・IT5 R.2）。記録だけでは誰にも見えない。
+    await expect(page.getByRole('heading', { name: '修正履歴' })).toBeVisible();
+    await expect(page.getByTestId('revision-品名')).toContainText(product);
 
     // 引き渡すと修正の導線が消える（US32 §受入基準 1）。
     await page.getByRole('button', { name: '経路設計を依頼する' }).click();

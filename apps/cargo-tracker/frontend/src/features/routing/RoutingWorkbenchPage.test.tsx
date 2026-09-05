@@ -196,7 +196,7 @@ describe('S31 経路の確定（US09）', () => {
 
     renderWorkbench();
 
-    await userEvent.click(await screen.findByRole('radio', { name: /候補 1/ }));
+    await userEvent.click(await screen.findByRole('radio', { name: '候補 1' }));
     await userEvent.click(screen.getByRole('button', { name: 'この経路で確定' }));
 
     await waitFor(() => {
@@ -266,7 +266,7 @@ describe('S31 経路の確定（US09）', () => {
 
     renderWorkbench();
 
-    await userEvent.click(await screen.findByRole('radio', { name: /候補 1/ }));
+    await userEvent.click(await screen.findByRole('radio', { name: '候補 1' }));
     await userEvent.click(screen.getByRole('button', { name: 'この経路で確定' }));
 
     expect(await screen.findByRole('alert'))
