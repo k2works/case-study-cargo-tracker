@@ -170,6 +170,24 @@ export function bookingStatusLabel(status: string): string {
   return BOOKING_STATUS_LABELS[status] ?? status;
 }
 
+/**
+ * 経路設定状態の呼び名（`RoutingStatus`）。
+ *
+ * <p>予約の状態（`bookingStatus`）とは別の軸。予約が「仮受付」のままでも
+ * 経路は「設計済」になりうるので、片方だけ出すと予約詳細から
+ * 経路の進み具合が読めない。</p>
+ */
+const ROUTING_STATUS_LABELS: Record<string, string> = {
+  NOT_ROUTED: '未設計',
+  ROUTING_REQUESTED: '設計依頼済み',
+  ROUTED: '設計済',
+  MISROUTED: '誤配（再設計が要る）',
+};
+
+export function routingStatusLabel(routingStatus: string): string {
+  return ROUTING_STATUS_LABELS[routingStatus] ?? routingStatus;
+}
+
 const CARGO_TYPE_LABELS: Record<string, string> = {
   GENERAL: '一般',
   HAZARDOUS: '危険物',

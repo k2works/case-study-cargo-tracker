@@ -25,6 +25,7 @@ import {
   fetchBooking,
   fetchBookingItinerary,
   fetchBookingRevisions,
+  routingStatusLabel,
 } from './api';
 
 /**
@@ -117,6 +118,12 @@ export function BookingDetailPage() {
             <h2 className={SECTION_TITLE}>状態</h2>
             <dl className="mt-2 grid gap-2 sm:grid-cols-2">
               <Row label="予約の状態" value={bookingStatusLabel(data.value.bookingStatus)} />
+              {/* 経路設定状態は予約の状態と別の軸。出さないと、この予約の経路が
+                  いまどこまで進んだのかを予約詳細から読めない。 */}
+              <Row
+                label="経路設定状態"
+                value={routingStatusLabel(data.value.routingStatus)}
+              />
               <Row label="荷主" value={display(data.value.shipperName)} />
               {/* 一度も直していない予約に最終更新を出すと、受付日時と
                   区別が付かない。直したことのある予約だけに出す（US32）。 */}

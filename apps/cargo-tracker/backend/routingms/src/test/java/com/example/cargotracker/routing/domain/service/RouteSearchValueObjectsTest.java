@@ -86,7 +86,6 @@ class RouteSearchValueObjectsTest {
         assertThat(path.origin()).isEqualTo(Location.of("JPTYO"));
         assertThat(path.destination()).isEqualTo(Location.of("USNYC"));
         assertThat(path.isDirect()).isFalse();
-        assertThat(path.viaPorts()).containsExactly(Location.of("SGSIN"));
     }
 
     @Test
@@ -95,7 +94,6 @@ class RouteSearchValueObjectsTest {
         TransitPath path = new TransitPath(List.of(edge("JPTYO", "USNYC", DEPART, ARRIVE)));
 
         assertThat(path.isDirect()).isTrue();
-        assertThat(path.viaPorts()).isEmpty();
     }
 
     @Test

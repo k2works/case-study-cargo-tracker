@@ -265,7 +265,13 @@ function journeyOf(candidate: RouteCandidateView): string {
   return `${formatBusinessDateTime(first.loadTime)} → ${formatBusinessDateTime(last.unloadTime)}`;
 }
 
-/** 経由港。端点は含まない（一覧の「輸送区間」に出ている）。 */
+/**
+ * 経由港。端点は含まない（一覧の「輸送区間」に出ている）。
+ *
+ * 経由港を決めるのはここ 1 か所だけ。応答は区間を業務上の順で運ぶので、
+ * 最後の区間を除いた到着港がそのまま経由港になる。バックエンドにも
+ * 同じ判断を置くと、片方だけ直したときに表示と根拠が食い違う。
+ */
 function viaPortsOf(candidate: RouteCandidateView): string {
   const via = candidate.legs.slice(0, -1).map((leg) => leg.unloadUnLocode);
   return via.length === 0 ? '—' : via.join(' → ');

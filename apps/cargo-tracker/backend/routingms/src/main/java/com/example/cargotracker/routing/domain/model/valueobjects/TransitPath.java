@@ -61,11 +61,6 @@ public record TransitPath(List<TransitEdge> edges) {
         return edges.size() == 1;
     }
 
-    /** 経由港（受入基準 3）。端点は含まない。 */
-    public List<Location> viaPorts() {
-        return edges.stream().limit(edges.size() - 1L).map(TransitEdge::unload).toList();
-    }
-
     /**
      * 期限を何日超えるか（超えないなら 0）。
      *

@@ -438,6 +438,24 @@ describe('S22 旅程（US09）', () => {
     expect(screen.getByTestId('leg-2')).toHaveTextContent('V-2');
   });
 
+  it('経路設定状態が予約の状態とは別に読める', async () => {
+    // 予約の状態は「仮受付」のままでも、経路は先に決まる。片方だけ出すと
+    // 予約詳細から経路の進み具合が読めない。
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify(booking({ bookingStatus: 'PRELIMINARY', routingStatus: 'ROUTED' })),
+        { status: 200 },
+      ),
+    );
+
+    renderDetail();
+
+    expect(await screen.findByRole('heading', { name: '状態' })).toBeInTheDocument();
+    expect(screen.getByText('経路設定状態')).toBeInTheDocument();
+    expect(screen.getByText('設計済')).toBeInTheDocument();
+    expect(screen.getByText('仮受付')).toBeInTheDocument();
+  });
+
   it('経路が決まっていなければ旅程を出さない', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(JSON.stringify(booking()), { status: 200 }),

@@ -634,28 +634,40 @@ public interface RouteCandidateFinder {
 @Component
 public class QueryBusRouteCandidateFinder implements RouteCandidateFinder {
 
-    private final QueryGateway queryGateway;
+    // 待ち方は QueryDispatcher（共有カーネル）が 1 か所で決める。5 秒で切る。
+    // ここで独自に待つと、同じ問い合わせが呼ぶ場所によって別の待ち方になる
+    private final QueryDispatcher queries;
 
     @Override
-    public List<RouteCandidate> find(RouteSpecification spec) {
-        // クエリ型と応答 DTO は shared/contract/query に置く。routingms の型は持ち込まず自 BC の型に変換する
-        // 同期問い合わせのタイムアウトは既定 5 秒（Resilience4j の TimeLimiter）。join() で無期限に待たない
-        // 待ち方は QueryDispatcher（共有カーネル）が 1 か所で決める。5 秒で切る。
-        // ここで独自に待つと、同じ問い合わせが呼ぶ場所によって別の待ち方になる
-        var response = queries.query(
-                // 貨物種別・除外港・departFrom も渡す。端点と期限だけでは、危険物を運べない
-                // 航海が候補に混ざる（domain-model.md「ドメインサービス：RouteSearchService」）
-                new FindRouteCandidatesQuery(
-                        request.origin().unLocode().value(),
-                        request.destination().unLocode().value(),
-                        request.arrivalDeadline(), request.cargoType().name(),
-                        excludePortCodes, departFromCode),
-                RouteCandidatesResponse.class);
-        // 相手が居ない・時間切れは RouteSearchUnavailable にして 503 にする。
-        // 空リストで返すと「候補が無い」と読まれ、条件を変え続けさせる
+    public RouteCandidates find(RouteSearchRequest request) {
+        RouteCandidatesResponse response;
+        try {
+            // クエリ型と応答 DTO は shared/contract/query に置く。
+            // routingms の型は持ち込まず、自 BC の型へ組み直す
+            response = queries.query(toQuery(request), RouteCandidatesResponse.class);
+        } catch (BusinessRuleViolation e) {
+            // 「知らない港・種別」という業務の断りは 422 のまま通す。
+            // 503 にすると、直せる入力の誤りが「あとで試して」に化ける
+            throw e;
+        } catch (RuntimeException e) {
+            // 相手が居ない・時間切れ・通信の失敗は 503 にする。
+            // 空リストで返すと「候補が無い」と読まれ、条件を変え続けさせる
+            throw new RouteSearchUnavailable("経路設計サービスに問い合わせられませんでした", e);
+        }
         return new RouteCandidates(
-                response.candidates().stream().map(RouteCandidate::from).toList(),
+                response.candidates().stream()
+                        .map(QueryBusRouteCandidateFinder::toCandidate).toList(),
                 response.truncated());
+    }
+
+    private static FindRouteCandidatesQuery toQuery(RouteSearchRequest request) {
+        // 貨物種別・除外港・departFrom も渡す。端点と期限だけでは、危険物を運べない
+        // 航海が候補に混ざる（domain-model.md「ドメインサービス：RouteSearchService」）
+        return new FindRouteCandidatesQuery(
+                request.origin().unLocode().value(),
+                request.destination().unLocode().value(),
+                request.arrivalDeadline(), request.cargoType().name(),
+                excludePortCodes(request), departFromCode(request));
     }
 }
 ```
