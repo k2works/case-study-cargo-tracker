@@ -81,7 +81,7 @@ quadrantChart
 | 航海グラフ | Voyage Graph | `VoyageGraph` | 投影 `voyage` / `carrier_movement` から組む探索用の読み取りモデル |
 | 経路 | Transit Path | `TransitPath` | 経路探索が返す 1 本の経路。期限超過日数を持つ |
 | 貨物種別 | Cargo Type | `CargoType` | 一般貨物・危険物・冷凍冷蔵。**Booking と Routing で別の型**（Routing は航海が受け入れる種別として使う） |
-| 経路候補 | Route Candidate | `RouteCandidate` | 経路仕様を満たす旅程の候補。Routing の読み取りモデル |
+| 経路候補 | Route Candidate | `RouteCandidate` | 経路仕様を満たす旅程の候補。**Booking と Routing で別の型**（`CargoType` と同じ）。Routing 側は探索の結果（`TransitPath` から組む読み取りモデル）、Booking 側は ACL が契約 DTO から変換した自 BC の型で、画面に出すのはこちら |
 | 港湾コード | UN/LOCODE | `UnLocode` | 国連が定める港湾識別コード（例: `JPTYO`）。共有カーネル |
 | 荷主 | Shipper | `Shipper` | 貨物の依頼主。個人または法人。集約ルート |
 | 荷受人 | Consignee | `Consignee` | 貨物を受け取る人 |
