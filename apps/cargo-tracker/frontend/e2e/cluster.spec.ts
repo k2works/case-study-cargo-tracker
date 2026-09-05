@@ -220,7 +220,9 @@ test.describe('kind クラスタでの通し確認', () => {
 
     await expect(page.getByRole('heading', { name: '航海スケジュール一覧' })).toBeVisible();
     await expect(page.getByText(voyageNumber)).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByText('E2E EXPRESS')).toBeVisible();
+    // 船名だけで当てない。同じ船名の航海が何度目かの実行で積み上がっており、
+    // 「見えている」のは別の回に登録した行かもしれない。登録した行の中で見る。
+    await expect(page.locator('tr', { hasText: voyageNumber })).toContainText('E2E EXPRESS');
   });
 
   test('管理者は利用者の状態を見てロックを解除できる', async ({ page, request }) => {
@@ -258,5 +260,126 @@ test.describe('kind クラスタでの通し確認', () => {
 
     await expect(page.getByRole('heading', { name: '荷物の追跡' })).toBeVisible();
     await expect(page.getByText('ABC12345')).toBeVisible();
+  });
+  test('経路設計者が航海を更新すると、差分を確かめて反映できる（US25・IT4）', async ({
+    page,
+  }) => {
+    const voyageNumber = `V-UPD-${String(Date.now()).slice(-6)}`;
+
+    await signIn(page, 'routing01');
+    await page.goto('/voyages/new');
+    await page.getByLabel('航海番号').fill(voyageNumber);
+    await page.getByLabel('運送会社コード').fill('MOL');
+    await page.getByLabel('運送会社名', { exact: true }).fill('商船三井');
+    await page.getByLabel('船名').fill('UPDATE EXPRESS');
+    await page.getByLabel('出発地').fill('JPTYO');
+    await page.getByLabel('到着地').fill('USNYC');
+    await page.getByLabel('出発日時（UTC）').fill(`${businessDate(30)}T09:00`);
+    await page.getByLabel('到着日時（UTC）').fill(`${businessDate(45)}T18:00`);
+    await page.getByRole('button', { name: '登録する' }).click();
+
+    // 一覧の航海番号から詳細へ入る（IT3 レビューで欠けていた導線）。
+    await expect(page.getByRole('link', { name: voyageNumber })).toBeVisible({
+      timeout: 20_000,
+    });
+    await page.getByRole('link', { name: voyageNumber }).click();
+    await expect(page.getByRole('heading', { name: `航海 ${voyageNumber}` })).toBeVisible();
+    await expect(page.getByTestId('movement-1')).toContainText('JPTYO → USNYC');
+
+    await page.getByRole('link', { name: '更新する' }).click();
+    await expect(page.getByLabel('船名')).toHaveValue('UPDATE EXPRESS', { timeout: 20_000 });
+    await page.getByLabel('船名').fill('UPDATE VOYAGER');
+    await page.getByRole('button', { name: '差分を確認する' }).click();
+
+    // 差分はサーバが出す。画面で並べていないことは、ここに出る文で分かる。
+    await expect(page.getByText('UPDATE EXPRESS → UPDATE VOYAGER')).toBeVisible();
+    await page.getByRole('button', { name: '更新する' }).click();
+
+    await expect(page.getByRole('heading', { name: `航海 ${voyageNumber}` })).toBeVisible();
+    await expect(page.getByText('UPDATE VOYAGER')).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/最終更新/)).toBeVisible();
+  });
+
+  test('経路設計者が条件で航海を絞り込める（US07・IT4）', async ({ page }) => {
+    const voyageNumber = `V-SRC-${String(Date.now()).slice(-6)}`;
+
+    await signIn(page, 'routing01');
+    await page.goto('/voyages/new');
+    await page.getByLabel('航海番号').fill(voyageNumber);
+    await page.getByLabel('運送会社コード').fill('ONE');
+    await page.getByLabel('運送会社名', { exact: true }).fill('オーシャンネットワーク');
+    await page.getByLabel('船名').fill('SEARCH HARMONY');
+    await page.getByLabel('出発地').fill('JPTYO');
+    await page.getByLabel('到着地').fill('SGSIN');
+    await page.getByLabel('出発日時（UTC）').fill(`${businessDate(30)}T09:00`);
+    await page.getByLabel('到着日時（UTC）').fill(`${businessDate(40)}T18:00`);
+    await page.getByRole('button', { name: '登録する' }).click();
+    await expect(page.getByRole('link', { name: voyageNumber })).toBeVisible({
+      timeout: 20_000,
+    });
+
+    // 条件に合う便だけが残る。
+    await page.getByLabel('目的地').fill('SGSIN');
+    await page.getByRole('button', { name: '絞り込む' }).click();
+    await expect(page.getByRole('link', { name: voyageNumber })).toBeVisible();
+
+    // 合わない条件では 0 件の案内が出て、条件を消して戻れる。
+    await page.getByLabel('目的地').fill('BRRIO');
+    await page.getByRole('button', { name: '絞り込む' }).click();
+    await expect(page.getByText('条件に合う航海はありません')).toBeVisible();
+
+    await page.getByRole('button', { name: '条件を消して探し直す' }).click();
+    await expect(page.getByRole('link', { name: voyageNumber })).toBeVisible();
+  });
+
+  test('営業が仮受付の予約を修正できる（US32・IT4）', async ({ page }) => {
+    const stamp = Date.now();
+    const email = `update-${stamp}@example.com`;
+    const product = `修正前の貨物-${stamp}`;
+
+    await signIn(page, 'sales01');
+    await page.goto('/shippers/new');
+    await page.getByLabel('名称').fill(`修正商事 ${stamp}`);
+    await page.getByLabel('メールアドレス').fill(email);
+    await page.getByLabel('電話番号').fill('03-0000-0000');
+    await page.getByLabel('住所').fill('東京都中央区');
+    await page.getByRole('button', { name: '登録する' }).click();
+    await expect(page.getByText(email)).toBeVisible({ timeout: 20_000 });
+
+    await page.goto('/bookings/new');
+    const option = page.locator('#shipperId option', { hasText: `修正商事 ${stamp}` });
+    await expect(option).toHaveCount(1, { timeout: 20_000 });
+    await page.getByLabel('荷主').selectOption((await option.getAttribute('value')) ?? '');
+    await page.getByLabel('出発地').fill('JPTYO');
+    await page.getByLabel('目的地').fill('USNYC');
+    await page.getByLabel('到着期限').fill(businessDate(60));
+    await page.getByLabel('重量 (kg)').fill('1200');
+    await page.getByLabel('数量').fill('10');
+    await page.getByLabel('長さ (cm)').fill('120');
+    await page.getByLabel('幅 (cm)').fill('80');
+    await page.getByLabel('高さ (cm)').fill('100');
+    await page.getByLabel('品名').fill(product);
+    await page.getByRole('button', { name: '登録する' }).click();
+
+    await expect(page.getByText(product)).toBeVisible({ timeout: 20_000 });
+    // 一覧の先頭を押さない。前の回の予約が並んでいて、別の予約を開いてしまう。
+    await page
+      .locator('tr', { hasText: product })
+      .getByRole('link', { name: /B-/ })
+      .click();
+    await expect(page.getByRole('link', { name: '修正する' })).toBeVisible({ timeout: 20_000 });
+    await page.getByRole('link', { name: '修正する' }).click();
+
+    await expect(page.getByLabel('品名')).toHaveValue(product, { timeout: 20_000 });
+    await page.getByLabel('品名').fill(`${product}（訂正）`);
+    await page.getByRole('button', { name: '修正する' }).click();
+
+    await expect(page.getByText(`${product}（訂正）`)).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/最終更新/)).toBeVisible();
+
+    // 引き渡すと修正の導線が消える（US32 §受入基準 1）。
+    await page.getByRole('button', { name: '経路設計を依頼する' }).click();
+    await expect(page.getByText('経路提案中')).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole('link', { name: '修正する' })).toHaveCount(0);
   });
 });
