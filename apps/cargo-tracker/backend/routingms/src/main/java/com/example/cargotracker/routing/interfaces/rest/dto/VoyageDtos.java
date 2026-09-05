@@ -53,6 +53,15 @@ public final class VoyageDtos {
             List<String> acceptedCargoTypes) {
     }
 
+    /**
+     * 航海のキャンセル（US24 / IT5 R.1）。
+     *
+     * <p>理由は必須。空で通すと、あとから「なぜ止めたか」が誰にも読めなくなる。
+     * 判断そのものは集約が持ち、ここは形式だけを見る。</p>
+     */
+    public record CancelVoyageRequest(@NotBlank String reason) {
+    }
+
     /** 更新前後の差分（US25 §受入基準 2）。変わった項目だけが並ぶ。 */
     public record VoyageDiffResponse(
             String voyageNumber,

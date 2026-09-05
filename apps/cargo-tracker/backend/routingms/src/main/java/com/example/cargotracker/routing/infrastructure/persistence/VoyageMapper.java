@@ -37,6 +37,18 @@ public interface VoyageMapper {
     int insertAcceptedCargoType(@Param("voyageNumber") String voyageNumber,
             @Param("cargoType") String cargoType);
 
+    /**
+     * キャンセルを反映する（US24）。<b>行は消さない。</b> その航海で経路を組んだ
+     * 貨物があるので、消すと何が起きたのかを追えなくなる。
+     *
+     * <p>戻り値で「書けたか」を見る。0 なら投影にその航海が無い。</p>
+     */
+    int cancel(@Param("voyageNumber") String voyageNumber,
+            @Param("cancelledAt") Instant cancelledAt,
+            @Param("cancelReason") String cancelReason,
+            @Param("cancelledBy") String cancelledBy,
+            @Param("projectedAt") Instant projectedAt);
+
     VoyageRow findByNumber(@Param("voyageNumber") String voyageNumber);
 
     /**
@@ -76,7 +88,11 @@ public interface VoyageMapper {
             Instant projectedAt,
             String lastEventId,
             Instant updatedAt,
-            String updatedBy) {
+            String updatedBy,
+            // キャンセル（US24）。止めていなければ 3 つとも null。
+            Instant cancelledAt,
+            String cancelReason,
+            String cancelledBy) {
     }
 
     /** 港間移動の行。並び順は {@code movementSeq}。 */

@@ -406,6 +406,9 @@ entity "voyage" as v {
   departure_at: TIMESTAMPTZ NOT NULL
   arrival_at: TIMESTAMPTZ NOT NULL
   cancelled: BOOLEAN NOT NULL DEFAULT FALSE
+  cancelled_at: TIMESTAMPTZ
+  cancel_reason: VARCHAR(200)
+  cancelled_by: VARCHAR(50)
   registered_at: TIMESTAMPTZ NOT NULL
   updated_at: TIMESTAMPTZ
   updated_by: VARCHAR(50)

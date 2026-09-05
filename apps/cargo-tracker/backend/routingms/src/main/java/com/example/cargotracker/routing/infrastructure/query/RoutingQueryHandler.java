@@ -54,6 +54,7 @@ public class RoutingQueryHandler {
                 row.voyageNumber(), row.carrierCode(), row.carrierName(), row.vesselName(),
                 row.departureUnlocode(), row.arrivalUnlocode(), row.departureAt(),
                 row.arrivalAt(), row.cancelled(), cargoTypes, movements,
-                row.updatedAt(), row.updatedBy());
+                row.updatedAt(), row.updatedBy(),
+                row.cancelledAt(), row.cancelReason(), row.cancelledBy());
     }
 }

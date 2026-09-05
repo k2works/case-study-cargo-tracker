@@ -1,5 +1,6 @@
 package com.example.cargotracker.routing.interfaces.rest;
 
+import com.example.cargotracker.routing.domain.model.commands.CancelVoyageCommand;
 import com.example.cargotracker.routing.domain.model.commands.RegisterVoyageCommand;
 import com.example.cargotracker.routing.domain.model.commands.UpdateVoyageScheduleCommand;
 import com.example.cargotracker.routing.domain.model.valueobjects.CargoType;
@@ -12,6 +13,7 @@ import com.example.cargotracker.routing.infrastructure.query.RoutingQueries.Find
 import com.example.cargotracker.routing.infrastructure.query.RoutingQueries.FindVoyagesQuery;
 import com.example.cargotracker.routing.infrastructure.query.RoutingQueries.VoyageListView;
 import com.example.cargotracker.routing.infrastructure.query.RoutingQueries.VoyageView;
+import com.example.cargotracker.routing.interfaces.rest.dto.VoyageDtos.CancelVoyageRequest;
 import com.example.cargotracker.routing.interfaces.rest.dto.VoyageDtos.MovementRequest;
 import com.example.cargotracker.routing.interfaces.rest.dto.VoyageDtos.PendingResponse;
 import com.example.cargotracker.routing.interfaces.rest.dto.VoyageDtos.RegisterVoyageRequest;
@@ -90,6 +92,23 @@ public class VoyageController {
                         .toList()),
                 acceptedCargoTypes(request.acceptedCargoTypes()),
                 username));
+
+        return ResponseEntity.ok(new RegisterVoyageResponse(voyageNumber));
+    }
+
+    /**
+     * 航海をキャンセルする（US24 / IT5 R.1）。
+     *
+     * <p>止めてよいか（登録済みか・既に止まっていないか）は集約が見る。ここで
+     * 先に問い合わせて分岐すると、同じ判断が 2 か所になって片方が古くなる。</p>
+     */
+    @PostMapping("/{voyageNumber}/cancel")
+    public ResponseEntity<RegisterVoyageResponse> cancel(
+            @PathVariable String voyageNumber,
+            @Valid @RequestBody CancelVoyageRequest request,
+            @RequestHeader(name = "X-Auth-Username", required = false) String username) {
+        commandGateway.sendAndWait(
+                new CancelVoyageCommand(voyageNumber, request.reason(), username));
 
         return ResponseEntity.ok(new RegisterVoyageResponse(voyageNumber));
     }

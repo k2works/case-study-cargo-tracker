@@ -39,6 +39,18 @@ export const BUTTON_PRIMARY =
   + ' disabled:bg-gray-300 aria-disabled:bg-gray-300';
 
 /**
+ * 取り消せない操作のボタン。ui_design.md の `badge-danger`
+ * （`#991B1B` on `#FEE2E2`、7.9 : 1）に対応する色を使う。
+ */
+export const BUTTON_DANGER =
+  'rounded bg-red-800 px-4 py-2 text-white hover:bg-red-900'
+  + ' disabled:bg-gray-300 aria-disabled:bg-gray-300';
+
+/** 補助ボタン（やめる・開く）。主導線から色で区別する。 */
+export const BUTTON_SECONDARY =
+  'rounded border border-gray-300 bg-white px-4 py-2 text-gray-800 hover:bg-gray-50';
+
+/**
  * 案内。ui_design.md の `badge-pending`（#B45309 on #FFFBEB、5.9 : 1）に対応する。
  * 「まだ出ていない」「反映中」など、待たせていることを伝える場所に使う。
  */

@@ -1,5 +1,6 @@
 package com.example.cargotracker.routing.infrastructure.projection;
 
+import com.example.cargotracker.routing.domain.model.events.VoyageCancelledEvent;
 import com.example.cargotracker.routing.domain.model.events.VoyageRegisteredEvent;
 import com.example.cargotracker.routing.domain.model.events.VoyageScheduleUpdatedEvent;
 import com.example.cargotracker.routing.infrastructure.persistence.VoyageMapper;
@@ -63,7 +64,9 @@ public class VoyageProjection {
                 // 登録時点では更新されていない。登録日時を入れると
                 // 「一度も直していない航海」と「直した航海」が見分けられない。
                 null,
-                null);
+                null,
+                // 登録時点では止まっていない。
+                null, null, null);
 
         // 一意制約は例外ではなく戻り値で見る。例外にすると PostgreSQL が
         // トランザクションを中断し、捕まえても外側（投影とトークンの書き込み）が
@@ -129,7 +132,9 @@ public class VoyageProjection {
                 now, now, null,
                 // 「いつ直したか」はイベントが持つ。ここで現在時刻を書くと、
                 // 読み直しのたびに最終更新が動く。
-                event.updatedAt(), event.updatedBy()));
+                event.updatedAt(), event.updatedBy(),
+                // UPDATE 文が触らない列。ここで作り直してもデータベースには行かない。
+                null, null, null));
 
         if (updated == 0) {
             log.warn("更新を書ける航海が投影に無い: voyageNumber={}", event.voyageNumber());
@@ -152,6 +157,27 @@ public class VoyageProjection {
         }
         for (String cargoType : event.acceptedCargoTypes()) {
             voyages.insertAcceptedCargoType(event.voyageNumber(), cargoType);
+        }
+    }
+
+    /**
+     * キャンセル（US24 / IT5 R.1）。
+     *
+     * <p><b>止めた事実だけを書き、スケジュールの列は触らない。</b> 上書きすると
+     * 「何を止めたのか」が読めなくなる。行も消さない（その航海で経路を組んだ貨物が
+     * ある）。</p>
+     *
+     * <p>更新できなかったことを黙らない。0 件なら投影にその航海が無い。</p>
+     */
+    @EventHandler
+    public void on(VoyageCancelledEvent event) {
+        Instant now = clock.instant();
+        int cancelled = voyages.cancel(event.voyageNumber(), now, event.reason(),
+                event.cancelledBy(), now);
+        if (cancelled == 0) {
+            log.warn("キャンセルを書ける航海が投影に無い: voyageNumber={}", event.voyageNumber());
+            attentionItems.add("PROJECTION_REJECTED", "VOYAGE", event.voyageNumber(),
+                    "ROLE_ROUTING", "キャンセルの対象が投影に無い", "{}", now);
         }
     }
 
@@ -205,7 +231,8 @@ public class VoyageProjection {
                 candidate.arrivalUnlocode(), candidate.departureAt(), candidate.arrivalAt(),
                 candidate.cancelled(),
                 stored.registeredAt(), stored.projectedAt(), stored.lastEventId(),
-                stored.updatedAt(), stored.updatedBy());
+                stored.updatedAt(), stored.updatedBy(),
+                stored.cancelledAt(), stored.cancelReason(), stored.cancelledBy());
         return normalized.equals(stored)
                 && sameMovements(candidate.voyageNumber(), movements)
                 && sameAcceptedCargoTypes(candidate.voyageNumber(), acceptedCargoTypes);

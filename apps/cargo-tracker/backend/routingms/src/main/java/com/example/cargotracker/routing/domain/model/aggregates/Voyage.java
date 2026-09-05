@@ -1,5 +1,6 @@
 package com.example.cargotracker.routing.domain.model.aggregates;
 
+import com.example.cargotracker.routing.domain.model.commands.CancelVoyageCommand;
 import com.example.cargotracker.routing.domain.model.commands.RegisterVoyageCommand;
 import com.example.cargotracker.routing.domain.model.commands.UpdateVoyageScheduleCommand;
 import com.example.cargotracker.routing.domain.model.events.VoyageCancelledEvent;
@@ -104,6 +105,30 @@ public class Voyage {
                 CargoType.resolveAcceptedNames(command.acceptedCargoTypes()),
                 command.updatedBy(),
                 clock.instant()));
+    }
+
+    /**
+     * 航海をキャンセルする（US24）。
+     *
+     * <p><b>2 度目は断る。</b> 何度でも通すと同じ事実がイベントに積み上がり、
+     * 投影と要確認一覧が二重に反応する。既にキャンセル済みかは集約だけが知っている。</p>
+     */
+    @CommandHandler
+    public void cancel(CancelVoyageCommand command, EventAppender appender) {
+        if (voyageNumber == null) {
+            throw new IllegalTransition(
+                    "航海 " + command.voyageNumber() + " は登録されていません");
+        }
+        if (cancelled) {
+            throw new IllegalTransition("航海 " + voyageNumber + " は既にキャンセル済みです");
+        }
+        if (command.reason() == null || command.reason().isBlank()) {
+            // 理由は運航の記録として残す。空で通すと「なぜ止めたか」が後から消える。
+            throw new BusinessRuleViolation("キャンセル理由は必須です");
+        }
+
+        appender.append(new VoyageCancelledEvent(
+                command.voyageNumber(), command.reason().strip(), command.cancelledBy()));
     }
 
     private static VoyageRegisteredEvent.Movement toMovement(CarrierMovement movement) {

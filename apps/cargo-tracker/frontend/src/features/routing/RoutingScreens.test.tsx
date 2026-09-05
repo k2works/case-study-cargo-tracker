@@ -504,6 +504,67 @@ describe('S34 航海詳細', () => {
     expect(screen.queryByRole('link', { name: '更新する' })).not.toBeInTheDocument();
   });
 
+  it('R.1: 理由を入れてキャンセルできる', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(voyage()), { status: 200 }),
+    );
+
+    renderVoyage('/voyages/V-MOL-001', <VoyageDetailPage />);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'この航海をキャンセルする' }));
+    await userEvent.type(screen.getByLabelText('キャンセル理由'), '運航中止');
+    await userEvent.click(screen.getByRole('button', { name: 'キャンセルを確定する' }));
+
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.stringContaining('/routing/voyages/V-MOL-001/cancel'),
+        expect.objectContaining({ method: 'POST' }),
+      );
+    });
+  });
+
+  it('R.1: 理由が空のままでは送らない', async () => {
+    // 集約も断るが、押してから 400 で気づく形にしない。
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(voyage()), { status: 200 }),
+    );
+
+    renderVoyage('/voyages/V-MOL-001', <VoyageDetailPage />);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'この航海をキャンセルする' }));
+    await userEvent.click(screen.getByRole('button', { name: 'キャンセルを確定する' }));
+
+    expect(await screen.findByText('キャンセル理由を入力してください')).toBeInTheDocument();
+    expect(
+      fetchSpy.mock.calls.filter(([url]) => String(url).includes('/cancel')),
+    ).toHaveLength(0);
+  });
+
+  it('R.1: キャンセル済みには止める導線も理由も出す', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify(
+          voyage({
+            cancelled: true,
+            cancelledAt: '2026-09-05T02:00:00Z',
+            cancelReason: '運航中止',
+            cancelledBy: 'routing02',
+          }),
+        ),
+        { status: 200 },
+      ),
+    );
+
+    renderVoyage('/voyages/V-MOL-001', <VoyageDetailPage />);
+
+    // 止めた理由を記録しても、読み口が無ければ誰にも見えない。
+    expect(await screen.findByText(/運航中止/)).toBeInTheDocument();
+    expect(screen.getByText(/routing02/)).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'この航海をキャンセルする' }),
+    ).not.toBeInTheDocument();
+  });
+
   it('投影がまだなら「反映中」と伝える（見つかりませんにしない）', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(

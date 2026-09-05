@@ -2,6 +2,7 @@ package com.example.cargotracker.routing.infrastructure.projection;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.cargotracker.routing.domain.model.events.VoyageCancelledEvent;
 import com.example.cargotracker.routing.domain.model.events.VoyageRegisteredEvent;
 import com.example.cargotracker.routing.domain.model.valueobjects.VoyageSearchCriteria;
 import com.example.cargotracker.routing.domain.model.events.VoyageScheduleUpdatedEvent;
@@ -374,5 +375,49 @@ class VoyageProjectionIT extends AbstractAxonIntegrationTest {
         assertThat(attentionItems.findOpenByRole("ROLE_ROUTING"))
                 .as("黙って捨てると、更新したのに反映されないことが誰にも見えない")
                 .anySatisfy(item -> assertThat(item.targetId()).isEqualTo(number));
+    }
+
+    @Test
+    @DisplayName("R.1: キャンセルすると理由と日時が読める（記録と読み口を対で出す）")
+    void projectsCancellation() {
+        String number = uniqueNumber();
+        projection.on(registered(number, List.of("GENERAL")));
+
+        projection.on(new VoyageCancelledEvent(number, "運航中止", "routing01"));
+
+        VoyageView view = queries.handle(new FindVoyageQuery(number));
+        assertThat(view.cancelled()).isTrue();
+        assertThat(view.cancelReason()).isEqualTo("運航中止");
+        assertThat(view.cancelledBy()).isEqualTo("routing01");
+        assertThat(view.cancelledAt()).isNotNull();
+        // 止めた航海の「元の予定」は残す。上書きすると何を止めたのかが読めなくなる。
+        assertThat(view.departureUnLocode()).isEqualTo("JPTYO");
+        assertThat(view.movements()).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("R.1: キャンセルした航海は一覧の既定から外れる")
+    void hidesCancelledFromList() {
+        String number = uniqueNumber();
+        projection.on(registered(number, List.of("GENERAL")));
+
+        projection.on(new VoyageCancelledEvent(number, "運航中止", "routing01"));
+
+        assertThat(queries.handle(new FindVoyagesQuery(0, 200, false,
+                VoyageSearchCriteria.of(null, null, null, null, null)))
+                .items().stream().map(VoyageView::voyageNumber))
+                .doesNotContain(number);
+    }
+
+    @Test
+    @DisplayName("R.1: 投影に無い航海のキャンセルは要確認一覧に残る（黙らない）")
+    void recordsAttentionWhenCancellingUnknownVoyage() {
+        String number = uniqueNumber();
+
+        projection.on(new VoyageCancelledEvent(number, "運航中止", "routing01"));
+
+        assertThat(attentionItems.findOpenByRole("ROLE_ROUTING"))
+                .anyMatch(item -> item.targetId().equals(number)
+                        && item.reason().equals("キャンセルの対象が投影に無い"));
     }
 }

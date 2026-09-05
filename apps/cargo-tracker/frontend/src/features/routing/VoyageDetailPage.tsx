@@ -1,8 +1,13 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 import { Link, useParams } from 'react-router';
 import {
   ALERT,
+  BUTTON_DANGER,
+  BUTTON_SECONDARY,
   CARD,
+  FIELD,
+  LABEL,
   LINK,
   NOTICE,
   PAGE_TITLE,
@@ -12,8 +17,8 @@ import {
   TD,
   TH,
 } from '@/shared/ui/styles';
-import { acceptedCargoTypeLabel, fetchVoyage, formatVoyageTime } from './api';
-import { canUpdateSchedule } from './voyageRules';
+import { acceptedCargoTypeLabel, cancelVoyage, fetchVoyage, formatVoyageTime } from './api';
+import { canCancel, canUpdateSchedule } from './voyageRules';
 
 /**
  * S34 航海詳細（UC19 / US24・US25）。
@@ -27,6 +32,18 @@ import { canUpdateSchedule } from './voyageRules';
  */
 export function VoyageDetailPage() {
   const { voyageNumber = '' } = useParams();
+  const queryClient = useQueryClient();
+  const [cancelling, setCancelling] = useState(false);
+  const [reason, setReason] = useState('');
+  const [reasonError, setReasonError] = useState('');
+  const cancel = useMutation({
+    mutationFn: () => cancelVoyage(voyageNumber, reason),
+    onSuccess: () => {
+      setCancelling(false);
+      setReason('');
+      return queryClient.invalidateQueries({ queryKey: ['voyage', voyageNumber] });
+    },
+  });
   const { data, isPending, isError } = useQuery({
     queryKey: ['voyage', voyageNumber],
     queryFn: () => fetchVoyage(voyageNumber),
@@ -54,7 +71,17 @@ export function VoyageDetailPage() {
             <p>
               対応貨物種別: {data.value.acceptedCargoTypes.map(acceptedCargoTypeLabel).join(' / ')}
             </p>
-            {data.value.cancelled && <p>キャンセル済み</p>}
+            {data.value.cancelled && (
+              <p>
+                キャンセル済み
+                {data.value.cancelReason ? `: ${data.value.cancelReason}` : ''}
+                {data.value.cancelledAt
+                  ? `（${formatVoyageTime(data.value.cancelledAt)}${
+                      data.value.cancelledBy ? ` / ${data.value.cancelledBy}` : ''
+                    }）`
+                  : ''}
+              </p>
+            )}
             {/* 一度も更新していない航海に「最終更新」を出すと、登録日時と
                 区別が付かなくなる。直したことのある航海だけに出す。 */}
             {data.value.updatedAt && (
@@ -91,6 +118,79 @@ export function VoyageDetailPage() {
               </tbody>
             </table>
           </div>
+
+          {/* 判定は書き直さず述語を呼ぶ（US24）。止めるのは戻せないので、
+              一覧のボタン 1 つでは送らず理由を書かせる。 */}
+          {canCancel(data.value) && (
+            <div className="mt-6">
+              {!cancelling && (
+                <button
+                  type="button"
+                  className={BUTTON_SECONDARY}
+                  onClick={() => setCancelling(true)}
+                >
+                  この航海をキャンセルする
+                </button>
+              )}
+              {cancelling && (
+                <form
+                  className={`${CARD} space-y-2`}
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    if (!reason.trim()) {
+                      // 集約も断るが、押してから 400 で気づく形にしない。
+                      setReasonError('キャンセル理由を入力してください');
+                      return;
+                    }
+                    setReasonError('');
+                    cancel.mutate();
+                  }}
+                >
+                  <p className="text-sm">
+                    キャンセルすると、この航海は経路候補に出なくなり、スケジュールも直せなくなります。
+                  </p>
+                  <label htmlFor="cancel-reason" className={LABEL}>
+                    キャンセル理由
+                  </label>
+                  <input
+                    id="cancel-reason"
+                    className={FIELD}
+                    value={reason}
+                    onChange={(event) => setReason(event.target.value)}
+                  />
+                  {reasonError && (
+                    <p role="alert" className={ALERT}>
+                      {reasonError}
+                    </p>
+                  )}
+                  {cancel.isError && (
+                    <p role="alert" className={ALERT}>
+                      キャンセルできませんでした
+                    </p>
+                  )}
+                  <div className="flex gap-2">
+                    <button
+                      type="submit"
+                      className={BUTTON_DANGER}
+                      disabled={cancel.isPending}
+                    >
+                      キャンセルを確定する
+                    </button>
+                    <button
+                      type="button"
+                      className={BUTTON_SECONDARY}
+                      onClick={() => {
+                        setCancelling(false);
+                        setReasonError('');
+                      }}
+                    >
+                      やめる
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          )}
 
           <p className="mt-4 flex gap-4 text-sm">
             {/* 判定は書き直さず述語を呼ぶ（不変条件 5）。 */}

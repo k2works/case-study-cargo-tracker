@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.example.cargotracker.routing.domain.model.commands.CancelVoyageCommand;
 import com.example.cargotracker.routing.domain.model.commands.RegisterVoyageCommand;
 import com.example.cargotracker.routing.domain.model.valueobjects.CargoType;
 import com.example.cargotracker.routing.infrastructure.query.RoutingQueries.FindVoyagesQuery;
@@ -13,6 +14,7 @@ import com.example.cargotracker.routing.infrastructure.query.RoutingQueries.Move
 import com.example.cargotracker.routing.infrastructure.query.RoutingQueries.VoyageListView;
 import com.example.cargotracker.routing.infrastructure.query.RoutingQueries.VoyageView;
 import com.example.cargotracker.routing.domain.model.commands.UpdateVoyageScheduleCommand;
+import com.example.cargotracker.routing.interfaces.rest.dto.VoyageDtos.CancelVoyageRequest;
 import com.example.cargotracker.routing.interfaces.rest.dto.VoyageDtos.MovementRequest;
 import com.example.cargotracker.routing.interfaces.rest.dto.VoyageDtos.UpdateVoyageRequest;
 import com.example.cargotracker.routing.interfaces.rest.dto.VoyageDtos.VoyageDiffResponse;
@@ -57,7 +59,8 @@ class VoyageControllerTest {
     private static VoyageView view() {
         return new VoyageView("V-MOL-001", "MOL", "商船三井", "MOL EXPRESS", "JPTYO", "USNYC",
                 DEPART, ARRIVE, false, List.of("GENERAL"),
-                List.of(new MovementView(1, "JPTYO", "USNYC", DEPART, ARRIVE)), null, null);
+                List.of(new MovementView(1, "JPTYO", "USNYC", DEPART, ARRIVE)), null, null,
+                null, null, null);
     }
 
     @Test
@@ -217,5 +220,20 @@ class VoyageControllerTest {
                         List.of(new MovementRequest("JPTYO", "USNYC", DEPART, ARRIVE)),
                         List.of("UNKNOWN")), "routing02"))
                 .isInstanceOf(BusinessRuleViolation.class);
+    }
+
+    @Test
+    @DisplayName("R.1: キャンセルはコマンドに理由と利用者を載せる")
+    void cancels() {
+        ResponseEntity<?> response = controller.cancel(
+                "V-MOL-001", new CancelVoyageRequest("運航中止"), "routing01");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        ArgumentCaptor<CancelVoyageCommand> captor =
+                ArgumentCaptor.forClass(CancelVoyageCommand.class);
+        org.mockito.Mockito.verify(commands).sendAndWait(captor.capture());
+        assertThat(captor.getValue().voyageNumber()).isEqualTo("V-MOL-001");
+        assertThat(captor.getValue().reason()).isEqualTo("運航中止");
+        assertThat(captor.getValue().cancelledBy()).isEqualTo("routing01");
     }
 }

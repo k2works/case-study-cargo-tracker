@@ -33,6 +33,10 @@ export interface VoyageView {
   /** 最終更新（US25）。一度も更新していなければ null。 */
   readonly updatedAt: string | null;
   readonly updatedBy: string | null;
+  /** キャンセル（US24）。止めていなければ 3 つとも null。 */
+  readonly cancelledAt?: string | null;
+  readonly cancelReason?: string | null;
+  readonly cancelledBy?: string | null;
 }
 
 /** 更新前後の差分 1 件（US25 §受入基準 2）。サーバが出す。 */
@@ -122,6 +126,18 @@ export function departurePeriod(from: string, to: string): {
 
 export function fetchVoyage(voyageNumber: string): Promise<Pending<VoyageView>> {
   return queryClient(`/routing/voyages/${encodeURIComponent(voyageNumber)}`);
+}
+
+/**
+ * 航海をキャンセルする（US24 / IT5 R.1）。
+ *
+ * <p>止めてよいかは集約が見る。ここは理由を運ぶだけ。</p>
+ */
+export function cancelVoyage(
+  voyageNumber: string,
+  reason: string,
+): Promise<{ voyageNumber: string }> {
+  return commandClient(`/routing/voyages/${encodeURIComponent(voyageNumber)}/cancel`, { reason });
 }
 
 export function registerVoyage(input: RegisterVoyageInput): Promise<{ voyageNumber: string }> {

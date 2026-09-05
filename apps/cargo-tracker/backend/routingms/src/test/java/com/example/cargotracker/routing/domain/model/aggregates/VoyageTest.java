@@ -2,6 +2,7 @@ package com.example.cargotracker.routing.domain.model.aggregates;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.cargotracker.routing.domain.model.commands.CancelVoyageCommand;
 import com.example.cargotracker.routing.domain.model.commands.RegisterVoyageCommand;
 import com.example.cargotracker.routing.domain.model.commands.UpdateVoyageScheduleCommand;
 import com.example.cargotracker.routing.domain.model.events.VoyageCancelledEvent;
@@ -234,5 +235,48 @@ class VoyageTest {
                         List.of(new VoyageScheduleUpdatedEvent.Movement(
                                 "JPTYO", "USNYC", DEPART_LATER, ARRIVE_LATER)),
                         List.of("GENERAL"), "routing01", UPDATED_AT));
+    }
+
+    private static CancelVoyageCommand cancel(String reason) {
+        return new CancelVoyageCommand("V-MOL-001", reason, "routing01");
+    }
+
+    @Test
+    @DisplayName("R.1: 登録済みの航海はキャンセルできる")
+    void cancels() {
+        fixture.given().event(registered(List.of("GENERAL")))
+                .when().command(cancel("運航中止"))
+                .then().success()
+                .events(new VoyageCancelledEvent("V-MOL-001", "運航中止", "routing01"));
+    }
+
+    @Test
+    @DisplayName("登録していない航海はキャンセルできない")
+    void rejectsCancelOfUnknownVoyage() {
+        fixture.given().noPriorActivity()
+                .when().command(cancel("運航中止"))
+                .then().exceptionSatisfies(e ->
+                        assertThat(e.getMessage()).contains("登録されていません"));
+    }
+
+    @Test
+    @DisplayName("2 度目のキャンセルは断る（イベントを二重に出さない）")
+    void rejectsSecondCancel() {
+        // 何度でも通すと、投影と要確認一覧に同じ事実が積み上がる。
+        fixture.given().events(registered(List.of("GENERAL")),
+                        new VoyageCancelledEvent("V-MOL-001", "運航中止", "routing01"))
+                .when().command(cancel("運航中止"))
+                .then().exceptionSatisfies(e ->
+                        assertThat(e.getMessage()).contains("キャンセル"));
+    }
+
+    @Test
+    @DisplayName("理由の無いキャンセルは断る")
+    void rejectsCancelWithoutReason() {
+        // 理由は運航の記録として残す。空で通すと、あとから「なぜ止めたか」が消える。
+        fixture.given().event(registered(List.of("GENERAL")))
+                .when().command(cancel("  "))
+                .then().exceptionSatisfies(e ->
+                        assertThat(e.getMessage()).contains("理由"));
     }
 }

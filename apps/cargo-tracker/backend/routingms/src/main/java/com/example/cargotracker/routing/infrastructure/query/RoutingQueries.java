@@ -51,7 +51,12 @@ public final class RoutingQueries {
             // 最終更新（US25）。一度も更新していなければ null。
             // 変更内容の履歴は Event Store が持つ（投影には持たせない）。
             Instant updatedAt,
-            String updatedBy) {
+            String updatedBy,
+            // キャンセル（US24）。止めていなければ 3 つとも null。
+            // 記録だけして読み口を出さないと、止めた理由が誰にも見えない。
+            Instant cancelledAt,
+            String cancelReason,
+            String cancelledBy) {
     }
 
     /** 寄港地。並び順そのものが業務の意味を持つ。 */

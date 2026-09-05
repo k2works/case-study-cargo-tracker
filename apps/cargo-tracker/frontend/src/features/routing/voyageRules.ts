@@ -12,6 +12,16 @@ export interface VoyageState {
   readonly cancelled: boolean;
 }
 
+/**
+ * キャンセルできるか（US24）。
+ *
+ * <p>集約は「登録済みで、まだ止まっていない」ものだけを受ける。画面が持てるのは
+ * 後者だけ（登録済みでなければ画面自体が開かない）。</p>
+ */
+export function canCancel(voyage: VoyageState): boolean {
+  return !voyage.cancelled;
+}
+
 /** スケジュールを更新できるか（不変条件 5）。 */
 export function canUpdateSchedule(voyage: VoyageState): boolean {
   return !voyage.cancelled;
