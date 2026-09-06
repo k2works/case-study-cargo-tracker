@@ -99,29 +99,39 @@ public class ConditionAndNotificationSteps {
         }, "到着期限が " + expected + " になる");
     }
 
-    @かつ("その予約は営業の見直し依頼に理由 {string} で出る")
-    public void 見直し依頼に出る(String reason) {
+    @かつ("{int} 秒以内にその予約は営業の見直し依頼に理由 {string} で出る")
+    public void 見直し依頼に出る(int seconds, String reason) {
         // **件数だけでは仕事が進まない。** 理由が読めることまで見る。
-        ResponseEntity<BookingRegistrationSteps.JsonMap> response = bookings.rest().get()
-                .uri(bookings.url("/api/v1/booking/bookings/condition-reviews"))
-                .retrieve().toEntity(BookingRegistrationSteps.JsonMap.class);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody().get("items").toString())
-                .contains(bookingId()).contains(reason);
+        // **投影を待つ。** 他のステップは待っているのに、ここだけ即座に照会して
+        // いた（IT6 レビュー 中）。速いから緑なだけで、CI が混むと落ちる。
+        String id = bookingId();
+        SharedSteps.awaitWithin(seconds, () -> {
+            ResponseEntity<BookingRegistrationSteps.JsonMap> response = bookings.rest().get()
+                    .uri(bookings.url("/api/v1/booking/bookings/condition-reviews"))
+                    .retrieve().toEntity(BookingRegistrationSteps.JsonMap.class);
+            return response.getStatusCode() == HttpStatus.OK
+                    && response.getBody().get("items").toString().contains(id)
+                    && response.getBody().get("items").toString().contains(reason);
+        }, "見直し依頼に理由「" + reason + "」で出る");
     }
 
-    @かつ("その予約の通知履歴には内容 {string} が {int} 件ある")
+    @かつ("{int} 秒以内にその予約の通知履歴には内容 {string} が {int} 件ある")
     @SuppressWarnings("unchecked")
-    public void 通知履歴を数える(String summary, int expected) {
-        ResponseEntity<BookingRegistrationSteps.JsonMap> response = bookings.rest().get()
-                .uri(bookings.url("/api/v1/booking/bookings/" + bookingId() + "/notifications"))
-                .retrieve().toEntity(BookingRegistrationSteps.JsonMap.class);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        List<Map<String, Object>> items =
-                (List<Map<String, Object>>) response.getBody().get("items");
-        assertThat(items).filteredOn(item -> summary.equals(item.get("summary")))
-                .hasSize(expected);
+    public void 通知履歴を数える(int seconds, String summary, int expected) {
+        // **投影を待つ。** 通知の 200 を確かめた直後に数えると、投影が追いつく前に
+        // 読んで 0 件で落ちる（IT6 レビュー 中）。
+        String id = bookingId();
+        SharedSteps.awaitWithin(seconds, () -> {
+            ResponseEntity<BookingRegistrationSteps.JsonMap> response = bookings.rest().get()
+                    .uri(bookings.url("/api/v1/booking/bookings/" + id + "/notifications"))
+                    .retrieve().toEntity(BookingRegistrationSteps.JsonMap.class);
+            if (response.getStatusCode() != HttpStatus.OK) {
+                return false;
+            }
+            List<Map<String, Object>> items =
+                    (List<Map<String, Object>>) response.getBody().get("items");
+            return items.stream().filter(item -> summary.equals(item.get("summary")))
+                    .count() == expected;
+        }, "通知履歴に「" + summary + "」が " + expected + " 件ある");
     }
 }

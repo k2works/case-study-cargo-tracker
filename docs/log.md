@@ -2,6 +2,14 @@
 
 ## 2026-09-06
 * **Creation**: [IT6実装_review_20260906](/review/cargo-tracker/IT6実装_review_20260906.md) を作成（claude-code/claude-opus-5）
+* **Update**: [10-荷主に経路を通知する](/manual/10-荷主に経路を通知する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [09-経路を設計する](/manual/09-経路を設計する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [07-航海スケジュールを登録する](/manual/07-航海スケジュールを登録する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [05-貨物予約を登録する](/manual/05-貨物予約を登録する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [01-業務フロー](/manual/01-業務フロー.md) を更新（claude-code/claude-opus-5）
+* **Update**: [retrospective-6](/development/cargo-tracker/retrospective-6.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_report-6](/development/cargo-tracker/iteration_report-6.md) を更新（claude-code/claude-opus-5）
+* **Creation**: [IT6実装_review_20260906](/review/cargo-tracker/IT6実装_review_20260906.md) を作成（claude-code/claude-opus-5）
 * **Update**: [09-経路を設計する](/manual/09-経路を設計する.md) を更新（claude-code/claude-opus-5）
 * **Update**: [retrospective-6](/development/cargo-tracker/retrospective-6.md) を更新（claude-code/claude-opus-5）
 * **Update**: [iteration_report-6](/development/cargo-tracker/iteration_report-6.md) を更新（claude-code/claude-opus-5）

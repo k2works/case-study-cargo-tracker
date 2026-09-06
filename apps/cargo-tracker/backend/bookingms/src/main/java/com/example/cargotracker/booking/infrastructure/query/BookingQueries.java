@@ -211,6 +211,10 @@ public final class BookingQueries {
             // 最後に荷主へ通知した日時（US12）。一度も通知していなければ null。
             // 画面は「通知履歴を問い合わせるか」をこの値で決める。
             Instant lastNotifiedAt,
+            // 営業が経路設計へ戻した日時と理由（US12）。**経路設計者が読む。**
+            // 記録だけ残して読み口を出さないと、営業に無駄な入力をさせることになる。
+            Instant returnedToRoutingAt,
+            String returnReason,
             // 最終更新（US32）。変更内容の履歴は Event Store が持つ。
             Instant updatedAt,
             String updatedBy) {

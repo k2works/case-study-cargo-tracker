@@ -24,7 +24,7 @@ import {
   cargoTypeLabel,
   fetchBooking,
 } from '@/features/bookings/api';
-import { canAssignRoute } from '@/features/bookings/transitions';
+import { canAssignRoute, canRequestConditionReview } from '@/features/bookings/transitions';
 import {
   adjustRouteSpecification,
   fetchRouteCandidates,
@@ -116,6 +116,10 @@ export function RoutingWorkbenchPage() {
   // 経路を確定できる状態か。集約が受けるのは ROUTING_REQUESTED と MISROUTED だけ。
   const assignable = booking.data?.state === 'ready'
     && canAssignRoute(booking.data.value.routingStatus);
+  // **差し戻せる状態は別の判断。** 誤配は経路を確定し直せるが、差し戻せない
+  // （ADR-0009 決定 2）。同じ述語で出し分けると誤配で押せて 422 になる。
+  const sendBackable = booking.data?.state === 'ready'
+    && canRequestConditionReview(booking.data.value.routingStatus);
 
   const unavailable =
     candidates.error instanceof ApiError && candidates.error.status === 503;
@@ -160,7 +164,20 @@ export function RoutingWorkbenchPage() {
           同じ条件で何度も再算出する。条件はサーバが持ち、ここは映すだけ。 */}
       {condition && (
         <>
-          <h2 className={`${SECTION_TITLE} mt-6`}>探す条件</h2>
+          {/* **営業が戻した理由を出す。** 記録だけ残して読み口を出さないと、営業に
+          無駄な入力をさせることになる（理由は必須にしている）。同じ経路をもう一度
+          確定して、また戻される往復にもなる。 */}
+      {booking.data?.state === 'ready' && booking.data.value.returnReason && (
+        <output className={`${NOTICE} mt-4 block`}>
+          <b>営業から戻されました</b>
+          {booking.data.value.returnedToRoutingAt
+            ? `（${formatBusinessDateTime(booking.data.value.returnedToRoutingAt)}）`
+            : ''}
+          : {booking.data.value.returnReason}
+        </output>
+      )}
+
+      <h2 className={`${SECTION_TITLE} mt-6`}>探す条件</h2>
           <div className={`${CARD} mt-2 space-y-3`}>
             <div className="grid gap-3 sm:grid-cols-3">
               <label className={LABEL}>
@@ -211,8 +228,8 @@ export function RoutingWorkbenchPage() {
                 {adjust.isPending ? '再算出しています…' : '条件を変えて再算出'}
               </button>
               {/* 組めているのだから見直しは要らない。押してから断られる導線に
-                  しない（判定は集約と同じ述語を呼ぶ）。 */}
-              {assignable && !sendingBack && (
+                  しない（判定は集約と同じ述語を呼ぶ）。**誤配も差し戻せない。** */}
+              {sendBackable && !sendingBack && (
                 <button
                   type="button"
                   className={BUTTON_SECONDARY}
@@ -315,11 +332,15 @@ export function RoutingWorkbenchPage() {
         </output>
       )}
 
-      {/* 上限まで探したことを黙らない（ADR-0007）。黙ると「候補が無い」と読まれる。 */}
+      {/* 上限まで探したことを黙らない（ADR-0007）。黙ると「候補が無い」と読まれる。
+          **「乗り継ぎの多い経路は出していません」とは書かない。** 打ち切りは並べた
+          あとに効くので、出ていないのは推奨順の 21 位以下であって、乗り継ぎの多さで
+          落としたものではない（ADR-0007「決定 2 の訂正」）。そう書くと「条件を絞れば
+          良い候補が出る」と読まれて空振りする。 */}
       {found && found.candidates.length > 0 && found.truncated && (
         <output className={`${NOTICE} mt-2 block`}>
-          上限まで探しました。乗り継ぎの多い経路は出していません。条件を絞ると別の候補が
-          出ることがあります
+          候補が多いため、<b>推奨順の上位 20 件だけ</b>を出しています。条件を絞ると
+          別の候補が上位に入ることがあります
         </output>
       )}
 

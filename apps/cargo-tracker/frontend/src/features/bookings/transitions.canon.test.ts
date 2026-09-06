@@ -4,6 +4,7 @@ import { ROUTING_STATUS_LABELS } from './api';
 import {
   BOOKING_TRANSITIONS,
   canNotifyShipper,
+  canRequestConditionReview,
   canRequestRouting,
   canReturnToRouting,
   canUpdateSpecification,
@@ -83,10 +84,15 @@ describe('予約の状態遷移表', () => {
   it('通知できる状態は正典と一致する（US12）', () => {
     // 集約は routingStatus で判断する。正典の本体を読み取って突き合わせる。
     const source = readFileSync(CARGO, 'utf-8');
-    const body = source.slice(source.indexOf('public String notifyShipper'));
-    const canon = /routingStatus != RoutingStatus\.(\w+)/.exec(body)?.[1];
+    const body = source.slice(source.indexOf('public String notifyShipper'),
+      source.indexOf('public String returnToRouting'));
+    const conditions = [...body.matchAll(/routingStatus != RoutingStatus\.(\w+)/g)];
+    const canon = conditions[0]?.[1];
 
     expect(canon, '正典の判断を読めていない').toBeDefined();
+    // **条件の数まで見る。** 1 件目だけを比べると、正典に条件が増えたときに
+    // 画面の述語が古いままでも緑になる（IT6 レビュー 中）。
+    expect(conditions, '正典の判断が 1 条件でなくなった').toHaveLength(1);
     for (const status of ['NOT_ROUTED', 'ROUTING_REQUESTED', 'ROUTED', 'MISROUTED']) {
       expect(canNotifyShipper(status), status).toBe(status === canon);
     }
@@ -95,9 +101,11 @@ describe('予約の状態遷移表', () => {
   it('経路設計へ戻せる状態は正典と一致する（US12）', () => {
     const source = readFileSync(CARGO, 'utf-8');
     const body = source.slice(source.indexOf('public String returnToRouting'));
-    const canon = /bookingStatus != BookingStatus\.(\w+)/.exec(body)?.[1];
+    const conditions = [...body.matchAll(/bookingStatus != BookingStatus\.(\w+)/g)];
+    const canon = conditions[0]?.[1];
 
     expect(canon, '正典の判断を読めていない').toBeDefined();
+    expect(conditions, '正典の判断が 1 条件でなくなった').toHaveLength(1);
     for (const status of Object.keys(BOOKING_TRANSITIONS)) {
       expect(canReturnToRouting(status), status).toBe(status === canon);
     }
@@ -122,6 +130,22 @@ describe('予約の状態遷移表', () => {
       expect(label, `${status} の呼び名が設計と食い違う`).toMatch(
         new RegExp(`^${canonLabel}`),
       );
+    }
+  });
+
+  it('差し戻せる状態は正典と一致する（US10 §4 / ADR-0009 決定 2）', () => {
+    // **経路を確定できるか（canAssignRoute）とは別の判断。** あちらは誤配からの
+    // 再設計を許すが、差し戻しは許さない。同じ述語で出し分けると、誤配の予約で
+    // ボタンが押せて 422 になる（IT6 レビュー 中）。
+    const source = readFileSync(
+      '../backend/bookingms/src/main/java/com/example/cargotracker/booking'
+      + '/domain/model/valueobjects/RoutingStatus.java', 'utf-8');
+    const body = source.slice(source.indexOf('canRequestConditionReview()'));
+    const canon = /return this == (\w+);/.exec(body)?.[1];
+
+    expect(canon, '正典の述語を読めていない').toBeDefined();
+    for (const status of ['NOT_ROUTED', 'ROUTING_REQUESTED', 'ROUTED', 'MISROUTED']) {
+      expect(canRequestConditionReview(status), status).toBe(status === canon);
     }
   });
 });

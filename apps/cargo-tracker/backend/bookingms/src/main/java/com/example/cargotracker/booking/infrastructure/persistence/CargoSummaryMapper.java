@@ -62,6 +62,9 @@ public interface CargoSummaryMapper {
      */
     @org.apache.ibatis.annotations.Update(
             "UPDATE cargo_summary SET routing_status = #{routingStatus}, "
+            // 組み直したので、戻された理由は役目を終える。残すと経路設計者は
+            // 次に開いたときも「営業から戻されました」を読み続ける。
+            + "returned_to_routing_at = NULL, return_reason = NULL, "
             + "projected_at = #{projectedAt} WHERE booking_id = #{bookingId}")
     int updateRoutingStatus(@Param("bookingId") String bookingId,
             @Param("routingStatus") String routingStatus,
@@ -266,6 +269,8 @@ public interface CargoSummaryMapper {
             Instant updatedAt,
             String updatedBy,
             Instant lastNotifiedAt,
+            Instant returnedToRoutingAt,
+            String returnReason,
             Instant projectedAt,
             String lastEventId) {
     }

@@ -88,3 +88,18 @@ export function canNotifyShipper(routingStatus: string): boolean {
 export function canReturnToRouting(bookingStatus: string): boolean {
   return bookingStatus === 'ROUTE_NOTIFIED';
 }
+
+/**
+ * 条件の見直しを営業へ差し戻せるか（US10 §受入基準 4 / ADR-0009 決定 2）。
+ *
+ * <p><b>経路を確定できるか（`canAssignRoute`）とは別の判断である。</b> あちらは
+ * 誤配（`MISROUTED`）からの再設計を許すが、差し戻しは許さない。誤配は「荷物が
+ * 経路から外れた」ことで、条件では組めないこととは別だからである。</p>
+ *
+ * <p>同じ述語で出し分けると、誤配の予約で押せて 422 になる。Java 側の
+ * RoutingStatus.canRequestConditionReview と同じ判断であることは
+ * transitions.canon.test.ts が正典を読んで突き合わせる。</p>
+ */
+export function canRequestConditionReview(routingStatus: string): boolean {
+  return routingStatus === 'ROUTING_REQUESTED';
+}

@@ -46,6 +46,16 @@ class RouteCandidateEndpointIT extends AbstractAxonIntegrationTest {
     /** 経路設計サービスの振る舞いをここで決める。実サービスは起こさない。 */
     private static final AtomicBoolean UNAVAILABLE = new AtomicBoolean();
 
+    /**
+     * 探索へ渡った条件。
+     *
+     * <p><b>スタブが引数を捨てると、コントローラが条件を落としても全部緑になる</b>
+     * （IT6 レビュー 高）。投影から条件を読む配線は、ここでしか踏まれない。</p>
+     */
+    private static final java.util.concurrent.atomic.AtomicReference<
+            com.example.cargotracker.booking.application.port.RouteSearchRequest> LAST_REQUEST =
+            new java.util.concurrent.atomic.AtomicReference<>();
+
     @TestConfiguration
     static class StubFinder {
 
@@ -53,6 +63,7 @@ class RouteCandidateEndpointIT extends AbstractAxonIntegrationTest {
         @Primary
         RouteCandidateFinder stubRouteCandidateFinder() {
             return request -> {
+                LAST_REQUEST.set(request);
                 if (UNAVAILABLE.get()) {
                     throw new RouteCandidateFinder.RouteSearchUnavailable(
                             "経路設計サービスに問い合わせられませんでした", null);
@@ -158,6 +169,48 @@ class RouteCandidateEndpointIT extends AbstractAxonIntegrationTest {
                 assertThat(leg.get("unloadUnLocode")).isEqualTo("USNYC");
                 assertThat(leg).containsKeys("loadTime", "unloadTime");
             });
+        });
+    }
+
+    @Test
+    @DisplayName("US10: 調整した条件が探索へ渡る（デモ項目 2 の配線）")
+    void adjustedConditionsReachTheSearch() {
+        // **この検査だけが、投影から条件を読む配線を踏む。** 集約・投影・ACL・探索器の
+        // 検査はそれぞれ自分の層しか見ておらず、コントローラの組み立てを
+        // `List.of(), null` に潰しても全部緑になる（IT6 レビュー 高）。
+        String bookingId = bookedId();
+        // 条件を調整できるのは経路設計へ引き渡したあとだけ。
+        assertThat(rest.post().uri(url("/" + bookingId + "/routing-request"))
+                .header("X-Auth-Username", "sales01")
+                .retrieve().toEntity(JsonMap.class).getStatusCode())
+                .isEqualTo(HttpStatus.ACCEPTED);
+        await().atMost(Duration.ofSeconds(10)).untilAsserted(() ->
+                assertThat(rest.get().uri(url("/" + bookingId)).retrieve()
+                        .toEntity(JsonMap.class).getBody().get("routingStatus"))
+                        .isEqualTo("ROUTING_REQUESTED"));
+
+        assertThat(rest.put()
+                .uri(url("/" + bookingId + "/route-specification"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("X-Auth-Username", "routing01")
+                .body(java.util.Map.of("arrivalDeadline", "2027-01-31",
+                        "excludeUnLocodes", List.of("SGSIN", "HKHKG"),
+                        "departFromUnLocode", "JPOSA"))
+                .retrieve().toEntity(JsonMap.class).getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+
+        await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
+            LAST_REQUEST.set(null);
+            rest.get().uri(url("/" + bookingId + "/route-candidates"))
+                    .retrieve().toEntity(JsonMap.class);
+            assertThat(LAST_REQUEST.get()).isNotNull();
+            assertThat(LAST_REQUEST.get().excludePorts())
+                    .extracting(port -> port.unLocode().value())
+                    .containsExactlyInAnyOrder("SGSIN", "HKHKG");
+            assertThat(LAST_REQUEST.get().departFrom()).isNotNull();
+            assertThat(LAST_REQUEST.get().departFrom().unLocode().value()).isEqualTo("JPOSA");
+            assertThat(LAST_REQUEST.get().arrivalDeadline())
+                    .isEqualTo(java.time.LocalDate.of(2027, 1, 31));
         });
     }
 }

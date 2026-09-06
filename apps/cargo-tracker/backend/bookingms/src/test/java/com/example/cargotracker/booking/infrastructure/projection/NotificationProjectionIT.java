@@ -137,4 +137,38 @@ class NotificationProjectionIT extends AbstractAxonIntegrationTest {
     void unnotifiedBookingHasEmptyHistory() {
         assertThat(historyOf(routedBooking())).isEmpty();
     }
+
+    @Test
+    @DisplayName("US12: 戻した理由は経路設計者が読める（記録だけで終わらせない）")
+    void returnReasonIsReadable() {
+        // **記録と読み口は対で出す。** 理由の入力を必須にしておいて誰にも届かないのは、
+        // 営業に無駄な入力をさせているのと同じ（IT6 レビュー 高）。
+        String bookingId = routedBooking();
+        projection.on(notified(bookingId, FIRST, "1 回目"));
+
+        projection.on(new ReturnedToRoutingEvent(bookingId, "荷主が SGSIN 経由を避けたい",
+                "sales01", SECOND));
+
+        BookingView view = queries.handle(new FindBookingQuery(bookingId));
+        assertThat(view.returnReason()).isEqualTo("荷主が SGSIN 経由を避けたい");
+        assertThat(view.returnedToRoutingAt()).isEqualTo(SECOND);
+    }
+
+    @Test
+    @DisplayName("US12: 組み直すと戻された理由は消える（読み続けさせない）")
+    void returnReasonIsClearedOnRedesign() {
+        String bookingId = routedBooking();
+        projection.on(notified(bookingId, FIRST, "1 回目"));
+        projection.on(new ReturnedToRoutingEvent(bookingId, "変更希望", "sales01", SECOND));
+
+        projection.on(new CargoRoutedEvent(bookingId,
+                List.of(new CargoRoutedEvent.Leg("V-2", "JPTYO", "USNYC",
+                        Instant.parse("2026-10-01T00:00:00Z"),
+                        Instant.parse("2026-10-20T00:00:00Z"))),
+                "routing01", SECOND));
+
+        BookingView view = queries.handle(new FindBookingQuery(bookingId));
+        assertThat(view.returnReason()).isNull();
+        assertThat(view.returnedToRoutingAt()).isNull();
+    }
 }

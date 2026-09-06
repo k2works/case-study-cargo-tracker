@@ -531,6 +531,49 @@ describe('S22 荷主への通知（US12）', () => {
     expect(content).toHaveAttribute('readonly');
   });
 
+  it('US12 §2: 乗り継ぎのある旅程では通る港が順に並ぶ', async () => {
+    // 直行 1 区間だけを通すと、`legs.map(unloadUnLocode)` を
+    // `[first.load, last.unload]` に縮めても緑になる（IT6 レビュー 低）。
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
+      const url = String(input);
+      if (url.includes('/notifications') && (init as RequestInit)?.method !== 'POST') {
+        return Promise.resolve(new Response(JSON.stringify({ items: [] }), { status: 200 }));
+      }
+      if (url.includes('/itinerary')) {
+        return Promise.resolve(new Response(JSON.stringify({
+          legs: [
+            {
+              legSeq: 1,
+              voyageNumber: 'V-1',
+              loadUnLocode: 'JPTYO',
+              unloadUnLocode: 'SGSIN',
+              loadAt: '2026-09-10T00:00:00Z',
+              unloadAt: '2026-09-16T00:00:00Z',
+            },
+            {
+              legSeq: 2,
+              voyageNumber: 'V-2',
+              loadUnLocode: 'SGSIN',
+              unloadUnLocode: 'USNYC',
+              loadAt: '2026-09-17T00:00:00Z',
+              unloadAt: '2026-09-24T00:00:00Z',
+            },
+          ],
+        }), { status: 200 }));
+      }
+      if (url.includes('/revisions')) {
+        return Promise.resolve(new Response(JSON.stringify({ items: [] }), { status: 200 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify(booking(ROUTED)), { status: 200 }));
+    });
+
+    renderDetail();
+
+    await screen.findByRole('heading', { name: '荷主への通知' });
+    const content = screen.getByLabelText('通知内容') as HTMLTextAreaElement;
+    await waitFor(() => expect(content.value).toContain('JPTYO → SGSIN → USNYC'));
+  });
+
   it('US12 §3: 宛先と内容を入れて通知できる', async () => {
     const fetchSpy = mockApi(ROUTED);
 

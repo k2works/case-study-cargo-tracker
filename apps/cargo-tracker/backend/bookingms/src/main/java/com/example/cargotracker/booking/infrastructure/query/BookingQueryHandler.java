@@ -166,6 +166,7 @@ public class BookingQueryHandler {
                 row.temperatureMinC(), row.temperatureMaxC(),
                 row.bookingStatus(), row.routingStatus(), row.bookedAt(),
                 row.routingRequestedAt(), row.lastNotifiedAt(),
+                row.returnedToRoutingAt(), row.returnReason(),
                 row.updatedAt(), row.updatedBy());
     }
 }

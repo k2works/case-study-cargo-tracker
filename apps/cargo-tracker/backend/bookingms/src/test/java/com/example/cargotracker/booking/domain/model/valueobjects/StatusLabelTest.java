@@ -3,6 +3,7 @@ package com.example.cargotracker.booking.domain.model.valueobjects;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
@@ -28,5 +29,20 @@ class StatusLabelTest {
     void bookingStatusHasJapaneseLabel(BookingStatus status) {
         assertThat(status.label()).isNotBlank().isNotEqualTo(status.name());
         assertThat(status.label()).doesNotMatch("^[A-Z_]+$");
+    }
+
+    @Test
+    @DisplayName("画面の呼び名と食い違わない（マニュアルが「同じ呼び名」と保証している）")
+    void labelsMatchTheScreen() throws Exception {
+        // マニュアル 09 章は「断りの括弧の中は、予約詳細の『経路設定状態』と同じ
+        // 呼び名」と書いている。片方だけ直すとその保証が黙って崩れる（IT6 レビュー 中）。
+        // 実行時のカレントは bookingms。フロントは backend の 1 つ上にある。
+        String api = java.nio.file.Files.readString(java.nio.file.Path.of(
+                "../../frontend/src/features/bookings/api.ts"));
+        for (RoutingStatus status : RoutingStatus.values()) {
+            assertThat(api)
+                    .as("%s の呼び名が画面と食い違う", status)
+                    .contains(status.name() + ": '" + status.label() + "'");
+        }
     }
 }

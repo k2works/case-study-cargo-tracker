@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import {
   ALERT,
@@ -49,6 +49,8 @@ import type { ItineraryLegView } from './api';
  */
 export function BookingDetailPage() {
   const { bookingId = '' } = useParams();
+  // 通知を記録したあと、投影に届くまで取り直す合図。
+  const [awaitingNotificationProjection, setAwaitingNotificationProjection] = useState(false);
   const queries = useQueryClient();
   // 引き渡すのは営業の仕事（US06）。詳細画面は経路設計・追跡にも開いているので、
   // 状態だけで出し分けると、見に来ただけの人が引き渡せる。
@@ -67,9 +69,13 @@ export function BookingDetailPage() {
       if (state?.state === 'pending') {
         return 2000;
       }
-      return state?.state === 'ready' && state.value.routingStatus === 'ROUTING_REQUESTED'
-        ? 3000
-        : false;
+      // 通知を記録した直後も投影が数秒遅れる。旅程と同じ形で待つ（IT6 レビュー 中）。
+      // 待たないと「通知した記録を残す」を押しても状態も履歴も変わらず、
+      // 利用者は同じ操作を繰り返す。
+      if (state?.state === 'ready' && state.value.routingStatus === 'ROUTING_REQUESTED') {
+        return 3000;
+      }
+      return state?.state === 'ready' && awaitingNotificationProjection ? 2000 : false;
     },
   });
 
@@ -111,6 +117,12 @@ export function BookingDetailPage() {
   // 一度も通知していない予約では問い合わせない（修正履歴と同じ形）。**状態では
   // 絞れない**——経路設計へ戻した予約は経路提案中に戻るが、通知履歴は残っている。
   const notified = data?.state === 'ready' && Boolean(data.value.lastNotifiedAt);
+  // 届いたら取り直しを止める。
+  useEffect(() => {
+    if (notified) {
+      setAwaitingNotificationProjection(false);
+    }
+  }, [notified]);
   const notifications = useQuery({
     queryKey: ['booking', bookingId, 'notifications'],
     queryFn: () => fetchBookingNotifications(bookingId),
@@ -134,6 +146,7 @@ export function BookingDetailPage() {
   const notify = useMutation({
     mutationFn: () => notifyShipper(bookingId, { recipientEmail: recipient, summary }),
     onSuccess: async () => {
+      setAwaitingNotificationProjection(true);
       await queries.invalidateQueries({ queryKey: ['booking', bookingId] });
       await queries.invalidateQueries({ queryKey: ['booking', bookingId, 'notifications'] });
     },

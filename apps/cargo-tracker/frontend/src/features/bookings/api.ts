@@ -30,6 +30,9 @@ export interface BookingView {
   readonly routingRequestedAt: string | null;
   /** 最後に荷主へ通知した日時（US12）。一度も通知していなければ null。 */
   readonly lastNotifiedAt: string | null;
+  /** 営業が経路設計へ戻した日時と理由（US12）。**経路設計者が読む。** */
+  readonly returnedToRoutingAt: string | null;
+  readonly returnReason: string | null;
   /** 最終更新（US32）。一度も直していなければ null。 */
   readonly updatedAt: string | null;
   readonly updatedBy: string | null;

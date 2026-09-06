@@ -14,7 +14,7 @@ public enum RoutingStatus {
     /** 経路が決まっている。 */
     ROUTED("設定済"),
     /** 予定ルート外の荷役を受けた（誤配）。 */
-    MISROUTED("誤配");
+    MISROUTED("誤配（再設計が要る）");
 
     private final String label;
 

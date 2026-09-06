@@ -32,6 +32,8 @@
             <arg column="updated_at" javaType="java.time.Instant"/>
             <arg column="updated_by" javaType="string"/>
             <arg column="last_notified_at" javaType="java.time.Instant"/>
+            <arg column="returned_to_routing_at" javaType="java.time.Instant"/>
+            <arg column="return_reason" javaType="string"/>
             <arg column="projected_at" javaType="java.time.Instant"/>
             <arg column="last_event_id" javaType="string"/>
         </constructor>

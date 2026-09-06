@@ -30,6 +30,9 @@ function booking() {
     routingStatus: 'ROUTING_REQUESTED',
     bookedAt: '2026-09-03T01:00:00Z',
     routingRequestedAt: '2026-09-04T01:00:00Z',
+    lastNotifiedAt: null,
+    returnedToRoutingAt: null,
+    returnReason: null,
     updatedAt: null,
     updatedBy: null,
   };
@@ -177,7 +180,10 @@ describe('S31 経路設計ワークベンチ', () => {
 
     renderWorkbench();
 
-    expect(await screen.findByText(/上限まで探しました/)).toBeInTheDocument();
+    // **「乗り継ぎの多い経路は出していません」とは言わない。** 打ち切りは並べた
+    // あとに効くので、出ていないのは推奨順の 21 位以下（ADR-0007 決定 2 の訂正）。
+    expect(await screen.findByText(/推奨順の上位 20 件だけ/)).toBeInTheDocument();
+    expect(screen.queryByText(/乗り継ぎの多い経路は出していません/)).not.toBeInTheDocument();
     expect(screen.queryByText(/条件を変えても候補は増えません/)).not.toBeInTheDocument();
   });
 
@@ -439,6 +445,62 @@ describe('S31 経路の確定（US09）', () => {
       }
       return Promise.resolve(new Response(
         JSON.stringify({ ...booking(), routingStatus: 'ROUTED' }), { status: 200 },
+      ));
+    });
+
+    renderWorkbench();
+
+    await screen.findByLabelText('到着期限');
+    expect(screen.queryByRole('button', { name: '営業へ差し戻す' })).not.toBeInTheDocument();
+  });
+
+  it('US12: 営業が戻した理由が経路設計者に読める', async () => {
+    // **記録と読み口は対で出す。** 理由の入力を必須にしておいて誰にも届かないのは、
+    // 営業に無駄な入力をさせているのと同じ（IT6 レビュー 高）。
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      if (String(input).includes('/route-candidates')) {
+        return Promise.resolve(new Response(
+          JSON.stringify({ candidates: [], truncated: false, condition: NO_CONDITION }),
+          { status: 200 },
+        ));
+      }
+      return Promise.resolve(new Response(JSON.stringify({
+        ...booking(),
+        returnedToRoutingAt: '2026-09-07T00:00:00Z',
+        returnReason: '荷主が SGSIN 経由を避けたい',
+      }), { status: 200 }));
+    });
+
+    renderWorkbench();
+
+    expect(await screen.findByText(/営業から戻されました/)).toBeInTheDocument();
+    expect(screen.getByText(/荷主が SGSIN 経由を避けたい/)).toBeInTheDocument();
+  });
+
+  it('戻されていない予約には戻された理由を出さない', async () => {
+    mockApi(new Response(
+      JSON.stringify({ candidates: [], truncated: false, condition: NO_CONDITION }),
+      { status: 200 },
+    ));
+
+    renderWorkbench();
+
+    await screen.findByRole('heading', { name: '経路候補' });
+    expect(screen.queryByText(/営業から戻されました/)).not.toBeInTheDocument();
+  });
+
+  it('US10 §4: 誤配の予約には差し戻しの導線を出さない（押すと 422 になる）', async () => {
+    // 経路の確定はできる（US28 の再設計）が、差し戻しはできない（ADR-0009 決定 2）。
+    // 同じ述語で出し分けると、ここで押せて 422 になる。
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      if (String(input).includes('/route-candidates')) {
+        return Promise.resolve(new Response(
+          JSON.stringify({ candidates: [], truncated: false, condition: NO_CONDITION }),
+          { status: 200 },
+        ));
+      }
+      return Promise.resolve(new Response(
+        JSON.stringify({ ...booking(), routingStatus: 'MISROUTED' }), { status: 200 },
       ));
     });
 
