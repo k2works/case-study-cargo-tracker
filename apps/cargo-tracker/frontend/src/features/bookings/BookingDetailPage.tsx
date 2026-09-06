@@ -431,8 +431,9 @@ export function BookingDetailPage() {
             <div className="space-y-2">
               <h2 className={SECTION_TITLE}>予約の確定</h2>
               <p className="text-sm text-gray-600">
-                荷主の承認を確認してから確定してください。<b>確定すると経路設計へは
-                戻せません。</b>荷主が変更を求めたら、確定する前に戻します
+                荷主の承認を確認してから確定してください。
+                <b>確定すると経路設計へは戻せません。</b>
+                荷主が変更を求めたら、確定する前に戻します
               </p>
               {confirm.isError && (
                 <p role="alert" className={ALERT}>
@@ -458,8 +459,9 @@ export function BookingDetailPage() {
             <div className="space-y-2">
               <h2 className={SECTION_TITLE}>追跡番号の発行</h2>
               <p className="text-sm text-gray-600">
-                発行すると荷主が輸送状況を追えるようになります。<b>番号はシステムが
-                採ります。</b>一度発行した予約に二度目は発行できません
+                発行すると荷主が輸送状況を追えるようになります。
+                <b>番号はシステムが採ります。</b>
+                一度発行した予約に二度目は発行できません
               </p>
               {issue.isError && (
                 <p role="alert" className={ALERT}>

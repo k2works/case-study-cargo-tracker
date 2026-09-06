@@ -111,6 +111,32 @@ public class ConditionAndNotificationSteps {
         }, "確定待ちに" + (expected ? "出る" : "出ない"));
     }
 
+    @もし("その予約に追跡番号を発行する")
+    public void 追跡番号を発行する() {
+        // **経路設計者の操作**（ADR-0010 決定 3）。採番はサーバが行うので本文は無い。
+        lastResponse = post("/tracking-number", Map.of(), "routing01");
+    }
+
+    @かつ("{int} 秒以内にその予約に追跡番号が付く")
+    public void 追跡番号が付く(int seconds) {
+        SharedSteps.awaitWithin(seconds, () -> {
+            Map<String, Object> row = bookings.currentBooking();
+            return row != null && row.get("trackingNumber") != null;
+        }, "追跡番号が付く");
+    }
+
+    @ならば("{int} 秒以内にその予約は経路設計者の発行待ちに出る")
+    public void 発行待ちに出る(int seconds) {
+        String id = bookingId();
+        SharedSteps.awaitWithin(seconds, () -> {
+            ResponseEntity<BookingRegistrationSteps.JsonMap> response = bookings.rest().get()
+                    .uri(bookings.url("/api/v1/booking/bookings/awaiting-tracking-number"))
+                    .retrieve().toEntity(BookingRegistrationSteps.JsonMap.class);
+            return response.getStatusCode() == HttpStatus.OK
+                    && response.getBody().get("items").toString().contains(id);
+        }, "発行待ちに出る");
+    }
+
     @ならば("その操作は成功する")
     public void 操作は成功する() {
         assertThat(lastResponse.getStatusCode()).isEqualTo(HttpStatus.OK);

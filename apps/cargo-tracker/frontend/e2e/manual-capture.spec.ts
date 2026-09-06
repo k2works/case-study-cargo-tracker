@@ -665,6 +665,53 @@ test.describe('マニュアルの画面キャプチャ', () => {
     await page.screenshot({ path: `${OUT}/04-S70-attention-list.png`, fullPage: true });
   });
 
+  test('11 予約の確定（営業）', async ({ page }) => {
+    // 通知済みの予約。**営業に「予約を確定する」が出る**（US13）。
+    await page.route('**/api/v1/booking/bookings/*/notifications', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json',
+        body: JSON.stringify({ items: [] }) }));
+    await page.route('**/api/v1/booking/bookings/*/itinerary', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json',
+        body: JSON.stringify(SAMPLE_ITINERARY) }));
+    await page.route('**/api/v1/booking/bookings/*/revisions', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json',
+        body: JSON.stringify({ items: [] }) }));
+    await page.route('**/api/v1/booking/bookings/*', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json',
+        body: JSON.stringify({ ...SAMPLE_ROUTED_BOOKING,
+          bookingStatus: 'ROUTE_NOTIFIED',
+          lastNotifiedAt: '2026-09-07T00:00:00Z' }) }));
+
+    await signIn(page);
+    await page.goto('/bookings/55555555-5555-5555-5555-555555555555');
+    await expect(page.getByRole('heading', { name: '予約の確定' })).toBeVisible();
+    await page.screenshot({ path: `${OUT}/11-S22-confirm-booking.png`, fullPage: true });
+  });
+
+  test('11 追跡番号の発行（経路設計）', async ({ page }) => {
+    // 確定済みの予約。**経路設計者に「追跡番号を発行する」が出る**（US14）。
+    await page.route('**/api/v1/booking/bookings/*/notifications', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json',
+        body: JSON.stringify({ items: [] }) }));
+    await page.route('**/api/v1/booking/bookings/*/itinerary', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json',
+        body: JSON.stringify(SAMPLE_ITINERARY) }));
+    await page.route('**/api/v1/booking/bookings/*/revisions', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json',
+        body: JSON.stringify({ items: [] }) }));
+    await page.route('**/api/v1/booking/bookings/*', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json',
+        body: JSON.stringify({ ...SAMPLE_ROUTED_BOOKING,
+          bookingStatus: 'CONFIRMED',
+          lastNotifiedAt: '2026-09-07T00:00:00Z',
+          confirmedAt: '2026-09-08T00:00:00Z' }) }));
+
+    await signInAsRouting(page);
+    await page.goto('/bookings/55555555-5555-5555-5555-555555555555');
+    await expect(page.getByRole('heading', { name: '追跡番号の発行' })).toBeVisible();
+    await page.screenshot({ path: `${OUT}/11-S22-issue-tracking-number.png`, fullPage: true });
+  });
+
   test('09 経路設計ワークベンチ', async ({ page }) => {
     // 引き渡したあとの予約に候補が並んだ状態を写す。**1 件の読み口より後に置く**
     // （`*` は `/` をまたがないので、広いパターンが先だと候補の経路に当たらない）。

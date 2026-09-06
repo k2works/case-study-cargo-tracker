@@ -1,6 +1,8 @@
 # Docs Update Log
 
 ## 2026-09-06
+* **Creation**: [11-予約を確定して追跡番号を発行する](/manual/11-予約を確定して追跡番号を発行する.md) を作成（claude-code/claude-opus-5）
+* **Update**: [01-業務フロー](/manual/01-業務フロー.md) を更新（claude-code/claude-opus-5）
 * **Creation**: [0010-reaction-handler-as-the-only-coordinator](/adr/cargo-tracker/0010-reaction-handler-as-the-only-coordinator.md) を作成（claude-code/claude-opus-5）
 * **Update**: [iteration_plan-7](/development/cargo-tracker/iteration_plan-7.md) を更新（claude-code/claude-opus-5）
 * **Update**: [architecture_backend](/design/cargo-tracker/architecture_backend.md) を更新（claude-code/claude-opus-5）
