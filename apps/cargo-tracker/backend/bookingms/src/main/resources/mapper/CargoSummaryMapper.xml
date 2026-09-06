@@ -34,6 +34,8 @@
             <arg column="last_notified_at" javaType="java.time.Instant"/>
             <arg column="returned_to_routing_at" javaType="java.time.Instant"/>
             <arg column="return_reason" javaType="string"/>
+            <arg column="route_exclude_unlocodes" javaType="string"/>
+            <arg column="route_depart_from_unlocode" javaType="string"/>
             <arg column="projected_at" javaType="java.time.Instant"/>
             <arg column="last_event_id" javaType="string"/>
         </constructor>

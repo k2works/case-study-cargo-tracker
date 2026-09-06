@@ -69,8 +69,11 @@ export function RoutingWorkbenchPage() {
   const [reason, setReason] = useState('');
   const [reasonError, setReasonError] = useState('');
 
-  const condition = candidates.data?.state === 'ready'
-    ? candidates.data.value.condition : null;
+  // **条件は予約から組む。候補算出の応答からは組まない。**
+  // 候補の応答に載せると、探索が落ちている（503）間だけ条件の欄と差し戻しが
+  // 画面から消える。直せる手段が要るのはまさにそのときで、経路設計者は
+  // 「探索が直るのを待つ」以外に何もできなくなる（IT6 引き継ぎ 8b）。
+  const condition = booking.data?.state === 'ready' ? booking.data.value : null;
   // サーバの条件が変わったら欄も追随する。入力中の値を握り続けると、再算出の
   // あとも古い値が残って「送ったのに変わらない」ように見える。
   useEffect(() => {
@@ -78,8 +81,8 @@ export function RoutingWorkbenchPage() {
       return;
     }
     setDeadline(condition.arrivalDeadline);
-    setExcluded(condition.excludeUnLocodes.join(', '));
-    setDepartFrom(condition.departFromUnLocode ?? '');
+    setExcluded(condition.routeExcludeUnLocodes.join(', '));
+    setDepartFrom(condition.routeDepartFromUnLocode ?? '');
   }, [condition]);
 
   const adjust = useMutation({

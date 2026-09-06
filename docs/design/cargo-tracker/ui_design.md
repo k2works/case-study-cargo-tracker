@@ -4,7 +4,7 @@ title: "UI 設計 - 国際貨物輸送管理システム（CQRS / Event Sourcing
 description: "CQRS / Event Sourcing 版 Cargo Tracker の UI 設計。画面一覧・ロール別ナビゲーション・画面遷移・salt 画面イメージ・インタラクションを定め、投影の「反映中」を画面共通の規約として扱う。"
 tags: [design,ui,ux,cqrs]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-06T05:09:34Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-06T11:46:04Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -1079,6 +1079,8 @@ CANCELLED : [追跡を見る]（陸揚げ地で荷降しが記録されるまで
 候補の算出は同期処理（`GET /api/v1/booking/bookings/:id/route-candidates`）で、反映中はありません。**REST は bookingms に置き**、その Controller が ACL（`RouteCandidateFinder`）を通して routingms に Query Bus で問い合わせます（[バックエンドアーキテクチャ](architecture_backend.md)）。条件は画面から組み立てず、**サーバが予約の投影（`cargo_summary`）から組みます**。候補算出は Query 側なので集約を読み出しません（`Cargo` は経路仕様をフィールドに持たず、持たせるのは条件調整（US10）の仕事です）。画面が条件を組むと、予約の期限を直したのに古い期限で探すことが起きます。「この経路で確定」（`POST /api/v1/booking/bookings/:id/route`）は複数ロールが触る予約の遷移なので「送信中…」→確定表示です。
 
 **「候補が無い」と「探索できなかった」を言い分けます。** routingms に届かないときは 503 の案内を出し、空の候補一覧を出しません。0 件の一覧は「その条件の経路が無い」と読まれ、条件を変え続けることになります。
+
+**「探す条件」の欄は、候補算出の応答ではなく予約の読み口（`GET /api/v1/booking/bookings/:id`）から埋めます。** 条件を候補の応答に載せると、**探索が落ちている（503）間だけ、条件の欄と「営業へ差し戻す」が画面から消えます**。直せる手段が要るのはまさにそのときで、経路設計者は「探索が直るのを待つ」以外に何もできなくなります。予約が持つ `routeExcludeUnLocodes`・`routeDepartFromUnLocode`・`arrivalDeadline` を映します。
 
 **推奨順は「直行便が先、そのあと所要日数の短い順」です。** 直行便は積み替えが無いぶん事故と遅延の芽が少ないので、多少遅くても先に出します（US08 §受入基準 5）。所要日数は最初の出発から最後の到着までで、**乗り継ぎの待ち時間も含みます**（区間の合計にすると、港で 2 日待つ経路が短く見えます）。
 

@@ -95,9 +95,7 @@ public class BookingQueryHandler {
         if (row == null || row.excludeUnlocodes() == null && row.departFromUnlocode() == null) {
             return new RouteConditionView(List.of(), null);
         }
-        return new RouteConditionView(
-                row.excludeUnlocodes() == null
-                        ? List.of() : List.of(row.excludeUnlocodes().split(",")),
+        return new RouteConditionView(parsePorts(row.excludeUnlocodes()),
                 row.departFromUnlocode());
     }
 
@@ -167,6 +165,18 @@ public class BookingQueryHandler {
                 row.bookingStatus(), row.routingStatus(), row.bookedAt(),
                 row.routingRequestedAt(), row.lastNotifiedAt(),
                 row.returnedToRoutingAt(), row.returnReason(),
+                parsePorts(row.routeExcludeUnlocodes()), row.routeDepartFromUnlocode(),
                 row.updatedAt(), row.updatedBy());
+    }
+
+    /**
+     * 保存した除外港（カンマ区切り）を読み出す。<b>読み方を 1 か所にする。</b>
+     *
+     * <p>探索が組む条件と画面に映す条件が別々に解釈すると、片方だけが正しく
+     * なる。調整していなければ空リスト（{@code null} を画面へ渡さない）。</p>
+     */
+    private static List<String> parsePorts(String stored) {
+        return stored == null || stored.isBlank()
+                ? List.of() : List.of(stored.split(","));
     }
 }

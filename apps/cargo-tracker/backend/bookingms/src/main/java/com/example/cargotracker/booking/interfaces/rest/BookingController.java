@@ -154,6 +154,11 @@ public class BookingController {
      *
      * <p><b>問い合わせられないときは 503。</b> 空の候補一覧を返すと「候補が無い」と
      * 読まれ、経路設計者は条件を変え続けることになる。</p>
+     *
+     * <p><b>いまの条件はこの応答に載せない。</b> 載せると、探索が落ちている間だけ
+     * 画面から条件の欄と差し戻しが消える。直せる手段が要るのはまさにそのときで、
+     * 経路設計者は「探索が直るのを待つ」以外に何もできなくなる（IT6 引き継ぎ 8b）。
+     * 条件は予約の読み口（{@code GET /bookings/&#123;id&#125;}）が持つ。</p>
      */
     @GetMapping("/{bookingId}/route-candidates")
     public ResponseEntity<?> routeCandidates(@PathVariable String bookingId) {
@@ -182,9 +187,7 @@ public class BookingController {
                 found.candidates().stream()
                         .map(BookingController::toCandidateResponse)
                         .toList(),
-                found.truncated(),
-                new BookingDtos.RouteConditionResponse(booking.arrivalDeadline(),
-                        condition.excludeUnLocodes(), condition.departFromUnLocode())));
+                found.truncated()));
     }
 
     private static RouteCandidateResponse toCandidateResponse(RouteCandidate candidate) {

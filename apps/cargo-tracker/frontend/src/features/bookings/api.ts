@@ -33,6 +33,14 @@ export interface BookingView {
   /** 営業が経路設計へ戻した日時と理由（US12）。**経路設計者が読む。** */
   readonly returnedToRoutingAt: string | null;
   readonly returnReason: string | null;
+  /**
+   * 調整済みの探索条件（US10）。調整していなければ空配列と null。
+   *
+   * **候補算出の応答から切り離して持つ。** 探索が落ちている間だけ条件の欄と
+   * 差し戻しが画面から消えると、経路設計者は直せる手段を失う（IT6 引き継ぎ 8b）。
+   */
+  readonly routeExcludeUnLocodes: readonly string[];
+  readonly routeDepartFromUnLocode: string | null;
   /** 最終更新（US32）。一度も直していなければ null。 */
   readonly updatedAt: string | null;
   readonly updatedBy: string | null;

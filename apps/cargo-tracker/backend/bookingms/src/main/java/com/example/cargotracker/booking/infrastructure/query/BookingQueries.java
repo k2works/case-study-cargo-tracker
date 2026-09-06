@@ -215,6 +215,11 @@ public final class BookingQueries {
             // 記録だけ残して読み口を出さないと、営業に無駄な入力をさせることになる。
             Instant returnedToRoutingAt,
             String returnReason,
+            // 調整済みの探索条件（US10）。**候補算出の応答から切り離して持つ。**
+            // 探索が落ちていても、条件の調整と差し戻しは使えなければならない
+            // （IT6 引き継ぎ 8b）。調整していなければ空リストと null。
+            List<String> routeExcludeUnLocodes,
+            String routeDepartFromUnLocode,
             // 最終更新（US32）。変更内容の履歴は Event Store が持つ。
             Instant updatedAt,
             String updatedBy) {

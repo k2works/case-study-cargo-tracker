@@ -103,6 +103,9 @@ public class CargoProjection {
                 // まだ経路設計へ戻されていない（US12）。
                 null,
                 null,
+                // まだ探索の条件を調整していない（US10）。
+                null,
+                null,
                 now,
                 null));
     }
@@ -230,7 +233,9 @@ public class CargoProjection {
                 null, null, null, null,
                 // 「いつ直したか」はイベントが持つ。ここで現在時刻を書くと、
                 // 読み直しのたびに最終更新が動く。
-                event.updatedAt(), event.updatedBy(), null, null, null, now, null));
+                event.updatedAt(), event.updatedBy(), null, null, null,
+                // 探索の条件は UPDATE 文が触らない（US10 の調整だけが書く）。
+                null, null, now, null));
 
         if (before != null) {
             recordRevision(before, event);

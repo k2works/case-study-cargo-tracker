@@ -620,6 +620,10 @@ test.describe('マニュアルの画面キャプチャ', () => {
           bookingStatus: 'ROUTE_PROPOSED',
           routingStatus: 'ROUTING_REQUESTED',
           routingRequestedAt: '2026-09-04T05:10:00Z',
+          // **条件は予約が持つ**（IT7 H.1）。候補算出の応答に載せると、探索が
+          // 落ちている間だけ条件の欄と差し戻しが画面から消える。
+          routeExcludeUnLocodes: ['SGSIN'],
+          routeDepartFromUnLocode: null,
         }),
       }),
     );
@@ -673,6 +677,10 @@ test.describe('マニュアルの画面キャプチャ', () => {
           bookingStatus: 'ROUTE_PROPOSED',
           routingStatus: 'ROUTING_REQUESTED',
           routingRequestedAt: '2026-09-04T05:10:00Z',
+          // **条件は予約が持つ**（IT7 H.1）。候補算出の応答に載せると、探索が
+          // 落ちている間だけ条件の欄と差し戻しが画面から消える。
+          routeExcludeUnLocodes: ['SGSIN'],
+          routeDepartFromUnLocode: null,
         }),
       }),
     );
@@ -717,11 +725,6 @@ test.describe('マニュアルの画面キャプチャ', () => {
             },
           ],
           truncated: false,
-          condition: {
-            arrivalDeadline: '2026-12-01',
-            excludeUnLocodes: ['SGSIN'],
-            departFromUnLocode: null,
-          },
         }),
       }),
     );

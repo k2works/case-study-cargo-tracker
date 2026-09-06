@@ -153,6 +153,30 @@ class ConditionAdjustmentProjectionIT extends AbstractAxonIntegrationTest {
     }
 
     @Test
+    @DisplayName("調整した条件は予約の読み口からも読める（探索が落ちていても直せる）")
+    void adjustedConditionsAreReadableFromTheBooking() {
+        // **条件を候補算出の応答だけに載せない。** 探索が落ちている間だけ画面から
+        // 条件の欄と差し戻しが消えると、経路設計者は直せる手段を失う。条件が要る
+        // のはまさにそのときである（IT6 引き継ぎ 8b）。
+        String bookingId = handedOver();
+
+        projection.on(new RouteSpecificationAdjustedEvent(bookingId, EXTENDED,
+                List.of("SGSIN", "HKHKG"), "JPOSA", "routing01", AT));
+
+        BookingView view = booking(bookingId);
+        assertThat(view.routeExcludeUnLocodes()).containsExactly("SGSIN", "HKHKG");
+        assertThat(view.routeDepartFromUnLocode()).isEqualTo("JPOSA");
+    }
+
+    @Test
+    @DisplayName("調整していない予約は、読み口でも条件が空（null を画面に出さない）")
+    void unadjustedBookingHasEmptyConditionsInTheView() {
+        BookingView view = booking(handedOver());
+        assertThat(view.routeExcludeUnLocodes()).isEmpty();
+        assertThat(view.routeDepartFromUnLocode()).isNull();
+    }
+
+    @Test
     @DisplayName("調整していない予約の条件は空（IT5 までと同じ探索になる）")
     void unadjustedBookingHasNoConditions() {
         assertThat(queries.handle(new FindRouteConditionQuery(handedOver())))

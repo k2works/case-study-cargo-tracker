@@ -191,18 +191,6 @@ export function fetchRouteCandidates(
 }
 
 /**
- * いま何で絞って探したか（S31 / US10）。
- *
- * <p><b>候補と同じ応答で受け取る。</b> 別の読み口にすると、条件を直した直後に
- * 「古い条件で出した候補」と「新しい条件」が並ぶ瞬間ができる。</p>
- */
-export interface RouteConditionView {
-  readonly arrivalDeadline: string;
-  readonly excludeUnLocodes: readonly string[];
-  readonly departFromUnLocode: string | null;
-}
-
-/**
  * 条件を調整して再算出できるようにする（US10）。
  *
  * <p><b>条件はサーバが持つ。</b> 画面が組み立てて候補算出へ渡すのではなく、集約に
@@ -238,7 +226,6 @@ export function requestConditionReview(
 export interface RouteCandidatesView {
   readonly candidates: readonly RouteCandidateView[];
   readonly truncated: boolean;
-  readonly condition: RouteConditionView;
 }
 
 /**

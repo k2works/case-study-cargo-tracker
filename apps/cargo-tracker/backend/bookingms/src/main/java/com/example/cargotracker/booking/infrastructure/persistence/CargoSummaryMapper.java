@@ -279,6 +279,11 @@ public interface CargoSummaryMapper {
             Instant lastNotifiedAt,
             Instant returnedToRoutingAt,
             String returnReason,
+            // 調整済みの探索条件（US10）。**予約の読み口からも読める**ようにする。
+            // 候補算出の応答にだけ載せると、探索が落ちている間だけ画面から条件が
+            // 消え、経路設計者は直せる手段を失う（IT6 引き継ぎ 8b）。
+            String routeExcludeUnlocodes,
+            String routeDepartFromUnlocode,
             Instant projectedAt,
             String lastEventId) {
     }

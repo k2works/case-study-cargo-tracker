@@ -33,6 +33,8 @@ function booking() {
     lastNotifiedAt: null,
     returnedToRoutingAt: null,
     returnReason: null,
+    routeExcludeUnLocodes: ['SGSIN'],
+    routeDepartFromUnLocode: 'JPOSA',
     updatedAt: null,
     updatedBy: null,
   };
@@ -55,12 +57,13 @@ function leg(voyageNumber: string, from: string, to: string, load: string, unloa
   };
 }
 
-function mockApi(candidatesResponse: Response) {
+function mockApi(candidatesResponse: Response, bookingOverride: object = {}) {
   return vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
     if (String(input).includes('/route-candidates')) {
       return Promise.resolve(candidatesResponse);
     }
-    return Promise.resolve(new Response(JSON.stringify(booking()), { status: 200 }));
+    return Promise.resolve(new Response(
+      JSON.stringify({ ...booking(), ...bookingOverride }), { status: 200 }));
   });
 }
 
@@ -145,6 +148,25 @@ describe('S31 経路設計ワークベンチ', () => {
     expect(await screen.findByRole('alert'))
       .toHaveTextContent('経路設計サービスに問い合わせできませんでした');
     expect(screen.queryByText(/経路が見つかりませんでした/)).not.toBeInTheDocument();
+  });
+
+  it('探せなくても条件は直せるし、営業へ差し戻せる（H.1）', async () => {
+    // **条件は予約が持つ。** 候補算出の応答から組むと、探索が落ちている間だけ
+    // 条件の欄と差し戻しが画面から消える。直せる手段が要るのはまさにそのときで、
+    // 経路設計者は「探索が直るのを待つ」以外に何もできなくなる。
+    mockApi(
+      new Response(JSON.stringify({ code: 'ROUTE_SEARCH_UNAVAILABLE', message: 'x' }),
+        { status: 503 }),
+    );
+
+    renderWorkbench();
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    // 予約が持つ条件で欄が埋まる（候補の応答は無い）。
+    expect(await screen.findByLabelText('除外する港')).toHaveValue('SGSIN');
+    expect(screen.getByLabelText('この港より後に出る便だけ')).toHaveValue('JPOSA');
+    expect(screen.getByLabelText('到着期限')).toHaveValue('2026-12-01');
+    expect(screen.getByRole('button', { name: '営業へ差し戻す' })).toBeInTheDocument();
   });
 
   it('0 件で打ち切りに当たったら「条件を変えても増えない」と伝える', async () => {
@@ -347,19 +369,18 @@ describe('S31 経路の確定（US09）', () => {
   });
 
   it('US10: いまの条件が読める（何で絞っているか分からないと同じ条件で回す）', async () => {
+    // **条件は予約が持つ**（IT7 H.1）。候補算出の応答から組むと、探索が落ちて
+    // いる間だけ条件が読めなくなる。
     mockApi(
       new Response(
-        JSON.stringify({
-          candidates: [],
-          truncated: false,
-          condition: {
-            arrivalDeadline: '2027-01-31',
-            excludeUnLocodes: ['SGSIN', 'HKHKG'],
-            departFromUnLocode: 'JPOSA',
-          },
-        }),
+        JSON.stringify({ candidates: [], truncated: false, condition: NO_CONDITION }),
         { status: 200 },
       ),
+      {
+        arrivalDeadline: '2027-01-31',
+        routeExcludeUnLocodes: ['SGSIN', 'HKHKG'],
+        routeDepartFromUnLocode: 'JPOSA',
+      },
     );
 
     renderWorkbench();
