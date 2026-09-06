@@ -9,6 +9,7 @@ import com.example.cargotracker.booking.domain.model.commands.ReturnToRoutingCom
 import com.example.cargotracker.booking.domain.model.commands.RequestConditionReviewCommand;
 import com.example.cargotracker.booking.domain.model.commands.RequestRoutingCommand;
 import com.example.cargotracker.booking.domain.model.commands.UpdateCargoSpecificationCommand;
+import com.example.cargotracker.booking.domain.model.events.BookingConfirmedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
 import com.example.cargotracker.booking.domain.model.events.ReturnedToRoutingEvent;
 import com.example.cargotracker.booking.domain.model.events.ShipperNotifiedEvent;
@@ -20,6 +21,7 @@ import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoSpecification;
 import com.example.cargotracker.booking.domain.model.valueobjects.RouteSpecification;
 import com.example.cargotracker.booking.domain.model.commands.AssignRouteCommand;
+import com.example.cargotracker.booking.domain.model.commands.ConfirmBookingCommand;
 import com.example.cargotracker.booking.domain.model.events.CargoRoutedEvent;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoItinerary;
 import com.example.cargotracker.booking.domain.model.valueobjects.RoutingStatus;
@@ -86,7 +88,7 @@ public class Cargo {
         }
         // 業務タイムゾーンの「今日」で判断する。JVM 既定だと、日本時間の朝 9 時より
         // 前に受け付けた予約で当日の期限が「過去」になる時間帯ができる。
-        validate(command, LocalDate.now(clock));
+        CargoValidation.validate(command, LocalDate.now(clock));
         CargoSpecification spec = command.cargoSpecification();
         appender.append(new CargoBookedEvent(
                 command.bookingId(),
@@ -156,7 +158,7 @@ public class Cargo {
         // **期限は「変えたときだけ」検査する。** 据え置きにも今日以降を求めると、
         // 期限を過ぎた仮受付の予約は品名すら直せなくなる（誤りに気づくのは
         // たいてい期限が近づいてからで、そのときには直せない）。
-        validate(command.cargoSpecification(), command.routeSpecification(),
+        CargoValidation.validate(command.cargoSpecification(), command.routeSpecification(),
                 LocalDate.now(clock), arrivalDeadline);
 
         CargoSpecification spec = command.cargoSpecification();
@@ -363,6 +365,35 @@ public class Cargo {
     }
 
     /**
+     * 予約を確定する（UC11 / US13）。営業が荷主の承認を確認してから使う。
+     *
+     * <p><b>通知していない予約は確定できない。</b> 遷移表は
+     * {@code ROUTE_NOTIFIED → CONFIRMED} だけを許す。荷主が知らないうちに確定すると、
+     * 追跡番号の発行と輸送手配まで進む。二重の確定も同じ判定で断る
+     * （{@code CONFIRMED → CONFIRMED} は遷移表に無い）。</p>
+     */
+    @CommandHandler
+    public String confirm(ConfirmBookingCommand command, EventAppender appender, Clock clock) {
+        if (bookingId == null) {
+            throw new IllegalTransition("予約 " + command.bookingId() + " は受け付けていません");
+        }
+        if (!bookingStatus.canTransitionTo(BookingStatus.CONFIRMED)) {
+            throw new IllegalTransition(
+                    "状態 " + bookingStatus.label() + " の予約は確定できません"
+                            + "（荷主へ通知してから確定してください）");
+        }
+
+        appender.append(new BookingConfirmedEvent(command.bookingId(),
+                command.confirmedBy(), clock.instant()));
+        return command.bookingId();
+    }
+
+    @EventSourcingHandler
+    void on(BookingConfirmedEvent event) {
+        this.bookingStatus = BookingStatus.CONFIRMED;
+    }
+
+    /**
      * 通知した経路を経路設計へ戻す（UC08 / US12）。
      *
      * <p>荷主が変更を求めたときに営業が使う。<b>通知したあとだけ開く</b>——通知前に
@@ -416,44 +447,6 @@ public class Cargo {
     /** いま集約が持っている経路仕様。修正（US32）を反映した値になる。 */
     private RouteSpecification routeSpecification() {
         return new RouteSpecification(origin, destination, arrivalDeadline);
-    }
-
-    private static void validate(BookCargoCommand command, LocalDate today) {
-        if (command.bookingId() == null || command.bookingId().isBlank()) {
-            throw new BusinessRuleViolation("予約 ID は必須です");
-        }
-        if (command.shipperId() == null || command.shipperId().isBlank()) {
-            // 荷主の分からない予約は、通知も請求も宛先が無い。
-            throw new BusinessRuleViolation("荷主 ID は必須です");
-        }
-        validate(command.cargoSpecification(), command.routeSpecification(), today, null);
-    }
-
-    /**
-     * 受付と修正で同じ検査を通す。分けて書くと片方だけが古くなる。
-     *
-     * <p>{@code currentDeadline} は据え置きを見分けるためのもの（受付では null）。
-     * 期限を動かさない修正は、その期限が過去でも通す。</p>
-     */
-    private static void validate(CargoSpecification cargoSpecification,
-            RouteSpecification routeSpecification, LocalDate today, LocalDate currentDeadline) {
-        if (cargoSpecification == null) {
-            throw new BusinessRuleViolation("貨物仕様は必須です");
-        }
-        if (routeSpecification == null) {
-            throw new BusinessRuleViolation("輸送条件は必須です");
-        }
-        // 期限は日付で比較する。当日着は間に合う扱い（不変条件 5）。
-        //
-        // **新規の受け付けでだけ検査する。** 復元（@EventSourcingHandler）では見ない。
-        // 見ると、受け付けたあとに期限を過ぎた予約が読めなくなる。
-        if (routeSpecification.arrivalDeadline().equals(currentDeadline)) {
-            return;
-        }
-        if (routeSpecification.arrivalDeadline().isBefore(today)) {
-            throw new BusinessRuleViolation(
-                    "到着期限が過去の日付です: " + routeSpecification.arrivalDeadline());
-        }
     }
 
     @EventSourcingHandler

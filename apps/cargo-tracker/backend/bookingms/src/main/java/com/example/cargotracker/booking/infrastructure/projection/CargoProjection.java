@@ -1,5 +1,6 @@
 package com.example.cargotracker.booking.infrastructure.projection;
 
+import com.example.cargotracker.booking.domain.model.events.BookingConfirmedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoSpecificationUpdatedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoRoutedEvent;
@@ -106,6 +107,8 @@ public class CargoProjection {
                 // まだ探索の条件を調整していない（US10）。
                 null,
                 null,
+                // まだ確定していない（US13）。
+                null,
                 now,
                 null));
     }
@@ -177,6 +180,23 @@ public class CargoProjection {
     }
 
     /**
+     * 予約の確定（UC11 / US13）。
+     *
+     * <p><b>確定日時を残す。</b> 状態だけだと、通知から確定までにどれだけ待たせたか
+     * も、確定したまま追跡番号が発行されていない期間も読めない。</p>
+     */
+    @EventHandler
+    public void on(BookingConfirmedEvent event) {
+        int updated = cargos.updateConfirmed(event.bookingId(),
+                BookingStatus.CONFIRMED.name(), event.confirmedAt(), clock.instant());
+        if (updated == 0) {
+            log.warn("確定を書ける予約が投影に無い: bookingId={}", event.bookingId());
+            attentionItems.add("PROJECTION_REJECTED", "BOOKING", event.bookingId(),
+                    "ROLE_SALES", "確定の対象が投影に無い", "{}", clock.instant());
+        }
+    }
+
+    /**
      * 経路設計への差し戻し（US12）。
      *
      * <p><b>{@code routing_requested_at} は触らない。</b> 引き渡した日時と、通知後に
@@ -234,8 +254,8 @@ public class CargoProjection {
                 // 「いつ直したか」はイベントが持つ。ここで現在時刻を書くと、
                 // 読み直しのたびに最終更新が動く。
                 event.updatedAt(), event.updatedBy(), null, null, null,
-                // 探索の条件は UPDATE 文が触らない（US10 の調整だけが書く）。
-                null, null, now, null));
+                // 探索の条件と確定日時は UPDATE 文が触らない。
+                null, null, null, now, null));
 
         if (before != null) {
             recordRevision(before, event);

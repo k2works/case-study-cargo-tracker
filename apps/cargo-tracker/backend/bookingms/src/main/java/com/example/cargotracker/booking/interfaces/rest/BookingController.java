@@ -11,6 +11,7 @@ import com.example.cargotracker.booking.domain.model.valueobjects.Leg;
 import com.example.cargotracker.booking.application.port.RouteSearchRequest;
 import com.example.cargotracker.booking.domain.model.valueobjects.RouteCandidate;
 import com.example.cargotracker.booking.domain.model.commands.BookCargoCommand;
+import com.example.cargotracker.booking.domain.model.commands.ConfirmBookingCommand;
 import com.example.cargotracker.booking.domain.model.commands.RequestRoutingCommand;
 import com.example.cargotracker.booking.domain.model.commands.UpdateCargoSpecificationCommand;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoSpecification;
@@ -22,24 +23,18 @@ import com.example.cargotracker.booking.domain.model.valueobjects.TemperatureReq
 import com.example.cargotracker.booking.domain.model.valueobjects.Weight;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.BookingListView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.BookingView;
-import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
-import com.example.cargotracker.booking.infrastructure.query.BookingQueries.CountBookingsByStatusQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.AffectedBookingListView;
-import com.example.cargotracker.booking.infrastructure.query.BookingQueries.CountAwaitingNotificationQuery;
-import com.example.cargotracker.booking.infrastructure.query.BookingQueries.ConditionReviewListView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingNotificationsQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindRouteConditionQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.NotificationListView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.RouteConditionView;
-import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindConditionReviewsQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingItineraryQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingsByVoyageQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingRevisionsQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.ItineraryView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.RevisionListView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingsQuery;
-import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindRoutingWorklistQuery;
 import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos;
 import com.example.cargotracker.shared.infrastructure.axon.QueryDispatcher;
 import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
@@ -57,7 +52,6 @@ import com.example.cargotracker.shared.domain.location.Location;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import org.axonframework.messaging.commandhandling.gateway.CommandGateway;
 import org.springframework.http.ResponseEntity;
@@ -343,6 +337,20 @@ public class BookingController {
     }
 
     /**
+     * 予約を確定する（UC11 / US13 §受入基準 2）。営業だけが使う。
+     *
+     * <p>本文を取らない。確定は「荷主の承認を確認した」という営業の行為で、
+     * 入力する内容が無い。<b>通知していない予約は集約が断る</b>（422）。</p>
+     */
+    @PostMapping("/{bookingId}/confirmation")
+    public ResponseEntity<BookCargoResponse> confirm(
+            @PathVariable String bookingId,
+            @RequestHeader(name = "X-Auth-Username", required = false) String username) {
+        commandGateway.sendAndWait(new ConfirmBookingCommand(bookingId, username));
+        return ResponseEntity.ok(new BookCargoResponse(bookingId));
+    }
+
+    /**
      * 確定した経路を荷主へ通知した記録を残す（US12 §受入基準 3・4）。
      *
      * <p><b>送信はしない</b>（送信基盤はスコープ外）。通知は手作業で行い、ここには
@@ -385,56 +393,6 @@ public class BookingController {
         commandGateway.sendAndWait(
                 new ReturnToRoutingCommand(bookingId, request.reason(), username));
         return ResponseEntity.ok(new BookCargoResponse(bookingId));
-    }
-
-    /**
-     * 見直しを頼まれている予約（S02 / 営業。US10 §受入基準 4）。
-     *
-     * <p>件数でなく行を返す。理由が読めないと、営業は荷主と何を協議すればよいのか
-     * 分からない（IT4 の「気づく手段は次の行動へ繋ぐ」）。</p>
-     */
-    @GetMapping("/condition-reviews")
-    public ResponseEntity<ConditionReviewListView> conditionReviews(
-            @RequestParam(defaultValue = "50") int limit) {
-        return ResponseEntity.ok(queries.query(
-                new FindConditionReviewsQuery(limit), ConditionReviewListView.class));
-    }
-
-    /**
-     * 経路設計作業一覧（S30）。
-     *
-     * <p>routingms ではなくここに置く。{@code routing_read_db} に予約の表は無く、
-     * 一覧のために写しも作らない（写しを作ると Booking の状態と二重管理になる）。
-     * 経路設計ロールへの開放は Gateway のルートとロールで行う。</p>
-     */
-    @GetMapping("/routing-worklist")
-    public ResponseEntity<BookingListView> routingWorklist(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "50") int size,
-            @RequestParam(defaultValue = "false") boolean includeRouted) {
-        return ResponseEntity.ok(queries.query(
-                new FindRoutingWorklistQuery(page, size, includeRouted), BookingListView.class));
-    }
-
-    /**
-     * ダッシュボード（S02）の「今日の作業」の件数。
-     *
-     * <p>ロールごとに見るものが違う。{@code preliminary}（まだ引き渡していない予約）は
-     * <b>営業の仕事</b>で、{@code routingWorklist}（設計待ち・誤配）は経路設計者の仕事。
-     * 経路設計者に {@code preliminary} を出しても、その件数に対して打てる手が無い。</p>
-     */
-    @GetMapping("/summary")
-    public ResponseEntity<Map<String, Integer>> summary() {
-        BookingListView worklist = queries.query(new FindRoutingWorklistQuery(0, 1, false),
-                BookingListView.class);
-        return ResponseEntity.ok(Map.of(
-                "preliminary",
-                queries.query(new CountBookingsByStatusQuery(BookingStatus.PRELIMINARY.name()),
-                        Integer.class),
-                "routingWorklist", worklist.total(),
-                // 荷主へ通知していない経路確定済みの予約（US12）。営業の仕事。
-                "awaitingNotification",
-                queries.query(new CountAwaitingNotificationQuery(), Integer.class)));
     }
 
     /**

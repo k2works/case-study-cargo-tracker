@@ -21,6 +21,7 @@ import { ApiError } from '@/shared/api/client';
 import { useAuthStore } from '@/shared/auth/authStore';
 import {
   canNotifyShipper,
+  canTransitionTo,
   canRequestRouting,
   canReturnToRouting,
   canUpdateSpecification,
@@ -31,6 +32,7 @@ import { display } from '@/features/shippers/api';
 import {
   bookingStatusLabel,
   cargoTypeLabel,
+  confirmBooking,
   fetchBooking,
   fetchBookingItinerary,
   fetchBookingNotifications,
@@ -135,6 +137,10 @@ export function BookingDetailPage() {
     ? notifications.data.value.items ?? [] : [];
 
   const notifiable = data?.state === 'ready' && canNotifyShipper(data.value.routingStatus);
+  // **確定は予約の状態の判断。** 遷移表がそのまま答えになる（ROUTE_NOTIFIED から
+  // だけ CONFIRMED に進める）ので、別の述語を作らない。写しが増えるほどずれる。
+  const confirmable = data?.state === 'ready'
+    && canTransitionTo(data.value.bookingStatus, 'CONFIRMED');
   const returnable = data?.state === 'ready' && canReturnToRouting(data.value.bookingStatus);
 
   const [recipient, setRecipient] = useState('');
@@ -154,6 +160,13 @@ export function BookingDetailPage() {
       setAwaitingNotificationProjection(true);
       await queries.invalidateQueries({ queryKey: ['booking', bookingId] });
       await queries.invalidateQueries({ queryKey: ['booking', bookingId, 'notifications'] });
+    },
+  });
+
+  const confirm = useMutation({
+    mutationFn: () => confirmBooking(bookingId),
+    onSuccess: async () => {
+      await queries.invalidateQueries({ queryKey: ['booking', bookingId] });
     },
   });
 
@@ -387,6 +400,33 @@ export function BookingDetailPage() {
                   {notify.isPending ? '記録しています…' : '通知した記録を残す'}
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* 確定の操作は営業だけ（US13）。荷主の承認を確認するのは営業の仕事。
+              **通知していない予約には出さない**——押してから断られる導線にしない。 */}
+          {isSales && confirmable && (
+            <div className="space-y-2">
+              <h2 className={SECTION_TITLE}>予約の確定</h2>
+              <p className="text-sm text-gray-600">
+                荷主の承認を確認してから確定してください。<b>確定すると経路設計へは
+                戻せません。</b>荷主が変更を求めたら、確定する前に戻します
+              </p>
+              {confirm.isError && (
+                <p role="alert" className={ALERT}>
+                  {confirm.error instanceof ApiError
+                    ? confirm.error.body.message
+                    : '予約を確定できませんでした'}
+                </p>
+              )}
+              <button
+                type="button"
+                className={BUTTON_PRIMARY}
+                disabled={confirm.isPending}
+                onClick={() => confirm.mutate()}
+              >
+                {confirm.isPending ? '確定しています…' : '予約を確定する'}
+              </button>
             </div>
           )}
 

@@ -163,6 +163,26 @@ public final class BookingQueries {
     public record CountAwaitingNotificationQuery() { // NOSONAR: 型が問い合わせの識別子
     }
 
+    /**
+     * 確定を待っている予約（S02 / 営業。US13 §受入基準 3）。
+     *
+     * <p>荷主へ通知したまま確定を忘れると、追跡番号の発行も輸送手配も始まらない。
+     * <b>件数でなく行を返す</b>——件数だけでは、営業はどの予約を開けばよいか
+     * 分からない。</p>
+     */
+    public record FindAwaitingConfirmationQuery(int limit) {
+    }
+
+    /** 確定を待っている予約 1 件。予約詳細（S22）へ行ける。 */
+    public record AwaitingConfirmationView(
+            String bookingId,
+            String bookingNumber,
+            Instant notifiedAt) {
+    }
+
+    public record AwaitingConfirmationListView(List<AwaitingConfirmationView> items) {
+    }
+
     /** 通知履歴（S22 / US12 §受入基準 4）。新しい通知が先。 */
     public record FindBookingNotificationsQuery(String bookingId) {
     }
@@ -220,6 +240,8 @@ public final class BookingQueries {
             // （IT6 引き継ぎ 8b）。調整していなければ空リストと null。
             List<String> routeExcludeUnLocodes,
             String routeDepartFromUnLocode,
+            // 確定した日時（US13）。未確定なら null。
+            Instant confirmedAt,
             // 最終更新（US32）。変更内容の履歴は Event Store が持つ。
             Instant updatedAt,
             String updatedBy) {

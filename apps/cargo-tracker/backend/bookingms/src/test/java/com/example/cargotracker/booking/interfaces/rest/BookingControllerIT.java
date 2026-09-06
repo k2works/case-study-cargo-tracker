@@ -285,6 +285,18 @@ class BookingControllerIT extends AbstractAxonIntegrationTest {
     }
 
     /** 受け付けて経路設計へ引き渡した予約。投影が追いつくまで待つ。 */
+    @Test
+    @DisplayName("US13: 通知していない予約は API を直接叩いても確定できない")
+    void rejectsConfirmationBeforeNotification() {
+        // **集約の検査だけでは、画面での見え方（500 か 409 か）を判別しない。**
+        // 画面はボタンを出さないが、ボタンの出し分けは守りではない。
+        String bookingId = handedOverBooking();
+
+        ResponseEntity<JsonMap> response = postTo("/" + bookingId + "/confirmation", Map.of());
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+    }
+
     private String handedOverBooking() {
         ResponseEntity<JsonMap> created = post(request(Map.of()));
         String bookingId = String.valueOf(created.getBody().get("bookingId"));

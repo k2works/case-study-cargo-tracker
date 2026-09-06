@@ -663,6 +663,53 @@ describe('S22 荷主への通知（US12）', () => {
       String(url).includes('/return-to-routing'))).toHaveLength(0);
   });
 
+  it('US13 §2: 通知した予約を確定できる', async () => {
+    const fetchSpy = mockApi(NOTIFIED);
+
+    renderDetail();
+
+    await userEvent.click(await screen.findByRole('button', { name: '予約を確定する' }));
+
+    await waitFor(() => {
+      expect(fetchSpy.mock.calls.some(([url]) =>
+        String(url).includes('/confirmation'))).toBe(true);
+    });
+  });
+
+  it('US13: 通知していない予約には確定の導線を出さない', async () => {
+    // 押してから断られる導線にしない。判定は集約と同じ遷移表を読む。
+    mockApi(ROUTED);
+
+    renderDetail();
+
+    await screen.findByRole('heading', { name: '荷主への通知' });
+    expect(screen.queryByRole('button', { name: '予約を確定する' })).not.toBeInTheDocument();
+  });
+
+  it('US13: 確定済みの予約は二度と確定できないし、経路設計へも戻せない', async () => {
+    // 遷移表に CONFIRMED → CONFIRMED も CONFIRMED → ROUTE_PROPOSED も無い。
+    mockApi({ ...NOTIFIED, bookingStatus: 'CONFIRMED',
+      confirmedAt: '2026-09-08T00:00:00Z' });
+
+    renderDetail();
+
+    expect(await screen.findByText('確定')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '予約を確定する' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '経路設計へ戻す' })).not.toBeInTheDocument();
+  });
+
+  it('US13: 営業以外には確定の操作を出さない', async () => {
+    useAuthStore.setState({
+      user: { username: 'routing01', roles: ['ROLE_ROUTING'], token: 't' },
+    });
+    mockApi(NOTIFIED);
+
+    renderDetail();
+
+    await screen.findByText('通知済み');
+    expect(screen.queryByRole('button', { name: '予約を確定する' })).not.toBeInTheDocument();
+  });
+
   it('US12: 営業以外には通知の操作を出さない（読むのは全員）', async () => {
     useAuthStore.setState({
       user: { username: 'routing01', roles: ['ROLE_ROUTING'], token: 't' },

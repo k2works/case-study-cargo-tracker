@@ -3,7 +3,11 @@ import { Link } from 'react-router';
 import { useAuthStore } from '@/shared/auth/authStore';
 import { navigationFor } from '@/shared/ui/navigation';
 import { CARD, LINK, NOTICE, PAGE_TITLE, SECTION_TITLE } from '@/shared/ui/styles';
-import { fetchBookingSummary, fetchConditionReviews } from '@/features/bookings/api';
+import {
+  fetchAwaitingConfirmation,
+  fetchBookingSummary,
+  fetchConditionReviews,
+} from '@/features/bookings/api';
 import { formatBusinessDateTime } from '@/shared/api/businessDate';
 
 /** S02 ダッシュボード。「今日の作業」からその日の入口へ行けるようにする。 */
@@ -48,6 +52,17 @@ export function DashboardPage() {
   const conditionReviews =
     reviews?.state === 'ready' ? reviews.value.items ?? [] : [];
 
+  // 確定を待っている予約（US13 §受入基準 3）。**打てる手を持つのは営業**で、
+  // 荷主の承認を確認して確定する。経路設計者はこの件数に対して何もできない。
+  const { data: awaiting } = useQuery({
+    queryKey: ['awaiting-confirmation'],
+    queryFn: fetchAwaitingConfirmation,
+    enabled: isSales,
+    refetchInterval: 10000,
+  });
+  const awaitingConfirmation =
+    awaiting?.state === 'ready' ? awaiting.value.items ?? [] : [];
+
   return (
     <section>
       <h1 className={PAGE_TITLE}>ダッシュボード</h1>
@@ -83,6 +98,26 @@ export function DashboardPage() {
             予約一覧
           </Link>
           で確認してください。
+        </output>
+      )}
+
+      {/* 件数だけでは仕事が進まない。**どの予約を開けばよいか**が読めるように
+          行そのものを出す（US13 §受入基準 3 の「通知」の代わり）。 */}
+      {isSales && awaitingConfirmation.length > 0 && (
+        <output className={`${NOTICE} mt-4 block`}>
+          荷主へ通知したまま確定していない予約が {awaitingConfirmation.length} 件あります。
+          <ul className="mt-2 space-y-1">
+            {awaitingConfirmation.map((item) => (
+              <li key={item.bookingId} data-testid={`awaiting-confirmation-${item.bookingId}`}>
+                <Link to={`/bookings/${item.bookingId}`} className={LINK}>
+                  {item.bookingNumber}
+                </Link>
+                <span className="ml-2 text-gray-600">
+                  （通知 {formatBusinessDateTime(item.notifiedAt)}）
+                </span>
+              </li>
+            ))}
+          </ul>
         </output>
       )}
 

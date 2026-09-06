@@ -19,22 +19,36 @@ function renderAs(roles: readonly Role[]) {
 }
 
 /**
- * ダッシュボードは読み口を 2 つ引く。<b>URL で出し分ける。</b>
+ * ダッシュボードは読み口を 3 つ引く。<b>URL で出し分ける。</b>
  *
  * <p>1 つの本体を全部の問い合わせに返すと、本物が返さない形で検査が通る。</p>
  */
 function mockApi(
   summary: Record<string, number>,
   conditionReviews: unknown[] = [],
+  awaitingConfirmation: unknown[] = [],
 ) {
-  return vi.spyOn(globalThis, 'fetch').mockImplementation((input) =>
-    Promise.resolve(
-      String(input).includes('/condition-reviews')
-        ? new Response(JSON.stringify({ items: conditionReviews }), { status: 200 })
-        : new Response(JSON.stringify(summary), { status: 200 }),
-    ),
-  );
+  return vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+    const url = String(input);
+    if (url.includes('/condition-reviews')) {
+      return Promise.resolve(
+        new Response(JSON.stringify({ items: conditionReviews }), { status: 200 }));
+    }
+    if (url.includes('/awaiting-confirmation')) {
+      return Promise.resolve(
+        new Response(JSON.stringify({ items: awaitingConfirmation }), { status: 200 }));
+    }
+    return Promise.resolve(new Response(JSON.stringify(summary), { status: 200 }));
+  });
 }
+
+const AWAITING = [
+  {
+    bookingId: 'b-9',
+    bookingNumber: 'B-2026-0903-0009',
+    notifiedAt: '2026-09-07T00:00:00Z',
+  },
+];
 
 beforeEach(() => {
   mockApi({ preliminary: 3, routingWorklist: 5, awaitingNotification: 2 });
@@ -132,6 +146,27 @@ describe('S02 ダッシュボード', () => {
     const notice = await screen.findByText(/荷主へ通知していない経路確定済みの予約が 2 件/);
     expect(within(notice.closest('output') as HTMLElement)
       .getByRole('link', { name: '予約一覧' })).toHaveAttribute('href', '/bookings');
+  });
+
+  it('US13 §3: 営業には確定を待っている予約の行を出し、そこから予約詳細へ行ける', async () => {
+    // **件数だけでは仕事が進まない。** 通知したまま確定を忘れた予約は、追跡番号の
+    // 発行も輸送手配も始まらない。どの予約を開けばよいかが読めなければならない。
+    mockApi({ preliminary: 0, routingWorklist: 0, awaitingNotification: 0 }, [], AWAITING);
+
+    renderAs(['ROLE_SALES']);
+
+    const row = await screen.findByTestId('awaiting-confirmation-b-9');
+    expect(within(row).getByRole('link', { name: 'B-2026-0903-0009' }))
+      .toHaveAttribute('href', '/bookings/b-9');
+  });
+
+  it('US13 §3: 経路設計には確定待ちを出さない（確定は営業の仕事）', async () => {
+    mockApi({ preliminary: 0, routingWorklist: 0, awaitingNotification: 0 }, [], AWAITING);
+
+    renderAs(['ROLE_ROUTING']);
+    await screen.findByRole('heading', { name: '今日の作業' });
+
+    expect(screen.queryByText(/確定していない予約/)).not.toBeInTheDocument();
   });
 
   it('US12: 経路設計には通知していない件数を出さない（通知は営業の仕事）', async () => {

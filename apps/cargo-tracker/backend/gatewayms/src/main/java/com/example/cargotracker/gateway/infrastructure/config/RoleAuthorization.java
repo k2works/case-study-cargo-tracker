@@ -96,6 +96,8 @@ public final class RoleAuthorization {
         // 見直しを頼まれている予約（S02 / 営業。US10 §4）。**/bookings/** より先に
         // 置く。後ろに置くと経路設計・追跡にも開く。
         rules.put("/api/v1/booking/bookings/condition-reviews", Set.of(SALES));
+        // 確定を待っている予約は営業の受け皿（US13 §受入基準 3）。
+        rules.put("/api/v1/booking/bookings/awaiting-confirmation", Set.of(SALES));
         rules.put("/api/v1/booking/bookings/*/route", Set.of(ROUTING));
 
         // 予約（S20 / S21）は営業・経路設計・追跡が読む。
@@ -127,6 +129,9 @@ public final class RoleAuthorization {
         ordered.add(new Rule("POST", "/api/v1/booking/bookings/*/notifications",
                 Set.of(SALES)));
         ordered.add(new Rule("POST", "/api/v1/booking/bookings/*/return-to-routing",
+                Set.of(SALES)));
+        // 予約の確定は営業だけ（US13）。荷主の承認を確認するのは営業の仕事である。
+        ordered.add(new Rule("POST", "/api/v1/booking/bookings/*/confirmation",
                 Set.of(SALES)));
         ordered.add(new Rule("PUT", "/api/v1/booking/bookings/*", Set.of(SALES)));
         rules.forEach((pattern, allowed) -> ordered.add(new Rule(ANY_METHOD, pattern, allowed)));

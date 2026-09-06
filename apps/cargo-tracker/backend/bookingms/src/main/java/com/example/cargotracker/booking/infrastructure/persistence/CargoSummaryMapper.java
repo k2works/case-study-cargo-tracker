@@ -185,6 +185,37 @@ public interface CargoSummaryMapper {
     int countAwaitingNotification();
 
     /**
+     * 確定を待っている予約（S02 / 営業。US13 §受入基準 3）。
+     *
+     * <p>荷主へ通知したまま確定を忘れると、追跡番号の発行も輸送手配も始まらない。
+     * <b>気づく手立てが無いと、期限が近づくまで誰も見つけられない。</b></p>
+     *
+     * <p><b>件数でなく行を返す。</b> 件数だけでは、営業はどの予約を開けばよいか
+     * 分からない（IT4 の「気づく手段は次の行動へ繋ぐ」）。古い通知から順に返す。</p>
+     */
+    @Select("SELECT booking_id, booking_number, last_notified_at AS notified_at "
+            + "FROM cargo_summary WHERE booking_status = 'ROUTE_NOTIFIED' "
+            + "ORDER BY last_notified_at LIMIT #{limit}")
+    List<AwaitingConfirmationRow> findAwaitingConfirmation(@Param("limit") int limit);
+
+    /** 確定を待っている予約 1 件。 */
+    record AwaitingConfirmationRow(
+            String bookingId,
+            String bookingNumber,
+            Instant notifiedAt) {
+    }
+
+    /** 予約を確定した（US13）。状態と確定日時だけを書く。 */
+    @org.apache.ibatis.annotations.Update(
+            "UPDATE cargo_summary SET booking_status = #{bookingStatus}, "
+            + "confirmed_at = #{confirmedAt}, projected_at = #{projectedAt} "
+            + "WHERE booking_id = #{bookingId}")
+    int updateConfirmed(@Param("bookingId") String bookingId,
+            @Param("bookingStatus") String bookingStatus,
+            @Param("confirmedAt") Instant confirmedAt,
+            @Param("projectedAt") Instant projectedAt);
+
+    /**
      * 見直しを頼まれている予約（S02 / 営業）。
      *
      * <p>件数だけでは仕事が進まないので、予約番号と理由を返して予約詳細へ行けるように
@@ -284,6 +315,8 @@ public interface CargoSummaryMapper {
             // 消え、経路設計者は直せる手段を失う（IT6 引き継ぎ 8b）。
             String routeExcludeUnlocodes,
             String routeDepartFromUnlocode,
+            // 確定した日時（US13）。未確定なら null。
+            Instant confirmedAt,
             Instant projectedAt,
             String lastEventId) {
     }

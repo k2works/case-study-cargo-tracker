@@ -75,6 +75,42 @@ public class ConditionAndNotificationSteps {
         lastResponse = post("/return-to-routing", Map.of("reason", reason), "sales01");
     }
 
+    @もし("その予約を確定する")
+    public void 予約を確定する() {
+        // 本文を取らない。確定は「荷主の承認を確認した」という営業の行為である。
+        lastResponse = post("/confirmation", Map.of(), "sales01");
+    }
+
+    @かつ("{int} 秒以内にその予約には確定日時が入っている")
+    public void 確定日時が入る(int seconds) {
+        // 状態だけだと、確定したまま追跡番号が発行されていない期間が読めない。
+        SharedSteps.awaitWithin(seconds, () -> {
+            Map<String, Object> row = bookings.currentBooking();
+            return row != null && row.get("confirmedAt") != null;
+        }, "確定日時が入る");
+    }
+
+    @ならば("{int} 秒以内にその予約は営業の確定待ちに出る")
+    public void 確定待ちに出る(int seconds) {
+        awaitAwaitingConfirmation(seconds, true);
+    }
+
+    @ならば("{int} 秒以内にその予約は営業の確定待ちから消える")
+    public void 確定待ちから消える(int seconds) {
+        awaitAwaitingConfirmation(seconds, false);
+    }
+
+    private void awaitAwaitingConfirmation(int seconds, boolean expected) {
+        String id = bookingId();
+        SharedSteps.awaitWithin(seconds, () -> {
+            ResponseEntity<BookingRegistrationSteps.JsonMap> response = bookings.rest().get()
+                    .uri(bookings.url("/api/v1/booking/bookings/awaiting-confirmation"))
+                    .retrieve().toEntity(BookingRegistrationSteps.JsonMap.class);
+            return response.getStatusCode() == HttpStatus.OK
+                    && response.getBody().get("items").toString().contains(id) == expected;
+        }, "確定待ちに" + (expected ? "出る" : "出ない"));
+    }
+
     @ならば("その操作は成功する")
     public void 操作は成功する() {
         assertThat(lastResponse.getStatusCode()).isEqualTo(HttpStatus.OK);

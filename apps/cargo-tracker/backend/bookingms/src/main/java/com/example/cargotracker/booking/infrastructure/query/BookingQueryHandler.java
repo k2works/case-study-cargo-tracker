@@ -16,6 +16,9 @@ import com.example.cargotracker.booking.infrastructure.query.BookingQueries.Noti
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.NotificationView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.RouteConditionView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.BookingView;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.AwaitingConfirmationListView;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.AwaitingConfirmationView;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindAwaitingConfirmationQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.CountAwaitingNotificationQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.CountBookingsByStatusQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingQuery;
@@ -105,6 +108,16 @@ public class BookingQueryHandler {
         return cargos.countAwaitingNotification();
     }
 
+    /** 確定を待っている予約（S02 / 営業。US13 §受入基準 3）。 */
+    @QueryHandler
+    public AwaitingConfirmationListView handle(FindAwaitingConfirmationQuery query) {
+        return new AwaitingConfirmationListView(
+                cargos.findAwaitingConfirmation(Math.clamp(query.limit(), 1, 200)).stream()
+                        .map(row -> new AwaitingConfirmationView(
+                                row.bookingId(), row.bookingNumber(), row.notifiedAt()))
+                        .toList());
+    }
+
     /** 通知履歴（US12 §受入基準 4）。一度も通知していなければ空。 */
     @QueryHandler
     public NotificationListView handle(FindBookingNotificationsQuery query) {
@@ -166,7 +179,7 @@ public class BookingQueryHandler {
                 row.routingRequestedAt(), row.lastNotifiedAt(),
                 row.returnedToRoutingAt(), row.returnReason(),
                 parsePorts(row.routeExcludeUnlocodes()), row.routeDepartFromUnlocode(),
-                row.updatedAt(), row.updatedBy());
+                row.confirmedAt(), row.updatedAt(), row.updatedBy());
     }
 
     /**

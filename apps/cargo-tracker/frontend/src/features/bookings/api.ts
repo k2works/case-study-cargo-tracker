@@ -41,9 +41,22 @@ export interface BookingView {
    */
   readonly routeExcludeUnLocodes: readonly string[];
   readonly routeDepartFromUnLocode: string | null;
+  /** 確定した日時（US13）。未確定なら null。 */
+  readonly confirmedAt: string | null;
   /** 最終更新（US32）。一度も直していなければ null。 */
   readonly updatedAt: string | null;
   readonly updatedBy: string | null;
+}
+
+/**
+ * 予約を確定する（UC11 / US13 §受入基準 2）。営業だけが使う。
+ *
+ * <p>本文を送らない。確定は「荷主の承認を確認した」という営業の行為で、入力する
+ * 内容が無い。<b>通知していない予約は集約が断る</b>（画面もボタンを出さない）。</p>
+ */
+export function confirmBooking(bookingId: string): Promise<{ bookingId: string }> {
+  return commandClient(
+    `/booking/bookings/${encodeURIComponent(bookingId)}/confirmation`, {});
 }
 
 /** 修正の入力（US32）。荷主は変えられない（不変条件 1）。 */
@@ -121,6 +134,24 @@ export interface RevisionView {
  */
 export function fetchConditionReviews(): Promise<Pending<{ items: ConditionReviewView[] }>> {
   return queryClient('/booking/bookings/condition-reviews');
+}
+
+/**
+ * 確定を待っている予約（S02 / 営業。US13 §受入基準 3）。
+ *
+ * <p>荷主へ通知したまま確定を忘れると、追跡番号の発行も輸送手配も始まらない。
+ * <b>件数でなく行を返す</b>——件数だけでは、営業はどの予約を開けばよいか
+ * 分からない。</p>
+ */
+export function fetchAwaitingConfirmation():
+Promise<Pending<{ items: AwaitingConfirmationView[] }>> {
+  return queryClient('/booking/bookings/awaiting-confirmation');
+}
+
+export interface AwaitingConfirmationView {
+  readonly bookingId: string;
+  readonly bookingNumber: string;
+  readonly notifiedAt: string;
 }
 
 export interface ConditionReviewView {
