@@ -2,10 +2,12 @@ package com.example.cargotracker.booking.domain.model.aggregates;
 
 import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.shared.domain.location.Location;
+import com.example.cargotracker.booking.domain.model.commands.AdjustRouteSpecificationCommand;
 import com.example.cargotracker.booking.domain.model.commands.BookCargoCommand;
 import com.example.cargotracker.booking.domain.model.commands.RequestRoutingCommand;
 import com.example.cargotracker.booking.domain.model.commands.UpdateCargoSpecificationCommand;
 import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
+import com.example.cargotracker.booking.domain.model.events.RouteSpecificationAdjustedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoSpecificationUpdatedEvent;
 import com.example.cargotracker.booking.domain.model.events.RoutingRequestedEvent;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
@@ -18,6 +20,7 @@ import com.example.cargotracker.booking.domain.model.valueobjects.RoutingStatus;
 import com.example.cargotracker.shared.domain.error.IllegalTransition;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.List;
 import org.axonframework.eventsourcing.annotation.EventSourcingHandler;
 import org.axonframework.eventsourcing.annotation.reflection.EntityCreator;
 import org.axonframework.extension.spring.stereotype.EventSourced;
@@ -222,6 +225,63 @@ public class Cargo {
                 command.assignedBy(),
                 clock.instant()));
         return command.bookingId();
+    }
+
+    /**
+     * 経路の条件を調整する（UC08 / US10）。
+     *
+     * <p><b>調整を集約に記録する。</b> 画面の一時的な絞り込みにすると、誰がいつ期限を
+     * 延ばしたかが残らない（UC08 の最低保証「調整条件と再算出結果が記録される」）。</p>
+     *
+     * <p><b>経路設計に入ってからだけ開く。</b> 仮受付のあいだは S24（予約修正）が
+     * 正典で、2 つの入口を同時に開くと「どちらが正か」が読めなくなる。逆に経路設計に
+     * 入った予約は S24 が使えないので、期限を延ばす手段はここだけである。</p>
+     *
+     * <p><b>確定済みの旅程は消さない。</b> 再設計で入れ替わるまで残す。戻すのは
+     * {@code routingStatus} だけで、ROUTED のままだと条件を変えても確定し直せない。</p>
+     */
+    @CommandHandler
+    public String adjustRouteSpecification(AdjustRouteSpecificationCommand command,
+            EventAppender appender, Clock clock) {
+        if (bookingId == null) {
+            throw new IllegalTransition("予約 " + command.bookingId() + " は受け付けていません");
+        }
+        if (routingStatus == RoutingStatus.NOT_ROUTED) {
+            throw new IllegalTransition(
+                    "経路設計を依頼していない予約の条件は調整できません（"
+                            + routingStatus.label() + "）");
+        }
+        LocalDate deadline = command.arrivalDeadline();
+        if (deadline == null) {
+            throw new BusinessRuleViolation("到着期限は必須です");
+        }
+        if (deadline.isBefore(LocalDate.now(clock))) {
+            // 過去の期限にすると、どの候補も期限切れになる。組めない条件を作らせない。
+            throw new BusinessRuleViolation("到着期限は今日以降にしてください: " + deadline);
+        }
+        List<String> excluded = command.excludeUnLocodes() == null
+                ? List.of() : List.copyOf(command.excludeUnLocodes());
+        for (String port : excluded) {
+            // 必ず通る港を除外すると、候補は必ず 0 件になる。条件を変えても直らない
+            // ものを、変え続けさせることになる。
+            if (port.equals(origin.unLocode().value())
+                    || port.equals(destination.unLocode().value())) {
+                throw new BusinessRuleViolation(
+                        "出発地と目的地は除外できません: " + port);
+            }
+        }
+
+        appender.append(new RouteSpecificationAdjustedEvent(command.bookingId(), deadline,
+                excluded, command.departFromUnLocode(), command.adjustedBy(), clock.instant()));
+        return command.bookingId();
+    }
+
+    @EventSourcingHandler
+    void on(RouteSpecificationAdjustedEvent event) {
+        this.arrivalDeadline = event.arrivalDeadline();
+        // 条件が変わったので、確定済みの経路は設計し直しになる。**旅程は消さない**
+        // （再設計で入れ替わるまで残す）。ROUTED のままだと確定し直せない。
+        this.routingStatus = RoutingStatus.ROUTING_REQUESTED;
     }
 
     /** いま集約が持っている経路仕様。修正（US32）を反映した値になる。 */
