@@ -188,3 +188,29 @@ describe('S70 要確認一覧', () => {
     expect(screen.getByText('V-0001')).toBeInTheDocument();
   });
 });
+
+describe('S70 要確認一覧の「次の行動」（IT7 クローズ）', () => {
+  it('予約の項目からは、その予約詳細へ行ける', async () => {
+    // **気づく手段は、その人が次に取れる行動へ繋がらなければ意味がない。**
+    // 荷主の重複用のリンク（「修正して再登録する」）を予約の項目に出しても、
+    // 経路設計者は追跡番号を発行し直せない（IT7 クローズの自己レビュー）。
+    respond(200, {
+      items: [{
+          itemId: 'a-1',
+          kind: 'CHAIN_COMPENSATED',
+          targetType: 'BOOKING',
+          targetId: 'b-1',
+          assignedRole: 'ROLE_ROUTING',
+          reason: '追跡の開始が 3 回とも届きませんでした',
+          occurredAt: '2026-09-08T02:00:00Z',
+          relatedShipperId: null,
+      }],
+    });
+
+    renderPage();
+
+    const link = await screen.findByRole('link', { name: '予約を開く' });
+    expect(link).toHaveAttribute('href', '/bookings/b-1');
+    expect(screen.queryByRole('link', { name: '修正して再登録する' })).not.toBeInTheDocument();
+  });
+});

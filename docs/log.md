@@ -1,6 +1,20 @@
 # Docs Update Log
 
 ## 2026-09-06
+* **Update**: [IT7実装_review_20260907](/review/cargo-tracker/IT7実装_review_20260907.md) を更新（claude-code/claude-opus-5）
+* **Update**: [retrospective-7](/development/cargo-tracker/retrospective-7.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_report-7](/development/cargo-tracker/iteration_report-7.md) を更新（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-7](/development/cargo-tracker/iteration_plan-7.md) を更新（claude-code/claude-opus-5）
+* **Update**: [architecture_backend](/design/cargo-tracker/architecture_backend.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0010-reaction-handler-as-the-only-coordinator](/adr/cargo-tracker/0010-reaction-handler-as-the-only-coordinator.md) を更新（claude-code/claude-opus-5）
+* **Creation**: [IT7実装_review_20260907](/review/cargo-tracker/IT7実装_review_20260907.md) を作成（claude-code/claude-opus-5）
+* **Creation**: [retrospective-7](/development/cargo-tracker/retrospective-7.md) を作成（claude-code/claude-opus-5）
+* **Creation**: [iteration_report-7](/development/cargo-tracker/iteration_report-7.md) を作成（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-7](/development/cargo-tracker/iteration_plan-7.md) を更新（claude-code/claude-opus-5）
+* **Update**: [architecture_backend](/design/cargo-tracker/architecture_backend.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0010-reaction-handler-as-the-only-coordinator](/adr/cargo-tracker/0010-reaction-handler-as-the-only-coordinator.md) を更新（claude-code/claude-opus-5）
 * **Update**: [user_story](/requirements/user_story.md) を更新（claude-code/claude-opus-5）
 * **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
 * **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）

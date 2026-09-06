@@ -45,6 +45,16 @@ public class BookingReactionHandler {
      * 誰にも見えないまま溜まり続ける。</p>
      */
     private static final int MAX_ATTEMPTS = 3;
+    /** 要確認一覧の種類。連鎖を補償したことを表す。 */
+    private static final String COMPENSATED = "CHAIN_COMPENSATED";
+    /**
+     * 補償の宛先は<b>経路設計者</b>。
+     *
+     * <p>設計（architecture_backend.md）は「追跡管理者の要確認一覧に写す」と書いていたが、
+     * <b>追跡管理者には打つ手が無い</b>——追跡番号を発行し直せるのは経路設計者だけである
+     * （ADR-0010 決定 3）。気づく手段は、その人が次に取れる行動へ繋がらなければ意味がない。</p>
+     */
+    private static final String ROLE_ROUTING = "ROLE_ROUTING";
 
     private static final Logger log = LoggerFactory.getLogger(BookingReactionHandler.class);
 
@@ -110,7 +120,8 @@ public class BookingReactionHandler {
      * 発行だけを取り消し、経路設計者がもう一度発行できるようにする。</p>
      *
      * <p><b>要確認一覧に出す。</b> 補償したことが誰にも見えないと、荷主は追跡番号を
-     * 受け取ったのに追跡できない状態のまま放置される。</p>
+     * 受け取ったのに追跡できない状態のまま放置される。<b>宛先は経路設計者</b>——
+     * 発行し直せるのはその人だけだからである。</p>
      */
     private void compensate(TrackingNumberIssuedEvent event, RuntimeException cause) {
         String reason = "追跡の開始が " + MAX_ATTEMPTS + " 回とも届きませんでした";
@@ -118,7 +129,7 @@ public class BookingReactionHandler {
                 event.bookingId(), event.trackingNumber(), cause);
         commands.sendAndWait(new RevertTrackingNumberCommand(event.bookingId(), reason));
         processes.compensate(PROCESS_TYPE, event.bookingId(), reason);
-        attentionItems.add("SAGA_COMPENSATED", "BOOKING", event.bookingId(), "ROLE_TRACKER",
+        attentionItems.add(COMPENSATED, "BOOKING", event.bookingId(), ROLE_ROUTING,
                 reason, "{}", clock.instant());
     }
 

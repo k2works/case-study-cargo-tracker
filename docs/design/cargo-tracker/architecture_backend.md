@@ -4,7 +4,7 @@ title: "バックエンドアーキテクチャ - 国際貨物輸送管理シス
 description: "Axon Framework 5 による CQRS / Event Sourcing 版 Cargo Tracker のバックエンドアーキテクチャ。マイクロサービス構成で BC ごとにサービスを分け、Axon Server を Command / Event / Query Bus と Event Store に使い、投影・Reaction Handler・イベント契約を定める。"
 tags: [design, architecture, backend, cqrs, event-sourcing, axon, microservices]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-06T12:55:11Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-06T22:39:06Z }
 stale_after: 2026-12-01T00:00:00Z
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
@@ -851,7 +851,7 @@ public class BookingReactionHandler {
 
 | 失敗 | 補償 |
 | :--- | :--- |
-| trackingms が落ちていて追跡の初期化コマンドが届かない | Reaction Handler が再試行（再試行間隔は `Clock` を差し替えてテストする）。上限を超えたら `Cargo` に `RevertTrackingNumberCommand`。予約は `CONFIRMED` に留まり、追跡管理者の要確認一覧（`attention_item`）に写す |
+| trackingms が落ちていて追跡の初期化コマンドが届かない | Reaction Handler が再試行（再試行間隔は `Clock` を差し替えてテストする）。上限を超えたら `Cargo` に `RevertTrackingNumberCommand`。予約は `CONFIRMED` に留まり、**経路設計者**の要確認一覧（`attention_item`）に写す。**追跡管理者には打つ手が無い**——追跡番号を発行し直せるのは経路設計者だけである（[ADR-0010](../../adr/cargo-tracker/0010-reaction-handler-as-the-only-coordinator.md) 決定 3。IT7 のクローズで宛先を直した） |
 | キャンセル承認後、陸揚げ地での荷降しが記録されない | 追跡は `dischargeLocation` を持ったまま開いている。当該港の `UNLOAD` を受けた `TrackingReactionHandler` が `CloseTrackingCommand` を送り、`TrackingClosedEvent` で連鎖が終わる |
 | 配送完了後の請求書作成に失敗 | `BillingReactionHandler` が再試行。上限を超えたら `InvoiceCreationFailedEvent` を出し、経理担当者の作業一覧に写す |
 | 入金確認後の予約 `SETTLED` 化に失敗 | Reaction Handler が再試行し、失敗を **イベントとして残す**。戻り値を捨てて黙らない（`java-2` ADR-021 の教訓） |

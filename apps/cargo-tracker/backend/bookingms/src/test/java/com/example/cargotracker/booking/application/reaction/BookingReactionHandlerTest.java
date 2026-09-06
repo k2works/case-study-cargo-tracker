@@ -252,8 +252,9 @@ class BookingReactionHandlerTest {
                 .satisfies(state -> assertThat(state.status())
                         .isEqualTo(ProcessState.Status.COMPENSATED));
         assertThat(attentionItems.reasons)
-                .as("補償したことが誰にも見えないと、荷主は追跡できないまま放置される")
-                .anyMatch(r -> r.startsWith("SAGA_COMPENSATED/ROLE_TRACKER/"));
+                .as("**宛先は経路設計者。** 追跡管理者には発行し直す手が無く、"
+                        + "気づいても次の行動へ繋がらない")
+                .anyMatch(r -> r.startsWith("CHAIN_COMPENSATED/ROLE_ROUTING/"));
     }
 
     @Test

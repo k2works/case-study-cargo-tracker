@@ -81,17 +81,28 @@ export function AttentionListPage() {
                   <td className={TD}>{item.reason}</td>
                   <td className={`${TD} font-mono`}>{item.targetId}</td>
                   <td className={TD}>
-                    {/* 気づく手段で終わらせず、次の行動へ繋ぐ。重複なのだから、
-                        多くの場合は既存の荷主を使えば済む。 */}
+                    {/* **気づく手段で終わらせず、次の行動へ繋ぐ。** ただし「次の行動」は
+                        対象によって違う。荷主の重複なら既存を使えば済むが、予約の項目
+                        （連鎖の補償・投影の弾き）で開くべきなのはその予約である。
+                        一律に荷主のリンクを出すと、経路設計者は追跡番号を発行し直す
+                        入口にたどり着けない（IT7 クローズの自己レビュー）。 */}
                     <div className="flex flex-col gap-1">
-                      {item.relatedShipperId !== null && (
-                        <Link to="/shippers" className={LINK}>
-                          既存の荷主を見る
+                      {item.targetType === 'BOOKING' ? (
+                        <Link to={`/bookings/${item.targetId}`} className={LINK}>
+                          予約を開く
                         </Link>
+                      ) : (
+                        <>
+                          {item.relatedShipperId !== null && (
+                            <Link to="/shippers" className={LINK}>
+                              既存の荷主を見る
+                            </Link>
+                          )}
+                          <Link to="/shippers/new" className={LINK}>
+                            修正して再登録する
+                          </Link>
+                        </>
                       )}
-                      <Link to="/shippers/new" className={LINK}>
-                        修正して再登録する
-                      </Link>
                     </div>
                   </td>
                 </tr>
@@ -99,11 +110,15 @@ export function AttentionListPage() {
             </tbody>
           </table>
         </div>
-        {/* なぜ空のフォームが開くのかを言う。黙って空だと「消えた」と受け取られる。 */}
+        {/* なぜ空のフォームが開くのかを言う。黙って空だと「消えた」と受け取られる。
+            **荷主の項目があるときだけ出す**——予約の項目しか無い人に「再登録」の
+            説明を読ませても、その人の仕事とは関係がない。 */}
+        {data.value.items.some((item) => item.targetType !== 'BOOKING') && (
         <p className="mt-3 text-sm text-gray-600">
           「修正して再登録する」は空のフォームを開きます。受け付けた内容には個人情報が含まれるため、
           鍵を破棄したときに消えない場所へ写していません。お手元の資料をご用意ください。
         </p>
+        )}
         </>
       )}
     </section>

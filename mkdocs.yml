@@ -115,6 +115,9 @@ nav:
           - イテレーション 6 ふりかえり: development/cargo-tracker/retrospective-6.md
           - イテレーション 6 完了報告書: development/cargo-tracker/iteration_report-6.md
           - イテレーション 7 計画: development/cargo-tracker/iteration_plan-7.md
+          - イテレーション 7 ふりかえり: development/cargo-tracker/retrospective-7.md
+          - イテレーション 7 完了報告書: development/cargo-tracker/iteration_report-7.md
+          - イテレーション 7 計画: development/cargo-tracker/iteration_plan-7.md
   - 運用:
       - 概要: operation/index.md
       - cargo-tracker:
@@ -147,6 +150,7 @@ nav:
           - IT4 実装レビュー（2026-09-05）: review/cargo-tracker/IT4実装_review_20260905.md
           - IT5 実装レビュー（2026-09-05）: review/cargo-tracker/IT5実装_review_20260905.md
           - IT6 実装レビュー（2026-09-06）: review/cargo-tracker/IT6実装_review_20260906.md
+          - IT7 実装レビュー（2026-09-07）: review/cargo-tracker/IT7実装_review_20260907.md
   - ADR:
       - 概要: adr/index.md
       - cargo-tracker:

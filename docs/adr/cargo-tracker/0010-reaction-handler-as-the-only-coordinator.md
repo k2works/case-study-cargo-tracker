@@ -4,7 +4,7 @@ title: "ADR-0010 サービスをまたぐ連鎖の調整役を Reaction Handler 
 description: "予約から追跡開始までの連鎖を BookingReactionHandler + processstate で表し、追跡番号の採番と発行者、そして補償の粒度を決める。"
 tags: [adr]
 status: draft
-generated: { by: claude-code/claude-opus-5, at: 2026-09-06T13:48:08Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-06T22:39:06Z }
 ---
 
 # ADR-0010 サービスをまたぐ連鎖の調整役を Reaction Handler に一本化する
@@ -73,7 +73,7 @@ IT7 は**サービスをまたぐ最初の連鎖**である。予約を確定し
 - **起票してからコマンドを送る。** 送ってから起票すると、trackingms の応答のほうが先に届いて「行が無いのに 2 段目が来る」
 - **送れたところまでを 1 段目の完了とする。** 届いていないのに次の段へ進めると、滞留の走査から漏れる
 - **再試行は 3 回まで**。1・2 回目は例外を投げ直して Event Processor に再試行させる。回数は `process_state` の `metadata.attempts` に持つ（プロセスをまたぐので変数では数えられない）
-- **上限を超えたら補償する。** `RevertTrackingNumberCommand` を送って予約を `CONFIRMED` に戻し、`process_state` を `COMPENSATED` にして、`attention_item`（`ROLE_TRACKER`）に出す。**キャンセルではない**ので、経路設計者がもう一度発行できる
+- **上限を超えたら補償する。** `RevertTrackingNumberCommand` を送って予約を `CONFIRMED` に戻し、`process_state` を `COMPENSATED` にして、`attention_item`（**`ROLE_ROUTING`**）に出す。**追跡管理者ではなく経路設計者に宛てる**——発行し直せるのは経路設計者だけで、気づく手段はその人が次に取れる行動へ繋がらなければ意味がない。**キャンセルではない**ので、経路設計者がもう一度発行できる
 - **滞留は 24 時間**。`RUNNING` のまま古い行を `gulp reaction:stuck` が走査する
 
 ## 影響
