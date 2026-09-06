@@ -242,10 +242,10 @@ export function bookingStatusLabel(status: string): string {
  * 経路は「設計済」になりうるので、片方だけ出すと予約詳細から
  * 経路の進み具合が読めない。</p>
  */
-const ROUTING_STATUS_LABELS: Record<string, string> = {
-  NOT_ROUTED: '未設計',
-  ROUTING_REQUESTED: '設計依頼済み',
-  ROUTED: '設計済',
+export const ROUTING_STATUS_LABELS: Record<string, string> = {
+  NOT_ROUTED: '未設定',
+  ROUTING_REQUESTED: '設計依頼中',
+  ROUTED: '設定済',
   MISROUTED: '誤配（再設計が要る）',
 };
 

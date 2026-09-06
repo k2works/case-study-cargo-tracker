@@ -161,7 +161,7 @@ class CargoRoutingTest {
                 .when().command(assign(itinerary()))
                 // 断りの文に列挙名（ROUTED）は出さない。業務担当者が読む文にする。
                 .then().exceptionSatisfies(e ->
-                        assertThat(e.getMessage()).contains("設計済").doesNotContain("ROUTED"));
+                        assertThat(e.getMessage()).contains("設定済").doesNotContain("ROUTED"));
     }
 
     @Test

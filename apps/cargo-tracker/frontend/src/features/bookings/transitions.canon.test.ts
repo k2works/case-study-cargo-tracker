@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { ROUTING_STATUS_LABELS } from './api';
 import {
   BOOKING_TRANSITIONS,
   canNotifyShipper,
@@ -99,6 +100,28 @@ describe('予約の状態遷移表', () => {
     expect(canon, '正典の判断を読めていない').toBeDefined();
     for (const status of Object.keys(BOOKING_TRANSITIONS)) {
       expect(canReturnToRouting(status), status).toBe(status === canon);
+    }
+  });
+
+  it('経路設定状態の呼び名は設計と一致する（US10・US12）', () => {
+    // **利用者に見せる文字列は、画面から踏むテストでしか固定されない。** IT6 で
+    // `ROUTING_REQUESTED` の呼び名が実装だけ「設計依頼済み」になっていた（正典は
+    // 「設計依頼中」）。要素表の呼び名を読んで突き合わせる。
+    //
+    // 画面の呼び名は正典で**始まる**ことを見る。`MISROUTED` は「誤配（再設計が
+    // 要る）」のように、次の行動を添えて出しているため。添えた分を許しても、
+    // 「設計依頼済み」と「設計依頼中」のような食い違いは捕まる。
+    const canon = readFileSync(
+      '../../../docs/design/cargo-tracker/domain-model.md', 'utf-8');
+    for (const [status, label] of Object.entries(ROUTING_STATUS_LABELS)) {
+      const row = canon.split('\n').find((line) =>
+        line.startsWith('|') && line.includes(`\`${status}\``));
+      expect(row, `${status} が要素表に無い`).toBeDefined();
+      const canonLabel = (row as string).split('|')[2]?.trim();
+      expect(canonLabel, `${status} の呼び名を読めていない`).toBeTruthy();
+      expect(label, `${status} の呼び名が設計と食い違う`).toMatch(
+        new RegExp(`^${canonLabel}`),
+      );
     }
   });
 });

@@ -182,7 +182,7 @@ class CargoConditionAdjustmentTest {
 
     @ParameterizedTest
     @EnumSource(RoutingStatus.class)
-    @DisplayName("ADR-0009 決定 2: 差し戻せるのは設計依頼済みのときだけ（誤配は含めない）")
+    @DisplayName("ADR-0009 決定 2: 差し戻せるのは設計依頼中のときだけ（誤配は含めない）")
     void onlyRoutingRequestedCanBeSentBack(RoutingStatus status) {
         // **誤配（MISROUTED）は含めない。** 誤配は「荷物が経路から外れた」ことで、
         // 条件が組めないこととは別である。差し戻せると、荷物が動いている予約が

@@ -177,7 +177,7 @@ class CargoNotificationTest {
     }
 
     @Test
-    @DisplayName("戻したあとは経路を確定し直せる（旅程は残るが設計依頼済みに戻る）")
+    @DisplayName("戻したあとは経路を確定し直せる（旅程は残るが設計依頼中に戻る）")
     void routeCanBeAssignedAfterReturn() {
         fixture.given().events(booked(), new RoutingRequestedEvent("B-0001", "sales01"),
                         routed(), notified(),

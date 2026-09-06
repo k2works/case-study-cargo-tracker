@@ -454,7 +454,7 @@ describe('S22 旅程（US09）', () => {
 
     expect(await screen.findByRole('heading', { name: '状態' })).toBeInTheDocument();
     expect(screen.getByText('経路設定状態')).toBeInTheDocument();
-    expect(screen.getByText('設計済')).toBeInTheDocument();
+    expect(screen.getByText('設定済')).toBeInTheDocument();
     expect(screen.getByText('仮受付')).toBeInTheDocument();
   });
 

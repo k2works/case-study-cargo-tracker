@@ -8,11 +8,11 @@ package com.example.cargotracker.booking.domain.model.valueobjects;
  */
 public enum RoutingStatus {
     /** 未設計。 */
-    NOT_ROUTED("未設計"),
+    NOT_ROUTED("未設定"),
     /** 経路設計を依頼済み。 */
-    ROUTING_REQUESTED("設計依頼済み"),
+    ROUTING_REQUESTED("設計依頼中"),
     /** 経路が決まっている。 */
-    ROUTED("設計済"),
+    ROUTED("設定済"),
     /** 予定ルート外の荷役を受けた（誤配）。 */
     MISROUTED("誤配");
 

@@ -92,10 +92,15 @@ public class RouteAssignmentSteps {
 
     @かつ("{int} 秒以内にその予約の経路設定状態は {string} になる")
     public void 経路設定状態が変わる(int seconds, String label) {
+        // 呼び名の正典は domain-model.md の要素表（`:119`）と ui_design.md の
+        // バッジ表（`:1461`）で、どちらも「設計依頼中」。IT6 で
+        // RoutingStatus#label() が「設計依頼済み」になっていたのを見つけて実装を
+        // 直した。**この分岐を踏むシナリオが 1 本も無かったので気づけていなかった**
+        // ——利用者に見せる文字列は、画面から踏むテストでしか固定されない。
         String expected = switch (label) {
-            case "未設計" -> "NOT_ROUTED";
+            case "未設定" -> "NOT_ROUTED";
             case "設計依頼中" -> "ROUTING_REQUESTED";
-            case "設計済" -> "ROUTED";
+            case "設定済" -> "ROUTED";
             case "誤配" -> "MISROUTED";
             default -> throw new IllegalArgumentException("知らない経路設定状態です: " + label);
         };
