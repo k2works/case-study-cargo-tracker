@@ -3,6 +3,8 @@ package com.example.cargotracker.booking.infrastructure.projection;
 import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoSpecificationUpdatedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoRoutedEvent;
+import com.example.cargotracker.booking.domain.model.events.ConditionReviewRequestedEvent;
+import com.example.cargotracker.booking.domain.model.events.RouteSpecificationAdjustedEvent;
 import com.example.cargotracker.booking.domain.model.events.RoutingRequestedEvent;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.booking.domain.model.valueobjects.RoutingStatus;
@@ -115,6 +117,37 @@ public class CargoProjection {
                 now);
         if (updated == 0) {
             log.warn("経路設計の依頼を書ける予約が投影に無い: bookingId={}", event.bookingId());
+        }
+    }
+
+    /**
+     * 条件の調整（US10 / ADR-0009 決定 3）。
+     *
+     * <p>期限を書き換え、経路設計をやり直しにする。<b>{@code cargo_leg} は消さない。</b>
+     * 差し戻しの記録は消す（条件が変わったので営業の手番は終わっている）。</p>
+     */
+    @EventHandler
+    public void on(RouteSpecificationAdjustedEvent event) {
+        int updated = cargos.updateAdjustedRouteSpecification(event.bookingId(),
+                event.arrivalDeadline(),
+                RoutingStatus.ROUTING_REQUESTED.name(),
+                clock.instant());
+        if (updated == 0) {
+            log.warn("条件の調整を書ける予約が投影に無い: bookingId={}", event.bookingId());
+        }
+    }
+
+    /**
+     * 条件の見直し依頼（US10 §4 / ADR-0009 決定 1）。
+     *
+     * <p><b>{@code routing_status} は動かさない。</b> 記録だけを写す。</p>
+     */
+    @EventHandler
+    public void on(ConditionReviewRequestedEvent event) {
+        int updated = cargos.updateConditionReview(event.bookingId(),
+                event.requestedAt(), event.reason(), clock.instant());
+        if (updated == 0) {
+            log.warn("差し戻しを書ける予約が投影に無い: bookingId={}", event.bookingId());
         }
     }
 

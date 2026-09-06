@@ -6,6 +6,9 @@ import com.example.cargotracker.booking.infrastructure.persistence.CargoSummaryM
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.AffectedBookingListView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.AffectedBookingView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.BookingListView;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.ConditionReviewListView;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.ConditionReviewView;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindConditionReviewsQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.BookingView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.CountBookingsByStatusQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingQuery;
@@ -58,6 +61,15 @@ public class BookingQueryHandler {
                         .map(row -> new AffectedBookingView(row.bookingId(), row.bookingNumber(),
                                 row.bookingStatus(), row.routingStatus()))
                         .toList());
+    }
+
+    /** 見直しを頼まれている予約（S02 / 営業。US10 §4）。古い依頼から順に返す。 */
+    @QueryHandler
+    public ConditionReviewListView handle(FindConditionReviewsQuery query) {
+        return new ConditionReviewListView(cargos.findConditionReviews(query.limit()).stream()
+                .map(row -> new ConditionReviewView(row.bookingId(), row.bookingNumber(),
+                        row.reason(), row.requestedAt()))
+                .toList());
     }
 
     /** 修正履歴（US32 §受入基準 4）。一度も直していなければ空。 */

@@ -78,6 +78,56 @@ public interface CargoSummaryMapper {
     int updateSpecification(CargoSummaryRow row);
 
     /**
+     * 条件の調整を投影に反映する（US10 / ADR-0009 決定 3）。
+     *
+     * <p>期限を書き換え、経路設計をやり直しにする。<b>{@code cargo_leg} は消さない</b>
+     * （再設計で入れ替わるまで残す）。消すと「何を組み直すのか」が分からなくなる。</p>
+     *
+     * <p><b>差し戻しの記録も同時に消す。</b> 条件が変わったのだから、営業の手番は
+     * 終わっている。残すと S02 に出たままになり、営業は何度も同じ予約を開く。</p>
+     */
+    @org.apache.ibatis.annotations.Update(
+            "UPDATE cargo_summary SET arrival_deadline = #{arrivalDeadline}, "
+            + "routing_status = #{routingStatus}, condition_review_requested_at = NULL, "
+            + "condition_review_reason = NULL, projected_at = #{projectedAt} "
+            + "WHERE booking_id = #{bookingId}")
+    int updateAdjustedRouteSpecification(@Param("bookingId") String bookingId,
+            @Param("arrivalDeadline") LocalDate arrivalDeadline,
+            @Param("routingStatus") String routingStatus,
+            @Param("projectedAt") Instant projectedAt);
+
+    /**
+     * 差し戻しを投影に反映する（US10 §4 / ADR-0009 決定 1）。
+     *
+     * <p><b>{@code routing_status} は触らない。</b> 状態を戻すと「一度も設計して
+     * いない予約」と混ざり、S30 の一覧から消えて誰も再開しない。</p>
+     */
+    @org.apache.ibatis.annotations.Update(
+            "UPDATE cargo_summary SET condition_review_requested_at = #{requestedAt}, "
+            + "condition_review_reason = #{reason}, projected_at = #{projectedAt} "
+            + "WHERE booking_id = #{bookingId}")
+    int updateConditionReview(@Param("bookingId") String bookingId,
+            @Param("requestedAt") Instant requestedAt,
+            @Param("reason") String reason,
+            @Param("projectedAt") Instant projectedAt);
+
+    /**
+     * 見直しを頼まれている予約（S02 / 営業）。
+     *
+     * <p>件数だけでは仕事が進まないので、予約番号と理由を返して予約詳細へ行けるように
+     * する。古い依頼から順に返す（放置されたものを上に出す）。</p>
+     */
+    List<ConditionReviewRow> findConditionReviews(@Param("limit") int limit);
+
+    /** 見直しを頼まれている予約 1 件。 */
+    record ConditionReviewRow(
+            String bookingId,
+            String bookingNumber,
+            String reason,
+            Instant requestedAt) {
+    }
+
+    /**
      * 経路設計作業一覧（S30）。
      *
      * <p>並び順は<b>誤配が先、そのあと到着期限が近い順</b>（ui_design.md）。誤配は

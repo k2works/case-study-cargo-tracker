@@ -1,6 +1,7 @@
 # Docs Update Log
 
 ## 2026-09-06
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
 * **Update**: [0009-condition-review-is-not-a-state-transition](/adr/cargo-tracker/0009-condition-review-is-not-a-state-transition.md) を更新（claude-code/claude-opus-5）
 * **Update**: [iteration_plan-6](/development/cargo-tracker/iteration_plan-6.md) を更新（claude-code/claude-opus-5）
 

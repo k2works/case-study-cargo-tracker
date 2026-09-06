@@ -116,6 +116,26 @@ public final class BookingQueries {
     public record AffectedBookingListView(List<AffectedBookingView> items) {
     }
 
+    /**
+     * 見直しを頼まれている予約（S02 / 営業。US10 §受入基準 4）。
+     *
+     * <p>件数だけでは仕事が進まないので、行そのものを返して予約詳細へ行けるように
+     * する（IT4 の「気づく手段は次の行動へ繋ぐ」）。</p>
+     */
+    public record FindConditionReviewsQuery(int limit) {
+    }
+
+    /** 見直しを頼まれている予約 1 件。理由が読めないと、営業は何を協議するか分からない。 */
+    public record ConditionReviewView(
+            String bookingId,
+            String bookingNumber,
+            String reason,
+            Instant requestedAt) {
+    }
+
+    public record ConditionReviewListView(List<ConditionReviewView> items) {
+    }
+
     /** 画面に出す予約。荷主名は鍵破棄後に {@code null} になる。 */
     public record BookingView(
             String bookingId,

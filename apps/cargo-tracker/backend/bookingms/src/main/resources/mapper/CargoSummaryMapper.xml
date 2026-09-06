@@ -36,6 +36,29 @@
         </constructor>
     </resultMap>
 
+    <resultMap id="conditionReviewRow"
+               type="com.example.cargotracker.booking.infrastructure.persistence.CargoSummaryMapper$ConditionReviewRow">
+        <constructor>
+            <idArg column="booking_id" javaType="string"/>
+            <arg column="booking_number" javaType="string"/>
+            <arg column="reason" javaType="string"/>
+            <arg column="requested_at" javaType="java.time.Instant"/>
+        </constructor>
+    </resultMap>
+
+    <!-- 見直しを頼まれている予約（S02 / 営業）。古い依頼を上に出す。
+         終了した予約は出さない（止めた予約の見直しは要らない）。 -->
+    <select id="findConditionReviews" resultMap="conditionReviewRow">
+        SELECT booking_id, booking_number,
+               condition_review_reason AS reason,
+               condition_review_requested_at AS requested_at
+        FROM cargo_summary
+        WHERE condition_review_requested_at IS NOT NULL
+          AND booking_status NOT IN ('SETTLED', 'CANCELLED')
+        ORDER BY condition_review_requested_at
+        LIMIT #{limit}
+    </select>
+
     <sql id="visible">
         <if test="!includeFinished">
             WHERE booking_status NOT IN ('SETTLED', 'CANCELLED')
