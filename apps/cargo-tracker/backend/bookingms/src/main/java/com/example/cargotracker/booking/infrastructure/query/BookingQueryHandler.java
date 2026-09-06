@@ -1,6 +1,7 @@
 package com.example.cargotracker.booking.infrastructure.query;
 
 import com.example.cargotracker.booking.infrastructure.persistence.CargoLegMapper;
+import com.example.cargotracker.booking.infrastructure.persistence.CargoNotificationMapper;
 import com.example.cargotracker.booking.infrastructure.persistence.CargoRevisionMapper;
 import com.example.cargotracker.booking.infrastructure.persistence.CargoSummaryMapper;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.AffectedBookingListView;
@@ -9,7 +10,10 @@ import com.example.cargotracker.booking.infrastructure.query.BookingQueries.Book
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.ConditionReviewListView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.ConditionReviewView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindConditionReviewsQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingNotificationsQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindRouteConditionQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.NotificationListView;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.NotificationView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.RouteConditionView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.BookingView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.CountBookingsByStatusQuery;
@@ -34,12 +38,14 @@ public class BookingQueryHandler {
     private final CargoSummaryMapper cargos;
     private final CargoRevisionMapper revisions;
     private final CargoLegMapper legs;
+    private final CargoNotificationMapper notifications;
 
     public BookingQueryHandler(CargoSummaryMapper cargos, CargoRevisionMapper revisions,
-            CargoLegMapper legs) {
+            CargoLegMapper legs, CargoNotificationMapper notifications) {
         this.cargos = cargos;
         this.revisions = revisions;
         this.legs = legs;
+        this.notifications = notifications;
     }
 
     /** 確定した旅程（US09）。まだ決まっていなければ空。 */
@@ -92,6 +98,16 @@ public class BookingQueryHandler {
                 row.excludeUnlocodes() == null
                         ? List.of() : List.of(row.excludeUnlocodes().split(",")),
                 row.departFromUnlocode());
+    }
+
+    /** 通知履歴（US12 §受入基準 4）。一度も通知していなければ空。 */
+    @QueryHandler
+    public NotificationListView handle(FindBookingNotificationsQuery query) {
+        return new NotificationListView(
+                notifications.findByBooking(query.bookingId()).stream()
+                        .map(row -> new NotificationView(row.notifiedAt(), row.recipientEmail(),
+                                row.summary(), row.notifiedBy()))
+                        .toList());
     }
 
     /** 修正履歴（US32 §受入基準 4）。一度も直していなければ空。 */

@@ -4,13 +4,16 @@ import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoSpecificationUpdatedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoRoutedEvent;
 import com.example.cargotracker.booking.domain.model.events.ConditionReviewRequestedEvent;
+import com.example.cargotracker.booking.domain.model.events.ReturnedToRoutingEvent;
 import com.example.cargotracker.booking.domain.model.events.RouteSpecificationAdjustedEvent;
+import com.example.cargotracker.booking.domain.model.events.ShipperNotifiedEvent;
 import com.example.cargotracker.booking.domain.model.events.RoutingRequestedEvent;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.booking.domain.model.valueobjects.RoutingStatus;
 import com.example.cargotracker.booking.domain.service.CargoSpecificationDiff;
 import com.example.cargotracker.booking.infrastructure.persistence.CargoLegMapper;
 import com.example.cargotracker.booking.infrastructure.persistence.CargoRevisionMapper;
+import com.example.cargotracker.booking.infrastructure.persistence.CargoNotificationMapper;
 import com.example.cargotracker.booking.infrastructure.persistence.CargoSummaryMapper;
 import com.example.cargotracker.booking.infrastructure.persistence.ShipperMapper;
 import java.time.Clock;
@@ -40,16 +43,18 @@ public class CargoProjection {
     private final CargoSummaryMapper cargos;
     private final CargoRevisionMapper revisions;
     private final CargoLegMapper legs;
+    private final CargoNotificationMapper notifications;
     private final ShipperMapper shippers;
     private final AttentionItemRecorder attentionItems;
     private final Clock clock;
 
     public CargoProjection(CargoSummaryMapper cargos, CargoRevisionMapper revisions,
-            CargoLegMapper legs, ShipperMapper shippers, AttentionItemRecorder attentionItems,
-            Clock clock) {
+            CargoLegMapper legs, CargoNotificationMapper notifications, ShipperMapper shippers,
+            AttentionItemRecorder attentionItems, Clock clock) {
         this.cargos = cargos;
         this.revisions = revisions;
         this.legs = legs;
+        this.notifications = notifications;
         this.shippers = shippers;
         this.attentionItems = attentionItems;
         this.clock = clock;
@@ -140,6 +145,43 @@ public class CargoProjection {
                 clock.instant());
         if (updated == 0) {
             log.warn("条件の調整を書ける予約が投影に無い: bookingId={}", event.bookingId());
+        }
+    }
+
+    /**
+     * 荷主への通知（US12）。
+     *
+     * <p>履歴に 1 行増やし、予約の状態を通知済みにする。<b>再通知では行が増え、
+     * リプレイでは増えない</b>——主キーが内容（予約 ID と通知日時）から決まる。</p>
+     */
+    @EventHandler
+    public void on(ShipperNotifiedEvent event) {
+        Instant now = clock.instant();
+        int updated = cargos.updateNotified(event.bookingId(),
+                BookingStatus.ROUTE_NOTIFIED.name(), event.notifiedAt(), now);
+        if (updated == 0) {
+            log.warn("通知を書ける予約が投影に無い: bookingId={}", event.bookingId());
+            return;
+        }
+        notifications.insert(new CargoNotificationMapper.CargoNotificationRow(
+                event.bookingId(), event.notifiedAt(), event.recipientEmail(),
+                event.summary(), event.notifiedBy()));
+    }
+
+    /**
+     * 経路設計への差し戻し（US12）。
+     *
+     * <p><b>{@code routing_requested_at} は触らない。</b> 引き渡した日時と、通知後に
+     * 戻した日時は別のことである。<b>旅程も消さない</b>（再設計で入れ替わるまで残す）。</p>
+     */
+    @EventHandler
+    public void on(ReturnedToRoutingEvent event) {
+        int updated = cargos.updateReturnedToRouting(event.bookingId(),
+                BookingStatus.ROUTE_PROPOSED.name(),
+                RoutingStatus.ROUTING_REQUESTED.name(),
+                event.returnedAt(), event.reason(), clock.instant());
+        if (updated == 0) {
+            log.warn("差し戻しを書ける予約が投影に無い: bookingId={}", event.bookingId());
         }
     }
 

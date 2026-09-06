@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.booking.infrastructure.persistence.CargoNotificationMapper">
+
+    <resultMap id="notificationRow"
+               type="com.example.cargotracker.booking.infrastructure.persistence.CargoNotificationMapper$CargoNotificationRow">
+        <constructor>
+            <idArg column="booking_id" javaType="string"/>
+            <idArg column="notified_at" javaType="java.time.Instant"/>
+            <arg column="recipient_email" javaType="string"/>
+            <arg column="summary" javaType="string"/>
+            <arg column="notified_by" javaType="string"/>
+        </constructor>
+    </resultMap>
+
+    <!-- ON CONFLICT DO NOTHING でリプレイに耐える。主キーが内容から決まるので、
+         同じイベントを 2 度読んでも同じ行になる。 -->
+    <insert id="insert">
+        INSERT INTO cargo_notification
+            (booking_id, notified_at, recipient_email, summary, notified_by)
+        VALUES (#{bookingId}, #{notifiedAt}, #{recipientEmail}, #{summary}, #{notifiedBy})
+        ON CONFLICT (booking_id, notified_at) DO NOTHING
+    </insert>
+
+    <select id="findByBooking" resultMap="notificationRow">
+        SELECT * FROM cargo_notification
+        WHERE booking_id = #{bookingId}
+        ORDER BY notified_at DESC
+    </select>
+</mapper>

@@ -4,7 +4,7 @@ title: "データモデル設計 - 国際貨物輸送管理システム（CQRS /
 description: "CQRS / Event Sourcing 版 Cargo Tracker のデータモデル設計。Event Store は Axon Server に任せ、サービスごとの投影テーブル・Axon 管理テーブル・Auth の状態テーブルを ER 図とテーブル定義で示し、Processing Group との対応とリプレイ前提のマイグレーション方針を定める。"
 tags: [design,data-model,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-06T02:44:57Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-06T03:59:58Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -88,7 +88,7 @@ bi --> bidb
 | :--- | :--- | :--- | :--- |
 | Axon Server | （専用ボリューム） | Event Store | イベント列、スナップショット |
 | authms | `auth_db` | 状態保存 | `users`, `user_roles`, `user_shipper_link`, `auth_audit_log` |
-| bookingms | `booking_read_db` | 投影 + 受け皿 + Axon 管理 | `shipper`, `cargo_summary`, `cargo_revision`, `cargo_leg`, `cancellation_request`, `quotation`, `quotation_candidate`, `attention_item`, `process_state`, `token_entry` |
+| bookingms | `booking_read_db` | 投影 + 受け皿 + Axon 管理 | `shipper`, `cargo_summary`, `cargo_revision`, `cargo_notification`, `cargo_leg`, `cancellation_request`, `quotation`, `quotation_candidate`, `attention_item`, `process_state`, `token_entry` |
 | routingms | `routing_read_db` | 投影 + 受け皿 + Axon 管理 | `voyage`, `carrier_movement`, `voyage_accepted_cargo_type`, `attention_item`, `token_entry` |
 | trackingms | `tracking_read_db` | 投影 + 受け皿 + Axon 管理 | `tracking_summary`, `tracking_event`, `tracking_exception`, `shipper_cargo_snapshot`, `attention_item`, `token_entry` |
 | handlingms | `handling_read_db` | 投影 + Axon 管理 | `cargo_snapshot`, `cargo_snapshot_leg`, `handling_activity`, `customs_declaration`, `token_entry` |
@@ -294,6 +294,8 @@ entity "cargo_summary" as cargo {
   condition_review_reason: VARCHAR(200)
   route_exclude_unlocodes: VARCHAR(500)
   route_depart_from_unlocode: VARCHAR(5)
+  returned_to_routing_at: TIMESTAMPTZ
+  return_reason: VARCHAR(200)
   confirmed_at: TIMESTAMPTZ
   tracking_issued_at: TIMESTAMPTZ
   last_handling_type: VARCHAR(30)
@@ -306,6 +308,15 @@ entity "cargo_summary" as cargo {
   pending_cancellation: BOOLEAN NOT NULL DEFAULT FALSE
   projected_at: TIMESTAMPTZ NOT NULL
   last_event_id: VARCHAR(36)
+}
+
+entity "cargo_notification" as note {
+  * **booking_id**: VARCHAR(36) <<PK>> <<FK>>
+  * **notified_at**: TIMESTAMPTZ <<PK>>
+  --
+  recipient_email: VARCHAR(255) NOT NULL
+  summary: VARCHAR(500) NOT NULL
+  notified_by: VARCHAR(50) NOT NULL
 }
 
 entity "cargo_revision" as rev {
@@ -396,8 +407,9 @@ q ||--o{ qc
 | テーブル | 元になるイベント | 制約・インデックス | 備考 |
 | :--- | :--- | :--- | :--- |
 | `shipper` | `ShipperRegisteredEvent`, `ShipperContactUpdatedEvent`, `CorporateContractAssignedEvent` | `UNIQUE(email)`（NULL を許す）, `UNIQUE(shipper_code)` | `shipper_code` は投影側のシーケンス（`SHP-` + 連番 6 桁）で採番。UNIQUE 違反は `attention_item` に記録。`name` / `email` / `phone` / `address` は crypto-shredding 後に `NULL` になる（ADR-0003）。表示既定値は「（削除済み）」（`ui_design.md`） |
+| `cargo_notification` | `ShipperNotifiedEvent` | `PK(booking_id, notified_at)`, `INDEX(booking_id, notified_at DESC)` | 荷主への通知履歴（US12 §受入基準 4）。1 行 = 1 回の通知。**送信基盤はスコープ外**で、通知は現行の手作業（電話・メール）で行う。ここに残るのは「いつ・誰に・何を伝えたか」で、荷主から「聞いていない」と言われたときに突き合わせる材料になる。`cargo_revision` と同じく**主キーに通知日時を含めるので、リプレイしても行が増えない**（採番すると積み上がる。[ADR-0008](../../adr/cargo-tracker/0008-cargo-revision-as-a-projection.md)）。再通知では行が増える |
 | `cargo_revision` | `CargoSpecificationUpdatedEvent` | `PK(booking_id, updated_at, field_label)`, `INDEX(booking_id, updated_at DESC)` | 修正で変わった項目（US32 §受入基準 4「何を変えたか」）。1 行 = 1 回の修正で変わった 1 項目。**投影の直前の行と修正イベントを丸ごと比べて作る**（項目の名簿を手で書くと、要素を足したときに書き忘れが黙って差分から消える）。主キーに修正時刻を含めるので、リプレイしても行が増えない。判断の経緯は [ADR-0008](../../adr/cargo-tracker/0008-cargo-revision-as-a-projection.md) |
-| `cargo_summary` | `CargoBookedEvent` ほか Cargo の全イベント（`booking_status` の書き手は `BookingDeliveredEvent`・`BookingSettledEvent` を含む Cargo 自身のイベントだけ）、`HandlingActivityRegisteredEvent`・`HandlingActivityVoidedEvent`（契約、`last_handling_*` のみ） | `UNIQUE(tracking_number)`, `INDEX(shipper_id)`, `INDEX(booking_status)`, `INDEX(routing_status)` | `shipper_name` を非正規化して持つ（一覧が JOIN しない）。`last_handling_*` は荷役の契約イベントから写す。他サービスの `CargoDeliveredEvent`・`PaymentRecordedEvent` は投影が写さず、`booking-reaction` が Cargo へコマンドを送り、Cargo のイベントで `booking_status` が変わる。`INDEX(shipper_id)` は荷主向け一覧（`FindShipperBookingsQuery`）の索引を兼ねる。`updated_at` / `updated_by` は**最終更新だけ**を持つ（US32）。何を変えたかは `cargo_revision` が持つ（[ADR-0008](../../adr/cargo-tracker/0008-cargo-revision-as-a-projection.md)）。`routing_requested_at` は経路設計者へ引き渡した日時（US06）。S30 は到着期限が近い順に並ぶので、期限が遠い案件は下に沈む。引き渡しからどれだけ経ったかが読めないと放置に気づけない。`condition_review_requested_at` / `condition_review_reason` は営業への差し戻し（US10 §4）。**状態は動かさず記録で表す**（[ADR-0009](../../adr/cargo-tracker/0009-condition-review-is-not-a-state-transition.md)）。条件を調整すると消える（営業の手番が終わるため）。`route_exclude_unlocodes` / `route_depart_from_unlocode` は経路探索の条件（US10）。**候補を出すたびにここから組む**（画面から組み立てて送ると、条件を直したのに古い条件で探すことが起きる）。除外港はカンマ区切りで持つ。1 予約あたり数件で、絞り込みにも並び替えにも使わず、予約と一緒にしか読まない |
+| `cargo_summary` | `CargoBookedEvent` ほか Cargo の全イベント（`booking_status` の書き手は `BookingDeliveredEvent`・`BookingSettledEvent` を含む Cargo 自身のイベントだけ）、`HandlingActivityRegisteredEvent`・`HandlingActivityVoidedEvent`（契約、`last_handling_*` のみ） | `UNIQUE(tracking_number)`, `INDEX(shipper_id)`, `INDEX(booking_status)`, `INDEX(routing_status)` | `shipper_name` を非正規化して持つ（一覧が JOIN しない）。`last_handling_*` は荷役の契約イベントから写す。他サービスの `CargoDeliveredEvent`・`PaymentRecordedEvent` は投影が写さず、`booking-reaction` が Cargo へコマンドを送り、Cargo のイベントで `booking_status` が変わる。`INDEX(shipper_id)` は荷主向け一覧（`FindShipperBookingsQuery`）の索引を兼ねる。`updated_at` / `updated_by` は**最終更新だけ**を持つ（US32）。何を変えたかは `cargo_revision` が持つ（[ADR-0008](../../adr/cargo-tracker/0008-cargo-revision-as-a-projection.md)）。`routing_requested_at` は経路設計者へ引き渡した日時（US06）。S30 は到着期限が近い順に並ぶので、期限が遠い案件は下に沈む。引き渡しからどれだけ経ったかが読めないと放置に気づけない。`condition_review_requested_at` / `condition_review_reason` は営業への差し戻し（US10 §4）。**状態は動かさず記録で表す**（[ADR-0009](../../adr/cargo-tracker/0009-condition-review-is-not-a-state-transition.md)）。条件を調整すると消える（営業の手番が終わるため）。`route_exclude_unlocodes` / `route_depart_from_unlocode` は経路探索の条件（US10）。**候補を出すたびにここから組む**（画面から組み立てて送ると、条件を直したのに古い条件で探すことが起きる）。除外港はカンマ区切りで持つ。1 予約あたり数件で、絞り込みにも並び替えにも使わず、予約と一緒にしか読まない。`last_notified_at` は最後に荷主へ通知した日時（US12）。営業のダッシュボードが「まだ通知していない経路確定済みの予約」を、履歴テーブルを数えずに絞るために持つ。`returned_to_routing_at` / `return_reason` は通知後に経路設計へ戻した記録（US12）。**`routing_requested_at` とは別の列にする**——同じ列に書くと「引き渡した」と「通知後に戻した」が区別できなくなる |
 | `cargo_leg` | `CargoRoutedEvent` | `INDEX(voyage_number)` | 再設計時は全行を入れ替える |
 | `cancellation_request` | `CancellationRequestedEvent`, `CancellationApprovedEvent`, `CancellationRejectedEvent` | `INDEX(booking_id)`, `INDEX(decision)`（`NULL` = 承認待ち） | `decision` は `APPROVED` / `REJECTED` / `NULL` |
 | `quotation` / `quotation_candidate` | `QuotationCreatedEvent` | `INDEX(created_at)` | 候補 0 件の見積も 1 行残る |

@@ -150,6 +150,25 @@ public final class BookingQueries {
             String departFromUnLocode) {
     }
 
+    /** 通知履歴（S22 / US12 §受入基準 4）。新しい通知が先。 */
+    public record FindBookingNotificationsQuery(String bookingId) {
+    }
+
+    /**
+     * 通知 1 件。<b>何を伝えたかを残す。</b>
+     *
+     * <p>要約が読めないと、荷主から「聞いていない」と言われたときに突き合わせられない。</p>
+     */
+    public record NotificationView(
+            Instant notifiedAt,
+            String recipientEmail,
+            String summary,
+            String notifiedBy) {
+    }
+
+    public record NotificationListView(List<NotificationView> items) {
+    }
+
     /** 画面に出す予約。荷主名は鍵破棄後に {@code null} になる。 */
     public record BookingView(
             String bookingId,

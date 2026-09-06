@@ -130,6 +130,50 @@ public interface CargoSummaryMapper {
             @Param("projectedAt") Instant projectedAt);
 
     /**
+     * 荷主への通知を投影に反映する（US12）。
+     *
+     * <p>状態は {@code ROUTE_NOTIFIED} になり、{@code last_notified_at} が動く。
+     * 履歴は {@code cargo_notification} が持つ。<b>ここで数えない</b>——営業の
+     * ダッシュボードは「まだ通知していない予約」を履歴テーブルを数えずに絞る。</p>
+     */
+    @org.apache.ibatis.annotations.Update(
+            "UPDATE cargo_summary SET booking_status = #{bookingStatus}, "
+            + "last_notified_at = #{notifiedAt}, projected_at = #{projectedAt} "
+            + "WHERE booking_id = #{bookingId}")
+    int updateNotified(@Param("bookingId") String bookingId,
+            @Param("bookingStatus") String bookingStatus,
+            @Param("notifiedAt") Instant notifiedAt,
+            @Param("projectedAt") Instant projectedAt);
+
+    /**
+     * 経路設計への差し戻しを投影に反映する（US12）。
+     *
+     * <p><b>{@code routing_requested_at} は触らない。</b> 引き渡した日時と、通知後に
+     * 戻した日時は別のことである。同じ列に書くと履歴で区別できなくなる。</p>
+     */
+    @org.apache.ibatis.annotations.Update(
+            "UPDATE cargo_summary SET booking_status = #{bookingStatus}, "
+            + "routing_status = #{routingStatus}, returned_to_routing_at = #{returnedAt}, "
+            + "return_reason = #{reason}, projected_at = #{projectedAt} "
+            + "WHERE booking_id = #{bookingId}")
+    int updateReturnedToRouting(@Param("bookingId") String bookingId,
+            @Param("bookingStatus") String bookingStatus,
+            @Param("routingStatus") String routingStatus,
+            @Param("returnedAt") Instant returnedAt,
+            @Param("reason") String reason,
+            @Param("projectedAt") Instant projectedAt);
+
+    /**
+     * 荷主へ通知していない経路確定済みの予約の件数（S02 / 営業。US12）。
+     *
+     * <p>履歴テーブルを数えず {@code last_notified_at} で絞る。</p>
+     */
+    @Select("SELECT count(*) FROM cargo_summary "
+            + "WHERE routing_status = 'ROUTED' AND last_notified_at IS NULL "
+            + "AND booking_status NOT IN ('SETTLED', 'CANCELLED')")
+    int countAwaitingNotification();
+
+    /**
      * 見直しを頼まれている予約（S02 / 営業）。
      *
      * <p>件数だけでは仕事が進まないので、予約番号と理由を返して予約詳細へ行けるように
