@@ -4,10 +4,14 @@ import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.shared.domain.location.Location;
 import com.example.cargotracker.booking.domain.model.commands.AdjustRouteSpecificationCommand;
 import com.example.cargotracker.booking.domain.model.commands.BookCargoCommand;
+import com.example.cargotracker.booking.domain.model.commands.NotifyShipperCommand;
+import com.example.cargotracker.booking.domain.model.commands.ReturnToRoutingCommand;
 import com.example.cargotracker.booking.domain.model.commands.RequestConditionReviewCommand;
 import com.example.cargotracker.booking.domain.model.commands.RequestRoutingCommand;
 import com.example.cargotracker.booking.domain.model.commands.UpdateCargoSpecificationCommand;
 import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
+import com.example.cargotracker.booking.domain.model.events.ReturnedToRoutingEvent;
+import com.example.cargotracker.booking.domain.model.events.ShipperNotifiedEvent;
 import com.example.cargotracker.booking.domain.model.events.ConditionReviewRequestedEvent;
 import com.example.cargotracker.booking.domain.model.events.RouteSpecificationAdjustedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoSpecificationUpdatedEvent;
@@ -306,6 +310,86 @@ public class Cargo {
         appender.append(new ConditionReviewRequestedEvent(command.bookingId(),
                 command.reason().trim(), command.requestedBy(), clock.instant()));
         return command.bookingId();
+    }
+
+    /**
+     * 確定した経路を荷主へ通知した記録を残す（UC10 / US12）。
+     *
+     * <p><b>送信基盤はスコープ外だが、記録は業務の守りとして働く。</b> 経路が
+     * 決まっていない予約は通知できず、通知した予約だけが確定（US13）へ進める。</p>
+     *
+     * <p><b>再通知を許す。</b> 条件が変わったら伝え直す必要がある。予約の状態は
+     * {@code ROUTE_NOTIFIED} のままで、通知履歴に行が増える。</p>
+     */
+    @CommandHandler
+    public String notifyShipper(NotifyShipperCommand command, EventAppender appender,
+            Clock clock) {
+        if (bookingId == null) {
+            throw new IllegalTransition("予約 " + command.bookingId() + " は受け付けていません");
+        }
+        if (routingStatus != RoutingStatus.ROUTED) {
+            // 通知は「この経路で運びます」と伝えること。経路が無いまま伝えると、
+            // 荷主は何も確認できない。
+            throw new IllegalTransition(
+                    "経路が決まっていない予約は荷主へ通知できません（"
+                            + routingStatus.label() + "）");
+        }
+        if (command.recipientEmail() == null || command.recipientEmail().isBlank()) {
+            throw new BusinessRuleViolation("通知の宛先は必須です");
+        }
+        if (command.summary() == null || command.summary().isBlank()) {
+            // 荷主から「聞いていない」と言われたときに突き合わせられない。
+            throw new BusinessRuleViolation("通知内容は必須です");
+        }
+
+        appender.append(new ShipperNotifiedEvent(command.bookingId(),
+                command.recipientEmail().trim(), command.summary().trim(),
+                command.notifiedBy(), clock.instant()));
+        return command.bookingId();
+    }
+
+    @EventSourcingHandler
+    void on(ShipperNotifiedEvent event) {
+        this.bookingStatus = BookingStatus.ROUTE_NOTIFIED;
+    }
+
+    /**
+     * 通知した経路を経路設計へ戻す（UC08 / US12）。
+     *
+     * <p>荷主が変更を求めたときに営業が使う。<b>通知したあとだけ開く</b>——通知前に
+     * 組み直したいなら、経路設計者が自分で確定し直せばよい。</p>
+     *
+     * <p><b>{@code RoutingRequestedEvent} を再利用しない。</b> 投影の結果（作業一覧に
+     * 再び出る）は同じでも、「引き渡した」と「通知後に戻した」を履歴で区別できなく
+     * なる。経路設計者が「なぜ戻ってきたのか」を読めることが業務の要点である。</p>
+     *
+     * <p><b>確定済みの旅程は消さない。</b> 再設計で入れ替わるまで残す。</p>
+     */
+    @CommandHandler
+    public String returnToRouting(ReturnToRoutingCommand command, EventAppender appender,
+            Clock clock) {
+        if (bookingId == null) {
+            throw new IllegalTransition("予約 " + command.bookingId() + " は受け付けていません");
+        }
+        if (bookingStatus != BookingStatus.ROUTE_NOTIFIED) {
+            throw new IllegalTransition(
+                    "状態 " + bookingStatus.label() + " の予約は経路設計へ戻せません");
+        }
+        if (command.reason() == null || command.reason().isBlank()) {
+            // 経路設計者が何を直せばよいのか分からない。
+            throw new BusinessRuleViolation("経路設計へ戻す理由は必須です");
+        }
+
+        appender.append(new ReturnedToRoutingEvent(command.bookingId(),
+                command.reason().trim(), command.returnedBy(), clock.instant()));
+        return command.bookingId();
+    }
+
+    @EventSourcingHandler
+    void on(ReturnedToRoutingEvent event) {
+        this.bookingStatus = BookingStatus.ROUTE_PROPOSED;
+        // 経路設計者の手番に戻す。**旅程は消さない**（再設計で入れ替わるまで残す）。
+        this.routingStatus = RoutingStatus.ROUTING_REQUESTED;
     }
 
     @EventSourcingHandler
