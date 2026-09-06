@@ -84,13 +84,19 @@ export function BookingDetailPage() {
     enabled: updated,
   });
 
-  // 旅程（US09）。経路が決まっていなければ問い合わせない。
+  // 旅程（US09）。引き渡していない予約には無いので問い合わせない。
   // 記録（cargo_leg）だけあって読み口が無いと、誰も区間を確かめられない。
+  //
+  // **状態が ROUTED のときだけ問い合わせる形にしない。** 条件を調整したり
+  // 経路設計へ戻したりすると設計依頼中に戻るが、確定済みの旅程は残っている
+  // （ADR-0009 決定 3・US12）。状態で出し分けると、戻した瞬間に旅程が消えて
+  // 「何を組み直すのか」が分からなくなる（クラスタの E2E で実測）。
   const routed = data?.state === 'ready' && data.value.routingStatus === 'ROUTED';
+  const everRouted = data?.state === 'ready' && data.value.routingStatus !== 'NOT_ROUTED';
   const itinerary = useQuery({
     queryKey: ['booking', bookingId, 'itinerary'],
     queryFn: () => fetchBookingItinerary(bookingId),
-    enabled: routed,
+    enabled: everRouted,
     // 経路を確定した直後は投影が数秒遅れる。1 回で諦めると、旅程の欄ごと
     // 現れないまま「失敗した」と読まれる（IT5 レビュー 高 1）。
     refetchInterval: (query) =>
@@ -286,7 +292,8 @@ export function BookingDetailPage() {
             <output className={NOTICE}>経路の反映を待っています</output>
           )}
 
-          {routed
+          {/* 区間があるかどうかで出す。設計し直しの途中でも読める。 */}
+          {everRouted
             && itinerary.data?.state === 'ready'
             && itinerary.data.value.legs.length > 0 && (
             <div>

@@ -641,3 +641,60 @@ describe('S22 荷主への通知（US12）', () => {
     expect(screen.queryByRole('button', { name: '経路設計へ戻す' })).not.toBeInTheDocument();
   });
 });
+
+describe('S22 旅程は設計し直しでも残る（US10・US12）', () => {
+  /** 経路を組んだあと、設計依頼中へ戻った予約。旅程は投影に残っている。 */
+  function mockReopened(over: Record<string, unknown>) {
+    return vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      const url = String(input);
+      if (url.includes('/itinerary')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              legs: [{
+                legSeq: 1,
+                voyageNumber: 'V-1',
+                loadUnLocode: 'JPTYO',
+                unloadUnLocode: 'USNYC',
+                loadAt: '2026-09-10T00:00:00Z',
+                unloadAt: '2026-09-24T00:00:00Z',
+              }],
+            }),
+            { status: 200 },
+          ),
+        );
+      }
+      if (url.includes('/notifications') || url.includes('/revisions')) {
+        return Promise.resolve(new Response(JSON.stringify({ items: [] }), { status: 200 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify(booking(over)), { status: 200 }));
+    });
+  }
+
+  it('経路設計へ戻した予約でも、確定済みの旅程は読める', async () => {
+    // **クラスタで踏んで分かった。** 状態で出し分けると、戻した瞬間に旅程が
+    // 消える。消えると「何を組み直すのか」が分からない。設計にも「旅程は残る」と
+    // 書いてあった（ui_design.md）。書いた保証は赤で固定する。
+    mockReopened({ bookingStatus: 'ROUTE_PROPOSED', routingStatus: 'ROUTING_REQUESTED' });
+
+    renderDetail();
+
+    expect(await screen.findByRole('heading', { name: '旅程' })).toBeInTheDocument();
+    expect(screen.getByTestId('leg-1')).toHaveTextContent('V-1');
+  });
+
+  it('一度も経路を組んでいない予約には旅程を出さない', async () => {
+    // 空の表を出すと「経路が決まったのに区間が無い」と読める。
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      if (String(input).includes('/itinerary')) {
+        return Promise.resolve(new Response(JSON.stringify({ legs: [] }), { status: 200 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify(booking()), { status: 200 }));
+    });
+
+    renderDetail();
+
+    await screen.findByRole('heading', { name: '予約 B-2026-0903-0001' });
+    expect(screen.queryByRole('heading', { name: '旅程' })).not.toBeInTheDocument();
+  });
+});

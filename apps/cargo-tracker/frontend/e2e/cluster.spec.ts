@@ -227,8 +227,8 @@ test.describe('kind クラスタでの通し確認', () => {
     await page.getByLabel('出発地').fill('JPTYO');
     await page.getByLabel('到着地').fill('USNYC');
     // 出港済みを既定で外すので、未来の日付にしないと一覧に出ない。
-    await page.getByLabel('出発日時（UTC）').fill(`${businessDate(30)}T09:00`);
-    await page.getByLabel('到着日時（UTC）').fill(`${businessDate(45)}T18:00`);
+    await page.getByLabel('出発日時（日本時間）').fill(`${businessDate(30)}T09:00`);
+    await page.getByLabel('到着日時（日本時間）').fill(`${businessDate(45)}T18:00`);
     await page.getByRole('button', { name: '登録する' }).click();
 
     await expect(page.getByRole('heading', { name: '航海スケジュール一覧' })).toBeVisible();
@@ -304,6 +304,124 @@ test.describe('kind クラスタでの通し確認', () => {
     await expect(page.getByText('経路提案中')).toBeVisible();
   });
 
+  test('経路設計者が条件を調整して再算出できる（US10・IT6）', async ({ page, request }) => {
+    // デモ項目 2。**条件はサーバが持つ**ので、画面で変えて再算出すると調整が
+    // 記録され、候補算出はその条件から組み直される。
+    const product = `条件調整-${Date.now()}`;
+    const bookingId = await bookCargo(request, product);
+
+    await signIn(page, 'sales01');
+    await page.goto(`/bookings/${bookingId}`);
+    await page.getByRole('button', { name: '経路設計を依頼する' }).click();
+    await expect(page.getByText('経路提案中')).toBeVisible({ timeout: 20_000 });
+
+    await page.goto('/logout');
+    await signIn(page, 'routing01');
+    await page.goto(`/routing/bookings/${bookingId}`);
+
+    // いまの条件が読める（読めないと同じ条件で何度も回す）。
+    await expect(page.getByLabel('到着期限')).toBeVisible({ timeout: 20_000 });
+    await page.getByLabel('除外する港').fill('SGSIN');
+    await page.getByRole('button', { name: '条件を変えて再算出' }).click();
+
+    // 調整が記録され、読み直した条件が欄に戻る。
+    await expect(page.getByLabel('除外する港')).toHaveValue('SGSIN', { timeout: 20_000 });
+  });
+
+  test('経路設計者が営業へ差し戻すと、営業のダッシュボードに出る（US10・IT6）',
+      async ({ page, request }) => {
+    // デモ項目 3。**差し戻しても状態は動かない**（ADR-0009 決定 1）ので、
+    // 予約は経路設計の作業一覧に残ったまま、営業に「見直してほしい」が届く。
+    const product = `差し戻し-${Date.now()}`;
+    const bookingId = await bookCargo(request, product);
+
+    await signIn(page, 'sales01');
+    await page.goto(`/bookings/${bookingId}`);
+    await page.getByRole('button', { name: '経路設計を依頼する' }).click();
+    await expect(page.getByText('経路提案中')).toBeVisible({ timeout: 20_000 });
+
+    await page.goto('/logout');
+    await signIn(page, 'routing01');
+    await page.goto(`/routing/bookings/${bookingId}`);
+    await page.getByRole('button', { name: '営業へ差し戻す' }).click();
+    await page.getByLabel('差し戻す理由').fill(`期限内に着ける便がありません（${product}）`);
+    await page.getByRole('button', { name: '差し戻しを送る' }).click();
+
+    await page.goto('/logout');
+    await signIn(page, 'sales01');
+    // 件数だけでは仕事が進まない。理由が読め、そこから予約へ行けること。
+    await expect(page.getByText(`期限内に着ける便がありません（${product}）`))
+      .toBeVisible({ timeout: 20_000 });
+  });
+
+  test('営業が荷主へ通知し、経路設計へ戻せる（US12・IT6）', async ({ page, request }) => {
+    // デモ項目 5・7。**通知は記録だけ**（送信基盤はスコープ外）だが、記録は
+    // 業務の守りとして働く——通知していない予約は経路設計へ戻せない。
+    const voyageNumber = uniqueVoyageNumber('V-NT-');
+    const product = `通知-${Date.now()}`;
+
+    const routingToken = await tokenOf(request, 'routing01');
+    const voyage = await request.post('/api/v1/routing/voyages', {
+      headers: { Authorization: `Bearer ${routingToken}` },
+      data: {
+        voyageNumber,
+        carrierCode: 'MOL',
+        carrierName: '商船三井',
+        vesselName: 'NOTIFY EXPRESS',
+        movements: [
+          {
+            departureUnLocode: 'JPTYO',
+            arrivalUnLocode: 'USNYC',
+            // どの候補より速くする（上の経路確定のテストと同じ理由）。
+            departureAt: `${businessDate(2)}T00:00:00Z`,
+            arrivalAt: `${businessDate(5)}T00:00:00Z`,
+          },
+        ],
+        acceptedCargoTypes: ['GENERAL'],
+      },
+    });
+    expect(voyage.status()).toBe(201);
+
+    const bookingId = await bookCargo(request, product);
+    await signIn(page, 'sales01');
+    await page.goto(`/bookings/${bookingId}`);
+    await page.getByRole('button', { name: '経路設計を依頼する' }).click();
+    await expect(page.getByText('経路提案中')).toBeVisible({ timeout: 20_000 });
+
+    await page.goto('/logout');
+    await signIn(page, 'routing01');
+    await page.goto(`/routing/bookings/${bookingId}`);
+    const candidate = page.locator('tr', { hasText: voyageNumber });
+    await expect(candidate).toBeVisible({ timeout: 30_000 });
+    await candidate.getByRole('radio').check();
+    await page.getByRole('button', { name: 'この経路で確定' }).click();
+    await expect(page.getByRole('heading', { name: '旅程' })).toBeVisible({ timeout: 20_000 });
+
+    await page.goto('/logout');
+    await signIn(page, 'sales01');
+    await page.goto(`/bookings/${bookingId}`);
+
+    // 通知内容は旅程から作る。旅程が届く前は送れない。
+    await expect(page.getByRole('heading', { name: '荷主への通知' }))
+      .toBeVisible({ timeout: 20_000 });
+    await expect(page.getByLabel('通知内容')).toHaveValue(/JPTYO → USNYC/, { timeout: 20_000 });
+    await page.getByLabel('通知先メールアドレス').fill('shipper@example.com');
+    await page.getByRole('button', { name: '通知した記録を残す' }).click();
+
+    // 通知済みになり、履歴に残る（US12 §受入基準 4）。
+    await expect(page.getByText('通知済み')).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole('heading', { name: '通知履歴' })).toBeVisible();
+
+    // 通知したので経路設計へ戻せる（デモ項目 7）。
+    await page.getByRole('button', { name: '経路設計へ戻す' }).click();
+    await page.getByLabel('戻す理由').fill('荷主が経由港の変更を希望');
+    await page.getByRole('button', { name: '戻すことを確定する' }).click();
+
+    await expect(page.getByText('経路提案中')).toBeVisible({ timeout: 20_000 });
+    // **旅程は残る。** 消すと「何を組み直すのか」が分からなくなる。
+    await expect(page.getByRole('heading', { name: '旅程' })).toBeVisible();
+  });
+
   test('管理者は利用者の状態を見てロックを解除できる', async ({ page, request }) => {
     // 先に API で 5 回失敗させてロックする。画面から 5 回打つと、E2E が
     // 「ロックの再現手順」ではなく「入力の反復」を測ることになる。
@@ -353,8 +471,8 @@ test.describe('kind クラスタでの通し確認', () => {
     await page.getByLabel('船名').fill('UPDATE EXPRESS');
     await page.getByLabel('出発地').fill('JPTYO');
     await page.getByLabel('到着地').fill('USNYC');
-    await page.getByLabel('出発日時（UTC）').fill(`${businessDate(30)}T09:00`);
-    await page.getByLabel('到着日時（UTC）').fill(`${businessDate(45)}T18:00`);
+    await page.getByLabel('出発日時（日本時間）').fill(`${businessDate(30)}T09:00`);
+    await page.getByLabel('到着日時（日本時間）').fill(`${businessDate(45)}T18:00`);
     await page.getByRole('button', { name: '登録する' }).click();
 
     // 一覧の航海番号から詳細へ入る（IT3 レビューで欠けていた導線）。
@@ -390,8 +508,8 @@ test.describe('kind クラスタでの通し確認', () => {
     await page.getByLabel('船名').fill('SEARCH HARMONY');
     await page.getByLabel('出発地').fill('JPTYO');
     await page.getByLabel('到着地').fill('SGSIN');
-    await page.getByLabel('出発日時（UTC）').fill(`${businessDate(30)}T09:00`);
-    await page.getByLabel('到着日時（UTC）').fill(`${businessDate(40)}T18:00`);
+    await page.getByLabel('出発日時（日本時間）').fill(`${businessDate(30)}T09:00`);
+    await page.getByLabel('到着日時（日本時間）').fill(`${businessDate(40)}T18:00`);
     await page.getByRole('button', { name: '登録する' }).click();
     await expect(page.getByRole('link', { name: voyageNumber })).toBeVisible({
       timeout: 20_000,
