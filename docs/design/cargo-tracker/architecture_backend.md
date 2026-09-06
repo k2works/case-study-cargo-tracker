@@ -4,7 +4,7 @@ title: "バックエンドアーキテクチャ - 国際貨物輸送管理シス
 description: "Axon Framework 5 による CQRS / Event Sourcing 版 Cargo Tracker のバックエンドアーキテクチャ。マイクロサービス構成で BC ごとにサービスを分け、Axon Server を Command / Event / Query Bus と Event Store に使い、投影・Reaction Handler・イベント契約を定める。"
 tags: [design, architecture, backend, cqrs, event-sourcing, axon, microservices]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-04T12:39:20Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-06T02:56:52Z }
 stale_after: 2026-12-01T00:00:00Z
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
@@ -678,7 +678,7 @@ public class QueryBusRouteCandidateFinder implements RouteCandidateFinder {
 | 落ちているときは 503 | `NoHandlerForQueryException`・時間切れ・通信の失敗は `RouteSearchUnavailable` に変換し、Controller が `503` を返す。**空の候補一覧にしない**（「候補が無い」と読まれ、経路設計者は直らない条件を変え続ける） |
 | 業務の断りは通す | 経路設計側が「知らない港・種別」と断ったときは 422 のまま通す。503 にすると、直せる入力の誤りが「あとで試して」に化ける |
 | Saga から同期クエリを呼ばない | Saga の中で `.join()` すると Processing Group が止まる。経路候補の存在確認は Controller（US08 の経路検索）で行い、Saga と Reaction Handler は同期クエリを持たない（ArchUnit：`application/reaction` と `application/reaction` は `QueryGateway` に依存しない） |
-| 契約クエリは 1 本 | `FindRouteCandidatesQuery` だけ。`FindShipperForBillingQuery` は廃止し、billingms は `ShipperRegisteredEvent` / `CorporateContractAssignedEvent` を購読して `shipper_contract_snapshot` を作る |
+| 契約クエリは 1 本 | `FindRouteCandidatesQuery` だけ。`FindShipperForBillingQuery` は廃止し、billingms は `ShipperRegisteredEvent` / `CorporateContractAssignedEvent` を購読して `shipper_contract_snapshot` を作る。**このクエリの `excludeUnLocodes` / `departFromUnLocode` は IT5 で契約に置いたまま 1 イテレーションのあいだ使われず、IT6（US10 の条件調整）で初めて配線が通った。「定義済み未使用は配線漏れのサイン」という規律は、契約の項目にも当てはまる** |
 
 take-4 の `ExternalCargoRoutingService`（REST）と役割は同じです。違いは、配送を Axon Server に任せることで、サービスの所在（URL）を bookingms が知らなくてよくなることと、routingms が落ちているときに `NoHandlerForQueryException` で**明示的に**失敗することです。
 

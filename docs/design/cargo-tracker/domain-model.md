@@ -4,7 +4,7 @@ title: "ドメインモデル設計 - 国際貨物輸送管理システム（CQR
 description: "CQRS / Event Sourcing 版 Cargo Tracker のドメインモデル設計。6 コンテキストの集約・不変条件・コマンド・イベント（内部 / 契約）・状態遷移・Reaction Handler を、イベントを永続化フォーマットとして定義する。"
 tags: [design,domain-model,ddd,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-04T21:21:35Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-06T02:56:52Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -315,6 +315,7 @@ class Cargo <<Aggregate Root>> <<@EventSourced(tagKey="bookingId")>> {
   + requestRouting(RequestRoutingCommand)
   + assignRoute(AssignRouteCommand)
   + adjustRouteSpecification(AdjustRouteSpecificationCommand)
+  + requestConditionReview(RequestConditionReviewCommand)
   + notifyShipper(NotifyShipperCommand)
   + returnToRouting(ReturnToRoutingCommand)
   + confirm(ConfirmBookingCommand)
@@ -557,6 +558,7 @@ CANCELLED --> [*]
 | `RequestRoutingCommand` | 営業担当者 | `RoutingRequestedEvent` | — | UC04 / US06 |
 | `AssignRouteCommand` | 経路設計者 | `CargoRoutedEvent` | — | UC07・UC09 / US09・US11・US28 |
 | `AdjustRouteSpecificationCommand` | 経路設計者 | `RouteSpecificationAdjustedEvent` | — | UC08 / US10 |
+| `RequestConditionReviewCommand` | 経路設計者 | `ConditionReviewRequestedEvent` | — | UC08 / US10 |
 | `NotifyShipperCommand` | 営業担当者 | `ShipperNotifiedEvent` | — | UC10 / US12 |
 | `ReturnToRoutingCommand` | 営業担当者 | `ReturnedToRoutingEvent` | — | UC08 |
 | `ConfirmBookingCommand` | 営業担当者 | `BookingConfirmedEvent` | — | UC11 / US13 |
@@ -570,6 +572,10 @@ CANCELLED --> [*]
 | `SettleBookingCommand` | `BookingReactionHandler`（`PaymentRecordedEvent` 購読） | `BookingSettledEvent` | — | UC18 / US23 |
 
 イベント購読からコマンドを送るのは `application/reaction/BookingReactionHandler`（Processing Group `booking-reaction`）です。投影（`infrastructure/projection`）は SQL に写すだけでコマンドを送りません。リプレイは投影の Group だけを対象にし、Reaction の Group はリセットしないので、リプレイで他サービスの集約が動くことはありません。`cargo_summary.booking_status` の書き手は `Cargo` 自身のイベント（`BookingDeliveredEvent`、`BookingSettledEvent`）だけです。
+
+`AdjustRouteSpecificationCommand(bookingId, arrivalDeadline, excludeUnLocodes, departFromUnLocode, adjustedBy)` は経路の条件を調整します。**経路設計に入った予約（`ROUTE_PROPOSED`）は `UpdateCargoSpecificationCommand` が使えない**（`BookingStatus#canUpdateSpecification` は仮受付だけを許す）ので、到着期限を延ばす手段はこれだけです。**貨物種別は含めません**——種別を変えるのは「その貨物が何か」を変えることで、危険物申告や温度条件が付いて回るため、US32 が持ちます。調整すると `RoutingStatus` は `ROUTED` から `ROUTING_REQUESTED` へ戻りますが、**確定済みの旅程（`cargo_leg`）は消しません**（再設計で入れ替わるまで残す。[ADR-0009](../../adr/cargo-tracker/0009-condition-review-is-not-a-state-transition.md) 決定 3）。
+
+`ConditionReviewRequestedEvent(bookingId, reason, requestedBy, requestedAt)` は「この条件では組めない」ことを営業へ返した記録です。**状態は動かしません**（ADR-0009 決定 1）。`NOT_ROUTED` へ戻すと「一度も設計していない予約」と区別が付かなくなり、S30 の一覧から消えて誰も設計を再開しません。差し戻せるのは `ROUTING_REQUESTED` のときだけで、**誤配（`MISROUTED`）は含めません**（誤配からの再設計は US28）。
 
 `ShipperNotifiedEvent(bookingId, recipientEmail, summary, notifiedBy, notifiedAt)` は「荷主へ経路を提示した」という事実の記録です。宛先と要約を載せ、予約詳細（S22）に通知履歴（いつ・誰に・何を）として写します。**メール等の送信基盤は本リリースのスコープ外**です。通知は現行の手作業（電話・メール）で行い、システムは通知した事実だけを記録します。
 
@@ -1390,7 +1396,7 @@ Reaction Handler の再試行と補償は「例外にしない」ではなく「
 | UC05 航海検索 | — | `FindVoyagesQuery` | — |
 | UC06 経路候補算出 | — | `FindRouteCandidatesQuery` + `RouteSearchService` | — |
 | UC07 経路選択・確定 | `Cargo` | `AssignRouteCommand` | `CargoRoutedEvent` |
-| UC08 経路条件調整 | `Cargo` | `AdjustRouteSpecificationCommand`, `ReturnToRoutingCommand` | `RouteSpecificationAdjustedEvent`, `ReturnedToRoutingEvent` |
+| UC08 経路条件調整 | `Cargo` | `AdjustRouteSpecificationCommand`, `RequestConditionReviewCommand`, `ReturnToRoutingCommand` | `RouteSpecificationAdjustedEvent`, `ConditionReviewRequestedEvent`, `ReturnedToRoutingEvent` |
 | UC09 経路情報紐付 | `Cargo` | `AssignRouteCommand` | `CargoRoutedEvent` |
 | UC10 確定経路通知 | `Cargo` | `NotifyShipperCommand` | `ShipperNotifiedEvent` |
 | UC11 予約確定 | `Cargo` | `ConfirmBookingCommand` | `BookingConfirmedEvent` |
