@@ -29,6 +29,10 @@ export function DashboardPage() {
     summary?.state === 'ready' ? summary.value.preliminary : 0;
   const routingWorklist =
     summary?.state === 'ready' ? summary.value.routingWorklist : 0;
+  // 荷主へ通知していない経路確定済みの予約（US12）。**通知するのは営業の仕事**なので
+  // 営業に出す。経路設計者はその件数に対して打てる手が無い。
+  const awaitingNotification =
+    summary?.state === 'ready' ? summary.value.awaitingNotification ?? 0 : 0;
 
   // 見直しを頼まれた予約（US10 §4）。**打てる手を持つのは営業**（荷主と条件を
   // 協議する）。経路設計者の受け皿は S30 で、こちらではない。
@@ -72,6 +76,16 @@ export function DashboardPage() {
         <output className={`${NOTICE} mt-4 block`}>
           経路設計者へ引き渡していない予約が {preliminary} 件あります。
           {/* 件数を出すだけでは仕事が進まない。対象へ行ける導線を添える。 */}
+          <Link to="/bookings" className={`${LINK} ml-1`}>
+            予約一覧
+          </Link>
+          で確認してください。
+        </output>
+      )}
+
+      {isSales && awaitingNotification > 0 && (
+        <output className={`${NOTICE} mt-4 block`}>
+          荷主へ通知していない経路確定済みの予約が {awaitingNotification} 件あります。
           <Link to="/bookings" className={`${LINK} ml-1`}>
             予約一覧
           </Link>

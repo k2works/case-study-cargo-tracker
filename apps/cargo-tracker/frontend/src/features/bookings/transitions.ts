@@ -64,3 +64,27 @@ export function canRequestRouting(status: string): boolean {
 export function canAssignRoute(routingStatus: string): boolean {
   return routingStatus === 'ROUTING_REQUESTED' || routingStatus === 'MISROUTED';
 }
+
+/**
+ * 荷主へ通知できるか（US12）。
+ *
+ * <p><b>routingStatus の判断である。</b> 集約は経路が決まっている（`ROUTED`）
+ * ときだけ通す。通知は「この経路で運びます」と伝えることなので、経路が無いまま
+ * 伝えると荷主は何も確認できない。</p>
+ *
+ * <p>Java 側の Cargo.notifyShipper と同じ判断であることは
+ * transitions.canon.test.ts が正典を読んで突き合わせる。</p>
+ */
+export function canNotifyShipper(routingStatus: string): boolean {
+  return routingStatus === 'ROUTED';
+}
+
+/**
+ * 経路設計へ戻せるか（US12）。
+ *
+ * <p>通知したあとだけ開く。通知前に組み直したいなら経路設計者が自分で確定し直せば
+ * よく、営業が戻す操作は「荷主が変更を求めた」ことを表す。</p>
+ */
+export function canReturnToRouting(bookingStatus: string): boolean {
+  return bookingStatus === 'ROUTE_NOTIFIED';
+}

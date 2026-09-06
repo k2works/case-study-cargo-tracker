@@ -98,6 +98,8 @@ public class CargoProjection {
                 // 「一度も直していない予約」と「直した予約」が見分けられない。
                 null,
                 null,
+                // まだ荷主へ通知していない（US12）。
+                null,
                 now,
                 null));
     }
@@ -225,7 +227,7 @@ public class CargoProjection {
                 null, null, null, null,
                 // 「いつ直したか」はイベントが持つ。ここで現在時刻を書くと、
                 // 読み直しのたびに最終更新が動く。
-                event.updatedAt(), event.updatedBy(), now, null));
+                event.updatedAt(), event.updatedBy(), null, now, null));
 
         if (before != null) {
             recordRevision(before, event);

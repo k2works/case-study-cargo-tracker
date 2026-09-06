@@ -265,6 +265,7 @@ public interface CargoSummaryMapper {
             Instant routingRequestedAt,
             Instant updatedAt,
             String updatedBy,
+            Instant lastNotifiedAt,
             Instant projectedAt,
             String lastEventId) {
     }

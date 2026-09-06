@@ -37,7 +37,7 @@ function mockApi(
 }
 
 beforeEach(() => {
-  mockApi({ preliminary: 3, routingWorklist: 5 });
+  mockApi({ preliminary: 3, routingWorklist: 5, awaitingNotification: 2 });
 });
 afterEach(() => vi.restoreAllMocks());
 
@@ -74,7 +74,7 @@ describe('S02 ダッシュボード', () => {
   });
 
   it('0 件のときは知らせない', async () => {
-    mockApi({ preliminary: 0, routingWorklist: 0 });
+    mockApi({ preliminary: 0, routingWorklist: 0, awaitingNotification: 0 });
 
     renderAs(['ROLE_ROUTING', 'ROLE_SALES']);
     await screen.findByRole('heading', { name: '今日の作業' });
@@ -124,5 +124,20 @@ describe('S02 ダッシュボード', () => {
     await screen.findByRole('heading', { name: '今日の作業' });
 
     expect(screen.queryByText(/条件の見直しを頼まれた予約/)).not.toBeInTheDocument();
+  });
+
+  it('US12: 営業には通知していない経路確定済みの予約の件数を出す', async () => {
+    renderAs(['ROLE_SALES']);
+
+    const notice = await screen.findByText(/荷主へ通知していない経路確定済みの予約が 2 件/);
+    expect(within(notice.closest('output') as HTMLElement)
+      .getByRole('link', { name: '予約一覧' })).toHaveAttribute('href', '/bookings');
+  });
+
+  it('US12: 経路設計には通知していない件数を出さない（通知は営業の仕事）', async () => {
+    renderAs(['ROLE_ROUTING']);
+    await screen.findByRole('heading', { name: '今日の作業' });
+
+    expect(screen.queryByText(/荷主へ通知していない/)).not.toBeInTheDocument();
   });
 });

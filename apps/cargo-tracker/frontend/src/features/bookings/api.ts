@@ -28,6 +28,8 @@ export interface BookingView {
   readonly bookedAt: string;
   /** 経路設計者へ引き渡した日時（US06）。引き渡していなければ null。 */
   readonly routingRequestedAt: string | null;
+  /** 最後に荷主へ通知した日時（US12）。一度も通知していなければ null。 */
+  readonly lastNotifiedAt: string | null;
   /** 最終更新（US32）。一度も直していなければ null。 */
   readonly updatedAt: string | null;
   readonly updatedBy: string | null;
@@ -118,6 +120,52 @@ export interface ConditionReviewView {
 }
 
 /**
+ * 通知履歴（S22 / US12 §受入基準 4）。一度も通知していなければ空。
+ *
+ * <p><b>要約を残す。</b> 何を伝えたかが読めないと、荷主から「聞いていない」と
+ * 言われたときに突き合わせられない。</p>
+ */
+export function fetchBookingNotifications(
+  bookingId: string,
+): Promise<Pending<{ items: NotificationView[] }>> {
+  return queryClient(`/booking/bookings/${encodeURIComponent(bookingId)}/notifications`);
+}
+
+export interface NotificationView {
+  readonly notifiedAt: string;
+  readonly recipientEmail: string;
+  readonly summary: string;
+  readonly notifiedBy: string | null;
+}
+
+/**
+ * 荷主へ通知した記録を残す（US12 §受入基準 3）。
+ *
+ * <p><b>送信はしない。</b> 送信基盤はスコープ外で、通知は電話・メールの手作業。
+ * ここに残るのは「いつ・誰に・何を伝えたか」である。</p>
+ */
+export function notifyShipper(
+  bookingId: string,
+  notification: { recipientEmail: string; summary: string },
+): Promise<{ bookingId: string }> {
+  return commandClient(
+    `/booking/bookings/${encodeURIComponent(bookingId)}/notifications`,
+    notification,
+  );
+}
+
+/** 通知した経路を経路設計へ戻す（US12）。 */
+export function returnToRouting(
+  bookingId: string,
+  reason: string,
+): Promise<{ bookingId: string }> {
+  return commandClient(
+    `/booking/bookings/${encodeURIComponent(bookingId)}/return-to-routing`,
+    { reason },
+  );
+}
+
+/**
  * 経路を確定する（US09）。
  *
  * <p><b>候補 ID ではなく旅程そのものを送る。</b> 経路候補はテーブルに持たないので、
@@ -160,7 +208,7 @@ export function bookCargo(input: BookCargoInput): Promise<{ bookingId: string }>
 
 /** 経路設計の「今日の作業」に出す件数。 */
 export function fetchBookingSummary(): Promise<
-  Pending<{ preliminary: number; routingWorklist: number }>
+  Pending<{ preliminary: number; routingWorklist: number; awaitingNotification: number }>
 > {
   return queryClient('/booking/bookings/summary');
 }

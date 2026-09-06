@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -29,6 +30,7 @@ function booking(over: Record<string, unknown> = {}) {
     routingStatus: 'NOT_ROUTED',
     bookedAt: '2026-09-03T01:00:00Z',
     routingRequestedAt: null,
+    lastNotifiedAt: null,
     updatedAt: null,
     updatedBy: null,
     ...over,
@@ -465,5 +467,177 @@ describe('S22 旅程（US09）', () => {
 
     expect(await screen.findByRole('heading', { name: '状態' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: '旅程' })).not.toBeInTheDocument();
+  });
+});
+
+describe('S22 荷主への通知（US12）', () => {
+  /** 予約・旅程・通知履歴を URL で出し分ける。1 つの本体を返すと本物より甘くなる。 */
+  function mockApi(over: Record<string, unknown>, notifications: unknown[] = []) {
+    return vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
+      const url = String(input);
+      if (url.includes('/notifications') && (init as RequestInit)?.method !== 'POST') {
+        return Promise.resolve(
+          new Response(JSON.stringify({ items: notifications }), { status: 200 }),
+        );
+      }
+      if (url.includes('/itinerary')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              legs: [{
+                legSeq: 1,
+                voyageNumber: 'V-1',
+                loadUnLocode: 'JPTYO',
+                unloadUnLocode: 'USNYC',
+                loadAt: '2026-09-10T00:00:00Z',
+                unloadAt: '2026-09-24T00:00:00Z',
+              }],
+            }),
+            { status: 200 },
+          ),
+        );
+      }
+      if (url.includes('/revisions')) {
+        return Promise.resolve(new Response(JSON.stringify({ items: [] }), { status: 200 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify(booking(over)), { status: 200 }));
+    });
+  }
+
+  const ROUTED = { bookingStatus: 'ROUTE_PROPOSED', routingStatus: 'ROUTED' };
+  /** 通知済み。**lastNotifiedAt が入る**——画面はこれで履歴を問い合わせるか決める。 */
+  const NOTIFIED = {
+    bookingStatus: 'ROUTE_NOTIFIED',
+    routingStatus: 'ROUTED',
+    lastNotifiedAt: '2026-09-07T00:00:00Z',
+  };
+
+  it('US12 §2: 通知する内容を送る前に確かめられる', async () => {
+    // 何を伝えるのかが読めないまま送れると、荷主に何を言ったのか分からなくなる。
+    mockApi(ROUTED);
+
+    renderDetail();
+
+    await screen.findByRole('heading', { name: '荷主への通知' });
+    // 経由港・所要日数・到着予定日は旅程から作る。料金概算は US21（IT13）が
+    // 正典で、いまは出さない（0 円と読まれる）。
+    const content = screen.getByLabelText('通知内容') as HTMLTextAreaElement;
+    // 内容は旅程が届いてから作る。旅程を待たずに送れると、空の通知が記録される。
+    await waitFor(() => expect(content.value).toContain('JPTYO → USNYC'));
+    expect(content.value).toContain('所要 14 日');
+    expect(content.value).toContain('到着予定');
+    expect(content.value).not.toContain('円');
+    // 打ち直せると、実際の旅程と違うことを伝えられる。
+    expect(content).toHaveAttribute('readonly');
+  });
+
+  it('US12 §3: 宛先と内容を入れて通知できる', async () => {
+    const fetchSpy = mockApi(ROUTED);
+
+    renderDetail();
+
+    await screen.findByLabelText('通知先メールアドレス');
+    await userEvent.clear(screen.getByLabelText('通知先メールアドレス'));
+    await userEvent.type(screen.getByLabelText('通知先メールアドレス'), 'shipper@example.com');
+    await userEvent.click(screen.getByRole('button', { name: '通知した記録を残す' }));
+
+    await waitFor(() => {
+      expect(fetchSpy.mock.calls.some(([url, init]) =>
+        String(url).includes('/notifications')
+        && (init as RequestInit)?.method === 'POST')).toBe(true);
+    });
+  });
+
+  it('US12: 経路が決まっていない予約には通知の導線を出さない', async () => {
+    // 集約も断るが、押してから 409 で気づく形にしない。
+    mockApi({ bookingStatus: 'ROUTE_PROPOSED', routingStatus: 'ROUTING_REQUESTED' });
+
+    renderDetail();
+
+    await screen.findByRole('heading', { name: '予約 B-2026-0903-0001' });
+    expect(screen.queryByRole('heading', { name: '荷主への通知' })).not.toBeInTheDocument();
+  });
+
+  it('US12 §4: 通知履歴が新しい順に読める（何を伝えたかが残る）', async () => {
+    mockApi(NOTIFIED, [
+      {
+        notifiedAt: '2026-09-07T00:00:00Z',
+        recipientEmail: 'shipper@example.com',
+        summary: '2 回目（経由港を変更）',
+        notifiedBy: 'sales02',
+      },
+      {
+        notifiedAt: '2026-09-06T00:00:00Z',
+        recipientEmail: 'shipper@example.com',
+        summary: '1 回目',
+        notifiedBy: null,
+      },
+    ]);
+
+    renderDetail();
+
+    const rows = await screen.findAllByTestId(/^notification-/);
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveTextContent('2 回目（経由港を変更）');
+    // 誰が通知したか分からないことは「—」で表す（記録は残っている）。
+    expect(rows[1]).toHaveTextContent('—');
+  });
+
+  it('US12: 通知した予約は経路設計へ戻せる', async () => {
+    const fetchSpy = mockApi(NOTIFIED);
+
+    renderDetail();
+
+    await userEvent.click(await screen.findByRole('button', { name: '経路設計へ戻す' }));
+    await userEvent.type(screen.getByLabelText('戻す理由'), '荷主が経由港の変更を希望');
+    await userEvent.click(screen.getByRole('button', { name: '戻すことを確定する' }));
+
+    await waitFor(() => {
+      expect(fetchSpy.mock.calls.some(([url]) =>
+        String(url).includes('/return-to-routing'))).toBe(true);
+    });
+  });
+
+  it('US12: 通知していない予約には戻す導線を出さない', async () => {
+    mockApi(ROUTED);
+
+    renderDetail();
+
+    await screen.findByRole('heading', { name: '荷主への通知' });
+    expect(screen.queryByRole('button', { name: '経路設計へ戻す' })).not.toBeInTheDocument();
+  });
+
+  it('US12: 理由が空のままでは戻さない', async () => {
+    const fetchSpy = mockApi(NOTIFIED);
+
+    renderDetail();
+
+    await userEvent.click(await screen.findByRole('button', { name: '経路設計へ戻す' }));
+    await userEvent.click(screen.getByRole('button', { name: '戻すことを確定する' }));
+
+    expect(await screen.findByText('戻す理由を入力してください')).toBeInTheDocument();
+    expect(fetchSpy.mock.calls.filter(([url]) =>
+      String(url).includes('/return-to-routing'))).toHaveLength(0);
+  });
+
+  it('US12: 営業以外には通知の操作を出さない（読むのは全員）', async () => {
+    useAuthStore.setState({
+      user: { username: 'routing01', roles: ['ROLE_ROUTING'], token: 't' },
+    });
+    mockApi(NOTIFIED, [
+      {
+        notifiedAt: '2026-09-06T00:00:00Z',
+        recipientEmail: 'shipper@example.com',
+        summary: '1 回目',
+        notifiedBy: 'sales01',
+      },
+    ]);
+
+    renderDetail();
+
+    // 履歴は読める（経路設計者も「荷主に何を伝えたか」を知る必要がある）。
+    expect(await screen.findByTestId(/^notification-/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '通知した記録を残す' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '経路設計へ戻す' })).not.toBeInTheDocument();
   });
 });

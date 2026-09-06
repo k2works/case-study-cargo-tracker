@@ -16,6 +16,7 @@ import com.example.cargotracker.booking.infrastructure.query.BookingQueries.Noti
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.NotificationView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.RouteConditionView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.BookingView;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.CountAwaitingNotificationQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.CountBookingsByStatusQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingsByVoyageQuery;
@@ -100,6 +101,12 @@ public class BookingQueryHandler {
                 row.departFromUnlocode());
     }
 
+    /** 荷主へ通知していない経路確定済みの予約の件数（S02 / 営業。US12）。 */
+    @QueryHandler
+    public Integer handle(CountAwaitingNotificationQuery query) {
+        return cargos.countAwaitingNotification();
+    }
+
     /** 通知履歴（US12 §受入基準 4）。一度も通知していなければ空。 */
     @QueryHandler
     public NotificationListView handle(FindBookingNotificationsQuery query) {
@@ -158,6 +165,7 @@ public class BookingQueryHandler {
                 row.quantity(), row.productName(), row.hazardImoClass(), row.hazardUnNumber(),
                 row.temperatureMinC(), row.temperatureMaxC(),
                 row.bookingStatus(), row.routingStatus(), row.bookedAt(),
-                row.routingRequestedAt(), row.updatedAt(), row.updatedBy());
+                row.routingRequestedAt(), row.lastNotifiedAt(),
+                row.updatedAt(), row.updatedBy());
     }
 }

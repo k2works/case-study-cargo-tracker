@@ -1,6 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { BOOKING_TRANSITIONS, canRequestRouting, canUpdateSpecification } from './transitions';
+import {
+  BOOKING_TRANSITIONS,
+  canNotifyShipper,
+  canRequestRouting,
+  canReturnToRouting,
+  canUpdateSpecification,
+} from './transitions';
 
 /**
  * 画面が持つ遷移表は、バックエンドの正典と同じ内容である。
@@ -15,6 +21,10 @@ import { BOOKING_TRANSITIONS, canRequestRouting, canUpdateSpecification } from '
 const CANON =
   '../backend/bookingms/src/main/java/com/example/cargotracker/booking'
   + '/domain/model/valueobjects/BookingStatus.java';
+/** 状態そのものでなく「集約が何を許すか」を読むための正典。 */
+const CARGO =
+  '../backend/bookingms/src/main/java/com/example/cargotracker/booking'
+  + '/domain/model/aggregates/Cargo.java';
 
 function canonTransitions(): Record<string, string[]> {
   const source = readFileSync(CANON, 'utf-8');
@@ -66,6 +76,29 @@ describe('予約の状態遷移表', () => {
     expect(canUpdateSpecification(canon as string)).toBe(true);
     for (const status of Object.keys(BOOKING_TRANSITIONS)) {
       expect(canUpdateSpecification(status)).toBe(status === canon);
+    }
+  });
+
+  it('通知できる状態は正典と一致する（US12）', () => {
+    // 集約は routingStatus で判断する。正典の本体を読み取って突き合わせる。
+    const source = readFileSync(CARGO, 'utf-8');
+    const body = source.slice(source.indexOf('public String notifyShipper'));
+    const canon = /routingStatus != RoutingStatus\.(\w+)/.exec(body)?.[1];
+
+    expect(canon, '正典の判断を読めていない').toBeDefined();
+    for (const status of ['NOT_ROUTED', 'ROUTING_REQUESTED', 'ROUTED', 'MISROUTED']) {
+      expect(canNotifyShipper(status), status).toBe(status === canon);
+    }
+  });
+
+  it('経路設計へ戻せる状態は正典と一致する（US12）', () => {
+    const source = readFileSync(CARGO, 'utf-8');
+    const body = source.slice(source.indexOf('public String returnToRouting'));
+    const canon = /bookingStatus != BookingStatus\.(\w+)/.exec(body)?.[1];
+
+    expect(canon, '正典の判断を読めていない').toBeDefined();
+    for (const status of Object.keys(BOOKING_TRANSITIONS)) {
+      expect(canReturnToRouting(status), status).toBe(status === canon);
     }
   });
 });

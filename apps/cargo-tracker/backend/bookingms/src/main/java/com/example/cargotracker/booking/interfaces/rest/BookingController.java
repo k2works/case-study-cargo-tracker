@@ -26,6 +26,7 @@ import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.CountBookingsByStatusQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.AffectedBookingListView;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.CountAwaitingNotificationQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.ConditionReviewListView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingNotificationsQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindRouteConditionQuery;
@@ -427,7 +428,10 @@ public class BookingController {
                 "preliminary",
                 queries.query(new CountBookingsByStatusQuery(BookingStatus.PRELIMINARY.name()),
                         Integer.class),
-                "routingWorklist", worklist.total()));
+                "routingWorklist", worklist.total(),
+                // 荷主へ通知していない経路確定済みの予約（US12）。営業の仕事。
+                "awaitingNotification",
+                queries.query(new CountAwaitingNotificationQuery(), Integer.class)));
     }
 
     /**

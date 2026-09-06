@@ -150,6 +150,14 @@ public final class BookingQueries {
             String departFromUnLocode) {
     }
 
+    /**
+     * 荷主へ通知していない経路確定済みの予約の件数（S02 / 営業。US12）。
+     *
+     * <p>履歴テーブルを数えず {@code last_notified_at} で絞る。</p>
+     */
+    public record CountAwaitingNotificationQuery() {
+    }
+
     /** 通知履歴（S22 / US12 §受入基準 4）。新しい通知が先。 */
     public record FindBookingNotificationsQuery(String bookingId) {
     }
@@ -195,6 +203,9 @@ public final class BookingQueries {
             // 経路設計者へ引き渡した日時（US06）。引き渡していなければ null。
             // 期限が遠い案件が S30 の下に沈んで放置されたことに気づく手立て。
             Instant routingRequestedAt,
+            // 最後に荷主へ通知した日時（US12）。一度も通知していなければ null。
+            // 画面は「通知履歴を問い合わせるか」をこの値で決める。
+            Instant lastNotifiedAt,
             // 最終更新（US32）。変更内容の履歴は Event Store が持つ。
             Instant updatedAt,
             String updatedBy) {

@@ -1,9 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 import { Link, useParams } from 'react-router';
 import {
   ALERT,
   BUTTON_PRIMARY,
+  BUTTON_SECONDARY,
   CARD,
+  FIELD,
+  LABEL,
   LINK,
   NOTICE,
   PAGE_TITLE,
@@ -15,7 +19,12 @@ import {
 } from '@/shared/ui/styles';
 import { ApiError } from '@/shared/api/client';
 import { useAuthStore } from '@/shared/auth/authStore';
-import { canRequestRouting, canUpdateSpecification } from './transitions';
+import {
+  canNotifyShipper,
+  canRequestRouting,
+  canReturnToRouting,
+  canUpdateSpecification,
+} from './transitions';
 import { requestRouting } from '@/features/routing/api';
 import { formatBusinessDateTime } from '@/shared/api/businessDate';
 import { display } from '@/features/shippers/api';
@@ -24,9 +33,13 @@ import {
   cargoTypeLabel,
   fetchBooking,
   fetchBookingItinerary,
+  fetchBookingNotifications,
   fetchBookingRevisions,
+  notifyShipper,
+  returnToRouting,
   routingStatusLabel,
 } from './api';
+import type { ItineraryLegView } from './api';
 
 /**
  * S22 予約詳細（UC04）。
@@ -84,6 +97,49 @@ export function BookingDetailPage() {
       query.state.data?.state === 'ready' && query.state.data.value.legs.length > 0
         ? false
         : 2000,
+  });
+
+  // 通知履歴（US12 §受入基準 4）。**読むのは全員**——経路設計者も追跡も
+  // 「荷主に何を伝えたか」を知る必要がある。操作だけを営業に絞る。
+  //
+  // 一度も通知していない予約では問い合わせない（修正履歴と同じ形）。**状態では
+  // 絞れない**——経路設計へ戻した予約は経路提案中に戻るが、通知履歴は残っている。
+  const notified = data?.state === 'ready' && Boolean(data.value.lastNotifiedAt);
+  const notifications = useQuery({
+    queryKey: ['booking', bookingId, 'notifications'],
+    queryFn: () => fetchBookingNotifications(bookingId),
+    enabled: notified,
+  });
+
+  const notifiable = data?.state === 'ready' && canNotifyShipper(data.value.routingStatus);
+  const returnable = data?.state === 'ready' && canReturnToRouting(data.value.bookingStatus);
+
+  const [recipient, setRecipient] = useState('');
+  const [returning, setReturning] = useState(false);
+  const [returnReason, setReturnReason] = useState('');
+  const [returnError, setReturnError] = useState('');
+
+  // 通知する内容は旅程から作る。**画面で打たせない**——打ち直すと、実際の旅程と
+  // 違うことを伝えられる。料金概算は US21（IT13）が正典で、いまは欄を置かない
+  // （0 円と読まれる）。
+  const summary = itinerary.data?.state === 'ready'
+    ? summaryOf(itinerary.data.value.legs) : '';
+
+  const notify = useMutation({
+    mutationFn: () => notifyShipper(bookingId, { recipientEmail: recipient, summary }),
+    onSuccess: async () => {
+      await queries.invalidateQueries({ queryKey: ['booking', bookingId] });
+      await queries.invalidateQueries({ queryKey: ['booking', bookingId, 'notifications'] });
+    },
+  });
+
+  const sendBack = useMutation({
+    mutationFn: () => returnToRouting(bookingId, returnReason),
+    onSuccess: async () => {
+      setReturning(false);
+      setReturnReason('');
+      await queries.invalidateQueries({ queryKey: ['booking', bookingId] });
+    },
   });
 
   const handOver = useMutation({
@@ -265,6 +321,153 @@ export function BookingDetailPage() {
             </div>
           )}
 
+          {/* 通知の操作は営業だけ（US12）。読むのは全員——経路設計者も追跡も
+              「荷主に何を伝えたか」を知る必要がある。 */}
+          {isSales && notifiable && (
+            <div>
+              <h2 className={SECTION_TITLE}>荷主への通知</h2>
+              <p className="mt-2 text-sm text-gray-600">
+                <b>このシステムは送信しません。</b>通知は電話・メールで行い、ここには
+                「いつ・誰に・何を伝えたか」の記録だけを残します
+              </p>
+              <div className="mt-2 space-y-3">
+                <label className={LABEL}>
+                  <span>通知先メールアドレス</span>
+                  <input
+                    className={FIELD}
+                    type="email"
+                    value={recipient}
+                    onChange={(event) => setRecipient(event.target.value)}
+                  />
+                </label>
+                <label className={LABEL}>
+                  {/* 内容は旅程から作る。打ち直せると、実際の旅程と違うことを
+                      伝えられる。料金概算は US21（IT13）が正典なので置かない。 */}
+                  <span>通知内容</span>
+                  <textarea className={FIELD} rows={2} value={summary} readOnly />
+                </label>
+                {notify.isError && (
+                  <p role="alert" className={ALERT}>
+                    {notify.error instanceof ApiError
+                      ? notify.error.body.message
+                      : '通知を記録できませんでした'}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  className={BUTTON_PRIMARY}
+                  disabled={notify.isPending || summary === ''}
+                  onClick={() => notify.mutate()}
+                >
+                  {notify.isPending ? '記録しています…' : '通知した記録を残す'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* 通知したあとだけ開く。通知前に組み直したいなら、経路設計者が自分で
+              確定し直せばよい（判定は集約と同じ述語を呼ぶ）。 */}
+          {isSales && returnable && (
+            <div className="space-y-2">
+              {!returning && (
+                <button
+                  type="button"
+                  className={BUTTON_SECONDARY}
+                  onClick={() => setReturning(true)}
+                >
+                  経路設計へ戻す
+                </button>
+              )}
+              {returning && (
+                <div className={`${CARD} space-y-2`}>
+                  <p className="text-sm">
+                    荷主が経路の変更を求めたときに戻します。
+                    <b>確定した旅程はそのまま残ります。</b>
+                  </p>
+                  <label htmlFor="return-reason" className={LABEL}>
+                    戻す理由
+                  </label>
+                  <input
+                    id="return-reason"
+                    className={FIELD}
+                    value={returnReason}
+                    onChange={(event) => setReturnReason(event.target.value)}
+                  />
+                  {returnError && (
+                    <p role="alert" className={ALERT}>
+                      {returnError}
+                    </p>
+                  )}
+                  {sendBack.isError && (
+                    <p role="alert" className={ALERT}>
+                      経路設計へ戻せませんでした
+                    </p>
+                  )}
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      className={BUTTON_PRIMARY}
+                      disabled={sendBack.isPending}
+                      onClick={() => {
+                        if (!returnReason.trim()) {
+                          // 集約も断るが、押してから 422 で気づく形にしない。
+                          setReturnError('戻す理由を入力してください');
+                          return;
+                        }
+                        setReturnError('');
+                        sendBack.mutate();
+                      }}
+                    >
+                      戻すことを確定する
+                    </button>
+                    <button
+                      type="button"
+                      className={BUTTON_SECONDARY}
+                      onClick={() => {
+                        setReturning(false);
+                        setReturnError('');
+                      }}
+                    >
+                      やめる
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {notified
+            && notifications.data?.state === 'ready'
+            && notifications.data.value.items.length > 0 && (
+            <div>
+              <h2 className={SECTION_TITLE}>通知履歴</h2>
+              <div className="mt-2 overflow-x-auto">
+                <table className={TABLE}>
+                  <caption className={TABLE_CAPTION}>新しい通知が先に並んでいます</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col" className={TH}>いつ</th>
+                      <th scope="col" className={TH}>誰が</th>
+                      <th scope="col" className={TH}>宛先</th>
+                      <th scope="col" className={TH}>内容</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {notifications.data.value.items.map((item) => (
+                      <tr key={item.notifiedAt} data-testid={`notification-${item.notifiedAt}`}>
+                        <td className={TD}>{formatBusinessDateTime(item.notifiedAt)}</td>
+                        {/* 誰が通知したか分からないことは「—」で表す（記録は残る）。 */}
+                        <td className={TD}>{item.notifiedBy ?? '—'}</td>
+                        <td className={TD}>{item.recipientEmail}</td>
+                        <td className={TD}>{item.summary}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {updated
             && revisions.data?.state === 'ready'
             && revisions.data.value.items.length > 0 && (
@@ -306,6 +509,26 @@ export function BookingDetailPage() {
       )}
     </section>
   );
+}
+
+/**
+ * 通知する内容を旅程から作る（US12 §受入基準 2）。
+ *
+ * <p>経由港・所要日数・到着予定日を並べる。<b>料金概算は含めない</b>——料金表は
+ * US21（IT13）が正典で、現時点で存在しない。0 と出すと「費用 0 円」と読める。</p>
+ */
+function summaryOf(legs: readonly ItineraryLegView[]): string {
+  const first = legs[0];
+  const last = legs.at(-1);
+  if (!first || !last) {
+    return '';
+  }
+  const ports = [first.loadUnLocode, ...legs.map((leg) => leg.unloadUnLocode)].join(' → ');
+  const days = Math.ceil(
+    (new Date(last.unloadAt).getTime() - new Date(first.loadAt).getTime())
+    / (24 * 60 * 60 * 1000),
+  );
+  return `${ports} / 所要 ${days} 日 / 到着予定 ${formatBusinessDateTime(last.unloadAt)}`;
 }
 
 function Row({ label, value }: { readonly label: string; readonly value: string }) {
