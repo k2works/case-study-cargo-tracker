@@ -31,3 +31,4 @@ cargo-tracker プロジェクトの開発ドキュメントです。
 * [イテレーション 5 ふりかえり](./retrospective-5.md)
 * [イテレーション 6 ふりかえり](./retrospective-6.md)
 * [イテレーション 6 完了報告書](./iteration_report-6.md)
+* [イテレーション 7 計画 - 予約確定と追跡番号発行](./iteration_plan-7.md)
