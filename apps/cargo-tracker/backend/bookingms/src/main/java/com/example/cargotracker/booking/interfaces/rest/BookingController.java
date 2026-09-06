@@ -1,6 +1,7 @@
 package com.example.cargotracker.booking.interfaces.rest;
 
 import com.example.cargotracker.booking.application.port.RouteCandidateFinder;
+import com.example.cargotracker.booking.application.port.TrackingNumberGenerator;
 import com.example.cargotracker.booking.domain.model.commands.AdjustRouteSpecificationCommand;
 import com.example.cargotracker.booking.domain.model.commands.AssignRouteCommand;
 import com.example.cargotracker.booking.domain.model.commands.NotifyShipperCommand;
@@ -12,6 +13,7 @@ import com.example.cargotracker.booking.application.port.RouteSearchRequest;
 import com.example.cargotracker.booking.domain.model.valueobjects.RouteCandidate;
 import com.example.cargotracker.booking.domain.model.commands.BookCargoCommand;
 import com.example.cargotracker.booking.domain.model.commands.ConfirmBookingCommand;
+import com.example.cargotracker.booking.domain.model.commands.IssueTrackingNumberCommand;
 import com.example.cargotracker.booking.domain.model.commands.RequestRoutingCommand;
 import com.example.cargotracker.booking.domain.model.commands.UpdateCargoSpecificationCommand;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoSpecification;
@@ -74,12 +76,14 @@ public class BookingController {
     private final CommandGateway commandGateway;
     private final QueryDispatcher queries;
     private final RouteCandidateFinder routeCandidates;
+    private final TrackingNumberGenerator trackingNumbers;
 
     public BookingController(CommandGateway commandGateway, QueryDispatcher queries,
-            RouteCandidateFinder routeCandidates) {
+            RouteCandidateFinder routeCandidates, TrackingNumberGenerator trackingNumbers) {
         this.commandGateway = commandGateway;
         this.queries = queries;
         this.routeCandidates = routeCandidates;
+        this.trackingNumbers = trackingNumbers;
     }
 
     @PostMapping
@@ -347,6 +351,25 @@ public class BookingController {
             @PathVariable String bookingId,
             @RequestHeader(name = "X-Auth-Username", required = false) String username) {
         commandGateway.sendAndWait(new ConfirmBookingCommand(bookingId, username));
+        return ResponseEntity.ok(new BookCargoResponse(bookingId));
+    }
+
+    /**
+     * 追跡番号を発行する（UC12 / US14 §受入基準 1・2）。<b>経路設計者だけ</b>が使う
+     * （ui_design.md S22「[追跡番号を発行]（経路設計者）」）。
+     *
+     * <p><b>採番はここで行う</b>（ADR-0010 決定 2）。集約で MAX+1 を採ると、同時に
+     * 2 件発行したときに同じ番号が出る。集約は「発行してよいか」だけを判断する。</p>
+     *
+     * <p><b>採ってから断られることがある。</b> 二重発行を集約が断ると、採った番号は
+     * 使われずに飛ぶ。番号が連続しないことより、同じ番号が 2 つ出ないことを優先する。</p>
+     */
+    @PostMapping("/{bookingId}/tracking-number")
+    public ResponseEntity<BookCargoResponse> issueTrackingNumber(
+            @PathVariable String bookingId,
+            @RequestHeader(name = "X-Auth-Username", required = false) String username) {
+        commandGateway.sendAndWait(new IssueTrackingNumberCommand(bookingId,
+                trackingNumbers.next(), username));
         return ResponseEntity.ok(new BookCargoResponse(bookingId));
     }
 

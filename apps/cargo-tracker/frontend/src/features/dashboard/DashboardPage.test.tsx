@@ -27,6 +27,7 @@ function mockApi(
   summary: Record<string, number>,
   conditionReviews: unknown[] = [],
   awaitingConfirmation: unknown[] = [],
+  awaitingTracking: unknown[] = [],
 ) {
   return vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
     const url = String(input);
@@ -37,6 +38,10 @@ function mockApi(
     if (url.includes('/awaiting-confirmation')) {
       return Promise.resolve(
         new Response(JSON.stringify({ items: awaitingConfirmation }), { status: 200 }));
+    }
+    if (url.includes('/awaiting-tracking-number')) {
+      return Promise.resolve(
+        new Response(JSON.stringify({ items: awaitingTracking }), { status: 200 }));
     }
     return Promise.resolve(new Response(JSON.stringify(summary), { status: 200 }));
   });
@@ -167,6 +172,33 @@ describe('S02 ダッシュボード', () => {
     await screen.findByRole('heading', { name: '今日の作業' });
 
     expect(screen.queryByText(/確定していない予約/)).not.toBeInTheDocument();
+  });
+
+  it('US14: 経路設計には発行待ちの予約の行を出し、そこから予約詳細へ行ける', async () => {
+    // **確定したまま発行を忘れると、荷主は追跡番号を受け取れない。** US13 §3 の
+    // 「経路設計者への通知」は送信基盤がスコープ外なので、この受け皿で代える。
+    mockApi({ preliminary: 0, routingWorklist: 0, awaitingNotification: 0 }, [], [], [
+      { bookingId: 'b-7', bookingNumber: 'B-2026-0903-0007',
+        confirmedAt: '2026-09-08T00:00:00Z' },
+    ]);
+
+    renderAs(['ROLE_ROUTING']);
+
+    const row = await screen.findByTestId('awaiting-tracking-b-7');
+    expect(within(row).getByRole('link', { name: 'B-2026-0903-0007' }))
+      .toHaveAttribute('href', '/bookings/b-7');
+  });
+
+  it('US14: 営業には発行待ちを出さない（発行は経路設計者の仕事）', async () => {
+    mockApi({ preliminary: 0, routingWorklist: 0, awaitingNotification: 0 }, [], [], [
+      { bookingId: 'b-7', bookingNumber: 'B-2026-0903-0007',
+        confirmedAt: '2026-09-08T00:00:00Z' },
+    ]);
+
+    renderAs(['ROLE_SALES']);
+    await screen.findByRole('heading', { name: '今日の作業' });
+
+    expect(screen.queryByText(/追跡番号の発行を待っている/)).not.toBeInTheDocument();
   });
 
   it('US12: 経路設計には通知していない件数を出さない（通知は営業の仕事）', async () => {

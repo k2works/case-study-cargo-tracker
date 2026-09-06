@@ -98,6 +98,8 @@ public final class RoleAuthorization {
         rules.put("/api/v1/booking/bookings/condition-reviews", Set.of(SALES));
         // 確定を待っている予約は営業の受け皿（US13 §受入基準 3）。
         rules.put("/api/v1/booking/bookings/awaiting-confirmation", Set.of(SALES));
+        // 追跡番号の発行待ちは経路設計者の受け皿（US13 §受入基準 3 の代わり）。
+        rules.put("/api/v1/booking/bookings/awaiting-tracking-number", Set.of(ROUTING));
         rules.put("/api/v1/booking/bookings/*/route", Set.of(ROUTING));
 
         // 予約（S20 / S21）は営業・経路設計・追跡が読む。
@@ -133,6 +135,10 @@ public final class RoleAuthorization {
         // 予約の確定は営業だけ（US13）。荷主の承認を確認するのは営業の仕事である。
         ordered.add(new Rule("POST", "/api/v1/booking/bookings/*/confirmation",
                 Set.of(SALES)));
+        // 追跡番号の発行は**経路設計者だけ**（US14 / ui_design.md S22）。
+        // 営業に開くと、経路設計者の手番を飛ばして発行できてしまう。
+        ordered.add(new Rule("POST", "/api/v1/booking/bookings/*/tracking-number",
+                Set.of(ROUTING)));
         ordered.add(new Rule("PUT", "/api/v1/booking/bookings/*", Set.of(SALES)));
         rules.forEach((pattern, allowed) -> ordered.add(new Rule(ANY_METHOD, pattern, allowed)));
         return List.copyOf(ordered);

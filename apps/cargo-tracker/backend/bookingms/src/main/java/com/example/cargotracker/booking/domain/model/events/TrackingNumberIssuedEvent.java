@@ -38,4 +38,16 @@ public record TrackingNumberIssuedEvent(
             Instant loadTime,
             Instant unloadTime) {
     }
+
+    /** 確定済みの旅程から組み立てる。<b>集約に平坦化の手順を置かない。</b> */
+    public static TrackingNumberIssuedEvent of(String bookingId, String trackingNumber,
+            String origin, String destination, String cargoType,
+            List<CargoRoutedEvent.Leg> routedLegs, String issuedBy, Instant issuedAt) {
+        return new TrackingNumberIssuedEvent(bookingId, trackingNumber, origin, destination,
+                cargoType,
+                routedLegs.stream().map(leg -> new Leg(leg.voyageNumber(),
+                        leg.loadUnLocode(), leg.unloadUnLocode(),
+                        leg.loadTime(), leg.unloadTime())).toList(),
+                issuedBy, issuedAt);
+    }
 }

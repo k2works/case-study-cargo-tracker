@@ -33,6 +33,14 @@ public interface ProcessStateService {
     ProcessState advance(String processType, String processId, String completedStep,
             String nextStep);
 
+    /**
+     * 再試行の回数を残す（ADR-0010 決定 4）。
+     *
+     * <p><b>回数を持たないと、上限という概念が成り立たない。</b> Event Processor の
+     * 再試行はプロセスをまたぐので、ハンドラのインスタンス変数では数えられない。</p>
+     */
+    ProcessState recordAttempt(String processType, String processId, int attempts);
+
     /** 補償に至ったことを残す。理由は metadata に足す。 */
     ProcessState compensate(String processType, String processId, String reason);
 

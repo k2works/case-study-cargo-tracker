@@ -8,6 +8,7 @@ import com.example.cargotracker.booking.domain.model.commands.NotifyShipperComma
 import com.example.cargotracker.booking.domain.model.commands.ReturnToRoutingCommand;
 import com.example.cargotracker.booking.domain.model.commands.RequestConditionReviewCommand;
 import com.example.cargotracker.booking.domain.model.commands.RequestRoutingCommand;
+import com.example.cargotracker.booking.domain.model.commands.RevertTrackingNumberCommand;
 import com.example.cargotracker.booking.domain.model.commands.UpdateCargoSpecificationCommand;
 import com.example.cargotracker.booking.domain.model.events.BookingConfirmedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
@@ -24,6 +25,7 @@ import com.example.cargotracker.booking.domain.model.commands.ConfirmBookingComm
 import com.example.cargotracker.booking.domain.model.commands.IssueTrackingNumberCommand;
 import com.example.cargotracker.booking.domain.model.events.CargoRoutedEvent;
 import com.example.cargotracker.booking.domain.model.events.TrackingNumberIssuedEvent;
+import com.example.cargotracker.booking.domain.model.events.TrackingNumberRevertedEvent;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoItinerary;
 import com.example.cargotracker.booking.domain.model.valueobjects.RoutingStatus;
 import com.example.cargotracker.shared.domain.error.IllegalTransition;
@@ -66,6 +68,8 @@ public class Cargo {
     private Location destination;
     /** 貨物種別。追跡番号の発行（US14）で trackingms へ渡す。 */
     private String cargoType;
+    /** 発行済みの追跡番号。取り消し（補償）で「何を取り消したか」を残すのに要る。 */
+    private String trackingNumber;
     /** 確定した旅程。<b>発行のイベントに載せる</b>（IT9 の荷役が材料にする）。 */
     private List<CargoRoutedEvent.Leg> legs = List.of();
 
@@ -106,9 +110,7 @@ public class Cargo {
      */
     @CommandHandler
     public String requestRouting(RequestRoutingCommand command, EventAppender appender) {
-        if (bookingId == null) {
-            throw new IllegalTransition("予約 " + command.bookingId() + " は受け付けていません");
-        }
+        requireBooked(command.bookingId());
         // 遷移先で判断しない。ROUTE_PROPOSED への自己遷移は経路の確定と条件の調整の
         // もので、引き渡しではない。述語を呼ぶ（BookingStatus#canRequestRouting）。
         if (!bookingStatus.canRequestRouting()) {
@@ -123,19 +125,15 @@ public class Cargo {
      * 入力の誤りを直す（UC03・UC04 / US32）。
      *
      * <p><b>直せるかどうかは遷移表の述語を呼ぶ</b>（{@link BookingStatus#canUpdateSpecification}）。
-     * ここで {@code if (status == PRELIMINARY)} と書くと、状態が増えたときに集約と
-     * 遷移表の判断が食い違う。</p>
+     * ここで書き直すと、状態が増えたときに集約と遷移表の判断が食い違う。</p>
      *
-     * <p><b>登録と同じ検査を通す。</b> 修正用に検査を書き直すと「登録では断るのに
-     * 修正では通る」が生まれる。危険物の申告も冷凍の温度条件も
-     * {@code CargoSpecification} が同じように守る。</p>
+     * <p><b>登録と同じ検査を通す。</b> 書き直すと「登録では断るのに修正では通る」が
+     * 生まれる（{@code CargoValidation} が両方を守る）。</p>
      */
     @CommandHandler
     public String updateSpecification(UpdateCargoSpecificationCommand command,
             EventAppender appender, Clock clock) {
-        if (bookingId == null) {
-            throw new IllegalTransition("予約 " + command.bookingId() + " は受け付けていません");
-        }
+        requireBooked(command.bookingId());
         if (!bookingStatus.canUpdateSpecification()) {
             throw new IllegalTransition("状態 " + bookingStatus.label() + " の予約は修正できません");
         }
@@ -162,9 +160,7 @@ public class Cargo {
      */
     @CommandHandler
     public String assignRoute(AssignRouteCommand command, EventAppender appender, Clock clock) {
-        if (bookingId == null) {
-            throw new IllegalTransition("予約 " + command.bookingId() + " は受け付けていません");
-        }
+        requireBooked(command.bookingId());
         // 判定は書き直さず述語を呼ぶ（RoutingStatus#canAssignRoute）。画面も同じ
         // 判断を写しており、canon テストが述語の本体を読んで突き合わせる。
         if (!routingStatus.canAssignRoute()) {
@@ -183,18 +179,8 @@ public class Cargo {
                             + destination.unLocode().value() + "）");
         }
 
-        appender.append(new CargoRoutedEvent(
-                command.bookingId(),
-                command.itinerary().legs().stream()
-                        .map(leg -> new CargoRoutedEvent.Leg(
-                                leg.voyageNumber(),
-                                leg.load().unLocode().value(),
-                                leg.unload().unLocode().value(),
-                                leg.loadTime(),
-                                leg.unloadTime()))
-                        .toList(),
-                command.assignedBy(),
-                clock.instant()));
+        appender.append(CargoRoutedEvent.of(command.bookingId(), command.itinerary(),
+                command.assignedBy(), clock.instant()));
         return command.bookingId();
     }
 
@@ -204,19 +190,17 @@ public class Cargo {
      * <p><b>調整を集約に記録する。</b> 画面の一時的な絞り込みにすると、誰がいつ期限を
      * 延ばしたかが残らない（UC08 の最低保証「調整条件と再算出結果が記録される」）。</p>
      *
-     * <p><b>経路設計に入ってからだけ開く。</b> 仮受付のあいだは S24（予約修正）が
-     * 正典で、2 つの入口を同時に開くと「どちらが正か」が読めなくなる。逆に経路設計に
-     * 入った予約は S24 が使えないので、期限を延ばす手段はここだけである。</p>
+     * <p><b>経路設計に入ってからだけ開く。</b> 仮受付のあいだは S24（予約修正）が正典で、
+     * 2 つの入口を同時に開くと「どちらが正か」が読めない。逆に経路設計に入った予約は
+     * S24 が使えないので、期限を延ばす手段はここだけである。</p>
      *
-     * <p><b>確定済みの旅程は消さない。</b> 再設計で入れ替わるまで残す。戻すのは
-     * {@code routingStatus} だけで、ROUTED のままだと条件を変えても確定し直せない。</p>
+     * <p><b>確定済みの旅程は消さない。</b> 戻すのは {@code routingStatus} だけ
+     * （ROUTED のままだと条件を変えても確定し直せない）。</p>
      */
     @CommandHandler
     public String adjustRouteSpecification(AdjustRouteSpecificationCommand command,
             EventAppender appender, Clock clock) {
-        if (bookingId == null) {
-            throw new IllegalTransition("予約 " + command.bookingId() + " は受け付けていません");
-        }
+        requireBooked(command.bookingId());
         // 誤配を含めない（調整が誤配の記録を消し、US28 の設計を先に縛る）。
         if (!routingStatus.canAdjustRouteSpecification()) {
             throw new IllegalTransition(
@@ -267,9 +251,7 @@ public class Cargo {
     @CommandHandler
     public String requestConditionReview(RequestConditionReviewCommand command,
             EventAppender appender, Clock clock) {
-        if (bookingId == null) {
-            throw new IllegalTransition("予約 " + command.bookingId() + " は受け付けていません");
-        }
+        requireBooked(command.bookingId());
         if (!routingStatus.canRequestConditionReview()) {
             throw new IllegalTransition(
                     "この予約は営業へ差し戻せません（" + routingStatus.label() + "）");
@@ -294,9 +276,7 @@ public class Cargo {
     @CommandHandler
     public String notifyShipper(NotifyShipperCommand command, EventAppender appender,
             Clock clock) {
-        if (bookingId == null) {
-            throw new IllegalTransition("予約 " + command.bookingId() + " は受け付けていません");
-        }
+        requireBooked(command.bookingId());
         // 判定は書き直さず述語を呼ぶ（RoutingStatus#canNotifyShipper）。
         if (!routingStatus.canNotifyShipper()) {
             throw new IllegalTransition(
@@ -338,9 +318,7 @@ public class Cargo {
      */
     @CommandHandler
     public String confirm(ConfirmBookingCommand command, EventAppender appender, Clock clock) {
-        if (bookingId == null) {
-            throw new IllegalTransition("予約 " + command.bookingId() + " は受け付けていません");
-        }
+        requireBooked(command.bookingId());
         if (!bookingStatus.canTransitionTo(BookingStatus.CONFIRMED)) {
             throw new IllegalTransition(
                     "状態 " + bookingStatus.label() + " の予約は確定できません"
@@ -360,19 +338,16 @@ public class Cargo {
     /**
      * 追跡番号を発行する（UC12 / US14）。<b>経路設計者の操作</b>。
      *
-     * <p><b>不変条件 8: 二重に発行しない。</b> 発行から連鎖が始まる（trackingms に
-     * 追跡が作られる）ので、2 度発行すると追跡が 2 つできる。遷移表が
-     * {@code CONFIRMED → TRACKING_ISSUED} だけを許すので、同じ判定で両方を断る。</p>
+     * <p><b>不変条件 8: 二重に発行しない。</b> 発行から連鎖が始まるので、2 度発行すると
+     * 追跡が 2 つできる。遷移表が {@code CONFIRMED → TRACKING_ISSUED} だけを許すので、
+     * 未確定の発行も二重の発行も同じ判定で断る。</p>
      *
-     * <p><b>採番はしない。</b> 集約で MAX+1 を採ると、同時に 2 件発行したときに同じ
-     * 番号が出る。番号は投影が採り、コマンドで渡す。</p>
+     * <p><b>採番はしない</b>（同時に 2 件発行したときに同じ番号が出る）。投影が採る。</p>
      */
     @CommandHandler
     public String issueTrackingNumber(IssueTrackingNumberCommand command,
             EventAppender appender, Clock clock) {
-        if (bookingId == null) {
-            throw new IllegalTransition("予約 " + command.bookingId() + " は受け付けていません");
-        }
+        requireBooked(command.bookingId());
         if (!bookingStatus.canTransitionTo(BookingStatus.TRACKING_ISSUED)) {
             throw new IllegalTransition(
                     "状態 " + bookingStatus.label() + " の予約に追跡番号は発行できません");
@@ -381,12 +356,9 @@ public class Cargo {
             throw new BusinessRuleViolation("追跡番号は必須です");
         }
 
-        appender.append(new TrackingNumberIssuedEvent(command.bookingId(),
-                command.trackingNumber().trim(),
-                origin.unLocode().value(), destination.unLocode().value(), cargoType,
-                legs.stream().map(leg -> new TrackingNumberIssuedEvent.Leg(leg.voyageNumber(),
-                        leg.loadUnLocode(), leg.unloadUnLocode(),
-                        leg.loadTime(), leg.unloadTime())).toList(),
+        appender.append(TrackingNumberIssuedEvent.of(command.bookingId(),
+                command.trackingNumber().trim(), origin.unLocode().value(),
+                destination.unLocode().value(), cargoType, legs,
                 command.issuedBy(), clock.instant()));
         return command.bookingId();
     }
@@ -394,6 +366,36 @@ public class Cargo {
     @EventSourcingHandler
     void on(TrackingNumberIssuedEvent event) {
         this.bookingStatus = BookingStatus.TRACKING_ISSUED;
+        this.trackingNumber = event.trackingNumber();
+    }
+
+    /**
+     * 追跡番号の発行を取り消す（US14 の補償 / ADR-0010 決定 4）。
+     *
+     * <p>trackingms へ追跡開始が届かないまま再試行の上限を超えたときに、調整役が送る。
+     * <b>予約は {@code CONFIRMED} に戻る</b>——キャンセルではないので、経路設計者が
+     * もう一度発行できる状態にするだけである。</p>
+     */
+    @CommandHandler
+    public String revertTrackingNumber(RevertTrackingNumberCommand command,
+            EventAppender appender, Clock clock) {
+        if (bookingStatus != BookingStatus.TRACKING_ISSUED) {
+            // 発行していないものは取り消せない。再試行で 2 度届いても 1 度だけ効く。
+            throw new IllegalTransition(
+                    "状態 " + (bookingStatus == null ? "未受付" : bookingStatus.label())
+                            + " の予約の追跡番号は取り消せません");
+        }
+
+        appender.append(new TrackingNumberRevertedEvent(command.bookingId(), trackingNumber,
+                command.reason(), clock.instant()));
+        return command.bookingId();
+    }
+
+    @EventSourcingHandler
+    void on(TrackingNumberRevertedEvent event) {
+        // キャンセルではない。もう一度発行できる状態に戻す。
+        this.bookingStatus = BookingStatus.CONFIRMED;
+        this.trackingNumber = null;
     }
 
     /**
@@ -408,9 +410,7 @@ public class Cargo {
     @CommandHandler
     public String returnToRouting(ReturnToRoutingCommand command, EventAppender appender,
             Clock clock) {
-        if (bookingId == null) {
-            throw new IllegalTransition("予約 " + command.bookingId() + " は受け付けていません");
-        }
+        requireBooked(command.bookingId());
         // 判定は書き直さず述語を呼ぶ（BookingStatus#canReturnToRouting）。
         if (!bookingStatus.canReturnToRouting()) {
             throw new IllegalTransition(
@@ -445,6 +445,18 @@ public class Cargo {
         // 条件が変わったので、確定済みの経路は設計し直しになる。**旅程は消さない**
         // （再設計で入れ替わるまで残す）。ROUTED のままだと確定し直せない。
         this.routingStatus = RoutingStatus.ROUTING_REQUESTED;
+    }
+
+    /**
+     * 受け付け済みか。<b>どのコマンドでも最初に通す。</b>
+     *
+     * <p>受け付けていない予約に操作が届くのは、識別子の打ち間違いか、投影が先に
+     * 消えたか。どちらも 409 で断る（500 にすると「壊れた」と読まれる）。</p>
+     */
+    private void requireBooked(String commandBookingId) {
+        if (bookingId == null) {
+            throw new IllegalTransition("予約 " + commandBookingId + " は受け付けていません");
+        }
     }
 
     /** いま集約が持っている経路仕様。修正（US32）を反映した値になる。 */

@@ -20,6 +20,7 @@ import {
 import { ApiError } from '@/shared/api/client';
 import { useAuthStore } from '@/shared/auth/authStore';
 import {
+  canIssueTrackingNumber,
   canNotifyShipper,
   canTransitionTo,
   canRequestRouting,
@@ -33,6 +34,7 @@ import {
   bookingStatusLabel,
   cargoTypeLabel,
   confirmBooking,
+  issueTrackingNumber,
   fetchBooking,
   fetchBookingItinerary,
   fetchBookingNotifications,
@@ -58,6 +60,9 @@ export function BookingDetailPage() {
   // 状態だけで出し分けると、見に来ただけの人が引き渡せる。
   // これは表示の話で、守りは Gateway の認可（ADR-0006）が担う。
   const isSales = useAuthStore((state) => state.user?.roles.includes('ROLE_SALES') ?? false);
+  // 追跡番号の発行は経路設計者の操作（ui_design.md S22）。
+  const isRouting = useAuthStore(
+    (state) => state.user?.roles.includes('ROLE_ROUTING') ?? false);
   const { data, isPending, isError } = useQuery({
     queryKey: ['booking', bookingId],
     queryFn: () => fetchBooking(bookingId),
@@ -141,6 +146,10 @@ export function BookingDetailPage() {
   // だけ CONFIRMED に進める）ので、別の述語を作らない。写しが増えるほどずれる。
   const confirmable = data?.state === 'ready'
     && canTransitionTo(data.value.bookingStatus, 'CONFIRMED');
+  // **発行は経路設計者の操作**（ui_design.md S22）。営業に開くと、経路設計者の
+  // 手番を飛ばして発行できてしまう。二重発行も同じ判定で断る。
+  const issuable = data?.state === 'ready'
+    && canIssueTrackingNumber(data.value.bookingStatus);
   const returnable = data?.state === 'ready' && canReturnToRouting(data.value.bookingStatus);
 
   const [recipient, setRecipient] = useState('');
@@ -165,6 +174,13 @@ export function BookingDetailPage() {
 
   const confirm = useMutation({
     mutationFn: () => confirmBooking(bookingId),
+    onSuccess: async () => {
+      await queries.invalidateQueries({ queryKey: ['booking', bookingId] });
+    },
+  });
+
+  const issue = useMutation({
+    mutationFn: () => issueTrackingNumber(bookingId),
     onSuccess: async () => {
       await queries.invalidateQueries({ queryKey: ['booking', bookingId] });
     },
@@ -217,6 +233,12 @@ export function BookingDetailPage() {
                 label="経路設定状態"
                 value={routingStatusLabel(data.value.routingStatus)}
               />
+              {/* 追跡番号（US14）。**発行するまで欄そのものを出さない**——
+                  空欄は「番号が消えた」と読める。荷主に伝える唯一の手掛かりなので、
+                  発行後は誰が見ても読めるようにする（ロールで隠さない）。 */}
+              {data.value.trackingNumber && (
+                <Row label="追跡番号" value={data.value.trackingNumber} />
+              )}
               <Row label="荷主" value={display(data.value.shipperName)} />
               {/* 一度も直していない予約に最終更新を出すと、受付日時と
                   区別が付かない。直したことのある予約だけに出す（US32）。 */}
@@ -426,6 +448,33 @@ export function BookingDetailPage() {
                 onClick={() => confirm.mutate()}
               >
                 {confirm.isPending ? '確定しています…' : '予約を確定する'}
+              </button>
+            </div>
+          )}
+
+          {/* 追跡番号（US14）。**発行は経路設計者の操作**で、営業には出さない。
+              発行済みなら番号を出し、操作は消す（二重に発行しない）。 */}
+          {isRouting && issuable && (
+            <div className="space-y-2">
+              <h2 className={SECTION_TITLE}>追跡番号の発行</h2>
+              <p className="text-sm text-gray-600">
+                発行すると荷主が輸送状況を追えるようになります。<b>番号はシステムが
+                採ります。</b>一度発行した予約に二度目は発行できません
+              </p>
+              {issue.isError && (
+                <p role="alert" className={ALERT}>
+                  {issue.error instanceof ApiError
+                    ? issue.error.body.message
+                    : '追跡番号を発行できませんでした'}
+                </p>
+              )}
+              <button
+                type="button"
+                className={BUTTON_PRIMARY}
+                disabled={issue.isPending}
+                onClick={() => issue.mutate()}
+              >
+                {issue.isPending ? '発行しています…' : '追跡番号を発行する'}
               </button>
             </div>
           )}

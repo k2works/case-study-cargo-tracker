@@ -1,6 +1,7 @@
 # Docs Update Log
 
 ## 2026-09-06
+* **Creation**: [0010-reaction-handler-as-the-only-coordinator](/adr/cargo-tracker/0010-reaction-handler-as-the-only-coordinator.md) を作成（claude-code/claude-opus-5）
 * **Update**: [iteration_plan-7](/development/cargo-tracker/iteration_plan-7.md) を更新（claude-code/claude-opus-5）
 * **Update**: [architecture_backend](/design/cargo-tracker/architecture_backend.md) を更新（claude-code/claude-opus-5）
 * **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）

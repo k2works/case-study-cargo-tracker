@@ -5,6 +5,7 @@ import { navigationFor } from '@/shared/ui/navigation';
 import { CARD, LINK, NOTICE, PAGE_TITLE, SECTION_TITLE } from '@/shared/ui/styles';
 import {
   fetchAwaitingConfirmation,
+  fetchAwaitingTrackingNumber,
   fetchBookingSummary,
   fetchConditionReviews,
 } from '@/features/bookings/api';
@@ -62,6 +63,17 @@ export function DashboardPage() {
   });
   const awaitingConfirmation =
     awaiting?.state === 'ready' ? awaiting.value.items ?? [] : [];
+
+  // 追跡番号の発行を待っている予約（US13 §受入基準 3 の代わり）。**打てる手を
+  // 持つのは経路設計者**で、発行は経路設計者の操作である。営業には出さない。
+  const { data: awaitingTracking } = useQuery({
+    queryKey: ['awaiting-tracking-number'],
+    queryFn: fetchAwaitingTrackingNumber,
+    enabled: isRouting,
+    refetchInterval: 10000,
+  });
+  const awaitingTrackingNumber =
+    awaitingTracking?.state === 'ready' ? awaitingTracking.value.items ?? [] : [];
 
   return (
     <section>
@@ -128,6 +140,26 @@ export function DashboardPage() {
             予約一覧
           </Link>
           で確認してください。
+        </output>
+      )}
+
+      {/* 確定したまま発行を忘れると、荷主は追跡番号を受け取れない。US13 §3 の
+          「経路設計者への通知」は送信基盤がスコープ外なので、この受け皿で代える。 */}
+      {isRouting && awaitingTrackingNumber.length > 0 && (
+        <output className={`${NOTICE} mt-4 block`}>
+          追跡番号の発行を待っている予約が {awaitingTrackingNumber.length} 件あります。
+          <ul className="mt-2 space-y-1">
+            {awaitingTrackingNumber.map((item) => (
+              <li key={item.bookingId} data-testid={`awaiting-tracking-${item.bookingId}`}>
+                <Link to={`/bookings/${item.bookingId}`} className={LINK}>
+                  {item.bookingNumber}
+                </Link>
+                <span className="ml-2 text-gray-600">
+                  （確定 {formatBusinessDateTime(item.confirmedAt)}）
+                </span>
+              </li>
+            ))}
+          </ul>
         </output>
       )}
 

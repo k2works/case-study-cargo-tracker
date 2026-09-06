@@ -22,6 +22,59 @@ public interface CargoSummaryMapper {
             + "|| lpad(nextval('booking_number_seq')::text, 4, '0')")
     String nextBookingNumber(@Param("bookedOn") LocalDate bookedOn);
 
+    /**
+     * 追跡番号も投影側で採番する（US14 / ADR-0010 決定 2）。
+     *
+     * <p><b>集約で MAX+1 しない。</b> 同時に 2 件発行したときに同じ番号が出る
+     * （{@code booking_number}・{@code shipper_code} と同じ形）。</p>
+     */
+    @Select("SELECT 'T-' || to_char(#{issuedOn}::date, 'YYYY') || '-' "
+            + "|| lpad(nextval('tracking_number_seq')::text, 6, '0')")
+    String nextTrackingNumber(@Param("issuedOn") LocalDate issuedOn);
+
+    /** 追跡番号を発行した（US14）。状態・番号・発行日時を書く。 */
+    @org.apache.ibatis.annotations.Update(
+            "UPDATE cargo_summary SET booking_status = #{bookingStatus}, "
+            + "tracking_number = #{trackingNumber}, tracking_issued_at = #{issuedAt}, "
+            + "projected_at = #{projectedAt} WHERE booking_id = #{bookingId}")
+    int updateTrackingNumber(@Param("bookingId") String bookingId,
+            @Param("bookingStatus") String bookingStatus,
+            @Param("trackingNumber") String trackingNumber,
+            @Param("issuedAt") Instant issuedAt,
+            @Param("projectedAt") Instant projectedAt);
+
+    /**
+     * 追跡番号の発行を取り消した（US14 の補償 / ADR-0010 決定 4）。
+     *
+     * <p><b>予約は {@code CONFIRMED} に戻る</b>——キャンセルではない。番号を消して
+     * もう一度発行できるようにする。</p>
+     */
+    @org.apache.ibatis.annotations.Update(
+            "UPDATE cargo_summary SET booking_status = #{bookingStatus}, "
+            + "tracking_number = NULL, tracking_issued_at = NULL, "
+            + "projected_at = #{projectedAt} WHERE booking_id = #{bookingId}")
+    int updateTrackingNumberReverted(@Param("bookingId") String bookingId,
+            @Param("bookingStatus") String bookingStatus,
+            @Param("projectedAt") Instant projectedAt);
+
+    /**
+     * 追跡番号を発行できる予約（S02 / 経路設計者。US13 §受入基準 3）。
+     *
+     * <p>確定したまま発行を忘れると、荷主は追跡番号を受け取れない。<b>件数でなく
+     * 行を返す</b>（どの予約を開けばよいかが読めなければ仕事が進まない）。</p>
+     */
+    @Select("SELECT booking_id, booking_number, confirmed_at "
+            + "FROM cargo_summary WHERE booking_status = 'CONFIRMED' "
+            + "ORDER BY confirmed_at LIMIT #{limit}")
+    List<AwaitingTrackingRow> findAwaitingTrackingNumber(@Param("limit") int limit);
+
+    /** 追跡番号の発行を待っている予約 1 件。 */
+    record AwaitingTrackingRow(
+            String bookingId,
+            String bookingNumber,
+            Instant confirmedAt) {
+    }
+
     int insert(CargoSummaryRow row);
 
     CargoSummaryRow findById(@Param("bookingId") String bookingId);
@@ -317,6 +370,8 @@ public interface CargoSummaryMapper {
             String routeDepartFromUnlocode,
             // 確定した日時（US13）。未確定なら null。
             Instant confirmedAt,
+            // 追跡番号を発行した日時（US14）。未発行なら null。
+            Instant trackingIssuedAt,
             Instant projectedAt,
             String lastEventId) {
     }

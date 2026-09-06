@@ -109,3 +109,15 @@ export function canReturnToRouting(bookingStatus: string): boolean {
 export function canRequestConditionReview(routingStatus: string): boolean {
   return routingStatus === 'ROUTING_REQUESTED';
 }
+
+/**
+ * 追跡番号を発行できるか（US14）。<b>経路設計者の操作</b>。
+ *
+ * <p>遷移表がそのまま答えになる（`CONFIRMED` からだけ `TRACKING_ISSUED` へ進める）ので、
+ * 述語を新しく作らない。写しが増えるほどずれる。</p>
+ *
+ * <p><b>二重発行も同じ判定で断る</b>（`TRACKING_ISSUED → TRACKING_ISSUED` は無い）。</p>
+ */
+export function canIssueTrackingNumber(bookingStatus: string): boolean {
+  return canTransitionTo(bookingStatus, 'TRACKING_ISSUED');
+}

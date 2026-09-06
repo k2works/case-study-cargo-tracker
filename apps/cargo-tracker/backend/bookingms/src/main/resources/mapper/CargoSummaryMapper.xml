@@ -37,6 +37,7 @@
             <arg column="route_exclude_unlocodes" javaType="string"/>
             <arg column="route_depart_from_unlocode" javaType="string"/>
             <arg column="confirmed_at" javaType="java.time.Instant"/>
+            <arg column="tracking_issued_at" javaType="java.time.Instant"/>
             <arg column="projected_at" javaType="java.time.Instant"/>
             <arg column="last_event_id" javaType="string"/>
         </constructor>

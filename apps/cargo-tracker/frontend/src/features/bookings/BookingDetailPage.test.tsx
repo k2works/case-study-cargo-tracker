@@ -710,6 +710,50 @@ describe('S22 荷主への通知（US12）', () => {
     expect(screen.queryByRole('button', { name: '予約を確定する' })).not.toBeInTheDocument();
   });
 
+  it('US14 §1: 経路設計者は確定した予約に追跡番号を発行できる', async () => {
+    useAuthStore.setState({
+      user: { username: 'routing01', roles: ['ROLE_ROUTING'], token: 't' },
+    });
+    const fetchSpy = mockApi({ ...NOTIFIED, bookingStatus: 'CONFIRMED',
+      confirmedAt: '2026-09-08T00:00:00Z' });
+
+    renderDetail();
+
+    await userEvent.click(await screen.findByRole('button', { name: '追跡番号を発行する' }));
+
+    await waitFor(() => {
+      expect(fetchSpy.mock.calls.some(([url]) =>
+        String(url).includes('/tracking-number'))).toBe(true);
+    });
+  });
+
+  it('US14: 営業には発行の操作を出さない（発行は経路設計者の仕事）', async () => {
+    mockApi({ ...NOTIFIED, bookingStatus: 'CONFIRMED',
+      confirmedAt: '2026-09-08T00:00:00Z' });
+
+    renderDetail();
+
+    await screen.findByText('確定');
+    expect(screen.queryByRole('button', { name: '追跡番号を発行する' }))
+      .not.toBeInTheDocument();
+  });
+
+  it('US14 §2: 発行された追跡番号が予約詳細に出る（二重発行の導線は消える）', async () => {
+    useAuthStore.setState({
+      user: { username: 'routing01', roles: ['ROLE_ROUTING'], token: 't' },
+    });
+    mockApi({ ...NOTIFIED, bookingStatus: 'TRACKING_ISSUED',
+      confirmedAt: '2026-09-08T00:00:00Z',
+      trackingNumber: 'T-2026-000042',
+      trackingIssuedAt: '2026-09-08T01:00:00Z' });
+
+    renderDetail();
+
+    expect(await screen.findByText('T-2026-000042')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '追跡番号を発行する' }))
+      .not.toBeInTheDocument();
+  });
+
   it('US12: 営業以外には通知の操作を出さない（読むのは全員）', async () => {
     useAuthStore.setState({
       user: { username: 'routing01', roles: ['ROLE_ROUTING'], token: 't' },

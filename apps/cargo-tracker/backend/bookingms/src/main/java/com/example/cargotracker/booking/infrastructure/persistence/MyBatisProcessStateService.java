@@ -91,6 +91,23 @@ public class MyBatisProcessStateService implements ProcessStateService {
 
     @Override
     @Transactional
+    public ProcessState recordAttempt(String processType, String processId, int attempts) {
+        ProcessStateMapper.ProcessStateRow row = require(processType, processId);
+        ProcessState current = toModel(row);
+
+        Map<String, String> metadata = new LinkedHashMap<>(current.metadata());
+        metadata.put("attempts", String.valueOf(attempts));
+
+        ProcessStateMapper.ProcessStateRow updated = new ProcessStateMapper.ProcessStateRow(
+                processType, processId, current.currentStep(), current.totalSteps(),
+                current.completedSteps(), current.status().name(), toJson(metadata),
+                current.startedAt(), clock.instant(), current.completedAt());
+        mapper.update(updated);
+        return toModel(updated);
+    }
+
+    @Override
+    @Transactional
     public ProcessState compensate(String processType, String processId, String reason) {
         ProcessStateMapper.ProcessStateRow row = require(processType, processId);
         ProcessState current = toModel(row);

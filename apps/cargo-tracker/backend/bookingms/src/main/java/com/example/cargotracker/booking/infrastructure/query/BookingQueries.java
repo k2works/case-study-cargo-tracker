@@ -173,6 +173,25 @@ public final class BookingQueries {
     public record FindAwaitingConfirmationQuery(int limit) {
     }
 
+    /**
+     * 追跡番号の発行を待っている予約（S02 / 経路設計者。US13 §受入基準 3）。
+     *
+     * <p>確定したまま発行を忘れると、荷主は追跡番号を受け取れない。US13 §3 の
+     * 「経路設計者への通知」は送信基盤がスコープ外なので、<b>この受け皿で代える</b>。</p>
+     */
+    public record FindAwaitingTrackingNumberQuery(int limit) {
+    }
+
+    /** 追跡番号の発行を待っている予約 1 件。予約詳細（S22）へ行ける。 */
+    public record AwaitingTrackingView(
+            String bookingId,
+            String bookingNumber,
+            Instant confirmedAt) {
+    }
+
+    public record AwaitingTrackingListView(List<AwaitingTrackingView> items) {
+    }
+
     /** 確定を待っている予約 1 件。予約詳細（S22）へ行ける。 */
     public record AwaitingConfirmationView(
             String bookingId,
@@ -242,6 +261,9 @@ public final class BookingQueries {
             String routeDepartFromUnLocode,
             // 確定した日時（US13）。未確定なら null。
             Instant confirmedAt,
+            // 追跡番号と発行日時（US14）。未発行なら null。
+            String trackingNumber,
+            Instant trackingIssuedAt,
             // 最終更新（US32）。変更内容の履歴は Event Store が持つ。
             Instant updatedAt,
             String updatedBy) {

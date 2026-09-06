@@ -35,4 +35,22 @@ public record CargoRoutedEvent(
             Instant loadTime,
             Instant unloadTime) {
     }
+
+    /**
+     * 旅程から組み立てる。<b>集約に平坦化の手順を置かない。</b>
+     *
+     * <p>値オブジェクトを素の型へ写す手順であって、業務の判断ではない。</p>
+     */
+    public static CargoRoutedEvent of(String bookingId,
+            com.example.cargotracker.booking.domain.model.valueobjects.CargoItinerary itinerary,
+            String assignedBy, java.time.Instant routedAt) {
+        return new CargoRoutedEvent(bookingId,
+                itinerary.legs().stream()
+                        .map(leg -> new Leg(leg.voyageNumber(),
+                                leg.load().unLocode().value(),
+                                leg.unload().unLocode().value(),
+                                leg.loadTime(), leg.unloadTime()))
+                        .toList(),
+                assignedBy, routedAt);
+    }
 }

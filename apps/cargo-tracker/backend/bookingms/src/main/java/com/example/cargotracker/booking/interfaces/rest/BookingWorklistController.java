@@ -2,6 +2,8 @@ package com.example.cargotracker.booking.interfaces.rest;
 
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.AwaitingConfirmationListView;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.AwaitingTrackingListView;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindAwaitingTrackingNumberQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.BookingListView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.ConditionReviewListView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.CountAwaitingNotificationQuery;
@@ -64,6 +66,19 @@ public class BookingWorklistController {
             @RequestParam(defaultValue = "50") int limit) {
         return ResponseEntity.ok(queries.query(
                 new FindAwaitingConfirmationQuery(limit), AwaitingConfirmationListView.class));
+    }
+
+    /**
+     * 追跡番号の発行を待っている予約（S02 / 経路設計者。US13 §受入基準 3）。
+     *
+     * <p>確定したまま発行を忘れると、荷主は追跡番号を受け取れない。US13 §3 の
+     * 「経路設計者への通知」は送信基盤がスコープ外なので、<b>この受け皿で代える</b>。</p>
+     */
+    @GetMapping("/awaiting-tracking-number")
+    public ResponseEntity<AwaitingTrackingListView> awaitingTrackingNumber(
+            @RequestParam(defaultValue = "50") int limit) {
+        return ResponseEntity.ok(queries.query(
+                new FindAwaitingTrackingNumberQuery(limit), AwaitingTrackingListView.class));
     }
 
     /**

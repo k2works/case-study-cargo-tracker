@@ -9,6 +9,8 @@ import com.example.cargotracker.booking.domain.model.events.ReturnedToRoutingEve
 import com.example.cargotracker.booking.domain.model.events.RouteSpecificationAdjustedEvent;
 import com.example.cargotracker.booking.domain.model.events.ShipperNotifiedEvent;
 import com.example.cargotracker.booking.domain.model.events.RoutingRequestedEvent;
+import com.example.cargotracker.booking.domain.model.events.TrackingNumberIssuedEvent;
+import com.example.cargotracker.booking.domain.model.events.TrackingNumberRevertedEvent;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.booking.domain.model.valueobjects.RoutingStatus;
 import com.example.cargotracker.booking.domain.service.CargoSpecificationDiff;
@@ -107,7 +109,8 @@ public class CargoProjection {
                 // まだ探索の条件を調整していない（US10）。
                 null,
                 null,
-                // まだ確定していない（US13）。
+                // まだ確定していない（US13）。まだ発行していない（US14）。
+                null,
                 null,
                 now,
                 null));
@@ -197,6 +200,39 @@ public class CargoProjection {
     }
 
     /**
+     * 追跡番号の発行（UC12 / US14）。
+     *
+     * <p><b>番号は集約が載せたものを書く。</b> ここで採り直すと、イベントに残った番号と
+     * 投影の番号が食い違う。採番そのものは発行の入口（Controller）が行う。</p>
+     */
+    @EventHandler
+    public void on(TrackingNumberIssuedEvent event) {
+        int updated = cargos.updateTrackingNumber(event.bookingId(),
+                BookingStatus.TRACKING_ISSUED.name(), event.trackingNumber(),
+                event.issuedAt(), clock.instant());
+        if (updated == 0) {
+            log.warn("追跡番号を書ける予約が投影に無い: bookingId={}", event.bookingId());
+            attentionItems.add("PROJECTION_REJECTED", "BOOKING", event.bookingId(),
+                    "ROLE_ROUTING", "追跡番号の対象が投影に無い", "{}", clock.instant());
+        }
+    }
+
+    /**
+     * 追跡番号の発行の取り消し（US14 の補償 / ADR-0010 決定 4）。
+     *
+     * <p><b>予約は確定に戻る。</b> キャンセルではないので、経路設計者がもう一度
+     * 発行できる状態にするだけである。</p>
+     */
+    @EventHandler
+    public void on(TrackingNumberRevertedEvent event) {
+        int updated = cargos.updateTrackingNumberReverted(event.bookingId(),
+                BookingStatus.CONFIRMED.name(), clock.instant());
+        if (updated == 0) {
+            log.warn("取り消しを書ける予約が投影に無い: bookingId={}", event.bookingId());
+        }
+    }
+
+    /**
      * 経路設計への差し戻し（US12）。
      *
      * <p><b>{@code routing_requested_at} は触らない。</b> 引き渡した日時と、通知後に
@@ -254,8 +290,8 @@ public class CargoProjection {
                 // 「いつ直したか」はイベントが持つ。ここで現在時刻を書くと、
                 // 読み直しのたびに最終更新が動く。
                 event.updatedAt(), event.updatedBy(), null, null, null,
-                // 探索の条件と確定日時は UPDATE 文が触らない。
-                null, null, null, now, null));
+                // 探索の条件・確定日時・追跡番号は UPDATE 文が触らない。
+                null, null, null, null, now, null));
 
         if (before != null) {
             recordRevision(before, event);

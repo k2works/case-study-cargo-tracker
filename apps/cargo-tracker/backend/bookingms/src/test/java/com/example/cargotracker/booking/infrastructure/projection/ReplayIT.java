@@ -2,6 +2,10 @@ package com.example.cargotracker.booking.infrastructure.projection;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.lang.reflect.Constructor;
+import java.util.List;
+import org.axonframework.messaging.commandhandling.gateway.CommandGateway;
+
 import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
 import com.example.cargotracker.booking.infrastructure.persistence.AttentionItemMapper;
 import com.example.cargotracker.booking.infrastructure.persistence.CargoSummaryMapper;
@@ -109,5 +113,25 @@ class ReplayIT extends AbstractAxonIntegrationTest {
         assertThat(openAttentionCount())
                 .as("読み直しのたびに増えると、要確認一覧が同じ内容で膨らんで信用されなくなる")
                 .isEqualTo(afterFirstRejection);
+    }
+
+    @Test
+    @DisplayName("ADR-0001 決定 6: 投影はコマンドの送り口を持たない（リプレイで連鎖が走り直さない）")
+    void projectionsCannotSendCommands() {
+        // **投影と Reaction Handler を同じ Processing Group に置くと、投影のリプレイで
+        // InitializeTrackingCommand が再送され、追跡が作り直される。** 分けたことは
+        // パッケージ（application.yml の列挙）で表しているが、それだけでは
+        // 「投影がコマンドを送らない」ことにならない。
+        //
+        // 送り口そのものを持っていないことを見る。持っていなければ送りようがない。
+        List<Class<?>> projections = List.of(CargoProjection.class, ShipperProjection.class);
+        for (Class<?> projection : projections) {
+            for (Constructor<?> constructor : projection.getDeclaredConstructors()) {
+                assertThat(constructor.getParameterTypes())
+                        .as("%s が CommandGateway を持つと、リプレイのたびに連鎖が走り直す",
+                                projection.getSimpleName())
+                        .doesNotContain(CommandGateway.class);
+            }
+        }
     }
 }

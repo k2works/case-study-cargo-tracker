@@ -17,6 +17,9 @@ import com.example.cargotracker.booking.infrastructure.query.BookingQueries.Noti
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.RouteConditionView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.BookingView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.AwaitingConfirmationListView;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.AwaitingTrackingListView;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.AwaitingTrackingView;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindAwaitingTrackingNumberQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.AwaitingConfirmationView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindAwaitingConfirmationQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.CountAwaitingNotificationQuery;
@@ -118,6 +121,16 @@ public class BookingQueryHandler {
                         .toList());
     }
 
+    /** 追跡番号の発行を待っている予約（S02 / 経路設計者。US13 §受入基準 3）。 */
+    @QueryHandler
+    public AwaitingTrackingListView handle(FindAwaitingTrackingNumberQuery query) {
+        return new AwaitingTrackingListView(
+                cargos.findAwaitingTrackingNumber(Math.clamp(query.limit(), 1, 200)).stream()
+                        .map(row -> new AwaitingTrackingView(
+                                row.bookingId(), row.bookingNumber(), row.confirmedAt()))
+                        .toList());
+    }
+
     /** 通知履歴（US12 §受入基準 4）。一度も通知していなければ空。 */
     @QueryHandler
     public NotificationListView handle(FindBookingNotificationsQuery query) {
@@ -179,7 +192,8 @@ public class BookingQueryHandler {
                 row.routingRequestedAt(), row.lastNotifiedAt(),
                 row.returnedToRoutingAt(), row.returnReason(),
                 parsePorts(row.routeExcludeUnlocodes()), row.routeDepartFromUnlocode(),
-                row.confirmedAt(), row.updatedAt(), row.updatedBy());
+                row.confirmedAt(), row.trackingNumber(), row.trackingIssuedAt(),
+                row.updatedAt(), row.updatedBy());
     }
 
     /**

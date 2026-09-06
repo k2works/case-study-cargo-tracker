@@ -43,6 +43,9 @@ export interface BookingView {
   readonly routeDepartFromUnLocode: string | null;
   /** 確定した日時（US13）。未確定なら null。 */
   readonly confirmedAt: string | null;
+  /** 追跡番号と発行日時（US14）。未発行なら null。 */
+  readonly trackingNumber: string | null;
+  readonly trackingIssuedAt: string | null;
   /** 最終更新（US32）。一度も直していなければ null。 */
   readonly updatedAt: string | null;
   readonly updatedBy: string | null;
@@ -57,6 +60,33 @@ export interface BookingView {
 export function confirmBooking(bookingId: string): Promise<{ bookingId: string }> {
   return commandClient(
     `/booking/bookings/${encodeURIComponent(bookingId)}/confirmation`, {});
+}
+
+/**
+ * 追跡番号を発行する（UC12 / US14）。<b>経路設計者だけ</b>が使う。
+ *
+ * <p>本文を送らない。<b>採番はサーバが行う</b>——画面が番号を作ると、同時に 2 件
+ * 発行したときに同じ番号が出る。</p>
+ */
+export function issueTrackingNumber(bookingId: string): Promise<{ bookingId: string }> {
+  return commandClient(
+    `/booking/bookings/${encodeURIComponent(bookingId)}/tracking-number`, {});
+}
+
+/**
+ * 追跡番号の発行を待っている予約（S02 / 経路設計者。US13 §受入基準 3）。
+ *
+ * <p>確定したまま発行を忘れると、荷主は追跡番号を受け取れない。</p>
+ */
+export function fetchAwaitingTrackingNumber():
+Promise<Pending<{ items: AwaitingTrackingView[] }>> {
+  return queryClient('/booking/bookings/awaiting-tracking-number');
+}
+
+export interface AwaitingTrackingView {
+  readonly bookingId: string;
+  readonly bookingNumber: string;
+  readonly confirmedAt: string;
 }
 
 /** 修正の入力（US32）。荷主は変えられない（不変条件 1）。 */

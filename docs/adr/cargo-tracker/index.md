@@ -19,3 +19,4 @@ cargo-tracker プロジェクトのADRドキュメントです。
 
 - 実ドキュメントを追加したら、この一覧を更新します。
 * [ADR-0009 営業への差し戻しを状態遷移にしない](./0009-condition-review-is-not-a-state-transition.md) - 条件では組めないことを営業へ返すとき、経路設計の状態を戻さず記録で表す。差し戻せる状態と、条件調整が経路設計をやり直しにすることも併せて決める。
+* [ADR-0010 サービスをまたぐ連鎖の調整役を Reaction Handler に一本化する](./0010-reaction-handler-as-the-only-coordinator.md) - 予約から追跡開始までの連鎖を BookingReactionHandler + processstate で表し、追跡番号の採番と発行者、そして補償の粒度を決める。
