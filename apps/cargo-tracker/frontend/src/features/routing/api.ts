@@ -131,6 +131,27 @@ export function departurePeriod(from: string, to: string): {
   };
 }
 
+/**
+ * その航海で経路を組んだ予約（S34 / US24）。
+ *
+ * <p>止めても予約側の旅程は自動では戻らない。<b>止める前に</b>誰を巻き込むかを
+ * 読めるようにする（IT5 引き継ぎ 2）。読み口は予約側にある（区間を持つのは
+ * 予約の投影で、航海側は誰が自分を使っているかを知らない）。</p>
+ */
+export function fetchAffectedBookings(
+  voyageNumber: string,
+): Promise<Pending<{ items: AffectedBookingView[] }>> {
+  return queryClient(`/booking/bookings/by-voyage/${encodeURIComponent(voyageNumber)}`);
+}
+
+/** 巻き込む予約 1 件。止めてよいかの判断に要るのは、どの予約かと、いまどの状態か。 */
+export interface AffectedBookingView {
+  readonly bookingId: string;
+  readonly bookingNumber: string;
+  readonly bookingStatus: string;
+  readonly routingStatus: string;
+}
+
 /** その分の最後の秒まで含める。`...T14:59:00Z` → `...T14:59:59Z`。 */
 function endOfSecond(instant: string): string {
   return `${instant.slice(0, 17)}59Z`;

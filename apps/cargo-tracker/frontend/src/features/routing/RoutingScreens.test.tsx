@@ -412,13 +412,27 @@ describe('S30 経路設計作業一覧', () => {
   });
 });
 
+/**
+ * S34 の fetch モック。<b>航海と影響範囲の 2 本を URL で出し分ける。</b>
+ *
+ * <p>1 つの本体を全部の問い合わせに返すと、影響範囲（{@code by-voyage}）の応答が
+ * 航海の形になって画面が壊れる。本物より甘いモックにすると、本物が返さない形で
+ * 検査が通ってしまう。</p>
+ */
+function respondVoyage(body: unknown, status = 200, affected: unknown[] = []) {
+  return vi.spyOn(globalThis, 'fetch').mockImplementation((input) =>
+    Promise.resolve(
+      String(input).includes('/by-voyage/')
+        ? new Response(JSON.stringify({ items: affected }), { status: 200 })
+        : new Response(JSON.stringify(body), { status }),
+    ),
+  );
+}
+
 describe('S34 航海詳細', () => {
   it('寄港地が順に読める', async () => {
     // IT3 では登録した中身を確認する画面が無く、409 の案内が指す先も無かった。
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(
-        JSON.stringify(
-          voyage({
+    respondVoyage(voyage({
             movements: [
               {
                 movementSeq: 1,
@@ -435,11 +449,7 @@ describe('S34 航海詳細', () => {
                 arrivalAt: '2026-09-24T18:00:00Z',
               },
             ],
-          }),
-        ),
-        { status: 200 },
-      ),
-    );
+          }));
 
     renderVoyage('/voyages/V-MOL-001', <VoyageDetailPage />);
 
@@ -451,18 +461,11 @@ describe('S34 航海詳細', () => {
   });
 
   it('対応貨物種別と最終更新が読める', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(
-        JSON.stringify(
-          voyage({
+    respondVoyage(voyage({
             acceptedCargoTypes: ['GENERAL', 'HAZARDOUS'],
             updatedAt: '2026-09-05T02:00:00Z',
             updatedBy: 'routing02',
-          }),
-        ),
-        { status: 200 },
-      ),
-    );
+          }));
 
     renderVoyage('/voyages/V-MOL-001', <VoyageDetailPage />);
 
@@ -471,9 +474,7 @@ describe('S34 航海詳細', () => {
   });
 
   it('一度も更新していなければ最終更新は出さない', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify(voyage()), { status: 200 }),
-    );
+    respondVoyage(voyage());
 
     renderVoyage('/voyages/V-MOL-001', <VoyageDetailPage />);
 
@@ -482,9 +483,7 @@ describe('S34 航海詳細', () => {
   });
 
   it('更新画面へ行ける', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify(voyage()), { status: 200 }),
-    );
+    respondVoyage(voyage());
 
     renderVoyage('/voyages/V-MOL-001', <VoyageDetailPage />);
 
@@ -496,9 +495,7 @@ describe('S34 航海詳細', () => {
 
   it('キャンセル済みの航海には更新の導線を出さない', async () => {
     // 集約が断る（不変条件 5）。画面に出しておくと、押してから 409 で気づく。
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify(voyage({ cancelled: true })), { status: 200 }),
-    );
+    respondVoyage(voyage({ cancelled: true }));
 
     renderVoyage('/voyages/V-MOL-001', <VoyageDetailPage />);
 
@@ -506,10 +503,60 @@ describe('S34 航海詳細', () => {
     expect(screen.queryByRole('link', { name: '更新する' })).not.toBeInTheDocument();
   });
 
+  const AFFECTED = [
+    {
+      bookingId: 'b-1',
+      bookingNumber: 'B-2026-0903-0001',
+      bookingStatus: 'ROUTE_PROPOSED',
+      routingStatus: 'ROUTED',
+    },
+    {
+      bookingId: 'b-2',
+      bookingNumber: 'B-2026-0903-0002',
+      bookingStatus: 'ROUTE_NOTIFIED',
+      routingStatus: 'ROUTED',
+    },
+  ];
+
+  it('H.2: 止める前に、巻き込む予約の件数と行き先が読める（US24）', async () => {
+    // 止めても予約側の旅程は自動では戻らない。件数だけ出しても、そこへ行けなければ
+    // 仕事は進まない（マニュアル 07 章は「控えてください」と書いていた）。
+    respondVoyage(voyage(), 200, AFFECTED);
+
+    renderVoyage('/voyages/V-MOL-001', <VoyageDetailPage />);
+
+    expect(await screen.findByText(/この航海で経路を組んだ予約が 2 件あります/))
+      .toBeInTheDocument();
+    // 行き先が無ければ、件数は不安を増やすだけ。
+    expect(await screen.findByRole('link', { name: 'B-2026-0903-0001' }))
+      .toHaveAttribute('href', '/bookings/b-1');
+    // 状態は列挙名で見せない。
+    expect(screen.getByText('通知済み')).toBeInTheDocument();
+    expect(screen.queryByText('ROUTE_NOTIFIED')).not.toBeInTheDocument();
+  });
+
+  it('H.2: 巻き込む予約が無ければ、そのことを言う（黙らない）', async () => {
+    // 黙ると「まだ読み込んでいない」と区別が付かず、止めてよいのか分からない。
+    respondVoyage(voyage(), 200, []);
+
+    renderVoyage('/voyages/V-MOL-001', <VoyageDetailPage />);
+
+    expect(await screen.findByText(/この航海で経路を組んだ予約はありません/))
+      .toBeInTheDocument();
+  });
+
+  it('H.2: キャンセル済みの航海でも巻き込んだ予約は読める', async () => {
+    // 止めたあとこそ「誰を組み直すか」を読む場面。止めたら消える形にしない。
+    respondVoyage(voyage({ cancelled: true }), 200, [AFFECTED[0]]);
+
+    renderVoyage('/voyages/V-MOL-001', <VoyageDetailPage />);
+
+    expect(await screen.findByText(/この航海で経路を組んだ予約が 1 件あります/))
+      .toBeInTheDocument();
+  });
+
   it('R.1: 理由を入れてキャンセルできる', async () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify(voyage()), { status: 200 }),
-    );
+    const fetchSpy = respondVoyage(voyage());
 
     renderVoyage('/voyages/V-MOL-001', <VoyageDetailPage />);
 
@@ -527,9 +574,7 @@ describe('S34 航海詳細', () => {
 
   it('R.1: 理由が空のままでは送らない', async () => {
     // 集約も断るが、押してから 400 で気づく形にしない。
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify(voyage()), { status: 200 }),
-    );
+    const fetchSpy = respondVoyage(voyage());
 
     renderVoyage('/voyages/V-MOL-001', <VoyageDetailPage />);
 
@@ -543,19 +588,12 @@ describe('S34 航海詳細', () => {
   });
 
   it('R.1: キャンセル済みには止める導線も理由も出す', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(
-        JSON.stringify(
-          voyage({
+    respondVoyage(voyage({
             cancelled: true,
             cancelledAt: '2026-09-05T02:00:00Z',
             cancelReason: '運航中止',
             cancelledBy: 'routing02',
-          }),
-        ),
-        { status: 200 },
-      ),
-    );
+          }));
 
     renderVoyage('/voyages/V-MOL-001', <VoyageDetailPage />);
 
@@ -568,11 +606,9 @@ describe('S34 航海詳細', () => {
   });
 
   it('投影がまだなら「反映中」と伝える（見つかりませんにしない）', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(
-        JSON.stringify({ voyageNumber: 'V-MOL-001', message: '反映までしばらくお待ちください' }),
-        { status: 202 },
-      ),
+    respondVoyage(
+      { voyageNumber: 'V-MOL-001', message: '反映までしばらくお待ちください' },
+      202,
     );
 
     renderVoyage('/voyages/V-MOL-001', <VoyageDetailPage />);

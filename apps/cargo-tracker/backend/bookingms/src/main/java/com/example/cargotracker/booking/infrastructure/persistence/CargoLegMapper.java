@@ -22,6 +22,22 @@ public interface CargoLegMapper {
     /** 積む順。並び順そのものが業務の意味を持つ。 */
     List<CargoLegRow> findByBooking(@Param("bookingId") String bookingId);
 
+    /**
+     * その航海で経路を組んだ予約（S34 / US24）。予約番号の順に返す。
+     *
+     * <p><b>1 予約 1 行にする。</b> 同じ航海を 2 区間で使う旅程があるので、区間ごとに
+     * 返すと同じ予約が 2 度数えられ、件数が実際より多くなる。</p>
+     */
+    List<AffectedBookingRow> findBookingsByVoyage(@Param("voyageNumber") String voyageNumber);
+
+    /** 巻き込む予約 1 件。状態は cargo_summary から採る。 */
+    record AffectedBookingRow(
+            String bookingId,
+            String bookingNumber,
+            String bookingStatus,
+            String routingStatus) {
+    }
+
     record CargoLegRow(
             String bookingId,
             int legSeq,

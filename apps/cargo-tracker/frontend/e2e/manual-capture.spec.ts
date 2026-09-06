@@ -278,6 +278,23 @@ test.describe('マニュアルの画面キャプチャ', () => {
         body: JSON.stringify(SAMPLE_ROUTED_BOOKING),
       }),
     );
+    // 航海を止める前の影響範囲（S34 / US24）。**1 件の読み口より後**に置く。
+    await page.route('**/api/v1/booking/bookings/by-voyage/*', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: [
+            {
+              bookingId: '77777777-7777-7777-7777-777777777777',
+              bookingNumber: 'B-2026-0903-0002',
+              bookingStatus: 'ROUTE_PROPOSED',
+              routingStatus: 'ROUTED',
+            },
+          ],
+        }),
+      }),
+    );
     await page.route('**/api/v1/booking/bookings/*/itinerary', (route) =>
       route.fulfill({
         status: 200,

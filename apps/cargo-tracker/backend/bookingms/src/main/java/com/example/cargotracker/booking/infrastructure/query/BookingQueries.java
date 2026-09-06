@@ -85,6 +85,37 @@ public final class BookingQueries {
     public record ItineraryView(List<ItineraryLegView> legs) {
     }
 
+    /**
+     * その航海で経路を組んだ予約（S34 / US24）。
+     *
+     * <p>航海を止める前に、巻き込む予約を数え、そこへ行けるようにする。止めても
+     * 予約側の旅程は自動では戻らないので、<b>誰が影響を受けるかを止める前に知る</b>
+     * 必要がある。マニュアル 07 章は「控えてください」と書いているが、控える先が
+     * 無かった（IT5 引き継ぎ 2）。</p>
+     *
+     * <p>読むのは {@code cargo_leg}。{@code voyage_number} の索引が既にある。</p>
+     */
+    public record FindBookingsByVoyageQuery(String voyageNumber) {
+    }
+
+    /**
+     * 巻き込む予約 1 件。
+     *
+     * <p><b>一覧の {@code BookingView} を使い回さない。</b> 止める判断に要るのは
+     * 「どの予約が」「いまどの状態か」だけで、荷主名や貨物の寸法まで運ぶと、
+     * 航海を読む人に予約の中身を余分に見せることになる。</p>
+     */
+    public record AffectedBookingView(
+            String bookingId,
+            String bookingNumber,
+            String bookingStatus,
+            String routingStatus) {
+    }
+
+    /** 巻き込む予約の一覧。件数は {@code items().size()} で足りる。 */
+    public record AffectedBookingListView(List<AffectedBookingView> items) {
+    }
+
     /** 画面に出す予約。荷主名は鍵破棄後に {@code null} になる。 */
     public record BookingView(
             String bookingId,

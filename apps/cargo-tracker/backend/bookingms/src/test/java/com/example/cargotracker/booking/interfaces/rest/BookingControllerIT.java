@@ -89,6 +89,21 @@ class BookingControllerIT extends AbstractAxonIntegrationTest {
     }
 
     @Test
+    @DisplayName("S34: 経路を組んでいない航海の影響範囲は空の一覧を返す（404 にしない）")
+    void returnsEmptyAffectedBookingsForUnusedVoyage() {
+        // 404 にすると「そんな航海は無い」と読める。止めてよいかを確かめに来た人が、
+        // 航海番号を打ち間違えたのだと思って探し直すことになる。
+        //
+        // **画面から呼ぶ経路を HTTP の層で 1 本通す。** クエリだけを見ていると、
+        // /{bookingId} に吸われて予約 ID として解決される（202）ことに気づけない。
+        ResponseEntity<JsonMap> response =
+                get("/by-voyage/V-NONE-" + System.nanoTime());
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().get("items").toString()).isEqualTo("[]");
+    }
+
+    @Test
     @DisplayName("投影がまだなら 404 ではなく 202 を返す")
     void returnsAcceptedWhileProjectionIsBehind() {
         // 404 にすると「登録に失敗した」と読めてしまう。

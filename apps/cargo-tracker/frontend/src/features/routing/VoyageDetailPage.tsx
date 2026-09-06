@@ -17,8 +17,15 @@ import {
   TD,
   TH,
 } from '@/shared/ui/styles';
-import { acceptedCargoTypeLabel, cancelVoyage, fetchVoyage, formatVoyageTime } from './api';
+import {
+  acceptedCargoTypeLabel,
+  cancelVoyage,
+  fetchAffectedBookings,
+  fetchVoyage,
+  formatVoyageTime,
+} from './api';
 import type { VoyageView } from './api';
+import { bookingStatusLabel, routingStatusLabel } from '@/features/bookings/api';
 import { canCancel, canUpdateSchedule } from './voyageRules';
 
 /**
@@ -44,6 +51,13 @@ export function VoyageDetailPage() {
       setReason('');
       return queryClient.invalidateQueries({ queryKey: ['voyage', voyageNumber] });
     },
+  });
+  // 止める前に、巻き込む予約を読む（US24 / IT5 引き継ぎ 2）。**止めたあとも読む。**
+  // 止めたあとこそ「誰を組み直すか」を確かめる場面なので、キャンセル済みで
+  // 消える形にしない。
+  const affected = useQuery({
+    queryKey: ['voyage', voyageNumber, 'affected-bookings'],
+    queryFn: () => fetchAffectedBookings(voyageNumber),
   });
   const { data, isPending, isError } = useQuery({
     queryKey: ['voyage', voyageNumber],
@@ -88,6 +102,56 @@ export function VoyageDetailPage() {
               </p>
             )}
           </div>
+
+          {/* **止めても予約側の旅程は自動では戻らない。** 誰を巻き込むかを止める前に
+              読めるようにする。件数だけでは仕事が進まないので、予約詳細へ行ける
+              ようにする（IT5 引き継ぎ 2）。 */}
+          <h2 className={`${SECTION_TITLE} mt-6`}>この航海を使っている予約</h2>
+          {affected.isPending && (
+            <output className={`${NOTICE} mt-2 block`}>読み込み中…</output>
+          )}
+          {affected.isError && (
+            <p role="alert" className={`${ALERT} mt-2`}>
+              この航海を使っている予約を取得できませんでした。止める前に確かめてください
+            </p>
+          )}
+          {affected.data?.state === 'ready' && affected.data.value.items.length === 0 && (
+            <output className={`${NOTICE} mt-2 block`}>
+              この航海で経路を組んだ予約はありません
+            </output>
+          )}
+          {affected.data?.state === 'ready' && affected.data.value.items.length > 0 && (
+            <>
+              <output className={`${NOTICE} mt-2 block`}>
+                この航海で経路を組んだ予約が {affected.data.value.items.length} 件あります。
+                <b>止めても旅程は自動では戻りません。</b>経路設計をやり直してください
+              </output>
+              <div className={`${CARD} mt-2 overflow-x-auto`}>
+                <table className={TABLE}>
+                  <thead>
+                    <tr>
+                      <th scope="col" className={TH}>予約番号</th>
+                      <th scope="col" className={TH}>予約の状態</th>
+                      <th scope="col" className={TH}>経路設定状態</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {affected.data.value.items.map((item) => (
+                      <tr key={item.bookingId} data-testid={`affected-${item.bookingId}`}>
+                        <td className={TD}>
+                          <Link to={`/bookings/${item.bookingId}`} className={LINK}>
+                            {item.bookingNumber}
+                          </Link>
+                        </td>
+                        <td className={TD}>{bookingStatusLabel(item.bookingStatus)}</td>
+                        <td className={TD}>{routingStatusLabel(item.routingStatus)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
 
           <h2 className={`${SECTION_TITLE} mt-6`}>寄港地</h2>
           <div className={`${CARD} mt-2 overflow-x-auto`}>

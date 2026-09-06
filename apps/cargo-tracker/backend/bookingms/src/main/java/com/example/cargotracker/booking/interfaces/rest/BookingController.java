@@ -21,7 +21,9 @@ import com.example.cargotracker.booking.infrastructure.query.BookingQueries.Book
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.CountBookingsByStatusQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.AffectedBookingListView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingItineraryQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingsByVoyageQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingRevisionsQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.ItineraryView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.RevisionListView;
@@ -33,6 +35,8 @@ import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos.BookCargoRequest;
 import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos.AssignRouteRequest;
 import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos.BookCargoResponse;
+import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos.AffectedBookingResponse;
+import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos.AffectedBookingsResponse;
 import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos.ItineraryLegResponse;
 import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos.ItineraryResponse;
 import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos.RouteCandidateResponse;
@@ -214,6 +218,26 @@ public class BookingController {
         return ResponseEntity.ok(new ItineraryResponse(view.legs().stream()
                 .map(leg -> new ItineraryLegResponse(leg.legSeq(), leg.voyageNumber(),
                         leg.loadUnLocode(), leg.unloadUnLocode(), leg.loadAt(), leg.unloadAt()))
+                .toList()));
+    }
+
+    /**
+     * その航海で経路を組んだ予約（S34 / US24）。
+     *
+     * <p>航海を止めると経路候補から外れるが、<b>既に組んだ予約の旅程は自動では
+     * 戻らない</b>。止める前に誰を巻き込むかを読めるようにする（IT5 引き継ぎ 2）。</p>
+     *
+     * <p>読むのは航海を止める経路設計者だけなので、宣言は
+     * {@code /bookings/by-voyage/*} を {@code /bookings/**} より先に置いて絞る。
+     * 予約の一覧に相乗りさせると、営業・追跡にも開くことになる。</p>
+     */
+    @GetMapping("/by-voyage/{voyageNumber}")
+    public ResponseEntity<AffectedBookingsResponse> byVoyage(@PathVariable String voyageNumber) {
+        AffectedBookingListView view = queries.query(
+                new FindBookingsByVoyageQuery(voyageNumber), AffectedBookingListView.class);
+        return ResponseEntity.ok(new AffectedBookingsResponse(view.items().stream()
+                .map(item -> new AffectedBookingResponse(item.bookingId(), item.bookingNumber(),
+                        item.bookingStatus(), item.routingStatus()))
                 .toList()));
     }
 

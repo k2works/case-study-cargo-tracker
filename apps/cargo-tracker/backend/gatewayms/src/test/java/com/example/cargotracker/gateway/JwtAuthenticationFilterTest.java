@@ -244,6 +244,22 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
+    @DisplayName("航海を止める前の影響範囲は経路設計者だけに開く（S34 / US24）")
+    void restrictsAffectedBookingsToRoutingRole() throws Exception {
+        // 予約番号と状態を並べて返すので、広い宣言（/bookings/**）に吸われると
+        // 営業・追跡が全予約を航海単位で引ける読み口になる。
+        String affected = "/api/v1/booking/bookings/by-voyage/V-MOL-001";
+        assertThat(run(affected, "Bearer " + tokenWithRoles("ROLE_SALES")).getStatus())
+                .as("営業が航海の影響範囲を引けてはいけない")
+                .isEqualTo(403);
+        assertThat(run(affected, "Bearer " + tokenWithRoles("ROLE_TRACKER")).getStatus())
+                .isEqualTo(403);
+        assertThat(run(affected, "Bearer " + tokenWithRoles("ROLE_ROUTING")).getStatus())
+                .as("経路設計者は引ける")
+                .isNotEqualTo(403);
+    }
+
+    @Test
     @DisplayName("予約の参照は営業以外にも開いたままにする")
     void keepsBookingReadOpen() throws Exception {
         // 修正を絞ったついでに参照まで絞ると、経路設計者が予約の詳細を開けなくなる。

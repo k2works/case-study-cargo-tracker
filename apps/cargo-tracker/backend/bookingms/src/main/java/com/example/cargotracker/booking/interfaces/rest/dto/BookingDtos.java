@@ -156,6 +156,17 @@ public final class BookingDtos {
             java.time.Instant unloadAt) {
     }
 
+    /** その航海で経路を組んだ予約（S34 / US24）。件数は items の長さで足りる。 */
+    public record AffectedBookingsResponse(java.util.List<AffectedBookingResponse> items) {
+    }
+
+    public record AffectedBookingResponse(
+            String bookingId,
+            String bookingNumber,
+            String bookingStatus,
+            String routingStatus) {
+    }
+
     public record BookCargoResponse(String bookingId) {
     }
 }

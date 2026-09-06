@@ -3,10 +3,13 @@ package com.example.cargotracker.booking.infrastructure.query;
 import com.example.cargotracker.booking.infrastructure.persistence.CargoLegMapper;
 import com.example.cargotracker.booking.infrastructure.persistence.CargoRevisionMapper;
 import com.example.cargotracker.booking.infrastructure.persistence.CargoSummaryMapper;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.AffectedBookingListView;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.AffectedBookingView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.BookingListView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.BookingView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.CountBookingsByStatusQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingsByVoyageQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingItineraryQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingRevisionsQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingsQuery;
@@ -40,6 +43,21 @@ public class BookingQueryHandler {
                 .map(row -> new ItineraryLegView(row.legSeq(), row.voyageNumber(),
                         row.loadUnlocode(), row.unloadUnlocode(), row.loadAt(), row.unloadAt()))
                 .toList());
+    }
+
+    /**
+     * その航海で経路を組んだ予約（S34 / US24）。組んでいなければ空。
+     *
+     * <p>止めても予約側の旅程は自動では戻らない。<b>止める前に</b>誰を巻き込むかを
+     * 読めるようにする（IT5 引き継ぎ 2）。</p>
+     */
+    @QueryHandler
+    public AffectedBookingListView handle(FindBookingsByVoyageQuery query) {
+        return new AffectedBookingListView(
+                legs.findBookingsByVoyage(query.voyageNumber()).stream()
+                        .map(row -> new AffectedBookingView(row.bookingId(), row.bookingNumber(),
+                                row.bookingStatus(), row.routingStatus()))
+                        .toList());
     }
 
     /** 修正履歴（US32 §受入基準 4）。一度も直していなければ空。 */

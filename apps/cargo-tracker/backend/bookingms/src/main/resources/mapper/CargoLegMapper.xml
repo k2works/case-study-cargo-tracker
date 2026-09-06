@@ -30,6 +30,26 @@
         )
     </insert>
 
+    <resultMap id="affectedBookingRow"
+               type="com.example.cargotracker.booking.infrastructure.persistence.CargoLegMapper$AffectedBookingRow">
+        <constructor>
+            <idArg column="booking_id" javaType="string"/>
+            <arg column="booking_number" javaType="string"/>
+            <arg column="booking_status" javaType="string"/>
+            <arg column="routing_status" javaType="string"/>
+        </constructor>
+    </resultMap>
+
+    <!-- その航海で経路を組んだ予約（S34）。同じ航海を 2 区間で使う旅程があるので
+         DISTINCT で 1 予約 1 行にする。区間ごとに返すと件数が実際より多くなる。 -->
+    <select id="findBookingsByVoyage" resultMap="affectedBookingRow">
+        SELECT DISTINCT s.booking_id, s.booking_number, s.booking_status, s.routing_status
+        FROM cargo_leg l
+        JOIN cargo_summary s ON s.booking_id = l.booking_id
+        WHERE l.voyage_number = #{voyageNumber}
+        ORDER BY s.booking_number
+    </select>
+
     <select id="findByBooking" resultMap="legRow">
         SELECT * FROM cargo_leg WHERE booking_id = #{bookingId} ORDER BY leg_seq
     </select>
