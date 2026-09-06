@@ -205,7 +205,7 @@ class RouteCandidateEndpointIT extends AbstractAxonIntegrationTest {
                     .retrieve().toEntity(JsonMap.class);
             assertThat(LAST_REQUEST.get()).isNotNull();
             assertThat(LAST_REQUEST.get().excludePorts())
-                    .extracting(port -> port.unLocode().value())
+                    .extracting(excluded -> excluded.unLocode().value())
                     .containsExactlyInAnyOrder("SGSIN", "HKHKG");
             assertThat(LAST_REQUEST.get().departFrom()).isNotNull();
             assertThat(LAST_REQUEST.get().departFrom().unLocode().value()).isEqualTo("JPOSA");
