@@ -1,12 +1,14 @@
 package com.example.cargotracker.booking.domain.model.aggregates;
 
 import com.example.cargotracker.booking.domain.model.commands.IssueTrackingNumberCommand;
+import com.example.cargotracker.booking.domain.model.commands.RevertTrackingNumberCommand;
 import com.example.cargotracker.booking.domain.model.events.BookingConfirmedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoRoutedEvent;
 import com.example.cargotracker.booking.domain.model.events.RoutingRequestedEvent;
 import com.example.cargotracker.booking.domain.model.events.ShipperNotifiedEvent;
 import com.example.cargotracker.booking.domain.model.events.TrackingNumberIssuedEvent;
+import com.example.cargotracker.booking.domain.model.events.TrackingNumberRevertedEvent;
 import com.example.cargotracker.shared.domain.error.IllegalTransition;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -127,6 +129,52 @@ class CargoTrackingNumberTest {
     void rejectsUnknownBooking() {
         fixture.given().noPriorActivity()
                 .when().command(new IssueTrackingNumberCommand("B-NONE", "T-0001", "routing01"))
+                .then().exception(IllegalTransition.class);
+    }
+
+    @Test
+    @DisplayName("ADR-0010 決定 4: 発行済みの追跡番号を取り消せる（予約は確定に戻る）")
+    void revertsTrackingNumber() {
+        // 補償。**キャンセルではない**ので、経路設計者がもう一度発行できる状態にする。
+        fixture.given().events(booked(), new RoutingRequestedEvent("B-0001", "sales01"),
+                        routed(),
+                        new ShipperNotifiedEvent("B-0001", "s@example.com", "案内", "sales01", NOW),
+                        new BookingConfirmedEvent("B-0001", "sales01", NOW),
+                        new TrackingNumberIssuedEvent("B-0001", "T-0001", "JPTYO", "USNYC",
+                                "GENERAL", List.of(), "routing01", NOW))
+                .when().command(new RevertTrackingNumberCommand("B-0001", "届きませんでした"))
+                .then().success()
+                .events(new TrackingNumberRevertedEvent("B-0001", "T-0001",
+                        "届きませんでした", NOW));
+    }
+
+    @Test
+    @DisplayName("ADR-0010 決定 4: 取り消したあとはもう一度発行できる")
+    void allowsReissueAfterRevert() {
+        fixture.given().events(booked(), new RoutingRequestedEvent("B-0001", "sales01"),
+                        routed(),
+                        new ShipperNotifiedEvent("B-0001", "s@example.com", "案内", "sales01", NOW),
+                        new BookingConfirmedEvent("B-0001", "sales01", NOW),
+                        new TrackingNumberIssuedEvent("B-0001", "T-0001", "JPTYO", "USNYC",
+                                "GENERAL", List.of(), "routing01", NOW),
+                        new TrackingNumberRevertedEvent("B-0001", "T-0001", "届かず", NOW))
+                .when().command(new IssueTrackingNumberCommand("B-0001", "T-0002", "routing01"))
+                .then().success();
+    }
+
+    @Test
+    @DisplayName("発行していない予約の追跡番号は取り消せない（再試行で 2 度届いても 1 度だけ効く）")
+    void rejectsRevertWhenNotIssued() {
+        fixture.given().events(confirmed())
+                .when().command(new RevertTrackingNumberCommand("B-0001", "届かず"))
+                .then().exception(IllegalTransition.class);
+    }
+
+    @Test
+    @DisplayName("受け付けていない予約の追跡番号は取り消せない（500 にしない）")
+    void rejectsRevertForUnknownBooking() {
+        fixture.given().noPriorActivity()
+                .when().command(new RevertTrackingNumberCommand("B-NONE", "届かず"))
                 .then().exception(IllegalTransition.class);
     }
 }

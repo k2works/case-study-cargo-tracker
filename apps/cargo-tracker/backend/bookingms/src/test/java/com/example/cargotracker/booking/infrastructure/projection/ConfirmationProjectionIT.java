@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.cargotracker.booking.domain.model.events.BookingConfirmedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
+import com.example.cargotracker.booking.domain.model.events.TrackingNumberIssuedEvent;
+import com.example.cargotracker.booking.domain.model.events.TrackingNumberRevertedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoRoutedEvent;
 import com.example.cargotracker.booking.domain.model.events.RoutingRequestedEvent;
 import com.example.cargotracker.booking.domain.model.events.ShipperNotifiedEvent;
@@ -98,5 +100,53 @@ class ConfirmationProjectionIT extends AbstractAxonIntegrationTest {
 
     private List<AwaitingConfirmationView> awaiting() {
         return queries.handle(new FindAwaitingConfirmationQuery(200)).items();
+    }
+
+    @Test
+    @DisplayName("US14: 発行と取り消しが投影に出る（取り消すと番号が消えて確定に戻る）")
+    void trackingNumberIsProjectedAndReverted() {
+        String bookingId = notified();
+        projection.on(new BookingConfirmedEvent(bookingId, "sales01", AT));
+
+        projection.on(new TrackingNumberIssuedEvent(bookingId, "T-2026-000099",
+                "JPTYO", "USNYC", "GENERAL", List.of(), "routing01", AT));
+
+        BookingView issued = booking(bookingId);
+        assertThat(issued.bookingStatus()).isEqualTo("TRACKING_ISSUED");
+        assertThat(issued.trackingNumber()).isEqualTo("T-2026-000099");
+        assertThat(issued.trackingIssuedAt()).isEqualTo(AT);
+
+        // 補償（ADR-0010 決定 4）。**キャンセルではない**——確定に戻り、
+        // 経路設計者がもう一度発行できる。
+        projection.on(new TrackingNumberRevertedEvent(bookingId, "T-2026-000099",
+                "届きませんでした", AT));
+
+        BookingView reverted = booking(bookingId);
+        assertThat(reverted.bookingStatus()).isEqualTo("CONFIRMED");
+        assertThat(reverted.trackingNumber()).isNull();
+    }
+
+    @Test
+    @DisplayName("投影に無い予約への発行・取り消しは 500 にせず要確認一覧へ回す")
+    void unknownBookingGoesToAttentionList() {
+        String unknown = "B-NONE-" + System.nanoTime();
+
+        projection.on(new TrackingNumberIssuedEvent(unknown, "T-X", "JPTYO", "USNYC",
+                "GENERAL", List.of(), "routing01", AT));
+        projection.on(new TrackingNumberRevertedEvent(unknown, "T-X", "届かず", AT));
+
+        assertThat(booking(unknown))
+                .as("投影が無いだけで投影全体を止めない（要確認一覧で気づく）")
+                .isNull();
+    }
+
+    @Test
+    @DisplayName("US13: 確定を書ける予約が投影に無くても投影を止めない")
+    void unknownBookingConfirmationIsRecorded() {
+        String unknown = "B-NONE-" + System.nanoTime();
+
+        projection.on(new BookingConfirmedEvent(unknown, "sales01", AT));
+
+        assertThat(booking(unknown)).isNull();
     }
 }

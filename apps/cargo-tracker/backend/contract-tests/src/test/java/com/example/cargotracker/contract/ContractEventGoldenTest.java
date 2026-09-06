@@ -45,6 +45,11 @@ class ContractEventGoldenTest {
         return new ClassFileImporter()
                 .importPackages("com.example.cargotracker.shared.contract.event").stream()
                 .filter(JavaClass::isRecord)
+                // 入れ子（Leg など）は親の形の一部として一緒に固定される。
+                // **クエリ・コマンドの検査と同じ形にする**——ここだけ除外していな
+                // かったので、入れ子を持つ契約イベントを足した瞬間に赤くなった
+                // （IT7 で実測）。3 つの走査が違う形をしていると、こういう差が出る。
+                .filter(type -> type.getEnclosingClass().isEmpty())
                 .map(JavaClass::getSimpleName)
                 .sorted()
                 .toList();

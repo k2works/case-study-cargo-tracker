@@ -97,6 +97,16 @@ class TrackingActivityTest {
                 .then().exception(BusinessRuleViolation.class);
     }
 
+    @Test
+    @DisplayName("US14: 予約 ID が無い（null）追跡も始めない")
+    void rejectsNullBookingId() {
+        // 空文字だけを試すと、null の分岐が残る。
+        fixture.given().noPriorActivity()
+                .when().command(new InitializeTrackingCommand("T-2026-0001", null,
+                        "JPTYO", "USNYC", "GENERAL", initialize().legs(), ISSUED))
+                .then().exception(BusinessRuleViolation.class);
+    }
+
     @ParameterizedTest
     @EnumSource(TransportStatus.class)
     @DisplayName("輸送状態は列挙名でない日本語の呼び名を持つ")

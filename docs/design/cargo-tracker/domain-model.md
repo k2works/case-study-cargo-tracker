@@ -4,7 +4,7 @@ title: "ドメインモデル設計 - 国際貨物輸送管理システム（CQR
 description: "CQRS / Event Sourcing 版 Cargo Tracker のドメインモデル設計。6 コンテキストの集約・不変条件・コマンド・イベント（内部 / 契約）・状態遷移・Reaction Handler を、イベントを永続化フォーマットとして定義する。"
 tags: [design,domain-model,ddd,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-06T05:09:34Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-06T15:08:45Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -66,7 +66,7 @@ quadrantChart
 | 予約 | Booking | `Cargo` 集約 | 貨物の輸送予約。`BookingId` で識別 |
 | 予約番号 | Booking ID | `BookingId` | 予約を識別する一意な番号 |
 | 見積 | Quotation | `Quotation` | 予約前の概算。集約ルート |
-| 追跡番号 | Tracking Number | `TrackingNumber` | 荷主が貨物を追跡するための一意な番号 |
+| 追跡番号 | Tracking Number | `TrackingNumber` | 荷主が貨物を追跡するための一意な番号。**bookingms と trackingms でそれぞれの型を持つ**（`VoyageNumber` と同じ形。契約では文字列で運ぶ）。採番は投影側（[ADR-0010](../../adr/cargo-tracker/0010-reaction-handler-as-the-only-coordinator.md) 決定 2） |
 | 経路仕様 | Route Specification | `RouteSpecification` | 出発地・目的地・到着期限の指定 |
 | 旅程 | Itinerary | `CargoItinerary` | 確定した輸送区間（Leg）の順序付き列 |
 | 輸送区間 | Leg | `Leg` | 航海単位の輸送区間（積込港・荷降港・日時・航海番号） |

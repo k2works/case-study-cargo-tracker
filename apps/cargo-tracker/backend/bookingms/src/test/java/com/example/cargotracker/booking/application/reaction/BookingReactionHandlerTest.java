@@ -264,4 +264,36 @@ class BookingReactionHandlerTest {
 
         assertThat(processes.find(BookingReactionHandler.PROCESS_TYPE, "b-unknown")).isEmpty();
     }
+
+    @Test
+    @DisplayName("終わった連鎖に遅れて届いたイベントは送り直さない（追跡が作り直される）")
+    void doesNotResendForCompletedProcess() {
+        handler.on(issued());
+        handler.on(new TrackingInitializedEvent("T-2026-0001", "b-1", "JPTYO", "USNYC",
+                "GENERAL", List.of(), NOW));
+        int sentSoFar = commands.sent.size();
+
+        handler.on(issued());
+
+        assertThat(commands.sent)
+                .as("終わった連鎖に送り直すと、trackingms に追跡がもう 1 つできる")
+                .hasSize(sentSoFar);
+    }
+
+    @Test
+    @DisplayName("段が進まなかった応答は黙って完了にしない")
+    void doesNotCompleteWhenStepDidNotAdvance() {
+        // 1 段目を飛ばして 2 段目だけが届いた形。行はあるが段が合わない。
+        processes.start(BookingReactionHandler.PROCESS_TYPE, "b-2",
+                BookingReactionHandler.STEP_INITIALIZE_TRACKING, 3, Map.of());
+
+        handler.on(new TrackingInitializedEvent("T-2", "b-2", "JPTYO", "USNYC",
+                "GENERAL", List.of(), NOW));
+
+        assertThat(processes.find(BookingReactionHandler.PROCESS_TYPE, "b-2"))
+                .get()
+                .satisfies(state -> assertThat(state.allStepsDone())
+                        .as("段が残っているのに完了にすると、抜けに気づけない")
+                        .isFalse());
+    }
 }
