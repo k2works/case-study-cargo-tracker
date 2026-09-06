@@ -388,8 +388,8 @@ export function BookingDetailPage() {
               {returning && (
                 <div className={`${CARD} space-y-2`}>
                   <p className="text-sm">
-                    荷主が経路の変更を求めたときに戻します。
-                    <b>確定した旅程はそのまま残ります。</b>
+                    荷主が経路の変更を求めたときに戻します。<b>確定した旅程は
+                    そのまま残ります。</b>
                   </p>
                   <label htmlFor="return-reason" className={LABEL}>
                     戻す理由

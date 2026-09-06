@@ -225,8 +225,8 @@ export function RoutingWorkbenchPage() {
             {sendingBack && (
               <div className="space-y-2 border-t border-gray-200 pt-3">
                 <p className="text-sm">
-                  条件を変えても組めないときは、営業へ見直しを頼めます。
-                  <b>予約はこのまま経路設計の作業一覧に残ります。</b>
+                  条件を変えても組めないときは、営業へ見直しを頼めます。<b>予約は
+                  このまま経路設計の作業一覧に残ります。</b>
                 </p>
                 <label htmlFor="review-reason" className={LABEL}>
                   差し戻す理由

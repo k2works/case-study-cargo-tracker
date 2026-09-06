@@ -154,8 +154,13 @@ public final class BookingQueries {
      * 荷主へ通知していない経路確定済みの予約の件数（S02 / 営業。US12）。
      *
      * <p>履歴テーブルを数えず {@code last_notified_at} で絞る。</p>
+     *
+     * <p><b>引数を持たない。</b> Axon のクエリは<b>型そのものが問い合わせの識別子</b>で、
+     * この問い合わせに絞り込みの余地は無い（「経路が決まっていて、まだ通知していない」
+     * は 1 つの状態である）。数えるだけの引数を足すと、呼ぶ側が「別の状態でも数え
+     * られる」と読んでしまう。静的解析の「空のクラス」指摘はこの形に当たらない。</p>
      */
-    public record CountAwaitingNotificationQuery() {
+    public record CountAwaitingNotificationQuery() { // NOSONAR: 型が問い合わせの識別子
     }
 
     /** 通知履歴（S22 / US12 §受入基準 4）。新しい通知が先。 */
