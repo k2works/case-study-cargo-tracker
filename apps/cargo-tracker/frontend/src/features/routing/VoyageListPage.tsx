@@ -151,7 +151,7 @@ export function VoyageListPage() {
             「その港へ行く便が無い」と読まれる（経路の探索は US08）。 */}
         <p className="text-sm text-gray-600">
           始発港と最終港で絞り込みます。途中の寄港地では絞り込めません。
-          出発日は協定世界時（UTC）で判定します。
+          出発日は日本時間で判定します。
         </p>
         <div className="grid gap-3 sm:grid-cols-3">
           <label className={LABEL}>
@@ -188,7 +188,7 @@ export function VoyageListPage() {
             </select>
           </label>
           <label className={LABEL}>
-            <span>出発日（開始・UTC）</span>
+            <span>出発日（開始）</span>
             <input
               className={FIELD}
               type="date"
@@ -197,7 +197,7 @@ export function VoyageListPage() {
             />
           </label>
           <label className={LABEL}>
-            <span>出発日（終了・UTC）</span>
+            <span>出発日（終了）</span>
             <input
               className={FIELD}
               type="date"

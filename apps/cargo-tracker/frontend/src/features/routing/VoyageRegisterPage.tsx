@@ -1,6 +1,7 @@
 import { useEffect, useState, type SubmitEvent } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router';
+import { businessLocalToInstant, instantToBusinessLocal } from '@/shared/api/businessDate';
 import { ApiError } from '@/shared/api/client';
 import {
   ALERT,
@@ -49,14 +50,20 @@ function emptyMovement(): MovementRow {
   };
 }
 
-/** 入力欄の値（datetime-local）を絶対時刻へ。港の時間帯が入るまでは UTC で送る。 */
+/**
+ * 入力欄の値（datetime-local）を絶対時刻へ。
+ *
+ * <p><b>入れた時刻は業務タイムゾーンの時刻として送る。</b> 表示だけを業務
+ * タイムゾーンに揃えて入力を UTC のままにすると、入れた時刻と出る時刻が
+ * 時差の分ずれる。読み書きは同じ見方でしか揃わない。</p>
+ */
 function toInstant(local: string): string {
-  return local ? `${local}:00Z` : '';
+  return businessLocalToInstant(local);
 }
 
-/** 絶対時刻を入力欄の値へ。送るときと同じ UTC の見方で戻す。 */
+/** 絶対時刻を入力欄の値へ。送るときと同じ見方で戻す。 */
 function toLocalInput(instant: string): string {
-  return instant ? instant.slice(0, 16) : '';
+  return instantToBusinessLocal(instant);
 }
 
 /**
@@ -75,7 +82,7 @@ function toLocalInput(instant: string): string {
  * 差分に出す値を、画面の他の場所と同じ言葉にする。
  *
  * <p>差分は送信直前のいちばん慎重に読む場面なので、ここだけ列挙名と ISO 時刻が
- * 出ると読み違える。一覧・詳細と同じ「一般貨物」「2026-09-10 09:00 UTC」に揃える。</p>
+ * 出ると読み違える。一覧・詳細と同じ「一般貨物」「2026/09/10 09:00」に揃える。</p>
  */
 function displayValue(value: string): string {
   return value
@@ -349,7 +356,7 @@ export function VoyageRegisterPage() {
                 ずれた航海が登録され、経路候補の所要日数までずれる。エラーは出ない
                 ので、荷主に誤った到着日を出すまで誰も気づかない。 */}
             <strong className="block mt-1">
-              日時は協定世界時（UTC）で入力してください。運送会社の公開スケジュールは
+              日時は日本時間で入力してください。運送会社の公開スケジュールは
               港の現地時刻なので、換算してから入れてください。
             </strong>
           </p>
@@ -368,7 +375,7 @@ export function VoyageRegisterPage() {
                 />
               </label>
               <label className={LABEL}>
-                <span>出発日時（UTC）</span>
+                <span>出発日時（日本時間）</span>
                 <input
                   className={FIELD}
                   type="datetime-local"
@@ -389,7 +396,7 @@ export function VoyageRegisterPage() {
                 />
               </label>
               <label className={LABEL}>
-                <span>到着日時（UTC）</span>
+                <span>到着日時（日本時間）</span>
                 <input
                   className={FIELD}
                   type="datetime-local"

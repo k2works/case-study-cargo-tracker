@@ -38,3 +38,60 @@ export function formatBusinessDateTime(isoString: string): string {
   }
   return DATE_TIME_FORMATTER.format(at);
 }
+
+const OFFSET_FORMATTER = new Intl.DateTimeFormat('en-US', {
+  timeZone: BUSINESS_TIME_ZONE,
+  timeZoneName: 'longOffset',
+});
+
+/**
+ * その瞬間の業務タイムゾーンの UTC からのずれ（分）。
+ *
+ * <p>固定値を書かない。夏時間を採る地域へ業務タイムゾーンを変えたときに、
+ * 年の半分だけずれる形になる。</p>
+ */
+function offsetMinutes(at: Date): number {
+  const name = OFFSET_FORMATTER.formatToParts(at)
+    .find((part) => part.type === 'timeZoneName')?.value ?? 'GMT';
+  const matched = /GMT([+-])(\d{2}):(\d{2})/.exec(name);
+  if (!matched) {
+    // GMT ちょうどのときは符号も数字も付かない。
+    return 0;
+  }
+  const sign = matched[1] === '-' ? -1 : 1;
+  return sign * (Number(matched[2]) * 60 + Number(matched[3]));
+}
+
+/**
+ * 入力欄（datetime-local）の壁時計を絶対時刻へ。
+ *
+ * <p><b>入れた時刻は業務タイムゾーンの時刻である。</b> UTC として送ると、時差の分
+ * ずれた航海が登録され、そのまま経路候補の所要日数になる（エラーは出ない）。</p>
+ */
+export function businessLocalToInstant(local: string): string {
+  if (!local) {
+    return '';
+  }
+  // 一度 UTC として読み、その瞬間のずれで引き戻す。ずれは日付をまたぐと
+  // 変わりうるので、引き戻したあとの瞬間で決め直す。
+  const naive = new Date(`${local}:00Z`);
+  if (Number.isNaN(naive.getTime())) {
+    return local;
+  }
+  const first = new Date(naive.getTime() - offsetMinutes(naive) * 60_000);
+  const at = new Date(naive.getTime() - offsetMinutes(first) * 60_000);
+  return `${at.toISOString().slice(0, 19)}Z`;
+}
+
+/** 絶対時刻を入力欄（datetime-local）の壁時計へ。送るときと同じ見方で戻す。 */
+export function instantToBusinessLocal(instant: string): string {
+  if (!instant) {
+    return '';
+  }
+  const at = new Date(instant);
+  if (Number.isNaN(at.getTime())) {
+    return instant;
+  }
+  const shifted = new Date(at.getTime() + offsetMinutes(at) * 60_000);
+  return shifted.toISOString().slice(0, 16);
+}

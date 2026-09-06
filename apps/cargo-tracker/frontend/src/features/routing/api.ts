@@ -1,4 +1,8 @@
 import type { BookingView } from '@/features/bookings/api';
+import {
+  businessLocalToInstant,
+  formatBusinessDateTime,
+} from '@/shared/api/businessDate';
 import { commandClient, queryClient } from '@/shared/api/client';
 import type { Pending } from '@/shared/api/pending';
 
@@ -118,10 +122,18 @@ export function departurePeriod(from: string, to: string): {
   departFrom?: string;
   departTo?: string;
 } {
+  // **業務タイムゾーンの一日で切る。** UTC の一日で送ると、日本時間の朝 9 時より
+  // 前に出る航海が前日の指定で拾われ、指定した日のものが落ちる。
   return {
-    departFrom: from ? `${from}T00:00:00Z` : undefined,
-    departTo: to ? `${to}T23:59:59Z` : undefined,
+    departFrom: from ? businessLocalToInstant(`${from}T00:00`) : undefined,
+    // 23:59 の「分」までしか入力欄が無いので、秒はここで最後まで伸ばす。
+    departTo: to ? endOfSecond(businessLocalToInstant(`${to}T23:59`)) : undefined,
   };
+}
+
+/** その分の最後の秒まで含める。`...T14:59:00Z` → `...T14:59:59Z`。 */
+function endOfSecond(instant: string): string {
+  return `${instant.slice(0, 17)}59Z`;
 }
 
 export function fetchVoyage(voyageNumber: string): Promise<Pending<VoyageView>> {
@@ -253,15 +265,12 @@ export function acceptedCargoTypeLabel(cargoType: string): string {
 }
 
 /**
- * 当面は UTC を明示して見せる。港のローカル時刻は港の時間帯を持ってから。
+ * 航海の日時。<b>予約側と同じ業務タイムゾーンで読む</b>（S32・S34）。
  *
- * <p>保存は絶対時刻（TIMESTAMPTZ）。利用者の居る場所の時刻に揃えると、出港に
- * 間に合うかの判断を誤る。港の時間帯が分かるまでは、どの時刻かを明示して出す。</p>
+ * <p>保存は絶対時刻（TIMESTAMPTZ）。IT4 までは UTC を明示して出していたが、旅程
+ * （S22）は業務タイムゾーンで出るので、<b>同じ区間の同じ瞬間が画面によって 9 時間
+ * 違って見えていた</b>。港のローカル時刻は港の時間帯を持ってから（US15・IT9）。</p>
  */
 export function formatVoyageTime(iso: string): string {
-  const at = new Date(iso);
-  if (Number.isNaN(at.getTime())) {
-    return iso;
-  }
-  return `${at.toISOString().slice(0, 16).replace('T', ' ')} UTC`;
+  return formatBusinessDateTime(iso);
 }

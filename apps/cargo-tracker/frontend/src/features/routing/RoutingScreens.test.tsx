@@ -173,8 +173,8 @@ describe('S32 航海スケジュールの検索', () => {
 
     await userEvent.type(screen.getByLabelText('出発地'), 'JPTYO');
     await userEvent.type(screen.getByLabelText('目的地'), 'USNYC');
-    await userEvent.type(screen.getByLabelText('出発日（開始・UTC）'), '2026-09-01');
-    await userEvent.type(screen.getByLabelText('出発日（終了・UTC）'), '2026-09-30');
+    await userEvent.type(screen.getByLabelText('出発日（開始）'), '2026-09-01');
+    await userEvent.type(screen.getByLabelText('出発日（終了）'), '2026-09-30');
     await userEvent.selectOptions(screen.getByLabelText('対応貨物種別'), 'HAZARDOUS');
     await userEvent.click(screen.getByRole('button', { name: '絞り込む' }));
 
@@ -184,8 +184,10 @@ describe('S32 航海スケジュールの検索', () => {
       expect(url).toContain('arrival=USNYC');
       expect(url).toContain('cargoType=HAZARDOUS');
       // 期間は日付で入れて絶対時刻で送る。終了日はその日の終わりまで含める。
-      expect(url).toContain('departFrom=2026-09-01T00%3A00%3A00Z');
-      expect(url).toContain('departTo=2026-09-30T23%3A59%3A59Z');
+      // **日付は業務タイムゾーンの一日である。** UTC の一日で送ると、日本時間の
+      // 朝 9 時より前に出る航海が前日の指定で拾われる。
+      expect(url).toContain('departFrom=2026-08-31T15%3A00%3A00Z');
+      expect(url).toContain('departTo=2026-09-30T14%3A59%3A59Z');
     });
   });
 
@@ -243,7 +245,7 @@ describe('S32 航海スケジュールの検索', () => {
     expect(screen.getByLabelText('対応貨物種別')).toHaveValue('HAZARDOUS');
     expect(screen.getByLabelText('出発地')).toHaveValue('JPTYO');
     expect(screen.getByLabelText('目的地')).toHaveValue('USNYC');
-    expect(screen.getByLabelText('出発日（終了・UTC）')).toHaveValue('2026-12-01');
+    expect(screen.getByLabelText('出発日（終了）')).toHaveValue('2026-12-01');
   });
 });
 
@@ -261,8 +263,8 @@ describe('S33 航海スケジュール登録', () => {
     await userEvent.type(screen.getByLabelText('船名'), 'MOL EXPRESS');
     await userEvent.type(screen.getByLabelText('出発地'), 'JPTYO');
     await userEvent.type(screen.getByLabelText('到着地'), 'USNYC');
-    await userEvent.type(screen.getByLabelText('出発日時（UTC）'), '2026-09-10T09:00');
-    await userEvent.type(screen.getByLabelText('到着日時（UTC）'), '2026-09-24T18:00');
+    await userEvent.type(screen.getByLabelText('出発日時（日本時間）'), '2026-09-10T09:00');
+    await userEvent.type(screen.getByLabelText('到着日時（日本時間）'), '2026-09-24T18:00');
     await userEvent.click(screen.getByLabelText('危険物'));
     await userEvent.click(screen.getByRole('button', { name: '登録する' }));
 
@@ -298,8 +300,8 @@ describe('S33 航海スケジュール登録', () => {
     await userEvent.type(screen.getByLabelText('船名'), 'MOL EXPRESS');
     await userEvent.type(screen.getByLabelText('出発地'), 'JPTYO');
     await userEvent.type(screen.getByLabelText('到着地'), 'USNYC');
-    await userEvent.type(screen.getByLabelText('出発日時（UTC）'), '2026-09-10T09:00');
-    await userEvent.type(screen.getByLabelText('到着日時（UTC）'), '2026-09-24T18:00');
+    await userEvent.type(screen.getByLabelText('出発日時（日本時間）'), '2026-09-10T09:00');
+    await userEvent.type(screen.getByLabelText('到着日時（日本時間）'), '2026-09-24T18:00');
     await userEvent.click(screen.getByRole('button', { name: '登録する' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('既に登録されています');
