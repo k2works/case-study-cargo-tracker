@@ -128,6 +128,30 @@ public class RouteAssignmentSteps {
         assertThat(actual.toString()).isEqualTo(expected);
     }
 
+    /**
+     * 確定経路と予約番号を一緒に読めるか（US11 §受入基準 1）。
+     *
+     * <p><b>旅程の読み口は予約番号を返さない。</b> 経路設計者が読むのは予約詳細で、
+     * そこに予約番号と旅程が並ぶ。旅程だけが読めても「どの予約の経路か」が分からず、
+     * 荷主へのルート提案には使えない。</p>
+     */
+    @かつ("その予約の旅程は予約番号と一緒に読める")
+    @SuppressWarnings("unchecked")
+    public void 旅程が予約番号と一緒に読める() {
+        Map<String, Object> row = bookings.currentBooking();
+        assertThat(row).isNotNull();
+        assertThat(row.get("bookingNumber")).as("予約番号が読める")
+                .asString().startsWith("B-");
+
+        ResponseEntity<BookingRegistrationSteps.JsonMap> response = bookings.rest().get()
+                .uri(bookings.url(
+                        "/api/v1/booking/bookings/" + row.get("bookingId") + "/itinerary"))
+                .retrieve().toEntity(BookingRegistrationSteps.JsonMap.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat((List<Map<String, Object>>) response.getBody().get("legs"))
+                .as("同じ予約 ID で旅程が読める").isNotEmpty();
+    }
+
     @かつ("その予約の状態は {string} のままである")
     public void 予約の状態は変わらない(String label) {
         // 荷主に通知するまでは提案中（US12）。経路が付いただけで確定にしない。
