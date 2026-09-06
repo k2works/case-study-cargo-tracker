@@ -60,6 +60,9 @@ export function canRequestRouting(status: string): boolean {
  * （IT5 レビュー 中 5・7）。</p>
  *
  * <p>これは <b>routingStatus</b> の判断で、予約の状態（bookingStatus）とは別の軸。</p>
+ *
+ * <p>Java 側の RoutingStatus.canAssignRoute と同じ判断であることは
+ * transitions.canon.test.ts が正典の述語の本体を読んで突き合わせる。</p>
  */
 export function canAssignRoute(routingStatus: string): boolean {
   return routingStatus === 'ROUTING_REQUESTED' || routingStatus === 'MISROUTED';
@@ -72,8 +75,8 @@ export function canAssignRoute(routingStatus: string): boolean {
  * ときだけ通す。通知は「この経路で運びます」と伝えることなので、経路が無いまま
  * 伝えると荷主は何も確認できない。</p>
  *
- * <p>Java 側の Cargo.notifyShipper と同じ判断であることは
- * transitions.canon.test.ts が正典を読んで突き合わせる。</p>
+ * <p>Java 側の RoutingStatus.canNotifyShipper と同じ判断であることは
+ * transitions.canon.test.ts が正典の述語の本体を読んで突き合わせる。</p>
  */
 export function canNotifyShipper(routingStatus: string): boolean {
   return routingStatus === 'ROUTED';
@@ -84,6 +87,9 @@ export function canNotifyShipper(routingStatus: string): boolean {
  *
  * <p>通知したあとだけ開く。通知前に組み直したいなら経路設計者が自分で確定し直せば
  * よく、営業が戻す操作は「荷主が変更を求めた」ことを表す。</p>
+ *
+ * <p>Java 側の BookingStatus.canReturnToRouting と同じ判断であることは
+ * transitions.canon.test.ts が正典の述語の本体を読んで突き合わせる。</p>
  */
 export function canReturnToRouting(bookingStatus: string): boolean {
   return bookingStatus === 'ROUTE_NOTIFIED';

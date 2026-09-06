@@ -54,4 +54,27 @@ public enum RoutingStatus {
     public boolean canAdjustRouteSpecification() {
         return this == ROUTING_REQUESTED || this == ROUTED;
     }
+
+    /**
+     * 経路を確定できるか（US09）。
+     *
+     * <p>引き渡していない予約に経路が付くと、営業の知らないところで設計が進む。
+     * <b>誤配（{@code MISROUTED}）からの再設計は許す</b>（US28）。</p>
+     *
+     * <p><b>差し戻せるか（{@link #canRequestConditionReview()}）とは別の判断。</b>
+     * あちらは誤配を許さない。同じ述語で出し分けると誤配で押せて 422 になる。</p>
+     */
+    public boolean canAssignRoute() {
+        return this == ROUTING_REQUESTED || this == MISROUTED;
+    }
+
+    /**
+     * 荷主へ通知できるか（US12）。
+     *
+     * <p>通知は「この経路で運びます」と伝えること。経路が無いまま伝えると、荷主は
+     * 何も確認できない。<b>予約の状態も別に見る</b>（遷移表に無い後退を防ぐ）。</p>
+     */
+    public boolean canNotifyShipper() {
+        return this == ROUTED;
+    }
 }

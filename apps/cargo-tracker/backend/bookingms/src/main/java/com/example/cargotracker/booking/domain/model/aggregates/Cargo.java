@@ -199,10 +199,9 @@ public class Cargo {
         if (bookingId == null) {
             throw new IllegalTransition("予約 " + command.bookingId() + " は受け付けていません");
         }
-        if (routingStatus != RoutingStatus.ROUTING_REQUESTED
-                && routingStatus != RoutingStatus.MISROUTED) {
-            // 引き渡していない予約に経路が付くと、営業の知らないところで設計が進む。
-            // 誤配（MISROUTED）からの再設計は許す（US28）。
+        // 判定は書き直さず述語を呼ぶ（RoutingStatus#canAssignRoute）。画面も同じ
+        // 判断を写しており、canon テストが述語の本体を読んで突き合わせる。
+        if (!routingStatus.canAssignRoute()) {
             throw new IllegalTransition(
                     "経路設計を依頼していない予約には経路を確定できません（"
                             + routingStatus.label() + "）");
@@ -332,9 +331,8 @@ public class Cargo {
         if (bookingId == null) {
             throw new IllegalTransition("予約 " + command.bookingId() + " は受け付けていません");
         }
-        if (routingStatus != RoutingStatus.ROUTED) {
-            // 通知は「この経路で運びます」と伝えること。経路が無いまま伝えると、
-            // 荷主は何も確認できない。
+        // 判定は書き直さず述語を呼ぶ（RoutingStatus#canNotifyShipper）。
+        if (!routingStatus.canNotifyShipper()) {
             throw new IllegalTransition(
                     "経路が決まっていない予約は荷主へ通知できません（"
                             + routingStatus.label() + "）");
@@ -379,7 +377,8 @@ public class Cargo {
         if (bookingId == null) {
             throw new IllegalTransition("予約 " + command.bookingId() + " は受け付けていません");
         }
-        if (bookingStatus != BookingStatus.ROUTE_NOTIFIED) {
+        // 判定は書き直さず述語を呼ぶ（BookingStatus#canReturnToRouting）。
+        if (!bookingStatus.canReturnToRouting()) {
             throw new IllegalTransition(
                     "状態 " + bookingStatus.label() + " の予約は経路設計へ戻せません");
         }

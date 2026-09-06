@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { ROUTING_STATUS_LABELS } from './api';
 import {
   BOOKING_TRANSITIONS,
+  canAssignRoute,
   canNotifyShipper,
   canRequestConditionReview,
   canRequestRouting,
@@ -23,10 +24,35 @@ import {
 const CANON =
   '../backend/bookingms/src/main/java/com/example/cargotracker/booking'
   + '/domain/model/valueobjects/BookingStatus.java';
-/** 状態そのものでなく「集約が何を許すか」を読むための正典。 */
-const CARGO =
+const ROUTING_CANON =
   '../backend/bookingms/src/main/java/com/example/cargotracker/booking'
-  + '/domain/model/aggregates/Cargo.java';
+  + '/domain/model/valueobjects/RoutingStatus.java';
+
+const ROUTING_STATUSES = ['NOT_ROUTED', 'ROUTING_REQUESTED', 'ROUTED', 'MISROUTED'];
+
+/**
+ * 正典の述語の本体を読み、許している状態を全部返す（IT7 H.3）。
+ *
+ * <p><b>述語の本体だけを読む。</b> 集約の `!=` 比較を直接読む形だと、集約が
+ * 述語に寄せ替えたときに検査が空振りする。判断は列挙が持ち、集約も画面も
+ * それを呼ぶ、という形に揃える。</p>
+ *
+ * <p><b>拾えた数を返す側で数える。</b> 正典に条件が増えたのに 1 件目だけを
+ * 比べると、画面の述語が古いままでも緑になる（IT6 レビュー 中）。</p>
+ */
+function canonPredicate(file: string, name: string): string[] {
+  const source = readFileSync(file, 'utf-8');
+  const start = source.indexOf(`${name}()`);
+  expect(start, `${name} が正典に無い`).toBeGreaterThan(-1);
+  const body = source.slice(start);
+  const statement = /return ([^;]+);/.exec(body)?.[1];
+  expect(statement, `${name} の本体を読めていない`).toBeTruthy();
+  // `this == A` の並びを全部拾う。`||` でつないだ形も 1 つだけの形も同じに扱う。
+  const allowed = [...(statement as string).matchAll(/this == (\w+)/g)]
+    .map((match) => match[1] as string);
+  expect(allowed.length, `${name} が this == の形でない`).toBeGreaterThan(0);
+  return allowed;
+}
 
 function canonTransitions(): Record<string, string[]> {
   const source = readFileSync(CANON, 'utf-8');
@@ -57,57 +83,43 @@ describe('予約の状態遷移表', () => {
   it('引き渡せる状態は正典と一致する（US06）', () => {
     // 遷移表には出ない。ROUTE_PROPOSED への自己遷移は経路の確定と条件の調整の
     // もので、引き渡しではないため。Java 側の述語の本体を読み取って突き合わせる。
-    const source = readFileSync(CANON, 'utf-8');
-    const body = source.slice(source.indexOf('canRequestRouting()'));
-    const canon = /return this == (\w+);/.exec(body)?.[1];
-
-    expect(canon, '正典の述語を読めていない').toBeDefined();
+    const canon = canonPredicate(CANON, 'canRequestRouting');
     for (const status of Object.keys(BOOKING_TRANSITIONS)) {
-      expect(canRequestRouting(status), status).toBe(status === canon);
+      expect(canRequestRouting(status), status).toBe(canon.includes(status));
     }
   });
 
   it('修正できる状態は正典と一致する（US32）', () => {
     // 遷移ではないので遷移表には出ない。Java 側の述語の本体を読み取って
     // 突き合わせる。正典が「仮受付だけ」でなくなったらここが赤くなる。
-    const source = readFileSync(CANON, 'utf-8');
-    const body = source.slice(source.indexOf('canUpdateSpecification()'));
-    const canon = /return this == (\w+);/.exec(body)?.[1];
-
-    expect(canon, '正典の述語を読めていない').toBeDefined();
-    expect(canUpdateSpecification(canon as string)).toBe(true);
+    const canon = canonPredicate(CANON, 'canUpdateSpecification');
     for (const status of Object.keys(BOOKING_TRANSITIONS)) {
-      expect(canUpdateSpecification(status)).toBe(status === canon);
+      expect(canUpdateSpecification(status), status).toBe(canon.includes(status));
     }
   });
 
   it('通知できる状態は正典と一致する（US12）', () => {
-    // 集約は routingStatus で判断する。正典の本体を読み取って突き合わせる。
-    const source = readFileSync(CARGO, 'utf-8');
-    const body = source.slice(source.indexOf('public String notifyShipper'),
-      source.indexOf('public String returnToRouting'));
-    const conditions = [...body.matchAll(/routingStatus != RoutingStatus\.(\w+)/g)];
-    const canon = conditions[0]?.[1];
+    // 判断は RoutingStatus が持ち、集約も画面もそれを呼ぶ（IT7 H.3）。
+    const canon = canonPredicate(ROUTING_CANON, 'canNotifyShipper');
+    for (const status of ROUTING_STATUSES) {
+      expect(canNotifyShipper(status), status).toBe(canon.includes(status));
+    }
+  });
 
-    expect(canon, '正典の判断を読めていない').toBeDefined();
-    // **条件の数まで見る。** 1 件目だけを比べると、正典に条件が増えたときに
-    // 画面の述語が古いままでも緑になる（IT6 レビュー 中）。
-    expect(conditions, '正典の判断が 1 条件でなくなった').toHaveLength(1);
-    for (const status of ['NOT_ROUTED', 'ROUTING_REQUESTED', 'ROUTED', 'MISROUTED']) {
-      expect(canNotifyShipper(status), status).toBe(status === canon);
+  it('経路を確定できる状態は正典と一致する（US09）', () => {
+    // **これまで突き合わせが無かった**（IT6 引き継ぎ 8c）。誤配からの再設計を
+    // 許すか否かが、集約と画面で別々に書かれていた。
+    const canon = canonPredicate(ROUTING_CANON, 'canAssignRoute');
+    expect(canon, '正典が 2 つの状態を許さなくなった').toHaveLength(2);
+    for (const status of ROUTING_STATUSES) {
+      expect(canAssignRoute(status), status).toBe(canon.includes(status));
     }
   });
 
   it('経路設計へ戻せる状態は正典と一致する（US12）', () => {
-    const source = readFileSync(CARGO, 'utf-8');
-    const body = source.slice(source.indexOf('public String returnToRouting'));
-    const conditions = [...body.matchAll(/bookingStatus != BookingStatus\.(\w+)/g)];
-    const canon = conditions[0]?.[1];
-
-    expect(canon, '正典の判断を読めていない').toBeDefined();
-    expect(conditions, '正典の判断が 1 条件でなくなった').toHaveLength(1);
+    const canon = canonPredicate(CANON, 'canReturnToRouting');
     for (const status of Object.keys(BOOKING_TRANSITIONS)) {
-      expect(canReturnToRouting(status), status).toBe(status === canon);
+      expect(canReturnToRouting(status), status).toBe(canon.includes(status));
     }
   });
 
@@ -137,15 +149,9 @@ describe('予約の状態遷移表', () => {
     // **経路を確定できるか（canAssignRoute）とは別の判断。** あちらは誤配からの
     // 再設計を許すが、差し戻しは許さない。同じ述語で出し分けると、誤配の予約で
     // ボタンが押せて 422 になる（IT6 レビュー 中）。
-    const source = readFileSync(
-      '../backend/bookingms/src/main/java/com/example/cargotracker/booking'
-      + '/domain/model/valueobjects/RoutingStatus.java', 'utf-8');
-    const body = source.slice(source.indexOf('canRequestConditionReview()'));
-    const canon = /return this == (\w+);/.exec(body)?.[1];
-
-    expect(canon, '正典の述語を読めていない').toBeDefined();
-    for (const status of ['NOT_ROUTED', 'ROUTING_REQUESTED', 'ROUTED', 'MISROUTED']) {
-      expect(canRequestConditionReview(status), status).toBe(status === canon);
+    const canon = canonPredicate(ROUTING_CANON, 'canRequestConditionReview');
+    for (const status of ROUTING_STATUSES) {
+      expect(canRequestConditionReview(status), status).toBe(canon.includes(status));
     }
   });
 });
