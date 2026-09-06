@@ -35,6 +35,13 @@ function booking() {
   };
 }
 
+/** まだ何も調整していない状態。サーバは常に条件を載せて返す。 */
+const NO_CONDITION = {
+  arrivalDeadline: '2026-12-01',
+  excludeUnLocodes: [] as string[],
+  departFromUnLocode: null,
+};
+
 function leg(voyageNumber: string, from: string, to: string, load: string, unload: string) {
   return {
     voyageNumber,
@@ -46,7 +53,7 @@ function leg(voyageNumber: string, from: string, to: string, load: string, unloa
 }
 
 function mockApi(candidatesResponse: Response) {
-  vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+  return vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
     if (String(input).includes('/route-candidates')) {
       return Promise.resolve(candidatesResponse);
     }
@@ -93,7 +100,7 @@ describe('S31 経路設計ワークベンチ', () => {
               direct: false,
             },
           ],
-          truncated: false,
+          truncated: false, condition: NO_CONDITION,
         }),
         { status: 200 },
       ),
@@ -113,7 +120,7 @@ describe('S31 経路設計ワークベンチ', () => {
 
   it('候補 0 件は「見つからなかった」と条件調整の案内を出す（エラーにしない）', async () => {
     mockApi(
-      new Response(JSON.stringify({ candidates: [], truncated: false }), { status: 200 }),
+      new Response(JSON.stringify({ candidates: [], truncated: false, condition: NO_CONDITION }), { status: 200 }),
     );
 
     renderWorkbench();
@@ -141,7 +148,7 @@ describe('S31 経路設計ワークベンチ', () => {
     // 期限を延ばす・港を広げるという逆の案内を重ねて出さない
     // （IT5 レビュー 高 1）。乗り継ぎの上限で捨てた枝は条件では戻らない。
     mockApi(
-      new Response(JSON.stringify({ candidates: [], truncated: true }), { status: 200 }),
+      new Response(JSON.stringify({ candidates: [], truncated: true, condition: NO_CONDITION }), { status: 200 }),
     );
 
     renderWorkbench();
@@ -162,7 +169,7 @@ describe('S31 経路設計ワークベンチ', () => {
               direct: true,
             },
           ],
-          truncated: true,
+          truncated: true, condition: NO_CONDITION,
         }),
         { status: 200 },
       ),
@@ -190,7 +197,7 @@ describe('S31 経路設計ワークベンチ', () => {
                   direct: true,
                 },
               ],
-              truncated: false,
+              truncated: false, condition: NO_CONDITION,
             }),
             { status: 200 },
           ),
@@ -210,7 +217,7 @@ describe('S31 経路設計ワークベンチ', () => {
   it('費用は出さず、どこで出るかを書く', async () => {
     // 0 円と出すと「費用 0 円の経路」と読める（US08 §受入基準 3 の未達）。
     mockApi(
-      new Response(JSON.stringify({ candidates: [], truncated: false }), { status: 200 }),
+      new Response(JSON.stringify({ candidates: [], truncated: false, condition: NO_CONDITION }), { status: 200 }),
     );
 
     renderWorkbench();
@@ -237,7 +244,7 @@ describe('S31 経路の確定（US09）', () => {
                   direct: true,
                 },
               ],
-              truncated: false,
+              truncated: false, condition: NO_CONDITION,
             }),
             { status: 200 },
           ),
@@ -304,7 +311,7 @@ describe('S31 経路の確定（US09）', () => {
                   direct: true,
                 },
               ],
-              truncated: false,
+              truncated: false, condition: NO_CONDITION,
             }),
             { status: 200 },
           ),
@@ -331,5 +338,113 @@ describe('S31 経路の確定（US09）', () => {
 
     expect(await screen.findByRole('alert'))
       .toHaveTextContent('選んだ旅程は予約の経路仕様を満たしません');
+  });
+
+  it('US10: いまの条件が読める（何で絞っているか分からないと同じ条件で回す）', async () => {
+    mockApi(
+      new Response(
+        JSON.stringify({
+          candidates: [],
+          truncated: false,
+          condition: {
+            arrivalDeadline: '2027-01-31',
+            excludeUnLocodes: ['SGSIN', 'HKHKG'],
+            departFromUnLocode: 'JPOSA',
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+
+    renderWorkbench();
+
+    expect(await screen.findByLabelText('到着期限')).toHaveValue('2027-01-31');
+    expect(screen.getByLabelText('除外する港')).toHaveValue('SGSIN, HKHKG');
+    expect(screen.getByLabelText('この港より後に出る便だけ')).toHaveValue('JPOSA');
+  });
+
+  it('US10: 条件を変えて再算出すると、調整を送ってから候補を取り直す', async () => {
+    const fetchSpy = mockApi(
+      new Response(
+        JSON.stringify({ candidates: [], truncated: false, condition: NO_CONDITION }),
+        { status: 200 },
+      ),
+    );
+
+    renderWorkbench();
+    await screen.findByLabelText('到着期限');
+
+    await userEvent.clear(screen.getByLabelText('除外する港'));
+    await userEvent.type(screen.getByLabelText('除外する港'), 'SGSIN, HKHKG');
+    await userEvent.click(screen.getByRole('button', { name: '条件を変えて再算出' }));
+
+    await waitFor(() => {
+      const call = fetchSpy.mock.calls.find(([url, init]) =>
+        String(url).includes('/route-specification')
+        && (init as RequestInit)?.method === 'PUT');
+      expect(call, '条件は集約に記録してから読み直す').toBeDefined();
+      // 打ち間違いの空白で港が増えない。
+      expect(String((call?.[1] as RequestInit)?.body))
+        .toContain('"excludeUnLocodes":["SGSIN","HKHKG"]');
+    });
+  });
+
+  it('US10 §4: 理由を入れて営業へ差し戻せる', async () => {
+    const fetchSpy = mockApi(
+      new Response(
+        JSON.stringify({ candidates: [], truncated: false, condition: NO_CONDITION }),
+        { status: 200 },
+      ),
+    );
+
+    renderWorkbench();
+
+    await userEvent.click(await screen.findByRole('button', { name: '営業へ差し戻す' }));
+    await userEvent.type(screen.getByLabelText('差し戻す理由'), '期限内に着ける便がありません');
+    await userEvent.click(screen.getByRole('button', { name: '差し戻しを送る' }));
+
+    await waitFor(() => {
+      expect(fetchSpy.mock.calls.some(([url]) =>
+        String(url).includes('/condition-review'))).toBe(true);
+    });
+  });
+
+  it('US10 §4: 理由が空のままでは差し戻さない', async () => {
+    // 集約も断るが、押してから 422 で気づく形にしない。
+    const fetchSpy = mockApi(
+      new Response(
+        JSON.stringify({ candidates: [], truncated: false, condition: NO_CONDITION }),
+        { status: 200 },
+      ),
+    );
+
+    renderWorkbench();
+
+    await userEvent.click(await screen.findByRole('button', { name: '営業へ差し戻す' }));
+    await userEvent.click(screen.getByRole('button', { name: '差し戻しを送る' }));
+
+    expect(await screen.findByText('差し戻す理由を入力してください')).toBeInTheDocument();
+    expect(fetchSpy.mock.calls.filter(([url]) =>
+      String(url).includes('/condition-review'))).toHaveLength(0);
+  });
+
+  it('US10 §4: 経路が決まった予約には差し戻しの導線を出さない', async () => {
+    // 組めているのだから見直しは要らない。押してから断られる導線にしない。
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      if (String(input).includes('/route-candidates')) {
+        return Promise.resolve(new Response(
+          JSON.stringify({ candidates: [], truncated: false, condition: NO_CONDITION }),
+          { status: 200 },
+        ));
+      }
+      return Promise.resolve(new Response(
+        JSON.stringify({ ...booking(), routingStatus: 'ROUTED' }), { status: 200 },
+      ));
+    });
+
+    renderWorkbench();
+
+    await screen.findByLabelText('到着期限');
+    expect(screen.queryByRole('button', { name: '営業へ差し戻す' })).not.toBeInTheDocument();
   });
 });

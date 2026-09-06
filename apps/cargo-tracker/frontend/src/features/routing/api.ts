@@ -190,10 +190,55 @@ export function fetchRouteCandidates(
   );
 }
 
+/**
+ * いま何で絞って探したか（S31 / US10）。
+ *
+ * <p><b>候補と同じ応答で受け取る。</b> 別の読み口にすると、条件を直した直後に
+ * 「古い条件で出した候補」と「新しい条件」が並ぶ瞬間ができる。</p>
+ */
+export interface RouteConditionView {
+  readonly arrivalDeadline: string;
+  readonly excludeUnLocodes: readonly string[];
+  readonly departFromUnLocode: string | null;
+}
+
+/**
+ * 条件を調整して再算出できるようにする（US10）。
+ *
+ * <p><b>条件はサーバが持つ。</b> 画面が組み立てて候補算出へ渡すのではなく、集約に
+ * 記録してから読み直す。誰がいつ期限を延ばしたかが残る。</p>
+ */
+export function adjustRouteSpecification(
+  bookingId: string,
+  condition: {
+    arrivalDeadline: string;
+    excludeUnLocodes: readonly string[];
+    departFromUnLocode: string | null;
+  },
+): Promise<{ bookingId: string }> {
+  return commandClient(
+    `/booking/bookings/${encodeURIComponent(bookingId)}/route-specification`,
+    condition,
+    'PUT',
+  );
+}
+
+/** 組めないことを営業へ差し戻す（US10 §受入基準 4）。 */
+export function requestConditionReview(
+  bookingId: string,
+  reason: string,
+): Promise<{ bookingId: string }> {
+  return commandClient(
+    `/booking/bookings/${encodeURIComponent(bookingId)}/condition-review`,
+    { reason },
+  );
+}
+
 /** 経路候補の一覧。`truncated` は探索の上限で切ったことを表す（ADR-0007）。 */
 export interface RouteCandidatesView {
   readonly candidates: readonly RouteCandidateView[];
   readonly truncated: boolean;
+  readonly condition: RouteConditionView;
 }
 
 /**

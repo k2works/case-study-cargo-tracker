@@ -107,7 +107,22 @@ public final class BookingDtos {
      * @param truncated 探索の上限で切ったか（ADR-0007）。0 件と言い分けるために出す
      */
     public record RouteCandidatesResponse(
-            java.util.List<RouteCandidateResponse> candidates, boolean truncated) {
+            java.util.List<RouteCandidateResponse> candidates,
+            boolean truncated,
+            RouteConditionResponse condition) {
+    }
+
+    /**
+     * いま何で絞って探したか（US10）。
+     *
+     * <p><b>候補と同じ応答に載せる。</b> 別の読み口にすると、条件を直した直後に
+     * 「古い条件で出した候補」と「新しい条件」が並ぶ瞬間ができる。読めないと、
+     * 経路設計者は同じ条件で何度も再算出する。</p>
+     */
+    public record RouteConditionResponse(
+            java.time.LocalDate arrivalDeadline,
+            java.util.List<String> excludeUnLocodes,
+            String departFromUnLocode) {
     }
 
     /** 経路候補 1 件。区間の順序が業務の意味を持つ。 */

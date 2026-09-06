@@ -177,7 +177,9 @@ public class BookingController {
                 found.candidates().stream()
                         .map(BookingController::toCandidateResponse)
                         .toList(),
-                found.truncated()));
+                found.truncated(),
+                new BookingDtos.RouteConditionResponse(booking.arrivalDeadline(),
+                        condition.excludeUnLocodes(), condition.departFromUnLocode())));
     }
 
     private static RouteCandidateResponse toCandidateResponse(RouteCandidate candidate) {

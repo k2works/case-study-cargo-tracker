@@ -3,7 +3,8 @@ import { Link } from 'react-router';
 import { useAuthStore } from '@/shared/auth/authStore';
 import { navigationFor } from '@/shared/ui/navigation';
 import { CARD, LINK, NOTICE, PAGE_TITLE, SECTION_TITLE } from '@/shared/ui/styles';
-import { fetchBookingSummary } from '@/features/bookings/api';
+import { fetchBookingSummary, fetchConditionReviews } from '@/features/bookings/api';
+import { formatBusinessDateTime } from '@/shared/api/businessDate';
 
 /** S02 ダッシュボード。「今日の作業」からその日の入口へ行けるようにする。 */
 export function DashboardPage() {
@@ -29,9 +30,41 @@ export function DashboardPage() {
   const routingWorklist =
     summary?.state === 'ready' ? summary.value.routingWorklist : 0;
 
+  // 見直しを頼まれた予約（US10 §4）。**打てる手を持つのは営業**（荷主と条件を
+  // 協議する）。経路設計者の受け皿は S30 で、こちらではない。
+  const { data: reviews } = useQuery({
+    queryKey: ['condition-reviews'],
+    queryFn: fetchConditionReviews,
+    enabled: isSales,
+    refetchInterval: 10000,
+  });
+  const conditionReviews =
+    reviews?.state === 'ready' ? reviews.value.items : [];
+
   return (
     <section>
       <h1 className={PAGE_TITLE}>ダッシュボード</h1>
+
+      {/* 件数だけでは仕事が進まない。理由が読めないと荷主と何を協議するか
+          分からないので、行そのものを出す。 */}
+      {isSales && conditionReviews.length > 0 && (
+        <output className={`${NOTICE} mt-4 block`}>
+          経路設計者から条件の見直しを頼まれた予約が {conditionReviews.length} 件あります。
+          <ul className="mt-2 space-y-1">
+            {conditionReviews.map((item) => (
+              <li key={item.bookingId} data-testid={`condition-review-${item.bookingId}`}>
+                <Link to={`/bookings/${item.bookingId}`} className={LINK}>
+                  {item.bookingNumber}
+                </Link>
+                <span className="ml-2">{item.reason}</span>
+                <span className="ml-2 text-gray-600">
+                  （{formatBusinessDateTime(item.requestedAt)}）
+                </span>
+              </li>
+            ))}
+          </ul>
+        </output>
+      )}
 
       {/* 0 件のときは出さない。毎朝「0 件」を読み飛ばす習慣がつくと、
           件数が出た日も見落とす。 */}

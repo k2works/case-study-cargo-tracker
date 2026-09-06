@@ -1,10 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import {
   ALERT,
   BUTTON_PRIMARY,
+  BUTTON_SECONDARY,
   CARD,
+  FIELD,
+  LABEL,
   LINK,
   NOTICE,
   PAGE_TITLE,
@@ -22,7 +25,12 @@ import {
   fetchBooking,
 } from '@/features/bookings/api';
 import { canAssignRoute } from '@/features/bookings/transitions';
-import { fetchRouteCandidates, type RouteCandidateView } from './api';
+import {
+  adjustRouteSpecification,
+  fetchRouteCandidates,
+  requestConditionReview,
+  type RouteCandidateView,
+} from './api';
 
 /**
  * S31 経路設計ワークベンチ（UC06 / US08・US09）。
@@ -50,6 +58,50 @@ export function RoutingWorkbenchPage() {
     queryKey: ['route-candidates', bookingId],
     queryFn: () => fetchRouteCandidates(bookingId),
     retry: false,
+  });
+
+  // 条件の入力欄。サーバが返した条件で初期化する。**画面が条件を持たない。**
+  // 画面から組み立てて候補算出へ渡すと、誰がいつ期限を延ばしたかが残らない。
+  const [deadline, setDeadline] = useState('');
+  const [excluded, setExcluded] = useState('');
+  const [departFrom, setDepartFrom] = useState('');
+  const [sendingBack, setSendingBack] = useState(false);
+  const [reason, setReason] = useState('');
+  const [reasonError, setReasonError] = useState('');
+
+  const condition = candidates.data?.state === 'ready'
+    ? candidates.data.value.condition : null;
+  // サーバの条件が変わったら欄も追随する。入力中の値を握り続けると、再算出の
+  // あとも古い値が残って「送ったのに変わらない」ように見える。
+  useEffect(() => {
+    if (!condition) {
+      return;
+    }
+    setDeadline(condition.arrivalDeadline);
+    setExcluded(condition.excludeUnLocodes.join(', '));
+    setDepartFrom(condition.departFromUnLocode ?? '');
+  }, [condition]);
+
+  const adjust = useMutation({
+    mutationFn: () => adjustRouteSpecification(bookingId, {
+      arrivalDeadline: deadline,
+      excludeUnLocodes: parsePorts(excluded),
+      departFromUnLocode: departFrom.trim() === '' ? null : departFrom.trim().toUpperCase(),
+    }),
+    onSuccess: async () => {
+      // 条件を記録してから候補を取り直す。順序が逆だと、古い条件の候補が出る。
+      await queryClient.invalidateQueries({ queryKey: ['booking', bookingId] });
+      await queryClient.invalidateQueries({ queryKey: ['route-candidates', bookingId] });
+    },
+  });
+
+  const sendBack = useMutation({
+    mutationFn: () => requestConditionReview(bookingId, reason),
+    onSuccess: async () => {
+      setSendingBack(false);
+      setReason('');
+      await queryClient.invalidateQueries({ queryKey: ['booking', bookingId] });
+    },
   });
 
   const assign = useMutation({
@@ -102,6 +154,131 @@ export function RoutingWorkbenchPage() {
           </p>
           <p>状態: {bookingStatusLabel(booking.data.value.bookingStatus)}</p>
         </div>
+      )}
+
+      {/* **いまの条件を出す。** 何で絞っているのかが読めないと、経路設計者は
+          同じ条件で何度も再算出する。条件はサーバが持ち、ここは映すだけ。 */}
+      {condition && (
+        <>
+          <h2 className={`${SECTION_TITLE} mt-6`}>探す条件</h2>
+          <div className={`${CARD} mt-2 space-y-3`}>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <label className={LABEL}>
+                <span>到着期限</span>
+                <input
+                  className={FIELD}
+                  type="date"
+                  value={deadline}
+                  onChange={(event) => setDeadline(event.target.value)}
+                />
+              </label>
+              <label className={LABEL}>
+                <span>除外する港</span>
+                <input
+                  className={FIELD}
+                  value={excluded}
+                  placeholder="SGSIN, HKHKG"
+                  onChange={(event) => setExcluded(event.target.value)}
+                />
+              </label>
+              <label className={LABEL}>
+                <span>この港より後に出る便だけ</span>
+                <input
+                  className={FIELD}
+                  value={departFrom}
+                  placeholder="JPOSA"
+                  onChange={(event) => setDepartFrom(event.target.value)}
+                />
+              </label>
+            </div>
+            <p className="text-sm text-gray-600">
+              期限はここから延ばせます。仮受付を過ぎた予約は予約修正の画面では直せません
+            </p>
+            {adjust.isError && (
+              <p role="alert" className={ALERT}>
+                {adjust.error instanceof ApiError
+                  ? adjust.error.body.message
+                  : '条件を変えられませんでした'}
+              </p>
+            )}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className={BUTTON_PRIMARY}
+                disabled={adjust.isPending}
+                onClick={() => adjust.mutate()}
+              >
+                {adjust.isPending ? '再算出しています…' : '条件を変えて再算出'}
+              </button>
+              {/* 組めているのだから見直しは要らない。押してから断られる導線に
+                  しない（判定は集約と同じ述語を呼ぶ）。 */}
+              {assignable && !sendingBack && (
+                <button
+                  type="button"
+                  className={BUTTON_SECONDARY}
+                  onClick={() => setSendingBack(true)}
+                >
+                  営業へ差し戻す
+                </button>
+              )}
+            </div>
+            {sendingBack && (
+              <div className="space-y-2 border-t border-gray-200 pt-3">
+                <p className="text-sm">
+                  条件を変えても組めないときは、営業へ見直しを頼めます。
+                  <b>予約はこのまま経路設計の作業一覧に残ります。</b>
+                </p>
+                <label htmlFor="review-reason" className={LABEL}>
+                  差し戻す理由
+                </label>
+                <input
+                  id="review-reason"
+                  className={FIELD}
+                  value={reason}
+                  onChange={(event) => setReason(event.target.value)}
+                />
+                {reasonError && (
+                  <p role="alert" className={ALERT}>
+                    {reasonError}
+                  </p>
+                )}
+                {sendBack.isError && (
+                  <p role="alert" className={ALERT}>
+                    差し戻せませんでした
+                  </p>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className={BUTTON_PRIMARY}
+                    disabled={sendBack.isPending}
+                    onClick={() => {
+                      if (!reason.trim()) {
+                        // 集約も断るが、押してから 422 で気づく形にしない。
+                        setReasonError('差し戻す理由を入力してください');
+                        return;
+                      }
+                      setReasonError('');
+                      sendBack.mutate();
+                    }}
+                  >
+                    差し戻しを送る
+                  </button>
+                  <button
+                    type="button"
+                    className={BUTTON_SECONDARY}
+                    onClick={() => {
+                      setSendingBack(false);
+                      setReasonError('');
+                    }}
+                  >
+                    やめる
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </>
       )}
 
       <h2 className={`${SECTION_TITLE} mt-6`}>経路候補</h2>
@@ -256,6 +433,19 @@ export function RoutingWorkbenchPage() {
       </p>
     </section>
   );
+}
+
+/**
+ * 入力された除外港を港コードの一覧にする。
+ *
+ * <p>打ち間違いの空白で港が増えないように、空の要素は落とす。大文字に揃えるのは、
+ * 港コードが大文字だから（小文字で入れると 1 件も除外されない）。</p>
+ */
+function parsePorts(input: string): string[] {
+  return input
+    .split(',')
+    .map((port) => port.trim().toUpperCase())
+    .filter((port) => port.length > 0);
 }
 
 /** 最初の出発から最後の到着まで。区間が 1 本でも同じ形で読める。 */

@@ -101,6 +101,23 @@ export interface RevisionView {
 }
 
 /**
+ * 見直しを頼まれている予約（S02 / 営業。US10 §受入基準 4）。
+ *
+ * <p><b>件数でなく行を返す。</b> 理由が読めないと、営業は荷主と何を協議すれば
+ * よいのか分からない。</p>
+ */
+export function fetchConditionReviews(): Promise<Pending<{ items: ConditionReviewView[] }>> {
+  return queryClient('/booking/bookings/condition-reviews');
+}
+
+export interface ConditionReviewView {
+  readonly bookingId: string;
+  readonly bookingNumber: string;
+  readonly reason: string;
+  readonly requestedAt: string;
+}
+
+/**
  * 経路を確定する（US09）。
  *
  * <p><b>候補 ID ではなく旅程そのものを送る。</b> 経路候補はテーブルに持たないので、
