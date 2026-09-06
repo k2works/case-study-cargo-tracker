@@ -252,8 +252,7 @@ public class Cargo {
         if (bookingId == null) {
             throw new IllegalTransition("予約 " + command.bookingId() + " は受け付けていません");
         }
-        // 判定は述語に置く。誤配を含めると、調整が routingStatus を戻して誤配の
-        // 記録を消し、US28（IT11）の設計を先に縛る。
+        // 誤配を含めない（調整が誤配の記録を消し、US28 の設計を先に縛る）。
         if (!routingStatus.canAdjustRouteSpecification()) {
             throw new IllegalTransition(
                     "この予約の条件は調整できません（" + routingStatus.label() + "）");
@@ -401,9 +400,10 @@ public class Cargo {
         this.routingStatus = RoutingStatus.ROUTING_REQUESTED;
     }
 
-    /** **状態は動かさない**（ADR-0009 決定 1）。記録は投影が持つ。 */
     @EventSourcingHandler
     void on(ConditionReviewRequestedEvent event) {
+        // **状態は動かさない**（ADR-0009 決定 1）。記録は投影が持つので集約に
+        // 変えるものが無い。ハンドラ自体は要る（イベントを読み飛ばさない）。
     }
 
     @EventSourcingHandler
