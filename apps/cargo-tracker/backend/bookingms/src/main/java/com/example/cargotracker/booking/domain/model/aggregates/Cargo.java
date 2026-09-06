@@ -252,10 +252,11 @@ public class Cargo {
         if (bookingId == null) {
             throw new IllegalTransition("予約 " + command.bookingId() + " は受け付けていません");
         }
-        if (routingStatus == RoutingStatus.NOT_ROUTED) {
+        // 判定は述語に置く。誤配を含めると、調整が routingStatus を戻して誤配の
+        // 記録を消し、US28（IT11）の設計を先に縛る。
+        if (!routingStatus.canAdjustRouteSpecification()) {
             throw new IllegalTransition(
-                    "経路設計を依頼していない予約の条件は調整できません（"
-                            + routingStatus.label() + "）");
+                    "この予約の条件は調整できません（" + routingStatus.label() + "）");
         }
         LocalDate deadline = command.arrivalDeadline();
         if (deadline == null) {
@@ -265,20 +266,27 @@ public class Cargo {
             // 過去の期限にすると、どの候補も期限切れになる。組めない条件を作らせない。
             throw new BusinessRuleViolation("到着期限は今日以降にしてください: " + deadline);
         }
-        List<String> excluded = command.excludeUnLocodes() == null
-                ? List.of() : List.copyOf(command.excludeUnLocodes());
-        for (String port : excluded) {
+        // **港コードは Location に通す。** 生文字列だと小文字が端点の除外検査を
+        // 素通りし、長すぎる起点は投影の UPDATE で落ちてリプレイのたびに落ち続ける。
+        List<Location> excluded = (command.excludeUnLocodes() == null
+                ? List.<String>of() : command.excludeUnLocodes()).stream()
+                .map(Location::of)
+                .toList();
+        for (Location port : excluded) {
             // 必ず通る港を除外すると、候補は必ず 0 件になる。条件を変えても直らない
             // ものを、変え続けさせることになる。
-            if (port.equals(origin.unLocode().value())
-                    || port.equals(destination.unLocode().value())) {
+            if (port.equals(origin) || port.equals(destination)) {
                 throw new BusinessRuleViolation(
-                        "出発地と目的地は除外できません: " + port);
+                        "出発地と目的地は除外できません: " + port.unLocode().value());
             }
         }
+        Location departFrom = command.departFromUnLocode() == null
+                ? null : Location.of(command.departFromUnLocode());
 
         appender.append(new RouteSpecificationAdjustedEvent(command.bookingId(), deadline,
-                excluded, command.departFromUnLocode(), command.adjustedBy(), clock.instant()));
+                excluded.stream().map(port -> port.unLocode().value()).toList(),
+                departFrom == null ? null : departFrom.unLocode().value(),
+                command.adjustedBy(), clock.instant()));
         return command.bookingId();
     }
 
@@ -316,10 +324,8 @@ public class Cargo {
      * 確定した経路を荷主へ通知した記録を残す（UC10 / US12）。
      *
      * <p><b>送信基盤はスコープ外だが、記録は業務の守りとして働く。</b> 経路が
-     * 決まっていない予約は通知できず、通知した予約だけが確定（US13）へ進める。</p>
-     *
-     * <p><b>再通知を許す。</b> 条件が変わったら伝え直す必要がある。予約の状態は
-     * {@code ROUTE_NOTIFIED} のままで、通知履歴に行が増える。</p>
+     * 決まっていない予約は通知できず、通知した予約だけが確定（US13）へ進める。
+     * 再通知は許す（条件が変わったら伝え直す）。</p>
      */
     @CommandHandler
     public String notifyShipper(NotifyShipperCommand command, EventAppender appender,
@@ -333,6 +339,12 @@ public class Cargo {
             throw new IllegalTransition(
                     "経路が決まっていない予約は荷主へ通知できません（"
                             + routingStatus.label() + "）");
+        }
+        // **予約の状態も見る。** routingStatus だけだと、確定済みや終端の予約への
+        // 再通知で、遷移表に無い後退が静かに起きる。
+        if (!bookingStatus.canTransitionTo(BookingStatus.ROUTE_NOTIFIED)) {
+            throw new IllegalTransition(
+                    "状態 " + bookingStatus.label() + " の予約は荷主へ通知できません");
         }
         if (command.recipientEmail() == null || command.recipientEmail().isBlank()) {
             throw new BusinessRuleViolation("通知の宛先は必須です");
@@ -359,11 +371,8 @@ public class Cargo {
      * <p>荷主が変更を求めたときに営業が使う。<b>通知したあとだけ開く</b>——通知前に
      * 組み直したいなら、経路設計者が自分で確定し直せばよい。</p>
      *
-     * <p><b>{@code RoutingRequestedEvent} を再利用しない。</b> 投影の結果（作業一覧に
-     * 再び出る）は同じでも、「引き渡した」と「通知後に戻した」を履歴で区別できなく
-     * なる。経路設計者が「なぜ戻ってきたのか」を読めることが業務の要点である。</p>
-     *
-     * <p><b>確定済みの旅程は消さない。</b> 再設計で入れ替わるまで残す。</p>
+     * <p><b>{@code RoutingRequestedEvent} を再利用しない</b>（詳細は
+     * {@link ReturnToRoutingCommand}）。確定済みの旅程は消さない。</p>
      */
     @CommandHandler
     public String returnToRouting(ReturnToRoutingCommand command, EventAppender appender,
@@ -392,11 +401,9 @@ public class Cargo {
         this.routingStatus = RoutingStatus.ROUTING_REQUESTED;
     }
 
+    /** **状態は動かさない**（ADR-0009 決定 1）。記録は投影が持つ。 */
     @EventSourcingHandler
     void on(ConditionReviewRequestedEvent event) {
-        // **状態は動かさない**（ADR-0009 決定 1）。記録は投影が持つ。集約が変える
-        // ものが無いので本文は空だが、@EventSourcingHandler は要る（このイベントを
-        // 読み飛ばすと、以降のイベントの適用順が変わる形に将来なりうる）。
     }
 
     @EventSourcingHandler

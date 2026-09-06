@@ -114,9 +114,11 @@ export function BookingDetailPage() {
   // 通知履歴（US12 §受入基準 4）。**読むのは全員**——経路設計者も追跡も
   // 「荷主に何を伝えたか」を知る必要がある。操作だけを営業に絞る。
   //
-  // 一度も通知していない予約では問い合わせない（修正履歴と同じ形）。**状態では
-  // 絞れない**——経路設計へ戻した予約は経路提案中に戻るが、通知履歴は残っている。
-  const notified = data?.state === 'ready' && Boolean(data.value.lastNotifiedAt);
+  // 一度も経路を組んでいない予約では問い合わせない。**`lastNotifiedAt` では
+  // 絞れない**——戻したり条件を変えたりすると、組み直したあと再び「未通知」に
+  // 出せるように印を落とすため（IT6 レビュー 中）。履歴そのものは残るので、
+  // 旅程と同じ「一度でも経路を組んだか」で問い合わせる。
+  const notified = everRouted;
   // 届いたら取り直しを止める。
   useEffect(() => {
     if (notified) {
@@ -128,6 +130,9 @@ export function BookingDetailPage() {
     queryFn: () => fetchBookingNotifications(bookingId),
     enabled: notified,
   });
+  // **1 つの読み口で画面全体を落とさない。** 予約詳細は 4 つの読み口を束ねる。
+  const notificationItems = notifications.data?.state === 'ready'
+    ? notifications.data.value.items ?? [] : [];
 
   const notifiable = data?.state === 'ready' && canNotifyShipper(data.value.routingStatus);
   const returnable = data?.state === 'ready' && canReturnToRouting(data.value.bookingStatus);
@@ -456,9 +461,9 @@ export function BookingDetailPage() {
             </div>
           )}
 
-          {notified
-            && notifications.data?.state === 'ready'
-            && notifications.data.value.items.length > 0 && (
+          {/* **1 つの読み口で画面全体を落とさない。** 予約詳細は 4 つの読み口を
+              束ねるので、どれか 1 つが思わぬ形を返すと予約の内容ごと消える。 */}
+          {notificationItems.length > 0 && (
             <div>
               <h2 className={SECTION_TITLE}>通知履歴</h2>
               <div className="mt-2 overflow-x-auto">
@@ -473,7 +478,7 @@ export function BookingDetailPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {notifications.data.value.items.map((item) => (
+                    {notificationItems.map((item) => (
                       <tr key={item.notifiedAt} data-testid={`notification-${item.notifiedAt}`}>
                         <td className={TD}>{formatBusinessDateTime(item.notifiedAt)}</td>
                         {/* 誰が通知したか分からないことは「—」で表す（記録は残る）。 */}

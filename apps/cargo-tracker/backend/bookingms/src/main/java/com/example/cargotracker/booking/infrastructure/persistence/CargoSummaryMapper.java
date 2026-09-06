@@ -94,7 +94,12 @@ public interface CargoSummaryMapper {
             + "route_exclude_unlocodes = #{excludeUnLocodes}, "
             + "route_depart_from_unlocode = #{departFromUnLocode}, "
             + "routing_status = #{routingStatus}, condition_review_requested_at = NULL, "
-            + "condition_review_reason = NULL, projected_at = #{projectedAt} "
+            + "condition_review_reason = NULL, "
+            // **通知済みの印も落とす。** 条件が変われば、荷主へ伝えた経路は
+            // その条件で組んだものではなくなる。残すと、組み直しても営業の
+            // 「未通知」に二度と出ず、旧経路を伝えたまま誰も気づけない
+            // （IT6 レビュー 中）。履歴（cargo_notification）は残る。
+            + "last_notified_at = NULL, projected_at = #{projectedAt} "
             + "WHERE booking_id = #{bookingId}")
     int updateAdjustedRouteSpecification(@Param("bookingId") String bookingId,
             @Param("arrivalDeadline") LocalDate arrivalDeadline,
@@ -157,7 +162,10 @@ public interface CargoSummaryMapper {
     @org.apache.ibatis.annotations.Update(
             "UPDATE cargo_summary SET booking_status = #{bookingStatus}, "
             + "routing_status = #{routingStatus}, returned_to_routing_at = #{returnedAt}, "
-            + "return_reason = #{reason}, projected_at = #{projectedAt} "
+            + "return_reason = #{reason}, "
+            // 戻したのだから、伝えた経路はもう有効でない。組み直したあと
+            // 営業の「未通知」に再び出るようにする。履歴は残る。
+            + "last_notified_at = NULL, projected_at = #{projectedAt} "
             + "WHERE booking_id = #{bookingId}")
     int updateReturnedToRouting(@Param("bookingId") String bookingId,
             @Param("bookingStatus") String bookingStatus,

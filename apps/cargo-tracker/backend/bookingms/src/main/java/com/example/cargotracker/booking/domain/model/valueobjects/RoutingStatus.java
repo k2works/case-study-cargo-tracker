@@ -41,4 +41,17 @@ public enum RoutingStatus {
     public boolean canRequestConditionReview() {
         return this == ROUTING_REQUESTED;
     }
+
+    /**
+     * 経路の条件を調整できるか（US10 / ADR-0009 決定 3）。
+     *
+     * <p>引き渡してから経路が決まるまでの間と、決まったあとに変えたいときに開く。</p>
+     *
+     * <p><b>誤配（{@code MISROUTED}）は含めない。</b> 調整は routingStatus を
+     * {@code ROUTING_REQUESTED} に戻すので、誤配の記録が消える。誤配からの再設計は
+     * US28（IT11）が持つ判断で、そこを先に縛らない。</p>
+     */
+    public boolean canAdjustRouteSpecification() {
+        return this == ROUTING_REQUESTED || this == ROUTED;
+    }
 }

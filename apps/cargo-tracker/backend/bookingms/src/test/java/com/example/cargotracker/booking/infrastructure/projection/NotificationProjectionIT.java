@@ -11,6 +11,7 @@ import com.example.cargotracker.booking.infrastructure.query.BookingQueries.Book
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingItineraryQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingNotificationsQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.CountAwaitingNotificationQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.NotificationView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueryHandler;
 import com.example.cargotracker.shared.testing.AbstractAxonIntegrationTest;
@@ -170,5 +171,49 @@ class NotificationProjectionIT extends AbstractAxonIntegrationTest {
         BookingView view = queries.handle(new FindBookingQuery(bookingId));
         assertThat(view.returnReason()).isNull();
         assertThat(view.returnedToRoutingAt()).isNull();
+    }
+
+    @Test
+    @DisplayName("US12: 戻して組み直すと、営業の「未通知」に再び出る")
+    void redesignedBookingBecomesAwaitingNotificationAgain() {
+        // **通知済みの印を残すと、旧経路を伝えたまま誰も気づけない**（IT6 レビュー 中）。
+        // 戻した時点で印を落とし、組み直して設定済みになったら再び数える。
+        String bookingId = routedBooking();
+        projection.on(notified(bookingId, FIRST, "1 回目"));
+        int afterNotifying = queries.handle(new CountAwaitingNotificationQuery());
+
+        projection.on(new ReturnedToRoutingEvent(bookingId, "変更希望", "sales01", SECOND));
+        projection.on(new CargoRoutedEvent(bookingId,
+                List.of(new CargoRoutedEvent.Leg("V-2", "JPTYO", "USNYC",
+                        Instant.parse("2026-10-01T00:00:00Z"),
+                        Instant.parse("2026-10-20T00:00:00Z"))),
+                "routing01", SECOND));
+
+        assertThat(queries.handle(new CountAwaitingNotificationQuery()))
+                .as("組み直した予約は、もう一度伝える必要がある")
+                .isEqualTo(afterNotifying + 1);
+        // 何を伝えたかは残る。
+        assertThat(historyOf(bookingId)).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("US10: 条件を調整しても、通知済みの印は落ちる")
+    void adjustmentAlsoClearsTheNotifiedMark() {
+        String bookingId = routedBooking();
+        projection.on(notified(bookingId, FIRST, "1 回目"));
+        int afterNotifying = queries.handle(new CountAwaitingNotificationQuery());
+
+        projection.on(new com.example.cargotracker.booking.domain.model.events
+                .RouteSpecificationAdjustedEvent(bookingId,
+                java.time.LocalDate.of(2027, Month.JANUARY, 31),
+                List.of(), null, "routing01", SECOND));
+        projection.on(new CargoRoutedEvent(bookingId,
+                List.of(new CargoRoutedEvent.Leg("V-3", "JPTYO", "USNYC",
+                        Instant.parse("2026-10-01T00:00:00Z"),
+                        Instant.parse("2026-10-20T00:00:00Z"))),
+                "routing01", SECOND));
+
+        assertThat(queries.handle(new CountAwaitingNotificationQuery()))
+                .isEqualTo(afterNotifying + 1);
     }
 }

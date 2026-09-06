@@ -10,6 +10,7 @@ import com.example.cargotracker.booking.domain.model.events.CargoRoutedEvent;
 import com.example.cargotracker.booking.domain.model.events.ReturnedToRoutingEvent;
 import com.example.cargotracker.booking.domain.model.events.RoutingRequestedEvent;
 import com.example.cargotracker.booking.domain.model.events.ShipperNotifiedEvent;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -23,6 +24,8 @@ import org.axonframework.test.fixture.AxonTestFixture;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 /**
  * 確定経路の荷主への通知（UC10 / US12）と、経路設計への差し戻し（UC08）。
@@ -210,5 +213,21 @@ class CargoNotificationTest {
                 .when().command(new RequestConditionReviewCommand("B-0001",
                         "希望の経由港では期限に間に合いません", "routing01"))
                 .then().success();
+    }
+
+    @ParameterizedTest
+    @EnumSource(BookingStatus.class)
+    @DisplayName("通知できるのは遷移表が通知済みへ進める状態だけ（後退させない）")
+    void notificationFollowsTheTransitionTable(BookingStatus status) {
+        // **routingStatus だけを見ると後退が起きる。** 確定済み（US13・IT7）や
+        // 終端（精算済・キャンセル）の予約に再通知すると、遷移表に無い
+        // 「確定 → 通知済み」が静かに起きる（IT6 レビュー 中・2 視点）。
+        //
+        // 集約のイベントでは到達できない状態があるので、遷移表の述語そのものを
+        // 全値で回して固定する。値を足したらここが赤くなる。
+        assertThat(status.canTransitionTo(BookingStatus.ROUTE_NOTIFIED))
+                .as("%s から通知済みへ進めるか", status)
+                .isEqualTo(status == BookingStatus.ROUTE_PROPOSED
+                        || status == BookingStatus.ROUTE_NOTIFIED);
     }
 }

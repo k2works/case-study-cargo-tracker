@@ -283,4 +283,54 @@ class CargoConditionAdjustmentTest {
                 .then().exceptionSatisfies(e ->
                         assertThat(e.getMessage()).contains("受け付けていません"));
     }
+
+    @Test
+    @DisplayName("小文字の港コードは受け付けない（生文字列で比べない）")
+    void rejectsLowerCasePortCode() {
+        // 生文字列の equals で比べていると、"jptyo" が端点の除外検査を素通りして
+        // 「候補が必ず 0 件になる条件」が作られる（IT6 レビュー 高）。Location に
+        // 通すと、素通りする前に形で断る。
+        fixture.given().events(booked(), new RoutingRequestedEvent("B-0001", "sales01"))
+                .when().command(new AdjustRouteSpecificationCommand("B-0001", EXTENDED,
+                        List.of("jptyo"), null, "routing01"))
+                .then().exceptionSatisfies(e ->
+                        assertThat(e.getMessage()).contains("UN/LOCODE"));
+    }
+
+    @Test
+    @DisplayName("港コードの形が違う起点は受け付けない（投影で落ちる前に断る）")
+    void rejectsMalformedDepartFrom() {
+        // 6 文字以上はイベントを確定してから投影の UPDATE で落ち、リプレイのたびに
+        // 落ち続ける。集約で断れば、そもそもイベントにならない。
+        fixture.given().events(booked(), new RoutingRequestedEvent("B-0001", "sales01"))
+                .when().command(new AdjustRouteSpecificationCommand("B-0001", EXTENDED,
+                        List.of(), "JPTYOX", "routing01"))
+                .then().exceptionSatisfies(e ->
+                        assertThat(e.getMessage()).contains("UN/LOCODE"));
+    }
+
+    @Test
+    @DisplayName("形の正しい港コードはそのまま記録する")
+    void keepsWellFormedPortCodes() {
+        fixture.given().events(booked(), new RoutingRequestedEvent("B-0001", "sales01"))
+                .when().command(new AdjustRouteSpecificationCommand("B-0001", EXTENDED,
+                        List.of("SGSIN"), "JPOSA", "routing01"))
+                .then().success()
+                .events(new RouteSpecificationAdjustedEvent("B-0001", EXTENDED,
+                        List.of("SGSIN"), "JPOSA", "routing01", NOW));
+    }
+
+    @ParameterizedTest
+    @EnumSource(RoutingStatus.class)
+    @DisplayName("条件を調整できるのは設計依頼中と設定済みだけ（誤配は含めない）")
+    void onlyRequestedOrRoutedCanBeAdjusted(RoutingStatus status) {
+        // **誤配を含めると、調整が routingStatus を戻して誤配の記録を消す。**
+        // 誤配からの再設計は US28（IT11）が持つ判断で、そこを先に縛らない
+        // （IT6 レビュー 中）。集約のイベントでは MISROUTED に到達できないので、
+        // 述語を全値で回して固定する。
+        assertThat(status.canAdjustRouteSpecification())
+                .as("%s から条件を調整できるか", status)
+                .isEqualTo(status == RoutingStatus.ROUTING_REQUESTED
+                        || status == RoutingStatus.ROUTED);
+    }
 }
