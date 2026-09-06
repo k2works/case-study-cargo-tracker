@@ -297,6 +297,26 @@ class BookingControllerIT extends AbstractAxonIntegrationTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
     }
 
+    @Test
+    @DisplayName("断った理由が利用者に届く（器だけの文言に化けない）")
+    void refusalCarriesTheReason() {
+        // **ステータスコードだけを見る検査では判別できなかった**（IT7 のクラスタで実測）。
+        // Axon Server 越しに来ると「An exception was thrown by the remote message
+        // handling component: 」という器だけの文言が最深に来る。印の付いた文言を
+        // 優先しないと、断った理由が画面に出ない。
+        String bookingId = handedOverBooking();
+
+        ResponseEntity<JsonMap> response = postTo("/" + bookingId + "/confirmation", Map.of());
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(String.valueOf(response.getBody().get("message")))
+                .as("なぜ断られたのかが読めないと、利用者は次に何をすればよいか分からない")
+                .contains("確定できません")
+                .doesNotContain("remote message handling component")
+                // 例外クラスの完全名を業務担当者に見せない。
+                .doesNotContain("com.example.cargotracker");
+    }
+
     private String handedOverBooking() {
         ResponseEntity<JsonMap> created = post(request(Map.of()));
         String bookingId = String.valueOf(created.getBody().get("bookingId"));

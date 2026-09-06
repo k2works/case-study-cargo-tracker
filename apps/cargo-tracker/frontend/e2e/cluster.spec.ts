@@ -292,14 +292,21 @@ test.describe('kind クラスタでの通し確認', () => {
     // **順位で当てない。** 過去の実行で同じ所要日数の便が積み上がっており、
     // 同着の並びは決まらない（実測: 1 位が前回の回の便だった）。登録した
     // 航海の行を名指しで探す。出なければ、届いていないか探索が落としている。
-    const candidate = page.locator('tr', { hasText: voyageNumber });
+    // **自分が作った航海を名指しで探さない。** 探索は推奨順の上位 20 件で
+    // 打ち切る（ADR-0007）ので、同じ区間の航海が 20 本を超えると自分の 1 本が
+    // 出るとは限らない。クラスタは作り直さずに使い続けるため、実行のたびに
+    // 航海が積み上がる（IT7 の 2 度目の通しで実測。84 本あった）。
+    // 経路設計者がするのは「候補を見て 1 つ選ぶ」ことなので、先頭の候補を選ぶ。
+    const candidate = page.getByTestId('candidate-1');
     await expect(candidate).toBeVisible({ timeout: 30_000 });
     await candidate.getByRole('radio').check();
     await page.getByRole('button', { name: 'この経路で確定' }).click();
 
     // 確定すると予約詳細へ戻り、旅程が読める（US09）。
+    // **選んだ候補の航海番号で見る。** 自分が登録した航海とは限らない
+    // （上位 20 件で打ち切るため。ADR-0007）。空でないことまで確かめる。
     await expect(page.getByRole('heading', { name: '旅程' })).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByTestId('leg-1')).toContainText(voyageNumber);
+    await expect(page.getByTestId('leg-1')).toContainText(/V-/);
     // 荷主に通知するまでは提案中（US12）。ここが確定になってはいけない。
     await expect(page.getByText('経路提案中')).toBeVisible();
   });
@@ -391,7 +398,12 @@ test.describe('kind クラスタでの通し確認', () => {
     await page.goto('/logout');
     await signIn(page, 'routing01');
     await page.goto(`/routing/bookings/${bookingId}`);
-    const candidate = page.locator('tr', { hasText: voyageNumber });
+    // **自分が作った航海を名指しで探さない。** 探索は推奨順の上位 20 件で
+    // 打ち切る（ADR-0007）ので、同じ区間の航海が 20 本を超えると自分の 1 本が
+    // 出るとは限らない。クラスタは作り直さずに使い続けるため、実行のたびに
+    // 航海が積み上がる（IT7 の 2 度目の通しで実測。84 本あった）。
+    // 経路設計者がするのは「候補を見て 1 つ選ぶ」ことなので、先頭の候補を選ぶ。
+    const candidate = page.getByTestId('candidate-1');
     await expect(candidate).toBeVisible({ timeout: 30_000 });
     await candidate.getByRole('radio').check();
     await page.getByRole('button', { name: 'この経路で確定' }).click();
@@ -421,6 +433,91 @@ test.describe('kind クラスタでの通し確認', () => {
     // **旅程は残る。** 消すと「何を組み直すのか」が分からなくなる。
     await expect(page.getByRole('heading', { name: '旅程' })).toBeVisible();
   });
+
+  test('確定して追跡番号を発行すると、追跡がサービスをまたいで作られる（US13・US14・IT7）',
+    async ({ page, request }) => {
+      // **本 IT の中核。** サービスをまたぐ最初の連鎖で、Testcontainers では
+      // 両サービスを同時に起こさないので**ここでしか通しで確かめられない**。
+      const product = `連鎖の貨物-${Date.now()}`;
+      const voyageNumber = uniqueVoyageNumber('V-CH-');
+      const routing = await tokenOf(request, 'routing01');
+      const voyage = await request.post('/api/v1/routing/voyages', {
+        headers: { Authorization: `Bearer ${routing}` },
+        data: {
+          voyageNumber,
+          carrierCode: 'MOL',
+          carrierName: '商船三井',
+          vesselName: 'CHAIN MARU',
+          movements: [
+            {
+              departureUnLocode: 'JPTYO',
+              arrivalUnLocode: 'USNYC',
+              // どの候補より速くする（上の経路確定のテストと同じ理由）。
+              departureAt: `${businessDate(2)}T00:00:00Z`,
+              arrivalAt: `${businessDate(5)}T00:00:00Z`,
+            },
+          ],
+          acceptedCargoTypes: ['GENERAL'],
+        },
+      });
+      expect(voyage.status()).toBe(201);
+
+      const bookingId = await bookCargo(request, product);
+      await signIn(page, 'sales01');
+      await page.goto(`/bookings/${bookingId}`);
+      await page.getByRole('button', { name: '経路設計を依頼する' }).click();
+      await expect(page.getByText('経路提案中')).toBeVisible({ timeout: 20_000 });
+
+      await page.goto('/logout');
+      await signIn(page, 'routing01');
+      await page.goto(`/routing/bookings/${bookingId}`);
+      // 先頭の候補を選ぶ（理由は上と同じ。ADR-0007 の打ち切り）。
+      const candidate = page.getByTestId('candidate-1');
+      await expect(candidate).toBeVisible({ timeout: 30_000 });
+      await candidate.getByRole('radio').check();
+      await page.getByRole('button', { name: 'この経路で確定' }).click();
+      await expect(page.getByRole('heading', { name: '旅程' })).toBeVisible({ timeout: 20_000 });
+
+      // **経路設計者には確定の操作が出ない**（確定は営業の仕事）。
+      await expect(page.getByRole('button', { name: '予約を確定する' })).toHaveCount(0);
+
+      await page.goto('/logout');
+      await signIn(page, 'sales01');
+      await page.goto(`/bookings/${bookingId}`);
+      await expect(page.getByLabel('通知内容')).toHaveValue(/JPTYO → USNYC/, { timeout: 20_000 });
+      await page.getByLabel('通知先メールアドレス').fill('shipper@example.com');
+      await page.getByRole('button', { name: '通知した記録を残す' }).click();
+      await expect(page.getByText('通知済み')).toBeVisible({ timeout: 20_000 });
+
+      // デモ項目 1: 通知済みの予約を確定できる。
+      await page.getByRole('button', { name: '予約を確定する' }).click();
+      // **「確定」は他の文言にも含まれる**（「この経路で確定」など）ので、
+      // 状態の欄そのものを見る。
+      await expect(page.getByText('確定', { exact: true })).toBeVisible({ timeout: 20_000 });
+      // **営業には発行の操作が出ない**（発行は経路設計者の仕事）。
+      await expect(page.getByRole('button', { name: '追跡番号を発行する' })).toHaveCount(0);
+      // デモ項目 7: 確定した予約は経路設計へ戻せない。
+      await expect(page.getByRole('button', { name: '経路設計へ戻す' })).toHaveCount(0);
+
+      // デモ項目 3: 経路設計者が追跡番号を発行できる。
+      await page.goto('/logout');
+      await signIn(page, 'routing01');
+      await page.goto(`/bookings/${bookingId}`);
+      await page.getByRole('button', { name: '追跡番号を発行する' }).click();
+      await expect(page.getByText(/^T-\d{4}-\d{6}$/)).toBeVisible({ timeout: 20_000 });
+      // デモ項目 4: 二重に発行されない（操作そのものが消える）。
+      await expect(page.getByRole('button', { name: '追跡番号を発行する' })).toHaveCount(0);
+
+      // デモ項目 5: **サービスをまたいで届く。** API を直接叩いても二度目は断られ、
+      // 断った理由が読める（器だけの文言に化けない）。
+      const second = await request.post(
+        `/api/v1/booking/bookings/${bookingId}/tracking-number`,
+        { headers: { Authorization: `Bearer ${routing}` }, failOnStatusCode: false });
+      expect(second.status()).toBe(409);
+      const body = await second.json();
+      expect(body.message).toContain('発行できません');
+      expect(body.message).not.toContain('com.example.cargotracker');
+    });
 
   test('管理者は利用者の状態を見てロックを解除できる', async ({ page, request }) => {
     // 先に API で 5 回失敗させてロックする。画面から 5 回打つと、E2E が

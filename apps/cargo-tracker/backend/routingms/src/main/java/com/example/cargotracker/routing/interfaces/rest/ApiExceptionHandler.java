@@ -79,15 +79,41 @@ public class ApiExceptionHandler {
         return false;
     }
 
-    /** 連鎖のいちばん内側の文言。無ければ外側から順に探す。 */
+    /**
+     * 断った理由の文言。<b>印の付いた文言を優先する。</b>
+     *
+     * <p>いちばん内側を採ると、Axon Server 越しに来たときに
+     * 「An exception was thrown by the remote message handling component: 」という
+     * 器だけの文言が最深に来て、<b>断った理由が利用者に届かない</b>（IT7 のクラスタで
+     * 実測。ステータスコードだけを見る検査では判別できなかった）。</p>
+     *
+     * <p>印が無ければ、これまでどおりいちばん内側の文言を使う。</p>
+     */
     private static String deepestMessage(Throwable throwable) {
+        String marked = null;
         String message = null;
         for (Throwable t = throwable; t != null; t = t.getCause() == t ? null : t.getCause()) {
-            if (t.getMessage() != null && !t.getMessage().isBlank()) {
-                message = t.getMessage();
+            if (t.getMessage() == null || t.getMessage().isBlank()) {
+                continue;
+            }
+            message = t.getMessage();
+            if (marked == null) {
+                // **印より前は切り落とす。** 遠隔から来た文言は
+                // 「<例外クラスの完全名>: [ILLEGAL_STATE] 本文」の形になり、
+                // クラス名がそのまま業務担当者の画面に出る。
+                marked = fromMarker(t.getMessage(), IllegalTransition.MARKER);
+                if (marked == null) {
+                    marked = fromMarker(t.getMessage(), BusinessRuleViolation.MARKER);
+                }
             }
         }
-        return message == null ? "処理できませんでした" : message;
+        return marked != null ? marked : (message == null ? "処理できませんでした" : message);
+    }
+
+    /** 印から後ろだけを取り出す。印が無ければ {@code null}。 */
+    private static String fromMarker(String message, String marker) {
+        int at = message.indexOf(marker);
+        return at < 0 ? null : message.substring(at);
     }
 
     /** 状態遷移違反。集約の外（Controller）で判断したもの。 */
