@@ -1,6 +1,9 @@
 # Docs Update Log
 
 ## 2026-09-06
+* **Update**: [retrospective-6](/development/cargo-tracker/retrospective-6.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_report-6](/development/cargo-tracker/iteration_report-6.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-6](/development/cargo-tracker/iteration_plan-6.md) を更新（claude-code/claude-opus-5）
 * **Creation**: [IT6実装_review_20260906](/review/cargo-tracker/IT6実装_review_20260906.md) を作成（claude-code/claude-opus-5）
 * **Update**: [10-荷主に経路を通知する](/manual/10-荷主に経路を通知する.md) を更新（claude-code/claude-opus-5）
 * **Update**: [09-経路を設計する](/manual/09-経路を設計する.md) を更新（claude-code/claude-opus-5）
