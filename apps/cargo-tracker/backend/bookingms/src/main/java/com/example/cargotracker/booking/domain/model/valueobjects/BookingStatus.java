@@ -61,6 +61,23 @@ public enum BookingStatus {
     }
 
     /**
+     * 経路設計へ引き渡せるか（US06）。
+     *
+     * <p><b>遷移先だけでは表せない。</b> 正典で {@code RequestRoutingCommand} が出るのは
+     * {@code PRELIMINARY} からだけで、{@code ROUTE_PROPOSED} の自己遷移は経路の確定
+     * （{@code AssignRouteCommand}）と条件の調整（{@code AdjustRouteSpecificationCommand}）
+     * のものである（domain-model.md「BookingStatus 状態遷移（正典）」）。</p>
+     *
+     * <p>{@code canTransitionTo(ROUTE_PROPOSED)} で代用すると、引き渡し済みの予約を
+     * もう一度引き渡せる。{@code RoutingRequestedEvent} は routingStatus を
+     * {@code ROUTING_REQUESTED} に戻すので、<b>確定済みの経路が理由も残さず未設計に
+     * 戻る</b>。戻すのは {@code ReturnToRoutingCommand} の仕事（US12）。</p>
+     */
+    public boolean canRequestRouting() {
+        return this == PRELIMINARY;
+    }
+
+    /**
      * 入力の誤りを直せるか（US32。不変条件「修正できるのは仮受付の予約だけ」）。
      *
      * <p>経路提案中より先へ進むと、経路設計者が既にその内容で作業している。直せると、

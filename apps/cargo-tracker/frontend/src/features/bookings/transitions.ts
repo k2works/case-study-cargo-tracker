@@ -37,9 +37,19 @@ export function canUpdateSpecification(status: string): boolean {
   return status === 'PRELIMINARY';
 }
 
-/** 経路設計へ引き渡せるか（US06）。集約と同じ述語を通す。 */
+/**
+ * 経路設計へ引き渡せるか（US06）。集約と同じ述語を通す。
+ *
+ * <p><b>遷移先では表せない。</b> ROUTE_PROPOSED への自己遷移は経路の確定と条件の
+ * 調整のもので、引き渡しではない。`canTransitionTo(status, 'ROUTE_PROPOSED')` で
+ * 代用すると、引き渡し済みの予約に「経路設計を依頼する」が出て、押すと確定済みの
+ * 経路が理由も残さず未設計に戻る（マニュアルのキャプチャで実測）。</p>
+ *
+ * <p>Java 側の BookingStatus.canRequestRouting と同じ判断であることは
+ * transitions.canon.test.ts が正典を読んで突き合わせる。</p>
+ */
 export function canRequestRouting(status: string): boolean {
-  return canTransitionTo(status, 'ROUTE_PROPOSED');
+  return status === 'PRELIMINARY';
 }
 
 /**

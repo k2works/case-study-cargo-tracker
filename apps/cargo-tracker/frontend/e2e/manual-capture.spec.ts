@@ -112,6 +112,45 @@ const SAMPLE_VOYAGES = {
   total: 2,
 };
 
+/**
+ * 経路が確定していて、一度修正した予約（05 章）。
+ *
+ * <p>仮受付の見本（{@code SAMPLE_BOOKINGS.items[0]}）では「旅程」も「修正履歴」も
+ * 出ない。マニュアルはその両方を説明しているので、説明だけがあって画面に無い状態に
+ * なる（IT5 引き継ぎ 1）。<b>2 つの状態は 1 枚に収まらないので、別のキャプチャにする。</b></p>
+ */
+const SAMPLE_ROUTED_BOOKING = {
+  ...SAMPLE_BOOKINGS.items[0],
+  bookingId: '77777777-7777-7777-7777-777777777777',
+  bookingNumber: 'B-2026-0903-0002',
+  bookingStatus: 'ROUTE_PROPOSED',
+  routingStatus: 'ROUTED',
+  updatedAt: '2026-09-05T02:00:00Z',
+  updatedBy: 'sales02',
+};
+
+/** 確定した旅程。乗り継ぎのある形にする。区間が 1 本だと積む順が読めない。 */
+const SAMPLE_ITINERARY = {
+  legs: [
+    {
+      legSeq: 1,
+      voyageNumber: 'V-ONE-118',
+      loadUnLocode: 'JPTYO',
+      unloadUnLocode: 'SGSIN',
+      loadAt: '2026-09-12T15:30:00Z',
+      unloadAt: '2026-09-19T08:00:00Z',
+    },
+    {
+      legSeq: 2,
+      voyageNumber: 'V-MOL-001',
+      loadUnLocode: 'SGSIN',
+      unloadUnLocode: 'USNYC',
+      loadAt: '2026-09-20T01:00:00Z',
+      unloadAt: '2026-10-05T18:00:00Z',
+    },
+  ],
+};
+
 /** 経路設計作業一覧に出す予約。誤配を先頭に置いて並び順も写す。 */
 const SAMPLE_WORKLIST = {
   items: [
@@ -228,6 +267,22 @@ test.describe('マニュアルの画面キャプチャ', () => {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify(SAMPLE_BOOKINGS.items[0]),
+      }),
+    );
+    // 経路が確定した予約（05 章）。**1 件の読み口より後**に置く。`*` は `/` を
+    // またがないので、これを先に置くと当たらない。
+    await page.route('**/api/v1/booking/bookings/77777777-*', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(SAMPLE_ROUTED_BOOKING),
+      }),
+    );
+    await page.route('**/api/v1/booking/bookings/*/itinerary', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(SAMPLE_ITINERARY),
       }),
     );
     await page.route('**/api/v1/booking/bookings/summary**', (route) =>
@@ -373,6 +428,39 @@ test.describe('マニュアルの画面キャプチャ', () => {
     await page.goto('/bookings/55555555-5555-5555-5555-555555555555');
     await expect(page.getByRole('heading', { name: /予約 B-2026-0903-0001/ })).toBeVisible();
     await page.screenshot({ path: `${OUT}/05-S22-booking-detail.png`, fullPage: true });
+  });
+
+  test('05 予約詳細（経路確定済み・修正済み）', async ({ page }) => {
+    // **仮受付の見本では「旅程」も「修正履歴」も出ない。** マニュアルはその両方を
+    // 説明しているので、1 枚では説明と画面が食い違う（IT5 引き継ぎ 1）。
+    await page.route('**/api/v1/booking/bookings/*/revisions', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: [
+            {
+              updatedAt: '2026-09-05T02:00:00Z',
+              updatedBy: 'sales02',
+              label: '到着期限',
+              before: '2026-11-20',
+              after: '2026-12-01',
+            },
+          ],
+        }),
+      }),
+    );
+    await signIn(page);
+    await page.goto('/bookings/77777777-7777-7777-7777-777777777777');
+    await expect(page.getByRole('heading', { name: /予約 B-2026-0903-0002/ })).toBeVisible();
+    // 撮る前に、写したい 2 つが出ていることを確かめる。出ていないまま撮ると、
+    // 説明と食い違うキャプチャを作り直しただけになる。
+    await expect(page.getByRole('heading', { name: '旅程' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '修正履歴' })).toBeVisible();
+    await page.screenshot({
+      path: `${OUT}/05-S22-booking-detail-routed.png`,
+      fullPage: true,
+    });
   });
 
   test('06 利用者管理', async ({ page }) => {

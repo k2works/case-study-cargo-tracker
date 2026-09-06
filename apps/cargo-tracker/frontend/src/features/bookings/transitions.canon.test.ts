@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { BOOKING_TRANSITIONS, canUpdateSpecification } from './transitions';
+import { BOOKING_TRANSITIONS, canRequestRouting, canUpdateSpecification } from './transitions';
 
 /**
  * 画面が持つ遷移表は、バックエンドの正典と同じ内容である。
@@ -40,6 +40,19 @@ describe('予約の状態遷移表', () => {
 
   it('画面の写しは正典と丸ごと一致する', () => {
     expect(BOOKING_TRANSITIONS).toEqual(canonTransitions());
+  });
+
+  it('引き渡せる状態は正典と一致する（US06）', () => {
+    // 遷移表には出ない。ROUTE_PROPOSED への自己遷移は経路の確定と条件の調整の
+    // もので、引き渡しではないため。Java 側の述語の本体を読み取って突き合わせる。
+    const source = readFileSync(CANON, 'utf-8');
+    const body = source.slice(source.indexOf('canRequestRouting()'));
+    const canon = /return this == (\w+);/.exec(body)?.[1];
+
+    expect(canon, '正典の述語を読めていない').toBeDefined();
+    for (const status of Object.keys(BOOKING_TRANSITIONS)) {
+      expect(canRequestRouting(status), status).toBe(status === canon);
+    }
   });
 
   it('修正できる状態は正典と一致する（US32）', () => {

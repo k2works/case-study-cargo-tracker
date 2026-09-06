@@ -114,7 +114,9 @@ public class Cargo {
         if (bookingId == null) {
             throw new IllegalTransition("予約 " + command.bookingId() + " は受け付けていません");
         }
-        if (!bookingStatus.canTransitionTo(BookingStatus.ROUTE_PROPOSED)) {
+        // 遷移先で判断しない。ROUTE_PROPOSED への自己遷移は経路の確定と条件の調整の
+        // もので、引き渡しではない。述語を呼ぶ（BookingStatus#canRequestRouting）。
+        if (!bookingStatus.canRequestRouting()) {
             throw new IllegalTransition(
                     "状態 " + bookingStatus.label() + " の予約は経路設計へ引き渡せません");
         }

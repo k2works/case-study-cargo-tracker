@@ -8,6 +8,7 @@ import com.example.cargotracker.booking.domain.model.commands.RequestRoutingComm
 import com.example.cargotracker.booking.domain.model.commands.UpdateCargoSpecificationCommand;
 import com.example.cargotracker.booking.domain.model.events.CargoSpecificationUpdatedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
+import com.example.cargotracker.booking.domain.model.events.CargoRoutedEvent;
 import com.example.cargotracker.booking.domain.model.events.RoutingRequestedEvent;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoSpecification;
@@ -19,8 +20,10 @@ import com.example.cargotracker.booking.domain.model.valueobjects.TemperatureReq
 import com.example.cargotracker.booking.domain.model.valueobjects.Weight;
 import com.example.cargotracker.shared.domain.location.Location;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Month;
+import java.util.List;
 import org.axonframework.eventsourcing.configuration.EventSourcedEntityModule;
 import org.axonframework.eventsourcing.configuration.EventSourcingConfigurer;
 import org.axonframework.test.fixture.AxonTestFixture;
@@ -257,13 +260,37 @@ class CargoTest {
     }
 
     @Test
-    @DisplayName("2 度目の引き渡しも受け付ける（ROUTE_PROPOSED → ROUTE_PROPOSED）")
-    void routingCanBeRequestedAgain() {
-        // 遷移表が ROUTE_PROPOSED → ROUTE_PROPOSED を許している。判定を書き直さず
-        // 述語を呼んでいるので、表を変えればここも変わる。
+    @DisplayName("引き渡し済みの予約はもう一度引き渡せない（US06）")
+    void rejectsSecondRoutingRequest() {
+        // 正典の遷移表で RequestRoutingCommand が出るのは PRELIMINARY からだけ。
+        // ROUTE_PROPOSED の自己遷移は経路の確定と条件の調整のもので、引き渡しでは
+        // ない（domain-model.md「BookingStatus 状態遷移（正典）」）。
+        //
+        // **通すと、確定済みの経路が理由も残さず未設計に戻る。** RoutingRequestedEvent
+        // は routingStatus を ROUTING_REQUESTED に戻すので、荷主へ通知したあとに
+        // 押されると、経路設計者は「なぜ戻ってきたのか」を読めない。戻すのは
+        // ReturnToRoutingCommand の仕事（US12）。
         fixture.given().event(bookedEvent()).event(new RoutingRequestedEvent("B-0001", "s"))
                 .when().command(new RequestRoutingCommand("B-0001", "sales01"))
-                .then().success();
+                .then().exceptionSatisfies(e ->
+                        assertThat(e.getMessage()).contains("引き渡せません"));
+    }
+
+    @Test
+    @DisplayName("経路が決まった予約を引き渡し直して未設計に戻せない（US06）")
+    void rejectsRoutingRequestAfterRouteAssigned() {
+        // 上の検査は状態だけを見る。こちらは**壊れ方**を見る。引き渡しを通すと
+        // routingStatus が ROUTED から巻き戻り、確定済みの旅程を持つ予約が
+        // 経路設計の作業一覧に「未設計」として再び現れる。
+        fixture.given().event(bookedEvent()).event(new RoutingRequestedEvent("B-0001", "s"))
+                .event(new CargoRoutedEvent("B-0001",
+                        List.of(new CargoRoutedEvent.Leg("V-MOL-001", "JPTYO", "USNYC",
+                                Instant.parse("2026-09-10T00:00:00Z"),
+                                Instant.parse("2026-09-24T09:00:00Z"))),
+                        "routing01", Instant.parse("2026-09-05T00:00:00Z")))
+                .when().command(new RequestRoutingCommand("B-0001", "sales01"))
+                .then().exceptionSatisfies(e ->
+                        assertThat(e.getMessage()).contains("引き渡せません"));
     }
 
     @Test
