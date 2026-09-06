@@ -172,4 +172,36 @@ class ConditionAdjustmentProjectionIT extends AbstractAxonIntegrationTest {
         assertThat(queries.handle(new FindRouteConditionQuery(bookingId)))
                 .isEqualTo(new RouteConditionView(List.of(), null));
     }
+
+    @Test
+    @DisplayName("投影に無い予約の条件は空（候補算出が先に予約の有無を見る）")
+    void unknownBookingHasNoConditions() {
+        assertThat(queries.handle(new FindRouteConditionQuery("B-NONE-" + System.nanoTime())))
+                .isEqualTo(new RouteConditionView(List.of(), null));
+    }
+
+    @Test
+    @DisplayName("起点だけを調整しても読み出せる（除外港が空でも条件は残る）")
+    void departFromOnlyIsKept() {
+        // 「除外港が無ければ条件も無い」と扱うと、起点だけの調整が消える。
+        String bookingId = handedOver();
+
+        projection.on(new RouteSpecificationAdjustedEvent(bookingId, EXTENDED,
+                List.of(), "JPOSA", "routing01", AT));
+
+        assertThat(queries.handle(new FindRouteConditionQuery(bookingId)))
+                .isEqualTo(new RouteConditionView(List.of(), "JPOSA"));
+    }
+
+    @Test
+    @DisplayName("除外港だけを調整しても読み出せる")
+    void excludedPortsOnlyAreKept() {
+        String bookingId = handedOver();
+
+        projection.on(new RouteSpecificationAdjustedEvent(bookingId, EXTENDED,
+                List.of("SGSIN"), null, "routing01", AT));
+
+        assertThat(queries.handle(new FindRouteConditionQuery(bookingId)))
+                .isEqualTo(new RouteConditionView(List.of("SGSIN"), null));
+    }
 }
