@@ -49,8 +49,10 @@ class BookingControllerIT extends AbstractAxonIntegrationTest {
                 .body(body).retrieve().toEntity(JsonMap.class);
     }
 
+    /** Gateway が付ける利用者名を添える。実際の経路では必ず付く。 */
     private ResponseEntity<JsonMap> postTo(String path, Map<String, Object> body) {
         return rest.post().uri(url(path)).contentType(MediaType.APPLICATION_JSON)
+                .header("X-Auth-Username", "sales01")
                 .body(body).retrieve().toEntity(JsonMap.class);
     }
 
@@ -172,6 +174,114 @@ class BookingControllerIT extends AbstractAxonIntegrationTest {
                 Map.of("arrivalDeadline", "2027-01-31"));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    @DisplayName("US12: 経路が決まった予約を通知でき、履歴に残る")
+    void notifiesShipper() {
+        String bookingId = routedBooking();
+
+        ResponseEntity<JsonMap> response = postTo("/" + bookingId + "/notifications",
+                Map.of("recipientEmail", "shipper@example.com",
+                        "summary", "JPTYO → USNYC / 14 日 / 2026-09-24 着"));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
+            assertThat(get("/" + bookingId).getBody().get("bookingStatus"))
+                    .isEqualTo("ROUTE_NOTIFIED");
+            assertThat(get("/" + bookingId + "/notifications").getBody().get("items").toString())
+                    .contains("shipper@example.com")
+                    .contains("2026-09-24 着");
+        });
+    }
+
+    @Test
+    @DisplayName("US12: 経路が決まっていない予約の通知は 409 で断る（画面が 500 にならない）")
+    void rejectsNotificationBeforeRouting() {
+        String bookingId = handedOverBooking();
+
+        ResponseEntity<JsonMap> response = postTo("/" + bookingId + "/notifications",
+                Map.of("recipientEmail", "shipper@example.com", "summary", "経路"));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    @DisplayName("US12: 利用者名の無い通知でも 500 にしない（記録は残す）")
+    void notifiesWithoutActor() {
+        // Gateway を通れば X-Auth-Username は必ず入るが、入らなかったときに
+        // 落とすのは違う。通知した事実は残し、「誰が」は画面で「—」と出す。
+        String bookingId = routedBooking();
+
+        ResponseEntity<JsonMap> response = rest.post()
+                .uri(url("/" + bookingId + "/notifications"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("recipientEmail", "shipper@example.com", "summary", "経路"))
+                .retrieve().toEntity(JsonMap.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        await().atMost(Duration.ofSeconds(10)).untilAsserted(() ->
+                assertThat(get("/" + bookingId + "/notifications").getBody()
+                        .get("items").toString()).contains("shipper@example.com"));
+    }
+
+    @Test
+    @DisplayName("US12 §4: 一度も通知していない予約の履歴は空（404 にしない）")
+    void emptyNotificationHistory() {
+        ResponseEntity<JsonMap> response = get("/" + handedOverBooking() + "/notifications");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().get("items").toString()).isEqualTo("[]");
+    }
+
+    @Test
+    @DisplayName("US12: 通知した予約を経路設計へ戻すと作業一覧に戻る")
+    void returnsToRouting() {
+        String bookingId = routedBooking();
+        assertThat(postTo("/" + bookingId + "/notifications",
+                Map.of("recipientEmail", "shipper@example.com", "summary", "経路"))
+                .getStatusCode()).isEqualTo(HttpStatus.OK);
+        await().atMost(Duration.ofSeconds(10)).untilAsserted(() ->
+                assertThat(get("/" + bookingId).getBody().get("bookingStatus"))
+                        .isEqualTo("ROUTE_NOTIFIED"));
+
+        ResponseEntity<JsonMap> response = postTo("/" + bookingId + "/return-to-routing",
+                Map.of("reason", "荷主が経由港の変更を希望"));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
+            JsonMap detail = get("/" + bookingId).getBody();
+            assertThat(detail.get("bookingStatus")).isEqualTo("ROUTE_PROPOSED");
+            assertThat(detail.get("routingStatus")).isEqualTo("ROUTING_REQUESTED");
+        });
+        // 戻しても「何を伝えたか」は残る。
+        assertThat(get("/" + bookingId + "/notifications").getBody().get("items").toString())
+                .contains("shipper@example.com");
+    }
+
+    @Test
+    @DisplayName("US12: 通知していない予約は経路設計へ戻せない（409）")
+    void rejectsReturnBeforeNotification() {
+        ResponseEntity<JsonMap> response = postTo(
+                "/" + routedBooking() + "/return-to-routing", Map.of("reason", "変更希望"));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    /** 引き渡して経路まで確定した予約。 */
+    private String routedBooking() {
+        String bookingId = handedOverBooking();
+        assertThat(postTo("/" + bookingId + "/route", Map.of("legs", List.of(Map.of(
+                "voyageNumber", "V-IT-001",
+                "loadUnLocode", "JPTYO",
+                "unloadUnLocode", "USNYC",
+                "loadTime", "2026-09-10T00:00:00Z",
+                "unloadTime", "2026-11-20T00:00:00Z")))).getStatusCode())
+                .isEqualTo(HttpStatus.OK);
+        await().atMost(Duration.ofSeconds(10)).untilAsserted(() ->
+                assertThat(get("/" + bookingId).getBody().get("routingStatus"))
+                        .isEqualTo("ROUTED"));
+        return bookingId;
     }
 
     /** 受け付けて経路設計へ引き渡した予約。投影が追いつくまで待つ。 */

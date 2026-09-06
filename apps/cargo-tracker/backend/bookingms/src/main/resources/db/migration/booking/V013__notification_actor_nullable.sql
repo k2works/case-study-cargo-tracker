@@ -1,0 +1,12 @@
+-- 通知した利用者は分からないことがある（US12）。
+--
+-- 正典: docs/design/cargo-tracker/data-model.md
+--
+-- notified_by は Gateway が付ける X-Auth-Username から来る。Gateway を通れば必ず
+-- 入るが、**入らなかったときに 500 で落とすのは違う**。通知した事実は残すべきで、
+-- 「誰が」が欠けていることは画面で「—」と出せばよい。修正履歴（cargo_revision の
+-- updated_by）も同じ扱いにしている。
+--
+-- V012 を書き換えず新しいマイグレーションで直す。適用済みのマイグレーションを
+-- 編集すると、既に当てた環境だけが checksum mismatch で起動しなくなる。
+ALTER TABLE cargo_notification ALTER COLUMN notified_by DROP NOT NULL;

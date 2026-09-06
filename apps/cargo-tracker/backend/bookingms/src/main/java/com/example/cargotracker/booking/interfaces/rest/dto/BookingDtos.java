@@ -180,6 +180,26 @@ public final class BookingDtos {
             @jakarta.validation.constraints.Size(max = 200) String reason) {
     }
 
+    /**
+     * 荷主への通知（US12）。
+     *
+     * <p><b>料金概算の欄を持たない。</b> 料金表は US21（IT13）が正典で、現時点で
+     * 存在しない。0 を出すと「費用 0 円」と読める（US12 §受入基準 2 の未達）。</p>
+     */
+    public record NotifyShipperRequest(
+            @jakarta.validation.constraints.NotBlank
+            @jakarta.validation.constraints.Email
+            @jakarta.validation.constraints.Size(max = 255) String recipientEmail,
+            @jakarta.validation.constraints.NotBlank
+            @jakarta.validation.constraints.Size(max = 500) String summary) {
+    }
+
+    /** 経路設計へ戻す（US12）。理由は必須（経路設計者が何を直すか分からない）。 */
+    public record ReturnToRoutingRequest(
+            @jakarta.validation.constraints.NotBlank
+            @jakarta.validation.constraints.Size(max = 200) String reason) {
+    }
+
     /** 確定した旅程（S22 / US09）。並び順が業務の意味を持つ。 */
     public record ItineraryResponse(java.util.List<ItineraryLegResponse> legs) {
     }

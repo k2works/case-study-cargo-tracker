@@ -3,6 +3,8 @@ package com.example.cargotracker.booking.interfaces.rest;
 import com.example.cargotracker.booking.application.port.RouteCandidateFinder;
 import com.example.cargotracker.booking.domain.model.commands.AdjustRouteSpecificationCommand;
 import com.example.cargotracker.booking.domain.model.commands.AssignRouteCommand;
+import com.example.cargotracker.booking.domain.model.commands.NotifyShipperCommand;
+import com.example.cargotracker.booking.domain.model.commands.ReturnToRoutingCommand;
 import com.example.cargotracker.booking.domain.model.commands.RequestConditionReviewCommand;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoItinerary;
 import com.example.cargotracker.booking.domain.model.valueobjects.Leg;
@@ -25,7 +27,9 @@ import com.example.cargotracker.booking.infrastructure.query.BookingQueries.Coun
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.AffectedBookingListView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.ConditionReviewListView;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingNotificationsQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindRouteConditionQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.NotificationListView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.RouteConditionView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindConditionReviewsQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingItineraryQuery;
@@ -331,6 +335,51 @@ public class BookingController {
             @RequestHeader(name = "X-Auth-Username", required = false) String username) {
         commandGateway.sendAndWait(
                 new RequestConditionReviewCommand(bookingId, request.reason(), username));
+        return ResponseEntity.ok(new BookCargoResponse(bookingId));
+    }
+
+    /**
+     * 確定した経路を荷主へ通知した記録を残す（US12 §受入基準 3・4）。
+     *
+     * <p><b>送信はしない</b>（送信基盤はスコープ外）。通知は手作業で行い、ここには
+     * その事実だけを残す。通知できる状態かは集約が見る。</p>
+     */
+    @PostMapping("/{bookingId}/notifications")
+    public ResponseEntity<BookCargoResponse> notifyShipper(
+            @PathVariable String bookingId,
+            @Valid @RequestBody BookingDtos.NotifyShipperRequest request,
+            @RequestHeader(name = "X-Auth-Username", required = false) String username) {
+        commandGateway.sendAndWait(new NotifyShipperCommand(bookingId,
+                request.recipientEmail(), request.summary(), username));
+        return ResponseEntity.ok(new BookCargoResponse(bookingId));
+    }
+
+    /**
+     * 通知履歴（US12 §受入基準 4）。
+     *
+     * <p>一度も通知していなければ空の一覧を返す。{@code 404} にすると「予約が無い」と
+     * 読める。読む相手は予約詳細と同じなので、認可の宣言は {@code /bookings/**} が
+     * そのまま当たる（同じ集合の宣言を重ねると、片方だけ直したときに食い違う）。</p>
+     */
+    @GetMapping("/{bookingId}/notifications")
+    public ResponseEntity<NotificationListView> notifications(@PathVariable String bookingId) {
+        return ResponseEntity.ok(queries.query(
+                new FindBookingNotificationsQuery(bookingId), NotificationListView.class));
+    }
+
+    /**
+     * 通知した経路を経路設計へ戻す（US12）。
+     *
+     * <p>荷主が変更を求めたときに営業が使う。<b>{@code /routing-request} を
+     * 再利用しない</b>（引き渡しと戻しを履歴で区別するため）。</p>
+     */
+    @PostMapping("/{bookingId}/return-to-routing")
+    public ResponseEntity<BookCargoResponse> returnToRouting(
+            @PathVariable String bookingId,
+            @Valid @RequestBody BookingDtos.ReturnToRoutingRequest request,
+            @RequestHeader(name = "X-Auth-Username", required = false) String username) {
+        commandGateway.sendAndWait(
+                new ReturnToRoutingCommand(bookingId, request.reason(), username));
         return ResponseEntity.ok(new BookCargoResponse(bookingId));
     }
 

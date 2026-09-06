@@ -120,6 +120,14 @@ public final class RoleAuthorization {
         // 差し戻しは経路設計者だけ。POST なのでメソッド込みで宣言する。
         ordered.add(new Rule("POST", "/api/v1/booking/bookings/*/condition-review",
                 Set.of(ROUTING)));
+        // 荷主への通知と、通知後の経路設計への差し戻しは営業だけ（US12）。
+        // **GET /notifications は宣言を足さない。** 広い /bookings/** が
+        // {SALES, ROUTING, TRACKER} で、通知履歴に許したいロールと同じである。
+        // 同じ集合の宣言を重ねると、片方だけ直したときに食い違う。
+        ordered.add(new Rule("POST", "/api/v1/booking/bookings/*/notifications",
+                Set.of(SALES)));
+        ordered.add(new Rule("POST", "/api/v1/booking/bookings/*/return-to-routing",
+                Set.of(SALES)));
         ordered.add(new Rule("PUT", "/api/v1/booking/bookings/*", Set.of(SALES)));
         rules.forEach((pattern, allowed) -> ordered.add(new Rule(ANY_METHOD, pattern, allowed)));
         return List.copyOf(ordered);

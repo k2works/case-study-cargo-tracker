@@ -300,6 +300,44 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
+    @DisplayName("荷主への通知と経路設計への差し戻しは営業だけに開く（US12）")
+    void restrictsNotificationToSalesRole() throws Exception {
+        String notify = "/api/v1/booking/bookings/b-1/notifications";
+        assertThat(run(notify, "Bearer " + tokenWithRoles("ROLE_ROUTING"), "POST").getStatus())
+                .as("経路設計者が荷主へ通知できてはいけない")
+                .isEqualTo(403);
+        assertThat(run(notify, "Bearer " + tokenWithRoles("ROLE_TRACKER"), "POST").getStatus())
+                .isEqualTo(403);
+        assertThat(run(notify, "Bearer " + tokenWithRoles("ROLE_SALES"), "POST").getStatus())
+                .as("営業は通知できる")
+                .isNotEqualTo(403);
+
+        String back = "/api/v1/booking/bookings/b-1/return-to-routing";
+        assertThat(run(back, "Bearer " + tokenWithRoles("ROLE_ROUTING"), "POST").getStatus())
+                .as("経路設計者が自分へ戻せてはいけない")
+                .isEqualTo(403);
+        assertThat(run(back, "Bearer " + tokenWithRoles("ROLE_SALES"), "POST").getStatus())
+                .as("営業は戻せる")
+                .isNotEqualTo(403);
+    }
+
+    @Test
+    @DisplayName("通知履歴は営業・経路設計・追跡が読める（宣言を足さない判断を固定する）")
+    void keepsNotificationHistoryReadableByEveryBookingRole() throws Exception {
+        // **「宣言を足さない」判断も検査で固定する。** 宣言が無いことと、広い宣言に
+        // 当たっていることは別で、前者なら通らない。
+        String history = "/api/v1/booking/bookings/b-1/notifications";
+        for (String role : List.of("ROLE_SALES", "ROLE_ROUTING", "ROLE_TRACKER")) {
+            assertThat(run(history, "Bearer " + tokenWithRoles(role)).getStatus())
+                    .as("%s は通知履歴を読める", role)
+                    .isNotEqualTo(403);
+        }
+        assertThat(run(history, "Bearer " + tokenWithRoles("ROLE_ACCOUNTANT")).getStatus())
+                .as("経理は予約を読まない")
+                .isEqualTo(403);
+    }
+
+    @Test
     @DisplayName("予約の参照は営業以外にも開いたままにする")
     void keepsBookingReadOpen() throws Exception {
         // 修正を絞ったついでに参照まで絞ると、経路設計者が予約の詳細を開けなくなる。
