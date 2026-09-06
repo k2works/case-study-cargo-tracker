@@ -1,5 +1,9 @@
 package com.example.cargotracker.booking.domain.model.events;
 
+import com.example.cargotracker.booking.domain.model.valueobjects.CargoSpecification;
+import com.example.cargotracker.booking.domain.model.valueobjects.HazardousDeclaration;
+import com.example.cargotracker.booking.domain.model.valueobjects.RouteSpecification;
+import com.example.cargotracker.booking.domain.model.valueobjects.TemperatureRequirement;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import org.axonframework.eventsourcing.annotation.EventTag;
@@ -37,4 +41,29 @@ public record CargoSpecificationUpdatedEvent(
         // 直した時刻。投影が現在時刻で決めない。決めると、投影を読み直すたびに
         // 「いつ直したか」が動き、読み直した日時が最終更新として画面に出る。
         java.time.Instant updatedAt) {
+
+    /**
+     * 貨物仕様・輸送条件から組み立てる。<b>集約に平坦化の手順を置かない。</b>
+     *
+     * <p>受付（{@link CargoBookedEvent#of}）と同じ手順である。集約に 2 度書くと、
+     * 片方だけ直したときに受付と修正が食い違う。</p>
+     */
+    public static CargoSpecificationUpdatedEvent of(String bookingId,
+            RouteSpecification routeSpecification, CargoSpecification spec,
+            String updatedBy, java.time.Instant updatedAt) {
+        HazardousDeclaration hazard = spec.hazardousDeclaration();
+        TemperatureRequirement temperature = spec.temperatureRequirement();
+        return new CargoSpecificationUpdatedEvent(bookingId,
+                routeSpecification.origin().unLocode().value(),
+                routeSpecification.destination().unLocode().value(),
+                routeSpecification.arrivalDeadline(),
+                spec.cargoType().name(), spec.weight().kilograms(),
+                spec.dimensions().lengthCm(), spec.dimensions().widthCm(),
+                spec.dimensions().heightCm(), spec.quantity(), spec.productName(),
+                hazard == null ? null : hazard.imoClass(),
+                hazard == null ? null : hazard.unNumber(),
+                temperature == null ? null : temperature.minCelsius(),
+                temperature == null ? null : temperature.maxCelsius(),
+                updatedBy, updatedAt);
+    }
 }

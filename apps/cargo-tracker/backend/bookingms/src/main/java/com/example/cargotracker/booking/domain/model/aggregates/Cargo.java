@@ -18,11 +18,12 @@ import com.example.cargotracker.booking.domain.model.events.RouteSpecificationAd
 import com.example.cargotracker.booking.domain.model.events.CargoSpecificationUpdatedEvent;
 import com.example.cargotracker.booking.domain.model.events.RoutingRequestedEvent;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
-import com.example.cargotracker.booking.domain.model.valueobjects.CargoSpecification;
 import com.example.cargotracker.booking.domain.model.valueobjects.RouteSpecification;
 import com.example.cargotracker.booking.domain.model.commands.AssignRouteCommand;
 import com.example.cargotracker.booking.domain.model.commands.ConfirmBookingCommand;
+import com.example.cargotracker.booking.domain.model.commands.IssueTrackingNumberCommand;
 import com.example.cargotracker.booking.domain.model.events.CargoRoutedEvent;
+import com.example.cargotracker.booking.domain.model.events.TrackingNumberIssuedEvent;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoItinerary;
 import com.example.cargotracker.booking.domain.model.valueobjects.RoutingStatus;
 import com.example.cargotracker.shared.domain.error.IllegalTransition;
@@ -42,12 +43,10 @@ import org.axonframework.messaging.eventhandling.gateway.EventAppender;
  * {@code PRELIMINARY} までだが、遷移の判定は {@link BookingStatus#canTransitionTo} に
  * 置き、あとの IT で足すたびに書き足す場所が増えないようにする。</p>
  *
- * <p>不変条件（domain-model.md「Cargo 集約の不変条件」）:</p>
- * <ul>
- *   <li>1: BookingId は不変。ShipperId は登録時に必須</li>
- *   <li>2: 出発地と目的地は異なる（RouteSpecification が守る）</li>
- *   <li>3: 危険物は申告、冷凍・冷蔵は温度条件が必須（CargoSpecification が守る）</li>
- * </ul>
+ * <p>不変条件は domain-model.md「Cargo 集約の不変条件」が正典。1（BookingId は不変・
+ * ShipperId 必須）はここが、2（出発地 ≠ 目的地）は {@code RouteSpecification} が、
+ * 3（危険物の申告・温度条件）は {@code CargoSpecification} が、8（二重発行の禁止）は
+ * {@code issueTrackingNumber} が守る。</p>
  */
 @EventSourced(idType = String.class, tagKey = "bookingId")
 public class Cargo {
@@ -65,6 +64,10 @@ public class Cargo {
      */
     private Location origin;
     private Location destination;
+    /** 貨物種別。追跡番号の発行（US14）で trackingms へ渡す。 */
+    private String cargoType;
+    /** 確定した旅程。<b>発行のイベントに載せる</b>（IT9 の荷役が材料にする）。 */
+    private List<CargoRoutedEvent.Leg> legs = List.of();
 
     @EntityCreator
     public Cargo() {
@@ -74,10 +77,9 @@ public class Cargo {
     /**
      * 予約を受け付ける。
      *
-     * <p><b>static ではなくインスタンスのハンドラにしている。</b> static（作る側）と
-     * インスタンス（既にある側）を両方置くと、集約が既に存在しても static のほうが
-     * 呼ばれ、2 度目の受付が通ってしまう（IT2 で実測）。{@code @EntityCreator} が
-     * 空の集約を用意するので、インスタンス側だけで両方を扱える。</p>
+     * <p><b>static ではなくインスタンスのハンドラにしている。</b> 両方置くと、集約が
+     * 既に存在しても static のほうが呼ばれ、2 度目の受付が通る（IT2 で実測）。
+     * {@code @EntityCreator} が空の集約を用意するので、片方で両方を扱える。</p>
      */
     @CommandHandler
     public String book(BookCargoCommand command, EventAppender appender, Clock clock) {
@@ -89,26 +91,8 @@ public class Cargo {
         // 業務タイムゾーンの「今日」で判断する。JVM 既定だと、日本時間の朝 9 時より
         // 前に受け付けた予約で当日の期限が「過去」になる時間帯ができる。
         CargoValidation.validate(command, LocalDate.now(clock));
-        CargoSpecification spec = command.cargoSpecification();
-        appender.append(new CargoBookedEvent(
-                command.bookingId(),
-                command.shipperId(),
-                command.routeSpecification().origin().unLocode().value(),
-                command.routeSpecification().destination().unLocode().value(),
-                command.routeSpecification().arrivalDeadline(),
-                spec.cargoType().name(),
-                spec.weight().kilograms(),
-                spec.dimensions().lengthCm(),
-                spec.dimensions().widthCm(),
-                spec.dimensions().heightCm(),
-                spec.quantity(),
-                spec.productName(),
-                spec.hazardousDeclaration() == null ? null : spec.hazardousDeclaration().imoClass(),
-                spec.hazardousDeclaration() == null ? null : spec.hazardousDeclaration().unNumber(),
-                spec.temperatureRequirement() == null
-                        ? null : spec.temperatureRequirement().minCelsius(),
-                spec.temperatureRequirement() == null
-                        ? null : spec.temperatureRequirement().maxCelsius(),
+        appender.append(CargoBookedEvent.of(command.bookingId(), command.shipperId(),
+                command.routeSpecification(), command.cargoSpecification(),
                 command.bookedBy()));
         return command.bookingId();
     }
@@ -161,38 +145,18 @@ public class Cargo {
         CargoValidation.validate(command.cargoSpecification(), command.routeSpecification(),
                 LocalDate.now(clock), arrivalDeadline);
 
-        CargoSpecification spec = command.cargoSpecification();
-        appender.append(new CargoSpecificationUpdatedEvent(
-                command.bookingId(),
-                command.routeSpecification().origin().unLocode().value(),
-                command.routeSpecification().destination().unLocode().value(),
-                command.routeSpecification().arrivalDeadline(),
-                spec.cargoType().name(),
-                spec.weight().kilograms(),
-                spec.dimensions().lengthCm(),
-                spec.dimensions().widthCm(),
-                spec.dimensions().heightCm(),
-                spec.quantity(),
-                spec.productName(),
-                spec.hazardousDeclaration() == null ? null : spec.hazardousDeclaration().imoClass(),
-                spec.hazardousDeclaration() == null ? null : spec.hazardousDeclaration().unNumber(),
-                spec.temperatureRequirement() == null
-                        ? null : spec.temperatureRequirement().minCelsius(),
-                spec.temperatureRequirement() == null
-                        ? null : spec.temperatureRequirement().maxCelsius(),
-                command.updatedBy(),
-                clock.instant()));
+        appender.append(CargoSpecificationUpdatedEvent.of(command.bookingId(),
+                command.routeSpecification(), command.cargoSpecification(),
+                command.updatedBy(), clock.instant()));
         return command.bookingId();
     }
 
     /**
      * 選んだ経路を確定する（UC07 / US09）。
      *
-     * <p><b>旅程が経路仕様を満たすかは集約が見る</b>（不変条件 5）。画面は候補を
-     * そのまま送るだけで、「候補は探索が作ったのだから正しい」としない。探索と集約は
-     * 別の判断であり、API を直接叩く経路もある。</p>
-     *
-     * <p>区間の連結と時刻の昇順は {@link CargoItinerary} が守る（不変条件 4）。</p>
+     * <p><b>旅程が経路仕様を満たすかは集約が見る</b>（不変条件 5）。「候補は探索が
+     * 作ったのだから正しい」としない——探索と集約は別の判断で、API を直接叩く経路も
+     * ある。区間の連結と時刻の昇順は {@link CargoItinerary} が守る（不変条件 4）。</p>
      *
      * <p><b>{@code BookingStatus} は動かさない。</b> 荷主に通知するまでは提案中である。</p>
      */
@@ -394,6 +358,45 @@ public class Cargo {
     }
 
     /**
+     * 追跡番号を発行する（UC12 / US14）。<b>経路設計者の操作</b>。
+     *
+     * <p><b>不変条件 8: 二重に発行しない。</b> 発行から連鎖が始まる（trackingms に
+     * 追跡が作られる）ので、2 度発行すると追跡が 2 つできる。遷移表が
+     * {@code CONFIRMED → TRACKING_ISSUED} だけを許すので、同じ判定で両方を断る。</p>
+     *
+     * <p><b>採番はしない。</b> 集約で MAX+1 を採ると、同時に 2 件発行したときに同じ
+     * 番号が出る。番号は投影が採り、コマンドで渡す。</p>
+     */
+    @CommandHandler
+    public String issueTrackingNumber(IssueTrackingNumberCommand command,
+            EventAppender appender, Clock clock) {
+        if (bookingId == null) {
+            throw new IllegalTransition("予約 " + command.bookingId() + " は受け付けていません");
+        }
+        if (!bookingStatus.canTransitionTo(BookingStatus.TRACKING_ISSUED)) {
+            throw new IllegalTransition(
+                    "状態 " + bookingStatus.label() + " の予約に追跡番号は発行できません");
+        }
+        if (command.trackingNumber() == null || command.trackingNumber().isBlank()) {
+            throw new BusinessRuleViolation("追跡番号は必須です");
+        }
+
+        appender.append(new TrackingNumberIssuedEvent(command.bookingId(),
+                command.trackingNumber().trim(),
+                origin.unLocode().value(), destination.unLocode().value(), cargoType,
+                legs.stream().map(leg -> new TrackingNumberIssuedEvent.Leg(leg.voyageNumber(),
+                        leg.loadUnLocode(), leg.unloadUnLocode(),
+                        leg.loadTime(), leg.unloadTime())).toList(),
+                command.issuedBy(), clock.instant()));
+        return command.bookingId();
+    }
+
+    @EventSourcingHandler
+    void on(TrackingNumberIssuedEvent event) {
+        this.bookingStatus = BookingStatus.TRACKING_ISSUED;
+    }
+
+    /**
      * 通知した経路を経路設計へ戻す（UC08 / US12）。
      *
      * <p>荷主が変更を求めたときに営業が使う。<b>通知したあとだけ開く</b>——通知前に
@@ -456,6 +459,7 @@ public class Cargo {
         this.arrivalDeadline = event.arrivalDeadline();
         this.origin = Location.of(event.originUnLocode());
         this.destination = Location.of(event.destinationUnLocode());
+        this.cargoType = event.cargoType();
     }
 
     @EventSourcingHandler
@@ -466,6 +470,7 @@ public class Cargo {
         this.arrivalDeadline = event.arrivalDeadline();
         this.origin = Location.of(event.originUnLocode());
         this.destination = Location.of(event.destinationUnLocode());
+        this.cargoType = event.cargoType();
     }
 
     @EventSourcingHandler
@@ -477,6 +482,8 @@ public class Cargo {
     @EventSourcingHandler
     void on(CargoRoutedEvent event) {
         this.routingStatus = RoutingStatus.ROUTED;
+        // 発行のイベントに載せる（US14）。組み直せば新しい旅程で上書きされる。
+        this.legs = event.legs();
         // BookingStatus は動かさない。荷主に通知するまでは提案中（US12）。
     }
 

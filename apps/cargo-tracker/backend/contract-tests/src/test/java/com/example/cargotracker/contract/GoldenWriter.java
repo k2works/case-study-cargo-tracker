@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
  * <p>形を変えるときはまず Upcaster を考える。ここを回して上書きすると、
  * 過去のイベントが読めなくなったことに誰も気づけない。</p>
  */
+
 @Disabled("ゴールデンを作り直すときだけ手で外す")
 class GoldenWriter {
 
@@ -23,6 +24,19 @@ class GoldenWriter {
         Files.createDirectories(dir);
         Path queryDir = Path.of("src/test/resources/golden-query");
         Files.createDirectories(queryDir);
+        Path commandDir = Path.of("src/test/resources/golden-command");
+        Files.createDirectories(commandDir);
+        ContractCommandGoldenTest.contractCommands().forEach(message -> {
+            try {
+                Files.writeString(
+                        commandDir.resolve(message.getClass().getSimpleName() + ".json"),
+                        new String(converter.convert(message, byte[].class),
+                                StandardCharsets.UTF_8),
+                        StandardCharsets.UTF_8);
+            } catch (Exception e) {
+                throw new IllegalStateException(e);
+            }
+        });
         ContractQueryGoldenTest.contractQueries().forEach(message -> {
             try {
                 Files.writeString(

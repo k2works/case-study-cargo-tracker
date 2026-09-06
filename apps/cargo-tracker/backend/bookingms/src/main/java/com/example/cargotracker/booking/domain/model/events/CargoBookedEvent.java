@@ -1,5 +1,9 @@
 package com.example.cargotracker.booking.domain.model.events;
 
+import com.example.cargotracker.booking.domain.model.valueobjects.CargoSpecification;
+import com.example.cargotracker.booking.domain.model.valueobjects.HazardousDeclaration;
+import com.example.cargotracker.booking.domain.model.valueobjects.RouteSpecification;
+import com.example.cargotracker.booking.domain.model.valueobjects.TemperatureRequirement;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import org.axonframework.eventsourcing.annotation.EventTag;
@@ -38,4 +42,28 @@ public record CargoBookedEvent(
         BigDecimal temperatureMinC,
         BigDecimal temperatureMaxC,
         String bookedBy) {
+
+    /**
+     * 貨物仕様・輸送条件から組み立てる。<b>集約に平坦化の手順を置かない。</b>
+     *
+     * <p>値オブジェクトを 17 個のフィールドへ写す手順は、{@link CargoSpecificationUpdatedEvent}
+     * とほぼ同じである。集約に 2 度書くと、片方だけ直したときに受付と修正が食い違う。</p>
+     */
+    public static CargoBookedEvent of(String bookingId, String shipperId,
+            RouteSpecification routeSpecification, CargoSpecification spec, String bookedBy) {
+        HazardousDeclaration hazard = spec.hazardousDeclaration();
+        TemperatureRequirement temperature = spec.temperatureRequirement();
+        return new CargoBookedEvent(bookingId, shipperId,
+                routeSpecification.origin().unLocode().value(),
+                routeSpecification.destination().unLocode().value(),
+                routeSpecification.arrivalDeadline(),
+                spec.cargoType().name(), spec.weight().kilograms(),
+                spec.dimensions().lengthCm(), spec.dimensions().widthCm(),
+                spec.dimensions().heightCm(), spec.quantity(), spec.productName(),
+                hazard == null ? null : hazard.imoClass(),
+                hazard == null ? null : hazard.unNumber(),
+                temperature == null ? null : temperature.minCelsius(),
+                temperature == null ? null : temperature.maxCelsius(),
+                bookedBy);
+    }
 }
