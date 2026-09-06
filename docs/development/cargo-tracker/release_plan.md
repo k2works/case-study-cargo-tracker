@@ -4,7 +4,7 @@ title: "リリース計画 - 国際貨物輸送管理システム（CQRS / Event
 description: "CQRS / Event Sourcing 版 Cargo Tracker のリリース計画。US01〜US32 を 15 イテレーション・5 リリース（122 SP）に配分し、ストーリーポイント・ベロシティ・バッファ・順序の根拠・リスクを定める。"
 tags: [plan,release,cargo-tracker]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-06T08:09:12Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-06T11:01:03Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T12:47:29Z }
 ---
@@ -106,7 +106,7 @@ Event Sourcing とマイクロサービスの分を、コンシューマ側の�
 | :--- | :--: | :--- |
 | US02 | +2 | crypto-shredding（[ADR-0003](../../adr/cargo-tracker/0003-crypto-shredding-for-personal-data.md)）の導入を含む。個人情報を載せる最初のイベントなので、鍵による暗号化をここで入れる |
 | US08 | +2 | 契約クエリ 1 本目。Query Bus 越しの ACL と往復テスト |
-| US14 | +2 | 契約イベント・契約コマンド・`BookingSaga` の 1 本目。サービス越しの連鎖がここで初めて閉じる |
+| US14 | +2 | 契約イベント・契約コマンド・**`BookingReactionHandler`** の 1 本目。サービス越しの連鎖がここで初めて閉じる |
 | US15 | +2 | 荷役種別ごとの要件・航海番号起点の一覧・港のローカル時刻・冪等キー・Reaction Handler |
 | US28 | +2 | 誤配の検知（handlingms → trackingms / bookingms）と現在地起点の再設計（routingms）で 4 サービスが関わる |
 | US29 | +2 | `CustomsDeclaration` 集約・営業日の算定・引取の通関ガード有効化 |
@@ -185,7 +185,7 @@ gantt
 | IT4 | US25(3), US07(3), US32(2) | 8 | 負債 2 | 航海を更新し、出港済みを除いた一覧から検索できる。仮受付の予約を直してから引き渡せる |
 | IT5 | US08(6), US09(4) | 10 | 負債（IT4 引き継ぎ） | 経路候補が期限内のものだけ提示され、選んで確定できる（bookingms → routingms を Axon Query Bus 越しに） |
 | IT6 | US10(3), US11(2), US12(3) | 8 | 負債（IT5 引き継ぎ） | 条件を変えて再算出し、荷主へ通知すると「経路通知済」になる |
-| IT7 | US13(3), US14(6) | 9 | — | 通知していない予約は確定できない。確定 → 追跡番号発行 → trackingms に追跡が作られる（契約イベントと Saga の 1 本目） |
+| IT7 | US13(3), US14(6) | 9 | — | 通知していない予約は確定できない。確定 → 追跡番号発行（経路設計者）→ trackingms に追跡が作られる（**契約コマンドの 1 本目と `BookingReactionHandler` の 1 本目**） |
 | IT8 | US18(5), US17(3) | 8 | — | 追跡番号だけで公開画面から照会できる。荷主は自社貨物だけが見える。追跡管理者が状態を手動更新できる |
 | IT9 | US15(7) | 7 | 予備 1 | 航海番号から「この船から降ろす貨物」を出し、連続して荷役を記録する。予定外の港は警告のうえ記録に残る |
 | IT10 | US16(3), US19(4) | 7 | 負債 1 | 荷受人の確認なしの引取が断られる。確認を入れると「引取済」になる。遅延を起票して解決すると元の状態に戻る |
@@ -205,7 +205,7 @@ gantt
 | 引取（US16, IT10）の通関ガードは US29（IT12）で有効化 | IT10 では荷受人の確認で代替する（[ドメインモデル](../../design/cargo-tracker/domain-model.md) Handling の不変条件）。読む側の無い配線を先に敷かない |
 | 見積（US01）は料金算出（US21）の後 | 式と料率の同一性を契約テストで固定するため、料率が確定してから |
 | キャンセル（US30）は精算（US23）の後 | キャンセル料が Billing に依存する |
-| `BookingSaga` は US14（IT7）が 1 本目 | それまではイベント購読と Reaction Handler で足りる。未確定の Saga API と補償設計を同時に抱えない |
+| **サービスをまたぐ連鎖（`BookingReactionHandler` + `process_state`）は US14（IT7）が 1 本目** | それまでは 1 段で終わる購読で足りる。**当初は「`BookingSaga` が 1 本目」と書いていたが、[ADR-0001](../../adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) 決定 6 のとおり Axon 5 に Saga の API は無い**（IT7 の開始準備で訂正） |
 | `BillingSaga` は IT13 以降 | 同上 |
 | US08（経路候補）が最初の契約クエリ | Query Bus をサービス越しに使う最初の場所。[ADR-0001](../../adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) 決定 4 の検証点 |
 
@@ -276,7 +276,8 @@ IT4・IT10・IT12・IT15 に SP 対象外の枠を置きます。**「余力次�
 | IT4 | 8 | 8 | 100% | **完了**（[計画](iteration_plan-4.md) / [ふりかえり](retrospective-4.md) / [完了報告書](iteration_report-4.md)）。返済枠 6 件をすべて返済 |
 | IT5 | 10 | 10 | 100% | **完了**（[計画](iteration_plan-5.md) / [ふりかえり](retrospective-5.md) / [完了報告書](iteration_report-5.md)）。引き継ぎ枠 6 件を**繰越ゼロで返済**。受入基準 3 件が未達（費用 2・条件調整 1。いずれも前提のストーリーが後続 IT） |
 | IT6 | 8 | 8 | 100% | **完了**（[計画](iteration_plan-6.md) / [ふりかえり](retrospective-6.md) / [完了報告書](iteration_report-6.md)）。引き継ぎ枠 3 件を**繰越ゼロで返済**。受入基準 2 件が未達（料金概算・経由地追加。いずれも前提が後続 IT）。**実装して初めて分かった欠陥が 6 件**（うち 4 件は画面から踏むテストでしか出なかった） |
-| IT7〜IT15 | 69 | — | — | 未着手 |
+| IT7 | 9 | — | — | **計画済み**（[計画](iteration_plan-7.md)）。US13・US14。IT6 引き継ぎ枠 3 件（SP 対象外） |
+| IT8〜IT15 | 60 | — | — | 未着手 |
 | **累計** | **122** | **53** | **100%**（IT1〜IT6 の 53 SP に対して） | |
 
 **実績 SP は 9 です。** US26（3）・US27（1）・US02（5）の受入基準を満たし、デモ項目 7 件の受け入れテストが緑です。ただし **SP 対象外の基盤投資に持ち越しが 5 件あります**（S01 ポータル・全ルートのプレースホルダ・無操作タイムアウト・スパイク 0.7・契約テストの往復）。ベロシティは 9 と読めますが、基盤の未完了分を IT2 が負う点は [ふりかえり](retrospective-1.md) を参照してください。
@@ -299,7 +300,7 @@ IT4・IT10・IT12・IT15 に SP 対象外の枠を置きます。**「余力次�
 
 1. ~~IT6 を完了する~~ **完了**（[ふりかえり](retrospective-6.md) / [報告書](iteration_report-6.md)）。8 SP を達成し、引き継ぎ枠 3 件も返済した
 2. ~~US09 §受入基準 4 の未達を US10 で解消する~~ **解消**。候補 0 件の案内のすぐ上に「探す条件」が出て、その場で調整できる
-3. **IT7 の計画を作る（`opening-iteration`）。** US13（予約確定）・US14（追跡番号発行）が中心。IT6 の引き継ぎは[ふりかえり](retrospective-6.md)を参照
+3. ~~IT7 の計画を作る（`opening-iteration`）~~ **完了**（[IT7 計画](iteration_plan-7.md)）。**着手前の検証で高 6 件**——うち 2 件は「そもそも動かない」計画だった（Axon 5 に Saga の API が無い・追跡番号の発行を経路設計者から取り上げていた）
 4. **クラスタ E2E は IT7 でも回す。** IT5・IT6 とも、モックと単体では出ない実害をここで捕まえた（IT6 では旅程が消える欠陥）
 5. **画面から踏むテスト（マニュアルのキャプチャ・クラスタ E2E）を検査として扱う。** IT6 の欠陥 6 件のうち 4 件はここでしか出なかった
 
@@ -316,6 +317,7 @@ IT4・IT10・IT12・IT15 に SP 対象外の枠を置きます。**「余力次�
 | 2026-09-05 | **Release 0.1 の完了報告書**を作成（IT3 からの持ち越し）。実績 27 SP・達成率 100% | claude-code/claude-opus-5 |
 | 2026-09-05 | IT5 開始準備。進捗表を「計画済み」に更新。**IT5 に引き継ぎ枠（SP 対象外）を置く**判断を記録（当初の枠は IT4・IT10・IT12・IT15 のみ。IT4 のふりかえりで高 2 件が出たため） | claude-code/claude-opus-5 |
 | 2026-09-05 | IT5 クローズ。実績 SP 10・達成率 100% を反映。受入基準 3 件の未達（費用 2・条件調整 1）を記録 | claude-code/claude-opus-5 |
+| 2026-09-06 | IT7 開始準備。進捗表を「計画済み」に更新。**`BookingSaga` は Axon 5 に API が無く作れない**（ADR-0001 決定 6）ので、`:109`・`:188`・`:208` の「Saga の 1 本目」を `BookingReactionHandler` に直した。**着手前の検証で見つけた** | claude-code/claude-opus-5 |
 | 2026-09-06 | IT6 クローズ。実績 SP 8（達成率 100%・累計 53）と引き継ぎ枠 3 件の返済を記録。**6 IT 連続 100%・平均 8.83 SP** でベロシティの再調整は不要。US09 §4 の未達が US10 の完成で解消したことも記録 | claude-code/claude-opus-5 |
 | 2026-09-05 | IT6 開始準備。進捗表を「計画済み」に更新。**IT5 に続き引き継ぎ枠（SP 対象外）を置く**判断と、4 回繰越の 2 件を「扱わない」と決着させたことを記録 | claude-code/claude-opus-5 |
 | 2026-09-04 | IT3 の開発完了。US05・US06・US24 の 9 SP。進捗表を更新。クローズはこれから | claude-code/claude-opus-5 |

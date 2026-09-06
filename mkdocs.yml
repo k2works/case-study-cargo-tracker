@@ -114,6 +114,7 @@ nav:
           - イテレーション 6 計画: development/cargo-tracker/iteration_plan-6.md
           - イテレーション 6 ふりかえり: development/cargo-tracker/retrospective-6.md
           - イテレーション 6 完了報告書: development/cargo-tracker/iteration_report-6.md
+          - イテレーション 7 計画: development/cargo-tracker/iteration_plan-7.md
   - 運用:
       - 概要: operation/index.md
       - cargo-tracker:
