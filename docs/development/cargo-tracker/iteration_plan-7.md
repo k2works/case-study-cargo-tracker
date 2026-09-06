@@ -3,7 +3,7 @@ type: Plan
 title: "イテレーション 7 計画 - 予約確定と追跡番号発行"
 tags: [plan]
 status: draft
-generated: { by: claude-code/claude-opus-5, at: 2026-09-06T10:56:31Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-06T10:59:13Z }
 ---
 
 # イテレーション 7 計画 - 予約確定と追跡番号発行
@@ -16,11 +16,13 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-06T10:56:31Z }
 | 期間 | 2 週間 |
 | SP | **9**（US13 3 / US14 6） |
 | 局面 | 中盤（インサイドアウト）。IT4 から数えて 4 回目 |
-| 引き継ぎ枠 | **SP 対象外で 3 件**（IT6 の高 3 件。Day 1 の独立コミットで消化） |
+| 引き継ぎ枠 | **SP 対象外で 3 件**（IT6 の**高 2 件 + 中 1 件**。Day 1 の独立コミットで消化）。**高の残り 1 件（#8）は送り**——行き先は下記 |
 
 **本 IT の中核は、サービスをまたぐ最初の連鎖です。** 予約を確定すると追跡番号が発行され、trackingms に追跡が作られます。**契約コマンドの 1 本目**（`InitializeTrackingCommand`）と、**trackingms の最初の集約**（`TrackingActivity`）と、**`BookingReactionHandler` の 1 本目**が同時に出てきます。
 
-**調整役は Axon の `@Saga` ではなく `BookingReactionHandler` + `process_state` です**（[ドメインモデル](../../design/cargo-tracker/domain-model.md) `:1318-1352`）。**着手前の検証で見つけました**——当初の計画は `architecture_backend.md` の「予約 Saga」節だけを読んで `@Saga` を使うと書いていましたが、**ドメインモデルは 3 段の Reaction Handler で決着済み**で、途中経過・タイムアウト・補償の置き場まで決まっています。設計が正なので、そちらに合わせます。
+**調整役は `BookingReactionHandler` + `process_state` です。** **そもそも Axon 5 に Saga の API がありません**（[ADR-0001](../../adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) 決定 6。スパイクで 5.0.0／5.1.0-RC2／5.3.1 のどの jar にも `Saga`/`SagaLifecycle` が 0 件と確認済み）。`SagaIsStillAbsentTest` が「Saga が現れたら赤にする」検査として**すでに置かれています**。
+
+**着手前の検証で見つけました。** 当初の計画は `architecture_backend.md` の「予約 Saga」節と `release_plan.md:208` を根拠に `@Saga` を使うと書いていましたが、**どちらも ADR-0001 より古い記述**です。`@Saga`/`@StartSaga`/`@EndSaga` は**そもそもコンパイルできない**ので、着手直後に破綻していました。
 
 **これまでのサービス間はイベントの一方向でした。** IT5 で同期の問い合わせ（Query Bus 越しの ACL）が 1 本通り、本 IT で**コマンドを送る向き**が初めて通ります。
 
@@ -73,7 +75,7 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-06T10:56:31Z }
 | :--- | :--: | :--- | :--- | :--- |
 | US13 | 1 | 予約番号を指定して予約内容と選択ルートを確認できる | **満たす** | S22 に既にある（IT5・IT6） |
 | US13 | 2 | 確定操作を行うと予約状態が「予約確定」に更新される | **満たす** | `ConfirmBookingCommand` |
-| US13 | 3 | 経路設計者に追跡番号発行依頼の通知が送信される | **一部未達** | **発行は連鎖が自動で行うので、依頼の通知は要らなくなる**（下記「設計への反映が必要な事項」1）。通知の記録は残さない |
+| US13 | 3 | 経路設計者に追跡番号発行依頼の通知が送信される | **一部未達** | 送信基盤はスコープ外（`ui_design.md:120`）。**S02（経路設計者）に「追跡番号を発行できる予約」の件数を出す**ことで、気づく手段にする |
 | US13 | 4 | 荷主がルート変更を希望する場合、予約を「経路提案中」に戻せる | **満たす** | **IT6 で実装済み**（`ReturnToRoutingCommand`）。検査で固定する |
 | US13 | 5 | 荷主がキャンセルを希望する場合、予約をキャンセル状態に変更できる | **未達** | US30（IT12）が前提 |
 | US13 | 6 | キャンセル時、荷主にキャンセル確認通知が送信される | **未達** | 同上 |
@@ -101,12 +103,12 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-06T10:56:31Z }
 | T4 | **契約コマンド `InitializeTrackingCommand` を `shared/contract/command/` に置く**（1 本目）。**ゴールデン JSON を両側に置いて赤から始める**。ArchUnit の名簿と「列挙型・識別子型を載せない」検査も更新 | US14 | 4h |
 | T5 | **trackingms の `TrackingActivity` 集約**（`InitializeTrackingCommand` → `TrackingInitializedEvent`） | US14 | 5h |
 | T6 | trackingms の投影（`tracking_summary`）とマイグレーション | US14 | 4h |
-| T7 | **`BookingReactionHandler`（3 段）と `process_state`**（`BOOKING_TO_TRACKING`）。再試行の上限超過で `RevertTrackingNumberCommand` + `attention_item` | US14 | 8h |
-| T8 | 追跡番号の採番（投影側）と S22 への表示 | US14 | 3h |
-| T9 | 認可の宣言（`POST /bookings/{id}/confirmation`）と HTTP の配線 | US13・US14 | 3h |
+| T7 | **`BookingReactionHandler`（2 段）と `process_state`**（`BOOKING_TO_TRACKING`）。**投影と別の Processing Group**。再試行の上限超過で `RevertTrackingNumberCommand` + `attention_item`、滞留は `gulp reaction:stuck` | US14 | 8h |
+| T8 | 追跡番号の採番（投影側）、S22 の**発行操作**（経路設計者）と表示、`tracking_issued_at` | US14 | 4h |
+| T9 | 認可の宣言（`POST /confirmation` は営業・`POST /tracking-number` は**経路設計者**）と HTTP の配線 | US13・US14 | 3h |
 | T10 | 引き継ぎ枠 H.1〜H.3 | — | 9h |
 | T11 | クラスタ E2E・受け入れテスト・マニュアル | — | 10h |
-| **合計** | | | **59h** |
+| **合計** | | | **60h** |
 
 ### 依存関係
 
@@ -126,7 +128,9 @@ T1 → T2 → T3 → T4 → T5 → T6 → T7 → T8 の順。**T4〜T7 が本 IT
 | H.2 | **`BookingStatus`・`TransportStatus` の呼び名を canon テストで固定する。** IT6 で `RoutingStatus` に置いた形を広げる | IT6 引き継ぎ 3（高） | 2h |
 | H.3 | **`assignRoute`／`notifyShipper`／`returnToRouting` を述語に寄せ、canon テストを述語本体を読む形へ統一する。** `canAssignRoute` にも突き合わせを足す | IT6 引き継ぎ 8c（中） | 3h |
 
-**IT6 引き継ぎ 8（差し戻された営業に打つ手が無い）は本 IT で扱いません。** 新しいコマンドとイベントが要り、US13 の「経路提案中に戻す」（§4）とも重なるので、**US13 の実装で当たったら判断します**（下記リスク）。
+**IT6 引き継ぎ 8（差し戻された営業に打つ手が無い）は本 IT で扱いません。** 新しいコマンドとイベントが要ります。**US13 §4「経路提案中に戻せる」と同じ画面・同じ状態**なので、**US13 の実装（T1・T2）で当たったときに判断し、そこで入れないなら IT8 に置きます**。
+
+**「余力次第」にはしません**（IT5 のふりかえり「落とした負債は育つ」。ADR-0008 が IT6-8 で 3 回繰り越した経緯があります）。**T2 の終わりに判断し、送るなら IT8 と数字で書きます。**
 
 ### IT7 で扱わない引き継ぎ（行き先を先に決める）
 
@@ -146,6 +150,8 @@ T1 → T2 → T3 → T4 → T5 → T6 → T7 → T8 の順。**T4〜T7 が本 IT
 | 12 | 航海キャンセル後に組み直しが要る予約が一覧に立たない | **IT9**。荷役（US15）で `cargo_snapshot` を作るときに一緒に |
 | 13 | 所要日数の起点・計算式が 2 か所 | **IT8** |
 | 14 | 到着期限の `min`・「所要日数／所要時間」の揺れ | **IT8** |
+| 15 | `shipper_cargo_snapshot`（`data-model.md:823`。`TrackingNumberIssuedEvent` から作る） | **IT8（US18）**。荷主向け追跡で初めて読む |
+| 16 | `cargo_snapshot`・`cargo_snapshot_leg`（handlingms。同じイベントから作る） | **IT9（US15）**。荷役で初めて読む |
 
 ### Day 2-3: US13 予約を確定する（3 SP）
 
@@ -189,9 +195,8 @@ package "bookingms" {
     + issueTrackingNumber(cmd) : 追跡番号を発行（US14）
   }
   class BookingReactionHandler <<ReactionHandler>> {
-    + on(BookingConfirmedEvent) : IssueTrackingNumberCommand（1 段）
-    + on(TrackingNumberIssuedEvent) : InitializeTrackingCommand（2 段）
-    + on(TrackingInitializedEvent) : 連鎖の終わり（3 段）
+    + on(TrackingNumberIssuedEvent) : InitializeTrackingCommand（1 段）
+    + on(TrackingInitializedEvent) : 連鎖の終わり（2 段）
   }
   class ProcessState <<投影・既存>> {
     + process_type = BOOKING_TO_TRACKING
@@ -224,18 +229,20 @@ TrackingInitializedEvent ..> BookingReactionHandler
 @enduml
 ```
 
-**`BookingReactionHandler` を使います**（`domain-model.md:1318-1352`）。**Axon の `@Saga` は使いません。**
+**`BookingReactionHandler` を使います。** **Axon 5 に Saga の API が無い**ためです（[ADR-0001](../../adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) 決定 6）。`domain-model.md:1318-1352` が 3 段の Reaction Handler として具体化しており、次まで決まっています。
 
-**着手前の検証で見つけた食い違いです。** 当初の計画は `architecture_backend.md:775-820`「予約 Saga」節だけを読んで `@Saga` を採ると書き、`release_plan.md:208`（「`BookingSaga` は US14 が 1 本目」）を根拠にしていました。**しかし `domain-model.md` は 3 段の Reaction Handler で決着済み**で、次まで決まっています。
+**調整役は投影と別の Processing Group に置きます**（ADR-0001 決定 6。リプレイ対象から外す）。
 
 | 決まっていること | 置き場 |
 | :--- | :--- |
 | 関連付け | `process_state` の行（`SagaLifecycle.associateWith()` の代わり） |
-| 終了 | 3 段目で `status = 'COMPLETED'`（`@EndSaga` の代わり。行は消さない） |
+| 終了 | 最後の段で `status = 'COMPLETED'`（`@EndSaga` の代わり。行は消さない） |
 | タイムアウト | `status = 'RUNNING'` かつ 24 時間より古い行を `gulp reaction:stuck` で走査 |
 | 補償 | 上限超過で `RevertTrackingNumberCommand` + `attention_item`。**予約は `CONFIRMED` に留まる** |
 
-**`process_state` は V003 で実装済みです**（`process_type = 'BOOKING_TO_TRACKING'`・`process_id = bookingId`）。**本 IT が最初の利用者になります。**
+**`process_state` は V003 で実装済みです**（`process_type = 'BOOKING_TO_TRACKING'`・`process_id = bookingId`）。**本 IT が最初の利用者になります**（`data-model.md:731-760` が「現時点の該当は予約 → 追跡番号発行 → 追跡開始」と名指ししています）。
+
+**正典の 3 段のうち、本 IT で作るのは 2 段目・3 段目です。** 1 段目（`BookingConfirmedEvent` → `IssueTrackingNumberCommand`）は**経路設計者の操作に置き換えます**（上記 API 設計）。**自動発行にすると、`ui_design.md:351` が定める経路設計者の操作が消えます。** `process_state` の行は、発行（`TrackingNumberIssuedEvent`）を受けた時点で作ります。
 
 **Saga のストアに直列化して埋めるのと違い、止まった位置がそのまま SQL で読めます**（`domain-model.md:1345`）。
 
@@ -249,7 +256,7 @@ title BookingStatus / TransportStatus（IT7 スコープ）
 
 state "bookingms" as B {
   ROUTE_NOTIFIED --> CONFIRMED : ConfirmBookingCommand
-  CONFIRMED --> TRACKING_ISSUED : IssueTrackingNumberCommand\n（Saga が送る）
+  CONFIRMED --> TRACKING_ISSUED : IssueTrackingNumberCommand\n（経路設計者の操作）
   ROUTE_NOTIFIED --> ROUTE_PROPOSED : ReturnToRoutingCommand（IT6）
 }
 
@@ -257,7 +264,7 @@ state "trackingms" as T {
   [*] --> NOT_RECEIVED : InitializeTrackingCommand
 }
 
-B --> T : TrackingNumberIssuedEvent → Saga → InitializeTrackingCommand
+B --> T : TrackingNumberIssuedEvent → BookingReactionHandler → InitializeTrackingCommand
 @enduml
 ```
 
@@ -274,8 +281,9 @@ entity "cargo_summary（bookingms）" as cargo {
   --
   ..IT7 で使い始める..
   tracking_number : VARCHAR(25) <<UNIQUE>>
-  ..IT7 で足す..
+  ..IT7 で使い始める（定義済み）..
   confirmed_at : TIMESTAMPTZ
+  tracking_issued_at : TIMESTAMPTZ
 }
 
 entity "tracking_summary（trackingms・新設）" as ts {
@@ -333,13 +341,31 @@ S22 --> S22 : 追跡番号が出る（**本 IT**・自動）
 | :--- | :--- | :--- | :--- |
 | `POST` | `/api/v1/booking/bookings/{bookingId}/confirmation` | 予約を確定（US13） | ROLE_SALES |
 
-**追跡番号の発行に API はありません。** Saga が自動で送ります。**画面から発行させると、確定と発行の間に人の操作が挟まって連鎖が切れます。**
+| `POST` | `/api/v1/booking/bookings/{bookingId}/tracking-number` | 追跡番号を発行（US14） | ROLE_ROUTING |
+
+**追跡番号は経路設計者が発行します。** **着手前の検証で見つけて直しました**——当初の計画は「連鎖が自動で送るので API は無い」と書いていましたが、正典は**経路設計者の操作**と明記しています（`ui_design.md:351`「`CONFIRMED : [追跡番号を発行]（経路設計者）`」・`:31` の操作一覧・`user_story.md` US14 の主語）。**US14 の「として: 経路設計者」が受入基準 1 と結びつかなくなる**ので、操作を消してはいけません。
+
+**`domain-model.md:566` は発行者を「経路設計者 / Reaction Handler」の両方と書いています。** 本 IT では**経路設計者の操作だけ**を作ります。Reaction Handler が自動発行する経路は、それが要る業務（自動化の要望）が出てから足します。**連鎖は「発行されたあと」から始まります**（`TrackingNumberIssuedEvent` を受けて `InitializeTrackingCommand` を送る 2 段目・3 段目）。
 
 **`GET /bookings/{id}` に `trackingNumber` を足します**（既存の読み口）。
 
 ### 契約への影響
 
 **増えます。** 契約コマンドが **0 → 1 本**（`InitializeTrackingCommand`）になります。
+
+**`TrackingNumberIssuedEvent` の payload は正典どおりにします**（`domain-model.md:1222`）。
+
+| フィールド | 備考 |
+| :--- | :--- |
+| `bookingId` / `trackingNumber` | 文字列 |
+| `origin` / `destination` | 港コード（文字列） |
+| `cargoType` | **文字列**（列挙型を契約に載せない） |
+| `legs[]` | **落とさない。** handlingms の `CargoSnapshot`（IT9）の材料になる |
+| `issuedAt` | 日時 |
+
+**購読側が未実装でも `legs[]` を落としません。** 契約イベントは追記専用で、あとから形を変えられません。**「いま要らないから」で落とすと、IT9 で契約を変えることになります。**
+
+**`shipperId` はありません**（正典どおり）。そのため `tracking_summary.shipper_id` を本 IT では作りません（上記 ER）。
 
 **契約の名簿は ArchUnit で固定されている**ので、名簿と検査を同じ変更で更新します。`architecture_backend.md:714` は「コマンド 2」（`InitializeTrackingCommand`・`CreateInvoiceCommand`）と書いていますが、実装は 0 本です。**本 IT で 1 本目を置きます。**
 
@@ -349,23 +375,24 @@ S22 --> S22 : 追跡番号が出る（**本 IT**・自動）
 
 **「どちらを使うか」はドメインモデルで決着済み**なので、ADR が決めるのは**設計文書の食い違いをどう畳むか**と、**実装で初めて決まること**です。
 
-1. **調整役は `BookingReactionHandler` + `process_state`。Axon の `@Saga` は使わない。** `architecture_backend.md:775-820`「予約 Saga」節と「Saga 実装パターン」節は**ドメインモデルと食い違うので改める**（同じ文書のコンポーネント図・ディレクトリ図は既に Reaction Handler）。`release_plan.md:208` の「`BookingSaga` は US14 が 1 本目」も直す
+1. **`architecture_backend.md` の Saga 節と `release_plan.md:208` を、ADR-0001 決定 6 に追随させる。** 「Saga か Reaction Handler か」は**ADR-0001 で決着済み**（Axon 5 に Saga の API が無い）。ADR-0010 が決めるのは「古い記述をどう畳むか」であって、選び直しではない
 2. **追跡番号の採番は投影側。** 集約で MAX+1 しない（`ShipperCode`・`BookingNumber` と同じ形）
-3. **`process_state` の 3 段をどう区切るか。** 段が進むたびに `completed_steps` を進め、3 段目で `COMPLETED` にする。**再試行の上限と、上限超過で `RevertTrackingNumberCommand` + `attention_item` に落とすところ**（`domain-model.md:1346` の既定路線）を、実装で決まる粒度まで書く
+3. **発行は経路設計者の操作にする**（`ui_design.md:351` どおり）。`domain-model.md:566` は「経路設計者 / Reaction Handler」の両方を許すが、**本 IT では人の操作だけを作る**。自動発行が要る業務が出てから足す
+4. **`process_state` の段の区切りと補償の粒度。** 段が進むたびに `completed_steps` を進め、最後の段で `COMPLETED` にする。**上限超過で `RevertTrackingNumberCommand` + `attention_item`、予約は `CONFIRMED` に留まる、24 時間で走査**（`domain-model.md:1346` の既定）を、実装で決まる粒度まで書く
 
-**決定の数だけ検査を対応させます**（IT5・IT6 で守れた形）。決定 3 は「止まった連鎖が SQL で読める」「上限超過で要確認一覧に出る」の 2 本になります。
+**決定の数だけ検査を対応させます**（IT5・IT6 で守れた形）。決定 4 は「止まった連鎖が SQL で読める」「上限超過で要確認一覧に出る」の 2 本になります。
 
 ### 設計への反映が必要な事項
 
 | # | 反映先 | 内容 |
 | :--- | :--- | :--- |
-| 1 | `user_story.md`（US13 §3） | **「経路設計者に追跡番号発行依頼の通知が送信される」は、Saga が自動発行する設計と矛盾する。** 依頼が不要になるので、受入基準を「確定すると追跡番号が自動で発行される」に改めるか、未達として残すかを決める。**本 IT で当たる** |
+| 1 | `user_story.md`（US13 §3） | **「経路設計者に追跡番号発行依頼の通知が送信される」の扱い。** 発行は経路設計者の操作なので依頼は自然だが、**送信基盤はスコープ外**（`ui_design.md:120`）。US12 と同じく「記録＋手作業」で満たすか、S02（経路設計者）の件数で代えるかを決める。**本 IT で当たる** |
 | 2 | `architecture_backend.md`（`:775-820`） | **「予約 Saga」節と「Saga 実装パターン」節が `domain-model.md:1318-1352` と食い違う。** ドメインモデルは Reaction Handler + `process_state` で決着済み。**設計が正なので architecture_backend の 2 節を改める**（同じ文書のコンポーネント図・ディレクトリ図は既に Reaction Handler） |
 | 2b | `release_plan.md`（`:208`） | 「`BookingSaga` は US14（IT7）が 1 本目」を、Reaction Handler の 1 本目に直す |
 | 2c | `domain-model.md`（`:1222`） | **`TrackingNumberIssuedEvent` に `shipperId` が無いのに、`tracking_summary.shipper_id` は NOT NULL**。trackingms は荷主 ID を得る手段が無い。イベントに足すか、本 IT では列を作らないかを決める（下記 ER 参照） |
-| 3 | `data-model.md` | `cargo_summary` に `confirmed_at` を足す。`tracking_summary` は「本 IT で作る列」と「後続 IT で足す列」を区別して書く |
+| 3 | `data-model.md` | ~~`cargo_summary` に `confirmed_at` を足す~~ → **`confirmed_at` も `tracking_issued_at` も `:299-300` に定義済み**（着手前の検証で判明）。**本 IT で使い始めるだけ**。`tracking_summary` は「本 IT で作る列」と「後続 IT で足す列」を区別して書く |
 | 4 | `domain-model.md` 要素表 | `TrackingNumber` が bookingms と trackingms で別の型になることを明記（`VoyageNumber` と同じ形） |
-| 5 | `ui_design.md`（S22） | 予約確定の操作と追跡番号の表示を書く。**「追跡番号は自動で出る（発行の操作は無い）」**ことも書く |
+| 5 | `ui_design.md`（S22） | 予約確定の操作と、**経路設計者の「追跡番号を発行」操作**（`:351` に既にある）を S22 の操作として書く。追跡番号の表示も足す |
 | 6 | `ui_design.md`（S02 営業） | 「確定できる予約（通知済み）」の行を足す |
 
 ## リスクと対策
@@ -389,8 +416,9 @@ S22 --> S22 : 追跡番号が出る（**本 IT**・自動）
 - [ ] **通知していない予約は確定できないことを、集約と HTTP の両方で確かめた**
 - [ ] **追跡番号を二重に発行できないことを確かめた**（不変条件 8）
 - [ ] **連鎖が最後まで通ることを、クラスタで 1 度確かめた**（Testcontainers では両サービスを同時に起こさない）
-- [ ] **連鎖が途中で止まったときに、止まった位置が `process_state` から SQL で読めることを確かめた**（ADR-0010 決定 3）
+- [ ] **連鎖が途中で止まったときに、止まった位置が `process_state` から SQL で読めることを確かめた**（ADR-0010 決定 4）
 - [ ] **上限を超えた連鎖が要確認一覧に出ることを確かめた**（同上。`RevertTrackingNumberCommand` + `attention_item`）
+- [ ] **`TrackingNumberIssuedEvent` に `legs[]` を載せた**（購読側が未実装でも落とさない。IT9 の材料）
 - [ ] **契約のゴールデン JSON を bookingms・trackingms の両側に置き、赤から始めた**（開発戦略の Phase 0。US14 は名指し）
 - [ ] **契約に列挙型・識別子型を載せていない**（文字列・数値・日付のみ。ArchUnit で固定）
 - [ ] `./gradlew build` が緑・`TZ=UTC ./gradlew build` が緑
@@ -414,10 +442,10 @@ S22 --> S22 : 追跡番号が出る（**本 IT**・自動）
 | :--- | :--- | :--- | :--- |
 | 1 | 通知済みの予約を確定できる | 営業 | 状態が「確定」になる |
 | 2 | 通知していない予約は確定できない | 営業 | 集約が断る。**API を直接叩いても守られる**。画面にボタンも出ない |
-| 3 | 確定すると追跡番号が自動で出る | 営業 | S22 に追跡番号が出る（発行の操作は無い） |
+| 3 | 確定した予約に経路設計者が追跡番号を発行できる | 経路設計 | S22 に追跡番号が出る。**営業には発行の操作が出ない** |
 | 4 | 追跡番号は二重に発行されない | — | 不変条件 8。同じ予約に 2 度目を送っても増えない |
 | 5 | 追跡が trackingms に作られ、貨物状態が「未受領」になる | — | **サービスをまたいで届く**。クラスタで確かめる |
-| 6 | 連鎖が途中で止まったら、誰かに見える | 追跡 | **`process_state` に止まった位置が残り**、上限超過で要確認一覧に出る（ADR-0010 決定 3） |
+| 6 | 連鎖が途中で止まったら、誰かに見える | 追跡 | **`process_state` に止まった位置が残り**、上限超過で要確認一覧に出る（ADR-0010 決定 4） |
 | 7 | 確定した予約は経路設計へ戻せない | 営業 | 遷移表どおり（`CONFIRMED` から `ROUTE_PROPOSED` は無い） |
 
 ## 局面の確認（中盤の継続）
