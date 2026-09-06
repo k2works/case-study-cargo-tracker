@@ -4,7 +4,7 @@ title: "ドメインモデル設計 - 国際貨物輸送管理システム（CQR
 description: "CQRS / Event Sourcing 版 Cargo Tracker のドメインモデル設計。6 コンテキストの集約・不変条件・コマンド・イベント（内部 / 契約）・状態遷移・Reaction Handler を、イベントを永続化フォーマットとして定義する。"
 tags: [design,domain-model,ddd,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-06T02:56:52Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-06T05:09:34Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -70,6 +70,7 @@ quadrantChart
 | 経路仕様 | Route Specification | `RouteSpecification` | 出発地・目的地・到着期限の指定 |
 | 旅程 | Itinerary | `CargoItinerary` | 確定した輸送区間（Leg）の順序付き列 |
 | 輸送区間 | Leg | `Leg` | 航海単位の輸送区間（積込港・荷降港・日時・航海番号） |
+| 荷主への通知 | Shipper Notification | `ShipperNotification` | 確定経路を荷主へ伝えた記録（宛先・内容・通知者・日時）。**集約は持たず** `ShipperNotifiedEvent` のペイロードの形として使い、投影（`cargo_notification`）が履歴として写す（US12） |
 | 航海 | Voyage | `Voyage` | 運送会社が運航する 1 つの航海。集約ルート |
 | 航海番号 | Voyage Number | `VoyageNumber` | 航海を識別する番号。**BC ごとに別の型** |
 | 運搬移動 | Carrier Movement | `CarrierMovement` | 航海内の港間移動 |
