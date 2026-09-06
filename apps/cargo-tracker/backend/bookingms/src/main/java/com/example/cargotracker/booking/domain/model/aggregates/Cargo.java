@@ -4,9 +4,11 @@ import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.shared.domain.location.Location;
 import com.example.cargotracker.booking.domain.model.commands.AdjustRouteSpecificationCommand;
 import com.example.cargotracker.booking.domain.model.commands.BookCargoCommand;
+import com.example.cargotracker.booking.domain.model.commands.RequestConditionReviewCommand;
 import com.example.cargotracker.booking.domain.model.commands.RequestRoutingCommand;
 import com.example.cargotracker.booking.domain.model.commands.UpdateCargoSpecificationCommand;
 import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
+import com.example.cargotracker.booking.domain.model.events.ConditionReviewRequestedEvent;
 import com.example.cargotracker.booking.domain.model.events.RouteSpecificationAdjustedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoSpecificationUpdatedEvent;
 import com.example.cargotracker.booking.domain.model.events.RoutingRequestedEvent;
@@ -274,6 +276,43 @@ public class Cargo {
         appender.append(new RouteSpecificationAdjustedEvent(command.bookingId(), deadline,
                 excluded, command.departFromUnLocode(), command.adjustedBy(), clock.instant()));
         return command.bookingId();
+    }
+
+    /**
+     * 条件では組めないことを営業へ差し戻す（UC08 / US10 §受入基準 4）。
+     *
+     * <p><b>状態は動かさない</b>（ADR-0009 決定 1）。{@code NOT_ROUTED} へ戻すと
+     * 「一度も設計していない予約」と区別が付かなくなり、経路設計作業一覧（S30）と
+     * 誤配の扱いにも波及する。記録で表し、営業のダッシュボードに出す。</p>
+     *
+     * <p>差し戻せる状態の判断は {@link RoutingStatus#canRequestConditionReview()} に
+     * 置く。ここに条件を書き直すと、画面と食い違う。</p>
+     */
+    @CommandHandler
+    public String requestConditionReview(RequestConditionReviewCommand command,
+            EventAppender appender, Clock clock) {
+        if (bookingId == null) {
+            throw new IllegalTransition("予約 " + command.bookingId() + " は受け付けていません");
+        }
+        if (!routingStatus.canRequestConditionReview()) {
+            throw new IllegalTransition(
+                    "この予約は営業へ差し戻せません（" + routingStatus.label() + "）");
+        }
+        if (command.reason() == null || command.reason().isBlank()) {
+            // 理由が無いと、営業は荷主と何を協議すればよいのか分からない。
+            throw new BusinessRuleViolation("差し戻す理由は必須です");
+        }
+
+        appender.append(new ConditionReviewRequestedEvent(command.bookingId(),
+                command.reason().trim(), command.requestedBy(), clock.instant()));
+        return command.bookingId();
+    }
+
+    @EventSourcingHandler
+    void on(ConditionReviewRequestedEvent event) {
+        // **状態は動かさない**（ADR-0009 決定 1）。記録は投影が持つ。集約が変える
+        // ものが無いので本文は空だが、@EventSourcingHandler は要る（このイベントを
+        // 読み飛ばすと、以降のイベントの適用順が変わる形に将来なりうる）。
     }
 
     @EventSourcingHandler

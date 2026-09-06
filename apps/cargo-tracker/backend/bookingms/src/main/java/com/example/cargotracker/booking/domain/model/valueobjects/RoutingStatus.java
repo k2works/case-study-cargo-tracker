@@ -26,4 +26,19 @@ public enum RoutingStatus {
     public String label() {
         return label;
     }
+
+    /**
+     * 条件の見直しを営業へ差し戻せるか（US10 §受入基準 4 / ADR-0009 決定 2）。
+     *
+     * <p><b>誤配（{@code MISROUTED}）は含めない。</b> 誤配は「荷物が経路から外れた」
+     * ことで、条件では組めないこととは別である。差し戻せると、荷物が動いている予約が
+     * 営業の手番に見える。誤配からの再設計は US28（IT11）が持つ。</p>
+     *
+     * <p>経路が決まっている（{@code ROUTED}）予約も差し戻せない。組めているのだから
+     * 条件の見直しは要らず、変えたいなら先に条件を調整する
+     * （{@code AdjustRouteSpecificationCommand}）。</p>
+     */
+    public boolean canRequestConditionReview() {
+        return this == ROUTING_REQUESTED;
+    }
 }

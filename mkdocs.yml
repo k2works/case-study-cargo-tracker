@@ -153,6 +153,7 @@ nav:
           - ADR-0006 Gateway でのロール認可: adr/cargo-tracker/0006-role-authorization-at-the-gateway.md
           - ADR-0007 経路探索の打ち切り: adr/cargo-tracker/0007-route-search-cutoff.md
           - ADR-0008 予約の修正内容は投影として持つ: adr/cargo-tracker/0008-cargo-revision-as-a-projection.md
+          - ADR-0009 営業への差し戻しを状態遷移にしない: adr/cargo-tracker/0009-condition-review-is-not-a-state-transition.md
   - 記事:
       - 概要: article/index.md
       - モノリスアーキテクチャ実装比較:

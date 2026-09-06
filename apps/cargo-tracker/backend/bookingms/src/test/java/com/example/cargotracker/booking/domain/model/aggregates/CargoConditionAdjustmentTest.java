@@ -4,12 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.cargotracker.booking.domain.model.commands.AdjustRouteSpecificationCommand;
 import com.example.cargotracker.booking.domain.model.commands.AssignRouteCommand;
+import com.example.cargotracker.booking.domain.model.commands.RequestConditionReviewCommand;
 import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoRoutedEvent;
+import com.example.cargotracker.booking.domain.model.events.ConditionReviewRequestedEvent;
 import com.example.cargotracker.booking.domain.model.events.RouteSpecificationAdjustedEvent;
 import com.example.cargotracker.booking.domain.model.events.RoutingRequestedEvent;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoItinerary;
 import com.example.cargotracker.booking.domain.model.valueobjects.Leg;
+import com.example.cargotracker.booking.domain.model.valueobjects.RoutingStatus;
 import com.example.cargotracker.shared.domain.location.Location;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -24,6 +27,8 @@ import org.axonframework.test.fixture.AxonTestFixture;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 /**
  * 経路条件の調整（UC08 / US10）。
@@ -147,5 +152,74 @@ class CargoConditionAdjustmentTest {
                         List.of("USNYC"), null, "routing01"))
                 .then().exceptionSatisfies(e ->
                         assertThat(e.getMessage()).contains("除外"));
+    }
+
+    private static RequestConditionReviewCommand review(String reason) {
+        return new RequestConditionReviewCommand("B-0001", reason, "routing01");
+    }
+
+    @Test
+    @DisplayName("US10 §4: 組めないことを営業へ差し戻せる（ADR-0009 決定 1: 状態は動かさない）")
+    void requestsConditionReview() {
+        fixture.given().events(booked(), new RoutingRequestedEvent("B-0001", "sales01"))
+                .when().command(review("期限内に着ける便がありません"))
+                .then().success()
+                .events(new ConditionReviewRequestedEvent("B-0001",
+                        "期限内に着ける便がありません", "routing01", NOW));
+    }
+
+    @Test
+    @DisplayName("ADR-0009 決定 1: 差し戻しても経路設計作業一覧から消えない（状態を戻さない）")
+    void conditionReviewDoesNotResetRoutingStatus() {
+        // 状態を NOT_ROUTED へ戻すと「一度も設計していない予約」と混ざる。
+        // 差し戻したあとも、営業が条件を直せばそのまま設計を続けられる。
+        fixture.given().events(booked(), new RoutingRequestedEvent("B-0001", "sales01"),
+                        new ConditionReviewRequestedEvent("B-0001", "組めません",
+                                "routing01", NOW))
+                .when().command(adjust(EXTENDED))
+                .then().success();
+    }
+
+    @ParameterizedTest
+    @EnumSource(RoutingStatus.class)
+    @DisplayName("ADR-0009 決定 2: 差し戻せるのは設計依頼済みのときだけ（誤配は含めない）")
+    void onlyRoutingRequestedCanBeSentBack(RoutingStatus status) {
+        // **誤配（MISROUTED）は含めない。** 誤配は「荷物が経路から外れた」ことで、
+        // 条件が組めないこととは別である。差し戻せると、荷物が動いている予約が
+        // 営業の手番に見える。再設計は US28（IT11）が持つ。
+        //
+        // 集約のイベントでは MISROUTED に到達できない（US28 で足す）ので、
+        // 列挙の全値を回して述語を固定する。値を足したらここが赤くなる。
+        assertThat(status.canRequestConditionReview())
+                .as("%s から差し戻せるか", status)
+                .isEqualTo(status == RoutingStatus.ROUTING_REQUESTED);
+    }
+
+    @Test
+    @DisplayName("ADR-0009 決定 3: 経路が決まった予約は差し戻せない（先に条件を調整する）")
+    void rejectsConditionReviewAfterRouting() {
+        fixture.given().events(booked(), new RoutingRequestedEvent("B-0001", "sales01"),
+                        routed())
+                .when().command(review("組めません"))
+                .then().exceptionSatisfies(e ->
+                        assertThat(e.getMessage()).contains("差し戻せません"));
+    }
+
+    @Test
+    @DisplayName("理由の無い差し戻しは受け付けない（営業が何をすればよいか分からない）")
+    void rejectsConditionReviewWithoutReason() {
+        fixture.given().events(booked(), new RoutingRequestedEvent("B-0001", "sales01"))
+                .when().command(review("  "))
+                .then().exceptionSatisfies(e ->
+                        assertThat(e.getMessage()).contains("理由"));
+    }
+
+    @Test
+    @DisplayName("引き渡していない予約は差し戻せない")
+    void rejectsConditionReviewBeforeRoutingRequested() {
+        fixture.given().event(booked())
+                .when().command(review("組めません"))
+                .then().exceptionSatisfies(e ->
+                        assertThat(e.getMessage()).contains("差し戻せません"));
     }
 }
