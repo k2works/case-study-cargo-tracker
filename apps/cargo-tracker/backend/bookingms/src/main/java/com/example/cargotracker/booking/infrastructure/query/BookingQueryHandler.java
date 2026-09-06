@@ -9,6 +9,8 @@ import com.example.cargotracker.booking.infrastructure.query.BookingQueries.Book
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.ConditionReviewListView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.ConditionReviewView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindConditionReviewsQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindRouteConditionQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.RouteConditionView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.BookingView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.CountBookingsByStatusQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingQuery;
@@ -21,6 +23,7 @@ import com.example.cargotracker.booking.infrastructure.query.BookingQueries.Itin
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.ItineraryView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.RevisionListView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.RevisionView;
+import java.util.List;
 import org.axonframework.messaging.queryhandling.annotation.QueryHandler;
 import org.springframework.stereotype.Component;
 
@@ -70,6 +73,25 @@ public class BookingQueryHandler {
                 .map(row -> new ConditionReviewView(row.bookingId(), row.bookingNumber(),
                         row.reason(), row.requestedAt()))
                 .toList());
+    }
+
+    /**
+     * 調整された探索条件（US10）。調整していなければ空。
+     *
+     * <p>予約そのものが無いときも空を返す。{@code null} を返すと、呼ぶ側が
+     * 「予約が無い」と「条件が無い」を分けて扱うことになるが、候補算出は先に
+     * 予約の有無を見ている。</p>
+     */
+    @QueryHandler
+    public RouteConditionView handle(FindRouteConditionQuery query) {
+        CargoSummaryMapper.RouteConditionRow row = cargos.findRouteCondition(query.bookingId());
+        if (row == null || row.excludeUnlocodes() == null && row.departFromUnlocode() == null) {
+            return new RouteConditionView(List.of(), null);
+        }
+        return new RouteConditionView(
+                row.excludeUnlocodes() == null
+                        ? List.of() : List.of(row.excludeUnlocodes().split(",")),
+                row.departFromUnlocode());
     }
 
     /** 修正履歴（US32 §受入基準 4）。一度も直していなければ空。 */

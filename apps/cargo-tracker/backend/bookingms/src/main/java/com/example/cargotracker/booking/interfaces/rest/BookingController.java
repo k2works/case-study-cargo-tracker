@@ -25,6 +25,8 @@ import com.example.cargotracker.booking.infrastructure.query.BookingQueries.Coun
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.AffectedBookingListView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.ConditionReviewListView;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindRouteConditionQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.RouteConditionView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindConditionReviewsQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingItineraryQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingsByVoyageQuery;
@@ -156,12 +158,20 @@ public class BookingController {
                     "登録を受け付けました。反映までしばらくお待ちください"));
         }
 
+        // **条件は投影から組む**（US10）。画面から組み立てて送ると、条件を直したのに
+        // 古い条件で探すことが起きる。調整していなければどちらも null で、
+        // IT5 までと同じ探索になる。
+        RouteConditionView condition = queries.query(
+                new FindRouteConditionQuery(bookingId), RouteConditionView.class);
         RouteCandidateFinder.RouteCandidates found = routeCandidates.find(
-                RouteSearchRequest.of(
+                new RouteSearchRequest(
                         Location.of(booking.originUnLocode()),
                         Location.of(booking.destinationUnLocode()),
                         booking.arrivalDeadline(),
-                        CargoType.valueOf(booking.cargoType())));
+                        CargoType.valueOf(booking.cargoType()),
+                        condition.excludeUnLocodes().stream().map(Location::of).toList(),
+                        condition.departFromUnLocode() == null
+                                ? null : Location.of(condition.departFromUnLocode())));
 
         return ResponseEntity.ok(new RouteCandidatesResponse(
                 found.candidates().stream()

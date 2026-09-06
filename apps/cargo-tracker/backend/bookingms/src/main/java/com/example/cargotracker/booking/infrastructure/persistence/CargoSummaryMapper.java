@@ -88,13 +88,31 @@ public interface CargoSummaryMapper {
      */
     @org.apache.ibatis.annotations.Update(
             "UPDATE cargo_summary SET arrival_deadline = #{arrivalDeadline}, "
+            + "route_exclude_unlocodes = #{excludeUnLocodes}, "
+            + "route_depart_from_unlocode = #{departFromUnLocode}, "
             + "routing_status = #{routingStatus}, condition_review_requested_at = NULL, "
             + "condition_review_reason = NULL, projected_at = #{projectedAt} "
             + "WHERE booking_id = #{bookingId}")
     int updateAdjustedRouteSpecification(@Param("bookingId") String bookingId,
             @Param("arrivalDeadline") LocalDate arrivalDeadline,
+            @Param("excludeUnLocodes") String excludeUnLocodes,
+            @Param("departFromUnLocode") String departFromUnLocode,
             @Param("routingStatus") String routingStatus,
             @Param("projectedAt") Instant projectedAt);
+
+    /**
+     * 経路探索の条件（US10）。**候補を出すたびにここから組む。**
+     *
+     * <p>画面から組み立てて送ると、条件を直したのに古い条件で探すことが起きる。</p>
+     */
+    @Select("SELECT route_exclude_unlocodes AS exclude_unlocodes, "
+            + "route_depart_from_unlocode AS depart_from_unlocode "
+            + "FROM cargo_summary WHERE booking_id = #{bookingId}")
+    RouteConditionRow findRouteCondition(@Param("bookingId") String bookingId);
+
+    /** 調整された探索条件。どちらも未調整なら null。 */
+    record RouteConditionRow(String excludeUnlocodes, String departFromUnlocode) {
+    }
 
     /**
      * 差し戻しを投影に反映する（US10 §4 / ADR-0009 決定 1）。

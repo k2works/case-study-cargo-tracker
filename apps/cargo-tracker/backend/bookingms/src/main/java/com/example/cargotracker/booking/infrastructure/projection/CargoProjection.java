@@ -128,8 +128,14 @@ public class CargoProjection {
      */
     @EventHandler
     public void on(RouteSpecificationAdjustedEvent event) {
+        // 除外港はカンマ区切りで持つ。**空の一覧を空文字にしない**（「制限なし」と
+        // 「未設定」が読み分けられなくなる）。
+        List<String> excluded = event.excludeUnLocodes() == null
+                ? List.of() : event.excludeUnLocodes();
         int updated = cargos.updateAdjustedRouteSpecification(event.bookingId(),
                 event.arrivalDeadline(),
+                excluded.isEmpty() ? null : String.join(",", excluded),
+                event.departFromUnLocode(),
                 RoutingStatus.ROUTING_REQUESTED.name(),
                 clock.instant());
         if (updated == 0) {

@@ -136,6 +136,20 @@ public final class BookingQueries {
     public record ConditionReviewListView(List<ConditionReviewView> items) {
     }
 
+    /** 調整された探索条件（US10）。候補を出すたびに投影から組む。 */
+    public record FindRouteConditionQuery(String bookingId) {
+    }
+
+    /**
+     * 探索の条件。<b>画面にも出す</b>（S31 の「いまの条件」）。
+     *
+     * <p>いま何で絞っているのかが読めないと、経路設計者は同じ条件で何度も再算出する。</p>
+     */
+    public record RouteConditionView(
+            List<String> excludeUnLocodes,
+            String departFromUnLocode) {
+    }
+
     /** 画面に出す予約。荷主名は鍵破棄後に {@code null} になる。 */
     public record BookingView(
             String bookingId,

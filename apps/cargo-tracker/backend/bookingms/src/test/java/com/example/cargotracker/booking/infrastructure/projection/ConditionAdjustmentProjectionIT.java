@@ -12,6 +12,8 @@ import com.example.cargotracker.booking.infrastructure.query.BookingQueries.Cond
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingItineraryQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindConditionReviewsQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindRouteConditionQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.RouteConditionView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueryHandler;
 import com.example.cargotracker.shared.testing.AbstractAxonIntegrationTest;
 import java.math.BigDecimal;
@@ -134,5 +136,40 @@ class ConditionAdjustmentProjectionIT extends AbstractAxonIntegrationTest {
         return queries.handle(new FindConditionReviewsQuery(200)).items().stream()
                 .filter(item -> item.bookingId().equals(bookingId))
                 .findFirst().orElse(null);
+    }
+
+    @Test
+    @DisplayName("調整した除外港と起点が探索の条件として読み出せる（層を生き延びる）")
+    void adjustedConditionsSurviveToTheSearch() {
+        // **表示のためだけでなく、探索がここから条件を組む。** どこか一層で
+        // 落としても集約の検査は緑のままなので、投影から読み直して確かめる。
+        String bookingId = handedOver();
+
+        projection.on(new RouteSpecificationAdjustedEvent(bookingId, EXTENDED,
+                List.of("SGSIN", "HKHKG"), "JPOSA", "routing01", AT));
+
+        assertThat(queries.handle(new FindRouteConditionQuery(bookingId)))
+                .isEqualTo(new RouteConditionView(List.of("SGSIN", "HKHKG"), "JPOSA"));
+    }
+
+    @Test
+    @DisplayName("調整していない予約の条件は空（IT5 までと同じ探索になる）")
+    void unadjustedBookingHasNoConditions() {
+        assertThat(queries.handle(new FindRouteConditionQuery(handedOver())))
+                .isEqualTo(new RouteConditionView(List.of(), null));
+    }
+
+    @Test
+    @DisplayName("除外港を外す調整をすると、条件が空に戻る（消し方が無いと絞り込みが積み上がる）")
+    void adjustmentCanClearTheConditions() {
+        String bookingId = handedOver();
+        projection.on(new RouteSpecificationAdjustedEvent(bookingId, EXTENDED,
+                List.of("SGSIN"), "JPOSA", "routing01", AT));
+
+        projection.on(new RouteSpecificationAdjustedEvent(bookingId, EXTENDED,
+                List.of(), null, "routing01", AT));
+
+        assertThat(queries.handle(new FindRouteConditionQuery(bookingId)))
+                .isEqualTo(new RouteConditionView(List.of(), null));
     }
 }
