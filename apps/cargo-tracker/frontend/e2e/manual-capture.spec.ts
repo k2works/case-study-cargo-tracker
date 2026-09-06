@@ -302,11 +302,29 @@ test.describe('マニュアルの画面キャプチャ', () => {
         body: JSON.stringify(SAMPLE_ITINERARY),
       }),
     );
+    // 見直し依頼（S02 / US10）。**1 件の読み口より後**に置く。逆にすると
+    // `bookings/*` に当たって予約 1 件の形が返り、ダッシュボードが丸ごと落ちる。
+    await page.route('**/api/v1/booking/bookings/condition-reviews**', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: [
+            {
+              bookingId: '99999999-9999-9999-9999-999999999999',
+              bookingNumber: 'B-2026-0902-0011',
+              reason: '期限内に着ける便がありません',
+              requestedAt: '2026-09-05T23:30:00Z',
+            },
+          ],
+        }),
+      }),
+    );
     await page.route('**/api/v1/booking/bookings/summary**', (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ preliminary: 3 }),
+        body: JSON.stringify({ preliminary: 3, awaitingNotification: 2 }),
       }),
     );
     await page.route('**/api/v1/routing/voyages**', (route) =>
@@ -478,6 +496,47 @@ test.describe('マニュアルの画面キャプチャ', () => {
       path: `${OUT}/05-S22-booking-detail-routed.png`,
       fullPage: true,
     });
+  });
+
+  test('10 荷主への通知', async ({ page }) => {
+    // 通知の欄は経路が決まった予約にだけ出る。通知履歴も一緒に写す
+    // （マニュアルが両方を説明しているため）。
+    await page.route('**/api/v1/booking/bookings/*/notifications', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: [
+            {
+              notifiedAt: '2026-09-06T02:00:00Z',
+              recipientEmail: 'sales@example.com',
+              summary: 'JPTYO → SGSIN → USNYC / 所要 24 日 / 到着予定 2026/10/06 03:00',
+              notifiedBy: 'sales01',
+            },
+          ],
+        }),
+      }),
+    );
+    await page.route('**/api/v1/booking/bookings/88888888-*', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ...SAMPLE_ROUTED_BOOKING,
+          bookingId: '88888888-8888-8888-8888-888888888888',
+          bookingNumber: 'B-2026-0903-0003',
+          bookingStatus: 'ROUTE_NOTIFIED',
+          lastNotifiedAt: '2026-09-06T02:00:00Z',
+          updatedAt: null,
+          updatedBy: null,
+        }),
+      }),
+    );
+    await signIn(page);
+    await page.goto('/bookings/88888888-8888-8888-8888-888888888888');
+    await expect(page.getByRole('heading', { name: '荷主への通知' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '通知履歴' })).toBeVisible();
+    await page.screenshot({ path: `${OUT}/10-S22-notify-shipper.png`, fullPage: true });
   });
 
   test('06 利用者管理', async ({ page }) => {
@@ -658,6 +717,11 @@ test.describe('マニュアルの画面キャプチャ', () => {
             },
           ],
           truncated: false,
+          condition: {
+            arrivalDeadline: '2026-12-01',
+            excludeUnLocodes: ['SGSIN'],
+            departFromUnLocode: null,
+          },
         }),
       }),
     );

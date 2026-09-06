@@ -42,8 +42,11 @@ export function DashboardPage() {
     enabled: isSales,
     refetchInterval: 10000,
   });
+  // **1 つの読み口で画面全体を落とさない。** ダッシュボードは複数の読み口を
+  // 束ねるので、どれか 1 つが思わぬ形を返すと「今日の作業」ごと消える
+  // （マニュアルのキャプチャで実測。要確認一覧でも同じ形の失敗があった）。
   const conditionReviews =
-    reviews?.state === 'ready' ? reviews.value.items : [];
+    reviews?.state === 'ready' ? reviews.value.items ?? [] : [];
 
   return (
     <section>
