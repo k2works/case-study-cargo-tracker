@@ -18,6 +18,7 @@ import com.example.cargotracker.booking.infrastructure.query.BookingQueries.Itin
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.RevisionView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindRoutingWorklistQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueryHandler;
+import com.example.cargotracker.booking.infrastructure.query.BookingWorklistQueryHandler;
 import com.example.cargotracker.shared.contract.event.ShipperRegisteredEvent;
 import com.example.cargotracker.shared.testing.AbstractAxonIntegrationTest;
 import java.math.BigDecimal;
@@ -44,6 +45,9 @@ class CargoProjectionIT extends AbstractAxonIntegrationTest {
 
     @Autowired
     private BookingQueryHandler queries;
+
+    @Autowired
+    private BookingWorklistQueryHandler worklistQueries;
 
     @Autowired
     private com.example.cargotracker.booking.infrastructure.persistence.AttentionItemMapper
@@ -141,8 +145,8 @@ class CargoProjectionIT extends AbstractAxonIntegrationTest {
     void countsPreliminary() {
         projection.on(booked("B-CNT-" + System.nanoTime(), "SHP-X", "数える荷"));
 
-        assertThat(queries.handle(new CountBookingsByStatusQuery("PRELIMINARY"))).isPositive();
-        assertThat(queries.handle(new CountBookingsByStatusQuery("CANCELLED")))
+        assertThat(worklistQueries.handle(new CountBookingsByStatusQuery("PRELIMINARY"))).isPositive();
+        assertThat(worklistQueries.handle(new CountBookingsByStatusQuery("CANCELLED")))
                 .as("状態を引数で受けるので、別の状態でも数えられる")
                 .isNotNull();
     }
@@ -186,7 +190,7 @@ class CargoProjectionIT extends AbstractAxonIntegrationTest {
         BookingView view = queries.handle(new FindBookingQuery(bookingId));
         assertThat(view.bookingStatus()).isEqualTo("ROUTE_PROPOSED");
         assertThat(view.routingStatus()).isEqualTo("ROUTING_REQUESTED");
-        assertThat(queries.handle(new FindRoutingWorklistQuery(0, 200, false)).items())
+        assertThat(worklistQueries.handle(new FindRoutingWorklistQuery(0, 200, false)).items())
                 .extracting(BookingView::bookingId).contains(bookingId);
         assertThat(view.routingRequestedAt())
                 .as("いつ引き渡されたかが読めないと、期限が遠く放置された案件が"
@@ -229,7 +233,7 @@ class CargoProjectionIT extends AbstractAxonIntegrationTest {
         }
         cargos.markMisroutedForTest(misrouted);
 
-        List<String> order = queries.handle(new FindRoutingWorklistQuery(0, 200, false)).items()
+        List<String> order = worklistQueries.handle(new FindRoutingWorklistQuery(0, 200, false)).items()
                 .stream().map(BookingView::bookingId)
                 .filter(id -> id.equals(far) || id.equals(near) || id.equals(misrouted))
                 .toList();
@@ -247,7 +251,7 @@ class CargoProjectionIT extends AbstractAxonIntegrationTest {
         projection.on(new RoutingRequestedEvent(misrouted, "sales01"));
         cargos.markMisroutedInTransitForTest(misrouted);
 
-        List<String> ids = queries.handle(new FindRoutingWorklistQuery(0, 200, false)).items()
+        List<String> ids = worklistQueries.handle(new FindRoutingWorklistQuery(0, 200, false)).items()
                 .stream().map(BookingView::bookingId).toList();
 
         assertThat(ids)

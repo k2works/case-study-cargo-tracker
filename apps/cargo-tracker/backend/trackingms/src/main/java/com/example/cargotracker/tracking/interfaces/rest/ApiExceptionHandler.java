@@ -107,7 +107,10 @@ public class ApiExceptionHandler {
                 }
             }
         }
-        return marked != null ? marked : (message == null ? "処理できませんでした" : message);
+        if (marked != null) {
+            return marked;
+        }
+        return message == null ? "処理できませんでした" : message;
     }
 
     /** 印から後ろだけを取り出す。印が無ければ {@code null}。 */

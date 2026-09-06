@@ -43,6 +43,11 @@ public class CargoProjection {
 
     private static final Logger log = LoggerFactory.getLogger(CargoProjection.class);
 
+    /** 要確認一覧の種類。投影が弾いたことを表す（data-model.md）。 */
+    private static final String PROJECTION_REJECTED = "PROJECTION_REJECTED";
+    /** 要確認一覧の対象の種類。 */
+    private static final String TARGET_BOOKING = "BOOKING";
+
     private final CargoSummaryMapper cargos;
     private final CargoRevisionMapper revisions;
     private final CargoLegMapper legs;
@@ -194,7 +199,7 @@ public class CargoProjection {
                 BookingStatus.CONFIRMED.name(), event.confirmedAt(), clock.instant());
         if (updated == 0) {
             log.warn("確定を書ける予約が投影に無い: bookingId={}", event.bookingId());
-            attentionItems.add("PROJECTION_REJECTED", "BOOKING", event.bookingId(),
+            attentionItems.add(PROJECTION_REJECTED, TARGET_BOOKING, event.bookingId(),
                     "ROLE_SALES", "確定の対象が投影に無い", "{}", clock.instant());
         }
     }
@@ -212,7 +217,7 @@ public class CargoProjection {
                 event.issuedAt(), clock.instant());
         if (updated == 0) {
             log.warn("追跡番号を書ける予約が投影に無い: bookingId={}", event.bookingId());
-            attentionItems.add("PROJECTION_REJECTED", "BOOKING", event.bookingId(),
+            attentionItems.add(PROJECTION_REJECTED, TARGET_BOOKING, event.bookingId(),
                     "ROLE_ROUTING", "追跡番号の対象が投影に無い", "{}", clock.instant());
         }
     }
@@ -299,7 +304,7 @@ public class CargoProjection {
 
         if (updated == 0) {
             log.warn("修正を書ける予約が投影に無い: bookingId={}", event.bookingId());
-            attentionItems.add("PROJECTION_REJECTED", "BOOKING", event.bookingId(),
+            attentionItems.add(PROJECTION_REJECTED, TARGET_BOOKING, event.bookingId(),
                     "ROLE_SALES", "修正の対象が投影に無い", "{}", now);
         }
     }
@@ -325,7 +330,7 @@ public class CargoProjection {
                 RoutingStatus.ROUTED.name(), now);
         if (updated == 0) {
             log.warn("経路を書ける予約が投影に無い: bookingId={}", event.bookingId());
-            attentionItems.add("PROJECTION_REJECTED", "BOOKING", event.bookingId(),
+            attentionItems.add(PROJECTION_REJECTED, TARGET_BOOKING, event.bookingId(),
                     "ROLE_ROUTING", "経路の対象が投影に無い", "{}", now);
             return;
         }

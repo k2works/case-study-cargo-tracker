@@ -15,6 +15,7 @@ import com.example.cargotracker.booking.infrastructure.query.BookingQueries.Find
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindRouteConditionQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.RouteConditionView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueryHandler;
+import com.example.cargotracker.booking.infrastructure.query.BookingWorklistQueryHandler;
 import com.example.cargotracker.shared.testing.AbstractAxonIntegrationTest;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -46,6 +47,9 @@ class ConditionAdjustmentProjectionIT extends AbstractAxonIntegrationTest {
 
     @Autowired
     private BookingQueryHandler queries;
+
+    @Autowired
+    private BookingWorklistQueryHandler worklistQueries;
 
     private static CargoBookedEvent booked(String bookingId) {
         return new CargoBookedEvent(bookingId, "SHP-CA", "JPTYO", "USNYC", DEADLINE,
@@ -133,7 +137,7 @@ class ConditionAdjustmentProjectionIT extends AbstractAxonIntegrationTest {
     }
 
     private ConditionReviewView reviewOf(String bookingId) {
-        return queries.handle(new FindConditionReviewsQuery(200)).items().stream()
+        return worklistQueries.handle(new FindConditionReviewsQuery(200)).items().stream()
                 .filter(item -> item.bookingId().equals(bookingId))
                 .findFirst().orElse(null);
     }

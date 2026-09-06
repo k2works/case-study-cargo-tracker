@@ -7,29 +7,17 @@ import com.example.cargotracker.booking.infrastructure.persistence.CargoSummaryM
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.AffectedBookingListView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.AffectedBookingView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.BookingListView;
-import com.example.cargotracker.booking.infrastructure.query.BookingQueries.ConditionReviewListView;
-import com.example.cargotracker.booking.infrastructure.query.BookingQueries.ConditionReviewView;
-import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindConditionReviewsQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingNotificationsQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindRouteConditionQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.NotificationListView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.NotificationView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.RouteConditionView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.BookingView;
-import com.example.cargotracker.booking.infrastructure.query.BookingQueries.AwaitingConfirmationListView;
-import com.example.cargotracker.booking.infrastructure.query.BookingQueries.AwaitingTrackingListView;
-import com.example.cargotracker.booking.infrastructure.query.BookingQueries.AwaitingTrackingView;
-import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindAwaitingTrackingNumberQuery;
-import com.example.cargotracker.booking.infrastructure.query.BookingQueries.AwaitingConfirmationView;
-import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindAwaitingConfirmationQuery;
-import com.example.cargotracker.booking.infrastructure.query.BookingQueries.CountAwaitingNotificationQuery;
-import com.example.cargotracker.booking.infrastructure.query.BookingQueries.CountBookingsByStatusQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingsByVoyageQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingItineraryQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingRevisionsQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingsQuery;
-import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindRoutingWorklistQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.ItineraryLegView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.ItineraryView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.RevisionListView;
@@ -79,15 +67,6 @@ public class BookingQueryHandler {
                         .toList());
     }
 
-    /** 見直しを頼まれている予約（S02 / 営業。US10 §4）。古い依頼から順に返す。 */
-    @QueryHandler
-    public ConditionReviewListView handle(FindConditionReviewsQuery query) {
-        return new ConditionReviewListView(cargos.findConditionReviews(query.limit()).stream()
-                .map(row -> new ConditionReviewView(row.bookingId(), row.bookingNumber(),
-                        row.reason(), row.requestedAt()))
-                .toList());
-    }
-
     /**
      * 調整された探索条件（US10）。調整していなければ空。
      *
@@ -103,32 +82,6 @@ public class BookingQueryHandler {
         }
         return new RouteConditionView(parsePorts(row.excludeUnlocodes()),
                 row.departFromUnlocode());
-    }
-
-    /** 荷主へ通知していない経路確定済みの予約の件数（S02 / 営業。US12）。 */
-    @QueryHandler
-    public Integer handle(CountAwaitingNotificationQuery query) {
-        return cargos.countAwaitingNotification();
-    }
-
-    /** 確定を待っている予約（S02 / 営業。US13 §受入基準 3）。 */
-    @QueryHandler
-    public AwaitingConfirmationListView handle(FindAwaitingConfirmationQuery query) {
-        return new AwaitingConfirmationListView(
-                cargos.findAwaitingConfirmation(Math.clamp(query.limit(), 1, 200)).stream()
-                        .map(row -> new AwaitingConfirmationView(
-                                row.bookingId(), row.bookingNumber(), row.notifiedAt()))
-                        .toList());
-    }
-
-    /** 追跡番号の発行を待っている予約（S02 / 経路設計者。US13 §受入基準 3）。 */
-    @QueryHandler
-    public AwaitingTrackingListView handle(FindAwaitingTrackingNumberQuery query) {
-        return new AwaitingTrackingListView(
-                cargos.findAwaitingTrackingNumber(Math.clamp(query.limit(), 1, 200)).stream()
-                        .map(row -> new AwaitingTrackingView(
-                                row.bookingId(), row.bookingNumber(), row.confirmedAt()))
-                        .toList());
     }
 
     /** 通知履歴（US12 §受入基準 4）。一度も通知していなければ空。 */
@@ -166,22 +119,12 @@ public class BookingQueryHandler {
                 cargos.countAll(query.includeFinished()));
     }
 
-    @QueryHandler
-    public BookingListView handle(FindRoutingWorklistQuery query) {
-        int size = Math.clamp(query.size(), 1, 200);
-        int offset = Math.max(query.page(), 0) * size;
-        return new BookingListView(
-                cargos.findRoutingWorklist(query.includeRouted(), size, offset).stream()
-                        .map(BookingQueryHandler::toView).toList(),
-                cargos.countRoutingWorklist(query.includeRouted()));
-    }
-
-    @QueryHandler
-    public Integer handle(CountBookingsByStatusQuery query) {
-        return cargos.countByStatus(query.bookingStatus());
-    }
-
-    private static BookingView toView(CargoSummaryMapper.CargoSummaryRow row) {
+    /**
+     * 投影の行を画面に出す形へ。<b>同じパッケージの読み口が共有する</b>
+     * （{@link BookingWorklistQueryHandler} も一覧を返す）。写しを作ると、
+     * 列を足したときに片方だけが古くなる。
+     */
+    static BookingView toView(CargoSummaryMapper.CargoSummaryRow row) {
         return new BookingView(
                 row.bookingId(), row.bookingNumber(), row.shipperId(), row.shipperName(),
                 row.originUnlocode(), row.destinationUnlocode(), row.arrivalDeadline(),

@@ -14,6 +14,7 @@ import com.example.cargotracker.booking.infrastructure.query.BookingQueries.Awai
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindAwaitingConfirmationQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueryHandler;
+import com.example.cargotracker.booking.infrastructure.query.BookingWorklistQueryHandler;
 import com.example.cargotracker.shared.testing.AbstractAxonIntegrationTest;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -44,6 +45,9 @@ class ConfirmationProjectionIT extends AbstractAxonIntegrationTest {
 
     @Autowired
     private BookingQueryHandler queries;
+
+    @Autowired
+    private BookingWorklistQueryHandler worklistQueries;
 
     private String notified() {
         String bookingId = "B-CF-" + System.nanoTime();
@@ -99,7 +103,7 @@ class ConfirmationProjectionIT extends AbstractAxonIntegrationTest {
     }
 
     private List<AwaitingConfirmationView> awaiting() {
-        return queries.handle(new FindAwaitingConfirmationQuery(200)).items();
+        return worklistQueries.handle(new FindAwaitingConfirmationQuery(200)).items();
     }
 
     @Test

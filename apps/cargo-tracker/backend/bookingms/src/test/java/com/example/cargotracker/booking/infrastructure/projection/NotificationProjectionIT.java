@@ -14,6 +14,7 @@ import com.example.cargotracker.booking.infrastructure.query.BookingQueries.Find
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.CountAwaitingNotificationQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.NotificationView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueryHandler;
+import com.example.cargotracker.booking.infrastructure.query.BookingWorklistQueryHandler;
 import com.example.cargotracker.shared.testing.AbstractAxonIntegrationTest;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -39,6 +40,9 @@ class NotificationProjectionIT extends AbstractAxonIntegrationTest {
 
     @Autowired
     private BookingQueryHandler queries;
+
+    @Autowired
+    private BookingWorklistQueryHandler worklistQueries;
 
     private String routedBooking() {
         String bookingId = "B-NT-" + System.nanoTime();
@@ -180,7 +184,7 @@ class NotificationProjectionIT extends AbstractAxonIntegrationTest {
         // 戻した時点で印を落とし、組み直して設定済みになったら再び数える。
         String bookingId = routedBooking();
         projection.on(notified(bookingId, FIRST, "1 回目"));
-        int afterNotifying = queries.handle(new CountAwaitingNotificationQuery());
+        int afterNotifying = worklistQueries.handle(new CountAwaitingNotificationQuery());
 
         projection.on(new ReturnedToRoutingEvent(bookingId, "変更希望", "sales01", SECOND));
         projection.on(new CargoRoutedEvent(bookingId,
@@ -189,7 +193,7 @@ class NotificationProjectionIT extends AbstractAxonIntegrationTest {
                         Instant.parse("2026-10-20T00:00:00Z"))),
                 "routing01", SECOND));
 
-        assertThat(queries.handle(new CountAwaitingNotificationQuery()))
+        assertThat(worklistQueries.handle(new CountAwaitingNotificationQuery()))
                 .as("組み直した予約は、もう一度伝える必要がある")
                 .isEqualTo(afterNotifying + 1);
         // 何を伝えたかは残る。
@@ -201,7 +205,7 @@ class NotificationProjectionIT extends AbstractAxonIntegrationTest {
     void adjustmentAlsoClearsTheNotifiedMark() {
         String bookingId = routedBooking();
         projection.on(notified(bookingId, FIRST, "1 回目"));
-        int afterNotifying = queries.handle(new CountAwaitingNotificationQuery());
+        int afterNotifying = worklistQueries.handle(new CountAwaitingNotificationQuery());
 
         projection.on(new com.example.cargotracker.booking.domain.model.events
                 .RouteSpecificationAdjustedEvent(bookingId,
@@ -213,7 +217,7 @@ class NotificationProjectionIT extends AbstractAxonIntegrationTest {
                         Instant.parse("2026-10-20T00:00:00Z"))),
                 "routing01", SECOND));
 
-        assertThat(queries.handle(new CountAwaitingNotificationQuery()))
+        assertThat(worklistQueries.handle(new CountAwaitingNotificationQuery()))
                 .isEqualTo(afterNotifying + 1);
     }
 }
