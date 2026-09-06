@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.tracking.infrastructure.persistence.TrackingSummaryMapper">
+
+    <!--
+      リプレイで行が増えない形にする。追跡番号が主キーなので、同じイベントを
+      2 度読んでも上書きになる（IT6 の「追記専用の行はリプレイで増える」）。
+    -->
+    <insert id="insert">
+        INSERT INTO tracking_summary (
+            tracking_number, booking_id, origin_unlocode, destination_unlocode,
+            cargo_type, transport_status, initialized_at, last_status_changed_at,
+            projected_at, last_event_id
+        ) VALUES (
+            #{trackingNumber}, #{bookingId}, #{originUnlocode}, #{destinationUnlocode},
+            #{cargoType}, #{transportStatus}, #{initializedAt}, #{lastStatusChangedAt},
+            #{projectedAt}, #{lastEventId}
+        )
+        ON CONFLICT (tracking_number) DO UPDATE SET
+            booking_id = EXCLUDED.booking_id,
+            origin_unlocode = EXCLUDED.origin_unlocode,
+            destination_unlocode = EXCLUDED.destination_unlocode,
+            cargo_type = EXCLUDED.cargo_type,
+            transport_status = EXCLUDED.transport_status,
+            initialized_at = EXCLUDED.initialized_at,
+            last_status_changed_at = EXCLUDED.last_status_changed_at,
+            projected_at = EXCLUDED.projected_at,
+            last_event_id = EXCLUDED.last_event_id
+    </insert>
+
+    <insert id="insertLegs">
+        INSERT INTO tracking_leg (
+            tracking_number, leg_seq, voyage_number,
+            load_unlocode, unload_unlocode, load_time, unload_time
+        ) VALUES
+        <foreach collection="legs" item="leg" separator=",">
+            (#{trackingNumber}, #{leg.legSeq}, #{leg.voyageNumber},
+             #{leg.loadUnlocode}, #{leg.unloadUnlocode}, #{leg.loadTime}, #{leg.unloadTime})
+        </foreach>
+    </insert>
+</mapper>

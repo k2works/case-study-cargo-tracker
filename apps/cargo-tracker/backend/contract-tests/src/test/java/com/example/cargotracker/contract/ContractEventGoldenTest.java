@@ -3,6 +3,8 @@ package com.example.cargotracker.contract;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.cargotracker.shared.contract.event.ShipperRegisteredEvent;
+import com.example.cargotracker.shared.contract.event.TrackingInitializedEvent;
+import java.time.Instant;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
@@ -53,7 +55,15 @@ class ContractEventGoldenTest {
     static Stream<Object> contractEvents() {
         return Stream.of(
                 new ShipperRegisteredEvent("SHP-000001", "CORPORATE", "山田商事",
-                        "sales@example.com", "03-1111-1111", "東京都中央区", "CT-0001", "0.1000"));
+                        "sales@example.com", "03-1111-1111", "東京都中央区", "CT-0001", "0.1000"),
+                new TrackingInitializedEvent("T-2026-0001", "b-1", "JPTYO", "USNYC", "GENERAL",
+                        List.of(new TrackingInitializedEvent.Leg("V-MOL-001", "JPTYO", "SGSIN",
+                                        Instant.parse("2026-09-10T09:00:00Z"),
+                                        Instant.parse("2026-09-16T08:00:00Z")),
+                                new TrackingInitializedEvent.Leg("V-ONE-002", "SGSIN", "USNYC",
+                                        Instant.parse("2026-09-17T06:00:00Z"),
+                                        Instant.parse("2026-09-24T18:00:00Z"))),
+                        Instant.parse("2026-09-08T01:00:00Z")));
     }
 
     private static String goldenOf(String name) {

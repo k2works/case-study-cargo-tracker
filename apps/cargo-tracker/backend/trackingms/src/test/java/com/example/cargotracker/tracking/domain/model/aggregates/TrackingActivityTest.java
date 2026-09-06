@@ -60,7 +60,12 @@ class TrackingActivityTest {
         fixture.given().noPriorActivity()
                 .when().command(initialize())
                 .then().success()
-                .events(new TrackingInitializedEvent("T-2026-0001", "b-1", NOW));
+                .events(new TrackingInitializedEvent("T-2026-0001", "b-1", "JPTYO", "USNYC",
+                        "GENERAL",
+                        List.of(new TrackingInitializedEvent.Leg("V-MOL-001", "JPTYO", "USNYC",
+                                Instant.parse("2026-09-10T09:00:00Z"),
+                                Instant.parse("2026-09-24T18:00:00Z"))),
+                        NOW));
     }
 
     @Test
@@ -68,7 +73,8 @@ class TrackingActivityTest {
     void rejectsSecondInitialization() {
         // 連鎖は失敗したら再試行する。同じコマンドが 2 度届いたときに追跡が
         // 2 つできると、荷役がどちらに付くのか決まらない。
-        fixture.given().events(new TrackingInitializedEvent("T-2026-0001", "b-1", NOW))
+        fixture.given().events(new TrackingInitializedEvent("T-2026-0001", "b-1", "JPTYO",
+                        "USNYC", "GENERAL", List.of(), NOW))
                 .when().command(initialize())
                 .then().exception(IllegalTransition.class);
     }
