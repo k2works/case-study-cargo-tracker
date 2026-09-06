@@ -2,6 +2,7 @@ package com.example.cargotracker.shared.contract.command;
 
 import java.time.Instant;
 import java.util.List;
+import org.axonframework.modelling.annotation.TargetEntityId;
 
 /**
  * 追跡を開始する（US14）。bookingms → trackingms。<b>契約コマンドの 1 本目</b>
@@ -19,6 +20,10 @@ import java.util.List;
  * する。契約は追記専用で、あとから形を変えられない。「いま要らないから」で落とすと、
  * 購読側を作る IT で契約を変えることになる。</p>
  *
+ * <p><b>{@code @TargetEntityId} が要る。</b> 付け忘れると Axon が宛先の集約を決められず、
+ * {@code EntityIdResolutionException} で届かない。<b>これは Axon の注釈であって BC の
+ * 型ではない</b>ので、「文字列・数値・日付だけ」の決まりとは両立する。</p>
+ *
  * <p><b>状態を載せない。</b> 追跡を始めた直後がどの状態かは trackingms が決める
  * （{@code TransportStatus.NOT_RECEIVED}）。載せると、送る側が相手の状態機械を
  * 知っていることになる。</p>
@@ -32,7 +37,7 @@ import java.util.List;
  * @param issuedAt 追跡番号を発行した時刻
  */
 public record InitializeTrackingCommand(
-        String trackingNumber,
+        @TargetEntityId String trackingNumber,
         String bookingId,
         String originUnLocode,
         String destinationUnLocode,
