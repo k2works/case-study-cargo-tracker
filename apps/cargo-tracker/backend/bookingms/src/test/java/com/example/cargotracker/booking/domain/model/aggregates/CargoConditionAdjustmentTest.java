@@ -222,4 +222,65 @@ class CargoConditionAdjustmentTest {
                 .then().exceptionSatisfies(e ->
                         assertThat(e.getMessage()).contains("差し戻せません"));
     }
+
+    @Test
+    @DisplayName("除外港を送らなくても調整できる（空の一覧として扱う）")
+    void adjustsWithoutExcludedPorts() {
+        // null をそのまま持つと、投影と画面で「制限なし」と「未設定」が混ざる。
+        fixture.given().events(booked(), new RoutingRequestedEvent("B-0001", "sales01"))
+                .when().command(new AdjustRouteSpecificationCommand("B-0001", EXTENDED,
+                        null, null, "routing01"))
+                .then().success()
+                .events(new RouteSpecificationAdjustedEvent("B-0001", EXTENDED,
+                        List.of(), null, "routing01", NOW));
+    }
+
+    @Test
+    @DisplayName("到着期限を送らない調整は受け付けない")
+    void rejectsAdjustmentWithoutDeadline() {
+        fixture.given().events(booked(), new RoutingRequestedEvent("B-0001", "sales01"))
+                .when().command(new AdjustRouteSpecificationCommand("B-0001", null,
+                        List.of(), null, "routing01"))
+                .then().exceptionSatisfies(e ->
+                        assertThat(e.getMessage()).contains("到着期限は必須"));
+    }
+
+    @Test
+    @DisplayName("出発地も除外港にはできない（目的地だけを見ていない）")
+    void rejectsExcludingTheOrigin() {
+        fixture.given().events(booked(), new RoutingRequestedEvent("B-0001", "sales01"))
+                .when().command(new AdjustRouteSpecificationCommand("B-0001", EXTENDED,
+                        List.of("JPTYO"), null, "routing01"))
+                .then().exceptionSatisfies(e ->
+                        assertThat(e.getMessage()).contains("JPTYO"));
+    }
+
+    @Test
+    @DisplayName("到着期限が今日ちょうどの調整は通す（当日着を落とさない）")
+    void acceptsDeadlineToday() {
+        // NOW は 2026-09-06T00:00:00Z＝日本時間の 09:06 09:00。業務タイムゾーンで
+        // 日付にするので「今日」は 2026-09-06 になる。
+        fixture.given().events(booked(), new RoutingRequestedEvent("B-0001", "sales01"))
+                .when().command(new AdjustRouteSpecificationCommand("B-0001",
+                        LocalDate.of(2026, Month.SEPTEMBER, 6), List.of(), null, "routing01"))
+                .then().success();
+    }
+
+    @Test
+    @DisplayName("理由が null の差し戻しも受け付けない（空白だけを見ていない）")
+    void rejectsConditionReviewWithNullReason() {
+        fixture.given().events(booked(), new RoutingRequestedEvent("B-0001", "sales01"))
+                .when().command(new RequestConditionReviewCommand("B-0001", null, "routing01"))
+                .then().exceptionSatisfies(e ->
+                        assertThat(e.getMessage()).contains("理由"));
+    }
+
+    @Test
+    @DisplayName("受け付けていない予約は差し戻せない")
+    void rejectsConditionReviewForUnknownBooking() {
+        fixture.given().noPriorActivity()
+                .when().command(review("組めません"))
+                .then().exceptionSatisfies(e ->
+                        assertThat(e.getMessage()).contains("受け付けていません"));
+    }
 }
