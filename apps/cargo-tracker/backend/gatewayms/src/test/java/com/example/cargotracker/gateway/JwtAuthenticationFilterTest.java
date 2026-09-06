@@ -260,6 +260,46 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
+    @DisplayName("条件の調整と差し戻しは経路設計者だけに開く（US10）")
+    void restrictsConditionAdjustmentToRoutingRole() throws Exception {
+        // **PUT /bookings/* は営業だけに宣言されている。** メソッド込みの宣言どうしは
+        // 追加順で決まるので、この経路を後ろに積むと広いほうに吸われ、営業に開いて
+        // 経路設計者には閉じる（逆になる）。順序でしか絞れない。
+        String adjust = "/api/v1/booking/bookings/b-1/route-specification";
+        assertThat(run(adjust, "Bearer " + tokenWithRoles("ROLE_SALES"), "PUT").getStatus())
+                .as("営業が経路の条件を調整できてはいけない")
+                .isEqualTo(403);
+        assertThat(run(adjust, "Bearer " + tokenWithRoles("ROLE_TRACKER"), "PUT").getStatus())
+                .isEqualTo(403);
+        assertThat(run(adjust, "Bearer " + tokenWithRoles("ROLE_ROUTING"), "PUT").getStatus())
+                .as("経路設計者は調整できる")
+                .isNotEqualTo(403);
+
+        String review = "/api/v1/booking/bookings/b-1/condition-review";
+        assertThat(run(review, "Bearer " + tokenWithRoles("ROLE_SALES"), "POST").getStatus())
+                .as("営業が自分へ差し戻せてはいけない")
+                .isEqualTo(403);
+        assertThat(run(review, "Bearer " + tokenWithRoles("ROLE_ROUTING"), "POST").getStatus())
+                .as("経路設計者は差し戻せる")
+                .isNotEqualTo(403);
+    }
+
+    @Test
+    @DisplayName("見直しを頼まれている予約は営業だけに開く（S02 / US10 §4）")
+    void restrictsConditionReviewListToSalesRole() throws Exception {
+        // 差し戻された予約に打てる手を持つのは営業（荷主と条件を協議する）。
+        String reviews = "/api/v1/booking/bookings/condition-reviews";
+        assertThat(run(reviews, "Bearer " + tokenWithRoles("ROLE_ROUTING")).getStatus())
+                .as("経路設計者の作業一覧は S30 で、これは営業の受け皿")
+                .isEqualTo(403);
+        assertThat(run(reviews, "Bearer " + tokenWithRoles("ROLE_TRACKER")).getStatus())
+                .isEqualTo(403);
+        assertThat(run(reviews, "Bearer " + tokenWithRoles("ROLE_SALES")).getStatus())
+                .as("営業は読める")
+                .isNotEqualTo(403);
+    }
+
+    @Test
     @DisplayName("予約の参照は営業以外にも開いたままにする")
     void keepsBookingReadOpen() throws Exception {
         // 修正を絞ったついでに参照まで絞ると、経路設計者が予約の詳細を開けなくなる。

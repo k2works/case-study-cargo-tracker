@@ -302,7 +302,7 @@ S22 --> S24 : 期限・貨物を直す（US32・IT4）
 - **`GET /bookings/*/notifications` は宣言を足しません。** 広い `/bookings/**` が `{SALES, ROUTING, TRACKER}` で、通知履歴に許したいロールと同じだからです。**同じ集合の宣言を重ねると、片方だけ直したときに食い違います**
 - `POST /bookings/*/condition-review`（経路設計者だけ）もメソッド込みで宣言します
 - `POST /bookings/*/return-to-routing`（営業）と `PUT /bookings/*/route-specification`（経路設計者）もメソッド込みで宣言します。**`POST /bookings/*/routing-request` は再利用しません**（引き渡しと戻しを履歴で区別するため）
-- **`PUT /bookings/*` は既に営業だけに宣言されています**（`RoleAuthorization.java:106`）。`PUT .../route-specification` はより細かい経路ですが、**メソッド込みの宣言どうしは追加順で決まる**ので、`PUT /bookings/*` より**前**に積む必要があります。ここだけは順序を確かめます
+- ~~**`PUT /bookings/*` は既に営業だけに宣言されています**。`PUT .../route-specification` は `PUT /bookings/*` より前に積む必要があります~~ → **実装したら誤りでした。** `AntPathMatcher` の `*` は `/` をまたがないので、`/bookings/*/route-specification` は `/bookings/*` に当たりません。**吸われる先は経路だけの宣言 `/bookings/**` のほう**です。宣言そのものを外すと営業に開くことを検査で確かめました（順序を入れ替えても赤にならないので、順序の検査にはなりません）
 
 **「宣言を足さない」判断も検査で固定します。** `GET /notifications` が営業・経路設計・追跡で通り、それ以外で 403 になることを確かめます（宣言が無いことと、広い宣言に当たっていることは別）。
 

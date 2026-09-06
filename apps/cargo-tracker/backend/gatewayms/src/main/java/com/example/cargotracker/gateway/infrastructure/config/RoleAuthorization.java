@@ -93,6 +93,9 @@ public final class RoleAuthorization {
         // 航海を止める前に巻き込む予約を数える（S34 / US24）。読むのは経路設計者
         // だけ。**/bookings/** より先に置く。** 後ろに置くと営業・追跡にも開く。
         rules.put("/api/v1/booking/bookings/by-voyage/*", Set.of(ROUTING));
+        // 見直しを頼まれている予約（S02 / 営業。US10 §4）。**/bookings/** より先に
+        // 置く。後ろに置くと経路設計・追跡にも開く。
+        rules.put("/api/v1/booking/bookings/condition-reviews", Set.of(SALES));
         rules.put("/api/v1/booking/bookings/*/route", Set.of(ROUTING));
 
         // 予約（S20 / S21）は営業・経路設計・追跡が読む。
@@ -106,6 +109,17 @@ public final class RoleAuthorization {
         List<Rule> ordered = new java.util.ArrayList<>();
         // メソッドを絞る宣言を先に置く。後ろに置くと、経路だけの宣言に吸われる
         // （予約の修正（US32）は営業だけだが、参照は経路設計・追跡にも開く）。
+        // 条件の調整は経路設計者だけ（US10）。**PUT /bookings/* との順序は問わない。**
+        // AntPathMatcher の `*` は `/` をまたがないので、/bookings/*/route-specification
+        // は /bookings/* に当たらない（IT6 で実測。計画は「前に積む必要がある」と
+        // 書いていたが誤り）。**吸われる先は経路だけの宣言 /bookings/** のほう**で、
+        // これは ordered の後ろに積まれるマップ側にある。宣言そのものを外すと営業に
+        // 開くことを検査で確かめている。
+        ordered.add(new Rule("PUT", "/api/v1/booking/bookings/*/route-specification",
+                Set.of(ROUTING)));
+        // 差し戻しは経路設計者だけ。POST なのでメソッド込みで宣言する。
+        ordered.add(new Rule("POST", "/api/v1/booking/bookings/*/condition-review",
+                Set.of(ROUTING)));
         ordered.add(new Rule("PUT", "/api/v1/booking/bookings/*", Set.of(SALES)));
         rules.forEach((pattern, allowed) -> ordered.add(new Rule(ANY_METHOD, pattern, allowed)));
         return List.copyOf(ordered);

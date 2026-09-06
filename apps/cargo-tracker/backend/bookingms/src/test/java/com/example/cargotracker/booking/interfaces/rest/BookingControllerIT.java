@@ -6,6 +6,7 @@ import static org.awaitility.Awaitility.await;
 import com.example.cargotracker.shared.testing.AbstractAxonIntegrationTest;
 import java.time.Duration;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -48,6 +49,16 @@ class BookingControllerIT extends AbstractAxonIntegrationTest {
                 .body(body).retrieve().toEntity(JsonMap.class);
     }
 
+    private ResponseEntity<JsonMap> postTo(String path, Map<String, Object> body) {
+        return rest.post().uri(url(path)).contentType(MediaType.APPLICATION_JSON)
+                .body(body).retrieve().toEntity(JsonMap.class);
+    }
+
+    private ResponseEntity<JsonMap> put(String path, Map<String, Object> body) {
+        return rest.put().uri(url(path)).contentType(MediaType.APPLICATION_JSON)
+                .body(body).retrieve().toEntity(JsonMap.class);
+    }
+
     private ResponseEntity<JsonMap> get(String path) {
         return rest.get().uri(url(path)).retrieve().toEntity(JsonMap.class);
     }
@@ -86,6 +97,93 @@ class BookingControllerIT extends AbstractAxonIntegrationTest {
         });
 
         assertThat(get("?page=0&size=200").getBody().get("items").toString()).contains(product);
+    }
+
+    @Test
+    @DisplayName("US10: 引き渡した予約の条件を調整でき、期限が変わる")
+    void adjustsRouteSpecification() {
+        String bookingId = handedOverBooking();
+
+        ResponseEntity<JsonMap> adjusted = put("/" + bookingId + "/route-specification",
+                Map.of("arrivalDeadline", "2027-01-31",
+                        "excludeUnLocodes", List.of("SGSIN"),
+                        "departFromUnLocode", "JPOSA"));
+
+        assertThat(adjusted.getStatusCode()).isEqualTo(HttpStatus.OK);
+        await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
+            JsonMap detail = get("/" + bookingId).getBody();
+            assertThat(detail.get("arrivalDeadline")).isEqualTo("2027-01-31");
+            // 条件が変われば、確定済みの経路はその条件で組んだものではなくなる。
+            assertThat(detail.get("routingStatus")).isEqualTo("ROUTING_REQUESTED");
+        });
+    }
+
+    @Test
+    @DisplayName("US10: 出発地・目的地を除外しようとすると 422 で断る（画面が 500 にならない）")
+    void rejectsExcludingTheEndpoints() {
+        String bookingId = handedOverBooking();
+
+        ResponseEntity<JsonMap> response = put("/" + bookingId + "/route-specification",
+                Map.of("arrivalDeadline", "2027-01-31",
+                        "excludeUnLocodes", List.of("USNYC")));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
+        assertThat(response.getBody().get("code")).isEqualTo("BUSINESS_RULE_VIOLATION");
+    }
+
+    @Test
+    @DisplayName("US10 §4: 差し戻すと営業の受け皿に出る（状態は動かない）")
+    void requestsConditionReview() {
+        String bookingId = handedOverBooking();
+
+        ResponseEntity<JsonMap> response = postTo("/" + bookingId + "/condition-review",
+                Map.of("reason", "期限内に着ける便がありません"));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
+            assertThat(get("/" + bookingId).getBody().get("routingStatus"))
+                    .as("差し戻しは状態遷移にしない（ADR-0009 決定 1）")
+                    .isEqualTo("ROUTING_REQUESTED");
+            assertThat(rest.get().uri(url("/condition-reviews")).retrieve()
+                    .toEntity(JsonMap.class).getBody().get("items").toString())
+                    .contains(bookingId);
+        });
+    }
+
+    @Test
+    @DisplayName("US10 §4: 理由の無い差し戻しは 422 で断る")
+    void rejectsConditionReviewWithoutReason() {
+        String bookingId = handedOverBooking();
+
+        ResponseEntity<JsonMap> response =
+                postTo("/" + bookingId + "/condition-review", Map.of("reason", "  "));
+
+        // 入力の検証は 422 で返す（このサービスの既定。ApiExceptionHandler）。
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
+    }
+
+    @Test
+    @DisplayName("引き渡していない予約の条件は調整できない（409 で断り、画面が 500 にならない）")
+    void rejectsAdjustmentBeforeRoutingRequested() {
+        ResponseEntity<JsonMap> created = post(request(Map.of()));
+        String bookingId = String.valueOf(created.getBody().get("bookingId"));
+
+        ResponseEntity<JsonMap> response = put("/" + bookingId + "/route-specification",
+                Map.of("arrivalDeadline", "2027-01-31"));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    /** 受け付けて経路設計へ引き渡した予約。投影が追いつくまで待つ。 */
+    private String handedOverBooking() {
+        ResponseEntity<JsonMap> created = post(request(Map.of()));
+        String bookingId = String.valueOf(created.getBody().get("bookingId"));
+        assertThat(postTo("/" + bookingId + "/routing-request", Map.of()).getStatusCode())
+                .isEqualTo(HttpStatus.ACCEPTED);
+        await().atMost(Duration.ofSeconds(10)).untilAsserted(() ->
+                assertThat(get("/" + bookingId).getBody().get("routingStatus"))
+                        .isEqualTo("ROUTING_REQUESTED"));
+        return bookingId;
     }
 
     @Test

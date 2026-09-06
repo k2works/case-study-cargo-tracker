@@ -1,7 +1,9 @@
 package com.example.cargotracker.booking.interfaces.rest;
 
 import com.example.cargotracker.booking.application.port.RouteCandidateFinder;
+import com.example.cargotracker.booking.domain.model.commands.AdjustRouteSpecificationCommand;
 import com.example.cargotracker.booking.domain.model.commands.AssignRouteCommand;
+import com.example.cargotracker.booking.domain.model.commands.RequestConditionReviewCommand;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoItinerary;
 import com.example.cargotracker.booking.domain.model.valueobjects.Leg;
 import com.example.cargotracker.booking.application.port.RouteSearchRequest;
@@ -22,6 +24,8 @@ import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.CountBookingsByStatusQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.AffectedBookingListView;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.ConditionReviewListView;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindConditionReviewsQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingItineraryQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingsByVoyageQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingRevisionsQuery;
@@ -45,6 +49,7 @@ import com.example.cargotracker.booking.interfaces.rest.dto.ShipperDtos.PendingR
 import com.example.cargotracker.shared.domain.location.Location;
 import jakarta.validation.Valid;
 import java.net.URI;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.axonframework.messaging.commandhandling.gateway.CommandGateway;
@@ -277,6 +282,57 @@ public class BookingController {
             @RequestHeader(name = "X-Auth-Username", required = false) String username) {
         commandGateway.sendAndWait(new RequestRoutingCommand(bookingId, username));
         return ResponseEntity.accepted().body(new BookCargoResponse(bookingId));
+    }
+
+    /**
+     * 経路の条件を調整する（US10）。
+     *
+     * <p>調整できる状態かは集約が見る。ここで先に問い合わせて分岐すると、同じ判断が
+     * 2 か所になって片方が古くなる。</p>
+     *
+     * <p>認可は Gateway が持つ（{@code PUT /bookings/*} は営業だけなので、この経路は
+     * <b>その宣言より前に</b>経路設計者として宣言する）。</p>
+     */
+    @PutMapping("/{bookingId}/route-specification")
+    public ResponseEntity<BookCargoResponse> adjustRouteSpecification(
+            @PathVariable String bookingId,
+            @Valid @RequestBody BookingDtos.AdjustRouteSpecificationRequest request,
+            @RequestHeader(name = "X-Auth-Username", required = false) String username) {
+        commandGateway.sendAndWait(new AdjustRouteSpecificationCommand(bookingId,
+                request.arrivalDeadline(),
+                request.excludeUnLocodes() == null ? List.of() : request.excludeUnLocodes(),
+                request.departFromUnLocode(),
+                username));
+        return ResponseEntity.ok(new BookCargoResponse(bookingId));
+    }
+
+    /**
+     * 条件では組めないことを営業へ差し戻す（US10 §受入基準 4）。
+     *
+     * <p><b>状態は動かさない</b>（ADR-0009）。記録が増えるだけなので {@code 200} を
+     * 返す。差し戻せる状態かは集約が {@code RoutingStatus} の述語で判断する。</p>
+     */
+    @PostMapping("/{bookingId}/condition-review")
+    public ResponseEntity<BookCargoResponse> requestConditionReview(
+            @PathVariable String bookingId,
+            @Valid @RequestBody BookingDtos.RequestConditionReviewRequest request,
+            @RequestHeader(name = "X-Auth-Username", required = false) String username) {
+        commandGateway.sendAndWait(
+                new RequestConditionReviewCommand(bookingId, request.reason(), username));
+        return ResponseEntity.ok(new BookCargoResponse(bookingId));
+    }
+
+    /**
+     * 見直しを頼まれている予約（S02 / 営業。US10 §受入基準 4）。
+     *
+     * <p>件数でなく行を返す。理由が読めないと、営業は荷主と何を協議すればよいのか
+     * 分からない（IT4 の「気づく手段は次の行動へ繋ぐ」）。</p>
+     */
+    @GetMapping("/condition-reviews")
+    public ResponseEntity<ConditionReviewListView> conditionReviews(
+            @RequestParam(defaultValue = "50") int limit) {
+        return ResponseEntity.ok(queries.query(
+                new FindConditionReviewsQuery(limit), ConditionReviewListView.class));
     }
 
     /**

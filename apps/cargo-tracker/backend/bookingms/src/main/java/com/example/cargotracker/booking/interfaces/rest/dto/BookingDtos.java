@@ -143,6 +143,28 @@ public final class BookingDtos {
         }
     }
 
+    /**
+     * 経路条件の調整（US10）。
+     *
+     * <p><b>貨物種別を持たない。</b> 種別を変えるのは「その貨物が何か」を変えることで、
+     * 危険物申告や温度条件が付いて回る。経路を探す条件ではないので US32 が持つ。</p>
+     */
+    public record AdjustRouteSpecificationRequest(
+            @jakarta.validation.constraints.NotNull java.time.LocalDate arrivalDeadline,
+            java.util.List<String> excludeUnLocodes,
+            String departFromUnLocode) {
+    }
+
+    /**
+     * 条件の見直し依頼（US10 §受入基準 4）。
+     *
+     * <p>理由は必須。無いと営業は荷主と何を協議すればよいのか分からない。</p>
+     */
+    public record RequestConditionReviewRequest(
+            @jakarta.validation.constraints.NotBlank
+            @jakarta.validation.constraints.Size(max = 200) String reason) {
+    }
+
     /** 確定した旅程（S22 / US09）。並び順が業務の意味を持つ。 */
     public record ItineraryResponse(java.util.List<ItineraryLegResponse> legs) {
     }
