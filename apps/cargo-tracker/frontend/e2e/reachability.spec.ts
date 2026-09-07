@@ -34,14 +34,16 @@ test('ポータルから追跡番号を入れて公開追跡へ行ける', async
   await page.getByRole('button', { name: '照会する' }).click();
 
   await expect(page.getByRole('heading', { name: '荷物の追跡' })).toBeVisible();
-  await expect(page.getByText('ABC12345')).toBeVisible();
+  // **番号を持って移る。** 打ち直させると、社外の人は入口で止まる。
+  // ここは到達性の検査なので、照会そのもの（後段が要る）は見ない。
+  await expect(page.getByLabel('追跡番号')).toHaveValue('ABC12345');
 });
 
 test('追跡番号つきの公開追跡も認証なしで開ける', async ({ page }) => {
   await page.goto('/track/ABC12345');
 
   await expect(page.getByRole('heading', { name: '荷物の追跡' })).toBeVisible();
-  await expect(page.getByText('ABC12345')).toBeVisible();
+  await expect(page.getByLabel('追跡番号')).toHaveValue('ABC12345');
 });
 
 test('ログインの失敗は理由を言わない', async ({ page }) => {
@@ -246,4 +248,34 @@ test('経路設計はダッシュボードから作業一覧へ入れる', async
   await page.getByRole('link', { name: '経路設計作業一覧を開く' }).click();
 
   await expect(page.getByRole('heading', { name: '経路設計作業一覧' })).toBeVisible();
+});
+
+test('追跡でログインすると追跡の画面がナビに出て、開ける', async ({ page }) => {
+  await signInAs(page, 'tracker01', ['ROLE_TRACKER']);
+
+  await expect(page.getByRole('navigation')).toContainText('追跡');
+
+  await page.goto('/tracking');
+  await expect(page.getByRole('heading', { name: '追跡' })).toBeVisible();
+});
+
+test('荷主でログインしても追跡の画面に入れる（自社のぶんだけ見える）', async ({ page }) => {
+  // **ui_design は S40・S41 のロールを「追跡、荷主（自社のみ）」と定める。**
+  // 荷主を外すと、自社の貨物すら追えない。
+  await signInAs(page, 'shipper01', ['ROLE_SHIPPER']);
+
+  await expect(page.getByRole('navigation')).toContainText('追跡');
+
+  await page.goto('/tracking');
+  await expect(page.getByRole('heading', { name: '追跡' })).toBeVisible();
+});
+
+test('営業には追跡の画面がナビに出ず、直打ちすると 403 になる', async ({ page }) => {
+  await signInAs(page, 'sales01', ['ROLE_SALES']);
+
+  await expect(page.getByRole('navigation')).not.toContainText('追跡');
+
+  await page.goto('/tracking');
+  await expect(page.getByRole('heading', { name: 'この画面を開く権限がありません' }))
+    .toBeVisible();
 });
