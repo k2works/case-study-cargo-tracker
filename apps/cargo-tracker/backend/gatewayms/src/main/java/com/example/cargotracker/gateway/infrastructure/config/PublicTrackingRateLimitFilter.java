@@ -72,15 +72,11 @@ public class PublicTrackingRateLimitFilter extends OncePerRequestFilter {
             return;
         }
 
-        if (windows.size() > MAX_TRACKED_ADDRESSES) {
-            windows.clear();
-        }
-
+        String address = clientAddress(request);
         Instant now = clock.instant();
-        Window window = windows.compute(request.getRemoteAddr(),
-                (address, current) -> current == null ? new Window(now, 1) : current.next(now));
-
-        if (window.count() > LIMIT) {
+        Window window = windows.get(address);
+        if (window != null && window.startedAt().plus(WINDOW).isAfter(now)
+                && window.count() >= LIMIT) {
             // **待てば通ることを伝える。** 断られた側は、番号が違うのか回数なのかを
             // 応答から読めないと、正しい番号を疑い続ける（画面が文言で書き分ける）。
             response.setStatus(429);
@@ -88,7 +84,41 @@ public class PublicTrackingRateLimitFilter extends OncePerRequestFilter {
                     String.valueOf(remainingSeconds(window.startedAt(), now)));
             return;
         }
+
         chain.doFilter(request, response);
+
+        if (response.getStatus() == 404) {
+            countMiss(address, now);
+        }
+    }
+
+    /** 外れを 1 つ数える。当たりは数えない（総当たりは外れでしか進まない）。 */
+    private void countMiss(String address, Instant now) {
+        if (windows.size() > MAX_TRACKED_ADDRESSES) {
+            windows.clear();
+        }
+        windows.compute(address,
+                (key, current) -> current == null ? new Window(now, 1) : current.next(now));
+    }
+
+    /**
+     * 接続元。<b>中継機の内側では転送元を見る</b>。
+     *
+     * <p>Ingress やリバースプロキシ越しだと {@code getRemoteAddr()} は中継機の
+     * アドレスになり、<b>全利用者が 1 つのカウンタを共有</b>して常時断られる。
+     * {@code X-Forwarded-For} の先頭が本来の接続元である。</p>
+     *
+     * <p><b>これは詐称できる。</b> 詐称されればカウンタを分散できるが、<b>詐称
+     * しない相手を巻き添えにするほうが実害が大きい</b>。総当たりの本命の防ぎは
+     * 番号の広さ（36^10）で、回数はそれを補う。</p>
+     */
+    private static String clientAddress(HttpServletRequest request) {
+        String forwarded = request.getHeader("X-Forwarded-For");
+        if (forwarded == null || forwarded.isBlank()) {
+            return request.getRemoteAddr();
+        }
+        int comma = forwarded.indexOf(',');
+        return (comma < 0 ? forwarded : forwarded.substring(0, comma)).trim();
     }
 
     private static long remainingSeconds(Instant windowStart, Instant now) {

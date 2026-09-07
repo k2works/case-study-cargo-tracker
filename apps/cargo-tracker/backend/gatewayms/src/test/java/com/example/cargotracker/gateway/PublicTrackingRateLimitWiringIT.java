@@ -3,6 +3,9 @@ package com.example.cargotracker.gateway;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.cargotracker.gateway.infrastructure.config.PublicTrackingRateLimitFilter;
+import com.sun.net.httpserver.HttpServer;
+import java.io.IOException;
+import java.net.InetSocketAddress;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +32,36 @@ import org.springframework.web.client.RestClient;
     "cargo-tracker.axon.startup-check.enabled=false",
 })
 class PublicTrackingRateLimitWiringIT {
+
+    /**
+     * 後段の代わりに<b>「見つからない」を返すだけのスタブ</b>を立てる。
+     *
+     * <p>レート制限は<b>外れだけを数える</b>ので、後段が居ないまま（接続できずに
+     * 5xx になる）では何も数えられず、配線が正しくても 429 に到達しない。
+     * 総当たりの相手が見るのと同じ応答（404）を返す相手が要る。</p>
+     */
+    private static final HttpServer TRACKING_STUB = startStub();
+
+    private static HttpServer startStub() {
+        try {
+            HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
+            server.createContext("/", exchange -> {
+                exchange.sendResponseHeaders(404, -1);
+                exchange.close();
+            });
+            server.start();
+            return server;
+        } catch (IOException e) {
+            throw new IllegalStateException("スタブを立てられませんでした", e);
+        }
+    }
+
+    @org.springframework.test.context.DynamicPropertySource
+    static void routeTrackingToStub(
+            org.springframework.test.context.DynamicPropertyRegistry registry) {
+        registry.add("TRACKINGMS_URI",
+                () -> "http://localhost:" + TRACKING_STUB.getAddress().getPort());
+    }
 
     @LocalServerPort
     private int port;

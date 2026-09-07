@@ -1,6 +1,11 @@
 # Docs Update Log
 
 ## 2026-09-07
+* **Update**: [retrospective-8](/development/cargo-tracker/retrospective-8.md) を更新（claude-code/claude-opus-5）
+* **Update**: [12-貨物の輸送状況を追う](/manual/12-貨物の輸送状況を追う.md) を更新（claude-code/claude-opus-5）
+* **Update**: [01-業務フロー](/manual/01-業務フロー.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-8](/development/cargo-tracker/iteration_plan-8.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0011-tracking-number-is-hard-to-guess](/adr/cargo-tracker/0011-tracking-number-is-hard-to-guess.md) を更新（claude-code/claude-opus-5）
 * **Update**: [iteration_plan-8](/development/cargo-tracker/iteration_plan-8.md) を更新（claude-code/claude-opus-5）
 * **Update**: [12-貨物の輸送状況を追う](/manual/12-貨物の輸送状況を追う.md) を更新（claude-code/claude-opus-5）
 * **Update**: [iteration_plan-8](/development/cargo-tracker/iteration_plan-8.md) を更新（claude-code/claude-opus-5）

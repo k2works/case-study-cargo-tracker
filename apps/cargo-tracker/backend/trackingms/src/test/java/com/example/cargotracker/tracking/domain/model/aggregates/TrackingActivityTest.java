@@ -235,4 +235,14 @@ class TrackingActivityTest {
                         "JPTYO", Instant.parse("2026-09-11T02:00:00Z"), "  "))
                 .then().exception(BusinessRuleViolation.class);
     }
+
+    @Test
+    @DisplayName("誤配・例外発生は手では入れられない（起きていない誤配を記録できてしまう）")
+    void rejectsStatusesThatAreNotSetByHand() {
+        // **例外発生は行き止まりになる。** 例外中は手で動かせず、解決の画面は
+        // まだ無いので、選んだ人は自分で戻せない。
+        fixture.given().event(initialized())
+                .when().command(update(TransportStatus.MISROUTED))
+                .then().exception(BusinessRuleViolation.class);
+    }
 }

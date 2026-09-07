@@ -26,19 +26,25 @@ export function ShipperRegisterPage() {
     setError(null);
     setSubmitting(true);
     const form = new FormData(event.currentTarget);
-    const email = String(form.get('email') ?? '');
+    // **FormData の値はファイルにもなりうる。** そのまま String() に渡すと
+    // '[object Object]' が入るので、文字列のときだけ読む。
+    const field = (name: string): string => {
+      const value = form.get(name);
+      return typeof value === 'string' ? value : '';
+    };
+    const email = field('email');
     try {
       await registerShipper({
-        name: String(form.get('name') ?? ''),
+        name: field('name'),
         shipperType,
         email,
-        phone: String(form.get('phone') ?? ''),
-        address: String(form.get('address') ?? ''),
+        phone: field('phone'),
+        address: field('address'),
         acknowledgedDuplicate: acknowledgedEmail === email,
         contractNumber:
-          shipperType === 'CORPORATE' ? String(form.get('contractNumber') ?? '') : undefined,
+          shipperType === 'CORPORATE' ? field('contractNumber') : undefined,
         discountRate:
-          shipperType === 'CORPORATE' ? String(form.get('discountRate') ?? '') : undefined,
+          shipperType === 'CORPORATE' ? field('discountRate') : undefined,
       });
       // 受け付けただけで一覧にはまだ出ない。一覧側が取り直せるようにしてから移る。
       await queryClient.invalidateQueries({ queryKey: ['shippers'] });
@@ -47,7 +53,7 @@ export function ShipperRegisterPage() {
       navigate('/shippers', {
         state: {
           justRegistered: {
-            name: String(form.get('name') ?? ''),
+            name: field('name'),
             email,
             shipperType,
           },

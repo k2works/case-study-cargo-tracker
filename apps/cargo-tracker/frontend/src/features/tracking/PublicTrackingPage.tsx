@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import {
   ALERT,
@@ -58,7 +58,7 @@ export function PublicTrackingPage() {
     refetchInterval: REFETCH_INTERVAL_MS,
   });
 
-  function submit(event: FormEvent) {
+  function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     // **照会前に形を見る。** 送ってしまうと、レート制限（429）の回数を無駄に使い、
     // 正しい番号を打ち直すころには断られる。
@@ -88,7 +88,7 @@ export function PublicTrackingPage() {
             placeholder="TRK-AB12CD3456"
           />
           <button type="submit" className={`${BUTTON_PRIMARY} mt-4`}>
-            照会
+            照会する
           </button>
           {formatError !== null && (
             <output className={`${ALERT} mt-4`}>

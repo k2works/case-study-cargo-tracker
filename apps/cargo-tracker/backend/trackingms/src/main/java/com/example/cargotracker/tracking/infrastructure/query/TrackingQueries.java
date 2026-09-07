@@ -71,8 +71,13 @@ public final class TrackingQueries {
             Instant lastStatusChangedAt) {
     }
 
-    /** 追跡一覧（S40）。 */
-    public record TrackingListView(List<TrackingListItemView> items) {
+    /**
+     * 追跡一覧（S40）。
+     *
+     * @param total 絞り込みに合う全件数。<b>上限で切れていることを黙らない</b>ため
+     *     に返す——出ていない貨物は誰も追わない（「一覧に出ていない＝無い」と読む）
+     */
+    public record TrackingListView(List<TrackingListItemView> items, int total) {
     }
 
     /**

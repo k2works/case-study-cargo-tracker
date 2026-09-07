@@ -73,9 +73,22 @@ public class TrackingQueryHandler {
         return TransportStatus.valueOf(status).label();
     }
 
-    /** いまどこか。<b>手動更新で入る分だけ</b>（荷役由来の位置は US15・IT9）。 */
+    /**
+     * いまどこか。<b>最後に場所が入っていたイベントの場所</b>（手動更新で入る分だけ。
+     * 荷役由来の位置は US15・IT9）。
+     *
+     * <p><b>最新イベントの場所をそのまま出さない。</b> 場所は任意入力なので、
+     * 場所を空のまま 1 回更新しただけで、それまで分かっていた現在地が消える。
+     * 荷受人にとって現在地は照会の主目的である。</p>
+     */
     private static String currentLocation(List<PublicTrackingEventView> events) {
-        return events.isEmpty() ? null : events.get(events.size() - 1).location();
+        for (int i = events.size() - 1; i >= 0; i--) {
+            String location = events.get(i).location();
+            if (location != null && !location.isBlank()) {
+                return location;
+            }
+        }
+        return null;
     }
 
     /** 出発。予定の旅程の最初の区間の積み込み。 */
@@ -108,7 +121,8 @@ public class TrackingQueryHandler {
                                 label(row.transportStatus()), currentLocationOf(row),
                                 estimatedArrival(trackings.findLegs(row.trackingNumber())),
                                 row.lastStatusChangedAt()))
-                        .toList());
+                        .toList(),
+                trackings.countAll(query.shipperId(), query.includeDelivered()));
     }
 
     /**
@@ -142,10 +156,15 @@ public class TrackingQueryHandler {
      *
      * <p><b>画面が遷移表を持たない。</b> 持つと判定が 2 つになり、集約が断る先を
      * 画面が出してしまう（押してから断られる）。集約と同じ述語をそのまま呼ぶ。</p>
+     *
+     * <p><b>手で選べない先は出さない</b>（{@link TransportStatus#isSetByHand}）。
+     * 誤配は荷役が、例外発生は例外の起票が決める。とくに例外発生は<b>解決の画面が
+     * 無い IT では行き止まり</b>になる（例外中は手で動かせない）。</p>
      */
     private static List<String> nextStatuses(TransportStatus status) {
         return java.util.Arrays.stream(TransportStatus.values())
                 .filter(status::canTransitionTo)
+                .filter(TransportStatus::isSetByHand)
                 .map(Enum::name)
                 .toList();
     }
@@ -155,9 +174,15 @@ public class TrackingQueryHandler {
         return shipperId == null || shipperId.equals(row.shipperId());
     }
 
-    /** いまどこか。<b>手動更新で入る分だけ</b>（荷役由来の位置は US15・IT9）。 */
+    /** いまどこか。<b>最後に場所が入っていたイベントの場所</b>（上と同じ判断）。 */
     private String currentLocationOf(TrackingSummaryMapper.TrackingSummaryRow row) {
         var events = history.findHistory(row.trackingNumber());
-        return events.isEmpty() ? null : events.get(events.size() - 1).location();
+        for (int i = events.size() - 1; i >= 0; i--) {
+            String location = events.get(i).location();
+            if (location != null && !location.isBlank()) {
+                return location;
+            }
+        }
+        return null;
     }
 }

@@ -4,6 +4,7 @@ import { Link } from 'react-router';
 import {
   ALERT,
   CARD,
+  NOTICE,
   LINK,
   PAGE_TITLE,
   TABLE,
@@ -35,7 +36,8 @@ export function TrackingListPage() {
     refetchInterval: REFETCH_INTERVAL_MS,
   });
 
-  const items = trackings.data?.state === 'ready' ? trackings.data.value.items : [];
+  const ready = trackings.data?.state === 'ready' ? trackings.data.value : null;
+  const items = ready?.items ?? [];
 
   return (
     <div>
@@ -52,6 +54,15 @@ export function TrackingListPage() {
 
       {trackings.isError && (
         <output className={`${ALERT} mt-4`}>追跡の一覧を取得できませんでした。</output>
+      )}
+
+      {/* **上限で切れていることを黙らない。** 出ていない貨物は誰も追わない
+          （「一覧に出ていない＝無い」と読む）。 */}
+      {ready !== null && ready.total > ready.items.length && (
+        <output className={`${NOTICE} mt-4 block`}>
+          {ready.total} 件のうち {ready.items.length} 件を表示しています。
+          到着予定が近い順です。絞り込みは次のイテレーションで入ります
+        </output>
       )}
 
       <div className={`${CARD} mt-4 overflow-x-auto`}>

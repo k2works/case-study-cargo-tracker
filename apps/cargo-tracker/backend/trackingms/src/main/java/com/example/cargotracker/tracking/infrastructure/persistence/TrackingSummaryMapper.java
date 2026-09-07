@@ -67,6 +67,14 @@ public interface TrackingSummaryMapper {
      *
      * <p>引取済（{@code DELIVERED}）は既定で外す。引き取られた貨物が混ざると、
      * 一覧全体が「いま追うもの」として信用されなくなる（ui_design.md）。</p>
+     *
+     * <p><b>到着予定が近い順に並べる</b>（ui_design.md「一覧の既定条件」）。最終更新の
+     * 新しい順にすると「さっき自分が触ったもの」が上に来て、<b>誰も触っていない＝
+     * いちばん危ないものが最下段に沈む</b>。追跡管理者が朝いちばんに見たいのは
+     * 「今日・明日着く貨物」と「止まっているもの」である。</p>
+     *
+     * <p>到着予定は<b>予定の旅程の最終区間の荷降し</b>（区間は積む順なので最大値）。
+     * 旅程が無い行は末尾に置く——判断の材料が無いものを先頭に出しても仕事が進まない。</p>
      */
     @Select({"<script>",
         "SELECT " + COLUMNS + " FROM tracking_summary",
@@ -74,11 +82,30 @@ public interface TrackingSummaryMapper {
         "  <if test='shipperId != null'>AND shipper_id = #{shipperId}</if>",
         "  <if test='!includeDelivered'>AND transport_status &lt;&gt; 'DELIVERED'</if>",
         "</where>",
-        " ORDER BY last_status_changed_at DESC LIMIT #{limit}",
+        " ORDER BY (SELECT MAX(l.unload_time) FROM tracking_leg l",
+        "           WHERE l.tracking_number = tracking_summary.tracking_number)",
+        "          ASC NULLS LAST, last_status_changed_at DESC",
+        " LIMIT #{limit}",
         "</script>"})
     List<TrackingSummaryRow> findAll(@Param("shipperId") String shipperId,
             @Param("includeDelivered") boolean includeDelivered,
             @Param("limit") int limit);
+
+    /**
+     * 一覧の対象件数（S40）。<b>上限で切れていることを黙らないため</b>に数える。
+     *
+     * <p>件数が上限を超えると、出ていない貨物は<b>誰も追わない</b>——追跡管理者は
+     * 「一覧に出ていない＝無い」と読む。</p>
+     */
+    @Select({"<script>",
+        "SELECT count(*) FROM tracking_summary",
+        "<where>",
+        "  <if test='shipperId != null'>AND shipper_id = #{shipperId}</if>",
+        "  <if test='!includeDelivered'>AND transport_status &lt;&gt; 'DELIVERED'</if>",
+        "</where>",
+        "</script>"})
+    int countAll(@Param("shipperId") String shipperId,
+            @Param("includeDelivered") boolean includeDelivered);
 
     /** 予定の旅程。**積む順**に返す（順序が業務の意味を持つ）。 */
     @Select("SELECT tracking_number, leg_seq, voyage_number, load_unlocode, "

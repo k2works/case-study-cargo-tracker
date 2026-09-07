@@ -71,7 +71,9 @@ export function TrackingDetailPage() {
         <h1 className={PAGE_TITLE}>追跡</h1>
         <output className={`${ALERT} mt-4`}>
           {tracking.error instanceof ApiError && tracking.error.status === 404
-            ? '追跡が見つかりません。追跡番号をお確かめください。'
+            ? '追跡番号が見つかりません。追跡番号をお確かめください。'
+              + '追跡番号は予約が確定して発行されると使えます。'
+              + '自社の貨物のはずが見つからないときは、営業担当者にお問い合わせください。'
             : '追跡を取得できませんでした。'}
         </output>
         <p className="mt-4 text-sm">
@@ -115,7 +117,7 @@ export function TrackingDetailPage() {
         </dl>
       </section>
 
-      <History history={view.history} />
+      <History history={view.history} showRecordedBy={isTracker} />
 
       {isTracker && <UpdateStatusPanel
         view={view}
@@ -140,8 +142,20 @@ export function TrackingDetailPage() {
   );
 }
 
-/** 状態の履歴（S41 / US17 §3）。 */
-function History({ history }: { readonly history: TrackingView['history'] }) {
+/**
+ * 状態の履歴（S41 / US17 §3）。
+ *
+ * <p><b>記録者は社内の利用者名なので荷主には出さない。</b> S41 は荷主も開く。
+ * `ui_design.md` は荷主向け（S46）で「担当者名は出しません」と定めており、
+ * 同じ判断をここにも通す。</p>
+ */
+function History({
+  history,
+  showRecordedBy,
+}: {
+  readonly history: TrackingView['history'];
+  readonly showRecordedBy: boolean;
+}) {
   return (
     <section className={`${CARD} mt-4 overflow-x-auto`}>
       <h2 className={SECTION_TITLE}>状態の履歴</h2>
@@ -157,7 +171,7 @@ function History({ history }: { readonly history: TrackingView['history'] }) {
               <th className={TH}>日時</th>
               <th className={TH}>変更</th>
               <th className={TH}>場所</th>
-              <th className={TH}>記録者</th>
+              {showRecordedBy && <th className={TH}>記録者</th>}
             </tr>
           </thead>
           <tbody>
@@ -170,7 +184,7 @@ function History({ history }: { readonly history: TrackingView['history'] }) {
                     : `${event.previousStatusLabel} → ${event.statusLabel}`}
                 </td>
                 <td className={TD}>{event.location ?? '—'}</td>
-                <td className={TD}>{event.recordedBy ?? '—'}</td>
+                {showRecordedBy && <td className={TD}>{event.recordedBy ?? '—'}</td>}
               </tr>
             ))}
           </tbody>
@@ -195,12 +209,16 @@ function UpdateStatusPanel({
 }) {
   const [newStatus, setNewStatus] = useState('');
   const [location, setLocation] = useState('');
+  // **後から入れる。** 出港は夜間で、記録は翌朝になる。空ならサーバの業務時計で「いま」。
+  const [occurredAt, setOccurredAt] = useState('');
 
   const update = useMutation({
-    mutationFn: () => updateTransportStatus(view.trackingNumber, { newStatus, location }),
+    mutationFn: () =>
+      updateTransportStatus(view.trackingNumber, { newStatus, location, occurredAt }),
     onSuccess: () => {
       setNewStatus('');
       setLocation('');
+      setOccurredAt('');
       onUpdated();
     },
   });
@@ -247,9 +265,26 @@ function UpdateStatusPanel({
             id="location"
             className={FIELD}
             value={location}
-            onChange={(event) => setLocation(event.target.value)}
+            onChange={(event) => setLocation(event.target.value.toUpperCase())}
             placeholder="JPTYO"
+            maxLength={5}
+            pattern="[A-Z]{5}"
           />
+        </div>
+        <div>
+          <label htmlFor="occurredAt" className={LABEL}>
+            起きた日時
+          </label>
+          <input
+            id="occurredAt"
+            type="datetime-local"
+            className={FIELD}
+            value={occurredAt}
+            onChange={(event) => setOccurredAt(event.target.value)}
+          />
+          {/* **後から入れる。** 出港は夜間で、記録は翌朝になる。入れないと履歴の
+              日時が全部「入力した時刻」になり、遅延の判断に使えない。 */}
+          <p className="mt-1 text-xs text-gray-600">空のままなら「いま」で記録します。</p>
         </div>
       </div>
 

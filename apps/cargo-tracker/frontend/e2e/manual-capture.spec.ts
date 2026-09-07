@@ -868,6 +868,7 @@ test.describe('マニュアルの画面キャプチャ', () => {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
+          total: 2,
           items: [
             {
               trackingNumber: 'TRK-AB12CD3456',

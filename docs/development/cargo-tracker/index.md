@@ -36,3 +36,4 @@ cargo-tracker プロジェクトの開発ドキュメントです。
 * [イテレーション 7 計画 - 予約確定と追跡番号発行](./iteration_plan-7.md)
 * [イテレーション 7 完了報告書](./iteration_report-7.md)
 * [イテレーション 7 ふりかえり](./retrospective-7.md)
+* [イテレーション 8 ふりかえり](./retrospective-8.md)

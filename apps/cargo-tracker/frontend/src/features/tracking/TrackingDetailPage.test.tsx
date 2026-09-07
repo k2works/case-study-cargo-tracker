@@ -19,9 +19,15 @@ function tracking(over: Record<string, unknown> = {}) {
     estimatedArrival: '2026-09-24T18:00:00Z',
     lastStatusChangedAt: '2026-09-08T01:00:00Z',
     history: [],
-    nextStatuses: ['RECEIVED', 'MISROUTED'],
+    // **サーバは手で選べる先だけを返す**（誤配・例外発生は荷役と例外の起票が決める）。
+    // モックを本物より甘くしない。
+    nextStatuses: ['RECEIVED'],
     ...over,
   };
+}
+
+function shipperTracking(over: Record<string, unknown> = {}) {
+  return tracking(over);
 }
 
 function respondWith(body: unknown, status = 200) {
@@ -101,6 +107,9 @@ describe('S41 追跡詳細・管理', () => {
     // サーバが集約と同じ述語で決めた先だけ。押してから断られない。
     expect(options).toContain('受領済');
     expect(options).not.toContain('引取済');
+    // **誤配・例外発生は手で選べない。** サーバが返さないので出ない。
+    expect(options).not.toContain('誤配');
+    expect(options).not.toContain('例外発生');
   });
 
   it('US17 §2: 状態を更新すると送信される', async () => {
@@ -166,7 +175,44 @@ describe('S41 追跡詳細・管理', () => {
 
     renderDetail();
 
-    expect(await screen.findByText(/追跡が見つかりません/)).toBeInTheDocument();
+    expect(await screen.findByText(/追跡番号が見つかりません/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '追跡一覧に戻る' })).toBeInTheDocument();
+  });
+
+  it('荷主には記録者（社内の担当者名）を出さない', async () => {
+    // S41 は荷主も開く。ui_design は荷主向けで「担当者名は出しません」と定めている。
+    asShipper();
+    respondWith(shipperTracking({
+      history: [{
+        occurredAt: '2026-09-10T02:00:00Z',
+        eventType: 'MANUAL',
+        previousStatusLabel: '未受領',
+        statusLabel: '受領済',
+        location: 'JPTYO',
+        recordedBy: 'tracker01',
+      }],
+    }));
+
+    renderDetail();
+
+    await screen.findByRole('row', { name: /受領済/ });
+    expect(screen.queryByText('tracker01')).not.toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: '記録者' })).not.toBeInTheDocument();
+  });
+
+  it('US17 §2: 起きた日時を後から入れられる（出港は夜間、記録は翌朝）', async () => {
+    const fetchSpy = respondWith(tracking());
+
+    renderDetail();
+    await screen.findByLabelText('新しい状態');
+    await userEvent.selectOptions(screen.getByLabelText('新しい状態'), 'RECEIVED');
+    await userEvent.type(screen.getByLabelText('起きた日時'), '2026-09-10T22:30');
+    await userEvent.click(screen.getByRole('button', { name: '状態を更新する' }));
+
+    await waitFor(() => {
+      const posted = fetchSpy.mock.calls.find((call) => call[1]?.method === 'POST');
+      // 業務タイムゾーンで解釈して送る（ブラウザの時計に依らない）。
+      expect(String(posted?.[1]?.body)).toContain('2026-09-10T13:30');
+    });
   });
 });

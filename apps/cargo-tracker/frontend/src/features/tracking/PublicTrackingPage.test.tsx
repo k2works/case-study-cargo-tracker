@@ -101,7 +101,7 @@ describe('S44 公開追跡照会', () => {
 
     renderAt('/track');
     await userEvent.type(screen.getByLabelText('追跡番号'), 'TRK-123');
-    await userEvent.click(screen.getByRole('button', { name: '照会' }));
+    await userEvent.click(screen.getByRole('button', { name: '照会する' }));
 
     expect(await screen.findByText(/追跡番号の形式が違います/)).toBeInTheDocument();
     // **照会前に知らせる。** 送ってしまうと、レート制限（429）の回数を無駄に使う。
@@ -120,7 +120,7 @@ describe('S44 公開追跡照会', () => {
 
     renderAt('/track');
     await userEvent.type(screen.getByLabelText('追跡番号'), 'trk-8k2qx7m4rb');
-    await userEvent.click(screen.getByRole('button', { name: '照会' }));
+    await userEvent.click(screen.getByRole('button', { name: '照会する' }));
 
     // 荷受人は URL を転送して共有する。番号が URL に無いと転送できない。
     await waitFor(() => expect(screen.getByText('輸送中')).toBeInTheDocument());

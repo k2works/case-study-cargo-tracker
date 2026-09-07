@@ -622,7 +622,9 @@ test.describe('kind クラスタでの通し確認', () => {
         });
       expect(forbidden.status()).toBe(409);
 
-      // デモ項目 8: **総当たりが止まる。** 同一 IP から 1 分に 10 回を超えると 429。
+      // デモ項目 8: **総当たりが止まる。** 同一 IP から 1 分に 10 回を超える
+      // 「見つからない」照会は 429。**当たりは数えない**ので、正しい番号を持つ
+      // 荷受人は画面を開いたまま何度更新しても断られない。
       let retryAfter = '';
       let sawTooManyRequests = false;
       for (let i = 0; i < 12; i++) {

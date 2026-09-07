@@ -100,9 +100,10 @@ class TrackingControllerIT extends AbstractAxonIntegrationTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).containsEntry("statusLabel", "未受領");
         // **画面が遷移表を持たない。** 持つと、集約が断る先を画面が出してしまう。
+        // **手で選べる先だけが来る。** 誤配は荷役が、例外発生は例外の起票が決める。
         assertThat(response.getBody().get("nextStatuses"))
                 .asInstanceOf(org.assertj.core.api.InstanceOfAssertFactories.list(String.class))
-                .containsExactlyInAnyOrder("RECEIVED", "MISROUTED");
+                .containsExactly("RECEIVED");
     }
 
     @Test
@@ -197,5 +198,50 @@ class TrackingControllerIT extends AbstractAxonIntegrationTest {
                 .retrieve().toBodilessEntity();
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.valueOf(422));
+    }
+
+    @Test
+    @DisplayName("US17: 一覧は到着予定が近い順に出て、切れていれば全件数が分かる")
+    void ordersByEstimatedArrivalAndReportsTotal() {
+        given("SHP-000003");
+
+        var response = get("/api/v1/tracking/trackings?limit=200", "SHP-000003");
+
+        // **上限で切れていることを黙らない。** 出ていない貨物は誰も追わない。
+        assertThat(response.getBody().get("total")).isNotNull();
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> items = (List<Map<String, Object>>) response.getBody()
+                .get("items");
+        assertThat(items).isNotEmpty();
+    }
+
+    @Test
+    @DisplayName("場所を空で更新しても、それまでの現在地が消えない")
+    void keepsTheLastKnownLocation() {
+        String trackingNumber = givenAggregate("SHP-000001");
+
+        rest.post().uri("http://localhost:" + port + "/api/v1/tracking/trackings/"
+                        + trackingNumber + "/status")
+                .header("X-Auth-Username", "tracker01")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("newStatus", "RECEIVED", "location", "JPTYO"))
+                .retrieve().toBodilessEntity();
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
+                assertThat(get("/api/v1/tracking/trackings/" + trackingNumber, null).getBody())
+                        .containsEntry("currentUnLocode", "JPTYO"));
+
+        // 場所を入れずに次の状態へ。**荷受人にとって現在地は照会の主目的**なので、
+        // 分かっていた場所が消えると業務が止まる。
+        rest.post().uri("http://localhost:" + port + "/api/v1/tracking/trackings/"
+                        + trackingNumber + "/status")
+                .header("X-Auth-Username", "tracker01")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("newStatus", "LOADED"))
+                .retrieve().toBodilessEntity();
+
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
+                assertThat(get("/api/v1/tracking/trackings/" + trackingNumber, null).getBody())
+                        .containsEntry("statusLabel", "積込済")
+                        .containsEntry("currentUnLocode", "JPTYO"));
     }
 }

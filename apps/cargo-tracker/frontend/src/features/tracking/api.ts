@@ -1,3 +1,4 @@
+import { businessLocalToInstant } from '@/shared/api/businessDate';
 import { commandClient, queryClient } from '@/shared/api/client';
 import type { Pending } from '@/shared/api/pending';
 
@@ -97,7 +98,7 @@ export interface TrackingView {
 /** 追跡一覧（S40）。荷主には自社のぶんだけが返る（サーバがヘッダで絞る）。 */
 export function fetchTrackings(
   includeDelivered: boolean,
-): Promise<Pending<{ items: TrackingListItemView[] }>> {
+): Promise<Pending<{ items: TrackingListItemView[]; total: number }>> {
   return queryClient(`/tracking/trackings?includeDelivered=${includeDelivered}`);
 }
 
@@ -109,12 +110,18 @@ export function fetchTracking(trackingNumber: string): Promise<Pending<TrackingV
 /** 状態を手で更新する（S41 / US17 §2）。追跡管理者だけ。 */
 export function updateTransportStatus(
   trackingNumber: string,
-  input: { readonly newStatus: string; readonly location: string },
+  input: {
+    readonly newStatus: string;
+    readonly location: string;
+    /** 起きた日時（業務時刻の `YYYY-MM-DDTHH:mm`）。空ならサーバの業務時計で「いま」。 */
+    readonly occurredAt: string;
+  },
 ): Promise<void> {
-  // 日時は送らない。**サーバの業務時計で「いま」を決める**——ブラウザの時計は
-  // 利用者の設定に左右され、履歴の並びが端末ごとに変わる。
+  // **日時を空で送ったときはサーバの業務時計で決める。** ブラウザの時計は利用者の
+  // 設定に左右され、履歴の並びが端末ごとに変わる。
   return commandClient(`/tracking/trackings/${encodeURIComponent(trackingNumber)}/status`, {
     newStatus: input.newStatus,
     location: input.location || null,
+    occurredAt: input.occurredAt === '' ? null : businessLocalToInstant(input.occurredAt),
   });
 }
