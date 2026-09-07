@@ -1,0 +1,101 @@
+package com.example.cargotracker.handling.infrastructure.projection;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.example.cargotracker.handling.infrastructure.persistence.CargoSnapshotMapper;
+import com.example.cargotracker.shared.contract.event.TrackingInitializedEvent;
+import com.example.cargotracker.shared.testing.AbstractAxonIntegrationTest;
+import java.time.Instant;
+import java.util.List;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.DirtiesContext;
+
+/**
+ * 貨物の写し（US15 / [ADR-0012]）。
+ *
+ * <p><b>契約イベントから作れることを実 DB で確かめる。</b> 集約の検査では
+ * 「投影がどう見えるか」を判別しない。</p>
+ */
+@SpringBootTest
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+class CargoSnapshotProjectionIT extends AbstractAxonIntegrationTest {
+
+    private static final Instant AT = Instant.parse("2026-09-08T01:00:00Z");
+
+    @Autowired
+    private CargoSnapshotProjection projection;
+
+    @Autowired
+    private CargoSnapshotMapper cargos;
+
+    private static TrackingInitializedEvent initialized(String trackingNumber) {
+        return new TrackingInitializedEvent(trackingNumber, "b-" + System.nanoTime(),
+                "SHP-000001", "JPTYO", "USNYC", "GENERAL",
+                List.of(new TrackingInitializedEvent.Leg("V-MOL-001", "JPTYO", "SGSIN",
+                                Instant.parse("2026-09-10T09:00:00Z"),
+                                Instant.parse("2026-09-16T08:00:00Z")),
+                        new TrackingInitializedEvent.Leg("V-ONE-002", "SGSIN", "USNYC",
+                                Instant.parse("2026-09-17T06:00:00Z"),
+                                Instant.parse("2026-09-24T18:00:00Z"))),
+                AT);
+    }
+
+    @Test
+    @DisplayName("ADR-0012 決定 1: 契約イベント TrackingInitializedEvent から作られる")
+    void buildsFromTrackingInitialized() {
+        String trackingNumber = "TRK-S" + System.nanoTime() % 1000000000L;
+
+        projection.on(initialized(trackingNumber), "evt-1");
+
+        var row = cargos.findByTrackingNumber(trackingNumber);
+        assertThat(row).isNotNull();
+        assertThat(row.originUnlocode()).isEqualTo("JPTYO");
+        assertThat(row.destinationUnlocode()).isEqualTo("USNYC");
+        assertThat(row.cargoType()).isEqualTo("GENERAL");
+        assertThat(cargos.findLegs(trackingNumber))
+                .extracting(CargoSnapshotMapper.CargoSnapshotLegRow::voyageNumber)
+                .containsExactly("V-MOL-001", "V-ONE-002");
+    }
+
+    @Test
+    @DisplayName("ADR-0012 決定 3: キャンセルの既定は false（書き手は US30・IT15）")
+    void defaultsToNotCancelled() {
+        String trackingNumber = "TRK-S" + System.nanoTime() % 1000000000L;
+
+        projection.on(initialized(trackingNumber), "evt-2");
+
+        assertThat(cargos.findByTrackingNumber(trackingNumber).cancelled()).isFalse();
+    }
+
+    @Test
+    @DisplayName("S50 の起点: この航海がこの港で降ろす貨物を引ける")
+    void findsCargosOnVoyage() {
+        // **追跡番号は現場が持っていない。** 荷役作業員は船と港から始める。
+        String mine = "TRK-S" + System.nanoTime() % 1000000000L;
+        projection.on(initialized(mine), "evt-3");
+
+        assertThat(cargos.findOnVoyage("V-MOL-001", "SGSIN"))
+                .extracting(CargoSnapshotMapper.CargoSnapshotRow::trackingNumber)
+                .contains(mine);
+        // 積む港では引けない（この船は東京で積んでシンガポールで降ろす）。
+        assertThat(cargos.findOnVoyage("V-MOL-001", "JPTYO"))
+                .extracting(CargoSnapshotMapper.CargoSnapshotRow::trackingNumber)
+                .doesNotContain(mine);
+    }
+
+    @Test
+    @DisplayName("リプレイで行も区間も増えない")
+    void isIdempotentOnReplay() {
+        String trackingNumber = "TRK-S" + System.nanoTime() % 1000000000L;
+        var event = initialized(trackingNumber);
+
+        projection.on(event, "evt-4");
+        projection.on(event, "evt-4");
+
+        assertThat(cargos.findByTrackingNumber(trackingNumber)).isNotNull();
+        assertThat(cargos.findLegs(trackingNumber)).hasSize(2);
+    }
+}

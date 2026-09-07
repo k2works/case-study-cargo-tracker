@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.handling.infrastructure.persistence.CargoSnapshotMapper">
+
+    <!--
+      リプレイで行が増えない形にする。追跡番号が主キーなので、同じイベントを
+      2 度読んでも上書きになる。
+
+      cancelled は上書きしない。書き手は US30（IT15）の CargoCancelledEvent で、
+      追跡開始の再配送でキャンセルを取り消してはならない（IT8 で同じ形の欠陥を
+      踏んだ——開始イベントの再配送で状態が巻き戻った）。
+    -->
+    <insert id="insert">
+        INSERT INTO cargo_snapshot (
+            tracking_number, booking_id, origin_unlocode, destination_unlocode,
+            cargo_type, projected_at, last_event_id
+        ) VALUES (
+            #{trackingNumber}, #{bookingId}, #{originUnlocode}, #{destinationUnlocode},
+            #{cargoType}, #{projectedAt}, #{lastEventId}
+        )
+        ON CONFLICT (tracking_number) DO UPDATE SET
+            booking_id = EXCLUDED.booking_id,
+            origin_unlocode = EXCLUDED.origin_unlocode,
+            destination_unlocode = EXCLUDED.destination_unlocode,
+            cargo_type = EXCLUDED.cargo_type,
+            projected_at = EXCLUDED.projected_at,
+            last_event_id = EXCLUDED.last_event_id
+    </insert>
+
+    <insert id="insertLegs">
+        INSERT INTO cargo_snapshot_leg (
+            tracking_number, leg_seq, voyage_number, load_unlocode, unload_unlocode
+        ) VALUES
+        <foreach collection="legs" item="leg" separator=",">
+            (#{trackingNumber}, #{leg.legSeq}, #{leg.voyageNumber},
+             #{leg.loadUnlocode}, #{leg.unloadUnlocode})
+        </foreach>
+    </insert>
+
+</mapper>
