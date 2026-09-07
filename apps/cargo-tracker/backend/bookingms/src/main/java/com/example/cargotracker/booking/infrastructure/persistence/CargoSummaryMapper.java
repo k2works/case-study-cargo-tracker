@@ -32,6 +32,26 @@ public interface CargoSummaryMapper {
     @Select("SELECT EXISTS(SELECT 1 FROM cargo_summary WHERE tracking_number = #{trackingNumber})")
     boolean trackingNumberExists(@Param("trackingNumber") String trackingNumber);
 
+    /**
+     * 最後の荷役を写す（US15 / 不変条件 12）。
+     *
+     * <p><b>予約から見た「いまどこまで進んだか」。</b> 荷役そのものの真実は
+     * handlingms にあり、ここは一覧が JOIN しないための非正規化である
+     * （data-model.md）。</p>
+     */
+    @org.apache.ibatis.annotations.Update(
+            "UPDATE cargo_summary SET booking_status = #{bookingStatus}, "
+            + "last_handling_type = #{handlingType}, last_handling_unlocode = #{unLocode}, "
+            + "last_handling_at = #{completedAt}, last_handling_off_route = #{offRoute}, "
+            + "projected_at = #{projectedAt} WHERE booking_id = #{bookingId}")
+    int updateLastHandling(@Param("bookingId") String bookingId,
+            @Param("bookingStatus") String bookingStatus,
+            @Param("handlingType") String handlingType,
+            @Param("unLocode") String unLocode,
+            @Param("completedAt") Instant completedAt,
+            @Param("offRoute") boolean offRoute,
+            @Param("projectedAt") Instant projectedAt);
+
     /** 追跡番号を発行した（US14）。状態・番号・発行日時を書く。 */
     @org.apache.ibatis.annotations.Update(
             "UPDATE cargo_summary SET booking_status = #{bookingStatus}, "

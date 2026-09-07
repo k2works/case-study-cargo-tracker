@@ -12,6 +12,9 @@ import com.example.cargotracker.booking.domain.model.events.ShipperNotifiedEvent
 import com.example.cargotracker.booking.domain.model.events.RoutingRequestedEvent;
 import com.example.cargotracker.booking.domain.model.events.TrackingNumberIssuedEvent;
 import com.example.cargotracker.booking.domain.model.events.TrackingNumberRevertedEvent;
+import com.example.cargotracker.booking.domain.model.events.BookingMisroutedEvent;
+import com.example.cargotracker.booking.domain.model.events.HandlingRecordedEvent;
+import com.example.cargotracker.booking.domain.model.events.HandlingRevertedEvent;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.booking.domain.model.valueobjects.RoutingStatus;
 import com.example.cargotracker.booking.domain.service.CargoSpecificationDiff;
@@ -403,6 +406,43 @@ public class CargoProjection {
             revisions.insert(new CargoRevisionMapper.CargoRevisionRow(
                     event.bookingId(), event.updatedAt(), change.label(), i + 1,
                     change.before(), change.after(), event.updatedBy()));
+        }
+    }
+
+    /**
+     * 最後の荷役を写す（US15 / 不変条件 12）。
+     *
+     * <p><b>最初の受領で予約が輸送中になる。</b> 集約と同じ判断をここに書き直さない
+     * ——状態は行から読み、集約が決めた遷移に従う。</p>
+     */
+    @EventHandler
+    public void on(HandlingRecordedEvent event) {
+        var current = cargos.findById(event.bookingId());
+        if (current == null) {
+            return;
+        }
+        // 最初の受領で輸送中。以降は動かさない（集約と同じ判断）。
+        String status = BookingStatus.TRACKING_ISSUED.name().equals(current.bookingStatus())
+                ? BookingStatus.IN_TRANSIT.name()
+                : current.bookingStatus();
+
+        cargos.updateLastHandling(event.bookingId(), status, event.handlingType(),
+                event.unLocode(), event.completedAt(), false, clock.instant());
+    }
+
+    /** 予定ルート外の荷役を受けた（US28 / 不変条件 12）。 */
+    @EventHandler
+    public void on(BookingMisroutedEvent event) {
+        cargos.updateRoutingStatus(event.bookingId(), RoutingStatus.MISROUTED.name(),
+                clock.instant());
+    }
+
+    /** 取り消された荷役の分を戻す（不変条件 13）。 */
+    @EventHandler
+    public void on(HandlingRevertedEvent event) {
+        if (event.misrouteCleared()) {
+            cargos.updateRoutingStatus(event.bookingId(), RoutingStatus.ROUTED.name(),
+                    clock.instant());
         }
     }
 }

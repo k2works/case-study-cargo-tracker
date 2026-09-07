@@ -5,6 +5,10 @@ import com.example.cargotracker.booking.domain.model.commands.RevertTrackingNumb
 import com.example.cargotracker.booking.domain.model.events.TrackingNumberIssuedEvent;
 import com.example.cargotracker.booking.infrastructure.projection.AttentionItemRecorder;
 import com.example.cargotracker.shared.contract.command.InitializeTrackingCommand;
+import com.example.cargotracker.booking.domain.model.commands.RecordHandlingCommand;
+import com.example.cargotracker.booking.domain.model.commands.RevertHandlingCommand;
+import com.example.cargotracker.shared.contract.event.HandlingActivityRegisteredEvent;
+import com.example.cargotracker.shared.contract.event.HandlingActivityVoidedEvent;
 import com.example.cargotracker.shared.contract.event.TrackingInitializedEvent;
 import java.time.Clock;
 import java.util.Map;
@@ -161,5 +165,26 @@ public class BookingReactionHandler {
             log.warn("段が進まなかった: bookingId={} currentStep={}",
                     event.bookingId(), state.currentStep());
         }
+    }
+
+    /**
+     * 荷役が記録された（US15・US28 / 不変条件 12）。
+     *
+     * <p><b>この連鎖は 1 段で終わる。</b> 予約 → 追跡開始（ADR-0010）と違い、
+     * 応答を待って次へ進む段がないので {@code process_state} は要らない。
+     * 止まったかどうかは、荷役の記録と予約の状態を突き合わせれば読める。</p>
+     */
+    @EventHandler
+    public void on(HandlingActivityRegisteredEvent event) {
+        commands.sendAndWait(new RecordHandlingCommand(event.bookingId(), event.activityId(),
+                event.handlingType(), event.unLocode(), event.offRoute(),
+                event.completedAt()), Void.class);
+    }
+
+    /** 荷役が取り消された（不変条件 13）。 */
+    @EventHandler
+    public void on(HandlingActivityVoidedEvent event) {
+        commands.sendAndWait(new RevertHandlingCommand(event.bookingId(), event.activityId(),
+                event.reason()), Void.class);
     }
 }

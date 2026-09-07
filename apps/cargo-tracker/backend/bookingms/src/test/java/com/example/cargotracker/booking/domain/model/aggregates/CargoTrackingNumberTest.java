@@ -1,12 +1,17 @@
 package com.example.cargotracker.booking.domain.model.aggregates;
 
 import com.example.cargotracker.booking.domain.model.commands.IssueTrackingNumberCommand;
+import com.example.cargotracker.booking.domain.model.commands.RecordHandlingCommand;
+import com.example.cargotracker.booking.domain.model.commands.RevertHandlingCommand;
 import com.example.cargotracker.booking.domain.model.commands.RevertTrackingNumberCommand;
 import com.example.cargotracker.booking.domain.model.events.BookingConfirmedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoRoutedEvent;
 import com.example.cargotracker.booking.domain.model.events.RoutingRequestedEvent;
 import com.example.cargotracker.booking.domain.model.events.ShipperNotifiedEvent;
+import com.example.cargotracker.booking.domain.model.events.BookingMisroutedEvent;
+import com.example.cargotracker.booking.domain.model.events.HandlingRecordedEvent;
+import com.example.cargotracker.booking.domain.model.events.HandlingRevertedEvent;
 import com.example.cargotracker.booking.domain.model.events.TrackingNumberIssuedEvent;
 import com.example.cargotracker.booking.domain.model.events.TrackingNumberRevertedEvent;
 import com.example.cargotracker.shared.domain.error.IllegalTransition;
@@ -176,5 +181,91 @@ class CargoTrackingNumberTest {
         fixture.given().noPriorActivity()
                 .when().command(new RevertTrackingNumberCommand("B-NONE", "届かず"))
                 .then().exception(IllegalTransition.class);
+    }
+
+    // ---- US15・US28 荷役の反映（IT9 T6b / 不変条件 12・13） ----
+
+    private static final Instant HANDLED = Instant.parse("2026-09-20T01:00:00Z");
+
+    private static Object[] trackingIssued() {
+        return new Object[] {
+            booked(), new RoutingRequestedEvent("B-0001", "sales01"), routed(),
+            new ShipperNotifiedEvent("B-0001", "shipper@example.com", "案内", "sales01", NOW),
+            new BookingConfirmedEvent("B-0001", "sales01", NOW),
+            new TrackingNumberIssuedEvent("B-0001", "TRK-8K2QX7M4RB", "SHP-000001",
+                    "JPTYO", "USNYC", "GENERAL", List.of(), "routing01", NOW),
+        };
+    }
+
+    /** 追跡番号を発行し、予定外の受領で誤配になっているところまで。 */
+    private static Object[] misrouted() {
+        var issued = trackingIssued();
+        var events = new Object[issued.length + 2];
+        System.arraycopy(issued, 0, events, 0, issued.length);
+        events[issued.length] = new HandlingRecordedEvent("B-0001", "act-1", "RECEIVE",
+                "JPTYO", HANDLED, NOW);
+        events[issued.length + 1] = new BookingMisroutedEvent("B-0001", "act-1", "JPTYO", NOW);
+        return events;
+    }
+
+    private static RecordHandlingCommand record(boolean offRoute) {
+        return new RecordHandlingCommand("B-0001", "act-1", "RECEIVE", "JPTYO", offRoute,
+                HANDLED);
+    }
+
+    @Test
+    @DisplayName("US15 §4: 最初の受領で予約が輸送中になる")
+    void firstReceiveMovesToInTransit() {
+        fixture.given().events(trackingIssued())
+                .when().command(record(false))
+                .then().events(new HandlingRecordedEvent("B-0001", "act-1", "RECEIVE",
+                        "JPTYO", HANDLED, NOW));
+    }
+
+    @Test
+    @DisplayName("不変条件 12: 予定ルート外の荷役で経路設計が誤配になる")
+    void marksMisroutedOnOffRouteHandling() {
+        fixture.given().events(trackingIssued())
+                .when().command(record(true))
+                .then().events(
+                        new HandlingRecordedEvent("B-0001", "act-1", "RECEIVE", "JPTYO",
+                                HANDLED, NOW),
+                        new BookingMisroutedEvent("B-0001", "act-1", "JPTYO", NOW));
+    }
+
+    @Test
+    @DisplayName("不変条件 12: すでに誤配なら二度は出さない")
+    void doesNotRepeatMisroute() {
+        fixture.given().events(misrouted())
+                .when().command(new RecordHandlingCommand("B-0001", "act-2", "LOAD", "SGSIN",
+                        true, HANDLED))
+                .then().events(new HandlingRecordedEvent("B-0001", "act-2", "LOAD", "SGSIN",
+                        HANDLED, NOW));
+    }
+
+    @Test
+    @DisplayName("不変条件 13: 誤配の原因が取り消されたら経路設計も戻る")
+    void clearsMisrouteWhenTheCauseIsVoided() {
+        fixture.given().events(misrouted())
+                .when().command(new RevertHandlingCommand("B-0001", "act-1", "取り違え"))
+                .then().events(new HandlingRevertedEvent("B-0001", "act-1", true, NOW));
+    }
+
+    @Test
+    @DisplayName("不変条件 13: 別の荷役の取り消しでは誤配は解けない")
+    void keepsMisrouteWhenAnotherActivityIsVoided() {
+        // **起きていない誤配を組み直させない**——逆に、原因でない取り消しで
+        // 誤配を消すと、経路設計者は誤配に気づけなくなる。
+        fixture.given().events(misrouted())
+                .when().command(new RevertHandlingCommand("B-0001", "act-9", "別の記録"))
+                .then().events(new HandlingRevertedEvent("B-0001", "act-9", false, NOW));
+    }
+
+    @Test
+    @DisplayName("知らない予約の荷役では止まらない（後続の荷役まで届かなくなる）")
+    void doesNotFailForUnknownBooking() {
+        fixture.given().noPriorActivity()
+                .when().command(record(false))
+                .then().success().noEvents();
     }
 }

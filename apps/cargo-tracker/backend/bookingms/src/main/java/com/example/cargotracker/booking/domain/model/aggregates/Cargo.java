@@ -9,6 +9,8 @@ import com.example.cargotracker.booking.domain.model.commands.ReturnToRoutingCom
 import com.example.cargotracker.booking.domain.model.commands.RequestConditionReviewCommand;
 import com.example.cargotracker.booking.domain.model.commands.RequestRoutingCommand;
 import com.example.cargotracker.booking.domain.model.commands.RespondToConditionReviewCommand;
+import com.example.cargotracker.booking.domain.model.commands.RecordHandlingCommand;
+import com.example.cargotracker.booking.domain.model.commands.RevertHandlingCommand;
 import com.example.cargotracker.booking.domain.model.commands.RevertTrackingNumberCommand;
 import com.example.cargotracker.booking.domain.model.commands.UpdateCargoSpecificationCommand;
 import com.example.cargotracker.booking.domain.model.events.BookingConfirmedEvent;
@@ -26,6 +28,9 @@ import com.example.cargotracker.booking.domain.model.commands.AssignRouteCommand
 import com.example.cargotracker.booking.domain.model.commands.ConfirmBookingCommand;
 import com.example.cargotracker.booking.domain.model.commands.IssueTrackingNumberCommand;
 import com.example.cargotracker.booking.domain.model.events.CargoRoutedEvent;
+import com.example.cargotracker.booking.domain.model.events.BookingMisroutedEvent;
+import com.example.cargotracker.booking.domain.model.events.HandlingRecordedEvent;
+import com.example.cargotracker.booking.domain.model.events.HandlingRevertedEvent;
 import com.example.cargotracker.booking.domain.model.events.TrackingNumberIssuedEvent;
 import com.example.cargotracker.booking.domain.model.events.TrackingNumberRevertedEvent;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoItinerary;
@@ -546,6 +551,80 @@ public class Cargo {
         // 発行のイベントに載せる（US14）。組み直せば新しい旅程で上書きされる。
         this.legs = event.legs();
         // BookingStatus は動かさない。荷主に通知するまでは提案中（US12）。
+    }
+
+    /**
+     * 荷役が記録されたことを予約に写す（US15・US28 / 不変条件 12）。
+     *
+     * <p><b>最初の受領で輸送中にする</b>（domain-model.md の状態遷移図）。
+     * 2 回目以降の荷役では状態を動かさない——輸送中のまま港を進む。</p>
+     *
+     * <p><b>予定外なら経路設計の状態を誤配にする。</b> 経路設計者が現在地起点で
+     * 組み直すまで、その予約は作業一覧に残る。</p>
+     *
+     * <p><b>知らない予約の荷役では止まらない。</b> 荷役は handlingms に記録済みで、
+     * ここで例外にすると Event Processor が止まり、後続の荷役まで届かなくなる
+     * （trackingms 側と同じ判断）。</p>
+     */
+    @CommandHandler
+    public void recordHandling(RecordHandlingCommand command, EventAppender appender,
+            Clock clock) {
+        if (bookingId == null) {
+            return;
+        }
+        var now = clock.instant();
+        appender.append(new HandlingRecordedEvent(command.bookingId(), command.activityId(),
+                command.handlingType(), command.unLocode(), command.completedAt(), now));
+
+        if (command.offRoute() && routingStatus != RoutingStatus.MISROUTED) {
+            appender.append(new BookingMisroutedEvent(command.bookingId(), command.activityId(),
+                    command.unLocode(), now));
+        }
+    }
+
+    /**
+     * 取り消された荷役の分を戻す（不変条件 13）。
+     *
+     * <p><b>誤配の原因が取り消された荷役だけなら、経路設計の状態も戻す。</b>
+     * 取り消したのに作業一覧へ残り続けると、経路設計者は起きていない誤配を
+     * 組み直そうとする。</p>
+     */
+    @CommandHandler
+    public void revertHandling(RevertHandlingCommand command, EventAppender appender,
+            Clock clock) {
+        if (bookingId == null) {
+            return;
+        }
+        boolean clears = routingStatus == RoutingStatus.MISROUTED
+                && command.activityId().equals(misroutedBy);
+
+        appender.append(new HandlingRevertedEvent(command.bookingId(), command.activityId(),
+                clears, clock.instant()));
+    }
+
+    /** 誤配にした荷役。取り消しで戻してよいかの判断に要る（不変条件 13）。 */
+    private String misroutedBy;
+
+    @EventSourcingHandler
+    void on(HandlingRecordedEvent event) {
+        // 最初の受領で輸送中になる。以降は動かさない。
+        if (bookingStatus == BookingStatus.TRACKING_ISSUED) {
+            this.bookingStatus = BookingStatus.IN_TRANSIT;
+        }
+    }
+
+    @EventSourcingHandler
+    void on(BookingMisroutedEvent event) {
+        this.routingStatus = RoutingStatus.MISROUTED;
+        this.misroutedBy = event.activityId();
+    }
+
+    @EventSourcingHandler
+    void on(HandlingRevertedEvent event) {
+        if (event.misrouteCleared()) {
+            this.routingStatus = RoutingStatus.ROUTED;
+            this.misroutedBy = null;
+        }
     }
 
     /** 復元した予約の状態。画面のボタン出し分けはこの値と述語で決める。 */
