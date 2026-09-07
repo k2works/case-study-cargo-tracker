@@ -22,6 +22,9 @@ export const NAVIGATION: readonly NavigationItem[] = [
   { path: '/routing/worklist', label: '経路設計作業', allow: ['ROLE_ROUTING'] },
   { path: '/voyages', label: '航海スケジュール', allow: ['ROLE_ROUTING'] },
   { path: '/voyages/new', label: '航海登録', allow: ['ROLE_ROUTING'] },
+  // 追跡（S40）は追跡管理者と荷主。**荷主を外すと自社の貨物すら追えない**
+  // （ui_design.md:234「追跡 | S40 | 追跡、荷主」）。
+  { path: '/tracking', label: '追跡', allow: ['ROLE_TRACKER', 'ROLE_SHIPPER'] },
   {
     path: '/worklist/attention',
     label: '要確認一覧',

@@ -75,6 +75,7 @@ const SCREEN_OF_PATH: Record<string, string> = {
   '/routing/worklist': 'S30',
   '/voyages': 'S32',
   '/voyages/new': 'S33',
+  '/tracking': 'S40',
   '/worklist/attention': 'S70',
   '/admin/users': 'S90',
 };

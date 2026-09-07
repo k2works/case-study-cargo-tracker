@@ -40,6 +40,7 @@ public final class RoleAuthorization {
     private static final String TRACKER = "ROLE_TRACKER";
     private static final String ACCOUNTANT = "ROLE_ACCOUNTANT";
     private static final String ADMIN = "ROLE_ADMIN";
+    private static final String SHIPPER = "ROLE_SHIPPER";
 
     private static final AntPathMatcher MATCHER = new AntPathMatcher();
 
@@ -106,6 +107,14 @@ public final class RoleAuthorization {
         rules.put("/api/v1/booking/bookings/**", Set.of(SALES, ROUTING, TRACKER));
         rules.put("/api/v1/booking/bookings", Set.of(SALES, ROUTING, TRACKER));
 
+        // 追跡（S40 / S41）は追跡管理者と荷主。**荷主には自社のぶんだけ**を
+        // trackingms が X-Auth-Shipper-Id で絞る。ここで荷主を外すと、荷主は
+        // 自社の貨物すら追えない（ui_design.md:144-145）。
+        // **公開照会（/tracking/public/**）はここに要らない**——PUBLIC_PATHS が
+        // 認証そのものを外すので、ロールの宣言は通らない。
+        rules.put("/api/v1/tracking/trackings/**", Set.of(TRACKER, SHIPPER));
+        rules.put("/api/v1/tracking/trackings", Set.of(TRACKER, SHIPPER));
+
         // 航海（S32 / S33）は経路設計者だけ。
         rules.put("/api/v1/routing/voyages/**", Set.of(ROUTING));
         rules.put("/api/v1/routing/voyages", Set.of(ROUTING));
@@ -143,6 +152,9 @@ public final class RoleAuthorization {
         // 営業に開くと、経路設計者の手番を飛ばして発行できてしまう。
         ordered.add(new Rule("POST", "/api/v1/booking/bookings/*/tracking-number",
                 Set.of(ROUTING)));
+        // 状態の手動更新は**追跡管理者だけ**（US17）。荷主に開くと、自分の貨物の
+        // 状態を書き換えられる。**読みの宣言（TRACKER, SHIPPER）より先に置く**。
+        ordered.add(new Rule("POST", "/api/v1/tracking/trackings/*/status", Set.of(TRACKER)));
         ordered.add(new Rule("PUT", "/api/v1/booking/bookings/*", Set.of(SALES)));
         rules.forEach((pattern, allowed) -> ordered.add(new Rule(ANY_METHOD, pattern, allowed)));
         return List.copyOf(ordered);

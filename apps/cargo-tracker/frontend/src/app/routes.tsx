@@ -21,6 +21,8 @@ import { RoutingWorklistPage } from '@/features/routing/RoutingWorklistPage';
 import { VoyageListPage } from '@/features/routing/VoyageListPage';
 import { VoyageRegisterPage } from '@/features/routing/VoyageRegisterPage';
 import { VoyageDetailPage } from '@/features/routing/VoyageDetailPage';
+import { TrackingListPage } from '@/features/tracking/TrackingListPage';
+import { TrackingDetailPage } from '@/features/tracking/TrackingDetailPage';
 
 /**
  * ルートと画面の対応。
@@ -42,6 +44,7 @@ export const PAGES: Record<string, ReactElement> = {
   '/routing/worklist': <RoutingWorklistPage />,
   '/voyages': <VoyageListPage />,
   '/voyages/new': <VoyageRegisterPage />,
+  '/tracking': <TrackingListPage />,
   '/worklist/attention': <AttentionListPage />,
   '/admin/users': <AdminUserListPage />,
 };
@@ -92,6 +95,16 @@ export function AppRoutes() {
         {/* 航海詳細（S34）と更新（S33 の編集）は一覧・詳細から開く。
             ナビに載せると「航海詳細」という行き先の無い項目が出る。
             ロールは一覧（S32）と同じ経路設計者に揃える。 */}
+        {/* 追跡詳細（S41）は一覧から開く。追跡管理者と荷主の両方が使い、
+            更新の操作は画面が追跡管理者にだけ出す（ui_design.md:145）。 */}
+        <Route
+          path="/tracking/:trackingNumber"
+          element={
+            <RequireRole allow={['ROLE_TRACKER', 'ROLE_SHIPPER']}>
+              <TrackingDetailPage />
+            </RequireRole>
+          }
+        />
         <Route
           path="/voyages/:voyageNumber"
           element={

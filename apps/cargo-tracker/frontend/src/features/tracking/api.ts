@@ -1,4 +1,4 @@
-import { queryClient } from '@/shared/api/client';
+import { commandClient, queryClient } from '@/shared/api/client';
 import type { Pending } from '@/shared/api/pending';
 
 /** 公開照会の履歴 1 行（S44 / US18）。 */
@@ -49,4 +49,72 @@ export function fetchPublicTracking(trackingNumber: string): Promise<Pending<Pub
   return queryClient(
     `/tracking/public/${encodeURIComponent(normalizeTrackingNumber(trackingNumber))}`,
   );
+}
+
+/** 追跡一覧の 1 行（S40）。 */
+export interface TrackingListItemView {
+  readonly trackingNumber: string;
+  readonly originUnLocode: string;
+  readonly destinationUnLocode: string;
+  readonly statusLabel: string;
+  readonly currentUnLocode: string | null;
+  readonly estimatedArrival: string | null;
+  readonly lastStatusChangedAt: string;
+}
+
+/** 追跡詳細の履歴 1 行（S41）。公開照会と違い**誰が動かしたか**も出る。 */
+export interface TrackingEventView {
+  readonly occurredAt: string;
+  readonly eventType: string;
+  readonly previousStatusLabel: string | null;
+  readonly statusLabel: string;
+  readonly location: string | null;
+  readonly recordedBy: string | null;
+}
+
+/** 追跡詳細（S41）。 */
+export interface TrackingView {
+  readonly trackingNumber: string;
+  readonly bookingId: string;
+  readonly originUnLocode: string;
+  readonly destinationUnLocode: string;
+  readonly cargoType: string;
+  readonly status: string;
+  readonly statusLabel: string;
+  readonly currentUnLocode: string | null;
+  readonly estimatedArrival: string | null;
+  readonly lastStatusChangedAt: string;
+  readonly history: readonly TrackingEventView[];
+  /**
+   * いま手で動かせる先。
+   *
+   * <p><b>画面が遷移表を持たない。</b> 持つと判定が 2 つになり、集約が断る先を
+   * 画面が出してしまう（押してから断られる）。サーバが集約と同じ述語で決める。</p>
+   */
+  readonly nextStatuses: readonly string[];
+}
+
+/** 追跡一覧（S40）。荷主には自社のぶんだけが返る（サーバがヘッダで絞る）。 */
+export function fetchTrackings(
+  includeDelivered: boolean,
+): Promise<Pending<{ items: TrackingListItemView[] }>> {
+  return queryClient(`/tracking/trackings?includeDelivered=${includeDelivered}`);
+}
+
+/** 追跡詳細（S41）。 */
+export function fetchTracking(trackingNumber: string): Promise<Pending<TrackingView>> {
+  return queryClient(`/tracking/trackings/${encodeURIComponent(trackingNumber)}`);
+}
+
+/** 状態を手で更新する（S41 / US17 §2）。追跡管理者だけ。 */
+export function updateTransportStatus(
+  trackingNumber: string,
+  input: { readonly newStatus: string; readonly location: string },
+): Promise<void> {
+  // 日時は送らない。**サーバの業務時計で「いま」を決める**——ブラウザの時計は
+  // 利用者の設定に左右され、履歴の並びが端末ごとに変わる。
+  return commandClient(`/tracking/trackings/${encodeURIComponent(trackingNumber)}/status`, {
+    newStatus: input.newStatus,
+    location: input.location || null,
+  });
 }

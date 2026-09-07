@@ -157,7 +157,7 @@ class TrackingProjectionIT extends AbstractAxonIntegrationTest {
         projection.on(new TrackingInitializedEvent(other, "b-" + System.nanoTime(),
                 "SHP-000999", "JPTYO", "USNYC", "GENERAL", List.of(), AT));
 
-        assertThat(trackings.findByShipper("SHP-000001"))
+        assertThat(trackings.findAll("SHP-000001", true, 50))
                 .extracting(TrackingSummaryMapper.TrackingSummaryRow::trackingNumber)
                 .contains(mine)
                 .as("他社の追跡が混ざると、荷主に他人の貨物が見える")

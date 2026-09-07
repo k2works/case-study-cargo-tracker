@@ -4,6 +4,12 @@ import com.example.cargotracker.tracking.domain.model.valueobjects.TransportStat
 import com.example.cargotracker.tracking.infrastructure.persistence.TrackingEventMapper;
 import com.example.cargotracker.tracking.infrastructure.persistence.TrackingSummaryMapper;
 import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.FindPublicTrackingQuery;
+import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.FindTrackingQuery;
+import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.FindTrackingsQuery;
+import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.TrackingEventView;
+import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.TrackingListItemView;
+import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.TrackingListView;
+import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.TrackingView;
 import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.PublicTrackingEventView;
 import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.PublicTrackingView;
 import java.util.List;
@@ -87,5 +93,71 @@ public class TrackingQueryHandler {
     private static java.time.Instant estimatedArrival(
             List<TrackingSummaryMapper.TrackingLegRow> legs) {
         return legs.isEmpty() ? null : legs.get(legs.size() - 1).unloadTime();
+    }
+
+    /**
+     * 追跡一覧（S40）。<b>荷主が指定されていれば自社のぶんだけ</b>（US18）。
+     */
+    @QueryHandler
+    public TrackingListView handle(FindTrackingsQuery query) {
+        return new TrackingListView(
+                trackings.findAll(query.shipperId(), query.includeDelivered(), query.limit())
+                        .stream()
+                        .map(row -> new TrackingListItemView(row.trackingNumber(),
+                                row.originUnlocode(), row.destinationUnlocode(),
+                                label(row.transportStatus()), currentLocationOf(row),
+                                estimatedArrival(trackings.findLegs(row.trackingNumber())),
+                                row.lastStatusChangedAt()))
+                        .toList());
+    }
+
+    /**
+     * 追跡詳細（S41）。<b>荷主が指定されていれば、その荷主のものでなければ返さない</b>。
+     *
+     * <p><b>他社のものを「見つからない」として返す。</b> 権限が無いことを伝えると、
+     * 番号が実在することが分かる（公開照会と同じ判断）。</p>
+     */
+    @QueryHandler
+    public TrackingView handle(FindTrackingQuery query) {
+        var row = trackings.findByTrackingNumber(query.trackingNumber());
+        if (row == null || !belongsTo(row, query.shipperId())) {
+            return null;
+        }
+
+        var status = TransportStatus.valueOf(row.transportStatus());
+        List<TrackingEventView> events = history.findHistory(row.trackingNumber()).stream()
+                .map(event -> new TrackingEventView(event.occurredAt(), event.eventType(),
+                        event.previousStatus() == null ? null : label(event.previousStatus()),
+                        label(event.newStatus()), event.location(), event.recordedBy()))
+                .toList();
+
+        return new TrackingView(row.trackingNumber(), row.bookingId(), row.originUnlocode(),
+                row.destinationUnlocode(), row.cargoType(), status.name(), status.label(),
+                currentLocationOf(row), estimatedArrival(trackings.findLegs(row.trackingNumber())),
+                row.lastStatusChangedAt(), events, nextStatuses(status));
+    }
+
+    /**
+     * 手で動かせる先（S41 の選択肢）。
+     *
+     * <p><b>画面が遷移表を持たない。</b> 持つと判定が 2 つになり、集約が断る先を
+     * 画面が出してしまう（押してから断られる）。集約と同じ述語をそのまま呼ぶ。</p>
+     */
+    private static List<String> nextStatuses(TransportStatus status) {
+        return java.util.Arrays.stream(TransportStatus.values())
+                .filter(status::canTransitionTo)
+                .map(Enum::name)
+                .toList();
+    }
+
+    private static boolean belongsTo(TrackingSummaryMapper.TrackingSummaryRow row,
+            String shipperId) {
+        return shipperId == null || shipperId.equals(row.shipperId());
+    }
+
+    /** いまどこか。<b>手動更新で入る分だけ</b>（荷役由来の位置は US15・IT9）。 */
+    private String currentLocationOf(TrackingSummaryMapper.TrackingSummaryRow row) {
+        var events = history.findHistory(row.trackingNumber());
+        return events.isEmpty() ? null : events.get(events.size() - 1).location();
     }
 }

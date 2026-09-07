@@ -60,14 +60,25 @@ public interface TrackingSummaryMapper {
     int deleteLegs(@Param("trackingNumber") String trackingNumber);
 
     /**
-     * 荷主の追跡を新しい順に返す（US18）。<b>自社の貨物だけ</b>。
+     * 追跡一覧（S40）。<b>荷主が指定されていれば自社のぶんだけ</b>。
      *
      * <p><b>絞り込みは SQL で行う。</b> 全件を読んでから捨てると、件数が増えたときに
      * 他社の行がメモリに載り、絞り忘れが情報漏れになる。</p>
+     *
+     * <p>引取済（{@code DELIVERED}）は既定で外す。引き取られた貨物が混ざると、
+     * 一覧全体が「いま追うもの」として信用されなくなる（ui_design.md）。</p>
      */
-    @Select("SELECT " + COLUMNS + " FROM tracking_summary WHERE shipper_id = #{shipperId} "
-            + "ORDER BY initialized_at DESC")
-    List<TrackingSummaryRow> findByShipper(@Param("shipperId") String shipperId);
+    @Select({"<script>",
+        "SELECT " + COLUMNS + " FROM tracking_summary",
+        "<where>",
+        "  <if test='shipperId != null'>AND shipper_id = #{shipperId}</if>",
+        "  <if test='!includeDelivered'>AND transport_status &lt;&gt; 'DELIVERED'</if>",
+        "</where>",
+        " ORDER BY last_status_changed_at DESC LIMIT #{limit}",
+        "</script>"})
+    List<TrackingSummaryRow> findAll(@Param("shipperId") String shipperId,
+            @Param("includeDelivered") boolean includeDelivered,
+            @Param("limit") int limit);
 
     /** 予定の旅程。**積む順**に返す（順序が業務の意味を持つ）。 */
     @Select("SELECT tracking_number, leg_seq, voyage_number, load_unlocode, "
