@@ -25,6 +25,23 @@ public class GatewayConfiguration {
         var registration = new FilterRegistrationBean<>(
                 new JwtAuthenticationFilter(JwtSecret.of(secret, productionLike).value()));
         registration.addUrlPatterns("/*");
+        // レート制限の 1 つ後ろ。ルーティングより前であればよい。
+        registration.setOrder(Ordered.HIGHEST_PRECEDENCE + 1);
+        return registration;
+    }
+
+    /**
+     * 公開照会の総当たり対策（US18 / ui_design.md）。
+     *
+     * <p><b>認証より先に通す。</b> 断ると決めた要求に署名の検証まで走らせると、
+     * 総当たりのあいだ Gateway が一番重い処理をし続ける。公開経路はそもそも
+     * 認証を通らないので、順序を変えても守りは弱くならない。</p>
+     */
+    @Bean
+    public FilterRegistrationBean<PublicTrackingRateLimitFilter> publicTrackingRateLimitFilter(
+            java.time.Clock clock) {
+        var registration = new FilterRegistrationBean<>(new PublicTrackingRateLimitFilter(clock));
+        registration.addUrlPatterns("/*");
         registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
         return registration;
     }

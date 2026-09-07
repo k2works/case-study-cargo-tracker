@@ -3,7 +3,7 @@ type: Plan
 title: "イテレーション 8 計画 - 追跡照会と手動更新"
 tags: [plan]
 status: draft
-generated: { by: claude-code/claude-opus-5, at: 2026-09-07T04:27:06Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-07T04:31:59Z }
 ---
 
 # イテレーション 8 計画 - 追跡照会と手動更新
@@ -116,7 +116,7 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-07T04:27:06Z }
 | T4 | `tracking_event` テーブルと投影。**追記系なので `event_id` を PK にして再配送で増えない**（data-model:43）。**完了**（`@MessageIdentifier` で Axon のイベント識別子をそのまま PK に。実 Axon Server を通す `TrackingStatusUpdateIT` で配線も固定） | US17・US18 | 4h |
 | T5 | **`shipperId` を 3 本のイベント／コマンドに足す**（`TrackingNumberIssuedEvent` → `InitializeTrackingCommand` → `TrackingInitializedEvent`）。**`Cargo` 集約に `shipperId` フィールドと `on(CargoBookedEvent)` での代入を先に足す**（いまは `book()` を通り抜けるだけで保持していない）。`tracking_summary.shipper_id` を作る（**`shipper_cargo_snapshot` は作らない**——元にする予定だったイベントは契約ではなく trackingms から購読できず、購読できる `TrackingInitializedEvent` から作れる内容は `tracking_summary.shipper_id` と同じ。`data-model.md` に反映済み）。**契約 2 本（`InitializeTrackingCommand`・`TrackingInitializedEvent`）はゴールデン JSON を先に赤にする**。**完了**（3 本すべてに `shipperId`。`Cargo` が保持し発行のイベントに載る。`V004` で `tracking_summary.shipper_id` と索引） | US18 | 7h |
 | T6 | 公開照会の読み口（`GET /api/v1/tracking/public/{trackingNumber}`）と **S44 画面**（**既存の `PublicTrackingPage` プレースホルダを埋める**）。**見つからない案内・入力形式のヒント・問い合わせの出口**。**完了**（`FindPublicTrackingQuery` + `PublicTrackingController`。S44 は入力形式の吸収・見つからない案内・429 の案内・問い合わせの出口。認証ヘッダ無しの HTTP も IT で固定） | US18 | 6h |
-| T6b | **総当たり対策**（`ui_design.md:1298`）。同一 IP から 1 分に 10 回を超える公開照会を Gateway で `429` にする。**gatewayms に実装が無い**（`grep` で 0 件）ので新設。**認証不要経路の唯一の防御**で、番号の形式を直すだけでは止まらない | US18 | 4h |
+| T6b | **総当たり対策**（`ui_design.md:1298`）。同一 IP から 1 分に 10 回を超える公開照会を Gateway で `429` にする。**gatewayms に実装が無い**（`grep` で 0 件）ので新設。**認証不要経路の唯一の防御**で、番号の形式を直すだけでは止まらない。**完了**（`PublicTrackingRateLimitFilter`。窓が過ぎれば通り、ヘルスチェックと認証経路は数えない。配線も IT で固定） | US18 | 4h |
 | T7 | **S41 追跡詳細・管理**（状態の履歴・手動更新）と **S40 追跡一覧**（`/tracking`）。**追跡管理者と荷主の両方の入口**（`ui_design.md:144-145` は S40・S41 のロールを「追跡、**荷主（自社のみ）**」と定める）。navbar・ダッシュボード・到達性テストの 4 点を**両ロールで**合わせる | US17・US18 | 7h |
 | T8 | 荷主の絞り込み（`ROLE_SHIPPER` は自社の追跡だけ）。**`X-Shipper-Id` ヘッダは伝播済み**（authms → Gateway）なので、trackingms 側で突き合わせる | US18 | 4h |
 | T9 | 認可の宣言（公開経路・追跡管理者・荷主）と HTTP の配線 | US17・US18 | 3h |
