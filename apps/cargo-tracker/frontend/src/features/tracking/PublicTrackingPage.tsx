@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import {
   ALERT,
@@ -58,7 +58,7 @@ export function PublicTrackingPage() {
     refetchInterval: REFETCH_INTERVAL_MS,
   });
 
-  function submit(event: React.FormEvent) {
+  function submit(event: FormEvent) {
     event.preventDefault();
     // **照会前に形を見る。** 送ってしまうと、レート制限（429）の回数を無駄に使い、
     // 正しい番号を打ち直すころには断られる。

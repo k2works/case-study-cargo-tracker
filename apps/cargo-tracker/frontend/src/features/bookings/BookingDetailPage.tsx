@@ -27,7 +27,6 @@ import {
   canReturnToRouting,
   canUpdateSpecification,
 } from './transitions';
-import { requestRouting } from '@/features/routing/api';
 import { formatBusinessDateTime } from '@/shared/api/businessDate';
 import { display } from '@/features/shippers/api';
 import {
@@ -43,7 +42,7 @@ import {
   returnToRouting,
   routingStatusLabel,
 } from './api';
-import { respondToConditionReview } from '@/features/routing/api';
+import { requestRouting, respondToConditionReview } from '@/features/routing/api';
 import type { BookingView, ItineraryLegView } from './api';
 import type { Pending } from '@/shared/api/pending';
 

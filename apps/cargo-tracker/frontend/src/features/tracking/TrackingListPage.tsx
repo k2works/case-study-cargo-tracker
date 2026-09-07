@@ -47,7 +47,7 @@ export function TrackingListPage() {
           checked={includeDelivered}
           onChange={(event) => setIncludeDelivered(event.target.checked)}
         />
-        引取済も表示
+        <span>引取済も表示</span>
       </label>
 
       {trackings.isError && (
