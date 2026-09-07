@@ -23,6 +23,8 @@ import { VoyageRegisterPage } from '@/features/routing/VoyageRegisterPage';
 import { VoyageDetailPage } from '@/features/routing/VoyageDetailPage';
 import { TrackingListPage } from '@/features/tracking/TrackingListPage';
 import { TrackingDetailPage } from '@/features/tracking/TrackingDetailPage';
+import { HandlingHistoryPage } from '@/features/handling/HandlingHistoryPage';
+import { HandlingRecordPage } from '@/features/handling/HandlingRecordPage';
 
 /**
  * ルートと画面の対応。
@@ -45,6 +47,7 @@ export const PAGES: Record<string, ReactElement> = {
   '/voyages': <VoyageListPage />,
   '/voyages/new': <VoyageRegisterPage />,
   '/tracking': <TrackingListPage />,
+  '/handling': <HandlingHistoryPage />,
   '/worklist/attention': <AttentionListPage />,
   '/admin/users': <AdminUserListPage />,
 };
@@ -95,6 +98,24 @@ export function AppRoutes() {
         {/* 航海詳細（S34）と更新（S33 の編集）は一覧・詳細から開く。
             ナビに載せると「航海詳細」という行き先の無い項目が出る。
             ロールは一覧（S32）と同じ経路設計者に揃える。 */}
+        {/* 荷役の記録（S50）は航海を選んで開く。荷役ロールだけ。 */}
+        <Route
+          path="/handling/voyages/:voyageNumber"
+          element={
+            <RequireRole allow={['ROLE_HANDLER']}>
+              <HandlingRecordPage />
+            </RequireRole>
+          }
+        />
+        {/* 荷役履歴（S51）は荷役と追跡の両方（ui_design.md:236）。 */}
+        <Route
+          path="/handling/:trackingNumber"
+          element={
+            <RequireRole allow={['ROLE_HANDLER', 'ROLE_TRACKER']}>
+              <HandlingHistoryPage />
+            </RequireRole>
+          }
+        />
         {/* 追跡詳細（S41）は一覧から開く。追跡管理者と荷主の両方が使い、
             更新の操作は画面が追跡管理者にだけ出す（ui_design.md:145）。 */}
         <Route

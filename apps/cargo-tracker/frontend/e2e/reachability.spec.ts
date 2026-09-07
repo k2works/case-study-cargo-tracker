@@ -279,3 +279,32 @@ test('営業には追跡の画面がナビに出ず、直打ちすると 403 に
   await expect(page.getByRole('heading', { name: 'この画面を開く権限がありません' }))
     .toBeVisible();
 });
+
+test('荷役でログインすると荷役の画面がナビに出て、開ける', async ({ page }) => {
+  await signInAs(page, 'handler01', ['ROLE_HANDLER']);
+
+  await expect(page.getByRole('navigation')).toContainText('荷役');
+
+  await page.goto('/handling');
+  await expect(page.getByRole('heading', { name: '荷役履歴' })).toBeVisible();
+});
+
+test('追跡も荷役履歴を開ける（問い合わせを受けて現場の記録を確かめる）', async ({ page }) => {
+  // **ui_design は S51 のロールを「荷役、追跡」と定める。**
+  await signInAs(page, 'tracker01', ['ROLE_TRACKER']);
+
+  await expect(page.getByRole('navigation')).toContainText('荷役');
+
+  await page.goto('/handling');
+  await expect(page.getByRole('heading', { name: '荷役履歴' })).toBeVisible();
+});
+
+test('営業には荷役の画面がナビに出ず、直打ちすると 403 になる', async ({ page }) => {
+  await signInAs(page, 'sales01', ['ROLE_SALES']);
+
+  await expect(page.getByRole('navigation')).not.toContainText('荷役');
+
+  await page.goto('/handling');
+  await expect(page.getByRole('heading', { name: 'この画面を開く権限がありません' }))
+    .toBeVisible();
+});
