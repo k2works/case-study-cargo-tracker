@@ -3,7 +3,7 @@ type: Plan
 title: "イテレーション 7 完了報告書"
 tags: [plan]
 status: draft
-generated: { by: claude-code/claude-opus-5, at: 2026-09-06T22:39:06Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-07T00:07:45Z }
 ---
 
 # イテレーション 7 完了報告書
@@ -75,6 +75,7 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-06T22:39:06Z }
 | フロントカバレッジ | 行 96.98% / 分岐 86.19% |
 | クラスタ E2E | **15/15 緑**（Pod 作り直し後 1 度空回ししてから測定） |
 | SonarQube | **バックエンド PASSED・フロントエンド PASSED** |
+| CI | **success**（最終コミット `6d0bfd5ca` まで確認） |
 | OKF | ERROR 0 |
 
 ## 実装して初めて分かった欠陥
