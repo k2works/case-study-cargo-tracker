@@ -740,6 +740,45 @@ export default function (gulp) {
       });
   }));
 
+  /**
+   * クラスタに積み上がった検査用データの量を出す（IT8 H.3）。
+   *
+   * **クラスタは作り直さずに使い続ける。** Event Store が真実なので投影だけ
+   * 消しても戻り、E2E を回すたびにデータが増える。経路探索は推奨順の上位 20 件で
+   * 打ち切る（ADR-0007）ので、**同じ区間の航海が増えるほど「どの候補が出るか」が
+   * 読めなくなる**。E2E 自体は先頭の候補を選ぶ形にして積み上がりに強くしたが
+   * （検査で固定）、量そのものは見えるようにしておく。
+   *
+   * 消す手段は用意しない。**投影だけ消してもリプレイで戻る**ので、
+   * 作り直すならクラスタごと（`k8s:down` → `k8s:setup`）である。
+   */
+  gulp.task('e2e:data', (done) => {
+    const THRESHOLD = 200;
+    try {
+      const out = psql(
+        'routing_read_db',
+        `SELECT departure_unlocode || ' -> ' || arrival_unlocode AS lane, count(*) ` +
+          `FROM carrier_movement GROUP BY 1 ORDER BY 2 DESC LIMIT 5`,
+      );
+      console.log('=== 区間ごとの航海数（多い順） ===');
+      console.log(out);
+      const max = Math.max(
+        0,
+        ...out.split('\n').map((line) => Number((line.match(/\|\s+(\d+)\s*$/) ?? [])[1] ?? 0)),
+      );
+      if (max >= THRESHOLD) {
+        console.log(
+          `同じ区間の航海が ${max} 本あります（閾値 ${THRESHOLD}）。\n` +
+            '  探索は上位 20 件で打ち切るので、候補の中身が読みにくくなっています。\n' +
+            '  作り直すならクラスタごと（npx gulp k8s:down && npx gulp k8s:setup）。',
+        );
+      }
+    } catch (e) {
+      console.log(`  読めません: ${e.message.split('\n')[0]}`);
+    }
+    done();
+  });
+
   /** kind クラスタを消す。取り消せないので名前を明示する。 */
   gulp.task('k8s:down', (done) => {
     console.log(sh(`kind delete cluster --name ${KIND_CLUSTER}`));
