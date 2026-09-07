@@ -4,7 +4,7 @@ title: "ドメインモデル設計 - 国際貨物輸送管理システム（CQR
 description: "CQRS / Event Sourcing 版 Cargo Tracker のドメインモデル設計。6 コンテキストの集約・不変条件・コマンド・イベント（内部 / 契約）・状態遷移・Reaction Handler を、イベントを永続化フォーマットとして定義する。"
 tags: [design,domain-model,ddd,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-06T15:08:45Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-07T00:25:14Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -1219,13 +1219,13 @@ User *-- "0..1" UserShipperLink
 
 | イベント | 発行 | 購読と用途 | 主なフィールド |
 | :--- | :--- | :--- | :--- |
-| `TrackingNumberIssuedEvent` | bookingms | trackingms（Reaction Handler → 追跡開始）、handlingms（`CargoSnapshot`） | `bookingId`, `trackingNumber`, `origin`, `destination`, `cargoType`, `legs[]`, `issuedAt` |
+| `TrackingNumberIssuedEvent` | bookingms | trackingms（Reaction Handler → 追跡開始）、handlingms（`CargoSnapshot`） | `bookingId`, `trackingNumber`, **`shipperId`**, `origin`, `destination`, `cargoType`, `legs[]`, `issuedAt`。**`shipperId` は IT8（US18）で足す**——trackingms の `shipper_cargo_snapshot` は荷主 ID をここからしか得られない |
 | `CargoCancelledEvent` | bookingms | trackingms（陸揚げ地を記録。閉じるのは当該港の `UNLOAD` 後）、handlingms（`CargoSnapshot` 更新）、billingms（キャンセル料） | `bookingId`, `trackingNumber?`, `statusAtCancel`, `dischargeLocation?`, `cancelledAt` |
 | `HandlingActivityRegisteredEvent` | handlingms | trackingms（`TrackingReactionHandler` が状態を進める・誤配検知）、bookingms（投影に写す。`BookingReactionHandler` が `RecordHandlingCommand`） | `activityId`, `trackingNumber`, `bookingId`, `type`, `location`, `voyageNumber?`, `completedAt`, `offRoute` |
 | `HandlingActivityVoidedEvent` | handlingms | trackingms（`RevertTrackingCommand`）、bookingms（`RevertHandlingCommand`）。元の記録は残る | `activityId`, `trackingNumber`, `bookingId`, `type`, `location`, `reason`, `voidedBy`, `voidedAt` |
 | `CustomsStatusChangedEvent` | handlingms | trackingms（`HELD` で例外起票）、billingms（留置の調整根拠） | `declarationNumber`, `trackingNumber`, `from`, `to`, `reason`, `heldBusinessDays?`（`HELD` から出るとき）, `changedAt` |
 | `CargoDeliveredEvent` | trackingms | billingms（`BillingReactionHandler` 開始）、bookingms（`DELIVERED`） | `trackingNumber`, `bookingId`, `deliveredAt`, `location` |
-| `TrackingInitializedEvent` | trackingms | bookingms（`BookingReactionHandler`。連鎖の終わり） | `bookingId`, `trackingNumber`, `initializedAt` |
+| `TrackingInitializedEvent` | trackingms | bookingms（`BookingReactionHandler`。連鎖の終わり） | `bookingId`, `trackingNumber`, **`shipperId`**, `originUnLocode`, `destinationUnLocode`, `cargoType`, `legs[]`, `initializedAt`。**bookingms が読むのは識別子だけ**だが、**trackingms 自身の投影はこのイベントからしか作れない**ので、コマンドで届いた値を載せ直す（IT7 で実測。載せずに実装して投影が作れなかった） |
 | `TrackingClosedEvent` | trackingms | bookingms（キャンセル完了を投影に写す） | `bookingId`, `trackingNumber`, `closedAt`, `reason` |
 | `PaymentRecordedEvent` | billingms | bookingms（`SETTLED`） | `invoiceId`, `bookingId`, `paidAt`, `amount` |
 | `ShipperRegisteredEvent` | bookingms | billingms（`shipper_contract_snapshot` を作る） | `shipperId`, `shipperCode`, `shipperType`, `name`, `email`, `phone`, `address`, `corporateContract?`, `registeredAt`。`name` / `email` / `phone` / `address` は荷主ごとの鍵で暗号化して載せる（crypto-shredding、ADR-0003） |

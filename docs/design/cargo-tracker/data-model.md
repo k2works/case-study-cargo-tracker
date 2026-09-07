@@ -4,7 +4,7 @@ title: "データモデル設計 - 国際貨物輸送管理システム（CQRS /
 description: "CQRS / Event Sourcing 版 Cargo Tracker のデータモデル設計。Event Store は Axon Server に任せ、サービスごとの投影テーブル・Axon 管理テーブル・Auth の状態テーブルを ER 図とテーブル定義で示し、Processing Group との対応とリプレイ前提のマイグレーション方針を定める。"
 tags: [design,data-model,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-06T15:08:45Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-07T00:25:14Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -565,6 +565,8 @@ ts ||--o{ tx
 
 | テーブル | 元になるイベント | 制約・インデックス | 備考 |
 | :--- | :--- | :--- | :--- |
+**`shipper_id`・`tracking_event`・`shipper_cargo_snapshot` は IT8（US18・US17）で作ります。** `TrackingNumberIssuedEvent` → `InitializeTrackingCommand` → `TrackingInitializedEvent` の 3 本すべてに `shipperId` を足し、trackingms が荷主 ID を得られるようにします（1 本でも落とすとそこで値が消えます）。`current_unlocode` は**手動更新（US17）で入る分だけ**で、荷役由来の位置は US15（IT9）です。
+
 **`shipper_id` は IT7 では作っていません。** `TrackingInitializedEvent` に荷主 ID が無く、trackingms はそれを得る手段を持たないためです（載せる相手のいない `NOT NULL` は作れません）。荷主向け追跡（US18・IT8）で契約イベントに `shipperId` を足すときに、この列も足します。**荷役・例外・キャンセルの列も、それを書くイベントを実装する IT で足します**——中身の無い列を先に作ると、画面が読んで「常に 0 件」を出し、動いていると誤解されます。IT7 で作ったのは `tracking_number`・`booking_id`・`cargo_type`・端点・`transport_status`・日時だけです。
 
 **予定の旅程は `tracking_leg` に持ちます**（IT7 で新設。`tracking_number` + `leg_seq` が主キーで、**積む順**に並びます）。荷役（US15・IT9）が予定と実績を照合する材料です。投影は入れ直しの前に消します（追記だけにすると、リプレイで区間が倍になります）。
