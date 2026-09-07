@@ -162,11 +162,7 @@ public class TrackingQueryHandler {
      * 無い IT では行き止まり</b>になる（例外中は手で動かせない）。</p>
      */
     private static List<String> nextStatuses(TransportStatus status) {
-        return java.util.Arrays.stream(TransportStatus.values())
-                .filter(status::canTransitionTo)
-                .filter(TransportStatus::isSetByHand)
-                .map(Enum::name)
-                .toList();
+        return TransportStatus.manualTransitionsFrom(status).stream().map(Enum::name).toList();
     }
 
     private static boolean belongsTo(TrackingSummaryMapper.TrackingSummaryRow row,

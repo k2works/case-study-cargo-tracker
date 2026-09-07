@@ -93,4 +93,22 @@ class TransportStatusTest {
     void usesTheCanonicalLabel(TransportStatus status) {
         assertThat(status.label()).isEqualTo(LABELS.get(status));
     }
+
+    @Test
+    @DisplayName("例外の対応中は手で動かせる先が無い（押しても断られるボタンを出さない）")
+    void allowsNoManualTransitionWhileAnExceptionIsOpen() {
+        // 集約は例外中の手動更新を無条件で断る。読み口が canTransitionTo だけで
+        // 選択肢を作ると、6 個のボタンが並んでどれを押しても断られる（IT8 レビュー）。
+        assertThat(TransportStatus.manualTransitionsFrom(TransportStatus.EXCEPTION)).isEmpty();
+    }
+
+    @ParameterizedTest
+    @EnumSource(TransportStatus.class)
+    @DisplayName("手で動かせる先は、集約が受け付ける先と一致する")
+    void manualTransitionsMatchWhatTheAggregateAccepts(TransportStatus from) {
+        for (TransportStatus to : TransportStatus.manualTransitionsFrom(from)) {
+            assertThat(from.canTransitionTo(to)).as("%s → %s", from, to).isTrue();
+            assertThat(to.isSetByHand()).as("%s は手で入れられない", to).isTrue();
+        }
+    }
 }

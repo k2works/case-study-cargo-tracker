@@ -6,6 +6,11 @@
     <!--
       リプレイで行が増えない形にする。追跡番号が主キーなので、同じイベントを
       2 度読んでも上書きになる（IT6 の「追記専用の行はリプレイで増える」）。
+
+      **状態と最終更新は上書きしない。** ここで書くのは「追跡が始まった」ことで、
+      そのときの状態（未受領）は挿入のときだけ正しい。開始イベントだけが再配送
+      されると（少なくとも 1 回配送では起こりうる）、履歴は受領済を持ったまま
+      一覧と詳細だけが未受領に巻き戻る（IT8 のレビューで指摘）。
     -->
     <insert id="insert">
         INSERT INTO tracking_summary (
@@ -23,11 +28,8 @@
             origin_unlocode = EXCLUDED.origin_unlocode,
             destination_unlocode = EXCLUDED.destination_unlocode,
             cargo_type = EXCLUDED.cargo_type,
-            transport_status = EXCLUDED.transport_status,
             initialized_at = EXCLUDED.initialized_at,
-            last_status_changed_at = EXCLUDED.last_status_changed_at,
-            projected_at = EXCLUDED.projected_at,
-            last_event_id = EXCLUDED.last_event_id
+            projected_at = EXCLUDED.projected_at
     </insert>
 
     <insert id="insertLegs">

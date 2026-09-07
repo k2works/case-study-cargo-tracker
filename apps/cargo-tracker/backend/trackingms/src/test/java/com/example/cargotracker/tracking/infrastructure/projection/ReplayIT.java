@@ -89,4 +89,25 @@ class ReplayIT extends AbstractAxonIntegrationTest {
 
         assertThat(history.findHistory(trackingNumber)).hasSize(1);
     }
+
+    @Test
+    @DisplayName("開始だけが再配送されても、現在の状態が巻き戻らない")
+    void redeliveringInitializationDoesNotRewindStatus() {
+        // **少なくとも 1 回配送では起こりうる順序**（開始 → 更新 → 開始）。
+        // 履歴は受領済を持ったまま、一覧と詳細だけが未受領に戻ると、
+        // 同じ画面の中で食い違って見える。
+        String trackingNumber = "T-R-" + System.nanoTime();
+        var initialized = initialized(trackingNumber, "b-" + System.nanoTime());
+        projection.on(initialized);
+        projection.on(new TransportStatusUpdatedEvent(trackingNumber,
+                TransportStatus.NOT_RECEIVED, TransportStatus.RECEIVED,
+                StatusUpdateSource.MANUAL, "JPTYO",
+                Instant.parse("2026-09-11T02:00:00Z"), "tracker-1", AT), "evt-rewind");
+
+        projection.on(initialized);
+
+        assertThat(trackings.findByTrackingNumber(trackingNumber).transportStatus())
+                .as("開始の再配送で現在の状態を書き戻さない")
+                .isEqualTo("RECEIVED");
+    }
 }

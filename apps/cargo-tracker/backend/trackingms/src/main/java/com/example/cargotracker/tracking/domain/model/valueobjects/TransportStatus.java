@@ -53,6 +53,29 @@ public enum TransportStatus {
     }
 
     /**
+     * その状態から<b>手で動かせる先</b>（US17）。<b>判定はここ 1 か所</b>。
+     *
+     * <p>集約（{@code updateStatusManually}）も読み口（画面の選択肢）もこれを呼ぶ。
+     * 別々に持つと、画面が「押しても断られる先」を出す（実際に IT8 のレビューで
+     * 出た——例外発生中の追跡に 6 個のボタンが並び、どれを押しても断られた）。</p>
+     *
+     * <p><b>例外の対応中は動かせない</b>（不変条件 5 の下地）。解決は例外の側の
+     * 操作で行い、そのとき例外前の状態へ戻る。</p>
+     */
+    public static Set<TransportStatus> manualTransitionsFrom(TransportStatus status) {
+        if (status == EXCEPTION) {
+            return EnumSet.noneOf(TransportStatus.class);
+        }
+        EnumSet<TransportStatus> allowed = EnumSet.noneOf(TransportStatus.class);
+        for (TransportStatus next : values()) {
+            if (status.canTransitionTo(next) && next.isSetByHand()) {
+                allowed.add(next);
+            }
+        }
+        return allowed;
+    }
+
+    /**
      * 追跡管理者が<b>手で選んでよい状態か</b>（US17）。
      *
      * <p><b>誤配は荷役が、例外発生は例外の起票が決める。</b> 手で選べるようにすると、

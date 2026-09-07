@@ -149,9 +149,12 @@ public class TrackingSteps {
 
     @ならば("断られる")
     public void 断られる() {
-        assertThat(lastResponse.getStatusCode().is2xxSuccessful())
-                .as("遷移表が許さない更新は通してはならない")
-                .isFalse();
+        // **状態コードと理由まで見る。** 2xx でないことだけを見ると、404 でも
+        // 500 でも緑になり「遷移表が許さないから断った」ことを判別しない。
+        assertThat(lastResponse.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(lastResponse.getBody().get("message").toString())
+                .contains("未受領")
+                .contains("引取済");
     }
 
     @もし("別の荷主として追跡を開く")
@@ -159,8 +162,15 @@ public class TrackingSteps {
         lastResponse = detail("SHP-000999");
     }
 
+    /**
+     * 追跡詳細を開く。<b>Gateway が実際に送る形</b>で送る。
+     *
+     * <p>ロールと荷主 ID は Gateway が JWT から取り出して付ける。片方だけを
+     * 送る検査にすると、本番では起きない組合せで緑になる。</p>
+     */
     private ResponseEntity<JsonMap> detail(String shipperId) {
-        var request = rest.get().uri(url("/api/v1/tracking/trackings/" + trackingNumber));
+        var request = rest.get().uri(url("/api/v1/tracking/trackings/" + trackingNumber))
+                .header("X-Auth-Roles", shipperId == null ? "ROLE_TRACKER" : "ROLE_SHIPPER");
         if (shipperId != null) {
             request = request.header("X-Auth-Shipper-Id", shipperId);
         }

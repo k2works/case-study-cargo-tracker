@@ -31,8 +31,13 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * <p><b>絞り込みはヘッダの荷主 ID で行う。</b> Gateway が JWT から取り出して
  * {@code X-Auth-Shipper-Id} で伝える。クライアントの指定を信じると、他社の追跡まで
- * 見えてしまう。<b>ロールも同じくヘッダから読む</b>——追跡管理者には荷主 ID が
- * 付かないので、付いていない要求を「全件」として扱う。</p>
+ * 見えてしまう。</p>
+ *
+ * <p><b>「荷主 ID が無ければ全件」にしない。</b> 荷主 ID の紐付いていない
+ * {@code ROLE_SHIPPER} の利用者が 1 人でも作られると、その人に全社の追跡が見える
+ * （{@code user_shipper_link} は NULL を許し、JWT も claim ごと落とす）。
+ * <b>判断の材料はロール</b>にする——{@code ROLE_SHIPPER} を名乗るなら荷主 ID は必須で、
+ * 無ければ断る。フェイルオープンにしない。</p>
  */
 @RestController
 @RequestMapping("/api/v1/tracking/trackings")
@@ -55,15 +60,51 @@ public class TrackingController {
             Instant occurredAt) {
     }
 
-    /** 追跡一覧（S40）。荷主 ID が付いていれば自社のぶんだけ。 */
+    /** 一覧が一度に返す上限。**上限を超える指定は切り詰める**（1 行ごとに問い合わせるため）。 */
+    private static final int MAX_LIMIT = 200;
+
+    /** 追跡一覧（S40）。荷主なら自社のぶんだけ。 */
     @GetMapping
     public ResponseEntity<TrackingListView> list(
             @RequestHeader(value = "X-Auth-Shipper-Id", required = false) String shipperId,
+            @RequestHeader(value = "X-Auth-Roles", required = false) String roles,
             @RequestParam(defaultValue = "false") boolean includeDelivered,
             @RequestParam(defaultValue = "50") int limit) {
         return ResponseEntity.ok(queries.query(
-                new FindTrackingsQuery(shipperId, includeDelivered, limit),
+                new FindTrackingsQuery(shipperOf(roles, shipperId), includeDelivered,
+                        clamped(limit)),
                 TrackingListView.class));
+    }
+
+    /**
+     * 何件まで返すか。<b>負値と極端な大きさを断る</b>。
+     *
+     * <p>負値はそのまま SQL に渡ると落ちて 500 になり、「壊れた」と読まれる。
+     * 極端に大きい値は 1 行ごとの問い合わせを増やすだけで、画面には出せない。</p>
+     */
+    private static int clamped(int limit) {
+        return Math.clamp(limit, 1, MAX_LIMIT);
+    }
+
+    /**
+     * 絞り込みに使う荷主 ID。<b>荷主を名乗るなら必須</b>。
+     *
+     * @return 追跡管理者なら {@code null}（全件）、荷主ならその荷主 ID
+     * @throws org.springframework.web.server.ResponseStatusException 荷主なのに荷主 ID が無い
+     */
+    private static String shipperOf(String roles, String shipperId) {
+        boolean declaresShipper = roles != null && roles.contains("ROLE_SHIPPER");
+        boolean hasShipperId = shipperId != null && !shipperId.isBlank();
+
+        if (declaresShipper && !hasShipperId) {
+            // 紐付けが済んでいない荷主。全件を見せるより断るほうが害が小さい。
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.FORBIDDEN,
+                    "荷主の紐付けがありません。担当者にお問い合わせください");
+        }
+        // **荷主 ID が来ていれば、ロールが読めなくても絞る。** どちらか一方が
+        // 欠けたときに広い側へ倒すと、欠けさせるだけで他社の追跡が見える。
+        return hasShipperId ? shipperId : null;
     }
 
     /**
@@ -74,9 +115,11 @@ public class TrackingController {
      */
     @GetMapping("/{trackingNumber}")
     public ResponseEntity<TrackingView> find(@PathVariable String trackingNumber,
-            @RequestHeader(value = "X-Auth-Shipper-Id", required = false) String shipperId) {
+            @RequestHeader(value = "X-Auth-Shipper-Id", required = false) String shipperId,
+            @RequestHeader(value = "X-Auth-Roles", required = false) String roles) {
         TrackingView view = queries.query(
-                new FindTrackingQuery(trackingNumber, shipperId), TrackingView.class);
+                new FindTrackingQuery(trackingNumber, shipperOf(roles, shipperId)),
+                TrackingView.class);
         return view == null ? ResponseEntity.notFound().build() : ResponseEntity.ok(view);
     }
 

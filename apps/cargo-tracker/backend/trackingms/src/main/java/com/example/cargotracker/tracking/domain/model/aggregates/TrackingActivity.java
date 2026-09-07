@@ -103,17 +103,19 @@ public class TrackingActivity {
         if (command.newStatus() == null) {
             throw new BusinessRuleViolation("新しい状態は必須です");
         }
-        if (!command.newStatus().isSetByHand()) {
-            // 誤配は荷役が、例外発生は例外の起票が決める。手で入れると、起きて
-            // いない誤配を記録でき、例外発生は解決の画面が無いあいだ行き止まりになる。
-            throw new BusinessRuleViolation(
-                    command.newStatus().label() + " は手では入れられません");
-        }
         if (status == TransportStatus.EXCEPTION) {
             throw new BusinessRuleViolation(
                     "例外の対応中は状態を手で動かせません。例外を解決してください");
         }
-        if (!status.canTransitionTo(command.newStatus())) {
+        if (!command.newStatus().isSetByHand()) {
+            // 誤配は荷役が、例外発生は例外の起票が決める。手で入れると、起きて
+            // いない誤配を記録できてしまう。
+            throw new BusinessRuleViolation(
+                    command.newStatus().label() + " は手では入れられません");
+        }
+        // **読み口と同じ述語で判断する。** 別々に持つと、画面が「押しても断られる先」
+        // を出す（IT8 のレビューで実際に出た）。
+        if (!TransportStatus.manualTransitionsFrom(status).contains(command.newStatus())) {
             throw new IllegalTransition(status.label() + " から "
                     + command.newStatus().label() + " へは動かせません");
         }

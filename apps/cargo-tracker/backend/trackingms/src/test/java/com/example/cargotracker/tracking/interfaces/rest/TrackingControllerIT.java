@@ -83,9 +83,16 @@ class TrackingControllerIT extends AbstractAxonIntegrationTest {
     }
 
     private ResponseEntity<JsonMap> get(String path, String shipperId) {
+        return get(path, shipperId, shipperId == null ? "ROLE_TRACKER" : "ROLE_SHIPPER");
+    }
+
+    private ResponseEntity<JsonMap> get(String path, String shipperId, String roles) {
         var request = rest.get().uri("http://localhost:" + port + path);
         if (shipperId != null) {
             request = request.header("X-Auth-Shipper-Id", shipperId);
+        }
+        if (roles != null) {
+            request = request.header("X-Auth-Roles", roles);
         }
         return request.retrieve().toEntity(JsonMap.class);
     }
@@ -243,5 +250,27 @@ class TrackingControllerIT extends AbstractAxonIntegrationTest {
                 assertThat(get("/api/v1/tracking/trackings/" + trackingNumber, null).getBody())
                         .containsEntry("statusLabel", "積込済")
                         .containsEntry("currentUnLocode", "JPTYO"));
+    }
+
+    @Test
+    @DisplayName("荷主 ID の紐付いていない荷主には見せない（フェイルオープンにしない）")
+    void refusesShippersWithoutAShipperId() {
+        // **「荷主 ID が無ければ全件」にしない。** 紐付けの無い ROLE_SHIPPER が
+        // 1 人でも作られると、その人に全社の追跡が見える（user_shipper_link は
+        // NULL を許し、JWT も claim ごと落とす）。
+        given("SHP-000004");
+
+        assertThat(get("/api/v1/tracking/trackings", null, "ROLE_SHIPPER").getStatusCode())
+                .isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(get("/api/v1/tracking/trackings/TRK-ANY0000001", null, "ROLE_SHIPPER")
+                .getStatusCode())
+                .isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    @DisplayName("負の件数でも壊れない（500 にしない）")
+    void clampsTheLimit() {
+        assertThat(get("/api/v1/tracking/trackings?limit=-1", null).getStatusCode())
+                .isEqualTo(HttpStatus.OK);
     }
 }

@@ -148,6 +148,17 @@ describe('S41 追跡詳細・管理', () => {
     expect(screen.getByText(/これ以上状態は動きません/)).toBeInTheDocument();
   });
 
+  it('例外の対応中も操作を出さない（押しても断られるボタンを並べない）', async () => {
+    // サーバは例外中の nextStatuses を空で返す。画面が遷移表を持たないので、
+    // ここは「空なら操作を出さない」だけを守ればよい。
+    respondWith(tracking({ status: 'EXCEPTION', statusLabel: '例外発生', nextStatuses: [] }));
+
+    renderDetail();
+
+    await screen.findByText('例外発生');
+    expect(screen.queryByRole('button', { name: '状態を更新する' })).not.toBeInTheDocument();
+  });
+
   it('一覧と予約に戻れる', async () => {
     respondWith(tracking());
 
