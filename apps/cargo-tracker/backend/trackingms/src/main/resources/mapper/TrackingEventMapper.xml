@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.tracking.infrastructure.persistence.TrackingEventMapper">
+
+    <!--
+      追記の表なので、リプレイで増えないのは主キーの働きによる。主キーは
+      元イベントの識別子で、再配送も読み直しも同じ行に落ちる（DO NOTHING）。
+      内容は書き換えない——同じイベントの内容は変わらないので、上書きする理由がない。
+    -->
+    <insert id="insert">
+        INSERT INTO tracking_event (
+            event_id, tracking_number, event_type, previous_status, new_status,
+            location, occurred_at, recorded_by, projected_at
+        ) VALUES (
+            #{eventId}, #{trackingNumber}, #{eventType}, #{previousStatus}, #{newStatus},
+            #{location}, #{occurredAt}, #{recordedBy}, #{projectedAt}
+        )
+        ON CONFLICT (event_id) DO NOTHING
+    </insert>
+
+</mapper>

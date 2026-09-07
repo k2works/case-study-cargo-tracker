@@ -4,6 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.cargotracker.shared.contract.event.TrackingInitializedEvent;
 import com.example.cargotracker.shared.testing.AbstractAxonIntegrationTest;
+import com.example.cargotracker.tracking.domain.model.events.TransportStatusUpdatedEvent;
+import com.example.cargotracker.tracking.domain.model.valueobjects.StatusUpdateSource;
+import com.example.cargotracker.tracking.domain.model.valueobjects.TransportStatus;
+import com.example.cargotracker.tracking.infrastructure.persistence.TrackingEventMapper;
 import com.example.cargotracker.tracking.infrastructure.persistence.TrackingSummaryMapper;
 import java.time.Instant;
 import java.util.List;
@@ -36,6 +40,9 @@ class ReplayIT extends AbstractAxonIntegrationTest {
     @Autowired
     private TrackingSummaryMapper trackings;
 
+    @Autowired
+    private TrackingEventMapper history;
+
     private static TrackingInitializedEvent initialized(String trackingNumber, String bookingId) {
         return new TrackingInitializedEvent(trackingNumber, bookingId, "JPTYO", "USNYC",
                 "GENERAL",
@@ -61,5 +68,25 @@ class ReplayIT extends AbstractAxonIntegrationTest {
         assertThat(trackings.findLegs(trackingNumber))
                 .as("追記だけにすると、リプレイで区間が倍になる")
                 .hasSize(2);
+    }
+
+    @Test
+    @DisplayName("状態更新を 2 度読んでも履歴は 1 行のまま（追記の表は主キーで守る）")
+    void replayingStatusUpdateDoesNotDuplicateHistory() {
+        // **投影テーブルが冪等でも、受け皿は対象外**（IT6 の「追記専用の行は
+        // リプレイで増える」）。履歴は追記なので、主キーが元イベントの識別子で
+        // ないかぎり読み直すたびに積み上がる。
+        String trackingNumber = "T-R-" + System.nanoTime();
+        projection.on(initialized(trackingNumber, "b-" + System.nanoTime()));
+
+        var event = new TransportStatusUpdatedEvent(trackingNumber,
+                TransportStatus.NOT_RECEIVED, TransportStatus.RECEIVED,
+                StatusUpdateSource.MANUAL, "JPTYO",
+                Instant.parse("2026-09-11T02:00:00Z"), "tracker-1", AT);
+
+        projection.on(event, "evt-replay");
+        projection.on(event, "evt-replay");
+
+        assertThat(history.findHistory(trackingNumber)).hasSize(1);
     }
 }

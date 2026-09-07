@@ -1,11 +1,14 @@
 package com.example.cargotracker.tracking.infrastructure.projection;
 
 import com.example.cargotracker.shared.contract.event.TrackingInitializedEvent;
+import com.example.cargotracker.tracking.domain.model.events.TransportStatusUpdatedEvent;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TransportStatus;
+import com.example.cargotracker.tracking.infrastructure.persistence.TrackingEventMapper;
 import com.example.cargotracker.tracking.infrastructure.persistence.TrackingSummaryMapper;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.List;
+import org.axonframework.messaging.core.annotation.MessageIdentifier;
 import org.axonframework.messaging.eventhandling.annotation.EventHandler;
 import org.springframework.stereotype.Component;
 
@@ -22,10 +25,13 @@ import org.springframework.stereotype.Component;
 public class TrackingProjection {
 
     private final TrackingSummaryMapper trackings;
+    private final TrackingEventMapper history;
     private final Clock clock;
 
-    public TrackingProjection(TrackingSummaryMapper trackings, Clock clock) {
+    public TrackingProjection(TrackingSummaryMapper trackings, TrackingEventMapper history,
+            Clock clock) {
         this.trackings = trackings;
+        this.history = history;
         this.clock = clock;
     }
 
@@ -53,5 +59,29 @@ public class TrackingProjection {
                     leg.loadTime(), leg.unloadTime()));
         }
         trackings.insertLegs(event.trackingNumber(), rows);
+    }
+
+    /**
+     * 状態が変わった（US17 §受入基準 3）。<b>一覧の現在値と履歴の 1 行を対で書く</b>。
+     *
+     * <p><b>履歴の主キーは元イベントの識別子</b>（{@link MessageIdentifier}）。追記の表なので
+     * 採番すると、投影を読み直すたびに同じ内容の行が積み上がる（IT2 で実在した欠陥）。</p>
+     *
+     * <p><b>直前の行を引かない。</b>「何から何へ」はイベントが持って来る。引くと、
+     * 再配送や順序の入れ替わりで壊れる。</p>
+     */
+    @EventHandler
+    public void on(TransportStatusUpdatedEvent event, @MessageIdentifier String eventId) {
+        var now = clock.instant();
+        var current = trackings.findByTrackingNumber(event.trackingNumber());
+        if (current != null) {
+            trackings.updateStatus(event.trackingNumber(), event.newStatus().name(),
+                    event.occurredAt(), now, eventId);
+        }
+        history.insert(new TrackingEventMapper.TrackingEventRow(eventId, event.trackingNumber(),
+                event.source().eventType(),
+                event.previousStatus() == null ? null : event.previousStatus().name(),
+                event.newStatus().name(), event.location(), event.occurredAt(),
+                event.updatedBy(), now));
     }
 }

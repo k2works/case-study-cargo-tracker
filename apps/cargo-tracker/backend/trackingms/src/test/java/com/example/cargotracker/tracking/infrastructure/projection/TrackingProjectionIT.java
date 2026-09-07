@@ -4,6 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.cargotracker.shared.contract.event.TrackingInitializedEvent;
 import com.example.cargotracker.shared.testing.AbstractAxonIntegrationTest;
+import com.example.cargotracker.tracking.domain.model.events.TransportStatusUpdatedEvent;
+import com.example.cargotracker.tracking.domain.model.valueobjects.StatusUpdateSource;
+import com.example.cargotracker.tracking.domain.model.valueobjects.TransportStatus;
+import com.example.cargotracker.tracking.infrastructure.persistence.TrackingEventMapper;
 import com.example.cargotracker.tracking.infrastructure.persistence.TrackingSummaryMapper;
 import java.time.Instant;
 import java.util.List;
@@ -30,6 +34,9 @@ class TrackingProjectionIT extends AbstractAxonIntegrationTest {
 
     @Autowired
     private TrackingSummaryMapper trackings;
+
+    @Autowired
+    private TrackingEventMapper history;
 
     private static TrackingInitializedEvent initialized(String trackingNumber, String bookingId) {
         return new TrackingInitializedEvent(trackingNumber, bookingId, "JPTYO", "USNYC",
@@ -75,4 +82,66 @@ class TrackingProjectionIT extends AbstractAxonIntegrationTest {
                 .containsExactly("V-MOL-001", "V-ONE-002");
     }
 
+
+    // ---- US17 §3 状態の履歴（T4） ----
+
+    private static TransportStatusUpdatedEvent updated(String trackingNumber,
+            TransportStatus from, TransportStatus to, Instant occurredAt) {
+        return new TransportStatusUpdatedEvent(trackingNumber, from, to,
+                StatusUpdateSource.MANUAL, "JPTYO", occurredAt, "tracker-1", AT);
+    }
+
+    @Test
+    @DisplayName("US17 §3: 更新すると履歴に 1 行残り、一覧の現在値も変わる")
+    void recordsHistoryAndUpdatesCurrentStatus() {
+        String trackingNumber = "T-H-" + System.nanoTime();
+        projection.on(initialized(trackingNumber, "b-" + System.nanoTime()));
+
+        projection.on(updated(trackingNumber, TransportStatus.NOT_RECEIVED,
+                TransportStatus.RECEIVED, Instant.parse("2026-09-11T02:00:00Z")), "evt-1");
+
+        // **記録と読み口は対で出す。** 履歴だけ書いて一覧が古いままだと、
+        // 同じ画面の中で食い違って見える。
+        assertThat(trackings.findByTrackingNumber(trackingNumber).transportStatus())
+                .isEqualTo("RECEIVED");
+
+        var rows = history.findHistory(trackingNumber);
+        assertThat(rows).hasSize(1);
+        assertThat(rows.get(0).eventType()).isEqualTo("MANUAL");
+        assertThat(rows.get(0).previousStatus()).isEqualTo("NOT_RECEIVED");
+        assertThat(rows.get(0).newStatus()).isEqualTo("RECEIVED");
+        assertThat(rows.get(0).location()).isEqualTo("JPTYO");
+        assertThat(rows.get(0).recordedBy()).isEqualTo("tracker-1");
+    }
+
+    @Test
+    @DisplayName("履歴は起きた順に並ぶ（記録した順ではない）")
+    void ordersHistoryByWhenItHappened() {
+        String trackingNumber = "T-H-" + System.nanoTime();
+        projection.on(initialized(trackingNumber, "b-" + System.nanoTime()));
+
+        // **後から入れた記録のほうが、業務上は先に起きている。**
+        projection.on(updated(trackingNumber, TransportStatus.RECEIVED, TransportStatus.LOADED,
+                Instant.parse("2026-09-12T02:00:00Z")), "evt-late");
+        projection.on(updated(trackingNumber, TransportStatus.NOT_RECEIVED,
+                TransportStatus.RECEIVED, Instant.parse("2026-09-11T02:00:00Z")), "evt-early");
+
+        assertThat(history.findHistory(trackingNumber))
+                .extracting(TrackingEventMapper.TrackingEventRow::newStatus)
+                .containsExactly("RECEIVED", "LOADED");
+    }
+
+    @Test
+    @DisplayName("追跡が無ければ空の行を作らない（出発地も目的地も無い追跡が一覧に出る）")
+    void doesNotCreateAnEmptyTracking() {
+        String trackingNumber = "T-H-" + System.nanoTime();
+
+        projection.on(updated(trackingNumber, TransportStatus.NOT_RECEIVED,
+                TransportStatus.RECEIVED, Instant.parse("2026-09-11T02:00:00Z")), "evt-orphan");
+
+        assertThat(trackings.findByTrackingNumber(trackingNumber)).isNull();
+        assertThat(history.findHistory(trackingNumber))
+                .as("履歴そのものは残す。届いた事実を捨てると、後から追えない")
+                .hasSize(1);
+    }
 }

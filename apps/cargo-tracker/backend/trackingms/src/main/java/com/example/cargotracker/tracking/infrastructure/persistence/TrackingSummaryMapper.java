@@ -25,6 +25,23 @@ public interface TrackingSummaryMapper {
     @Select("SELECT * FROM tracking_summary WHERE booking_id = #{bookingId}")
     TrackingSummaryRow findByBooking(@Param("bookingId") String bookingId);
 
+    /**
+     * 現在の状態を書き換える（US17）。
+     *
+     * <p><b>行が無ければ何もしない</b>（呼ぶ側が確かめる）。追跡が作られる前に
+     * 状態の更新が届く順序は起きないが、起きたときに空の行を作ると、出発地も
+     * 目的地も無い追跡が一覧に出る。</p>
+     */
+    @org.apache.ibatis.annotations.Update(
+            "UPDATE tracking_summary SET transport_status = #{transportStatus}, "
+            + "last_status_changed_at = #{lastStatusChangedAt}, projected_at = #{projectedAt}, "
+            + "last_event_id = #{lastEventId} WHERE tracking_number = #{trackingNumber}")
+    int updateStatus(@Param("trackingNumber") String trackingNumber,
+            @Param("transportStatus") String transportStatus,
+            @Param("lastStatusChangedAt") Instant lastStatusChangedAt,
+            @Param("projectedAt") Instant projectedAt,
+            @Param("lastEventId") String lastEventId);
+
     void insertLegs(@Param("trackingNumber") String trackingNumber,
             @Param("legs") List<TrackingLegRow> legs);
 
