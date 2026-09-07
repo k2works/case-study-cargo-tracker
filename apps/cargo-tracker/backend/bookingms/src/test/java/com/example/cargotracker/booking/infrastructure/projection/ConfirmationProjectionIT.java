@@ -112,17 +112,17 @@ class ConfirmationProjectionIT extends AbstractAxonIntegrationTest {
         String bookingId = notified();
         projection.on(new BookingConfirmedEvent(bookingId, "sales01", AT));
 
-        projection.on(new TrackingNumberIssuedEvent(bookingId, "T-2026-000099",
+        projection.on(new TrackingNumberIssuedEvent(bookingId, "TRK-9F3K7QW2XD",
                 "JPTYO", "USNYC", "GENERAL", List.of(), "routing01", AT));
 
         BookingView issued = booking(bookingId);
         assertThat(issued.bookingStatus()).isEqualTo("TRACKING_ISSUED");
-        assertThat(issued.trackingNumber()).isEqualTo("T-2026-000099");
+        assertThat(issued.trackingNumber()).isEqualTo("TRK-9F3K7QW2XD");
         assertThat(issued.trackingIssuedAt()).isEqualTo(AT);
 
         // 補償（ADR-0010 決定 4）。**キャンセルではない**——確定に戻り、
         // 経路設計者がもう一度発行できる。
-        projection.on(new TrackingNumberRevertedEvent(bookingId, "T-2026-000099",
+        projection.on(new TrackingNumberRevertedEvent(bookingId, "TRK-9F3K7QW2XD",
                 "届きませんでした", AT));
 
         BookingView reverted = booking(bookingId);

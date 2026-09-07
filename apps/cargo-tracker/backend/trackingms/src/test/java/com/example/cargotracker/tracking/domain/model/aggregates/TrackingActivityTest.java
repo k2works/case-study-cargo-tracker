@@ -45,7 +45,7 @@ class TrackingActivityTest {
     }
 
     private static InitializeTrackingCommand initialize() {
-        return new InitializeTrackingCommand("T-2026-0001", "b-1", "JPTYO", "USNYC", "GENERAL",
+        return new InitializeTrackingCommand("TRK-8K2QX7M4RB", "b-1", "JPTYO", "USNYC", "GENERAL",
                 List.of(new InitializeTrackingCommand.LegDto("V-MOL-001", "JPTYO", "USNYC",
                         Instant.parse("2026-09-10T09:00:00Z"),
                         Instant.parse("2026-09-24T18:00:00Z"))),
@@ -60,7 +60,7 @@ class TrackingActivityTest {
         fixture.given().noPriorActivity()
                 .when().command(initialize())
                 .then().success()
-                .events(new TrackingInitializedEvent("T-2026-0001", "b-1", "JPTYO", "USNYC",
+                .events(new TrackingInitializedEvent("TRK-8K2QX7M4RB", "b-1", "JPTYO", "USNYC",
                         "GENERAL",
                         List.of(new TrackingInitializedEvent.Leg("V-MOL-001", "JPTYO", "USNYC",
                                 Instant.parse("2026-09-10T09:00:00Z"),
@@ -73,7 +73,7 @@ class TrackingActivityTest {
     void rejectsSecondInitialization() {
         // 連鎖は失敗したら再試行する。同じコマンドが 2 度届いたときに追跡が
         // 2 つできると、荷役がどちらに付くのか決まらない。
-        fixture.given().events(new TrackingInitializedEvent("T-2026-0001", "b-1", "JPTYO",
+        fixture.given().events(new TrackingInitializedEvent("TRK-8K2QX7M4RB", "b-1", "JPTYO",
                         "USNYC", "GENERAL", List.of(), NOW))
                 .when().command(initialize())
                 .then().exception(IllegalTransition.class);
@@ -83,7 +83,7 @@ class TrackingActivityTest {
     @DisplayName("US14: 旅程の無い追跡は始めない（経路が決まってから発行される）")
     void rejectsEmptyItinerary() {
         fixture.given().noPriorActivity()
-                .when().command(new InitializeTrackingCommand("T-2026-0001", "b-1",
+                .when().command(new InitializeTrackingCommand("TRK-8K2QX7M4RB", "b-1",
                         "JPTYO", "USNYC", "GENERAL", List.of(), ISSUED))
                 .then().exception(BusinessRuleViolation.class);
     }
@@ -92,7 +92,7 @@ class TrackingActivityTest {
     @DisplayName("US14: 予約の分からない追跡は始めない（誰の荷物か辿れなくなる）")
     void rejectsMissingBookingId() {
         fixture.given().noPriorActivity()
-                .when().command(new InitializeTrackingCommand("T-2026-0001", "  ",
+                .when().command(new InitializeTrackingCommand("TRK-8K2QX7M4RB", "  ",
                         "JPTYO", "USNYC", "GENERAL", initialize().legs(), ISSUED))
                 .then().exception(BusinessRuleViolation.class);
     }
@@ -102,7 +102,7 @@ class TrackingActivityTest {
     void rejectsNullBookingId() {
         // 空文字だけを試すと、null の分岐が残る。
         fixture.given().noPriorActivity()
-                .when().command(new InitializeTrackingCommand("T-2026-0001", null,
+                .when().command(new InitializeTrackingCommand("TRK-8K2QX7M4RB", null,
                         "JPTYO", "USNYC", "GENERAL", initialize().legs(), ISSUED))
                 .then().exception(BusinessRuleViolation.class);
     }

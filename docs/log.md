@@ -1,6 +1,13 @@
 # Docs Update Log
 
 ## 2026-09-07
+* **Update**: [0011-tracking-number-is-hard-to-guess](/adr/cargo-tracker/0011-tracking-number-is-hard-to-guess.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-8](/development/cargo-tracker/iteration_plan-8.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0010-reaction-handler-as-the-only-coordinator](/adr/cargo-tracker/0010-reaction-handler-as-the-only-coordinator.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0011-tracking-number-is-hard-to-guess](/adr/cargo-tracker/0011-tracking-number-is-hard-to-guess.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0010-reaction-handler-as-the-only-coordinator](/adr/cargo-tracker/0010-reaction-handler-as-the-only-coordinator.md) を更新（claude-code/claude-opus-5）
 * **Update**: [user_story](/requirements/user_story.md) を更新（claude-code/claude-opus-5）
 * **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
 * **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）

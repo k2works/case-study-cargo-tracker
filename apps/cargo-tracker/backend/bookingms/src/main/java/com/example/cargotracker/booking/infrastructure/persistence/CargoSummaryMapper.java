@@ -23,14 +23,14 @@ public interface CargoSummaryMapper {
     String nextBookingNumber(@Param("bookedOn") LocalDate bookedOn);
 
     /**
-     * 追跡番号も投影側で採番する（US14 / ADR-0010 決定 2）。
+     * その追跡番号がすでに使われているか（ADR-0011 決定 2 の衝突検査）。
      *
-     * <p><b>集約で MAX+1 しない。</b> 同時に 2 件発行したときに同じ番号が出る
-     * （{@code booking_number}・{@code shipper_code} と同じ形）。</p>
+     * <p>追跡番号は<b>連番ではなく乱数</b>で採る。連番だと公開照会（US18）で
+     * 1 つ知れば前後がすべて推測できるため。乱数は重なりうるので、採るたびに
+     * ここで空きを確かめる。</p>
      */
-    @Select("SELECT 'T-' || to_char(#{issuedOn}::date, 'YYYY') || '-' "
-            + "|| lpad(nextval('tracking_number_seq')::text, 6, '0')")
-    String nextTrackingNumber(@Param("issuedOn") LocalDate issuedOn);
+    @Select("SELECT EXISTS(SELECT 1 FROM cargo_summary WHERE tracking_number = #{trackingNumber})")
+    boolean trackingNumberExists(@Param("trackingNumber") String trackingNumber);
 
     /** 追跡番号を発行した（US14）。状態・番号・発行日時を書く。 */
     @org.apache.ibatis.annotations.Update(

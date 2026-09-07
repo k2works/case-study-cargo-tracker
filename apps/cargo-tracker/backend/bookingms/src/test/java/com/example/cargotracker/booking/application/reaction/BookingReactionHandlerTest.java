@@ -162,7 +162,7 @@ class BookingReactionHandlerTest {
     }
 
     private static TrackingNumberIssuedEvent issued() {
-        return new TrackingNumberIssuedEvent("b-1", "T-2026-0001", "JPTYO", "USNYC", "GENERAL",
+        return new TrackingNumberIssuedEvent("b-1", "TRK-8K2QX7M4RB", "JPTYO", "USNYC", "GENERAL",
                 List.of(new TrackingNumberIssuedEvent.Leg("V-MOL-001", "JPTYO", "USNYC",
                         Instant.parse("2026-09-10T09:00:00Z"),
                         Instant.parse("2026-09-24T18:00:00Z"))),
@@ -176,7 +176,7 @@ class BookingReactionHandlerTest {
 
         assertThat(commands.sent).hasSize(1);
         InitializeTrackingCommand sent = (InitializeTrackingCommand) commands.sent.get(0);
-        assertThat(sent.trackingNumber()).isEqualTo("T-2026-0001");
+        assertThat(sent.trackingNumber()).isEqualTo("TRK-8K2QX7M4RB");
         assertThat(sent.bookingId()).isEqualTo("b-1");
         assertThat(sent.originUnLocode()).isEqualTo("JPTYO");
         assertThat(sent.destinationUnLocode()).isEqualTo("USNYC");
@@ -211,7 +211,7 @@ class BookingReactionHandlerTest {
     void completesTheProcess() {
         handler.on(issued());
 
-        handler.on(new TrackingInitializedEvent("T-2026-0001", "b-1", "JPTYO", "USNYC",
+        handler.on(new TrackingInitializedEvent("TRK-8K2QX7M4RB", "b-1", "JPTYO", "USNYC",
                 "GENERAL", List.of(), NOW));
 
         assertThat(processes.find(BookingReactionHandler.PROCESS_TYPE, "b-1"))
@@ -270,7 +270,7 @@ class BookingReactionHandlerTest {
     @DisplayName("終わった連鎖に遅れて届いたイベントは送り直さない（追跡が作り直される）")
     void doesNotResendForCompletedProcess() {
         handler.on(issued());
-        handler.on(new TrackingInitializedEvent("T-2026-0001", "b-1", "JPTYO", "USNYC",
+        handler.on(new TrackingInitializedEvent("TRK-8K2QX7M4RB", "b-1", "JPTYO", "USNYC",
                 "GENERAL", List.of(), NOW));
         int sentSoFar = commands.sent.size();
 

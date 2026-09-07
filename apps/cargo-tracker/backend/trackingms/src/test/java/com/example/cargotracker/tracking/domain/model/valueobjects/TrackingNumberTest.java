@@ -20,8 +20,8 @@ class TrackingNumberTest {
     @Test
     @DisplayName("前後の空白は落とす（表示と照合で食い違わない）")
     void trimsSurroundingSpaces() {
-        assertThat(TrackingNumber.of("  T-2026-000001  ").value())
-                .isEqualTo("T-2026-000001");
+        assertThat(TrackingNumber.of("  TRK-8K2QX7M4RB  ").value())
+                .isEqualTo("TRK-8K2QX7M4RB");
     }
 
     @ParameterizedTest

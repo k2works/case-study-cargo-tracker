@@ -3,7 +3,7 @@ type: Plan
 title: "イテレーション 8 計画 - 追跡照会と手動更新"
 tags: [plan]
 status: draft
-generated: { by: claude-code/claude-opus-5, at: 2026-09-07T00:29:51Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-07T02:52:33Z }
 ---
 
 # イテレーション 8 計画 - 追跡照会と手動更新
@@ -110,7 +110,7 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-07T00:29:51Z }
 
 | # | タスク | ストーリー | 見積 |
 | :--- | :--- | :--- | :--: |
-| T1 | **追跡番号を正典の形式（`TRK-` + 大文字英数字 10 桁）にする。** ADR-0010 決定 2 を訂正。既存の発行済み番号の扱いを決める。**採番の場所は投影側のまま** | US18 前提 | 4h |
+| T1 | **追跡番号を正典の形式（`TRK-` + 大文字英数字 10 桁）にする。** ADR-0010 決定 2 を訂正。既存の発行済み番号の扱いを決める。**採番の場所は投影側のまま**。**完了**（`RandomTrackingNumberGenerator`・V016・[ADR-0011](../../adr/cargo-tracker/0011-tracking-number-is-hard-to-guess.md)。検査 4 件） | US18 前提 | 4h |
 | T2 | `TransportStatus#canTransitionTo`（不変条件 2）。**遷移表を正典から写し、canon テストで固定**。**同じ変更で javadoc を直す**——いまは「`canTransitionTo` と `afterHandling` は荷役（US15・IT9）で足す」と書いてあり、前倒しすると実装と食い違ったまま残る（コメントは仕様として読まれる） | US17 | 4h |
 | T3 | `UpdateTransportStatusCommand` / `TransportStatusUpdatedEvent` と **`TrackingActivity#updateStatusManually`**（正典の名前。`domain-model.md:762`）。**荷役由来の `AdvanceTrackingCommand`（IT9）と同じ集約に入る**ので、名前で区別が付くようにする。**例外発生中は動かさない**（不変条件 5 の下地） | US17 | 5h |
 | T4 | `tracking_event` テーブルと投影。**追記系なので `event_id` を PK にして再配送で増えない**（data-model:43） | US17・US18 | 4h |
@@ -506,7 +506,7 @@ end note
 - [ ] SonarQube の Quality Gate がバックエンド・フロントエンドとも PASS
 - [ ] **ユーザーマニュアルが更新されている**（公開追跡照会・追跡管理の章）
 - [ ] **設計への反映が必要な事項 5 件が `docs/design/` に反映されている**
-- [ ] ADR-0011 を作成し、**決定の数だけ検査を対応させた**
+- [x] ADR-0011 を作成し、**決定の数だけ検査を対応させた**（決定 4 つ / 検査 4 つ）
 - [ ] ふりかえり（`retrospective-8.md`）と完了報告書（`iteration_report-8.md`）を作成した
 
 ### デモ項目

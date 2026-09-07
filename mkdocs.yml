@@ -165,6 +165,8 @@ nav:
           - ADR-0007 経路探索の打ち切り: adr/cargo-tracker/0007-route-search-cutoff.md
           - ADR-0008 予約の修正内容は投影として持つ: adr/cargo-tracker/0008-cargo-revision-as-a-projection.md
           - ADR-0009 営業への差し戻しを状態遷移にしない: adr/cargo-tracker/0009-condition-review-is-not-a-state-transition.md
+          - ADR-0010 サービスをまたぐ連鎖の調整役を Reaction Handler に一本化する: adr/cargo-tracker/0010-reaction-handler-as-the-only-coordinator.md
+          - ADR-0011 追跡番号は推測されにくい形式で採る: adr/cargo-tracker/0011-tracking-number-is-hard-to-guess.md
   - 記事:
       - 概要: article/index.md
       - モノリスアーキテクチャ実装比較:

@@ -49,7 +49,7 @@ class ContractCommandGoldenTest {
 
     static Stream<Object> contractCommands() {
         return Stream.of(
-                new InitializeTrackingCommand("T-2026-0001", "b-1", "JPTYO", "USNYC", "GENERAL",
+                new InitializeTrackingCommand("TRK-8K2QX7M4RB", "b-1", "JPTYO", "USNYC", "GENERAL",
                         List.of(new InitializeTrackingCommand.LegDto("V-MOL-001", "JPTYO",
                                         "SGSIN", Instant.parse("2026-09-10T09:00:00Z"),
                                         Instant.parse("2026-09-16T08:00:00Z")),

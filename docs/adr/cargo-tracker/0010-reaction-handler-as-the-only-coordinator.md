@@ -4,7 +4,7 @@ title: "ADR-0010 サービスをまたぐ連鎖の調整役を Reaction Handler 
 description: "予約から追跡開始までの連鎖を BookingReactionHandler + processstate で表し、追跡番号の採番と発行者、そして補償の粒度を決める。"
 tags: [adr]
 status: draft
-generated: { by: claude-code/claude-opus-5, at: 2026-09-07T01:51:31Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-07T02:52:33Z }
 ---
 
 # ADR-0010 サービスをまたぐ連鎖の調整役を Reaction Handler に一本化する
@@ -52,7 +52,9 @@ IT7 は**サービスをまたぐ最初の連鎖**である。予約を確定し
 
 ### 決定 2: 追跡番号の採番は投影側
 
-`booking_number`・`shipper_code` と同じくデータベースのシーケンス（`tracking_number_seq`）で採る。**集約は「発行してよいか」だけを判断し、番号は渡されたものを載せる。**
+採番の場所は投影側にする。**集約は「発行してよいか」だけを判断し、番号は渡されたものを載せる。**
+
+> **訂正（2026-09-07 / IT8 T1 / [ADR-0011](0011-tracking-number-is-hard-to-guess.md)）。** 当初この決定は「`booking_number`・`shipper_code` と同じくデータベースのシーケンス（`tracking_number_seq`）で採る」と書いていた。**これは誤りだった。** 追跡番号は荷主に共有され、認証なしで照会できる（US18）ため、連番だと 1 つ知れば前後がすべて推測でき、他人の貨物が読める。`domain-model.md:1431` の正典（`TRK-` + 大文字英数字 10 桁）とも形式が食い違っていた。**採番の場所（投影側）はこの決定のまま**で、採り方だけを衝突検査つきの乱数に改める。
 
 採番の窓口は `TrackingNumberGenerator` ポートにする。発行の入口（Controller）が投影のマッパーを直に触ると、何を頼んでいるのかが型から読めなくなる。
 
@@ -99,7 +101,7 @@ IT7 は**サービスをまたぐ最初の連鎖**である。予約を確定し
 | 決定 | 検査 |
 | :--- | :--- |
 | 1 | `SagaIsStillAbsentTest`（Saga が現れたら赤）。`ReplayIT#projectionsCannotSendCommands`（投影が `CommandGateway` を持たない＝リプレイで連鎖が走り直さない） |
-| 2 | `CargoTrackingNumberTest#rejectsBlankTrackingNumber`（集約は採らない）。`BookingControllerIT`（発行すると番号が付く） |
+| 2 | `CargoTrackingNumberTest#rejectsBlankTrackingNumber`（集約は採らない）。`BookingControllerIT`（発行すると番号が付く）。採り方の訂正は [ADR-0011](0011-tracking-number-is-hard-to-guess.md) の検査 |
 | 3 | `EveryServiceEndpointIsRoutedAndProtectedTest`（`POST /tracking-number` に ROLE_ROUTING の宣言がある）。`BookingDetailPage.test.tsx`「営業には発行の操作を出さない」 |
 | 4 | `BookingReactionHandlerTest#startsTheProcessBeforeSending`（送る前に起票）・`#rethrowsUntilTheLimit`（上限までは投げ直す）・`#compensatesAfterTheLimit`（補償して要確認一覧に出す）。**`ProcessStateServiceIT#startSurvivesOuterRollback`・`#recordAttemptSurvivesOuterRollback`**（外側が巻き戻っても残る）・**`#compensatedProcessCanBeRestarted`**（補償のあとやり直せる）・`#runningOrCompletedProcessIsNotRestarted`（再配送で巻き戻らない） |
 
@@ -117,6 +119,7 @@ IT7 は**サービスをまたぐ最初の連鎖**である。予約を確定し
 
 - [ADR-0001](0001-cqrs-es-with-axon-in-microservices.md) — 決定 6（Axon 5 に Saga が無い）
 - [ADR-0009](0009-condition-review-is-not-a-state-transition.md) — 直前の UC08 の判断
+- [ADR-0011](0011-tracking-number-is-hard-to-guess.md) — 決定 2 の採り方を訂正する
 - [バックエンドアーキテクチャ](../../design/cargo-tracker/architecture_backend.md)「連鎖の調整」
 - [データモデル](../../design/cargo-tracker/data-model.md)「連鎖の途中経過（process_state）」
 - [イテレーション 7 計画](../../development/cargo-tracker/iteration_plan-7.md)
