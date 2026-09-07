@@ -5,6 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Import;
 import com.example.cargotracker.shared.infrastructure.axon.AxonJdbcConfiguration;
 import com.example.cargotracker.shared.infrastructure.axon.AxonServerStartupCheckConfiguration;
+import com.example.cargotracker.shared.infrastructure.axon.QueryDispatcherConfiguration;
 import com.example.cargotracker.shared.infrastructure.time.BusinessClockConfiguration;
 
 /** Handling サービスの起動クラス。 */
@@ -15,6 +16,7 @@ import com.example.cargotracker.shared.infrastructure.time.BusinessClockConfigur
     AxonJdbcConfiguration.class,
     AxonServerStartupCheckConfiguration.class,
     BusinessClockConfiguration.class,
+    QueryDispatcherConfiguration.class,
 })
 public class HandlingApplication {
 

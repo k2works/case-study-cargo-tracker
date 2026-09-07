@@ -41,6 +41,7 @@ public final class RoleAuthorization {
     private static final String ACCOUNTANT = "ROLE_ACCOUNTANT";
     private static final String ADMIN = "ROLE_ADMIN";
     private static final String SHIPPER = "ROLE_SHIPPER";
+    private static final String HANDLER = "ROLE_HANDLER";
 
     private static final AntPathMatcher MATCHER = new AntPathMatcher();
 
@@ -114,6 +115,14 @@ public final class RoleAuthorization {
         // 認証そのものを外すので、ロールの宣言は通らない。
         rules.put("/api/v1/tracking/trackings/**", Set.of(TRACKER, SHIPPER));
         rules.put("/api/v1/tracking/trackings", Set.of(TRACKER, SHIPPER));
+
+        // 荷役履歴（S51）は**荷役と追跡の両方**（ui_design.md:236）。
+        // 追跡管理者は問い合わせを受けたときに現場の記録を確かめる。
+        rules.put("/api/v1/handling/*/activities", Set.of(HANDLER, TRACKER));
+        // 荷役の記録（S50）は荷役だけ。**/handling/** より先に置く。
+        rules.put("/api/v1/handling/voyages/**", Set.of(HANDLER));
+        rules.put("/api/v1/handling/cargos/**", Set.of(HANDLER));
+        rules.put("/api/v1/handling/**", Set.of(HANDLER));
 
         // 航海（S32 / S33）は経路設計者だけ。
         rules.put("/api/v1/routing/voyages/**", Set.of(ROUTING));
