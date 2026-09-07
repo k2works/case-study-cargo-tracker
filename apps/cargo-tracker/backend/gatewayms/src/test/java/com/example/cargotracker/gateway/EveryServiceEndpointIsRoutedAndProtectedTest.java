@@ -147,7 +147,7 @@ class EveryServiceEndpointIsRoutedAndProtectedTest {
         List<String> unprotected = serviceEndpoints().stream()
                 .filter(endpoint -> JwtAuthenticationFilter.isPublic(endpoint + "/x"))
                 .filter(endpoint -> JwtAuthenticationFilter.PUBLIC_PATHS.stream()
-                        .noneMatch(pattern -> pattern.startsWith(endpoint)))
+                        .noneMatch(pattern -> pattern.startsWith(literalPrefix(endpoint))))
                 .toList();
 
         assertThat(unprotected)
@@ -173,6 +173,22 @@ class EveryServiceEndpointIsRoutedAndProtectedTest {
         assertThat(undeclared)
                 .as("要求ロールを宣言していない経路は、認証済みなら誰でも叩ける")
                 .isEmpty();
+    }
+
+    /**
+     * 経路のうち<b>パス変数より手前</b>。{@code /a/b/{id}} なら {@code /a/b/}。
+     *
+     * <p>公開経路がパス変数を含むと、経路の文字列（{@code {trackingNumber}}）は
+     * どの {@code PUBLIC_PATHS} にも前方一致しない。<b>比べるのは literal な部分</b>
+     * ——「その経路のために書かれた公開宣言があるか」を見たいのであって、
+     * 変数名の綴りを見たいのではない（IT8 T6 で最初の該当経路が出た）。</p>
+     *
+     * <p><b>緩めない。</b> 無関係な広いパターン（例: {@code /api/**}）でたまたま
+     * 公開になっている経路は、literal な部分でも前方一致しないので今までどおり赤になる。</p>
+     */
+    private static String literalPrefix(String endpoint) {
+        int variable = endpoint.indexOf('{');
+        return variable < 0 ? endpoint : endpoint.substring(0, variable);
     }
 
     /** 実在するメソッド。宣言はこの全部に対して要る。 */
