@@ -1,6 +1,8 @@
 # Docs Update Log
 
 ## 2026-09-07
+* **Update**: [iteration_plan-8](/development/cargo-tracker/iteration_plan-8.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-7](/development/cargo-tracker/iteration_plan-7.md) を更新（claude-code/claude-opus-5）
 * **Creation**: [iteration_plan-8](/development/cargo-tracker/iteration_plan-8.md) を作成（claude-code/claude-opus-5）
 * **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
 * **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）

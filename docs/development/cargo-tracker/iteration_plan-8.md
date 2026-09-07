@@ -3,7 +3,7 @@ type: Plan
 title: "イテレーション 8 計画 - 追跡照会と手動更新"
 tags: [plan]
 status: draft
-generated: { by: claude-code/claude-opus-5, at: 2026-09-07T00:25:14Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-07T00:29:51Z }
 ---
 
 # イテレーション 8 計画 - 追跡照会と手動更新
@@ -88,7 +88,7 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-07T00:25:14Z }
 | :--- | :--: | :--- | :--- | :--- |
 | US18 | 1 | 追跡番号を入力して貨物情報を照会できる | **満たす** | S44（認証不要） |
 | US18 | 2 | 現在の状態・位置（港湾名）・推定到着日が表示される | **一部未達** | **現在地は荷役（US15・IT9）が書く**。本 IT では手動更新（US17）で入った位置だけ。推定到着日は `tracking_leg` の最終区間から出す |
-| US18 | 3 | 追跡イベント履歴が時系列で表示される | **満たす** | `tracking_event`（本 IT で新設）。**本 IT で入るのは手動更新の行だけ** |
+| US18 | 3 | 追跡イベント履歴が時系列で表示される | **一部未達** | 正典は「日時・**場所**・**作業種別**」（`user_story.md:428`）。**作業種別は荷役（US15・IT9）が書く**ので、`handling_type` を本 IT で作らない以上出せない。日時・場所・状態の変化までを出す |
 | US18 | 4 | 見つからない場合「追跡番号が見つかりません」 | **満たす** | **存在しない番号と権限の無い番号を区別しない**（`ui_design.md:1296`） |
 | US18 | 5 | ログインなしでも照会できる | **満たす** | S44。`/api/v1/tracking/public/**` は PUBLIC_PATHS に**予約済み**（IT1 から） |
 | US18 | — | （画面の割り当て） | **一部を送る** | `ui_design.md:1537` は US18 に 5 画面（S44・S40・S41・S45・S46）を割り当てる。**S45・S46 は予約の画面**で受入基準に含まれないため IT9 へ（理由は下記） |
@@ -97,7 +97,7 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-07T00:25:14Z }
 | US17 | 3 | 更新後、追跡イベントが履歴に記録される | **満たす** | `tracking_event`（`event_type = MANUAL`） |
 | US17 | 4 | 状態変更の種類に応じて荷主への通知が送信される | **一部未達** | 送信基盤はスコープ外（`ui_design.md:120`）。**記録として残す**か、荷主が S44/S46 で読めることで代える |
 
-**一部未達は 2 点です。** US18 §2 の「現在位置」は荷役（IT9）が前提、US17 §4 は送信基盤がスコープ外です。
+**一部未達は 3 点です。** US18 §2 の「現在位置」と §3 の「作業種別」は荷役（US15・IT9）が前提、US17 §4 は送信基盤がスコープ外です。**着手前の検証で §3 の判定の誤りを見つけました**——「履歴が出る」ことだけを見て「満たす」としていましたが、正典は履歴に何が載るかまで定めています。
 
 ### ストーリー詳細
 
@@ -111,17 +111,18 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-07T00:25:14Z }
 | # | タスク | ストーリー | 見積 |
 | :--- | :--- | :--- | :--: |
 | T1 | **追跡番号を正典の形式（`TRK-` + 大文字英数字 10 桁）にする。** ADR-0010 決定 2 を訂正。既存の発行済み番号の扱いを決める。**採番の場所は投影側のまま** | US18 前提 | 4h |
-| T2 | `TransportStatus#canTransitionTo`（不変条件 2）。**遷移表を正典から写し、canon テストで固定** | US17 | 4h |
-| T3 | `UpdateTransportStatusCommand` / `TransportStatusUpdatedEvent` と `TrackingActivity#updateStatus`。**例外発生中は動かさない**（不変条件 5 の下地） | US17 | 5h |
+| T2 | `TransportStatus#canTransitionTo`（不変条件 2）。**遷移表を正典から写し、canon テストで固定**。**同じ変更で javadoc を直す**——いまは「`canTransitionTo` と `afterHandling` は荷役（US15・IT9）で足す」と書いてあり、前倒しすると実装と食い違ったまま残る（コメントは仕様として読まれる） | US17 | 4h |
+| T3 | `UpdateTransportStatusCommand` / `TransportStatusUpdatedEvent` と **`TrackingActivity#updateStatusManually`**（正典の名前。`domain-model.md:762`）。**荷役由来の `AdvanceTrackingCommand`（IT9）と同じ集約に入る**ので、名前で区別が付くようにする。**例外発生中は動かさない**（不変条件 5 の下地） | US17 | 5h |
 | T4 | `tracking_event` テーブルと投影。**追記系なので `event_id` を PK にして再配送で増えない**（data-model:43） | US17・US18 | 4h |
-| T5 | **`shipperId` を契約に足す**（`TrackingNumberIssuedEvent` → `InitializeTrackingCommand` → `TrackingInitializedEvent`）。`tracking_summary.shipper_id` と `shipper_cargo_snapshot` を作る。**ゴールデン JSON を先に赤にする** | US18 | 5h |
-| T6 | 公開照会の読み口（`GET /api/v1/tracking/public/{trackingNumber}`）と **S44 画面**（**既存の `PublicTrackingPage` プレースホルダを埋める**）。**見つからない案内・入力形式のヒント・問い合わせの出口**。総当たり対策（Gateway で 429） | US18 | 6h |
-| T7 | **S41 追跡詳細・管理**（状態の履歴・手動更新）と **S40 追跡一覧**（追跡管理者の入口）。**ロール別の到達性** | US17・US18 | 6h |
-| T8 | 荷主の絞り込み（`ROLE_SHIPPER` は自社の追跡だけ）。**authms の荷主 ID と突き合わせる** | US18 | 4h |
+| T5 | **`shipperId` を 3 本のイベント／コマンドに足す**（`TrackingNumberIssuedEvent` → `InitializeTrackingCommand` → `TrackingInitializedEvent`）。**`Cargo` 集約に `shipperId` フィールドと `on(CargoBookedEvent)` での代入を先に足す**（いまは `book()` を通り抜けるだけで保持していない）。`tracking_summary.shipper_id` と `shipper_cargo_snapshot` を作る。**契約 2 本（`InitializeTrackingCommand`・`TrackingInitializedEvent`）はゴールデン JSON を先に赤にする** | US18 | 7h |
+| T6 | 公開照会の読み口（`GET /api/v1/tracking/public/{trackingNumber}`）と **S44 画面**（**既存の `PublicTrackingPage` プレースホルダを埋める**）。**見つからない案内・入力形式のヒント・問い合わせの出口** | US18 | 6h |
+| T6b | **総当たり対策**（`ui_design.md:1298`）。同一 IP から 1 分に 10 回を超える公開照会を Gateway で `429` にする。**gatewayms に実装が無い**（`grep` で 0 件）ので新設。**認証不要経路の唯一の防御**で、番号の形式を直すだけでは止まらない | US18 | 4h |
+| T7 | **S41 追跡詳細・管理**（状態の履歴・手動更新）と **S40 追跡一覧**（`/tracking`）。**追跡管理者と荷主の両方の入口**（`ui_design.md:144-145` は S40・S41 のロールを「追跡、**荷主（自社のみ）**」と定める）。navbar・ダッシュボード・到達性テストの 4 点を**両ロールで**合わせる | US17・US18 | 7h |
+| T8 | 荷主の絞り込み（`ROLE_SHIPPER` は自社の追跡だけ）。**`X-Shipper-Id` ヘッダは伝播済み**（authms → Gateway）なので、trackingms 側で突き合わせる | US18 | 4h |
 | T9 | 認可の宣言（公開経路・追跡管理者・荷主）と HTTP の配線 | US17・US18 | 3h |
 | T10 | 引き継ぎ枠 H.1〜H.3 | — | 10h |
 | T11 | クラスタ E2E・受け入れテスト・マニュアル | — | 10h |
-| **合計** | | | **61h** |
+| **合計** | | | **67h** |
 
 ### 既にあるもの（**着手前に `grep` で確かめた**。IT7 の T1）
 
@@ -169,12 +170,14 @@ T1 → T5（形式を直してから `shipperId` を足す。契約を 2 度触�
 | # | 内容 | 出所 | 見積 |
 | :--- | :--- | :--- | :--: |
 | H.1 | **止まった連鎖と補償をクラスタで再現する。** trackingms を落として `process_state` が `RUNNING` のまま残ること・上限超過で要確認一覧に出ることを確かめる | IT7 引き継ぎ 1（高） | 4h |
-| H.2 | **差し戻された営業に打つ手を作る。** 見直しを終えたことを記録して経路設計者へ返す。**経路設計者が「自分がもう差し戻したか」を S30 で読める**ようにする（引き継ぎ 9 とセット） | IT7 引き継ぎ 2・9（高） | 4h |
+| H.2 | **差し戻された営業に打つ手を作る。** 見直しを終えたことを記録して経路設計者へ返す。**経路設計者が「自分がもう差し戻したか」を S30 で読める**ようにする | IT7 引き継ぎ 2（高。IT6 引き継ぎ 8・9 由来） | 4h |
 | H.3 | **クラスタ E2E のデータが積み上がる問題。** 実行前にデータを作り直す手順、または区間を一意にする仕組み | IT7 引き継ぎ 8（中） | 2h |
 
 **「余力次第」にはしません。** H.2 は **IT7 で「US13 の実装で当たったら判断」として送ったもの**で、当たらなかったため 2 IT 連続の繰越です。ここで返します。
 
 **引き継ぎ 3（`shipper_id`・`shipper_cargo_snapshot`）は本体 T5 に取り込みました。** US18 の「荷主は自社の貨物だけが見える」が成り立たないためで、引き継ぎ枠ではなくストーリーの一部です。
+
+**IT7 引き継ぎ 10 件の行き先（漏れなく）:** 1 → H.1、2 → H.2、**3 → T5（本体）**、4 → IT9、5 → T8 で当たったら / IT9、6 → IT9、7 → T6 で当たる、8 → H.3、9（ADR の承認と `verify`）→ **人の署名**、10（既存の Code Smell）→ 扱わない。
 
 ### IT8 で扱わない引き継ぎ（行き先を先に決める）
 
@@ -224,7 +227,7 @@ package "trackingms" {
     + currentLocation : Location [0..1]
     --
     + initialize(cmd)  : IT7
-    + updateStatus(cmd) : 状態を手動更新（US17）
+    + updateStatusManually(cmd) : 状態を手動更新（US17）
   }
   enum TransportStatus {
     NOT_RECEIVED / RECEIVED / LOADED / IN_TRANSIT
@@ -383,7 +386,28 @@ end note
 | `InitializeTrackingCommand` | 同上（trackingms へ渡す） |
 | `TrackingInitializedEvent` | 同上（trackingms の投影が読む） |
 
-**3 本すべてに載せます。** 1 本でも落とすと、そこで値が消えます（IT7 の実測）。**ゴールデン JSON を先に赤にしてから足します。**
+**3 本すべてに載せます。** 1 本でも落とすと、そこで値が消えます（IT7 の実測）。
+
+### `TrackingNumberIssuedEvent` は契約イベントではない（**着手前の検証で判明**）
+
+**正典と実装が既に乖離しています。**
+
+| | 実際 |
+| :--- | :--- |
+| `shared/contract/event/` の中身 | `ShipperRegisteredEvent` と `TrackingInitializedEvent` の **2 本だけ** |
+| `TrackingNumberIssuedEvent` の場所 | `bookingms/domain/model/events/`（**bookingms 内部**）。`BookingReactionHandler` がプロセス内で購読 |
+| `domain-model.md:1222` | 契約イベント 11 本の表に載せ、購読者に **trackingms と handlingms** を挙げる |
+| `data-model.md:577,830` | `shipper_cargo_snapshot` の元イベントを `TrackingNumberIssuedEvent` と指定 |
+
+**trackingms はこのイベントを購読できません**（BC の外にあるので）。つまり **正典が実装不能な指定をしています**。
+
+**本 IT の判断: 契約へ昇格させず、正典側を直します。**
+
+- trackingms が `shipper_cargo_snapshot` を作れるのは **`TrackingInitializedEvent` から**だけ。`data-model.md` の元イベントをこちらに直す
+- `domain-model.md:1222` の購読と用途を「trackingms（**`BookingReactionHandler` 経由**。直接購読しない）」に直す
+- **handlingms が `cargo_snapshot` を作る IT9 で、契約へ昇格させるかを判断します**。実際に BC の外から購読する必要が出るのはそのときで、それまで契約に置くと「読む側の無い契約を先に敷く」ことになります（`architecture_backend.md` の判断）
+
+**したがってゴールデン JSON を赤にするのは契約 2 本**（`InitializeTrackingCommand`・`TrackingInitializedEvent`）です。`TrackingNumberIssuedEvent` は bookingms の内部イベントなので、bookingms の検査で守ります。
 
 **フィールドの追加は許されます**（削除・型変更が禁止）。IT7 に発行済みのイベントは `shipperId` が `null` で復元されます。**投影は `null` の分を書きません**（`shipper_cargo_snapshot` に行ができない）。開発データなので作り直します。
 
@@ -405,22 +429,42 @@ end note
 | 1 | `domain-model.md`（`:1222`） | `TrackingNumberIssuedEvent` の payload に **`shipperId` を足す**（IT7 で「US18 で足す」と決めた） |
 | 2 | `data-model.md` | `tracking_summary.shipper_id`・`tracking_event`・`shipper_cargo_snapshot` を「IT8 で作る」に更新。`current_unlocode` は手動更新で入る分だけ |
 | 3 | ADR-0010 決定 2 | 採番の形式を訂正（ADR-0011 で行う） |
+| 3b | `data-model.md`（`:577`・`:830`） | **`shipper_cargo_snapshot` の元イベントを `TrackingInitializedEvent` に直す**。`TrackingNumberIssuedEvent` は bookingms 内部で、trackingms は購読できない |
+| 3c | `domain-model.md`（`:1222`） | **`TrackingNumberIssuedEvent` の購読と用途を「trackingms（`BookingReactionHandler` 経由。直接購読しない）」に直す**。契約イベント 11 本の表に載っているが `shared/contract` には無い |
+| 3d | `trackingms/TransportStatus` の javadoc | 「`canTransitionTo` は IT9 で足す」を「**`canTransitionTo` は US17（IT8）で実装。`afterHandling` は IT9**」に直す（T2 の同じ変更で） |
 | 4 | `ui_design.md`（S44） | **推定到着日の出し方**（`tracking_leg` の最終区間の荷降し）を明記。所要日数の計算式が 2 か所ある問題（IT7 引き継ぎ 7）もここで 1 か所に寄せる |
 | 5 | `ui_design.md`（S41） | 本 IT で出すのは「状態の履歴」と「状態を手動更新」だけ。例外・誤配・陸揚げ待ちは後続 IT と明記 |
 
 ## 着手前の検証（ステップ 3・4）の結果
 
-**並列の検証エージェント 2 本を起動しましたが返着しませんでした**（IT7 のクローズと同じ形。問い合わせを 3 度送っても応答なし）。**自己検証で実施し、見つけたものを本計画に反映済みです。**
+**自己検証を先に行い、そのあと並列の検証エージェント 2 本が遅れて返着したので統合しました。** IT7 のクローズでは「返らない」と判断して自己レビューで確定させましたが、**今回は遅着分に高 4 件・中 5 件が入っていました**（IT6 と同じ形で、待つ価値がありました）。
+
+### 自己検証で見つけたもの
 
 | # | 見つけたもの | 反映 |
 | :--- | :--- | :--- |
-| 高 1 | **追跡番号が正典違反**（`TRK-` + 英数 10 桁のはずが `T-2026-000001` の連番）。**US18 は認証不要なので推測で他人の貨物が読める** | **T1 を最初に置いた**。実データ（`T-2026-000001`・`-000005`・`-000007`）で裏を取った。ADR-0011 で訂正 |
-| 高 2 | **US18 は 5 画面にまたがる**（`ui_design.md:1537`）。計画は 2 画面しか見ていなかった | S40 を T7 に足し、**S45・S46 を作らない理由と行き先（IT9）**を書いた |
-| 中 1 | **`PublicTrackingPage` とルートが既に実装済み**（プレースホルダ）。計画は「S44 画面を作る」と書いていた | 「既にあるもの」の表を足し、**中身を埋める作業**と書き直した |
-| 中 2 | 不変条件 1「**Tracking は検証も採番もしない**」。IT7 の `TrackingNumber` は空チェックだけで整合するが、形式の検証を入れると違反する | 設計の節に明記した |
+| 高 1 | **追跡番号が正典違反**（`TRK-` + 英数 10 桁のはずが `T-2026-000001` の連番）。**US18 は認証不要なので推測で他人の貨物が読める** | **T1 を最初に置いた**。実データ（`-000001`・`-000005`・`-000007`）で裏を取った。ADR-0011 で訂正 |
+| 高 2 | **US18 は 5 画面にまたがる**（`ui_design.md:1537`）。計画は 2 画面しか見ていなかった | S40 を足し、**S45・S46 を作らない理由と行き先（IT9）**を書いた |
+| 中 1 | **`PublicTrackingPage` とルートが既に実装済み**（プレースホルダ） | 「既にあるもの」の表を足し、**中身を埋める作業**と書き直した |
+| 中 2 | 不変条件 1「**Tracking は検証も採番もしない**」 | 設計の節に明記した |
 | 中 3 | IT7 引き継ぎ 3（`shipper_id`）は引き継ぎ枠ではなく**ストーリーの一部** | 本体 T5 に取り込んだ |
 
-**検証の対象**: `user_story.md`（US18・US17）、`domain-model.md`（不変条件 1〜11・遷移表・コマンド表・`:1431` の形式・`:1222` の payload）、`data-model.md`（3 テーブルの列と制約・`:43` の追記系規約）、`ui_design.md`（S44・S41・S40・画面一覧・認可・総当たり対策・`:1537` の画面割り当て）、`development_strategy.md`（局面）、`release_plan.md:189`（SP）、`retrospective-7.md`（引き継ぎ 10 件の行き先）、既存コード（`grep` で実装状況）。
+### 検証エージェントの遅着分（自己検証で見落としていたもの）
+
+| # | 見つけたもの | 反映 |
+| :--- | :--- | :--- |
+| 高 3 | **`TrackingNumberIssuedEvent` は契約イベントではない。** `shared/contract/event` にあるのは 2 本だけで、実体は bookingms 内部。**正典（`data-model.md:577,830`・`domain-model.md:1222`）が trackingms に購読できないイベントを投影の元と指定している** | **正典側を直す判断**を書いた（契約への昇格は handlingms が要る IT9）。ゴールデン JSON は契約 2 本 |
+| 高 4 | **総当たり対策の `429` が実体を持たない。** `gatewayms/src/main` に実装 0 件（`grep`）。計画は T6 の括弧書きだけで、タスク行・DoD・デモ項目に無い。**認証不要経路の唯一の防御** | **T6b（4h）として独立**させ、DoD とデモ項目 8 に足した |
+| 高 5 | **荷主の S40・S41 到達性がスコープに無い。** `ui_design.md:144-145` は両画面のロールを「追跡、**荷主（自社のみ）**」と定め、デモ項目 6 も荷主が対象なのに、T7 は追跡管理者しか見ていなかった | T7 を「**両ロールの入口**」に直し、DoD の 4 点一致も両ロールでと明記 |
+| 中 4 | **`Cargo` 集約が `shipperId` を保持していない**（`book()` を通り抜けるだけ）。T5 は配線に見えて**集約変更を伴う** | T5 に集約フィールドと `on(CargoBookedEvent)` の更新を明記。見積 5h → 7h |
+| 中 5 | **`TransportStatus` の javadoc が「`canTransitionTo` は IT9 で足す」と宣言**している。前倒しすると実装と食い違ったまま残る | T2 で**同じ変更で javadoc を直す**と明記（設計反映 3d） |
+| 中 6 | **集約メソッド名が正典と違う**（正典は `updateStatusManually`）。IT9 の `AdvanceTrackingCommand` と併存するので名前で区別が要る | 正典に寄せた |
+| 中 7 | **引き継ぎの番号取り違え**（引き継ぎ 9 は「ADR の承認」）。**引き継ぎ 3 が両表のどちらにも載っていない** | H.2 の出所を直し、**10 件の行き先を 1 行にまとめた** |
+| 中 8 | **「更新履歴」セクションの欠落**（テンプレート必須。**IT7 に続き 2 回連続**） | 本計画に追加し、**IT7 の計画にも遡って追加** |
+
+**両エージェントが独立に同じものを指摘したのは 5 件**（高 3・高 5・中 4・中 5・中 6・中 7）でした。
+
+**検証の対象**: `user_story.md`（US18・US17）、`domain-model.md`（不変条件 1〜11・遷移表・コマンド表・`:762` のメソッド名・`:1222` の契約表・`:1431` の形式）、`data-model.md`（3 テーブルの列と制約・`:43` の追記系規約・`:577,830` の元イベント）、`ui_design.md`（S44・S41・S40・`:144-145` のロール・`:115` の荷主導線・`:1298` の総当たり対策・`:1537` の画面割り当て）、`development_strategy.md`（局面）、`release_plan.md:189`（SP）、`retrospective-7.md`（引き継ぎ 10 件）、`docs/template/イテレーション計画.md`（必須セクション）、既存コード（`grep` で実装状況）。
 
 ## リスクと対策
 
@@ -442,6 +486,7 @@ end note
 - [ ] 本 IT で足した検査を壊して赤を見た
 - [ ] **追跡番号が `TRK-` + 大文字英数字 10 桁になっている。連番でないことを検査した**
 - [ ] **公開の応答に荷主名・予約番号・社内メモが入らないことを検査した**
+- [ ] **同一 IP からの総当たりが `429` で止まることを検査した**（`ui_design.md:1298`。**認証不要経路の唯一の防御**）
 - [ ] **存在しない追跡番号と権限の無い追跡番号を区別しないことを検査した**
 - [ ] **遷移表が正典と一致していることを canon テストで固定した**（部分的に写していない）
 - [ ] **例外発生中は手動更新で状態が動かないことを確かめた**（不変条件 5 の下地）
@@ -452,7 +497,7 @@ end note
 - [ ] フロントの `npm run test`・`npx tsc -b`・`npm run build` が緑
 - [ ] **新しい経路が `RoleAuthorization` にメソッド込みで宣言され、そのロール以外は 403 になることを検査した**（公開経路は除外の宣言も検査する）
 - [ ] UI 設計・navbar・ダッシュボード・到達性テストの 4 点が一致している
-- [ ] **追跡管理者が S41 にたどり着ける**（S40 経由。**状態軸の到達性**も——どの状態の追跡からでも開けるか）
+- [ ] **追跡管理者と荷主の両方が S40・S41 にたどり着ける**（navbar・ダッシュボード。`ui_design.md:144-145`）。**状態軸の到達性**も——どの状態の追跡からでも開けるか
 - [ ] **認証不要の画面の入口が、ログイン画面とポータルにある**（IT7 の教訓）
 - [ ] **内部の列挙名を利用者に見せていない**
 - [ ] **kind クラスタで動く**：イメージを作り直して載せ直し、全 Pod が Ready
@@ -475,6 +520,7 @@ end note
 | 5 | 遷移表が許さない更新は断る | 追跡 | 不変条件 2。**API を直接叩いても守られる** |
 | 6 | 荷主は自社の貨物だけが見える | 荷主 | 他社の番号は「見つかりません」 |
 | 7 | 公開の応答に社内の情報が入らない | — | 荷主名・予約番号・社内メモが無い |
+| 8 | **総当たりが止まる** | — | 同一 IP から 1 分に 10 回を超えると `429`。**番号の形式を直すだけでは止まらない** |
 
 ## 局面の確認（中盤の継続）
 
@@ -483,6 +529,13 @@ IT4 から数えて 5 回目の中盤です。
 - **遷移の判断を先に集約へ置く**（`canTransitionTo`）。画面から導くと貧血になる
 - **契約を 1 度で変える。** 形式と `shipperId` を別々に足さない
 - **公開の読み口を社内と分ける。** ロールで出し分けを足すと漏れる
+
+## 更新履歴
+
+| 日付 | 更新内容 | 更新者 |
+| :--- | :--- | :--- |
+| 2026-09-07 | IT8 計画を作成。**着手前の自己検証で高 2 件**——追跡番号が正典違反（連番。US18 は認証不要なので推測で他人の貨物が読める）、US18 が 5 画面にまたがる。既存実装を `grep` して「既にあるもの」の表を作った（IT7 で `process_state` を新設と誤認した反省） | claude-code/claude-opus-5 |
+| 2026-09-07 | **検証エージェント 2 本が遅れて返着**したので統合。高 4 件・中 5 件を反映——US18 §3 の判定が誤り（作業種別は出せない）、**総当たり対策 429 が実体を持たない**（gatewayms に実装 0 件）、**`TrackingNumberIssuedEvent` は契約イベントではない**（正典が実装不能な指定をしている）、荷主の到達性がスコープに無い、`Cargo` が `shipperId` を保持していない、メソッド名が正典と違う、引き継ぎの番号取り違え、本節（更新履歴）の欠落。見積 61h → 67h | claude-code/claude-opus-5 |
 
 ## 関連ドキュメント
 
