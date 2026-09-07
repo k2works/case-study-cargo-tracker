@@ -3,7 +3,7 @@ type: Plan
 title: "イテレーション 8 計画 - 追跡照会と手動更新"
 tags: [plan]
 status: draft
-generated: { by: claude-code/claude-opus-5, at: 2026-09-07T07:09:25Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-07T07:58:37Z }
 ---
 
 # イテレーション 8 計画 - 追跡照会と手動更新
@@ -65,7 +65,7 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-07T07:09:25Z }
 - [x] **受入基準を 1 項目ずつ表にして、満たす／未達を個別に書いた**
 - [x] **内部の列挙名を利用者に見せていない**
 - [ ] **クラスタ E2E を Day 9 に 1 度、クローズ前にもう 1 度回した**。**守れなかった**——実装の終盤に 1 度だけ回した。早く回していれば、荷主が上限を超える欠陥をもっと早く見つけられた
-- [ ] SonarQube の Quality Gate がバックエンド・フロントエンドとも PASS
+- [x] SonarQube の Quality Gate がバックエンド・フロントエンドとも PASS（**クローズで初めて回した**。新規コードの指摘 5 件を直して PASS）
 - [x] `npx gulp okf:check` が ERROR 0
 - [x] ユーザーマニュアルの該当章が更新され、画面キャプチャが再生成されている（12 章・キャプチャ 3 枚）
 - [x] **並列レビューをクローズの最初に起動した**（5 本。待ち時間は完了報告書に記録）
@@ -497,11 +497,11 @@ end note
 - [x] **kind クラスタで動く**：イメージを作り直して載せ直し、全 Pod が Ready
 - [ ] **クラスタに対して E2E が緑（Day 10 とクローズ前の 2 回）**。**14 緑・2 赤で終えた**——赤 2 件は本 IT の変更ではなく、荷主が上限を超えると予約が取れない欠陥を踏んだもの（IT9 へ送る。テストは緩めていない）
 - [x] `npx gulp okf:check` が ERROR 0
-- [ ] SonarQube の Quality Gate がバックエンド・フロントエンドとも PASS
+- [x] SonarQube の Quality Gate がバックエンド・フロントエンドとも PASS（**クローズで初めて回した**。新規コードの指摘 5 件を直して PASS）
 - [x] **ユーザーマニュアルが更新されている**（12 章「貨物の輸送状況を追う」・キャプチャ 3 枚）
 - [x] **設計への反映が必要な事項 5 件が `docs/design/` に反映されている**
 - [x] ADR-0011 を作成し、**決定の数だけ検査を対応させた**（決定 4 つ / 検査 4 つ）
-- [ ] ふりかえり（`retrospective-8.md`）と完了報告書（`iteration_report-8.md`）を作成した
+- [x] ふりかえり（`retrospective-8.md`）と完了報告書（`iteration_report-8.md`）を作成した
 
 ### デモ項目
 
