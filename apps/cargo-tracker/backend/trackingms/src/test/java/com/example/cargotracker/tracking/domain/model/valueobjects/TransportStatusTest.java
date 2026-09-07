@@ -1,6 +1,7 @@
 package com.example.cargotracker.tracking.domain.model.valueobjects;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.EnumSet;
 import java.util.Map;
@@ -110,5 +111,47 @@ class TransportStatusTest {
             assertThat(from.canTransitionTo(to)).as("%s → %s", from, to).isTrue();
             assertThat(to.isSetByHand()).as("%s は手で入れられない", to).isTrue();
         }
+    }
+
+    // ---- US15 荷役からの導出（IT9） ----
+
+    @Test
+    @DisplayName("US15 §4: 荷役の種別から貨物状態が決まる")
+    void derivesStatusFromHandling() {
+        assertThat(TransportStatus.afterHandling("RECEIVE", false, false))
+                .isEqualTo(TransportStatus.RECEIVED);
+        assertThat(TransportStatus.afterHandling("LOAD", false, false))
+                .isEqualTo(TransportStatus.LOADED);
+        assertThat(TransportStatus.afterHandling("CLAIM", true, false))
+                .isEqualTo(TransportStatus.DELIVERED);
+    }
+
+    @Test
+    @DisplayName("同じ荷降しでも、目的港なら引取待ちになる")
+    void distinguishesTheFinalPort() {
+        // **この判定を集約や購読側に書き直さない。** 書き直すと、片方だけ正しくなる。
+        assertThat(TransportStatus.afterHandling("UNLOAD", false, false))
+                .isEqualTo(TransportStatus.UNLOADED);
+        assertThat(TransportStatus.afterHandling("UNLOAD", true, false))
+                .isEqualTo(TransportStatus.AWAITING_CLAIM);
+    }
+
+    @Test
+    @DisplayName("予定外の荷役は種別によらず誤配（US28 の下地）")
+    void treatsOffRouteAsMisrouted() {
+        // 予定外に運ばれた貨物は、積んだか降ろしたかより「予定から外れた」ことが重い。
+        for (String type : new String[] {"RECEIVE", "LOAD", "UNLOAD", "CLAIM"}) {
+            assertThat(TransportStatus.afterHandling(type, false, true))
+                    .as("%s（予定外）", type)
+                    .isEqualTo(TransportStatus.MISROUTED);
+        }
+    }
+
+    @Test
+    @DisplayName("知らない種別は黙って通さない（契約に値が増えたのに追随していない）")
+    void rejectsUnknownHandlingTypes() {
+        // 素通りさせると、貨物状態が動かないまま荷役だけが記録される。
+        assertThatThrownBy(() -> TransportStatus.afterHandling("CUSTOMS", false, false))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }

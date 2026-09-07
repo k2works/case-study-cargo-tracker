@@ -6,7 +6,10 @@ import com.example.cargotracker.shared.contract.command.InitializeTrackingComman
 import com.example.cargotracker.shared.contract.event.TrackingInitializedEvent;
 import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.shared.domain.error.IllegalTransition;
+import com.example.cargotracker.tracking.domain.model.commands.AdvanceTrackingCommand;
+import com.example.cargotracker.tracking.domain.model.commands.RevertTrackingCommand;
 import com.example.cargotracker.tracking.domain.model.commands.UpdateTransportStatusCommand;
+import com.example.cargotracker.tracking.domain.model.events.TransportStatusRevertedEvent;
 import com.example.cargotracker.tracking.domain.model.events.TransportStatusUpdatedEvent;
 import com.example.cargotracker.tracking.domain.model.valueobjects.StatusUpdateSource;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TransportStatus;
@@ -244,5 +247,102 @@ class TrackingActivityTest {
         fixture.given().event(initialized())
                 .when().command(update(TransportStatus.MISROUTED))
                 .then().exception(BusinessRuleViolation.class);
+    }
+
+    // ---- US15 荷役から貨物状態が進む（IT9 T6） ----
+
+    private static final Instant HANDLED = Instant.parse("2026-09-10T02:00:00Z");
+
+    private static AdvanceTrackingCommand advance(String handlingType, boolean finalPort,
+            boolean offRoute) {
+        return new AdvanceTrackingCommand(NUMBER, handlingType, "JPTYO", finalPort, offRoute,
+                "handler01", HANDLED);
+    }
+
+    @Test
+    @DisplayName("US15 §4: 荷役を受けると貨物状態が進む")
+    void advancesOnHandling() {
+        fixture.given().event(initialized())
+                .when().command(advance("RECEIVE", false, false))
+                .then().events(new TransportStatusUpdatedEvent(NUMBER,
+                        TransportStatus.NOT_RECEIVED, TransportStatus.RECEIVED,
+                        StatusUpdateSource.HANDLING, "JPTYO", HANDLED, "handler01", NOW));
+    }
+
+    @Test
+    @DisplayName("US28 の下地: 予定外の荷役は誤配にする")
+    void marksMisroutedOnOffRouteHandling() {
+        fixture.given().event(initialized())
+                .when().command(advance("RECEIVE", false, true))
+                .then().events(new TransportStatusUpdatedEvent(NUMBER,
+                        TransportStatus.NOT_RECEIVED, TransportStatus.MISROUTED,
+                        StatusUpdateSource.HANDLING, "JPTYO", HANDLED, "handler01", NOW));
+    }
+
+    @Test
+    @DisplayName("不変条件 8: 知らない追跡番号の荷役では止まらない")
+    void doesNotFailForUnknownTracking() {
+        // **例外にすると Event Processor が止まり、後続の荷役まで届かなくなる。**
+        // 荷役そのものは handlingms に記録済み。
+        fixture.given().noPriorActivity()
+                .when().command(advance("RECEIVE", false, false))
+                .then().success().noEvents();
+    }
+
+    @Test
+    @DisplayName("遷移表が許さない荷役では進めない（順序が入れ替わっても壊れない）")
+    void doesNotSkipStates() {
+        // 未受領のまま引取だけが届いた。状態を飛ばして進めると履歴が事実と食い違う。
+        fixture.given().event(initialized())
+                .when().command(advance("CLAIM", true, false))
+                .then().success().noEvents();
+    }
+
+    @Test
+    @DisplayName("不変条件 11: 取り消された荷役の分を戻す")
+    void revertsTheHandling() {
+        fixture.given().events(initialized(),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.NOT_RECEIVED,
+                                TransportStatus.RECEIVED, StatusUpdateSource.HANDLING, "JPTYO",
+                                HANDLED, "handler01", NOW))
+                .when().command(new RevertTrackingCommand(NUMBER, "RECEIVE", "取り違え",
+                        "handler01", NOW))
+                .then().events(new TransportStatusRevertedEvent(NUMBER, TransportStatus.RECEIVED,
+                        TransportStatus.NOT_RECEIVED, "RECEIVE", "取り違え", "handler01", NOW));
+    }
+
+    @Test
+    @DisplayName("手動更新の分は荷役の取り消しで戻さない（別の操作）")
+    void doesNotRevertManualUpdates() {
+        fixture.given().events(initialized(),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.NOT_RECEIVED,
+                                TransportStatus.RECEIVED, StatusUpdateSource.MANUAL, "JPTYO",
+                                HANDLED, "tracker01", NOW))
+                .when().command(new RevertTrackingCommand(NUMBER, "RECEIVE", "取り違え",
+                        "handler01", NOW))
+                .then().success().noEvents();
+    }
+
+    @Test
+    @DisplayName("例外の対応中は荷役でも進めない（解決は例外の側で行う）")
+    void doesNotAdvanceWhileAnExceptionIsOpen() {
+        fixture.given().events(initialized(),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.NOT_RECEIVED,
+                                TransportStatus.RECEIVED, StatusUpdateSource.MANUAL, "JPTYO",
+                                HANDLED, "tracker01", NOW),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.RECEIVED,
+                                TransportStatus.EXCEPTION, StatusUpdateSource.MANUAL, "JPTYO",
+                                HANDLED, "tracker01", NOW))
+                .when().command(advance("LOAD", false, false))
+                .then().success().noEvents();
+    }
+
+    @Test
+    @DisplayName("知らない追跡番号の取り消しでも止まらない")
+    void doesNotFailToRevertUnknownTracking() {
+        fixture.given().noPriorActivity()
+                .when().command(new RevertTrackingCommand(NUMBER, "RECEIVE", "理由",
+                        "handler01", NOW))
+                .then().success().noEvents();
     }
 }

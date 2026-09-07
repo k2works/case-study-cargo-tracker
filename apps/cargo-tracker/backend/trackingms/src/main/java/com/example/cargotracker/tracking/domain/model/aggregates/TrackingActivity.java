@@ -4,7 +4,10 @@ import com.example.cargotracker.shared.contract.command.InitializeTrackingComman
 import com.example.cargotracker.shared.contract.event.TrackingInitializedEvent;
 import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.shared.domain.error.IllegalTransition;
+import com.example.cargotracker.tracking.domain.model.commands.AdvanceTrackingCommand;
+import com.example.cargotracker.tracking.domain.model.commands.RevertTrackingCommand;
 import com.example.cargotracker.tracking.domain.model.commands.UpdateTransportStatusCommand;
+import com.example.cargotracker.tracking.domain.model.events.TransportStatusRevertedEvent;
 import com.example.cargotracker.tracking.domain.model.events.TransportStatusUpdatedEvent;
 import com.example.cargotracker.tracking.domain.model.valueobjects.StatusUpdateSource;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingNumber;
@@ -124,9 +127,73 @@ public class TrackingActivity {
                 command.occurredAt(), command.updatedBy(), clock.instant()));
     }
 
+    /**
+     * 荷役の記録から貨物状態を進める（UC14 / US15 §受入基準 4）。
+     *
+     * <p><b>進めた先は種別と港が決める</b>（{@link TransportStatus#afterHandling}）。
+     * ここで判定を書き直さない。</p>
+     *
+     * <p><b>遷移表が許さない先へは動かさない</b>（不変条件 2）。荷役の順序が
+     * 現場で入れ替わることはあるが、状態を飛ばして進めると履歴が事実と食い違う。
+     * <b>断らずに記録だけ残す</b>——荷役そのものは handlingms に記録済みで、
+     * ここで例外にすると Event Processor が止まり、後続の荷役まで届かなくなる。</p>
+     *
+     * <p><b>例外の対応中は進めない</b>（不変条件 5 の下地）。解決は例外の側で行う。</p>
+     */
+    @CommandHandler
+    public void advance(AdvanceTrackingCommand command, EventAppender appender, Clock clock) {
+        if (trackingNumber == null) {
+            // **知らない追跡番号の荷役では止まらない**（不変条件 8）。荷役は
+            // すでに記録されており、ここで例外にすると後続の荷役まで止まる。
+            return;
+        }
+        TransportStatus next = TransportStatus.afterHandling(
+                command.handlingType(), command.finalPort(), command.offRoute());
+        if (status == TransportStatus.EXCEPTION || !status.canTransitionTo(next)) {
+            // 進められない。荷役の記録は handlingms に残っているので、
+            // ここでは何もしない（黙って捨てない——記録は向こうにある）。
+            return;
+        }
+
+        appender.append(new TransportStatusUpdatedEvent(trackingNumber.value(), status, next,
+                StatusUpdateSource.HANDLING, command.unLocode(), command.completedAt(),
+                command.operator(), clock.instant()));
+    }
+
+    /**
+     * 取り消された荷役の分だけ戻す（UC13 / 不変条件 11）。
+     *
+     * <p><b>戻す先は「その荷役で進める前の状態」。</b> 集約が覚えている。</p>
+     */
+    @CommandHandler
+    public void revert(RevertTrackingCommand command, EventAppender appender, Clock clock) {
+        if (trackingNumber == null || statusBeforeHandling == null) {
+            // 進めていないものは戻せない。荷役の取り消しは handlingms に残る。
+            return;
+        }
+
+        appender.append(new TransportStatusRevertedEvent(trackingNumber.value(), status,
+                statusBeforeHandling, command.handlingType(), command.reason(),
+                command.revertedBy(), clock.instant()));
+    }
+
+    /** 荷役で進める前の状態。取り消しの戻し先（不変条件 11）。 */
+    private TransportStatus statusBeforeHandling;
+
     @EventSourcingHandler
     void on(TransportStatusUpdatedEvent event) {
+        if (event.source() == StatusUpdateSource.HANDLING) {
+            // 戻し先は「その荷役で進める前」。手動更新では覚えない
+            // （手動の取り消しという操作が無い）。
+            this.statusBeforeHandling = event.previousStatus();
+        }
         this.status = event.newStatus();
+    }
+
+    @EventSourcingHandler
+    void on(TransportStatusRevertedEvent event) {
+        this.status = event.restoredStatus();
+        this.statusBeforeHandling = null;
     }
 
     @EventSourcingHandler

@@ -18,8 +18,9 @@ import java.util.Set;
  * （US17・IT8）で要るので足した。集約も画面もこの判定を書き直さない——書き直すと、
  * 片方だけ正しく、もう一方が誤りを素通りさせる。</p>
  *
- * <p>荷役からの導出（{@code afterHandling}）は荷役（US15・IT9）で足す。
- * <b>いま要らない判断を先に書かない</b>——書くと、実装が無いまま「守っている」と読める。</p>
+ * <p><b>荷役からの導出は {@link #afterHandling} が 1 か所で答える</b>（US15・IT9）。
+ * 「同じ荷降しでも行き先が違う」判定を集約や購読側に書き直さない
+ * （domain-model.md「TransportStatus 状態遷移」）。</p>
  */
 public enum TransportStatus {
     /** 追跡を開始した直後。まだ荷物を受け取っていない。 */
@@ -50,6 +51,40 @@ public enum TransportStatus {
     /** 利用者に見せる呼び名。 */
     public String label() {
         return label;
+    }
+
+    /**
+     * 荷役のあとの状態（US15 / domain-model.md）。
+     *
+     * <p><b>同じ荷降しでも行き先が違う。</b> 途中の港なら {@code UNLOADED}、
+     * 目的港なら {@code AWAITING_CLAIM} で、引取を待つ状態になる。この判定を
+     * 集約にも購読側にも書き直さない。</p>
+     *
+     * <p><b>予定外の荷役は {@code MISROUTED}</b>（不変条件 3 / US28）。どの種別でも
+     * 同じで、種別ごとの行き先より先に効く——予定外に運ばれた貨物は、
+     * 積んだか降ろしたかより「予定から外れた」ことのほうが重い。</p>
+     *
+     * @param handlingType 荷役の種別（{@code RECEIVE} / {@code LOAD} /
+     *     {@code UNLOAD} / {@code CLAIM}）。<b>handlingms の型は持ち込まない</b>ので
+     *     名前で受ける（契約は文字列で運ぶ）
+     * @param finalPort 目的港での作業か。旅程を持つ handlingms が判定して載せる
+     * @param offRoute 予定ルート外か。同上
+     */
+    public static TransportStatus afterHandling(String handlingType, boolean finalPort,
+            boolean offRoute) {
+        if (offRoute) {
+            return MISROUTED;
+        }
+        return switch (handlingType) {
+            case "RECEIVE" -> RECEIVED;
+            case "LOAD" -> LOADED;
+            case "UNLOAD" -> finalPort ? AWAITING_CLAIM : UNLOADED;
+            case "CLAIM" -> DELIVERED;
+            // **知らない種別を黙って通さない。** 契約に値が増えたのに
+            // こちらが追随していない、という状態を素通りさせると、
+            // 貨物状態が動かないまま荷役だけが記録される。
+            default -> throw new IllegalArgumentException("知らない荷役種別です: " + handlingType);
+        };
     }
 
     /**
