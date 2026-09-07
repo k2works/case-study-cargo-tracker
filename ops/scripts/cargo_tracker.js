@@ -10,6 +10,7 @@
 
 import { execSync, spawn } from 'child_process';
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { openUrl } from './shared.js';
 import { BACKEND_DIR, DB_SERVICES, JIG_SERVICES } from './develop.js';
@@ -317,6 +318,7 @@ const READY_TIMEOUT_SECONDS = 600;
 
 /** kind クラスタ名と名前空間。手順書と揃える。 */
 const KIND_CLUSTER = 'cargo-tracker';
+const KIND_API_SERVER_PORT = 16443;
 const NAMESPACE = 'cargo-tracker';
 const OVERLAY = 'ops/k8s/overlays/local';
 
@@ -333,10 +335,16 @@ function sleep(ms) {
  * `container ... is not running` で落ちる。クラスタは壊れておらず、起こせば
  * 中の Pod ごと戻るので、作り直しには倒さない。</p>
  *
- * <p>`docker start` は動いているコンテナには何もしないため、状態は調べない。</p>
+ * <p>Docker 29 では、動いているコンテナへの `docker start` でも公開ポートを検査し、
+ * Windows の予約済みポートに当たると失敗することがある。停止中のノードだけ起こす。</p>
  */
 function startNodes() {
-  const nodes = sh(`kind get nodes --name ${KIND_CLUSTER}`).trim().split('\n').filter(Boolean);
+  const nodes = sh(`kind get nodes --name ${KIND_CLUSTER}`).trim().split('\n').filter((node) => {
+    if (!node) {
+      return false;
+    }
+    return sh(`docker inspect ${node} --format "{{.State.Running}}"`).trim() !== 'true';
+  });
   if (nodes.length === 0) {
     return;
   }
@@ -364,6 +372,32 @@ function waitForApiServer(seconds = 180) {
   throw new Error(`API server が ${seconds} 秒のあいだ応答しません`);
 }
 
+/** kind ノードの Kubernetes API がホストへ公開されているかを見る。 */
+function hasKindApiServerPort() {
+  const ports = sh(
+    `docker inspect ${KIND_CLUSTER}-control-plane --format "{{json .NetworkSettings.Ports}}"`,
+  );
+  return /"6443\/tcp":\[\{/.test(ports);
+}
+
+/** Windows の予約ポートを避けるため、kind の API server ポートを固定して作る。 */
+function createKindCluster() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), `${KIND_CLUSTER}-kind-`));
+  const config = path.join(dir, 'kind-cluster.yaml');
+  fs.writeFileSync(config, `kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+networking:
+  apiServerAddress: 127.0.0.1
+  apiServerPort: ${KIND_API_SERVER_PORT}
+`, 'utf8');
+  try {
+    console.log(sh(`kind create cluster --name ${KIND_CLUSTER} --config "${config}"`,
+      { stdio: 'inherit' }) ?? '');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
 /** kind クラスタを作成または起動し、kubectl の context を使える状態にする。 */
 function ensureKindCluster() {
   const clusters = (() => {
@@ -374,9 +408,18 @@ function ensureKindCluster() {
     }
   })();
   if (!clusters.split('\n').includes(KIND_CLUSTER)) {
-    console.log(sh(`kind create cluster --name ${KIND_CLUSTER}`, { stdio: 'inherit' }) ?? '');
+    createKindCluster();
   } else {
     startNodes();
+    if (!hasKindApiServerPort()) {
+      throw new Error(
+        `${KIND_CLUSTER}-control-plane の 6443/tcp がホストへ公開されていません。`
+        + ` kind delete cluster --name ${KIND_CLUSTER} で作り直してください`,
+      );
+    }
+    // Docker Desktop の再起動後は API server の待受ポートが変わることがある。
+    // 古い kubeconfig のまま /readyz を見ると、起動済みでも接続拒否になる。
+    sh(`kind export kubeconfig --name ${KIND_CLUSTER}`);
     waitForApiServer();
   }
   // クラスタがあっても kubeconfig に context が無いことがある（作成を途中で
