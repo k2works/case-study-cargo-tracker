@@ -1,6 +1,8 @@
 # Docs Update Log
 
 ## 2026-09-07
+* **Update**: [iteration_plan-9](/development/cargo-tracker/iteration_plan-9.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0008-cargo-revision-as-a-projection](/adr/cargo-tracker/0008-cargo-revision-as-a-projection.md) を更新（claude-code/claude-opus-5）
 * **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
 * **Update**: [iteration_plan-9](/development/cargo-tracker/iteration_plan-9.md) を更新（claude-code/claude-opus-5）
 * **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）

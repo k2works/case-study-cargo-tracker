@@ -46,6 +46,11 @@ tasks.named<Test>("test") {
     // ClusterJwtSecretTest はマニフェストそのものを読む。入力として宣言しないと
     // Gradle が UP-TO-DATE と判断し、鍵を戻しても検査が走らない。
     inputs.file(rootProject.file("../../../ops/k8s/base/kustomization.yaml"))
+    // AdrHasChecksTest は ADR の文書そのものを読む。入力として宣言しないと
+    // Gradle が UP-TO-DATE と判断し、検査の節を消しても赤にならない（IT9 で実測）。
+    inputs.dir(rootProject.file("../../../docs/adr/cargo-tracker"))
+            .withPropertyName("adrDocuments")
+            .withPathSensitivity(PathSensitivity.RELATIVE)
     // ArchRulesAreAppliedTest は各サービスのテストソースを読む。
     inputs.files(rootProject.subprojects.map { it.file("src/test/java") })
             .withPropertyName("serviceTestSources")

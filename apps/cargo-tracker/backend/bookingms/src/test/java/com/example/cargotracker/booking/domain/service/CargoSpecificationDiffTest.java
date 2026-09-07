@@ -83,4 +83,32 @@ class CargoSpecificationDiffTest {
         assertThatThrownBy(() -> CargoSpecificationDiff.labelOf("知らない項目"))
                 .isInstanceOf(IllegalStateException.class);
     }
+
+    @Test
+    @DisplayName("ADR-0008 決定 3: ラベルの無い要素は例外にする（黙って差分から消さない）")
+    void failsWhenAnElementHasNoLabel() {
+        // **名簿方式の罠。** 載っていないものを通す名簿は、載せ忘れたものほど漏れる。
+        // ここで落ちれば、要素を足した人がラベルを足し忘れたことに気づける。
+        var labels = labelsOf();
+
+        for (var component : CargoSnapshot.class.getRecordComponents()) {
+            assertThat(labels)
+                    .as("%s のラベルが要素表に無い。足さないと差分から黙って消える",
+                            component.getName())
+                    .containsKey(component.getName());
+        }
+    }
+
+    /** 実装が持つラベルの名簿を読む（本番と同じものを見る）。 */
+    private static java.util.Map<String, String> labelsOf() {
+        try {
+            var field = CargoSpecificationDiff.class.getDeclaredField("LABELS");
+            field.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            var labels = (java.util.Map<String, String>) field.get(null);
+            return labels;
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException("ラベルの名簿を読めませんでした", e);
+        }
+    }
 }

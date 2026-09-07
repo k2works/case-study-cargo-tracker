@@ -421,4 +421,30 @@ class BookingControllerIT extends AbstractAxonIntegrationTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(((Number) response.getBody().get("preliminary")).intValue()).isPositive();
     }
+
+    @Test
+    @DisplayName("ADR-0008 決定 4: 修正の履歴を HTTP から読める（記録と読み口は対で出す）")
+    void servesTheRevisionHistory() {
+        // **記録だけして読み口を出さないと、記録は無いのと同じ**（ADR-0008 の起票理由）。
+        // 画面の検査（BookingDetailPage.test.tsx）はモックを読むので、
+        // 経路が生きていることは判別しない。
+        String bookingId = String.valueOf(
+                post(request(Map.of("productName", "改訂前-" + System.nanoTime())))
+                        .getBody().get("bookingId"));
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
+                assertThat(get("/" + bookingId).getStatusCode()).isEqualTo(HttpStatus.OK));
+
+        put("/" + bookingId, request(Map.of("productName", "改訂後-" + System.nanoTime())));
+
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
+            var response = get("/" + bookingId + "/revisions");
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> items =
+                    (List<Map<String, Object>>) response.getBody().get("items");
+            assertThat(items).isNotEmpty();
+            assertThat(items.get(0)).containsKeys("label", "before", "after", "updatedAt");
+        });
+    }
 }
