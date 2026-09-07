@@ -1,6 +1,11 @@
 # Docs Update Log
 
 ## 2026-09-07
+* **Update**: [iteration_plan-9](/development/cargo-tracker/iteration_plan-9.md) を更新（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-9](/development/cargo-tracker/iteration_plan-9.md) を更新（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-9](/development/cargo-tracker/iteration_plan-9.md) を更新（claude-code/claude-opus-5）
 * **Update**: [iteration_plan-8](/development/cargo-tracker/iteration_plan-8.md) を更新（claude-code/claude-opus-5）
 * **Update**: [iteration_report-8](/development/cargo-tracker/iteration_report-8.md) を更新（claude-code/claude-opus-5）
 * **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
