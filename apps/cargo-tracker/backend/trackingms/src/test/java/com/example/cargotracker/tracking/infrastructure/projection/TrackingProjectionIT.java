@@ -39,8 +39,8 @@ class TrackingProjectionIT extends AbstractAxonIntegrationTest {
     private TrackingEventMapper history;
 
     private static TrackingInitializedEvent initialized(String trackingNumber, String bookingId) {
-        return new TrackingInitializedEvent(trackingNumber, bookingId, "JPTYO", "USNYC",
-                "GENERAL",
+        return new TrackingInitializedEvent(trackingNumber, bookingId, "SHP-000001",
+                "JPTYO", "USNYC", "GENERAL",
                 List.of(new TrackingInitializedEvent.Leg("V-MOL-001", "JPTYO", "SGSIN",
                                 Instant.parse("2026-09-10T09:00:00Z"),
                                 Instant.parse("2026-09-16T08:00:00Z")),
@@ -143,5 +143,24 @@ class TrackingProjectionIT extends AbstractAxonIntegrationTest {
         assertThat(history.findHistory(trackingNumber))
                 .as("履歴そのものは残す。届いた事実を捨てると、後から追えない")
                 .hasSize(1);
+    }
+
+    @Test
+    @DisplayName("US18: 荷主で絞って自社の追跡だけを引ける")
+    void findsTrackingsByShipper() {
+        // **値は全層を生き延びるか確かめる。** shipperId は
+        // TrackingNumberIssuedEvent → InitializeTrackingCommand → TrackingInitializedEvent
+        // の 3 本を通って来る。1 本でも落とすとここで空になる。
+        String mine = "T-S-" + System.nanoTime();
+        String other = "T-S-" + System.nanoTime();
+        projection.on(initialized(mine, "b-" + System.nanoTime()));
+        projection.on(new TrackingInitializedEvent(other, "b-" + System.nanoTime(),
+                "SHP-000999", "JPTYO", "USNYC", "GENERAL", List.of(), AT));
+
+        assertThat(trackings.findByShipper("SHP-000001"))
+                .extracting(TrackingSummaryMapper.TrackingSummaryRow::trackingNumber)
+                .contains(mine)
+                .as("他社の追跡が混ざると、荷主に他人の貨物が見える")
+                .doesNotContain(other);
     }
 }

@@ -20,12 +20,17 @@ import org.axonframework.eventsourcing.annotation.EventTag;
  * trackingms の {@code TransportStatus} の話で、bookingms には別の意味の状態がある。
  * 同じ名前でも BC ごとに値と意味が違うので、列挙型も状態名も契約に出さない。</p>
  *
+ * <p><b>{@code shipperId} を載せる。</b> 投影はコマンドを読まないので、コマンドに
+ * 載せただけでは荷主向けの追跡一覧（US18）が作れない。<b>イベントは購読側の投影が
+ * 作れる分を運ぶ</b>——受け側の列を先に並べて確かめる（IT7 の教訓）。</p>
+ *
  * <p><b>{@code @EventTag} が要る。</b> 付け忘れると trackingms の集約は空のまま
  * 復元され、「二重に開始しない」守りが素通りする。</p>
  */
 public record TrackingInitializedEvent(
         @EventTag(key = "trackingNumber") String trackingNumber,
         String bookingId,
+        String shipperId,
         String originUnLocode,
         String destinationUnLocode,
         String cargoType,

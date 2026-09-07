@@ -47,8 +47,7 @@ class TrackingStatusUpdateIT extends AbstractAxonIntegrationTest {
     @DisplayName("US17: 手動更新が集約を通り、履歴と一覧の現在値になる")
     void manualUpdateFlowsThroughToTheProjection() {
         String trackingNumber = "TRK-IT" + System.nanoTime() % 100000000L;
-        commandGateway.sendAndWait(new InitializeTrackingCommand(trackingNumber,
-                "b-" + System.nanoTime(), "JPTYO", "USNYC", "GENERAL",
+        commandGateway.sendAndWait(new InitializeTrackingCommand(trackingNumber, "b-", "SHP-000001" + System.nanoTime(), "JPTYO", "USNYC", "GENERAL",
                 List.of(new InitializeTrackingCommand.LegDto("V-MOL-001", "JPTYO", "USNYC",
                         Instant.parse("2026-09-10T09:00:00Z"),
                         Instant.parse("2026-09-24T18:00:00Z"))),

@@ -44,8 +44,8 @@ class ReplayIT extends AbstractAxonIntegrationTest {
     private TrackingEventMapper history;
 
     private static TrackingInitializedEvent initialized(String trackingNumber, String bookingId) {
-        return new TrackingInitializedEvent(trackingNumber, bookingId, "JPTYO", "USNYC",
-                "GENERAL",
+        return new TrackingInitializedEvent(trackingNumber, bookingId, "SHP-000001",
+                "JPTYO", "USNYC", "GENERAL",
                 List.of(new TrackingInitializedEvent.Leg("V-MOL-001", "JPTYO", "SGSIN",
                                 Instant.parse("2026-09-10T09:00:00Z"),
                                 Instant.parse("2026-09-16T08:00:00Z")),

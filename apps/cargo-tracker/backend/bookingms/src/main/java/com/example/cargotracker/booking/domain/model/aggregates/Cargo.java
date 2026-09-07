@@ -70,6 +70,14 @@ public class Cargo {
     private Location destination;
     /** 貨物種別。追跡番号の発行（US14）で trackingms へ渡す。 */
     private String cargoType;
+    /**
+     * 荷主。<b>発行のイベントに載せる</b>（US18）。
+     *
+     * <p>受付のイベントには最初から載っていたが、集約は保持していなかった
+     * （{@code book()} を通り抜けるだけ）。持たないと、発行のときに誰の貨物か
+     * 分からず、trackingms は荷主を知る手段を持たない。</p>
+     */
+    private String shipperId;
     /** 発行済みの追跡番号。取り消し（補償）で「何を取り消したか」を残すのに要る。 */
     private String trackingNumber;
     /** 営業へ差し戻していて、まだ返事が来ていないか（US10 §4 の対）。 */
@@ -361,7 +369,7 @@ public class Cargo {
         }
 
         appender.append(TrackingNumberIssuedEvent.of(command.bookingId(),
-                command.trackingNumber().trim(), origin.unLocode().value(),
+                command.trackingNumber().trim(), shipperId, origin.unLocode().value(),
                 destination.unLocode().value(), cargoType, legs,
                 command.issuedBy(), clock.instant()));
         return command.bookingId();
@@ -523,6 +531,7 @@ public class Cargo {
         this.origin = Location.of(event.originUnLocode());
         this.destination = Location.of(event.destinationUnLocode());
         this.cargoType = event.cargoType();
+        this.shipperId = event.shipperId();
     }
 
     @EventSourcingHandler

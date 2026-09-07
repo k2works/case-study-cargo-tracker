@@ -3,7 +3,7 @@ type: Plan
 title: "イテレーション 8 計画 - 追跡照会と手動更新"
 tags: [plan]
 status: draft
-generated: { by: claude-code/claude-opus-5, at: 2026-09-07T03:44:12Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-07T04:03:53Z }
 ---
 
 # イテレーション 8 計画 - 追跡照会と手動更新
@@ -114,7 +114,7 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-07T03:44:12Z }
 | T2 | `TransportStatus#canTransitionTo`（不変条件 2）。**遷移表を正典から写し、canon テストで固定**。**同じ変更で javadoc を直す**——いまは「`canTransitionTo` と `afterHandling` は荷役（US15・IT9）で足す」と書いてあり、前倒しすると実装と食い違ったまま残る（コメントは仕様として読まれる）。**完了**（`TransportStatusTest` が全 9 値 × 全 9 値と呼び名を固定。javadoc も訂正） | US17 | 4h |
 | T3 | `UpdateTransportStatusCommand` / `TransportStatusUpdatedEvent` と **`TrackingActivity#updateStatusManually`**（正典の名前。`domain-model.md:762`）。**荷役由来の `AdvanceTrackingCommand`（IT9）と同じ集約に入る**ので、名前で区別が付くようにする。**例外発生中は動かさない**（不変条件 5 の下地）。**完了**（集約まで。**REST の入口は T7**——ここで止めると定義済み未使用になるので、T7 で必ず繋ぐ） | US17 | 5h |
 | T4 | `tracking_event` テーブルと投影。**追記系なので `event_id` を PK にして再配送で増えない**（data-model:43）。**完了**（`@MessageIdentifier` で Axon のイベント識別子をそのまま PK に。実 Axon Server を通す `TrackingStatusUpdateIT` で配線も固定） | US17・US18 | 4h |
-| T5 | **`shipperId` を 3 本のイベント／コマンドに足す**（`TrackingNumberIssuedEvent` → `InitializeTrackingCommand` → `TrackingInitializedEvent`）。**`Cargo` 集約に `shipperId` フィールドと `on(CargoBookedEvent)` での代入を先に足す**（いまは `book()` を通り抜けるだけで保持していない）。`tracking_summary.shipper_id` と `shipper_cargo_snapshot` を作る。**契約 2 本（`InitializeTrackingCommand`・`TrackingInitializedEvent`）はゴールデン JSON を先に赤にする** | US18 | 7h |
+| T5 | **`shipperId` を 3 本のイベント／コマンドに足す**（`TrackingNumberIssuedEvent` → `InitializeTrackingCommand` → `TrackingInitializedEvent`）。**`Cargo` 集約に `shipperId` フィールドと `on(CargoBookedEvent)` での代入を先に足す**（いまは `book()` を通り抜けるだけで保持していない）。`tracking_summary.shipper_id` を作る（**`shipper_cargo_snapshot` は作らない**——元にする予定だったイベントは契約ではなく trackingms から購読できず、購読できる `TrackingInitializedEvent` から作れる内容は `tracking_summary.shipper_id` と同じ。`data-model.md` に反映済み）。**契約 2 本（`InitializeTrackingCommand`・`TrackingInitializedEvent`）はゴールデン JSON を先に赤にする**。**完了**（3 本すべてに `shipperId`。`Cargo` が保持し発行のイベントに載る。`V004` で `tracking_summary.shipper_id` と索引） | US18 | 7h |
 | T6 | 公開照会の読み口（`GET /api/v1/tracking/public/{trackingNumber}`）と **S44 画面**（**既存の `PublicTrackingPage` プレースホルダを埋める**）。**見つからない案内・入力形式のヒント・問い合わせの出口** | US18 | 6h |
 | T6b | **総当たり対策**（`ui_design.md:1298`）。同一 IP から 1 分に 10 回を超える公開照会を Gateway で `429` にする。**gatewayms に実装が無い**（`grep` で 0 件）ので新設。**認証不要経路の唯一の防御**で、番号の形式を直すだけでは止まらない | US18 | 4h |
 | T7 | **S41 追跡詳細・管理**（状態の履歴・手動更新）と **S40 追跡一覧**（`/tracking`）。**追跡管理者と荷主の両方の入口**（`ui_design.md:144-145` は S40・S41 のロールを「追跡、**荷主（自社のみ）**」と定める）。navbar・ダッシュボード・到達性テストの 4 点を**両ロールで**合わせる | US17・US18 | 7h |
@@ -135,7 +135,7 @@ IT7 で `process_state` を「新設」と誤認して実装済みの一式を�
 | ログイン画面・ポータルからの入口 | **実装済み**（IT7 の教訓で入れた）。クラスタ E2E に検査もある | そのまま使う |
 | `TransportStatus`（9 値・呼び名） | **実装済み**（IT7）。`canTransitionTo` は**未実装**（「いま要らない判断を先に書かない」として保留） | 遷移だけ足す |
 | `tracking_summary`・`tracking_leg` | **実装済み**（IT7） | 列を足す |
-| `tracking_event`・`shipper_cargo_snapshot` | **未実装**（`grep` で 0 件） | 新設 |
+| `tracking_event` | **未実装**（`grep` で 0 件） | 新設（`shipper_cargo_snapshot` は作らない。T5 参照） |
 | `UpdateTransportStatusCommand`・`TransportStatusUpdatedEvent` | **未実装**（`grep` で 0 件） | 新設 |
 | authms の利用者に `shipper_id` | **実装済み**（V002。`ROLE_SHIPPER` のときだけ持つ） | そのまま使う |
 
@@ -175,7 +175,7 @@ T1 → T5（形式を直してから `shipperId` を足す。契約を 2 度触�
 
 **「余力次第」にはしません。** H.2 は **IT7 で「US13 の実装で当たったら判断」として送ったもの**で、当たらなかったため 2 IT 連続の繰越です。ここで返します。
 
-**引き継ぎ 3（`shipper_id`・`shipper_cargo_snapshot`）は本体 T5 に取り込みました。** US18 の「荷主は自社の貨物だけが見える」が成り立たないためで、引き継ぎ枠ではなくストーリーの一部です。
+**引き継ぎ 3（`shipper_id`）は本体 T5 に取り込みました。** US18 の「荷主は自社の貨物だけが見える」が成り立たないためで、引き継ぎ枠ではなくストーリーの一部です。
 
 **IT7 引き継ぎ 10 件の行き先（漏れなく）:** 1 → H.1、2 → H.2、**3 → T5（本体）**、4 → IT9、5 → T8 で当たったら / IT9、6 → IT9、7 → T6 で当たる、8 → H.3、9（ADR の承認と `verify`）→ **人の署名**、10（既存の Code Smell）→ 扱わない。
 
@@ -315,15 +315,7 @@ entity "tracking_event（新設）" as te {
   recorded_by : VARCHAR(50)
 }
 
-entity "shipper_cargo_snapshot（新設）" as scs {
-  * **tracking_number** : VARCHAR(25) <<PK>>
-  --
-  shipper_id : VARCHAR(36) NOT NULL
-  booking_id : VARCHAR(36) NOT NULL
-}
-
 ts ||--o{ te
-ts ||--|| scs
 @enduml
 ```
 
@@ -331,7 +323,9 @@ ts ||--|| scs
 
 **`handling_type` / `voyage_number` は本 IT で作りません。** 書くのは荷役（IT9）で、中身の無い列を先に作ると動くと誤解されます。
 
-**`tracking_summary.shipper_id` は `NOT NULL` にします。** IT7 の既存行（クラスタに 1 件）は開発データなので、マイグレーションで**削除して作り直す**か、`DEFAULT` を置いて後で埋めるかを T5 で決めます。
+**`tracking_summary.shipper_id` は NULL を許しました（T5 の決定）。** 正典は `NOT NULL` ですが、IT7 に作られた行には荷主 ID がありません。**既存の行を読めなくする不変条件は足しません**——復元では検査せず、新規の受け入れ時だけ検査します（IT7 の教訓）。開発データを作り直せば全行に入ります。
+
+**`shipper_cargo_snapshot` は作りません（T5 の決定）。** 正典が元イベントに指定していた `TrackingNumberIssuedEvent` は bookingms の内部イベントで、`shared/contract/event` に無く trackingms から購読できません。購読できる `TrackingInitializedEvent` から作れる内容は `tracking_summary.shipper_id` と同じになるため、同じ事実を 2 か所に持たず 1 つに寄せました。`data-model.md`・`architecture_backend.md`・`domain-model.md` に反映済みです。
 
 #### 画面遷移（本 IT で触る画面）
 
@@ -382,7 +376,7 @@ end note
 
 | 契約 | 変更 |
 | :--- | :--- |
-| `TrackingNumberIssuedEvent` | `shipperId` を足す（`data-model.md:575` が `shipper_cargo_snapshot` の元と指定） |
+| `TrackingNumberIssuedEvent` | `shipperId` を足す（trackingms が荷主 ID を得る唯一の経路） |
 | `InitializeTrackingCommand` | 同上（trackingms へ渡す） |
 | `TrackingInitializedEvent` | 同上（trackingms の投影が読む） |
 
@@ -397,19 +391,19 @@ end note
 | `shared/contract/event/` の中身 | `ShipperRegisteredEvent` と `TrackingInitializedEvent` の **2 本だけ** |
 | `TrackingNumberIssuedEvent` の場所 | `bookingms/domain/model/events/`（**bookingms 内部**）。`BookingReactionHandler` がプロセス内で購読 |
 | `domain-model.md:1222` | 契約イベント 11 本の表に載せ、購読者に **trackingms と handlingms** を挙げる |
-| `data-model.md:577,830` | `shipper_cargo_snapshot` の元イベントを `TrackingNumberIssuedEvent` と指定 |
+| `data-model.md:577,830` | `shipper_cargo_snapshot` の元イベントを `TrackingNumberIssuedEvent` と指定。**実装不能だった**（契約ではないので購読できない）ため、表そのものを取り下げて `tracking_summary.shipper_id` に寄せた |
 
 **trackingms はこのイベントを購読できません**（BC の外にあるので）。つまり **正典が実装不能な指定をしています**。
 
 **本 IT の判断: 契約へ昇格させず、正典側を直します。**
 
-- trackingms が `shipper_cargo_snapshot` を作れるのは **`TrackingInitializedEvent` から**だけ。`data-model.md` の元イベントをこちらに直す
+- trackingms が荷主 ID を得られるのは **`TrackingInitializedEvent` から**だけ。`shipper_cargo_snapshot` は取り下げ、`tracking_summary.shipper_id` に寄せた（T5 の決定）
 - `domain-model.md:1222` の購読と用途を「trackingms（**`BookingReactionHandler` 経由**。直接購読しない）」に直す
 - **handlingms が `cargo_snapshot` を作る IT9 で、契約へ昇格させるかを判断します**。実際に BC の外から購読する必要が出るのはそのときで、それまで契約に置くと「読む側の無い契約を先に敷く」ことになります（`architecture_backend.md` の判断）
 
 **したがってゴールデン JSON を赤にするのは契約 2 本**（`InitializeTrackingCommand`・`TrackingInitializedEvent`）です。`TrackingNumberIssuedEvent` は bookingms の内部イベントなので、bookingms の検査で守ります。
 
-**フィールドの追加は許されます**（削除・型変更が禁止）。IT7 に発行済みのイベントは `shipperId` が `null` で復元されます。**投影は `null` の分を書きません**（`shipper_cargo_snapshot` に行ができない）。開発データなので作り直します。
+**フィールドの追加は許されます**（削除・型変更が禁止）。IT7 に発行済みのイベントは `shipperId` が `null` で復元されます。**投影は `null` のまま書きます**（`tracking_summary.shipper_id` は NULL を許す）。荷主向け一覧には出ませんが、既存の行が読めなくなることもありません。開発データは作り直します。
 
 ### ADR
 
@@ -427,9 +421,9 @@ end note
 | # | 反映先 | 内容 |
 | :--- | :--- | :--- |
 | 1 | `domain-model.md`（`:1222`） | `TrackingNumberIssuedEvent` の payload に **`shipperId` を足す**（IT7 で「US18 で足す」と決めた） |
-| 2 | `data-model.md` | `tracking_summary.shipper_id`・`tracking_event`・`shipper_cargo_snapshot` を「IT8 で作る」に更新。`current_unlocode` は手動更新で入る分だけ |
+| 2 | `data-model.md` | `tracking_summary.shipper_id`・`tracking_event` を「IT8 で作る」に更新。`current_unlocode` は手動更新で入る分だけ。**完了**（`shipper_cargo_snapshot` は取り下げ） |
 | 3 | ADR-0010 決定 2 | 採番の形式を訂正（ADR-0011 で行う） |
-| 3b | `data-model.md`（`:577`・`:830`） | **`shipper_cargo_snapshot` の元イベントを `TrackingInitializedEvent` に直す**。`TrackingNumberIssuedEvent` は bookingms 内部で、trackingms は購読できない |
+| 3b | `data-model.md`（`:577`・`:830`） | **完了**。元イベントの指定が実装不能（`TrackingNumberIssuedEvent` は bookingms 内部で購読できない）だったため、表そのものを取り下げて `tracking_summary.shipper_id` に寄せた |
 | 3c | `domain-model.md`（`:1222`） | **`TrackingNumberIssuedEvent` の購読と用途を「trackingms（`BookingReactionHandler` 経由。直接購読しない）」に直す**。契約イベント 11 本の表に載っているが `shared/contract` には無い |
 | 3d | `trackingms/TransportStatus` の javadoc | 「`canTransitionTo` は IT9 で足す」を「**`canTransitionTo` は US17（IT8）で実装。`afterHandling` は IT9**」に直す（T2 の同じ変更で） |
 | 4 | `ui_design.md`（S44） | **推定到着日の出し方**（`tracking_leg` の最終区間の荷降し）を明記。所要日数の計算式が 2 か所ある問題（IT7 引き継ぎ 7）もここで 1 か所に寄せる |

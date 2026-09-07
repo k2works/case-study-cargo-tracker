@@ -17,12 +17,16 @@ import org.axonframework.eventsourcing.annotation.EventTag;
  * <p><b>列挙型を載せない。</b> {@code cargoType} は文字列で運ぶ。同じ名前でも
  * BC ごとに値と意味が違う（domain-model.md「置かないもの」）。</p>
  *
+ * <p><b>{@code shipperId} を載せる。</b> 連鎖の先（trackingms）が荷主を知る唯一の
+ * 経路である。載せ忘れても連鎖は通り、荷主向けの一覧だけが空になる。</p>
+ *
  * <p><b>{@code @EventTag} が要る。</b> 付け忘れると集約は空のまま復元され、
  * 「二重に発行しない」守り（不変条件 8）が素通りする。</p>
  */
 public record TrackingNumberIssuedEvent(
         @EventTag(key = "bookingId") String bookingId,
         String trackingNumber,
+        String shipperId,
         String origin,
         String destination,
         String cargoType,
@@ -41,10 +45,10 @@ public record TrackingNumberIssuedEvent(
 
     /** 確定済みの旅程から組み立てる。<b>集約に平坦化の手順を置かない。</b> */
     public static TrackingNumberIssuedEvent of(String bookingId, String trackingNumber,
-            String origin, String destination, String cargoType,
+            String shipperId, String origin, String destination, String cargoType,
             List<CargoRoutedEvent.Leg> routedLegs, String issuedBy, Instant issuedAt) {
-        return new TrackingNumberIssuedEvent(bookingId, trackingNumber, origin, destination,
-                cargoType,
+        return new TrackingNumberIssuedEvent(bookingId, trackingNumber, shipperId, origin,
+                destination, cargoType,
                 routedLegs.stream().map(leg -> new Leg(leg.voyageNumber(),
                         leg.loadUnLocode(), leg.unloadUnLocode(),
                         leg.loadTime(), leg.unloadTime())).toList(),

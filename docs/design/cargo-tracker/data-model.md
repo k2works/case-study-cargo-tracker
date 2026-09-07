@@ -4,7 +4,7 @@ title: "データモデル設計 - 国際貨物輸送管理システム（CQRS /
 description: "CQRS / Event Sourcing 版 Cargo Tracker のデータモデル設計。Event Store は Axon Server に任せ、サービスごとの投影テーブル・Axon 管理テーブル・Auth の状態テーブルを ER 図とテーブル定義で示し、Processing Group との対応とリプレイ前提のマイグレーション方針を定める。"
 tags: [design,data-model,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-07T02:52:33Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-07T04:03:53Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -90,7 +90,7 @@ bi --> bidb
 | authms | `auth_db` | 状態保存 | `users`, `user_roles`, `user_shipper_link`, `auth_audit_log` |
 | bookingms | `booking_read_db` | 投影 + 受け皿 + Axon 管理 | `shipper`, `cargo_summary`, `cargo_revision`, `cargo_notification`, `cargo_leg`, `cancellation_request`, `quotation`, `quotation_candidate`, `attention_item`, `process_state`, `token_entry` |
 | routingms | `routing_read_db` | 投影 + 受け皿 + Axon 管理 | `voyage`, `carrier_movement`, `voyage_accepted_cargo_type`, `attention_item`, `token_entry` |
-| trackingms | `tracking_read_db` | 投影 + 受け皿 + Axon 管理 | `tracking_summary`, `tracking_event`, `tracking_exception`, `shipper_cargo_snapshot`, `attention_item`, `token_entry` |
+| trackingms | `tracking_read_db` | 投影 + 受け皿 + Axon 管理 | `tracking_summary`, `tracking_event`, `tracking_exception`, `attention_item`, `token_entry` |
 | handlingms | `handling_read_db` | 投影 + Axon 管理 | `cargo_snapshot`, `cargo_snapshot_leg`, `handling_activity`, `customs_declaration`, `token_entry` |
 | billingms | `billing_read_db` | 投影 + 受け皿 + Axon 管理 | `invoice`, `invoice_line_item`, `payment`, `shipper_contract_snapshot`, `attention_item`, `token_entry` |
 
@@ -553,13 +553,6 @@ entity "tracking_exception" as tx {
   projected_at: TIMESTAMPTZ NOT NULL
 }
 
-entity "shipper_cargo_snapshot" as scs {
-  * **tracking_number**: VARCHAR(25) <<PK>>
-  --
-  shipper_id: VARCHAR(36) NOT NULL
-  booking_id: VARCHAR(36) NOT NULL
-}
-
 ts ||--o{ te
 ts ||--o{ tx
 @enduml
@@ -567,7 +560,9 @@ ts ||--o{ tx
 
 | テーブル | 元になるイベント | 制約・インデックス | 備考 |
 | :--- | :--- | :--- | :--- |
-**`shipper_id`・`tracking_event`・`shipper_cargo_snapshot` は IT8（US18・US17）で作ります。** `TrackingNumberIssuedEvent` → `InitializeTrackingCommand` → `TrackingInitializedEvent` の 3 本すべてに `shipperId` を足し、trackingms が荷主 ID を得られるようにします（1 本でも落とすとそこで値が消えます）。`current_unlocode` は**手動更新（US17）で入る分だけ**で、荷役由来の位置は US15（IT9）です。
+**`shipper_id`・`tracking_event` は IT8（US18・US17）で作りました。`shipper_cargo_snapshot` は作りません。**
+
+> **IT8 T5 での判断。** この表の「元になるイベント」は `TrackingNumberIssuedEvent`（契約）と書いていましたが、**このイベントは bookingms の内部イベントで契約ではなく、trackingms から購読できません**（`shared/contract/event` に無い。正典が実装不能だった例）。購読できるのは `TrackingInitializedEvent` で、そこから作れるのは「追跡番号 → 荷主 ID・予約 ID」——**`tracking_summary` に `shipper_id` を持てば同じ情報になります**。同じ事実を 2 つの表に持つと、片方だけ直る形の食い違いが生まれます。荷主の絞り込みは `tracking_summary.shipper_id` と `INDEX(shipper_id)` で行い、この表は作りません。**authms の `user_shipper_link` との突き合わせは変わりません**（荷主 ID を突き合わせる先が 1 つ減るだけ）。 `TrackingNumberIssuedEvent` → `InitializeTrackingCommand` → `TrackingInitializedEvent` の 3 本すべてに `shipperId` を足し、trackingms が荷主 ID を得られるようにします（1 本でも落とすとそこで値が消えます）。`current_unlocode` は**手動更新（US17）で入る分だけ**で、荷役由来の位置は US15（IT9）です。
 
 **`shipper_id` は IT7 では作っていません。** `TrackingInitializedEvent` に荷主 ID が無く、trackingms はそれを得る手段を持たないためです（載せる相手のいない `NOT NULL` は作れません）。荷主向け追跡（US18・IT8）で契約イベントに `shipperId` を足すときに、この列も足します。**荷役・例外・キャンセルの列も、それを書くイベントを実装する IT で足します**——中身の無い列を先に作ると、画面が読んで「常に 0 件」を出し、動いていると誤解されます。IT7 で作ったのは `tracking_number`・`booking_id`・`cargo_type`・端点・`transport_status`・日時だけです。
 
@@ -576,7 +571,7 @@ ts ||--o{ tx
 | `tracking_summary` | `TrackingInitializedEvent`, `TransportStatusUpdatedEvent`, `CargoMisroutedEvent`, `TrackingException*Event`, `CancellationDischargePlannedEvent`, `TrackingClosedEvent` | `UNIQUE(booking_id)`, `INDEX(shipper_id)`, `INDEX(transport_status)`, `INDEX(urgent_exception_count DESC, last_status_changed_at)` | 例外の件数を非正規化して持ち、一覧が `tracking_exception` を数えない。`cancellation_discharge_unlocode` はキャンセル承認後の陸揚げ地（`CargoCancelledEvent.dischargeLocation` を `tracking-reaction` 経由で写す）。当該港の `UNLOAD` で `closed` になる |
 | `tracking_event` | `TransportStatusUpdatedEvent`（荷役由来・手動由来）、`CargoMisroutedEvent` | `UNIQUE(event_id)`（PK。元イベントの識別子）, `INDEX(tracking_number, occurred_at)` | 画面の履歴用。`event_type` は `HANDLING` / `MANUAL` / `MISROUTE` / `EXCEPTION` / `RESOLVED` / `VOIDED`。追記系なので再配送は UNIQUE で弾く。真実は Event Store |
 | `tracking_exception` | `TrackingExceptionRegisteredEvent`, `ExceptionResponseStartedEvent`, `TrackingExceptionResolvedEvent` | `INDEX(response_status, urgent DESC, occurred_at)` | `urgent` は `ExceptionType#urgent` の結果を写す |
-| `shipper_cargo_snapshot` | `TrackingNumberIssuedEvent`（契約） | `INDEX(shipper_id)` | 荷主向け一覧・詳細の絞り込み。authms の `user_shipper_link` と突き合わせる |
+| ~~`shipper_cargo_snapshot`~~ | — | — | **作りません**（IT8 T5）。元にする予定だったイベントは契約ではなく trackingms から購読できず、購読できる `TrackingInitializedEvent` から作れる内容は `tracking_summary.shipper_id` と同じになる。同じ事実を 2 か所に持たない |
 | `attention_item` | `tracking-projection` の拒否、`tracking-reaction` のコマンド失敗 | `booking_read_db` と同じ | 定義は `booking_read_db` の `attention_item` と同一 |
 
 ### `handling_read_db`（handlingms）
@@ -829,7 +824,7 @@ Processing Group は `@ProcessingGroup`（Axon 5 に存在しません）では�
 | bookingms | `booking-quotation-projection` | Quotation のイベント | `quotation`, `quotation_candidate` |
 | bookingms | `booking-reaction` | `CargoDeliveredEvent`、`PaymentRecordedEvent`、`HandlingActivityVoidedEvent`（契約） | **投影テーブルを書かない**。Cargo へコマンドを送る（`MarkDeliveredCommand`、`SettleBookingCommand` 等）。失敗だけを `attention_item` に書く |
 | routingms | `routing-voyage-projection` | Voyage のイベント | `voyage`, `carrier_movement`, `voyage_accepted_cargo_type` |
-| trackingms | `tracking-projection` | TrackingActivity のイベント、`TrackingNumberIssuedEvent` | `tracking_summary`, `tracking_event`, `tracking_exception`, `shipper_cargo_snapshot` |
+| trackingms | `tracking-projection` | TrackingActivity のイベント、`TrackingInitializedEvent`（契約） | `tracking_summary`, `tracking_event`, `tracking_exception` |
 | trackingms | `tracking-reaction` | `HandlingActivityRegisteredEvent`、`HandlingActivityVoidedEvent`、`CargoCancelledEvent`（契約）、`UNLOAD` 後の陸揚げ完了 | **投影テーブルを書かない**。TrackingActivity へコマンドを送る（`AdvanceTrackingCommand`、`CloseTrackingCommand` 等）。失敗だけを `attention_item` に書く |
 | handlingms | `handling-snapshot-projection` | `TrackingNumberIssuedEvent`, `CargoCancelledEvent` | `cargo_snapshot`, `cargo_snapshot_leg` |
 | handlingms | `handling-activity-projection` | HandlingActivity / CustomsDeclaration のイベント | `handling_activity`, `customs_declaration` |
@@ -910,7 +905,7 @@ JVM で起動するため、番号をサービス間で調整しない形が要�
 
 | 観点 | 対応 |
 | :--- | :--- |
-| 性能 | 一覧の絞り込みキー（状態・荷主・期限）にインデックス。一覧が JOIN しないよう非正規化（`shipper_name`、`last_handling_*`、例外件数）。荷主向け画面（S45 / S46 / S62）は `cargo_summary(shipper_id)`・`invoice(shipper_id)`・`shipper_cargo_snapshot(shipper_id)` の既存索引で足り、追加の索引は置かない |
+| 性能 | 一覧の絞り込みキー（状態・荷主・期限）にインデックス。一覧が JOIN しないよう非正規化（`shipper_name`、`last_handling_*`、例外件数）。荷主向け画面（S45 / S46 / S62）は `cargo_summary(shipper_id)`・`invoice(shipper_id)`・`tracking_summary(shipper_id)` の既存索引で足り、追加の索引は置かない |
 | データ量 | `tracking_event` は時系列で増える。月単位のパーティショニングは実トラフィックの計測後に判断 |
 | 監査 | Event Store のイベント列が監査ログ。投影は監査に使わない |
 | 災害復旧 | Read Model DB が壊れても Event Store から再構築できる。Event Store のバックアップが唯一の必須バックアップ |
@@ -931,10 +926,10 @@ JVM で起動するため、番号をサービス間で調整しない形が要�
 | UC08 経路条件調整 | `cargo_summary` | — |
 | UC10 確定経路通知 | `cargo_summary`（`ROUTE_NOTIFIED`） | `cargo_summary`, `cargo_leg`, `shipper` |
 | UC11 予約確定 | `cargo_summary` | — |
-| UC12 追跡番号発行 | `cargo_summary`, `tracking_summary`, `shipper_cargo_snapshot`, `cargo_snapshot`, `cargo_snapshot_leg` | — |
+| UC12 追跡番号発行 | `cargo_summary`, `tracking_summary`, `cargo_snapshot`, `cargo_snapshot_leg` | — |
 | UC13 荷役作業記録 | `handling_activity`, `tracking_summary`, `tracking_event`, `cargo_summary`（`last_handling_*`） | `cargo_snapshot`, `cargo_snapshot_leg`（航海番号起点の一覧）, `customs_declaration` |
 | UC14 貨物状態更新 | `tracking_summary`, `tracking_event` | — |
-| UC15 追跡情報照会 | — | `tracking_summary`, `tracking_event`, `tracking_exception`, `shipper_cargo_snapshot` |
+| UC15 追跡情報照会 | — | `tracking_summary`, `tracking_event`, `tracking_exception` |
 | UC16 例外処理 | `tracking_exception`, `tracking_summary` | — |
 | UC17 輸送料金算出 | `invoice`, `invoice_line_item`, `shipper_contract_snapshot` | — |
 | UC18 精算処理 | `invoice`, `payment`, `cargo_summary`（`SETTLED`） | `invoice` |

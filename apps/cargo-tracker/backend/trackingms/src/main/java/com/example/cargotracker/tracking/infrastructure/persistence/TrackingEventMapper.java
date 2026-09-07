@@ -20,7 +20,9 @@ public interface TrackingEventMapper {
     int insert(TrackingEventRow row);
 
     /** その追跡の履歴を<b>起きた順</b>に返す。記録した順ではない（後から入れるとずれる）。 */
-    @Select("SELECT * FROM tracking_event WHERE tracking_number = #{trackingNumber} "
+    @Select("SELECT event_id, tracking_number, event_type, previous_status, new_status, "
+            + "location, occurred_at, recorded_by, projected_at FROM tracking_event "
+            + "WHERE tracking_number = #{trackingNumber} "
             + "ORDER BY occurred_at, event_id")
     List<TrackingEventRow> findHistory(@Param("trackingNumber") String trackingNumber);
 

@@ -72,7 +72,7 @@ public class TrackingActivity {
         // ここで落とすと追跡の一覧に出発地も目的地も出せない（IT6 の「値は全層を
         // 生き延びるか確かめる」）。
         appender.append(new TrackingInitializedEvent(number.value(), command.bookingId(),
-                command.originUnLocode(), command.destinationUnLocode(), command.cargoType(),
+                command.shipperId(), command.originUnLocode(), command.destinationUnLocode(), command.cargoType(),
                 command.legs().stream().map(leg -> new TrackingInitializedEvent.Leg(
                         leg.voyageNumber(), leg.loadUnLocode(), leg.unloadUnLocode(),
                         leg.loadTime(), leg.unloadTime())).toList(),

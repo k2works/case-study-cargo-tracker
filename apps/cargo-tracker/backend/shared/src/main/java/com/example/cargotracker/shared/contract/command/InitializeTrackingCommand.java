@@ -30,6 +30,9 @@ import org.axonframework.modelling.annotation.TargetEntityId;
  *
  * @param trackingNumber 発行済みの追跡番号（bookingms の投影が採番した）
  * @param bookingId 元の予約
+ * @param shipperId 荷主。<b>trackingms は他の手段で知りようがない</b>——荷主向けの
+ *     追跡一覧（US18）は「自社の貨物だけ」を出すので、絞る材料がここに載らないと
+ *     作れない。投影はコマンドを読まないので、この値はイベントにも載せ直す
  * @param originUnLocode 出発地の UN/LOCODE
  * @param destinationUnLocode 目的地の UN/LOCODE
  * @param cargoType 貨物種別の名前（{@code GENERAL} / {@code HAZARDOUS} / {@code REEFER}）
@@ -39,6 +42,7 @@ import org.axonframework.modelling.annotation.TargetEntityId;
 public record InitializeTrackingCommand(
         @TargetEntityId String trackingNumber,
         String bookingId,
+        String shipperId,
         String originUnLocode,
         String destinationUnLocode,
         String cargoType,

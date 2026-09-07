@@ -4,7 +4,7 @@ title: "ドメインモデル設計 - 国際貨物輸送管理システム（CQR
 description: "CQRS / Event Sourcing 版 Cargo Tracker のドメインモデル設計。6 コンテキストの集約・不変条件・コマンド・イベント（内部 / 契約）・状態遷移・Reaction Handler を、イベントを永続化フォーマットとして定義する。"
 tags: [design,domain-model,ddd,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-07T02:17:24Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-07T04:03:53Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -1220,7 +1220,7 @@ User *-- "0..1" UserShipperLink
 
 | イベント | 発行 | 購読と用途 | 主なフィールド |
 | :--- | :--- | :--- | :--- |
-| `TrackingNumberIssuedEvent` | bookingms | trackingms（Reaction Handler → 追跡開始）、handlingms（`CargoSnapshot`） | `bookingId`, `trackingNumber`, **`shipperId`**, `origin`, `destination`, `cargoType`, `legs[]`, `issuedAt`。**`shipperId` は IT8（US18）で足す**——trackingms の `shipper_cargo_snapshot` は荷主 ID をここからしか得られない |
+| `TrackingNumberIssuedEvent` | bookingms | trackingms（Reaction Handler → 追跡開始）、handlingms（`CargoSnapshot`） | `bookingId`, `trackingNumber`, **`shipperId`**, `origin`, `destination`, `cargoType`, `legs[]`, `issuedAt`。**`shipperId` は IT8（US18）で足した**——trackingms は荷主 ID をこの連鎖からしか得られない（`tracking_summary.shipper_id` に落ちる） |
 | `CargoCancelledEvent` | bookingms | trackingms（陸揚げ地を記録。閉じるのは当該港の `UNLOAD` 後）、handlingms（`CargoSnapshot` 更新）、billingms（キャンセル料） | `bookingId`, `trackingNumber?`, `statusAtCancel`, `dischargeLocation?`, `cancelledAt` |
 | `HandlingActivityRegisteredEvent` | handlingms | trackingms（`TrackingReactionHandler` が状態を進める・誤配検知）、bookingms（投影に写す。`BookingReactionHandler` が `RecordHandlingCommand`） | `activityId`, `trackingNumber`, `bookingId`, `type`, `location`, `voyageNumber?`, `completedAt`, `offRoute` |
 | `HandlingActivityVoidedEvent` | handlingms | trackingms（`RevertTrackingCommand`）、bookingms（`RevertHandlingCommand`）。元の記録は残る | `activityId`, `trackingNumber`, `bookingId`, `type`, `location`, `reason`, `voidedBy`, `voidedAt` |

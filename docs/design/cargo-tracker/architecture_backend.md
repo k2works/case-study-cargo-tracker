@@ -4,7 +4,7 @@ title: "バックエンドアーキテクチャ - 国際貨物輸送管理シス
 description: "Axon Framework 5 による CQRS / Event Sourcing 版 Cargo Tracker のバックエンドアーキテクチャ。マイクロサービス構成で BC ごとにサービスを分け、Axon Server を Command / Event / Query Bus と Event Store に使い、投影・Reaction Handler・イベント契約を定める。"
 tags: [design, architecture, backend, cqrs, event-sourcing, axon, microservices]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-07T01:51:31Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-07T04:03:53Z }
 stale_after: 2026-12-01T00:00:00Z
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
@@ -885,7 +885,7 @@ public class BookingReactionHandler {
 | authms | 状態保存 | `auth_db` | `users`, `user_roles`, `user_shipper_link`, `auth_audit_log` |
 | bookingms | Read Model | `booking_read_db` | `shipper`, `cargo_summary`, `cargo_leg`, `cancellation_request`, `quotation`, `quotation_candidate`, `attention_item`, `token_entry`, `saga_entry`, `association_value_entry` |
 | routingms | Read Model | `routing_read_db` | `voyage`, `carrier_movement`, `voyage_accepted_cargo_type`, `token_entry` |
-| trackingms | Read Model | `tracking_read_db` | `tracking_summary`, `tracking_event`, `tracking_exception`, `shipper_cargo_snapshot`, `attention_item`, `token_entry` |
+| trackingms | Read Model | `tracking_read_db` | `tracking_summary`, `tracking_event`, `tracking_exception`, `attention_item`, `token_entry` |
 | handlingms | Read Model | `handling_read_db` | `cargo_snapshot`, `cargo_snapshot_leg`, `handling_activity`, `customs_declaration`, `token_entry` |
 | billingms | Read Model | `billing_read_db` | `invoice`, `invoice_line_item`, `payment`, `shipper_contract_snapshot`, `attention_item`, `token_entry`, `saga_entry`, `association_value_entry` |
 | Axon Server | Event Store | 専用ボリューム | イベント列、スナップショット |

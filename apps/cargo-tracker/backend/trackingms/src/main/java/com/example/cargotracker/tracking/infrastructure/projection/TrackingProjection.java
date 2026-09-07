@@ -39,7 +39,7 @@ public class TrackingProjection {
     public void on(TrackingInitializedEvent event) {
         var now = clock.instant();
         trackings.insert(new TrackingSummaryMapper.TrackingSummaryRow(
-                event.trackingNumber(), event.bookingId(),
+                event.trackingNumber(), event.bookingId(), event.shipperId(),
                 event.originUnLocode(), event.destinationUnLocode(), event.cargoType(),
                 // 追跡を始めた直後は未受領。**状態はイベントに載って来ない**ので、
                 // trackingms が自分の状態機械で決める。
