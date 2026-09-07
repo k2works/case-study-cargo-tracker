@@ -34,6 +34,16 @@ export interface BookingView {
   readonly returnedToRoutingAt: string | null;
   readonly returnReason: string | null;
   /**
+   * 差し戻し（US10 §受入基準 4）と、荷主との協議の結果（§4 の対）。
+   *
+   * **対で持つ。** 営業は「何を頼まれたか」を、経路設計者は「何が決まったか」を
+   * 読む。片方だけだと、条件をどう直せばよいのか分からない。
+   */
+  readonly conditionReviewReason: string | null;
+  readonly conditionReviewRequestedAt: string | null;
+  readonly conditionReviewResponse: string | null;
+  readonly conditionReviewRespondedAt: string | null;
+  /**
    * 調整済みの探索条件（US10）。調整していなければ空配列と null。
    *
    * **候補算出の応答から切り離して持つ。** 探索が落ちている間だけ条件の欄と

@@ -211,6 +211,22 @@ export function adjustRouteSpecification(
   );
 }
 
+/**
+ * 荷主と協議した結果を経路設計者へ返す（US10 §受入基準 4 の対）。**営業だけ**。
+ *
+ * <p>差し戻しは経路設計者 → 営業の一方向しか無く、営業は協議を終えても伝える
+ * 手段を持たなかった（IT6 レビュー）。</p>
+ */
+export function respondToConditionReview(
+  bookingId: string,
+  response: string,
+): Promise<{ bookingId: string }> {
+  return commandClient(
+    `/booking/bookings/${encodeURIComponent(bookingId)}/condition-review/response`,
+    { response },
+  );
+}
+
 /** 組めないことを営業へ差し戻す（US10 §受入基準 4）。 */
 export function requestConditionReview(
   bookingId: string,

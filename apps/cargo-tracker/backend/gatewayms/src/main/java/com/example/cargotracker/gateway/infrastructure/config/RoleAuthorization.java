@@ -122,6 +122,10 @@ public final class RoleAuthorization {
         ordered.add(new Rule("PUT", "/api/v1/booking/bookings/*/route-specification",
                 Set.of(ROUTING)));
         // 差し戻しは経路設計者だけ。POST なのでメソッド込みで宣言する。
+        // **返事は営業だけ。** 経路の `*` は `/` をまたがないので、
+        // `/condition-review/response` は上の宣言に当たらない（別に要る）。
+        ordered.add(new Rule("POST", "/api/v1/booking/bookings/*/condition-review/response",
+                Set.of(SALES)));
         ordered.add(new Rule("POST", "/api/v1/booking/bookings/*/condition-review",
                 Set.of(ROUTING)));
         // 荷主への通知と、通知後の経路設計への差し戻しは営業だけ（US12）。

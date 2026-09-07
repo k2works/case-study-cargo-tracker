@@ -180,6 +180,22 @@ export function RoutingWorkbenchPage() {
         </output>
       )}
 
+      {/* 営業から返ってきた協議の結果（US10 §4 の対）。**頼んだ理由と対で出す**——
+          何を頼んだかが読めないと、返事の意味が取れない。差し戻しは経路設計者 →
+          営業の一方向しか無く、営業は協議を終えても伝える手段がなかった。 */}
+      {booking.data?.state === 'ready' && booking.data.value.conditionReviewRespondedAt && (
+        <output className={`${NOTICE} mt-4 block`}>
+          <b>営業から返事が来ています</b>
+          （{formatBusinessDateTime(booking.data.value.conditionReviewRespondedAt)}）
+          <div className="mt-1 text-sm">
+            頼んだこと: {booking.data.value.conditionReviewReason}
+          </div>
+          <div className="mt-1">
+            決まったこと: {booking.data.value.conditionReviewResponse}
+          </div>
+        </output>
+      )}
+
       <h2 className={`${SECTION_TITLE} mt-6`}>探す条件</h2>
           <div className={`${CARD} mt-2 space-y-3`}>
             <div className="grid gap-3 sm:grid-cols-3">

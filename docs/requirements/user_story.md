@@ -4,7 +4,7 @@ title: "ユーザーストーリー - 国際貨物輸送管理システム"
 description: "US01〜US32 のユーザーストーリーと受け入れ基準の一覧。"
 tags: [requirements]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-06T15:08:45Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-07T02:17:24Z }
 ---
 
 # ユーザーストーリー - 国際貨物輸送管理システム
@@ -259,7 +259,12 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-06T15:08:45Z }
 - [ ] 現在の制約条件（期限・経由地制限等）を確認できる
 - [ ] 条件を調整（期限延長・経由地追加・貨物種別変更等）して再算出を実行できる
 - [ ] 調整後の条件で新たな経路候補が算出・提示される
-- [ ] 調整後も条件を満たす経路がない場合、営業担当者に荷主との条件協議を依頼できる
+- [x] 調整後も条件を満たす経路がない場合、営業担当者に荷主との条件協議を依頼できる
+  - IT6 で実装（`RequestConditionReviewCommand`）
+- [x] **（IT8 で追加）営業担当者は協議の結果を経路設計者に返せる**
+  - **受入基準に無かったが、依頼の一方向しか無いと業務が閉じない**（IT6 レビュー）。
+    営業は協議を終えても伝える手段が無く、依頼はダッシュボードに出たままだった。
+    `RespondToConditionReviewCommand`。状態は動かさない（[ADR-0009](../adr/cargo-tracker/0009-condition-review-is-not-a-state-transition.md) 決定 1）
 
 ---
 

@@ -254,6 +254,12 @@ public final class BookingQueries {
             // 記録だけ残して読み口を出さないと、営業に無駄な入力をさせることになる。
             Instant returnedToRoutingAt,
             String returnReason,
+            // 差し戻し（US10 §4）と協議の結果（§4 の対）。**対で持つ。**
+            // 営業は「何を頼まれたか」を、経路設計者は「何が決まったか」を読む。
+            String conditionReviewReason,
+            Instant conditionReviewRequestedAt,
+            String conditionReviewResponse,
+            Instant conditionReviewRespondedAt,
             // 調整済みの探索条件（US10）。**候補算出の応答から切り離して持つ。**
             // 探索が落ちていても、条件の調整と差し戻しは使えなければならない
             // （IT6 引き継ぎ 8b）。調整していなければ空リストと null。

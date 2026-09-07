@@ -134,6 +134,8 @@ public class BookingQueryHandler {
                 row.bookingStatus(), row.routingStatus(), row.bookedAt(),
                 row.routingRequestedAt(), row.lastNotifiedAt(),
                 row.returnedToRoutingAt(), row.returnReason(),
+                row.conditionReviewReason(), row.conditionReviewRequestedAt(),
+                row.conditionReviewResponse(), row.conditionReviewRespondedAt(),
                 parsePorts(row.routeExcludeUnlocodes()), row.routeDepartFromUnlocode(),
                 row.confirmedAt(), row.trackingNumber(), row.trackingIssuedAt(),
                 row.updatedAt(), row.updatedBy());

@@ -34,6 +34,10 @@
             <arg column="last_notified_at" javaType="java.time.Instant"/>
             <arg column="returned_to_routing_at" javaType="java.time.Instant"/>
             <arg column="return_reason" javaType="string"/>
+            <arg column="condition_review_reason" javaType="string"/>
+            <arg column="condition_review_requested_at" javaType="java.time.Instant"/>
+            <arg column="condition_review_response" javaType="string"/>
+            <arg column="condition_review_responded_at" javaType="java.time.Instant"/>
             <arg column="route_exclude_unlocodes" javaType="string"/>
             <arg column="route_depart_from_unlocode" javaType="string"/>
             <arg column="confirmed_at" javaType="java.time.Instant"/>
@@ -61,6 +65,9 @@
                condition_review_requested_at AS requested_at
         FROM cargo_summary
         WHERE condition_review_requested_at IS NOT NULL
+          -- **返したものは出さない。** 残り続けると営業は何度も同じ予約を開く
+          -- （US10 §4 の対・IT8 H.2）。
+          AND condition_review_responded_at IS NULL
           AND booking_status NOT IN ('SETTLED', 'CANCELLED')
         ORDER BY condition_review_requested_at
         LIMIT #{limit}

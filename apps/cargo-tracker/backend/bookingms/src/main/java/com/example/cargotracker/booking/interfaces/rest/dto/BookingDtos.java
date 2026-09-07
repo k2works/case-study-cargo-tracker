@@ -167,6 +167,15 @@ public final class BookingDtos {
     }
 
     /**
+     * 荷主との協議の結果（US10 §受入基準 4 の対）。
+     *
+     * <p>中身が無いと、経路設計者は条件をどう直せばよいのか分からない。</p>
+     */
+    public record RespondToConditionReviewRequest(
+            @jakarta.validation.constraints.NotBlank String response) {
+    }
+
+    /**
      * 荷主への通知（US12）。
      *
      * <p><b>料金概算の欄を持たない。</b> 料金表は US21（IT13）が正典で、現時点で

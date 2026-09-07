@@ -31,6 +31,17 @@ function booking(over: Record<string, unknown> = {}) {
     bookedAt: '2026-09-03T01:00:00Z',
     routingRequestedAt: null,
     lastNotifiedAt: null,
+    returnedToRoutingAt: null,
+    returnReason: null,
+    // **本物と同じ形にする。** キーが無いと undefined になり、`=== null` の
+    // 判定が実装と違う結果になる（モックが本物より厳しい形の失敗）。
+    conditionReviewReason: null,
+    conditionReviewRequestedAt: null,
+    conditionReviewResponse: null,
+    conditionReviewRespondedAt: null,
+    confirmedAt: null,
+    trackingNumber: null,
+    trackingIssuedAt: null,
     updatedAt: null,
     updatedBy: null,
     ...over,
@@ -661,6 +672,55 @@ describe('S22 荷主への通知（US12）', () => {
     expect(await screen.findByText('戻す理由を入力してください')).toBeInTheDocument();
     expect(fetchSpy.mock.calls.filter(([url]) =>
       String(url).includes('/return-to-routing'))).toHaveLength(0);
+  });
+
+  it('US10 §4 の対: 差し戻された予約に、営業が協議の結果を返せる', async () => {
+    // **差し戻しは一方向しか無かった**（IT6 レビュー・IT7 引き継ぎ 2）。
+    // 営業は荷主と協議を終えても、経路設計者に伝える手段が無かった。
+    const fetchSpy = mockApi({
+      bookingStatus: 'ROUTE_PROPOSED',
+      routingStatus: 'ROUTING_REQUESTED',
+      conditionReviewReason: '期限内に着ける便がありません',
+      conditionReviewRequestedAt: '2026-09-06T00:00:00Z',
+    });
+
+    renderDetail();
+
+    await userEvent.click(await screen.findByRole('button', { name: '協議の結果を返す' }));
+    await userEvent.type(screen.getByLabelText('協議の結果'), '荷主が期限を 1 月末まで延ばすことに同意');
+    await userEvent.click(screen.getByRole('button', { name: '経路設計者へ返す' }));
+
+    await waitFor(() => {
+      expect(fetchSpy.mock.calls.some(([url]) =>
+        String(url).includes('/condition-review/response'))).toBe(true);
+    });
+  });
+
+  it('US10 §4 の対: 差し戻されていない予約には返す導線を出さない', async () => {
+    mockApi(ROUTED);
+
+    renderDetail();
+
+    await screen.findByRole('heading', { name: '荷主への通知' });
+    expect(screen.queryByRole('button', { name: '協議の結果を返す' })).not.toBeInTheDocument();
+  });
+
+  it('US10 §4 の対: 中身が空のままでは返さない', async () => {
+    const fetchSpy = mockApi({
+      bookingStatus: 'ROUTE_PROPOSED',
+      routingStatus: 'ROUTING_REQUESTED',
+      conditionReviewReason: '組めません',
+      conditionReviewRequestedAt: '2026-09-06T00:00:00Z',
+    });
+
+    renderDetail();
+
+    await userEvent.click(await screen.findByRole('button', { name: '協議の結果を返す' }));
+    await userEvent.click(screen.getByRole('button', { name: '経路設計者へ返す' }));
+
+    expect(await screen.findByText('協議の結果を入力してください')).toBeInTheDocument();
+    expect(fetchSpy.mock.calls.filter(([url]) =>
+      String(url).includes('/condition-review/response'))).toHaveLength(0);
   });
 
   it('US13 §2: 通知した予約を確定できる', async () => {

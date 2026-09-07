@@ -4,7 +4,7 @@ title: "ドメインモデル設計 - 国際貨物輸送管理システム（CQR
 description: "CQRS / Event Sourcing 版 Cargo Tracker のドメインモデル設計。6 コンテキストの集約・不変条件・コマンド・イベント（内部 / 契約）・状態遷移・Reaction Handler を、イベントを永続化フォーマットとして定義する。"
 tags: [design,domain-model,ddd,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-07T00:25:14Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-07T02:17:24Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -559,6 +559,7 @@ CANCELLED --> [*]
 | `RequestRoutingCommand` | 営業担当者 | `RoutingRequestedEvent` | — | UC04 / US06 |
 | `AssignRouteCommand` | 経路設計者 | `CargoRoutedEvent` | — | UC07・UC09 / US09・US11・US28 |
 | `AdjustRouteSpecificationCommand` | 経路設計者 | `RouteSpecificationAdjustedEvent` | — | UC08 / US10 |
+| `RespondToConditionReviewCommand` | 営業担当者 | `ConditionReviewRespondedEvent` | — | UC08 / US10 §4 の対（IT8） |
 | `RequestConditionReviewCommand` | 経路設計者 | `ConditionReviewRequestedEvent` | — | UC08 / US10 |
 | `NotifyShipperCommand` | 営業担当者 | `ShipperNotifiedEvent` | — | UC10 / US12 |
 | `ReturnToRoutingCommand` | 営業担当者 | `ReturnedToRoutingEvent` | — | UC08 |

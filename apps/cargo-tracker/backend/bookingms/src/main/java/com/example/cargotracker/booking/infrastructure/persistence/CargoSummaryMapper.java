@@ -148,6 +148,7 @@ public interface CargoSummaryMapper {
             + "route_depart_from_unlocode = #{departFromUnLocode}, "
             + "routing_status = #{routingStatus}, condition_review_requested_at = NULL, "
             + "condition_review_reason = NULL, "
+            + "condition_review_response = NULL, condition_review_responded_at = NULL, "
             // **通知済みの印も落とす。** 条件が変われば、荷主へ伝えた経路は
             // その条件で組んだものではなくなる。残すと、組み直しても営業の
             // 「未通知」に二度と出ず、旧経路を伝えたまま誰も気づけない
@@ -188,6 +189,21 @@ public interface CargoSummaryMapper {
     int updateConditionReview(@Param("bookingId") String bookingId,
             @Param("requestedAt") Instant requestedAt,
             @Param("reason") String reason,
+            @Param("projectedAt") Instant projectedAt);
+
+    /**
+     * 荷主との協議の結果を書く（US10 §受入基準 4 の対 / IT8 H.2）。
+     *
+     * <p><b>差し戻しの記録（理由・日時）は消さない。</b> 何を頼まれて何が決まったかが
+     * 対で読めないと、経路設計者は条件をどう直せばよいのか分からない。</p>
+     */
+    @org.apache.ibatis.annotations.Update(
+            "UPDATE cargo_summary SET condition_review_response = #{response}, "
+            + "condition_review_responded_at = #{respondedAt}, projected_at = #{projectedAt} "
+            + "WHERE booking_id = #{bookingId}")
+    int updateConditionReviewResponse(@Param("bookingId") String bookingId,
+            @Param("response") String response,
+            @Param("respondedAt") Instant respondedAt,
             @Param("projectedAt") Instant projectedAt);
 
     /**
@@ -363,6 +379,12 @@ public interface CargoSummaryMapper {
             Instant lastNotifiedAt,
             Instant returnedToRoutingAt,
             String returnReason,
+            // 差し戻し（US10 §4）と、その協議の結果（§4 の対）。
+            // **対で持つ。** 何を頼まれて何が決まったかが読めないと条件を直せない。
+            String conditionReviewReason,
+            Instant conditionReviewRequestedAt,
+            String conditionReviewResponse,
+            Instant conditionReviewRespondedAt,
             // 調整済みの探索条件（US10）。**予約の読み口からも読める**ようにする。
             // 候補算出の応答にだけ載せると、探索が落ちている間だけ画面から条件が
             // 消え、経路設計者は直せる手段を失う（IT6 引き継ぎ 8b）。

@@ -8,6 +8,7 @@ import com.example.cargotracker.booking.domain.model.commands.NotifyShipperComma
 import com.example.cargotracker.booking.domain.model.commands.ReturnToRoutingCommand;
 import com.example.cargotracker.booking.domain.model.commands.RequestConditionReviewCommand;
 import com.example.cargotracker.booking.domain.model.commands.RequestRoutingCommand;
+import com.example.cargotracker.booking.domain.model.commands.RespondToConditionReviewCommand;
 import com.example.cargotracker.booking.domain.model.commands.RevertTrackingNumberCommand;
 import com.example.cargotracker.booking.domain.model.commands.UpdateCargoSpecificationCommand;
 import com.example.cargotracker.booking.domain.model.events.BookingConfirmedEvent;
@@ -15,6 +16,7 @@ import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
 import com.example.cargotracker.booking.domain.model.events.ReturnedToRoutingEvent;
 import com.example.cargotracker.booking.domain.model.events.ShipperNotifiedEvent;
 import com.example.cargotracker.booking.domain.model.events.ConditionReviewRequestedEvent;
+import com.example.cargotracker.booking.domain.model.events.ConditionReviewRespondedEvent;
 import com.example.cargotracker.booking.domain.model.events.RouteSpecificationAdjustedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoSpecificationUpdatedEvent;
 import com.example.cargotracker.booking.domain.model.events.RoutingRequestedEvent;
@@ -70,6 +72,8 @@ public class Cargo {
     private String cargoType;
     /** 発行済みの追跡番号。取り消し（補償）で「何を取り消したか」を残すのに要る。 */
     private String trackingNumber;
+    /** 営業へ差し戻していて、まだ返事が来ていないか（US10 §4 の対）。 */
+    private boolean awaitingConditionReviewResponse;
     /** 確定した旅程。<b>発行のイベントに載せる</b>（IT9 の荷役が材料にする）。 */
     private List<CargoRoutedEvent.Leg> legs = List.of();
 
@@ -435,13 +439,49 @@ public class Cargo {
 
     @EventSourcingHandler
     void on(ConditionReviewRequestedEvent event) {
-        // **状態は動かさない**（ADR-0009 決定 1）。記録は投影が持つので集約に
-        // 変えるものが無い。ハンドラ自体は要る（イベントを読み飛ばさない）。
+        // **状態は動かさない**（ADR-0009 決定 1）。ただし「差し戻されている最中か」は
+        // 集約が持つ——営業が返事を返せるのは差し戻されているあいだだけである。
+        this.awaitingConditionReviewResponse = true;
+    }
+
+    /**
+     * 荷主との協議の結果を経路設計者へ返す（UC08 / US10 §受入基準 4 の対）。
+     *
+     * <p><b>差し戻しは一方向しか無かった。</b> 営業は協議を終えても伝える手段が
+     * なく、差し戻しはダッシュボードに出たままだった（IT6 レビュー）。</p>
+     *
+     * <p><b>状態は動かさない</b>（ADR-0009 決定 1）。条件を実際に直すのは経路設計者で、
+     * ここで返すのは協議の結果である。</p>
+     */
+    @CommandHandler
+    public String respondToConditionReview(RespondToConditionReviewCommand command,
+            EventAppender appender, Clock clock) {
+        requireBooked(command.bookingId());
+        if (!awaitingConditionReviewResponse) {
+            // 誰も待っていない返事を残さない。二度目もここで断る。
+            throw new IllegalTransition("この予約は営業へ差し戻されていません");
+        }
+        if (command.response() == null || command.response().isBlank()) {
+            // 中身が無いと、経路設計者は条件をどう直せばよいのか分からない。
+            throw new BusinessRuleViolation("協議の結果は必須です");
+        }
+
+        appender.append(new ConditionReviewRespondedEvent(command.bookingId(),
+                command.response().trim(), command.respondedBy(), clock.instant()));
+        return command.bookingId();
+    }
+
+    @EventSourcingHandler
+    void on(ConditionReviewRespondedEvent event) {
+        // 営業の手番は終わった。**差し戻しの記録は消さない**（投影が両方を持つ）。
+        this.awaitingConditionReviewResponse = false;
     }
 
     @EventSourcingHandler
     void on(RouteSpecificationAdjustedEvent event) {
         this.arrivalDeadline = event.arrivalDeadline();
+        // 条件が変われば営業の手番は終わっている（投影も差し戻しの記録を消す）。
+        this.awaitingConditionReviewResponse = false;
         // 条件が変わったので、確定済みの経路は設計し直しになる。**旅程は消さない**
         // （再設計で入れ替わるまで残す）。ROUTED のままだと確定し直せない。
         this.routingStatus = RoutingStatus.ROUTING_REQUESTED;

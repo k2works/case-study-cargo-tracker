@@ -7,6 +7,7 @@ import com.example.cargotracker.booking.domain.model.commands.AssignRouteCommand
 import com.example.cargotracker.booking.domain.model.commands.NotifyShipperCommand;
 import com.example.cargotracker.booking.domain.model.commands.ReturnToRoutingCommand;
 import com.example.cargotracker.booking.domain.model.commands.RequestConditionReviewCommand;
+import com.example.cargotracker.booking.domain.model.commands.RespondToConditionReviewCommand;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoItinerary;
 import com.example.cargotracker.booking.domain.model.valueobjects.Leg;
 import com.example.cargotracker.booking.application.port.RouteSearchRequest;
@@ -337,6 +338,22 @@ public class BookingController {
             @RequestHeader(name = "X-Auth-Username", required = false) String username) {
         commandGateway.sendAndWait(
                 new RequestConditionReviewCommand(bookingId, request.reason(), username));
+        return ResponseEntity.ok(new BookCargoResponse(bookingId));
+    }
+
+    /**
+     * 荷主との協議の結果を経路設計者へ返す（UC08 / US10 §受入基準 4 の対）。営業だけ。
+     *
+     * <p>差し戻しは経路設計者 → 営業の一方向しか無く、<b>営業は協議を終えても伝える
+     * 手段を持たなかった</b>（IT6 レビュー）。差し戻されていない予約には返せない（409）。</p>
+     */
+    @PostMapping("/{bookingId}/condition-review/response")
+    public ResponseEntity<BookCargoResponse> respondToConditionReview(
+            @PathVariable String bookingId,
+            @Valid @RequestBody BookingDtos.RespondToConditionReviewRequest request,
+            @RequestHeader(name = "X-Auth-Username", required = false) String username) {
+        commandGateway.sendAndWait(
+                new RespondToConditionReviewCommand(bookingId, request.response(), username));
         return ResponseEntity.ok(new BookCargoResponse(bookingId));
     }
 

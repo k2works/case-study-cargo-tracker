@@ -43,6 +43,7 @@ import {
   returnToRouting,
   routingStatusLabel,
 } from './api';
+import { respondToConditionReview } from '@/features/routing/api';
 import type { BookingView, ItineraryLegView } from './api';
 import type { Pending } from '@/shared/api/pending';
 
@@ -140,6 +141,14 @@ export function BookingDetailPage() {
   // 手番を飛ばして発行できてしまう。二重発行も同じ判定で断る。
   const issuable = booking != null && canIssueTrackingNumber(booking.bookingStatus);
   const returnable = booking != null && canReturnToRouting(booking.bookingStatus);
+  // 経路設計者から条件の見直しを頼まれていて、まだ返していない（US10 §4 の対）。
+  // **打てる手を持つのは営業**（荷主と協議する）。
+  const respondable = booking != null
+    && booking.conditionReviewRequestedAt !== null
+    && booking.conditionReviewRespondedAt === null;
+  const [responding, setResponding] = useState(false);
+  const [reviewResponse, setReviewResponse] = useState('');
+  const [reviewResponseError, setReviewResponseError] = useState('');
 
   const [recipient, setRecipient] = useState('');
   const [returning, setReturning] = useState(false);
@@ -171,6 +180,15 @@ export function BookingDetailPage() {
   const issue = useMutation({
     mutationFn: () => issueTrackingNumber(bookingId),
     onSuccess: async () => {
+      await queries.invalidateQueries({ queryKey: ['booking', bookingId] });
+    },
+  });
+
+  const respond = useMutation({
+    mutationFn: () => respondToConditionReview(bookingId, reviewResponse),
+    onSuccess: async () => {
+      setResponding(false);
+      setReviewResponse('');
       await queries.invalidateQueries({ queryKey: ['booking', bookingId] });
     },
   });
@@ -380,6 +398,35 @@ export function BookingDetailPage() {
               error={notify.error}
               onRecipientChange={setRecipient}
               onNotify={() => notify.mutate()}
+            />
+          )}
+
+          {/* 差し戻された予約に営業が返す（US10 §4 の対）。**理由と対で出す**——
+              何を頼まれたのかが読めないまま返させると、協議の結果が噛み合わない。 */}
+          {isSales && respondable && (
+            <ConditionReviewResponsePanel
+              reason={booking.conditionReviewReason ?? ''}
+              requestedAt={booking.conditionReviewRequestedAt}
+              open={responding}
+              response={reviewResponse}
+              error={reviewResponseError}
+              failed={respond.isError}
+              pending={respond.isPending}
+              onOpen={() => setResponding(true)}
+              onResponseChange={setReviewResponse}
+              onCancel={() => {
+                setResponding(false);
+                setReviewResponseError('');
+              }}
+              onSubmit={() => {
+                if (!reviewResponse.trim()) {
+                  // 集約も断るが、押してから 422 で気づく形にしない。
+                  setReviewResponseError('協議の結果を入力してください');
+                  return;
+                }
+                setReviewResponseError('');
+                respond.mutate();
+              }}
             />
           )}
 
@@ -736,6 +783,74 @@ function NotifyShipperPanel(props: Readonly<{
           {props.pending ? '記録しています…' : '通知した記録を残す'}
         </button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * 荷主との協議の結果を経路設計者へ返す（US10 §受入基準 4 の対）。<b>営業だけ</b>。
+ *
+ * <p><b>頼まれた理由と対で出す。</b> 何を頼まれたのかが読めないまま返させると、
+ * 協議の結果が噛み合わない。差し戻しは経路設計者 → 営業の一方向しか無く、営業は
+ * 協議を終えても伝える手段を持たなかった（IT6 レビュー・IT8 H.2）。</p>
+ */
+function ConditionReviewResponsePanel(props: Readonly<{
+  reason: string;
+  requestedAt: string | null;
+  open: boolean;
+  response: string;
+  error: string;
+  failed: boolean;
+  pending: boolean;
+  onOpen: () => void;
+  onResponseChange: (value: string) => void;
+  onCancel: () => void;
+  onSubmit: () => void;
+}>) {
+  return (
+    <div className="space-y-2">
+      <h2 className={SECTION_TITLE}>条件の見直し依頼</h2>
+      <output className={`${NOTICE} block`}>
+        <b>経路設計者から見直しを頼まれています</b>
+        {props.requestedAt ? `（${formatBusinessDateTime(props.requestedAt)}）` : ''}
+        : {props.reason}
+      </output>
+      <p className="text-sm text-gray-600">
+        荷主と協議し、決まった内容を返してください。{' '}
+        <b>条件を直すのは経路設計者です。</b>{' '}
+        この画面からは条件そのものを変えられません
+      </p>
+      {!props.open && (
+        <button type="button" className={BUTTON_SECONDARY} onClick={props.onOpen}>
+          協議の結果を返す
+        </button>
+      )}
+      {props.open && (
+        <div className={`${CARD} space-y-2`}>
+          <label htmlFor="review-response" className={LABEL}>
+            協議の結果
+          </label>
+          <input
+            id="review-response"
+            className={FIELD}
+            value={props.response}
+            onChange={(event) => props.onResponseChange(event.target.value)}
+          />
+          {props.error && <p role="alert" className={ALERT}>{props.error}</p>}
+          {props.failed && (
+            <p role="alert" className={ALERT}>協議の結果を返せませんでした</p>
+          )}
+          <div className="flex gap-2">
+            <button type="button" className={BUTTON_PRIMARY}
+              disabled={props.pending} onClick={props.onSubmit}>
+              経路設計者へ返す
+            </button>
+            <button type="button" className={BUTTON_SECONDARY} onClick={props.onCancel}>
+              やめる
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -35,6 +35,10 @@ function booking() {
     returnReason: null,
     routeExcludeUnLocodes: ['SGSIN'],
     routeDepartFromUnLocode: 'JPOSA',
+    conditionReviewReason: null,
+    conditionReviewRequestedAt: null,
+    conditionReviewResponse: null,
+    conditionReviewRespondedAt: null,
     updatedAt: null,
     updatedBy: null,
   };
@@ -148,6 +152,42 @@ describe('S31 経路設計ワークベンチ', () => {
     expect(await screen.findByRole('alert'))
       .toHaveTextContent('経路設計サービスに問い合わせできませんでした');
     expect(screen.queryByText(/経路が見つかりませんでした/)).not.toBeInTheDocument();
+  });
+
+  it('US10 §4 の対: 営業から返ってきた協議の結果が読める（IT8 H.2）', async () => {
+    // **差し戻しは一方向しか無かった。** 営業が荷主と協議しても、経路設計者は
+    // 結果を画面から読めず、条件を直す手掛かりが無かった（IT6 レビュー）。
+    mockApi(
+      new Response(JSON.stringify({ candidates: [], truncated: false }), { status: 200 }),
+      {
+        conditionReviewReason: '期限内に着ける便がありません',
+        conditionReviewRequestedAt: '2026-09-06T00:00:00Z',
+        conditionReviewResponse: '荷主が期限を 1 月末まで延ばすことに同意',
+        conditionReviewRespondedAt: '2026-09-07T00:00:00Z',
+      },
+    );
+
+    renderWorkbench();
+
+    const notice = await screen.findByText(/営業から返事が来ています/);
+    // **頼んだ理由と対で出す。** 何を頼んだかが読めないと、返事の意味が取れない。
+    expect(notice.closest('output')).toHaveTextContent('期限内に着ける便がありません');
+    expect(notice.closest('output')).toHaveTextContent('荷主が期限を 1 月末まで延ばすことに同意');
+  });
+
+  it('US10 §4 の対: 返事が来ていなければ出さない（差し戻し中だけ）', async () => {
+    mockApi(
+      new Response(JSON.stringify({ candidates: [], truncated: false }), { status: 200 }),
+      {
+        conditionReviewReason: '組めません',
+        conditionReviewRequestedAt: '2026-09-06T00:00:00Z',
+      },
+    );
+
+    renderWorkbench();
+
+    await screen.findByRole('heading', { name: '探す条件' });
+    expect(screen.queryByText(/営業から返事が来ています/)).not.toBeInTheDocument();
   });
 
   it('探せなくても条件は直せるし、営業へ差し戻せる（H.1）', async () => {

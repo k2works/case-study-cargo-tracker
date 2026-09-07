@@ -5,6 +5,7 @@ import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoSpecificationUpdatedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoRoutedEvent;
 import com.example.cargotracker.booking.domain.model.events.ConditionReviewRequestedEvent;
+import com.example.cargotracker.booking.domain.model.events.ConditionReviewRespondedEvent;
 import com.example.cargotracker.booking.domain.model.events.ReturnedToRoutingEvent;
 import com.example.cargotracker.booking.domain.model.events.RouteSpecificationAdjustedEvent;
 import com.example.cargotracker.booking.domain.model.events.ShipperNotifiedEvent;
@@ -47,6 +48,8 @@ public class CargoProjection {
     private static final String PROJECTION_REJECTED = "PROJECTION_REJECTED";
     /** 要確認一覧の対象の種類。 */
     private static final String TARGET_BOOKING = "BOOKING";
+    /** 要確認一覧の宛先（予約の投影が弾いたものは営業が見る）。 */
+    private static final String ROLE_SALES = "ROLE_SALES";
 
     private final CargoSummaryMapper cargos;
     private final CargoRevisionMapper revisions;
@@ -109,6 +112,11 @@ public class CargoProjection {
                 // まだ荷主へ通知していない（US12）。
                 null,
                 // まだ経路設計へ戻されていない（US12）。
+                null,
+                null,
+                // まだ差し戻されていない・返していない（US10 §4 と対）。
+                null,
+                null,
                 null,
                 null,
                 // まだ探索の条件を調整していない（US10）。
@@ -188,6 +196,24 @@ public class CargoProjection {
     }
 
     /**
+     * 荷主との協議の結果（US10 §受入基準 4 の対 / IT8 H.2）。
+     *
+     * <p><b>差し戻しの記録は消さない。</b> 何を頼まれて何が決まったかが対で読めないと、
+     * 経路設計者は条件をどう直せばよいのか分からない。営業の受け皿からは
+     * 「返した」ことで消える（読み口が `responded_at IS NULL` で絞る）。</p>
+     */
+    @EventHandler
+    public void on(ConditionReviewRespondedEvent event) {
+        int updated = cargos.updateConditionReviewResponse(event.bookingId(),
+                event.response(), event.respondedAt(), clock.instant());
+        if (updated == 0) {
+            log.warn("協議の結果を書ける予約が投影に無い: bookingId={}", event.bookingId());
+            attentionItems.add(PROJECTION_REJECTED, TARGET_BOOKING, event.bookingId(),
+                    ROLE_SALES, "協議の結果の対象が投影に無い", "{}", clock.instant());
+        }
+    }
+
+    /**
      * 予約の確定（UC11 / US13）。
      *
      * <p><b>確定日時を残す。</b> 状態だけだと、通知から確定までにどれだけ待たせたか
@@ -200,7 +226,7 @@ public class CargoProjection {
         if (updated == 0) {
             log.warn("確定を書ける予約が投影に無い: bookingId={}", event.bookingId());
             attentionItems.add(PROJECTION_REJECTED, TARGET_BOOKING, event.bookingId(),
-                    "ROLE_SALES", "確定の対象が投影に無い", "{}", clock.instant());
+                    ROLE_SALES, "確定の対象が投影に無い", "{}", clock.instant());
         }
     }
 
@@ -294,7 +320,7 @@ public class CargoProjection {
                 null, null, null, null,
                 // 「いつ直したか」はイベントが持つ。ここで現在時刻を書くと、
                 // 読み直しのたびに最終更新が動く。
-                event.updatedAt(), event.updatedBy(), null, null, null,
+                event.updatedAt(), event.updatedBy(), null, null, null, null, null, null, null,
                 // 探索の条件・確定日時・追跡番号は UPDATE 文が触らない。
                 null, null, null, null, now, null));
 
@@ -305,7 +331,7 @@ public class CargoProjection {
         if (updated == 0) {
             log.warn("修正を書ける予約が投影に無い: bookingId={}", event.bookingId());
             attentionItems.add(PROJECTION_REJECTED, TARGET_BOOKING, event.bookingId(),
-                    "ROLE_SALES", "修正の対象が投影に無い", "{}", now);
+                    ROLE_SALES, "修正の対象が投影に無い", "{}", now);
         }
     }
 

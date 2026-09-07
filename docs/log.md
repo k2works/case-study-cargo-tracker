@@ -1,6 +1,10 @@
 # Docs Update Log
 
 ## 2026-09-07
+* **Update**: [user_story](/requirements/user_story.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+* **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
 * **Update**: [アプリケーション開発環境セットアップ手順書](/operation/cargo-tracker/アプリケーション開発環境セットアップ手順書.md) を更新（claude-code/claude-opus-5）
 * **Update**: [architecture_backend](/design/cargo-tracker/architecture_backend.md) を更新（claude-code/claude-opus-5）
 * **Update**: [0010-reaction-handler-as-the-only-coordinator](/adr/cargo-tracker/0010-reaction-handler-as-the-only-coordinator.md) を更新（claude-code/claude-opus-5）

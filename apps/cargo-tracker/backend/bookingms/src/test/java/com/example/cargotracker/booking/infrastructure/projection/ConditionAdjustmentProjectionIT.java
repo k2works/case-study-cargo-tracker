@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoRoutedEvent;
 import com.example.cargotracker.booking.domain.model.events.ConditionReviewRequestedEvent;
+import com.example.cargotracker.booking.domain.model.events.ConditionReviewRespondedEvent;
 import com.example.cargotracker.booking.domain.model.events.RouteSpecificationAdjustedEvent;
 import com.example.cargotracker.booking.domain.model.events.RoutingRequestedEvent;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.BookingView;
@@ -231,5 +232,57 @@ class ConditionAdjustmentProjectionIT extends AbstractAxonIntegrationTest {
 
         assertThat(queries.handle(new FindRouteConditionQuery(bookingId)))
                 .isEqualTo(new RouteConditionView(List.of("SGSIN"), null));
+    }
+
+    @Test
+    @DisplayName("US10 §4 の対: 協議の結果を返すと営業の受け皿から消え、経路設計者が読める")
+    void respondingClearsTheSalesInboxAndIsReadable() {
+        // **差し戻しは一方向しか無かった**（IT6 レビュー・IT7 引き継ぎ 2）。
+        // 営業は協議を終えても伝える手段が無く、受け皿に出たままだった。
+        String bookingId = handedOver();
+        projection.on(new ConditionReviewRequestedEvent(bookingId,
+                "期限内に着ける便がありません", "routing01", AT));
+        assertThat(reviewOf(bookingId)).as("まず営業の受け皿に出る").isNotNull();
+
+        projection.on(new ConditionReviewRespondedEvent(bookingId,
+                "荷主が期限を 1 月末まで延ばすことに同意", "sales01", AT));
+
+        assertThat(reviewOf(bookingId))
+                .as("返したものが残り続けると、営業は何度も同じ予約を開く")
+                .isNull();
+        BookingView view = booking(bookingId);
+        assertThat(view.conditionReviewResponse())
+                .as("経路設計者が読めないと、協議の結果が届かない")
+                .isEqualTo("荷主が期限を 1 月末まで延ばすことに同意");
+        assertThat(view.conditionReviewRespondedAt()).isEqualTo(AT);
+    }
+
+    @Test
+    @DisplayName("US10 §4 の対: 返しても差し戻しの理由は消えない（対で読めないと直せない）")
+    void respondingKeepsTheOriginalReason() {
+        String bookingId = handedOver();
+        projection.on(new ConditionReviewRequestedEvent(bookingId, "組めません", "routing01", AT));
+
+        projection.on(new ConditionReviewRespondedEvent(bookingId, "延ばします", "sales01", AT));
+
+        assertThat(booking(bookingId).conditionReviewResponse()).isNotNull();
+        // 何を頼まれて何が決まったかが対で読めないと、条件をどう直せばよいか分からない。
+        assertThat(queries.handle(new FindBookingQuery(bookingId)))
+                .satisfies(v -> assertThat(v.routingStatus()).isEqualTo("ROUTING_REQUESTED"));
+    }
+
+    @Test
+    @DisplayName("条件を調整すると、協議の結果も消える（営業の手番はもう終わっている）")
+    void adjustmentClearsTheResponseToo() {
+        String bookingId = handedOver();
+        projection.on(new ConditionReviewRequestedEvent(bookingId, "組めません", "routing01", AT));
+        projection.on(new ConditionReviewRespondedEvent(bookingId, "延ばします", "sales01", AT));
+
+        projection.on(new RouteSpecificationAdjustedEvent(bookingId, EXTENDED,
+                List.of(), null, "routing01", AT));
+
+        assertThat(booking(bookingId).conditionReviewResponse())
+                .as("次の差し戻しで前回の返事が残っていると、古い協議が新しい依頼に見える")
+                .isNull();
     }
 }
