@@ -28,6 +28,12 @@ mybatis:
     map-underscore-to-camel-case: true
 
 axon:
+  eventhandling:
+    processors:
+      # Processing Group はパッケージ名キーで指定する（@ProcessingGroup は Axon 5 に無い）。
+      # 列挙し忘れると既定の設定で動くので、テストは緑のまま本番だけ挙動が変わる。
+      "[com.example.cargotracker.handling.infrastructure.projection]":
+        mode: pooled
   axonserver:
     servers: ${AXON_SERVER:localhost:8124}
 
