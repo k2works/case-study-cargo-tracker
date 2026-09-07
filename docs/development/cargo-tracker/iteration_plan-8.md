@@ -3,7 +3,7 @@ type: Plan
 title: "イテレーション 8 計画 - 追跡照会と手動更新"
 tags: [plan]
 status: draft
-generated: { by: claude-code/claude-opus-5, at: 2026-09-07T04:48:17Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-07T05:29:30Z }
 ---
 
 # イテレーション 8 計画 - 追跡照会と手動更新
@@ -422,12 +422,12 @@ end note
 | :--- | :--- | :--- |
 | 1 | `domain-model.md`（`:1222`） | `TrackingNumberIssuedEvent` の payload に **`shipperId` を足す**（IT7 で「US18 で足す」と決めた） |
 | 2 | `data-model.md` | `tracking_summary.shipper_id`・`tracking_event` を「IT8 で作る」に更新。`current_unlocode` は手動更新で入る分だけ。**完了**（`shipper_cargo_snapshot` は取り下げ） |
-| 3 | ADR-0010 決定 2 | 採番の形式を訂正（ADR-0011 で行う） |
+| 3 | ADR-0010 決定 2 | **完了**。採番の形式を訂正（ADR-0011） |
 | 3b | `data-model.md`（`:577`・`:830`） | **完了**。元イベントの指定が実装不能（`TrackingNumberIssuedEvent` は bookingms 内部で購読できない）だったため、表そのものを取り下げて `tracking_summary.shipper_id` に寄せた |
-| 3c | `domain-model.md`（`:1222`） | **`TrackingNumberIssuedEvent` の購読と用途を「trackingms（`BookingReactionHandler` 経由。直接購読しない）」に直す**。契約イベント 11 本の表に載っているが `shared/contract` には無い |
-| 3d | `trackingms/TransportStatus` の javadoc | 「`canTransitionTo` は IT9 で足す」を「**`canTransitionTo` は US17（IT8）で実装。`afterHandling` は IT9**」に直す（T2 の同じ変更で） |
-| 4 | `ui_design.md`（S44） | **推定到着日の出し方**（`tracking_leg` の最終区間の荷降し）を明記。所要日数の計算式が 2 か所ある問題（IT7 引き継ぎ 7）もここで 1 か所に寄せる |
-| 5 | `ui_design.md`（S41） | 本 IT で出すのは「状態の履歴」と「状態を手動更新」だけ。例外・誤配・陸揚げ待ちは後続 IT と明記 |
+| 3c | `domain-model.md`（`:1222`） | **完了**。`TrackingNumberIssuedEvent` の購読と用途を「trackingms（`BookingReactionHandler` 経由。直接購読しない）」に直す**。契約イベント 11 本の表に載っているが `shared/contract` には無い |
+| 3d | `trackingms/TransportStatus` の javadoc | **完了**。「`canTransitionTo` は IT9 で足す」を「**`canTransitionTo` は US17（IT8）で実装。`afterHandling` は IT9**」に直す（T2 の同じ変更で） |
+| 4 | `ui_design.md`（S44） | **完了**。**推定到着日の出し方**（`tracking_leg` の最終区間の荷降し）を明記。所要日数の計算式が 2 か所ある問題（IT7 引き継ぎ 7）もここで 1 か所に寄せる |
+| 5 | `ui_design.md`（S41） | **完了**。本 IT で出すのは「状態の履歴」と「状態を手動更新」だけ。例外・誤配・陸揚げ待ちは後続 IT と明記 |
 
 ## 着手前の検証（ステップ 3・4）の結果
 
@@ -530,6 +530,7 @@ IT4 から数えて 5 回目の中盤です。
 | :--- | :--- | :--- |
 | 2026-09-07 | IT8 計画を作成。**着手前の自己検証で高 2 件**——追跡番号が正典違反（連番。US18 は認証不要なので推測で他人の貨物が読める）、US18 が 5 画面にまたがる。既存実装を `grep` して「既にあるもの」の表を作った（IT7 で `process_state` を新設と誤認した反省） | claude-code/claude-opus-5 |
 | 2026-09-07 | **検証エージェント 2 本が遅れて返着**したので統合。高 4 件・中 5 件を反映——US18 §3 の判定が誤り（作業種別は出せない）、**総当たり対策 429 が実体を持たない**（gatewayms に実装 0 件）、**`TrackingNumberIssuedEvent` は契約イベントではない**（正典が実装不能な指定をしている）、荷主の到達性がスコープに無い、`Cargo` が `shipperId` を保持していない、メソッド名が正典と違う、引き継ぎの番号取り違え、本節（更新履歴）の欠落。見積 61h → 67h | claude-code/claude-opus-5 |
+| 2026-09-07 | **実装完了（T1〜T11）。** 実装中に判明した設計の食い違いを 3 件反映——`shipper_cargo_snapshot` は元イベントが契約でなく**実装不能**だったので取り下げて `tracking_summary.shipper_id` に寄せた、`tracking_summary.shipper_id` は既存行のため NULL 可にした、`TrackingNumberIssuedEvent` の購読経路を `BookingReactionHandler` 経由に直した。設計反映 1〜5・3b〜3d をすべて完了 | claude-code/claude-opus-5 |
 
 ## 関連ドキュメント
 

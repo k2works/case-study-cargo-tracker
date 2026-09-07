@@ -504,7 +504,8 @@ test.describe('kind クラスタでの通し確認', () => {
       await signIn(page, 'routing01');
       await page.goto(`/bookings/${bookingId}`);
       await page.getByRole('button', { name: '追跡番号を発行する' }).click();
-      await expect(page.getByText(/^T-\d{4}-\d{6}$/)).toBeVisible({ timeout: 20_000 });
+      // **形式は正典（ADR-0011）。** 連番だと公開照会（US18）で前後が推測できる。
+      await expect(page.getByText(/^TRK-[0-9A-Z]{10}$/)).toBeVisible({ timeout: 20_000 });
       // デモ項目 4: 二重に発行されない（操作そのものが消える）。
       await expect(page.getByRole('button', { name: '追跡番号を発行する' })).toHaveCount(0);
 
@@ -517,6 +518,118 @@ test.describe('kind クラスタでの通し確認', () => {
       const body = await second.json();
       expect(body.message).toContain('発行できません');
       expect(body.message).not.toContain('com.example.cargotracker');
+    });
+
+  test('追跡番号だけで照会でき、追跡管理者が状態を手で更新できる（US17・US18・IT8）',
+    async ({ page, request }) => {
+      // **本 IT の中核。** 公開照会は認証を通らず、状態の更新は trackingms の集約を
+      // 通る。モックでは「Gateway が公開経路を素通しするか」を判別できない。
+      const product = `追跡の貨物-${Date.now()}`;
+      const voyageNumber = uniqueVoyageNumber('V-TR-');
+      const routing = await tokenOf(request, 'routing01');
+      const voyage = await request.post('/api/v1/routing/voyages', {
+        headers: { Authorization: `Bearer ${routing}` },
+        data: {
+          voyageNumber,
+          carrierCode: 'MOL',
+          carrierName: '商船三井',
+          vesselName: 'TRACK MARU',
+          movements: [
+            {
+              departureUnLocode: 'JPTYO',
+              arrivalUnLocode: 'USNYC',
+              departureAt: `${businessDate(2)}T00:00:00Z`,
+              arrivalAt: `${businessDate(5)}T00:00:00Z`,
+            },
+          ],
+          acceptedCargoTypes: ['GENERAL'],
+        },
+      });
+      expect(voyage.status()).toBe(201);
+
+      const bookingId = await bookCargo(request, product);
+      await signIn(page, 'sales01');
+      await page.goto(`/bookings/${bookingId}`);
+      await page.getByRole('button', { name: '経路設計を依頼する' }).click();
+      await expect(page.getByText('経路提案中')).toBeVisible({ timeout: 20_000 });
+
+      await page.goto('/logout');
+      await signIn(page, 'routing01');
+      await page.goto(`/routing/bookings/${bookingId}`);
+      const candidate = page.getByTestId('candidate-1');
+      await expect(candidate).toBeVisible({ timeout: 30_000 });
+      await candidate.getByRole('radio').check();
+      await page.getByRole('button', { name: 'この経路で確定' }).click();
+      await expect(page.getByRole('heading', { name: '旅程' })).toBeVisible({ timeout: 20_000 });
+
+      await page.goto('/logout');
+      await signIn(page, 'sales01');
+      await page.goto(`/bookings/${bookingId}`);
+      await expect(page.getByLabel('通知内容')).toHaveValue(/JPTYO → USNYC/, { timeout: 20_000 });
+      await page.getByLabel('通知先メールアドレス').fill('shipper@example.com');
+      await page.getByRole('button', { name: '通知した記録を残す' }).click();
+      await page.getByRole('button', { name: '予約を確定する' }).click();
+      await expect(page.getByText('確定', { exact: true })).toBeVisible({ timeout: 20_000 });
+
+      await page.goto('/logout');
+      await signIn(page, 'routing01');
+      await page.goto(`/bookings/${bookingId}`);
+      await page.getByRole('button', { name: '追跡番号を発行する' }).click();
+      const number = page.getByText(/^TRK-[0-9A-Z]{10}$/);
+      await expect(number).toBeVisible({ timeout: 20_000 });
+      const trackingNumber = (await number.textContent())?.trim() ?? '';
+
+      // デモ項目 1: **ログインせずに**状況が読める。
+      await page.goto('/logout');
+      await page.goto(`/track/${trackingNumber}`);
+      await expect(page.getByText('未受領')).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByText('出発').first()).toBeVisible();
+
+      // デモ項目 7: 公開の応答に社内の情報が入らない。
+      const publicView = await request.get(`/api/v1/tracking/public/${trackingNumber}`);
+      expect(publicView.status()).toBe(200);
+      const publicBody = await publicView.json();
+      expect(publicBody.shipperId).toBeUndefined();
+      expect(publicBody.bookingId).toBeUndefined();
+
+      // デモ項目 2: 見つからない番号は 404 だけ（実在するかを教えない）。
+      const unknown = await request.get('/api/v1/tracking/public/TRK-NOSUCHNUM', {
+        failOnStatusCode: false,
+      });
+      expect(unknown.status()).toBe(404);
+
+      // デモ項目 4: 追跡管理者が手で更新でき、履歴に残る。
+      await signIn(page, 'tracker01');
+      await page.goto(`/tracking/${trackingNumber}`);
+      await expect(page.getByLabel('新しい状態')).toBeVisible({ timeout: 20_000 });
+      await page.getByLabel('新しい状態').selectOption('RECEIVED');
+      await page.getByLabel('場所（UN/LOCODE）').fill('JPTYO');
+      await page.getByRole('button', { name: '状態を更新する' }).click();
+      await expect(page.getByRole('row', { name: /受領済/ })).toBeVisible({ timeout: 30_000 });
+
+      // デモ項目 5: 遷移表が許さない更新は **API を直接叩いても** 断られる。
+      const tracker = await tokenOf(request, 'tracker01');
+      const forbidden = await request.post(
+        `/api/v1/tracking/trackings/${trackingNumber}/status`,
+        {
+          headers: { Authorization: `Bearer ${tracker}` },
+          data: { newStatus: 'DELIVERED' },
+          failOnStatusCode: false,
+        });
+      expect(forbidden.status()).toBe(409);
+
+      // デモ項目 8: **総当たりが止まる。** 同一 IP から 1 分に 10 回を超えると 429。
+      let sawTooManyRequests = false;
+      for (let i = 0; i < 12; i++) {
+        const probe = await request.get('/api/v1/tracking/public/TRK-BRUTEFORC', {
+          failOnStatusCode: false,
+        });
+        if (probe.status() === 429) {
+          sawTooManyRequests = true;
+          break;
+        }
+      }
+      expect(sawTooManyRequests, '認証不要経路の唯一の防御が効いていない').toBe(true);
     });
 
   test('管理者は利用者の状態を見てロックを解除できる', async ({ page, request }) => {
@@ -549,11 +662,12 @@ test.describe('kind クラスタでの通し確認', () => {
   test('未認証でもポータルから公開追跡へ入れる', async ({ page }) => {
     await page.goto('/portal');
 
-    await page.getByLabel('追跡番号').fill('ABC12345');
+    // 存在しない番号でも**入口までは通る**。見つからない案内はここで確かめる。
+    await page.getByLabel('追跡番号').fill('TRK-NOSUCHNUM');
     await page.getByRole('button', { name: '照会する' }).click();
 
     await expect(page.getByRole('heading', { name: '荷物の追跡' })).toBeVisible();
-    await expect(page.getByText('ABC12345')).toBeVisible();
+    await expect(page.getByText(/追跡番号が見つかりません/)).toBeVisible({ timeout: 20_000 });
   });
   test('経路設計者が航海を更新すると、差分を確かめて反映できる（US25・IT4）', async ({
     page,

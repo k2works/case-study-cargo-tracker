@@ -781,4 +781,134 @@ test.describe('マニュアルの画面キャプチャ', () => {
     await expect(page.getByTestId('candidate-1')).toBeVisible();
     await page.screenshot({ path: `${OUT}/09-S31-routing-workbench.png`, fullPage: true });
   });
+
+  async function signInAsTracker(page: import('@playwright/test').Page) {
+    await page.route('**/api/v1/auth/login', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          token: 'token',
+          username: 'tracker01',
+          displayName: '追跡 三郎',
+          roles: ['ROLE_TRACKER'],
+          shipperId: null,
+        }),
+      }),
+    );
+    await page.goto('/login');
+    await page.getByLabel('利用者名').fill('tracker01');
+    await page.getByLabel('パスワード').fill('secret1234');
+    await page.getByRole('button', { name: 'ログイン' }).click();
+    await expect(page.getByRole('heading', { name: 'ダッシュボード' })).toBeVisible();
+  }
+
+  const SAMPLE_TRACKING = {
+    trackingNumber: 'TRK-AB12CD3456',
+    bookingId: '55555555-5555-5555-5555-555555555555',
+    originUnLocode: 'JPTYO',
+    destinationUnLocode: 'USNYC',
+    cargoType: 'GENERAL',
+    status: 'LOADED',
+    statusLabel: '積込済',
+    currentUnLocode: 'JPTYO',
+    estimatedArrival: '2026-10-12T18:00:00Z',
+    lastStatusChangedAt: '2026-09-21T00:00:00Z',
+    history: [
+      {
+        occurredAt: '2026-09-20T01:00:00Z',
+        eventType: 'MANUAL',
+        previousStatusLabel: '未受領',
+        statusLabel: '受領済',
+        location: 'JPTYO',
+        recordedBy: 'tracker01',
+      },
+      {
+        occurredAt: '2026-09-21T00:00:00Z',
+        eventType: 'MANUAL',
+        previousStatusLabel: '受領済',
+        statusLabel: '積込済',
+        location: 'JPTYO',
+        recordedBy: 'tracker01',
+      },
+    ],
+    nextStatuses: ['IN_TRANSIT', 'UNLOADED', 'AWAITING_CLAIM', 'MISROUTED', 'EXCEPTION'],
+  };
+
+  test('12 公開追跡照会', async ({ page }) => {
+    // **認証の外の画面。** ログインせずに開く。
+    await page.route('**/api/v1/tracking/public/*', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          trackingNumber: 'TRK-AB12CD3456',
+          originUnLocode: 'JPTYO',
+          destinationUnLocode: 'USNYC',
+          statusLabel: '積込済',
+          currentUnLocode: 'JPTYO',
+          departedAt: '2026-09-21T00:00:00Z',
+          estimatedArrival: '2026-10-12T18:00:00Z',
+          history: SAMPLE_TRACKING.history.map((event) => ({
+            occurredAt: event.occurredAt,
+            statusLabel: event.statusLabel,
+            location: event.location,
+          })),
+        }),
+      }),
+    );
+    await page.goto('/track/TRK-AB12CD3456');
+    await expect(page.getByText('積込済').first()).toBeVisible();
+    await page.screenshot({ path: `${OUT}/12-S44-public-tracking.png`, fullPage: true });
+  });
+
+  test('12 追跡一覧', async ({ page }) => {
+    await page.route('**/api/v1/tracking/trackings?*', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: [
+            {
+              trackingNumber: 'TRK-AB12CD3456',
+              originUnLocode: 'JPTYO',
+              destinationUnLocode: 'USNYC',
+              statusLabel: '積込済',
+              currentUnLocode: 'JPTYO',
+              estimatedArrival: '2026-10-12T18:00:00Z',
+              lastStatusChangedAt: '2026-09-21T00:00:00Z',
+            },
+            {
+              trackingNumber: 'TRK-EF78GH9012',
+              originUnLocode: 'JPOSA',
+              destinationUnLocode: 'DEHAM',
+              statusLabel: '輸送中',
+              currentUnLocode: 'SGSIN',
+              estimatedArrival: '2026-10-20T10:00:00Z',
+              lastStatusChangedAt: '2026-09-22T00:00:00Z',
+            },
+          ],
+        }),
+      }),
+    );
+    await signInAsTracker(page);
+    await page.goto('/tracking');
+    await expect(page.getByRole('link', { name: 'TRK-AB12CD3456' })).toBeVisible();
+    await page.screenshot({ path: `${OUT}/12-S40-tracking-list.png`, fullPage: true });
+  });
+
+  test('12 追跡詳細', async ({ page }) => {
+    await page.route('**/api/v1/tracking/trackings/TRK-AB12CD3456', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(SAMPLE_TRACKING),
+      }),
+    );
+    await signInAsTracker(page);
+    await page.goto('/tracking/TRK-AB12CD3456');
+    await expect(page.getByRole('heading', { name: /TRK-AB12CD3456/ })).toBeVisible();
+    await expect(page.getByLabel('新しい状態')).toBeVisible();
+    await page.screenshot({ path: `${OUT}/12-S41-tracking-detail.png`, fullPage: true });
+  });
 });

@@ -73,6 +73,39 @@ val routingAcceptanceTest = tasks.register<Test>("routingAcceptanceTest") {
     systemProperty("cucumber.junit-platform.naming-strategy", "long")
 }
 
-// `./gradlew :acceptance-tests:test` で両方回る。片方だけ回ると、
+// 追跡（trackingms）も同じ理由で別のソースセットに置く。
+val trackingTest: SourceSet by sourceSets.creating
+
+dependencies {
+    "trackingTestImplementation"(project(":shared"))
+    "trackingTestImplementation"(testFixtures(project(":shared")))
+    "trackingTestImplementation"(project(":trackingms"))
+    "trackingTestImplementation"(libs.axon.test)
+    "trackingTestImplementation"(libs.testcontainers.junit.jupiter)
+    "trackingTestImplementation"(libs.testcontainers.postgresql)
+    "trackingTestImplementation"(libs.awaitility)
+    "trackingTestImplementation"(libs.cucumber.java)
+    "trackingTestImplementation"(libs.cucumber.spring)
+    "trackingTestImplementation"(libs.cucumber.junit.platform.engine)
+    "trackingTestImplementation"(libs.assertj.core)
+    "trackingTestImplementation"(platform(libs.junit.bom))
+    "trackingTestImplementation"("org.junit.platform:junit-platform-suite")
+    "trackingTestImplementation"(libs.spring.boot.starter.test)
+    "trackingTestImplementation"(libs.spring.boot.starter.web)
+    "trackingTestImplementation"(libs.spring.boot.starter.jdbc)
+    "trackingTestImplementation"(libs.mybatis.spring.boot.starter)
+    "trackingTestRuntimeOnly"(libs.junit.platform.launcher)
+}
+
+val trackingAcceptanceTest = tasks.register<Test>("trackingAcceptanceTest") {
+    description = "追跡の照会と状態の手動更新（trackingms）のデモ項目を回す"
+    group = "verification"
+    testClassesDirs = trackingTest.output.classesDirs
+    classpath = trackingTest.runtimeClasspath
+    useJUnitPlatform()
+    systemProperty("cucumber.junit-platform.naming-strategy", "long")
+}
+
+// `./gradlew :acceptance-tests:test` で全部回る。片方だけ回ると、
 // 増えたサービスの受け入れが黙って走らなくなる。
-tasks.named("test") { dependsOn(routingAcceptanceTest) }
+tasks.named("test") { dependsOn(routingAcceptanceTest, trackingAcceptanceTest) }
