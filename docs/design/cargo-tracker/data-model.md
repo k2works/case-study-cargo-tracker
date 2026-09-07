@@ -4,7 +4,7 @@ title: "データモデル設計 - 国際貨物輸送管理システム（CQRS /
 description: "CQRS / Event Sourcing 版 Cargo Tracker のデータモデル設計。Event Store は Axon Server に任せ、サービスごとの投影テーブル・Axon 管理テーブル・Auth の状態テーブルを ER 図とテーブル定義で示し、Processing Group との対応とリプレイ前提のマイグレーション方針を定める。"
 tags: [design,data-model,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-07T11:55:34Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-07T12:27:56Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -645,7 +645,7 @@ cs ||--o{ cd
 
 | テーブル | 元になるイベント | 制約・インデックス | 備考 |
 | :--- | :--- | :--- | :--- |
-| `cargo_snapshot` / `cargo_snapshot_leg` | `TrackingNumberIssuedEvent`, `CargoCancelledEvent`（いずれも契約） | — | ACL の読み取りモデル。`HandlingActivity` の登録時に `isOffRoute` の判定に使う。Booking の型を持ち込まない |
+| `cargo_snapshot` / `cargo_snapshot_leg` | **`TrackingInitializedEvent`**（契約）、`CargoCancelledEvent`（契約・US30） | `INDEX(voyage_number, unload_unlocode)` | ACL の読み取りモデル。`HandlingActivity` の登録時に `isOffRoute` の判定に使う。Booking の型を持ち込まない。**元イベントは [ADR-0012](../../adr/cargo-tracker/0012-cargo-snapshot-from-tracking-initialized.md) で決め直した**——当初 `TrackingNumberIssuedEvent` と書いていたが、これは bookingms の内部イベントで handlingms から購読できない（IT9 の着手前に発見）。`cancelled` の書き手は US30（IT15）まで居ない（既定 `false` が業務上正しい） |
 | `handling_activity` | `HandlingActivityRegisteredEvent`, `HandlingActivityVoidedEvent` | `UNIQUE(activity_id)`（PK。クライアント生成の冪等キー）, `INDEX(tracking_number, completed_at)`, `INDEX(voyage_number, unlocode)` | `activity_id` は `RegisterHandlingActivityCommand` の冪等キー（クライアント生成 UUID）。再送信は集約が同一 `activityId` で弾き、投影は PK で弾く。重複登録の 5 分規則は集約が守る。訂正は `voided` を立てるだけで元の行は残る（`VoidHandlingActivityCommand`）。`completed_at` は港のローカル時刻で入力し `TIMESTAMPTZ` で保存。`INDEX(voyage_number, unlocode)` は `FindCargosOnVoyageQuery` 用（`cargo_snapshot_leg` と合わせる） |
 | `customs_declaration` | `CustomsDeclarationRegisteredEvent`, `CustomsStatusUpdatedEvent` | `INDEX(tracking_number, status)`, `INDEX(status, held_business_days DESC)` | 状態変更の履歴は Event Store が持つ。画面の履歴表示は Event Store から読む（`FindCustomsDeclarationQuery` が最新状態、履歴はイベント列）。`held_business_days` は留置の営業日数（港の所在国の休日カレンダーで数え、`CustomsStatusChangedEvent.heldBusinessDays` から写す）。一覧は留置営業日の多い順 |
 

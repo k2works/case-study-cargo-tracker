@@ -4,7 +4,7 @@ title: "ドメインモデル設計 - 国際貨物輸送管理システム（CQR
 description: "CQRS / Event Sourcing 版 Cargo Tracker のドメインモデル設計。6 コンテキストの集約・不変条件・コマンド・イベント（内部 / 契約）・状態遷移・Reaction Handler を、イベントを永続化フォーマットとして定義する。"
 tags: [design,domain-model,ddd,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-07T05:29:30Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-07T12:27:56Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -1026,7 +1026,7 @@ CustomsDeclaration *-- CustomsStatus
 | `RegisterCustomsDeclarationCommand` | 荷役作業員 | `CustomsDeclarationRegisteredEvent` | — | UC21 / US29 |
 | `UpdateCustomsStatusCommand` | 追跡管理者 | `CustomsStatusUpdatedEvent`、`CustomsStatusChangedEvent` | ○（後者） | UC21 / US29 |
 
-`CargoSnapshot` は Booking の契約イベント（`TrackingNumberIssuedEvent`、`CargoCancelledEvent`）を購読して Handling 側が作る読み取りモデルです。旅程の情報は `TrackingNumberIssuedEvent` に載せます。Booking の型は持ち込みません。荷役画面（S50）は航海番号を起点に「この船から降ろす貨物」を出すので、投影 `cargo_snapshot_leg` に航海番号と港で引ける形で写します（`FindCargosOnVoyageQuery`）。
+`CargoSnapshot` は**契約イベント `TrackingInitializedEvent`**（発行は trackingms）と `CargoCancelledEvent`（US30）を購読して Handling 側が作る読み取りモデルです（[ADR-0012](../../adr/cargo-tracker/0012-cargo-snapshot-from-tracking-initialized.md)）。**当初は「Booking の契約イベント（`TrackingNumberIssuedEvent`）」と書いていましたが、これは bookingms の内部イベントで handlingms から購読できません**（IT9 の着手前に発見）。旅程の情報は `TrackingInitializedEvent` に載っています。Booking の型は持ち込みません。荷役画面（S50）は航海番号を起点に「この船から降ろす貨物」を出すので、投影 `cargo_snapshot_leg` に航海番号と港で引ける形で写します（`FindCargosOnVoyageQuery`）。
 
 ## Billing Context（補完）— billingms
 

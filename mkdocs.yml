@@ -172,6 +172,7 @@ nav:
           - ADR-0009 営業への差し戻しを状態遷移にしない: adr/cargo-tracker/0009-condition-review-is-not-a-state-transition.md
           - ADR-0010 サービスをまたぐ連鎖の調整役を Reaction Handler に一本化する: adr/cargo-tracker/0010-reaction-handler-as-the-only-coordinator.md
           - ADR-0011 追跡番号は推測されにくい形式で採る: adr/cargo-tracker/0011-tracking-number-is-hard-to-guess.md
+          - ADR-0012 CargoSnapshot は TrackingInitializedEvent から作る: adr/cargo-tracker/0012-cargo-snapshot-from-tracking-initialized.md
   - 記事:
       - 概要: article/index.md
       - モノリスアーキテクチャ実装比較:
