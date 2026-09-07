@@ -1,6 +1,8 @@
 # Docs Update Log
 
 ## 2026-09-07
+* **Update**: [13-荷役作業を記録する](/manual/13-荷役作業を記録する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [01-業務フロー](/manual/01-業務フロー.md) を更新（claude-code/claude-opus-5）
 * **Update**: [0012-cargo-snapshot-from-tracking-initialized](/adr/cargo-tracker/0012-cargo-snapshot-from-tracking-initialized.md) を更新（claude-code/claude-opus-5）
 * **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
 * **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）

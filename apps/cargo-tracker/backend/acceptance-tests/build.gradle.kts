@@ -108,4 +108,39 @@ val trackingAcceptanceTest = tasks.register<Test>("trackingAcceptanceTest") {
 
 // `./gradlew :acceptance-tests:test` で全部回る。片方だけ回ると、
 // 増えたサービスの受け入れが黙って走らなくなる。
-tasks.named("test") { dependsOn(routingAcceptanceTest, trackingAcceptanceTest) }
+// 荷役（handlingms）も同じ理由で別のソースセットに置く。
+val handlingTest: SourceSet by sourceSets.creating
+
+dependencies {
+    "handlingTestImplementation"(project(":shared"))
+    "handlingTestImplementation"(testFixtures(project(":shared")))
+    "handlingTestImplementation"(project(":handlingms"))
+    "handlingTestImplementation"(libs.axon.test)
+    "handlingTestImplementation"(libs.testcontainers.junit.jupiter)
+    "handlingTestImplementation"(libs.testcontainers.postgresql)
+    "handlingTestImplementation"(libs.awaitility)
+    "handlingTestImplementation"(libs.cucumber.java)
+    "handlingTestImplementation"(libs.cucumber.spring)
+    "handlingTestImplementation"(libs.cucumber.junit.platform.engine)
+    "handlingTestImplementation"(libs.assertj.core)
+    "handlingTestImplementation"(platform(libs.junit.bom))
+    "handlingTestImplementation"("org.junit.platform:junit-platform-suite")
+    "handlingTestImplementation"(libs.spring.boot.starter.test)
+    "handlingTestImplementation"(libs.spring.boot.starter.web)
+    "handlingTestImplementation"(libs.spring.boot.starter.jdbc)
+    "handlingTestImplementation"(libs.mybatis.spring.boot.starter)
+    "handlingTestRuntimeOnly"(libs.junit.platform.launcher)
+}
+
+val handlingAcceptanceTest = tasks.register<Test>("handlingAcceptanceTest") {
+    description = "荷役の記録（handlingms）のデモ項目を回す"
+    group = "verification"
+    testClassesDirs = handlingTest.output.classesDirs
+    classpath = handlingTest.runtimeClasspath
+    useJUnitPlatform()
+    systemProperty("cucumber.junit-platform.naming-strategy", "long")
+}
+
+tasks.named("test") {
+    dependsOn(routingAcceptanceTest, trackingAcceptanceTest, handlingAcceptanceTest)
+}

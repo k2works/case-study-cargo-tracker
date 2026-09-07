@@ -912,4 +912,100 @@ test.describe('マニュアルの画面キャプチャ', () => {
     await expect(page.getByLabel('新しい状態')).toBeVisible();
     await page.screenshot({ path: `${OUT}/12-S41-tracking-detail.png`, fullPage: true });
   });
+
+  async function signInAsHandler(page: import('@playwright/test').Page) {
+    await page.route('**/api/v1/auth/login', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          token: 'token',
+          username: 'handler01',
+          displayName: '荷役 四郎',
+          roles: ['ROLE_HANDLER'],
+          shipperId: null,
+        }),
+      }),
+    );
+    await page.goto('/login');
+    await page.getByLabel('利用者名').fill('handler01');
+    await page.getByLabel('パスワード').fill('secret1234');
+    await page.getByRole('button', { name: 'ログイン' }).click();
+    await expect(page.getByRole('heading', { name: 'ダッシュボード' })).toBeVisible();
+  }
+
+  test('13 荷役の記録', async ({ page }) => {
+    await page.route('**/api/v1/handling/voyages/*/cargos*', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: [
+            {
+              trackingNumber: 'TRK-AB12CD3456',
+              bookingId: 'b-1',
+              originUnLocode: 'JPTYO',
+              destinationUnLocode: 'USNYC',
+              cargoType: 'GENERAL',
+              handledHere: false,
+            },
+            {
+              trackingNumber: 'TRK-EF78GH9012',
+              bookingId: 'b-2',
+              originUnLocode: 'JPOSA',
+              destinationUnLocode: 'USNYC',
+              cargoType: 'GENERAL',
+              handledHere: true,
+            },
+          ],
+        }),
+      }),
+    );
+    await signInAsHandler(page);
+    await page.goto('/handling/voyages/V-MOL-001?unLocode=SGSIN');
+    await expect(page.getByRole('heading', { name: /荷役の記録/ })).toBeVisible();
+    await page.screenshot({ path: `${OUT}/13-S50-handling-record.png`, fullPage: true });
+  });
+
+  test('13 荷役履歴', async ({ page }) => {
+    await page.route('**/api/v1/handling/*/activities', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          trackingNumber: 'TRK-AB12CD3456',
+          items: [
+            {
+              activityId: 'act-1',
+              handlingType: 'RECEIVE',
+              handlingTypeLabel: '受領',
+              unLocode: 'JPTYO',
+              voyageNumber: null,
+              offRoute: false,
+              operator: 'handler01',
+              completedAt: '2026-09-20T01:00:00Z',
+              voided: false,
+              voidReason: null,
+            },
+            {
+              activityId: 'act-2',
+              handlingType: 'LOAD',
+              handlingTypeLabel: '積込',
+              unLocode: 'JPTYO',
+              voyageNumber: 'V-MOL-001',
+              offRoute: false,
+              operator: 'handler01',
+              completedAt: '2026-09-21T00:00:00Z',
+              voided: false,
+              voidReason: null,
+            },
+          ],
+        }),
+      }),
+    );
+    await signInAsHandler(page);
+    await page.goto('/handling/TRK-AB12CD3456');
+    await expect(page.getByRole('heading', { name: /荷役履歴/ })).toBeVisible();
+    await page.screenshot({ path: `${OUT}/13-S51-handling-history.png`, fullPage: true });
+  });
 });
