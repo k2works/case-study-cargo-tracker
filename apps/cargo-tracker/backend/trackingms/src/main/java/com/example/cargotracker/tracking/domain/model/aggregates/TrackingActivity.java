@@ -4,6 +4,9 @@ import com.example.cargotracker.shared.contract.command.InitializeTrackingComman
 import com.example.cargotracker.shared.contract.event.TrackingInitializedEvent;
 import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.shared.domain.error.IllegalTransition;
+import com.example.cargotracker.tracking.domain.model.commands.UpdateTransportStatusCommand;
+import com.example.cargotracker.tracking.domain.model.events.TransportStatusUpdatedEvent;
+import com.example.cargotracker.tracking.domain.model.valueobjects.StatusUpdateSource;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingNumber;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TransportStatus;
 import java.time.Clock;
@@ -75,6 +78,47 @@ public class TrackingActivity {
                         leg.loadTime(), leg.unloadTime())).toList(),
                 clock.instant()));
         return number.value();
+    }
+
+    /**
+     * 輸送状態を手で更新する（UC14 / US17 §受入基準 2）。
+     *
+     * <p><b>遷移の可否は {@link TransportStatus#canTransitionTo} に聞く。</b> ここで
+     * 判定を書き直すと、判定が 2 つになり片方だけ直る。</p>
+     *
+     * <p><b>例外発生中は動かさない</b>（不変条件 5 の下地）。例外の解決は「例外前の
+     * 状態へ戻る」ことなので、解決を待たずに手で動かすと戻り先と実際が食い違う。
+     * 例外そのものの起票・解決は US19・US20（IT9 以降）で足す。</p>
+     */
+    @CommandHandler
+    public void updateStatusManually(UpdateTransportStatusCommand command,
+            EventAppender appender, Clock clock) {
+        if (trackingNumber == null) {
+            throw new IllegalTransition("追跡 " + command.trackingNumber() + " は始まっていません");
+        }
+        if (command.updatedBy() == null || command.updatedBy().isBlank()) {
+            // 誰が動かしたか分からない記録は、後から突き合わせられない。
+            throw new BusinessRuleViolation("更新者は必須です");
+        }
+        if (command.newStatus() == null) {
+            throw new BusinessRuleViolation("新しい状態は必須です");
+        }
+        if (status == TransportStatus.EXCEPTION) {
+            throw new BusinessRuleViolation(
+                    "例外の対応中は状態を手で動かせません。例外を解決してください");
+        }
+        if (!status.canTransitionTo(command.newStatus())) {
+            throw new IllegalTransition(status.label() + " から "
+                    + command.newStatus().label() + " へは動かせません");
+        }
+        appender.append(new TransportStatusUpdatedEvent(trackingNumber.value(), status,
+                command.newStatus(), StatusUpdateSource.MANUAL, command.location(),
+                command.occurredAt(), command.updatedBy(), clock.instant()));
+    }
+
+    @EventSourcingHandler
+    void on(TransportStatusUpdatedEvent event) {
+        this.status = event.newStatus();
     }
 
     @EventSourcingHandler

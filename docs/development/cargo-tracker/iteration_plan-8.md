@@ -3,7 +3,7 @@ type: Plan
 title: "イテレーション 8 計画 - 追跡照会と手動更新"
 tags: [plan]
 status: draft
-generated: { by: claude-code/claude-opus-5, at: 2026-09-07T02:52:33Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-07T03:20:30Z }
 ---
 
 # イテレーション 8 計画 - 追跡照会と手動更新
@@ -111,8 +111,8 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-07T02:52:33Z }
 | # | タスク | ストーリー | 見積 |
 | :--- | :--- | :--- | :--: |
 | T1 | **追跡番号を正典の形式（`TRK-` + 大文字英数字 10 桁）にする。** ADR-0010 決定 2 を訂正。既存の発行済み番号の扱いを決める。**採番の場所は投影側のまま**。**完了**（`RandomTrackingNumberGenerator`・V016・[ADR-0011](../../adr/cargo-tracker/0011-tracking-number-is-hard-to-guess.md)。検査 4 件） | US18 前提 | 4h |
-| T2 | `TransportStatus#canTransitionTo`（不変条件 2）。**遷移表を正典から写し、canon テストで固定**。**同じ変更で javadoc を直す**——いまは「`canTransitionTo` と `afterHandling` は荷役（US15・IT9）で足す」と書いてあり、前倒しすると実装と食い違ったまま残る（コメントは仕様として読まれる） | US17 | 4h |
-| T3 | `UpdateTransportStatusCommand` / `TransportStatusUpdatedEvent` と **`TrackingActivity#updateStatusManually`**（正典の名前。`domain-model.md:762`）。**荷役由来の `AdvanceTrackingCommand`（IT9）と同じ集約に入る**ので、名前で区別が付くようにする。**例外発生中は動かさない**（不変条件 5 の下地） | US17 | 5h |
+| T2 | `TransportStatus#canTransitionTo`（不変条件 2）。**遷移表を正典から写し、canon テストで固定**。**同じ変更で javadoc を直す**——いまは「`canTransitionTo` と `afterHandling` は荷役（US15・IT9）で足す」と書いてあり、前倒しすると実装と食い違ったまま残る（コメントは仕様として読まれる）。**完了**（`TransportStatusTest` が全 9 値 × 全 9 値と呼び名を固定。javadoc も訂正） | US17 | 4h |
+| T3 | `UpdateTransportStatusCommand` / `TransportStatusUpdatedEvent` と **`TrackingActivity#updateStatusManually`**（正典の名前。`domain-model.md:762`）。**荷役由来の `AdvanceTrackingCommand`（IT9）と同じ集約に入る**ので、名前で区別が付くようにする。**例外発生中は動かさない**（不変条件 5 の下地）。**完了**（集約まで。**REST の入口は T7**——ここで止めると定義済み未使用になるので、T7 で必ず繋ぐ） | US17 | 5h |
 | T4 | `tracking_event` テーブルと投影。**追記系なので `event_id` を PK にして再配送で増えない**（data-model:43） | US17・US18 | 4h |
 | T5 | **`shipperId` を 3 本のイベント／コマンドに足す**（`TrackingNumberIssuedEvent` → `InitializeTrackingCommand` → `TrackingInitializedEvent`）。**`Cargo` 集約に `shipperId` フィールドと `on(CargoBookedEvent)` での代入を先に足す**（いまは `book()` を通り抜けるだけで保持していない）。`tracking_summary.shipper_id` と `shipper_cargo_snapshot` を作る。**契約 2 本（`InitializeTrackingCommand`・`TrackingInitializedEvent`）はゴールデン JSON を先に赤にする** | US18 | 7h |
 | T6 | 公開照会の読み口（`GET /api/v1/tracking/public/{trackingNumber}`）と **S44 画面**（**既存の `PublicTrackingPage` プレースホルダを埋める**）。**見つからない案内・入力形式のヒント・問い合わせの出口** | US18 | 6h |

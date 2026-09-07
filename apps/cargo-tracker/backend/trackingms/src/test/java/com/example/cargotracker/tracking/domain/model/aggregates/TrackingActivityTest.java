@@ -6,6 +6,9 @@ import com.example.cargotracker.shared.contract.command.InitializeTrackingComman
 import com.example.cargotracker.shared.contract.event.TrackingInitializedEvent;
 import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.shared.domain.error.IllegalTransition;
+import com.example.cargotracker.tracking.domain.model.commands.UpdateTransportStatusCommand;
+import com.example.cargotracker.tracking.domain.model.events.TransportStatusUpdatedEvent;
+import com.example.cargotracker.tracking.domain.model.valueobjects.StatusUpdateSource;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TransportStatus;
 import java.time.Clock;
 import java.time.Instant;
@@ -151,5 +154,84 @@ class TrackingActivityTest {
         assertThat(row)
                 .as("%s の呼び名が設計と食い違う", status)
                 .contains(status.label());
+    }
+
+    // ---- US17 状態の手動更新（T3） ----
+
+    private static final String NUMBER = "TRK-8K2QX7M4RB";
+
+    private static UpdateTransportStatusCommand update(TransportStatus to) {
+        return new UpdateTransportStatusCommand(NUMBER, to, "JPTYO",
+                Instant.parse("2026-09-11T02:00:00Z"), "tracker-1");
+    }
+
+    private static TrackingInitializedEvent initialized() {
+        return new TrackingInitializedEvent(NUMBER, "b-1", "JPTYO", "USNYC", "GENERAL",
+                List.of(new TrackingInitializedEvent.Leg("V-MOL-001", "JPTYO", "USNYC",
+                        Instant.parse("2026-09-10T09:00:00Z"),
+                        Instant.parse("2026-09-24T18:00:00Z"))),
+                ISSUED);
+    }
+
+    @Test
+    @DisplayName("US17 §2: 新しい状態・位置・日時を入力して更新できる")
+    void updatesStatusManually() {
+        fixture.given().event(initialized())
+                .when().command(update(TransportStatus.RECEIVED))
+                .then().events(new TransportStatusUpdatedEvent(NUMBER,
+                        TransportStatus.NOT_RECEIVED, TransportStatus.RECEIVED,
+                        StatusUpdateSource.MANUAL, "JPTYO",
+                        Instant.parse("2026-09-11T02:00:00Z"), "tracker-1", NOW));
+    }
+
+    @Test
+    @DisplayName("不変条件 2: 正典が許さない遷移は断る")
+    void rejectsTransitionsTheCanonForbids() {
+        // 未受領からいきなり引取済にはしない。**集約が判定を書き直さず、
+        // TransportStatus#canTransitionTo をそのまま呼ぶ**（判定が 2 つあると片方だけ直る）。
+        fixture.given().event(initialized())
+                .when().command(update(TransportStatus.DELIVERED))
+                .then().exception(IllegalTransition.class);
+    }
+
+    @Test
+    @DisplayName("同じ状態への更新は断る（履歴に同じ行が積み上がるだけ）")
+    void rejectsUpdateToTheSameStatus() {
+        fixture.given().event(initialized())
+                .when().command(update(TransportStatus.NOT_RECEIVED))
+                .then().exception(IllegalTransition.class);
+    }
+
+    @Test
+    @DisplayName("不変条件 5 の下地: 例外発生中は手動で動かさない")
+    void doesNotMoveWhileAnExceptionIsOpen() {
+        // **例外の解決は「例外前の状態へ戻る」**（不変条件 5）。解決を待たずに手で
+        // 動かすと、戻り先（statusBeforeException）と実際の状態が食い違う。
+        fixture.given().events(initialized(),
+                new TransportStatusUpdatedEvent(NUMBER, TransportStatus.NOT_RECEIVED,
+                        TransportStatus.RECEIVED, StatusUpdateSource.MANUAL, "JPTYO",
+                        Instant.parse("2026-09-11T02:00:00Z"), "tracker-1", NOW),
+                new TransportStatusUpdatedEvent(NUMBER, TransportStatus.RECEIVED,
+                        TransportStatus.EXCEPTION, StatusUpdateSource.MANUAL, "JPTYO",
+                        Instant.parse("2026-09-11T03:00:00Z"), "tracker-1", NOW))
+                .when().command(update(TransportStatus.LOADED))
+                .then().exception(BusinessRuleViolation.class);
+    }
+
+    @Test
+    @DisplayName("始まっていない追跡は更新できない")
+    void rejectsUpdateBeforeInitialization() {
+        fixture.given().noPriorActivity()
+                .when().command(update(TransportStatus.RECEIVED))
+                .then().exception(IllegalTransition.class);
+    }
+
+    @Test
+    @DisplayName("更新した人が分からない記録は残さない")
+    void requiresWhoUpdated() {
+        fixture.given().event(initialized())
+                .when().command(new UpdateTransportStatusCommand(NUMBER, TransportStatus.RECEIVED,
+                        "JPTYO", Instant.parse("2026-09-11T02:00:00Z"), "  "))
+                .then().exception(BusinessRuleViolation.class);
     }
 }
