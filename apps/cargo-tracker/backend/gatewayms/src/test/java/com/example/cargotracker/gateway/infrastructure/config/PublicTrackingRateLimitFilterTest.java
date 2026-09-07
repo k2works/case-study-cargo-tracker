@@ -85,12 +85,13 @@ class PublicTrackingRateLimitFilterTest {
     @Test
     @DisplayName("中継機の内側では転送元アドレスで数える（全利用者が 1 つのカウンタを共有しない）")
     void countsTheForwardedAddress() throws Exception {
-        var filter = new PublicTrackingRateLimitFilter(clock);
+        // フィールドの filter とは別に、この検査だけの新しいカウンタで数える。
+        var behindProxy = new PublicTrackingRateLimitFilter(clock);
         for (int i = 0; i < 11; i++) {
             var request = new MockHttpServletRequest("GET", "/api/v1/tracking/public/TRK-A");
             request.setRemoteAddr("10.0.0.99");
             request.addHeader("X-Forwarded-For", "203.0.113.5, 10.0.0.99");
-            filter.doFilter(request, new MockHttpServletResponse(), chain);
+            behindProxy.doFilter(request, new MockHttpServletResponse(), chain);
         }
 
         // 中継機は同じでも、転送元が違えば巻き添えにならない。
@@ -98,7 +99,7 @@ class PublicTrackingRateLimitFilterTest {
         other.setRemoteAddr("10.0.0.99");
         other.addHeader("X-Forwarded-For", "203.0.113.9, 10.0.0.99");
         var response = new MockHttpServletResponse();
-        filter.doFilter(other, response, chain);
+        behindProxy.doFilter(other, response, chain);
 
         assertThat(response.getStatus()).isEqualTo(404);
     }

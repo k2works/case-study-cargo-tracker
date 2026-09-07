@@ -1,6 +1,8 @@
 # Docs Update Log
 
 ## 2026-09-07
+* **Update**: [iteration_report-8](/development/cargo-tracker/iteration_report-8.md) を更新（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
 * **Update**: [IT8実装_review_20260907](/review/cargo-tracker/IT8実装_review_20260907.md) を更新（claude-code/claude-opus-5）
 * **Update**: [retrospective-8](/development/cargo-tracker/retrospective-8.md) を更新（claude-code/claude-opus-5）
 * **Update**: [12-貨物の輸送状況を追う](/manual/12-貨物の輸送状況を追う.md) を更新（claude-code/claude-opus-5）
