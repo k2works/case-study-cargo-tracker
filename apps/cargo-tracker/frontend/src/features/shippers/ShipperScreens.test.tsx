@@ -83,6 +83,79 @@ describe('S10 荷主一覧', () => {
     expect(await screen.findByText(/反映までしばらくお待ちください/)).toBeInTheDocument();
   });
 
+  it('登録直後の荷主を、投影が追いつく前でも行として差し込む', async () => {
+    // **正典（ui_design.md S11）が「S10 に反映中の行を差し込む」と定めている。**
+    // 案内文だけだと、上限で切れた一覧では登録した荷主がどこにも出ず、
+    // 営業は「登録できていない」と判断して二重に入力する。
+    respond(200, { items: [], total: 219 });
+
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter
+          initialEntries={[{
+            pathname: '/',
+            state: {
+              justRegistered: {
+                name: '新規商事',
+                email: 'new@example.com',
+                shipperType: 'INDIVIDUAL',
+              },
+            },
+          }]}
+        >
+          <Routes>
+            <Route path="/" element={<ShipperListPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    const row = await screen.findByRole('row', { name: /新規商事/ });
+    expect(row).toHaveTextContent('new@example.com');
+    expect(row).toHaveTextContent('反映中');
+  });
+
+  it('投影が追いついたら差し込んだ行は重複しない', async () => {
+    respond(200, {
+      items: [{
+        shipperId: 'id-9',
+        shipperCode: 'SHP-000219',
+        shipperType: 'INDIVIDUAL',
+        name: '新規商事',
+        email: 'new@example.com',
+        phone: null,
+        address: null,
+        contractNumber: null,
+        discountRate: null,
+      }],
+      total: 219,
+    });
+
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter
+          initialEntries={[{
+            pathname: '/',
+            state: {
+              justRegistered: {
+                name: '新規商事',
+                email: 'new@example.com',
+                shipperType: 'INDIVIDUAL',
+              },
+            },
+          }]}
+        >
+          <Routes>
+            <Route path="/" element={<ShipperListPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    await screen.findByText('SHP-000219');
+    expect(screen.getAllByText('新規商事')).toHaveLength(1);
+  });
+
   it('登録画面への導線がある', async () => {
     respond(200, { items: [] });
 

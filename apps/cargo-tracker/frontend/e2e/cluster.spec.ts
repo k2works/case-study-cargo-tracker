@@ -524,6 +524,10 @@ test.describe('kind クラスタでの通し確認', () => {
     async ({ page, request }) => {
       // **本 IT の中核。** 公開照会は認証を通らず、状態の更新は trackingms の集約を
       // 通る。モックでは「Gateway が公開経路を素通しするか」を判別できない。
+      //
+      // 既定の 30 秒では足りない。最後にレート制限の窓（1 分）が空くまで待つ
+      // ——待たないと、後続のテストが自分のせいで 429 になる。
+      test.setTimeout(180_000);
       const product = `追跡の貨物-${Date.now()}`;
       const voyageNumber = uniqueVoyageNumber('V-TR-');
       const routing = await tokenOf(request, 'routing01');
@@ -619,6 +623,7 @@ test.describe('kind クラスタでの通し確認', () => {
       expect(forbidden.status()).toBe(409);
 
       // デモ項目 8: **総当たりが止まる。** 同一 IP から 1 分に 10 回を超えると 429。
+      let retryAfter = '';
       let sawTooManyRequests = false;
       for (let i = 0; i < 12; i++) {
         const probe = await request.get('/api/v1/tracking/public/TRK-BRUTEFORC', {
@@ -626,10 +631,18 @@ test.describe('kind クラスタでの通し確認', () => {
         });
         if (probe.status() === 429) {
           sawTooManyRequests = true;
+          retryAfter = probe.headers()['retry-after'] ?? '';
           break;
         }
       }
       expect(sawTooManyRequests, '認証不要経路の唯一の防御が効いていない').toBe(true);
+      // **断らせた分を後片付けする。** 数えるのは接続元アドレスなので、窓が
+      // 空くまで待たないと、後続のテスト（未認証の公開照会）まで 429 になる。
+      // 待つ長さはサーバが返した Retry-After に従う——こちらで決め打つと、
+      // 上限や窓を変えたときに待ち足りなくなる。
+      expect(retryAfter, '断るときは待てば通ることを伝える').not.toBe('');
+      await new Promise((resolve) =>
+        setTimeout(resolve, (Number(retryAfter) + 1) * 1000));
     });
 
   test('管理者は利用者の状態を見てロックを解除できる', async ({ page, request }) => {

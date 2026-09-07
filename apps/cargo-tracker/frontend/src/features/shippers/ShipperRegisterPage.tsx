@@ -42,7 +42,17 @@ export function ShipperRegisterPage() {
       });
       // 受け付けただけで一覧にはまだ出ない。一覧側が取り直せるようにしてから移る。
       await queryClient.invalidateQueries({ queryKey: ['shippers'] });
-      navigate('/shippers', { state: { justRegistered: true } });
+      // **入れた内容を持って移る。** 一覧は荷主コード順で上限があるので、
+      // 新しく採った荷主は 1 ページ目に出ない。反映中の行として差し込む。
+      navigate('/shippers', {
+        state: {
+          justRegistered: {
+            name: String(form.get('name') ?? ''),
+            email,
+            shipperType,
+          },
+        },
+      });
     } catch (e) {
       if (e instanceof ApiError && e.body.code === 'SHIPPER_EMAIL_DUPLICATE') {
         setAcknowledgedEmail(email);

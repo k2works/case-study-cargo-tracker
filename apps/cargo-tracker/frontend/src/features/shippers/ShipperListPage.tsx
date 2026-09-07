@@ -13,12 +13,25 @@ import {
 } from '@/shared/ui/styles';
 import { display, fetchShippers } from './api';
 
+/**
+ * 登録直後に一覧へ差し込む行（ui_design.md S11「登録後は S10 に反映中の行を差し込む」）。
+ *
+ * <p>投影が追いつくまでの数秒だけでなく、<b>一覧が上限で切れているとき</b>にも要る。
+ * 荷主コード順に並ぶので、新しく採った荷主ほど後ろに回り、件数が上限を超えると
+ * 1 ページ目には決して出ない（実測 219 件 / 表示 200 件）。</p>
+ */
+export interface JustRegistered {
+  readonly name: string;
+  readonly email: string;
+  readonly shipperType: 'CORPORATE' | 'INDIVIDUAL';
+}
+
 /** S10 荷主一覧（UC02）。 */
 export function ShipperListPage() {
   // 登録直後は投影がまだなので、自分が入れた荷主が一覧に無い。何も出さないと
   // 「登録できていない」と判断して二重に入力される（ui_design.md S10 の salt）。
-  const justRegistered =
-    (useLocation().state as { justRegistered?: boolean } | null)?.justRegistered === true;
+  const justRegistered = (useLocation().state as { justRegistered?: JustRegistered } | null)
+    ?.justRegistered;
   const { data, isPending, isError } = useQuery({
     queryKey: ['shippers'],
     queryFn: fetchShippers,
@@ -44,7 +57,7 @@ export function ShipperListPage() {
         </output>
       )}
 
-      {justRegistered && (
+      {justRegistered !== undefined && (
         <output className={`${NOTICE} mt-4 block`}>
           登録を受け付けました。反映までしばらくお待ちください
         </output>
@@ -61,13 +74,15 @@ export function ShipperListPage() {
 
       {/* 見出しだけの表を出すと「読み込みに失敗した」と受け取られる。
           0 件であることを文で言う。 */}
-      {data?.state === 'ready' && data.value.items.length === 0 && (
+      {data?.state === 'ready' && data.value.items.length === 0
+        && justRegistered === undefined && (
         <output className={`${NOTICE} mt-4`}>
           登録済みの荷主はまだありません。
         </output>
       )}
 
-      {data?.state === 'ready' && data.value.items.length > 0 && (
+      {data?.state === 'ready'
+        && (data.value.items.length > 0 || justRegistered !== undefined) && (
         // 画面幅に収まらない表は、ページ全体でなくこの中だけを横に流す。
         // ページごと横スクロールすると、ナビや見出しまで隠れる。
         <div className={`${CARD} mt-4 overflow-x-auto`}>
@@ -90,6 +105,20 @@ export function ShipperListPage() {
               </tr>
             </thead>
             <tbody>
+              {/* **反映中の行を差し込む**（ui_design.md S11）。上限で切れた一覧では、
+                  登録した荷主がどこにも出ない。案内文だけだと営業は「登録できて
+                  いない」と判断して二重に入力する。投影が追いつけば消える。 */}
+              {justRegistered !== undefined
+                && !data.value.items.some((shipper) => shipper.email === justRegistered.email) && (
+                <tr>
+                  <td className={TD}>反映中</td>
+                  <td className={TD}>{justRegistered.name}</td>
+                  <td className={TD}>
+                    {justRegistered.shipperType === 'CORPORATE' ? '法人' : '個人'}
+                  </td>
+                  <td className={TD}>{justRegistered.email}</td>
+                </tr>
+              )}
               {data.value.items.map((shipper) => (
                 <tr key={shipper.shipperId}>
                   <td className={TD}>{shipper.shipperCode}</td>
