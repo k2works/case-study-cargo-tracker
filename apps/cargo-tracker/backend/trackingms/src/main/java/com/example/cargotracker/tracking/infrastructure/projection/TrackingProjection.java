@@ -35,6 +35,17 @@ public class TrackingProjection {
         this.clock = clock;
     }
 
+    /**
+     * 到着予定。<b>予定の旅程の最終区間の荷降し</b>（区間は積む順）。
+     *
+     * <p><b>導出はここ 1 か所。</b> 所要日数から計算すると、計算式が画面ごとに
+     * 増えて違う日付が出る（IT7 引き継ぎ 7）。</p>
+     */
+    private static java.time.Instant estimatedArrival(
+            List<TrackingInitializedEvent.Leg> legs) {
+        return legs.isEmpty() ? null : legs.get(legs.size() - 1).unloadTime();
+    }
+
     @EventHandler
     public void on(TrackingInitializedEvent event) {
         var now = clock.instant();
@@ -44,6 +55,11 @@ public class TrackingProjection {
                 // 追跡を始めた直後は未受領。**状態はイベントに載って来ない**ので、
                 // trackingms が自分の状態機械で決める。
                 TransportStatus.NOT_RECEIVED.name(),
+                // 始まった時点では、まだどこにも着いていない。
+                null,
+                // **到着予定は投影が 1 か所で決める**（予定の旅程の最終区間の荷降し）。
+                // 一覧のたびに旅程を引くと、1 行ごとの往復が残る。
+                estimatedArrival(event.legs()),
                 event.initializedAt(), event.initializedAt(), now, null));
 
         // 旅程は消してから入れ直す。追記だけにすると、リプレイで区間が倍になる。
@@ -76,7 +92,7 @@ public class TrackingProjection {
         var current = trackings.findByTrackingNumber(event.trackingNumber());
         if (current != null) {
             trackings.updateStatus(event.trackingNumber(), event.newStatus().name(),
-                    event.occurredAt(), now, eventId);
+                    event.occurredAt(), event.location(), now, eventId);
         }
         history.insert(new TrackingEventMapper.TrackingEventRow(eventId, event.trackingNumber(),
                 event.source().eventType(),

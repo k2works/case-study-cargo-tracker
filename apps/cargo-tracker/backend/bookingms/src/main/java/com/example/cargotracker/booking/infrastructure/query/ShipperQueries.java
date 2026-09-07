@@ -16,7 +16,12 @@ public final class ShipperQueries {
     public record FindShipperQuery(String shipperId) {
     }
 
-    public record FindShippersQuery(int page, int size) {
+    /**
+     * 一覧（S10）。
+     *
+     * @param q 名前の絞り込み（部分一致・大文字小文字を問わない）。空なら全件
+     */
+    public record FindShippersQuery(int page, int size, String q) {
     }
 
     /**

@@ -189,6 +189,21 @@ describe('S21 予約登録', () => {
       .toBeInTheDocument();
   });
 
+  it('荷主が上限を超えていても、名前で絞り込んで選べる', async () => {
+    // **クラスタで踏んだ欠陥。** 選択肢は一覧と同じ上限で作られるので、
+    // 新しく登録した荷主は選べず、**その日からその荷主の予約が取れない**。
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ items: [], total: 219 }), { status: 200 }));
+
+    renderAt('/bookings-new', <BookingRegisterPage />);
+
+    await screen.findByLabelText('荷主');
+    await userEvent.type(screen.getByLabelText('荷主を名前で絞り込む'), '山田');
+
+    await vi.waitFor(() =>
+      expect(String(fetchSpy.mock.calls.at(-1)?.[0])).toContain('q=%E5%B1%B1%E7%94%B0'));
+  });
+
   it('危険物を選んだときだけ IMO クラスを出す', async () => {
     renderAt('/bookings-new', <BookingRegisterPage />);
 

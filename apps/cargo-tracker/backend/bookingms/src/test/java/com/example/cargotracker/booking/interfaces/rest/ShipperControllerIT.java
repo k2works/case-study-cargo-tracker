@@ -241,4 +241,87 @@ class ShipperControllerIT extends AbstractAxonIntegrationTest {
             assertThat(list.getBody().get("items").toString()).contains(email);
         });
     }
+
+    // ---- H.1 荷主が上限を超えると予約が取れない（IT8 引き継ぎ） ----
+
+    /**
+     * 名前で絞り込む。
+     *
+     * <p><b>自分でエンコードしない。</b> エンコード済みの文字列を {@code uri(String)} に
+     * 渡すと二重にエンコードされ、日本語の絞り込みだけが引っかからない
+     * （ASCII は変わらないので、英字の検査だけが通って気づけない）。</p>
+     */
+    private ResponseEntity<JsonMap> search(String q) {
+        return rest.get()
+                .uri("http://localhost:" + port + "/api/v1/booking/shippers",
+                        uri -> uri.path("").queryParam("size", 50).queryParam("q", q).build())
+                .retrieve().toEntity(JsonMap.class);
+    }
+
+    @Test
+    @DisplayName("名前で絞り込める（上限を超えても、登録した荷主にたどり着ける）")
+    void filtersByName() {
+        // **クラスタで踏んだ欠陥。** 荷主が 219 件あり一覧は 200 件で切れる。
+        // 一覧は荷主コード順なので新しく採った荷主ほど後ろに回り、1 ページ目に
+        // 出ない。予約登録の選択肢も同じ上限で作られるため、**登録した荷主で
+        // その日から予約が取れなくなる**。
+        String unique = "絞込商事-" + System.nanoTime();
+        var created = post("", Map.of(
+                "shipperType", "INDIVIDUAL",
+                "name", unique,
+                "email", "filter-" + System.nanoTime() + "@example.com",
+                "phone", "03-0000-0000",
+                "address", "東京都中央区"));
+        assertThat(created.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
+            var response = search(unique);
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+            @SuppressWarnings("unchecked")
+            java.util.List<Map<String, Object>> items =
+                    (java.util.List<Map<String, Object>>) response.getBody().get("items");
+            assertThat(items).hasSize(1);
+            assertThat(items.get(0)).containsEntry("name", unique);
+        });
+    }
+
+    @Test
+    @DisplayName("絞り込みは部分一致で、大文字小文字を問わない")
+    void filtersByPartialNameIgnoringCase() {
+        String unique = "PartialCo-" + System.nanoTime();
+        post("", Map.of(
+                "shipperType", "INDIVIDUAL",
+                "name", unique,
+                "email", "partial-" + System.nanoTime() + "@example.com",
+                "phone", "03-0000-0000",
+                "address", "東京都中央区"));
+
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
+            var response = search(unique.toLowerCase(java.util.Locale.ROOT));
+
+            @SuppressWarnings("unchecked")
+            java.util.List<Map<String, Object>> items =
+                    (java.util.List<Map<String, Object>>) response.getBody().get("items");
+            assertThat(items).extracting(item -> item.get("name")).contains(unique);
+        });
+    }
+
+    @Test
+    @DisplayName("絞り込みの結果でも全件数は絞り込み後の件数（画面の案内が嘘にならない）")
+    void reportsTheFilteredTotal() {
+        String unique = "件数商事-" + System.nanoTime();
+        post("", Map.of(
+                "shipperType", "INDIVIDUAL",
+                "name", unique,
+                "email", "total-" + System.nanoTime() + "@example.com",
+                "phone", "03-0000-0000",
+                "address", "東京都中央区"));
+
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
+            var response = search(unique);
+
+            assertThat(response.getBody()).containsEntry("total", 1);
+        });
+    }
 }

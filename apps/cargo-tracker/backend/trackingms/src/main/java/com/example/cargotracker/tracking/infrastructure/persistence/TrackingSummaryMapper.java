@@ -18,7 +18,10 @@ public interface TrackingSummaryMapper {
      * record の途中に項目を足した瞬間、全部が 1 つずつずれる（IT8 T5 で実測。
      * 「日時の列に evt-1 が入らない」という、原因の読めない形で落ちた）。</p>
      */
-    String COLUMNS = "tracking_number, booking_id, shipper_id, origin_unlocode, destination_unlocode, cargo_type, transport_status, initialized_at, last_status_changed_at, projected_at, last_event_id";
+    String COLUMNS = "tracking_number, booking_id, shipper_id, origin_unlocode, "
+            + "destination_unlocode, cargo_type, transport_status, current_unlocode, "
+            + "estimated_arrival, initialized_at, last_status_changed_at, projected_at, "
+            + "last_event_id";
 
     /**
      * 追跡を作る（US14）。
@@ -44,11 +47,16 @@ public interface TrackingSummaryMapper {
      */
     @org.apache.ibatis.annotations.Update(
             "UPDATE tracking_summary SET transport_status = #{transportStatus}, "
-            + "last_status_changed_at = #{lastStatusChangedAt}, projected_at = #{projectedAt}, "
+            + "last_status_changed_at = #{lastStatusChangedAt}, "
+            // **場所が空の更新で現在地を消さない**（COALESCE）。場所は任意入力で、
+            // 空のまま 1 回更新しただけで分かっていた現在地が消えていた。
+            + "current_unlocode = COALESCE(#{currentUnlocode}, current_unlocode), "
+            + "projected_at = #{projectedAt}, "
             + "last_event_id = #{lastEventId} WHERE tracking_number = #{trackingNumber}")
     int updateStatus(@Param("trackingNumber") String trackingNumber,
             @Param("transportStatus") String transportStatus,
             @Param("lastStatusChangedAt") Instant lastStatusChangedAt,
+            @Param("currentUnlocode") String currentUnlocode,
             @Param("projectedAt") Instant projectedAt,
             @Param("lastEventId") String lastEventId);
 
@@ -82,9 +90,7 @@ public interface TrackingSummaryMapper {
         "  <if test='shipperId != null'>AND shipper_id = #{shipperId}</if>",
         "  <if test='!includeDelivered'>AND transport_status &lt;&gt; 'DELIVERED'</if>",
         "</where>",
-        " ORDER BY (SELECT MAX(l.unload_time) FROM tracking_leg l",
-        "           WHERE l.tracking_number = tracking_summary.tracking_number)",
-        "          ASC NULLS LAST, last_status_changed_at DESC",
+        " ORDER BY estimated_arrival ASC NULLS LAST, last_status_changed_at DESC",
         " LIMIT #{limit}",
         "</script>"})
     List<TrackingSummaryRow> findAll(@Param("shipperId") String shipperId,
@@ -123,6 +129,8 @@ public interface TrackingSummaryMapper {
             String destinationUnlocode,
             String cargoType,
             String transportStatus,
+            String currentUnlocode,
+            Instant estimatedArrival,
             Instant initializedAt,
             Instant lastStatusChangedAt,
             Instant projectedAt,

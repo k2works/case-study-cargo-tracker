@@ -50,7 +50,7 @@ public class TrackingQueryHandler {
 
         return new PublicTrackingView(row.trackingNumber(), row.originUnlocode(),
                 row.destinationUnlocode(), label(row.transportStatus()),
-                currentLocation(events), departure(legs), estimatedArrival(legs), events);
+                row.currentUnlocode(), departure(legs), row.estimatedArrival(), events);
     }
 
     /**
@@ -73,23 +73,6 @@ public class TrackingQueryHandler {
         return TransportStatus.valueOf(status).label();
     }
 
-    /**
-     * いまどこか。<b>最後に場所が入っていたイベントの場所</b>（手動更新で入る分だけ。
-     * 荷役由来の位置は US15・IT9）。
-     *
-     * <p><b>最新イベントの場所をそのまま出さない。</b> 場所は任意入力なので、
-     * 場所を空のまま 1 回更新しただけで、それまで分かっていた現在地が消える。
-     * 荷受人にとって現在地は照会の主目的である。</p>
-     */
-    private static String currentLocation(List<PublicTrackingEventView> events) {
-        for (int i = events.size() - 1; i >= 0; i--) {
-            String location = events.get(i).location();
-            if (location != null && !location.isBlank()) {
-                return location;
-            }
-        }
-        return null;
-    }
 
     /** 出発。予定の旅程の最初の区間の積み込み。 */
     private static java.time.Instant departure(
@@ -97,16 +80,6 @@ public class TrackingQueryHandler {
         return legs.isEmpty() ? null : legs.get(0).loadTime();
     }
 
-    /**
-     * 到着予定。<b>予定の旅程の最終区間の荷降し</b>。
-     *
-     * <p><b>所要日数から計算しない。</b> 計算式が 2 か所にあると、片方だけ直った
-     * ときに画面ごとに違う日付が出る（IT7 引き継ぎ 7）。</p>
-     */
-    private static java.time.Instant estimatedArrival(
-            List<TrackingSummaryMapper.TrackingLegRow> legs) {
-        return legs.isEmpty() ? null : legs.get(legs.size() - 1).unloadTime();
-    }
 
     /**
      * 追跡一覧（S40）。<b>荷主が指定されていれば自社のぶんだけ</b>（US18）。
@@ -116,11 +89,13 @@ public class TrackingQueryHandler {
         return new TrackingListView(
                 trackings.findAll(query.shipperId(), query.includeDelivered(), query.limit())
                         .stream()
+                        // **1 行ごとに旅程と履歴を引かない。** 既定 50 件で 100 回超の
+                        // 往復になり、それが 30 秒ごとに繰り返される。投影が写した
+                        // 列をそのまま読む（data-model.md の「一覧が JOIN しない」）。
                         .map(row -> new TrackingListItemView(row.trackingNumber(),
                                 row.originUnlocode(), row.destinationUnlocode(),
-                                label(row.transportStatus()), currentLocationOf(row),
-                                estimatedArrival(trackings.findLegs(row.trackingNumber())),
-                                row.lastStatusChangedAt()))
+                                label(row.transportStatus()), row.currentUnlocode(),
+                                row.estimatedArrival(), row.lastStatusChangedAt()))
                         .toList(),
                 trackings.countAll(query.shipperId(), query.includeDelivered()));
     }
@@ -147,7 +122,7 @@ public class TrackingQueryHandler {
 
         return new TrackingView(row.trackingNumber(), row.bookingId(), row.originUnlocode(),
                 row.destinationUnlocode(), row.cargoType(), status.name(), status.label(),
-                currentLocationOf(row), estimatedArrival(trackings.findLegs(row.trackingNumber())),
+                row.currentUnlocode(), row.estimatedArrival(),
                 row.lastStatusChangedAt(), events, nextStatuses(status));
     }
 
@@ -170,15 +145,4 @@ public class TrackingQueryHandler {
         return shipperId == null || shipperId.equals(row.shipperId());
     }
 
-    /** いまどこか。<b>最後に場所が入っていたイベントの場所</b>（上と同じ判断）。 */
-    private String currentLocationOf(TrackingSummaryMapper.TrackingSummaryRow row) {
-        var events = history.findHistory(row.trackingNumber());
-        for (int i = events.size() - 1; i >= 0; i--) {
-            String location = events.get(i).location();
-            if (location != null && !location.isBlank()) {
-                return location;
-            }
-        }
-        return null;
-    }
 }

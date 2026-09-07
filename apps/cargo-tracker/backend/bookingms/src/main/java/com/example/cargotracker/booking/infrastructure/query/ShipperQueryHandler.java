@@ -35,8 +35,10 @@ public class ShipperQueryHandler {
         int size = Math.clamp(query.size(), 1, 200);
         int offset = Math.max(query.page(), 0) * size;
         return new ShipperListView(
-                shippers.findAll(size, offset).stream().map(ShipperQueryHandler::toView).toList(),
-                shippers.countAll());
+                shippers.findAll(size, offset, query.q()).stream()
+                        .map(ShipperQueryHandler::toView).toList(),
+                // **絞り込み後の件数を返す。** 全件数だと、絞り込んだ画面の案内が嘘になる。
+                shippers.countAll(query.q()));
     }
 
     private static ShipperView toView(ShipperMapper.ShipperRow row) {

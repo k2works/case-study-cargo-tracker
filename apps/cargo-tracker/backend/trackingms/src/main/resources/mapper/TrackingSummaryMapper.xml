@@ -15,12 +15,12 @@
     <insert id="insert">
         INSERT INTO tracking_summary (
             tracking_number, booking_id, shipper_id, origin_unlocode, destination_unlocode,
-            cargo_type, transport_status, initialized_at, last_status_changed_at,
-            projected_at, last_event_id
+            cargo_type, transport_status, current_unlocode, estimated_arrival,
+            initialized_at, last_status_changed_at, projected_at, last_event_id
         ) VALUES (
             #{trackingNumber}, #{bookingId}, #{shipperId}, #{originUnlocode}, #{destinationUnlocode},
-            #{cargoType}, #{transportStatus}, #{initializedAt}, #{lastStatusChangedAt},
-            #{projectedAt}, #{lastEventId}
+            #{cargoType}, #{transportStatus}, #{currentUnlocode}, #{estimatedArrival},
+            #{initializedAt}, #{lastStatusChangedAt}, #{projectedAt}, #{lastEventId}
         )
         ON CONFLICT (tracking_number) DO UPDATE SET
             booking_id = EXCLUDED.booking_id,
@@ -28,6 +28,7 @@
             origin_unlocode = EXCLUDED.origin_unlocode,
             destination_unlocode = EXCLUDED.destination_unlocode,
             cargo_type = EXCLUDED.cargo_type,
+            estimated_arrival = EXCLUDED.estimated_arrival,
             initialized_at = EXCLUDED.initialized_at,
             projected_at = EXCLUDED.projected_at
     </insert>

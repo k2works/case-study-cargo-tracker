@@ -27,7 +27,13 @@ export function BookingRegisterPage() {
   // 荷主は選ぶ（UI 設計 S21）。識別子を打たせると、営業は一覧を開いて
   // UUID を書き写すことになる。荷主コードは画面に出ているが、予約が要るのは
   // 識別子なので、対応づけを人にやらせない。
-  const { data: shippers } = useQuery({ queryKey: ['shippers'], queryFn: fetchShippers });
+  // **選択肢は一覧と同じ上限で作られる。** 絞り込めないと、新しく登録した荷主で
+  // その日から予約が取れない（IT8 のクラスタで実測）。
+  const [shipperQuery, setShipperQuery] = useState('');
+  const { data: shippers } = useQuery({
+    queryKey: ['shippers', shipperQuery],
+    queryFn: () => fetchShippers(shipperQuery),
+  });
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
@@ -62,7 +68,18 @@ export function BookingRegisterPage() {
 
       <form onSubmit={onSubmit} className={`${CARD} mt-4 space-y-4`}>
         <div>
-          <label htmlFor="shipperId" className={LABEL}>
+          <label htmlFor="shipperQuery" className={LABEL}>
+            荷主を名前で絞り込む
+          </label>
+          <input
+            id="shipperQuery"
+            className={FIELD}
+            value={shipperQuery}
+            onChange={(event) => setShipperQuery(event.target.value)}
+            placeholder="山田"
+          />
+
+          <label htmlFor="shipperId" className={`${LABEL} mt-4`}>
             荷主
           </label>
           <select id="shipperId" name="shipperId" required className={FIELD}>

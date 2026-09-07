@@ -4,7 +4,7 @@ title: "データモデル設計 - 国際貨物輸送管理システム（CQRS /
 description: "CQRS / Event Sourcing 版 Cargo Tracker のデータモデル設計。Event Store は Axon Server に任せ、サービスごとの投影テーブル・Axon 管理テーブル・Auth の状態テーブルを ER 図とテーブル定義で示し、Processing Group との対応とリプレイ前提のマイグレーション方針を定める。"
 tags: [design,data-model,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-07T04:03:53Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-07T11:55:34Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -562,7 +562,7 @@ ts ||--o{ tx
 | :--- | :--- | :--- | :--- |
 **`shipper_id`・`tracking_event` は IT8（US18・US17）で作りました。`shipper_cargo_snapshot` は作りません。**
 
-> **IT8 T5 での判断。** この表の「元になるイベント」は `TrackingNumberIssuedEvent`（契約）と書いていましたが、**このイベントは bookingms の内部イベントで契約ではなく、trackingms から購読できません**（`shared/contract/event` に無い。正典が実装不能だった例）。購読できるのは `TrackingInitializedEvent` で、そこから作れるのは「追跡番号 → 荷主 ID・予約 ID」——**`tracking_summary` に `shipper_id` を持てば同じ情報になります**。同じ事実を 2 つの表に持つと、片方だけ直る形の食い違いが生まれます。荷主の絞り込みは `tracking_summary.shipper_id` と `INDEX(shipper_id)` で行い、この表は作りません。**authms の `user_shipper_link` との突き合わせは変わりません**（荷主 ID を突き合わせる先が 1 つ減るだけ）。 `TrackingNumberIssuedEvent` → `InitializeTrackingCommand` → `TrackingInitializedEvent` の 3 本すべてに `shipperId` を足し、trackingms が荷主 ID を得られるようにします（1 本でも落とすとそこで値が消えます）。`current_unlocode` は**手動更新（US17）で入る分だけ**で、荷役由来の位置は US15（IT9）です。
+> **IT8 T5 での判断。** この表の「元になるイベント」は `TrackingNumberIssuedEvent`（契約）と書いていましたが、**このイベントは bookingms の内部イベントで契約ではなく、trackingms から購読できません**（`shared/contract/event` に無い。正典が実装不能だった例）。購読できるのは `TrackingInitializedEvent` で、そこから作れるのは「追跡番号 → 荷主 ID・予約 ID」——**`tracking_summary` に `shipper_id` を持てば同じ情報になります**。同じ事実を 2 つの表に持つと、片方だけ直る形の食い違いが生まれます。荷主の絞り込みは `tracking_summary.shipper_id` と `INDEX(shipper_id)` で行い、この表は作りません。**authms の `user_shipper_link` との突き合わせは変わりません**（荷主 ID を突き合わせる先が 1 つ減るだけ）。 `TrackingNumberIssuedEvent` → `InitializeTrackingCommand` → `TrackingInitializedEvent` の 3 本すべてに `shipperId` を足し、trackingms が荷主 ID を得られるようにします（1 本でも落とすとそこで値が消えます）。`current_unlocode` は **IT9 で作りました**（一覧の N+1 を解消するため。手動更新で入る分と、荷役由来（US15）の両方が書きます）。`estimated_arrival` も同じ理由で写します——予定の旅程から導ける値ですが、一覧のたびに引くと 1 行ごとの往復が残ります。**導出は投影の 1 か所**です。`shipper_id` は **IT9 の V006 で NOT NULL に締めました**（NULL の行は誰にも紐づかないまま一覧に出続けるため）。
 
 **`shipper_id` は IT7 では作っていません。** `TrackingInitializedEvent` に荷主 ID が無く、trackingms はそれを得る手段を持たないためです（載せる相手のいない `NOT NULL` は作れません）。荷主向け追跡（US18・IT8）で契約イベントに `shipperId` を足すときに、この列も足します。**荷役・例外・キャンセルの列も、それを書くイベントを実装する IT で足します**——中身の無い列を先に作ると、画面が読んで「常に 0 件」を出し、動いていると誤解されます。IT7 で作ったのは `tracking_number`・`booking_id`・`cargo_type`・端点・`transport_status`・日時だけです。
 

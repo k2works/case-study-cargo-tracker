@@ -40,7 +40,30 @@
         SELECT * FROM shipper WHERE shipper_id = #{shipperId}
     </select>
 
+    <!--
+      名前で絞り込める。絞り込みが無いと、上限を超えた荷主にたどり着けない
+      （一覧は荷主コード順なので、新しく採った荷主ほど後ろに回る）。
+
+      部分一致・大文字小文字を問わない。荷主名は手で打つので完全一致では探せない。
+      鍵破棄後の荷主は name が NULL になるため、絞り込むと出てこない（意図どおり
+      ——名前で探せないものを名前で探させない）。
+    -->
     <select id="findAll" resultMap="shipperRow">
-        SELECT * FROM shipper ORDER BY shipper_code LIMIT #{limit} OFFSET #{offset}
+        SELECT * FROM shipper
+        <where>
+            <if test="q != null and q != ''">
+                AND lower(name) LIKE lower('%' || #{q} || '%')
+            </if>
+        </where>
+        ORDER BY shipper_code LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countAll" resultType="int">
+        SELECT count(*) FROM shipper
+        <where>
+            <if test="q != null and q != ''">
+                AND lower(name) LIKE lower('%' || #{q} || '%')
+            </if>
+        </where>
     </select>
 </mapper>

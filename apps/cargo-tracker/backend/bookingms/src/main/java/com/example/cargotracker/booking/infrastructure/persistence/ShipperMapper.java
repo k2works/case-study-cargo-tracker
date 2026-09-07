@@ -16,9 +16,13 @@ public interface ShipperMapper {
     @Select("SELECT count(*) FROM shipper WHERE email = #{email}")
     int countByEmail(@Param("email") String email);
 
-    /** 全件数。一覧が上限で切れていることを画面が知らせるために使う。 */
-    @Select("SELECT count(*) FROM shipper")
-    int countAll();
+    /**
+     * 絞り込みに合う件数。一覧が上限で切れていることを画面が知らせるために使う。
+     *
+     * <p><b>絞り込み後の件数を返す。</b> 全件数を返すと、絞り込んだ画面の案内
+     * （「N 件のうち M 件」）が嘘になる。</p>
+     */
+    int countAll(@Param("q") String q);
 
     /**
      * 重複相手の荷主 ID。要確認一覧が「既存の荷主を見る」の行き先に使う。
@@ -32,7 +36,19 @@ public interface ShipperMapper {
 
     ShipperRow findById(@Param("shipperId") String shipperId);
 
-    java.util.List<ShipperRow> findAll(@Param("limit") int limit, @Param("offset") int offset);
+    /**
+     * 一覧（S10）。<b>名前で絞り込める</b>。
+     *
+     * <p><b>絞り込みが無いと、上限を超えた荷主にたどり着けない。</b> 一覧は荷主
+     * コード順なので、新しく採った荷主ほど後ろに回る。件数が上限を超えると
+     * 1 ページ目には決して出ず、<b>予約登録の選択肢にも出ない</b>ので、登録した
+     * その日からその荷主の予約が取れなくなる（IT8 のクラスタで実測）。</p>
+     *
+     * <p>絞り込みは<b>部分一致・大文字小文字を問わない</b>。荷主名は手で打つので、
+     * 完全一致を求めると探せない。</p>
+     */
+    java.util.List<ShipperRow> findAll(@Param("limit") int limit, @Param("offset") int offset,
+            @Param("q") String q);
 
     /** 投影の行。個人情報の列は null になりうる（鍵破棄後）。 */
     record ShipperRow(

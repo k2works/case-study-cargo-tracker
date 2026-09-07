@@ -156,6 +156,22 @@ describe('S10 荷主一覧', () => {
     expect(screen.getAllByText('新規商事')).toHaveLength(1);
   });
 
+  it('名前で絞り込める（上限を超えた荷主にたどり着く）', async () => {
+    // **クラスタで踏んだ欠陥。** 一覧は荷主コード順で上限があるので、新しく
+    // 採った荷主ほど後ろに回り 1 ページ目に出ない。
+    const fetchSpy = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ items: [], total: 219 }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchSpy);
+
+    withQuery(<ShipperListPage />);
+
+    await screen.findByText(/219 件のうち/);
+    await userEvent.type(screen.getByLabelText('荷主名で絞り込む'), '山田');
+
+    await vi.waitFor(() =>
+      expect(String(fetchSpy.mock.calls.at(-1)?.[0])).toContain('q=%E5%B1%B1%E7%94%B0'));
+  });
+
   it('登録画面への導線がある', async () => {
     respond(200, { items: [] });
 

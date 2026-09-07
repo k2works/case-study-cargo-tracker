@@ -26,8 +26,21 @@ export interface RegisterShipperInput {
   readonly acknowledgedDuplicate?: boolean;
 }
 
-export function fetchShippers(): Promise<Pending<{ items: ShipperView[]; total: number }>> {
-  return queryClient('/booking/shippers?page=0&size=200');
+/**
+ * 荷主の一覧（S10）。**名前で絞り込める**。
+ *
+ * <p>一覧は荷主コード順で上限があるので、新しく採った荷主ほど後ろに回る。
+ * 件数が上限を超えると 1 ページ目には出ず、<b>予約登録の選択肢にも出ない</b>ので、
+ * 登録したその日からその荷主の予約が取れなくなる（IT8 のクラスタで実測）。</p>
+ */
+export function fetchShippers(
+  q = '',
+): Promise<Pending<{ items: ShipperView[]; total: number }>> {
+  const query = new URLSearchParams({ page: '0', size: '200' });
+  if (q.trim() !== '') {
+    query.set('q', q.trim());
+  }
+  return queryClient(`/booking/shippers?${query.toString()}`);
 }
 
 export function fetchShipper(shipperId: string): Promise<Pending<ShipperView>> {

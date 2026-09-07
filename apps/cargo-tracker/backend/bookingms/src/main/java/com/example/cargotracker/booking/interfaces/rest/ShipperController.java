@@ -105,8 +105,9 @@ public class ShipperController {
     @GetMapping
     public ShipperListView list(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "50") int size) {
-        return queries.query(new FindShippersQuery(page, size), ShipperListView.class);
+            @RequestParam(defaultValue = "50") int size,
+            @RequestParam(required = false) String q) {
+        return queries.query(new FindShippersQuery(page, size, q), ShipperListView.class);
     }
 
     /** メールアドレスが既に使われている（409）。 */

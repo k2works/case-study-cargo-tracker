@@ -3,6 +3,8 @@ import { Link, useLocation } from 'react-router';
 import {
   ALERT,
   CARD,
+  FIELD,
+  LABEL,
   LINK,
   NOTICE,
   PAGE_TITLE,
@@ -11,6 +13,7 @@ import {
   TD,
   TH,
 } from '@/shared/ui/styles';
+import { useState } from 'react';
 import { display, fetchShippers } from './api';
 
 /**
@@ -32,9 +35,10 @@ export function ShipperListPage() {
   // 「登録できていない」と判断して二重に入力される（ui_design.md S10 の salt）。
   const justRegistered = (useLocation().state as { justRegistered?: JustRegistered } | null)
     ?.justRegistered;
+  const [q, setQ] = useState('');
   const { data, isPending, isError } = useQuery({
-    queryKey: ['shippers'],
-    queryFn: fetchShippers,
+    queryKey: ['shippers', q],
+    queryFn: () => fetchShippers(q),
     // 投影は非同期なので、登録直後は数秒ぶん遅れる。定期に取り直す。
     refetchInterval: 3000,
   });
@@ -48,12 +52,27 @@ export function ShipperListPage() {
         </Link>
       </p>
 
+      {/* **絞り込みが無いと、上限を超えた荷主にたどり着けない。** 一覧は荷主
+          コード順なので、新しく採った荷主ほど後ろに回る。 */}
+      <div className="mt-4">
+        <label htmlFor="q" className={LABEL}>
+          荷主名で絞り込む
+        </label>
+        <input
+          id="q"
+          className={`${FIELD} max-w-md`}
+          value={q}
+          onChange={(event) => setQ(event.target.value)}
+          placeholder="山田"
+        />
+      </div>
+
       {/* 上限で切れていることを黙らない。載らなかった荷主は、予約登録の
           選択肢にも出ないので、その日から予約が取れなくなる。 */}
       {data?.state === 'ready' && data.value.total > data.value.items.length && (
         <output className={`${NOTICE} mt-4 block`}>
           {data.value.total} 件のうち {data.value.items.length} 件を表示しています。
-          絞り込みは次のイテレーションで入ります
+          荷主名で絞り込んでください
         </output>
       )}
 
