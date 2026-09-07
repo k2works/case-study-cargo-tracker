@@ -13,6 +13,7 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.ObjectMapper;
 
@@ -33,17 +34,48 @@ public class MyBatisProcessStateService implements ProcessStateService {
         this.clock = clock;
     }
 
+    /**
+     * <b>別トランザクションで書く。</b>
+     *
+     * <p>連鎖の 1 段目は「起票してからコマンドを送る」。送信が失敗すると Reaction
+     * Handler は例外を投げ直して Event Processor に再試行させるが、<b>同じ
+     * トランザクションだと起票も一緒に巻き戻る</b>。すると `process_state` に行が
+     * 残らず、<b>止まった連鎖が滞留の走査に出ない</b>（IT8 H.1 でクラスタ実測。
+     * trackingms を落としたら行が 1 つも作られなかった）。</p>
+     *
+     * <p>フェイクを使う単体テストではトランザクションの巻き戻りを再現しないので、
+     * 判別できなかった。{@code AttentionItemRecorder} が同じ理由で
+     * {@code REQUIRES_NEW} にしている。</p>
+     */
     @Override
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public ProcessState start(String processType, String processId, String firstStep,
             int totalSteps, Map<String, String> metadata) {
+        Instant now = clock.instant();
         ProcessStateMapper.ProcessStateRow existing = mapper.findById(processType, processId);
+        if (existing != null && Status.COMPENSATED.name().equals(existing.status())) {
+            // **補償は行き止まりではない。** 要確認一覧は「追跡番号を発行し直せ」と
+            // 言う（ADR-0010 決定 4）。発行し直すと新しいイベントが出るので、連鎖も
+            // やり直せなければならない。やり直せないと、予約は TRACKING_ISSUED に
+            // なるのに追跡が作られないまま残る（IT8 H.1 でクラスタ実測）。
+            //
+            // **回数は引き継がない。** 引き継ぐと 1 回の失敗で即座に補償に落ちる。
+            // **やり直したことは残す。** 何度も落ちている予約を見つけられるように。
+            Map<String, String> restarted = new LinkedHashMap<>(
+                    metadata == null ? Map.of() : metadata);
+            restarted.put("restartedAfterCompensation", now.toString());
+            ProcessStateMapper.ProcessStateRow row = new ProcessStateMapper.ProcessStateRow(
+                    processType, processId, firstStep, totalSteps, 0, Status.RUNNING.name(),
+                    toJson(restarted), existing.startedAt(), now, null);
+            mapper.update(row);
+            log.info("補償した連鎖をやり直す: {}/{}", processType, processId);
+            return toModel(row);
+        }
         if (existing != null) {
             // イベントは再配信されうる。作り直すと進んだ段が巻き戻る。
             log.debug("連鎖は既に始まっている: {}/{}", processType, processId);
             return toModel(existing);
         }
-        Instant now = clock.instant();
         ProcessStateMapper.ProcessStateRow row = new ProcessStateMapper.ProcessStateRow(
                 processType, processId, firstStep, totalSteps, 0, Status.RUNNING.name(),
                 toJson(metadata), now, now, null);
@@ -89,8 +121,15 @@ public class MyBatisProcessStateService implements ProcessStateService {
         return toModel(updated);
     }
 
+    /**
+     * <b>別トランザクションで書く。</b>
+     *
+     * <p>回数を記録するのは送信に失敗したときで、そのあと例外を投げ直す。同じ
+     * トランザクションだと回数も巻き戻り、<b>永久に 1 のままで上限に到達しない</b>
+     * ——trackingms が落ちている間、無限に再試行し続けることになる。</p>
+     */
     @Override
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public ProcessState recordAttempt(String processType, String processId, int attempts) {
         ProcessStateMapper.ProcessStateRow row = require(processType, processId);
         ProcessState current = toModel(row);
@@ -106,8 +145,14 @@ public class MyBatisProcessStateService implements ProcessStateService {
         return toModel(updated);
     }
 
+    /**
+     * <b>別トランザクションで書く。</b>
+     *
+     * <p>補償したことは、外側が何を巻き戻しても残さなければならない。消えると
+     * 「追跡番号が取り消された理由」を誰も説明できない。</p>
+     */
     @Override
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public ProcessState compensate(String processType, String processId, String reason) {
         ProcessStateMapper.ProcessStateRow row = require(processType, processId);
         ProcessState current = toModel(row);

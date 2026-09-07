@@ -28,6 +28,10 @@ class ProcessStateServiceIT extends AbstractAxonIntegrationTest {
     @Autowired
     private ProcessStateService service;
 
+    /** 外側のトランザクションを自分で張って、巻き戻りを再現する。 */
+    @Autowired
+    private org.springframework.transaction.support.TransactionTemplate template;
+
     private String newId() {
         return "bk-" + System.nanoTime();
     }
@@ -162,5 +166,95 @@ class ProcessStateServiceIT extends AbstractAxonIntegrationTest {
         assertThat(service.findStuck(TYPE, Duration.ofHours(24)))
                 .extracting(ProcessState::processId)
                 .doesNotContain(fresh);
+    }
+
+    @Test
+    @DisplayName("外側のトランザクションが巻き戻っても、起票は残る（IT8 H.1 でクラスタ実測）")
+    void startSurvivesOuterRollback() {
+        // **連鎖の 1 段目は「起票してからコマンドを送る」。** 送信が失敗すると
+        // Reaction Handler は例外を投げ直して Event Processor に再試行させるが、
+        // **同じトランザクションだと起票も一緒に巻き戻る**。すると
+        // `process_state` に行が残らず、**止まった連鎖が滞留の走査に出ない**。
+        //
+        // クラスタで trackingms を落として実測した（NoHandlerForCommandException が
+        // 出て、行が 1 つも作られなかった）。フェイクを使う単体テストでは
+        // トランザクションの巻き戻りを再現しないので判別できなかった。
+        String processId = newId();
+
+        assertThatThrownBy(() -> template.execute(status -> {
+            service.start(TYPE, processId, "INITIALIZE_TRACKING", 2, Map.of());
+            throw new IllegalStateException("送信に失敗した");
+        })).isInstanceOf(IllegalStateException.class);
+
+        assertThat(service.find(TYPE, processId))
+                .as("起票が巻き戻ると、止まった連鎖が誰にも見えない")
+                .isPresent();
+    }
+
+    @Test
+    @DisplayName("外側が巻き戻っても、再試行の回数は残る（残らないと上限に到達しない）")
+    void recordAttemptSurvivesOuterRollback() {
+        // 回数が巻き戻ると**永久に 1 のまま**で、上限を超えず補償に落ちない。
+        // trackingms が落ちている間、無限に再試行し続けることになる。
+        String processId = newId();
+        service.start(TYPE, processId, "INITIALIZE_TRACKING", 2, Map.of());
+
+        assertThatThrownBy(() -> template.execute(status -> {
+            service.recordAttempt(TYPE, processId, 1);
+            throw new IllegalStateException("送信に失敗した");
+        })).isInstanceOf(IllegalStateException.class);
+
+        assertThat(service.find(TYPE, processId))
+                .get()
+                .satisfies(state -> assertThat(state.metadata().get("attempts"))
+                        .as("回数が残らないと、上限という概念が成り立たない")
+                        .isEqualTo("1"));
+    }
+
+    @Test
+    @DisplayName("補償した連鎖は、もう一度始められる（IT8 H.1 でクラスタ実測）")
+    void compensatedProcessCanBeRestarted() {
+        // **補償は行き止まりではない。** 要確認一覧は経路設計者に「追跡番号を
+        // 発行し直せ」と言う（ADR-0010 決定 4）。発行し直すと新しい
+        // TrackingNumberIssuedEvent が出るので、連鎖もやり直せなければならない。
+        //
+        // クラスタで実測した——補償のあと再発行すると予約は TRACKING_ISSUED に
+        // なるのに、`start` が COMPENSATED の行をそのまま返すので調整役が
+        // 何もせず戻り、**trackingms に追跡が作られないまま**になった。
+        // 気づく手段が次の行動に繋がらない。
+        String processId = newId();
+        service.start(TYPE, processId, "INITIALIZE_TRACKING", 2, Map.of());
+        service.recordAttempt(TYPE, processId, 3);
+        service.compensate(TYPE, processId, "届きませんでした");
+
+        ProcessState restarted =
+                service.start(TYPE, processId, "INITIALIZE_TRACKING", 2,
+                        Map.of("trackingNumber", "T-2"));
+
+        assertThat(restarted.isRunning())
+                .as("補償した連鎖をやり直せないと、発行し直しても追跡が作られない")
+                .isTrue();
+        assertThat(restarted.completedSteps()).isZero();
+        assertThat(restarted.metadata().get("attempts"))
+                .as("前回の回数が残ると、1 回の失敗で即座に補償に落ちる")
+                .isNull();
+        assertThat(restarted.metadata())
+                .as("やり直したことは記録に残す（何度も落ちている予約を見つけられる）")
+                .containsKey("restartedAfterCompensation");
+    }
+
+    @Test
+    @DisplayName("実行中・完了した連鎖は始め直さない（再配送で巻き戻らない）")
+    void runningOrCompletedProcessIsNotRestarted() {
+        String processId = newId();
+        service.start(TYPE, processId, "INITIALIZE_TRACKING", 2, Map.of());
+        service.advance(TYPE, processId, "INITIALIZE_TRACKING", "TRACKING_INITIALIZED");
+        service.advance(TYPE, processId, "TRACKING_INITIALIZED", "TRACKING_INITIALIZED");
+
+        ProcessState again = service.start(TYPE, processId, "INITIALIZE_TRACKING", 2, Map.of());
+
+        assertThat(again.status())
+                .as("イベントは再配送されうる。作り直すと進んだ段が巻き戻る")
+                .isEqualTo(ProcessState.Status.COMPLETED);
     }
 }

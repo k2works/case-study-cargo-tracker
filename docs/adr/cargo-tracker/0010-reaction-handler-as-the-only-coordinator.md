@@ -4,7 +4,7 @@ title: "ADR-0010 サービスをまたぐ連鎖の調整役を Reaction Handler 
 description: "予約から追跡開始までの連鎖を BookingReactionHandler + processstate で表し、追跡番号の採番と発行者、そして補償の粒度を決める。"
 tags: [adr]
 status: draft
-generated: { by: claude-code/claude-opus-5, at: 2026-09-06T22:39:06Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-07T01:51:31Z }
 ---
 
 # ADR-0010 サービスをまたぐ連鎖の調整役を Reaction Handler に一本化する
@@ -75,6 +75,8 @@ IT7 は**サービスをまたぐ最初の連鎖**である。予約を確定し
 - **再試行は 3 回まで**。1・2 回目は例外を投げ直して Event Processor に再試行させる。回数は `process_state` の `metadata.attempts` に持つ（プロセスをまたぐので変数では数えられない）
 - **上限を超えたら補償する。** `RevertTrackingNumberCommand` を送って予約を `CONFIRMED` に戻し、`process_state` を `COMPENSATED` にして、`attention_item`（**`ROLE_ROUTING`**）に出す。**追跡管理者ではなく経路設計者に宛てる**——発行し直せるのは経路設計者だけで、気づく手段はその人が次に取れる行動へ繋がらなければ意味がない。**キャンセルではない**ので、経路設計者がもう一度発行できる
 - **滞留は 24 時間**。`RUNNING` のまま古い行を `gulp reaction:stuck` が走査する
+- **途中経過は別トランザクションで書く**（`REQUIRES_NEW`）。**IT8 でクラスタ実測して足した**——起票・再試行回数・補償を外側と同じトランザクションで書くと、送信の失敗で例外を投げ直したときに**一緒に巻き戻る**。起票が消えれば止まった連鎖は滞留の走査に出ず、回数が消えれば**永久に 1 のままで上限に到達しない**（無限に再試行する）
+- **補償は行き止まりにしない。** 補償した連鎖に新しい発行が届いたら**やり直す**（`RUNNING` に戻し、段と回数をリセットし、やり直した事実を `metadata` に残す）。要確認一覧は経路設計者に「発行し直せ」と言うので、**し直して何も起きないなら気づく手段が次の行動に繋がらない**（IT8 でクラスタ実測）
 
 ## 影響
 
@@ -99,7 +101,7 @@ IT7 は**サービスをまたぐ最初の連鎖**である。予約を確定し
 | 1 | `SagaIsStillAbsentTest`（Saga が現れたら赤）。`ReplayIT#projectionsCannotSendCommands`（投影が `CommandGateway` を持たない＝リプレイで連鎖が走り直さない） |
 | 2 | `CargoTrackingNumberTest#rejectsBlankTrackingNumber`（集約は採らない）。`BookingControllerIT`（発行すると番号が付く） |
 | 3 | `EveryServiceEndpointIsRoutedAndProtectedTest`（`POST /tracking-number` に ROLE_ROUTING の宣言がある）。`BookingDetailPage.test.tsx`「営業には発行の操作を出さない」 |
-| 4 | `BookingReactionHandlerTest#startsTheProcessBeforeSending`（送る前に起票）・`#rethrowsUntilTheLimit`（上限までは投げ直す）・`#compensatesAfterTheLimit`（補償して要確認一覧に出す） |
+| 4 | `BookingReactionHandlerTest#startsTheProcessBeforeSending`（送る前に起票）・`#rethrowsUntilTheLimit`（上限までは投げ直す）・`#compensatesAfterTheLimit`（補償して要確認一覧に出す）。**`ProcessStateServiceIT#startSurvivesOuterRollback`・`#recordAttemptSurvivesOuterRollback`**（外側が巻き戻っても残る）・**`#compensatedProcessCanBeRestarted`**（補償のあとやり直せる）・`#runningOrCompletedProcessIsNotRestarted`（再配送で巻き戻らない） |
 
 ## 代替案
 

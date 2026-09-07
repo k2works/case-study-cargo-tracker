@@ -4,7 +4,7 @@ title: "バックエンドアーキテクチャ - 国際貨物輸送管理シス
 description: "Axon Framework 5 による CQRS / Event Sourcing 版 Cargo Tracker のバックエンドアーキテクチャ。マイクロサービス構成で BC ごとにサービスを分け、Axon Server を Command / Event / Query Bus と Event Store に使い、投影・Reaction Handler・イベント契約を定める。"
 tags: [design, architecture, backend, cqrs, event-sourcing, axon, microservices]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-06T22:39:06Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-07T01:51:31Z }
 stale_after: 2026-12-01T00:00:00Z
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
@@ -836,6 +836,13 @@ public class BookingReactionHandler {
     public void on(TrackingNumberIssuedEvent event) {
         // 1 段目。process_state に RUNNING で起票してからコマンドを送る。
         // 送ってから起票すると、届いた応答のほうが先に来て行が無い。
+        //
+        // **起票は別トランザクション（REQUIRES_NEW）で書く。** 同じにすると、
+        // 送信の失敗で例外を投げ直したときに起票も巻き戻り、止まった連鎖が
+        // 滞留の走査に出ない（IT8 でクラスタ実測）。再試行の回数も同じ。
+        //
+        // **補償した連鎖に新しい発行が届いたらやり直す。** やり直せないと、
+        // 「発行し直せ」と言われた経路設計者が発行し直しても何も起きない。
     }
 
     @EventHandler

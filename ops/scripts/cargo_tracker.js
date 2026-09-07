@@ -32,6 +32,33 @@ function sh(command, options = {}) {
 }
 
 /**
+ * 投影のデータベースに問い合わせる。**動いている場所を自分で見つける。**
+ *
+ * <p>クラスタ（kind）で運用しているときは PostgreSQL が Pod（`postgres-0`）にあり、
+ * `docker exec cargo-tracker-postgres` は存在しない。**運用タスクが片方でしか
+ * 動かないと、必要なときに読めない**——滞留の走査は「連鎖が止まっている」ときに
+ * 使うもので、そのときに使えなければ意味がない（IT8 H.1 で実測）。</p>
+ *
+ * <p>クラスタを先に見るのは、docker-compose のコンテナが残っていても
+ * 実際に動いているのはクラスタ側であることが多いため。</p>
+ */
+function psql(database, query) {
+  const inCluster = (() => {
+    try {
+      return sh('kubectl get pod postgres-0 -n cargo-tracker -o name').trim().length > 0;
+    } catch {
+      return false;
+    }
+  })();
+  if (inCluster) {
+    return sh(
+      `kubectl exec -n cargo-tracker postgres-0 -- psql -U postgres -d ${database} -c "${query}"`,
+    );
+  }
+  return sh(`docker exec cargo-tracker-postgres psql -U postgres -d ${database} -c "${query}"`);
+}
+
+/**
  * curl に本文を捨てさせる先。
  *
  * Windows に `/dev/null` は無く、渡すと curl が書き込みエラー（23）で落ちる。
@@ -607,11 +634,23 @@ export default function (gulp) {
     })();
     try {
       console.log(
-        sh(
-          `docker exec cargo-tracker-postgres psql -U postgres -d booking_read_db -c ` +
-            `"SELECT process_type, process_id, current_step, completed_steps || '/' || total_steps AS steps, ` +
-            `updated_at FROM process_state WHERE status = 'RUNNING' ` +
-            `AND updated_at < now() - interval '${hours} hours' ORDER BY updated_at"`,
+        psql(
+          'booking_read_db',
+          `SELECT process_type, process_id, current_step, completed_steps || '/' || total_steps AS steps, ` +
+            `status, updated_at FROM process_state WHERE status = 'RUNNING' ` +
+            `AND updated_at < now() - interval '${hours} hours' ORDER BY updated_at`,
+        ),
+      );
+      // **補償した連鎖も出す。** 止まったまま気づかれないのと同じくらい、
+      // 「補償されたのに誰も見ていない」も業務が止まる（IT7 の要確認一覧は
+      // 経路設計者に宛てているが、運用の側からも読めるようにする）。
+      console.log('--- 補償された連鎖（直近 7 日） ---');
+      console.log(
+        psql(
+          'booking_read_db',
+          `SELECT process_type, process_id, current_step, metadata, completed_at ` +
+            `FROM process_state WHERE status = 'COMPENSATED' ` +
+            `AND completed_at > now() - interval '7 days' ORDER BY completed_at DESC`,
         ),
       );
     } catch (e) {
