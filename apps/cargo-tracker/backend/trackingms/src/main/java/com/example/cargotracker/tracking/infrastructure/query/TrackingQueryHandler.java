@@ -24,10 +24,15 @@ public class TrackingQueryHandler {
 
     private final TrackingSummaryMapper trackings;
     private final TrackingEventMapper history;
+    // **業務日付は業務タイムゾーンの時計で決める。** Clock.systemUTC() を直接
+    // 呼ぶと、時差の分だけ「直近 24 時間」の境界がずれる（IT7 の教訓）。
+    private final java.time.Clock clock;
 
-    public TrackingQueryHandler(TrackingSummaryMapper trackings, TrackingEventMapper history) {
+    public TrackingQueryHandler(TrackingSummaryMapper trackings, TrackingEventMapper history,
+            java.time.Clock clock) {
         this.trackings = trackings;
         this.history = history;
+        this.clock = clock;
     }
 
     /**
@@ -151,8 +156,7 @@ public class TrackingQueryHandler {
     /** 直近で状態が変わった件数（S02 荷主 / US17 §4 の代わり）。 */
     @QueryHandler
     public RecentlyChangedView handle(CountRecentlyChangedQuery query) {
-        var since = java.time.Instant.now().minus(
-                java.time.Duration.ofHours(query.withinHours()));
+        var since = clock.instant().minus(java.time.Duration.ofHours(query.withinHours()));
         return new RecentlyChangedView(
                 trackings.countRecentlyChanged(query.shipperId(), since), query.withinHours());
     }
