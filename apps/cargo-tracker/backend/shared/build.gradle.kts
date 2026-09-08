@@ -14,6 +14,9 @@ dependencies {
     api(libs.axon.server.connector)
     // AxonJdbcConfiguration が DataSource / PlatformTransactionManager を使う。
     compileOnly(libs.spring.boot.starter.jdbc)
+    // API のエラー対応表（interfaces/rest）が使う。**compileOnly にする**——
+    // Web を持たないサービスに Web の起動を持ち込まないため。
+    compileOnly(libs.spring.boot.starter.web)
 
     // testFixtures 側でルールを組み立てる。各サービスは testFixtures(project(":shared")) で取り込む。
     testFixturesApi(libs.archunit.junit5)

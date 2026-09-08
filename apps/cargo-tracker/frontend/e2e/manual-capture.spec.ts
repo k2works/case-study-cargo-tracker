@@ -947,7 +947,7 @@ test.describe('マニュアルの画面キャプチャ', () => {
               originUnLocode: 'JPTYO',
               destinationUnLocode: 'USNYC',
               cargoType: 'GENERAL',
-              handledHere: false,
+              handledTypes: [],
             },
             {
               trackingNumber: 'TRK-EF78GH9012',
@@ -955,7 +955,7 @@ test.describe('マニュアルの画面キャプチャ', () => {
               originUnLocode: 'JPOSA',
               destinationUnLocode: 'USNYC',
               cargoType: 'GENERAL',
-              handledHere: true,
+              handledTypes: ['UNLOAD'],
             },
           ],
         }),
@@ -976,6 +976,8 @@ test.describe('マニュアルの画面キャプチャ', () => {
           cargoType: 'GENERAL',
           // 予定は東京 → ニューヨーク。シンガポールで降ろすのは予定外。
           legs: [{ voyageNumber: 'V-MOL-001', loadUnLocode: 'JPTYO', unloadUnLocode: 'USNYC' }],
+          // **判定はサーバが答える**（H.5）。シンガポールでの荷降しは予定外。
+          offRouteByType: { RECEIVE: true, LOAD: true, UNLOAD: true, CLAIM: true },
         }),
       }),
     );
@@ -983,7 +985,7 @@ test.describe('マニュアルの画面キャプチャ', () => {
     await page.goto('/handling/voyages/V-MOL-001?unLocode=SGSIN');
     await expect(page.getByRole('heading', { name: /荷役の記録/ })).toBeVisible();
     await page.getByLabel('追跡番号').fill('TRK-AB12CD3456');
-    await expect(page.getByText('確認')).toBeVisible();
+    await expect(page.getByText('確認', { exact: true })).toBeVisible();
     await expect(page.getByText(/予定ルートに含まれていません/)).toBeVisible();
     await page.screenshot({ path: `${OUT}/13-S50-handling-record.png`, fullPage: true });
   });
@@ -1006,6 +1008,9 @@ test.describe('マニュアルの画面キャプチャ', () => {
               operator: 'handler01',
               completedAt: '2026-09-20T01:00:00Z',
               voided: false,
+              voidedAt: null,
+              voidedBy: null,
+              consigneeName: null,
               voidReason: null,
             },
             {
@@ -1018,6 +1023,9 @@ test.describe('マニュアルの画面キャプチャ', () => {
               operator: 'handler01',
               completedAt: '2026-09-21T00:00:00Z',
               voided: false,
+              voidedAt: null,
+              voidedBy: null,
+              consigneeName: null,
               voidReason: null,
             },
             // **本文が「取り消した記録も出ます」「予定外の印が付きます」と
@@ -1033,6 +1041,9 @@ test.describe('マニュアルの画面キャプチャ', () => {
               operator: 'handler02',
               completedAt: '2026-09-26T02:00:00Z',
               voided: false,
+              voidedAt: null,
+              voidedBy: null,
+              consigneeName: null,
               voidReason: null,
             },
             {
@@ -1045,6 +1056,9 @@ test.describe('マニュアルの画面キャプチャ', () => {
               operator: 'handler02',
               completedAt: '2026-09-27T02:00:00Z',
               voided: true,
+              voidedAt: '2026-09-27T03:00:00Z',
+              voidedBy: 'handler01',
+              consigneeName: null,
               voidReason: '別の貨物と取り違えました',
             },
           ],
@@ -1055,5 +1069,110 @@ test.describe('マニュアルの画面キャプチャ', () => {
     await page.goto('/handling/TRK-AB12CD3456');
     await expect(page.getByRole('heading', { name: /荷役履歴/ })).toBeVisible();
     await page.screenshot({ path: `${OUT}/13-S51-handling-history.png`, fullPage: true });
+  });
+
+  test('14 引取の記録', async ({ page }) => {
+    // **本文が説明する要素を写す。** 荷受人の確認の欄は「引取」を選ばないと
+    // 出ない。初期状態のまま撮ると、文章と画像が別々に正しくなる。
+    await page.route('**/api/v1/handling/voyages/*/cargos*', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: [{
+            trackingNumber: 'TRK-AB12CD3456',
+            bookingId: 'b-1',
+            originUnLocode: 'JPTYO',
+            destinationUnLocode: 'USNYC',
+            cargoType: 'GENERAL',
+            handledTypes: ['UNLOAD'],
+          }],
+        }),
+      }),
+    );
+    await page.route('**/api/v1/handling/cargos/*', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          trackingNumber: 'TRK-AB12CD3456',
+          bookingId: 'b-1',
+          originUnLocode: 'JPTYO',
+          destinationUnLocode: 'USNYC',
+          cargoType: 'GENERAL',
+          legs: [{ voyageNumber: 'V-MOL-001', loadUnLocode: 'JPTYO', unloadUnLocode: 'USNYC' }],
+          // 目的港での引取は予定どおり。
+          offRouteByType: { RECEIVE: true, LOAD: true, UNLOAD: false, CLAIM: false },
+        }),
+      }),
+    );
+    await signInAsHandler(page);
+    await page.goto('/handling/voyages/V-MOL-001?unLocode=USNYC');
+    await page.getByLabel('作業種別').selectOption('CLAIM');
+    await page.getByLabel('追跡番号').fill('TRK-AB12CD3456');
+    await expect(page.getByText('確認', { exact: true })).toBeVisible();
+    await expect(page.getByLabel(/荷受人の確認/)).toBeVisible();
+    await page.screenshot({ path: `${OUT}/14-S50-claim.png`, fullPage: true });
+  });
+
+  test('14 例外の起票', async ({ page }) => {
+    await signInAsTracker(page);
+    await page.goto('/tracking/TRK-AB12CD3456/exceptions/new');
+    await expect(page.getByRole('heading', { name: '例外を起票する' })).toBeVisible();
+    // **本文が「発生状況に、対応する人が読んで動ける内容を書きます」と書いている。**
+    // 空のまま撮ると、何を書く欄なのかが画像から分からない。
+    await page.getByLabel('発生場所').fill('SGSIN');
+    await page.getByLabel('発生状況').fill('台風で 3 日遅れます。代替便を手配中です');
+    await page.screenshot({ path: `${OUT}/14-S43-exception-report.png`, fullPage: true });
+  });
+
+  test('14 例外一覧', async ({ page }) => {
+    // **本文が「緊急のものから」「解決したものは出ません」と書いている。**
+    // 緊急の行が無いと、文章と画像が別々に正しくなる。
+    await page.route('**/api/v1/tracking/trackings/exceptions', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: [
+            {
+              exceptionId: 'ex-1',
+              trackingNumber: 'TRK-EF78GH9012',
+              exceptionType: 'LOSS',
+              exceptionTypeLabel: '紛失',
+              responseStatus: 'REPORTED',
+              responseStatusLabel: '起票',
+              urgent: true,
+              unLocode: 'SGSIN',
+              description: '積替えの際に見当たらなくなりました',
+              occurredAt: '2026-09-22T02:00:00Z',
+              estimatedArrival: '2026-09-30T18:00:00Z',
+              transportStatus: 'EXCEPTION',
+              transportStatusLabel: '例外発生',
+            },
+            {
+              exceptionId: 'ex-2',
+              trackingNumber: 'TRK-AB12CD3456',
+              exceptionType: 'DELAY',
+              exceptionTypeLabel: '遅延',
+              responseStatus: 'RESPONDING',
+              responseStatusLabel: '対応中',
+              urgent: false,
+              unLocode: 'SGSIN',
+              description: '台風で 3 日遅れます',
+              occurredAt: '2026-09-20T02:00:00Z',
+              estimatedArrival: '2026-09-27T18:00:00Z',
+              transportStatus: 'EXCEPTION',
+              transportStatusLabel: '例外発生',
+            },
+          ],
+        }),
+      }),
+    );
+    await signInAsTracker(page);
+    await page.goto('/tracking/exceptions');
+    await expect(page.getByRole('heading', { name: '未解決の例外' })).toBeVisible();
+    await expect(page.getByText('緊急', { exact: true })).toBeVisible();
+    await page.screenshot({ path: `${OUT}/14-S42-exception-list.png`, fullPage: true });
   });
 });

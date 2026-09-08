@@ -80,7 +80,8 @@ public class HandlingSteps {
 
     @かつ("まだ記録していないことが分かる")
     public void まだ記録していないことが分かる() {
-        assertThat(itemOf(lastResponse, trackingNumber)).containsEntry("handledHere", false);
+        assertThat(itemOf(lastResponse, trackingNumber))
+                .containsEntry("handledTypes", java.util.List.of());
     }
 
     private ResponseEntity<JsonMap> register(String type, String unLocode, String number,
@@ -163,7 +164,8 @@ public class HandlingSteps {
         await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
             var listed = rest.get().uri(url("/voyages/" + VOYAGE + "/cargos?unLocode=" + PORT))
                     .retrieve().toEntity(JsonMap.class);
-            assertThat(itemOf(listed, trackingNumber)).containsEntry("handledHere", true);
+            assertThat(itemOf(listed, trackingNumber))
+                    .containsEntry("handledTypes", java.util.List.of("UNLOAD"));
         });
     }
 
@@ -177,6 +179,39 @@ public class HandlingSteps {
     public void 履歴は1件のままである() {
         await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
                 assertThat(history()).hasSize(1));
+    }
+
+    // ---- IT10 US16 引取（デモ項目 1・2） ----
+
+    @もし("荷受人の確認なしで引取を記録する")
+    public void 荷受人の確認なしで引取を記録する() {
+        lastResponse = register("CLAIM", "USNYC", trackingNumber, null);
+    }
+
+    @もし("荷受人の確認を添えて引取を記録する")
+    public void 荷受人の確認を添えて引取を記録する() {
+        activityId = "act-" + System.nanoTime();
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("activityId", activityId);
+        body.put("trackingNumber", trackingNumber);
+        body.put("handlingType", "CLAIM");
+        body.put("unLocode", "USNYC");
+        body.put("consigneeName", "John Smith");
+        lastResponse = rest.post().uri(url("/activities"))
+                .header("X-Auth-Username", "handler01")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(body).retrieve().toEntity(JsonMap.class);
+        assertThat(lastResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+    }
+
+    @かつ("履歴に荷受人の確認が残る")
+    public void 履歴に荷受人の確認が残る() {
+        // **記録するだけでは誰にも見えない。** 読み口まで通っていることを見る。
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
+                assertThat(history()).anySatisfy(item -> {
+                    assertThat(item).containsEntry("handlingType", "CLAIM");
+                    assertThat(item).containsEntry("consigneeName", "John Smith");
+                }));
     }
 
     @ならば("断られる")
@@ -210,7 +245,8 @@ public class HandlingSteps {
         await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
             var listed = rest.get().uri(url("/voyages/" + VOYAGE + "/cargos?unLocode=" + PORT))
                     .retrieve().toEntity(JsonMap.class);
-            assertThat(itemOf(listed, trackingNumber)).containsEntry("handledHere", false);
+            assertThat(itemOf(listed, trackingNumber))
+                    .containsEntry("handledTypes", java.util.List.of());
         });
     }
 

@@ -35,20 +35,20 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-08T07:06:06Z }
 
 | # | 受入基準 | 満たす手段 | 検査の所在 | 状態 |
 | :--- | :--- | :--- | :--- | :--- |
-| §1 | 作業種別「引取」を選ぶと荷受人確認フィールド（**署名または確認コード**）が出る | S50 に `CLAIM` を選択肢へ戻し、選んだときだけ確認欄を出す | `HandlingRecordPage.test.tsx` | — |
-| §2 | 荷受人確認が取得されると引取作業が記録される | `HandlingActivity.register` の `CLAIM` ガードを**確認の有無に置き換える** | `HandlingActivityTest`・`HandlingControllerIT` | — |
-| §3 | 記録後、貨物状態が「引取済」に更新される | `TransportStatus.afterHandling("CLAIM")` は実装済み。**反応ハンドラの経路**を検査する | `TrackingReactionHandlerTest`・受け入れテスト | — |
-| §4 | 「引取済」は配送完了を意味し、精算処理の開始条件となる | `CargoDeliveredEvent(trackingNumber, bookingId, deliveredAt, location)`（**契約**）を発行し、**billingms（`BillingReactionHandler` 開始）と bookingms（`MarkDeliveredCommand` → `BookingDeliveredEvent`）の 2 つ**が購読できる形にする（`domain-model.md:1228`） | ゴールデン JSON・往復テスト・`BookingReactionHandlerTest` | — |
+| §1 | 作業種別「引取」を選ぶと荷受人確認フィールド（**署名または確認コード**）が出る | S50 に `CLAIM` を選択肢へ戻し、選んだときだけ確認欄を出す | `HandlingRecordPage.test.tsx` | **達成** |
+| §2 | 荷受人確認が取得されると引取作業が記録される | `HandlingActivity.register` の `CLAIM` ガードを**確認の有無に置き換える** | `HandlingActivityTest`・`HandlingControllerIT` | **達成** |
+| §3 | 記録後、貨物状態が「引取済」に更新される | `TransportStatus.afterHandling("CLAIM")` は実装済み。**反応ハンドラの経路**を検査する | `TrackingActivityTest`・クラスタ E2E | **達成** |
+| §4 | 「引取済」は配送完了を意味し、精算処理の開始条件となる | `CargoDeliveredEvent(trackingNumber, bookingId, deliveredAt, location)`（**契約**）を発行し、**billingms（`BillingReactionHandler` 開始）と bookingms（`MarkDeliveredCommand` → `BookingDeliveredEvent`）の 2 つ**が購読できる形にする（`domain-model.md:1228`） | ゴールデン JSON・`BookingReactionHandlerTest`・クラスタ E2E | **達成**（往復テストは T1b の判断どおり購読側の配線と同じ変更で入れた） |
 
 ### US19 遅延例外を処理する
 
 | # | 受入基準 | 満たす手段 | 検査の所在 | 状態 |
 | :--- | :--- | :--- | :--- | :--- |
-| §1 | 追跡番号と例外種別「遅延」・発生状況（場所・日時・理由）を記録できる | `RegisterTrackingExceptionCommand` と S43 | `TrackingActivityTest`・`ExceptionScreens.test.tsx` | — |
-| §2 | 記録後、貨物状態が「例外発生」に更新される | 集約が `statusBeforeException` を覚えて `EXCEPTION` へ | `TrackingActivityTest` | — |
-| §3 | 荷主に遅延発生の通知が送信される | **送信基盤はスコープ外**（`ui_design.md:120`）。通知した事実を **trackingms 自身の `ExceptionShipperNotifiedEvent`** として記録し、`tracking_event`（`event_type = EXCEPTION`）と S41 の履歴に出す。**`ShipperNotifiedEvent` は使えない**——bookingms の `Cargo` の内部イベントで契約に無く（11 件のロスター）、trackingms からは発行も購読もできない | `TrackingActivityTest`・`TrackingProjectionIT`・`TrackingDetailPage.test.tsx` | — |
-| §4 | 対応内容（新しい到着予定日・対応方針）を入力して**荷主に**対応報告を送信できる（送信は §3 と同じく記録で満たす） | `StartExceptionResponseCommand` / `ResolveTrackingExceptionCommand` と S41 | `TrackingActivityTest`・`TrackingDetailPage.test.tsx` | — |
-| §5 | 例外対応履歴が記録される | `tracking_exception` 投影と S42 一覧 | `TrackingProjectionIT`・`ExceptionListPage.test.tsx` | — |
+| §1 | 追跡番号と例外種別「遅延」・発生状況（場所・日時・理由）を記録できる | `RegisterTrackingExceptionCommand` と S43 | `TrackingActivityTest`・`ExceptionScreens.test.tsx`・受け入れテスト | **達成** |
+| §2 | 記録後、貨物状態が「例外発生」に更新される | 集約が `statusBeforeException` を覚えて `EXCEPTION` へ | `TrackingActivityTest`・受け入れテスト | **達成** |
+| §3 | 荷主に遅延発生の通知が送信される | **送信基盤はスコープ外**（`ui_design.md:120`）。通知した事実を **trackingms 自身の `ExceptionShipperNotifiedEvent`** として記録し、`tracking_event`（`event_type = EXCEPTION`）と S41 の履歴に出す。**`ShipperNotifiedEvent` は使えない**——bookingms の `Cargo` の内部イベントで契約に無く（11 件のロスター）、trackingms からは発行も購読もできない | `TrackingActivityTest`・`TrackingProjectionIT`・`TrackingDetailPage.test.tsx` | **記録で達成**（送信基盤はスコープ外。注 N1 を設計へ反映済み） |
+| §4 | 対応内容（新しい到着予定日・対応方針）を入力して**荷主に**対応報告を送信できる（送信は §3 と同じく記録で満たす） | `StartExceptionResponseCommand` / `ResolveTrackingExceptionCommand` と S41 | `TrackingActivityTest`・`TrackingDetailPage.test.tsx`・受け入れテスト | **記録で達成**（送信基盤はスコープ外） |
+| §5 | 例外対応履歴が記録される | `tracking_exception` 投影と S42 一覧 | `TrackingProjectionIT`・`ExceptionScreens.test.tsx`・受け入れテスト | **達成** |
 
 ### 注（設計への反映が必要）
 

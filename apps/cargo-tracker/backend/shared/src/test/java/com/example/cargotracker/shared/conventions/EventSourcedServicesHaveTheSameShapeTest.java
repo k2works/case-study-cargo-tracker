@@ -120,33 +120,55 @@ class EventSourcedServicesHaveTheSameShapeTest {
     }
 
     @Test
-    @DisplayName("Event Sourcing のサービスは例外の対応表を同じ形で持つ")
-    void servicesMapExceptionsTheSameWay() throws IOException {
+    @DisplayName("Event Sourcing のサービスは共有カーネルの対応表を使う（写さない）")
+    void servicesReuseTheSharedExceptionMapping() throws IOException {
         // 「連鎖の途中の包みまで見る」（containsMarker / deepestMessage）は IT3 で
-        // 受け入れテストが初めて出した知見で、いまは 2 サービスに写している。
-        // **3 つ目のサービスで同じ失敗を繰り返さない**ために、写しの有無を機械的に見る。
-        // 抽出（shared の基底クラス）に変えるときは、この検査も同じ変更で直す。
-        List<String> missing = new ArrayList<>();
+        // 受け入れテストが初めて出した知見で、**4 サービスに写していた**（IT9 H.2）。
+        // 写しは文言と説明が少しずつ食い違い、片方だけ直る。IT10 で共有カーネルへ
+        // 抽出したので、いま見るのは「写していないこと」である。
+        List<String> offenders = new ArrayList<>();
         for (Aggregate aggregate : eventSourcedAggregates()) {
             Path handler = aggregate.serviceDir().resolve("src/main/java")
                     .resolve(aggregate.servicePackage().replace('.', '/'))
                     .resolve("interfaces/rest/ApiExceptionHandler.java");
             if (!Files.exists(handler)) {
-                missing.add(aggregate.serviceDir().getFileName() + ": ApiExceptionHandler が無い");
+                offenders.add(aggregate.serviceDir().getFileName() + ": ApiExceptionHandler が無い");
                 continue;
             }
             String body = Files.readString(handler, StandardCharsets.UTF_8);
-            for (String required : List.of("containsMarker", "deepestMessage",
+            if (!body.contains(
+                    "extends com.example.cargotracker.shared.interfaces.rest.AbstractApiExceptionHandler")) {
+                offenders.add(aggregate.serviceDir().getFileName() + ": 共有の対応表を継承していない");
+            }
+            // 共通の処理を写し戻したら赤にする。
+            for (String copied : List.of("containsMarker", "deepestMessage",
                     "@ExceptionHandler(BusinessRuleViolation.class)")) {
-                if (!body.contains(required)) {
-                    missing.add(aggregate.serviceDir().getFileName() + ": " + required);
+                if (body.contains(copied)) {
+                    offenders.add(aggregate.serviceDir().getFileName()
+                            + ": 共有の対応表にあるものを写している（" + copied + "）");
                 }
             }
         }
 
-        assertThat(missing)
-                .as("包みを 1 枚しか見ないと 409 が 422 に化ける（IT3 で実測）")
+        assertThat(offenders)
+                .as("対応表が複数あると、包みの見方が片方だけ直る（IT3 で実測・IT9 H.2）")
                 .isEmpty();
+    }
+
+    @Test
+    @DisplayName("共有カーネルの対応表が、包みを 1 枚しか見ない形に戻っていない")
+    void sharedMappingStillUnwrapsEveryLayer() throws IOException {
+        Path shared = backendRoot().resolve("shared/src/main/java/com/example/cargotracker"
+                + "/shared/interfaces/rest/AbstractApiExceptionHandler.java");
+        assertThat(shared).as("共有の対応表が無い").exists();
+
+        String body = Files.readString(shared, StandardCharsets.UTF_8);
+        assertThat(body)
+                .as("包みを 1 枚しか見ないと 409 が 422 に化ける（IT3 で実測）")
+                .contains("containsMarker")
+                .contains("deepestMessage")
+                .contains("@ExceptionHandler(BusinessRuleViolation.class)")
+                .contains("@ExceptionHandler(CommandExecutionException.class)");
     }
 
     @Test

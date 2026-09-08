@@ -125,6 +125,11 @@ public final class CargoTrackerArchRules {
                         // crypto-shredding の変換。契約イベントを読む側も同じ変換が要る
                         // （ADR-0003 決定 1）。持たないと暗号文がそのまま投影に入る。
                         "com.example.cargotracker.shared.infrastructure.crypto..",
+                        // API のエラー対応表（architecture_backend.md「例外と HTTP の対応」）。
+                        // **対応表は 1 つ。** 4 サービスに写していたころ、文言と説明が
+                        // 少しずつ食い違っていた（IT9 レビュー H.2）。各サービスは
+                        // 継承して @RestControllerAdvice を付け、固有の断り方だけ足す。
+                        "com.example.cargotracker.shared.interfaces.rest..",
                         "com.example.cargotracker.shared.archunit..",
                         "com.example.cargotracker.shared.testing..",
                         "com.example.cargotracker.shared.conventions..",

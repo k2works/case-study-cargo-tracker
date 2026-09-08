@@ -725,6 +725,76 @@ test.describe('kind クラスタでの通し確認', () => {
       await expectEventually(page, '配送完了');
     });
 
+  test('遅延を起票して解決すると、例外前の状態へ戻る（US19・IT10）',
+    async ({ page, request }) => {
+      // **US19 のクラスタ確認**（Try T3。US ごとに 1 度回す）。
+      // モックでは「集約が覚えた戻り先が投影と画面まで通るか」を判別できない。
+      test.setTimeout(180_000);
+      const product = `例外の貨物-${Date.now()}`;
+      const { trackingNumber, voyageNumber } = await issueTrackingNumber(request, product);
+
+      // 受領まで進める（例外は輸送中に起きる。未受領から戻っても区別が付かない）。
+      const handlerToken = await tokenOf(request, 'handler01');
+      await expect(async () => {
+        const response = await request.post('/api/v1/handling/activities', {
+          headers: { Authorization: `Bearer ${handlerToken}` },
+          data: {
+            activityId: crypto.randomUUID(),
+            trackingNumber,
+            handlingType: 'RECEIVE',
+            unLocode: 'JPTYO',
+          },
+        });
+        expect(response.status()).toBe(201);
+      }).toPass({ timeout: 60_000 });
+
+      await signIn(page, 'tracker01');
+      await page.goto(`/tracking/${trackingNumber}`);
+      await expectEventually(page, '受領済');
+
+      // **デモ項目 4: 遅延を起票すると「例外発生」になる。**
+      await page.getByRole('link', { name: '例外を起票する' }).click();
+      await expect(page.getByRole('heading', { name: '例外を起票する' })).toBeVisible();
+      await page.getByLabel('例外種別').selectOption('DELAY');
+      await page.getByLabel('発生場所').fill('SGSIN');
+      await page.getByLabel('発生状況').fill(`台風で 3 日遅れます（${product}）`);
+      await page.getByRole('button', { name: '起票する' }).click();
+
+      await expectEventually(page, '例外発生');
+      await expect(page.getByText(`台風で 3 日遅れます（${product}）`)).toBeVisible();
+
+      // **デモ項目 9: 例外一覧に出る**（解決済は既定で出ない）。
+      await page.goto('/tracking/exceptions');
+      await expectEventually(page, `台風で 3 日遅れます（${product}）`);
+
+      // **デモ項目 5: 荷主へ知らせた事実が残る**（送信基盤はスコープ外）。
+      await page.goto(`/tracking/${trackingNumber}`);
+      await page.getByRole('button', { name: '荷主へ知らせた' }).click();
+      await page.getByLabel('伝えた手段').fill('電話');
+      await page.getByLabel('伝えた内容').fill('3 日遅れる見込みと伝えました');
+      await page.getByRole('button', { name: '記録を残す' }).click();
+
+      // **デモ項目 6: 対応内容を入れて解決すると、例外前の状態へ戻る。**
+      await expect(page.getByRole('button', { name: '解決にする' }))
+        .toBeVisible({ timeout: 20_000 });
+      await page.getByRole('button', { name: '解決にする' }).click();
+      await page.getByLabel('対応内容').fill('代替便に振り替えました');
+      await page.getByRole('button', { name: '解決を確定する' }).click();
+
+      await expectEventually(page, '受領済');
+      // **解決しても事実は消えない**（不変条件 6）。
+      await expect(page.getByText('代替便に振り替えました')).toBeVisible();
+
+      // 解決したら一覧から外れる（決着したものが混ざると一覧が信用されない）。
+      await page.goto('/tracking/exceptions');
+      await waitForProjection(page, async () => {
+        await page.reload();
+        await expect(page.getByText(`台風で 3 日遅れます（${product}）`)).toHaveCount(0);
+      });
+      // 航海番号は前提づくりの確認にだけ使う（未使用の警告を避ける）。
+      expect(voyageNumber).toMatch(/^V-CL-/);
+    });
+
   test('追跡番号だけで照会でき、追跡管理者が状態を手で更新できる（US17・US18・IT8）',
     async ({ page, request }) => {
       // **本 IT の中核。** 公開照会は認証を通らず、状態の更新は trackingms の集約を

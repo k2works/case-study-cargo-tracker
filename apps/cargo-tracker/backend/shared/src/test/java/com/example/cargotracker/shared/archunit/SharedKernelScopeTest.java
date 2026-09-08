@@ -50,7 +50,8 @@ class SharedKernelScopeTest {
                         "com.example.cargotracker.shared.contract..",
                         // infrastructure.axon をわざと外す
                         "com.example.cargotracker.shared.infrastructure.time..",
-                        "com.example.cargotracker.shared.infrastructure.security..");
+                        "com.example.cargotracker.shared.infrastructure.security..",
+                        "com.example.cargotracker.shared.interfaces.rest..");
 
         assertThatThrownBy(() -> narrowed.check(sharedClasses()))
                 .as("名簿を狭めても赤にならないなら、この規則は何も守っていない")

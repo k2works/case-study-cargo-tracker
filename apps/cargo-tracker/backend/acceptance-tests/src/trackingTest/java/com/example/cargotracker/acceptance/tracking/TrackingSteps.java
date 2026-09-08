@@ -147,6 +147,92 @@ public class TrackingSteps {
         assertThat(history.get(0)).containsEntry("recordedBy", "tracker01");
     }
 
+    // ---- IT10 US19 例外（デモ項目 4〜9） ----
+
+    private String exceptionId;
+
+    @もし("追跡管理者が {string} の例外を起票する")
+    public void 追跡管理者が例外を起票する(String type) {
+        exceptionId = "ex-" + System.nanoTime();
+        lastResponse = rest.post()
+                .uri(url("/api/v1/tracking/trackings/" + trackingNumber + "/exceptions"))
+                .header("X-Auth-Username", "tracker01")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("exceptionId", exceptionId, "exceptionType", type,
+                        "unLocode", "SGSIN", "description", "台風で 3 日遅れます"))
+                .retrieve().toEntity(JsonMap.class);
+    }
+
+    @かつ("荷主へ知らせた記録を残す")
+    public void 荷主へ知らせた記録を残す() {
+        lastResponse = rest.post()
+                .uri(url("/api/v1/tracking/trackings/" + trackingNumber
+                        + "/exceptions/" + exceptionId + "/notifications"))
+                .header("X-Auth-Username", "tracker01")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("means", "電話", "summary", "3 日遅れる見込みと伝えました"))
+                .retrieve().toEntity(JsonMap.class);
+    }
+
+    @かつ("その例外を解決する")
+    public void その例外を解決する() {
+        lastResponse = rest.post()
+                .uri(url("/api/v1/tracking/trackings/" + trackingNumber
+                        + "/exceptions/" + exceptionId + "/resolution"))
+                .header("X-Auth-Username", "tracker01")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("resolution", "代替便に振り替えました"))
+                .retrieve().toEntity(JsonMap.class);
+    }
+
+    @ならば("未解決の例外一覧に出る")
+    public void 未解決の例外一覧に出る() {
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
+                assertThat(openExceptionIds()).contains(exceptionId));
+    }
+
+    @かつ("未解決の例外一覧から外れる")
+    public void 未解決の例外一覧から外れる() {
+        // **決着したものが混ざると、一覧全体が「まだ手を入れる場所」に見えなくなる。**
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
+                assertThat(openExceptionIds()).doesNotContain(exceptionId));
+    }
+
+    @かつ("履歴に例外の起票が残る")
+    public void 履歴に例外の起票が残る() {
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> history =
+                    (List<Map<String, Object>>) detail(null).getBody().get("history");
+            assertThat(history).anySatisfy(item ->
+                    assertThat(item).containsEntry("eventType", "EXCEPTION"));
+        });
+    }
+
+    @かつ("解決した対応内容が残る")
+    public void 解決した対応内容が残る() {
+        // **解決しても事実は消えない**（不変条件 6）。料金調整の根拠になる。
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> exceptions =
+                    (List<Map<String, Object>>) detail(null).getBody().get("exceptions");
+            assertThat(exceptions).anySatisfy(item -> {
+                assertThat(item).containsEntry("exceptionId", exceptionId);
+                assertThat(item).containsEntry("resolution", "代替便に振り替えました");
+            });
+        });
+    }
+
+    private List<String> openExceptionIds() {
+        var response = rest.get().uri(url("/api/v1/tracking/trackings/exceptions"))
+                .header("X-Auth-Username", "tracker01")
+                .retrieve().toEntity(JsonMap.class);
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> items =
+                (List<Map<String, Object>>) response.getBody().get("items");
+        return items.stream().map(item -> String.valueOf(item.get("exceptionId"))).toList();
+    }
+
     @ならば("断られる")
     public void 断られる() {
         // **状態コードと理由まで見る。** 2xx でないことだけを見ると、404 でも
