@@ -38,7 +38,9 @@ import com.example.cargotracker.booking.domain.model.valueobjects.RoutingStatus;
 import com.example.cargotracker.shared.domain.error.IllegalTransition;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import org.axonframework.eventsourcing.annotation.EventSourcingHandler;
 import org.axonframework.eventsourcing.annotation.reflection.EntityCreator;
 import org.axonframework.extension.spring.stereotype.EventSourced;
@@ -565,11 +567,16 @@ public class Cargo {
      * <p><b>知らない予約の荷役では止まらない。</b> 荷役は handlingms に記録済みで、
      * ここで例外にすると Event Processor が止まり、後続の荷役まで届かなくなる
      * （trackingms 側と同じ判断）。</p>
+     *
+     * <p><b>同じ荷役が二度届いても 1 度しか書かない。</b> Event Processor は
+     * at-least-once で、リプレイや再配送で同じイベントがもう一度来る。投影は
+     * 追記系の主キーで弾けるが、<b>イベントストアは弾けない</b>——集約が
+     * {@code activityId} を覚えていることでしか防げない。</p>
      */
     @CommandHandler
     public void recordHandling(RecordHandlingCommand command, EventAppender appender,
             Clock clock) {
-        if (bookingId == null) {
+        if (bookingId == null || recordedActivities.contains(command.activityId())) {
             return;
         }
         var now = clock.instant();
@@ -588,11 +595,15 @@ public class Cargo {
      * <p><b>誤配の原因が取り消された荷役だけなら、経路設計の状態も戻す。</b>
      * 取り消したのに作業一覧へ残り続けると、経路設計者は起きていない誤配を
      * 組み直そうとする。</p>
+     *
+     * <p><b>同じ取り消しが二度届いても 1 度しか書かない。</b> 二度目は
+     * {@code misrouteCleared = false} で積まれ、予約の状態こそ変わらないが、
+     * <b>取り消しの履歴に起きていない行が増える</b>。</p>
      */
     @CommandHandler
     public void revertHandling(RevertHandlingCommand command, EventAppender appender,
             Clock clock) {
-        if (bookingId == null) {
+        if (bookingId == null || revertedActivities.contains(command.activityId())) {
             return;
         }
         boolean clears = routingStatus == RoutingStatus.MISROUTED
@@ -605,8 +616,20 @@ public class Cargo {
     /** 誤配にした荷役。取り消しで戻してよいかの判断に要る（不変条件 13）。 */
     private String misroutedBy;
 
+    /**
+     * 反映済みの荷役。<b>再配送を弾く鍵</b>。
+     *
+     * <p>予約 1 件あたりの荷役は旅程の区間数に比例する数（受領・積込・荷降し・引取）で、
+     * 際限なく増えるものではない。</p>
+     */
+    private final Set<String> recordedActivities = new HashSet<>();
+
+    /** 取り消し済みの荷役。同じく再配送を弾く鍵。 */
+    private final Set<String> revertedActivities = new HashSet<>();
+
     @EventSourcingHandler
     void on(HandlingRecordedEvent event) {
+        this.recordedActivities.add(event.activityId());
         // 最初の受領で輸送中になる。以降は動かさない。
         if (bookingStatus == BookingStatus.TRACKING_ISSUED) {
             this.bookingStatus = BookingStatus.IN_TRANSIT;
@@ -621,6 +644,7 @@ public class Cargo {
 
     @EventSourcingHandler
     void on(HandlingRevertedEvent event) {
+        this.revertedActivities.add(event.activityId());
         if (event.misrouteCleared()) {
             this.routingStatus = RoutingStatus.ROUTED;
             this.misroutedBy = null;

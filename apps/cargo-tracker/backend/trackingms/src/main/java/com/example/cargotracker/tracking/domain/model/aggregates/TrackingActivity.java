@@ -13,6 +13,8 @@ import com.example.cargotracker.tracking.domain.model.valueobjects.StatusUpdateS
 import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingNumber;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TransportStatus;
 import java.time.Clock;
+import java.util.HashSet;
+import java.util.Set;
 import org.axonframework.eventsourcing.annotation.EventSourcingHandler;
 import org.axonframework.eventsourcing.annotation.reflection.EntityCreator;
 import org.axonframework.extension.spring.stereotype.EventSourced;
@@ -139,12 +141,21 @@ public class TrackingActivity {
      * ここで例外にすると Event Processor が止まり、後続の荷役まで届かなくなる。</p>
      *
      * <p><b>例外の対応中は進めない</b>（不変条件 5 の下地）。解決は例外の側で行う。</p>
+     *
+     * <p><b>同じ荷役が二度届いても 1 度しか進めない。</b> Event Processor は
+     * at-least-once である。遷移表は同一状態への更新を弾くが<b>識別子は見ていない</b>——
+     * 積込→荷降しと進んだあとに古い積込がもう一度届くと、荷降し済→積込済は
+     * 遷移表が許すので、起きていない積込が履歴に積まれる。</p>
      */
     @CommandHandler
     public void advance(AdvanceTrackingCommand command, EventAppender appender, Clock clock) {
         if (trackingNumber == null) {
             // **知らない追跡番号の荷役では止まらない**（不変条件 8）。荷役は
             // すでに記録されており、ここで例外にすると後続の荷役まで止まる。
+            return;
+        }
+        if (appliedActivities.contains(command.activityId())) {
+            // すでに反映した荷役。再配送・リプレイで二度目が届いている。
             return;
         }
         TransportStatus next = TransportStatus.afterHandling(
@@ -194,9 +205,19 @@ public class TrackingActivity {
     /** 最後に状態を進めた荷役。取り消しはこれと一致するときだけ戻す。 */
     private String lastHandlingActivityId;
 
+    /**
+     * 反映済みの荷役。<b>再配送を弾く鍵</b>。
+     *
+     * <p>取り消したものは外す——取り消しの取り消し（同じ荷役の再記録）は
+     * handlingms で新しい {@code activityId} になるが、
+     * <b>戻したあとに同じ荷役が届いたら進め直せる</b>ほうが事実に近い。</p>
+     */
+    private final Set<String> appliedActivities = new HashSet<>();
+
     @EventSourcingHandler
     void on(TransportStatusUpdatedEvent event) {
         if (event.source() == StatusUpdateSource.HANDLING) {
+            this.appliedActivities.add(event.activityId());
             // 戻し先は「その荷役で進める前」。手動更新では覚えない
             // （手動の取り消しという操作が無い）。
             this.statusBeforeHandling = event.previousStatus();
@@ -208,6 +229,7 @@ public class TrackingActivity {
     @EventSourcingHandler
     void on(TransportStatusRevertedEvent event) {
         this.status = event.restoredStatus();
+        this.appliedActivities.remove(lastHandlingActivityId);
         this.statusBeforeHandling = null;
         this.lastHandlingActivityId = null;
     }

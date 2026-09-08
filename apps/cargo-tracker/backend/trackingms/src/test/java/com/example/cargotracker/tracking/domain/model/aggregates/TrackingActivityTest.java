@@ -304,6 +304,26 @@ class TrackingActivityTest {
     }
 
     @Test
+    @DisplayName("同じ荷役が二度届いても進めるのは 1 度だけ（順序が入れ替わった再配送）")
+    void ignoresRedeliveredHandling() {
+        // **遷移表は同一状態への更新を弾くが、識別子は見ていない。** 積込のあとで
+        // 荷降しが入り、そこへ古い積込がもう一度届くと、荷降し済 → 積込済 は
+        // 遷移表が許すので、**起きていない積込が履歴に積まれる**。
+        fixture.given().events(initialized(),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.NOT_RECEIVED,
+                                TransportStatus.RECEIVED, StatusUpdateSource.HANDLING, "act-1",
+                                "JPTYO", HANDLED, "handler01", NOW),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.RECEIVED,
+                                TransportStatus.LOADED, StatusUpdateSource.HANDLING, "act-2",
+                                "JPTYO", HANDLED, "handler01", NOW),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.LOADED,
+                                TransportStatus.UNLOADED, StatusUpdateSource.HANDLING, "act-3",
+                                "JPTYO", HANDLED, "handler01", NOW))
+                .when().command(advance("act-2", "LOAD", false, false))
+                .then().success().noEvents();
+    }
+
+    @Test
     @DisplayName("不変条件 11: 取り消された荷役の分を戻す")
     void revertsTheHandling() {
         fixture.given().events(initialized(),

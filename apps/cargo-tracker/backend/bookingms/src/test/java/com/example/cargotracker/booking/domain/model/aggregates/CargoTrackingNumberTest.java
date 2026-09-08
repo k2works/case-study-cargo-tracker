@@ -208,6 +208,14 @@ class CargoTrackingNumberTest {
         return events;
     }
 
+    /** 既定の履歴に追記する（varargs に配列と単体を混ぜられないため）。 */
+    private static Object[] and(Object[] base, Object... more) {
+        var events = new Object[base.length + more.length];
+        System.arraycopy(base, 0, events, 0, base.length);
+        System.arraycopy(more, 0, events, base.length, more.length);
+        return events;
+    }
+
     private static RecordHandlingCommand recordHandling(boolean offRoute) {
         return new RecordHandlingCommand("B-0001", "act-1", "RECEIVE", "JPTYO", offRoute,
                 HANDLED);
@@ -259,6 +267,39 @@ class CargoTrackingNumberTest {
         fixture.given().events(misrouted())
                 .when().command(new RevertHandlingCommand("B-0001", "act-9", "別の記録"))
                 .then().events(new HandlingRevertedEvent("B-0001", "act-9", false, NOW));
+    }
+
+    // ---- IT10 引き継ぎ枠 A: 少なくとも 1 回配送の再配送で重複を積まない ----
+
+    @Test
+    @DisplayName("同じ荷役が二度届いても記録は 1 度だけ（Event Processor は at-least-once）")
+    void ignoresRedeliveredHandling() {
+        // **リプレイでイベントストアに重複が積まれる。** 投影は追記系の PK で弾けるが、
+        // イベントストアは弾けない——集約が同じ荷役を二度書かないことでしか防げない。
+        fixture.given().events(and(trackingIssued(),
+                        new HandlingRecordedEvent("B-0001", "act-1", "RECEIVE", "JPTYO",
+                                HANDLED, NOW)))
+                .when().command(recordHandling(false))
+                .then().success().noEvents();
+    }
+
+    @Test
+    @DisplayName("再配送では誤配も二度出さない")
+    void ignoresRedeliveredOffRouteHandling() {
+        fixture.given().events(misrouted())
+                .when().command(recordHandling(true))
+                .then().success().noEvents();
+    }
+
+    @Test
+    @DisplayName("同じ取り消しが二度届いても戻すのは 1 度だけ")
+    void ignoresRedeliveredRevert() {
+        // 二度目は clears = false で積まれる。予約の状態は変わらないが、
+        // **取り消しの履歴に起きていない行が増える**。
+        fixture.given().events(and(misrouted(),
+                        new HandlingRevertedEvent("B-0001", "act-1", true, NOW)))
+                .when().command(new RevertHandlingCommand("B-0001", "act-1", "取り違え"))
+                .then().success().noEvents();
     }
 
     @Test
