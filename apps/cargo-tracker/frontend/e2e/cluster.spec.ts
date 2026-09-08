@@ -37,6 +37,47 @@ test.describe('kind クラスタでの通し確認', () => {
     return `${prefix}${Date.now().toString(36)}${Math.floor(Math.random() * 36).toString(36)}`;
   }
 
+  /**
+   * 投影が追いつくまで<b>再読込しながら</b>待つ。
+   *
+   * <p><b>`toBeVisible({ timeout })` だけでは足りない。</b> 画面は 1 度取得した
+   * きりで、投影が遅れて届いても自分から取り直さない（headless では
+   * ウィンドウのフォーカスも起きないので TanStack Query の再取得も走らない）。
+   * データは 3 秒で届いているのに 20 秒待って落ちる——IT9 のクラスタで実測した
+   * 形がこれで、単独なら 2.3 秒で緑、通し実行だけ 22 秒でタイムアウトした。</p>
+   *
+   * <p><b>最初に成功した時点で抜けない。</b> 一度見えたあと投影の遅れた行で
+   * 消えるようなら、それは緑ではない。{@code hold} のあいだ保ち続けることを見る。</p>
+   */
+  async function waitForProjection(
+    page: import('@playwright/test').Page,
+    check: () => Promise<void>,
+    options: { timeout?: number; hold?: number } = {},
+  ) {
+    const timeout = options.timeout ?? 60_000;
+    const hold = options.hold ?? 1_000;
+    await expect(async () => {
+      await check();
+    }).toPass({ timeout, intervals: [500, 1_000, 2_000] });
+    // 保ち続けるか。投影の遅れで消えるなら、ここで落ちる。
+    await page.waitForTimeout(hold);
+    await check();
+  }
+
+  /** 再読込しながら、その文字列が出るまで待つ（投影待ちの定型）。 */
+  async function expectEventually(
+    page: import('@playwright/test').Page,
+    text: string | RegExp,
+    options: { reload?: boolean } = {},
+  ) {
+    await waitForProjection(page, async () => {
+      if (options.reload !== false) {
+        await page.reload();
+      }
+      await expect(page.getByText(text).first()).toBeVisible({ timeout: 5_000 });
+    });
+  }
+
   async function signIn(page: import('@playwright/test').Page, username: string) {
     await page.goto('/login');
     await page.getByLabel('利用者名').fill(username);
@@ -60,8 +101,8 @@ test.describe('kind クラスタでの通し確認', () => {
     await page.getByLabel('住所').fill('東京都中央区');
     await page.getByRole('button', { name: '登録する' }).click();
 
-    // 投影は非同期なので、一覧に出るまで待つ。
-    await expect(page.getByText(email)).toBeVisible({ timeout: 20_000 });
+    // 投影は非同期なので、一覧に出るまで待つ（**再読込しながら**）。
+    await expectEventually(page, email);
 
     await page.getByRole('link', { name: '予約登録' }).first().click();
     await expect(page.getByRole('heading', { name: '貨物予約の登録' })).toBeVisible();
@@ -218,7 +259,7 @@ test.describe('kind クラスタでの通し確認', () => {
     await page.getByRole('link', { name: '経路設計作業' }).first().click();
 
     await expect(page.getByRole('heading', { name: '経路設計作業一覧' })).toBeVisible();
-    await expect(page.getByText(product)).toBeVisible({ timeout: 20_000 });
+    await expectEventually(page, product);
   });
 
   test('経路設計者が航海を登録すると、一覧に出る（US24）', async ({ page }) => {
@@ -240,7 +281,7 @@ test.describe('kind クラスタでの通し確認', () => {
     await page.getByRole('button', { name: '登録する' }).click();
 
     await expect(page.getByRole('heading', { name: '航海スケジュール一覧' })).toBeVisible();
-    await expect(page.getByText(voyageNumber)).toBeVisible({ timeout: 20_000 });
+    await expectEventually(page, voyageNumber);
     // 船名だけで当てない。同じ船名の航海が何度目かの実行で積み上がっており、
     // 「見えている」のは別の回に登録した行かもしれない。登録した行の中で見る。
     await expect(page.locator('tr', { hasText: voyageNumber })).toContainText('E2E EXPRESS');
@@ -365,8 +406,7 @@ test.describe('kind クラスタでの通し確認', () => {
     await page.goto('/logout');
     await signIn(page, 'sales01');
     // 件数だけでは仕事が進まない。理由が読め、そこから予約へ行けること。
-    await expect(page.getByText(`期限内に着ける便がありません（${product}）`))
-      .toBeVisible({ timeout: 20_000 });
+    await expectEventually(page, `期限内に着ける便がありません（${product}）`);
   });
 
   test('営業が荷主へ通知し、経路設計へ戻せる（US12・IT6）', async ({ page, request }) => {
