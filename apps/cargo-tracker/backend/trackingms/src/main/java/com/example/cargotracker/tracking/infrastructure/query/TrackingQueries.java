@@ -105,7 +105,25 @@ public final class TrackingQueries {
             Instant estimatedArrival,
             Instant lastStatusChangedAt,
             List<TrackingEventView> history,
+            // その追跡の例外（US19 §受入基準 5）。**解決したものも出す**——
+            // 事実は消えず、料金調整の根拠になる（不変条件 6）。
+            List<TrackingExceptionView> exceptions,
             List<String> nextStatuses) {
+    }
+
+    /** 追跡詳細に出す例外 1 件（S41）。 */
+    public record TrackingExceptionView(
+            String exceptionId,
+            String exceptionType,
+            String exceptionTypeLabel,
+            String responseStatus,
+            String responseStatusLabel,
+            boolean urgent,
+            String unLocode,
+            String description,
+            String resolution,
+            Instant occurredAt,
+            Instant resolvedAt) {
     }
 
     /**

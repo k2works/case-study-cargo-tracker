@@ -19,6 +19,7 @@ function tracking(over: Record<string, unknown> = {}) {
     estimatedArrival: '2026-09-24T18:00:00Z',
     lastStatusChangedAt: '2026-09-08T01:00:00Z',
     history: [],
+    exceptions: [],
     // **サーバは手で選べる先だけを返す**（誤配・例外発生は荷役と例外の起票が決める）。
     // モックを本物より甘くしない。
     nextStatuses: ['RECEIVED'],
@@ -224,6 +225,165 @@ describe('S41 追跡詳細・管理', () => {
       const posted = fetchSpy.mock.calls.find((call) => call[1]?.method === 'POST');
       // 業務タイムゾーンで解釈して送る（ブラウザの時計に依らない）。
       expect(String(posted?.[1]?.body)).toContain('2026-09-10T13:30');
+    });
+  });
+});
+
+describe('S41 例外の対応（US19 §3・§4 / IT10 T7）', () => {
+  it('追跡管理者は詳細から例外を起票しに行ける（追跡番号を書き写させない）', async () => {
+    useAuthStore.setState({
+      user: { username: 'tracker01', roles: ['ROLE_TRACKER'], token: 't' },
+    });
+    respondWith(tracking());
+
+    renderDetail();
+
+    expect(await screen.findByRole('link', { name: '例外を起票する' }))
+      .toHaveAttribute('href', '/tracking/TRK-8K2QX7M4RB/exceptions/new');
+  });
+
+  it('荷主には起票の導線を出さない（403 になる）', async () => {
+    useAuthStore.setState({
+      user: { username: 'shipper01', roles: ['ROLE_SHIPPER'], token: 't' },
+    });
+    respondWith(tracking());
+
+    renderDetail();
+
+    await screen.findByText('未受領');
+    expect(screen.queryByRole('link', { name: '例外を起票する' })).not.toBeInTheDocument();
+  });
+
+  function openException(over: Record<string, unknown> = {}) {
+    return {
+      exceptionId: 'ex-1',
+      exceptionType: 'DELAY',
+      exceptionTypeLabel: '遅延',
+      responseStatus: 'REPORTED',
+      responseStatusLabel: '起票',
+      urgent: false,
+      unLocode: 'SGSIN',
+      description: '台風で 3 日遅れます',
+      resolution: null,
+      occurredAt: '2026-09-20T02:00:00Z',
+      resolvedAt: null,
+      ...over,
+    };
+  }
+
+  it('起票された例外が詳細に出る（対応する人が読んで動ける）', async () => {
+    useAuthStore.setState({
+      user: { username: 'tracker01', roles: ['ROLE_TRACKER'], token: 't' },
+    });
+    respondWith(tracking({
+      status: 'EXCEPTION', statusLabel: '例外発生', nextStatuses: [],
+      exceptions: [openException()],
+    }));
+
+    renderDetail();
+
+    expect(await screen.findByText('台風で 3 日遅れます')).toBeInTheDocument();
+    expect(screen.getByText('遅延')).toBeInTheDocument();
+  });
+
+  it('解決した例外も残る（事実は消えない・不変条件 6）', async () => {
+    useAuthStore.setState({
+      user: { username: 'tracker01', roles: ['ROLE_TRACKER'], token: 't' },
+    });
+    respondWith(tracking({
+      exceptions: [openException({
+        responseStatus: 'RESOLVED',
+        responseStatusLabel: '解決',
+        resolution: '代替便に振り替えました',
+        resolvedAt: '2026-09-21T02:00:00Z',
+      })],
+    }));
+
+    renderDetail();
+
+    expect(await screen.findByText('代替便に振り替えました')).toBeInTheDocument();
+    // 解決したものに操作は出さない（押しても断られるボタンを並べない）。
+    expect(screen.queryByRole('button', { name: '対応を始める' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '解決にする' })).not.toBeInTheDocument();
+  });
+
+  it('荷主には例外の操作を出さない（対応するのは追跡管理者）', async () => {
+    useAuthStore.setState({
+      user: { username: 'shipper01', roles: ['ROLE_SHIPPER'], token: 't' },
+    });
+    respondWith(tracking({
+      status: 'EXCEPTION', statusLabel: '例外発生', nextStatuses: [],
+      exceptions: [openException()],
+    }));
+
+    renderDetail();
+
+    // 起きていることは読める。手を入れるのは追跡管理者だけ。
+    expect(await screen.findByText('台風で 3 日遅れます')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '対応を始める' })).not.toBeInTheDocument();
+  });
+
+  it('対応内容を入れて解決すると、その内容が送られる', async () => {
+    useAuthStore.setState({
+      user: { username: 'tracker01', roles: ['ROLE_TRACKER'], token: 't' },
+    });
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      if (init?.method === 'POST') {
+        return { ok: true, status: 204, text: async () => '' } as Response;
+      }
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify(tracking({
+          status: 'EXCEPTION', statusLabel: '例外発生', nextStatuses: [],
+          exceptions: [openException()],
+        })),
+      } as Response;
+    });
+
+    renderDetail();
+    await userEvent.click(await screen.findByRole('button', { name: '解決にする' }));
+    await userEvent.type(screen.getByLabelText('対応内容'), '代替便に振り替えました');
+    await userEvent.click(screen.getByRole('button', { name: '解決を確定する' }));
+
+    await waitFor(() => {
+      const post = fetchSpy.mock.calls.find(([, init]) => init?.method === 'POST');
+      expect(post).toBeDefined();
+      expect(String(post?.[0])).toContain('/exceptions/ex-1/resolution');
+      expect(JSON.parse(String(post?.[1]?.body)).resolution).toBe('代替便に振り替えました');
+    });
+  });
+
+  it('US19 §3: 荷主へ知らせた事実を記録できる（送信基盤はスコープ外）', async () => {
+    useAuthStore.setState({
+      user: { username: 'tracker01', roles: ['ROLE_TRACKER'], token: 't' },
+    });
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      if (init?.method === 'POST') {
+        return { ok: true, status: 204, text: async () => '' } as Response;
+      }
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify(tracking({
+          status: 'EXCEPTION', statusLabel: '例外発生', nextStatuses: [],
+          exceptions: [openException()],
+        })),
+      } as Response;
+    });
+
+    renderDetail();
+    await userEvent.click(await screen.findByRole('button', { name: '荷主へ知らせた' }));
+    await userEvent.type(screen.getByLabelText('伝えた手段'), '電話');
+    await userEvent.type(screen.getByLabelText('伝えた内容'), '3 日遅れる見込み');
+    await userEvent.click(screen.getByRole('button', { name: '記録を残す' }));
+
+    await waitFor(() => {
+      const post = fetchSpy.mock.calls.find(([, init]) => init?.method === 'POST');
+      expect(String(post?.[0])).toContain('/exceptions/ex-1/notifications');
+      const body = JSON.parse(String(post?.[1]?.body));
+      expect(body.means).toBe('電話');
+      expect(body.summary).toBe('3 日遅れる見込み');
     });
   });
 });

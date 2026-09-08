@@ -74,6 +74,21 @@ export interface TrackingEventView {
 }
 
 /** 追跡詳細（S41）。 */
+/** 追跡詳細に出す例外 1 件（S41）。**解決したものも出す**（不変条件 6）。 */
+export interface TrackingExceptionView {
+  readonly exceptionId: string;
+  readonly exceptionType: ExceptionType;
+  readonly exceptionTypeLabel: string;
+  readonly responseStatus: string;
+  readonly responseStatusLabel: string;
+  readonly urgent: boolean;
+  readonly unLocode: string | null;
+  readonly description: string;
+  readonly resolution: string | null;
+  readonly occurredAt: string;
+  readonly resolvedAt: string | null;
+}
+
 export interface TrackingView {
   readonly trackingNumber: string;
   readonly bookingId: string;
@@ -86,6 +101,8 @@ export interface TrackingView {
   readonly estimatedArrival: string | null;
   readonly lastStatusChangedAt: string;
   readonly history: readonly TrackingEventView[];
+  /** その追跡の例外（US19）。**解決したものも出す**（不変条件 6）。 */
+  readonly exceptions: readonly TrackingExceptionView[];
   /**
    * いま手で動かせる先。
    *
@@ -140,4 +157,122 @@ export interface RecentlyChangedView {
  */
 export function fetchRecentlyChanged(): Promise<Pending<RecentlyChangedView>> {
   return queryClient('/tracking/trackings/recently-changed');
+}
+
+/** 例外の種別（domain-model.md の要素表・不変条件 7）。 */
+export type ExceptionType = 'DELAY' | 'DAMAGE' | 'LOSS' | 'MISROUTE' | 'CUSTOMS_HOLD';
+
+/**
+ * 呼び名。<b>正典は要素表</b>で、`exceptionTypeLabels.test.ts` が読んで突き合わせる。
+ *
+ * <p>サーバも一覧に呼び名を載せるが、S43 の選択肢はサーバへ問い合わせずに出す
+ * ——起票の画面を開いた時点で決まっており、1 往復増やす理由がない。</p>
+ */
+export const EXCEPTION_TYPE_LABELS: Record<ExceptionType, string> = {
+  DELAY: '遅延',
+  DAMAGE: '破損',
+  LOSS: '紛失',
+  MISROUTE: '誤配',
+  CUSTOMS_HOLD: '税関保留',
+};
+
+/**
+ * 手で起票してよい種別（S43）。
+ *
+ * <p><b>誤配と税関保留は出さない。</b> どちらもシステムが自動で起票する
+ * （US28・UC21）——手で選べるようにすると、起きていない誤配を記録できてしまう
+ * （`TransportStatus#isSetByHand` と同じ考え方）。</p>
+ */
+export const REPORTABLE_EXCEPTION_TYPES: readonly ExceptionType[] =
+  ['DELAY', 'DAMAGE', 'LOSS'];
+
+/** 例外一覧の 1 行（S42）。 */
+export interface ExceptionView {
+  readonly exceptionId: string;
+  readonly trackingNumber: string;
+  readonly exceptionType: ExceptionType;
+  readonly exceptionTypeLabel: string;
+  readonly responseStatus: string;
+  readonly responseStatusLabel: string;
+  readonly urgent: boolean;
+  readonly unLocode: string | null;
+  readonly description: string;
+  readonly occurredAt: string;
+  readonly estimatedArrival: string | null;
+  readonly transportStatus: string;
+  readonly transportStatusLabel: string;
+}
+
+/**
+ * 未解決の例外（S42 / US19 §5）。
+ *
+ * <p><b>並びはサーバが決める。</b> 緊急が先、以降は到着期限までの残日数が
+ * 少ない順（不変条件 7）。画面で並べ直すと判定が 2 か所になる。</p>
+ */
+export function fetchOpenExceptions(): Promise<Pending<{ items: ExceptionView[] }>> {
+  return queryClient('/tracking/trackings/exceptions');
+}
+
+/** 例外を起票する（S43 / US19 §1）。 */
+export function registerException(
+  trackingNumber: string,
+  input: {
+    readonly exceptionId: string;
+    readonly exceptionType: ExceptionType;
+    readonly unLocode: string;
+    readonly description: string;
+    /** 起きた日時（業務時刻の `YYYY-MM-DDTHH:mm`）。空ならサーバの業務時計で「いま」。 */
+    readonly occurredAt: string;
+  },
+): Promise<void> {
+  return commandClient(`/tracking/trackings/${encodeURIComponent(trackingNumber)}/exceptions`, {
+    exceptionId: input.exceptionId,
+    exceptionType: input.exceptionType,
+    unLocode: input.unLocode || null,
+    description: input.description,
+    occurredAt: input.occurredAt === '' ? null : businessLocalToInstant(input.occurredAt),
+  });
+}
+
+/** 例外の経路。階層が深いので 1 か所で組む。 */
+function exceptionPath(trackingNumber: string, exceptionId: string): string {
+  return `/tracking/trackings/${encodeURIComponent(trackingNumber)}`
+    + `/exceptions/${encodeURIComponent(exceptionId)}`;
+}
+
+/** 対応を始める（S41 / US19 §4）。 */
+export function startExceptionResponse(
+  trackingNumber: string,
+  exceptionId: string,
+  input: { readonly newEstimatedArrival: string; readonly plan: string },
+): Promise<void> {
+  return commandClient(`${exceptionPath(trackingNumber, exceptionId)}/response`, {
+    newEstimatedArrival: input.newEstimatedArrival || null,
+    plan: input.plan,
+  });
+}
+
+/** 解決する（S41 / US19 §4）。 */
+export function resolveException(
+  trackingNumber: string,
+  exceptionId: string,
+  resolution: string,
+): Promise<void> {
+  return commandClient(`${exceptionPath(trackingNumber, exceptionId)}/resolution`, {
+    resolution,
+  });
+}
+
+/**
+ * 荷主へ知らせた事実を記録する（S41 / US19 §3）。
+ *
+ * <p><b>送信基盤はスコープ外</b>（ui_design.md:120）。通知は電話・メールで行い、
+ * ここに残すのは「いつ・どうやって・何を伝えたか」だけ。</p>
+ */
+export function notifyShipperOfException(
+  trackingNumber: string,
+  exceptionId: string,
+  input: { readonly means: string; readonly summary: string },
+): Promise<void> {
+  return commandClient(`${exceptionPath(trackingNumber, exceptionId)}/notifications`, input);
 }

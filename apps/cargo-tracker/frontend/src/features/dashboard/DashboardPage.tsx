@@ -11,7 +11,7 @@ import {
 } from '@/features/bookings/api';
 import { formatBusinessDateTime } from '@/shared/api/businessDate';
 import { fetchVoyagePorts } from '@/features/handling/api';
-import { fetchRecentlyChanged } from '@/features/tracking/api';
+import { fetchOpenExceptions, fetchRecentlyChanged } from '@/features/tracking/api';
 
 /** S02 ダッシュボード。「今日の作業」からその日の入口へ行けるようにする。 */
 export function DashboardPage() {
@@ -21,6 +21,7 @@ export function DashboardPage() {
   const isSales = user?.roles.includes('ROLE_SALES') ?? false;
   const isHandler = user?.roles.includes('ROLE_HANDLER') ?? false;
   const isShipper = user?.roles.includes('ROLE_SHIPPER') ?? false;
+  const isTracker = user?.roles.includes('ROLE_TRACKER') ?? false;
 
   // **荷役は航海から始まる。** 追跡番号は現場が持っていないので、
   // 「今日どの船のどの港を扱うか」を出さないと画面に入れない。
@@ -28,6 +29,14 @@ export function DashboardPage() {
     queryKey: ['handling-voyage-ports'],
     queryFn: fetchVoyagePorts,
     enabled: isHandler,
+  });
+
+  // **追跡管理者の「今日の仕事」は未解決の例外**（US19）。件数だけでは進まないので
+  // 一覧へ繋ぐ（IT4 の「気づく手段は次の行動へ繋ぐ」）。
+  const { data: openExceptions } = useQuery({
+    queryKey: ['open-exceptions'],
+    queryFn: fetchOpenExceptions,
+    enabled: isTracker,
   });
 
   // **荷主には「変わったこと」を知る手段がない**（送信基盤はスコープ外）。
@@ -231,6 +240,18 @@ export function DashboardPage() {
             </ul>
           )}
         </section>
+      )}
+
+      {/* **追跡管理者の受け皿。** 未解決の例外が残っているあいだは、それが仕事である。 */}
+      {isTracker && openExceptions?.state === 'ready'
+        && openExceptions.value.items.length > 0 && (
+        <output className={`${NOTICE} mt-6 block`}>
+          未解決の例外が {openExceptions.value.items.length} 件あります。{' '}
+          <Link to="/tracking/exceptions" className={LINK}>
+            例外一覧
+          </Link>
+          {' '}で対応してください。
+        </output>
       )}
 
       {/* **引取は航海起点では辿り着けない**（船から降りたあとの作業で、どの航海の

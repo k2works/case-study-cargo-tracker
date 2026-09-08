@@ -19,7 +19,15 @@ import {
 import { ApiError } from '@/shared/api/client';
 import { formatBusinessDateTime } from '@/shared/api/businessDate';
 import { useAuthStore } from '@/shared/auth/authStore';
-import { fetchTracking, updateTransportStatus, type TrackingView } from './api';
+import {
+  fetchTracking,
+  notifyShipperOfException,
+  resolveException,
+  startExceptionResponse,
+  updateTransportStatus,
+  type TrackingExceptionView,
+  type TrackingView,
+} from './api';
 
 /** 詳細も 30 秒ごとに更新する（ui_design.md「ポーリング」）。 */
 const REFETCH_INTERVAL_MS = 30_000;
@@ -119,6 +127,13 @@ export function TrackingDetailPage() {
 
       <History history={view.history} showRecordedBy={isTracker} />
 
+      <ExceptionPanel
+        trackingNumber={view.trackingNumber}
+        exceptions={view.exceptions}
+        canRespond={isTracker}
+        onChanged={() => queries.invalidateQueries({ queryKey: ['tracking', trackingNumber] })}
+      />
+
       {isTracker && <UpdateStatusPanel
         view={view}
         onUpdated={() => queries.invalidateQueries({ queryKey: ['tracking', trackingNumber] })}
@@ -128,6 +143,16 @@ export function TrackingDetailPage() {
         <Link to="/tracking" className={LINK}>
           追跡一覧に戻る
         </Link>
+        {/* **起票の入口は詳細から。** 例外は「この貨物に起きたこと」なので、
+            追跡番号を書き写させない（US19 §受入基準 1）。 */}
+        {isTracker && (
+          <>
+            {' ／ '}
+            <Link to={`/tracking/${view.trackingNumber}/exceptions/new`} className={LINK}>
+              例外を起票する
+            </Link>
+          </>
+        )}
         {/* **共有画面のリンクもロールで出し分ける。** 荷主に出すと 403 になる。 */}
         {isTracker && (
           <>
@@ -302,6 +327,232 @@ function UpdateStatusPanel({
           {update.error instanceof ApiError
             ? update.error.body.message
             : '状態を更新できませんでした。'}
+        </output>
+      )}
+    </section>
+  );
+}
+
+/**
+ * 例外の一覧と対応（S41 / US19 §受入基準 3・4・5）。
+ *
+ * <p><b>解決したものも出す</b>（不変条件 6）。事実は消えず、料金調整の根拠になる。
+ * 消えるのは操作のほうで、決着した例外に押せるボタンを並べない。</p>
+ *
+ * <p><b>対応するのは追跡管理者だけ。</b> 荷主は起きていることを読めるが、
+ * 手は入れられない（サーバも同じ宣言で断る）。</p>
+ */
+function ExceptionPanel({ trackingNumber, exceptions, canRespond, onChanged }: {
+  trackingNumber: string;
+  exceptions: readonly TrackingExceptionView[];
+  canRespond: boolean;
+  onChanged: () => void;
+}) {
+  const [respondingTo, setRespondingTo] = useState<string | null>(null);
+  const [resolvingId, setResolvingId] = useState<string | null>(null);
+  const [notifyingId, setNotifyingId] = useState<string | null>(null);
+  const [plan, setPlan] = useState('');
+  const [newEstimatedArrival, setNewEstimatedArrival] = useState('');
+  const [resolution, setResolution] = useState('');
+  const [means, setMeans] = useState('');
+  const [summary, setSummary] = useState('');
+
+  function close() {
+    setRespondingTo(null);
+    setResolvingId(null);
+    setNotifyingId(null);
+    setPlan('');
+    setNewEstimatedArrival('');
+    setResolution('');
+    setMeans('');
+    setSummary('');
+  }
+
+  const respond = useMutation({
+    mutationFn: (exceptionId: string) =>
+      startExceptionResponse(trackingNumber, exceptionId, { newEstimatedArrival, plan }),
+    onSuccess: () => { close(); onChanged(); },
+  });
+  const resolve = useMutation({
+    mutationFn: (exceptionId: string) =>
+      resolveException(trackingNumber, exceptionId, resolution.trim()),
+    onSuccess: () => { close(); onChanged(); },
+  });
+  const notify = useMutation({
+    mutationFn: (exceptionId: string) =>
+      notifyShipperOfException(trackingNumber, exceptionId, { means, summary }),
+    onSuccess: () => { close(); onChanged(); },
+  });
+
+  if (exceptions.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className={`${CARD} mt-4`}>
+      <h2 className={SECTION_TITLE}>例外</h2>
+      <ul className="mt-2 divide-y divide-gray-100">
+        {exceptions.map((item) => (
+          <li key={item.exceptionId} className="py-3">
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <span className="font-semibold text-gray-900">{item.exceptionTypeLabel}</span>
+              {/* **緊急は種別が決める**（不変条件 7）。画面で判定しない。 */}
+              {item.urgent && (
+                <span className="rounded bg-red-100 px-2 py-0.5 text-xs font-semibold
+                  text-red-800">
+                  緊急
+                </span>
+              )}
+              <span className="text-gray-600">{item.responseStatusLabel}</span>
+              <span className="text-gray-600">
+                {formatBusinessDateTime(item.occurredAt)}
+              </span>
+              <span className="text-gray-600">{item.unLocode ?? '—'}</span>
+            </div>
+            <p className="mt-1 text-sm text-gray-900">{item.description}</p>
+            {item.resolution !== null && (
+              <p className="mt-1 text-sm text-gray-700">
+                <span className="text-gray-600">対応</span>{' '}
+                <span>{item.resolution}</span>
+              </p>
+            )}
+
+            {/* **決着した例外に押せるボタンを並べない。** 押しても集約が断る。 */}
+            {canRespond && item.responseStatus !== 'RESOLVED' && (
+              <div className="mt-2 flex flex-wrap gap-3 text-sm">
+                {item.responseStatus === 'REPORTED' && (
+                  <button
+                    type="button"
+                    className={LINK}
+                    onClick={() => { close(); setRespondingTo(item.exceptionId); }}
+                  >
+                    対応を始める
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className={LINK}
+                  onClick={() => { close(); setNotifyingId(item.exceptionId); }}
+                >
+                  荷主へ知らせた
+                </button>
+                <button
+                  type="button"
+                  className={LINK}
+                  onClick={() => { close(); setResolvingId(item.exceptionId); }}
+                >
+                  解決にする
+                </button>
+              </div>
+            )}
+
+            {respondingTo === item.exceptionId && (
+              <div className="mt-3 rounded border border-gray-200 p-3">
+                <label htmlFor="newEstimatedArrival" className={LABEL}>
+                  新しい到着予定日
+                </label>
+                <input
+                  id="newEstimatedArrival"
+                  type="date"
+                  className={FIELD}
+                  value={newEstimatedArrival}
+                  onChange={(event) => setNewEstimatedArrival(event.target.value)}
+                />
+                <label htmlFor="plan" className={`${LABEL} mt-2`}>
+                  対応方針
+                </label>
+                <input
+                  id="plan"
+                  className={FIELD}
+                  value={plan}
+                  onChange={(event) => setPlan(event.target.value)}
+                  placeholder="代替便を手配中"
+                />
+                <div className="mt-3 flex gap-3">
+                  <button
+                    type="button"
+                    className={BUTTON_PRIMARY}
+                    disabled={plan.trim() === '' || respond.isPending}
+                    onClick={() => respond.mutate(item.exceptionId)}
+                  >
+                    対応の開始を記録する
+                  </button>
+                  <button type="button" className={LINK} onClick={close}>やめる</button>
+                </div>
+              </div>
+            )}
+
+            {notifyingId === item.exceptionId && (
+              <div className="mt-3 rounded border border-gray-200 p-3">
+                {/* **送信基盤はスコープ外。** 通知は電話・メールで行い、
+                    ここに残すのは「いつ・どうやって・何を伝えたか」だけ。 */}
+                <p className="text-xs text-gray-600">
+                  通知そのものは電話・メールで行います。ここには伝えた記録を残します。
+                </p>
+                <label htmlFor="means" className={`${LABEL} mt-2`}>伝えた手段</label>
+                <input
+                  id="means"
+                  className={FIELD}
+                  value={means}
+                  onChange={(event) => setMeans(event.target.value)}
+                  placeholder="電話"
+                />
+                <label htmlFor="summary" className={`${LABEL} mt-2`}>伝えた内容</label>
+                <input
+                  id="summary"
+                  className={FIELD}
+                  value={summary}
+                  onChange={(event) => setSummary(event.target.value)}
+                  placeholder="3 日遅れる見込みと伝えました"
+                />
+                <div className="mt-3 flex gap-3">
+                  <button
+                    type="button"
+                    className={BUTTON_PRIMARY}
+                    disabled={means.trim() === '' || summary.trim() === '' || notify.isPending}
+                    onClick={() => notify.mutate(item.exceptionId)}
+                  >
+                    記録を残す
+                  </button>
+                  <button type="button" className={LINK} onClick={close}>やめる</button>
+                </div>
+              </div>
+            )}
+
+            {resolvingId === item.exceptionId && (
+              <div className="mt-3 rounded border border-gray-200 p-3">
+                <label htmlFor="resolution" className={LABEL}>対応内容</label>
+                <input
+                  id="resolution"
+                  className={FIELD}
+                  value={resolution}
+                  onChange={(event) => setResolution(event.target.value)}
+                  placeholder="代替便に振り替えました"
+                />
+                {/* **何をしたか読めない記録を残さない。** 集約も空を断る。 */}
+                <p className="mt-1 text-xs text-gray-600">
+                  解決しても例外は消えません。何をしたかが残ります。
+                </p>
+                <div className="mt-3 flex gap-3">
+                  <button
+                    type="button"
+                    className={BUTTON_PRIMARY}
+                    disabled={resolution.trim() === '' || resolve.isPending}
+                    onClick={() => resolve.mutate(item.exceptionId)}
+                  >
+                    解決を確定する
+                  </button>
+                  <button type="button" className={LINK} onClick={close}>やめる</button>
+                </div>
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+
+      {(respond.isError || resolve.isError || notify.isError) && (
+        <output className={`${ALERT} mt-3`}>
+          記録できませんでした。もう一度お試しください。
         </output>
       )}
     </section>

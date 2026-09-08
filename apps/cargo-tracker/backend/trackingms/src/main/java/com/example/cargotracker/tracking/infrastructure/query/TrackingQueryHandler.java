@@ -13,6 +13,7 @@ import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.Ex
 import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.FindOpenExceptionsQuery;
 import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.FindTrackingQuery;
 import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.RecentlyChangedView;
+import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.TrackingExceptionView;
 import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.FindTrackingsQuery;
 import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.TrackingEventView;
 import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.TrackingListItemView;
@@ -135,10 +136,20 @@ public class TrackingQueryHandler {
                         label(event.newStatus()), event.location(), event.recordedBy()))
                 .toList();
 
+        // **解決したものも出す**（不変条件 6）。事実は消えず、料金調整の根拠になる。
+        var trackingExceptions = exceptions.findByTracking(row.trackingNumber()).stream()
+                .map(x -> new TrackingExceptionView(x.exceptionId(), x.exceptionType(),
+                        ExceptionType.valueOf(x.exceptionType()).label(),
+                        x.responseStatus(),
+                        ResponseStatus.valueOf(x.responseStatus()).label(),
+                        x.urgent(), x.unlocode(), x.description(), x.resolution(),
+                        x.occurredAt(), x.resolvedAt()))
+                .toList();
+
         return new TrackingView(row.trackingNumber(), row.bookingId(), row.originUnlocode(),
                 row.destinationUnlocode(), row.cargoType(), status.name(), status.label(),
                 row.currentUnlocode(), row.estimatedArrival(),
-                row.lastStatusChangedAt(), events, nextStatuses(status));
+                row.lastStatusChangedAt(), events, trackingExceptions, nextStatuses(status));
     }
 
     /**

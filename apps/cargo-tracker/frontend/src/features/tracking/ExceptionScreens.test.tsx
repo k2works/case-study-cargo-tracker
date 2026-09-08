@@ -1,0 +1,172 @@
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { MemoryRouter, Route, Routes } from 'react-router';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ExceptionListPage } from './ExceptionListPage';
+import { ExceptionReportPage } from './ExceptionReportPage';
+import { useAuthStore } from '@/shared/auth/authStore';
+
+function exceptionItem(over: Record<string, unknown> = {}) {
+  return {
+    exceptionId: 'ex-1',
+    trackingNumber: 'TRK-8K2QX7M4RB',
+    exceptionType: 'DELAY',
+    exceptionTypeLabel: '遅延',
+    responseStatus: 'REPORTED',
+    responseStatusLabel: '起票',
+    urgent: false,
+    unLocode: 'SGSIN',
+    description: '台風で 3 日遅れます',
+    occurredAt: '2026-09-20T02:00:00Z',
+    estimatedArrival: '2026-09-24T18:00:00Z',
+    transportStatus: 'EXCEPTION',
+    transportStatusLabel: '例外発生',
+    ...over,
+  };
+}
+
+function respondByUrl(handlers: Record<string, unknown>, onPost?: (url: string) => void) {
+  return vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+    const url = String(input);
+    if (init?.method === 'POST') {
+      onPost?.(url);
+      // **204 は本文を持てない。** '' を渡すと Response の生成そのものが投げる。
+      return new Response(null, { status: 204 });
+    }
+    for (const [fragment, body] of Object.entries(handlers)) {
+      if (url.includes(fragment)) {
+        return new Response(JSON.stringify(body), { status: 200 });
+      }
+    }
+    return new Response(JSON.stringify({ code: 'NOT_FOUND', message: '見つかりません' }),
+      { status: 404 });
+  });
+}
+
+function renderList() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={['/tracking/exceptions']}>
+        <Routes>
+          <Route path="/tracking/exceptions" element={<ExceptionListPage />} />
+          <Route path="/tracking/:trackingNumber" element={<h1>追跡詳細</h1>} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
+function renderReport() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={['/tracking/TRK-8K2QX7M4RB/exceptions/new']}>
+        <Routes>
+          <Route
+            path="/tracking/:trackingNumber/exceptions/new"
+            element={<ExceptionReportPage />}
+          />
+          <Route path="/tracking/:trackingNumber" element={<h1>追跡詳細</h1>} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
+beforeEach(() => {
+  useAuthStore.setState({ user: { username: 'tracker01', roles: ['ROLE_TRACKER'], token: 't' } });
+});
+afterEach(() => vi.restoreAllMocks());
+
+describe('S42 例外一覧（US19 §5）', () => {
+  it('未解決の例外が、サーバの並びのまま出る', async () => {
+    // **並べ直さない。** 緊急が先、以降は残日数が少ない順（不変条件 7）を
+    // サーバが決める。画面で並べ直すと判定が 2 か所になる。
+    respondByUrl({
+      '/tracking/trackings/exceptions': {
+        items: [
+          exceptionItem({ exceptionId: 'ex-loss', exceptionTypeLabel: '紛失', urgent: true }),
+          exceptionItem({ exceptionId: 'ex-delay' }),
+        ],
+      },
+    });
+
+    renderList();
+
+    const rows = await screen.findAllByRole('row');
+    // 1 行目は見出し。
+    expect(rows[1]).toHaveTextContent('紛失');
+    expect(rows[2]).toHaveTextContent('遅延');
+  });
+
+  it('緊急の例外が目で分かる', async () => {
+    respondByUrl({
+      '/tracking/trackings/exceptions': {
+        items: [exceptionItem({ exceptionTypeLabel: '紛失', urgent: true })],
+      },
+    });
+
+    renderList();
+
+    expect(await screen.findByText('緊急')).toBeInTheDocument();
+  });
+
+  it('一覧から対象の追跡へ行ける（気づく手段は次の行動へ繋ぐ）', async () => {
+    respondByUrl({ '/tracking/trackings/exceptions': { items: [exceptionItem()] } });
+
+    renderList();
+    await userEvent.click(await screen.findByRole('link', { name: 'TRK-8K2QX7M4RB' }));
+
+    expect(await screen.findByRole('heading', { name: '追跡詳細' })).toBeInTheDocument();
+  });
+
+  it('未解決が無ければ、そう言う（空欄で終わらせない）', async () => {
+    respondByUrl({ '/tracking/trackings/exceptions': { items: [] } });
+
+    renderList();
+
+    expect(await screen.findByText(/未解決の例外はありません/)).toBeInTheDocument();
+  });
+});
+
+describe('S43 例外起票（US19 §1）', () => {
+  it('自動で起票される種別は選べない（起きていない誤配を記録させない）', async () => {
+    respondByUrl({});
+
+    renderReport();
+
+    const select = await screen.findByLabelText('例外種別');
+    const options = Array.from(select.querySelectorAll('option')).map((o) => o.textContent);
+    expect(options).toContain('遅延');
+    expect(options).toContain('破損');
+    expect(options).toContain('紛失');
+    expect(options).not.toContain('誤配');
+    expect(options).not.toContain('税関保留');
+  });
+
+  it('発生状況が空のままでは起票できない', async () => {
+    respondByUrl({});
+
+    renderReport();
+
+    expect(await screen.findByRole('button', { name: '起票する' })).toBeDisabled();
+    await userEvent.type(screen.getByLabelText('発生状況'), '台風で 3 日遅れます');
+    expect(screen.getByRole('button', { name: '起票する' })).toBeEnabled();
+  });
+
+  it('起票すると、その追跡の詳細へ戻る', async () => {
+    const posted: string[] = [];
+    respondByUrl({}, (url) => posted.push(url));
+
+    renderReport();
+    await userEvent.selectOptions(await screen.findByLabelText('例外種別'), 'DELAY');
+    await userEvent.type(screen.getByLabelText('発生状況'), '台風で 3 日遅れます');
+    await userEvent.click(screen.getByRole('button', { name: '起票する' }));
+
+    await waitFor(() =>
+      expect(posted.some((url) => url.includes('/TRK-8K2QX7M4RB/exceptions'))).toBe(true));
+    expect(await screen.findByRole('heading', { name: '追跡詳細' })).toBeInTheDocument();
+  });
+});

@@ -22,6 +22,8 @@ import { VoyageListPage } from '@/features/routing/VoyageListPage';
 import { VoyageRegisterPage } from '@/features/routing/VoyageRegisterPage';
 import { VoyageDetailPage } from '@/features/routing/VoyageDetailPage';
 import { TrackingListPage } from '@/features/tracking/TrackingListPage';
+import { ExceptionListPage } from '@/features/tracking/ExceptionListPage';
+import { ExceptionReportPage } from '@/features/tracking/ExceptionReportPage';
 import { TrackingDetailPage } from '@/features/tracking/TrackingDetailPage';
 import { AwaitingClaimPage } from '@/features/handling/AwaitingClaimPage';
 import { HandlingHistoryPage } from '@/features/handling/HandlingHistoryPage';
@@ -125,6 +127,25 @@ export function AppRoutes() {
           element={
             <RequireRole allow={['ROLE_HANDLER', 'ROLE_TRACKER']}>
               <HandlingHistoryPage />
+            </RequireRole>
+          }
+        />
+        {/* 例外一覧（S42）と起票（S43）は追跡管理者だけ（US19）。
+            **`/tracking/:trackingNumber` より先に置く。** 後ろに置くと
+            "exceptions" が追跡番号として吸われる。 */}
+        <Route
+          path="/tracking/exceptions"
+          element={
+            <RequireRole allow={['ROLE_TRACKER']}>
+              <ExceptionListPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/tracking/:trackingNumber/exceptions/new"
+          element={
+            <RequireRole allow={['ROLE_TRACKER']}>
+              <ExceptionReportPage />
             </RequireRole>
           }
         />
