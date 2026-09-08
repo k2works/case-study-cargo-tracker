@@ -23,7 +23,7 @@ import {
   fetchCargoSnapshot,
   fetchCargosOnVoyage,
   registerHandling,
-  type CargoSnapshotView,
+  requiresConsigneeConfirmation,
   type HandlingType,
   HANDLING_TYPE_LABELS,
   SELECTABLE_HANDLING_TYPES,
@@ -56,6 +56,10 @@ export function HandlingRecordPage() {
   // **起きた日時を後から入れられる**（US15 §受入基準 3）。通信できない場所では
   // 紙に控えて、戻ってから入れる。空なら「いま」。
   const [completedAt, setCompletedAt] = useState('');
+  // **荷受人の確認は引取のときだけ**（US16 §受入基準 1）。署名または確認コード。
+  const [consigneeName, setConsigneeName] = useState('');
+
+  const needsConsignee = requiresConsigneeConfirmation(handlingType);
 
   const cargos = useQuery({
     queryKey: ['handling-cargos', voyageNumber, unLocode],
@@ -65,8 +69,9 @@ export function HandlingRecordPage() {
 
   // 追跡番号を入れた直後に照合する。**押す前に予定外を知らせる**ため。
   const scanned = useQuery({
-    queryKey: ['handling-cargo', trackingNumber],
-    queryFn: () => fetchCargoSnapshot(trackingNumber),
+    queryKey: ['handling-cargo', trackingNumber, unLocode],
+    // **港も渡す。** 予定外かどうかはサーバが答える（H.5）。
+    queryFn: () => fetchCargoSnapshot(trackingNumber, unLocode),
     enabled: trackingNumber.trim().length >= 4,
     retry: false,
   });
@@ -80,11 +85,15 @@ export function HandlingRecordPage() {
       unLocode,
       voyageNumber: requiresVoyage(handlingType) ? voyageNumber : null,
       completedAt: completedAt === '' ? null : businessLocalToInstant(completedAt),
+      // **引取のときだけ載せる。** 他の種別に載せるとサーバが断る
+      // （黙って捨てると、現場は確認を取ったつもりのまま記録が残らない）。
+      ...(needsConsignee ? { consigneeName: consigneeName.trim() } : {}),
     }),
     onSuccess: () => {
       // **種別と場所は保つ。** 次の 1 本へすぐ移れるようにする。
       setTrackingNumber('');
       setCompletedAt('');
+      setConsigneeName('');
       setActivityId(crypto.randomUUID());
       queries.invalidateQueries({ queryKey: ['handling-cargos', voyageNumber, unLocode] });
     },
@@ -104,9 +113,12 @@ export function HandlingRecordPage() {
   const cargo = scanned.data?.state === 'ready' ? scanned.data.value : null;
   const notFound = scanned.isError
     && scanned.error instanceof ApiError && scanned.error.status === 404;
-  const offRoute = cargo !== null && isOffRoute(cargo, handlingType, unLocode);
+  // **判定はサーバが答える**（H.5）。画面に書き直すと、本番と画面が別の判定を持つ。
+  const offRoute = cargo?.offRouteByType?.[handlingType] ?? false;
   const items = cargos.data?.state === 'ready' ? cargos.data.value.items : [];
-  const remaining = items.filter((item) => !item.handledHere);
+  // **選んでいる種別で数える**（M14）。荷降しを済ませただけで引取まで済んだように
+  // 見えると、その貨物は誰にも引き取られないまま「済」になる。
+  const remaining = items.filter((item) => !item.handledTypes.includes(handlingType));
 
   return (
     <div>
@@ -173,6 +185,27 @@ export function HandlingRecordPage() {
           </div>
         </div>
 
+        {needsConsignee && (
+          <div className="mt-4">
+            <label htmlFor="consigneeName" className={LABEL}>
+              荷受人の確認（署名または確認コード）
+            </label>
+            <input
+              id="consigneeName"
+              className={FIELD}
+              value={consigneeName}
+              onChange={(event) => setConsigneeName(event.target.value)}
+              placeholder="受領者名または確認コード"
+              autoComplete="off"
+            />
+            {/* **引取は貨物状態を引取済——精算の開始条件——まで進める。**
+                そこからは戻せないので、確認が取れていないものは送らせない。 */}
+            <p className="mt-1 text-xs text-gray-600">
+              引き渡しの証明になります。確認が取れていない引取は記録できません。
+            </p>
+          </div>
+        )}
+
         {cargo !== null && (
           <dl className="mt-4 grid grid-cols-[6rem_1fr] gap-y-1 text-sm">
             <dt className="text-gray-600">確認</dt>
@@ -200,7 +233,8 @@ export function HandlingRecordPage() {
         <button
           type="button"
           className={`${BUTTON_PRIMARY} mt-4`}
-          disabled={cargo === null || record.isPending}
+          disabled={cargo === null || record.isPending
+            || (needsConsignee && consigneeName.trim() === '')}
           onClick={() => record.mutate()}
         >
           記録する
@@ -229,6 +263,7 @@ export function HandlingRecordPage() {
                 <th className={TH}>追跡番号</th>
                 <th className={TH}>区間</th>
                 <th className={TH}>状態</th>
+                <th className={TH}>操作</th>
               </tr>
             </thead>
             <tbody>
@@ -242,7 +277,19 @@ export function HandlingRecordPage() {
                   <td className={TD}>
                     {item.originUnLocode} → {item.destinationUnLocode}
                   </td>
-                  <td className={TD}>{item.handledHere ? '記録済' : '未記録'}</td>
+                  {/* **選んでいる種別で見る**（M14）。同じ港で荷降し → 引取が起きる。 */}
+                  <td className={TD}>{handledLabel(item.handledTypes, handlingType)}</td>
+                  <td className={TD}>
+                    {/* **一覧の行から記録を始められる**（M15）。追跡番号を
+                        書き写させると、連続記録の途中で打ち間違える。 */}
+                    <button
+                      type="button"
+                      className={LINK}
+                      onClick={() => setTrackingNumber(item.trackingNumber)}
+                    >
+                      この貨物を記録する
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -259,18 +306,19 @@ function requiresVoyage(type: HandlingType): boolean {
 }
 
 /**
- * 予定ルート外か（画面の先出し警告）。
+ * この港での状態（S50 の一覧）。
  *
- * <p><b>記録の可否はサーバが決める。</b> ここでの判定は「押す前に知らせる」ためだけ
- * で、記録は拒まない。サーバは同じ判定を `CargoSnapshot#isOffRoute` で行う。</p>
+ * <p><b>選んでいる種別で見る</b>（M14）。引取が入ると同じ港で荷降し → 引取が
+ * 起きるので、「記録済」の一語では「荷降しは済んだが引取はまだ」を表せない。
+ * 済んだ種別が他にあるならその呼び名を出す——何が終わっているかが読めないと、
+ * 作業員は同じ貨物をもう一度探す。</p>
  */
-function isOffRoute(cargo: CargoSnapshotView, type: HandlingType, unLocode: string): boolean {
-  if (type === 'RECEIVE') {
-    return cargo.originUnLocode !== unLocode;
+function handledLabel(handled: readonly HandlingType[], selected: HandlingType): string {
+  if (handled.includes(selected)) {
+    return `${HANDLING_TYPE_LABELS[selected]}済`;
   }
-  if (type === 'CLAIM') {
-    return cargo.destinationUnLocode !== unLocode;
+  if (handled.length > 0) {
+    return `未記録（${handled.map((type) => HANDLING_TYPE_LABELS[type]).join('・')}済）`;
   }
-  const ports = cargo.legs.map((leg) => (type === 'LOAD' ? leg.loadUnLocode : leg.unloadUnLocode));
-  return ports.length === 0 || !ports.includes(unLocode);
+  return '未記録';
 }

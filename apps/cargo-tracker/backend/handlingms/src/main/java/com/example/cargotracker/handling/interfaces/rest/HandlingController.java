@@ -3,11 +3,13 @@ package com.example.cargotracker.handling.interfaces.rest;
 import com.example.cargotracker.handling.domain.model.commands.RegisterHandlingActivityCommand;
 import com.example.cargotracker.handling.domain.model.commands.VoidHandlingActivityCommand;
 import com.example.cargotracker.handling.domain.model.valueobjects.CargoSnapshot;
+import com.example.cargotracker.handling.infrastructure.persistence.CargoSnapshots;
 import com.example.cargotracker.handling.domain.model.valueobjects.HandlingType;
 import com.example.cargotracker.handling.infrastructure.persistence.CargoSnapshotMapper;
 import com.example.cargotracker.handling.infrastructure.persistence.HandlingActivityMapper;
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.CargoOnVoyageListView;
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.CargoSnapshotView;
+import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.FindAwaitingClaimQuery;
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.FindCargoSnapshotQuery;
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.FindCargosOnVoyageQuery;
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.FindHandlingHistoryQuery;
@@ -23,7 +25,6 @@ import java.net.URI;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.List;
 import org.axonframework.messaging.commandhandling.gateway.CommandGateway;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -117,15 +118,32 @@ public class HandlingController {
     }
 
     /**
+     * その港で引取を待っている貨物（H.8 / US16）。
+     *
+     * <p><b>航海起点では辿り着けない。</b> 引取は船から降りたあとの作業で、
+     * どの航海の仕事でもない（S02 荷役の下部タブ「引取待ち」）。</p>
+     */
+    @GetMapping("/awaiting-claim")
+    public ResponseEntity<CargoOnVoyageListView> awaitingClaim(
+            @RequestParam String unLocode) {
+        return ResponseEntity.ok(queries.query(
+                new FindAwaitingClaimQuery(unLocode.toUpperCase(java.util.Locale.ROOT)),
+                CargoOnVoyageListView.class));
+    }
+
+    /**
      * 貨物 1 件の写し（S50 の「確認」欄）。
      *
      * <p><b>見つからないときは 404。</b> US15 §受入基準 6——存在しない追跡番号を
      * 打ったことが分からないと、作業員は記録できたつもりで次へ進む。</p>
      */
     @GetMapping("/cargos/{trackingNumber}")
-    public ResponseEntity<CargoSnapshotView> cargo(@PathVariable String trackingNumber) {
+    public ResponseEntity<CargoSnapshotView> cargo(@PathVariable String trackingNumber,
+            @RequestParam(required = false) String unLocode) {
+        // **港を渡すと、種別ごとに予定外かどうかも返る**（H.5）。判定を画面に
+        // 書き直させない。S51（荷役履歴）は港を持たないので渡さない。
         CargoSnapshotView view = queries.query(
-                new FindCargoSnapshotQuery(trackingNumber), CargoSnapshotView.class);
+                new FindCargoSnapshotQuery(trackingNumber, unLocode), CargoSnapshotView.class);
         return view == null ? ResponseEntity.notFound().build() : ResponseEntity.ok(view);
     }
 
@@ -207,13 +225,8 @@ public class HandlingController {
             throw new BusinessRuleViolation(
                     "追跡番号 " + trackingNumber + " の貨物が見つかりません");
         }
-        List<CargoSnapshot.LegSnapshot> legs = cargos.findLegs(trackingNumber).stream()
-                .map(leg -> new CargoSnapshot.LegSnapshot(leg.voyageNumber(),
-                        Location.of(leg.loadUnlocode()), Location.of(leg.unloadUnlocode())))
-                .toList();
-        return new CargoSnapshot(row.trackingNumber(), row.bookingId(),
-                Location.of(row.originUnlocode()), Location.of(row.destinationUnlocode()),
-                row.cargoType(), legs);
+        // **組み立ては 1 か所**（読みの経路と同じ形にする）。
+        return CargoSnapshots.of(row, cargos.findLegs(trackingNumber));
     }
 
     /** 種別の名前を型に直す。<b>知らない名前を 500 にしない</b>（入力の誤り）。 */

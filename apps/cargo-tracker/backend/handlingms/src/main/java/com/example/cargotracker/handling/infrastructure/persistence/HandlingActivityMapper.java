@@ -13,7 +13,7 @@ public interface HandlingActivityMapper {
     /** 読み出す列を並べる。<b>{@code SELECT *} にしない</b>（列順で割り当てられる）。 */
     String COLUMNS = "activity_id, tracking_number, booking_id, handling_type, unlocode, "
             + "voyage_number, consignee_name, off_route, operator, completed_at, "
-            + "voided, voided_at, void_reason, projected_at";
+            + "voided, voided_at, voided_by, void_reason, projected_at";
 
     /**
      * 記録を 1 行足す（US15 §4）。
@@ -26,10 +26,12 @@ public interface HandlingActivityMapper {
     /** 取り消しを記録する。<b>元の行は消さない</b>（不変条件 7）。 */
     @org.apache.ibatis.annotations.Update(
             "UPDATE handling_activity SET voided = TRUE, voided_at = #{voidedAt}, "
+            + "voided_by = #{voidedBy}, "
             + "void_reason = #{reason}, projected_at = #{projectedAt} "
             + "WHERE activity_id = #{activityId}")
     int markVoided(@Param("activityId") String activityId,
             @Param("reason") String reason,
+            @Param("voidedBy") String voidedBy,
             @Param("voidedAt") Instant voidedAt,
             @Param("projectedAt") Instant projectedAt);
 
@@ -98,6 +100,7 @@ public interface HandlingActivityMapper {
             Instant completedAt,
             boolean voided,
             Instant voidedAt,
+            String voidedBy,
             String voidReason,
             Instant projectedAt) {
     }

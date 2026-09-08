@@ -2,6 +2,7 @@ package com.example.cargotracker.handling.infrastructure.query;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 /** 荷役の読み取りモデル（domain-model.md「クエリ一覧」）。 */
 public final class HandlingQueries {
@@ -21,7 +22,9 @@ public final class HandlingQueries {
     /**
      * S50 に出す貨物 1 件。
      *
-     * @param handledHere すでにこの港で記録済みか。連続記録で「残り」を数えるのに使う
+     * @param handledTypes この港ですでに記録した種別。<b>種別で区別する</b>——引取が
+     *     入ると同じ港で荷降し → 引取が起きるので、1 つの真偽値では
+     *     「荷降しは済んだが引取はまだ」を表せない（M14）
      */
     public record CargoOnVoyageView(
             String trackingNumber,
@@ -29,7 +32,11 @@ public final class HandlingQueries {
             String originUnLocode,
             String destinationUnLocode,
             String cargoType,
-            boolean handledHere) {
+            List<String> handledTypes) {
+    }
+
+    /** その港で引取を待っている貨物（H.8 / S02 荷役の下部タブ）。 */
+    public record FindAwaitingClaimQuery(String unLocode) {
     }
 
     /** S50 の一覧。 */
@@ -53,6 +60,9 @@ public final class HandlingQueries {
             String operator,
             Instant completedAt,
             boolean voided,
+            Instant voidedAt,
+            // 取り消した人（M13）。列が無かったころの行では null——画面は「—」と出す。
+            String voidedBy,
             String voidReason) {
     }
 
@@ -66,7 +76,7 @@ public final class HandlingQueries {
      * <p>追跡番号を打ち込んだ直後に、予約番号・端点・貨物種別を出して
      * 「その貨物で合っているか」を確かめる。</p>
      */
-    public record FindCargoSnapshotQuery(String trackingNumber) {
+    public record FindCargoSnapshotQuery(String trackingNumber, String unLocode) {
     }
 
     /** S50 の「確認」欄に出す中身。 */
@@ -76,7 +86,10 @@ public final class HandlingQueries {
             String originUnLocode,
             String destinationUnLocode,
             String cargoType,
-            List<LegView> legs) {
+            List<LegView> legs,
+            // 種別ごとに、その港での作業が予定外か（H.5）。港を渡さなければ null。
+            // **判定は CargoSnapshot#isOffRoute が答える。** 画面に書き直させない。
+            Map<String, Boolean> offRouteByType) {
     }
 
     /** 予定の旅程の 1 区間。<b>時刻は持たない</b>（[ADR-0012] 決定 4）。 */

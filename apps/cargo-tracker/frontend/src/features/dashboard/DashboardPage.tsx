@@ -233,6 +233,17 @@ export function DashboardPage() {
         </section>
       )}
 
+      {/* **引取は航海起点では辿り着けない**（船から降りたあとの作業で、どの航海の
+          仕事でもない）。モバイル幅では下部タブが受け持つが、**デスクトップ幅にも
+          導線が要る**——出さないと、その画面はロール別到達性の外に落ちる。 */}
+      {isHandler && (
+        <p className="mt-4 text-sm">
+          <Link to="/handling/awaiting-claim" className={LINK}>
+            引取待ちの貨物を見る
+          </Link>
+        </p>
+      )}
+
       {/* 荷主が「変わったこと」に気づく手段。**そこから一覧へ行ける**。 */}
       {isShipper && recentlyChanged?.state === 'ready'
         && recentlyChanged.value.count > 0 && (

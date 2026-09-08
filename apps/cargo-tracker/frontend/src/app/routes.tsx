@@ -23,6 +23,7 @@ import { VoyageRegisterPage } from '@/features/routing/VoyageRegisterPage';
 import { VoyageDetailPage } from '@/features/routing/VoyageDetailPage';
 import { TrackingListPage } from '@/features/tracking/TrackingListPage';
 import { TrackingDetailPage } from '@/features/tracking/TrackingDetailPage';
+import { AwaitingClaimPage } from '@/features/handling/AwaitingClaimPage';
 import { HandlingHistoryPage } from '@/features/handling/HandlingHistoryPage';
 import { HandlingRecordPage } from '@/features/handling/HandlingRecordPage';
 
@@ -104,6 +105,17 @@ export function AppRoutes() {
           element={
             <RequireRole allow={['ROLE_HANDLER']}>
               <HandlingRecordPage />
+            </RequireRole>
+          }
+        />
+        {/* 引取待ち（H.8 / US16）は荷役ロールだけ。**`/handling/:trackingNumber`
+            より先に置く。** 後ろに置くと "awaiting-claim" が追跡番号として
+            吸われ、荷役履歴が「見つかりません」になる。 */}
+        <Route
+          path="/handling/awaiting-claim"
+          element={
+            <RequireRole allow={['ROLE_HANDLER']}>
+              <AwaitingClaimPage />
             </RequireRole>
           }
         />

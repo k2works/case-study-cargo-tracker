@@ -17,6 +17,8 @@ function item(over: Record<string, unknown> = {}) {
     operator: 'handler01',
     completedAt: '2026-09-16T08:30:00Z',
     voided: false,
+    voidedAt: null,
+    voidedBy: null,
     voidReason: null,
     ...over,
   };
@@ -82,6 +84,44 @@ describe('S51 荷役履歴', () => {
     renderHistory();
 
     expect(await screen.findByRole('row', { name: /取消/ })).toHaveTextContent('取り違えました');
+  });
+
+  it('M13: 取消行に「誰がいつ取り消したか」が出る', async () => {
+    // **取り消しは現場の記録を後から変える操作。** 誰がやったかが読めないと、
+    // 荷主から問われたときに突き合わせられない。
+    useAuthStore.setState({
+      user: { username: 'handler01', roles: ['ROLE_HANDLER'], token: 't' },
+    });
+    respondWith({
+      trackingNumber: 'TRK-8K2QX7M4RB',
+      items: [item({
+        voided: true,
+        voidReason: '取り違えました',
+        voidedBy: 'handler02',
+        voidedAt: '2026-09-16T09:00:00Z',
+      })],
+    });
+
+    renderHistory();
+
+    const row = await screen.findByRole('row', { name: /取消/ });
+    expect(row).toHaveTextContent('handler02');
+    expect(row).toHaveTextContent('2026/09/16');
+  });
+
+  it('M13: 取り消した人が分からない行では「—」と出す（500 にしない）', async () => {
+    // 列が無かったころの行。読めなくするのではなく、分からないことを出す。
+    useAuthStore.setState({
+      user: { username: 'handler01', roles: ['ROLE_HANDLER'], token: 't' },
+    });
+    respondWith({
+      trackingNumber: 'TRK-8K2QX7M4RB',
+      items: [item({ voided: true, voidReason: '取り違えました' })],
+    });
+
+    renderHistory();
+
+    expect(await screen.findByRole('row', { name: /取消/ })).toHaveTextContent('—');
   });
 
   it('荷役ロールには追跡詳細へのリンクを出さない（403 になる）', async () => {

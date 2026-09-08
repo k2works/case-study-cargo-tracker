@@ -1,12 +1,16 @@
 package com.example.cargotracker.handling.infrastructure.query;
 
 import com.example.cargotracker.handling.domain.model.valueobjects.HandlingType;
+import com.example.cargotracker.shared.domain.location.Location;
+import com.example.cargotracker.handling.domain.model.valueobjects.CargoSnapshot;
 import com.example.cargotracker.handling.infrastructure.persistence.CargoSnapshotMapper;
+import com.example.cargotracker.handling.infrastructure.persistence.CargoSnapshots;
 import com.example.cargotracker.handling.infrastructure.persistence.HandlingActivityMapper;
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.CargoOnVoyageListView;
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.CargoOnVoyageView;
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.CargoSnapshotView;
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.FindCargoSnapshotQuery;
+import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.FindAwaitingClaimQuery;
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.FindCargosOnVoyageQuery;
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.FindHandlingHistoryQuery;
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.HandlingHistoryItemView;
@@ -16,7 +20,7 @@ import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.Le
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.VoyagePortListView;
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.VoyagePortView;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 import java.util.stream.Collectors;
 import org.axonframework.messaging.queryhandling.annotation.QueryHandler;
 import org.springframework.stereotype.Component;
@@ -44,18 +48,23 @@ public class HandlingQueryHandler {
      */
     @QueryHandler
     public CargoOnVoyageListView handle(FindCargosOnVoyageQuery query) {
-        Set<String> handled = activities
+        // **種別ごとに数える**（M14）。引取が入ると同じ港で荷降し → 引取が起きるので、
+        // 1 つの真偽値では「荷降しは済んだが引取はまだ」を表せない。
+        Map<String, List<String>> handled = activities
                 .findOnVoyage(query.voyageNumber(), query.unLocode(), VOYAGE_ACTIVITY_LIMIT)
                 .stream()
                 .filter(row -> !row.voided())
-                .map(HandlingActivityMapper.HandlingActivityRow::trackingNumber)
-                .collect(Collectors.toSet());
+                .collect(Collectors.groupingBy(
+                        HandlingActivityMapper.HandlingActivityRow::trackingNumber,
+                        Collectors.mapping(
+                                HandlingActivityMapper.HandlingActivityRow::handlingType,
+                                Collectors.toList())));
 
         return new CargoOnVoyageListView(
                 cargos.findOnVoyage(query.voyageNumber(), query.unLocode()).stream()
                         .map(row -> new CargoOnVoyageView(row.trackingNumber(), row.bookingId(),
                                 row.originUnlocode(), row.destinationUnlocode(), row.cargoType(),
-                                handled.contains(row.trackingNumber())))
+                                handled.getOrDefault(row.trackingNumber(), List.of())))
                         .toList());
     }
 
@@ -70,7 +79,7 @@ public class HandlingQueryHandler {
                                 row.unlocode(), row.voyageNumber(), row.consigneeName(),
                                 row.offRoute(),
                                 row.operator(), row.completedAt(), row.voided(),
-                                row.voidReason()))
+                                row.voidedAt(), row.voidedBy(), row.voidReason()))
                         .toList();
         return new HandlingHistoryView(query.trackingNumber(), items);
     }
@@ -82,11 +91,53 @@ public class HandlingQueryHandler {
         if (row == null) {
             return null;
         }
+        var legs = cargos.findLegs(row.trackingNumber());
         return new CargoSnapshotView(row.trackingNumber(), row.bookingId(),
                 row.originUnlocode(), row.destinationUnlocode(), row.cargoType(),
-                cargos.findLegs(row.trackingNumber()).stream()
+                legs.stream()
                         .map(leg -> new LegView(leg.voyageNumber(), leg.loadUnlocode(),
                                 leg.unloadUnlocode()))
+                        .toList(),
+                offRouteByType(row, legs, query.unLocode()));
+    }
+
+    /**
+     * 種別ごとに、その港での作業が予定外か（H.5）。
+     *
+     * <p><b>判定は {@link CargoSnapshot#isOffRoute} が答える。</b> 画面に書き直させると、
+     * 本番と画面が別の判定を持ち、片方だけが正しい形になる。</p>
+     *
+     * <p>港を渡さなければ {@code null}。S51（荷役履歴）は港を持たない。</p>
+     */
+    private Map<String, Boolean> offRouteByType(CargoSnapshotMapper.CargoSnapshotRow row,
+            List<CargoSnapshotMapper.CargoSnapshotLegRow> legs, String unLocode) {
+        if (unLocode == null || unLocode.isBlank()) {
+            return null;
+        }
+        CargoSnapshot snapshot = CargoSnapshots.of(row, legs);
+        Location location = Location.of(unLocode.toUpperCase(java.util.Locale.ROOT));
+        Map<String, Boolean> result = new java.util.LinkedHashMap<>();
+        for (HandlingType type : HandlingType.values()) {
+            result.put(type.name(), snapshot.isOffRoute(type, location));
+        }
+        return result;
+    }
+
+    /**
+     * その港で引取を待っている貨物（H.8 / US16）。
+     *
+     * <p><b>航海起点では辿り着けない。</b> 引取は船から降りたあとの作業で、
+     * どの航海の仕事でもない。目的港に居る荷役作業員の 2 つ目の入口になる。</p>
+     */
+    @QueryHandler
+    public CargoOnVoyageListView handle(FindAwaitingClaimQuery query) {
+        return new CargoOnVoyageListView(
+                cargos.findAwaitingClaim(query.unLocode()).stream()
+                        .map(row -> new CargoOnVoyageView(row.trackingNumber(), row.bookingId(),
+                                row.originUnlocode(), row.destinationUnlocode(), row.cargoType(),
+                                // 引取はまだ。荷降しは済んでいるが、この一覧が
+                                // 見せたいのは「引取が残っている」ことである。
+                                List.of("UNLOAD")))
                         .toList());
     }
 

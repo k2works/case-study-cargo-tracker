@@ -13,7 +13,21 @@ function cargo(over: Record<string, unknown> = {}) {
     originUnLocode: 'JPTYO',
     destinationUnLocode: 'USNYC',
     cargoType: 'GENERAL',
-    handledHere: false,
+    handledTypes: [],
+    ...over,
+  };
+}
+
+function snapshot(over: Record<string, unknown> = {}) {
+  return {
+    trackingNumber: 'TRK-8K2QX7M4RB',
+    bookingId: 'b-1',
+    originUnLocode: 'JPTYO',
+    destinationUnLocode: 'USNYC',
+    cargoType: 'GENERAL',
+    legs: [{ voyageNumber: 'V-MOL-001', loadUnLocode: 'JPTYO', unloadUnLocode: 'SGSIN' }],
+    // **判定はサーバが答える**（H.5）。画面に書き直させない。
+    offRouteByType: { RECEIVE: true, LOAD: true, UNLOAD: false, CLAIM: true },
     ...over,
   };
 }
@@ -69,7 +83,7 @@ describe('S50 荷役作業記録', () => {
     expect(row).toHaveTextContent('未記録');
   });
 
-  it('US15 §2: 作業種別を選べる（引取は本 IT で出さない）', async () => {
+  it('US16 §1: 作業種別に引取が出る', async () => {
     respondByUrl({ '/cargos?unLocode': { items: [] } });
 
     renderAt();
@@ -79,8 +93,84 @@ describe('S50 荷役作業記録', () => {
     expect(options).toContain('受領');
     expect(options).toContain('積込');
     expect(options).toContain('荷降し');
-    // 引取は通関と荷受人の確認が要る（US16・IT10）。
-    expect(options).not.toContain('引取');
+    expect(options).toContain('引取');
+  });
+
+  it('US16 §1: 引取を選んだときだけ荷受人確認の欄が出る', async () => {
+    respondByUrl({ '/cargos?unLocode': { items: [] } });
+
+    renderAt();
+
+    expect(screen.queryByLabelText(/荷受人の確認/)).not.toBeInTheDocument();
+    await userEvent.selectOptions(await screen.findByLabelText('作業種別'), 'CLAIM');
+    expect(await screen.findByLabelText(/荷受人の確認/)).toBeInTheDocument();
+
+    await userEvent.selectOptions(screen.getByLabelText('作業種別'), 'UNLOAD');
+    await waitFor(() => expect(screen.queryByLabelText(/荷受人の確認/)).not.toBeInTheDocument());
+  });
+
+  it('US16 §2: 荷受人の確認が空のままでは引取を送れない', async () => {
+    respondByUrl({
+      '/cargos?unLocode': { items: [cargo()] },
+      '/handling/cargos/TRK-8K2QX7M4RB': snapshot(),
+    });
+
+    renderAt();
+    await userEvent.selectOptions(await screen.findByLabelText('作業種別'), 'CLAIM');
+    await userEvent.type(screen.getByLabelText('追跡番号'), 'TRK-8K2QX7M4RB');
+    await screen.findByText('確認');
+
+    expect(screen.getByRole('button', { name: '記録する' })).toBeDisabled();
+
+    await userEvent.type(screen.getByLabelText(/荷受人の確認/), 'John Smith');
+    expect(screen.getByRole('button', { name: '記録する' })).toBeEnabled();
+  });
+
+  it('US16 §2: 引取では荷受人の確認を載せて送る', async () => {
+    const fetchSpy = respondByUrl({
+      '/cargos?unLocode': { items: [cargo()] },
+      '/handling/cargos/TRK-8K2QX7M4RB': snapshot(),
+    });
+
+    renderAt();
+    await userEvent.selectOptions(await screen.findByLabelText('作業種別'), 'CLAIM');
+    await userEvent.type(screen.getByLabelText('追跡番号'), 'TRK-8K2QX7M4RB');
+    await screen.findByText('確認');
+    await userEvent.type(screen.getByLabelText(/荷受人の確認/), 'John Smith');
+    await userEvent.click(screen.getByRole('button', { name: '記録する' }));
+
+    await waitFor(() => {
+      const post = fetchSpy.mock.calls.find(([, init]) => init?.method === 'POST');
+      expect(post).toBeDefined();
+      const body = JSON.parse(String(post?.[1]?.body));
+      expect(body.handlingType).toBe('CLAIM');
+      expect(body.consigneeName).toBe('John Smith');
+    });
+  });
+
+  it('M14: 同じ港の荷降しと引取を区別する（荷降し済でも引取は未記録）', async () => {
+    // **引取が入ると同じ港で 2 度作業する。** 荷降しを済ませただけで
+    // 引取まで済んだように見えると、その貨物は誰にも引き取られない。
+    respondByUrl({ '/cargos?unLocode': { items: [cargo({ handledTypes: ['UNLOAD'] })] } });
+
+    renderAt();
+
+    const row = await screen.findByRole('row', { name: /TRK-8K2QX7M4RB/ });
+    expect(row).toHaveTextContent('荷降し済');
+    await userEvent.selectOptions(screen.getByLabelText('作業種別'), 'CLAIM');
+    expect(await screen.findByRole('row', { name: /TRK-8K2QX7M4RB/ })).toHaveTextContent('未記録');
+  });
+
+  it('M15: 一覧の行から記録を始められる（追跡番号が入る）', async () => {
+    respondByUrl({
+      '/cargos?unLocode': { items: [cargo()] },
+      '/handling/cargos/TRK-8K2QX7M4RB': snapshot(),
+    });
+
+    renderAt();
+    await userEvent.click(await screen.findByRole('button', { name: /この貨物を記録する/ }));
+
+    expect(screen.getByLabelText('追跡番号')).toHaveValue('TRK-8K2QX7M4RB');
   });
 
   it('US15 §1: 追跡番号を入れると貨物を確認できる', async () => {
@@ -108,14 +198,11 @@ describe('S50 荷役作業記録', () => {
     // **押す前に知らせる。** 押してから警告すると、作業員は取り消しの手間を負う。
     respondByUrl({
       '/cargos?unLocode': { items: [cargo()] },
-      '/handling/cargos/TRK-8K2QX7M4RB': {
-        trackingNumber: 'TRK-8K2QX7M4RB',
-        bookingId: 'b-1',
-        originUnLocode: 'JPTYO',
-        destinationUnLocode: 'USNYC',
-        cargoType: 'GENERAL',
+      // **判定はサーバが答える**（H.5）。画面は返ってきた答えを出すだけ。
+      '/handling/cargos/TRK-8K2QX7M4RB': snapshot({
         legs: [{ voyageNumber: 'V-MOL-001', loadUnLocode: 'JPTYO', unloadUnLocode: 'DEHAM' }],
-      },
+        offRouteByType: { RECEIVE: true, LOAD: true, UNLOAD: true, CLAIM: true },
+      }),
     });
 
     renderAt();
@@ -239,13 +326,13 @@ describe('S50 荷役作業記録', () => {
     });
   });
 
-  it('送信済みは「記録済」として積み上がる（取り消しは S51 で行う）', async () => {
-    respondByUrl({ '/cargos?unLocode': { items: [cargo({ handledHere: true })] } });
+  it('送信済みは「荷降し済」として積み上がる（取り消しは S51 で行う）', async () => {
+    respondByUrl({ '/cargos?unLocode': { items: [cargo({ handledTypes: ['UNLOAD'] })] } });
 
     renderAt();
 
     const row = await screen.findByRole('row', { name: /TRK-8K2QX7M4RB/ });
-    expect(row).toHaveTextContent('記録済');
+    expect(row).toHaveTextContent('荷降し済');
   });
 
   it('港が指定されていなければ、選ぶよう促す', async () => {

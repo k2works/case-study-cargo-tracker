@@ -17,8 +17,17 @@ export const HANDLING_TYPE_LABELS: Record<HandlingType, string> = {
   CLAIM: '引取',
 };
 
-/** 本 IT で選べる種別。**引取は US16（IT10）** で、通関と荷受人の確認が要る。 */
-export const SELECTABLE_HANDLING_TYPES: readonly HandlingType[] = ['RECEIVE', 'LOAD', 'UNLOAD'];
+/**
+ * 選べる種別。**引取は US16（IT10）で開けた**——荷受人の確認という検査を
+ * 同じ変更で入れたため。通関の検査は US29（IT12）。
+ */
+export const SELECTABLE_HANDLING_TYPES: readonly HandlingType[] =
+  ['RECEIVE', 'LOAD', 'UNLOAD', 'CLAIM'];
+
+/** その種別に荷受人の確認が要るか。**サーバの `HandlingType` と同じ判断**。 */
+export function requiresConsigneeConfirmation(type: HandlingType): boolean {
+  return type === 'CLAIM';
+}
 
 /** S50 に出す貨物 1 件。 */
 export interface CargoOnVoyageView {
@@ -27,8 +36,12 @@ export interface CargoOnVoyageView {
   readonly originUnLocode: string;
   readonly destinationUnLocode: string;
   readonly cargoType: string;
-  /** すでにこの港で記録済みか。「残り」を数えるのに使う。 */
-  readonly handledHere: boolean;
+  /**
+   * この港ですでに記録した種別。**種別で区別する**——引取が入ると同じ港で
+   * 荷降し → 引取が起きるので、1 つの真偽値では「荷降しは済んだが引取はまだ」を
+   * 表せない（M14）。
+   */
+  readonly handledTypes: readonly HandlingType[];
 }
 
 /** 予定の旅程の 1 区間。**時刻は持たない**（ADR-0012 決定 4）。 */
@@ -46,6 +59,13 @@ export interface CargoSnapshotView {
   readonly destinationUnLocode: string;
   readonly cargoType: string;
   readonly legs: readonly LegView[];
+  /**
+   * 種別ごとに、その港での作業が予定外か（H.5）。
+   *
+   * <p><b>判定はサーバが答える。</b> 画面に書き直すと、本番と画面が別の判定を
+   * 持ち、片方だけが正しい形になる。港を渡さなければ `null`。</p>
+   */
+  readonly offRouteByType: Readonly<Record<HandlingType, boolean>> | null;
 }
 
 /** 荷役履歴の 1 行（S51）。 */
@@ -59,6 +79,9 @@ export interface HandlingHistoryItemView {
   readonly operator: string;
   readonly completedAt: string;
   readonly voided: boolean;
+  readonly voidedAt: string | null;
+  /** 取り消した人（M13）。分からない行では `null`——画面は「—」と出す。 */
+  readonly voidedBy: string | null;
   readonly voidReason: string | null;
 }
 
@@ -80,8 +103,13 @@ export function fetchCargosOnVoyage(
 }
 
 /** 貨物 1 件の写し（スキャン後の確認）。見つからなければ ApiError(404)。 */
-export function fetchCargoSnapshot(trackingNumber: string): Promise<Pending<CargoSnapshotView>> {
-  return queryClient(`/handling/cargos/${encodeURIComponent(trackingNumber)}`);
+export function fetchCargoSnapshot(
+  trackingNumber: string,
+  unLocode?: string,
+): Promise<Pending<CargoSnapshotView>> {
+  // 港を渡すと、種別ごとに予定外かどうかも返る（H.5）。
+  const query = unLocode ? `?unLocode=${encodeURIComponent(unLocode)}` : '';
+  return queryClient(`/handling/cargos/${encodeURIComponent(trackingNumber)}${query}`);
 }
 
 /** 荷役履歴（S51）。 */
@@ -105,6 +133,8 @@ export function registerHandling(input: {
   readonly voyageNumber: string | null;
   /** 起きた日時（US15 §受入基準 3）。**空なら「いま」**——サーバが埋める。 */
   readonly completedAt: string | null;
+  /** 荷受人の確認（US16 §受入基準 1・2）。**引取のときだけ**載せる。 */
+  readonly consigneeName?: string;
 }): Promise<void> {
   return commandClient('/handling/activities', input);
 }
@@ -119,6 +149,18 @@ export interface VoyagePortView {
   readonly voyageNumber: string;
   readonly unLocode: string;
   readonly cargoCount: number;
+}
+
+/**
+ * その港で引取を待っている貨物（H.8 / US16）。
+ *
+ * <p><b>航海起点では辿り着けない。</b> 引取は船から降りたあとの作業で、
+ * どの航海の仕事でもない。</p>
+ */
+export function fetchAwaitingClaim(
+  unLocode: string,
+): Promise<Pending<{ items: CargoOnVoyageView[] }>> {
+  return queryClient(`/handling/awaiting-claim?unLocode=${encodeURIComponent(unLocode)}`);
 }
 
 /** これから作業する航海と港の一覧。 */

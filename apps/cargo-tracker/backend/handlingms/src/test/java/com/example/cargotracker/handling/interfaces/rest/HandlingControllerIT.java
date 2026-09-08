@@ -151,7 +151,7 @@ class HandlingControllerIT extends AbstractAxonIntegrationTest {
                 .filter(item -> trackingNumber.equals(item.get("trackingNumber")))
                 .findFirst().orElseThrow())
                 .as("まだ記録していないので残り")
-                .containsEntry("handledHere", false);
+                .containsEntry("handledTypes", List.of());
     }
 
     @Test
@@ -199,6 +199,10 @@ class HandlingControllerIT extends AbstractAxonIntegrationTest {
             assertThat(items).hasSize(1);
             assertThat(items.get(0)).containsEntry("voided", true);
             assertThat(items.get(0)).containsEntry("voidReason", "取り違えました");
+            // **誰がいつ取り消したかが読めないと突き合わせられない**（M13）。
+            // 契約イベントは voidedBy を運んでいるのに、投影が捨てていた。
+            assertThat(items.get(0)).containsEntry("voidedBy", "handler01");
+            assertThat(items.get(0)).containsKey("voidedAt");
         });
     }
 
@@ -217,8 +221,115 @@ class HandlingControllerIT extends AbstractAxonIntegrationTest {
             assertThat(items.stream()
                     .filter(item -> trackingNumber.equals(item.get("trackingNumber")))
                     .findFirst().orElseThrow())
-                    .containsEntry("handledHere", true);
+                    // **種別で区別する**（M14）。引取が入ると同じ港で荷降し → 引取が
+                    // 起きる。荷降しを済ませただけで引取まで済んだように見えると、
+                    // その貨物は誰にも引き取られないまま「済」になる。
+                    .containsEntry("handledTypes", List.of("UNLOAD"));
         });
+    }
+
+    @Test
+    @DisplayName("S50: 同じ港の荷降しと引取を区別する（M14。引取が入ると同じ港で 2 度作業する）")
+    void distinguishesHandledTypesAtTheSamePort() {
+        String trackingNumber = givenCargo();
+        register(request(trackingNumber, "UNLOAD", "SGSIN"));
+
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
+            var response = rest.get().uri(url("/voyages/V-MOL-001/cargos?unLocode=SGSIN"))
+                    .retrieve().toEntity(JsonMap.class);
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> items =
+                    (List<Map<String, Object>>) response.getBody().get("items");
+            @SuppressWarnings("unchecked")
+            List<String> handled = (List<String>) items.stream()
+                    .filter(item -> trackingNumber.equals(item.get("trackingNumber")))
+                    .findFirst().orElseThrow().get("handledTypes");
+            assertThat(handled).containsExactly("UNLOAD").doesNotContain("CLAIM");
+        });
+    }
+
+    @Test
+    @DisplayName("H.8: 目的港で荷降し済・引取未記録の貨物が「引取待ち」に出る")
+    void listsCargosAwaitingClaim() {
+        // **荷役作業員の 2 つ目の入口**（下部タブ）。航海起点では引取に辿り着けない
+        // ——引取は船から降りたあとの作業で、どの航海の仕事でもない。
+        String trackingNumber = givenCargo();
+        register(request(trackingNumber, "UNLOAD", "USNYC"));
+
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
+            var response = rest.get().uri(url("/awaiting-claim?unLocode=USNYC"))
+                    .retrieve().toEntity(JsonMap.class);
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> items =
+                    (List<Map<String, Object>>) response.getBody().get("items");
+            assertThat(items).anySatisfy(item ->
+                    assertThat(item).containsEntry("trackingNumber", trackingNumber));
+        });
+    }
+
+    @Test
+    @DisplayName("H.8: 引取を記録したら「引取待ち」から消える（残りが読めないと数え直す）")
+    void removesClaimedCargosFromAwaitingClaim() {
+        String trackingNumber = givenCargo();
+        register(request(trackingNumber, "UNLOAD", "USNYC"));
+        var claim = request(trackingNumber, "CLAIM", "USNYC");
+        claim.put("consigneeName", "John Smith");
+        register(claim);
+
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
+            var response = rest.get().uri(url("/awaiting-claim?unLocode=USNYC"))
+                    .retrieve().toEntity(JsonMap.class);
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> items =
+                    (List<Map<String, Object>>) response.getBody().get("items");
+            assertThat(items).noneSatisfy(item ->
+                    assertThat(item).containsEntry("trackingNumber", trackingNumber));
+        });
+    }
+
+    @Test
+    @DisplayName("H.8: 荷降ししていない貨物は「引取待ち」に出ない（まだ船の上にある）")
+    void doesNotListCargosNotYetUnloaded() {
+        String trackingNumber = givenCargo();
+
+        var response = rest.get().uri(url("/awaiting-claim?unLocode=USNYC"))
+                .retrieve().toEntity(JsonMap.class);
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> items =
+                (List<Map<String, Object>>) response.getBody().get("items");
+        assertThat(items).noneSatisfy(item ->
+                assertThat(item).containsEntry("trackingNumber", trackingNumber));
+    }
+
+    @Test
+    @DisplayName("H.5: 予定外かどうかはサーバが答える（画面に判定を書き直させない）")
+    void answersOffRouteForTheGivenPort() {
+        String trackingNumber = givenCargo();
+
+        var atOrigin = rest.get()
+                .uri(url("/cargos/" + trackingNumber + "?unLocode=JPTYO"))
+                .retrieve().toEntity(JsonMap.class);
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> offRoute = (Map<String, Object>) atOrigin.getBody().get("offRouteByType");
+        assertThat(offRoute)
+                .as("出発港での受領は予定どおり")
+                .containsEntry("RECEIVE", false);
+        assertThat(offRoute)
+                .as("出発港での引取は予定外（目的港ではない）")
+                .containsEntry("CLAIM", true);
+    }
+
+    @Test
+    @DisplayName("H.5: 港を渡さなければ判定は返さない（S51 は港を持たない）")
+    void omitsOffRouteWithoutAPort() {
+        String trackingNumber = givenCargo();
+
+        var response = rest.get().uri(url("/cargos/" + trackingNumber))
+                .retrieve().toEntity(JsonMap.class);
+
+        assertThat(response.getBody().get("offRouteByType")).isNull();
     }
 
     @Test
@@ -245,7 +356,7 @@ class HandlingControllerIT extends AbstractAxonIntegrationTest {
                     .filter(item -> trackingNumber.equals(item.get("trackingNumber")))
                     .findFirst().orElseThrow())
                     .as("取り消したのに済んだままだと、その貨物が誰にも記録されない")
-                    .containsEntry("handledHere", false);
+                    .containsEntry("handledTypes", List.of());
         });
     }
 

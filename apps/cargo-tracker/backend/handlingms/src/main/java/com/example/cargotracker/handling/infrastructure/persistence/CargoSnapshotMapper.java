@@ -90,6 +90,31 @@ public interface CargoSnapshotMapper {
             + "ORDER BY voyage_number, unlocode")
     List<VoyagePortRow> findVoyagePorts();
 
+    /**
+     * その港で引取を待っている貨物（H.8 / US16）。
+     *
+     * <p><b>目的港で荷降しが済み、引取がまだのもの。</b> 引取は船から降りたあとの
+     * 作業なので、航海起点（S50）では辿り着けない——どの航海の仕事でもない。</p>
+     *
+     * <p>取り消された記録は数えない。取り消したのに「引取待ちから外れたまま」に
+     * すると、その貨物は誰にも引き取られない。</p>
+     */
+    @Select("SELECT s.tracking_number, s.booking_id, s.origin_unlocode, "
+            + "s.destination_unlocode, s.cargo_type, s.cancelled, s.projected_at, "
+            + "s.last_event_id "
+            + "FROM cargo_snapshot s "
+            + "WHERE s.cancelled = FALSE "
+            + "  AND s.destination_unlocode = #{unLocode} "
+            + "  AND EXISTS (SELECT 1 FROM handling_activity a "
+            + "              WHERE a.tracking_number = s.tracking_number "
+            + "                AND a.handling_type = 'UNLOAD' "
+            + "                AND a.unlocode = #{unLocode} AND a.voided = FALSE) "
+            + "  AND NOT EXISTS (SELECT 1 FROM handling_activity a "
+            + "                  WHERE a.tracking_number = s.tracking_number "
+            + "                    AND a.handling_type = 'CLAIM' AND a.voided = FALSE) "
+            + "ORDER BY s.tracking_number")
+    List<CargoSnapshotRow> findAwaitingClaim(@Param("unLocode") String unLocode);
+
     /** 航海と港の組（S02 荷役）。**積む港と降ろす港の両方**が入る。 */
     record VoyagePortRow(String voyageNumber, String unlocode, int cargoCount) {
     }

@@ -1,0 +1,15 @@
+-- 取り消した人を記録する（IT10 / IT9 レビュー M13）。
+--
+-- 正典: docs/design/cargo-tracker/data-model.md「handling_activity」
+--
+-- 履歴の取消行に「誰がいつ取り消したか」が出ていなかった。取り消しは現場の
+-- 記録を後から変える操作なので、**誰がやったかが読めないと突き合わせられない**
+-- （`voided_at` と `void_reason` だけでは、荷主から問われたときに答えられない）。
+--
+-- 契約イベント `HandlingActivityVoidedEvent` はすでに `voidedBy` を運んでいる。
+-- **運んでいた値を投影が捨てていた**（表示のためだけに運ぶ値は、どこか一層で
+-- 潰しても緑になりやすい）。
+--
+-- 既存行は NULL のままにする。取り消した人が分からない行を 500 で落とすのは
+-- 違う——画面では「—」と出す（`cargo_revision.updated_by` と同じ扱い）。
+ALTER TABLE handling_activity ADD COLUMN voided_by VARCHAR(50);

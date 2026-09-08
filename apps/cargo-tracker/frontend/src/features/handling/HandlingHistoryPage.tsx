@@ -39,6 +39,24 @@ function stateLabel(item: { voided: boolean; voidReason: string | null; offRoute
   return item.offRoute ? '予定外' : '記録済';
 }
 
+/**
+ * 誰がいつ取り消したか（M13）。
+ *
+ * <p><b>取り消しは現場の記録を後から変える操作</b>なので、誰がやったかが
+ * 読めないと、荷主から問われたときに突き合わせられない。</p>
+ *
+ * <p><b>分からない行は「—」。</b> 列が無かったころの記録を 500 で落とすのは
+ * 違う（`cargo_revision.updated_by` と同じ扱い）。</p>
+ */
+function voidedByLabel(item: { voided: boolean; voidedBy: string | null;
+  voidedAt: string | null }) {
+  if (!item.voided) {
+    return '—';
+  }
+  const who = item.voidedBy ?? '—';
+  return item.voidedAt === null ? who : `${who}（${formatBusinessDateTime(item.voidedAt)}）`;
+}
+
 export function HandlingHistoryPage() {
   const { trackingNumber = '' } = useParams();
   const navigate = useNavigate();
@@ -128,6 +146,7 @@ export function HandlingHistoryPage() {
                 <th className={TH}>航海</th>
                 <th className={TH}>記録者</th>
                 <th className={TH}>状態</th>
+                <th className={TH}>取り消した人</th>
                 {isHandler && <th className={TH}>操作</th>}
               </tr>
             </thead>
@@ -142,6 +161,7 @@ export function HandlingHistoryPage() {
                   <td className={TD}>
                     {stateLabel(item)}
                   </td>
+                  <td className={TD}>{voidedByLabel(item)}</td>
                   {isHandler && (
                     <td className={TD}>
                       {/* **取り消せるのは取り消していない記録だけ。**

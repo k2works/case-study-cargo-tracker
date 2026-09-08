@@ -36,7 +36,7 @@ public class HandlingActivityProjection {
                 // 荷受人の確認は引取（US16・IT10）が書く。
                 null,
                 event.offRoute(), event.operator(), event.completedAt(),
-                false, null, null, clock.instant()));
+                false, null, null, null, clock.instant()));
     }
 
     /**
@@ -52,7 +52,8 @@ public class HandlingActivityProjection {
 
     @EventHandler
     public void on(HandlingActivityVoidedEvent event) {
-        activities.markVoided(event.activityId(), event.reason(), event.voidedAt(),
-                clock.instant());
+        // **運んでいた値を捨てない。** 契約は voidedBy を運んでいる（M13）。
+        activities.markVoided(event.activityId(), event.reason(), event.voidedBy(),
+                event.voidedAt(), clock.instant());
     }
 }

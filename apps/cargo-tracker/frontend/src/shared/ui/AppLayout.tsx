@@ -13,6 +13,20 @@ function navItemClass({ isActive }: { isActive: boolean }) {
   ].join(' ');
 }
 
+/**
+ * 荷役ロールの下部タブ（ui_design.md:613 / H.8）。
+ *
+ * <p><b>モバイル幅だけ。</b> 荷役作業員は港に居て片手で使う——左サイドナビは
+ * 画面の外に出ているので、そのままでは 2 つ目の入口に辿り着けない。</p>
+ *
+ * <p>タブは 2 つ。<b>船から降ろす仕事（作業のある航海）と、降りたあとの仕事
+ * （引取待ち）</b>で、どちらの航海の仕事でもない引取は航海起点では出てこない。</p>
+ */
+const HANDLER_TABS = [
+  { path: '/', label: '作業のある航海' },
+  { path: '/handling/awaiting-claim', label: '引取待ち' },
+] as const;
+
 /** 左サイドナビ + トップヘッダ（ui_design.md）。 */
 export function AppLayout() {
   const user = useAuthStore((state) => state.user);
@@ -27,6 +41,7 @@ export function AppLayout() {
   }
 
   const items = navigationFor(user.roles);
+  const isHandler = user.roles.includes('ROLE_HANDLER');
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -88,10 +103,33 @@ export function AppLayout() {
             </button>
           </div>
         </header>
-        <main className="p-6">
+        {/* 下部タブのぶんだけ余白を空ける。空けないと最後の行が隠れる。 */}
+        <main className={`p-6 ${isHandler ? 'pb-24 sm:pb-6' : ''}`}>
           <Outlet />
         </main>
       </div>
+
+      {/* **モバイル幅だけ**（ui_design.md:613）。荷役作業員は港に居て片手で使う。 */}
+      {isHandler && (
+        <nav
+          aria-label="荷役の作業タブ"
+          className="fixed inset-x-0 bottom-0 z-10 flex border-t border-gray-200 bg-white sm:hidden"
+        >
+          {HANDLER_TABS.map((tab) => (
+            <NavLink
+              key={tab.path}
+              to={tab.path}
+              end
+              className={({ isActive }) => [
+                'flex-1 py-3 text-center text-sm',
+                isActive ? 'font-semibold text-blue-800' : 'text-gray-700',
+              ].join(' ')}
+            >
+              {tab.label}
+            </NavLink>
+          ))}
+        </nav>
+      )}
     </div>
   );
 }
