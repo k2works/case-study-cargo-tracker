@@ -2,6 +2,7 @@ package com.example.cargotracker.contract;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.cargotracker.shared.contract.event.CargoDeliveredEvent;
 import com.example.cargotracker.shared.contract.event.HandlingActivityRegisteredEvent;
 import com.example.cargotracker.shared.contract.event.HandlingActivityVoidedEvent;
 import com.example.cargotracker.shared.contract.event.ShipperRegisteredEvent;
@@ -78,7 +79,9 @@ class ContractEventGoldenTest {
                         Instant.parse("2026-09-16T08:35:00Z")),
                 new HandlingActivityVoidedEvent("act-1", "TRK-8K2QX7M4RB", "b-1",
                         "UNLOAD", "別の貨物と取り違えました", "handler01",
-                        Instant.parse("2026-09-16T09:00:00Z")));
+                        Instant.parse("2026-09-16T09:00:00Z")),
+                new CargoDeliveredEvent("TRK-8K2QX7M4RB", "b-1",
+                        Instant.parse("2026-09-25T02:00:00Z"), "USNYC"));
     }
 
     private static String goldenOf(String name) {
