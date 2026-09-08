@@ -123,7 +123,7 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-07T12:23:42Z }
 
 | # | タスク | ストーリー | 見積 |
 | :--- | :--- | :--- | :--: |
-| T0 | **US を終えるたびに SonarQube を回す**（IT7・IT8 と 2 回連続で守れていない。**独立の行として立てる**——括弧書きにすると実施されない） | — | 2h |
+| T0 | ✅ **US を終えるたびに SonarQube を回す**（IT7・IT8 と 2 回連続で守れていない。**独立の行として立てる**——括弧書きにすると実施されない） | — | 2h |
 | T1 | **`cargo_snapshot` の元イベントを決めて ADR に書く**（上記の案 A / B）。**契約への昇格は追記専用で後戻りできない**ので、決めてから実装する。**`CargoCancelledEvent` も同じ判断に含める**——正典は元イベントを 2 本としており（data-model:648）、`cancelled` 列（同 :591）はキャンセル（US30・IT12）まで書き手が居ない。**書き手の無い列を先に作らない**なら、列ごと本 IT で作らないことを決める | US15 前提 | 3h |
 | T1b | **契約のゴールデン JSON を先に置く**（`development_strategy.md:260` の Phase 0。**US15 は名指しで該当**）。本 IT で増える契約 2 本（`HandlingActivityRegisteredEvent`・`HandlingActivityVoidedEvent`）と、T1 で昇格を決めたものについて、**発行側と購読側の両方**にゴールデンと Axon Server 経由の往復テストを置く。**括弧書きにしない**——IT8 で「括弧書きの守りは実装されない」を実測した（T6b の 429） | US15 | 3h |
 | T2 | `HandlingType`（`RECEIVE` / `LOAD` / `UNLOAD` / `CLAIM`）と要件表。**`requiresVoyageNumber` / `requiresConsigneeConfirmation` / `portToMatch` を型自身に持たせる**。要素表と突き合わせる canon テスト | US15 | 4h |
@@ -133,7 +133,7 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-07T12:23:42Z }
 | T6 | **`TransportStatus#afterHandling` と `TrackingReactionHandler`**。荷役から貨物状態が進む。**予定外は `MISROUTED`**（US28 の下地。誤配の起票そのものは IT10 以降）。**知らない追跡番号の荷役では止めず、記録を投影側に残す**（Tracking の不変条件 8。「止まらない」だけ作ると、届かなかった荷役が誰にも見えなくなる） | US15 | 6h |
 | T6b | **bookingms 側の反応**（`BookingReactionHandler` が `HandlingActivityRegisteredEvent` / `HandlingActivityVoidedEvent` を購読 → `RecordHandlingCommand` / `RevertHandlingCommand`）。**Cargo の不変条件 12・13**（予定外なら `RoutingStatus = MISROUTED` と `BookingMisroutedEvent`、取り消しで `lastHandling` を巻き戻す）と `cargo_summary.last_handling_*` の投影。**ゴールとデモ項目 6・DoD が「予約に伝わる」と約束しているのに、タスクが無かった**（着手前の検証で発見） | US15 | 6h |
 | T7 | **S50 荷役作業記録**（`/handling/voyages/:voyageNumber`。荷役）。航海起点・連続記録。**送信済みが積み上がり、未記録が減る**。予定外はインライン警告。**反映中の待ち合わせを持ち込まない**。**場所は港の候補から選ぶ**（IT8 レビュー 中 J。自由入力だと打ち間違いが現在地として荷受人にも出る） | US15 | 8h |
-| T8 | **S51 荷役履歴**（`/handling/:trackingNumber`。荷役と追跡の両方）と、**荷主が「変わったこと」に気づく手段**（IT8 レビュー 中 M。「24 時間以内に状態が変わった N 件」をダッシュボードに）。荷役ロールのダッシュボード（**本日の航海だけ**。引取待ち・通関は IT10） | US15 | 6h |
+| T8 | ✅ **S51 荷役履歴**（`/handling/:trackingNumber`。荷役と追跡の両方）と、**荷主が「変わったこと」に気づく手段**（IT8 レビュー 中 M。「24 時間以内に状態が変わった N 件」をダッシュボードに）。荷役ロールのダッシュボード（**本日の航海だけ**。引取待ち・通関は IT10） | US15 | 6h |
 | T9 | 認可の宣言（荷役ロール）と HTTP の配線。**S51 は荷役と追跡の両方**（`ui_design.md:236`） | US15 | 3h |
 | T10 | 引き継ぎ枠 H.1〜H.3 | — | 8h |
 | T11 | クラスタ E2E・受け入れテスト・マニュアル | — | 10h |
@@ -460,6 +460,7 @@ IT4 から数えて 6 回目の中盤です。
 | 2026-09-07 | IT9 計画を作成。**着手前の検証で高 1 件**——`cargo_snapshot` の元イベント（`TrackingNumberIssuedEvent`）が契約ではなく handlingms から購読できない。IT8 のふりかえり Try T5 が効いた。IT8 の Try 5 件をすべて成功基準に落とし、**SonarQube を独立のタスク行（T0）に立てた**（2 回連続で守れていないため） | claude-code/claude-opus-5 |
 | 2026-09-07 | **着手前の検証（`validating-iteration-plan`）で高 2 件・中 5 件・低 3 件を反映。** 最も重いのは **bookingms 側の反応がタスクに無かった**こと——ゴール・デモ項目 6・DoD が「記録は予約に伝わる」と約束しているのに、`BookingReactionHandler` と `RecordHandlingCommand` の行が無く、見積にも入っていなかった（T6b として 6h を追加、67h → 73h）。**引き継ぎ H.3 が別物を指していた**（レビュー中 D と中 M の取り違え）。IT8 レビューが送った 14 件の**行き先を 1 件ずつ表にした**——表に無いものは「忘れた」と区別が付かない。下部タブ・不変条件 1 の部分適用・`CargoCancelledEvent`・URL パス・索引・コマンドの項目も補った | claude-code/claude-opus-5 |
 | 2026-09-07 | **横断整合の検証（`validating-design`）で高 3 件・中 5 件を反映。** (1) **予備枠 1 の所在が 3 文書で食い違っていた**——`release_plan.md:233` だけが「IT10」で、同 :190 と `development_strategy.md:243` は「IT9」。**IT9 に枠があると分かり、ADR-0008 を送る根拠が消えた**ので予備枠 R.1 で返す（4 回連続の繰越を止める）。`release_plan.md` の枠一覧も直した。(2) **ER 図の列名が正典と 6 か所ずれていた**（`location_unlocode`→`unlocode` ほか）。このまま書くと `INDEX(voyage_number, unlocode)` が張れない。(3) **IT8 の引き継ぎ 6 件のうち 2 件が計画に無かった**（US18 §2・§3 は荷役が動く本 IT で満たせる）。契約ゴールデンを Phase 0 の独立行（T1b）に、投影の冪等性とリプレイを DoD に、Tracking の不変条件 8 の「記録を残す」を T6 に足した。見積 73h → 76h | claude-code/claude-opus-5 |
+| 2026-09-08 | **T8（荷役・荷主のダッシュボード）と T0（SonarQube）を完了。** 品質ゲートは両プロジェクト PASSED（新規違反 0 / 新規カバレッジ backend 93.6%・frontend 94.9% / 重複 3% 未満）。**クラスタ E2E で実欠陥 3 件を捕まえた**——(1) **適用済みマイグレーション V004 への追記**で checksum が変わり、trackingms が既存クラスタでだけ起動しない（CI は新しい DB なので緑のまま）。(2) **予約一覧が到着期限順＋上限**で、登録したその日に一覧で確かめられない。画面には「絞り込みは次のイテレーションで入ります」と書いたまま IT8・IT9 と持ち越していたので、荷主一覧と同じ形で実装した。(3) `TransportStatus#afterHandling` の `IllegalArgumentException` がドメイン層の規約テストに触れていた。**(1) と (3) はモジュール単位のテストでは出ず、フルビルド／実クラスタでだけ赤になる**。同型の 4 件目として、T8 で足した読み口が `Instant.now()` を直接呼び ArchUnit に触れていた（業務タイムゾーンの時計に直した） | claude-code/claude-opus-5 |
 
 ## 関連ドキュメント
 
