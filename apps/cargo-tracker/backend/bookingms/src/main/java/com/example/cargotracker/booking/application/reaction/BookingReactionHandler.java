@@ -7,6 +7,8 @@ import com.example.cargotracker.booking.infrastructure.projection.AttentionItemR
 import com.example.cargotracker.shared.contract.command.InitializeTrackingCommand;
 import com.example.cargotracker.booking.domain.model.commands.RecordHandlingCommand;
 import com.example.cargotracker.booking.domain.model.commands.RevertHandlingCommand;
+import com.example.cargotracker.booking.domain.model.commands.MarkDeliveredCommand;
+import com.example.cargotracker.shared.contract.event.CargoDeliveredEvent;
 import com.example.cargotracker.shared.contract.event.HandlingActivityRegisteredEvent;
 import com.example.cargotracker.shared.contract.event.HandlingActivityVoidedEvent;
 import com.example.cargotracker.shared.contract.event.TrackingInitializedEvent;
@@ -179,6 +181,18 @@ public class BookingReactionHandler {
         commands.sendAndWait(new RecordHandlingCommand(event.bookingId(), event.activityId(),
                 event.handlingType(), event.unLocode(), event.offRoute(),
                 event.completedAt()), Void.class);
+    }
+
+    /**
+     * 貨物が引き渡された（UC14 / US16 §受入基準 4）。
+     *
+     * <p><b>購読側は billingms だけではない。</b> 予約の状態も引取済へ進む
+     * （domain-model.md:573）。ここで止めると、営業の一覧は輸送中のまま残る。</p>
+     */
+    @EventHandler
+    public void on(CargoDeliveredEvent event) {
+        commands.sendAndWait(new MarkDeliveredCommand(event.bookingId(),
+                event.trackingNumber(), event.deliveredAt(), event.location()), Void.class);
     }
 
     /** 荷役が取り消された（不変条件 13）。 */

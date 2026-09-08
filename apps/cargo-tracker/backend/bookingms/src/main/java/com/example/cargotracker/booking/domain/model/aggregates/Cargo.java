@@ -9,6 +9,7 @@ import com.example.cargotracker.booking.domain.model.commands.ReturnToRoutingCom
 import com.example.cargotracker.booking.domain.model.commands.RequestConditionReviewCommand;
 import com.example.cargotracker.booking.domain.model.commands.RequestRoutingCommand;
 import com.example.cargotracker.booking.domain.model.commands.RespondToConditionReviewCommand;
+import com.example.cargotracker.booking.domain.model.commands.MarkDeliveredCommand;
 import com.example.cargotracker.booking.domain.model.commands.RecordHandlingCommand;
 import com.example.cargotracker.booking.domain.model.commands.RevertHandlingCommand;
 import com.example.cargotracker.booking.domain.model.commands.RevertTrackingNumberCommand;
@@ -29,6 +30,7 @@ import com.example.cargotracker.booking.domain.model.commands.ConfirmBookingComm
 import com.example.cargotracker.booking.domain.model.commands.IssueTrackingNumberCommand;
 import com.example.cargotracker.booking.domain.model.events.CargoRoutedEvent;
 import com.example.cargotracker.booking.domain.model.events.BookingMisroutedEvent;
+import com.example.cargotracker.booking.domain.model.events.BookingDeliveredEvent;
 import com.example.cargotracker.booking.domain.model.events.HandlingRecordedEvent;
 import com.example.cargotracker.booking.domain.model.events.HandlingRevertedEvent;
 import com.example.cargotracker.booking.domain.model.events.TrackingNumberIssuedEvent;
@@ -611,6 +613,32 @@ public class Cargo {
 
         appender.append(new HandlingRevertedEvent(command.bookingId(), command.activityId(),
                 clears, clock.instant()));
+    }
+
+    /**
+     * 貨物が引き渡された（UC14 / US16 §受入基準 4）。
+     *
+     * <p><b>契約 {@code CargoDeliveredEvent} を受けて {@code BookingReactionHandler}
+     * が送る。</b> 輸送の完了は trackingms が知っており、予約はその事実を写す。</p>
+     *
+     * <p><b>二度届いても 1 度だけ。</b> Event Processor は at-least-once である。</p>
+     *
+     * <p><b>知らない予約では止まらない。</b> 引き渡しは trackingms に記録済みで、
+     * ここで例外にすると Event Processor が止まり、後続の予約まで届かなくなる。</p>
+     */
+    @CommandHandler
+    public void markDelivered(MarkDeliveredCommand command, EventAppender appender) {
+        if (bookingId == null || bookingStatus == BookingStatus.DELIVERED) {
+            return;
+        }
+        appender.append(new BookingDeliveredEvent(command.bookingId(),
+                command.trackingNumber(), command.deliveredAt(), command.location()));
+    }
+
+    @EventSourcingHandler
+    void on(BookingDeliveredEvent event) {
+        // 引取済からはキャンセルできない（不変条件 9）。次に来るのは精算だけ。
+        this.bookingStatus = BookingStatus.DELIVERED;
     }
 
     /** 誤配にした荷役。取り消しで戻してよいかの判断に要る（不変条件 13）。 */

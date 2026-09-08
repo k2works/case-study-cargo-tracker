@@ -1,6 +1,8 @@
 package com.example.cargotracker.booking.domain.model.aggregates;
 
 import com.example.cargotracker.booking.domain.model.commands.IssueTrackingNumberCommand;
+import com.example.cargotracker.booking.domain.model.commands.MarkDeliveredCommand;
+import com.example.cargotracker.booking.domain.model.events.BookingDeliveredEvent;
 import com.example.cargotracker.booking.domain.model.commands.RecordHandlingCommand;
 import com.example.cargotracker.booking.domain.model.commands.RevertHandlingCommand;
 import com.example.cargotracker.booking.domain.model.commands.RevertTrackingNumberCommand;
@@ -267,6 +269,43 @@ class CargoTrackingNumberTest {
         fixture.given().events(misrouted())
                 .when().command(new RevertHandlingCommand("B-0001", "act-9", "別の記録"))
                 .then().events(new HandlingRevertedEvent("B-0001", "act-9", false, NOW));
+    }
+
+    // ---- IT10 US16 §4: 引き渡しを予約に写す ----
+
+    /** 追跡番号を発行し、最初の受領で輸送中になっているところまで。 */
+    private static Object[] inTransit() {
+        return and(trackingIssued(),
+                new HandlingRecordedEvent("B-0001", "act-1", "RECEIVE", "JPTYO", HANDLED, NOW));
+    }
+
+    @Test
+    @DisplayName("US16 §4: 引き渡しが届くと予約が引取済になる")
+    void marksDelivered() {
+        fixture.given().events(inTransit())
+                .when().command(new MarkDeliveredCommand("B-0001", "TRK-8K2QX7M4RB",
+                        HANDLED, "USNYC"))
+                .then().events(new BookingDeliveredEvent("B-0001", "TRK-8K2QX7M4RB",
+                        HANDLED, "USNYC"));
+    }
+
+    @Test
+    @DisplayName("US16 §4: 二度届いても 1 度だけ（再配送で状態が揺れない）")
+    void marksDeliveredOnlyOnce() {
+        fixture.given().events(and(inTransit(),
+                        new BookingDeliveredEvent("B-0001", "TRK-8K2QX7M4RB", HANDLED, "USNYC")))
+                .when().command(new MarkDeliveredCommand("B-0001", "TRK-8K2QX7M4RB",
+                        HANDLED, "USNYC"))
+                .then().success().noEvents();
+    }
+
+    @Test
+    @DisplayName("知らない予約の引き渡しでは止まらない")
+    void doesNotFailForUnknownBookingOnDelivered() {
+        fixture.given().noPriorActivity()
+                .when().command(new MarkDeliveredCommand("B-NONE", "TRK-8K2QX7M4RB",
+                        HANDLED, "USNYC"))
+                .then().success().noEvents();
     }
 
     // ---- IT10 引き継ぎ枠 A: 少なくとも 1 回配送の再配送で重複を積まない ----

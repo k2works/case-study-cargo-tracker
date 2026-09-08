@@ -1,6 +1,7 @@
 package com.example.cargotracker.tracking.domain.model.aggregates;
 
 import com.example.cargotracker.shared.contract.command.InitializeTrackingCommand;
+import com.example.cargotracker.shared.contract.event.CargoDeliveredEvent;
 import com.example.cargotracker.shared.contract.event.TrackingInitializedEvent;
 import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.shared.domain.error.IllegalTransition;
@@ -169,6 +170,15 @@ public class TrackingActivity {
         appender.append(new TransportStatusUpdatedEvent(trackingNumber.value(), status, next,
                 StatusUpdateSource.HANDLING, command.activityId(), command.unLocode(),
                 command.completedAt(), command.operator(), clock.instant()));
+
+        if (next == TransportStatus.DELIVERED) {
+            // **精算の開始条件は別のイベントで出す**（US16 §受入基準 4）。
+            // 1 つのイベントに「状態が変わった」と「精算を始めてよい」の 2 つの
+            // 役割を持たせると、片方の都合でもう片方の購読側が動く。
+            // 購読側は billingms（精算の開始）と bookingms（予約を引取済に）。
+            appender.append(new CargoDeliveredEvent(trackingNumber.value(), bookingId,
+                    command.completedAt(), command.unLocode()));
+        }
     }
 
     /**

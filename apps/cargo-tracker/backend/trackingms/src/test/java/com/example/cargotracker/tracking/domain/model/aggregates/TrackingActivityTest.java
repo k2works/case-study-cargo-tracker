@@ -6,6 +6,7 @@ import com.example.cargotracker.shared.contract.command.InitializeTrackingComman
 import com.example.cargotracker.shared.contract.event.TrackingInitializedEvent;
 import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.shared.domain.error.IllegalTransition;
+import com.example.cargotracker.shared.contract.event.CargoDeliveredEvent;
 import com.example.cargotracker.tracking.domain.model.commands.AdvanceTrackingCommand;
 import com.example.cargotracker.tracking.domain.model.commands.RevertTrackingCommand;
 import com.example.cargotracker.tracking.domain.model.commands.UpdateTransportStatusCommand;
@@ -301,6 +302,40 @@ class TrackingActivityTest {
         fixture.given().event(initialized())
                 .when().command(advance("CLAIM", true, false))
                 .then().success().noEvents();
+    }
+
+    @Test
+    @DisplayName("US16 §4: 引取で引取済になると、精算の開始条件が契約として出る")
+    void publishesCargoDeliveredOnClaim() {
+        // **1 つのイベントに 2 つの役割を持たせない。** 状態が変わった事実
+        // （TransportStatusUpdatedEvent）と、精算を始めてよい事実
+        // （CargoDeliveredEvent）は購読側が違う。
+        fixture.given().events(initialized(),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.NOT_RECEIVED,
+                                TransportStatus.RECEIVED, StatusUpdateSource.HANDLING, "act-1",
+                                "JPTYO", HANDLED, "handler01", NOW),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.RECEIVED,
+                                TransportStatus.LOADED, StatusUpdateSource.HANDLING, "act-2",
+                                "JPTYO", HANDLED, "handler01", NOW),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.LOADED,
+                                TransportStatus.AWAITING_CLAIM, StatusUpdateSource.HANDLING,
+                                "act-3", "USNYC", HANDLED, "handler01", NOW))
+                .when().command(advance("act-4", "CLAIM", true, false))
+                .then().events(
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.AWAITING_CLAIM,
+                                TransportStatus.DELIVERED, StatusUpdateSource.HANDLING, "act-4",
+                                "JPTYO", HANDLED, "handler01", NOW),
+                        new CargoDeliveredEvent(NUMBER, "b-1", HANDLED, "JPTYO"));
+    }
+
+    @Test
+    @DisplayName("US16 §4: 引取以外の荷役では精算の開始条件は出さない")
+    void doesNotPublishCargoDeliveredOnOtherHandling() {
+        fixture.given().event(initialized())
+                .when().command(advance("RECEIVE", false, false))
+                .then().events(new TransportStatusUpdatedEvent(NUMBER,
+                        TransportStatus.NOT_RECEIVED, TransportStatus.RECEIVED,
+                        StatusUpdateSource.HANDLING, "act-1", "JPTYO", HANDLED, "handler01", NOW));
     }
 
     @Test

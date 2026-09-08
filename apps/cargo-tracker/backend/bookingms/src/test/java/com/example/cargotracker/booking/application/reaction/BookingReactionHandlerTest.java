@@ -11,6 +11,8 @@ import com.example.cargotracker.booking.infrastructure.projection.AttentionItemR
 import com.example.cargotracker.booking.domain.model.commands.RecordHandlingCommand;
 import com.example.cargotracker.booking.domain.model.commands.RevertHandlingCommand;
 import com.example.cargotracker.shared.contract.command.InitializeTrackingCommand;
+import com.example.cargotracker.booking.domain.model.commands.MarkDeliveredCommand;
+import com.example.cargotracker.shared.contract.event.CargoDeliveredEvent;
 import com.example.cargotracker.shared.contract.event.HandlingActivityRegisteredEvent;
 import com.example.cargotracker.shared.contract.event.HandlingActivityVoidedEvent;
 import com.example.cargotracker.shared.contract.event.TrackingInitializedEvent;
@@ -308,6 +310,17 @@ class BookingReactionHandlerTest {
     private static HandlingActivityRegisteredEvent handled(boolean offRoute) {
         return new HandlingActivityRegisteredEvent("act-1", "TRK-8K2QX7M4RB", "b-1", "UNLOAD",
                 "DEHAM", "V-MOL-001", offRoute, false, "handler01", ISSUED, NOW);
+    }
+
+    @Test
+    @DisplayName("US16 §4: 引取済が届いたら予約を引取済にする（UC14）")
+    void sendsMarkDelivered() {
+        // **購読側は billingms だけではない。** 予約の状態も引取済に進む
+        // （domain-model.md:573）。運んだ値を落とさず渡す。
+        handler.on(new CargoDeliveredEvent("TRK-8K2QX7M4RB", "b-1", ISSUED, "USNYC"));
+
+        assertThat(commands.sent).singleElement()
+                .isEqualTo(new MarkDeliveredCommand("b-1", "TRK-8K2QX7M4RB", ISSUED, "USNYC"));
     }
 
     @Test
