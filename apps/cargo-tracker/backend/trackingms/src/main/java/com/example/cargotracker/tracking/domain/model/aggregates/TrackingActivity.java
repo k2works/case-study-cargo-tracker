@@ -17,6 +17,7 @@ import com.example.cargotracker.tracking.domain.model.events.HandlingNotAppliedE
 import com.example.cargotracker.tracking.domain.model.events.TrackingExceptionRegisteredEvent;
 import com.example.cargotracker.tracking.domain.model.events.TrackingExceptionResolvedEvent;
 import com.example.cargotracker.tracking.domain.model.valueobjects.ExceptionType;
+import com.example.cargotracker.tracking.domain.model.valueobjects.ResponseStatus;
 import com.example.cargotracker.tracking.domain.model.commands.RevertTrackingCommand;
 import com.example.cargotracker.tracking.domain.model.commands.UpdateTransportStatusCommand;
 import com.example.cargotracker.tracking.domain.model.events.TransportStatusRevertedEvent;
@@ -323,6 +324,17 @@ public class TrackingActivity {
             // 進めていないものは戻せない。荷役の取り消しは handlingms に残る。
             return;
         }
+        if (status == TransportStatus.DELIVERED) {
+            // **引取の取り消しは断る**（IT10 レビュー 高）。ここで戻すと、
+            // すでに出した CargoDeliveredEvent を打ち消す手立てが無く、
+            // 予約の配送完了と精算だけが残って追跡が巻き戻る——BC をまたいだ
+            // 食い違いが、しかも誰にも見えないまま残る。
+            // 補償の設計（打ち消しを購読側へ伝える）は IT11。**検査できない段階で
+            // その経路を開けない**（IT9 が CLAIM そのものに下したのと同じ判断）。
+            throw new BusinessRuleViolation(
+                    "引き渡し済みの荷役は取り消せません。精算と予約にも伝わっているため、"
+                            + "取り消しには別の手続きが要ります");
+        }
         if (lastHandlingActivityId != null
                 && !lastHandlingActivityId.equals(command.activityId())) {
             // 最後の荷役ではない。**戻さないことが正しい**——そのあとの荷役で
@@ -351,9 +363,12 @@ public class TrackingActivity {
 
     @EventSourcingHandler
     void on(TrackingExceptionRegisteredEvent event) {
-        exceptions.put(event.exceptionId(), TrackingException.report(event.exceptionId(),
+        // **復元では検査しない**（不変条件の追加は既存行を壊す）。report() に
+        // 新しい必須項目を足した日、過去のイベントを持つ集約が復元できなくなる。
+        // 検査は新規受け入れ（registerException）の側にだけ置く。
+        exceptions.put(event.exceptionId(), new TrackingException(event.exceptionId(),
                 ExceptionType.valueOf(event.exceptionType()), event.occurredAt(),
-                event.unLocode(), event.description()));
+                event.unLocode(), event.description(), ResponseStatus.REPORTED, null, null));
         if (statusBeforeException == null) {
             // **最初の起票の時点を覚える。** 2 件目は例外発生から起票されるので、
             // 上書きすると戻る先が EXCEPTION になる。

@@ -33,6 +33,19 @@ public enum ExceptionType {
     }
 
     /**
+     * 追跡管理者が<b>手で起票してよい種別か</b>（US19 §受入基準 1）。
+     *
+     * <p><b>誤配は荷役が、税関保留は通関が決める。</b> 手で起票できるようにすると、
+     * 起きていない誤配を記録でき、経路設計者はそれを組み直そうとする
+     * （{@code TransportStatus#isSetByHand} と同じ考え方）。</p>
+     *
+     * <p>入口を絞るだけで、種別そのものを禁じるのではない——自動起票は通る。</p>
+     */
+    public boolean reportableByHand() {
+        return this != MISROUTE && this != CUSTOMS_HOLD;
+    }
+
+    /**
      * 緊急か（不変条件 7）。
      *
      * <p><b>紛失だけ。</b> 遅延も破損も業務は続けられるが、見つからない貨物は

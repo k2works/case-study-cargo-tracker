@@ -190,14 +190,33 @@ class TrackingControllerIT extends AbstractAxonIntegrationTest {
                         + trackingNumber + "/status")
                 .header("X-Auth-Username", "tracker01")
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(Map.of("newStatus", "DELIVERED"))
+                // **引取済は使わない**——手で選べる先から外したので（IT10 レビュー 高）、
+                // 遷移表より先に別の理由で断られ、この検査が遷移表を見ていることに
+                // ならない。荷降し済は手で選べるが、未受領からは進めない。
+                .body(Map.of("newStatus", "UNLOADED"))
                 .retrieve().toEntity(JsonMap.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
         assertThat(response.getBody().get("message").toString())
                 .as("断った理由が読めないと、追跡管理者は次に何をすればよいか分からない")
                 .contains("未受領")
-                .contains("引取済");
+                .contains("荷降し済");
+    }
+
+    @Test
+    @DisplayName("引取済は手で入れられない（精算と予約へ伝わらないまま引取済になる）")
+    void refusesManualDelivered() {
+        String trackingNumber = givenAggregate("SHP-000001");
+
+        var response = rest.post()
+                .uri("http://localhost:" + port + "/api/v1/tracking/trackings/"
+                        + trackingNumber + "/status")
+                .header("X-Auth-Username", "tracker01")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("newStatus", "DELIVERED"))
+                .exchange((req, res) -> res.getStatusCode());
+
+        assertThat(response).isEqualTo(HttpStatus.valueOf(422));
     }
 
     @Test
@@ -352,6 +371,27 @@ class TrackingControllerIT extends AbstractAxonIntegrationTest {
                     .noneSatisfy(item ->
                             assertThat(item).containsEntry("exceptionId", exceptionId));
         });
+    }
+
+    @Test
+    @DisplayName("誤配と税関保留は手で起票できない（画面が外していても API では通っていた）")
+    void refusesManuallyReportedAutomaticTypes() {
+        // **IT9 で引取に対して実測した形をそのまま繰り返さない。**
+        String trackingNumber = givenAggregate("SHP-000001");
+
+        for (String type : List.of("MISROUTE", "CUSTOMS_HOLD")) {
+            var response = rest.post()
+                    .uri("http://localhost:" + port + "/api/v1/tracking/trackings/"
+                            + trackingNumber + "/exceptions")
+                    .header("X-Auth-Username", "tracker01")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of("exceptionId", "ex-" + System.nanoTime(),
+                            "exceptionType", type, "description", "手で起票"))
+                    .exchange((req, res) -> res.getStatusCode());
+
+            assertThat(response).as("%s は手で起票できない", type)
+                    .isEqualTo(HttpStatus.valueOf(422));
+        }
     }
 
     @Test

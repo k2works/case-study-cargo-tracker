@@ -114,15 +114,19 @@ public enum TransportStatus {
     /**
      * 追跡管理者が<b>手で選んでよい状態か</b>（US17）。
      *
-     * <p><b>誤配は荷役が、例外発生は例外の起票が決める。</b> 手で選べるようにすると、
-     * 起きていない誤配を記録できてしまう。とくに例外発生は<b>解決の画面が無いあいだ
+     * <p><b>誤配は荷役が、例外発生は例外の起票が決める。引取済は引取の荷役が決める。</b>
+     * 手で選べるようにすると、起きていない誤配を記録できてしまう。とくに例外発生は<b>解決の画面が無いあいだ
      * 行き止まり</b>になる——例外中は手で動かせないので、選んだ人は自分で戻せない。</p>
      *
      * <p>遷移そのものを禁じるのではない（荷役・例外の起票からは入る）。
      * <b>入口を絞る</b>だけである。</p>
      */
     public boolean isSetByHand() {
-        return this != MISROUTED && this != EXCEPTION;
+        // **引取済も手では選べない**（IT10 レビュー 高）。手で動かすと
+        // CargoDeliveredEvent が出ず、billingms の精算も bookingms の配送完了も
+        // 一生始まらない。正典の状態遷移図も AWAITING_CLAIM → DELIVERED は
+        // 引取の荷役（CLAIM）だけを許している。
+        return this != MISROUTED && this != EXCEPTION && this != DELIVERED;
     }
 
     /**

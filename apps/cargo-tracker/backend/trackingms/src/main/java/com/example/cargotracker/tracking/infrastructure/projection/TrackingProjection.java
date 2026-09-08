@@ -134,9 +134,15 @@ public class TrackingProjection {
                 ResponseStatus.REPORTED.name(), event.urgent(), event.unLocode(),
                 // 起票の時点では対応内容も新しい期限も無い。対応開始が書き足す。
                 event.description(), null, null, null, event.occurredAt(), null, now));
-        refreshCounts(event.trackingNumber(),
-                event.statusBeforeException() == null
-                        ? null : event.statusBeforeException().name(), now);
+        // **2 件目以降の起票では上書きしない**（IT10 レビュー 高）。2 件目は
+        // 例外発生から起票されるので、そのまま書くと「解決すると何に戻るか」が
+        // 「例外発生」と出る。集約と同じ判断（最初の起票の時点を覚える）。
+        var current = trackings.findByTrackingNumber(event.trackingNumber());
+        String before = current != null && current.statusBeforeException() != null
+                ? current.statusBeforeException()
+                : (event.statusBeforeException() == null
+                        ? null : event.statusBeforeException().name());
+        refreshCounts(event.trackingNumber(), before, now);
         // **起票と解決は逆向きの出来事。** 同じ印にすると履歴が読めない。
         writeHistory(new HistoryEntry(eventId, event.trackingNumber(),
                 StatusUpdateSource.EXCEPTION.eventType(), event.statusBeforeException(),

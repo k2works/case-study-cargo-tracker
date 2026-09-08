@@ -156,17 +156,37 @@ describe('S43 例外起票（US19 §1）', () => {
     expect(screen.getByRole('button', { name: '起票する' })).toBeEnabled();
   });
 
-  it('起票すると、その追跡の詳細へ戻る', async () => {
-    const posted: string[] = [];
-    respondByUrl({}, (url) => posted.push(url));
+  it('起票すると、入力した内容が送られてその追跡の詳細へ戻る', async () => {
+    // **URL だけを見ない。** 組み立て（種別・場所・発生日時）を潰しても緑になる。
+    const posted: { url: string; body: unknown }[] = [];
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (init?.method === 'POST') {
+        posted.push({ url, body: JSON.parse(String(init.body)) });
+        return new Response(null, { status: 204 });
+      }
+      return new Response(JSON.stringify({ code: 'NOT_FOUND', message: '見つかりません' }),
+        { status: 404 });
+    });
 
     renderReport();
-    await userEvent.selectOptions(await screen.findByLabelText('例外種別'), 'DELAY');
-    await userEvent.type(screen.getByLabelText('発生状況'), '台風で 3 日遅れます');
+    await userEvent.selectOptions(await screen.findByLabelText('例外種別'), 'DAMAGE');
+    await userEvent.type(screen.getByLabelText('発生場所'), 'sgsin');
+    // **業務タイムゾーンの時刻として送る**（UTC 直送だと時差の分ずれる）。
+    await userEvent.type(screen.getByLabelText('発生日時'), '2026-09-20T11:00');
+    await userEvent.type(screen.getByLabelText('発生状況'), '外装が破れています');
     await userEvent.click(screen.getByRole('button', { name: '起票する' }));
 
-    await waitFor(() =>
-      expect(posted.some((url) => url.includes('/TRK-8K2QX7M4RB/exceptions'))).toBe(true));
+    await waitFor(() => expect(posted).toHaveLength(1));
+    const sent = posted[0]?.body as Record<string, unknown>;
+    expect(posted[0]?.url).toContain('/TRK-8K2QX7M4RB/exceptions');
+    expect(sent.exceptionType).toBe('DAMAGE');
+    // 港コードは大文字にして送る（入力の揺れを画面が吸収する）。
+    expect(sent.unLocode).toBe('SGSIN');
+    expect(sent.description).toBe('外装が破れています');
+    expect(String(sent.occurredAt)).toBe('2026-09-20T02:00:00Z');
+    expect(sent.exceptionId).toEqual(expect.any(String));
     expect(await screen.findByRole('heading', { name: '追跡詳細' })).toBeInTheDocument();
+    expect(fetchSpy).toHaveBeenCalled();
   });
 });

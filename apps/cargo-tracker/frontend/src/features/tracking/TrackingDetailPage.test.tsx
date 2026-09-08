@@ -366,6 +366,40 @@ describe('S41 例外の対応（US19 §3・§4 / IT10 T7）', () => {
     expect(screen.queryByRole('button', { name: '対応を始める' })).not.toBeInTheDocument();
   });
 
+  it('US19 §4: 対応を始めると、新しい到着予定日と対応方針が送られる', async () => {
+    // **§4 の唯一の入力経路。** 押して送る検査が無いと、組み立てを潰しても緑。
+    useAuthStore.setState({
+      user: { username: 'tracker01', roles: ['ROLE_TRACKER'], token: 't' },
+    });
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      if (init?.method === 'POST') {
+        return { ok: true, status: 204, text: async () => '' } as Response;
+      }
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify(tracking({
+          status: 'EXCEPTION', statusLabel: '例外発生', nextStatuses: [],
+          exceptions: [openException()],
+        })),
+      } as Response;
+    });
+
+    renderDetail();
+    await userEvent.click(await screen.findByRole('button', { name: '対応を始める' }));
+    await userEvent.type(screen.getByLabelText('新しい到着予定日'), '2026-09-27');
+    await userEvent.type(screen.getByLabelText('対応方針'), '代替便を手配中');
+    await userEvent.click(screen.getByRole('button', { name: '対応の開始を記録する' }));
+
+    await waitFor(() => {
+      const post = fetchSpy.mock.calls.find(([, init]) => init?.method === 'POST');
+      expect(String(post?.[0])).toContain('/exceptions/ex-1/response');
+      const body = JSON.parse(String(post?.[1]?.body));
+      expect(body.newEstimatedArrival).toBe('2026-09-27');
+      expect(body.plan).toBe('代替便を手配中');
+    });
+  });
+
   it('対応内容を入れて解決すると、その内容が送られる', async () => {
     useAuthStore.setState({
       user: { username: 'tracker01', roles: ['ROLE_TRACKER'], token: 't' },

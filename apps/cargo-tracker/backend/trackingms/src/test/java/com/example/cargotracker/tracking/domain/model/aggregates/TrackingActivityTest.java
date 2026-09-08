@@ -202,10 +202,13 @@ class TrackingActivityTest {
     @Test
     @DisplayName("不変条件 2: 正典が許さない遷移は断る")
     void rejectsTransitionsTheCanonForbids() {
-        // 未受領からいきなり引取済にはしない。**集約が判定を書き直さず、
+        // 未受領からいきなり荷降し済にはしない。**集約が判定を書き直さず、
         // TransportStatus#canTransitionTo をそのまま呼ぶ**（判定が 2 つあると片方だけ直る）。
+        // **引取済は使わない**——手で選べる先から外したので（IT10 レビュー 高）、
+        // 遷移表より先に「手では入れられません」で断られ、この検査が
+        // 遷移表を見ていることにならない。
         fixture.given().event(initialized())
-                .when().command(update(TransportStatus.DELIVERED))
+                .when().command(update(TransportStatus.UNLOADED))
                 .then().exception(IllegalTransition.class);
     }
 
@@ -447,6 +450,42 @@ class TrackingActivityTest {
                                 null, "SGSIN", OCCURRED, "tracker01", NOW)))
                 .when().command(registerException(ExceptionType.DELAY))
                 .then().success().noEvents();
+    }
+
+    @Test
+    @DisplayName("引取済へは手で動かせない（精算と予約へ伝わらないまま引取済になる）")
+    void cannotReachDeliveredByHand() {
+        // **決定は経路を 1 度通す。** 手動で引取済にすると CargoDeliveredEvent が
+        // 出ず、billingms の精算も bookingms の配送完了も一生始まらない。
+        // 正典の状態遷移図も AWAITING_CLAIM → DELIVERED は CLAIM だけを許す。
+        fixture.given().events(and(received(),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.RECEIVED,
+                                TransportStatus.LOADED, StatusUpdateSource.HANDLING, "act-2",
+                                "JPTYO", HANDLED, "handler01", NOW),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.LOADED,
+                                TransportStatus.AWAITING_CLAIM, StatusUpdateSource.HANDLING,
+                                "act-3", "USNYC", HANDLED, "handler01", NOW)))
+                .when().command(new UpdateTransportStatusCommand(NUMBER,
+                        TransportStatus.DELIVERED, "USNYC", HANDLED, "tracker01"))
+                .then().exception(BusinessRuleViolation.class);
+    }
+
+    @Test
+    @DisplayName("引取の取り消しは断る（精算と予約の引取済が残ったまま追跡だけ戻る）")
+    void refusesToRevertADeliveredHandling() {
+        // **BC をまたいだ状態が食い違い、しかも誰にも見えない。** 補償の設計
+        // （bookingms・billingms へ打ち消しを伝える）は IT11。検査できない段階で
+        // その経路を開けないという判断は、IT9 が CLAIM そのものに下したのと同じ。
+        fixture.given().events(and(received(),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.RECEIVED,
+                                TransportStatus.AWAITING_CLAIM, StatusUpdateSource.HANDLING,
+                                "act-3", "USNYC", HANDLED, "handler01", NOW),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.AWAITING_CLAIM,
+                                TransportStatus.DELIVERED, StatusUpdateSource.HANDLING,
+                                "act-4", "USNYC", HANDLED, "handler01", NOW)))
+                .when().command(new RevertTrackingCommand(NUMBER, "act-4", "CLAIM", "取り違え",
+                        "handler01", NOW))
+                .then().exception(BusinessRuleViolation.class);
     }
 
     @Test

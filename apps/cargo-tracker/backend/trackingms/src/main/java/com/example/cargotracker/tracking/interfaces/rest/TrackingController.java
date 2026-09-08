@@ -261,13 +261,27 @@ public class TrackingController {
         return ResponseEntity.noContent().build();
     }
 
-    /** 例外種別の名前を型に直す。<b>知らない名前を 500 にしない</b>（入力の誤り）。 */
+    /**
+     * 例外種別の名前を型に直す。<b>知らない名前を 500 にしない</b>（入力の誤り）。
+     *
+     * <p><b>手で起票してよい種別だけを通す。</b> 誤配は荷役が、税関保留は通関が
+     * 決める（{@link ExceptionType#reportableByHand}）。<b>画面が選択肢から
+     * 外していても、この経路を直接叩けば通る</b>——IT9 で引取に対して実測した
+     * 形をそのまま繰り返さない。自動起票は反応ハンドラがコマンドを直接送るので、
+     * ここを通らない。</p>
+     */
     private static ExceptionType exceptionTypeOf(String name) {
+        ExceptionType type;
         try {
-            return ExceptionType.valueOf(name);
+            type = ExceptionType.valueOf(name);
         } catch (IllegalArgumentException e) {
             throw new BusinessRuleViolation("知らない例外種別です: " + name);
         }
+        if (!type.reportableByHand()) {
+            throw new BusinessRuleViolation(
+                    type.label() + "は荷役と通関の記録からシステムが起票します");
+        }
+        return type;
     }
 
     /**
