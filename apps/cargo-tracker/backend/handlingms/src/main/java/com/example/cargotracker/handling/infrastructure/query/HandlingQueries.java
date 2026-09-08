@@ -80,4 +80,21 @@ public final class HandlingQueries {
     /** 予定の旅程の 1 区間。<b>時刻は持たない</b>（[ADR-0012] 決定 4）。 */
     public record LegView(String voyageNumber, String loadUnLocode, String unloadUnLocode) {
     }
+
+    /**
+     * これから作業する航海と港（S02 荷役のダッシュボード）。
+     *
+     * <p><b>件数だけでは仕事が進まない。</b> どの航海のどの港を開けばよいかまで出す
+     * （IT4 の「気づく手段は次の行動へ繋ぐ」）。</p>
+     */
+    public record FindVoyagePortsQuery() {
+    }
+
+    /** 航海と港の組 1 件。 */
+    public record VoyagePortView(String voyageNumber, String unLocode, int cargoCount) {
+    }
+
+    /** 航海と港の一覧。 */
+    public record VoyagePortListView(List<VoyagePortView> items) {
+    }
 }

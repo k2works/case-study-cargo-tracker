@@ -11,7 +11,10 @@ import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.Fi
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.FindHandlingHistoryQuery;
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.HandlingHistoryItemView;
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.HandlingHistoryView;
+import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.FindVoyagePortsQuery;
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.LegView;
+import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.VoyagePortListView;
+import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.VoyagePortView;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -84,5 +87,14 @@ public class HandlingQueryHandler {
                         .map(leg -> new LegView(leg.voyageNumber(), leg.loadUnlocode(),
                                 leg.unloadUnlocode()))
                         .toList());
+    }
+
+    /** これから作業する航海と港（S02 荷役）。 */
+    @QueryHandler
+    public VoyagePortListView handle(FindVoyagePortsQuery query) {
+        return new VoyagePortListView(cargos.findVoyagePorts().stream()
+                .map(row -> new VoyagePortView(row.voyageNumber(), row.unloadUnlocode(),
+                        row.cargoCount()))
+                .toList());
     }
 }

@@ -122,4 +122,17 @@ public final class TrackingQueries {
             String location,
             String recordedBy) {
     }
+
+    /**
+     * 直近で状態が変わった追跡の件数（S02 荷主）。
+     *
+     * <p>US17 §受入基準 4 の「荷主への通知」は送信基盤がスコープ外。<b>荷主が
+     * 自分で気づける手段</b>で代える（IT8 のレビュー指摘）。</p>
+     */
+    public record CountRecentlyChangedQuery(String shipperId, int withinHours) {
+    }
+
+    /** 件数と、その先の一覧への入口。 */
+    public record RecentlyChangedView(int count, int withinHours) {
+    }
 }

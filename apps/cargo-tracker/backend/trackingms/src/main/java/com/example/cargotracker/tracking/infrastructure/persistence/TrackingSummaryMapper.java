@@ -113,6 +113,18 @@ public interface TrackingSummaryMapper {
     int countAll(@Param("shipperId") String shipperId,
             @Param("includeDelivered") boolean includeDelivered);
 
+    /**
+     * 直近で状態が変わった件数（S02 荷主 / US17 §受入基準 4 の代わり）。
+     *
+     * <p><b>荷主には「変わったこと」を知る手段がない。</b> 送信基盤はスコープ外
+     * なので、一覧を毎回見比べるしかなかった（IT8 のレビュー指摘）。件数を出して
+     * 一覧へ繋げば、送信基盤なしで満たせる。</p>
+     */
+    @Select("SELECT count(*) FROM tracking_summary "
+            + "WHERE shipper_id = #{shipperId} AND last_status_changed_at >= #{since}")
+    int countRecentlyChanged(@Param("shipperId") String shipperId,
+            @Param("since") Instant since);
+
     /** 予定の旅程。**積む順**に返す（順序が業務の意味を持つ）。 */
     @Select("SELECT tracking_number, leg_seq, voyage_number, load_unlocode, "
             + "unload_unlocode, load_time, unload_time FROM tracking_leg "

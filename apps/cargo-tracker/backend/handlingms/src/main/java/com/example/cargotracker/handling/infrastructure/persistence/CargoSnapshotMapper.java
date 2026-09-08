@@ -56,6 +56,27 @@ public interface CargoSnapshotMapper {
     List<CargoSnapshotRow> findOnVoyage(@Param("voyageNumber") String voyageNumber,
             @Param("unLocode") String unLocode);
 
+    /**
+     * これから降ろす予定のある航海と港（S02 荷役のダッシュボード）。
+     *
+     * <p><b>航海の一覧は routingms が持つが、荷役ロールはそこを読めない</b>
+     * （`/routing/voyages` は経路設計者だけ）。荷役が見たいのは「自分が扱う貨物が
+     * ある航海」なので、写しから引く。</p>
+     *
+     * <p>キャンセルされた貨物は数えない（作業の対象ではない）。</p>
+     */
+    @Select("SELECT l.voyage_number, l.unload_unlocode, count(*) AS cargo_count "
+            + "FROM cargo_snapshot_leg l JOIN cargo_snapshot s "
+            + "  ON s.tracking_number = l.tracking_number "
+            + "WHERE s.cancelled = FALSE "
+            + "GROUP BY l.voyage_number, l.unload_unlocode "
+            + "ORDER BY l.voyage_number, l.unload_unlocode")
+    List<VoyagePortRow> findVoyagePorts();
+
+    /** 航海と港の組（S02 荷役）。 */
+    record VoyagePortRow(String voyageNumber, String unloadUnlocode, int cargoCount) {
+    }
+
     /** 貨物の写し。Booking / Tracking の型は持ち込まない。 */
     record CargoSnapshotRow(
             String trackingNumber,

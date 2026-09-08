@@ -4,7 +4,9 @@ import com.example.cargotracker.tracking.domain.model.valueobjects.TransportStat
 import com.example.cargotracker.tracking.infrastructure.persistence.TrackingEventMapper;
 import com.example.cargotracker.tracking.infrastructure.persistence.TrackingSummaryMapper;
 import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.FindPublicTrackingQuery;
+import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.CountRecentlyChangedQuery;
 import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.FindTrackingQuery;
+import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.RecentlyChangedView;
 import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.FindTrackingsQuery;
 import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.TrackingEventView;
 import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.TrackingListItemView;
@@ -145,4 +147,13 @@ public class TrackingQueryHandler {
         return shipperId == null || shipperId.equals(row.shipperId());
     }
 
+
+    /** 直近で状態が変わった件数（S02 荷主 / US17 §4 の代わり）。 */
+    @QueryHandler
+    public RecentlyChangedView handle(CountRecentlyChangedQuery query) {
+        var since = java.time.Instant.now().minus(
+                java.time.Duration.ofHours(query.withinHours()));
+        return new RecentlyChangedView(
+                trackings.countRecentlyChanged(query.shipperId(), since), query.withinHours());
+    }
 }

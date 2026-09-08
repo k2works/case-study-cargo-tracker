@@ -111,3 +111,15 @@ export function registerHandling(input: {
 export function voidHandling(activityId: string, reason: string): Promise<void> {
   return commandClient(`/handling/activities/${encodeURIComponent(activityId)}/void`, { reason });
 }
+
+/** これから作業する航海と港（S02 荷役）。 */
+export interface VoyagePortView {
+  readonly voyageNumber: string;
+  readonly unLocode: string;
+  readonly cargoCount: number;
+}
+
+/** これから作業する航海と港の一覧。 */
+export function fetchVoyagePorts(): Promise<Pending<{ items: VoyagePortView[] }>> {
+  return queryClient('/handling/voyages');
+}

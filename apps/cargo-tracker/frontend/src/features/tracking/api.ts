@@ -125,3 +125,19 @@ export function updateTransportStatus(
     occurredAt: input.occurredAt === '' ? null : businessLocalToInstant(input.occurredAt),
   });
 }
+
+/** 直近で状態が変わった追跡の件数（S02 荷主 / US17 §4 の代わり）。 */
+export interface RecentlyChangedView {
+  readonly count: number;
+  readonly withinHours: number;
+}
+
+/**
+ * 直近で状態が変わった件数（S02 荷主）。
+ *
+ * <p>荷主には「変わったこと」を知る手段がなく、一覧を毎回見比べるしかなかった。
+ * 送信基盤なしで満たすための受け皿。</p>
+ */
+export function fetchRecentlyChanged(): Promise<Pending<RecentlyChangedView>> {
+  return queryClient('/tracking/trackings/recently-changed');
+}

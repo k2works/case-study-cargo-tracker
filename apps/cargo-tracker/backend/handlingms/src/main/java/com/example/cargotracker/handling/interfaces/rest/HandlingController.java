@@ -10,7 +10,9 @@ import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.Ca
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.FindCargoSnapshotQuery;
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.FindCargosOnVoyageQuery;
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.FindHandlingHistoryQuery;
+import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.FindVoyagePortsQuery;
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.HandlingHistoryView;
+import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.VoyagePortListView;
 import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.shared.domain.location.Location;
 import com.example.cargotracker.shared.infrastructure.axon.QueryDispatcher;
@@ -76,6 +78,18 @@ public class HandlingController {
 
     /** 取り消し（S50 の送信済みの行）。 */
     public record VoidRequest(@NotBlank(message = "理由は必須です") String reason) {
+    }
+
+    /**
+     * これから作業する航海と港（S02 荷役のダッシュボード）。
+     *
+     * <p><b>件数だけでは仕事が進まない。</b> 現場は追跡番号を持っていないので、
+     * 航海と港から入れないと S50 が始まらない（IT4 の「気づく手段は次の行動へ繋ぐ」）。</p>
+     */
+    @GetMapping("/voyages")
+    public ResponseEntity<VoyagePortListView> voyagePorts() {
+        return ResponseEntity.ok(queries.query(
+                new FindVoyagePortsQuery(), VoyagePortListView.class));
     }
 
     /** この航海がこの港で降ろす貨物（S50 の起点）。 */

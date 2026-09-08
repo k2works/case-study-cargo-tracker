@@ -3,7 +3,9 @@ package com.example.cargotracker.tracking.interfaces.rest;
 import com.example.cargotracker.shared.infrastructure.axon.QueryDispatcher;
 import com.example.cargotracker.tracking.domain.model.commands.UpdateTransportStatusCommand;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TransportStatus;
+import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.CountRecentlyChangedQuery;
 import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.FindTrackingQuery;
+import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.RecentlyChangedView;
 import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.FindTrackingsQuery;
 import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.TrackingListView;
 import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.TrackingView;
@@ -105,6 +107,26 @@ public class TrackingController {
         // **荷主 ID が来ていれば、ロールが読めなくても絞る。** どちらか一方が
         // 欠けたときに広い側へ倒すと、欠けさせるだけで他社の追跡が見える。
         return hasShipperId ? shipperId : null;
+    }
+
+    /**
+     * 直近で状態が変わった件数（S02 荷主）。
+     *
+     * <p>US17 §受入基準 4 の「荷主への通知」は送信基盤がスコープ外。<b>荷主が
+     * 自分で気づける手段</b>で代える。</p>
+     */
+    @GetMapping("/recently-changed")
+    public ResponseEntity<RecentlyChangedView> recentlyChanged(
+            @RequestHeader(value = "X-Auth-Shipper-Id", required = false) String shipperId,
+            @RequestHeader(value = "X-Auth-Roles", required = false) String roles,
+            @RequestParam(defaultValue = "24") int withinHours) {
+        String shipper = shipperOf(roles, shipperId);
+        if (shipper == null) {
+            // 追跡管理者は全社を見るので、この受け皿は要らない（自分の仕事ではない）。
+            return ResponseEntity.ok(new RecentlyChangedView(0, withinHours));
+        }
+        return ResponseEntity.ok(queries.query(
+                new CountRecentlyChangedQuery(shipper, withinHours), RecentlyChangedView.class));
     }
 
     /**

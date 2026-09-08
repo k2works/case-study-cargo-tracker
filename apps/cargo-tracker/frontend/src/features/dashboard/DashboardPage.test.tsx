@@ -39,6 +39,16 @@ function mockApi(
       return Promise.resolve(
         new Response(JSON.stringify({ items: awaitingConfirmation }), { status: 200 }));
     }
+    if (url.includes('/handling/voyages')) {
+      return Promise.resolve(new Response(JSON.stringify({
+        items: [{ voyageNumber: 'V-MOL-001', unLocode: 'SGSIN', cargoCount: 12 }],
+      }), { status: 200 }));
+    }
+    if (url.includes('/recently-changed')) {
+      return Promise.resolve(new Response(JSON.stringify({
+        count: 3, withinHours: 24,
+      }), { status: 200 }));
+    }
     if (url.includes('/awaiting-tracking-number')) {
       return Promise.resolve(
         new Response(JSON.stringify({ items: awaitingTracking }), { status: 200 }));
@@ -206,5 +216,31 @@ describe('S02 ダッシュボード', () => {
     await screen.findByRole('heading', { name: '今日の作業' });
 
     expect(screen.queryByText(/荷主へ通知していない/)).not.toBeInTheDocument();
+  });
+
+  it('荷役には本日の航海を出し、その航海の画面へ直接繋ぐ（IT9）', async () => {
+    // **件数だけでは仕事が進まない。** 追跡番号は現場が持っていないので、
+    // 航海と港から入れないと画面が始まらない。
+    renderAs(['ROLE_HANDLER']);
+
+    const link = await screen.findByRole('link', { name: /V-MOL-001/ });
+    expect(link).toHaveAttribute('href', '/handling/voyages/V-MOL-001?unLocode=SGSIN');
+    expect(link).toHaveTextContent('12 本');
+  });
+
+  it('荷主には「変わったこと」を知らせ、一覧へ繋ぐ（IT9 / US17 §4 の代わり）', async () => {
+    // 荷主には通知が届かない（送信基盤はスコープ外）。一覧を毎回見比べるしかなかった。
+    renderAs(['ROLE_SHIPPER']);
+
+    expect(await screen.findByText(/3 件の貨物の状態が変わりました/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '追跡一覧で確かめる' }))
+      .toHaveAttribute('href', '/tracking');
+  });
+
+  it('荷役以外に本日の航海は出さない（その人の仕事ではない）', async () => {
+    renderAs(['ROLE_SALES']);
+
+    await screen.findByText('今日の作業');
+    expect(screen.queryByText('本日の航海')).not.toBeInTheDocument();
   });
 });

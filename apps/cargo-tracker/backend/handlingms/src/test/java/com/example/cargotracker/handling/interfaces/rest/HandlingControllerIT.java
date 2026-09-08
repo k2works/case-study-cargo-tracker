@@ -258,4 +258,26 @@ class HandlingControllerIT extends AbstractAxonIntegrationTest {
 
         assertThat(register(body).getStatusCode()).isEqualTo(HttpStatus.valueOf(422));
     }
+
+    @Test
+    @DisplayName("S02 荷役: 作業する航海と港を引ける（追跡番号を持たない現場の入口）")
+    void listsVoyagePortsForTheDashboard() {
+        // **件数だけでは仕事が進まない。** ここから S50 の航海起点に入る。
+        String trackingNumber = givenCargo();
+
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
+            var response = rest.get().uri(url("/voyages"))
+                    .retrieve().toEntity(JsonMap.class);
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> items =
+                    (List<Map<String, Object>>) response.getBody().get("items");
+            var sgsin = items.stream()
+                    .filter(item -> "V-MOL-001".equals(item.get("voyageNumber"))
+                            && "SGSIN".equals(item.get("unLocode")))
+                    .findFirst();
+            assertThat(sgsin).as("写しに入れた %s の区間が出ない", trackingNumber).isPresent();
+            assertThat((Integer) sgsin.orElseThrow().get("cargoCount")).isPositive();
+        });
+    }
 }

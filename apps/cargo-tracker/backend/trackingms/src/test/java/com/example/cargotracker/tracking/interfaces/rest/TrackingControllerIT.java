@@ -273,4 +273,29 @@ class TrackingControllerIT extends AbstractAxonIntegrationTest {
         assertThat(get("/api/v1/tracking/trackings?limit=-1", null).getStatusCode())
                 .isEqualTo(HttpStatus.OK);
     }
+
+    @Test
+    @DisplayName("S02 荷主: 直近で状態が変わった件数を自社分だけ数える")
+    void countsRecentlyChangedForTheShipperOnly() {
+        // **荷主には通知が届かない**（送信基盤はスコープ外）。件数で気づかせて一覧へ繋ぐ。
+        String mine = "SHP-RC0001";
+        given(mine);
+        given("SHP-RC0002");
+
+        var response = get("/api/v1/tracking/trackings/recently-changed?withinHours=100000", mine);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat((Integer) response.getBody().get("count")).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("S02 追跡管理者にはこの受け皿を出さない（自分の仕事ではない）")
+    void doesNotCountForTrackers() {
+        given("SHP-RC0003");
+
+        var response = get("/api/v1/tracking/trackings/recently-changed?withinHours=100000", null);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat((Integer) response.getBody().get("count")).isZero();
+    }
 }

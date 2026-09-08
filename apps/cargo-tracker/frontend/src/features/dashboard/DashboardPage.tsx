@@ -10,6 +10,8 @@ import {
   fetchConditionReviews,
 } from '@/features/bookings/api';
 import { formatBusinessDateTime } from '@/shared/api/businessDate';
+import { fetchVoyagePorts } from '@/features/handling/api';
+import { fetchRecentlyChanged } from '@/features/tracking/api';
 
 /** S02 ダッシュボード。「今日の作業」からその日の入口へ行けるようにする。 */
 export function DashboardPage() {
@@ -17,6 +19,24 @@ export function DashboardPage() {
   const items = user ? navigationFor(user.roles).filter((i) => i.path !== '/') : [];
   const isRouting = user?.roles.includes('ROLE_ROUTING') ?? false;
   const isSales = user?.roles.includes('ROLE_SALES') ?? false;
+  const isHandler = user?.roles.includes('ROLE_HANDLER') ?? false;
+  const isShipper = user?.roles.includes('ROLE_SHIPPER') ?? false;
+
+  // **荷役は航海から始まる。** 追跡番号は現場が持っていないので、
+  // 「今日どの船のどの港を扱うか」を出さないと画面に入れない。
+  const { data: voyagePorts } = useQuery({
+    queryKey: ['handling-voyage-ports'],
+    queryFn: fetchVoyagePorts,
+    enabled: isHandler,
+  });
+
+  // **荷主には「変わったこと」を知る手段がない**（送信基盤はスコープ外）。
+  // 件数を出して一覧へ繋ぐ（US17 §受入基準 4 の代わり。IT8 のレビュー指摘）。
+  const { data: recentlyChanged } = useQuery({
+    queryKey: ['tracking-recently-changed'],
+    queryFn: fetchRecentlyChanged,
+    enabled: isShipper,
+  });
 
   // US04 §受入基準 5・US06 §受入基準 3 の「通知」。送信基盤はスコープ外なので、
   // 担当者はここで気づく（ユーザーストーリーの通知に関する注記）。
@@ -182,6 +202,43 @@ export function DashboardPage() {
             経路設計作業一覧を開く
           </Link>
         </p>
+      )}
+
+      {/* 荷役の入口。**件数だけでは仕事が進まない**ので、その航海の画面へ直接繋ぐ。 */}
+      {isHandler && voyagePorts?.state === 'ready' && (
+        <section className="mt-6">
+          <h2 className={SECTION_TITLE}>本日の航海</h2>
+          {voyagePorts.value.items.length === 0 ? (
+            <output className={`${NOTICE} mt-3`}>
+              扱う貨物のある航海はありません。追跡番号が発行されると、ここに並びます。
+            </output>
+          ) : (
+            <ul className={`${CARD} mt-3 divide-y divide-gray-100`}>
+              {voyagePorts.value.items.map((item) => (
+                <li key={`${item.voyageNumber}-${item.unLocode}`} className="py-2">
+                  <Link
+                    to={`/handling/voyages/${item.voyageNumber}?unLocode=${item.unLocode}`}
+                    className={LINK}
+                  >
+                    {item.voyageNumber}{'\u3000'}{item.unLocode}（{item.cargoCount} 本）
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
+      {/* 荷主が「変わったこと」に気づく手段。**そこから一覧へ行ける**。 */}
+      {isShipper && recentlyChanged?.state === 'ready'
+        && recentlyChanged.value.count > 0 && (
+        <output className={`${NOTICE} mt-6 block`}>
+          この {recentlyChanged.value.withinHours} 時間で
+          {recentlyChanged.value.count} 件の貨物の状態が変わりました。
+          <Link to="/tracking" className={`${LINK} ml-1`}>
+            追跡一覧で確かめる
+          </Link>
+        </output>
       )}
 
       <h2 className={`${SECTION_TITLE} mt-6`}>今日の作業</h2>
