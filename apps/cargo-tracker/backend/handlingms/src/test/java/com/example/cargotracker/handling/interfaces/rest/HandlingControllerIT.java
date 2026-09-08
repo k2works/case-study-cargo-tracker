@@ -280,4 +280,41 @@ class HandlingControllerIT extends AbstractAxonIntegrationTest {
             assertThat((Integer) sgsin.orElseThrow().get("cargoCount")).isPositive();
         });
     }
+
+    @Test
+    @DisplayName("不変条件 5: 同じ内容の記録が 5 分以内にあれば断る（読取機の二度打ち）")
+    void rejectsRecentDuplicates() {
+        // **冪等キーとは別の守り。** あちらは同じ送信の重複を、こちらは
+        // 別々の送信で同じ内容の重複を断る（読取機の二度打ち、2 人が同じ貨物）。
+        String trackingNumber = givenCargo();
+        assertThat(register(request(trackingNumber, "RECEIVE", "JPTYO")).getStatusCode())
+                .isEqualTo(HttpStatus.CREATED);
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
+            var history = rest.get().uri(url("/" + trackingNumber + "/activities"))
+                    .retrieve().toEntity(JsonMap.class);
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> items =
+                    (List<Map<String, Object>>) history.getBody().get("items");
+            assertThat(items).hasSize(1);
+        });
+
+        // 別の activityId（＝別の送信）で同じ内容を送る。
+        var second = register(request(trackingNumber, "RECEIVE", "JPTYO"));
+
+        assertThat(second.getStatusCode()).isEqualTo(HttpStatus.valueOf(422));
+        assertThat(String.valueOf(second.getBody().get("message"))).contains("5 分以内");
+    }
+
+    @Test
+    @DisplayName("引取はまだ記録できない（荷受人確認と通関の検査は IT10）")
+    void rejectsClaimUntilItsRequirementsCanBeChecked() {
+        // **引取を通すと貨物状態が引取済——精算の開始条件——まで進み、戻せない。**
+        // 画面は選択肢から外しているが、API を直接叩けば通っていた（IT9 レビュー）。
+        String trackingNumber = givenCargo();
+
+        var response = register(request(trackingNumber, "CLAIM", "USNYC"));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.valueOf(422));
+        assertThat(String.valueOf(response.getBody().get("message"))).contains("荷受人の確認");
+    }
 }

@@ -72,6 +72,17 @@ public class HandlingActivity {
             // 未来の作業は起きていない。過去は通す（後から入れる運用がある）。
             throw new BusinessRuleViolation("作業日時に未来は指定できません");
         }
+        // **引取は本 IT では受け付けない**（不変条件 4・US16 は IT10）。
+        // 引取を通すと貨物状態が `DELIVERED`——精算の開始条件——まで一気に進み、
+        // そこからは戻せない。荷受人の確認と通関の検査を実装できていない段階で
+        // その先へ進める経路を開けておくと、**画面が選択肢から外していても
+        // API を直接叩けば通る**（実際に開いていた。IT9 のレビューで発見）。
+        if (command.type().requiresConsigneeConfirmation()
+                || command.type().requiresCustomsClearance()) {
+            throw new BusinessRuleViolation(
+                    command.type().label() + "は荷受人の確認と通関の検査が要るため、"
+                            + "まだ記録できません");
+        }
         // 要件は種別自身が持つ。呼び出し側に種別ごとの分岐を書かせない。
         if (command.type().requiresVoyageNumber()
                 && (command.voyageNumber() == null || command.voyageNumber().isBlank())) {

@@ -129,6 +129,18 @@ public class HandlingSteps {
                 .body(body).retrieve().toBodilessEntity();
     }
 
+    @もし("別の活動 ID で同じ内容を続けて記録する")
+    public void 別の活動IDで同じ内容を続けて記録する() {
+        // **冪等キーとは別の守り。** 読取機の二度打ちや、2 人が同じ貨物を
+        // 記録したときを断る（不変条件 5）。
+        assertThat(register("UNLOAD", PORT, trackingNumber, null).getStatusCode())
+                .isEqualTo(HttpStatus.CREATED);
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
+                assertThat(history()).hasSize(1));
+
+        lastResponse = register("UNLOAD", PORT, trackingNumber, null);
+    }
+
     @もし("未来の日時で記録する")
     public void 未来の日時で記録する() {
         lastResponse = register("UNLOAD", PORT, trackingNumber,

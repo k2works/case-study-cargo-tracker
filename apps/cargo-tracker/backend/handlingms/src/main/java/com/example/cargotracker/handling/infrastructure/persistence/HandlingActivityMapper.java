@@ -53,6 +53,29 @@ public interface HandlingActivityMapper {
     List<HandlingActivityRow> findOnVoyage(@Param("voyageNumber") String voyageNumber,
             @Param("unLocode") String unLocode, @Param("limit") int limit);
 
+    /**
+     * 同じ内容の記録が直近にあるか（不変条件 5）。
+     *
+     * <p><b>集約では守れない。</b> 1 作業 1 集約なので、集約は他の作業を知らない
+     * （`activityId` が違えば別の集約になる）。同じ貨物・同じ種別・同じ港の記録が
+     * 短い間隔で 2 件あるのは、読取機の二度打ちか、2 人が同じ貨物を記録したとき
+     * ——現場では起きる。判定に他の作業が要るので、旅程を引く層（application）で
+     * 解決する（`isOffRoute` と同じ置き場所）。</p>
+     *
+     * <p>取り消した記録は数えない。取り消したのは「無かったことにする」ためではなく
+     * 「やり直す」ためで、やり直しを重複として断ると現場が進めなくなる。</p>
+     */
+    @Select("SELECT count(*) FROM handling_activity "
+            + "WHERE tracking_number = #{trackingNumber} "
+            + "  AND handling_type = #{handlingType} "
+            + "  AND unlocode = #{unLocode} "
+            + "  AND voided = FALSE "
+            + "  AND completed_at >= #{since}")
+    int countRecentDuplicates(@Param("trackingNumber") String trackingNumber,
+            @Param("handlingType") String handlingType,
+            @Param("unLocode") String unLocode,
+            @Param("since") Instant since);
+
     /** 記録の 1 行。 */
     record HandlingActivityRow(
             String activityId,

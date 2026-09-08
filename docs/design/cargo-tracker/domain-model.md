@@ -1005,7 +1005,7 @@ CustomsDeclaration *-- CustomsStatus
 | 2 | 場所の照合は `CargoSnapshot#isOffRoute` が答え、application 層が結果を `RegisterHandlingActivityCommand.offRoute` に載せる（Axon のコマンドハンドラは読み取りモデルを引数に取れない）。集約は載った値を再検査し（種別と場所の組がスナップショットの旅程と食い違えば拒否）、**一致しなくても記録は拒まない**（現場ではすでに作業が終わっている） |
 | 3 | 旅程が無い貨物の `LOAD` / `UNLOAD` は `offRoute` とする（分からないときは予定外に倒す） |
 | 4 | `CLAIM` はコマンドに載った `customsStatus` が `CLEARED` のときだけ登録できる。**拒否時は判定に使った通関状態と時点（`customsStatus`, `customsStatusAsOf`）を返す**。画面はこれを「直近で変わった可能性があります」と再確認ボタンに使う（US29・H17） |
-| 5 | 同一 `activityId` の再送は冪等（二重登録せず、同じ応答を返す）。`activityId` が違っても同一追跡番号・同一種別・同一場所・5 分以内の重複登録は拒否する |
+| 5 | 同一 `activityId` の再送は冪等（二重登録せず、同じ応答を返す。**集約が守る**）。`activityId` が違っても同一追跡番号・同一種別・同一場所・5 分以内の重複登録は拒否する（**application 層が守る**——1 作業 1 集約なので集約は他の作業を知らない。IT9 で判明） |
 | 6 | `completedAt` は登録時刻以前。港のローカル時刻で受け取り、`Instant` に変換して保持する |
 | 7 | 取り消し（`void`）は元の記録を残したまま `voided = true` にする。取り消し済みの再取り消しは拒否する。理由は必須 |
 

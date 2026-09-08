@@ -5,6 +5,7 @@ import com.example.cargotracker.handling.domain.model.commands.VoidHandlingActiv
 import com.example.cargotracker.handling.domain.model.valueobjects.CargoSnapshot;
 import com.example.cargotracker.handling.domain.model.valueobjects.HandlingType;
 import com.example.cargotracker.handling.infrastructure.persistence.CargoSnapshotMapper;
+import com.example.cargotracker.handling.infrastructure.persistence.HandlingActivityMapper;
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.CargoOnVoyageListView;
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.CargoSnapshotView;
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.FindCargoSnapshotQuery;
@@ -20,6 +21,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import java.net.URI;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import org.axonframework.messaging.commandhandling.gateway.CommandGateway;
@@ -51,13 +53,23 @@ public class HandlingController {
     private final CommandGateway commands;
     private final QueryDispatcher queries;
     private final CargoSnapshotMapper cargos;
+    private final HandlingActivityMapper activities;
     private final Clock clock;
 
+    /**
+     * 同じ内容の記録を断る間隔（不変条件 5）。
+     *
+     * <p>読取機の二度打ちと、2 人が同じ貨物を記録したときを断る。長くすると
+     * 「同じ港で降ろして積み直す」正当な作業まで断ってしまう。</p>
+     */
+    private static final Duration DUPLICATE_WINDOW = Duration.ofMinutes(5);
+
     public HandlingController(CommandGateway commands, QueryDispatcher queries,
-            CargoSnapshotMapper cargos, Clock clock) {
+            CargoSnapshotMapper cargos, HandlingActivityMapper activities, Clock clock) {
         this.commands = commands;
         this.queries = queries;
         this.cargos = cargos;
+        this.activities = activities;
         this.clock = clock;
     }
 
@@ -131,6 +143,9 @@ public class HandlingController {
         HandlingType type = typeOf(request.handlingType());
         String unLocode = request.unLocode().toUpperCase(java.util.Locale.ROOT);
         CargoSnapshot snapshot = snapshotOf(request.trackingNumber());
+        Instant completedAt = request.completedAt() == null
+                ? clock.instant() : request.completedAt();
+        rejectRecentDuplicate(snapshot.trackingNumber(), type, unLocode, completedAt);
 
         commands.sendAndWait(new RegisterHandlingActivityCommand(request.activityId(),
                 snapshot.trackingNumber(), snapshot.bookingId(), type, unLocode,
@@ -138,13 +153,34 @@ public class HandlingController {
                 // **判定は CargoSnapshot が答える。** ここに書き直さない。
                 snapshot.isOffRoute(type, Location.of(unLocode)),
                 Location.of(unLocode).equals(snapshot.destination()),
-                username,
-                // 入力されなければ「いま」。後から入れるときだけ日時を指定する。
-                request.completedAt() == null ? clock.instant() : request.completedAt()),
+                username, completedAt),
                 String.class);
 
         return ResponseEntity.created(URI.create(
                 "/api/v1/handling/activities/" + request.activityId())).build();
+    }
+
+    /**
+     * 同じ内容の記録が直近にあれば断る（不変条件 5）。
+     *
+     * <p><b>集約では守れないのでここに置く。</b> 1 作業 1 集約で、集約は他の作業を
+     * 知らない（`activityId` が違えば別の集約）。判定に他の作業が要る規則は、
+     * 旅程を引くのと同じ層で解決する。<b>正典（data-model）は「集約が守る」と
+     * 書いていたが実装できない</b>——IT9 のレビューで分かり、正典を直した。</p>
+     *
+     * <p>冪等キー（同一 `activityId` の再送）とは別の守り。あちらは<b>同じ送信</b>
+     * の重複を、こちらは<b>別々の送信で同じ内容</b>の重複を断る。</p>
+     */
+    private void rejectRecentDuplicate(String trackingNumber, HandlingType type,
+            String unLocode, Instant completedAt) {
+        int recent = activities.countRecentDuplicates(trackingNumber, type.name(), unLocode,
+                completedAt.minus(DUPLICATE_WINDOW));
+        if (recent > 0) {
+            throw new BusinessRuleViolation(
+                    "同じ貨物の" + type.label() + "が " + DUPLICATE_WINDOW.toMinutes()
+                            + " 分以内に記録されています。取り違えでなければ、"
+                            + "前の記録を取り消してから記録し直してください");
+        }
     }
 
     /** 記録を取り消す（S50 の送信済みの行 / 不変条件 7）。 */
