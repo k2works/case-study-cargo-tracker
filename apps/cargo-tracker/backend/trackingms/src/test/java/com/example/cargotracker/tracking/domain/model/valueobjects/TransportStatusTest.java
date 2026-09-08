@@ -152,6 +152,6 @@ class TransportStatusTest {
     void rejectsUnknownHandlingTypes() {
         // 素通りさせると、貨物状態が動かないまま荷役だけが記録される。
         assertThatThrownBy(() -> TransportStatus.afterHandling("CUSTOMS", false, false))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(IllegalStateException.class);
     }
 }

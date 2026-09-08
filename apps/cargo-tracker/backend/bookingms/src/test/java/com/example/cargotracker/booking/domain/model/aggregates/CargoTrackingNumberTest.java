@@ -208,7 +208,7 @@ class CargoTrackingNumberTest {
         return events;
     }
 
-    private static RecordHandlingCommand record(boolean offRoute) {
+    private static RecordHandlingCommand recordHandling(boolean offRoute) {
         return new RecordHandlingCommand("B-0001", "act-1", "RECEIVE", "JPTYO", offRoute,
                 HANDLED);
     }
@@ -217,7 +217,7 @@ class CargoTrackingNumberTest {
     @DisplayName("US15 §4: 最初の受領で予約が輸送中になる")
     void firstReceiveMovesToInTransit() {
         fixture.given().events(trackingIssued())
-                .when().command(record(false))
+                .when().command(recordHandling(false))
                 .then().events(new HandlingRecordedEvent("B-0001", "act-1", "RECEIVE",
                         "JPTYO", HANDLED, NOW));
     }
@@ -226,7 +226,7 @@ class CargoTrackingNumberTest {
     @DisplayName("不変条件 12: 予定ルート外の荷役で経路設計が誤配になる")
     void marksMisroutedOnOffRouteHandling() {
         fixture.given().events(trackingIssued())
-                .when().command(record(true))
+                .when().command(recordHandling(true))
                 .then().events(
                         new HandlingRecordedEvent("B-0001", "act-1", "RECEIVE", "JPTYO",
                                 HANDLED, NOW),
@@ -265,7 +265,7 @@ class CargoTrackingNumberTest {
     @DisplayName("知らない予約の荷役では止まらない（後続の荷役まで届かなくなる）")
     void doesNotFailForUnknownBooking() {
         fixture.given().noPriorActivity()
-                .when().command(record(false))
+                .when().command(recordHandling(false))
                 .then().success().noEvents();
     }
 }

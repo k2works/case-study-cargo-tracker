@@ -16,6 +16,7 @@ import com.example.cargotracker.shared.testing.AbstractAxonIntegrationTest;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -43,7 +44,7 @@ class CargoHandlingProjectionIT extends AbstractAxonIntegrationTest {
     /** 予約を作る（CargoProjectionIT と同じ形の最小データ）。 */
     private static CargoBookedEvent booked(String bookingId, String shipperId, String product) {
         return new CargoBookedEvent(bookingId, shipperId, "JPTYO", "USNYC",
-                LocalDate.of(2026, 12, 1), "GENERAL", new BigDecimal("1200"),
+                LocalDate.of(2026, Month.DECEMBER, 1), "GENERAL", new BigDecimal("1200"),
                 new BigDecimal("120"), new BigDecimal("80"), new BigDecimal("100"), 10,
                 product, null, null, null, null, "sales01");
     }

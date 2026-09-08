@@ -83,7 +83,8 @@ public enum TransportStatus {
             // **知らない種別を黙って通さない。** 契約に値が増えたのに
             // こちらが追随していない、という状態を素通りさせると、
             // 貨物状態が動かないまま荷役だけが記録される。
-            default -> throw new IllegalArgumentException("知らない荷役種別です: " + handlingType);
+            // **業務の判断ではなくこちらの追随漏れ**なので IllegalState。
+            default -> throw new IllegalStateException("知らない荷役種別です: " + handlingType);
         };
     }
 

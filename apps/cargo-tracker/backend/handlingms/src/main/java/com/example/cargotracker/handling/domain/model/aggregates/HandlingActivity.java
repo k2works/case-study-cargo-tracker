@@ -72,7 +72,7 @@ public class HandlingActivity {
             // 未来の作業は起きていない。過去は通す（後から入れる運用がある）。
             throw new BusinessRuleViolation("作業日時に未来は指定できません");
         }
-        // 要件は種別自身が持つ。呼び出し側に if (type == LOAD) を書かせない。
+        // 要件は種別自身が持つ。呼び出し側に種別ごとの分岐を書かせない。
         if (command.type().requiresVoyageNumber()
                 && (command.voyageNumber() == null || command.voyageNumber().isBlank())) {
             throw new BusinessRuleViolation(

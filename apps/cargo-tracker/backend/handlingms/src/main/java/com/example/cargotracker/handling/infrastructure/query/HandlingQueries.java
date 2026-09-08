@@ -87,7 +87,7 @@ public final class HandlingQueries {
      * <p><b>件数だけでは仕事が進まない。</b> どの航海のどの港を開けばよいかまで出す
      * （IT4 の「気づく手段は次の行動へ繋ぐ」）。</p>
      */
-    public record FindVoyagePortsQuery() {
+    public record FindVoyagePortsQuery() { // NOSONAR: 型が問い合わせの識別子
     }
 
     /** 航海と港の組 1 件。 */
