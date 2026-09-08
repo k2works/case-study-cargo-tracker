@@ -92,6 +92,20 @@ class HandlingActivityTest {
     }
 
     @Test
+    @DisplayName("不変条件 6: いまちょうどの作業日時は通す（境界。isAfter を !isBefore にすると赤）")
+    void acceptsCompletionTimeExactlyNow() {
+        // **境界が未固定だと、判定を「以後は拒む」に変異させても緑になる。**
+        // 現場は作業を終えた直後に記録する——ちょうどいまを拒むと、
+        // その瞬間に押した記録が通らない。
+        var justNow = new RegisterHandlingActivityCommand(ACTIVITY, "TRK-8K2QX7M4RB", "b-1",
+                HandlingType.UNLOAD, "SGSIN", "V-MOL-001", false, false, "handler01", NOW);
+
+        fixture.given().noPriorActivity()
+                .when().command(justNow)
+                .then().success();
+    }
+
+    @Test
     @DisplayName("不変条件 6: 過去の作業日時は通す（通信不能時は紙に控えて後から入れる）")
     void acceptsPastCompletionTime() {
         var past = new RegisterHandlingActivityCommand(ACTIVITY, "TRK-8K2QX7M4RB", "b-1",

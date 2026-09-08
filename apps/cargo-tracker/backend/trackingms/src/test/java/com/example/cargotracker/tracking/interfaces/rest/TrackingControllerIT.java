@@ -52,13 +52,18 @@ class TrackingControllerIT extends AbstractAxonIntegrationTest {
             .build();
 
     private String given(String shipperId) {
+        return given(shipperId, Instant.parse("2026-09-08T01:00:00Z"));
+    }
+
+    /** 状態が最後に変わった時刻を指定して作る（時間窓の検査に要る）。 */
+    private String given(String shipperId, Instant lastChangedAt) {
         String trackingNumber = "TRK-T" + System.nanoTime() % 1000000000L;
         projection.on(new TrackingInitializedEvent(trackingNumber, "b-" + System.nanoTime(),
                 shipperId, "JPTYO", "USNYC", "GENERAL",
                 List.of(new TrackingInitializedEvent.Leg("V-MOL-001", "JPTYO", "USNYC",
                         Instant.parse("2026-09-10T09:00:00Z"),
                         Instant.parse("2026-09-24T18:00:00Z"))),
-                Instant.parse("2026-09-08T01:00:00Z")));
+                lastChangedAt));
         return trackingNumber;
     }
 
@@ -286,6 +291,24 @@ class TrackingControllerIT extends AbstractAxonIntegrationTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat((Integer) response.getBody().get("count")).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("S02 荷主: 時間窓の外で状態が変わったものは数えない（既定の 24 時間）")
+    void doesNotCountChangesOutsideTheWindow() {
+        // **IT9 の検査は withinHours=100000 で窓を無効化していた。** それでは
+        // since を業務タイムゾーンの時計から出す実装を潰しても緑になる。
+        String mine = "SHP-RC0004";
+        given(mine, Instant.now().minus(Duration.ofHours(1)));
+        given(mine, Instant.now().minus(Duration.ofDays(30)));
+
+        var response = get("/api/v1/tracking/trackings/recently-changed", mine);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat((Integer) response.getBody().get("count"))
+                .as("30 日前の変更は「直近 24 時間」ではない")
+                .isEqualTo(1);
+        assertThat((Integer) response.getBody().get("withinHours")).isEqualTo(24);
     }
 
     @Test

@@ -214,6 +214,37 @@ class EveryServiceEndpointIsRoutedAndProtectedTest {
     }
 
     @Test
+    @DisplayName("荷役の記録と取消は荷役ロールだけ（履歴は追跡も読める）")
+    void handlingWritesAreForHandlersOnly() {
+        // **IT9 の宣言はメソッドを見ていなかった。** 荷役履歴を
+        // {荷役, 追跡} に開いたので、同じ経路への書き込みも追跡に開いていた。
+        List<String> tracker = List.of("ROLE_TRACKER");
+        List<String> handler = List.of("ROLE_HANDLER");
+        String history = "/api/v1/handling/TRK-8K2QX7M4RB/activities";
+
+        assertThat(RoleAuthorization.isAllowed("GET", history, tracker))
+                .as("追跡管理者は問い合わせを受けたときに現場の記録を読む")
+                .isTrue();
+        assertThat(RoleAuthorization.isAllowed("POST", history, tracker))
+                .as("追跡管理者は荷役を記録しない")
+                .isFalse();
+        assertThat(RoleAuthorization.isAllowed("POST", "/api/v1/handling/activities", handler))
+                .as("荷役作業員は記録できる")
+                .isTrue();
+        assertThat(RoleAuthorization.isAllowed("POST", "/api/v1/handling/activities", tracker))
+                .as("追跡管理者は記録できない")
+                .isFalse();
+        assertThat(RoleAuthorization.isAllowed(
+                        "POST", "/api/v1/handling/activities/act-1/void", handler))
+                .as("荷役作業員は取り消せる")
+                .isTrue();
+        assertThat(RoleAuthorization.isAllowed(
+                        "POST", "/api/v1/handling/activities/act-1/void", tracker))
+                .as("追跡管理者は取り消せない")
+                .isFalse();
+    }
+
+    @Test
     @DisplayName("宣言が実際にある（検査が空振りしていない）")
     void thereAreRoleDeclarations() throws IOException {
         // 実数に近い下限にする。5 のままだと、宣言が減っても気づけない。

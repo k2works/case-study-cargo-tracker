@@ -118,6 +118,7 @@ public final class RoleAuthorization {
 
         // 荷役履歴（S51）は**荷役と追跡の両方**（ui_design.md:236）。
         // 追跡管理者は問い合わせを受けたときに現場の記録を確かめる。
+        // **読みだけ。** 書き込みは下の ordered でメソッド込みに宣言する。
         rules.put("/api/v1/handling/*/activities", Set.of(HANDLER, TRACKER));
         // 荷役の記録（S50）は荷役だけ。**/handling/** より先に置く。
         rules.put("/api/v1/handling/voyages/**", Set.of(HANDLER));
@@ -164,6 +165,13 @@ public final class RoleAuthorization {
         // 状態の手動更新は**追跡管理者だけ**（US17）。荷主に開くと、自分の貨物の
         // 状態を書き換えられる。**読みの宣言（TRACKER, SHIPPER）より先に置く**。
         ordered.add(new Rule("POST", "/api/v1/tracking/trackings/*/status", Set.of(TRACKER)));
+        // 荷役の記録と取り消しは**荷役作業員だけ**（US15 / IT10 枠 B）。
+        // **履歴の宣言（HANDLER, TRACKER）より先に置く。** 後ろに置くと、
+        // 同じ経路への書き込みが読み向けの広い宣言に吸われ、
+        // 現場の記録を読める追跡管理者が記録も取り消しもできることになる。
+        ordered.add(new Rule("POST", "/api/v1/handling/*/activities", Set.of(HANDLER)));
+        ordered.add(new Rule("POST", "/api/v1/handling/activities", Set.of(HANDLER)));
+        ordered.add(new Rule("POST", "/api/v1/handling/activities/*/void", Set.of(HANDLER)));
         ordered.add(new Rule("PUT", "/api/v1/booking/bookings/*", Set.of(SALES)));
         rules.forEach((pattern, allowed) -> ordered.add(new Rule(ANY_METHOD, pattern, allowed)));
         return List.copyOf(ordered);
