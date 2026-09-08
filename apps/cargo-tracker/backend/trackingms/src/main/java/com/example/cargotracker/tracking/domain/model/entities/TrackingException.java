@@ -55,7 +55,7 @@ public record TrackingException(
 
     /** 対応を始める（US19 §受入基準 4）。 */
     public TrackingException startResponding() {
-        requireOpen();
+        requireModifiable();
         return new TrackingException(exceptionId, type, occurredAt, unLocode, description,
                 ResponseStatus.RESPONDING, resolution, resolvedAt);
     }
@@ -67,10 +67,7 @@ public record TrackingException(
      * ある。手順のためにボタンを 2 度押させると、記録が実態から遅れる。</p>
      */
     public TrackingException resolve(String resolution, Instant resolvedAt) {
-        requireOpen();
-        if (resolution == null || resolution.isBlank()) {
-            throw new BusinessRuleViolation("対応内容は必須です");
-        }
+        requireResolvable(resolution);
         return new TrackingException(exceptionId, type, occurredAt, unLocode, description,
                 ResponseStatus.RESOLVED, resolution.trim(), resolvedAt);
     }
@@ -85,10 +82,30 @@ public record TrackingException(
         return type.urgent();
     }
 
-    private void requireOpen() {
+    /**
+     * まだ動かせるか（不変条件 6）。
+     *
+     * <p><b>集約からも呼ぶ。</b> 呼び出し側に「解決済みかどうか」を書き直させない
+     * ——判定が 2 つになると、片方だけが正しい形になる。</p>
+     */
+    public void requireModifiable() {
         if (settled()) {
             // 追記のみ（不変条件 6）。解決した事実を書き換えない。
             throw new BusinessRuleViolation("解決した例外は変更できません");
+        }
+    }
+
+    /**
+     * 解決してよいか（{@link #resolve} と同じ判定）。
+     *
+     * <p>集約はイベントを出す前にこれで断る。値を作って捨てると、
+     * 「検査のために呼んでいる」ことがコードから読めない。</p>
+     */
+    public void requireResolvable(String resolution) {
+        requireModifiable();
+        if (resolution == null || resolution.isBlank()) {
+            // 何をしたか読めない記録を残さない。
+            throw new BusinessRuleViolation("対応内容は必須です");
         }
     }
 }

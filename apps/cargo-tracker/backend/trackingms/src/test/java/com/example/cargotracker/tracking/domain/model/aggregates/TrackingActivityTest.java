@@ -8,6 +8,16 @@ import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.shared.domain.error.IllegalTransition;
 import com.example.cargotracker.shared.contract.event.CargoDeliveredEvent;
 import com.example.cargotracker.tracking.domain.model.commands.AdvanceTrackingCommand;
+import com.example.cargotracker.tracking.domain.model.commands.NotifyShipperOfExceptionCommand;
+import com.example.cargotracker.tracking.domain.model.commands.RegisterTrackingExceptionCommand;
+import com.example.cargotracker.tracking.domain.model.commands.ResolveTrackingExceptionCommand;
+import com.example.cargotracker.tracking.domain.model.commands.StartExceptionResponseCommand;
+import com.example.cargotracker.tracking.domain.model.events.ExceptionResponseStartedEvent;
+import com.example.cargotracker.tracking.domain.model.events.ExceptionShipperNotifiedEvent;
+import com.example.cargotracker.tracking.domain.model.events.HandlingNotAppliedEvent;
+import com.example.cargotracker.tracking.domain.model.events.TrackingExceptionRegisteredEvent;
+import com.example.cargotracker.tracking.domain.model.events.TrackingExceptionResolvedEvent;
+import com.example.cargotracker.tracking.domain.model.valueobjects.ExceptionType;
 import com.example.cargotracker.tracking.domain.model.commands.RevertTrackingCommand;
 import com.example.cargotracker.tracking.domain.model.commands.UpdateTransportStatusCommand;
 import com.example.cargotracker.tracking.domain.model.events.TransportStatusRevertedEvent;
@@ -299,9 +309,152 @@ class TrackingActivityTest {
     @DisplayName("遷移表が許さない荷役では進めない（順序が入れ替わっても壊れない）")
     void doesNotSkipStates() {
         // 未受領のまま引取だけが届いた。状態を飛ばして進めると履歴が事実と食い違う。
+        // **状態は動かさないが、届いた事実は残す**（M6。無言で捨てない）。
         fixture.given().event(initialized())
                 .when().command(advance("CLAIM", true, false))
-                .then().success().noEvents();
+                .then().events(new HandlingNotAppliedEvent(NUMBER, "act-1", "CLAIM", "JPTYO",
+                        TransportStatus.NOT_RECEIVED, TransportStatus.DELIVERED, HANDLED, NOW));
+    }
+
+    // ---- US19 例外の起票・対応開始・解決（IT10 T4） ----
+
+    private static final Instant OCCURRED = Instant.parse("2026-09-20T02:00:00Z");
+
+    /** 受領まで進めた履歴（例外は輸送中に起きる）。 */
+    private static Object[] received() {
+        return new Object[] {
+            initialized(),
+            new TransportStatusUpdatedEvent(NUMBER, TransportStatus.NOT_RECEIVED,
+                    TransportStatus.RECEIVED, StatusUpdateSource.HANDLING, "act-1", "JPTYO",
+                    HANDLED, "handler01", NOW),
+        };
+    }
+
+    private static Object[] and(Object[] base, Object... more) {
+        var events = new Object[base.length + more.length];
+        System.arraycopy(base, 0, events, 0, base.length);
+        System.arraycopy(more, 0, events, base.length, more.length);
+        return events;
+    }
+
+    private static RegisterTrackingExceptionCommand registerException(ExceptionType type) {
+        return new RegisterTrackingExceptionCommand(NUMBER, "ex-1", type, OCCURRED, "SGSIN",
+                "台風で 3 日遅れます", "tracker01");
+    }
+
+    private static TrackingExceptionRegisteredEvent registered(ExceptionType type) {
+        return new TrackingExceptionRegisteredEvent(NUMBER, "ex-1", type.name(), OCCURRED,
+                "SGSIN", "台風で 3 日遅れます", type.urgent(), TransportStatus.RECEIVED,
+                "tracker01", NOW);
+    }
+
+    @Test
+    @DisplayName("US19 §1・§2: 遅延を起票すると例外発生になる")
+    void registersException() {
+        fixture.given().events(received())
+                .when().command(registerException(ExceptionType.DELAY))
+                .then().events(
+                        registered(ExceptionType.DELAY),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.RECEIVED,
+                                TransportStatus.EXCEPTION, StatusUpdateSource.EXCEPTION,
+                                null, "SGSIN", OCCURRED, "tracker01", NOW));
+    }
+
+    @Test
+    @DisplayName("不変条件 5: 解決すると例外前の状態へ戻る（集約が覚えている）")
+    void restoresTheStatusBeforeException() {
+        fixture.given().events(and(received(), registered(ExceptionType.DELAY),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.RECEIVED,
+                                TransportStatus.EXCEPTION, StatusUpdateSource.EXCEPTION,
+                                null, "SGSIN", OCCURRED, "tracker01", NOW)))
+                .when().command(new ResolveTrackingExceptionCommand(NUMBER, "ex-1",
+                        "代替便に振り替えました", "tracker01"))
+                .then().events(
+                        new TrackingExceptionResolvedEvent(NUMBER, "ex-1",
+                                "代替便に振り替えました", "tracker01", NOW),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.EXCEPTION,
+                                TransportStatus.RECEIVED, StatusUpdateSource.RESOLVED,
+                                null, null, NOW, "tracker01", NOW));
+    }
+
+    @Test
+    @DisplayName("不変条件 5: 未解決の例外が残っているあいだは戻さない")
+    void doesNotRestoreWhileOtherExceptionsAreOpen() {
+        // **1 件解決しただけで戻すと、まだ手を入れる場所が「正常」に見える。**
+        fixture.given().events(and(received(), registered(ExceptionType.DELAY),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.RECEIVED,
+                                TransportStatus.EXCEPTION, StatusUpdateSource.EXCEPTION,
+                                null, "SGSIN", OCCURRED, "tracker01", NOW),
+                        new TrackingExceptionRegisteredEvent(NUMBER, "ex-2",
+                                ExceptionType.DAMAGE.name(), OCCURRED, "SGSIN", "外装が破れた",
+                                false, TransportStatus.EXCEPTION, "tracker01", NOW)))
+                .when().command(new ResolveTrackingExceptionCommand(NUMBER, "ex-1",
+                        "代替便に振り替えました", "tracker01"))
+                .then().events(new TrackingExceptionResolvedEvent(NUMBER, "ex-1",
+                        "代替便に振り替えました", "tracker01", NOW));
+    }
+
+    @Test
+    @DisplayName("US19 §4: 対応を始めると対応中になる")
+    void startsResponding() {
+        fixture.given().events(and(received(), registered(ExceptionType.DELAY),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.RECEIVED,
+                                TransportStatus.EXCEPTION, StatusUpdateSource.EXCEPTION,
+                                null, "SGSIN", OCCURRED, "tracker01", NOW)))
+                .when().command(new StartExceptionResponseCommand(NUMBER, "ex-1",
+                        "2026-09-27", "代替便を手配中", "tracker01"))
+                .then().events(new ExceptionResponseStartedEvent(NUMBER, "ex-1",
+                        "2026-09-27", "代替便を手配中", "tracker01", NOW));
+    }
+
+    @Test
+    @DisplayName("不変条件 6: 解決した例外はもう動かせない（追記のみ）")
+    void cannotResolveTwice() {
+        fixture.given().events(and(received(), registered(ExceptionType.DELAY),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.RECEIVED,
+                                TransportStatus.EXCEPTION, StatusUpdateSource.EXCEPTION,
+                                null, "SGSIN", OCCURRED, "tracker01", NOW),
+                        new TrackingExceptionResolvedEvent(NUMBER, "ex-1", "対応済み",
+                                "tracker01", NOW)))
+                .when().command(new ResolveTrackingExceptionCommand(NUMBER, "ex-1",
+                        "もう一度", "tracker01"))
+                .then().exception(BusinessRuleViolation.class);
+    }
+
+    @Test
+    @DisplayName("知らない例外は解決できない（500 にしない）")
+    void rejectsUnknownException() {
+        fixture.given().events(received())
+                .when().command(new ResolveTrackingExceptionCommand(NUMBER, "ex-none",
+                        "対応済み", "tracker01"))
+                .then().exception(BusinessRuleViolation.class);
+    }
+
+    @Test
+    @DisplayName("US19 §3: 荷主へ知らせた事実を記録する（送信基盤はスコープ外）")
+    void recordsShipperNotification() {
+        // ShipperNotifiedEvent は bookingms の内部イベントで、ここからは
+        // 発行も購読もできない。**trackingms 自身のイベントに記録する**（注 N1）。
+        fixture.given().events(and(received(), registered(ExceptionType.DELAY),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.RECEIVED,
+                                TransportStatus.EXCEPTION, StatusUpdateSource.EXCEPTION,
+                                null, "SGSIN", OCCURRED, "tracker01", NOW)))
+                .when().command(new NotifyShipperOfExceptionCommand(NUMBER, "ex-1",
+                        "電話", "3 日遅れる見込みと伝えました", "tracker01"))
+                .then().events(new ExceptionShipperNotifiedEvent(NUMBER, "ex-1", "電話",
+                        "3 日遅れる見込みと伝えました", "tracker01", NOW));
+    }
+
+    @Test
+    @DisplayName("M6: 遷移表が許さない荷役は受け皿に残す（無言で捨てない）")
+    void recordsHandlingThatCouldNotAdvance() {
+        // **届かなかった荷役が trackingms 側に残らない**という指摘（IT9 M6）。
+        // 記録は handlingms にあるが、追跡の履歴からは見えなかった。
+        fixture.given().event(initialized())
+                .when().command(advance("act-9", "CLAIM", true, false))
+                .then().events(new HandlingNotAppliedEvent(NUMBER, "act-9", "CLAIM",
+                        "JPTYO", TransportStatus.NOT_RECEIVED, TransportStatus.DELIVERED,
+                        HANDLED, NOW));
     }
 
     @Test
@@ -428,7 +581,9 @@ class TrackingActivityTest {
                                 TransportStatus.EXCEPTION, StatusUpdateSource.MANUAL, null, "JPTYO",
                                 HANDLED, "tracker01", NOW))
                 .when().command(advance("LOAD", false, false))
-                .then().success().noEvents();
+                // 進めないが、届いた荷役は履歴に残す（M6）。解決は例外の側で行う。
+                .then().events(new HandlingNotAppliedEvent(NUMBER, "act-1", "LOAD", "JPTYO",
+                        TransportStatus.EXCEPTION, TransportStatus.LOADED, HANDLED, NOW));
     }
 
     @Test

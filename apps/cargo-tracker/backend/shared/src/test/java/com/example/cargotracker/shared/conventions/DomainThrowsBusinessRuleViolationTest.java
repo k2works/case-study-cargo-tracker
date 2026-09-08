@@ -54,6 +54,20 @@ class DomainThrowsBusinessRuleViolationTest {
     private static final List<String> ALLOWED = List.of(
             "BusinessRuleViolation", "IllegalTransition", "IllegalStateException");
 
+    /**
+     * 名前が {@code Exception} で終わるが<b>例外ではない</b>型。
+     *
+     * <p>この検査はソースの文字列から「例外を作っている箇所」を拾うので、
+     * 業務語として「例外」と呼ぶ型を投げていると誤って読む。{@code TrackingException}
+     * は<b>輸送中に起きた例外</b>（遅延・破損・紛失）を表すエンティティで、
+     * {@code Throwable} を継承していない——追跡管理者も画面も「例外」と呼ぶ
+     * （domain-model.md「TrackingException」）。</p>
+     *
+     * <p><b>ここに足すのは「Throwable を継承していないこと」を確かめてから。</b>
+     * 名前で外すと、本物の例外を紛れ込ませられる。</p>
+     */
+    private static final List<String> NOT_EXCEPTIONS = List.of("TrackingException");
+
     private static Path backendRoot() {
         Path dir = Path.of("").toAbsolutePath();
         while (dir != null) {
@@ -74,6 +88,29 @@ class DomainThrowsBusinessRuleViolationTest {
                     })
                     .filter(p -> p.getFileName().toString().endsWith(".java"))
                     .toList();
+        }
+    }
+
+    @Test
+    @DisplayName("例外でないとして外した型が、本当に例外でない（名前で外していない）")
+    void excludedTypesAreNotThrowable() throws IOException {
+        // **名前で外すと、本物の例外を紛れ込ませられる。** 宣言を読んで確かめる。
+        // shared は trackingms に依存しないので、クラスではなくソースを見る。
+        for (String excluded : NOT_EXCEPTIONS) {
+            List<Path> declarations = domainSources().stream()
+                    .filter(p -> p.getFileName().toString().equals(excluded + ".java"))
+                    .toList();
+
+            assertThat(declarations)
+                    .as("%s の宣言が見つからない。消したなら除外も消す", excluded)
+                    .hasSize(1);
+            String source = Files.readString(declarations.get(0), StandardCharsets.UTF_8);
+            assertThat(source)
+                    .as("%s が record なら Throwable は継承できない", excluded)
+                    .contains("public record " + excluded + "(");
+            assertThat(source)
+                    .as("%s が例外を継承したら、除外はもう正しくない", excluded)
+                    .doesNotContain("extends");
         }
     }
 
@@ -101,7 +138,7 @@ class DomainThrowsBusinessRuleViolationTest {
             Matcher constructed = CONSTRUCTED_EXCEPTION.matcher(source);
             while (constructed.find()) {
                 String type = constructed.group(1);
-                if (!ALLOWED.contains(type)) {
+                if (!ALLOWED.contains(type) && !NOT_EXCEPTIONS.contains(type)) {
                     offenders.add(name + ": " + type);
                 }
             }

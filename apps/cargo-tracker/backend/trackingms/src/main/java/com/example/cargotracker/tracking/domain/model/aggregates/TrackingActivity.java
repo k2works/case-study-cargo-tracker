@@ -6,6 +6,17 @@ import com.example.cargotracker.shared.contract.event.TrackingInitializedEvent;
 import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.shared.domain.error.IllegalTransition;
 import com.example.cargotracker.tracking.domain.model.commands.AdvanceTrackingCommand;
+import com.example.cargotracker.tracking.domain.model.commands.NotifyShipperOfExceptionCommand;
+import com.example.cargotracker.tracking.domain.model.commands.RegisterTrackingExceptionCommand;
+import com.example.cargotracker.tracking.domain.model.commands.ResolveTrackingExceptionCommand;
+import com.example.cargotracker.tracking.domain.model.commands.StartExceptionResponseCommand;
+import com.example.cargotracker.tracking.domain.model.entities.TrackingException;
+import com.example.cargotracker.tracking.domain.model.events.ExceptionResponseStartedEvent;
+import com.example.cargotracker.tracking.domain.model.events.ExceptionShipperNotifiedEvent;
+import com.example.cargotracker.tracking.domain.model.events.HandlingNotAppliedEvent;
+import com.example.cargotracker.tracking.domain.model.events.TrackingExceptionRegisteredEvent;
+import com.example.cargotracker.tracking.domain.model.events.TrackingExceptionResolvedEvent;
+import com.example.cargotracker.tracking.domain.model.valueobjects.ExceptionType;
 import com.example.cargotracker.tracking.domain.model.commands.RevertTrackingCommand;
 import com.example.cargotracker.tracking.domain.model.commands.UpdateTransportStatusCommand;
 import com.example.cargotracker.tracking.domain.model.events.TransportStatusRevertedEvent;
@@ -162,8 +173,12 @@ public class TrackingActivity {
         TransportStatus next = TransportStatus.afterHandling(
                 command.handlingType(), command.finalPort(), command.offRoute());
         if (status == TransportStatus.EXCEPTION || !status.canTransitionTo(next)) {
-            // 進められない。荷役の記録は handlingms に残っているので、
-            // ここでは何もしない（黙って捨てない——記録は向こうにある）。
+            // **無言で捨てない**（IT9 レビュー M6）。記録は handlingms にあるが、
+            // 追跡の履歴には何も残らず「荷役は記録したのに追跡が動いていない」と
+            // いう問い合わせに答えられなかった。状態は動かさず、届いた事実だけ残す。
+            appender.append(new HandlingNotAppliedEvent(trackingNumber.value(),
+                    command.activityId(), command.handlingType(), command.unLocode(),
+                    status, next, command.completedAt(), clock.instant()));
             return;
         }
 
@@ -179,6 +194,117 @@ public class TrackingActivity {
             appender.append(new CargoDeliveredEvent(trackingNumber.value(), bookingId,
                     command.completedAt(), command.unLocode()));
         }
+    }
+
+    /**
+     * 輸送中の例外を起票する（UC16 / US19 §受入基準 1・2）。
+     *
+     * <p><b>戻る先を覚える</b>（不変条件 5）。起票した時点の状態を
+     * {@code statusBeforeException} に写し、解決したらそこへ戻す。履歴から
+     * 導き直すと、途中の荷役で状態が動いていたときに誤った先へ戻る。</p>
+     *
+     * <p><b>例外中でも起票できる。</b> 遅延の対応中に破損が見つかることはある。
+     * 2 件目以降は状態を動かさない（すでに例外発生である）。</p>
+     */
+    @CommandHandler
+    public void registerException(RegisterTrackingExceptionCommand command,
+            EventAppender appender, Clock clock) {
+        requireStarted(command.trackingNumber());
+        if (exceptions.containsKey(command.exceptionId())) {
+            // 同じ起票が二度届いた（自動起票は再配送されうる）。
+            return;
+        }
+        // 値そのものの検査はエンティティが持つ（発生状況が無い起票を残さない）。
+        TrackingException candidate = TrackingException.report(command.exceptionId(),
+                command.type(), command.occurredAt(), command.unLocode(),
+                command.description());
+        var now = clock.instant();
+        appender.append(new TrackingExceptionRegisteredEvent(trackingNumber.value(),
+                candidate.exceptionId(), candidate.type().name(), candidate.occurredAt(),
+                candidate.unLocode(), candidate.description(), candidate.urgent(),
+                status, command.reportedBy(), now));
+
+        if (status != TransportStatus.EXCEPTION) {
+            appender.append(new TransportStatusUpdatedEvent(trackingNumber.value(), status,
+                    TransportStatus.EXCEPTION, StatusUpdateSource.EXCEPTION, null,
+                    command.unLocode(), command.occurredAt(), command.reportedBy(), now));
+        }
+    }
+
+    /** 例外への対応を始める（UC16 / US19 §受入基準 4）。 */
+    @CommandHandler
+    public void startResponding(StartExceptionResponseCommand command,
+            EventAppender appender, Clock clock) {
+        requireStarted(command.trackingNumber());
+        // 動かせるかはエンティティが答える（解決した例外はもう動かせない）。
+        exceptionNamed(command.exceptionId()).requireModifiable();
+        appender.append(new ExceptionResponseStartedEvent(trackingNumber.value(),
+                command.exceptionId(), command.newEstimatedArrival(), command.plan(),
+                command.respondedBy(), clock.instant()));
+    }
+
+    /**
+     * 例外を解決する（UC16 / US19 §受入基準 4 / 不変条件 5・6）。
+     *
+     * <p><b>起票中の例外がすべて解決したときだけ戻す。</b> 1 件解決しただけで
+     * 戻すと、まだ手を入れる場所が「正常」に見える。</p>
+     */
+    @CommandHandler
+    public void resolveException(ResolveTrackingExceptionCommand command,
+            EventAppender appender, Clock clock) {
+        requireStarted(command.trackingNumber());
+        var now = clock.instant();
+        // 対応内容の無い解決を断るのもエンティティ（何をしたか読めない記録を残さない）。
+        exceptionNamed(command.exceptionId()).requireResolvable(command.resolution());
+        appender.append(new TrackingExceptionResolvedEvent(trackingNumber.value(),
+                command.exceptionId(), command.resolution(), command.resolvedBy(), now));
+
+        boolean othersOpen = exceptions.entrySet().stream()
+                .filter(entry -> !entry.getKey().equals(command.exceptionId()))
+                .anyMatch(entry -> !entry.getValue().settled());
+        if (!othersOpen && statusBeforeException != null) {
+            appender.append(new TransportStatusUpdatedEvent(trackingNumber.value(), status,
+                    statusBeforeException, StatusUpdateSource.RESOLVED, null, null,
+                    now, command.resolvedBy(), now));
+        }
+    }
+
+    /**
+     * 荷主へ知らせた事実を記録する（UC16 / US19 §受入基準 3）。
+     *
+     * <p><b>送信基盤はスコープ外</b>（ui_design.md:120）。残すのは
+     * 「いつ・どうやって・何を伝えたか」だけである。</p>
+     */
+    @CommandHandler
+    public void notifyShipperOfException(NotifyShipperOfExceptionCommand command,
+            EventAppender appender, Clock clock) {
+        requireStarted(command.trackingNumber());
+        // 起票されていない例外への通知は残さない（どの例外の話か分からない記録になる）。
+        exceptionNamed(command.exceptionId()).requireModifiable();
+        appender.append(new ExceptionShipperNotifiedEvent(trackingNumber.value(),
+                command.exceptionId(), command.means(), command.summary(),
+                command.notifiedBy(), clock.instant()));
+    }
+
+    /**
+     * 追跡が始まっているか。
+     *
+     * <p>始まっていない追跡に例外を起票させない——起票だけが残り、
+     * どの貨物の話か分からない記録になる。</p>
+     */
+    private void requireStarted(String number) {
+        if (trackingNumber == null) {
+            throw new IllegalTransition("追跡 " + number + " は始まっていません");
+        }
+    }
+
+    /** 起票済みの例外。<b>知らない例外を 500 にしない</b>（入力の誤り）。 */
+    private TrackingException exceptionNamed(String exceptionId) {
+        TrackingException exception = exceptions.get(exceptionId);
+        if (exception == null) {
+            throw new BusinessRuleViolation("例外 " + exceptionId + " は起票されていません");
+        }
+        return exception;
     }
 
     /**
@@ -212,6 +338,41 @@ public class TrackingActivity {
     /** 荷役で進める前の状態。取り消しの戻し先（不変条件 11）。 */
     private TransportStatus statusBeforeHandling;
 
+    /**
+     * 例外の起票前の状態。<b>解決したらここへ戻す</b>（不変条件 5）。
+     *
+     * <p>履歴から導き直さない——途中の荷役で状態が動いていたときに誤った先へ戻る。</p>
+     */
+    private TransportStatus statusBeforeException;
+
+    /** 起票された例外。解決しても消さない（不変条件 6）。 */
+    private final java.util.Map<String, TrackingException> exceptions =
+            new java.util.LinkedHashMap<>();
+
+    @EventSourcingHandler
+    void on(TrackingExceptionRegisteredEvent event) {
+        exceptions.put(event.exceptionId(), TrackingException.report(event.exceptionId(),
+                ExceptionType.valueOf(event.exceptionType()), event.occurredAt(),
+                event.unLocode(), event.description()));
+        if (statusBeforeException == null) {
+            // **最初の起票の時点を覚える。** 2 件目は例外発生から起票されるので、
+            // 上書きすると戻る先が EXCEPTION になる。
+            statusBeforeException = event.statusBeforeException();
+        }
+    }
+
+    @EventSourcingHandler
+    void on(ExceptionResponseStartedEvent event) {
+        exceptions.computeIfPresent(event.exceptionId(),
+                (id, exception) -> exception.startResponding());
+    }
+
+    @EventSourcingHandler
+    void on(TrackingExceptionResolvedEvent event) {
+        exceptions.computeIfPresent(event.exceptionId(),
+                (id, exception) -> exception.resolve(event.resolution(), event.resolvedAt()));
+    }
+
     /** 最後に状態を進めた荷役。取り消しはこれと一致するときだけ戻す。 */
     private String lastHandlingActivityId;
 
@@ -226,6 +387,10 @@ public class TrackingActivity {
 
     @EventSourcingHandler
     void on(TransportStatusUpdatedEvent event) {
+        if (event.source() == StatusUpdateSource.RESOLVED) {
+            // 例外前へ戻った。次の起票でまた覚え直す。
+            this.statusBeforeException = null;
+        }
         if (event.source() == StatusUpdateSource.HANDLING) {
             this.appliedActivities.add(event.activityId());
             // 戻し先は「その荷役で進める前」。手動更新では覚えない

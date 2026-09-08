@@ -12,7 +12,17 @@ public enum StatusUpdateSource {
     /** 荷役の記録から導いた（US15・IT9）。 */
     HANDLING("HANDLING"),
     /** 追跡管理者が手で更新した（US17）。 */
-    MANUAL("MANUAL");
+    MANUAL("MANUAL"),
+    /**
+     * 例外の起票・解決から動いた（US19・IT10）。
+     *
+     * <p>履歴の種別は起票なら {@code EXCEPTION}、解決なら {@code RESOLVED}
+     * （data-model.md:572）。<b>どちらも「例外由来」だが、履歴では区別する</b>
+     * ——起票と解決は逆向きの出来事で、同じ印にすると読めない。</p>
+     */
+    EXCEPTION("EXCEPTION"),
+    /** 例外が解決して戻った（US19・IT10）。 */
+    RESOLVED("RESOLVED");
 
     private final String eventType;
 
