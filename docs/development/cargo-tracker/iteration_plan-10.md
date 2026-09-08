@@ -35,10 +35,10 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-08T04:58:16Z }
 
 | # | 受入基準 | 満たす手段 | 検査の所在 | 状態 |
 | :--- | :--- | :--- | :--- | :--- |
-| §1 | 作業種別「引取」を選ぶと荷受人確認フィールドが出る | S50 に `CLAIM` を選択肢へ戻し、選んだときだけ確認欄を出す | `HandlingRecordPage.test.tsx` | — |
+| §1 | 作業種別「引取」を選ぶと荷受人確認フィールド（**署名または確認コード**）が出る | S50 に `CLAIM` を選択肢へ戻し、選んだときだけ確認欄を出す | `HandlingRecordPage.test.tsx` | — |
 | §2 | 荷受人確認が取得されると引取作業が記録される | `HandlingActivity.register` の `CLAIM` ガードを**確認の有無に置き換える** | `HandlingActivityTest`・`HandlingControllerIT` | — |
 | §3 | 記録後、貨物状態が「引取済」に更新される | `TransportStatus.afterHandling("CLAIM")` は実装済み。**反応ハンドラの経路**を検査する | `TrackingReactionHandlerTest`・受け入れテスト | — |
-| §4 | 「引取済」は配送完了を意味し、精算処理の開始条件となる | `CargoDeliveredEvent`（**契約**）を発行し、billingms が購読できる形にする | ゴールデン JSON・往復テスト | — |
+| §4 | 「引取済」は配送完了を意味し、精算処理の開始条件となる | `CargoDeliveredEvent(trackingNumber, bookingId, deliveredAt, location)`（**契約**）を発行し、**billingms（`BillingReactionHandler` 開始）と bookingms（`MarkDeliveredCommand` → `BookingDeliveredEvent`）の 2 つ**が購読できる形にする（`domain-model.md:1228`） | ゴールデン JSON・往復テスト・`BookingReactionHandlerTest` | — |
 
 ### US19 遅延例外を処理する
 
@@ -46,9 +46,20 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-08T04:58:16Z }
 | :--- | :--- | :--- | :--- | :--- |
 | §1 | 追跡番号と例外種別「遅延」・発生状況（場所・日時・理由）を記録できる | `RegisterTrackingExceptionCommand` と S43 | `TrackingActivityTest`・`ExceptionScreens.test.tsx` | — |
 | §2 | 記録後、貨物状態が「例外発生」に更新される | 集約が `statusBeforeException` を覚えて `EXCEPTION` へ | `TrackingActivityTest` | — |
-| §3 | 荷主に遅延発生の通知が送信される | **送信基盤はスコープ外**（`ui_design.md:120`）。通知した事実を記録し履歴に出す | `ShipperNotifiedEvent` の記録を検査 | — |
-| §4 | 対応内容（新しい到着予定日・対応方針）を入力して対応報告を送信できる | `StartExceptionResponseCommand` / `ResolveTrackingExceptionCommand` と S41 | `TrackingActivityTest`・`TrackingDetailPage.test.tsx` | — |
+| §3 | 荷主に遅延発生の通知が送信される | **送信基盤はスコープ外**（`ui_design.md:120`）。通知した事実を **trackingms 自身の `ExceptionShipperNotifiedEvent`** として記録し、`tracking_event`（`event_type = EXCEPTION`）と S41 の履歴に出す。**`ShipperNotifiedEvent` は使えない**——bookingms の `Cargo` の内部イベントで契約に無く（11 件のロスター）、trackingms からは発行も購読もできない | `TrackingActivityTest`・`TrackingProjectionIT`・`TrackingDetailPage.test.tsx` | — |
+| §4 | 対応内容（新しい到着予定日・対応方針）を入力して**荷主に**対応報告を送信できる（送信は §3 と同じく記録で満たす） | `StartExceptionResponseCommand` / `ResolveTrackingExceptionCommand` と S41 | `TrackingActivityTest`・`TrackingDetailPage.test.tsx` | — |
 | §5 | 例外対応履歴が記録される | `tracking_exception` 投影と S42 一覧 | `TrackingProjectionIT`・`ExceptionListPage.test.tsx` | — |
+
+### 注（設計への反映が必要）
+
+検証（`validating-iteration-plan` / `validating-design`）で見つかった、**設計ドキュメント側の欠落**です。本 IT の中で設計に反映します。
+
+| # | 欠落 | 反映先 | 反映するタスク |
+| :--- | :--- | :--- | :--- |
+| N1 | `ui_design.md:120` の「記録と手作業の組で満たす」US 一覧に **US19 が入っていない**。かつ記録先が bookingms の `ShipperNotifiedEvent` に固定されていて、trackingms から出す例外通知の置き場が無い | `ui_design.md:120`・`domain-model.md`（trackingms のイベント表に `ExceptionShipperNotifiedEvent` を追加） | T7 |
+| N2 | S42・S43 は表と図の行にはあるが、`ui_design.md` に **`###` の節が無い**（画面項目・操作手順が未記述） | `ui_design.md`（S42・S43 の節を新設） | T6 |
+| N3 | `ui_design.md:151` は S50 が通関未済の引取を「判定時点で」断ると書いているが、**通関の検査は US29（IT12）**。本 IT は荷受人確認で代替する（R1） | `ui_design.md:151` に但し書きを足す | T2 |
+| N4 | `data-model.md:541-560` の `tracking_exception` には**到着期限までの残日数を導ける列が無い**。不変条件 7 の並び順は `tracking_summary.estimated_arrival`（IT9 で追加済み）との JOIN で出す | `data-model.md:573`（並び順の導出元を明記） | T5 |
 
 ## 成功基準
 
@@ -60,9 +71,10 @@ IT9 のふりかえり Try 7 件をすべて落とし込みます。
 - [ ] `./gradlew :acceptance-tests:test` が緑（4 スイート + 例外の新スイート）
 - [ ] **受入基準の表を、US の実装を始める前に作った**（Try T1。上の表を空欄のまま残さない）
 - [ ] **値を足したら「集約 → イベント → 投影 → 読み口 → 画面」を 1 本読み直した**（Try T2。**各タスクの完了条件**にする）
-- [ ] **画面を触った US では、その US の中でクラスタ E2E を 1 度回した**（Try T3。**タスク行に立てた**——IT8・IT9 と 2 回続けて守れていない）
+- [ ] **画面を触った US では、その US の中でクラスタ E2E を 1 度回した**（Try T3。**US ごとに独立したタスク行 T2e・T6e を立てた**——IT8・IT9 は「終盤にまとめる」形だったので 2 回続けて守れていない）
 - [ ] **「〜する」「〜しない」と書いたコメント・javadoc には、同じ変更の中で赤にできる検査を書いた。書けないものは書かなかった**（Try T4。IT9 で 7 件出た）
 - [ ] **モジュール単位の作業の終わりに `shared` の規約テストと ArchUnit も回した**（Try T5。`./gradlew :shared:test :<module>:test`）
+- [ ] **適用済みマイグレーションを編集していないことを検査に落とした**（Try T6。`V0xx` の内容ハッシュを固定するテスト。IT9 でクラスタだけが起動しなくなった）
 - [ ] **レビュー依頼の文面で出力の形を指定した**（Try T7。「高と中だけ・1 件 1 行の表・3000 字以内」）
 - [ ] **US を終えるたびに SonarQube を回した**（T0 として独立のタスク行に立てる）
 - [ ] **US を終えたコミットのメッセージに、回した品質ゲートの結果を 1 行書いた**（IT9 未達）
@@ -100,6 +112,7 @@ IT9 から 9 件を受けています。**負債枠 1** と合わせ、重いも
 | # | 指摘 | 行き先 |
 | :--- | :--- | :--- |
 | M3 | 表示上限 200 が「記録済みか」の正しさを変える | **負債枠**（件数を数える経路を上限のないクエリに分ける） |
+| M5 | `ON CONFLICT DO NOTHING` の PostgreSQL 方言が方言スモークで未確認 | **引き継ぎ枠 B に統合**（本 IT で `tracking_exception` / `tracking_event` に同じ書き方を増やすので、増やす前にスモークの対象へ入れる） |
 | M6 | 遷移表が許さない荷役を `advance` が無言で捨てる | **T4 に統合**（例外の投影を作るので、届かなかった荷役も同じ受け皿に残せる） |
 | M7 | 受け入れ／IT の前提データが購読配線を判別しない | **T1b に統合**（契約を 1 本足すので、実バスを通す往復テストを同じ枠で） |
 | M8 | 未来日時の境界（`completedAt == now`）が未固定 | **引き継ぎ枠 B**（1 行） |
@@ -120,17 +133,19 @@ IT9 から 9 件を受けています。**負債枠 1** と合わせ、重いも
 | B | **引き継ぎ枠 B**：荷役の認可にメソッド指定と肯定否定テスト。未来日時の境界（`== now`）。時間窓のテスト（`withinHours` を既定に戻す） | — | 3h |
 | C | **引き継ぎ枠 C**：クラスタ E2E の投影待ちを堅くする（**一定時間保ち続ける形**にする。最初に成功した時点で抜けると偽陰性） | — | 2h |
 | T1 | **`TrackingException` エンティティと `ExceptionType` / `ResponseStatus`**。**緊急かどうかは種別が答える**（不変条件 7。属性に持たない）。要素表と突き合わせる canon テスト | US19 | 4h |
-| T1b | **契約 `CargoDeliveredEvent` を先に置く**（`development_strategy.md` の Phase 0）。**発行側と購読側の両方**にゴールデンと Axon Server 経由の往復テスト。**M7 の「実バスを通す」もここで** | US16 | 3h |
+| T1b | **契約 `CargoDeliveredEvent(trackingNumber, bookingId, deliveredAt, location)` を先に置く**（`development_strategy.md` の Phase 0）。**購読側は billingms と bookingms の 2 つ**。発行側と購読側の両方にゴールデンと Axon Server 経由の往復テスト。**契約ロスターの件数（11 → 12）を固定する ArchUnit も同じ変更で直す**。**M7 の「実バスを通す」もここで** | US16 | 4h |
 | T2 | **S50 に引取を戻す**（`CLAIM` のガードを荷受人確認の有無に置き換える）。**H.5・H.8・M13・M14・M15 を同じ変更で**——判定をサーバへ、下部タブ（本日の航海 / 引取待ち）、取消行に誰がいつ、記録済を種別で区別、行から記録を始める | US16 | 7h |
-| T3 | **`CargoDeliveredEvent` の発行**（`AdvanceTrackingCommand(CLAIM)` が状態更新と契約の 2 つを出す）。**1 つのイベントに両方の役割を持たせない** | US16 | 3h |
-| T4 | **例外の起票・対応開始・解決**（`RegisterTrackingExceptionCommand` ほか 2 本）と `TrackingActivity` の不変条件 5・6。**`statusBeforeException` へ戻る**。**M6（届かなかった荷役）も同じ受け皿に** | US19 | 6h |
-| T5 | **`tracking_exception` 投影**（`INDEX(response_status, urgent DESC, occurred_at)`）と `tracking_summary` の `open_exception_count` / `urgent_exception_count` / `status_before_exception`。**一覧が `tracking_exception` を数えない** | US19 | 4h |
-| T6 | **S43 例外起票**（`/tracking/:trackingNumber/exceptions/new`。追跡）と **S42 例外一覧**（`/tracking/exceptions`。**紛失 → 残日数が少ない順**、既定で解決済を外す） | US19 | 6h |
-| T7 | **S41 に例外の対応開始・解決を足す**（楽観的更新）。通知した事実の記録（送信基盤はスコープ外） | US19 | 4h |
+| T3 | **`CargoDeliveredEvent` の発行**（`AdvanceTrackingCommand(CLAIM)` が状態更新と契約の 2 つを出す）。**1 つのイベントに両方の役割を持たせない**。**bookingms 側の受け口**（`BookingReactionHandler` → `MarkDeliveredCommand` → `BookingDeliveredEvent`。UC14） | US16 | 4h |
+| T2e | **US16 のクラスタ E2E**（Try T3。イメージを作り直して載せ直し、S50 で引取を記録して「引取済」まで見る）。**US16 を閉じる前に回す** | US16 | 2h |
+| T4 | **例外の起票・対応開始・解決**（`registerException` / **`startResponding`** / `resolveException`。`RegisterTrackingExceptionCommand`・`StartExceptionResponseCommand`・`ResolveTrackingExceptionCommand`。`domain-model.md:765`）と `TrackingActivity` の不変条件 5・6。**`statusBeforeException` へ戻る**。**M6（届かなかった荷役）も同じ受け皿に** | US19 | 6h |
+| T5 | **`tracking_exception` 投影**（`INDEX(response_status, urgent DESC, occurred_at)`）と **`tracking_event` への追記**（`event_type` = `EXCEPTION` / `RESOLVED`。`data-model.md:572`。**S41 の履歴に例外が出る受け皿はここ**。M6 の「届かなかった荷役」も同じ表へ）と `tracking_summary` の `open_exception_count` / `urgent_exception_count` / `status_before_exception` と `INDEX(urgent_exception_count DESC, last_status_changed_at)`（`data-model.md:571`）。**一覧が `tracking_exception` を数えない**。**追記系は元イベントの識別子を PK にする**（リプレイで行を増やさない） | US19 | 5h |
+| T6 | **`FindOpenExceptionsQuery()`**（`domain-model.md:1381`。`ExceptionType#urgent` を先頭、以降は **`tracking_summary.estimated_arrival` との JOIN で残日数が少ない順**）と **S43 例外起票**（`/tracking/:trackingNumber/exceptions/new`）・**S42 例外一覧**（`/tracking/exceptions`。既定で解決済を外す）。**`navigation.ts` と `navigationMatchesUiDesign.test.ts` を同じ変更で更新する**。**N2（S42・S43 の節）を `ui_design.md` に足す** | US19 | 7h |
+| T6e | **US19 のクラスタ E2E**（Try T3。起票 → 対応開始 → 解決で例外前の状態へ戻るところまで）。**US19 を閉じる前に回す** | US19 | 2h |
+| T7 | **S41 に例外の対応開始・解決を足す**（楽観的更新）。**`ExceptionShipperNotifiedEvent` で通知した事実を記録**（送信基盤はスコープ外）。**N1 を `ui_design.md:120` と `domain-model.md` に反映する** | US19 | 4h |
 | T8 | 認可の宣言（例外の経路）と HTTP の配線。**メソッド込みで宣言し、そのロール以外が 403 になることを検査する** | US19 | 3h |
 | T9 | **負債枠**：`ApiExceptionHandler` を `shared` へ移す（4 サービスの複製 139 行）。M3（表示上限が正しさを変える）。余れば L1〜L5 | — | 4h |
-| T10 | クラスタ E2E・受け入れテスト・マニュアル（**14 章 引取と例外**） | — | 8h |
-| **合計** | | | **62h** |
+| T10 | 受け入れテスト（デモ 9 件）・マニュアル（**14 章 引取と例外**）・全体のクラスタ E2E（T2e・T6e で US ごとに回した後の通し） | — | 8h |
+| **合計** | | | **73h** |
 
 ### 既にあるもの（**着手前に `grep` で確かめた**）
 
@@ -143,7 +158,10 @@ IT9 から 9 件を受けています。**負債枠 1** と合わせ、重いも
 | `TransportStatus.afterHandling("CLAIM")` | **実装済み**（`DELIVERED` を返す） | T3 でその先を繋ぐ |
 | `HandlingType.requiresConsigneeConfirmation()` | **実装済みだが本番未使用**（IT9 で `CLAIM` を断るガードにだけ使用） | T2 で**確認の有無を見る形**に置き換える |
 | `handling_activity.consignee_name` | **投影に列がある**（IT9 で作成済み） | T2 で書き手を繋ぐ |
-| `ShipperNotifiedEvent` | **実装済み**（IT6・US12） | T7 で例外の通知記録に再利用 |
+| `ShipperNotifiedEvent` | **実装済み**（IT6・US12）だが **bookingms の内部イベント**（契約ロスター 11 件に無い） | **再利用しない**。T7 で trackingms 自身の `ExceptionShipperNotifiedEvent` を新設（N1） |
+| `tracking_event` | **実装済み**（IT8） | T5 で `EXCEPTION` / `RESOLVED` を書き足す |
+| `tracking_summary.estimated_arrival` | **実装済み**（IT9） | T6 の並び順（残日数）の導出元 |
+| `FindOpenExceptionsQuery` | **実装 0 件** | T6 で新設 |
 
 ## 設計
 
@@ -158,8 +176,9 @@ class TrackingActivity <<AggregateRoot>> {
   - status: TransportStatus
   - statusBeforeException: TransportStatus [0..1]
   + registerException(cmd): TrackingExceptionRegisteredEvent
-  + startResponse(cmd): ExceptionResponseStartedEvent
+  + startResponding(cmd): ExceptionResponseStartedEvent
   + resolveException(cmd): TrackingExceptionResolvedEvent
+  + notifyShipperOfException(cmd): ExceptionShipperNotifiedEvent
 }
 
 class TrackingException <<Entity>> {
@@ -244,6 +263,17 @@ entity "tracking_summary" as ts {
   open_exception_count: INTEGER NOT NULL DEFAULT 0
   urgent_exception_count: INTEGER NOT NULL DEFAULT 0
   delivered_at: TIMESTAMPTZ
+  .. 既存（IT7-IT9） ..
+  shipper_id / booking_id / current_unlocode
+  estimated_arrival / last_status_changed_at
+}
+
+entity "tracking_event" as te {
+  * **event_id**: VARCHAR(36) <<PK>>
+  --
+  tracking_number: VARCHAR(25) NOT NULL
+  event_type: VARCHAR(20) NOT NULL
+  occurred_at: TIMESTAMPTZ NOT NULL
 }
 
 entity "tracking_exception" as tx {
@@ -262,10 +292,13 @@ entity "tracking_exception" as tx {
 }
 
 ts ||--o{ tx
+ts ||--o{ te
 @enduml
 ```
 
-**`urgent` は `ExceptionType#urgent` の結果を写します**（`data-model.md:573`）。判定を投影に書き直しません。件数を `tracking_summary` に非正規化するのは、**一覧が `tracking_exception` を数えないため**です。
+**`urgent` は `ExceptionType#urgent` の結果を写します**（`data-model.md:573`）。判定を投影に書き直しません。件数を `tracking_summary` に非正規化するのは、**一覧が `tracking_exception` を数えないため**です。索引は `INDEX(urgent_exception_count DESC, last_status_changed_at)`（`data-model.md:571`）。`tracking_event` は **IT8 で作ってある既存の表**で、本 IT では `event_type` に `EXCEPTION` / `RESOLVED` を書き足すだけです（`data-model.md:572`）——**S41 の履歴に例外が出る受け皿はここ**で、`tracking_exception` は一覧（S42）用です。
+
+**例外一覧の並び順**は `tracking_exception` だけでは出せません（残日数を導ける列が無い）。`tracking_summary.estimated_arrival` と JOIN して `urgent DESC, (estimated_arrival - 今日) ASC` で並べます（N4）。
 
 ### 画面遷移図（本 IT のスコープ）
 
@@ -294,32 +327,33 @@ S50 --> S51 : 追跡番号
 
 **S02 に「未解決の例外 N 件」を出し、S42 へ繋ぎます**（IT4 の教訓「気づく手段は次の行動へ繋ぐ」）。追跡管理者の入口です。
 
-## デモ項目（**すべて受け入れテストに落とす**）
+## デモ項目（9 件。**すべて受け入れテストに落とす**）
 
 | # | デモ | US |
 | :--- | :--- | :--- |
 | 1 | 荷受人の確認なしで引取を送ると断られる | US16 §1・§2 |
 | 2 | 確認を入れて引取を記録すると「引取済」になる | US16 §2・§3 |
 | 3 | 引取が精算へ伝わる（`CargoDeliveredEvent` が billingms に届く） | US16 §4 |
+| 3b | 引取が予約へ伝わる（bookingms の予約が「引取済」になる。UC14） | US16 §4 |
 | 4 | 遅延を起票すると「例外発生」になる | US19 §1・§2 |
-| 5 | 通知した事実が履歴に残る | US19 §3 |
-| 6 | 対応内容を入れて解決すると、**例外前の状態へ戻る** | US19 §4 |
-| 7 | 未解決の例外が残っているあいだは戻らない | 不変条件 5 |
-| 8 | 例外一覧が**紛失 → 残日数が少ない順**に並び、解決済は既定で出ない | US19 §5 |
+| 5 | 通知した事実が S41 の履歴（`tracking_event`）に残る | US19 §3 |
+| 7 | 対応内容を入れて解決すると、**例外前の状態へ戻る** | US19 §4 |
+| 8 | 未解決の例外が残っているあいだは戻らない | 不変条件 5 |
+| 9 | 例外一覧が**紛失 → 残日数が少ない順**に並び、解決済は既定で出ない | US19 §5 |
 
 ## リスク
 
 | # | リスク | 対応 |
 | :--- | :--- | :--- |
-| R1 | **`CLAIM` のガードを外すとき、不変条件 4（通関未済の拒否）が無いまま `DELIVERED` へ進む経路が開く** | IT9 で「検査できない段階で開けない」ためにガードを入れた。**外すのと同時に荷受人確認の検査を入れる**。通関は US29（IT12）で足す——`release_plan.md:205` の決定どおり |
-| R2 | `CargoDeliveredEvent` は **billingms が購読する契約**。追記専用で後戻りできない | T1b で先に置き、**購読側の投影が作れる分**を運ぶことを確かめる（`bookingId`・`deliveredAt`・`location`） |
+| R1 | **`CLAIM` のガードを外すとき、不変条件 4（通関未済の拒否）が無いまま `DELIVERED` へ進む経路が開く** | IT9 で「検査できない段階で開けない」ためにガードを入れた。**外すのと同時に荷受人確認の検査を入れる**。通関は US29（IT12）で足す——`release_plan.md:205` の決定どおり。**`ui_design.md:151` は S50 が通関未済を判定時点で断ると書いているので、但し書きを足す**（N3） |
+| R2 | `CargoDeliveredEvent` は **billingms が購読する契約**。追記専用で後戻りできない | T1b で先に置き、**購読側の投影が作れる分**を運ぶことを確かめる（`trackingNumber`・`bookingId`・`deliveredAt`・`location`。**購読側は billingms と bookingms の 2 つ**） |
 | R3 | 例外は `TrackingActivity` の中のエンティティ。**集約が大きくなる** | 例外は追記のみで解決しても消えない（不変条件 6）。件数が増えたら投影で読む。**集約は起票中の例外の解決状態だけを持つ** |
-| R4 | 通知の送信基盤がスコープ外なので、§3 が「記録するだけ」になる | `ui_design.md:120` の決定どおり。**受入基準の表に「記録で満たす」と書く**——満たしたことにせず、何で満たしたかを残す |
+| R4 | 通知の送信基盤がスコープ外なので、§3 が「記録するだけ」になる | `ui_design.md:120` の決定どおり。**受入基準の表に「記録で満たす」と書く**——満たしたことにせず、何で満たしたかを残す。ただし `ui_design.md:120` の US 一覧に US19 が無く、記録先も bookingms のイベントに固定されている。**trackingms 自身のイベントを新設し、設計にも反映する**（N1） |
 
 ## DoD
 
 - [ ] US16・US19 の受入基準（上の表）を 1 項目ずつ埋めた。**未達は理由を書いた**
-- [ ] デモ項目 8 件の受け入れテストがすべて緑。**対応はテスト名でなく本文のアサーションで確かめる**
+- [ ] デモ項目 9 件の受け入れテストがすべて緑。**対応はテスト名でなく本文のアサーションで確かめる**
 - [ ] 引き継ぎ枠 A・B・C と負債枠が消化されている、または送った理由がふりかえりに書かれている
 - [ ] 本 IT で足した検査を壊して赤を見た
 - [ ] **`ExceptionType#urgent` が緊急を答える**（属性に持たない・投影は結果を写す）
@@ -333,10 +367,12 @@ S50 --> S51 : 追跡番号
 - [ ] **追跡管理者が S42・S43 にたどり着ける**。**荷役ロールの下部タブが「本日の航海」と「引取待ち」の 2 つ**（US16 で引取待ちが実体を持つ）
 - [ ] **内部の列挙名を利用者に見せていない**
 - [ ] **kind クラスタで動く**：イメージを作り直して載せ直し、載ったことを確かめ、全 Pod が Ready
-- [ ] **クラスタに対して E2E が緑**（**US ごとに 1 度**。終盤に集めない）
+- [ ] **クラスタに対して E2E が緑**（**US ごとに 1 度**。T2e・T6e のタスク行で回した。終盤に集めない）
 - [ ] `npx gulp okf:check` が ERROR 0
 - [ ] SonarQube の Quality Gate がバックエンド・フロントエンドとも PASS
 - [ ] **ユーザーマニュアルが更新されている**（14 章 引取と例外）。**キャプチャは本文が説明する要素を写す**
+- [ ] **注 N1〜N4 を設計ドキュメントに反映した**（`ui_design.md`・`domain-model.md`・`data-model.md`）
+- [ ] **適用済みマイグレーションを編集していないことが検査で固定されている**（Try T6）
 - [ ] ふりかえり（`retrospective-10.md`）と完了報告書（`iteration_report-10.md`）を作成した
 
 ## 関連ドキュメント
@@ -352,4 +388,5 @@ S50 --> S51 : 追跡番号
 
 | 日付 | 更新内容 | 更新者 |
 | :--- | :--- | :--- |
+| 2026-09-08 | `validating-iteration-plan` / `validating-design` の指摘を反映（**設計が正**）。`CargoDeliveredEvent` を正典どおり 4 項目にし、**bookingms も購読側**であることを受入基準・T1b・T3・デモに足した。`startResponse` → **`startResponding`**。`tracking_event` への書き込み（`EXCEPTION` / `RESOLVED`）を T5 に、`FindOpenExceptionsQuery` を T6 に立てた。例外一覧の並び順を `tracking_summary.estimated_arrival` との JOIN と明記。**Try T6（適用済みマイグレーションの検査）と M5（方言スモーク）の行き先**を足した。**US ごとのクラスタ E2E を独立タスク T2e・T6e に立てた**（Try T3。IT8・IT9 と同型の未達を避ける）。**`ShipperNotifiedEvent` は bookingms の内部イベントで trackingms から使えない**ため、US19 §3 の手段を `ExceptionShipperNotifiedEvent` の新設に差し替え、設計側の欠落を注 N1〜N4 として明記。見積 62h → 73h | claude-code/claude-opus-5 |
 | 2026-09-08 | IT10 計画を作成。**受入基準の表を着手前に作った**（IT9 の Try T1）。IT9 の引き継ぎ 9 件とレビュー中低 12 件の行き先を 1 件ずつ書いた。**着手前の `grep` で、US16・US19 の主要な部品が実装 0 件であることを確かめた**（`TrackingException`・`ExceptionType`・`CargoDeliveredEvent`・`tracking_exception`）。`HandlingType.requiresConsigneeConfirmation` と `handling_activity.consignee_name` は IT9 で作ってあり、T2 で書き手を繋ぐ | claude-code/claude-opus-5 |
