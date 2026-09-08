@@ -147,7 +147,7 @@ public final class TrackingQueries {
      * <p><b>既定で解決済を外す。</b> 決着したものが混ざると、一覧全体が
      * 「まだ手を入れる場所」に見えなくなる。</p>
      */
-    public record FindOpenExceptionsQuery() {
+    public record FindOpenExceptionsQuery() { // NOSONAR: 型が問い合わせの識別子
     }
 
     /**

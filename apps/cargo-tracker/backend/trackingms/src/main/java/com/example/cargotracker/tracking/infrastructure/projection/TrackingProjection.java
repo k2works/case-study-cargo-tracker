@@ -132,9 +132,10 @@ public class TrackingProjection {
                 event.statusBeforeException() == null
                         ? null : event.statusBeforeException().name(), now);
         // **起票と解決は逆向きの出来事。** 同じ印にすると履歴が読めない。
-        writeHistory(eventId, event.trackingNumber(), StatusUpdateSource.EXCEPTION.eventType(),
-                event.statusBeforeException(), TransportStatus.EXCEPTION, event.unLocode(),
-                event.occurredAt(), event.reportedBy(), now);
+        writeHistory(new HistoryEntry(eventId, event.trackingNumber(),
+                StatusUpdateSource.EXCEPTION.eventType(), event.statusBeforeException(),
+                TransportStatus.EXCEPTION, event.unLocode(), event.occurredAt(),
+                event.reportedBy()), now);
     }
 
     /** 例外への対応が始まった（US19 §受入基準 4）。 */
@@ -165,9 +166,9 @@ public class TrackingProjection {
         var current = trackings.findByTrackingNumber(event.trackingNumber());
         refreshCounts(event.trackingNumber(),
                 current == null ? null : current.statusBeforeException(), now);
-        writeHistory(eventId, event.trackingNumber(), StatusUpdateSource.RESOLVED.eventType(),
-                TransportStatus.EXCEPTION, null, null, event.resolvedAt(),
-                event.resolvedBy(), now);
+        writeHistory(new HistoryEntry(eventId, event.trackingNumber(),
+                StatusUpdateSource.RESOLVED.eventType(), TransportStatus.EXCEPTION, null, null,
+                event.resolvedAt(), event.resolvedBy()), now);
     }
 
     /**
@@ -178,9 +179,9 @@ public class TrackingProjection {
      */
     @EventHandler
     public void on(HandlingNotAppliedEvent event, @MessageIdentifier String eventId) {
-        writeHistory(eventId, event.trackingNumber(), "NOT_APPLIED", event.currentStatus(),
-                event.attemptedStatus(), event.unLocode(), event.completedAt(), null,
-                clock.instant());
+        writeHistory(new HistoryEntry(eventId, event.trackingNumber(), "NOT_APPLIED",
+                event.currentStatus(), event.attemptedStatus(), event.unLocode(),
+                event.completedAt(), null), clock.instant());
     }
 
     /** 例外の件数を明細から数え直す（足し引きしない）。 */
@@ -191,15 +192,42 @@ public class TrackingProjection {
         }
     }
 
-    /** 履歴を 1 行足す（追記系。主キーは元イベントの識別子）。 */
-    private void writeHistory(String eventId, String trackingNumber, String eventType,
-            TransportStatus previous, TransportStatus next, String location,
-            Instant occurredAt, String recordedBy, Instant now) {
-        history.insert(new TrackingEventMapper.TrackingEventRow(eventId, trackingNumber,
-                eventType, previous == null ? null : previous.name(),
-                // new_status は NOT NULL。動かないものは「今の状態」を書く。
-                next == null ? (previous == null ? TransportStatus.EXCEPTION.name()
-                        : previous.name()) : next.name(),
-                location, occurredAt, recordedBy, now));
+    /**
+     * 履歴の 1 行（追記系。主キーは元イベントの識別子）。
+     *
+     * <p>引数を並べる代わりに record で受ける。9 個の引数を並べると、呼ぶ側が
+     * 順序を取り違えても型が同じところは気づけない。</p>
+     */
+    private record HistoryEntry(
+            String eventId,
+            String trackingNumber,
+            String eventType,
+            TransportStatus previous,
+            TransportStatus next,
+            String location,
+            Instant occurredAt,
+            String recordedBy) {
+
+        /**
+         * 履歴に書く「変わった先」。
+         *
+         * <p>{@code new_status} は NOT NULL。<b>動かないものは「今の状態」を書く</b>
+         * ——反映できなかった荷役（M6）や解決の記録は、状態そのものを動かさない。</p>
+         */
+        String newStatusName() {
+            if (next != null) {
+                return next.name();
+            }
+            return previous == null ? TransportStatus.EXCEPTION.name() : previous.name();
+        }
+    }
+
+    /** 履歴を 1 行足す。 */
+    private void writeHistory(HistoryEntry entry, Instant now) {
+        history.insert(new TrackingEventMapper.TrackingEventRow(entry.eventId(),
+                entry.trackingNumber(), entry.eventType(),
+                entry.previous() == null ? null : entry.previous().name(),
+                entry.newStatusName(), entry.location(), entry.occurredAt(),
+                entry.recordedBy(), now));
     }
 }

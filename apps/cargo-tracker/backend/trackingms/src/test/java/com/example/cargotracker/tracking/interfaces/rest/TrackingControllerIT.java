@@ -44,6 +44,10 @@ class TrackingControllerIT extends AbstractAxonIntegrationTest {
     @Autowired
     private TrackingProjection projection;
 
+    /** 業務タイムゾーンの時計。**検査も実装と同じ時計で「いま」を決める**。 */
+    @Autowired
+    private java.time.Clock clock;
+
     @Autowired
     private org.axonframework.messaging.commandhandling.gateway.CommandGateway commands;
 
@@ -393,9 +397,12 @@ class TrackingControllerIT extends AbstractAxonIntegrationTest {
     void doesNotCountChangesOutsideTheWindow() {
         // **IT9 の検査は withinHours=100000 で窓を無効化していた。** それでは
         // since を業務タイムゾーンの時計から出す実装を潰しても緑になる。
+        // **実装と同じ時計で「いま」を決める**（業務タイムゾーン）。JVM 既定の
+        // now() を使うと、時差の分だけ境界がずれて CI だけ落ちる。
+        Instant now = clock.instant();
         String mine = "SHP-RC0004";
-        given(mine, Instant.now().minus(Duration.ofHours(1)));
-        given(mine, Instant.now().minus(Duration.ofDays(30)));
+        given(mine, now.minus(Duration.ofHours(1)));
+        given(mine, now.minus(Duration.ofDays(30)));
 
         var response = get("/api/v1/tracking/trackings/recently-changed", mine);
 
