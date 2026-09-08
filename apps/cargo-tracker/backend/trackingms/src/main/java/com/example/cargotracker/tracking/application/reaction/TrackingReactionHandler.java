@@ -35,14 +35,14 @@ public class TrackingReactionHandler {
     @EventHandler
     public void on(HandlingActivityRegisteredEvent event) {
         commands.sendAndWait(new AdvanceTrackingCommand(event.trackingNumber(),
-                event.handlingType(), event.unLocode(), event.finalPort(), event.offRoute(),
-                event.operator(), event.completedAt()), Void.class);
+                event.activityId(), event.handlingType(), event.unLocode(), event.finalPort(),
+                event.offRoute(), event.operator(), event.completedAt()), Void.class);
     }
 
     @EventHandler
     public void on(HandlingActivityVoidedEvent event) {
         commands.sendAndWait(new RevertTrackingCommand(event.trackingNumber(),
-                event.handlingType(), event.reason(), event.voidedBy(), event.voidedAt()),
-                Void.class);
+                event.activityId(), event.handlingType(), event.reason(), event.voidedBy(),
+                event.voidedAt()), Void.class);
     }
 }

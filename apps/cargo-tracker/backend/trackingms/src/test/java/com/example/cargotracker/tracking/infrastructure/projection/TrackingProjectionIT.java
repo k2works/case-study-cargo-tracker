@@ -88,7 +88,7 @@ class TrackingProjectionIT extends AbstractAxonIntegrationTest {
     private static TransportStatusUpdatedEvent updated(String trackingNumber,
             TransportStatus from, TransportStatus to, Instant occurredAt) {
         return new TransportStatusUpdatedEvent(trackingNumber, from, to,
-                StatusUpdateSource.MANUAL, "JPTYO", occurredAt, "tracker-1", AT);
+                StatusUpdateSource.MANUAL, null, "JPTYO", occurredAt, "tracker-1", AT);
     }
 
     @Test

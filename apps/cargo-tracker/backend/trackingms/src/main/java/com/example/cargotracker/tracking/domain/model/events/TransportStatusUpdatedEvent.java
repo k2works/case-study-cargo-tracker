@@ -28,6 +28,10 @@ public record TransportStatusUpdatedEvent(
         TransportStatus previousStatus,
         TransportStatus newStatus,
         StatusUpdateSource source,
+        // **どの荷役が進めたか。** 取り消しは「最後に進めた荷役」だけを戻せる
+        // ——順序が入れ替わって古い荷役が取り消されたとき、進んだ先まで
+        // 巻き戻すと、積込済の貨物が受領済に見える。手動更新では null。
+        String activityId,
         String location,
         Instant occurredAt,
         String updatedBy,

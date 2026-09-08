@@ -81,7 +81,7 @@ class ReplayIT extends AbstractAxonIntegrationTest {
 
         var event = new TransportStatusUpdatedEvent(trackingNumber,
                 TransportStatus.NOT_RECEIVED, TransportStatus.RECEIVED,
-                StatusUpdateSource.MANUAL, "JPTYO",
+                StatusUpdateSource.MANUAL, null, "JPTYO",
                 Instant.parse("2026-09-11T02:00:00Z"), "tracker-1", AT);
 
         projection.on(event, "evt-replay");
@@ -101,7 +101,7 @@ class ReplayIT extends AbstractAxonIntegrationTest {
         projection.on(initialized);
         projection.on(new TransportStatusUpdatedEvent(trackingNumber,
                 TransportStatus.NOT_RECEIVED, TransportStatus.RECEIVED,
-                StatusUpdateSource.MANUAL, "JPTYO",
+                StatusUpdateSource.MANUAL, null, "JPTYO",
                 Instant.parse("2026-09-11T02:00:00Z"), "tracker-1", AT), "evt-rewind");
 
         projection.on(initialized);

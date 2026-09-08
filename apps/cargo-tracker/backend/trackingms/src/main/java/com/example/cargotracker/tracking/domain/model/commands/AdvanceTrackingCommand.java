@@ -15,6 +15,7 @@ import org.axonframework.modelling.annotation.TargetEntityId;
  */
 public record AdvanceTrackingCommand(
         @TargetEntityId String trackingNumber,
+        String activityId,
         String handlingType,
         String unLocode,
         boolean finalPort,

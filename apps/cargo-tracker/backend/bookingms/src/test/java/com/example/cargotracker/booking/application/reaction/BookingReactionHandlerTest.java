@@ -8,7 +8,11 @@ import com.example.cargotracker.booking.application.port.ProcessStateService;
 import com.example.cargotracker.booking.domain.model.commands.RevertTrackingNumberCommand;
 import com.example.cargotracker.booking.domain.model.events.TrackingNumberIssuedEvent;
 import com.example.cargotracker.booking.infrastructure.projection.AttentionItemRecorder;
+import com.example.cargotracker.booking.domain.model.commands.RecordHandlingCommand;
+import com.example.cargotracker.booking.domain.model.commands.RevertHandlingCommand;
 import com.example.cargotracker.shared.contract.command.InitializeTrackingCommand;
+import com.example.cargotracker.shared.contract.event.HandlingActivityRegisteredEvent;
+import com.example.cargotracker.shared.contract.event.HandlingActivityVoidedEvent;
 import com.example.cargotracker.shared.contract.event.TrackingInitializedEvent;
 import java.time.Clock;
 import java.time.Duration;
@@ -297,5 +301,45 @@ class BookingReactionHandlerTest {
                 .satisfies(state -> assertThat(state.allStepsDone())
                         .as("段が残っているのに完了にすると、抜けに気づけない")
                         .isFalse());
+    }
+
+    // ---- US15 荷役が予約に伝わる（IT9 T6b） ----
+
+    private static HandlingActivityRegisteredEvent handled(boolean offRoute) {
+        return new HandlingActivityRegisteredEvent("act-1", "TRK-8K2QX7M4RB", "b-1", "UNLOAD",
+                "DEHAM", "V-MOL-001", offRoute, false, "handler01", ISSUED, NOW);
+    }
+
+    @Test
+    @DisplayName("US15 §4: 荷役が記録されたら予約へ落とさず送る")
+    void sendsRecordHandling() {
+        // **スタブは受け取った引数を捨てない。** 引数の順を入れ替えても緑になる
+        // 検査は、組み立てを潰しても気づけない（IT6 の実測欠陥）。
+        handler.on(handled(true));
+
+        assertThat(commands.sent).singleElement()
+                .isEqualTo(new RecordHandlingCommand("b-1", "act-1", "UNLOAD", "DEHAM", true,
+                        ISSUED));
+    }
+
+    @Test
+    @DisplayName("予定内の荷役では誤配の印を立てない（boolean の取り違えを判別する）")
+    void carriesOffRouteAsRecorded() {
+        handler.on(handled(false));
+
+        assertThat(commands.sent).singleElement()
+                .asInstanceOf(org.assertj.core.api.InstanceOfAssertFactories
+                        .type(RecordHandlingCommand.class))
+                .satisfies(command -> assertThat(command.offRoute()).isFalse());
+    }
+
+    @Test
+    @DisplayName("不変条件 13: 荷役が取り消されたら予約へ戻すよう送る")
+    void sendsRevertHandling() {
+        handler.on(new HandlingActivityVoidedEvent("act-1", "TRK-8K2QX7M4RB", "b-1", "UNLOAD",
+                "取り違えました", "handler01", NOW));
+
+        assertThat(commands.sent).singleElement()
+                .isEqualTo(new RevertHandlingCommand("b-1", "act-1", "取り違えました"));
     }
 }

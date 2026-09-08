@@ -11,6 +11,7 @@ import org.axonframework.modelling.annotation.TargetEntityId;
  */
 public record RevertTrackingCommand(
         @TargetEntityId String trackingNumber,
+        String activityId,
         String handlingType,
         String reason,
         String revertedBy,

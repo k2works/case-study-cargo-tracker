@@ -81,11 +81,11 @@ class PublicTrackingQueryIT extends AbstractAxonIntegrationTest {
         String trackingNumber = given();
         projection.on(new TransportStatusUpdatedEvent(trackingNumber,
                 TransportStatus.NOT_RECEIVED, TransportStatus.RECEIVED,
-                StatusUpdateSource.MANUAL, "JPTYO",
+                StatusUpdateSource.MANUAL, null, "JPTYO",
                 Instant.parse("2026-09-10T02:00:00Z"), "tracker-1", AT), "evt-a");
         projection.on(new TransportStatusUpdatedEvent(trackingNumber,
                 TransportStatus.RECEIVED, TransportStatus.LOADED,
-                StatusUpdateSource.MANUAL, "SGSIN",
+                StatusUpdateSource.MANUAL, null, "SGSIN",
                 Instant.parse("2026-09-11T02:00:00Z"), "tracker-1", AT), "evt-b");
 
         var view = queries.handle(new FindPublicTrackingQuery(trackingNumber));

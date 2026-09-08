@@ -184,7 +184,7 @@ class TrackingActivityTest {
                 .when().command(update(TransportStatus.RECEIVED))
                 .then().events(new TransportStatusUpdatedEvent(NUMBER,
                         TransportStatus.NOT_RECEIVED, TransportStatus.RECEIVED,
-                        StatusUpdateSource.MANUAL, "JPTYO",
+                        StatusUpdateSource.MANUAL, null, "JPTYO",
                         Instant.parse("2026-09-11T02:00:00Z"), "tracker-1", NOW));
     }
 
@@ -213,10 +213,10 @@ class TrackingActivityTest {
         // 動かすと、戻り先（statusBeforeException）と実際の状態が食い違う。
         fixture.given().events(initialized(),
                 new TransportStatusUpdatedEvent(NUMBER, TransportStatus.NOT_RECEIVED,
-                        TransportStatus.RECEIVED, StatusUpdateSource.MANUAL, "JPTYO",
+                        TransportStatus.RECEIVED, StatusUpdateSource.MANUAL, null, "JPTYO",
                         Instant.parse("2026-09-11T02:00:00Z"), "tracker-1", NOW),
                 new TransportStatusUpdatedEvent(NUMBER, TransportStatus.RECEIVED,
-                        TransportStatus.EXCEPTION, StatusUpdateSource.MANUAL, "JPTYO",
+                        TransportStatus.EXCEPTION, StatusUpdateSource.MANUAL, null, "JPTYO",
                         Instant.parse("2026-09-11T03:00:00Z"), "tracker-1", NOW))
                 .when().command(update(TransportStatus.LOADED))
                 .then().exception(BusinessRuleViolation.class);
@@ -255,8 +255,13 @@ class TrackingActivityTest {
 
     private static AdvanceTrackingCommand advance(String handlingType, boolean finalPort,
             boolean offRoute) {
-        return new AdvanceTrackingCommand(NUMBER, handlingType, "JPTYO", finalPort, offRoute,
-                "handler01", HANDLED);
+        return advance("act-1", handlingType, finalPort, offRoute);
+    }
+
+    private static AdvanceTrackingCommand advance(String activityId, String handlingType,
+            boolean finalPort, boolean offRoute) {
+        return new AdvanceTrackingCommand(NUMBER, activityId, handlingType, "JPTYO", finalPort,
+                offRoute, "handler01", HANDLED);
     }
 
     @Test
@@ -266,7 +271,7 @@ class TrackingActivityTest {
                 .when().command(advance("RECEIVE", false, false))
                 .then().events(new TransportStatusUpdatedEvent(NUMBER,
                         TransportStatus.NOT_RECEIVED, TransportStatus.RECEIVED,
-                        StatusUpdateSource.HANDLING, "JPTYO", HANDLED, "handler01", NOW));
+                        StatusUpdateSource.HANDLING, "act-1", "JPTYO", HANDLED, "handler01", NOW));
     }
 
     @Test
@@ -276,7 +281,7 @@ class TrackingActivityTest {
                 .when().command(advance("RECEIVE", false, true))
                 .then().events(new TransportStatusUpdatedEvent(NUMBER,
                         TransportStatus.NOT_RECEIVED, TransportStatus.MISROUTED,
-                        StatusUpdateSource.HANDLING, "JPTYO", HANDLED, "handler01", NOW));
+                        StatusUpdateSource.HANDLING, "act-1", "JPTYO", HANDLED, "handler01", NOW));
     }
 
     @Test
@@ -303,12 +308,46 @@ class TrackingActivityTest {
     void revertsTheHandling() {
         fixture.given().events(initialized(),
                         new TransportStatusUpdatedEvent(NUMBER, TransportStatus.NOT_RECEIVED,
-                                TransportStatus.RECEIVED, StatusUpdateSource.HANDLING, "JPTYO",
+                                TransportStatus.RECEIVED, StatusUpdateSource.HANDLING, "act-1", "JPTYO",
                                 HANDLED, "handler01", NOW))
-                .when().command(new RevertTrackingCommand(NUMBER, "RECEIVE", "取り違え",
+                .when().command(new RevertTrackingCommand(NUMBER, "act-1", "RECEIVE", "取り違え",
                         "handler01", NOW))
                 .then().events(new TransportStatusRevertedEvent(NUMBER, TransportStatus.RECEIVED,
                         TransportStatus.NOT_RECEIVED, "RECEIVE", "取り違え", "handler01", NOW));
+    }
+
+    @Test
+    @DisplayName("不変条件 11: 最後でない荷役の取り消しでは戻さない（積込済が受領済に見える）")
+    void doesNotRevertWhenTheVoidedHandlingIsNotTheLast() {
+        // **契約イベントは順序が入れ替わることがある。** 受領→積込と進んだあとで
+        // 古い受領を取り消したとき、覚えている 1 段だけを見て戻すと、実際には
+        // 船に積んである貨物が「受領済」に見える。荷主にも荷役にもそう見える。
+        fixture.given().events(initialized(),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.NOT_RECEIVED,
+                                TransportStatus.RECEIVED, StatusUpdateSource.HANDLING, "act-1",
+                                "JPTYO", HANDLED, "handler01", NOW),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.RECEIVED,
+                                TransportStatus.LOADED, StatusUpdateSource.HANDLING, "act-2",
+                                "JPTYO", HANDLED, "handler01", NOW))
+                .when().command(new RevertTrackingCommand(NUMBER, "act-1", "RECEIVE", "取り違え",
+                        "handler01", NOW))
+                .then().success().noEvents();
+    }
+
+    @Test
+    @DisplayName("最後の荷役の取り消しは戻す（直前の荷役まで）")
+    void revertsTheLastHandlingOnly() {
+        fixture.given().events(initialized(),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.NOT_RECEIVED,
+                                TransportStatus.RECEIVED, StatusUpdateSource.HANDLING, "act-1",
+                                "JPTYO", HANDLED, "handler01", NOW),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.RECEIVED,
+                                TransportStatus.LOADED, StatusUpdateSource.HANDLING, "act-2",
+                                "JPTYO", HANDLED, "handler01", NOW))
+                .when().command(new RevertTrackingCommand(NUMBER, "act-2", "LOAD", "取り違え",
+                        "handler01", NOW))
+                .then().events(new TransportStatusRevertedEvent(NUMBER, TransportStatus.LOADED,
+                        TransportStatus.RECEIVED, "LOAD", "取り違え", "handler01", NOW));
     }
 
     @Test
@@ -316,9 +355,9 @@ class TrackingActivityTest {
     void doesNotRevertManualUpdates() {
         fixture.given().events(initialized(),
                         new TransportStatusUpdatedEvent(NUMBER, TransportStatus.NOT_RECEIVED,
-                                TransportStatus.RECEIVED, StatusUpdateSource.MANUAL, "JPTYO",
+                                TransportStatus.RECEIVED, StatusUpdateSource.MANUAL, null, "JPTYO",
                                 HANDLED, "tracker01", NOW))
-                .when().command(new RevertTrackingCommand(NUMBER, "RECEIVE", "取り違え",
+                .when().command(new RevertTrackingCommand(NUMBER, "act-1", "RECEIVE", "取り違え",
                         "handler01", NOW))
                 .then().success().noEvents();
     }
@@ -328,10 +367,10 @@ class TrackingActivityTest {
     void doesNotAdvanceWhileAnExceptionIsOpen() {
         fixture.given().events(initialized(),
                         new TransportStatusUpdatedEvent(NUMBER, TransportStatus.NOT_RECEIVED,
-                                TransportStatus.RECEIVED, StatusUpdateSource.MANUAL, "JPTYO",
+                                TransportStatus.RECEIVED, StatusUpdateSource.MANUAL, null, "JPTYO",
                                 HANDLED, "tracker01", NOW),
                         new TransportStatusUpdatedEvent(NUMBER, TransportStatus.RECEIVED,
-                                TransportStatus.EXCEPTION, StatusUpdateSource.MANUAL, "JPTYO",
+                                TransportStatus.EXCEPTION, StatusUpdateSource.MANUAL, null, "JPTYO",
                                 HANDLED, "tracker01", NOW))
                 .when().command(advance("LOAD", false, false))
                 .then().success().noEvents();
@@ -341,7 +380,7 @@ class TrackingActivityTest {
     @DisplayName("知らない追跡番号の取り消しでも止まらない")
     void doesNotFailToRevertUnknownTracking() {
         fixture.given().noPriorActivity()
-                .when().command(new RevertTrackingCommand(NUMBER, "RECEIVE", "理由",
+                .when().command(new RevertTrackingCommand(NUMBER, "act-1", "RECEIVE", "理由",
                         "handler01", NOW))
                 .then().success().noEvents();
     }

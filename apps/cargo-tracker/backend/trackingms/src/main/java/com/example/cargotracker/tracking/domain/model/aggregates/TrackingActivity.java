@@ -123,7 +123,7 @@ public class TrackingActivity {
                     + command.newStatus().label() + " へは動かせません");
         }
         appender.append(new TransportStatusUpdatedEvent(trackingNumber.value(), status,
-                command.newStatus(), StatusUpdateSource.MANUAL, command.location(),
+                command.newStatus(), StatusUpdateSource.MANUAL, null, command.location(),
                 command.occurredAt(), command.updatedBy(), clock.instant()));
     }
 
@@ -156,19 +156,30 @@ public class TrackingActivity {
         }
 
         appender.append(new TransportStatusUpdatedEvent(trackingNumber.value(), status, next,
-                StatusUpdateSource.HANDLING, command.unLocode(), command.completedAt(),
-                command.operator(), clock.instant()));
+                StatusUpdateSource.HANDLING, command.activityId(), command.unLocode(),
+                command.completedAt(), command.operator(), clock.instant()));
     }
 
     /**
      * 取り消された荷役の分だけ戻す（UC13 / 不変条件 11）。
      *
      * <p><b>戻す先は「その荷役で進める前の状態」。</b> 集約が覚えている。</p>
+     *
+     * <p><b>戻せるのは最後に進めた荷役だけ。</b> 契約イベントは順序が入れ替わる
+     * ことがある（{@code HandlingActivityVoidedEvent}）。受領→積込と進んだあとで
+     * <b>古い受領</b>を取り消したとき、覚えている 1 段だけを見て戻すと、実際には
+     * 積込済の貨物が受領済に見える。取り消された荷役を名指しで照合する。</p>
      */
     @CommandHandler
     public void revert(RevertTrackingCommand command, EventAppender appender, Clock clock) {
         if (trackingNumber == null || statusBeforeHandling == null) {
             // 進めていないものは戻せない。荷役の取り消しは handlingms に残る。
+            return;
+        }
+        if (lastHandlingActivityId != null
+                && !lastHandlingActivityId.equals(command.activityId())) {
+            // 最後の荷役ではない。**戻さないことが正しい**——そのあとの荷役で
+            // 進んだ先のほうが、いま貨物が置かれている状態に近い。
             return;
         }
 
@@ -180,12 +191,16 @@ public class TrackingActivity {
     /** 荷役で進める前の状態。取り消しの戻し先（不変条件 11）。 */
     private TransportStatus statusBeforeHandling;
 
+    /** 最後に状態を進めた荷役。取り消しはこれと一致するときだけ戻す。 */
+    private String lastHandlingActivityId;
+
     @EventSourcingHandler
     void on(TransportStatusUpdatedEvent event) {
         if (event.source() == StatusUpdateSource.HANDLING) {
             // 戻し先は「その荷役で進める前」。手動更新では覚えない
             // （手動の取り消しという操作が無い）。
             this.statusBeforeHandling = event.previousStatus();
+            this.lastHandlingActivityId = event.activityId();
         }
         this.status = event.newStatus();
     }
@@ -194,6 +209,7 @@ public class TrackingActivity {
     void on(TransportStatusRevertedEvent event) {
         this.status = event.restoredStatus();
         this.statusBeforeHandling = null;
+        this.lastHandlingActivityId = null;
     }
 
     @EventSourcingHandler
