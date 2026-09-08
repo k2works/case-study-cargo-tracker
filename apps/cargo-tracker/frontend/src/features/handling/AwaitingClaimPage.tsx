@@ -42,7 +42,9 @@ export function AwaitingClaimPage() {
 
   // 同じ港が複数の航海に出るので、港だけにまとめる。
   const portOptions = ports.data?.state === 'ready'
-    ? Array.from(new Set(ports.data.value.items.map((item) => item.unLocode))).sort()
+    // **並べ方を明示する。** 既定の sort は実装に依存し、環境で並びが変わる。
+    ? Array.from(new Set(ports.data.value.items.map((item) => item.unLocode)))
+      .sort((a, b) => a.localeCompare(b))
     : [];
   const items = cargos.data?.state === 'ready' ? cargos.data.value.items : [];
 

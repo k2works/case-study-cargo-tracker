@@ -342,12 +342,12 @@ function UpdateStatusPanel({
  * <p><b>対応するのは追跡管理者だけ。</b> 荷主は起きていることを読めるが、
  * 手は入れられない（サーバも同じ宣言で断る）。</p>
  */
-function ExceptionPanel({ trackingNumber, exceptions, canRespond, onChanged }: {
+function ExceptionPanel({ trackingNumber, exceptions, canRespond, onChanged }: Readonly<{
   trackingNumber: string;
   exceptions: readonly TrackingExceptionView[];
   canRespond: boolean;
   onChanged: () => void;
-}) {
+}>) {
   const [respondingTo, setRespondingTo] = useState<string | null>(null);
   const [resolvingId, setResolvingId] = useState<string | null>(null);
   const [notifyingId, setNotifyingId] = useState<string | null>(null);
