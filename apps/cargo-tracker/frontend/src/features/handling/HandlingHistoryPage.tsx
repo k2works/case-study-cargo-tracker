@@ -27,6 +27,18 @@ const REFETCH_INTERVAL_MS = 30_000;
  * <p><b>取り消した記録も出す。</b> 消えていると、現場で何が起きたのかを
  * 後から突き合わせられない。取り消した印と理由を添える。</p>
  */
+/**
+ * 1 件の記録の状態（S51 の「状態」欄）。
+ *
+ * <p>取消が最優先——取り消した記録の「予定外」は、もう起きていないことの印。</p>
+ */
+function stateLabel(item: { voided: boolean; voidReason: string | null; offRoute: boolean }) {
+  if (item.voided) {
+    return `取消（${item.voidReason ?? '理由なし'}）`;
+  }
+  return item.offRoute ? '予定外' : '記録済';
+}
+
 export function HandlingHistoryPage() {
   const { trackingNumber = '' } = useParams();
   const navigate = useNavigate();
@@ -112,9 +124,7 @@ export function HandlingHistoryPage() {
                   <td className={TD}>{item.voyageNumber ?? '—'}</td>
                   <td className={TD}>{item.operator}</td>
                   <td className={TD}>
-                    {item.voided
-                      ? `取消（${item.voidReason ?? '理由なし'}）`
-                      : item.offRoute ? '予定外' : '記録済'}
+                    {stateLabel(item)}
                   </td>
                 </tr>
               ))}
