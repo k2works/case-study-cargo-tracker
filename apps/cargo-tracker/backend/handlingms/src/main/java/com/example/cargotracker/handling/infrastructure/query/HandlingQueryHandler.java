@@ -93,7 +93,7 @@ public class HandlingQueryHandler {
     @QueryHandler
     public VoyagePortListView handle(FindVoyagePortsQuery query) {
         return new VoyagePortListView(cargos.findVoyagePorts().stream()
-                .map(row -> new VoyagePortView(row.voyageNumber(), row.unloadUnlocode(),
+                .map(row -> new VoyagePortView(row.voyageNumber(), row.unlocode(),
                         row.cargoCount()))
                 .toList());
     }

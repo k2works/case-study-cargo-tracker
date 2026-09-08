@@ -204,10 +204,14 @@ export function DashboardPage() {
         </p>
       )}
 
-      {/* 荷役の入口。**件数だけでは仕事が進まない**ので、その航海の画面へ直接繋ぐ。 */}
+      {/* 荷役の入口。**件数だけでは仕事が進まない**ので、その航海の画面へ直接繋ぐ。
+          **「本日」とは書かない。** 写しは予定の時刻を持たない（ADR-0012 決定 4）
+          ので日付で絞れない。出せるのは「作業のある航海」までで、見出しをそう書く
+          ——書けないことを見出しで約束すると、数か月後に終わった船が並んだとき
+          利用者は見出しのほうを信じて探し続ける。 */}
       {isHandler && voyagePorts?.state === 'ready' && (
         <section className="mt-6">
-          <h2 className={SECTION_TITLE}>本日の航海</h2>
+          <h2 className={SECTION_TITLE}>作業のある航海</h2>
           {voyagePorts.value.items.length === 0 ? (
             <output className={`${NOTICE} mt-3`}>
               扱う貨物のある航海はありません。追跡番号が発行されると、ここに並びます。
@@ -220,7 +224,7 @@ export function DashboardPage() {
                     to={`/handling/voyages/${item.voyageNumber}?unLocode=${item.unLocode}`}
                     className={LINK}
                   >
-                    {item.voyageNumber}{'\u3000'}{item.unLocode}（{item.cargoCount} 本）
+                    {item.voyageNumber}{'\u3000'}{item.unLocode}（予定 {item.cargoCount} 本）
                   </Link>
                 </li>
               ))}

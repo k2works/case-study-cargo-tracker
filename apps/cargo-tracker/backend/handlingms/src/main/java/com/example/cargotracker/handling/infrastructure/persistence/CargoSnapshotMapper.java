@@ -50,31 +50,48 @@ public interface CargoSnapshotMapper {
             + "s.cargo_type, s.cancelled, s.projected_at, s.last_event_id "
             + "FROM cargo_snapshot s JOIN cargo_snapshot_leg l "
             + "  ON l.tracking_number = s.tracking_number "
-            + "WHERE l.voyage_number = #{voyageNumber} AND l.unload_unlocode = #{unLocode} "
+            + "WHERE l.voyage_number = #{voyageNumber} "
+            // **積む港からも入る。** 降ろす港だけで引くと、受領と積込の作業を
+            // する港からは画面が始まらない（種別は 3 つ選べるのに対象が出ない）。
+            + "  AND (l.load_unlocode = #{unLocode} OR l.unload_unlocode = #{unLocode}) "
             + "  AND s.cancelled = FALSE "
             + "ORDER BY s.tracking_number")
     List<CargoSnapshotRow> findOnVoyage(@Param("voyageNumber") String voyageNumber,
             @Param("unLocode") String unLocode);
 
     /**
-     * これから降ろす予定のある航海と港（S02 荷役のダッシュボード）。
+     * 作業する予定のある航海と港（S02 荷役のダッシュボード）。
      *
      * <p><b>航海の一覧は routingms が持つが、荷役ロールはそこを読めない</b>
      * （`/routing/voyages` は経路設計者だけ）。荷役が見たいのは「自分が扱う貨物が
      * ある航海」なので、写しから引く。</p>
      *
+     * <p><b>積む港と降ろす港の両方</b>を出す。降ろす港だけだと、受領と積込を
+     * する港がダッシュボードに現れない。</p>
+     *
+     * <p><b>「本日」では絞れない。</b> 写しは予定の時刻を持たない（[ADR-0012]
+     * 決定 4——航海の予定は routingms が変えるので、写した時刻は黙って古くなる）。
+     * 出せるのは「作業のある航海」までで、見出しもそう書く。</p>
+     *
      * <p>キャンセルされた貨物は数えない（作業の対象ではない）。</p>
      */
-    @Select("SELECT l.voyage_number, l.unload_unlocode, count(*) AS cargo_count "
-            + "FROM cargo_snapshot_leg l JOIN cargo_snapshot s "
-            + "  ON s.tracking_number = l.tracking_number "
-            + "WHERE s.cancelled = FALSE "
-            + "GROUP BY l.voyage_number, l.unload_unlocode "
-            + "ORDER BY l.voyage_number, l.unload_unlocode")
+    @Select("SELECT voyage_number, unlocode, count(*) AS cargo_count FROM ("
+            + "  SELECT l.voyage_number, l.load_unlocode AS unlocode, l.tracking_number "
+            + "  FROM cargo_snapshot_leg l JOIN cargo_snapshot s "
+            + "    ON s.tracking_number = l.tracking_number "
+            + "  WHERE s.cancelled = FALSE "
+            + "  UNION ALL "
+            + "  SELECT l.voyage_number, l.unload_unlocode AS unlocode, l.tracking_number "
+            + "  FROM cargo_snapshot_leg l JOIN cargo_snapshot s "
+            + "    ON s.tracking_number = l.tracking_number "
+            + "  WHERE s.cancelled = FALSE"
+            + ") ports "
+            + "GROUP BY voyage_number, unlocode "
+            + "ORDER BY voyage_number, unlocode")
     List<VoyagePortRow> findVoyagePorts();
 
-    /** 航海と港の組（S02 荷役）。 */
-    record VoyagePortRow(String voyageNumber, String unloadUnlocode, int cargoCount) {
+    /** 航海と港の組（S02 荷役）。**積む港と降ろす港の両方**が入る。 */
+    record VoyagePortRow(String voyageNumber, String unlocode, int cargoCount) {
     }
 
     /** 貨物の写し。Booking / Tracking の型は持ち込まない。 */

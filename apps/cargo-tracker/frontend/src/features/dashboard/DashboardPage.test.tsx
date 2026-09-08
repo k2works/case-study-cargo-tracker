@@ -218,14 +218,14 @@ describe('S02 ダッシュボード', () => {
     expect(screen.queryByText(/荷主へ通知していない/)).not.toBeInTheDocument();
   });
 
-  it('荷役には本日の航海を出し、その航海の画面へ直接繋ぐ（IT9）', async () => {
+  it('荷役には作業のある航海を出し、その航海の画面へ直接繋ぐ（IT9）', async () => {
     // **件数だけでは仕事が進まない。** 追跡番号は現場が持っていないので、
     // 航海と港から入れないと画面が始まらない。
     renderAs(['ROLE_HANDLER']);
 
     const link = await screen.findByRole('link', { name: /V-MOL-001/ });
     expect(link).toHaveAttribute('href', '/handling/voyages/V-MOL-001?unLocode=SGSIN');
-    expect(link).toHaveTextContent('12 本');
+    expect(link).toHaveTextContent('予定 12 本');
   });
 
   it('荷主には「変わったこと」を知らせ、一覧へ繋ぐ（IT9 / US17 §4 の代わり）', async () => {
@@ -237,10 +237,10 @@ describe('S02 ダッシュボード', () => {
       .toHaveAttribute('href', '/tracking');
   });
 
-  it('荷役以外に本日の航海は出さない（その人の仕事ではない）', async () => {
+  it('荷役以外に作業のある航海は出さない（その人の仕事ではない）', async () => {
     renderAs(['ROLE_SALES']);
 
     await screen.findByText('今日の作業');
-    expect(screen.queryByText('本日の航海')).not.toBeInTheDocument();
+    expect(screen.queryByText('作業のある航海')).not.toBeInTheDocument();
   });
 });

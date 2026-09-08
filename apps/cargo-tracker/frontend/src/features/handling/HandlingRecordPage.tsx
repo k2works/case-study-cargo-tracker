@@ -113,7 +113,7 @@ export function HandlingRecordPage() {
         荷役の記録{'\u3000'}航海 {voyageNumber}{'\u3000'}{unLocode}
       </h1>
       <p className="mt-1 text-sm text-gray-600">
-        {unLocode} で降ろす予定 {items.length} 本（未記録 {remaining.length} 本）
+        {unLocode} で扱う予定 {items.length} 本（未記録 {remaining.length} 本）
       </p>
 
       <section className={`${CARD} mt-4`}>
@@ -221,7 +221,7 @@ export function HandlingRecordPage() {
           </p>
         ) : (
           <table className={`${TABLE} mt-2`}>
-            <caption className={TABLE_CAPTION}>この港で降ろす貨物</caption>
+            <caption className={TABLE_CAPTION}>この港で扱う貨物</caption>
             <thead>
               <tr>
                 <th className={TH}>追跡番号</th>

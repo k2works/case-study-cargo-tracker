@@ -71,19 +71,40 @@ class CargoSnapshotProjectionIT extends AbstractAxonIntegrationTest {
     }
 
     @Test
-    @DisplayName("S50 の起点: この航海がこの港で降ろす貨物を引ける")
+    @DisplayName("S50 の起点: この航海がこの港で扱う貨物を引ける（積む港からも）")
     void findsCargosOnVoyage() {
         // **追跡番号は現場が持っていない。** 荷役作業員は船と港から始める。
         String mine = "TRK-S" + System.nanoTime() % 1000000000L;
         projection.on(initialized(mine), "evt-3");
 
+        // この船は東京で積んでシンガポールで降ろす。**どちらの港でも作業がある**
+        // ——降ろす港だけで引くと、受領と積込をする港から画面が始まらない
+        // （種別は 3 つ選べるのに対象が出ない。IT9 のレビューで発見）。
         assertThat(cargos.findOnVoyage("V-MOL-001", "SGSIN"))
                 .extracting(CargoSnapshotMapper.CargoSnapshotRow::trackingNumber)
                 .contains(mine);
-        // 積む港では引けない（この船は東京で積んでシンガポールで降ろす）。
         assertThat(cargos.findOnVoyage("V-MOL-001", "JPTYO"))
                 .extracting(CargoSnapshotMapper.CargoSnapshotRow::trackingNumber)
+                .contains(mine);
+        // その船が寄らない港では引けない。
+        assertThat(cargos.findOnVoyage("V-MOL-001", "DEHAM"))
+                .extracting(CargoSnapshotMapper.CargoSnapshotRow::trackingNumber)
                 .doesNotContain(mine);
+    }
+
+    @Test
+    @DisplayName("S02 荷役: 積む港と降ろす港の両方が航海の一覧に出る")
+    void listsBothLoadAndUnloadPorts() {
+        String mine = "TRK-S" + System.nanoTime() % 1000000000L;
+        projection.on(initialized(mine), "evt-ports");
+
+        assertThat(cargos.findVoyagePorts())
+                .extracting(CargoSnapshotMapper.VoyagePortRow::voyageNumber,
+                        CargoSnapshotMapper.VoyagePortRow::unlocode)
+                .contains(org.assertj.core.groups.Tuple.tuple("V-MOL-001", "JPTYO"),
+                        org.assertj.core.groups.Tuple.tuple("V-MOL-001", "SGSIN"),
+                        org.assertj.core.groups.Tuple.tuple("V-ONE-002", "SGSIN"),
+                        org.assertj.core.groups.Tuple.tuple("V-ONE-002", "USNYC"));
     }
 
     @Test
