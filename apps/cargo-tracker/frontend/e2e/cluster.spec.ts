@@ -794,6 +794,8 @@ test.describe('kind クラスタでの通し確認', () => {
     await page.getByLabel('品名').fill(product);
     await page.getByRole('button', { name: '登録する' }).click();
 
+    // 一覧は到着期限順で上限があるので、品名で絞ってから確かめる。
+    await page.getByLabel('予約番号・品名で絞り込む').fill(product);
     await expect(page.getByText(product)).toBeVisible({ timeout: 20_000 });
     // 一覧の先頭を押さない。前の回の予約が並んでいて、別の予約を開いてしまう。
     await page
