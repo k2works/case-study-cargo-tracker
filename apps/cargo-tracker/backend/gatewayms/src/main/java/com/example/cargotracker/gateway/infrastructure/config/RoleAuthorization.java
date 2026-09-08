@@ -165,6 +165,18 @@ public final class RoleAuthorization {
         // 状態の手動更新は**追跡管理者だけ**（US17）。荷主に開くと、自分の貨物の
         // 状態を書き換えられる。**読みの宣言（TRACKER, SHIPPER）より先に置く**。
         ordered.add(new Rule("POST", "/api/v1/tracking/trackings/*/status", Set.of(TRACKER)));
+        // 例外の起票・対応開始・解決・通知の記録は**追跡管理者だけ**（US19）。
+        // **読みの宣言（TRACKER, SHIPPER）より先に置く。** 後ろに置くと書き込みが
+        // 広いほうに吸われ、荷主が自分の貨物に例外を起票できてしまう。
+        // 経路の `*` は `/` をまたがないので、階層ごとに宣言が要る。
+        ordered.add(new Rule("POST", "/api/v1/tracking/trackings/*/exceptions/*/response",
+                Set.of(TRACKER)));
+        ordered.add(new Rule("POST", "/api/v1/tracking/trackings/*/exceptions/*/resolution",
+                Set.of(TRACKER)));
+        ordered.add(new Rule("POST", "/api/v1/tracking/trackings/*/exceptions/*/notifications",
+                Set.of(TRACKER)));
+        ordered.add(new Rule("POST", "/api/v1/tracking/trackings/*/exceptions",
+                Set.of(TRACKER)));
         // 荷役の記録と取り消しは**荷役作業員だけ**（US15 / IT10 枠 B）。
         // **履歴の宣言（HANDLER, TRACKER）より先に置く。** 後ろに置くと、
         // 同じ経路への書き込みが読み向けの広い宣言に吸われ、

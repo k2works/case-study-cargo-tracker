@@ -124,6 +124,42 @@ public final class TrackingQueries {
     }
 
     /**
+     * 未解決の例外（S42 / UC16・US19 §受入基準 5）。
+     *
+     * <p><b>既定で解決済を外す。</b> 決着したものが混ざると、一覧全体が
+     * 「まだ手を入れる場所」に見えなくなる。</p>
+     */
+    public record FindOpenExceptionsQuery() {
+    }
+
+    /**
+     * 例外一覧の 1 行（S42）。
+     *
+     * <p><b>緊急かどうかは載せる（種別の結果）。</b> 並びは緊急が先、以降は
+     * 到着期限までの残日数が少ない順（不変条件 7）——読み口が並べたものを
+     * 画面が並べ直さない。</p>
+     */
+    public record ExceptionView(
+            String exceptionId,
+            String trackingNumber,
+            String exceptionType,
+            String exceptionTypeLabel,
+            String responseStatus,
+            String responseStatusLabel,
+            boolean urgent,
+            String unLocode,
+            String description,
+            Instant occurredAt,
+            Instant estimatedArrival,
+            String transportStatus,
+            String transportStatusLabel) {
+    }
+
+    /** 例外一覧（S42）。 */
+    public record ExceptionListView(List<ExceptionView> items) {
+    }
+
+    /**
      * 直近で状態が変わった追跡の件数（S02 荷主）。
      *
      * <p>US17 §受入基準 4 の「荷主への通知」は送信基盤がスコープ外。<b>荷主が

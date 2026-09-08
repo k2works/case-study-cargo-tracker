@@ -1,10 +1,17 @@
 package com.example.cargotracker.tracking.interfaces.rest;
 
 import com.example.cargotracker.shared.infrastructure.axon.QueryDispatcher;
+import com.example.cargotracker.tracking.domain.model.commands.NotifyShipperOfExceptionCommand;
+import com.example.cargotracker.tracking.domain.model.commands.RegisterTrackingExceptionCommand;
+import com.example.cargotracker.tracking.domain.model.commands.ResolveTrackingExceptionCommand;
+import com.example.cargotracker.tracking.domain.model.commands.StartExceptionResponseCommand;
 import com.example.cargotracker.tracking.domain.model.commands.UpdateTransportStatusCommand;
+import com.example.cargotracker.tracking.domain.model.valueobjects.ExceptionType;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TransportStatus;
 import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.CountRecentlyChangedQuery;
 import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.FindTrackingQuery;
+import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.ExceptionListView;
+import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.FindOpenExceptionsQuery;
 import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.RecentlyChangedView;
 import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.FindTrackingsQuery;
 import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.TrackingListView;
@@ -60,6 +67,32 @@ public class TrackingController {
             @NotBlank(message = "新しい状態は必須です") String newStatus,
             String location,
             Instant occurredAt) {
+    }
+
+    /** 例外の起票（S43 / US19 §受入基準 1）。 */
+    public record RegisterExceptionRequest(
+            @NotBlank(message = "例外 ID は必須です") String exceptionId,
+            @NotBlank(message = "例外種別は必須です") String exceptionType,
+            Instant occurredAt,
+            String unLocode,
+            @NotBlank(message = "発生状況は必須です") String description) {
+    }
+
+    /** 対応の開始（S41 / US19 §受入基準 4）。 */
+    public record StartResponseRequest(
+            String newEstimatedArrival,
+            @NotBlank(message = "対応方針は必須です") String plan) {
+    }
+
+    /** 解決（S41 / US19 §受入基準 4）。 */
+    public record ResolveExceptionRequest(
+            @NotBlank(message = "対応内容は必須です") String resolution) {
+    }
+
+    /** 荷主へ知らせた記録（S41 / US19 §受入基準 3）。送信基盤はスコープ外。 */
+    public record NotifyShipperRequest(
+            @NotBlank(message = "伝えた手段は必須です") String means,
+            @NotBlank(message = "伝えた内容は必須です") String summary) {
     }
 
     /** 一覧が一度に返す上限。**上限を超える指定は切り詰める**（1 行ごとに問い合わせるため）。 */
@@ -164,6 +197,77 @@ public class TrackingController {
                 request.occurredAt() == null ? clock.instant() : request.occurredAt(),
                 username), Void.class);
         return ResponseEntity.noContent().build();
+    }
+
+    /** 未解決の例外の一覧（S42 / US19 §受入基準 5）。 */
+    @GetMapping("/exceptions")
+    public ResponseEntity<ExceptionListView> openExceptions() {
+        return ResponseEntity.ok(queries.query(new FindOpenExceptionsQuery(),
+                ExceptionListView.class));
+    }
+
+    /**
+     * 例外を起票する（S43 / US19 §受入基準 1・2）。
+     *
+     * <p><b>起票者はヘッダから取る。</b> 本文に載せると、他人の名前で記録できる。</p>
+     */
+    @PostMapping("/{trackingNumber}/exceptions")
+    public ResponseEntity<Void> registerException(@PathVariable String trackingNumber,
+            @RequestHeader(value = "X-Auth-Username", required = false) String username,
+            @Valid @RequestBody RegisterExceptionRequest request) {
+        commands.sendAndWait(new RegisterTrackingExceptionCommand(trackingNumber,
+                request.exceptionId(), exceptionTypeOf(request.exceptionType()),
+                // 入力されなければ「いま」。**業務の時計で決める**。
+                request.occurredAt() == null ? clock.instant() : request.occurredAt(),
+                request.unLocode(), request.description(), username), Void.class);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** 対応を始める（S41 / US19 §受入基準 4）。 */
+    @PostMapping("/{trackingNumber}/exceptions/{exceptionId}/response")
+    public ResponseEntity<Void> startResponse(@PathVariable String trackingNumber,
+            @PathVariable String exceptionId,
+            @RequestHeader(value = "X-Auth-Username", required = false) String username,
+            @Valid @RequestBody StartResponseRequest request) {
+        commands.sendAndWait(new StartExceptionResponseCommand(trackingNumber, exceptionId,
+                request.newEstimatedArrival(), request.plan(), username), Void.class);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** 解決する（S41 / US19 §受入基準 4）。 */
+    @PostMapping("/{trackingNumber}/exceptions/{exceptionId}/resolution")
+    public ResponseEntity<Void> resolveException(@PathVariable String trackingNumber,
+            @PathVariable String exceptionId,
+            @RequestHeader(value = "X-Auth-Username", required = false) String username,
+            @Valid @RequestBody ResolveExceptionRequest request) {
+        commands.sendAndWait(new ResolveTrackingExceptionCommand(trackingNumber, exceptionId,
+                request.resolution(), username), Void.class);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * 荷主へ知らせた事実を記録する（S41 / US19 §受入基準 3）。
+     *
+     * <p><b>送信基盤はスコープ外</b>（ui_design.md:120）。通知は現行の手作業で行い、
+     * ここに残るのは「いつ・どうやって・何を伝えたか」だけである。</p>
+     */
+    @PostMapping("/{trackingNumber}/exceptions/{exceptionId}/notifications")
+    public ResponseEntity<Void> notifyShipper(@PathVariable String trackingNumber,
+            @PathVariable String exceptionId,
+            @RequestHeader(value = "X-Auth-Username", required = false) String username,
+            @Valid @RequestBody NotifyShipperRequest request) {
+        commands.sendAndWait(new NotifyShipperOfExceptionCommand(trackingNumber, exceptionId,
+                request.means(), request.summary(), username), Void.class);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** 例外種別の名前を型に直す。<b>知らない名前を 500 にしない</b>（入力の誤り）。 */
+    private static ExceptionType exceptionTypeOf(String name) {
+        try {
+            return ExceptionType.valueOf(name);
+        } catch (IllegalArgumentException e) {
+            throw new BusinessRuleViolation("知らない例外種別です: " + name);
+        }
     }
 
     /**

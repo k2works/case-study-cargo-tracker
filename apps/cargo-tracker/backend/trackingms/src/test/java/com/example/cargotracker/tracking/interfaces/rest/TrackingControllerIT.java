@@ -272,6 +272,101 @@ class TrackingControllerIT extends AbstractAxonIntegrationTest {
                 .isEqualTo(HttpStatus.FORBIDDEN);
     }
 
+    // ---- US19 例外（IT10 T6・T7） ----
+
+    private ResponseEntity<Void> post(String path, Map<String, Object> body) {
+        return rest.post().uri("http://localhost:" + port + path)
+                .header("X-Auth-Username", "tracker01")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(body).retrieve().toBodilessEntity();
+    }
+
+    @Test
+    @DisplayName("US19 §1・§2・§5: 遅延を起票すると例外発生になり、一覧に出る")
+    void registersAndListsException() {
+        String trackingNumber = givenAggregate("SHP-000001");
+        String exceptionId = "ex-" + System.nanoTime();
+
+        var registered = post("/api/v1/tracking/trackings/" + trackingNumber + "/exceptions",
+                Map.of("exceptionId", exceptionId, "exceptionType", "DELAY",
+                        "unLocode", "SGSIN", "description", "台風で 3 日遅れます"));
+
+        assertThat(registered.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
+            var detail = get("/api/v1/tracking/trackings/" + trackingNumber, null);
+            assertThat(detail.getBody()).containsEntry("statusLabel", "例外発生");
+
+            var list = get("/api/v1/tracking/trackings/exceptions", null);
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> items =
+                    (List<Map<String, Object>>) list.getBody().get("items");
+            assertThat(items).anySatisfy(item -> {
+                assertThat(item).containsEntry("exceptionId", exceptionId);
+                // **利用者に列挙名を見せない。**
+                assertThat(item).containsEntry("exceptionTypeLabel", "遅延");
+                assertThat(item).containsEntry("responseStatusLabel", "起票");
+                assertThat(item).containsEntry("urgent", false);
+            });
+        });
+    }
+
+    @Test
+    @DisplayName("US19 §3・§4: 通知の記録・対応開始・解決を通すと例外前の状態へ戻る")
+    void respondsAndResolves() {
+        String trackingNumber = givenAggregate("SHP-000001");
+        // 受領まで進めてから起票する（戻る先が未受領では区別が付かない）。
+        post("/api/v1/tracking/trackings/" + trackingNumber + "/status",
+                Map.of("newStatus", "RECEIVED", "location", "JPTYO"));
+        String exceptionId = "ex-" + System.nanoTime();
+        post("/api/v1/tracking/trackings/" + trackingNumber + "/exceptions",
+                Map.of("exceptionId", exceptionId, "exceptionType", "DELAY",
+                        "unLocode", "SGSIN", "description", "台風で 3 日遅れます"));
+
+        String base = "/api/v1/tracking/trackings/" + trackingNumber + "/exceptions/"
+                + exceptionId;
+        assertThat(post(base + "/notifications",
+                Map.of("means", "電話", "summary", "3 日遅れる見込みと伝えました"))
+                .getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        assertThat(post(base + "/response",
+                Map.of("newEstimatedArrival", "2026-09-27", "plan", "代替便を手配中"))
+                .getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        assertThat(post(base + "/resolution",
+                Map.of("resolution", "代替便に振り替えました"))
+                .getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
+            // **例外前の状態へ戻る**（不変条件 5）。
+            assertThat(get("/api/v1/tracking/trackings/" + trackingNumber, null).getBody())
+                    .containsEntry("statusLabel", "受領済");
+
+            var list = get("/api/v1/tracking/trackings/exceptions", null);
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> items =
+                    (List<Map<String, Object>>) list.getBody().get("items");
+            assertThat(items)
+                    .as("解決済は既定で外す（決着したものが混ざると一覧が信用されない）")
+                    .noneSatisfy(item ->
+                            assertThat(item).containsEntry("exceptionId", exceptionId));
+        });
+    }
+
+    @Test
+    @DisplayName("知らない例外種別は 422（壊れたのではなく入力の誤り）")
+    void rejectsUnknownExceptionType() {
+        String trackingNumber = givenAggregate("SHP-000001");
+
+        var response = rest.post()
+                .uri("http://localhost:" + port + "/api/v1/tracking/trackings/"
+                        + trackingNumber + "/exceptions")
+                .header("X-Auth-Username", "tracker01")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("exceptionId", "ex-x", "exceptionType", "TYPHOON",
+                        "description", "台風"))
+                .exchange((req, res) -> res.getStatusCode());
+
+        assertThat(response).isEqualTo(HttpStatus.valueOf(422));
+    }
+
     @Test
     @DisplayName("負の件数でも壊れない（500 にしない）")
     void clampsTheLimit() {

@@ -2,9 +2,15 @@ package com.example.cargotracker.tracking.infrastructure.query;
 
 import com.example.cargotracker.tracking.domain.model.valueobjects.TransportStatus;
 import com.example.cargotracker.tracking.infrastructure.persistence.TrackingEventMapper;
+import com.example.cargotracker.tracking.domain.model.valueobjects.ExceptionType;
+import com.example.cargotracker.tracking.domain.model.valueobjects.ResponseStatus;
+import com.example.cargotracker.tracking.infrastructure.persistence.TrackingExceptionMapper;
 import com.example.cargotracker.tracking.infrastructure.persistence.TrackingSummaryMapper;
 import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.FindPublicTrackingQuery;
 import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.CountRecentlyChangedQuery;
+import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.ExceptionListView;
+import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.ExceptionView;
+import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.FindOpenExceptionsQuery;
 import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.FindTrackingQuery;
 import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.RecentlyChangedView;
 import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.FindTrackingsQuery;
@@ -24,14 +30,16 @@ public class TrackingQueryHandler {
 
     private final TrackingSummaryMapper trackings;
     private final TrackingEventMapper history;
+    private final TrackingExceptionMapper exceptions;
     // **業務日付は業務タイムゾーンの時計で決める。** Clock.systemUTC() を直接
     // 呼ぶと、時差の分だけ「直近 24 時間」の境界がずれる（IT7 の教訓）。
     private final java.time.Clock clock;
 
     public TrackingQueryHandler(TrackingSummaryMapper trackings, TrackingEventMapper history,
-            java.time.Clock clock) {
+            TrackingExceptionMapper exceptions, java.time.Clock clock) {
         this.trackings = trackings;
         this.history = history;
+        this.exceptions = exceptions;
         this.clock = clock;
     }
 
@@ -152,6 +160,26 @@ public class TrackingQueryHandler {
         return shipperId == null || shipperId.equals(row.shipperId());
     }
 
+
+    /**
+     * 未解決の例外（S42 / US19 §受入基準 5）。
+     *
+     * <p><b>並びは読み口が決める</b>（緊急が先、以降は到着期限までの残日数が
+     * 少ない順）。画面で並べ直すと、判定が 2 か所になる。</p>
+     */
+    @QueryHandler
+    public ExceptionListView handle(FindOpenExceptionsQuery query) {
+        return new ExceptionListView(exceptions.findOpen().stream()
+                .map(row -> new ExceptionView(row.exceptionId(), row.trackingNumber(),
+                        row.exceptionType(),
+                        ExceptionType.valueOf(row.exceptionType()).label(),
+                        row.responseStatus(),
+                        ResponseStatus.valueOf(row.responseStatus()).label(),
+                        row.urgent(), row.unlocode(), row.description(), row.occurredAt(),
+                        row.estimatedArrival(), row.transportStatus(),
+                        TransportStatus.valueOf(row.transportStatus()).label()))
+                .toList());
+    }
 
     /** 直近で状態が変わった件数（S02 荷主 / US17 §4 の代わり）。 */
     @QueryHandler
