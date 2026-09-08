@@ -54,7 +54,11 @@ test.describe('kind クラスタでの通し確認', () => {
     check: () => Promise<void>,
     options: { timeout?: number; hold?: number } = {},
   ) {
-    const timeout = options.timeout ?? 60_000;
+    // **テストの既定のタイムアウト（30 秒）より短くする。** 長くすると、投影が
+    // 遅れたときに「何が見えなかったか」ではなく「テストが時間切れ」とだけ出て、
+    // 原因が読めなくなる（IT10 で実測）。長く待つ必要がある通しの検査は、
+    // その検査自身が test.setTimeout で伸ばす。
+    const timeout = options.timeout ?? 20_000;
     const hold = options.hold ?? 1_000;
     await expect(async () => {
       await check();
@@ -70,6 +74,8 @@ test.describe('kind クラスタでの通し確認', () => {
     text: string | RegExp,
     options: { reload?: boolean } = {},
   ) {
+    // **絞り込みを入れた画面では再読込しない。** 読み直すと入力が消え、
+    // 上限の外にある行を探し続けることになる（一覧はポーリングで更新される）。
     await waitForProjection(page, async () => {
       if (options.reload !== false) {
         await page.reload();
@@ -101,8 +107,11 @@ test.describe('kind クラスタでの通し確認', () => {
     await page.getByLabel('住所').fill('東京都中央区');
     await page.getByRole('button', { name: '登録する' }).click();
 
-    // 投影は非同期なので、一覧に出るまで待つ（**再読込しながら**）。
-    await expectEventually(page, email);
+    // **名前で絞り込んでから確かめる。** 一覧には上限があり、登録したばかりの
+    // 荷主は絞り込まないと出ない（クラスタは作り直さずに使い続けるので、
+    // 実行のたびに荷主が積み上がる。IT10 の通しで実測: 295 件で上限 50 件）。
+    await page.getByLabel('荷主名で絞り込む').fill(`クラスタ商事 ${stamp}`);
+    await expectEventually(page, email, { reload: false });
 
     await page.getByRole('link', { name: '予約登録' }).first().click();
     await expect(page.getByRole('heading', { name: '貨物予約の登録' })).toBeVisible();
@@ -553,7 +562,8 @@ test.describe('kind クラスタでの通し確認', () => {
       await page.goto(`/bookings/${bookingId}`);
       await page.getByRole('button', { name: '追跡番号を発行する' }).click();
       // **形式は正典（ADR-0011）。** 連番だと公開照会（US18）で前後が推測できる。
-      await expect(page.getByText(/^TRK-[0-9A-Z]{10}$/)).toBeVisible({ timeout: 20_000 });
+      // 投影は非同期なので、**再読込しながら**待つ（画面は自分から取り直さない）。
+      await expectEventually(page, /^TRK-[0-9A-Z]{10}$/);
       // デモ項目 4: 二重に発行されない（操作そのものが消える）。
       await expect(page.getByRole('button', { name: '追跡番号を発行する' })).toHaveCount(0);
 
