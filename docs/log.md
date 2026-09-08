@@ -1,5 +1,8 @@
 # Docs Update Log
 
+## 2026-09-08
+* **Update**: [iteration_plan-9](/development/cargo-tracker/iteration_plan-9.md) を更新（claude-code/claude-opus-5）
+
 ## 2026-09-07
 * **Update**: [13-荷役作業を記録する](/manual/13-荷役作業を記録する.md) を更新（claude-code/claude-opus-5）
 * **Update**: [01-業務フロー](/manual/01-業務フロー.md) を更新（claude-code/claude-opus-5）

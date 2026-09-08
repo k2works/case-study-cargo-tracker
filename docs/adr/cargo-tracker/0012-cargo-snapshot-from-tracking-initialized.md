@@ -3,7 +3,7 @@ type: ADR
 title: "ADR-0012 CargoSnapshot は TrackingInitializedEvent から作る"
 description: "handlingms が予定ルートの判定に使う CargoSnapshot の元イベントを、購読できる契約イベントに決め直す。正典が指定していた TrackingNumberIssuedEvent は bookingms の内部イベントで購読できない。"
 tags: [adr]
-status: accepted
+status: draft
 generated: { by: claude-code/claude-opus-5, at: 2026-09-07T12:27:56Z }
 ---
 
