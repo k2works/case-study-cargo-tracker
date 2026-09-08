@@ -3,7 +3,7 @@ type: Plan
 title: "イテレーション 10 計画"
 tags: [plan]
 status: draft
-generated: { by: claude-code/claude-opus-5, at: 2026-09-08T04:58:16Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-08T07:06:06Z }
 ---
 
 # イテレーション 10 計画
@@ -59,7 +59,7 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-08T04:58:16Z }
 | N1 | `ui_design.md:120` の「記録と手作業の組で満たす」US 一覧に **US19 が入っていない**。かつ記録先が bookingms の `ShipperNotifiedEvent` に固定されていて、trackingms から出す例外通知の置き場が無い | `ui_design.md:120`・`domain-model.md`（trackingms のイベント表に `ExceptionShipperNotifiedEvent` を追加） | T7 |
 | N2 | S42・S43 は表と図の行にはあるが、`ui_design.md` に **`###` の節が無い**（画面項目・操作手順が未記述） | `ui_design.md`（S42・S43 の節を新設） | T6 |
 | N3 | `ui_design.md:151` は S50 が通関未済の引取を「判定時点で」断ると書いているが、**通関の検査は US29（IT12）**。本 IT は荷受人確認で代替する（R1） | `ui_design.md:151` に但し書きを足す | T2 |
-| N5 | 引取待ち（H.8 の 2 つ目のタブ）に対応する**画面 ID が `ui_design.md` の画面一覧に無い**。航海起点（S50）では辿り着けない画面で、下部タブとダッシュボードから開く | `ui_design.md`（画面一覧に追加）・`data-model.md`（`handling_activity.voided_by`） | T2 |
+| N5 | 引取待ち（H.8 の 2 つ目のタブ）に対応する**画面 ID が `ui_design.md` の画面一覧に無い**。航海起点（S50）では辿り着けない画面で、下部タブとダッシュボードから開く | **反映済み**（T2）。`ui_design.md` に **S54 引取待ち**を追加（S52・S53 は通関で使用済み）。`data-model.md` に `handling_activity.voided_by` を追加。N1・N3 も同じ変更で反映した | T2 |
 | N4 | `data-model.md:541-560` の `tracking_exception` には**到着期限までの残日数を導ける列が無い**。不変条件 7 の並び順は `tracking_summary.estimated_arrival`（IT9 で追加済み）との JOIN で出す | `data-model.md:573`（並び順の導出元を明記） | T5 |
 
 ## 成功基準
