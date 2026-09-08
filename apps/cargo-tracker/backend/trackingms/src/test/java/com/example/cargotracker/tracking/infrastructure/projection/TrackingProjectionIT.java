@@ -8,6 +8,12 @@ import com.example.cargotracker.tracking.domain.model.events.TransportStatusUpda
 import com.example.cargotracker.tracking.domain.model.valueobjects.StatusUpdateSource;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TransportStatus;
 import com.example.cargotracker.tracking.infrastructure.persistence.TrackingEventMapper;
+import com.example.cargotracker.tracking.domain.model.events.ExceptionResponseStartedEvent;
+import com.example.cargotracker.tracking.domain.model.events.HandlingNotAppliedEvent;
+import com.example.cargotracker.tracking.domain.model.events.TrackingExceptionRegisteredEvent;
+import com.example.cargotracker.tracking.domain.model.events.TrackingExceptionResolvedEvent;
+import com.example.cargotracker.tracking.domain.model.valueobjects.ExceptionType;
+import com.example.cargotracker.tracking.infrastructure.persistence.TrackingExceptionMapper;
 import com.example.cargotracker.tracking.infrastructure.persistence.TrackingSummaryMapper;
 import java.time.Instant;
 import java.util.List;
@@ -37,6 +43,9 @@ class TrackingProjectionIT extends AbstractAxonIntegrationTest {
 
     @Autowired
     private TrackingEventMapper history;
+
+    @Autowired
+    private TrackingExceptionMapper exceptions;
 
     private static TrackingInitializedEvent initialized(String trackingNumber, String bookingId) {
         return new TrackingInitializedEvent(trackingNumber, bookingId, "SHP-000001",
@@ -143,6 +152,125 @@ class TrackingProjectionIT extends AbstractAxonIntegrationTest {
         assertThat(history.findHistory(trackingNumber))
                 .as("履歴そのものは残す。届いた事実を捨てると、後から追えない")
                 .hasSize(1);
+    }
+
+    // ---- US19 例外の投影（IT10 T5） ----
+
+    private static final Instant OCCURRED = Instant.parse("2026-09-20T02:00:00Z");
+
+    private static TrackingExceptionRegisteredEvent exceptionRegistered(String trackingNumber,
+            String exceptionId, ExceptionType type) {
+        return new TrackingExceptionRegisteredEvent(trackingNumber, exceptionId, type.name(),
+                OCCURRED, "SGSIN", "台風で 3 日遅れます", type.urgent(),
+                TransportStatus.RECEIVED, "tracker01", AT);
+    }
+
+    @Test
+    @DisplayName("US19 §5: 起票が例外一覧に出て、件数が追跡に写る")
+    void writesTheException() {
+        String trackingNumber = "T-E-" + System.nanoTime();
+        projection.on(initialized(trackingNumber, "b-" + System.nanoTime()));
+
+        projection.on(exceptionRegistered(trackingNumber, "ex-1", ExceptionType.DELAY),
+                "evt-ex-1");
+
+        var row = exceptions.findById("ex-1");
+        assertThat(row).isNotNull();
+        assertThat(row.exceptionType()).isEqualTo("DELAY");
+        assertThat(row.responseStatus()).isEqualTo("REPORTED");
+        // **判定は写す**（不変条件 7）。投影に書き直さない。
+        assertThat(row.urgent()).isFalse();
+
+        var summary = trackings.findByTrackingNumber(trackingNumber);
+        assertThat(summary.openExceptionCount())
+                .as("一覧が tracking_exception を数えないための写し").isEqualTo(1);
+        assertThat(summary.urgentExceptionCount()).isZero();
+    }
+
+    @Test
+    @DisplayName("不変条件 7: 紛失は緊急として写る（件数も緊急で数える）")
+    void countsUrgentExceptions() {
+        String trackingNumber = "T-E-" + System.nanoTime();
+        projection.on(initialized(trackingNumber, "b-" + System.nanoTime()));
+
+        projection.on(exceptionRegistered(trackingNumber, "ex-2", ExceptionType.LOSS),
+                "evt-ex-2");
+
+        assertThat(exceptions.findById("ex-2").urgent()).isTrue();
+        assertThat(trackings.findByTrackingNumber(trackingNumber).urgentExceptionCount())
+                .isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("US19 §5: 対応開始と解決が例外に残り、解決すると未解決の件数が減る")
+    void writesTheResponseAndResolution() {
+        String trackingNumber = "T-E-" + System.nanoTime();
+        projection.on(initialized(trackingNumber, "b-" + System.nanoTime()));
+        projection.on(exceptionRegistered(trackingNumber, "ex-3", ExceptionType.DELAY),
+                "evt-ex-3");
+
+        projection.on(new ExceptionResponseStartedEvent(trackingNumber, "ex-3",
+                "2026-09-27", "代替便を手配中", "tracker01", AT));
+        assertThat(exceptions.findById("ex-3").responseStatus()).isEqualTo("RESPONDING");
+
+        projection.on(new TrackingExceptionResolvedEvent(trackingNumber, "ex-3",
+                "代替便に振り替えました", "tracker01", AT), "evt-ex-3-x");
+
+        var row = exceptions.findById("ex-3");
+        assertThat(row.responseStatus()).isEqualTo("RESOLVED");
+        // **解決しても消えない**（不変条件 6）。料金調整の根拠として残る。
+        assertThat(row.resolution()).isEqualTo("代替便に振り替えました");
+        assertThat(row.description()).isEqualTo("台風で 3 日遅れます");
+        assertThat(trackings.findByTrackingNumber(trackingNumber).openExceptionCount()).isZero();
+    }
+
+    @Test
+    @DisplayName("履歴に例外の起票と解決が別の種別で残る（逆向きの出来事を同じ印にしない）")
+    void writesExceptionHistory() {
+        String trackingNumber = "T-E-" + System.nanoTime();
+        projection.on(initialized(trackingNumber, "b-" + System.nanoTime()));
+        projection.on(exceptionRegistered(trackingNumber, "ex-4", ExceptionType.DELAY),
+                "evt-ex-4");
+        projection.on(new TrackingExceptionResolvedEvent(trackingNumber, "ex-4",
+                "対応済み", "tracker01", AT), "evt-ex-4-x");
+
+        assertThat(history.findHistory(trackingNumber))
+                .extracting(TrackingEventMapper.TrackingEventRow::eventType)
+                .contains("EXCEPTION", "RESOLVED");
+    }
+
+    @Test
+    @DisplayName("追記系はリプレイで行を増やさない（同じ例外を二度読んでも 1 行）")
+    void doesNotDuplicateOnReplay() {
+        String trackingNumber = "T-E-" + System.nanoTime();
+        projection.on(initialized(trackingNumber, "b-" + System.nanoTime()));
+
+        projection.on(exceptionRegistered(trackingNumber, "ex-5", ExceptionType.DELAY),
+                "evt-ex-5");
+        projection.on(exceptionRegistered(trackingNumber, "ex-5", ExceptionType.DELAY),
+                "evt-ex-5");
+
+        assertThat(exceptions.findOpen()).filteredOn(row -> "ex-5".equals(row.exceptionId()))
+                .hasSize(1);
+        assertThat(trackings.findByTrackingNumber(trackingNumber).openExceptionCount())
+                .as("件数も二度数えない").isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("M6: 反映できなかった荷役が履歴に残る（無言で捨てない）")
+    void writesHandlingThatCouldNotAdvance() {
+        String trackingNumber = "T-E-" + System.nanoTime();
+        projection.on(initialized(trackingNumber, "b-" + System.nanoTime()));
+
+        projection.on(new HandlingNotAppliedEvent(trackingNumber, "act-9", "CLAIM", "JPTYO",
+                TransportStatus.NOT_RECEIVED, TransportStatus.DELIVERED, OCCURRED, AT),
+                "evt-na-1");
+
+        assertThat(history.findHistory(trackingNumber))
+                .extracting(TrackingEventMapper.TrackingEventRow::eventType)
+                .contains("NOT_APPLIED");
+        assertThat(trackings.findByTrackingNumber(trackingNumber).transportStatus())
+                .as("状態は動かさない").isEqualTo("NOT_RECEIVED");
     }
 
     @Test

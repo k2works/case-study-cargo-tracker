@@ -21,7 +21,8 @@ public interface TrackingSummaryMapper {
     String COLUMNS = "tracking_number, booking_id, shipper_id, origin_unlocode, "
             + "destination_unlocode, cargo_type, transport_status, current_unlocode, "
             + "estimated_arrival, initialized_at, last_status_changed_at, projected_at, "
-            + "last_event_id";
+            + "last_event_id, open_exception_count, urgent_exception_count, "
+            + "status_before_exception";
 
     /**
      * 追跡を作る（US14）。
@@ -59,6 +60,26 @@ public interface TrackingSummaryMapper {
             @Param("currentUnlocode") String currentUnlocode,
             @Param("projectedAt") Instant projectedAt,
             @Param("lastEventId") String lastEventId);
+
+    /**
+     * 例外の件数を数え直す（US19）。
+     *
+     * <p><b>足し引きしない。</b> 前回の記入漏れは赤くならず、足し算で書くと
+     * 永久に残る（IT4 の「インデックスの累計は明細から導く」）。明細から数える。</p>
+     */
+    @org.apache.ibatis.annotations.Update(
+            "UPDATE tracking_summary SET "
+            + "open_exception_count = (SELECT COUNT(*) FROM tracking_exception x "
+            + "  WHERE x.tracking_number = #{trackingNumber} "
+            + "    AND x.response_status <> 'RESOLVED'), "
+            + "urgent_exception_count = (SELECT COUNT(*) FROM tracking_exception x "
+            + "  WHERE x.tracking_number = #{trackingNumber} "
+            + "    AND x.response_status <> 'RESOLVED' AND x.urgent = TRUE), "
+            + "status_before_exception = #{statusBeforeException}, "
+            + "projected_at = #{projectedAt} WHERE tracking_number = #{trackingNumber}")
+    int refreshExceptionCounts(@Param("trackingNumber") String trackingNumber,
+            @Param("statusBeforeException") String statusBeforeException,
+            @Param("projectedAt") Instant projectedAt);
 
     void insertLegs(@Param("trackingNumber") String trackingNumber,
             @Param("legs") List<TrackingLegRow> legs);
@@ -146,7 +167,13 @@ public interface TrackingSummaryMapper {
             Instant initializedAt,
             Instant lastStatusChangedAt,
             Instant projectedAt,
-            String lastEventId) {
+            String lastEventId,
+            // 例外の件数（US19）。**一覧が tracking_exception を数えないための写し**。
+            int openExceptionCount,
+            int urgentExceptionCount,
+            // 例外前の状態。画面が「解決すると何に戻るか」を出すために持つ。
+            // 戻る先そのものは集約が覚えている（不変条件 5）。
+            String statusBeforeException) {
     }
 
     /** 予定の旅程の 1 区間。 */

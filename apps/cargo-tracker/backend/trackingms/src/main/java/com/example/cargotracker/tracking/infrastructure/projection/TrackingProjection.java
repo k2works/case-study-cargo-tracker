@@ -4,8 +4,16 @@ import com.example.cargotracker.shared.contract.event.TrackingInitializedEvent;
 import com.example.cargotracker.tracking.domain.model.events.TransportStatusUpdatedEvent;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TransportStatus;
 import com.example.cargotracker.tracking.infrastructure.persistence.TrackingEventMapper;
+import com.example.cargotracker.tracking.domain.model.events.ExceptionResponseStartedEvent;
+import com.example.cargotracker.tracking.domain.model.events.HandlingNotAppliedEvent;
+import com.example.cargotracker.tracking.domain.model.events.TrackingExceptionRegisteredEvent;
+import com.example.cargotracker.tracking.domain.model.events.TrackingExceptionResolvedEvent;
+import com.example.cargotracker.tracking.domain.model.valueobjects.ResponseStatus;
+import com.example.cargotracker.tracking.domain.model.valueobjects.StatusUpdateSource;
+import com.example.cargotracker.tracking.infrastructure.persistence.TrackingExceptionMapper;
 import com.example.cargotracker.tracking.infrastructure.persistence.TrackingSummaryMapper;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import org.axonframework.messaging.core.annotation.MessageIdentifier;
@@ -24,14 +32,19 @@ import org.springframework.stereotype.Component;
 @Component
 public class TrackingProjection {
 
+    private static final org.slf4j.Logger log =
+            org.slf4j.LoggerFactory.getLogger(TrackingProjection.class);
+
     private final TrackingSummaryMapper trackings;
     private final TrackingEventMapper history;
+    private final TrackingExceptionMapper exceptions;
     private final Clock clock;
 
     public TrackingProjection(TrackingSummaryMapper trackings, TrackingEventMapper history,
-            Clock clock) {
+            TrackingExceptionMapper exceptions, Clock clock) {
         this.trackings = trackings;
         this.history = history;
+        this.exceptions = exceptions;
         this.clock = clock;
     }
 
@@ -60,7 +73,8 @@ public class TrackingProjection {
                 // **到着予定は投影が 1 か所で決める**（予定の旅程の最終区間の荷降し）。
                 // 一覧のたびに旅程を引くと、1 行ごとの往復が残る。
                 estimatedArrival(event.legs()),
-                event.initializedAt(), event.initializedAt(), now, null));
+                // 例外はまだ無い。件数は起票のたびに明細から数え直す。
+                event.initializedAt(), event.initializedAt(), now, null, 0, 0, null));
 
         // 旅程は消してから入れ直す。追記だけにすると、リプレイで区間が倍になる。
         trackings.deleteLegs(event.trackingNumber());
@@ -99,5 +113,93 @@ public class TrackingProjection {
                 event.previousStatus() == null ? null : event.previousStatus().name(),
                 event.newStatus().name(), event.location(), event.occurredAt(),
                 event.updatedBy(), now));
+    }
+
+    /**
+     * 例外が起票された（US19 §受入基準 1・5）。
+     *
+     * <p><b>{@code urgent} は写すだけ</b>（不変条件 7）。判定を投影に書き直すと、
+     * 種別が増えたときに片方だけ直る。</p>
+     */
+    @EventHandler
+    public void on(TrackingExceptionRegisteredEvent event, @MessageIdentifier String eventId) {
+        var now = clock.instant();
+        exceptions.insert(new TrackingExceptionMapper.TrackingExceptionRow(
+                event.exceptionId(), event.trackingNumber(), event.exceptionType(),
+                ResponseStatus.REPORTED.name(), event.urgent(), event.unLocode(),
+                event.description(), null, event.occurredAt(), null, now));
+        refreshCounts(event.trackingNumber(),
+                event.statusBeforeException() == null
+                        ? null : event.statusBeforeException().name(), now);
+        // **起票と解決は逆向きの出来事。** 同じ印にすると履歴が読めない。
+        writeHistory(eventId, event.trackingNumber(), StatusUpdateSource.EXCEPTION.eventType(),
+                event.statusBeforeException(), TransportStatus.EXCEPTION, event.unLocode(),
+                event.occurredAt(), event.reportedBy(), now);
+    }
+
+    /** 例外への対応が始まった（US19 §受入基準 4）。 */
+    @EventHandler
+    public void on(ExceptionResponseStartedEvent event) {
+        var now = clock.instant();
+        int updated = exceptions.updateResponseStatus(event.exceptionId(),
+                ResponseStatus.RESPONDING.name(), now);
+        if (updated == 0) {
+            log.warn("対応開始を書ける例外が投影に無い: exceptionId={}", event.exceptionId());
+        }
+    }
+
+    /**
+     * 例外が解決した（US19 §受入基準 4・5）。
+     *
+     * <p><b>行は消さない</b>（不変条件 6）。起票の内容は残り、料金調整の根拠になる。
+     * 減るのは未解決の件数だけである。</p>
+     */
+    @EventHandler
+    public void on(TrackingExceptionResolvedEvent event, @MessageIdentifier String eventId) {
+        var now = clock.instant();
+        int updated = exceptions.resolve(event.exceptionId(), ResponseStatus.RESOLVED.name(),
+                event.resolution(), event.resolvedAt(), now);
+        if (updated == 0) {
+            log.warn("解決を書ける例外が投影に無い: exceptionId={}", event.exceptionId());
+        }
+        var current = trackings.findByTrackingNumber(event.trackingNumber());
+        refreshCounts(event.trackingNumber(),
+                current == null ? null : current.statusBeforeException(), now);
+        writeHistory(eventId, event.trackingNumber(), StatusUpdateSource.RESOLVED.eventType(),
+                TransportStatus.EXCEPTION, null, null, event.resolvedAt(),
+                event.resolvedBy(), now);
+    }
+
+    /**
+     * 届いたが反映できなかった荷役（IT9 レビュー M6）。
+     *
+     * <p><b>状態は動かさない。</b> 履歴に残すだけである——「荷役は記録したのに
+     * 追跡が動いていない」という問い合わせに、これが無いと答えられない。</p>
+     */
+    @EventHandler
+    public void on(HandlingNotAppliedEvent event, @MessageIdentifier String eventId) {
+        writeHistory(eventId, event.trackingNumber(), "NOT_APPLIED", event.currentStatus(),
+                event.attemptedStatus(), event.unLocode(), event.completedAt(), null,
+                clock.instant());
+    }
+
+    /** 例外の件数を明細から数え直す（足し引きしない）。 */
+    private void refreshCounts(String trackingNumber, String statusBeforeException, Instant now) {
+        int updated = trackings.refreshExceptionCounts(trackingNumber, statusBeforeException, now);
+        if (updated == 0) {
+            log.warn("例外の件数を書ける追跡が投影に無い: trackingNumber={}", trackingNumber);
+        }
+    }
+
+    /** 履歴を 1 行足す（追記系。主キーは元イベントの識別子）。 */
+    private void writeHistory(String eventId, String trackingNumber, String eventType,
+            TransportStatus previous, TransportStatus next, String location,
+            Instant occurredAt, String recordedBy, Instant now) {
+        history.insert(new TrackingEventMapper.TrackingEventRow(eventId, trackingNumber,
+                eventType, previous == null ? null : previous.name(),
+                // new_status は NOT NULL。動かないものは「今の状態」を書く。
+                next == null ? (previous == null ? TransportStatus.EXCEPTION.name()
+                        : previous.name()) : next.name(),
+                location, occurredAt, recordedBy, now));
     }
 }
