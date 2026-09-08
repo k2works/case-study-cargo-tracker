@@ -257,6 +257,35 @@ class TrackingProjectionIT extends AbstractAxonIntegrationTest {
     }
 
     @Test
+    @DisplayName("投影に無い例外への対応・解決でも止まらない（後続まで届かなくなる）")
+    void doesNotFailForUnknownException() {
+        // **Event Processor が止まると、後続の例外まで届かなくなる。**
+        // 書けなかったことは記録に残すが、例外にはしない。
+        String trackingNumber = "T-E-" + System.nanoTime();
+        projection.on(initialized(trackingNumber, "b-" + System.nanoTime()));
+
+        projection.on(new ExceptionResponseStartedEvent(trackingNumber, "ex-none",
+                "2026-09-27", "代替便を手配中", "tracker01", AT));
+        projection.on(new TrackingExceptionResolvedEvent(trackingNumber, "ex-none",
+                "対応済み", "tracker01", AT), "evt-none-x");
+
+        assertThat(exceptions.findById("ex-none")).isNull();
+    }
+
+    @Test
+    @DisplayName("投影に無い追跡の起票でも止まらない（件数を書ける行が無い）")
+    void doesNotFailWhenTheTrackingIsMissing() {
+        String trackingNumber = "T-E-" + System.nanoTime();
+
+        projection.on(exceptionRegistered(trackingNumber, "ex-orphan", ExceptionType.DELAY),
+                "evt-ex-orphan");
+
+        // 例外そのものは残す。届いた事実を捨てると、後から追えない。
+        assertThat(exceptions.findById("ex-orphan")).isNotNull();
+        assertThat(trackings.findByTrackingNumber(trackingNumber)).isNull();
+    }
+
+    @Test
     @DisplayName("M6: 反映できなかった荷役が履歴に残る（無言で捨てない）")
     void writesHandlingThatCouldNotAdvance() {
         String trackingNumber = "T-E-" + System.nanoTime();

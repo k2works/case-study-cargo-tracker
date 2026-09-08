@@ -431,6 +431,25 @@ class TrackingActivityTest {
     }
 
     @Test
+    @DisplayName("始まっていない追跡には例外を起票できない（どの貨物の話か分からない記録を残さない）")
+    void rejectsExceptionForUnknownTracking() {
+        fixture.given().noPriorActivity()
+                .when().command(registerException(ExceptionType.DELAY))
+                .then().exception(IllegalTransition.class);
+    }
+
+    @Test
+    @DisplayName("同じ起票が二度届いても 1 度だけ（自動起票は再配送されうる）")
+    void ignoresDuplicateExceptionRegistration() {
+        fixture.given().events(and(received(), registered(ExceptionType.DELAY),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.RECEIVED,
+                                TransportStatus.EXCEPTION, StatusUpdateSource.EXCEPTION,
+                                null, "SGSIN", OCCURRED, "tracker01", NOW)))
+                .when().command(registerException(ExceptionType.DELAY))
+                .then().success().noEvents();
+    }
+
+    @Test
     @DisplayName("US19 §3: 荷主へ知らせた事実を記録する（送信基盤はスコープ外）")
     void recordsShipperNotification() {
         // ShipperNotifiedEvent は bookingms の内部イベントで、ここからは

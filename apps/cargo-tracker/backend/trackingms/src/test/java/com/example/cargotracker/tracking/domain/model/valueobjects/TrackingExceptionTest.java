@@ -85,20 +85,53 @@ class TrackingExceptionTest {
     }
 
     @Test
-    @DisplayName("対応内容の無い解決は残さない（何をしたか読めない記録になる）")
+    @DisplayName("対応内容の無い解決は残さない（何をしたか読めない記録になる。null も空白も）")
     void requiresAResolution() {
         var exception = reported(ExceptionType.DELAY);
 
         assertThatThrownBy(() -> exception.resolve("  ", RESOLVED_AT))
                 .isInstanceOf(BusinessRuleViolation.class);
+        assertThatThrownBy(() -> exception.resolve(null, RESOLVED_AT))
+                .isInstanceOf(BusinessRuleViolation.class);
     }
 
     @Test
-    @DisplayName("発生状況が無い起票は残さない（US19 §1）")
+    @DisplayName("発生状況が無い起票は残さない（US19 §1。null も空白も）")
     void requiresADescription() {
         assertThatThrownBy(() ->
                 TrackingException.report("ex-1", ExceptionType.DELAY, OCCURRED, "SGSIN", " "))
                 .isInstanceOf(BusinessRuleViolation.class);
+        assertThatThrownBy(() ->
+                TrackingException.report("ex-1", ExceptionType.DELAY, OCCURRED, "SGSIN", null))
+                .isInstanceOf(BusinessRuleViolation.class);
+    }
+
+    @Test
+    @DisplayName("識別子・種別・発生日時が無い起票は残さない（どの例外の話か分からなくなる）")
+    void requiresTheIdentity() {
+        // **値の一覧から回す。** 1 件ずつ書くと、項目を足したときに抜ける。
+        record Missing(String label, org.assertj.core.api.ThrowableAssert.ThrowingCallable call) {
+        }
+        var cases = java.util.List.of(
+                new Missing("例外 ID（空白）",
+                        () -> TrackingException.report("  ", ExceptionType.DELAY, OCCURRED,
+                                "SGSIN", "台風で 3 日遅れます")),
+                // **null と空白の両方を通す。** 片方だけだと、条件の半分が未検査になる。
+                new Missing("例外 ID（null）",
+                        () -> TrackingException.report(null, ExceptionType.DELAY, OCCURRED,
+                                "SGSIN", "台風で 3 日遅れます")),
+                new Missing("例外種別",
+                        () -> TrackingException.report("ex-1", null, OCCURRED,
+                                "SGSIN", "台風で 3 日遅れます")),
+                new Missing("発生日時",
+                        () -> TrackingException.report("ex-1", ExceptionType.DELAY, null,
+                                "SGSIN", "台風で 3 日遅れます")));
+
+        for (Missing missing : cases) {
+            assertThatThrownBy(missing.call())
+                    .as("%s が無い起票を残すと、どの例外の話か分からなくなる", missing.label())
+                    .isInstanceOf(BusinessRuleViolation.class);
+        }
     }
 
     @Test
