@@ -469,7 +469,7 @@ test.describe('kind クラスタでの通し確認', () => {
     await page.getByRole('button', { name: '通知した記録を残す' }).click();
 
     // 通知済みになり、履歴に残る（US12 §受入基準 4）。
-    await expect(page.getByText('通知済み')).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText('経路通知済')).toBeVisible({ timeout: 20_000 });
     await expect(page.getByRole('heading', { name: '通知履歴' })).toBeVisible();
 
     // 通知したので経路設計へ戻せる（デモ項目 7）。
@@ -535,13 +535,13 @@ test.describe('kind クラスタでの通し確認', () => {
       await expect(page.getByLabel('通知内容')).toHaveValue(/JPTYO → USNYC/, { timeout: 20_000 });
       await page.getByLabel('通知先メールアドレス').fill('shipper@example.com');
       await page.getByRole('button', { name: '通知した記録を残す' }).click();
-      await expect(page.getByText('通知済み')).toBeVisible({ timeout: 20_000 });
+      await expect(page.getByText('経路通知済')).toBeVisible({ timeout: 20_000 });
 
       // デモ項目 1: 通知済みの予約を確定できる。
       await page.getByRole('button', { name: '予約を確定する' }).click();
       // **「確定」は他の文言にも含まれる**（「この経路で確定」など）ので、
-      // 状態の欄そのものを見る。
-      await expect(page.getByText('確定', { exact: true })).toBeVisible({ timeout: 20_000 });
+      // 状態の欄そのものを見る。呼び名は正典が「予約確定」と決めている。
+      await expect(page.getByText('予約確定', { exact: true })).toBeVisible({ timeout: 20_000 });
       // **営業には発行の操作が出ない**（発行は経路設計者の仕事）。
       await expect(page.getByRole('button', { name: '追跡番号を発行する' })).toHaveCount(0);
       // デモ項目 7: 確定した予約は経路設計へ戻せない。
@@ -566,6 +566,163 @@ test.describe('kind クラスタでの通し確認', () => {
       const body = await second.json();
       expect(body.message).toContain('発行できません');
       expect(body.message).not.toContain('com.example.cargotracker');
+    });
+
+  /**
+   * 追跡番号を発行したところまで作る（US16 のクラスタ確認の前提）。
+   *
+   * <p><b>前提は API で作る。</b> 画面から通すのは US13・US14 の確認の仕事で、
+   * ここで繰り返すと何を確かめている検査なのか読めなくなる。</p>
+   */
+  async function issueTrackingNumber(
+    request: import('@playwright/test').APIRequestContext,
+    product: string,
+  ): Promise<{ bookingId: string; trackingNumber: string; voyageNumber: string }> {
+    const voyageNumber = uniqueVoyageNumber('V-CL-');
+    const routingToken = await tokenOf(request, 'routing01');
+    const routingHeaders = { Authorization: `Bearer ${routingToken}` };
+
+    const voyage = await request.post('/api/v1/routing/voyages', {
+      headers: routingHeaders,
+      data: {
+        voyageNumber,
+        carrierCode: 'MOL',
+        carrierName: '商船三井',
+        vesselName: 'CLAIM EXPRESS',
+        movements: [{
+          departureUnLocode: 'JPTYO',
+          arrivalUnLocode: 'USNYC',
+          // **どの候補より速くする。** 候補は 20 件で打ち切られる（ADR-0007）。
+          departureAt: `${businessDate(2)}T00:00:00Z`,
+          arrivalAt: `${businessDate(4)}T00:00:00Z`,
+        }],
+        acceptedCargoTypes: ['GENERAL'],
+      },
+    });
+    expect(voyage.status(), await voyage.text()).toBe(201);
+
+    const bookingId = await bookCargo(request, product);
+    const salesToken = await tokenOf(request, 'sales01');
+    const salesHeaders = { Authorization: `Bearer ${salesToken}` };
+
+    expect((await request.post(
+      `/api/v1/booking/bookings/${bookingId}/routing-request`,
+      { headers: salesHeaders })).status()).toBe(202);
+
+    // 経路を確定する。候補の 1 件目を選ぶ（自分の航海を名指ししない）。
+    let candidates: { legs: unknown[] }[] = [];
+    await expect(async () => {
+      const response = await request.get(
+        `/api/v1/booking/bookings/${bookingId}/route-candidates`,
+        { headers: routingHeaders });
+      expect(response.status()).toBe(200);
+      candidates = (await response.json()).candidates ?? [];
+      expect(candidates.length).toBeGreaterThan(0);
+    }).toPass({ timeout: 60_000 });
+
+    // **経路の確定は POST**（`/route`）。PUT は経路仕様の調整（US10）で別物。
+    expect((await request.post(`/api/v1/booking/bookings/${bookingId}/route`, {
+      headers: routingHeaders,
+      data: { legs: candidates[0]?.legs ?? [] },
+    })).status()).toBe(200);
+
+    await expect(async () => {
+      const response = await request.post(
+        `/api/v1/booking/bookings/${bookingId}/notifications`, {
+          headers: salesHeaders,
+          data: { recipientEmail: 'shipper@example.com', summary: 'JPTYO → USNYC' },
+        });
+      // 通知の記録は同期で返る（旅程が届く前は集約が断るので、届くまで再試行する）。
+      expect(response.status()).toBe(200);
+    }).toPass({ timeout: 60_000 });
+
+    expect((await request.post(`/api/v1/booking/bookings/${bookingId}/confirmation`,
+      { headers: salesHeaders })).status()).toBe(200);
+
+    let trackingNumber = '';
+    await expect(async () => {
+      const issued = await request.post(
+        `/api/v1/booking/bookings/${bookingId}/tracking-number`,
+        { headers: routingHeaders });
+      expect(issued.status()).toBe(200);
+      const detail = await request.get(`/api/v1/booking/bookings/${bookingId}`,
+        { headers: salesHeaders });
+      trackingNumber = (await detail.json()).trackingNumber ?? '';
+      expect(trackingNumber).toMatch(/^TRK-[0-9A-Z]{10}$/);
+    }).toPass({ timeout: 60_000 });
+
+    return { bookingId, trackingNumber, voyageNumber };
+  }
+
+  test('荷受人の確認を取って引取を記録すると、引取済になり精算と予約へ伝わる（US16・IT10）',
+    async ({ page, request }) => {
+      // **US16 のクラスタ確認**（Try T3。US ごとに 1 度回す）。
+      // モックでは「引取が billingms と bookingms の両方へ届くか」を判別できない。
+      test.setTimeout(180_000);
+      const product = `引取の貨物-${Date.now()}`;
+      const { bookingId, trackingNumber, voyageNumber } =
+        await issueTrackingNumber(request, product);
+
+      const handlerToken = await tokenOf(request, 'handler01');
+      const handlerHeaders = { Authorization: `Bearer ${handlerToken}` };
+
+      // 目的港まで進める（受領 → 積込 → 荷降し）。ここは US15 で確かめ済みなので API で。
+      for (const step of [
+        { handlingType: 'RECEIVE', unLocode: 'JPTYO' },
+        { handlingType: 'LOAD', unLocode: 'JPTYO', voyageNumber },
+        { handlingType: 'UNLOAD', unLocode: 'USNYC', voyageNumber },
+      ]) {
+        await expect(async () => {
+          const response = await request.post('/api/v1/handling/activities', {
+            headers: handlerHeaders,
+            data: { activityId: crypto.randomUUID(), trackingNumber, ...step },
+          });
+          expect(response.status()).toBe(201);
+        }).toPass({ timeout: 60_000 });
+      }
+
+      // **デモ項目 1: 荷受人の確認なしで引取を送ると断られる。**
+      // 画面が選択肢から外していても API を直接叩けば通っていた（IT9 レビュー）。
+      const withoutConsignee = await request.post('/api/v1/handling/activities', {
+        headers: handlerHeaders,
+        failOnStatusCode: false,
+        data: {
+          activityId: crypto.randomUUID(),
+          trackingNumber,
+          handlingType: 'CLAIM',
+          unLocode: 'USNYC',
+        },
+      });
+      expect(withoutConsignee.status()).toBe(422);
+      expect((await withoutConsignee.json()).message).toContain('荷受人の確認');
+
+      // **デモ項目 2: 画面から確認を入れて引取を記録すると「引取済」になる。**
+      await signIn(page, 'handler01');
+      await page.goto(`/handling/voyages/${voyageNumber}?unLocode=USNYC`);
+      await page.getByLabel('作業種別').selectOption('CLAIM');
+      await page.getByLabel('追跡番号').fill(trackingNumber);
+      // **「確認」だけで指さない。** 引取では荷受人の確認欄の文言にも含まれる。
+      // 貨物が引けたことは、確認欄の見出し（dt）そのもので見る。
+      await expect(page.getByText('確認', { exact: true })).toBeVisible({ timeout: 20_000 });
+      await page.getByLabel(/荷受人の確認/).fill('John Smith');
+      await page.getByRole('button', { name: '記録する' }).click();
+
+      // 履歴に確認が残る（記録するだけでは誰にも見えない）。
+      await page.goto(`/handling/${trackingNumber}`);
+      await expectEventually(page, '引取');
+
+      // **デモ項目 2 の続き: 貨物状態が引取済になる。**
+      await page.goto('/logout');
+      await signIn(page, 'tracker01');
+      await page.goto(`/tracking/${trackingNumber}`);
+      await expectEventually(page, '引取済');
+
+      // **デモ項目 3b: 引取が予約へ伝わる**（購読側は billingms だけではない）。
+      // **予約は「配送完了」**。輸送の「引取済」と呼び名を分ける（正典の状態の一覧）。
+      await page.goto('/logout');
+      await signIn(page, 'sales01');
+      await page.goto(`/bookings/${bookingId}`);
+      await expectEventually(page, '配送完了');
     });
 
   test('追跡番号だけで照会でき、追跡管理者が状態を手で更新できる（US17・US18・IT8）',
@@ -621,7 +778,7 @@ test.describe('kind クラスタでの通し確認', () => {
       await page.getByLabel('通知先メールアドレス').fill('shipper@example.com');
       await page.getByRole('button', { name: '通知した記録を残す' }).click();
       await page.getByRole('button', { name: '予約を確定する' }).click();
-      await expect(page.getByText('確定', { exact: true })).toBeVisible({ timeout: 20_000 });
+      await expect(page.getByText('予約確定', { exact: true })).toBeVisible({ timeout: 20_000 });
 
       await page.goto('/logout');
       await signIn(page, 'routing01');

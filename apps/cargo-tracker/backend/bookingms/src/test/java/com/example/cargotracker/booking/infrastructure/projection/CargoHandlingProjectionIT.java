@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.cargotracker.booking.domain.model.events.BookingConfirmedEvent;
 import com.example.cargotracker.booking.domain.model.events.BookingMisroutedEvent;
+import com.example.cargotracker.booking.domain.model.events.BookingDeliveredEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoRoutedEvent;
 import com.example.cargotracker.booking.domain.model.events.HandlingRecordedEvent;
@@ -90,6 +91,21 @@ class CargoHandlingProjectionIT extends AbstractAxonIntegrationTest {
 
         var row = booking(bookingId);
         assertThat(row.bookingStatus()).as("最初の受領で輸送中になる").isEqualTo("IN_TRANSIT");
+    }
+
+    @Test
+    @DisplayName("US16 §4: 引き渡しが予約の状態に出る（記録するだけでは誰にも見えない）")
+    void writesDelivered() {
+        // **集約が引取済になっても、投影に書き手が無ければ一覧は輸送中のまま。**
+        // クラスタで実測した欠陥（IT10 T2e）。
+        String bookingId = bookedAndTracked();
+        projection.on(new HandlingRecordedEvent(bookingId, "act-1", "RECEIVE", "JPTYO",
+                Instant.parse("2026-09-20T01:00:00Z"), AT));
+
+        projection.on(new BookingDeliveredEvent(bookingId, "TRK-8K2QX7M4RB",
+                Instant.parse("2026-09-25T02:00:00Z"), "USNYC"));
+
+        assertThat(booking(bookingId).bookingStatus()).isEqualTo("DELIVERED");
     }
 
     @Test

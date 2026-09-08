@@ -1,6 +1,8 @@
 # Docs Update Log
 
 ## 2026-09-08
+* **Update**: [11-予約を確定して追跡番号を発行する](/manual/11-予約を確定して追跡番号を発行する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [10-荷主に経路を通知する](/manual/10-荷主に経路を通知する.md) を更新（claude-code/claude-opus-5）
 * **Update**: [iteration_plan-10](/development/cargo-tracker/iteration_plan-10.md) を更新（claude-code/claude-opus-5）
 * **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
 * **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）

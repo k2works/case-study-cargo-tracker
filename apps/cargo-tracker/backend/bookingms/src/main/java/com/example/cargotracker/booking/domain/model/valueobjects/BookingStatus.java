@@ -20,15 +20,21 @@ public enum BookingStatus {
     /** 経路提案中。 */
     ROUTE_PROPOSED("経路提案中"),
     /** 荷主へ経路を通知済み。 */
-    ROUTE_NOTIFIED("通知済み"),
+    ROUTE_NOTIFIED("経路通知済"),
     /** 予約確定。 */
-    CONFIRMED("確定"),
+    CONFIRMED("予約確定"),
     /** 追跡番号発行済み。 */
-    TRACKING_ISSUED("追跡番号発行済み"),
+    TRACKING_ISSUED("追跡番号発行済"),
     /** 輸送中。 */
     IN_TRANSIT("輸送中"),
-    /** 引取済。 */
-    DELIVERED("引取済"),
+    /**
+     * 配送完了。
+     *
+     * <p><b>{@code TransportStatus.DELIVERED}（引取済）と呼び名を分ける。</b>
+     * 同じ「引取済」にすると、予約の状態なのか輸送の状態なのかが画面で見分けられない
+     * （domain-model.md の状態の一覧が「文脈語を添えて区別する」と決めている）。</p>
+     */
+    DELIVERED("配送完了"),
     /** 精算済。 */
     SETTLED("精算済"),
     /** キャンセル。 */

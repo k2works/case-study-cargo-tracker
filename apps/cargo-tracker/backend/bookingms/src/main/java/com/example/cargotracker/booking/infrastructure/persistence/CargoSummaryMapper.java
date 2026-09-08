@@ -52,6 +52,20 @@ public interface CargoSummaryMapper {
             @Param("offRoute") boolean offRoute,
             @Param("projectedAt") Instant projectedAt);
 
+    /**
+     * 引き渡しが済んだ（US16 §受入基準 4）。
+     *
+     * <p><b>状態だけを書く。</b> 最後の荷役（引取）は
+     * {@code HandlingRecordedEvent} が別に写す——同じ列を 2 つのイベントで
+     * 書くと、届く順で結果が変わる。</p>
+     */
+    @org.apache.ibatis.annotations.Update(
+            "UPDATE cargo_summary SET booking_status = #{bookingStatus}, "
+            + "projected_at = #{projectedAt} WHERE booking_id = #{bookingId}")
+    int updateDelivered(@Param("bookingId") String bookingId,
+            @Param("bookingStatus") String bookingStatus,
+            @Param("projectedAt") Instant projectedAt);
+
     /** 追跡番号を発行した（US14）。状態・番号・発行日時を書く。 */
     @org.apache.ibatis.annotations.Update(
             "UPDATE cargo_summary SET booking_status = #{bookingStatus}, "

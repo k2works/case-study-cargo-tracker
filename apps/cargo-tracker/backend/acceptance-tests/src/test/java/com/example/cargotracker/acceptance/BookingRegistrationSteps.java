@@ -42,10 +42,10 @@ public class BookingRegistrationSteps {
     private static final Map<String, String> STATUS_OF_LABEL = Map.of(
             "仮受付", "PRELIMINARY",
             "経路提案中", "ROUTE_PROPOSED",
-            "通知済み", "ROUTE_NOTIFIED",
-            "確定", "CONFIRMED",
+            "経路通知済", "ROUTE_NOTIFIED",
+            "予約確定", "CONFIRMED",
             "輸送中", "IN_TRANSIT",
-            "引取済", "DELIVERED",
+            "配送完了", "DELIVERED",
             "精算済", "SETTLED",
             "キャンセル", "CANCELLED");
 

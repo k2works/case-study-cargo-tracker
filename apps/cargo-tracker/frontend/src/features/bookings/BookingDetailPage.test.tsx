@@ -753,7 +753,7 @@ describe('S22 荷主への通知（US12）', () => {
 
     renderDetail();
 
-    expect(await screen.findByText('確定')).toBeInTheDocument();
+    expect(await screen.findByText('予約確定')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '予約を確定する' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '経路設計へ戻す' })).not.toBeInTheDocument();
   });
@@ -766,7 +766,7 @@ describe('S22 荷主への通知（US12）', () => {
 
     renderDetail();
 
-    await screen.findByText('通知済み');
+    await screen.findByText('経路通知済');
     expect(screen.queryByRole('button', { name: '予約を確定する' })).not.toBeInTheDocument();
   });
 
@@ -793,7 +793,7 @@ describe('S22 荷主への通知（US12）', () => {
 
     renderDetail();
 
-    await screen.findByText('確定');
+    await screen.findByText('予約確定');
     expect(screen.queryByRole('button', { name: '追跡番号を発行する' }))
       .not.toBeInTheDocument();
   });

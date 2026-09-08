@@ -311,11 +311,11 @@ export function fetchBookingSummary(): Promise<
 const BOOKING_STATUS_LABELS: Record<string, string> = {
   PRELIMINARY: '仮受付',
   ROUTE_PROPOSED: '経路提案中',
-  ROUTE_NOTIFIED: '通知済み',
-  CONFIRMED: '確定',
-  TRACKING_ISSUED: '追跡番号発行済み',
+  ROUTE_NOTIFIED: '経路通知済',
+  CONFIRMED: '予約確定',
+  TRACKING_ISSUED: '追跡番号発行済',
   IN_TRANSIT: '輸送中',
-  DELIVERED: '引取済',
+  DELIVERED: '配送完了',
   SETTLED: '精算済',
   CANCELLED: 'キャンセル',
 };

@@ -31,6 +31,41 @@ class StatusLabelTest {
         assertThat(status.label()).doesNotMatch("^[A-Z_]+$");
     }
 
+    @ParameterizedTest
+    @EnumSource(BookingStatus.class)
+    @DisplayName("予約の状態の呼び名は正典の要素表が決める（画面と揃っていても正典とずれる）")
+    void bookingStatusLabelsMatchTheCanon(BookingStatus status) throws java.io.IOException {
+        // **画面と揃っていることだけでは足りない。** 実装と画面を同時に書き写せば
+        // 両方ずれたまま緑になる。DELIVERED は正典が「配送完了」と決めているのに
+        // 実装は「引取済」で、TransportStatus.DELIVERED と見分けが付かなかった
+        // （正典はまさに「文脈語を添えて区別する」と書いている。IT10 で実測）。
+        assertThat(status.label())
+                .as("%s の呼び名が正典（domain-model.md の状態の一覧）と食い違う", status)
+                .isEqualTo(canonLabel(status.name()));
+    }
+
+    /** 状態の一覧から `NAME` の行の日本語を読む。 */
+    private static String canonLabel(String name) throws java.io.IOException {
+        java.nio.file.Path canon = java.nio.file.Path.of("..", "..", "..", "..",
+                "docs", "design", "cargo-tracker", "domain-model.md");
+        String source = java.nio.file.Files.readString(canon);
+        int table = source.indexOf("### 状態の一覧");
+        assertThat(table).as("状態の一覧が見つからない").isGreaterThan(-1);
+        // BookingStatus の行だけを見る。TransportStatus にも同じコードがある。
+        int start = source.indexOf("| 予約状態 `BookingStatus` |", table);
+        int end = source.indexOf("| 経路設定状態 `RoutingStatus` |", start);
+        assertThat(start).isGreaterThan(-1);
+        assertThat(end).isGreaterThan(start);
+
+        for (String line : source.substring(start, end).split("\n")) {
+            String[] cells = line.split("\\|");
+            if (cells.length > 3 && cells[3].trim().equals("`" + name + "`")) {
+                return cells[2].trim();
+            }
+        }
+        throw new AssertionError("正典の状態の一覧に " + name + " が無い");
+    }
+
     @Test
     @DisplayName("経路設定状態の呼び名が画面と食い違わない（マニュアルが「同じ呼び名」と保証している）")
     void routingStatusLabelsMatchTheScreen() throws Exception {

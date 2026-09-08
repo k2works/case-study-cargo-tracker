@@ -1,6 +1,7 @@
 package com.example.cargotracker.booking.infrastructure.projection;
 
 import com.example.cargotracker.booking.domain.model.events.BookingConfirmedEvent;
+import com.example.cargotracker.booking.domain.model.events.BookingDeliveredEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoSpecificationUpdatedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoRoutedEvent;
@@ -428,6 +429,24 @@ public class CargoProjection {
 
         cargos.updateLastHandling(event.bookingId(), status, event.handlingType(),
                 event.unLocode(), event.completedAt(), false, clock.instant());
+    }
+
+    /**
+     * 引き渡しが済んだ（US16 §受入基準 4 / UC14）。
+     *
+     * <p><b>記録するだけでは誰にも見えない。</b> 集約が引取済になっても、ここに
+     * 書き手が無ければ営業の一覧は輸送中のまま残る（IT10 のクラスタで実測）。</p>
+     *
+     * <p><b>書けなかったことを黙らない。</b> 戻り値を捨てると、投影に行が無いことが
+     * 誰にも見えないまま「引き取ったのに反映されない」だけが残る。</p>
+     */
+    @EventHandler
+    public void on(BookingDeliveredEvent event) {
+        int updated = cargos.updateDelivered(event.bookingId(),
+                BookingStatus.DELIVERED.name(), clock.instant());
+        if (updated == 0) {
+            log.warn("引き渡しを書ける予約が投影に無い: bookingId={}", event.bookingId());
+        }
     }
 
     /** 予定ルート外の荷役を受けた（US28 / 不変条件 12）。 */

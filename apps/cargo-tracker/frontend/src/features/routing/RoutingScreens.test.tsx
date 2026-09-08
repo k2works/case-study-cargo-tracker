@@ -531,7 +531,7 @@ describe('S34 航海詳細', () => {
     expect(await screen.findByRole('link', { name: 'B-2026-0903-0001' }))
       .toHaveAttribute('href', '/bookings/b-1');
     // 状態は列挙名で見せない。
-    expect(screen.getByText('通知済み')).toBeInTheDocument();
+    expect(screen.getByText('経路通知済')).toBeInTheDocument();
     expect(screen.queryByText('ROUTE_NOTIFIED')).not.toBeInTheDocument();
   });
 
