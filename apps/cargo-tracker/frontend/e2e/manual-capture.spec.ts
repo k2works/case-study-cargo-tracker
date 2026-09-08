@@ -832,6 +832,9 @@ test.describe('マニュアルの画面キャプチャ', () => {
         recordedBy: 'tracker01',
       },
     ],
+    // **本文が説明する要素を写す。** 12 章は例外に触れないので空のままにする
+    // ——ここに例外があると、12 章の画像に 14 章の話が写り込む。
+    exceptions: [],
     nextStatuses: ['IN_TRANSIT', 'UNLOADED', 'AWAITING_CLAIM', 'MISROUTED', 'EXCEPTION'],
   };
 
