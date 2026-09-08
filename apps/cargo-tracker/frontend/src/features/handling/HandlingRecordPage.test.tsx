@@ -164,7 +164,7 @@ describe('S50 荷役作業記録', () => {
     expect(screen.getByLabelText('作業種別')).toHaveValue('UNLOAD');
   });
 
-  it('送信済みが積み上がり、取り消せる', async () => {
+  it('送信済みは「記録済」として積み上がる（取り消しは S51 で行う）', async () => {
     respondByUrl({ '/cargos?unLocode': { items: [cargo({ handledHere: true })] } });
 
     renderAt();

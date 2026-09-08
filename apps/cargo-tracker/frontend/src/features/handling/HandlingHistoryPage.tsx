@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type SubmitEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import {
@@ -16,7 +16,7 @@ import {
 } from '@/shared/ui/styles';
 import { formatBusinessDateTime } from '@/shared/api/businessDate';
 import { useAuthStore } from '@/shared/auth/authStore';
-import { fetchHandlingHistory } from './api';
+import { fetchHandlingHistory, voidHandling } from './api';
 
 /** 履歴は 30 秒ごとに更新する（ui_design.md「ポーリング」）。 */
 const REFETCH_INTERVAL_MS = 30_000;
@@ -44,6 +44,12 @@ export function HandlingHistoryPage() {
   const navigate = useNavigate();
   const [input, setInput] = useState('');
   const isTracker = useAuthStore((state) => state.user?.roles.includes('ROLE_TRACKER') ?? false);
+  // **記録は現場が取り消す。** 追跡管理者は履歴を読むだけ（記録した本人でないと
+  // 「何を取り違えたか」が分からない）。
+  const isHandler = useAuthStore((state) => state.user?.roles.includes('ROLE_HANDLER') ?? false);
+  const queries = useQueryClient();
+  const [voidingId, setVoidingId] = useState<string | null>(null);
+  const [reason, setReason] = useState('');
 
   const history = useQuery({
     queryKey: ['handling-history', trackingNumber],
@@ -53,6 +59,15 @@ export function HandlingHistoryPage() {
   });
 
   const items = history.data?.state === 'ready' ? history.data.value.items : [];
+
+  const cancel = useMutation({
+    mutationFn: (activityId: string) => voidHandling(activityId, reason.trim()),
+    onSuccess: async () => {
+      setVoidingId(null);
+      setReason('');
+      await queries.invalidateQueries({ queryKey: ['handling-history', trackingNumber] });
+    },
+  });
 
   if (trackingNumber === '') {
     // **番号なしでも開ける。** ナビからはここに来る（追跡管理者は問い合わせを
@@ -113,6 +128,7 @@ export function HandlingHistoryPage() {
                 <th className={TH}>航海</th>
                 <th className={TH}>記録者</th>
                 <th className={TH}>状態</th>
+                {isHandler && <th className={TH}>操作</th>}
               </tr>
             </thead>
             <tbody>
@@ -126,12 +142,64 @@ export function HandlingHistoryPage() {
                   <td className={TD}>
                     {stateLabel(item)}
                   </td>
+                  {isHandler && (
+                    <td className={TD}>
+                      {/* **取り消せるのは取り消していない記録だけ。**
+                          二度目の取り消しは集約が断るので、押せるボタンを並べない。 */}
+                      {!item.voided && (
+                        <button
+                          type="button"
+                          className={LINK}
+                          onClick={() => {
+                            setVoidingId(item.activityId);
+                            setReason('');
+                          }}
+                        >
+                          取り消す
+                        </button>
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
           </table>
         )}
       </section>
+
+      {/* **理由を書かせてから取り消す。** 取消の理由は履歴に残り、あとで
+          「何を取り違えたのか」を突き合わせる唯一の手がかりになる。 */}
+      {voidingId !== null && (
+        <section className={`${CARD} mt-4`}>
+          <h2 className="font-semibold">記録を取り消す</h2>
+          <label htmlFor="voidReason" className={`${LABEL} mt-2`}>
+            取り消す理由
+          </label>
+          <input
+            id="voidReason"
+            className={FIELD}
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+            placeholder="別の貨物と取り違えました"
+          />
+          {cancel.isError && (
+            <p role="alert" className={`${ALERT} mt-2`}>取り消せませんでした。</p>
+          )}
+          <div className="mt-4 flex gap-2">
+            <button
+              type="button"
+              className={BUTTON_PRIMARY}
+              disabled={reason.trim() === '' || cancel.isPending}
+              onClick={() => cancel.mutate(voidingId)}
+            >
+              取り消しを確定する
+            </button>
+            <button type="button" className={LINK} onClick={() => setVoidingId(null)}>
+              やめる
+            </button>
+          </div>
+        </section>
+      )}
 
       {/* **共有画面のリンクもロールで出し分ける。** 荷役ロールに追跡詳細を
           出すと 403 になる（S41 は追跡と荷主）。 */}
