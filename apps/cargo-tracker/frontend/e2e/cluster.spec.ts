@@ -760,6 +760,10 @@ test.describe('kind クラスタでの通し確認', () => {
       await page.getByLabel('発生状況').fill(`台風で 3 日遅れます（${product}）`);
       await page.getByRole('button', { name: '起票する' }).click();
 
+      // **遷移を待ってから確かめる。** expectEventually は最初に再読込するので、
+      // 押した直後に呼ぶと遷移そのものを打ち消し、起票フォームに戻ってしまう。
+      await expect(page).toHaveURL(new RegExp(`/tracking/${trackingNumber}$`),
+        { timeout: 20_000 });
       await expectEventually(page, '例外発生');
       await expect(page.getByText(`台風で 3 日遅れます（${product}）`)).toBeVisible();
 
