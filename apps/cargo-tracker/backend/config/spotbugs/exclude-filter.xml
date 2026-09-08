@@ -40,4 +40,20 @@
     <Match>
         <Package name="~com\.example\.cargotracker\.archfixture.*"/>
     </Match>
+    <!--
+      NM_CLASS_NOT_EXCEPTION（例外クラスのような名前だが Exception を継承していない）は
+      TrackingException に限って除外する。
+
+      これは**業務の「例外」**（輸送中に起きた遅延・破損・紛失）であって、Java の例外では
+      ない。名前は正典（domain-model.md「TrackingException」）のユビキタス言語で、
+      追跡管理者も画面も「例外」と呼ぶ。Java の都合で TrackingIncident などに改名すると、
+      設計と実装で呼び名が割れ、次に読む人がどちらを信じるか迷う。
+
+      **除外はこのクラスに限る。** パターン全体を外すと、本当に Exception を継承し忘れた
+      クラスが出たときに気づけない。
+    -->
+    <Match>
+        <Class name="com.example.cargotracker.tracking.domain.model.entities.TrackingException"/>
+        <Bug pattern="NM_CLASS_NOT_EXCEPTION"/>
+    </Match>
 </FindBugsFilter>
