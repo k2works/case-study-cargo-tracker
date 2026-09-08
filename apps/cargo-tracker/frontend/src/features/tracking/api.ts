@@ -85,8 +85,26 @@ export interface TrackingExceptionView {
   readonly unLocode: string | null;
   readonly description: string;
   readonly resolution: string | null;
+  /** 対応で示した新しい到着予定日（US19 §4）。一覧の並びに効く。 */
+  readonly newEstimatedArrival: string | null;
+  readonly responsePlan: string | null;
   readonly occurredAt: string;
   readonly resolvedAt: string | null;
+  /**
+   * 荷主へ知らせた記録（US19 §3）。
+   *
+   * <p><b>送信基盤はスコープ外</b>なので、これが読めることでしか受入基準を
+   * 満たせない。記録だけして読めなければ、記録していないのと同じ。</p>
+   */
+  readonly notifications: readonly ExceptionNotificationView[];
+}
+
+/** 荷主へ知らせた記録 1 件（S41）。 */
+export interface ExceptionNotificationView {
+  readonly means: string;
+  readonly summary: string;
+  readonly notifiedBy: string | null;
+  readonly notifiedAt: string;
 }
 
 export interface TrackingView {

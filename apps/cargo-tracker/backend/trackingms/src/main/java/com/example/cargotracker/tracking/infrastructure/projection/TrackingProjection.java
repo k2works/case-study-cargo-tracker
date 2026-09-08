@@ -5,11 +5,13 @@ import com.example.cargotracker.tracking.domain.model.events.TransportStatusUpda
 import com.example.cargotracker.tracking.domain.model.valueobjects.TransportStatus;
 import com.example.cargotracker.tracking.infrastructure.persistence.TrackingEventMapper;
 import com.example.cargotracker.tracking.domain.model.events.ExceptionResponseStartedEvent;
+import com.example.cargotracker.tracking.domain.model.events.ExceptionShipperNotifiedEvent;
 import com.example.cargotracker.tracking.domain.model.events.HandlingNotAppliedEvent;
 import com.example.cargotracker.tracking.domain.model.events.TrackingExceptionRegisteredEvent;
 import com.example.cargotracker.tracking.domain.model.events.TrackingExceptionResolvedEvent;
 import com.example.cargotracker.tracking.domain.model.valueobjects.ResponseStatus;
 import com.example.cargotracker.tracking.domain.model.valueobjects.StatusUpdateSource;
+import com.example.cargotracker.tracking.infrastructure.persistence.ExceptionNotificationMapper;
 import com.example.cargotracker.tracking.infrastructure.persistence.TrackingExceptionMapper;
 import com.example.cargotracker.tracking.infrastructure.persistence.TrackingSummaryMapper;
 import java.time.Clock;
@@ -38,13 +40,16 @@ public class TrackingProjection {
     private final TrackingSummaryMapper trackings;
     private final TrackingEventMapper history;
     private final TrackingExceptionMapper exceptions;
+    private final ExceptionNotificationMapper notifications;
     private final Clock clock;
 
     public TrackingProjection(TrackingSummaryMapper trackings, TrackingEventMapper history,
-            TrackingExceptionMapper exceptions, Clock clock) {
+            TrackingExceptionMapper exceptions, ExceptionNotificationMapper notifications,
+            Clock clock) {
         this.trackings = trackings;
         this.history = history;
         this.exceptions = exceptions;
+        this.notifications = notifications;
         this.clock = clock;
     }
 
@@ -127,7 +132,8 @@ public class TrackingProjection {
         exceptions.insert(new TrackingExceptionMapper.TrackingExceptionRow(
                 event.exceptionId(), event.trackingNumber(), event.exceptionType(),
                 ResponseStatus.REPORTED.name(), event.urgent(), event.unLocode(),
-                event.description(), null, event.occurredAt(), null, now));
+                // 起票の時点では対応内容も新しい期限も無い。対応開始が書き足す。
+                event.description(), null, null, null, event.occurredAt(), null, now));
         refreshCounts(event.trackingNumber(),
                 event.statusBeforeException() == null
                         ? null : event.statusBeforeException().name(), now);
@@ -142,8 +148,10 @@ public class TrackingProjection {
     @EventHandler
     public void on(ExceptionResponseStartedEvent event) {
         var now = clock.instant();
+        // **入力した値を落とさない。** 新しい到着予定日は一覧の並びに効く。
         int updated = exceptions.updateResponseStatus(event.exceptionId(),
-                ResponseStatus.RESPONDING.name(), now);
+                ResponseStatus.RESPONDING.name(), event.newEstimatedArrival(),
+                event.plan(), now);
         if (updated == 0) {
             log.warn("対応開始を書ける例外が投影に無い: exceptionId={}", event.exceptionId());
         }
@@ -169,6 +177,20 @@ public class TrackingProjection {
         writeHistory(new HistoryEntry(eventId, event.trackingNumber(),
                 StatusUpdateSource.RESOLVED.eventType(), TransportStatus.EXCEPTION, null, null,
                 event.resolvedAt(), event.resolvedBy()), now);
+    }
+
+    /**
+     * 荷主へ知らせた（US19 §受入基準 3）。
+     *
+     * <p><b>記録と読み口は対で出す。</b> Event Store に積むだけでは誰も読めず、
+     * 「記録で満たす」という受入基準の満たし方そのものが成り立たない
+     * （IT10 のレビューで実測）。</p>
+     */
+    @EventHandler
+    public void on(ExceptionShipperNotifiedEvent event, @MessageIdentifier String eventId) {
+        notifications.insert(new ExceptionNotificationMapper.ExceptionNotificationRow(
+                eventId, event.trackingNumber(), event.exceptionId(), event.means(),
+                event.summary(), event.notifiedBy(), event.notifiedAt(), clock.instant()));
     }
 
     /**

@@ -15,8 +15,8 @@ public interface TrackingExceptionMapper {
      * record に<b>列順で</b>割り当てるので、列を足した瞬間に全部ずれる。
      */
     String COLUMNS = "exception_id, tracking_number, exception_type, response_status, "
-            + "urgent, unlocode, description, resolution, occurred_at, resolved_at, "
-            + "projected_at";
+            + "urgent, unlocode, description, resolution, new_estimated_arrival, "
+            + "response_plan, occurred_at, resolved_at, projected_at";
 
     /**
      * 起票を 1 行足す。
@@ -26,12 +26,24 @@ public interface TrackingExceptionMapper {
      */
     int insert(TrackingExceptionRow row);
 
-    /** 対応を始めた。<b>起票の内容は書き換えない</b>（追記のみ・不変条件 6）。 */
+    /**
+     * 対応を始めた。<b>起票の内容は書き換えない</b>（追記のみ・不変条件 6）。
+     *
+     * <p><b>入力した値を落とさない。</b> 新しい到着予定日と対応方針は画面で
+     * 入力させ、コマンドとイベントまで運んでいる——ここで捨てると、入力した値が
+     * 最後の層で消える（IT10 のレビューで実測）。とくに新しい到着予定日は
+     * 一覧の並び（残日数が少ない順・不変条件 7）に効く。</p>
+     */
     @org.apache.ibatis.annotations.Update(
             "UPDATE tracking_exception SET response_status = #{responseStatus}, "
+            + "new_estimated_arrival = COALESCE("
+            + "  CAST(#{newEstimatedArrival} AS DATE), new_estimated_arrival), "
+            + "response_plan = #{responsePlan}, "
             + "projected_at = #{projectedAt} WHERE exception_id = #{exceptionId}")
     int updateResponseStatus(@Param("exceptionId") String exceptionId,
             @Param("responseStatus") String responseStatus,
+            @Param("newEstimatedArrival") String newEstimatedArrival,
+            @Param("responsePlan") String responsePlan,
             @Param("projectedAt") Instant projectedAt);
 
     /** 解決した。対応内容と解決日時を足す。<b>起票の内容は残る</b>（不変条件 6）。 */
@@ -66,13 +78,22 @@ public interface TrackingExceptionMapper {
     @Select("SELECT " + OPEN_COLUMNS + " FROM tracking_exception x "
             + "JOIN tracking_summary s ON s.tracking_number = x.tracking_number "
             + "WHERE x.response_status <> 'RESOLVED' "
-            + "ORDER BY x.urgent DESC, s.estimated_arrival ASC NULLS LAST, x.occurred_at")
+            // **対応で期限が動いたら、その日付で並べる。** 古い期限のまま並べると、
+            // 対応済みのものが「まだ急ぎ」の位置に残る（IT10 レビュー 高）。
+            + "ORDER BY x.urgent DESC, "
+            + "  COALESCE(x.new_estimated_arrival, CAST(s.estimated_arrival AS DATE)) "
+            + "    ASC NULLS LAST, "
+            + "  x.occurred_at")
     List<OpenExceptionRow> findOpen();
 
     /** 一覧の 1 行。到着期限は追跡から持って来る（残日数の並びに要る）。 */
     String OPEN_COLUMNS = "x.exception_id, x.tracking_number, x.exception_type, "
             + "x.response_status, x.urgent, x.unlocode, x.description, x.occurred_at, "
-            + "s.estimated_arrival, s.transport_status";
+            // **並びの根拠を、そのまま画面に出す。** 対応で動いた期限が
+            // 見えないと、なぜその順なのか読めない。
+            + "COALESCE(x.new_estimated_arrival, CAST(s.estimated_arrival AS DATE)) "
+            + "  AS estimated_arrival, "
+            + "s.transport_status";
 
     /** 例外 1 件（投影の行）。 */
     record TrackingExceptionRow(
@@ -84,6 +105,9 @@ public interface TrackingExceptionMapper {
             String unlocode,
             String description,
             String resolution,
+            // 対応で示した新しい到着予定日（US19 §4）。一覧の並びに効く。
+            java.time.LocalDate newEstimatedArrival,
+            String responsePlan,
             Instant occurredAt,
             Instant resolvedAt,
             Instant projectedAt) {
@@ -99,7 +123,7 @@ public interface TrackingExceptionMapper {
             String unlocode,
             String description,
             Instant occurredAt,
-            Instant estimatedArrival,
+            java.time.LocalDate estimatedArrival,
             String transportStatus) {
     }
 }

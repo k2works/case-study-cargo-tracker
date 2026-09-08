@@ -122,8 +122,22 @@ public final class TrackingQueries {
             String unLocode,
             String description,
             String resolution,
+            // 対応で示した内容（US19 §4）。入力した値を画面まで返す。
+            String newEstimatedArrival,
+            String responsePlan,
             Instant occurredAt,
-            Instant resolvedAt) {
+            Instant resolvedAt,
+            // 荷主へ知らせた記録（US19 §3）。**送信基盤はスコープ外**なので、
+            // これが読めることでしか受入基準を満たせない。
+            List<ExceptionNotificationView> notifications) {
+    }
+
+    /** 荷主へ知らせた記録 1 件（S41）。 */
+    public record ExceptionNotificationView(
+            String means,
+            String summary,
+            String notifiedBy,
+            Instant notifiedAt) {
     }
 
     /**
@@ -168,7 +182,8 @@ public final class TrackingQueries {
             String unLocode,
             String description,
             Instant occurredAt,
-            Instant estimatedArrival,
+            // 対応で動いた期限を優先する（並びの根拠。US19 §4・不変条件 7）。
+            java.time.LocalDate estimatedArrival,
             String transportStatus,
             String transportStatusLabel) {
     }

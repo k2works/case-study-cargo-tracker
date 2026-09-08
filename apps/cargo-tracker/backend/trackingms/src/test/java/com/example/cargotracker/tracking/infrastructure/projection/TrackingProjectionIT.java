@@ -9,10 +9,12 @@ import com.example.cargotracker.tracking.domain.model.valueobjects.StatusUpdateS
 import com.example.cargotracker.tracking.domain.model.valueobjects.TransportStatus;
 import com.example.cargotracker.tracking.infrastructure.persistence.TrackingEventMapper;
 import com.example.cargotracker.tracking.domain.model.events.ExceptionResponseStartedEvent;
+import com.example.cargotracker.tracking.domain.model.events.ExceptionShipperNotifiedEvent;
 import com.example.cargotracker.tracking.domain.model.events.HandlingNotAppliedEvent;
 import com.example.cargotracker.tracking.domain.model.events.TrackingExceptionRegisteredEvent;
 import com.example.cargotracker.tracking.domain.model.events.TrackingExceptionResolvedEvent;
 import com.example.cargotracker.tracking.domain.model.valueobjects.ExceptionType;
+import com.example.cargotracker.tracking.infrastructure.persistence.ExceptionNotificationMapper;
 import com.example.cargotracker.tracking.infrastructure.persistence.TrackingExceptionMapper;
 import com.example.cargotracker.tracking.infrastructure.persistence.TrackingSummaryMapper;
 import java.time.Instant;
@@ -46,6 +48,9 @@ class TrackingProjectionIT extends AbstractAxonIntegrationTest {
 
     @Autowired
     private TrackingExceptionMapper exceptions;
+
+    @Autowired
+    private ExceptionNotificationMapper notifications;
 
     private static TrackingInitializedEvent initialized(String trackingNumber, String bookingId) {
         return new TrackingInitializedEvent(trackingNumber, bookingId, "SHP-000001",
@@ -254,6 +259,62 @@ class TrackingProjectionIT extends AbstractAxonIntegrationTest {
                 .hasSize(1);
         assertThat(trackings.findByTrackingNumber(trackingNumber).openExceptionCount())
                 .as("件数も二度数えない").isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("US19 §4: 対応開始で入れた新しい到着予定日と対応方針が投影に残る")
+    void writesTheResponsePlan() {
+        // **値は全層を生き延びるか確かめる。** 画面で入力させ、コマンドと
+        // イベントまで運んだ値を、投影が捨てていた（IT10 レビュー 高）。
+        String trackingNumber = "T-E-" + System.nanoTime();
+        projection.on(initialized(trackingNumber, "b-" + System.nanoTime()));
+        projection.on(exceptionRegistered(trackingNumber, "ex-plan", ExceptionType.DELAY),
+                "evt-ex-plan");
+
+        projection.on(new ExceptionResponseStartedEvent(trackingNumber, "ex-plan",
+                "2026-09-27", "代替便を手配中", "tracker01", AT));
+
+        var row = exceptions.findById("ex-plan");
+        assertThat(row.newEstimatedArrival()).isEqualTo(java.time.LocalDate.of(2026, 9, 27));
+        assertThat(row.responsePlan()).isEqualTo("代替便を手配中");
+    }
+
+    @Test
+    @DisplayName("US19 §3: 荷主へ知らせた事実が投影に残る（記録と読み口は対で出す）")
+    void writesTheShipperNotification() {
+        // **Event Store に積むだけでは誰も読めない。** 送信基盤はスコープ外なので、
+        // 「いつ・どうやって・何を伝えたか」が読めることでしか §3 を満たせない。
+        String trackingNumber = "T-E-" + System.nanoTime();
+        projection.on(initialized(trackingNumber, "b-" + System.nanoTime()));
+        projection.on(exceptionRegistered(trackingNumber, "ex-notify", ExceptionType.DELAY),
+                "evt-ex-notify");
+
+        projection.on(new ExceptionShipperNotifiedEvent(trackingNumber, "ex-notify",
+                "電話", "3 日遅れる見込みと伝えました", "tracker01", AT), "evt-notify-1");
+
+        assertThat(notifications.findByException("ex-notify"))
+                .singleElement()
+                .satisfies(row -> {
+                    assertThat(row.means()).isEqualTo("電話");
+                    assertThat(row.summary()).isEqualTo("3 日遅れる見込みと伝えました");
+                    assertThat(row.notifiedBy()).isEqualTo("tracker01");
+                });
+    }
+
+    @Test
+    @DisplayName("通知の記録はリプレイで増えない（追記系は元イベントの識別子が主キー）")
+    void doesNotDuplicateNotificationsOnReplay() {
+        String trackingNumber = "T-E-" + System.nanoTime();
+        projection.on(initialized(trackingNumber, "b-" + System.nanoTime()));
+        projection.on(exceptionRegistered(trackingNumber, "ex-notify2", ExceptionType.DELAY),
+                "evt-ex-notify2");
+        var notified = new ExceptionShipperNotifiedEvent(trackingNumber, "ex-notify2",
+                "電話", "3 日遅れる見込み", "tracker01", AT);
+
+        projection.on(notified, "evt-notify-2");
+        projection.on(notified, "evt-notify-2");
+
+        assertThat(notifications.findByException("ex-notify2")).hasSize(1);
     }
 
     @Test

@@ -85,8 +85,9 @@ export function ExceptionListPage() {
                   <td className={TD}>{formatBusinessDateTime(item.occurredAt)}</td>
                   <td className={TD}>{item.unLocode ?? '—'}</td>
                   <td className={TD}>
-                    {item.estimatedArrival === null
-                      ? '—' : formatBusinessDateTime(item.estimatedArrival)}
+                    {/* **日付そのものを出す。** 対応で動いた期限を優先して
+                        サーバが返しており（並びの根拠）、時刻は持たない。 */}
+                    {item.estimatedArrival ?? '—'}
                   </td>
                   <td className={TD}>{item.description}</td>
                 </tr>

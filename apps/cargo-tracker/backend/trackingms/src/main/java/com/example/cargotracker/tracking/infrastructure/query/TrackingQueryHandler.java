@@ -4,11 +4,13 @@ import com.example.cargotracker.tracking.domain.model.valueobjects.TransportStat
 import com.example.cargotracker.tracking.infrastructure.persistence.TrackingEventMapper;
 import com.example.cargotracker.tracking.domain.model.valueobjects.ExceptionType;
 import com.example.cargotracker.tracking.domain.model.valueobjects.ResponseStatus;
+import com.example.cargotracker.tracking.infrastructure.persistence.ExceptionNotificationMapper;
 import com.example.cargotracker.tracking.infrastructure.persistence.TrackingExceptionMapper;
 import com.example.cargotracker.tracking.infrastructure.persistence.TrackingSummaryMapper;
 import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.FindPublicTrackingQuery;
 import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.CountRecentlyChangedQuery;
 import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.ExceptionListView;
+import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.ExceptionNotificationView;
 import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.ExceptionView;
 import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.FindOpenExceptionsQuery;
 import com.example.cargotracker.tracking.infrastructure.query.TrackingQueries.FindTrackingQuery;
@@ -32,15 +34,18 @@ public class TrackingQueryHandler {
     private final TrackingSummaryMapper trackings;
     private final TrackingEventMapper history;
     private final TrackingExceptionMapper exceptions;
+    private final ExceptionNotificationMapper notifications;
     // **業務日付は業務タイムゾーンの時計で決める。** Clock.systemUTC() を直接
     // 呼ぶと、時差の分だけ「直近 24 時間」の境界がずれる（IT7 の教訓）。
     private final java.time.Clock clock;
 
     public TrackingQueryHandler(TrackingSummaryMapper trackings, TrackingEventMapper history,
-            TrackingExceptionMapper exceptions, java.time.Clock clock) {
+            TrackingExceptionMapper exceptions, ExceptionNotificationMapper notifications,
+            java.time.Clock clock) {
         this.trackings = trackings;
         this.history = history;
         this.exceptions = exceptions;
+        this.notifications = notifications;
         this.clock = clock;
     }
 
@@ -143,7 +148,13 @@ public class TrackingQueryHandler {
                         x.responseStatus(),
                         ResponseStatus.valueOf(x.responseStatus()).label(),
                         x.urgent(), x.unlocode(), x.description(), x.resolution(),
-                        x.occurredAt(), x.resolvedAt()))
+                        x.newEstimatedArrival() == null
+                                ? null : x.newEstimatedArrival().toString(),
+                        x.responsePlan(), x.occurredAt(), x.resolvedAt(),
+                        notifications.findByException(x.exceptionId()).stream()
+                                .map(n -> new ExceptionNotificationView(n.means(), n.summary(),
+                                        n.notifiedBy(), n.notifiedAt()))
+                                .toList()))
                 .toList();
 
         return new TrackingView(row.trackingNumber(), row.bookingId(), row.originUnlocode(),
@@ -187,6 +198,7 @@ public class TrackingQueryHandler {
                         row.responseStatus(),
                         ResponseStatus.valueOf(row.responseStatus()).label(),
                         row.urgent(), row.unlocode(), row.description(), row.occurredAt(),
+                        // 対応で動いた期限を優先して出す（並びの根拠と揃える）。
                         row.estimatedArrival(), row.transportStatus(),
                         TransportStatus.valueOf(row.transportStatus()).label()))
                 .toList());

@@ -410,11 +410,39 @@ function ExceptionPanel({ trackingNumber, exceptions, canRespond, onChanged }: R
               <span className="text-gray-600">{item.unLocode ?? '—'}</span>
             </div>
             <p className="mt-1 text-sm text-gray-900">{item.description}</p>
+            {item.responsePlan !== null && (
+              <p className="mt-1 text-sm text-gray-700">
+                <span className="text-gray-600">対応方針</span>{' '}
+                <span>{item.responsePlan}</span>
+                {item.newEstimatedArrival !== null && (
+                  <>
+                    {'\u3000'}
+                    <span className="text-gray-600">新しい到着予定日</span>{' '}
+                    <span>{item.newEstimatedArrival}</span>
+                  </>
+                )}
+              </p>
+            )}
             {item.resolution !== null && (
               <p className="mt-1 text-sm text-gray-700">
                 <span className="text-gray-600">対応</span>{' '}
                 <span>{item.resolution}</span>
               </p>
+            )}
+            {/* **知らせた記録が読めることでしか US19 §3 は満たせない。**
+                送信基盤はスコープ外で、通知そのものは電話・メールで行う。 */}
+            {item.notifications.length > 0 && (
+              <ul className="mt-1 space-y-0.5 text-sm text-gray-700">
+                {item.notifications.map((notice) => (
+                  <li key={`${notice.notifiedAt}-${notice.means}`}>
+                    <span className="text-gray-600">荷主へ連絡</span>{' '}
+                    <span>{formatBusinessDateTime(notice.notifiedAt)}</span>{' '}
+                    <span>{notice.means}</span>{' '}
+                    <span>{notice.summary}</span>{' '}
+                    <span className="text-gray-600">{notice.notifiedBy ?? '—'}</span>
+                  </li>
+                ))}
+              </ul>
             )}
 
             {/* **決着した例外に押せるボタンを並べない。** 押しても集約が断る。 */}

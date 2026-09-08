@@ -265,8 +265,11 @@ describe('S41 例外の対応（US19 §3・§4 / IT10 T7）', () => {
       unLocode: 'SGSIN',
       description: '台風で 3 日遅れます',
       resolution: null,
+      newEstimatedArrival: null,
+      responsePlan: null,
       occurredAt: '2026-09-20T02:00:00Z',
       resolvedAt: null,
+      notifications: [],
       ...over,
     };
   }
@@ -284,6 +287,46 @@ describe('S41 例外の対応（US19 §3・§4 / IT10 T7）', () => {
 
     expect(await screen.findByText('台風で 3 日遅れます')).toBeInTheDocument();
     expect(screen.getByText('遅延')).toBeInTheDocument();
+  });
+
+  it('US19 §3: 荷主へ知らせた記録が読める（記録だけして読めなければ、記録していないのと同じ）', async () => {
+    useAuthStore.setState({
+      user: { username: 'tracker01', roles: ['ROLE_TRACKER'], token: 't' },
+    });
+    respondWith(tracking({
+      exceptions: [openException({
+        notifications: [{
+          means: '電話',
+          summary: '3 日遅れる見込みと伝えました',
+          notifiedBy: 'tracker01',
+          notifiedAt: '2026-09-20T05:00:00Z',
+        }],
+      })],
+    }));
+
+    renderDetail();
+
+    expect(await screen.findByText('3 日遅れる見込みと伝えました')).toBeInTheDocument();
+    expect(screen.getByText('電話')).toBeInTheDocument();
+  });
+
+  it('US19 §4: 対応方針と新しい到着予定日が読める（入力した値が消えない）', async () => {
+    useAuthStore.setState({
+      user: { username: 'tracker01', roles: ['ROLE_TRACKER'], token: 't' },
+    });
+    respondWith(tracking({
+      exceptions: [openException({
+        responseStatus: 'RESPONDING',
+        responseStatusLabel: '対応中',
+        responsePlan: '代替便を手配中',
+        newEstimatedArrival: '2026-09-27',
+      })],
+    }));
+
+    renderDetail();
+
+    expect(await screen.findByText('代替便を手配中')).toBeInTheDocument();
+    expect(screen.getByText('2026-09-27')).toBeInTheDocument();
   });
 
   it('解決した例外も残る（事実は消えない・不変条件 6）', async () => {
