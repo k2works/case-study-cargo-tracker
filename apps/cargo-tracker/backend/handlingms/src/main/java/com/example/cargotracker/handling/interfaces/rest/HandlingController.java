@@ -85,6 +85,7 @@ public class HandlingController {
             @NotBlank(message = "作業種別は必須です") String handlingType,
             @NotBlank(message = "作業場所は必須です") String unLocode,
             String voyageNumber,
+            String consigneeName,
             Instant completedAt) {
     }
 
@@ -153,6 +154,7 @@ public class HandlingController {
                 // **判定は CargoSnapshot が答える。** ここに書き直さない。
                 snapshot.isOffRoute(type, Location.of(unLocode)),
                 Location.of(unLocode).equals(snapshot.destination()),
+                request.consigneeName(),
                 username, completedAt),
                 String.class);
 

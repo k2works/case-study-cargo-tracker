@@ -16,6 +16,9 @@ import org.axonframework.modelling.annotation.TargetEntityId;
  * {@code CargoSnapshot} を引ける層で判定してから渡す。<b>集約は載った値を信じきらず、
  * 必須項目と時刻だけは自分で検査する</b>。</p>
  *
+ * @param consigneeName 荷受人の確認（署名または確認コード）。<b>引取のときだけ必須</b>で、
+ *     それ以外の種別には載せない（載せたら断る——黙って捨てると、現場は確認を
+ *     取ったつもりのまま記録が残らない）
  * @param completedAt 作業が終わった時刻。<b>過去は通し、未来は拒む</b>——通信不能時は
  *     紙に控えて後から入れる運用がある
  */
@@ -28,6 +31,7 @@ public record RegisterHandlingActivityCommand(
         String voyageNumber,
         boolean offRoute,
         boolean finalPort,
+        String consigneeName,
         String operator,
         Instant completedAt) {
 }

@@ -67,7 +67,8 @@ public class HandlingQueryHandler {
                         .map(row -> new HandlingHistoryItemView(row.activityId(),
                                 row.handlingType(),
                                 HandlingType.valueOf(row.handlingType()).label(),
-                                row.unlocode(), row.voyageNumber(), row.offRoute(),
+                                row.unlocode(), row.voyageNumber(), row.consigneeName(),
+                                row.offRoute(),
                                 row.operator(), row.completedAt(), row.voided(),
                                 row.voidReason()))
                         .toList();

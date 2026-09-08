@@ -47,6 +47,8 @@ public final class HandlingQueries {
             String handlingTypeLabel,
             String unLocode,
             String voyageNumber,
+            // 荷受人の確認（引取のみ。US16）。取れていない種別では null。
+            String consigneeName,
             boolean offRoute,
             String operator,
             Instant completedAt,

@@ -3,6 +3,7 @@ package com.example.cargotracker.handling.domain.model.aggregates;
 
 import com.example.cargotracker.handling.domain.model.commands.RegisterHandlingActivityCommand;
 import com.example.cargotracker.handling.domain.model.commands.VoidHandlingActivityCommand;
+import com.example.cargotracker.handling.domain.model.events.ConsigneeConfirmationRecordedEvent;
 import com.example.cargotracker.handling.domain.model.valueobjects.HandlingType;
 import com.example.cargotracker.shared.contract.event.HandlingActivityRegisteredEvent;
 import com.example.cargotracker.shared.contract.event.HandlingActivityVoidedEvent;
@@ -44,7 +45,7 @@ class HandlingActivityTest {
     private static RegisterHandlingActivityCommand register(HandlingType type, boolean offRoute) {
         return new RegisterHandlingActivityCommand(ACTIVITY, "TRK-8K2QX7M4RB", "b-1", type,
                 "SGSIN", type.requiresVoyageNumber() ? "V-MOL-001" : null,
-                offRoute, false, "handler01", COMPLETED);
+                offRoute, false, null, "handler01", COMPLETED);
     }
 
     private static HandlingActivityRegisteredEvent registered(HandlingType type, boolean offRoute) {
@@ -83,7 +84,7 @@ class HandlingActivityTest {
     @DisplayName("不変条件 6: 未来の作業日時は拒む（過去は通す）")
     void rejectsFutureCompletionTime() {
         var future = new RegisterHandlingActivityCommand(ACTIVITY, "TRK-8K2QX7M4RB", "b-1",
-                HandlingType.UNLOAD, "SGSIN", "V-MOL-001", false, false, "handler01",
+                HandlingType.UNLOAD, "SGSIN", "V-MOL-001", false, false, null, "handler01",
                 NOW.plusSeconds(60));
 
         fixture.given().noPriorActivity()
@@ -98,7 +99,7 @@ class HandlingActivityTest {
         // 現場は作業を終えた直後に記録する——ちょうどいまを拒むと、
         // その瞬間に押した記録が通らない。
         var justNow = new RegisterHandlingActivityCommand(ACTIVITY, "TRK-8K2QX7M4RB", "b-1",
-                HandlingType.UNLOAD, "SGSIN", "V-MOL-001", false, false, "handler01", NOW);
+                HandlingType.UNLOAD, "SGSIN", "V-MOL-001", false, false, null, "handler01", NOW);
 
         fixture.given().noPriorActivity()
                 .when().command(justNow)
@@ -109,7 +110,7 @@ class HandlingActivityTest {
     @DisplayName("不変条件 6: 過去の作業日時は通す（通信不能時は紙に控えて後から入れる）")
     void acceptsPastCompletionTime() {
         var past = new RegisterHandlingActivityCommand(ACTIVITY, "TRK-8K2QX7M4RB", "b-1",
-                HandlingType.UNLOAD, "SGSIN", "V-MOL-001", false, false, "handler01",
+                HandlingType.UNLOAD, "SGSIN", "V-MOL-001", false, false, null, "handler01",
                 NOW.minusSeconds(86400));
 
         fixture.given().noPriorActivity()
@@ -121,7 +122,7 @@ class HandlingActivityTest {
     @DisplayName("不変条件 1: 積込・荷降しには航海番号が要る")
     void requiresVoyageNumberForLoadAndUnload() {
         var withoutVoyage = new RegisterHandlingActivityCommand(ACTIVITY, "TRK-8K2QX7M4RB", "b-1",
-                HandlingType.LOAD, "JPTYO", null, false, false, "handler01", COMPLETED);
+                HandlingType.LOAD, "JPTYO", null, false, false, null, "handler01", COMPLETED);
 
         fixture.given().noPriorActivity()
                 .when().command(withoutVoyage)
@@ -136,11 +137,63 @@ class HandlingActivityTest {
                 .then().success();
     }
 
+    // ---- US16 引取（IT10 T2） ----
+
+    private static RegisterHandlingActivityCommand claim(String consigneeName) {
+        return new RegisterHandlingActivityCommand(ACTIVITY, "TRK-8K2QX7M4RB", "b-1",
+                HandlingType.CLAIM, "USNYC", null, false, true, consigneeName,
+                "handler01", COMPLETED);
+    }
+
+    @Test
+    @DisplayName("US16 §2: 荷受人の確認が取れていない引取は記録できない（不変条件 1）")
+    void rejectsClaimWithoutConsigneeConfirmation() {
+        // **IT9 は引取そのものを断っていた。** 検査できない段階で
+        // DELIVERED——精算の開始条件——へ進む経路を開けないため。
+        // 本 IT で開けるのは、荷受人の確認という検査を同時に入れるからである。
+        fixture.given().noPriorActivity()
+                .when().command(claim(null))
+                .then().exception(BusinessRuleViolation.class);
+    }
+
+    @Test
+    @DisplayName("US16 §2: 空白だけの確認も取れていないものとして断る")
+    void rejectsClaimWithBlankConsigneeConfirmation() {
+        fixture.given().noPriorActivity()
+                .when().command(claim("   "))
+                .then().exception(BusinessRuleViolation.class);
+    }
+
+    @Test
+    @DisplayName("US16 §2: 荷受人の確認が取れた引取は記録され、確認の事実も残る")
+    void recordsClaimWithConsigneeConfirmation() {
+        fixture.given().noPriorActivity()
+                .when().command(claim("John Smith"))
+                .then().events(
+                        new HandlingActivityRegisteredEvent(ACTIVITY, "TRK-8K2QX7M4RB", "b-1",
+                                "CLAIM", "USNYC", null, false, true, "handler01",
+                                COMPLETED, NOW),
+                        new ConsigneeConfirmationRecordedEvent(ACTIVITY, "TRK-8K2QX7M4RB",
+                                "John Smith", NOW));
+    }
+
+    @Test
+    @DisplayName("荷受人の確認は引取にしか載せない（載せたら断る。黙って捨てない）")
+    void rejectsConsigneeConfirmationOnOtherTypes() {
+        var loadWithConsignee = new RegisterHandlingActivityCommand(ACTIVITY,
+                "TRK-8K2QX7M4RB", "b-1", HandlingType.LOAD, "JPTYO", "V-MOL-001",
+                false, false, "John Smith", "handler01", COMPLETED);
+
+        fixture.given().noPriorActivity()
+                .when().command(loadWithConsignee)
+                .then().exception(BusinessRuleViolation.class);
+    }
+
     @Test
     @DisplayName("作業者が分からない記録は残さない")
     void requiresOperator() {
         var withoutOperator = new RegisterHandlingActivityCommand(ACTIVITY, "TRK-8K2QX7M4RB",
-                "b-1", HandlingType.UNLOAD, "SGSIN", "V-MOL-001", false, false, "  ", COMPLETED);
+                "b-1", HandlingType.UNLOAD, "SGSIN", "V-MOL-001", false, false, null, "  ", COMPLETED);
 
         fixture.given().noPriorActivity()
                 .when().command(withoutOperator)
@@ -192,19 +245,19 @@ class HandlingActivityTest {
         var cases = java.util.List.of(
                 new Missing("追跡番号", new RegisterHandlingActivityCommand(ACTIVITY, "  ", "b-1",
                         HandlingType.UNLOAD, "SGSIN", "V-MOL-001", false, false,
-                        "handler01", COMPLETED)),
+                        null, "handler01", COMPLETED)),
                 new Missing("予約 ID", new RegisterHandlingActivityCommand(ACTIVITY,
                         "TRK-8K2QX7M4RB", null, HandlingType.UNLOAD, "SGSIN", "V-MOL-001",
-                        false, false, "handler01", COMPLETED)),
+                        false, false, null, "handler01", COMPLETED)),
                 new Missing("作業場所", new RegisterHandlingActivityCommand(ACTIVITY,
                         "TRK-8K2QX7M4RB", "b-1", HandlingType.UNLOAD, "", "V-MOL-001",
-                        false, false, "handler01", COMPLETED)),
+                        false, false, null, "handler01", COMPLETED)),
                 new Missing("作業種別", new RegisterHandlingActivityCommand(ACTIVITY,
                         "TRK-8K2QX7M4RB", "b-1", null, "SGSIN", "V-MOL-001",
-                        false, false, "handler01", COMPLETED)),
+                        false, false, null, "handler01", COMPLETED)),
                 new Missing("作業日時", new RegisterHandlingActivityCommand(ACTIVITY,
                         "TRK-8K2QX7M4RB", "b-1", HandlingType.UNLOAD, "SGSIN", "V-MOL-001",
-                        false, false, "handler01", null)));
+                        false, false, null, "handler01", null)));
 
         for (var missing : cases) {
             fixture.given().noPriorActivity()

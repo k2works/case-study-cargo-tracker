@@ -33,6 +33,14 @@ public interface HandlingActivityMapper {
             @Param("voidedAt") Instant voidedAt,
             @Param("projectedAt") Instant projectedAt);
 
+    /** 荷受人の確認を書き足す（US16）。記録の行はすでにある。 */
+    @org.apache.ibatis.annotations.Update(
+            "UPDATE handling_activity SET consignee_name = #{consigneeName}, "
+            + "projected_at = #{projectedAt} WHERE activity_id = #{activityId}")
+    int recordConsignee(@Param("activityId") String activityId,
+            @Param("consigneeName") String consigneeName,
+            @Param("projectedAt") Instant projectedAt);
+
     @Select("SELECT " + COLUMNS + " FROM handling_activity WHERE activity_id = #{activityId}")
     HandlingActivityRow findById(@Param("activityId") String activityId);
 

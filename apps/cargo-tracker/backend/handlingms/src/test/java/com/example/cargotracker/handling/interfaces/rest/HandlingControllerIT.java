@@ -306,15 +306,50 @@ class HandlingControllerIT extends AbstractAxonIntegrationTest {
     }
 
     @Test
-    @DisplayName("引取はまだ記録できない（荷受人確認と通関の検査は IT10）")
-    void rejectsClaimUntilItsRequirementsCanBeChecked() {
+    @DisplayName("US16 §1・§2: 荷受人の確認なしの引取は断る（画面が外していても API は通っていた）")
+    void rejectsClaimWithoutConsigneeConfirmation() {
         // **引取を通すと貨物状態が引取済——精算の開始条件——まで進み、戻せない。**
-        // 画面は選択肢から外しているが、API を直接叩けば通っていた（IT9 レビュー）。
         String trackingNumber = givenCargo();
 
         var response = register(request(trackingNumber, "CLAIM", "USNYC"));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.valueOf(422));
         assertThat(String.valueOf(response.getBody().get("message"))).contains("荷受人の確認");
+    }
+
+    @Test
+    @DisplayName("US16 §2: 荷受人の確認を添えた引取は記録され、履歴に確認が出る")
+    void registersClaimWithConsigneeConfirmation() {
+        String trackingNumber = givenCargo();
+        var body = request(trackingNumber, "CLAIM", "USNYC");
+        body.put("consigneeName", "John Smith");
+
+        var response = register(body);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
+            var history = rest.get().uri(url("/" + trackingNumber + "/activities"))
+                    .retrieve().toEntity(JsonMap.class);
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> items =
+                    (List<Map<String, Object>>) history.getBody().get("items");
+            // **記録するだけでは誰にも見えない。** 読み口まで通っていることを見る。
+            assertThat(items).anySatisfy(item -> {
+                assertThat(item.get("handlingType")).isEqualTo("CLAIM");
+                assertThat(item.get("consigneeName")).isEqualTo("John Smith");
+            });
+        });
+    }
+
+    @Test
+    @DisplayName("荷受人の確認は引取以外に載せられない（黙って捨てない）")
+    void rejectsConsigneeConfirmationOnOtherTypes() {
+        String trackingNumber = givenCargo();
+        var body = request(trackingNumber, "RECEIVE", "JPTYO");
+        body.put("consigneeName", "John Smith");
+
+        var response = register(body);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.valueOf(422));
     }
 }

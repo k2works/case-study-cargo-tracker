@@ -2,6 +2,7 @@ package com.example.cargotracker.handling.domain.model.aggregates;
 
 import com.example.cargotracker.handling.domain.model.commands.RegisterHandlingActivityCommand;
 import com.example.cargotracker.handling.domain.model.commands.VoidHandlingActivityCommand;
+import com.example.cargotracker.handling.domain.model.events.ConsigneeConfirmationRecordedEvent;
 import com.example.cargotracker.handling.domain.model.valueobjects.HandlingType;
 import com.example.cargotracker.shared.contract.event.HandlingActivityRegisteredEvent;
 import com.example.cargotracker.shared.contract.event.HandlingActivityVoidedEvent;
@@ -72,16 +73,26 @@ public class HandlingActivity {
             // 未来の作業は起きていない。過去は通す（後から入れる運用がある）。
             throw new BusinessRuleViolation("作業日時に未来は指定できません");
         }
-        // **引取は本 IT では受け付けない**（不変条件 4・US16 は IT10）。
+        // **引取には荷受人の確認が要る**（不変条件 1 / US16 §受入基準 1・2）。
         // 引取を通すと貨物状態が `DELIVERED`——精算の開始条件——まで一気に進み、
-        // そこからは戻せない。荷受人の確認と通関の検査を実装できていない段階で
-        // その先へ進める経路を開けておくと、**画面が選択肢から外していても
-        // API を直接叩けば通る**（実際に開いていた。IT9 のレビューで発見）。
-        if (command.type().requiresConsigneeConfirmation()
-                || command.type().requiresCustomsClearance()) {
+        // そこからは戻せない。IT9 は検査を実装できていなかったので引取そのものを
+        // 断っていた（画面が選択肢から外していても API を直接叩けば通るため）。
+        // **開けるのは、検査を同じ変更で入れるからである。**
+        //
+        // **通関の検査（`CLEARED` のみ許可）は US29・IT12。** 引取の受入基準は
+        // 荷受人の確認で満たす（release_plan.md:205 の決定）。通関を先に敷いても
+        // 申告を記録する画面が無く、読む側の無い配線になる。
+        boolean confirmed = command.consigneeName() != null
+                && !command.consigneeName().isBlank();
+        if (command.type().requiresConsigneeConfirmation() && !confirmed) {
             throw new BusinessRuleViolation(
-                    command.type().label() + "は荷受人の確認と通関の検査が要るため、"
-                            + "まだ記録できません");
+                    command.type().label() + "には荷受人の確認（署名または確認コード）が必要です");
+        }
+        if (!command.type().requiresConsigneeConfirmation() && confirmed) {
+            // **黙って捨てない。** 捨てると、現場は確認を取ったつもりのまま
+            // 記録が残らない（M6 と同じ形）。
+            throw new BusinessRuleViolation(
+                    command.type().label() + "に荷受人の確認は記録できません");
         }
         // 要件は種別自身が持つ。呼び出し側に種別ごとの分岐を書かせない。
         if (command.type().requiresVoyageNumber()
@@ -94,6 +105,12 @@ public class HandlingActivity {
                 command.trackingNumber(), command.bookingId(), command.type().name(),
                 command.unLocode(), command.voyageNumber(), command.offRoute(),
                 command.finalPort(), command.operator(), command.completedAt(), now));
+        if (confirmed) {
+            // **契約とは別のイベントに分ける。** 荷受人が誰だったかは現場の記録で、
+            // 購読側の投影は要らない。
+            appender.append(new ConsigneeConfirmationRecordedEvent(command.activityId(),
+                    command.trackingNumber(), command.consigneeName(), now));
+        }
         return command.activityId();
     }
 

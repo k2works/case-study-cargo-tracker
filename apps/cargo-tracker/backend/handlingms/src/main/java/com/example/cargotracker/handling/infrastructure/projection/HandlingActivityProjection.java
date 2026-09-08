@@ -1,6 +1,7 @@
 package com.example.cargotracker.handling.infrastructure.projection;
 
 import com.example.cargotracker.handling.infrastructure.persistence.HandlingActivityMapper;
+import com.example.cargotracker.handling.domain.model.events.ConsigneeConfirmationRecordedEvent;
 import com.example.cargotracker.shared.contract.event.HandlingActivityRegisteredEvent;
 import com.example.cargotracker.shared.contract.event.HandlingActivityVoidedEvent;
 import java.time.Clock;
@@ -36,6 +37,17 @@ public class HandlingActivityProjection {
                 null,
                 event.offRoute(), event.operator(), event.completedAt(),
                 false, null, null, clock.instant()));
+    }
+
+    /**
+     * 荷受人の確認を書き足す（US16 §受入基準 2）。
+     *
+     * <p><b>記録の行はすでにある</b>（同じコマンドが先に
+     * {@code HandlingActivityRegisteredEvent} を出している）。</p>
+     */
+    @EventHandler
+    public void on(ConsigneeConfirmationRecordedEvent event) {
+        activities.recordConsignee(event.activityId(), event.consigneeName(), clock.instant());
     }
 
     @EventHandler
