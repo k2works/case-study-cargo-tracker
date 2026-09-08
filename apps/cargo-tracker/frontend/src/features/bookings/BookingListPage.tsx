@@ -4,6 +4,8 @@ import { Link, useLocation } from 'react-router';
 import {
   ALERT,
   CARD,
+  FIELD,
+  LABEL,
   LINK,
   NOTICE,
   PAGE_TITLE,
@@ -24,12 +26,16 @@ import { bookingStatusLabel, cargoTypeLabel, fetchBookings } from './api';
  */
 export function BookingListPage() {
   const [includeFinished, setIncludeFinished] = useState(false);
+  // **上限で切れた予約は誰の目にも入らない。** 並び順は到着期限なので、期限の
+  // 遠い予約ほど後ろへ回る（IT9 のクラスタで実測——登録したその日に一覧で
+  // 確かめられなかった）。予約番号と品名で絞れるようにする。
+  const [q, setQ] = useState('');
   // 登録直後は投影がまだなので、自分が入れた予約が一覧に無い。何も出さないと
   // 「登録できていない」と判断して二重に入力される（ui_design.md S20 の salt）。
   const justBooked = (useLocation().state as { justBooked?: boolean } | null)?.justBooked === true;
   const { data, isPending, isError } = useQuery({
-    queryKey: ['bookings', includeFinished],
-    queryFn: () => fetchBookings(includeFinished),
+    queryKey: ['bookings', includeFinished, q],
+    queryFn: () => fetchBookings(includeFinished, q),
     // 投影は非同期なので、登録直後は数秒ぶん遅れる。定期に取り直す。
     refetchInterval: 3000,
   });
@@ -42,6 +48,19 @@ export function BookingListPage() {
           予約を登録する
         </Link>
       </p>
+
+      <div className="mt-3">
+        <label htmlFor="bookingQuery" className={LABEL}>
+          予約番号・品名で絞り込む
+        </label>
+        <input
+          id="bookingQuery"
+          className={FIELD}
+          value={q}
+          onChange={(event) => setQ(event.target.value)}
+          placeholder="B-0001 / 精密機器"
+        />
+      </div>
 
       <label className="mt-3 flex items-center gap-2 text-sm text-gray-700">
         <input
@@ -76,7 +95,7 @@ export function BookingListPage() {
       {data?.state === 'ready' && data.value.total > data.value.items.length && (
         <output className={`${NOTICE} mt-4 block`}>
           {data.value.total} 件のうち {data.value.items.length} 件を表示しています。
-          絞り込みは次のイテレーションで入ります
+          予約番号・品名で絞り込んでください
         </output>
       )}
 

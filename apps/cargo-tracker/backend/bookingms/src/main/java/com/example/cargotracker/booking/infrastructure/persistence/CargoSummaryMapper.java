@@ -103,11 +103,16 @@ public interface CargoSummaryMapper {
      * 一覧（S20）。既定では精算済とキャンセルを外し、到着期限が近い順に並べる
      * （ui_design.md「一覧の既定条件」）。終わった予約が混ざると、一覧全体が
      * 「今日やること」として信用されなくなる。
+     *
+     * <p><b>予約番号と品名で絞れる。</b> 上限で切れた予約は誰の目にも入らない
+     * ——並び順は到着期限なので、期限の遠い予約ほど後ろへ回る（IT9 のクラスタで
+     * 実測。登録したその日に一覧で確かめられなかった）。</p>
      */
     List<CargoSummaryRow> findAll(@Param("includeFinished") boolean includeFinished,
-            @Param("limit") int limit, @Param("offset") int offset);
+            @Param("limit") int limit, @Param("offset") int offset,
+            @Param("q") String q);
 
-    int countAll(@Param("includeFinished") boolean includeFinished);
+    int countAll(@Param("includeFinished") boolean includeFinished, @Param("q") String q);
 
     /**
      * 経路設計の依頼を投影に反映する（US06）。

@@ -136,10 +136,17 @@ export interface BookCargoInput {
  */
 export function fetchBookings(
   includeFinished = false,
+  q = '',
 ): Promise<Pending<{ items: BookingView[]; total: number }>> {
-  return queryClient(
-    `/booking/bookings?page=0&size=200&includeFinished=${includeFinished ? 'true' : 'false'}`,
-  );
+  const query = new URLSearchParams({
+    page: '0',
+    size: '200',
+    includeFinished: includeFinished ? 'true' : 'false',
+  });
+  if (q.trim() !== '') {
+    query.set('q', q.trim());
+  }
+  return queryClient(`/booking/bookings?${query.toString()}`);
 }
 
 export function fetchBooking(bookingId: string): Promise<Pending<BookingView>> {

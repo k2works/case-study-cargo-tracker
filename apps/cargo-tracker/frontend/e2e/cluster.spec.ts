@@ -67,10 +67,14 @@ test.describe('kind クラスタでの通し確認', () => {
     await expect(page.getByRole('heading', { name: '貨物予約の登録' })).toBeVisible();
 
     // 荷主は選ぶ。識別子を打たせると、営業は一覧を開いて UUID を書き写すことになる。
+    // **名前で絞り込んでから選ぶ。** 選択肢には上限があるので、登録したばかりの
+    // 荷主は絞り込まないと出ない（IT8 のクラスタで実測した欠陥。IT9 で絞り込みを足した）。
+    await page.getByLabel('荷主を名前で絞り込む').fill(`クラスタ商事 ${stamp}`);
     // 選択肢は「名称（荷主コード）」なので、名称の部分で当てる。
     const option = page.locator('#shipperId option', { hasText: `クラスタ商事 ${stamp}` });
     await expect(option).toHaveCount(1, { timeout: 20_000 });
-    await page.getByLabel('荷主').selectOption(await option.getAttribute('value') ?? '');
+    await page.getByLabel('荷主', { exact: true })
+        .selectOption(await option.getAttribute('value') ?? '');
     await page.getByLabel('出発地').fill('JPTYO');
     await page.getByLabel('目的地').fill('USNYC');
     await page.getByLabel('到着期限').fill(businessDate(60));
@@ -82,6 +86,9 @@ test.describe('kind クラスタでの通し確認', () => {
     await page.getByLabel('品名').fill(product);
     await page.getByRole('button', { name: '登録する' }).click();
 
+    // **品名で絞り込んでから確かめる。** 一覧は到着期限順で上限があるので、
+    // 期限の遠い予約は上限の外に回る（IT9 のクラスタで実測した欠陥）。
+    await page.getByLabel('予約番号・品名で絞り込む').fill(product);
     // 一覧に出る（予約番号が採番され、状態は仮受付）。
     await expect(page.getByText(product)).toBeVisible({ timeout: 20_000 });
     const row = page.locator('tr', { hasText: product });
@@ -101,7 +108,8 @@ test.describe('kind クラスタでの通し確認', () => {
     // 荷主は一覧の先頭を選ぶ。ここで見たいのは経路の拒否なので、誰でもよい。
     const first = page.locator('#shipperId option').nth(1);
     await expect(first).toHaveCount(1, { timeout: 20_000 });
-    await page.getByLabel('荷主').selectOption(await first.getAttribute('value') ?? '');
+    await page.getByLabel('荷主', { exact: true })
+        .selectOption(await first.getAttribute('value') ?? '');
     await page.getByLabel('出発地').fill('JPTYO');
     await page.getByLabel('目的地').fill('JPTYO');
     await page.getByLabel('到着期限').fill(businessDate(60));
@@ -770,9 +778,11 @@ test.describe('kind クラスタでの通し確認', () => {
     await expect(page.getByText(email)).toBeVisible({ timeout: 20_000 });
 
     await page.goto('/bookings/new');
+    await page.getByLabel('荷主を名前で絞り込む').fill(`修正商事 ${stamp}`);
     const option = page.locator('#shipperId option', { hasText: `修正商事 ${stamp}` });
     await expect(option).toHaveCount(1, { timeout: 20_000 });
-    await page.getByLabel('荷主').selectOption((await option.getAttribute('value')) ?? '');
+    await page.getByLabel('荷主', { exact: true })
+        .selectOption((await option.getAttribute('value')) ?? '');
     await page.getByLabel('出発地').fill('JPTYO');
     await page.getByLabel('目的地').fill('USNYC');
     await page.getByLabel('到着期限').fill(businessDate(60));

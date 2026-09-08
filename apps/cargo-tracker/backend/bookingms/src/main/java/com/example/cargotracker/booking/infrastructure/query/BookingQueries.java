@@ -21,7 +21,7 @@ public final class BookingQueries {
      * false にしているのは、精算済とキャンセルが混ざると一覧全体が「今日やること」
      * として信用されなくなるため（ui_design.md「一覧の既定条件」）。</p>
      */
-    public record FindBookingsQuery(int page, int size, boolean includeFinished) {
+    public record FindBookingsQuery(int page, int size, boolean includeFinished, String q) {
     }
 
     /**

@@ -124,8 +124,8 @@ class CargoProjectionIT extends AbstractAxonIntegrationTest {
         projection.on(booked(bookingId, "SHP-X", "精算済の荷"));
         cargos.markSettledForTest(bookingId);
 
-        BookingListView visible = queries.handle(new FindBookingsQuery(0, 200, false));
-        BookingListView all = queries.handle(new FindBookingsQuery(0, 200, true));
+        BookingListView visible = queries.handle(new FindBookingsQuery(0, 200, false, null));
+        BookingListView all = queries.handle(new FindBookingsQuery(0, 200, true, null));
 
         assertThat(visible.items()).noneMatch(i -> i.bookingId().equals(bookingId));
         assertThat(all.items()).anyMatch(i -> i.bookingId().equals(bookingId));
@@ -133,10 +133,28 @@ class CargoProjectionIT extends AbstractAxonIntegrationTest {
     }
 
     @Test
+    @DisplayName("品名で絞り込める（上限で切れた予約に届く）")
+    void filtersByProduct() {
+        // **上限で切れた予約は誰の目にも入らない。** 並び順は到着期限なので、
+        // 期限の遠い予約ほど後ろへ回る（IT9 のクラスタで実測——登録したその日に
+        // 一覧で確かめられなかった）。
+        String stamp = String.valueOf(System.nanoTime());
+        String bookingId = "B-FIND-" + stamp;
+        projection.on(booked(bookingId, "SHP-F", "絞り込みの荷 " + stamp));
+        projection.on(booked("B-OTHER-" + stamp, "SHP-F", "別の荷 " + stamp));
+
+        BookingListView found = queries.handle(
+                new FindBookingsQuery(0, 200, true, "絞り込みの荷 " + stamp));
+
+        assertThat(found.items()).extracting(i -> i.bookingId()).containsExactly(bookingId);
+        assertThat(found.total()).isEqualTo(1);
+    }
+
+    @Test
     @DisplayName("ページの大きさは上限で丸める")
     void clampsPageSize() {
         // 上限を外すと、1 回の問い合わせで全件を引かれて一覧が固まる。
-        assertThat(queries.handle(new FindBookingsQuery(-1, 10_000, true)).items().size())
+        assertThat(queries.handle(new FindBookingsQuery(-1, 10_000, true, null)).items().size())
                 .isLessThanOrEqualTo(200);
     }
 
@@ -169,7 +187,7 @@ class CargoProjectionIT extends AbstractAxonIntegrationTest {
                 new BigDecimal("1"), new BigDecimal("1"), new BigDecimal("1"), 1,
                 "近い期限-" + stamp, null, null, null, null, "sales01"));
 
-        List<String> ids = queries.handle(new FindBookingsQuery(0, 200, true)).items().stream()
+        List<String> ids = queries.handle(new FindBookingsQuery(0, 200, true, null)).items().stream()
                 .map(BookingView::bookingId)
                 .filter(id -> id.endsWith(stamp))
                 .toList();

@@ -73,10 +73,22 @@
         LIMIT #{limit}
     </select>
 
+    <!--
+      一覧の絞り（S20）。**上限で切れた予約は誰の目にも入らない。**
+      並び順は到着期限なので、期限の遠い予約ほど後ろへ回る——登録したその日に
+      一覧で確かめられない、ということが起きる（IT8・IT9 のクラスタで実測）。
+      予約番号と品名で絞れるようにして、上限の外にあるものへ届くようにする。
+    -->
     <sql id="visible">
-        <if test="!includeFinished">
-            WHERE booking_status NOT IN ('SETTLED', 'CANCELLED')
-        </if>
+        <where>
+            <if test="!includeFinished">
+                booking_status NOT IN ('SETTLED', 'CANCELLED')
+            </if>
+            <if test="q != null and q != ''">
+                AND (lower(booking_number) LIKE lower('%' || #{q} || '%')
+                     OR lower(product_name) LIKE lower('%' || #{q} || '%'))
+            </if>
+        </where>
     </sql>
 
     <!--

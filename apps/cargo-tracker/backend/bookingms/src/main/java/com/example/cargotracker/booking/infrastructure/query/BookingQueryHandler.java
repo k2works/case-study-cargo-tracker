@@ -114,9 +114,9 @@ public class BookingQueryHandler {
         int size = Math.clamp(query.size(), 1, 200);
         int offset = Math.max(query.page(), 0) * size;
         return new BookingListView(
-                cargos.findAll(query.includeFinished(), size, offset).stream()
+                cargos.findAll(query.includeFinished(), size, offset, query.q()).stream()
                         .map(BookingQueryHandler::toView).toList(),
-                cargos.countAll(query.includeFinished()));
+                cargos.countAll(query.includeFinished(), query.q()));
     }
 
     /**

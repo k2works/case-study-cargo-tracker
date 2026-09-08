@@ -284,9 +284,10 @@ public class BookingController {
     public ResponseEntity<BookingListView> list(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size,
-            @RequestParam(defaultValue = "false") boolean includeFinished) {
-        return ResponseEntity.ok(
-                queries.query(new FindBookingsQuery(page, size, includeFinished), BookingListView.class));
+            @RequestParam(defaultValue = "false") boolean includeFinished,
+            @RequestParam(required = false) String q) {
+        return ResponseEntity.ok(queries.query(
+                new FindBookingsQuery(page, size, includeFinished, q), BookingListView.class));
     }
 
     /**
