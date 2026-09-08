@@ -16,6 +16,7 @@ import {
   TD,
   TH,
 } from '@/shared/ui/styles';
+import { cargoTypeLabel } from '@/features/bookings/api';
 import { businessLocalToInstant } from '@/shared/api/businessDate';
 import { ApiError } from '@/shared/api/client';
 import {
@@ -176,7 +177,8 @@ export function HandlingRecordPage() {
           <dl className="mt-4 grid grid-cols-[6rem_1fr] gap-y-1 text-sm">
             <dt className="text-gray-600">確認</dt>
             <dd className="text-gray-900">
-              {cargo.originUnLocode} → {cargo.destinationUnLocode}{'\u3000'}{cargo.cargoType}
+              {cargo.originUnLocode} → {cargo.destinationUnLocode}{'\u3000'}
+              {cargoTypeLabel(cargo.cargoType)}
             </dd>
           </dl>
         )}
@@ -214,10 +216,10 @@ export function HandlingRecordPage() {
       </section>
 
       <section className={`${CARD} mt-4 overflow-x-auto`}>
-        <h2 className={SECTION_TITLE}>この港で降ろす貨物</h2>
+        <h2 className={SECTION_TITLE}>この港で扱う貨物</h2>
         {items.length === 0 ? (
           <p className="mt-2 text-sm text-gray-600">
-            この航海がこの港で降ろす貨物はありません。航海番号と港をお確かめください。
+            この航海がこの港で扱う貨物はありません。航海番号と港をお確かめください。
           </p>
         ) : (
           <table className={`${TABLE} mt-2`}>

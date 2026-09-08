@@ -961,9 +961,30 @@ test.describe('マニュアルの画面キャプチャ', () => {
         }),
       }),
     );
+    // **本文が説明する要素を写す。** 「確認」欄（区間・貨物種別）と予定外の
+    // 先出し警告は、追跡番号を入れないと出ない。初期状態のまま撮ると、
+    // 文章と画像が別々に正しくなる（IT9 レビュー writer 中 6）。
+    await page.route('**/api/v1/handling/cargos/*', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          trackingNumber: 'TRK-AB12CD3456',
+          bookingId: 'b-1',
+          originUnLocode: 'JPTYO',
+          destinationUnLocode: 'USNYC',
+          cargoType: 'GENERAL',
+          // 予定は東京 → ニューヨーク。シンガポールで降ろすのは予定外。
+          legs: [{ voyageNumber: 'V-MOL-001', loadUnLocode: 'JPTYO', unloadUnLocode: 'USNYC' }],
+        }),
+      }),
+    );
     await signInAsHandler(page);
     await page.goto('/handling/voyages/V-MOL-001?unLocode=SGSIN');
     await expect(page.getByRole('heading', { name: /荷役の記録/ })).toBeVisible();
+    await page.getByLabel('追跡番号').fill('TRK-AB12CD3456');
+    await expect(page.getByText('確認')).toBeVisible();
+    await expect(page.getByText(/予定ルートに含まれていません/)).toBeVisible();
     await page.screenshot({ path: `${OUT}/13-S50-handling-record.png`, fullPage: true });
   });
 
@@ -998,6 +1019,33 @@ test.describe('マニュアルの画面キャプチャ', () => {
               completedAt: '2026-09-21T00:00:00Z',
               voided: false,
               voidReason: null,
+            },
+            // **本文が「取り消した記録も出ます」「予定外の印が付きます」と
+            // 書いている。** 記録済の行だけを写すと、文章と画像が別々に
+            // 正しくなる（IT9 レビュー writer 中 7）。
+            {
+              activityId: 'act-3',
+              handlingType: 'UNLOAD',
+              handlingTypeLabel: '荷降し',
+              unLocode: 'SGSIN',
+              voyageNumber: 'V-MOL-001',
+              offRoute: true,
+              operator: 'handler02',
+              completedAt: '2026-09-26T02:00:00Z',
+              voided: false,
+              voidReason: null,
+            },
+            {
+              activityId: 'act-4',
+              handlingType: 'UNLOAD',
+              handlingTypeLabel: '荷降し',
+              unLocode: 'DEHAM',
+              voyageNumber: 'V-MOL-001',
+              offRoute: false,
+              operator: 'handler02',
+              completedAt: '2026-09-27T02:00:00Z',
+              voided: true,
+              voidReason: '別の貨物と取り違えました',
             },
           ],
         }),
