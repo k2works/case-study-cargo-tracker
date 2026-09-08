@@ -103,6 +103,8 @@ export function registerHandling(input: {
   readonly handlingType: HandlingType;
   readonly unLocode: string;
   readonly voyageNumber: string | null;
+  /** 起きた日時（US15 §受入基準 3）。**空なら「いま」**——サーバが埋める。 */
+  readonly completedAt: string | null;
 }): Promise<void> {
   return commandClient('/handling/activities', input);
 }

@@ -826,7 +826,7 @@ Processing Group は `@ProcessingGroup`（Axon 5 に存在しません）では�
 | routingms | `routing-voyage-projection` | Voyage のイベント | `voyage`, `carrier_movement`, `voyage_accepted_cargo_type` |
 | trackingms | `tracking-projection` | TrackingActivity のイベント、`TrackingInitializedEvent`（契約） | `tracking_summary`, `tracking_event`, `tracking_exception` |
 | trackingms | `tracking-reaction` | `HandlingActivityRegisteredEvent`、`HandlingActivityVoidedEvent`、`CargoCancelledEvent`（契約）、`UNLOAD` 後の陸揚げ完了 | **投影テーブルを書かない**。TrackingActivity へコマンドを送る（`AdvanceTrackingCommand`、`CloseTrackingCommand` 等）。失敗だけを `attention_item` に書く |
-| handlingms | `handling-snapshot-projection` | `TrackingNumberIssuedEvent`, `CargoCancelledEvent` | `cargo_snapshot`, `cargo_snapshot_leg` |
+| handlingms | `handling-snapshot-projection` | **`TrackingInitializedEvent`**（契約・[ADR-0012](../../adr/cargo-tracker/0012-cargo-snapshot-from-tracking-initialized.md)）, `CargoCancelledEvent` | `cargo_snapshot`, `cargo_snapshot_leg` |
 | handlingms | `handling-activity-projection` | HandlingActivity / CustomsDeclaration のイベント | `handling_activity`, `customs_declaration` |
 | billingms | `billing-projection` | Invoice のイベント、`ShipperRegisteredEvent`、`CorporateContractAssignedEvent`（契約） | `invoice`, `invoice_line_item`, `payment`, `shipper_contract_snapshot` |
 | billingms | `billing-reaction` | `CargoDeliveredEvent`、`CustomsStatusChangedEvent`（契約） | **投影テーブルを書かない**。Invoice へコマンドを送る。失敗だけを `attention_item` に書く |

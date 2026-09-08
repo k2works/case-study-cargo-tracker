@@ -3,7 +3,7 @@ type: ADR
 title: "ADR-0012 CargoSnapshot は TrackingInitializedEvent から作る"
 description: "handlingms が予定ルートの判定に使う CargoSnapshot の元イベントを、購読できる契約イベントに決め直す。正典が指定していた TrackingNumberIssuedEvent は bookingms の内部イベントで購読できない。"
 tags: [adr]
-status: draft
+status: accepted
 generated: { by: claude-code/claude-opus-5, at: 2026-09-07T12:27:56Z }
 ---
 
@@ -15,7 +15,7 @@ handlingms が予定ルートの判定に使う `CargoSnapshot` の元イベン�
 
 ## ステータス
 
-2026-09-07 提案されました。[ADR-0002](0002-event-store-axon-server-and-postgresql-read-models.md)（読み取りモデルの方針）の範囲内で、`data-model.md` と `domain-model.md` の指定を訂正するもの。
+2026-09-07 提案し、IT9 で実装して採用しました。[ADR-0002](0002-event-store-axon-server-and-postgresql-read-models.md)（読み取りモデルの方針）の範囲内で、`data-model.md` と `domain-model.md` の指定を訂正するもの。
 
 ## コンテキスト
 
@@ -78,7 +78,7 @@ IT9 で handlingms が動き出します。荷役の記録では、**作業場�
 | 1 | `CargoSnapshotProjectionIT#buildsFromTrackingInitialized`（契約イベントから作られる）。`ContractEventGoldenTest`（`TrackingInitializedEvent` の形が固定されている） |
 | 2 | `CargoSnapshotProjectionIT`（trackingms が出したイベントを handlingms が購読できる。**実 Axon Server を通す**） |
 | 3 | `CargoSnapshotProjectionIT#defaultsToNotCancelled`（既定が `false`） |
-| 4 | `CargoSnapshotProjectionTest#keepsOnlyPortsAndVoyages`（時刻を持たない）。`ContractCarriesOnlyPlainValuesTest`（契約の形） |
+| 4 | `CargoSnapshotProjectionIT#keepsOnlyPortsAndVoyages`（区間の型に時刻が無く、写るのは航海と港だけ）。`ContractCarriesOnlyPlainValuesTest`（契約の形） |
 
 ## 代替案
 
@@ -92,7 +92,7 @@ IT9 で handlingms が動き出します。荷役の記録では、**作業場�
 
 - **`TrackingNumberIssuedEvent` は bookingms の内部イベントのままです。** 契約への昇格は、その内容を運ぶ経路が他に無いときに改めて判断します
 - `CargoSnapshot` は**追跡が始まってから**作られます。予約を確定して追跡番号を発行するまで、荷役の対象になりません（業務の順序どおり）
-- 正典 2 か所（`data-model.md:648`・`domain-model.md:215`）を訂正します
+- 正典を訂正します（`data-model.md` の表と Processing Group 一覧、`domain-model.md` の BC 関連図・イベント一覧・連鎖図）。**IT9 のレビューで、図と表に旧イベント名が残っていたことが分かり、すべて直しました**——図を読んで次のストーリーを設計すると、同じ「購読できないイベント」を踏みます
 
 ## 関連
 

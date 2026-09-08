@@ -98,4 +98,24 @@ class CargoSnapshotProjectionIT extends AbstractAxonIntegrationTest {
         assertThat(cargos.findByTrackingNumber(trackingNumber)).isNotNull();
         assertThat(cargos.findLegs(trackingNumber)).hasSize(2);
     }
+
+    @Test
+    @DisplayName("ADR-0012 決定 4: 写しは港と航海だけを持ち、時刻は持たない")
+    void keepsOnlyPortsAndVoyages() {
+        // **予定の時刻は写さない。** 航海の予定は routingms が変える（US25）ので、
+        // 写した時刻は黙って古くなる。荷役が要るのは「この船がこの港で降ろすか」
+        // だけで、時刻は要らない（判断の材料にしない）。
+        String trackingNumber = "TRK-P" + System.nanoTime() % 1000000000L;
+        projection.on(initialized(trackingNumber), "evt-adr12");
+
+        assertThat(CargoSnapshotMapper.CargoSnapshotLegRow.class.getRecordComponents())
+                .extracting(java.lang.reflect.RecordComponent::getType)
+                .as("区間に時刻の型があると、予定の時刻を写す道ができる")
+                .doesNotContain(Instant.class);
+        assertThat(cargos.findLegs(trackingNumber))
+                .extracting(CargoSnapshotMapper.CargoSnapshotLegRow::voyageNumber,
+                        CargoSnapshotMapper.CargoSnapshotLegRow::unloadUnlocode)
+                .containsExactly(org.assertj.core.groups.Tuple.tuple("V-MOL-001", "SGSIN"),
+                        org.assertj.core.groups.Tuple.tuple("V-ONE-002", "USNYC"));
+    }
 }

@@ -212,7 +212,7 @@ billing <.. handling : CustomsStatusChangedEvent\n（留置営業日の調整根
 booking <.. tracking : CargoDeliveredEvent\nTrackingInitializedEvent\nTrackingClosedEvent
 booking <.. billing : PaymentRecordedEvent
 billing <.. booking : ShipperRegisteredEvent\nCorporateContractAssignedEvent\nCargoCancelledEvent
-handling <.. booking : TrackingNumberIssuedEvent\n（CargoSnapshot の材料）
+handling <.. tracking : TrackingInitializedEvent\n（CargoSnapshot の材料・ADR-0012）
 
 note bottom of handling
   CargoSnapshot は Booking の契約イベントを
@@ -1220,7 +1220,7 @@ User *-- "0..1" UserShipperLink
 
 | イベント | 発行 | 購読と用途 | 主なフィールド |
 | :--- | :--- | :--- | :--- |
-| `TrackingNumberIssuedEvent` | bookingms | trackingms（**`BookingReactionHandler` 経由**。直接購読しない）、handlingms（`CargoSnapshot`・IT9） | `bookingId`, `trackingNumber`, **`shipperId`**, `origin`, `destination`, `cargoType`, `legs[]`, `issuedAt`。**`shipperId` は IT8（US18）で足した**——trackingms は荷主 ID をこの連鎖からしか得られない（`tracking_summary.shipper_id` に落ちる）。**これは bookingms の内部イベントで `shared/contract` には無い**——他 BC は `BookingReactionHandler` が送る契約コマンド（`InitializeTrackingCommand`）越しに受け取る。handlingms が `cargo_snapshot` を作る IT9 で、契約へ昇格させるかを判断する |
+| `TrackingNumberIssuedEvent` | bookingms | trackingms（**`BookingReactionHandler` 経由**。直接購読しない）。**handlingms は購読しない**——`CargoSnapshot` の元イベントは `TrackingInitializedEvent`（契約）に決め直した（[ADR-0012](../../adr/cargo-tracker/0012-cargo-snapshot-from-tracking-initialized.md)） | `bookingId`, `trackingNumber`, **`shipperId`**, `origin`, `destination`, `cargoType`, `legs[]`, `issuedAt`。**`shipperId` は IT8（US18）で足した**——trackingms は荷主 ID をこの連鎖からしか得られない（`tracking_summary.shipper_id` に落ちる）。**これは bookingms の内部イベントで `shared/contract` には無い**——他 BC は `BookingReactionHandler` が送る契約コマンド（`InitializeTrackingCommand`）越しに受け取る。**IT9 で判断済み——契約へは昇格させない**（ADR-0012 決定 1。同じ事実を運ぶ契約が 2 本になるため） |
 | `CargoCancelledEvent` | bookingms | trackingms（陸揚げ地を記録。閉じるのは当該港の `UNLOAD` 後）、handlingms（`CargoSnapshot` 更新）、billingms（キャンセル料） | `bookingId`, `trackingNumber?`, `statusAtCancel`, `dischargeLocation?`, `cancelledAt` |
 | `HandlingActivityRegisteredEvent` | handlingms | trackingms（`TrackingReactionHandler` が状態を進める・誤配検知）、bookingms（投影に写す。`BookingReactionHandler` が `RecordHandlingCommand`） | `activityId`, `trackingNumber`, `bookingId`, `type`, `location`, `voyageNumber?`, `completedAt`, `offRoute` |
 | `HandlingActivityVoidedEvent` | handlingms | trackingms（`RevertTrackingCommand`）、bookingms（`RevertHandlingCommand`）。元の記録は残る | `activityId`, `trackingNumber`, `bookingId`, `type`, `location`, `reason`, `voidedBy`, `voidedAt` |
@@ -1278,7 +1278,7 @@ B -> B : IssueTrackingNumberCommand → TrackingNumberIssuedEvent（契約）
 B -> T : InitializeTrackingCommand（契約コマンド）
 T -> T : TrackingInitializedEvent（契約）
 T -> B : （購読）BookingReactionHandler：連鎖の終わり
-B -> H : （TrackingNumberIssuedEvent 購読）CargoSnapshot 作成
+T -> H : （TrackingInitializedEvent 購読）CargoSnapshot 作成（ADR-0012）
 
 == 輸送中 ==
 H -> H : HandlingActivityRegisteredEvent（契約）

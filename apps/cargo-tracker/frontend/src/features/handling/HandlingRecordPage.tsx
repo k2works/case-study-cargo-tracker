@@ -16,6 +16,7 @@ import {
   TD,
   TH,
 } from '@/shared/ui/styles';
+import { businessLocalToInstant } from '@/shared/api/businessDate';
 import { ApiError } from '@/shared/api/client';
 import {
   fetchCargoSnapshot,
@@ -47,6 +48,13 @@ export function HandlingRecordPage() {
 
   const [handlingType, setHandlingType] = useState<HandlingType>('UNLOAD');
   const [trackingNumber, setTrackingNumber] = useState('');
+  // **1 本ぶんの鍵は送信のたびに変えない。** 応答が返らずもう一度押したとき、
+  // ここで作り直すと別の鍵になって二重に記録される（現場は電波の届かない
+  // 岸壁で使う）。次の 1 本へ移るとき——成功したときだけ——採り直す。
+  const [activityId, setActivityId] = useState(() => crypto.randomUUID());
+  // **起きた日時を後から入れられる**（US15 §受入基準 3）。通信できない場所では
+  // 紙に控えて、戻ってから入れる。空なら「いま」。
+  const [completedAt, setCompletedAt] = useState('');
 
   const cargos = useQuery({
     queryKey: ['handling-cargos', voyageNumber, unLocode],
@@ -64,16 +72,19 @@ export function HandlingRecordPage() {
 
   const record = useMutation({
     mutationFn: () => registerHandling({
-      // 画面が作る冪等キー。再送しても同じ鍵になる。
-      activityId: crypto.randomUUID(),
+      // 画面が作る冪等キー。**再送しても同じ鍵**（状態に持つ）。
+      activityId,
       trackingNumber: trackingNumber.trim().toUpperCase(),
       handlingType,
       unLocode,
       voyageNumber: requiresVoyage(handlingType) ? voyageNumber : null,
+      completedAt: completedAt === '' ? null : businessLocalToInstant(completedAt),
     }),
     onSuccess: () => {
       // **種別と場所は保つ。** 次の 1 本へすぐ移れるようにする。
       setTrackingNumber('');
+      setCompletedAt('');
+      setActivityId(crypto.randomUUID());
       queries.invalidateQueries({ queryKey: ['handling-cargos', voyageNumber, unLocode] });
     },
   });
@@ -140,6 +151,23 @@ export function HandlingRecordPage() {
                 カメラ撮影は本 IT で作らない。 */}
             <p className="mt-1 text-xs text-gray-600">
               スキャンした番号はここに入ります。手入力もできます。
+            </p>
+          </div>
+          <div>
+            <label htmlFor="completedAt" className={LABEL}>
+              作業日時
+            </label>
+            <input
+              id="completedAt"
+              type="datetime-local"
+              className={FIELD}
+              value={completedAt}
+              onChange={(event) => setCompletedAt(event.target.value)}
+            />
+            {/* **後から入れられる**（US15 §受入基準 3）。電波の届かない岸壁では
+                紙に控え、戻ってから入れる。未来は集約が断る。 */}
+            <p className="mt-1 text-xs text-gray-600">
+              空のままなら「いま」で記録します。紙に控えた作業は日時を入れてください。
             </p>
           </div>
         </div>
