@@ -156,6 +156,70 @@ class EventSourcedServicesHaveTheSameShapeTest {
     }
 
     @Test
+    @DisplayName("対応表を持たないサービスは、ドメイン例外も投げていない（IT10 H.5）")
+    void servicesWithoutTheSharedMappingDoNotThrowDomainErrors() throws IOException {
+        // **「対応表は 1 つ」と宣言した IT で、持たないサービスが 1 つ残った。**
+        // authms は Event Sourcing ではないので上の検査の外にいる（ADR-0001）。
+        // 外にいること自体は正しいが、**外にいるサービスがドメイン例外を投げ始めたら
+        // 500 に化ける**——検査は配り先の数だけ確かめる。
+        List<String> offenders = new ArrayList<>();
+        for (Path serviceDir : servicesWithoutSharedMapping()) {
+            Path main = serviceDir.resolve("src/main/java");
+            if (!Files.exists(main)) {
+                continue;
+            }
+            try (Stream<Path> sources = Files.walk(main)) {
+                for (Path source : sources.filter(p -> p.toString().endsWith(".java")).toList()) {
+                    String body = Files.readString(source, StandardCharsets.UTF_8);
+                    if (body.contains("BusinessRuleViolation")
+                            || body.contains("IllegalTransition")) {
+                        offenders.add(serviceDir.getFileName() + ": "
+                                + main.relativize(source)
+                                + " がドメイン例外を投げるが、対応表が無い（500 に化ける）");
+                    }
+                }
+            }
+        }
+
+        assertThat(offenders)
+                .as("対応表を持たないサービスがドメイン例外を投げると、"
+                        + "利用者には 500 としか出ない（IT10 レビュー N5）")
+                .isEmpty();
+    }
+
+    /**
+     * 共有の対応表を継承していないサービス。
+     *
+     * <p><b>名簿にしない。</b> 走査で導く——載せ忘れたものほど漏れる。</p>
+     */
+    private static List<Path> servicesWithoutSharedMapping() throws IOException {
+        try (Stream<Path> dirs = Files.list(backendRoot())) {
+            return dirs.filter(Files::isDirectory)
+                    .filter(dir -> dir.getFileName().toString().endsWith("ms"))
+                    .filter(dir -> {
+                        try (Stream<Path> sources = Files.walk(dir.resolve("src/main/java"))) {
+                            return sources.filter(p -> p.toString().endsWith(".java"))
+                                    .noneMatch(EventSourcedServicesHaveTheSameShapeTest::extendsShared);
+                        } catch (IOException e) {
+                            return false;
+                        }
+                    })
+                    .sorted()
+                    .toList();
+        }
+    }
+
+    private static boolean extendsShared(Path source) {
+        try {
+            return Files.readString(source, StandardCharsets.UTF_8).contains(
+                    "extends com.example.cargotracker.shared.interfaces.rest"
+                            + ".AbstractApiExceptionHandler");
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
+    @Test
     @DisplayName("共有カーネルの対応表が、包みを 1 枚しか見ない形に戻っていない")
     void sharedMappingStillUnwrapsEveryLayer() throws IOException {
         Path shared = backendRoot().resolve("shared/src/main/java/com/example/cargotracker"

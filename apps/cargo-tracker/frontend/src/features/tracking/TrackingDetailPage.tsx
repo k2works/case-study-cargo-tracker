@@ -482,7 +482,9 @@ function ExceptionPanel({ trackingNumber, exceptions, canRespond, onChanged }: R
             )}
 
             {/* **決着した例外に押せるボタンを並べない。** 押しても集約が断る。 */}
-            {canRespond && item.responseStatus !== 'RESOLVED' && (
+            {/* **判定はサーバが答える**（ResponseStatus#settled）。画面で書き直すと、
+                状態が増えたときに片方だけが直る（IT10 レビュー N3）。 */}
+            {canRespond && !item.settled && (
               <div className="mt-2 flex flex-wrap gap-3 text-sm">
                 {item.responseStatus === 'REPORTED' && (
                   <button

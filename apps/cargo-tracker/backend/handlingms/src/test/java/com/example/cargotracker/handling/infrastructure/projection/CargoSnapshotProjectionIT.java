@@ -98,7 +98,7 @@ class CargoSnapshotProjectionIT extends AbstractAxonIntegrationTest {
         String mine = "TRK-S" + System.nanoTime() % 1000000000L;
         projection.on(initialized(mine), "evt-ports");
 
-        assertThat(cargos.findVoyagePorts())
+        assertThat(cargos.findVoyagePorts(200))
                 .extracting(CargoSnapshotMapper.VoyagePortRow::voyageNumber,
                         CargoSnapshotMapper.VoyagePortRow::unlocode)
                 .contains(org.assertj.core.groups.Tuple.tuple("V-MOL-001", "JPTYO"),

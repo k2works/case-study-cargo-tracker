@@ -164,6 +164,8 @@ export function fetchAwaitingClaim(
 }
 
 /** これから作業する航海と港の一覧。 */
-export function fetchVoyagePorts(): Promise<Pending<{ items: VoyagePortView[] }>> {
+export function fetchVoyagePorts(): Promise<
+  Pending<{ items: VoyagePortView[]; truncated: boolean }>
+> {
   return queryClient('/handling/voyages');
 }

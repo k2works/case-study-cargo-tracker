@@ -88,6 +88,42 @@ class CargoItineraryTest {
     }
 
     @Test
+    @DisplayName("US28 §4・§5: 誤配の再設計は出発地を見ない（現在地から組み直す）")
+    void redesignIgnoresTheOrigin() {
+        // **予定ルートを外れた貨物は、もう出発地に無い。** 目的地は引き継ぐ。
+        CargoItinerary fromSingapore = new CargoItinerary(
+                List.of(leg("SGSIN", "USNYC", LOAD, UNLOAD)));
+
+        assertThat(spec(LocalDate.of(2026, Month.SEPTEMBER, 30))
+                .isSatisfiedByRedesign(fromSingapore)).isTrue();
+    }
+
+    @Test
+    @DisplayName("US28 §5: 再設計でも目的地は引き継ぐ（違う目的地は満たさない）")
+    void redesignStillRequiresTheDestination() {
+        CargoItinerary toLondonFromSingapore = new CargoItinerary(
+                List.of(leg("SGSIN", "GBLON", LOAD, UNLOAD)));
+
+        assertThat(spec(LocalDate.of(2026, Month.SEPTEMBER, 30))
+                .isSatisfiedByRedesign(toLondonFromSingapore)).isFalse();
+        assertThat(spec(LocalDate.of(2026, Month.SEPTEMBER, 30))
+                .isSatisfiedByRedesign(null)).isFalse();
+    }
+
+    @Test
+    @DisplayName("US28 §6: 再設計は期限を見ない（超過は日数で数える）")
+    void redesignAcceptsOverdueAndCountsTheDays() {
+        // **現在地からでは間に合わないのが普通。** 断ると貨物が動かせなくなる。
+        RouteSpecification tight = spec(LocalDate.of(2026, Month.SEPTEMBER, 21));
+
+        assertThat(tight.isSatisfiedByRedesign(direct())).isTrue();
+        assertThat(tight.overdueDays(direct(), ZONE)).isEqualTo(3);
+        // 間に合う旅程は 0（**組み直して間に合ったことも情報である**）。
+        assertThat(spec(LocalDate.of(2026, Month.SEPTEMBER, 30))
+                .overdueDays(direct(), ZONE)).isZero();
+    }
+
+    @Test
     @DisplayName("不変条件 5: 起点・終点が違う旅程は満たさない")
     void wrongEndpointsDoNotSatisfy() {
         CargoItinerary fromOsaka = new CargoItinerary(

@@ -97,6 +97,13 @@ export interface TrackingExceptionView {
    * 満たせない。記録だけして読めなければ、記録していないのと同じ。</p>
    */
   readonly notifications: readonly ExceptionNotificationView[];
+  /**
+   * 決着したか（サーバが `ResponseStatus#settled` で決める）。
+   *
+   * <p><b>画面で `responseStatus !== 'RESOLVED'` と書き直さない。</b> 状態が
+   * 増えたときに片方だけが直る（IT10 レビュー N3。三重定義だった）。</p>
+   */
+  readonly settled: boolean;
 }
 
 /** 荷主へ知らせた記録 1 件（S41）。 */
@@ -253,7 +260,6 @@ export function fetchOpenExceptions(
 export function registerException(
   trackingNumber: string,
   input: {
-    readonly exceptionId: string;
     readonly exceptionType: ExceptionType;
     readonly unLocode: string;
     readonly description: string;
@@ -262,7 +268,6 @@ export function registerException(
   },
 ): Promise<void> {
   return commandClient(`/tracking/trackings/${encodeURIComponent(trackingNumber)}/exceptions`, {
-    exceptionId: input.exceptionId,
     exceptionType: input.exceptionType,
     unLocode: input.unLocode || null,
     description: input.description,

@@ -1,6 +1,12 @@
 # Docs Update Log
 
 ## 2026-09-09
+* **Update**: [0013-shared-kernel-holds-the-error-mapping](/adr/cargo-tracker/0013-shared-kernel-holds-the-error-mapping.md) を更新（claude-code/claude-opus-5）
+* **Update**: [15-誤配を検知して経路を組み直す](/manual/15-誤配を検知して経路を組み直す.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-11](/development/cargo-tracker/iteration_plan-11.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0013-shared-kernel-holds-the-error-mapping](/adr/cargo-tracker/0013-shared-kernel-holds-the-error-mapping.md) を更新（claude-code/claude-opus-5）
+* **Update**: [15-誤配を検知して経路を組み直す](/manual/15-誤配を検知して経路を組み直す.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-11](/development/cargo-tracker/iteration_plan-11.md) を更新（claude-code/claude-opus-5）
 * **Update**: [operation](/design/cargo-tracker/operation.md) を更新（claude-code/claude-opus-5）
 * **Update**: [iteration_plan-11](/development/cargo-tracker/iteration_plan-11.md) を更新（claude-code/claude-opus-5）
 * **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）

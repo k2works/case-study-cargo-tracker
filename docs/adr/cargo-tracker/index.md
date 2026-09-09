@@ -22,3 +22,4 @@ cargo-tracker プロジェクトのADRドキュメントです。
 * [ADR-0010 サービスをまたぐ連鎖の調整役を Reaction Handler に一本化する](./0010-reaction-handler-as-the-only-coordinator.md) - 予約から追跡開始までの連鎖を BookingReactionHandler + processstate で表し、追跡番号の採番と発行者、そして補償の粒度を決める。
 * [ADR-0011 追跡番号は推測されにくい形式で採る](./0011-tracking-number-is-hard-to-guess.md) - 認証なしで照会できる追跡番号を連番から衝突検査つきの乱数へ改め、正典の形式にそろえる。ADR-0010 決定 2 の採り方を訂正する。
 * [ADR-0012 CargoSnapshot は TrackingInitializedEvent から作る](./0012-cargo-snapshot-from-tracking-initialized.md) - handlingms が予定ルートの判定に使う CargoSnapshot の元イベントを、購読できる契約イベントに決め直す。
+* [ADR-0013 共有カーネルが例外の対応表を持つ](./0013-shared-kernel-holds-the-error-mapping.md) - ドメイン例外を HTTP へ写す対応表を shared.interfaces.rest に置く。共有カーネルにはドメインと契約だけを置く原則の、意図した例外である。

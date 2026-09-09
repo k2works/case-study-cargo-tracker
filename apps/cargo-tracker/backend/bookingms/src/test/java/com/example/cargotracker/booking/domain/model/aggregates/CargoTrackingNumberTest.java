@@ -1,6 +1,11 @@
 package com.example.cargotracker.booking.domain.model.aggregates;
 
 import com.example.cargotracker.booking.domain.model.commands.IssueTrackingNumberCommand;
+import com.example.cargotracker.booking.domain.model.commands.AssignRouteCommand;
+import com.example.cargotracker.booking.domain.model.valueobjects.CargoItinerary;
+import com.example.cargotracker.booking.domain.model.valueobjects.Leg;
+import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
+import com.example.cargotracker.shared.domain.location.Location;
 import com.example.cargotracker.booking.domain.model.commands.MarkDeliveredCommand;
 import com.example.cargotracker.booking.domain.model.commands.RevertDeliveryCommand;
 import com.example.cargotracker.booking.domain.model.events.BookingDeliveryRevertedEvent;
@@ -309,6 +314,42 @@ class CargoTrackingNumberTest {
                 .when().command(new MarkDeliveredCommand("B-NONE", "TRK-8K2QX7M4RB",
                         HANDLED, "USNYC"))
                 .then().success().noEvents();
+    }
+
+    // ---- IT11 US28: 誤配の再設計 ----
+
+    @Test
+    @DisplayName("US28 §4・§5・§6: 誤配の再設計は現在地から組み直し、期限超過も受ける")
+    void assignsRouteFromCurrentLocationWhenMisrouted() {
+        // **予定ルートを外れた貨物はもう出発地に無く、現在地からでは間に合わない
+        // のが普通である。** 断ると貨物が動かせなくなる——超過した事実は
+        // イベントに載せて荷主への説明に使う。
+        var fromSingapore = new CargoItinerary(List.of(new Leg("V-9",
+                Location.of("SGSIN"), Location.of("USNYC"),
+                Instant.parse("2026-11-20T00:00:00Z"),
+                Instant.parse("2026-12-20T00:00:00Z"))));
+
+        fixture.given().events(misrouted())
+                .when().command(new AssignRouteCommand("B-0001", fromSingapore, "routing01"))
+                .then().success()
+                .events(CargoRoutedEvent.of("B-0001", fromSingapore, "routing01", NOW,
+                        // 到着期限を 19 日超える（業務タイムゾーンで日付にして数える）。
+                        19));
+    }
+
+    @Test
+    @DisplayName("US28 §6: 通常の設計では期限超過を受けない（緩めすぎに気づける）")
+    void stillRejectsOverdueItineraryWhenNotMisrouted() {
+        // **緩める側だけを検査すると、緩みすぎに気づけない。**
+        var late = new CargoItinerary(List.of(new Leg("V-9",
+                Location.of("JPTYO"), Location.of("USNYC"),
+                Instant.parse("2026-11-20T00:00:00Z"),
+                Instant.parse("2026-12-20T00:00:00Z"))));
+
+        // 経路設計を依頼したところ（まだ確定していない）で試す。
+        fixture.given().events(booked(), new RoutingRequestedEvent("B-0001", "sales01"))
+                .when().command(new AssignRouteCommand("B-0001", late, "routing01"))
+                .then().exception(BusinessRuleViolation.class);
     }
 
     // ---- IT11 引き継ぎ枠 A: 引き渡しの打ち消し ----

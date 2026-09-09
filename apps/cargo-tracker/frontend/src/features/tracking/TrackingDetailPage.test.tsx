@@ -270,6 +270,7 @@ describe('S41 例外の対応（US19 §3・§4 / IT10 T7）', () => {
       responsePlan: null,
       occurredAt: '2026-09-20T02:00:00Z',
       resolvedAt: null,
+      settled: false,
       notifications: [],
       ...over,
     };
@@ -340,6 +341,8 @@ describe('S41 例外の対応（US19 §3・§4 / IT10 T7）', () => {
         responseStatusLabel: '解決',
         resolution: '代替便に振り替えました',
         resolvedAt: '2026-09-21T02:00:00Z',
+        // **モックを本物より甘くしない。** サーバは決着を settled で返す。
+        settled: true,
       })],
     }));
 

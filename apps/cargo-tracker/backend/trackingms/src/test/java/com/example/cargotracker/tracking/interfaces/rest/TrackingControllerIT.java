@@ -304,17 +304,30 @@ class TrackingControllerIT extends AbstractAxonIntegrationTest {
                 .body(body).retrieve().toBodilessEntity();
     }
 
+    /** 例外を起票し、<b>サーバが採番した ID</b> を返す（IT10 レビュー N7）。 */
+    private String registerException(String trackingNumber, String type) {
+        var registered = rest.post()
+                .uri("http://localhost:" + port + "/api/v1/tracking/trackings/"
+                        + trackingNumber + "/exceptions")
+                .header("X-Auth-Username", "tracker01")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("exceptionType", type,
+                        "unLocode", "SGSIN", "description", "台風で 3 日遅れます"))
+                .retrieve()
+                .toEntity(new org.springframework.core.ParameterizedTypeReference<
+                        Map<String, Object>>() { });
+        assertThat(registered.getStatusCode()).isEqualTo(HttpStatus.OK);
+        return String.valueOf(registered.getBody().get("exceptionId"));
+    }
+
     @Test
     @DisplayName("US19 §1・§2・§5: 遅延を起票すると例外発生になり、一覧に出る")
     void registersAndListsException() {
         String trackingNumber = givenAggregate("SHP-000001");
-        String exceptionId = "ex-" + System.nanoTime();
 
-        var registered = post("/api/v1/tracking/trackings/" + trackingNumber + "/exceptions",
-                Map.of("exceptionId", exceptionId, "exceptionType", "DELAY",
-                        "unLocode", "SGSIN", "description", "台風で 3 日遅れます"));
-
-        assertThat(registered.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        // **例外 ID はサーバが採番して返す**（IT10 レビュー N7）。呼ぶ側が決めると、
+        // 別の追跡で同じ ID が来たときに投影の insert だけが落ちる。
+        String exceptionId = registerException(trackingNumber, "DELAY");
         await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
             var detail = get("/api/v1/tracking/trackings/" + trackingNumber, null);
             assertThat(detail.getBody()).containsEntry("statusLabel", "例外発生");
@@ -340,10 +353,7 @@ class TrackingControllerIT extends AbstractAxonIntegrationTest {
         // 受領まで進めてから起票する（戻る先が未受領では区別が付かない）。
         post("/api/v1/tracking/trackings/" + trackingNumber + "/status",
                 Map.of("newStatus", "RECEIVED", "location", "JPTYO"));
-        String exceptionId = "ex-" + System.nanoTime();
-        post("/api/v1/tracking/trackings/" + trackingNumber + "/exceptions",
-                Map.of("exceptionId", exceptionId, "exceptionType", "DELAY",
-                        "unLocode", "SGSIN", "description", "台風で 3 日遅れます"));
+        String exceptionId = registerException(trackingNumber, "DELAY");
 
         String base = "/api/v1/tracking/trackings/" + trackingNumber + "/exceptions/"
                 + exceptionId;

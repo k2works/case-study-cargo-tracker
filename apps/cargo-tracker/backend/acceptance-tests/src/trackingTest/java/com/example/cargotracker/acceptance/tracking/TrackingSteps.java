@@ -153,14 +153,30 @@ public class TrackingSteps {
 
     @もし("追跡管理者が {string} の例外を起票する")
     public void 追跡管理者が例外を起票する(String type) {
-        exceptionId = "ex-" + System.nanoTime();
+        // **例外 ID はサーバが採番する**（IT10 レビュー N7）。起票の応答から拾う。
         lastResponse = rest.post()
                 .uri(url("/api/v1/tracking/trackings/" + trackingNumber + "/exceptions"))
                 .header("X-Auth-Username", "tracker01")
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(Map.of("exceptionId", exceptionId, "exceptionType", type,
+                .body(Map.of("exceptionType", type,
                         "unLocode", "SGSIN", "description", "台風で 3 日遅れます"))
                 .retrieve().toEntity(JsonMap.class);
+        exceptionId = issuedExceptionId();
+    }
+
+    /**
+     * 起票した例外の識別子。
+     *
+     * <p><b>応答が返さないなら一覧から拾う。</b> サーバ採番にしたので、
+     * 呼ぶ側は自分で決めた ID を持たない。</p>
+     */
+    private String issuedExceptionId() {
+        if (lastResponse.getBody() != null && lastResponse.getBody().get("exceptionId") != null) {
+            return String.valueOf(lastResponse.getBody().get("exceptionId"));
+        }
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
+                assertThat(openExceptionIds()).isNotEmpty());
+        return openExceptionIds().get(0);
     }
 
     @かつ("荷主へ知らせた記録を残す")
@@ -227,12 +243,11 @@ public class TrackingSteps {
 
     @もし("追跡管理者が発生場所 {string} で {string} の例外を起票する")
     public void 追跡管理者が発生場所で例外を起票する(String unLocode, String type) {
-        exceptionId = "ex-" + System.nanoTime();
         lastResponse = rest.post()
                 .uri(url("/api/v1/tracking/trackings/" + trackingNumber + "/exceptions"))
                 .header("X-Auth-Username", "tracker01")
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(Map.of("exceptionId", exceptionId, "exceptionType", type,
+                .body(Map.of("exceptionType", type,
                         "unLocode", unLocode, "description", "外装が破れています"))
                 .retrieve().toEntity(JsonMap.class);
     }

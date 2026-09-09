@@ -1198,6 +1198,8 @@ test.describe('マニュアルの画面キャプチャ', () => {
               estimatedArrival: '2026-09-30T18:00:00Z',
               transportStatus: 'EXCEPTION',
               transportStatusLabel: '例外発生',
+              bookingId: 'B-2026-0902-004',
+              escalatedAt: '2026-09-22T02:05:00Z',
             },
             {
               exceptionId: 'ex-2',
@@ -1213,6 +1215,8 @@ test.describe('マニュアルの画面キャプチャ', () => {
               estimatedArrival: '2026-09-27T18:00:00Z',
               transportStatus: 'EXCEPTION',
               transportStatusLabel: '例外発生',
+              bookingId: 'B-2026-0902-007',
+              escalatedAt: null,
             },
           ],
         }),
@@ -1220,8 +1224,92 @@ test.describe('マニュアルの画面キャプチャ', () => {
     );
     await signInAsTracker(page);
     await page.goto('/tracking/exceptions');
-    await expect(page.getByRole('heading', { name: '未解決の例外' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '例外一覧' })).toBeVisible();
     await expect(page.getByText('緊急', { exact: true })).toBeVisible();
     await page.screenshot({ path: `${OUT}/14-S42-exception-list.png`, fullPage: true });
+  });
+
+  test('15 誤配のバナー', async ({ page }) => {
+    // **本文が「いつ・どこで・現在地」「何日超えるか」を説明している。**
+    // バナーの中身が写っていないと、文章と画像が別々に正しくなる。
+    await signInAsRouting(page);
+    await page.route('**/api/v1/booking/bookings/*', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ...SAMPLE_ROUTED_BOOKING,
+          routingStatus: 'MISROUTED',
+          lastHandlingUnLocode: 'SGSIN',
+          lastHandlingAt: '2026-09-28T00:30:00Z',
+          lastHandlingOffRoute: true,
+          routeOverdueDays: 3,
+        }),
+      }),
+    );
+    await page.goto(`/bookings/${SAMPLE_ROUTED_BOOKING.bookingId}`);
+    await expect(page.getByRole('alert').filter({ hasText: '誤配を検知しました' }))
+      .toBeVisible();
+    await page.screenshot({ path: `${OUT}/15-S22-misroute-banner.png`, fullPage: true });
+  });
+
+  test('15 期限超過の候補', async ({ page }) => {
+    // **本文が「期限超過の列」「3 日超過」を説明している。**
+    // 超過の行が無いと、文章と画像が別々に正しくなる。
+    await page.route('**/api/v1/booking/bookings/88888888-*', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ...SAMPLE_BOOKINGS.items[0],
+          bookingId: '88888888-8888-8888-8888-888888888888',
+          bookingStatus: 'ROUTE_PROPOSED',
+          // 誤配の再設計。出発港は現在地に固定され、期限超過の候補も出る。
+          routingStatus: 'MISROUTED',
+          routeExcludeUnLocodes: [],
+          routeDepartFromUnLocode: 'SGSIN',
+        }),
+      }),
+    );
+    await page.route('**/api/v1/booking/bookings/*/route-candidates', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          candidates: [
+            {
+              legs: [{
+                voyageNumber: 'V-ONE-002',
+                loadUnLocode: 'SGSIN',
+                unloadUnLocode: 'USNYC',
+                loadTime: '2026-10-02T09:00:00Z',
+                unloadTime: '2026-10-14T18:00:00Z',
+              }],
+              transitDays: 12,
+              direct: true,
+              overdueDays: 0,
+            },
+            {
+              legs: [{
+                voyageNumber: 'V-MOL-009',
+                loadUnLocode: 'SGSIN',
+                unloadUnLocode: 'USNYC',
+                loadTime: '2026-10-05T09:00:00Z',
+                unloadTime: '2026-10-18T18:00:00Z',
+              }],
+              transitDays: 13,
+              direct: true,
+              overdueDays: 3,
+            },
+          ],
+          truncated: false,
+        }),
+      }),
+    );
+    await signInAsRouting(page);
+    await page.goto('/routing/bookings/88888888-8888-8888-8888-888888888888');
+    await expect(page.getByRole('heading', { name: '経路候補' })).toBeVisible();
+    await expect(page.getByText('3 日超過')).toBeVisible();
+    await page.screenshot({ path: `${OUT}/15-S31-overdue-candidates.png`, fullPage: true });
   });
 });

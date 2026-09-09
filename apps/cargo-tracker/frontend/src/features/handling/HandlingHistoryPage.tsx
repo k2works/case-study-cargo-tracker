@@ -34,7 +34,7 @@ const REFETCH_INTERVAL_MS = 30_000;
  */
 function stateLabel(item: { voided: boolean; voidReason: string | null; offRoute: boolean }) {
   if (item.voided) {
-    return `取消（${item.voidReason ?? '理由なし'}）`;
+    return '取消';
   }
   return item.offRoute ? '予定外' : '記録済';
 }
@@ -147,6 +147,10 @@ export function HandlingHistoryPage() {
                 <th className={TH}>記録者</th>
                 <th className={TH}>状態</th>
                 <th className={TH}>取り消した人</th>
+                {/* **監査で最初に問われるのは理由。** 状態欄に括弧で混ぜると、
+                    絞り込みも並べ替えもできず、長い理由で表が崩れる
+                    （IT10 レビュー N17）。 */}
+                <th className={TH}>理由</th>
                 {isHandler && <th className={TH}>操作</th>}
               </tr>
             </thead>
@@ -162,6 +166,9 @@ export function HandlingHistoryPage() {
                     {stateLabel(item)}
                   </td>
                   <td className={TD}>{voidedByLabel(item)}</td>
+                  <td className={TD}>
+                    {item.voided ? (item.voidReason ?? '理由なし') : '—'}
+                  </td>
                   {isHandler && (
                     <td className={TD}>
                       {/* **取り消せるのは取り消していない記録だけ。**

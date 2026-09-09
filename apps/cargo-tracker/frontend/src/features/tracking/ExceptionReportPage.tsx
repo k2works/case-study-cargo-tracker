@@ -36,11 +36,9 @@ export function ExceptionReportPage() {
   const [description, setDescription] = useState('');
   // **鍵は画面が作る。** 応答が返らずもう一度押したとき、作り直すと別の鍵になり
   // 同じ例外が二重に起票される。
-  const [exceptionId] = useState(() => crypto.randomUUID());
 
   const report = useMutation({
     mutationFn: () => registerException(trackingNumber, {
-      exceptionId,
       exceptionType,
       unLocode: unLocode.trim().toUpperCase(),
       description: description.trim(),

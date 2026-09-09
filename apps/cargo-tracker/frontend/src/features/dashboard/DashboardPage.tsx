@@ -241,6 +241,13 @@ export function DashboardPage() {
               ))}
             </ul>
           )}
+          {/* **上限で切れたことを黙らない**（IT10 レビュー N6）。無音で切ると、
+              載らなかった航海は「今日の仕事ではない」と読まれる。 */}
+          {voyagePorts.value.truncated && (
+            <output className={`${NOTICE} mt-3 block`}>
+              航海が多いため、一部だけを出しています。荷役の一覧から探してください
+            </output>
+          )}
         </section>
       )}
 

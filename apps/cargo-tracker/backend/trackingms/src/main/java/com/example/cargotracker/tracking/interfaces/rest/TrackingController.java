@@ -69,9 +69,18 @@ public class TrackingController {
             Instant occurredAt) {
     }
 
-    /** 例外の起票（S43 / US19 §受入基準 1）。 */
+    /**
+     * 例外の起票（S43 / US19 §受入基準 1）。
+     *
+     * <p><b>例外 ID は受け取らない</b>（IT10 レビュー N7）。投影の主キーなので、
+     * 呼ぶ側が決めると<b>別の追跡で同じ ID が来たときに投影の insert だけが
+     * 落ちる</b>——集約は追跡ごとに別なので気づかず、画面には「起票したのに
+     * 一覧に出ない」としか出ない。サーバが採番する。</p>
+     *
+     * <p>再送で二重に起票されうるが、**同じ内容の例外が 2 件並ぶ**のは
+     * 追跡管理者が見て分かる。**投影が黙って落ちる**より扱える。</p>
+     */
     public record RegisterExceptionRequest(
-            @NotBlank(message = "例外 ID は必須です") String exceptionId,
             @NotBlank(message = "例外種別は必須です") String exceptionType,
             Instant occurredAt,
             String unLocode,
@@ -213,15 +222,26 @@ public class TrackingController {
      * <p><b>起票者はヘッダから取る。</b> 本文に載せると、他人の名前で記録できる。</p>
      */
     @PostMapping("/{trackingNumber}/exceptions")
-    public ResponseEntity<Void> registerException(@PathVariable String trackingNumber,
+    public ResponseEntity<RegisteredExceptionResponse> registerException(
+            @PathVariable String trackingNumber,
             @RequestHeader(value = "X-Auth-Username", required = false) String username,
             @Valid @RequestBody RegisterExceptionRequest request) {
+        // **採番はサーバが持つ**（IT10 レビュー N7）。投影の主キーなので、
+        // 呼ぶ側が決めると別の追跡で衝突して投影の insert だけが落ちる。
+        String exceptionId = java.util.UUID.randomUUID().toString();
         commands.sendAndWait(new RegisterTrackingExceptionCommand(trackingNumber,
-                request.exceptionId(), exceptionTypeOf(request.exceptionType()),
+                exceptionId,
+                exceptionTypeOf(request.exceptionType()),
                 // 入力されなければ「いま」。**業務の時計で決める**。
                 request.occurredAt() == null ? clock.instant() : request.occurredAt(),
                 request.unLocode(), request.description(), username), Void.class);
-        return ResponseEntity.noContent().build();
+        // **採番した ID を返す。** 返さないと、呼ぶ側は起票した例外を名指しで
+        // 追えず、一覧から推測することになる。
+        return ResponseEntity.ok(new RegisteredExceptionResponse(exceptionId));
+    }
+
+    /** 起票の応答。<b>サーバが採番した例外 ID を返す</b>（IT10 レビュー N7）。 */
+    public record RegisteredExceptionResponse(String exceptionId) {
     }
 
     /** 対応を始める（S41 / US19 §受入基準 4）。 */

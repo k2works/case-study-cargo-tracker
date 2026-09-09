@@ -109,7 +109,13 @@ public final class HandlingQueries {
     public record VoyagePortView(String voyageNumber, String unLocode, int cargoCount) {
     }
 
-    /** 航海と港の一覧。 */
-    public record VoyagePortListView(List<VoyagePortView> items) {
+    /**
+     * 航海と港の一覧（S02 荷役）。
+     *
+     * <p><b>上限で切れたことを黙らない</b>（IT10 レビュー N6）。無音で切ると、
+     * 載らなかった航海は誰の目にも入らないまま残る——荷役の現場は毎朝ここから
+     * 入るので、載っていない航海は「今日の仕事ではない」と読まれる。</p>
+     */
+    public record VoyagePortListView(List<VoyagePortView> items, boolean truncated) {
     }
 }

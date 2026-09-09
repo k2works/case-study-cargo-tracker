@@ -87,8 +87,12 @@ public interface CargoSnapshotMapper {
             + "  WHERE s.cancelled = FALSE"
             + ") ports "
             + "GROUP BY voyage_number, unlocode "
-            + "ORDER BY voyage_number, unlocode")
-    List<VoyagePortRow> findVoyagePorts();
+            + "ORDER BY voyage_number, unlocode "
+            // **上限を置く**（IT10 レビュー N6）。全航海・全港を無制限に返すと、
+            // 運用日数に比例して伸びる——荷役のダッシュボードは毎朝ここを開く。
+            // 上限に当たったことは呼び出し側が数えて画面に知らせる（黙って切らない）。
+            + "LIMIT #{limit}")
+    List<VoyagePortRow> findVoyagePorts(@Param("limit") int limit);
 
     /**
      * その港で引取を待っている貨物（H.8 / US16）。

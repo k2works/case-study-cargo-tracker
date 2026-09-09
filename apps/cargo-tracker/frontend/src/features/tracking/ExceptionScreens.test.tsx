@@ -262,7 +262,9 @@ describe('S43 例外起票（US19 §1）', () => {
     expect(sent.unLocode).toBe('SGSIN');
     expect(sent.description).toBe('外装が破れています');
     expect(String(sent.occurredAt)).toBe('2026-09-20T02:00:00Z');
-    expect(sent.exceptionId).toEqual(expect.any(String));
+    // **例外 ID はサーバが採番する**（IT10 レビュー N7）。呼ぶ側が決めると、
+    // 別の追跡で同じ ID が来たときに投影の insert だけが落ちる。
+    expect(sent).not.toHaveProperty('exceptionId');
     expect(await screen.findByRole('heading', { name: '追跡詳細' })).toBeInTheDocument();
     expect(fetchSpy).toHaveBeenCalled();
   });

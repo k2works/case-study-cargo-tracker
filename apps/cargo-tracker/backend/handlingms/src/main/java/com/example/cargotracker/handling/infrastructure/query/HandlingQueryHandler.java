@@ -29,6 +29,14 @@ import org.springframework.stereotype.Component;
 @Component
 public class HandlingQueryHandler {
 
+    /**
+     * 航海と港の一覧の上限（IT10 レビュー N6）。
+     *
+     * <p>荷役の現場が 1 日に扱う航海はせいぜい数十で、200 は実務の幅を十分に
+     * 超える。<b>運用日数に比例して伸びる読み口を残さない。</b></p>
+     */
+    private static final int VOYAGE_PORT_LIMIT = 200;
+
     /** S50 が一度に出す上限。1 隻から 20〜50 本が普通で、それを超えると画面が読めない。 */
     private static final int VOYAGE_ACTIVITY_LIMIT = 200;
 
@@ -144,9 +152,17 @@ public class HandlingQueryHandler {
     /** これから作業する航海と港（S02 荷役）。 */
     @QueryHandler
     public VoyagePortListView handle(FindVoyagePortsQuery query) {
-        return new VoyagePortListView(cargos.findVoyagePorts().stream()
-                .map(row -> new VoyagePortView(row.voyageNumber(), row.unlocode(),
-                        row.cargoCount()))
-                .toList());
+        // **上限より 1 件多く引いて、切れたかどうかを判別する**（IT10 レビュー N6）。
+        // 件数が上限ちょうどのときに「切れた」と言うと、警告が常時点灯して
+        // 合図として働かなくなる。
+        var rows = cargos.findVoyagePorts(VOYAGE_PORT_LIMIT + 1);
+        boolean truncated = rows.size() > VOYAGE_PORT_LIMIT;
+        return new VoyagePortListView(
+                rows.stream()
+                        .limit(VOYAGE_PORT_LIMIT)
+                        .map(row -> new VoyagePortView(row.voyageNumber(), row.unlocode(),
+                                row.cargoCount()))
+                        .toList(),
+                truncated);
     }
 }

@@ -131,6 +131,10 @@ public final class TrackingQueries {
             String responsePlan,
             Instant occurredAt,
             Instant resolvedAt,
+            // **決着したか**（`ResponseStatus#settled`）。判定はドメインが答え、
+            // 読み口はその結果を写す——画面と SQL に書き直すと、状態が増えたときに
+            // 片方だけが直る（IT10 レビュー N3。三重定義だった）。
+            boolean settled,
             // 荷主へ知らせた記録（US19 §3）。**送信基盤はスコープ外**なので、
             // これが読めることでしか受入基準を満たせない。
             List<ExceptionNotificationView> notifications) {

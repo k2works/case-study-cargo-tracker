@@ -151,6 +151,8 @@ public class TrackingQueryHandler {
                         x.newEstimatedArrival() == null
                                 ? null : x.newEstimatedArrival().toString(),
                         x.responsePlan(), x.occurredAt(), x.resolvedAt(),
+                        // **判定はドメインが答える**（IT10 レビュー N3）。
+                        ResponseStatus.valueOf(x.responseStatus()).settled(),
                         notifications.findByException(x.exceptionId()).stream()
                                 .map(n -> new ExceptionNotificationView(n.means(), n.summary(),
                                         n.notifiedBy(), n.notifiedAt()))
