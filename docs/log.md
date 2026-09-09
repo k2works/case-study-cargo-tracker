@@ -1,6 +1,14 @@
 # Docs Update Log
 
 ## 2026-09-09
+* **Update**: [retrospective-10](/development/cargo-tracker/retrospective-10.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_report-10](/development/cargo-tracker/iteration_report-10.md) を更新（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-10](/development/cargo-tracker/iteration_plan-10.md) を更新（claude-code/claude-opus-5）
+* **Update**: [retrospective-10](/development/cargo-tracker/retrospective-10.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_report-10](/development/cargo-tracker/iteration_report-10.md) を更新（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-10](/development/cargo-tracker/iteration_plan-10.md) を更新（claude-code/claude-opus-5）
 * **Update**: [IT10実装_review_20260909](/review/cargo-tracker/IT10実装_review_20260909.md) を更新（claude-code/claude-opus-5）
 * **Update**: [14-引取と例外を扱う](/manual/14-引取と例外を扱う.md) を更新（claude-code/claude-opus-5）
 * **Update**: [12-貨物の輸送状況を追う](/manual/12-貨物の輸送状況を追う.md) を更新（claude-code/claude-opus-5）
