@@ -134,15 +134,9 @@ public class TrackingProjection {
                 ResponseStatus.REPORTED.name(), event.urgent(), event.unLocode(),
                 // 起票の時点では対応内容も新しい期限も無い。対応開始が書き足す。
                 event.description(), null, null, null, event.occurredAt(), null, now));
-        // **2 件目以降の起票では上書きしない**（IT10 レビュー 高）。2 件目は
-        // 例外発生から起票されるので、そのまま書くと「解決すると何に戻るか」が
-        // 「例外発生」と出る。集約と同じ判断（最初の起票の時点を覚える）。
         var current = trackings.findByTrackingNumber(event.trackingNumber());
-        String before = current != null && current.statusBeforeException() != null
-                ? current.statusBeforeException()
-                : (event.statusBeforeException() == null
-                        ? null : event.statusBeforeException().name());
-        refreshCounts(event.trackingNumber(), before, now);
+        refreshCounts(event.trackingNumber(),
+                statusBeforeException(current, event), now);
         // **起票と解決は逆向きの出来事。** 同じ印にすると履歴が読めない。
         writeHistory(new HistoryEntry(eventId, event.trackingNumber(),
                 StatusUpdateSource.EXCEPTION.eventType(), event.statusBeforeException(),
@@ -210,6 +204,22 @@ public class TrackingProjection {
         writeHistory(new HistoryEntry(eventId, event.trackingNumber(), "NOT_APPLIED",
                 event.currentStatus(), event.attemptedStatus(), event.unLocode(),
                 event.completedAt(), null), clock.instant());
+    }
+
+    /**
+     * 解決したら戻る先（IT10 レビュー 高）。
+     *
+     * <p><b>2 件目以降の起票では上書きしない。</b> 2 件目は例外発生から起票される
+     * ので、そのまま書くと画面の「解決すると何に戻るか」が「例外発生」と出る。
+     * 集約と同じ判断（最初の起票の時点を覚える）。</p>
+     */
+    private static String statusBeforeException(TrackingSummaryMapper.TrackingSummaryRow current,
+            TrackingExceptionRegisteredEvent event) {
+        if (current != null && current.statusBeforeException() != null) {
+            return current.statusBeforeException();
+        }
+        return event.statusBeforeException() == null
+                ? null : event.statusBeforeException().name();
     }
 
     /** 例外の件数を明細から数え直す（足し引きしない）。 */

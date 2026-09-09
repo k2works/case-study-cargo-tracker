@@ -57,7 +57,7 @@ export function AwaitingClaimPage() {
       {/* **通関の状態はこの画面では判断できない。** 通関の記録は US29（IT12）で
           作る。黙っていると「渡してよい」と読まれるので、そう書く。 */}
       <output className={`${NOTICE} mt-3 block`}>
-        <strong>通関の状態はこの画面では分かりません。</strong>
+        <strong>通関の状態はこの画面では分かりません。</strong>{' '}
         通関が済んでいるかは、荷主または通関業者に確かめてから引き渡してください。
       </output>
 

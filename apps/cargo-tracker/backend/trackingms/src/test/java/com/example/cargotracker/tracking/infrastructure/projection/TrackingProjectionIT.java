@@ -275,7 +275,7 @@ class TrackingProjectionIT extends AbstractAxonIntegrationTest {
                 "2026-09-27", "代替便を手配中", "tracker01", AT));
 
         var row = exceptions.findById("ex-plan");
-        assertThat(row.newEstimatedArrival()).isEqualTo(java.time.LocalDate.of(2026, 9, 27));
+        assertThat(row.newEstimatedArrival()).isEqualTo(java.time.LocalDate.of(2026, java.time.Month.SEPTEMBER, 27));
         assertThat(row.responsePlan()).isEqualTo("代替便を手配中");
     }
 
