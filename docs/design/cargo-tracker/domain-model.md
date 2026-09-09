@@ -4,7 +4,7 @@ title: "ドメインモデル設計 - 国際貨物輸送管理システム（CQR
 description: "CQRS / Event Sourcing 版 Cargo Tracker のドメインモデル設計。6 コンテキストの集約・不変条件・コマンド・イベント（内部 / 契約）・状態遷移・Reaction Handler を、イベントを永続化フォーマットとして定義する。"
 tags: [design,domain-model,ddd,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-09T06:34:30Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-09T13:36:31Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -97,6 +97,8 @@ quadrantChart
 | 荷役作業 | Handling Activity | `HandlingActivity` | 港湾での受領・積込・荷降し・引取作業。集約ルート |
 | 荷役種別 | Handling Type | `HandlingType` | 荷役作業の種別。**種別ごとの要件を自分で持つ** |
 | 通関申告 | Customs Declaration | `CustomsDeclaration` | 税関への申告と審査状態。集約ルート |
+| 申告番号 | Declaration Number | `DeclarationNumber` | 税関が採番する申告の番号。**利用者が持ち込む**ので集約の識別子にする |
+| 休日カレンダー | Holiday Calendar | `HolidayCalendar` | 港の所在国の休日。留置日数を**営業日**で数える（不変条件 4）。**共有カーネルには置かない**——営業日を数えるのはいま handlingms だけで、billingms が保管料を数え始めたら（US21・IT13）そのとき移す |
 | 貨物スナップショット | Cargo Snapshot | `CargoSnapshot` | Handling が Booking のイベントから写し取った貨物の最小情報（ACL） |
 | 請求書 | Invoice | `Invoice` | 輸送料金の請求書。集約ルート |
 | 金額 | Money | `Money` | 通貨と数量を伴う金額。丸めは `Money` の中 1 か所 |

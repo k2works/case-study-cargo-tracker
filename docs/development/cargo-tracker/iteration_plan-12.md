@@ -3,7 +3,7 @@ type: Plan
 title: "イテレーション 12 計画"
 tags: [plan]
 status: draft
-generated: { by: claude-code/claude-opus-5, at: 2026-09-09T12:06:18Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-09T13:36:31Z }
 ---
 
 # イテレーション 12 計画
@@ -60,7 +60,7 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-09T12:06:18Z }
 
 | # | 欠落 | 反映先 | 反映するタスク |
 | :--- | :--- | :--- | :--- |
-| N1 | **`HolidayCalendar` の置き場が決まっていない。** `domain-model.md:1033` は「港の所在国の休日カレンダー」と書くが、**要素表にも共有カーネルの名簿にも無い**。国コードから休日を引くので、`shared.domain.location.CountryCode` と対になる | `domain-model.md` の要素表（値オブジェクト）と、共有カーネルの範囲（ADR-0001 決定 4 / `SharedKernelScopeTest` の名簿） | T1 |
+| N1 | **`HolidayCalendar` の置き場が決まっていない。** `domain-model.md:1033` は「港の所在国の休日カレンダー」と書くが、**要素表にも共有カーネルの名簿にも無い**。国コードから休日を引くので、`shared.domain.location.CountryCode` と対になる | `domain-model.md` の要素表（値オブジェクト）と、共有カーネルの範囲（ADR-0001 決定 4 / `SharedKernelScopeTest` の名簿） | T1（**共有カーネルではなく handlingms に置いた**。上の ADR 表を参照） |
 | N2 | US29 §4 の**通知の置き場が設計に無い**。`ui_design.md:120` の「記録と手作業の組で満たす」US 一覧に US29 はあるが、**記録先のイベントが `domain-model.md` の handlingms のイベント表に無い** | `domain-model.md`（`CustomsClearanceNotifiedEvent` を追加）・`ui_design.md:120` | T5 |
 | N3 | **履歴を Event Store から読むクエリが設計に無い。** `data-model.md:656` は「履歴は Event Store から読む」と書くが、`domain-model.md` のクエリ一覧に該当する問い合わせが無い | `domain-model.md` のクエリ一覧（`FindCustomsHistoryQuery`） | T6 |
 | N4 | **S52・S53 の `###` 節が `ui_design.md` に無い**（S53 はある。**S52 が無い**）。画面一覧の行と一覧規約の行だけで、画面項目・操作手順が未記述 | `ui_design.md`（S52 の節を新設） | T6 |
@@ -123,7 +123,7 @@ IT11 から 12 件を受けています。`release_plan.md` の IT12 の枠は**
 | A | **引き継ぎ枠 A**：Dead Letter Queue。**書けないイベントを退避して処理を続ける**。退避したことは `attention_item` に出す（**黙って捨てない**）。**IT11 の事象を再現してから直す** | — | 5h |
 | B | **引き継ぎ枠 B**：S30 に「誤配だけ / 設計待ちだけ」の絞り込み。**表示上限に当たったことは既に知らせている**ので、絞る手段を足す | — | 3h |
 | P1 | **業務シナリオを赤で置く**（終盤の Phase 1）。デモ項目を受け入れテストとクラスタ E2E に先に書く | — | 4h |
-| T1 | **`HolidayCalendar` と `CustomsStatus`**（`allowsClaim`）。**営業日は共有カーネルに置く**（国コードと対。注 N1）。要素表と突き合わせる canon テスト | US29 | 5h |
+| T1 | **`HolidayCalendar` と `CustomsStatus`**（`allowsClaim`）。**営業日は handlingms に置く**（**当初は共有カーネルの予定だったが、読む側が 1 つしかないので変えた**。上の ADR 表）。要素表と突き合わせる canon テスト | US29 | 5h |
 | T2 | **契約 `CustomsStatusChangedEvent` を先に置く**（Phase 2）。**購読側は trackingms（例外の自動起票）と billingms（留置営業日を調整根拠に）**。ゴールデンと**往復テスト**（H.5・H.6 をここで） | US29 | 5h |
 | T3 | **`CustomsDeclaration` 集約**（`register` / `updateStatus` / `heldBusinessDays`）と不変条件。**理由の無い更新を断る**。**留置日数は営業日で数える** | US29 | 6h |
 | T4 | **`customs_declaration` 投影**（`INDEX(tracking_number, status)`・`INDEX(status, held_business_days DESC)`）と `FindCustomsDeclarationsQuery`（**既定で通関済を外す**） | US29 | 4h |
@@ -143,7 +143,7 @@ IT11 から 12 件を受けています。`release_plan.md` の IT12 の枠は**
 | `CustomsDeclaration`・`CustomsStatus`・`DeclarationNumber` | **実装 0 件**（javadoc が名前だけ言及） | T1・T3 で新設 |
 | `CustomsStatusChangedEvent` | **実装 0 件**（契約に無い） | T2 で新設（**契約**） |
 | `customs_declaration` テーブル | **実装 0 件** | T4（handlingms のマイグレーション） |
-| `HolidayCalendar` | **実装 0 件・設計の要素表にも無い**（注 N1） | T1 で新設（**共有カーネル**） |
+| `HolidayCalendar` | **実装 0 件・設計の要素表にも無い**（注 N1） | T1 で新設（**handlingms**。共有カーネルには置かない） |
 | `ExceptionType.CUSTOMS_HOLD`・`reportableByHand` | **実装済み**（IT10・IT11） | T5 でその経路を繋ぐ |
 | `TrackingReactionHandler` | **実装済み**（荷役の 2 経路を購読） | T5 で通関の購読を足す |
 | `HandlingType.CLAIM` の荷受人確認ガード | **実装済み**（IT10） | T7 で**通関のガードを足す**（置き換えない） |
@@ -169,7 +169,7 @@ IT11 から 12 件を受けています。`release_plan.md` の IT12 の枠は**
 
 | 判断 | ADR の要否 |
 | :--- | :--- |
-| **`HolidayCalendar` を共有カーネルに置く** | **要**（注 N1）。共有カーネルの範囲は ADR-0001 決定 4 が名簿で縛っており、**足すには決定を書き換える**。ADR-0013（例外の対応表）と同じ形で、「全 BC で同じでなければならない業務上の理由」が言えるかを問う |
+| **`HolidayCalendar` を共有カーネルに置く** | **不要（判断を変えた）。** ADR-0013 が立てた問い——「全 BC で同じでなければならない業務上の理由が言えるか」——に、いまは言えない。**営業日を数えるのは handlingms だけ**である。billingms が保管料を数え始めたら（US21・IT13）同じ日数でなければならなくなるので、そのときに共有へ移して ADR-0001 の名簿を書き換える。**読む側の無い配線を先に敷かない**（IT9・IT10 と同じ判断。計画 R4 の「書けないなら handlingms の中に置く」に従った）。注 N1 の反映は `domain-model.md` の要素表に置き場つきで載せることで済ませた |
 | **Dead Letter Queue の導入** | **要**（引き継ぎ枠 A）。退避先・再投入の手順・`attention_item` との関係を決める。**IT11 で実際に投影が止まった**ことが動機 |
 | **履歴を Event Store から読む**（追記専用テーブルを作らない） | **不要**。`data-model.md:656` が既に決定として書いている。注 N3 は「クエリが設計に無い」ことの反映のみ |
 | **引取の通関ガードを有効にする** | **不要**。`release_plan.md:205` が「US29 で有効化」と決めている。IT9〜IT11 は「読む側の無い配線を先に敷かない」として保留していた |
