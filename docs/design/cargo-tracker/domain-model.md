@@ -4,7 +4,7 @@ title: "ドメインモデル設計 - 国際貨物輸送管理システム（CQR
 description: "CQRS / Event Sourcing 版 Cargo Tracker のドメインモデル設計。6 コンテキストの集約・不変条件・コマンド・イベント（内部 / 契約）・状態遷移・Reaction Handler を、イベントを永続化フォーマットとして定義する。"
 tags: [design,domain-model,ddd,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-07T12:27:56Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-09T00:06:30Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -888,10 +888,15 @@ EXCEPTION --> DELIVERED : 解決・引取完了
 | `RegisterTrackingExceptionCommand` | 追跡管理者 / 自動起票 | `TrackingExceptionRegisteredEvent` | — | UC16 / US19・US20 |
 | `StartExceptionResponseCommand` | 追跡管理者 | `ExceptionResponseStartedEvent` | — | UC16 |
 | `ResolveTrackingExceptionCommand` | 追跡管理者 | `TrackingExceptionResolvedEvent` | — | UC16 |
+| `NotifyShipperOfExceptionCommand` | 追跡管理者 | `ExceptionShipperNotifiedEvent` | — | UC16 / US19 §3。**送信基盤はスコープ外**（ui_design.md:120）。残すのは「いつ・どうやって・何を伝えたか」で、投影 `exception_notification` に写して S41 に出す。bookingms の `ShipperNotifiedEvent` は予約の内部イベントで、trackingms からは発行も購読もできない |
 | （`advance` が `CLAIM` を受けたとき） | — | `CargoDeliveredEvent` | **○** | UC14 → UC17 |
 | `CloseTrackingCommand`（`shared/contract/command`） | `TrackingReactionHandler`（`cancellationDischargeLocation` での `UNLOAD` を受けた後） | `TrackingClosedEvent` | ○ | UC22 |
 
 `CargoDeliveredEvent` はコマンドに 1 対 1 で対応しません。`AdvanceTrackingCommand(CLAIM)` が `TransportStatusUpdatedEvent(DELIVERED)` と `CargoDeliveredEvent` の 2 つを発行します。前者は Tracking 内部の永続化フォーマット、後者は Billing と Booking への契約です。1 つのイベントに両方の役割を持たせると、内部の形を変えるたびに契約が動きます。
+
+`HandlingNotAppliedEvent` は trackingms の内部イベントです（IT10 / レビュー M6）。**遷移表が許さない荷役や、例外の対応中に届いた荷役は状態を動かせませんが、届いたこと自体は事実**なので、捨てずに履歴（`tracking_event.event_type = NOT_APPLIED`）へ残します。捨てると「荷役は記録したのに追跡が動いていない」という問い合わせに答えられません——記録は handlingms にありますが、追跡管理者はそちらを見る手がかりを持ちません。**状態は動かしません。**
+
+`ExceptionShipperNotifiedEvent` も trackingms の内部イベントです（US19 §3）。bookingms の `ShipperNotifiedEvent` は予約（`Cargo`）の内部イベントで契約ではなく、trackingms からは発行も購読もできません。投影は `exception_notification`。
 
 `CargoMisroutedEvent` は trackingms の内部イベントです。bookingms 側の同じ意味のイベントは `BookingMisroutedEvent` と名付け、同名クラスが契約に昇格した瞬間に衝突するのを避けます。イベント購読からコマンドを送るのは `application/reaction/TrackingReactionHandler`（Processing Group `tracking-reaction`）で、投影はコマンドを送りません。
 

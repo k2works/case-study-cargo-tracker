@@ -110,6 +110,17 @@ export function AppRoutes() {
             </RequireRole>
           }
         />
+        {/* 引取の記録（S54 から開く）。**航海番号を取らない**——引取は船から
+            降りたあとの作業で、どの航海の仕事でもない。`/handling/voyages/*`
+            より前でも後でも当たらないので順序は問わない。 */}
+        <Route
+          path="/handling/claim"
+          element={
+            <RequireRole allow={['ROLE_HANDLER']}>
+              <HandlingRecordPage />
+            </RequireRole>
+          }
+        />
         {/* 引取待ち（H.8 / US16）は荷役ロールだけ。**`/handling/:trackingNumber`
             より先に置く。** 後ろに置くと "awaiting-claim" が追跡番号として
             吸われ、荷役履歴が「見つかりません」になる。 */}

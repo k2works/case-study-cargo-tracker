@@ -334,6 +334,18 @@ function UpdateStatusPanel({
 }
 
 /**
+ * 断った理由。<b>業務の判断で断ったなら、その文言をそのまま出す。</b>
+ *
+ * <p>通信の失敗と業務の拒否を同じ文言にすると、利用者は「やり直せばよいのか」
+ * 「入力を直すのか」を判断できない。</p>
+ */
+function failureMessage(error: unknown): string {
+  return error instanceof ApiError
+    ? error.body.message
+    : '記録できませんでした。もう一度お試しください。';
+}
+
+/**
  * 例外の一覧と対応（S41 / US19 §受入基準 3・4・5）。
  *
  * <p><b>解決したものも出す</b>（不変条件 6）。事実は消えず、料金調整の根拠になる。
@@ -578,9 +590,12 @@ function ExceptionPanel({ trackingNumber, exceptions, canRespond, onChanged }: R
         ))}
       </ul>
 
+      {/* **断った理由をそのまま出す。** 固定文言にすると、集約が返した
+          「解決した例外は変更できません」「対応内容は必須です」が誰にも届かず、
+          利用者は次に何をすればよいか分からない（マニュアルもその文言で索く）。 */}
       {(respond.isError || resolve.isError || notify.isError) && (
         <output className={`${ALERT} mt-3`}>
-          記録できませんでした。もう一度お試しください。
+          {failureMessage(respond.error ?? resolve.error ?? notify.error)}
         </output>
       )}
     </section>

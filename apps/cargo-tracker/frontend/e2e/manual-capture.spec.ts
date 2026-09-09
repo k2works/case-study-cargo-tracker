@@ -1118,6 +1118,52 @@ test.describe('マニュアルの画面キャプチャ', () => {
     await page.screenshot({ path: `${OUT}/14-S50-claim.png`, fullPage: true });
   });
 
+  test('14 引取待ち', async ({ page }) => {
+    // **本文が「港を選ぶまで一覧は出ません」「通関の状態は分かりません」と
+    // 書いている。** 港を選んだ状態で撮らないと、文章と画像が別々に正しくなる。
+    await page.route('**/api/v1/handling/voyages', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: [{ voyageNumber: 'V-ONE-002', unLocode: 'USNYC', cargoCount: 3 }],
+        }),
+      }),
+    );
+    await page.route('**/api/v1/handling/awaiting-claim*', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: [
+            {
+              trackingNumber: 'TRK-AB12CD3456',
+              bookingId: 'b-1',
+              originUnLocode: 'JPTYO',
+              destinationUnLocode: 'USNYC',
+              cargoType: 'GENERAL',
+              handledTypes: ['UNLOAD'],
+            },
+            {
+              trackingNumber: 'TRK-EF78GH9012',
+              bookingId: 'b-2',
+              originUnLocode: 'JPOSA',
+              destinationUnLocode: 'USNYC',
+              cargoType: 'REEFER',
+              handledTypes: ['UNLOAD'],
+            },
+          ],
+        }),
+      }),
+    );
+    await signInAsHandler(page);
+    await page.goto('/handling/awaiting-claim');
+    await expect(page.getByRole('heading', { name: '引取待ち' })).toBeVisible();
+    await page.getByLabel('港').selectOption('USNYC');
+    await expect(page.getByRole('link', { name: '引取を記録' }).first()).toBeVisible();
+    await page.screenshot({ path: `${OUT}/14-S54-awaiting-claim.png`, fullPage: true });
+  });
+
   test('14 例外の起票', async ({ page }) => {
     await signInAsTracker(page);
     await page.goto('/tracking/TRK-AB12CD3456/exceptions/new');

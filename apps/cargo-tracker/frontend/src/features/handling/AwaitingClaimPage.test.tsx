@@ -27,6 +27,7 @@ function renderAt(path = '/handling/awaiting-claim') {
         <Routes>
           <Route path="/handling/awaiting-claim" element={<AwaitingClaimPage />} />
           <Route path="/handling/voyages/:voyageNumber" element={<h1>荷役の記録</h1>} />
+          <Route path="/handling/claim" element={<h1>引取の記録</h1>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -82,5 +83,39 @@ describe('引取待ち（H.8 / US16）', () => {
     await userEvent.selectOptions(screen.getByLabelText('港'), 'USNYC');
 
     expect(await screen.findByText(/引取を待っている貨物はありません/)).toBeInTheDocument();
+  });
+
+  it('行から引取を記録しに行ける（追跡番号を書き写させない）', async () => {
+    // **窓口で荷受人を待たせたまま、航海を思い出して選び直させない。**
+    respondByUrl({
+      '/awaiting-claim': {
+        items: [{
+          trackingNumber: 'TRK-8K2QX7M4RB',
+          bookingId: 'b-1',
+          originUnLocode: 'JPTYO',
+          destinationUnLocode: 'USNYC',
+          cargoType: 'GENERAL',
+          handledTypes: ['UNLOAD'],
+        }],
+      },
+      '/handling/voyages': { items: [{ voyageNumber: 'V-ONE-002', unLocode: 'USNYC', cargoCount: 3 }] },
+    });
+
+    renderAt();
+    await screen.findByRole('option', { name: 'USNYC' });
+    await userEvent.selectOptions(screen.getByLabelText('港'), 'USNYC');
+
+    const link = await screen.findByRole('link', { name: '引取を記録' });
+    expect(link).toHaveAttribute(
+      'href', '/handling/claim?unLocode=USNYC&trackingNumber=TRK-8K2QX7M4RB');
+  });
+
+  it('通関の状態が分からないことを黙らない（渡してよいと読まれる）', async () => {
+    respondByUrl({ '/handling/voyages': { items: [] } });
+
+    renderAt();
+
+    expect(await screen.findByText(/通関の状態はこの画面では分かりません/))
+      .toBeInTheDocument();
   });
 });

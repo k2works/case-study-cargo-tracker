@@ -20,6 +20,7 @@ import { cargoTypeLabel } from '@/features/bookings/api';
 import { businessLocalToInstant } from '@/shared/api/businessDate';
 import { ApiError } from '@/shared/api/client';
 import {
+  fetchAwaitingClaim,
   fetchCargoSnapshot,
   fetchCargosOnVoyage,
   registerHandling,
@@ -45,10 +46,18 @@ export function HandlingRecordPage() {
   const { voyageNumber = '' } = useParams();
   const [params] = useSearchParams();
   const unLocode = (params.get('unLocode') ?? '').toUpperCase();
+  // **引取は航海起点では辿り着けない**（船から降りたあとの作業で、どの航海の
+  // 仕事でもない）。引取待ち（S54）から来たときは、その港で引取を待っている
+  // 貨物を対象にする。航海番号は要らない。
+  const claimOnly = voyageNumber === '';
   const queries = useQueryClient();
 
-  const [handlingType, setHandlingType] = useState<HandlingType>('UNLOAD');
-  const [trackingNumber, setTrackingNumber] = useState('');
+  const [handlingType, setHandlingType] = useState<HandlingType>(
+    claimOnly ? 'CLAIM' : 'UNLOAD');
+  // 引取待ちの行から来たときは、その貨物を最初から入れておく
+  // （追跡番号を書き写させない）。
+  const [trackingNumber, setTrackingNumber] = useState(
+    (params.get('trackingNumber') ?? '').toUpperCase());
   // **1 本ぶんの鍵は送信のたびに変えない。** 応答が返らずもう一度押したとき、
   // ここで作り直すと別の鍵になって二重に記録される（現場は電波の届かない
   // 岸壁で使う）。次の 1 本へ移るとき——成功したときだけ——採り直す。
@@ -62,8 +71,10 @@ export function HandlingRecordPage() {
   const needsConsignee = requiresConsigneeConfirmation(handlingType);
 
   const cargos = useQuery({
-    queryKey: ['handling-cargos', voyageNumber, unLocode],
-    queryFn: () => fetchCargosOnVoyage(voyageNumber, unLocode),
+    queryKey: ['handling-cargos', voyageNumber, unLocode, claimOnly],
+    queryFn: () => (claimOnly
+      ? fetchAwaitingClaim(unLocode)
+      : fetchCargosOnVoyage(voyageNumber, unLocode)),
     enabled: unLocode !== '',
   });
 
@@ -95,7 +106,8 @@ export function HandlingRecordPage() {
       setCompletedAt('');
       setConsigneeName('');
       setActivityId(crypto.randomUUID());
-      queries.invalidateQueries({ queryKey: ['handling-cargos', voyageNumber, unLocode] });
+      queries.invalidateQueries({
+        queryKey: ['handling-cargos', voyageNumber, unLocode, claimOnly] });
     },
   });
 
@@ -123,10 +135,14 @@ export function HandlingRecordPage() {
   return (
     <div>
       <h1 className={PAGE_TITLE}>
-        荷役の記録{'\u3000'}航海 {voyageNumber}{'\u3000'}{unLocode}
+        {claimOnly
+          ? `引取の記録\u3000${unLocode}`
+          : `荷役の記録\u3000航海 ${voyageNumber}\u3000${unLocode}`}
       </h1>
       <p className="mt-1 text-sm text-gray-600">
-        {unLocode} で扱う予定 {items.length} 本（未記録 {remaining.length} 本）
+        {claimOnly
+          ? `${unLocode} で引取を待っている貨物 ${items.length} 本（未記録 ${remaining.length} 本）`
+          : `${unLocode} で扱う予定 ${items.length} 本（未記録 ${remaining.length} 本）`}
       </p>
 
       <section className={`${CARD} mt-4`}>
@@ -141,7 +157,7 @@ export function HandlingRecordPage() {
               value={handlingType}
               onChange={(event) => setHandlingType(event.target.value as HandlingType)}
             >
-              {SELECTABLE_HANDLING_TYPES.map((type) => (
+              {(claimOnly ? ['CLAIM' as HandlingType] : SELECTABLE_HANDLING_TYPES).map((type) => (
                 <option key={type} value={type}>
                   {HANDLING_TYPE_LABELS[type]}
                 </option>
@@ -250,10 +266,14 @@ export function HandlingRecordPage() {
       </section>
 
       <section className={`${CARD} mt-4 overflow-x-auto`}>
-        <h2 className={SECTION_TITLE}>この港で扱う貨物</h2>
+        <h2 className={SECTION_TITLE}>
+          {claimOnly ? '引取を待っている貨物' : 'この港で扱う貨物'}
+        </h2>
         {items.length === 0 ? (
           <p className="mt-2 text-sm text-gray-600">
-            この航海がこの港で扱う貨物はありません。航海番号と港をお確かめください。
+            {claimOnly
+              ? 'この港で引取を待っている貨物はありません。'
+              : 'この航海がこの港で扱う貨物はありません。航海番号と港をお確かめください。'}
           </p>
         ) : (
           <table className={`${TABLE} mt-2`}>
