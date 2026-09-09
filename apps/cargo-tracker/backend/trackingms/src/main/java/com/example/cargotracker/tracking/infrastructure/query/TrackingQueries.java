@@ -202,9 +202,12 @@ public final class TrackingQueries {
             // **電話は「A 社の予約の件で」から始まる**（IT10 レビュー N9）。
             // 荷主名は契約（TrackingInitializedEvent）に無いので、予約番号を出す。
             String bookingId,
-            // **上位者へ知らせたか**（US20 §受入基準 3）。null なら未 escalation。
-            // 「緊急なのに誰にも伝わっていない」を一覧で見分けられる。
-            Instant escalatedAt) {
+            // **上位者へ知らせた時刻**（US20 §受入基準 3）。null なら未 escalation。
+            Instant escalatedAt,
+            // **決着したか**（`ResponseStatus#settled`）。一覧に「対応する」導線を
+            // 出すかの判断に使う。画面で `responseStatus !== 'RESOLVED'` と
+            // 書き直さない（IT10 レビュー N3 と同じ理由）。
+            boolean settled) {
     }
 
     /** 例外一覧（S42）。 */

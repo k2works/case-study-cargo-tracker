@@ -204,7 +204,8 @@ public class TrackingQueryHandler {
                         // 対応で動いた期限を優先して出す（並びの根拠と揃える）。
                         row.estimatedArrival(), row.transportStatus(),
                         TransportStatus.valueOf(row.transportStatus()).label(),
-                        row.bookingId(), row.escalatedAt()))
+                        row.bookingId(), row.escalatedAt(),
+                        ResponseStatus.valueOf(row.responseStatus()).settled()))
                 .toList());
     }
 

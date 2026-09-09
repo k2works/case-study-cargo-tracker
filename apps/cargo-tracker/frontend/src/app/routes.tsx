@@ -166,7 +166,11 @@ export function AppRoutes() {
         <Route
           path="/tracking/:trackingNumber"
           element={
-            <RequireRole allow={['ROLE_TRACKER', 'ROLE_SHIPPER']}>
+            /* **管理者にも開く**（US20 §3 / IT11 レビュー 高）。緊急を知らせる先が
+               「読むだけの一覧」で止まると、追跡番号を書き写して電話で追跡管理者を
+               探すところから始まる。**操作は出さない**——手動更新も例外の対応も
+               追跡管理者の仕事で、画面が `isTracker` で出し分ける。 */
+            <RequireRole allow={['ROLE_TRACKER', 'ROLE_SHIPPER', 'ROLE_ADMIN']}>
               <TrackingDetailPage />
             </RequireRole>
           }

@@ -319,7 +319,15 @@ public class Cargo {
         }
         // **予約の状態も見る。** routingStatus だけだと、確定済みや終端の予約への
         // 再通知で、遷移表に無い後退が静かに起きる。
-        if (!bookingStatus.canTransitionTo(BookingStatus.ROUTE_NOTIFIED)) {
+        //
+        // **輸送中の予約は状態を動かさずに記録だけ残す**（US28 §受入基準 6 /
+        // IT11 レビュー 高）。誤配を組み直したあと、超過日数を荷主へ伝えた記録が
+        // 残せないと「聞いていない」と言われたときに突き合わせられない。かといって
+        // `ROUTE_NOTIFIED` へ戻すと、輸送中の貨物が「経路を通知しただけ」に見え、
+        // 確定も追跡番号の発行もやり直しになる——**通知は出来事であって、状態の
+        // 巻き戻しではない**。
+        boolean inTransit = bookingStatus == BookingStatus.IN_TRANSIT;
+        if (!inTransit && !bookingStatus.canTransitionTo(BookingStatus.ROUTE_NOTIFIED)) {
             throw new IllegalTransition(
                     "状態 " + bookingStatus.label() + " の予約は荷主へ通知できません");
         }
@@ -339,6 +347,10 @@ public class Cargo {
 
     @EventSourcingHandler
     void on(ShipperNotifiedEvent event) {
+        if (bookingStatus == BookingStatus.IN_TRANSIT) {
+            // **輸送中は状態を動かさない**（US28 §受入基準 6）。記録だけ残す。
+            return;
+        }
         this.bookingStatus = BookingStatus.ROUTE_NOTIFIED;
     }
 

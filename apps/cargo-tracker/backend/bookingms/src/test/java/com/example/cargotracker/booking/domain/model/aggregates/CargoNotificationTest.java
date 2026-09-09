@@ -5,6 +5,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.example.cargotracker.booking.domain.model.commands.NotifyShipperCommand;
 import com.example.cargotracker.booking.domain.model.commands.RequestConditionReviewCommand;
 import com.example.cargotracker.booking.domain.model.commands.ReturnToRoutingCommand;
+import com.example.cargotracker.booking.domain.model.events.BookingConfirmedEvent;
+import com.example.cargotracker.booking.domain.model.events.HandlingRecordedEvent;
+import com.example.cargotracker.booking.domain.model.events.TrackingNumberIssuedEvent;
+import com.example.cargotracker.shared.domain.error.IllegalTransition;
 import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoRoutedEvent;
 import com.example.cargotracker.booking.domain.model.events.ReturnedToRoutingEvent;
@@ -93,6 +97,46 @@ class CargoNotificationTest {
                 .when().command(notifyCommand())
                 .then().exceptionSatisfies(e ->
                         assertThat(e.getMessage()).contains("通知できません"));
+    }
+
+    @Test
+    @DisplayName("US28 §6: 輸送中の予約にも通知を記録できる（状態は動かさない）")
+    void recordsNotificationWhileInTransit() {
+        // **誤配を組み直したあと、超過日数を荷主へ伝えた記録が要る**（US28 §受入基準 6）。
+        // 記録できないと「聞いていない」と言われたときに突き合わせられない。
+        // かといって ROUTE_NOTIFIED へ戻すと、輸送中の貨物が「経路を通知しただけ」に
+        // 見え、確定も追跡番号の発行もやり直しになる（IT11 レビュー 高）。
+        fixture.given().events(booked(), new RoutingRequestedEvent("B-0001", "sales01"),
+                        routed(), notified(),
+                        new BookingConfirmedEvent("B-0001", "sales01", NOW),
+                        new TrackingNumberIssuedEvent("B-0001", "TRK-8K2QX7M4RB", "SHP-000001",
+                                "JPTYO", "USNYC", "GENERAL", List.of(), "routing01", NOW),
+                        new HandlingRecordedEvent("B-0001", "act-1", "RECEIVE", "JPTYO",
+                                NOW, NOW))
+                .when().command(notifyCommand())
+                .then().success()
+                .events(notified());
+    }
+
+    @Test
+    @DisplayName("US28 §6: 輸送中に通知しても、確定や発行をやり直しにしない")
+    void keepsInTransitAfterNotifying() {
+        // **通知は出来事であって、状態の巻き戻しではない。** 状態が戻ると
+        // 「経路を通知しただけ」に見え、営業がもう一度確定することになる。
+        fixture.given().events(booked(), new RoutingRequestedEvent("B-0001", "sales01"),
+                        routed(), notified(),
+                        new BookingConfirmedEvent("B-0001", "sales01", NOW),
+                        new TrackingNumberIssuedEvent("B-0001", "TRK-8K2QX7M4RB", "SHP-000001",
+                                "JPTYO", "USNYC", "GENERAL", List.of(), "routing01", NOW),
+                        new HandlingRecordedEvent("B-0001", "act-1", "RECEIVE", "JPTYO",
+                                NOW, NOW),
+                        notified())
+                .when().command(new com.example.cargotracker.booking.domain.model.commands
+                        .ConfirmBookingCommand("B-0001", "sales01"))
+                // 輸送中の予約は確定し直せない（遷移表どおり）。通知で状態が
+                // 巻き戻っていれば、ここが通ってしまう。
+                .then().exceptionSatisfies(e ->
+                        assertThat(e).isInstanceOf(IllegalTransition.class));
     }
 
     @Test

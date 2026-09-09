@@ -410,6 +410,21 @@ function ExceptionPanel({
     onEditingChange(true);
   }
 
+  /**
+   * 送信が終わったフォームだけを閉じる。
+   *
+   * <p><b>無条件に閉じると、その間に開いた別のフォームまで閉じる。</b> 荷主への
+   * 記録を残したあと続けて解決へ進むのはよくある流れで、記録の完了処理が
+   * 遅れて届くと、開いたばかりの解決フォームが消える（IT11 のクラスタで実測。
+   * 画面には「押したのに何も起きない」としか出ない）。</p>
+   */
+  function closeIfOpen(openedId: string | null) {
+    if (openedId !== null && (respondingTo === openedId || resolvingId === openedId
+            || notifyingId === openedId)) {
+      close();
+    }
+  }
+
   function close() {
     onEditingChange(false);
     setRespondingTo(null);
@@ -425,17 +440,17 @@ function ExceptionPanel({
   const respond = useMutation({
     mutationFn: (exceptionId: string) =>
       startExceptionResponse(trackingNumber, exceptionId, { newEstimatedArrival, plan }),
-    onSuccess: () => { close(); onChanged(); },
+    onSuccess: () => { closeIfOpen(respondingTo); onChanged(); },
   });
   const resolve = useMutation({
     mutationFn: (exceptionId: string) =>
       resolveException(trackingNumber, exceptionId, resolution.trim()),
-    onSuccess: () => { close(); onChanged(); },
+    onSuccess: () => { closeIfOpen(resolvingId); onChanged(); },
   });
   const notify = useMutation({
     mutationFn: (exceptionId: string) =>
       notifyShipperOfException(trackingNumber, exceptionId, { means, summary }),
-    onSuccess: () => { close(); onChanged(); },
+    onSuccess: () => { closeIfOpen(notifyingId); onChanged(); },
   });
 
   if (exceptions.length === 0) {

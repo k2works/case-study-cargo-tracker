@@ -694,12 +694,17 @@ test.describe('kind クラスタでの通し確認', () => {
       expect(confirmed.status()).toBe(200);
     }).toPass({ timeout: 60_000 });
 
+    // **発行は 1 度だけ叩く。** 発行と投影の反映を同じ再試行に入れると、
+    // 投影が遅れたときに**発行をもう一度叩いて 409 に当たり**、そのまま
+    // 60 秒粘って落ちる（IT11 の通しで実測）。**取り消しの利かない操作を
+    // 再試行の中に置かない。**
+    const issued = await request.post(
+      `/api/v1/booking/bookings/${bookingId}/tracking-number`,
+      { headers: routingHeaders });
+    expect(issued.status()).toBe(200);
+
     let trackingNumber = '';
     await expect(async () => {
-      const issued = await request.post(
-        `/api/v1/booking/bookings/${bookingId}/tracking-number`,
-        { headers: routingHeaders });
-      expect(issued.status()).toBe(200);
       const detail = await request.get(`/api/v1/booking/bookings/${bookingId}`,
         { headers: salesHeaders });
       trackingNumber = (await detail.json()).trackingNumber ?? '';

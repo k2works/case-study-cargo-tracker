@@ -509,6 +509,16 @@ export function RoutingWorkbenchPage() {
                 この経路は当初の到着期限を <b>{pendingOverdue.overdueDays} 日</b>{' '}
                 超えます。確定すると、荷主への連絡にこの差分を含める必要があります。
               </p>
+              {/* **荷主への説明は「何日に着くか」で始まる**（IT11 レビュー 中）。
+                  日数だけだと、設計者は確定後に予約詳細へ戻って日付を拾い直す。 */}
+              <p className="text-sm">
+                到着予定{' '}
+                <b>
+                  {formatBusinessDateTime(
+                    pendingOverdue.legs.at(-1)?.unloadTime ?? '')}
+                </b>
+                （当初の到着期限 {arrivalDeadlineOf(booking.data) ?? '—'}）
+              </p>
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -547,6 +557,12 @@ export function RoutingWorkbenchPage() {
       </p>
     </section>
   );
+}
+
+/** 予約の到着期限。読めなければ null（画面は「—」と出す）。 */
+function arrivalDeadlineOf(data: unknown): string | null {
+  const state = data as { state?: string; value?: { arrivalDeadline?: string } } | undefined;
+  return state?.state === 'ready' ? state.value?.arrivalDeadline ?? null : null;
 }
 
 /**

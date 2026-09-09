@@ -562,3 +562,59 @@ describe('S41 対応の入力中は読み直しを止める（IT11 レビュー 
     vi.useRealTimers();
   });
 });
+
+describe('S41 送信の完了処理は、開いた別のフォームを閉じない（IT11 クラスタで実測）', () => {
+  it('荷主への記録のあとに解決を開いても、フォームが消えない', async () => {
+    // **無条件に閉じると、その間に開いた別のフォームまで閉じる。** 記録の完了処理が
+    // 遅れて届くと、開いたばかりの解決フォームが消え、画面には「押したのに何も
+    // 起きない」としか出ない。
+    let resolvePost: ((value: Response) => void) | undefined;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      if (init?.method === 'POST') {
+        // 記録の応答をこちらの合図まで遅らせる。
+        return await new Promise<Response>((done) => { resolvePost = done; });
+      }
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify(tracking({
+          status: 'EXCEPTION', statusLabel: '例外発生', nextStatuses: [],
+          exceptions: [{
+            exceptionId: 'ex-1',
+            exceptionType: 'DELAY',
+            exceptionTypeLabel: '遅延',
+            responseStatus: 'REPORTED',
+            responseStatusLabel: '起票',
+            urgent: false,
+            unLocode: 'SGSIN',
+            description: '台風で 3 日遅れます',
+            resolution: null,
+            newEstimatedArrival: null,
+            responsePlan: null,
+            occurredAt: '2026-09-20T02:00:00Z',
+            resolvedAt: null,
+            settled: false,
+            notifications: [],
+          }],
+        })),
+      } as Response;
+    });
+
+    renderDetail();
+    await userEvent.click(await screen.findByRole('button', { name: '荷主へ知らせた' }));
+    await userEvent.type(screen.getByLabelText('伝えた手段'), '電話');
+    await userEvent.type(screen.getByLabelText('伝えた内容'), '遅れます');
+    await userEvent.click(screen.getByRole('button', { name: '記録を残す' }));
+
+    // 記録が返る前に、続けて解決を開く。
+    await userEvent.click(screen.getByRole('button', { name: '解決にする' }));
+    expect(screen.getByLabelText('対応内容')).toBeInTheDocument();
+
+    // ここで記録の応答が届く。**解決フォームは開いたまま**でなければならない。
+    resolvePost?.(new Response(null, { status: 204 }));
+
+    await vi.waitFor(() => {
+      expect(screen.getByLabelText('対応内容')).toBeInTheDocument();
+    });
+  });
+});

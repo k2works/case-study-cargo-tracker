@@ -238,6 +238,8 @@ export interface ExceptionView {
   readonly bookingId: string | null;
   /** 上位者へ知らせた時刻（US20 §3）。null なら未 escalation。 */
   readonly escalatedAt: string | null;
+  /** 決着したか（サーバが決める）。一覧に「対応する」導線を出すかの判断。 */
+  readonly settled: boolean;
 }
 
 /**

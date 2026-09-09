@@ -24,6 +24,7 @@ function exceptionItem(over: Record<string, unknown> = {}) {
     transportStatusLabel: '例外発生',
     bookingId: 'B-2026-0902-004',
     escalatedAt: null,
+    settled: false,
     ...over,
   };
 }
@@ -123,21 +124,9 @@ describe('S42 例外一覧（US19 §5）', () => {
     expect(await screen.findByText('B-2026-0902-004')).toBeInTheDocument();
   });
 
-  it('緊急なのに上位者へ知らせていない例外が見分けられる（US20 §3）', async () => {
-    // **知らせた事実が無い緊急は、まだ誰にも伝わっていない。** 一覧で
-    // 見分けられないと、緊急の印だけが増えて誰も動かない。
-    respondByUrl({
-      '/tracking/trackings/exceptions': {
-        items: [exceptionItem({ urgent: true, escalatedAt: null })],
-      },
-    });
-
-    renderList();
-
-    expect(await screen.findByText('未連絡')).toBeInTheDocument();
-  });
-
-  it('知らせ済みの緊急には未連絡を出さない', async () => {
+  it('上位者へ知らせた時刻が読める（US20 §3）', async () => {
+    // **「未連絡」の印はやめた**（IT11 レビュー 高）。起票と同時に知らせるので
+    // 通常は点かず、点いても消す操作が無い飾りだった。事実を出す。
     respondByUrl({
       '/tracking/trackings/exceptions': {
         items: [exceptionItem({ urgent: true, escalatedAt: '2026-09-20T03:00:00Z' })],
@@ -146,8 +135,38 @@ describe('S42 例外一覧（US19 §5）', () => {
 
     renderList();
 
-    expect(await screen.findByText('緊急')).toBeInTheDocument();
-    expect(screen.queryByText('未連絡')).not.toBeInTheDocument();
+    expect(await screen.findByText(/上位者へ連絡/)).toBeInTheDocument();
+  });
+
+  it('知らせていない例外には連絡の欄を出さない', async () => {
+    respondByUrl({
+      '/tracking/trackings/exceptions': {
+        items: [exceptionItem({ urgent: false, escalatedAt: null })],
+      },
+    });
+
+    renderList();
+
+    expect(await screen.findByText('遅延')).toBeInTheDocument();
+    expect(screen.queryByText(/上位者へ連絡/)).not.toBeInTheDocument();
+  });
+
+  it('未解決の行から対応へ入れる（一覧には目的の操作を置く）', async () => {
+    respondByUrl({ '/tracking/trackings/exceptions': { items: [exceptionItem()] } });
+
+    renderList();
+
+    expect(await screen.findByRole('link', { name: '対応する' }))
+      .toHaveAttribute('href', '/tracking/TRK-8K2QX7M4RB');
+  });
+
+  it('予約番号から予約詳細へ行ける（経路設計者へ渡す前の状況確認）', async () => {
+    respondByUrl({ '/tracking/trackings/exceptions': { items: [exceptionItem()] } });
+
+    renderList();
+
+    expect(await screen.findByRole('link', { name: 'B-2026-0902-004' }))
+      .toHaveAttribute('href', '/bookings/B-2026-0902-004');
   });
 
   it('解決済も表示に切り替えると、解決済を含めて問い合わせる（US28 §8）', async () => {
@@ -166,9 +185,9 @@ describe('S42 例外一覧（US19 §5）', () => {
     });
   });
 
-  it('管理者には S41・S43 へのリンクを出さない（開けない場所へ誘わない）', async () => {
-    // **共有画面のリンクもロールで出し分ける。** 管理者は読む側で、
-    // 追跡詳細と起票は開けない。リンクを出すと 403 に当たる。
+  it('管理者は中身を読めるが、起票と対応の導線は出さない（IT11 レビュー 高）', async () => {
+    // **escalation の宛先が一番動けない**のは成り立たない。追跡詳細は開ける。
+    // 起票・対応は追跡管理者の仕事なので出さない。
     useAuthStore.setState({
       user: { username: 'admin01', roles: ['ROLE_ADMIN'], token: 't' },
     });
@@ -176,9 +195,10 @@ describe('S42 例外一覧（US19 §5）', () => {
 
     renderList();
 
-    expect(await screen.findByText('TRK-8K2QX7M4RB')).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'TRK-8K2QX7M4RB' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: 'TRK-8K2QX7M4RB' }))
+      .toHaveAttribute('href', '/tracking/TRK-8K2QX7M4RB');
     expect(screen.queryByRole('link', { name: '例外を起票' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: '対応する' })).not.toBeInTheDocument();
   });
 
   it('一覧の行から例外を起票できる（IT10 レビュー N10）', async () => {

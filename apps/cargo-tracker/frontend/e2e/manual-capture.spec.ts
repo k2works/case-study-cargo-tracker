@@ -1202,9 +1202,10 @@ test.describe('マニュアルの画面キャプチャ', () => {
               transportStatus: 'EXCEPTION',
               transportStatusLabel: '例外発生',
               bookingId: 'B-2026-0902-004',
-              // **本文が説明する要素を写す。** 緊急なのに知らせた記録が無い行に
-              // 「未連絡」が出る、と 14 章が書いている（IT11 レビュー 高）。
-              escalatedAt: null,
+              // **本文が説明する要素を写す。** 「上位者へ連絡 …」が出る、と
+              // 14 章が書いている。
+              escalatedAt: '2026-09-22T02:05:00Z',
+              settled: false,
             },
             {
               exceptionId: 'ex-2',
@@ -1222,6 +1223,7 @@ test.describe('マニュアルの画面キャプチャ', () => {
               transportStatusLabel: '例外発生',
               bookingId: 'B-2026-0902-007',
               escalatedAt: null,
+              settled: false,
             },
           ],
         }),

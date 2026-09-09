@@ -93,17 +93,23 @@ export function ExceptionListPage() {
                   <td className={TD}>
                     {/* **気づく手段は次の行動へ繋ぐ。** 一覧で終わると、
                         追跡管理者は追跡番号を書き写して S41 を探し直す。 */}
-                    {isTracker ? (
-                      <Link to={`/tracking/${item.trackingNumber}`} className={LINK}>
-                        {item.trackingNumber}
-                      </Link>
-                    ) : (
-                      item.trackingNumber
-                    )}
+                    {/* **管理者も追跡詳細を開ける**（IT11 レビュー 高）。
+                        緊急に気づいた人が中身を読めないと、電話に負ける。 */}
+                    <Link to={`/tracking/${item.trackingNumber}`} className={LINK}>
+                      {item.trackingNumber}
+                    </Link>
                   </td>
                   {/* **電話は「A 社の予約の件で」から始まる**（IT10 レビュー N9）。
                       追跡番号だけでは、どの予約の話か照合できない。 */}
-                  <td className={TD}>{item.bookingId ?? '—'}</td>
+                  <td className={TD}>
+                    {/* **予約詳細へ行けるようにする**（IT11 レビュー 中）。
+                        経路設計者に渡す前の状況確認（現在地・期限）は S22 にある。 */}
+                    {item.bookingId === null ? '—' : (
+                      <Link to={`/bookings/${item.bookingId}`} className={LINK}>
+                        {item.bookingId}
+                      </Link>
+                    )}
+                  </td>
                   <td className={TD}>
                     {item.exceptionTypeLabel}
                     {/* **緊急は種別が決める**（不変条件 7）。画面で判定しない。 */}
@@ -116,12 +122,12 @@ export function ExceptionListPage() {
                   </td>
                   <td className={TD}>
                     {item.responseStatusLabel}
-                    {/* **緊急なのに誰にも伝わっていない**を一覧で見分ける
-                        （US20 §受入基準 3）。知らせた時刻があれば済んでいる。 */}
-                    {item.urgent && item.escalatedAt === null && (
-                      <span className="ml-2 rounded bg-amber-100 px-2 py-0.5 text-xs
-                        font-semibold text-amber-900">
-                        未連絡
+                    {/* **「未連絡」の印はやめた**（IT11 レビュー 高）。起票と同時に
+                        知らせるので通常は点かず、点いても消す操作が無い飾りだった。
+                        代わりに**いつ知らせたか**という事実を出す。 */}
+                    {item.escalatedAt !== null && (
+                      <span className="ml-2 text-xs text-gray-600">
+                        上位者へ連絡 {formatBusinessDateTime(item.escalatedAt)}
                       </span>
                     )}
                   </td>
@@ -139,12 +145,22 @@ export function ExceptionListPage() {
                         いま見ている行から起票したい。S41 を経由させると、
                         追跡番号を書き写す手間が挟まる。 */}
                     {isTracker ? (
-                      <Link
-                        to={`/tracking/${item.trackingNumber}/exceptions/new`}
-                        className={LINK}
-                      >
-                        例外を起票
-                      </Link>
+                      <span className="flex flex-wrap gap-x-3">
+                        {/* **一覧には目的の操作を置く**（IT10 で S50 に対して直した
+                            方針。IT11 レビュー 中で S42 との食い違いを指摘された）。
+                            未解決の例外を見て、いちばんしたいのは対応することである。 */}
+                        {!item.settled && (
+                          <Link to={`/tracking/${item.trackingNumber}`} className={LINK}>
+                            対応する
+                          </Link>
+                        )}
+                        <Link
+                          to={`/tracking/${item.trackingNumber}/exceptions/new`}
+                          className={LINK}
+                        >
+                          例外を起票
+                        </Link>
+                      </span>
                     ) : (
                       '—'
                     )}
