@@ -3,7 +3,7 @@ type: Plan
 title: "イテレーション 11 計画"
 tags: [plan]
 status: draft
-generated: { by: claude-code/claude-opus-5, at: 2026-09-09T05:38:17Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-09T07:48:59Z }
 ---
 
 # イテレーション 11 計画
@@ -41,7 +41,7 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-09T05:38:17Z }
 | :--- | :--- | :--- | :--- | :--- |
 | §1 | 追跡番号と例外種別「破損」または「紛失」・発生状況を記録できる | **実装済み**（IT10 の `RegisterTrackingExceptionCommand`・S43。`ExceptionType#reportableByHand` が `DAMAGE`・`LOSS` を通す）。本 IT は**発生場所を港コードとして断る**（N15）ところまで | `ExceptionTypeTest`・`ExceptionScreens.test.tsx`・受け入れテスト（D4） | **達成**（港コードの検証を足した） |
 | §2 | 記録後、貨物状態が「例外発生」に更新される | **実装済み**（IT10。`statusBeforeException` を覚えて `EXCEPTION` へ）。本 IT は破損・紛失で通ることを受け入れテストで固定する | `TrackingActivityTest`・受け入れテスト（D3） | **達成** |
-| §3 | 例外種別「紛失」の場合、緊急フラグが設定されて**管理職への escalation 通知**が送信される | 緊急は `ExceptionType#urgent` が答える（**実装済み**・不変条件 7）。**送信基盤はスコープ外**（`ui_design.md:120`）なので、**escalate した事実を `ExceptionEscalatedEvent` として記録し、読み口を対で出す**——S42 例外一覧を `ROLE_ADMIN` にも開き、緊急を先頭に出す。**読み口の無い記録は作らない**（IT10 P1・Try T1）。注 N1 | `TrackingActivityTest`・`TrackingProjectionIT`・`ExceptionScreens.test.tsx`・受け入れテスト（D1・D2） | **記録と読み口で達成**（送信基盤はスコープ外。S42 を `ROLE_ADMIN` に開き「未連絡」を出す） |
+| §3 | 例外種別「紛失」の場合、緊急フラグが設定されて**管理職への escalation 通知**が送信される | 緊急は `ExceptionType#urgent` が答える（**実装済み**・不変条件 7）。**送信基盤はスコープ外**（`ui_design.md:120`）なので、**escalate した事実を `ExceptionEscalatedEvent` として記録し、読み口を対で出す**——S42 例外一覧を `ROLE_ADMIN` にも開く。**読み口の無い記録は作らない**（IT10 P1・Try T1）。注 N1 | `TrackingActivityTest`・`TrackingProjectionIT`・`ExceptionScreens.test.tsx`・受け入れテスト（D1・D2） | **記録と読み口で達成**（送信基盤はスコープ外）。**当初は「未連絡」の印を出したが、起票と同時に escalate されるので通常点かず、点いても消せない飾りだった**——クローズ中に「いつ知らせたか」の表示へ変え、**管理者に追跡詳細の閲覧も開いた**（読むだけの一覧では電話に負ける） |
 | §4 | 荷主に破損・紛失発生の通知が送信される | **実装済み**（IT10 の `ExceptionShipperNotifiedEvent`・記録で満たす）。本 IT は破損・紛失でも同じ経路を通ることを固定する | `TrackingActivityTest`・受け入れテスト | **記録で達成**（送信基盤はスコープ外） |
 | §5 | 対応内容（補償方針等）を入力して荷主に報告を送信できる | **実装済み**（IT10 の `resolveException` と S41）。本 IT は S42 から解決フォームへ入れるようにする（N10・N11） | `TrackingDetailPage.test.tsx`・`ExceptionScreens.test.tsx` | **達成**（S42 から起票・解決へ入れる） |
 
@@ -54,8 +54,8 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-09T05:38:17Z }
 | §3 | 予約詳細に誤配の警告バナーが表示され、**検知した荷役イベント（場所・日時）と貨物の現在地**が示される | S22 に `role="alert"` のバナー（`ui_design.md:1032`）。`cargo_summary` は `last_handling_*` を持つ（**実装済み**）ので、投影に列を足さずに出せるか着手時に確かめる | `BookingDetailPage.test.tsx`・クラスタ E2E | **達成**（S22・S41 のバナー。`last_handling_*` の読み口を新設） |
 | §4 | 経路設計者は予約詳細から `[経路を再設計]` により、**現在地を出発地とした**経路割り当て画面へ遷移できる | S22 → S31（`?departFrom=<現在地>`）。`FindRouteCandidatesQuery.departFromUnLocode` は**実装済み**（探索の起点として効く）。**経路設計者だけに出す**（他ロールには「経路設計者に依頼済み」） | `BookingDetailPage.test.tsx`・`RoutingWorkbenchPage.test.tsx`・E2E（403 の否定側） | **達成**（候補算出が誤配のとき現在地を起点にする。403 の否定側も検査） |
 | §5 | 再設計時の目的地と希望期限は**元の予約から引き継がれる** | S31 が予約から読む（**実装済みの経路**）。**出発港だけを現在地に差し替える** | `RoutingWorkbenchPage.test.tsx` | **達成**（出発港だけを差し替える） |
-| §6 | 再設計後の到着予定が当初の希望期限を超える場合、**その差分が明示され**、荷主への通知内容に含まれる | **未実装が 3 か所**——(a) `RouteSearchService#collectIfInTime` が期限超過の候補を無条件に捨てている（`departFrom` 指定時は残す）、(b) 契約 `RouteCandidateDto` に `overdueDays` が無い（`domain-model.md:737` は候補が持つと書いている。注 N2）、(c) `Cargo` 不変条件 5 が再設計時の超過を許さず `CargoRoutedEvent` が超過日数を運ばない。**確定は確認ダイアログで超過日数を再掲する** | `RouteSearchValueObjectsTest`・`RouteCandidateQueryIT`・`CargoRoutingTest`・`RoutingWorkbenchPage.test.tsx`・受け入れテスト | **達成**（(a)(b)(c) をすべて実装。通常の設計で超過候補が出ないことも赤で固定） |
-| §7 | 誤配の例外イベントは**例外一覧（追跡管理者）に表示され**、解決フォームから対応内容を記録できる | **実装済み**（IT10 の S42・`resolveException`）。本 IT は自動起票された `MISROUTE` が一覧に出ることを固定する | `ExceptionScreens.test.tsx`・受け入れテスト | **達成**（自動起票された `MISROUTE` が一覧に出る） |
+| §6 | 再設計後の到着予定が当初の希望期限を超える場合、**その差分が明示され**、荷主への通知内容に含まれる | **未実装が 3 か所**——(a) `RouteSearchService#collectIfInTime` が期限超過の候補を無条件に捨てている（`departFrom` 指定時は残す）、(b) 契約 `RouteCandidateDto` に `overdueDays` が無い（`domain-model.md:737` は候補が持つと書いている。注 N2）、(c) `Cargo` 不変条件 5 が再設計時の超過を許さず `CargoRoutedEvent` が超過日数を運ばない。**確定は確認ダイアログで超過日数を再掲する** | `RouteSearchValueObjectsTest`・`RouteCandidateQueryIT`・`CargoRoutingTest`・`RoutingWorkbenchPage.test.tsx`・受け入れテスト | **達成**（(a)(b)(c) をすべて実装。通常の設計で超過候補が出ないことも赤で固定）。**当初は「達成」と書いたが、user 視点のレビューで後半（荷主への通知内容に含まれる）が**輸送中の予約では記録できない**ことが分かり、クローズ中に直した——`IN_TRANSIT` でも通知を記録できるようにした（状態は動かさない） |
+| §7 | 誤配の例外イベントは**例外一覧（追跡管理者）に表示され**、解決フォームから対応内容を記録できる | **実装済み**（IT10 の S42・`resolveException`）。本 IT は自動起票された `MISROUTE` が一覧に出ることを固定する | `ExceptionScreens.test.tsx`・受け入れテスト | **達成**（自動起票された `MISROUTE` が一覧に出る）。**S42 に解決の導線が無く S41 経由だった**のを、クローズ中に一覧へ `[対応する]` を置いて直した（「一覧には目的の操作を置く」方針との食い違い） |
 | §8 | 誤配の事実は**解決後も記録として残り**、料金調整の根拠として参照できる | `tracking_exception` は解決後も行が残る（**実装済み**）。**参照する側（US21 の料金調整・`basisExceptionId`）は IT13**。本 IT は「解決済も表示」の切替（N11）で**後から確かめられる**ところまでを満たす。料金からの参照は IT13 の受入基準に送る | `ExceptionScreens.test.tsx`（解決済の表示）・`TrackingProjectionIT`（解決後も行が残る） | **一部達成**（解決後も残り「解決済も表示」で読める。**料金からの参照は US21・IT13**） |
 
 ### 注（設計への反映が必要）
