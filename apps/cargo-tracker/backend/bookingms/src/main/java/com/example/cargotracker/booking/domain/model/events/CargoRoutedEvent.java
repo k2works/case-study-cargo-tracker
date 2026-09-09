@@ -21,10 +21,25 @@ public record CargoRoutedEvent(
         @EventTag(key = "bookingId") String bookingId,
         List<Leg> legs,
         String assignedBy,
-        Instant assignedAt) {
+        Instant assignedAt,
+        /*
+         * 到着期限を何日超えるか（US28 §受入基準 6）。通常の設計では必ず 0
+         * （不変条件 5）。**誤配の再設計でだけ 0 より大きくなる**。
+         *
+         * 投影はコマンドを読まないので、超過した事実を集約が載せる。予約詳細は
+         * この差分を出し、荷主への通知内容にも含める——「間に合わないことに
+         * 気づけない」のが誤配でいちばん困る。
+         */
+        int overdueDays) {
 
     public CargoRoutedEvent {
         legs = List.copyOf(legs);
+    }
+
+    /** 期限を満たす経路の確定（通常の設計）。 */
+    public CargoRoutedEvent(String bookingId, List<Leg> legs, String assignedBy,
+            Instant assignedAt) {
+        this(bookingId, legs, assignedBy, assignedAt, 0);
     }
 
     /** 区間 1 つ。<b>並び順が業務の意味を持つ。</b> */
@@ -44,6 +59,13 @@ public record CargoRoutedEvent(
     public static CargoRoutedEvent of(String bookingId,
             com.example.cargotracker.booking.domain.model.valueobjects.CargoItinerary itinerary,
             String assignedBy, java.time.Instant routedAt) {
+        return of(bookingId, itinerary, assignedBy, routedAt, 0);
+    }
+
+    /** 超過日数つき（誤配の再設計。US28 §受入基準 6）。 */
+    public static CargoRoutedEvent of(String bookingId,
+            com.example.cargotracker.booking.domain.model.valueobjects.CargoItinerary itinerary,
+            String assignedBy, java.time.Instant routedAt, int overdueDays) {
         return new CargoRoutedEvent(bookingId,
                 itinerary.legs().stream()
                         .map(leg -> new Leg(leg.voyageNumber(),
@@ -51,6 +73,6 @@ public record CargoRoutedEvent(
                                 leg.unload().unLocode().value(),
                                 leg.loadTime(), leg.unloadTime()))
                         .toList(),
-                assignedBy, routedAt);
+                assignedBy, routedAt, overdueDays);
     }
 }

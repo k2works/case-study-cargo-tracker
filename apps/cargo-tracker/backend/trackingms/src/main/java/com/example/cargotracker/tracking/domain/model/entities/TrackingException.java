@@ -1,6 +1,7 @@
 package com.example.cargotracker.tracking.domain.model.entities;
 
 import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
+import com.example.cargotracker.shared.domain.location.UnLocode;
 import com.example.cargotracker.tracking.domain.model.valueobjects.ExceptionType;
 import com.example.cargotracker.tracking.domain.model.valueobjects.ResponseStatus;
 import java.time.Instant;
@@ -49,7 +50,16 @@ public record TrackingException(
             // 無いと、対応する人は電話で聞き直すところから始める。
             throw new BusinessRuleViolation("発生状況は必須です");
         }
-        return new TrackingException(exceptionId, type, occurredAt, unLocode,
+        if (unLocode != null && !unLocode.isBlank()) {
+            // **港コードとして読めないものを断る**（IT10 レビュー N15 / US20 §受入基準 1）。
+            // 自由入力のままだと「東京港」「TOKYO」が混ざり、一覧や誤配の突き合わせで
+            // 同じ港が別物になる。**形だけを見る**——その港が実在するかは routingms が
+            // 持っており、ここから問い合わせると起票が航海の登録に依存する。
+            new UnLocode(unLocode.trim().toUpperCase(java.util.Locale.ROOT));
+        }
+        return new TrackingException(exceptionId, type, occurredAt,
+                unLocode == null || unLocode.isBlank()
+                        ? null : unLocode.trim().toUpperCase(java.util.Locale.ROOT),
                 description.trim(), ResponseStatus.REPORTED, null, null);
     }
 

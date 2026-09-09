@@ -17,7 +17,13 @@ import java.util.List;
  * @param transitDays 所要日数
  * @param direct 直行便か
  */
-public record RouteCandidate(List<Leg> legs, int transitDays, boolean direct) {
+public record RouteCandidate(List<Leg> legs, int transitDays, boolean direct,
+        int overdueDays) {
+
+    /** 期限に間に合う候補（通常の設計）。 */
+    public RouteCandidate(List<Leg> legs, int transitDays, boolean direct) {
+        this(legs, transitDays, direct, 0);
+    }
 
     public RouteCandidate {
         if (legs == null || legs.isEmpty()) {

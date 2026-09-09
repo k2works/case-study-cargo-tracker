@@ -227,6 +227,10 @@ export function BookingDetailPage() {
           と読めてしまう。 */}
       {data?.state === 'pending' && <output className={`${NOTICE} mt-4`}>{data.message}</output>}
 
+      {data?.state === 'ready' && data.value.routingStatus === 'MISROUTED' && (
+        <MisrouteBanner booking={data.value} isRouting={isRouting} />
+      )}
+
       {data?.state === 'ready' && (
         <div className={`${CARD} mt-4 space-y-6`}>
           <div>
@@ -850,6 +854,57 @@ function ConditionReviewResponsePanel(props: Readonly<{
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * 誤配の警告バナー（S22 / US28 §受入基準 3・4）。
+ *
+ * <p><b>検知した荷役と現在地を出す。</b> 「誤配です」だけでは、営業も荷主も
+ * 何が起きたか説明できない。いつ・どこで予定外の荷役が記録されたかまで出して
+ * 初めて、次に取る行動（組み直しの依頼・荷主への連絡）が決まる。</p>
+ *
+ * <p><b>`[経路を再設計]` は経路設計者にだけ出す。</b> 他のロールには
+ * 「経路設計者に依頼済み」と出す——押せない操作を並べると、できることが
+ * 読めなくなる。**リンクを出さないだけでは守りにならない**ので、
+ * サーバ側も 403 を返す。</p>
+ *
+ * <p><b>超過日数は組み直したあとに出る。</b> 再設計で期限に間に合わなくなった
+ * ときだけ 0 より大きくなる（US28 §受入基準 6）。</p>
+ */
+function MisrouteBanner({
+  booking,
+  isRouting,
+}: {
+  readonly booking: BookingView;
+  readonly isRouting: boolean;
+}) {
+  const where = booking.lastHandlingUnLocode;
+  const when = booking.lastHandlingAt;
+  return (
+    <div role="alert" className={`${ALERT} mt-4`}>
+      <p className="font-semibold">誤配を検知しました。</p>
+      <p className="mt-1 text-sm">
+        {when && where
+          ? `${formatBusinessDateTime(when)} に ${where} で予定外の荷役が記録されました。現在地: ${where}。`
+          : '予定ルート外での荷役が記録されました。'}
+      </p>
+      {booking.routeOverdueDays != null && booking.routeOverdueDays > 0 && (
+        <p className="mt-1 text-sm font-semibold">
+          組み直した経路では、当初の到着期限 {booking.arrivalDeadline} を{' '}
+          {booking.routeOverdueDays} 日超えます。荷主への連絡にこの差分を含めてください。
+        </p>
+      )}
+      <p className="mt-2 text-sm">
+        {isRouting ? (
+          <Link to={`/routing/bookings/${booking.bookingId}`} className={LINK}>
+            経路を再設計
+          </Link>
+        ) : (
+          '経路設計者に再設計を依頼済みです。'
+        )}
+      </p>
     </div>
   );
 }

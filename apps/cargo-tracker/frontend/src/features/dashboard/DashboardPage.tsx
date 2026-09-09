@@ -35,7 +35,9 @@ export function DashboardPage() {
   // 一覧へ繋ぐ（IT4 の「気づく手段は次の行動へ繋ぐ」）。
   const { data: openExceptions } = useQuery({
     queryKey: ['open-exceptions'],
-    queryFn: fetchOpenExceptions,
+    // 引数を渡さない（既定で未解決だけ）。queryFn にそのまま渡すと、
+    // TanStack Query の context が第 1 引数として入る。
+    queryFn: () => fetchOpenExceptions(),
     enabled: isTracker,
   });
 

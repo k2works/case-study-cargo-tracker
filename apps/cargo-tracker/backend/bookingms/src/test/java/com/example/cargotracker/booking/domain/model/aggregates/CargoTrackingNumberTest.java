@@ -2,6 +2,9 @@ package com.example.cargotracker.booking.domain.model.aggregates;
 
 import com.example.cargotracker.booking.domain.model.commands.IssueTrackingNumberCommand;
 import com.example.cargotracker.booking.domain.model.commands.MarkDeliveredCommand;
+import com.example.cargotracker.booking.domain.model.commands.RevertDeliveryCommand;
+import com.example.cargotracker.booking.domain.model.events.BookingDeliveryRevertedEvent;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.booking.domain.model.events.BookingDeliveredEvent;
 import com.example.cargotracker.booking.domain.model.commands.RecordHandlingCommand;
 import com.example.cargotracker.booking.domain.model.commands.RevertHandlingCommand;
@@ -305,6 +308,36 @@ class CargoTrackingNumberTest {
         fixture.given().noPriorActivity()
                 .when().command(new MarkDeliveredCommand("B-NONE", "TRK-8K2QX7M4RB",
                         HANDLED, "USNYC"))
+                .then().success().noEvents();
+    }
+
+    // ---- IT11 引き継ぎ枠 A: 引き渡しの打ち消し ----
+
+    @Test
+    @DisplayName("打ち消しが届くと予約が引取済から戻る（IT11 引き継ぎ枠 A）")
+    void revertsDelivery() {
+        // **戻す先は「引取済にする前の状態」。** 集約が覚えている。導き直すと、
+        // 途中でキャンセル申請などが入っていたときに誤った先へ戻る。
+        fixture.given().events(and(inTransit(),
+                        new BookingDeliveredEvent("B-0001", "TRK-8K2QX7M4RB", HANDLED, "USNYC")))
+                .when().command(new RevertDeliveryCommand("B-0001", "TRK-8K2QX7M4RB", "取り違え"))
+                .then().events(new BookingDeliveryRevertedEvent("B-0001", "TRK-8K2QX7M4RB",
+                        BookingStatus.IN_TRANSIT.name(), "取り違え"));
+    }
+
+    @Test
+    @DisplayName("引取済でない予約への打ち消しでは何も起きない（二度届いても 1 度だけ）")
+    void revertsDeliveryOnlyOnce() {
+        fixture.given().events(inTransit())
+                .when().command(new RevertDeliveryCommand("B-0001", "TRK-8K2QX7M4RB", "取り違え"))
+                .then().success().noEvents();
+    }
+
+    @Test
+    @DisplayName("知らない予約の打ち消しでは止まらない")
+    void doesNotFailForUnknownBookingOnRevertDelivery() {
+        fixture.given().noPriorActivity()
+                .when().command(new RevertDeliveryCommand("B-NONE", "TRK-8K2QX7M4RB", "取り違え"))
                 .then().success().noEvents();
     }
 

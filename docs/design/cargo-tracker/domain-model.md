@@ -734,7 +734,7 @@ RouteSearchService ..> RouteSearchResult
 
 制約は [要件定義の経路設計の制約条件](../../requirements/requirements_definition.md) に従います。危険物・冷凍貨物は `acceptedCargoTypes` に含む航海だけを通し、到着期限は日付単位で比較します。
 
-期限の扱いは `departFrom` の有無で変えます。通常の設計（`departFrom` 無し）では期限に間に合う候補だけを返します。誤配の再設計（`departFrom` 指定）では、すでに期限に間に合わないことが普通なので、**期限超過の候補も返し**、各候補に `overdueDays`（最終到着日 − 到着期限、日付単位。間に合う候補は 0）を持たせます。経路設計者は超過日数を見て選び、選んだ候補は `AssignRouteCommand` に載せます。`Cargo` 不変条件 5（旅程は期限を満たす）は再設計時に限り `overdueDays > 0` を許し、その事実を `CargoRoutedEvent` に載せて荷主への説明に使います。
+期限の扱いは `departFrom` の有無で変えます。通常の設計（`departFrom` 無し）では期限に間に合う候補だけを返します。誤配の再設計（`departFrom` 指定）では、すでに期限に間に合わないことが普通なので、**期限超過の候補も返し**、各候補に `overdueDays`（最終到着日 − 到着期限、日付単位。間に合う候補は 0）を持たせます。経路設計者は超過日数を見て選び、選んだ候補は `AssignRouteCommand` に載せます。**超過日数は契約 `RouteCandidateDto.overdueDays` が運びます**（IT11。画面に計算し直させると、期限の比べ方——日付単位・業務タイムゾーン——が片方だけ直る）。`Cargo` 不変条件 5（旅程は期限を満たす）は再設計時に限り `overdueDays > 0` を許し、その事実を `CargoRoutedEvent` に載せて荷主への説明に使います。
 
 ## Tracking Context（中核）— trackingms
 
@@ -806,6 +806,7 @@ enum ExceptionType {
   MISROUTE
   CUSTOMS_HOLD
   + urgent(): boolean
+  + reportableByHand(): boolean
 }
 enum ResponseStatus
 
@@ -890,7 +891,15 @@ EXCEPTION --> DELIVERED : 解決・引取完了
 | `ResolveTrackingExceptionCommand` | 追跡管理者 | `TrackingExceptionResolvedEvent` | — | UC16 |
 | `NotifyShipperOfExceptionCommand` | 追跡管理者 | `ExceptionShipperNotifiedEvent` | — | UC16 / US19 §3。**送信基盤はスコープ外**（ui_design.md:120）。残すのは「いつ・どうやって・何を伝えたか」で、投影 `exception_notification` に写して S41 に出す。bookingms の `ShipperNotifiedEvent` は予約の内部イベントで、trackingms からは発行も購読もできない |
 | （`advance` が `CLAIM` を受けたとき） | — | `CargoDeliveredEvent` | **○** | UC14 → UC17 |
+| （`revert` が引取済から戻すとき） | — | `CargoDeliveryRevertedEvent` | **○** | UC13 → UC14 |
+| （`registerException` が緊急を受けたとき） | — | `ExceptionEscalatedEvent` | — | UC16 / US20 |
+| （`advance` が例外の対応中に届いたとき） | — | `HandlingDeferredEvent` | — | UC13・UC16 |
+| （`resolveException` が戻したあと） | — | `DeferredHandlingAppliedEvent` | — | UC16 |
 | `CloseTrackingCommand`（`shared/contract/command`） | `TrackingReactionHandler`（`cancellationDischargeLocation` での `UNLOAD` を受けた後） | `TrackingClosedEvent` | ○ | UC22 |
+
+**引取の取り消しは打ち消しで伝えます（IT11 引き継ぎ枠 A）。** IT10 では `revert` が引取済からの巻き戻しを断っていました——打ち消しを購読側へ伝える手立てが無く、追跡だけ戻して予約が引取済のまま残ると、営業には配送完了、荷役には陸揚げ待ちに見えるためです。IT11 で `CargoDeliveryRevertedEvent`（契約）を足し、bookingms が `RevertDeliveryCommand` で引取済の**前の状態**へ戻します。戻す先は集約が覚え（`statusBeforeDelivery`）、イベントに載せます——投影はコマンドを読まないので、導き直させると集約と投影が別々の判断を持つことになります。
+
+**例外の対応中に届いた荷役は預かります（IT11 引き継ぎ枠 B）。** 遷移表が許さない荷役（`HandlingNotAppliedEvent`）とは分けます。前者は「起きえない順序で届いた」もので、あとから適用してはいけません。後者は順序としては正しく、状態が例外へ退避しているだけなので、解決したら適用しなければ**状態が事実と食い違ったまま残ります**（船に積んだ貨物が受領済に見える）。`resolveException` が例外前の状態へ戻したあと、預かった荷役を**届いた順に 1 つずつ**適用します。まとめて最後の状態へ飛ばすと途中の区間が履歴から消え、荷主に「いつ船に載ったか」を答えられなくなります。
 
 `CargoDeliveredEvent` はコマンドに 1 対 1 で対応しません。`AdvanceTrackingCommand(CLAIM)` が `TransportStatusUpdatedEvent(DELIVERED)` と `CargoDeliveredEvent` の 2 つを発行します。前者は Tracking 内部の永続化フォーマット、後者は Billing と Booking への契約です。1 つのイベントに両方の役割を持たせると、内部の形を変えるたびに契約が動きます。
 
@@ -1231,6 +1240,7 @@ User *-- "0..1" UserShipperLink
 | `HandlingActivityVoidedEvent` | handlingms | trackingms（`RevertTrackingCommand`）、bookingms（`RevertHandlingCommand`）。元の記録は残る | `activityId`, `trackingNumber`, `bookingId`, `type`, `location`, `reason`, `voidedBy`, `voidedAt` |
 | `CustomsStatusChangedEvent` | handlingms | trackingms（`HELD` で例外起票）、billingms（留置の調整根拠） | `declarationNumber`, `trackingNumber`, `from`, `to`, `reason`, `heldBusinessDays?`（`HELD` から出るとき）, `changedAt` |
 | `CargoDeliveredEvent` | trackingms | billingms（`BillingReactionHandler` 開始）、bookingms（`DELIVERED`） | `trackingNumber`, `bookingId`, `deliveredAt`, `location` |
+| `CargoDeliveryRevertedEvent` | trackingms | bookingms（`RevertDeliveryCommand`）、billingms（精算の取り下げ。US21・IT13） | `trackingNumber`, `bookingId`, `revertedAt`, `reason` |
 | `TrackingInitializedEvent` | trackingms | bookingms（`BookingReactionHandler`。連鎖の終わり） | `bookingId`, `trackingNumber`, **`shipperId`**, `originUnLocode`, `destinationUnLocode`, `cargoType`, `legs[]`, `initializedAt`。**bookingms が読むのは識別子だけ**だが、**trackingms 自身の投影はこのイベントからしか作れない**ので、コマンドで届いた値を載せ直す（IT7 で実測。載せずに実装して投影が作れなかった） |
 | `TrackingClosedEvent` | trackingms | bookingms（キャンセル完了を投影に写す） | `bookingId`, `trackingNumber`, `closedAt`, `reason` |
 | `PaymentRecordedEvent` | billingms | bookingms（`SETTLED`） | `invoiceId`, `bookingId`, `paidAt`, `amount` |
@@ -1428,6 +1438,7 @@ Reaction Handler の再試行と補償は「例外にしない」ではなく「
 - `Cargo` は `bookingId` 1 件分を境界とし、`Shipper` / `Quotation` は別集約にする。`CancellationRequest` は `Cargo` の内側のエンティティにする（承認の判定が予約状態に依存するため）
 - `CargoItinerary` は値オブジェクト。順序・連結の整合は `Cargo` が保証する
 - `TrackingException` は解決状態が変わるためエンティティだが、`TrackingActivity` の内側に閉じる
+- **上位者へ知らせた時刻はエンティティに持たせない**（IT11 / US20 §受入基準 3）。緊急かどうかは `ExceptionType#urgent` が答え、知らせたのは<b>起きた出来事</b>なので `ExceptionEscalatedEvent` に残し、投影（`tracking_exception.escalated_at`）が写す。エンティティの属性にすると「緊急だが知らせない例外」を作れてしまう
 - `HandlingActivity` は 1 作業 1 集約。履歴は投影が持つ。`CustomsDeclaration` は監査履歴が要るため別集約にする
 - 経路候補（`RouteCandidate`）は集約にしない。算出は状態を変えないので Query 側のドメインサービスで行う
 

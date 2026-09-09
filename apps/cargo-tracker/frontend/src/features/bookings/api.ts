@@ -56,6 +56,17 @@ export interface BookingView {
   /** 追跡番号と発行日時（US14）。未発行なら null。 */
   readonly trackingNumber: string | null;
   readonly trackingIssuedAt: string | null;
+  /**
+   * 誤配の再設計で到着期限を何日超えたか（US28 §6）。
+   *
+   * <p><b>null は「誤配になっていない」、0 は「組み直して間に合った」。</b>
+   * 画面はこの差分を出し、荷主への説明に使う。</p>
+   */
+  readonly routeOverdueDays: number | null;
+  /** 検知した荷役（US28 §3）。誤配のバナーが場所・日時と現在地を出す。 */
+  readonly lastHandlingUnLocode: string | null;
+  readonly lastHandlingAt: string | null;
+  readonly lastHandlingOffRoute: boolean;
   /** 最終更新（US32）。一度も直していなければ null。 */
   readonly updatedAt: string | null;
   readonly updatedBy: string | null;

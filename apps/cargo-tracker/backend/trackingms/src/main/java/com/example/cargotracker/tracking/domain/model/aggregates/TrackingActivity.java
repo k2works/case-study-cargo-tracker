@@ -2,6 +2,7 @@ package com.example.cargotracker.tracking.domain.model.aggregates;
 
 import com.example.cargotracker.shared.contract.command.InitializeTrackingCommand;
 import com.example.cargotracker.shared.contract.event.CargoDeliveredEvent;
+import com.example.cargotracker.shared.contract.event.CargoDeliveryRevertedEvent;
 import com.example.cargotracker.shared.contract.event.TrackingInitializedEvent;
 import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.shared.domain.error.IllegalTransition;
@@ -11,8 +12,12 @@ import com.example.cargotracker.tracking.domain.model.commands.RegisterTrackingE
 import com.example.cargotracker.tracking.domain.model.commands.ResolveTrackingExceptionCommand;
 import com.example.cargotracker.tracking.domain.model.commands.StartExceptionResponseCommand;
 import com.example.cargotracker.tracking.domain.model.entities.TrackingException;
+import com.example.cargotracker.tracking.domain.model.events.ExceptionEscalatedEvent;
 import com.example.cargotracker.tracking.domain.model.events.ExceptionResponseStartedEvent;
 import com.example.cargotracker.tracking.domain.model.events.ExceptionShipperNotifiedEvent;
+import com.example.cargotracker.tracking.domain.model.events.CargoMisroutedEvent;
+import com.example.cargotracker.tracking.domain.model.events.DeferredHandlingAppliedEvent;
+import com.example.cargotracker.tracking.domain.model.events.HandlingDeferredEvent;
 import com.example.cargotracker.tracking.domain.model.events.HandlingNotAppliedEvent;
 import com.example.cargotracker.tracking.domain.model.events.TrackingExceptionRegisteredEvent;
 import com.example.cargotracker.tracking.domain.model.events.TrackingExceptionResolvedEvent;
@@ -27,6 +32,7 @@ import com.example.cargotracker.tracking.domain.model.valueobjects.TrackingNumbe
 import com.example.cargotracker.tracking.domain.model.valueobjects.TransportStatus;
 import java.time.Clock;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import org.axonframework.eventsourcing.annotation.EventSourcingHandler;
 import org.axonframework.eventsourcing.annotation.reflection.EntityCreator;
@@ -173,10 +179,23 @@ public class TrackingActivity {
         }
         TransportStatus next = TransportStatus.afterHandling(
                 command.handlingType(), command.finalPort(), command.offRoute());
-        if (status == TransportStatus.EXCEPTION || !status.canTransitionTo(next)) {
+        if (status == TransportStatus.EXCEPTION) {
+            // **例外の対応中は預かる**（IT11 引き継ぎ枠 B）。順序としては正しく、
+            // 状態が例外へ退避しているだけなので、解決したら適用しなければ
+            // 事実と食い違ったまま残る——船に積んだ貨物が受領済に見える。
+            appender.append(new HandlingDeferredEvent(trackingNumber.value(),
+                    command.activityId(), command.handlingType(), command.unLocode(),
+                    command.finalPort(), command.offRoute(), status, next,
+                    command.operator(), command.completedAt(), clock.instant()));
+            return;
+        }
+        if (!status.canTransitionTo(next)) {
             // **無言で捨てない**（IT9 レビュー M6）。記録は handlingms にあるが、
             // 追跡の履歴には何も残らず「荷役は記録したのに追跡が動いていない」と
             // いう問い合わせに答えられなかった。状態は動かさず、届いた事実だけ残す。
+            //
+            // **預かりとは分ける。** こちらは起きえない順序で届いたもので、
+            // あとから適用してはいけない。
             appender.append(new HandlingNotAppliedEvent(trackingNumber.value(),
                     command.activityId(), command.handlingType(), command.unLocode(),
                     status, next, command.completedAt(), clock.instant()));
@@ -187,6 +206,15 @@ public class TrackingActivity {
                 StatusUpdateSource.HANDLING, command.activityId(), command.unLocode(),
                 command.completedAt(), command.operator(), clock.instant()));
 
+        if (next == TransportStatus.MISROUTED) {
+            // **誤配は荷役が決める**（US28 §受入基準 2）。手で起票できないのは
+            // そのため（ExceptionType#reportableByHand）——起きていない誤配を
+            // 記録できると、経路設計者はそれを組み直そうとする。
+            appender.append(new CargoMisroutedEvent(trackingNumber.value(), bookingId,
+                    command.activityId(), command.unLocode(), command.completedAt(),
+                    clock.instant()));
+            autoReportMisroute(command, appender, clock.instant());
+        }
         if (next == TransportStatus.DELIVERED) {
             // **精算の開始条件は別のイベントで出す**（US16 §受入基準 4）。
             // 1 つのイベントに「状態が変わった」と「精算を始めてよい」の 2 つの
@@ -195,6 +223,37 @@ public class TrackingActivity {
             appender.append(new CargoDeliveredEvent(trackingNumber.value(), bookingId,
                     command.completedAt(), command.unLocode()));
         }
+    }
+
+    /**
+     * 誤配を自動で起票する（US28 §受入基準 2）。
+     *
+     * <p><b>識別子は荷役から導く。</b> 採番すると、同じ荷役から何度でも新しい例外が
+     * できる（投影の主キーは例外の識別子なので、行も増える）。荷役の取り消しは
+     * 反映済みの印を外すので、同じ荷役がもう一度届くことがある——そのとき
+     * 起票済みの例外を重ねない。</p>
+     *
+     * <p><b>誤配が続けて届いても重ならない。</b> 遷移表が {@code MISROUTED} から
+     * {@code MISROUTED} を許さないので、2 度目の予定外の荷役はここまで来ない
+     * （反映できなかった荷役として履歴に残る）。</p>
+     */
+    private void autoReportMisroute(AdvanceTrackingCommand command, EventAppender appender,
+            java.time.Instant now) {
+        String exceptionId = "MIS-" + command.activityId();
+        if (exceptions.containsKey(exceptionId)) {
+            return;
+        }
+        TrackingException candidate = TrackingException.report(exceptionId,
+                ExceptionType.MISROUTE, command.completedAt(), command.unLocode(),
+                "予定ルート外の " + command.unLocode() + " で "
+                        + command.handlingType() + " が記録されました");
+        appender.append(new TrackingExceptionRegisteredEvent(trackingNumber.value(),
+                candidate.exceptionId(), candidate.type().name(), candidate.occurredAt(),
+                candidate.unLocode(), candidate.description(), candidate.urgent(),
+                status, command.operator(), now));
+        appender.append(new TransportStatusUpdatedEvent(trackingNumber.value(), status,
+                TransportStatus.EXCEPTION, StatusUpdateSource.EXCEPTION, null,
+                command.unLocode(), command.completedAt(), command.operator(), now));
     }
 
     /**
@@ -225,6 +284,13 @@ public class TrackingActivity {
                 candidate.unLocode(), candidate.description(), candidate.urgent(),
                 status, command.reportedBy(), now));
 
+        if (candidate.urgent()) {
+            // **緊急は上位者へ知らせる**（US20 §受入基準 3）。送信基盤はスコープ外
+            // なので、残すのは知らせた事実と時刻だけ。読み口（S42 を管理者に開く）
+            // と対で出す——記録だけでは受入基準の満たし方が成り立たない。
+            appender.append(new ExceptionEscalatedEvent(trackingNumber.value(),
+                    candidate.exceptionId(), candidate.type().name(), now));
+        }
         if (status != TransportStatus.EXCEPTION) {
             appender.append(new TransportStatusUpdatedEvent(trackingNumber.value(), status,
                     TransportStatus.EXCEPTION, StatusUpdateSource.EXCEPTION, null,
@@ -264,9 +330,51 @@ public class TrackingActivity {
                 .filter(entry -> !entry.getKey().equals(command.exceptionId()))
                 .anyMatch(entry -> !entry.getValue().settled());
         if (!othersOpen && statusBeforeException != null) {
+            // **戻り先を先に控える。** appender.append() はその場で集約へ適用されるので、
+            // RESOLVED を積んだ瞬間に statusBeforeException は null に戻る。
+            // あとから読むと「戻った先」が分からなくなる。
+            TransportStatus restored = statusBeforeException;
             appender.append(new TransportStatusUpdatedEvent(trackingNumber.value(), status,
-                    statusBeforeException, StatusUpdateSource.RESOLVED, null, null,
+                    restored, StatusUpdateSource.RESOLVED, null, null,
                     now, command.resolvedBy(), now));
+            applyDeferredHandlings(restored, appender, now);
+        }
+    }
+
+    /**
+     * 預かっていた荷役を、戻った先から順に適用する（IT11 引き継ぎ枠 B）。
+     *
+     * <p><b>届いた順に、1 つずつ状態を進める。</b> まとめて最後の状態へ飛ばすと、
+     * 途中の区間が履歴から消える——荷主には「いつ船に載ったか」が答えられなくなる。</p>
+     *
+     * <p><b>預かったものが必ず適用できるとは限らない。</b> 戻った先から進めない
+     * 荷役は、順序が入れ替わって届いたものなので、
+     * {@link HandlingNotAppliedEvent} として履歴に残す。</p>
+     *
+     * <p>集約はイベントを追記するだけで、自分の {@code status} はまだ動いていない
+     * （{@code EventSourcingHandler} は追記後に走る）。だから進行中の状態を
+     * 引数で持ち回る。</p>
+     */
+    private void applyDeferredHandlings(TransportStatus restored, EventAppender appender,
+            java.time.Instant now) {
+        TransportStatus current = restored;
+        // **控えてから回す。** append() は即座に適用されるので、
+        // DeferredHandlingAppliedEvent が反復中の map を削る。
+        for (DeferredHandling deferred : List.copyOf(deferredHandlings.values())) {
+            TransportStatus next = TransportStatus.afterHandling(
+                    deferred.handlingType(), deferred.finalPort(), deferred.offRoute());
+            if (current.canTransitionTo(next)) {
+                appender.append(new TransportStatusUpdatedEvent(trackingNumber.value(), current,
+                        next, StatusUpdateSource.HANDLING, deferred.activityId(),
+                        deferred.unLocode(), deferred.completedAt(), deferred.operator(), now));
+                current = next;
+            } else {
+                appender.append(new HandlingNotAppliedEvent(trackingNumber.value(),
+                        deferred.activityId(), deferred.handlingType(), deferred.unLocode(),
+                        current, next, deferred.completedAt(), now));
+            }
+            appender.append(new DeferredHandlingAppliedEvent(trackingNumber.value(),
+                    deferred.activityId()));
         }
     }
 
@@ -324,17 +432,6 @@ public class TrackingActivity {
             // 進めていないものは戻せない。荷役の取り消しは handlingms に残る。
             return;
         }
-        if (status == TransportStatus.DELIVERED) {
-            // **引取の取り消しは断る**（IT10 レビュー 高）。ここで戻すと、
-            // すでに出した CargoDeliveredEvent を打ち消す手立てが無く、
-            // 予約の配送完了と精算だけが残って追跡が巻き戻る——BC をまたいだ
-            // 食い違いが、しかも誰にも見えないまま残る。
-            // 補償の設計（打ち消しを購読側へ伝える）は IT11。**検査できない段階で
-            // その経路を開けない**（IT9 が CLAIM そのものに下したのと同じ判断）。
-            throw new BusinessRuleViolation(
-                    "引き渡し済みの荷役は取り消せません。精算と予約にも伝わっているため、"
-                            + "取り消しには別の手続きが要ります");
-        }
         if (lastHandlingActivityId != null
                 && !lastHandlingActivityId.equals(command.activityId())) {
             // 最後の荷役ではない。**戻さないことが正しい**——そのあとの荷役で
@@ -342,9 +439,18 @@ public class TrackingActivity {
             return;
         }
 
+        boolean wasDelivered = status == TransportStatus.DELIVERED;
         appender.append(new TransportStatusRevertedEvent(trackingNumber.value(), status,
                 statusBeforeHandling, command.handlingType(), command.reason(),
                 command.revertedBy(), clock.instant()));
+        if (wasDelivered) {
+            // **引取済から出るときだけ打ち消す**（IT11 引き継ぎ枠 A）。IT10 は
+            // 打ち消しを購読側へ伝える手立てが無かったので、取り消し自体を断って
+            // 塞いでいた。状態を戻すイベントとは別に出す——束ねると、状態の
+            // 巻き戻しのたびに精算が動く。
+            appender.append(new CargoDeliveryRevertedEvent(trackingNumber.value(), bookingId,
+                    clock.instant(), command.reason()));
+        }
     }
 
     /** 荷役で進める前の状態。取り消しの戻し先（不変条件 11）。 */
@@ -386,6 +492,33 @@ public class TrackingActivity {
     void on(TrackingExceptionResolvedEvent event) {
         exceptions.computeIfPresent(event.exceptionId(),
                 (id, exception) -> exception.resolve(event.resolution(), event.resolvedAt()));
+    }
+
+    /**
+     * 例外の対応中に預かった荷役（IT11 引き継ぎ枠 B）。
+     *
+     * <p><b>届いた順を保つ</b>（{@code LinkedHashMap}）。適用は 1 つずつ順に行う。</p>
+     */
+    private final java.util.Map<String, DeferredHandling> deferredHandlings =
+            new java.util.LinkedHashMap<>();
+
+    /** 預かった荷役 1 件。適用に要るものを全部持つ。 */
+    private record DeferredHandling(String activityId, String handlingType, String unLocode,
+            boolean finalPort, boolean offRoute, String operator,
+            java.time.Instant completedAt) {
+    }
+
+    @EventSourcingHandler
+    void on(HandlingDeferredEvent event) {
+        deferredHandlings.put(event.activityId(), new DeferredHandling(event.activityId(),
+                event.handlingType(), event.unLocode(), event.finalPort(), event.offRoute(),
+                event.operator(), event.completedAt()));
+    }
+
+    @EventSourcingHandler
+    void on(DeferredHandlingAppliedEvent event) {
+        // 預かりを解く。**残したままにすると、解決のたびに同じ荷役を適用し直す。**
+        deferredHandlings.remove(event.activityId());
     }
 
     /** 最後に状態を進めた荷役。取り消しはこれと一致するときだけ戻す。 */

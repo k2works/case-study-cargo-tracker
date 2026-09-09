@@ -8,7 +8,9 @@ import com.example.cargotracker.shared.contract.command.InitializeTrackingComman
 import com.example.cargotracker.booking.domain.model.commands.RecordHandlingCommand;
 import com.example.cargotracker.booking.domain.model.commands.RevertHandlingCommand;
 import com.example.cargotracker.booking.domain.model.commands.MarkDeliveredCommand;
+import com.example.cargotracker.booking.domain.model.commands.RevertDeliveryCommand;
 import com.example.cargotracker.shared.contract.event.CargoDeliveredEvent;
+import com.example.cargotracker.shared.contract.event.CargoDeliveryRevertedEvent;
 import com.example.cargotracker.shared.contract.event.HandlingActivityRegisteredEvent;
 import com.example.cargotracker.shared.contract.event.HandlingActivityVoidedEvent;
 import com.example.cargotracker.shared.contract.event.TrackingInitializedEvent;
@@ -193,6 +195,18 @@ public class BookingReactionHandler {
     public void on(CargoDeliveredEvent event) {
         commands.sendAndWait(new MarkDeliveredCommand(event.bookingId(),
                 event.trackingNumber(), event.deliveredAt(), event.location()), Void.class);
+    }
+
+    /**
+     * 引き渡しの記録が取り消された（IT11 引き継ぎ枠 A）。
+     *
+     * <p><b>{@code CargoDeliveredEvent} と対で購読する。</b> 片方だけを受けると、
+     * 予約が引取済のまま残って追跡だけが巻き戻る。</p>
+     */
+    @EventHandler
+    public void on(CargoDeliveryRevertedEvent event) {
+        commands.sendAndWait(new RevertDeliveryCommand(event.bookingId(),
+                event.trackingNumber(), event.reason()), Void.class);
     }
 
     /** 荷役が取り消された（不変条件 13）。 */

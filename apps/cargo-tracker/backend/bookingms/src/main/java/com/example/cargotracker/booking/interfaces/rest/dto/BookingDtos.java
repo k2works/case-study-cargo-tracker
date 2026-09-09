@@ -113,7 +113,13 @@ public final class BookingDtos {
 
     /** 経路候補 1 件。区間の順序が業務の意味を持つ。 */
     public record RouteCandidateResponse(
-            java.util.List<LegResponse> legs, int transitDays, boolean direct) {
+            java.util.List<LegResponse> legs, int transitDays, boolean direct,
+            /*
+             * 到着期限を何日超えるか（US28 §受入基準 6）。通常の設計では必ず 0。
+             * **誤配の再設計でだけ 0 より大きくなる**——候補を隠すと 0 件になり、
+             * 貨物が動かせなくなるので、超過した候補も出して日数を添える。
+             */
+            int overdueDays) {
 
         /** 区間 1 つ。航海番号を出す（US08 §受入基準 3）。 */
         public record LegResponse(

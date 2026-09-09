@@ -46,4 +46,31 @@ public record RouteSpecification(Location origin, Location destination, LocalDat
         }
         return !LocalDate.ofInstant(itinerary.finalArrival(), zone).isAfter(arrivalDeadline);
     }
+
+    /**
+     * 誤配の再設計として満たすか（US28 §受入基準 4・5・6）。
+     *
+     * <p><b>出発地は見ない。</b> 再設計は<b>現在地</b>を起点にする——予定ルートを
+     * 外れた貨物は、もう出発地には無い。目的地と貨物仕様は元の予約から
+     * 引き継ぐので、そちらは変わらず見る。</p>
+     *
+     * <p><b>期限も見ない。</b> 現在地からでは間に合わないのが普通で、
+     * 超過を断ると貨物が動かせなくなる。超過した事実は
+     * {@link #overdueDays} が数え、イベントに載せて荷主への説明に使う。</p>
+     */
+    public boolean isSatisfiedByRedesign(CargoItinerary itinerary) {
+        return itinerary != null && destination.equals(itinerary.destination());
+    }
+
+    /**
+     * 到着期限を何日超えるか（超えないなら 0）。
+     *
+     * <p><b>日付で比べる</b>（期限は {@code DATE}）。到着時刻と素朴に比べると
+     * 期限当日に着く旅程を落とす。日付にするタイムゾーンは業務のものを渡す。</p>
+     */
+    public int overdueDays(CargoItinerary itinerary, ZoneId zone) {
+        LocalDate arrival = LocalDate.ofInstant(itinerary.finalArrival(), zone);
+        long days = java.time.temporal.ChronoUnit.DAYS.between(arrivalDeadline, arrival);
+        return (int) Math.max(days, 0);
+    }
 }

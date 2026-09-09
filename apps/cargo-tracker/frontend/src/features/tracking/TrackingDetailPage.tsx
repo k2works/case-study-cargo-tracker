@@ -65,6 +65,10 @@ export function TrackingDetailPage() {
   const { trackingNumber = '' } = useParams();
   const queries = useQueryClient();
   const isTracker = useAuthStore((state) => state.user?.roles.includes('ROLE_TRACKER') ?? false);
+  // **`[経路を再設計]` は経路設計者だけ**（US28 §受入基準 4）。他ロールには
+  // 「依頼済み」と出す——押せない操作を並べると、できることが読めなくなる。
+  const isRouting = useAuthStore(
+    (state) => state.user?.roles.includes('ROLE_ROUTING') ?? false);
 
   const tracking = useQuery({
     queryKey: ['tracking', trackingNumber],
@@ -107,6 +111,26 @@ export function TrackingDetailPage() {
           {view.statusLabel}
         </span>
       </h1>
+
+      {view.misrouted && (
+        <div role="alert" className={`${ALERT} mt-4`}>
+          <p className="font-semibold">誤配を検知しました。</p>
+          <p className="mt-1 text-sm">
+            予定ルート外で荷役が記録されています。現在地:{' '}
+            {view.currentUnLocode ?? '—'}。到着予定は誤配前の旅程によるもので、
+            再設計するまで更新されません。
+          </p>
+          <p className="mt-2 text-sm">
+            {isRouting ? (
+              <Link to={`/routing/bookings/${view.bookingId}`} className={LINK}>
+                経路を再設計
+              </Link>
+            ) : (
+              '経路設計者に再設計を依頼済みです。'
+            )}
+          </p>
+        </div>
+      )}
 
       <section className={`${CARD} mt-4`}>
         <dl className="grid grid-cols-[8rem_1fr] gap-y-2 text-sm">

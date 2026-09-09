@@ -298,6 +298,7 @@ entity "cargo_summary" as cargo {
   return_reason: VARCHAR(200)
   confirmed_at: TIMESTAMPTZ
   tracking_issued_at: TIMESTAMPTZ
+  route_overdue_days: INTEGER
   last_handling_type: VARCHAR(30)
   last_handling_unlocode: VARCHAR(5)
   last_handling_at: TIMESTAMPTZ
@@ -409,7 +410,7 @@ q ||--o{ qc
 | `shipper` | `ShipperRegisteredEvent`, `ShipperContactUpdatedEvent`, `CorporateContractAssignedEvent` | `UNIQUE(email)`（NULL を許す）, `UNIQUE(shipper_code)` | `shipper_code` は投影側のシーケンス（`SHP-` + 連番 6 桁）で採番。UNIQUE 違反は `attention_item` に記録。`name` / `email` / `phone` / `address` は crypto-shredding 後に `NULL` になる（ADR-0003）。表示既定値は「（削除済み）」（`ui_design.md`） |
 | `cargo_notification` | `ShipperNotifiedEvent` | `PK(booking_id, notified_at)`, `INDEX(booking_id, notified_at DESC)` | 荷主への通知履歴（US12 §受入基準 4）。1 行 = 1 回の通知。**送信基盤はスコープ外**で、通知は現行の手作業（電話・メール）で行う。ここに残るのは「いつ・誰に・何を伝えたか」で、荷主から「聞いていない」と言われたときに突き合わせる材料になる。`cargo_revision` と同じく**主キーに通知日時を含めるので、リプレイしても行が増えない**（採番すると積み上がる。[ADR-0008](../../adr/cargo-tracker/0008-cargo-revision-as-a-projection.md)）。再通知では行が増える。`notified_by` は NULL を許す——Gateway を通れば必ず入るが、入らなかったときに 500 で落とすのは違う（通知した事実は残し、画面で「—」と出す。`cargo_revision.updated_by` と同じ扱い） |
 | `cargo_revision` | `CargoSpecificationUpdatedEvent` | `PK(booking_id, updated_at, field_label)`, `INDEX(booking_id, updated_at DESC)` | 修正で変わった項目（US32 §受入基準 4「何を変えたか」）。1 行 = 1 回の修正で変わった 1 項目。**投影の直前の行と修正イベントを丸ごと比べて作る**（項目の名簿を手で書くと、要素を足したときに書き忘れが黙って差分から消える）。主キーに修正時刻を含めるので、リプレイしても行が増えない。判断の経緯は [ADR-0008](../../adr/cargo-tracker/0008-cargo-revision-as-a-projection.md) |
-| `cargo_summary` | `CargoBookedEvent` ほか Cargo の全イベント（`booking_status` の書き手は `BookingDeliveredEvent`・`BookingSettledEvent` を含む Cargo 自身のイベントだけ）、`HandlingActivityRegisteredEvent`・`HandlingActivityVoidedEvent`（契約、`last_handling_*` のみ） | `UNIQUE(tracking_number)`, `INDEX(shipper_id)`, `INDEX(booking_status)`, `INDEX(routing_status)` | `shipper_name` を非正規化して持つ（一覧が JOIN しない）。`last_handling_*` は荷役の契約イベントから写す。他サービスの `CargoDeliveredEvent`・`PaymentRecordedEvent` は投影が写さず、`booking-reaction` が Cargo へコマンドを送り、Cargo のイベントで `booking_status` が変わる。`INDEX(shipper_id)` は荷主向け一覧（`FindShipperBookingsQuery`）の索引を兼ねる。`updated_at` / `updated_by` は**最終更新だけ**を持つ（US32）。何を変えたかは `cargo_revision` が持つ（[ADR-0008](../../adr/cargo-tracker/0008-cargo-revision-as-a-projection.md)）。`routing_requested_at` は経路設計者へ引き渡した日時（US06）。S30 は到着期限が近い順に並ぶので、期限が遠い案件は下に沈む。引き渡しからどれだけ経ったかが読めないと放置に気づけない。`condition_review_requested_at` / `condition_review_reason` は営業への差し戻し（US10 §4）。**状態は動かさず記録で表す**（[ADR-0009](../../adr/cargo-tracker/0009-condition-review-is-not-a-state-transition.md)）。条件を調整すると消える（営業の手番が終わるため）。`route_exclude_unlocodes` / `route_depart_from_unlocode` は経路探索の条件（US10）。**候補を出すたびにここから組む**（画面から組み立てて送ると、条件を直したのに古い条件で探すことが起きる）。除外港はカンマ区切りで持つ。1 予約あたり数件で、絞り込みにも並び替えにも使わず、予約と一緒にしか読まない。`last_notified_at` は最後に荷主へ通知した日時（US12）。営業のダッシュボードが「まだ通知していない経路確定済みの予約」を、履歴テーブルを数えずに絞るために持つ。`returned_to_routing_at` / `return_reason` は通知後に経路設計へ戻した記録（US12）。**`routing_requested_at` とは別の列にする**——同じ列に書くと「引き渡した」と「通知後に戻した」が区別できなくなる。`tracking_number` は**投影側で採るが連番では採らない**——荷主に認証なしで公開する（US18）ため、連番だと 1 つ知れば前後が推測できる。`TRK-` + 大文字英数字 10 桁を乱数で採り、採るたびに空きを確かめる（[ADR-0011](../../adr/cargo-tracker/0011-tracking-number-is-hard-to-guess.md)）。`UNIQUE(tracking_number)` が最後の砦 |
+| `cargo_summary` | `CargoBookedEvent` ほか Cargo の全イベント（`booking_status` の書き手は `BookingDeliveredEvent`・`BookingSettledEvent` を含む Cargo 自身のイベントだけ）、`HandlingActivityRegisteredEvent`・`HandlingActivityVoidedEvent`（契約、`last_handling_*` のみ） | `UNIQUE(tracking_number)`, `INDEX(shipper_id)`, `INDEX(booking_status)`, `INDEX(routing_status)` | `shipper_name` を非正規化して持つ（一覧が JOIN しない）。`last_handling_*` は荷役の契約イベントから写す。他サービスの `CargoDeliveredEvent`・`PaymentRecordedEvent` は投影が写さず、`booking-reaction` が Cargo へコマンドを送り、Cargo のイベントで `booking_status` が変わる。`INDEX(shipper_id)` は荷主向け一覧（`FindShipperBookingsQuery`）の索引を兼ねる。`route_overdue_days` は誤配の再設計で到着期限を何日超えたか（US28 §受入基準 6。`CargoRoutedEvent` が運ぶ）——**`NULL` は「誤配になっていない」、`0` は「組み直して間に合った」**で意味が違うので既定値で埋めない。`updated_at` / `updated_by` は**最終更新だけ**を持つ（US32）。何を変えたかは `cargo_revision` が持つ（[ADR-0008](../../adr/cargo-tracker/0008-cargo-revision-as-a-projection.md)）。`routing_requested_at` は経路設計者へ引き渡した日時（US06）。S30 は到着期限が近い順に並ぶので、期限が遠い案件は下に沈む。引き渡しからどれだけ経ったかが読めないと放置に気づけない。`condition_review_requested_at` / `condition_review_reason` は営業への差し戻し（US10 §4）。**状態は動かさず記録で表す**（[ADR-0009](../../adr/cargo-tracker/0009-condition-review-is-not-a-state-transition.md)）。条件を調整すると消える（営業の手番が終わるため）。`route_exclude_unlocodes` / `route_depart_from_unlocode` は経路探索の条件（US10）。**候補を出すたびにここから組む**（画面から組み立てて送ると、条件を直したのに古い条件で探すことが起きる）。除外港はカンマ区切りで持つ。1 予約あたり数件で、絞り込みにも並び替えにも使わず、予約と一緒にしか読まない。`last_notified_at` は最後に荷主へ通知した日時（US12）。営業のダッシュボードが「まだ通知していない経路確定済みの予約」を、履歴テーブルを数えずに絞るために持つ。`returned_to_routing_at` / `return_reason` は通知後に経路設計へ戻した記録（US12）。**`routing_requested_at` とは別の列にする**——同じ列に書くと「引き渡した」と「通知後に戻した」が区別できなくなる。`tracking_number` は**投影側で採るが連番では採らない**——荷主に認証なしで公開する（US18）ため、連番だと 1 つ知れば前後が推測できる。`TRK-` + 大文字英数字 10 桁を乱数で採り、採るたびに空きを確かめる（[ADR-0011](../../adr/cargo-tracker/0011-tracking-number-is-hard-to-guess.md)）。`UNIQUE(tracking_number)` が最後の砦 |
 
 **`condition_review_response` / `condition_review_responded_at` は IT8 で足しました**（US10 §受入基準 4 の対）。**差し戻しの理由と対で持ちます**——何を頼まれて何が決まったかが読めないと、経路設計者は条件をどう直せばよいのか分かりません。営業の受け皿（S02）は「差し戻されていて、まだ返していない」で絞ります（返したものが残り続けると、営業は何度も同じ予約を開きます）。条件を調整すると両方が消えます（営業の手番はもう終わっているため）。
 | `cargo_leg` | `CargoRoutedEvent` | `INDEX(voyage_number)` | 再設計時は全行を入れ替える |
@@ -542,12 +543,16 @@ entity "tracking_exception" as tx {
   * **exception_id**: VARCHAR(36) <<PK>>
   --
   tracking_number: VARCHAR(25) NOT NULL <<FK>>
+  booking_id: VARCHAR(36)
   exception_type: VARCHAR(30) NOT NULL
   response_status: VARCHAR(30) NOT NULL
   urgent: BOOLEAN NOT NULL
+  escalated_at: TIMESTAMPTZ
   unlocode: VARCHAR(5)
   description: TEXT NOT NULL
   resolution: TEXT
+  new_estimated_arrival: DATE
+  response_plan: TEXT
   occurred_at: TIMESTAMPTZ NOT NULL
   resolved_at: TIMESTAMPTZ
   projected_at: TIMESTAMPTZ NOT NULL
@@ -569,8 +574,8 @@ ts ||--o{ tx
 **予定の旅程は `tracking_leg` に持ちます**（IT7 で新設。`tracking_number` + `leg_seq` が主キーで、**積む順**に並びます）。荷役（US15・IT9）が予定と実績を照合する材料です。投影は入れ直しの前に消します（追記だけにすると、リプレイで区間が倍になります）。
 
 | `tracking_summary` | `TrackingInitializedEvent`, `TransportStatusUpdatedEvent`, `CargoMisroutedEvent`, `TrackingException*Event`, `CancellationDischargePlannedEvent`, `TrackingClosedEvent` | `UNIQUE(booking_id)`, `INDEX(shipper_id)`, `INDEX(transport_status)`, `INDEX(urgent_exception_count DESC, last_status_changed_at)` | 例外の件数を非正規化して持ち、一覧が `tracking_exception` を数えない。`cancellation_discharge_unlocode` はキャンセル承認後の陸揚げ地（`CargoCancelledEvent.dischargeLocation` を `tracking-reaction` 経由で写す）。当該港の `UNLOAD` で `closed` になる |
-| `tracking_event` | `TransportStatusUpdatedEvent`（荷役由来・手動由来）、`CargoMisroutedEvent` | `UNIQUE(event_id)`（PK。元イベントの識別子）, `INDEX(tracking_number, occurred_at)` | 画面の履歴用。`event_type` は `HANDLING` / `MANUAL` / `MISROUTE` / `EXCEPTION` / `RESOLVED` / `VOIDED`。追記系なので再配送は UNIQUE で弾く。真実は Event Store |
-| `tracking_exception` | `TrackingExceptionRegisteredEvent`, `ExceptionResponseStartedEvent`, `TrackingExceptionResolvedEvent` | `INDEX(response_status, urgent DESC, occurred_at)` | `urgent` は `ExceptionType#urgent` の結果を写す |
+| `tracking_event` | `TransportStatusUpdatedEvent`（荷役由来・手動由来）、`CargoMisroutedEvent` | `UNIQUE(event_id)`（PK。元イベントの識別子）, `INDEX(tracking_number, occurred_at)` | 画面の履歴用。`event_type` は `HANDLING` / `MANUAL` / `MISROUTE` / `EXCEPTION` / `RESOLVED` / `VOIDED` / `NOT_APPLIED`（遷移表が許さず反映しなかった荷役。IT9 M6）/ `DEFERRED`（例外の対応中に預かった荷役。IT11 引き継ぎ枠 B）。**預かりと反映不可を分ける**——追跡管理者の次の行動が違う（反映不可は荷役側に問い合わせる、預かりは例外を解決すれば反映される）。追記系なので再配送は UNIQUE で弾く。真実は Event Store |
+| `tracking_exception` | `TrackingExceptionRegisteredEvent`, `ExceptionResponseStartedEvent`, `TrackingExceptionResolvedEvent`, `ExceptionEscalatedEvent` | `INDEX(response_status, urgent DESC, occurred_at)`, `INDEX(escalated_at DESC) WHERE escalated_at IS NOT NULL AND response_status <> 'RESOLVED'` | `urgent` は `ExceptionType#urgent` の結果を写す。`escalated_at` は上位者へ知らせた事実（US20 §3。**判定ではなく起きたこと**）。`booking_id` は一覧が予約番号を出すための写し——**荷主名は持てない**（契約 `TrackingInitializedEvent` が `shipperId` しか運ばず、名前を足すには本番に出ている契約の変更と Upcaster が要る。判断は IT12） |
 | ~~`shipper_cargo_snapshot`~~ | — | — | **作りません**（IT8 T5）。元にする予定だったイベントは契約ではなく trackingms から購読できず、購読できる `TrackingInitializedEvent` から作れる内容は `tracking_summary.shipper_id` と同じになる。同じ事実を 2 か所に持たない |
 | `attention_item` | `tracking-projection` の拒否、`tracking-reaction` のコマンド失敗 | `booking_read_db` と同じ | 定義は `booking_read_db` の `attention_item` と同一 |
 

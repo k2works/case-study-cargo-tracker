@@ -127,6 +127,11 @@ export function RoutingWorkbenchPage() {
   const unavailable =
     candidates.error instanceof ApiError && candidates.error.status === 503;
   const found = candidates.data?.state === 'ready' ? candidates.data.value : null;
+  // 超過を承知で確定するとき、1 度だけ確かめる（US28 §受入基準 6）。
+  const [pendingOverdue, setPendingOverdue] = useState<RouteCandidateView | null>(null);
+  // **超過の列は誤配の再設計でだけ出す。** 通常の設計では全候補が期限を
+  // 満たすので、常に「期限内」と並ぶ列は読む人の目を無駄に使う。
+  const overdue = found?.candidates.some((candidate) => candidate.overdueDays > 0) ?? false;
 
   return (
     <section>
@@ -369,7 +374,9 @@ export function RoutingWorkbenchPage() {
             {/* 並び順の根拠は目でも読めるようにする。読み上げにしか無いと、
                 なぜこの順なのかが分からないまま上から選ばれる。 */}
             <caption className="caption-top pb-2 text-left text-sm text-gray-600">
-              直行便を先に、そのあと所要時間の短い順に並んでいます
+              {overdue
+                ? '期限を満たす候補を先に、そのあと直行便・所要時間の短い順に並んでいます'
+                : '直行便を先に、そのあと所要時間の短い順に並んでいます'}
             </caption>
             <thead>
               <tr>
@@ -379,6 +386,10 @@ export function RoutingWorkbenchPage() {
                 <th scope="col" className={TH}>経由港</th>
                 <th scope="col" className={TH}>航海</th>
                 <th scope="col" className={TH}>出発 → 到着</th>
+                {/* **超過は誤配の再設計でだけ出る。** 通常の設計では全候補が
+                    期限を満たすので、列そのものを出さない（常に「—」の列は
+                    読む人の目を無駄に使う）。 */}
+                {overdue && <th scope="col" className={TH}>期限超過</th>}
               </tr>
             </thead>
             <tbody>
@@ -407,6 +418,17 @@ export function RoutingWorkbenchPage() {
                     {candidate.legs.map((leg) => leg.voyageNumber).join(' → ')}
                   </td>
                   <td className={TD}>{journeyOf(candidate)}</td>
+                  {overdue && (
+                    <td className={TD}>
+                      {candidate.overdueDays > 0 ? (
+                        <span className="font-semibold text-red-700">
+                          {candidate.overdueDays} 日超過
+                        </span>
+                      ) : (
+                        '期限内'
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -451,12 +473,48 @@ export function RoutingWorkbenchPage() {
                 return;
               }
               setSelectionError('');
+              if (candidate.overdueDays > 0) {
+                // **超過を承知で選んだことを 1 度だけ確かめる**（US28 §受入基準 6）。
+                // 押した本人が超過に気づかないまま確定すると、荷主への説明が
+                // 「なぜ遅れるのか」から始まらない。
+                setPendingOverdue(candidate);
+                return;
+              }
               assign.mutate(candidate.legs);
             }}
           >
             {/* 複数ロールが触る予約の遷移なので、押したあとは送信中を出す。 */}
             {assign.isPending ? '送信中…' : 'この経路で確定'}
           </button>
+
+          {pendingOverdue && (
+            <div role="alertdialog" aria-label="期限超過の確認" className={`${ALERT} space-y-2`}>
+              <p>
+                この経路は当初の到着期限を <b>{pendingOverdue.overdueDays} 日</b>{' '}
+                超えます。確定すると、荷主への連絡にこの差分を含める必要があります。
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className={BUTTON_PRIMARY}
+                  onClick={() => {
+                    const legs = pendingOverdue.legs;
+                    setPendingOverdue(null);
+                    assign.mutate(legs);
+                  }}
+                >
+                  超過を承知で確定する
+                </button>
+                <button
+                  type="button"
+                  className={BUTTON_SECONDARY}
+                  onClick={() => setPendingOverdue(null)}
+                >
+                  やめる
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

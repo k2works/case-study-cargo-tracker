@@ -223,6 +223,64 @@ public class TrackingSteps {
         });
     }
 
+    // ---- IT11 US20 破損・紛失（デモ項目 D1〜D4） ----
+
+    @もし("追跡管理者が発生場所 {string} で {string} の例外を起票する")
+    public void 追跡管理者が発生場所で例外を起票する(String unLocode, String type) {
+        exceptionId = "ex-" + System.nanoTime();
+        lastResponse = rest.post()
+                .uri(url("/api/v1/tracking/trackings/" + trackingNumber + "/exceptions"))
+                .header("X-Auth-Username", "tracker01")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("exceptionId", exceptionId, "exceptionType", type,
+                        "unLocode", unLocode, "description", "外装が破れています"))
+                .retrieve().toEntity(JsonMap.class);
+    }
+
+    @ならば("港コードではないと断られる")
+    public void 港コードではないと断られる() {
+        // **理由まで見る。** 2xx でないことだけを見ると、別の理由で断られていても緑になる。
+        assertThat(lastResponse.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(lastResponse.getBody().get("message").toString())
+                .contains("UN/LOCODE");
+    }
+
+    @ならば("その例外は緊急として記録される")
+    public void その例外は緊急として記録される() {
+        // **緊急かどうかは種別が答える**（不変条件 7）。起票した人は選べない。
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
+                assertThat(openException(exceptionId)).containsEntry("urgent", true));
+    }
+
+    @かつ("上位者へ知らせた記録が残る")
+    public void 上位者へ知らせた記録が残る() {
+        // **記録と読み口は対で出す**（US20 §受入基準 3）。送信基盤はスコープ外なので、
+        // 残るのは「いつ知らせたか」だけ。一覧がそれを出せて初めて、管理者は
+        // 自分が見るべきものを見つけられる。
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
+                assertThat(openException(exceptionId).get("escalatedAt")).isNotNull());
+    }
+
+    @かつ("未解決の例外一覧の先頭に出る")
+    public void 未解決の例外一覧の先頭に出る() {
+        // **並びはサーバが決める**（緊急が先。不変条件 7）。
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
+                assertThat(openExceptionIds()).first().isEqualTo(exceptionId));
+    }
+
+    private Map<String, Object> openException(String id) {
+        var response = rest.get().uri(url("/api/v1/tracking/trackings/exceptions"))
+                .header("X-Auth-Username", "tracker01")
+                .retrieve().toEntity(JsonMap.class);
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> items =
+                (List<Map<String, Object>>) response.getBody().get("items");
+        return items.stream()
+                .filter(item -> id.equals(item.get("exceptionId")))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("例外 " + id + " が一覧に出ていません"));
+    }
+
     private List<String> openExceptionIds() {
         var response = rest.get().uri(url("/api/v1/tracking/trackings/exceptions"))
                 .header("X-Auth-Username", "tracker01")

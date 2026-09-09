@@ -4,8 +4,11 @@ import com.example.cargotracker.shared.contract.event.TrackingInitializedEvent;
 import com.example.cargotracker.tracking.domain.model.events.TransportStatusUpdatedEvent;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TransportStatus;
 import com.example.cargotracker.tracking.infrastructure.persistence.TrackingEventMapper;
+import com.example.cargotracker.tracking.domain.model.events.CargoMisroutedEvent;
+import com.example.cargotracker.tracking.domain.model.events.ExceptionEscalatedEvent;
 import com.example.cargotracker.tracking.domain.model.events.ExceptionResponseStartedEvent;
 import com.example.cargotracker.tracking.domain.model.events.ExceptionShipperNotifiedEvent;
+import com.example.cargotracker.tracking.domain.model.events.HandlingDeferredEvent;
 import com.example.cargotracker.tracking.domain.model.events.HandlingNotAppliedEvent;
 import com.example.cargotracker.tracking.domain.model.events.TrackingExceptionRegisteredEvent;
 import com.example.cargotracker.tracking.domain.model.events.TrackingExceptionResolvedEvent;
@@ -79,7 +82,8 @@ public class TrackingProjection {
                 // 一覧のたびに旅程を引くと、1 行ごとの往復が残る。
                 estimatedArrival(event.legs()),
                 // 例外はまだ無い。件数は起票のたびに明細から数え直す。
-                event.initializedAt(), event.initializedAt(), now, null, 0, 0, null));
+                // 誤配はまだ無い（US28）。予定外の荷役が来たときだけ立つ。
+                event.initializedAt(), event.initializedAt(), now, null, 0, 0, null, false));
 
         // 旅程は消してから入れ直す。追記だけにすると、リプレイで区間が倍になる。
         trackings.deleteLegs(event.trackingNumber());
@@ -129,12 +133,16 @@ public class TrackingProjection {
     @EventHandler
     public void on(TrackingExceptionRegisteredEvent event, @MessageIdentifier String eventId) {
         var now = clock.instant();
+        var current = trackings.findByTrackingNumber(event.trackingNumber());
         exceptions.insert(new TrackingExceptionMapper.TrackingExceptionRow(
                 event.exceptionId(), event.trackingNumber(), event.exceptionType(),
                 ResponseStatus.REPORTED.name(), event.urgent(), event.unLocode(),
                 // 起票の時点では対応内容も新しい期限も無い。対応開始が書き足す。
-                event.description(), null, null, null, event.occurredAt(), null, now));
-        var current = trackings.findByTrackingNumber(event.trackingNumber());
+                event.description(), null, null, null,
+                // **予約番号は追跡の投影から引く**（IT10 レビュー N9）。契約イベントを
+                // 変えずに済み、写す先は 1 つ。escalation の時刻は起票の時点では無い。
+                current == null ? null : current.bookingId(), null,
+                event.occurredAt(), null, now));
         refreshCounts(event.trackingNumber(),
                 statusBeforeException(current, event), now);
         // **起票と解決は逆向きの出来事。** 同じ印にすると履歴が読めない。
@@ -142,6 +150,21 @@ public class TrackingProjection {
                 StatusUpdateSource.EXCEPTION.eventType(), event.statusBeforeException(),
                 TransportStatus.EXCEPTION, event.unLocode(), event.occurredAt(),
                 event.reportedBy()), now);
+    }
+
+    /**
+     * 緊急の例外を上位者へ知らせた（US20 §受入基準 3 / IT11）。
+     *
+     * <p><b>記録と読み口は対で出す。</b> 例外一覧（S42）が「いつ知らせたか」を
+     * 出せて初めて、管理者は自分が見るべきものを見つけられる。</p>
+     */
+    @EventHandler
+    public void on(ExceptionEscalatedEvent event) {
+        int updated = exceptions.markEscalated(event.exceptionId(), event.escalatedAt(),
+                clock.instant());
+        if (updated == 0) {
+            log.warn("escalation を書ける例外が投影に無い: exceptionId={}", event.exceptionId());
+        }
     }
 
     /** 例外への対応が始まった（US19 §受入基準 4）。 */
@@ -204,6 +227,42 @@ public class TrackingProjection {
         writeHistory(new HistoryEntry(eventId, event.trackingNumber(), "NOT_APPLIED",
                 event.currentStatus(), event.attemptedStatus(), event.unLocode(),
                 event.completedAt(), null), clock.instant());
+    }
+
+    /**
+     * 誤配を検知した（US28 §受入基準 2・3）。
+     *
+     * <p><b>状態から導かない。</b> 例外の対応中は状態が {@code EXCEPTION} へ
+     * 退避するが、誤配であることは変わらない。導くと、バナーが例外の起票と
+     * 同時に消える——画面から「なぜ組み直すのか」が読めなくなる。</p>
+     */
+    @EventHandler
+    public void on(CargoMisroutedEvent event, @MessageIdentifier String eventId) {
+        int updated = trackings.markMisrouted(event.trackingNumber(), event.unLocode(),
+                clock.instant());
+        if (updated == 0) {
+            log.warn("誤配を書ける追跡が投影に無い: trackingNumber={}", event.trackingNumber());
+        }
+        // **検知した荷役を履歴に残す**（US28 §受入基準 3）。バナーは
+        // 「いつ・どこで予定外の荷役が記録されたか」を出す。
+        writeHistory(new HistoryEntry(eventId, event.trackingNumber(), "MISROUTE",
+                null, TransportStatus.MISROUTED, event.unLocode(), event.detectedAt(), null),
+                clock.instant());
+    }
+
+    /**
+     * 例外の対応中に預かった荷役（IT11 引き継ぎ枠 B）。
+     *
+     * <p><b>「反映できなかった」とは別の行にする。</b> 預かりは<b>あとで適用される</b>
+     * ので、追跡管理者にとって次の行動が違う——反映できなかった荷役は荷役側に
+     * 問い合わせるが、預かった荷役は例外を解決すれば自然に反映される。同じ
+     * 「NOT_APPLIED」で出すと、解決すれば済むものに人が動く。</p>
+     */
+    @EventHandler
+    public void on(HandlingDeferredEvent event, @MessageIdentifier String eventId) {
+        writeHistory(new HistoryEntry(eventId, event.trackingNumber(), "DEFERRED",
+                event.currentStatus(), event.attemptedStatus(), event.unLocode(),
+                event.completedAt(), event.operator()), clock.instant());
     }
 
     /**

@@ -218,6 +218,61 @@ class RouteSearchServiceTest {
     }
 
     @Test
+    @DisplayName("US28 §6: 誤配の再設計では期限超過の候補も返す")
+    void keepsOverdueCandidatesWhenRedesigning() {
+        // **候補を隠すと 0 件になり、貨物が動かせなくなる。** 現在地からでは
+        // 期限に間に合わないのが普通で、経路設計者は超過日数を見て選ぶ。
+        Graph graph = new Graph()
+                .add("V-LATE", "SGSIN", "USNYC", "2026-09-18T00:00:00Z",
+                        "2026-11-30T00:00:00Z");
+
+        List<TransitPath> found = service.findCandidates(
+                new RouteSearchSpecification(Location.of("JPTYO"), Location.of("USNYC"),
+                        DEADLINE, CargoType.GENERAL, Set.of(), Location.of("SGSIN")),
+                graph);
+
+        assertThat(found).hasSize(1);
+        assertThat(found.get(0).overdueDays(
+                new RouteSearchSpecification(Location.of("JPTYO"), Location.of("USNYC"),
+                        DEADLINE, CargoType.GENERAL, Set.of(), Location.of("SGSIN")),
+                java.time.ZoneId.of("Asia/Tokyo")))
+                .as("超過日数が読める").isPositive();
+    }
+
+    @Test
+    @DisplayName("通常の設計では期限超過の候補を返さない（緩めすぎに気づける）")
+    void stillExcludesOverdueCandidatesWithoutDepartFrom() {
+        // **緩める側だけを検査すると、緩みすぎに気づけない。** departFrom が
+        // 無いのは「まだ出発していない予約」で、期限を満たす経路を選べる。
+        Graph graph = new Graph()
+                .add("V-LATE", "JPTYO", "USNYC", "2026-09-10T00:00:00Z",
+                        "2026-11-30T00:00:00Z");
+
+        assertThat(service.findCandidates(spec(CargoType.GENERAL, Set.of()), graph)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("US28 §6: 間に合う候補が超過候補より先に出る")
+    void ordersInTimeCandidatesFirst() {
+        // **超過は業務上の妥協で、進んで選ぶものではない。** 直行かどうかより
+        // 先に「期限を満たすか」で分ける。
+        Graph graph = new Graph()
+                // 直行だが期限を超える。
+                .add("V-LATE", "SGSIN", "USNYC", "2026-09-18T00:00:00Z",
+                        "2026-11-30T00:00:00Z")
+                // 乗り継ぎだが間に合う。
+                .add("V-A", "SGSIN", "NLRTM", "2026-09-18T00:00:00Z", "2026-09-22T00:00:00Z")
+                .add("V-B", "NLRTM", "USNYC", "2026-09-23T00:00:00Z", "2026-09-28T00:00:00Z");
+
+        List<TransitPath> found = service.findCandidates(
+                new RouteSearchSpecification(Location.of("JPTYO"), Location.of("USNYC"),
+                        DEADLINE, CargoType.GENERAL, Set.of(), Location.of("SGSIN")),
+                graph);
+
+        assertThat(voyagesOf(found.get(0))).containsExactly("V-A", "V-B");
+    }
+
+    @Test
     @DisplayName("ADR-0007: 打ち切りに当たったことは候補 0 件と区別できる")
     void reportsTruncationSeparatelyFromEmptyResult() {
         // 乗り継ぎの上限を超える経路しか無い。件数だけで判断すると「候補が無い」と

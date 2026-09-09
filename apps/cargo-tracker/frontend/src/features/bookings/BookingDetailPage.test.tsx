@@ -42,6 +42,10 @@ function booking(over: Record<string, unknown> = {}) {
     confirmedAt: null,
     trackingNumber: null,
     trackingIssuedAt: null,
+    routeOverdueDays: null,
+    lastHandlingUnLocode: null,
+    lastHandlingAt: null,
+    lastHandlingOffRoute: false,
     updatedAt: null,
     updatedBy: null,
     ...over,
@@ -890,5 +894,70 @@ describe('S22 旅程は設計し直しでも残る（US10・US12）', () => {
 
     await screen.findByRole('heading', { name: '予約 B-2026-0903-0001' });
     expect(screen.queryByRole('heading', { name: '旅程' })).not.toBeInTheDocument();
+  });
+});
+
+function respond(body: unknown) {
+  return vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    new Response(JSON.stringify(body), { status: 200 }),
+  );
+}
+
+describe('S22 誤配バナー（US28 §受入基準 3・4・6）', () => {
+  const misrouted = {
+    routingStatus: 'MISROUTED',
+    lastHandlingUnLocode: 'SGSIN',
+    lastHandlingAt: '2026-09-28T00:30:00Z',
+    lastHandlingOffRoute: true,
+  };
+
+  it('検知した荷役の場所と日時、現在地が読める', async () => {
+    // **「誤配です」だけでは、営業も荷主も何が起きたか説明できない。**
+    respond(booking(misrouted));
+
+    renderDetail();
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('誤配を検知しました');
+    expect(alert).toHaveTextContent('SGSIN');
+  });
+
+  it('経路設計者には [経路を再設計] が出て、現在地起点の画面へ行ける', async () => {
+    useAuthStore.setState({
+      user: { username: 'routing01', roles: ['ROLE_ROUTING'], token: 't' },
+    });
+    respond(booking(misrouted));
+
+    renderDetail();
+
+    expect(await screen.findByRole('link', { name: '経路を再設計' }))
+      .toHaveAttribute('href', '/routing/bookings/b-1');
+  });
+
+  it('経路設計者以外には出さず、依頼済みだと伝える', async () => {
+    // **押せない操作を並べると、できることが読めなくなる。**
+    respond(booking(misrouted));
+
+    renderDetail();
+
+    expect(await screen.findByText(/経路設計者に再設計を依頼済み/)).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: '経路を再設計' })).not.toBeInTheDocument();
+  });
+
+  it('再設計で期限を超えたら、その差分が出る（US28 §6）', async () => {
+    respond(booking({ ...misrouted, routeOverdueDays: 3 }));
+
+    renderDetail();
+
+    expect(await screen.findByText(/3 日超えます/)).toBeInTheDocument();
+  });
+
+  it('誤配でなければバナーを出さない', async () => {
+    respond(booking());
+
+    renderDetail();
+
+    await screen.findByText('B-2026-0903-0001', { exact: false });
+    expect(screen.queryByText('誤配を検知しました。')).not.toBeInTheDocument();
   });
 });

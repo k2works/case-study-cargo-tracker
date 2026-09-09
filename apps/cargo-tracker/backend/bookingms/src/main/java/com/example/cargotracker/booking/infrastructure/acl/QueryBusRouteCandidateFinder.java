@@ -74,7 +74,10 @@ public class QueryBusRouteCandidateFinder implements RouteCandidateFinder {
         return new RouteCandidate(
                 dto.legs().stream().map(QueryBusRouteCandidateFinder::toLeg).toList(),
                 dto.transitDays(),
-                dto.direct());
+                dto.direct(),
+                // **超過日数は routingms が数える**（US28 §受入基準 6）。ここで
+                // 数え直すと、期限の比べ方が 2 か所になる。
+                dto.overdueDays());
     }
 
     private static Leg toLeg(RouteCandidateDto.LegDto leg) {

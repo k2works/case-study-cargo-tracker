@@ -22,7 +22,7 @@ public interface TrackingSummaryMapper {
             + "destination_unlocode, cargo_type, transport_status, current_unlocode, "
             + "estimated_arrival, initialized_at, last_status_changed_at, projected_at, "
             + "last_event_id, open_exception_count, urgent_exception_count, "
-            + "status_before_exception";
+            + "status_before_exception, misrouted";
 
     /**
      * 追跡を作る（US14）。
@@ -173,8 +173,33 @@ public interface TrackingSummaryMapper {
             int urgentExceptionCount,
             // 例外前の状態。画面が「解決すると何に戻るか」を出すために持つ。
             // 戻る先そのものは集約が覚えている（不変条件 5）。
-            String statusBeforeException) {
+            String statusBeforeException,
+            // 誤配として扱っているか（US28）。バナー（S22・S41）が読む。
+            // **状態（MISROUTED）とは別に持つ**——例外の対応中は状態が
+            // EXCEPTION に退避するが、誤配であることは変わらない。
+            boolean misrouted) {
     }
+
+    /**
+     * 誤配として扱う（US28 §受入基準 2）。
+     *
+     * <p><b>状態とは別に立てる。</b> 例外の対応中は状態が {@code EXCEPTION} へ
+     * 退避するが、誤配であることは変わらない。状態から導くと、バナーが
+     * 例外の起票と同時に消える。</p>
+     */
+    @org.apache.ibatis.annotations.Update(
+            "UPDATE tracking_summary SET misrouted = TRUE, current_unlocode = #{unLocode}, "
+            + "projected_at = #{projectedAt} WHERE tracking_number = #{trackingNumber}")
+    int markMisrouted(@Param("trackingNumber") String trackingNumber,
+            @Param("unLocode") String unLocode,
+            @Param("projectedAt") Instant projectedAt);
+
+    /** 誤配が解けた（再設計で経路が確定した）。 */
+    @org.apache.ibatis.annotations.Update(
+            "UPDATE tracking_summary SET misrouted = FALSE, projected_at = #{projectedAt} "
+            + "WHERE tracking_number = #{trackingNumber}")
+    int clearMisrouted(@Param("trackingNumber") String trackingNumber,
+            @Param("projectedAt") Instant projectedAt);
 
     /** 予定の旅程の 1 区間。 */
     record TrackingLegRow(

@@ -117,7 +117,7 @@ UI 設計で CQRS / Event Sourcing に固有なのは **「反映中」という
 - ログアウト（US27）：ヘッダの `[ログアウト]` から `/logout`（S03）へ。認証ストアと `sessionStorage` を破棄し、authms にログアウトを記録してから S00 へ戻す。業務画面はキャッシュ不可（`Cache-Control: no-store`）にし、ブラウザバックで戻っても `RequireRole` が S00 へ送る
 - ログイン失敗は理由を問わず同一メッセージ
 - 画面の表示制御と API の実行可否は同一の RBAC マトリクスに従う。最終的に守るのはサーバー側の `403`
-- **荷主・荷受人への通知の送信基盤（メール等）は本リリースのスコープ外**。通知は現行の手作業（電話・メール）で行い、システムは通知した事実（いつ・誰に・何を）だけを `ShipperNotifiedEvent` に記録して S22・S46 の通知履歴に出す。US12・US14・US19・US23・US29・US30 の「通知される」は、この記録と手作業の組で満たす。**US19（遅延例外）は trackingms 側の `ExceptionShipperNotifiedEvent` に記録し、S41 の履歴（`tracking_event`）に出す**——`ShipperNotifiedEvent` は bookingms の内部イベントで契約ではなく、trackingms から発行も購読もできない
+- **荷主・荷受人への通知の送信基盤（メール等）は本リリースのスコープ外**。通知は現行の手作業（電話・メール）で行い、システムは通知した事実（いつ・誰に・何を）だけを `ShipperNotifiedEvent` に記録して S22・S46 の通知履歴に出す。US12・US14・US19・**US20**・US23・US29・US30 の「通知される」は、この記録と手作業の組で満たす。**US19・US20（例外）は trackingms 側の `ExceptionShipperNotifiedEvent` に記録し、S41 の履歴（`tracking_event`）に出す**——`ShipperNotifiedEvent` は bookingms の内部イベントで契約ではなく、trackingms から発行も購読もできない。**US20 §受入基準 3 の「管理職への escalation 通知」も同じ扱い**で、`ExceptionEscalatedEvent` に記録し、**読み口は S42（例外一覧）を `ROLE_ADMIN` にも開いて緊急を先頭に出すこと**で満たす（IT11）。緊急なのに知らせた記録が無い行は「未連絡」として一覧で見分けられる——**記録だけを積んで読み口を出さないと、受入基準の満たし方そのものが成り立たない**（IT10 で 2 回踏んだ）
 
 ## 画面一覧
 
@@ -143,7 +143,7 @@ UI 設計で CQRS / Event Sourcing に固有なのは **「反映中」という
 | S34 | 航海詳細 | `/voyages/:no` | 経路設計 | UC19・UC05 | 寄港地の順序・対応貨物種別・最終更新・キャンセルの理由。ここから更新とキャンセルに入る。**サイドナビには載せない**（一覧から開く） |
 | S40 | 追跡一覧 | `/tracking` | 追跡、荷主（自社のみ） | UC15 | ポーリング |
 | S41 | 追跡詳細・管理 | `/tracking/:trackingNumber` | 追跡、荷主（自社のみ） | UC14・UC15・UC16、US28 | ポーリング。手動更新・例外は楽観的更新。誤配時は S31 へ |
-| S42 | 例外一覧 | `/tracking/exceptions` | 追跡 | UC16 | 紛失 → 残日数が少ない順。ポーリング |
+| S42 | 例外一覧 | `/tracking/exceptions` | 追跡、**管理者**（US20 §3 の escalation の読み口。IT11） | UC16 | 紛失 → 残日数が少ない順。ポーリング。予約番号と「未連絡」の印を出す。`[解決済も表示]` で決着したものも読める（US28 §8 の根拠参照） |
 | S43 | 例外起票 | `/tracking/:trackingNumber/exceptions/new` | 追跡 | UC16 | 登録直後の詳細 |
 | S44 | 公開追跡照会 | `/track/:trackingNumber` | 認証不要 | UC15（US18） | ポーリング。見つからないときは案内と問い合わせの出口 |
 | S45 | 自社予約一覧 | `/shipper/bookings` | 荷主 | UC15 | ポーリング |
@@ -233,7 +233,7 @@ admin --> u
 | 航海スケジュール | S32 | 経路設計 |
 | 航海登録 | S33 | 経路設計 |
 | 追跡 | S40 | 追跡、荷主 |
-| 例外 | S42 | 追跡 |
+| 例外 | S42 | 追跡、管理者 |
 | 荷役 | S51 | 荷役、追跡 |
 | 通関 | S52 | 荷役、追跡 |
 | 請求 | S60 | 経理 |

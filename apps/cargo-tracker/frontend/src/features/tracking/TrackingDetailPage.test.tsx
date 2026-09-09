@@ -23,6 +23,7 @@ function tracking(over: Record<string, unknown> = {}) {
     // **サーバは手で選べる先だけを返す**（誤配・例外発生は荷役と例外の起票が決める）。
     // モックを本物より甘くしない。
     nextStatuses: ['RECEIVED'],
+    misrouted: false,
     ...over,
   };
 }
@@ -462,5 +463,42 @@ describe('S41 例外の対応（US19 §3・§4 / IT10 T7）', () => {
       expect(body.means).toBe('電話');
       expect(body.summary).toBe('3 日遅れる見込み');
     });
+  });
+});
+
+describe('S41 誤配バナー（US28 §受入基準 3・4）', () => {
+  it('誤配なら現在地つきのバナーを出す', async () => {
+    // **状態から導かない。** 例外の対応中は状態が「例外発生」へ退避するが、
+    // 誤配であることは変わらない。
+    respondWith(tracking({
+      misrouted: true, status: 'EXCEPTION', statusLabel: '例外発生', nextStatuses: [],
+      currentUnLocode: 'SGSIN',
+    }));
+
+    renderDetail();
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('誤配を検知しました');
+    expect(alert).toHaveTextContent('SGSIN');
+  });
+
+  it('経路設計者には [経路を再設計] を出す', async () => {
+    useAuthStore.setState({
+      user: { username: 'routing01', roles: ['ROLE_ROUTING'], token: 't' },
+    });
+    respondWith(tracking({ misrouted: true }));
+
+    renderDetail();
+
+    expect(await screen.findByRole('link', { name: '経路を再設計' })).toBeInTheDocument();
+  });
+
+  it('誤配でなければバナーを出さない', async () => {
+    respondWith(tracking());
+
+    renderDetail();
+
+    await screen.findByText('未受領');
+    expect(screen.queryByText('誤配を検知しました。')).not.toBeInTheDocument();
   });
 });

@@ -25,10 +25,14 @@ export const NAVIGATION: readonly NavigationItem[] = [
   // 追跡（S40）は追跡管理者と荷主。**荷主を外すと自社の貨物すら追えない**
   // （ui_design.md:234「追跡 | S40 | 追跡、荷主」）。
   { path: '/tracking', label: '追跡', allow: ['ROLE_TRACKER', 'ROLE_SHIPPER'] },
-  // 例外（S42）は追跡管理者だけ（ui_design.md の到達性の表）。
+  // 例外（S42）は追跡管理者と**管理者**（ui_design.md の到達性の表 / IT11）。
   // **荷主には出さない**——起きていることは S41 で読めるが、対応するのは
   // 追跡管理者の仕事で、一覧を出しても打てる手が無い。
-  { path: '/tracking/exceptions', label: '例外', allow: ['ROLE_TRACKER'] },
+  //
+  // **管理者を入れるのは US20 §受入基準 3 の読み口として。** 紛失を起票すると
+  // 上位者へ知らせた記録が残るが、その記録を読む場所が無ければ「知らせた」
+  // ことにならない。この一覧が緊急を先頭に出す。
+  { path: '/tracking/exceptions', label: '例外', allow: ['ROLE_TRACKER', 'ROLE_ADMIN'] },
   // 荷役（S51）は荷役と追跡の両方（ui_design.md:236）。追跡管理者は
   // 問い合わせを受けたときに現場の記録を確かめる。
   { path: '/handling', label: '荷役', allow: ['ROLE_HANDLER', 'ROLE_TRACKER'] },

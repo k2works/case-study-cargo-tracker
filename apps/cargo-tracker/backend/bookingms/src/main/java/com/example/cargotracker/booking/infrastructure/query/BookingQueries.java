@@ -270,6 +270,15 @@ public final class BookingQueries {
             // 追跡番号と発行日時（US14）。未発行なら null。
             String trackingNumber,
             Instant trackingIssuedAt,
+            // 誤配の再設計で到着期限を何日超えたか（US28 §受入基準 6）。
+            // **null は「誤配になっていない」、0 は「組み直して間に合った」。**
+            // 画面はこの差分を出し、荷主への通知内容にも含める。
+            Integer routeOverdueDays,
+            // 検知した荷役（US28 §受入基準 3）。誤配のバナーが「いつ・どこで
+            // 予定外の荷役が記録されたか」と現在地を出すために要る。
+            String lastHandlingUnLocode,
+            Instant lastHandlingAt,
+            boolean lastHandlingOffRoute,
             // 最終更新（US32）。変更内容の履歴は Event Store が持つ。
             Instant updatedAt,
             String updatedBy) {

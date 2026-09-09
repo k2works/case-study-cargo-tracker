@@ -11,11 +11,12 @@
     <insert id="insert">
         INSERT INTO tracking_exception (
             exception_id, tracking_number, exception_type, response_status, urgent,
-            unlocode, description, resolution, occurred_at, resolved_at, projected_at
+            unlocode, description, resolution, booking_id, occurred_at, resolved_at,
+            projected_at
         ) VALUES (
             #{exceptionId}, #{trackingNumber}, #{exceptionType}, #{responseStatus}, #{urgent},
-            #{unlocode}, #{description}, #{resolution}, #{occurredAt}, #{resolvedAt},
-            #{projectedAt}
+            #{unlocode}, #{description}, #{resolution}, #{bookingId}, #{occurredAt},
+            #{resolvedAt}, #{projectedAt}
         )
         ON CONFLICT (exception_id) DO NOTHING
     </insert>

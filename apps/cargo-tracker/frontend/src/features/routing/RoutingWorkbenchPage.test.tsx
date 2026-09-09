@@ -100,6 +100,7 @@ describe('S31 経路設計ワークベンチ', () => {
                 '2026-09-24T18:00:00Z')],
               transitDays: 14,
               direct: true,
+              overdueDays: 0,
             },
             {
               legs: [
@@ -108,6 +109,7 @@ describe('S31 経路設計ワークベンチ', () => {
               ],
               transitDays: 15,
               direct: false,
+              overdueDays: 0,
             },
           ],
           truncated: false, condition: NO_CONDITION,
@@ -232,6 +234,7 @@ describe('S31 経路設計ワークベンチ', () => {
                 '2026-09-24T18:00:00Z')],
               transitDays: 14,
               direct: true,
+              overdueDays: 0,
             },
           ],
           truncated: true, condition: NO_CONDITION,
@@ -263,6 +266,7 @@ describe('S31 経路設計ワークベンチ', () => {
                     '2026-09-24T18:00:00Z')],
                   transitDays: 14,
                   direct: true,
+                  overdueDays: 0,
                 },
               ],
               truncated: false, condition: NO_CONDITION,
@@ -310,6 +314,7 @@ describe('S31 経路の確定（US09）', () => {
                   ],
                   transitDays: 14,
                   direct: true,
+                  overdueDays: 0,
                 },
               ],
               truncated: false, condition: NO_CONDITION,
@@ -377,6 +382,7 @@ describe('S31 経路の確定（US09）', () => {
                   ],
                   transitDays: 14,
                   direct: true,
+                  overdueDays: 0,
                 },
               ],
               truncated: false, condition: NO_CONDITION,
@@ -569,5 +575,91 @@ describe('S31 経路の確定（US09）', () => {
 
     await screen.findByLabelText('到着期限');
     expect(screen.queryByRole('button', { name: '営業へ差し戻す' })).not.toBeInTheDocument();
+  });
+});
+
+describe('S31 誤配の再設計（US28 §受入基準 6）', () => {
+  function overdueResponse() {
+    return new Response(
+      JSON.stringify({
+        candidates: [
+          {
+            legs: [leg('V-A', 'SGSIN', 'USNYC', '2026-11-01T09:00:00Z',
+              '2026-11-20T18:00:00Z')],
+            transitDays: 19,
+            direct: true,
+            overdueDays: 0,
+          },
+          {
+            legs: [leg('V-LATE', 'SGSIN', 'USNYC', '2026-11-05T09:00:00Z',
+              '2026-12-04T18:00:00Z')],
+            transitDays: 29,
+            direct: true,
+            overdueDays: 3,
+          },
+        ],
+        truncated: false, condition: NO_CONDITION,
+      }),
+      { status: 200 },
+    );
+  }
+
+  it('期限を超える候補も出て、超過日数が読める', async () => {
+    // **候補を隠すと 0 件になり、貨物が動かせなくなる。**
+    mockApi(overdueResponse());
+
+    renderWorkbench();
+
+    expect(await screen.findByText('3 日超過')).toBeInTheDocument();
+    expect(screen.getByText('期限内')).toBeInTheDocument();
+  });
+
+  it('超過候補の確定は、超過日数を再掲して 1 度確かめる', async () => {
+    // **押した本人が超過に気づかないまま確定すると、荷主への説明が
+    // 「なぜ遅れるのか」から始まらない。**
+    mockApi(overdueResponse());
+
+    renderWorkbench();
+
+    await userEvent.click(await screen.findByRole('radio', { name: '候補 2' }));
+    await userEvent.click(screen.getByRole('button', { name: 'この経路で確定' }));
+
+    const dialog = await screen.findByRole('alertdialog', { name: '期限超過の確認' });
+    expect(dialog).toHaveTextContent('3 日');
+  });
+
+  it('期限内の候補では確認を挟まない', async () => {
+    mockApi(overdueResponse());
+
+    renderWorkbench();
+
+    await userEvent.click(await screen.findByRole('radio', { name: '候補 1' }));
+    await userEvent.click(screen.getByRole('button', { name: 'この経路で確定' }));
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  it('超過の候補が無ければ、期限超過の列そのものを出さない', async () => {
+    // **常に「期限内」と並ぶ列は、読む人の目を無駄に使う。**
+    mockApi(
+      new Response(
+        JSON.stringify({
+          candidates: [{
+            legs: [leg('V-MOL-001', 'JPTYO', 'USNYC', '2026-09-10T09:00:00Z',
+              '2026-09-24T18:00:00Z')],
+            transitDays: 14,
+            direct: true,
+            overdueDays: 0,
+          }],
+          truncated: false, condition: NO_CONDITION,
+        }),
+        { status: 200 },
+      ),
+    );
+
+    renderWorkbench();
+
+    await screen.findByTestId('candidate-1');
+    expect(screen.queryByRole('columnheader', { name: '期限超過' })).not.toBeInTheDocument();
   });
 });

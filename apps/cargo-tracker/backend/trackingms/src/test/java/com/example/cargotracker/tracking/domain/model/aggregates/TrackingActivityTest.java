@@ -7,6 +7,7 @@ import com.example.cargotracker.shared.contract.event.TrackingInitializedEvent;
 import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.shared.domain.error.IllegalTransition;
 import com.example.cargotracker.shared.contract.event.CargoDeliveredEvent;
+import com.example.cargotracker.shared.contract.event.CargoDeliveryRevertedEvent;
 import com.example.cargotracker.tracking.domain.model.commands.AdvanceTrackingCommand;
 import com.example.cargotracker.tracking.domain.model.commands.NotifyShipperOfExceptionCommand;
 import com.example.cargotracker.tracking.domain.model.commands.RegisterTrackingExceptionCommand;
@@ -14,6 +15,9 @@ import com.example.cargotracker.tracking.domain.model.commands.ResolveTrackingEx
 import com.example.cargotracker.tracking.domain.model.commands.StartExceptionResponseCommand;
 import com.example.cargotracker.tracking.domain.model.events.ExceptionResponseStartedEvent;
 import com.example.cargotracker.tracking.domain.model.events.ExceptionShipperNotifiedEvent;
+import com.example.cargotracker.tracking.domain.model.events.CargoMisroutedEvent;
+import com.example.cargotracker.tracking.domain.model.events.DeferredHandlingAppliedEvent;
+import com.example.cargotracker.tracking.domain.model.events.HandlingDeferredEvent;
 import com.example.cargotracker.tracking.domain.model.events.HandlingNotAppliedEvent;
 import com.example.cargotracker.tracking.domain.model.events.TrackingExceptionRegisteredEvent;
 import com.example.cargotracker.tracking.domain.model.events.TrackingExceptionResolvedEvent;
@@ -289,16 +293,6 @@ class TrackingActivityTest {
     }
 
     @Test
-    @DisplayName("US28 の下地: 予定外の荷役は誤配にする")
-    void marksMisroutedOnOffRouteHandling() {
-        fixture.given().event(initialized())
-                .when().command(advance("RECEIVE", false, true))
-                .then().events(new TransportStatusUpdatedEvent(NUMBER,
-                        TransportStatus.NOT_RECEIVED, TransportStatus.MISROUTED,
-                        StatusUpdateSource.HANDLING, "act-1", "JPTYO", HANDLED, "handler01", NOW));
-    }
-
-    @Test
     @DisplayName("不変条件 8: 知らない追跡番号の荷役では止まらない")
     void doesNotFailForUnknownTracking() {
         // **例外にすると Event Processor が止まり、後続の荷役まで届かなくなる。**
@@ -471,24 +465,6 @@ class TrackingActivityTest {
     }
 
     @Test
-    @DisplayName("引取の取り消しは断る（精算と予約の引取済が残ったまま追跡だけ戻る）")
-    void refusesToRevertADeliveredHandling() {
-        // **BC をまたいだ状態が食い違い、しかも誰にも見えない。** 補償の設計
-        // （bookingms・billingms へ打ち消しを伝える）は IT11。検査できない段階で
-        // その経路を開けないという判断は、IT9 が CLAIM そのものに下したのと同じ。
-        fixture.given().events(and(received(),
-                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.RECEIVED,
-                                TransportStatus.AWAITING_CLAIM, StatusUpdateSource.HANDLING,
-                                "act-3", "USNYC", HANDLED, "handler01", NOW),
-                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.AWAITING_CLAIM,
-                                TransportStatus.DELIVERED, StatusUpdateSource.HANDLING,
-                                "act-4", "USNYC", HANDLED, "handler01", NOW)))
-                .when().command(new RevertTrackingCommand(NUMBER, "act-4", "CLAIM", "取り違え",
-                        "handler01", NOW))
-                .then().exception(BusinessRuleViolation.class);
-    }
-
-    @Test
     @DisplayName("US19 §3: 荷主へ知らせた事実を記録する（送信基盤はスコープ外）")
     void recordsShipperNotification() {
         // ShipperNotifiedEvent は bookingms の内部イベントで、ここからは
@@ -617,6 +593,43 @@ class TrackingActivityTest {
     }
 
     @Test
+    @DisplayName("引き渡し済みの取り消しは、状態を戻し**契約の打ち消しを出す**（IT11 引き継ぎ枠 A）")
+    void revertsTheDeliveryAndCompensatesTheContract() {
+        // **断るのをやめるには、購読側へ打ち消しを伝える手立てが要る**（IT10 で塞いだ）。
+        // 追跡だけ巻き戻して予約が引取済のままだと、営業には配送完了、荷役には
+        // 陸揚げ待ちに見える——BC をまたいだ食い違いが、誰にも見えないまま残る。
+        fixture.given().events(initialized(),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.NOT_RECEIVED,
+                                TransportStatus.AWAITING_CLAIM, StatusUpdateSource.HANDLING,
+                                "act-1", "USNYC", HANDLED, "handler01", NOW),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.AWAITING_CLAIM,
+                                TransportStatus.DELIVERED, StatusUpdateSource.HANDLING, "act-2",
+                                "USNYC", HANDLED, "handler01", NOW))
+                .when().command(new RevertTrackingCommand(NUMBER, "act-2", "CLAIM", "取り違え",
+                        "handler01", NOW))
+                .then().events(
+                        new TransportStatusRevertedEvent(NUMBER, TransportStatus.DELIVERED,
+                                TransportStatus.AWAITING_CLAIM, "CLAIM", "取り違え", "handler01",
+                                NOW),
+                        new CargoDeliveryRevertedEvent(NUMBER, "b-1", NOW, "取り違え"));
+    }
+
+    @Test
+    @DisplayName("引き渡し以外の取り消しでは契約の打ち消しを出さない")
+    void doesNotCompensateWhenTheRevertedHandlingIsNotTheDelivery() {
+        // **打ち消しは「引取済から出るとき」だけ。** 荷役の取り消しのたびに出すと、
+        // 精算は始まってもいない予約の取り消しを受け取る。
+        fixture.given().events(initialized(),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.NOT_RECEIVED,
+                                TransportStatus.RECEIVED, StatusUpdateSource.HANDLING, "act-1",
+                                "JPTYO", HANDLED, "handler01", NOW))
+                .when().command(new RevertTrackingCommand(NUMBER, "act-1", "RECEIVE", "取り違え",
+                        "handler01", NOW))
+                .then().events(new TransportStatusRevertedEvent(NUMBER, TransportStatus.RECEIVED,
+                        TransportStatus.NOT_RECEIVED, "RECEIVE", "取り違え", "handler01", NOW));
+    }
+
+    @Test
     @DisplayName("手動更新の分は荷役の取り消しで戻さない（別の操作）")
     void doesNotRevertManualUpdates() {
         fixture.given().events(initialized(),
@@ -629,7 +642,7 @@ class TrackingActivityTest {
     }
 
     @Test
-    @DisplayName("例外の対応中は荷役でも進めない（解決は例外の側で行う）")
+    @DisplayName("例外の対応中は荷役でも進めない（預かって解決後に適用する）")
     void doesNotAdvanceWhileAnExceptionIsOpen() {
         fixture.given().events(initialized(),
                         new TransportStatusUpdatedEvent(NUMBER, TransportStatus.NOT_RECEIVED,
@@ -639,9 +652,147 @@ class TrackingActivityTest {
                                 TransportStatus.EXCEPTION, StatusUpdateSource.MANUAL, null, "JPTYO",
                                 HANDLED, "tracker01", NOW))
                 .when().command(advance("LOAD", false, false))
-                // 進めないが、届いた荷役は履歴に残す（M6）。解決は例外の側で行う。
-                .then().events(new HandlingNotAppliedEvent(NUMBER, "act-1", "LOAD", "JPTYO",
-                        TransportStatus.EXCEPTION, TransportStatus.LOADED, HANDLED, NOW));
+                // 進めないが、届いた荷役は**預かる**（IT11 引き継ぎ枠 B）。捨てると、
+                // 解決後の状態が事実と食い違ったまま残る。
+                .then().events(new HandlingDeferredEvent(NUMBER, "act-1", "LOAD", "JPTYO",
+                        false, false, TransportStatus.EXCEPTION, TransportStatus.LOADED,
+                        "handler01", HANDLED, NOW));
+    }
+
+    // ---- IT11 US28: 誤配の自動起票 ----
+
+    @Test
+    @DisplayName("US28 §2: 予定外の荷役で誤配になり、例外が**自動で起票される**")
+    void autoReportsMisrouteOnOffRouteHandling() {
+        // **誤配は荷役が決める。** 手で起票できないのはそのため
+        // （ExceptionType#reportableByHand）。
+        fixture.given().event(initialized())
+                .when().command(advance("act-9", "UNLOAD", false, true))
+                .then().success()
+                .events(
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.NOT_RECEIVED,
+                                TransportStatus.MISROUTED, StatusUpdateSource.HANDLING, "act-9",
+                                "JPTYO", HANDLED, "handler01", NOW),
+                        new CargoMisroutedEvent(NUMBER, "b-1", "act-9", "JPTYO", HANDLED, NOW),
+                        new TrackingExceptionRegisteredEvent(NUMBER, "MIS-act-9",
+                                ExceptionType.MISROUTE.name(), HANDLED, "JPTYO",
+                                "予定ルート外の JPTYO で UNLOAD が記録されました",
+                                false, TransportStatus.MISROUTED, "handler01", NOW),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.MISROUTED,
+                                TransportStatus.EXCEPTION, StatusUpdateSource.EXCEPTION, null,
+                                "JPTYO", HANDLED, "handler01", NOW));
+    }
+
+    @Test
+    @DisplayName("US28 §2: 取り消したあと同じ荷役が再送されても、例外は増えない")
+    void doesNotDuplicateMisrouteExceptionOnRedelivery() {
+        // **取り消しは反映済みの印を外す**ので、同じ荷役がもう一度届きうる。
+        // 起票済みの例外を重ねると、一覧が同じ貨物で埋まる。
+        fixture.given().events(initialized(),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.NOT_RECEIVED,
+                                TransportStatus.MISROUTED, StatusUpdateSource.HANDLING, "act-9",
+                                "JPTYO", HANDLED, "handler01", NOW),
+                        new CargoMisroutedEvent(NUMBER, "b-1", "act-9", "JPTYO", HANDLED, NOW),
+                        new TrackingExceptionRegisteredEvent(NUMBER, "MIS-act-9",
+                                ExceptionType.MISROUTE.name(), HANDLED, "JPTYO", "予定外",
+                                false, TransportStatus.MISROUTED, "handler01", NOW),
+                        new TransportStatusRevertedEvent(NUMBER, TransportStatus.MISROUTED,
+                                TransportStatus.NOT_RECEIVED, "UNLOAD", "取り違え", "handler01",
+                                NOW))
+                .when().command(advance("act-9", "UNLOAD", false, true))
+                .then().success()
+                .events(
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.NOT_RECEIVED,
+                                TransportStatus.MISROUTED, StatusUpdateSource.HANDLING, "act-9",
+                                "JPTYO", HANDLED, "handler01", NOW),
+                        new CargoMisroutedEvent(NUMBER, "b-1", "act-9", "JPTYO", HANDLED, NOW));
+    }
+
+    // ---- IT11 引き継ぎ枠 B: 例外の対応中に届いた荷役を、解決後に適用する ----
+
+    @Test
+    @DisplayName("例外の対応中に届いた荷役は**預かる**（捨てない・適用もしない）")
+    void defersHandlingWhileAnExceptionIsOpen() {
+        // **遷移表が許さない荷役とは意味が違う。** 順序としては正しく、ただ状態が
+        // 例外へ退避しているだけなので、解決したら適用しなければならない。
+        fixture.given().events(and(received(), registered(ExceptionType.DELAY),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.RECEIVED,
+                                TransportStatus.EXCEPTION, StatusUpdateSource.EXCEPTION,
+                                null, "SGSIN", OCCURRED, "tracker01", NOW)))
+                .when().command(advance("act-9", "LOAD", false, false))
+                .then().events(new HandlingDeferredEvent(NUMBER, "act-9", "LOAD", "JPTYO",
+                        false, false, TransportStatus.EXCEPTION, TransportStatus.LOADED,
+                        "handler01", HANDLED, NOW));
+    }
+
+    @Test
+    @DisplayName("解決すると、預かった荷役が**適用される**（IT11 引き継ぎ枠 B）")
+    void appliesDeferredHandlingsOnResolution() {
+        // IT10 までは預かりも適用もせず捨てていた——船に積んだ貨物が
+        // 解決後も「受領済」に見えたまま残る。
+        fixture.given().events(and(received(), registered(ExceptionType.DELAY),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.RECEIVED,
+                                TransportStatus.EXCEPTION, StatusUpdateSource.EXCEPTION,
+                                null, "SGSIN", OCCURRED, "tracker01", NOW),
+                        new HandlingDeferredEvent(NUMBER, "act-9", "LOAD", "JPTYO", false, false,
+                                TransportStatus.EXCEPTION, TransportStatus.LOADED, "handler01",
+                                HANDLED, NOW)))
+                .when().command(new ResolveTrackingExceptionCommand(NUMBER, "ex-1",
+                        "代替便に振り替えました", "tracker01"))
+                .then().events(
+                        new TrackingExceptionResolvedEvent(NUMBER, "ex-1",
+                                "代替便に振り替えました", "tracker01", NOW),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.EXCEPTION,
+                                TransportStatus.RECEIVED, StatusUpdateSource.RESOLVED,
+                                null, null, NOW, "tracker01", NOW),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.RECEIVED,
+                                TransportStatus.LOADED, StatusUpdateSource.HANDLING, "act-9",
+                                "JPTYO", HANDLED, "handler01", NOW),
+                        new DeferredHandlingAppliedEvent(NUMBER, "act-9"));
+    }
+
+    @Test
+    @DisplayName("預かった荷役が解決後も遷移表で許されないなら、適用せず履歴に残す")
+    void keepsDeferredHandlingUnappliedWhenStillInvalid() {
+        // **預かったからといって必ず適用するのではない。** 戻った先から進めない
+        // 荷役は、順序が入れ替わって届いたものである。
+        fixture.given().events(and(received(), registered(ExceptionType.DELAY),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.RECEIVED,
+                                TransportStatus.EXCEPTION, StatusUpdateSource.EXCEPTION,
+                                null, "SGSIN", OCCURRED, "tracker01", NOW),
+                        new HandlingDeferredEvent(NUMBER, "act-9", "CLAIM", "USNYC", false, false,
+                                TransportStatus.EXCEPTION, TransportStatus.DELIVERED, "handler01",
+                                HANDLED, NOW)))
+                .when().command(new ResolveTrackingExceptionCommand(NUMBER, "ex-1",
+                        "代替便に振り替えました", "tracker01"))
+                .then().events(
+                        new TrackingExceptionResolvedEvent(NUMBER, "ex-1",
+                                "代替便に振り替えました", "tracker01", NOW),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.EXCEPTION,
+                                TransportStatus.RECEIVED, StatusUpdateSource.RESOLVED,
+                                null, null, NOW, "tracker01", NOW),
+                        new HandlingNotAppliedEvent(NUMBER, "act-9", "CLAIM", "USNYC",
+                                TransportStatus.RECEIVED, TransportStatus.DELIVERED, HANDLED, NOW),
+                        new DeferredHandlingAppliedEvent(NUMBER, "act-9"));
+    }
+
+    @Test
+    @DisplayName("未解決の例外が残っているあいだは、預かった荷役も適用しない")
+    void doesNotApplyDeferredHandlingsWhileOtherExceptionsAreOpen() {
+        fixture.given().events(and(received(), registered(ExceptionType.DELAY),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.RECEIVED,
+                                TransportStatus.EXCEPTION, StatusUpdateSource.EXCEPTION,
+                                null, "SGSIN", OCCURRED, "tracker01", NOW),
+                        new TrackingExceptionRegisteredEvent(NUMBER, "ex-2",
+                                ExceptionType.DAMAGE.name(), OCCURRED, "SGSIN", "外装が破れた",
+                                false, TransportStatus.EXCEPTION, "tracker01", NOW),
+                        new HandlingDeferredEvent(NUMBER, "act-9", "LOAD", "JPTYO", false, false,
+                                TransportStatus.EXCEPTION, TransportStatus.LOADED, "handler01",
+                                HANDLED, NOW)))
+                .when().command(new ResolveTrackingExceptionCommand(NUMBER, "ex-1",
+                        "代替便に振り替えました", "tracker01"))
+                .then().events(new TrackingExceptionResolvedEvent(NUMBER, "ex-1",
+                        "代替便に振り替えました", "tracker01", NOW));
     }
 
     @Test

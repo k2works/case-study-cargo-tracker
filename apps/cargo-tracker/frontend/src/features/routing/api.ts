@@ -254,6 +254,13 @@ export interface RouteCandidateView {
   readonly legs: readonly RouteLegView[];
   readonly transitDays: number;
   readonly direct: boolean;
+  /**
+   * 到着期限を何日超えるか（US28 §6）。通常の設計では必ず 0。
+   *
+   * <p><b>誤配の再設計でだけ 0 より大きくなる。</b> 現在地からでは間に合わない
+   * のが普通で、候補を隠すと 0 件になり貨物が動かせなくなる。</p>
+   */
+  readonly overdueDays: number;
 }
 
 export interface RouteLegView {

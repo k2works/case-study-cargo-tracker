@@ -22,6 +22,8 @@ function exceptionItem(over: Record<string, unknown> = {}) {
     estimatedArrival: '2026-09-24',
     transportStatus: 'EXCEPTION',
     transportStatusLabel: '例外発生',
+    bookingId: 'B-2026-0902-004',
+    escalatedAt: null,
     ...over,
   };
 }
@@ -111,6 +113,81 @@ describe('S42 例外一覧（US19 §5）', () => {
     renderList();
 
     expect(await screen.findByText('緊急')).toBeInTheDocument();
+  });
+
+  it('予約番号が出る（電話は「A 社の予約の件で」から始まる）', async () => {
+    respondByUrl({ '/tracking/trackings/exceptions': { items: [exceptionItem()] } });
+
+    renderList();
+
+    expect(await screen.findByText('B-2026-0902-004')).toBeInTheDocument();
+  });
+
+  it('緊急なのに上位者へ知らせていない例外が見分けられる（US20 §3）', async () => {
+    // **知らせた事実が無い緊急は、まだ誰にも伝わっていない。** 一覧で
+    // 見分けられないと、緊急の印だけが増えて誰も動かない。
+    respondByUrl({
+      '/tracking/trackings/exceptions': {
+        items: [exceptionItem({ urgent: true, escalatedAt: null })],
+      },
+    });
+
+    renderList();
+
+    expect(await screen.findByText('未連絡')).toBeInTheDocument();
+  });
+
+  it('知らせ済みの緊急には未連絡を出さない', async () => {
+    respondByUrl({
+      '/tracking/trackings/exceptions': {
+        items: [exceptionItem({ urgent: true, escalatedAt: '2026-09-20T03:00:00Z' })],
+      },
+    });
+
+    renderList();
+
+    expect(await screen.findByText('緊急')).toBeInTheDocument();
+    expect(screen.queryByText('未連絡')).not.toBeInTheDocument();
+  });
+
+  it('解決済も表示に切り替えると、解決済を含めて問い合わせる（US28 §8）', async () => {
+    const urls: string[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      urls.push(String(input));
+      return new Response(JSON.stringify({ items: [exceptionItem()] }), { status: 200 });
+    });
+
+    renderList();
+    await screen.findByText('B-2026-0902-004');
+    await userEvent.click(screen.getByLabelText('解決済も表示する'));
+
+    await vi.waitFor(() => {
+      expect(urls.some((url) => url.includes('includeResolved=true'))).toBe(true);
+    });
+  });
+
+  it('管理者には S41・S43 へのリンクを出さない（開けない場所へ誘わない）', async () => {
+    // **共有画面のリンクもロールで出し分ける。** 管理者は読む側で、
+    // 追跡詳細と起票は開けない。リンクを出すと 403 に当たる。
+    useAuthStore.setState({
+      user: { username: 'admin01', roles: ['ROLE_ADMIN'], token: 't' },
+    });
+    respondByUrl({ '/tracking/trackings/exceptions': { items: [exceptionItem()] } });
+
+    renderList();
+
+    expect(await screen.findByText('TRK-8K2QX7M4RB')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'TRK-8K2QX7M4RB' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: '例外を起票' })).not.toBeInTheDocument();
+  });
+
+  it('一覧の行から例外を起票できる（IT10 レビュー N10）', async () => {
+    respondByUrl({ '/tracking/trackings/exceptions': { items: [exceptionItem()] } });
+
+    renderList();
+
+    expect(await screen.findByRole('link', { name: '例外を起票' }))
+      .toHaveAttribute('href', '/tracking/TRK-8K2QX7M4RB/exceptions/new');
   });
 
   it('一覧から対象の追跡へ行ける（気づく手段は次の行動へ繋ぐ）', async () => {

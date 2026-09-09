@@ -138,6 +138,9 @@ public class BookingQueryHandler {
                 row.conditionReviewResponse(), row.conditionReviewRespondedAt(),
                 parsePorts(row.routeExcludeUnlocodes()), row.routeDepartFromUnlocode(),
                 row.confirmedAt(), row.trackingNumber(), row.trackingIssuedAt(),
+                row.routeOverdueDays(),
+                row.lastHandlingUnlocode(), row.lastHandlingAt(),
+                Boolean.TRUE.equals(row.lastHandlingOffRoute()),
                 row.updatedAt(), row.updatedBy());
     }
 

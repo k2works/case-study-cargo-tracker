@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.example.cargotracker.booking.domain.model.events.BookingConfirmedEvent;
 import com.example.cargotracker.booking.domain.model.events.BookingMisroutedEvent;
 import com.example.cargotracker.booking.domain.model.events.BookingDeliveredEvent;
+import com.example.cargotracker.booking.domain.model.events.BookingDeliveryRevertedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoRoutedEvent;
 import com.example.cargotracker.booking.domain.model.events.HandlingRecordedEvent;
@@ -106,6 +107,22 @@ class CargoHandlingProjectionIT extends AbstractAxonIntegrationTest {
                 Instant.parse("2026-09-25T02:00:00Z"), "USNYC"));
 
         assertThat(booking(bookingId).bookingStatus()).isEqualTo("DELIVERED");
+    }
+
+    @Test
+    @DisplayName("引き渡しの取り消しが投影にも届く（IT11 引き継ぎ枠 A）")
+    void revertsDeliveryInTheProjection() {
+        // **記録と読み口は対で出す。** 集約が戻っても投影に書き手が無ければ、
+        // 営業の一覧は配送完了のまま残る（IT10 で同じ形の欠陥を出した）。
+        String bookingId = bookedAndTracked();
+        projection.on(new BookingDeliveredEvent(bookingId, "TRK-8K2QX7M4RB",
+                Instant.parse("2026-09-25T02:00:00Z"), "USNYC"));
+        assertThat(booking(bookingId).bookingStatus()).isEqualTo("DELIVERED");
+
+        projection.on(new BookingDeliveryRevertedEvent(bookingId, "TRK-8K2QX7M4RB",
+                "IN_TRANSIT", "取り違え"));
+
+        assertThat(booking(bookingId).bookingStatus()).isEqualTo("IN_TRANSIT");
     }
 
     @Test

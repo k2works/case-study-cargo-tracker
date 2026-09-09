@@ -160,7 +160,8 @@ public class TrackingQueryHandler {
         return new TrackingView(row.trackingNumber(), row.bookingId(), row.originUnlocode(),
                 row.destinationUnlocode(), row.cargoType(), status.name(), status.label(),
                 row.currentUnlocode(), row.estimatedArrival(),
-                row.lastStatusChangedAt(), events, trackingExceptions, nextStatuses(status));
+                row.lastStatusChangedAt(), events, trackingExceptions, nextStatuses(status),
+                row.misrouted());
     }
 
     /**
@@ -191,7 +192,7 @@ public class TrackingQueryHandler {
      */
     @QueryHandler
     public ExceptionListView handle(FindOpenExceptionsQuery query) {
-        return new ExceptionListView(exceptions.findOpen().stream()
+        return new ExceptionListView(exceptions.findOpen(query.includeResolved()).stream()
                 .map(row -> new ExceptionView(row.exceptionId(), row.trackingNumber(),
                         row.exceptionType(),
                         ExceptionType.valueOf(row.exceptionType()).label(),
@@ -200,7 +201,8 @@ public class TrackingQueryHandler {
                         row.urgent(), row.unlocode(), row.description(), row.occurredAt(),
                         // 対応で動いた期限を優先して出す（並びの根拠と揃える）。
                         row.estimatedArrival(), row.transportStatus(),
-                        TransportStatus.valueOf(row.transportStatus()).label()))
+                        TransportStatus.valueOf(row.transportStatus()).label(),
+                        row.bookingId(), row.escalatedAt()))
                 .toList());
     }
 

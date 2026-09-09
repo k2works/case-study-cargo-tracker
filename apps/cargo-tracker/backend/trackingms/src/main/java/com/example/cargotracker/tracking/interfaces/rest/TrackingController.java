@@ -201,8 +201,9 @@ public class TrackingController {
 
     /** 未解決の例外の一覧（S42 / US19 §受入基準 5）。 */
     @GetMapping("/exceptions")
-    public ResponseEntity<ExceptionListView> openExceptions() {
-        return ResponseEntity.ok(queries.query(new FindOpenExceptionsQuery(),
+    public ResponseEntity<ExceptionListView> openExceptions(
+            @RequestParam(defaultValue = "false") boolean includeResolved) {
+        return ResponseEntity.ok(queries.query(new FindOpenExceptionsQuery(includeResolved),
                 ExceptionListView.class));
     }
 

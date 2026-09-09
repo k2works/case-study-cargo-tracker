@@ -10,6 +10,7 @@ import com.example.cargotracker.booking.domain.model.commands.RequestConditionRe
 import com.example.cargotracker.booking.domain.model.commands.RequestRoutingCommand;
 import com.example.cargotracker.booking.domain.model.commands.RespondToConditionReviewCommand;
 import com.example.cargotracker.booking.domain.model.commands.MarkDeliveredCommand;
+import com.example.cargotracker.booking.domain.model.commands.RevertDeliveryCommand;
 import com.example.cargotracker.booking.domain.model.commands.RecordHandlingCommand;
 import com.example.cargotracker.booking.domain.model.commands.RevertHandlingCommand;
 import com.example.cargotracker.booking.domain.model.commands.RevertTrackingNumberCommand;
@@ -31,6 +32,7 @@ import com.example.cargotracker.booking.domain.model.commands.IssueTrackingNumbe
 import com.example.cargotracker.booking.domain.model.events.CargoRoutedEvent;
 import com.example.cargotracker.booking.domain.model.events.BookingMisroutedEvent;
 import com.example.cargotracker.booking.domain.model.events.BookingDeliveredEvent;
+import com.example.cargotracker.booking.domain.model.events.BookingDeliveryRevertedEvent;
 import com.example.cargotracker.booking.domain.model.events.HandlingRecordedEvent;
 import com.example.cargotracker.booking.domain.model.events.HandlingRevertedEvent;
 import com.example.cargotracker.booking.domain.model.events.TrackingNumberIssuedEvent;
@@ -192,7 +194,15 @@ public class Cargo {
         if (command.itinerary() == null) {
             throw new BusinessRuleViolation("旅程は必須です");
         }
-        if (!routeSpecification().isSatisfiedBy(command.itinerary(), clock.getZone())) {
+        // **誤配の再設計だけ、出発地と期限を緩める**（US28 §受入基準 4・5・6 /
+        // domain-model.md:737）。予定ルートを外れた貨物はもう出発地に無く、
+        // 現在地からでは期限に間に合わないのが普通である。断ると貨物が
+        // 動かせなくなる——超過した事実はイベントに載せて荷主への説明に使う。
+        boolean redesign = routingStatus == RoutingStatus.MISROUTED;
+        boolean satisfied = redesign
+                ? routeSpecification().isSatisfiedByRedesign(command.itinerary())
+                : routeSpecification().isSatisfiedBy(command.itinerary(), clock.getZone());
+        if (!satisfied) {
             // 不変条件 5。期限も端点も、いま集約が持っている値で見る。
             throw new BusinessRuleViolation(
                     "選んだ旅程は予約の経路仕様を満たしません（期限 " + arrivalDeadline
@@ -201,7 +211,10 @@ public class Cargo {
         }
 
         appender.append(CargoRoutedEvent.of(command.bookingId(), command.itinerary(),
-                command.assignedBy(), clock.instant()));
+                command.assignedBy(), clock.instant(),
+                redesign
+                        ? routeSpecification().overdueDays(command.itinerary(), clock.getZone())
+                        : 0));
         return command.bookingId();
     }
 
@@ -638,8 +651,37 @@ public class Cargo {
     @EventSourcingHandler
     void on(BookingDeliveredEvent event) {
         // 引取済からはキャンセルできない（不変条件 9）。次に来るのは精算だけ。
+        this.statusBeforeDelivery = bookingStatus;
         this.bookingStatus = BookingStatus.DELIVERED;
     }
+
+    /**
+     * 引き渡しの記録が取り消された（IT11 引き継ぎ枠 A）。
+     *
+     * <p><b>契約 {@code CargoDeliveryRevertedEvent} を受けて
+     * {@code BookingReactionHandler} が送る。</b> 引取は荷役の記録なので、
+     * 取り違え・二重記録で取り消されることがある。予約だけ引取済のまま残すと、
+     * 営業には配送完了、荷役には陸揚げ待ちに見える。</p>
+     *
+     * <p><b>引取済でないなら何もしない。</b> 二度届いても 1 度だけ
+     * （Event Processor は at-least-once）。</p>
+     */
+    @CommandHandler
+    public void revertDelivery(RevertDeliveryCommand command, EventAppender appender) {
+        if (bookingId == null || bookingStatus != BookingStatus.DELIVERED) {
+            return;
+        }
+        appender.append(new BookingDeliveryRevertedEvent(command.bookingId(),
+                command.trackingNumber(), statusBeforeDelivery.name(), command.reason()));
+    }
+
+    @EventSourcingHandler
+    void on(BookingDeliveryRevertedEvent event) {
+        this.bookingStatus = BookingStatus.valueOf(event.restoredStatus());
+    }
+
+    /** 引取済にする前の状態。打ち消しの戻し先。<b>導き直さない</b>。 */
+    private BookingStatus statusBeforeDelivery;
 
     /** 誤配にした荷役。取り消しで戻してよいかの判断に要る（不変条件 13）。 */
     private String misroutedBy;

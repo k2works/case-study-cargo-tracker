@@ -128,6 +128,14 @@ export interface TrackingView {
    * 画面が出してしまう（押してから断られる）。サーバが集約と同じ述語で決める。</p>
    */
   readonly nextStatuses: readonly string[];
+  /**
+   * 誤配として扱っているか（US28 §3）。
+   *
+   * <p><b>状態とは別に持つ。</b> 例外の対応中は状態が「例外発生」へ退避するが、
+   * 誤配であることは変わらない。状態から導くと、バナーが例外の起票と同時に
+   * 消えてしまう。</p>
+   */
+  readonly misrouted: boolean;
 }
 
 /** 追跡一覧（S40）。荷主には自社のぶんだけが返る（サーバがヘッダで絞る）。 */
@@ -219,6 +227,10 @@ export interface ExceptionView {
   readonly estimatedArrival: string | null;
   readonly transportStatus: string;
   readonly transportStatusLabel: string;
+  /** 予約番号。電話は「A 社の予約の件で」から始まる（IT10 レビュー N9）。 */
+  readonly bookingId: string | null;
+  /** 上位者へ知らせた時刻（US20 §3）。null なら未 escalation。 */
+  readonly escalatedAt: string | null;
 }
 
 /**
@@ -227,8 +239,14 @@ export interface ExceptionView {
  * <p><b>並びはサーバが決める。</b> 緊急が先、以降は到着期限までの残日数が
  * 少ない順（不変条件 7）。画面で並べ直すと判定が 2 か所になる。</p>
  */
-export function fetchOpenExceptions(): Promise<Pending<{ items: ExceptionView[] }>> {
-  return queryClient('/tracking/trackings/exceptions');
+export function fetchOpenExceptions(
+  options: { readonly includeResolved?: boolean } = {},
+): Promise<Pending<{ items: ExceptionView[] }>> {
+  // **既定では解決済を外す。** 決着したものが混ざると、一覧全体が
+  // 「まだ手を入れる場所」に見えなくなる。切替は US28 §8 が要る——
+  // 誤配の事実は解決後も料金調整の根拠として参照される。
+  const query = options.includeResolved ? '?includeResolved=true' : '';
+  return queryClient(`/tracking/trackings/exceptions${query}`);
 }
 
 /** 例外を起票する（S43 / US19 §1）。 */

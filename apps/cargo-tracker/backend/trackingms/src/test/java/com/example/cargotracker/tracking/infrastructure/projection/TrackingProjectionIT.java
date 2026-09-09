@@ -10,6 +10,7 @@ import com.example.cargotracker.tracking.domain.model.valueobjects.TransportStat
 import com.example.cargotracker.tracking.infrastructure.persistence.TrackingEventMapper;
 import com.example.cargotracker.tracking.domain.model.events.ExceptionResponseStartedEvent;
 import com.example.cargotracker.tracking.domain.model.events.ExceptionShipperNotifiedEvent;
+import com.example.cargotracker.tracking.domain.model.events.HandlingDeferredEvent;
 import com.example.cargotracker.tracking.domain.model.events.HandlingNotAppliedEvent;
 import com.example.cargotracker.tracking.domain.model.events.TrackingExceptionRegisteredEvent;
 import com.example.cargotracker.tracking.domain.model.events.TrackingExceptionResolvedEvent;
@@ -255,7 +256,7 @@ class TrackingProjectionIT extends AbstractAxonIntegrationTest {
         projection.on(exceptionRegistered(trackingNumber, "ex-5", ExceptionType.DELAY),
                 "evt-ex-5");
 
-        assertThat(exceptions.findOpen()).filteredOn(row -> "ex-5".equals(row.exceptionId()))
+        assertThat(exceptions.findOpen(false)).filteredOn(row -> "ex-5".equals(row.exceptionId()))
                 .hasSize(1);
         assertThat(trackings.findByTrackingNumber(trackingNumber).openExceptionCount())
                 .as("件数も二度数えない").isEqualTo(1);
@@ -361,6 +362,23 @@ class TrackingProjectionIT extends AbstractAxonIntegrationTest {
                 .contains("NOT_APPLIED");
         assertThat(trackings.findByTrackingNumber(trackingNumber).transportStatus())
                 .as("状態は動かさない").isEqualTo("NOT_RECEIVED");
+    }
+
+    @Test
+    @DisplayName("預かった荷役は反映できなかった荷役と別の行で残る（IT11 引き継ぎ枠 B）")
+    void writesDeferredHandlingSeparately() {
+        // **同じ「NOT_APPLIED」で出すと、解決すれば済むものに人が動く。**
+        String trackingNumber = "T-D-" + System.nanoTime();
+        projection.on(initialized(trackingNumber, "b-" + System.nanoTime()));
+
+        projection.on(new HandlingDeferredEvent(trackingNumber, "act-9", "LOAD", "JPTYO",
+                false, false, TransportStatus.EXCEPTION, TransportStatus.LOADED,
+                "handler01", OCCURRED, AT), "evt-df-1");
+
+        assertThat(history.findHistory(trackingNumber))
+                .extracting(TrackingEventMapper.TrackingEventRow::eventType)
+                .contains("DEFERRED")
+                .doesNotContain("NOT_APPLIED");
     }
 
     @Test

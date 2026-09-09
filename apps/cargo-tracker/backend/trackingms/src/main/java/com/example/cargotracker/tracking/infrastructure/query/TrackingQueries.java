@@ -108,7 +108,11 @@ public final class TrackingQueries {
             // その追跡の例外（US19 §受入基準 5）。**解決したものも出す**——
             // 事実は消えず、料金調整の根拠になる（不変条件 6）。
             List<TrackingExceptionView> exceptions,
-            List<String> nextStatuses) {
+            List<String> nextStatuses,
+            // 誤配として扱っているか（US28 §受入基準 3）。**状態とは別に持つ**——
+            // 例外の対応中は状態が例外発生へ退避するが、誤配であることは変わらない。
+            // 画面はこれでバナーと `[経路を再設計]` の出し分けを決める。
+            boolean misrouted) {
     }
 
     /** 追跡詳細に出す例外 1 件（S41）。 */
@@ -161,7 +165,12 @@ public final class TrackingQueries {
      * <p><b>既定で解決済を外す。</b> 決着したものが混ざると、一覧全体が
      * 「まだ手を入れる場所」に見えなくなる。</p>
      */
-    public record FindOpenExceptionsQuery() { // NOSONAR: 型が問い合わせの識別子
+    public record FindOpenExceptionsQuery(boolean includeResolved) {
+
+        /** 既定は未解決だけ（S42 の既定）。 */
+        public FindOpenExceptionsQuery() {
+            this(false);
+        }
     }
 
     /**
@@ -185,7 +194,13 @@ public final class TrackingQueries {
             // 対応で動いた期限を優先する（並びの根拠。US19 §4・不変条件 7）。
             java.time.LocalDate estimatedArrival,
             String transportStatus,
-            String transportStatusLabel) {
+            String transportStatusLabel,
+            // **電話は「A 社の予約の件で」から始まる**（IT10 レビュー N9）。
+            // 荷主名は契約（TrackingInitializedEvent）に無いので、予約番号を出す。
+            String bookingId,
+            // **上位者へ知らせたか**（US20 §受入基準 3）。null なら未 escalation。
+            // 「緊急なのに誰にも伝わっていない」を一覧で見分けられる。
+            Instant escalatedAt) {
     }
 
     /** 例外一覧（S42）。 */

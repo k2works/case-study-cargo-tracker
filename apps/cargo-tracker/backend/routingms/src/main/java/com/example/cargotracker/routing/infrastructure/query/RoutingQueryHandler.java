@@ -60,7 +60,7 @@ public class RoutingQueryHandler {
 
         return new RouteCandidatesResponse(
                 result.candidates().stream()
-                        .map(this::toDto)
+                        .map(path -> toDto(path, specification))
                         .toList(),
                 result.truncated());
     }
@@ -114,14 +114,18 @@ public class RoutingQueryHandler {
         }
     }
 
-    private RouteCandidateDto toDto(TransitPath path) {
+    private RouteCandidateDto toDto(TransitPath path, RouteSearchSpecification specification) {
         // 所要日数は切り上げる。13 時間の航海を「0 日」と出すと、届かないように読める。
         long hours = path.totalDuration().toHours();
         int transitDays = (int) Math.max(1, Math.ceil(hours / 24.0));
         return new RouteCandidateDto(
                 path.edges().stream().map(RoutingQueryHandler::toLegDto).toList(),
                 transitDays,
-                path.isDirect());
+                path.isDirect(),
+                // **超過日数は候補が答える**（domain-model.md:737）。画面に書き直させると
+                // 判定が 2 か所になり、期限の比べ方（日付単位・業務タイムゾーン）が
+                // 片方だけ直る。
+                path.overdueDays(specification, clock.getZone()));
     }
 
     private static RouteCandidateDto.LegDto toLegDto(TransitEdge edge) {

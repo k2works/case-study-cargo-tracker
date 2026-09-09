@@ -2,6 +2,7 @@ package com.example.cargotracker.booking.infrastructure.projection;
 
 import com.example.cargotracker.booking.domain.model.events.BookingConfirmedEvent;
 import com.example.cargotracker.booking.domain.model.events.BookingDeliveredEvent;
+import com.example.cargotracker.booking.domain.model.events.BookingDeliveryRevertedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoSpecificationUpdatedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoRoutedEvent;
@@ -129,6 +130,11 @@ public class CargoProjection {
                 // まだ確定していない（US13）。まだ発行していない（US14）。
                 null,
                 null,
+                // まだ再設計していない（US28）。**0 ではない**——0 は「組み直して
+                // 間に合った」で、null は「誤配になっていない」である。
+                null,
+                // まだ荷役が届いていない。
+                null, null, null, null,
                 now,
                 null));
     }
@@ -325,8 +331,8 @@ public class CargoProjection {
                 // 「いつ直したか」はイベントが持つ。ここで現在時刻を書くと、
                 // 読み直しのたびに最終更新が動く。
                 event.updatedAt(), event.updatedBy(), null, null, null, null, null, null, null,
-                // 探索の条件・確定日時・追跡番号は UPDATE 文が触らない。
-                null, null, null, null, now, null));
+                // 探索の条件・確定日時・追跡番号・超過日数・荷役は UPDATE 文が触らない。
+                null, null, null, null, null, null, null, null, null, now, null));
 
         if (before != null) {
             recordRevision(before, event);
@@ -356,8 +362,11 @@ public class CargoProjection {
     @EventHandler
     public void on(CargoRoutedEvent event) {
         Instant now = clock.instant();
-        int updated = cargos.updateRoutingStatus(event.bookingId(),
-                RoutingStatus.ROUTED.name(), now);
+        int updated = cargos.updateRouted(event.bookingId(),
+                RoutingStatus.ROUTED.name(),
+                // **再設計で期限を超えた事実を残す**（US28 §受入基準 6）。
+                // 0 でも書く——組み直して間に合うようになったことも情報である。
+                event.overdueDays(), now);
         if (updated == 0) {
             log.warn("経路を書ける予約が投影に無い: bookingId={}", event.bookingId());
             attentionItems.add(PROJECTION_REJECTED, TARGET_BOOKING, event.bookingId(),
@@ -442,10 +451,25 @@ public class CargoProjection {
      */
     @EventHandler
     public void on(BookingDeliveredEvent event) {
-        int updated = cargos.updateDelivered(event.bookingId(),
+        int updated = cargos.updateBookingStatus(event.bookingId(),
                 BookingStatus.DELIVERED.name(), clock.instant());
         if (updated == 0) {
             log.warn("引き渡しを書ける予約が投影に無い: bookingId={}", event.bookingId());
+        }
+    }
+
+    /**
+     * 引き渡しの記録が取り消された（IT11 引き継ぎ枠 A）。
+     *
+     * <p><b>戻す先はイベントが運ぶ。</b> 投影がここで導き直すと、集約と投影が
+     * 別々の判断を持つことになる。</p>
+     */
+    @EventHandler
+    public void on(BookingDeliveryRevertedEvent event) {
+        int updated = cargos.updateBookingStatus(event.bookingId(), event.restoredStatus(),
+                clock.instant());
+        if (updated == 0) {
+            log.warn("引き渡しの取り消しを書ける予約が投影に無い: bookingId={}", event.bookingId());
         }
     }
 

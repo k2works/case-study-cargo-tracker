@@ -141,13 +141,14 @@ export function AppRoutes() {
             </RequireRole>
           }
         />
-        {/* 例外一覧（S42）と起票（S43）は追跡管理者だけ（US19）。
+        {/* 例外一覧（S42）は追跡管理者と**管理者**（US19・US20 §3）、起票（S43）は
+            追跡管理者だけ。管理者は緊急の知らせを読む側で、起票はしない。
             **`/tracking/:trackingNumber` より先に置く。** 後ろに置くと
             "exceptions" が追跡番号として吸われる。 */}
         <Route
           path="/tracking/exceptions"
           element={
-            <RequireRole allow={['ROLE_TRACKER']}>
+            <RequireRole allow={['ROLE_TRACKER', 'ROLE_ADMIN']}>
               <ExceptionListPage />
             </RequireRole>
           }

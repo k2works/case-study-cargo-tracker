@@ -179,14 +179,31 @@ public class BookingController {
                         booking.arrivalDeadline(),
                         CargoType.valueOf(booking.cargoType()),
                         condition.excludeUnLocodes().stream().map(Location::of).toList(),
-                        condition.departFromUnLocode() == null
-                                ? null : Location.of(condition.departFromUnLocode())));
+                        departFrom(booking, condition)));
 
         return ResponseEntity.ok(new RouteCandidatesResponse(
                 found.candidates().stream()
                         .map(BookingController::toCandidateResponse)
                         .toList(),
                 found.truncated()));
+    }
+
+    /**
+     * 探索の起点（US28 §受入基準 4）。
+     *
+     * <p><b>誤配は現在地から組み直す。</b> 予定ルートを外れた貨物はもう出発地に
+     * 無いので、条件の調整（US10）で入れた起点より、いま貨物が置かれている港が
+     * 優先される。ここを条件任せにすると、経路設計者が毎回手で現在地を
+     * 入れ直すことになり、入れ忘れれば届かない経路が出る。</p>
+     *
+     * <p>誤配でなければ、これまでどおり調整済みの条件に従う。</p>
+     */
+    private static Location departFrom(BookingView booking, RouteConditionView condition) {
+        if ("MISROUTED".equals(booking.routingStatus()) && booking.lastHandlingUnLocode() != null) {
+            return Location.of(booking.lastHandlingUnLocode());
+        }
+        return condition.departFromUnLocode() == null
+                ? null : Location.of(condition.departFromUnLocode());
     }
 
     private static RouteCandidateResponse toCandidateResponse(RouteCandidate candidate) {
@@ -200,7 +217,8 @@ public class BookingController {
                                 leg.unloadTime()))
                         .toList(),
                 candidate.transitDays(),
-                candidate.direct());
+                candidate.direct(),
+                candidate.overdueDays());
     }
 
     /**

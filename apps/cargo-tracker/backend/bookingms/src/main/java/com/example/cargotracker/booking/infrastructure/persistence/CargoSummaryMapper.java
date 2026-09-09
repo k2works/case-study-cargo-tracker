@@ -53,16 +53,19 @@ public interface CargoSummaryMapper {
             @Param("projectedAt") Instant projectedAt);
 
     /**
-     * 引き渡しが済んだ（US16 §受入基準 4）。
+     * 引き渡しの前後で予約の状態を書く（US16 §受入基準 4 / IT11 引き継ぎ枠 A）。
      *
      * <p><b>状態だけを書く。</b> 最後の荷役（引取）は
      * {@code HandlingRecordedEvent} が別に写す——同じ列を 2 つのイベントで
      * 書くと、届く順で結果が変わる。</p>
+     *
+     * <p><b>引取済にするのと戻すのが同じ 1 本。</b> 書く列も条件も同じで、
+     * 違うのは入れる値だけである。分けると、片方だけが直る。</p>
      */
     @org.apache.ibatis.annotations.Update(
             "UPDATE cargo_summary SET booking_status = #{bookingStatus}, "
             + "projected_at = #{projectedAt} WHERE booking_id = #{bookingId}")
-    int updateDelivered(@Param("bookingId") String bookingId,
+    int updateBookingStatus(@Param("bookingId") String bookingId,
             @Param("bookingStatus") String bookingStatus,
             @Param("projectedAt") Instant projectedAt);
 
@@ -156,6 +159,18 @@ public interface CargoSummaryMapper {
             "UPDATE cargo_summary SET routing_status = #{routingStatus}, "
             // 組み直したので、戻された理由は役目を終える。残すと経路設計者は
             // 次に開いたときも「営業から戻されました」を読み続ける。
+            + "returned_to_routing_at = NULL, return_reason = NULL, "
+            // **超過日数は確定のたびに書き直す**（US28 §受入基準 6）。組み直して
+            // 間に合うようになったのに古い超過が残ると、S22 が遅れを出し続ける。
+            + "route_overdue_days = #{overdueDays}, "
+            + "projected_at = #{projectedAt} WHERE booking_id = #{bookingId}")
+    int updateRouted(@Param("bookingId") String bookingId,
+            @Param("routingStatus") String routingStatus,
+            @Param("overdueDays") Integer overdueDays,
+            @Param("projectedAt") Instant projectedAt);
+
+    @org.apache.ibatis.annotations.Update(
+            "UPDATE cargo_summary SET routing_status = #{routingStatus}, "
             + "returned_to_routing_at = NULL, return_reason = NULL, "
             + "projected_at = #{projectedAt} WHERE booking_id = #{bookingId}")
     int updateRoutingStatus(@Param("bookingId") String bookingId,
@@ -433,6 +448,16 @@ public interface CargoSummaryMapper {
             Instant confirmedAt,
             // 追跡番号を発行した日時（US14）。未発行なら null。
             Instant trackingIssuedAt,
+            // 誤配の再設計で到着期限を何日超えたか（US28 §受入基準 6）。
+            // **null は「まだ再設計していない」**で、0 とは違う。
+            Integer routeOverdueDays,
+            // 最後に届いた荷役（US28 §受入基準 3）。誤配のバナーは「いつ・どこで
+            // 予定外の荷役が記録されたか」を出す。**IT9 から書いていたが読み口が
+            // 無く、画面から見えない列だった**（記録と読み口は対で出す）。
+            String lastHandlingType,
+            String lastHandlingUnlocode,
+            Instant lastHandlingAt,
+            Boolean lastHandlingOffRoute,
             Instant projectedAt,
             String lastEventId) {
     }

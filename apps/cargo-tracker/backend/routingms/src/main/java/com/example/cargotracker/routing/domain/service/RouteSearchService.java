@@ -90,8 +90,13 @@ public class RouteSearchService {
             }
         }
 
+        // **間に合う候補が先。** 誤配の再設計では超過候補も返すので、
+        // 直行かどうかより先に「期限を満たすか」で分ける——超過は業務上の
+        // 妥協であって、進んで選ぶものではない。
         List<TransitPath> ordered = found.stream()
-                .sorted(Comparator.comparing((TransitPath p) -> !p.isDirect())
+                .sorted(Comparator
+                        .comparing((TransitPath p) -> p.overdueDays(specification, businessZone))
+                        .thenComparing((TransitPath p) -> !p.isDirect())
                         .thenComparing(TransitPath::totalDuration))
                 .toList();
 
@@ -131,10 +136,23 @@ public class RouteSearchService {
         }
     }
 
+    /**
+     * 目的地に着いた経路を候補に加える。
+     *
+     * <p><b>誤配の再設計では期限超過も残す</b>（US28 §受入基準 6 /
+     * domain-model.md:737）。現在地からでは期限に間に合わないのが普通で、
+     * 間に合うものだけを返すと候補が 0 件になり、<b>貨物が動かせなくなる</b>。
+     * 経路設計者は超過日数を見て選ぶ。</p>
+     *
+     * <p><b>通常の設計では落とす。</b> {@code departFrom} が無いのは
+     * 「まだ出発していない予約」で、期限を満たす経路を選べる。ここを緩めると
+     * 不変条件 5（旅程は経路仕様を満たす）が骨抜きになる。</p>
+     */
     private void collectIfInTime(List<TransitEdge> edges,
             RouteSearchSpecification specification, List<TransitPath> found) {
         TransitPath candidate = new TransitPath(edges);
-        if (candidate.meetsDeadline(specification, businessZone)) {
+        if (specification.departFrom() != null
+                || candidate.meetsDeadline(specification, businessZone)) {
             found.add(candidate);
         }
     }

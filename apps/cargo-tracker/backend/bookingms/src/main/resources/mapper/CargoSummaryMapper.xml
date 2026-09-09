@@ -42,6 +42,11 @@
             <arg column="route_depart_from_unlocode" javaType="string"/>
             <arg column="confirmed_at" javaType="java.time.Instant"/>
             <arg column="tracking_issued_at" javaType="java.time.Instant"/>
+            <arg column="route_overdue_days" javaType="java.lang.Integer"/>
+            <arg column="last_handling_type" javaType="string"/>
+            <arg column="last_handling_unlocode" javaType="string"/>
+            <arg column="last_handling_at" javaType="java.time.Instant"/>
+            <arg column="last_handling_off_route" javaType="java.lang.Boolean"/>
             <arg column="projected_at" javaType="java.time.Instant"/>
             <arg column="last_event_id" javaType="string"/>
         </constructor>
