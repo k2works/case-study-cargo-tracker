@@ -4,7 +4,7 @@ title: "運用要件 - 国際貨物輸送管理システム（CQRS / Event Sourc
 description: "CQRS / Event Sourcing 版 Cargo Tracker の運用要件。投影のリプレイを日常操作として置き、Event Store の復元演習、Event Processor と Reaction Handler の監視、ランブック、イベントの形を変えるリリース手順、鍵の破棄、Gulp タスクを定める。"
 tags: [design,operation,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-04T02:23:42Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-09T01:32:37Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -312,6 +312,24 @@ Axon Server の停止中はコマンドを受け付けません。荷役作業�
 **`kind load docker-image` は使いません。** 公開イメージはマルチプラットフォームのマニフェストリストで配られており、ホストの Docker から取り込むと `content digest ... not found` で失敗します（自分で作ったイメージは単一プラットフォームなので通ります）。ノードの containerd に `crictl pull` で直接引かせます。
 
 **本番・ステージングは評価版を使いません。** ライセンスを取得して配ります（[非機能要件](non_functional.md)「Axon Server SE の単一障害点」）。この節はローカルの kind に限った話です。
+
+### 9.2 重い検証は 1 本ずつ回す
+
+**クラスタと Gradle のフルビルドを同時に走らせません。** どちらも機械の資源を使い切るので、同時に回すと**両方が落ちます**。IT9・IT10 で同じ形の失敗を繰り返し、実装が正しいのに検証の段取りだけで 1 時間以上を失いました（Testcontainers が起動できず `NoClassDefFoundError`、Axon Server の startupProbe が 496 回失敗、Pod が 6 つ CrashLoopBackOff）。
+
+| いつ | 何をする |
+| :--- | :--- |
+| フルビルドの前 | `kubectl --context kind-cargo-tracker -n cargo-tracker scale deploy --all --replicas=0` でクラスタを 0 台に落とす |
+| フルビルドのあと | `gulp k8s:up`（または `scale --replicas=1`）で戻し、`gulp k8s:wait` で揃うのを待つ |
+| どちらを回すときも | **もう一方が走っていないことを確かめてから始める**。`./gradlew --stop` は打たない（自分の走っているビルドを殺す） |
+
+### 9.3 イメージは作成時刻で確かめる
+
+**「作り直しました」という出力を信じません。** IT10 で `gulp k8s:images` が実際には作り直しておらず、クラスタが 1 つ前のイテレーションのコードを動かしていました。画面には「守っているはずのガードが効かない」と出るので、実装を疑うことになります。
+
+`gulp k8s:images` は最後に**イメージ自身が持つ作成時刻**を出します。**すべてが「seconds ago」「minutes ago」であることを見てから** `gulp k8s:load` に進みます。1 つでも「hours ago」があれば、その先で見るものは古いコードの挙動です。
+
+**自分でループを書いてイメージを作るときは、タグを `${s}` のように囲みます。** zsh では `$s:latest` の `:l` が修飾子として解釈され、`cargo-tracker/trackingmsatest` のような壊れたタグができます（IT10 で 3 つ作りました）。
 
 ## 10. 運用 KPI
 

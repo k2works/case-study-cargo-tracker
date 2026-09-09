@@ -1,0 +1,12 @@
+# <type>(<scope>): <subject>（72 文字以内・命令形でなく体言止めか「〜する」）
+#
+# 本文：なぜこの変更が要るのかを書く。何をしたかはコードが答える。
+#
+# ---- 品質ゲート（US を閉じるコミットでは必ず埋める。それ以外は行ごと消す）----
+# テスト:      backend N 件緑 / frontend N 件緑 / 受け入れ N スイート緑
+# クラスタE2E: N/N 緑（回していないなら「未実施」と書く）
+# SonarQube:   backend PASS(cov N%) / frontend PASS(cov N%) / Bug 0 / Vuln 0
+# -----------------------------------------------------------------------
+#
+# Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+# Claude-Session: https://claude.ai/code/session_01FGCYhe4X1WuCr3VwuFZq5b

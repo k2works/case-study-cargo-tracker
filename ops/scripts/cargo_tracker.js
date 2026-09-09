@@ -494,6 +494,26 @@ export default function (gulp) {
   });
 
   /**
+   * 作ったイメージの作成時刻を出す。
+   *
+   * <p><b>「作り直した」という出力を信じない。</b> IT10 で `k8s:images` が
+   * 実際には作り直しておらず、クラスタが 1 つ前のイテレーションのコードを
+   * 動かしていた。実装を疑って半日を失ったが、原因はイメージが 7 時間前の
+   * ままだったことだった（ふりかえり P4 / Try T4）。</p>
+   *
+   * <p>出力ではなく<b>イメージ自身が持つ作成時刻</b>で確かめる。ここが
+   * 「7 hours ago」なら、この先で見るものはすべて古いコードの挙動である。</p>
+   */
+  function reportImageAges(services) {
+    const names = [...services, FRONTEND.name, PORTAL.name]
+      .map((n) => `cargo-tracker/${n}:latest`);
+    console.log('\n作成時刻（**すべて「seconds/minutes ago」であること**）:');
+    console.log(sh(
+      `docker images --format '{{.Repository}}:{{.Tag}}\t{{.CreatedSince}}' ${names.join(' ')}`,
+    ).trim());
+  }
+
+  /**
    * 全サービスのイメージを作る。
    *
    * <p>ビルドは各サービスの Dockerfile の中で行う（ホストの build/ は
@@ -538,6 +558,7 @@ export default function (gulp) {
     sh(`docker build -t cargo-tracker/${PORTAL.name}:latest .`,
       { cwd: PORTAL.dir, stdio: 'inherit' });
     console.log(`${total} 個のイメージを作りました`);
+    reportImageAges(services);
     done();
   });
 
