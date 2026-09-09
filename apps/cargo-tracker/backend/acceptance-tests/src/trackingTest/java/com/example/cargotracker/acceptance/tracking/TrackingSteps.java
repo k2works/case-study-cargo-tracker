@@ -240,7 +240,16 @@ public class TrackingSteps {
         assertThat(lastResponse.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
         assertThat(lastResponse.getBody().get("message").toString())
                 .contains("未受領")
-                .contains("引取済");
+                .contains("荷降し済");
+    }
+
+    @ならば("手では入れられないと断られる")
+    public void 手では入れられないと断られる() {
+        // **引取済は手で選べない**（IT10 レビュー 高）。手で動かすと
+        // CargoDeliveredEvent が出ず、精算も予約の配送完了も始まらない。
+        assertThat(lastResponse.getStatusCode()).isEqualTo(HttpStatus.valueOf(422));
+        assertThat(lastResponse.getBody().get("message").toString())
+                .contains("手では入れられません");
     }
 
     @もし("別の荷主として追跡を開く")
