@@ -79,7 +79,70 @@ function run(command, args, cwd = '.', extraEnv = {}) {
 }
 
 const gradlew = process.platform === 'win32' ? 'gradlew.bat' : './gradlew';
-const gradle = (args, extraEnv = {}) => run(gradlew, args, BACKEND_DIR, extraEnv);
+
+/**
+ * すでに走っている Gradle ビルドがあれば、始める前に断る。
+ *
+ * <p>この環境では Gradle を 2 本同時に走らせると build ディレクトリが壊れる。
+ * IT11 では 4 回起きた（`EOFException`・`in-progress-results-generic.bin` の
+ * `NoSuchFileException`）。そのたびに `rm -rf <module>/build` からやり直す。</p>
+ *
+ * <p><b>手順書の文章では守れなかった。</b> 「重い検証は 1 本ずつ」は IT9・IT10・
+ * IT11 と 3 回 Try に挙がって 3 回とも破られている。守れない約束は、守らせる
+ * 仕組みに変える——ここを通らない限りビルドが始まらないようにする。</p>
+ *
+ * <p>探すのは<b>デーモンではなくクライアント</b>（`GradleWrapperMain` /
+ * `GradleMain`）である。デーモンは呼び出しをまたいで生き残るので、その存在は
+ * 「いま走っている」ことを意味しない。クライアントはビルドの間だけ生きる。</p>
+ *
+ * @throws {Error} 別の Gradle ビルドが走っているとき
+ */
+export function assertNoRunningGradle() {
+  // Windows の tasklist は引数まで出さないので、この検出は POSIX のみ。
+  // 断れない環境で黙って通すが、通した事実は出す（黙って素通りさせない）。
+  if (process.platform === 'win32') {
+    console.warn('[gradle] Windows では実行中ビルドを判別できません。1 本ずつ回してください。');
+    return;
+  }
+  const ps = spawnSync('ps', ['-Ao', 'pid=,command='], { encoding: 'utf8' });
+  if (ps.status !== 0) {
+    throw new Error('実行中の Gradle を確認できませんでした（ps が失敗）。安全側に倒して中止します。');
+  }
+  const running = ps.stdout
+    .split('\n')
+    // ラッパーは `java -jar gradle-wrapper.jar` として起こされるのでクラス名は
+    // 出ない。`-Dorg.gradle.appname` はクライアントだけが持つ印である。
+    .filter((line) => /-Dorg\.gradle\.appname=|GradleWrapperMain|org\.gradle\.launcher\.GradleMain/.test(line))
+    .filter((line) => !line.includes('GradleDaemon'));
+  if (running.length > 0) {
+    throw new Error(
+      `Gradle ビルドが ${running.length} 本走っています。終わるまで待ってください。\n`
+      + running.map((line) => `  ${line.trim()}`).join('\n')
+      + '\n\n同時に走らせると build ディレクトリが壊れ、rm -rf からやり直しになります。',
+    );
+  }
+}
+
+const gradle = (args, extraEnv = {}) => {
+  assertNoRunningGradle();
+  return run(gradlew, args, BACKEND_DIR, extraEnv);
+};
+
+/**
+ * 分割フルビルドの単位。
+ *
+ * <p><b>この環境は 10 分を超える Gradle を完走させない。</b> 通しの `build` は
+ * 必ず途中で殺されるので、依存の順に 5 つへ割って 1 群ずつ回す。順序は
+ * `settings.gradle.kts` の依存方向——`shared` が全 BC の土台で、テスト専用の
+ * 2 つは全サービスを参照するので最後に置く。</p>
+ */
+export const BUILD_GROUPS = [
+  ['shared'],
+  ['authms', 'gatewayms'],
+  ['bookingms', 'routingms'],
+  ['trackingms', 'handlingms'],
+  ['billingms', 'contract-tests', 'acceptance-tests'],
+];
 const npmRun = (args) => run('npm', args, FRONTEND_DIR);
 
 export default function (gulp) {
@@ -134,6 +197,56 @@ export default function (gulp) {
   // Port の追加や ADR の起票を伴う変更では必ずこれを実行する。
   gulp.task('dev:backend:full', (done) => {
     gradle(['build']);
+    done();
+  });
+
+  /**
+   * 分割フルビルド。**群ごとに実行中ビルドを断り直す**（途中で別の Gradle が
+   * 始まっても、次の群の入口で止まる）。
+   *
+   * <p>`TZ=UTC` で回す。業務タイムゾーンを導入したあと、テストが JVM 既定の
+   * `now()` を使っていると CI（UTC）だけが落ちる。ここで先に落とす。</p>
+   */
+  gulp.task('dev:backend:full:split', (done) => {
+    BUILD_GROUPS.forEach((group, index) => {
+      console.log(`\n[${index + 1}/${BUILD_GROUPS.length}] ${group.join(' ')}`);
+      gradle(group.map((module) => `:${module}:build`), { TZ: 'UTC' });
+    });
+    done();
+  });
+
+  /**
+   * 1 つのモジュールのテストを、名前で絞って回す（TDD の赤緑）。
+   *
+   *   npx gulp dev:backend:one --module trackingms --tests '*DeadLetterQueueIT*'
+   *
+   * <p><b>`./gradlew` を直に叩かないための入口である。</b> 直に叩くとこの
+   * ガードを通らないので、走っているビルドがあっても始まってしまう。絞り込みが
+   * できないと結局は直に叩くことになるので、絞り込みごとここに置く。</p>
+   */
+  gulp.task('dev:backend:one', (done) => {
+    const valueOf = (flag) => {
+      const index = process.argv.indexOf(flag);
+      return index > -1 ? process.argv[index + 1] : undefined;
+    };
+    const module = valueOf('--module');
+    const tests = valueOf('--tests');
+    if (!module) {
+      done(new Error("--module <モジュール名> が要ります（例: --module trackingms）"));
+      return;
+    }
+    const args = [`:${module}:test`];
+    if (tests) {
+      args.push('--tests', tests);
+    }
+    gradle(args, { TZ: 'UTC' });
+    done();
+  });
+
+  /** 走っている Gradle があるかだけを見る（回す前の確認用）。 */
+  gulp.task('dev:backend:guard', (done) => {
+    assertNoRunningGradle();
+    console.log('走っている Gradle はありません。');
     done();
   });
 
@@ -204,6 +317,9 @@ export default function (gulp) {
     dev:backend:tdd            TDD モード（テスト自動再実行）
     dev:backend:check          Checkstyle + SpotBugs
     dev:backend:full           フルビルド（ArchUnit とカバレッジ閾値を含む）
+    dev:backend:full:split     分割フルビルド（TZ=UTC・5 群。10 分超が完走しない環境用）
+    dev:backend:one            1 モジュールのテストを名前で絞って回す（--module / --tests）
+    dev:backend:guard          走っている Gradle があるかを見るだけ
 
   フロントエンド
     dev:frontend               開発サーバー起動（port 5173）
