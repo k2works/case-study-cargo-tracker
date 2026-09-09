@@ -240,7 +240,7 @@ public class TrackingSteps {
     @ならば("港コードではないと断られる")
     public void 港コードではないと断られる() {
         // **理由まで見る。** 2xx でないことだけを見ると、別の理由で断られていても緑になる。
-        assertThat(lastResponse.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(lastResponse.getStatusCode()).isEqualTo(HttpStatus.valueOf(422));
         assertThat(lastResponse.getBody().get("message").toString())
                 .contains("UN/LOCODE");
     }
@@ -308,6 +308,15 @@ public class TrackingSteps {
         assertThat(lastResponse.getStatusCode()).isEqualTo(HttpStatus.valueOf(422));
         assertThat(lastResponse.getBody().get("message").toString())
                 .contains("手では入れられません");
+    }
+
+    @ならば("誤配は自動で起票されると断られる")
+    public void 誤配は自動で起票されると断られる() {
+        // **誤配は荷役が決める**（US28 §受入基準 2）。手で起票できると、
+        // 起きていない誤配を記録でき、経路設計者はそれを組み直そうとする。
+        assertThat(lastResponse.getStatusCode()).isEqualTo(HttpStatus.valueOf(422));
+        assertThat(lastResponse.getBody().get("message").toString())
+                .contains("システムが起票します");
     }
 
     @もし("別の荷主として追跡を開く")

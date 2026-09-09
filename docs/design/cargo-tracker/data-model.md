@@ -540,7 +540,7 @@ entity "tracking_event" as te {
 }
 
 entity "tracking_exception" as tx {
-  * **exception_id**: VARCHAR(36) <<PK>>
+  * **exception_id**: VARCHAR(64) <<PK>>
   --
   tracking_number: VARCHAR(25) NOT NULL <<FK>>
   booking_id: VARCHAR(36)

@@ -233,13 +233,18 @@ public class TrackingActivity {
      * 反映済みの印を外すので、同じ荷役がもう一度届くことがある——そのとき
      * 起票済みの例外を重ねない。</p>
      *
+     * <p><b>導いた識別子も UUID の形に収める。</b> {@code "MIS-" + activityId} のように
+     * 前置きを足すと 36 文字を超え、投影の列（{@code exception_id VARCHAR(36)}）に
+     * 入らない。**クラスタで初めて落ちる**——集約のテストは投影の桁を知らない
+     * （IT11 の T6e で実測）。同じ荷役からは必ず同じ識別子が出る。</p>
+     *
      * <p><b>誤配が続けて届いても重ならない。</b> 遷移表が {@code MISROUTED} から
      * {@code MISROUTED} を許さないので、2 度目の予定外の荷役はここまで来ない
      * （反映できなかった荷役として履歴に残る）。</p>
      */
     private void autoReportMisroute(AdvanceTrackingCommand command, EventAppender appender,
             java.time.Instant now) {
-        String exceptionId = "MIS-" + command.activityId();
+        String exceptionId = TrackingException.misrouteIdFor(command.activityId());
         if (exceptions.containsKey(exceptionId)) {
             return;
         }

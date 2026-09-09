@@ -177,6 +177,13 @@ public final class RoleAuthorization {
                 Set.of(TRACKER)));
         ordered.add(new Rule("POST", "/api/v1/tracking/trackings/*/exceptions",
                 Set.of(TRACKER)));
+        // 例外一覧の**読み**は追跡管理者と管理者（US20 §受入基準 3 / IT11）。
+        // **書き込みの宣言より後、読みの広い宣言（TRACKER, SHIPPER）より先。**
+        // 管理者は緊急の知らせを読む側で、起票も解決もしない——上の POST の
+        // 宣言に ADMIN を入れていないのはそのためである。
+        // **荷主には開かない。** 他社の貨物の例外まで並んでしまう。
+        ordered.add(new Rule("GET", "/api/v1/tracking/trackings/exceptions",
+                Set.of(TRACKER, ADMIN)));
         // 荷役の記録と取り消しは**荷役作業員だけ**（US15 / IT10 枠 B）。
         // **履歴の宣言（HANDLER, TRACKER）より先に置く。** 後ろに置くと、
         // 同じ経路への書き込みが読み向けの広い宣言に吸われ、

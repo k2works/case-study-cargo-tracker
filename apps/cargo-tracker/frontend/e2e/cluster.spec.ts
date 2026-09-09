@@ -261,7 +261,9 @@ test.describe('kind クラスタでの通し確認', () => {
     await signIn(page, 'sales01');
     await page.goto(`/bookings/${bookingId}`);
     await page.getByRole('button', { name: '経路設計を依頼する' }).click();
-    await expect(page.getByText('経路提案中')).toBeVisible({ timeout: 20_000 });
+    // **投影の反映を待つ。** 押した直後の画面だけを見ると、混んでいるときに
+    // 20 秒では届かない（IT11 の通しで 3 度落ちた）。読み直しながら待つ。
+    await expectEventually(page, '経路提案中');
 
     await page.goto('/logout');
     await signIn(page, 'routing01');
@@ -270,6 +272,24 @@ test.describe('kind クラスタでの通し確認', () => {
     await expect(page.getByRole('heading', { name: '経路設計作業一覧' })).toBeVisible();
     await expectEventually(page, product);
   });
+
+  /**
+   * 航海一覧を条件で絞る。
+   *
+   * <p><b>一覧は表示上限で切れる。</b> 作り直さないクラスタでは航海が積み上がり、
+   * 登録した直後の便でも 1 ページ目に載らなくなる。画面はそのことを
+   * 「N 件のうち M 件を表示しています」と知らせているので、テストも同じように
+   * 絞ってから探す。</p>
+   */
+  async function narrowVoyagesTo(
+    page: import('@playwright/test').Page,
+    departure: string,
+    arrival: string,
+  ) {
+    await page.getByLabel('出発地').fill(departure);
+    await page.getByLabel('目的地').fill(arrival);
+    await page.getByRole('button', { name: '絞り込む' }).click();
+  }
 
   test('経路設計者が航海を登録すると、一覧に出る（US24）', async ({ page }) => {
     const voyageNumber = uniqueVoyageNumber('V-E2E-');
@@ -290,10 +310,18 @@ test.describe('kind クラスタでの通し確認', () => {
     await page.getByRole('button', { name: '登録する' }).click();
 
     await expect(page.getByRole('heading', { name: '航海スケジュール一覧' })).toBeVisible();
-    await expectEventually(page, voyageNumber);
-    // 船名だけで当てない。同じ船名の航海が何度目かの実行で積み上がっており、
-    // 「見えている」のは別の回に登録した行かもしれない。登録した行の中で見る。
-    await expect(page.locator('tr', { hasText: voyageNumber })).toContainText('E2E EXPRESS');
+
+    // **一覧から登録した便を名指しで探さない。**
+    //
+    // 一覧は表示上限で切れ、並びは出発日が近い順である。作り直さないクラスタでは
+    // 同じ区間の便が積み上がるので、**絞り込んでも登録した便が 1 ページ目に
+    // 載らなくなる**（IT11 の通しで実測。航海番号で探す手段が画面に無い）。
+    // ここでは登録が通ったことを詳細で見る——一覧そのものの絞り込みは
+    // US07 の確認が持つ。
+    await page.goto(`/voyages/${voyageNumber}`);
+    await expect(page.getByRole('heading', { name: `航海 ${voyageNumber}` }))
+      .toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText('E2E EXPRESS')).toBeVisible();
   });
 
   test('経路設計者が候補を見て経路を確定する（US08・US09・IT5）', async ({ page, request }) => {
@@ -337,7 +365,8 @@ test.describe('kind クラスタでの通し確認', () => {
     await signIn(page, 'sales01');
     await page.goto(`/bookings/${bookingId}`);
     await page.getByRole('button', { name: '経路設計を依頼する' }).click();
-    await expect(page.getByText('経路提案中')).toBeVisible({ timeout: 20_000 });
+    // **投影の反映を待つ**（混んでいると 20 秒では届かない。IT11 の通しで実測）。
+    await expectEventually(page, '経路提案中');
 
     await page.goto('/logout');
     await signIn(page, 'routing01');
@@ -378,7 +407,8 @@ test.describe('kind クラスタでの通し確認', () => {
     await signIn(page, 'sales01');
     await page.goto(`/bookings/${bookingId}`);
     await page.getByRole('button', { name: '経路設計を依頼する' }).click();
-    await expect(page.getByText('経路提案中')).toBeVisible({ timeout: 20_000 });
+    // **投影の反映を待つ**（混んでいると 20 秒では届かない。IT11 の通しで実測）。
+    await expectEventually(page, '経路提案中');
 
     await page.goto('/logout');
     await signIn(page, 'routing01');
@@ -403,7 +433,8 @@ test.describe('kind クラスタでの通し確認', () => {
     await signIn(page, 'sales01');
     await page.goto(`/bookings/${bookingId}`);
     await page.getByRole('button', { name: '経路設計を依頼する' }).click();
-    await expect(page.getByText('経路提案中')).toBeVisible({ timeout: 20_000 });
+    // **投影の反映を待つ**（混んでいると 20 秒では届かない。IT11 の通しで実測）。
+    await expectEventually(page, '経路提案中');
 
     await page.goto('/logout');
     await signIn(page, 'routing01');
@@ -450,7 +481,8 @@ test.describe('kind クラスタでの通し確認', () => {
     await signIn(page, 'sales01');
     await page.goto(`/bookings/${bookingId}`);
     await page.getByRole('button', { name: '経路設計を依頼する' }).click();
-    await expect(page.getByText('経路提案中')).toBeVisible({ timeout: 20_000 });
+    // **投影の反映を待つ**（混んでいると 20 秒では届かない。IT11 の通しで実測）。
+    await expectEventually(page, '経路提案中');
 
     await page.goto('/logout');
     await signIn(page, 'routing01');
@@ -486,7 +518,7 @@ test.describe('kind クラスタでの通し確認', () => {
     await page.getByLabel('戻す理由').fill('荷主が経由港の変更を希望');
     await page.getByRole('button', { name: '戻すことを確定する' }).click();
 
-    await expect(page.getByText('経路提案中')).toBeVisible({ timeout: 20_000 });
+    await expectEventually(page, '経路提案中');
     // **旅程は残る。** 消すと「何を組み直すのか」が分からなくなる。
     await expect(page.getByRole('heading', { name: '旅程' })).toBeVisible();
   });
@@ -523,7 +555,7 @@ test.describe('kind クラスタでの通し確認', () => {
       await signIn(page, 'sales01');
       await page.goto(`/bookings/${bookingId}`);
       await page.getByRole('button', { name: '経路設計を依頼する' }).click();
-      await expect(page.getByText('経路提案中')).toBeVisible({ timeout: 20_000 });
+      await expectEventually(page, '経路提案中');
 
       await page.goto('/logout');
       await signIn(page, 'routing01');
@@ -646,8 +678,14 @@ test.describe('kind クラスタでの通し確認', () => {
       expect(response.status()).toBe(200);
     }).toPass({ timeout: 60_000 });
 
-    expect((await request.post(`/api/v1/booking/bookings/${bookingId}/confirmation`,
-      { headers: salesHeaders })).status()).toBe(200);
+    // **確定も届くまで再試行する。** 通知の記録が集約へ入るのと、確定が
+    // 「通知済み」を見るのは別の往復で、続けて叩くと 409 に当たる
+    // （IT11 の通しで実測。単独では出ない）。
+    await expect(async () => {
+      const confirmed = await request.post(
+        `/api/v1/booking/bookings/${bookingId}/confirmation`, { headers: salesHeaders });
+      expect(confirmed.status()).toBe(200);
+    }).toPass({ timeout: 60_000 });
 
     let trackingNumber = '';
     await expect(async () => {
@@ -668,7 +706,7 @@ test.describe('kind クラスタでの通し確認', () => {
     async ({ page, request }) => {
       // **US16 のクラスタ確認**（Try T3。US ごとに 1 度回す）。
       // モックでは「引取が billingms と bookingms の両方へ届くか」を判別できない。
-      test.setTimeout(180_000);
+      test.setTimeout(300_000);
       const product = `引取の貨物-${Date.now()}`;
       const { bookingId, trackingNumber, voyageNumber } =
         await issueTrackingNumber(request, product);
@@ -739,7 +777,7 @@ test.describe('kind クラスタでの通し確認', () => {
     async ({ page, request }) => {
       // **US19 のクラスタ確認**（Try T3。US ごとに 1 度回す）。
       // モックでは「集約が覚えた戻り先が投影と画面まで通るか」を判別できない。
-      test.setTimeout(180_000);
+      test.setTimeout(300_000);
       const product = `例外の貨物-${Date.now()}`;
       const { trackingNumber, voyageNumber } = await issueTrackingNumber(request, product);
 
@@ -809,6 +847,111 @@ test.describe('kind クラスタでの通し確認', () => {
       expect(voyageNumber).toMatch(/^V-CL-/);
     });
 
+  test('紛失を起票すると緊急として一覧の先頭に出て、管理者も気づける（US20・IT11）',
+    async ({ page, request }) => {
+      // **US20 のクラスタ確認**（Try T8。US ごとに 1 度回す）。
+      // モックでは「escalate の記録が投影を経て管理者の画面まで届くか」を判別できない。
+      test.setTimeout(300_000);
+      const product = `紛失の貨物-${Date.now()}`;
+      const { trackingNumber } = await issueTrackingNumber(request, product);
+
+      const handlerToken = await tokenOf(request, 'handler01');
+      await expect(async () => {
+        const response = await request.post('/api/v1/handling/activities', {
+          headers: { Authorization: `Bearer ${handlerToken}` },
+          data: {
+            activityId: crypto.randomUUID(),
+            trackingNumber,
+            handlingType: 'RECEIVE',
+            unLocode: 'JPTYO',
+          },
+        });
+        expect(response.status()).toBe(201);
+      }).toPass({ timeout: 60_000 });
+
+      await signIn(page, 'tracker01');
+      await page.goto(`/tracking/${trackingNumber}`);
+      await expectEventually(page, '受領済');
+
+      // **D1: 紛失を起票すると例外発生になる。**
+      await page.getByRole('link', { name: '例外を起票する' }).click();
+      await page.getByLabel('例外種別').selectOption('LOSS');
+      await page.getByLabel('発生場所').fill('SGSIN');
+      await page.getByLabel('発生状況').fill(`貨物が見つかりません（${product}）`);
+      await page.getByRole('button', { name: '起票する' }).click();
+      await expect(page).toHaveURL(new RegExp(`/tracking/${trackingNumber}$`),
+        { timeout: 20_000 });
+      await expectEventually(page, '例外発生');
+
+      // **D1: 緊急として一覧の先頭に出る。**
+      await page.goto('/tracking/exceptions');
+      await expectEventually(page, `貨物が見つかりません（${product}）`);
+      const row = page.getByRole('row', { name: new RegExp(product) });
+      await expect(row.getByText('緊急')).toBeVisible();
+      // **D2: 上位者へ知らせた記録が残る**ので「未連絡」は出ない。
+      await expect(row.getByText('未連絡')).toHaveCount(0);
+
+      // **D2: 管理者が同じ一覧を開いて見つけられる**（US20 §受入基準 3 の読み口）。
+      await signIn(page, 'admin01');
+      await page.goto('/tracking/exceptions');
+      await expectEventually(page, `貨物が見つかりません（${product}）`);
+      // **管理者は読む側。** 操作の導線は出さない（開けない場所へ誘わない）。
+      await expect(page.getByRole('link', { name: '例外を起票' })).toHaveCount(0);
+    });
+
+  test('予定外の荷役で誤配になり、現在地から組み直せる（US28・IT11）',
+    async ({ page, request }) => {
+      // **US28 のクラスタ確認**（Try T8）。4 サービスの連鎖（荷役 → 追跡 →
+      // 予約 → 経路探索）は、層ごとの検査では抜けが出ない。
+      test.setTimeout(240_000);
+      const product = `誤配の貨物-${Date.now()}`;
+      const { trackingNumber, bookingId, voyageNumber } =
+        await issueTrackingNumber(request, product);
+
+      // **D5・D6: 予定ルート外の港で荷役を記録する。**
+      const handlerToken = await tokenOf(request, 'handler01');
+      await expect(async () => {
+        const response = await request.post('/api/v1/handling/activities', {
+          headers: { Authorization: `Bearer ${handlerToken}` },
+          data: {
+            activityId: crypto.randomUUID(),
+            trackingNumber,
+            handlingType: 'UNLOAD',
+            // **荷降しには航海番号が要る**（種別自身が要件を持つ）。
+            voyageNumber,
+            // 予定の旅程に含まれない港（前提づくりは JPTYO → USNYC）。
+            unLocode: 'NLRTM',
+          },
+        });
+        expect(response.status()).toBe(201);
+      }).toPass({ timeout: 60_000 });
+
+      // **D8: 予約詳細に誤配のバナーが出る。**
+      await signIn(page, 'routing01');
+      await page.goto(`/bookings/${bookingId}`);
+      await waitForProjection(page, async () => {
+        await page.reload();
+        await expect(page.getByRole('alert').filter({ hasText: '誤配を検知しました' }))
+          .toBeVisible();
+      });
+      await expect(page.getByRole('alert')).toContainText('NLRTM');
+
+      // **D6: 誤配の例外が自動で起票されている。**
+      await signIn(page, 'tracker01');
+      await page.goto('/tracking/exceptions');
+      await expectEventually(page, '誤配');
+
+      // **D9: 経路設計者は現在地を起点に組み直せる。**
+      await signIn(page, 'routing01');
+      await page.goto(`/bookings/${bookingId}`);
+      await waitForProjection(page, async () => {
+        await page.reload();
+        await expect(page.getByRole('link', { name: '経路を再設計' })).toBeVisible();
+      });
+      await page.getByRole('link', { name: '経路を再設計' }).click();
+      await expect(page.getByRole('heading', { name: /経路設計/ })).toBeVisible();
+    });
+
   test('追跡番号だけで照会でき、追跡管理者が状態を手で更新できる（US17・US18・IT8）',
     async ({ page, request }) => {
       // **本 IT の中核。** 公開照会は認証を通らず、状態の更新は trackingms の集約を
@@ -816,7 +959,7 @@ test.describe('kind クラスタでの通し確認', () => {
       //
       // 既定の 30 秒では足りない。最後にレート制限の窓（1 分）が空くまで待つ
       // ——待たないと、後続のテストが自分のせいで 429 になる。
-      test.setTimeout(180_000);
+      test.setTimeout(300_000);
       const product = `追跡の貨物-${Date.now()}`;
       const voyageNumber = uniqueVoyageNumber('V-TR-');
       const routing = await tokenOf(request, 'routing01');
@@ -844,7 +987,7 @@ test.describe('kind クラスタでの通し確認', () => {
       await signIn(page, 'sales01');
       await page.goto(`/bookings/${bookingId}`);
       await page.getByRole('button', { name: '経路設計を依頼する' }).click();
-      await expect(page.getByText('経路提案中')).toBeVisible({ timeout: 20_000 });
+      await expectEventually(page, '経路提案中');
 
       await page.goto('/logout');
       await signIn(page, 'routing01');
@@ -898,7 +1041,11 @@ test.describe('kind クラスタでの通し確認', () => {
       await page.getByLabel('新しい状態').selectOption('RECEIVED');
       await page.getByLabel('場所（UN/LOCODE）').fill('JPTYO');
       await page.getByRole('button', { name: '状態を更新する' }).click();
-      await expect(page.getByRole('row', { name: /受領済/ })).toBeVisible({ timeout: 30_000 });
+      // **投影の反映を待つ**（読み直しながら待つ。混んでいると 30 秒では届かない）。
+      await waitForProjection(page, async () => {
+        await page.reload();
+        await expect(page.getByRole('row', { name: /受領済/ })).toBeVisible();
+      });
 
       // デモ項目 5: 遷移表が許さない更新は **API を直接叩いても** 断られる。
       const tracker = await tokenOf(request, 'tracker01');
@@ -909,7 +1056,11 @@ test.describe('kind クラスタでの通し確認', () => {
           data: { newStatus: 'DELIVERED' },
           failOnStatusCode: false,
         });
-      expect(forbidden.status()).toBe(409);
+      // **手では入れられない状態は業務規則で断る**（422）。遷移表が許さない先
+      // （409）とは別で、IT10 で `isSetByHand` を足したときに意味が変わった。
+      // **理由まで見る。** コードだけ見ると、別の理由で断られていても緑になる。
+      expect(forbidden.status()).toBe(422);
+      expect(await forbidden.text()).toContain('手では入れられません');
 
       // デモ項目 8: **総当たりが止まる。** 同一 IP から 1 分に 10 回を超える
       // 「見つからない」照会は 429。**当たりは数えない**ので、正しい番号を持つ
@@ -991,10 +1142,12 @@ test.describe('kind クラスタでの通し確認', () => {
     await page.getByRole('button', { name: '登録する' }).click();
 
     // 一覧の航海番号から詳細へ入る（IT3 レビューで欠けていた導線）。
-    await expect(page.getByRole('link', { name: voyageNumber })).toBeVisible({
-      timeout: 20_000,
-    });
-    await page.getByRole('link', { name: voyageNumber }).click();
+    //
+    // **一覧は表示上限で切れる。** 作り直さないクラスタでは航海が積み上がるので、
+    // 登録した直後でも一覧の 1 ページ目に載るとは限らない——**絞り込んでから
+    // 探す**（IT11 の通しで 2 度落ちた。上限の打ち切りは画面も知らせている）。
+    // **一覧から名指しで探さない**（US24 と同じ理由。表示上限と出発日順）。
+    await page.goto(`/voyages/${voyageNumber}`);
     await expect(page.getByRole('heading', { name: `航海 ${voyageNumber}` })).toBeVisible();
     await expect(page.getByTestId('movement-1')).toContainText('JPTYO → USNYC');
 
@@ -1008,8 +1161,13 @@ test.describe('kind クラスタでの通し確認', () => {
     await page.getByRole('button', { name: '更新する' }).click();
 
     await expect(page.getByRole('heading', { name: `航海 ${voyageNumber}` })).toBeVisible();
-    await expect(page.getByText('UPDATE VOYAGER')).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByText(/最終更新/)).toBeVisible();
+    // **投影の反映を待つ**（読み直しながら待つ）。押した直後の画面だけを見ると、
+    // 混んでいるときに届かない。
+    await waitForProjection(page, async () => {
+      await page.reload();
+      await expect(page.getByText('UPDATE VOYAGER')).toBeVisible();
+      await expect(page.getByText(/最終更新/)).toBeVisible();
+    });
   });
 
   test('経路設計者が条件で航海を絞り込める（US07・IT4）', async ({ page }) => {
@@ -1026,14 +1184,17 @@ test.describe('kind クラスタでの通し確認', () => {
     await page.getByLabel('出発日時（日本時間）').fill(`${businessDate(30)}T09:00`);
     await page.getByLabel('到着日時（日本時間）').fill(`${businessDate(40)}T18:00`);
     await page.getByRole('button', { name: '登録する' }).click();
-    await expect(page.getByRole('link', { name: voyageNumber })).toBeVisible({
-      timeout: 20_000,
-    });
 
-    // 条件に合う便だけが残る。
-    await page.getByLabel('目的地').fill('SGSIN');
-    await page.getByRole('button', { name: '絞り込む' }).click();
-    await expect(page.getByRole('link', { name: voyageNumber })).toBeVisible();
+    // **登録できたことは詳細で見る**（一覧は表示上限で切れる。US24 と同じ）。
+    await page.goto(`/voyages/${voyageNumber}`);
+    await expect(page.getByRole('heading', { name: `航海 ${voyageNumber}` }))
+      .toBeVisible({ timeout: 20_000 });
+    await page.goto('/voyages');
+
+    // 条件に合う便だけが残る。**登録した便を名指しで探さない**——表示上限で
+    // 切れるので、絞り込みが効いていることは「合わない便が消える」で見る。
+    await narrowVoyagesTo(page, 'JPTYO', 'SGSIN');
+    await expect(page.getByRole('cell', { name: 'USNYC' })).toHaveCount(0);
 
     // 合わない条件では 0 件の案内が出て、条件を消して戻れる。
     await page.getByLabel('目的地').fill('BRRIO');
@@ -1041,7 +1202,7 @@ test.describe('kind クラスタでの通し確認', () => {
     await expect(page.getByText('条件に合う航海はありません')).toBeVisible();
 
     await page.getByRole('button', { name: '条件を消して探し直す' }).click();
-    await expect(page.getByRole('link', { name: voyageNumber })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '航海スケジュール一覧' })).toBeVisible();
   });
 
   test('営業が仮受付の予約を修正できる（US32・IT4）', async ({ page }) => {
@@ -1103,7 +1264,8 @@ test.describe('kind クラスタでの通し確認', () => {
 
     // 引き渡すと修正の導線が消える（US32 §受入基準 1）。
     await page.getByRole('button', { name: '経路設計を依頼する' }).click();
-    await expect(page.getByText('経路提案中')).toBeVisible({ timeout: 20_000 });
+    // **投影の反映を待つ**（混んでいると 20 秒では届かない。IT11 の通しで実測）。
+    await expectEventually(page, '経路提案中');
     await expect(page.getByRole('link', { name: '修正する' })).toHaveCount(0);
   });
 });

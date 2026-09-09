@@ -271,6 +271,28 @@ class EveryServiceEndpointIsRoutedAndProtectedTest {
     }
 
     @Test
+    @DisplayName("管理者は例外一覧を読めるが、起票も解決もできない（US20 §3 / IT11）")
+    void adminReadsExceptionsButDoesNotWrite() {
+        // **緊急を知らせる先として一覧を開く**（送信基盤はスコープ外なので、
+        // 読み口が「知らせた」の実体になる）。**書き込みは開かない**——
+        // 対応するのは追跡管理者の仕事で、管理者が起票できると持ち場が混ざる。
+        List<String> admin = List.of("ROLE_ADMIN");
+        List<String> shipper = List.of("ROLE_SHIPPER");
+        String base = "/api/v1/tracking/trackings/TRK-8K2QX7M4RB/exceptions";
+
+        assertThat(RoleAuthorization.isAllowed("GET",
+                "/api/v1/tracking/trackings/exceptions", admin))
+                .as("管理者は未解決の例外を読む").isTrue();
+        assertThat(RoleAuthorization.isAllowed("POST", base, admin))
+                .as("管理者は起票できない").isFalse();
+        assertThat(RoleAuthorization.isAllowed("POST", base + "/ex-1/resolution", admin))
+                .as("管理者は解決できない").isFalse();
+        assertThat(RoleAuthorization.isAllowed("GET",
+                "/api/v1/tracking/trackings/exceptions", shipper))
+                .as("荷主には開かない（他社の貨物の例外まで並ぶ）").isFalse();
+    }
+
+    @Test
     @DisplayName("宣言が実際にある（検査が空振りしていない）")
     void thereAreRoleDeclarations() throws IOException {
         // 実数に近い下限にする。5 のままだと、宣言が減っても気づけない。

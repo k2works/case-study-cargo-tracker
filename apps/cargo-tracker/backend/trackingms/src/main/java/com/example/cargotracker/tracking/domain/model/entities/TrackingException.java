@@ -63,6 +63,27 @@ public record TrackingException(
                 description.trim(), ResponseStatus.REPORTED, null, null);
     }
 
+    /**
+     * 誤配の自動起票が使う識別子（US28 §受入基準 2）。
+     *
+     * <p><b>荷役から導く。</b> 採番すると、同じ荷役から何度でも新しい例外ができる
+     * （投影の主キーは例外の識別子なので、行も増える）。</p>
+     *
+     * <p><b>UUID の形に収める。</b> {@code "MIS-" + activityId} のように前置きを
+     * 足すと 36 文字を超え、投影の列（{@code exception_id VARCHAR(36)}）に入らない
+     * ——集約のテストは投影の桁を知らないので、<b>クラスタで初めて落ちる</b>
+     * （IT11 の T6e で実測）。</p>
+     *
+     * <p><b>導き方はここが 1 か所で持つ。</b> 検査側に書き写すと、導き方を変えた
+     * ときに検査だけが正しく、本番の誤りを素通りさせる。</p>
+     */
+    public static String misrouteIdFor(String activityId) {
+        return java.util.UUID
+                .nameUUIDFromBytes(("MISROUTE:" + activityId)
+                        .getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                .toString();
+    }
+
     /** 対応を始める（US19 §受入基準 4）。 */
     public TrackingException startResponding() {
         requireModifiable();

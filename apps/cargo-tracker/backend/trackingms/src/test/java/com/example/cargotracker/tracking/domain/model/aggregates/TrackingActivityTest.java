@@ -15,6 +15,7 @@ import com.example.cargotracker.tracking.domain.model.commands.ResolveTrackingEx
 import com.example.cargotracker.tracking.domain.model.commands.StartExceptionResponseCommand;
 import com.example.cargotracker.tracking.domain.model.events.ExceptionResponseStartedEvent;
 import com.example.cargotracker.tracking.domain.model.events.ExceptionShipperNotifiedEvent;
+import com.example.cargotracker.tracking.domain.model.entities.TrackingException;
 import com.example.cargotracker.tracking.domain.model.events.CargoMisroutedEvent;
 import com.example.cargotracker.tracking.domain.model.events.DeferredHandlingAppliedEvent;
 import com.example.cargotracker.tracking.domain.model.events.HandlingDeferredEvent;
@@ -182,6 +183,16 @@ class TrackingActivityTest {
     private static UpdateTransportStatusCommand update(TransportStatus to) {
         return new UpdateTransportStatusCommand(NUMBER, to, "JPTYO",
                 Instant.parse("2026-09-11T02:00:00Z"), "tracker-1");
+    }
+
+    /**
+     * 誤配の自動起票が使う識別子。<b>投影の列に入る形（UUID・36 文字）に収める。</b>
+     *
+     * <p>本番と同じ導き方を呼ぶ——テスト側で書き直すと、導き方を変えたときに
+     * 検査だけが正しく本番の誤りを素通りさせる。</p>
+     */
+    private static String misrouteExceptionId(String activityId) {
+        return TrackingException.misrouteIdFor(activityId);
     }
 
     private static TrackingInitializedEvent initialized() {
@@ -674,7 +685,7 @@ class TrackingActivityTest {
                                 TransportStatus.MISROUTED, StatusUpdateSource.HANDLING, "act-9",
                                 "JPTYO", HANDLED, "handler01", NOW),
                         new CargoMisroutedEvent(NUMBER, "b-1", "act-9", "JPTYO", HANDLED, NOW),
-                        new TrackingExceptionRegisteredEvent(NUMBER, "MIS-act-9",
+                        new TrackingExceptionRegisteredEvent(NUMBER, misrouteExceptionId("act-9"),
                                 ExceptionType.MISROUTE.name(), HANDLED, "JPTYO",
                                 "予定ルート外の JPTYO で UNLOAD が記録されました",
                                 false, TransportStatus.MISROUTED, "handler01", NOW),
@@ -693,7 +704,7 @@ class TrackingActivityTest {
                                 TransportStatus.MISROUTED, StatusUpdateSource.HANDLING, "act-9",
                                 "JPTYO", HANDLED, "handler01", NOW),
                         new CargoMisroutedEvent(NUMBER, "b-1", "act-9", "JPTYO", HANDLED, NOW),
-                        new TrackingExceptionRegisteredEvent(NUMBER, "MIS-act-9",
+                        new TrackingExceptionRegisteredEvent(NUMBER, misrouteExceptionId("act-9"),
                                 ExceptionType.MISROUTE.name(), HANDLED, "JPTYO", "予定外",
                                 false, TransportStatus.MISROUTED, "handler01", NOW),
                         new TransportStatusRevertedEvent(NUMBER, TransportStatus.MISROUTED,

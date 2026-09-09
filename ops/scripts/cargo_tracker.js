@@ -505,12 +505,21 @@ export default function (gulp) {
    * 「7 hours ago」なら、この先で見るものはすべて古いコードの挙動である。</p>
    */
   function reportImageAges(services) {
-    const names = [...services, FRONTEND.name, PORTAL.name]
-      .map((n) => `cargo-tracker/${n}:latest`);
+    const names = new Set(
+      [...services, FRONTEND.name, PORTAL.name].map((n) => `cargo-tracker/${n}:latest`),
+    );
     console.log('\n作成時刻（**すべて「seconds/minutes ago」であること**）:');
-    console.log(sh(
-      `docker images --format '{{.Repository}}:{{.Tag}}\t{{.CreatedSince}}' ${names.join(' ')}`,
-    ).trim());
+    // **`docker images` は引数を 1 つしか取らない。** 全件を出して自分で絞る。
+    const rows = sh("docker images --format '{{.Repository}}:{{.Tag}}\t{{.CreatedSince}}'")
+      .split('\n')
+      .filter((row) => names.has(row.split('\t')[0]));
+    console.log(rows.join('\n'));
+    const stale = rows.filter((row) => !/(seconds|minutes|About a minute) ago/.test(row));
+    if (stale.length > 0) {
+      // **黙って進めない。** 古いイメージのまま載せると、そのあと見るものは
+      // すべて 1 つ前のコードの挙動になる（IT10 で半日を失った）。
+      console.log(`\n**作り直せていないイメージがあります**:\n${stale.join('\n')}`);
+    }
   }
 
   /**
