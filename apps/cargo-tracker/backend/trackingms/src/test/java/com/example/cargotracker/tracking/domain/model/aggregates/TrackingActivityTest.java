@@ -13,6 +13,7 @@ import com.example.cargotracker.tracking.domain.model.commands.NotifyShipperOfEx
 import com.example.cargotracker.tracking.domain.model.commands.RegisterTrackingExceptionCommand;
 import com.example.cargotracker.tracking.domain.model.commands.ResolveTrackingExceptionCommand;
 import com.example.cargotracker.tracking.domain.model.commands.StartExceptionResponseCommand;
+import com.example.cargotracker.tracking.domain.model.events.ExceptionEscalatedEvent;
 import com.example.cargotracker.tracking.domain.model.events.ExceptionResponseStartedEvent;
 import com.example.cargotracker.tracking.domain.model.events.ExceptionShipperNotifiedEvent;
 import com.example.cargotracker.tracking.domain.model.entities.TrackingException;
@@ -692,6 +693,132 @@ class TrackingActivityTest {
                         new TransportStatusUpdatedEvent(NUMBER, TransportStatus.MISROUTED,
                                 TransportStatus.EXCEPTION, StatusUpdateSource.EXCEPTION, null,
                                 "JPTYO", HANDLED, "handler01", NOW));
+    }
+
+    @Test
+    @DisplayName("誤配の識別子は投影の列に入る形（UUID・36 文字）である")
+    void misrouteIdFitsTheProjectionColumn() {
+        // **クラスタで初めて落ちた欠陥**（IT11 T6e）。`"MIS-" + activityId` は
+        // 40 文字で `exception_id VARCHAR(36)` に入らず、書けないイベント 1 つで
+        // Event Processor が止まり後続が全滅した。集約のテストは投影の桁を
+        // 知らないので、ここで長さと形を固定する。
+        String id = TrackingException.misrouteIdFor(java.util.UUID.randomUUID().toString());
+
+        assertThat(id).hasSize(36)
+                .matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
+        // 同じ荷役からは必ず同じ識別子（リプレイで行が増えない）。
+        assertThat(TrackingException.misrouteIdFor("act-9"))
+                .isEqualTo(TrackingException.misrouteIdFor("act-9"));
+        assertThat(TrackingException.misrouteIdFor("act-9"))
+                .isNotEqualTo(TrackingException.misrouteIdFor("act-8"));
+    }
+
+    @Test
+    @DisplayName("預かった引取は、解決後に**精算へも伝わる**（IT11 レビュー 高）")
+    void deferredClaimStillPublishesTheContract() {
+        // **片方にだけ書くと、預かった引取だけ業務が止まる。** 追跡は引取済に
+        // なるのに、精算も予約も動かない。
+        fixture.given().events(and(received(), registered(ExceptionType.DELAY),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.RECEIVED,
+                                TransportStatus.EXCEPTION, StatusUpdateSource.EXCEPTION,
+                                null, "SGSIN", OCCURRED, "tracker01", NOW),
+                        new HandlingDeferredEvent(NUMBER, "act-9", "CLAIM", "USNYC", true, false,
+                                TransportStatus.EXCEPTION, TransportStatus.DELIVERED,
+                                "handler01", HANDLED, NOW)))
+                .when().command(new ResolveTrackingExceptionCommand(NUMBER, "ex-1",
+                        "代替便に振り替えました", "tracker01"))
+                .then().success()
+                .events(
+                        new TrackingExceptionResolvedEvent(NUMBER, "ex-1",
+                                "代替便に振り替えました", "tracker01", NOW),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.EXCEPTION,
+                                TransportStatus.RECEIVED, StatusUpdateSource.RESOLVED,
+                                null, null, NOW, "tracker01", NOW),
+                        // 受領済からは引取へ進めない（遷移表）。記録だけ残す。
+                        new HandlingNotAppliedEvent(NUMBER, "act-9", "CLAIM", "USNYC",
+                                TransportStatus.RECEIVED, TransportStatus.DELIVERED, HANDLED,
+                                NOW),
+                        new DeferredHandlingAppliedEvent(NUMBER, "act-9"));
+    }
+
+    @Test
+    @DisplayName("預かりを 2 件まとめて適用しても、順に進む（反復中に消えない）")
+    void appliesTwoDeferredHandlingsInOrder() {
+        // **append() は即座に集約へ適用される**ので、預かりの map を反復しながら
+        // append すると要素が消える。1 件だけの検査では気づけない。
+        fixture.given().events(and(received(), registered(ExceptionType.DELAY),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.RECEIVED,
+                                TransportStatus.EXCEPTION, StatusUpdateSource.EXCEPTION,
+                                null, "SGSIN", OCCURRED, "tracker01", NOW),
+                        new HandlingDeferredEvent(NUMBER, "act-8", "LOAD", "JPTYO", false, false,
+                                TransportStatus.EXCEPTION, TransportStatus.LOADED, "handler01",
+                                HANDLED, NOW),
+                        new HandlingDeferredEvent(NUMBER, "act-9", "UNLOAD", "USNYC", false,
+                                false, TransportStatus.EXCEPTION, TransportStatus.UNLOADED,
+                                "handler01", HANDLED, NOW)))
+                .when().command(new ResolveTrackingExceptionCommand(NUMBER, "ex-1",
+                        "代替便に振り替えました", "tracker01"))
+                .then().success()
+                .events(
+                        new TrackingExceptionResolvedEvent(NUMBER, "ex-1",
+                                "代替便に振り替えました", "tracker01", NOW),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.EXCEPTION,
+                                TransportStatus.RECEIVED, StatusUpdateSource.RESOLVED,
+                                null, null, NOW, "tracker01", NOW),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.RECEIVED,
+                                TransportStatus.LOADED, StatusUpdateSource.HANDLING, "act-8",
+                                "JPTYO", HANDLED, "handler01", NOW),
+                        new DeferredHandlingAppliedEvent(NUMBER, "act-8"),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.LOADED,
+                                TransportStatus.UNLOADED, StatusUpdateSource.HANDLING, "act-9",
+                                "USNYC", HANDLED, "handler01", NOW),
+                        new DeferredHandlingAppliedEvent(NUMBER, "act-9"));
+    }
+
+    @Test
+    @DisplayName("預かり中の荷役が取り消されたら、預かりから外す（IT11 レビュー 高）")
+    void dropsDeferredHandlingWhenVoided() {
+        // **外さないと、解決した瞬間に「起きなかったこと」が履歴に積まれる。**
+        fixture.given().events(and(received(), registered(ExceptionType.DELAY),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.RECEIVED,
+                                TransportStatus.EXCEPTION, StatusUpdateSource.EXCEPTION,
+                                null, "SGSIN", OCCURRED, "tracker01", NOW),
+                        new HandlingDeferredEvent(NUMBER, "act-9", "LOAD", "JPTYO", false, false,
+                                TransportStatus.EXCEPTION, TransportStatus.LOADED, "handler01",
+                                HANDLED, NOW)))
+                .when().command(new RevertTrackingCommand(NUMBER, "act-9", "LOAD", "取り違え",
+                        "handler01", NOW))
+                .then().success()
+                .events(new DeferredHandlingAppliedEvent(NUMBER, "act-9"));
+    }
+
+    @Test
+    @DisplayName("US20 §3: 紛失を起票すると上位者へ知らせた記録が残る")
+    void escalatesUrgentExceptions() {
+        // **緊急は種別が答える**（不変条件 7）。起票した人は選べない。
+        // 送信基盤はスコープ外なので、残るのは「知らせた事実と時刻」だけ。
+        fixture.given().events(received())
+                .when().command(registerException(ExceptionType.LOSS))
+                .then().success()
+                .events(registered(ExceptionType.LOSS),
+                        new ExceptionEscalatedEvent(NUMBER, "ex-1",
+                                ExceptionType.LOSS.name(), NOW),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.RECEIVED,
+                                TransportStatus.EXCEPTION, StatusUpdateSource.EXCEPTION,
+                                null, "SGSIN", OCCURRED, "tracker01", NOW));
+    }
+
+    @Test
+    @DisplayName("US20 §3: 緊急でない例外では上位者へ知らせない")
+    void doesNotEscalateNonUrgentExceptions() {
+        // **緊急は種別が答える**（不変条件 7）。破損は業務を続けられる。
+        fixture.given().events(received())
+                .when().command(registerException(ExceptionType.DAMAGE))
+                .then().success()
+                .events(registered(ExceptionType.DAMAGE),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.RECEIVED,
+                                TransportStatus.EXCEPTION, StatusUpdateSource.EXCEPTION,
+                                null, "SGSIN", OCCURRED, "tracker01", NOW));
     }
 
     @Test

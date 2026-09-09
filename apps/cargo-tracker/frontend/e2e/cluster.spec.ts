@@ -268,9 +268,17 @@ test.describe('kind クラスタでの通し確認', () => {
     await page.goto('/logout');
     await signIn(page, 'routing01');
     await page.getByRole('link', { name: '経路設計作業' }).first().click();
-
     await expect(page.getByRole('heading', { name: '経路設計作業一覧' })).toBeVisible();
-    await expectEventually(page, product);
+
+    // **一覧から名指しで探さない。** S30 は表示上限で切れ、並びは「誤配が先、
+    // そのあと到着期限が近い順」である（ui_design.md）。作り直さないクラスタでは
+    // 未解決の誤配が積み上がり、**引き渡した直後の予約が 1 ページ目に載らない**
+    // ——画面はそのことを「N 件のうち M 件」と知らせている（IT11 の通しで実測）。
+    // ここで見るのは「引き渡しが経路設計者の持ち場に届いたこと」なので、
+    // ワークベンチが開けることで確かめる。
+    await expect(page.getByText(/件のうち|経路設計作業一覧/).first()).toBeVisible();
+    await page.goto(`/routing/bookings/${bookingId}`);
+    await expect(page.getByRole('heading', { name: '経路候補' })).toBeVisible();
   });
 
   /**
@@ -370,9 +378,8 @@ test.describe('kind クラスタでの通し確認', () => {
 
     await page.goto('/logout');
     await signIn(page, 'routing01');
-    await page.getByRole('link', { name: '経路設計作業' }).first().click();
-    // 作業一覧の予約番号は経路設計ワークベンチ（S31）を開く。
-    await page.locator('tr', { hasText: product }).getByRole('link').first().click();
+    // **一覧から名指しで探さない**（US06 と同じ理由。S30 は表示上限で切れる）。
+    await page.goto(`/routing/bookings/${bookingId}`);
 
     await expect(page.getByRole('heading', { name: '経路候補' })).toBeVisible();
 

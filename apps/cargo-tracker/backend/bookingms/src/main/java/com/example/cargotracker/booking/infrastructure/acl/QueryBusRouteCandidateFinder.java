@@ -75,8 +75,15 @@ public class QueryBusRouteCandidateFinder implements RouteCandidateFinder {
                 dto.legs().stream().map(QueryBusRouteCandidateFinder::toLeg).toList(),
                 dto.transitDays(),
                 dto.direct(),
-                // **超過日数は routingms が数える**（US28 §受入基準 6）。ここで
-                // 数え直すと、期限の比べ方が 2 か所になる。
+                // **候補の超過日数は routingms が数えたものを写す**（US28 §受入基準 6）。
+                // ここで数え直すと、探索が使った期限と画面に出す超過日数がずれる。
+                //
+                // **確定するときは `Cargo` が数え直す。** 呼ぶ側が持ってきた数を
+                // 信じないためで、しかも予約の期限は条件調整（US10）で動きうる
+                // ——探索に渡した期限と、いま集約が持っている期限は別物になりうる。
+                // 2 か所あるのは重複ではなく、**答えるべき問いが違う**（候補は
+                // 「この探索条件で何日超えるか」、確定は「この予約の期限を何日
+                // 超えたか」）。
                 dto.overdueDays());
     }
 

@@ -95,7 +95,7 @@ class CargoItineraryTest {
                 List.of(leg("SGSIN", "USNYC", LOAD, UNLOAD)));
 
         assertThat(spec(LocalDate.of(2026, Month.SEPTEMBER, 30))
-                .isSatisfiedByRedesign(fromSingapore)).isTrue();
+                .isSatisfiedByRedesign(fromSingapore, Location.of("SGSIN"))).isTrue();
     }
 
     @Test
@@ -105,9 +105,9 @@ class CargoItineraryTest {
                 List.of(leg("SGSIN", "GBLON", LOAD, UNLOAD)));
 
         assertThat(spec(LocalDate.of(2026, Month.SEPTEMBER, 30))
-                .isSatisfiedByRedesign(toLondonFromSingapore)).isFalse();
+                .isSatisfiedByRedesign(toLondonFromSingapore, Location.of("SGSIN"))).isFalse();
         assertThat(spec(LocalDate.of(2026, Month.SEPTEMBER, 30))
-                .isSatisfiedByRedesign(null)).isFalse();
+                .isSatisfiedByRedesign(null, Location.of("SGSIN"))).isFalse();
     }
 
     @Test
@@ -116,11 +116,36 @@ class CargoItineraryTest {
         // **現在地からでは間に合わないのが普通。** 断ると貨物が動かせなくなる。
         RouteSpecification tight = spec(LocalDate.of(2026, Month.SEPTEMBER, 21));
 
-        assertThat(tight.isSatisfiedByRedesign(direct())).isTrue();
+        assertThat(tight.isSatisfiedByRedesign(direct(), Location.of("JPTYO"))).isTrue();
         assertThat(tight.overdueDays(direct(), ZONE)).isEqualTo(3);
         // 間に合う旅程は 0（**組み直して間に合ったことも情報である**）。
         assertThat(spec(LocalDate.of(2026, Month.SEPTEMBER, 30))
                 .overdueDays(direct(), ZONE)).isZero();
+    }
+
+    @Test
+    @DisplayName("US28 §4: 再設計の起点は**誤配を検知した港**でなければならない")
+    void redesignRequiresTheCurrentLocationAsOrigin() {
+        // **出発地を「見ない」のではなく「差し替える」。** 検査を外すと、集約は
+        // 「目的地さえ合っていればどこ発でもよい」ことになり、REST を直接叩けば
+        // 貨物のいない港から出る旅程が確定できる（IT11 レビュー 高）。
+        CargoItinerary fromSingapore = new CargoItinerary(
+                List.of(leg("SGSIN", "USNYC", LOAD, UNLOAD)));
+
+        assertThat(spec(LocalDate.of(2026, Month.SEPTEMBER, 30))
+                .isSatisfiedByRedesign(fromSingapore, Location.of("NLRTM")))
+                .as("誤配地でない港から出る旅程は受けない").isFalse();
+        assertThat(spec(LocalDate.of(2026, Month.SEPTEMBER, 30))
+                .isSatisfiedByRedesign(fromSingapore, null))
+                .as("誤配地が分からない古い行では起点を検査しない").isTrue();
+    }
+
+    @Test
+    @DisplayName("US28 §6: 超過日数の境界（1 日超過も数える）")
+    void countsASingleOverdueDay() {
+        // 0 と 2 だけだと、1 日ずらす実装に戻しても両方が偶然一致しうる。
+        assertThat(spec(LocalDate.of(2026, Month.SEPTEMBER, 23)).overdueDays(direct(), ZONE))
+                .isEqualTo(1);
     }
 
     @Test

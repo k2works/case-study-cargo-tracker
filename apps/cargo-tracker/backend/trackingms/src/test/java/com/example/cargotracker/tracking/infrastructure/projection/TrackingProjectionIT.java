@@ -8,6 +8,7 @@ import com.example.cargotracker.tracking.domain.model.events.TransportStatusUpda
 import com.example.cargotracker.tracking.domain.model.valueobjects.StatusUpdateSource;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TransportStatus;
 import com.example.cargotracker.tracking.infrastructure.persistence.TrackingEventMapper;
+import com.example.cargotracker.tracking.domain.model.events.ExceptionEscalatedEvent;
 import com.example.cargotracker.tracking.domain.model.events.ExceptionResponseStartedEvent;
 import com.example.cargotracker.tracking.domain.model.events.ExceptionShipperNotifiedEvent;
 import com.example.cargotracker.tracking.domain.model.events.HandlingDeferredEvent;
@@ -379,6 +380,46 @@ class TrackingProjectionIT extends AbstractAxonIntegrationTest {
                 .extracting(TrackingEventMapper.TrackingEventRow::eventType)
                 .contains("DEFERRED")
                 .doesNotContain("NOT_APPLIED");
+    }
+
+    @Test
+    @DisplayName("US20 §3: 上位者へ知らせた記録が投影に写る（読み口が無ければ記録は届かない）")
+    void writesEscalation() {
+        String trackingNumber = "T-ESC-" + System.nanoTime();
+        projection.on(initialized(trackingNumber, "b-" + System.nanoTime()));
+        projection.on(new TrackingExceptionRegisteredEvent(trackingNumber, "ex-esc",
+                ExceptionType.LOSS.name(), OCCURRED, "SGSIN", "見つかりません", true,
+                TransportStatus.RECEIVED, "tracker01", AT), "evt-esc-1");
+
+        projection.on(new ExceptionEscalatedEvent(trackingNumber, "ex-esc",
+                ExceptionType.LOSS.name(), AT));
+
+        assertThat(exceptions.findById("ex-esc").escalatedAt())
+                .as("知らせた時刻が読めないと、一覧は「未連絡」を出し続ける").isEqualTo(AT);
+    }
+
+    @Test
+    @DisplayName("US28 §8: 解決済も含めて読める（既定では外す）")
+    void listsResolvedExceptionsOnlyWhenAsked() {
+        // **誤配の事実は解決後も料金調整の根拠になる**（US28 §受入基準 8）。
+        // 既定で混ぜると一覧が「まだ手を入れる場所」に見えなくなる。
+        String trackingNumber = "T-RES-" + System.nanoTime();
+        projection.on(initialized(trackingNumber, "b-" + System.nanoTime()));
+        projection.on(new TrackingExceptionRegisteredEvent(trackingNumber, "ex-res",
+                ExceptionType.MISROUTE.name(), OCCURRED, "SGSIN", "予定外", false,
+                TransportStatus.RECEIVED, "tracker01", AT), "evt-res-1");
+        projection.on(new TrackingExceptionResolvedEvent(trackingNumber, "ex-res",
+                "組み直しました", "tracker01", AT), "evt-res-2");
+
+        assertThat(ids(exceptions.findOpen(false)))
+                .as("既定では出さない").doesNotContain("ex-res");
+        assertThat(ids(exceptions.findOpen(true)))
+                .as("切り替えれば読める").contains("ex-res");
+    }
+
+    private static List<String> ids(
+            List<TrackingExceptionMapper.OpenExceptionRow> rows) {
+        return rows.stream().map(TrackingExceptionMapper.OpenExceptionRow::exceptionId).toList();
     }
 
     @Test

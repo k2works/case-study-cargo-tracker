@@ -70,11 +70,16 @@ export function TrackingDetailPage() {
   const isRouting = useAuthStore(
     (state) => state.user?.roles.includes('ROLE_ROUTING') ?? false);
 
+  // **入力中はポーリングを止める**（IT11 のクラスタで実測）。30 秒ごとの
+  // 読み直しで例外の欄が描き直され、**対応内容を書いている最中に入力欄が
+  // 消える**。追跡管理者は長い対応内容を書くので、書き終わる前に必ず当たる。
+  const [editing, setEditing] = useState(false);
+
   const tracking = useQuery({
     queryKey: ['tracking', trackingNumber],
     queryFn: () => fetchTracking(trackingNumber),
     retry: false,
-    refetchInterval: REFETCH_INTERVAL_MS,
+    refetchInterval: editing ? false : REFETCH_INTERVAL_MS,
   });
 
   if (tracking.isError) {
@@ -155,6 +160,7 @@ export function TrackingDetailPage() {
         trackingNumber={view.trackingNumber}
         exceptions={view.exceptions}
         canRespond={isTracker}
+        onEditingChange={setEditing}
         onChanged={() => queries.invalidateQueries({ queryKey: ['tracking', trackingNumber] })}
       />
 
@@ -378,11 +384,15 @@ function failureMessage(error: unknown): string {
  * <p><b>対応するのは追跡管理者だけ。</b> 荷主は起きていることを読めるが、
  * 手は入れられない（サーバも同じ宣言で断る）。</p>
  */
-function ExceptionPanel({ trackingNumber, exceptions, canRespond, onChanged }: Readonly<{
+function ExceptionPanel({
+  trackingNumber, exceptions, canRespond, onChanged, onEditingChange,
+}: Readonly<{
   trackingNumber: string;
   exceptions: readonly TrackingExceptionView[];
   canRespond: boolean;
   onChanged: () => void;
+  /** どれかのフォームが開いているか。<b>開いているあいだは読み直しを止める</b>。 */
+  onEditingChange: (editing: boolean) => void;
 }>) {
   const [respondingTo, setRespondingTo] = useState<string | null>(null);
   const [resolvingId, setResolvingId] = useState<string | null>(null);
@@ -393,7 +403,15 @@ function ExceptionPanel({ trackingNumber, exceptions, canRespond, onChanged }: R
   const [means, setMeans] = useState('');
   const [summary, setSummary] = useState('');
 
+  function open(setter: (id: string | null) => void, exceptionId: string) {
+    close();
+    setter(exceptionId);
+    // **入力中は読み直しを止める**（IT11 のクラスタで実測。入力欄が消える）。
+    onEditingChange(true);
+  }
+
   function close() {
+    onEditingChange(false);
     setRespondingTo(null);
     setResolvingId(null);
     setNotifyingId(null);
@@ -490,7 +508,7 @@ function ExceptionPanel({ trackingNumber, exceptions, canRespond, onChanged }: R
                   <button
                     type="button"
                     className={LINK}
-                    onClick={() => { close(); setRespondingTo(item.exceptionId); }}
+                    onClick={() => open(setRespondingTo, item.exceptionId)}
                   >
                     対応を始める
                   </button>
@@ -498,14 +516,14 @@ function ExceptionPanel({ trackingNumber, exceptions, canRespond, onChanged }: R
                 <button
                   type="button"
                   className={LINK}
-                  onClick={() => { close(); setNotifyingId(item.exceptionId); }}
+                  onClick={() => open(setNotifyingId, item.exceptionId)}
                 >
                   荷主へ知らせた
                 </button>
                 <button
                   type="button"
                   className={LINK}
-                  onClick={() => { close(); setResolvingId(item.exceptionId); }}
+                  onClick={() => open(setResolvingId, item.exceptionId)}
                 >
                   解決にする
                 </button>

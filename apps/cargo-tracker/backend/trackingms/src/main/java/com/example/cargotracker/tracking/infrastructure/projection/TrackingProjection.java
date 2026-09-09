@@ -116,12 +116,31 @@ public class TrackingProjection {
         if (current != null) {
             trackings.updateStatus(event.trackingNumber(), event.newStatus().name(),
                     event.occurredAt(), event.location(), now, eventId);
+            clearMisrouteIfMovedOn(event.trackingNumber(), event.newStatus(), now);
         }
         history.insert(new TrackingEventMapper.TrackingEventRow(eventId, event.trackingNumber(),
                 event.source().eventType(),
                 event.previousStatus() == null ? null : event.previousStatus().name(),
                 event.newStatus().name(), event.location(), event.occurredAt(),
                 event.updatedBy(), now));
+    }
+
+    /**
+     * 誤配の印を降ろす（US28 §受入基準 4 の裏）。
+     *
+     * <p><b>組み直しただけでは降ろさない。</b> 貨物はまだ予定外の港にいる。
+     * <b>新しい経路で動き出したとき</b>——つまり誤配から荷役で先へ進んだとき——に
+     * 降ろす。降ろす経路が無いと、組み直しても S41 のバナーが残り続け、
+     * 「まだ誤配」と読まれる（IT11 レビュー。「記録と読み口は対」の裏面）。</p>
+     *
+     * <p><b>例外の対応中は降ろさない。</b> 状態は {@code EXCEPTION} へ退避して
+     * いるだけで、誤配であることは変わらない。</p>
+     */
+    private void clearMisrouteIfMovedOn(String trackingNumber, TransportStatus next,
+            Instant now) {
+        if (next != TransportStatus.MISROUTED && next != TransportStatus.EXCEPTION) {
+            trackings.clearMisrouted(trackingNumber, now);
+        }
     }
 
     /**

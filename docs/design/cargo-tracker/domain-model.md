@@ -4,7 +4,7 @@ title: "ドメインモデル設計 - 国際貨物輸送管理システム（CQR
 description: "CQRS / Event Sourcing 版 Cargo Tracker のドメインモデル設計。6 コンテキストの集約・不変条件・コマンド・イベント（内部 / 契約）・状態遷移・Reaction Handler を、イベントを永続化フォーマットとして定義する。"
 tags: [design,domain-model,ddd,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-09T00:06:30Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-09T06:34:30Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -734,7 +734,7 @@ RouteSearchService ..> RouteSearchResult
 
 制約は [要件定義の経路設計の制約条件](../../requirements/requirements_definition.md) に従います。危険物・冷凍貨物は `acceptedCargoTypes` に含む航海だけを通し、到着期限は日付単位で比較します。
 
-期限の扱いは `departFrom` の有無で変えます。通常の設計（`departFrom` 無し）では期限に間に合う候補だけを返します。誤配の再設計（`departFrom` 指定）では、すでに期限に間に合わないことが普通なので、**期限超過の候補も返し**、各候補に `overdueDays`（最終到着日 − 到着期限、日付単位。間に合う候補は 0）を持たせます。経路設計者は超過日数を見て選び、選んだ候補は `AssignRouteCommand` に載せます。**超過日数は契約 `RouteCandidateDto.overdueDays` が運びます**（IT11。画面に計算し直させると、期限の比べ方——日付単位・業務タイムゾーン——が片方だけ直る）。`Cargo` 不変条件 5（旅程は期限を満たす）は再設計時に限り `overdueDays > 0` を許し、その事実を `CargoRoutedEvent` に載せて荷主への説明に使います。
+期限の扱いは `departFrom` の有無で変えます。通常の設計（`departFrom` 無し）では期限に間に合う候補だけを返します。誤配の再設計（`departFrom` 指定）では、すでに期限に間に合わないことが普通なので、**期限超過の候補も返し**、各候補に `overdueDays`（最終到着日 − 到着期限、日付単位。間に合う候補は 0）を持たせます。経路設計者は超過日数を見て選び、選んだ候補は `AssignRouteCommand` に載せます。**超過日数は契約 `RouteCandidateDto.overdueDays` が運びます**（IT11。画面に計算し直させると、期限の比べ方——日付単位・業務タイムゾーン——が片方だけ直る）。`Cargo` 不変条件 5（旅程は期限を満たす）は再設計時に限り `overdueDays > 0` を許し、その事実を `CargoRoutedEvent` に載せて荷主への説明に使います。**端点は緩めません**——起点は<b>誤配を検知した港</b>でなければならず、集約が `BookingMisroutedEvent.unLocode` を覚えて突き合わせます（`isSatisfiedByRedesign`）。探索が現在地から探しているのは探索の便宜にすぎず、検査を外すと REST を直接叩いて貨物のいない港から出る旅程を確定できます（IT11 レビュー 高）。誤配を検知した港を覚えていない古い行（IT11 より前）では起点を検査しません——**不変条件の追加は既存行を壊す**ためです。
 
 ## Tracking Context（中核）— trackingms
 

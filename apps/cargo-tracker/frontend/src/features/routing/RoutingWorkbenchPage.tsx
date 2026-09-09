@@ -132,6 +132,11 @@ export function RoutingWorkbenchPage() {
   // **超過の列は誤配の再設計でだけ出す。** 通常の設計では全候補が期限を
   // 満たすので、常に「期限内」と並ぶ列は読む人の目を無駄に使う。
   const overdue = found?.candidates.some((candidate) => candidate.overdueDays > 0) ?? false;
+  // 誤配の再設計か（US28）。起点は現在地に固定され、編集できない。
+  const redesigning = booking.data?.state === 'ready'
+    && booking.data.value.routingStatus === 'MISROUTED';
+  const currentLocation = booking.data?.state === 'ready'
+    ? booking.data.value.lastHandlingUnLocode : null;
 
   return (
     <section>
@@ -223,11 +228,16 @@ export function RoutingWorkbenchPage() {
                 />
               </label>
               <label className={LABEL}>
-                <span>この港より後に出る便だけ</span>
+                <span>{redesigning ? '出発港（現在地）' : 'この港より後に出る便だけ'}</span>
+                {/* **誤配の再設計では起点を編集させない**（US28 §受入基準 4）。
+                    サーバは現在地を優先するので、編集できると「入れても効かない欄」
+                    になる。押せない操作を並べないのと同じ理由（IT11 レビュー 高）。 */}
                 <input
                   className={FIELD}
-                  value={departFrom}
+                  value={redesigning ? (currentLocation ?? '') : departFrom}
                   placeholder="JPOSA"
+                  readOnly={redesigning}
+                  aria-readonly={redesigning}
                   onChange={(event) => setDepartFrom(event.target.value)}
                 />
               </label>
@@ -235,6 +245,12 @@ export function RoutingWorkbenchPage() {
             <p className="text-sm text-gray-600">
               期限はここから延ばせます。仮受付を過ぎた予約は予約修正の画面では直せません
             </p>
+            {redesigning && (
+              <p className="text-sm text-gray-600">
+                誤配のため、出発港は貨物の<b>現在地</b>に固定されています。
+                目的地は元の予約のままです。期限を延ばすと、超過日数はその期限で数え直されます
+              </p>
+            )}
             {adjust.isError && (
               <p role="alert" className={ALERT}>
                 {adjust.error instanceof ApiError

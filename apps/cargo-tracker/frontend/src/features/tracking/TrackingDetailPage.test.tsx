@@ -282,7 +282,23 @@ describe('S41 例外の対応（US19 §3・§4 / IT10 T7）', () => {
     });
     respondWith(tracking({
       status: 'EXCEPTION', statusLabel: '例外発生', nextStatuses: [],
-      exceptions: [openException()],
+      exceptions: [{
+        exceptionId: 'ex-1',
+        exceptionType: 'DELAY',
+        exceptionTypeLabel: '遅延',
+        responseStatus: 'REPORTED',
+        responseStatusLabel: '起票',
+        urgent: false,
+        unLocode: 'SGSIN',
+        description: '台風で 3 日遅れます',
+        resolution: null,
+        newEstimatedArrival: null,
+        responsePlan: null,
+        occurredAt: '2026-09-20T02:00:00Z',
+        resolvedAt: null,
+        settled: false,
+        notifications: [],
+      }],
     }));
 
     renderDetail();
@@ -503,5 +519,46 @@ describe('S41 誤配バナー（US28 §受入基準 3・4）', () => {
 
     await screen.findByText('未受領');
     expect(screen.queryByText('誤配を検知しました。')).not.toBeInTheDocument();
+  });
+});
+
+describe('S41 対応の入力中は読み直しを止める（IT11 レビュー / クラスタで実測）', () => {
+  it('入力を始めたら 30 秒ごとの読み直しが止まる', async () => {
+    // **書いている最中に入力欄が消える。** 追跡管理者は長い対応内容を書くので、
+    // 書き終わる前に必ずポーリングに当たる（クラスタ E2E がここで落ちた）。
+    const spy = respondWith(tracking({
+      status: 'EXCEPTION', statusLabel: '例外発生', nextStatuses: [],
+      exceptions: [{
+        exceptionId: 'ex-1',
+        exceptionType: 'DELAY',
+        exceptionTypeLabel: '遅延',
+        responseStatus: 'REPORTED',
+        responseStatusLabel: '起票',
+        urgent: false,
+        unLocode: 'SGSIN',
+        description: '台風で 3 日遅れます',
+        resolution: null,
+        newEstimatedArrival: null,
+        responsePlan: null,
+        occurredAt: '2026-09-20T02:00:00Z',
+        resolvedAt: null,
+        settled: false,
+        notifications: [],
+      }],
+    }));
+
+    renderDetail();
+    await screen.findByRole('button', { name: '解決にする' });
+    await userEvent.click(screen.getByRole('button', { name: '解決にする' }));
+    // 読み込みが済んでから時計を差し替える（差し替えたまま描くと初回の取得が進まない）。
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const before = spy.mock.calls.length;
+
+    await vi.advanceTimersByTimeAsync(60_000);
+
+    expect(spy.mock.calls.length).toBe(before);
+    // 入力欄は残ったまま（描き直されていない）。
+    expect(screen.getByLabelText('対応内容')).toBeInTheDocument();
+    vi.useRealTimers();
   });
 });

@@ -4,7 +4,7 @@ title: "データモデル設計 - 国際貨物輸送管理システム（CQRS /
 description: "CQRS / Event Sourcing 版 Cargo Tracker のデータモデル設計。Event Store は Axon Server に任せ、サービスごとの投影テーブル・Axon 管理テーブル・Auth の状態テーブルを ER 図とテーブル定義で示し、Processing Group との対応とリプレイ前提のマイグレーション方針を定める。"
 tags: [design,data-model,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-08T07:06:06Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-09T06:34:30Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -701,7 +701,7 @@ entity "invoice_line_item" as li {
   description: VARCHAR(200) NOT NULL
   amount: NUMERIC(14,2) NOT NULL
   currency: VARCHAR(3) NOT NULL
-  basis_exception_id: VARCHAR(36)
+  basis_exception_id: VARCHAR(64)
 }
 
 entity "payment" as pay {

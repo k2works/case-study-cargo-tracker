@@ -1195,11 +1195,16 @@ test.describe('マニュアルの画面キャプチャ', () => {
               unLocode: 'SGSIN',
               description: '積替えの際に見当たらなくなりました',
               occurredAt: '2026-09-22T02:00:00Z',
-              estimatedArrival: '2026-09-30T18:00:00Z',
+              // **モックを本物より甘くしない。** 例外一覧の到着期限はサーバが
+              // 日付（DATE）で返す。時刻付きを渡すと、画面には UTC の ISO 文字列が
+              // そのまま出て、業務日付と 1 日ずれて読める（IT11 レビュー 中）。
+              estimatedArrival: '2026-09-30',
               transportStatus: 'EXCEPTION',
               transportStatusLabel: '例外発生',
               bookingId: 'B-2026-0902-004',
-              escalatedAt: '2026-09-22T02:05:00Z',
+              // **本文が説明する要素を写す。** 緊急なのに知らせた記録が無い行に
+              // 「未連絡」が出る、と 14 章が書いている（IT11 レビュー 高）。
+              escalatedAt: null,
             },
             {
               exceptionId: 'ex-2',
@@ -1212,7 +1217,7 @@ test.describe('マニュアルの画面キャプチャ', () => {
               unLocode: 'SGSIN',
               description: '台風で 3 日遅れます',
               occurredAt: '2026-09-20T02:00:00Z',
-              estimatedArrival: '2026-09-27T18:00:00Z',
+              estimatedArrival: '2026-09-27',
               transportStatus: 'EXCEPTION',
               transportStatusLabel: '例外発生',
               bookingId: 'B-2026-0902-007',

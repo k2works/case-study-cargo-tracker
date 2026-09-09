@@ -207,6 +207,17 @@ class CargoTrackingNumberTest {
         };
     }
 
+    /** 追跡番号を発行し、指定した港での予定外の荷役で誤配になっているところまで。 */
+    private static Object[] misroutedAt(String unLocode) {
+        var issued = trackingIssued();
+        var events = new Object[issued.length + 2];
+        System.arraycopy(issued, 0, events, 0, issued.length);
+        events[issued.length] = new HandlingRecordedEvent("B-0001", "act-1", "UNLOAD",
+                unLocode, HANDLED, NOW);
+        events[issued.length + 1] = new BookingMisroutedEvent("B-0001", "act-1", unLocode, NOW);
+        return events;
+    }
+
     /** 追跡番号を発行し、予定外の受領で誤配になっているところまで。 */
     private static Object[] misrouted() {
         var issued = trackingIssued();
@@ -329,12 +340,27 @@ class CargoTrackingNumberTest {
                 Instant.parse("2026-11-20T00:00:00Z"),
                 Instant.parse("2026-12-20T00:00:00Z"))));
 
-        fixture.given().events(misrouted())
+        fixture.given().events(misroutedAt("SGSIN"))
                 .when().command(new AssignRouteCommand("B-0001", fromSingapore, "routing01"))
                 .then().success()
                 .events(CargoRoutedEvent.of("B-0001", fromSingapore, "routing01", NOW,
                         // 到着期限を 19 日超える（業務タイムゾーンで日付にして数える）。
                         19));
+    }
+
+    @Test
+    @DisplayName("US28 §4: 再設計の起点は誤配を検知した港でなければならない")
+    void rejectsRedesignFromAnotherPort() {
+        // **出発地を「見ない」のではなく「差し替える」。** 検査を外すと、REST を
+        // 直接叩いて貨物のいない港から出る旅程が確定できる（IT11 レビュー 高）。
+        var fromRotterdam = new CargoItinerary(List.of(new Leg("V-9",
+                Location.of("NLRTM"), Location.of("USNYC"),
+                Instant.parse("2026-10-01T00:00:00Z"),
+                Instant.parse("2026-10-20T00:00:00Z"))));
+
+        fixture.given().events(misroutedAt("SGSIN"))
+                .when().command(new AssignRouteCommand("B-0001", fromRotterdam, "routing01"))
+                .then().exception(BusinessRuleViolation.class);
     }
 
     @Test

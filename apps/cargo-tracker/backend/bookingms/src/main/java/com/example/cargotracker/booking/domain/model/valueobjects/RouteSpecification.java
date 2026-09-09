@@ -50,16 +50,26 @@ public record RouteSpecification(Location origin, Location destination, LocalDat
     /**
      * 誤配の再設計として満たすか（US28 §受入基準 4・5・6）。
      *
-     * <p><b>出発地は見ない。</b> 再設計は<b>現在地</b>を起点にする——予定ルートを
-     * 外れた貨物は、もう出発地には無い。目的地と貨物仕様は元の予約から
-     * 引き継ぐので、そちらは変わらず見る。</p>
+     * <p><b>出発地を「見ない」のではなく「差し替える」。</b> 再設計の起点は
+     * <b>誤配を検知した港</b>である——予定ルートを外れた貨物はもう出発地には
+     * 無いが、どこから出発してもよいわけでもない。検査を外すと、集約は
+     * 「目的地さえ合っていればどこ発でもよい」ことになり、REST を直接叩けば
+     * 任意の起点の旅程が確定できる（IT11 レビュー 高）。目的地と貨物仕様は
+     * 元の予約から引き継ぐので、そちらは変わらず見る。</p>
      *
-     * <p><b>期限も見ない。</b> 現在地からでは間に合わないのが普通で、
+     * <p><b>期限は見ない。</b> 現在地からでは間に合わないのが普通で、
      * 超過を断ると貨物が動かせなくなる。超過した事実は
      * {@link #overdueDays} が数え、イベントに載せて荷主への説明に使う。</p>
+     *
+     * @param currentLocation 誤配を検知した港。<b>分からなければ起点を検査しない</b>
+     *     ——列が無かったころの誤配（IT11 より前）を復元した集約は覚えていない
+     *     （不変条件の追加は既存行を壊す）
      */
-    public boolean isSatisfiedByRedesign(CargoItinerary itinerary) {
-        return itinerary != null && destination.equals(itinerary.destination());
+    public boolean isSatisfiedByRedesign(CargoItinerary itinerary, Location currentLocation) {
+        if (itinerary == null || !destination.equals(itinerary.destination())) {
+            return false;
+        }
+        return currentLocation == null || currentLocation.equals(itinerary.origin());
     }
 
     /**

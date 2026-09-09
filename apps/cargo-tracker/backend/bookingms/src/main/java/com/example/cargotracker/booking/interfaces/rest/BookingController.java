@@ -198,7 +198,7 @@ public class BookingController {
      *
      * <p>誤配でなければ、これまでどおり調整済みの条件に従う。</p>
      */
-    private static Location departFrom(BookingView booking, RouteConditionView condition) {
+    static Location departFrom(BookingView booking, RouteConditionView condition) {
         if ("MISROUTED".equals(booking.routingStatus()) && booking.lastHandlingUnLocode() != null) {
             return Location.of(booking.lastHandlingUnLocode());
         }

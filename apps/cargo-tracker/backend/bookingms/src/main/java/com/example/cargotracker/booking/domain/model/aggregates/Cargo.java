@@ -200,7 +200,7 @@ public class Cargo {
         // 動かせなくなる——超過した事実はイベントに載せて荷主への説明に使う。
         boolean redesign = routingStatus == RoutingStatus.MISROUTED;
         boolean satisfied = redesign
-                ? routeSpecification().isSatisfiedByRedesign(command.itinerary())
+                ? routeSpecification().isSatisfiedByRedesign(command.itinerary(), misroutedAt)
                 : routeSpecification().isSatisfiedBy(command.itinerary(), clock.getZone());
         if (!satisfied) {
             // 不変条件 5。期限も端点も、いま集約が持っている値で見る。
@@ -687,6 +687,15 @@ public class Cargo {
     private String misroutedBy;
 
     /**
+     * 誤配を検知した港（US28 §受入基準 4）。<b>再設計の起点</b>。
+     *
+     * <p>覚えていないと、集約は「目的地さえ合っていればどこ発でもよい」ことに
+     * なる——探索が現在地から探しているのは<b>探索の便宜</b>にすぎず、
+     * REST を直接叩けば任意の起点の旅程を確定できてしまう（IT11 レビュー 高）。</p>
+     */
+    private Location misroutedAt;
+
+    /**
      * 反映済みの荷役。<b>再配送を弾く鍵</b>。
      *
      * <p>予約 1 件あたりの荷役は旅程の区間数に比例する数（受領・積込・荷降し・引取）で、
@@ -710,6 +719,8 @@ public class Cargo {
     void on(BookingMisroutedEvent event) {
         this.routingStatus = RoutingStatus.MISROUTED;
         this.misroutedBy = event.activityId();
+        // **現在地を覚える。** 再設計の起点をここで検査する（US28 §受入基準 4）。
+        this.misroutedAt = Location.of(event.unLocode());
     }
 
     @EventSourcingHandler
@@ -718,6 +729,7 @@ public class Cargo {
         if (event.misrouteCleared()) {
             this.routingStatus = RoutingStatus.ROUTED;
             this.misroutedBy = null;
+            this.misroutedAt = null;
         }
     }
 

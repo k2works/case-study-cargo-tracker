@@ -639,6 +639,34 @@ describe('S31 誤配の再設計（US28 §受入基準 6）', () => {
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
   });
 
+  it('誤配のときは出発港が現在地で固定され、編集できない（US28 §4）', async () => {
+    // **編集できると「入れても効かない欄」になる。** サーバは誤配のとき
+    // 現在地を優先するので、画面と挙動が食い違う（IT11 レビュー 高）。
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes('route-candidates')) {
+        return new Response(
+          JSON.stringify({ candidates: [], truncated: false, condition: NO_CONDITION }),
+          { status: 200 },
+        );
+      }
+      return new Response(
+        JSON.stringify({
+          ...booking(),
+          routingStatus: 'MISROUTED',
+          lastHandlingUnLocode: 'SGSIN',
+        }),
+        { status: 200 },
+      );
+    });
+
+    renderWorkbench();
+
+    const origin = await screen.findByLabelText('出発港（現在地）');
+    expect(origin).toHaveValue('SGSIN');
+    expect(origin).toHaveAttribute('readonly');
+  });
+
   it('超過の候補が無ければ、期限超過の列そのものを出さない', async () => {
     // **常に「期限内」と並ぶ列は、読む人の目を無駄に使う。**
     mockApi(

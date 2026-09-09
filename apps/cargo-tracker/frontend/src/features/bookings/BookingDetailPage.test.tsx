@@ -920,6 +920,9 @@ describe('S22 誤配バナー（US28 §受入基準 3・4・6）', () => {
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('誤配を検知しました');
     expect(alert).toHaveTextContent('SGSIN');
+    // **日時も出す**（US28 §受入基準 3）。業務タイムゾーンに直して出すので、
+    // ここを潰すと UTC 表示に戻る回帰が素通りする（IT11 レビュー 中）。
+    expect(alert).toHaveTextContent('2026/09/28 09:30');
   });
 
   it('経路設計者には [経路を再設計] が出て、現在地起点の画面へ行ける', async () => {
