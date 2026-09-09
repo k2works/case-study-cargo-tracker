@@ -1,6 +1,9 @@
 # Docs Update Log
 
 ## 2026-09-09
+* **Update**: [retrospective-11](/development/cargo-tracker/retrospective-11.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_report-11](/development/cargo-tracker/iteration_report-11.md) を更新（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
 * **Update**: [IT11実装_review_20260909](/review/cargo-tracker/IT11実装_review_20260909.md) を更新（claude-code/claude-opus-5）
 * **Update**: [15-誤配を検知して経路を組み直す](/manual/15-誤配を検知して経路を組み直す.md) を更新（claude-code/claude-opus-5）
 * **Update**: [20260909](/journal/cargo-tracker/20260909.md) を更新（claude-code/claude-opus-5）

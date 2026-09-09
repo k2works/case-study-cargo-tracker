@@ -6,6 +6,7 @@ import com.example.cargotracker.booking.infrastructure.query.BookingQueries.Book
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.RouteConditionView;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -21,7 +22,7 @@ class RouteSearchOriginTest {
 
     private static BookingView booking(String routingStatus, String lastHandlingUnLocode) {
         return new BookingView("b-1", "B-2026-0902-004", "SHP-000001", "山田商事",
-                "JPTYO", "USNYC", LocalDate.of(2026, 10, 15), "GENERAL",
+                "JPTYO", "USNYC", LocalDate.of(2026, Month.OCTOBER, 15), "GENERAL",
                 null, null, null, null, 10, "自動車部品", null, null, null, null,
                 "ROUTE_PROPOSED", routingStatus, Instant.parse("2026-09-02T01:00:00Z"),
                 null, null, null, null, null, null, null, null,

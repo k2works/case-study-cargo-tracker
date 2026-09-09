@@ -205,8 +205,9 @@ public class TrackingActivity {
         appender.append(new TransportStatusUpdatedEvent(trackingNumber.value(), status, next,
                 StatusUpdateSource.HANDLING, command.activityId(), command.unLocode(),
                 command.completedAt(), command.operator(), clock.instant()));
-        afterAdvancing(next, command.activityId(), command.handlingType(), command.unLocode(),
-                command.operator(), command.completedAt(), appender, clock.instant());
+        afterAdvancing(next, new AppliedHandling(command.activityId(), command.handlingType(),
+                command.unLocode(), command.operator(), command.completedAt()),
+                appender, clock.instant());
     }
 
     /**
@@ -218,17 +219,18 @@ public class TrackingActivity {
      * だけ業務が止まる**——例外の対応中に引取が届いた貨物は、解決後に追跡だけ
      * 引取済になり、精算も予約も動かない（IT11 レビューで programmer が指摘）。</p>
      */
-    private void afterAdvancing(TransportStatus next, String activityId, String handlingType,
-            String unLocode, String operator, java.time.Instant completedAt,
+    private void afterAdvancing(TransportStatus next, AppliedHandling handling,
             EventAppender appender, java.time.Instant now) {
+        String activityId = handling.activityId();
+        String unLocode = handling.unLocode();
+        java.time.Instant completedAt = handling.completedAt();
         if (next == TransportStatus.MISROUTED) {
             // **誤配は荷役が決める**（US28 §受入基準 2）。手で起票できないのは
             // そのため（ExceptionType#reportableByHand）——起きていない誤配を
             // 記録できると、経路設計者はそれを組み直そうとする。
             appender.append(new CargoMisroutedEvent(trackingNumber.value(), bookingId,
                     activityId, unLocode, completedAt, now));
-            autoReportMisroute(activityId, handlingType, unLocode, operator, completedAt,
-                    appender, now);
+            autoReportMisroute(handling, appender, now);
         }
         if (next == TransportStatus.DELIVERED) {
             // **精算の開始条件は別のイベントで出す**（US16 §受入基準 4）。
@@ -257,23 +259,23 @@ public class TrackingActivity {
      * {@code MISROUTED} を許さないので、2 度目の予定外の荷役はここまで来ない
      * （反映できなかった荷役として履歴に残る）。</p>
      */
-    private void autoReportMisroute(String activityId, String handlingType, String unLocode,
-            String operator, java.time.Instant completedAt, EventAppender appender,
+    private void autoReportMisroute(AppliedHandling handling, EventAppender appender,
             java.time.Instant now) {
-        String exceptionId = TrackingException.misrouteIdFor(activityId);
+        String exceptionId = TrackingException.misrouteIdFor(handling.activityId());
         if (exceptions.containsKey(exceptionId)) {
             return;
         }
         TrackingException candidate = TrackingException.report(exceptionId,
-                ExceptionType.MISROUTE, completedAt, unLocode,
-                "予定ルート外の " + unLocode + " で " + handlingType + " が記録されました");
+                ExceptionType.MISROUTE, handling.completedAt(), handling.unLocode(),
+                "予定ルート外の " + handling.unLocode() + " で "
+                        + handling.handlingType() + " が記録されました");
         appender.append(new TrackingExceptionRegisteredEvent(trackingNumber.value(),
                 candidate.exceptionId(), candidate.type().name(), candidate.occurredAt(),
                 candidate.unLocode(), candidate.description(), candidate.urgent(),
-                status, operator, now));
+                status, handling.operator(), now));
         appender.append(new TransportStatusUpdatedEvent(trackingNumber.value(), status,
                 TransportStatus.EXCEPTION, StatusUpdateSource.EXCEPTION, null,
-                unLocode, completedAt, operator, now));
+                handling.unLocode(), handling.completedAt(), handling.operator(), now));
     }
 
     /**
@@ -389,9 +391,9 @@ public class TrackingActivity {
                         deferred.unLocode(), deferred.completedAt(), deferred.operator(), now));
                 // **その場で適用したときと同じことをする。** 片方にだけ書くと、
                 // 預かった引取が精算へ伝わらない（IT11 レビュー 高）。
-                afterAdvancing(next, deferred.activityId(), deferred.handlingType(),
-                        deferred.unLocode(), deferred.operator(), deferred.completedAt(),
-                        appender, now);
+                afterAdvancing(next, new AppliedHandling(deferred.activityId(),
+                        deferred.handlingType(), deferred.unLocode(), deferred.operator(),
+                        deferred.completedAt()), appender, now);
                 current = next;
             } else {
                 appender.append(new HandlingNotAppliedEvent(trackingNumber.value(),
@@ -538,6 +540,16 @@ public class TrackingActivity {
      */
     private final java.util.Map<String, DeferredHandling> deferredHandlings =
             new java.util.LinkedHashMap<>();
+
+    /**
+     * 適用した荷役 1 件。
+     *
+     * <p><b>引数の群れをまとめる。</b> 「その場で適用」と「預かってから適用」の
+     * 2 経路が同じ 5 つの値を渡すので、束ねないと引数の並び違いが起きる。</p>
+     */
+    private record AppliedHandling(String activityId, String handlingType, String unLocode,
+            String operator, java.time.Instant completedAt) {
+    }
 
     /** 預かった荷役 1 件。適用に要るものを全部持つ。 */
     private record DeferredHandling(String activityId, String handlingType, String unLocode,
