@@ -964,6 +964,95 @@ test.describe('kind クラスタでの通し確認', () => {
       await expect(page.getByRole('heading', { name: /経路設計/ })).toBeVisible();
     });
 
+  test('通関が留置なら引取が断られ、通関済にすると引取できる（US29・IT12）',
+    async ({ page, request }) => {
+      // **US29 のクラスタ確認**（Try T8。US ごとに 1 度回す）。3 サービスの連鎖
+      // （荷役 → 追跡の例外 → 荷役の引取ガード）は、層ごとの検査では抜けが出る。
+      //
+      // **T7e として独立したタスク行にしてある。** US29 を閉じる前に回す。
+      test.setTimeout(300_000);
+      const product = `通関の貨物-${Date.now()}`;
+      const { trackingNumber } = await issueTrackingNumber(request, product);
+      const handlerToken = await tokenOf(request, 'handler01');
+      const trackerToken = await tokenOf(request, 'tracker01');
+      const declarationNumber = `IMP-${Date.now()}`;
+
+      // **D1: 申告を登録すると審査中になる。**
+      await expect(async () => {
+        const response = await request.post('/api/v1/handling/customs-declarations', {
+          headers: { Authorization: `Bearer ${handlerToken}` },
+          data: { declarationNumber, trackingNumber, declaredAt: new Date().toISOString() },
+        });
+        expect(response.status()).toBe(201);
+      }).toPass({ timeout: 60_000 });
+
+      // **D4: 通関が済んでいない貨物の引取は断られ、現在の通関状態が出る。**
+      // IT9 から 3 IT のあいだ「読む側の無い配線を敷かない」として保留してきた
+      // ガードを、ここで初めて実地で確かめる。
+      const beforeClearance = await request.post('/api/v1/handling/activities', {
+        headers: { Authorization: `Bearer ${handlerToken}` },
+        failOnStatusCode: false,
+        data: {
+          activityId: crypto.randomUUID(),
+          trackingNumber,
+          handlingType: 'CLAIM',
+          unLocode: 'USNYC',
+          consigneeConfirmation: 'John Smith',
+        },
+      });
+      expect(beforeClearance.status()).toBe(409);
+      expect(await beforeClearance.text()).toContain('PENDING');
+
+      // **D7: 留置にすると税関保留の例外が自動で起票される。**
+      await expect(async () => {
+        const response = await request.post(
+          `/api/v1/handling/customs-declarations/${declarationNumber}/status`,
+          {
+            headers: { Authorization: `Bearer ${trackerToken}` },
+            data: { status: 'HELD', reason: '原産地証明が未提出' },
+          },
+        );
+        expect(response.status()).toBe(200);
+      }).toPass({ timeout: 60_000 });
+
+      await signIn(page, 'tracker01');
+      // **一覧から自分のデータを名指しで探さない**（Try T6）。詳細は URL で開き、
+      // 一覧は「絞り込みが効く」ことだけ見る。ここは種別が出ることを見る。
+      await page.goto('/tracking/exceptions');
+      await expectEventually(page, '税関保留');
+
+      // **D2・D5: 通関済にすると引取できる。**
+      await expect(async () => {
+        const response = await request.post(
+          `/api/v1/handling/customs-declarations/${declarationNumber}/status`,
+          {
+            headers: { Authorization: `Bearer ${trackerToken}` },
+            data: { status: 'CLEARED', reason: '証明書を受領' },
+          },
+        );
+        expect(response.status()).toBe(200);
+      }).toPass({ timeout: 60_000 });
+
+      await expect(async () => {
+        const response = await request.post('/api/v1/handling/activities', {
+          headers: { Authorization: `Bearer ${handlerToken}` },
+          data: {
+            activityId: crypto.randomUUID(),
+            trackingNumber,
+            handlingType: 'CLAIM',
+            unLocode: 'USNYC',
+            consigneeConfirmation: 'John Smith',
+          },
+        });
+        expect(response.status()).toBe(201);
+      }).toPass({ timeout: 60_000 });
+
+      // **D11: 変更履歴が申告詳細から読める**（画面から踏んで確かめる）。
+      await page.goto(`/customs/${declarationNumber}`);
+      await expectEventually(page, '原産地証明が未提出');
+      await expect(page.getByText('証明書を受領')).toBeVisible();
+    });
+
   test('追跡番号だけで照会でき、追跡管理者が状態を手で更新できる（US17・US18・IT8）',
     async ({ page, request }) => {
       // **本 IT の中核。** 公開照会は認証を通らず、状態の更新は trackingms の集約を
