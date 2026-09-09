@@ -313,11 +313,21 @@ export function updateVoyage(
  * <p>供給元は予約（bookingms）。routing_read_db に予約の写しは作らない。
  * 作ると Booking の状態と二重管理になる。</p>
  */
+/**
+ * 経路設計作業一覧の絞り。
+ *
+ * <p>誤配は並びの先頭に来るので、滞留すると通常の設計依頼が表示上限に押し出される
+ * （IT11 の通しで実測）。上限に当たったことは既に知らせているので、絞る手段を足す。</p>
+ */
+export type WorklistKind = 'ALL' | 'MISROUTED' | 'AWAITING';
+
 export function fetchRoutingWorklist(
   includeRouted = false,
+  kind: WorklistKind = 'ALL',
 ): Promise<Pending<{ items: BookingView[]; total: number }>> {
   return queryClient(
-    `/booking/bookings/routing-worklist?page=0&size=200&includeRouted=${includeRouted ? 'true' : 'false'}`,
+    `/booking/bookings/routing-worklist?page=0&size=200`
+      + `&includeRouted=${includeRouted ? 'true' : 'false'}&kind=${kind}`,
   );
 }
 

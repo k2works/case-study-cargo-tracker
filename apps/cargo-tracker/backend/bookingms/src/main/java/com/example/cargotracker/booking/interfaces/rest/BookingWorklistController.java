@@ -87,14 +87,20 @@ public class BookingWorklistController {
      * <p>routingms ではなくここに置く。{@code routing_read_db} に予約の表は無く、
      * 一覧のために写しも作らない（写しを作ると Booking の状態と二重管理になる）。
      * 経路設計ロールへの開放は Gateway のルートとロールで行う。</p>
+     *
+     * <p><b>{@code kind} で片側だけに絞れる。</b> 誤配は並びの先頭に来るので、
+     * 滞留すると通常の設計依頼が表示上限に押し出される（IT11 の通しで実測）。
+     * 既定は両方で、絞りは経路設計者が選ぶ。</p>
      */
     @GetMapping("/routing-worklist")
     public ResponseEntity<BookingListView> routingWorklist(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size,
-            @RequestParam(defaultValue = "false") boolean includeRouted) {
+            @RequestParam(defaultValue = "false") boolean includeRouted,
+            @RequestParam(defaultValue = "ALL") String kind) {
         return ResponseEntity.ok(queries.query(
-                new FindRoutingWorklistQuery(page, size, includeRouted), BookingListView.class));
+                new FindRoutingWorklistQuery(page, size, includeRouted, kind),
+                BookingListView.class));
     }
 
     /**
@@ -106,7 +112,7 @@ public class BookingWorklistController {
      */
     @GetMapping("/summary")
     public ResponseEntity<Map<String, Integer>> summary() {
-        BookingListView worklist = queries.query(new FindRoutingWorklistQuery(0, 1, false),
+        BookingListView worklist = queries.query(new FindRoutingWorklistQuery(0, 1, false, "ALL"),
                 BookingListView.class);
         return ResponseEntity.ok(Map.of(
                 "preliminary",

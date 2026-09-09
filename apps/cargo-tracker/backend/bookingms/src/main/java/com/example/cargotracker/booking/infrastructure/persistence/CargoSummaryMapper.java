@@ -360,11 +360,17 @@ public interface CargoSummaryMapper {
      * <p>並び順は<b>誤配が先、そのあと到着期限が近い順</b>（ui_design.md）。誤配は
      * 現在地からの再設計が要り、放っておくほど選べる航海が減る。既定では設計済み
      * （{@code ROUTED}）を外し、誤配は含める。</p>
+     *
+     * <p><b>{@code kind} で絞れる。</b> 誤配は並びの先頭に来るので、滞留すると
+     * 通常の設計依頼が表示上限に押し出される（IT11 の通しで実測）。上限に当たった
+     * ことは既に知らせているので、<b>絞る手段</b>を足す。{@code MISROUTED} は誤配
+     * だけ、{@code AWAITING} は設計待ちだけ、それ以外は両方。</p>
      */
     List<CargoSummaryRow> findRoutingWorklist(@Param("includeRouted") boolean includeRouted,
-            @Param("limit") int limit, @Param("offset") int offset);
+            @Param("kind") String kind, @Param("limit") int limit, @Param("offset") int offset);
 
-    int countRoutingWorklist(@Param("includeRouted") boolean includeRouted);
+    int countRoutingWorklist(@Param("includeRouted") boolean includeRouted,
+            @Param("kind") String kind);
 
     /**
      * 一覧の既定条件を検査するためだけの更新。

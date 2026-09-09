@@ -3,7 +3,7 @@ type: Plan
 title: "イテレーション 12 計画"
 tags: [plan]
 status: draft
-generated: { by: claude-code/claude-opus-5, at: 2026-09-09T08:34:40Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-09T12:06:18Z }
 ---
 
 # イテレーション 12 計画
@@ -374,3 +374,5 @@ S42 --> S41 : 税関保留の例外から
 | 日付 | 内容 | 記録者 |
 | :--- | :--- | :--- |
 | 2026-09-09 | 初版作成（IT12 開始準備 ステップ 1・2） | claude-code/claude-opus-5 |
+| 2026-09-09 | 検証（ステップ 3・4）で見つけた 5 件を反映。GitHub（Issue #594・Project 41）と索引を同期 | claude-code/claude-opus-5 |
+| 2026-09-09 | 序盤を消化：T0 の入口（S）・引き継ぎ枠 A（DLQ・[ADR-0014](../../adr/cargo-tracker/0014-poison-events-are-parked-not-blocking.md)）・引き継ぎ枠 B（S30 の絞り込み）。**枠 A は一部未達**——退避と処理継続は入ったが、**列がまだ全体で 1 本**なので同じ列の後続は届かない（この版に手立てが無い。ADR-0014「引き受けていないこと」に記録し IT13 へ送る） | claude-code/claude-opus-5 |

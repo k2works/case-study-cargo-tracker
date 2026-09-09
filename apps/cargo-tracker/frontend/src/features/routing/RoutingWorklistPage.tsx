@@ -32,7 +32,7 @@ const VOYAGE_CARGO_TYPE: Record<CargoType, string> = {
   HAZARDOUS: 'HAZARDOUS',
   REFRIGERATED: 'REEFER',
 };
-import { fetchRoutingWorklist } from './api';
+import { fetchRoutingWorklist, type WorklistKind } from './api';
 
 /**
  * S30 経路設計作業一覧（UC04）。
@@ -74,11 +74,19 @@ function voyageSearchQuery(item: BookingView): string {
   }).toString();
 }
 
+/** 絞りの選択肢。**既定は両方**——絞りを既定にすると、片方が誰の目にも入らなくなる。 */
+const KINDS: ReadonlyArray<{ value: WorklistKind; label: string }> = [
+  { value: 'ALL', label: 'すべて' },
+  { value: 'MISROUTED', label: '誤配だけ' },
+  { value: 'AWAITING', label: '設計待ちだけ' },
+];
+
 export function RoutingWorklistPage() {
   const [includeRouted, setIncludeRouted] = useState(false);
+  const [kind, setKind] = useState<WorklistKind>('ALL');
   const { data, isPending, isError } = useQuery({
-    queryKey: ['routing-worklist', includeRouted],
-    queryFn: () => fetchRoutingWorklist(includeRouted),
+    queryKey: ['routing-worklist', includeRouted, kind],
+    queryFn: () => fetchRoutingWorklist(includeRouted, kind),
     refetchInterval: 3000,
   });
 
@@ -98,6 +106,28 @@ export function RoutingWorklistPage() {
             通知した予約（ROUTE_NOTIFIED）はこの一覧を離れる。 */}
         {'同じ依頼で設計済みのものも表示'}
       </label>
+
+      {/* **誤配は並びの先頭に来る。** 滞留すると通常の設計依頼が表示上限の外へ
+          押し出される（IT11 の通しで実測）。上限に当たったことは下で知らせて
+          いるので、ここでは絞る手段を出す。**絞りは並べ替えではない**——並び順
+          はサーバが決めたままにする。 */}
+      <fieldset className="mt-3">
+        <legend className="text-sm text-gray-700">絞り込み</legend>
+        <div className="mt-1 flex flex-wrap gap-4">
+          {KINDS.map((option) => (
+            <label key={option.value} className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="radio"
+                name="worklist-kind"
+                value={option.value}
+                checked={kind === option.value}
+                onChange={() => setKind(option.value)}
+              />
+              {option.label}
+            </label>
+          ))}
+        </div>
+      </fieldset>
 
       {isPending && <output className={`${NOTICE} mt-4`}>読み込み中…</output>}
       {isError && (

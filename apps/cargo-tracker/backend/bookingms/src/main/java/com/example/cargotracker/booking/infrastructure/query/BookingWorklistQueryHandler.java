@@ -78,9 +78,9 @@ public class BookingWorklistQueryHandler {
         int size = Math.clamp(query.size(), 1, 200);
         int offset = Math.max(query.page(), 0) * size;
         return new BookingListView(
-                cargos.findRoutingWorklist(query.includeRouted(), size, offset).stream()
-                        .map(BookingQueryHandler::toView).toList(),
-                cargos.countRoutingWorklist(query.includeRouted()));
+                cargos.findRoutingWorklist(query.includeRouted(), query.kind(), size, offset)
+                        .stream().map(BookingQueryHandler::toView).toList(),
+                cargos.countRoutingWorklist(query.includeRouted(), query.kind()));
     }
 
     @QueryHandler

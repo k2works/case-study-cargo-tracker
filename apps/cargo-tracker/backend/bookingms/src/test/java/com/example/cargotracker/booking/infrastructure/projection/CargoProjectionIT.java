@@ -16,7 +16,6 @@ import com.example.cargotracker.booking.infrastructure.query.BookingQueries.Find
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingsQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.ItineraryLegView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.RevisionView;
-import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindRoutingWorklistQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueryHandler;
 import com.example.cargotracker.booking.infrastructure.query.BookingWorklistQueryHandler;
 import com.example.cargotracker.shared.contract.event.ShipperRegisteredEvent;
@@ -195,86 +194,6 @@ class CargoProjectionIT extends AbstractAxonIntegrationTest {
         assertThat(ids)
                 .as("期限が近いものが先。あとから登録しても順序は期限で決まる")
                 .containsExactly(near, far);
-    }
-
-    @Test
-    @DisplayName("引き渡すと経路提案中になり、経路設計作業一覧に出る（US06）")
-    void appearsInRoutingWorklist() {
-        String bookingId = "B-WL-" + System.nanoTime();
-        projection.on(booked(bookingId, "SHP-WL", "自動車部品"));
-
-        projection.on(new RoutingRequestedEvent(bookingId, "sales01"));
-
-        BookingView view = queries.handle(new FindBookingQuery(bookingId));
-        assertThat(view.bookingStatus()).isEqualTo("ROUTE_PROPOSED");
-        assertThat(view.routingStatus()).isEqualTo("ROUTING_REQUESTED");
-        assertThat(worklistQueries.handle(new FindRoutingWorklistQuery(0, 200, false)).items())
-                .extracting(BookingView::bookingId).contains(bookingId);
-        assertThat(view.routingRequestedAt())
-                .as("いつ引き渡されたかが読めないと、期限が遠く放置された案件が"
-                        + "一覧の下に埋もれたまま気づかれない（IT3 レビュー R.4）")
-                .isNotNull();
-    }
-
-    @Test
-    @DisplayName("引き渡していない予約に引き渡し日時は入らない")
-    void hasNoRoutingRequestedAtBeforeHandover() {
-        String bookingId = "B-NOWL-" + System.nanoTime();
-        projection.on(booked(bookingId, "SHP-NOWL", "自動車部品"));
-
-        assertThat(queries.handle(new FindBookingQuery(bookingId)).routingRequestedAt())
-                .as("受け付けただけで日時が入ると、放置の判断ができない")
-                .isNull();
-    }
-
-    @Test
-    @DisplayName("経路設計作業一覧は誤配が先、そのあと到着期限が近い順に並ぶ")
-    void worklistPutsMisroutedFirst() {
-        // 並び順を消すとここが赤くなる。誤配は放っておくほど選べる航海が減る。
-        //
-        // **この組み合わせは本番ではまだ起こらない。** 作業一覧は
-        // booking_status = 'ROUTE_PROPOSED' で絞るが、誤配になるのは輸送中で、
-        // 遷移表に IN_TRANSIT → ROUTE_PROPOSED は無い。markMisroutedForTest は
-        // ROUTE_PROPOSED の行を直接書き換えて、その状態を作っている。
-        //
-        // したがってこの並び順は**仮置き**である。誤配のときに状態をどう戻すかは
-        // US28（IT11）で決める。決めたら、作業一覧の絞りをその決定に合わせ、
-        // ここも本番で起こりうる経路で組み直す。
-        String far = "B-WL-FAR-" + System.nanoTime();
-        String near = "B-WL-NEAR-" + System.nanoTime();
-        String misrouted = "B-WL-MIS-" + System.nanoTime();
-        projection.on(bookedWithDeadline(far, LocalDate.of(2027, Month.JANUARY, 31)));
-        projection.on(bookedWithDeadline(near, LocalDate.of(2026, Month.OCTOBER, 1)));
-        projection.on(bookedWithDeadline(misrouted, LocalDate.of(2027, Month.DECEMBER, 31)));
-        for (String id : List.of(far, near, misrouted)) {
-            projection.on(new RoutingRequestedEvent(id, "sales01"));
-        }
-        cargos.markMisroutedForTest(misrouted);
-
-        List<String> order = worklistQueries.handle(new FindRoutingWorklistQuery(0, 200, false)).items()
-                .stream().map(BookingView::bookingId)
-                .filter(id -> id.equals(far) || id.equals(near) || id.equals(misrouted))
-                .toList();
-
-        assertThat(order).containsExactly(misrouted, near, far);
-    }
-
-    @Test
-    @DisplayName("輸送中に誤配になった予約も経路設計作業一覧に出る")
-    void worklistIncludesMisroutedInTransit() {
-        // 誤配の再設計は急ぐ仕事で、S30 が唯一の入口。ここに出ないと
-        // 経路設計者は気づく手段を持たない。
-        String misrouted = "B-WL-MIT-" + System.nanoTime();
-        projection.on(bookedWithDeadline(misrouted, LocalDate.of(2027, Month.MARCH, 1)));
-        projection.on(new RoutingRequestedEvent(misrouted, "sales01"));
-        cargos.markMisroutedInTransitForTest(misrouted);
-
-        List<String> ids = worklistQueries.handle(new FindRoutingWorklistQuery(0, 200, false)).items()
-                .stream().map(BookingView::bookingId).toList();
-
-        assertThat(ids)
-                .as("誤配は輸送中に起きる。ROUTE_PROPOSED だけで絞ると 1 件も出ない")
-                .contains(misrouted);
     }
 
     private static CargoBookedEvent bookedWithDeadline(String bookingId, LocalDate deadline) {

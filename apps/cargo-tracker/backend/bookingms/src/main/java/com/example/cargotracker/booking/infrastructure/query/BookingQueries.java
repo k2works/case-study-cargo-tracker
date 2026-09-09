@@ -40,7 +40,8 @@ public final class BookingQueries {
      * しているのは、設計の済んだ予約が混ざると一覧全体が「今日やること」として
      * 信用されなくなるため。誤配は既定でも含める（現在地からの再設計が要る）。</p>
      */
-    public record FindRoutingWorklistQuery(int page, int size, boolean includeRouted) {
+    public record FindRoutingWorklistQuery(int page, int size, boolean includeRouted,
+            String kind) {
     }
 
     /**

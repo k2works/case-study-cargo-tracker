@@ -141,14 +141,33 @@
       誤配の再設計は急ぐ仕事で、S30 が唯一の入口である。ここに出ないと
       経路設計者は気づく手段を持たない。
     -->
+    <!--
+      kind で片側だけに絞れる。誤配は並びの先頭に来るので、滞留すると通常の
+      設計依頼が表示上限に押し出される（IT11 の通しで実測）。上限に当たった
+      ことは既に知らせているので、絞る手段を足す。
+    -->
     <sql id="worklistVisible">
-        WHERE (
-            booking_status = 'ROUTE_PROPOSED'
-            <if test="!includeRouted">
-                AND routing_status &lt;&gt; 'ROUTED'
-            </if>
-            OR routing_status = 'MISROUTED'
-        )
+        <choose>
+            <when test="kind == 'MISROUTED'">
+                WHERE routing_status = 'MISROUTED'
+            </when>
+            <when test="kind == 'AWAITING'">
+                WHERE booking_status = 'ROUTE_PROPOSED'
+                <if test="!includeRouted">
+                    AND routing_status &lt;&gt; 'ROUTED'
+                </if>
+                AND routing_status &lt;&gt; 'MISROUTED'
+            </when>
+            <otherwise>
+                WHERE (
+                    booking_status = 'ROUTE_PROPOSED'
+                    <if test="!includeRouted">
+                        AND routing_status &lt;&gt; 'ROUTED'
+                    </if>
+                    OR routing_status = 'MISROUTED'
+                )
+            </otherwise>
+        </choose>
     </sql>
 
     <select id="findRoutingWorklist" resultMap="cargoSummaryRow">

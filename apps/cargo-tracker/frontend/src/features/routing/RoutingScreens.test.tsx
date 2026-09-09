@@ -323,6 +323,25 @@ describe('S30 経路設計作業一覧', () => {
     expect(url).not.toContain('/routing/');
   });
 
+  it('誤配だけに絞れる（絞りはサーバに渡す。画面で間引かない）', async () => {
+    // **誤配は並びの先頭に来る。** 滞留すると通常の設計依頼が表示上限の外へ
+    // 押し出される（IT11 の通しで実測）。画面で間引くと、上限の外の行は
+    // 取り寄せてすらいないので、絞っても現れない。
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ items: [booking()], total: 1 }), { status: 200 }),
+    );
+
+    renderAt('/routing/worklist', <RoutingWorklistPage />);
+    expect(await screen.findByText('B-2026-0903-0001')).toBeInTheDocument();
+    expect(String(fetchSpy.mock.calls[0]?.[0])).toContain('kind=ALL');
+
+    await userEvent.click(screen.getByRole('radio', { name: '誤配だけ' }));
+
+    await waitFor(() =>
+      expect(fetchSpy.mock.calls.some((call) => String(call[0]).includes('kind=MISROUTED')))
+        .toBe(true));
+  });
+
   it('誤配は状態の欄でそれと分かる', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(
