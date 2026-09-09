@@ -4,7 +4,7 @@ title: "データモデル設計 - 国際貨物輸送管理システム（CQRS /
 description: "CQRS / Event Sourcing 版 Cargo Tracker のデータモデル設計。Event Store は Axon Server に任せ、サービスごとの投影テーブル・Axon 管理テーブル・Auth の状態テーブルを ER 図とテーブル定義で示し、Processing Group との対応とリプレイ前提のマイグレーション方針を定める。"
 tags: [design,data-model,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-09T06:34:30Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-09T12:06:18Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -810,12 +810,47 @@ entity "token_entry" as te {
   mask: INTEGER NOT NULL
 }
 
+entity "dead_letter_entry" as dle {
+  * **dead_letter_id**: VARCHAR(255) <<PK>>
+  --
+  processing_group: VARCHAR(255) NOT NULL
+  sequence_identifier: VARCHAR(255) NOT NULL
+  sequence_index: BIGINT NOT NULL
+  event_type: VARCHAR(255) NOT NULL
+  event_identifier: VARCHAR(255) NOT NULL
+  type: VARCHAR(255) NOT NULL
+  event_timestamp: VARCHAR(255) NOT NULL
+  payload: BYTEA NOT NULL
+  metadata: BYTEA
+  aggregate_type: VARCHAR(255)
+  aggregate_identifier: VARCHAR(255)
+  sequence_number: BIGINT
+  token_type: VARCHAR(255)
+  token: BYTEA
+  enqueued_at: VARCHAR(255) NOT NULL
+  last_touched: VARCHAR(255)
+  processing_started: VARCHAR(255)
+  cause_type: VARCHAR(255)
+  cause_message: VARCHAR(1023)
+  diagnostics: BYTEA
+}
+
+note bottom of dle
+  **書けなかったイベントの退避先**（[ADR-0014]）。
+  IT11 は 1 件の桁あふれで投影が止まり、
+  後続が全部届かなくなった。
+  列名は Axon の既定（camelCase）ではなく
+  この DB の書き方に合わせる
+  （AxonJdbcConfiguration#deadLetterSchema）
+end note
+
 @enduml
 ```
 
 | テーブル | 置く DB | 用途 |
 | :--- | :--- | :--- |
 | `token_entry` | 全 Read Model DB | Processing Group ごとの処理位置。`mask INTEGER NOT NULL` はセグメントのマスク（take-4 の実測スキーマ。無いと起動時に落ちる）。`INDEX(processor_name)` |
+| `dead_letter_entry` | 投影を持つ 5 サービス | 投影が書けなかったイベントの退避先（[ADR-0014](../../adr/cargo-tracker/0014-poison-events-are-parked-not-blocking.md)）。**黙って捨てず、原因（`cause_type` / `cause_message`）と元のイベントを残す。** 読むのは `npx gulp projection:dead-letters`。`UNIQUE(processing_group, sequence_identifier, sequence_index)`・`INDEX(processing_group)`・`INDEX(processing_group, sequence_identifier)` |
 
 ## Processing Group とテーブルの対応
 

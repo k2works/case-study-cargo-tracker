@@ -4,7 +4,7 @@ title: "運用要件 - 国際貨物輸送管理システム（CQRS / Event Sourc
 description: "CQRS / Event Sourcing 版 Cargo Tracker の運用要件。投影のリプレイを日常操作として置き、Event Store の復元演習、Event Processor と Reaction Handler の監視、ランブック、イベントの形を変えるリリース手順、鍵の破棄、Gulp タスクを定める。"
 tags: [design,operation,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-09T01:32:37Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-09T12:06:18Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -290,6 +290,7 @@ Axon Server の停止中はコマンドを受け付けません。荷役作業�
 | :--- | :--- |
 | `gulp projection:replay --env --service --group` | 投影の Processing Group のトークンをリセットしてリプレイ。終了後に行数を検証。`-reaction` の Group は拒否する |
 | `gulp projection:status --env` | 全 Processing Group の位置・遅れ・停止の一覧 |
+| `gulp projection:dead-letters --env` | 投影が書けずに退避されたイベントの一覧（原因つき）。**`projection:status` でトークンは進んでいるのに反映されない、という形の止まり方はここに出ます**（[ADR-0014](../../adr/cargo-tracker/0014-poison-events-are-parked-not-blocking.md)）。直したら退避先から処理し直します——Event Store 全体のリプレイは要りません |
 | `gulp reaction:stuck --env --older-than 24h` | 滞留している連鎖の一覧 |
 | `gulp axon:backup:snapshot --env` | Axon Server EBS の手動スナップショット（リリース前・バージョンアップ前） |
 | `gulp axon:restore --env --snapshot-id` | スナップショットからの復元と S3 差分の再投入 |

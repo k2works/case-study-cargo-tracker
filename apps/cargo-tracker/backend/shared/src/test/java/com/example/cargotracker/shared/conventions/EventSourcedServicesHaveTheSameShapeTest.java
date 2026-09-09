@@ -260,6 +260,44 @@ class EventSourcedServicesHaveTheSameShapeTest {
     }
 
     @Test
+    @DisplayName("列挙した Processing Group には退避先が付いている")
+    void everyEnumeratedProcessorHasADeadLetterQueue() throws IOException {
+        // **書き忘れを人の注意で防がない**（[ADR-0014] 決定 2）。`"[..default]"` は
+        // この版では効かないので、Processor ごとに `dlq.enabled: true` が要る。
+        // 書き忘れると、その Processor だけ 1 件で全部止まる形に戻る——
+        // テストは緑のまま、本番だけ IT11 の壊れ方をする。
+        List<String> withoutDlq = new ArrayList<>();
+        for (Path yml : applicationConfigs()) {
+            String config = Files.readString(yml, StandardCharsets.UTF_8);
+            // 列挙されている Processing Group を全部拾ってから、それぞれについて
+            // 見る。dlq が付いているものだけを数えると、付け忘れたものほど漏れる。
+            Matcher processors = Pattern
+                    .compile("(?m)^ {6}\"\\[(com\\.example\\.cargotracker\\.[^\\]]+)\\]\":"
+                            + "((?:\n {8}[^\n]*)*)")
+                    .matcher(config);
+            while (processors.find()) {
+                if (!processors.group(2).contains("dlq:")) {
+                    withoutDlq.add(yml.getParent().getParent().getParent().getParent()
+                            .getFileName() + ": " + processors.group(1));
+                }
+            }
+        }
+        assertThat(withoutDlq)
+                .as("退避先の無い Processor は、書けない 1 件で止まり後続が全部届かなくなる")
+                .isEmpty();
+    }
+
+    /** 業務サービスの {@code application.yml}。Processing Group を列挙している場所。 */
+    private static List<Path> applicationConfigs() throws IOException {
+        try (Stream<Path> paths = Files.walk(backendRoot())) {
+            return paths
+                    .filter(p -> p.toString().replace('\\', '/')
+                            .endsWith("/src/main/resources/application.yml"))
+                    .toList();
+        }
+    }
+
+    @Test
     @DisplayName("投影を持つサービスには ReplayIT がある")
     void projectionsHaveAReplayCheck() throws IOException {
         List<String> missing = new ArrayList<>();

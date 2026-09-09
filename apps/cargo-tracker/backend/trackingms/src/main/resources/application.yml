@@ -32,14 +32,22 @@ axon:
     servers: ${AXON_SERVER:localhost:8124}
   eventhandling:
     processors:
+      # **退避先は Processor ごとに明示する**（ADR-0014）。`"[..default]"` は
+      # この版では効かない（実測。DLQ が付かず、1 件で全部止まる形に戻る）。
+      # 書き忘れを人の注意で防がないよう、EveryProcessorHasADeadLetterQueueTest が
+      # 「@EventHandler を持つパッケージが、ここに dlq 付きで載っているか」を見る。
       # Processing Group はパッケージ名キーで指定する（@ProcessingGroup は Axon 5 に無い）。
       # 列挙し忘れると既定の設定で動くので、テストは緑のまま本番だけ挙動が変わる。
       "[com.example.cargotracker.tracking.infrastructure.projection]":
         mode: pooled
+        dlq:
+          enabled: true
       # 反応（コマンドを送る）は投影と別の Group にする。同じにすると、
       # 投影のリプレイでコマンドが再送され、貨物状態が二度進む。
       "[com.example.cargotracker.tracking.application.reaction]":
         mode: pooled
+        dlq:
+          enabled: true
 
 management:
   endpoints:

@@ -33,6 +33,12 @@ import org.springframework.stereotype.Component;
  *
  * <p><b>Reaction Handler と同じ Group にしない。</b> 投影のリプレイでコマンドが
  * 再送されると、追跡が作り直される（ADR-0001 決定 6）。パッケージで分ける。</p>
+ *
+ * <p><b>処理の列はまだ全体で 1 本である。</b> 1 件が書けずに退避されると、順序を守る
+ * という退避先の約束のために<b>後続も退避される</b>（[ADR-0014] の「引き受けていない
+ * こと」）。追跡番号ごとに分けたいが、この版では手立てが無い——{@code application.yml}
+ * の {@code sequencing-policy} はどこからも読まれず、{@code @SequencingPolicy} は
+ * 方針を作りはするが{@code sequenceIdentifierFor} が呼ばれない（どちらも実測）。</p>
  */
 @Component
 public class TrackingProjection {
@@ -68,7 +74,7 @@ public class TrackingProjection {
     }
 
     @EventHandler
-    public void on(TrackingInitializedEvent event) {
+        public void on(TrackingInitializedEvent event) {
         var now = clock.instant();
         trackings.insert(new TrackingSummaryMapper.TrackingSummaryRow(
                 event.trackingNumber(), event.bookingId(), event.shipperId(),

@@ -23,3 +23,4 @@ cargo-tracker プロジェクトのADRドキュメントです。
 * [ADR-0011 追跡番号は推測されにくい形式で採る](./0011-tracking-number-is-hard-to-guess.md) - 認証なしで照会できる追跡番号を連番から衝突検査つきの乱数へ改め、正典の形式にそろえる。ADR-0010 決定 2 の採り方を訂正する。
 * [ADR-0012 CargoSnapshot は TrackingInitializedEvent から作る](./0012-cargo-snapshot-from-tracking-initialized.md) - handlingms が予定ルートの判定に使う CargoSnapshot の元イベントを、購読できる契約イベントに決め直す。
 * [ADR-0013 共有カーネルが例外の対応表を持つ](./0013-shared-kernel-holds-the-error-mapping.md) - ドメイン例外を HTTP へ写す対応表を shared.interfaces.rest に置く。共有カーネルにはドメインと契約だけを置く原則の、意図した例外である。
+* [ADR-0014 書けないイベントは退避して、処理を止めない](./0014-poison-events-are-parked-not-blocking.md) - 投影が書けなかったイベントを dead_letter_entry へ退避し、Event Processor を生かしたままにする。1 件の不正イベントで後続が全部届かなくなる形をやめる。

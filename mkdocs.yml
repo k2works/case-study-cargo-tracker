@@ -189,6 +189,7 @@ nav:
           - ADR-0011 追跡番号は推測されにくい形式で採る: adr/cargo-tracker/0011-tracking-number-is-hard-to-guess.md
           - ADR-0012 CargoSnapshot は TrackingInitializedEvent から作る: adr/cargo-tracker/0012-cargo-snapshot-from-tracking-initialized.md
           - ADR-0013 共有カーネルが例外の対応表を持つ: adr/cargo-tracker/0013-shared-kernel-holds-the-error-mapping.md
+          - ADR-0014 書けないイベントは退避して、処理を止めない: adr/cargo-tracker/0014-poison-events-are-parked-not-blocking.md
   - 記事:
       - 概要: article/index.md
       - モノリスアーキテクチャ実装比較:

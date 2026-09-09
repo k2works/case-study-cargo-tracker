@@ -918,6 +918,39 @@ export default function (gulp) {
   });
 
   /**
+   * 退避されたイベント（Dead Letter）を読む。
+   *
+   * `projection:status` でトークンが進んでいるのに反映されない、という形の
+   * 止まり方はここに出る（ADR-0014）。**黙って捨てていない**ので、原因と
+   * 元のイベントが残っている。直したあとは退避先から処理し直す。
+   */
+  gulp.task('projection:dead-letters', (done) => {
+    const databases = {
+      bookingms: 'booking_read_db',
+      routingms: 'routing_read_db',
+      trackingms: 'tracking_read_db',
+      handlingms: 'handling_read_db',
+      billingms: 'billing_read_db',
+    };
+    for (const [service, database] of Object.entries(databases)) {
+      console.log(`=== ${service} (${database}) ===`);
+      try {
+        console.log(
+          sh(
+            `docker exec cargo-tracker-postgres psql -U postgres -d ${database} -c ` +
+              `"SELECT processing_group, event_type, cause_type, ` +
+              `left(cause_message, 120) AS cause, enqueued_at ` +
+              `FROM dead_letter_entry ORDER BY enqueued_at"`,
+          ),
+        );
+      } catch (e) {
+        console.log(`  読めません: ${e.message.split('\n')[0]}`);
+      }
+    }
+    done();
+  });
+
+  /**
    * 荷主の個人情報を削除する（crypto-shredding。ADR-0003）。
    *
    *   npx gulp shipper:shred --shipper <shipperId>

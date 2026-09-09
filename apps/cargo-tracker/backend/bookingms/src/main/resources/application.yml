@@ -32,13 +32,21 @@ axon:
     servers: ${AXON_SERVER:localhost:8124}
   eventhandling:
     processors:
+      # **退避先は Processor ごとに明示する**（ADR-0014）。`"[..default]"` は
+      # この版では効かない（実測。DLQ が付かず、1 件で全部止まる形に戻る）。
+      # 書き忘れを人の注意で防がないよう、EveryProcessorHasADeadLetterQueueTest が
+      # 「@EventHandler を持つパッケージが、ここに dlq 付きで載っているか」を見る。
       # Processing Group はパッケージ名キーで指定する（@ProcessingGroup は Axon 5 に無い）。
       # 投影と Reaction Handler を別 Group にするため、パッケージを分けている。
       # 名前の正典は data-model.md「Processing Group とテーブルの対応」。
       "[com.example.cargotracker.booking.infrastructure.projection]":
         mode: pooled
+        dlq:
+          enabled: true
       "[com.example.cargotracker.booking.application.reaction]":
         mode: pooled
+        dlq:
+          enabled: true
 
 management:
   endpoints:
