@@ -3,7 +3,7 @@ type: Plan
 title: "イテレーション 12 計画"
 tags: [plan]
 status: draft
-generated: { by: claude-code/claude-opus-5, at: 2026-09-09T22:35:39Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-09T23:26:44Z }
 ---
 
 # イテレーション 12 計画
@@ -45,7 +45,7 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-09T22:35:39Z }
 | §5 | 通関状態が「留置」になると、**例外種別「税関保留」の例外イベントが自動起票される** | 契約 `CustomsStatusChangedEvent`（handlingms → trackingms・billingms）→ `TrackingReactionHandler` → `RegisterTrackingExceptionCommand(CUSTOMS_HOLD)`。**手では起票できないまま**（`reportableByHand`）。IT11 の誤配と同じ形 | `TrackingActivityTest`・`TrackingReactionHandlerTest`・**`CustomsStatusChangedRoundTripIT`**（`test_strategy.md:414` が名指し）・クラスタ E2E・受け入れテスト | |
 | §6 | 「留置」のまま **3 日を超えた**申告は、一覧で警告表示され、追跡管理者のダッシュボードに件数が現れる | **営業日で数える**（不変条件 4。港の所在国の休日カレンダー `HolidayCalendar`）。`heldBusinessDays` を投影に写し、一覧は留置営業日の多い順。**件数は次の行動へ繋ぐ**（S02 の行から S52 へ） | `HolidayCalendarTest`・`CustomsDeclarationTest`・`CustomsProjectionIT`・`DashboardPage.test.tsx` | |
 | §7 | 通関申告の一覧を**貨物 ID・追跡番号・通関状態で検索**できる | `FindCustomsDeclarationsQuery` と S52。**既定で通関済を外す**（決着したものが混ざると一覧が「まだ手を入れる場所」に見えなくなる）。`[通関済も表示]` で切り替える | `CustomsQueryHandlerTest`・`CustomsProjectionIT`・`CustomsScreens.test.tsx` | |
-| §8 | 通関状態の**変更履歴（日時・変更者・理由）**が申告詳細から参照できる | **履歴はイベント列から読む**（`data-model.md:656`。追記専用テーブルを作らない）。`FindCustomsHistoryQuery` が Event Store を読む。注 N3 | `CustomsHistoryQueryIT`・`CustomsScreens.test.tsx`・受け入れテスト | |
+| §8 | 通関状態の**変更履歴（日時・変更者・理由）**が申告詳細から参照できる | **`customs_status_history` 投影から読む**（**当初は Event Store から読む予定だったが実装できなかった**。注 N3）。主キーは元イベントの識別子なのでリプレイで積み上がらない | `CustomsControllerIT#readsHistory`・`CustomsScreens.test.tsx`・受け入れテスト | |
 
 ### 受入基準に現れない不変条件（**正典にあり、実装が要る**）
 
@@ -62,7 +62,7 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-09T22:35:39Z }
 | :--- | :--- | :--- | :--- |
 | N1 | **`HolidayCalendar` の置き場が決まっていない。** `domain-model.md:1033` は「港の所在国の休日カレンダー」と書くが、**要素表にも共有カーネルの名簿にも無い**。国コードから休日を引くので、`shared.domain.location.CountryCode` と対になる | `domain-model.md` の要素表（値オブジェクト）と、共有カーネルの範囲（ADR-0001 決定 4 / `SharedKernelScopeTest` の名簿） | T1（**共有カーネルではなく handlingms に置いた**。上の ADR 表を参照） |
 | N2 | US29 §4 の**通知の置き場が設計に無い**。`ui_design.md:120` の「記録と手作業の組で満たす」US 一覧に US29 はあるが、**記録先のイベントが `domain-model.md` の handlingms のイベント表に無い** | `domain-model.md`（`CustomsClearanceNotifiedEvent` を追加）・`ui_design.md:120` | T5 |
-| N3 | **履歴を Event Store から読むクエリが設計に無い。** `data-model.md:656` は「履歴は Event Store から読む」と書くが、`domain-model.md` のクエリ一覧に該当する問い合わせが無い | `domain-model.md` のクエリ一覧（`FindCustomsHistoryQuery`） | T6 |
+| N3 | **履歴を Event Store から読むクエリが設計に無い。** `data-model.md:656` は「履歴は Event Store から読む」と書くが、`domain-model.md` のクエリ一覧に該当する問い合わせが無い | `domain-model.md` のクエリ一覧（`FindCustomsHistoryQuery`） | **T4 で反映。ただし正典どおりには実装できなかった**——`@QueryHandler` から Event Store を読むと、タグを指定しても `havingAnyTag()` でも 0 件になる（実測）。ADR-0012 と同じ形で正典を直し、`customs_status_history` 投影にした（主キーは元イベントの識別子なのでリプレイで積み上がらない） |
 | N4 | **S52・S53 の `###` 節が `ui_design.md` に無い**（S53 はある。**S52 が無い**）。画面一覧の行と一覧規約の行だけで、画面項目・操作手順が未記述 | `ui_design.md`（S52 の節を新設） | T6 |
 | N5 | **IT10 から 3 IT 続けて未反映の注**——`ui_design.md` に **S42・S43 の `###` 節が無い**。IT10 で「T6 で反映する」と書き、IT11 でも繰り越した | `ui_design.md`（S42・S43 の節を新設） | T9（負債枠） |
 

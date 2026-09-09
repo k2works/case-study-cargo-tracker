@@ -4,7 +4,7 @@ title: "データモデル設計 - 国際貨物輸送管理システム（CQRS /
 description: "CQRS / Event Sourcing 版 Cargo Tracker のデータモデル設計。Event Store は Axon Server に任せ、サービスごとの投影テーブル・Axon 管理テーブル・Auth の状態テーブルを ER 図とテーブル定義で示し、Processing Group との対応とリプレイ前提のマイグレーション方針を定める。"
 tags: [design,data-model,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-09T12:06:18Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-09T23:26:44Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -91,7 +91,7 @@ bi --> bidb
 | bookingms | `booking_read_db` | 投影 + 受け皿 + Axon 管理 | `shipper`, `cargo_summary`, `cargo_revision`, `cargo_notification`, `cargo_leg`, `cancellation_request`, `quotation`, `quotation_candidate`, `attention_item`, `process_state`, `token_entry` |
 | routingms | `routing_read_db` | 投影 + 受け皿 + Axon 管理 | `voyage`, `carrier_movement`, `voyage_accepted_cargo_type`, `attention_item`, `token_entry` |
 | trackingms | `tracking_read_db` | 投影 + 受け皿 + Axon 管理 | `tracking_summary`, `tracking_event`, `tracking_exception`, `attention_item`, `token_entry` |
-| handlingms | `handling_read_db` | 投影 + Axon 管理 | `cargo_snapshot`, `cargo_snapshot_leg`, `handling_activity`, `customs_declaration`, `token_entry` |
+| handlingms | `handling_read_db` | 投影 + Axon 管理 | `cargo_snapshot`, `cargo_snapshot_leg`, `handling_activity`, `customs_declaration`, `customs_status_history`, `token_entry`, `dead_letter_entry` |
 | billingms | `billing_read_db` | 投影 + 受け皿 + Axon 管理 | `invoice`, `invoice_line_item`, `payment`, `shipper_contract_snapshot`, `attention_item`, `token_entry` |
 
 `location` のマスタは各 DB に置きません。UN/LOCODE は共有カーネルの値オブジェクトであり、港名の表示に要る対応表は `shared` のリソース（CSV）から読みます。マスタを各 DB に複製すると更新の同期が要ります。
@@ -653,7 +653,8 @@ cs ||--o{ cd
 | :--- | :--- | :--- | :--- |
 | `cargo_snapshot` / `cargo_snapshot_leg` | **`TrackingInitializedEvent`**（契約）、`CargoCancelledEvent`（契約・US30） | `INDEX(voyage_number, unload_unlocode)` | ACL の読み取りモデル。`HandlingActivity` の登録時に `isOffRoute` の判定に使う。Booking の型を持ち込まない。**元イベントは [ADR-0012](../../adr/cargo-tracker/0012-cargo-snapshot-from-tracking-initialized.md) で決め直した**——当初 `TrackingNumberIssuedEvent` と書いていたが、これは bookingms の内部イベントで handlingms から購読できない（IT9 の着手前に発見）。`cancelled` の書き手は US30（IT15）まで居ない（既定 `false` が業務上正しい） |
 | `handling_activity` | `HandlingActivityRegisteredEvent`, `HandlingActivityVoidedEvent` | `UNIQUE(activity_id)`（PK。クライアント生成の冪等キー）, `INDEX(tracking_number, completed_at)`, `INDEX(voyage_number, unlocode)` | `activity_id` は `RegisterHandlingActivityCommand` の冪等キー（クライアント生成 UUID）。再送信は集約が同一 `activityId` で弾き、投影は PK で弾く。**重複登録の 5 分規則は application 層（`HandlingController`）が守る**——当初「集約が守る」と書いていたが、**1 作業 1 集約なので集約は他の作業を知らず、実装できない**（`activityId` が違えば別の集約になる。IT9 のレビューで発見）。判定に他の作業が要る規則は、旅程を引くのと同じ層で解決する。訂正は `voided` を立てるだけで元の行は残る（`VoidHandlingActivityCommand`）。`completed_at` は港のローカル時刻で入力し `TIMESTAMPTZ` で保存。`INDEX(voyage_number, unlocode)` は `FindCargosOnVoyageQuery` 用（`cargo_snapshot_leg` と合わせる）。`consignee_name` の書き手は引取（US16・IT10）で、`ConsigneeConfirmationRecordedEvent`（handlingms の内部イベント）が書く——契約 `HandlingActivityRegisteredEvent` はすでに本番の Event Store にあり、項目を足すと過去のイベントが読めなくなる。購読側の投影も荷受人名を要らない。`voided_by` は `HandlingActivityVoidedEvent.voidedBy` を写す（IT10 / V004）——運んでいたのに投影が捨てていた。列が無かったころの行は NULL で、画面は「—」と出す |
-| `customs_declaration` | `CustomsDeclarationRegisteredEvent`, `CustomsStatusUpdatedEvent` | `INDEX(tracking_number, status)`, `INDEX(status, held_business_days DESC)` | 状態変更の履歴は Event Store が持つ。画面の履歴表示は Event Store から読む（`FindCustomsDeclarationQuery` が最新状態、履歴はイベント列）。`held_business_days` は留置の営業日数（港の所在国の休日カレンダーで数え、`CustomsStatusChangedEvent.heldBusinessDays` から写す）。一覧は留置営業日の多い順 |
+| `customs_declaration` | `CustomsDeclarationRegisteredEvent`, `CustomsStatusUpdatedEvent` | `INDEX(tracking_number, status)`, `INDEX(status, held_business_days DESC)` | 現在状態のみ。`held_business_days` は**留置から出たときの確定値**で、**留置中の日数は読むときに数える**（`CustomsQueryHandler`）——留置中は日が経つだけで変わるのにイベントは来ないので、列に持つと古くなる。一覧は留置営業日の多い順（並べ替えも読むとき） |
+| `customs_status_history` | `CustomsDeclarationRegisteredEvent`, `CustomsStatusUpdatedEvent`, `CustomsClearanceNotifiedEvent` | `INDEX(declaration_number, changed_at)` | 状態変更の履歴（US29 §8）。**主キーは元イベントの識別子**なのでリプレイで積み上がらない。**当初は「履歴は Event Store から読む」と決めていたが、実装できなかった**——`@QueryHandler` から `EventStore.transaction(context).source(...)` を回すと、タグを指定しても `havingAnyTag()` でも 0 件になる（IT12 で実測。集約の復元は同じ API で動くので、クエリの `ProcessingContext` がこの読み方を支えていない）。[ADR-0012](../../adr/cargo-tracker/0012-cargo-snapshot-from-tracking-initialized.md) と同じ形で正典を直した |
 
 java-3 の `customs_status_history`（追記専用テーブル）は作りません。追記専用の履歴はイベント列そのものです。
 
@@ -868,7 +869,7 @@ Processing Group は `@ProcessingGroup`（Axon 5 に存在しません）では�
 | trackingms | `tracking-projection` | TrackingActivity のイベント、`TrackingInitializedEvent`（契約） | `tracking_summary`, `tracking_event`, `tracking_exception` |
 | trackingms | `tracking-reaction` | `HandlingActivityRegisteredEvent`、`HandlingActivityVoidedEvent`、`CargoCancelledEvent`（契約）、`UNLOAD` 後の陸揚げ完了 | **投影テーブルを書かない**。TrackingActivity へコマンドを送る（`AdvanceTrackingCommand`、`CloseTrackingCommand` 等）。失敗だけを `attention_item` に書く |
 | handlingms | `handling-snapshot-projection` | **`TrackingInitializedEvent`**（契約・[ADR-0012](../../adr/cargo-tracker/0012-cargo-snapshot-from-tracking-initialized.md)）, `CargoCancelledEvent` | `cargo_snapshot`, `cargo_snapshot_leg` |
-| handlingms | `handling-activity-projection` | HandlingActivity / CustomsDeclaration のイベント | `handling_activity`, `customs_declaration` |
+| handlingms | `handling-activity-projection` | HandlingActivity / CustomsDeclaration のイベント | `handling_activity`, `customs_declaration`, `customs_status_history` |
 | billingms | `billing-projection` | Invoice のイベント、`ShipperRegisteredEvent`、`CorporateContractAssignedEvent`（契約） | `invoice`, `invoice_line_item`, `payment`, `shipper_contract_snapshot` |
 | billingms | `billing-reaction` | `CargoDeliveredEvent`、`CustomsStatusChangedEvent`（契約） | **投影テーブルを書かない**。Invoice へコマンドを送る。失敗だけを `attention_item` に書く |
 
@@ -888,7 +889,7 @@ Processing Group は `@ProcessingGroup`（Axon 5 に存在しません）では�
 | `Voyage` | `voyage`, `carrier_movement`, `voyage_accepted_cargo_type` | 1 対 1 |
 | `TrackingActivity` | `tracking_summary`, `tracking_event`, `tracking_exception` | 現在状態 + 画面用の履歴 |
 | `HandlingActivity` | `handling_activity` | 1 対 1 |
-| `CustomsDeclaration` | `customs_declaration` | 現在状態のみ（履歴は Event Store） |
+| `CustomsDeclaration` | `customs_declaration`, `customs_status_history` | 現在状態と変更履歴（履歴の主キーは元イベントの識別子） |
 | `Invoice` | `invoice`, `invoice_line_item`, `payment` | 1 対 1 |
 | `User` | `users`, `user_roles`, `user_shipper_link` | 書き込みモデル（状態保存） |
 | `CargoSnapshot`（ACL） | `cargo_snapshot`, `cargo_snapshot_leg` | 他 BC の契約イベントから作る読み取りモデル |

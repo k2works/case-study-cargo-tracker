@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.handling.infrastructure.persistence.CustomsDeclarationMapper">
+
+    <!--
+      主キーは申告番号（税関が採番し、利用者が持ち込む）。読み直しても増えない。
+      内容は書き換えない——登録時の内容は変わらない。
+    -->
+    <insert id="insert">
+        INSERT INTO customs_declaration (
+            declaration_number, tracking_number, booking_id, status, declared_at,
+            last_status_changed_at, held_business_days, projected_at
+        ) VALUES (
+            #{declarationNumber}, #{trackingNumber}, #{bookingId}, #{status}, #{declaredAt},
+            #{lastStatusChangedAt}, #{heldBusinessDays}, #{projectedAt}
+        )
+        ON CONFLICT (declaration_number) DO NOTHING
+    </insert>
+
+    <!--
+      **古い配送で巻き戻らないようにする。** 少なくとも 1 回配送では、更新が
+      入れ替わって届くことがある。最後に起きた変更より古いものは書かない。
+    -->
+    <update id="updateStatus">
+        UPDATE customs_declaration
+           SET status = #{status},
+               last_reason = #{reason},
+               changed_by = #{changedBy},
+               held_business_days = #{heldBusinessDays},
+               last_held_at = COALESCE(#{lastHeldAt}, last_held_at),
+               last_status_changed_at = #{changedAt},
+               projected_at = #{projectedAt}
+         WHERE declaration_number = #{declarationNumber}
+           AND last_status_changed_at &lt;= #{changedAt}
+    </update>
+
+    <!--
+      **既定で通関済を外す。** 決着したものが混ざると、一覧全体が「まだ手を
+      入れる場所」に見えなくなる。
+
+      **並べ替えはここでしない。** 留置営業日の多い順に並べるが、留置中の日数は
+      日が経つだけで変わり、イベントは来ないので列は古いままになる。数えるのは
+      読むときで、並べ替えもそこで行う（CustomsQueryHandler）。
+    -->
+    <select id="search" resultType="com.example.cargotracker.handling.infrastructure.persistence.CustomsDeclarationMapper$CustomsDeclarationRow">
+        SELECT declaration_number, tracking_number, booking_id, status, declared_at,
+               last_status_changed_at, last_held_at, held_business_days, last_reason,
+               changed_by, projected_at
+          FROM customs_declaration
+         <where>
+            <if test="!includeCleared">
+                AND status &lt;&gt; 'CLEARED'
+            </if>
+            <if test="trackingNumber != null">
+                AND tracking_number = #{trackingNumber}
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+         </where>
+         ORDER BY declared_at, declaration_number
+         LIMIT #{limit}
+    </select>
+
+</mapper>

@@ -118,4 +118,78 @@ public final class HandlingQueries {
      */
     public record VoyagePortListView(List<VoyagePortView> items, boolean truncated) {
     }
+
+    /**
+     * 通関申告の一覧（S52 / US29 §受入基準 7）。
+     *
+     * <p><b>既定で通関済を外す。</b> 決着したものが混ざると、一覧全体が「まだ手を
+     * 入れる場所」に見えなくなる。</p>
+     */
+    public record FindCustomsDeclarationsQuery(
+            boolean includeCleared, String trackingNumber, String status, boolean overdueOnly) {
+    }
+
+    /** 通関申告 1 件（S53 / 引取のガードも読む）。 */
+    public record FindCustomsDeclarationQuery(String declarationNumber) {
+    }
+
+    /** その貨物の最新の通関状態（引取のガードが読む。US29 §受入基準 3）。 */
+    public record FindCustomsStatusOfCargoQuery(String trackingNumber) {
+    }
+
+    /**
+     * 状態の変更履歴（S53 / US29 §受入基準 8）。
+     *
+     * <p><b>Event Store から読む。</b> 追記専用の履歴テーブルは作らない
+     * （data-model.md）。</p>
+     */
+    public record FindCustomsHistoryQuery(String declarationNumber) {
+    }
+
+    /** 督促の対象（留置が既定の営業日数を超えた申告）の件数（S02 / §受入基準 6）。 */
+    public record CountOverdueCustomsHoldsQuery() {
+    }
+
+    /**
+     * S52 に出す申告 1 件。
+     *
+     * @param heldBusinessDays 留置してからの営業日数。<b>読むときに数える</b>——
+     *     留置中は日が経つだけで変わり、イベントは来ないので列は古くなる
+     * @param overdue 督促の対象か。<b>判定はサーバが持つ</b>（画面で数え直さない）
+     */
+    public record CustomsDeclarationView(
+            String declarationNumber,
+            String trackingNumber,
+            String bookingId,
+            String status,
+            String statusLabel,
+            Instant declaredAt,
+            Instant lastStatusChangedAt,
+            Instant lastHeldAt,
+            int heldBusinessDays,
+            boolean overdue,
+            String lastReason,
+            String changedBy) {
+    }
+
+    public record CustomsDeclarationListView(List<CustomsDeclarationView> items, int total) {
+    }
+
+    /**
+     * 履歴の 1 行（S53）。
+     *
+     * @param kind 何が起きたか。{@code STATUS_CHANGED} / {@code CLEARANCE_NOTIFIED}
+     */
+    public record CustomsHistoryEntryView(
+            String kind,
+            String previousStatus,
+            String status,
+            String statusLabel,
+            String reason,
+            String changedBy,
+            Instant changedAt) {
+    }
+
+    public record CustomsHistoryView(List<CustomsHistoryEntryView> items) {
+    }
 }
