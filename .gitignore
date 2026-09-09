@@ -71,3 +71,6 @@ apps/cargo-tracker/www/docs/
 apps/cargo-tracker/www/manual/
 apps/cargo-tracker/www/jig/
 apps/cargo-tracker/www/jig-erd/
+
+# SonarScanner の作業ディレクトリ（解析のたびに作り直される生成物）。
+.scannerwork/
