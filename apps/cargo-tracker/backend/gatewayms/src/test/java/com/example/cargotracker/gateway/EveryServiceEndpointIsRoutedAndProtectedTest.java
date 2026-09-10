@@ -245,6 +245,40 @@ class EveryServiceEndpointIsRoutedAndProtectedTest {
     }
 
     @Test
+    @DisplayName("US29: 通関の登録は荷役だけ、状態更新は追跡だけ（読みは両方）")
+    void customsWritesAreSplitBetweenRoles() {
+        // **メソッド込みで宣言し、そのロール以外が 403 になることを見る**（T8）。
+        // 読みを {荷役, 追跡} に開いたので、書き込みの宣言を先に置かないと
+        // 「一覧を読める側が登録も更新もできる」に落ちる（IT9 で踏んだ形）。
+        List<String> handler = List.of("ROLE_HANDLER");
+        List<String> tracker = List.of("ROLE_TRACKER");
+        List<String> sales = List.of("ROLE_SALES");
+        String list = "/api/v1/handling/customs-declarations";
+        String status = "/api/v1/handling/customs-declarations/IMP-1/status";
+
+        assertThat(RoleAuthorization.isAllowed("GET", list, handler))
+                .as("荷役作業員は自分が出した申告の一覧を読む").isTrue();
+        assertThat(RoleAuthorization.isAllowed("GET", list, tracker))
+                .as("追跡管理者は督促の対象を読む").isTrue();
+        assertThat(RoleAuthorization.isAllowed("GET", list, sales))
+                .as("営業は通関に関わらない").isFalse();
+
+        assertThat(RoleAuthorization.isAllowed("POST", list, handler))
+                .as("申告を出すのは現場（荷役作業員）").isTrue();
+        assertThat(RoleAuthorization.isAllowed("POST", list, tracker))
+                .as("追跡管理者は申告を出さない——読めるだけで書けてはいけない").isFalse();
+
+        assertThat(RoleAuthorization.isAllowed("POST", status, tracker))
+                .as("状態を更新するのは税関とのやりとりを追う側").isTrue();
+        assertThat(RoleAuthorization.isAllowed("POST", status, handler))
+                .as("荷役作業員は状態を更新しない").isFalse();
+
+        assertThat(RoleAuthorization.isAllowed(
+                        "GET", "/api/v1/handling/customs-declarations/IMP-1/history", tracker))
+                .as("履歴は状態を更新する側が読む").isTrue();
+    }
+
+    @Test
     @DisplayName("例外の起票・対応・解決は追跡管理者だけ（一覧は読めるが荷主は書けない）")
     void exceptionWritesAreForTrackersOnly() {
         // **読みの宣言（TRACKER, SHIPPER）に書き込みが吸われない**ことを見る。

@@ -123,6 +123,13 @@ public final class RoleAuthorization {
         // 荷役の記録（S50）は荷役だけ。**/handling/** より先に置く。
         rules.put("/api/v1/handling/voyages/**", Set.of(HANDLER));
         rules.put("/api/v1/handling/cargos/**", Set.of(HANDLER));
+        // 通関（S52 / S53）の**読み**は荷役と追跡の両方（ui_design.md:238）。
+        // 荷役が申告を出し、追跡が状態を更新する——どちらか一方にすると
+        // 片方が自分の仕事の一覧を開けない。
+        // **/handling/** より先に置く。** 後ろに置くと荷役だけの宣言に吸われ、
+        // 追跡管理者が通関の一覧を開けなくなる。
+        rules.put("/api/v1/handling/customs-declarations/**", Set.of(HANDLER, TRACKER));
+        rules.put("/api/v1/handling/customs-declarations", Set.of(HANDLER, TRACKER));
         rules.put("/api/v1/handling/**", Set.of(HANDLER));
 
         // 航海（S32 / S33）は経路設計者だけ。
@@ -191,6 +198,15 @@ public final class RoleAuthorization {
         ordered.add(new Rule("POST", "/api/v1/handling/*/activities", Set.of(HANDLER)));
         ordered.add(new Rule("POST", "/api/v1/handling/activities", Set.of(HANDLER)));
         ordered.add(new Rule("POST", "/api/v1/handling/activities/*/void", Set.of(HANDLER)));
+        // 通関申告の**登録は荷役作業員だけ**（US29 §受入基準 1。申告は現場が出す）。
+        // **状態の更新は追跡管理者だけ**（§受入基準 2。税関とのやりとりを追う側）。
+        // **読みの宣言（HANDLER, TRACKER）より先に置く。** 後ろに置くと、
+        // 同じ経路への書き込みが読み向けの広い宣言に吸われ、
+        // 一覧を読める側が登録も更新もできることになる。
+        ordered.add(new Rule("POST", "/api/v1/handling/customs-declarations",
+                Set.of(HANDLER)));
+        ordered.add(new Rule("POST", "/api/v1/handling/customs-declarations/*/status",
+                Set.of(TRACKER)));
         ordered.add(new Rule("PUT", "/api/v1/booking/bookings/*", Set.of(SALES)));
         rules.forEach((pattern, allowed) -> ordered.add(new Rule(ANY_METHOD, pattern, allowed)));
         return List.copyOf(ordered);
