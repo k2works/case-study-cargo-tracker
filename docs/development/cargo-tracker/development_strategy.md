@@ -4,7 +4,7 @@ title: "開発戦略 - 国際貨物輸送管理システム（CQRS / Event Sourc
 description: "CQRS / Event Sourcing 版 Cargo Tracker の開発戦略。15 イテレーションを序盤（アウトサイドイン）・中盤（インサイドアウト）・終盤（アウトサイドイン）の 3 局面に割り当て、共通の TDD サイクル・デモ項目を受け入れ基準とする方針・ウォーキングスケルトン・局面移行時の一貫性を定める。"
 tags: [plan,development-strategy,tdd,cqrs]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-04T21:21:35Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-10T21:43:03Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T12:47:29Z }
 ---
@@ -299,7 +299,9 @@ ui -> e2e : デモ項目のシナリオを足す
 
 ### 目的
 
-**できあがった集約を業務シナリオで束ねること。** この局面のストーリー（破損・紛失、誤配の再設計、通関、料金と精算、キャンセル承認）は、新しい集約を作るのではなく、既にある集約を複数サービスにまたがって連鎖させます。連鎖の抜けは集約のテストでは見つからず、業務シナリオを端から端まで通して初めて出ます。
+**できあがった集約を業務シナリオで束ねること。** この局面のストーリー（破損・紛失、誤配の再設計、通関、料金と精算、キャンセル承認）は、**多くが**新しい集約を作るのではなく、既にある集約を複数サービスにまたがって連鎖させます。連鎖の抜けは集約のテストでは見つからず、業務シナリオを端から端まで通して初めて出ます。
+
+**例外は 2 つあります**（実績。当初は「新設しない」と書いていました）。**IT12 の `CustomsDeclaration`** は税関という別の当事者との手続きで、荷役の一種ではありません。**IT13 の `Invoice`** は経理担当者が荷主に対して立てる文書で、予約・追跡・荷役のどれの一部でもありません。**どちらも既存の集約に混ぜられないから新設した**もので、進め方（シナリオを先に赤で置く）は終盤のままです。**「連鎖させるだけ」と読むと、混ぜてはいけないものを既存の集約に押し込むことになります。**
 
 たとえば US30（キャンセル承認）は、bookingms の承認 → 契約イベント → trackingms が陸揚げ地を記録 → handlingms でその港の荷降し → trackingms が追跡を閉じる → billingms がキャンセル料を載せる、という 4 サービスの連鎖です。ここは画面から入るのが自然です。
 
@@ -431,3 +433,4 @@ ADR に書いた決定は、**同じ変更の中で検査に落とします**。
 - [コーディングとテストガイド](../../reference/コーディングとテストガイド.md)
 - [テスト戦略](../../design/cargo-tracker/test_strategy.md)、[UI 設計](../../design/cargo-tracker/ui_design.md)
 - [ADR-0001](../../adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md)、[ADR-0002](../../adr/cargo-tracker/0002-event-store-axon-server-and-postgresql-read-models.md)、[ADR-0003](../../adr/cargo-tracker/0003-crypto-shredding-for-personal-data.md)
+| 2026-09-11 | 終盤の目的文に例外を明記（IT12 の `CustomsDeclaration`・IT13 の `Invoice`）。**当初は「新しい集約を作らない」と書いていたが、実績が 2 件ある**——どちらも既存の集約に混ぜられないから新設したもので、そう書かないと「混ぜてはいけないものを押し込む」読み方を招く（IT13 開始準備の横断検証 A2） | claude-code/claude-opus-5 |
