@@ -15,6 +15,7 @@ import {
   TH,
 } from '@/shared/ui/styles';
 import { formatBusinessDateTime } from '@/shared/api/businessDate';
+import { formatPortDateTime } from '@/shared/api/portTimeZone';
 import { useAuthStore } from '@/shared/auth/authStore';
 import { fetchHandlingHistory, voidHandling } from './api';
 
@@ -157,7 +158,11 @@ export function HandlingHistoryPage() {
             <tbody>
               {items.map((item) => (
                 <tr key={item.activityId}>
-                  <td className={TD}>{formatBusinessDateTime(item.completedAt)}</td>
+                  {/* **港のローカル時刻で出し、JST を併記する**（non_functional.md:212 /
+                      H.7）。片方だけにすると、どちらかの側が必ず換算を強いられる。 */}
+                  <td className={TD}>
+                    {formatPortDateTime(item.completedAt, item.unLocode)}
+                  </td>
                   <td className={TD}>{item.handlingTypeLabel}</td>
                   <td className={TD}>{item.unLocode}</td>
                   <td className={TD}>{item.voyageNumber ?? '—'}</td>

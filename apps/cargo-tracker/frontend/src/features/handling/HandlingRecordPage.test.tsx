@@ -277,8 +277,11 @@ describe('S50 荷役作業記録', () => {
 
     await waitFor(() => {
       const posted = fetchSpy.mock.calls.find((call) => call[1]?.method === 'POST');
-      // 業務タイムゾーンで解釈して送る（ブラウザの時計に依らない）。
-      expect(JSON.parse(String(posted?.[1]?.body)).completedAt).toContain('2026-09-16T13:30');
+      // **港のローカル時刻で解釈して送る**（non_functional.md:212 / IT9 引き継ぎ H.7）。
+      // ここはシンガポール（UTC+8）なので 22:30 は 14:30Z。**IT11 までは業務
+      // タイムゾーン（UTC+9）として送っていた**ので 13:30Z——1 時間ずれた記録が
+      // 残り、エラーは出ないまま履歴と予定の突き合わせが狂っていた。
+      expect(JSON.parse(String(posted?.[1]?.body)).completedAt).toContain('2026-09-16T14:30');
     });
   });
 

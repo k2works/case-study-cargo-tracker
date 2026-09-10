@@ -17,7 +17,7 @@ import {
   TH,
 } from '@/shared/ui/styles';
 import { cargoTypeLabel } from '@/features/bookings/api';
-import { businessLocalToInstant } from '@/shared/api/businessDate';
+import { portLocalToInstant, portTimeZone } from '@/shared/api/portTimeZone';
 import { ApiError } from '@/shared/api/client';
 import {
   fetchAwaitingClaim,
@@ -95,7 +95,10 @@ export function HandlingRecordPage() {
       handlingType,
       unLocode,
       voyageNumber: requiresVoyage(handlingType) ? voyageNumber : null,
-      completedAt: completedAt === '' ? null : businessLocalToInstant(completedAt),
+      // **港のローカル時刻として送る**（non_functional.md:212 / H.7）。業務
+      // タイムゾーンとして送ると、海外港で最大 13 時間ずれた記録になり、
+      // エラーは出ないまま履歴と予定の突き合わせが狂う。
+      completedAt: completedAt === '' ? null : portLocalToInstant(completedAt, unLocode),
       // **引取のときだけ載せる。** 他の種別に載せるとサーバが断る
       // （黙って捨てると、現場は確認を取ったつもりのまま記録が残らない）。
       ...(needsConsignee ? { consigneeName: consigneeName.trim() } : {}),
@@ -195,7 +198,10 @@ export function HandlingRecordPage() {
             />
             {/* **後から入れられる**（US15 §受入基準 3）。電波の届かない岸壁では
                 紙に控え、戻ってから入れる。未来は集約が断る。 */}
+            {/* **どちらの時刻かを書く**（non_functional.md:212）。書かないと、
+                現場は腕時計を見て入れ、東京の追跡管理者は JST と読む。 */}
             <p className="mt-1 text-xs text-gray-600">
+              {unLocode} の現地時刻（{portTimeZone(unLocode)}）で入れてください。
               空のままなら「いま」で記録します。紙に控えた作業は日時を入れてください。
             </p>
           </div>
