@@ -130,17 +130,17 @@ public class CustomsDeclaration {
      *
      * <p>日付単位・業務タイムゾーンで数える。時刻を持ち込むと、同じ日の中で
      * 「3 日超」になったりならなかったりする。</p>
+     *
+     * <p><b>「3 営業日超」の判定はここに置かない。</b> 督促の一覧（S52）は多数の
+     * 申告を投影から読み、集約を 1 件ずつ復元しない。判定を両方に置くと本番と
+     * 検査が別の判定を持つことになるので、閾値は {@code CustomsQueryHandler} が
+     * 単独で持つ（注 N4）。ここは記録の時点で載せる日数だけを数える。</p>
      */
     public int heldBusinessDaysAt(Instant today) {
         if (status != CustomsStatus.HELD || lastHeldAt == null) {
             return 0;
         }
         return calendar().businessDaysBetween(businessDate(lastHeldAt), businessDate(today));
-    }
-
-    /** 留置が指定営業日数を超えたか（US29 §受入基準 6 の督促判定）。 */
-    public boolean heldOver(int days, Instant today) {
-        return heldBusinessDaysAt(today) > days;
     }
 
     /**

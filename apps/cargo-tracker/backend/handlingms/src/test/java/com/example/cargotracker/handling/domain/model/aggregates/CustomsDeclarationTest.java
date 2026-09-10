@@ -187,4 +187,20 @@ class CustomsDeclarationTest {
                 .when().command(update(CustomsStatus.REJECTED, "通らなかった"))
                 .then().success();
     }
+
+    @Test
+    @DisplayName("登録されていない申告は更新できない（税関の採番より先には動かせない）")
+    void refusesUpdateOfUnregisteredDeclaration() {
+        fixture.given().noPriorActivity()
+                .when().command(update(CustomsStatus.CLEARED, "書類に不備なし"))
+                .then().exception(IllegalTransition.class);
+    }
+
+    @Test
+    @DisplayName("通関状態の無い更新は断る（何に変えるのか決まらない）")
+    void refusesUpdateWithoutStatus() {
+        fixture.given().event(registered())
+                .when().command(update(null, "書類に不備なし"))
+                .then().exception(BusinessRuleViolation.class);
+    }
 }

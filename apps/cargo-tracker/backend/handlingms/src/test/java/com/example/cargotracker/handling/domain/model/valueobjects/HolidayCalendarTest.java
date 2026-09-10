@@ -84,6 +84,19 @@ class HolidayCalendarTest {
     }
 
     @Test
+    @DisplayName("範囲の片方が無ければ数えない（起点も終点も必須）")
+    void refusesMissingRange() {
+        // **黙って 0 にしない。** 留置日時を持たない申告で呼ばれたら、0 日は
+        // 「まだ 3 日経っていない」に化けて督促が永久に出ない。
+        HolidayCalendar calendar = HolidayCalendar.of(JP);
+        LocalDate day = LocalDate.of(2026, Month.OCTOBER, 5);
+        assertThatThrownBy(() -> calendar.businessDaysBetween(null, day))
+                .isInstanceOf(BusinessRuleViolation.class);
+        assertThatThrownBy(() -> calendar.businessDaysBetween(day, null))
+                .isInstanceOf(BusinessRuleViolation.class);
+    }
+
+    @Test
     @DisplayName("国コードが無ければ作れない（どの国の休日か決まらない）")
     void requiresACountry() {
         assertThatThrownBy(() -> HolidayCalendar.of(null))
