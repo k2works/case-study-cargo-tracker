@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router';
 import {
@@ -67,7 +67,7 @@ export function CustomsDetailPage() {
   const view = declaration.data?.state === 'ready' ? declaration.data.value : null;
   const entries = history.data?.state === 'ready' ? history.data.value.items : [];
 
-  async function submit(event: React.FormEvent) {
+  async function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     setSending(true);
     setError(null);
@@ -77,9 +77,8 @@ export function CustomsDetailPage() {
       // 反映は非同期。**先行表示はしない**ので、読み直して確定表示にする。
       await queries.invalidateQueries({ queryKey: ['customs-declaration'] });
       await queries.invalidateQueries({ queryKey: ['customs-history'] });
-    } catch (failure) {
-      setError(failure instanceof ApiError
-        ? failure.message : '通関状態を更新できませんでした');
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : '通関状態を更新できませんでした');
     } finally {
       setSending(false);
     }

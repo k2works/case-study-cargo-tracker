@@ -19,14 +19,28 @@ public interface CustomsDeclarationMapper {
     int insert(CustomsDeclarationRow row);
 
     /** 状態を書き換える。**履歴はここではなく Event Store が持つ。** */
-    int updateStatus(@Param("declarationNumber") String declarationNumber,
-            @Param("status") String status,
-            @Param("reason") String reason,
-            @Param("changedBy") String changedBy,
-            @Param("heldBusinessDays") int heldBusinessDays,
-            @Param("lastHeldAt") Instant lastHeldAt,
-            @Param("changedAt") Instant changedAt,
-            @Param("projectedAt") Instant projectedAt);
+    int updateStatus(CustomsStatusChange change);
+
+    /**
+     * 状態の更新 1 回ぶん。
+     *
+     * <p><b>並べた引数にしない。</b> 8 つ並ぶと、呼び側で順序を 1 つ違えても
+     * 型が合ってしまう（{@code changedAt} と {@code projectedAt} はどちらも
+     * {@code Instant}）。名前で渡す。</p>
+     *
+     * @param lastHeldAt 留置に入った時刻。留置以外では {@code null} を渡し、
+     *     既存の値を残す（いつから留置だったかを消さない）
+     */
+    record CustomsStatusChange(
+            String declarationNumber,
+            String status,
+            String reason,
+            String changedBy,
+            int heldBusinessDays,
+            Instant lastHeldAt,
+            Instant changedAt,
+            Instant projectedAt) {
+    }
 
     @Select("SELECT " + COLUMNS + " FROM customs_declaration "
             + "WHERE declaration_number = #{declarationNumber}")

@@ -108,7 +108,7 @@ export function CustomsListPage() {
               onChange={(event) =>
                 setCondition({ ...condition, overdueOnly: event.target.checked })}
             />
-            督促の対象だけ表示
+            <span>督促の対象だけ表示</span>
           </label>
           <label className="flex items-center gap-2 text-sm text-gray-700">
             <input
@@ -117,7 +117,7 @@ export function CustomsListPage() {
               onChange={(event) =>
                 setCondition({ ...condition, includeCleared: event.target.checked })}
             />
-            通関済も表示
+            <span>通関済も表示</span>
           </label>
         </div>
       </section>

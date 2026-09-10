@@ -1,6 +1,7 @@
 package com.example.cargotracker.shared.infrastructure.axon;
 
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.concurrent.CompletableFuture;
 import javax.sql.DataSource;
 import org.axonframework.common.function.ThrowingFunction;
@@ -41,22 +42,33 @@ public final class OwnConnectionExecutorProvider
                 Connection connection = null;
                 try {
                     connection = dataSource.getConnection();
-                    boolean autoCommit = connection.getAutoCommit();
-                    connection.setAutoCommit(false);
-                    try {
-                        R result = action.apply(connection);
-                        connection.commit();
-                        return CompletableFuture.completedFuture(result);
-                    } catch (Exception failure) {
-                        connection.rollback();
-                        return CompletableFuture.failedFuture(failure);
-                    } finally {
-                        connection.setAutoCommit(autoCommit);
-                    }
+                    return inTransaction(connection, action);
                 } catch (Exception failure) {
                     return CompletableFuture.failedFuture(failure);
                 } finally {
                     close(connection);
+                }
+            }
+
+            /**
+             * 1 つの接続の中で、コミットまで済ませる。
+             *
+             * <p><b>自動コミットは元に戻す。</b> 接続はプールへ返るので、
+             * 戻し忘れると次に借りた誰かが「コミットしない接続」を使う。</p>
+             */
+            private <R> CompletableFuture<R> inTransaction(Connection connection,
+                    ThrowingFunction<Connection, R, Exception> action) throws SQLException {
+                boolean autoCommit = connection.getAutoCommit();
+                connection.setAutoCommit(false);
+                try {
+                    R result = action.apply(connection);
+                    connection.commit();
+                    return CompletableFuture.completedFuture(result);
+                } catch (Exception failure) {
+                    connection.rollback();
+                    return CompletableFuture.failedFuture(failure);
+                } finally {
+                    connection.setAutoCommit(autoCommit);
                 }
             }
 

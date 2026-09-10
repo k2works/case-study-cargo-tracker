@@ -68,14 +68,14 @@ public class CustomsDeclarationProjection {
                 eventId, event.declarationNumber(), "STATUS_CHANGED", event.previousStatus(),
                 event.status(), event.reason(), event.changedBy(), event.changedAt(),
                 clock.instant()));
-        declarations.updateStatus(event.declarationNumber(), event.status(), event.reason(),
-                event.changedBy(),
+        declarations.updateStatus(new CustomsDeclarationMapper.CustomsStatusChange(
+                event.declarationNumber(), event.status(), event.reason(), event.changedBy(),
                 // 留置から出るときの確定値は契約イベントが持つが、投影は内部イベント
                 // だけを読む（契約は他 BC のもの）。ここでは 0 のままにして、
                 // 数えるのは読むときにする——判定を 2 か所に置かない。
                 0,
                 status == CustomsStatus.HELD ? event.changedAt() : null,
-                event.changedAt(), clock.instant());
+                event.changedAt(), clock.instant()));
     }
 
     /**

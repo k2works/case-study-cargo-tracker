@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { useNavigate } from 'react-router';
 import {
   ALERT,
@@ -30,7 +30,7 @@ export function CustomsRegisterPage() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function submit(event: React.FormEvent) {
+  async function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     setSending(true);
     setError(null);
@@ -43,9 +43,8 @@ export function CustomsRegisterPage() {
         declaredAt: new Date(declaredAt).toISOString(),
       });
       navigate(`/customs/${encodeURIComponent(declarationNumber.trim())}`);
-    } catch (failure) {
-      setError(failure instanceof ApiError
-        ? failure.message : '通関申告を登録できませんでした');
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : '通関申告を登録できませんでした');
     } finally {
       setSending(false);
     }

@@ -147,7 +147,7 @@ public final class HandlingQueries {
     }
 
     /** 督促の対象（留置が既定の営業日数を超えた申告）の件数（S02 / §受入基準 6）。 */
-    public record CountOverdueCustomsHoldsQuery() {
+    public record CountOverdueCustomsHoldsQuery() { // NOSONAR: 型が問い合わせの識別子
     }
 
     /**

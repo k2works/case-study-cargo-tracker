@@ -89,9 +89,9 @@ public class HandlingActivity {
         // IT9 から 3 IT のあいだ「読む側の無い配線を先に敷かない」として保留して
         // きた。申告を記録する画面（S53）が出来たので、ここで有効にする。
         //
-        // **判定は列挙が答える**（`CustomsStatus#allowsClaim`）。ここに
-        // `if (status == CLEARED)` を書くと、状態が増えたときに書き換える場所が
-        // 散らばる。
+        // **判定は列挙が答える**（`CustomsStatus#allowsClaim`）。どの状態なら
+        // 引き取れるかをここで分岐して書くと、状態が増えたときに書き換える
+        // 場所が散らばる。
         requireCustomsCleared(command);
         if (!command.type().requiresConsigneeConfirmation() && confirmed) {
             // **黙って捨てない。** 捨てると、現場は確認を取ったつもりのまま

@@ -50,6 +50,10 @@ public final class HolidayCalendar {
                     java.time.MonthDay.of(Month.NOVEMBER, 11),
                     java.time.MonthDay.of(Month.DECEMBER, 25)));
 
+    /** 週末。どの国でも休みとして数える（国別の休日は {@link #FIXED_HOLIDAYS}）。 */
+    private static final Set<DayOfWeek> WEEKEND =
+            java.util.EnumSet.of(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY);
+
     private final Set<java.time.MonthDay> holidays;
 
     private HolidayCalendar(Set<java.time.MonthDay> holidays) {
@@ -89,7 +93,7 @@ public final class HolidayCalendar {
     }
 
     private boolean isBusinessDay(LocalDate day) {
-        if (day.getDayOfWeek() == DayOfWeek.SATURDAY || day.getDayOfWeek() == DayOfWeek.SUNDAY) {
+        if (WEEKEND.contains(day.getDayOfWeek())) {
             return false;
         }
         return !holidays.contains(java.time.MonthDay.from(day));

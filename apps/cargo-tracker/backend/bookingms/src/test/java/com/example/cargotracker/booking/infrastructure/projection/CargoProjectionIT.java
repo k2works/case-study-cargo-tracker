@@ -196,13 +196,6 @@ class CargoProjectionIT extends AbstractAxonIntegrationTest {
                 .containsExactly(near, far);
     }
 
-    private static CargoBookedEvent bookedWithDeadline(String bookingId, LocalDate deadline) {
-        return new CargoBookedEvent(bookingId, "SHP-WL", "JPTYO", "USNYC", deadline,
-                "GENERAL", new BigDecimal("1200"), new BigDecimal("120"),
-                new BigDecimal("80"), new BigDecimal("100"), 10, "自動車部品",
-                null, null, null, null, "sales01");
-    }
-
     private static CargoSpecificationUpdatedEvent corrected(String bookingId) {
         return new CargoSpecificationUpdatedEvent(bookingId, "JPTYO", "GBLON",
                 LocalDate.of(2026, Month.DECEMBER, 20), "HAZARDOUS",
