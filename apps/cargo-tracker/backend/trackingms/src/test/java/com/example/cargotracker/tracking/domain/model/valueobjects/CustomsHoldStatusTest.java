@@ -40,28 +40,54 @@ class CustomsHoldStatusTest {
     }
 
     @Test
-    @DisplayName("起票するのは留置だけ、解決するのは決着したときだけ")
-    void raisesOnlyWhenHeldAndResolvesWhenSettled() {
+    @DisplayName("起票するのは留置だけ")
+    void raisesOnlyWhenHeld() {
         // **値の一覧から回す。** 足した値をここで扱い忘れると、その値だけ
-        // 起票も解決もされないまま静かに素通りする。
+        // 起票されないまま静かに素通りする。
         for (CustomsHoldStatus status : CustomsHoldStatus.values()) {
             assertThat(status.raisesHold())
                     .as("%s で税関保留を起票するか", status)
                     .isEqualTo(status == CustomsHoldStatus.HELD);
-            assertThat(status.resolvesHold())
-                    .as("%s で税関保留を解決するか", status)
-                    .isEqualTo(status == CustomsHoldStatus.CLEARED
-                            || status == CustomsHoldStatus.REJECTED);
         }
     }
 
     @Test
-    @DisplayName("起票と解決は同時に起きない（同じ状態が両方を意味することは無い）")
+    @DisplayName("解決するのは留置から出たときだけ（遷移の対で決まる）")
+    void resolvesOnlyWhenLeavingHeld() {
+        // **クラスタ E2E が見つけた実欠陥の回帰**（IT12 T7e）。新しい状態だけを
+        // 見ると、留置を経ていない通関済でも「解決する」と判定してしまい、
+        // 起票していない例外を解決しようとして集約に断られる。
+        //
+        // **すべての遷移の組み合わせを回す。** 片方の軸だけ見ると、
+        // 「留置へ入るとき」と「留置から出るとき」の区別が付かない。
+        for (CustomsHoldStatus previous : CustomsHoldStatus.values()) {
+            for (CustomsHoldStatus next : CustomsHoldStatus.values()) {
+                assertThat(CustomsHoldStatus.resolvesHold(previous.name(), next))
+                        .as("%s → %s で税関保留を解決するか", previous, next)
+                        .isEqualTo(previous == CustomsHoldStatus.HELD
+                                && next != CustomsHoldStatus.HELD);
+            }
+        }
+    }
+
+    @Test
+    @DisplayName("前の状態が読めなければ解決しない（安全側に倒れる）")
+    void doesNotResolveWhenPreviousIsUnknown() {
+        assertThat(CustomsHoldStatus.resolvesHold(null, CustomsHoldStatus.CLEARED)).isFalse();
+        assertThat(CustomsHoldStatus.resolvesHold("SOMETHING", CustomsHoldStatus.CLEARED))
+                .isFalse();
+    }
+
+    @Test
+    @DisplayName("起票と解決は同時に起きない（同じ遷移が両方を意味することは無い）")
     void neverRaisesAndResolvesAtOnce() {
-        for (CustomsHoldStatus status : CustomsHoldStatus.values()) {
-            assertThat(status.raisesHold() && status.resolvesHold())
-                    .as("%s が起票と解決の両方を意味している", status)
-                    .isFalse();
+        for (CustomsHoldStatus previous : CustomsHoldStatus.values()) {
+            for (CustomsHoldStatus next : CustomsHoldStatus.values()) {
+                assertThat(next.raisesHold()
+                                && CustomsHoldStatus.resolvesHold(previous.name(), next))
+                        .as("%s → %s が起票と解決の両方を意味している", previous, next)
+                        .isFalse();
+            }
         }
     }
 

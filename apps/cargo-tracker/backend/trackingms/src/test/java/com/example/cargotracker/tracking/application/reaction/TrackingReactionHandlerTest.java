@@ -154,9 +154,40 @@ class TrackingReactionHandlerTest {
     }
 
     @Test
-    @DisplayName("審査中への変化では何もしない（起票も解決もしない）")
-    void doesNothingForPending() {
+    @DisplayName("留置を経ていない通関済では解決しない（起票していない例外は解決できない）")
+    void doesNotResolveWhenNeverHeld() {
+        // **クラスタ E2E が見つけた実欠陥の回帰テスト**（IT12 T7e）。
+        // 新しい状態だけを見て「通関済なら解決」と判定していたので、
+        // 一度も留置にならず通関済になった申告（審査中 → 通関済）でも
+        // 解決コマンドを送っていた。集約は正しく断るが、その例外が退避され、
+        // **列が全体で 1 本なので後続のイベントが全部退避された**
+        // （[ADR-0014] の「引き受けていないこと」）。追跡番号発行の連鎖が止まった。
+        //
+        // **層ごとの検査では出なかった。** ここは「どのコマンドを送るか」だけを
+        // 見ており、集約が受け付けるかは判別しない。
+        handler.on(customs("PENDING", "CLEARED"));
+
+        assertThat(sent)
+                .as("留置していないなら、解決する対象が無い")
+                .isEmpty();
+    }
+
+    @Test
+    @DisplayName("留置から審査中へ戻っても解決する（留置を出た時点で保留は終わっている）")
+    void resolvesWhenLeavingHeldEvenToPending() {
+        // **判定は「留置を出たか」であって「どこへ行ったか」ではない。**
+        // 集約は留置 → 審査中を断らないので（未決着どうしの遷移）、この経路は
+        // 起こりうる。留置でなくなった時点で税関保留の理由は消えている。
         handler.on(customs("HELD", "PENDING"));
+
+        assertThat(sent).singleElement()
+                .isInstanceOf(ResolveTrackingExceptionCommand.class);
+    }
+
+    @Test
+    @DisplayName("留置に入っていない状態どうしの変化では何もしない")
+    void doesNothingBetweenNonHeldStatuses() {
+        handler.on(customs("PENDING", "REJECTED"));
 
         assertThat(sent).isEmpty();
     }

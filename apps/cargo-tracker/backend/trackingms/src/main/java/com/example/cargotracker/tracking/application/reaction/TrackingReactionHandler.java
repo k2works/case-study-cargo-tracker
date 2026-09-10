@@ -77,7 +77,10 @@ public class TrackingReactionHandler {
                             + "）: " + event.reason(), event.changedBy()), Void.class);
             return;
         }
-        if (status.resolvesHold()) {
+        // **前の状態が留置だったときだけ解決する。** 新しい状態だけで判定すると、
+        // 留置を経ていない申告（審査中 → 通関済）でも解決コマンドを送り、
+        // 起票していない例外を解決しようとして断られる（IT12 のクラスタ E2E で実測）。
+        if (CustomsHoldStatus.resolvesHold(event.previousStatus(), status)) {
             commands.sendAndWait(new ResolveTrackingExceptionCommand(event.trackingNumber(),
                     exceptionId,
                     "通関状態が " + status.label() + " になりました: " + event.reason(),
