@@ -375,4 +375,5 @@ S42 --> S41 : 税関保留の例外から
 | :--- | :--- | :--- |
 | 2026-09-09 | 初版作成（IT12 開始準備 ステップ 1・2） | claude-code/claude-opus-5 |
 | 2026-09-09 | 検証（ステップ 3・4）で見つけた 5 件を反映。GitHub（Issue #594・Project 41）と索引を同期 | claude-code/claude-opus-5 |
+| 2026-09-10 | US29 の実装を通した：T1（`CustomsStatus`・`HolidayCalendar`）→ T2（契約 + H.6 返済）→ T3（集約）→ T4（投影・クエリ・不変条件 3/5）→ T5・T7（連鎖と引取のガード）→ T6（S52・S53 と注 N4）→ T8（認可）→ T9（H.7・N5 の 3 IT 繰り越しを 2 件返済）→ T10（マニュアル 16 章）。**正典を 2 か所直した**——注 N3（履歴は Event Store から読めない）と `held_business_days`（留置中は列が古くなる） | claude-code/claude-opus-5 |
 | 2026-09-09 | 序盤を消化：T0 の入口（S）・引き継ぎ枠 A（DLQ・[ADR-0014](../../adr/cargo-tracker/0014-poison-events-are-parked-not-blocking.md)）・引き継ぎ枠 B（S30 の絞り込み）。**枠 A は一部未達**——退避と処理継続は入ったが、**列がまだ全体で 1 本**なので同じ列の後続は届かない（この版に手立てが無い。ADR-0014「引き受けていないこと」に記録し IT13 へ送る） | claude-code/claude-opus-5 |
