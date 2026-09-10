@@ -136,7 +136,7 @@ public class CustomsDeclaration {
      * 検査が別の判定を持つことになるので、閾値は {@code CustomsQueryHandler} が
      * 単独で持つ（注 N4）。ここは記録の時点で載せる日数だけを数える。</p>
      */
-    public int heldBusinessDaysAt(Instant today) {
+    private int heldBusinessDaysAt(Instant today) {
         if (status != CustomsStatus.HELD || lastHeldAt == null) {
             return 0;
         }

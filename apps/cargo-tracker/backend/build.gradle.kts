@@ -112,6 +112,17 @@ subprojects {
         if (name == "test") {
             filter { excludeTestsMatching("*.SchemaErdDocument") }
         }
+        // **正典を入力として宣言する。** 要素表や ADR を読んで突き合わせる検査が
+        // 6 本あるが、宣言しないと設計ドキュメントだけを書き換えたときに
+        // UP-TO-DATE で走らない——**正典と実装が食い違ったまま緑**になる
+        // （IT12 レビュー 中。「設定を読む検査は入力を宣言する」）。
+        val canonRoot = rootDir.resolve("../../../docs").normalize()
+        inputs.files(
+            fileTree(canonRoot.resolve("design/cargo-tracker")) { include("**/*.md") },
+            fileTree(canonRoot.resolve("adr/cargo-tracker")) { include("**/*.md") },
+        ).withPropertyName("canonDocuments").withPathSensitivity(
+            org.gradle.api.tasks.PathSensitivity.RELATIVE,
+        )
     }
 
     tasks.withType<JavaCompile>().configureEach {

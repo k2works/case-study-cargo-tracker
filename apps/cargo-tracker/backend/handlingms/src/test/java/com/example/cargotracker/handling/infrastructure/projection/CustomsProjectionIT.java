@@ -8,6 +8,7 @@ import com.example.cargotracker.handling.infrastructure.query.CustomsQueryHandle
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.CountOverdueCustomsHoldsQuery;
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.CustomsDeclarationView;
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.FindCustomsDeclarationsQuery;
+import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.FindCustomsHistoryQuery;
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.FindCustomsStatusOfCargoQuery;
 import com.example.cargotracker.shared.testing.AbstractAxonIntegrationTest;
 import java.time.Instant;
@@ -195,6 +196,12 @@ class CustomsProjectionIT extends AbstractAxonIntegrationTest {
 
         assertThat(numbersOf(new FindCustomsDeclarationsQuery(true, "TRK-IDEM", null, false)))
                 .containsOnlyOnce(number);
+        // **履歴も見る**（IT12 レビュー 中）。追記の表なので、主キーが元イベントの
+        // 識別子でなければリプレイで行が積み上がる（IT6 で実際に踏んだ形）。
+        // §8 の乖離記録は「積み上がらない」と**保証として書いている**。
+        assertThat(queries.handle(new FindCustomsHistoryQuery(number)).items())
+                .as("同じイベントを 2 度流しても履歴は 1 行")
+                .hasSize(1);
     }
 
     @Test

@@ -1,6 +1,12 @@
 # Docs Update Log
 
 ## 2026-09-10
+* **Update**: [IT12実装_review_20260910](/review/cargo-tracker/IT12実装_review_20260910.md) を更新（claude-code/claude-opus-5）
+* **Update**: [アプリケーション開発環境セットアップ手順書](/operation/cargo-tracker/アプリケーション開発環境セットアップ手順書.md) を更新（claude-code/claude-opus-5）
+* **Update**: [16-通関を通す](/manual/16-通関を通す.md) を更新（claude-code/claude-opus-5）
+* **Update**: [retrospective-12](/development/cargo-tracker/retrospective-12.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-12](/development/cargo-tracker/iteration_plan-12.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
 * **Update**: [16-通関を通す](/manual/16-通関を通す.md) を更新（claude-code/claude-opus-5）
 * **Update**: [14-引取と例外を扱う](/manual/14-引取と例外を扱う.md) を更新（claude-code/claude-opus-5）
 * **Update**: [13-荷役作業を記録する](/manual/13-荷役作業を記録する.md) を更新（claude-code/claude-opus-5）

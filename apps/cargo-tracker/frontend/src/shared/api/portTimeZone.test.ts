@@ -18,6 +18,20 @@ describe('港のタイムゾーン', () => {
     expect(portsWithTimeZone().length).toBeGreaterThanOrEqual(5);
   });
 
+  it('対応表のタイムゾーンがすべて実在する（打ち間違いを黙って JST にしない）', () => {
+    // **名簿と突き合わせる正典は無い**（港は利用者が打ち込んで増える）。
+    // 代わりに、書いた値そのものが解釈できるかを見る——`Asia/Tokio` のような
+    // 打ち間違いは実行時に例外になるか、黙って既定に倒れる（IT12 レビュー 高）。
+    for (const port of portsWithTimeZone()) {
+      const zone = portTimeZone(port);
+      expect(() => new Intl.DateTimeFormat('ja-JP', { timeZone: zone }), `${port} → ${zone}`)
+        .not.toThrow();
+      // 業務タイムゾーンを書いた港は「同じ地域」を意味する。打ち間違いが
+      // 既定と同じ文字列になることは無いので、ここでは区別しない。
+      expect(zone).not.toBe('');
+    }
+  });
+
   it('知らない港は業務タイムゾーンで扱う（画面には併記があるので読める）', () => {
     expect(portTimeZone('ZZZZZ')).toBe('Asia/Tokyo');
     expect(portTimeZone(null)).toBe('Asia/Tokyo');

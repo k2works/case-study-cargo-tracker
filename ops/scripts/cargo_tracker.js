@@ -905,9 +905,10 @@ export default function (gulp) {
       console.log(`=== ${service} (${database}) ===`);
       try {
         console.log(
-          sh(
-            `docker exec cargo-tracker-postgres psql -U postgres -d ${database} -c ` +
-              `"SELECT processor_name, segment, owner, timestamp FROM token_entry ORDER BY processor_name, segment"`,
+          psql(
+            database,
+            'SELECT processor_name, segment, owner, timestamp '
+              + 'FROM token_entry ORDER BY processor_name, segment',
           ),
         );
       } catch (e) {
@@ -935,12 +936,16 @@ export default function (gulp) {
     for (const [service, database] of Object.entries(databases)) {
       console.log(`=== ${service} (${database}) ===`);
       try {
+        // **`psql()` を通す。** ここで `docker exec` を直に書くと、クラスタで
+        // 運用しているとき（PostgreSQL は Pod）に読めない——滞留の走査は
+        // 「連鎖が止まっている」ときに使うもので、そのときに使えなければ
+        // 意味がない（IT8 H.1 と同じ形を IT12 で再発させた）。
         console.log(
-          sh(
-            `docker exec cargo-tracker-postgres psql -U postgres -d ${database} -c ` +
-              `"SELECT processing_group, event_type, cause_type, ` +
-              `left(cause_message, 120) AS cause, enqueued_at ` +
-              `FROM dead_letter_entry ORDER BY enqueued_at"`,
+          psql(
+            database,
+            'SELECT processing_group, event_type, cause_type, '
+              + 'left(cause_message, 120) AS cause, enqueued_at '
+              + 'FROM dead_letter_entry ORDER BY enqueued_at',
           ),
         );
       } catch (e) {
@@ -972,9 +977,10 @@ export default function (gulp) {
     console.log(`対象の荷主: ${shipperId}`);
     try {
       console.log(
-        sh(
-          `docker exec cargo-tracker-postgres psql -U postgres -d booking_read_db -c ` +
-            `"SELECT shipper_id, shipper_code, name, email FROM shipper WHERE shipper_id = '${shipperId}'"`,
+        psql(
+          'booking_read_db',
+          "SELECT shipper_id, shipper_code, name, email FROM shipper "
+            + `WHERE shipper_id = '${shipperId}'`,
         ),
       );
     } catch (e) {

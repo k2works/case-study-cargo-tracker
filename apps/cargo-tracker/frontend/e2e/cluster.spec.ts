@@ -881,6 +881,11 @@ test.describe('kind クラスタでの通し確認', () => {
       await page.getByLabel('伝えた手段').fill('電話');
       await page.getByLabel('伝えた内容').fill('3 日遅れる見込みと伝えました');
       await page.getByRole('button', { name: '記録を残す' }).click();
+      // **記録が出てから次の操作へ進む。** 続けて押すと、同じ集約への追記が
+      // 2 つ同時に飛んで Event Store の整合条件で断られる
+      // （`ConsistencyConditionException`。IT12 の通しで実測）。人は記録が
+      // 出たのを見てから次を押すので、待ち方をそちらに合わせる。
+      await expectEventually(page, '電話');
 
       // **デモ項目 6: 対応内容を入れて解決すると、例外前の状態へ戻る。**
       await expect(page.getByRole('button', { name: '解決にする' }))
@@ -1168,6 +1173,19 @@ test.describe('kind クラスタでの通し確認', () => {
 
       // デモ項目 1: **ログインせずに**状況が読める。
       await page.goto('/logout');
+      // **反映は認可のある読み口で待つ。** 公開照会には回数制限（1 分 10 回）が
+      // あるので、待つために読み直すと自分で 429 を作り、画面は「照会が続いて
+      // います」に変わってしまう。投影が届いたことを確かめてから、公開画面は
+      // 1 度だけ開く（IT12 のクラスタ E2E で実測）。
+      const trackerToken = await tokenOf(request, 'tracker01');
+      await expect(async () => {
+        const detail = await request.get(`/api/v1/tracking/trackings/${trackingNumber}`, {
+          headers: { Authorization: `Bearer ${trackerToken}` },
+          failOnStatusCode: false,
+        });
+        expect(detail.status()).toBe(200);
+      }).toPass({ timeout: 60_000, intervals: [1_000, 2_000, 3_000] });
+
       await page.goto(`/track/${trackingNumber}`);
       await expect(page.getByText('未受領')).toBeVisible({ timeout: 30_000 });
       await expect(page.getByText('出発').first()).toBeVisible();

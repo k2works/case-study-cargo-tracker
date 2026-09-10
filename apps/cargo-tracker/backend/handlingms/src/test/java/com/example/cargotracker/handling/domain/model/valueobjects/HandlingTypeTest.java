@@ -80,8 +80,12 @@ class HandlingTypeTest {
     @Test
     @DisplayName("要件表: 通関の検査が要るのは引取だけ（警告でなく拒否）")
     void requiresCustomsClearanceForClaimOnly() {
-        // **本 IT では引取そのものを作らない**（US16・IT10）。要件だけを型に置く。
-        assertThat(HandlingType.CLAIM.requiresCustomsClearance()).isTrue();
-        assertThat(HandlingType.LOAD.requiresCustomsClearance()).isFalse();
+        // **列挙に値を足したら全箇所を回る**（IT12 レビュー 中）。2 値だけを見ると、
+        // `UNLOAD` や `RECEIVE` に誤って真を返す実装に変えても緑になる。
+        for (HandlingType type : HandlingType.values()) {
+            assertThat(type.requiresCustomsClearance())
+                    .as("%s で通関を要求するか", type)
+                    .isEqualTo(type == HandlingType.CLAIM);
+        }
     }
 }

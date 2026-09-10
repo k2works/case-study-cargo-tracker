@@ -94,6 +94,27 @@ class CustomsDeclarationTest {
     }
 
     @Test
+    @DisplayName("不変条件 1: 予約番号・登録者・変更者も必須（誰の記録か分からない行を残さない）")
+    void requiresBookingAndActors() {
+        // **書いた守りは対で赤にする**（IT12 レビュー 低）。落としても赤にならない
+        // `requireText` が 3 つ残っていた。
+        fixture.given().noPriorActivity()
+                .when().command(new RegisterCustomsDeclarationCommand(NUMBER, TRACKING, "  ",
+                        DECLARED, "handler01"))
+                .then().exception(BusinessRuleViolation.class);
+
+        fixture.given().noPriorActivity()
+                .when().command(new RegisterCustomsDeclarationCommand(NUMBER, TRACKING, "b-1",
+                        DECLARED, " "))
+                .then().exception(BusinessRuleViolation.class);
+
+        fixture.given().event(registered())
+                .when().command(new UpdateCustomsStatusCommand(NUMBER, CustomsStatus.CLEARED,
+                        "書類に不備なし", "  "))
+                .then().exception(BusinessRuleViolation.class);
+    }
+
+    @Test
     @DisplayName("同じ申告番号で 2 度登録できない（税関が採番した番号は 1 つの申告を指す）")
     void refusesDuplicateRegistration() {
         fixture.given().event(registered())

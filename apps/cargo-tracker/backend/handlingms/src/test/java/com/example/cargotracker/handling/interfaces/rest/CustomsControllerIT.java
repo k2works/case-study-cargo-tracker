@@ -178,7 +178,7 @@ class CustomsControllerIT extends AbstractAxonIntegrationTest {
 
     @Test
     @DisplayName("US29 §8: 変更履歴が日時・変更者・理由つきで読める")
-    void readsHistoryFromTheEventStore() {
+    void readsHistoryFromTheProjection() {
         String number = "IMP-H-" + System.nanoTime();
         register(number, givenCargo());
         await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
