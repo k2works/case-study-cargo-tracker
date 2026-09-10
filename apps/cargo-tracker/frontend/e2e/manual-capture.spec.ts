@@ -1319,4 +1319,88 @@ test.describe('マニュアルの画面キャプチャ', () => {
     await expect(page.getByText('3 日超過')).toBeVisible();
     await page.screenshot({ path: `${OUT}/15-S31-overdue-candidates.png`, fullPage: true });
   });
+  const SAMPLE_CUSTOMS_HELD = {
+    declarationNumber: 'D-2026-0912-77',
+    trackingNumber: 'TRK-AB12CD3456',
+    bookingId: '55555555-5555-5555-5555-555555555555',
+    status: 'HELD',
+    statusLabel: '留置',
+    declaredAt: '2026-09-12T01:00:00Z',
+    lastStatusChangedAt: '2026-09-13T00:00:00Z',
+    lastHeldAt: '2026-09-13T00:00:00Z',
+    heldBusinessDays: 4,
+    overdue: true,
+    lastReason: '原産地証明の不備',
+    changedBy: 'tracker01',
+  };
+
+  test('16 通関申告一覧（督促の対象）', async ({ page }) => {
+    // **本文が「督促の印」「件数」「営業日数」を説明している。**
+    // どれかが写っていないと、文章と画像が別々に正しくなる。
+    await page.route('**/api/v1/handling/customs-declarations?*', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ items: [SAMPLE_CUSTOMS_HELD], total: 1 }),
+      }),
+    );
+    await signInAsTracker(page);
+    await page.goto('/customs');
+
+    await expect(page.getByRole('heading', { name: '通関申告一覧' })).toBeVisible();
+    await expect(page.getByText('4 営業日')).toBeVisible();
+    await expect(page.getByRole('alert')).toContainText('3 営業日を超えた');
+    await page.screenshot({ path: `${OUT}/16-S52-customs-list.png`, fullPage: true });
+  });
+
+  test('16 通関申告の登録', async ({ page }) => {
+    // **本文が「申告番号・追跡番号・申告日時の 3 つ」を説明している。**
+    await signInAsHandler(page);
+    await page.goto('/customs/new');
+
+    await expect(page.getByRole('heading', { name: '通関申告の登録' })).toBeVisible();
+    await page.getByLabel('申告番号').fill('D-2026-0912-77');
+    await page.getByLabel('追跡番号').fill('TRK-AB12CD3456');
+    await page.getByLabel('申告日時').fill('2026-09-12T10:00');
+    await page.screenshot({ path: `${OUT}/16-S53-customs-register.png`, fullPage: true });
+  });
+
+  test('16 通関状態の更新', async ({ page }) => {
+    // **本文が「理由は必須」「送信中になる」「督促の警告」を説明している。**
+    await page.route('**/api/v1/handling/customs-declarations/*/history', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: [
+            {
+              kind: 'REGISTERED', previousStatus: null, status: 'PENDING',
+              statusLabel: '審査中', reason: '通関申告を登録しました',
+              changedBy: 'handler01', changedAt: '2026-09-12T01:00:00Z',
+            },
+            {
+              kind: 'STATUS_CHANGED', previousStatus: 'PENDING', status: 'HELD',
+              statusLabel: '留置', reason: '原産地証明の不備',
+              changedBy: 'tracker01', changedAt: '2026-09-13T00:00:00Z',
+            },
+          ],
+        }),
+      }),
+    );
+    await page.route('**/api/v1/handling/customs-declarations/D-*', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(SAMPLE_CUSTOMS_HELD),
+      }),
+    );
+    await signInAsTracker(page);
+    await page.goto('/customs/D-2026-0912-77');
+
+    await expect(page.getByRole('heading', { name: '状態を更新する' })).toBeVisible();
+    await expect(page.getByRole('alert')).toContainText('3 営業日を超えています');
+    await expect(page.getByText('原産地証明の不備')).toBeVisible();
+    await page.getByLabel('理由').fill('書類の不備が解消したため');
+    await page.screenshot({ path: `${OUT}/16-S53-customs-status-update.png`, fullPage: true });
+  });
 });
