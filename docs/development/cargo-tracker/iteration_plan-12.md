@@ -3,7 +3,7 @@ type: Plan
 title: "イテレーション 12 計画"
 tags: [plan]
 status: draft
-generated: { by: claude-code/claude-opus-5, at: 2026-09-10T10:40:37Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-10T11:01:23Z }
 ---
 
 # イテレーション 12 計画
@@ -355,7 +355,7 @@ S42 --> S41 : 税関保留の例外から
 - [x] フロントの `npm run test`・`npx tsc -b`・`npm run build` が緑 — 達成
 - [x] クラスタ E2E が緑（US ごとに 1 度 + 通し） — 達成（**通し 21/21**）
 - [x] SonarQube の Quality Gate がバックエンド・フロントエンドとも PASS — 達成
-- [x] CI が緑 — 達成（run 34452552170 / success）
+- [x] CI が緑 — 達成（run 34467366727 / 全 6 ジョブ success。**時限式のフィクスチャで一度赤になり、直してから緑にした**）
 - [x] **注 N1〜N5 を設計ドキュメントに反映した**（**N5 は 3 IT 繰り越し。今回で終わらせる**） — 達成（N5 の 3 IT 繰り越しを終わらせた）
 - [x] **マニュアル 16 章を新設し、13 章に通関のガードを足し、キャプチャを生成 spec で撮り直した**。**書いた手順を画面で 1 度なぞった**（Try T3） — 達成
 - [x] `npx gulp okf:check` が ERROR 0 — 達成
