@@ -1,9 +1,11 @@
 ---
-type: Plan
+type: Report
 title: "イテレーション 12 完了報告書"
-tags: [plan]
-status: draft
+tags: [report]
+status: stable
 generated: { by: claude-code/claude-opus-5, at: 2026-09-10T14:14:06Z }
+verified:
+  - { by: human:k2works, at: 2026-09-10T21:11:19Z }
 ---
 
 # イテレーション 12 完了報告書

@@ -1,9 +1,11 @@
 ---
-type: Plan
+type: Retrospective
 title: "イテレーション 12 ふりかえり"
-tags: [plan]
-status: draft
+tags: [retrospective]
+status: stable
 generated: { by: claude-code/claude-opus-5, at: 2026-09-10T13:17:52Z }
+verified:
+  - { by: human:k2works, at: 2026-09-10T21:11:19Z }
 ---
 
 # イテレーション 12 ふりかえり
