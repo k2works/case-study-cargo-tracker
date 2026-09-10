@@ -3,7 +3,7 @@ type: Plan
 title: "イテレーション 12 計画"
 tags: [plan]
 status: draft
-generated: { by: claude-code/claude-opus-5, at: 2026-09-09T23:26:44Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-10T01:22:12Z }
 ---
 
 # イテレーション 12 計画
@@ -63,7 +63,7 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-09T23:26:44Z }
 | N1 | **`HolidayCalendar` の置き場が決まっていない。** `domain-model.md:1033` は「港の所在国の休日カレンダー」と書くが、**要素表にも共有カーネルの名簿にも無い**。国コードから休日を引くので、`shared.domain.location.CountryCode` と対になる | `domain-model.md` の要素表（値オブジェクト）と、共有カーネルの範囲（ADR-0001 決定 4 / `SharedKernelScopeTest` の名簿） | T1（**共有カーネルではなく handlingms に置いた**。上の ADR 表を参照） |
 | N2 | US29 §4 の**通知の置き場が設計に無い**。`ui_design.md:120` の「記録と手作業の組で満たす」US 一覧に US29 はあるが、**記録先のイベントが `domain-model.md` の handlingms のイベント表に無い** | `domain-model.md`（`CustomsClearanceNotifiedEvent` を追加）・`ui_design.md:120` | T5 |
 | N3 | **履歴を Event Store から読むクエリが設計に無い。** `data-model.md:656` は「履歴は Event Store から読む」と書くが、`domain-model.md` のクエリ一覧に該当する問い合わせが無い | `domain-model.md` のクエリ一覧（`FindCustomsHistoryQuery`） | **T4 で反映。ただし正典どおりには実装できなかった**——`@QueryHandler` から Event Store を読むと、タグを指定しても `havingAnyTag()` でも 0 件になる（実測）。ADR-0012 と同じ形で正典を直し、`customs_status_history` 投影にした（主キーは元イベントの識別子なのでリプレイで積み上がらない） |
-| N4 | **S52・S53 の `###` 節が `ui_design.md` に無い**（S53 はある。**S52 が無い**）。画面一覧の行と一覧規約の行だけで、画面項目・操作手順が未記述 | `ui_design.md`（S52 の節を新設） | T6 |
+| N4 | **S52・S53 の `###` 節が `ui_design.md` に無い**（S53 はある。**S52 が無い**）。画面一覧の行と一覧規約の行だけで、画面項目・操作手順が未記述 | `ui_design.md`（S52 の節を新設） | **T6 で反映済み**。あわせてモバイル下部タブを 3 つに（`ui_design.md:246`） |
 | N5 | **IT10 から 3 IT 続けて未反映の注**——`ui_design.md` に **S42・S43 の `###` 節が無い**。IT10 で「T6 で反映する」と書き、IT11 でも繰り越した | `ui_design.md`（S42・S43 の節を新設） | T9（負債枠） |
 
 ## 成功基準

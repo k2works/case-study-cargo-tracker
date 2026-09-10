@@ -11,6 +11,9 @@ import { NAVIGATION } from '@/shared/ui/navigation';
 import { ShipperListPage } from '@/features/shippers/ShipperListPage';
 import { ShipperRegisterPage } from '@/features/shippers/ShipperRegisterPage';
 import { AttentionListPage } from '@/features/attention/AttentionListPage';
+import { CustomsListPage } from '@/features/customs/CustomsListPage';
+import { CustomsRegisterPage } from '@/features/customs/CustomsRegisterPage';
+import { CustomsDetailPage } from '@/features/customs/CustomsDetailPage';
 import { AdminUserListPage } from '@/features/admin/AdminUserListPage';
 import { BookingListPage } from '@/features/bookings/BookingListPage';
 import { BookingRegisterPage } from '@/features/bookings/BookingRegisterPage';
@@ -51,6 +54,7 @@ export const PAGES: Record<string, ReactElement> = {
   '/voyages/new': <VoyageRegisterPage />,
   '/tracking': <TrackingListPage />,
   '/handling': <HandlingHistoryPage />,
+  '/customs': <CustomsListPage />,
   '/worklist/attention': <AttentionListPage />,
   '/admin/users': <AdminUserListPage />,
 };
@@ -129,6 +133,27 @@ export function AppRoutes() {
           element={
             <RequireRole allow={['ROLE_HANDLER']}>
               <AwaitingClaimPage />
+            </RequireRole>
+          }
+        />
+        {/* 通関申告の登録（S53）は荷役ロールだけ。**`/customs/:no` より先に置く。**
+            後ろに置くと "new" が申告番号として吸われ、登録画面が開けない
+            （引取待ちで踏んだのと同じ形）。 */}
+        <Route
+          path="/customs/new"
+          element={
+            <RequireRole allow={['ROLE_HANDLER']}>
+              <CustomsRegisterPage />
+            </RequireRole>
+          }
+        />
+        {/* 通関申告（S53）は荷役と追跡の両方が開く。更新のフォームは追跡だけに出す
+            ——**開ける場所と操作できる範囲は別**である（ui_design.md の画面一覧）。 */}
+        <Route
+          path="/customs/:declarationNumber"
+          element={
+            <RequireRole allow={['ROLE_HANDLER', 'ROLE_TRACKER']}>
+              <CustomsDetailPage />
             </RequireRole>
           }
         />

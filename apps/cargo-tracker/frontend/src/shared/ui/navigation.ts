@@ -36,6 +36,9 @@ export const NAVIGATION: readonly NavigationItem[] = [
   // 荷役（S51）は荷役と追跡の両方（ui_design.md:236）。追跡管理者は
   // 問い合わせを受けたときに現場の記録を確かめる。
   { path: '/handling', label: '荷役', allow: ['ROLE_HANDLER', 'ROLE_TRACKER'] },
+  // 通関（S52）は荷役と追跡の両方（ui_design.md:238）。荷役が申告を出し、
+  // 追跡が状態を更新する。**どちらか一方にすると片方が入口を持たない。**
+  { path: '/customs', label: '通関', allow: ['ROLE_HANDLER', 'ROLE_TRACKER'] },
   {
     path: '/worklist/attention',
     label: '要確認一覧',

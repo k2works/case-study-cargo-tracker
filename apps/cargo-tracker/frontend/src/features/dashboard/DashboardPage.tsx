@@ -12,6 +12,7 @@ import {
 import { formatBusinessDateTime } from '@/shared/api/businessDate';
 import { fetchVoyagePorts } from '@/features/handling/api';
 import { fetchOpenExceptions, fetchRecentlyChanged } from '@/features/tracking/api';
+import { fetchOverdueCustomsHolds } from '@/features/customs/api';
 
 /** S02 ダッシュボード。「今日の作業」からその日の入口へ行けるようにする。 */
 export function DashboardPage() {
@@ -38,6 +39,15 @@ export function DashboardPage() {
     // 引数を渡さない（既定で未解決だけ）。queryFn にそのまま渡すと、
     // TanStack Query の context が第 1 引数として入る。
     queryFn: () => fetchOpenExceptions(),
+    enabled: isTracker,
+  });
+
+  // **留置 3 営業日超は督促の対象**（US29 §受入基準 6）。件数だけでは進まないので
+  // 一覧へ繋ぐ。**判定はサーバが持つ**——留置中の日数は日が経つだけで変わるので、
+  // 画面で数えると一覧と件数が食い違う。
+  const { data: overdueCustoms } = useQuery({
+    queryKey: ['customs-overdue'],
+    queryFn: () => fetchOverdueCustomsHolds(),
     enabled: isTracker,
   });
 
@@ -260,6 +270,17 @@ export function DashboardPage() {
             例外一覧
           </Link>
           {' '}で対応してください。
+        </output>
+      )}
+
+      {/* **留置が長い申告は督促の対象**（US29 §受入基準 6）。件数から一覧へ繋ぐ。 */}
+      {isTracker && overdueCustoms?.state === 'ready' && overdueCustoms.value.total > 0 && (
+        <output className={`${NOTICE} mt-4 block`}>
+          留置が 3 営業日を超えた通関申告が {overdueCustoms.value.total} 件あります。{' '}
+          <Link to="/customs?overdueOnly=true" className={LINK}>
+            通関申告一覧
+          </Link>
+          {' '}で督促してください。
         </output>
       )}
 

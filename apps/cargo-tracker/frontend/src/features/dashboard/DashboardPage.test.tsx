@@ -49,6 +49,11 @@ function mockApi(
         count: 3, withinHours: 24,
       }), { status: 200 }));
     }
+    if (url.includes('/customs-declarations')) {
+      // 通関の督促（US29 §受入基準 6）。既定は 0 件で、必要なテストだけ差し替える。
+      return Promise.resolve(new Response(JSON.stringify({ items: [], total: 0 }),
+        { status: 200 }));
+    }
     if (url.includes('/awaiting-tracking-number')) {
       return Promise.resolve(
         new Response(JSON.stringify({ items: awaitingTracking }), { status: 200 }));
@@ -242,5 +247,32 @@ describe('S02 ダッシュボード', () => {
 
     await screen.findByText('今日の作業');
     expect(screen.queryByText('作業のある航海')).not.toBeInTheDocument();
+  });
+  it('US29 §6: 追跡管理者には留置 3 営業日超の件数が出て、そこから行ける', async () => {
+    // **件数だけでは進まない。** どの申告に督促すればよいかは一覧が持つ。
+    // **判定はサーバが持つ**——画面で数えると一覧と件数が食い違う。
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      const url = String(input);
+      if (url.includes('/customs-declarations')) {
+        return Promise.resolve(new Response(JSON.stringify({
+          items: [{ declarationNumber: 'IMP-1' }], total: 1,
+        }), { status: 200 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ items: [] }), { status: 200 }));
+    });
+
+    renderAs(['ROLE_TRACKER']);
+
+    expect(await screen.findByText(/留置が 3 営業日を超えた通関申告が 1 件あります/))
+      .toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '通関申告一覧' }))
+      .toHaveAttribute('href', '/customs?overdueOnly=true');
+  });
+
+  it('督促の対象が無ければ通関の件数は出さない（0 件の行を並べない）', async () => {
+    renderAs(['ROLE_TRACKER']);
+    await screen.findByRole('heading', { name: '今日の作業' });
+
+    expect(screen.queryByText(/留置が 3 営業日を超えた/)).not.toBeInTheDocument();
   });
 });

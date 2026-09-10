@@ -1,5 +1,9 @@
 # Docs Update Log
 
+## 2026-09-10
+* **Update**: [iteration_plan-12](/development/cargo-tracker/iteration_plan-12.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+
 ## 2026-09-09
 * **Update**: [iteration_plan-12](/development/cargo-tracker/iteration_plan-12.md) を更新（claude-code/claude-opus-5）
 * **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
