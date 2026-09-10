@@ -4,7 +4,7 @@ title: "ADR-0014 書けないイベントは退避して、処理を止めない
 description: "投影が書けなかったイベントを dead_letter_entry へ退避し、Event Processor を生かしたままにする。1 件の不正イベントで後続が全部届かなくなる形をやめる。"
 tags: [adr]
 status: draft
-generated: { by: claude-code/claude-opus-5, at: 2026-09-09T12:06:18Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-10T04:43:03Z }
 ---
 
 # ADR-0014 書けないイベントは退避して、処理を止めない
@@ -50,6 +50,24 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-09T12:06:18Z }
 | 後続のイベントが届かない | **同じ列の後続はやはり届かない**（退避先に溜まる） |
 
 列を分ける手立ては、`EventProcessorDefinition` で Processor を明示的に組み、`SequenceOverridingEventHandlingComponent` を挟むことで作れる見込みです。IT13 へ送ります。
+
+## 使ってみて分かったこと（IT12 の T7e で実測）
+
+**この ADR の仕組みは、置いた同じ IT で実際に働きました。** T5 で書いた通関の連鎖に
+欠陥があり（留置を経ていない申告に解決コマンドを送っていた）、集約が断った例外が
+退避されました。クラスタ E2E が症状（追跡番号発行の連鎖が止まる）を出し、
+`projection:dead-letters` が原因（`例外 … は起票されていません`）を 1 コマンドで
+出し、退避されたペイロードが `previousStatus: PENDING, status: CLEARED` という
+**再現条件そのもの**を示しました。層ごとの検査では出ない欠陥でした。
+
+**「引き受けていないこと」も実データで裏づけられました。** 退避された 4 件のうち
+毒は 1 件で、残り 3 件は**別の貨物の荷役イベント**でした。`sequence_identifier` は
+4 件すべて `FULL_SEQUENTIAL_POLICY` で、同じ列にいたために巻き添えになっています。
+
+**足りないものが 1 つ見つかりました。** 直したあとに<b>退避先から処理し直す入口</b>が
+ありません（Axon の `SequencedDeadLetterProcessor` を呼ぶ運用タスク）。今回は開発
+環境の使い捨てデータだったので `DELETE` で片づけましたが、**これは「黙って捨てる」
+ことであり、この ADR の決定 1 に反します**。本番では消せません。IT13 へ送ります。
 
 ## 検査
 

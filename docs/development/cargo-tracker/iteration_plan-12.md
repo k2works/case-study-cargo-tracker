@@ -3,7 +3,7 @@ type: Plan
 title: "イテレーション 12 計画"
 tags: [plan]
 status: draft
-generated: { by: claude-code/claude-opus-5, at: 2026-09-10T01:44:43Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-10T04:43:03Z }
 ---
 
 # イテレーション 12 計画
@@ -360,6 +360,14 @@ S42 --> S41 : 税関保留の例外から
 - [ ] `npx gulp okf:check` が ERROR 0
 - [ ] 引き継ぎ枠 A・B と負債枠を消化した（できなければ**理由をふりかえりに書く**）
 - [ ] 各タスクの成果を意味のある単位でコミットした（**品質ゲートの結果を書く欄を持つテンプレートで**）
+
+## IT13 へ送るもの（**本 IT で分かった分**）
+
+| # | 内容 | なぜ |
+| :--- | :--- | :--- |
+| 1 | **退避先から処理し直す入口**（`projection:dead-letters:retry`。Axon の `SequencedDeadLetterProcessor` を呼ぶ） | 直したあとに退避を消すのは「黙って捨てる」ことで、[ADR-0014](../../adr/cargo-tracker/0014-poison-events-are-parked-not-blocking.md) 決定 1 に反する。本番では消せない。T7e で実際に `DELETE` で片づけた |
+| 2 | **処理の列を分ける**（`EventProcessorDefinition` + `SequenceOverridingEventHandlingComponent`） | 列が全体で 1 本なので、1 件の毒で**別の貨物のイベントまで**退避される（T7e で 4 件のうち 3 件が巻き添え） |
+| 3 | H.4（S42・S52 に荷主名を出す。Upcaster が要る）・H.8（航海番号で探す）・H.9（港名の対応表）・H.11（互換コンストラクタ 3 本） | IT12 の計画で「IT13 へ送る」と決めていた分 |
 
 ## 関連ドキュメント
 

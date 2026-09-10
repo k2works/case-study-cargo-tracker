@@ -1,6 +1,8 @@
 # Docs Update Log
 
 ## 2026-09-10
+* **Update**: [iteration_plan-12](/development/cargo-tracker/iteration_plan-12.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0014-poison-events-are-parked-not-blocking](/adr/cargo-tracker/0014-poison-events-are-parked-not-blocking.md) を更新（claude-code/claude-opus-5）
 * **Update**: [16-通関を通す](/manual/16-通関を通す.md) を更新（claude-code/claude-opus-5）
 * **Update**: [14-引取と例外を扱う](/manual/14-引取と例外を扱う.md) を更新（claude-code/claude-opus-5）
 * **Update**: [13-荷役作業を記録する](/manual/13-荷役作業を記録する.md) を更新（claude-code/claude-opus-5）
