@@ -79,15 +79,20 @@ public class HandlingActivity {
         // 断っていた（画面が選択肢から外していても API を直接叩けば通るため）。
         // **開けるのは、検査を同じ変更で入れるからである。**
         //
-        // **通関の検査（`CLEARED` のみ許可）は US29・IT12。** 引取の受入基準は
-        // 荷受人の確認で満たす（release_plan.md:205 の決定）。通関を先に敷いても
-        // 申告を記録する画面が無く、読む側の無い配線になる。
         boolean confirmed = command.consigneeName() != null
                 && !command.consigneeName().isBlank();
         if (command.type().requiresConsigneeConfirmation() && !confirmed) {
             throw new BusinessRuleViolation(
                     command.type().label() + "には荷受人の確認（署名または確認コード）が必要です");
         }
+        // **通関が済んでいない貨物は引き取れない**（US29 §受入基準 3・不変条件 4）。
+        // IT9 から 3 IT のあいだ「読む側の無い配線を先に敷かない」として保留して
+        // きた。申告を記録する画面（S53）が出来たので、ここで有効にする。
+        //
+        // **判定は列挙が答える**（`CustomsStatus#allowsClaim`）。ここに
+        // `if (status == CLEARED)` を書くと、状態が増えたときに書き換える場所が
+        // 散らばる。
+        requireCustomsCleared(command);
         if (!command.type().requiresConsigneeConfirmation() && confirmed) {
             // **黙って捨てない。** 捨てると、現場は確認を取ったつもりのまま
             // 記録が残らない（M6 と同じ形）。
@@ -138,6 +143,36 @@ public class HandlingActivity {
     }
 
     private String bookingId;
+
+    /**
+     * 引取は通関済のときだけ通す（US29 §受入基準 3）。
+     *
+     * <p><b>断るときは判定に使った状態と時点を返す。</b> 画面は「直近で変わった
+     * 可能性があります」と再確認へ導ける（`domain-model.md`・`architecture_frontend.md`）。
+     * 「通関が済んでいません」だけでは、いつの話なのか分からない。</p>
+     *
+     * <p><b>「申告が無い」と「審査中」を分けて伝える。</b> 前者はまだ申告して
+     * いないので荷役作業員が申告から始める。後者は税関を待つしかない。</p>
+     *
+     * <p><b>ここが唯一の入口である</b>（Try T1 で数えた）。追跡側の「預かった荷役の
+     * 再適用」（IT11 引き継ぎ枠 B）は、<b>ここを通った記録</b>を追跡へ流し直すもので、
+     * 荷役の記録そのものをもう一度作りはしない。だから検査は 1 か所でよい。</p>
+     */
+    private static void requireCustomsCleared(RegisterHandlingActivityCommand command) {
+        if (!command.type().requiresCustomsClearance()) {
+            return;
+        }
+        if (command.customsStatus() == null) {
+            throw new IllegalTransition("通関申告がありません。"
+                    + command.type().label() + "の前に通関申告を登録してください");
+        }
+        if (!command.customsStatus().allowsClaim()) {
+            throw new IllegalTransition("通関状態が "
+                    + command.customsStatus().name() + "（" + command.customsStatus().label()
+                    + "）なので" + command.type().label() + "できません。"
+                    + "この判定は " + command.customsStatusAsOf() + " 時点のものです");
+        }
+    }
 
     private static void requireText(String value, String message) {
         if (value == null || value.isBlank()) {

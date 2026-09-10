@@ -1,9 +1,12 @@
 package com.example.cargotracker.handling.domain.model.aggregates;
 
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.example.cargotracker.handling.domain.model.commands.RegisterHandlingActivityCommand;
 import com.example.cargotracker.handling.domain.model.commands.VoidHandlingActivityCommand;
 import com.example.cargotracker.handling.domain.model.events.ConsigneeConfirmationRecordedEvent;
+import com.example.cargotracker.handling.domain.model.valueobjects.CustomsStatus;
 import com.example.cargotracker.handling.domain.model.valueobjects.HandlingType;
 import com.example.cargotracker.shared.contract.event.HandlingActivityRegisteredEvent;
 import com.example.cargotracker.shared.contract.event.HandlingActivityVoidedEvent;
@@ -43,9 +46,15 @@ class HandlingActivityTest {
     }
 
     private static RegisterHandlingActivityCommand register(HandlingType type, boolean offRoute) {
+        return register(type, offRoute, null, null);
+    }
+
+    /** 通関状態を指定して組む（引取のガード / US29 §受入基準 3）。 */
+    private static RegisterHandlingActivityCommand register(HandlingType type, boolean offRoute,
+            String consigneeName, CustomsStatus customsStatus) {
         return new RegisterHandlingActivityCommand(ACTIVITY, "TRK-8K2QX7M4RB", "b-1", type,
                 "SGSIN", type.requiresVoyageNumber() ? "V-MOL-001" : null,
-                offRoute, false, null, "handler01", COMPLETED);
+                offRoute, false, consigneeName, customsStatus, NOW, "handler01", COMPLETED);
     }
 
     private static HandlingActivityRegisteredEvent registered(HandlingType type, boolean offRoute) {
@@ -84,8 +93,7 @@ class HandlingActivityTest {
     @DisplayName("不変条件 6: 未来の作業日時は拒む（過去は通す）")
     void rejectsFutureCompletionTime() {
         var future = new RegisterHandlingActivityCommand(ACTIVITY, "TRK-8K2QX7M4RB", "b-1",
-                HandlingType.UNLOAD, "SGSIN", "V-MOL-001", false, false, null, "handler01",
-                NOW.plusSeconds(60));
+                HandlingType.UNLOAD, "SGSIN", "V-MOL-001", false, false, null, null, NOW, "handler01", NOW.plusSeconds(60));
 
         fixture.given().noPriorActivity()
                 .when().command(future)
@@ -99,7 +107,7 @@ class HandlingActivityTest {
         // 現場は作業を終えた直後に記録する——ちょうどいまを拒むと、
         // その瞬間に押した記録が通らない。
         var justNow = new RegisterHandlingActivityCommand(ACTIVITY, "TRK-8K2QX7M4RB", "b-1",
-                HandlingType.UNLOAD, "SGSIN", "V-MOL-001", false, false, null, "handler01", NOW);
+                HandlingType.UNLOAD, "SGSIN", "V-MOL-001", false, false, null, null, NOW, "handler01", NOW);
 
         fixture.given().noPriorActivity()
                 .when().command(justNow)
@@ -110,7 +118,7 @@ class HandlingActivityTest {
     @DisplayName("不変条件 6: 過去の作業日時は通す（通信不能時は紙に控えて後から入れる）")
     void acceptsPastCompletionTime() {
         var past = new RegisterHandlingActivityCommand(ACTIVITY, "TRK-8K2QX7M4RB", "b-1",
-                HandlingType.UNLOAD, "SGSIN", "V-MOL-001", false, false, null, "handler01",
+                HandlingType.UNLOAD, "SGSIN", "V-MOL-001", false, false, null, null, NOW, "handler01",
                 NOW.minusSeconds(86400));
 
         fixture.given().noPriorActivity()
@@ -122,7 +130,7 @@ class HandlingActivityTest {
     @DisplayName("不変条件 1: 積込・荷降しには航海番号が要る")
     void requiresVoyageNumberForLoadAndUnload() {
         var withoutVoyage = new RegisterHandlingActivityCommand(ACTIVITY, "TRK-8K2QX7M4RB", "b-1",
-                HandlingType.LOAD, "JPTYO", null, false, false, null, "handler01", COMPLETED);
+                HandlingType.LOAD, "JPTYO", null, false, false, null, null, NOW, "handler01", COMPLETED);
 
         fixture.given().noPriorActivity()
                 .when().command(withoutVoyage)
@@ -139,10 +147,16 @@ class HandlingActivityTest {
 
     // ---- US16 引取（IT10 T2） ----
 
+    /** 通関済の貨物の引取。**通関のガード（US29・IT12）は別のテストで見る。** */
     private static RegisterHandlingActivityCommand claim(String consigneeName) {
+        return claim(consigneeName, CustomsStatus.CLEARED);
+    }
+
+    private static RegisterHandlingActivityCommand claim(String consigneeName,
+            CustomsStatus customsStatus) {
         return new RegisterHandlingActivityCommand(ACTIVITY, "TRK-8K2QX7M4RB", "b-1",
                 HandlingType.CLAIM, "USNYC", null, false, true, consigneeName,
-                "handler01", COMPLETED);
+                customsStatus, NOW, "handler01", COMPLETED);
     }
 
     @Test
@@ -182,7 +196,7 @@ class HandlingActivityTest {
     void rejectsConsigneeConfirmationOnOtherTypes() {
         var loadWithConsignee = new RegisterHandlingActivityCommand(ACTIVITY,
                 "TRK-8K2QX7M4RB", "b-1", HandlingType.LOAD, "JPTYO", "V-MOL-001",
-                false, false, "John Smith", "handler01", COMPLETED);
+                false, false, "John Smith", null, NOW, "handler01", COMPLETED);
 
         fixture.given().noPriorActivity()
                 .when().command(loadWithConsignee)
@@ -193,7 +207,7 @@ class HandlingActivityTest {
     @DisplayName("作業者が分からない記録は残さない")
     void requiresOperator() {
         var withoutOperator = new RegisterHandlingActivityCommand(ACTIVITY, "TRK-8K2QX7M4RB",
-                "b-1", HandlingType.UNLOAD, "SGSIN", "V-MOL-001", false, false, null, "  ", COMPLETED);
+                "b-1", HandlingType.UNLOAD, "SGSIN", "V-MOL-001", false, false, null, null, NOW, "  ", COMPLETED);
 
         fixture.given().noPriorActivity()
                 .when().command(withoutOperator)
@@ -245,19 +259,19 @@ class HandlingActivityTest {
         var cases = java.util.List.of(
                 new Missing("追跡番号", new RegisterHandlingActivityCommand(ACTIVITY, "  ", "b-1",
                         HandlingType.UNLOAD, "SGSIN", "V-MOL-001", false, false,
-                        null, "handler01", COMPLETED)),
+                        null, null, NOW, "handler01", COMPLETED)),
                 new Missing("予約 ID", new RegisterHandlingActivityCommand(ACTIVITY,
                         "TRK-8K2QX7M4RB", null, HandlingType.UNLOAD, "SGSIN", "V-MOL-001",
-                        false, false, null, "handler01", COMPLETED)),
+                        false, false, null, null, NOW, "handler01", COMPLETED)),
                 new Missing("作業場所", new RegisterHandlingActivityCommand(ACTIVITY,
                         "TRK-8K2QX7M4RB", "b-1", HandlingType.UNLOAD, "", "V-MOL-001",
-                        false, false, null, "handler01", COMPLETED)),
+                        false, false, null, null, NOW, "handler01", COMPLETED)),
                 new Missing("作業種別", new RegisterHandlingActivityCommand(ACTIVITY,
                         "TRK-8K2QX7M4RB", "b-1", null, "SGSIN", "V-MOL-001",
-                        false, false, null, "handler01", COMPLETED)),
+                        false, false, null, null, NOW, "handler01", COMPLETED)),
                 new Missing("作業日時", new RegisterHandlingActivityCommand(ACTIVITY,
                         "TRK-8K2QX7M4RB", "b-1", HandlingType.UNLOAD, "SGSIN", "V-MOL-001",
-                        false, false, null, "handler01", null)));
+                        false, false, null, null, NOW, "handler01", null)));
 
         for (var missing : cases) {
             fixture.given().noPriorActivity()
@@ -272,5 +286,51 @@ class HandlingActivityTest {
         fixture.given().event(registered(HandlingType.UNLOAD, false))
                 .when().command(new VoidHandlingActivityCommand(ACTIVITY, "理由", null))
                 .then().exception(BusinessRuleViolation.class);
+    }
+    // ---- US29 通関のガード（IT12 T7） ----
+
+    @Test
+    @DisplayName("US29 §3: 通関済でない貨物の引取は断り、判定に使った状態を返す")
+    void rejectsClaimUntilCustomsCleared() {
+        // **緩めていない側**（Try T2）。通関済以外はすべて断る。値の一覧から
+        // 回す——足した状態をここで扱い忘れると、その状態だけ引取が素通りする。
+        for (CustomsStatus status : CustomsStatus.values()) {
+            if (status.allowsClaim()) {
+                continue;
+            }
+            fixture.given().noPriorActivity()
+                    .when().command(claim("John Smith", status))
+                    .then().exception(IllegalTransition.class);
+        }
+    }
+
+    @Test
+    @DisplayName("US29 §3: 断りの理由に通関状態が入る（画面が再確認へ導ける）")
+    void tellsWhichCustomsStatusRefusedTheClaim() {
+        fixture.given().noPriorActivity()
+                .when().command(claim("John Smith", CustomsStatus.PENDING))
+                .then().exceptionSatisfies(thrown ->
+                        assertThat(thrown.getMessage()).contains("PENDING").contains("審査中"));
+    }
+
+    @Test
+    @DisplayName("US29 §3: 申告が無い貨物は「申告がありません」と断る（審査中とは違う）")
+    void rejectsClaimWhenNoDeclaration() {
+        // 「無い」と「審査中」は違う。前者はまだ申告していないので荷役作業員が
+        // 申告から始める。後者は税関を待つしかない。
+        fixture.given().noPriorActivity()
+                .when().command(claim("John Smith", null))
+                .then().exceptionSatisfies(thrown ->
+                        assertThat(thrown.getMessage()).contains("通関申告がありません"));
+    }
+
+    @Test
+    @DisplayName("通関のガードは引取だけ（荷降しは通関を待たない）")
+    void doesNotGuardOtherTypes() {
+        // **緩めた側の範囲を確かめる**（Try T2）。ここを引取以外にも広げると、
+        // 輸入港に着く前の積込・荷降しが記録できなくなる。
+        fixture.given().noPriorActivity()
+                .when().command(register(HandlingType.UNLOAD, false, null, null))
+                .then().success();
     }
 }

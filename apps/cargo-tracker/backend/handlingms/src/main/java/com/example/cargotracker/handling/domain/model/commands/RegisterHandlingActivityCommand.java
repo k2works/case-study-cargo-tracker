@@ -2,6 +2,7 @@ package com.example.cargotracker.handling.domain.model.commands;
 
 import com.example.cargotracker.handling.domain.model.valueobjects.HandlingType;
 import java.time.Instant;
+import com.example.cargotracker.handling.domain.model.valueobjects.CustomsStatus;
 import org.axonframework.modelling.annotation.TargetEntityId;
 
 /**
@@ -21,6 +22,11 @@ import org.axonframework.modelling.annotation.TargetEntityId;
  *     取ったつもりのまま記録が残らない）
  * @param completedAt 作業が終わった時刻。<b>過去は通し、未来は拒む</b>——通信不能時は
  *     紙に控えて後から入れる運用がある
+ * @param customsStatus 判定に使った通関状態。{@code offRoute} と同じく application 層が
+ *     解決して載せる（`domain-model.md`）。<b>申告が無ければ {@code null}</b>——
+ *     「無い」と「審査中」は違う
+ * @param customsStatusAsOf その通関状態を読んだ時点。<b>断るときに返す</b>ので、
+ *     画面が「直近で変わった可能性があります」と再確認へ導ける
  */
 public record RegisterHandlingActivityCommand(
         @TargetEntityId String activityId,
@@ -32,6 +38,8 @@ public record RegisterHandlingActivityCommand(
         boolean offRoute,
         boolean finalPort,
         String consigneeName,
+        CustomsStatus customsStatus,
+        Instant customsStatusAsOf,
         String operator,
         Instant completedAt) {
 }

@@ -188,6 +188,46 @@ public class HandlingSteps {
         lastResponse = register("CLAIM", "USNYC", trackingNumber, null);
     }
 
+    /**
+     * 通関を通した状態にする（US29・IT12 でガードを有効にした）。
+     *
+     * <p><b>ここに置く。</b> ステップ定義はクラスごとに別の状態を持つので、
+     * 通関側のクラスから追跡番号を見られない。<b>ガードを緩めるのではなく、
+     * 前提づくりを足す</b>のが正しい直し方である（計画 R1）。</p>
+     */
+    @かつ("その貨物の通関が済んでいる")
+    public void その貨物の通関が済んでいる() {
+        String declarationNumber = "IMP-PRE-" + System.nanoTime();
+        Map<String, Object> declaration = new LinkedHashMap<>();
+        declaration.put("declarationNumber", declarationNumber);
+        declaration.put("trackingNumber", trackingNumber);
+        declaration.put("declaredAt", "2026-09-09T09:00:00Z");
+        rest.post().uri(url("/customs-declarations"))
+                .header("X-Auth-Username", "handler01")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(declaration).retrieve().toBodilessEntity();
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
+                assertThat(customs(declarationNumber).getStatusCode())
+                        .isEqualTo(HttpStatus.OK));
+
+        Map<String, Object> update = new LinkedHashMap<>();
+        update.put("status", "CLEARED");
+        update.put("reason", "書類に不備なし");
+        rest.post().uri(url("/customs-declarations/" + declarationNumber + "/status"))
+                .header("X-Auth-Username", "tracker01")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(update).retrieve().toBodilessEntity();
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
+                assertThat(customs(declarationNumber).getBody())
+                        .containsEntry("status", "CLEARED"));
+    }
+
+    private ResponseEntity<JsonMap> customs(String declarationNumber) {
+        return rest.get().uri(url("/customs-declarations/" + declarationNumber))
+                .header("X-Auth-Username", "tracker01")
+                .retrieve().toEntity(JsonMap.class);
+    }
+
     @もし("荷受人の確認を添えて引取を記録する")
     public void 荷受人の確認を添えて引取を記録する() {
         activityId = "act-" + System.nanoTime();

@@ -3,9 +3,14 @@ package com.example.cargotracker.tracking.application.reaction;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.cargotracker.shared.contract.event.HandlingActivityRegisteredEvent;
+import com.example.cargotracker.shared.contract.event.CustomsStatusChangedEvent;
 import com.example.cargotracker.shared.contract.event.HandlingActivityVoidedEvent;
 import com.example.cargotracker.tracking.domain.model.commands.AdvanceTrackingCommand;
+import com.example.cargotracker.tracking.domain.model.commands.RegisterTrackingExceptionCommand;
+import com.example.cargotracker.tracking.domain.model.commands.ResolveTrackingExceptionCommand;
 import com.example.cargotracker.tracking.domain.model.commands.RevertTrackingCommand;
+import com.example.cargotracker.tracking.domain.model.entities.TrackingException;
+import com.example.cargotracker.tracking.domain.model.valueobjects.ExceptionType;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -95,5 +100,64 @@ class TrackingReactionHandlerTest {
         assertThat(sent).singleElement()
                 .isEqualTo(new RevertTrackingCommand("TRK-8K2QX7M4RB", "act-1", "UNLOAD",
                         "取り違えました", "handler01", RECORDED));
+    }
+    private static CustomsStatusChangedEvent customs(String previous, String status) {
+        return new CustomsStatusChangedEvent("IMP-2026-0001", "TRK-8K2QX7M4RB", "b-1",
+                previous, status, "原産地証明が未提出", 0, "tracker01", RECORDED);
+    }
+
+    @Test
+    @DisplayName("US29 §5: 留置になると税関保留を起票する（手では起票できない種別）")
+    void registersCustomsHoldWhenHeld() {
+        handler.on(customs("PENDING", "HELD"));
+
+        assertThat(sent).singleElement()
+                .isInstanceOfSatisfying(RegisterTrackingExceptionCommand.class, command -> {
+                    assertThat(command.type()).isEqualTo(ExceptionType.CUSTOMS_HOLD);
+                    assertThat(command.trackingNumber()).isEqualTo("TRK-8K2QX7M4RB");
+                    assertThat(command.description()).contains("IMP-2026-0001")
+                            .contains("原産地証明が未提出");
+                });
+    }
+
+    @Test
+    @DisplayName("識別子は申告から導く（留置が再配送されても例外が増えない）")
+    void derivesTheExceptionIdFromTheDeclaration() {
+        handler.on(customs("PENDING", "HELD"));
+        handler.on(customs("PENDING", "HELD"));
+
+        assertThat(sent).hasSize(2)
+                .extracting(command -> ((RegisterTrackingExceptionCommand) command).exceptionId())
+                .containsOnly(TrackingException.customsHoldIdFor("IMP-2026-0001"));
+    }
+
+    @Test
+    @DisplayName("**起票の後段を数える**: 留置から出たら解決する（Try T1）")
+    void resolvesCustomsHoldWhenLeavingHeld() {
+        // **起票だけでは足りない。** 例外中の貨物は荷役を預かって適用しない
+        // （IT11 引き継ぎ枠 B）ので、解決しないと通関済にしても引取が届かない。
+        handler.on(customs("HELD", "CLEARED"));
+
+        assertThat(sent).singleElement()
+                .isInstanceOfSatisfying(ResolveTrackingExceptionCommand.class, command ->
+                        assertThat(command.exceptionId())
+                                .isEqualTo(TrackingException.customsHoldIdFor("IMP-2026-0001")));
+    }
+
+    @Test
+    @DisplayName("不可でも解決する（通らなかったことは別の業務で扱う）")
+    void resolvesCustomsHoldWhenRejected() {
+        handler.on(customs("HELD", "REJECTED"));
+
+        assertThat(sent).singleElement()
+                .isInstanceOf(ResolveTrackingExceptionCommand.class);
+    }
+
+    @Test
+    @DisplayName("審査中への変化では何もしない（起票も解決もしない）")
+    void doesNothingForPending() {
+        handler.on(customs("HELD", "PENDING"));
+
+        assertThat(sent).isEmpty();
     }
 }

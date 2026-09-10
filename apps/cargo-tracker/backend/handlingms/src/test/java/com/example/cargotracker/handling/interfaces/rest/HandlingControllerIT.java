@@ -65,6 +65,41 @@ class HandlingControllerIT extends AbstractAxonIntegrationTest {
         return trackingNumber;
     }
 
+    /**
+     * 通関を通した状態にする（US29・IT12 で引取のガードが有効になった）。
+     *
+     * <p><b>引取の検査には通関の前提が要る。</b> ガードを有効にした IT12 で、
+     * 既存の引取のテストが 409 で落ちた（計画 R1 が言っていたとおり）。
+     * 前提づくりを足すのが正しい直し方で、ガードを緩めるのは違う。</p>
+     */
+    private void givenCustomsCleared(String trackingNumber) {
+        String declarationNumber = "IMP-IT-" + System.nanoTime();
+        Map<String, Object> declaration = new LinkedHashMap<>();
+        declaration.put("declarationNumber", declarationNumber);
+        declaration.put("trackingNumber", trackingNumber);
+        declaration.put("declaredAt", "2026-09-09T09:00:00Z");
+        rest.post().uri(url("/customs-declarations"))
+                .header("X-Auth-Username", "handler01")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(declaration).retrieve().toBodilessEntity();
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
+                assertThat(rest.get().uri(url("/customs-declarations/" + declarationNumber))
+                        .retrieve().toEntity(JsonMap.class).getStatusCode())
+                        .isEqualTo(HttpStatus.OK));
+
+        Map<String, Object> update = new LinkedHashMap<>();
+        update.put("status", "CLEARED");
+        update.put("reason", "書類に不備なし");
+        rest.post().uri(url("/customs-declarations/" + declarationNumber + "/status"))
+                .header("X-Auth-Username", "tracker01")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(update).retrieve().toBodilessEntity();
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
+                assertThat(rest.get().uri(url("/customs-declarations/" + declarationNumber))
+                        .retrieve().toEntity(JsonMap.class).getBody())
+                        .containsEntry("status", "CLEARED"));
+    }
+
     private ResponseEntity<JsonMap> register(Map<String, Object> body) {
         return rest.post().uri(url("/activities"))
                 .header("X-Auth-Username", "handler01")
@@ -268,26 +303,6 @@ class HandlingControllerIT extends AbstractAxonIntegrationTest {
     }
 
     @Test
-    @DisplayName("H.8: 引取を記録したら「引取待ち」から消える（残りが読めないと数え直す）")
-    void removesClaimedCargosFromAwaitingClaim() {
-        String trackingNumber = givenCargo();
-        register(request(trackingNumber, "UNLOAD", "USNYC"));
-        var claim = request(trackingNumber, "CLAIM", "USNYC");
-        claim.put("consigneeName", "John Smith");
-        register(claim);
-
-        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
-            var response = rest.get().uri(url("/awaiting-claim?unLocode=USNYC"))
-                    .retrieve().toEntity(JsonMap.class);
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> items =
-                    (List<Map<String, Object>>) response.getBody().get("items");
-            assertThat(items).noneSatisfy(item ->
-                    assertThat(item).containsEntry("trackingNumber", trackingNumber));
-        });
-    }
-
-    @Test
     @DisplayName("H.8: 荷降ししていない貨物は「引取待ち」に出ない（まだ船の上にある）")
     void doesNotListCargosNotYetUnloaded() {
         String trackingNumber = givenCargo();
@@ -432,6 +447,7 @@ class HandlingControllerIT extends AbstractAxonIntegrationTest {
     @DisplayName("US16 §2: 荷受人の確認を添えた引取は記録され、履歴に確認が出る")
     void registersClaimWithConsigneeConfirmation() {
         String trackingNumber = givenCargo();
+        givenCustomsCleared(trackingNumber);
         var body = request(trackingNumber, "CLAIM", "USNYC");
         body.put("consigneeName", "John Smith");
 

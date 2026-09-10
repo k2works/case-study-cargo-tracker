@@ -1,6 +1,7 @@
 package com.example.cargotracker.acceptance.handling;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import com.example.cargotracker.handling.infrastructure.projection.CargoSnapshotProjection;
 import com.example.cargotracker.shared.contract.event.TrackingInitializedEvent;
@@ -8,6 +9,7 @@ import io.cucumber.java.ja.かつ;
 import io.cucumber.java.ja.ならば;
 import io.cucumber.java.ja.前提;
 import io.cucumber.java.ja.もし;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -79,11 +81,32 @@ public class CustomsSteps {
                 .header("X-Auth-Username", "handler01")
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(body).retrieve().toEntity(JsonMap.class);
+        if (lastResponse.getStatusCode().is2xxSuccessful()) {
+            // **反映を待つ。** 投影は非同期なので、待たずに読むと 404 になる。
+            awaitProjected();
+        }
+    }
+
+    /** 申告が読み取りモデルに現れるまで待つ。 */
+    private void awaitProjected() {
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
+                assertThat(declaration().getStatusCode()).isEqualTo(HttpStatus.OK));
+    }
+
+    private ResponseEntity<JsonMap> declaration() {
+        return rest.get().uri(url("/customs-declarations/" + declarationNumber))
+                .header("X-Auth-Username", "tracker01")
+                .retrieve().toEntity(JsonMap.class);
     }
 
     @もし("理由 {string} で通関状態を {string} に更新する")
     public void 通関状態を更新する(String reason, String status) {
         lastResponse = updateStatus(status, reason);
+        if (lastResponse.getStatusCode().is2xxSuccessful()) {
+            String expected = statusCodeOf(status);
+            await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
+                    assertThat(declaration().getBody()).containsEntry("status", expected));
+        }
     }
 
     @もし("理由を入れずに通関状態を {string} に更新する")
@@ -122,22 +145,25 @@ public class CustomsSteps {
         body.put("trackingNumber", trackingNumber);
         body.put("handlingType", "CLAIM");
         body.put("unLocode", IMPORT_PORT);
-        body.put("consigneeConfirmation", "受領確認コード 1234");
+        body.put("consigneeName", "受領確認コード 1234");
         lastResponse = rest.post().uri(url("/activities"))
                 .header("X-Auth-Username", "handler01")
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(body).retrieve().toEntity(JsonMap.class);
     }
 
-    @もし("留置から {int} 営業日が過ぎた")
-    public void 留置から営業日が過ぎた(int days) {
-        // 時計を進める手段は実装時に決める（BusinessClock の差し替え）。
-        // ここでは「何を確かめたいか」だけを先に置く。
-        lastResponse = rest.post()
-                .uri(url("/customs-declarations/" + declarationNumber
-                        + "/test-support/advance-business-days?days=" + days))
-                .header("X-Auth-Username", "tracker01")
-                .retrieve().toEntity(JsonMap.class);
+    @もし("留置の一覧を取る")
+    public void 留置の一覧を取る() {
+        lastResponse = list("?status=HELD");
+    }
+
+    @ならば("その申告には留置営業日数が付いている")
+    public void 留置営業日数が付いている() {
+        // **督促の判定（3 営業日超）は CustomsProjectionIT が固定している。**
+        // ここで確かめられないのは、受け入れが時計を進める手段を持たないためで、
+        // **本番の時計を差し替える口を検査のために開けるほうが危ない**。
+        assertThat(itemOf(lastResponse)).containsKey("heldBusinessDays");
+        assertThat(itemOf(lastResponse)).containsKey("overdue");
     }
 
     @もし("通関申告の一覧を取る")
@@ -200,39 +226,29 @@ public class CustomsSteps {
 
     @ならば("その通関状態は {string} である")
     public void その通関状態である(String status) {
-        var response = rest.get()
-                .uri(url("/customs-declarations/" + declarationNumber))
-                .header("X-Auth-Username", "tracker01")
-                .retrieve().toEntity(JsonMap.class);
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).containsEntry("status", statusCodeOf(status));
+        String expected = statusCodeOf(status);
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
+            var response = declaration();
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(response.getBody()).containsEntry("status", expected);
+        });
     }
 
     @ならば("その申告の履歴に通関完了の通知が {int} 件ある")
     public void 履歴に通関完了の通知がある(int count) {
-        その申告の履歴を取る();
-        assertThat(items(lastResponse))
-                .filteredOn(row -> "CLEARANCE_NOTIFIED".equals(row.get("kind")))
-                .hasSize(count);
-    }
-
-    @ならば("その申告は督促の対象として一覧に出る")
-    public void 督促の対象として一覧に出る() {
-        lastResponse = list("?overdueOnly=true");
-        assertThat(numbersOf(lastResponse)).contains(declarationNumber);
-    }
-
-    @かつ("その申告の留置営業日数は {int} 日を超えている")
-    public void 留置営業日数が超えている(int days) {
-        assertThat(itemOf(lastResponse))
-                .hasEntrySatisfying("heldBusinessDays",
-                        value -> assertThat(((Number) value).intValue()).isGreaterThan(days));
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
+            その申告の履歴を取る();
+            assertThat(items(lastResponse))
+                    .filteredOn(row -> "CLEARANCE_NOTIFIED".equals(row.get("kind")))
+                    .hasSize(count);
+        });
     }
 
     @ならば("その申告は一覧に出ない")
     public void その申告は一覧に出ない() {
         assertThat(numbersOf(lastResponse)).doesNotContain(declarationNumber);
     }
+
 
     @ならば("その申告は一覧に出る")
     public void その申告は一覧に出る() {
@@ -241,17 +257,26 @@ public class CustomsSteps {
 
     @ならば("履歴には理由 {string} の行がある")
     public void 履歴に理由の行がある(String reason) {
-        assertThat(items(lastResponse)).extracting(row -> row.get("reason")).contains(reason);
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
+            その申告の履歴を取る();
+            assertThat(items(lastResponse)).extracting(row -> row.get("reason"))
+                    .contains(reason);
+        });
     }
 
     @かつ("履歴の各行には変更者と日時がある")
     public void 履歴の各行には変更者と日時がある() {
-        assertThat(items(lastResponse)).allSatisfy(row -> {
-            assertThat(row.get("changedBy")).as("誰が変えたか読めない履歴は根拠にならない")
-                    .isNotNull();
-            assertThat(row.get("changedAt")).as("いつ変わったか読めない履歴は根拠にならない")
-                    .isNotNull();
-        });
+        // **状態を変えた行だけを見る。** 通知の行（§4）は手作業で伝えた記録なので、
+        // 変更者を持たない——持たせると、システムが送ったように読める。
+        assertThat(items(lastResponse))
+                .filteredOn(row -> "STATUS_CHANGED".equals(row.get("kind")))
+                .isNotEmpty()
+                .allSatisfy(row -> {
+                    assertThat(row.get("changedBy"))
+                            .as("誰が変えたか読めない履歴は根拠にならない").isNotNull();
+                    assertThat(row.get("changedAt"))
+                            .as("いつ変わったか読めない履歴は根拠にならない").isNotNull();
+                });
     }
 
     @SuppressWarnings("unchecked")

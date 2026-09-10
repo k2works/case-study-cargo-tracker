@@ -84,6 +84,23 @@ public record TrackingException(
                 .toString();
     }
 
+    /**
+     * 税関保留の自動起票が使う識別子（US29 §受入基準 5）。
+     *
+     * <p><b>申告から導く。</b> 採番すると、留置が再配送されるたびに新しい例外が
+     * できる（投影の主キーは例外の識別子なので、行も増える）。</p>
+     *
+     * <p><b>UUID の形に収める。</b> 申告番号は税関が採番するので長さが読めない
+     * ——前置きを足してそのまま使うと、投影の列（{@code exception_id VARCHAR(64)}）
+     * をいつか超える。誤配で踏んだのと同じ形である（IT11 の T6e）。</p>
+     */
+    public static String customsHoldIdFor(String declarationNumber) {
+        return java.util.UUID
+                .nameUUIDFromBytes(("CUSTOMS_HOLD:" + declarationNumber)
+                        .getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                .toString();
+    }
+
     /** 対応を始める（US19 §受入基準 4）。 */
     public TrackingException startResponding() {
         requireModifiable();

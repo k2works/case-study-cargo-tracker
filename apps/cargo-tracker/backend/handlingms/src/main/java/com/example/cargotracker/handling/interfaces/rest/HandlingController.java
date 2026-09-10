@@ -6,6 +6,8 @@ import com.example.cargotracker.handling.domain.model.valueobjects.CargoSnapshot
 import com.example.cargotracker.handling.infrastructure.persistence.CargoSnapshots;
 import com.example.cargotracker.handling.domain.model.valueobjects.HandlingType;
 import com.example.cargotracker.handling.infrastructure.persistence.CargoSnapshotMapper;
+import com.example.cargotracker.handling.domain.model.valueobjects.CustomsStatus;
+import com.example.cargotracker.handling.infrastructure.persistence.CustomsDeclarationMapper;
 import com.example.cargotracker.handling.infrastructure.persistence.HandlingActivityMapper;
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.CargoOnVoyageListView;
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.CargoSnapshotView;
@@ -55,6 +57,7 @@ public class HandlingController {
     private final QueryDispatcher queries;
     private final CargoSnapshotMapper cargos;
     private final HandlingActivityMapper activities;
+    private final CustomsDeclarationMapper declarations;
     private final Clock clock;
 
     /**
@@ -66,11 +69,13 @@ public class HandlingController {
     private static final Duration DUPLICATE_WINDOW = Duration.ofMinutes(5);
 
     public HandlingController(CommandGateway commands, QueryDispatcher queries,
-            CargoSnapshotMapper cargos, HandlingActivityMapper activities, Clock clock) {
+            CargoSnapshotMapper cargos, HandlingActivityMapper activities,
+            CustomsDeclarationMapper declarations, Clock clock) {
         this.commands = commands;
         this.queries = queries;
         this.cargos = cargos;
         this.activities = activities;
+        this.declarations = declarations;
         this.clock = clock;
     }
 
@@ -173,11 +178,28 @@ public class HandlingController {
                 snapshot.isOffRoute(type, Location.of(unLocode)),
                 Location.of(unLocode).equals(snapshot.destination()),
                 request.consigneeName(),
+                // **通関状態はコマンドに載せる**（`offRoute` と同じ形）。集約は
+                // 読み取りモデルを引数に取れないので、引ける層で解決してから渡す。
+                customsStatusOf(snapshot.trackingNumber()), clock.instant(),
                 username, completedAt),
                 String.class);
 
         return ResponseEntity.created(URI.create(
                 "/api/v1/handling/activities/" + request.activityId())).build();
+    }
+
+    /**
+     * その貨物の通関状態（US29 §受入基準 3）。
+     *
+     * <p><b>申告が無ければ {@code null}。</b>「無い」と「審査中」は違う——前者はまだ
+     * 申告していない、後者は税関を待っている。断り方も変わるので、ここでは潰さない。</p>
+     *
+     * <p><b>引取以外でも読む。</b> 種別で分けると、種別が増えたときに読む場所を
+     * 足し忘れる。要るかどうかは {@code HandlingType} が答える。</p>
+     */
+    private CustomsStatus customsStatusOf(String trackingNumber) {
+        var latest = declarations.findLatestByCargo(trackingNumber);
+        return latest == null ? null : CustomsStatus.valueOf(latest.status());
     }
 
     /**
