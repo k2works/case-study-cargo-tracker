@@ -36,6 +36,25 @@
     </update>
 
     <!--
+      **貨物ごとに 1 行だけ返す。** 引取待ちの一覧が、行ごとに問い合わせずに
+      通関状態を出せるようにする（N+1 を作らない）。同じ貨物に複数の申告が
+      あるとき（不可のあとに出し直した場合）は、引取のガードと同じ順——
+      最後に状態が変わったものが先——で最初の 1 件を採る。
+    -->
+    <select id="findLatestByCargos" resultType="com.example.cargotracker.handling.infrastructure.persistence.CustomsDeclarationMapper$CustomsDeclarationRow">
+        SELECT DISTINCT ON (tracking_number)
+               declaration_number, tracking_number, booking_id, status, declared_at,
+               last_status_changed_at, last_held_at, held_business_days, last_reason,
+               changed_by, projected_at
+          FROM customs_declaration
+         WHERE tracking_number IN
+        <foreach item="number" collection="trackingNumbers" open="(" separator="," close=")">
+            #{number}
+        </foreach>
+         ORDER BY tracking_number, last_status_changed_at DESC, declared_at DESC
+    </select>
+
+    <!--
       **既定で通関済を外す。** 決着したものが混ざると、一覧全体が「まだ手を
       入れる場所」に見えなくなる。
 

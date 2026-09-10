@@ -19,12 +19,14 @@ import {
 import { cargoTypeLabel } from '@/features/bookings/api';
 import { portLocalToInstant, portTimeZone } from '@/shared/api/portTimeZone';
 import { ApiError } from '@/shared/api/client';
+import type { Pending } from '@/shared/api/pending';
 import {
   fetchAwaitingClaim,
   fetchCargoSnapshot,
   fetchCargosOnVoyage,
   registerHandling,
   requiresConsigneeConfirmation,
+  type CargoOnVoyageView,
   type HandlingType,
   HANDLING_TYPE_LABELS,
   SELECTABLE_HANDLING_TYPES,
@@ -72,8 +74,25 @@ export function HandlingRecordPage() {
 
   const cargos = useQuery({
     queryKey: ['handling-cargos', voyageNumber, unLocode, claimOnly],
+    // 引取待ちは通関状態も運ぶ（S54 が読む）。この画面が要るのは
+    // 「残り何本か」だけなので、数える形に写す——荷降しは済んでいる。
     queryFn: () => (claimOnly
-      ? fetchAwaitingClaim(unLocode)
+      ? fetchAwaitingClaim(unLocode).then((page): Pending<{ items: CargoOnVoyageView[] }> =>
+        (page.state === 'ready'
+          ? {
+            state: 'ready',
+            value: {
+              items: page.value.items.map((item): CargoOnVoyageView => ({
+                trackingNumber: item.trackingNumber,
+                bookingId: item.bookingId,
+                originUnLocode: item.originUnLocode,
+                destinationUnLocode: item.destinationUnLocode,
+                cargoType: item.cargoType,
+                handledTypes: ['UNLOAD'],
+              })),
+            },
+          }
+          : page))
       : fetchCargosOnVoyage(voyageNumber, unLocode)),
     enabled: unLocode !== '',
   });

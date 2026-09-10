@@ -84,6 +84,17 @@ public interface CustomsDeclarationMapper {
             @Param("status") String status,
             @Param("limit") int limit);
 
+    /**
+     * その港の貨物ごとの最新の申告（引取待ち一覧が読む）。
+     *
+     * <p><b>1 件ずつ引かない。</b> 引取待ちは港ごとに数十件あり、行ごとに問い合わせると
+     * N+1 になる。<b>貨物ごとに 1 行だけ</b>返す——同じ貨物に複数の申告があるとき
+     * （不可のあとに出し直した場合）は、引取のガードと同じ順（最後に状態が変わった
+     * ものが先）で最初の 1 件を採る。</p>
+     */
+    List<CustomsDeclarationRow> findLatestByCargos(
+            @Param("trackingNumbers") List<String> trackingNumbers);
+
     /** 留置中の申告（督促の判定はこれを読んで数える）。 */
     @Select("SELECT " + COLUMNS + " FROM customs_declaration WHERE status = 'HELD'")
     List<CustomsDeclarationRow> findHeld();

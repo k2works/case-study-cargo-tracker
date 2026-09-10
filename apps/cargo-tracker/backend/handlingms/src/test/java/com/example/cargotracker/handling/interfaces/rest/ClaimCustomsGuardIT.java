@@ -123,7 +123,51 @@ class ClaimCustomsGuardIT extends AbstractAxonIntegrationTest {
         var response = register(body);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
-        assertThat(String.valueOf(response.getBody())).contains("PENDING");
+        // **現場に見せる呼び名で返る**（内部名は出さない。IT12 レビュー 高）。
+        assertThat(String.valueOf(response.getBody()))
+                .contains("審査中")
+                .doesNotContain("PENDING");
+    }
+
+    @Test
+    @DisplayName("US29 §3: 引取待ちの行に通関状態が出て、渡せないものは絞りで外れる")
+    void awaitingClaimCarriesCustomsStatus() {
+        // **窓口に呼び出してから断るのがいちばんまずい断り方**（IT12 レビュー 高）。
+        // 一覧の時点で分かるようにする。同じ handlingms の投影にあるので、
+        // 行ごとに問い合わせずに出せる。
+        String pending = givenCargo();
+        register(request(pending, "UNLOAD", "USNYC"));
+        givenCustomsDeclared(pending);
+        String cleared = givenCargo();
+        register(request(cleared, "UNLOAD", "USNYC"));
+        givenCustomsCleared(cleared);
+
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
+            assertThat(awaitingClaim(false))
+                    .anySatisfy(item -> assertThat(item)
+                            .containsEntry("trackingNumber", pending)
+                            .containsEntry("customsStatusLabel", "審査中")
+                            .containsEntry("claimable", false))
+                    .anySatisfy(item -> assertThat(item)
+                            .containsEntry("trackingNumber", cleared)
+                            .containsEntry("customsStatusLabel", "通関済")
+                            .containsEntry("claimable", true));
+
+            // **「今日渡せる貨物」だけに絞れる。** 判定はサーバが持つ。
+            assertThat(awaitingClaim(true))
+                    .anySatisfy(item -> assertThat(item)
+                            .containsEntry("trackingNumber", cleared))
+                    .noneSatisfy(item -> assertThat(item)
+                            .containsEntry("trackingNumber", pending));
+        });
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> awaitingClaim(boolean clearedOnly) {
+        var response = rest.get()
+                .uri(url("/awaiting-claim?unLocode=USNYC&clearedOnly=" + clearedOnly))
+                .retrieve().toEntity(JsonMap.class);
+        return (List<Map<String, Object>>) response.getBody().get("items");
     }
 
     @Test
@@ -145,6 +189,22 @@ class ClaimCustomsGuardIT extends AbstractAxonIntegrationTest {
             assertThat(items).noneSatisfy(item ->
                     assertThat(item).containsEntry("trackingNumber", trackingNumber));
         });
+    }
+
+    /** 申告だけ出した状態にする（審査中）。 */
+    private void givenCustomsDeclared(String trackingNumber) {
+        String declarationNumber = "IMP-IT-" + System.nanoTime();
+        Map<String, Object> declaration = new LinkedHashMap<>();
+        declaration.put("declarationNumber", declarationNumber);
+        declaration.put("trackingNumber", trackingNumber);
+        declaration.put("declaredAt", "2026-09-09T09:00:00Z");
+        rest.post().uri(url("/customs-declarations"))
+                .header("X-Auth-Username", "handler01")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(declaration).retrieve().toBodilessEntity();
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
+                assertThat(customs(declarationNumber).getStatusCode())
+                        .isEqualTo(HttpStatus.OK));
     }
 
     /**

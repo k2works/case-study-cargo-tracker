@@ -169,6 +169,30 @@ describe('S52 通関申告一覧', () => {
         .toBe(false));
   });
 
+  it('上限で切れたことを言う（督促の対象が上限の外に沈んだままにしない）', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ items: [declaration()], total: 1, truncated: true }),
+        { status: 200 }),
+    );
+
+    renderAt('/customs', <CustomsListPage />);
+
+    expect(await screen.findByText(/件数が多いため一部だけを表示しています/))
+      .toBeInTheDocument();
+  });
+
+  it('切れていなければ知らせを出さない（常時点灯すると合図として働かない）', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ items: [declaration()], total: 1, truncated: false }),
+        { status: 200 }),
+    );
+
+    renderAt('/customs', <CustomsListPage />);
+
+    expect(await screen.findByText('IMP-2026-0001')).toBeInTheDocument();
+    expect(screen.queryByText(/件数が多いため/)).not.toBeInTheDocument();
+  });
+
   it('登録の導線は追跡ロールには出さない（開けない場所へ誘わない）', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(JSON.stringify({ items: [declaration()], total: 1 }), { status: 200 }),

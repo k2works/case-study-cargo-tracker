@@ -9,6 +9,7 @@ import com.example.cargotracker.handling.infrastructure.persistence.CargoSnapsho
 import com.example.cargotracker.handling.domain.model.valueobjects.CustomsStatus;
 import com.example.cargotracker.handling.infrastructure.persistence.CustomsDeclarationMapper;
 import com.example.cargotracker.handling.infrastructure.persistence.HandlingActivityMapper;
+import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.AwaitingClaimListView;
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.CargoOnVoyageListView;
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.CargoSnapshotView;
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.FindAwaitingClaimQuery;
@@ -123,17 +124,22 @@ public class HandlingController {
     }
 
     /**
-     * その港で引取を待っている貨物（H.8 / US16）。
+     * その港で引取を待っている貨物（H.8 / US16・US29）。
      *
      * <p><b>航海起点では辿り着けない。</b> 引取は船から降りたあとの作業で、
      * どの航海の仕事でもない（S02 荷役の下部タブ「引取待ち」）。</p>
+     *
+     * <p>通関状態を各行に載せ、<b>「今日渡せる貨物」だけに絞れる</b>ようにする
+     * （{@code clearedOnly}。IT12 レビュー 高）。</p>
      */
     @GetMapping("/awaiting-claim")
-    public ResponseEntity<CargoOnVoyageListView> awaitingClaim(
-            @RequestParam String unLocode) {
+    public ResponseEntity<AwaitingClaimListView> awaitingClaim(
+            @RequestParam String unLocode,
+            @RequestParam(defaultValue = "false") boolean clearedOnly) {
         return ResponseEntity.ok(queries.query(
-                new FindAwaitingClaimQuery(unLocode.toUpperCase(java.util.Locale.ROOT)),
-                CargoOnVoyageListView.class));
+                new FindAwaitingClaimQuery(unLocode.toUpperCase(java.util.Locale.ROOT),
+                        clearedOnly),
+                AwaitingClaimListView.class));
     }
 
     /**

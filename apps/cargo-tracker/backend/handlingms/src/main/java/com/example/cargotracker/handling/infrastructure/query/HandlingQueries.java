@@ -35,8 +35,41 @@ public final class HandlingQueries {
             List<String> handledTypes) {
     }
 
-    /** その港で引取を待っている貨物（H.8 / S02 荷役の下部タブ）。 */
-    public record FindAwaitingClaimQuery(String unLocode) {
+    /**
+     * その港で引取を待っている貨物（H.8 / S02 荷役の下部タブ）。
+     *
+     * @param clearedOnly 通関済のものだけに絞るか。**現場の仕事の単位は「今日
+     *     渡せる貨物」**である（IT12 レビュー 高）
+     */
+    public record FindAwaitingClaimQuery(String unLocode, boolean clearedOnly) {
+    }
+
+    /**
+     * 引取待ちの 1 行（S54）。
+     *
+     * <p><b>通関状態を載せる。</b> 載せないと、現場は通関がまだの貨物を窓口へ
+     * 呼び出してから引取を断られる——<b>荷受人を待たせたうえで断る</b>のが
+     * いちばんまずい断り方である（IT12 レビュー 高）。同じ handlingms の投影に
+     * あるので、行ごとに問い合わせずに出せる。</p>
+     *
+     * @param customsStatus 申告が無ければ {@code null}。「無い」と「審査中」は違う
+     * @param claimable 引取を記録できるか。<b>判定はサーバが持つ</b>（画面で
+     *     状態名を並べ直さない）
+     */
+    public record AwaitingClaimView(
+            String trackingNumber,
+            String bookingId,
+            String originUnLocode,
+            String destinationUnLocode,
+            String cargoType,
+            String customsStatus,
+            String customsStatusLabel,
+            String declarationNumber,
+            boolean claimable) {
+    }
+
+    /** S54 の一覧。 */
+    public record AwaitingClaimListView(List<AwaitingClaimView> items) {
     }
 
     /** S50 の一覧。 */
@@ -174,7 +207,15 @@ public final class HandlingQueries {
             String changedBy) {
     }
 
-    public record CustomsDeclarationListView(List<CustomsDeclarationView> items, int total) {
+    /**
+     * S52 の一覧。
+     *
+     * @param truncated 上限で打ち切ったか。<b>黙って切らない</b>（IT12 レビュー 中）
+     *     ——読むときに数えて並べる設計なので SQL では絞れず、上限の外に督促の
+     *     対象が沈む。IT11 の H.2（S30 が上限到達を知らせる）と同じ形にする
+     */
+    public record CustomsDeclarationListView(List<CustomsDeclarationView> items, int total,
+            boolean truncated) {
     }
 
     /**

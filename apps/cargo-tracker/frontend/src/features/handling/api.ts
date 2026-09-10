@@ -152,15 +152,40 @@ export interface VoyagePortView {
 }
 
 /**
- * その港で引取を待っている貨物（H.8 / US16）。
+ * 引取待ちの 1 行（S54）。
+ *
+ * <p><b>通関状態を載せる。</b> 出さないと、現場は通関がまだの貨物を窓口へ
+ * 呼び出してから引取を断られる（IT12 レビュー 高）。</p>
+ */
+export interface AwaitingClaimView {
+  readonly trackingNumber: string;
+  readonly bookingId: string;
+  readonly originUnLocode: string;
+  readonly destinationUnLocode: string;
+  readonly cargoType: string;
+  /** 申告が無ければ null。**「無い」と「審査中」は違う。** */
+  readonly customsStatus: string | null;
+  readonly customsStatusLabel: string | null;
+  readonly declarationNumber: string | null;
+  /** 引取を記録できるか。**判定はサーバが持つ**（画面で状態名を並べ直さない）。 */
+  readonly claimable: boolean;
+}
+
+/**
+ * その港で引取を待っている貨物（H.8 / US16・US29）。
  *
  * <p><b>航海起点では辿り着けない。</b> 引取は船から降りたあとの作業で、
  * どの航海の仕事でもない。</p>
+ *
+ * @param clearedOnly 通関済のものだけに絞るか。**現場の仕事の単位は
+ *   「今日渡せる貨物」**である
  */
 export function fetchAwaitingClaim(
   unLocode: string,
-): Promise<Pending<{ items: CargoOnVoyageView[] }>> {
-  return queryClient(`/handling/awaiting-claim?unLocode=${encodeURIComponent(unLocode)}`);
+  clearedOnly = false,
+): Promise<Pending<{ items: AwaitingClaimView[] }>> {
+  return queryClient(`/handling/awaiting-claim?unLocode=${encodeURIComponent(unLocode)}`
+    + `&clearedOnly=${clearedOnly ? 'true' : 'false'}`);
 }
 
 /** これから作業する航海と港の一覧。 */

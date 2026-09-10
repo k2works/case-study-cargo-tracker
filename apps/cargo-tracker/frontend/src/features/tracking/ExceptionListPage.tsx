@@ -146,6 +146,20 @@ export function ExceptionListPage() {
                         追跡番号を書き写す手間が挟まる。 */}
                     {isTracker ? (
                       <span className="flex flex-wrap gap-x-3">
+                        {/* **次の行動の宛先を種別ごとに分ける**（IT11 の判断を
+                            税関保留にも当てる。IT12 レビュー 中）。税関保留に
+                            対する実際の対応は S53 で通関状態を更新することで、
+                            追跡詳細では何もできない。発生状況に申告番号は
+                            入っているが、書き写して探し直すことになる。 */}
+                        {item.exceptionType === 'CUSTOMS_HOLD' && (
+                          <Link
+                            to={'/customs?trackingNumber='
+                              + encodeURIComponent(item.trackingNumber)}
+                            className={LINK}
+                          >
+                            通関を更新
+                          </Link>
+                        )}
                         {/* **一覧には目的の操作を置く**（IT10 で S50 に対して直した
                             方針。IT11 レビュー 中で S42 との食い違いを指摘された）。
                             未解決の例外を見て、いちばんしたいのは対応することである。 */}

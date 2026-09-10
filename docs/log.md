@@ -1,6 +1,10 @@
 # Docs Update Log
 
 ## 2026-09-10
+* **Update**: [16-通関を通す](/manual/16-通関を通す.md) を更新（claude-code/claude-opus-5）
+* **Update**: [14-引取と例外を扱う](/manual/14-引取と例外を扱う.md) を更新（claude-code/claude-opus-5）
+* **Update**: [13-荷役作業を記録する](/manual/13-荷役作業を記録する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
 * **Update**: [retrospective-12](/development/cargo-tracker/retrospective-12.md) を更新（claude-code/claude-opus-5）
 * **Update**: [iteration_report-12](/development/cargo-tracker/iteration_report-12.md) を更新（claude-code/claude-opus-5）
 * **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）

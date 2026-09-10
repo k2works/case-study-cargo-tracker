@@ -1144,15 +1144,34 @@ test.describe('マニュアルの画面キャプチャ', () => {
               originUnLocode: 'JPTYO',
               destinationUnLocode: 'USNYC',
               cargoType: 'GENERAL',
-              handledTypes: ['UNLOAD'],
+              customsStatus: 'CLEARED',
+              customsStatusLabel: '通関済',
+              declarationNumber: 'D-2026-0912-77',
+              claimable: true,
             },
             {
+              // **本文が「渡せません」「申告なし」を説明している。**
+              // 見本に無いと、文章だけが正しくなる（IT12 レビュー 中）。
               trackingNumber: 'TRK-EF78GH9012',
               bookingId: 'b-2',
               originUnLocode: 'JPOSA',
               destinationUnLocode: 'USNYC',
               cargoType: 'REEFER',
-              handledTypes: ['UNLOAD'],
+              customsStatus: 'PENDING',
+              customsStatusLabel: '審査中',
+              declarationNumber: 'D-2026-0912-78',
+              claimable: false,
+            },
+            {
+              trackingNumber: 'TRK-IJ34KL5678',
+              bookingId: 'b-3',
+              originUnLocode: 'JPNGO',
+              destinationUnLocode: 'USNYC',
+              cargoType: 'GENERAL',
+              customsStatus: null,
+              customsStatusLabel: null,
+              declarationNumber: null,
+              claimable: false,
             },
           ],
         }),
@@ -1162,10 +1181,13 @@ test.describe('マニュアルの画面キャプチャ', () => {
     await page.goto('/handling/awaiting-claim');
     await expect(page.getByRole('heading', { name: '引取待ち' })).toBeVisible();
     await page.getByLabel('港').selectOption('USNYC');
-    await expect(page.getByRole('link', { name: '引取を記録' }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: '引取を記録' })).toHaveCount(1);
     await expect(page.getByText(/通関が済んでいない貨物は引取を記録できません/))
       .toBeVisible();
     await expect(page.getByRole('link', { name: '通関を確かめる' }).first()).toBeVisible();
+    await expect(page.getByText('渡せません').first()).toBeVisible();
+    await expect(page.getByText('申告なし')).toBeVisible();
+    await expect(page.getByRole('checkbox', { name: '通関済のものだけ表示' })).toBeVisible();
     await page.screenshot({ path: `${OUT}/14-S54-awaiting-claim.png`, fullPage: true });
   });
 
@@ -1349,12 +1371,16 @@ test.describe('マニュアルの画面キャプチャ', () => {
         body: JSON.stringify({ items: [SAMPLE_CUSTOMS_HELD], total: 1 }),
       }),
     );
-    await signInAsTracker(page);
+    // **手順の主体で撮る**（IT12 レビュー 中）。本文の手順 2 は
+    // 「`[通関申告を登録する]` を押します」で、このリンクは荷役ロールにだけ
+    // 出る。追跡管理者で撮ると、本文が指すボタンが画像に無い。
+    await signInAsHandler(page);
     await page.goto('/customs');
 
     await expect(page.getByRole('heading', { name: '通関申告一覧' })).toBeVisible();
     await expect(page.getByText('4 営業日')).toBeVisible();
     await expect(page.getByRole('alert')).toContainText('3 営業日を超えた');
+    await expect(page.getByRole('link', { name: '通関申告を登録する' })).toBeVisible();
     await page.screenshot({ path: `${OUT}/16-S52-customs-list.png`, fullPage: true });
   });
 
@@ -1388,6 +1414,13 @@ test.describe('マニュアルの画面キャプチャ', () => {
               statusLabel: '留置', reason: '原産地証明の不備',
               changedBy: 'tracker01', changedAt: '2026-09-13T00:00:00Z',
             },
+            // **本文が「通関完了の連絡には変更者が出ない」と説明している**
+            // （IT12 レビュー 中）。見本に無いと、文章だけが正しくなる。
+            {
+              kind: 'CLEARANCE_NOTIFIED', previousStatus: null, status: null,
+              statusLabel: null, reason: '通関が完了しました（申告番号 D-2026-0912-77）',
+              changedBy: null, changedAt: '2026-09-14T00:30:00Z',
+            },
           ],
         }),
       }),
@@ -1405,6 +1438,7 @@ test.describe('マニュアルの画面キャプチャ', () => {
     await expect(page.getByRole('heading', { name: '状態を更新する' })).toBeVisible();
     await expect(page.getByRole('alert')).toContainText('3 営業日を超えています');
     await expect(page.getByText('原産地証明の不備')).toBeVisible();
+    await expect(page.getByText('通関完了の連絡')).toBeVisible();
     await page.getByLabel('理由').fill('書類の不備が解消したため');
     await page.screenshot({ path: `${OUT}/16-S53-customs-status-update.png`, fullPage: true });
   });

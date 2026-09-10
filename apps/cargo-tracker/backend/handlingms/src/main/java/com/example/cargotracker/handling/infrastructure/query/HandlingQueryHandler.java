@@ -1,6 +1,12 @@
 package com.example.cargotracker.handling.infrastructure.query;
 
 import com.example.cargotracker.handling.domain.model.valueobjects.HandlingType;
+import com.example.cargotracker.handling.domain.model.valueobjects.CustomsStatus;
+import com.example.cargotracker.handling.infrastructure.persistence.CargoSnapshotMapper.CargoSnapshotRow;
+import com.example.cargotracker.handling.infrastructure.persistence.CustomsDeclarationMapper;
+import com.example.cargotracker.handling.infrastructure.persistence.CustomsDeclarationMapper.CustomsDeclarationRow;
+import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.AwaitingClaimListView;
+import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.AwaitingClaimView;
 import com.example.cargotracker.shared.domain.location.Location;
 import com.example.cargotracker.handling.domain.model.valueobjects.CargoSnapshot;
 import com.example.cargotracker.handling.infrastructure.persistence.CargoSnapshotMapper;
@@ -42,10 +48,13 @@ public class HandlingQueryHandler {
 
     private final CargoSnapshotMapper cargos;
     private final HandlingActivityMapper activities;
+    private final CustomsDeclarationMapper declarations;
 
-    public HandlingQueryHandler(CargoSnapshotMapper cargos, HandlingActivityMapper activities) {
+    public HandlingQueryHandler(CargoSnapshotMapper cargos, HandlingActivityMapper activities,
+            CustomsDeclarationMapper declarations) {
         this.cargos = cargos;
         this.activities = activities;
+        this.declarations = declarations;
     }
 
     /**
@@ -132,21 +141,48 @@ public class HandlingQueryHandler {
     }
 
     /**
-     * その港で引取を待っている貨物（H.8 / US16）。
+     * その港で引取を待っている貨物（H.8 / US16・US29）。
      *
      * <p><b>航海起点では辿り着けない。</b> 引取は船から降りたあとの作業で、
      * どの航海の仕事でもない。目的港に居る荷役作業員の 2 つ目の入口になる。</p>
+     *
+     * <p><b>通関状態を載せる。</b> 載せないと、現場は通関がまだの貨物を窓口へ
+     * 呼び出してから引取を断られる（IT12 レビュー 高）。同じ handlingms の投影に
+     * あるので、<b>貨物ごとに 1 行だけまとめて引く</b>——行ごとに問い合わせると
+     * N+1 になる。</p>
      */
     @QueryHandler
-    public CargoOnVoyageListView handle(FindAwaitingClaimQuery query) {
-        return new CargoOnVoyageListView(
-                cargos.findAwaitingClaim(query.unLocode()).stream()
-                        .map(row -> new CargoOnVoyageView(row.trackingNumber(), row.bookingId(),
-                                row.originUnlocode(), row.destinationUnlocode(), row.cargoType(),
-                                // 引取はまだ。荷降しは済んでいるが、この一覧が
-                                // 見せたいのは「引取が残っている」ことである。
-                                List.of("UNLOAD")))
-                        .toList());
+    public AwaitingClaimListView handle(FindAwaitingClaimQuery query) {
+        var cargoRows = cargos.findAwaitingClaim(query.unLocode());
+        List<String> trackingNumbers = cargoRows.stream()
+                .map(row -> row.trackingNumber())
+                .toList();
+        // 引取待ちが 0 件のときは問い合わせない（`IN ()` は組めない）。
+        Map<String, CustomsDeclarationRow> latest = trackingNumbers.isEmpty()
+                ? Map.of()
+                : declarations.findLatestByCargos(trackingNumbers).stream()
+                        .collect(Collectors.toMap(CustomsDeclarationRow::trackingNumber,
+                                row -> row, (first, second) -> first));
+        return new AwaitingClaimListView(cargoRows.stream()
+                .map(row -> toAwaitingClaim(row, latest.get(row.trackingNumber())))
+                .filter(view -> !query.clearedOnly() || view.claimable())
+                .toList());
+    }
+
+    private static AwaitingClaimView toAwaitingClaim(CargoSnapshotRow cargo,
+            CustomsDeclarationRow declaration) {
+        // **「無い」と「審査中」は違う。** 前者はまだ申告していないので、
+        // 荷役作業員が登録から始める。
+        CustomsStatus status = declaration == null
+                ? null : CustomsStatus.valueOf(declaration.status());
+        return new AwaitingClaimView(cargo.trackingNumber(), cargo.bookingId(),
+                cargo.originUnlocode(), cargo.destinationUnlocode(), cargo.cargoType(),
+                status == null ? null : status.name(),
+                status == null ? null : status.label(),
+                declaration == null ? null : declaration.declarationNumber(),
+                // **判定は列挙が答える**（引取のガードと同じ述語）。画面に
+                // 状態名を並べ直させると、判定が 2 か所になる。
+                status != null && status.allowsClaim());
     }
 
     /** これから作業する航海と港（S02 荷役）。 */

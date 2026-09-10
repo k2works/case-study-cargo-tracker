@@ -4,7 +4,7 @@ title: "データモデル設計 - 国際貨物輸送管理システム（CQRS /
 description: "CQRS / Event Sourcing 版 Cargo Tracker のデータモデル設計。Event Store は Axon Server に任せ、サービスごとの投影テーブル・Axon 管理テーブル・Auth の状態テーブルを ER 図とテーブル定義で示し、Processing Group との対応とリプレイ前提のマイグレーション方針を定める。"
 tags: [design,data-model,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-09T23:26:44Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-10T11:47:34Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -656,7 +656,7 @@ cs ||--o{ cd
 | `customs_declaration` | `CustomsDeclarationRegisteredEvent`, `CustomsStatusUpdatedEvent` | `INDEX(tracking_number, status)`, `INDEX(status, held_business_days DESC)` | 現在状態のみ。**`held_business_days` は使っていない**（IT12 レビューで判明。**列は常に 0**——確定値を持つのは契約イベント `CustomsStatusChangedEvent` だが、投影は内部イベントだけを読むので写す相手がいない）。**営業日数は留置中も決着後も読むときに数える**（`CustomsQueryHandler`。留置中は今日まで、決着後は `last_status_changed_at` まで）。列の削除は適用済みマイグレーションの編集になるので IT13 の追加マイグレーションで行う。一覧は留置営業日の多い順（並べ替えも読むとき） |
 | `customs_status_history` | `CustomsDeclarationRegisteredEvent`, `CustomsStatusUpdatedEvent`, `CustomsClearanceNotifiedEvent` | `INDEX(declaration_number, changed_at)` | 状態変更の履歴（US29 §8）。**主キーは元イベントの識別子**なのでリプレイで積み上がらない。**当初は「履歴は Event Store から読む」と決めていたが、実装できなかった**——`@QueryHandler` から `EventStore.transaction(context).source(...)` を回すと、タグを指定しても `havingAnyTag()` でも 0 件になる（IT12 で実測。集約の復元は同じ API で動くので、クエリの `ProcessingContext` がこの読み方を支えていない）。[ADR-0012](../../adr/cargo-tracker/0012-cargo-snapshot-from-tracking-initialized.md) と同じ形で正典を直した |
 
-java-3 の `customs_status_history`（追記専用テーブル）は作りません。追記専用の履歴はイベント列そのものです。
+`customs_status_history` は **IT12 で作りました**（上の表の注を参照）。当初の方針は「作らない。履歴はイベント列そのもの」でしたが、**この版の Axon では `@QueryHandler` からイベント列を読めません**（実測）。主キーを元イベントの識別子にすることで、真実が 2 か所に分かれる害（リプレイでの積み上がり・順序の食い違い）は抑えています。
 
 ### `billing_read_db`（billingms）
 
@@ -993,9 +993,11 @@ JVM で起動するため、番号をサービス間で調整しない形が要�
 
 `shipper.email` の一意性は、コマンド受付前の存在確認（`ExistsShipperEmailQuery`）、投影の UNIQUE、拒否の記録（`attention_item`）の三段で守ります。二段目で弾かれた事実は三段目の `attention_item` に `assigned_role = ROLE_SALES` で記録し、要確認一覧（S70）に出します。黙って捨てると、集約には登録済みなのに一覧に出ない荷主ができます。三段目を踏む検査は、存在確認を経由せず直接コマンドを 2 件送る経路で行います（`test_strategy.md`）。
 
-### 3. 履歴テーブルは作らない
+### 3. 履歴テーブルは「画面に要るときだけ」作る
 
-java-3 の `customs_status_history` や take-4 の `handling_event_projection` に相当する追記専用テーブルは、Event Sourcing ではイベント列そのものです。画面に履歴が要る場合だけ（`tracking_event`）投影します。真実を 2 か所に持たないためです。
+take-4 の `handling_event_projection` に相当する追記専用テーブルは、Event Sourcing ではイベント列そのものです。**画面に履歴が要る場合だけ投影します**（`tracking_event`・`customs_status_history`）。真実を 2 か所に持たないためです。
+
+**当初は「作らない」と書いていました。** IT12 で `customs_status_history` を作ったのは、この版の Axon では `@QueryHandler` からイベント列を読めなかったからです（`EventStore.transaction(context).source(...)` がタグを指定しても `havingAnyTag()` でも 0 件を返す。集約の復元は同じ API で動くので、クエリの `ProcessingContext` がこの読み方を支えていない）。投影する場合は**主キーを元イベントの識別子にします**——リプレイで行が積み上がらないためです。
 
 ### 4. 他サービスの事実は写す
 

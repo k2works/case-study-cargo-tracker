@@ -85,6 +85,13 @@ class CustomsQueryHandlerTest {
         }
 
         @Override
+        public List<CustomsDeclarationRow> findLatestByCargos(List<String> trackingNumbers) {
+            return rows.stream()
+                    .filter(row -> trackingNumbers.contains(row.trackingNumber()))
+                    .toList();
+        }
+
+        @Override
         public List<CustomsDeclarationRow> findHeld() {
             return rows.stream().filter(row -> "HELD".equals(row.status())).toList();
         }

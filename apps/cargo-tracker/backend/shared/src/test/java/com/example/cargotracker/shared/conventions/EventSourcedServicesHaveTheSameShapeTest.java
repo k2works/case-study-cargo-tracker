@@ -188,6 +188,20 @@ class EventSourcedServicesHaveTheSameShapeTest {
     }
 
     /**
+     * 業務サービスのディレクトリ（{@code *ms}）。
+     *
+     * <p><b>名簿にしない。</b> 走査で導く——載せ忘れたものほど漏れる。</p>
+     */
+    private static List<Path> serviceDirs() throws IOException {
+        try (Stream<Path> dirs = Files.list(backendRoot())) {
+            return dirs.filter(Files::isDirectory)
+                    .filter(dir -> dir.getFileName().toString().endsWith("ms"))
+                    .sorted()
+                    .toList();
+        }
+    }
+
+    /**
      * 共有の対応表を継承していないサービス。
      *
      * <p><b>名簿にしない。</b> 走査で導く——載せ忘れたものほど漏れる。</p>
@@ -236,27 +250,59 @@ class EventSourcedServicesHaveTheSameShapeTest {
     }
 
     @Test
-    @DisplayName("投影のパッケージが Processing Group として application.yml に列挙されている")
-    void projectionPackagesAreEnumerated() throws IOException {
+    @DisplayName("@EventHandler を持つパッケージが Processing Group として列挙されている")
+    void everyEventHandlerPackageIsEnumerated() throws IOException {
+        // **走査するのは「対象になりうるもの」の側である**（IT12 レビュー 中）。
+        // 以前は `infrastructure.projection` だけを見ていたので、
+        // `application.reaction` のような新しいパッケージを足しても気づけなかった
+        // ——bookingms・trackingms は手で列挙して偶然揃っていただけである。
+        // 列挙し忘れると既定の設定で動くので、**テストは緑のまま本番だけ**
+        // IT11 の壊れ方（1 件で全部止まる）に戻る（[ADR-0014] 決定 2）。
         List<String> missing = new ArrayList<>();
-        for (Aggregate aggregate : eventSourcedAggregates()) {
-            Path projectionDir = aggregate.serviceDir().resolve("src/main/java")
-                    .resolve(aggregate.servicePackage().replace('.', '/'))
-                    .resolve("infrastructure/projection");
-            if (!hasJavaClass(projectionDir)) {
-                continue; // 投影を持たないサービスには列挙するものが無い。
-            }
-            Path yml = aggregate.serviceDir().resolve("src/main/resources/application.yml");
+        for (Path serviceDir : serviceDirs()) {
+            Path yml = serviceDir.resolve("src/main/resources/application.yml");
             String config = Files.exists(yml)
                     ? Files.readString(yml, StandardCharsets.UTF_8) : "";
-            String expected = aggregate.servicePackage() + ".infrastructure.projection";
-            if (!config.contains(expected)) {
-                missing.add(expected);
+            for (String pkg : eventHandlerPackages(serviceDir)) {
+                if (!config.contains(pkg)) {
+                    missing.add(serviceDir.getFileName() + ": " + pkg);
+                }
             }
         }
         assertThat(missing)
                 .as("列挙し忘れると既定の設定で動くので、テストは緑のまま本番だけ挙動が変わる")
                 .isEmpty();
+    }
+
+    /**
+     * {@code @EventHandler} を持つクラスのパッケージ。
+     *
+     * <p>Processing Group はパッケージ名で決まる（{@code @ProcessingGroup} は Axon 5
+     * に無い）ので、走査の単位もパッケージである。</p>
+     */
+    private static List<String> eventHandlerPackages(Path serviceDir) throws IOException {
+        Path sources = serviceDir.resolve("src/main/java");
+        if (!Files.isDirectory(sources)) {
+            return List.of();
+        }
+        try (Stream<Path> paths = Files.walk(sources)) {
+            return paths
+                    .filter(path -> path.toString().endsWith(".java"))
+                    .filter(EventSourcedServicesHaveTheSameShapeTest::declaresEventHandler)
+                    .map(path -> sources.relativize(path.getParent()).toString()
+                            .replace('\\', '/').replace('/', '.'))
+                    .distinct()
+                    .sorted()
+                    .toList();
+        }
+    }
+
+    private static boolean declaresEventHandler(Path javaFile) {
+        try {
+            return Files.readString(javaFile, StandardCharsets.UTF_8).contains("@EventHandler");
+        } catch (IOException unreadable) {
+            throw new java.io.UncheckedIOException(unreadable);
+        }
     }
 
     @Test

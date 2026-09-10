@@ -28,6 +28,9 @@ import { fetchAwaitingClaim, fetchVoyagePorts } from './api';
  */
 export function AwaitingClaimPage() {
   const [unLocode, setUnLocode] = useState('');
+  // **現場の仕事の単位は「今日渡せる貨物」**（IT12 レビュー 高）。既定は全件
+  // ——通関がまだのものも見えないと、いつ渡せるのかが分からない。
+  const [clearedOnly, setClearedOnly] = useState(false);
 
   const ports = useQuery({
     queryKey: ['handling-voyage-ports'],
@@ -35,8 +38,8 @@ export function AwaitingClaimPage() {
   });
 
   const cargos = useQuery({
-    queryKey: ['handling-awaiting-claim', unLocode],
-    queryFn: () => fetchAwaitingClaim(unLocode),
+    queryKey: ['handling-awaiting-claim', unLocode, clearedOnly],
+    queryFn: () => fetchAwaitingClaim(unLocode, clearedOnly),
     enabled: unLocode !== '',
   });
 
@@ -60,7 +63,7 @@ export function AwaitingClaimPage() {
           「分かりません」と言い続けると、確かめる先を間違えたまま窓口で待たせる。 */}
       <output className={`${NOTICE} mt-3 block`}>
         <strong>通関が済んでいない貨物は引取を記録できません。</strong>{' '}
-        この一覧には通関前の貨物も並びます。各行の「通関」から状態を確かめてください。
+        各行に通関状態が出ます。「今日渡せる貨物」だけを見るなら、下の絞り込みを使ってください。
       </output>
 
       <section className={`${CARD} mt-4`}>
@@ -80,6 +83,15 @@ export function AwaitingClaimPage() {
             </option>
           ))}
         </select>
+
+        <label className="mt-3 flex items-center gap-2 text-sm text-gray-700">
+          <input
+            type="checkbox"
+            checked={clearedOnly}
+            onChange={(event) => setClearedOnly(event.target.checked)}
+          />
+          <span>通関済のものだけ表示</span>
+        </label>
       </section>
 
       {unLocode === '' ? (
@@ -100,6 +112,7 @@ export function AwaitingClaimPage() {
                   <th className={TH}>追跡番号</th>
                   <th className={TH}>区間</th>
                   <th className={TH}>貨物種別</th>
+                  <th className={TH}>通関状態</th>
                   <th className={TH}>操作</th>
                   <th className={TH}>通関</th>
                   <th className={TH}>履歴</th>
@@ -114,16 +127,33 @@ export function AwaitingClaimPage() {
                     </td>
                     <td className={TD}>{cargoTypeLabel(item.cargoType)}</td>
                     <td className={TD}>
+                      {/* **「無い」と「審査中」は違う。** 前者はまだ申告して
+                          いないので、荷役作業員が登録から始める。 */}
+                      {item.customsStatusLabel ?? '申告なし'}
+                      {!item.claimable && (
+                        <span className="ml-2 rounded bg-amber-100 px-2 py-0.5 text-xs
+                          font-semibold text-amber-800">
+                          渡せません
+                        </span>
+                      )}
+                    </td>
+                    <td className={TD}>
                       {/* **気づく手段は次の行動へ繋ぐ。** 一覧で終わると、作業員は
                           追跡番号を書き写し、その貨物が乗っていた航海を思い出して
                           S50 を選び直すことになる——荷受人を窓口で待たせたまま。 */}
-                      <Link
-                        to={`/handling/claim?unLocode=${encodeURIComponent(unLocode)}`
-                          + `&trackingNumber=${encodeURIComponent(item.trackingNumber)}`}
-                        className={LINK}
-                      >
-                        引取を記録
-                      </Link>
+                      {/* **押せるのに断られる操作を並べない**（IT12 レビュー 高）。
+                          通関が済んでいなければ集約が断るので、入口を出さない。 */}
+                      {item.claimable ? (
+                        <Link
+                          to={`/handling/claim?unLocode=${encodeURIComponent(unLocode)}`
+                            + `&trackingNumber=${encodeURIComponent(item.trackingNumber)}`}
+                          className={LINK}
+                        >
+                          引取を記録
+                        </Link>
+                      ) : (
+                        '—'
+                      )}
                     </td>
                     <td className={TD}>
                       {/* **断られる前に確かめられるようにする。** 追跡番号で

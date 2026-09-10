@@ -83,6 +83,10 @@ export function CustomsListPage() {
   });
 
   const items = declarations.data?.state === 'ready' ? declarations.data.value.items : [];
+  // **黙って切らない**（IT12 レビュー 中）。読むときに数えて並べる設計なので
+  // SQL では絞れず、上限の外に督促の対象が沈む。切れたことはサーバが判定する。
+  const truncated = declarations.data?.state === 'ready'
+    ? declarations.data.value.truncated : false;
   const overdue = items.filter((item) => item.overdue).length;
 
   return (
@@ -160,6 +164,14 @@ export function CustomsListPage() {
       {overdue > 0 && (
         <p role="alert" className={`${ALERT} mt-4`}>
           留置が 3 営業日を超えた申告が {overdue} 件あります。
+        </p>
+      )}
+
+      {/* **上限で切れたことを言う**（IT12 レビュー 中）。黙って切ると、
+          督促の対象が上限の外に沈んだままになる。 */}
+      {truncated && (
+        <p role="alert" className={`${ALERT} mt-4`}>
+          件数が多いため一部だけを表示しています。追跡番号や通関状態で絞り込んでください。
         </p>
       )}
 

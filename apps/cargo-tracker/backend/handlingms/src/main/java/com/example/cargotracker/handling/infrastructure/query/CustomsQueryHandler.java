@@ -73,10 +73,15 @@ public class CustomsQueryHandler {
 
     @QueryHandler
     public CustomsDeclarationListView handle(FindCustomsDeclarationsQuery query) {
-        List<CustomsDeclarationView> items = declarations.search(
-                        query.includeCleared(), query.trackingNumber(), query.status(),
-                        FETCH_LIMIT)
-                .stream()
+        // **上限より 1 件多く引いて、切れたかどうかを判別する**（IT10 レビュー N6 と
+        // 同じ形）。件数が上限ちょうどのときに「切れた」と言うと、警告が常時
+        // 点灯して合図として働かなくなる。
+        List<CustomsDeclarationRow> rows = declarations.search(
+                query.includeCleared(), query.trackingNumber(), query.status(),
+                FETCH_LIMIT + 1);
+        boolean truncated = rows.size() > FETCH_LIMIT;
+        List<CustomsDeclarationView> items = rows.stream()
+                .limit(FETCH_LIMIT)
                 .map(this::toView)
                 .filter(view -> !query.overdueOnly() || view.overdue())
                 // **督促の対象が先に来る。** 留置営業日の多い順（ui_design.md）。
@@ -85,7 +90,7 @@ public class CustomsQueryHandler {
                         .thenComparing(CustomsDeclarationView::declaredAt)
                         .thenComparing(CustomsDeclarationView::declarationNumber))
                 .toList();
-        return new CustomsDeclarationListView(items, items.size());
+        return new CustomsDeclarationListView(items, items.size(), truncated);
     }
 
     @QueryHandler

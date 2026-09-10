@@ -104,6 +104,35 @@ describe('S42 例外一覧（US19 §5）', () => {
     expect(rows[2]).toHaveTextContent('遅延');
   });
 
+  it('税関保留からは通関の更新へ行ける（追跡詳細では何もできない）', async () => {
+    // **次の行動の宛先を種別ごとに分ける**（IT12 レビュー 中）。税関保留に
+    // 対する対応は S53 で通関状態を更新すること。発生状況に申告番号は入って
+    // いるが、書き写して探し直すことになる。
+    respondByUrl({
+      '/tracking/trackings/exceptions': {
+        items: [exceptionItem({
+          exceptionType: 'CUSTOMS_HOLD',
+          exceptionTypeLabel: '税関保留',
+          description: '通関が留置になりました（申告番号 IMP-2026-0001）: 原産地証明が未提出',
+        })],
+      },
+    });
+
+    renderList();
+
+    expect(await screen.findByRole('link', { name: '通関を更新' }))
+      .toHaveAttribute('href', '/customs?trackingNumber=TRK-8K2QX7M4RB');
+  });
+
+  it('遅延には通関の導線を出さない（種別に合わない宛先へ誘わない）', async () => {
+    respondByUrl({ '/tracking/trackings/exceptions': { items: [exceptionItem()] } });
+
+    renderList();
+
+    expect(await screen.findByText('遅延')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: '通関を更新' })).not.toBeInTheDocument();
+  });
+
   it('緊急の例外が目で分かる', async () => {
     respondByUrl({
       '/tracking/trackings/exceptions': {

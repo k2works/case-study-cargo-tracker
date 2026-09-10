@@ -48,7 +48,7 @@ export interface CustomsSearchCondition {
  */
 export function fetchCustomsDeclarations(
   condition: CustomsSearchCondition,
-): Promise<Pending<{ items: CustomsDeclarationView[]; total: number }>> {
+): Promise<Pending<{ items: CustomsDeclarationView[]; total: number; truncated: boolean }>> {
   const query = new URLSearchParams({
     includeCleared: condition.includeCleared ? 'true' : 'false',
     overdueOnly: condition.overdueOnly ? 'true' : 'false',

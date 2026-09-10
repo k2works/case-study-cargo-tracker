@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -39,14 +39,22 @@ beforeEach(() => {
 });
 afterEach(() => vi.restoreAllMocks());
 
-const awaitingCargo = {
-  trackingNumber: 'TRK-8K2QX7M4RB',
-  bookingId: 'b-1',
-  originUnLocode: 'JPTYO',
-  destinationUnLocode: 'USNYC',
-  cargoType: 'GENERAL',
-  handledTypes: ['UNLOAD'],
-};
+function awaiting(over: Record<string, unknown> = {}) {
+  return {
+    trackingNumber: 'TRK-8K2QX7M4RB',
+    bookingId: 'b-1',
+    originUnLocode: 'JPTYO',
+    destinationUnLocode: 'USNYC',
+    cargoType: 'GENERAL',
+    customsStatus: 'CLEARED',
+    customsStatusLabel: '通関済',
+    declarationNumber: 'IMP-2026-0001',
+    claimable: true,
+    ...over,
+  };
+}
+
+const awaitingCargo = awaiting();
 
 describe('引取待ち（H.8 / US16）', () => {
   it('港を選ぶまでは、選ぶよう促す', async () => {
@@ -60,14 +68,7 @@ describe('引取待ち（H.8 / US16）', () => {
   it('港を選ぶと、引取を待っている貨物が出る', async () => {
     respondByUrl({
       '/awaiting-claim': {
-        items: [{
-          trackingNumber: 'TRK-8K2QX7M4RB',
-          bookingId: 'b-1',
-          originUnLocode: 'JPTYO',
-          destinationUnLocode: 'USNYC',
-          cargoType: 'GENERAL',
-          handledTypes: ['UNLOAD'],
-        }],
+        items: [awaiting()],
       },
       '/handling/voyages': { items: [{ voyageNumber: 'V-ONE-002', unLocode: 'USNYC', cargoCount: 3 }] },
     });
@@ -98,14 +99,7 @@ describe('引取待ち（H.8 / US16）', () => {
     // **窓口で荷受人を待たせたまま、航海を思い出して選び直させない。**
     respondByUrl({
       '/awaiting-claim': {
-        items: [{
-          trackingNumber: 'TRK-8K2QX7M4RB',
-          bookingId: 'b-1',
-          originUnLocode: 'JPTYO',
-          destinationUnLocode: 'USNYC',
-          cargoType: 'GENERAL',
-          handledTypes: ['UNLOAD'],
-        }],
+        items: [awaiting()],
       },
       '/handling/voyages': { items: [{ voyageNumber: 'V-ONE-002', unLocode: 'USNYC', cargoCount: 3 }] },
     });
@@ -128,6 +122,65 @@ describe('引取待ち（H.8 / US16）', () => {
 
     expect(await screen.findByText(/通関が済んでいない貨物は引取を記録できません/))
       .toBeInTheDocument();
+  });
+
+  it('行に通関状態が出て、渡せないものは引取の入口を出さない', async () => {
+    // **窓口に呼び出してから断るのがいちばんまずい**（IT12 レビュー 高）。
+    // 一覧で先に分かるようにし、押せるのに断られる入口は出さない。
+    respondByUrl({
+      '/handling/voyages': { items: [{ voyageNumber: 'V-MOL-001', unLocode: 'USNYC',
+        cargoCount: 2 }] },
+      '/handling/awaiting-claim': {
+        items: [
+          awaiting({ trackingNumber: 'TRK-PENDING1234', customsStatus: 'PENDING',
+            customsStatusLabel: '審査中', claimable: false }),
+          awaiting(),
+        ],
+      },
+    });
+
+    renderAt();
+    await screen.findByRole('option', { name: 'USNYC' });
+    await userEvent.selectOptions(screen.getByLabelText('港'), 'USNYC');
+
+    expect(await screen.findByText('審査中')).toBeInTheDocument();
+    expect(screen.getByText('渡せません')).toBeInTheDocument();
+    // 通関済の行だけが引取の入口を持つ。
+    expect(screen.getAllByRole('link', { name: '引取を記録' })).toHaveLength(1);
+  });
+
+  it('申告が無ければ「申告なし」と出す（「無い」と「審査中」は違う）', async () => {
+    respondByUrl({
+      '/handling/voyages': { items: [{ voyageNumber: 'V-MOL-001', unLocode: 'USNYC',
+        cargoCount: 1 }] },
+      '/handling/awaiting-claim': {
+        items: [awaiting({ customsStatus: null, customsStatusLabel: null,
+          declarationNumber: null, claimable: false })],
+      },
+    });
+
+    renderAt();
+    await screen.findByRole('option', { name: 'USNYC' });
+    await userEvent.selectOptions(screen.getByLabelText('港'), 'USNYC');
+
+    expect(await screen.findByText('申告なし')).toBeInTheDocument();
+  });
+
+  it('「通関済のものだけ表示」を入れるとサーバに絞りを渡す', async () => {
+    const fetchSpy = respondByUrl({
+      '/handling/voyages': { items: [{ voyageNumber: 'V-MOL-001', unLocode: 'USNYC',
+        cargoCount: 1 }] },
+      '/handling/awaiting-claim': { items: [awaiting()] },
+    });
+
+    renderAt();
+    await screen.findByRole('option', { name: 'USNYC' });
+    await userEvent.selectOptions(screen.getByLabelText('港'), 'USNYC');
+    await userEvent.click(screen.getByRole('checkbox', { name: '通関済のものだけ表示' }));
+
+    // **判定はサーバが持つ。** 画面で絞ると判定が 2 か所になる。
+    await waitFor(() => expect(fetchSpy.mock.calls.some((call) =>
+      String(call[0]).includes('clearedOnly=true'))).toBe(true));
   });
 
   it('行から通関申告一覧へ、その追跡番号で絞って行ける', async () => {
