@@ -18,10 +18,10 @@
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | cargo-tracker: 設計 10 件作成済み（draft） |
-| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | cargo-tracker: **IT11 完了**（累計 94 SP・達成率 100%・11 回連続）。**Release 0.1 完了**、**Release 1.0 完了**、Release 1.1 は誤配まで。リリース計画・開発戦略・IT1〜IT11 の計画/ふりかえり/完了報告書・リリース完了報告書 0.1 |
+| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | cargo-tracker: **IT12 完了**（累計 100 SP・達成率 100%・12 回連続）。**Release 0.1 完了**、**Release 1.0 完了**、**Release 1.1 完了**。リリース計画・開発戦略・IT1〜IT12 の計画/ふりかえり/完了報告書・リリース完了報告書 0.1 |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | `index.md` を整備済み |
-| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 13 件作成済み（分析 1 件 + cargo-tracker 12 件。設計レビューと IT1〜IT11 の実装レビュー） |
-| [ADR](./adr/index.md) | Architecture Decision Records の管理 | cargo-tracker: 13 件作成済み |
+| [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 14 件作成済み（分析 1 件 + cargo-tracker 13 件。設計レビューと IT1〜IT12 の実装レビュー） |
+| [ADR](./adr/index.md) | Architecture Decision Records の管理 | cargo-tracker: 14 件作成済み（IT12 で ADR-0014「毒イベントは退避して止めない」を追加） |
 | [記事](./article/index.md) | モノリスアーキテクチャ実装比較（13 章）・関数型ドメインモデリング（11 章）・実践 AI 駆動開発（15 章）・XP によるドメイン駆動設計の実践（14 章） | 53 件作成済み |
 | [参照元ソース](./article/source/README.md) | 記事が引用する 10 言語の実装コードと java-2 の実装・一次資料 | 3,849 ファイル配置済み |
 | [リファレンス](./reference/index.md) | 開発ガイドラインやベストプラクティス | 30 件のドキュメントを配置 |
