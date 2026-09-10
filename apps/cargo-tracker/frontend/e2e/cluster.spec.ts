@@ -714,6 +714,42 @@ test.describe('kind クラスタでの通し確認', () => {
     return { bookingId, trackingNumber, voyageNumber };
   }
 
+  /**
+   * その貨物の通関を通す（US29・IT12 でガードを有効にした）。
+   *
+   * <p>申告は荷役ロールが出し、状態は追跡ロールが更新する——認可がロールで
+   * 分かれているので、片方のトークンでは通らない。</p>
+   */
+  async function clearCustoms(
+    request: import('@playwright/test').APIRequestContext,
+    trackingNumber: string,
+  ) {
+    const declarationNumber = `IMP-E2E-${Date.now()}`;
+    const handlerToken = await tokenOf(request, 'handler01');
+    const trackerToken = await tokenOf(request, 'tracker01');
+
+    await expect(async () => {
+      const response = await request.post('/api/v1/handling/customs-declarations', {
+        headers: { Authorization: `Bearer ${handlerToken}` },
+        data: { declarationNumber, trackingNumber, declaredAt: new Date().toISOString() },
+      });
+      expect(response.status()).toBe(201);
+    }).toPass({ timeout: 60_000 });
+
+    await expect(async () => {
+      const response = await request.post(
+        `/api/v1/handling/customs-declarations/${declarationNumber}/status`,
+        {
+          headers: { Authorization: `Bearer ${trackerToken}` },
+          data: { status: 'CLEARED', reason: '書類に不備なし' },
+        },
+      );
+      expect(response.status()).toBe(200);
+    }).toPass({ timeout: 60_000 });
+
+    return declarationNumber;
+  }
+
   test('荷受人の確認を取って引取を記録すると、引取済になり精算と予約へ伝わる（US16・IT10）',
     async ({ page, request }) => {
       // **US16 のクラスタ確認**（Try T3。US ごとに 1 度回す）。
@@ -741,8 +777,16 @@ test.describe('kind クラスタでの通し確認', () => {
         }).toPass({ timeout: 60_000 });
       }
 
+      // **通関の前提づくり**（US29・IT12 で引取のガードを有効にした。計画 R1）。
+      // ガードを緩めるのではなく前提を足すのが正しい直し方である。ここを足さないと
+      // 以降の引取は 409（通関申告がありません）で断られる。
+      await clearCustoms(request, trackingNumber);
+
       // **デモ項目 1: 荷受人の確認なしで引取を送ると断られる。**
       // 画面が選択肢から外していても API を直接叩けば通っていた（IT9 レビュー）。
+      // **通関を通したあとに確かめる。** 前に置くと、通関のガードが先に断って
+      // 「荷受人の確認」の検査を踏まないまま緑になる（新しい守りは古い検査を
+      // 空振りにする / IT11 の教訓）。
       const withoutConsignee = await request.post('/api/v1/handling/activities', {
         headers: handlerHeaders,
         failOnStatusCode: false,
@@ -847,7 +891,12 @@ test.describe('kind クラスタでの通し確認', () => {
 
       await expectEventually(page, '受領済');
       // **解決しても事実は消えない**（不変条件 6）。
-      await expect(page.getByText('代替便に振り替えました')).toBeVisible();
+      //
+      // **これも反映待ちにする。** 貨物状態（tracking_summary）と対応内容
+      // （tracking_exception）は別のハンドラが別の行に書くので、状態が戻った
+      // 時点で対応内容がまだ書かれていないことがある。**再読込しない待ちは、
+      // ポーリングしない画面では何秒待っても届かない**（IT12 の通しで実測）。
+      await expectEventually(page, '代替便に振り替えました');
 
       // 解決したら一覧から外れる（決着したものが混ざると一覧が信用されない）。
       await page.goto('/tracking/exceptions');
@@ -997,7 +1046,7 @@ test.describe('kind クラスタでの通し確認', () => {
           trackingNumber,
           handlingType: 'CLAIM',
           unLocode: 'USNYC',
-          consigneeConfirmation: 'John Smith',
+          consigneeName: 'John Smith',
         },
       });
       expect(beforeClearance.status()).toBe(409);
@@ -1041,7 +1090,7 @@ test.describe('kind クラスタでの通し確認', () => {
             trackingNumber,
             handlingType: 'CLAIM',
             unLocode: 'USNYC',
-            consigneeConfirmation: 'John Smith',
+            consigneeName: 'John Smith',
           },
         });
         expect(response.status()).toBe(201);
@@ -1355,8 +1404,18 @@ test.describe('kind クラスタでの通し確認', () => {
     // 「貨物」欄の値を見る。IT5 で修正履歴の表が付き、同じ文字列が
     // 「変更後」の欄にも出るようになった（US32 §受入基準 4 の読み口）。
     // 画面のどこかに出ていることだけを見ると、どちらを確かめたのか分からない。
-    await expect(page.getByRole('definition').filter({ hasText: `${product}（訂正）` }))
+    // **先に画面が変わるのを待つ。** 押した直後に再読込すると、遷移前の
+    // 修正フォームの URL を読み直してしまい、詳細画面へ永久に進めない
+    // （IT12 で実際に踏んだ。「反映待ちにする」つもりで壊した）。
+    await expect(page.getByRole('heading', { name: /^予約 B-/ }))
       .toBeVisible({ timeout: 20_000 });
+
+    // **そのうえで反映を待つ。** 修正は投影に届いてから読める。
+    await waitForProjection(page, async () => {
+      await page.reload();
+      await expect(page.getByRole('definition').filter({ hasText: `${product}（訂正）` }))
+        .toBeVisible({ timeout: 5_000 });
+    });
     await expect(page.getByText(/最終更新/)).toBeVisible();
 
     // 何を変えたかが読める（US32 §受入基準 4・IT5 R.2）。記録だけでは誰にも見えない。
