@@ -3,7 +3,7 @@ type: Plan
 title: "イテレーション 12 計画"
 tags: [plan]
 status: draft
-generated: { by: claude-code/claude-opus-5, at: 2026-09-10T13:17:52Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-10T14:14:06Z }
 ---
 
 # イテレーション 12 計画
@@ -91,7 +91,7 @@ IT11 のふりかえり Try 10 件をすべて落とし込みます。
 - [x] **注釈マッパーで `SELECT *` を書いていない** — 達成（`CustomsDeclarationMapper.COLUMNS` で列を並べた）
 - [x] **イベントに載せる値を「購読側の投影が作れるか」で決めた** — 達成（`CustomsStatusChangedEvent` に `bookingId` と `heldBusinessDays` を載せた）
 - [x] **利用者に見せる文字列を、設計の要素表と突き合わせる canon テストで固定した**（`CustomsStatus` が本 IT で出る） — 達成
-- [x] SonarQube の Quality Gate がバックエンド・フロントエンドとも PASS — 達成（backend / frontend とも PASS。Bug 0・Vulnerability 0・重複 0.2% / 0.0%・カバレッジ 93.4% / 95.2%）。**残した Code Smell 34 件はすべて新規コードの外**——`ApiExceptionHandler` の三項や `RouteSearchService` の複雑度など、本 IT で触っていない箇所である。触っていないものを直すコミットは、本 IT の変更を読みにくくする
+- [x] SonarQube の Quality Gate がバックエンド・フロントエンドとも PASS — 達成（backend / frontend とも PASS。Bug 0・Vulnerability 0・重複 0.2% / 0.0%・カバレッジ 94.0% / 95.0%）。**残した Code Smell 34 件はすべて新規コードの外**——`ApiExceptionHandler` の三項や `RouteSearchService` の複雑度など、本 IT で触っていない箇所である。触っていないものを直すコミットは、本 IT の変更を読みにくくする
 - [x] `npx gulp okf:check` が ERROR 0 — 達成（ERROR 0 / WARN 0）
 - [x] **ユーザーマニュアル 16 章（通関）を新設し、14 章の引取に通関のガードを足し、画面キャプチャを再生成した** — 達成（**計画は「13 章」と書いていたが引取は 14 章**。13 章には荷役日時のタイムゾーンの説明を足した）
 
@@ -355,7 +355,7 @@ S42 --> S41 : 税関保留の例外から
 - [x] フロントの `npm run test`・`npx tsc -b`・`npm run build` が緑 — 達成
 - [x] クラスタ E2E が緑（US ごとに 1 度 + 通し） — 達成（**通し 21/21**）
 - [x] SonarQube の Quality Gate がバックエンド・フロントエンドとも PASS — 達成
-- [x] CI が緑 — 達成（run 34467366727 / 全 6 ジョブ success。**時限式のフィクスチャで一度赤になり、直してから緑にした**）
+- [x] CI が緑 — 達成（run 34483637077 / 全 6 ジョブ success。**時限式のフィクスチャで一度赤になり、直してから緑にした**）
 - [x] **注 N1〜N5 を設計ドキュメントに反映した**（**N5 は 3 IT 繰り越し。今回で終わらせる**） — 達成（N5 の 3 IT 繰り越しを終わらせた）
 - [x] **マニュアル 16 章を新設し、14 章に通関のガードを足し（13 章には荷役日時の時間帯）、キャプチャを生成 spec で撮り直した**。**書いた手順を画面で 1 度なぞった**（Try T3） — 達成
 - [x] `npx gulp okf:check` が ERROR 0 — 達成

@@ -44,7 +44,11 @@ function loadProjects() {
 
 /** SonarQube ポート */
 function sonarPort() {
-  return process.env.LOCAL_SONAR_PORT || '9000';
+  // **既定は 9001。** 9000 は IntelliJ IDEA が使うので、手順書もそう書いている
+  // （`docs/operation/cargo-tracker/アプリケーション開発環境セットアップ手順書.md`）。
+  // ここと docker-compose.yml の既定が食い違うと、上げ直したときだけ
+  // スキャンが落ちる（IT12 で実測）。
+  return process.env.LOCAL_SONAR_PORT || '9001';
 }
 
 /** DB パスワード */
@@ -778,7 +782,7 @@ ${projectList}
   sonarqube.config.json      プロジェクト定義（プロジェクトルートに配置）
 
 環境変数（.env に設定）:
-  LOCAL_SONAR_PORT           SonarQube ポート（デフォルト: 9000）
+  LOCAL_SONAR_PORT           SonarQube ポート（デフォルト: 9001。9000 は IntelliJ IDEA）
   LOCAL_SONAR_DB_PASSWORD    DB パスワード（デフォルト: sonarqube_password）
   SONAR_HOST_URL             SonarQube URL（デフォルト: http://localhost:9000）
   SONAR_TOKEN                分析トークン（スキャン時に必須）
