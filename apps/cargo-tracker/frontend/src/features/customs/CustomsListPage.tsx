@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import {
   ALERT,
   BUTTON_PRIMARY,
@@ -35,6 +35,30 @@ const INITIAL: CustomsSearchCondition = {
 };
 
 /**
+ * URL の絞り込みを初期条件にする。
+ *
+ * <p><b>件数から来た人は、その件数の一覧を見たい。</b> S02 は「留置が 3 営業日を
+ * 超えた申告が N 件あります」から `?overdueOnly=true` で送ってくる。読まないと
+ * 全件が出て、どれが督促の対象かをもう一度自分で絞ることになる（気づく手段が
+ * 次の行動へ繋がらない）。引取待ち（H.8）からは `?trackingNumber=` で来る。</p>
+ */
+function conditionFrom(params: URLSearchParams): CustomsSearchCondition {
+  const status = params.get('status') ?? '';
+  return {
+    ...INITIAL,
+    trackingNumber: params.get('trackingNumber') ?? '',
+    // **知らない状態は無視する。** 絞り込みが空振りして「0 件」に見えるより、
+    // 全件を出して自分で絞れるほうがよい。
+    status: SEARCHABLE_STATUSES.some((option) => option.value === status)
+      ? (status as CustomsStatus) : '',
+    overdueOnly: params.get('overdueOnly') === 'true',
+    // 追跡番号で 1 件を指して来たときは、通関済でも見せる——「済んでいる」
+    // ことが知りたくて来ている。
+    includeCleared: params.get('trackingNumber') !== null,
+  };
+}
+
+/**
  * S52 通関申告一覧（UC21 / US29 §受入基準 6・7）。
  *
  * <p><b>既定で通関済を外す。</b> 決着したものが混ざると、一覧全体が「まだ手を
@@ -49,7 +73,9 @@ export function CustomsListPage() {
   // 登録画面を開けない。リンクを出すと 403 に当たる——「開けない場所へ誘う」ことになる。
   const isHandler = useAuthStore(
     (state) => state.user?.roles.includes('ROLE_HANDLER') ?? false);
-  const [condition, setCondition] = useState<CustomsSearchCondition>(INITIAL);
+  const [searchParams] = useSearchParams();
+  const [condition, setCondition] = useState<CustomsSearchCondition>(
+    () => conditionFrom(searchParams));
   const declarations = useQuery({
     queryKey: ['customs-declarations', condition],
     queryFn: () => fetchCustomsDeclarations(condition),

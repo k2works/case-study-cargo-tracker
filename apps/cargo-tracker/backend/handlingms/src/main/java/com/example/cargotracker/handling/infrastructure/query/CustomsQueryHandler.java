@@ -128,15 +128,26 @@ public class CustomsQueryHandler {
     /**
      * 留置してからの営業日数。
      *
-     * <p>留置中なら今日まで、留置から出たあとは列の確定値を返す。留置したことが
-     * 無ければ 0。</p>
+     * <p>留置中なら今日まで、<b>留置から出たあとは出た時刻まで</b>数える。留置した
+     * ことが無ければ 0。</p>
+     *
+     * <p><b>列は読まない。</b> {@code held_business_days} は投影が 0 のまま置いて
+     * いる——契約イベントが確定値を持つが、投影は内部イベントだけを読むので写す
+     * 相手がいない。列を返すと、5 営業日留置されて通関済になった申告が「留置
+     * 0 営業日」に見える。料金調整の根拠（US21）がそこで消える。</p>
      */
     private int heldBusinessDaysOf(CustomsDeclarationRow row, CustomsStatus status) {
-        if (status != CustomsStatus.HELD || row.lastHeldAt() == null) {
-            return row.heldBusinessDays();
+        if (row.lastHeldAt() == null) {
+            // 留置したことが無い。
+            return 0;
         }
+        // 留置中は今日まで、決着していれば決着した日まで。**同じ数え方を使う**
+        // ——数える場所を分けると、決着の前後で日数が飛ぶ。
+        Instant until = status == CustomsStatus.HELD
+                ? clock.instant()
+                : row.lastStatusChangedAt();
         LocalDate heldFrom = businessDate(row.lastHeldAt());
-        LocalDate today = businessDate(clock.instant());
+        LocalDate today = businessDate(until);
         if (heldFrom.isAfter(today)) {
             // 留置がまだ来ていない。時計のずれや入力の誤りで起こりうるが、
             // **一覧全体を落とさない**——1 件の変な行のために、他の申告まで

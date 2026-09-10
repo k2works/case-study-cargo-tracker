@@ -140,8 +140,10 @@ public final class HandlingQueries {
     /**
      * 状態の変更履歴（S53 / US29 §受入基準 8）。
      *
-     * <p><b>Event Store から読む。</b> 追記専用の履歴テーブルは作らない
-     * （data-model.md）。</p>
+     * <p><b>{@code customs_status_history} 投影から読む。</b> 正典は当初
+     * 「Event Store から読む」だったが、この版では `@QueryHandler` から
+     * イベント列を読むと 0 件になる（IT12 で実測）。主キーは元イベントの
+     * 識別子なので、リプレイで行が積み上がらない（[ADR-0012] と同じ形）。</p>
      */
     public record FindCustomsHistoryQuery(String declarationNumber) {
     }

@@ -890,7 +890,7 @@ public class BookingReactionHandler {
 | billingms | Read Model | `billing_read_db` | `invoice`, `invoice_line_item`, `payment`, `shipper_contract_snapshot`, `attention_item`, `token_entry`, `saga_entry`, `association_value_entry` |
 | Axon Server | Event Store | 専用ボリューム | イベント列、スナップショット |
 
-テーブルの正典は `data-model.md` です。通関状態の履歴（java-3 の `customs_status_history`）は作りません。履歴は Event Store のイベント列そのものであり、画面はイベント列から読みます。`attention_item` は投影が弾いた行・Reaction のコマンド拒否・連鎖の補償失敗を「要確認」として受ける表で、bookingms / trackingms / billingms の 3 つに置きます（旧 `projection_rejection` を統合）。
+テーブルの正典は `data-model.md` です。通関状態の履歴は `customs_status_history` に投影します——**当初は「作らない。履歴は Event Store から読む」と決めていましたが、この版では実装できませんでした**（`@QueryHandler` からイベント列を読むと 0 件になる。IT12 で実測。詳細は `data-model.md` の同表）。主キーは元イベントの識別子なので、リプレイで行が積み上がりません。`attention_item` は投影が弾いた行・Reaction のコマンド拒否・連鎖の補償失敗を「要確認」として受ける表で、bookingms / trackingms / billingms の 3 つに置きます（旧 `projection_rejection` を統合）。
 
 投影テーブルは派生データです。マイグレーションで列を足すときは、既存行を UPDATE で埋めるのではなく、**該当 Processing Group のトークンをリセットしてリプレイ**します。リプレイ手順はサービス単位で `operation.md` に置き、Gulp タスクにします。
 

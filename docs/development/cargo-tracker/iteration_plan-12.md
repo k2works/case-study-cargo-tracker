@@ -289,9 +289,10 @@ entity "cargo_snapshot" as cs {
 cs ||--o{ cd
 
 note bottom of cd
-  **追記専用の履歴テーブルは作らない**（data-model.md:656）。
-  履歴はイベント列そのもの。
-  `held_business_days` は CustomsStatusChangedEvent から写す
+  **注（実績）**: 履歴は `customs_status_history` に投影した。
+  当初の正典「イベント列から読む」はこの版では実装できない（注 N3）。
+  `held_business_days` は**使わなかった**——写す相手の契約イベントを
+  投影が購読しないため、営業日数は読むときに数える
 end note
 @enduml
 ```
@@ -354,7 +355,7 @@ S42 --> S41 : 税関保留の例外から
 - [x] フロントの `npm run test`・`npx tsc -b`・`npm run build` が緑 — 達成
 - [x] クラスタ E2E が緑（US ごとに 1 度 + 通し） — 達成（**通し 21/21**）
 - [x] SonarQube の Quality Gate がバックエンド・フロントエンドとも PASS — 達成
-- [ ] CI が緑 — **未**（本 IT のコミットは未 push。クローズのステップ 2.5 で確認する）
+- [x] CI が緑 — 達成（run 34452552170 / success）
 - [x] **注 N1〜N5 を設計ドキュメントに反映した**（**N5 は 3 IT 繰り越し。今回で終わらせる**） — 達成（N5 の 3 IT 繰り越しを終わらせた）
 - [x] **マニュアル 16 章を新設し、13 章に通関のガードを足し、キャプチャを生成 spec で撮り直した**。**書いた手順を画面で 1 度なぞった**（Try T3） — 達成
 - [x] `npx gulp okf:check` が ERROR 0 — 達成
@@ -367,6 +368,7 @@ S42 --> S41 : 税関保留の例外から
 | :--- | :--- | :--- |
 | 1 | **退避先から処理し直す入口**（`projection:dead-letters:retry`。Axon の `SequencedDeadLetterProcessor` を呼ぶ） | 直したあとに退避を消すのは「黙って捨てる」ことで、[ADR-0014](../../adr/cargo-tracker/0014-poison-events-are-parked-not-blocking.md) 決定 1 に反する。本番では消せない。T7e で実際に `DELETE` で片づけた |
 | 2 | **処理の列を分ける**（`EventProcessorDefinition` + `SequenceOverridingEventHandlingComponent`） | 列が全体で 1 本なので、1 件の毒で**別の貨物のイベントまで**退避される（T7e で 4 件のうち 3 件が巻き添え） |
+| 4 | **`customs_declaration.held_business_days` の削除**（追加マイグレーションで） | 列は常に 0 で、誰も読まない。IT12 のレビューで見つけた——V006 は適用済みなので、コメントも含めて編集できない（checksum が変わると既存クラスタが起動しない） |
 | 3 | H.4（S42・S52 に荷主名を出す。Upcaster が要る）・H.8（航海番号で探す）・H.9（港名の対応表）・H.11（互換コンストラクタ 3 本） | IT12 の計画で「IT13 へ送る」と決めていた分 |
 
 ## 関連ドキュメント

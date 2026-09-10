@@ -125,6 +125,50 @@ describe('S52 通関申告一覧', () => {
     });
   });
 
+  it('S02 の件数から来たら、督促の対象だけを絞って出す（URL の絞り込みを読む）', async () => {
+    // **気づく手段は次の行動へ繋ぐ。** S02 は「留置が 3 営業日を超えた申告が
+    // N 件」から `?overdueOnly=true` で送ってくる。読まないと全件が出て、
+    // どれが督促の対象かをもう一度自分で絞ることになる。
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ items: [held()], total: 1 }), { status: 200 }),
+    );
+
+    renderAt('/customs?overdueOnly=true', <CustomsListPage />);
+
+    await waitFor(() =>
+      expect(fetchSpy.mock.calls.some((call) => String(call[0]).includes('overdueOnly=true')))
+        .toBe(true));
+    expect(screen.getByRole('checkbox', { name: '督促の対象だけ表示' })).toBeChecked();
+  });
+
+  it('引取待ちから来たら、その追跡番号で絞り、通関済も含めて出す', async () => {
+    // **「済んでいる」ことが知りたくて来ている。** 既定の絞り込み（通関済を
+    // 外す）のままだと、通関済の申告が 0 件に見えて確かめようがない。
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ items: [declaration()], total: 1 }), { status: 200 }),
+    );
+
+    renderAt('/customs?trackingNumber=TRK-8K2QX7M4RB', <CustomsListPage />);
+
+    await waitFor(() => {
+      const urls = fetchSpy.mock.calls.map((call) => String(call[0]));
+      expect(urls.some((url) => url.includes('trackingNumber=TRK-8K2QX7M4RB'))).toBe(true);
+      expect(urls.some((url) => url.includes('includeCleared=true'))).toBe(true);
+    });
+  });
+
+  it('知らない通関状態は無視して全件を出す（絞り込みの空振りで 0 件に見せない）', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ items: [declaration()], total: 1 }), { status: 200 }),
+    );
+
+    renderAt('/customs?status=NOT_A_STATUS', <CustomsListPage />);
+
+    await waitFor(() =>
+      expect(fetchSpy.mock.calls.some((call) => String(call[0]).includes('status=')))
+        .toBe(false));
+  });
+
   it('登録の導線は追跡ロールには出さない（開けない場所へ誘わない）', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(JSON.stringify({ items: [declaration()], total: 1 }), { status: 200 }),

@@ -54,11 +54,13 @@ export function AwaitingClaimPage() {
       <p className="mt-1 text-sm text-gray-600">
         目的港で荷降しが済み、荷受人の引取がまだの貨物です。
       </p>
-      {/* **通関の状態はこの画面では判断できない。** 通関の記録は US29（IT12）で
-          作る。黙っていると「渡してよい」と読まれるので、そう書く。 */}
+      {/* **US29 で通関が読めるようになった。** IT11 まではここに「この画面では
+          分かりません。荷主に確かめてください」と出していたが、いまは通関済で
+          なければ引取そのものが断られる（`HandlingActivity#requireCustomsCleared`）。
+          「分かりません」と言い続けると、確かめる先を間違えたまま窓口で待たせる。 */}
       <output className={`${NOTICE} mt-3 block`}>
-        <strong>通関の状態はこの画面では分かりません。</strong>{' '}
-        通関が済んでいるかは、荷主または通関業者に確かめてから引き渡してください。
+        <strong>通関が済んでいない貨物は引取を記録できません。</strong>{' '}
+        この一覧には通関前の貨物も並びます。各行の「通関」から状態を確かめてください。
       </output>
 
       <section className={`${CARD} mt-4`}>
@@ -99,6 +101,7 @@ export function AwaitingClaimPage() {
                   <th className={TH}>区間</th>
                   <th className={TH}>貨物種別</th>
                   <th className={TH}>操作</th>
+                  <th className={TH}>通関</th>
                   <th className={TH}>履歴</th>
                 </tr>
               </thead>
@@ -120,6 +123,17 @@ export function AwaitingClaimPage() {
                         className={LINK}
                       >
                         引取を記録
+                      </Link>
+                    </td>
+                    <td className={TD}>
+                      {/* **断られる前に確かめられるようにする。** 追跡番号で
+                          絞った通関申告一覧へ送る（通関済も含めて出る）。 */}
+                      <Link
+                        to={'/customs?trackingNumber='
+                          + encodeURIComponent(item.trackingNumber)}
+                        className={LINK}
+                      >
+                        通関を確かめる
                       </Link>
                     </td>
                     <td className={TD}>

@@ -115,6 +115,31 @@ class CustomsProjectionIT extends AbstractAxonIntegrationTest {
     }
 
     @Test
+    @DisplayName("不変条件 4: 留置から出たあとも営業日数が残る（料金調整の根拠）")
+    void keepsHeldBusinessDaysAfterLeavingHeld() {
+        // **列を返すと 0 になる。** 投影は内部イベントだけを読むので、確定値を
+        // 持つ契約イベントから写す相手がいない。5 営業日留置されて通関済に
+        // なった申告が「留置 0 営業日」に見えると、US21 の調整根拠が消える。
+        String number = register("K1");
+        update(number, "PENDING", "HELD", "検査待ち",
+                Instant.parse("2026-08-10T02:00:00Z"));
+        update(number, "HELD", "CLEARED", "証明書を受領",
+                Instant.parse("2026-08-17T02:00:00Z"));
+
+        assertThat(queries.handle(new FindCustomsDeclarationsQuery(true, "TRK-K1", null, false))
+                .items())
+                .singleElement()
+                .satisfies(view -> {
+                    // 2026-08-10(月) → 2026-08-17(月)。土日と 8/11（山の日）を
+                    // 外して 4 営業日。**暦日なら 7 日**——休日を数えないことが
+                    // ここでも効いている。
+                    assertThat(view.heldBusinessDays()).isEqualTo(4);
+                    // **決着しているので督促の対象ではない。** 日数だけが残る。
+                    assertThat(view.overdue()).isFalse();
+                });
+    }
+
+    @Test
     @DisplayName("US29 §6: 督促の対象だけに絞れて、件数も同じ判定で数える")
     void narrowsToOverdueAndCountsTheSameWay() {
         String overdue = register("O1");
