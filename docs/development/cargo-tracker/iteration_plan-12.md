@@ -3,7 +3,7 @@ type: Plan
 title: "イテレーション 12 計画"
 tags: [plan]
 status: draft
-generated: { by: claude-code/claude-opus-5, at: 2026-09-10T07:54:30Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-10T10:40:37Z }
 ---
 
 # イテレーション 12 計画
@@ -368,6 +368,7 @@ S42 --> S41 : 税関保留の例外から
 | :--- | :--- | :--- |
 | 1 | **退避先から処理し直す入口**（`projection:dead-letters:retry`。Axon の `SequencedDeadLetterProcessor` を呼ぶ） | 直したあとに退避を消すのは「黙って捨てる」ことで、[ADR-0014](../../adr/cargo-tracker/0014-poison-events-are-parked-not-blocking.md) 決定 1 に反する。本番では消せない。T7e で実際に `DELETE` で片づけた |
 | 2 | **処理の列を分ける**（`EventProcessorDefinition` + `SequenceOverridingEventHandlingComponent`） | 列が全体で 1 本なので、1 件の毒で**別の貨物のイベントまで**退避される（T7e で 4 件のうち 3 件が巻き添え） |
+| 5 | **受け入れフィクスチャの固定日付を「今」から導く**（handling・tracking に残る `2026-09-10T09:00:00Z` の航海区間） | 出発日時を現実の時刻が追い越すと、既定の一覧が出港済みとして外す。routing では**実際に赤になった**（同じ日の 08:00 UTC の CI は緑、09:51 UTC は 13 件が赤）。routing だけ直したので、残る 2 suite は同じ罠を抱えている |
 | 4 | **`customs_declaration.held_business_days` の削除**（追加マイグレーションで） | 列は常に 0 で、誰も読まない。IT12 のレビューで見つけた——V006 は適用済みなので、コメントも含めて編集できない（checksum が変わると既存クラスタが起動しない） |
 | 3 | H.4（S42・S52 に荷主名を出す。Upcaster が要る）・H.8（航海番号で探す）・H.9（港名の対応表）・H.11（互換コンストラクタ 3 本） | IT12 の計画で「IT13 へ送る」と決めていた分 |
 
@@ -389,3 +390,4 @@ S42 --> S41 : 税関保留の例外から
 | 2026-09-09 | 序盤を消化：T0 の入口（S）・引き継ぎ枠 A（DLQ・[ADR-0014](../../adr/cargo-tracker/0014-poison-events-are-parked-not-blocking.md)）・引き継ぎ枠 B（S30 の絞り込み）。**枠 A は一部未達**——退避と処理継続は入ったが、**列がまだ全体で 1 本**なので同じ列の後続は届かない（この版に手立てが無い。ADR-0014「引き受けていないこと」に記録し IT13 へ送る） | claude-code/claude-opus-5 |
 | 2026-09-10 | T7e（クラスタ E2E 通し 21/21）と T0（分割フルビルド・SonarQube）を通し、成功基準と DoD を実績で埋めた。**フルビルドで 2 件・SonarQube で 13 件の指摘を直した**——ドメイン層の未検査分岐（読む側の無い `heldOver` は消した）と、`DayOfWeek` を `==` で比べていた欠陥。**未達はレビュー（Try T7・T9）と CI の 3 件**で、いずれもクローズのステップで行う | claude-code/claude-opus-5 |
 | 2026-09-10 | クローズのステップ 1（レビュー）を実施。**並列 5 視点は 48 分無応答**だったので逐次フォールバックでたどり、**高 3 件・中 6 件をクローズ前に修正**した——留置から出ると営業日数が 0 に落ちる／S02 の督促リンクが全件の一覧に着く／引取待ちが「通関の状態は分かりません」と言い続けていた。低 4 件は IT13 送り。修正後に通し E2E 21/21・キャプチャ 35 件・CI 緑 | claude-code/claude-opus-5 |
+| 2026-09-10 | CI が赤になった原因を追い、**時限式のフィクスチャ**を直した——航海の出発日時が `2026-09-10T09:00:00Z` 固定で、現実の時刻がそれを追い越した瞬間に「出港済み」として一覧から外れ、routing の受け入れ 13 件が全滅していた（同じ日の 08:00 UTC の CI は緑）。日付を「今」から導くようにし、期間の絞り込みも出発日から数えるようにした。**同型が handling・tracking にも残る**ので IT13 へ送る | claude-code/claude-opus-5 |

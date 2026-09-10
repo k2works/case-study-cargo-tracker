@@ -61,7 +61,7 @@ public class VoyageUpdateSteps {
 
     private static List<Map<String, Object>> singleLeg() {
         return List.of(movement("JPTYO", "USNYC",
-                "2026-09-10T09:00:00Z", "2026-09-24T18:00:00Z"));
+                SharedRoutingSteps.iso(SharedRoutingSteps.DEPARTURE), SharedRoutingSteps.iso(SharedRoutingSteps.ARRIVAL)));
     }
 
     private ResponseEntity<JsonMap> put(String voyageNumber, Map<String, Object> body) {
@@ -99,14 +99,14 @@ public class VoyageUpdateSteps {
     @もし("航海 {string} を、港が繋がっていない寄港地で更新する")
     public void 繋がらない寄港地で更新する(String voyageNumber) {
         lastResponse = put(voyageNumber, body("MOL EXPRESS", List.of(
-                movement("JPTYO", "SGSIN", "2026-09-10T09:00:00Z", "2026-09-16T08:00:00Z"),
-                movement("USNYC", "GBLON", "2026-09-17T06:00:00Z", "2026-09-24T18:00:00Z"))));
+                movement("JPTYO", "SGSIN", SharedRoutingSteps.iso(SharedRoutingSteps.DEPARTURE), SharedRoutingSteps.iso(SharedRoutingSteps.MID_ARRIVAL)),
+                movement("USNYC", "GBLON", SharedRoutingSteps.iso(SharedRoutingSteps.MID_DEPARTURE), SharedRoutingSteps.iso(SharedRoutingSteps.ARRIVAL)))));
     }
 
     @もし("航海 {string} を {string} 発 {string} 着の 1 区間に更新する")
     public void 一区間に更新する(String voyageNumber, String from, String to) {
         lastResponse = put(voyageNumber, body("MOL EXPRESS", List.of(
-                movement(from, to, "2026-09-10T09:00:00Z", "2026-09-24T18:00:00Z"))));
+                movement(from, to, SharedRoutingSteps.iso(SharedRoutingSteps.DEPARTURE), SharedRoutingSteps.iso(SharedRoutingSteps.ARRIVAL)))));
     }
 
     @もし("航海 {string} の差分だけを確かめて更新はしない")

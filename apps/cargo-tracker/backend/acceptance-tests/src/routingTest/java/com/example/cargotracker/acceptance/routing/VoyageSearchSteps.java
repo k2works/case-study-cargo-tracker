@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import io.cucumber.java.ja.かつ;
 import io.cucumber.java.ja.ならば;
 import io.cucumber.java.ja.もし;
+import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -105,17 +106,28 @@ public class VoyageSearchSteps {
                 .contains(included).doesNotContain(excluded);
     }
 
-    @ならば("出発日が {string} から {string} の航海に {string} は出る")
-    public void 期間で絞ると出る(String from, String to, String voyageNumber) {
-        assertThat(numbers(period(from, to), false)).contains(voyageNumber);
+    /**
+     * 期間は<b>出発日から数える</b>。
+     *
+     * <p><b>固定日付を書かない。</b> 書くと、現実の時刻がその日を追い越した
+     * 瞬間に「出港済み」として一覧から外れ、検査の意図とは関係なく赤になる
+     * （{@link SharedRoutingSteps#DEPARTURE} の説明）。</p>
+     */
+    @ならば("出発日を含む期間で絞ると {string} は出る")
+    public void 期間で絞ると出る(String voyageNumber) {
+        LocalDate departure = SharedRoutingSteps.departureDate();
+        assertThat(numbers(period(departure.minusDays(1), departure.plusDays(1)), false))
+                .contains(voyageNumber);
     }
 
-    @かつ("出発日が {string} から {string} の航海に {string} は出ない")
-    public void 期間で絞ると出ない(String from, String to, String voyageNumber) {
-        assertThat(numbers(period(from, to), false)).doesNotContain(voyageNumber);
+    @かつ("出発日より後の期間で絞ると {string} は出ない")
+    public void 期間で絞ると出ない(String voyageNumber) {
+        LocalDate departure = SharedRoutingSteps.departureDate();
+        assertThat(numbers(period(departure.plusDays(30), departure.plusDays(60)), false))
+                .doesNotContain(voyageNumber);
     }
 
-    private static Map<String, String> period(String from, String to) {
+    private static Map<String, String> period(LocalDate from, LocalDate to) {
         Map<String, String> criteria = new LinkedHashMap<>();
         criteria.put("departFrom", from + "T00:00:00Z");
         // 終了日はその日の終わりまで。00:00 で切ると、その日に出る便が落ちる。

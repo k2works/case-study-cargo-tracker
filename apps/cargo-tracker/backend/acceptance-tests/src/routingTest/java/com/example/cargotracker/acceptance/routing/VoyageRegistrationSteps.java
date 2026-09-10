@@ -101,7 +101,7 @@ public class VoyageRegistrationSteps {
     public void 航海を登録する(String voyageNumber, String carrierName, String vesselName,
             String from, String to) {
         lastResponse = register(voyageNumber, carrierName, vesselName,
-                List.of(movement(from, to, "2026-09-10T09:00:00Z", "2026-09-24T18:00:00Z")),
+                List.of(movement(from, to, SharedRoutingSteps.iso(SharedRoutingSteps.DEPARTURE), SharedRoutingSteps.iso(SharedRoutingSteps.ARRIVAL))),
                 List.of("GENERAL"));
     }
 
@@ -109,29 +109,29 @@ public class VoyageRegistrationSteps {
     public void 港が繋がらない航海を登録する(String voyageNumber, String from1, String to1,
             String from2, String to2) {
         lastResponse = register(voyageNumber, "商船三井", "MOL EXPRESS",
-                List.of(movement(from1, to1, "2026-09-10T09:00:00Z", "2026-09-16T08:00:00Z"),
-                        movement(from2, to2, "2026-09-17T06:00:00Z", "2026-09-24T18:00:00Z")),
+                List.of(movement(from1, to1, SharedRoutingSteps.iso(SharedRoutingSteps.DEPARTURE), SharedRoutingSteps.iso(SharedRoutingSteps.MID_ARRIVAL)),
+                        movement(from2, to2, SharedRoutingSteps.iso(SharedRoutingSteps.MID_DEPARTURE), SharedRoutingSteps.iso(SharedRoutingSteps.ARRIVAL))),
                 List.of("GENERAL"));
     }
 
     @もし("航海 {string} を、到着日時が出発日時より前になる寄港地で登録する")
     public void 到着が出発より前の航海を登録する(String voyageNumber) {
         lastResponse = register(voyageNumber, "商船三井", "MOL EXPRESS",
-                List.of(movement("JPTYO", "USNYC", "2026-09-24T18:00:00Z", "2026-09-10T09:00:00Z")),
+                List.of(movement("JPTYO", "USNYC", SharedRoutingSteps.iso(SharedRoutingSteps.ARRIVAL), SharedRoutingSteps.iso(SharedRoutingSteps.DEPARTURE))),
                 List.of("GENERAL"));
     }
 
     @もし("航海 {string} を対応貨物種別を選ばずに登録する")
     public void 種別を選ばず登録する(String voyageNumber) {
         lastResponse = register(voyageNumber, "商船三井", "MOL EXPRESS",
-                List.of(movement("JPTYO", "USNYC", "2026-09-10T09:00:00Z", "2026-09-24T18:00:00Z")),
+                List.of(movement("JPTYO", "USNYC", SharedRoutingSteps.iso(SharedRoutingSteps.DEPARTURE), SharedRoutingSteps.iso(SharedRoutingSteps.ARRIVAL))),
                 List.of());
     }
 
     @もし("航海 {string} を対応貨物種別 {string} で登録する")
     public void 種別を指定して登録する(String voyageNumber, String cargoTypes) {
         lastResponse = register(voyageNumber, "商船三井", "MOL EXPRESS",
-                List.of(movement("JPTYO", "USNYC", "2026-09-10T09:00:00Z", "2026-09-24T18:00:00Z")),
+                List.of(movement("JPTYO", "USNYC", SharedRoutingSteps.iso(SharedRoutingSteps.DEPARTURE), SharedRoutingSteps.iso(SharedRoutingSteps.ARRIVAL))),
                 Arrays.asList(cargoTypes.split(",")));
     }
 
@@ -165,8 +165,8 @@ public class VoyageRegistrationSteps {
     @もし("航海 {string} を、{string} と {string} を経由して {string} まで登録する")
     public void 多区間の航海を登録する(String voyageNumber, String from, String via, String to) {
         lastResponse = register(voyageNumber, "商船三井", "MOL EXPRESS",
-                List.of(movement(from, via, "2026-09-10T09:00:00Z", "2026-09-16T08:00:00Z"),
-                        movement(via, to, "2026-09-17T06:00:00Z", "2026-09-24T18:00:00Z")),
+                List.of(movement(from, via, SharedRoutingSteps.iso(SharedRoutingSteps.DEPARTURE), SharedRoutingSteps.iso(SharedRoutingSteps.MID_ARRIVAL)),
+                        movement(via, to, SharedRoutingSteps.iso(SharedRoutingSteps.MID_DEPARTURE), SharedRoutingSteps.iso(SharedRoutingSteps.ARRIVAL))),
                 List.of("GENERAL"));
     }
 
