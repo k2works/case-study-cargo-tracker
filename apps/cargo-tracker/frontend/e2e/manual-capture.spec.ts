@@ -1119,8 +1119,10 @@ test.describe('マニュアルの画面キャプチャ', () => {
   });
 
   test('14 引取待ち', async ({ page }) => {
-    // **本文が「港を選ぶまで一覧は出ません」「通関の状態は分かりません」と
-    // 書いている。** 港を選んだ状態で撮らないと、文章と画像が別々に正しくなる。
+    // **本文が「港を選ぶまで一覧は出ません」「通関が済んでいない貨物は引取を
+    // 記録できません」「行の `[通関を確かめる]`」と書いている。** 港を選んだ
+    // 状態で撮り、その 3 つが写っていることまで見る——文章と画像は別々に
+    // 正しくなるので、写っていることを検査で固定する。
     await page.route('**/api/v1/handling/voyages', (route) =>
       route.fulfill({
         status: 200,
@@ -1161,6 +1163,9 @@ test.describe('マニュアルの画面キャプチャ', () => {
     await expect(page.getByRole('heading', { name: '引取待ち' })).toBeVisible();
     await page.getByLabel('港').selectOption('USNYC');
     await expect(page.getByRole('link', { name: '引取を記録' }).first()).toBeVisible();
+    await expect(page.getByText(/通関が済んでいない貨物は引取を記録できません/))
+      .toBeVisible();
+    await expect(page.getByRole('link', { name: '通関を確かめる' }).first()).toBeVisible();
     await page.screenshot({ path: `${OUT}/14-S54-awaiting-claim.png`, fullPage: true });
   });
 
