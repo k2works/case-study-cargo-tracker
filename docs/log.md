@@ -1,6 +1,7 @@
 # Docs Update Log
 
 ## 2026-09-10
+* **Creation**: [IT12実装_review_20260910](/review/cargo-tracker/IT12実装_review_20260910.md) を作成（claude-code/claude-opus-5）
 * **Update**: [iteration_plan-12](/development/cargo-tracker/iteration_plan-12.md) を更新（claude-code/claude-opus-5）
 * **Update**: [iteration_plan-12](/development/cargo-tracker/iteration_plan-12.md) を更新（claude-code/claude-opus-5）
 * **Update**: [0014-poison-events-are-parked-not-blocking](/adr/cargo-tracker/0014-poison-events-are-parked-not-blocking.md) を更新（claude-code/claude-opus-5）
