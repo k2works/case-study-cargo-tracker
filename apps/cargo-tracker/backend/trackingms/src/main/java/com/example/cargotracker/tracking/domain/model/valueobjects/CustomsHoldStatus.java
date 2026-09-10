@@ -29,7 +29,15 @@ public enum CustomsHoldStatus {
     CLEARED("通関済", false),
     /** 留置。税関保留を起票する。 */
     HELD("留置", true),
-    /** 不可。通らなかったことは別の業務で扱う。 */
+    /**
+     * 不可。
+     *
+     * <p><b>税関保留は解決しない。</b> 通らなかった貨物は返送・再申告・廃棄の
+     * いずれかを荷主と決めるまで港に残り、そのあいだ保管料が積み上がる。
+     * 引取は永久に断られる（通関済でないため）。ここで例外を閉じると、
+     * 未解決の一覧からも督促からも消えて<b>誰も追わない貨物</b>になる
+     * （IT12 レビュー 高）。追跡管理者が対応内容を書いて閉じる。</p>
+     */
     REJECTED("不可", false);
 
     private final String label;
@@ -75,9 +83,14 @@ public enum CustomsHoldStatus {
      * 判定すると、起票していない例外を解決しようとして集約に断られ、その例外が
      * 退避されて後続まで止まる（IT12 のクラスタ E2E で実測）。</p>
      *
+     * <p><b>不可では解決しない。</b> 留置から出てはいるが、業務としては終わって
+     * いない——返送・再申告・廃棄のどれにするかが決まるまで貨物は港に残る。
+     * 解決すると未解決の一覧から消え、督促（留置だけが対象）にも出ないので、
+     * 誰も追わなくなる。{@link #REJECTED} の説明を参照。</p>
+     *
      * @param previous 変更前の状態。読めない値なら解決しない（安全側）
      */
     public static boolean resolvesHold(String previous, CustomsHoldStatus next) {
-        return HELD.name().equals(previous) && next != HELD;
+        return HELD.name().equals(previous) && next != HELD && next != REJECTED;
     }
 }

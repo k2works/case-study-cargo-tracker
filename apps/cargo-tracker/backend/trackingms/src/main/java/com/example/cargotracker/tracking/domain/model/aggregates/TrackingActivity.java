@@ -292,10 +292,18 @@ public class TrackingActivity {
     public void registerException(RegisterTrackingExceptionCommand command,
             EventAppender appender, Clock clock) {
         requireStarted(command.trackingNumber());
-        if (exceptions.containsKey(command.exceptionId())) {
-            // 同じ起票が二度届いた（自動起票は再配送されうる）。
+        TrackingException existing = exceptions.get(command.exceptionId());
+        if (existing != null && !existing.settled()) {
+            // 同じ起票が二度届いた（自動起票は再配送されうる）。まだ決着して
+            // いないのだから、同じことをもう一度記録する意味が無い。
             return;
         }
+        // **決着したものと同じ識別子なら、もう一度起票する。** 識別子を業務の値
+        // から導く例外（税関保留は申告番号、誤配は荷役の識別子）は、同じことが
+        // 二度起きうる——留置 → 審査中 → 再度留置は集約が許す遷移である
+        // （どちらも未決着）。ここで黙って捨てると、**再留置が誰にも見えない**：
+        // 状態は例外発生に戻らず、未解決の一覧にも督促にも出ない。引取は投影の
+        // 最新状態で止まるので、気づく手段だけが消える（IT12 レビュー 高）。
         // 値そのものの検査はエンティティが持つ（発生状況が無い起票を残さない）。
         TrackingException candidate = TrackingException.report(command.exceptionId(),
                 command.type(), command.occurredAt(), command.unLocode(),

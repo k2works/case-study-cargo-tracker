@@ -9,6 +9,7 @@ import {
   LABEL,
   PAGE_TITLE,
 } from '@/shared/ui/styles';
+import { businessLocalToInstant } from '@/shared/api/businessDate';
 import { ApiError } from '@/shared/api/client';
 import { registerCustomsDeclaration } from './api';
 
@@ -38,9 +39,12 @@ export function CustomsRegisterPage() {
       await registerCustomsDeclaration({
         declarationNumber: declarationNumber.trim(),
         trackingNumber: trackingNumber.trim().toUpperCase(),
-        // datetime-local は秒とタイムゾーンを持たない。業務タイムゾーンで送る
-        // ——UTC で組むと、時差の分だけ申告日時がずれる。
-        declaredAt: new Date(declaredAt).toISOString(),
+        // datetime-local は秒とタイムゾーンを持たない。**共有ヘルパで業務
+        // タイムゾーンとして解く**（IT12 レビュー 高）。`new Date(...)` が使うのは
+        // ブラウザの時間帯なので、海外港や UTC の端末から入れると申告日時が
+        // 数時間ずれて記録され、しかもエラーは出ない。留置営業日数の起点に
+        // 効くので、督促の判定が 1 日ずれる。
+        declaredAt: businessLocalToInstant(declaredAt),
       });
       navigate(`/customs/${encodeURIComponent(declarationNumber.trim())}`);
     } catch (e) {

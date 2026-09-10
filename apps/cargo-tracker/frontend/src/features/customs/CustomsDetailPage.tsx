@@ -23,6 +23,7 @@ import {
   fetchCustomsDeclaration,
   fetchCustomsHistory,
   updateCustomsStatus,
+  CUSTOMS_SETTLED_STATUSES,
   UPDATABLE_STATUSES,
   type CustomsStatus,
 } from './api';
@@ -50,7 +51,10 @@ export function CustomsDetailPage() {
   // 申告を出す側で、更新のフォームを出しても 403 に当たる。
   const isTracker = useAuthStore(
     (state) => state.user?.roles.includes('ROLE_TRACKER') ?? false);
-  const [status, setStatus] = useState<CustomsStatus>('CLEARED');
+  // **既定を置かない**（IT12 レビュー 中）。「通関済」を選んだ状態で出すと、
+  // いちばん影響の大きい操作——引取のガードが外れ、決着して取り消せない——が
+  // 最初から選ばれていることになる。この画面はどの状態も同じ頻度で使う。
+  const [status, setStatus] = useState<CustomsStatus | ''>('');
   const [reason, setReason] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,6 +76,11 @@ export function CustomsDetailPage() {
     setSending(true);
     setError(null);
     try {
+      if (status === '') {
+        // ブラウザの `required` が効かない経路（自動入力・スクリプト）でも
+        // 送らない。**選ばないと押せない**という約束を 1 か所で守る。
+        return;
+      }
       await updateCustomsStatus(declarationNumber, { status, reason: reason.trim() });
       setReason('');
       // 反映は非同期。**先行表示はしない**ので、読み直して確定表示にする。
@@ -132,7 +141,10 @@ export function CustomsDetailPage() {
             </p>
           )}
 
-          {isTracker && (
+          {/* **決着した申告には更新の口を出さない**（IT12 レビュー 高）。
+              押せるのに断られる操作を並べると、画面が信用されなくなる。
+              判定はサーバと同じ述語（`unsettled`）をひとつだけ使う。 */}
+          {isTracker && !CUSTOMS_SETTLED_STATUSES.includes(view.status) && (
             <section className={`${CARD} mt-4`}>
               <h2 className={SECTION_TITLE}>状態を更新する</h2>
               {error && <p role="alert" className={`${ALERT} mt-3`}>{error}</p>}
@@ -142,12 +154,18 @@ export function CustomsDetailPage() {
                   <select
                     id="customs-new-status"
                     className={FIELD}
+                    required
                     value={status}
                     onChange={(event) => setStatus(event.target.value as CustomsStatus)}
                   >
-                    {UPDATABLE_STATUSES.map((option) => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
+                    {/* **いま同じ状態は選べない**（サーバが「すでに 留置 です」と
+                        断る。IT12 レビュー 高）。審査中に戻す選択肢も出さない。 */}
+                    <option value="">選んでください</option>
+                    {UPDATABLE_STATUSES
+                      .filter((option) => option.value !== view.status)
+                      .map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
                   </select>
                 </div>
                 <div>

@@ -459,6 +459,33 @@ class TrackingActivityTest {
     }
 
     @Test
+    @DisplayName("決着した例外と同じ識別子なら、もう一度起票する（再留置が見えなくなる）")
+    void reopensSettledExceptionWithTheSameId() {
+        // **識別子を業務の値から導く例外は、同じことが二度起きうる**（IT12 レビュー 高）。
+        // 税関保留は申告番号から導くので、留置 → 審査中 → 再度留置（どちらも未決着
+        // なので集約が許す遷移）で同じ識別子に戻る。
+        //
+        // ここで黙って捨てると**再留置が誰にも見えない**：状態は例外発生に戻らず、
+        // 未解決の一覧にも督促にも出ない。引取は投影の最新状態で止まるので、
+        // 気づく手段だけが消える。
+        fixture.given().events(and(received(), registered(ExceptionType.CUSTOMS_HOLD),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.RECEIVED,
+                                TransportStatus.EXCEPTION, StatusUpdateSource.EXCEPTION,
+                                null, "SGSIN", OCCURRED, "tracker01", NOW),
+                        new TrackingExceptionResolvedEvent(NUMBER, "ex-1",
+                                "通関が下りました", "tracker01", NOW),
+                        new TransportStatusUpdatedEvent(NUMBER, TransportStatus.EXCEPTION,
+                                TransportStatus.RECEIVED, StatusUpdateSource.RESOLVED,
+                                null, null, NOW, "tracker01", NOW)))
+                .when().command(registerException(ExceptionType.CUSTOMS_HOLD))
+                .then().eventsSatisfy(events -> assertThat(events)
+                        .as("決着済みなら起票し直す。状態も例外発生へ戻る")
+                        .map(event -> event.payload().getClass().getSimpleName())
+                        .contains("TrackingExceptionRegisteredEvent",
+                                "TransportStatusUpdatedEvent"));
+    }
+
+    @Test
     @DisplayName("引取済へは手で動かせない（精算と予約へ伝わらないまま引取済になる）")
     void cannotReachDeliveredByHand() {
         // **決定は経路を 1 度通す。** 手動で引取済にすると CargoDeliveredEvent が

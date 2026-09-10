@@ -277,8 +277,9 @@ describe('S53 通関申告', () => {
     renderAt('/customs/IMP-2026-0001', <CustomsDetailPage />);
     const select = await screen.findByLabelText('状態の変更');
 
+    // 先頭は未選択の案内。**審査中は出さない**（戻せない）。
     expect(Array.from(select.querySelectorAll('option')).map((option) => option.textContent))
-      .toEqual(['通関済', '留置', '不可']);
+      .toEqual(['選んでください', '通関済', '留置', '不可']);
   });
 
   it('更新のフォームは追跡ロールにだけ出す（荷役は申告を出す側）', async () => {
@@ -291,6 +292,29 @@ describe('S53 通関申告', () => {
 
     expect(await screen.findByText('審査中')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: '状態を更新する' })).not.toBeInTheDocument();
+  });
+
+  it('決着した申告には更新の口を出さない（押せるのに断られる操作を並べない）', async () => {
+    detailResponses(declaration({ status: 'CLEARED', statusLabel: '通関済' }), []);
+
+    renderAt('/customs/IMP-2026-0001', <CustomsDetailPage />);
+
+    expect(await screen.findByText('通関済')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: '状態を更新する' })).not.toBeInTheDocument();
+  });
+
+  it('いまと同じ状態は選べず、既定は未選択（いちばん重い操作を選んで出さない）', async () => {
+    detailResponses(held(), []);
+
+    renderAt('/customs/IMP-2026-0001', <CustomsDetailPage />);
+
+    const select = await screen.findByLabelText('状態の変更');
+    // **既定は未選択。** 「通関済」が選ばれた状態で出すと、引取のガードが
+    // 外れて取り消せない操作が最初から選ばれていることになる。
+    expect(select).toHaveValue('');
+    // **いまが留置なら「留置」は出さない**（サーバが「すでに 留置 です」と断る）。
+    expect(screen.queryByRole('option', { name: '留置' })).not.toBeInTheDocument();
+    expect(screen.getByRole('option', { name: '通関済' })).toBeInTheDocument();
   });
 });
 

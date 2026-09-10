@@ -305,12 +305,20 @@ class HandlingActivityTest {
     }
 
     @Test
-    @DisplayName("US29 §3: 断りの理由に通関状態が入る（画面が再確認へ導ける）")
+    @DisplayName("US29 §3: 断りの理由に通関状態と判定時点が入る（画面が再確認へ導ける）")
     void tellsWhichCustomsStatusRefusedTheClaim() {
         fixture.given().noPriorActivity()
                 .when().command(claim("John Smith", CustomsStatus.PENDING))
-                .then().exceptionSatisfies(thrown ->
-                        assertThat(thrown.getMessage()).contains("PENDING").contains("審査中"));
+                .then().exceptionSatisfies(thrown -> assertThat(thrown.getMessage())
+                        // **内部名は出さない**（IT12 レビュー 高）。現場が読む文に
+                        // `PENDING` が混ざっても意味が増えない。
+                        .doesNotContain("PENDING")
+                        .contains("審査中")
+                        // **時点は業務タイムゾーンで出す。** `Instant#toString` の
+                        // UTC を出すと、港に居る人が自分の時計との 9 時間差に
+                        // 気づけない。ここを落とすと画面が再確認へ導けない。
+                        .doesNotContain("Z")
+                        .contains("2026/09/16 17:35"));
     }
 
     @Test

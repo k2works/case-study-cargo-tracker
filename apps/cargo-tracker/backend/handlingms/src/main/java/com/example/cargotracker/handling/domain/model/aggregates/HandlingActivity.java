@@ -7,6 +7,7 @@ import com.example.cargotracker.handling.domain.model.valueobjects.HandlingType;
 import com.example.cargotracker.shared.contract.event.HandlingActivityRegisteredEvent;
 import com.example.cargotracker.shared.contract.event.HandlingActivityVoidedEvent;
 import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
+import com.example.cargotracker.shared.infrastructure.time.BusinessClockConfiguration;
 import com.example.cargotracker.shared.domain.error.IllegalTransition;
 import java.time.Clock;
 import java.time.Instant;
@@ -30,6 +31,11 @@ import org.axonframework.messaging.eventhandling.gateway.EventAppender;
  */
 @EventSourced(idType = String.class, tagKey = "activityId")
 public class HandlingActivity {
+
+    /** 現場に見せる日時の形（業務タイムゾーン）。 */
+    private static final java.time.format.DateTimeFormatter BUSINESS_TIME =
+            java.time.format.DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm");
+
 
     private String activityId;
     private String trackingNumber;
@@ -167,11 +173,23 @@ public class HandlingActivity {
                     + command.type().label() + "の前に通関申告を登録してください");
         }
         if (!command.customsStatus().allowsClaim()) {
-            throw new IllegalTransition("通関状態が "
-                    + command.customsStatus().name() + "（" + command.customsStatus().label()
-                    + "）なので" + command.type().label() + "できません。"
-                    + "この判定は " + command.customsStatusAsOf() + " 時点のものです");
+            // **内部名を出さない。** 現場が読む文に `HELD` が混ざっても意味が
+            // 増えない。**時点は業務タイムゾーンで出す**——`Instant#toString` は
+            // UTC なので、港に居る人が自分の時計と 9 時間違うことに気づけない
+            // （同じ IT で荷役の時刻を港のローカル時刻に直した。IT12 レビュー 高）。
+            throw new IllegalTransition("通関状態が " + command.customsStatus().label()
+                    + "なので" + command.type().label() + "できません。"
+                    + "この判定は " + businessTime(command.customsStatusAsOf())
+                    + " 時点のものです");
         }
+    }
+
+    /** 業務タイムゾーンの日時（利用者に見せる文に埋める）。 */
+    private static String businessTime(Instant at) {
+        if (at == null) {
+            return "不明な時刻";
+        }
+        return BUSINESS_TIME.format(at.atZone(BusinessClockConfiguration.BUSINESS_ZONE));
     }
 
     private static void requireText(String value, String message) {

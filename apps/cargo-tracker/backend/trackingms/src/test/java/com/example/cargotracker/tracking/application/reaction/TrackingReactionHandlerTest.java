@@ -145,12 +145,20 @@ class TrackingReactionHandlerTest {
     }
 
     @Test
-    @DisplayName("不可でも解決する（通らなかったことは別の業務で扱う）")
-    void resolvesCustomsHoldWhenRejected() {
+    @DisplayName("不可では解決しない（誰も追わない貨物にしない）")
+    void doesNotResolveWhenRejected() {
+        // **留置からは出ているが、業務としては終わっていない**（IT12 レビュー 高）。
+        // 通らなかった貨物は返送・再申告・廃棄のどれかを荷主と決めるまで港に残り、
+        // 保管料が積み上がる。引取は永久に断られる（通関済でない）。
+        //
+        // ここで解決すると、未解決の一覧から消え、督促（留置だけが対象）にも
+        // 出ず、ダッシュボードの件数にも入らない——**誰も追わなくなる**。
+        // 未解決のまま残し、追跡管理者が対応内容を書いて閉じる。
         handler.on(customs("HELD", "REJECTED"));
 
-        assertThat(sent).singleElement()
-                .isInstanceOf(ResolveTrackingExceptionCommand.class);
+        assertThat(sent)
+                .as("不可は決着ではない。追う相手が居なくなる")
+                .isEmpty();
     }
 
     @Test

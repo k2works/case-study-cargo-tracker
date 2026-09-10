@@ -1050,7 +1050,8 @@ test.describe('kind クラスタでの通し確認', () => {
         },
       });
       expect(beforeClearance.status()).toBe(409);
-      expect(await beforeClearance.text()).toContain('PENDING');
+      // **現場に見せる呼び名で返る**（内部名は出さない。IT12 レビュー 高）。
+      expect(await beforeClearance.text()).toContain('審査中');
 
       // **D7: 留置にすると税関保留の例外が自動で起票される。**
       await expect(async () => {

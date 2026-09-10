@@ -220,8 +220,12 @@ public class CustomsSteps {
     public void 断りの理由に通関状態が含まれる(String status) {
         // **拒否のときは判定に使った状態を返す**（domain-model.md）。
         // 画面が「直近で変わった可能性があります」と再確認へ導けるようにする。
+        //
+        // **見るのは呼び名で、内部名ではない**（IT12 レビュー 高）。現場が読む
+        // 文に `PENDING` が混ざっても意味が増えないので、落とした。
         assertThat(String.valueOf(lastResponse.getBody()))
-                .contains(statusCodeOf(status));
+                .contains(status)
+                .doesNotContain(statusCodeOf(status));
     }
 
     @ならば("その通関状態は {string} である")

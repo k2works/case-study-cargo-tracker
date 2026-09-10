@@ -113,6 +113,15 @@ export const UPDATABLE_STATUSES: ReadonlyArray<{ value: CustomsStatus; label: st
   { value: 'REJECTED', label: '不可' },
 ];
 
+/**
+ * 決着した通関状態（S53 で更新の口を出さない）。
+ *
+ * <p>**サーバと同じ述語を写す**（`CustomsStatus#unsettled` の裏）。ここに
+ * 書き写した判定が本番と別に育つのを避けるため、**画面はこの 1 か所だけ**を
+ * 見る（IT12 レビュー 高。決着済でもフォームが出て、押すと断られていた）。</p>
+ */
+export const CUSTOMS_SETTLED_STATUSES: ReadonlyArray<CustomsStatus> = ['CLEARED', 'REJECTED'];
+
 /** 絞り込みに使う通関状態（すべてを含む）。 */
 export const SEARCHABLE_STATUSES: ReadonlyArray<{ value: CustomsStatus | ''; label: string }> = [
   { value: '', label: 'すべて' },

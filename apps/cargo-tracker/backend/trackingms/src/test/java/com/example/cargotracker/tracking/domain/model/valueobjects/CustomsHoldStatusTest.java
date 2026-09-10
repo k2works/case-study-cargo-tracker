@@ -64,8 +64,12 @@ class CustomsHoldStatusTest {
             for (CustomsHoldStatus next : CustomsHoldStatus.values()) {
                 assertThat(CustomsHoldStatus.resolvesHold(previous.name(), next))
                         .as("%s → %s で税関保留を解決するか", previous, next)
+                        // **不可へ出たときは解決しない**（IT12 レビュー 高）。
+                        // 留置からは出ているが、返送・再申告・廃棄が決まるまで
+                        // 貨物は港に残る。閉じると誰も追わなくなる。
                         .isEqualTo(previous == CustomsHoldStatus.HELD
-                                && next != CustomsHoldStatus.HELD);
+                                && next != CustomsHoldStatus.HELD
+                                && next != CustomsHoldStatus.REJECTED);
             }
         }
     }
