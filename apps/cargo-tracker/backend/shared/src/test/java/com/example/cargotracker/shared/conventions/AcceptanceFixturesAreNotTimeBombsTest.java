@@ -1,6 +1,7 @@
 package com.example.cargotracker.shared.conventions;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -95,11 +96,70 @@ class AcceptanceFixturesAreNotTimeBombsTest {
     @Test
     @DisplayName("シナリオの日付が期限切れに近づいたら、壊れる前に赤くする")
     void featureDatesAreNotAboutToExpire() throws IOException {
-        // **業務タイムゾーンで数える。** UTC の今日で数えると、時差の分だけ
-        // 期限の見え方がずれる（CI は UTC で回る）。
-        LocalDate today = LocalDate.now(
-                com.example.cargotracker.shared.infrastructure.time
-                        .BusinessClockConfiguration.BUSINESS_ZONE);
+        assertThat(expiringDatesAt(businessToday()))
+                .as("日付を先送りするのではなく、「今」から導く形に直す")
+                .isEmpty();
+    }
+
+    @Test
+    @DisplayName("期限が近づいた日付は、実際に赤として拾える（検査が空振りしていない）")
+    void discriminatesWhenADateIsAboutToExpire() throws IOException {
+        // **「今」を動かして確かめる。** いまシナリオに残っている日付のうち
+        // いちばん近いものを基準に、その 1 日前から数えれば必ず拾える。
+        // 拾えないなら、この検査は「守っている」ではなく「調べていない」。
+        LocalDate nearest = nearestFutureDate();
+        assumeThat(nearest).as("未来の日付がシナリオに無ければ、この検査は確かめようがない")
+                .isNotNull();
+
+        assertThat(expiringDatesAt(nearest.minusDays(1)))
+                .as("期限の %s 日前から見れば拾えるはず", LEAD_DAYS)
+                .isNotEmpty();
+    }
+
+    /**
+     * 業務タイムゾーンの「今日」。
+     *
+     * <p><b>UTC の今日で数えない。</b> 時差の分だけ期限の見え方がずれる
+     * （CI は UTC で回る）。</p>
+     */
+    private static LocalDate businessToday() {
+        return LocalDate.now(com.example.cargotracker.shared.infrastructure.time
+                .BusinessClockConfiguration.BUSINESS_ZONE);
+    }
+
+    /** シナリオに残っている未来の日付のうち、いちばん近いもの（無ければ null）。 */
+    private static LocalDate nearestFutureDate() {
+        LocalDate today = businessToday();
+        try {
+            return allFeatureDates().stream()
+                    .filter(date -> date.isAfter(today))
+                    .min(LocalDate::compareTo)
+                    .orElse(null);
+        } catch (IOException unreadable) {
+            throw new java.io.UncheckedIOException(unreadable);
+        }
+    }
+
+    private static List<LocalDate> allFeatureDates() throws IOException {
+        List<LocalDate> dates = new ArrayList<>();
+        for (Path file : acceptanceFiles(".feature")) {
+            for (String line : Files.readAllLines(file, StandardCharsets.UTF_8)) {
+                Matcher matcher = DATE.matcher(line);
+                while (matcher.find()) {
+                    dates.add(dateOf(matcher));
+                }
+            }
+        }
+        return dates;
+    }
+
+    private static LocalDate dateOf(Matcher matcher) {
+        return LocalDate.of(Integer.parseInt(matcher.group(1)),
+                Integer.parseInt(matcher.group(2)), Integer.parseInt(matcher.group(3)));
+    }
+
+    /** {@code today} から見て、期限切れに近づいているシナリオの日付。 */
+    private static List<String> expiringDatesAt(LocalDate today) throws IOException {
         LocalDate horizon = today.plusDays(LEAD_DAYS);
         List<String> expiring = new ArrayList<>();
 
@@ -108,8 +168,7 @@ class AcceptanceFixturesAreNotTimeBombsTest {
             for (int i = 0; i < lines.size(); i++) {
                 Matcher matcher = DATE.matcher(lines.get(i));
                 while (matcher.find()) {
-                    LocalDate date = LocalDate.of(Integer.parseInt(matcher.group(1)),
-                            Integer.parseInt(matcher.group(2)), Integer.parseInt(matcher.group(3)));
+                    LocalDate date = dateOf(matcher);
                     // 過ぎた日付は動かない（もう追い越されている）。危ないのは
                     // 「まだ未来だが、もうすぐ過去になる」もの。
                     if (date.isAfter(today) && date.isBefore(horizon)) {
@@ -121,8 +180,6 @@ class AcceptanceFixturesAreNotTimeBombsTest {
             }
         }
 
-        assertThat(expiring)
-                .as("日付を先送りするのではなく、「今」から導く形に直す")
-                .isEmpty();
+        return expiring;
     }
 }
