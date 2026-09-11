@@ -90,9 +90,9 @@ bi --> bidb
 | authms | `auth_db` | 状態保存 | `users`, `user_roles`, `user_shipper_link`, `auth_audit_log` |
 | bookingms | `booking_read_db` | 投影 + 受け皿 + Axon 管理 | `shipper`, `cargo_summary`, `cargo_revision`, `cargo_notification`, `cargo_leg`, `cancellation_request`, `quotation`, `quotation_candidate`, `attention_item`, `process_state`, `token_entry` |
 | routingms | `routing_read_db` | 投影 + 受け皿 + Axon 管理 | `voyage`, `carrier_movement`, `voyage_accepted_cargo_type`, `attention_item`, `token_entry` |
-| trackingms | `tracking_read_db` | 投影 + 受け皿 + Axon 管理 | `tracking_summary`, `tracking_event`, `tracking_exception`, `attention_item`, `token_entry` |
+| trackingms | `tracking_read_db` | 投影 + 受け皿 + Axon 管理 | `tracking_summary`, `tracking_event`, `tracking_exception`, `attention_item`, `token_entry`, `dead_letter_entry` |
 | handlingms | `handling_read_db` | 投影 + Axon 管理 | `cargo_snapshot`, `cargo_snapshot_leg`, `handling_activity`, `customs_declaration`, `customs_status_history`, `token_entry`, `dead_letter_entry` |
-| billingms | `billing_read_db` | 投影 + 受け皿 + Axon 管理 | `invoice`, `invoice_line_item`, `payment`, `shipper_contract_snapshot`, `attention_item`, `token_entry` |
+| billingms | `billing_read_db` | 投影 + 受け皿 + Axon 管理 | `invoice`, `invoice_line_item`, `payment`, `shipper_contract_snapshot`, **`billing_cargo_snapshot`**, **`billing_cargo_leg`**, `attention_item`, `token_entry`, `dead_letter_entry` |
 
 `location` のマスタは各 DB に置きません。UN/LOCODE は共有カーネルの値オブジェクトであり、港名の表示に要る対応表は `shared` のリソース（CSV）から読みます。マスタを各 DB に複製すると更新の同期が要ります。
 
@@ -714,10 +714,31 @@ entity "payment" as pay {
   recorded_by: VARCHAR(50) NOT NULL
 }
 
+entity "billing_cargo_snapshot" as bcs {
+  * **tracking_number**: VARCHAR(25) <<PK>>
+  --
+  booking_id: VARCHAR(36) NOT NULL
+  shipper_id: VARCHAR(36) NOT NULL
+  origin_unlocode: VARCHAR(5) NOT NULL
+  destination_unlocode: VARCHAR(5) NOT NULL
+  cargo_type: VARCHAR(30) NOT NULL
+  weight_kg: NUMERIC(10,2)
+  projected_at: TIMESTAMPTZ NOT NULL
+  last_event_id: VARCHAR(36)
+}
+
+entity "billing_cargo_leg" as bcl {
+  * **tracking_number**: VARCHAR(25) <<PK>> <<FK>>
+  * **leg_seq**: INTEGER <<PK>>
+  --
+  load_unlocode: VARCHAR(5) NOT NULL
+  unload_unlocode: VARCHAR(5) NOT NULL
+}
+
 entity "shipper_contract_snapshot" as scs {
   * **shipper_id**: VARCHAR(36) <<PK>>
   --
-  shipper_name: VARCHAR(200) NOT NULL
+  shipper_name: VARCHAR(200)
   shipper_type: VARCHAR(30) NOT NULL
   discount_rate: NUMERIC(5,4)
   contract_number: VARCHAR(50)
@@ -727,6 +748,7 @@ entity "shipper_contract_snapshot" as scs {
 
 inv ||--o{ li
 inv ||--o{ pay
+bcs ||--o{ bcl
 @enduml
 ```
 
@@ -735,8 +757,9 @@ inv ||--o{ pay
 | `invoice` | `InvoiceCalculatedEvent`, `DiscountAppliedEvent`, `InvoiceAdjustedEvent`, `InvoiceIssuedEvent`, `PaymentRecordedEvent`, `InvoiceVoidedEvent`, `CancellationFeeAppliedEvent` | `UNIQUE(booking_id, void_marker)`, `INDEX(billing_status, due_on)`, `INDEX(shipper_id)` | `void_marker` は有効中 `''`、取り消し時に `invoice_id` を入れる。有効な請求書は予約ごとに 1 通。**`overdue` 列は持たず**、一覧の SQL が `due_on < :today AND billing_status = 'INVOICED'` で判定する。`quoted_amount` / `quoted_currency` は見積時の概算（任意。見積を経ない予約は `NULL`）で、S61 が「見積時の概算 → 請求 → 差額」を出す。`INDEX(shipper_id)` は荷主向け請求書（`FindShipperInvoiceQuery`）の索引を兼ねる |
 | `invoice_line_item` | 同上 | — | `item_type` は `BASE` / `DISCOUNT` / `ADJUSTMENT` / `CANCELLATION_FEE` / `TAX`。`basis_exception_id` は調整行の根拠になった例外 ID（任意。trackingms への論理参照）で、S61 から例外へリンクする |
 | `payment` | `PaymentRecordedEvent` | `INDEX(invoice_id)` | |
-| `shipper_contract_snapshot` | `ShipperRegisteredEvent`, `CorporateContractAssignedEvent`（いずれも契約）の購読。**IT2 時点で購読しているのは前者だけ**（`CorporateContractAssignedEvent` は US22 の IT13 で足す） | `PK(shipper_id)` | billingms が bookingms に同期問い合わせをしないための ACL の読み取りモデル（`FindShipperForBillingQuery` は廃止）。荷主の最新の契約を写し、請求書作成時に `invoice.discount_rate` へ複写する。作成後に割引率が変わっても請求書は変わらない。`shipper_name` は crypto-shredding 後に `NULL`（ADR-0003） |
-| `attention_item` | `billing-projection` の拒否、`billing-reaction` のコマンド失敗、補償 | `booking_read_db` と同じ | 定義は `booking_read_db` の `attention_item` と同一 |
+| `shipper_contract_snapshot` | **`ShipperRegisteredEvent`（契約）の購読**。**`CorporateContractAssignedEvent` は足さない**（IT13 の判断）——法人契約は荷主登録で設定され、`ShipperRegisteredEvent` が既に契約番号と割引率を運んでいる。付与を後から行う操作は bookingms に無いので、**読む側の無い契約を先に足さない**（IT9〜IT12 と同じ判断） | `PK(shipper_id)` | billingms が bookingms に同期問い合わせをしないための ACL の読み取りモデル（`FindShipperForBillingQuery` は廃止）。荷主の最新の契約を写し、請求書作成時に `invoice.discount_rate` へ複写する。作成後に割引率が変わっても請求書は変わらない。`shipper_name` は crypto-shredding 後に `NULL`（ADR-0003） |
+| `billing_cargo_snapshot` / `billing_cargo_leg` | **`TrackingInitializedEvent`**（契約）の購読（IT13 / V004） | `PK(tracking_number)`, `INDEX(booking_id)`, `PK(tracking_number, leg_seq)` | 請求が料金を数えるための ACL の読み取りモデル（[ADR-0012](../../adr/cargo-tracker/0012-cargo-snapshot-from-tracking-initialized.md) と同じ形）。**`CargoDeliveredEvent` では足りない**——追跡番号・予約・引渡時刻・場所しか運ばず、式が要る区間・重量・貨物種別が無い。**`weight_kg` は NULL 許容**：重量を契約に足したのは IT13 で、それ以前のイベントには入っていない。0 で埋めると重量係数が下限に落ち、**足りない重量で安い請求**が黙って出るので、NULL のまま残して算出のときに断る。区間は追記専用にせず、読み直しのたびに消して入れ直す（IT6 の「追記専用の行はリプレイで増える」） |
+| `attention_item` | `billing-projection` の拒否、`billing-reaction` のコマンド失敗、補償 | `booking_read_db` と同じ | 定義は `booking_read_db` の `attention_item` と同一。**IT13 時点では未作成**（US21 の T5 で足す） |
 
 ### 連鎖の途中経過（`process_state`）
 

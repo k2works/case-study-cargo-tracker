@@ -46,12 +46,12 @@ class CustomsDeclarationTest {
     }
 
     private static RegisterCustomsDeclarationCommand register() {
-        return new RegisterCustomsDeclarationCommand(NUMBER, TRACKING, "b-1", DECLARED,
+        return new RegisterCustomsDeclarationCommand(NUMBER, TRACKING, "b-1", "USNYC", DECLARED,
                 "handler01");
     }
 
     private static CustomsDeclarationRegisteredEvent registered() {
-        return new CustomsDeclarationRegisteredEvent(NUMBER, TRACKING, "b-1", DECLARED,
+        return new CustomsDeclarationRegisteredEvent(NUMBER, TRACKING, "b-1", "USNYC", DECLARED,
                 "handler01", NOW);
     }
 
@@ -83,12 +83,12 @@ class CustomsDeclarationTest {
     @DisplayName("不変条件 1: 追跡番号・申告日時は必須（申告番号の書式は検査しない）")
     void requiresTrackingNumberAndDeclaredAt() {
         fixture.given().noPriorActivity()
-                .when().command(new RegisterCustomsDeclarationCommand(NUMBER, null, "b-1",
+                .when().command(new RegisterCustomsDeclarationCommand(NUMBER, null, "b-1", "USNYC",
                         DECLARED, "handler01"))
                 .then().exception(BusinessRuleViolation.class);
 
         fixture.given().noPriorActivity()
-                .when().command(new RegisterCustomsDeclarationCommand(NUMBER, TRACKING, "b-1",
+                .when().command(new RegisterCustomsDeclarationCommand(NUMBER, TRACKING, "b-1", "USNYC",
                         null, "handler01"))
                 .then().exception(BusinessRuleViolation.class);
     }
@@ -99,12 +99,12 @@ class CustomsDeclarationTest {
         // **書いた守りは対で赤にする**（IT12 レビュー 低）。落としても赤にならない
         // `requireText` が 3 つ残っていた。
         fixture.given().noPriorActivity()
-                .when().command(new RegisterCustomsDeclarationCommand(NUMBER, TRACKING, "  ",
+                .when().command(new RegisterCustomsDeclarationCommand(NUMBER, TRACKING, "  ", "USNYC",
                         DECLARED, "handler01"))
                 .then().exception(BusinessRuleViolation.class);
 
         fixture.given().noPriorActivity()
-                .when().command(new RegisterCustomsDeclarationCommand(NUMBER, TRACKING, "b-1",
+                .when().command(new RegisterCustomsDeclarationCommand(NUMBER, TRACKING, "b-1", "USNYC",
                         DECLARED, " "))
                 .then().exception(BusinessRuleViolation.class);
 
@@ -223,5 +223,48 @@ class CustomsDeclarationTest {
         fixture.given().event(registered())
                 .when().command(update(null, "書類に不備なし"))
                 .then().exception(BusinessRuleViolation.class);
+    }
+
+    @Test
+    @DisplayName("#L17: 数える国は輸入港で決まる（日本の休日は米国では休みでない）")
+    void countsInTheImportCountry() {
+        // **日本固定だと、この違いが出ない。** 2026-08-07(金) 留置 →
+        // 2026-08-14(金) 解除。日本は 8/11（山の日）を外して 4 営業日、
+        // 米国は 5 営業日。同じ期間・違う港で数える。
+        assertThat(heldBusinessDaysFor("JPTYO")).isEqualTo(4);
+        assertThat(heldBusinessDaysFor("USNYC")).isEqualTo(5);
+    }
+
+    @Test
+    @DisplayName("輸入港が載っていない古い申告でも数えられる（日本の暦で数える）")
+    void fallsBackToJapanWhenTheImportPortIsMissing() {
+        // 列を足す前に登録された申告には輸入港が入っていない。読めなくしない。
+        assertThat(heldBusinessDaysFor(null)).isEqualTo(4);
+        assertThat(heldBusinessDaysFor("  ")).isEqualTo(4);
+    }
+
+    /** その輸入港で 2026-08-07 → 2026-08-14 の留置を解除したときに載る営業日数。 */
+    private int heldBusinessDaysFor(String destinationUnLocode) {
+        var clearedAt = Instant.parse("2026-08-14T02:00:00Z");
+        var configurer = EventSourcingConfigurer.create()
+                .registerEntity(EventSourcedEntityModule.autodetected(
+                        String.class, CustomsDeclaration.class))
+                .componentRegistry(registry -> registry.registerComponent(
+                        Clock.class, c -> Clock.fixed(clearedAt, ZoneId.of("Asia/Tokyo"))));
+        var localFixture = AxonTestFixture.with(configurer, c -> c.disableAxonServer());
+
+        int[] counted = new int[1];
+        localFixture.given()
+                .event(new CustomsDeclarationRegisteredEvent(NUMBER, TRACKING, "b-1",
+                        destinationUnLocode, DECLARED, "handler01", DECLARED))
+                .event(new CustomsStatusUpdatedEvent(NUMBER, "PENDING", "HELD", "検査待ち",
+                        "tracker01", Instant.parse("2026-08-07T02:00:00Z")))
+                .when().command(update(CustomsStatus.CLEARED, "証明書を受領"))
+                .then().eventsSatisfy(events -> counted[0] = events.stream()
+                        .map(event -> event.payload())
+                        .filter(CustomsStatusChangedEvent.class::isInstance)
+                        .map(CustomsStatusChangedEvent.class::cast)
+                        .findFirst().orElseThrow().heldBusinessDays());
+        return counted[0];
     }
 }

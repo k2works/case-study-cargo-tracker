@@ -40,6 +40,7 @@ import com.example.cargotracker.booking.domain.model.events.TrackingNumberRevert
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoItinerary;
 import com.example.cargotracker.booking.domain.model.valueobjects.RoutingStatus;
 import com.example.cargotracker.shared.domain.error.IllegalTransition;
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.HashSet;
@@ -81,6 +82,15 @@ public class Cargo {
     private Location destination;
     /** 貨物種別。追跡番号の発行（US14）で trackingms へ渡す。 */
     private String cargoType;
+
+    /**
+     * 貨物の重量（kg）。<b>請求が数える材料</b>（IT13）。
+     *
+     * <p>予約の時点から分かっているのに、追跡へ渡す契約に載っていなかった。
+     * 載せ直すために集約が覚えておく——{@code IssueTrackingNumberCommand} は
+     * 重量を持たないので、コマンドから採ることはできない。</p>
+     */
+    private BigDecimal weightKg;
     /**
      * 荷主。<b>発行のイベントに載せる</b>（US18）。
      *
@@ -404,7 +414,7 @@ public class Cargo {
 
         appender.append(TrackingNumberIssuedEvent.of(command.bookingId(),
                 command.trackingNumber().trim(), shipperId, origin.unLocode().value(),
-                destination.unLocode().value(), cargoType, legs,
+                destination.unLocode().value(), cargoType, weightKg, legs,
                 command.issuedBy(), clock.instant()));
         return command.bookingId();
     }
@@ -554,6 +564,7 @@ public class Cargo {
         this.origin = Location.of(event.originUnLocode());
         this.destination = Location.of(event.destinationUnLocode());
         this.cargoType = event.cargoType();
+        this.weightKg = event.weightKg();
     }
 
     @EventSourcingHandler
@@ -565,6 +576,7 @@ public class Cargo {
         this.origin = Location.of(event.originUnLocode());
         this.destination = Location.of(event.destinationUnLocode());
         this.cargoType = event.cargoType();
+        this.weightKg = event.weightKg();
         this.shipperId = event.shipperId();
     }
 

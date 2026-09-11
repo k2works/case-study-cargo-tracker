@@ -1,5 +1,6 @@
 package com.example.cargotracker.tracking.domain.model.aggregates;
 
+import java.math.BigDecimal;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
@@ -48,6 +49,7 @@ class TrackingStatusUpdateIT extends AbstractAxonIntegrationTest {
     void manualUpdateFlowsThroughToTheProjection() {
         String trackingNumber = "TRK-IT" + System.nanoTime() % 100000000L;
         commandGateway.sendAndWait(new InitializeTrackingCommand(trackingNumber, "b-", "SHP-000001" + System.nanoTime(), "JPTYO", "USNYC", "GENERAL",
+                new BigDecimal("1200"),
                 List.of(new InitializeTrackingCommand.LegDto("V-MOL-001", "JPTYO", "USNYC",
                         Instant.parse("2026-09-10T09:00:00Z"),
                         Instant.parse("2026-09-24T18:00:00Z"))),

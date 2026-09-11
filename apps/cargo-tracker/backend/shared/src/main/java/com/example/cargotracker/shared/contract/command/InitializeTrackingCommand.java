@@ -1,5 +1,6 @@
 package com.example.cargotracker.shared.contract.command;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import org.axonframework.modelling.annotation.TargetEntityId;
@@ -36,6 +37,9 @@ import org.axonframework.modelling.annotation.TargetEntityId;
  * @param originUnLocode 出発地の UN/LOCODE
  * @param destinationUnLocode 目的地の UN/LOCODE
  * @param cargoType 貨物種別の名前（{@code GENERAL} / {@code HAZARDOUS} / {@code REEFER}）
+ * @param weightKg 貨物の重量（kg）。<b>trackingms は使わないが、載せ直したイベントを
+ *     billingms が読む</b>（IT13）。請求は実際に運んだ重量で基本料金を数えるので、
+ *     ここで落とすと「重量の分からない貨物」になって請求を作れない
  * @param legs 確定した旅程。積む順。空にはならない（経路が決まってから発行する）
  * @param issuedAt 追跡番号を発行した時刻
  */
@@ -46,6 +50,7 @@ public record InitializeTrackingCommand(
         String originUnLocode,
         String destinationUnLocode,
         String cargoType,
+        BigDecimal weightKg,
         List<LegDto> legs,
         Instant issuedAt) {
 

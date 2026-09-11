@@ -1,7 +1,7 @@
 package com.example.cargotracker.handling.infrastructure.query;
 
 import com.example.cargotracker.handling.domain.model.valueobjects.CustomsStatus;
-import com.example.cargotracker.handling.domain.model.valueobjects.HolidayCalendar;
+import com.example.cargotracker.shared.domain.calendar.HolidayCalendar;
 import com.example.cargotracker.handling.infrastructure.persistence.CustomsDeclarationMapper;
 import com.example.cargotracker.handling.infrastructure.persistence.CustomsDeclarationMapper.CustomsDeclarationRow;
 import com.example.cargotracker.handling.infrastructure.persistence.CustomsStatusHistoryMapper;
@@ -14,6 +14,7 @@ import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.Fi
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.FindCustomsHistoryQuery;
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.FindCustomsStatusOfCargoQuery;
 import com.example.cargotracker.shared.domain.location.CountryCode;
+import com.example.cargotracker.shared.domain.location.UnLocode;
 import com.example.cargotracker.shared.infrastructure.time.BusinessClockConfiguration;
 import java.time.Clock;
 import java.time.Instant;
@@ -149,7 +150,22 @@ public class CustomsQueryHandler {
             // 読めなくなるほうが困る。数えるものが無いので 0 にする。
             return 0;
         }
-        return HolidayCalendar.of(new CountryCode("JP")).businessDaysBetween(heldFrom, today);
+        // **輸入港の国の暦で数える**（IT12 レビュー #L17）。記録の時点で集約が
+        // 数えるのと同じ国でなければ、請求（US21）と画面が違う日数を出す。
+        return calendarOf(row.destinationUnLocode()).businessDaysBetween(heldFrom, today);
+    }
+
+    /**
+     * 輸入港の所在国のカレンダー。載っていない古い申告は日本の暦で数える。
+     *
+     * <p><b>集約と同じ決め方にする</b>（{@code CustomsDeclaration#calendar}）。
+     * 違う決め方を置くと、記録した日数と画面の日数が食い違う。</p>
+     */
+    private static HolidayCalendar calendarOf(String destinationUnLocode) {
+        if (destinationUnLocode == null || destinationUnLocode.isBlank()) {
+            return HolidayCalendar.of(new CountryCode("JP"));
+        }
+        return HolidayCalendar.of(new UnLocode(destinationUnLocode).countryCode());
     }
 
     private static LocalDate businessDate(Instant at) {

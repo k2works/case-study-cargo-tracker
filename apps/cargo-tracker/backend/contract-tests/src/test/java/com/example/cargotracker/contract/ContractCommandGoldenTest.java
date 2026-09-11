@@ -1,5 +1,6 @@
 package com.example.cargotracker.contract;
 
+import java.math.BigDecimal;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.cargotracker.shared.contract.command.InitializeTrackingCommand;
@@ -51,7 +52,8 @@ class ContractCommandGoldenTest {
         return Stream.of(
                 new InitializeTrackingCommand("TRK-8K2QX7M4RB", "b-1", "SHP-000001", "JPTYO", "USNYC",
                         "GENERAL",
-                        List.of(new InitializeTrackingCommand.LegDto("V-MOL-001", "JPTYO",
+                        new BigDecimal("1200"),
+                List.of(new InitializeTrackingCommand.LegDto("V-MOL-001", "JPTYO",
                                         "SGSIN", Instant.parse("2026-09-10T09:00:00Z"),
                                         Instant.parse("2026-09-16T08:00:00Z")),
                                 new InitializeTrackingCommand.LegDto("V-ONE-002", "SGSIN",

@@ -110,7 +110,7 @@ class CargoNotificationTest {
                         routed(), notified(),
                         new BookingConfirmedEvent("B-0001", "sales01", NOW),
                         new TrackingNumberIssuedEvent("B-0001", "TRK-8K2QX7M4RB", "SHP-000001",
-                                "JPTYO", "USNYC", "GENERAL", List.of(), "routing01", NOW),
+                                "JPTYO", "USNYC", "GENERAL", new BigDecimal("1200"), List.of(), "routing01", NOW),
                         new HandlingRecordedEvent("B-0001", "act-1", "RECEIVE", "JPTYO",
                                 NOW, NOW))
                 .when().command(notifyCommand())
@@ -127,7 +127,7 @@ class CargoNotificationTest {
                         routed(), notified(),
                         new BookingConfirmedEvent("B-0001", "sales01", NOW),
                         new TrackingNumberIssuedEvent("B-0001", "TRK-8K2QX7M4RB", "SHP-000001",
-                                "JPTYO", "USNYC", "GENERAL", List.of(), "routing01", NOW),
+                                "JPTYO", "USNYC", "GENERAL", new BigDecimal("1200"), List.of(), "routing01", NOW),
                         new HandlingRecordedEvent("B-0001", "act-1", "RECEIVE", "JPTYO",
                                 NOW, NOW),
                         notified())

@@ -109,7 +109,7 @@ public class BookingReactionHandler {
         try {
             commands.sendAndWait(new InitializeTrackingCommand(
                     event.trackingNumber(), event.bookingId(), event.shipperId(),
-                    event.origin(), event.destination(), event.cargoType(),
+                    event.origin(), event.destination(), event.cargoType(), event.weightKg(),
                     event.legs().stream().map(leg -> new InitializeTrackingCommand.LegDto(
                             leg.voyageNumber(), leg.loadUnLocode(), leg.unloadUnLocode(),
                             leg.loadTime(), leg.unloadTime())).toList(),

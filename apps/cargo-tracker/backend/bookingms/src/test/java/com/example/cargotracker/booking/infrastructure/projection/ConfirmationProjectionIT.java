@@ -113,7 +113,7 @@ class ConfirmationProjectionIT extends AbstractAxonIntegrationTest {
         projection.on(new BookingConfirmedEvent(bookingId, "sales01", AT));
 
         projection.on(new TrackingNumberIssuedEvent(bookingId, "TRK-9F3K7QW2XD",
-                "SHP-000001", "JPTYO", "USNYC", "GENERAL", List.of(), "routing01", AT));
+                "SHP-000001", "JPTYO", "USNYC", "GENERAL", new BigDecimal("1200"), List.of(), "routing01", AT));
 
         BookingView issued = booking(bookingId);
         assertThat(issued.bookingStatus()).isEqualTo("TRACKING_ISSUED");
@@ -136,7 +136,7 @@ class ConfirmationProjectionIT extends AbstractAxonIntegrationTest {
         String unknown = "B-NONE-" + System.nanoTime();
 
         projection.on(new TrackingNumberIssuedEvent(unknown, "T-X", "SHP-000001", "JPTYO", "USNYC",
-                "GENERAL", List.of(), "routing01", AT));
+                "GENERAL", new BigDecimal("1200"), List.of(), "routing01", AT));
         projection.on(new TrackingNumberRevertedEvent(unknown, "T-X", "届かず", AT));
 
         assertThat(booking(unknown))

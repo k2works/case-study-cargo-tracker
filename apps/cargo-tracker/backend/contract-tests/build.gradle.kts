@@ -24,6 +24,9 @@ dependencies {
     "roundTripTestImplementation"(project(":billingms"))
     // 契約クエリの往復（US08）。bookingms → routingms を同じ JVM で確かめる。
     "roundTripTestImplementation"(project(":routingms"))
+    // 追跡の契約イベント（TrackingInitializedEvent）の往復。IT13 で重量を足したので、
+    // **足した項目が実際に billingms へ届く**ことを見る（開発戦略の終盤 Phase 2）。
+    "roundTripTestImplementation"(project(":trackingms"))
     "roundTripTestImplementation"(libs.spring.boot.starter.test)
     "roundTripTestImplementation"(libs.spring.boot.starter.web)
     "roundTripTestImplementation"(libs.spring.boot.starter.jdbc)

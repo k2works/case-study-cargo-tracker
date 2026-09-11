@@ -1,4 +1,4 @@
-package com.example.cargotracker.handling.domain.model.valueobjects;
+package com.example.cargotracker.shared.domain.calendar;
 
 import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.shared.domain.location.CountryCode;
@@ -14,11 +14,11 @@ import java.util.Set;
  * <p><b>営業日で数える。</b> 暦日で数えると、金曜に留置された貨物が月曜の朝には
  * もう「3 日超」になる。督促は人が動く話なので、動けない日を数えては早すぎる。</p>
  *
- * <p><b>共有カーネルには置かない。</b> 置き場は ADR-0001 決定 4 の名簿が縛っており、
- * 足すには「全 BC で同じでなければならない業務上の理由」が要る（ADR-0013 で立てた
- * 問い）。営業日を数えるのはいま handlingms だけである——billingms が保管料を
- * 数え始めたら（US21・IT13）同じ日数でなければならなくなるので、そのときに移す。
- * <b>読む側の無い配線を先に敷かない</b>（IT9・IT10 と同じ判断）。</p>
+ * <p><b>共有カーネルに置く（IT13・[ADR-0015]）。</b> 移す条件は
+ * {@code domain-model.md} の要素表が書いていた——「billingms が保管料を数え始めたら、
+ * そのとき移す」。US21 で請求が留置営業日を調整の根拠にするので、条件が満たされた。
+ * <b>同じ留置に対して handlingms の画面と billingms の請求が違う日数を出してはならない</b>
+ * ——数え方が 2 か所にあると、片方だけ直る。</p>
  *
  * <p><b>カレンダーを持たない国は土日だけ休みとして数える。</b> 早く点くほうが、
  * 遅れて点かないより安全である（計画 R3）。</p>

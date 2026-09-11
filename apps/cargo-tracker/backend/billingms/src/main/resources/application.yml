@@ -54,3 +54,37 @@ management:
         # なく処理し直す手段を置く。運用の読み口（projection:dead-letters）と
         # 同じ立場のものを同じ入口に並べる。
         include: health,info,deadletters
+
+# 料金の料率（正典: docs/design/cargo-tracker/domain-model.md「料金計算（正典）」）。
+#
+# **ハードコードしない**（ADR-0016）。見積（US01・IT14）も同じ値を読むので、
+# 出典が 1 つでなければ片方だけ直る。欠けていれば RateTable が組み立ての時点で
+# 断るので、請求のたびに落ちることはない。
+billing:
+  rates:
+    # 基準運賃（1 区間・1,000kg・一般貨物）
+    base-fare: 50000
+    # 区間ごとの地域係数。**区間の区分は両端の重いほう**。
+    region-factors:
+      DOMESTIC: 1.0
+      NEAR_SEA: 2.5
+      OCEAN: 6.0
+    cargo-type-factors:
+      GENERAL: 1.0
+      HAZARDOUS: 1.8
+      REFRIGERATED: 1.5
+    # 港の所在国 → 地域区分。**表に無い国は遠洋**として数える（安いほうに
+    # 倒さない。取りこぼした請求はあとから取り返せない）。
+    country-regions:
+      JP: DOMESTIC
+      CN: NEAR_SEA
+      KR: NEAR_SEA
+      TW: NEAR_SEA
+      SG: NEAR_SEA
+      HK: NEAR_SEA
+      TH: NEAR_SEA
+      VN: NEAR_SEA
+      MY: NEAR_SEA
+      PH: NEAR_SEA
+    # 消費税率。**輸出（出発地と目的地の国が違う）は免税**（判定は計算側）。
+    tax-rate: 0.10

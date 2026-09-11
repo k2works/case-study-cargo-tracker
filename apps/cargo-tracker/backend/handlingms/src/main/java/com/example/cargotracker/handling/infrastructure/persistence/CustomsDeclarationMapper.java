@@ -13,7 +13,7 @@ public interface CustomsDeclarationMapper {
     /** 読み出す列を並べる。<b>{@code SELECT *} にしない</b>（列順で割り当てられる）。 */
     String COLUMNS = "declaration_number, tracking_number, booking_id, status, declared_at, "
             + "last_status_changed_at, last_held_at, last_reason, "
-            + "changed_by, projected_at";
+            + "changed_by, destination_unlocode, projected_at";
 
     /** 申告を 1 行足す。主キーは申告番号なので、読み直しても増えない。 */
     int insert(CustomsDeclarationRow row);
@@ -108,6 +108,7 @@ public interface CustomsDeclarationMapper {
             Instant lastHeldAt,
             String lastReason,
             String changedBy,
+            String destinationUnLocode,
             Instant projectedAt) {
     }
 }

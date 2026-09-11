@@ -16,6 +16,7 @@ public record CustomsDeclarationRegisteredEvent(
         @EventTag(key = "declarationNumber") String declarationNumber,
         String trackingNumber,
         String bookingId,
+        String destinationUnLocode,
         Instant declaredAt,
         String registeredBy,
         Instant registeredAt) {

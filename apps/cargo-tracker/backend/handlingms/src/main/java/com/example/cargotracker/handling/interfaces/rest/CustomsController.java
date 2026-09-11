@@ -72,6 +72,9 @@ public class CustomsController {
 
         commands.sendAndWait(new RegisterCustomsDeclarationCommand(
                 request.declarationNumber(), request.trackingNumber(), cargo.bookingId(),
+                // **輸入港を持ち込む。** 留置の営業日は輸入港の国の暦で数える
+                // （IT12 レビュー #L17）。集約は投影を読めないので、ここで渡す。
+                cargo.destinationUnlocode(),
                 request.declaredAt(), username), String.class);
 
         return ResponseEntity.created(URI.create("/api/v1/handling/customs-declarations/"

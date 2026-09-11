@@ -16,10 +16,10 @@
     <insert id="insert">
         INSERT INTO customs_declaration (
             declaration_number, tracking_number, booking_id, status, declared_at,
-            last_status_changed_at, projected_at
+            last_status_changed_at, destination_unlocode, projected_at
         ) VALUES (
             #{declarationNumber}, #{trackingNumber}, #{bookingId}, #{status}, #{declaredAt},
-            #{lastStatusChangedAt}, #{projectedAt}
+            #{lastStatusChangedAt}, #{destinationUnLocode}, #{projectedAt}
         )
         ON CONFLICT DO NOTHING
     </insert>
@@ -50,7 +50,7 @@
         SELECT DISTINCT ON (tracking_number)
                declaration_number, tracking_number, booking_id, status, declared_at,
                last_status_changed_at, last_held_at, last_reason,
-               changed_by, projected_at
+               changed_by, destination_unlocode, projected_at
           FROM customs_declaration
          WHERE tracking_number IN
         <foreach item="number" collection="trackingNumbers" open="(" separator="," close=")">
@@ -70,7 +70,7 @@
     <select id="search" resultType="com.example.cargotracker.handling.infrastructure.persistence.CustomsDeclarationMapper$CustomsDeclarationRow">
         SELECT declaration_number, tracking_number, booking_id, status, declared_at,
                last_status_changed_at, last_held_at, last_reason,
-               changed_by, projected_at
+               changed_by, destination_unlocode, projected_at
           FROM customs_declaration
          <where>
             <if test="!includeCleared">

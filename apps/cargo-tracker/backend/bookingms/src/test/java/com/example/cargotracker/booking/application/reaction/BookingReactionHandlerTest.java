@@ -1,5 +1,6 @@
 package com.example.cargotracker.booking.application.reaction;
 
+import java.math.BigDecimal;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -170,7 +171,8 @@ class BookingReactionHandlerTest {
     private static TrackingNumberIssuedEvent issued() {
         return new TrackingNumberIssuedEvent("b-1", "TRK-8K2QX7M4RB", "SHP-000001", "JPTYO",
                 "USNYC", "GENERAL",
-                List.of(new TrackingNumberIssuedEvent.Leg("V-MOL-001", "JPTYO", "USNYC",
+                new BigDecimal("1200"),
+                        List.of(new TrackingNumberIssuedEvent.Leg("V-MOL-001", "JPTYO", "USNYC",
                         Instant.parse("2026-09-10T09:00:00Z"),
                         Instant.parse("2026-09-24T18:00:00Z"))),
                 "routing01", ISSUED);
@@ -219,7 +221,7 @@ class BookingReactionHandlerTest {
         handler.on(issued());
 
         handler.on(new TrackingInitializedEvent("TRK-8K2QX7M4RB", "b-1", "SHP-000001", "JPTYO",
-                "USNYC", "GENERAL", List.of(), NOW));
+                "USNYC", "GENERAL", new BigDecimal("1200"), List.of(), NOW));
 
         assertThat(processes.find(BookingReactionHandler.PROCESS_TYPE, "b-1"))
                 .get()
@@ -268,7 +270,7 @@ class BookingReactionHandlerTest {
     @DisplayName("起票されていない連鎖の応答は黙って進めない")
     void ignoresUnknownProcess() {
         handler.on(new TrackingInitializedEvent("T-9", "b-unknown", "SHP-000001", "JPTYO", "USNYC",
-                "GENERAL", List.of(), NOW));
+                "GENERAL", new BigDecimal("1200"), List.of(), NOW));
 
         assertThat(processes.find(BookingReactionHandler.PROCESS_TYPE, "b-unknown")).isEmpty();
     }
@@ -278,7 +280,7 @@ class BookingReactionHandlerTest {
     void doesNotResendForCompletedProcess() {
         handler.on(issued());
         handler.on(new TrackingInitializedEvent("TRK-8K2QX7M4RB", "b-1", "SHP-000001", "JPTYO",
-                "USNYC", "GENERAL", List.of(), NOW));
+                "USNYC", "GENERAL", new BigDecimal("1200"), List.of(), NOW));
         int sentSoFar = commands.sent.size();
 
         handler.on(issued());
@@ -296,7 +298,7 @@ class BookingReactionHandlerTest {
                 BookingReactionHandler.STEP_INITIALIZE_TRACKING, 3, Map.of());
 
         handler.on(new TrackingInitializedEvent("T-2", "b-2", "SHP-000001", "JPTYO", "USNYC",
-                "GENERAL", List.of(), NOW));
+                "GENERAL", new BigDecimal("1200"), List.of(), NOW));
 
         assertThat(processes.find(BookingReactionHandler.PROCESS_TYPE, "b-2"))
                 .get()

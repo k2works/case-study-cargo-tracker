@@ -1,4 +1,4 @@
-package com.example.cargotracker.handling.domain.model.valueobjects;
+package com.example.cargotracker.shared.domain.calendar;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

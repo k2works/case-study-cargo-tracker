@@ -1,5 +1,6 @@
 package com.example.cargotracker.handling.interfaces.rest;
 
+import java.math.BigDecimal;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
@@ -55,6 +56,7 @@ class HandlingControllerIT extends AbstractAxonIntegrationTest {
         String trackingNumber = "TRK-C" + System.nanoTime() % 1000000000L;
         projection.on(new TrackingInitializedEvent(trackingNumber, "b-" + System.nanoTime(),
                 "SHP-000001", "JPTYO", "USNYC", "GENERAL",
+                new BigDecimal("1200"),
                 List.of(new TrackingInitializedEvent.Leg("V-MOL-001", "JPTYO", "SGSIN",
                                 Instant.parse("2026-09-10T09:00:00Z"),
                                 Instant.parse("2026-09-16T08:00:00Z")),

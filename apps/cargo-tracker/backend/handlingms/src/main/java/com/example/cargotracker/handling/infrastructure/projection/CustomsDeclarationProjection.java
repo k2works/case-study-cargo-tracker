@@ -59,7 +59,10 @@ public class CustomsDeclarationProjection {
         int inserted = declarations.insert(new CustomsDeclarationMapper.CustomsDeclarationRow(
                 event.declarationNumber(), event.trackingNumber(), event.bookingId(),
                 CustomsStatus.PENDING.name(), event.declaredAt(),
-                event.registeredAt(), null, null, null, clock.instant()));
+                event.registeredAt(), null, null, null,
+                // **輸入港も写す。** 留置の営業日は読むときに数えるので、
+                // 数える国を決める材料が読み取りモデルにも要る（IT12 レビュー #L17）。
+                event.destinationUnLocode(), clock.instant()));
         if (inserted == 0) {
             recordSkippedRegistration(event);
         }

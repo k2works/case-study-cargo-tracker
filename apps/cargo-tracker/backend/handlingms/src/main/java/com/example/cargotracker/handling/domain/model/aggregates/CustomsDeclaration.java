@@ -6,11 +6,12 @@ import com.example.cargotracker.handling.domain.model.events.CustomsClearanceNot
 import com.example.cargotracker.handling.domain.model.events.CustomsDeclarationRegisteredEvent;
 import com.example.cargotracker.handling.domain.model.events.CustomsStatusUpdatedEvent;
 import com.example.cargotracker.handling.domain.model.valueobjects.CustomsStatus;
-import com.example.cargotracker.handling.domain.model.valueobjects.HolidayCalendar;
+import com.example.cargotracker.shared.domain.calendar.HolidayCalendar;
 import com.example.cargotracker.shared.contract.event.CustomsStatusChangedEvent;
 import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.shared.domain.error.IllegalTransition;
 import com.example.cargotracker.shared.domain.location.CountryCode;
+import com.example.cargotracker.shared.domain.location.UnLocode;
 import com.example.cargotracker.shared.infrastructure.time.BusinessClockConfiguration;
 import java.time.Clock;
 import java.time.Instant;
@@ -39,6 +40,14 @@ public class CustomsDeclaration {
 
     private String declarationNumber;
     private String trackingNumber;
+
+    /**
+     * 輸入港（UN/LOCODE）。<b>営業日を数える国</b>を決める（IT12 レビュー #L17）。
+     *
+     * <p>載っていない古い申告では {@code null} になる——イベントは追記専用で、
+     * 過去のイベントには入っていない。そのときは日本の暦で数える。</p>
+     */
+    private String destinationUnLocode;
     private String bookingId;
     private CustomsStatus status;
     /** 最新の {@code HELD} 遷移日時。留置営業日数の起点（不変条件 4）。 */
@@ -68,7 +77,8 @@ public class CustomsDeclaration {
         }
 
         appender.append(new CustomsDeclarationRegisteredEvent(command.declarationNumber(),
-                command.trackingNumber(), command.bookingId(), command.declaredAt(),
+                command.trackingNumber(), command.bookingId(), command.destinationUnLocode(),
+                command.declaredAt(),
                 command.registeredBy(), clock.instant()));
         return command.declarationNumber();
     }
@@ -144,15 +154,21 @@ public class CustomsDeclaration {
     }
 
     /**
-     * 港の所在国のカレンダー。
+     * <b>輸入港の所在国</b>のカレンダー（IT12 レビュー #L17）。
      *
-     * <p><b>いまは輸入国を追跡番号から引けない</b>ので、業務タイムゾーンの国
-     * （日本）を使う。輸入港の国コードを持ち込むには {@code CargoSnapshot} の
-     * 目的港が要り、それは application 層の仕事である（IT13 で渡す）。
+     * <p>留置は輸入港の税関で起きるので、数えるのはその国の営業日である。
+     * 日本固定にしていたころ、{@code HolidayCalendar} の国別分岐は本番の経路で
+     * 一度も踏まれていなかった——<b>検査だけが国を切り替えていた</b>。</p>
+     *
+     * <p>輸入港は登録時に application 層が持ち込む（集約は投影を読めない）。
+     * 載っていない古い申告では業務タイムゾーンの国（日本）で数える——
      * <b>足りないことは「早く点く」側に倒れる</b>ので、督促は手遅れにならない。</p>
      */
-    private static HolidayCalendar calendar() {
-        return HolidayCalendar.of(new CountryCode("JP"));
+    private HolidayCalendar calendar() {
+        if (destinationUnLocode == null || destinationUnLocode.isBlank()) {
+            return HolidayCalendar.of(new CountryCode("JP"));
+        }
+        return HolidayCalendar.of(new UnLocode(destinationUnLocode).countryCode());
     }
 
     private static LocalDate businessDate(Instant at) {
@@ -163,6 +179,7 @@ public class CustomsDeclaration {
     public void on(CustomsDeclarationRegisteredEvent event) {
         this.declarationNumber = event.declarationNumber();
         this.trackingNumber = event.trackingNumber();
+        this.destinationUnLocode = event.destinationUnLocode();
         this.bookingId = event.bookingId();
         this.status = CustomsStatus.PENDING;
     }

@@ -74,7 +74,7 @@ class CargoHandlingProjectionIT extends AbstractAxonIntegrationTest {
                         "2026-09-10T00:00:00Z", "2026-09-25T00:00:00Z"))));
         projection.on(new BookingConfirmedEvent(bookingId, "sales01", AT));
         projection.on(new TrackingNumberIssuedEvent(bookingId, "TRK-H" + System.nanoTime() % 1000000000L,
-                "SHP-000001", "JPTYO", "USNYC", "GENERAL", List.of(), "routing01", AT));
+                "SHP-000001", "JPTYO", "USNYC", "GENERAL", new BigDecimal("1200"), List.of(), "routing01", AT));
         return bookingId;
     }
 

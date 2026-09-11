@@ -1,5 +1,6 @@
 package com.example.cargotracker.booking.domain.model.events;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import org.axonframework.eventsourcing.annotation.EventTag;
@@ -30,6 +31,7 @@ public record TrackingNumberIssuedEvent(
         String origin,
         String destination,
         String cargoType,
+        BigDecimal weightKg,
         List<Leg> legs,
         String issuedBy,
         Instant issuedAt) {
@@ -46,9 +48,10 @@ public record TrackingNumberIssuedEvent(
     /** 確定済みの旅程から組み立てる。<b>集約に平坦化の手順を置かない。</b> */
     public static TrackingNumberIssuedEvent of(String bookingId, String trackingNumber,
             String shipperId, String origin, String destination, String cargoType,
-            List<CargoRoutedEvent.Leg> routedLegs, String issuedBy, Instant issuedAt) {
+            BigDecimal weightKg, List<CargoRoutedEvent.Leg> routedLegs,
+            String issuedBy, Instant issuedAt) {
         return new TrackingNumberIssuedEvent(bookingId, trackingNumber, shipperId, origin,
-                destination, cargoType,
+                destination, cargoType, weightKg,
                 routedLegs.stream().map(leg -> new Leg(leg.voyageNumber(),
                         leg.loadUnLocode(), leg.unloadUnLocode(),
                         leg.loadTime(), leg.unloadTime())).toList(),

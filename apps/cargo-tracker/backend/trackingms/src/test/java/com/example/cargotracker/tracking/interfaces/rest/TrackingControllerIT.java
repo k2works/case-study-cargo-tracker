@@ -1,5 +1,6 @@
 package com.example.cargotracker.tracking.interfaces.rest;
 
+import java.math.BigDecimal;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import static org.awaitility.Awaitility.await;
@@ -64,6 +65,7 @@ class TrackingControllerIT extends AbstractAxonIntegrationTest {
         String trackingNumber = "TRK-T" + System.nanoTime() % 1000000000L;
         projection.on(new TrackingInitializedEvent(trackingNumber, "b-" + System.nanoTime(),
                 shipperId, "JPTYO", "USNYC", "GENERAL",
+                new BigDecimal("1200"),
                 List.of(new TrackingInitializedEvent.Leg("V-MOL-001", "JPTYO", "USNYC",
                         Instant.parse("2026-09-10T09:00:00Z"),
                         Instant.parse("2026-09-24T18:00:00Z"))),
@@ -81,6 +83,7 @@ class TrackingControllerIT extends AbstractAxonIntegrationTest {
         String trackingNumber = "TRK-A" + System.nanoTime() % 1000000000L;
         commands.sendAndWait(new InitializeTrackingCommand(trackingNumber,
                 "b-" + System.nanoTime(), shipperId, "JPTYO", "USNYC", "GENERAL",
+                new BigDecimal("1200"),
                 List.of(new InitializeTrackingCommand.LegDto("V-MOL-001", "JPTYO", "USNYC",
                         Instant.parse("2026-09-10T09:00:00Z"),
                         Instant.parse("2026-09-24T18:00:00Z"))),

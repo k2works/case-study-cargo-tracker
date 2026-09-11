@@ -1,5 +1,6 @@
 package com.example.cargotracker.acceptance.tracking;
 
+import java.math.BigDecimal;
 import com.example.cargotracker.shared.testing.AcceptanceFixtureTime;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -60,6 +61,7 @@ public class TrackingSteps {
                 bookingId + "-" + System.nanoTime(), SHIPPER, "JPTYO", "USNYC", "GENERAL",
                 // **日時は「今」から導く**（固定日付は現実の時刻に追い越される）。
                 // 出発は昨日、到着は 2 週間後——追跡中の貨物という位置関係だけが要る。
+                new BigDecimal("1200"),
                 List.of(new InitializeTrackingCommand.LegDto("V-MOL-001", "JPTYO", "USNYC",
                         AcceptanceFixtureTime.at(-1, 9),
                         AcceptanceFixtureTime.at(13, 18))),

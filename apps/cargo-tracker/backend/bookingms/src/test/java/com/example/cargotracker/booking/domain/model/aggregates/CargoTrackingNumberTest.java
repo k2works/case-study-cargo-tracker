@@ -99,6 +99,7 @@ class CargoTrackingNumberTest {
                 .then().success()
                 .events(new TrackingNumberIssuedEvent("B-0001", "T-0001", "SHP-000001", "JPTYO",
                         "USNYC", "GENERAL",
+                        new BigDecimal("1200"),
                         List.of(new TrackingNumberIssuedEvent.Leg("V-MOL-001", "JPTYO", "SGSIN",
                                         LOAD, Instant.parse("2026-09-15T00:00:00Z")),
                                 new TrackingNumberIssuedEvent.Leg("V-MSK-220", "SGSIN", "USNYC",
@@ -115,7 +116,7 @@ class CargoTrackingNumberTest {
                         new ShipperNotifiedEvent("B-0001", "s@example.com", "案内", "sales01", NOW),
                         new BookingConfirmedEvent("B-0001", "sales01", NOW),
                         new TrackingNumberIssuedEvent("B-0001", "T-0001", "SHP-000001",
-                                "JPTYO", "USNYC", "GENERAL", List.of(), "routing01", NOW))
+                                "JPTYO", "USNYC", "GENERAL", new BigDecimal("1200"), List.of(), "routing01", NOW))
                 .when().command(new IssueTrackingNumberCommand("B-0001", "T-0002", "routing02"))
                 .then().exception(IllegalTransition.class);
     }
@@ -156,7 +157,7 @@ class CargoTrackingNumberTest {
                         new ShipperNotifiedEvent("B-0001", "s@example.com", "案内", "sales01", NOW),
                         new BookingConfirmedEvent("B-0001", "sales01", NOW),
                         new TrackingNumberIssuedEvent("B-0001", "T-0001", "SHP-000001",
-                                "JPTYO", "USNYC", "GENERAL", List.of(), "routing01", NOW))
+                                "JPTYO", "USNYC", "GENERAL", new BigDecimal("1200"), List.of(), "routing01", NOW))
                 .when().command(new RevertTrackingNumberCommand("B-0001", "届きませんでした"))
                 .then().success()
                 .events(new TrackingNumberRevertedEvent("B-0001", "T-0001",
@@ -171,7 +172,7 @@ class CargoTrackingNumberTest {
                         new ShipperNotifiedEvent("B-0001", "s@example.com", "案内", "sales01", NOW),
                         new BookingConfirmedEvent("B-0001", "sales01", NOW),
                         new TrackingNumberIssuedEvent("B-0001", "T-0001", "SHP-000001",
-                                "JPTYO", "USNYC", "GENERAL", List.of(), "routing01", NOW),
+                                "JPTYO", "USNYC", "GENERAL", new BigDecimal("1200"), List.of(), "routing01", NOW),
                         new TrackingNumberRevertedEvent("B-0001", "T-0001", "届かず", NOW))
                 .when().command(new IssueTrackingNumberCommand("B-0001", "T-0002", "routing01"))
                 .then().success();
@@ -203,7 +204,7 @@ class CargoTrackingNumberTest {
             new ShipperNotifiedEvent("B-0001", "shipper@example.com", "案内", "sales01", NOW),
             new BookingConfirmedEvent("B-0001", "sales01", NOW),
             new TrackingNumberIssuedEvent("B-0001", "TRK-8K2QX7M4RB", "SHP-000001",
-                    "JPTYO", "USNYC", "GENERAL", List.of(), "routing01", NOW),
+                    "JPTYO", "USNYC", "GENERAL", new BigDecimal("1200"), List.of(), "routing01", NOW),
         };
     }
 

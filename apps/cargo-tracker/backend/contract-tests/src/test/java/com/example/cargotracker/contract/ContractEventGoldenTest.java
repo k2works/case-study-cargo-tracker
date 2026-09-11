@@ -1,5 +1,6 @@
 package com.example.cargotracker.contract;
 
+import java.math.BigDecimal;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.cargotracker.shared.contract.event.CargoDeliveredEvent;
@@ -68,7 +69,8 @@ class ContractEventGoldenTest {
                         "sales@example.com", "03-1111-1111", "東京都中央区", "CT-0001", "0.1000"),
                 new TrackingInitializedEvent("TRK-8K2QX7M4RB", "b-1", "SHP-000001", "JPTYO", "USNYC",
                         "GENERAL",
-                        List.of(new TrackingInitializedEvent.Leg("V-MOL-001", "JPTYO", "SGSIN",
+                        new BigDecimal("1200"),
+                List.of(new TrackingInitializedEvent.Leg("V-MOL-001", "JPTYO", "SGSIN",
                                         Instant.parse("2026-09-10T09:00:00Z"),
                                         Instant.parse("2026-09-16T08:00:00Z")),
                                 new TrackingInitializedEvent.Leg("V-ONE-002", "SGSIN", "USNYC",

@@ -1,5 +1,6 @@
 package com.example.cargotracker.shared.contract.event;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import org.axonframework.eventsourcing.annotation.EventTag;
@@ -24,6 +25,16 @@ import org.axonframework.eventsourcing.annotation.EventTag;
  * 載せただけでは荷主向けの追跡一覧（US18）が作れない。<b>イベントは購読側の投影が
  * 作れる分を運ぶ</b>——受け側の列を先に並べて確かめる（IT7 の教訓）。</p>
  *
+ * <p><b>{@code weightKg} を載せる（IT13）。</b> 請求（billingms）は実際に運んだ重量で
+ * 基本料金を数えるが、<b>重量を運ぶ契約が 1 つも無かった</b>。{@code CargoDeliveredEvent}
+ * は追跡番号・予約・引渡時刻だけ、このイベントは区間と貨物種別までで、重量はどこにも
+ * 無い。<b>イベントは購読側の投影が作れる分を運ぶ</b>ので、ここに足す。</p>
+ *
+ * <p><b>{@code null} を許す。</b> 足す前に積まれたイベントには入っていない——契約は
+ * 追記専用で、過去のイベントは書き換えられない。読めなくなればその貨物は復元できなく
+ * なるので、既定値（{@code null}）で読めるようにし、<b>重量が分からない貨物は請求を
+ * 作らずに要確認へ出す</b>。足りない重量で安い請求を黙って出さない。</p>
+ *
  * <p><b>{@code @EventTag} が要る。</b> 付け忘れると trackingms の集約は空のまま
  * 復元され、「二重に開始しない」守りが素通りする。</p>
  */
@@ -34,6 +45,7 @@ public record TrackingInitializedEvent(
         String originUnLocode,
         String destinationUnLocode,
         String cargoType,
+        BigDecimal weightKg,
         List<Leg> legs,
         Instant initializedAt) {
 

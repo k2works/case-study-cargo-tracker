@@ -16,6 +16,7 @@ public record RegisterCustomsDeclarationCommand(
         @TargetEntityId String declarationNumber,
         String trackingNumber,
         String bookingId,
+        String destinationUnLocode,
         Instant declaredAt,
         String registeredBy) {
 }

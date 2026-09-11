@@ -1,5 +1,6 @@
 package com.example.cargotracker.acceptance.handling;
 
+import java.math.BigDecimal;
 import com.example.cargotracker.shared.testing.AcceptanceFixtureTime;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -64,6 +65,7 @@ public class CustomsSteps {
         snapshots.on(new TrackingInitializedEvent(trackingNumber, "b-" + System.nanoTime(),
                 "SHP-000001", "JPTYO", unLocode, "GENERAL",
                 // **日時は「今」から導く**（固定日付は現実の時刻に追い越される）。
+                new BigDecimal("1200"),
                 List.of(new TrackingInitializedEvent.Leg("V-MOL-001", "JPTYO", unLocode,
                         AcceptanceFixtureTime.at(-1, 9),
                         AcceptanceFixtureTime.at(5, 8))),

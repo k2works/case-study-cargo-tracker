@@ -1,5 +1,6 @@
 package com.example.cargotracker.tracking.infrastructure.projection;
 
+import java.math.BigDecimal;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.cargotracker.shared.contract.event.TrackingInitializedEvent;
@@ -57,6 +58,7 @@ class TrackingProjectionIT extends AbstractAxonIntegrationTest {
     private static TrackingInitializedEvent initialized(String trackingNumber, String bookingId) {
         return new TrackingInitializedEvent(trackingNumber, bookingId, "SHP-000001",
                 "JPTYO", "USNYC", "GENERAL",
+                new BigDecimal("1200"),
                 List.of(new TrackingInitializedEvent.Leg("V-MOL-001", "JPTYO", "SGSIN",
                                 Instant.parse("2026-09-10T09:00:00Z"),
                                 Instant.parse("2026-09-16T08:00:00Z")),
@@ -432,7 +434,7 @@ class TrackingProjectionIT extends AbstractAxonIntegrationTest {
         String other = "T-S-" + System.nanoTime();
         projection.on(initialized(mine, "b-" + System.nanoTime()));
         projection.on(new TrackingInitializedEvent(other, "b-" + System.nanoTime(),
-                "SHP-000999", "JPTYO", "USNYC", "GENERAL", List.of(), AT));
+                "SHP-000999", "JPTYO", "USNYC", "GENERAL", new BigDecimal("1200"), List.of(), AT));
 
         assertThat(trackings.findAll("SHP-000001", true, 50))
                 .extracting(TrackingSummaryMapper.TrackingSummaryRow::trackingNumber)

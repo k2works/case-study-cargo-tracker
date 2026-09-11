@@ -40,7 +40,10 @@ class CustomsProjectionIT extends AbstractAxonIntegrationTest {
     private String register(String suffix) {
         String number = "IMP-" + suffix + "-" + System.nanoTime();
         projection.on(new CustomsDeclarationRegisteredEvent(number, "TRK-" + suffix,
-                "b-" + suffix, DECLARED, "handler01", DECLARED), "evt-" + System.nanoTime());
+                // 既定は日本の輸入港。営業日の期待値は日本の暦で書いてある
+                // （8/11 の山の日を外す）。国を変える検査だけが明示的に上書きする。
+                "b-" + suffix, "JPTYO", DECLARED, "handler01", DECLARED),
+                "evt-" + System.nanoTime());
         return number;
     }
 
@@ -183,7 +186,7 @@ class CustomsProjectionIT extends AbstractAxonIntegrationTest {
     @DisplayName("同じイベントを 2 度読んでも行は増えない")
     void isIdempotent() {
         String number = "IMP-IDEM-" + System.nanoTime();
-        var event = new CustomsDeclarationRegisteredEvent(number, "TRK-IDEM", "b-idem",
+        var event = new CustomsDeclarationRegisteredEvent(number, "TRK-IDEM", "b-idem", "USNYC",
                 DECLARED, "handler01", DECLARED);
 
         projection.on(event, "evt-idem");
@@ -224,9 +227,9 @@ class CustomsProjectionIT extends AbstractAxonIntegrationTest {
         String first = "IMP-UNQ1-" + System.nanoTime();
         String second = "IMP-UNQ2-" + System.nanoTime();
 
-        projection.on(new CustomsDeclarationRegisteredEvent(first, cargo, "b-unq",
+        projection.on(new CustomsDeclarationRegisteredEvent(first, cargo, "b-unq", "USNYC",
                 DECLARED, "handler01", DECLARED), "evt-" + System.nanoTime());
-        projection.on(new CustomsDeclarationRegisteredEvent(second, cargo, "b-unq",
+        projection.on(new CustomsDeclarationRegisteredEvent(second, cargo, "b-unq", "USNYC",
                 DECLARED, "handler01", DECLARED), "evt-" + System.nanoTime());
 
         assertThat(numbersOf(new FindCustomsDeclarationsQuery(true, cargo, null, false)))
@@ -243,15 +246,81 @@ class CustomsProjectionIT extends AbstractAxonIntegrationTest {
         String first = "IMP-RED1-" + System.nanoTime();
         String second = "IMP-RED2-" + System.nanoTime();
 
-        projection.on(new CustomsDeclarationRegisteredEvent(first, cargo, "b-red",
+        projection.on(new CustomsDeclarationRegisteredEvent(first, cargo, "b-red", "USNYC",
                 DECLARED, "handler01", DECLARED), "evt-" + System.nanoTime());
         projection.on(new CustomsStatusUpdatedEvent(first, "PENDING", "REJECTED",
                 "書類不備", "tracker01", DECLARED.plusSeconds(3600)), "evt-" + System.nanoTime());
-        projection.on(new CustomsDeclarationRegisteredEvent(second, cargo, "b-red",
+        projection.on(new CustomsDeclarationRegisteredEvent(second, cargo, "b-red", "USNYC",
                 DECLARED.plusSeconds(7200), "handler01", DECLARED.plusSeconds(7200)),
                 "evt-" + System.nanoTime());
 
         assertThat(numbersOf(new FindCustomsDeclarationsQuery(true, cargo, null, false)))
                 .containsExactlyInAnyOrder(first, second);
+    }
+
+    @Test
+    @DisplayName("#L17: 留置の営業日は輸入港の国の暦で数える（米国の独立記念日）")
+    void countsBusinessDaysInTheImportCountry() {
+        // **日本固定だと、HolidayCalendar の国別分岐は本番で一度も踏まれない。**
+        // 7/3（金）に留置 → 7/8（水）。米国では 7/4 が休日だが振替は無く、
+        // 7/4 は土曜。日本では 7 月に固定休日が無い。**判別できる日を選ぶ**——
+        // 2026-07-03(金) → 2026-07-13(月) で数えると、米国は 7 営業日
+        // （7/4 土・7/5 日・7/11 土・7/12 日を外す）、日本も 7 営業日で同じになる。
+        // 国の違いが出るのは日本の固定休日を含む区間なので、そちらで見る:
+        // 2026-08-07(金) → 2026-08-14(金)。日本は 8/11（山の日）を外して 4 営業日、
+        // 米国は 5 営業日。
+        String usCargo = "TRK-US-" + System.nanoTime();
+        String usNumber = "IMP-US-" + System.nanoTime();
+        projection.on(new CustomsDeclarationRegisteredEvent(usNumber, usCargo, "b-us", "USNYC",
+                DECLARED, "handler01", DECLARED), "evt-" + System.nanoTime());
+        update(usNumber, "PENDING", "HELD", "検査待ち", Instant.parse("2026-08-07T02:00:00Z"));
+        update(usNumber, "HELD", "CLEARED", "解除", Instant.parse("2026-08-14T02:00:00Z"));
+
+        String jpCargo = "TRK-JP-" + System.nanoTime();
+        String jpNumber = "IMP-JP-" + System.nanoTime();
+        projection.on(new CustomsDeclarationRegisteredEvent(jpNumber, jpCargo, "b-jp", "JPTYO",
+                DECLARED, "handler01", DECLARED), "evt-" + System.nanoTime());
+        update(jpNumber, "PENDING", "HELD", "検査待ち", Instant.parse("2026-08-07T02:00:00Z"));
+        update(jpNumber, "HELD", "CLEARED", "解除", Instant.parse("2026-08-14T02:00:00Z"));
+
+        assertThat(queries.handle(new FindCustomsDeclarationsQuery(true, usCargo, null, false))
+                .items()).singleElement()
+                .satisfies(view -> assertThat(view.heldBusinessDays())
+                        .as("米国の暦では 8/11 は休日ではない")
+                        .isEqualTo(5));
+        assertThat(queries.handle(new FindCustomsDeclarationsQuery(true, jpCargo, null, false))
+                .items()).singleElement()
+                .satisfies(view -> assertThat(view.heldBusinessDays())
+                        .as("日本の暦では 8/11（山の日）を外す")
+                        .isEqualTo(4));
+    }
+
+    @Test
+    @DisplayName("#L18: 記録した営業日数と、読み取りが数える営業日数が一致する")
+    void theRecordedAndTheReadCountAgree() {
+        // **請求（US21）は記録側の値を根拠にし、画面は読み取り側を出す。**
+        // 2 つが違うと、経理が見た日数と請求の根拠が食い違う。
+        String cargo = "TRK-AGREE-" + System.nanoTime();
+        String number = "IMP-AGREE-" + System.nanoTime();
+        projection.on(new CustomsDeclarationRegisteredEvent(number, cargo, "b-agree", "JPTYO",
+                DECLARED, "handler01", DECLARED), "evt-" + System.nanoTime());
+        Instant heldAt = Instant.parse("2026-08-07T02:00:00Z");
+        Instant clearedAt = Instant.parse("2026-08-14T02:00:00Z");
+        update(number, "PENDING", "HELD", "検査待ち", heldAt);
+        update(number, "HELD", "CLEARED", "解除", clearedAt);
+
+        int recorded = com.example.cargotracker.shared.domain.calendar.HolidayCalendar
+                .of(new com.example.cargotracker.shared.domain.location.UnLocode("JPTYO")
+                        .countryCode())
+                .businessDaysBetween(
+                        java.time.LocalDate.ofInstant(heldAt, java.time.ZoneId.of("Asia/Tokyo")),
+                        java.time.LocalDate.ofInstant(clearedAt,
+                                java.time.ZoneId.of("Asia/Tokyo")));
+
+        assertThat(queries.handle(new FindCustomsDeclarationsQuery(true, cargo, null, false))
+                .items()).singleElement()
+                .satisfies(view -> assertThat(view.heldBusinessDays())
+                        .as("記録の時点で載せた日数と、読み取りが数える日数は同じでなければならない")
+                        .isEqualTo(recorded));
     }
 }

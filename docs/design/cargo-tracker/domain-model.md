@@ -98,7 +98,7 @@ quadrantChart
 | 荷役種別 | Handling Type | `HandlingType` | 荷役作業の種別。**種別ごとの要件を自分で持つ** |
 | 通関申告 | Customs Declaration | `CustomsDeclaration` | 税関への申告と審査状態。集約ルート |
 | 申告番号 | Declaration Number | `DeclarationNumber` | 税関が採番する申告の番号。**利用者が持ち込む**ので集約の識別子にする |
-| 休日カレンダー | Holiday Calendar | `HolidayCalendar` | 港の所在国の休日。留置日数を**営業日**で数える（不変条件 4）。**共有カーネルには置かない**——営業日を数えるのはいま handlingms だけで、billingms が保管料を数え始めたら（US21・IT13）そのとき移す |
+| 休日カレンダー | Holiday Calendar | `HolidayCalendar` | 港の所在国の休日。留置日数を**営業日**で数える（不変条件 4）。**共有カーネル（`shared.domain.calendar`）に置く**——IT13 で移した（[ADR-0015](../../adr/cargo-tracker/0015-business-day-counting-lives-in-the-shared-kernel.md)）。US21 の調整根拠が留置営業日を読むので、handlingms の画面と billingms の請求が同じ値を出さなければならない。**数える国は輸入港の UN/LOCODE から決める**（日本固定にしていたころ、国別分岐は本番の経路で一度も踏まれていなかった） |
 | 貨物スナップショット | Cargo Snapshot | `CargoSnapshot` | Handling が Booking のイベントから写し取った貨物の最小情報（ACL） |
 | 請求書 | Invoice | `Invoice` | 輸送料金の請求書。集約ルート |
 | 金額 | Money | `Money` | 通貨と数量を伴う金額。丸めは `Money` の中 1 か所 |

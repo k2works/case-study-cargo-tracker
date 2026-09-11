@@ -118,6 +118,10 @@ public final class CargoTrackerArchRules {
                         // 要確認一覧の識別子。どの BC も同じ表に同じ意味で書き、採番せず
                         // 事実から導く。各 BC に写すと導出が食い違う（IT4 R.1・R.2）。
                         "com.example.cargotracker.shared.domain.attention..",
+                        // 営業日の数え方（HolidayCalendar）。留置の営業日数は handlingms の
+                        // 画面と billingms の請求（US21 の調整根拠）が**同じ値を出さなければ
+                        // ならない**。数え方が 2 か所にあると片方だけ直る（ADR-0015）。
+                        "com.example.cargotracker.shared.domain.calendar..",
                         "com.example.cargotracker.shared.contract..",
                         "com.example.cargotracker.shared.infrastructure.axon..",
                         "com.example.cargotracker.shared.infrastructure.time..",

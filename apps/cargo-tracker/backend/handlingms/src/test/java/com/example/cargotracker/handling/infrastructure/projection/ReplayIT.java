@@ -1,5 +1,6 @@
 package com.example.cargotracker.handling.infrastructure.projection;
 
+import java.math.BigDecimal;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.cargotracker.handling.infrastructure.persistence.CargoSnapshotMapper;
@@ -39,6 +40,7 @@ class ReplayIT extends AbstractAxonIntegrationTest {
     private static TrackingInitializedEvent initialized(String trackingNumber) {
         return new TrackingInitializedEvent(trackingNumber, "b-" + System.nanoTime(),
                 "SHP-000001", "JPTYO", "USNYC", "GENERAL",
+                new BigDecimal("1200"),
                 List.of(new TrackingInitializedEvent.Leg("V-MOL-001", "JPTYO", "SGSIN",
                                 Instant.parse("2026-09-10T09:00:00Z"),
                                 Instant.parse("2026-09-16T08:00:00Z")),
@@ -71,6 +73,7 @@ class ReplayIT extends AbstractAxonIntegrationTest {
 
         projection.on(new TrackingInitializedEvent(trackingNumber, "b-1", "SHP-000001",
                 "JPTYO", "USNYC", "GENERAL",
+                new BigDecimal("1200"),
                 List.of(new TrackingInitializedEvent.Leg("V-DIRECT-9", "JPTYO", "USNYC",
                         Instant.parse("2026-09-10T09:00:00Z"),
                         Instant.parse("2026-09-24T18:00:00Z"))),
