@@ -3,8 +3,10 @@ type: Plan
 title: "リリース完了報告書 1.0 - Cargo Tracker（CQRS / Event Sourcing 版）"
 description: "Cargo Tracker v1.0「追跡と荷役」のリリース完了報告書です。"
 tags: [plan]
-status: draft
+status: stable
 generated: { by: claude-code/claude-opus-5, at: 2026-09-11T08:59:10Z }
+verified:
+  - { by: human:k2works, at: 2026-09-11T09:20:18Z }
 ---
 
 # リリース完了報告書 1.0 - Cargo Tracker（CQRS / Event Sourcing 版）

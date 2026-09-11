@@ -1,6 +1,10 @@
 # Docs Update Log
 
 ## 2026-09-11
+* **Verification**: [release_report-1_1_0](/development/cargo-tracker/release_report-1_1_0.md) を human:k2works が検証
+* **Verification**: [release_report-1_0_0](/development/cargo-tracker/release_report-1_0_0.md) を human:k2works が検証
+* **Verification**: [release_report-0_2_0](/development/cargo-tracker/release_report-0_2_0.md) を human:k2works が検証
+* **Verification**: [release_report-0_1_0](/development/cargo-tracker/release_report-0_1_0.md) を human:k2works が検証
 * **Creation**: [release_report-1_1_0](/development/cargo-tracker/release_report-1_1_0.md) を作成（claude-code/claude-opus-5）
 * **Creation**: [release_report-1_0_0](/development/cargo-tracker/release_report-1_0_0.md) を作成（claude-code/claude-opus-5）
 * **Creation**: [release_report-0_2_0](/development/cargo-tracker/release_report-0_2_0.md) を作成（claude-code/claude-opus-5）

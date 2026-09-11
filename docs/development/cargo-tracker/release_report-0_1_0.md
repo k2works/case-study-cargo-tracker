@@ -2,8 +2,10 @@
 type: Plan
 title: "リリース完了報告書 0.1 予約基盤"
 tags: [plan]
-status: draft
+status: stable
 generated: { by: claude-code/claude-opus-5, at: 2026-09-05T05:40:00Z }
+verified:
+  - { by: human:k2works, at: 2026-09-11T09:20:18Z }
 ---
 
 # リリース完了報告書 0.1 - 予約基盤
