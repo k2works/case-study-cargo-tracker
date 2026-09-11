@@ -96,6 +96,9 @@ nav:
           - リリース計画: development/cargo-tracker/release_plan.md
           - 開発戦略: development/cargo-tracker/development_strategy.md
           - リリース完了報告書 0.1: development/cargo-tracker/release_report-0_1_0.md
+          - リリース完了報告書 0.2: development/cargo-tracker/release_report-0_2_0.md
+          - リリース完了報告書 1.0: development/cargo-tracker/release_report-1_0_0.md
+          - リリース完了報告書 1.1: development/cargo-tracker/release_report-1_1_0.md
           - イテレーション計画 1: development/cargo-tracker/iteration_plan-1.md
           - イテレーション 1 ふりかえり: development/cargo-tracker/retrospective-1.md
           - イテレーション 1 完了報告書: development/cargo-tracker/iteration_report-1.md

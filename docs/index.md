@@ -18,7 +18,7 @@
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
 | [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
 | [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | cargo-tracker: 設計 10 件作成済み（draft） |
-| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | cargo-tracker: **IT12 完了**（累計 100 SP・達成率 100%・12 回連続）。**Release 0.1 完了**、**Release 1.0 完了**、**Release 1.1 完了**。リリース計画・開発戦略・IT1〜IT12 の計画/ふりかえり/完了報告書・リリース完了報告書 0.1 |
+| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | cargo-tracker: **IT13 完了**（累計 108 SP・達成率 100%・13 回連続）、**IT14 計画済み**。**Release 0.1 / 0.2 / 1.0 / 1.1 完了**（Release 2.0 は IT13 まで消化）。リリース計画・開発戦略・IT1〜IT14 の計画/ふりかえり/完了報告書・**リリース完了報告書 4 件**（0.1・0.2・1.0・1.1） |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | `index.md` を整備済み |
 | [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 15 件作成済み（分析 1 件 + cargo-tracker 14 件。設計レビューと IT1〜IT13 の実装レビュー） |
 | [ADR](./adr/index.md) | Architecture Decision Records の管理 | cargo-tracker: 16 件作成済み（IT13 で ADR-0015「営業日の数え方は共有カーネルが持つ」・ADR-0016「料率は設定に置き、見積と請求で同じものを読む」を追加） |
