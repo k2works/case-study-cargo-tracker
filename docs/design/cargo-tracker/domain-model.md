@@ -99,6 +99,11 @@ quadrantChart
 | 通関申告 | Customs Declaration | `CustomsDeclaration` | 税関への申告と審査状態。集約ルート |
 | 申告番号 | Declaration Number | `DeclarationNumber` | 税関が採番する申告の番号。**利用者が持ち込む**ので集約の識別子にする |
 | 休日カレンダー | Holiday Calendar | `HolidayCalendar` | 港の所在国の休日。留置日数を**営業日**で数える（不変条件 4）。**共有カーネル（`shared.domain.calendar`）に置く**——IT13 で移した（[ADR-0015](../../adr/cargo-tracker/0015-business-day-counting-lives-in-the-shared-kernel.md)）。US21 の調整根拠が留置営業日を読むので、handlingms の画面と billingms の請求が同じ値を出さなければならない。**数える国は輸入港の UN/LOCODE から決める**（日本固定にしていたころ、国別分岐は本番の経路で一度も踏まれていなかった） |
+| 料金計算 | Freight Charge Calculator | `FreightChargeCalculator` | 基本料金を数えるドメインサービス（正典の式）。**料率は持たず**引数で受け取る（[ADR-0016](../../adr/cargo-tracker/0016-rates-live-in-configuration.md)）。輸出免税の判定（`taxOn`）も持つ |
+| 割引の当て方 | Discount Policy | `DiscountPolicy` | 法人割引を当てるドメインサービス（US22）。**種別で断ち切る**——個人荷主に割引率が入っていても当てない |
+| 明細の種別 | Line Item Type | `LineItemType` | `BASE` / `DISCOUNT` / `ADJUSTMENT` / `CANCELLATION_FEE` / `TAX`。**表示の分類であって業務判断ではない**ので、値オブジェクトには持たせず投影の列に置く |
+| 地域区分 | Port Region | `PortRegion` | 国内 / 近海 / 遠洋。区間の区分は**両端の重いほう**。国 → 区分の対応は設定から読む（表に無い国は遠洋） |
+| 料率表 | Rate Table | `RateTable` | 基準運賃・地域係数・貨物種別係数・税率。**`application.yml` が出典**（[ADR-0016](../../adr/cargo-tracker/0016-rates-live-in-configuration.md)）。**知らない貨物種別は断る** |
 | 貨物スナップショット | Cargo Snapshot | `CargoSnapshot` | Handling が Booking のイベントから写し取った貨物の最小情報（ACL） |
 | 請求書 | Invoice | `Invoice` | 輸送料金の請求書。集約ルート |
 | 金額 | Money | `Money` | 通貨と数量を伴う金額。丸めは `Money` の中 1 か所 |
@@ -135,7 +140,7 @@ quadrantChart
 | 例外種別 `ExceptionType` | 遅延 / 破損 / 紛失 / 誤配 / 税関保留 | `DELAY` / `DAMAGE` / `LOSS` / `MISROUTE` / `CUSTOMS_HOLD` | 緊急かどうかは種別が答える（`LOSS` のみ）。一覧の並びは `LOSS` → 期限までの残日数が少ない順 |
 | 例外対応状態 `ResponseStatus` | 起票 / 対応中 / 解決 | `REPORTED` / `RESPONDING` / `RESOLVED` | |
 | 通関状態 `CustomsStatus` | 審査中 / 通関済 / 留置 / 不可 | `PENDING` / `CLEARED` / `HELD` / `REJECTED` | 引取を許すのは `CLEARED` だけ。`REJECTED` の日本語は「不可」に統一（行動を要する赤） |
-| 精算状態 `BillingStatus` | 算出待ち / 算出済 / 請求済 / 入金済 / 取消 | `PENDING` / `CALCULATED` / `INVOICED` / `PAID` / `VOID` | 期限超過は列に持たず `overdue(today)` で判定 |
+| 精算状態 `BillingStatus` | 算出待ち / 算出済 / 請求済 / 入金済 / 取消 | `PENDING` / `CALCULATED` / `INVOICED` / `PAID` / `VOID` | 期限超過は列に持たず `overdue(today)` で判定（**述語は US23・IT14 で入る**——期限が決まるのは発行のときなので、先に作ると入力経路の無い述語になる）。**`PENDING` は本プロジェクトの経路では通らない**——算出の起点は `CargoDeliveredEvent` で、算出できたときに初めて集約ができる。算出できなければ請求書を作らず要確認に出す。列挙に残すのは US23 以降で使う余地を消さないためで、**書いてあるのに通らない値は次に読む人が使おうとする**ので注記する |
 | 荷主種別 `ShipperType` | 個人 / 法人 | `INDIVIDUAL` / `CORPORATE` | |
 | 貨物種別 `CargoType` | 一般 / 危険物 / 冷凍 | `GENERAL` / `HAZARDOUS` / `REFRIGERATED` | |
 
@@ -1070,7 +1075,6 @@ class Invoice <<Aggregate Root>> <<@EventSourced(tagKey="invoiceId")>> {
   - dueDate: LocalDate [0..1]
   - paidAt: Instant [0..1]
   + {static} calculate(CalculateInvoiceCommand, charge: FreightCharge)
-  + applyDiscount(ApplyDiscountCommand)
   + adjust(AdjustInvoiceCommand)
   + issue(IssueInvoiceCommand)
   + recordPayment(RecordPaymentCommand)
@@ -1161,8 +1165,7 @@ Booking の `Quotation` はこの式と同じ料率で概算を出します。�
 
 | コマンド | アクター | 発行イベント | 契約 | UC / US |
 | :--- | :--- | :--- | :--- | :--- |
-| `CalculateInvoiceCommand` | `BillingReactionHandler`（`CargoDeliveredEvent` 購読。荷主の種別・割引率は自前の `shipper_contract_snapshot` から）/ 経理担当者 | `InvoiceCalculatedEvent` | — | UC17 / US21 |
-| `ApplyDiscountCommand` | Reaction Handler / 経理担当者 | `DiscountAppliedEvent` | — | UC17 / US22 |
+| `CalculateInvoiceCommand` | `BillingReactionHandler`（`CargoDeliveredEvent` 購読。荷主の種別・割引率は自前の `shipper_contract_snapshot` から、区間・重量・貨物種別は `billing_cargo_snapshot` から）/ 経理担当者 | `InvoiceCalculatedEvent` | — | UC17 / US21・US22 |
 | `AdjustInvoiceCommand` | 経理担当者 | `InvoiceAdjustedEvent` | — | UC17 |
 | `IssueInvoiceCommand` | 経理担当者 | `InvoiceIssuedEvent` | — | UC18 / US23 |
 | `RecordPaymentCommand` | 経理担当者 | `PaymentRecordedEvent` | **○** | UC18 / US23 |
@@ -1313,7 +1316,6 @@ H -> Bi : （購読）留置営業日を調整根拠に写す
 == 配送完了から精算 ==
 T -> T : AdvanceTrackingCommand(CLAIM) → TransportStatusUpdatedEvent(DELIVERED) + CargoDeliveredEvent（契約）
 T -> Bi : （購読）BillingReactionHandler → CalculateInvoiceCommand（shipper_contract_snapshot を読む）
-Bi -> Bi : ApplyDiscountCommand → DiscountAppliedEvent
 Bi -> Bi : IssueInvoiceCommand → InvoiceIssuedEvent（経理担当者）
 Bi -> Bi : RecordPaymentCommand → PaymentRecordedEvent（契約）
 Bi -> B : （BookingReactionHandler）SettleBookingCommand → BookingSettledEvent
@@ -1426,7 +1428,7 @@ Reaction Handler の再試行と補償は「例外にしない」ではなく「
 | UC14 貨物状態更新 | `TrackingActivity` | `AdvanceTrackingCommand`, `UpdateTransportStatusCommand` | `TransportStatusUpdatedEvent`, `CargoDeliveredEvent` |
 | UC15 追跡情報照会 | — | `FindTrackingQuery`, `FindPublicTrackingQuery` | — |
 | UC16 例外処理 | `TrackingActivity` | `RegisterTrackingExceptionCommand`, `ResolveTrackingExceptionCommand` | `TrackingExceptionRegisteredEvent`, `TrackingExceptionResolvedEvent` |
-| UC17 輸送料金算出 | `Invoice` | `CalculateInvoiceCommand`, `ApplyDiscountCommand` | `InvoiceCalculatedEvent`, `DiscountAppliedEvent` |
+| UC17 輸送料金算出 | `Invoice` | `CalculateInvoiceCommand`, `AdjustInvoiceCommand` | `InvoiceCalculatedEvent`, `InvoiceAdjustedEvent` |
 | UC18 精算処理 | `Invoice` → `Cargo` | `IssueInvoiceCommand`, `RecordPaymentCommand`, `SettleBookingCommand` | `InvoiceIssuedEvent`, `PaymentRecordedEvent`, `BookingSettledEvent` |
 | UC19 航海スケジュール登録 | `Voyage` | `RegisterVoyageCommand`, `UpdateVoyageScheduleCommand` | `VoyageRegisteredEvent`, `VoyageScheduleUpdatedEvent` |
 | UC20 ユーザー認証 | `User` | `LoginCommand`, `UnlockAccountCommand` | （状態保存・監査ログ） |
