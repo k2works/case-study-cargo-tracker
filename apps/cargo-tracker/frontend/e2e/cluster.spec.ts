@@ -829,6 +829,101 @@ test.describe('kind クラスタでの通し確認', () => {
       await expectEventually(page, '配送完了');
     });
 
+  test('引取が完了すると請求が算出され、根拠つきで調整できる（US21・US22・IT13）',
+    async ({ page, request }) => {
+      // **US21・US22 のクラスタ確認**（Try T7。US ごとに 1 度回す）。
+      // モックでは「引取が billingms へ届いて請求書になるか」を判別できない。
+      // IT13 では**この経路でしか出ない欠陥**が実際に 2 件出ている（請求書 ID の
+      // 桁あふれ・調整明細の重複）ので、通しで踏む。
+      test.setTimeout(300_000);
+      const product = `請求の貨物-${Date.now()}`;
+      const { bookingId, trackingNumber, voyageNumber } =
+        await issueTrackingNumber(request, product);
+
+      const handlerToken = await tokenOf(request, 'handler01');
+      const handlerHeaders = { Authorization: `Bearer ${handlerToken}` };
+
+      for (const step of [
+        { handlingType: 'RECEIVE', unLocode: 'JPTYO' },
+        { handlingType: 'LOAD', unLocode: 'JPTYO', voyageNumber },
+        { handlingType: 'UNLOAD', unLocode: 'USNYC', voyageNumber },
+      ]) {
+        await expect(async () => {
+          const response = await request.post('/api/v1/handling/activities', {
+            headers: handlerHeaders,
+            data: { activityId: crypto.randomUUID(), trackingNumber, ...step },
+          });
+          expect(response.status()).toBe(201);
+        }).toPass({ timeout: 60_000 });
+      }
+
+      // 引取のガード（US29・IT12）を通す。
+      await clearCustoms(request, trackingNumber);
+
+      await expect(async () => {
+        const response = await request.post('/api/v1/handling/activities', {
+          headers: handlerHeaders,
+          data: {
+            activityId: crypto.randomUUID(),
+            trackingNumber,
+            handlingType: 'CLAIM',
+            unLocode: 'USNYC',
+            consigneeName: 'John Smith',
+          },
+        });
+        expect(response.status()).toBe(201);
+      }).toPass({ timeout: 60_000 });
+
+      // **D1: 引取済になった予約に請求書が自動でできる。**
+      // 経理が始める操作は無い——連鎖が作る。
+      const accountantToken = await tokenOf(request, 'accountant01');
+      const accountantHeaders = { Authorization: `Bearer ${accountantToken}` };
+      let invoiceId = '';
+      await expect(async () => {
+        const response = await request.get(
+          `/api/v1/billing/invoices/by-booking/${bookingId}`,
+          { headers: accountantHeaders });
+        expect(response.status()).toBe(200);
+        const invoice = await response.json();
+        invoiceId = invoice.invoiceId ?? '';
+        // **請求書番号は人が読める形で、列に収まる。** IT13 では
+        // "INV-" + UUID（40 文字）が VARCHAR(36) に入らず、集約は受け付けるのに
+        // 投影だけが退避された——**この経路でしか気づけなかった**。
+        expect(invoiceId).toMatch(/^INV-\d{8}-[0-9a-f]{8}$/);
+        expect(invoice.statusLabel).toBe('算出済');
+      }).toPass({ timeout: 120_000 });
+
+      // **D2・D4・D5: 画面で根拠が読める。** 個人荷主なので割引は無く、
+      // 輸出（JPTYO → USNYC）なので消費税は 0 円。
+      await signIn(page, 'accountant01');
+      await page.goto(`/invoices/${invoiceId}`);
+      await expectEventually(page, '基本料金');
+      await expect(page.getByText(/区間/).first()).toBeVisible();
+      await expect(page.getByText('消費税（輸出免税）')).toBeVisible();
+      await expect(page.getByText('割引')).toHaveCount(0);
+
+      // **D6・D7: 根拠を指して調整を入れると、合計が動いて明細に残る。**
+      await page.getByLabel('調整額').fill('-10000');
+      await page.getByLabel('理由').fill('遅延の補償');
+      await page.getByLabel('根拠の例外 ID（任意）').fill('EX-E2E-0001');
+      await page.getByRole('button', { name: '調整を入れる' }).click();
+      await expectEventually(page, '遅延の補償');
+      await expect(page.getByRole('link', { name: /根拠の例外（EX-E2E-0001）/ }))
+        .toBeVisible();
+
+      // **明細は 1 行だけ。** 同じ調整が 2 行になる欠陥が IT13 で実際に出た
+      // （合計は動かないのに明細だけ増えるので、二重に調整したと読める）。
+      await expect(page.getByText('遅延の補償')).toHaveCount(1);
+
+      // **D11: 経理以外は請求を開けない**（Gateway の認可。実際の 403 をここで見る）。
+      const trackerToken = await tokenOf(request, 'tracker01');
+      const forbidden = await request.get('/api/v1/billing/invoices', {
+        headers: { Authorization: `Bearer ${trackerToken}` },
+        failOnStatusCode: false,
+      });
+      expect(forbidden.status()).toBe(403);
+    });
+
   test('遅延を起票して解決すると、例外前の状態へ戻る（US19・IT10）',
     async ({ page, request }) => {
       // **US19 のクラスタ確認**（Try T3。US ごとに 1 度回す）。

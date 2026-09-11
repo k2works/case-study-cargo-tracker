@@ -11,7 +11,6 @@ import io.cucumber.java.ja.ならば;
 import io.cucumber.java.ja.前提;
 import io.cucumber.java.ja.もし;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;

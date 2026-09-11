@@ -59,6 +59,10 @@ class ContractEventRoundTripIT extends AbstractAxonIntegrationTest {
             // 相手のマッパー XML も読めるようにする。classpath: は最初に見つかった
             // 位置しか探さないので、片方のサービスのマッパーが黙って読まれなくなる。
             "--mybatis.mapper-locations=classpath*:mapper/*.xml",
+            // **料率は別ファイルから名指しで取り込む**（ADR-0016）。同じ JVM に
+            // 2 サービスを載せると `classpath:application.yml` は 1 つしか読まれず、
+            // billingms の設定が消えて起動に失敗する（実測）。
+            "--spring.config.import=optional:classpath:billing-rates.yml",
             "--server.port=" + port,
             "--axon.axonserver.servers=" + AXON_SERVER.getAxonServerAddress(),
             "--spring.datasource.url=" + POSTGRES.getJdbcUrl() + "&currentSchema=" + schema,

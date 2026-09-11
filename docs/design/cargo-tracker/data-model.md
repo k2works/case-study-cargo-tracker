@@ -892,8 +892,8 @@ Processing Group は `@ProcessingGroup`（Axon 5 に存在しません）では�
 | trackingms | `tracking-reaction` | `HandlingActivityRegisteredEvent`、`HandlingActivityVoidedEvent`、`CargoCancelledEvent`（契約）、`UNLOAD` 後の陸揚げ完了 | **投影テーブルを書かない**。TrackingActivity へコマンドを送る（`AdvanceTrackingCommand`、`CloseTrackingCommand` 等）。失敗だけを `attention_item` に書く |
 | handlingms | `handling-snapshot-projection` | **`TrackingInitializedEvent`**（契約・[ADR-0012](../../adr/cargo-tracker/0012-cargo-snapshot-from-tracking-initialized.md)）, `CargoCancelledEvent` | `cargo_snapshot`, `cargo_snapshot_leg` |
 | handlingms | `handling-activity-projection` | HandlingActivity / CustomsDeclaration のイベント | `handling_activity`, `customs_declaration`, `customs_status_history` |
-| billingms | `billing-projection` | Invoice のイベント、`ShipperRegisteredEvent`、`CorporateContractAssignedEvent`（契約） | `invoice`, `invoice_line_item`, `payment`, `shipper_contract_snapshot` |
-| billingms | `billing-reaction` | `CargoDeliveredEvent`、`CustomsStatusChangedEvent`（契約） | **投影テーブルを書かない**。Invoice へコマンドを送る。失敗だけを `attention_item` に書く |
+| billingms | `billing-projection` | Invoice のイベント、**`ShipperRegisteredEvent`**、**`TrackingInitializedEvent`**（いずれも契約） | `invoice`, `invoice_line_item`, `payment`, `shipper_contract_snapshot`, **`billing_cargo_snapshot`**, **`billing_cargo_leg`** |
+| billingms | `billing-reaction` | **`CargoDeliveredEvent`**（契約。IT13 から購読） | **投影テーブルを書かない**。Invoice へコマンドを送る（`CalculateInvoiceCommand`）。作れなかったことだけを `attention_item` に書く。`CustomsStatusChangedEvent` は購読しない——留置の営業日数は**調整の根拠として人が指す**もので、自動で調整を立てる業務は無い |
 
 1 つの投影テーブルを複数の Processing Group が書かないようにします。書き手が 1 つなら、リプレイの単位とテーブルの単位が一致します。`*-reaction` は `application/reaction` の Reaction Handler（イベント購読からコマンドを送る役割）の Group で、投影とは分けます。投影が SQL に写すだけであること、コマンドを送るのが Reaction だけであることを ArchUnit で固定します（`CommandGateway` を使えるのは `interfaces`・`application/reaction` の 2 か所）。
 

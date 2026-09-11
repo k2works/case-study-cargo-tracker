@@ -75,6 +75,14 @@ tasks.named<Test>("test") {
             .withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.file(rootProject.file(
             "../../../docs/adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md"))
+    // IterationPlanChecksExistTest は計画の文書と全サービスのソースを読む。
+    // 宣言しないと Gradle が UP-TO-DATE と判断し、検査名を書き間違えても赤にならない。
+    inputs.dir(rootProject.file("../../../docs/development/cargo-tracker"))
+            .withPropertyName("iterationPlans")
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.dir(rootProject.file("../../frontend/src"))
+            .withPropertyName("frontendSources")
+            .withPathSensitivity(PathSensitivity.RELATIVE)
     // AcceptanceFixturesAreNotTimeBombsTest は受け入れテストのソースとシナリオを読む。
     // 宣言しないと Gradle が UP-TO-DATE と判断し、固定日付を書き足しても赤にならない。
     inputs.dir(rootProject.file("acceptance-tests/src"))

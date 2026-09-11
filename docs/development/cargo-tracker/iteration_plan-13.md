@@ -45,21 +45,21 @@ verified:
 
 | # | 受入基準 | 満たす手段 | 検査の所在 | 状態 |
 | :--- | :--- | :--- | :--- | :--- |
-| §1 | 「引取済」状態の予約に対して**料金算出を開始できる** | `CargoDeliveredEvent` を `BillingReactionHandler` が購読して `CalculateInvoiceCommand` を送る（`domain-model.md` のコマンド表）。経理担当者が S60 から手で始めることもできる。**引取済でない予約では始められない**——`CargoDeliveredEvent` が来ていない予約の請求書は作らない | `BillingReactionHandlerTest`・`InvoiceControllerIT`・受け入れテスト | |
-| §2 | **輸送実績（経路・距離・重量・貨物種別・荷役作業実績）が表示される** | `billing_cargo_snapshot`（新設。`TrackingInitializedEvent` を購読。ADR-0012 と同じ形）から `TransportRecord` を作り、S61 に「基本料金（3 区間・近海 2.5 + 遠洋 6.0・1,200 kg・一般）」の形で根拠を並べる。**距離は持たない**——正典の式は区間の地域係数で数え、距離は使わない（注 N3） | `InvoiceProjectionIT`・`InvoiceScreens.test.tsx`・受け入れテスト | |
-| §3 | **基本料金が自動計算される** | `FreightChargeCalculator`（ドメインサービス）。式と料率は正典（`domain-model.md`「料金計算（正典）」）。**料率は `application.yml` から読む**（`RateTable`）——ハードコードしない。**丸めは `Money` の中 1 か所** | `FreightChargeCalculatorTest`（式の各係数を 1 つずつ動かす）・`MoneyTest`・`RateTableTest` | |
-| §4 | 算出結果を**確認して確定操作ができる** | `Invoice` は `CALCULATED` で作られ、経理担当者が S61 で確定（`IssueInvoiceCommand` は US23・IT14 なので、本 IT の「確定」は**算出の確定**＝`CALCULATED` の登録まで）。注 N4 | `InvoiceTest`・`InvoiceControllerIT`・`InvoiceScreens.test.tsx` | |
-| §5 | 確定後、輸送料金が**「確定」状態で登録される** | `InvoiceCalculatedEvent` → `invoice` 投影（`billing_status = 'CALCULATED'`）。**有効な請求書は予約ごとに 1 通**（不変条件 2。三段で守る） | `InvoiceProjectionIT`・`InvoiceControllerIT` | |
-| §6 | 例外（遅延・破損等）が発生している場合、**料金調整（減額・補償費用）の入力ができる** | `AdjustInvoiceCommand` と `InvoiceLineItem`。**調整行は根拠の例外 ID を持つ**（`basisExceptionId`）——US28 §8「誤配の事実は料金調整の根拠として参照できる」の受け側。S61 から例外へリンクする。**留置は `CustomsStatusChangedEvent.heldBusinessDays` を根拠にする**（IT12 で載せた項目の最初の読み手） | `InvoiceTest`・`InvoiceProjectionIT`・`InvoiceScreens.test.tsx`・受け入れテスト | |
+| §1 | 「引取済」状態の予約に対して**料金算出を開始できる** | `CargoDeliveredEvent` を `BillingReactionHandler` が購読して `CalculateInvoiceCommand` を送る（`domain-model.md` のコマンド表）。**手で始める入口は置かなかった**（実装時の判断）——先に作ると、連鎖が止まっていることに気づかないまま手で回してしまう。止まったことは要確認一覧に出る。**引取済でない予約では始まらない**——`CargoDeliveredEvent` が来ていない予約の請求書は作らない | `BillingReactionHandlerIT`（連鎖と補償経路 4 本）・`InvoiceControllerIT`・受け入れテスト D1 | 達成 |
+| §2 | **輸送実績（経路・距離・重量・貨物種別・荷役作業実績）が表示される** | `billing_cargo_snapshot`（新設。`TrackingInitializedEvent` を購読。ADR-0012 と同じ形）から `TransportRecord` を作り、S61 に「基本料金（3 区間・近海 2.5 + 遠洋 6.0・1,200 kg・一般）」の形で根拠を並べる。**距離は持たない**——正典の式は区間の地域係数で数え、距離は使わない（注 N3） | `InvoiceProjectionIT`・`InvoiceScreens.test.tsx`・受け入れテスト D2 | **一部達成**：区間・地域区分・重量・貨物種別は出る。**距離は出さない**（注 N3。数えていないものを根拠に書かない）。**荷役作業実績は出していない**——請求の根拠は「実際に通った区間」で足り、荷役の 1 件ずつは S51 が持つ。US21 §2 の言い換えとして `user_story.md` に注記が要る（IT14 で直す） |
+| §3 | **基本料金が自動計算される** | `FreightChargeCalculator`（ドメインサービス）。式と料率は正典（`domain-model.md`「料金計算（正典）」）。**料率は `application.yml` から読む**（`RateTable`）——ハードコードしない。**丸めは `Money` の中 1 か所** | `FreightChargeCalculatorTest`（式の各係数を 1 つずつ動かす）・`MoneyTest`・`RateTableTest` | 達成 |
+| §4 | 算出結果を**確認して確定操作ができる** | `Invoice` は `CALCULATED` で作られ、経理担当者は S61 で**内容を確かめ、例外があれば調整する**（`IssueInvoiceCommand` は US23・IT14 なので、本 IT の「確定」は**算出の確定**＝`CALCULATED` の登録まで）。注 N4 | `InvoiceTest`・`InvoiceControllerIT`・`InvoiceScreens.test.tsx` | 達成 |
+| §5 | 確定後、輸送料金が**「確定」状態で登録される** | `InvoiceCalculatedEvent` → `invoice` 投影（`billing_status = 'CALCULATED'`）。**有効な請求書は予約ごとに 1 通**（不変条件 2。三段で守る） | `InvoiceProjectionIT`・`InvoiceControllerIT` | 達成 |
+| §6 | 例外（遅延・破損等）が発生している場合、**料金調整（減額・補償費用）の入力ができる** | `AdjustInvoiceCommand` と `InvoiceLineItem`。**調整行は根拠の例外 ID を持つ**（`basisExceptionId`）——US28 §8「誤配の事実は料金調整の根拠として参照できる」の受け側。S61 から例外へリンクする。**留置は `CustomsStatusChangedEvent.heldBusinessDays` を根拠にする**（IT12 で載せた項目の最初の読み手） | `InvoiceTest`・`InvoiceProjectionIT`・`InvoiceScreens.test.tsx`・受け入れテスト | 達成 |
 
 ### US22 法人割引を適用する
 
 | # | 受入基準 | 満たす手段 | 検査の所在 | 状態 |
 | :--- | :--- | :--- | :--- | :--- |
-| §1 | 荷主種別が「法人」の場合、料金算出時に**契約割引率が自動的に取得・表示される** | `shipper_contract_snapshot`（IT2 から写している）から読む。**同期問い合わせをしない**（bookingms が落ちていても請求書は作れる）。注 N2 | `BillingReactionHandlerTest`・`InvoiceProjectionIT`・`InvoiceScreens.test.tsx` | |
-| §2 | 割引率（**0〜30%**）が基本料金に適用され、割引後の金額が表示される | `DiscountPolicy`（ドメインサービス）。**範囲は値オブジェクトが守る**（`DiscountRate`。bookingms に既にある形を billingms の型として持つ——BC が違えば型も違う） | `DiscountPolicyTest`・`InvoiceTest` | |
-| §3 | **個人荷主の場合は割引が適用されない** | 同上。`INDIVIDUAL` は 0%。**判定は列挙が答える** | `DiscountPolicyTest`（`ShipperType.values()` を回す）・`InvoiceTest` | |
-| §4 | 割引計算の**根拠（割引率・基本料金・割引後料金）が精算書に記載される** | `InvoiceLineItem` と S61。**請求書は作成時の割引率を持つ**（`invoice.discount_rate`）——作成後に荷主の契約が変わっても、出した請求書は変わらない。**契約番号も割引行に出す**（正典の S61 は「法人割引 (15%) … 法人契約 C-0012」と書く）ので、`shipper_contract_snapshot.contract_number` を**請求書へ複写する**——後から荷主の契約が差し替わっても、その請求書がどの契約に基づくかは変わらない | `InvoiceProjectionIT`・`InvoiceScreens.test.tsx`・受け入れテスト | |
+| §1 | 荷主種別が「法人」の場合、料金算出時に**契約割引率が自動的に取得・表示される** | `shipper_contract_snapshot`（IT2 から写している）から読む。**同期問い合わせをしない**（bookingms が落ちていても請求書は作れる）。注 N2 | `BillingReactionHandlerTest`・`InvoiceProjectionIT`・`InvoiceScreens.test.tsx` | 達成 |
+| §2 | 割引率（**0〜30%**）が基本料金に適用され、割引後の金額が表示される | `DiscountPolicy`（ドメインサービス）。**範囲は値オブジェクトが守る**（`DiscountRate`。bookingms に既にある形を billingms の型として持つ——BC が違えば型も違う） | `DiscountPolicyTest`・`InvoiceTest` | 達成 |
+| §3 | **個人荷主の場合は割引が適用されない** | 同上。`INDIVIDUAL` は 0%。**判定は列挙が答える** | `DiscountPolicyTest`（`ShipperType.values()` を回す）・`InvoiceTest` | 達成 |
+| §4 | 割引計算の**根拠（割引率・基本料金・割引後料金）が精算書に記載される** | `InvoiceLineItem` と S61。**請求書は作成時の割引率を持つ**（`invoice.discount_rate`）——作成後に荷主の契約が変わっても、出した請求書は変わらない。**契約番号も割引行に出す**（正典の S61 は「法人割引 (15%) … 法人契約 C-0012」と書く）ので、`shipper_contract_snapshot.contract_number` を**請求書へ複写する**——後から荷主の契約が差し替わっても、その請求書がどの契約に基づくかは変わらない | `InvoiceProjectionIT`・`InvoiceScreens.test.tsx`・受け入れテスト | 達成 |
 
 ### 受入基準に現れない不変条件（**正典にあり、実装が要る**）
 
@@ -410,19 +410,19 @@ S70 --> S22 : 算出できなかった予約へ
 
 ## デモ項目（**すべて受け入れテストかクラスタ E2E に落とす**）
 
-| # | シナリオ | 受入基準 |
-| :--- | :--- | :--- |
-| D1 | 引取済になった予約に、請求書が自動でできる（基本料金つき） | US21 §1・§3・§5 |
-| D2 | 請求詳細に**根拠が並ぶ**（区間・地域区分・重量・貨物種別） | US21 §2 |
-| D3 | **法人荷主なら割引が入る**（割引率・基本料金・割引後が読める） | US22 §1・§2・§4 |
-| D4 | **個人荷主では割引が入らない** | US22 §3 |
-| D5 | **輸出（出発地と目的地の国が違う）は消費税 0 円** | 正典の式 |
-| D6 | 経理担当者が**調整を入れられる**（減額・補償費用） | US21 §6 |
-| D7 | 調整行から**根拠の例外へ行ける** | US21 §6・US28 §8 |
-| D8 | **留置 4 営業日の保管料を調整の根拠にできる** | US21 §6 |
-| D9 | **同じ予約に有効な請求書は 1 通だけ**（2 通目は断られ、要確認に出る） | 不変条件 2 |
-| D10 | **重量が分からない貨物では請求書を作らず、要確認に出る** | 注 N1 |
-| D11 | 経理以外は請求を開けない | US21 §1（認可） |
+| # | シナリオ | 受入基準 | 検査の所在 |
+| :--- | :--- | :--- | :--- |
+| D1 | 引取済になった予約に、請求書が自動でできる（基本料金つき） | US21 §1・§3・§5 | 受け入れ `請求の算出.feature`「引取済になった予約に請求書が自動でできる」 |
+| D2 | 請求詳細に**根拠が並ぶ**（区間・地域区分・重量・貨物種別） | US21 §2 | 受け入れ「請求詳細に根拠が並ぶ」・`InvoiceScreens.test.tsx` |
+| D3 | **法人荷主なら割引が入る**（割引率・基本料金・割引後が読める） | US22 §1・§2・§4 | 受け入れ「法人荷主には契約割引が入る」・`InvoiceScreens.test.tsx` |
+| D4 | **個人荷主では割引が入らない** | US22 §3 | 受け入れ「個人荷主には割引が入らない」 |
+| D5 | **輸出（出発地と目的地の国が違う）は消費税 0 円** | 正典の式 | 受け入れ「出発地と目的地の国が違えば消費税は 0 円」・`FreightChargeCalculatorTest#exportIsTaxFree` |
+| D6 | 経理担当者が**調整を入れられる**（減額・補償費用） | US21 §6 | 受け入れ「例外があれば料金調整を入れられる」・`InvoiceControllerIT` |
+| D7 | 調整行から**根拠の例外へ行ける** | US21 §6・US28 §8 | `InvoiceScreens.test.tsx`「調整行から根拠の例外へ飛べる」 |
+| D8 | **留置 4 営業日の保管料を調整の根拠にできる** | US21 §6 | 受け入れ「留置 4 営業日の保管料を調整の根拠にできる」 |
+| D9 | **同じ予約に有効な請求書は 1 通だけ**（2 通目は断られ、要確認に出る） | 不変条件 2 | 受け入れ「同じ引取が 2 度届いても請求書は 1 通のまま」・`InvoiceProjectionIT` |
+| D10 | **重量が分からない貨物では請求書を作らず、要確認に出る** | 注 N1 | 受け入れ「重量が分からない貨物では請求書を作らず、要確認に出る」・`BillingReactionHandlerIT` |
+| D11 | 経理以外は請求を開けない | US21 §1（認可） | `EveryServiceEndpointIsRoutedAndProtectedTest#billingIsForAccountantsOnly`（実際の 403 はクラスタ E2E） |
 
 ## リスク
 

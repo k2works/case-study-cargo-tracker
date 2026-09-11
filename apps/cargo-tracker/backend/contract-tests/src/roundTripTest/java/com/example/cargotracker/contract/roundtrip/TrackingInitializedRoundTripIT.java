@@ -43,6 +43,10 @@ class TrackingInitializedRoundTripIT extends AbstractAxonIntegrationTest {
             "--spring.application.name=" + service + "ms",
             "--spring.flyway.locations=classpath:db/migration/" + service,
             "--mybatis.mapper-locations=classpath*:mapper/*.xml",
+            // **料率は別ファイルから名指しで取り込む**（ADR-0016）。同じ JVM に
+            // 2 サービスを載せると `classpath:application.yml` は 1 つしか読まれず、
+            // billingms の設定が消えて起動に失敗する（実測）。
+            "--spring.config.import=optional:classpath:billing-rates.yml",
             "--server.port=0",
             "--axon.axonserver.servers=" + AXON_SERVER.getAxonServerAddress(),
             "--spring.datasource.url=" + POSTGRES.getJdbcUrl() + "&currentSchema=" + schema,

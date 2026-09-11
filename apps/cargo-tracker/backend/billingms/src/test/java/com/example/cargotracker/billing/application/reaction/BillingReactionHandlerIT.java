@@ -213,4 +213,23 @@ class BillingReactionHandlerIT extends AbstractAxonIntegrationTest {
         assertThat(row.weightKg()).isEqualByComparingTo("1200");
         assertThat(cargos.findLegs(fixture.trackingNumber())).hasSize(2);
     }
+
+    @Test
+    @DisplayName("請求書番号は人が読める形で、列に収まる（経理は番号で会話する）")
+    void invoiceIdIsReadableAndFitsTheColumn() {
+        // **素の UUID では画面でも問い合わせでも扱えない。** IT13 では逆に
+        // "INV-" + UUID（40 文字）にして `VARCHAR(36)` に入らず、集約は受け付ける
+        // のに投影だけが退避された——**退避先を見るまで気づけなかった**。
+        var fixture = cargo(new BigDecimal("1200"), true, true, "INDIVIDUAL", null);
+
+        deliver(fixture);
+
+        String invoiceId = awaitInvoice(fixture.bookingId()).invoiceId();
+        assertThat(invoiceId)
+                .as("日付が読めないと、いつの請求か番号から分からない")
+                .matches("INV-\\d{8}-[0-9a-f]{8}");
+        assertThat(invoiceId.length())
+                .as("invoice_id は VARCHAR(36)。超えると投影だけが退避される")
+                .isLessThanOrEqualTo(36);
+    }
 }

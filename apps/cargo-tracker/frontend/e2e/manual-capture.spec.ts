@@ -1443,3 +1443,143 @@ test.describe('マニュアルの画面キャプチャ', () => {
     await page.screenshot({ path: `${OUT}/16-S53-customs-status-update.png`, fullPage: true });
   });
 });
+
+test.describe('17 請求を組み立てる', () => {
+  const SAMPLE_INVOICE = {
+    invoiceId: 'INV-20260928-1a2b3c4d',
+    bookingId: 'B-2026-0902-004',
+    shipperId: 'SHP-000001',
+    shipperName: '山田商事',
+    shipperType: 'CORPORATE',
+    shipperTypeLabel: '法人',
+    contractNumber: 'CT-0012',
+    discountRate: 0.15,
+    baseAmount: 510000,
+    discountAmount: 76500,
+    adjustmentAmount: -10000,
+    taxAmount: 0,
+    totalAmount: 423500,
+    currency: 'JPY',
+    status: 'CALCULATED',
+    statusLabel: '算出済',
+    calculatedAt: '2026-09-28T01:00:00Z',
+    quotedAmount: null,
+    lineItems: [
+      {
+        itemType: 'BASE',
+        itemTypeLabel: '基本料金',
+        description: '基本料金（2 区間・近海 2.5 + 遠洋 6.0・1,200 kg・一般 1.0）',
+        amount: 510000,
+        currency: 'JPY',
+        basisExceptionId: null,
+      },
+      {
+        itemType: 'DISCOUNT',
+        itemTypeLabel: '割引',
+        description: '割引（15%・CT-0012）',
+        amount: 76500,
+        currency: 'JPY',
+        basisExceptionId: null,
+      },
+      {
+        itemType: 'TAX',
+        itemTypeLabel: '消費税',
+        description: '消費税（輸出免税）',
+        amount: 0,
+        currency: 'JPY',
+        basisExceptionId: null,
+      },
+      {
+        itemType: 'ADJUSTMENT',
+        itemTypeLabel: '調整',
+        description: '誤配による再設計',
+        amount: -10000,
+        currency: 'JPY',
+        basisExceptionId: 'EX-2026-0928-03',
+      },
+    ],
+  };
+
+  async function signInAsAccountant(page: import('@playwright/test').Page) {
+    await page.route('**/api/v1/auth/login', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          token: 'token',
+          username: 'accountant01',
+          displayName: '経理 五郎',
+          roles: ['ROLE_ACCOUNTANT'],
+          shipperId: null,
+        }),
+      }),
+    );
+    await page.goto('/login');
+    await page.getByLabel('利用者名').fill('accountant01');
+    await page.getByLabel('パスワード').fill('secret1234');
+    await page.getByRole('button', { name: 'ログイン' }).click();
+    await expect(page.getByRole('heading', { name: 'ダッシュボード' })).toBeVisible();
+  }
+
+  test('17 請求一覧', async ({ page }) => {
+    // **本文が「算出が新しい順」「入金済は出ない」「荷主種別」を説明している。**
+    // どれかが写っていないと、文章と画像が別々に正しくなる。
+    await page.route('**/api/v1/billing/invoices?*', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: [
+            {
+              invoiceId: SAMPLE_INVOICE.invoiceId,
+              bookingId: SAMPLE_INVOICE.bookingId,
+              shipperId: SAMPLE_INVOICE.shipperId,
+              shipperName: SAMPLE_INVOICE.shipperName,
+              shipperTypeLabel: '法人',
+              status: 'CALCULATED',
+              statusLabel: '算出済',
+              totalAmount: 423500,
+              currency: 'JPY',
+              calculatedAt: '2026-09-28T01:00:00Z',
+            },
+          ],
+          total: 1,
+        }),
+      }),
+    );
+    await signInAsAccountant(page);
+    await page.goto('/invoices');
+
+    await expect(page.getByRole('heading', { name: '請求一覧' })).toBeVisible();
+    await expect(page.getByText('算出済')).toBeVisible();
+    await expect(page.getByText('¥ 423,500')).toBeVisible();
+    await page.screenshot({ path: `${OUT}/17-S60-invoice-list.png`, fullPage: true });
+  });
+
+  test('17 請求詳細（根拠と調整）', async ({ page }) => {
+    // **本文が「基本料金の根拠」「割引の契約番号」「調整の根拠の例外」
+    // 「調整の入力欄」を説明している。**
+    await page.route('**/api/v1/billing/invoices/INV-*', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(SAMPLE_INVOICE),
+      }),
+    );
+    await signInAsAccountant(page);
+    await page.goto(`/invoices/${SAMPLE_INVOICE.invoiceId}`);
+
+    await expect(page.getByRole('heading',
+      { name: `請求書 ${SAMPLE_INVOICE.invoiceId}` })).toBeVisible();
+    await expect(page.getByText('2 区間・近海 2.5 + 遠洋 6.0・1,200 kg・一般 1.0'))
+      .toBeVisible();
+    await expect(page.getByText('割引（15%・CT-0012）')).toBeVisible();
+    await expect(page.getByRole('link', { name: /根拠の例外（EX-2026-0928-03）/ }))
+      .toBeVisible();
+    await expect(page.getByRole('heading', { name: '料金を調整する' })).toBeVisible();
+    await page.getByLabel('調整額').fill('12000');
+    await page.getByLabel('理由').fill('留置 4 営業日の保管料');
+    await page.getByLabel('根拠の例外 ID（任意）').fill('IMP-2026-0001');
+    await page.screenshot({ path: `${OUT}/17-S61-invoice-detail.png`, fullPage: true });
+  });
+});

@@ -141,6 +141,40 @@ val handlingAcceptanceTest = tasks.register<Test>("handlingAcceptanceTest") {
     systemProperty("cucumber.junit-platform.naming-strategy", "long")
 }
 
+// 請求（billingms）も同じ理由で別のソースセットに置く。
+val billingTest: SourceSet by sourceSets.creating
+
+dependencies {
+    "billingTestImplementation"(project(":shared"))
+    "billingTestImplementation"(testFixtures(project(":shared")))
+    "billingTestImplementation"(project(":billingms"))
+    "billingTestImplementation"(libs.axon.test)
+    "billingTestImplementation"(libs.testcontainers.junit.jupiter)
+    "billingTestImplementation"(libs.testcontainers.postgresql)
+    "billingTestImplementation"(libs.awaitility)
+    "billingTestImplementation"(libs.cucumber.java)
+    "billingTestImplementation"(libs.cucumber.spring)
+    "billingTestImplementation"(libs.cucumber.junit.platform.engine)
+    "billingTestImplementation"(libs.assertj.core)
+    "billingTestImplementation"(platform(libs.junit.bom))
+    "billingTestImplementation"("org.junit.platform:junit-platform-suite")
+    "billingTestImplementation"(libs.spring.boot.starter.test)
+    "billingTestImplementation"(libs.spring.boot.starter.web)
+    "billingTestImplementation"(libs.spring.boot.starter.jdbc)
+    "billingTestImplementation"(libs.mybatis.spring.boot.starter)
+    "billingTestRuntimeOnly"(libs.junit.platform.launcher)
+}
+
+val billingAcceptanceTest = tasks.register<Test>("billingAcceptanceTest") {
+    description = "輸送料金の算出と法人割引（billingms）のデモ項目を回す"
+    group = "verification"
+    testClassesDirs = billingTest.output.classesDirs
+    classpath = billingTest.runtimeClasspath
+    useJUnitPlatform()
+    systemProperty("cucumber.junit-platform.naming-strategy", "long")
+}
+
 tasks.named("test") {
-    dependsOn(routingAcceptanceTest, trackingAcceptanceTest, handlingAcceptanceTest)
+    dependsOn(routingAcceptanceTest, trackingAcceptanceTest, handlingAcceptanceTest,
+            billingAcceptanceTest)
 }
