@@ -72,6 +72,33 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe('S22 予約詳細', () => {
+  it('US21: 経理はここから請求書へ入れる（予約から辿れないと番号を知る必要がある）',
+    async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(JSON.stringify(booking()), { status: 200 }),
+      );
+      useAuthStore.setState({
+        user: { username: 'accountant01', roles: ['ROLE_ACCOUNTANT'], token: 't' },
+      });
+
+      renderDetail();
+
+      const link = await screen.findByRole('link', { name: 'この予約の請求書' });
+      // **着いた先がその予約で絞り込まれている**（Try T1）。
+      expect(link).toHaveAttribute('href', '/invoices?bookingId=b-1');
+    });
+
+  it('経理以外に請求書への導線を出さない（開けない場所へ誘わない）', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(booking()), { status: 200 }),
+    );
+
+    renderDetail();
+
+    await screen.findByRole('heading', { name: '予約 B-2026-0903-0001' });
+    expect(screen.queryByRole('link', { name: 'この予約の請求書' })).not.toBeInTheDocument();
+  });
+
   it('状態・輸送条件・貨物を利用者の言葉で出す', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(JSON.stringify(booking()), { status: 200 }),

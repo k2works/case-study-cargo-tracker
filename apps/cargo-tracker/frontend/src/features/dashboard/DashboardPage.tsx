@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
+import { fetchInvoices } from '@/features/billing/api';
 import { useAuthStore } from '@/shared/auth/authStore';
 import { navigationFor } from '@/shared/ui/navigation';
 import { CARD, LINK, NOTICE, PAGE_TITLE, SECTION_TITLE } from '@/shared/ui/styles';
@@ -23,6 +24,7 @@ export function DashboardPage() {
   const isHandler = user?.roles.includes('ROLE_HANDLER') ?? false;
   const isShipper = user?.roles.includes('ROLE_SHIPPER') ?? false;
   const isTracker = user?.roles.includes('ROLE_TRACKER') ?? false;
+  const isAccountant = user?.roles.includes('ROLE_ACCOUNTANT') ?? false;
 
   // **荷役は航海から始まる。** 追跡番号は現場が持っていないので、
   // 「今日どの船のどの港を扱うか」を出さないと画面に入れない。
@@ -49,6 +51,15 @@ export function DashboardPage() {
     queryKey: ['customs-overdue'],
     queryFn: () => fetchOverdueCustomsHolds(),
     enabled: isTracker,
+  });
+
+  // **経理の「今日の仕事」は算出済の請求**（US21）。引取が完了すると自動で
+  // 算出されるので、経理は「出てきたものを確かめる」ところから始まる。
+  // **件数はその人の仕事に合わせる**——算出済（まだ発行していない）だけを数える。
+  const { data: calculatedInvoices } = useQuery({
+    queryKey: ['invoices-calculated'],
+    queryFn: () => fetchInvoices(false),
+    enabled: isAccountant,
   });
 
   // **荷主には「変わったこと」を知る手段がない**（送信基盤はスコープ外）。
@@ -281,6 +292,20 @@ export function DashboardPage() {
             通関申告一覧
           </Link>
           {' '}で督促してください。
+        </output>
+      )}
+
+      {/* **経理は「出てきた請求」から始まる**（US21）。件数だけでは進まないので
+          一覧へ繋ぐ。**算出されないこと**に気づく手段は要確認一覧のほうにある
+          （材料が足りない予約はそこへ出る）。 */}
+      {isAccountant && calculatedInvoices?.state === 'ready'
+        && calculatedInvoices.value.items.length > 0 && (
+        <output className={`${NOTICE} mt-4 block`}>
+          確かめていない請求が {calculatedInvoices.value.items.length} 件あります。{' '}
+          <Link to="/invoices" className={LINK}>
+            請求一覧
+          </Link>
+          {' '}で内容を確かめてください。
         </output>
       )}
 

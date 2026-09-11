@@ -61,6 +61,9 @@ export function BookingDetailPage() {
   // 状態だけで出し分けると、見に来ただけの人が引き渡せる。
   // これは表示の話で、守りは Gateway の認可（ADR-0006）が担う。
   const isSales = useAuthStore((state) => state.user?.roles.includes('ROLE_SALES') ?? false);
+  // 請求書（S61）へ入れるのは経理だけ（ui_design.md の画面一覧）。
+  const isAccountant = useAuthStore(
+    (state) => state.user?.roles.includes('ROLE_ACCOUNTANT') ?? false);
   // 追跡番号の発行は経路設計者の操作（ui_design.md S22）。
   const isRouting = useAuthStore(
     (state) => state.user?.roles.includes('ROLE_ROUTING') ?? false);
@@ -271,6 +274,21 @@ export function BookingDetailPage() {
               <Row label="到着期限" value={data.value.arrivalDeadline} />
             </dl>
           </div>
+
+          {/* **経理はここから請求書へ入る**（ui_design.md の画面遷移「S22 → S61」）。
+              予約から辿れないと、請求書を開くには番号を知っている必要がある。
+              **経理以外には出さない**——押しても Gateway の 403 に当たる
+              （開けない場所へ誘わない）。 */}
+          {isAccountant && (
+            <p className="text-sm">
+              <Link
+                to={`/invoices?bookingId=${encodeURIComponent(bookingId)}`}
+                className={LINK}
+              >
+                この予約の請求書
+              </Link>
+            </p>
+          )}
 
           {/* ボタンの出し分けは状態の述語をそのまま呼ぶ。ここで
               status === 'PRELIMINARY' と書くと、集約の遷移表と判断が二重になり、

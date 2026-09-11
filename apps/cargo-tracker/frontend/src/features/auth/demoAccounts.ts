@@ -49,7 +49,7 @@ function account(
 
 export const DEMO_ACCOUNTS: readonly DemoAccount[] = [
   account('sales01', ['ROLE_SALES'], '営業担当者（荷主の登録・検索・要確認一覧）'),
-  account('accountant01', ['ROLE_ACCOUNTANT'], '経理担当者（荷主一覧・要確認一覧）'),
+  account('accountant01', ['ROLE_ACCOUNTANT'], '経理担当者（請求一覧・荷主一覧・要確認一覧）'),
   account('tracker01', ['ROLE_TRACKER'], '追跡管理者（要確認一覧）'),
   account('routing01', ['ROLE_ROUTING'], '経路設計者（IT1 時点では専用の画面はまだありません）'),
   account('handler01', ['ROLE_HANDLER'], '荷役担当者（IT1 時点では専用の画面はまだありません）'),

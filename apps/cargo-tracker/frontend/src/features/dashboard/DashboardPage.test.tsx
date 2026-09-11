@@ -269,6 +269,33 @@ describe('S02 ダッシュボード', () => {
       .toHaveAttribute('href', '/customs?overdueOnly=true');
   });
 
+  it('US21: 経理には確かめていない請求の件数が出て、そこから請求一覧へ行ける', async () => {
+    // **件数はその人の仕事に合わせる。** 経理は「出てきた請求を確かめる」ところから
+    // 始まる。行けても自分の仕事でなければ進まない。
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      const url = String(input);
+      if (url.includes('/billing/invoices')) {
+        return Promise.resolve(new Response(JSON.stringify({
+          items: [{ invoiceId: 'INV-20260928-1a2b3c4d' }], total: 1,
+        }), { status: 200 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ items: [] }), { status: 200 }));
+    });
+
+    renderAs(['ROLE_ACCOUNTANT']);
+
+    expect(await screen.findByText(/確かめていない請求が 1 件あります/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '請求一覧' }))
+      .toHaveAttribute('href', '/invoices');
+  });
+
+  it('経理以外に請求の件数を出さない（自分の仕事でないものを並べない）', async () => {
+    renderAs(['ROLE_TRACKER']);
+    await screen.findByRole('heading', { name: '今日の作業' });
+
+    expect(screen.queryByText(/確かめていない請求が/)).not.toBeInTheDocument();
+  });
+
   it('督促の対象が無ければ通関の件数は出さない（0 件の行を並べない）', async () => {
     renderAs(['ROLE_TRACKER']);
     await screen.findByRole('heading', { name: '今日の作業' });

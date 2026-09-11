@@ -39,6 +39,10 @@ export const NAVIGATION: readonly NavigationItem[] = [
   // 通関（S52）は荷役と追跡の両方（ui_design.md:238）。荷役が申告を出し、
   // 追跡が状態を更新する。**どちらか一方にすると片方が入口を持たない。**
   { path: '/customs', label: '通関', allow: ['ROLE_HANDLER', 'ROLE_TRACKER'] },
+  // 請求（S60）は経理だけ（ui_design.md の到達性の表）。**構成表には IT2 から
+  // 載っていたが、実装側に入口が無かった**——設計が先にあり実装が追いついて
+  // いない形（IT12 の S52 と逆）。US21 で画面ができたので開く。
+  { path: '/invoices', label: '請求', allow: ['ROLE_ACCOUNTANT'] },
   {
     path: '/worklist/attention',
     label: '要確認一覧',

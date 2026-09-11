@@ -11,6 +11,8 @@ import { NAVIGATION } from '@/shared/ui/navigation';
 import { ShipperListPage } from '@/features/shippers/ShipperListPage';
 import { ShipperRegisterPage } from '@/features/shippers/ShipperRegisterPage';
 import { AttentionListPage } from '@/features/attention/AttentionListPage';
+import { InvoiceListPage } from '@/features/billing/InvoiceListPage';
+import { InvoiceDetailPage } from '@/features/billing/InvoiceDetailPage';
 import { CustomsListPage } from '@/features/customs/CustomsListPage';
 import { CustomsRegisterPage } from '@/features/customs/CustomsRegisterPage';
 import { CustomsDetailPage } from '@/features/customs/CustomsDetailPage';
@@ -55,6 +57,7 @@ export const PAGES: Record<string, ReactElement> = {
   '/tracking': <TrackingListPage />,
   '/handling': <HandlingHistoryPage />,
   '/customs': <CustomsListPage />,
+  '/invoices': <InvoiceListPage />,
   '/worklist/attention': <AttentionListPage />,
   '/admin/users': <AdminUserListPage />,
 };
@@ -154,6 +157,16 @@ export function AppRoutes() {
           element={
             <RequireRole allow={['ROLE_HANDLER', 'ROLE_TRACKER']}>
               <CustomsDetailPage />
+            </RequireRole>
+          }
+        />
+        {/* 請求詳細（S61）は経理だけ（ui_design.md の画面一覧）。荷主が読む
+            自社請求書（S62）は発行が前提なので US23・IT14 で作る。 */}
+        <Route
+          path="/invoices/:invoiceId"
+          element={
+            <RequireRole allow={['ROLE_ACCOUNTANT']}>
+              <InvoiceDetailPage />
             </RequireRole>
           }
         />
