@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.billing.infrastructure.persistence.InvoiceMapper">
+
+    <insert id="insert">
+        INSERT INTO invoice (
+            invoice_id, booking_id, shipper_id, shipper_name, shipper_type, contract_number,
+            base_amount, discount_amount, adjustment_amount, tax_amount, total_amount,
+            currency, discount_rate, billing_status, calculated_at, projected_at, last_event_id
+        ) VALUES (
+            #{invoiceId}, #{bookingId}, #{shipperId}, #{shipperName}, #{shipperType},
+            #{contractNumber}, #{baseAmount}, #{discountAmount}, #{adjustmentAmount},
+            #{taxAmount}, #{totalAmount}, #{currency}, #{discountRate}, #{billingStatus},
+            #{calculatedAt}, #{projectedAt}, #{lastEventId}
+        )
+        ON CONFLICT DO NOTHING
+    </insert>
+
+    <update id="updateAmounts">
+        UPDATE invoice
+           SET adjustment_amount = #{adjustmentAmount},
+               tax_amount        = #{taxAmount},
+               total_amount      = #{totalAmount},
+               projected_at      = #{projectedAt},
+               last_event_id     = #{lastEventId}
+         WHERE invoice_id = #{invoiceId}
+    </update>
+
+    <insert id="insertLineItem">
+        INSERT INTO invoice_line_item (invoice_id, line_seq, item_type, description,
+                                       amount, currency, basis_exception_id)
+        VALUES (#{invoiceId}, #{lineSeq}, #{itemType}, #{description}, #{amount},
+                #{currency}, #{basisExceptionId})
+        ON CONFLICT (invoice_id, line_seq) DO UPDATE SET
+            item_type          = EXCLUDED.item_type,
+            description        = EXCLUDED.description,
+            amount             = EXCLUDED.amount,
+            currency           = EXCLUDED.currency,
+            basis_exception_id = EXCLUDED.basis_exception_id
+    </insert>
+
+    <!--
+      **既定で決着したものを外す。** 混ざると一覧全体が「まだ手を入れる場所」に
+      見えなくなる。並びは算出日時の新しい順（期限は US23・IT14 で入る）。
+    -->
+    <select id="search"
+            resultType="com.example.cargotracker.billing.infrastructure.persistence.InvoiceMapper$InvoiceRow">
+        SELECT invoice_id, booking_id, shipper_id, shipper_name, shipper_type, contract_number,
+               base_amount, discount_amount, adjustment_amount, tax_amount, total_amount,
+               currency, discount_rate, billing_status, calculated_at, projected_at, last_event_id
+          FROM invoice
+         <where>
+            <if test="!includeSettled">
+                AND billing_status NOT IN ('PAID', 'VOID')
+            </if>
+            <if test="bookingId != null">
+                AND booking_id = #{bookingId}
+            </if>
+         </where>
+         ORDER BY calculated_at DESC, invoice_id
+         LIMIT #{limit}
+    </select>
+</mapper>
