@@ -1,5 +1,6 @@
 package com.example.cargotracker.acceptance.routing;
 
+import com.example.cargotracker.shared.testing.AcceptanceFixtureTime;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.cucumber.java.ja.かつ;
@@ -89,7 +90,10 @@ public class VoyageSearchSteps {
 
     @もし("出港済みの航海 {string} を {string} 発 {string} 着で登録する")
     public void 出港済みの航海を登録する(String voyageNumber, String from, String to) {
-        register(voyageNumber, from, to, "2020-01-01T00:00:00Z", "2020-01-15T00:00:00Z");
+        // **「十分に過去」も導く。** literal を許すと「未来のつもりの literal」が
+        // 混ざる（IT12 で 13 件が赤になった形）。
+        register(voyageNumber, from, to, AcceptanceFixtureTime.longPast().toString(),
+                AcceptanceFixtureTime.longPast().plus(java.time.Duration.ofDays(14)).toString());
     }
 
     @かつ("10 秒以内に出港済みを含む航海一覧に航海 {string} が現れる")

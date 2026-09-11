@@ -1,5 +1,6 @@
 package com.example.cargotracker.acceptance;
 
+import com.example.cargotracker.shared.testing.AcceptanceFixtureTime;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.cucumber.java.ja.かつ;
@@ -98,7 +99,9 @@ public class BookingRegistrationSteps {
                 "shipperId", lastShipperId,
                 "originUnLocode", "JPTYO",
                 "destinationUnLocode", "USNYC",
-                "arrivalDeadline", "2026-12-01",
+                // **期限は「今」から導く**。過ぎた期限は予約が断るので、
+                // 固定日付にすると現実の時刻に追い越された日から全滅する。
+                "arrivalDeadline", AcceptanceFixtureTime.isoDate(81),
                 "cargoType", "GENERAL",
                 "weightKg", "1200",
                 "lengthCm", "120",

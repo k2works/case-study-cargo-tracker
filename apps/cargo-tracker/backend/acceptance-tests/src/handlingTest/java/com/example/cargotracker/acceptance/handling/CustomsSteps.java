@@ -1,5 +1,6 @@
 package com.example.cargotracker.acceptance.handling;
 
+import com.example.cargotracker.shared.testing.AcceptanceFixtureTime;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
@@ -62,21 +63,23 @@ public class CustomsSteps {
         trackingNumber = "TRK-C" + System.nanoTime() % 1000000000L;
         snapshots.on(new TrackingInitializedEvent(trackingNumber, "b-" + System.nanoTime(),
                 "SHP-000001", "JPTYO", unLocode, "GENERAL",
+                // **日時は「今」から導く**（固定日付は現実の時刻に追い越される）。
                 List.of(new TrackingInitializedEvent.Leg("V-MOL-001", "JPTYO", unLocode,
-                        Instant.parse("2026-09-10T09:00:00Z"),
-                        Instant.parse("2026-09-16T08:00:00Z"))),
-                Instant.parse("2026-09-08T01:00:00Z")), "evt-" + System.nanoTime());
+                        AcceptanceFixtureTime.at(-1, 9),
+                        AcceptanceFixtureTime.at(5, 8))),
+                AcceptanceFixtureTime.at(-3, 1)), "evt-" + System.nanoTime());
     }
 
     @もし("申告番号 {string} 申告日時 {string} で通関申告を登録する")
     public void 通関申告を登録する(String number, String declaredAt) {
+        // **シナリオは相対で書く**（「2 日前」）。固定日付は現実の時刻に追い越される。
         // **申告番号は利用者が持ち込む**（税関が採番する）。同時に走る受け入れが
         // 衝突しないよう、シナリオの番号に一意な尾を付ける。
         declarationNumber = number + "-" + System.nanoTime() % 1000000L;
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("declarationNumber", declarationNumber);
         body.put("trackingNumber", trackingNumber);
-        body.put("declaredAt", declaredAt);
+        body.put("declaredAt", AcceptanceFixtureTime.resolve(declaredAt).toString());
         lastResponse = rest.post().uri(url("/customs-declarations"))
                 .header("X-Auth-Username", "handler01")
                 .contentType(MediaType.APPLICATION_JSON)

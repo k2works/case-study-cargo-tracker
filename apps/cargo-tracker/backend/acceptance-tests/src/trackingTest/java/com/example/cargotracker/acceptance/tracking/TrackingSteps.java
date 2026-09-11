@@ -1,5 +1,6 @@
 package com.example.cargotracker.acceptance.tracking;
 
+import com.example.cargotracker.shared.testing.AcceptanceFixtureTime;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
@@ -57,10 +58,12 @@ public class TrackingSteps {
         trackingNumber = "TRK-B" + System.nanoTime() % 1000000000L;
         commands.sendAndWait(new InitializeTrackingCommand(trackingNumber,
                 bookingId + "-" + System.nanoTime(), SHIPPER, "JPTYO", "USNYC", "GENERAL",
+                // **日時は「今」から導く**（固定日付は現実の時刻に追い越される）。
+                // 出発は昨日、到着は 2 週間後——追跡中の貨物という位置関係だけが要る。
                 List.of(new InitializeTrackingCommand.LegDto("V-MOL-001", "JPTYO", "USNYC",
-                        Instant.parse("2026-09-10T09:00:00Z"),
-                        Instant.parse("2026-09-24T18:00:00Z"))),
-                Instant.parse("2026-09-08T01:00:00Z")), String.class);
+                        AcceptanceFixtureTime.at(-1, 9),
+                        AcceptanceFixtureTime.at(13, 18))),
+                AcceptanceFixtureTime.at(-3, 1)), String.class);
 
         // 投影は非同期に追いつく。
         await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->

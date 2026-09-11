@@ -1,5 +1,6 @@
 package com.example.cargotracker.acceptance;
 
+import com.example.cargotracker.shared.testing.AcceptanceFixtureTime;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.cucumber.java.ja.かつ;
@@ -61,14 +62,17 @@ public class RouteAssignmentSteps {
 
     @もし("その予約に {string} 発 {string} 着、到着 {string} の経路を確定する")
     public void 経路を確定する(String from, String to, String arrival) {
-        lastResponse = assign(List.of(leg("V-ACC-001", from, to, "2026-11-01", arrival)));
+        // 出発は 10 日後（到着はシナリオが決める）。**固定日付にしない。**
+        lastResponse = assign(List.of(
+                leg("V-ACC-001", from, to, AcceptanceFixtureTime.isoDate(10), arrival)));
     }
 
     @もし("その予約に {string} 経由 {string} から {string} 着、到着 {string} の経路を確定する")
     public void 経由つきで確定する(String from, String via, String to, String arrival) {
         lastResponse = assign(List.of(
-                leg("V-ACC-001", from, via, "2026-11-01", "2026-11-10"),
-                leg("V-ACC-002", via, to, "2026-11-11", arrival)));
+                leg("V-ACC-001", from, via, AcceptanceFixtureTime.isoDate(10),
+                        AcceptanceFixtureTime.isoDate(19)),
+                leg("V-ACC-002", via, to, AcceptanceFixtureTime.isoDate(20), arrival)));
     }
 
     @ならば("経路の確定は成功する")

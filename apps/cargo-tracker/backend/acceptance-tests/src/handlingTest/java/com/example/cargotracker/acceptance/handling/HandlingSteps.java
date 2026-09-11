@@ -1,5 +1,6 @@
 package com.example.cargotracker.acceptance.handling;
 
+import com.example.cargotracker.shared.testing.AcceptanceFixtureTime;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
@@ -59,10 +60,11 @@ public class HandlingSteps {
         trackingNumber = "TRK-F" + System.nanoTime() % 1000000000L;
         projection.on(new TrackingInitializedEvent(trackingNumber, "b-" + System.nanoTime(),
                 "SHP-000001", "JPTYO", "USNYC", "GENERAL",
+                // **日時は「今」から導く**（固定日付は現実の時刻に追い越される）。
                 List.of(new TrackingInitializedEvent.Leg(voyage, "JPTYO", unLocode,
-                        Instant.parse("2026-09-10T09:00:00Z"),
-                        Instant.parse("2026-09-16T08:00:00Z"))),
-                Instant.parse("2026-09-08T01:00:00Z")), "evt-" + System.nanoTime());
+                        AcceptanceFixtureTime.at(-1, 9),
+                        AcceptanceFixtureTime.at(5, 8))),
+                AcceptanceFixtureTime.at(-3, 1)), "evt-" + System.nanoTime());
     }
 
     @もし("航海と港で貨物を探す")
@@ -201,7 +203,8 @@ public class HandlingSteps {
         Map<String, Object> declaration = new LinkedHashMap<>();
         declaration.put("declarationNumber", declarationNumber);
         declaration.put("trackingNumber", trackingNumber);
-        declaration.put("declaredAt", "2026-09-09T09:00:00Z");
+        // 申告は過去の出来事（2 日前）。留置営業日の起点になるので未来にしない。
+        declaration.put("declaredAt", AcceptanceFixtureTime.at(-2, 9).toString());
         rest.post().uri(url("/customs-declarations"))
                 .header("X-Auth-Username", "handler01")
                 .contentType(MediaType.APPLICATION_JSON)
