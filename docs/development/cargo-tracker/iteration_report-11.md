@@ -2,8 +2,10 @@
 type: Report
 title: "イテレーション 11 完了報告書"
 tags: [report]
-status: draft
+status: stable
 generated: { by: claude-code/claude-opus-5, at: 2026-09-09T07:47:51Z }
+verified:
+  - { by: human:k2works, at: 2026-09-11T10:02:08Z }
 ---
 
 # イテレーション 11 完了報告書

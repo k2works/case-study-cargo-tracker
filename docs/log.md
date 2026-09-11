@@ -1,6 +1,17 @@
 # Docs Update Log
 
 ## 2026-09-11
+* **Verification**: [iteration_report-11](/development/cargo-tracker/iteration_report-11.md) を human:k2works が検証
+* **Verification**: [iteration_report-10](/development/cargo-tracker/iteration_report-10.md) を human:k2works が検証
+* **Verification**: [iteration_report-9](/development/cargo-tracker/iteration_report-9.md) を human:k2works が検証
+* **Verification**: [iteration_report-8](/development/cargo-tracker/iteration_report-8.md) を human:k2works が検証
+* **Verification**: [iteration_report-7](/development/cargo-tracker/iteration_report-7.md) を human:k2works が検証
+* **Verification**: [iteration_report-6](/development/cargo-tracker/iteration_report-6.md) を human:k2works が検証
+* **Verification**: [iteration_report-5](/development/cargo-tracker/iteration_report-5.md) を human:k2works が検証
+* **Verification**: [iteration_report-4](/development/cargo-tracker/iteration_report-4.md) を human:k2works が検証
+* **Verification**: [iteration_report-3](/development/cargo-tracker/iteration_report-3.md) を human:k2works が検証
+* **Verification**: [iteration_report-2](/development/cargo-tracker/iteration_report-2.md) を human:k2works が検証
+* **Verification**: [iteration_report-1](/development/cargo-tracker/iteration_report-1.md) を human:k2works が検証
 * **Verification**: [iteration_plan-14](/development/cargo-tracker/iteration_plan-14.md) を human:k2works が検証
 * **Verification**: [release_report-1_1_0](/development/cargo-tracker/release_report-1_1_0.md) を human:k2works が検証
 * **Verification**: [release_report-1_0_0](/development/cargo-tracker/release_report-1_0_0.md) を human:k2works が検証

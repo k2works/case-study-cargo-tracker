@@ -3,8 +3,10 @@ type: Report
 title: "イテレーション 1 完了報告書"
 description: "IT1（基盤・認証・荷主登録）の完了報告。実績 SP 9・達成率 100%、デモ項目 7 件が緑、品質ゲート PASS。持ち越し 5 件と未達 2 件を明記。"
 tags: [report,iteration,cargo-tracker]
-status: draft
+status: stable
 generated: { by: claude-code/claude-opus-5, at: 2026-09-03T08:45:00Z }
+verified:
+  - { by: human:k2works, at: 2026-09-11T10:02:08Z }
 ---
 
 # イテレーション 1 完了報告書
