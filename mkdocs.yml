@@ -125,6 +125,9 @@ nav:
           - イテレーション 12 計画: development/cargo-tracker/iteration_plan-12.md
           - イテレーション 12 ふりかえり: development/cargo-tracker/retrospective-12.md
           - イテレーション 12 完了報告書: development/cargo-tracker/iteration_report-12.md
+          - イテレーション 13 計画: development/cargo-tracker/iteration_plan-13.md
+          - イテレーション 13 ふりかえり: development/cargo-tracker/retrospective-13.md
+          - イテレーション 13 完了報告書: development/cargo-tracker/iteration_report-13.md
           - イテレーション 11 計画: development/cargo-tracker/iteration_plan-11.md
           - イテレーション 11 ふりかえり: development/cargo-tracker/retrospective-11.md
           - イテレーション 11 完了報告書: development/cargo-tracker/iteration_report-11.md
@@ -159,6 +162,7 @@ nav:
       - 引取と例外を扱う: manual/14-引取と例外を扱う.md
       - 誤配を検知して経路を組み直す: manual/15-誤配を検知して経路を組み直す.md
       - 通関を通す: manual/16-通関を通す.md
+      - 請求を組み立てる: manual/17-請求を組み立てる.md
   - レビュー:
       - 概要: review/index.md
       - ドメインモデル分析レビュー: review/ドメインモデル分析_review_20260331.md
@@ -176,6 +180,7 @@ nav:
           - IT9 実装レビュー（2026-09-08）: review/cargo-tracker/IT9実装_review_20260908.md
           - IT11 実装レビュー（2026-09-09）: review/cargo-tracker/IT11実装_review_20260909.md
           - IT12 実装レビュー（2026-09-10）: review/cargo-tracker/IT12実装_review_20260910.md
+          - IT13 実装レビュー（2026-09-11）: review/cargo-tracker/IT13実装_review_20260911.md
           - IT10 実装レビュー（2026-09-09）: review/cargo-tracker/IT10実装_review_20260909.md
   - ADR:
       - 概要: adr/index.md
@@ -195,6 +200,8 @@ nav:
           - ADR-0012 CargoSnapshot は TrackingInitializedEvent から作る: adr/cargo-tracker/0012-cargo-snapshot-from-tracking-initialized.md
           - ADR-0013 共有カーネルが例外の対応表を持つ: adr/cargo-tracker/0013-shared-kernel-holds-the-error-mapping.md
           - ADR-0014 書けないイベントは退避して、処理を止めない: adr/cargo-tracker/0014-poison-events-are-parked-not-blocking.md
+          - ADR-0015 営業日の数え方は共有カーネルが持つ: adr/cargo-tracker/0015-business-day-counting-lives-in-the-shared-kernel.md
+          - ADR-0016 料率は設定に置き、見積と請求で同じものを読む: adr/cargo-tracker/0016-rates-live-in-configuration.md
   - 記事:
       - 概要: article/index.md
       - モノリスアーキテクチャ実装比較:

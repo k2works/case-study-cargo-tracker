@@ -375,15 +375,20 @@ test.describe('マニュアルの画面キャプチャ', () => {
         body: JSON.stringify(SAMPLE_ATTENTION),
       }),
     );
-    // 要確認は BC ごとの読み口を画面が束ねる。**片方を用意しないと画面全体が
+    // 要確認は BC ごとの読み口を画面が束ねる。**1 つでも用意しないと画面全体が
     // 失敗になる**（束ねる側はどれか 1 つでも取れないと出さない）。
-    await page.route('**/api/v1/routing/attention-items**', (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ items: [] }),
-      }),
-    );
+    // **読み口を足したらここにも足す**——IT13 で billingms を足したとき、
+    // このキャプチャが実際に赤くなった。
+    for (const path of ['**/api/v1/routing/attention-items**',
+      '**/api/v1/billing/attention-items**']) {
+      await page.route(path, (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ items: [] }),
+        }),
+      );
+    }
   });
 
   async function signIn(page: import('@playwright/test').Page) {
