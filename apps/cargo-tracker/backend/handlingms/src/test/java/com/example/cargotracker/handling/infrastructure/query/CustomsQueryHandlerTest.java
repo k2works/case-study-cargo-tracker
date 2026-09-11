@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.example.cargotracker.handling.infrastructure.persistence.CustomsDeclarationMapper;
 import com.example.cargotracker.handling.infrastructure.persistence.CustomsDeclarationMapper.CustomsDeclarationRow;
 import com.example.cargotracker.handling.infrastructure.persistence.CustomsStatusHistoryMapper;
-import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.CountOverdueCustomsHoldsQuery;
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.CustomsDeclarationView;
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.FindCustomsDeclarationsQuery;
 import java.time.Clock;
@@ -149,19 +148,17 @@ class CustomsQueryHandlerTest {
     }
 
     @Test
-    @DisplayName("US29 §6: 一覧の絞り込みと件数が同じ判定を使う（判別できる形で見る）")
-    void listAndCountUseTheSameJudgement() {
+    @DisplayName("US29 §6: 督促の対象だけに絞れる（判別できる形で見る）")
+    void narrowsToOverdueOnly() {
         held("IMP-3", HELD_3_DAYS);
         held("IMP-4", HELD_4_DAYS);
 
-        // **督促でない留置を混ぜる。** 混ぜないと、件数側が全 HELD を数える
-        // 実装に戻しても緑になる。
+        // **督促でない留置を混ぜる。** 混ぜないと、全 HELD を返す実装に戻しても
+        // 緑になる。**件数は一覧そのものから数える**（S02 は総件数を読む）ので、
+        // 別立ての件数クエリは持たない——判定が 2 か所に分かれる余地を作らない。
         assertThat(list(true))
                 .extracting(CustomsDeclarationView::declarationNumber)
                 .containsExactly("IMP-4");
-        assertThat(queries.handle(new CountOverdueCustomsHoldsQuery()))
-                .as("一覧に出るものだけを数える")
-                .isEqualTo(1);
     }
 
     @Test

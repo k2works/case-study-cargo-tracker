@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.example.cargotracker.handling.domain.model.events.CustomsDeclarationRegisteredEvent;
 import com.example.cargotracker.handling.domain.model.events.CustomsStatusUpdatedEvent;
 import com.example.cargotracker.handling.infrastructure.query.CustomsQueryHandler;
-import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.CountOverdueCustomsHoldsQuery;
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.CustomsDeclarationView;
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.FindCustomsDeclarationsQuery;
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.FindCustomsHistoryQuery;
@@ -141,17 +140,13 @@ class CustomsProjectionIT extends AbstractAxonIntegrationTest {
     }
 
     @Test
-    @DisplayName("US29 §6: 督促の対象だけに絞れて、件数も同じ判定で数える")
-    void narrowsToOverdueAndCountsTheSameWay() {
+    @DisplayName("US29 §6: 督促の対象だけに絞れる（S02 の件数もこの一覧から数える）")
+    void narrowsToOverdue() {
         String overdue = register("O1");
         update(overdue, "PENDING", "HELD", "検査待ち", Instant.parse("2026-08-10T02:00:00Z"));
 
         assertThat(numbersOf(new FindCustomsDeclarationsQuery(true, null, null, true)))
                 .contains(overdue);
-        // **件数は次の行動へ繋ぐ。** 一覧と違う判定で数えると、
-        // 件数をたどった先に何も無い、が起きる。
-        assertThat(queries.handle(new CountOverdueCustomsHoldsQuery()))
-                .isGreaterThanOrEqualTo(1);
     }
 
     @Test

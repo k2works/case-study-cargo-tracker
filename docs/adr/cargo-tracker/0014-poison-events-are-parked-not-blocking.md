@@ -33,9 +33,13 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-10T04:43:03Z }
 
 **決定 3. 退避先への書き込みは、失敗した処理とは別の接続で行う。** PostgreSQL は 1 つの文が落ちるとトランザクション全体を中断し、以降を `current transaction is aborted` で拒みます。Axon の `JdbcTransactionalExecutorProvider` は処理中の接続を使い回すので、**退避しようとした瞬間にその接続はもう死んでいます**（実測）。要確認一覧を別トランザクションで書くのと同じ理由です（`AttentionItemRecorder` の `REQUIRES_NEW`）——落ちた処理は巻き戻ってよいが、**落ちた事実は残す**。
 
+**決定 4. 処理の列は業務の識別子で分ける（IT13 で追加）。** 退避先は「同じ列のイベントは順序どおりに」を守るので、列の切り方がそのまま**被害の範囲**になります。既定では列が全体で 1 本で、1 件の毒で無関係の貨物のイベントまで退避されました（IT12 の T7e で実測。4 件のうち 3 件が巻き添え）。`@EventHandler` を持つクラスに `@SequencingPolicy(type = PropertySequencingPolicy.class, parameters = "…")` を宣言し、**貨物・予約・荷主・申告・航海のいずれかで切ります**。それより細かくは切りません——同じ貨物の中では順序が要る（訂正は登録より後に効かなければならない）ためです。**書き忘れを人の注意で防ぎません**——`@EventHandler` を持つクラス全部を走査し、宣言の無いものを赤にします。
+
+**決定 4 の但し書き。** IT12 では「`@SequencingPolicy` は方針を作りはするが `sequenceIdentifierFor` が呼ばれない」と記録しましたが、**IT13 の実測では働きました**（クラス宣言 + `PropertySequencingPolicy`）。当時の測り方が何を見ていたかは追えていません。いま効いていることは `DeadLetterQueueIT#anotherCargoIsNotParkedByAPoisonEvent` が固定しており、**効かなくなれば赤になります**。
+
 ## 引き受けていないこと（**未達を未達と書く**）
 
-**処理の列はまだ全体で 1 本です。** 退避先は「同じ列のイベントは順序どおりに」を守るので、1 件が退避されるとその列の**後続も退避されます**。追跡番号ごとに列を分ければ他の貨物は流れますが、この版では手立てがありません——
+**~~処理の列はまだ全体で 1 本です。~~**（**IT13 で解消**。決定 4 を参照。以下は当時の記録） 退避先は「同じ列のイベントは順序どおりに」を守るので、1 件が退避されるとその列の**後続も退避されます**。追跡番号ごとに列を分ければ他の貨物は流れますが、この版では手立てがありません——
 
 - `application.yml` の `sequencing-policy` は設定として読めますが、**どこからも使われていません**（`EventProcessorProperties$ProcessorSettings.sequencingPolicy()` の呼び出し元が jar に 1 つも無い）
 - `@SequencingPolicy` は方針を**作りはします**（構築が 10 回走ることを実測）が、`sequenceIdentifierFor` が**一度も呼ばれません**。Processor 側が別の component に列を尋ねています
@@ -49,7 +53,7 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-10T04:43:03Z }
 | 直したあとは Event Store 全体のリプレイ | 退避先から処理し直す |
 | 後続のイベントが届かない | **同じ列の後続はやはり届かない**（退避先に溜まる） |
 
-列を分ける手立ては、`EventProcessorDefinition` で Processor を明示的に組み、`SequenceOverridingEventHandlingComponent` を挟むことで作れる見込みです。IT13 へ送ります。
+列を分ける手立ては **IT13 で入りました**。見込んでいた `EventProcessorDefinition` + `SequenceOverridingEventHandlingComponent` ではなく、**`@SequencingPolicy` のクラス宣言**で足りました。上の表の最終行は次のとおり改まります——**別の業務識別子（別の貨物・別の予約）のイベントは、毒があっても届きます**。同じ識別子の後続はやはり届きません（順序を守るため。これは意図した動作です）。
 
 ## 使ってみて分かったこと（IT12 の T7e で実測）
 
@@ -65,9 +69,15 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-10T04:43:03Z }
 4 件すべて `FULL_SEQUENTIAL_POLICY` で、同じ列にいたために巻き添えになっています。
 
 **足りないものが 1 つ見つかりました。** 直したあとに<b>退避先から処理し直す入口</b>が
-ありません（Axon の `SequencedDeadLetterProcessor` を呼ぶ運用タスク）。今回は開発
+ありませんでした（Axon の `SequencedDeadLetterProcessor` を呼ぶ運用タスク）。IT12 では開発
 環境の使い捨てデータだったので `DELETE` で片づけましたが、**これは「黙って捨てる」
-ことであり、この ADR の決定 1 に反します**。本番では消せません。IT13 へ送ります。
+ことであり、この ADR の決定 1 に反します**。本番では消せません。
+
+**IT13 で入りました。** `/actuator/deadletters`（`DeadLetterRetryEndpoint`）と
+`npx gulp projection:dead-letters:retry` です。**消す手段は置いていません**——直って
+いなければまた退避されるだけで、消えはしません。実測で 1 つ分かったことがあります:
+**投影が書く先は 1 つとは限らない**ので、原因を片方だけ直すと処理し直しても通らず、
+「0 列を処理し直した」という答えが返ります（何も起きなかったことが分かる形にしてあります）。
 
 ## 検査
 
@@ -75,8 +85,10 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-10T04:43:03Z }
 
 | 決定 | 検査 |
 | :--- | :--- |
+| 1 | `DeadLetterQueueIT#parkedEventIsReprocessedAfterTheCauseIsFixed`（**原因を直してから処理し直すと反映される**。入口が無ければ消して片づけることになる）。`EventSourcedServicesHaveTheSameShapeTest#everyServiceWithADeadLetterQueueCanReprocess`（退避先を持つサービス全部に入口があるか。**@Import と actuator への露出の両方**を見る——片方だけでは呼べない） |
 | 1 | `DeadLetterQueueIT#unwritableEventIsParkedWithItsCause`（**IT11 の事象を同じ原因で再現**し、退避先に原因つきで残ることを見る）。`DeadLetterQueueIT#theProcessorKeepsWorkingAfterParking`（1 件目で止まっているなら 2 件目は退避先にも現れない） |
 | 2 | `EventSourcedServicesHaveTheSameShapeTest#everyEnumeratedProcessorHasADeadLetterQueue`（**列挙されている Processing Group を全部拾ってから**それぞれを見る。`dlq` の付いたものだけを数えると、付け忘れたものほど漏れる。1 つ外すと赤になることを確認済み） |
+| 4 | `DeadLetterQueueIT#anotherCargoIsNotParkedByAPoisonEvent`（**毒と別の貨物のイベントが投影される**ことを見る。列を 1 本に戻すと赤になる）。`EventSourcedServicesHaveTheSameShapeTest#everyEventHandlingClassDeclaresItsSequence`（**`@EventHandler` を持つクラス全部を走査**し、宣言の無いものを赤にする。宣言しているものだけを数えると、書き忘れたものほど漏れる） |
 | 3 | `OwnConnectionExecutorProviderTest`（DataSource から取り直す・成功で確定・失敗で巻き戻して失敗として返す・接続が取れなければ失敗として返す） |
 
 ## 代替案

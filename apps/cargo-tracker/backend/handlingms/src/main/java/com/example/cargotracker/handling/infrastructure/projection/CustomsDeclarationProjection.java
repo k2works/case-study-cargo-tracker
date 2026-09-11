@@ -1,5 +1,7 @@
 package com.example.cargotracker.handling.infrastructure.projection;
 
+import org.axonframework.messaging.core.annotation.SequencingPolicy;
+import org.axonframework.messaging.core.sequencing.PropertySequencingPolicy;
 import com.example.cargotracker.handling.domain.model.events.CustomsDeclarationRegisteredEvent;
 import com.example.cargotracker.handling.domain.model.events.CustomsStatusUpdatedEvent;
 import com.example.cargotracker.handling.domain.model.valueobjects.CustomsStatus;
@@ -28,7 +30,14 @@ import org.springframework.stereotype.Component;
  * <p><b>留置営業日数はここでは数えない。</b> 留置中は日が経つだけで日数が変わるのに
  * イベントは来ないので、列に持つと古いままになる。列に写すのは「留置から出るとき」
  * の確定値だけで、留置中の日数は読むときに数える（{@code CustomsQueryHandler}）。</p>
+ *
+ * <p><b>処理の列を申告ごとに分ける。</b> 既定では列が全体で 1 本なので、1 件の毒で
+ * <b>無関係の申告のイベントまで退避される</b>（IT12 のクラスタ E2E で 4 件のうち 3 件が
+ * 巻き添え）。退避先は順序を守るために「同じ列の後続」も退避するので、列の切り方が
+ * そのまま被害の範囲になる。同じ申告の中では順序が要る（訂正は登録より後に効かなければ
+ * ならない）ので、申告より細かくは切らない。</p>
  */
+@SequencingPolicy(type = PropertySequencingPolicy.class, parameters = "declarationNumber")
 @Component
 public class CustomsDeclarationProjection {
 

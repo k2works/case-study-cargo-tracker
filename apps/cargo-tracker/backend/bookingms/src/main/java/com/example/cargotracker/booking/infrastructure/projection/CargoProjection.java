@@ -1,5 +1,7 @@
 package com.example.cargotracker.booking.infrastructure.projection;
 
+import org.axonframework.messaging.core.annotation.SequencingPolicy;
+import org.axonframework.messaging.core.sequencing.PropertySequencingPolicy;
 import com.example.cargotracker.booking.domain.model.events.BookingConfirmedEvent;
 import com.example.cargotracker.booking.domain.model.events.BookingDeliveredEvent;
 import com.example.cargotracker.booking.domain.model.events.BookingDeliveryRevertedEvent;
@@ -43,7 +45,14 @@ import org.springframework.stereotype.Component;
  * ので、荷主の投影が遅れていることを理由に予約を落とさない。</p>
  *
  * <p><b>投影はコマンドを送らない。</b> 送るとリプレイのたびに副作用が再実行される。</p>
+ *
+ * <p><b>処理の列を予約ごとに分ける。</b> 既定では列が全体で 1 本なので、1 件の毒で
+ * <b>無関係の予約のイベントまで退避される</b>（IT12 のクラスタ E2E で 4 件のうち 3 件が
+ * 巻き添え）。退避先は順序を守るために「同じ列の後続」も退避するので、列の切り方が
+ * そのまま被害の範囲になる。同じ予約の中では順序が要る（訂正は登録より後に効かなければ
+ * ならない）ので、予約より細かくは切らない。</p>
  */
+@SequencingPolicy(type = PropertySequencingPolicy.class, parameters = "bookingId")
 @Component
 public class CargoProjection {
 

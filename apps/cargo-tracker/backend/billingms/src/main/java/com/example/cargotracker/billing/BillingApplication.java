@@ -5,6 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Import;
 import com.example.cargotracker.shared.infrastructure.axon.AxonJdbcConfiguration;
 import com.example.cargotracker.shared.infrastructure.axon.AxonServerStartupCheckConfiguration;
+import com.example.cargotracker.shared.infrastructure.axon.DeadLetterRetryEndpoint;
 import com.example.cargotracker.shared.infrastructure.crypto.CryptoConfiguration;
 import com.example.cargotracker.shared.infrastructure.time.BusinessClockConfiguration;
 
@@ -13,6 +14,8 @@ import com.example.cargotracker.shared.infrastructure.time.BusinessClockConfigur
 // DataSource を持たない gatewayms が JDBC の設定を読み込んで起動に失敗する。
 @SpringBootApplication
 @Import({
+    // 退避したイベントを処理し直す入口（ADR-0014 決定 1）。**消す手段は置かない。**
+    DeadLetterRetryEndpoint.class,
     AxonJdbcConfiguration.class,
     AxonServerStartupCheckConfiguration.class,
     BusinessClockConfiguration.class,

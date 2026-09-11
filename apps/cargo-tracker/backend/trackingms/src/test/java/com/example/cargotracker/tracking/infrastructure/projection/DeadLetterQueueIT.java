@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import com.example.cargotracker.shared.contract.event.TrackingInitializedEvent;
+import com.example.cargotracker.shared.infrastructure.axon.DeadLetterRetryEndpoint;
 import com.example.cargotracker.shared.testing.AbstractAxonIntegrationTest;
 import java.time.Duration;
 import java.time.Instant;
@@ -75,6 +76,9 @@ class DeadLetterQueueIT {
     @Autowired
     private JdbcTemplate jdbc;
 
+    @Autowired
+    private DeadLetterRetryEndpoint retry;
+
     private static TrackingInitializedEvent initialized(String trackingNumber) {
         return new TrackingInitializedEvent(trackingNumber, "b-" + System.nanoTime(),
                 "SHP-000001", "JPTYO", "USNYC", "GENERAL",
@@ -115,10 +119,10 @@ class DeadLetterQueueIT {
         // 後続が Event Store に積まれたまま届かなくなった。退避先があると、
         // Processor は退避して次へ進むので、2 件目も引き受けられる。
         //
-        // 2 件目も書けないもので確かめる。書けるもので確かめると、
-        // **列がまだ全体で 1 本である**ため退避されて、この検査は
-        // 「引き受けたか」ではなく順序の都合を見てしまう（[ADR-0014] の
-        // 「引き受けていないこと」）。
+        // 2 件目も書けないもので確かめる。列は貨物ごとに分けたので（IT13）、
+        // 書けるもので確かめても通るが、それでは「退避したあとも動き続けるか」
+        // ではなく「別の列だから届いた」を見ることになる。**同じ壊れ方の 2 件目**を
+        // 引き受けられることが、ここで見たいことである。
         events.publish(List.of(initialized(TOO_LONG_TRACKING_NUMBER + "-A"))).join();
         events.publish(List.of(initialized(TOO_LONG_TRACKING_NUMBER + "-B"))).join();
 
@@ -127,5 +131,74 @@ class DeadLetterQueueIT {
                         "SELECT count(*) FROM dead_letter_entry", Integer.class))
                         .as("1 件目で止まっているなら、2 件目は退避先にも現れない")
                         .isGreaterThanOrEqualTo(2));
+    }
+
+    @Test
+    @DisplayName("処理の列は貨物ごとに分かれる（別の貨物の毒で巻き添えにならない）")
+    void anotherCargoIsNotParkedByAPoisonEvent() {
+        // **列が全体で 1 本だと、1 件の毒で無関係の貨物まで退避される。** IT12 の
+        // クラスタ E2E で実測した——4 件のうち 3 件が巻き添えだった。退避先は
+        // 「同じ列の後続」を意図的に退避するので（順序を守るため）、列の切り方が
+        // そのまま被害の範囲になる。貨物ごとに切れていれば、毒とは別の貨物の
+        // イベントは**そのまま投影される**。
+        events.publish(List.of(initialized(TOO_LONG_TRACKING_NUMBER + "-C"))).join();
+
+        String healthy = "TRK-DLQ-OK-" + System.nanoTime() % 1000000L;
+        events.publish(List.of(initialized(healthy))).join();
+
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
+                assertThat(jdbc.queryForObject(
+                        "SELECT count(*) FROM tracking_summary WHERE tracking_number = ?",
+                        Integer.class, healthy))
+                        .as("毒と同じ列に入れられると、書けるはずのこの貨物も退避される")
+                        .isEqualTo(1));
+    }
+
+    @Test
+    @DisplayName("原因を直してから処理し直すと、退避したイベントが反映される（消さない）")
+    void parkedEventIsReprocessedAfterTheCauseIsFixed() {
+        // **直したあとに退避を消すのは「黙って捨てる」こと**で、[ADR-0014] 決定 1 に
+        // 反する。IT12 の実機確認では処理し直す入口が無く、実際に DELETE で片づけた。
+        // ここでは同じ道筋をたどる——毒を流して退避させ、**原因（列の桁）を直し**、
+        // 入口を呼ぶと反映される。
+        String parked = TOO_LONG_TRACKING_NUMBER + "-R";
+        events.publish(List.of(initialized(parked))).join();
+
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
+                assertThat(jdbc.queryForList(
+                        "SELECT sequence_identifier FROM dead_letter_entry "
+                        + "WHERE sequence_identifier = ?", parked))
+                        .as("退避されていなければ、処理し直すものが無い")
+                        .isNotEmpty());
+
+        // 原因を直す（本番なら投影のコードを直して入れ替える。ここでは桁を広げる）。
+        //
+        // **投影が書く先は 1 つではない。** 旅程も同じ桁で持っているので、片方だけ
+        // 直すと処理し直しても通らない（実測。retry は 0 列を返す）。
+        widenTrackingNumberTo(60);
+        try {
+            Map<String, Object> result = retry.retry();
+
+            assertThat(result).as("処理し直した列の数を返す（何も起きなかったのか、が分かる）")
+                    .containsKey("processedSequences");
+            assertThat(jdbc.queryForObject(
+                    "SELECT count(*) FROM tracking_summary WHERE tracking_number = ?",
+                    Integer.class, parked))
+                    .as("処理し直したのに反映されないなら、退避先から取り出せていない")
+                    .isEqualTo(1);
+        } finally {
+            // **桁を戻す。** 戻さないと、同じ DB を使う他の検査の毒が毒でなくなり、
+            // 実行順で結果が変わる（実測。1 件目の検査が落ちた）。
+            jdbc.update("DELETE FROM tracking_leg WHERE length(tracking_number) > 25");
+            jdbc.update("DELETE FROM tracking_summary WHERE length(tracking_number) > 25");
+            widenTrackingNumberTo(25);
+        }
+    }
+
+    private void widenTrackingNumberTo(int size) {
+        jdbc.execute("ALTER TABLE tracking_summary "
+                + "ALTER COLUMN tracking_number TYPE VARCHAR(" + size + ")");
+        jdbc.execute("ALTER TABLE tracking_leg "
+                + "ALTER COLUMN tracking_number TYPE VARCHAR(" + size + ")");
     }
 }

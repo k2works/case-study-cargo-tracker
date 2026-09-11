@@ -956,6 +956,55 @@ export default function (gulp) {
   });
 
   /**
+   * 退避されたイベントを処理し直す（ADR-0014 決定 1・IT13 引き継ぎ枠 A）。
+   *
+   *   npx gulp projection:dead-letters:retry
+   *
+   * **直したあとに退避を消さない。** 消すのは「黙って捨てる」ことで、決定 1 に
+   * 反する（IT12 の実機確認では入口が無く、実際に DELETE で片づけた）。原因を
+   * 直してからこれを呼ぶと、退避先のイベントが順に処理し直される。直っていなければ
+   * また退避されるだけで、消えはしない。
+   *
+   * **どちらの動かし方でも使える。** クラスタ（kind）のときは Service が ClusterIP
+   * なので、その場かぎりの port-forward を張って呼ぶ。滞留の処理は「連鎖が止まって
+   * いる」ときに使うもので、そのときに使えなければ意味がない（IT8 H.1）。
+   */
+  gulp.task('projection:dead-letters:retry', async () => {
+    const inCluster = (() => {
+      try {
+        return sh(`kubectl get ns ${NAMESPACE} -o name`).trim().length > 0;
+      } catch {
+        return false;
+      }
+    })();
+
+    for (const [service, port] of Object.entries(SERVICES)) {
+      if (service === 'gatewayms' || service === 'authms') {
+        continue; // 投影を持たない（退避先も無い）。
+      }
+      console.log(`=== ${service} ===`);
+      let forward;
+      if (inCluster) {
+        forward = spawn('kubectl', ['--context', `kind-${KIND_CLUSTER}`, '-n', NAMESPACE,
+          'port-forward', `svc/${service}`, `${port}:${port}`], { stdio: 'ignore' });
+        // eslint-disable-next-line no-await-in-loop
+        await waitForGateway(port);
+      }
+      try {
+        console.log(sh(
+          `curl -sS -m 30 -X POST http://localhost:${port}/actuator/deadletters`,
+        ).trim());
+      } catch (e) {
+        console.log(`  呼べません: ${e.message.split('\n')[0]}`);
+      } finally {
+        if (forward) {
+          forward.kill();
+        }
+      }
+    }
+  });
+
+  /**
    * 荷主の個人情報を削除する（crypto-shredding。ADR-0003）。
    *
    *   npx gulp shipper:shred --shipper <shipperId>

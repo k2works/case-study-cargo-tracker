@@ -306,6 +306,78 @@ class EventSourcedServicesHaveTheSameShapeTest {
     }
 
     @Test
+    @DisplayName("退避先を持つサービスには、処理し直す入口がある")
+    void everyServiceWithADeadLetterQueueCanReprocess() throws IOException {
+        // **消す手段しか無いと、消すことになる**（[ADR-0014] 決定 1 に反する）。
+        // IT12 の実機確認では入口が無く、実際に `DELETE` で片づけた。入口は
+        // 共有の Actuator エンドポイントだが、各サービスが @Import しないと
+        // Bean にならない（共有設定は明示的に取り込む形にしてある）。
+        List<String> withoutEntry = new ArrayList<>();
+        for (Path yml : applicationConfigs()) {
+            if (!Files.readString(yml, StandardCharsets.UTF_8).contains("dlq:")) {
+                continue;
+            }
+            Path serviceDir = yml.getParent().getParent().getParent().getParent();
+            boolean imported;
+            try (Stream<Path> paths = Files.walk(serviceDir.resolve("src/main/java"))) {
+                imported = paths.filter(path -> path.toString().endsWith("Application.java"))
+                        .anyMatch(path -> readFile(path).contains("DeadLetterRetryEndpoint"));
+            }
+            boolean exposed = Files.readString(yml, StandardCharsets.UTF_8)
+                    .contains("deadletters");
+            if (!imported || !exposed) {
+                withoutEntry.add(serviceDir.getFileName()
+                        + (imported ? "" : "（@Import が無い）")
+                        + (exposed ? "" : "（actuator に出していない）"));
+            }
+        }
+
+        assertThat(withoutEntry)
+                .as("処理し直せないと、退避を消して片づけることになる（ADR-0014 決定 1）")
+                .isEmpty();
+    }
+
+    @Test
+    @DisplayName("イベントを受けるクラスは処理の列の切り方を宣言している")
+    void everyEventHandlingClassDeclaresItsSequence() throws IOException {
+        // **既定では列が全体で 1 本になる。** 1 件の毒で無関係の貨物のイベントまで
+        // 退避される（IT12 のクラスタ E2E で 4 件のうち 3 件が巻き添え）。
+        // `@SequencingPolicy` を書き忘れたクラスだけが、黙って 1 本の列に戻る——
+        // 単体の検査はどれも緑のままで、症状はクラスタでしか出ない。
+        //
+        // **走査するのは「対象になりうるもの」の側**（`@EventHandler` を持つ
+        // クラス全部）にする。宣言しているものだけを数えると、書き忘れたものほど漏れる。
+        List<String> undeclared = new ArrayList<>();
+        for (Path serviceDir : serviceDirs()) {
+            Path sources = serviceDir.resolve("src/main/java");
+            if (!Files.isDirectory(sources)) {
+                continue;
+            }
+            try (Stream<Path> paths = Files.walk(sources)) {
+                paths.filter(path -> path.toString().endsWith(".java"))
+                        // package-info は説明であって、イベントを受けるクラスではない。
+                        .filter(path -> !path.getFileName().toString().equals("package-info.java"))
+                        .filter(EventSourcedServicesHaveTheSameShapeTest::declaresEventHandler)
+                        .filter(path -> !readFile(path).contains("@SequencingPolicy"))
+                        .forEach(path -> undeclared.add(serviceDir.getFileName()
+                                + ": " + path.getFileName()));
+            }
+        }
+
+        assertThat(undeclared)
+                .as("@SequencingPolicy を書かないと、そのクラスだけ 1 本の列に戻る")
+                .isEmpty();
+    }
+
+    private static String readFile(Path path) {
+        try {
+            return Files.readString(path, StandardCharsets.UTF_8);
+        } catch (IOException unreadable) {
+            throw new java.io.UncheckedIOException(unreadable);
+        }
+    }
+
+    @Test
     @DisplayName("列挙した Processing Group には退避先が付いている")
     void everyEnumeratedProcessorHasADeadLetterQueue() throws IOException {
         // **書き忘れを人の注意で防がない**（[ADR-0014] 決定 2）。`"[..default]"` は

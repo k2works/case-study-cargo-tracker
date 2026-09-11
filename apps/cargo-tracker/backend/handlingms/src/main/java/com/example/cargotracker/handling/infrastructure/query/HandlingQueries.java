@@ -181,10 +181,6 @@ public final class HandlingQueries {
     public record FindCustomsHistoryQuery(String declarationNumber) {
     }
 
-    /** 督促の対象（留置が既定の営業日数を超えた申告）の件数（S02 / §受入基準 6）。 */
-    public record CountOverdueCustomsHoldsQuery() { // NOSONAR: 型が問い合わせの識別子
-    }
-
     /**
      * S52 に出す申告 1 件。
      *

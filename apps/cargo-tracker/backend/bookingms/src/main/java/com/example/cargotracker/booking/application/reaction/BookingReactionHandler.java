@@ -1,5 +1,7 @@
 package com.example.cargotracker.booking.application.reaction;
 
+import org.axonframework.messaging.core.annotation.SequencingPolicy;
+import org.axonframework.messaging.core.sequencing.PropertySequencingPolicy;
 import com.example.cargotracker.booking.application.port.ProcessStateService;
 import com.example.cargotracker.booking.domain.model.commands.RevertTrackingNumberCommand;
 import com.example.cargotracker.booking.domain.model.events.TrackingNumberIssuedEvent;
@@ -35,7 +37,14 @@ import org.springframework.stereotype.Component;
  *
  * <p><b>2 段しかない。</b> 追跡番号の発行そのものは経路設計者の操作なので、連鎖は
  * 発行された<b>あと</b>から始まる（ADR-0010 決定 3）。</p>
+ *
+ * <p><b>処理の列を予約ごとに分ける。</b> 既定では列が全体で 1 本なので、1 件の毒で
+ * <b>無関係の予約のイベントまで退避される</b>（IT12 のクラスタ E2E で 4 件のうち 3 件が
+ * 巻き添え）。退避先は順序を守るために「同じ列の後続」も退避するので、列の切り方が
+ * そのまま被害の範囲になる。同じ予約の中では順序が要る（訂正は登録より後に効かなければ
+ * ならない）ので、予約より細かくは切らない。</p>
  */
+@SequencingPolicy(type = PropertySequencingPolicy.class, parameters = "bookingId")
 @Component
 public class BookingReactionHandler {
 

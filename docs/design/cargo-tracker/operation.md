@@ -291,6 +291,7 @@ Axon Server の停止中はコマンドを受け付けません。荷役作業�
 | `gulp projection:replay --env --service --group` | 投影の Processing Group のトークンをリセットしてリプレイ。終了後に行数を検証。`-reaction` の Group は拒否する |
 | `gulp projection:status --env` | 全 Processing Group の位置・遅れ・停止の一覧 |
 | `gulp projection:dead-letters --env` | 投影が書けずに退避されたイベントの一覧（原因つき）。**`projection:status` でトークンは進んでいるのに反映されない、という形の止まり方はここに出ます**（[ADR-0014](../../adr/cargo-tracker/0014-poison-events-are-parked-not-blocking.md)）。直したら退避先から処理し直します——Event Store 全体のリプレイは要りません |
+| `gulp projection:dead-letters:retry` | **退避されたイベントを処理し直す**（[ADR-0014](../../adr/cargo-tracker/0014-poison-events-are-parked-not-blocking.md) 決定 1）。原因を直してから呼びます。**退避を消す手段は置きません**——消すのは「黙って捨てる」ことで、反映されていない貨物が誰にも見えないまま残ります。直っていなければまた退避されるだけで、消えはしません。クラスタでも動きます（その場かぎりの port-forward を張ります） |
 | `gulp reaction:stuck --env --older-than 24h` | 滞留している連鎖の一覧 |
 | `gulp axon:backup:snapshot --env` | Axon Server EBS の手動スナップショット（リリース前・バージョンアップ前） |
 | `gulp axon:restore --env --snapshot-id` | スナップショットからの復元と S3 差分の再投入 |

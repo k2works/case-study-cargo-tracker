@@ -5,7 +5,6 @@ import com.example.cargotracker.handling.domain.model.valueobjects.HolidayCalend
 import com.example.cargotracker.handling.infrastructure.persistence.CustomsDeclarationMapper;
 import com.example.cargotracker.handling.infrastructure.persistence.CustomsDeclarationMapper.CustomsDeclarationRow;
 import com.example.cargotracker.handling.infrastructure.persistence.CustomsStatusHistoryMapper;
-import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.CountOverdueCustomsHoldsQuery;
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.CustomsDeclarationListView;
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.CustomsDeclarationView;
 import com.example.cargotracker.handling.infrastructure.query.HandlingQueries.CustomsHistoryEntryView;
@@ -109,15 +108,6 @@ public class CustomsQueryHandler {
     public CustomsDeclarationView handle(FindCustomsStatusOfCargoQuery query) {
         CustomsDeclarationRow row = declarations.findLatestByCargo(query.trackingNumber());
         return row == null ? null : toView(row);
-    }
-
-    /** 督促の対象の件数（S02。**件数は次の行動へ繋ぐ**ので一覧と同じ判定で数える）。 */
-    @QueryHandler
-    public Integer handle(CountOverdueCustomsHoldsQuery query) {
-        return (int) declarations.findHeld().stream()
-                .map(this::toView)
-                .filter(CustomsDeclarationView::overdue)
-                .count();
     }
 
     private CustomsDeclarationView toView(CustomsDeclarationRow row) {

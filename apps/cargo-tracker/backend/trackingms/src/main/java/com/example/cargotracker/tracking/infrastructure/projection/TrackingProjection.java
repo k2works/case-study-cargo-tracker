@@ -1,5 +1,7 @@
 package com.example.cargotracker.tracking.infrastructure.projection;
 
+import org.axonframework.messaging.core.annotation.SequencingPolicy;
+import org.axonframework.messaging.core.sequencing.PropertySequencingPolicy;
 import com.example.cargotracker.shared.contract.event.TrackingInitializedEvent;
 import com.example.cargotracker.tracking.domain.model.events.TransportStatusUpdatedEvent;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TransportStatus;
@@ -34,12 +36,13 @@ import org.springframework.stereotype.Component;
  * <p><b>Reaction Handler と同じ Group にしない。</b> 投影のリプレイでコマンドが
  * 再送されると、追跡が作り直される（ADR-0001 決定 6）。パッケージで分ける。</p>
  *
- * <p><b>処理の列はまだ全体で 1 本である。</b> 1 件が書けずに退避されると、順序を守る
- * という退避先の約束のために<b>後続も退避される</b>（[ADR-0014] の「引き受けていない
- * こと」）。追跡番号ごとに分けたいが、この版では手立てが無い——{@code application.yml}
- * の {@code sequencing-policy} はどこからも読まれず、{@code @SequencingPolicy} は
- * 方針を作りはするが{@code sequenceIdentifierFor} が呼ばれない（どちらも実測）。</p>
+ * <p><b>処理の列を貨物ごとに分ける。</b> 既定では列が全体で 1 本なので、1 件の毒で
+ * <b>無関係の貨物のイベントまで退避される</b>（IT12 のクラスタ E2E で 4 件のうち 3 件が
+ * 巻き添え）。退避先は順序を守るために「同じ列の後続」も退避するので、列の切り方が
+ * そのまま被害の範囲になる。同じ貨物の中では順序が要る（訂正は登録より後に効かなければ
+ * ならない）ので、貨物より細かくは切らない。</p>
  */
+@SequencingPolicy(type = PropertySequencingPolicy.class, parameters = "trackingNumber")
 @Component
 public class TrackingProjection {
 

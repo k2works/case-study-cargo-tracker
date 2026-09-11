@@ -50,4 +50,8 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        # deadletters は退避したイベントを処理し直す入口（ADR-0014 決定 1）。
+        # **直したあとに退避を消すのは「黙って捨てる」こと**なので、消す手段では
+        # なく処理し直す手段を置く。運用の読み口（projection:dead-letters）と
+        # 同じ立場のものを同じ入口に並べる。
+        include: health,info,deadletters

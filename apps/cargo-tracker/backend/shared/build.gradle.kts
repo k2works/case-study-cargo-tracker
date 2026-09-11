@@ -17,6 +17,10 @@ dependencies {
     // API のエラー対応表（interfaces/rest）が使う。**compileOnly にする**——
     // Web を持たないサービスに Web の起動を持ち込まないため。
     compileOnly(libs.spring.boot.starter.web)
+    // 退避したイベントを処理し直す入口（DeadLetterRetryEndpoint）が使う。
+    // **compileOnly にする**——各サービスは自分で actuator を宣言している
+    // （BuildConventionTest）。ここで api にすると、宣言を消しても気づけない。
+    compileOnly(libs.spring.boot.starter.actuator)
 
     // testFixtures 側でルールを組み立てる。各サービスは testFixtures(project(":shared")) で取り込む。
     testFixturesApi(libs.archunit.junit5)
@@ -39,6 +43,9 @@ dependencies {
     // テスト側にも入れる。最小の違反例だけだと、ここが緑でも実コードの違反を見逃す。
     testImplementation(libs.spring.boot.starter.web)
     testImplementation(libs.mybatis.spring.boot.starter)
+    // DeadLetterRetryEndpoint の @Endpoint を読むのに要る。compileOnly の依存は
+    // テスト側に伝わらないので、ここでも宣言する（無いと -Werror で落ちる）。
+    testImplementation(libs.spring.boot.starter.actuator)
 }
 
 // BuildConventionTest はビルド構成のファイルそのものを読む。入力として宣言しないと
@@ -68,6 +75,11 @@ tasks.named<Test>("test") {
             .withPathSensitivity(PathSensitivity.RELATIVE)
     inputs.file(rootProject.file(
             "../../../docs/adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md"))
+    // AcceptanceFixturesAreNotTimeBombsTest は受け入れテストのソースとシナリオを読む。
+    // 宣言しないと Gradle が UP-TO-DATE と判断し、固定日付を書き足しても赤にならない。
+    inputs.dir(rootProject.file("acceptance-tests/src"))
+            .withPropertyName("acceptanceSources")
+            .withPathSensitivity(PathSensitivity.RELATIVE)
     // EventSourcedServicesHaveTheSameShapeTest は各サービスの application.yml を読む。
     // 宣言しないと、Processing Group の列挙を消しても検査が走らずに緑のままになる。
     inputs.files(rootProject.subprojects.map { it.file("src/main/resources") })

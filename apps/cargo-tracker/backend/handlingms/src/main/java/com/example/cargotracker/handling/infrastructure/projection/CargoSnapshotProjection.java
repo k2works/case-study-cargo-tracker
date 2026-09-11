@@ -1,5 +1,7 @@
 package com.example.cargotracker.handling.infrastructure.projection;
 
+import org.axonframework.messaging.core.annotation.SequencingPolicy;
+import org.axonframework.messaging.core.sequencing.PropertySequencingPolicy;
 import com.example.cargotracker.shared.contract.event.TrackingInitializedEvent;
 import com.example.cargotracker.handling.infrastructure.persistence.CargoSnapshotMapper;
 import java.time.Clock;
@@ -20,7 +22,14 @@ import org.springframework.stereotype.Component;
  *
  * <p><b>リプレイで行が増えない。</b> 追跡番号が主キーなので上書きになり、旅程は
  * 先に消してから入れ直す（追記だけにすると、リプレイで区間が倍になる）。</p>
+ *
+ * <p><b>処理の列を貨物ごとに分ける。</b> 既定では列が全体で 1 本なので、1 件の毒で
+ * <b>無関係の貨物のイベントまで退避される</b>（IT12 のクラスタ E2E で 4 件のうち 3 件が
+ * 巻き添え）。退避先は順序を守るために「同じ列の後続」も退避するので、列の切り方が
+ * そのまま被害の範囲になる。同じ貨物の中では順序が要る（訂正は登録より後に効かなければ
+ * ならない）ので、貨物より細かくは切らない。</p>
  */
+@SequencingPolicy(type = PropertySequencingPolicy.class, parameters = "trackingNumber")
 @Component
 public class CargoSnapshotProjection {
 
