@@ -343,8 +343,53 @@ class InvoiceTest {
     void lineItemsDefaultToEmpty() {
         var event = new InvoiceCalculatedEvent(INVOICE, BOOKING, "SHP-000001", null, "INDIVIDUAL",
                 null, BigDecimal.ZERO, new BigDecimal("1000"), BigDecimal.ZERO, BigDecimal.ZERO,
-                new BigDecimal("1000"), "JPY", null, "accountant01", NOW);
+                new BigDecimal("0.10"), false, new BigDecimal("1000"), "JPY", null,
+                "accountant01", NOW);
 
         assertThat(event.lineItems()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("輸出の請求書は、調整を入れても免税のまま（税率で逆算しない）")
+    void keepsTheExportExemptionAfterAdjustment() {
+        // **免税は業務の判断**であって「税額が 0 だったから」ではない。割り戻しで
+        // 復元していたころ、税率 0% の期間には国内貨物も免税として復元された
+        // （IT13 のレビュー 中）。輸出の請求書に調整を入れて、税が 0 のままで
+        // あることを固定する。
+        var calculated = calculatedEventOf(calculate(ShipperType.INDIVIDUAL, null));
+        assertThat(calculated.taxExempt()).as("JPTYO → USNYC は輸出").isTrue();
+
+        var captured = new InvoiceAdjustedEvent[1];
+        fixture.given().event(calculated)
+                .when().command(new AdjustInvoiceCommand(INVOICE, new BigDecimal("12000"),
+                        "留置 4 営業日の保管料", "IMP-2026-0001", "accountant01"))
+                .then().eventsSatisfy(events -> captured[0] = events.stream()
+                        .map(event -> event.payload())
+                        .filter(InvoiceAdjustedEvent.class::isInstance)
+                        .map(InvoiceAdjustedEvent.class::cast)
+                        .findFirst().orElseThrow());
+
+        assertThat(captured[0].taxAmount())
+                .as("免税を落とすと、調整のぶんに税が乗る")
+                .isEqualByComparingTo("0");
+        assertThat(captured[0].totalAmount()).isEqualByComparingTo("522000");
+    }
+
+    @Test
+    @DisplayName("算出時の税率を覚える（あとで料率が変わっても請求書は変わらない）")
+    void remembersTheTaxRateOfItsCalculation() {
+        var calculated = calculatedEventOf(new CalculateInvoiceCommand(INVOICE, BOOKING,
+                "SHP-000001", "山田商事", ShipperType.INDIVIDUAL, DiscountRate.none(), null,
+                new TransportRecord(
+                        List.of(new TransportRecord.BilledLeg(new UnLocode("JPTYO"),
+                                new UnLocode("JPOSA"))),
+                        new BigDecimal("1000"), "GENERAL", new UnLocode("JPTYO"),
+                        new UnLocode("JPOSA")),
+                "accountant01"));
+
+        assertThat(calculated.taxRate())
+                .as("イベントに載せないと、復元のたびに料率表を読むことになる")
+                .isEqualByComparingTo("0.10");
+        assertThat(calculated.taxExempt()).isFalse();
     }
 }

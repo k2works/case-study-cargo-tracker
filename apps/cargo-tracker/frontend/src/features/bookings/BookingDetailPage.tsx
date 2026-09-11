@@ -18,6 +18,7 @@ import {
   TH,
 } from '@/shared/ui/styles';
 import { ApiError } from '@/shared/api/client';
+import { fetchInvoiceOfBooking } from '@/features/billing/api';
 import { useAuthStore } from '@/shared/auth/authStore';
 import {
   canIssueTrackingNumber,
@@ -279,16 +280,7 @@ export function BookingDetailPage() {
               予約から辿れないと、請求書を開くには番号を知っている必要がある。
               **経理以外には出さない**——押しても Gateway の 403 に当たる
               （開けない場所へ誘わない）。 */}
-          {isAccountant && (
-            <p className="text-sm">
-              <Link
-                to={`/invoices?bookingId=${encodeURIComponent(bookingId)}`}
-                className={LINK}
-              >
-                この予約の請求書
-              </Link>
-            </p>
-          )}
+          {isAccountant && <InvoiceLink bookingId={bookingId} />}
 
           {/* ボタンの出し分けは状態の述語をそのまま呼ぶ。ここで
               status === 'PRELIMINARY' と書くと、集約の遷移表と判断が二重になり、
@@ -924,5 +916,32 @@ function MisrouteBanner({
         )}
       </p>
     </div>
+  );
+}
+
+/**
+ * その予約の請求書への導線（S22 → S61）。
+ *
+ * <p><b>請求書へ直行する。</b> 一覧を経由すると、1 件しかないと分かっている
+ * ものをもう一度選ぶことになる。<b>まだ算出されていなければリンクを出さない</b>
+ * ——押しても開く先が無いものを並べない（IT13 のレビュー 中）。</p>
+ */
+function InvoiceLink({ bookingId }: { readonly bookingId: string }) {
+  const invoice = useQuery({
+    queryKey: ['invoice-of-booking', bookingId],
+    queryFn: () => fetchInvoiceOfBooking(bookingId),
+    // 404（まだ算出されていない）は「失敗」ではない。再試行しない。
+    retry: false,
+  });
+
+  if (invoice.data?.state !== 'ready') {
+    return null;
+  }
+  return (
+    <p className="text-sm">
+      <Link to={`/invoices/${invoice.data.value.invoiceId}`} className={LINK}>
+        この予約の請求書（{invoice.data.value.statusLabel}）
+      </Link>
+    </p>
   );
 }

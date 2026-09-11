@@ -42,10 +42,20 @@ class InvoiceProjectionIT extends AbstractAxonIntegrationTest {
     @Autowired
     private AttentionItemMapper attentionItems;
 
+    @Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbc;
+
     private static InvoiceCalculatedEvent calculated(String invoiceId, String bookingId) {
+        return calculatedAt(invoiceId, bookingId, AT);
+    }
+
+    private static InvoiceCalculatedEvent calculatedAt(String invoiceId, String bookingId,
+            Instant calculatedAt) {
         return new InvoiceCalculatedEvent(invoiceId, bookingId, "SHP-000001", "山田商事",
                 "CORPORATE", "CT-0012", new BigDecimal("0.1500"),
                 new BigDecimal("510000"), new BigDecimal("76500"), BigDecimal.ZERO,
+                // 輸出免税（税率は算出時のものを載せる）。
+                new BigDecimal("0.10"), true,
                 new BigDecimal("433500"), "JPY",
                 List.of(new InvoiceCalculatedEvent.LineItem("BASE",
                                 "基本料金（2 区間・近海 2.5 + 遠洋 6.0・1,200 kg・一般 1.0）",
@@ -54,7 +64,7 @@ class InvoiceProjectionIT extends AbstractAxonIntegrationTest {
                                 new BigDecimal("76500"), "JPY", null),
                         new InvoiceCalculatedEvent.LineItem("TAX", "消費税（輸出免税）",
                                 BigDecimal.ZERO, "JPY", null)),
-                "accountant01", AT);
+                "accountant01", calculatedAt);
     }
 
     private String project(String suffix) {
@@ -146,20 +156,47 @@ class InvoiceProjectionIT extends AbstractAxonIntegrationTest {
     }
 
     @Test
-    @DisplayName("一覧は既定で入金済・取消を外し、算出日時の新しい順に出る")
-    void listsOpenInvoicesNewestFirst() {
-        String older = project("L1");
-        String newer = project("L2");
+    @DisplayName("一覧は算出日時の新しい順に出る（古い順にすると赤になる）")
+    void listsInvoicesNewestFirst() {
+        // **同じ時刻の 2 件では順序を判別しない**（IT13 のレビューで実測。
+        // `containsExactlyInAnyOrder` は `ORDER BY` を消しても緑だった）。
+        String booking = "B-ORD-" + System.nanoTime();
+        String older = "INV-ORD1-" + System.nanoTime();
+        String newer = "INV-ORD2-" + System.nanoTime();
+        projection.on(calculatedAt(older, booking + "-a", AT), "evt-" + System.nanoTime());
+        projection.on(calculatedAt(newer, booking + "-b", AT.plusSeconds(3600)),
+                "evt-" + System.nanoTime());
 
         List<String> ids = queries.handle(new FindInvoicesQuery(false, null)).items().stream()
                 .map(InvoiceSummaryView::invoiceId)
                 .filter(id -> id.equals(older) || id.equals(newer))
                 .toList();
 
-        // 同じ算出日時なので、並びは invoice_id の順で決まる（安定している）。
-        assertThat(ids).containsExactlyInAnyOrder(older, newer);
-        assertThat(queries.handle(new FindInvoicesQuery(false, null)).total())
-                .isEqualTo(queries.handle(new FindInvoicesQuery(false, null)).items().size());
+        assertThat(ids).containsExactly(newer, older);
+    }
+
+    @Test
+    @DisplayName("一覧は既定で入金済・取消を外す（外さない実装に戻すと赤になる）")
+    void excludesSettledInvoicesByDefault() {
+        // **IT13 では PAID / VOID に至らない**ので、状態を直接書いて確かめる。
+        // 確かめずに置くと、US23 で入金が入った瞬間に決着済みが一覧へ混ざる
+        // （一覧は「まだ手を入れる場所」でなくなる）。
+        String paid = "INV-PAID-" + System.nanoTime();
+        String open = "INV-OPEN-" + System.nanoTime();
+        projection.on(calculated(paid, "B-PAID-" + System.nanoTime()),
+                "evt-" + System.nanoTime());
+        projection.on(calculated(open, "B-OPEN-" + System.nanoTime()),
+                "evt-" + System.nanoTime());
+        jdbc.update("UPDATE invoice SET billing_status = 'PAID' WHERE invoice_id = ?", paid);
+
+        assertThat(queries.handle(new FindInvoicesQuery(false, null)).items())
+                .extracting(InvoiceSummaryView::invoiceId)
+                .contains(open)
+                .doesNotContain(paid);
+        assertThat(queries.handle(new FindInvoicesQuery(true, null)).items())
+                .extracting(InvoiceSummaryView::invoiceId)
+                .as("切り替えれば出る（隠しっぱなしにしない）")
+                .contains(paid);
     }
 
     @Test

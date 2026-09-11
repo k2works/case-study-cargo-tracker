@@ -87,7 +87,7 @@ public class BillingReactionHandler {
         if (cargo.weightKg() == null) {
             // **待っても入らない。** 重量を運ぶ前のイベントから作られた写しなので、
             // 再試行しても同じである。要確認に出して人に渡す。
-            fail(event, cargo.bookingId(), "貨物 " + event.trackingNumber()
+            fail(cargo.bookingId(), "貨物 " + event.trackingNumber()
                     + " の重量が分からないので請求書を作れません");
             return;
         }
@@ -104,7 +104,7 @@ public class BillingReactionHandler {
                     new UnLocode(leg.unloadUnLocode())));
         }
         if (legs.isEmpty()) {
-            fail(event, cargo.bookingId(), "貨物 " + event.trackingNumber()
+            fail(cargo.bookingId(), "貨物 " + event.trackingNumber()
                     + " の区間が分からないので請求書を作れません");
             return;
         }
@@ -144,7 +144,7 @@ public class BillingReactionHandler {
      * 増えることはない）ので、退避先に積み続けるより人に渡すほうがよい。
      * <b>「例外にしない」は「記録しない」ではない</b>（IT7 の教訓）。</p>
      */
-    private void fail(CargoDeliveredEvent event, String bookingId, String reason) {
+    private void fail(String bookingId, String reason) {
         log.warn("請求書を作れませんでした: {}", reason);
         attentionItems.add("REACTION_FAILED", "BOOKING", bookingId, ACCOUNTANT, reason, null,
                 clock.instant());

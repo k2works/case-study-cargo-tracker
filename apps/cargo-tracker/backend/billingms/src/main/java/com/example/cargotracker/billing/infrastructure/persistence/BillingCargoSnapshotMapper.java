@@ -26,11 +26,6 @@ public interface BillingCargoSnapshotMapper {
             + "WHERE tracking_number = #{trackingNumber}")
     SnapshotRow find(@Param("trackingNumber") String trackingNumber);
 
-    /** 予約から引く（請求は引取済の予約に対して作る）。 */
-    @Select("SELECT " + COLUMNS + " FROM billing_cargo_snapshot "
-            + "WHERE booking_id = #{bookingId}")
-    SnapshotRow findByBooking(@Param("bookingId") String bookingId);
-
     /**
      * 区間を入れ直す前に消す。
      *

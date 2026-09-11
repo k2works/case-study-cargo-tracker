@@ -1553,6 +1553,11 @@ test.describe('17 請求を組み立てる', () => {
     await expect(page.getByRole('heading', { name: '請求一覧' })).toBeVisible();
     await expect(page.getByText('算出済')).toBeVisible();
     await expect(page.getByText('¥ 423,500')).toBeVisible();
+    // **本文が説明する要素ごとに確かめる**（IT13 のレビュー 低）。UI から消えても
+    // キャプチャが緑のままだと、古い本文を支え続ける。
+    await expect(page.getByText('入金済・取消も表示')).toBeVisible();
+    await expect(page.getByText(/山田商事（法人）/)).toBeVisible();
+    await expect(page.getByText(/入金済・取消のものは出ません/)).toBeVisible();
     await page.screenshot({ path: `${OUT}/17-S60-invoice-list.png`, fullPage: true });
   });
 

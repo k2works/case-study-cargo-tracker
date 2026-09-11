@@ -708,7 +708,7 @@ take-4 の `ExternalCargoRoutingService`（REST）と役割は同じです。違
 | `TransportStatusUpdatedEvent` / `CargoMisroutedEvent` / `TrackingExceptionRegisteredEvent` | trackingms | — | trackingms 投影 | take-4 |
 | `CargoDeliveredEvent` | trackingms | **○** | billingms：`BillingReactionHandler` 開始、bookingms：`MarkDeliveredCommand`（Reaction） | take-4（java-3 では未実装） |
 | `TrackingClosedEvent` | trackingms | **○** | bookingms：連鎖の補償完了（`BookingReactionHandler`） | 本設計 |
-| `InvoiceCalculatedEvent` / `DiscountAppliedEvent` / `InvoiceIssuedEvent` | billingms | — | billingms 投影 | take-4 |
+| `InvoiceCalculatedEvent` / `InvoiceAdjustedEvent` / `InvoiceIssuedEvent` | billingms | — | billingms 投影 | take-4（**`DiscountAppliedEvent` は IT13 で落とした**——割引は算出の中で当てる。別コマンドにすると、割引の無い請求書が一瞬見える状態が正常系として存在する） |
 | `PaymentRecordedEvent` | billingms | **○** | billingms 投影、bookingms：`SettleBookingCommand`（Reaction） | take-4 |
 
 契約の数は **イベント 11**（`ShipperRegisteredEvent`, `CorporateContractAssignedEvent`, `TrackingNumberIssuedEvent`, `CargoCancelledEvent`, `HandlingActivityRegisteredEvent`, `HandlingActivityVoidedEvent`, `CustomsStatusChangedEvent`, `TrackingInitializedEvent`, `CargoDeliveredEvent`, `TrackingClosedEvent`, `PaymentRecordedEvent`）、**コマンド 2**（`InitializeTrackingCommand`・**IT7 で実装済み**, `CreateInvoiceCommand`・未実装）、**クエリ 1**（`FindRouteCandidatesQuery`）です。

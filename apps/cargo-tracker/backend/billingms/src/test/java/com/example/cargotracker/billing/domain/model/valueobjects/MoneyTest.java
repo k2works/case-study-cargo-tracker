@@ -63,8 +63,6 @@ class MoneyTest {
         assertThat(yen("1000").multiply(new BigDecimal("2.5")).amount())
                 .isEqualByComparingTo("2500");
         assertThat(yen("1000").subtract(yen("150")).amount()).isEqualByComparingTo("850");
-        assertThat(yen("1000").isGreaterThan(yen("999"))).isTrue();
-        assertThat(yen("1000").isGreaterThan(yen("1000"))).isFalse();
     }
 
     @Test

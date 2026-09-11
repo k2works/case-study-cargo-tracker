@@ -56,7 +56,7 @@ verified:
 
 | # | 受入基準 | 満たす手段 | 検査の所在 | 状態 |
 | :--- | :--- | :--- | :--- | :--- |
-| §1 | 荷主種別が「法人」の場合、料金算出時に**契約割引率が自動的に取得・表示される** | `shipper_contract_snapshot`（IT2 から写している）から読む。**同期問い合わせをしない**（bookingms が落ちていても請求書は作れる）。注 N2 | `BillingReactionHandlerTest`・`InvoiceProjectionIT`・`InvoiceScreens.test.tsx` | 達成 |
+| §1 | 荷主種別が「法人」の場合、料金算出時に**契約割引率が自動的に取得・表示される** | `shipper_contract_snapshot`（IT2 から写している）から読む。**同期問い合わせをしない**（bookingms が落ちていても請求書は作れる）。注 N2 | `BillingReactionHandlerIT`・`InvoiceProjectionIT`・`InvoiceScreens.test.tsx` | 達成 |
 | §2 | 割引率（**0〜30%**）が基本料金に適用され、割引後の金額が表示される | `DiscountPolicy`（ドメインサービス）。**範囲は値オブジェクトが守る**（`DiscountRate`。bookingms に既にある形を billingms の型として持つ——BC が違えば型も違う） | `DiscountPolicyTest`・`InvoiceTest` | 達成 |
 | §3 | **個人荷主の場合は割引が適用されない** | 同上。`INDIVIDUAL` は 0%。**判定は列挙が答える** | `DiscountPolicyTest`（`ShipperType.values()` を回す）・`InvoiceTest` | 達成 |
 | §4 | 割引計算の**根拠（割引率・基本料金・割引後料金）が精算書に記載される** | `InvoiceLineItem` と S61。**請求書は作成時の割引率を持つ**（`invoice.discount_rate`）——作成後に荷主の契約が変わっても、出した請求書は変わらない。**契約番号も割引行に出す**（正典の S61 は「法人割引 (15%) … 法人契約 C-0012」と書く）ので、`shipper_contract_snapshot.contract_number` を**請求書へ複写する**——後から荷主の契約が差し替わっても、その請求書がどの契約に基づくかは変わらない | `InvoiceProjectionIT`・`InvoiceScreens.test.tsx`・受け入れテスト | 達成 |
@@ -150,7 +150,7 @@ IT12 から 5 件 + レビューの低 9 件を受けています。`release_pla
 | T2 | **値オブジェクトと料率表**（`Money`・`DiscountRate`・`RateTable`・`TransportRecord`・`FreightCharge`・`BillingStatus`・`LineItemType`）。**`Money` は billingms の型として作る**（注 N9）。**料率は `application.yml` から読む**。注 N2 の正典修正・注 N8 の要素表への追加 | US21・US22 | 8h |
 | T3 | **`FreightChargeCalculator` と `DiscountPolicy`**（ドメインサービス）。式の各係数を 1 つずつ動かす検査。**輸出免税**（出発地と目的地の国が違えば 0%） | US21・US22 | 8h |
 | T4 | **`Invoice` 集約**（`calculate` / `adjust`）と不変条件 1・2。**`applyDiscount` は作らない**（注 N10）。**`overdue` も作らない**（注 N4。`dueDate` が入るのは US23・IT14 で、いま作ると入力経路の無い述語になる——IT12 の「常に 0 の列」と同型） | US21・US22 | 8h |
-| T5 | **投影とクエリ**（`invoice`・`invoice_line_item`・`billing_cargo_snapshot`・`billing_cargo_leg`。`FindInvoicesQuery` / `FindInvoiceQuery`）。**`attention_item` を billingms に作る**（実在しない。追加マイグレーション）。**不変条件 2 の三段目**（拒否を記録。宛先は経理）。**索引は本 IT で置く分だけ**——`UNIQUE(booking_id, void_marker)` と `INDEX(shipper_id)`。`INDEX(billing_status, due_on)` は IT14（注 N4）。**`InvoiceAdjustedEvent` も投影の元イベント**。**`BillingReplayIT`**（規約テストが要求する。リスク R3）。注 N12 の正典修正 | US21 | 8h |
+| T5 | **投影とクエリ**（`invoice`・`invoice_line_item`・`billing_cargo_snapshot`・`billing_cargo_leg`。`FindInvoicesQuery` / `FindInvoiceQuery`）。**`attention_item` を billingms に作る**（実在しない。追加マイグレーション）。**不変条件 2 の三段目**（拒否を記録。宛先は経理）。**索引は本 IT で置く分だけ**——`UNIQUE(booking_id, void_marker)` と `INDEX(shipper_id)`。`INDEX(billing_status, due_on)` は IT14（注 N4）。**`InvoiceAdjustedEvent` も投影の元イベント**。**`ReplayIT`（billingms）**（規約テストが要求する。リスク R3）。注 N12 の正典修正 | US21 | 8h |
 | T6 | **S60 請求一覧・S61 請求詳細**（`/invoices`・`/invoices/:id`）。**注 N6（S60 の節）・N7（経理のナビ）を `ui_design.md` に足す**。ナビゲーション整合（構成表・`navigation.ts`・S02・検証テストの 4 点） | US21・US22 | 8h |
 | T7 | **連鎖**（`BillingReactionHandler`。`CargoDeliveredEvent` 購読 → `CalculateInvoiceCommand`）。**割引は算出の中で当てる**（注 N10）。**補償経路を 1 本ずつ検査する**——荷主スナップショットが無い／重量が無い／再試行の上限を超えた場合に `InvoiceCreationFailedEvent` を出し、**経理の要確認一覧（S70）に写す**（`architecture_backend.md:863`・`domain-model.md:1376`。開発戦略の完了条件「連鎖の補償経路が 1 本ずつ検査されている」） | US21・US22 | 8h |
 | T7e | **クラスタ E2E（US21・US22）**。引取済 → 請求書ができる → 割引が入る → 調整を入れる | US21・US22 | 4h |

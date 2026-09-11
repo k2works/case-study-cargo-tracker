@@ -72,21 +72,46 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe('S22 予約詳細', () => {
-  it('US21: 経理はここから請求書へ入れる（予約から辿れないと番号を知る必要がある）',
-    async () => {
-      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(JSON.stringify(booking()), { status: 200 }),
-      );
-      useAuthStore.setState({
-        user: { username: 'accountant01', roles: ['ROLE_ACCOUNTANT'], token: 't' },
-      });
-
-      renderDetail();
-
-      const link = await screen.findByRole('link', { name: 'この予約の請求書' });
-      // **着いた先がその予約で絞り込まれている**（Try T1）。
-      expect(link).toHaveAttribute('href', '/invoices?bookingId=b-1');
+  it('US21: 経理はここから請求書へ直行できる（一覧を経由しない）', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      const url = String(input);
+      if (url.includes('/billing/invoices/by-booking/')) {
+        return Promise.resolve(new Response(JSON.stringify({
+          invoiceId: 'INV-20260928-1a2b3c4d', statusLabel: '算出済',
+        }), { status: 200 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify(booking()), { status: 200 }));
     });
+    useAuthStore.setState({
+      user: { username: 'accountant01', roles: ['ROLE_ACCOUNTANT'], token: 't' },
+    });
+
+    renderDetail();
+
+    // **着いた先がその請求書そのもの**（Try T1）。1 件と分かっているものを
+    // もう一度選ばせない。
+    const link = await screen.findByRole('link', { name: /この予約の請求書（算出済）/ });
+    expect(link).toHaveAttribute('href', '/invoices/INV-20260928-1a2b3c4d');
+  });
+
+  it('まだ算出されていない予約では、請求書のリンクを出さない', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      const url = String(input);
+      if (url.includes('/billing/invoices/by-booking/')) {
+        return Promise.resolve(new Response(JSON.stringify({ message: '無い' }),
+          { status: 404 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify(booking()), { status: 200 }));
+    });
+    useAuthStore.setState({
+      user: { username: 'accountant01', roles: ['ROLE_ACCOUNTANT'], token: 't' },
+    });
+
+    renderDetail();
+
+    await screen.findByRole('heading', { name: '予約 B-2026-0903-0001' });
+    expect(screen.queryByRole('link', { name: /この予約の請求書/ })).not.toBeInTheDocument();
+  });
 
   it('経理以外に請求書への導線を出さない（開けない場所へ誘わない）', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(

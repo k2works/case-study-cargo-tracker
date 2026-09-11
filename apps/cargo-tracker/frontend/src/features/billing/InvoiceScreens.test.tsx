@@ -132,6 +132,16 @@ describe('S60 請求一覧', () => {
     expect(await screen.findByText(/（削除済）/)).toBeInTheDocument();
   });
 
+  it('絞り込みのラベルは、実際に出るものを言う（取消も出る）', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ items: [summary()], total: 1 }), { status: 200 }),
+    );
+
+    renderAt('/invoices', <InvoiceListPage />);
+
+    expect(await screen.findByText('入金済・取消も表示')).toBeInTheDocument();
+  });
+
   it('1 件も無ければ、どうすれば増えるかを書く（空の表を黙って出さない）', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(JSON.stringify({ items: [], total: 0 }), { status: 200 }),

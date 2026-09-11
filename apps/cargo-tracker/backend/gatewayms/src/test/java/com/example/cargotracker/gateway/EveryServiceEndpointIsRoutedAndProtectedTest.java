@@ -302,6 +302,32 @@ class EveryServiceEndpointIsRoutedAndProtectedTest {
                 .as("追跡管理者は請求に関わらない").isFalse();
         assertThat(RoleAuthorization.isAllowed("GET", one, sales))
                 .as("営業も請求は読まない").isFalse();
+
+        // **経理は根拠を開ける**（IT13 のレビュー 高）。調整は例外・通関申告を
+        // 根拠に指すので、開けないと「なぜこの減額か」を確かめられない。
+        // **読みだけ**——起票・状態更新は各ロールの宣言が守る。
+        assertThat(RoleAuthorization.isAllowed(
+                        "GET", "/api/v1/tracking/trackings/exceptions", accountant))
+                .as("調整の根拠になった例外を読む").isTrue();
+        assertThat(RoleAuthorization.isAllowed(
+                        "POST", "/api/v1/tracking/trackings/TRK-1/exceptions", accountant))
+                .as("起票はしない").isFalse();
+        assertThat(RoleAuthorization.isAllowed(
+                        "GET", "/api/v1/handling/customs-declarations/IMP-1", accountant))
+                .as("留置の保管料の根拠になった申告を読む").isTrue();
+        assertThat(RoleAuthorization.isAllowed(
+                        "POST", "/api/v1/handling/customs-declarations/IMP-1/status", accountant))
+                .as("通関状態は更新しない").isFalse();
+
+        // **経理は指された予約を開ける**（要確認一覧が算出できなかった予約を出す）。
+        // **読みだけ**——修正・確定・発行は各ロールの宣言が守る。
+        assertThat(RoleAuthorization.isAllowed("GET", "/api/v1/booking/bookings/B-1", accountant))
+                .as("算出できなかった予約を開く").isTrue();
+        assertThat(RoleAuthorization.isAllowed("PUT", "/api/v1/booking/bookings/B-1", accountant))
+                .as("予約は書き換えない").isFalse();
+        assertThat(RoleAuthorization.isAllowed(
+                        "POST", "/api/v1/booking/bookings/B-1/confirmation", accountant))
+                .as("確定もしない").isFalse();
         assertThat(RoleAuthorization.isAllowed("GET", one, shipper))
                 .as("荷主向けの請求書は S62（US23・IT14）。いまは開かない").isFalse();
         assertThat(RoleAuthorization.isAllowed("POST", adjust, tracker))

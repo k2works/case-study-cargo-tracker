@@ -22,7 +22,12 @@ export interface AttentionItemView {
  * ここにも足す。** 記録するだけで読み口に載せないと、弾かれたことが誰にも見えない
  * まま残る（IT3 で routing がその状態だった）。
  */
-const SOURCES = ['/booking/attention-items', '/routing/attention-items'] as const;
+const SOURCES = [
+  '/booking/attention-items',
+  '/routing/attention-items',
+  // 請求（IT13）。算出できなかった予約と、二重に作られた請求書の拒否が経理宛に出る。
+  '/billing/attention-items',
+] as const;
 
 /**
  * 自分の担当宛の要確認だけを取る。

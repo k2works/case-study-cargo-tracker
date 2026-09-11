@@ -15,12 +15,28 @@ function respond(status: number, body: unknown) {
 
 type ServiceResponse = readonly [number, unknown];
 
-function respondPerService(bodies: { booking: ServiceResponse; routing: ServiceResponse }) {
+/**
+ * サービスごとに応答を変える。
+ *
+ * <p><b>サービスを増やしたらここにも足す。</b> 足し忘れると、新しいサービスへの
+ * 問い合わせが別のサービスの応答を受け取り、同じ項目が二重に出る（IT13 で
+ * billingms を足したときに実際に赤くなった）。</p>
+ */
+function respondPerService(bodies: {
+  booking: ServiceResponse;
+  routing: ServiceResponse;
+  billing?: ServiceResponse;
+}) {
+  const billing: ServiceResponse = bodies.billing ?? [200, { items: [] }];
   vi.stubGlobal(
     'fetch',
     vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
-      const [status, body] = url.includes('/routing/') ? bodies.routing : bodies.booking;
+      const [status, body] = url.includes('/routing/')
+        ? bodies.routing
+        : url.includes('/billing/')
+          ? billing
+          : bodies.booking;
       return Promise.resolve(new Response(JSON.stringify(body), { status }));
     }),
   );

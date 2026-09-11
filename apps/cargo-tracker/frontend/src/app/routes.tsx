@@ -80,13 +80,16 @@ export function AppRoutes() {
         <Route
           path="/bookings/:bookingId"
           element={
-            <RequireRole allow={['ROLE_SALES', 'ROLE_ROUTING', 'ROLE_TRACKER']}>
+            <RequireRole allow={['ROLE_SALES', 'ROLE_ROUTING', 'ROLE_TRACKER',
+              'ROLE_ACCOUNTANT']}>
               <BookingDetailPage />
             </RequireRole>
           }
         />
         {/* 予約修正（S24）は詳細から開く。修正は営業だけ（US32）。
-            参照（S22）は経路設計・追跡にも開いたままにする。 */}
+            参照（S22）は経路設計・追跡・**経理**にも開いたままにする——要確認一覧が
+            「算出できなかった予約」を経理宛に出すので、開けないと気づいた先が
+            行き止まりになる（IT13 のレビュー 高）。 */}
         <Route
           path="/bookings/:bookingId/edit"
           element={
@@ -155,7 +158,7 @@ export function AppRoutes() {
         <Route
           path="/customs/:declarationNumber"
           element={
-            <RequireRole allow={['ROLE_HANDLER', 'ROLE_TRACKER']}>
+            <RequireRole allow={['ROLE_HANDLER', 'ROLE_TRACKER', 'ROLE_ACCOUNTANT']}>
               <CustomsDetailPage />
             </RequireRole>
           }
@@ -186,7 +189,7 @@ export function AppRoutes() {
         <Route
           path="/tracking/exceptions"
           element={
-            <RequireRole allow={['ROLE_TRACKER', 'ROLE_ADMIN']}>
+            <RequireRole allow={['ROLE_TRACKER', 'ROLE_ADMIN', 'ROLE_ACCOUNTANT']}>
               <ExceptionListPage />
             </RequireRole>
           }

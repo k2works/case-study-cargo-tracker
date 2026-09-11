@@ -75,11 +75,6 @@ public record Money(BigDecimal amount, String currency) {
         return new Money(amount.setScale(0, RoundingMode.HALF_UP), currency);
     }
 
-    public boolean isGreaterThan(Money other) {
-        requireSameCurrency(other);
-        return amount.compareTo(other.amount) > 0;
-    }
-
     public boolean isZero() {
         return amount.signum() == 0;
     }

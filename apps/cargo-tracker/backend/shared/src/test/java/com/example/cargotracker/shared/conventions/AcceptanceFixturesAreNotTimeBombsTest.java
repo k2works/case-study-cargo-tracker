@@ -95,7 +95,11 @@ class AcceptanceFixturesAreNotTimeBombsTest {
     @Test
     @DisplayName("シナリオの日付が期限切れに近づいたら、壊れる前に赤くする")
     void featureDatesAreNotAboutToExpire() throws IOException {
-        LocalDate today = LocalDate.now();
+        // **業務タイムゾーンで数える。** UTC の今日で数えると、時差の分だけ
+        // 期限の見え方がずれる（CI は UTC で回る）。
+        LocalDate today = LocalDate.now(
+                com.example.cargotracker.shared.infrastructure.time
+                        .BusinessClockConfiguration.BUSINESS_ZONE);
         LocalDate horizon = today.plusDays(LEAD_DAYS);
         List<String> expiring = new ArrayList<>();
 

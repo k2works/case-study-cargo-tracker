@@ -91,6 +91,13 @@ export function AttentionListPage() {
                         <Link to={`/bookings/${item.targetId}`} className={LINK}>
                           予約を開く
                         </Link>
+                      ) : item.targetType === 'INVOICE' ? (
+                        /* **請求書は投影に行が無い。** 二重に作られて弾かれた
+                           ものなので、開く先は「その予約の請求一覧」である
+                           （IT13）。 */
+                        <Link to="/invoices" className={LINK}>
+                          請求一覧を開く
+                        </Link>
                       ) : (
                         <>
                           {item.relatedShipperId !== null && (

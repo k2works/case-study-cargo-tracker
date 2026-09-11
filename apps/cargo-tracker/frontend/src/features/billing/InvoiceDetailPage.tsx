@@ -20,6 +20,26 @@ import { ApiError } from '@/shared/api/client';
 import { adjustInvoice, fetchInvoice, formatMoney } from './api';
 
 /**
+ * 根拠の種類。**接頭辞で決まる**——通関申告は `IMP-`、例外はそれ以外。
+ *
+ * <p>種類ごとに飛び先が違う。一律に例外一覧へ送ると、留置の保管料を根拠にした
+ * 調整が「該当なし」に着く（IT13 のレビュー 高）。</p>
+ */
+function isCustomsDeclaration(basisId: string): boolean {
+  return basisId.startsWith('IMP-');
+}
+
+function basisLinkOf(basisId: string): string {
+  return isCustomsDeclaration(basisId)
+    ? `/customs/${encodeURIComponent(basisId)}`
+    : `/tracking/exceptions?exceptionId=${encodeURIComponent(basisId)}`;
+}
+
+function basisLabelOf(basisId: string): string {
+  return isCustomsDeclaration(basisId) ? '根拠の通関申告' : '根拠の例外';
+}
+
+/**
  * S61 請求詳細・算出（UC17 / US21・US22）。
  *
  * <p><b>根拠を並べる。</b> 経理が確かめるのは「なぜこの額か」である。基本料金の
@@ -116,13 +136,14 @@ export function InvoiceDetailPage() {
                 {line.basisExceptionId !== null && (
                   <>
                     {' '}
-                    {/* **根拠の例外へ飛べるようにする**（US28 §8 の受け側）。
-                        ID を出すだけでは、探しに行くのは人の仕事になる。 */}
-                    <Link
-                      className={LINK}
-                      to={`/tracking/exceptions?exceptionId=${encodeURIComponent(line.basisExceptionId)}`}
-                    >
-                      根拠の例外（{line.basisExceptionId}）
+                    {/* **根拠へ飛べるようにする**（US28 §8 の受け側）。ID を出す
+                        だけでは、探しに行くのは人の仕事になる。
+
+                        **飛び先は根拠の種類で決まる。** 留置の保管料は通関申告
+                        （`IMP-…`）が根拠で、例外一覧へ飛ばすと該当なしになる
+                        （IT13 のレビュー 高）。 */}
+                    <Link className={LINK} to={basisLinkOf(line.basisExceptionId)}>
+                      {basisLabelOf(line.basisExceptionId)}（{line.basisExceptionId}）
                     </Link>
                   </>
                 )}

@@ -16,6 +16,10 @@ import org.axonframework.eventsourcing.annotation.EventTag;
  *
  * <p><b>投影が作れる分を運ぶ。</b> 投影はコマンドを読まないので、明細も根拠も
  * ここに載せる（IT7 の教訓）。</p>
+ *
+ * <p><b>税率と免税は載せて運ぶ。</b> 「税額 ÷ 課税対象」で割り戻すと、税率 0% の
+ * 期間や全額割引のときに国内貨物が免税として復元される。<b>免税であることは業務の
+ * 判断</b>であって、割り算で復元する値ではない（IT13 のレビュー 中）。</p>
  */
 public record InvoiceCalculatedEvent(
         @EventTag(key = "invoiceId") String invoiceId,
@@ -28,6 +32,8 @@ public record InvoiceCalculatedEvent(
         BigDecimal baseAmount,
         BigDecimal discountAmount,
         BigDecimal taxAmount,
+        BigDecimal taxRate,
+        boolean taxExempt,
         BigDecimal totalAmount,
         String currency,
         List<LineItem> lineItems,

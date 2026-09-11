@@ -59,7 +59,7 @@ public class Invoice {
     private BigDecimal adjustmentTotal = BigDecimal.ZERO;
 
     /**
-     * 調整のたびに税を数え直すのに要る。
+     * 輸出免税の請求書か。調整のたびに税を数え直すのに要る。
      *
      * <p><b>税額と合計そのものは持たない。</b> 調整のたびに数え直すので、
      * 持っても読まない——<b>読む側の無い状態を先に持たない</b>（IT12 の
@@ -67,7 +67,10 @@ public class Invoice {
      */
     private boolean taxExempt;
 
-    /** 税率。**算出時のものを覚えておく**——あとで料率が変わっても請求書は変わらない。 */
+    /**
+     * 税率。<b>算出時のものを覚えておく</b>——あとで料率が変わっても、出した
+     * 請求書は変わらない。<b>イベントから写す</b>（割り戻さない）。
+     */
     private BigDecimal taxRate;
 
     @EntityCreator
@@ -121,7 +124,11 @@ public class Invoice {
         appender.append(new InvoiceCalculatedEvent(command.invoiceId(), command.bookingId(),
                 command.shipperId(), command.shipperName(), command.shipperType().name(),
                 command.contractNumber(), command.discountRate().value(),
-                round(base), round(discount), round(tax), round(total), base.currency(),
+                round(base), round(discount), round(tax),
+                // **税率と免税を載せる。** 割り戻すと、税率 0% の期間に国内貨物が
+                // 免税として復元される（IT13 のレビュー 中）。
+                rates.taxRate(), command.transport().isExport(),
+                round(total), base.currency(),
                 items, command.calculatedBy(), clock.instant()));
         return command.invoiceId();
     }
@@ -176,27 +183,13 @@ public class Invoice {
         this.baseAmount = Money.yen(event.baseAmount());
         this.discountAmount = Money.yen(event.discountAmount());
         this.adjustmentTotal = BigDecimal.ZERO;
-        this.taxExempt = event.taxAmount().signum() == 0;
-        this.taxRate = deriveTaxRate(event);
+        this.taxExempt = event.taxExempt();
+        this.taxRate = event.taxRate();
     }
 
     @EventSourcingHandler
     void on(InvoiceAdjustedEvent event) {
         this.adjustmentTotal = event.adjustmentTotal();
-    }
-
-    /**
-     * 算出時の税率。
-     *
-     * <p>輸出免税なら 0。そうでなければ「税額 ÷ 課税対象」で導く——<b>料率表を
-     * 復元のたびに読まない</b>（あとで料率が変わっても、出した請求書は変わらない）。</p>
-     */
-    private static BigDecimal deriveTaxRate(InvoiceCalculatedEvent event) {
-        BigDecimal taxable = event.baseAmount().subtract(event.discountAmount());
-        if (event.taxAmount().signum() == 0 || taxable.signum() == 0) {
-            return BigDecimal.ZERO;
-        }
-        return event.taxAmount().divide(taxable, 4, java.math.RoundingMode.HALF_UP);
     }
 
     private InvoiceCalculatedEvent.LineItem item(LineItemType type, String description,

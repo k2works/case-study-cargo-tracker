@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import com.example.cargotracker.billing.application.reaction.BillingReactionHandler;
-import com.example.cargotracker.billing.infrastructure.persistence.AttentionItemMapper;
 import com.example.cargotracker.billing.infrastructure.projection.BillingCargoProjection;
 import com.example.cargotracker.billing.infrastructure.projection.ShipperContractProjection;
 import com.example.cargotracker.shared.contract.event.CargoDeliveredEvent;
@@ -46,9 +45,6 @@ public class BillingSteps {
 
     @Autowired
     private ShipperContractProjection shippers;
-
-    @Autowired
-    private AttentionItemMapper attentionItems;
 
     private final RestClient rest = RestClient.builder()
             .defaultStatusHandler(status -> true, (request, response) -> { })
@@ -311,11 +307,21 @@ public class BillingSteps {
     }
 
     @かつ("経理の要確認一覧にその予約が出る")
+    @SuppressWarnings("unchecked")
     public void 要確認に出る() {
-        assertThat(attentionItems.findOpenByRole("ROLE_ACCOUNTANT"))
-                .filteredOn(item -> bookingId.equals(item.targetId()))
+        // **画面が読む経路で確かめる。** DB を直接読むと、読み口が無くても緑に
+        // なる——IT13 では実際にその状態で受け入れが通っていた（レビューで発見）。
+        ResponseEntity<Map<String, Object>> response = rest.get()
+                .uri("http://localhost:" + port + "/api/v1/billing/attention-items")
+                .header("X-Auth-Roles", "ROLE_ACCOUNTANT")
+                .retrieve().toEntity(JSON);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat((List<Map<String, Object>>) response.getBody().get("items"))
+                .filteredOn(item -> bookingId.equals(item.get("targetId")))
                 .singleElement()
-                .satisfies(item -> assertThat(item.reason()).contains("重量"));
+                .satisfies(item -> assertThat(String.valueOf(item.get("reason")))
+                        .contains("重量"));
     }
 
 }

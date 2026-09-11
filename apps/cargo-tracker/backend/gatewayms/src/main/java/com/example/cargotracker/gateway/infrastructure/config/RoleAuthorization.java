@@ -79,6 +79,10 @@ public final class RoleAuthorization {
         rules.put("/api/v1/booking/attention-items", ANY_AUTHENTICATED);
         rules.put("/api/v1/routing/attention-items/**", ANY_AUTHENTICATED);
         rules.put("/api/v1/routing/attention-items", ANY_AUTHENTICATED);
+        // 請求の要確認（IT13）。**自分の担当宛だけ**をサービス側が返すので、
+        // ここは認証済みなら通す（booking・routing と同じ形）。
+        rules.put("/api/v1/billing/attention-items/**", ANY_AUTHENTICATED);
+        rules.put("/api/v1/billing/attention-items", ANY_AUTHENTICATED);
 
         // 荷主（S10 / S11）は営業と経理。
         rules.put("/api/v1/booking/shippers/**", Set.of(SALES, ACCOUNTANT));
@@ -128,8 +132,12 @@ public final class RoleAuthorization {
         // 片方が自分の仕事の一覧を開けない。
         // **/handling/** より先に置く。** 後ろに置くと荷役だけの宣言に吸われ、
         // 追跡管理者が通関の一覧を開けなくなる。
-        rules.put("/api/v1/handling/customs-declarations/**", Set.of(HANDLER, TRACKER));
-        rules.put("/api/v1/handling/customs-declarations", Set.of(HANDLER, TRACKER));
+        // **経理も読む**（IT13 のレビュー 高）。留置の保管料を調整の根拠に指すので、
+        // その申告を開けないと根拠を確かめられない。書き込み（登録・状態更新）は
+        // 下の ordered がメソッド込みで荷役・追跡に限っている。
+        rules.put("/api/v1/handling/customs-declarations/**",
+                Set.of(HANDLER, TRACKER, ACCOUNTANT));
+        rules.put("/api/v1/handling/customs-declarations", Set.of(HANDLER, TRACKER, ACCOUNTANT));
         rules.put("/api/v1/handling/**", Set.of(HANDLER));
 
         // 請求（S60 / S61）は経理だけ（US21 §受入基準 1）。**荷主向けの請求書
@@ -194,8 +202,11 @@ public final class RoleAuthorization {
         // 管理者は緊急の知らせを読む側で、起票も解決もしない——上の POST の
         // 宣言に ADMIN を入れていないのはそのためである。
         // **荷主には開かない。** 他社の貨物の例外まで並んでしまう。
+        // **経理も読む**（IT13 のレビュー 高）。請求の調整は誤配・破損の例外を
+        // 根拠に指すので、その根拠を開けないと「なぜこの減額か」を確かめられない。
+        // **読みだけ。** 起票・対応・解決の POST は上の宣言が追跡管理者に限る。
         ordered.add(new Rule("GET", "/api/v1/tracking/trackings/exceptions",
-                Set.of(TRACKER, ADMIN)));
+                Set.of(TRACKER, ADMIN, ACCOUNTANT)));
         // 荷役の記録と取り消しは**荷役作業員だけ**（US15 / IT10 枠 B）。
         // **履歴の宣言（HANDLER, TRACKER）より先に置く。** 後ろに置くと、
         // 同じ経路への書き込みが読み向けの広い宣言に吸われ、
@@ -212,6 +223,26 @@ public final class RoleAuthorization {
                 Set.of(HANDLER)));
         ordered.add(new Rule("POST", "/api/v1/handling/customs-declarations/*/status",
                 Set.of(TRACKER)));
+        // **予約の参照だけ経理にも開く**（IT13 のレビュー 高）。要確認一覧
+        // （S70）は「算出できなかった予約」を経理宛に出すのに、その予約を
+        // 開けないと**気づいた先が行き止まり**になる。正典の画面遷移も
+        // S70 → S22 を経理の導線として書いている（ui_design.md）。
+        //
+        // **一覧の経路を先に宣言する。** `/bookings/*` は `/` をまたがないが、
+        // `routing-worklist` のような**ロール専用の一覧も同じ形**なので、
+        // 先に置かないとこの宣言に吸われて全員に開いてしまう（実測。
+        // 経路設計者の作業一覧が営業にも見えた）。
+        for (String roleSpecificList : List.of(
+                "/api/v1/booking/bookings/routing-worklist",
+                "/api/v1/booking/bookings/condition-reviews",
+                "/api/v1/booking/bookings/awaiting-confirmation",
+                "/api/v1/booking/bookings/awaiting-tracking-number")) {
+            ordered.add(new Rule("GET", roleSpecificList, rules.get(roleSpecificList)));
+        }
+        // **GET だけ。** 書き込みの宣言（PUT / POST）は別に置いてあるので、
+        // 経理が予約を書き換えられることはない。
+        ordered.add(new Rule("GET", "/api/v1/booking/bookings/*",
+                Set.of(SALES, ROUTING, TRACKER, ACCOUNTANT)));
         // 料金の調整は経理だけ（US21 §受入基準 6）。**メソッド込みで宣言する**
         // ——読み向けの広い宣言に吸われると、載せ忘れた書き込みほど無防備になる。
         ordered.add(new Rule("POST", "/api/v1/billing/invoices/*/adjustments",

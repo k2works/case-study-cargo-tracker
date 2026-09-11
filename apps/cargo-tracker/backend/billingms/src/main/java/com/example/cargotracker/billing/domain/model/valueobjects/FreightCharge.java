@@ -10,7 +10,9 @@ import java.util.List;
  * 区間ごとの地域区分・重量・貨物種別を一緒に運ぶ。S61 はこれを明細に並べる。</p>
  *
  * @param baseCharge 基本料金（丸め前。丸めは {@link Money} の中）
- * @param regions 区間ごとの地域区分（積む順）
+ * @param regions 区間ごとの地域区分（積む順）。<b>画面へは運ばない</b>——S61 が
+ *     読むのは {@code description} である。ここは根拠の文を組み立てる材料と、
+ *     計算が何区間をどう数えたかを検査が確かめるためにある
  * @param description 画面と明細に出す根拠の文（「3 区間・近海 2.5 + 遠洋 6.0・…」）
  */
 public record FreightCharge(Money baseCharge, List<PortRegion> regions, String description) {

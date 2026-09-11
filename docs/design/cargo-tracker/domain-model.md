@@ -215,11 +215,12 @@ tracking <.. booking : TrackingNumberIssuedEvent\nCargoCancelledEvent
 tracking <.. handling : HandlingActivityRegisteredEvent\nHandlingActivityVoidedEvent\nCustomsStatusChangedEvent
 booking <.. handling : HandlingActivityRegisteredEvent\nHandlingActivityVoidedEvent
 billing <.. tracking : CargoDeliveredEvent
-billing <.. handling : CustomsStatusChangedEvent\n（留置営業日の調整根拠）
+billing <.. handling : CustomsStatusChangedEvent\n（留置営業日の調整根拠・IT14）
 booking <.. tracking : CargoDeliveredEvent\nTrackingInitializedEvent\nTrackingClosedEvent
 booking <.. billing : PaymentRecordedEvent
-billing <.. booking : ShipperRegisteredEvent\nCorporateContractAssignedEvent\nCargoCancelledEvent
+billing <.. booking : ShipperRegisteredEvent\nCargoCancelledEvent
 handling <.. tracking : TrackingInitializedEvent\n（CargoSnapshot の材料・ADR-0012）
+billing <.. tracking : TrackingInitializedEvent\n（区間・重量・貨物種別。IT13）
 
 note bottom of handling
   CargoSnapshot は Booking の契約イベントを
@@ -229,7 +230,7 @@ end note
 @enduml
 ```
 
-実線はイベント（Axon Event Bus）、点線の Query は Axon Query Bus です。サービス越しに状態を変える同期呼び出しはありません。契約は**イベント 11 本、コマンド 2 本、クエリ 1 本**（`FindRouteCandidatesQuery`）で、名簿は「ドメインイベント一覧（サービス横断）」を正典とします。billingms が要る荷主情報（種別・割引率）は同期クエリで取りに行かず、`ShipperRegisteredEvent` / `CorporateContractAssignedEvent` を購読して自前の `shipper_contract_snapshot` に写します。
+実線はイベント（Axon Event Bus）、点線の Query は Axon Query Bus です。サービス越しに状態を変える同期呼び出しはありません。契約は**イベント 11 本、コマンド 2 本、クエリ 1 本**（`FindRouteCandidatesQuery`）で、名簿は「ドメインイベント一覧（サービス横断）」を正典とします。billingms が要る荷主情報（種別・割引率）は同期クエリで取りに行かず、**`ShipperRegisteredEvent`** を購読して自前の `shipper_contract_snapshot` に写します（**`CorporateContractAssignedEvent` は購読しません**。IT13 の判断——法人契約は荷主登録で設定され、`ShipperRegisteredEvent` が契約番号と割引率を運んでいます。付与を後から行う操作は bookingms に無いので、**読む側の無い契約を先に足しません**）。
 
 ## Shared Kernel（共有カーネル）
 
@@ -601,7 +602,7 @@ CANCELLED --> [*]
 | :--- | :--- | :--- | :--- |
 | `RegisterShipperCommand` | `ShipperRegisteredEvent` | **○**（billingms が `shipper_contract_snapshot` に写す） | UC02 / US02・US03 |
 | `UpdateShipperContactCommand` | `ShipperContactUpdatedEvent` | — | UC02 |
-| `AssignCorporateContractCommand` | `CorporateContractAssignedEvent` | **○**（billingms が割引率を写す） | UC02 / US03・US22 |
+| `AssignCorporateContractCommand` | `CorporateContractAssignedEvent` | — （**購読者はいない**。IT13 の判断。契約情報は `ShipperRegisteredEvent` が運ぶ） | UC02 / US03・US22 |
 
 Event Sourcing での一意制約は集約 1 つでは守れません。`Email` の一意性は三段で守ります。（1）コマンド受付前に投影へ問い合わせて存在確認する、（2）投影テーブルの UNIQUE で最終的に弾く、（3）投影で弾かれた行は投影側が `attention_item` に記録し、営業担当者の要確認一覧（S70）に写す。同時登録のレース条件では 1 段目を素通りするので、2 段目と 3 段目が本当に踏まれることをテストで固定します。
 
@@ -1149,7 +1150,7 @@ FreightChargeCalculator ..> FreightCharge
 端数は 1 円単位で四捨五入。丸めは Money の中 1 か所だけ
 ```
 
-Booking の `Quotation` はこの式と同じ料率で概算を出します。式と料率の同一性は、同じ入力に対する出力を突き合わせる契約テストで固定します。ただし見積の入力は候補経路、請求の入力は実際に通った区間なので、金額そのものは一致しません。困るのは差ではなく説明できないことなので、`Invoice` は見積時の概算 `quotedAmount`（任意）を持ち、請求詳細（S61）に「見積時の概算 → 請求 → 差額」と差の理由（区間数の増減・誤配・留置）を出します。調整行 `InvoiceLineItem` は根拠となる例外の ID（`basisExceptionId`、任意）を持ち、Tracking の例外へリンクします。留置による調整は `CustomsStatusChangedEvent.heldBusinessDays` を根拠にします。
+Booking の `Quotation` はこの式と同じ料率で概算を出します。式と料率の同一性は、同じ入力に対する出力を突き合わせる契約テストで固定します。ただし見積の入力は候補経路、請求の入力は実際に通った区間なので、金額そのものは一致しません。困るのは差ではなく説明できないことなので、`Invoice` は見積時の概算 `quotedAmount`（任意）を持ち、請求詳細（S61）に「見積時の概算 → 請求 → 差額」と差の理由（区間数の増減・誤配・留置）を出します。調整行 `InvoiceLineItem` は根拠となる例外の ID（`basisExceptionId`、任意）を持ち、Tracking の例外へリンクします。留置による調整は通関申告を根拠に指します（`basisExceptionId` に申告番号を入れ、S61 から申告詳細へ飛びます）。**日数そのものを billingms が数えることはしません**——数えるのは handlingms（`CustomsQueryHandler`）で、経理は申告詳細でその日数を読んで調整額を決めます。自動で調整を立てる業務は無いので、`CustomsStatusChangedEvent` は購読しません（IT13 の判断）。
 
 ### Invoice 集約の不変条件
 
@@ -1243,14 +1244,14 @@ User *-- "0..1" UserShipperLink
 | `CargoCancelledEvent` | bookingms | trackingms（陸揚げ地を記録。閉じるのは当該港の `UNLOAD` 後）、handlingms（`CargoSnapshot` 更新）、billingms（キャンセル料） | `bookingId`, `trackingNumber?`, `statusAtCancel`, `dischargeLocation?`, `cancelledAt` |
 | `HandlingActivityRegisteredEvent` | handlingms | trackingms（`TrackingReactionHandler` が状態を進める・誤配検知）、bookingms（投影に写す。`BookingReactionHandler` が `RecordHandlingCommand`） | `activityId`, `trackingNumber`, `bookingId`, `type`, `location`, `voyageNumber?`, `completedAt`, `offRoute` |
 | `HandlingActivityVoidedEvent` | handlingms | trackingms（`RevertTrackingCommand`）、bookingms（`RevertHandlingCommand`）。元の記録は残る | `activityId`, `trackingNumber`, `bookingId`, `type`, `location`, `reason`, `voidedBy`, `voidedAt` |
-| `CustomsStatusChangedEvent` | handlingms | trackingms（`HELD` で例外起票）、billingms（留置の調整根拠。**購読は US21・IT13 から**） | `declarationNumber`, `trackingNumber`, `bookingId`, `previousStatus`, `status`, `reason`, `heldBusinessDays`（`HELD` から出るとき以外は 0）, `changedBy`, `changedAt` |
+| `CustomsStatusChangedEvent` | handlingms | trackingms（`HELD` で例外起票）、**billingms は購読しない**（IT13 の判断。留置営業日は調整の根拠として**人が指す**もので、自動で調整を立てる業務は無い） | `declarationNumber`, `trackingNumber`, `bookingId`, `previousStatus`, `status`, `reason`, `heldBusinessDays`（`HELD` から出るとき以外は 0）, `changedBy`, `changedAt` |（**IT13 では購読しない**。留置営業日は調整の根拠として**人が指す**もので、自動で調整を立てる業務は無い。自動化するなら US23 以降で判断する）
 | `CargoDeliveredEvent` | trackingms | billingms（`BillingReactionHandler` 開始）、bookingms（`DELIVERED`） | `trackingNumber`, `bookingId`, `deliveredAt`, `location` |
 | `CargoDeliveryRevertedEvent` | trackingms | bookingms（`RevertDeliveryCommand`）、billingms（精算の取り下げ。US21・IT13） | `trackingNumber`, `bookingId`, `revertedAt`, `reason` |
-| `TrackingInitializedEvent` | trackingms | bookingms（`BookingReactionHandler`。連鎖の終わり） | `bookingId`, `trackingNumber`, **`shipperId`**, `originUnLocode`, `destinationUnLocode`, `cargoType`, `legs[]`, `initializedAt`。**bookingms が読むのは識別子だけ**だが、**trackingms 自身の投影はこのイベントからしか作れない**ので、コマンドで届いた値を載せ直す（IT7 で実測。載せずに実装して投影が作れなかった） |
+| `TrackingInitializedEvent` | trackingms | bookingms（`BookingReactionHandler`。連鎖の終わり）、handlingms（`CargoSnapshot`・ADR-0012）、**billingms**（`billing_cargo_snapshot`。区間・重量・貨物種別から料金を数える。IT13） | `bookingId`, `trackingNumber`, **`shipperId`**, `originUnLocode`, `destinationUnLocode`, `cargoType`, **`weightKg`**（IT13 で追加。無い貨物では請求を作らず要確認へ出す）, `legs[]`, `initializedAt`。**bookingms が読むのは識別子だけ**だが、**trackingms 自身の投影はこのイベントからしか作れない**ので、コマンドで届いた値を載せ直す（IT7 で実測。載せずに実装して投影が作れなかった） |
 | `TrackingClosedEvent` | trackingms | bookingms（キャンセル完了を投影に写す） | `bookingId`, `trackingNumber`, `closedAt`, `reason` |
 | `PaymentRecordedEvent` | billingms | bookingms（`SETTLED`） | `invoiceId`, `bookingId`, `paidAt`, `amount` |
 | `ShipperRegisteredEvent` | bookingms | billingms（`shipper_contract_snapshot` を作る） | `shipperId`, `shipperCode`, `shipperType`, `name`, `email`, `phone`, `address`, `corporateContract?`, `registeredAt`。`name` / `email` / `phone` / `address` は荷主ごとの鍵で暗号化して載せる（crypto-shredding、ADR-0003） |
-| `CorporateContractAssignedEvent` | bookingms | billingms（`shipper_contract_snapshot` の割引率を更新） | `shipperId`, `contractNumber`, `discountRate`, `assignedAt` |
+| `CorporateContractAssignedEvent` | bookingms | **購読者なし**（IT13 の判断。契約情報は `ShipperRegisteredEvent` が運ぶ） | `shipperId`, `contractNumber`, `discountRate`, `assignedAt` |
 
 **`CustomsStatusChangedEvent` の項目は IT12 で 3 つ増やしました。** `bookingId` は billingms が請求を引くのに要ります（追跡番号では引けません）。`changedBy` は US29 §受入基準 8 の「変更履歴（日時・変更者・理由）」が読むもので、**履歴はイベント列そのもの**なので、載せなければどこにも残りません。当初の `from` / `to` は `previousStatus` / `status` に改めました——この業務で `from` / `to` は港と読まれます。
 
@@ -1271,7 +1272,7 @@ Reaction Handler が送る、サービス境界をまたぐ意味を持つコマ
 | :--- | :--- | :--- | :--- |
 | `FindRouteCandidatesQuery` | bookingms（ACL `RouteCandidateFinder`。Controller から呼ぶ。Reaction Handler からは呼ばない） | routingms | `List<RouteCandidateDto>` |
 
-契約クエリは **1 本**です。billingms が要る荷主の種別・割引率は同期クエリ（旧 `FindShipperForBillingQuery`）で取りに行かず、`ShipperRegisteredEvent` / `CorporateContractAssignedEvent` を購読して `shipper_contract_snapshot` を作ります。請求が bookingms の稼働に依存しなくなります。同期クエリのタイムアウト既定は 5 秒です。
+契約クエリは **1 本**です。billingms が要る荷主の種別・割引率は同期クエリ（旧 `FindShipperForBillingQuery`）で取りに行かず、**`ShipperRegisteredEvent`** を購読して `shipper_contract_snapshot` を作ります（`CorporateContractAssignedEvent` は購読しません。IT13 の判断）。請求が bookingms の稼働に依存しなくなります。同期クエリのタイムアウト既定は 5 秒です。
 
 ### イベントの流れ
 
@@ -1286,7 +1287,7 @@ participant "handlingms" as H
 participant "billingms" as Bi
 
 == 荷主登録 ==
-B -> B : ShipperRegisteredEvent / CorporateContractAssignedEvent（契約）
+B -> B : ShipperRegisteredEvent（契約）
 B -> Bi : （購読）shipper_contract_snapshot に写す
 
 == 予約から追跡開始 ==

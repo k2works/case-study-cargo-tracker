@@ -32,7 +32,7 @@ import org.springframework.test.annotation.DirtiesContext;
  * 材料が欠けた 3 つの場合——貨物の写しが無い・重量が無い・荷主の契約が無い——を
  * 別々に踏む。</p>
  */
-@SpringBootTest
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class BillingReactionHandlerIT extends AbstractAxonIntegrationTest {
 
@@ -55,6 +55,9 @@ class BillingReactionHandlerIT extends AbstractAxonIntegrationTest {
 
     @Autowired
     private BillingCargoSnapshotMapper cargos;
+
+    @org.springframework.boot.test.web.server.LocalServerPort
+    private int port;
 
     private record Fixture(String trackingNumber, String bookingId, String shipperId) {
     }
@@ -231,5 +234,77 @@ class BillingReactionHandlerIT extends AbstractAxonIntegrationTest {
         assertThat(invoiceId.length())
                 .as("invoice_id は VARCHAR(36)。超えると投影だけが退避される")
                 .isLessThanOrEqualTo(36);
+    }
+
+    @Test
+    @DisplayName("作れなかった事実が、経理の要確認一覧（S70）から読める")
+    void theFailureIsReadableFromTheAttentionList() {
+        // **記録するだけでは誰にも見えない**（IT3 で routingms が踏んだ形）。
+        // IT13 は要確認へ書き始めたが、読み口を置き忘れていた——受け入れテストが
+        // DB を直接読んでいたため、全緑のまま欠落が隠れていた（レビューで発見）。
+        var fixture = cargo(null, true, true, "CORPORATE", "0.1500");
+
+        deliver(fixture);
+
+        var rest = org.springframework.web.client.RestClient.create();
+        var response = rest.get()
+                .uri("http://localhost:" + port + "/api/v1/billing/attention-items")
+                .header("X-Auth-Roles", "ROLE_ACCOUNTANT")
+                .retrieve()
+                .toEntity(new org.springframework.core.ParameterizedTypeReference<
+                        java.util.Map<String, Object>>() { });
+
+        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
+        @SuppressWarnings("unchecked")
+        var items = (List<java.util.Map<String, Object>>) response.getBody().get("items");
+        assertThat(items)
+                .filteredOn(item -> fixture.bookingId().equals(item.get("targetId")))
+                .singleElement()
+                .satisfies(item -> assertThat(String.valueOf(item.get("reason")))
+                        .contains("重量"));
+    }
+
+    @Test
+    @DisplayName("他ロールには経理宛の要確認を出さない（全員に見えるものは誰も直さない）")
+    void doesNotShowAccountantItemsToOtherRoles() {
+        var fixture = cargo(null, true, true, "CORPORATE", "0.1500");
+        deliver(fixture);
+
+        var rest = org.springframework.web.client.RestClient.create();
+        var response = rest.get()
+                .uri("http://localhost:" + port + "/api/v1/billing/attention-items")
+                .header("X-Auth-Roles", "ROLE_TRACKER")
+                .retrieve()
+                .toEntity(new org.springframework.core.ParameterizedTypeReference<
+                        java.util.Map<String, Object>>() { });
+
+        @SuppressWarnings("unchecked")
+        var items = (List<java.util.Map<String, Object>>) response.getBody().get("items");
+        assertThat(items)
+                .filteredOn(item -> fixture.bookingId().equals(item.get("targetId")))
+                .isEmpty();
+    }
+
+    @Test
+    @DisplayName("ロールが伝わらなければ何も出さない（既定を置くと他ロール宛が見える）")
+    void showsNothingWhenNoRoleIsPassed() {
+        // **既定を置かない。** ロールの伝達が壊れていることに気づかないまま、
+        // 他ロール宛の要確認が見えるほうが困る（bookingms・routingms と同じ形）。
+        var fixture = cargo(null, true, true, "CORPORATE", "0.1500");
+        deliver(fixture);
+
+        var rest = org.springframework.web.client.RestClient.create();
+        for (String header : new String[] {"", "  ,  "}) {
+            var response = rest.get()
+                    .uri("http://localhost:" + port + "/api/v1/billing/attention-items")
+                    .header("X-Auth-Roles", header)
+                    .retrieve()
+                    .toEntity(new org.springframework.core.ParameterizedTypeReference<
+                            java.util.Map<String, Object>>() { });
+
+            @SuppressWarnings("unchecked")
+            var items = (List<java.util.Map<String, Object>>) response.getBody().get("items");
+            assertThat(items).as("ロール『%s』では何も出さない", header).isEmpty();
+        }
     }
 }

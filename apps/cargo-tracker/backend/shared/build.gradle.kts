@@ -80,7 +80,10 @@ tasks.named<Test>("test") {
     inputs.dir(rootProject.file("../../../docs/development/cargo-tracker"))
             .withPropertyName("iterationPlans")
             .withPathSensitivity(PathSensitivity.RELATIVE)
-    inputs.dir(rootProject.file("../../frontend/src"))
+    // `rootProject` は backend なので、frontend は 1 つ上にある。**2 つ上にすると
+    // 存在しないパスになり、Test タスクの構成そのものが失敗して 1 件も走らない**
+    // （IT13 のレビューで実測。規約検査 3 本がまとめて空振りしていた）。
+    inputs.dir(rootProject.file("../frontend/src"))
             .withPropertyName("frontendSources")
             .withPathSensitivity(PathSensitivity.RELATIVE)
     // AcceptanceFixturesAreNotTimeBombsTest は受け入れテストのソースとシナリオを読む。

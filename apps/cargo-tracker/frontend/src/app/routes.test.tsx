@@ -43,9 +43,23 @@ describe('ロール別の到達性', () => {
     }
   });
 
-  it.each(ROLES)('%s: ナビに出ない画面は 403 になる', (role) => {
+  /**
+   * ナビに出さないが開ける画面。**理由を書いたものだけ**を並べる。
+   *
+   * 経理の例外一覧は「毎日の入口」ではないのでナビには出さないが、請求詳細の
+   * 調整行が根拠の例外を指すので、**指された先は開けなければならない**
+   * （開けない場所へ誘わない。IT13 のレビュー 高）。
+   */
+  const OPEN_WITHOUT_NAV: ReadonlyArray<readonly [Role, string]> = [
+    ['ROLE_ACCOUNTANT', '/tracking/exceptions'],
+  ];
+
+  it.each(ROLES)('%s: ナビに出ない画面は 403 になる（理由を書いたものを除く）', (role) => {
     const allowedPaths = navigationFor([role]).map((i) => i.path);
-    for (const item of NAVIGATION.filter((i) => !allowedPaths.includes(i.path))) {
+    const openWithoutNav = OPEN_WITHOUT_NAV
+      .filter(([r]) => r === role).map(([, path]) => path);
+    for (const item of NAVIGATION.filter(
+      (i) => !allowedPaths.includes(i.path) && !openWithoutNav.includes(i.path))) {
       loginAs([role]);
       const { unmount } = renderAt(item.path);
       expect(
@@ -54,6 +68,13 @@ describe('ロール別の到達性', () => {
       ).toBeInTheDocument();
       unmount();
     }
+  });
+
+  it('経理は請求の根拠（例外）を開ける（ナビには出さないが、指された先は開く）', () => {
+    loginAs(['ROLE_ACCOUNTANT']);
+    renderAt('/tracking/exceptions');
+
+    expect(screen.queryByText('この画面を開く権限がありません')).not.toBeInTheDocument();
   });
 
   it('未認証はログイン画面へ送られる（403 ではない）', () => {
@@ -114,10 +135,14 @@ describe('403 の見え方', () => {
 describe('一覧から開く画面（ナビに載せない）', () => {
   // ナビに載せない画面は、上のロール別到達性の検査から外れる。**外れた画面ほど
   // 権限の設定を間違えても気づけない**ので、ここで明示的に確かめる。
-  // 許可ロールは一覧（/bookings）と揃える。一覧に出ている行を開けないと、
-  // 「一覧には出るのに詳細は 403」になる。
+  //
+  // **経理も参照だけ開く**（IT13）。要確認一覧（S70）が「算出できなかった予約」を
+  // 経理宛に出すので、開けないと**気づいた先が行き止まり**になる。正典の画面遷移
+  // （ui_design.md）も S70 → S22 を経理の導線として書いている。一覧（/bookings）の
+  // ナビには出さない——経理の仕事は予約を探すことではなく、指された予約を見ること。
   const DETAIL_PATH = '/bookings/b-1';
-  const ALLOWED: readonly Role[] = ['ROLE_SALES', 'ROLE_ROUTING', 'ROLE_TRACKER'];
+  const ALLOWED: readonly Role[] = [
+    'ROLE_SALES', 'ROLE_ROUTING', 'ROLE_TRACKER', 'ROLE_ACCOUNTANT'];
 
   it.each(ALLOWED)('%s: 予約詳細を開ける', (role) => {
     loginAs([role]);
@@ -135,8 +160,10 @@ describe('一覧から開く画面（ナビに載せない）', () => {
 
   it('予約一覧を開けるロールは、その詳細も開ける', () => {
     // 一覧と詳細で許可がずれると「一覧には出るのに開くと 403」になる。
+    // **詳細のほうが広いのは許す**——経理は一覧から探さず、要確認一覧や請求書から
+    // 指された予約だけを開く（IT13）。逆（一覧に出るのに詳細が 403）は許さない。
     const listAllow = NAVIGATION.find((i) => i.path === '/bookings')?.allow ?? [];
 
-    expect([...ALLOWED].sort()).toEqual([...listAllow].sort());
+    expect(listAllow.filter((role) => !ALLOWED.includes(role))).toEqual([]);
   });
 });

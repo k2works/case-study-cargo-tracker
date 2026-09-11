@@ -61,7 +61,9 @@ export function InvoiceListPage() {
             checked={includeSettled}
             onChange={(event) => setIncludeSettled(event.target.checked)}
           />
-          <span>入金済も表示</span>
+          {/* **取消も一緒に出る。** ラベルが「入金済」だけだと、取り消された
+              請求書が混ざった理由が読めない（IT13 のレビュー 中）。 */}
+          <span>入金済・取消も表示</span>
         </label>
       </section>
 

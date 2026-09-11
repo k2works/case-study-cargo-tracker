@@ -24,7 +24,7 @@ class TransportRecordTest {
     private static final List<TransportRecord.BilledLeg> LEGS =
             List.of(new TransportRecord.BilledLeg(TOKYO, OSAKA));
 
-    private static TransportRecord record(List<TransportRecord.BilledLeg> legs, String weightKg,
+    private static TransportRecord transportOf(List<TransportRecord.BilledLeg> legs, String weightKg,
             String cargoType, UnLocode origin, UnLocode destination) {
         return new TransportRecord(legs, weightKg == null ? null : new BigDecimal(weightKg),
                 cargoType, origin, destination);
@@ -33,29 +33,29 @@ class TransportRecordTest {
     @Test
     @DisplayName("注 N1: 重量が分からなければ作れない（安い請求を黙って出さない）")
     void refusesMissingWeight() {
-        assertThatThrownBy(() -> record(LEGS, null, "GENERAL", TOKYO, OSAKA))
+        assertThatThrownBy(() -> transportOf(LEGS, null, "GENERAL", TOKYO, OSAKA))
                 .isInstanceOf(BusinessRuleViolation.class)
                 .hasMessageContaining("重量");
-        assertThatThrownBy(() -> record(LEGS, "0", "GENERAL", TOKYO, OSAKA))
+        assertThatThrownBy(() -> transportOf(LEGS, "0", "GENERAL", TOKYO, OSAKA))
                 .isInstanceOf(BusinessRuleViolation.class);
-        assertThatThrownBy(() -> record(LEGS, "-1", "GENERAL", TOKYO, OSAKA))
+        assertThatThrownBy(() -> transportOf(LEGS, "-1", "GENERAL", TOKYO, OSAKA))
                 .isInstanceOf(BusinessRuleViolation.class);
     }
 
     @Test
     @DisplayName("区間・貨物種別・両端が無ければ作れない")
     void refusesMissingInputs() {
-        assertThatThrownBy(() -> record(List.of(), "1000", "GENERAL", TOKYO, OSAKA))
+        assertThatThrownBy(() -> transportOf(List.of(), "1000", "GENERAL", TOKYO, OSAKA))
                 .isInstanceOf(BusinessRuleViolation.class);
-        assertThatThrownBy(() -> record(null, "1000", "GENERAL", TOKYO, OSAKA))
+        assertThatThrownBy(() -> transportOf(null, "1000", "GENERAL", TOKYO, OSAKA))
                 .isInstanceOf(BusinessRuleViolation.class);
-        assertThatThrownBy(() -> record(LEGS, "1000", " ", TOKYO, OSAKA))
+        assertThatThrownBy(() -> transportOf(LEGS, "1000", " ", TOKYO, OSAKA))
                 .isInstanceOf(BusinessRuleViolation.class);
-        assertThatThrownBy(() -> record(LEGS, "1000", null, TOKYO, OSAKA))
+        assertThatThrownBy(() -> transportOf(LEGS, "1000", null, TOKYO, OSAKA))
                 .isInstanceOf(BusinessRuleViolation.class);
-        assertThatThrownBy(() -> record(LEGS, "1000", "GENERAL", null, OSAKA))
+        assertThatThrownBy(() -> transportOf(LEGS, "1000", "GENERAL", null, OSAKA))
                 .isInstanceOf(BusinessRuleViolation.class);
-        assertThatThrownBy(() -> record(LEGS, "1000", "GENERAL", TOKYO, null))
+        assertThatThrownBy(() -> transportOf(LEGS, "1000", "GENERAL", TOKYO, null))
                 .isInstanceOf(BusinessRuleViolation.class);
         assertThatThrownBy(() -> new TransportRecord.BilledLeg(TOKYO, null))
                 .isInstanceOf(BusinessRuleViolation.class);
@@ -66,7 +66,7 @@ class TransportRecordTest {
     @Test
     @DisplayName("輸出は出発地と目的地の国で決まる（区間の遠さではない）")
     void decidesExportByCountries() {
-        assertThat(record(LEGS, "1000", "GENERAL", TOKYO, NEW_YORK).isExport()).isTrue();
-        assertThat(record(LEGS, "1000", "GENERAL", TOKYO, OSAKA).isExport()).isFalse();
+        assertThat(transportOf(LEGS, "1000", "GENERAL", TOKYO, NEW_YORK).isExport()).isTrue();
+        assertThat(transportOf(LEGS, "1000", "GENERAL", TOKYO, OSAKA).isExport()).isFalse();
     }
 }
