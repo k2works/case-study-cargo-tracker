@@ -12,7 +12,7 @@ public interface CustomsDeclarationMapper {
 
     /** 読み出す列を並べる。<b>{@code SELECT *} にしない</b>（列順で割り当てられる）。 */
     String COLUMNS = "declaration_number, tracking_number, booking_id, status, declared_at, "
-            + "last_status_changed_at, last_held_at, held_business_days, last_reason, "
+            + "last_status_changed_at, last_held_at, last_reason, "
             + "changed_by, projected_at";
 
     /** 申告を 1 行足す。主キーは申告番号なので、読み直しても増えない。 */
@@ -24,7 +24,7 @@ public interface CustomsDeclarationMapper {
     /**
      * 状態の更新 1 回ぶん。
      *
-     * <p><b>並べた引数にしない。</b> 8 つ並ぶと、呼び側で順序を 1 つ違えても
+     * <p><b>並べた引数にしない。</b> 7 つ並ぶと、呼び側で順序を 1 つ違えても
      * 型が合ってしまう（{@code changedAt} と {@code projectedAt} はどちらも
      * {@code Instant}）。名前で渡す。</p>
      *
@@ -36,7 +36,6 @@ public interface CustomsDeclarationMapper {
             String status,
             String reason,
             String changedBy,
-            int heldBusinessDays,
             Instant lastHeldAt,
             Instant changedAt,
             Instant projectedAt) {
@@ -107,7 +106,6 @@ public interface CustomsDeclarationMapper {
             Instant declaredAt,
             Instant lastStatusChangedAt,
             Instant lastHeldAt,
-            int heldBusinessDays,
             String lastReason,
             String changedBy,
             Instant projectedAt) {

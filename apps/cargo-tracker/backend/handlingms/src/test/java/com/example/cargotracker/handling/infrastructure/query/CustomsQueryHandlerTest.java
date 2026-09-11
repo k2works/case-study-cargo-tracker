@@ -114,7 +114,7 @@ class CustomsQueryHandlerTest {
 
     private void held(String number, Instant lastHeldAt) {
         rows.add(new CustomsDeclarationRow(number, "TRK-" + number, "b-1", "HELD",
-                DECLARED, lastHeldAt, lastHeldAt, 0, "検査待ち", "tracker01", NOW));
+                DECLARED, lastHeldAt, lastHeldAt, "検査待ち", "tracker01", NOW));
     }
 
     private List<CustomsDeclarationView> list(boolean overdueOnly) {
@@ -169,11 +169,11 @@ class CustomsQueryHandlerTest {
     void keepsDaysAfterSettlingButIsNotOverdue() {
         // 2026-09-29 に留置 → 2026-10-05 に通関済。営業日は 4 日。
         rows.add(new CustomsDeclarationRow("IMP-C", "TRK-C", "b-1", "CLEARED",
-                DECLARED, NOW, HELD_4_DAYS, 0, "証明書を受領", "tracker01", NOW));
+                DECLARED, NOW, HELD_4_DAYS, "証明書を受領", "tracker01", NOW));
 
         assertThat(list(false)).singleElement().satisfies(view -> {
             assertThat(view.heldBusinessDays())
-                    .as("列は常に 0。読むときに数えないと調整根拠が消える")
+                    .as("読むときに数えないと調整根拠が消える（列は持たない）")
                     .isEqualTo(4);
             assertThat(view.overdue())
                     .as("決着しているので督促の対象ではない")
@@ -185,7 +185,7 @@ class CustomsQueryHandlerTest {
     @DisplayName("留置したことが無ければ 0（数えるものが無い）")
     void neverHeldCountsZero() {
         rows.add(new CustomsDeclarationRow("IMP-P", "TRK-P", "b-1", "PENDING",
-                DECLARED, DECLARED, null, 0, null, null, NOW));
+                DECLARED, DECLARED, null, null, null, NOW));
 
         assertThat(list(false)).singleElement().satisfies(view -> {
             assertThat(view.heldBusinessDays()).isZero();

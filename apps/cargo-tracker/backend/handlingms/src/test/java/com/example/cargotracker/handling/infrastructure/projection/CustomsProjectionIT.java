@@ -218,4 +218,45 @@ class CustomsProjectionIT extends AbstractAxonIntegrationTest {
         assertThat(queries.handle(new FindCustomsStatusOfCargoQuery("TRK-L1")).status())
                 .isEqualTo("CLEARED");
     }
+
+    @Test
+    @DisplayName("不変条件 3: 同じ貨物に未決着の申告は 2 件残らない（DB が断る）")
+    void keepsAtMostOneUnsettledDeclarationPerCargo() {
+        // **画面の確認だけでは同時の 2 件が通る。** 登録は投影を読んでから
+        // コマンドを送るので、2 つの要求が同時に来ると両方とも「未決着は無い」を
+        // 見る。**部分ユニークインデックスが最後の砦**（IT12 レビュー #L15）。
+        String cargo = "TRK-UNQ-" + System.nanoTime();
+        String first = "IMP-UNQ1-" + System.nanoTime();
+        String second = "IMP-UNQ2-" + System.nanoTime();
+
+        projection.on(new CustomsDeclarationRegisteredEvent(first, cargo, "b-unq",
+                DECLARED, "handler01", DECLARED), "evt-" + System.nanoTime());
+        projection.on(new CustomsDeclarationRegisteredEvent(second, cargo, "b-unq",
+                DECLARED, "handler01", DECLARED), "evt-" + System.nanoTime());
+
+        assertThat(numbersOf(new FindCustomsDeclarationsQuery(true, cargo, null, false)))
+                .as("2 件目は残らない")
+                .containsExactly(first);
+    }
+
+    @Test
+    @DisplayName("決着したあとなら同じ貨物に出し直せる")
+    void allowsRedeclarationAfterSettlement() {
+        // **不可のあとは出し直せる。** 部分ユニークは未決着だけを見ているので、
+        // 決着した申告は 2 件目を妨げない。
+        String cargo = "TRK-RED-" + System.nanoTime();
+        String first = "IMP-RED1-" + System.nanoTime();
+        String second = "IMP-RED2-" + System.nanoTime();
+
+        projection.on(new CustomsDeclarationRegisteredEvent(first, cargo, "b-red",
+                DECLARED, "handler01", DECLARED), "evt-" + System.nanoTime());
+        projection.on(new CustomsStatusUpdatedEvent(first, "PENDING", "REJECTED",
+                "書類不備", "tracker01", DECLARED.plusSeconds(3600)), "evt-" + System.nanoTime());
+        projection.on(new CustomsDeclarationRegisteredEvent(second, cargo, "b-red",
+                DECLARED.plusSeconds(7200), "handler01", DECLARED.plusSeconds(7200)),
+                "evt-" + System.nanoTime());
+
+        assertThat(numbersOf(new FindCustomsDeclarationsQuery(true, cargo, null, false)))
+                .containsExactlyInAnyOrder(first, second);
+    }
 }

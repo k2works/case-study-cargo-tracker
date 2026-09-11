@@ -7,6 +7,8 @@ import com.example.cargotracker.handling.domain.model.events.CustomsClearanceNot
 import com.example.cargotracker.handling.infrastructure.persistence.CustomsDeclarationMapper;
 import com.example.cargotracker.handling.infrastructure.persistence.CustomsStatusHistoryMapper;
 import java.time.Clock;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.axonframework.messaging.core.annotation.MessageIdentifier;
 import org.axonframework.messaging.eventhandling.annotation.EventHandler;
 import org.springframework.stereotype.Component;
@@ -30,6 +32,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class CustomsDeclarationProjection {
 
+    private static final Logger log = LoggerFactory.getLogger(CustomsDeclarationProjection.class);
+
     private final CustomsDeclarationMapper declarations;
     private final CustomsStatusHistoryMapper history;
     private final Clock clock;
@@ -43,10 +47,13 @@ public class CustomsDeclarationProjection {
 
     @EventHandler
     public void on(CustomsDeclarationRegisteredEvent event, @MessageIdentifier String eventId) {
-        declarations.insert(new CustomsDeclarationMapper.CustomsDeclarationRow(
+        int inserted = declarations.insert(new CustomsDeclarationMapper.CustomsDeclarationRow(
                 event.declarationNumber(), event.trackingNumber(), event.bookingId(),
                 CustomsStatus.PENDING.name(), event.declaredAt(),
-                event.registeredAt(), null, 0, null, null, clock.instant()));
+                event.registeredAt(), null, null, null, clock.instant()));
+        if (inserted == 0) {
+            recordSkippedRegistration(event);
+        }
         // **登録も履歴に出す**（不変条件 2「登録も含め、変更はすべてイベントとして
         // 残る」）。読む人が「いつ申告したのか」を別の画面で探さずに済む。
         history.insert(new CustomsStatusHistoryMapper.CustomsStatusHistoryRow(
@@ -70,10 +77,6 @@ public class CustomsDeclarationProjection {
                 clock.instant()));
         declarations.updateStatus(new CustomsDeclarationMapper.CustomsStatusChange(
                 event.declarationNumber(), event.status(), event.reason(), event.changedBy(),
-                // 留置から出るときの確定値は契約イベントが持つが、投影は内部イベント
-                // だけを読む（契約は他 BC のもの）。ここでは 0 のままにして、
-                // 数えるのは読むときにする——判定を 2 か所に置かない。
-                0,
                 status == CustomsStatus.HELD ? event.changedAt() : null,
                 event.changedAt(), clock.instant()));
     }
@@ -89,5 +92,25 @@ public class CustomsDeclarationProjection {
         history.insert(new CustomsStatusHistoryMapper.CustomsStatusHistoryRow(
                 eventId, event.declarationNumber(), "CLEARANCE_NOTIFIED", null, null,
                 event.content(), null, event.notifiedAt(), clock.instant()));
+    }
+
+    /**
+     * 行が増えなかったときに、その理由を残す。
+     *
+     * <p><b>黙って見送らない。</b> {@code ON CONFLICT DO NOTHING} は 2 つの索引を
+     * まとめて受け止めるので、リプレイ（同じ申告を読み直した）と不変条件 3 の違反
+     * （同じ貨物に未決着の申告がもう 1 件できた）が同じ 0 件に見える。読み直して
+     * 区別し、違反のほうだけ警告に出す——**登録した本人には成功に見えている**ので、
+     * 気づく手段がここにしか無い。</p>
+     */
+    private void recordSkippedRegistration(CustomsDeclarationRegisteredEvent event) {
+        if (declarations.findByNumber(event.declarationNumber()) != null) {
+            return; // 同じ申告の読み直し。行は既にある。
+        }
+        var unsettled = declarations.findUnsettledByCargo(event.trackingNumber());
+        log.warn("通関申告 {} を投影できませんでした。貨物 {} には未決着の申告 {} が既にあります"
+                        + "（不変条件 3）。申告は登録されていますが一覧には出ません",
+                event.declarationNumber(), event.trackingNumber(),
+                unsettled.isEmpty() ? "(不明)" : unsettled.getFirst().declarationNumber());
     }
 }
