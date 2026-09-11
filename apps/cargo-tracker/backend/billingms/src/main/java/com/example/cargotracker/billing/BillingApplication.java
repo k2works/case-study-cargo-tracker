@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Import;
 import com.example.cargotracker.shared.infrastructure.axon.AxonJdbcConfiguration;
 import com.example.cargotracker.shared.infrastructure.axon.AxonServerStartupCheckConfiguration;
 import com.example.cargotracker.shared.infrastructure.axon.DeadLetterRetryEndpoint;
+import com.example.cargotracker.shared.infrastructure.axon.QueryDispatcherConfiguration;
 import com.example.cargotracker.shared.infrastructure.crypto.CryptoConfiguration;
 import com.example.cargotracker.shared.infrastructure.time.BusinessClockConfiguration;
 
@@ -22,6 +23,8 @@ import com.example.cargotracker.shared.infrastructure.time.BusinessClockConfigur
     // ADR-0003。ShipperRegisteredEvent の氏名は暗号化されて届く。同じ変換を
     // 入れないと、契約スナップショットにエンベロープの JSON がそのまま入る。
     CryptoConfiguration.class,
+    // 画面が読む問い合わせの送り口（S60・S61）。
+    QueryDispatcherConfiguration.class,
 })
 public class BillingApplication {
 

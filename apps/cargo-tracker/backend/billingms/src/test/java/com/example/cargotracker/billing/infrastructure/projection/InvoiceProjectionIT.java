@@ -207,4 +207,42 @@ class InvoiceProjectionIT extends AbstractAxonIntegrationTest {
                 .satisfies(line -> assertThat(line.basisExceptionId())
                         .isEqualTo("IMP-2026-0001"));
     }
+
+    @Test
+    @DisplayName("同じ調整イベントが 2 度届いても、明細は 1 行のまま")
+    void doesNotDuplicateAdjustmentsOnRedelivery() {
+        // **調整は入れ直せない**（算出と違って別のイベントで積む）。MAX(line_seq)+1 で
+        // 採ると、2 度目は新しい番号を採って同じ内容の行がもう 1 行できる——
+        // **合計は動かないのに明細だけが増える**ので、経理が二重に調整したと読む。
+        // IT13 の画面から踏む検査が実際にこれを出した。
+        String invoiceId = project("DUP");
+        var adjusted = new InvoiceAdjustedEvent(invoiceId, new BigDecimal("-10000"),
+                "誤配による再設計", "EX-2026-0928-03", new BigDecimal("-10000"),
+                BigDecimal.ZERO, new BigDecimal("423500"), "JPY", "accountant01", AT);
+
+        projection.on(adjusted, "evt-dup");
+        projection.on(adjusted, "evt-dup");
+
+        assertThat(queries.handle(new FindInvoiceQuery(invoiceId)).lineItems())
+                .filteredOn(line -> "ADJUSTMENT".equals(line.itemType()))
+                .hasSize(1);
+    }
+
+    @Test
+    @DisplayName("違う調整は 2 行とも残る（同じ請求書に複数の根拠がある）")
+    void keepsDistinctAdjustments() {
+        String invoiceId = project("MULTI");
+
+        projection.on(new InvoiceAdjustedEvent(invoiceId, new BigDecimal("-10000"),
+                "誤配による再設計", "EX-1", new BigDecimal("-10000"), BigDecimal.ZERO,
+                new BigDecimal("423500"), "JPY", "accountant01", AT), "evt-m1");
+        projection.on(new InvoiceAdjustedEvent(invoiceId, new BigDecimal("12000"),
+                "留置 4 営業日の保管料", "IMP-2026-0001", new BigDecimal("2000"),
+                BigDecimal.ZERO, new BigDecimal("435500"), "JPY", "accountant01", AT), "evt-m2");
+
+        assertThat(queries.handle(new FindInvoiceQuery(invoiceId)).lineItems())
+                .filteredOn(line -> "ADJUSTMENT".equals(line.itemType()))
+                .extracting(InvoiceLineView::basisExceptionId)
+                .containsExactly("EX-1", "IMP-2026-0001");
+    }
 }

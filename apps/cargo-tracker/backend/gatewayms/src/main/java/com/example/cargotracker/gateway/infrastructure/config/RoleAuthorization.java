@@ -132,6 +132,11 @@ public final class RoleAuthorization {
         rules.put("/api/v1/handling/customs-declarations", Set.of(HANDLER, TRACKER));
         rules.put("/api/v1/handling/**", Set.of(HANDLER));
 
+        // 請求（S60 / S61）は経理だけ（US21 §受入基準 1）。**荷主向けの請求書
+        // （S62）は US23・IT14** なので、いまは荷主に開く経路が無い。
+        rules.put("/api/v1/billing/invoices/**", Set.of(ACCOUNTANT));
+        rules.put("/api/v1/billing/invoices", Set.of(ACCOUNTANT));
+
         // 航海（S32 / S33）は経路設計者だけ。
         rules.put("/api/v1/routing/voyages/**", Set.of(ROUTING));
         rules.put("/api/v1/routing/voyages", Set.of(ROUTING));
@@ -207,6 +212,10 @@ public final class RoleAuthorization {
                 Set.of(HANDLER)));
         ordered.add(new Rule("POST", "/api/v1/handling/customs-declarations/*/status",
                 Set.of(TRACKER)));
+        // 料金の調整は経理だけ（US21 §受入基準 6）。**メソッド込みで宣言する**
+        // ——読み向けの広い宣言に吸われると、載せ忘れた書き込みほど無防備になる。
+        ordered.add(new Rule("POST", "/api/v1/billing/invoices/*/adjustments",
+                Set.of(ACCOUNTANT)));
         ordered.add(new Rule("PUT", "/api/v1/booking/bookings/*", Set.of(SALES)));
         rules.forEach((pattern, allowed) -> ordered.add(new Rule(ANY_METHOD, pattern, allowed)));
         return List.copyOf(ordered);

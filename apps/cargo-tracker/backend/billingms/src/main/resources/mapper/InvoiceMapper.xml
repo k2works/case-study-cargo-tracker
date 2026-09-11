@@ -29,15 +29,15 @@
 
     <insert id="insertLineItem">
         INSERT INTO invoice_line_item (invoice_id, line_seq, item_type, description,
-                                       amount, currency, basis_exception_id)
+                                       amount, currency, basis_exception_id, source_event_id)
         VALUES (#{invoiceId}, #{lineSeq}, #{itemType}, #{description}, #{amount},
-                #{currency}, #{basisExceptionId})
-        ON CONFLICT (invoice_id, line_seq) DO UPDATE SET
-            item_type          = EXCLUDED.item_type,
-            description        = EXCLUDED.description,
-            amount             = EXCLUDED.amount,
-            currency           = EXCLUDED.currency,
-            basis_exception_id = EXCLUDED.basis_exception_id
+                #{currency}, #{basisExceptionId}, #{sourceEventId})
+        <!--
+          **衝突先を書かない。** 主キー（invoice_id, line_seq）のほかに
+          元イベントの一意索引があるので、衝突先を 1 つに絞るともう一方で
+          例外になる。どちらでも黙って見送ってよい——同じ内容の行だからである。
+        -->
+        ON CONFLICT DO NOTHING
     </insert>
 
     <!--

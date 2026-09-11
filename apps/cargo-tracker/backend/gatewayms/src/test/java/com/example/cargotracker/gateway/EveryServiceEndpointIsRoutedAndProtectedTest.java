@@ -279,6 +279,40 @@ class EveryServiceEndpointIsRoutedAndProtectedTest {
     }
 
     @Test
+    @DisplayName("US21: 請求は経理だけが読み書きできる（肯定と否定の両方を見る）")
+    void billingIsForAccountantsOnly() {
+        // **メソッド込みで宣言し、そのロール以外が 403 になることを見る**（T8）。
+        // IT10 の引き継ぎ枠 B で同じ穴を返済した形——読みの宣言に書き込みが
+        // 吸われると、読める側が書けてしまう。
+        List<String> accountant = List.of("ROLE_ACCOUNTANT");
+        List<String> tracker = List.of("ROLE_TRACKER");
+        List<String> shipper = List.of("ROLE_SHIPPER");
+        List<String> sales = List.of("ROLE_SALES");
+        String list = "/api/v1/billing/invoices";
+        String one = "/api/v1/billing/invoices/INV-20260928-1a2b3c4d";
+        String adjust = one + "/adjustments";
+
+        assertThat(RoleAuthorization.isAllowed("GET", list, accountant))
+                .as("経理は請求一覧（S60）を読む").isTrue();
+        assertThat(RoleAuthorization.isAllowed("GET", one, accountant)).isTrue();
+        assertThat(RoleAuthorization.isAllowed("POST", adjust, accountant))
+                .as("調整を入れるのは経理（US21 §6）").isTrue();
+
+        assertThat(RoleAuthorization.isAllowed("GET", list, tracker))
+                .as("追跡管理者は請求に関わらない").isFalse();
+        assertThat(RoleAuthorization.isAllowed("GET", one, sales))
+                .as("営業も請求は読まない").isFalse();
+        assertThat(RoleAuthorization.isAllowed("GET", one, shipper))
+                .as("荷主向けの請求書は S62（US23・IT14）。いまは開かない").isFalse();
+        assertThat(RoleAuthorization.isAllowed("POST", adjust, tracker))
+                .as("読めない側が書ける余地を作らない").isFalse();
+
+        assertThat(RoleAuthorization.isDeclared("POST", adjust))
+                .as("宣言が無ければ通さない（載せ忘れた書き込みほど無防備になる）")
+                .isTrue();
+    }
+
+    @Test
     @DisplayName("例外の起票・対応・解決は追跡管理者だけ（一覧は読めるが荷主は書けない）")
     void exceptionWritesAreForTrackersOnly() {
         // **読みの宣言（TRACKER, SHIPPER）に書き込みが吸われない**ことを見る。

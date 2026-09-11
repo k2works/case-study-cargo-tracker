@@ -70,7 +70,9 @@ public class InvoiceProjection {
         for (InvoiceCalculatedEvent.LineItem item : event.lineItems()) {
             invoices.insertLineItem(new InvoiceMapper.LineItemRow(event.invoiceId(), seq++,
                     item.itemType(), item.description(), item.amount(), item.currency(),
-                    item.basisExceptionId()));
+                    item.basisExceptionId(),
+                    // 算出の明細は消して入れ直すので、元イベントで縛らない。
+                    null));
         }
     }
 
@@ -87,9 +89,12 @@ public class InvoiceProjection {
 
         // **調整行は積む。** 減額も補償費用も、あとから「なぜその額か」を
         // 追えなければ根拠にならない（US28 §8 の受け側）。
+        // **元イベントの識別子で縛る。** 調整は入れ直せない（別のイベントで積む）
+        // ので、2 度届くと MAX(line_seq)+1 が新しい番号を採って同じ行が増える。
         invoices.insertLineItem(new InvoiceMapper.LineItemRow(event.invoiceId(),
                 invoices.nextLineSeq(event.invoiceId()), LineItemType.ADJUSTMENT.name(),
-                event.reason(), event.amount(), event.currency(), event.basisExceptionId()));
+                event.reason(), event.amount(), event.currency(), event.basisExceptionId(),
+                eventId));
     }
 
     /**

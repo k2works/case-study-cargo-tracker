@@ -60,6 +60,14 @@ public interface InvoiceMapper {
             @Param("bookingId") String bookingId,
             @Param("limit") int limit);
 
+    /**
+     * 明細を 1 行足す。
+     *
+     * <p><b>元イベントの識別子で一意にする</b>（{@code source_event_id}）。
+     * 調整は算出と違って入れ直せない（別のイベントで積む）ので、同じイベントが
+     * 2 度届くと {@code MAX(line_seq)+1} が新しい番号を採って同じ内容の行が
+     * もう 1 行できる（IT13 T7 で実測）。</p>
+     */
     int insertLineItem(LineItemRow row);
 
     /** 明細は入れ直す（追記専用の行はリプレイで増える。IT6 の教訓）。 */
@@ -68,8 +76,8 @@ public interface InvoiceMapper {
     int deleteCalculatedLineItems(@Param("invoiceId") String invoiceId);
 
     @Select("SELECT invoice_id, line_seq, item_type, description, amount, currency, "
-            + "basis_exception_id FROM invoice_line_item WHERE invoice_id = #{invoiceId} "
-            + "ORDER BY line_seq")
+            + "basis_exception_id, source_event_id FROM invoice_line_item "
+            + "WHERE invoice_id = #{invoiceId} ORDER BY line_seq")
     List<LineItemRow> findLineItems(@Param("invoiceId") String invoiceId);
 
     /** 次の明細の並び順（調整は積み上がるので、いまある行の次に置く）。 */
@@ -104,6 +112,7 @@ public interface InvoiceMapper {
             String description,
             BigDecimal amount,
             String currency,
-            String basisExceptionId) {
+            String basisExceptionId,
+            String sourceEventId) {
     }
 }
