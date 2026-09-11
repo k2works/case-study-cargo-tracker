@@ -121,7 +121,15 @@ class AcceptanceFixturesAreNotTimeBombsTest {
      *
      * <p><b>UTC の今日で数えない。</b> 時差の分だけ期限の見え方がずれる
      * （CI は UTC で回る）。</p>
+     *
+     * <p><b>「テストで時計を使わない」を承知で使う。</b> この検査が見たいのは
+     * 「シナリオの日付が<b>いま</b>から見て期限切れに近いか」で、<b>今日そのものが
+     * 対象</b>である。時計を固定すると、固定した日付を追い越したときに検査のほうが
+     * 時限式になる（それがまさに、この検査が防ごうとしているもの）。代わりに
+     * <b>「今」を引数に取る形</b>にして、{@code discriminatesWhenADateIsAboutToExpire}
+     * が動かして確かめている——空振りしていないことは、そちらで固定する。</p>
      */
+    @SuppressWarnings("java:S8692") // 「今日」そのものがこの検査の対象である（下記）
     private static LocalDate businessToday() {
         return LocalDate.now(com.example.cargotracker.shared.infrastructure.time
                 .BusinessClockConfiguration.BUSINESS_ZONE);

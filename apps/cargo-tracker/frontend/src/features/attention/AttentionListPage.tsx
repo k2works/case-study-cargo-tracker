@@ -12,7 +12,7 @@ import {
   TD,
   TH,
 } from '@/shared/ui/styles';
-import { fetchAttentionItems } from './api';
+import { fetchAttentionItems, type AttentionItemView } from './api';
 
 /**
  * S70 要確認一覧。
@@ -87,29 +87,7 @@ export function AttentionListPage() {
                         一律に荷主のリンクを出すと、経路設計者は追跡番号を発行し直す
                         入口にたどり着けない（IT7 クローズの自己レビュー）。 */}
                     <div className="flex flex-col gap-1">
-                      {item.targetType === 'BOOKING' ? (
-                        <Link to={`/bookings/${item.targetId}`} className={LINK}>
-                          予約を開く
-                        </Link>
-                      ) : item.targetType === 'INVOICE' ? (
-                        /* **請求書は投影に行が無い。** 二重に作られて弾かれた
-                           ものなので、開く先は「その予約の請求一覧」である
-                           （IT13）。 */
-                        <Link to="/invoices" className={LINK}>
-                          請求一覧を開く
-                        </Link>
-                      ) : (
-                        <>
-                          {item.relatedShipperId !== null && (
-                            <Link to="/shippers" className={LINK}>
-                              既存の荷主を見る
-                            </Link>
-                          )}
-                          <Link to="/shippers/new" className={LINK}>
-                            修正して再登録する
-                          </Link>
-                        </>
-                      )}
+                      <NextAction item={item} />
                     </div>
                   </td>
                 </tr>
@@ -129,5 +107,41 @@ export function AttentionListPage() {
         </>
       )}
     </section>
+  );
+}
+
+/**
+ * その項目に対して打てる手。
+ *
+ * <p><b>対象の種類で違う。</b> 荷主の重複なら既存を使えば済むが、予約の項目
+ * （連鎖の補償・投影の弾き）で開くべきなのはその予約で、請求書の項目は
+ * 投影に行が無いので請求一覧へ送る（IT13）。</p>
+ */
+function NextAction({ item }: { readonly item: AttentionItemView }) {
+  if (item.targetType === 'BOOKING') {
+    return (
+      <Link to={`/bookings/${item.targetId}`} className={LINK}>
+        予約を開く
+      </Link>
+    );
+  }
+  if (item.targetType === 'INVOICE') {
+    return (
+      <Link to="/invoices" className={LINK}>
+        請求一覧を開く
+      </Link>
+    );
+  }
+  return (
+    <>
+      {item.relatedShipperId !== null && (
+        <Link to="/shippers" className={LINK}>
+          既存の荷主を見る
+        </Link>
+      )}
+      <Link to="/shippers/new" className={LINK}>
+        修正して再登録する
+      </Link>
+    </>
   );
 }

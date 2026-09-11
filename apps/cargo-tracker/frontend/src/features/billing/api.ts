@@ -104,5 +104,6 @@ export function adjustInvoice(
 export function formatMoney(amount: number, currency: string): string {
   const formatted = new Intl.NumberFormat('ja-JP').format(Math.abs(amount));
   const sign = amount < 0 ? '− ' : '';
-  return `${sign}${currency === 'JPY' ? '¥ ' : `${currency} `}${formatted}`;
+  const unit = currency === 'JPY' ? '¥' : currency;
+  return `${sign}${unit} ${formatted}`;
 }
