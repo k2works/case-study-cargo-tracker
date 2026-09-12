@@ -341,6 +341,46 @@ describe('S21 予約登録', () => {
     expect(body.heightCm).toBe('100');
   });
 
+  it('US01 §4: 見積と異なる項目を登録後に知らせる', async () => {
+    // **断らずに知らせる**（正典の不変条件 3）。応答に載せても画面が捨てると、
+    // 誰にも伝わらない——サーバ側の受け入れが緑でもここは判別しない。
+    const fetchMock = mockShippersThen(
+      new Response(JSON.stringify({
+        bookingId: 'b-1',
+        quotationDifferences: ['重量: 1200 kg → 1500 kg'],
+      }), { status: 201 }),
+    );
+
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={['/bookings-new']}>
+          <Routes>
+            <Route path="/bookings-new" element={<BookingRegisterPage />} />
+            <Route path="/bookings" element={<BookingListPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    await screen.findByRole('option', { name: '山田商事（SHP-000001）' });
+    await userEvent.selectOptions(screen.getByLabelText('荷主'), 's-1');
+    await userEvent.type(screen.getByLabelText('出発地'), 'JPTYO');
+    await userEvent.type(screen.getByLabelText('目的地'), 'USNYC');
+    await userEvent.type(screen.getByLabelText('到着期限'), '2026-12-01');
+    await userEvent.type(screen.getByLabelText('重量 (kg)'), '1500');
+    await userEvent.type(screen.getByLabelText('長さ (cm)'), '120');
+    await userEvent.type(screen.getByLabelText('幅 (cm)'), '80');
+    await userEvent.type(screen.getByLabelText('高さ (cm)'), '100');
+    await userEvent.type(screen.getByLabelText('数量'), '10');
+    await userEvent.type(screen.getByLabelText('品名'), '自動車部品');
+    await userEvent.click(screen.getByRole('button', { name: '登録する' }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    expect(await screen.findByText('見積と異なる項目があります')).toBeInTheDocument();
+    expect(await screen.findByText('重量: 1200 kg → 1500 kg')).toBeInTheDocument();
+  });
+
   it('危険物の申告を送る', async () => {
     // 寸法で潰した「値が一層で落ちる」形が付帯情報側に残っていた。
     const fetchMock = mockShippersThen(

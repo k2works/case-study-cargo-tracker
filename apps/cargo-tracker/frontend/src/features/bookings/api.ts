@@ -311,8 +311,20 @@ export interface ItineraryLegView {
   readonly unloadAt: string;
 }
 
-export function bookCargo(input: BookCargoInput): Promise<{ bookingId: string }> {
+export function bookCargo(input: BookCargoInput): Promise<BookedView> {
   return commandClient('/booking/bookings', input);
+}
+
+/**
+ * 受け付けた予約（US01 §受入基準 4）。
+ *
+ * 見積番号を添えて登録したとき、**見積と違った項目がここに載る**。断らずに
+ * 知らせるので、載せても使わなければ誰にも伝わらない。
+ */
+export interface BookedView {
+  readonly bookingId: string;
+  /** 見積と違った項目（「何から何へ」まで）。見積を経ない予約では空。 */
+  readonly quotationDifferences?: readonly string[];
 }
 
 /** 経路設計の「今日の作業」に出す件数。 */

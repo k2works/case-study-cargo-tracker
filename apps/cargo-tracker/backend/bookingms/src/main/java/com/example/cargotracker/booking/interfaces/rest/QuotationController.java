@@ -11,6 +11,7 @@ import com.example.cargotracker.booking.domain.model.valueobjects.Weight;
 import com.example.cargotracker.booking.domain.service.QuotationEstimator;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindQuotationQuery;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.QuotationView;
+import com.example.cargotracker.booking.interfaces.rest.dto.CargoSpecificationAssembler;
 import com.example.cargotracker.booking.interfaces.rest.dto.ShipperDtos.PendingResponse;
 import com.example.cargotracker.shared.domain.location.Location;
 import com.example.cargotracker.shared.infrastructure.axon.QueryDispatcher;
@@ -80,7 +81,10 @@ public class QuotationController {
                 Location.of(request.originUnLocode()),
                 Location.of(request.destinationUnLocode()),
                 request.arrivalDeadline());
-        CargoType cargoType = CargoType.valueOf(request.cargoType());
+        // **知らない貨物種別は 400 で断る。** 素の valueOf は
+        // IllegalArgumentException になり 500 になる——利用者には「壊れた」と
+        // しか見えず、打ち直せない。組み立ては予約と同じ 1 か所に置く。
+        CargoType cargoType = CargoSpecificationAssembler.cargoType(request.cargoType());
         Weight weight = new Weight(request.weightKg());
 
         // **既にある探索を使う。** 見積のために新しい経路探索を作らない。

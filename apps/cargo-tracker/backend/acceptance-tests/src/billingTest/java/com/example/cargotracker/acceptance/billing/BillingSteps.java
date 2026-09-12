@@ -61,18 +61,66 @@ public class BillingSteps {
     private String destination = "JPOSA";
     private int legCount = 3;
     private ResponseEntity<Void> lastResponse;
+    private String invoiceId;
 
     /** 調整の前の請求額。**「小さくなった」は前と比べないと言えない。** */
     private BigDecimal totalBeforeAdjustment;
+
+    /** 予約番号。**同じシナリオの続きを書くステップ定義が読む**（{@link SettlementSteps}）。 */
+    String bookingId() {
+        return bookingId;
+    }
+
+    /** 荷主 ID。通知の宛先を突き合わせる。 */
+    String shipperId() {
+        return shipperId;
+    }
+
+    /**
+     * 直前の操作の結果を預かる。
+     *
+     * <p><b>成功／失敗の判定は 1 か所に置く</b>（{@code その操作は成功する}）。
+     * 続きのステップ定義が自分で持つと、判定が二重になる。</p>
+     */
+    void record(ResponseEntity<Void> response) {
+        this.lastResponse = response;
+    }
+
+    /** 直前の操作の状態コード。 */
+    org.springframework.http.HttpStatusCode lastStatus() {
+        return lastResponse.getStatusCode();
+    }
 
     private String url(String path) {
         return "http://localhost:" + port + "/api/v1/billing/invoices" + path;
     }
 
+    /**
+     * その予約の請求書。
+     *
+     * <p><b>取り消したあとは予約から引けない</b>（有効な請求書だけを返す経路
+     * なので 404 になる）。それでも「状態は取消である」は確かめたいので、
+     * 一度見えた請求番号を覚えておき、番号で引き直す。</p>
+     */
     private Map<String, Object> invoice() {
         ResponseEntity<Map<String, Object>> response = rest.get()
                 .uri(url("/by-booking/" + bookingId)).retrieve().toEntity(JSON);
-        return response.getStatusCode().is2xxSuccessful() ? response.getBody() : null;
+        if (response.getStatusCode().is2xxSuccessful()) {
+            invoiceId = String.valueOf(response.getBody().get("invoiceId"));
+            return response.getBody();
+        }
+        if (invoiceId == null) {
+            return null;
+        }
+        ResponseEntity<Map<String, Object>> byId = rest.get()
+                .uri(url("/" + invoiceId)).retrieve().toEntity(JSON);
+        return byId.getStatusCode().is2xxSuccessful() ? byId.getBody() : null;
+    }
+
+    /** 一度見えた請求番号。**取消後も操作の宛先として要る。** */
+    String invoiceId() {
+        await().atMost(Duration.ofSeconds(30)).until(() -> invoice() != null);
+        return invoiceId;
     }
 
     @SuppressWarnings("unchecked")
@@ -163,7 +211,10 @@ public class BillingSteps {
 
     @かつ("その請求書の状態は {string} である")
     public void 請求書の状態(String label) {
-        assertThat(invoice().get("statusLabel")).isEqualTo(label);
+        // **投影が追いつくのを待つ。** 発行・入金・取消はコマンドの応答が返った
+        // あとに投影へ届くので、すぐ読むと 1 つ前の状態が見える。
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() ->
+                assertThat(invoice().get("statusLabel")).isEqualTo(label));
     }
 
     @かつ("請求の明細に基本料金の根拠が並ぶ")

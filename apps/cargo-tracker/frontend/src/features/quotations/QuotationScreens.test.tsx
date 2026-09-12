@@ -24,6 +24,7 @@ function quotation(over: Record<string, unknown> = {}) {
       {
         candidateSeq: 1,
         voyageNumbers: 'V-MOL-001 > V-ONE-002',
+        ports: 'JPTYO > SGSIN > USNYC',
         transitDays: 20,
         estimatedCost: 510000,
         currency: 'JPY',
@@ -108,8 +109,9 @@ describe('S13 見積詳細', () => {
     expect(row).not.toBeNull();
     expect(row).toHaveTextContent('20 日');
     expect(row).toHaveTextContent('¥ 510,000');
-    expect(row).toHaveTextContent('JPTYO');
-    expect(row).toHaveTextContent('USNYC');
+    // **経由港は候補ごとに違う。** 出発地と目的地を繋いだだけだと、
+    // どの候補も同じ経路に見える——中継港がここに出ることで判別する。
+    expect(row).toHaveTextContent('JPTYO > SGSIN > USNYC');
   });
 
   it('US01 §5: 期限に間に合う候補が無ければ、その旨が出る', async () => {
@@ -139,6 +141,7 @@ describe('S13 見積詳細', () => {
             {
               candidateSeq: 1,
               voyageNumbers: 'V-LATE-001',
+              ports: 'JPTYO > USNYC',
               transitDays: 40,
               estimatedCost: 300000,
               currency: 'JPY',

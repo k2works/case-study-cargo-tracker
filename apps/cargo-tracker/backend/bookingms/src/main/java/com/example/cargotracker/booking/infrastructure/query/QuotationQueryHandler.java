@@ -28,7 +28,9 @@ public class QuotationQueryHandler {
                 quotations.findCandidates(row.quotationId()).stream()
                         .map(candidate -> new QuotationCandidateView(
                                 candidate.candidateSeq(), candidate.voyageNumbers(),
-                                candidate.transitDays(), candidate.estimatedCost(),
+                                // **列が無かったころの行は経由港を持たない。**
+                                // 空文字にせず、画面が「分からない」を出せる形で渡す。
+                                candidate.ports(), candidate.transitDays(), candidate.estimatedCost(),
                                 candidate.estimatedCurrency(), candidate.overdueDays()))
                         .toList();
 

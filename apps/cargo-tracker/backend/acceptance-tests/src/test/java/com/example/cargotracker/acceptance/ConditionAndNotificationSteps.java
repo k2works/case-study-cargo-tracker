@@ -137,9 +137,30 @@ public class ConditionAndNotificationSteps {
         }, "発行待ちに出る");
     }
 
+    /**
+     * 直前の操作の結果を預かる。
+     *
+     * <p><b>成功／失敗の判定は 1 か所に置く。</b> ステップ定義ごとに同じ判定を
+     * 書くと、片方だけ緩い判定になっても誰も気づかない。</p>
+     */
+    void record(ResponseEntity<BookingRegistrationSteps.JsonMap> response) {
+        this.lastResponse = response;
+    }
+
+    @ならば("その操作は断られる")
+    public void 操作は断られる() {
+        // 画面のボタンを出さないだけでは守りにならない。API を直接叩いても断る。
+        assertThat(lastResponse.getStatusCode().is4xxClientError())
+                .as("断るはずの操作が通った（%s）", lastResponse.getStatusCode())
+                .isTrue();
+    }
+
     @ならば("その操作は成功する")
     public void 操作は成功する() {
-        assertThat(lastResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+        // **201 も成功である。** 作る操作は 201 を返す——200 だけを成功と
+        // 見なすと、登録のシナリオがここを使えない。
+        assertThat(lastResponse.getStatusCode().is2xxSuccessful())
+                .as("応答: %s", lastResponse.getStatusCode()).isTrue();
     }
 
     @ならば("その操作は状態の誤りとして断られる")

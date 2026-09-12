@@ -32,7 +32,11 @@ export function BookingListPage() {
   const [q, setQ] = useState('');
   // 登録直後は投影がまだなので、自分が入れた予約が一覧に無い。何も出さないと
   // 「登録できていない」と判断して二重に入力される（ui_design.md S20 の salt）。
-  const justBooked = (useLocation().state as { justBooked?: boolean } | null)?.justBooked === true;
+  const handoff = useLocation().state as
+    { justBooked?: boolean; quotationDifferences?: readonly string[] } | null;
+  const justBooked = handoff?.justBooked === true;
+  /** 見積と違った項目。**断らずに知らせる**ので、登録の直後に一度だけ出す。 */
+  const quotationDifferences = handoff?.quotationDifferences ?? [];
   const { data, isPending, isError } = useQuery({
     queryKey: ['bookings', includeFinished, q],
     queryFn: () => fetchBookings(includeFinished, q),
@@ -74,6 +78,16 @@ export function BookingListPage() {
       {justBooked && (
         <output className={`${NOTICE} mt-4 block`}>
           登録を受け付けました。反映までしばらくお待ちください
+          {quotationDifferences.length > 0 && (
+            <>
+              <span className="mt-2 block font-semibold">見積と異なる項目があります</span>
+              <ul className="mt-1 list-disc pl-5">
+                {quotationDifferences.map((difference) => (
+                  <li key={difference}>{difference}</li>
+                ))}
+              </ul>
+            </>
+          )}
         </output>
       )}
 

@@ -46,7 +46,7 @@ public interface QuotationMapper {
     int insertCandidate(CandidateRow row);
 
     /** 提示した順に返す。<b>順序が業務の意味を持つ</b>（安い順・間に合う順）。 */
-    @Select("SELECT quotation_id, candidate_seq, voyage_numbers, transit_days, "
+    @Select("SELECT quotation_id, candidate_seq, voyage_numbers, ports, transit_days, "
             + "estimated_cost, estimated_currency, overdue_days FROM quotation_candidate "
             + "WHERE quotation_id = #{quotationId} ORDER BY candidate_seq")
     List<CandidateRow> findCandidates(@Param("quotationId") String quotationId);
@@ -70,6 +70,7 @@ public interface QuotationMapper {
             String quotationId,
             int candidateSeq,
             String voyageNumbers,
+            String ports,
             int transitDays,
             BigDecimal estimatedCost,
             String estimatedCurrency,

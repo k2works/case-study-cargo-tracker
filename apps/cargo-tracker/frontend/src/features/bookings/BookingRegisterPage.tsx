@@ -74,7 +74,7 @@ export function BookingRegisterPage() {
     setSubmitting(true);
     const form = new FormData(event.currentTarget);
     try {
-      await bookCargo({
+      const booked = await bookCargo({
         shipperId: shipperIdOf(form),
         ...cargoFieldsPayload(form, cargoType),
         // **見積番号を一緒に送る。** 送らないと、サーバは見積と突き合わせられず
@@ -83,7 +83,11 @@ export function BookingRegisterPage() {
       });
       // 受け付けただけで一覧にはまだ出ない。一覧側が取り直せるようにしてから移る。
       await queryClient.invalidateQueries({ queryKey: ['bookings'] });
-      navigate('/bookings', { state: { justBooked: true } });
+      // **見積と違った項目を持って行く。** 受け取って捨てると、断らずに
+      // 知らせるという約束が画面の手前で消える（正典の不変条件 3）。
+      navigate('/bookings', {
+        state: { justBooked: true, quotationDifferences: booked.quotationDifferences ?? [] },
+      });
     } catch (e) {
       // 断ったのは集約の判断であって画面の誤りではない。理由をそのまま見せる。
       setError(

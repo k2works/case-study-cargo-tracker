@@ -12,6 +12,13 @@ export interface QuotationCandidateView {
   readonly candidateSeq: number;
   /** 航海番号の並び（`V-MOL-001 > V-ONE-002`）。**区切りはサーバが決める。** */
   readonly voyageNumbers: string;
+  /**
+   * 経由港の並び（`JPTYO > SGSIN > USNYC`）。**候補ごとに違う。**
+   *
+   * 出発地と目的地だけを画面で繋ぐと、どの候補も同じ経路に見え、営業担当者は
+   * 案を選び分けられない。列が無かったころの見積では `null` になる。
+   */
+  readonly ports: string | null;
   readonly transitDays: number;
   readonly estimatedCost: number;
   readonly currency: string;

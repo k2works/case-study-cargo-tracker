@@ -46,6 +46,7 @@ public class QuotationProjection {
         for (QuotationCreatedEvent.Candidate candidate : event.candidates()) {
             quotations.insertCandidate(new QuotationMapper.CandidateRow(
                     event.quotationId(), candidate.candidateSeq(), candidate.voyageNumbers(),
+                    candidate.ports(),
                     candidate.transitDays(), candidate.estimatedCost(), candidate.currency(),
                     candidate.overdueDays()));
         }

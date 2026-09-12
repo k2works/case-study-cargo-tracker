@@ -48,11 +48,15 @@ public record QuotationCreatedEvent(
      * <p>正典の {@code quotation_candidate} は経路そのものを持たず、航海番号の
      * 並びだけを持つ（経路は予約のとき {@code cargo_leg} に写す）。</p>
      *
+     * @param ports 経由港を出発地から順に並べたもの（{@code JPTYO > SGSIN > USNYC}）。
+     *     <b>候補ごとに違う。</b> 出発地と目的地だけを画面で繋ぐと、どの候補も
+     *     同じ経路に見え、営業担当者は案を選び分けられない（US01 §受入基準 3）
      * @param overdueDays 希望期限からの超過日数。0 なら間に合う
      */
     public record Candidate(
             int candidateSeq,
             String voyageNumbers,
+            String ports,
             int transitDays,
             BigDecimal estimatedCost,
             String currency,

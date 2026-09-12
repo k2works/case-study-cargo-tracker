@@ -14,9 +14,14 @@ import org.springframework.boot.test.context.SpringBootTest;
  *
  * <p>Axon Server は本番と同じ形（DCB 有効）で立てる。ここを緩めると、
  * 受け入れテストが緑でも本番だけ動かない。</p>
+ *
+ * <p><b>経路探索だけは代役に差し替える</b>（{@link StubRouteCandidateFinder}）。
+ * routingms はこの文脈に居ないので、本物の ACL は必ず落ちる。差し替えるのは
+ * 「相手のサービスが返すもの」だけで、見積の式も比較も本物が動く。</p>
  */
 @CucumberContextConfiguration
-@SpringBootTest(classes = BookingApplication.class,
+@SpringBootTest(classes = { BookingApplication.class,
+        StubRouteCandidateFinder.Configuration.class },
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class CucumberSpringConfiguration extends AbstractAxonIntegrationTest {
 }

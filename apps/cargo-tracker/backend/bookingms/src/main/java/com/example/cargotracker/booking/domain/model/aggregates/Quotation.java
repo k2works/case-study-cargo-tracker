@@ -108,6 +108,7 @@ public class Quotation {
         int seq = 1;
         for (QuotedRoute route : candidates) {
             rows.add(new QuotationCreatedEvent.Candidate(seq++, route.voyageNumbers(),
+                    String.join(" > ", route.ports()),
                     route.transitDays(), route.estimatedCharge().roundToUnit().amount(),
                     route.estimatedCharge().currency(), route.overdueDays()));
         }

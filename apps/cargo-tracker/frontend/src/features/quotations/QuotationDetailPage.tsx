@@ -92,8 +92,10 @@ export function QuotationDetailPage() {
               {view.candidates.map((candidate) => (
                 <tr key={candidate.candidateSeq}>
                   <td className={`${TD} font-mono`}>{candidate.voyageNumbers}</td>
+                  {/* **候補ごとの経由港を出す。** 出発地と目的地を繋ぐと、
+                      どの候補も同じ経路に見えて案を選び分けられない。 */}
                   <td className={TD}>
-                    {view.originUnLocode} → {view.destinationUnLocode}
+                    {candidate.ports ?? `${view.originUnLocode} → ${view.destinationUnLocode}`}
                   </td>
                   <td className={`${TD} whitespace-nowrap`}>
                     {candidate.transitDays} 日

@@ -21,10 +21,11 @@
 
     <insert id="insertCandidate">
         INSERT INTO quotation_candidate (quotation_id, candidate_seq, voyage_numbers,
-                                         transit_days, estimated_cost, estimated_currency,
-                                         overdue_days)
+                                         ports, transit_days, estimated_cost,
+                                         estimated_currency, overdue_days)
         VALUES (#{quotationId}, #{candidateSeq}, #{voyageNumbers},
-                #{transitDays}, #{estimatedCost}, #{estimatedCurrency}, #{overdueDays})
+                #{ports}, #{transitDays}, #{estimatedCost}, #{estimatedCurrency},
+                #{overdueDays})
         <!-- 候補は消して入れ直すので、衝突しても見送ってよい。 -->
         ON CONFLICT DO NOTHING
     </insert>

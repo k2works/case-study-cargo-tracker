@@ -330,6 +330,7 @@ public final class BookingQueries {
     public record QuotationCandidateView(
             int candidateSeq,
             String voyageNumbers,
+            String ports,
             int transitDays,
             BigDecimal estimatedCost,
             String currency,

@@ -69,6 +69,19 @@ public class ShipperRegistrationSteps {
                 .retrieve().toEntity(JsonMap.class);
     }
 
+    /**
+     * 見積のシナリオが使う荷主を 1 つ作る。
+     *
+     * <p><b>登録の手順は 1 か所に置く。</b> 別のステップ定義が自分で組み立てると、
+     * 必須項目が増えたときに片方だけ直る。</p>
+     */
+    String registerShipper() {
+        String email = "quotation-" + System.nanoTime() + "@example.com";
+        ResponseEntity<JsonMap> response = registerCorporate("見積商事", email);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        return String.valueOf(response.getBody().get("shipperId"));
+    }
+
     @前提("営業担当者 {string} でログインしている")
     public void ログインしている(String username) {
         // 認可は Gateway が担う。ここでは営業として操作することだけを表す。
