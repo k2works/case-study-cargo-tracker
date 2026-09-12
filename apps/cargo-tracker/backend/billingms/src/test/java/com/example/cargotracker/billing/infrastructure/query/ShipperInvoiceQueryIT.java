@@ -11,6 +11,7 @@ import com.example.cargotracker.billing.infrastructure.query.BillingQueries.Find
 import com.example.cargotracker.shared.testing.AbstractAxonIntegrationTest;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.Month;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -63,7 +64,7 @@ class ShipperInvoiceQueryIT extends AbstractAxonIntegrationTest {
     private void issue(String invoiceId, String bookingId) {
         projection.on(new InvoiceIssuedEvent(invoiceId, bookingId, "SHP-000001",
                 new BigDecimal("433500"), "JPY",
-                java.time.LocalDate.of(2026, 10, 12), java.time.LocalDate.of(2026, 11, 11),
+                java.time.LocalDate.of(2026, Month.OCTOBER, 12), java.time.LocalDate.of(2026, Month.NOVEMBER, 11),
                 "accountant01", AT), "evt-i" + System.nanoTime());
     }
 

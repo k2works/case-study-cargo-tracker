@@ -27,6 +27,7 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.Month;
 import java.time.ZoneId;
 import java.util.List;
 import org.axonframework.eventsourcing.configuration.EventSourcedEntityModule;
@@ -467,10 +468,10 @@ class InvoiceTest {
                 .isEqualTo(BOOKING);
         assertThat(event.totalAmount()).isEqualByComparingTo("510000");
         // 業務タイムゾーン（Asia/Tokyo）の 2026-09-28。UTC で判断すると前日になる。
-        assertThat(event.issuedOn()).isEqualTo(LocalDate.of(2026, 9, 28));
+        assertThat(event.issuedOn()).isEqualTo(LocalDate.of(2026, Month.SEPTEMBER, 28));
         assertThat(event.dueOn())
                 .as("支払期限は集約が決める（不変条件 3）。画面に決めさせない")
-                .isEqualTo(LocalDate.of(2026, 10, 28));
+                .isEqualTo(LocalDate.of(2026, Month.OCTOBER, 28));
     }
 
     @Test

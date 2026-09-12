@@ -6,6 +6,7 @@ import com.example.cargotracker.booking.domain.model.commands.BookCargoCommand;
 import com.example.cargotracker.shared.domain.location.Location;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Month;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -21,7 +22,7 @@ import org.junit.jupiter.api.Test;
  */
 class QuotationDiffTest {
 
-    private static final LocalDate DEADLINE = LocalDate.of(2026, 12, 1);
+    private static final LocalDate DEADLINE = LocalDate.of(2026, Month.DECEMBER, 1);
 
     private static QuotationTerms quoted() {
         return new QuotationTerms("JPTYO", "USNYC", DEADLINE, "GENERAL",
@@ -65,7 +66,7 @@ class QuotationDiffTest {
     @DisplayName("項目ごとに「何から何へ」を返す")
     void reportsEachDifferentTerm() {
         var differences = quoted().differencesAgainst(QuotationTerms.of(
-                booking("JPOSA", "USLAX", LocalDate.of(2026, 12, 15),
+                booking("JPOSA", "USLAX", LocalDate.of(2026, Month.DECEMBER, 15),
                         CargoType.REFRIGERATED, "1500")));
 
         assertThat(differences).hasSize(5);

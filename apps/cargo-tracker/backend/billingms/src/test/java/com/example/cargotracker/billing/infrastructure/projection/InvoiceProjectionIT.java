@@ -18,6 +18,7 @@ import com.example.cargotracker.billing.infrastructure.query.InvoiceQueryHandler
 import com.example.cargotracker.shared.testing.AbstractAxonIntegrationTest;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.Month;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -334,15 +335,15 @@ class InvoiceProjectionIT extends AbstractAxonIntegrationTest {
 
         projection.on(new InvoiceIssuedEvent(invoiceId, "B-ISSUE", "SHP-000001",
                 new BigDecimal("433500"), "JPY",
-                java.time.LocalDate.of(2026, 10, 12), java.time.LocalDate.of(2026, 11, 11),
+                java.time.LocalDate.of(2026, Month.OCTOBER, 12), java.time.LocalDate.of(2026, Month.NOVEMBER, 11),
                 "accountant01", AT), "evt-issue");
 
         var view = queries.handle(new FindInvoiceQuery(invoiceId));
         assertThat(view.status()).isEqualTo("INVOICED");
         assertThat(view.dueOn())
                 .as("状態と期限を別々に書くと、片方だけ入った行が「請求済だが期限が無い」になる")
-                .isEqualTo(java.time.LocalDate.of(2026, 11, 11));
-        assertThat(view.issuedOn()).isEqualTo(java.time.LocalDate.of(2026, 10, 12));
+                .isEqualTo(java.time.LocalDate.of(2026, Month.NOVEMBER, 11));
+        assertThat(view.issuedOn()).isEqualTo(java.time.LocalDate.of(2026, Month.OCTOBER, 12));
 
         // **記録と読み口は対で出す。** 通知の記録だけ書いて読めないと、
         // 「いつ何を伝えたか」が誰にも見えない。
@@ -372,7 +373,7 @@ class InvoiceProjectionIT extends AbstractAxonIntegrationTest {
         String invoiceId = project("OVERDUE");
         issue(invoiceId, "B-OVERDUE");
 
-        assertThat(overdueIds(java.time.LocalDate.of(2026, 11, 12)))
+        assertThat(overdueIds(java.time.LocalDate.of(2026, Month.NOVEMBER, 12)))
                 .as("期限は 2026-11-11。翌日から未払い")
                 .contains(invoiceId);
     }
@@ -385,7 +386,7 @@ class InvoiceProjectionIT extends AbstractAxonIntegrationTest {
 
         // **判定は Java と SQL の 2 か所にある。** Java 側だけを見ると、
         // SQL の `<=` と `<` の取り違えが素通りする。
-        assertThat(overdueIds(java.time.LocalDate.of(2026, 11, 11)))
+        assertThat(overdueIds(java.time.LocalDate.of(2026, Month.NOVEMBER, 11)))
                 .as("当日に督促が飛ぶと、入金する側は「まだ期限内なのに」と受け取る")
                 .doesNotContain(invoiceId);
     }
@@ -399,7 +400,7 @@ class InvoiceProjectionIT extends AbstractAxonIntegrationTest {
                 "B-PAID-OVERDUE", "SHP-000001", new BigDecimal("433500"), "JPY",
                 AT, "accountant01", AT), "evt-po" + System.nanoTime());
 
-        assertThat(overdueIds(java.time.LocalDate.of(2026, 11, 12)))
+        assertThat(overdueIds(java.time.LocalDate.of(2026, Month.NOVEMBER, 12)))
                 .doesNotContain(invoiceId);
     }
 
@@ -414,7 +415,7 @@ class InvoiceProjectionIT extends AbstractAxonIntegrationTest {
     private void issue(String invoiceId, String bookingId) {
         projection.on(new InvoiceIssuedEvent(invoiceId, bookingId, "SHP-000001",
                 new BigDecimal("433500"), "JPY",
-                java.time.LocalDate.of(2026, 10, 12), java.time.LocalDate.of(2026, 11, 11),
+                java.time.LocalDate.of(2026, Month.OCTOBER, 12), java.time.LocalDate.of(2026, Month.NOVEMBER, 11),
                 "accountant01", AT), "evt-i" + System.nanoTime());
     }
 

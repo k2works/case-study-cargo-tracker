@@ -11,6 +11,7 @@ import com.example.cargotracker.shared.domain.location.Location;
 import com.example.cargotracker.shared.testing.AbstractAxonIntegrationTest;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -91,9 +92,26 @@ class QuotationEndpointIT extends AbstractAxonIntegrationTest {
     @LocalServerPort
     private int port;
 
+    /** 業務の時計。**JVM 既定の now() を使わない**（CI は UTC で、時差の分ずれる）。 */
+    @org.springframework.beans.factory.annotation.Autowired
+    private Clock clock;
+
     private final RestClient rest = RestClient.builder()
             .defaultStatusHandler(status -> true, (request, response) -> { })
             .build();
+
+    /**
+     * 業務タイムゾーンの「今日」。
+     *
+     * <p><b>固定日付を書かない。</b> 書くと、その日を過ぎた時点で受け入れが赤に
+     * なる（時限式。IT13 で実際に踏んだ）。<b>JVM 既定の now() も使わない</b>
+     * ——CI は UTC なので、時差の分だけ「今日」がずれる。</p>
+     */
+    private LocalDate businessToday() {
+        return LocalDate.ofInstant(clock.instant(),
+                com.example.cargotracker.shared.infrastructure.time
+                        .BusinessClockConfiguration.BUSINESS_ZONE);
+    }
 
     private String url(String path) {
         return "http://localhost:" + port + "/api/v1/booking/quotations" + path;
@@ -106,11 +124,11 @@ class QuotationEndpointIT extends AbstractAxonIntegrationTest {
                 .retrieve().toEntity(JsonMap.class);
     }
 
-    private static Map<String, Object> request(Map<String, Object> overrides) {
+    private Map<String, Object> request(Map<String, Object> overrides) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("originUnLocode", "JPTYO");
         body.put("destinationUnLocode", "USNYC");
-        body.put("arrivalDeadline", LocalDate.now().plusDays(60).toString());
+        body.put("arrivalDeadline", businessToday().plusDays(60).toString());
         body.put("cargoType", "GENERAL");
         body.put("weightKg", "1200");
         body.putAll(overrides);
@@ -254,7 +272,7 @@ class QuotationEndpointIT extends AbstractAxonIntegrationTest {
         body.put("shipperId", "SHP-Q-" + System.nanoTime());
         body.put("originUnLocode", "JPTYO");
         body.put("destinationUnLocode", "USNYC");
-        body.put("arrivalDeadline", LocalDate.now().plusDays(60).toString());
+        body.put("arrivalDeadline", businessToday().plusDays(60).toString());
         body.put("cargoType", "GENERAL");
         body.put("weightKg", "1200");
         body.put("lengthCm", "120");

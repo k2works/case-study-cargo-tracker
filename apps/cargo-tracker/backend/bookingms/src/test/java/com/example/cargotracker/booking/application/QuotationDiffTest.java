@@ -12,6 +12,7 @@ import com.example.cargotracker.booking.infrastructure.persistence.QuotationMapp
 import com.example.cargotracker.shared.domain.location.Location;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Month;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -34,7 +35,7 @@ class QuotationDiffTest {
                                 new BigDecimal("100")),
                         10, "自動車部品", null, null),
                 new RouteSpecification(Location.of("JPTYO"), Location.of("USNYC"),
-                        LocalDate.of(2026, 12, 1)),
+                        LocalDate.of(2026, Month.DECEMBER, 1)),
                 "sales01");
     }
 

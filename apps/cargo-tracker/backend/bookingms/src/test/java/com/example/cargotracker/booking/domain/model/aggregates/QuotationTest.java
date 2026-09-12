@@ -18,6 +18,7 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.Month;
 import java.time.ZoneId;
 import java.util.List;
 import org.axonframework.eventsourcing.configuration.EventSourcedEntityModule;
@@ -62,7 +63,7 @@ class QuotationTest {
             HazardousDeclaration hazardous, List<QuotedRoute> candidates) {
         return new CreateQuotationCommand(QUOTATION,
                 new RouteSpecification(Location.of("JPTYO"), Location.of("USNYC"),
-                        LocalDate.of(2026, 12, 1)),
+                        LocalDate.of(2026, Month.DECEMBER, 1)),
                 cargoType, Weight.ofKilograms("1200"), hazardous, candidates, "sales01");
     }
 
@@ -86,11 +87,11 @@ class QuotationTest {
         assertThat(event.quotationId()).isEqualTo(QUOTATION);
         assertThat(event.originUnLocode()).isEqualTo("JPTYO");
         assertThat(event.destinationUnLocode()).isEqualTo("USNYC");
-        assertThat(event.arrivalDeadline()).isEqualTo(LocalDate.of(2026, 12, 1));
+        assertThat(event.arrivalDeadline()).isEqualTo(LocalDate.of(2026, Month.DECEMBER, 1));
         assertThat(event.cargoType()).isEqualTo("GENERAL");
         assertThat(event.weightKg()).isEqualByComparingTo("1200");
         // 業務タイムゾーン（Asia/Tokyo）の 2026-09-28 + 30 日。
-        assertThat(event.validUntil()).isEqualTo(LocalDate.of(2026, 10, 28));
+        assertThat(event.validUntil()).isEqualTo(LocalDate.of(2026, Month.OCTOBER, 28));
         assertThat(event.candidates()).singleElement()
                 .satisfies(candidate -> {
                     assertThat(candidate.voyageNumbers()).isEqualTo("V-Q-001");
@@ -136,7 +137,7 @@ class QuotationTest {
         // 経路仕様そのものが断る（集約に届く前）。ここでは型の検査として確かめる。
         org.assertj.core.api.Assertions.assertThatThrownBy(() ->
                 new RouteSpecification(Location.of("JPTYO"), Location.of("JPTYO"),
-                        LocalDate.of(2026, 12, 1)))
+                        LocalDate.of(2026, Month.DECEMBER, 1)))
                 .isInstanceOf(BusinessRuleViolation.class);
     }
 
@@ -160,14 +161,14 @@ class QuotationTest {
         fixture.given().noPriorActivity()
                 .when().command(new CreateQuotationCommand(QUOTATION,
                         new RouteSpecification(Location.of("JPTYO"), Location.of("USNYC"),
-                                LocalDate.of(2026, 12, 1)),
+                                LocalDate.of(2026, Month.DECEMBER, 1)),
                         null, Weight.ofKilograms("1200"), null, List.of(), "sales01"))
                 .then().exception(BusinessRuleViolation.class);
 
         fixture.given().noPriorActivity()
                 .when().command(new CreateQuotationCommand(QUOTATION,
                         new RouteSpecification(Location.of("JPTYO"), Location.of("USNYC"),
-                                LocalDate.of(2026, 12, 1)),
+                                LocalDate.of(2026, Month.DECEMBER, 1)),
                         CargoType.GENERAL, null, null, List.of(), "sales01"))
                 .then().exception(BusinessRuleViolation.class);
     }
@@ -177,7 +178,7 @@ class QuotationTest {
     void createsWithoutACandidateList() {
         var created = createdEventOf(new CreateQuotationCommand(QUOTATION,
                 new RouteSpecification(Location.of("JPTYO"), Location.of("USNYC"),
-                        LocalDate.of(2026, 12, 1)),
+                        LocalDate.of(2026, Month.DECEMBER, 1)),
                 CargoType.GENERAL, Weight.ofKilograms("1200"), null, null, "sales01"));
 
         assertThat(created.candidates()).isEmpty();
@@ -188,8 +189,8 @@ class QuotationTest {
     @DisplayName("候補が null のイベントでも復元できる（古い記録を読めなくしない）")
     void restoresFromAnEventWithoutCandidates() {
         var created = new QuotationCreatedEvent(QUOTATION, "JPTYO", "USNYC",
-                LocalDate.of(2026, 12, 1), "GENERAL", new BigDecimal("1200"), null, null,
-                BigDecimal.ZERO, "JPY", LocalDate.of(2026, 10, 28), null, "sales01",
+                LocalDate.of(2026, Month.DECEMBER, 1), "GENERAL", new BigDecimal("1200"), null, null,
+                BigDecimal.ZERO, "JPY", LocalDate.of(2026, Month.OCTOBER, 28), null, "sales01",
                 Instant.parse("2026-09-28T01:00:00Z"));
 
         assertThat(created.candidates())
@@ -216,7 +217,7 @@ class QuotationTest {
         fixture.given().noPriorActivity()
                 .when().command(new CreateQuotationCommand(tooLong,
                         new RouteSpecification(Location.of("JPTYO"), Location.of("USNYC"),
-                                LocalDate.of(2026, 12, 1)),
+                                LocalDate.of(2026, Month.DECEMBER, 1)),
                         CargoType.GENERAL, Weight.ofKilograms("1200"), null,
                         List.of(), "sales01"))
                 .then().exception(BusinessRuleViolation.class);

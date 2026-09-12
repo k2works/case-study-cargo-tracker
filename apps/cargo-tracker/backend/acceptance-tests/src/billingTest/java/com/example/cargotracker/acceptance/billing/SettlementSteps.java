@@ -7,6 +7,7 @@ import com.example.cargotracker.billing.infrastructure.persistence.InvoiceMapper
 import com.example.cargotracker.billing.infrastructure.query.BillingQueries.FindOverdueInvoicesQuery;
 import com.example.cargotracker.billing.infrastructure.query.BillingQueries.InvoiceListView;
 import com.example.cargotracker.shared.infrastructure.axon.QueryDispatcher;
+import com.example.cargotracker.shared.testing.AcceptanceFixtureTime;
 import io.cucumber.java.ja.かつ;
 import io.cucumber.java.ja.ならば;
 import io.cucumber.java.ja.もし;
@@ -92,7 +93,7 @@ public class SettlementSteps {
     public void 入金を記録する() {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("amount", new BigDecimal(String.valueOf(invoice().get("totalAmount"))));
-        body.put("paidAt", Instant.now().toString());
+        body.put("paidAt", AcceptanceFixtureTime.at(0, 10).toString());
         billing.record(rest.post().uri(url("/" + invoiceId() + "/payments"))
                 .header("X-Auth-Username", "accountant01")
                 .contentType(MediaType.APPLICATION_JSON)

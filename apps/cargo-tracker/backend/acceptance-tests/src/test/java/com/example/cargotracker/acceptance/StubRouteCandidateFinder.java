@@ -43,7 +43,7 @@ public class StubRouteCandidateFinder implements RouteCandidateFinder {
             origin = destination;
         }
         this.legs = List.copyOf(built);
-        this.arrival = java.time.LocalDate.now().plusDays(5L + legCount);
+        this.arrival = AcceptanceFixtureTime.date(5L + legCount);
     }
 
     /**
@@ -60,7 +60,7 @@ public class StubRouteCandidateFinder implements RouteCandidateFinder {
         int overdueDays = (int) Math.max(0,
                 java.time.temporal.ChronoUnit.DAYS.between(request.arrivalDeadline(), arrival));
         int transitDays = (int) java.time.temporal.ChronoUnit.DAYS.between(
-                java.time.LocalDate.now(), arrival);
+                AcceptanceFixtureTime.today(), arrival);
         return new RouteCandidates(
                 List.of(new RouteCandidate(legs, transitDays, true, overdueDays)), false);
     }

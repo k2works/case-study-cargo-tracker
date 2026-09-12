@@ -2,6 +2,7 @@ package com.example.cargotracker.acceptance;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.cargotracker.shared.testing.AcceptanceFixtureTime;
 import io.cucumber.java.ja.かつ;
 import io.cucumber.java.ja.ならば;
 import io.cucumber.java.ja.もし;
@@ -86,13 +87,13 @@ public class QuotationSteps {
 
     @もし("営業担当者が {string} から {string} へ {int} キログラムの一般貨物の見積を作る")
     public void 見積を作る(String from, String to, int kilograms) {
-        create(from, to, LocalDate.now().plusMonths(3), new BigDecimal(kilograms));
+        create(from, to, AcceptanceFixtureTime.date(90), new BigDecimal(kilograms));
     }
 
     @もし("営業担当者が到着期限を明日にして {string} から {string} への見積を作る")
     public void 期限を明日にして見積を作る(String from, String to) {
         // **明日には着かない。** 候補はあるが期限に間に合わない——0 件とは別の状態。
-        create(from, to, LocalDate.now().plusDays(1), new BigDecimal("1200"));
+        create(from, to, AcceptanceFixtureTime.date(1), new BigDecimal("1200"));
     }
 
     private void create(String from, String to, LocalDate deadline, BigDecimal kilograms) {
