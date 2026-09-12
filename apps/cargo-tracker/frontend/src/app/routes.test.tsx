@@ -167,3 +167,32 @@ describe('一覧から開く画面（ナビに載せない）', () => {
     expect(listAllow.filter((role) => !ALLOWED.includes(role))).toEqual([]);
   });
 });
+
+describe('画面の中のリンク先が、そのロールで開ける（Try T4）', () => {
+  // **画面の中のリンクはナビの検査から外れる。** 外れたリンクほど、許可の
+  // 設定を間違えても気づけない——押した人にだけ 403 が出る（IT7 の教訓
+  // 「共有画面のリンクもロールで出し分ける」と同じ形）。
+  //
+  // ここに並べるのは**その画面が実際に出すリンク先**と、**押す人のロール**。
+  // 画面側の検査（href がこの形であること）と対で効く。
+  const LINKS: readonly { from: string; to: string; role: Role }[] = [
+    // S13 見積詳細 → S21 予約登録（この見積で予約する）
+    { from: 'S13', to: '/bookings/new?quotationId=Q-1', role: 'ROLE_SALES' },
+    // S41 追跡詳細 → S62 自社請求書（荷主は請求書番号を知らない）
+    { from: 'S41', to: '/shipper/invoices/by-booking/b-1', role: 'ROLE_SHIPPER' },
+    // S62 → S46 自社予約の進み具合（開いた先から戻れるようにする）
+    { from: 'S62', to: '/shipper/bookings/b-1', role: 'ROLE_SHIPPER' },
+    // S61 請求詳細 → S22 予約詳細（金額の相手を開く）
+    { from: 'S61', to: '/bookings/b-1', role: 'ROLE_ACCOUNTANT' },
+    // ダッシュボード → 未払いだけの請求一覧（督促の起点）
+    { from: 'S02', to: '/invoices?overdue=true', role: 'ROLE_ACCOUNTANT' },
+  ];
+
+  it.each(LINKS)('$from のリンク先 $to は $role で開ける', ({ to, role }) => {
+    loginAs([role]);
+    renderAt(to);
+
+    expect(screen.queryByText('この画面を開く権限がありません')).not.toBeInTheDocument();
+  });
+});
+
