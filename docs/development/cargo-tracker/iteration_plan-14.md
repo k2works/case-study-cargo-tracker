@@ -46,9 +46,9 @@ US23 は**新設ゼロ**です。`Invoice` に `issue` / `recordPayment` / `void
 | # | 受入基準 | 検査の所在 |
 | :--- | :--- | :--- |
 | §1 | 出発地・目的地・希望期限・貨物種別・重量を入力できる | 受け入れ「営業担当者が輸送要件から見積を作る」・`QuotationTest` |
-| §2 | 航海スケジュール情報をもとにルート概算候補が表示される | 受け入れ「航海スケジュールから候補が出る」・`QuotationCandidateIT`（**既にある `FindRouteCandidatesQuery` を使う**） |
+| §2 | 航海スケジュール情報をもとにルート概算候補が表示される | 受け入れ「航海スケジュールから候補が出る」・`QuotationEndpointIT`（**既にある `FindRouteCandidatesQuery` を使う**。スタブは引数を捨てないので、条件を落とすと赤になる） |
 | §3 | ルート候補ごとに「経由港・所要日数・概算料金・航海番号」が表示される | `QuotationScreens.test.tsx`・`QuotationEstimatorTest` |
-| §4 | 見積情報が保存され、見積番号が発行される | `QuotationProjectionIT`・`QuotationTest` |
+| §4 | 見積情報が保存され、見積番号が発行される | `QuotationEndpointIT`・`QuotationTest` |
 | §5 | 希望期限に間に合うルートが存在しない場合、その旨が通知される | 受け入れ「期限に間に合う候補が無い」・`QuotationTest`（**候補 0 件でも見積は作れる**。正典の不変条件） |
 | §6 | 危険物が含まれる場合、危険物申告情報の入力フォームが表示される | `QuotationScreens.test.tsx`（`HazardousDeclaration` は既にある） |
 
@@ -56,11 +56,11 @@ US23 は**新設ゼロ**です。`Invoice` に `issue` / `recordPayment` / `void
 
 | # | 受入基準 | 検査の所在 |
 | :--- | :--- | :--- |
-| §1 | 「確定」状態の輸送料金をもとに精算書（請求番号・請求金額・支払い期限）を発行できる | 受け入れ「算出済の請求書を発行する」・`InvoiceIssueTest`（不変条件 3：`dueDate = issuedAt + 30 日`） |
-| §2 | 精算書が荷主にメール通知される | **送信基盤はスコープ外**（注 N9）。残すのは「いつ・何を伝えたか」で、荷主は S62 で自社の請求書を読む。`InvoiceNotificationIT` |
-| §3 | 決済機関との連携により入金確認ができる | **決済機関との接続はスコープ外**（注 N9）。経理担当者が入金を記録する。`InvoicePaymentTest` |
-| §4 | 入金確認後、精算状態が「精算済」に更新され予約状態も「精算済」になる | 受け入れ「入金を記録すると予約が精算済になる」・`SettleBookingIT`・クラスタ E2E |
-| §5 | 支払い期限超過時、経理担当者に未払い通知が送信される | 受け入れ「期限を過ぎた請求書が未払いとして出る」・`InvoiceOverdueTest`（**列を持たず `overdue(today)` で判定**。期限当日は超過ではない） |
+| §1 | 「確定」状態の輸送料金をもとに精算書（請求番号・請求金額・支払い期限）を発行できる | 受け入れ「算出済の請求書を発行する」・`InvoiceTest#issuesTheInvoice`（不変条件 3：`dueDate = issuedAt + 30 日`） |
+| §2 | 精算書が荷主にメール通知される | **送信基盤はスコープ外**（注 N9）。残すのは「いつ・何を伝えたか」で、荷主は S62 で自社の請求書を読む。`InvoiceProjectionIT#marksIssued`（通知の記録と読み口を対で確かめる） |
+| §3 | 決済機関との連携により入金確認ができる | **決済機関との接続はスコープ外**（注 N9）。経理担当者が入金を記録する。`InvoiceTest#recordsThePayment` |
+| §4 | 入金確認後、精算状態が「精算済」に更新され予約状態も「精算済」になる | 受け入れ「入金を記録すると予約が精算済になる」・`InvoiceTest#recordsThePayment`（契約イベントの中身）・クラスタ E2E（予約が精算済になるところ） |
+| §5 | 支払い期限超過時、経理担当者に未払い通知が送信される | 受け入れ「期限を過ぎた請求書が未払いとして出る」・`InvoiceTest#overdueStartsTheDayAfterTheDueDate`（**列を持たず `overdue(today)` で判定**。期限当日は超過ではない） |
 
 ### 受入基準に現れない不変条件（**正典にあり、実装が要る**）
 
@@ -439,16 +439,16 @@ end note
 | # | デモ項目 | 出典 | 検査の所在 |
 | :--- | :--- | :--- | :--- |
 | D1 | 営業担当者が輸送要件を入力すると、候補ごとに経由港・所要日数・概算料金・航海番号が出る | US01 §1・US01 §2・US01 §3 | 受け入れ・`QuotationScreens.test.tsx` |
-| D2 | 見積が保存され、見積番号が発行される | US01 §4 | 受け入れ・`QuotationProjectionIT` |
+| D2 | 見積が保存され、見積番号が発行される | US01 §4 | 受け入れ・`QuotationEndpointIT` |
 | D3 | 期限に間に合う候補が無いと、その旨が出る（**見積自体は作れる**） | US01 §5 | 受け入れ・`QuotationTest` |
 | D4 | 危険物を選ぶと危険物申告の入力が出る | US01 §6 | `QuotationScreens.test.tsx` |
 | D5 | 見積で予約すると 5 項目が写り、変えた項目が「見積と異なる項目」として出る | 正典の不変条件 3 | 受け入れ・`QuotationDiffTest` |
 | D6 | 見積と請求が同じ料率で計算している | 正典の不変条件 2 | `RateTableParityTest`（契約テスト） |
-| D7 | 算出済の請求書を発行すると、請求番号・金額・支払期限（発行日 + 30 日）が確定する | US23 §1 | 受け入れ・`InvoiceIssueTest` |
+| D7 | 算出済の請求書を発行すると、請求番号・金額・支払期限（発行日 + 30 日）が確定する | US23 §1 | 受け入れ・`InvoiceTest#issuesTheInvoice` |
 | D8 | 荷主が自社の請求書を S62 で読める（**他社の請求書は読めない**） | US23 §2 | 受け入れ・クラスタ E2E |
-| D9 | 入金を記録すると請求が「入金済」になり、**予約が「精算済」になる** | US23 §3・§4 | 受け入れ・`SettleBookingIT`・クラスタ E2E |
-| D10 | 期限を過ぎた請求書が未払いとして経理に出る（**期限当日は超過ではない**） | US23 §5 | 受け入れ・`InvoiceOverdueTest` |
-| D11 | 取り消した請求書は再発行できず、新規に発行する | 正典の不変条件 6 | `InvoiceVoidTest` |
+| D9 | 入金を記録すると請求が「入金済」になり、**予約が「精算済」になる** | US23 §3・§4 | 受け入れ・`InvoiceTest#recordsThePayment`（契約イベントの中身）・クラスタ E2E（予約が精算済になるところ） |
+| D10 | 期限を過ぎた請求書が未払いとして経理に出る（**期限当日は超過ではない**） | US23 §5 | 受け入れ・`InvoiceTest#overdueStartsTheDayAfterTheDueDate` |
+| D11 | 取り消した請求書は再発行できず、新規に発行する | 正典の不変条件 6 | `InvoiceTest#doesNotReissueAVoidedInvoice` |
 | D12 | 請求詳細に「見積時の概算 → 請求 → 差額」と差の理由が出る（**見積を経ない予約では出さない**） | 正典・注 N12 | `InvoiceScreens.test.tsx` |
 
 ## リスク

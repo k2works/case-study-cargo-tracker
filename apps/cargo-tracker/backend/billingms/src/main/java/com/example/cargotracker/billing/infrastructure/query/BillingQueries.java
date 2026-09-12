@@ -52,6 +52,16 @@ public final class BillingQueries {
     public record FindShipperInvoiceQuery(String invoiceId, String shipperId) {
     }
 
+    /**
+     * 荷主が予約から引く自社の請求書（S62 / US23 §受入基準 2）。
+     *
+     * <p><b>荷主は請求書番号を知らない。</b> 荷主が持っているのは予約番号と
+     * 追跡番号で、番号を打たせると探しに行くことになる。経理向けの
+     * {@link FindInvoiceOfBookingQuery} と同じ形にする。</p>
+     */
+    public record FindShipperInvoiceOfBookingQuery(String bookingId, String shipperId) {
+    }
+
     /** 一覧の応答。 */
     public record InvoiceListView(List<InvoiceSummaryView> items, int total) {
     }

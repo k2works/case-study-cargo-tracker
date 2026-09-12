@@ -1,5 +1,6 @@
 package com.example.cargotracker.billing.interfaces.rest;
 
+import com.example.cargotracker.billing.infrastructure.query.BillingQueries.FindShipperInvoiceOfBookingQuery;
 import com.example.cargotracker.billing.infrastructure.query.BillingQueries.FindShipperInvoiceQuery;
 import com.example.cargotracker.billing.infrastructure.query.BillingQueries.InvoiceView;
 import com.example.cargotracker.shared.infrastructure.axon.QueryDispatcher;
@@ -37,6 +38,27 @@ public class ShipperInvoiceController {
 
     public ShipperInvoiceController(QueryDispatcher queries) {
         this.queries = queries;
+    }
+
+    /**
+     * 予約から引く自社の請求書。
+     *
+     * <p><b>荷主は請求書番号を知らない。</b> 荷主が持っているのは予約番号と
+     * 追跡番号である。番号を打たせると探しに行くことになるので、追跡詳細
+     * （S41）から予約番号で開けるようにする。</p>
+     *
+     * <p><b>{@code /{invoiceId}} より先に置く。</b> 後ろに置くと
+     * {@code by-booking} が請求書番号として解釈される。</p>
+     */
+    @GetMapping("/by-booking/{bookingId}")
+    public ResponseEntity<InvoiceView> findByBooking(@PathVariable String bookingId,
+            @RequestHeader(name = "X-Auth-Shipper-Id", required = false) String shipperId) {
+        if (shipperId == null || shipperId.isBlank()) {
+            return ResponseEntity.notFound().build();
+        }
+        InvoiceView view = queries.query(
+                new FindShipperInvoiceOfBookingQuery(bookingId, shipperId), InvoiceView.class);
+        return view == null ? ResponseEntity.notFound().build() : ResponseEntity.ok(view);
     }
 
     /**

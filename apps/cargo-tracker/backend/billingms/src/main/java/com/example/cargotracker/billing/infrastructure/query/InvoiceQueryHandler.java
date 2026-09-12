@@ -9,6 +9,7 @@ import com.example.cargotracker.billing.infrastructure.query.BillingQueries.Find
 import com.example.cargotracker.billing.infrastructure.query.BillingQueries.FindInvoiceQuery;
 import com.example.cargotracker.billing.infrastructure.query.BillingQueries.FindInvoicesQuery;
 import com.example.cargotracker.billing.infrastructure.query.BillingQueries.FindOverdueInvoicesQuery;
+import com.example.cargotracker.billing.infrastructure.query.BillingQueries.FindShipperInvoiceOfBookingQuery;
 import com.example.cargotracker.billing.infrastructure.query.BillingQueries.FindShipperInvoiceQuery;
 import com.example.cargotracker.billing.infrastructure.query.BillingQueries.InvoiceLineView;
 import com.example.cargotracker.billing.infrastructure.query.BillingQueries.InvoiceListView;
@@ -92,8 +93,32 @@ public class InvoiceQueryHandler {
      */
     @QueryHandler
     public InvoiceView handle(FindShipperInvoiceQuery query) {
-        InvoiceMapper.InvoiceRow row = invoices.find(query.invoiceId());
-        if (row == null || !row.shipperId().equals(query.shipperId())) {
+        return shipperView(invoices.find(query.invoiceId()), query.shipperId());
+    }
+
+    /**
+     * 荷主が予約から引く自社の請求書（S62）。
+     *
+     * <p><b>有効な請求書だけ</b>を引く（取り消したものは {@code void_marker} で
+     * 外れる）。絞りは {@link #shipperView} が同じ規則で掛ける——荷主向けの
+     * 判断を 2 か所に書かない。</p>
+     */
+    @QueryHandler
+    public InvoiceView handle(FindShipperInvoiceOfBookingQuery query) {
+        return shipperView(invoices.findActiveByBooking(query.bookingId()), query.shipperId());
+    }
+
+    /**
+     * 荷主に見せてよい請求書か。
+     *
+     * <p><b>荷主 ID をサーバで突き合わせる。</b> 他社の請求書は {@code null}
+     * （呼び出し側が 404 にする）——403 にすると存在を教えてしまう。</p>
+     *
+     * <p><b>発行済と入金済だけ。</b> 算出済は社内の途中経過で、見せると
+     * 「まだ確定していない金額」で会話が始まる。取消も見せない。</p>
+     */
+    private InvoiceView shipperView(InvoiceMapper.InvoiceRow row, String shipperId) {
+        if (row == null || !row.shipperId().equals(shipperId)) {
             return null;
         }
         BillingStatus status = BillingStatus.valueOf(row.billingStatus());

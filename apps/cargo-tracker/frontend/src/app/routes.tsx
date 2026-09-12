@@ -4,6 +4,7 @@ import { LoginPage } from '@/features/auth/LoginPage';
 import { PublicTrackingPage } from '@/features/tracking/PublicTrackingPage';
 import { PortalPage } from '@/features/portal/PortalPage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
+import { ShipperInvoicePage } from '@/features/billing/ShipperInvoicePage';
 import { QuotationCreatePage } from '@/features/quotations/QuotationCreatePage';
 import { QuotationDetailPage } from '@/features/quotations/QuotationDetailPage';
 import { RequireRole } from '@/shared/auth/RequireRole';
@@ -86,6 +87,25 @@ export function AppRoutes() {
             <RequireRole allow={['ROLE_SALES', 'ROLE_ROUTING', 'ROLE_TRACKER',
               'ROLE_ACCOUNTANT']}>
               <BookingDetailPage />
+            </RequireRole>
+          }
+        />
+        {/* 自社請求書（S62）は荷主だけ。**ナビには載せない**——請求書番号ごとの
+            画面なので、一覧（S45・S46）か追跡詳細（S41）から開く。自社予約の
+            一覧は未実装なので、いまの入口は S41 だけである。 */}
+        <Route
+          path="/shipper/invoices/by-booking/:bookingId"
+          element={
+            <RequireRole allow={['ROLE_SHIPPER']}>
+              <ShipperInvoicePage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/shipper/invoices/:invoiceId"
+          element={
+            <RequireRole allow={['ROLE_SHIPPER']}>
+              <ShipperInvoicePage />
             </RequireRole>
           }
         />

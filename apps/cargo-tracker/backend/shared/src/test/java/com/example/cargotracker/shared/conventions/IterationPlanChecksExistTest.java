@@ -49,8 +49,13 @@ class IterationPlanChecksExistTest {
      *
      * <p>過去の計画に出てくる検査は、その後の整理で消えていることがある
      * （消したこと自体は正しい）。<b>いま守ろうとしている約束</b>を対象にする。</p>
+     *
+     * <p><b>イテレーションを進めたら、ここも同じ変更で進める。</b> 古い計画を
+     * 見続けると、前 IT の「直した」という記述に出てくる<b>旧クラス名</b>まで
+     * 拾って赤になる（IT14 で実際に起きた）。それは本物の違反ではないので、
+     * 検査そのものが信用されなくなる。</p>
      */
-    private static final String CURRENT_PLAN = "iteration_plan-13.md";
+    private static final String CURRENT_PLAN = "iteration_plan-14.md";
 
     @Test
     @DisplayName("計画が名指しした検査（バックエンド）が実在する")

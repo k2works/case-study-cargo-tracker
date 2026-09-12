@@ -176,3 +176,26 @@ export function recordPayment(
 export function voidInvoice(invoiceId: string, reason: string): Promise<void> {
   return commandClient(`/billing/invoices/${encodeURIComponent(invoiceId)}/void`, { reason });
 }
+
+/**
+ * 荷主が読む自社の請求書（S62 / US23 §受入基準 2）。
+ *
+ * <p><b>荷主 ID は送らない。</b> Gateway が JWT から取り出して伝える
+ * （ADR-0001 決定 4）。クライアントが指定できると、他社の請求書が読まれる。</p>
+ *
+ * <p><b>経理向けの一覧とは別の経路。</b> 同じ経路にロールで分岐を足すと、
+ * 載せ忘れた分岐ほど無防備になる。</p>
+ */
+export function fetchShipperInvoice(invoiceId: string): Promise<Pending<InvoiceView>> {
+  return queryClient(`/billing/shipper-invoices/${encodeURIComponent(invoiceId)}`);
+}
+
+/**
+ * 予約から引く自社の請求書（S62）。
+ *
+ * <p><b>荷主は請求書番号を知らない。</b> 荷主が持っているのは予約番号と追跡番号
+ * である。番号を打たせると探しに行くことになる。</p>
+ */
+export function fetchShipperInvoiceOfBooking(bookingId: string): Promise<Pending<InvoiceView>> {
+  return queryClient(`/billing/shipper-invoices/by-booking/${encodeURIComponent(bookingId)}`);
+}

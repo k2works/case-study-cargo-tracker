@@ -65,6 +65,7 @@ export function TrackingDetailPage() {
   const { trackingNumber = '' } = useParams();
   const queries = useQueryClient();
   const isTracker = useAuthStore((state) => state.user?.roles.includes('ROLE_TRACKER') ?? false);
+  const isShipper = useAuthStore((state) => state.user?.roles.includes('ROLE_SHIPPER') ?? false);
   // **`[経路を再設計]` は経路設計者だけ**（US28 §受入基準 4）。他ロールには
   // 「依頼済み」と出す——押せない操作を並べると、できることが読めなくなる。
   const isRouting = useAuthStore(
@@ -189,6 +190,18 @@ export function TrackingDetailPage() {
             {' ／ '}
             <Link to={`/bookings/${view.bookingId}`} className={LINK}>
               予約を見る
+            </Link>
+          </>
+        )}
+        {/* **荷主が自社の請求書に辿り着ける唯一の入口**（US23 §2）。自社予約の
+            一覧（S45・S46）は未実装なので、ここに導線が無ければ、金額を出す
+            画面があっても荷主は読めない。**番号は打たせない**——荷主は請求書
+            番号を知らないので、予約から引く。 */}
+        {isShipper && (
+          <>
+            {' ／ '}
+            <Link to={`/shipper/invoices/by-booking/${view.bookingId}`} className={LINK}>
+              自社の請求書を見る
             </Link>
           </>
         )}

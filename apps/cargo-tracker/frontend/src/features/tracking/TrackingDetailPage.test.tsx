@@ -49,6 +49,8 @@ function renderDetail() {
           <Route path="/tracking/:trackingNumber" element={<TrackingDetailPage />} />
           <Route path="/tracking" element={<h1>追跡</h1>} />
           <Route path="/bookings/:bookingId" element={<h1>予約詳細</h1>} />
+          <Route path="/shipper/invoices/by-booking/:bookingId"
+            element={<h1>自社請求書</h1>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -241,6 +243,29 @@ describe('S41 例外の対応（US19 §3・§4 / IT10 T7）', () => {
 
     expect(await screen.findByRole('link', { name: '例外を起票する' }))
       .toHaveAttribute('href', '/tracking/TRK-8K2QX7M4RB/exceptions/new');
+  });
+
+  it('US23 §2: 荷主は自社の請求書へ行ける（S62 への唯一の入口）', async () => {
+    // **S45・S46 が未実装なので、荷主が請求書に辿り着けるのはここだけ。**
+    // 導線が無ければ、金額を出す画面があっても荷主は読めない。
+    asShipper();
+    respondWith(tracking());
+
+    renderDetail();
+
+    expect(await screen.findByRole('link', { name: '自社の請求書を見る' }))
+      // **荷主は請求書番号を知らない。** 予約から引く（経理向けの by-booking と
+      // 同じ形）——番号を打たせると、荷主は探しに行くことになる。
+      .toHaveAttribute('href', '/shipper/invoices/by-booking/b-1');
+  });
+
+  it('追跡管理者には自社請求書の導線を出さない（自分の仕事ではない）', async () => {
+    respondWith(tracking());
+
+    renderDetail();
+
+    await screen.findByText('未受領');
+    expect(screen.queryByRole('link', { name: '自社の請求書を見る' })).not.toBeInTheDocument();
   });
 
   it('荷主には起票の導線を出さない（403 になる）', async () => {
