@@ -1,5 +1,6 @@
 package com.example.cargotracker.routing.domain.model.valueobjects;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -100,5 +101,33 @@ class RoutingValueObjectsTest {
                 .isInstanceOf(BusinessRuleViolation.class);
         assertThatThrownBy(() -> new TransitEdge("V-1", TOKYO, NEWYORK, LOAD, LOAD))
                 .isInstanceOf(BusinessRuleViolation.class);
+    }
+
+    @Test
+    @DisplayName("契約の貨物種別を自 BC の呼び名に組み直す（冷凍だけ名前が違う）")
+    void translatesTheContractCargoTypeAtTheBoundary() {
+        // 翻訳しないと、冷凍の予約は経路候補を 1 件も見られない（422 で断られる）。
+        assertThat(CargoType.fromContractName("REFRIGERATED")).isEqualTo(CargoType.REEFER);
+        assertThat(CargoType.fromContractName("GENERAL")).isEqualTo(CargoType.GENERAL);
+        assertThat(CargoType.fromContractName("HAZARDOUS")).isEqualTo(CargoType.HAZARDOUS);
+    }
+
+    @Test
+    @DisplayName("知らない貨物種別は素通りさせない（黙って一般貨物にしない）")
+    void refusesAnUnknownContractCargoType() {
+        assertThatThrownBy(() -> CargoType.fromContractName("FROZEN"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("対応貨物種別の既定は一般貨物のみ（既定を 2 か所に書かない）")
+    void resolvesTheDefaultAcceptedCargoTypes() {
+        assertThat(CargoType.resolveAcceptedNames(null)).containsExactly("GENERAL");
+        assertThat(CargoType.resolveAcceptedNames(java.util.Set.of()))
+                .containsExactly("GENERAL");
+        assertThat(CargoType.resolveAcceptedNames(
+                java.util.Set.of(CargoType.REEFER, CargoType.GENERAL)))
+                .as("並びは列挙の順（差分が「変わった」と出ないように安定させる）")
+                .containsExactly("GENERAL", "REEFER");
     }
 }

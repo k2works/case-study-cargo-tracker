@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.example.cargotracker.billing.domain.model.events.InvoiceAdjustedEvent;
 import com.example.cargotracker.billing.domain.model.events.InvoiceCalculatedEvent;
 import com.example.cargotracker.billing.domain.model.events.InvoiceIssuedEvent;
+import com.example.cargotracker.billing.infrastructure.query.BillingQueries;
 import com.example.cargotracker.billing.domain.model.events.InvoiceVoidedEvent;
 import com.example.cargotracker.shared.contract.event.PaymentRecordedEvent;
 import com.example.cargotracker.billing.infrastructure.persistence.AttentionItemMapper;
@@ -363,6 +364,58 @@ class InvoiceProjectionIT extends AbstractAxonIntegrationTest {
         projection.on(paid, "evt-pay-2");
 
         assertThat(queries.handle(new FindInvoiceQuery(invoiceId)).status()).isEqualTo("PAID");
+    }
+
+    @Test
+    @DisplayName("US23 §5: 支払期限の翌日から未払いとして出る（SQL 側の境界）")
+    void listsTheInvoiceTheDayAfterItsDueDate() {
+        String invoiceId = project("OVERDUE");
+        issue(invoiceId, "B-OVERDUE");
+
+        assertThat(overdueIds(java.time.LocalDate.of(2026, 11, 12)))
+                .as("期限は 2026-11-11。翌日から未払い")
+                .contains(invoiceId);
+    }
+
+    @Test
+    @DisplayName("US23 §5: 期限当日は未払いにならない（当日中の入金はふつうにある）")
+    void doesNotListTheInvoiceOnItsDueDate() {
+        String invoiceId = project("DUE-TODAY");
+        issue(invoiceId, "B-DUE-TODAY");
+
+        // **判定は Java と SQL の 2 か所にある。** Java 側だけを見ると、
+        // SQL の `<=` と `<` の取り違えが素通りする。
+        assertThat(overdueIds(java.time.LocalDate.of(2026, 11, 11)))
+                .as("当日に督促が飛ぶと、入金する側は「まだ期限内なのに」と受け取る")
+                .doesNotContain(invoiceId);
+    }
+
+    @Test
+    @DisplayName("US23 §5: 入金済は未払いに出ない（決着したものを督促しない）")
+    void doesNotListPaidInvoices() {
+        String invoiceId = project("PAID-OVERDUE");
+        issue(invoiceId, "B-PAID-OVERDUE");
+        projection.on(new PaymentRecordedEvent(invoiceId, "PAY-O" + System.nanoTime(),
+                "B-PAID-OVERDUE", "SHP-000001", new BigDecimal("433500"), "JPY",
+                AT, "accountant01", AT), "evt-po" + System.nanoTime());
+
+        assertThat(overdueIds(java.time.LocalDate.of(2026, 11, 12)))
+                .doesNotContain(invoiceId);
+    }
+
+    private java.util.List<String> overdueIds(java.time.LocalDate today) {
+        return queries.handle(new BillingQueries.FindOverdueInvoicesQuery(today))
+                .items().stream()
+                .map(BillingQueries.InvoiceSummaryView::invoiceId)
+                .toList();
+    }
+
+    /** 発行を写す。**荷主に見えるのは発行してから**なので、多くの検査がここを通る。 */
+    private void issue(String invoiceId, String bookingId) {
+        projection.on(new InvoiceIssuedEvent(invoiceId, bookingId, "SHP-000001",
+                new BigDecimal("433500"), "JPY",
+                java.time.LocalDate.of(2026, 10, 12), java.time.LocalDate.of(2026, 11, 11),
+                "accountant01", AT), "evt-i" + System.nanoTime());
     }
 
     @Test
