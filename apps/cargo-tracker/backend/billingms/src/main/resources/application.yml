@@ -3,7 +3,7 @@ spring:
   # 契約の往復テストでは `classpath:application.yml` が 1 つしか読まれず、
   # 料率が消えて起動に失敗した。名指しで取り込めば、どちらが先でも入る。
   config:
-    import: classpath:billing-rates.yml
+    import: classpath:cargo-rates.yml
   application:
     name: billingms
   datasource:

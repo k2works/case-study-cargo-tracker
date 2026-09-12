@@ -62,7 +62,7 @@ class ContractEventRoundTripIT extends AbstractAxonIntegrationTest {
             // **料率は別ファイルから名指しで取り込む**（ADR-0016）。同じ JVM に
             // 2 サービスを載せると `classpath:application.yml` は 1 つしか読まれず、
             // billingms の設定が消えて起動に失敗する（実測）。
-            "--spring.config.import=optional:classpath:billing-rates.yml",
+            "--spring.config.import=optional:classpath:cargo-rates.yml",
             "--server.port=" + port,
             "--axon.axonserver.servers=" + AXON_SERVER.getAxonServerAddress(),
             "--spring.datasource.url=" + POSTGRES.getJdbcUrl() + "&currentSchema=" + schema,

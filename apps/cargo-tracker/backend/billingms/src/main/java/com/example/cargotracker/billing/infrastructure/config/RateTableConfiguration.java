@@ -40,7 +40,7 @@ public class RateTableConfiguration {
     }
 
     /**
-     * {@code billing.rates.*}。
+     * {@code cargo.rates.*}。
      *
      * @param baseFare 基準運賃（円）
      * @param regionFactors 地域係数（{@code DOMESTIC} / {@code NEAR_SEA} / {@code OCEAN}）
@@ -48,7 +48,7 @@ public class RateTableConfiguration {
      * @param countryRegions 国コード → 地域区分。表に無い国は遠洋
      * @param taxRate 消費税率
      */
-    @ConfigurationProperties(prefix = "billing.rates")
+    @ConfigurationProperties(prefix = "cargo.rates")
     public record RateProperties(
             BigDecimal baseFare,
             Map<String, BigDecimal> regionFactors,

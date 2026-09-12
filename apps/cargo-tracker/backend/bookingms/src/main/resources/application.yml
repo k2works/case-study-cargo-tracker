@@ -1,4 +1,10 @@
 spring:
+  # 料率は請求と同じファイルを読む（ADR-0016）。出典が 1 つでなければ片方だけ
+  # 直り、見積が旧料率・請求が新料率という状態になる。**別名のファイルにして
+  # 名指しする**——2 つのサービスを同じ JVM に載せたとき classpath:application.yml
+  # は最初に見つかった 1 つしか読まれない。
+  config:
+    import: classpath:cargo-rates.yml
   application:
     name: bookingms
   datasource:
