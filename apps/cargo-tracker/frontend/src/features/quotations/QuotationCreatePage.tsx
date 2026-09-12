@@ -29,13 +29,13 @@ import { createQuotation } from './api';
 export function QuotationCreatePage() {
   const navigate = useNavigate();
 
-  const [originUnLocode, setOrigin] = useState('');
-  const [destinationUnLocode, setDestination] = useState('');
+  const [originUnLocode, setOriginUnLocode] = useState('');
+  const [destinationUnLocode, setDestinationUnLocode] = useState('');
   const [arrivalDeadline, setArrivalDeadline] = useState('');
   const [cargoType, setCargoType] = useState<CargoType>('GENERAL');
   const [weightKg, setWeightKg] = useState('');
-  const [hazardousImoClass, setImoClass] = useState('');
-  const [hazardousUnNumber, setUnNumber] = useState('');
+  const [hazardousImoClass, setHazardousImoClass] = useState('');
+  const [hazardousUnNumber, setHazardousUnNumber] = useState('');
 
   const create = useMutation({
     mutationFn: () => createQuotation({
@@ -73,7 +73,7 @@ export function QuotationCreatePage() {
             id="quotation-origin"
             className={FIELD}
             value={originUnLocode}
-            onChange={(event) => setOrigin(event.target.value)}
+            onChange={(event) => setOriginUnLocode(event.target.value)}
           />
         </div>
         <div>
@@ -82,7 +82,7 @@ export function QuotationCreatePage() {
             id="quotation-destination"
             className={FIELD}
             value={destinationUnLocode}
-            onChange={(event) => setDestination(event.target.value)}
+            onChange={(event) => setDestinationUnLocode(event.target.value)}
           />
         </div>
         <div>
@@ -129,7 +129,7 @@ export function QuotationCreatePage() {
                 id="quotation-imo"
                 className={FIELD}
                 value={hazardousImoClass}
-                onChange={(event) => setImoClass(event.target.value)}
+                onChange={(event) => setHazardousImoClass(event.target.value)}
               />
             </div>
             <div>
@@ -138,7 +138,7 @@ export function QuotationCreatePage() {
                 id="quotation-un"
                 className={FIELD}
                 value={hazardousUnNumber}
-                onChange={(event) => setUnNumber(event.target.value)}
+                onChange={(event) => setHazardousUnNumber(event.target.value)}
               />
             </div>
           </>

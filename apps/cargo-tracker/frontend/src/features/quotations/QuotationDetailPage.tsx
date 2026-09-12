@@ -65,15 +65,14 @@ export function QuotationDetailPage() {
       {/* **「候補が無い」ことも答えである**（US01 §受入基準 5）。断って
           しまうと、営業担当者は荷主に何も返せない。 */}
       {!view.hasDeadlineMeetingCandidate && (
-        <p
-          role="status"
+        <output
           className={
             'mt-3 block rounded border border-amber-300 bg-amber-50 px-4 py-3'
             + ' text-sm text-amber-900'
           }
         >
           希望期限に間に合う経路がありません。期限を延ばすか、条件を変えてご相談ください。
-        </p>
+        </output>
       )}
 
       {view.candidates.length > 0 && (
