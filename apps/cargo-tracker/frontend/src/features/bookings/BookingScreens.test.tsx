@@ -36,11 +36,14 @@ function booking(over: Record<string, unknown> = {}) {
 
 function renderAt(path: string, element: React.ReactElement) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  // **クエリ文字列はルートの一部ではない。** initialEntries には付けたまま渡し、
+  // Route の path からは外す（付けたままだと一致せず、画面が描画されない）。
+  const routePath = path.split('?')[0] as string;
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[path]}>
         <Routes>
-          <Route path={path} element={element} />
+          <Route path={routePath} element={element} />
           <Route path="/bookings" element={<h1>予約一覧</h1>} />
         </Routes>
       </MemoryRouter>
@@ -202,6 +205,61 @@ describe('S21 予約登録', () => {
 
     await vi.waitFor(() =>
       expect(String(fetchSpy.mock.calls.at(-1)?.[0])).toContain('q=%E5%B1%B1%E7%94%B0'));
+  });
+
+  it('US01: 見積から来たときは 5 項目が写り、見積番号を一緒に送る', async () => {
+    // **写さないと、営業担当者は見積を開き直して打ち直すことになる。**
+    // 打ち直しは写し間違いを生み、見積と違う予約が黙ってできる。
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      const url = String(input);
+      if (url.includes('/quotations/')) {
+        return Promise.resolve(new Response(JSON.stringify({
+          quotationId: 'Q-1',
+          originUnLocode: 'JPTYO',
+          destinationUnLocode: 'USNYC',
+          arrivalDeadline: '2026-12-01',
+          cargoType: 'REFRIGERATED',
+          weightKg: 1500,
+          estimatedAmount: 510000,
+          currency: 'JPY',
+          validUntil: '2026-10-28',
+          hasDeadlineMeetingCandidate: true,
+          createdBy: 'sales01',
+          createdAt: '2026-09-28T01:00:00Z',
+          candidates: [],
+        }), { status: 200 }));
+      }
+      if (url.includes('/shippers')) {
+        return Promise.resolve(new Response(JSON.stringify({
+          items: [{ shipperId: 'SHP-000001', shipperCode: 'SHP-000001', name: '山田商事' }],
+          total: 1,
+        }), { status: 200 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ bookingId: 'b-1' }), { status: 201 }));
+    });
+
+    renderAt('/bookings-new?quotationId=Q-1', <BookingRegisterPage />);
+
+    await waitFor(() =>
+      expect(screen.getByLabelText('出発地')).toHaveValue('JPTYO'));
+    expect(screen.getByLabelText('目的地')).toHaveValue('USNYC');
+    expect(screen.getByLabelText('到着期限')).toHaveValue('2026-12-01');
+    expect(screen.getByLabelText('重量 (kg)')).toHaveValue('1500');
+    // 貨物種別も写す（写さないと、冷凍の見積が一般貨物の予約になる）。
+    expect(screen.getByLabelText('冷凍・冷蔵')).toBeChecked();
+
+    expect(fetchSpy).toHaveBeenCalled();
+  });
+
+  it('US01: 見積から来ていなければ、見積の欄は出さない', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ items: [], total: 0 }), { status: 200 }));
+
+    renderAt('/bookings-new', <BookingRegisterPage />);
+
+    await screen.findByLabelText('荷主');
+    // 選べない欄を置くと「使えない機能がある」ようにしか見えない。
+    expect(screen.queryByText(/見積 Q-/)).not.toBeInTheDocument();
   });
 
   it('危険物を選んだときだけ IMO クラスを出す', async () => {

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.booking.infrastructure.persistence.QuotationMapper">
+
+    <insert id="insert">
+        INSERT INTO quotation (quotation_id, origin_unlocode, destination_unlocode,
+                               arrival_deadline, cargo_type, weight_kg,
+                               estimated_amount, estimated_currency, valid_until,
+                               created_by, created_at, projected_at)
+        VALUES (#{quotationId}, #{originUnLocode}, #{destinationUnLocode},
+                #{arrivalDeadline}, #{cargoType}, #{weightKg},
+                #{estimatedAmount}, #{estimatedCurrency}, #{validUntil},
+                #{createdBy}, #{createdAt}, #{projectedAt})
+        <!--
+          見積は作られたあと変わらない。同じイベントが 2 度届いても、
+          書き直す理由が無いので見送る（少なくとも 1 回配送）。
+        -->
+        ON CONFLICT (quotation_id) DO NOTHING
+    </insert>
+
+    <insert id="insertCandidate">
+        INSERT INTO quotation_candidate (quotation_id, candidate_seq, voyage_numbers,
+                                         transit_days, estimated_cost, estimated_currency,
+                                         overdue_days)
+        VALUES (#{quotationId}, #{candidateSeq}, #{voyageNumbers},
+                #{transitDays}, #{estimatedCost}, #{estimatedCurrency}, #{overdueDays})
+        <!-- 候補は消して入れ直すので、衝突しても見送ってよい。 -->
+        ON CONFLICT DO NOTHING
+    </insert>
+</mapper>

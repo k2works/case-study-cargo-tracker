@@ -84,6 +84,11 @@ public final class RoleAuthorization {
         rules.put("/api/v1/billing/attention-items/**", ANY_AUTHENTICATED);
         rules.put("/api/v1/billing/attention-items", ANY_AUTHENTICATED);
 
+        // 見積（S12 / S13）は営業だけ（US01）。**荷主に見積そのものは開かない**
+        // ——金額を出す荷主向けの画面は S62（自社の請求書）だけである。
+        rules.put("/api/v1/booking/quotations/**", Set.of(SALES));
+        rules.put("/api/v1/booking/quotations", Set.of(SALES));
+
         // 荷主（S10 / S11）は営業と経理。
         rules.put("/api/v1/booking/shippers/**", Set.of(SALES, ACCOUNTANT));
         rules.put("/api/v1/booking/shippers", Set.of(SALES, ACCOUNTANT));

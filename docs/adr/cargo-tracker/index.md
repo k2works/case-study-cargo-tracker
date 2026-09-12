@@ -26,3 +26,4 @@ cargo-tracker プロジェクトのADRドキュメントです。
 * [ADR-0014 書けないイベントは退避して、処理を止めない](./0014-poison-events-are-parked-not-blocking.md) - 投影が書けなかったイベントを dead_letter_entry へ退避し、Event Processor を生かしたままにする。1 件の不正イベントで後続が全部届かなくなる形をやめる。**IT13 で決定 4（処理の列を業務の識別子で分ける）を追加**。
 * [ADR-0015 営業日の数え方は共有カーネルが持つ](./0015-business-day-counting-lives-in-the-shared-kernel.md) - HolidayCalendar を handlingms から共有カーネルへ移し、数える国を輸入港の UN/LOCODE から決める。国別分岐が本番の経路で一度も踏まれていなかった。
 * [ADR-0016 料率は設定に置き、見積と請求で同じものを読む](./0016-rates-live-in-configuration.md) - 基準運賃・地域係数・貨物種別係数・税率を application.yml に置く。検査のフィクスチャと起動したアプリの料率が一致することを検査で固定する。
+* [ADR-0017 請求書の有効／決着は billing_status を正とし、void_marker は派生列とする](./0017-billing-status-is-the-source-of-truth.md) - 「有効な請求書は予約ごとに 1 通」を守る部分ユニークが列を要求する。状態を 2 か所で表すことになるので、どちらが正かを決めて検査に落とす。

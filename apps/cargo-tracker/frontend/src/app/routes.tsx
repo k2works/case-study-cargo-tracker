@@ -4,6 +4,8 @@ import { LoginPage } from '@/features/auth/LoginPage';
 import { PublicTrackingPage } from '@/features/tracking/PublicTrackingPage';
 import { PortalPage } from '@/features/portal/PortalPage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
+import { QuotationCreatePage } from '@/features/quotations/QuotationCreatePage';
+import { QuotationDetailPage } from '@/features/quotations/QuotationDetailPage';
 import { RequireRole } from '@/shared/auth/RequireRole';
 import { AppLayout } from '@/shared/ui/AppLayout';
 import { ForbiddenPage } from '@/shared/ui/ForbiddenPage';
@@ -49,6 +51,7 @@ export const PAGES: Record<string, ReactElement> = {
   '/': <DashboardPage />,
   '/shippers': <ShipperListPage />,
   '/shippers/new': <ShipperRegisterPage />,
+  '/quotations/new': <QuotationCreatePage />,
   '/bookings': <BookingListPage />,
   '/bookings/new': <BookingRegisterPage />,
   '/routing/worklist': <RoutingWorklistPage />,
@@ -83,6 +86,16 @@ export function AppRoutes() {
             <RequireRole allow={['ROLE_SALES', 'ROLE_ROUTING', 'ROLE_TRACKER',
               'ROLE_ACCOUNTANT']}>
               <BookingDetailPage />
+            </RequireRole>
+          }
+        />
+        {/* 見積詳細（S13）は S12 から開く。ナビには載せない（作った直後に
+            移る画面）。**営業だけ**——金額を出す荷主向けの画面は S62 だけである。 */}
+        <Route
+          path="/quotations/:quotationId"
+          element={
+            <RequireRole allow={['ROLE_SALES']}>
+              <QuotationDetailPage />
             </RequireRole>
           }
         />

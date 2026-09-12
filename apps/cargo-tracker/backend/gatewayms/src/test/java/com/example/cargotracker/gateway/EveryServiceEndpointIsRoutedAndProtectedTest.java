@@ -156,6 +156,25 @@ class EveryServiceEndpointIsRoutedAndProtectedTest {
     }
 
     @Test
+    @DisplayName("US01: 見積は営業だけ（荷主にも経路設計にも開かない）")
+    void quotationsAreForSalesOnly() {
+        List<String> sales = List.of("ROLE_SALES");
+        String list = "/api/v1/booking/quotations";
+        String one = list + "/Q-0123456789abcdef0123456789abcd";
+
+        assertThat(RoleAuthorization.isAllowed("POST", list, sales))
+                .as("営業が見積を作る").isTrue();
+        assertThat(RoleAuthorization.isAllowed("GET", one, sales)).isTrue();
+
+        assertThat(RoleAuthorization.isAllowed("GET", one, List.of("ROLE_SHIPPER")))
+                .as("金額を出す荷主向けの画面は S62 だけ").isFalse();
+        assertThat(RoleAuthorization.isAllowed("GET", one, List.of("ROLE_ROUTING")))
+                .as("経路設計者は見積を読まない（経路の依頼は予約から来る）").isFalse();
+        assertThat(RoleAuthorization.isAllowed("POST", list, List.of("ROLE_ACCOUNTANT")))
+                .as("経理は見積を作らない").isFalse();
+    }
+
+    @Test
     @DisplayName("S62 荷主向けの請求書は読み取りだけ（書き込みの経路を生やさない）")
     void shipperInvoicesAreReadOnly() throws IOException {
         // **書き込みの守りは「経路が無い」こと**で成り立つ。Gateway の名簿は

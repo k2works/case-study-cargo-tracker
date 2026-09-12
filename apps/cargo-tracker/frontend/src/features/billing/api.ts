@@ -57,11 +57,22 @@ export interface InvoiceView {
   /**
    * 見積時の概算。
    *
-   * **いまは必ず `null`**——見積は US01（IT14）なので、見積を経ない予約しかない。
-   * `null` のときは概算行も差額も出さない（出すと「見積が無い」ことを
-   * 「差額 0」と読み違える）。
+   * **見積を経ない予約では `null`**（注 N12）。`null` のときは概算行も差額も
+   * 出さない——出すと「見積が無い」ことを「差額 0」と読み違える。
    */
   readonly quotedAmount: number | null;
+  /** 発行日。**未発行なら null**（US23 §1）。 */
+  readonly issuedOn?: string | null;
+  /** 支払期限（発行日 + 30 日）。**未発行なら null**。 */
+  readonly dueOn?: string | null;
+  readonly paidAt?: string | null;
+  /**
+   * 支払期限を過ぎているか。
+   *
+   * **列ではなくサーバが問い合わせのたびに数える**（不変条件 4）。期限当日は
+   * 超過ではない。画面で数え直すと、業務タイムゾーンの扱いが 2 か所になる。
+   */
+  readonly overdue?: boolean;
   readonly lineItems: readonly InvoiceLineView[];
 }
 
@@ -122,10 +133,46 @@ export function reverseAdjustment(
   );
 }
 
-/** 金額の表示（画面はどこでも同じ書き方にする）。 */
-export function formatMoney(amount: number, currency: string): string {
-  const formatted = new Intl.NumberFormat('ja-JP').format(Math.abs(amount));
-  const sign = amount < 0 ? '− ' : '';
-  const unit = currency === 'JPY' ? '¥' : currency;
-  return `${sign}${unit} ${formatted}`;
+/**
+ * 金額の表示。
+ *
+ * <p><b>実体は共有に移した</b>（`@/shared/ui/money`）。見積（S13）も金額を
+ * 出すようになり、機能ごとに書式を持つと同じ額が画面によって違う見た目に
+ * なる。ここは既存の import を壊さないための再輸出である。</p>
+ */
+export { formatMoney } from '@/shared/ui/money';
+
+/**
+ * 請求書を発行する（US23 §受入基準 1）。
+ *
+ * <p>支払期限（発行日 + 30 日）は集約が決める。画面は発行後に読み直す。</p>
+ */
+export function issueInvoice(invoiceId: string): Promise<void> {
+  return commandClient(`/billing/invoices/${encodeURIComponent(invoiceId)}/issue`, {});
+}
+
+/**
+ * 入金を記録する（US23 §受入基準 3・4）。
+ *
+ * <p><b>決済機関との接続はスコープ外。</b> 経理担当者が入金明細を見て記録する。
+ * <b>入金日時は入金のあった時刻</b>で、記録した時刻ではない（記録は後日に
+ * なることがある）。</p>
+ */
+export function recordPayment(
+  invoiceId: string,
+  input: { amount: number; paidAt: string },
+): Promise<void> {
+  return commandClient(`/billing/invoices/${encodeURIComponent(invoiceId)}/payments`, input);
+}
+
+/**
+ * 請求書を取り消す（UC18）。
+ *
+ * <p><b>理由は必須。</b> 取り消した請求書は荷主にも見えなくなるので、何が
+ * 起きたかを追えなければ、あとから誰も確かめられない。</p>
+ *
+ * <p><b>取り消したら再発行しない</b>（不変条件 6）。出し直すときは新規に発行する。</p>
+ */
+export function voidInvoice(invoiceId: string, reason: string): Promise<void> {
+  return commandClient(`/billing/invoices/${encodeURIComponent(invoiceId)}/void`, { reason });
 }

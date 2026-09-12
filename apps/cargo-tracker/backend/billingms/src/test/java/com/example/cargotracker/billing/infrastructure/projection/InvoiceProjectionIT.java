@@ -4,6 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.cargotracker.billing.domain.model.events.InvoiceAdjustedEvent;
 import com.example.cargotracker.billing.domain.model.events.InvoiceCalculatedEvent;
+import com.example.cargotracker.billing.domain.model.events.InvoiceIssuedEvent;
+import com.example.cargotracker.billing.domain.model.events.InvoiceVoidedEvent;
+import com.example.cargotracker.shared.contract.event.PaymentRecordedEvent;
 import com.example.cargotracker.billing.infrastructure.persistence.AttentionItemMapper;
 import com.example.cargotracker.billing.infrastructure.query.BillingQueries.FindInvoiceOfBookingQuery;
 import com.example.cargotracker.billing.infrastructure.query.BillingQueries.FindInvoiceQuery;
@@ -41,6 +44,9 @@ class InvoiceProjectionIT extends AbstractAxonIntegrationTest {
 
     @Autowired
     private AttentionItemMapper attentionItems;
+
+    @Autowired
+    private com.example.cargotracker.billing.infrastructure.persistence.InvoiceMapper invoices;
 
     @Autowired
     private org.springframework.jdbc.core.JdbcTemplate jdbc;
@@ -318,6 +324,69 @@ class InvoiceProjectionIT extends AbstractAxonIntegrationTest {
         assertThat(queries.handle(new FindInvoiceQuery(invoiceId)).lineItems())
                 .filteredOn(line -> "ADJUSTMENT".equals(line.itemType()))
                 .hasSize(2);
+    }
+
+    @Test
+    @DisplayName("US23 §1: 発行を写すと状態・発行日・期限・通知の記録が一度に入る")
+    void marksIssued() {
+        String invoiceId = project("ISSUE");
+
+        projection.on(new InvoiceIssuedEvent(invoiceId, "B-ISSUE", "SHP-000001",
+                new BigDecimal("433500"), "JPY",
+                java.time.LocalDate.of(2026, 10, 12), java.time.LocalDate.of(2026, 11, 11),
+                "accountant01", AT), "evt-issue");
+
+        var view = queries.handle(new FindInvoiceQuery(invoiceId));
+        assertThat(view.status()).isEqualTo("INVOICED");
+        assertThat(view.dueOn())
+                .as("状態と期限を別々に書くと、片方だけ入った行が「請求済だが期限が無い」になる")
+                .isEqualTo(java.time.LocalDate.of(2026, 11, 11));
+        assertThat(view.issuedOn()).isEqualTo(java.time.LocalDate.of(2026, 10, 12));
+
+        // **記録と読み口は対で出す。** 通知の記録だけ書いて読めないと、
+        // 「いつ何を伝えたか」が誰にも見えない。
+        assertThat(invoices.findNotification(invoiceId))
+                .as("送信基盤はスコープ外なので、残すのは「いつ・誰に・何を伝えたか」")
+                .isNotNull()
+                .satisfies(row -> assertThat(row.shipperId()).isEqualTo("SHP-000001"));
+    }
+
+    @Test
+    @DisplayName("US23 §4: 入金を写すと入金済になり、入金の行が 1 行だけ入る")
+    void marksPaid() {
+        String invoiceId = project("PAY");
+        var paid = new PaymentRecordedEvent(invoiceId, "PAY-1", "B-PAY", "SHP-000001",
+                new BigDecimal("433500"), "JPY", AT, "accountant01", AT);
+
+        projection.on(paid, "evt-pay-1");
+        // **同じ入金が 2 度届いても 1 行**（payment_id が PK・少なくとも 1 回配送）。
+        projection.on(paid, "evt-pay-2");
+
+        assertThat(queries.handle(new FindInvoiceQuery(invoiceId)).status()).isEqualTo("PAID");
+    }
+
+    @Test
+    @DisplayName("ADR-0017 決定 2: 取消は billing_status と void_marker を同じ更新で動かす")
+    void marksTheVoidedInvoice() {
+        String bookingId = "B-VOID-" + System.nanoTime();
+        String first = "INV-V1-" + System.nanoTime();
+        projection.on(calculatedAt(first, bookingId, AT), "evt-v1");
+
+        projection.on(new InvoiceVoidedEvent(first, bookingId, "宛先の誤り",
+                "accountant01", AT), "evt-void");
+
+        assertThat(queries.handle(new FindInvoiceQuery(first)).status())
+                .as("行は消さない（消すと、取り消した事実そのものが残らない）")
+                .isEqualTo("VOID");
+
+        // **void_marker が動いていなければ、ここで UNIQUE に弾かれる。**
+        // 片方だけ書く実装に戻すと、この行が入らず赤になる。
+        String second = "INV-V2-" + System.nanoTime();
+        projection.on(calculatedAt(second, bookingId, AT), "evt-v2");
+
+        assertThat(queries.handle(new FindInvoiceQuery(second)))
+                .as("取り消したら、同じ予約に新しい請求書を発行できる（不変条件 6）")
+                .isNotNull();
     }
 
     @Test

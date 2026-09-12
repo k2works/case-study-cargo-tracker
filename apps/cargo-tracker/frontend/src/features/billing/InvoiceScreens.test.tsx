@@ -43,6 +43,10 @@ function invoice(over: Record<string, unknown> = {}) {
     statusLabel: '算出済',
     calculatedAt: '2026-09-28T01:00:00Z',
     quotedAmount: null,
+    issuedOn: null,
+    dueOn: null,
+    paidAt: null,
+    overdue: false,
     lineItems: [
       {
         itemType: 'BASE',
@@ -253,6 +257,114 @@ describe('S61 請求詳細', () => {
     await screen.findByText(/2 区間/);
     expect(screen.queryByText(/見積時の概算/)).not.toBeInTheDocument();
     expect(screen.queryByText(/差額/)).not.toBeInTheDocument();
+  });
+
+  it('US23 §1: 算出済の請求書を発行できる', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(JSON.stringify(invoice()), { status: 200 }));
+
+    renderAt('/invoices/INV-20260928-1a2b3c4d', <InvoiceDetailPage />);
+    await screen.findByText(/2 区間/);
+
+    await userEvent.click(screen.getByRole('button', { name: '請求書を発行する' }));
+
+    await waitFor(() => {
+      const call = fetchSpy.mock.calls.find(([url]) => String(url).includes('/issue'));
+      expect(call).toBeDefined();
+    });
+  });
+
+  it('US23 §1: 発行済には支払期限が出て、発行の口は出ない', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(invoice({
+        status: 'INVOICED',
+        statusLabel: '請求済',
+        issuedOn: '2026-10-12',
+        dueOn: '2026-11-11',
+      })), { status: 200 }),
+    );
+
+    renderAt('/invoices/INV-20260928-1a2b3c4d', <InvoiceDetailPage />);
+
+    expect(await screen.findByText(/支払期限 2026-11-11/)).toBeInTheDocument();
+    // 押せるのに断られる操作を並べない（二度発行できない）。
+    expect(screen.queryByRole('button', { name: '請求書を発行する' })).not.toBeInTheDocument();
+  });
+
+  it('US23 §4: 発行済には入金を記録できる', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(invoice({
+        status: 'INVOICED',
+        statusLabel: '請求済',
+        issuedOn: '2026-10-12',
+        dueOn: '2026-11-11',
+      })), { status: 200 }),
+    );
+
+    renderAt('/invoices/INV-20260928-1a2b3c4d', <InvoiceDetailPage />);
+    await screen.findByText(/支払期限/);
+
+    await userEvent.type(screen.getByLabelText('入金日'), '2026-11-05');
+    await userEvent.click(screen.getByRole('button', { name: '入金を記録する' }));
+
+    await waitFor(() => {
+      const call = fetchSpy.mock.calls.find(([url]) => String(url).includes('/payments'));
+      expect(call).toBeDefined();
+      // **請求額をそのまま送る。** 打たせると、打ち間違いが一部入金として断られる。
+      expect(String(call?.[1]?.body)).toContain('"amount":433500');
+    });
+  });
+
+  it('US23 §5: 期限を過ぎた請求書は未払いと分かる', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(invoice({
+        status: 'INVOICED',
+        statusLabel: '請求済',
+        issuedOn: '2026-09-01',
+        dueOn: '2026-10-01',
+        overdue: true,
+      })), { status: 200 }),
+    );
+
+    renderAt('/invoices/INV-20260928-1a2b3c4d', <InvoiceDetailPage />);
+
+    expect(await screen.findByText('未払い')).toBeInTheDocument();
+  });
+
+  it('入金済には発行も入金も調整も出ない（決着したものを動かさない）', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(invoice({
+        status: 'PAID',
+        statusLabel: '入金済',
+        issuedOn: '2026-10-12',
+        dueOn: '2026-11-11',
+        paidAt: '2026-11-05T02:00:00Z',
+      })), { status: 200 }),
+    );
+
+    renderAt('/invoices/INV-20260928-1a2b3c4d', <InvoiceDetailPage />);
+    await screen.findByText(/2 区間/);
+
+    expect(screen.queryByRole('button', { name: '請求書を発行する' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '入金を記録する' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '調整を入れる' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '請求書を取り消す' })).not.toBeInTheDocument();
+  });
+
+  it('D12: 見積を経た予約では「見積時の概算 → 請求 → 差額」が出る', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(invoice({ quotedAmount: 400000 })), { status: 200 }),
+    );
+
+    renderAt('/invoices/INV-20260928-1a2b3c4d', <InvoiceDetailPage />);
+
+    expect(await screen.findByText(/見積時の概算/)).toBeInTheDocument();
+    expect(screen.getByText(/¥ 400,000/)).toBeInTheDocument();
+    // 差額は請求 − 概算（433,500 − 400,000 = 33,500）。**行で確かめる**——
+    // セルだけを見ると、金額が別の行にあっても緑になる。
+    const row = screen.getByText('差額').closest('tr');
+    expect(row).toHaveTextContent('33,500');
+    expect(row).toHaveTextContent('+');
   });
 
   it('引き継ぎ C: 入れた調整を取り消せる（誤入力を戻せないまま発行しない）', async () => {

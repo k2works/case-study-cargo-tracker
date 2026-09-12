@@ -95,7 +95,10 @@ public final class BookingDtos {
             String hazardImoClass,
             String hazardUnNumber,
             BigDecimal temperatureMinC,
-            BigDecimal temperatureMaxC) implements CargoFields {
+            BigDecimal temperatureMaxC,
+            // 見積番号（任意・US01）。**見積を経ない予約もある**ので必須にしない。
+            // 入っていれば、見積と違う項目を項目名で知らせる（正典の不変条件 3）。
+            String quotationId) implements CargoFields {
     }
 
     /**
@@ -231,6 +234,18 @@ public final class BookingDtos {
             String routingStatus) {
     }
 
-    public record BookCargoResponse(String bookingId) {
+    /**
+     * 予約を受け付けた応答。
+     *
+     * @param quotationDifferences 見積と違った項目（「何から何へ」まで）。
+     *     <b>断らずに知らせる</b>（正典の不変条件 3）——荷主の事情は見積のあとで
+     *     変わるので、断ると業務が止まる。見積を経ない予約では<b>空</b>
+     */
+    public record BookCargoResponse(String bookingId, java.util.List<String> quotationDifferences) {
+
+        /** 見積を経ない予約。 */
+        public BookCargoResponse(String bookingId) {
+            this(bookingId, java.util.List.of());
+        }
     }
 }

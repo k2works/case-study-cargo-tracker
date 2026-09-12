@@ -1,9 +1,10 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type SubmitEvent } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useNavigate, useSearchParams } from 'react-router';
 import { ApiError } from '@/shared/api/client';
 import { display, fetchShippers } from '@/features/shippers/api';
 import { ALERT, BUTTON_PRIMARY, CARD, FIELD, LABEL, LINK, PAGE_TITLE } from '@/shared/ui/styles';
+import { fetchQuotation } from '@/features/quotations/api';
 import { bookCargo, type CargoType } from './api';
 import { CargoFields, cargoFieldsPayload } from './CargoFields';
 
@@ -13,8 +14,16 @@ import { CargoFields, cargoFieldsPayload } from './CargoFields';
  * <p>種別ごとの入力欄は<b>その種別を選んだときだけ</b>出す。常に出すと
  * 「一般貨物なのに危険物申告を求められる」ことになる（ui_design.md S11 と同じ考え）。</p>
  *
- * <p>見積の欄は出さない。見積（US01）が未実装のうちは、選べない欄を置いても
- * 「使えない機能がある」ようにしか見えない。</p>
+ * <p><b>見積から来たときは 5 項目を写す</b>（US01・S13 の `[この見積で予約する]`）。
+ * 写さないと、営業担当者は見積を開き直して打ち直すことになり、写し間違いが
+ * 見積と違う予約を黙って作る。</p>
+ *
+ * <p><b>見積から来ていなければ、見積の欄は出しません。</b> 選べない欄を置くと
+ * 「使えない機能がある」ようにしか見えません。</p>
+ *
+ * <p><b>写した項目は変えられます。</b> 荷主の事情は見積のあとで変わるので、
+ * 固定すると業務が止まります。違いはサーバが項目名で知らせます
+ * （正典の不変条件 3）。</p>
  */
 /** 荷主は選ぶ（S21）。入力欄が無い修正画面と共通化しないのはこの 1 項目だけ。 */
 function shipperIdOf(form: FormData): string {
@@ -23,6 +32,18 @@ function shipperIdOf(form: FormData): string {
 }
 
 export function BookingRegisterPage() {
+  const [searchParams] = useSearchParams();
+  const quotationId = searchParams.get('quotationId');
+
+  // **見積から来たときだけ読む。** 見積を経ない予約のほうが多いので、
+  // 常に問い合わせると無駄な往復が増える。
+  const { data: quotation } = useQuery({
+    queryKey: ['quotation', quotationId],
+    queryFn: () => fetchQuotation(String(quotationId)),
+    enabled: quotationId !== null,
+  });
+  const quoted = quotation?.state === 'ready' ? quotation.value : null;
+
   const [cargoType, setCargoType] = useState<CargoType>('GENERAL');
   // 荷主は選ぶ（UI 設計 S21）。識別子を打たせると、営業は一覧を開いて
   // UUID を書き写すことになる。荷主コードは画面に出ているが、予約が要るのは
@@ -34,6 +55,14 @@ export function BookingRegisterPage() {
     queryKey: ['shippers', shipperQuery],
     queryFn: () => fetchShippers(shipperQuery),
   });
+  // **貨物種別も写す。** 写さないと、冷凍の見積が一般貨物の予約になる。
+  // 入力欄の既定値（defaultValue）とは別に、種別だけは state が持っている。
+  const [quotedTypeApplied, setQuotedTypeApplied] = useState(false);
+  if (quoted !== null && !quotedTypeApplied) {
+    setQuotedTypeApplied(true);
+    setCargoType(quoted.cargoType);
+  }
+
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
@@ -48,6 +77,9 @@ export function BookingRegisterPage() {
       await bookCargo({
         shipperId: shipperIdOf(form),
         ...cargoFieldsPayload(form, cargoType),
+        // **見積番号を一緒に送る。** 送らないと、サーバは見積と突き合わせられず
+        // 「見積と異なる項目」を知らせられない（正典の不変条件 3）。
+        ...(quotationId === null ? {} : { quotationId }),
       });
       // 受け付けただけで一覧にはまだ出ない。一覧側が取り直せるようにしてから移る。
       await queryClient.invalidateQueries({ queryKey: ['bookings'] });
@@ -114,7 +146,25 @@ export function BookingRegisterPage() {
             )}
         </div>
 
-        <CargoFields cargoType={cargoType} onCargoTypeChange={setCargoType} />
+        {/* **見積から来たときだけ出す。** 選べない欄を置くと「使えない機能が
+            ある」ようにしか見えない（ui_design.md S21）。 */}
+        {quoted !== null && (
+          <p className="rounded border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+            見積 {quoted.quotationId} の内容を写しました。変更すると、登録後に
+            「見積と異なる項目」としてお知らせします。
+          </p>
+        )}
+
+        <CargoFields
+          cargoType={cargoType}
+          onCargoTypeChange={setCargoType}
+          defaults={quoted === null ? undefined : {
+            originUnLocode: quoted.originUnLocode,
+            destinationUnLocode: quoted.destinationUnLocode,
+            arrivalDeadline: quoted.arrivalDeadline,
+            weightKg: String(quoted.weightKg),
+          }}
+        />
 
         {error !== null && (
           <p role="alert" className={ALERT}>

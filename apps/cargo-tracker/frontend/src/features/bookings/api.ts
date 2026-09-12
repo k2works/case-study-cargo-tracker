@@ -1,7 +1,16 @@
 import { commandClient, queryClient } from '@/shared/api/client';
 import type { Pending } from '@/shared/api/pending';
 
-export type CargoType = 'GENERAL' | 'HAZARDOUS' | 'REFRIGERATED';
+/**
+ * 貨物種別。
+ *
+ * <p><b>実体は共有に移した</b>（`@/shared/domain/cargoType`）。見積（S12）も
+ * 同じ種別を扱うようになり、機能ごとに型を持つと種別を足したときに片方だけが
+ * 直る。ここは既存の import を壊さないための再輸出である。</p>
+ */
+import type { CargoType } from '@/shared/domain/cargoType';
+
+export type { CargoType };
 
 export interface BookingView {
   readonly bookingId: string;

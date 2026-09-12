@@ -285,6 +285,57 @@ public final class BookingQueries {
             String updatedBy) {
     }
 
+    /** 見積 1 件（S13 / US01）。 */
+    public record FindQuotationQuery(String quotationId) {
+    }
+
+    /**
+     * 見積の詳細（S13）。
+     *
+     * <p><b>候補も一緒に返す。</b> 候補ごとに問い合わせると N+1 になり、何より
+     * 「どの案にするか」は 1 画面で比べられなければ選べない。</p>
+     *
+     * <p><b>危険物申告は持たない。</b> 正典の {@code quotation} 表に列が無く、
+     * 申告そのものは予約のときに {@code Cargo} が持つ。画面は貨物種別で入力欄を
+     * 出し分ける（US01 §受入基準 6）——投影に無いものをビューに出さない。</p>
+     *
+     * @param estimatedAmount いちばん安い候補の概算。<b>候補が無ければ 0 円</b>
+     * @param hasDeadlineMeetingCandidate 希望期限に間に合う候補があるか。
+     *     <b>サーバが数える</b>（画面に数え直させない・US01 §受入基準 5）
+     */
+    public record QuotationView(
+            String quotationId,
+            String originUnLocode,
+            String destinationUnLocode,
+            java.time.LocalDate arrivalDeadline,
+            String cargoType,
+            BigDecimal weightKg,
+            BigDecimal estimatedAmount,
+            String currency,
+            java.time.LocalDate validUntil,
+            boolean hasDeadlineMeetingCandidate,
+            String createdBy,
+            Instant createdAt,
+            List<QuotationCandidateView> candidates) {
+    }
+
+    /**
+     * ルート候補 1 件（S13 / US01 §受入基準 3）。
+     *
+     * <p>経由港・所要日数・概算料金・航海番号——この 4 つが読めなければ、
+     * 営業担当者は荷主に案を説明できない。</p>
+     *
+     * @param overdueDays 希望期限からの超過日数。<b>0 なら間に合う</b>
+     */
+    public record QuotationCandidateView(
+            int candidateSeq,
+            String voyageNumbers,
+            int transitDays,
+            BigDecimal estimatedCost,
+            String currency,
+            int overdueDays) {
+    }
+
     public record BookingListView(List<BookingView> items, int total) {
     }
 }

@@ -111,4 +111,67 @@ class BillingVocabularyTest {
         assertThatThrownBy(() -> DiscountRate.of(null))
                 .isInstanceOf(BusinessRuleViolation.class);
     }
+
+    /**
+     * [ADR-0017] 決定 3。<b>{@code void_marker} を読んで判断しない。</b>
+     *
+     * <p>有効／決着を表すものが {@code billing_status} と {@code void_marker} の
+     * 2 つあるので、書き手ごとに違う判定が混ざる。読んでよいのは索引を使わせる
+     * 1 か所（{@code findActiveByBooking}）だけで、業務の判断は
+     * {@code BillingStatus} の述語が持つ。</p>
+     *
+     * <p><b>対象になりうる行を全部拾ってから書き方を検査する。</b> 「正しい形
+     * だけ拾う」正規表現にすると、違反の書き方が素通りする（IT13 の教訓）。</p>
+     */
+    @Test
+    @DisplayName("ADR-0017 決定 3: void_marker を条件に書くのは有効な請求書を引く 1 か所だけ")
+    void voidMarkerIsNotReadOutsideTheActiveLookup() throws java.io.IOException {
+        java.nio.file.Path main = java.nio.file.Path.of("src/main");
+        assertThat(main).as("走査の起点が実在する（検査が空振りしない）").exists();
+
+        java.util.List<String> offenders = new java.util.ArrayList<>();
+        try (var paths = java.nio.file.Files.walk(main)) {
+            for (java.nio.file.Path file : paths
+                    .filter(java.nio.file.Files::isRegularFile)
+                    .filter(path -> path.toString().endsWith(".java")
+                            || path.toString().endsWith(".xml"))
+                    .toList()) {
+                String source = java.nio.file.Files.readString(file,
+                        java.nio.charset.StandardCharsets.UTF_8);
+                // **対象になりうる行を全部拾ってから書き方を検査する。** ただし
+                // コメントは除く——理由の説明にこの列名が出るのは当然で、そこまで
+                // 赤にすると検査が邪魔になって消される。
+                //
+                // **複数行コメントは内側を追う。** 開始行だけを見ると、続きの行が
+                // 「コードの行」として拾われる（この検査を書いたとき実際に赤くなった）。
+                boolean inBlockComment = false;
+                for (String line : source.split("\n")) {
+                    String trimmed = line.strip();
+                    boolean opens = trimmed.startsWith("<!--") || trimmed.startsWith("/*");
+                    boolean closes = trimmed.contains("-->") || trimmed.endsWith("*/");
+                    boolean commented = inBlockComment || opens
+                            || trimmed.startsWith("*") || trimmed.startsWith("//")
+                            || trimmed.startsWith("--");
+                    if (opens && !closes) {
+                        inBlockComment = true;
+                    } else if (inBlockComment && closes) {
+                        inBlockComment = false;
+                    }
+                    if (commented || !trimmed.contains("void_marker")) {
+                        continue;
+                    }
+                    offenders.add(file.getFileName() + ": " + trimmed);
+                }
+            }
+        }
+
+        assertThat(offenders)
+                .as("void_marker は UNIQUE を成立させるための派生列。業務の判断は "
+                        + "billing_status で行う（ADR-0017 決定 1・3）")
+                .allSatisfy(offender -> assertThat(offender)
+                        // 有効な請求書を引く条件（索引を使わせる）と、取消を写す更新。
+                        .matches(line -> line.contains("WHERE booking_id = #{bookingId}")
+                                || line.contains("void_marker    = #{invoiceId}")
+                                || line.contains("void_marker = ''")));
+    }
 }

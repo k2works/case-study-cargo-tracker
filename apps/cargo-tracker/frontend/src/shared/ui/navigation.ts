@@ -17,6 +17,10 @@ export const NAVIGATION: readonly NavigationItem[] = [
   { path: '/', label: 'ダッシュボード', allow: ['ROLE_SHIPPER', 'ROLE_SALES', 'ROLE_ROUTING', 'ROLE_TRACKER', 'ROLE_HANDLER', 'ROLE_ACCOUNTANT', 'ROLE_ADMIN'] },
   { path: '/shippers', label: '荷主一覧', allow: ['ROLE_SALES', 'ROLE_ACCOUNTANT'] },
   { path: '/shippers/new', label: '荷主登録', allow: ['ROLE_SALES'] },
+  // 見積（S12）は営業だけ（ui_design.md の到達性の表 / US01）。**予約の前段**
+  // なので予約一覧より前に置く——業務の順に並んでいないと、営業担当者は
+  // 「見積はどこか」を探すことになる。
+  { path: '/quotations/new', label: '見積作成', allow: ['ROLE_SALES'] },
   { path: '/bookings', label: '予約一覧', allow: ['ROLE_SALES', 'ROLE_ROUTING', 'ROLE_TRACKER'] },
   { path: '/bookings/new', label: '予約登録', allow: ['ROLE_SALES'] },
   { path: '/routing/worklist', label: '経路設計作業', allow: ['ROLE_ROUTING'] },

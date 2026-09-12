@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router';
 import {
   ALERT,
+  BUTTON_DANGER,
   BUTTON_PRIMARY,
   CARD,
   FIELD,
@@ -15,9 +16,17 @@ import {
   TD,
   TH,
 } from '@/shared/ui/styles';
-import { formatBusinessDateTime } from '@/shared/api/businessDate';
+import { businessLocalToInstant, formatBusinessDateTime } from '@/shared/api/businessDate';
 import { ApiError } from '@/shared/api/client';
-import { adjustInvoice, fetchInvoice, formatMoney, reverseAdjustment } from './api';
+import {
+  adjustInvoice,
+  fetchInvoice,
+  formatMoney,
+  issueInvoice,
+  recordPayment,
+  reverseAdjustment,
+  voidInvoice,
+} from './api';
 import type { InvoiceLineView } from './api';
 
 /**
@@ -71,6 +80,37 @@ export function InvoiceDetailPage() {
   const [reason, setReason] = useState('');
   const [basisExceptionId, setBasisExceptionId] = useState('');
 
+  const [paidAt, setPaidAt] = useState('');
+  const [voidReason, setVoidReason] = useState('');
+
+  const issue = useMutation({
+    mutationFn: () => issueInvoice(invoiceId),
+    onSuccess: () => client.invalidateQueries({ queryKey: ['invoice', invoiceId] }),
+  });
+
+  const pay = useMutation({
+    mutationFn: (amount: number) => recordPayment(invoiceId, {
+      // **請求額をそのまま送る。** 打たせると、打ち間違いが一部入金として
+      // 断られ、経理は「なぜ通らないのか」を金額から探すことになる。
+      amount,
+      // 入金日は日付で聞き、業務タイムゾーンの正午として送る——UTC で作ると
+      // 時差の分だけ前日の入金になる時間帯ができる。
+      paidAt: businessLocalToInstant(`${paidAt}T12:00`),
+    }),
+    onSuccess: async () => {
+      setPaidAt('');
+      await client.invalidateQueries({ queryKey: ['invoice', invoiceId] });
+    },
+  });
+
+  const cancel = useMutation({
+    mutationFn: () => voidInvoice(invoiceId, voidReason),
+    onSuccess: async () => {
+      setVoidReason('');
+      await client.invalidateQueries({ queryKey: ['invoice', invoiceId] });
+    },
+  });
+
   const adjust = useMutation({
     mutationFn: () => adjustInvoice(invoiceId, {
       amount: direction === 'DEDUCTION' ? -Math.abs(Number(amount)) : Math.abs(Number(amount)),
@@ -107,8 +147,21 @@ export function InvoiceDetailPage() {
         {view.shipperName ?? '（削除済）'}（{view.shipperTypeLabel}）
         {' / '}
         <span>{view.statusLabel}</span>
+        {view.overdue === true && (
+          <>
+            {' / '}
+            {/* **列ではなくサーバが数える**（不変条件 4）。期限当日は超過ではない。 */}
+            <span className="font-semibold text-red-700">未払い</span>
+          </>
+        )}
         {' / '}
         算出 {formatBusinessDateTime(view.calculatedAt)}
+        {typeof view.dueOn === 'string' && (
+          <>
+            {' / '}
+            支払期限 {view.dueOn}
+          </>
+        )}
       </p>
       {/* **一覧へ戻る口を置く。** 開いた先から戻れないと、ブラウザの戻るに頼る
           ことになる（共有画面のリンクもロールで出し分ける・IT7 の教訓）。 */}
@@ -167,13 +220,145 @@ export function InvoiceDetailPage() {
               </td>
             </tr>
           ))}
+          {/* **見積を経ない予約では出さない**（注 N12）。出すと「見積が無い」
+              ことを「差額 0」と読み違える。 */}
+          {typeof view.quotedAmount === 'number' && (
+            <tr>
+              <td className={TD}>見積時の概算</td>
+              <td className={TD}>{formatMoney(view.quotedAmount, view.currency)}</td>
+              <td className={TD}>見積の候補経路（実際に通った区間とは異なる）</td>
+            </tr>
+          )}
           <tr>
             <td className={TD}><b>合計</b></td>
             <td className={TD}><b>{formatMoney(view.totalAmount, view.currency)}</b></td>
             <td className={TD} />
           </tr>
+          {typeof view.quotedAmount === 'number' && (
+            <tr>
+              <td className={TD}>差額</td>
+              <td className={TD}>
+                {/* **符号で向きを出す。** 概算より高いのか安いのかが、金額だけでは
+                    読めない。 */}
+                {view.totalAmount - view.quotedAmount >= 0 ? '+ ' : ''}
+                {formatMoney(view.totalAmount - view.quotedAmount, view.currency)}
+              </td>
+              <td className={TD}>
+                見積は候補経路、請求は実際に通った区間で数えます（区間数の増減・誤配・留置）
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
+
+      {/* **算出済のあいだだけ発行できる**（US23 §受入基準 1）。発行すると額が
+          確定するので、調整はもう受け付けない。 */}
+      {view.status === 'CALCULATED' && (
+        <section className={`${CARD} mt-4`}>
+          <h2 className="text-base font-semibold text-gray-900">請求書を発行する</h2>
+          <p className="mt-1 text-sm text-gray-600">
+            発行すると支払期限（発行日 + 30 日）が確定し、荷主が自社の請求書を読めるようになります。
+            発行後は調整を入れられません。
+          </p>
+          <button
+            className={`${BUTTON_PRIMARY} mt-3`}
+            type="button"
+            disabled={issue.isPending}
+            onClick={() => issue.mutate()}
+          >
+            請求書を発行する
+          </button>
+          {issue.isPending && <output className={`${NOTICE} ml-3`}>送信中…</output>}
+          {issue.isError && (
+            <p role="alert" className={`${ALERT} mt-3`}>
+              {issue.error instanceof ApiError
+                ? issue.error.message : '発行できませんでした'}
+            </p>
+          )}
+        </section>
+      )}
+
+      {/* **発行済のあいだだけ入金を記録できる**（US23 §受入基準 3・4）。
+          発行していない請求書への入金は「何に対する入金か」が決まらない。 */}
+      {view.status === 'INVOICED' && (
+        <section className={`${CARD} mt-4`}>
+          <h2 className="text-base font-semibold text-gray-900">入金を記録する</h2>
+          <p className="mt-1 text-sm text-gray-600">
+            決済機関との連携はありません。入金明細を見て記録してください。
+            入金日は<b>入金のあった日</b>です（記録した日ではありません）。
+          </p>
+          <form
+            className="mt-3 flex flex-wrap items-end gap-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              pay.mutate(view.totalAmount);
+            }}
+          >
+            <div>
+              <label className={LABEL} htmlFor="payment-paid-at">入金日</label>
+              <input
+                id="payment-paid-at"
+                className={FIELD}
+                type="date"
+                value={paidAt}
+                onChange={(event) => setPaidAt(event.target.value)}
+              />
+            </div>
+            <div>
+              <span className={LABEL}>入金額</span>
+              <p className="mt-1 text-sm text-gray-800">
+                {formatMoney(view.totalAmount, view.currency)}（請求額）
+              </p>
+            </div>
+            <button className={BUTTON_PRIMARY} type="submit" disabled={pay.isPending}>
+              入金を記録する
+            </button>
+            {pay.isPending && <output className={NOTICE}>送信中…</output>}
+          </form>
+          {pay.isError && (
+            <p role="alert" className={`${ALERT} mt-3`}>
+              {pay.error instanceof ApiError ? pay.error.message : '入金を記録できませんでした'}
+            </p>
+          )}
+        </section>
+      )}
+
+      {/* **算出済と請求済は取り消せる。** 入金済は取り消さない——決着したものを
+          動かすと、入金の事実と請求書の状態が食い違う。 */}
+      {(view.status === 'CALCULATED' || view.status === 'INVOICED') && (
+        <section className={`${CARD} mt-4`}>
+          <h2 className="text-base font-semibold text-gray-900">請求書を取り消す</h2>
+          <p className="mt-1 text-sm text-gray-600">
+            取り消した請求書は<b>再発行できません</b>。出し直すときは新しく作り直します。
+          </p>
+          <form
+            className="mt-3 flex flex-wrap items-end gap-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              cancel.mutate();
+            }}
+          >
+            <div className="grow">
+              <label className={LABEL} htmlFor="void-reason">取消の理由</label>
+              <input
+                id="void-reason"
+                className={FIELD}
+                value={voidReason}
+                onChange={(event) => setVoidReason(event.target.value)}
+              />
+            </div>
+            <button className={BUTTON_DANGER} type="submit" disabled={cancel.isPending}>
+              請求書を取り消す
+            </button>
+          </form>
+          {cancel.isError && (
+            <p role="alert" className={`${ALERT} mt-3`}>
+              {cancel.error instanceof ApiError
+                ? cancel.error.message : '取り消せませんでした'}
+            </p>
+          )}
+        </section>
+      )}
 
       {/* 算出済のあいだだけ調整を受け付ける（US21 §受入基準 6）。押せるのに
           断られる操作を並べない。 */}

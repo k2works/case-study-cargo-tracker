@@ -6,6 +6,7 @@ import com.example.cargotracker.booking.domain.model.events.QuotationCreatedEven
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;
 import com.example.cargotracker.booking.domain.model.valueobjects.EstimatedAmount;
 import com.example.cargotracker.booking.domain.model.valueobjects.QuotationId;
+import com.example.cargotracker.booking.domain.model.valueobjects.QuotationTerms;
 import com.example.cargotracker.booking.domain.model.valueobjects.QuotedRoute;
 import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.shared.domain.error.IllegalTransition;
@@ -144,27 +145,15 @@ public class Quotation {
         if (quotationId == null) {
             throw new IllegalTransition("見積がありません");
         }
-        List<String> differences = new ArrayList<>();
-        var route = command.routeSpecification();
-        var spec = command.cargoSpecification();
-        if (route != null) {
-            addIfDifferent(differences, "出発地", originUnLocode,
-                    route.origin().unLocode().value());
-            addIfDifferent(differences, "目的地", destinationUnLocode,
-                    route.destination().unLocode().value());
-            addIfDifferent(differences, "到着期限", arrivalDeadline, route.arrivalDeadline());
-        }
-        if (spec != null) {
-            addIfDifferent(differences, "貨物種別", cargoType, spec.cargoType().name());
-            // **数として比べる。** BigDecimal の equals は桁数まで見るので、
-            // 1200 と 1200.00 が「違う」になる（見積どおりの予約が毎回違うと出る）。
-            if (weightKg != null && spec.weight() != null
-                    && weightKg.compareTo(spec.weight().kilograms()) != 0) {
-                differences.add("重量: " + weightKg + " kg → "
-                        + spec.weight().kilograms() + " kg");
-            }
-        }
-        return List.copyOf(differences);
+        // **比較は 1 か所**（QuotationTerms）。予約の受付側（QuotationDiff）と
+        // 別々に書くと、片方だけが正しくてもう片方が違いを見落とす。
+        return terms().differencesAgainst(QuotationTerms.of(command));
+    }
+
+    /** この見積が示した 5 項目。 */
+    private QuotationTerms terms() {
+        return new QuotationTerms(originUnLocode, destinationUnLocode, arrivalDeadline,
+                cargoType, weightKg);
     }
 
     /** 期限に間に合う候補があるか。<b>集約が答える</b>（画面に数え直させない）。 */
@@ -201,10 +190,4 @@ public class Quotation {
                 .orElse(EstimatedAmount.zero());
     }
 
-    private static void addIfDifferent(List<String> differences, String label,
-            Object quoted, Object booked) {
-        if (quoted != null && !quoted.equals(booked)) {
-            differences.add(label + ": " + quoted + " → " + booked);
-        }
-    }
 }

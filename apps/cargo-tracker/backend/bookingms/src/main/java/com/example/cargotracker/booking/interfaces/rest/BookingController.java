@@ -17,13 +17,8 @@ import com.example.cargotracker.booking.domain.model.commands.ConfirmBookingComm
 import com.example.cargotracker.booking.domain.model.commands.IssueTrackingNumberCommand;
 import com.example.cargotracker.booking.domain.model.commands.RequestRoutingCommand;
 import com.example.cargotracker.booking.domain.model.commands.UpdateCargoSpecificationCommand;
-import com.example.cargotracker.booking.domain.model.valueobjects.CargoSpecification;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;
-import com.example.cargotracker.booking.domain.model.valueobjects.Dimensions;
-import com.example.cargotracker.booking.domain.model.valueobjects.HazardousDeclaration;
 import com.example.cargotracker.booking.domain.model.valueobjects.RouteSpecification;
-import com.example.cargotracker.booking.domain.model.valueobjects.TemperatureRequirement;
-import com.example.cargotracker.booking.domain.model.valueobjects.Weight;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.BookingListView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.BookingView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingQuery;
@@ -39,8 +34,8 @@ import com.example.cargotracker.booking.infrastructure.query.BookingQueries.Itin
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.RevisionListView;
 import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingsQuery;
 import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos;
+import com.example.cargotracker.booking.interfaces.rest.dto.CargoSpecificationAssembler;
 import com.example.cargotracker.shared.infrastructure.axon.QueryDispatcher;
-import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos.BookCargoRequest;
 import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos.AssignRouteRequest;
 import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos.BookCargoResponse;
@@ -78,13 +73,17 @@ public class BookingController {
     private final QueryDispatcher queries;
     private final RouteCandidateFinder routeCandidates;
     private final TrackingNumberGenerator trackingNumbers;
+    /** 見積との違いを項目名で知らせる（US01・正典の不変条件 3）。 */
+    private final com.example.cargotracker.booking.application.QuotationDiff quotationDiff;
 
     public BookingController(CommandGateway commandGateway, QueryDispatcher queries,
-            RouteCandidateFinder routeCandidates, TrackingNumberGenerator trackingNumbers) {
+            RouteCandidateFinder routeCandidates, TrackingNumberGenerator trackingNumbers,
+            com.example.cargotracker.booking.application.QuotationDiff quotationDiff) {
         this.commandGateway = commandGateway;
         this.queries = queries;
         this.routeCandidates = routeCandidates;
         this.trackingNumbers = trackingNumbers;
+        this.quotationDiff = quotationDiff;
     }
 
     @PostMapping
@@ -92,18 +91,28 @@ public class BookingController {
             @RequestHeader(name = "X-Auth-Username", required = false) String username) {
         String bookingId = UUID.randomUUID().toString();
 
-        commandGateway.sendAndWait(new BookCargoCommand(
+        BookCargoCommand command = new BookCargoCommand(
                 bookingId,
                 request.shipperId(),
-                cargoSpecification(request),
+                CargoSpecificationAssembler.from(request),
                 new RouteSpecification(
                         Location.of(request.originUnLocode()),
                         Location.of(request.destinationUnLocode()),
                         request.arrivalDeadline()),
-                username));
+                username);
+        commandGateway.sendAndWait(command);
 
+        // **見積との違いは断らずに知らせる**（正典の不変条件 3）。荷主の事情は
+        // 見積のあとで変わる——重量が増えることも、期限が延びることもある。
+        // 断ると業務が止まるので、「何がどう違うか」を返すにとどめる。
+        //
+        // **予約そのものは既に受け付けてある。** 差分を数えるために受付を
+        // 遅らせない——数え方の誤りで予約が通らなくなるほうが重い。
         return ResponseEntity.created(URI.create("/api/v1/booking/bookings/" + bookingId))
-                .body(new BookCargoResponse(bookingId));
+                .body(new BookCargoResponse(bookingId,
+                        // **判定も「見つからないときどうするか」も application が持つ**
+                        // （QuotationDiff）。入口に置くと、同じ扱いを画面の数だけ書く。
+                        quotationDiff.differences(request.quotationId(), command)));
     }
 
     /**
@@ -118,7 +127,7 @@ public class BookingController {
             @RequestHeader(name = "X-Auth-Username", required = false) String username) {
         commandGateway.sendAndWait(new UpdateCargoSpecificationCommand(
                 bookingId,
-                cargoSpecification(request),
+                CargoSpecificationAssembler.from(request),
                 new RouteSpecification(
                         Location.of(request.originUnLocode()),
                         Location.of(request.destinationUnLocode()),
@@ -454,45 +463,4 @@ public class BookingController {
         return ResponseEntity.ok(new BookCargoResponse(bookingId));
     }
 
-    /**
-     * 種別ごとの付帯情報を組み立てる。
-     *
-     * <p>空文字は「入力していない」として {@code null} に寄せる。空文字のまま渡すと、
-     * 「危険物申告がある」と判断されて集約の検査を素通りする。</p>
-     */
-    private static CargoSpecification cargoSpecification(BookingDtos.CargoFields request) {
-        return new CargoSpecification(
-                cargoType(request.cargoType()),
-                new Weight(request.weightKg()),
-                new Dimensions(request.lengthCm(), request.widthCm(), request.heightCm()),
-                request.quantity(),
-                request.productName(),
-                blank(request.hazardImoClass()) && blank(request.hazardUnNumber())
-                        ? null
-                        : new HazardousDeclaration(request.hazardImoClass(),
-                                request.hazardUnNumber()),
-                request.temperatureMinC() == null && request.temperatureMaxC() == null
-                        ? null
-                        : new TemperatureRequirement(request.temperatureMinC(),
-                                request.temperatureMaxC()));
-    }
-
-    /**
-     * 知らない貨物種別を素の例外にしない。
-     *
-     * <p>{@code CargoType.valueOf} の {@code IllegalArgumentException} は
-     * {@code ApiExceptionHandler} の対象外なので 500 に化ける。入力の誤りは
-     * 業務規則違反として 422 で返す。</p>
-     */
-    private static CargoType cargoType(String name) {
-        try {
-            return CargoType.valueOf(name);
-        } catch (IllegalArgumentException e) {
-            throw new BusinessRuleViolation("知らない貨物種別です: " + name);
-        }
-    }
-
-    private static boolean blank(String value) {
-        return value == null || value.isBlank();
-    }
 }
