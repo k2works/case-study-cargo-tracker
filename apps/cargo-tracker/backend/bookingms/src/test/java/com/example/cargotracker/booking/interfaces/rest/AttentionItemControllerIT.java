@@ -26,6 +26,16 @@ import org.springframework.web.client.RestClient;
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class AttentionItemControllerIT extends AbstractAxonIntegrationTest {
 
+    /**
+     * 要確認が起きた時刻。
+     *
+     * <p><b>固定した 1 点を使う。</b> 検査したいのは「誰宛に出るか・片づけたら
+     * 消えるか」であって、時刻そのものではない。JVM 既定の現在時刻を使うと、
+     * 何を検査しているのかが読みにくくなる（CI は UTC で回るので、時刻の絡む
+     * 検査を足したときに時差でずれる形も招く）。</p>
+     */
+    private static final Instant OCCURRED_AT = Instant.parse("2026-09-28T01:00:00Z");
+
     static class JsonMap extends LinkedHashMap<String, Object> {
         private static final long serialVersionUID = 1L;
     }
@@ -54,9 +64,9 @@ class AttentionItemControllerIT extends AbstractAxonIntegrationTest {
         String salesTarget = "sales-" + System.nanoTime();
         String accountantTarget = "acct-" + System.nanoTime();
         recorder.add("PROJECTION_REJECTED", "SHIPPER", salesTarget, "ROLE_SALES",
-                "メールアドレスの重複", "{}", Instant.now());
+                "メールアドレスの重複", "{}", OCCURRED_AT);
         recorder.add("PROJECTION_REJECTED", "INVOICE", accountantTarget, "ROLE_ACCOUNTANT",
-                "荷主が見つからない", "{}", Instant.now());
+                "荷主が見つからない", "{}", OCCURRED_AT);
 
         String forSales = String.valueOf(listAs("ROLE_SALES").getBody().get("items"));
 
@@ -72,9 +82,9 @@ class AttentionItemControllerIT extends AbstractAxonIntegrationTest {
         String salesTarget = "sales-" + System.nanoTime();
         String trackerTarget = "trk-" + System.nanoTime();
         recorder.add("PROJECTION_REJECTED", "SHIPPER", salesTarget, "ROLE_SALES",
-                "メールアドレスの重複", "{}", Instant.now());
+                "メールアドレスの重複", "{}", OCCURRED_AT);
         recorder.add("REACTION_FAILED", "CARGO", trackerTarget, "ROLE_TRACKER",
-                "追跡の初期化が届かない", "{}", Instant.now());
+                "追跡の初期化が届かない", "{}", OCCURRED_AT);
 
         String body = String.valueOf(listAs("ROLE_SALES,ROLE_TRACKER").getBody().get("items"));
 
@@ -99,7 +109,7 @@ class AttentionItemControllerIT extends AbstractAxonIntegrationTest {
     void acknowledgingRemovesItemFromListAndKeepsTheTrail() {
         String target = "ack-" + System.nanoTime();
         recorder.add("PROJECTION_REJECTED", "SHIPPER", target, "ROLE_SALES",
-                "メールアドレスの重複", "{}", Instant.now());
+                "メールアドレスの重複", "{}", OCCURRED_AT);
         String itemId = itemIdOf("ROLE_SALES", target);
 
         // 確認する前は出ている。**この行が無いと、消えたのか元から無かったのか
@@ -122,7 +132,7 @@ class AttentionItemControllerIT extends AbstractAxonIntegrationTest {
     void cannotAcknowledgeAnotherRolesItem() {
         String target = "foreign-" + System.nanoTime();
         recorder.add("PROJECTION_REJECTED", "INVOICE", target, "ROLE_ACCOUNTANT",
-                "荷主が見つからない", "{}", Instant.now());
+                "荷主が見つからない", "{}", OCCURRED_AT);
         String itemId = itemIdOf("ROLE_ACCOUNTANT", target);
 
         assertThat(acknowledgeAs(itemId, "ROLE_SALES", "sales01").getStatusCode())
@@ -138,7 +148,7 @@ class AttentionItemControllerIT extends AbstractAxonIntegrationTest {
     void doesNotOverwriteAnExistingAcknowledgement() {
         String target = "twice-" + System.nanoTime();
         recorder.add("PROJECTION_REJECTED", "SHIPPER", target, "ROLE_SALES",
-                "メールアドレスの重複", "{}", Instant.now());
+                "メールアドレスの重複", "{}", OCCURRED_AT);
         String itemId = itemIdOf("ROLE_SALES", target);
 
         acknowledgeAs(itemId, "ROLE_SALES", "sales01");
@@ -153,7 +163,7 @@ class AttentionItemControllerIT extends AbstractAxonIntegrationTest {
     void cannotAcknowledgeWithoutRoles() {
         String target = "noroles-" + System.nanoTime();
         recorder.add("PROJECTION_REJECTED", "SHIPPER", target, "ROLE_SALES",
-                "メールアドレスの重複", "{}", Instant.now());
+                "メールアドレスの重複", "{}", OCCURRED_AT);
 
         assertThat(acknowledgeAs(itemIdOf("ROLE_SALES", target), null, "sales01").getStatusCode())
                 .isEqualTo(HttpStatus.NOT_FOUND);
@@ -171,7 +181,7 @@ class AttentionItemControllerIT extends AbstractAxonIntegrationTest {
     @DisplayName("ロールが伝わっていなければ何も出さない")
     void showsNothingWithoutRoles() {
         recorder.add("PROJECTION_REJECTED", "SHIPPER", "orphan-" + System.nanoTime(),
-                "ROLE_SALES", "メールアドレスの重複", "{}", Instant.now());
+                "ROLE_SALES", "メールアドレスの重複", "{}", OCCURRED_AT);
 
         ResponseEntity<JsonMap> response = listAs(null);
 
