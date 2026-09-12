@@ -140,6 +140,119 @@ class ContractEventRoundTripIT extends AbstractAxonIntegrationTest {
     }
 
     @Test
+    @org.junit.jupiter.api.Disabled(
+            "US23 §受入基準 4 の未達を示す検査。IT15 の最優先課題として引き継ぐ。"
+            + "直ったらこの行を外す——検査そのものは消さない（消すと、次に同じ欠陥が"
+            + "入っても誰も気づけない）")
+    @DisplayName("billingms で記録した入金が bookingms に届き、予約が精算済になる（US23 §4）")
+    void paymentRecordedReachesBooking() {
+        // **向きが逆の 1 本目である。** IT13 までの契約は booking → tracking →
+        // handling → billing の一方向で、**billing から booking へ戻るのは IT14 が
+        // 最初**。往復を検査していないと、購読側が読めていないことに気づけない。
+        //
+        // **この検査は現在赤である**（US23 §受入基準 4 の未達）。入金は記録され
+        // 請求書は入金済になるが、bookingms は `PaymentRecordedEvent` を処理せず、
+        // ログにも要確認にも退避（`dead_letter_entry`）にも何も残らない。reaction
+        // の token は追いついているので「読んだが配送されていない」形である。
+        // `@EventTag` に予約 ID を足しても変わらなかった。**原因は Axon 5 の
+        // イベント配送にあると見ており、IT15 で腰を据えて調べる。**
+        //
+        // 計画の T7 は「契約イベントなのでゴールデン JSON **と Axon Server 経由の
+        // 往復テスト**」を求めていたが、往復テストが作られていなかった。
+        // ゴールデン JSON（形の固定）だけでは「届くか」は分からない。
+        JdbcTemplate bookingJdbc = booking.getBean(JdbcTemplate.class);
+        JdbcTemplate billingJdbc = billing.getBean(JdbcTemplate.class);
+
+        String bookingId = "B-RT-" + System.nanoTime();
+        String invoiceId = "INV-RT-" + String.valueOf(System.nanoTime()).substring(9);
+        String shipperId = "SHP-RT-" + System.nanoTime();
+        String trackingNumber = "TRK-RT" + String.valueOf(System.nanoTime()).substring(10);
+
+        // 引取済の予約を作る。**画面の経路をなぞらない**——確かめたいのは
+        // 「入金のイベントが BC をまたいで届くか」だけである。
+        var cargos = billing.getBean(com.example.cargotracker.billing.infrastructure
+                .projection.BillingCargoProjection.class);
+        var shippers = billing.getBean(com.example.cargotracker.billing.infrastructure
+                .projection.ShipperContractProjection.class);
+        shippers.on(new com.example.cargotracker.shared.contract.event.ShipperRegisteredEvent(
+                shipperId, "INDIVIDUAL", "山田 太郎", shipperId + "@example.com",
+                "03-0000-0000", "東京都港区", null, null));
+        cargos.on(new com.example.cargotracker.shared.contract.event.TrackingInitializedEvent(
+                trackingNumber, bookingId, shipperId, "JPTYO", "JPOSA", "GENERAL",
+                new java.math.BigDecimal("1200"),
+                java.util.List.of(new com.example.cargotracker.shared.contract.event
+                        .TrackingInitializedEvent.Leg("V-MOL-001", "JPTYO", "JPOSA",
+                        java.time.Instant.parse("2026-09-01T09:00:00Z"),
+                        java.time.Instant.parse("2026-09-05T18:00:00Z"))),
+                java.time.Instant.parse("2026-09-01T01:00:00Z")), "evt-" + System.nanoTime());
+
+        // 予約の側も引取済にしておく（精算は引取済からしか進まない）。
+        var bookingCommands = booking.getBean(
+                org.axonframework.messaging.commandhandling.gateway.CommandGateway.class);
+        bookingCommands.sendAndWait(new com.example.cargotracker.booking.domain.model.commands
+                .BookCargoCommand(bookingId, shipperId,
+                new com.example.cargotracker.booking.domain.model.valueobjects.CargoSpecification(
+                        com.example.cargotracker.booking.domain.model.valueobjects
+                                .CargoType.GENERAL,
+                        com.example.cargotracker.booking.domain.model.valueobjects.Weight
+                                .ofKilograms("1200"),
+                        new com.example.cargotracker.booking.domain.model.valueobjects.Dimensions(
+                                new java.math.BigDecimal("120"), new java.math.BigDecimal("80"),
+                                new java.math.BigDecimal("100")),
+                        10, "往復の貨物", null, null),
+                new com.example.cargotracker.booking.domain.model.valueobjects.RouteSpecification(
+                        com.example.cargotracker.shared.domain.location.Location.of("JPTYO"),
+                        com.example.cargotracker.shared.domain.location.Location.of("JPOSA"),
+                        java.time.LocalDate.now().plusDays(60)),
+                "sales01"));
+        bookingCommands.sendAndWait(new com.example.cargotracker.booking.domain.model.commands
+                .MarkDeliveredCommand(bookingId, trackingNumber,
+                java.time.Instant.parse("2026-09-05T18:00:00Z"), "JPOSA"));
+
+        await("予約が引取済になる").atMost(Duration.ofSeconds(30))
+                .pollInterval(Duration.ofMillis(500))
+                .until(() -> "DELIVERED".equals(bookingJdbc.queryForObject(
+                        "SELECT booking_status FROM cargo_summary WHERE booking_id = ?",
+                        String.class, bookingId)));
+
+        // 請求書を作り、発行して、入金を記録する。
+        var billingCommands = billing.getBean(
+                org.axonframework.messaging.commandhandling.gateway.CommandGateway.class);
+        var calculation = billing.getBean(com.example.cargotracker.billing.application
+                .InvoiceCalculation.class);
+        var outcome = calculation.prepare(trackingNumber, bookingId);
+        assertThat(outcome).isInstanceOf(
+                com.example.cargotracker.billing.application.InvoiceCalculation.Outcome.Ready.class);
+        var ready = (com.example.cargotracker.billing.application.InvoiceCalculation.Outcome.Ready)
+                outcome;
+        billingCommands.sendAndWait(ready.command());
+        invoiceId = ready.command().invoiceId();
+
+        final String finalInvoiceId = invoiceId;
+        await("請求書が投影に入る").atMost(Duration.ofSeconds(30))
+                .pollInterval(Duration.ofMillis(500))
+                .until(() -> billingJdbc.queryForObject(
+                        "SELECT count(*) FROM invoice WHERE invoice_id = ?",
+                        Integer.class, finalInvoiceId) == 1);
+
+        billingCommands.sendAndWait(new com.example.cargotracker.billing.domain.model.commands
+                .IssueInvoiceCommand(invoiceId, "accountant01"));
+        java.math.BigDecimal total = billingJdbc.queryForObject(
+                "SELECT total_amount FROM invoice WHERE invoice_id = ?",
+                java.math.BigDecimal.class, invoiceId);
+        billingCommands.sendAndWait(new com.example.cargotracker.billing.domain.model.commands
+                .RecordPaymentCommand(invoiceId, "PAY-RT-" + System.nanoTime(), total,
+                java.time.Instant.parse("2026-09-06T02:00:00Z"), "accountant01"));
+
+        // **購読側の表で見る。** 発行側を見ても「送った」ことしか分からない。
+        await("予約が精算済になる").atMost(Duration.ofSeconds(60))
+                .pollInterval(Duration.ofMillis(500))
+                .until(() -> "SETTLED".equals(bookingJdbc.queryForObject(
+                        "SELECT booking_status FROM cargo_summary WHERE booking_id = ?",
+                        String.class, bookingId)));
+    }
+
+    @Test
     @DisplayName("2 つのサービスは別々の DB を見ている（同じ表を見ているのではない）")
     void servicesUseSeparateDatabases() {
         // 同じスキーマに載せていると、上の検査は「イベントで届いた」ことを判別しない。

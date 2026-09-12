@@ -59,7 +59,7 @@ US23 は**新設ゼロ**です。`Invoice` に `issue` / `recordPayment` / `void
 | §1 | 「確定」状態の輸送料金をもとに精算書（請求番号・請求金額・支払い期限）を発行できる | 受け入れ「算出済の請求書を発行する」・`InvoiceTest#issuesTheInvoice`（不変条件 3：`dueDate = issuedAt + 30 日`） |
 | §2 | 精算書が荷主にメール通知される | **送信基盤はスコープ外**（注 N9）。残すのは「いつ・何を伝えたか」で、荷主は S62 で自社の請求書を読む。`InvoiceProjectionIT#marksIssued`（通知の記録と読み口を対で確かめる） |
 | §3 | 決済機関との連携により入金確認ができる | **決済機関との接続はスコープ外**（注 N9）。経理担当者が入金を記録する。`InvoiceTest#recordsThePayment` |
-| §4 | 入金確認後、精算状態が「精算済」に更新され予約状態も「精算済」になる | 受け入れ「入金を記録すると予約が精算済になる」・`InvoiceTest#recordsThePayment`（契約イベントの中身）・クラスタ E2E（予約が精算済になるところ） |
+| §4 | 入金確認後、精算状態が「精算済」に更新され予約状態も「精算済」になる | **未達**（請求書は入金済になるが、**予約は引取済のまま**）。`InvoiceTest#recordsThePayment` と受け入れは緑だが、どちらも 1 サービスの中で完結する。**BC をまたぐ配送だけが未検査**だった——クローズで新設した `ContractEventRoundTripIT#paymentRecordedReachesBooking` が赤で示す（IT15 の最優先） |
 | §5 | 支払い期限超過時、経理担当者に未払い通知が送信される | 受け入れ「期限を過ぎた請求書が未払いとして出る」・`InvoiceTest#overdueStartsTheDayAfterTheDueDate`（**列を持たず `overdue(today)` で判定**。期限当日は超過ではない） |
 
 ### 受入基準に現れない不変条件（**正典にあり、実装が要る**）
@@ -97,7 +97,7 @@ US23 は**新設ゼロ**です。`Invoice` に `issue` / `recordPayment` / `void
 
 ## 成功基準
 
-- [x] デモ項目の受け入れテストがすべて緑（**クローズで達成**。ステップ定義が 1 つも無く、着手時点では事実に反していた）
+- [x] デモ項目の受け入れテストがすべて緑（**クローズで達成**。ステップ定義が 1 つも無く、着手時点では事実に反していた）。ただし**受け入れは 1 サービスの中で完結する**ので、D9 後半（予約が精算済になる）は判別しなかった
 - [x] **`TZ=UTC` でモジュールを分けて `build` が緑**（`dev:backend:full:split`。5 群。**クローズで達成**——カバレッジゲートが 2 モジュールで赤のままだった）
 - [x] フロントの `npm run test`（494 件）・`npx tsc -b`・`npm run build` が緑
 - [x] **受入基準の表を、実装を始める前に作った**（継続）
@@ -114,7 +114,7 @@ US23 は**新設ゼロ**です。`Invoice` に `issue` / `recordPayment` / `void
 - [x] **前 IT の Try を、クローズの最初に採点した**（[ふりかえり](retrospective-14.md) の採点表）（**Try T11**。未達・一部達成はその場でふりかえりの Try に起こす）
 - [x] **見積と請求が同じ料率を読んでいる**（契約テストで固定。ADR-0016 決定 1）
 - [x] **画面一覧に行があって節が無い画面が 0 件**（検査で固定。N1 の再発防止）
-- [ ] SonarQube の Quality Gate がバックエンド・フロントエンドとも PASS
+- [x] SonarQube の Quality Gate がバックエンド・フロントエンドとも PASS（新規指摘 0 件。4 度赤を返してから通した）
 - [x] `npx gulp okf:check` が ERROR 0
 - [x] **ユーザーマニュアル 18 章（見積を作る）・17 章への発行と入金の追記**。画面キャプチャを生成 spec で撮る
 
@@ -446,7 +446,7 @@ end note
 | D6 | 見積と請求が同じ料率で計算している | 正典の不変条件 2 | `RateTableParityTest`（契約テスト） |
 | D7 | 算出済の請求書を発行すると、請求番号・金額・支払期限（発行日 + 30 日）が確定する | US23 §1 | 受け入れ・`InvoiceTest#issuesTheInvoice` |
 | D8 | 荷主が自社の請求書を S62 で読める（**他社の請求書は読めない**） | US23 §2 | 受け入れ・クラスタ E2E |
-| D9 | 入金を記録すると請求が「入金済」になり、**予約が「精算済」になる** | US23 §3・§4 | 受け入れ・`InvoiceTest#recordsThePayment`（契約イベントの中身）・クラスタ E2E（予約が精算済になるところ） |
+| D9 | 入金を記録すると請求が「入金済」になり、**予約が「精算済」になる** | US23 §3・§4 | **前半のみ達成**。請求が入金済になるところは受け入れ・クラスタ E2E とも緑。**予約が精算済になるところは未達**（`ContractEventRoundTripIT#paymentRecordedReachesBooking` が赤で示す） |
 | D10 | 期限を過ぎた請求書が未払いとして経理に出る（**期限当日は超過ではない**） | US23 §5 | 受け入れ・`InvoiceTest#overdueStartsTheDayAfterTheDueDate` |
 | D11 | 取り消した請求書は再発行できず、新規に発行する | 正典の不変条件 6 | `InvoiceTest#doesNotReissueAVoidedInvoice` |
 | D12 | 請求詳細に「見積時の概算 → 請求 → 差額」と差の理由が出る（**見積を経ない予約では出さない**） | 正典・注 N12 | `InvoiceScreens.test.tsx` |
@@ -468,10 +468,10 @@ end note
 - [x] **受入基準の表の「検査の所在」に書いたクラス名が実在する**（`IterationPlanChecksExistTest`。`CURRENT_PLAN` を 14 に上げた）
 - [x] **画面一覧に行があって節が無い画面が 0 件**（新しい検査。置いた瞬間に既存の 5 件を見つけた）
 - [x] ナビゲーション整合（`ui_design.md` の構成表・`navigation.ts`・S02・検証テストの 4 点が一致）。**画面の中のリンク先の到達性も検査した**（Try T4）
-- [ ] **`TZ=UTC` で分割 `build` が緑**
+- [x] **`TZ=UTC` で分割 `build` が緑**（5 群すべて）
 - [x] フロントの `npm run test`（494 件）・`npx tsc -b`・`npm run build`・ESLint が緑
-- [ ] クラスタ E2E が緑（US ごとに 1 度 + 通し）
-- [ ] SonarQube の Quality Gate がバックエンド・フロントエンドとも PASS
+- [ ] クラスタ E2E が緑（US ごとに 1 度 + 通し）——**24 件中 21 件緑**。赤 3 件は US23 §4 の実欠陥 1 件と E2E 側の不備 2 件（待ち方・ラベルの重複）
+- [x] SonarQube の Quality Gate がバックエンド・フロントエンドとも PASS（新規指摘 0 件。4 度赤を返してから通した）
 - [ ] CI が緑
 - [x] **注 N1〜N14 を設計ドキュメントに反映した**（クローズでさらに 3 か所——`invoice_notification`・`overdue_days`・Processing Group の単位——を実装に合わせて直した）
 - [x] **ADR-0017 を起票した**（3 決定に 3 検査。レビュー architect が「文章だけの決定は無い」と確認）

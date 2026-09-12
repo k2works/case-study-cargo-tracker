@@ -20,6 +20,11 @@ import org.axonframework.eventsourcing.annotation.EventTag;
  * {@code Invoice} である。付け忘れると集約が空のまま復元され、状態を見る守りが
  * 素通りする。</p>
  *
+ * <p><b>予約 ID にもタグを付けてみたが、届かない原因ではなかった</b>（IT14 で
+ * 実測。当てずっぽうの変更を残さないので戻した）。<b>bookingms が本イベントを
+ * 処理できない欠陥は未解決</b>で、往復テスト
+ * {@code ContractEventRoundTripIT#paymentRecordedReachesBooking} が赤で示す。</p>
+ *
  * @param paymentId 入金の識別子。<b>追記系投影の行を一意にする</b>
  *     （{@code payment.payment_id} が PK。少なくとも 1 回配送で二度入らない）
  */
