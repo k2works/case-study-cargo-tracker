@@ -36,7 +36,9 @@ import org.axonframework.modelling.annotation.TargetEntityId;
  *     作れない。投影はコマンドを読まないので、この値はイベントにも載せ直す
  * @param originUnLocode 出発地の UN/LOCODE
  * @param destinationUnLocode 目的地の UN/LOCODE
- * @param cargoType 貨物種別の名前（{@code GENERAL} / {@code HAZARDOUS} / {@code REEFER}）
+ * @param cargoType 貨物種別の名前（{@code GENERAL} / {@code HAZARDOUS} / {@code REFRIGERATED}）。
+ *     <b>契約の語彙は Booking のもの</b>で統一する。Routing は冷凍を
+ *     {@code REEFER} と呼ぶので、受け側が境界で翻訳する
  * @param weightKg 貨物の重量（kg）。<b>trackingms は使わないが、載せ直したイベントを
  *     billingms が読む</b>（IT13）。請求は実際に運んだ重量で基本料金を数えるので、
  *     ここで落とすと「重量の分からない貨物」になって請求を作れない

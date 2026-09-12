@@ -108,7 +108,7 @@ public class RoutingQueryHandler {
             throw new BusinessRuleViolation("貨物種別は必須です");
         }
         try {
-            return CargoType.valueOf(name);
+            return CargoType.fromContractName(name);
         } catch (IllegalArgumentException e) {
             throw new BusinessRuleViolation("知らない貨物種別です: " + name);
         }

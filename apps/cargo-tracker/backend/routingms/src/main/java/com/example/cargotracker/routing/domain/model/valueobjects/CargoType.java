@@ -12,8 +12,26 @@ public enum CargoType {
     GENERAL,
     /** 危険物。 */
     HAZARDOUS,
-    /** 冷凍・冷蔵貨物。 */
+    /** 冷凍・冷蔵貨物。<b>Booking では {@code REFRIGERATED}</b>（{@link #fromContractName}）。 */
     REEFER;
+
+    /**
+     * 契約で運ばれる貨物種別の名前を、自 BC の列挙型に組み直す。
+     *
+     * <p><b>契約の語彙は Booking のもの</b>（{@code GENERAL} / {@code HAZARDOUS} /
+     * {@code REFRIGERATED}）である。追跡の契約イベントも同じ語彙で billingms の
+     * 料率表まで届いており、出典が 1 つでなければ片方だけが直る。冷凍だけ
+     * Routing で呼び名が違う（{@code REEFER}）ので、<b>境界で翻訳する</b>——
+     * 翻訳しないと、冷凍の予約は経路候補を 1 件も見られない（422 で断られる）。</p>
+     *
+     * @throws IllegalArgumentException 知らない名前のとき（<b>素通りさせない</b>）
+     */
+    public static CargoType fromContractName(String name) {
+        if ("REFRIGERATED".equals(name)) {
+            return REEFER;
+        }
+        return valueOf(name);
+    }
 
     /**
      * 不変条件 4 の既定（空なら一般貨物のみ）を 1 か所で決める。

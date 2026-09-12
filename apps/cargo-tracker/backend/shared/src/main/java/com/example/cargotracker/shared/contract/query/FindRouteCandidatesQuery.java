@@ -18,7 +18,9 @@ import java.util.List;
  * @param originUnLocode 出発地の UN/LOCODE
  * @param destinationUnLocode 目的地の UN/LOCODE
  * @param arrivalDeadline 到着期限（日付。時刻は持たない）
- * @param cargoType 貨物種別の名前（{@code GENERAL} / {@code HAZARDOUS} / {@code REEFER}）
+ * @param cargoType 貨物種別の名前（{@code GENERAL} / {@code HAZARDOUS} / {@code REFRIGERATED}）。
+ *     <b>契約の語彙は Booking のもの</b>で統一する。Routing は冷凍を
+ *     {@code REEFER} と呼ぶので、受け側が境界で翻訳する
  * @param excludeUnLocodes 通したくない港。無ければ空リスト（null も空として扱う）
  * @param departFromUnLocode 探索の起点。通常は null（出発地から探す）
  */

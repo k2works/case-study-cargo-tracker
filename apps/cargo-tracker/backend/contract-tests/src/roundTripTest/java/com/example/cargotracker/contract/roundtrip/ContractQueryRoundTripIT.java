@@ -166,6 +166,62 @@ class ContractQueryRoundTripIT extends AbstractAxonIntegrationTest {
     }
 
     @Test
+    @DisplayName("冷凍貨物でも候補が返る（Booking の REFRIGERATED を Routing の REEFER へ翻訳する）")
+    void refrigeratedCargoIsTranslatedForRouting() {
+        // **REEFER しか受け入れない航海**を登録する。翻訳していなければ 0 件にも
+        // ならず、routingms が「知らない貨物種別です: REFRIGERATED」で断る。
+        String voyageNumber = "V-RF-" + Long.toString(System.nanoTime(), 36);
+        Map<String, Object> voyage = new LinkedHashMap<>();
+        voyage.put("voyageNumber", voyageNumber);
+        voyage.put("carrierCode", "MOL");
+        voyage.put("carrierName", "商船三井");
+        voyage.put("vesselName", "MOL REEFER");
+        voyage.put("movements", List.of(Map.of(
+                "departureUnLocode", "JPTYO",
+                "arrivalUnLocode", "USNYC",
+                "departureAt", at(2, 9),
+                "arrivalAt", at(16, 18))));
+        voyage.put("acceptedCargoTypes", List.of("REEFER"));
+
+        assertThat(RestClient.create()
+                .post().uri(urlOf(routing, "/api/v1/routing/voyages"))
+                .contentType(MediaType.APPLICATION_JSON).body(voyage)
+                .retrieve().toEntity(MAP).getStatusCode())
+                .isEqualTo(HttpStatus.CREATED);
+
+        String bookingId = bookCargo(registerShipper(), "REFRIGERATED");
+
+        await("予約の投影が入る").atMost(Duration.ofSeconds(30))
+                .pollInterval(Duration.ofMillis(500))
+                .until(() -> RestClient.create()
+                        .get().uri(urlOf(booking, "/api/v1/booking/bookings/" + bookingId))
+                        .retrieve().toEntity(MAP).getStatusCode() == HttpStatus.OK);
+
+        await("冷凍の候補が返る").atMost(Duration.ofSeconds(30))
+                .pollInterval(Duration.ofSeconds(1))
+                .untilAsserted(() -> {
+                    ResponseEntity<Map<String, Object>> response = RestClient.create()
+                            .get().uri(urlOf(booking, "/api/v1/booking/bookings/" + bookingId
+                                    + "/route-candidates"))
+                            .retrieve().toEntity(MAP);
+
+                    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+                    @SuppressWarnings("unchecked")
+                    List<Map<String, Object>> candidates =
+                            (List<Map<String, Object>>) response.getBody().get("candidates");
+                    assertThat(candidates)
+                            .as("REEFER を受け入れる航海が冷凍貨物の候補に出る")
+                            .anySatisfy(candidate -> {
+                                @SuppressWarnings("unchecked")
+                                List<Map<String, Object>> legs =
+                                        (List<Map<String, Object>>) candidate.get("legs");
+                                assertThat(legs.get(0).get("voyageNumber"))
+                                        .isEqualTo(voyageNumber);
+                            });
+                });
+    }
+
+    @Test
     @DisplayName("2 つのサービスは別々の DB を見ている")
     void servicesUseSeparateDatabases() {
         var bookingJdbc = booking.getBean(org.springframework.jdbc.core.JdbcTemplate.class);
@@ -192,12 +248,21 @@ class ContractQueryRoundTripIT extends AbstractAxonIntegrationTest {
     }
 
     private String bookCargo(String shipperId) {
+        return bookCargo(shipperId, "GENERAL");
+    }
+
+    private String bookCargo(String shipperId, String cargoType) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("shipperId", shipperId);
         body.put("originUnLocode", "JPTYO");
         body.put("destinationUnLocode", "USNYC");
         body.put("arrivalDeadline", today(30));
-        body.put("cargoType", "GENERAL");
+        body.put("cargoType", cargoType);
+        if ("REFRIGERATED".equals(cargoType)) {
+            // 冷凍は温度要件が必須（不変条件 3）。
+            body.put("temperatureMinC", "-20.0");
+            body.put("temperatureMaxC", "-5.0");
+        }
         body.put("weightKg", "1200.00");
         body.put("lengthCm", "120.00");
         body.put("widthCm", "80.00");
