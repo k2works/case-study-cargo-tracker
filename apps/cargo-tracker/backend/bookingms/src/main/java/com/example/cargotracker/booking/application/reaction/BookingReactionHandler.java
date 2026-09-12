@@ -11,10 +11,12 @@ import com.example.cargotracker.booking.domain.model.commands.RecordHandlingComm
 import com.example.cargotracker.booking.domain.model.commands.RevertHandlingCommand;
 import com.example.cargotracker.booking.domain.model.commands.MarkDeliveredCommand;
 import com.example.cargotracker.booking.domain.model.commands.RevertDeliveryCommand;
+import com.example.cargotracker.booking.domain.model.commands.SettleBookingCommand;
 import com.example.cargotracker.shared.contract.event.CargoDeliveredEvent;
 import com.example.cargotracker.shared.contract.event.CargoDeliveryRevertedEvent;
 import com.example.cargotracker.shared.contract.event.HandlingActivityRegisteredEvent;
 import com.example.cargotracker.shared.contract.event.HandlingActivityVoidedEvent;
+import com.example.cargotracker.shared.contract.event.PaymentRecordedEvent;
 import com.example.cargotracker.shared.contract.event.TrackingInitializedEvent;
 import java.time.Clock;
 import java.util.Map;
@@ -204,6 +206,23 @@ public class BookingReactionHandler {
     public void on(CargoDeliveredEvent event) {
         commands.sendAndWait(new MarkDeliveredCommand(event.bookingId(),
                 event.trackingNumber(), event.deliveredAt(), event.location()), Void.class);
+    }
+
+    /**
+     * 入金が記録された（UC18 / US23 §受入基準 4）。
+     *
+     * <p><b>精算の輪が閉じる。</b> 入金を知っているのは billingms で、予約は
+     * その事実を写して「精算済」になる。{@code BookingStatus.SETTLED} は IT1 から
+     * 列挙にあったが、<b>遷移させる相手がここで初めてできる</b>。</p>
+     *
+     * <p><b>誰が精算したかは入金を記録した人を写す。</b> 連鎖は利用者名を持たない
+     * が、「system」で埋めると誰が入金を確かめたのかが予約の側から追えなくなる。</p>
+     */
+    @EventHandler
+    public void on(PaymentRecordedEvent event) {
+        commands.sendAndWait(new SettleBookingCommand(event.bookingId(), event.invoiceId(),
+                event.amount(), event.currency(), event.paidAt(), event.recordedBy()),
+                Void.class);
     }
 
     /**

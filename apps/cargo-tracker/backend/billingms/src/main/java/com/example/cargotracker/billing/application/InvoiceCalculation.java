@@ -135,6 +135,11 @@ public class InvoiceCalculation {
                 contract.shipperName(), ShipperType.of(contract.shipperType()),
                 DiscountRate.ofNullable(contract.discountRate()), contract.contractNumber(),
                 transport,
+                // 見積時の概算（注 N12）。**いまは常に null。** 見積から予約を
+                // 作る経路（US01）が繋がると、貨物の写しに載って届く（T7）。
+                // 列と契約だけ先に用意してある——投影はコマンドを読まないので、
+                // イベントに載せる場所が無ければ S61 は概算行を出せない。
+                null,
                 // 連鎖からの算出は利用者名を持たない。**誰が作ったかは残す。**
                 "system"));
     }

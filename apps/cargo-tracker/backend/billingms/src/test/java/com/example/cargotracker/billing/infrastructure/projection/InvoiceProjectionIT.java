@@ -56,7 +56,7 @@ class InvoiceProjectionIT extends AbstractAxonIntegrationTest {
                 new BigDecimal("510000"), new BigDecimal("76500"), BigDecimal.ZERO,
                 // 輸出免税（税率は算出時のものを載せる）。
                 new BigDecimal("0.10"), true,
-                new BigDecimal("433500"), "JPY",
+                new BigDecimal("433500"), "JPY", null,
                 List.of(new InvoiceCalculatedEvent.LineItem("BASE",
                                 "基本料金（2 区間・近海 2.5 + 遠洋 6.0・1,200 kg・一般 1.0）",
                                 new BigDecimal("510000"), "JPY", null),

@@ -28,6 +28,30 @@ public final class BillingQueries {
     public record FindInvoiceOfBookingQuery(String bookingId) {
     }
 
+    /**
+     * 未払いの請求書（S60 の絞り込み・US23 §受入基準 5）。
+     *
+     * <p><b>期限超過は列に持たない</b>（不変条件 4）。問い合わせるたびに
+     * {@code due_on &lt; today} で数える。<b>期限当日は超過ではない。</b></p>
+     *
+     * @param today <b>業務タイムゾーンの今日</b>。呼ぶ側が決めて渡す——DB の
+     *     {@code CURRENT_DATE} を使うと、サーバのタイムゾーンで判断される
+     */
+    public record FindOverdueInvoicesQuery(java.time.LocalDate today) {
+    }
+
+    /**
+     * 荷主が読む自社の請求書（S62 / US23 §受入基準 2）。
+     *
+     * <p><b>荷主 ID で絞る。</b> 他社の請求書は読めない——金額を出す唯一の
+     * 荷主向け画面なので、絞りを画面に任せない。</p>
+     *
+     * <p><b>発行済だけを出す。</b> 算出済は社内の途中経過で、荷主に見せる
+     * ものではない。取消も出さない（一度取り消したものを見せ続けない）。</p>
+     */
+    public record FindShipperInvoiceQuery(String invoiceId, String shipperId) {
+    }
+
     /** 一覧の応答。 */
     public record InvoiceListView(List<InvoiceSummaryView> items, int total) {
     }
@@ -47,7 +71,9 @@ public final class BillingQueries {
             String statusLabel,
             BigDecimal totalAmount,
             String currency,
-            Instant calculatedAt) {
+            Instant calculatedAt,
+            java.time.LocalDate dueOn,
+            boolean overdue) {
     }
 
     /**
@@ -56,8 +82,12 @@ public final class BillingQueries {
      * <p><b>明細も一緒に返す。</b> 行ごとに問い合わせると N+1 になり、
      * 何より「金額の根拠」は 1 画面で読めなければ根拠にならない。</p>
      *
-     * @param quotedAmount 見積時の概算。<b>本 IT では常に {@code null}</b>——見積は
-     *     US01（IT14）なので、見積を経ない予約しかない。S61 は概算行と差額を出さない
+     * @param quotedAmount 見積時の概算。<b>見積を経ない予約では {@code null}</b>
+     *     （注 N12）。S61 は両方の場合を出し分ける（概算行と差額を出さない）
+     * @param issuedOn 発行日。<b>未発行なら {@code null}</b>
+     * @param dueOn 支払期限（発行日 + 30 日・不変条件 3）。<b>未発行なら {@code null}</b>
+     * @param overdue 支払期限を過ぎているか。<b>列ではなく問い合わせのたびに数える</b>
+     *     （不変条件 4）。期限当日は超過ではない
      */
     public record InvoiceView(
             String invoiceId,
@@ -78,6 +108,10 @@ public final class BillingQueries {
             String statusLabel,
             Instant calculatedAt,
             BigDecimal quotedAmount,
+            java.time.LocalDate issuedOn,
+            java.time.LocalDate dueOn,
+            Instant paidAt,
+            boolean overdue,
             List<InvoiceLineView> lineItems) {
     }
 

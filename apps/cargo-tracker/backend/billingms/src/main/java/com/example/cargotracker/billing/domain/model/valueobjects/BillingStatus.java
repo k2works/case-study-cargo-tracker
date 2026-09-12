@@ -42,4 +42,41 @@ public enum BillingStatus {
     public boolean acceptsAdjustment() {
         return this == CALCULATED;
     }
+
+    /**
+     * 発行できる状態か（US23 §受入基準 1）。
+     *
+     * <p><b>取消からは再発行しない</b>（不変条件 6）。取り消した請求書を
+     * 生き返らせると、荷主に一度取り消しを伝えたものがまた有効になる。
+     * 出し直すときは<b>新規に発行する</b>。</p>
+     */
+    public boolean acceptsIssue() {
+        return this == CALCULATED;
+    }
+
+    /**
+     * 入金を記録できる状態か（US23 §受入基準 3・4）。
+     *
+     * <p><b>発行していない請求書に入金は記録しない。</b> 金額と支払期限が
+     * 確定するのは発行のときで、その前の入金は「何に対する入金か」が決まらない。</p>
+     */
+    public boolean acceptsPayment() {
+        return this == INVOICED;
+    }
+
+    /**
+     * 取り消せる状態か。
+     *
+     * <p><b>入金済は取り消さない。</b> 決着したものを動かすと、入金の事実と
+     * 請求書の状態が食い違う。誤って記録した入金は入金の記録を取り消す
+     * （請求書そのものの取消とは別の操作）。</p>
+     */
+    public boolean acceptsVoid() {
+        return this == CALCULATED || this == INVOICED;
+    }
+
+    /** 決着したか。<b>一覧の既定から外す</b>（S60）。 */
+    public boolean isSettled() {
+        return this == PAID || this == VOID;
+    }
 }

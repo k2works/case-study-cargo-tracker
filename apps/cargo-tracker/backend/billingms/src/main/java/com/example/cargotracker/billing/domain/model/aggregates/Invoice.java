@@ -2,20 +2,29 @@ package com.example.cargotracker.billing.domain.model.aggregates;
 
 import com.example.cargotracker.billing.domain.model.commands.AdjustInvoiceCommand;
 import com.example.cargotracker.billing.domain.model.commands.CalculateInvoiceCommand;
+import com.example.cargotracker.billing.domain.model.commands.IssueInvoiceCommand;
+import com.example.cargotracker.billing.domain.model.commands.RecordPaymentCommand;
 import com.example.cargotracker.billing.domain.model.commands.ReverseAdjustmentCommand;
+import com.example.cargotracker.billing.domain.model.commands.VoidInvoiceCommand;
 import com.example.cargotracker.billing.domain.model.events.InvoiceAdjustedEvent;
 import com.example.cargotracker.billing.domain.model.events.InvoiceCalculatedEvent;
+import com.example.cargotracker.billing.domain.model.events.InvoiceIssuedEvent;
+import com.example.cargotracker.billing.domain.model.events.InvoiceVoidedEvent;
 import com.example.cargotracker.billing.domain.model.valueobjects.BillingStatus;
 import com.example.cargotracker.billing.domain.model.valueobjects.FreightCharge;
 import com.example.cargotracker.billing.domain.model.valueobjects.LineItemType;
 import com.example.cargotracker.billing.domain.model.valueobjects.Money;
+import com.example.cargotracker.billing.domain.model.valueobjects.PaymentTerm;
 import com.example.cargotracker.billing.domain.model.valueobjects.RateTable;
 import com.example.cargotracker.billing.domain.service.DiscountPolicy;
 import com.example.cargotracker.billing.domain.service.FreightChargeCalculator;
+import com.example.cargotracker.shared.contract.event.PaymentRecordedEvent;
 import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.shared.domain.error.IllegalTransition;
+import com.example.cargotracker.shared.infrastructure.time.BusinessClockConfiguration;
 import java.math.BigDecimal;
 import java.time.Clock;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -41,9 +50,9 @@ import org.axonframework.messaging.eventhandling.gateway.EventAppender;
  * application 層の存在確認・投影の部分ユニーク・拒否の記録。ここで守れるのは
  * 「同じ請求書に二度算出しない」までである。</p>
  *
- * <p><b>期限超過（{@code overdue}）は作らない。</b> 期限が決まるのは発行のとき
- * （不変条件 3・US23・IT14）で、入力経路の無い述語をいま作ると**壊しても赤に
- * ならない**（IT12 の「常に 0 の列」と同型）。</p>
+ * <p><b>期限超過は列に持たない。</b> {@link #overdue(LocalDate)} で判定する
+ * （不変条件 4）。列に持つと、日付が変わるたびに全件を書き換えることになり、
+ * 書き換えそこねた行が静かに未払いから漏れる。<b>期限当日は超過ではない</b>。</p>
  */
 @EventSourced(idType = String.class, tagKey = "invoiceId")
 public class Invoice {
@@ -82,6 +91,18 @@ public class Invoice {
      * 「常に 0 の列」と同じ形）。金額は投影が持ち、画面はそちらを読む。</p>
      */
     private boolean taxExempt;
+
+    /** 予約と荷主。<b>発行と入金のイベントに載せる</b>（購読側の投影が作れる分を運ぶ）。 */
+    private String bookingId;
+    private String shipperId;
+
+    /**
+     * 支払期限。<b>発行のときに確定する</b>（不変条件 3）。
+     *
+     * <p>未発行なら {@code null} で、{@link #overdue(LocalDate)} は常に false を
+     * 返す——発行していない請求書に「期限を過ぎた」は無い。</p>
+     */
+    private LocalDate dueOn;
 
     /**
      * 税率。<b>算出時のものを覚えておく</b>——あとで料率が変わっても、出した
@@ -145,6 +166,8 @@ public class Invoice {
                 // 免税として復元される（IT13 のレビュー 中）。
                 rates.taxRate(), command.transport().isExport(),
                 round(total), base.currency(),
+                // **そのまま持つ。計算し直さない**（不変条件 7）。
+                command.quotedAmount(),
                 items, command.calculatedBy(), clock.instant()));
         return command.invoiceId();
     }
@@ -244,6 +267,135 @@ public class Invoice {
                 baseAmount.currency(), command.reversedBy(), clock.instant()));
     }
 
+    /**
+     * 請求書を発行する（US23 §受入基準 1）。
+     *
+     * <p><b>支払期限は集約が決める</b>（不変条件 3。発行日 + 30 日）。コマンドで
+     * 受け取ると、画面が期限を自由に決められることになる。</p>
+     *
+     * <p><b>「今日」は業務タイムゾーンで決める。</b> UTC で判断すると、時差の分
+     * だけ発行日が前日になる時間帯ができる。</p>
+     *
+     * <p><b>取消からは再発行しない</b>（不変条件 6）。出し直すときは新規に発行する。</p>
+     */
+    @CommandHandler
+    public void issue(IssueInvoiceCommand command, EventAppender appender, Clock clock) {
+        if (invoiceId == null) {
+            throw new IllegalTransition("請求書 " + command.invoiceId() + " がありません");
+        }
+        if (!status.acceptsIssue()) {
+            throw new IllegalTransition(
+                    "状態 " + status.label() + " の請求書は発行できません"
+                            + (status == BillingStatus.VOID
+                                    ? "（取り消した請求書は再発行しません。新規に発行してください）"
+                                    : ""));
+        }
+        requireText(command.issuedBy(), "発行した人は必須です");
+
+        LocalDate issuedOn = LocalDate.ofInstant(clock.instant(),
+                BusinessClockConfiguration.BUSINESS_ZONE);
+        appender.append(new InvoiceIssuedEvent(invoiceId, bookingId, shipperId,
+                round(currentTotal()), baseAmount.currency(),
+                issuedOn, PaymentTerm.dueOn(issuedOn),
+                command.issuedBy(), clock.instant()));
+    }
+
+    /**
+     * 入金を記録する（US23 §受入基準 3・4）。
+     *
+     * <p><b>決済機関との接続はスコープ外</b>（計画の注 N9）。経理担当者が入金
+     * 明細を見て記録する。<b>{@code paidAt} は必須</b>（不変条件 5）——いつの
+     * 入金かが分からない記録は、精算の証跡として使えない。</p>
+     *
+     * <p><b>発行していない請求書には記録しない。</b> 金額と支払期限が確定する
+     * のは発行のときで、その前の入金は「何に対する入金か」が決まらない。</p>
+     *
+     * <p><b>一部入金は扱わない。</b> 請求額と違う額を受け取ったら断る——黙って
+     * 入金済にすると、残りが誰にも見えないまま精算が終わる。</p>
+     */
+    @CommandHandler
+    public void recordPayment(RecordPaymentCommand command, EventAppender appender,
+            Clock clock) {
+        if (invoiceId == null) {
+            throw new IllegalTransition("請求書 " + command.invoiceId() + " がありません");
+        }
+        if (!status.acceptsPayment()) {
+            throw new IllegalTransition(
+                    "状態 " + status.label() + " の請求書には入金を記録できません");
+        }
+        requireText(command.paymentId(), "入金の識別子は必須です");
+        requireText(command.recordedBy(), "記録した人は必須です");
+        if (command.paidAt() == null) {
+            throw new BusinessRuleViolation("入金日時は必須です");
+        }
+        if (command.amount() == null
+                || command.amount().compareTo(round(currentTotal())) != 0) {
+            // **黙って入金済にしない。** 残りが誰にも見えないまま精算が終わる。
+            throw new BusinessRuleViolation(
+                    "入金額が請求額と違います: " + command.amount()
+                            + "（請求額 " + round(currentTotal()) + "）");
+        }
+
+        appender.append(new PaymentRecordedEvent(invoiceId, command.paymentId(),
+                bookingId, shipperId, command.amount(), baseAmount.currency(),
+                command.paidAt(), command.recordedBy(), clock.instant()));
+    }
+
+    /**
+     * 請求書を取り消す（UC18）。
+     *
+     * <p><b>入金済は取り消さない。</b> 決着したものを動かすと、入金の事実と
+     * 請求書の状態が食い違う。</p>
+     */
+    @CommandHandler
+    public void voidInvoice(VoidInvoiceCommand command, EventAppender appender, Clock clock) {
+        if (invoiceId == null) {
+            throw new IllegalTransition("請求書 " + command.invoiceId() + " がありません");
+        }
+        if (!status.acceptsVoid()) {
+            throw new IllegalTransition(
+                    "状態 " + status.label() + " の請求書は取り消せません");
+        }
+        requireText(command.reason(), "取消の理由は必須です");
+        requireText(command.voidedBy(), "取り消した人は必須です");
+
+        appender.append(new InvoiceVoidedEvent(invoiceId, bookingId, command.reason(),
+                command.voidedBy(), clock.instant()));
+    }
+
+    /**
+     * 支払期限を過ぎているか（不変条件 4・US23 §受入基準 5）。
+     *
+     * <p><b>列に持たない。</b> 持つと、日付が変わるたびに全件を書き換えること
+     * になり、書き換えそこねた行が静かに未払いから漏れる。</p>
+     *
+     * <p><b>期限当日は超過ではない。</b> 当日中に入金されることはふつうにある。</p>
+     *
+     * <p><b>{@code today} は業務タイムゾーンで決める</b>（呼ぶ側の責任）。
+     * UTC で判断すると、時差の分だけ 1 日早く督促が飛ぶ時間帯ができる。</p>
+     */
+    public boolean overdue(LocalDate today) {
+        // **判定は 1 か所**（PaymentTerm）。一覧の SQL と別々に書くと、片方だけが
+        // 正しくてもう片方が誤りを素通りさせる。
+        return PaymentTerm.overdue(status, dueOn, today);
+    }
+
+    @EventSourcingHandler
+    void on(InvoiceIssuedEvent event) {
+        this.status = BillingStatus.INVOICED;
+        this.dueOn = event.dueOn();
+    }
+
+    @EventSourcingHandler
+    void on(PaymentRecordedEvent event) {
+        this.status = BillingStatus.PAID;
+    }
+
+    @EventSourcingHandler
+    void on(InvoiceVoidedEvent event) {
+        this.status = BillingStatus.VOID;
+    }
+
     @EventSourcingHandler
     void on(InvoiceCalculatedEvent event) {
         this.invoiceId = event.invoiceId();
@@ -253,6 +405,8 @@ public class Invoice {
         this.adjustmentTotal = BigDecimal.ZERO;
         this.taxExempt = event.taxExempt();
         this.taxRate = event.taxRate();
+        this.bookingId = event.bookingId();
+        this.shipperId = event.shipperId();
     }
 
     @EventSourcingHandler
@@ -299,6 +453,19 @@ public class Invoice {
         String body = adjustmentId.length() > 32
                 ? adjustmentId.substring(adjustmentId.length() - 32) : adjustmentId;
         return "REV-" + body;
+    }
+
+    /**
+     * いまの請求額。
+     *
+     * <p><b>持たずに数え直す。</b> 合計を状態に持つと、調整のたびに 2 か所を
+     * 直すことになる（集約と投影）。数え方は算出・調整と同じ 1 本である。</p>
+     */
+    private Money currentTotal() {
+        Money afterDiscount = baseAmount.subtract(discountAmount);
+        Money taxable = Money.yen(afterDiscount.amount().add(adjustmentTotal));
+        Money tax = taxExempt ? Money.zero() : taxable.multiply(taxRate);
+        return taxable.add(tax);
     }
 
     private static BigDecimal round(Money money) {

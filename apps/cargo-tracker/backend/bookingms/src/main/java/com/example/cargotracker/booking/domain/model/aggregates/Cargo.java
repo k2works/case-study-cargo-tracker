@@ -14,6 +14,7 @@ import com.example.cargotracker.booking.domain.model.commands.RevertDeliveryComm
 import com.example.cargotracker.booking.domain.model.commands.RecordHandlingCommand;
 import com.example.cargotracker.booking.domain.model.commands.RevertHandlingCommand;
 import com.example.cargotracker.booking.domain.model.commands.RevertTrackingNumberCommand;
+import com.example.cargotracker.booking.domain.model.commands.SettleBookingCommand;
 import com.example.cargotracker.booking.domain.model.commands.UpdateCargoSpecificationCommand;
 import com.example.cargotracker.booking.domain.model.events.BookingConfirmedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
@@ -33,6 +34,7 @@ import com.example.cargotracker.booking.domain.model.events.CargoRoutedEvent;
 import com.example.cargotracker.booking.domain.model.events.BookingMisroutedEvent;
 import com.example.cargotracker.booking.domain.model.events.BookingDeliveredEvent;
 import com.example.cargotracker.booking.domain.model.events.BookingDeliveryRevertedEvent;
+import com.example.cargotracker.booking.domain.model.events.BookingSettledEvent;
 import com.example.cargotracker.booking.domain.model.events.HandlingRecordedEvent;
 import com.example.cargotracker.booking.domain.model.events.HandlingRevertedEvent;
 import com.example.cargotracker.booking.domain.model.events.TrackingNumberIssuedEvent;
@@ -677,6 +679,42 @@ public class Cargo {
         // 引取済からはキャンセルできない（不変条件 9）。次に来るのは精算だけ。
         this.statusBeforeDelivery = bookingStatus;
         this.bookingStatus = BookingStatus.DELIVERED;
+    }
+
+    /**
+     * 予約が精算済になった（UC18 / US23 §受入基準 4）。
+     *
+     * <p><b>契約 {@code PaymentRecordedEvent} を受けて
+     * {@code BookingReactionHandler} が送る。</b> 入金を知っているのは billingms
+     * であり、予約はその事実を写す。<b>画面から直接送る入口は置かない</b>——
+     * 入金を伴わない「精算済」は業務として存在しない。</p>
+     *
+     * <p><b>引取済からだけ進む</b>（{@code BookingStatus#canTransitionTo}）。
+     * 配送が終わっていない予約に入金があるのは、請求書の取り違えである。</p>
+     *
+     * <p><b>二度届いても 1 度だけ。</b> Event Processor は at-least-once である。</p>
+     *
+     * <p><b>知らない予約では止まらない。</b> 入金は billingms に記録済みで、
+     * ここで例外にすると Event Processor が止まり、後続の予約まで届かなくなる。</p>
+     */
+    @CommandHandler
+    public void settle(SettleBookingCommand command, EventAppender appender, Clock clock) {
+        if (bookingId == null || bookingStatus == BookingStatus.SETTLED) {
+            return;
+        }
+        if (!bookingStatus.canTransitionTo(BookingStatus.SETTLED)) {
+            throw new IllegalTransition(
+                    "状態 " + bookingStatus.label() + " の予約は精算済にできません");
+        }
+        appender.append(new BookingSettledEvent(command.bookingId(), command.invoiceId(),
+                command.paidAmount(), command.currency(), command.paidAt(),
+                command.settledBy(), clock.instant()));
+    }
+
+    @EventSourcingHandler
+    void on(BookingSettledEvent event) {
+        // 精算済は終端。ここから進む先は無い（BookingStatus の遷移表）。
+        this.bookingStatus = BookingStatus.SETTLED;
     }
 
     /**

@@ -16,6 +16,7 @@ public interface InvoiceMapper {
     String COLUMNS = "invoice_id, booking_id, shipper_id, shipper_name, shipper_type, "
             + "contract_number, base_amount, discount_amount, adjustment_amount, tax_amount, "
             + "total_amount, currency, discount_rate, billing_status, calculated_at, "
+            + "issued_on, due_on, paid_at, quoted_amount, "
             + "projected_at, last_event_id";
 
     /**
@@ -38,6 +39,63 @@ public interface InvoiceMapper {
 
     @Select("SELECT " + COLUMNS + " FROM invoice WHERE invoice_id = #{invoiceId}")
     InvoiceRow find(@Param("invoiceId") String invoiceId);
+
+    /**
+     * 発行を写す（US23 §受入基準 1）。
+     *
+     * <p><b>状態と期限を一緒に書く。</b> 別々に書くと、片方だけ入った行が
+     * 「請求済だが期限が無い」あるいは「期限はあるが算出済」になる。</p>
+     */
+    int markIssued(@Param("invoiceId") String invoiceId,
+            @Param("issuedOn") java.time.LocalDate issuedOn,
+            @Param("dueOn") java.time.LocalDate dueOn,
+            @Param("totalAmount") BigDecimal totalAmount,
+            @Param("projectedAt") Instant projectedAt,
+            @Param("lastEventId") String lastEventId);
+
+    /** 入金を写す（US23 §受入基準 4）。 */
+    int markPaid(@Param("invoiceId") String invoiceId,
+            @Param("paidAt") Instant paidAt,
+            @Param("projectedAt") Instant projectedAt,
+            @Param("lastEventId") String lastEventId);
+
+    /**
+     * 取消を写す（UC18）。
+     *
+     * <p><b>行は消さない。</b> 消すと、取り消した事実そのものが残らない。
+     * {@code void_marker} には請求書 ID を入れて、部分ユニーク
+     * {@code (booking_id, void_marker)} から外す——同じ予約に新しい請求書を
+     * 発行できるようにするため（不変条件 6）。</p>
+     */
+    int markVoided(@Param("invoiceId") String invoiceId,
+            @Param("projectedAt") Instant projectedAt,
+            @Param("lastEventId") String lastEventId);
+
+    /** 入金の記録（追記専用。{@code payment_id} が PK）。 */
+    int insertPayment(PaymentRow row);
+
+    /** 発行の通知（追記専用。{@code invoice_id} が PK）。 */
+    int insertNotification(NotificationRow row);
+
+    /** その荷主に送った通知（S62 が読む）。 */
+    @Select("SELECT invoice_id, shipper_id, kind, notified_at FROM invoice_notification "
+            + "WHERE invoice_id = #{invoiceId}")
+    NotificationRow findNotification(@Param("invoiceId") String invoiceId);
+
+    /**
+     * 未払いの請求書（US23 §受入基準 5）。
+     *
+     * <p><b>期限超過は列に持たない</b>（不変条件 4）。状態と期限で絞る——
+     * <b>期限当日は超過ではない</b>ので {@code due_on < today} である
+     * （{@code <=} にすると当日に督促が飛ぶ）。</p>
+     *
+     * <p>{@code today} は<b>業務タイムゾーン</b>で決めて渡す。DB の
+     * {@code CURRENT_DATE} を使うと、サーバのタイムゾーンで判断される。</p>
+     */
+    @Select("SELECT " + COLUMNS + " FROM invoice "
+            + "WHERE billing_status = 'INVOICED' AND due_on < #{today} "
+            + "ORDER BY due_on, invoice_id")
+    List<InvoiceRow> findOverdue(@Param("today") java.time.LocalDate today);
 
     /**
      * その予約の<b>有効な</b>請求書（不変条件 2 の一段目が読む）。
@@ -86,6 +144,22 @@ public interface InvoiceMapper {
             + "WHERE invoice_id = #{invoiceId}")
     int nextLineSeq(@Param("invoiceId") String invoiceId);
 
+    record PaymentRow(
+            String paymentId,
+            String invoiceId,
+            BigDecimal amount,
+            String currency,
+            Instant paidAt,
+            String recordedBy) {
+    }
+
+    record NotificationRow(
+            String invoiceId,
+            String shipperId,
+            String kind,
+            Instant notifiedAt) {
+    }
+
     record InvoiceRow(
             String invoiceId,
             String bookingId,
@@ -102,6 +176,10 @@ public interface InvoiceMapper {
             BigDecimal discountRate,
             String billingStatus,
             Instant calculatedAt,
+            java.time.LocalDate issuedOn,
+            java.time.LocalDate dueOn,
+            Instant paidAt,
+            BigDecimal quotedAmount,
             Instant projectedAt,
             String lastEventId) {
     }

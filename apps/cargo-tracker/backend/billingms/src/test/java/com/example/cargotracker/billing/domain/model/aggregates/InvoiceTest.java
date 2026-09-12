@@ -4,9 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.cargotracker.billing.domain.model.commands.AdjustInvoiceCommand;
 import com.example.cargotracker.billing.domain.model.commands.CalculateInvoiceCommand;
+import com.example.cargotracker.billing.domain.model.commands.IssueInvoiceCommand;
+import com.example.cargotracker.billing.domain.model.commands.RecordPaymentCommand;
 import com.example.cargotracker.billing.domain.model.commands.ReverseAdjustmentCommand;
+import com.example.cargotracker.billing.domain.model.commands.VoidInvoiceCommand;
 import com.example.cargotracker.billing.domain.model.events.InvoiceAdjustedEvent;
 import com.example.cargotracker.billing.domain.model.events.InvoiceCalculatedEvent;
+import com.example.cargotracker.billing.domain.model.events.InvoiceIssuedEvent;
+import com.example.cargotracker.billing.domain.model.events.InvoiceVoidedEvent;
 import com.example.cargotracker.billing.domain.model.valueobjects.DiscountRate;
 import com.example.cargotracker.billing.domain.model.valueobjects.LineItemType;
 import com.example.cargotracker.billing.domain.model.valueobjects.RateTableFixture;
@@ -14,12 +19,14 @@ import com.example.cargotracker.billing.domain.model.valueobjects.ShipperType;
 import com.example.cargotracker.billing.domain.model.valueobjects.TransportRecord;
 import com.example.cargotracker.billing.domain.service.DiscountPolicy;
 import com.example.cargotracker.billing.domain.service.FreightChargeCalculator;
+import com.example.cargotracker.shared.contract.event.PaymentRecordedEvent;
 import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.shared.domain.error.IllegalTransition;
 import com.example.cargotracker.shared.domain.location.UnLocode;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import org.axonframework.eventsourcing.configuration.EventSourcedEntityModule;
@@ -76,7 +83,7 @@ class InvoiceTest {
         return new CalculateInvoiceCommand(INVOICE, BOOKING, "SHP-000001", "山田商事", type,
                 discountRate == null ? DiscountRate.none()
                         : DiscountRate.of(new BigDecimal(discountRate)),
-                "CT-0012", transport(), "accountant01");
+                "CT-0012", transport(), null, "accountant01");
     }
 
     private InvoiceCalculatedEvent calculatedEventOf(CalculateInvoiceCommand command) {
@@ -156,7 +163,8 @@ class InvoiceTest {
                         new UnLocode("JPOSA"))),
                 new BigDecimal("1000"), "GENERAL", new UnLocode("JPTYO"), new UnLocode("JPOSA"));
         var command = new CalculateInvoiceCommand(INVOICE, BOOKING, "SHP-000001", "山田商事",
-                ShipperType.INDIVIDUAL, DiscountRate.none(), null, domestic, "accountant01");
+                ShipperType.INDIVIDUAL, DiscountRate.none(), null, domestic, null,
+                "accountant01");
 
         InvoiceCalculatedEvent event = calculatedEventOf(command);
 
@@ -238,24 +246,24 @@ class InvoiceTest {
         var transport = transport();
         fixture.given().noPriorActivity()
                 .when().command(new CalculateInvoiceCommand(INVOICE, "  ", "SHP-000001", "山田商事",
-                        ShipperType.INDIVIDUAL, DiscountRate.none(), null, transport, "a01"))
+                        ShipperType.INDIVIDUAL, DiscountRate.none(), null, transport, null, "a01"))
                 .then().exception(BusinessRuleViolation.class);
         fixture.given().noPriorActivity()
                 .when().command(new CalculateInvoiceCommand(INVOICE, BOOKING, null, "山田商事",
-                        ShipperType.INDIVIDUAL, DiscountRate.none(), null, transport, "a01"))
+                        ShipperType.INDIVIDUAL, DiscountRate.none(), null, transport, null, "a01"))
                 .then().exception(BusinessRuleViolation.class);
         fixture.given().noPriorActivity()
                 .when().command(new CalculateInvoiceCommand(INVOICE, BOOKING, "SHP-000001", null,
                         // 荷主種別が分からなければ割引を判断できない。
-                        null, DiscountRate.none(), null, transport, "a01"))
+                        null, DiscountRate.none(), null, transport, null, "a01"))
                 .then().exception(BusinessRuleViolation.class);
         fixture.given().noPriorActivity()
                 .when().command(new CalculateInvoiceCommand(INVOICE, BOOKING, "SHP-000001", null,
-                        ShipperType.INDIVIDUAL, DiscountRate.none(), null, null, "a01"))
+                        ShipperType.INDIVIDUAL, DiscountRate.none(), null, null, null, "a01"))
                 .then().exception(BusinessRuleViolation.class);
         fixture.given().noPriorActivity()
                 .when().command(new CalculateInvoiceCommand(" ", BOOKING, "SHP-000001", null,
-                        ShipperType.INDIVIDUAL, DiscountRate.none(), null, transport, "a01"))
+                        ShipperType.INDIVIDUAL, DiscountRate.none(), null, transport, null, "a01"))
                 .then().exception(BusinessRuleViolation.class);
     }
 
@@ -264,7 +272,7 @@ class InvoiceTest {
     void discountLineWorksWithoutContractNumber() {
         var command = new CalculateInvoiceCommand(INVOICE, BOOKING, "SHP-000001", "山田商事",
                 ShipperType.CORPORATE, DiscountRate.of(new BigDecimal("0.1000")), null,
-                transport(), "accountant01");
+                transport(), null, "accountant01");
 
         InvoiceCalculatedEvent event = calculatedEventOf(command);
 
@@ -298,7 +306,7 @@ class InvoiceTest {
                 new BigDecimal("1000"), "GENERAL", new UnLocode("JPTYO"), new UnLocode("JPOSA"));
         var calculated = calculatedEventOf(new CalculateInvoiceCommand(INVOICE, BOOKING,
                 "SHP-000001", "山田商事", ShipperType.INDIVIDUAL, DiscountRate.none(), null,
-                domestic, "accountant01"));
+                domestic, null, "accountant01"));
 
         var captured = new InvoiceAdjustedEvent[1];
         fixture.given().event(calculated)
@@ -432,12 +440,233 @@ class InvoiceTest {
                 .then().exception(IllegalTransition.class);
     }
 
+    // ---- US23 精算（発行・入金・取消・未払い） --------------------------------
+
+    /** 発行された請求書のイベント列。**算出 → 発行**まで進めた状態。 */
+    private InvoiceIssuedEvent issuedEventOf(InvoiceCalculatedEvent calculated) {
+        var captured = new InvoiceIssuedEvent[1];
+        fixture.given().event(calculated)
+                .when().command(new IssueInvoiceCommand(INVOICE, "accountant01"))
+                .then().eventsSatisfy(events -> captured[0] = events.stream()
+                        .map(event -> event.payload())
+                        .filter(InvoiceIssuedEvent.class::isInstance)
+                        .map(InvoiceIssuedEvent.class::cast)
+                        .findFirst().orElseThrow());
+        return captured[0];
+    }
+
+    @Test
+    @DisplayName("US23 §1: 発行すると請求番号・金額・支払期限（発行日 + 30 日）が確定する")
+    void issuesTheInvoice() {
+        InvoiceIssuedEvent event = issuedEventOf(
+                calculatedEventOf(calculate(ShipperType.INDIVIDUAL, null)));
+
+        assertThat(event.invoiceId()).isEqualTo(INVOICE);
+        assertThat(event.bookingId())
+                .as("購読側の投影が作れる分を運ぶ（投影はコマンドを読まない）")
+                .isEqualTo(BOOKING);
+        assertThat(event.totalAmount()).isEqualByComparingTo("510000");
+        // 業務タイムゾーン（Asia/Tokyo）の 2026-09-28。UTC で判断すると前日になる。
+        assertThat(event.issuedOn()).isEqualTo(LocalDate.of(2026, 9, 28));
+        assertThat(event.dueOn())
+                .as("支払期限は集約が決める（不変条件 3）。画面に決めさせない")
+                .isEqualTo(LocalDate.of(2026, 10, 28));
+    }
+
+    @Test
+    @DisplayName("US23 §1: 発行した請求書は二度発行できない")
+    void doesNotIssueTwice() {
+        var calculated = calculatedEventOf(calculate(ShipperType.INDIVIDUAL, null));
+        var issued = issuedEventOf(calculated);
+
+        fixture.given().event(calculated).event(issued)
+                .when().command(new IssueInvoiceCommand(INVOICE, "accountant01"))
+                .then().exception(IllegalTransition.class);
+    }
+
+    @Test
+    @DisplayName("不変条件 6: 取り消した請求書は再発行しない（新規に発行する）")
+    void doesNotReissueAVoidedInvoice() {
+        var calculated = calculatedEventOf(calculate(ShipperType.INDIVIDUAL, null));
+        var voided = new InvoiceVoidedEvent(INVOICE, BOOKING, "宛先の誤り",
+                "accountant01", NOW);
+
+        fixture.given().event(calculated).event(voided)
+                .when().command(new IssueInvoiceCommand(INVOICE, "accountant01"))
+                .then().exception(IllegalTransition.class);
+    }
+
+    @Test
+    @DisplayName("US23 §4: 入金を記録すると、予約まで届く契約イベントが出る")
+    void recordsThePayment() {
+        var calculated = calculatedEventOf(calculate(ShipperType.INDIVIDUAL, null));
+        var issued = issuedEventOf(calculated);
+        Instant paidAt = Instant.parse("2026-10-05T02:00:00Z");
+
+        var captured = new PaymentRecordedEvent[1];
+        fixture.given().event(calculated).event(issued)
+                .when().command(new RecordPaymentCommand(INVOICE, "PAY-1",
+                        new BigDecimal("510000"), paidAt, "accountant01"))
+                .then().eventsSatisfy(events -> captured[0] = events.stream()
+                        .map(event -> event.payload())
+                        .filter(PaymentRecordedEvent.class::isInstance)
+                        .map(PaymentRecordedEvent.class::cast)
+                        .findFirst().orElseThrow());
+
+        assertThat(captured[0].bookingId())
+                .as("予約を精算済にするのは bookingms。名指しできなければ連鎖が止まる")
+                .isEqualTo(BOOKING);
+        assertThat(captured[0].paidAt())
+                .as("入金のあった時刻が業務の事実（記録した時刻ではない）")
+                .isEqualTo(paidAt);
+        assertThat(captured[0].paymentId())
+                .as("追記系投影の行を一意にする（少なくとも 1 回配送で二度入らない）")
+                .isEqualTo("PAY-1");
+    }
+
+    @Test
+    @DisplayName("US23 §3: 発行していない請求書には入金を記録できない")
+    void doesNotRecordPaymentBeforeIssuing() {
+        fixture.given().event(calculatedEventOf(calculate(ShipperType.INDIVIDUAL, null)))
+                .when().command(new RecordPaymentCommand(INVOICE, "PAY-1",
+                        new BigDecimal("510000"), NOW, "accountant01"))
+                .then().exception(IllegalTransition.class);
+    }
+
+    @Test
+    @DisplayName("不変条件 5: 入金日時の無い記録は残さない")
+    void requiresThePaymentInstant() {
+        var calculated = calculatedEventOf(calculate(ShipperType.INDIVIDUAL, null));
+
+        fixture.given().event(calculated).event(issuedEventOf(calculated))
+                .when().command(new RecordPaymentCommand(INVOICE, "PAY-1",
+                        new BigDecimal("510000"), null, "accountant01"))
+                .then().exception(BusinessRuleViolation.class);
+    }
+
+    @Test
+    @DisplayName("請求額と違う入金は断る（黙って入金済にすると、残りが見えなくなる）")
+    void refusesAPartialPayment() {
+        var calculated = calculatedEventOf(calculate(ShipperType.INDIVIDUAL, null));
+
+        fixture.given().event(calculated).event(issuedEventOf(calculated))
+                .when().command(new RecordPaymentCommand(INVOICE, "PAY-1",
+                        new BigDecimal("300000"), NOW, "accountant01"))
+                .then().exception(BusinessRuleViolation.class);
+    }
+
+    @Test
+    @DisplayName("入金済の請求書は取り消せない（決着したものを動かさない）")
+    void doesNotVoidAPaidInvoice() {
+        var calculated = calculatedEventOf(calculate(ShipperType.INDIVIDUAL, null));
+        var issued = issuedEventOf(calculated);
+        var paid = new PaymentRecordedEvent(INVOICE, "PAY-1", BOOKING, "SHP-000001",
+                new BigDecimal("510000"), "JPY", NOW, "accountant01", NOW);
+
+        fixture.given().event(calculated).event(issued).event(paid)
+                .when().command(new VoidInvoiceCommand(INVOICE, "誤って記録した",
+                        "accountant01"))
+                .then().exception(IllegalTransition.class);
+    }
+
+    @Test
+    @DisplayName("取消には理由が要る（追えない記録を残さない）")
+    void requiresAReasonToVoid() {
+        fixture.given().event(calculatedEventOf(calculate(ShipperType.INDIVIDUAL, null)))
+                .when().command(new VoidInvoiceCommand(INVOICE, "  ", "accountant01"))
+                .then().exception(BusinessRuleViolation.class);
+    }
+
+    @Test
+    @DisplayName("発行した請求書には調整を入れられない（額は発行の時点で確定する）")
+    void doesNotAdjustAnIssuedInvoice() {
+        var calculated = calculatedEventOf(calculate(ShipperType.INDIVIDUAL, null));
+
+        fixture.given().event(calculated).event(issuedEventOf(calculated))
+                .when().command(new AdjustInvoiceCommand(INVOICE, "ADJ-NEW",
+                        new BigDecimal("-1000"), "遅延の補償", null, "accountant01"))
+                .then().exception(IllegalTransition.class);
+    }
+
+    @Test
+    @DisplayName("US23 §5: 支払期限の翌日から未払い（期限当日は超過ではない）")
+    void overdueStartsTheDayAfterTheDueDate() {
+        var calculated = calculatedEventOf(calculate(ShipperType.INDIVIDUAL, null));
+        var issued = issuedEventOf(calculated);
+
+        // **集約の述語をそのまま回す。** 判定をテスト側に書き直すと、本番の誤りを
+        // 素通りさせる。復元してから overdue を呼ぶ形にする。
+        Invoice invoice = restored(calculated, issued);
+
+        assertThat(invoice.overdue(issued.dueOn().minusDays(1)))
+                .as("期限前は超過ではない").isFalse();
+        assertThat(invoice.overdue(issued.dueOn()))
+                .as("**期限当日は超過ではない**（当日中の入金はふつうにある）")
+                .isFalse();
+        assertThat(invoice.overdue(issued.dueOn().plusDays(1)))
+                .as("翌日から未払い").isTrue();
+    }
+
+    @Test
+    @DisplayName("未発行・入金済・取消に「期限を過ぎた」は無い")
+    void onlyIssuedInvoicesCanBeOverdue() {
+        var calculated = calculatedEventOf(calculate(ShipperType.INDIVIDUAL, null));
+        var issued = issuedEventOf(calculated);
+        LocalDate wayLater = issued.dueOn().plusDays(365);
+
+        assertThat(restored(calculated).overdue(wayLater))
+                .as("発行していない請求書に期限は無い").isFalse();
+        assertThat(restored(calculated, issued,
+                new PaymentRecordedEvent(INVOICE, "PAY-1", BOOKING, "SHP-000001",
+                        new BigDecimal("510000"), "JPY", NOW, "accountant01", NOW))
+                .overdue(wayLater))
+                .as("入金済は未払いではない").isFalse();
+        assertThat(restored(calculated, issued,
+                new InvoiceVoidedEvent(INVOICE, BOOKING, "宛先の誤り", "accountant01", NOW))
+                .overdue(wayLater))
+                .as("取り消した請求書は督促しない").isFalse();
+    }
+
+    /**
+     * イベント列から集約を復元する。
+     *
+     * <p><b>本番と同じ復元経路を通す。</b> フィールドを直接組み立てると、
+     * {@code @EventSourcingHandler} の書き漏らしを素通りさせる。</p>
+     */
+    private static Invoice restored(Object... events) {
+        Invoice invoice = new Invoice();
+        for (Object event : events) {
+            applyTo(invoice, event);
+        }
+        return invoice;
+    }
+
+    private static void applyTo(Invoice invoice, Object event) {
+        for (var method : Invoice.class.getDeclaredMethods()) {
+            if (!method.isAnnotationPresent(
+                    org.axonframework.eventsourcing.annotation.EventSourcingHandler.class)) {
+                continue;
+            }
+            var parameters = method.getParameterTypes();
+            if (parameters.length == 1 && parameters[0].isInstance(event)) {
+                method.setAccessible(true);
+                try {
+                    method.invoke(invoice, event);
+                } catch (ReflectiveOperationException e) {
+                    throw new IllegalStateException("復元できません: " + event, e);
+                }
+                return;
+            }
+        }
+        throw new IllegalStateException("復元のハンドラがありません: " + event.getClass());
+    }
+
     @Test
     @DisplayName("明細のイベントは null の行一覧でも壊れない（追記専用の形を守る）")
     void lineItemsDefaultToEmpty() {
         var event = new InvoiceCalculatedEvent(INVOICE, BOOKING, "SHP-000001", null, "INDIVIDUAL",
                 null, BigDecimal.ZERO, new BigDecimal("1000"), BigDecimal.ZERO, BigDecimal.ZERO,
-                new BigDecimal("0.10"), false, new BigDecimal("1000"), "JPY", null,
+                new BigDecimal("0.10"), false, new BigDecimal("1000"), "JPY", null, null,
                 "accountant01", NOW);
 
         assertThat(event.lineItems()).isEmpty();
@@ -479,7 +708,7 @@ class InvoiceTest {
                                 new UnLocode("JPOSA"))),
                         new BigDecimal("1000"), "GENERAL", new UnLocode("JPTYO"),
                         new UnLocode("JPOSA")),
-                "accountant01"));
+                null, "accountant01"));
 
         assertThat(calculated.taxRate())
                 .as("イベントに載せないと、復元のたびに料率表を読むことになる")

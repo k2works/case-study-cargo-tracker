@@ -156,6 +156,29 @@ class EveryServiceEndpointIsRoutedAndProtectedTest {
     }
 
     @Test
+    @DisplayName("S62 荷主向けの請求書は読み取りだけ（書き込みの経路を生やさない）")
+    void shipperInvoicesAreReadOnly() throws IOException {
+        // **書き込みの守りは「経路が無い」こと**で成り立つ。Gateway の名簿は
+        // 全メソッドを宣言する規約なので、ここでロールを絞ることはできない。
+        // 代わりに、荷主向けのコントローラに書き込みの割り当てが無いことを固定する。
+        java.nio.file.Path controller = backendRoot().resolve(
+                "billingms/src/main/java/com/example/cargotracker/billing/interfaces/rest/"
+                        + "ShipperInvoiceController.java");
+        assertThat(controller)
+                .as("S62 のコントローラが実在する（名指しした検査が空振りしない）")
+                .exists();
+
+        String source = Files.readString(controller, StandardCharsets.UTF_8);
+        assertThat(source)
+                .as("荷主は自社の請求書を読むだけ。書き込みを足すなら、"
+                        + "経理向けと同じくメソッド込みの宣言を先に置く")
+                .doesNotContain("@PostMapping")
+                .doesNotContain("@PutMapping")
+                .doesNotContain("@DeleteMapping")
+                .doesNotContain("@PatchMapping");
+    }
+
+    @Test
     @DisplayName("後段サービスの経路にはすべて要求ロールが宣言されている")
     void everyEndpointDeclaresRequiredRoles() throws IOException {
         // 認証だけでは足りない。宣言が無い経路は「認証済みなら誰でも」に
@@ -315,6 +338,25 @@ class EveryServiceEndpointIsRoutedAndProtectedTest {
                 .as("請求を作り直すのは経理").isTrue();
         assertThat(RoleAuthorization.isAllowed("POST", recalculate, tracker))
                 .as("追跡管理者は請求を作らない").isFalse();
+
+        // US23 の書き込み（発行・入金・取消）。
+        for (String write : new String[] {"/issue", "/payments", "/void"}) {
+            assertThat(RoleAuthorization.isAllowed("POST", one + write, accountant))
+                    .as("%s は経理", write).isTrue();
+            assertThat(RoleAuthorization.isAllowed("POST", one + write, shipper))
+                    .as("荷主は %s を叩けない", write).isFalse();
+        }
+
+        // S62 荷主向けの請求書（US23 §2）。**金額を出す唯一の荷主向け画面**で、
+        // 自社のぶんだけを billingms が X-Auth-Shipper-Id で絞る。
+        String shipperInvoice = "/api/v1/billing/shipper-invoices/INV-20260928-1a2b3c4d";
+        assertThat(RoleAuthorization.isAllowed("GET", shipperInvoice, shipper))
+                .as("荷主は自社の請求書を読む").isTrue();
+        assertThat(RoleAuthorization.isAllowed("GET", shipperInvoice, accountant))
+                .as("経理は経理向けの一覧から読む（同じ経路に分岐を足さない）").isFalse();
+        // **書き込みの守りは「経路が無い」こと**で成り立つ。ここでロールを
+        // 絞ると、名簿の規約（全メソッドを宣言する）と食い違う。経路が生えて
+        // いないことは ShipperInvoiceIsReadOnlyTest が固定する。
 
         // IT14 引き継ぎ A。**確認済は担当ロールをサービス側が確かめる**ので、
         // Gateway は認証済みなら通す（一覧に出す条件と同じ条件を更新にも置く）。

@@ -2,6 +2,9 @@ package com.example.cargotracker.billing.infrastructure.projection;
 
 import com.example.cargotracker.billing.domain.model.events.InvoiceAdjustedEvent;
 import com.example.cargotracker.billing.domain.model.events.InvoiceCalculatedEvent;
+import com.example.cargotracker.billing.domain.model.events.InvoiceIssuedEvent;
+import com.example.cargotracker.billing.domain.model.events.InvoiceVoidedEvent;
+import com.example.cargotracker.shared.contract.event.PaymentRecordedEvent;
 import com.example.cargotracker.billing.domain.model.valueobjects.BillingStatus;
 import com.example.cargotracker.billing.domain.model.valueobjects.LineItemType;
 import com.example.cargotracker.billing.infrastructure.persistence.InvoiceMapper;
@@ -58,7 +61,12 @@ public class InvoiceProjection {
                 event.shipperType(), event.contractNumber(), event.baseAmount(),
                 event.discountAmount(), java.math.BigDecimal.ZERO, event.taxAmount(),
                 event.totalAmount(), event.currency(), event.discountRate(),
-                BillingStatus.CALCULATED.name(), event.calculatedAt(), clock.instant(), eventId));
+                BillingStatus.CALCULATED.name(), event.calculatedAt(),
+                // 発行までは空。**発行のときに確定する**（不変条件 3）。
+                null, null, null,
+                // 見積時の概算。**見積を経ない予約では null のまま**（注 N12）。
+                event.quotedAmount(),
+                clock.instant(), eventId));
 
         if (inserted == 0 && invoices.find(event.invoiceId()) == null) {
             recordRejection(event);
@@ -99,6 +107,62 @@ public class InvoiceProjection {
                         : "取り消し（" + event.reason() + "）",
                 event.amount(), event.currency(), event.basisExceptionId(),
                 eventId, event.adjustmentId(), event.reversedAdjustmentId()));
+    }
+
+    /**
+     * 請求書を発行した（US23 §受入基準 1・2）。
+     *
+     * <p><b>状態・発行日・期限・金額を一度に書く。</b> 別々に書くと、片方だけ
+     * 入った行が「請求済だが期限が無い」になる。</p>
+     *
+     * <p><b>通知の記録も同じ変更で置く</b>（US23 §受入基準 2）。送信基盤は
+     * スコープ外なので、残すのは「いつ・誰に・何を伝えたか」である。
+     * <b>記録と読み口は対で出す</b>——荷主は S62 で自社の請求書を読む。</p>
+     */
+    @EventHandler
+    public void on(InvoiceIssuedEvent event, @MessageIdentifier String eventId) {
+        if (invoices.find(event.invoiceId()) == null) {
+            // 算出が弾かれた請求書の発行。書く先が無いので見送る——**黙っては
+            // 見送らない**（弾いた事実は算出のときに要確認へ出している）。
+            log.warn("請求書 {} が読み取りモデルに無いので発行を写せません", event.invoiceId());
+            return;
+        }
+        invoices.markIssued(event.invoiceId(), event.issuedOn(), event.dueOn(),
+                event.totalAmount(), clock.instant(), eventId);
+        invoices.insertNotification(new InvoiceMapper.NotificationRow(
+                event.invoiceId(), event.shipperId(), "ISSUED", event.issuedAt()));
+    }
+
+    /**
+     * 入金を記録した（US23 §受入基準 4）。
+     *
+     * <p><b>入金の行は追記する</b>（{@code payment_id} が PK）。少なくとも
+     * 1 回配送で同じ行が二度入らない。</p>
+     */
+    @EventHandler
+    public void on(PaymentRecordedEvent event, @MessageIdentifier String eventId) {
+        if (invoices.find(event.invoiceId()) == null) {
+            log.warn("請求書 {} が読み取りモデルに無いので入金を写せません", event.invoiceId());
+            return;
+        }
+        invoices.markPaid(event.invoiceId(), event.paidAt(), clock.instant(), eventId);
+        invoices.insertPayment(new InvoiceMapper.PaymentRow(event.paymentId(),
+                event.invoiceId(), event.amount(), event.currency(), event.paidAt(),
+                event.recordedBy()));
+    }
+
+    /**
+     * 請求書を取り消した（UC18）。
+     *
+     * <p><b>行は消さない。</b> 消すと、取り消した事実そのものが残らない。</p>
+     */
+    @EventHandler
+    public void on(InvoiceVoidedEvent event, @MessageIdentifier String eventId) {
+        if (invoices.find(event.invoiceId()) == null) {
+            log.warn("請求書 {} が読み取りモデルに無いので取消を写せません", event.invoiceId());
+            return;
+        }
+        invoices.markVoided(event.invoiceId(), clock.instant(), eventId);
     }
 
     /**

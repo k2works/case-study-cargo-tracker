@@ -61,7 +61,7 @@ class ReplayIT extends AbstractAxonIntegrationTest {
                 "SHP-000001", "山田商事", "INDIVIDUAL", null, BigDecimal.ZERO,
                 new BigDecimal("50000"), BigDecimal.ZERO, new BigDecimal("5000"),
                 new BigDecimal("0.10"), false,
-                new BigDecimal("55000"), "JPY",
+                new BigDecimal("55000"), "JPY", null,
                 List.of(new InvoiceCalculatedEvent.LineItem("BASE", "基本料金（1 区間）",
                                 new BigDecimal("50000"), "JPY", null),
                         new InvoiceCalculatedEvent.LineItem("TAX", "消費税",
@@ -130,7 +130,7 @@ class ReplayIT extends AbstractAxonIntegrationTest {
         return new InvoiceCalculatedEvent(invoiceId, bookingId, "SHP-000001", "山田商事",
                 "INDIVIDUAL", null, BigDecimal.ZERO, new BigDecimal("50000"), BigDecimal.ZERO,
                 new BigDecimal("5000"), new BigDecimal("0.10"), false,
-                new BigDecimal("55000"), "JPY",
+                new BigDecimal("55000"), "JPY", null,
                 List.of(new InvoiceCalculatedEvent.LineItem("BASE", "基本料金（1 区間）",
                         new BigDecimal("50000"), "JPY", null)),
                 "accountant01", AT);

@@ -36,6 +36,9 @@ public record InvoiceCalculatedEvent(
         boolean taxExempt,
         BigDecimal totalAmount,
         String currency,
+        // 見積時の概算（注 N12）。**見積を経ない予約では null。** 投影はコマンドを
+        // 読まないので、ここに載っていなければ S61 は概算行を出せない。
+        BigDecimal quotedAmount,
         List<LineItem> lineItems,
         String calculatedBy,
         Instant calculatedAt) {

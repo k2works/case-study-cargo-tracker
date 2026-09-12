@@ -3,6 +3,7 @@ package com.example.cargotracker.billing.domain.model.commands;
 import com.example.cargotracker.billing.domain.model.valueobjects.DiscountRate;
 import com.example.cargotracker.billing.domain.model.valueobjects.ShipperType;
 import com.example.cargotracker.billing.domain.model.valueobjects.TransportRecord;
+import java.math.BigDecimal;
 import org.axonframework.modelling.annotation.TargetEntityId;
 
 /**
@@ -14,6 +15,7 @@ import org.axonframework.modelling.annotation.TargetEntityId;
  * <p><b>割引は別のコマンドにしない</b>（計画の注 N10）。別にすると、割引の無い
  * 請求書が一瞬見える状態が正常系として存在する。</p>
  *
+ * @param quotedAmount 見積時の概算。<b>見積を経ない予約では {@code null}</b>（注 N12）
  * @param invoiceId 請求書の識別子（送る側が採る）
  * @param bookingId 予約。<b>有効な請求書は予約ごとに 1 通</b>（不変条件 2）
  * @param shipperId 荷主
@@ -33,5 +35,8 @@ public record CalculateInvoiceCommand(
         DiscountRate discountRate,
         String contractNumber,
         TransportRecord transport,
+        // 見積時の概算（注 N12）。**見積を経ない予約では null。** そのまま持ち、
+        // 計算し直さない（不変条件 7）——見積の時点の数字であることに意味がある。
+        BigDecimal quotedAmount,
         String calculatedBy) {
 }

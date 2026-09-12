@@ -2,11 +2,15 @@ package com.example.cargotracker.billing.interfaces.rest;
 
 import com.example.cargotracker.billing.application.InvoiceCalculation;
 import com.example.cargotracker.billing.domain.model.commands.AdjustInvoiceCommand;
+import com.example.cargotracker.billing.domain.model.commands.IssueInvoiceCommand;
+import com.example.cargotracker.billing.domain.model.commands.RecordPaymentCommand;
 import com.example.cargotracker.billing.domain.model.commands.ReverseAdjustmentCommand;
+import com.example.cargotracker.billing.domain.model.commands.VoidInvoiceCommand;
 import com.example.cargotracker.billing.infrastructure.persistence.AttentionItemMapper;
 import com.example.cargotracker.billing.infrastructure.query.BillingQueries.FindInvoiceOfBookingQuery;
 import com.example.cargotracker.billing.infrastructure.query.BillingQueries.FindInvoiceQuery;
 import com.example.cargotracker.billing.infrastructure.query.BillingQueries.FindInvoicesQuery;
+import com.example.cargotracker.billing.infrastructure.query.BillingQueries.FindOverdueInvoicesQuery;
 import com.example.cargotracker.billing.infrastructure.query.BillingQueries.InvoiceListView;
 import com.example.cargotracker.billing.infrastructure.query.BillingQueries.InvoiceView;
 import com.example.cargotracker.shared.domain.error.IllegalTransition;
@@ -65,13 +69,90 @@ public class InvoiceController {
         this.clock = clock;
     }
 
-    /** 一覧（S60）。**既定で入金済・取消を外す。** */
+    /**
+     * 一覧（S60）。**既定で入金済・取消を外す。**
+     *
+     * <p>{@code overdue=true} で<b>未払いだけ</b>に絞る（US23 §受入基準 5）。
+     * 絞りはサーバが数える——全件を読んでから画面で数えると、上限の打ち切りで
+     * 未払いが漏れる。</p>
+     */
     @GetMapping
     public ResponseEntity<InvoiceListView> list(
             @RequestParam(defaultValue = "false") boolean includeSettled,
+            @RequestParam(defaultValue = "false") boolean overdue,
             @RequestParam(required = false) String bookingId) {
+        if (overdue) {
+            // **今日はサーバが決める。** 業務タイムゾーンで判断しないと、
+            // 時差の分だけ 1 日早く督促が飛ぶ時間帯ができる。
+            return ResponseEntity.ok(queries.query(
+                    new FindOverdueInvoicesQuery(null), InvoiceListView.class));
+        }
         return ResponseEntity.ok(queries.query(
                 new FindInvoicesQuery(includeSettled, bookingId), InvoiceListView.class));
+    }
+
+    /**
+     * 請求書を発行する（US23 §受入基準 1）。
+     *
+     * <p><b>支払期限は返さない値ではなく、集約が決める</b>（不変条件 3）。
+     * 画面は発行後に読み直す。</p>
+     */
+    @PostMapping("/{invoiceId}/issue")
+    public ResponseEntity<Void> issue(@PathVariable String invoiceId,
+            @RequestHeader(value = "X-Auth-Username", required = false) String username) {
+        commands.sendAndWait(new IssueInvoiceCommand(invoiceId, username), Void.class);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * 入金を記録する（US23 §受入基準 3・4）。
+     *
+     * <p><b>決済機関との接続はスコープ外</b>（計画の注 N9）。経理担当者が入金
+     * 明細を見て記録する。</p>
+     *
+     * <p><b>識別子はサーバで採る。</b> 画面に採らせると、押し直しが二重の入金に
+     * なる。<b>36 文字に収める</b>——列は {@code VARCHAR(36)} で、接頭辞 + UUID を
+     * そのまま繋ぐとあふれ、投影だけが静かに退避される。</p>
+     */
+    @PostMapping("/{invoiceId}/payments")
+    public ResponseEntity<Void> recordPayment(@PathVariable String invoiceId,
+            @RequestHeader(value = "X-Auth-Username", required = false) String username,
+            @Valid @RequestBody RecordPaymentRequest request) {
+        String paymentId = "PAY-"
+                + java.util.UUID.randomUUID().toString().replace("-", "");
+        commands.sendAndWait(new RecordPaymentCommand(invoiceId, paymentId,
+                request.amount(), request.paidAt(), username), Void.class);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * 入金の入力。
+     *
+     * @param paidAt <b>入金のあった時刻</b>（記録した時刻ではない）。記録は
+     *     後日になることがある
+     */
+    public record RecordPaymentRequest(
+            @NotNull BigDecimal amount,
+            @NotNull java.time.Instant paidAt) {
+    }
+
+    /**
+     * 請求書を取り消す（UC18）。
+     *
+     * <p><b>理由は必須。</b> 取り消した請求書は荷主にも見えなくなるので、
+     * 何が起きたかを追えなければ、あとから誰も確かめられない。</p>
+     */
+    @PostMapping("/{invoiceId}/void")
+    public ResponseEntity<Void> voidInvoice(@PathVariable String invoiceId,
+            @RequestHeader(value = "X-Auth-Username", required = false) String username,
+            @Valid @RequestBody VoidRequest request) {
+        commands.sendAndWait(new VoidInvoiceCommand(invoiceId, request.reason(), username),
+                Void.class);
+        return ResponseEntity.ok().build();
+    }
+
+    /** 取消の入力。 */
+    public record VoidRequest(@NotBlank String reason) {
     }
 
     /** 請求書 1 通（S61）。 */

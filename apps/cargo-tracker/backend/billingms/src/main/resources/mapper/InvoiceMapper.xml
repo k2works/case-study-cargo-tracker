@@ -27,6 +27,56 @@
          WHERE invoice_id = #{invoiceId}
     </update>
 
+    <update id="markIssued">
+        UPDATE invoice
+           SET billing_status = 'INVOICED',
+               issued_on      = #{issuedOn},
+               due_on         = #{dueOn},
+               total_amount   = #{totalAmount},
+               projected_at   = #{projectedAt},
+               last_event_id  = #{lastEventId}
+         WHERE invoice_id = #{invoiceId}
+    </update>
+
+    <update id="markPaid">
+        UPDATE invoice
+           SET billing_status = 'PAID',
+               paid_at        = #{paidAt},
+               projected_at   = #{projectedAt},
+               last_event_id  = #{lastEventId}
+         WHERE invoice_id = #{invoiceId}
+    </update>
+
+    <!--
+      **行は消さない。** 消すと、取り消した事実そのものが残らない。
+      void_marker に請求書 ID を入れて部分ユニーク (booking_id, void_marker) から
+      外す——同じ予約に新しい請求書を発行できるようにするため（不変条件 6）。
+      **billing_status が正**で、void_marker は UNIQUE を成立させるための派生列
+      （ADR-0017）。
+    -->
+    <update id="markVoided">
+        UPDATE invoice
+           SET billing_status = 'VOID',
+               void_marker    = #{invoiceId},
+               projected_at   = #{projectedAt},
+               last_event_id  = #{lastEventId}
+         WHERE invoice_id = #{invoiceId}
+    </update>
+
+    <insert id="insertPayment">
+        INSERT INTO payment (payment_id, invoice_id, amount, currency, paid_at, recorded_by)
+        VALUES (#{paymentId}, #{invoiceId}, #{amount}, #{currency}, #{paidAt}, #{recordedBy})
+        <!-- 同じ入金は 1 行。少なくとも 1 回配送で二度入らない（payment_id が PK）。 -->
+        ON CONFLICT DO NOTHING
+    </insert>
+
+    <insert id="insertNotification">
+        INSERT INTO invoice_notification (invoice_id, shipper_id, kind, notified_at)
+        VALUES (#{invoiceId}, #{shipperId}, #{kind}, #{notifiedAt})
+        <!-- 発行は請求書 1 通につき 1 回（二度発行できない）。 -->
+        ON CONFLICT DO NOTHING
+    </insert>
+
     <insert id="insertLineItem">
         INSERT INTO invoice_line_item (invoice_id, line_seq, item_type, description,
                                        amount, currency, basis_exception_id, source_event_id,
@@ -48,9 +98,16 @@
     -->
     <select id="search"
             resultType="com.example.cargotracker.billing.infrastructure.persistence.InvoiceMapper$InvoiceRow">
+        <!--
+          **列は明示し、record の構築子と同じ順に並べる。** 注釈マッパー + record は
+          列名ではなく位置で割り当てるので、順序がずれると項目が丸ごと入れ替わる
+          （IT14 で足した issued_on / due_on / paid_at / quoted_amount もここに要る）。
+        -->
         SELECT invoice_id, booking_id, shipper_id, shipper_name, shipper_type, contract_number,
                base_amount, discount_amount, adjustment_amount, tax_amount, total_amount,
-               currency, discount_rate, billing_status, calculated_at, projected_at, last_event_id
+               currency, discount_rate, billing_status, calculated_at,
+               issued_on, due_on, paid_at, quoted_amount,
+               projected_at, last_event_id
           FROM invoice
          <where>
             <if test="!includeSettled">

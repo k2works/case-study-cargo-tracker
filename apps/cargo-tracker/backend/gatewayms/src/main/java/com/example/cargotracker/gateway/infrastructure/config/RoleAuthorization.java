@@ -140,10 +140,18 @@ public final class RoleAuthorization {
         rules.put("/api/v1/handling/customs-declarations", Set.of(HANDLER, TRACKER, ACCOUNTANT));
         rules.put("/api/v1/handling/**", Set.of(HANDLER));
 
-        // 請求（S60 / S61）は経理だけ（US21 §受入基準 1）。**荷主向けの請求書
-        // （S62）は US23・IT14** なので、いまは荷主に開く経路が無い。
+        // 荷主向けの請求書（S62 / US23・IT14）は**荷主だけ**。経理向けの
+        // /invoices とは別の経路にする——同じ経路にロールで分岐を足すと、載せ忘れた
+        // 分岐ほど無防備になる。**/invoices/** より先に置く**（後ろだと吸われる）。
+        // **自社のぶんだけ**を billingms が X-Auth-Shipper-Id で絞る。書き込みの
+        // 経路はこのコントローラに存在しない（ShipperInvoiceControllerIsReadOnly が固定）。
+        rules.put("/api/v1/billing/shipper-invoices/**", Set.of(SHIPPER));
+        rules.put("/api/v1/billing/shipper-invoices", Set.of(SHIPPER));
+
+        // 請求（S60 / S61）は経理だけ（US21 §受入基準 1）。
         rules.put("/api/v1/billing/invoices/**", Set.of(ACCOUNTANT));
         rules.put("/api/v1/billing/invoices", Set.of(ACCOUNTANT));
+
 
         // 航海（S32 / S33）は経路設計者だけ。
         rules.put("/api/v1/routing/voyages/**", Set.of(ROUTING));
@@ -253,6 +261,13 @@ public final class RoleAuthorization {
         // 作れなかった請求を作り直すのも経理だけ（IT14 引き継ぎ B）。
         ordered.add(new Rule("POST", "/api/v1/billing/invoices/recalculate",
                 Set.of(ACCOUNTANT)));
+        // 発行・入金・取消は経理だけ（US23）。**メソッド込みで宣言する**——
+        // 読み向けの広い宣言に吸われると、載せ忘れた書き込みほど無防備になる。
+        ordered.add(new Rule("POST", "/api/v1/billing/invoices/*/issue", Set.of(ACCOUNTANT)));
+        ordered.add(new Rule("POST", "/api/v1/billing/invoices/*/payments",
+                Set.of(ACCOUNTANT)));
+        ordered.add(new Rule("POST", "/api/v1/billing/invoices/*/void", Set.of(ACCOUNTANT)));
+
         // **要確認の確認済は、その要確認の担当ロールがサーバで確かめる**
         // （IT14 引き継ぎ A）。ここで絞ると、ロールが増えるたびに 2 か所を直す
         // ことになる——一覧に出す条件と同じ条件を更新にも置くほうが確かである。
