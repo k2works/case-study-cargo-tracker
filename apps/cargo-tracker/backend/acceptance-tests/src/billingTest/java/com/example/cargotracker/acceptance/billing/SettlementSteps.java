@@ -13,7 +13,6 @@ import io.cucumber.java.ja.ならば;
 import io.cucumber.java.ja.もし;
 import java.math.BigDecimal;
 import java.time.Duration;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.Map;
