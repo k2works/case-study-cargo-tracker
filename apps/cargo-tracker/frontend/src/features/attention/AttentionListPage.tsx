@@ -1,8 +1,10 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router';
+import { ApiError } from '@/shared/api/client';
 import { formatBusinessDateTime } from '@/shared/api/businessDate';
 import {
   ALERT,
+  BUTTON_SECONDARY,
   CARD,
   LINK,
   NOTICE,
@@ -12,7 +14,12 @@ import {
   TD,
   TH,
 } from '@/shared/ui/styles';
-import { fetchAttentionItems, type AttentionItemView } from './api';
+import {
+  acknowledgeAttentionItem,
+  fetchAttentionItems,
+  recalculateInvoice,
+  type AttentionItemView,
+} from './api';
 
 /**
  * S70 要確認一覧。
@@ -88,6 +95,9 @@ export function AttentionListPage() {
                         入口にたどり着けない（IT7 クローズの自己レビュー）。 */}
                     <div className="flex flex-col gap-1">
                       <NextAction item={item} />
+                      {/* **片づけた印が無いと、件数はいつまでも減らない。**
+                          同じ行を毎朝読み直すことになる（IT13 レビュー user #4）。 */}
+                      <AcknowledgeButton item={item} />
                     </div>
                   </td>
                 </tr>
@@ -111,6 +121,70 @@ export function AttentionListPage() {
 }
 
 /**
+ * 請求を作り直す（IT14 引き継ぎ B）。
+ *
+ * <p>材料がまだ直っていなければサーバが理由を返すので、それをそのまま出す。
+ * 「作れませんでした」だけでは、何を直せばよいのかが分からない。</p>
+ */
+function RecalculateButton({ bookingId }: { readonly bookingId: string }) {
+  const queryClient = useQueryClient();
+  const { mutate, isPending, isError, error } = useMutation({
+    mutationFn: () => recalculateInvoice(bookingId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['attention-items'] }),
+  });
+
+  return (
+    <>
+      <button
+        type="button"
+        className={BUTTON_SECONDARY}
+        disabled={isPending}
+        onClick={() => mutate()}
+      >
+        請求を作り直す
+      </button>
+      {isError && (
+        <span role="alert" className="text-sm text-red-700">
+          {error instanceof ApiError ? error.message : '請求を作り直せませんでした'}
+        </span>
+      )}
+    </>
+  );
+}
+
+/**
+ * 確認済にする。
+ *
+ * <p><b>確認したことも仕事の結果である。</b> 押したあとは担当の一覧から外れ、
+ * 誰がいつ確認したかはサーバに残る。失敗したら黙って消さず、理由を出す。</p>
+ */
+function AcknowledgeButton({ item }: { readonly item: AttentionItemView }) {
+  const queryClient = useQueryClient();
+  const { mutate, isPending, isError } = useMutation({
+    mutationFn: () => acknowledgeAttentionItem(item),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['attention-items'] }),
+  });
+
+  return (
+    <>
+      <button
+        type="button"
+        className={BUTTON_SECONDARY}
+        disabled={isPending}
+        onClick={() => mutate()}
+      >
+        確認済にする
+      </button>
+      {isError && (
+        <span role="alert" className="text-sm text-red-700">
+          確認済にできませんでした
+        </span>
+      )}
+    </>
+  );
+}
+
+/**
  * その項目に対して打てる手。
  *
  * <p><b>対象の種類で違う。</b> 荷主の重複なら既存を使えば済むが、予約の項目
@@ -120,9 +194,16 @@ export function AttentionListPage() {
 function NextAction({ item }: { readonly item: AttentionItemView }) {
   if (item.targetType === 'BOOKING') {
     return (
-      <Link to={`/bookings/${item.targetId}`} className={LINK}>
-        予約を開く
-      </Link>
+      <>
+        <Link to={`/bookings/${item.targetId}`} className={LINK}>
+          予約を開く
+        </Link>
+        {/* **予約を開くだけでは締めの母集団に戻らない。** 引取はもう届かない
+            ので、材料を直しても誰かが請求へ戻さなければ落ち続ける。 */}
+        {item.kind === 'REACTION_FAILED' && item.assignedRole === 'ROLE_ACCOUNTANT' && (
+          <RecalculateButton bookingId={item.targetId} />
+        )}
+      </>
     );
   }
   if (item.targetType === 'INVOICE') {

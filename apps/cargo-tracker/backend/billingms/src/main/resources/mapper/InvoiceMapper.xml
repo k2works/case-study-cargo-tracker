@@ -29,9 +29,11 @@
 
     <insert id="insertLineItem">
         INSERT INTO invoice_line_item (invoice_id, line_seq, item_type, description,
-                                       amount, currency, basis_exception_id, source_event_id)
+                                       amount, currency, basis_exception_id, source_event_id,
+                                       adjustment_id, reversed_adjustment_id)
         VALUES (#{invoiceId}, #{lineSeq}, #{itemType}, #{description}, #{amount},
-                #{currency}, #{basisExceptionId}, #{sourceEventId})
+                #{currency}, #{basisExceptionId}, #{sourceEventId},
+                #{adjustmentId}, #{reversedAdjustmentId})
         <!--
           **衝突先を書かない。** 主キー（invoice_id, line_seq）のほかに
           元イベントの一意索引があるので、衝突先を 1 つに絞るともう一方で

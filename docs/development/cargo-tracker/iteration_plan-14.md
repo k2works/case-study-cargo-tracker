@@ -81,8 +81,8 @@ US23 は**新設ゼロ**です。`Invoice` に `issue` / `recordPayment` / `void
 | # | 注 | 反映先 | 本 IT での対応 |
 | :--- | :--- | :--- | :--- |
 | N1 | **`### S12`・`### S13`・`### S62` の節が `ui_design.md` に無い**（画面一覧の行・ナビ構成表の行・画面遷移図はある。**画面項目と操作手順だけが未記述**）。IT12 の S52・IT13 の S60 と同じ形で、**3 IT 連続** | `ui_design.md`（3 節を新設） | **T8 で反映する。** 3 IT 続けて同じ欠落が出ているので、**画面一覧に行があって節が無い画面を検出する検査**を置く（Try T9 の「機械に移す」） |
-| N2 | **`invoice` の `INDEX(billing_status, due_on)` を本 IT で足す。** 正典が「`due_on` の書き手が US23 まで居ないので IT14 で足す」と明記している | `data-model.md:757`（注記を消す） | **T5 で足す**（V008）。IT13 が意図して送った負債の回収 |
-| N3 | **`payment` 表を新設する。** 正典の ER にはあるが実体が無い | `data-model.md:707` | **T5 で作る**（V009）。`payment_id` を PK（追記系投影の規約） |
+| N2 | **`invoice` の `INDEX(billing_status, due_on)` を本 IT で足す。** 正典が「`due_on` の書き手が US23 まで居ないので IT14 で足す」と明記している | `data-model.md:757`（注記を消す） | **T5 で足す**（V009）。IT13 が意図して送った負債の回収 |
+| N3 | **`payment` 表を新設する。** 正典の ER にはあるが実体が無い | `data-model.md:707` | **T5 で作る**（V010）。`payment_id` を PK（追記系投影の規約） |
 | N4 | **`quotation` / `quotation_candidate` 表を新設する。** 正典の ER にはあるが実体が無い | `data-model.md:360`・`:376` | **T2 で作る**（booking V019） |
 | N5 | **US21 §2 の文言が実装と食い違う。** 「距離・荷役作業実績」を挙げるが、正典の式は区間の**地域係数**で数えており距離を数えていない（IT13 で一部達成として記録した） | `user_story.md`（US21 §2） | **T0 で直す**（負債枠 1）。**数えていないものを受入基準に書かない** |
 | N6 | **貨物種別の語彙が契約と料率表で食い違う**（契約 `REEFER` / 料率表 `REFRIGERATED`）。見積が同じ料率表を読むので、**本 IT で 2 か所目の読み手ができる** | `billing-rates.yml`・`CargoType` | **T0 で揃える**（負債枠 2）。読み手が増える前に直す |
@@ -141,7 +141,7 @@ IT13 から 12 件を引き継ぎます。**US23 の発行を足す前に入れ�
 | T2 | **`Quotation` 集約と投影**（`QuotationId`・`QuotedRoute`・`QuotationEstimator`）。**料率は billingms と同じ出典を読む**（ADR-0016）。注 N4 の表・注 N8 の要素表 | US01 | 8h |
 | T3 | **料率の同一性を契約テストで固定**（`RateTableParityTest`。同じ入力に対する出力を突き合わせる） | US01 | 4h |
 | T4 | **見積の候補算出**（既にある `FindRouteCandidatesQuery` を使う。**作る前に開く**）。期限に間に合う候補が無い場合・候補 0 件 | US01 | 6h |
-| T5 | **`Invoice` の発行・入金・取消**（`issue` / `recordPayment` / `void` / `overdue`）。注 N2・N3 の表（V008・V009）・注 N10 の正典修正 | US23 | 8h |
+| T5 | **`Invoice` の発行・入金・取消**（`issue` / `recordPayment` / `void` / `overdue`）。注 N2・N3 の表（V009・V010）・注 N10 の正典修正 | US23 | 8h |
 | T6 | **未払いの検知**（`overdue(today)` と一覧 SQL。**`today` は業務タイムゾーン**） | US23 | 4h |
 | T7 | **精算の連鎖**（`PaymentRecordedEvent` → `SettleBookingCommand` → `BookingSettledEvent`）。**契約イベントなのでゴールデン JSON と往復テスト**（注 N13）。`quotedAmount` の入力経路（注 N12） | US23 | 8h |
 | T8 | **画面**（S12 見積作成・S13 見積詳細・S62 自社請求書）と `ui_design.md` の 3 節新設（注 N1）。**画面一覧に行があって節が無い画面を検出する検査** | US01・US23 | 8h |
@@ -164,6 +164,18 @@ IT13 から 12 件を引き継ぎます。**US23 の発行を足す前に入れ�
 | `BookingStatus.SETTLED` | **列挙にある**（`domain-model.md:124`・`:525`） | T7 で初めて通る |
 | `payment` / `quotation` / `quotation_candidate` テーブル | **無い**（正典の ER にだけある） | T5・T2 で作る |
 | `Quotation` 集約 | **無い** | T2 で作る |
+
+### T0 の `grep` 回収（Try T9・**IT13 は未達だったので本 IT では計画に貼る**）
+
+`IT14`・`IT15`・`US30` で検索した結果は **33 件**です。内訳と本 IT での扱いは次のとおりです。
+
+| 区分 | 件数 | 本 IT での扱い |
+| :--- | :--: | :--- |
+| **本 IT で回収する**（`US01`・`US23`・`IT14` と書いたコメント・注記） | 23 | T2〜T9 で実装したときに**同じ変更でコメントを消す**。消し忘れを防ぐため、クローズ前にもう一度 `grep` する |
+| **IT15 へ送る**（`US30`・`IT15`。キャンセル） | 5 | `CargoCancelledEvent` の書き手・`LineItemType.CANCELLATION`・`cargo_snapshot` のキャンセル列・`BookingConfirmedEvent` の注記・`CargoSnapshotProjection` の注記 |
+| **注記として残す**（正典の判断を述べたもの。回収対象ではない） | 5 | `BillingStatus.PENDING` は本 IT でも通らない（注 N11）・料率の出典が 1 つであること（ADR-0016）の 4 か所 |
+
+回収対象 23 件のうち、**スコープ外だった画面・経路に関するものが 5 件**あります（`routes.tsx` の S62 プレースホルダ、`RoleAuthorization` の「荷主に開く経路が無い」、`EveryServiceEndpointIsRoutedAndProtectedTest` の「いまは開かない」、`BookingDtos` の見積欄 2 件）。**これらは検査と対になっている**ので、実装したときに検査のほうも裏返す必要があります。
 
 ## スケジュール
 
@@ -376,7 +388,7 @@ end note
 @enduml
 ```
 
-**マイグレーションは番号順に読みます。** booking は V019、billing は V008（索引）・V009（`payment` 表）です。**適用済みのマイグレーションは編集しません**——CI は緑のまま、適用済みクラスタだけが checksum mismatch で起動しなくなります。
+**マイグレーションは番号順に読みます。** booking は V019、billing は **V008（調整の識別子・引き継ぎ C で先に消化）**・V009（索引）・V010（`payment` 表）です。**適用済みのマイグレーションは編集しません**——CI は緑のまま、適用済みクラスタだけが checksum mismatch で起動しなくなります。
 
 ### 画面遷移図（本 IT のスコープ）
 

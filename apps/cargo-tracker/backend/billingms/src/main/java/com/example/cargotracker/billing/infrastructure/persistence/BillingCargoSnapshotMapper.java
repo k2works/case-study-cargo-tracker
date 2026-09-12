@@ -27,6 +27,16 @@ public interface BillingCargoSnapshotMapper {
     SnapshotRow find(@Param("trackingNumber") String trackingNumber);
 
     /**
+     * 予約から引く（経理が請求を作り直す入口・IT14 引き継ぎ B）。
+     *
+     * <p><b>予約ごとに貨物は 1 つ</b>なので、追跡番号を人に打ち直させない。
+     * 打ち直させると、写し間違いが静かに別の貨物の請求になる。</p>
+     */
+    @Select("SELECT " + COLUMNS + " FROM billing_cargo_snapshot "
+            + "WHERE booking_id = #{bookingId}")
+    SnapshotRow findByBooking(@Param("bookingId") String bookingId);
+
+    /**
      * 区間を入れ直す前に消す。
      *
      * <p><b>追記専用の行はリプレイで増える</b>（IT6 で実際に踏んだ）。区間は

@@ -17,6 +17,10 @@ export interface InvoiceLineView {
   readonly currency: string;
   /** 調整の根拠になった例外 ID。**S42 の例外へ飛ぶ**（US28 §8 の受け側）。 */
   readonly basisExceptionId: string | null;
+  /** 調整の識別子（IT14 引き継ぎ C）。取り消す操作の宛先。調整以外は null。 */
+  readonly adjustmentId?: string | null;
+  /** すでに取り消されたか。**取り消し済みに取り消しを出さない。** */
+  readonly reversed?: boolean;
 }
 
 export interface InvoiceSummaryView {
@@ -96,8 +100,26 @@ export function fetchInvoiceOfBooking(bookingId: string): Promise<Pending<Invoic
 export function adjustInvoice(
   invoiceId: string,
   input: { amount: number; reason: string; basisExceptionId: string | null },
-): Promise<void> {
+): Promise<{ adjustmentId: string }> {
   return commandClient(`/billing/invoices/${encodeURIComponent(invoiceId)}/adjustments`, input);
+}
+
+/**
+ * 入れた調整を取り消す（IT14 引き継ぎ C）。
+ *
+ * <p><b>消さずに反対向きを積む。</b> 何が起きたかを追えない記録は、経理に
+ * とって根拠にならない。理由は必須。</p>
+ */
+export function reverseAdjustment(
+  invoiceId: string,
+  adjustmentId: string,
+  reason: string,
+): Promise<void> {
+  return commandClient(
+    `/billing/invoices/${encodeURIComponent(invoiceId)}`
+    + `/adjustments/${encodeURIComponent(adjustmentId)}/reversal`,
+    { reason },
+  );
 }
 
 /** 金額の表示（画面はどこでも同じ書き方にする）。 */

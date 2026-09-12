@@ -113,7 +113,7 @@ class InvoiceProjectionIT extends AbstractAxonIntegrationTest {
     void projectsAdjustmentWithItsBasis() {
         String invoiceId = project("A1");
 
-        projection.on(new InvoiceAdjustedEvent(invoiceId, new BigDecimal("-10000"),
+        projection.on(new InvoiceAdjustedEvent(invoiceId, "ADJ-1", null, new BigDecimal("-10000"),
                 "誤配による再設計", "EX-2026-0928-03", new BigDecimal("-10000"),
                 BigDecimal.ZERO, new BigDecimal("423500"), "JPY", "accountant01", AT),
                 "evt-" + System.nanoTime());
@@ -231,7 +231,7 @@ class InvoiceProjectionIT extends AbstractAxonIntegrationTest {
         String invoiceId = "INV-KEEP-" + System.nanoTime();
         var event = calculated(invoiceId, "B-KEEP-" + System.nanoTime());
         projection.on(event, "evt-keep");
-        projection.on(new InvoiceAdjustedEvent(invoiceId, new BigDecimal("12000"),
+        projection.on(new InvoiceAdjustedEvent(invoiceId, "ADJ-1", null, new BigDecimal("12000"),
                 "留置 4 営業日の保管料", "IMP-2026-0001", new BigDecimal("12000"),
                 BigDecimal.ZERO, new BigDecimal("445500"), "JPY", "accountant01", AT),
                 "evt-adj");
@@ -253,7 +253,7 @@ class InvoiceProjectionIT extends AbstractAxonIntegrationTest {
         // **合計は動かないのに明細だけが増える**ので、経理が二重に調整したと読む。
         // IT13 の画面から踏む検査が実際にこれを出した。
         String invoiceId = project("DUP");
-        var adjusted = new InvoiceAdjustedEvent(invoiceId, new BigDecimal("-10000"),
+        var adjusted = new InvoiceAdjustedEvent(invoiceId, "ADJ-1", null, new BigDecimal("-10000"),
                 "誤配による再設計", "EX-2026-0928-03", new BigDecimal("-10000"),
                 BigDecimal.ZERO, new BigDecimal("423500"), "JPY", "accountant01", AT);
 
@@ -266,14 +266,69 @@ class InvoiceProjectionIT extends AbstractAxonIntegrationTest {
     }
 
     @Test
+    @DisplayName("引き継ぎ C: 取り消しは行を消さずに積み、元の調整に取り消し済みの印が付く")
+    void marksTheReversedAdjustment() {
+        String invoiceId = project("REV");
+
+        projection.on(new InvoiceAdjustedEvent(invoiceId, "ADJ-1", null,
+                new BigDecimal("-10000"), "符号を取り違えた減額", null,
+                new BigDecimal("-10000"), BigDecimal.ZERO, new BigDecimal("423500"),
+                "JPY", "accountant01", AT), "evt-r1");
+        projection.on(new InvoiceAdjustedEvent(invoiceId, "ADJ-1-REV", "ADJ-1",
+                new BigDecimal("10000"), "符号の誤り", null,
+                BigDecimal.ZERO, BigDecimal.ZERO, new BigDecimal("433500"),
+                "JPY", "accountant01", AT), "evt-r2");
+
+        var lines = queries.handle(new FindInvoiceQuery(invoiceId)).lineItems().stream()
+                .filter(line -> "ADJUSTMENT".equals(line.itemType()))
+                .toList();
+
+        // **消さずに 2 行残す。** 何が起きたかを追えない記録は根拠にならない。
+        assertThat(lines).hasSize(2);
+        assertThat(lines.get(0).adjustmentId()).isEqualTo("ADJ-1");
+        assertThat(lines.get(0).reversed())
+                .as("取り消し済みの印が付く（押せるのに断られる操作を画面に並べない）")
+                .isTrue();
+        assertThat(lines.get(1).description())
+                .as("何の取り消しかが読める")
+                .contains("取り消し");
+        assertThat(lines.get(1).reversed())
+                .as("取り消しそのものは取り消し済みではない")
+                .isFalse();
+    }
+
+    @Test
+    @DisplayName("引き継ぎ C: 同じ取り消しが 2 度届いても 1 行（少なくとも 1 回配送）")
+    void doesNotDuplicateReversals() {
+        String invoiceId = project("REVDUP");
+        projection.on(new InvoiceAdjustedEvent(invoiceId, "ADJ-1", null,
+                new BigDecimal("-10000"), "符号を取り違えた減額", null,
+                new BigDecimal("-10000"), BigDecimal.ZERO, new BigDecimal("423500"),
+                "JPY", "accountant01", AT), "evt-rd1");
+        var reversal = new InvoiceAdjustedEvent(invoiceId, "ADJ-1-REV", "ADJ-1",
+                new BigDecimal("10000"), "符号の誤り", null,
+                BigDecimal.ZERO, BigDecimal.ZERO, new BigDecimal("433500"),
+                "JPY", "accountant01", AT);
+
+        projection.on(reversal, "evt-rd2");
+        // **別の配送として届く場合もある**（元イベントの識別子が違う）。調整の
+        // 識別子で縛っていなければ、ここで 3 行になる。
+        projection.on(reversal, "evt-rd3");
+
+        assertThat(queries.handle(new FindInvoiceQuery(invoiceId)).lineItems())
+                .filteredOn(line -> "ADJUSTMENT".equals(line.itemType()))
+                .hasSize(2);
+    }
+
+    @Test
     @DisplayName("違う調整は 2 行とも残る（同じ請求書に複数の根拠がある）")
     void keepsDistinctAdjustments() {
         String invoiceId = project("MULTI");
 
-        projection.on(new InvoiceAdjustedEvent(invoiceId, new BigDecimal("-10000"),
+        projection.on(new InvoiceAdjustedEvent(invoiceId, "ADJ-1", null, new BigDecimal("-10000"),
                 "誤配による再設計", "EX-1", new BigDecimal("-10000"), BigDecimal.ZERO,
                 new BigDecimal("423500"), "JPY", "accountant01", AT), "evt-m1");
-        projection.on(new InvoiceAdjustedEvent(invoiceId, new BigDecimal("12000"),
+        projection.on(new InvoiceAdjustedEvent(invoiceId, "ADJ-2", null, new BigDecimal("12000"),
                 "留置 4 営業日の保管料", "IMP-2026-0001", new BigDecimal("2000"),
                 BigDecimal.ZERO, new BigDecimal("435500"), "JPY", "accountant01", AT), "evt-m2");
 

@@ -2,6 +2,7 @@ package com.example.cargotracker.billing.domain.model.aggregates;
 
 import com.example.cargotracker.billing.domain.model.commands.AdjustInvoiceCommand;
 import com.example.cargotracker.billing.domain.model.commands.CalculateInvoiceCommand;
+import com.example.cargotracker.billing.domain.model.commands.ReverseAdjustmentCommand;
 import com.example.cargotracker.billing.domain.model.events.InvoiceAdjustedEvent;
 import com.example.cargotracker.billing.domain.model.events.InvoiceCalculatedEvent;
 import com.example.cargotracker.billing.domain.model.valueobjects.BillingStatus;
@@ -16,7 +17,9 @@ import com.example.cargotracker.shared.domain.error.IllegalTransition;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import org.axonframework.eventsourcing.annotation.EventSourcingHandler;
 import org.axonframework.eventsourcing.annotation.reflection.EntityCreator;
 import org.axonframework.extension.spring.stereotype.EventSourced;
@@ -57,6 +60,19 @@ public class Invoice {
      * 減額もありうる。累計だけは生の値で持つ。</p>
      */
     private BigDecimal adjustmentTotal = BigDecimal.ZERO;
+
+    /**
+     * まだ取り消されていない調整（識別子 → 金額）。
+     *
+     * <p><b>取り消せるものを集約が知っている必要がある。</b> 投影に尋ねると、
+     * 投影が追いついていないあいだは取り消せない／二重に取り消せるの両方が
+     * 起こる。</p>
+     *
+     * <p><b>識別子の無い調整（IT13 までの記録）は入らない。</b> 列が無かった
+     * ころの記録を読めなくしない——復元では検査せず、取り消そうとしたときに
+     * 「取り消せません」と答える。</p>
+     */
+    private final Map<String, BigDecimal> reversibleAdjustments = new LinkedHashMap<>();
 
     /**
      * 輸出免税の請求書か。調整のたびに税を数え直すのに要る。
@@ -171,9 +187,61 @@ public class Invoice {
         Money newTax = taxExempt ? Money.zero() : newTaxable.multiply(taxRate);
         Money newTotal = newTaxable.add(newTax);
 
-        appender.append(new InvoiceAdjustedEvent(invoiceId, command.amount(), command.reason(),
+        requireText(command.adjustmentId(), "調整の識別子は必須です");
+        if (reversibleAdjustments.containsKey(command.adjustmentId())) {
+            throw new IllegalTransition(
+                    "調整 " + command.adjustmentId() + " はすでに入っています");
+        }
+
+        appender.append(new InvoiceAdjustedEvent(invoiceId, command.adjustmentId(), null,
+                command.amount(), command.reason(),
                 command.basisExceptionId(), adjusted, round(newTax), round(newTotal),
                 baseAmount.currency(), command.adjustedBy(), clock.instant()));
+    }
+
+    /**
+     * 調整を取り消す（IT14 引き継ぎ C）。
+     *
+     * <p><b>消さずに反対向きを積む。</b> 何が起きたかを追えるようにしておかな
+     * ければ、経理が確かめられない。取り消したぶんは合計から引かれる。</p>
+     *
+     * <p><b>2 度取り消せない。</b> 取り消した調整を取り消すと、入れ直したのと
+     * 同じになり、誰も意図していない額になる。</p>
+     */
+    @CommandHandler
+    public void reverseAdjustment(ReverseAdjustmentCommand command, EventAppender appender,
+            Clock clock) {
+        if (invoiceId == null) {
+            throw new IllegalTransition("請求書 " + command.invoiceId() + " がありません");
+        }
+        if (!status.acceptsAdjustment()) {
+            throw new IllegalTransition(
+                    "状態 " + status.label() + " の請求書は調整を取り消せません");
+        }
+        requireText(command.reason(), "取り消しの理由は必須です");
+        requireText(command.reversedBy(), "取り消した人は必須です");
+
+        BigDecimal original = reversibleAdjustments.get(command.adjustmentId());
+        if (original == null) {
+            // **未登録を素通りさせない。** 取り消し済み・存在しない・識別子の
+            // 無い古い調整は、どれも「いま取り消せるもの」ではない。
+            throw new IllegalTransition(
+                    "取り消せる調整がありません: " + command.adjustmentId());
+        }
+
+        BigDecimal adjusted = adjustmentTotal.subtract(original);
+        Money afterDiscount = baseAmount.subtract(discountAmount);
+        Money newTaxable = Money.yen(afterDiscount.amount().add(adjusted));
+        Money newTax = taxExempt ? Money.zero() : newTaxable.multiply(taxRate);
+        Money newTotal = newTaxable.add(newTax);
+
+        appender.append(new InvoiceAdjustedEvent(invoiceId,
+                // 取り消しそのものにも識別子を与える。**これも調整の 1 本**なので、
+                // 番号の無い行を明細に積まない。
+                reversalIdOf(command.adjustmentId()), command.adjustmentId(),
+                original.negate(), command.reason(), null, adjusted,
+                round(newTax), round(newTotal),
+                baseAmount.currency(), command.reversedBy(), clock.instant()));
     }
 
     @EventSourcingHandler
@@ -190,6 +258,13 @@ public class Invoice {
     @EventSourcingHandler
     void on(InvoiceAdjustedEvent event) {
         this.adjustmentTotal = event.adjustmentTotal();
+        // **復元では検査しない。** 識別子の無かったころの記録も読めなければ
+        // ならない（不変条件を足しても、既存の記録が壊れてはいけない）。
+        if (event.reversedAdjustmentId() != null) {
+            reversibleAdjustments.remove(event.reversedAdjustmentId());
+        } else if (event.adjustmentId() != null) {
+            reversibleAdjustments.put(event.adjustmentId(), event.amount());
+        }
     }
 
     private InvoiceCalculatedEvent.LineItem item(LineItemType type, String description,
@@ -204,6 +279,26 @@ public class Invoice {
         return LineItemType.DISCOUNT.label() + "（"
                 + command.discountRate().percentage().toPlainString() + "%"
                 + contract + "）";
+    }
+
+    /**
+     * 取り消しの識別子。
+     *
+     * <p><b>36 文字に収める。</b> 列は {@code VARCHAR(36)} で、末尾に足すと
+     * あふれる——集約は受け付けるので、投影が退避されるまで気づけない
+     * （IT13 の請求書 ID と同じ形）。接頭辞を差し替えれば長さは変わらない。</p>
+     *
+     * <p><b>元の識別子から導く。</b> 採番すると、同じ取り消しが 2 度届いたときに
+     * 別の行として積まれる。</p>
+     */
+    private static String reversalIdOf(String adjustmentId) {
+        if (adjustmentId.startsWith("ADJ-")) {
+            return "REV-" + adjustmentId.substring("ADJ-".length());
+        }
+        // 形の違う識別子。**切り詰めて衝突させない**——32 文字までに収める。
+        String body = adjustmentId.length() > 32
+                ? adjustmentId.substring(adjustmentId.length() - 32) : adjustmentId;
+        return "REV-" + body;
     }
 
     private static BigDecimal round(Money money) {

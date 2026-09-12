@@ -81,6 +81,92 @@ class AttentionItemControllerIT extends AbstractAxonIntegrationTest {
         assertThat(body).contains(salesTarget).contains(trackerTarget);
     }
 
+    private ResponseEntity<JsonMap> acknowledgeAs(String itemId, String rolesHeader,
+            String username) {
+        var request = rest.post().uri("http://localhost:" + port
+                + "/api/v1/booking/attention-items/" + itemId + "/acknowledge");
+        if (rolesHeader != null) {
+            request = request.header("X-Auth-Roles", rolesHeader);
+        }
+        if (username != null) {
+            request = request.header("X-Auth-Username", username);
+        }
+        return request.retrieve().toEntity(JsonMap.class);
+    }
+
+    @Test
+    @DisplayName("確認済にすると一覧から消え、誰がいつ確認したかが残る")
+    void acknowledgingRemovesItemFromListAndKeepsTheTrail() {
+        String target = "ack-" + System.nanoTime();
+        recorder.add("PROJECTION_REJECTED", "SHIPPER", target, "ROLE_SALES",
+                "メールアドレスの重複", "{}", Instant.now());
+        String itemId = itemIdOf("ROLE_SALES", target);
+
+        // 確認する前は出ている。**この行が無いと、消えたのか元から無かったのか
+        // 判別できない**（条件を外しても緑になる検査を書かない）。
+        assertThat(String.valueOf(listAs("ROLE_SALES").getBody().get("items")))
+                .contains(target);
+
+        ResponseEntity<JsonMap> response = acknowledgeAs(itemId, "ROLE_SALES", "sales01");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().get("acknowledgedBy")).isEqualTo("sales01");
+        assertThat(response.getBody().get("acknowledgedAt")).isNotNull();
+        assertThat(String.valueOf(listAs("ROLE_SALES").getBody().get("items")))
+                .as("確認済は担当の一覧から外れる（残ると、確認した意味が無い）")
+                .doesNotContain(target);
+    }
+
+    @Test
+    @DisplayName("他ロール宛は確認できない（見えないものを片づけられてはいけない）")
+    void cannotAcknowledgeAnotherRolesItem() {
+        String target = "foreign-" + System.nanoTime();
+        recorder.add("PROJECTION_REJECTED", "INVOICE", target, "ROLE_ACCOUNTANT",
+                "荷主が見つからない", "{}", Instant.now());
+        String itemId = itemIdOf("ROLE_ACCOUNTANT", target);
+
+        assertThat(acknowledgeAs(itemId, "ROLE_SALES", "sales01").getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
+
+        assertThat(String.valueOf(listAs("ROLE_ACCOUNTANT").getBody().get("items")))
+                .as("担当の一覧には残ったまま")
+                .contains(target);
+    }
+
+    @Test
+    @DisplayName("確認済をもう一度確認しようとしても跡を上書きしない")
+    void doesNotOverwriteAnExistingAcknowledgement() {
+        String target = "twice-" + System.nanoTime();
+        recorder.add("PROJECTION_REJECTED", "SHIPPER", target, "ROLE_SALES",
+                "メールアドレスの重複", "{}", Instant.now());
+        String itemId = itemIdOf("ROLE_SALES", target);
+
+        acknowledgeAs(itemId, "ROLE_SALES", "sales01");
+
+        assertThat(acknowledgeAs(itemId, "ROLE_SALES", "sales02").getStatusCode())
+                .as("2 度目は対象が無い。最初に確認した人の跡が正")
+                .isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("ロールが伝わっていなければ確認もできない")
+    void cannotAcknowledgeWithoutRoles() {
+        String target = "noroles-" + System.nanoTime();
+        recorder.add("PROJECTION_REJECTED", "SHIPPER", target, "ROLE_SALES",
+                "メールアドレスの重複", "{}", Instant.now());
+
+        assertThat(acknowledgeAs(itemIdOf("ROLE_SALES", target), null, "sales01").getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    /** 識別子は採番せず事実から導く（共有カーネル）。テスト側で導出を写さない。 */
+    private static String itemIdOf(String role, String target) {
+        String targetType = "ROLE_ACCOUNTANT".equals(role) ? "INVOICE" : "SHIPPER";
+        String reason = "ROLE_ACCOUNTANT".equals(role) ? "荷主が見つからない" : "メールアドレスの重複";
+        return com.example.cargotracker.shared.domain.attention.AttentionItemId
+                .of("PROJECTION_REJECTED", targetType, target, reason).value();
+    }
+
     @Test
     @DisplayName("ロールが伝わっていなければ何も出さない")
     void showsNothingWithoutRoles() {

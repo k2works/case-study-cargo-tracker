@@ -59,10 +59,19 @@ public class InvoiceQueryHandler {
 
     private InvoiceView toView(InvoiceMapper.InvoiceRow row) {
         BillingStatus status = BillingStatus.valueOf(row.billingStatus());
-        List<InvoiceLineView> lines = invoices.findLineItems(row.invoiceId()).stream()
+        var lineRows = invoices.findLineItems(row.invoiceId());
+        // 取り消された調整の識別子。**行を消さずに印を付ける**——何が起きたかを
+        // 追えない記録は、経理にとって根拠にならない。
+        var reversedIds = lineRows.stream()
+                .map(InvoiceMapper.LineItemRow::reversedAdjustmentId)
+                .filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.toSet());
+        List<InvoiceLineView> lines = lineRows.stream()
                 .map(line -> new InvoiceLineView(line.itemType(),
                         LineItemType.valueOf(line.itemType()).label(), line.description(),
-                        line.amount(), line.currency(), line.basisExceptionId()))
+                        line.amount(), line.currency(), line.basisExceptionId(),
+                        line.adjustmentId(),
+                        line.adjustmentId() != null && reversedIds.contains(line.adjustmentId())))
                 .toList();
         return new InvoiceView(row.invoiceId(), row.bookingId(), row.shipperId(),
                 row.shipperName(), row.shipperType(), ShipperType.of(row.shipperType()).label(),

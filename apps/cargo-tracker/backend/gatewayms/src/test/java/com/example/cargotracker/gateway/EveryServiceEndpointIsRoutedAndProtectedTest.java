@@ -303,6 +303,30 @@ class EveryServiceEndpointIsRoutedAndProtectedTest {
         assertThat(RoleAuthorization.isAllowed("GET", one, sales))
                 .as("営業も請求は読まない").isFalse();
 
+        // IT14 引き継ぎ B・C。**書き込みはメソッド込みで宣言する**——読み向けの
+        // 広い宣言に吸われると、載せ忘れた書き込みほど無防備になる。
+        String reversal = adjust + "/ADJ-1/reversal";
+        String recalculate = list + "/recalculate";
+        assertThat(RoleAuthorization.isAllowed("POST", reversal, accountant))
+                .as("調整を取り消すのは経理").isTrue();
+        assertThat(RoleAuthorization.isAllowed("POST", reversal, sales))
+                .as("営業は調整を取り消さない").isFalse();
+        assertThat(RoleAuthorization.isAllowed("POST", recalculate, accountant))
+                .as("請求を作り直すのは経理").isTrue();
+        assertThat(RoleAuthorization.isAllowed("POST", recalculate, tracker))
+                .as("追跡管理者は請求を作らない").isFalse();
+
+        // IT14 引き継ぎ A。**確認済は担当ロールをサービス側が確かめる**ので、
+        // Gateway は認証済みなら通す（一覧に出す条件と同じ条件を更新にも置く）。
+        for (String service : new String[] {"booking", "routing", "billing"}) {
+            String acknowledge = "/api/v1/" + service + "/attention-items/i-1/acknowledge";
+            assertThat(RoleAuthorization.isDeclared("POST", acknowledge))
+                    .as("%s の確認済に宣言がある（名簿に無い経路は通さない）", service)
+                    .isTrue();
+            assertThat(RoleAuthorization.isAllowed("POST", acknowledge, sales))
+                    .as("%s の自分宛を確認できる", service).isTrue();
+        }
+
         // **経理は根拠を開ける**（IT13 のレビュー 高）。調整は例外・通関申告を
         // 根拠に指すので、開けないと「なぜこの減額か」を確かめられない。
         // **読みだけ**——起票・状態更新は各ロールの宣言が守る。

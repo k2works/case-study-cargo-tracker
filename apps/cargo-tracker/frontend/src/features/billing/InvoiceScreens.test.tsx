@@ -255,6 +255,90 @@ describe('S61 請求詳細', () => {
     expect(screen.queryByText(/差額/)).not.toBeInTheDocument();
   });
 
+  it('引き継ぎ C: 入れた調整を取り消せる（誤入力を戻せないまま発行しない）', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(invoice({
+        adjustmentAmount: -10000,
+        totalAmount: 423500,
+        lineItems: [
+          ...invoice().lineItems,
+          {
+            itemType: 'ADJUSTMENT',
+            itemTypeLabel: '調整',
+            description: '符号を取り違えた減額',
+            amount: -10000,
+            currency: 'JPY',
+            basisExceptionId: null,
+            adjustmentId: 'ADJ-1',
+            reversed: false,
+          },
+        ],
+      })), { status: 200 }),
+    );
+
+    renderAt('/invoices/INV-20260928-1a2b3c4d', <InvoiceDetailPage />);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'この調整を取り消す' }));
+    await userEvent.type(screen.getByLabelText('取り消しの理由'), '符号の誤り');
+    await userEvent.click(screen.getByRole('button', { name: '取り消しを確定する' }));
+
+    await waitFor(() => {
+      const call = fetchSpy.mock.calls.find(
+        ([url]) => String(url).includes('/adjustments/ADJ-1/reversal'));
+      expect(call).toBeDefined();
+      expect(String(call?.[1]?.body)).toContain('"reason":"符号の誤り"');
+    });
+  });
+
+  it('引き継ぎ C: 取り消し済みの調整には取り消しを出さない', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(invoice({
+        lineItems: [
+          ...invoice().lineItems,
+          {
+            itemType: 'ADJUSTMENT',
+            itemTypeLabel: '調整',
+            description: '符号を取り違えた減額',
+            amount: -10000,
+            currency: 'JPY',
+            basisExceptionId: null,
+            adjustmentId: 'ADJ-1',
+            reversed: true,
+          },
+        ],
+      })), { status: 200 }),
+    );
+
+    renderAt('/invoices/INV-20260928-1a2b3c4d', <InvoiceDetailPage />);
+
+    await screen.findByText('符号を取り違えた減額');
+    // 押せるのに断られる操作を並べない（2 度取り消すと入れ直したのと同じになる）。
+    expect(screen.queryByRole('button', { name: 'この調整を取り消す' }))
+      .not.toBeInTheDocument();
+    expect(screen.getByText('取り消し済み')).toBeInTheDocument();
+  });
+
+  it('引き継ぎ C: 調整の向きは選択式（符号の打ち間違いを入り口で防ぐ）', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(JSON.stringify(invoice()), { status: 200 }));
+
+    renderAt('/invoices/INV-20260928-1a2b3c4d', <InvoiceDetailPage />);
+    await screen.findByText(/2 区間/);
+
+    // **金額は正の数で打つ。** 向きは選ぶ——「−」を打ち忘れた減額が
+    // 補償費用として積まれるのを、入り口で防ぐ。
+    await userEvent.selectOptions(screen.getByLabelText('調整の向き'), 'DEDUCTION');
+    await userEvent.type(screen.getByLabelText('調整額'), '10000');
+    await userEvent.type(screen.getByLabelText('理由'), '遅延の補償');
+    await userEvent.click(screen.getByRole('button', { name: '調整を入れる' }));
+
+    await waitFor(() => {
+      const call = fetchSpy.mock.calls.find(
+        ([url]) => String(url).includes('/adjustments'));
+      expect(String(call?.[1]?.body)).toContain('"amount":-10000');
+    });
+  });
+
   it('US21 §6: 調整を送ると送信中を出し、理由と根拠を一緒に送る', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch')
       .mockResolvedValue(new Response(JSON.stringify(invoice()), { status: 200 }));
@@ -262,7 +346,8 @@ describe('S61 請求詳細', () => {
     renderAt('/invoices/INV-20260928-1a2b3c4d', <InvoiceDetailPage />);
     await screen.findByText(/2 区間/);
 
-    await userEvent.type(screen.getByLabelText('調整額'), '-10000');
+    await userEvent.selectOptions(screen.getByLabelText('調整の向き'), 'DEDUCTION');
+    await userEvent.type(screen.getByLabelText('調整額'), '10000');
     await userEvent.type(screen.getByLabelText('理由'), '遅延の補償');
     await userEvent.type(screen.getByLabelText('根拠の例外 ID（任意）'), 'EX-1');
     await userEvent.click(screen.getByRole('button', { name: '調整を入れる' }));

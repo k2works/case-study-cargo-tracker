@@ -1077,6 +1077,7 @@ class Invoice <<Aggregate Root>> <<@EventSourced(tagKey="invoiceId")>> {
   - paidAt: Instant [0..1]
   + {static} calculate(CalculateInvoiceCommand, charge: FreightCharge)
   + adjust(AdjustInvoiceCommand)
+  + reverseAdjustment(ReverseAdjustmentCommand)
   + issue(IssueInvoiceCommand)
   + recordPayment(RecordPaymentCommand)
   + void(VoidInvoiceCommand)
@@ -1087,6 +1088,8 @@ class InvoiceLineItem <<Value Object>> {
   - description: String
   - amount: Money
   - basisExceptionId: String [0..1]
+  - adjustmentId: String [0..1]
+  - reversedAdjustmentId: String [0..1]
 }
 class Money <<Value Object>> {
   - amount: BigDecimal
@@ -1163,11 +1166,13 @@ Booking の `Quotation` はこの式と同じ料率で概算を出します。�
 | 5 | `PAID` になるとき `paidAt` は必須 |
 | 6 | `VOID` の請求書は再発行しない。新規に発行する |
 | 7 | `quotedAmount` は `CalculateInvoiceCommand` に載った見積時の概算をそのまま持つ。計算し直さない |
+| 8 | 調整は識別子を持つ。**取り消しは行を消さず反対向きの調整を積む**（`reversedAdjustmentId` が元の調整を指す）。同じ調整を 2 度取り消さない——入れ直したのと同じ額になる。識別子の無い調整（IT13 までの記録）は**復元では断らず**、取り消そうとしたときに断る |
 
 | コマンド | アクター | 発行イベント | 契約 | UC / US |
 | :--- | :--- | :--- | :--- | :--- |
 | `CalculateInvoiceCommand` | `BillingReactionHandler`（`CargoDeliveredEvent` 購読。荷主の種別・割引率は自前の `shipper_contract_snapshot` から、区間・重量・貨物種別は `billing_cargo_snapshot` から）/ 経理担当者 | `InvoiceCalculatedEvent` | — | UC17 / US21・US22 |
 | `AdjustInvoiceCommand` | 経理担当者 | `InvoiceAdjustedEvent` | — | UC17 |
+| `ReverseAdjustmentCommand` | 経理担当者 | `InvoiceAdjustedEvent`（反対向き。`reversedAdjustmentId` 入り） | — | UC17 |
 | `IssueInvoiceCommand` | 経理担当者 | `InvoiceIssuedEvent` | — | UC18 / US23 |
 | `RecordPaymentCommand` | 経理担当者 | `PaymentRecordedEvent` | **○** | UC18 / US23 |
 | `VoidInvoiceCommand` | 経理担当者 | `InvoiceVoidedEvent` | — | UC18 |
@@ -1429,7 +1434,7 @@ Reaction Handler の再試行と補償は「例外にしない」ではなく「
 | UC14 貨物状態更新 | `TrackingActivity` | `AdvanceTrackingCommand`, `UpdateTransportStatusCommand` | `TransportStatusUpdatedEvent`, `CargoDeliveredEvent` |
 | UC15 追跡情報照会 | — | `FindTrackingQuery`, `FindPublicTrackingQuery` | — |
 | UC16 例外処理 | `TrackingActivity` | `RegisterTrackingExceptionCommand`, `ResolveTrackingExceptionCommand` | `TrackingExceptionRegisteredEvent`, `TrackingExceptionResolvedEvent` |
-| UC17 輸送料金算出 | `Invoice` | `CalculateInvoiceCommand`, `AdjustInvoiceCommand` | `InvoiceCalculatedEvent`, `InvoiceAdjustedEvent` |
+| UC17 輸送料金算出 | `Invoice` | `CalculateInvoiceCommand`, `AdjustInvoiceCommand`, `ReverseAdjustmentCommand` | `InvoiceCalculatedEvent`, `InvoiceAdjustedEvent` |
 | UC18 精算処理 | `Invoice` → `Cargo` | `IssueInvoiceCommand`, `RecordPaymentCommand`, `SettleBookingCommand` | `InvoiceIssuedEvent`, `PaymentRecordedEvent`, `BookingSettledEvent` |
 | UC19 航海スケジュール登録 | `Voyage` | `RegisterVoyageCommand`, `UpdateVoyageScheduleCommand` | `VoyageRegisteredEvent`, `VoyageScheduleUpdatedEvent` |
 | UC20 ユーザー認証 | `User` | `LoginCommand`, `UnlockAccountCommand` | （状態保存・監査ログ） |

@@ -1,19 +1,9 @@
 package com.example.cargotracker.billing.application.reaction;
 
-import com.example.cargotracker.billing.domain.model.commands.CalculateInvoiceCommand;
-import com.example.cargotracker.billing.domain.model.valueobjects.DiscountRate;
-import com.example.cargotracker.billing.domain.model.valueobjects.ShipperType;
-import com.example.cargotracker.billing.domain.model.valueobjects.TransportRecord;
-import com.example.cargotracker.billing.infrastructure.persistence.BillingCargoSnapshotMapper;
-import com.example.cargotracker.billing.infrastructure.persistence.InvoiceMapper;
-import com.example.cargotracker.billing.infrastructure.persistence.ShipperContractSnapshotMapper;
+import com.example.cargotracker.billing.application.InvoiceCalculation;
 import com.example.cargotracker.billing.infrastructure.projection.AttentionItemRecorder;
 import com.example.cargotracker.shared.contract.event.CargoDeliveredEvent;
-import com.example.cargotracker.shared.domain.location.UnLocode;
 import java.time.Clock;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
 import org.axonframework.messaging.commandhandling.gateway.CommandGateway;
 import org.axonframework.messaging.core.annotation.SequencingPolicy;
 import org.axonframework.messaging.core.sequencing.PropertySequencingPolicy;
@@ -52,89 +42,39 @@ public class BillingReactionHandler {
     private static final String ACCOUNTANT = "ROLE_ACCOUNTANT";
 
     private final CommandGateway commands;
-    private final BillingCargoSnapshotMapper cargos;
-    private final ShipperContractSnapshotMapper shippers;
-    private final InvoiceMapper invoices;
+    private final InvoiceCalculation calculation;
     private final AttentionItemRecorder attentionItems;
     private final Clock clock;
 
-    public BillingReactionHandler(CommandGateway commands, BillingCargoSnapshotMapper cargos,
-            ShipperContractSnapshotMapper shippers, InvoiceMapper invoices,
+    public BillingReactionHandler(CommandGateway commands, InvoiceCalculation calculation,
             AttentionItemRecorder attentionItems, Clock clock) {
         this.commands = commands;
-        this.cargos = cargos;
-        this.shippers = shippers;
-        this.invoices = invoices;
+        this.calculation = calculation;
         this.attentionItems = attentionItems;
         this.clock = clock;
     }
 
     @EventHandler
     public void on(CargoDeliveredEvent event) {
-        if (invoices.findActiveByBooking(event.bookingId()) != null) {
-            // 同じ引渡が 2 度届いた。送ると集約か投影のどちらかが弾くが、
-            // **弾かれた事実が要確認に出る**ので、ここで止めるほうが静かである。
-            return;
+        switch (calculation.prepare(event.trackingNumber(), event.bookingId())) {
+            case InvoiceCalculation.Outcome.AlreadyInvoiced ignored -> {
+                // 同じ引取が 2 度届いた。送ると集約か投影のどちらかが弾くが、
+                // **弾かれた事実が要確認に出る**ので、ここで止めるほうが静かである。
+            }
+            case InvoiceCalculation.Outcome.Blocked blocked -> {
+                if (blocked.retryable()) {
+                    // 購読の遅れ。**例外を投げて再試行させる**——退避先が受け止め、
+                    // `projection:dead-letters:retry` で処理し直せる。
+                    throw new IllegalStateException(blocked.reason());
+                }
+                // 待っても入らない。要確認に出して人に渡す。
+                fail(event.bookingId(), blocked.reason());
+            }
+            // **default を置かない。** 結果の種類を足したとき、ここが名乗り出ずに
+            // 素通りするのを防ぐ（コンパイルが赤になる）。
+            case InvoiceCalculation.Outcome.Ready ready ->
+                    commands.sendAndWait(ready.command(), String.class);
         }
-
-        var cargo = cargos.find(event.trackingNumber());
-        if (cargo == null) {
-            // 貨物の写しがまだ来ていない（購読の遅れ）。**例外を投げて再試行させる**
-            // ——退避先が受け止め、`projection:dead-letters:retry` で処理し直せる。
-            throw new IllegalStateException("貨物 " + event.trackingNumber()
-                    + " の写しがまだ届いていません（請求を作れません）");
-        }
-        if (cargo.weightKg() == null) {
-            // **待っても入らない。** 重量を運ぶ前のイベントから作られた写しなので、
-            // 再試行しても同じである。要確認に出して人に渡す。
-            fail(cargo.bookingId(), "貨物 " + event.trackingNumber()
-                    + " の重量が分からないので請求書を作れません");
-            return;
-        }
-
-        var contract = shippers.find(cargo.shipperId());
-        if (contract == null) {
-            throw new IllegalStateException("荷主 " + cargo.shipperId()
-                    + " の契約がまだ届いていません（請求を作れません）");
-        }
-
-        List<TransportRecord.BilledLeg> legs = new ArrayList<>();
-        for (BillingCargoSnapshotMapper.LegRow leg : cargos.findLegs(event.trackingNumber())) {
-            legs.add(new TransportRecord.BilledLeg(new UnLocode(leg.loadUnLocode()),
-                    new UnLocode(leg.unloadUnLocode())));
-        }
-        if (legs.isEmpty()) {
-            fail(cargo.bookingId(), "貨物 " + event.trackingNumber()
-                    + " の区間が分からないので請求書を作れません");
-            return;
-        }
-
-        var transport = new TransportRecord(legs, cargo.weightKg(), cargo.cargoType(),
-                new UnLocode(cargo.originUnLocode()), new UnLocode(cargo.destinationUnLocode()));
-
-        commands.sendAndWait(new CalculateInvoiceCommand(
-                nextInvoiceId(), cargo.bookingId(), cargo.shipperId(),
-                contract.shipperName(), ShipperType.of(contract.shipperType()),
-                DiscountRate.ofNullable(contract.discountRate()), contract.contractNumber(),
-                transport,
-                // 連鎖からの算出は利用者名を持たない。**誰が作ったかは残す。**
-                "system"), String.class);
-    }
-
-    /**
-     * 請求書の識別子。
-     *
-     * <p><b>人が読める形にする。</b> 経理は請求書番号で会話するので、素の UUID
-     * だと画面でも問い合わせでも扱えない。日付 + 8 桁で、{@code VARCHAR(36)} に
-     * 収まる（{@code "INV-" + UUID} は 40 文字で、<b>投影が退避された</b>——
-     * 集約は受け付けるので、退避先を見るまで気づけなかった）。</p>
-     */
-    private String nextInvoiceId() {
-        return "INV-" + java.time.LocalDate.ofInstant(clock.instant(),
-                        com.example.cargotracker.shared.infrastructure.time
-                                .BusinessClockConfiguration.BUSINESS_ZONE)
-                .format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE)
-                + "-" + UUID.randomUUID().toString().substring(0, 8);
     }
 
     /**

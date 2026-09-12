@@ -1,17 +1,23 @@
 package com.example.cargotracker.billing.interfaces.rest;
 
+import com.example.cargotracker.billing.application.InvoiceCalculation;
 import com.example.cargotracker.billing.domain.model.commands.AdjustInvoiceCommand;
+import com.example.cargotracker.billing.domain.model.commands.ReverseAdjustmentCommand;
+import com.example.cargotracker.billing.infrastructure.persistence.AttentionItemMapper;
 import com.example.cargotracker.billing.infrastructure.query.BillingQueries.FindInvoiceOfBookingQuery;
 import com.example.cargotracker.billing.infrastructure.query.BillingQueries.FindInvoiceQuery;
 import com.example.cargotracker.billing.infrastructure.query.BillingQueries.FindInvoicesQuery;
 import com.example.cargotracker.billing.infrastructure.query.BillingQueries.InvoiceListView;
 import com.example.cargotracker.billing.infrastructure.query.BillingQueries.InvoiceView;
+import com.example.cargotracker.shared.domain.error.IllegalTransition;
 import com.example.cargotracker.shared.infrastructure.axon.QueryDispatcher;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import org.axonframework.messaging.commandhandling.gateway.CommandGateway;
+import java.time.Clock;
+import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,9 +31,14 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * 請求（S60・S61 / UC17・US21・US22）。
  *
- * <p><b>算出の入口は置かない。</b> 算出は引取（{@code CargoDeliveredEvent}）の連鎖で
- * 始まる。手で始める入口を先に作ると、<b>連鎖が止まっていることに気づかないまま
- * 手で回してしまう</b>——止まっていることは要確認一覧に出る。</p>
+ * <p><b>算出を手で始める入口は置かない。</b> 算出は引取（{@code CargoDeliveredEvent}）
+ * の連鎖で始まる。手で始める入口を作ると、<b>連鎖が止まっていることに気づかないまま
+ * 手で回してしまう</b>。</p>
+ *
+ * <p><b>作り直す入口だけは置く</b>（IT14 引き継ぎ B）。材料が足りずに作れなかった
+ * 予約は要確認一覧に出ているが、材料を直したあとに請求へ戻す道が無く、<b>締めの
+ * 母集団から落ち続けていた</b>。作り直せるのは<b>要確認に出ている予約だけ</b>に
+ * 限る——それ以外を受け付けると、結局「手で始める入口」になる。</p>
  *
  * <p><b>荷主向けの請求書（S62）はここに無い。</b> 荷主が読む請求書は発行
  * （{@code INVOICED}）が前提で、それは US23（IT14）である。</p>
@@ -36,12 +47,22 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/billing/invoices")
 public class InvoiceController {
 
+    /** 作り直しの対象になる要確認の種別。連鎖が請求書を作れなかった記録である。 */
+    private static final String REACTION_FAILED = "REACTION_FAILED";
+
     private final CommandGateway commands;
     private final QueryDispatcher queries;
+    private final InvoiceCalculation calculation;
+    private final AttentionItemMapper attentionItems;
+    private final Clock clock;
 
-    public InvoiceController(CommandGateway commands, QueryDispatcher queries) {
+    public InvoiceController(CommandGateway commands, QueryDispatcher queries,
+            InvoiceCalculation calculation, AttentionItemMapper attentionItems, Clock clock) {
         this.commands = commands;
         this.queries = queries;
+        this.calculation = calculation;
+        this.attentionItems = attentionItems;
+        this.clock = clock;
     }
 
     /** 一覧（S60）。**既定で入金済・取消を外す。** */
@@ -80,12 +101,123 @@ public class InvoiceController {
      * ければ、あとから誰も確かめられない。</p>
      */
     @PostMapping("/{invoiceId}/adjustments")
-    public ResponseEntity<Void> adjust(@PathVariable String invoiceId,
+    public ResponseEntity<AdjustedView> adjust(@PathVariable String invoiceId,
             @RequestHeader(value = "X-Auth-Username", required = false) String username,
             @Valid @RequestBody AdjustRequest request) {
-        commands.sendAndWait(new AdjustInvoiceCommand(invoiceId, request.amount(),
+        // **識別子はサーバで採る。** 画面に採らせると、送り直しのたびに新しい
+        // 調整が積まれる（押し直しが二重の調整になる）。
+        //
+        // **36 文字に収める。** 列は VARCHAR(36) で、"ADJ-" + UUID は 40 文字に
+        // なる——集約は受け付けるので、投影が退避されるまで気づけない
+        // （IT13 の請求書 ID がまったく同じ形で踏んだ）。ハイフンを外すと
+        // 4 + 32 = 36 でちょうど収まり、entropy も落ちない。
+        String adjustmentId = "ADJ-"
+                + java.util.UUID.randomUUID().toString().replace("-", "");
+        commands.sendAndWait(new AdjustInvoiceCommand(invoiceId, adjustmentId, request.amount(),
                 request.reason(), request.basisExceptionId(), username), Void.class);
+        return ResponseEntity.ok(new AdjustedView(adjustmentId));
+    }
+
+    /** 入れた調整。<b>識別子を返す</b>——取り消すときの宛先になる。 */
+    public record AdjustedView(String adjustmentId) {
+    }
+
+    /**
+     * 調整を取り消す（IT14 引き継ぎ C）。
+     *
+     * <p><b>誤入力は起きる。</b> 符号を取り違えた調整が入ったまま請求書を発行
+     * すると、荷主に誤った額を請求することになる。発行（US23）を足す前に、
+     * 戻せる道を作っておく。</p>
+     *
+     * <p><b>消さずに反対向きを積む。</b> 何が起きたかを追えない記録は、経理に
+     * とって根拠にならない。</p>
+     */
+    @PostMapping("/{invoiceId}/adjustments/{adjustmentId}/reversal")
+    public ResponseEntity<Void> reverseAdjustment(@PathVariable String invoiceId,
+            @PathVariable String adjustmentId,
+            @RequestHeader(value = "X-Auth-Username", required = false) String username,
+            @Valid @RequestBody ReverseRequest request) {
+        commands.sendAndWait(new ReverseAdjustmentCommand(invoiceId, adjustmentId,
+                request.reason(), username), Void.class);
         return ResponseEntity.ok().build();
+    }
+
+    /** 取り消しの入力。<b>理由は必須</b>——理由の読めない取り消しを残さない。 */
+    public record ReverseRequest(@NotBlank String reason) {
+    }
+
+    /**
+     * 作れなかった請求を作り直す（IT14 引き継ぎ B）。
+     *
+     * <p><b>要確認に出ている予約だけ</b>を受け付ける。重量や区間が届いていな
+     * かった予約は、材料が直っても誰も請求へ戻さないままだった——月末の締めで
+     * 数が合わないのに、どこから落ちたのかが分からない。</p>
+     *
+     * <p><b>材料の判定は連鎖と同じものを使う</b>（{@link InvoiceCalculation}）。
+     * ここで書き直すと、手の入口だけが正しくて連鎖が誤りを素通りさせる、または
+     * その逆が起きる。</p>
+     *
+     * <p><b>作れたら要確認を確認済にする。</b> 残したままにすると、片づいた
+     * はずのものが毎朝の一覧に出続ける。</p>
+     */
+    @PostMapping("/recalculate")
+    public ResponseEntity<RecalculatedView> recalculate(
+            @RequestHeader(value = "X-Auth-Roles", required = false) String roles,
+            @RequestHeader(value = "X-Auth-Username", required = false) String username,
+            @Valid @RequestBody RecalculateRequest request) {
+        String attentionItemId = openAttentionItemFor(request.bookingId());
+        if (attentionItemId == null) {
+            // **共有の対応表が扱う型で投げる。** ResponseStatusException の理由は
+            // 既定の応答本文に載らず、画面には「作れませんでした」しか届かない。
+            throw new IllegalTransition("予約 " + request.bookingId()
+                    + " は要確認に出ていません（連鎖が止まっていないか確かめてください）");
+        }
+
+        switch (calculation.prepareForBooking(request.bookingId())) {
+            case InvoiceCalculation.Outcome.AlreadyInvoiced already ->
+                    throw new IllegalTransition("予約 " + request.bookingId()
+                            + " にはすでに有効な請求書があります: " + already.invoiceId());
+            case InvoiceCalculation.Outcome.Blocked blocked ->
+                    // **理由をそのまま返す。** 「作れません」だけでは、何を直せば
+                    // よいのかが分からず、同じ操作が繰り返される。
+                    throw new IllegalTransition(blocked.reason());
+            case InvoiceCalculation.Outcome.Ready ready -> {
+                String invoiceId = commands.sendAndWait(ready.command(), String.class);
+                attentionItems.acknowledge(attentionItemId, rolesOf(roles),
+                        username == null || username.isBlank() ? "system" : username,
+                        clock.instant());
+                return ResponseEntity.ok(new RecalculatedView(invoiceId));
+            }
+        }
+    }
+
+    /** その予約について、まだ確認されていない「請求を作れなかった」記録。 */
+    private String openAttentionItemFor(String bookingId) {
+        return attentionItems.findOpenByRole("ROLE_ACCOUNTANT").stream()
+                .filter(row -> REACTION_FAILED.equals(row.kind()))
+                .filter(row -> "BOOKING".equals(row.targetType()))
+                .filter(row -> bookingId.equals(row.targetId()))
+                .map(AttentionItemMapper.AttentionItemRow::itemId)
+                .findFirst()
+                .orElse(null);
+    }
+
+    private static List<String> rolesOf(String header) {
+        if (header == null || header.isBlank()) {
+            return List.of("ROLE_ACCOUNTANT");
+        }
+        return java.util.Arrays.stream(header.split(","))
+                .map(String::trim)
+                .filter(role -> !role.isEmpty())
+                .toList();
+    }
+
+    /** 作り直しの入力。<b>予約だけ</b>——追跡番号は貨物の写しから引く。 */
+    public record RecalculateRequest(@NotBlank String bookingId) {
+    }
+
+    /** 作り直した結果。画面はこの請求書へ移る。 */
+    public record RecalculatedView(String invoiceId) {
     }
 
     /**

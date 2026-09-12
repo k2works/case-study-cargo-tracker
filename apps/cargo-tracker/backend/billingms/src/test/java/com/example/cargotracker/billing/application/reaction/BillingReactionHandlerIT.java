@@ -285,6 +285,86 @@ class BillingReactionHandlerIT extends AbstractAxonIntegrationTest {
                 .isEmpty();
     }
 
+    /** 作り直しの入口を叩く。**経理として**送る。 */
+    private org.springframework.http.ResponseEntity<java.util.Map<String, Object>> recalculate(
+            String bookingId) {
+        return org.springframework.web.client.RestClient.builder()
+                .defaultStatusHandler(status -> true, (request, response) -> { })
+                .build()
+                .post().uri("http://localhost:" + port + "/api/v1/billing/invoices/recalculate")
+                .header("X-Auth-Roles", "ROLE_ACCOUNTANT")
+                .header("X-Auth-Username", "acct01")
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .body(java.util.Map.of("bookingId", bookingId))
+                .retrieve()
+                .toEntity(new org.springframework.core.ParameterizedTypeReference<
+                        java.util.Map<String, Object>>() { });
+    }
+
+    @Test
+    @DisplayName("引き継ぎ B: 材料を直したあとに請求を作り直せる（要確認も片づく）")
+    void recalculatesAfterTheMaterialIsFixed() {
+        // 重量が届いていなかったので請求書が作れず、要確認に出ている。
+        var fixture = cargo(null, true, true, "CORPORATE", "0.1500");
+        deliver(fixture);
+        assertThat(attentionFor(fixture.bookingId())).hasSize(1);
+
+        // 材料が直る（重量を運ぶイベントが届き、写しが上書きされる）。
+        cargoProjection.on(new TrackingInitializedEvent(fixture.trackingNumber(),
+                fixture.bookingId(), fixture.shipperId(), "JPTYO", "USNYC", "GENERAL",
+                new BigDecimal("1200"),
+                List.of(new TrackingInitializedEvent.Leg("V-MOL-001", "JPTYO", "SGSIN",
+                                AT, AT.plusSeconds(86_400)),
+                        new TrackingInitializedEvent.Leg("V-ONE-002", "SGSIN", "USNYC",
+                                AT.plusSeconds(90_000), AT.plusSeconds(600_000))),
+                AT), "evt-fixed-" + System.nanoTime());
+
+        // **直しただけでは請求に戻らない。** 引取はもう届かないので、誰かが
+        // 戻さなければ締めの母集団から落ち続ける。
+        assertThat(queries.handle(new FindInvoiceOfBookingQuery(fixture.bookingId()))).isNull();
+
+        var response = recalculate(fixture.bookingId());
+
+        assertThat(response.getStatusCode()).isEqualTo(org.springframework.http.HttpStatus.OK);
+        assertThat(response.getBody().get("invoiceId")).isNotNull();
+        assertThat(awaitInvoice(fixture.bookingId()).baseAmount())
+                .as("連鎖と同じ材料・同じ式で作る")
+                .isEqualByComparingTo("510000");
+        assertThat(attentionFor(fixture.bookingId()))
+                .as("片づいたものを毎朝の一覧に出し続けない")
+                .isEmpty();
+    }
+
+    @Test
+    @DisplayName("引き継ぎ B: 材料が直っていなければ、理由を返して作らない")
+    void refusesToRecalculateWhileTheMaterialIsStillMissing() {
+        var fixture = cargo(null, true, true, "CORPORATE", "0.1500");
+        deliver(fixture);
+
+        var response = recalculate(fixture.bookingId());
+
+        assertThat(response.getStatusCode()).isEqualTo(org.springframework.http.HttpStatus.CONFLICT);
+        assertThat(String.valueOf(response.getBody()))
+                .as("何を直せばよいか分からないと、同じ操作が繰り返される")
+                .contains("重量");
+        assertThat(attentionFor(fixture.bookingId()))
+                .as("作れていないのに片づけない")
+                .hasSize(1);
+    }
+
+    @Test
+    @DisplayName("引き継ぎ B: 要確認に出ていない予約は作り直せない（手で始める入口にしない）")
+    void refusesToRecalculateABookingThatIsNotInTheAttentionList() {
+        var fixture = cargo(new BigDecimal("1200"), true, true, "CORPORATE", "0.1500");
+
+        var response = recalculate(fixture.bookingId());
+
+        assertThat(response.getStatusCode()).isEqualTo(org.springframework.http.HttpStatus.CONFLICT);
+        assertThat(queries.handle(new FindInvoiceOfBookingQuery(fixture.bookingId())))
+                .as("連鎖が止まっていることを手で回して隠さない")
+                .isNull();
+    }
+
     @Test
     @DisplayName("ロールが伝わらなければ何も出さない（既定を置くと他ロール宛が見える）")
     void showsNothingWhenNoRoleIsPassed() {

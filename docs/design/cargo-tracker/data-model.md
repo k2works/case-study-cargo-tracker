@@ -702,6 +702,12 @@ entity "invoice_line_item" as li {
   amount: NUMERIC(14,2) NOT NULL
   currency: VARCHAR(3) NOT NULL
   basis_exception_id: VARCHAR(64)
+  source_event_id: VARCHAR(36)
+  adjustment_id: VARCHAR(36)
+  reversed_adjustment_id: VARCHAR(36)
+  --
+  **UNIQUE(invoice_id, adjustment_id)**（調整を 2 度積まない）
+  **UNIQUE(invoice_id, reversed_adjustment_id)**（2 度取り消さない）
 }
 
 entity "payment" as pay {

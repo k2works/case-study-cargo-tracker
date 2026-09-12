@@ -1,4 +1,4 @@
-import { queryClient } from '@/shared/api/client';
+import { commandClient, queryClient } from '@/shared/api/client';
 import type { Pending } from '@/shared/api/pending';
 
 export interface AttentionItemView {
@@ -15,6 +15,14 @@ export interface AttentionItemView {
    */
   readonly relatedShipperId: string | null;
   readonly occurredAt: string;
+  /**
+   * どのサービスから読んだか。**サーバは返さない**——画面が束ねた時点で分かる
+   * ことなので、応答に載せると出典が 2 か所になる。
+   *
+   * <p>確認済にするときの宛先に要る。取り違えると 404 になるだけで、相手の
+   * 一覧には残り続ける（消えたように見えて消えていない）。</p>
+   */
+  readonly source: string;
 }
 
 /**
@@ -49,11 +57,46 @@ export async function fetchAttentionItems(): Promise<Pending<{ items: AttentionI
     return notReady;
   }
 
-  const items = results.flatMap((result) => (result.state === 'ready' ? result.value.items : []));
+  const items: AttentionItemView[] = results.flatMap((result, index) => {
+    // **出典を index で結び直す。** 応答の順は SOURCES の順と同じ（Promise.all）。
+    const source = SOURCES[index] ?? SOURCES[0];
+    return result.state === 'ready'
+      ? result.value.items.map((item) => ({ ...item, source }))
+      : [];
+  });
   return {
     state: 'ready',
     value: {
       items: [...items].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt)),
     },
   };
+}
+
+/**
+ * 確認済にする（IT14 引き継ぎ A）。
+ *
+ * <p><b>読み出した元のサービスへ送る。</b> 要確認は BC ごとの読み取りモデルに
+ * 散っており、宛先を間違えると 404 になるだけで、担当の一覧には残り続ける。</p>
+ *
+ * <p>ロールと利用者名は送らない。Gateway が JWT から取り出して伝える
+ * （ADR-0001 決定 4）。クライアントが名乗れると、他人の名前で跡を残せる。</p>
+ */
+export async function acknowledgeAttentionItem(item: AttentionItemView): Promise<void> {
+  await commandClient<unknown>(`${item.source}/${item.itemId}/acknowledge`, {});
+}
+
+/**
+ * 作れなかった請求を作り直す（IT14 引き継ぎ B）。
+ *
+ * <p><b>要確認の操作なのでここに置く。</b> 機能どうしを直接 import しない
+ * （billing の api から引くと、要確認一覧が請求の画面に依存する）。</p>
+ *
+ * <p>材料が足りずに請求書ができなかった予約は、要確認一覧に出たまま締めの
+ * 母集団から落ち続けていた。材料が直ったら、ここから請求へ戻す。</p>
+ *
+ * <p><b>受け付けるのは要確認に出ている予約だけ</b>（サーバが確かめる）。
+ * それ以外を通すと、連鎖が止まっていることを手で回して隠すことになる。</p>
+ */
+export function recalculateInvoice(bookingId: string): Promise<{ invoiceId: string }> {
+  return commandClient('/billing/invoices/recalculate', { bookingId });
 }

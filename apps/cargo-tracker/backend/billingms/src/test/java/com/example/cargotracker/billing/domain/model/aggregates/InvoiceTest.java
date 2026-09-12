@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.cargotracker.billing.domain.model.commands.AdjustInvoiceCommand;
 import com.example.cargotracker.billing.domain.model.commands.CalculateInvoiceCommand;
+import com.example.cargotracker.billing.domain.model.commands.ReverseAdjustmentCommand;
 import com.example.cargotracker.billing.domain.model.events.InvoiceAdjustedEvent;
 import com.example.cargotracker.billing.domain.model.events.InvoiceCalculatedEvent;
 import com.example.cargotracker.billing.domain.model.valueobjects.DiscountRate;
@@ -181,7 +182,7 @@ class InvoiceTest {
 
         var captured = new InvoiceAdjustedEvent[1];
         fixture.given().event(calculated)
-                .when().command(new AdjustInvoiceCommand(INVOICE, new BigDecimal("-10000"),
+                .when().command(new AdjustInvoiceCommand(INVOICE, "ADJ-NEW", new BigDecimal("-10000"),
                         "遅延の補償", "EX-2026-0928-03", "accountant01"))
                 .then().eventsSatisfy(events -> captured[0] = events.stream()
                         .map(event -> event.payload())
@@ -201,12 +202,12 @@ class InvoiceTest {
         var calculated = calculatedEventOf(calculate(ShipperType.INDIVIDUAL, null));
 
         fixture.given().event(calculated)
-                .when().command(new AdjustInvoiceCommand(INVOICE, new BigDecimal("-10000"),
+                .when().command(new AdjustInvoiceCommand(INVOICE, "ADJ-NEW", new BigDecimal("-10000"),
                         "  ", "EX-1", "accountant01"))
                 .then().exception(BusinessRuleViolation.class);
         // 0 円の調整は履歴に意味の無い行を積む。
         fixture.given().event(calculated)
-                .when().command(new AdjustInvoiceCommand(INVOICE, BigDecimal.ZERO,
+                .when().command(new AdjustInvoiceCommand(INVOICE, "ADJ-NEW", BigDecimal.ZERO,
                         "動かない調整", "EX-1", "accountant01"))
                 .then().exception(BusinessRuleViolation.class);
     }
@@ -217,7 +218,7 @@ class InvoiceTest {
         var calculated = calculatedEventOf(calculate(ShipperType.INDIVIDUAL, null));
 
         fixture.given().event(calculated)
-                .when().command(new AdjustInvoiceCommand(INVOICE, new BigDecimal("-600000"),
+                .when().command(new AdjustInvoiceCommand(INVOICE, "ADJ-NEW", new BigDecimal("-600000"),
                         "過大な減額", null, "accountant01"))
                 .then().exception(BusinessRuleViolation.class);
     }
@@ -226,7 +227,7 @@ class InvoiceTest {
     @DisplayName("算出していない請求書は調整できない")
     void refusesAdjustmentBeforeCalculation() {
         fixture.given().noPriorActivity()
-                .when().command(new AdjustInvoiceCommand(INVOICE, new BigDecimal("-1000"),
+                .when().command(new AdjustInvoiceCommand(INVOICE, "ADJ-NEW", new BigDecimal("-1000"),
                         "理由", null, "accountant01"))
                 .then().exception(IllegalTransition.class);
     }
@@ -279,11 +280,11 @@ class InvoiceTest {
         var calculated = calculatedEventOf(calculate(ShipperType.INDIVIDUAL, null));
 
         fixture.given().event(calculated)
-                .when().command(new AdjustInvoiceCommand(INVOICE, new BigDecimal("-1000"),
+                .when().command(new AdjustInvoiceCommand(INVOICE, "ADJ-NEW", new BigDecimal("-1000"),
                         "理由", null, " "))
                 .then().exception(BusinessRuleViolation.class);
         fixture.given().event(calculated)
-                .when().command(new AdjustInvoiceCommand(INVOICE, null,
+                .when().command(new AdjustInvoiceCommand(INVOICE, "ADJ-NEW", null,
                         "理由", null, "accountant01"))
                 .then().exception(BusinessRuleViolation.class);
     }
@@ -301,7 +302,7 @@ class InvoiceTest {
 
         var captured = new InvoiceAdjustedEvent[1];
         fixture.given().event(calculated)
-                .when().command(new AdjustInvoiceCommand(INVOICE, new BigDecimal("10000"),
+                .when().command(new AdjustInvoiceCommand(INVOICE, "ADJ-NEW", new BigDecimal("10000"),
                         "留置 4 営業日の保管料", "IMP-2026-0001", "accountant01"))
                 .then().eventsSatisfy(events -> captured[0] = events.stream()
                         .map(event -> event.payload())
@@ -320,13 +321,13 @@ class InvoiceTest {
     @DisplayName("調整は積み上がる（2 度目は 1 度目の上に乗る）")
     void accumulatesAdjustments() {
         var calculated = calculatedEventOf(calculate(ShipperType.INDIVIDUAL, null));
-        var first = new InvoiceAdjustedEvent(INVOICE, new BigDecimal("-10000"), "遅延の補償",
+        var first = new InvoiceAdjustedEvent(INVOICE, "ADJ-1", null, new BigDecimal("-10000"), "遅延の補償",
                 "EX-1", new BigDecimal("-10000"), BigDecimal.ZERO, new BigDecimal("500000"),
                 "JPY", "accountant01", NOW);
 
         var captured = new InvoiceAdjustedEvent[1];
         fixture.given().event(calculated).event(first)
-                .when().command(new AdjustInvoiceCommand(INVOICE, new BigDecimal("-5000"),
+                .when().command(new AdjustInvoiceCommand(INVOICE, "ADJ-NEW", new BigDecimal("-5000"),
                         "破損の補償", "EX-2", "accountant01"))
                 .then().eventsSatisfy(events -> captured[0] = events.stream()
                         .map(event -> event.payload())
@@ -336,6 +337,99 @@ class InvoiceTest {
 
         assertThat(captured[0].adjustmentTotal()).isEqualByComparingTo("-15000");
         assertThat(captured[0].totalAmount()).isEqualByComparingTo("495000");
+    }
+
+    @Test
+    @DisplayName("引き継ぎ C: 調整を取り消すと、その分だけ合計が戻る（消さずに反対向きを積む）")
+    void reversesAnAdjustment() {
+        var calculated = calculatedEventOf(calculate(ShipperType.INDIVIDUAL, null));
+        var adjusted = new InvoiceAdjustedEvent(INVOICE, "ADJ-1", null,
+                new BigDecimal("-10000"), "符号を取り違えた減額", null,
+                new BigDecimal("-10000"), BigDecimal.ZERO, new BigDecimal("490000"),
+                "JPY", "accountant01", NOW);
+
+        var captured = new InvoiceAdjustedEvent[1];
+        fixture.given().event(calculated).event(adjusted)
+                .when().command(new ReverseAdjustmentCommand(INVOICE, "ADJ-1",
+                        "符号の誤り", "accountant01"))
+                .then().eventsSatisfy(events -> captured[0] = events.stream()
+                        .map(event -> event.payload())
+                        .filter(InvoiceAdjustedEvent.class::isInstance)
+                        .map(InvoiceAdjustedEvent.class::cast)
+                        .findFirst().orElseThrow());
+
+        assertThat(captured[0].reversedAdjustmentId()).isEqualTo("ADJ-1");
+        assertThat(captured[0].amount())
+                .as("入れた調整の反対向き")
+                .isEqualByComparingTo("10000");
+        assertThat(captured[0].adjustmentTotal())
+                .as("取り消したぶんだけ戻る")
+                .isEqualByComparingTo("0");
+    }
+
+    @Test
+    @DisplayName("引き継ぎ C: 取り消しの識別子は 36 文字に収まる（あふれると投影だけが退避される）")
+    void reversalIdentifierFitsTheColumn() {
+        // **集約は受け付けるので、あふれても赤にならない。** 気づくのは投影が
+        // 退避されたときで、そこまで誰も見ない（IT13 の請求書 ID と同じ形）。
+        var calculated = calculatedEventOf(calculate(ShipperType.INDIVIDUAL, null));
+        String adjustmentId = "ADJ-" + java.util.UUID.randomUUID().toString().replace("-", "");
+        assertThat(adjustmentId).hasSize(36);
+
+        var adjusted = new InvoiceAdjustedEvent(INVOICE, adjustmentId, null,
+                new BigDecimal("-10000"), "符号を取り違えた減額", null,
+                new BigDecimal("-10000"), BigDecimal.ZERO, new BigDecimal("490000"),
+                "JPY", "accountant01", NOW);
+
+        var captured = new InvoiceAdjustedEvent[1];
+        fixture.given().event(calculated).event(adjusted)
+                .when().command(new ReverseAdjustmentCommand(INVOICE, adjustmentId,
+                        "符号の誤り", "accountant01"))
+                .then().eventsSatisfy(events -> captured[0] = events.stream()
+                        .map(event -> event.payload())
+                        .filter(InvoiceAdjustedEvent.class::isInstance)
+                        .map(InvoiceAdjustedEvent.class::cast)
+                        .findFirst().orElseThrow());
+
+        assertThat(captured[0].adjustmentId())
+                .as("列は VARCHAR(36)。末尾に足すと 40 文字になる")
+                .hasSizeLessThanOrEqualTo(36);
+    }
+
+    @Test
+    @DisplayName("引き継ぎ C: 取り消した調整は 2 度取り消せない（入れ直したのと同じ額になる）")
+    void doesNotReverseTwice() {
+        var calculated = calculatedEventOf(calculate(ShipperType.INDIVIDUAL, null));
+        var adjusted = new InvoiceAdjustedEvent(INVOICE, "ADJ-1", null,
+                new BigDecimal("-10000"), "符号を取り違えた減額", null,
+                new BigDecimal("-10000"), BigDecimal.ZERO, new BigDecimal("490000"),
+                "JPY", "accountant01", NOW);
+        var reversed = new InvoiceAdjustedEvent(INVOICE, "ADJ-1-REV", "ADJ-1",
+                new BigDecimal("10000"), "符号の誤り", null,
+                BigDecimal.ZERO, BigDecimal.ZERO, new BigDecimal("500000"),
+                "JPY", "accountant01", NOW);
+
+        fixture.given().event(calculated).event(adjusted).event(reversed)
+                .when().command(new ReverseAdjustmentCommand(INVOICE, "ADJ-1",
+                        "もう一度", "accountant01"))
+                .then().exception(IllegalTransition.class);
+    }
+
+    @Test
+    @DisplayName("引き継ぎ C: 識別子の無い古い調整は取り消せない（復元では断らない）")
+    void cannotReverseAnAdjustmentWithoutAnIdentifier() {
+        var calculated = calculatedEventOf(calculate(ShipperType.INDIVIDUAL, null));
+        // IT13 までの記録には識別子が無い。**読めなくしない**——復元は通り、
+        // 取り消そうとしたときに「取り消せる調整がありません」と答える。
+        var legacy = new InvoiceAdjustedEvent(INVOICE, null, null,
+                new BigDecimal("-10000"), "遅延の補償", "EX-1",
+                new BigDecimal("-10000"), BigDecimal.ZERO, new BigDecimal("490000"),
+                "JPY", "accountant01", NOW);
+
+        fixture.given().event(calculated).event(legacy)
+                .when().command(new ReverseAdjustmentCommand(INVOICE, "ADJ-1",
+                        "取り消したい", "accountant01"))
+                .then().exception(IllegalTransition.class);
     }
 
     @Test
@@ -361,7 +455,7 @@ class InvoiceTest {
 
         var captured = new InvoiceAdjustedEvent[1];
         fixture.given().event(calculated)
-                .when().command(new AdjustInvoiceCommand(INVOICE, new BigDecimal("12000"),
+                .when().command(new AdjustInvoiceCommand(INVOICE, "ADJ-NEW", new BigDecimal("12000"),
                         "留置 4 営業日の保管料", "IMP-2026-0001", "accountant01"))
                 .then().eventsSatisfy(events -> captured[0] = events.stream()
                         .map(event -> event.payload())

@@ -17,7 +17,8 @@ import {
 } from '@/shared/ui/styles';
 import { formatBusinessDateTime } from '@/shared/api/businessDate';
 import { ApiError } from '@/shared/api/client';
-import { adjustInvoice, fetchInvoice, formatMoney } from './api';
+import { adjustInvoice, fetchInvoice, formatMoney, reverseAdjustment } from './api';
+import type { InvoiceLineView } from './api';
 
 /**
  * 根拠の種類。**接頭辞で決まる**——通関申告は `IMP-`、例外はそれ以外。
@@ -61,13 +62,18 @@ export function InvoiceDetailPage() {
     queryFn: () => fetchInvoice(invoiceId),
   });
 
+  /**
+   * 調整の向き。**符号を打たせない**（IT14 引き継ぎ C）。「−」を打ち忘れた減額が
+   * 補償費用として積まれるのを、入り口で防ぐ。
+   */
+  const [direction, setDirection] = useState<'DEDUCTION' | 'COMPENSATION'>('DEDUCTION');
   const [amount, setAmount] = useState('');
   const [reason, setReason] = useState('');
   const [basisExceptionId, setBasisExceptionId] = useState('');
 
   const adjust = useMutation({
     mutationFn: () => adjustInvoice(invoiceId, {
-      amount: Number(amount),
+      amount: direction === 'DEDUCTION' ? -Math.abs(Number(amount)) : Math.abs(Number(amount)),
       reason,
       basisExceptionId: basisExceptionId.trim() === '' ? null : basisExceptionId.trim(),
     }),
@@ -133,6 +139,17 @@ export function InvoiceDetailPage() {
               </td>
               <td className={TD}>
                 {line.description}
+                {line.reversed === true && (
+                  <span className="ml-2 text-sm text-gray-600">取り消し済み</span>
+                )}
+                {/* 算出済のあいだだけ取り消せる。発行したあとは取り消しでは
+                    なく請求書そのものを取り消す（不変条件 6）。 */}
+                {view.status === 'CALCULATED'
+                  && line.itemType === 'ADJUSTMENT'
+                  && typeof line.adjustmentId === 'string'
+                  && line.reversed !== true && (
+                  <ReverseAdjustment invoiceId={invoiceId} line={line} />
+                )}
                 {line.basisExceptionId !== null && (
                   <>
                     {' '}
@@ -164,15 +181,28 @@ export function InvoiceDetailPage() {
         <section className={`${CARD} mt-4`}>
           <h2 className="text-base font-semibold text-gray-900">料金を調整する</h2>
           <p className="mt-1 text-sm text-gray-600">
-            減額は負の数、補償費用は正の数で入れます。理由は必須です。
+            向きを選び、金額は正の数で入れます。理由は必須です。
           </p>
           <form
-            className="mt-3 grid gap-4 sm:grid-cols-3"
+            className="mt-3 grid gap-4 sm:grid-cols-4"
             onSubmit={(event) => {
               event.preventDefault();
               adjust.mutate();
             }}
           >
+            <div>
+              <label className={LABEL} htmlFor="adjust-direction">調整の向き</label>
+              <select
+                id="adjust-direction"
+                className={FIELD}
+                value={direction}
+                onChange={(event) =>
+                  setDirection(event.target.value as 'DEDUCTION' | 'COMPENSATION')}
+              >
+                <option value="DEDUCTION">減額（請求を減らす）</option>
+                <option value="COMPENSATION">補償費用（請求を増やす）</option>
+              </select>
+            </div>
             <div>
               <label className={LABEL} htmlFor="adjust-amount">調整額</label>
               <input
@@ -201,7 +231,7 @@ export function InvoiceDetailPage() {
                 onChange={(event) => setBasisExceptionId(event.target.value)}
               />
             </div>
-            <div className="sm:col-span-3">
+            <div className="sm:col-span-4">
               <button className={BUTTON_PRIMARY} type="submit" disabled={adjust.isPending}>
                 調整を入れる
               </button>
@@ -217,6 +247,66 @@ export function InvoiceDetailPage() {
             </p>
           )}
         </section>
+      )}
+    </div>
+  );
+}
+
+/**
+ * 調整を取り消す（IT14 引き継ぎ C）。
+ *
+ * <p><b>理由を聞いてから送る。</b> 理由の読めない取り消しを残すと、あとから
+ * 誰も何が起きたか確かめられない。</p>
+ */
+function ReverseAdjustment({
+  invoiceId,
+  line,
+}: {
+  readonly invoiceId: string;
+  readonly line: InvoiceLineView;
+}) {
+  const client = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState('');
+  const reverse = useMutation({
+    mutationFn: () => reverseAdjustment(invoiceId, String(line.adjustmentId), reason),
+    onSuccess: async () => {
+      setOpen(false);
+      setReason('');
+      await client.invalidateQueries({ queryKey: ['invoice', invoiceId] });
+    },
+  });
+
+  if (!open) {
+    return (
+      <button type="button" className={`${LINK} ml-2`} onClick={() => setOpen(true)}>
+        この調整を取り消す
+      </button>
+    );
+  }
+
+  return (
+    <div className="mt-2">
+      <label className={LABEL} htmlFor={`reverse-${line.adjustmentId}`}>取り消しの理由</label>
+      <input
+        id={`reverse-${line.adjustmentId}`}
+        className={FIELD}
+        value={reason}
+        onChange={(event) => setReason(event.target.value)}
+      />
+      <button
+        type="button"
+        className={`${BUTTON_PRIMARY} mt-2`}
+        disabled={reverse.isPending}
+        onClick={() => reverse.mutate()}
+      >
+        取り消しを確定する
+      </button>
+      {reverse.isError && (
+        <p role="alert" className={`${ALERT} mt-2`}>
+          {reverse.error instanceof ApiError
+            ? reverse.error.message : '取り消せませんでした'}
+        </p>
       )}
     </div>
   );

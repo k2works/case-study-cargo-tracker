@@ -34,4 +34,15 @@
         WHERE assigned_role = #{assignedRole} AND acknowledged_at IS NULL
         ORDER BY occurred_at DESC
     </select>
+
+    <update id="acknowledge">
+        UPDATE attention_item
+        SET acknowledged_at = #{acknowledgedAt}, acknowledged_by = #{acknowledgedBy}
+        WHERE item_id = #{itemId}
+          AND acknowledged_at IS NULL
+          AND assigned_role IN
+        <foreach item="role" collection="roles" open="(" separator="," close=")">
+            #{role}
+        </foreach>
+    </update>
 </mapper>

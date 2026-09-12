@@ -94,6 +94,59 @@ class AttentionItemControllerIT extends AbstractAxonIntegrationTest {
         assertThat(body).doesNotContain(number);
     }
 
+    private ResponseEntity<JsonMap> acknowledgeAs(String itemId, String rolesHeader,
+            String username) {
+        var request = rest.post().uri("http://localhost:" + port
+                + "/api/v1/routing/attention-items/" + itemId + "/acknowledge");
+        if (rolesHeader != null) {
+            request = request.header("X-Auth-Roles", rolesHeader);
+        }
+        if (username != null) {
+            request = request.header("X-Auth-Username", username);
+        }
+        return request.retrieve().toEntity(JsonMap.class);
+    }
+
+    @Test
+    @DisplayName("確認済にすると一覧から消え、誰がいつ確認したかが残る（IT14 引き継ぎ A）")
+    void acknowledgingRemovesItemFromList() {
+        String number = uniqueNumber();
+        register(number, "MOL EXPRESS");
+        register(number, "ONE HARMONY");
+        // 識別子は採番せず事実から導く（共有カーネル）。導出をテスト側に写さない。
+        String itemId = com.example.cargotracker.shared.domain.attention.AttentionItemId
+                .of("PROJECTION_REJECTED", "VOYAGE", number, "航海番号の重複").value();
+
+        // 確認する前は出ている。**この行が無いと、消えたのか元から無かったのかを
+        // 判別できない。**
+        assertThat(String.valueOf(listAs("ROLE_ROUTING").getBody().get("items")))
+                .contains(number);
+
+        ResponseEntity<JsonMap> response = acknowledgeAs(itemId, "ROLE_ROUTING", "routing01");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().get("acknowledgedBy")).isEqualTo("routing01");
+        assertThat(String.valueOf(listAs("ROLE_ROUTING").getBody().get("items")))
+                .as("確認済は担当の一覧から外れる")
+                .doesNotContain(number);
+    }
+
+    @Test
+    @DisplayName("他ロールは確認できない（見えないものを片づけられてはいけない）")
+    void cannotAcknowledgeFromAnotherRole() {
+        String number = uniqueNumber();
+        register(number, "MOL EXPRESS");
+        register(number, "ONE HARMONY");
+        String itemId = com.example.cargotracker.shared.domain.attention.AttentionItemId
+                .of("PROJECTION_REJECTED", "VOYAGE", number, "航海番号の重複").value();
+
+        assertThat(acknowledgeAs(itemId, "ROLE_SALES", "sales01").getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(String.valueOf(listAs("ROLE_ROUTING").getBody().get("items")))
+                .as("担当の一覧には残ったまま")
+                .contains(number);
+    }
+
     @Test
     @DisplayName("ロールが伝わっていなければ何も出さない")
     void showsNothingWithoutRoles() {

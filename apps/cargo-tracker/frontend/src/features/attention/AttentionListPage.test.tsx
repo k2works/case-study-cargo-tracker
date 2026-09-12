@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AttentionListPage } from './AttentionListPage';
@@ -228,5 +229,93 @@ describe('S70 要確認一覧の「次の行動」（IT7 クローズ）', () =>
     const link = await screen.findByRole('link', { name: '予約を開く' });
     expect(link).toHaveAttribute('href', '/bookings/b-1');
     expect(screen.queryByRole('link', { name: '修正して再登録する' })).not.toBeInTheDocument();
+  });
+
+  it('請求を作れなかった予約には「請求を作り直す」がある（材料を直したら戻せる）', async () => {
+    // **予約を開くだけでは、締めの母集団に戻らない。** 材料を直しても、引取は
+    // もう届かないので誰かが戻さなければ落ち続ける（IT13 レビュー user #3）。
+    const calls: { url: string; body: string }[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if ((init?.method ?? 'GET') === 'POST') {
+          calls.push({ url, body: String(init?.body ?? '') });
+          return Promise.resolve(
+            new Response(JSON.stringify({ invoiceId: 'INV-20260912-abcd1234' }), { status: 200 }),
+          );
+        }
+        const items = url.includes('/billing/')
+          ? [
+              {
+                itemId: 'i-recalc',
+                kind: 'REACTION_FAILED',
+                targetType: 'BOOKING',
+                targetId: 'B-1',
+                assignedRole: 'ROLE_ACCOUNTANT',
+                reason: '貨物 TRK-1 の重量が分からないので請求書を作れません',
+                occurredAt: '2026-09-03T09:00:00Z',
+              },
+            ]
+          : [];
+        return Promise.resolve(new Response(JSON.stringify({ items }), { status: 200 }));
+      }),
+    );
+
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: '請求を作り直す' }));
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.url).toContain('/billing/invoices/recalculate');
+    expect(JSON.parse(String(calls[0]?.body))).toEqual({ bookingId: 'B-1' });
+  });
+
+  it('確認済にすると、その項目が読み出し元のサービスへ送られて一覧から消える', async () => {
+    // **どのサービスの項目かを取り違えると、確認が届かないまま消えたように見える。**
+    // 請求の項目を booking へ送っても 404 になるだけで、経理の一覧には残り続ける。
+    const billingItem = {
+      itemId: 'i-billing',
+      kind: 'PROJECTION_REJECTED',
+      targetType: 'INVOICE',
+      targetId: 'inv-1',
+      assignedRole: 'ROLE_ACCOUNTANT',
+      reason: '重量が分からない',
+      occurredAt: '2026-09-03T09:00:00Z',
+    };
+    const calls: string[] = [];
+    let acknowledged = false;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if ((init?.method ?? 'GET') === 'POST') {
+          calls.push(url);
+          acknowledged = true;
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                itemId: 'i-billing',
+                acknowledgedBy: 'acct01',
+                acknowledgedAt: '2026-09-03T10:00:00Z',
+              }),
+              { status: 200 },
+            ),
+          );
+        }
+        const items = url.includes('/billing/') && !acknowledged ? [billingItem] : [];
+        return Promise.resolve(new Response(JSON.stringify({ items }), { status: 200 }));
+      }),
+    );
+
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: '確認済にする' }));
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toContain('/billing/attention-items/i-billing/acknowledge');
+    await waitFor(() =>
+      expect(screen.getByText('確認が必要なものはありません')).toBeInTheDocument(),
+    );
   });
 });

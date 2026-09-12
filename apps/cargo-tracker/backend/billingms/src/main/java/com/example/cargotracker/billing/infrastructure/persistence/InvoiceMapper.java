@@ -76,7 +76,8 @@ public interface InvoiceMapper {
     int deleteCalculatedLineItems(@Param("invoiceId") String invoiceId);
 
     @Select("SELECT invoice_id, line_seq, item_type, description, amount, currency, "
-            + "basis_exception_id, source_event_id FROM invoice_line_item "
+            + "basis_exception_id, source_event_id, adjustment_id, reversed_adjustment_id "
+            + "FROM invoice_line_item "
             + "WHERE invoice_id = #{invoiceId} ORDER BY line_seq")
     List<LineItemRow> findLineItems(@Param("invoiceId") String invoiceId);
 
@@ -113,6 +114,10 @@ public interface InvoiceMapper {
             BigDecimal amount,
             String currency,
             String basisExceptionId,
-            String sourceEventId) {
+            String sourceEventId,
+            // 調整の識別子（IT14 引き継ぎ C）。取り消すときの宛先。
+            String adjustmentId,
+            // どの調整の取り消しか。入っていれば、この行は取り消しである。
+            String reversedAdjustmentId) {
     }
 }

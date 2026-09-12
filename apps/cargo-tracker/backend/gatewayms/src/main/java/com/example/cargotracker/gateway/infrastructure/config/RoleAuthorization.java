@@ -247,6 +247,20 @@ public final class RoleAuthorization {
         // ——読み向けの広い宣言に吸われると、載せ忘れた書き込みほど無防備になる。
         ordered.add(new Rule("POST", "/api/v1/billing/invoices/*/adjustments",
                 Set.of(ACCOUNTANT)));
+        // 調整の取り消しも経理だけ（IT14 引き継ぎ C）。
+        ordered.add(new Rule("POST", "/api/v1/billing/invoices/*/adjustments/*/reversal",
+                Set.of(ACCOUNTANT)));
+        // 作れなかった請求を作り直すのも経理だけ（IT14 引き継ぎ B）。
+        ordered.add(new Rule("POST", "/api/v1/billing/invoices/recalculate",
+                Set.of(ACCOUNTANT)));
+        // **要確認の確認済は、その要確認の担当ロールがサーバで確かめる**
+        // （IT14 引き継ぎ A）。ここで絞ると、ロールが増えるたびに 2 か所を直す
+        // ことになる——一覧に出す条件と同じ条件を更新にも置くほうが確かである。
+        for (String service : new String[] {"booking", "routing", "billing"}) {
+            ordered.add(new Rule("POST",
+                    "/api/v1/" + service + "/attention-items/*/acknowledge",
+                    ANY_AUTHENTICATED));
+        }
         ordered.add(new Rule("PUT", "/api/v1/booking/bookings/*", Set.of(SALES)));
         rules.forEach((pattern, allowed) -> ordered.add(new Rule(ANY_METHOD, pattern, allowed)));
         return List.copyOf(ordered);

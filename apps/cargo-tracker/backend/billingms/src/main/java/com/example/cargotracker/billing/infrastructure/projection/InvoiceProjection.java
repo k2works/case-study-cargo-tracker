@@ -72,7 +72,7 @@ public class InvoiceProjection {
                     item.itemType(), item.description(), item.amount(), item.currency(),
                     item.basisExceptionId(),
                     // 算出の明細は消して入れ直すので、元イベントで縛らない。
-                    null));
+                    null, null, null));
         }
     }
 
@@ -93,8 +93,12 @@ public class InvoiceProjection {
         // ので、2 度届くと MAX(line_seq)+1 が新しい番号を採って同じ行が増える。
         invoices.insertLineItem(new InvoiceMapper.LineItemRow(event.invoiceId(),
                 invoices.nextLineSeq(event.invoiceId()), LineItemType.ADJUSTMENT.name(),
-                event.reason(), event.amount(), event.currency(), event.basisExceptionId(),
-                eventId));
+                // 取り消しは何を取り消したのかが読めなければ意味がない。
+                event.reversedAdjustmentId() == null
+                        ? event.reason()
+                        : "取り消し（" + event.reason() + "）",
+                event.amount(), event.currency(), event.basisExceptionId(),
+                eventId, event.adjustmentId(), event.reversedAdjustmentId()));
     }
 
     /**

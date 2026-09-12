@@ -86,6 +86,9 @@ public final class BillingQueries {
      *
      * @param basisExceptionId 調整の根拠になった例外 ID。S61 から例外へ飛ぶ
      *     （US28 §8「誤配の事実は料金調整の根拠として参照できる」の受け側）
+     * @param adjustmentId 調整の識別子。<b>取り消す操作の宛先</b>（IT14 引き継ぎ C）
+     * @param reversed すでに取り消されたか。<b>取り消し済みに取り消しを出さない</b>
+     *     ——押せるのに断られる操作を並べない
      */
     public record InvoiceLineView(
             String itemType,
@@ -93,6 +96,8 @@ public final class BillingQueries {
             String description,
             BigDecimal amount,
             String currency,
-            String basisExceptionId) {
+            String basisExceptionId,
+            String adjustmentId,
+            boolean reversed) {
     }
 }
