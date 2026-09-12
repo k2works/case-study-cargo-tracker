@@ -1592,4 +1592,95 @@ test.describe('17 請求を組み立てる', () => {
     await page.getByLabel('根拠の例外 ID（任意）').fill('IMP-2026-0001');
     await page.screenshot({ path: `${OUT}/17-S61-invoice-detail.png`, fullPage: true });
   });
+
+  async function signInAsSalesForQuotation(page: import('@playwright/test').Page) {
+    await page.route('**/api/v1/auth/login', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          token: 'token',
+          username: 'sales01',
+          displayName: '営業 一郎',
+          roles: ['ROLE_SALES'],
+          shipperId: null,
+        }),
+      }),
+    );
+    await page.goto('/login');
+    await page.getByLabel('利用者名').fill('sales01');
+    await page.getByLabel('パスワード').fill('secret1234');
+    await page.getByRole('button', { name: 'ログイン' }).click();
+    await expect(page.getByRole('heading', { name: 'ダッシュボード' })).toBeVisible();
+  }
+
+  test('18 見積作成', async ({ page }) => {
+    // **本文が「5 項目」「危険物を選ぶと申告の欄が出る」を説明している。**
+    // どちらかが写っていないと、文章と画像が別々に正しくなる。
+    await signInAsSalesForQuotation(page);
+    await page.goto('/quotations/new');
+
+    await expect(page.getByRole('heading', { name: '見積作成' })).toBeVisible();
+    await page.getByLabel('出発地').fill('JPTYO');
+    await page.getByLabel('目的地').fill('USNYC');
+    await page.getByLabel('希望到着期限').fill('2026-12-01');
+    await page.getByLabel('重量（kg）').fill('1200');
+    // 5 項目がそろって見えること（貨物種別は選択式）。
+    await expect(page.getByLabel('貨物種別')).toBeVisible();
+    await page.screenshot({ path: `${OUT}/18-S12-quotation-create.png`, fullPage: true });
+  });
+
+  test('18 見積詳細（候補と概算）', async ({ page }) => {
+    // **本文が「航海番号・経由港・所要日数・概算料金」「超過日数」
+    // 「この見積で予約する」を説明している。**
+    const quotationId = 'Q-0123456789abcdef0123456789abcd';
+    await page.route(`**/api/v1/booking/quotations/${quotationId}`, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          quotationId,
+          originUnLocode: 'JPTYO',
+          destinationUnLocode: 'USNYC',
+          arrivalDeadline: '2026-12-01',
+          cargoType: 'GENERAL',
+          weightKg: 1200,
+          estimatedAmount: 510000,
+          currency: 'JPY',
+          validUntil: '2026-10-28',
+          hasDeadlineMeetingCandidate: true,
+          createdBy: 'sales01',
+          createdAt: '2026-09-28T01:00:00Z',
+          candidates: [
+            {
+              candidateSeq: 1,
+              voyageNumbers: 'V-MOL-001 > V-ONE-002',
+              transitDays: 20,
+              estimatedCost: 510000,
+              currency: 'JPY',
+              overdueDays: 0,
+            },
+            {
+              candidateSeq: 2,
+              voyageNumbers: 'V-KL-055',
+              transitDays: 40,
+              estimatedCost: 300000,
+              currency: 'JPY',
+              overdueDays: 5,
+            },
+          ],
+        }),
+      }),
+    );
+    await signInAsSalesForQuotation(page);
+    await page.goto(`/quotations/${quotationId}`);
+
+    await expect(page.getByRole('heading', { name: `見積 ${quotationId}` })).toBeVisible();
+    await expect(page.getByText('V-MOL-001 > V-ONE-002')).toBeVisible();
+    await expect(page.getByText('¥ 510,000').first()).toBeVisible();
+    // **超過日数を添える**（本文が「40 日（5 日超過）」と書いている）。
+    await expect(page.getByText(/5 日超過/)).toBeVisible();
+    await expect(page.getByRole('link', { name: 'この見積で予約する' })).toBeVisible();
+    await page.screenshot({ path: `${OUT}/18-S13-quotation-detail.png`, fullPage: true });
+  });
 });

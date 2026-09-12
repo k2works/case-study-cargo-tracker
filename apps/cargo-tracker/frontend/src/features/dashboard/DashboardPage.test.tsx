@@ -296,6 +296,23 @@ describe('S02 ダッシュボード', () => {
     expect(screen.queryByText(/確かめていない請求が/)).not.toBeInTheDocument();
   });
 
+  it('US01: 営業には見積作成への入口がある（業務の入口は毎日使う）', async () => {
+    // **正典の画面遷移図が S02 → S12 を求めている。** サイドナビにあっても、
+    // 毎朝ここから始める人には「今日の作業」から入れるほうが早い。
+    renderAs(['ROLE_SALES']);
+    await screen.findByRole('heading', { name: '今日の作業' });
+
+    expect(screen.getByRole('link', { name: '見積を作る' }))
+      .toHaveAttribute('href', '/quotations/new');
+  });
+
+  it('営業以外に見積の入口は出さない（自分の仕事でないものを並べない）', async () => {
+    renderAs(['ROLE_ACCOUNTANT']);
+    await screen.findByRole('heading', { name: '今日の作業' });
+
+    expect(screen.queryByRole('link', { name: '見積を作る' })).not.toBeInTheDocument();
+  });
+
   it('督促の対象が無ければ通関の件数は出さない（0 件の行を並べない）', async () => {
     renderAs(['ROLE_TRACKER']);
     await screen.findByRole('heading', { name: '今日の作業' });

@@ -924,6 +924,145 @@ test.describe('kind クラスタでの通し確認', () => {
       expect(forbidden.status()).toBe(403);
     });
 
+  test('見積から候補と概算が出て、その見積で予約すると違いが知らされる（US01・IT14）',
+    async ({ page, request }) => {
+      // **US01 のクラスタ確認**（Try T7。US ごとに 1 度回す）。
+      // モックでは「bookingms の見積が routingms の探索に届いて候補になるか」を
+      // 判別できない——IT14 の負債 2 で、冷凍貨物が 422 で断られる欠陥が実際に
+      // あった（両 BC の単体テストはどちらも緑だった）。
+      test.setTimeout(300_000);
+
+      // 候補が出るように航海を 1 本置く。
+      const voyageNumber = uniqueVoyageNumber('V-Q-');
+      const routingToken = await tokenOf(request, 'routing01');
+      expect((await request.post('/api/v1/routing/voyages', {
+        headers: { Authorization: `Bearer ${routingToken}` },
+        data: {
+          voyageNumber,
+          carrierCode: 'MOL',
+          carrierName: '商船三井',
+          vesselName: 'QUOTE EXPRESS',
+          movements: [{
+            departureUnLocode: 'JPTYO',
+            arrivalUnLocode: 'USNYC',
+            departureAt: `${businessDate(2)}T00:00:00Z`,
+            arrivalAt: `${businessDate(4)}T00:00:00Z`,
+          }],
+          acceptedCargoTypes: ['GENERAL'],
+        },
+      })).status()).toBe(201);
+
+      // **D1・D2: 要件から候補と概算が出て、見積番号が発行される。**
+      await signIn(page, 'sales01');
+      await page.goto('/quotations/new');
+      await page.getByLabel('出発地').fill('JPTYO');
+      await page.getByLabel('目的地').fill('USNYC');
+      await page.getByLabel('希望到着期限').fill(businessDate(60));
+      await page.getByLabel('重量（kg）').fill('1200');
+      await page.getByRole('button', { name: '見積を作る' }).click();
+
+      // 見積詳細へ移り、投影が追いつくまで待つ。
+      await expectEventually(page, '概算料金');
+      const quotationId = new URL(page.url()).pathname.split('/').pop() ?? '';
+      expect(quotationId).toMatch(/^Q-[0-9a-f]{32}$/);
+
+      // **D3: 候補ごとに経由港・所要日数・概算料金・航海番号が読める。**
+      await expect(page.getByText(voyageNumber)).toBeVisible();
+
+      // **D5: その見積で予約すると 5 項目が写り、変えた項目が知らされる。**
+      await page.getByRole('link', { name: 'この見積で予約する' }).click();
+      await expect(page.getByLabel('出発地')).toHaveValue('JPTYO');
+      await expect(page.getByLabel('目的地')).toHaveValue('USNYC');
+      await expect(page.getByLabel('重量 (kg)')).toHaveValue('1200');
+    });
+
+  test('請求書を発行して入金を記録すると、予約が精算済になる（US23・IT14）',
+    async ({ page, request }) => {
+      // **US23 のクラスタ確認**（Try T7）。**BC をまたぐ連鎖はここでしか
+      // 判別できない**——billingms の入金が bookingms へ届いて予約が精算済に
+      // なるかは、どちらの単体テストにも出ない。
+      test.setTimeout(300_000);
+      const product = `精算の貨物-${Date.now()}`;
+      const { bookingId, trackingNumber, voyageNumber } =
+        await issueTrackingNumber(request, product);
+
+      const handlerToken = await tokenOf(request, 'handler01');
+      const handlerHeaders = { Authorization: `Bearer ${handlerToken}` };
+      for (const step of [
+        { handlingType: 'RECEIVE', unLocode: 'JPTYO' },
+        { handlingType: 'LOAD', unLocode: 'JPTYO', voyageNumber },
+        { handlingType: 'UNLOAD', unLocode: 'USNYC', voyageNumber },
+      ]) {
+        await expect(async () => {
+          const response = await request.post('/api/v1/handling/activities', {
+            headers: handlerHeaders,
+            data: { activityId: crypto.randomUUID(), trackingNumber, ...step },
+          });
+          expect(response.status()).toBe(201);
+        }).toPass({ timeout: 60_000 });
+      }
+      await clearCustoms(request, trackingNumber);
+      await expect(async () => {
+        const response = await request.post('/api/v1/handling/activities', {
+          headers: handlerHeaders,
+          data: {
+            activityId: crypto.randomUUID(),
+            trackingNumber,
+            handlingType: 'CLAIM',
+            unLocode: 'USNYC',
+            consigneeName: 'John Smith',
+          },
+        });
+        expect(response.status()).toBe(201);
+      }).toPass({ timeout: 60_000 });
+
+      const accountantToken = await tokenOf(request, 'accountant01');
+      const accountantHeaders = { Authorization: `Bearer ${accountantToken}` };
+      let invoiceId = '';
+      await expect(async () => {
+        const response = await request.get(
+          `/api/v1/billing/invoices/by-booking/${bookingId}`,
+          { headers: accountantHeaders });
+        expect(response.status()).toBe(200);
+        invoiceId = (await response.json()).invoiceId ?? '';
+        expect(invoiceId).not.toBe('');
+      }).toPass({ timeout: 120_000 });
+
+      // **D7: 発行すると請求番号・金額・支払期限が確定する。**
+      await signIn(page, 'accountant01');
+      await page.goto(`/invoices/${invoiceId}`);
+      await expectEventually(page, '基本料金');
+      await page.getByRole('button', { name: '請求書を発行する' }).click();
+      await expectEventually(page, '支払期限');
+      await expect(page.getByText('請求済')).toBeVisible();
+
+      // **D9: 入金を記録すると請求が入金済になり、予約も精算済になる。**
+      await page.getByLabel('入金日').fill(businessDate(0));
+      await page.getByRole('button', { name: '入金を記録する' }).click();
+      await expectEventually(page, '入金済');
+
+      // **BC をまたぐ連鎖。** BookingStatus.SETTLED は IT1 から列挙にあったが、
+      // 遷移させる相手が IT14 で初めてできた。
+      await expect(async () => {
+        const response = await request.get(`/api/v1/booking/bookings/${bookingId}`, {
+          headers: { Authorization: `Bearer ${await tokenOf(request, 'sales01')}` },
+        });
+        expect(response.status()).toBe(200);
+        // **列挙名で返る**（画面が呼び名に直す）。ここは API を直接見るので
+        // 列挙名で確かめる。
+        expect((await response.json()).bookingStatus).toBe('SETTLED');
+      }).toPass({ timeout: 120_000 });
+
+      // **D8: 荷主は自社の請求書を読める（他社のものは読めない）。**
+      // 荷主のロールで経理向けの一覧を叩くと 403（Gateway の認可）。
+      const shipperToken = await tokenOf(request, 'shipper01');
+      const forbidden = await request.get('/api/v1/billing/invoices', {
+        headers: { Authorization: `Bearer ${shipperToken}` },
+        failOnStatusCode: false,
+      });
+      expect(forbidden.status()).toBe(403);
+    });
+
   test('遅延を起票して解決すると、例外前の状態へ戻る（US19・IT10）',
     async ({ page, request }) => {
       // **US19 のクラスタ確認**（Try T3。US ごとに 1 度回す）。

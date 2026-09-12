@@ -152,6 +152,20 @@ export function DashboardPage() {
         </output>
       )}
 
+      {/* **業務の入口は件数と別に置く。** ほかの行は「対処が要るもの」の
+          知らせだが、見積は毎日そこから始める仕事である——0 件で消える形に
+          すると、始められる場所が日によって変わる（正典の画面遷移図
+          S02 → S12）。 */}
+      {isSales && (
+        <p className="mt-4 text-sm text-gray-700">
+          荷主から輸送の相談を受けたら、
+          <Link to="/quotations/new" className={`${LINK} mx-1`}>
+            見積を作る
+          </Link>
+          から始めます。
+        </p>
+      )}
+
       {/* 0 件のときは出さない。毎朝「0 件」を読み飛ばす習慣がつくと、
           件数が出た日も見落とす。 */}
       {isSales && preliminary > 0 && (
