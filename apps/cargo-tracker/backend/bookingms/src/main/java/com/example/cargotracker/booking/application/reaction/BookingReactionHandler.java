@@ -13,6 +13,7 @@ import com.example.cargotracker.booking.domain.model.commands.MarkDeliveredComma
 import com.example.cargotracker.booking.domain.model.commands.RevertDeliveryCommand;
 import com.example.cargotracker.booking.domain.model.commands.SettleBookingCommand;
 import com.example.cargotracker.shared.contract.event.CargoDeliveredEvent;
+import com.example.cargotracker.shared.domain.error.IllegalTransition;
 import com.example.cargotracker.shared.contract.event.CargoDeliveryRevertedEvent;
 import com.example.cargotracker.shared.contract.event.HandlingActivityRegisteredEvent;
 import com.example.cargotracker.shared.contract.event.HandlingActivityVoidedEvent;
@@ -74,6 +75,11 @@ public class BookingReactionHandler {
      * （ADR-0010 決定 3）。気づく手段は、その人が次に取れる行動へ繋がらなければ意味がない。</p>
      */
     private static final String ROLE_ROUTING = "ROLE_ROUTING";
+
+    /** 精算の連鎖が進めなかった。**直せるのは請求の側**なので経理宛に出す。 */
+    private static final String SETTLEMENT_BLOCKED = "SETTLEMENT_BLOCKED";
+
+    private static final String ROLE_ACCOUNTANT = "ROLE_ACCOUNTANT";
 
     private static final Logger log = LoggerFactory.getLogger(BookingReactionHandler.class);
 
@@ -217,12 +223,54 @@ public class BookingReactionHandler {
      *
      * <p><b>誰が精算したかは入金を記録した人を写す。</b> 連鎖は利用者名を持たない
      * が、「system」で埋めると誰が入金を確かめたのかが予約の側から追えなくなる。</p>
+     *
+     * <p><b>進めない状態でも黙って退避しない。</b> 引取の記録が取り消されたあとに
+     * 入金が届くと、集約は {@code IllegalTransition} で断る——そのまま投げ返すと
+     * イベントは退避され、<b>入金は記録されているのに予約だけが精算されないまま</b>
+     * 誰の目にも触れない。入金は billingms に残っているので、ここでやり直しても
+     * 結果は変わらない。<b>人が見て決める</b>ことなので要確認に出す。</p>
      */
     @EventHandler
     public void on(PaymentRecordedEvent event) {
-        commands.sendAndWait(new SettleBookingCommand(event.bookingId(), event.invoiceId(),
-                event.amount(), event.currency(), event.paidAt(), event.recordedBy()),
-                Void.class);
+        try {
+            commands.sendAndWait(new SettleBookingCommand(event.bookingId(), event.invoiceId(),
+                    event.amount(), event.currency(), event.paidAt(), event.recordedBy()),
+                    Void.class);
+        } catch (RuntimeException e) {
+            IllegalTransition refusal = refusalIn(e);
+            if (refusal == null) {
+                // 一時的な障害は投げ直す。Event Processor が再試行する——
+                // 要確認に落とすと、繋がり直せば済むものを人が見ることになる。
+                throw e;
+            }
+            // **経理宛に出す。** 直せるのは請求の側（入金の取り違えか、引取の
+            // 記録の取り消し）で、経路設計者には打つ手が無い。
+            String reason = "入金は記録されたが予約を精算済にできなかった（"
+                    + refusal.getMessage() + "）。請求書 " + event.invoiceId() + " を確かめる";
+            log.warn("精算の連鎖が進めなかった: bookingId={} invoiceId={} reason={}",
+                    event.bookingId(), event.invoiceId(), refusal.getMessage());
+            attentionItems.add(SETTLEMENT_BLOCKED, "BOOKING", event.bookingId(),
+                    ROLE_ACCOUNTANT, reason, "{}", clock.instant());
+        }
+    }
+
+    /**
+     * 集約が断ったのかどうか。
+     *
+     * <p><b>包まれて届く。</b> コマンドバス越しの例外は {@code
+     * CommandExecutionException} に包まれるので、素の型では捕まらない。
+     * <b>断りと障害を取り違えない</b>ために、原因の連鎖をたどって見分ける。</p>
+     */
+    private static IllegalTransition refusalIn(Throwable failure) {
+        for (Throwable cause = failure; cause != null; cause = cause.getCause()) {
+            if (cause instanceof IllegalTransition refusal) {
+                return refusal;
+            }
+            if (cause.getCause() == cause) {
+                return null;
+            }
+        }
+        return null;
     }
 
     /**

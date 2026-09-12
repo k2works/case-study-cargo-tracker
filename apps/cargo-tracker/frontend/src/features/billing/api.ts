@@ -34,6 +34,13 @@ export interface InvoiceSummaryView {
   readonly totalAmount: number;
   readonly currency: string;
   readonly calculatedAt: string;
+  /** 支払期限（発行日 + 30 日）。**未発行なら `null`**。 */
+  readonly dueOn: string | null;
+  /**
+   * 支払期限を過ぎているか。**列ではなく問い合わせのたびにサーバが数える**
+   * ——期限当日は超過ではない。
+   */
+  readonly overdue: boolean;
 }
 
 export interface InvoiceView {
@@ -80,13 +87,21 @@ export interface InvoiceView {
  * 請求一覧（S60 / US21）。
  *
  * **既定で入金済・取消を外す。** 決着したものが混ざると、一覧全体が「まだ手を
- * 入れる場所」に見えなくなる。並びはサーバが決める（算出日時の新しい順）。
+ * 入れる場所」に見えなくなる。並びはサーバが決める（算出日時の新しい順。
+ * 未払いだけに絞ったときは**支払期限の近い順**）。
+ *
+ * **未払いの絞りもサーバが数える**（US23 §受入基準 5）。全件を読んでから画面で
+ * 数えると、上限の打ち切りで未払いが漏れる。
  */
 export function fetchInvoices(
   includeSettled: boolean,
   bookingId?: string | null,
+  overdue = false,
 ): Promise<Pending<{ items: InvoiceSummaryView[]; total: number }>> {
   const query = new URLSearchParams({ includeSettled: includeSettled ? 'true' : 'false' });
+  if (overdue) {
+    query.set('overdue', 'true');
+  }
   if (bookingId !== undefined && bookingId !== null && bookingId.trim() !== '') {
     query.set('bookingId', bookingId.trim());
   }

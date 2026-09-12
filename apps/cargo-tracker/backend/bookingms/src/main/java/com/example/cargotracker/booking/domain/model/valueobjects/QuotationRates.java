@@ -49,12 +49,14 @@ public record QuotationRates(
         countryRegions = countryRegions == null ? Map.of() : Map.copyOf(countryRegions);
     }
 
+    /**
+     * 区分の係数。
+     *
+     * <p><b>ここでは検査しない。</b> 全区分そろっていることは組み立ての時点で
+     * 断ってある——同じ判定を 2 か所に書くと、片方だけが古くなる。</p>
+     */
     public BigDecimal regionFactor(PortRegion region) {
-        BigDecimal factor = regionFactors.get(region);
-        if (factor == null) {
-            throw new BusinessRuleViolation("地域係数が設定されていません: " + region);
-        }
-        return factor;
+        return regionFactors.get(region);
     }
 
     /**

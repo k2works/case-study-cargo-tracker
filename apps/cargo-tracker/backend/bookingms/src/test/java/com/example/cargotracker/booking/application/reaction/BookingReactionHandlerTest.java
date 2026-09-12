@@ -13,6 +13,8 @@ import com.example.cargotracker.booking.domain.model.commands.RecordHandlingComm
 import com.example.cargotracker.booking.domain.model.commands.RevertHandlingCommand;
 import com.example.cargotracker.shared.contract.command.InitializeTrackingCommand;
 import com.example.cargotracker.booking.domain.model.commands.MarkDeliveredCommand;
+import com.example.cargotracker.booking.domain.model.commands.SettleBookingCommand;
+import com.example.cargotracker.shared.domain.error.IllegalTransition;
 import com.example.cargotracker.shared.contract.event.CargoDeliveredEvent;
 import com.example.cargotracker.shared.contract.event.HandlingActivityRegisteredEvent;
 import com.example.cargotracker.shared.contract.event.HandlingActivityVoidedEvent;
@@ -154,7 +156,9 @@ class BookingReactionHandlerTest {
                     org.axonframework.messaging.core.Metadata metadata,
                     org.axonframework.messaging.core.unitofwork.ProcessingContext context) {
                 commands.sent.add(command);
-                if (commands.failure != null && command instanceof InitializeTrackingCommand) {
+                if (commands.failure != null
+                        && (command instanceof InitializeTrackingCommand
+                                || command instanceof SettleBookingCommand)) {
                     throw commands.failure;
                 }
                 return () -> CompletableFuture.completedFuture(null);
@@ -356,5 +360,60 @@ class BookingReactionHandlerTest {
 
         assertThat(commands.sent).singleElement()
                 .isEqualTo(new RevertHandlingCommand("b-1", "act-1", "取り違えました"));
+    }
+
+    @Test
+    @DisplayName("US23 §4: 入金が記録されると予約を精算済にする")
+    void settlesTheBookingOnPayment() {
+        handler.on(paymentRecorded());
+
+        assertThat(commands.sent).singleElement()
+                .isInstanceOfSatisfying(SettleBookingCommand.class, command -> {
+                    assertThat(command.bookingId()).isEqualTo("B-0001");
+                    assertThat(command.invoiceId()).isEqualTo("INV-20260928-1a2b3c4d");
+                    assertThat(command.paidAmount()).isEqualByComparingTo("433500");
+                    assertThat(command.settledBy())
+                            .as("誰が入金を確かめたのかを予約の側から追えるようにする")
+                            .isEqualTo("accountant01");
+                });
+    }
+
+    @Test
+    @DisplayName("進めない状態の入金は要確認に出す（黙って退避させない）")
+    void recordsAttentionWhenTheBookingCannotBeSettled() {
+        // 引取の記録が取り消されたあとに入金が届いた形。**入金は billingms に
+        // 記録済み**なので、やり直しても結果は変わらない。
+        commands.failure = new org.axonframework.messaging.commandhandling
+                .CommandExecutionException("精算できません",
+                new IllegalTransition("状態 輸送中 の予約は精算済にできません"));
+
+        handler.on(paymentRecorded());
+
+        assertThat(attentionItems.reasons).singleElement()
+                .as("退避すると、入金は記録されているのに予約だけ精算されないまま誰も気づかない")
+                .satisfies(recorded -> {
+                    assertThat(recorded).startsWith("SETTLEMENT_BLOCKED/ROLE_ACCOUNTANT/");
+                    assertThat(recorded)
+                            .as("直せるのは請求の側。宛先を間違えると打つ手の無い人に届く")
+                            .contains("INV-20260928-1a2b3c4d");
+                });
+    }
+
+    @Test
+    @DisplayName("一時的な障害は投げ直す（繋がり直せば済むものを人に見せない）")
+    void rethrowsTransientFailures() {
+        commands.failure = new IllegalStateException("コマンドバスに繋がりません");
+
+        assertThatThrownBy(() -> handler.on(paymentRecorded()))
+                .isInstanceOf(IllegalStateException.class);
+        assertThat(attentionItems.reasons).isEmpty();
+    }
+
+    private static com.example.cargotracker.shared.contract.event.PaymentRecordedEvent
+            paymentRecorded() {
+        return new com.example.cargotracker.shared.contract.event.PaymentRecordedEvent(
+                "INV-20260928-1a2b3c4d", "PAY-20261005-9f8e7d6c", "B-0001", "SHP-000001",
+                new BigDecimal("433500"), "JPY", Instant.parse("2026-10-05T02:00:00Z"),
+                "accountant01", NOW);
     }
 }

@@ -2,6 +2,7 @@ package com.example.cargotracker.booking.interfaces.rest;
 
 import com.example.cargotracker.booking.application.port.RouteCandidateFinder;
 import com.example.cargotracker.booking.application.port.TrackingNumberGenerator;
+import com.example.cargotracker.booking.domain.model.commands.LinkQuotationCommand;
 import com.example.cargotracker.booking.domain.model.commands.AdjustRouteSpecificationCommand;
 import com.example.cargotracker.booking.domain.model.commands.AssignRouteCommand;
 import com.example.cargotracker.booking.domain.model.commands.NotifyShipperCommand;
@@ -101,6 +102,18 @@ public class BookingController {
                         request.arrivalDeadline()),
                 username);
         commandGateway.sendAndWait(command);
+
+        // **見積の行は 1 度だけ読む。** 差分と概算を別々に読むと、片方だけが
+        // 古い見積を見ることになる。
+        var quoted = quotationDiff.quoted(request.quotationId());
+        if (quoted != null) {
+            // **概算を請求へ渡す唯一の経路**（注 N12）。結び付けに失敗しても
+            // 予約は残す——見積と比べられない予約は成り立つが、受け付けられ
+            // なかった予約は成り立たない。
+            commandGateway.sendAndWait(new LinkQuotationCommand(bookingId,
+                    quoted.quotationId(), quoted.estimatedAmount(),
+                    quoted.estimatedCurrency(), username));
+        }
 
         // **見積との違いは断らずに知らせる**（正典の不変条件 3）。荷主の事情は
         // 見積のあとで変わる——重量が増えることも、期限が延びることもある。

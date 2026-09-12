@@ -274,7 +274,7 @@ describe('S02 ダッシュボード', () => {
     // 始まる。行けても自分の仕事でなければ進まない。
     vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
       const url = String(input);
-      if (url.includes('/billing/invoices')) {
+      if (url.includes('/billing/invoices') && !url.includes('overdue=true')) {
         return Promise.resolve(new Response(JSON.stringify({
           items: [{ invoiceId: 'INV-20260928-1a2b3c4d' }], total: 1,
         }), { status: 200 }));
@@ -287,6 +287,26 @@ describe('S02 ダッシュボード', () => {
     expect(await screen.findByText(/確かめていない請求が 1 件あります/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '請求一覧' }))
       .toHaveAttribute('href', '/invoices');
+  });
+
+  it('US23 §5: 経理には未払いの件数が出て、そこから未払いだけの一覧へ行ける', async () => {
+    // **気づく手段は次の行動へ繋ぐ。** 件数だけ出して一覧が全件なら、
+    // どれが未払いかをもう一度自分で探すことになる。
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      const url = String(input);
+      if (url.includes('/billing/invoices') && url.includes('overdue=true')) {
+        return Promise.resolve(new Response(JSON.stringify({
+          items: [{ invoiceId: 'INV-20260928-1a2b3c4d' }], total: 1,
+        }), { status: 200 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ items: [] }), { status: 200 }));
+    });
+
+    renderAs(['ROLE_ACCOUNTANT']);
+
+    expect(await screen.findByText(/支払期限を過ぎた請求が 1 件あります/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '請求一覧' }))
+      .toHaveAttribute('href', '/invoices?overdue=true');
   });
 
   it('経理以外に請求の件数を出さない（自分の仕事でないものを並べない）', async () => {

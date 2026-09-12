@@ -11,6 +11,7 @@ import com.example.cargotracker.billing.infrastructure.projection.ShipperContrac
 import com.example.cargotracker.billing.infrastructure.query.BillingQueries.FindInvoiceOfBookingQuery;
 import com.example.cargotracker.billing.infrastructure.query.InvoiceQueryHandler;
 import com.example.cargotracker.shared.contract.event.CargoDeliveredEvent;
+import com.example.cargotracker.shared.contract.event.CargoQuotedEvent;
 import com.example.cargotracker.shared.contract.event.ShipperRegisteredEvent;
 import com.example.cargotracker.shared.contract.event.TrackingInitializedEvent;
 import com.example.cargotracker.shared.testing.AbstractAxonIntegrationTest;
@@ -55,6 +56,10 @@ class BillingReactionHandlerIT extends AbstractAxonIntegrationTest {
 
     @Autowired
     private BillingCargoSnapshotMapper cargos;
+
+    @Autowired
+    private com.example.cargotracker.billing.infrastructure.projection.BookingQuotationProjection
+            quotationProjection;
 
     @org.springframework.boot.test.web.server.LocalServerPort
     private int port;
@@ -123,6 +128,33 @@ class BillingReactionHandlerIT extends AbstractAxonIntegrationTest {
         assertThat(view.discountAmount()).isEqualByComparingTo("76500");
         assertThat(view.taxAmount()).as("輸出は免税").isEqualByComparingTo("0");
         assertThat(view.totalAmount()).isEqualByComparingTo("433500");
+    }
+
+    @Test
+    @DisplayName("注 N12: 見積から作った予約では、請求書に見積時の概算が載る")
+    void carriesTheQuotedAmountFromTheBooking() {
+        var fixture = cargo(new BigDecimal("1200"), true, true, "CORPORATE", "0.1500");
+        // **予約の時点で届く。** 請求書を作るのは引取のあとなので、間に合う。
+        quotationProjection.on(new CargoQuotedEvent(fixture.bookingId(),
+                "Q-0123456789abcdef0123456789abcd", new BigDecimal("510000"), "JPY", AT));
+
+        deliver(fixture);
+
+        assertThat(awaitInvoice(fixture.bookingId()).quotedAmount())
+                .as("載らないと S61 の差額行が永久に出ない（注 N12）")
+                .isEqualByComparingTo("510000");
+    }
+
+    @Test
+    @DisplayName("注 N12: 見積を経ない予約では概算は空のまま（0 円で埋めない）")
+    void leavesTheQuotedAmountEmptyWithoutAQuotation() {
+        var fixture = cargo(new BigDecimal("1200"), true, true, "CORPORATE", "0.1500");
+
+        deliver(fixture);
+
+        assertThat(awaitInvoice(fixture.bookingId()).quotedAmount())
+                .as("0 で埋めると「0 円の見積があった」と読まれる")
+                .isNull();
     }
 
     @Test

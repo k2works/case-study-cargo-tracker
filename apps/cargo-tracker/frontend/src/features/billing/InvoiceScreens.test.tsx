@@ -19,6 +19,8 @@ function summary(over: Record<string, unknown> = {}) {
     totalAmount: 433500,
     currency: 'JPY',
     calculatedAt: '2026-09-28T01:00:00Z',
+    dueOn: null,
+    overdue: false,
     ...over,
   };
 }
@@ -112,6 +114,50 @@ describe('S60 請求一覧', () => {
       expect(await screen.findByText('INV-20260928-1a2b3c4d')).toBeInTheDocument();
       expect(String(fetchSpy.mock.calls[0]?.[0])).toContain('includeSettled=false');
     });
+
+  it('US23 §5: 未払いだけに絞るとサーバが数える（画面で目視させない）', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ items: [], total: 0 }), { status: 200 }),
+    );
+
+    renderAt('/invoices', <InvoiceListPage />);
+
+    await screen.findByText('請求一覧');
+    await userEvent.click(screen.getByLabelText(/未払い（支払期限を過ぎたもの）だけ表示/));
+
+    // **絞らずに全件を読んで画面で数えると、上限の打ち切りで未払いが漏れる。**
+    // 問い合わせに載らなければ緑にしない。
+    await waitFor(() => expect(
+      fetchSpy.mock.calls.some((call) => String(call[0]).includes('overdue=true'))).toBe(true));
+    expect(await screen.findByText(/支払期限を過ぎたものだけを/)).toBeInTheDocument();
+  });
+
+  it('支払期限の列が出る（状態だけでは、あと何日あるのかが読めない）', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({
+        items: [summary({ status: 'INVOICED', statusLabel: '請求済',
+          dueOn: '2026-10-28', overdue: true })],
+        total: 1,
+      }), { status: 200 }),
+    );
+
+    renderAt('/invoices', <InvoiceListPage />);
+
+    const row = (await screen.findByText('INV-20260928-1a2b3c4d')).closest('tr');
+    expect(row).toHaveTextContent('2026-10-28');
+    expect(row).toHaveTextContent('未払い');
+  });
+
+  it('未発行の請求書は期限欄に「未発行」と出す（空欄だと取得漏れに見える）', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ items: [summary()], total: 1 }), { status: 200 }),
+    );
+
+    renderAt('/invoices', <InvoiceListPage />);
+
+    const row = (await screen.findByText('INV-20260928-1a2b3c4d')).closest('tr');
+    expect(row).toHaveTextContent('未発行');
+  });
 
   it('金額と荷主種別が読める（列挙名を出さない）', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(

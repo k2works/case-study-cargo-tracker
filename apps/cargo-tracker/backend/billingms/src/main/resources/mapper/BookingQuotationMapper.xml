@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.billing.infrastructure.persistence.BookingQuotationMapper">
+
+    <insert id="upsert">
+        INSERT INTO booking_quotation (booking_id, quotation_id, quoted_amount, currency,
+                                       quoted_at, projected_at)
+        VALUES (#{bookingId}, #{quotationId}, #{quotedAmount}, #{currency},
+                #{quotedAt}, #{projectedAt})
+        <!--
+          見積は結び付けたあと変わらない。同じイベントが 2 度届いても、
+          書き直す理由が無いので見送る（少なくとも 1 回配送）。
+        -->
+        ON CONFLICT (booking_id) DO NOTHING
+    </insert>
+</mapper>

@@ -35,13 +35,18 @@ public class InvoiceCalculation {
     private final BillingCargoSnapshotMapper cargos;
     private final ShipperContractSnapshotMapper shippers;
     private final InvoiceMapper invoices;
+    private final com.example.cargotracker.billing.infrastructure.persistence
+            .BookingQuotationMapper bookingQuotations;
     private final Clock clock;
 
     public InvoiceCalculation(BillingCargoSnapshotMapper cargos,
-            ShipperContractSnapshotMapper shippers, InvoiceMapper invoices, Clock clock) {
+            ShipperContractSnapshotMapper shippers, InvoiceMapper invoices,
+            com.example.cargotracker.billing.infrastructure.persistence
+                    .BookingQuotationMapper bookingQuotations, Clock clock) {
         this.cargos = cargos;
         this.shippers = shippers;
         this.invoices = invoices;
+        this.bookingQuotations = bookingQuotations;
         this.clock = clock;
     }
 
@@ -99,6 +104,12 @@ public class InvoiceCalculation {
         return prepareFor(cargo);
     }
 
+    /** 見積時の概算。**結び付いていなければ {@code null}**（普通の状態）。 */
+    private java.math.BigDecimal quotedAmountOf(String bookingId) {
+        var quoted = bookingQuotations.findByBooking(bookingId);
+        return quoted == null ? null : quoted.quotedAmount();
+    }
+
     private Outcome prepareFor(BillingCargoSnapshotMapper.SnapshotRow cargo) {
         var existing = invoices.findActiveByBooking(cargo.bookingId());
         if (existing != null) {
@@ -135,11 +146,10 @@ public class InvoiceCalculation {
                 contract.shipperName(), ShipperType.of(contract.shipperType()),
                 DiscountRate.ofNullable(contract.discountRate()), contract.contractNumber(),
                 transport,
-                // 見積時の概算（注 N12）。**いまは常に null。** 見積から予約を
-                // 作る経路（US01）が繋がると、貨物の写しに載って届く（T7）。
-                // 列と契約だけ先に用意してある——投影はコマンドを読まないので、
-                // イベントに載せる場所が無ければ S61 は概算行を出せない。
-                null,
+                // 見積時の概算（注 N12）。**見積を経ない予約では null** ——
+                // 「概算が無い」は欠損ではなく普通の状態で、0 円で埋めると
+                // 0 円の見積があったと読まれる（S61 は概算行を出さない）。
+                quotedAmountOf(cargo.bookingId()),
                 // 連鎖からの算出は利用者名を持たない。**誰が作ったかは残す。**
                 "system"));
     }

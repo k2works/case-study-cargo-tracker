@@ -62,6 +62,15 @@ export function DashboardPage() {
     enabled: isAccountant,
   });
 
+  // **未払いは督促の起点**（US23 §受入基準 5）。期限を過ぎたものは放っておくと
+  // 誰も数えない——一覧を開いて目で探させると、件数が増えるほど取りこぼす。
+  // **数えるのはサーバ**で、期限当日は未払いにしない。
+  const { data: overdueInvoices } = useQuery({
+    queryKey: ['invoices-overdue'],
+    queryFn: () => fetchInvoices(false, null, true),
+    enabled: isAccountant,
+  });
+
   // **荷主には「変わったこと」を知る手段がない**（送信基盤はスコープ外）。
   // 件数を出して一覧へ繋ぐ（US17 §受入基準 4 の代わり。IT8 のレビュー指摘）。
   const { data: recentlyChanged } = useQuery({
@@ -320,6 +329,19 @@ export function DashboardPage() {
             請求一覧
           </Link>
           {' '}で内容を確かめてください。
+        </output>
+      )}
+
+      {/* **未払いは督促の起点**（US23 §受入基準 5）。件数だけでは進まないので
+          一覧へ繋ぐ——期限の近いものから並ぶ。 */}
+      {isAccountant && overdueInvoices?.state === 'ready'
+        && overdueInvoices.value.items.length > 0 && (
+        <output className={`${NOTICE} mt-4 block`}>
+          支払期限を過ぎた請求が {overdueInvoices.value.items.length} 件あります。{' '}
+          <Link to="/invoices?overdue=true" className={LINK}>
+            請求一覧
+          </Link>
+          {' '}で督促してください。
         </output>
       )}
 

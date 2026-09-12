@@ -7,12 +7,15 @@
         INSERT INTO invoice (
             invoice_id, booking_id, shipper_id, shipper_name, shipper_type, contract_number,
             base_amount, discount_amount, adjustment_amount, tax_amount, total_amount,
-            currency, discount_rate, billing_status, calculated_at, projected_at, last_event_id
+            currency, discount_rate, billing_status, calculated_at, projected_at, last_event_id,
+            <!-- **見積時の概算も書く**（注 N12）。列と読み口だけあって書き込みが
+                 無いと、S61 の差額行は永久に出ない。 -->
+            quoted_amount
         ) VALUES (
             #{invoiceId}, #{bookingId}, #{shipperId}, #{shipperName}, #{shipperType},
             #{contractNumber}, #{baseAmount}, #{discountAmount}, #{adjustmentAmount},
             #{taxAmount}, #{totalAmount}, #{currency}, #{discountRate}, #{billingStatus},
-            #{calculatedAt}, #{projectedAt}, #{lastEventId}
+            #{calculatedAt}, #{projectedAt}, #{lastEventId}, #{quotedAmount}
         )
         ON CONFLICT DO NOTHING
     </insert>

@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.cargotracker.shared.contract.event.CargoDeliveredEvent;
+import com.example.cargotracker.shared.contract.event.CargoQuotedEvent;
 import com.example.cargotracker.shared.contract.event.PaymentRecordedEvent;
 import com.example.cargotracker.shared.contract.event.CargoDeliveryRevertedEvent;
 import com.example.cargotracker.shared.contract.event.CustomsStatusChangedEvent;
@@ -96,7 +97,11 @@ class ContractEventGoldenTest {
                 new PaymentRecordedEvent("INV-20260928-1a2b3c4d", "PAY-20261005-9f8e7d6c",
                         "b-1", "SHP-000001", new BigDecimal("510000"), "JPY",
                         Instant.parse("2026-10-05T02:00:00Z"), "accountant01",
-                        Instant.parse("2026-10-05T05:30:00Z")));
+                        Instant.parse("2026-10-05T05:30:00Z")),
+                // 見積からの予約（US01・IT14）。bookingms → billingms。
+                new CargoQuotedEvent("b-1", "Q-0123456789abcdef0123456789abcd",
+                        new BigDecimal("510000"), "JPY",
+                        Instant.parse("2026-09-28T01:00:00Z")));
     }
 
     private static String goldenOf(String name) {

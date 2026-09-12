@@ -91,6 +91,34 @@ class QuotationDiffTest {
     }
 
     @Test
+    @DisplayName("見積の側が持たない項目は「違う」と言わない（欠けを差分に見せない）")
+    void ignoresTermsTheQuotationDoesNotHave() {
+        // 見積が 5 項目を持たない形で保存されていることがある（列を足す前の行）。
+        // **持っていない項目は比べない**——比べると「JPTYO → null」のような
+        // 読めない差分が並ぶ。
+        var partial = new QuotationTerms(null, null, null, null, null);
+
+        assertThat(partial.differencesAgainst(QuotationTerms.of(
+                booking("JPTYO", "USNYC", DEADLINE, CargoType.GENERAL, "1200"))))
+                .isEmpty();
+    }
+
+    @Test
+    @DisplayName("予約の側に経路や貨物の指定が無くても落ちない")
+    void extractsNothingFromAnEmptyBooking() {
+        // 予約の入力は集約が断るが、**取り出しの側で落ちると原因が隠れる**
+        // ——断った理由でなく NullPointerException が上がる。
+        var terms = QuotationTerms.of(new BookCargoCommand("B-1", "SHP-000001",
+                null, null, "sales01"));
+
+        assertThat(terms.originUnLocode()).isNull();
+        assertThat(terms.cargoType()).isNull();
+        assertThat(quoted().differencesAgainst(terms))
+                .as("重量だけは相手が無ければ比べない（数として比べるので相手が要る）")
+                .hasSize(4);
+    }
+
+    @Test
     @DisplayName("相手が無ければ違いも無い（断らない）")
     void reportsNothingWithoutTheOtherSide() {
         assertThat(quoted().differencesAgainst(null)).isEmpty();

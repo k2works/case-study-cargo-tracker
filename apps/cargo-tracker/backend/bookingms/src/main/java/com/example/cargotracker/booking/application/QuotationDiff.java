@@ -40,27 +40,36 @@ public class QuotationDiff {
      * 業務が止まるほうが重い。</p>
      */
     public List<String> differences(String quotationId, BookCargoCommand command) {
-        if (quotationId == null || quotationId.isBlank()) {
-            // 見積を経ない予約。**そのほうが多い**ので、無いことを異常にしない。
-            return List.of();
-        }
-        QuotationMapper.QuotationRow quoted;
-        try {
-            quoted = quotations.find(quotationId);
-        } catch (RuntimeException e) {
-            // **読めなくても予約は通す。** 違いを知らせられないだけで、
-            // 予約そのものは既に受け付けてある。
-            log.warn("見積 {} と突き合わせられませんでした: {}", quotationId, e.toString());
-            return List.of();
-        }
+        QuotationMapper.QuotationRow quoted = quoted(quotationId);
         if (quoted == null) {
-            // 打ち間違いか、投影がまだ。**予約は通す**——番号の打ち間違いで
-            // 業務が止まるほうが重い。
             return List.of();
         }
         // **比較は 1 か所**（QuotationTerms）。集約の diffAgainst と同じものを使う。
         return new QuotationTerms(quoted.originUnLocode(), quoted.destinationUnLocode(),
                 quoted.arrivalDeadline(), quoted.cargoType(), quoted.weightKg())
                 .differencesAgainst(QuotationTerms.of(command));
+    }
+
+    /**
+     * 見積の行。**読めなければ null**（予約は通す）。
+     *
+     * <p>差分と概算は<b>同じ 1 行から取る</b>。別々に読むと、片方だけが
+     * 古い見積を見ることになる。</p>
+     */
+    public QuotationMapper.QuotationRow quoted(String quotationId) {
+        if (quotationId == null || quotationId.isBlank()) {
+            // 見積を経ない予約。**そのほうが多い**ので、無いことを異常にしない。
+            return null;
+        }
+        try {
+            // 打ち間違いか、投影がまだなら null。**予約は通す**——番号の
+            // 打ち間違いで業務が止まるほうが重い。
+            return quotations.find(quotationId);
+        } catch (RuntimeException e) {
+            // **読めなくても予約は通す。** 違いを知らせられないだけで、
+            // 予約そのものは既に受け付けてある。
+            log.warn("見積 {} と突き合わせられませんでした: {}", quotationId, e.toString());
+            return null;
+        }
     }
 }

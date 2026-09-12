@@ -153,6 +153,63 @@ class QuotationTest {
     }
 
     @Test
+    @DisplayName("経路・貨物種別・重量が欠けた見積は作れない（5 項目が見積の中身）")
+    void refusesMissingTerms() {
+        fixture.given().noPriorActivity()
+                .when().command(new CreateQuotationCommand(QUOTATION, null,
+                        CargoType.GENERAL, Weight.ofKilograms("1200"), null, List.of(),
+                        "sales01"))
+                .then().exception(BusinessRuleViolation.class);
+
+        fixture.given().noPriorActivity()
+                .when().command(new CreateQuotationCommand(QUOTATION,
+                        new RouteSpecification(Location.of("JPTYO"), Location.of("USNYC"),
+                                LocalDate.of(2026, 12, 1)),
+                        null, Weight.ofKilograms("1200"), null, List.of(), "sales01"))
+                .then().exception(BusinessRuleViolation.class);
+
+        fixture.given().noPriorActivity()
+                .when().command(new CreateQuotationCommand(QUOTATION,
+                        new RouteSpecification(Location.of("JPTYO"), Location.of("USNYC"),
+                                LocalDate.of(2026, 12, 1)),
+                        CargoType.GENERAL, null, null, List.of(), "sales01"))
+                .then().exception(BusinessRuleViolation.class);
+    }
+
+    @Test
+    @DisplayName("候補の一覧そのものが無くても作れる（0 件と同じに扱う）")
+    void createsWithoutACandidateList() {
+        var created = createdEventOf(new CreateQuotationCommand(QUOTATION,
+                new RouteSpecification(Location.of("JPTYO"), Location.of("USNYC"),
+                        LocalDate.of(2026, 12, 1)),
+                CargoType.GENERAL, Weight.ofKilograms("1200"), null, null, "sales01"));
+
+        assertThat(created.candidates()).isEmpty();
+        assertThat(created.estimatedAmount()).isEqualByComparingTo("0");
+    }
+
+    @Test
+    @DisplayName("候補が null のイベントでも復元できる（古い記録を読めなくしない）")
+    void restoresFromAnEventWithoutCandidates() {
+        var created = new QuotationCreatedEvent(QUOTATION, "JPTYO", "USNYC",
+                LocalDate.of(2026, 12, 1), "GENERAL", new BigDecimal("1200"), null, null,
+                BigDecimal.ZERO, "JPY", LocalDate.of(2026, 10, 28), null, "sales01",
+                Instant.parse("2026-09-28T01:00:00Z"));
+
+        assertThat(created.candidates())
+                .as("復元では断らず既定に落とす（追記専用の形を守る）")
+                .isEmpty();
+    }
+
+    @Test
+    @DisplayName("作られていない見積は予約と比べられない（比べる相手が無い）")
+    void refusesToDiffWithoutAQuotation() {
+        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                new Quotation().diffAgainst(bookingWith("USNYC", CargoType.GENERAL, "1200")))
+                .isInstanceOf(IllegalTransition.class);
+    }
+
+    @Test
     @DisplayName("同じ見積番号で二度作れない")
     void doesNotCreateTwice() {
         var created = createdEventOf(create(CargoType.GENERAL, null, List.of()));

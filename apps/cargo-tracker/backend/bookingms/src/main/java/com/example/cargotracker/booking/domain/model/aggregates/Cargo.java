@@ -14,10 +14,12 @@ import com.example.cargotracker.booking.domain.model.commands.RevertDeliveryComm
 import com.example.cargotracker.booking.domain.model.commands.RecordHandlingCommand;
 import com.example.cargotracker.booking.domain.model.commands.RevertHandlingCommand;
 import com.example.cargotracker.booking.domain.model.commands.RevertTrackingNumberCommand;
+import com.example.cargotracker.booking.domain.model.commands.LinkQuotationCommand;
 import com.example.cargotracker.booking.domain.model.commands.SettleBookingCommand;
 import com.example.cargotracker.booking.domain.model.commands.UpdateCargoSpecificationCommand;
 import com.example.cargotracker.booking.domain.model.events.BookingConfirmedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
+import com.example.cargotracker.shared.contract.event.CargoQuotedEvent;
 import com.example.cargotracker.booking.domain.model.events.ReturnedToRoutingEvent;
 import com.example.cargotracker.booking.domain.model.events.ShipperNotifiedEvent;
 import com.example.cargotracker.booking.domain.model.events.ConditionReviewRequestedEvent;
@@ -71,6 +73,8 @@ public class Cargo {
 
     private String bookingId;
     private BookingStatus bookingStatus;
+    /** もとになった見積。**無いほうが多い**（見積を経ない予約）。 */
+    private String quotationId;
     private RoutingStatus routingStatus;
     /** 受け付けたときの到着期限。修正で期限を触ったかどうかの判断に要る。 */
     private LocalDate arrivalDeadline;
@@ -679,6 +683,33 @@ public class Cargo {
         // 引取済からはキャンセルできない（不変条件 9）。次に来るのは精算だけ。
         this.statusBeforeDelivery = bookingStatus;
         this.bookingStatus = BookingStatus.DELIVERED;
+    }
+
+    /**
+     * もとになった見積を結び付ける（US01 §受入基準 4・注 N12）。
+     *
+     * <p><b>概算を請求へ渡す唯一の経路である。</b> 追跡のイベントには載せない
+     * ——trackingms は金額に関わらないので、そこを通すと金額を知る必要の無い
+     * BC が金額を運ぶ。</p>
+     *
+     * <p><b>二度結び付けない。</b> 押し直しでイベントが積まれると、投影は
+     * 最後の 1 つを見るだけだが、履歴には「見積を 2 度取った予約」が残る。</p>
+     *
+     * <p><b>知らない予約では止まらない。</b> 予約の受付は既に済んでいる。</p>
+     */
+    @CommandHandler
+    public void linkQuotation(LinkQuotationCommand command, EventAppender appender,
+            Clock clock) {
+        if (bookingId == null || quotationId != null) {
+            return;
+        }
+        appender.append(new CargoQuotedEvent(command.bookingId(), command.quotationId(),
+                command.quotedAmount(), command.currency(), clock.instant()));
+    }
+
+    @EventSourcingHandler
+    void on(CargoQuotedEvent event) {
+        this.quotationId = event.quotationId();
     }
 
     /**
