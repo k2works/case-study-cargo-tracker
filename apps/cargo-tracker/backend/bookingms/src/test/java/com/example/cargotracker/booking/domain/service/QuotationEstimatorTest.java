@@ -131,10 +131,18 @@ class QuotationEstimatorTest {
     @Test
     @DisplayName("消費税は載せない（輸出免税の判定は実際の輸送で決まる）")
     void doesNotIncludeTax() {
-        // 国内（JP → JP）でも税は乗らない。乗ると請求との差が税の分だけ増える。
+        // **国内も海外も同じ**。税率 0.10 を掛けると国内だけが 55,000 になるので、
+        // 2 経路を並べると「国内にだけ税を載せた」実装が赤になる。
+        // 1 経路だけだと baselineIsTheBaseFare と同じ入力・同じ期待値になり、
+        // どちらかを消しても検出力が変わらない。
         assertThat(estimator.estimateOne(List.of(leg("JPTYO", "JPOSA")),
                 CargoType.GENERAL, Weight.ofKilograms("1000"), rates()).amount())
+                .as("国内でも税は乗らない（乗ると請求との差が税の分だけ増える）")
                 .isEqualByComparingTo("50000");
+        assertThat(estimator.estimateOne(List.of(leg("JPTYO", "USNYC")),
+                CargoType.GENERAL, Weight.ofKilograms("1000"), rates()).amount())
+                .as("海外も同じ。輸出免税の判定は実際に通った区間で決まる")
+                .isEqualByComparingTo("300000");
     }
 
     @Test

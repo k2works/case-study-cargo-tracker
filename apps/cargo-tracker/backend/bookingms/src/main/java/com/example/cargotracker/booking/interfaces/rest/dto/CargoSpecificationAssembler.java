@@ -60,7 +60,14 @@ public final class CargoSpecificationAssembler {
         }
     }
 
-    private static boolean blank(String value) {
+    /**
+     * 空白は「入れていない」と同じに扱う。
+     *
+     * <p><b>入口ごとに違う扱いをしない。</b> 画面は選択肢を切り替えたときに
+     * 空文字を送る——{@code null} しか見ないと、空文字が「入力された」ことに
+     * なり、値オブジェクトが先に断って<b>集約の守りが画面から踏まれなくなる</b>。</p>
+     */
+    public static boolean blank(String value) {
         return value == null || value.isBlank();
     }
 }

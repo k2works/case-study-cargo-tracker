@@ -92,7 +92,7 @@ bi --> bidb
 | routingms | `routing_read_db` | 投影 + 受け皿 + Axon 管理 | `voyage`, `carrier_movement`, `voyage_accepted_cargo_type`, `attention_item`, `token_entry` |
 | trackingms | `tracking_read_db` | 投影 + 受け皿 + Axon 管理 | `tracking_summary`, `tracking_event`, `tracking_exception`, `attention_item`, `token_entry`, `dead_letter_entry` |
 | handlingms | `handling_read_db` | 投影 + Axon 管理 | `cargo_snapshot`, `cargo_snapshot_leg`, `handling_activity`, `customs_declaration`, `customs_status_history`, `token_entry`, `dead_letter_entry` |
-| billingms | `billing_read_db` | 投影 + 受け皿 + Axon 管理 | `invoice`, `invoice_line_item`, `payment`, `shipper_contract_snapshot`, **`billing_cargo_snapshot`**, **`billing_cargo_leg`**, `attention_item`, `token_entry`, `dead_letter_entry` |
+| billingms | `billing_read_db` | 投影 + 受け皿 + Axon 管理 | `invoice`, `invoice_line_item`, `payment`, `invoice_notification`, `booking_quotation`, `shipper_contract_snapshot`, **`billing_cargo_snapshot`**, **`billing_cargo_leg`**, `attention_item`, `token_entry`, `dead_letter_entry` |
 
 `location` のマスタは各 DB に置きません。UN/LOCODE は共有カーネルの値オブジェクトであり、港名の表示に要る対応表は `shared` のリソース（CSV）から読みます。マスタを各 DB に複製すると更新の同期が要ります。
 
@@ -378,9 +378,11 @@ entity "quotation_candidate" as qc {
   * **candidate_seq**: INTEGER <<PK>>
   --
   voyage_numbers: VARCHAR(200) NOT NULL
+  ports: VARCHAR(200)
   transit_days: INTEGER NOT NULL
   estimated_cost: NUMERIC(14,2) NOT NULL
   estimated_currency: VARCHAR(3) NOT NULL
+  overdue_days: INTEGER NOT NULL DEFAULT 0
 }
 
 entity "attention_item" as att {
@@ -415,7 +417,7 @@ q ||--o{ qc
 **`condition_review_response` / `condition_review_responded_at` は IT8 で足しました**（US10 §受入基準 4 の対）。**差し戻しの理由と対で持ちます**——何を頼まれて何が決まったかが読めないと、経路設計者は条件をどう直せばよいのか分かりません。営業の受け皿（S02）は「差し戻されていて、まだ返していない」で絞ります（返したものが残り続けると、営業は何度も同じ予約を開きます）。条件を調整すると両方が消えます（営業の手番はもう終わっているため）。
 | `cargo_leg` | `CargoRoutedEvent` | `INDEX(voyage_number)` | 再設計時は全行を入れ替える |
 | `cancellation_request` | `CancellationRequestedEvent`, `CancellationApprovedEvent`, `CancellationRejectedEvent` | `INDEX(booking_id)`, `INDEX(decision)`（`NULL` = 承認待ち） | `decision` は `APPROVED` / `REJECTED` / `NULL` |
-| `quotation` / `quotation_candidate` | `QuotationCreatedEvent` | `INDEX(created_at)` | 候補 0 件の見積も 1 行残る |
+| `quotation` / `quotation_candidate` | `QuotationCreatedEvent` | `INDEX(created_at)`, `PK(quotation_id, candidate_seq)` | 候補 0 件の見積も 1 行残る。`overdue_days` は**希望期限からの超過日数を候補が答える**（0 なら間に合う）——画面に数え直させると、探索が使った期限とずれる。`ports` は**候補ごとの経由港**（IT14 / V020。出発地と目的地を画面で繋ぐと、どの候補も同じ経路に見えて案を選び分けられない）。列が無かったころの行は `NULL`。候補は追記せず、読み直しのたびに消して入れ直す |
 | `attention_item` | 投影が UNIQUE 違反で書けなかった事実（`kind = PROJECTION_REJECTED`）、Reaction Handler のコマンド失敗（`kind = REACTION_FAILED`）、Saga の補償（`kind = SAGA_COMPENSATED`） | `INDEX(assigned_role, occurred_at) WHERE acknowledged_at IS NULL`（部分インデックス） | 要確認一覧（S70）の受け皿。`assigned_role` で自ロール宛に絞り、`payload` に受け付けた内容を持ち「修正して再登録」の初期値にする。`target_type` / `target_id` は詳細への導線（投影に無い行でも `payload` から開ける）。**投影ではなく追記専用の受け皿**であり、リプレイで TRUNCATE しない。同じ定義を `routing_read_db`・`tracking_read_db`・`billing_read_db` にも置く（「事前の存在確認 + 投影の UNIQUE + 拒否の記録」の三段の最後） **`item_id` は採番せず「何が・どの対象で・なぜ」から導きます**（SHA-256 の先頭 128 ビットを 16 進 32 文字。導出は共有カーネルの `AttentionItemId` 1 か所）。採番すると、投影を読み直すたびに同じ内容の行が積み上がります（IT2 で実在した欠陥）。**UUID の見た目に整形しません**（導出値であることが読めなくなり、採番された値だと誤解した変更を招く。IT4 R.1）。 |
 
 ### `routing_read_db`（routingms）
@@ -720,6 +722,24 @@ entity "payment" as pay {
   recorded_by: VARCHAR(50) NOT NULL
 }
 
+entity "invoice_notification" as inv_note {
+  * **invoice_id**: VARCHAR(36) <<PK>> <<FK>>
+  --
+  shipper_id: VARCHAR(36) NOT NULL
+  kind: VARCHAR(30) NOT NULL
+  notified_at: TIMESTAMPTZ NOT NULL
+}
+
+entity "booking_quotation" as bq {
+  * **booking_id**: VARCHAR(36) <<PK>>
+  --
+  quotation_id: VARCHAR(36) NOT NULL
+  quoted_amount: NUMERIC(14,2) NOT NULL
+  currency: VARCHAR(3) NOT NULL
+  quoted_at: TIMESTAMPTZ NOT NULL
+  projected_at: TIMESTAMPTZ NOT NULL
+}
+
 entity "billing_cargo_snapshot" as bcs {
   * **tracking_number**: VARCHAR(25) <<PK>>
   --
@@ -754,6 +774,7 @@ entity "shipper_contract_snapshot" as scs {
 
 inv ||--o{ li
 inv ||--o{ pay
+inv ||--o| inv_note
 bcs ||--o{ bcl
 @enduml
 ```
@@ -762,7 +783,9 @@ bcs ||--o{ bcl
 | :--- | :--- | :--- | :--- |
 | `invoice` | `InvoiceCalculatedEvent`, `InvoiceAdjustedEvent`, `InvoiceIssuedEvent`, `PaymentRecordedEvent`, `InvoiceVoidedEvent`, `CancellationFeeAppliedEvent` | `UNIQUE(booking_id, void_marker)`, `INDEX(shipper_id)`、**`INDEX(billing_status, due_on)` は IT14 で足す**（`due_on` の書き手が US23 まで居ない） | **`billing_status` が正で、`void_marker` は UNIQUE を成立させるための派生列**（[ADR-0017](../../adr/cargo-tracker/0017-billing-status-is-the-source-of-truth.md)）。有効中 `''`、取り消し時に `invoice_id` を入れる。**この列を読んで業務の判断をしない**——読んでよいのは有効な請求書を引く 1 か所だけ（決定 3）。有効な請求書は予約ごとに 1 通。**`overdue` 列は持たず**、一覧の SQL が `due_on < :today AND billing_status = 'INVOICED'` で判定する。`quoted_amount` / `quoted_currency` は見積時の概算（任意。見積を経ない予約は `NULL`）で、S61 が「見積時の概算 → 請求 → 差額」を出す。`INDEX(shipper_id)` は荷主向け請求書（`FindShipperInvoiceQuery`）の索引を兼ねる |
 | `invoice_line_item` | 同上 | `UNIQUE(source_event_id) WHERE source_event_id IS NOT NULL`（V006） | **`source_event_id` は調整行の元イベント**。算出の明細は消して入れ直すので増えないが、**調整は別のイベントで積むので入れ直せない**——同じイベントが 2 度届くと `MAX(line_seq)+1` が新しい番号を採って同じ行が増える（IT13 で実測。合計は動かないのに明細だけ増えるので、二重に調整したと読める）。`item_type` は `BASE` / `DISCOUNT` / `ADJUSTMENT` / `CANCELLATION_FEE` / `TAX`。`basis_exception_id` は調整行の根拠になった例外 ID（任意。trackingms への論理参照）で、S61 から例外へリンクする |
-| `payment` | `PaymentRecordedEvent` | `INDEX(invoice_id)` | |
+| `payment` | `PaymentRecordedEvent` | `PK(payment_id)`, `INDEX(invoice_id)` | **`payment_id` が PK**（追記系は元イベントの識別子で一意にする）。同じ入金が 2 度届いても 1 行 |
+| `invoice_notification` | `InvoiceIssuedEvent` | `PK(invoice_id)` | **送信基盤はスコープ外**（IT14 の注 N9）。残すのは「いつ・誰に・何を伝えたか」だけで、荷主はメールではなく S62 で自社の請求書を読む。**書きっぱなしにしない**——読み口は `InvoiceMapper#findNotification` で、`InvoiceProjectionIT#marksIssued` が記録と読み口を対で確かめる |
+| `booking_quotation` | **`CargoQuotedEvent`（契約）の購読**（IT14 / V011） | `PK(booking_id)` | 予約のもとになった見積の概算を写す。`invoice.quoted_amount` の唯一の入力経路で、S61 が「見積時の概算 → 請求 → 差額」を出す。**貨物スナップショットに混ぜない**——あちらは追跡番号が主キーで、追跡番号は輸送が始まってから決まる。見積が結び付くのは予約の時点なので、混ぜると「まだ行が無い」ところへ概算を書くことになる。**見積を経ない予約では行が無い**（0 円で埋めると「0 円の見積があった」と読まれる） |
 | `shipper_contract_snapshot` | **`ShipperRegisteredEvent`（契約）の購読**。**`CorporateContractAssignedEvent` は足さない**（IT13 の判断）——法人契約は荷主登録で設定され、`ShipperRegisteredEvent` が既に契約番号と割引率を運んでいる。付与を後から行う操作は bookingms に無いので、**読む側の無い契約を先に足さない**（IT9〜IT12 と同じ判断） | `PK(shipper_id)` | billingms が bookingms に同期問い合わせをしないための ACL の読み取りモデル（`FindShipperForBillingQuery` は廃止）。荷主の最新の契約を写し、請求書作成時に `invoice.discount_rate` へ複写する。作成後に割引率が変わっても請求書は変わらない。`shipper_name` は crypto-shredding 後に `NULL`（ADR-0003） |
 | `billing_cargo_snapshot` / `billing_cargo_leg` | **`TrackingInitializedEvent`**（契約）の購読（IT13 / V004） | `PK(tracking_number)`, `INDEX(booking_id)`, `PK(tracking_number, leg_seq)` | 請求が料金を数えるための ACL の読み取りモデル（[ADR-0012](../../adr/cargo-tracker/0012-cargo-snapshot-from-tracking-initialized.md) と同じ形）。**`CargoDeliveredEvent` では足りない**——追跡番号・予約・引渡時刻・場所しか運ばず、式が要る区間・重量・貨物種別が無い。**`weight_kg` は NULL 許容**：重量を契約に足したのは IT13 で、それ以前のイベントには入っていない。0 で埋めると重量係数が下限に落ち、**足りない重量で安い請求**が黙って出るので、NULL のまま残して算出のときに断る。区間は追記専用にせず、読み直しのたびに消して入れ直す（IT6 の「追記専用の行はリプレイで増える」） |
 | `attention_item` | `billing-projection` の拒否、`billing-reaction` のコマンド失敗、補償 | `booking_read_db` と同じ | 定義は `booking_read_db` の `attention_item` と同一。**IT13（V005）で作成**し、請求を作れなかった事実と二重作成の拒否を経理宛に書く。読み口は `GET /api/v1/billing/attention-items` |
@@ -892,6 +915,8 @@ Processing Group は `@ProcessingGroup`（Axon 5 に存在しません）では�
 | bookingms | `booking-shipper-projection` | Shipper のイベント | `shipper` |
 | bookingms | `booking-cargo-projection` | Cargo のイベント、`HandlingActivityRegisteredEvent`、`HandlingActivityVoidedEvent` | `cargo_summary`, `cargo_revision`, `cargo_leg`, `cancellation_request` |
 | bookingms | `booking-quotation-projection` | Quotation のイベント | `quotation`, `quotation_candidate` |
+
+> **IT14 の実測。** この表は Processing Group を「書くテーブルの単位」で並べていますが、**実装のグループはパッケージです**（`@ProcessingGroup` が Axon 5 に無く、`bookingms/application.yml` は `[com.example.cargotracker.booking.infrastructure.projection]` 1 本）。つまり `quotation` は `shipper` / `cargo` と**同じグループ・同じ token・同じ退避先**に同居し、リプレイと退避の単位が表と違います。**表は「何がどのテーブルを書くか」の対応として読んでください。** 列の切り方（毒の巻き添え範囲）は `@SequencingPolicy` が決めます（[ADR-0014] 決定 4）。分け直すには token の移行が要るので、必要になった IT で扱います。
 | bookingms | `booking-reaction` | `CargoDeliveredEvent`、`PaymentRecordedEvent`、`HandlingActivityVoidedEvent`（契約） | **投影テーブルを書かない**。Cargo へコマンドを送る（`MarkDeliveredCommand`、`SettleBookingCommand` 等）。失敗だけを `attention_item` に書く |
 | routingms | `routing-voyage-projection` | Voyage のイベント | `voyage`, `carrier_movement`, `voyage_accepted_cargo_type` |
 | trackingms | `tracking-projection` | TrackingActivity のイベント、`TrackingInitializedEvent`（契約） | `tracking_summary`, `tracking_event`, `tracking_exception` |

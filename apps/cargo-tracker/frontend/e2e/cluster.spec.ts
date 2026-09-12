@@ -974,6 +974,21 @@ test.describe('kind クラスタでの通し確認', () => {
       await expect(page.getByLabel('出発地')).toHaveValue('JPTYO');
       await expect(page.getByLabel('目的地')).toHaveValue('USNYC');
       await expect(page.getByLabel('重量 (kg)')).toHaveValue('1200');
+
+      // **写しただけで終えない。** 重量を変えて登録し、**違いが知らされる**
+      // ところまで踏む——テスト名が「違いが知らされる」と言っているのに
+      // 写しの確認で止めると、名前が仕様として嘘をつく（IT9 の教訓）。
+      await page.getByLabel('重量 (kg)').fill('1500');
+      await page.getByLabel('荷主').selectOption({ index: 1 });
+      await page.getByLabel('長さ (cm)').fill('120');
+      await page.getByLabel('幅 (cm)').fill('80');
+      await page.getByLabel('高さ (cm)').fill('100');
+      await page.getByLabel('数量').fill('10');
+      await page.getByLabel('品名').fill(`見積からの予約-${Date.now()}`);
+      await page.getByRole('button', { name: '登録する' }).click();
+
+      await expect(page.getByText('見積と異なる項目があります')).toBeVisible();
+      await expect(page.getByText(/重量: 1200 kg → 1500 kg/)).toBeVisible();
     });
 
   test('請求書を発行して入金を記録すると、予約が精算済になる（US23・IT14）',

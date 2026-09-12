@@ -74,7 +74,9 @@ describe('S12 見積作成', () => {
       expect(body).toContain('"destinationUnLocode":"USNYC"');
       expect(body).toContain('"arrivalDeadline":"2026-12-01"');
       expect(body).toContain('"cargoType":"GENERAL"');
-      expect(body).toContain('"weightKg":"1200"');
+      // **数値で送る**（予約と形を揃える）。文字列でも Jackson は救うが、
+      // 形が揃っていないと片方の変更が他方に効かない。
+      expect(body).toContain('"weightKg":1200');
     });
   });
 

@@ -758,6 +758,8 @@ axon:
 
 実際にはサービスごとの `application.yml` に自サービスの Group だけを書きます。上は全 Group（投影 8 + Reaction 3）の一覧を兼ねた表記です。`mode` は設定の実値 `pooled` に統一し、本文で `PooledStreamingEventProcessor` を指すときも `pooled` と書きます。
 
+> **IT14 の実測：グループの単位はパッケージです。** 上の一覧は「何がどのテーブルを書くか」の対応として読んでください。**Axon 5 に `@ProcessingGroup` が無い**ため、実装のグループ名はパッケージで（`bookingms/application.yml` は `[com.example.cargotracker.booking.infrastructure.projection]` 1 本）、`booking-shipper-projection` / `booking-cargo-projection` / `booking-quotation-projection` は**同じグループ・同じ token・同じ退避先**に同居します。つまり**リプレイと退避の単位は表より粗い**です。毒の巻き添え範囲（列の切り方）は `@SequencingPolicy` が決めます（[ADR-0014] 決定 4）。分け直すには token の移行が要るので、必要になった IT で扱います。
+
 | 項目 | 方針 | 由来 |
 | :--- | :--- | :--- |
 | `axon-server-connector` を全サービスで明示依存にする | starter の推移的依存に含まれず、無いと**無音で** in-memory にフォールバックする。起動時に接続を検査し、失敗したら起動を止める | take-4 ADR-0009 |
@@ -887,7 +889,7 @@ public class BookingReactionHandler {
 | routingms | Read Model | `routing_read_db` | `voyage`, `carrier_movement`, `voyage_accepted_cargo_type`, `token_entry` |
 | trackingms | Read Model | `tracking_read_db` | `tracking_summary`, `tracking_event`, `tracking_exception`, `attention_item`, `token_entry` |
 | handlingms | Read Model | `handling_read_db` | `cargo_snapshot`, `cargo_snapshot_leg`, `handling_activity`, `customs_declaration`, `token_entry` |
-| billingms | Read Model | `billing_read_db` | `invoice`, `invoice_line_item`, `payment`, `shipper_contract_snapshot`, `attention_item`, `token_entry`, `saga_entry`, `association_value_entry` |
+| billingms | Read Model | `billing_read_db` | `invoice`, `invoice_line_item`, `payment`, `invoice_notification`, `booking_quotation`, `shipper_contract_snapshot`, `billing_cargo_snapshot`, `billing_cargo_leg`, `attention_item`, `token_entry`, `dead_letter_entry` |
 | Axon Server | Event Store | 専用ボリューム | イベント列、スナップショット |
 
 テーブルの正典は `data-model.md` です。通関状態の履歴は `customs_status_history` に投影します——**当初は「作らない。履歴は Event Store から読む」と決めていましたが、この版では実装できませんでした**（`@QueryHandler` からイベント列を読むと 0 件になる。IT12 で実測。詳細は `data-model.md` の同表）。主キーは元イベントの識別子なので、リプレイで行が積み上がりません。`attention_item` は投影が弾いた行・Reaction のコマンド拒否・連鎖の補償失敗を「要確認」として受ける表で、bookingms / trackingms / billingms の 3 つに置きます（旧 `projection_rejection` を統合）。

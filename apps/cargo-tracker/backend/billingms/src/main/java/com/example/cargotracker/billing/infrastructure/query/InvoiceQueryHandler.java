@@ -118,7 +118,9 @@ public class InvoiceQueryHandler {
      * 「まだ確定していない金額」で会話が始まる。取消も見せない。</p>
      */
     private InvoiceView shipperView(InvoiceMapper.InvoiceRow row, String shipperId) {
-        if (row == null || !row.shipperId().equals(shipperId)) {
+        // **突き合わせで落ちない。** 荷主 ID が欠けた行（古い記録）で例外に
+        // すると、荷主には 500 に見える——「ありません」と同じ扱いでよい。
+        if (row == null || !java.util.Objects.equals(row.shipperId(), shipperId)) {
             return null;
         }
         BillingStatus status = BillingStatus.valueOf(row.billingStatus());

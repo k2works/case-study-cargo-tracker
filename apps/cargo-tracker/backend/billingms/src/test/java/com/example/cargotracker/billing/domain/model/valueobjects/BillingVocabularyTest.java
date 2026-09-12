@@ -160,7 +160,10 @@ class BillingVocabularyTest {
                     if (commented || !trimmed.contains("void_marker")) {
                         continue;
                     }
-                    offenders.add(file.getFileName() + ": " + trimmed);
+                    // **空白は畳んでから比べる。** 整形しただけで赤になる検査は
+                    // 「本物でない赤」を出し、いずれ消される方向に働く。
+                    offenders.add(file.getFileName() + ": "
+                            + trimmed.replaceAll("\\s+", " "));
                 }
             }
         }
@@ -171,7 +174,7 @@ class BillingVocabularyTest {
                 .allSatisfy(offender -> assertThat(offender)
                         // 有効な請求書を引く条件（索引を使わせる）と、取消を写す更新。
                         .matches(line -> line.contains("WHERE booking_id = #{bookingId}")
-                                || line.contains("void_marker    = #{invoiceId}")
+                                || line.contains("void_marker = #{invoiceId}")
                                 || line.contains("void_marker = ''")));
     }
 }

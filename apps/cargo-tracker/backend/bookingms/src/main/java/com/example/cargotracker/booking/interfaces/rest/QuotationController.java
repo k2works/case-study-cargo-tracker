@@ -119,8 +119,17 @@ public class QuotationController {
         return ResponseEntity.ok(view);
     }
 
+    /**
+     * 危険物申告。
+     *
+     * <p><b>空白は「入れていない」と同じに扱う</b>（予約と同じ {@code blank}）。
+     * {@code null} しか見ないと、画面が送る空文字が「入力された」ことになり、
+     * {@code HazardousDeclaration} が先に断る——<b>集約の「危険物には危険物申告が
+     * 必要です」が画面から絶対に踏まれなくなる</b>。</p>
+     */
     private static HazardousDeclaration hazardousOf(CreateQuotationRequest request) {
-        if (request.hazardousImoClass() == null && request.hazardousUnNumber() == null) {
+        if (CargoSpecificationAssembler.blank(request.hazardousImoClass())
+                && CargoSpecificationAssembler.blank(request.hazardousUnNumber())) {
             return null;
         }
         return new HazardousDeclaration(request.hazardousImoClass(),

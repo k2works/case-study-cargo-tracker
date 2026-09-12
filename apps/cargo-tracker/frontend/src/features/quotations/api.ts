@@ -56,7 +56,8 @@ export interface CreateQuotationInput {
   readonly destinationUnLocode: string;
   readonly arrivalDeadline: string;
   readonly cargoType: CargoType;
-  readonly weightKg: string;
+  /** 重量。**数値で送る**——予約（S21）と形を揃える。 */
+  readonly weightKg: number;
   readonly hazardousImoClass: string | null;
   readonly hazardousUnNumber: string | null;
 }

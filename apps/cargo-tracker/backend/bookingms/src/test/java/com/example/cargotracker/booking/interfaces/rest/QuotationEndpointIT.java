@@ -224,6 +224,30 @@ class QuotationEndpointIT extends AbstractAxonIntegrationTest {
                 .isEqualTo(HttpStatus.OK);
     }
 
+    @Test
+    @DisplayName("危険物申告の空欄は「入れていない」と同じ（集約の守りを画面から踏む）")
+    void treatsBlankHazardousFieldsAsMissing() {
+        UNAVAILABLE.set(false);
+        // **画面は選択肢を切り替えると空文字を送る。** null しか見ないと
+        // `HazardousDeclaration` が先に断り、集約の「危険物には危険物申告が
+        // 必要です」は画面から絶対に踏まれない。
+        var response = create(request(Map.of("cargoType", "HAZARDOUS",
+                "hazardousImoClass", "", "hazardousUnNumber", "  ")));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
+        assertThat(String.valueOf(response.getBody()))
+                .as("集約が断った理由がそのまま応答に載る（画面で言い換えない）")
+                .contains("危険物申告");
+    }
+
+    @Test
+    @DisplayName("知らない貨物種別は 400 で断る（500 だと利用者は打ち直せない）")
+    void refusesAnUnknownCargoType() {
+        UNAVAILABLE.set(false);
+        assertThat(create(request(Map.of("cargoType", "FROZEN"))).getStatusCode())
+                .isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
+    }
+
     /** 予約を 1 件作る。**見積番号を渡せる**（渡さない予約もある）。 */
     private ResponseEntity<JsonMap> book(String quotationId, Map<String, Object> overrides) {
         Map<String, Object> body = new LinkedHashMap<>();

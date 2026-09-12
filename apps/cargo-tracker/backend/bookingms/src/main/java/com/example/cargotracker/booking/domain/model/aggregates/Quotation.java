@@ -1,16 +1,13 @@
 package com.example.cargotracker.booking.domain.model.aggregates;
 
-import com.example.cargotracker.booking.domain.model.commands.BookCargoCommand;
 import com.example.cargotracker.booking.domain.model.commands.CreateQuotationCommand;
 import com.example.cargotracker.booking.domain.model.events.QuotationCreatedEvent;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;
 import com.example.cargotracker.booking.domain.model.valueobjects.EstimatedAmount;
 import com.example.cargotracker.booking.domain.model.valueobjects.QuotationId;
-import com.example.cargotracker.booking.domain.model.valueobjects.QuotationTerms;
 import com.example.cargotracker.booking.domain.model.valueobjects.QuotedRoute;
 import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.shared.domain.error.IllegalTransition;
-import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -35,7 +32,14 @@ import org.axonframework.messaging.eventhandling.gateway.EventAppender;
  * <p>不変条件は {@code domain-model.md} が正典。1（5 項目・出発地 ≠ 目的地）は
  * {@code RouteSpecification} とここが、2（請求と同じ料率）は
  * {@code QuotationEstimator} と契約テストが、3（予約との食い違いは断らず項目名で
- * 知らせる）は {@link #diffAgainst} が守る。</p>
+ * 知らせる）は {@code application.QuotationDiff} が守る。</p>
+ *
+ * <p><b>食い違いを集約が数えない理由。</b> 差分は予約を受け付けた<b>あと</b>に
+ * 出す表示で、業務の判断（受け付けるかどうか）には使わない——集約を復元するのは
+ * 「判断に使う状態」が要るときだけである。比較そのものは
+ * {@code QuotationTerms} の 1 か所にあり、集約が持っても同じものを呼ぶだけに
+ * なるので、<b>本番から呼ばれないメソッドを置かない</b>（定義済み未使用は
+ * 配線漏れのサインで、読む人が「ここが守っている」と誤読する）。</p>
  */
 @EventSourced(idType = String.class, tagKey = "quotationId")
 public class Quotation {
@@ -43,39 +47,22 @@ public class Quotation {
     /** 見積の有効期間。<b>業務が決める数字</b>だが、この版では固定でよい。 */
     private static final int VALID_DAYS = 30;
 
-    private String quotationId;
-    private String originUnLocode;
-    private String destinationUnLocode;
-    private LocalDate arrivalDeadline;
-    private String cargoType;
-    private BigDecimal weightKg;
-
     /**
-     * 候補の数。
+     * 見積番号。**復元されたかどうかを見る唯一の状態**である。
      *
-     * <p><b>概算額そのものは持たない。</b> 読む側が集約の中に居ない——金額は
-     * 投影が持ち、画面はそちらを読む。<b>読む側の無い状態を先に持たない</b>
-     * （IT12 の「常に 0 の列」と同じ形。SpotBugs が実際に指摘した）。</p>
-     *
-     * <p>候補の数だけは残す。<b>0 件かどうか</b>の判断に要る（画面が数え直さない）。</p>
+     * <p><b>5 項目を持たない。</b> 持つと「集約が見積の中身を守っている」ように
+     * 読めるが、実際に守るのは作るときの検査（{@code RouteSpecification} と
+     * ここ）と、比較の 1 か所（{@code QuotationTerms}）である。<b>読まない状態を
+     * 復元すると、次の書き手が「ここから読める」と思って使う</b>——読み取りは
+     * 投影の仕事で、集約を復元するのは判断に使う状態が要るときだけである。</p>
      */
-    private int candidateCount;
+    private String quotationId;
 
     @EntityCreator
     public Quotation() {
         // Axon がイベント再生で呼ぶ。
     }
 
-    /**
-     * 見積を作る（US01 §受入基準 1・4）。
-     *
-     * <p><b>static ではなくインスタンスのハンドラにする。</b> 両方置くと、集約が
-     * 既に存在しても static のほうが呼ばれ、同じ見積番号で 2 度作れる
-     * （IT2 で実測）。</p>
-     *
-     * <p><b>候補 0 件でも作る</b>（正典の不変条件）。断ると、営業担当者は
-     * 「間に合う経路がありません」という答えを荷主に返せない。</p>
-     */
     @CommandHandler
     public String create(CreateQuotationCommand command, EventAppender appender, Clock clock) {
         if (quotationId != null) {
@@ -130,47 +117,11 @@ public class Quotation {
         return id.value();
     }
 
-    /**
-     * 予約との食い違いを項目名で返す（不変条件 3）。
-     *
-     * <p><b>断らない。</b> 荷主の事情は見積のあとで変わる——重量が増えることも、
-     * 期限が延びることもある。断ると業務が止まるので、<b>何がどう違うかを
-     * 知らせる</b>にとどめる。</p>
-     *
-     * <p><b>「何から何へ」まで返す。</b> 項目名だけでは、営業担当者は見積を
-     * 開き直して見比べることになる。</p>
-     *
-     * @return 違いの説明。<b>空なら見積どおり</b>
-     */
-    public List<String> diffAgainst(BookCargoCommand command) {
-        if (quotationId == null) {
-            throw new IllegalTransition("見積がありません");
-        }
-        // **比較は 1 か所**（QuotationTerms）。予約の受付側（QuotationDiff）と
-        // 別々に書くと、片方だけが正しくてもう片方が違いを見落とす。
-        return terms().differencesAgainst(QuotationTerms.of(command));
-    }
-
-    /** この見積が示した 5 項目。 */
-    private QuotationTerms terms() {
-        return new QuotationTerms(originUnLocode, destinationUnLocode, arrivalDeadline,
-                cargoType, weightKg);
-    }
-
-    /** 期限に間に合う候補があるか。<b>集約が答える</b>（画面に数え直させない）。 */
-    public boolean hasCandidate() {
-        return candidateCount > 0;
-    }
-
     @EventSourcingHandler
     void on(QuotationCreatedEvent event) {
+        // **同じ見積番号で二度作らせないための復元**である。中身は読まない
+        // （読まない状態を復元すると、次の書き手が使ってしまう）。
         this.quotationId = event.quotationId();
-        this.originUnLocode = event.originUnLocode();
-        this.destinationUnLocode = event.destinationUnLocode();
-        this.arrivalDeadline = event.arrivalDeadline();
-        this.cargoType = event.cargoType();
-        this.weightKg = event.weightKg();
-        this.candidateCount = event.candidates().size();
     }
 
     /**

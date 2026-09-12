@@ -43,7 +43,9 @@ export function QuotationCreatePage() {
       destinationUnLocode: destinationUnLocode.trim().toUpperCase(),
       arrivalDeadline,
       cargoType,
-      weightKg,
+      // **数値で送る。** 文字列でも Jackson が救うが、予約（S21）は数値で
+      // 送っており、形が揃っていないと片方の変更が他方に効かない。
+      weightKg: Number(weightKg),
       hazardousImoClass: cargoType === 'HAZARDOUS' ? hazardousImoClass.trim() : null,
       hazardousUnNumber: cargoType === 'HAZARDOUS' ? hazardousUnNumber.trim() : null,
     }),

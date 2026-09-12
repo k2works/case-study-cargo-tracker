@@ -468,13 +468,40 @@ class Quotation <<Aggregate Root>> <<@EventSourced(tagKey="quotationId")>> {
   - cargoType: CargoType
   - weightKg: Weight
   - candidates: List<QuotedRoute>
-  - estimatedCharge: Money
+  - estimatedCharge: EstimatedAmount
   - validUntil: LocalDate
-  + {static} create(CreateQuotationCommand)
-  + diffAgainst(cargo: BookCargoCommand): List<String>
+  + create(CreateQuotationCommand)
 }
-class QuotedRoute <<Value Object>>
+class QuotedRoute <<Value Object>> {
+  - legs: List<Leg>
+  - transitDays: int
+  - estimatedCharge: EstimatedAmount
+  - overdueDays: int  ' 0 なら期限に間に合う
+  + meetsDeadline(): boolean
+  + voyageNumbers(): String
+  + ports(): List<String>
+}
+class QuotationId <<Value Object>>
+class EstimatedAmount <<Value Object>>
+class QuotationRates <<Value Object>>
+class QuotationTerms <<Value Object>> {
+  ' 見積と予約の 5 項目を比べる**唯一の場所**。
+  + {static} of(BookCargoCommand): QuotationTerms
+  + differencesAgainst(booked: QuotationTerms): List<String>
+}
 class Money <<Value Object>>
+
+note right of QuotationTerms
+  不変条件 3（予約との食い違いは断らず項目名で知らせる）は
+  **application の QuotationDiff** が投影を読んで出します。
+  集約は差分を数えません——差分は予約を受け付けた**あと**の
+  表示で、受け付けるかどうかの判断には使わないためです。
+end note
+
+Quotation *-- QuotationId
+Quotation *-- "0..*" QuotedRoute
+Quotation *-- EstimatedAmount
+QuotedRoute *-- EstimatedAmount
 
 Cargo *-- BookingId
 Cargo *-- ShipperId
@@ -1084,6 +1111,21 @@ class Invoice <<Aggregate Root>> <<@EventSourced(tagKey="invoiceId")>> {
   + overdue(today: LocalDate): boolean
 }
 class InvoiceId <<Value Object>>
+class PaymentTerm <<Value Object>> {
+  ' 支払条件（不変条件 3・4）。**Java 側の判定はここ 1 か所**。
+  + {static} DAYS: int = 30
+  + {static} dueOn(issuedOn: LocalDate): LocalDate
+  + {static} overdue(status, dueOn, today): boolean
+}
+
+note right of PaymentTerm
+  絞り込みだけは SQL にも同じ規則があります
+  （`InvoiceMapper#findOverdue` の `due_on < today`）。
+  全件を読んで Java で数えると、上限の打ち切りで
+  未払いが漏れるためです。**2 か所あることを隠さず**、
+  境界（期限当日と翌日）を SQL 側でも別に固定します。
+end note
+
 class InvoiceLineItem <<Value Object>> {
   - description: String
   - amount: Money
@@ -1130,6 +1172,7 @@ class CancellationFeePolicy <<Domain Service>> {
 }
 
 Invoice *-- InvoiceId
+Invoice *-- PaymentTerm
 Invoice *-- BillingStatus
 Invoice "1" *-- "0..*" InvoiceLineItem
 Invoice *-- Money

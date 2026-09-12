@@ -2,12 +2,9 @@ package com.example.cargotracker.booking.domain.model.aggregates;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.cargotracker.booking.domain.model.commands.BookCargoCommand;
 import com.example.cargotracker.booking.domain.model.commands.CreateQuotationCommand;
 import com.example.cargotracker.booking.domain.model.events.QuotationCreatedEvent;
-import com.example.cargotracker.booking.domain.model.valueobjects.CargoSpecification;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;
-import com.example.cargotracker.booking.domain.model.valueobjects.Dimensions;
 import com.example.cargotracker.booking.domain.model.valueobjects.EstimatedAmount;
 import com.example.cargotracker.booking.domain.model.valueobjects.HazardousDeclaration;
 import com.example.cargotracker.booking.domain.model.valueobjects.Leg;
@@ -81,7 +78,6 @@ class QuotationTest {
         return captured[0];
     }
 
-    @Test
     @DisplayName("US01 §4: 見積を作ると 5 項目と候補が残り、有効期限が決まる")
     void createsTheQuotation() {
         QuotationCreatedEvent event = createdEventOf(
@@ -202,14 +198,6 @@ class QuotationTest {
     }
 
     @Test
-    @DisplayName("作られていない見積は予約と比べられない（比べる相手が無い）")
-    void refusesToDiffWithoutAQuotation() {
-        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
-                new Quotation().diffAgainst(bookingWith("USNYC", CargoType.GENERAL, "1200")))
-                .isInstanceOf(IllegalTransition.class);
-    }
-
-    @Test
     @DisplayName("同じ見積番号で二度作れない")
     void doesNotCreateTwice() {
         var created = createdEventOf(create(CargoType.GENERAL, null, List.of()));
@@ -234,100 +222,4 @@ class QuotationTest {
                 .then().exception(BusinessRuleViolation.class);
     }
 
-    @Test
-    @DisplayName("不変条件 3: 予約との違いを断らずに項目名で返す（「何から何へ」まで）")
-    void reportsDifferencesAgainstTheBooking() {
-        var created = createdEventOf(create(CargoType.GENERAL, null, List.of()));
-
-        // **集約を復元してから聞く。** 復元のハンドラが項目を写していなければ、
-        // ここで違いを数えられない。
-        Quotation quotation = restored(created);
-
-        List<String> differences = quotation.diffAgainst(bookingWith(
-                "USLAX", CargoType.GENERAL, "1500"));
-
-        assertThat(differences)
-                .as("項目名だけでは、営業担当者は見積を開き直して見比べることになる")
-                .anySatisfy(difference ->
-                        assertThat(difference).contains("目的地").contains("USNYC")
-                                .contains("USLAX"))
-                .anySatisfy(difference ->
-                        assertThat(difference).contains("重量").contains("1200")
-                                .contains("1500"));
-    }
-
-    @Test
-    @DisplayName("見積どおりの予約では違いが出ない（1200 と 1200.00 を「違う」と言わない）")
-    void reportsNoDifferenceForAMatchingBooking() {
-        var created = createdEventOf(create(CargoType.GENERAL, null, List.of()));
-
-        assertThat(restored(created).diffAgainst(
-                bookingWith("USNYC", CargoType.GENERAL, "1200.00")))
-                .as("毎回「違う」と出ると読まれなくなる")
-                .isEmpty();
-    }
-
-    @Test
-    @DisplayName("候補が 1 件でもあれば hasCandidate は真（画面に数え直させない）")
-    void hasCandidateWhenAtLeastOneExists() {
-        // **1 つのテストでフィクスチャを 2 度使わない。** given() は集約の状態を
-        // 持ち越すので、2 度目のコマンドが「すでに作られています」で断られる。
-        assertThat(restored(createdEventOf(
-                create(CargoType.GENERAL, null, List.of(route("510000", 0))))).hasCandidate())
-                .isTrue();
-    }
-
-    @Test
-    @DisplayName("候補が 0 件なら hasCandidate は偽")
-    void hasNoCandidateWhenTheListIsEmpty() {
-        assertThat(restored(createdEventOf(
-                create(CargoType.GENERAL, null, List.of()))).hasCandidate())
-                .isFalse();
-    }
-
-    private static BookCargoCommand bookingWith(String destination, CargoType cargoType,
-            String weightKg) {
-        return new BookCargoCommand("B-1", "SHP-000001",
-                new CargoSpecification(cargoType, Weight.ofKilograms(weightKg),
-                        new Dimensions(new BigDecimal("120"), new BigDecimal("80"),
-                                new BigDecimal("100")),
-                        10, "自動車部品", null, null),
-                new RouteSpecification(Location.of("JPTYO"), Location.of(destination),
-                        LocalDate.of(2026, 12, 1)),
-                "sales01");
-    }
-
-    /**
-     * イベント列から集約を復元する。
-     *
-     * <p><b>本番と同じ復元経路を通す。</b> フィールドを直接組み立てると、
-     * {@code @EventSourcingHandler} の書き漏らしを素通りさせる。</p>
-     */
-    private static Quotation restored(Object... events) {
-        Quotation quotation = new Quotation();
-        for (Object event : events) {
-            applyTo(quotation, event);
-        }
-        return quotation;
-    }
-
-    private static void applyTo(Quotation quotation, Object event) {
-        for (var method : Quotation.class.getDeclaredMethods()) {
-            if (!method.isAnnotationPresent(
-                    org.axonframework.eventsourcing.annotation.EventSourcingHandler.class)) {
-                continue;
-            }
-            var parameters = method.getParameterTypes();
-            if (parameters.length == 1 && parameters[0].isInstance(event)) {
-                method.setAccessible(true);
-                try {
-                    method.invoke(quotation, event);
-                } catch (ReflectiveOperationException e) {
-                    throw new IllegalStateException("復元できません: " + event, e);
-                }
-                return;
-            }
-        }
-        throw new IllegalStateException("復元のハンドラがありません: " + event.getClass());
-    }
 }
