@@ -1449,7 +1449,7 @@ test.describe('マニュアルの画面キャプチャ', () => {
   });
 });
 
-test.describe('17 請求を組み立てる', () => {
+test.describe('17 請求を組み立てる・18 輸送見積を作る', () => {
   const SAMPLE_INVOICE = {
     invoiceId: 'INV-20260928-1a2b3c4d',
     bookingId: 'B-2026-0902-004',
@@ -1588,7 +1588,7 @@ test.describe('17 請求を組み立てる', () => {
       .toBeVisible();
     await expect(page.getByRole('heading', { name: '料金を調整する' })).toBeVisible();
     await page.getByLabel('調整額').fill('12000');
-    await page.getByLabel('理由').fill('留置 4 営業日の保管料');
+    await page.getByLabel('理由', { exact: true }).fill('留置 4 営業日の保管料');
     await page.getByLabel('根拠の例外 ID（任意）').fill('IMP-2026-0001');
     await page.screenshot({ path: `${OUT}/17-S61-invoice-detail.png`, fullPage: true });
   });
@@ -1655,6 +1655,7 @@ test.describe('17 請求を組み立てる', () => {
             {
               candidateSeq: 1,
               voyageNumbers: 'V-MOL-001 > V-ONE-002',
+              ports: 'JPTYO → SGSIN → USNYC',
               transitDays: 20,
               estimatedCost: 510000,
               currency: 'JPY',
@@ -1663,6 +1664,7 @@ test.describe('17 請求を組み立てる', () => {
             {
               candidateSeq: 2,
               voyageNumbers: 'V-KL-055',
+              ports: 'JPTYO → USNYC',
               transitDays: 40,
               estimatedCost: 300000,
               currency: 'JPY',
@@ -1677,6 +1679,8 @@ test.describe('17 請求を組み立てる', () => {
 
     await expect(page.getByRole('heading', { name: `見積 ${quotationId}` })).toBeVisible();
     await expect(page.getByText('V-MOL-001 > V-ONE-002')).toBeVisible();
+    // **経由港は候補ごとに違う**（本文が「候補ごとに違います」と書いている）。
+    await expect(page.getByText('JPTYO → SGSIN → USNYC')).toBeVisible();
     await expect(page.getByText('¥ 510,000').first()).toBeVisible();
     // **超過日数を添える**（本文が「40 日（5 日超過）」と書いている）。
     await expect(page.getByText(/5 日超過/)).toBeVisible();

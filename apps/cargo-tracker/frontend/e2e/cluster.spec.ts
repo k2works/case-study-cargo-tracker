@@ -904,7 +904,7 @@ test.describe('kind クラスタでの通し確認', () => {
 
       // **D6・D7: 根拠を指して調整を入れると、合計が動いて明細に残る。**
       await page.getByLabel('調整額').fill('-10000');
-      await page.getByLabel('理由').fill('遅延の補償');
+      await page.getByLabel('理由', { exact: true }).fill('遅延の補償');
       await page.getByLabel('根拠の例外 ID（任意）').fill('EX-E2E-0001');
       await page.getByRole('button', { name: '調整を入れる' }).click();
       await expectEventually(page, '遅延の補償');
@@ -962,9 +962,12 @@ test.describe('kind クラスタでの通し確認', () => {
       await page.getByRole('button', { name: '見積を作る' }).click();
 
       // 見積詳細へ移り、投影が追いつくまで待つ。
-      await expectEventually(page, '概算料金');
+      // **先に URL の遷移を待つ。** 「概算料金」は S12（作成画面）の説明文
+      // にも出るので、本文だけを見ると遷移前に素通りする。
+      await page.waitForURL(/\/quotations\/Q-[0-9a-f]{32}$/);
       const quotationId = new URL(page.url()).pathname.split('/').pop() ?? '';
       expect(quotationId).toMatch(/^Q-[0-9a-f]{32}$/);
+      await expectEventually(page, '概算料金');
 
       // **D3: 候補ごとに経由港・所要日数・概算料金・航海番号が読める。**
       await expect(page.getByText(voyageNumber)).toBeVisible();
