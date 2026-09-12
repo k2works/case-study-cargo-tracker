@@ -62,9 +62,21 @@ public record QuotationTerms(
         // 1200 と 1200.00 が「違う」になる（見積どおりの予約が毎回違うと出る）。
         if (weightKg != null && booked.weightKg() != null
                 && weightKg.compareTo(booked.weightKg()) != 0) {
-            differences.add("重量: " + weightKg + " kg → " + booked.weightKg() + " kg");
+            differences.add("重量: " + plain(weightKg) + " kg → "
+                    + plain(booked.weightKg()) + " kg");
         }
         return List.copyOf(differences);
+    }
+
+    /**
+     * 重量の見せ方を揃える。
+     *
+     * <p><b>比べ方だけ揃えても足りない。</b> 見積は列から {@code BigDecimal(2)} で
+     * 戻るので、そのまま並べると「1200.00 kg → 1500 kg」になり、同じ単位の 2 つの
+     * 数が別の書き方で出る。<b>桁は業務の意味を持たない</b>ので落とす。</p>
+     */
+    private static String plain(BigDecimal weight) {
+        return weight.stripTrailingZeros().toPlainString();
     }
 
     private static void addIfDifferent(List<String> differences, String label,

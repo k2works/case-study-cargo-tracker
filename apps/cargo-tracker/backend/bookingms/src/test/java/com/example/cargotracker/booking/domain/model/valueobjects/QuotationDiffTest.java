@@ -83,6 +83,21 @@ class QuotationDiffTest {
     }
 
     @Test
+    @DisplayName("重量は桁を揃えて出す（1200.00 kg → 1500 kg と読ませない）")
+    void showsWeightWithoutTrailingZeros() {
+        // **数として比べているのに、見せるときは持っている桁をそのまま出していた。**
+        // 見積は列から BigDecimal(2) で戻るので「1200.00 kg → 1500 kg」になり、
+        // 同じ単位の 2 つの数が別の書き方で並ぶ（クラスタで実測）。
+        var quoted = new QuotationTerms("JPTYO", "USNYC", DEADLINE, "GENERAL",
+                new java.math.BigDecimal("1200.00"));
+
+        assertThat(quoted.differencesAgainst(QuotationTerms.of(
+                booking("JPTYO", "USNYC", DEADLINE, CargoType.GENERAL, "1500"))))
+                .singleElement()
+                .isEqualTo("重量: 1200 kg → 1500 kg");
+    }
+
+    @Test
     @DisplayName("違う項目だけを返す（同じ項目は並べない）")
     void reportsOnlyWhatDiffers() {
         assertThat(quoted().differencesAgainst(QuotationTerms.of(
