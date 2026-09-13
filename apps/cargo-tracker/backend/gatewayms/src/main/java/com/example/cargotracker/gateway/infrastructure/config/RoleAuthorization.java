@@ -73,6 +73,21 @@ public final class RoleAuthorization {
         rules.put("/api/v1/auth/admin/**", Set.of(ADMIN));
         rules.put("/api/v1/auth/**", ANY_AUTHENTICATED);
 
+        // 退避したイベントの一覧と処理し直し（IT15 引き継ぎ 1）は**管理者だけ**。
+        // 業務の担当者には打つ手が無い——原因を直すのは開発と運用で、一覧は
+        // 「投影が止まっている」ことに画面から気づくためのものである。
+        // **/booking/** などの広い宣言より先に置く**（後ろだと吸われる）。
+        rules.put("/api/v1/booking/dead-letters/**", Set.of(ADMIN));
+        rules.put("/api/v1/booking/dead-letters", Set.of(ADMIN));
+        rules.put("/api/v1/routing/dead-letters/**", Set.of(ADMIN));
+        rules.put("/api/v1/routing/dead-letters", Set.of(ADMIN));
+        rules.put("/api/v1/tracking/dead-letters/**", Set.of(ADMIN));
+        rules.put("/api/v1/tracking/dead-letters", Set.of(ADMIN));
+        rules.put("/api/v1/handling/dead-letters/**", Set.of(ADMIN));
+        rules.put("/api/v1/handling/dead-letters", Set.of(ADMIN));
+        rules.put("/api/v1/billing/dead-letters/**", Set.of(ADMIN));
+        rules.put("/api/v1/billing/dead-letters", Set.of(ADMIN));
+
         // 要確認一覧は宛先ロールでサービス側が絞る。ここで絞ると、ロールが増える
         // たびに 2 か所を直すことになり、片方が置き去りになる。
         rules.put("/api/v1/booking/attention-items/**", ANY_AUTHENTICATED);

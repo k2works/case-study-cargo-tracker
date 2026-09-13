@@ -4,7 +4,7 @@ title: "UI 設計 - 国際貨物輸送管理システム（CQRS / Event Sourcing
 description: "CQRS / Event Sourcing 版 Cargo Tracker の UI 設計。画面一覧・ロール別ナビゲーション・画面遷移・salt 画面イメージ・インタラクションを定め、投影の「反映中」を画面共通の規約として扱う。"
 tags: [design,ui,ux,cqrs]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-10T13:17:52Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-13T02:53:55Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -158,6 +158,7 @@ UI 設計で CQRS / Event Sourcing に固有なのは **「反映中」という
 | S62 | 自社請求書 | `/shipper/invoices/:id` | 荷主 | UC18 | ポーリング。自社分のみ |
 | S70 | 要確認一覧（反映の拒否・失敗した連鎖） | `/worklist/attention` | 営業、経理、追跡、経路設計 | — | ポーリング。既定は自ロール宛。3 日超を強調。供給元は BC ごとの `attention_item`（booking と routing）で、画面が束ねる |
 | S90 | 利用者管理 | `/admin/users` | 管理者 | US31 | — |
+| S91 | 退避したイベント | `/admin/dead-letters` | 管理者 | ADR-0014 | 投影が止まっていることに**画面から気づく**ための一覧（IT15 引き継ぎ 1）。5 サービスの `dead_letter_entry` を画面が束ねる（S70 と同じ形）。出すのは処理・イベント種別・列の識別子・止まった理由で、**中身（payload）は出さない**（ADR-0003。退避には個人情報が載りうる）。`[処理し直す]` は Actuator と同じ入口を呼ぶ。**消す手段は置かない**（ADR-0014 決定 1） |
 
 ## ロール別ナビゲーション
 
@@ -190,6 +191,7 @@ rectangle 画面 {
   usecase "自社請求書 S62" as si
   usecase "要確認 S70" as w
   usecase "利用者管理 S90" as u
+  usecase "退避したイベント S91" as dl
 }
 
 sales --> s
@@ -240,6 +242,7 @@ admin --> u
 | 自社予約 | S45 | 荷主 |
 | 要確認一覧 | S70 | 営業、経理、追跡、経路設計 |
 | 利用者管理 | S90 | 管理者 |
+| 退避したイベント | S91 | 管理者 |
 
 **この表に無い画面は、一覧・詳細から開きます**（S22 予約詳細・S24 予約修正・S34 航海詳細・S31 経路設計ワークベンチなど）。サイドナビに載せる画面は「その日の入口になるもの」に限り、載せない画面のロール制御は個別に検査します。
 
@@ -471,6 +474,42 @@ CANCELLED : [追跡を見る]（陸揚げ地で荷降しが記録されるまで
 契約番号と割引率は**法人を選んだときだけ**出します。常に出すと「個人なのに契約番号を求められる」ことになります。
 
 重複は**断らずに問いかけます**。1 段目の存在確認は助言であって断定ではありません（同名・同メールで登録したい事情もあります）。続けると登録は受け付けられ、投影の UNIQUE で弾かれた場合は要確認一覧（S70）に出ます。
+
+### S91: 退避したイベント（管理者）
+
+```plantuml
+@startsalt
+{+
+  {* Cargo Tracker | 管理 花子 (システム管理者) | [ログアウト] }
+  {
+    {
+      ダッシュボード
+      利用者管理
+      <b>退避したイベント
+    } |
+    {
+      退避したイベント（3 件）
+      ..
+      {#
+        サービス | 処理 | イベント | 列 | 止まった理由 | 退避
+        booking | booking.infrastructure.projection | HandlingActivityRegisteredEvent | B-2026-0902-004 | 値が長すぎます（identifier） | 09-25 10:20
+        tracking | tracking.infrastructure.projection | CargoMisroutedEvent | TRK-8K2QX7M4RB | null が入りません（unlocode） | 09-25 10:21
+        billing | billing.application.reaction | CargoDeliveredEvent | B-2026-0902-007 | 荷主の契約がありません | 09-25 11:02
+      }
+      [処理し直す]
+      <color:#6B7280>中身（payload）は出しません。退避には個人情報が載りうるためです</color>
+      <color:#6B7280>原因を直してから処理し直してください。直っていなければ、また退避されます</color>
+    }
+  }
+}
+@endsalt
+```
+
+**「気づく手段」を画面に置くための一覧です。** 退避先には運用の gulp タスクと Actuator から届きますが、どちらも端末からしか触れません。投影が止まっていることに気づけるのが端末を持つ人だけだと、気づくのはたいてい「一覧が更新されない」と業務側から言われたあとになります。
+
+**出すのは次の行動を決めるものだけです。** どの処理が・どの種類のイベントで・どの列が・なぜ止まったか。**中身（payload）は出しません**——退避されたイベントには個人情報が載りうるので（[ADR-0003](../../adr/cargo-tracker/0003-crypto-shredding-for-personal-data.md)）、鍵を破棄しても画面に平文が残る形にはしません。
+
+**消す手段は置きません**（[ADR-0014](../../adr/cargo-tracker/0014-poison-events-are-parked-not-blocking.md) 決定 1）。直したあとに退避を消すのは「黙って捨てる」ことです。`[処理し直す]` は Actuator と同じ入口を呼び、直っていなければまた退避されます——それが正しい姿です。
 
 ### S90: 利用者管理（管理者）
 

@@ -567,6 +567,74 @@ test.describe('マニュアルの画面キャプチャ', () => {
     await page.screenshot({ path: `${OUT}/06-S90-admin-users.png`, fullPage: true });
   });
 
+  test('06 退避したイベント', async ({ page }) => {
+    await page.route('**/api/v1/auth/login', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          token: 'token',
+          username: 'admin01',
+          displayName: '管理 花子',
+          roles: ['ROLE_ADMIN'],
+          shipperId: null,
+        }),
+      }),
+    );
+    // **本文が説明する要素を写す。** 表の 6 列（サービス・処理・イベント・列・
+    // 止まった理由・退避）が読めなければ、読み方の表は絵と対応しない。
+    // 3 サービスに散らすのは「束ねている」ことが本文の主張だから。
+    const parked: Record<string, unknown[]> = {
+      booking: [{
+        deadLetterId: 'dl-1',
+        processingGroup: 'com.example.cargotracker.booking.infrastructure.projection',
+        sequenceIdentifier: 'B-2026-0902-004',
+        eventType: 'com.example.cargotracker.shared.contract.event.HandlingActivityRegisteredEvent',
+        eventIdentifier: 'evt-1',
+        enqueuedAt: '2026-09-25T01:20:00Z',
+        causeType: 'org.springframework.dao.DataIntegrityViolationException',
+        causeMessage: '値が長すぎます（identifier）',
+      }],
+      tracking: [{
+        deadLetterId: 'dl-2',
+        processingGroup: 'com.example.cargotracker.tracking.infrastructure.projection',
+        sequenceIdentifier: 'TRK-8K2QX7M4RB',
+        eventType: 'com.example.cargotracker.shared.contract.event.CargoMisroutedEvent',
+        eventIdentifier: 'evt-2',
+        enqueuedAt: '2026-09-25T01:21:00Z',
+        causeType: 'org.springframework.dao.DataIntegrityViolationException',
+        causeMessage: 'null が入りません（unlocode）',
+      }],
+      billing: [{
+        deadLetterId: 'dl-3',
+        processingGroup: 'com.example.cargotracker.billing.application.reaction',
+        sequenceIdentifier: 'B-2026-0902-007',
+        eventType: 'com.example.cargotracker.shared.contract.event.CargoDeliveredEvent',
+        eventIdentifier: 'evt-3',
+        enqueuedAt: '2026-09-25T02:02:00Z',
+        causeType: 'java.lang.IllegalStateException',
+        causeMessage: '荷主の契約がありません',
+      }],
+    };
+    await page.route('**/api/v1/*/dead-letters', (route) => {
+      const service = new URL(route.request().url()).pathname.split('/')[3] ?? '';
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ items: parked[service] ?? [] }),
+      });
+    });
+    await page.goto('/login');
+    await page.getByLabel('利用者名').fill('admin01');
+    await page.getByLabel('パスワード').fill('secret1234');
+    await page.getByRole('button', { name: 'ログイン' }).click();
+    await page.goto('/admin/dead-letters');
+    await expect(page.getByText('値が長すぎます（identifier）')).toBeVisible();
+    // 束ねていることが読めるように、3 サービスぶんが出るまで待つ。
+    await expect(page.getByText('荷主の契約がありません')).toBeVisible();
+    await page.screenshot({ path: `${OUT}/06-S91-dead-letters.png`, fullPage: true });
+  });
+
   /** 経路設計者としてログインする。航海と作業一覧はこのロールの画面。 */
   async function signInAsRouting(page: import('@playwright/test').Page) {
     await page.route('**/api/v1/auth/login', (route) =>

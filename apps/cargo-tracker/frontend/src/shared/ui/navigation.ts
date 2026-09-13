@@ -55,6 +55,8 @@ export const NAVIGATION: readonly NavigationItem[] = [
     allow: ['ROLE_SALES', 'ROLE_ACCOUNTANT', 'ROLE_TRACKER', 'ROLE_ROUTING'],
   },
   { path: '/admin/users', label: '利用者管理', allow: ['ROLE_ADMIN'] },
+  // 投影が止まっていることに画面から気づく（S91 / ADR-0014・IT15 引き継ぎ 1）。
+  { path: '/admin/dead-letters', label: '退避したイベント', allow: ['ROLE_ADMIN'] },
 ];
 
 /**

@@ -54,3 +54,7 @@ management:
         # なく処理し直す手段を置く。運用の読み口（projection:dead-letters）と
         # 同じ立場のものを同じ入口に並べる。
         include: health,info,deadletters
+
+# Gateway の振り分けと同じ接頭辞。共有の読み口（退避一覧）が経路を組み立てる。
+cargo:
+  context: handling

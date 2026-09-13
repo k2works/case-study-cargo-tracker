@@ -83,6 +83,7 @@ const SCREEN_OF_PATH: Record<string, string> = {
   '/invoices': 'S60',
   '/worklist/attention': 'S70',
   '/admin/users': 'S90',
+  '/admin/dead-letters': 'S91',
 };
 
 describe('サイドナビと UI 設計', () => {

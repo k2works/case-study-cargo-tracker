@@ -20,6 +20,7 @@ import { CustomsListPage } from '@/features/customs/CustomsListPage';
 import { CustomsRegisterPage } from '@/features/customs/CustomsRegisterPage';
 import { CustomsDetailPage } from '@/features/customs/CustomsDetailPage';
 import { AdminUserListPage } from '@/features/admin/AdminUserListPage';
+import { DeadLetterListPage } from '@/features/admin/DeadLetterListPage';
 import { BookingListPage } from '@/features/bookings/BookingListPage';
 import { BookingRegisterPage } from '@/features/bookings/BookingRegisterPage';
 import { BookingDetailPage } from '@/features/bookings/BookingDetailPage';
@@ -64,6 +65,7 @@ export const PAGES: Record<string, ReactElement> = {
   '/invoices': <InvoiceListPage />,
   '/worklist/attention': <AttentionListPage />,
   '/admin/users': <AdminUserListPage />,
+  '/admin/dead-letters': <DeadLetterListPage />,
 };
 
 export function AppRoutes() {

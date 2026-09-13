@@ -7,12 +7,7 @@ import com.example.cargotracker.gateway.infrastructure.config.RoleAuthorization;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -34,76 +29,6 @@ class EveryServiceEndpointIsRoutedAndProtectedTest {
     /**
      * {@code /api/} を含む文字列を持つマッピング注釈を<b>全部</b>拾う。
      *
-     * <p>{@code @RequestMapping("...")} の形だけを拾うと、
-     * {@code @RequestMapping(value = "...")} やクラスレベル注釈を持たない
-     * {@code @GetMapping("/api/...")} は「存在しないこと」になり、
-     * ルートに載っていなくても緑になる。対象になりうるものを全部拾ってから、
-     * 書き方を見る。</p>
-     */
-    private static final Pattern ANY_MAPPING = Pattern.compile(
-            "@(?:Request|Get|Post|Put|Delete|Patch)Mapping\\s*\\([^)]*?\"(/[^\"]*)\"");
-
-    /**
-     * クラスに付いた {@code @RequestMapping}。メソッド側は
-     * {@code @PutMapping("/{bookingId}")} のように<b>相対で書かれる</b>ので、
-     * ここを前置きにしないと経路として復元できない。
-     *
-     * <p><b>これが無い間、検査は method 側の経路を 1 本も見ていなかった。</b>
-     * {@code /api/} を含む文字列だけを拾っていたため、相対のものは「存在しない
-     * こと」になり、ルートにも宣言にも無いまま緑になる。</p>
-     */
-    private static final Pattern CLASS_MAPPING = Pattern.compile(
-            "@RequestMapping\\s*\\([^)]*?\"(/api/[^\"]+)\"");
-    private static final Pattern ROUTE_PREDICATE =
-            Pattern.compile("Path=(/api/[^\\]\\s,]+)");
-
-    private static Path backendRoot() {
-        Path dir = Path.of("").toAbsolutePath();
-        while (dir != null) {
-            if (Files.exists(dir.resolve("settings.gradle.kts"))) {
-                return dir;
-            }
-            dir = dir.getParent();
-        }
-        throw new IllegalStateException("settings.gradle.kts が見つかりません");
-    }
-
-    private static List<String> serviceEndpoints() throws IOException {
-        List<String> endpoints = new ArrayList<>();
-        try (Stream<Path> paths = Files.walk(backendRoot())) {
-            for (Path file : paths
-                    .filter(p -> p.toString().replace('\\', '/').contains("/src/main/java/"))
-                    // 名前で絞らない。*Controller.java 以外に書かれた経路は
-                    // 「存在しないこと」になり、検査を素通りする。
-                    .filter(p -> p.getFileName().toString().endsWith(".java"))
-                    .toList()) {
-                String source = Files.readString(file, StandardCharsets.UTF_8);
-                Matcher classMapping = CLASS_MAPPING.matcher(source);
-                String prefix = classMapping.find() ? classMapping.group(1) : null;
-                Matcher matcher = ANY_MAPPING.matcher(source);
-                while (matcher.find()) {
-                    String path = matcher.group(1);
-                    if (path.startsWith("/api/")) {
-                        endpoints.add(path);
-                    } else if (prefix != null) {
-                        // 相対の経路を前置きと繋ぐ。"/" だけの指定は前置きそのもの。
-                        endpoints.add("/".equals(path) ? prefix : prefix + path);
-                    }
-                }
-            }
-        }
-        return endpoints;
-    }
-
-    private static List<String> gatewayRoutes() throws IOException {
-        String config = Files.readString(
-                backendRoot().resolve("gatewayms/src/main/resources/application.yml"),
-                StandardCharsets.UTF_8);
-        List<String> routes = new ArrayList<>();
-        Matcher matcher = ROUTE_PREDICATE.matcher(config);
-        while (matcher.find()) {
-            routes.add(matcher.group(1));
-        }
         return routes;
     }
 
@@ -117,20 +42,20 @@ class EveryServiceEndpointIsRoutedAndProtectedTest {
     @Test
     @DisplayName("検査する経路が実際にある（空振りしていない）")
     void thereAreEndpointsToCheck() throws IOException {
-        assertThat(serviceEndpoints()).hasSizeGreaterThanOrEqualTo(3);
+        assertThat(BackendEndpoints.serviceEndpoints()).hasSizeGreaterThanOrEqualTo(3);
         // 相対で書かれた経路を拾えているか。これが 0 なら、method 側の注釈を
         // 1 本も見ていない（IT4 まで実際にそうだった）。
-        assertThat(serviceEndpoints())
+        assertThat(BackendEndpoints.serviceEndpoints())
                 .as("クラスの @RequestMapping とメソッドの相対経路を繋げている")
                 .contains("/api/v1/booking/bookings/routing-worklist");
-        assertThat(gatewayRoutes()).hasSizeGreaterThanOrEqualTo(3);
+        assertThat(BackendEndpoints.gatewayRoutes()).hasSizeGreaterThanOrEqualTo(3);
     }
 
     @Test
     @DisplayName("後段サービスの経路はすべて Gateway のルートに載っている")
     void everyEndpointIsRouted() throws IOException {
-        List<String> routes = gatewayRoutes();
-        List<String> unrouted = serviceEndpoints().stream()
+        List<String> routes = BackendEndpoints.gatewayRoutes();
+        List<String> unrouted = BackendEndpoints.serviceEndpoints().stream()
                 .filter(endpoint -> routes.stream().noneMatch(r -> isCoveredBy(endpoint, r)))
                 .toList();
 
@@ -144,7 +69,7 @@ class EveryServiceEndpointIsRoutedAndProtectedTest {
     void everyEndpointIsProtected() throws IOException {
         // 除外リストをテスト側に持たない。持つと、次に公開経路が増えたとき
         // 検査を無効化する側に働く。公開してよいものは PUBLIC_PATHS が決める。
-        List<String> unprotected = serviceEndpoints().stream()
+        List<String> unprotected = BackendEndpoints.serviceEndpoints().stream()
                 .filter(endpoint -> JwtAuthenticationFilter.isPublic(endpoint + "/x"))
                 .filter(endpoint -> JwtAuthenticationFilter.PUBLIC_PATHS.stream()
                         .noneMatch(pattern -> pattern.startsWith(literalPrefix(endpoint))))
@@ -180,7 +105,7 @@ class EveryServiceEndpointIsRoutedAndProtectedTest {
         // **書き込みの守りは「経路が無い」こと**で成り立つ。Gateway の名簿は
         // 全メソッドを宣言する規約なので、ここでロールを絞ることはできない。
         // 代わりに、荷主向けのコントローラに書き込みの割り当てが無いことを固定する。
-        java.nio.file.Path controller = backendRoot().resolve(
+        java.nio.file.Path controller = BackendEndpoints.backendRoot().resolve(
                 "billingms/src/main/java/com/example/cargotracker/billing/interfaces/rest/"
                         + "ShipperInvoiceController.java");
         assertThat(controller)
@@ -205,7 +130,7 @@ class EveryServiceEndpointIsRoutedAndProtectedTest {
         //
         // **メソッドも見る（決定 6）。** 経路だけで見ると、書き込みを足したときに
         // 読み向けの広い宣言に当たって「宣言がある」と読める。
-        List<String> undeclared = serviceEndpoints().stream()
+        List<String> undeclared = BackendEndpoints.serviceEndpoints().stream()
                 .filter(endpoint -> !JwtAuthenticationFilter.isPublic(endpoint + "/x"))
                 .filter(endpoint -> METHODS.stream().anyMatch(method ->
                         !RoleAuthorization.isDeclared(method, endpoint)
@@ -476,7 +401,7 @@ class EveryServiceEndpointIsRoutedAndProtectedTest {
     void thereAreRoleDeclarations() throws IOException {
         // 実数に近い下限にする。5 のままだと、宣言が減っても気づけない。
         assertThat(RoleAuthorization.declaredPatterns())
-                .hasSizeGreaterThanOrEqualTo(serviceEndpoints().stream().distinct().toList()
+                .hasSizeGreaterThanOrEqualTo(BackendEndpoints.serviceEndpoints().stream().distinct().toList()
                         .size() / 2);
     }
 }
