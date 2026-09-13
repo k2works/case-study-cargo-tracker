@@ -7,6 +7,7 @@ import com.example.cargotracker.tracking.domain.model.events.TransportStatusUpda
 import com.example.cargotracker.tracking.domain.model.valueobjects.TransportStatus;
 import com.example.cargotracker.tracking.infrastructure.persistence.TrackingEventMapper;
 import com.example.cargotracker.tracking.domain.model.events.CancellationDischargePlannedEvent;
+import com.example.cargotracker.tracking.domain.model.events.TrackingClosedEvent;
 import com.example.cargotracker.tracking.domain.model.events.CargoMisroutedEvent;
 import com.example.cargotracker.tracking.domain.model.events.ExceptionEscalatedEvent;
 import com.example.cargotracker.tracking.domain.model.events.ExceptionResponseStartedEvent;
@@ -278,6 +279,26 @@ public class TrackingProjection {
             log.warn("陸揚げ地を書ける追跡が投影に無い: trackingNumber={}",
                     event.trackingNumber());
         }
+    }
+
+    /**
+     * 追跡を閉じた（US30 / 不変条件 9）。
+     *
+     * <p><b>記録と読み口は対で出す。</b> 閉じたことが投影に出なければ、追跡管理者は
+     * その貨物をいつまでも「動いているもの」として一覧で見続ける。</p>
+     */
+    @EventHandler
+    public void on(TrackingClosedEvent event, @MessageIdentifier String eventId) {
+        int updated = trackings.markClosed(event.trackingNumber(), event.unLocode(),
+                clock.instant());
+        if (updated == 0) {
+            log.warn("閉じる追跡が投影に無い: trackingNumber={}", event.trackingNumber());
+        }
+        // **なぜ閉じたかを履歴に残す。** 状態だけだと「引き取られた」のか
+        // 「キャンセルで降ろした」のかが読めない。
+        writeHistory(new HistoryEntry(eventId, event.trackingNumber(), "CLOSED",
+                null, null, event.unLocode(), event.closedAt(), event.reason()),
+                clock.instant());
     }
 
     /**

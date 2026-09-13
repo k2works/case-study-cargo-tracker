@@ -13,6 +13,7 @@ import com.example.cargotracker.tracking.domain.model.commands.ResolveTrackingEx
 import com.example.cargotracker.tracking.domain.model.commands.StartExceptionResponseCommand;
 import com.example.cargotracker.tracking.domain.model.entities.TrackingException;
 import com.example.cargotracker.tracking.domain.model.events.CancellationDischargePlannedEvent;
+import com.example.cargotracker.tracking.domain.model.events.TrackingClosedEvent;
 import com.example.cargotracker.tracking.domain.model.events.ExceptionEscalatedEvent;
 import com.example.cargotracker.tracking.domain.model.events.ExceptionResponseStartedEvent;
 import com.example.cargotracker.tracking.domain.model.events.ExceptionShipperNotifiedEvent;
@@ -238,6 +239,18 @@ public class TrackingActivity {
                     activityId, unLocode, completedAt, now));
             autoReportMisroute(handling, appender, now);
         }
+        if (closesTheCancellation(handling)) {
+            // **キャンセルの陸揚げが済んだ。** ここで初めて追跡を閉じる
+            // （不変条件 9）——承認の時点で閉じると、この荷降しが記録できない。
+            //
+            // **コマンドを受けて閉じる形にしない。** 陸揚げ地を知っているのは
+            // 集約なので、外から送らせると送り手が投影を読むことになり、
+            // **投影が追いついていないあいだ閉じられない**（正典は
+            // `CloseTrackingCommand` を `TrackingReactionHandler` から送ると
+            // 書いていたが、その主眼は「bookingms から送らない」ことである）。
+            appender.append(new TrackingClosedEvent(trackingNumber.value(), bookingId,
+                    "CANCELLED", unLocode, now));
+        }
         if (next == TransportStatus.DELIVERED) {
             // **精算の開始条件は別のイベントで出す**（US16 §受入基準 4）。
             // 1 つのイベントに「状態が変わった」と「精算を始めてよい」の 2 つの
@@ -246,6 +259,21 @@ public class TrackingActivity {
             appender.append(new CargoDeliveredEvent(trackingNumber.value(), bookingId,
                     completedAt, unLocode));
         }
+    }
+
+    /**
+     * この荷役でキャンセルの陸揚げが済むか（不変条件 9）。
+     *
+     * <p><b>指定した港での荷降しだけ。</b> 途中の港で降ろしても（積み替え）
+     * キャンセルの陸揚げではない——閉じてしまうと、そのあとの荷役が記録できない。</p>
+     *
+     * <p><b>一度閉じたら二度閉じない。</b> 荷役は再配送されうる。</p>
+     */
+    private boolean closesTheCancellation(AppliedHandling handling) {
+        return cancellationDischargeUnLocode != null
+                && !closed
+                && "UNLOAD".equals(handling.handlingType())
+                && cancellationDischargeUnLocode.equals(handling.unLocode());
     }
 
     /**
@@ -660,6 +688,14 @@ public class TrackingActivity {
     @EventSourcingHandler
     void on(CancellationDischargePlannedEvent event) {
         this.cancellationDischargeUnLocode = event.dischargeUnLocode();
+    }
+
+    /** 追跡を閉じたか。<b>閉じた追跡には荷役を重ねて記録しない</b>。 */
+    private boolean closed;
+
+    @EventSourcingHandler
+    void on(TrackingClosedEvent event) {
+        this.closed = true;
     }
 
     /** 復元した輸送状態。荷役（US15・IT9）が読む。 */

@@ -217,6 +217,19 @@ public interface TrackingSummaryMapper {
             @Param("unLocode") String unLocode,
             @Param("projectedAt") Instant projectedAt);
 
+    /**
+     * 追跡を閉じた（US30 / 不変条件 9）。
+     *
+     * <p><b>閉じるのは陸揚げが済んでから。</b> 承認の時点では閉じない——
+     * この荷降しが記録できなくなる。</p>
+     */
+    @org.apache.ibatis.annotations.Update(
+            "UPDATE tracking_summary SET closed = TRUE, current_unlocode = #{unLocode}, "
+            + "projected_at = #{projectedAt} WHERE tracking_number = #{trackingNumber}")
+    int markClosed(@Param("trackingNumber") String trackingNumber,
+            @Param("unLocode") String unLocode,
+            @Param("projectedAt") Instant projectedAt);
+
     /** 誤配が解けた（再設計で経路が確定した）。 */
     @org.apache.ibatis.annotations.Update(
             "UPDATE tracking_summary SET misrouted = FALSE, projected_at = #{projectedAt} "

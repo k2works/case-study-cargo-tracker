@@ -4,7 +4,7 @@ title: "ドメインモデル設計 - 国際貨物輸送管理システム（CQR
 description: "CQRS / Event Sourcing 版 Cargo Tracker のドメインモデル設計。6 コンテキストの集約・不変条件・コマンド・イベント（内部 / 契約）・状態遷移・Reaction Handler を、イベントを永続化フォーマットとして定義する。"
 tags: [design,domain-model,ddd,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-13T06:02:22Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-13T12:21:03Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -219,7 +219,7 @@ tracking <.. handling : HandlingActivityRegisteredEvent\nHandlingActivityVoidedE
 booking <.. handling : HandlingActivityRegisteredEvent\nHandlingActivityVoidedEvent
 billing <.. tracking : CargoDeliveredEvent
 billing <.. handling : CustomsStatusChangedEvent\n（留置営業日の調整根拠・IT14）
-booking <.. tracking : CargoDeliveredEvent\nTrackingInitializedEvent\nTrackingClosedEvent
+booking <.. tracking : CargoDeliveredEvent\nTrackingInitializedEvent
 booking <.. billing : PaymentRecordedEvent
 billing <.. booking : ShipperRegisteredEvent\nCargoCancelledEvent
 handling <.. tracking : TrackingInitializedEvent\n（CargoSnapshot の材料・ADR-0012）
@@ -803,7 +803,8 @@ class TrackingActivity <<Aggregate Root>> <<@EventSourced(tagKey="trackingNumber
   + registerException(RegisterTrackingExceptionCommand)
   + startResponding(StartExceptionResponseCommand)
   + resolveException(ResolveTrackingExceptionCommand)
-  + close(CloseTrackingCommand)
+  ' 閉じるのは荷降しを適用する流れの中（IT15 T6）。外から送らせない
+  ' ——陸揚げ地を知っているのは集約で、送り手は投影を読むことになる
 }
 class TrackingNumber <<Value Object>>
 class TrackingBookingId <<Value Object>>
@@ -914,7 +915,7 @@ EXCEPTION --> DELIVERED : 解決・引取完了
 | 6 | 例外は追記のみ。解決しても事実は消えず、料金調整の根拠として残る |
 | 7 | 緊急かどうかは `ExceptionType#urgent`（`LOSS` のみ真）が答える。属性には持たない。一覧の並びは `urgent` を先頭に、以降は到着期限までの残日数が少ない順（M16） |
 | 8 | **知らない追跡番号の荷役では止まらない**。集約が無ければ `AdvanceTrackingCommand` は `UnknownTrackingRejectedEvent` に相当する記録を投影側に残し、後続の荷役を止めない |
-| 9 | キャンセル承認（`CargoCancelledEvent`）を受けても**追跡は閉じない**。`dischargeLocation` を `cancellationDischargeLocation` に記録し（`CancellationDischargePlannedEvent`）、その港での `UNLOAD` を受けた後に `CloseTrackingCommand` で閉じる（`TrackingClosedEvent(reason = CANCELLED)`）。貨物が船の上にある間、陸揚げの荷役を記録できる |
+| 9 | キャンセル承認（`CargoCancelledEvent`）を受けても**追跡は閉じない**。`dischargeLocation` を `cancellationDischargeLocation` に記録し（`CancellationDischargePlannedEvent`）、**その港での `UNLOAD` を適用する流れの中で** `TrackingClosedEvent(reason = CANCELLED)` を出す。貨物が船の上にある間、陸揚げの荷役を記録できる。**コマンドで外から閉じさせない**（IT15 T6）——陸揚げ地を知っているのは集約なので、送り手が投影を読むことになり、投影が追いついていないあいだ閉じられない |
 | 10 | `closed` の集約はコマンドを拒否する |
 | 11 | 取り消された荷役（`HandlingActivityVoidedEvent`）を受けたら、その荷役で進めた状態を直前の状態に戻す（`RevertTrackingCommand`）。取り消しの事実はイベントとして残る |
 
@@ -934,7 +935,7 @@ EXCEPTION --> DELIVERED : 解決・引取完了
 | （`registerException` が緊急を受けたとき） | — | `ExceptionEscalatedEvent` | — | UC16 / US20 |
 | （`advance` が例外の対応中に届いたとき） | — | `HandlingDeferredEvent` | — | UC13・UC16 |
 | （`resolveException` が戻したあと） | — | `DeferredHandlingAppliedEvent` | — | UC16 |
-| `CloseTrackingCommand`（`shared/contract/command`） | `TrackingReactionHandler`（`cancellationDischargeLocation` での `UNLOAD` を受けた後） | `TrackingClosedEvent` | ○ | UC22 |
+| ~~`CloseTrackingCommand`~~ | — | — | — | **作らなかった**（IT15 T6。上の不変条件 9 を参照） |
 
 **引取の取り消しは打ち消しで伝えます（IT11 引き継ぎ枠 A）。** IT10 では `revert` が引取済からの巻き戻しを断っていました——打ち消しを購読側へ伝える手立てが無く、追跡だけ戻して予約が引取済のまま残ると、営業には配送完了、荷役には陸揚げ待ちに見えるためです。IT11 で `CargoDeliveryRevertedEvent`（契約）を足し、bookingms が `RevertDeliveryCommand` で引取済の**前の状態**へ戻します。戻す先は集約が覚え（`statusBeforeDelivery`）、イベントに載せます——投影はコマンドを読まないので、導き直させると集約と投影が別々の判断を持つことになります。
 
@@ -1308,7 +1309,7 @@ User *-- "0..1" UserShipperLink
 | `CargoDeliveredEvent` | trackingms | billingms（`BillingReactionHandler` 開始）、bookingms（`DELIVERED`） | `trackingNumber`, `bookingId`, `deliveredAt`, `location` |
 | `CargoDeliveryRevertedEvent` | trackingms | bookingms（`RevertDeliveryCommand`）、billingms（精算の取り下げ。US21・IT13） | `trackingNumber`, `bookingId`, `revertedAt`, `reason` |
 | `TrackingInitializedEvent` | trackingms | bookingms（`BookingReactionHandler`。連鎖の終わり）、handlingms（`CargoSnapshot`・ADR-0012）、**billingms**（`billing_cargo_snapshot`。区間・重量・貨物種別から料金を数える。IT13） | `bookingId`, `trackingNumber`, **`shipperId`**, `originUnLocode`, `destinationUnLocode`, `cargoType`, **`weightKg`**（IT13 で追加。無い貨物では請求を作らず要確認へ出す）, `legs[]`, `initializedAt`。**bookingms が読むのは識別子だけ**だが、**trackingms 自身の投影はこのイベントからしか作れない**ので、コマンドで届いた値を載せ直す（IT7 で実測。載せずに実装して投影が作れなかった） |
-| `TrackingClosedEvent` | trackingms | bookingms（キャンセル完了を投影に写す） | `bookingId`, `trackingNumber`, `closedAt`, `reason` |
+| ~~`TrackingClosedEvent`~~ | trackingms | **契約から外した**（IT15 T6）。予約はキャンセル承認の時点で既に `CANCELLED` になっており、**bookingms がこれを読んで書く先が無い**——読む側の無い契約を先に足さない（IT13 で `CorporateContractAssignedEvent` に下した判断と同じ）。**trackingms の内部イベント**にし、閉じたことは追跡詳細（S41）が読む | — |
 | `PaymentRecordedEvent` | billingms | bookingms（`SETTLED`） | `invoiceId`, `bookingId`, `paidAt`, `amount` |
 | `PaymentVoidedEvent` | billingms | bookingms（`SETTLED` → `DELIVERED`） | `invoiceId`, `paymentId`, `bookingId`, `reason`, `voidedBy`, `voidedAt` |
 | `ShipperRegisteredEvent` | bookingms | billingms（`shipper_contract_snapshot` を作る） | `shipperId`, `shipperCode`, `shipperType`, `name`, `email`, `phone`, `address`, `corporateContract?`, `registeredAt`。`name` / `email` / `phone` / `address` は荷主ごとの鍵で暗号化して載せる（crypto-shredding、ADR-0003） |
@@ -1325,7 +1326,7 @@ Reaction Handler が送る、サービス境界をまたぐ意味を持つコマ
 | コマンド | 送信 | 宛先 | 用途 |
 | :--- | :--- | :--- | :--- |
 | `InitializeTrackingCommand` | bookingms `BookingReactionHandler` | trackingms `TrackingActivity` | 追跡開始 |
-| `CloseTrackingCommand` | trackingms `TrackingReactionHandler`（`cancellationDischargeLocation` での `UNLOAD` を受けた後） | trackingms `TrackingActivity` | キャンセル承認後、陸揚げの荷降しが記録されてから追跡を閉じる。`BookingReactionHandler` からは送らない |
+| ~~`CloseTrackingCommand`~~ | — | — | **コマンドを作らなかった**（IT15 T6）。この決定の主眼は「**bookingms から閉じさせない**」ことで、それは満たしている。**陸揚げ地を知っているのは集約**なので、外から送らせると送り手が投影を読むことになり、投影が追いついていないあいだ閉じられない。`TrackingActivity` が荷降しを適用する流れの中で、指定した港なら `TrackingClosedEvent` を出す |
 
 ### 契約クエリ（`shared/contract/query`）
 
@@ -1388,7 +1389,7 @@ B -> B : ApproveCancellationCommand → CargoCancelledEvent（契約, dischargeL
 B -> T : （TrackingReactionHandler）PlanCancellationDischargeCommand → CancellationDischargePlannedEvent
 B -> Bi : （BillingReactionHandler）ApplyCancellationFeeCommand
 H -> T : （TrackingReactionHandler）AdvanceTrackingCommand(UNLOAD @ dischargeLocation)
-T -> T : CloseTrackingCommand（契約コマンド, TrackingReactionHandler）→ TrackingClosedEvent（契約）
+T -> T : 陸揚げ地の UNLOAD を適用 → TrackingClosedEvent（内部）
 T -> B : （購読）キャンセル完了を投影に写す
 @enduml
 ```
@@ -1431,7 +1432,7 @@ CONFIRMED --> 終了 : CargoCancelledEvent
 
 一方、配送完了 → 精算のように **1 段で終わる連鎖には `process_state` を置きません。** `Invoice` の有無から「今どの段か」が読めるので、増やすと持ち主が二重になります。
 
-`BookingReactionHandler` は同期クエリを呼びません。経路候補の存在確認（候補 0 件の検知）は `RequestRoutingCommand` を受ける Controller が `FindRouteCandidatesQuery` で行い、Reaction Handler の外に置きます。Reaction Handler の中で `.join()` すると Processing Group が止まるためです。`CloseTrackingCommand` も bookingms から送らず、trackingms の `TrackingReactionHandler` が陸揚げ地での `UNLOAD` を受けた後に送ります（`TrackingActivity` 不変条件 9）。
+`BookingReactionHandler` は同期クエリを呼びません。経路候補の存在確認（候補 0 件の検知）は `RequestRoutingCommand` を受ける Controller が `FindRouteCandidatesQuery` で行い、Reaction Handler の外に置きます。Reaction Handler の中で `.join()` すると Processing Group が止まるためです。追跡を閉じるのも bookingms からは行わず、trackingms の `TrackingActivity` が陸揚げ地での `UNLOAD` を適用する流れの中で閉じます（不変条件 9）。**コマンドにしていません**——陸揚げ地を知っているのは集約なので、外から送らせると送り手が投影を読むことになります（IT15 T6）。
 
 ### 配送完了 → 精算の連鎖（billingms）
 
@@ -1495,7 +1496,7 @@ Reaction Handler の再試行と補償は「例外にしない」ではなく「
 | UC19 航海スケジュール登録 | `Voyage` | `RegisterVoyageCommand`, `UpdateVoyageScheduleCommand` | `VoyageRegisteredEvent`, `VoyageScheduleUpdatedEvent` |
 | UC20 ユーザー認証 | `User` | `LoginCommand`, `UnlockAccountCommand` | （状態保存・監査ログ） |
 | UC21 通関申告管理 | `CustomsDeclaration` → `TrackingActivity` | `RegisterCustomsDeclarationCommand`, `UpdateCustomsStatusCommand` | `CustomsStatusChangedEvent`, `TrackingExceptionRegisteredEvent(CUSTOMS_HOLD)` |
-| UC22 予約キャンセル | `Cargo` → `TrackingActivity` / `Invoice` | `RequestCancellationCommand`, `ApproveCancellationCommand`, `PlanCancellationDischargeCommand`, `CloseTrackingCommand`（陸揚げ地の `UNLOAD` 後）, `ApplyCancellationFeeCommand` | `CargoCancelledEvent`, `CancellationDischargePlannedEvent`, `TrackingClosedEvent`, `CancellationFeeAppliedEvent` |
+| UC22 予約キャンセル | `Cargo` → `TrackingActivity` / `Invoice` | `RequestCancellationCommand`, `ApproveCancellationCommand`, `RejectCancellationCommand`, `PlanCancellationDischargeCommand`, `ApplyCancellationFeeCommand` | `CancellationRequestedEvent`, `CancellationApprovedEvent`, `CancellationRejectedEvent`, `CargoCancelledEvent`, `CancellationDischargePlannedEvent`, `TrackingClosedEvent`（内部）, `CancellationFeeAppliedEvent` |
 | US28 誤配検知・再設計 | `HandlingActivity` → `TrackingActivity` / `Cargo` | `RegisterHandlingActivityCommand`（`offRoute`）, `AssignRouteCommand`（現在地起点、期限超過候補も可） | `CargoMisroutedEvent`（trackingms）, `BookingMisroutedEvent`（bookingms）, `CargoRoutedEvent` |
 | US31 アカウント保護 | `User` | `LoginCommand`（失敗）, `UnlockAccountCommand` | （状態保存・監査ログ） |
 

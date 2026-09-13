@@ -4,9 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.cargotracker.shared.contract.event.TrackingInitializedEvent;
 import com.example.cargotracker.shared.domain.error.IllegalTransition;
+import com.example.cargotracker.tracking.domain.model.commands.AdvanceTrackingCommand;
 import com.example.cargotracker.tracking.domain.model.commands.PlanCancellationDischargeCommand;
 import com.example.cargotracker.tracking.domain.model.events
         .CancellationDischargePlannedEvent;
+import com.example.cargotracker.tracking.domain.model.events.TrackingClosedEvent;
+import com.example.cargotracker.tracking.domain.model.events.TransportStatusUpdatedEvent;
+import com.example.cargotracker.tracking.domain.model.valueobjects.StatusUpdateSource;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TransportStatus;
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -106,6 +110,83 @@ class TrackingCancellationTest {
         fixture.given().noPriorActivity()
                 .when().command(plan("SGSIN"))
                 .then().exception(IllegalTransition.class);
+    }
+
+    @Test
+    @DisplayName("不変条件 9: 指定した港で荷降しすると追跡が閉じる")
+    void closesAfterTheDischarge() {
+        fixture.given().event(initialized())
+                .event(planned("SGSIN"))
+                .event(received())
+                .event(loaded())
+                .when().command(unload("SGSIN", "act-3"))
+                .then().eventsSatisfy(events -> assertThat(events)
+                        .as("キャンセルの陸揚げが済んだので閉じる")
+                        .map(event -> event.payload().getClass().getSimpleName())
+                        .contains("TrackingClosedEvent"));
+    }
+
+    @Test
+    @DisplayName("不変条件 9: 途中の港で降ろしても閉じない（積み替えがある）")
+    void doesNotCloseAtAnotherPort() {
+        // **閉じてしまうと、そのあとの荷役が記録できない。**
+        fixture.given().event(initialized())
+                .event(planned("USNYC"))
+                .event(received())
+                .event(loaded())
+                .when().command(unload("SGSIN", "act-3"))
+                .then().eventsSatisfy(events -> assertThat(events)
+                        .map(event -> event.payload().getClass().getSimpleName())
+                        .doesNotContain("TrackingClosedEvent"));
+    }
+
+    @Test
+    @DisplayName("キャンセルされていない追跡は、荷降ししても閉じない")
+    void doesNotCloseWithoutACancellation() {
+        fixture.given().event(initialized())
+                .event(received())
+                .event(loaded())
+                .when().command(unload("SGSIN", "act-3"))
+                .then().eventsSatisfy(events -> assertThat(events)
+                        .map(event -> event.payload().getClass().getSimpleName())
+                        .doesNotContain("TrackingClosedEvent"));
+    }
+
+    @Test
+    @DisplayName("一度閉じたら二度閉じない（荷役は再配送されうる）")
+    void closesOnlyOnce() {
+        fixture.given().event(initialized())
+                .event(planned("SGSIN"))
+                .event(received())
+                .event(loaded())
+                .event(new TrackingClosedEvent(NUMBER, "b-1", "CANCELLED", "SGSIN", NOW))
+                .when().command(unload("SGSIN", "act-9"))
+                .then().eventsSatisfy(events -> assertThat(events)
+                        .map(event -> event.payload().getClass().getSimpleName())
+                        .doesNotContain("TrackingClosedEvent"));
+    }
+
+    private static CancellationDischargePlannedEvent planned(String unLocode) {
+        return new CancellationDischargePlannedEvent(NUMBER, "b-1", unLocode,
+                "荷主の発注取消", "tracker01", PLANNED_AT);
+    }
+
+    /** 東京で受領 → 積込。ここまで来て初めて荷降しが通る（遷移表）。 */
+    private static TransportStatusUpdatedEvent received() {
+        return new TransportStatusUpdatedEvent(NUMBER, TransportStatus.NOT_RECEIVED,
+                TransportStatus.RECEIVED, StatusUpdateSource.HANDLING, "act-1", "JPTYO",
+                Instant.parse("2026-09-20T01:00:00Z"), "handler01", NOW);
+    }
+
+    private static TransportStatusUpdatedEvent loaded() {
+        return new TransportStatusUpdatedEvent(NUMBER, TransportStatus.RECEIVED,
+                TransportStatus.LOADED, StatusUpdateSource.HANDLING, "act-2",
+                "JPTYO", Instant.parse("2026-09-20T02:00:00Z"), "handler01", NOW);
+    }
+
+    private static AdvanceTrackingCommand unload(String unLocode, String activityId) {
+        return new AdvanceTrackingCommand(NUMBER, activityId, "UNLOAD", unLocode,
+                false, false, "handler01", Instant.parse("2026-10-02T01:00:00Z"));
     }
 
     /**
