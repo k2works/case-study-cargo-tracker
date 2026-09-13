@@ -6,6 +6,7 @@ import com.example.cargotracker.billing.domain.model.valueobjects.RateTable;
 import com.example.cargotracker.billing.domain.model.valueobjects.TransportRecord;
 import com.example.cargotracker.billing.domain.service.FreightChargeCalculator;
 import com.example.cargotracker.billing.infrastructure.config.RateTableConfiguration;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
 import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;
 import com.example.cargotracker.booking.domain.model.valueobjects.QuotationRates;
 import com.example.cargotracker.booking.domain.model.valueobjects.Weight;
@@ -80,6 +81,39 @@ class RateTableParityTest {
     }
 
     @Test
+    @DisplayName("キャンセルできるすべての予約状態にキャンセル料の料率がある（US30・IT15）")
+    void everyCancellableStatusHasAFeeRate() {
+        // **列挙から回す。** 名簿を手書きすると、扱っていない状態が名乗り出ない
+        // （列挙に値を足したら全箇所を回る）。キャンセル料は請求が出すが、
+        // **状態を持っているのは予約**なので、両方の型が見えるここでしか突き合わせ
+        // られない。契約イベント `CargoCancelledEvent` は状態を名前で運ぶ。
+        var cancellable = java.util.Arrays.stream(BookingStatus.values())
+                .filter(status -> status.canTransitionTo(BookingStatus.CANCELLED))
+                .toList();
+        assertThat(cancellable)
+                .as("キャンセルできる状態が 1 つも無いなら、この検査は何も見ていない")
+                .isNotEmpty();
+
+        for (BookingStatus status : cancellable) {
+            assertThat(BILLING_RATES.cancellationFeeRate(status.name()))
+                    .as("状態 %s のキャンセル料の料率（cargo.rates.cancellation-fee-rates）",
+                            status)
+                    .isNotNull()
+                    .isGreaterThanOrEqualTo(BigDecimal.ZERO);
+        }
+    }
+
+    @Test
+    @DisplayName("料率表に無い状態は断る（黙って 0 円にしない）")
+    void unknownStatusIsRefused() {
+        // **知らないものを通すと、取りこぼした請求はあとから取り返せない。**
+        // 貨物種別係数と同じ扱いにする。
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                        () -> BILLING_RATES.cancellationFeeRate("NO_SUCH_STATUS"))
+                .hasMessageContaining("NO_SUCH_STATUS");
+    }
+
+    @Test
     @DisplayName("港の地域区分の引き方が、見積と請求で一致する（表に無い国は遠洋）")
     void bothClassifyPortsTheSameWay() {
         for (String port : new String[] {"JPTYO", "CNSHA", "USNYC", "BRSSZ"}) {
@@ -149,7 +183,8 @@ class RateTableParityTest {
                         decimals((Map<String, Object>) rates.get("region-factors")),
                         decimals((Map<String, Object>) rates.get("cargo-type-factors")),
                         strings((Map<String, Object>) rates.get("country-regions")),
-                        decimal(rates.get("tax-rate"))));
+                        decimal(rates.get("tax-rate")),
+                        decimals((Map<String, Object>) rates.get("cancellation-fee-rates"))));
     }
 
     @SuppressWarnings("unchecked")

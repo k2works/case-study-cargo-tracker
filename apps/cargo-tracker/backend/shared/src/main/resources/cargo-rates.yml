@@ -43,3 +43,20 @@ cargo:
       PH: NEAR_SEA
     # 消費税率。**輸出（出発地と目的地の国が違う）は免税**（判定は計算側）。
     tax-rate: 0.10
+    # 状態別のキャンセル料の料率（US30・IT15）。**基本料金に掛ける**。
+    #
+    # **キャンセルできる予約状態を漏れなく並べる。** 表に無い状態は断る
+    # （黙って 0 円で通すと、取りこぼした請求はあとから取り返せない）。
+    # 漏れは RateTableParityTest#everyCancellableStatusHasAFeeRate が、
+    # BookingStatus の列挙から回して見つける——名簿を手書きすると、
+    # 足した状態が名乗り出ない。
+    #
+    # **輸送中の陸揚げ実費はここに入らない。** 港・船社・貨物で変わるので
+    # 自動では出せず、経理が S61 の調整行で入れる（マニュアル 17 章）。
+    cancellation-fee-rates:
+      PRELIMINARY: 0.00
+      ROUTE_PROPOSED: 0.05
+      ROUTE_NOTIFIED: 0.05
+      CONFIRMED: 0.10
+      TRACKING_ISSUED: 0.20
+      IN_TRANSIT: 0.50

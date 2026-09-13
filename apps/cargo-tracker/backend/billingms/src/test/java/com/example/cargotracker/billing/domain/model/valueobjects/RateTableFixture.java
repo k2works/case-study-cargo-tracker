@@ -30,6 +30,12 @@ public final class RateTableFixture {
                         "HK", PortRegion.NEAR_SEA, "TH", PortRegion.NEAR_SEA,
                         "VN", PortRegion.NEAR_SEA, "MY", PortRegion.NEAR_SEA,
                         "PH", PortRegion.NEAR_SEA),
-                new BigDecimal("0.10"));
+                new BigDecimal("0.10"),
+                Map.of("PRELIMINARY", new BigDecimal("0.00"),
+                        "ROUTE_PROPOSED", new BigDecimal("0.05"),
+                        "ROUTE_NOTIFIED", new BigDecimal("0.05"),
+                        "CONFIRMED", new BigDecimal("0.10"),
+                        "TRACKING_ISSUED", new BigDecimal("0.20"),
+                        "IN_TRANSIT", new BigDecimal("0.50")));
     }
 }

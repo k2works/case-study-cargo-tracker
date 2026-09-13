@@ -20,13 +20,17 @@ import java.util.Map;
  * @param cargoTypeFactors 貨物種別係数（GENERAL 1.0 / HAZARDOUS 1.8 / REFRIGERATED 1.5）
  * @param countryRegions 国コード → 地域区分。<b>表に無い国は遠洋</b>として数える
  * @param taxRate 消費税率（輸出免税の判定は {@code FreightChargeCalculator}）
+ * @param cancellationFeeRates 予約の状態 → キャンセル料の料率（US30）。<b>表に無い
+ *     状態は断る</b>。漏れは {@code RateTableParityTest} が {@code BookingStatus} の
+ *     列挙から回して見つける
  */
 public record RateTable(
         Money baseFare,
         Map<PortRegion, BigDecimal> regionFactors,
         Map<String, BigDecimal> cargoTypeFactors,
         Map<String, PortRegion> countryRegions,
-        BigDecimal taxRate) {
+        BigDecimal taxRate,
+        Map<String, BigDecimal> cancellationFeeRates) {
 
     public RateTable {
         if (baseFare == null) {
@@ -44,7 +48,29 @@ public record RateTable(
         }
         regionFactors = Map.copyOf(regionFactors);
         cargoTypeFactors = Map.copyOf(cargoTypeFactors);
+        if (cancellationFeeRates == null || cancellationFeeRates.isEmpty()) {
+            throw new BusinessRuleViolation(
+                    "キャンセル料の料率が設定されていません（cargo.rates.cancellation-fee-rates）");
+        }
         countryRegions = countryRegions == null ? Map.of() : Map.copyOf(countryRegions);
+        cancellationFeeRates = Map.copyOf(cancellationFeeRates);
+    }
+
+    /**
+     * 予約の状態に応じたキャンセル料の料率（US30・正典の料金計算）。
+     *
+     * <p><b>知らない状態は断る。</b> 黙って 0 円で通すと、取りこぼした請求は
+     * あとから取り返せない（貨物種別係数と同じ扱い）。状態を持っているのは
+     * 予約なので、ここでは名前（{@code CargoCancelledEvent.statusAtCancel}）で
+     * 引く——billingms は bookingms の型に依存できない。</p>
+     */
+    public BigDecimal cancellationFeeRate(String statusAtCancel) {
+        BigDecimal rate = cancellationFeeRates.get(statusAtCancel);
+        if (rate == null) {
+            throw new BusinessRuleViolation(
+                    "キャンセル料の料率表に無い予約状態です: " + statusAtCancel);
+        }
+        return rate;
     }
 
     public BigDecimal regionFactor(PortRegion region) {

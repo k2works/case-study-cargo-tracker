@@ -36,7 +36,8 @@ public class RateTableConfiguration {
                 countries.put(country, PortRegion.valueOf(region)));
 
         return new RateTable(Money.yen(properties.baseFare()), regions,
-                properties.cargoTypeFactors(), countries, properties.taxRate());
+                properties.cargoTypeFactors(), countries, properties.taxRate(),
+                properties.cancellationFeeRates());
     }
 
     /**
@@ -47,6 +48,7 @@ public class RateTableConfiguration {
      * @param cargoTypeFactors 貨物種別係数
      * @param countryRegions 国コード → 地域区分。表に無い国は遠洋
      * @param taxRate 消費税率
+     * @param cancellationFeeRates 予約の状態 → キャンセル料の料率（US30）
      */
     @ConfigurationProperties(prefix = "cargo.rates")
     public record RateProperties(
@@ -54,6 +56,7 @@ public class RateTableConfiguration {
             Map<String, BigDecimal> regionFactors,
             Map<String, BigDecimal> cargoTypeFactors,
             Map<String, String> countryRegions,
-            BigDecimal taxRate) {
+            BigDecimal taxRate,
+            Map<String, BigDecimal> cancellationFeeRates) {
     }
 }

@@ -79,10 +79,10 @@ class RateTableTest {
     @DisplayName("設定が欠けていれば起動時に分かる（請求のたびに落ちない）")
     void refusesIncompleteConfiguration() {
         assertThatThrownBy(() -> new RateTable(null, Map.of(), Map.of(), Map.of(),
-                new BigDecimal("0.10")))
+                new BigDecimal("0.10"), fees()))
                 .isInstanceOf(BusinessRuleViolation.class);
         assertThatThrownBy(() -> new RateTable(Money.yen(new BigDecimal("50000")),
-                Map.of(), Map.of(), Map.of(), new BigDecimal("0.10")))
+                Map.of(), Map.of(), Map.of(), new BigDecimal("0.10"), fees()))
                 .isInstanceOf(BusinessRuleViolation.class);
     }
 
@@ -94,20 +94,20 @@ class RateTableTest {
         Map<String, BigDecimal> cargoTypes = table().cargoTypeFactors();
 
         assertThatThrownBy(() -> new RateTable(fare, regions, Map.of(), Map.of(),
-                new BigDecimal("0.10")))
+                new BigDecimal("0.10"), fees()))
                 .as("貨物種別係数が空")
                 .isInstanceOf(BusinessRuleViolation.class);
         assertThatThrownBy(() -> new RateTable(fare, regions, null, Map.of(),
-                new BigDecimal("0.10")))
+                new BigDecimal("0.10"), fees()))
                 .isInstanceOf(BusinessRuleViolation.class);
         assertThatThrownBy(() -> new RateTable(fare, null, cargoTypes, Map.of(),
-                new BigDecimal("0.10")))
+                new BigDecimal("0.10"), fees()))
                 .isInstanceOf(BusinessRuleViolation.class);
-        assertThatThrownBy(() -> new RateTable(fare, regions, cargoTypes, Map.of(), null))
+        assertThatThrownBy(() -> new RateTable(fare, regions, cargoTypes, Map.of(), null, fees()))
                 .as("税率が無い")
                 .isInstanceOf(BusinessRuleViolation.class);
         assertThatThrownBy(() -> new RateTable(fare, regions, cargoTypes, Map.of(),
-                new BigDecimal("-0.1")))
+                new BigDecimal("-0.1"), fees()))
                 .as("税率が負")
                 .isInstanceOf(BusinessRuleViolation.class);
     }
@@ -117,7 +117,7 @@ class RateTableTest {
     void worksWithoutCountryRegions() {
         RateTable rates = new RateTable(Money.yen(new BigDecimal("50000")),
                 table().regionFactors(), table().cargoTypeFactors(), null,
-                new BigDecimal("0.10"));
+                new BigDecimal("0.10"), fees());
 
         assertThat(rates.regionOf(new UnLocode("JPTYO"))).isEqualTo(PortRegion.OCEAN);
     }
@@ -133,8 +133,39 @@ class RateTableTest {
         incomplete.put(PortRegion.OCEAN, null);
 
         assertThatThrownBy(() -> new RateTable(Money.yen(new BigDecimal("50000")), incomplete,
-                table().cargoTypeFactors(), Map.of(), new BigDecimal("0.10")))
+                table().cargoTypeFactors(), Map.of(), new BigDecimal("0.10"), fees()))
                 .as("null を含む Map.copyOf は弾かれる")
                 .isInstanceOf(NullPointerException.class);
+    }
+
+    /** キャンセル料の料率（正典と同じ値）。 */
+    private static Map<String, BigDecimal> fees() {
+        return RateTableFixture.canonical().cancellationFeeRates();
+    }
+
+    @Test
+    @DisplayName("キャンセル料の料率が無ければ組めない（US30・IT15）")
+    void refusesMissingCancellationFeeRates() {
+        // **黙って 0 円で通さない。** 取りこぼした請求はあとから取り返せない。
+        assertThatThrownBy(() -> new RateTable(Money.yen(new BigDecimal("50000")),
+                table().regionFactors(), table().cargoTypeFactors(), Map.of(),
+                new BigDecimal("0.10"), Map.of()))
+                .as("空")
+                .isInstanceOf(BusinessRuleViolation.class)
+                .hasMessageContaining("cancellation-fee-rates");
+        assertThatThrownBy(() -> new RateTable(Money.yen(new BigDecimal("50000")),
+                table().regionFactors(), table().cargoTypeFactors(), Map.of(),
+                new BigDecimal("0.10"), null))
+                .as("未設定")
+                .isInstanceOf(BusinessRuleViolation.class)
+                .hasMessageContaining("cancellation-fee-rates");
+    }
+
+    @Test
+    @DisplayName("料率表に無い予約状態は断る")
+    void refusesUnknownStatusAtLookup() {
+        assertThatThrownBy(() -> table().cancellationFeeRate("NO_SUCH_STATUS"))
+                .isInstanceOf(BusinessRuleViolation.class)
+                .hasMessageContaining("NO_SUCH_STATUS");
     }
 }
