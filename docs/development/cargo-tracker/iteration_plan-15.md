@@ -3,7 +3,7 @@ type: Plan
 title: "イテレーション 15 計画"
 tags: [plan]
 status: draft
-generated: { by: claude-code/claude-opus-5, at: 2026-09-13T11:24:18Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-13T12:38:34Z }
 ---
 
 # イテレーション 15 計画
@@ -74,7 +74,7 @@ S22（申請）・S23（承認）を先に置き、連鎖を後ろから埋め�
 | :--- | :--- | :--- |
 | N1 | **キャンセル料の「状態別料率」が正典に数字で無い** | domain-model L1195 は「輸送開始前は低率、輸送中は高率 + 陸揚げ実費」としか書いていない。**料率は `billing-rates.yml` に置く**（ADR-0016 決定 1。見積・請求と同じ出典）。数字を決めて domain-model と `billing-rates.yml` の両方に書く。**陸揚げ実費は自動では出せない**ので、経理が S61 の調整で入れる形にし、その旨をマニュアル 17 章に書く |
 | N2 | ~~**`cancellation_request` の DDL が bookingms に無い**~~ **解消**（2026-09-13・T3）。`V021__create_cancellation_request.sql` を作った。**承認待ちは `decision IS NULL` で表し、別の列を置かない**——同じ事実を 2 か所が持つと、片方だけ更新された行が生まれる |
-| N3 | **`CancellationFeeAppliedEvent` の受け皿が正典に無い** | `invoice_line_item` に `CANCELLATION` 行を積むのか、請求書が未作成なら何をするのかが書かれていない。**引取前のキャンセルには請求書がまだ無い**ので、`billing_cargo_snapshot` を元に算出する経路が要る。決めて data-model に書く |
+| N3 | ~~**`CancellationFeeAppliedEvent` の受け皿が正典に無い**~~ **決着**（2026-09-13・T8）。domain-model に「キャンセル料の受け皿」の表を書いた。**明細行として積む**（別の帳票を作らない）。料率 0% は何もしない／請求書が無ければキャンセル料だけの請求書を作る／写しが無ければ**経理宛の要確認**（黙って 0 円にしない） |
 | N4 | **S23 が `ui_design.md` にあるが画面一覧の実装が無い** | 画面一覧（L138）に行はあり、節（L1119）もある。**実装だけが無い**——IT14 で入れた「行があって節が無い画面を検出する検査」の逆向きなので、**実装の有無まで見る検査に広げる**か、本 IT で実装して解消する |
 | N7 | **列挙が 2 つ増える**（`CancellationDecision` の判断値と `TrackingCloseReason`）。**要素表に行を足す** | 列挙に値を足したら全箇所を回る（扱っていない場所は名乗り出ない）。`domain-model` の要素表に 2 表を足し、`it.each` で値の一覧から回る検査を置く |
 | N6 | **追跡を閉じた理由と日時の置き場が正典に無い** | 正典の `tracking_summary` は `closed: BOOLEAN` だけを持つ。`TrackingClosedEvent` は `closedAt` と `reason` を運ぶので、**S41 で「なぜ閉じたか」を出すなら列が要る**。出さないなら運ばせる意味が薄い。決めて data-model に書く（**記録と読み口は対で出す**） |

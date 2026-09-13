@@ -4,7 +4,7 @@ title: "ドメインモデル設計 - 国際貨物輸送管理システム（CQR
 description: "CQRS / Event Sourcing 版 Cargo Tracker のドメインモデル設計。6 コンテキストの集約・不変条件・コマンド・イベント（内部 / 契約）・状態遷移・Reaction Handler を、イベントを永続化フォーマットとして定義する。"
 tags: [design,domain-model,ddd,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-13T12:21:03Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-13T12:38:34Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -1232,7 +1232,20 @@ Booking の `Quotation` はこの式と同じ料率で概算を出します。�
 | `RecordPaymentCommand` | 経理担当者 | `PaymentRecordedEvent` | **○** | UC18 / US23 |
 | `VoidInvoiceCommand` | 経理担当者 | `InvoiceVoidedEvent` | — | UC18 |
 | `VoidPaymentCommand` | 経理担当者 | `PaymentVoidedEvent` | **○** | UC18 / US23（IT15 引き継ぎ 3） |
-| `ApplyCancellationFeeCommand` | Reaction Handler（`CargoCancelledEvent` 購読） | `CancellationFeeAppliedEvent` | — | UC22 |
+| `ApplyCancellationFeeCommand` | `BillingReactionHandler`（`CargoCancelledEvent` 購読） | `CancellationFeeAppliedEvent` | — | UC22 |
+
+### キャンセル料の受け皿（IT15 T8 で決めた。旧・注 N3）
+
+**キャンセル料は請求書の明細行（`CANCELLATION_FEE`）として積みます。** 別の帳票を作らないのは、荷主が受け取るものを増やさないためです。
+
+| 状況 | どうするか | なぜ |
+| :--- | :--- | :--- |
+| 料率が 0%（仮受付） | **何もしない** | 0 円の請求書は業務として存在しない。記録だけ作ると、経理が「確かめるもの」として毎朝読む |
+| 有効な請求書がある（引取後にキャンセルは起きないので、実際には稀） | その請求書に `CANCELLATION_FEE` 行を積む | 荷主が受け取る紙は 1 枚 |
+| 請求書がまだ無い（**通常の経路**） | **キャンセル料だけの請求書を新規に作る** | 輸送は行われていないので輸送料金は無い。請求するのはキャンセル料だけである |
+| `billing_cargo_snapshot` が無い | **経理宛の要確認に出す** | 基本料金が出せない。**黙って 0 円にしない**——取りこぼした請求はあとから取り返せない（US21 の「算出できなかったとき」と同じ扱い） |
+
+**輸送中の陸揚げ実費は自動では出せません**（港・船社・貨物で変わる）。経理が S61 の調整行で入れます（マニュアル 17 章）。
 
 ## Auth Context（支援）— authms
 
