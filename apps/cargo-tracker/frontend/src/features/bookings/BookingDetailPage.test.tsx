@@ -52,6 +52,30 @@ function booking(over: Record<string, unknown> = {}) {
   };
 }
 
+/**
+ * 予約詳細は読み口を複数引く。<b>URL で出し分ける。</b>
+ *
+ * <p>1 つの本体を全部の問い合わせに返すと、<b>本物が返さない形で検査が通る</b>
+ * ——キャンセル履歴に予約の本体が返り、画面が組み立てで落ちた（IT15 で実測）。
+ * <b>本体は読むたびに複製する</b>（Response は 1 度しか読めない）。</p>
+ */
+function mockFetch(response: Response) {
+  return vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+    const url = String(input);
+    // **本物と同じ形を返す。** 予約の本体を返すと、旅程は `legs` を、履歴は
+    // `items` を見つけられず、画面が組み立てで落ちる（IT15 で実測）。
+    if (url.includes('/itinerary')) {
+      return Promise.resolve(new Response(JSON.stringify({ legs: [] }), { status: 200 }));
+    }
+    if (url.includes('/cancellation') || url.includes('/revisions')
+        || url.includes('/notifications')) {
+      return Promise.resolve(new Response(JSON.stringify({ items: [] }), { status: 200 }));
+    }
+    // **読むたびに複製する。** Response の本体は 1 度しか読めない。
+    return Promise.resolve(response.clone());
+  });
+}
+
 function renderDetail() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -75,6 +99,11 @@ describe('S22 予約詳細', () => {
   it('US21: 経理はここから請求書へ直行できる（一覧を経由しない）', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
       const url = String(input);
+      if (url.includes('/cancellation')) {
+        // **本物と同じ形を返す。** 予約の本体を返すと `items` が無く、
+        // 画面が組み立てで落ちる——モックを本物より甘くしない。
+        return Promise.resolve(new Response(JSON.stringify({ items: [] }), { status: 200 }));
+      }
       if (url.includes('/billing/invoices/by-booking/')) {
         return Promise.resolve(new Response(JSON.stringify({
           invoiceId: 'INV-20260928-1a2b3c4d', statusLabel: '算出済',
@@ -97,6 +126,11 @@ describe('S22 予約詳細', () => {
   it('まだ算出されていない予約では、請求書のリンクを出さない', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
       const url = String(input);
+      if (url.includes('/cancellation')) {
+        // **本物と同じ形を返す。** 予約の本体を返すと `items` が無く、
+        // 画面が組み立てで落ちる——モックを本物より甘くしない。
+        return Promise.resolve(new Response(JSON.stringify({ items: [] }), { status: 200 }));
+      }
       if (url.includes('/billing/invoices/by-booking/')) {
         return Promise.resolve(new Response(JSON.stringify({ message: '無い' }),
           { status: 404 }));
@@ -114,7 +148,7 @@ describe('S22 予約詳細', () => {
   });
 
   it('経理以外に請求書への導線を出さない（開けない場所へ誘わない）', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    mockFetch(
       new Response(JSON.stringify(booking()), { status: 200 }),
     );
 
@@ -125,7 +159,7 @@ describe('S22 予約詳細', () => {
   });
 
   it('状態・輸送条件・貨物を利用者の言葉で出す', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    mockFetch(
       new Response(JSON.stringify(booking()), { status: 200 }),
     );
 
@@ -140,7 +174,7 @@ describe('S22 予約詳細', () => {
   });
 
   it('危険物と冷凍の付帯情報は、あるときだけ出す', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    mockFetch(
       new Response(
         JSON.stringify(booking({
           cargoType: 'HAZARDOUS',
@@ -159,7 +193,7 @@ describe('S22 予約詳細', () => {
   });
 
   it('温度条件を持つ予約では温度条件を出す', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    mockFetch(
       new Response(
         JSON.stringify(booking({
           cargoType: 'REFRIGERATED',
@@ -177,7 +211,7 @@ describe('S22 予約詳細', () => {
 
   it('寸法が無い予約では「—」を出す（空欄にしない）', async () => {
     // 空欄だと「入力し忘れ」と区別が付かない。
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    mockFetch(
       new Response(
         JSON.stringify(booking({ lengthCm: null, widthCm: null, heightCm: null })),
         { status: 200 },
@@ -191,7 +225,7 @@ describe('S22 予約詳細', () => {
   });
 
   it('鍵を破棄した荷主は「（削除済み）」と出す', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    mockFetch(
       new Response(JSON.stringify(booking({ shipperName: null })), { status: 200 }),
     );
 
@@ -202,7 +236,7 @@ describe('S22 予約詳細', () => {
 
   it('投影がまだなら「反映中」を出す（失敗にしない）', async () => {
     // 404 にすると「登録に失敗した」と読めてしまう。
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    mockFetch(
       new Response(JSON.stringify({ bookingId: 'b-1', message: '反映までしばらくお待ちください' }), {
         status: 202,
       }),
@@ -214,7 +248,7 @@ describe('S22 予約詳細', () => {
   });
 
   it('取得に失敗したら理由を出す', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    mockFetch(
       new Response(JSON.stringify({ code: 'E', message: 'x' }), { status: 500 }),
     );
 
@@ -229,7 +263,7 @@ describe('S22 予約詳細', () => {
     useAuthStore.setState({
       user: { username: 'routing01', roles: ['ROLE_ROUTING'], token: 't' },
     });
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    mockFetch(
       new Response(JSON.stringify(booking()), { status: 200 }),
     );
 
@@ -243,19 +277,24 @@ describe('S22 予約詳細', () => {
 
   it('押すと状態が「経路提案中」に変わる（US06 の成功経路）', async () => {
     // 成功経路をクラスタ E2E だけに頼らない。クラスタが無い回でも守られる形にする。
-    const fetchSpy = vi.spyOn(globalThis, 'fetch');
-    fetchSpy.mockResolvedValueOnce(
-      new Response(JSON.stringify(booking()), { status: 200 }),
-    );
-    fetchSpy.mockResolvedValueOnce(
-      new Response(JSON.stringify({ bookingId: 'b-1' }), { status: 202 }),
-    );
-    fetchSpy.mockResolvedValue(
-      new Response(
-        JSON.stringify(booking({ bookingStatus: 'ROUTE_PROPOSED' })),
-        { status: 200 },
-      ),
-    );
+    // **呼ばれた順ではなく URL で出し分ける。** 順番に積むと、画面が読み口を
+    // 1 つ増やしただけで並びがずれる（IT15 で実測）——検査が壊れた理由が
+    // 「実装が壊れた」に見える。
+    let requested = false;
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      const url = String(input);
+      if (url.includes('/cancellation')) {
+        return Promise.resolve(new Response(JSON.stringify({ items: [] }), { status: 200 }));
+      }
+      if (url.includes('/routing-request')) {
+        requested = true;
+        return Promise.resolve(
+          new Response(JSON.stringify({ bookingId: 'b-1' }), { status: 202 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify(
+          requested ? booking({ bookingStatus: 'ROUTE_PROPOSED' }) : booking()),
+          { status: 200 }));
+    });
 
     renderDetail();
     (await screen.findByRole('button', { name: '経路設計を依頼する' })).click();
@@ -264,7 +303,7 @@ describe('S22 予約詳細', () => {
   });
 
   it('仮受付の予約には「経路設計を依頼する」が出る（US06）', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    mockFetch(
       new Response(JSON.stringify(booking()), { status: 200 }),
     );
 
@@ -278,7 +317,7 @@ describe('S22 予約詳細', () => {
   it('精算済の予約には「経路設計を依頼する」が出ない（デモ項目 6）', async () => {
     // 出し分けは集約と同じ遷移表の述語を通す。ここで status を直に見ると、
     // 遷移表が変わったときに画面だけが古い判断のまま残る。
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    mockFetch(
       new Response(JSON.stringify(booking({ bookingStatus: 'SETTLED' })), { status: 200 }),
     );
 
@@ -309,7 +348,9 @@ describe('S22 予約詳細', () => {
 
 describe('S22 から S24 への導線（US32）', () => {
   it('仮受付の予約は営業が修正できる', async () => {
-    vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) =>
+      String(input).includes('/cancellation')
+        ? Promise.resolve(new Response(JSON.stringify({ items: [] }), { status: 200 })) :
       Promise.resolve(new Response(JSON.stringify(booking()), { status: 200 })),
     );
 
@@ -323,7 +364,9 @@ describe('S22 から S24 への導線（US32）', () => {
 
   it('経路提案中の予約には修正の導線を出さない', async () => {
     // 集約が断る（US32 §受入基準 1）。出しておくと、押してから 409 で気づく。
-    vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) =>
+      String(input).includes('/cancellation')
+        ? Promise.resolve(new Response(JSON.stringify({ items: [] }), { status: 200 })) :
       Promise.resolve(
         new Response(JSON.stringify(booking({ bookingStatus: 'ROUTE_PROPOSED' })), {
           status: 200,
@@ -341,7 +384,9 @@ describe('S22 から S24 への導線（US32）', () => {
     useAuthStore.setState({
       user: { username: 'routing01', roles: ['ROLE_ROUTING'], token: 't' },
     });
-    vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) =>
+      String(input).includes('/cancellation')
+        ? Promise.resolve(new Response(JSON.stringify({ items: [] }), { status: 200 })) :
       Promise.resolve(new Response(JSON.stringify(booking()), { status: 200 })),
     );
 
@@ -352,7 +397,9 @@ describe('S22 から S24 への導線（US32）', () => {
   });
 
   it('修正した予約は「いつ・誰が」が読める', async () => {
-    vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) =>
+      String(input).includes('/cancellation')
+        ? Promise.resolve(new Response(JSON.stringify({ items: [] }), { status: 200 })) :
       Promise.resolve(
         new Response(
           JSON.stringify(booking({ updatedAt: '2026-09-05T02:00:00Z', updatedBy: 'sales02' })),
@@ -367,7 +414,9 @@ describe('S22 から S24 への導線（US32）', () => {
   });
 
   it('一度も修正していない予約に最終更新は出さない', async () => {
-    vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) =>
+      String(input).includes('/cancellation')
+        ? Promise.resolve(new Response(JSON.stringify({ items: [] }), { status: 200 })) :
       Promise.resolve(new Response(JSON.stringify(booking()), { status: 200 })),
     );
 
@@ -382,6 +431,11 @@ describe('S22 修正履歴（US32 §受入基準 4）', () => {
   function mockBookingAnd(revisions: unknown[]) {
     vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
       const url = String(input);
+      if (url.includes('/cancellation')) {
+        // **本物と同じ形を返す。** 予約の本体を返すと `items` が無く、
+        // 画面が組み立てで落ちる——モックを本物より甘くしない。
+        return Promise.resolve(new Response(JSON.stringify({ items: [] }), { status: 200 }));
+      }
       if (url.includes('/revisions')) {
         return Promise.resolve(new Response(JSON.stringify({ items: revisions }), { status: 200 }));
       }
@@ -452,7 +506,7 @@ describe('S22 修正履歴（US32 §受入基準 4）', () => {
   });
 
   it('R.2: 一度も直していなければ修正履歴を出さない', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    mockFetch(
       new Response(JSON.stringify(booking()), { status: 200 }),
     );
 
@@ -467,6 +521,11 @@ describe('S22 旅程（US09）', () => {
   it('経路が決まっていれば区間が積む順に読める', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
       const url = String(input);
+      if (url.includes('/cancellation')) {
+        // **本物と同じ形を返す。** 予約の本体を返すと `items` が無く、
+        // 画面が組み立てで落ちる——モックを本物より甘くしない。
+        return Promise.resolve(new Response(JSON.stringify({ items: [] }), { status: 200 }));
+      }
       if (url.includes('/itinerary')) {
         return Promise.resolve(
           new Response(
@@ -510,7 +569,7 @@ describe('S22 旅程（US09）', () => {
   it('経路設定状態が予約の状態とは別に読める', async () => {
     // 予約の状態は「仮受付」のままでも、経路は先に決まる。片方だけ出すと
     // 予約詳細から経路の進み具合が読めない。
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    mockFetch(
       new Response(
         JSON.stringify(booking({ bookingStatus: 'PRELIMINARY', routingStatus: 'ROUTED' })),
         { status: 200 },
@@ -526,7 +585,7 @@ describe('S22 旅程（US09）', () => {
   });
 
   it('経路が決まっていなければ旅程を出さない', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    mockFetch(
       new Response(JSON.stringify(booking()), { status: 200 }),
     );
 
@@ -542,6 +601,11 @@ describe('S22 荷主への通知（US12）', () => {
   function mockApi(over: Record<string, unknown>, notifications: unknown[] = []) {
     return vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
       const url = String(input);
+      if (url.includes('/cancellation')) {
+        // **本物と同じ形を返す。** 予約の本体を返すと `items` が無く、
+        // 画面が組み立てで落ちる——モックを本物より甘くしない。
+        return Promise.resolve(new Response(JSON.stringify({ items: [] }), { status: 200 }));
+      }
       if (url.includes('/notifications') && (init as RequestInit)?.method !== 'POST') {
         return Promise.resolve(
           new Response(JSON.stringify({ items: notifications }), { status: 200 }),
@@ -603,6 +667,11 @@ describe('S22 荷主への通知（US12）', () => {
     // `[first.load, last.unload]` に縮めても緑になる（IT6 レビュー 低）。
     vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
       const url = String(input);
+      if (url.includes('/cancellation')) {
+        // **本物と同じ形を返す。** 予約の本体を返すと `items` が無く、
+        // 画面が組み立てで落ちる——モックを本物より甘くしない。
+        return Promise.resolve(new Response(JSON.stringify({ items: [] }), { status: 200 }));
+      }
       if (url.includes('/notifications') && (init as RequestInit)?.method !== 'POST') {
         return Promise.resolve(new Response(JSON.stringify({ items: [] }), { status: 200 }));
       }
@@ -897,6 +966,11 @@ describe('S22 旅程は設計し直しでも残る（US10・US12）', () => {
   function mockReopened(over: Record<string, unknown>) {
     return vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
       const url = String(input);
+      if (url.includes('/cancellation')) {
+        // **本物と同じ形を返す。** 予約の本体を返すと `items` が無く、
+        // 画面が組み立てで落ちる——モックを本物より甘くしない。
+        return Promise.resolve(new Response(JSON.stringify({ items: [] }), { status: 200 }));
+      }
       if (url.includes('/itinerary')) {
         return Promise.resolve(
           new Response(
@@ -950,7 +1024,7 @@ describe('S22 旅程は設計し直しでも残る（US10・US12）', () => {
 });
 
 function respond(body: unknown) {
-  return vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+  return mockFetch(
     new Response(JSON.stringify(body), { status: 200 }),
   );
 }

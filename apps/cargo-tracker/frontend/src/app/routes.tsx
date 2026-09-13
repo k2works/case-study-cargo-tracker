@@ -19,6 +19,7 @@ import { InvoiceDetailPage } from '@/features/billing/InvoiceDetailPage';
 import { CustomsListPage } from '@/features/customs/CustomsListPage';
 import { CustomsRegisterPage } from '@/features/customs/CustomsRegisterPage';
 import { CustomsDetailPage } from '@/features/customs/CustomsDetailPage';
+import { CancellationWorklistPage } from '@/features/bookings/CancellationWorklistPage';
 import { AdminUserListPage } from '@/features/admin/AdminUserListPage';
 import { DeadLetterListPage } from '@/features/admin/DeadLetterListPage';
 import { BookingListPage } from '@/features/bookings/BookingListPage';
@@ -64,6 +65,7 @@ export const PAGES: Record<string, ReactElement> = {
   '/customs': <CustomsListPage />,
   '/invoices': <InvoiceListPage />,
   '/worklist/attention': <AttentionListPage />,
+  '/bookings/cancellations': <CancellationWorklistPage />,
   '/admin/users': <AdminUserListPage />,
   '/admin/dead-letters': <DeadLetterListPage />,
 };

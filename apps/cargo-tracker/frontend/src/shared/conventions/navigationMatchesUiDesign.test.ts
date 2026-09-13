@@ -81,6 +81,7 @@ const SCREEN_OF_PATH: Record<string, string> = {
   '/handling': 'S51',
   '/customs': 'S52',
   '/invoices': 'S60',
+  '/bookings/cancellations': 'S23',
   '/worklist/attention': 'S70',
   '/admin/users': 'S90',
   '/admin/dead-letters': 'S91',

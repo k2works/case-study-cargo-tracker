@@ -20,6 +20,7 @@ import {
 import { ApiError } from '@/shared/api/client';
 import { fetchInvoiceOfBooking } from '@/features/billing/api';
 import { useAuthStore } from '@/shared/auth/authStore';
+import { BookingCancellationPanel } from './BookingCancellationPanel';
 import {
   canIssueTrackingNumber,
   canNotifyShipper,
@@ -447,6 +448,15 @@ export function BookingDetailPage() {
             <ConfirmPanel pending={confirm.isPending} error={confirm.error}
               onConfirm={() => confirm.mutate()} />
           )}
+
+          {/* キャンセル（US30）。**申請は営業、判断は追跡管理者**だが、履歴は
+              両方が読む——「いま何が起きているか」を片方しか読めないと、話が
+              噛み合わない。 */}
+          <BookingCancellationPanel
+            bookingId={bookingId}
+            bookingStatus={data.value.bookingStatus}
+            canRequest={isSales}
+          />
 
           {/* 追跡番号（US14）。**発行は経路設計者の操作**で、営業には出さない。
               発行済みなら「状態」の欄に番号が出る（二重に発行しない）。 */}

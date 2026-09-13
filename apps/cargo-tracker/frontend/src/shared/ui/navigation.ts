@@ -37,6 +37,9 @@ export const NAVIGATION: readonly NavigationItem[] = [
   // 上位者へ知らせた記録が残るが、その記録を読む場所が無ければ「知らせた」
   // ことにならない。この一覧が緊急を先頭に出す。
   { path: '/tracking/exceptions', label: '例外', allow: ['ROLE_TRACKER', 'ROLE_ADMIN'] },
+  // 輸送中のキャンセルを承認する（S23 / US30）。**陸揚げ地を決められるのは
+  // 追跡管理者だけ**で、営業には打つ手が無い。
+  { path: '/bookings/cancellations', label: 'キャンセル承認', allow: ['ROLE_TRACKER'] },
   // 荷役（S51）は荷役と追跡の両方（ui_design.md:236）。追跡管理者は
   // 問い合わせを受けたときに現場の記録を確かめる。
   { path: '/handling', label: '荷役', allow: ['ROLE_HANDLER', 'ROLE_TRACKER'] },

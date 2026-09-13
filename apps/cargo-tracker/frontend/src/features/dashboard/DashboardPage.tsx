@@ -15,6 +15,7 @@ import { fetchVoyagePorts } from '@/features/handling/api';
 import { fetchOpenExceptions, fetchRecentlyChanged } from '@/features/tracking/api';
 import { fetchOverdueCustomsHolds } from '@/features/customs/api';
 import { fetchAttentionItems } from '@/features/attention/api';
+import { fetchPendingCancellations } from '@/features/bookings/cancellationApi';
 
 /** S02 ダッシュボード。「今日の作業」からその日の入口へ行けるようにする。 */
 export function DashboardPage() {
@@ -70,6 +71,15 @@ export function DashboardPage() {
     queryKey: ['attention-items-count'],
     queryFn: fetchAttentionItems,
     enabled: !isShipper,
+  });
+
+  // **承認待ちのキャンセルは追跡管理者の仕事**（US30 §受入基準 4）。
+  // 件数だけでは進まないので一覧へ繋ぐ——陸揚げ地を決められるのはこの人だけで、
+  // 気づく手段はその人が次に取れる行動へ繋がらなければ意味がない。
+  const { data: pendingCancellations } = useQuery({
+    queryKey: ['pending-cancellations-count'],
+    queryFn: fetchPendingCancellations,
+    enabled: isTracker,
   });
 
   // **未払いは督促の起点**（US23 §受入基準 5）。期限を過ぎたものは放っておくと
@@ -338,6 +348,19 @@ export function DashboardPage() {
             要確認一覧
           </Link>
           {' '}で確かめてください。
+        </output>
+      )}
+
+      {/* **承認待ちのキャンセルは追跡管理者の仕事**（US30 §受入基準 4）。
+          件数から一覧へ辿れる形にする。 */}
+      {isTracker && pendingCancellations?.state === 'ready'
+        && pendingCancellations.value.items.length > 0 && (
+        <output className={`${NOTICE} mt-4 block`}>
+          承認待ちのキャンセル申請が {pendingCancellations.value.items.length} 件あります。{' '}
+          <Link to="/bookings/cancellations" className={LINK}>
+            キャンセル承認
+          </Link>
+          {' '}で判断してください。
         </output>
       )}
 
