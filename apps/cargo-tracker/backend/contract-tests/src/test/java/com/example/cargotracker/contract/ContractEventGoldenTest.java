@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.cargotracker.shared.contract.event.CargoDeliveredEvent;
 import com.example.cargotracker.shared.contract.event.CargoQuotedEvent;
+import com.example.cargotracker.shared.contract.event.CargoCancelledEvent;
 import com.example.cargotracker.shared.contract.event.PaymentRecordedEvent;
 import com.example.cargotracker.shared.contract.event.PaymentVoidedEvent;
 import com.example.cargotracker.shared.contract.event.CargoDeliveryRevertedEvent;
@@ -104,6 +105,11 @@ class ContractEventGoldenTest {
                 new PaymentVoidedEvent("INV-20260928-1a2b3c4d", "PAY-20261005-9f8e7d6c",
                         "b-1", "他社の入金と取り違えました", "accountant01",
                         Instant.parse("2026-10-06T01:00:00Z")),
+                // キャンセル（US30・IT15）。bookingms → trackingms・handlingms・billingms。
+                // **陸揚げ地は輸送中の承認でだけ入る**（輸送開始前は船に載っていない）。
+                new CargoCancelledEvent("b-1", "TRK-8K2QX7M4RB", "IN_TRANSIT", "SGSIN",
+                        "荷主の発注取消", "tracker01",
+                        Instant.parse("2026-09-25T02:00:00Z")),
                 // 見積からの予約（US01・IT14）。bookingms → billingms。
                 new CargoQuotedEvent("b-1", "Q-0123456789abcdef0123456789abcd",
                         new BigDecimal("510000"), "JPY",

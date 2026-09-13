@@ -4,7 +4,7 @@ title: "ドメインモデル設計 - 国際貨物輸送管理システム（CQR
 description: "CQRS / Event Sourcing 版 Cargo Tracker のドメインモデル設計。6 コンテキストの集約・不変条件・コマンド・イベント（内部 / 契約）・状態遷移・Reaction Handler を、イベントを永続化フォーマットとして定義する。"
 tags: [design,domain-model,ddd,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-13T05:10:53Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-13T06:02:22Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -110,7 +110,7 @@ quadrantChart
 | 貨物スナップショット | Cargo Snapshot | `CargoSnapshot` | Handling が Booking のイベントから写し取った貨物の最小情報（ACL） |
 | 請求書 | Invoice | `Invoice` | 輸送料金の請求書。集約ルート |
 | 金額 | Money | `Money` | 通貨と数量を伴う金額。丸めは `Money` の中 1 か所 |
-| キャンセル申請 | Cancellation Request | `CancellationRequest` | 輸送中の予約に対するキャンセルの申請・承認・却下の記録 |
+| キャンセル申請 | Cancellation Request | `CancellationRequest` | 輸送中の予約に対するキャンセルの申請・承認・却下の記録。**`Cargo` の中のエンティティ**（IT15 で決めた。注 N5）——予約の状態と一緒に決まるので、別の集約にすると「輸送中か」を投影に尋ねることになり、投影が追いついていないあいだは申請できない／二重に申請できるの両方が起きる。`cancellation_request` はその投影 |
 | 契約イベント | Contract Event | `shared/contract/event` | 他サービスが購読するイベント。`shared` に置く |
 
 ### 状態の一覧
@@ -582,7 +582,7 @@ CANCELLED --> [*]
 | 7 | `CONFIRMED` 以降は経路設計へ戻せない | `returnToRouting` |
 | 8 | 追跡番号は `CONFIRMED` の予約にだけ発行し、二重に発行しない | `issueTrackingNumber` |
 | 9 | `IN_TRANSIT` のキャンセルは申請 → 承認（陸揚げ地必須）の 2 段階。`DELIVERED` 以降はキャンセル不可 | `requestCancellation` / `approveCancellation` |
-| 9-2 | `CancellationDecision.dischargeLocation` は**現在地（`lastHandling.location`）または旅程の残りの寄港地のいずれか**。旅程に無い港や通過済みの港は指定できない | `CancellationDecision.approve` |
+| 9-2 | `CancellationDecision.dischargeLocation` は**現在地（`lastHandling.location`）または旅程の残りの寄港地のいずれか**。旅程に無い港や通過済みの港は指定できない。**「通過済み」は荷降しの済んだ港だけ**——積み港に居ることは、その区間を通ったことではない（東京で受領した貨物にとって東京 → シンガポールはまだ先。積み港も通過済みと数えると次の寄港地が候補から消える。IT15 で実測） | `CancellationDecision.approve` |
 | 10 | 未決着の `CancellationRequest` は高々 1 件 | `requestCancellation` |
 | 11 | `CANCELLED` の集約は以降のコマンドを拒否する | 全ハンドラ |
 | 11-2 | 貨物仕様・経路仕様を修正できるのは `PRELIMINARY` の予約だけ。修正時も登録時と同じ検査を通す（危険物なら申告、冷凍・冷蔵なら温度管理条件が必須） | `updateSpecification` |

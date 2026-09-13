@@ -16,6 +16,14 @@ import com.example.cargotracker.booking.domain.model.commands.RevertHandlingComm
 import com.example.cargotracker.booking.domain.model.commands.RevertTrackingNumberCommand;
 import com.example.cargotracker.booking.domain.model.commands.LinkQuotationCommand;
 import com.example.cargotracker.booking.domain.model.commands.RevertSettlementCommand;
+import com.example.cargotracker.booking.domain.model.commands.ApproveCancellationCommand;
+import com.example.cargotracker.booking.domain.model.commands.RejectCancellationCommand;
+import com.example.cargotracker.booking.domain.model.commands.RequestCancellationCommand;
+import com.example.cargotracker.booking.domain.model.events.CancellationApprovedEvent;
+import com.example.cargotracker.booking.domain.model.events.CancellationRejectedEvent;
+import com.example.cargotracker.booking.domain.model.events.CancellationRequestedEvent;
+import com.example.cargotracker.booking.domain.model.valueobjects.CancellationDecision;
+import com.example.cargotracker.shared.contract.event.CargoCancelledEvent;
 import com.example.cargotracker.booking.domain.model.commands.SettleBookingCommand;
 import com.example.cargotracker.booking.domain.model.commands.UpdateCargoSpecificationCommand;
 import com.example.cargotracker.booking.domain.model.events.BookingConfirmedEvent;
@@ -113,6 +121,31 @@ public class Cargo {
     private boolean awaitingConditionReviewResponse;
     /** 確定した旅程。<b>発行のイベントに載せる</b>（IT9 の荷役が材料にする）。 */
     private List<CargoRoutedEvent.Leg> legs = List.of();
+
+    /**
+     * 現在地（最後の荷役の港）。<b>陸揚げ地の候補を決めるのに要る</b>（不変条件 9-2）。
+     *
+     * <p>まだ荷役が無ければ {@code null}。船に載っていないので、降ろす港も無い。</p>
+     */
+    private String lastHandlingUnLocode;
+
+    /**
+     * 未決着のキャンセル申請（不変条件 10）。<b>高々 1 件</b>。
+     *
+     * <p><b>集約が持つ。</b> 投影に尋ねると、投影が追いついていないあいだは
+     * 申請できない／二重に申請できるの両方が起こる（調整の取り消しと同じ形）。</p>
+     */
+    private CancellationRequest pendingCancellation;
+
+    /**
+     * キャンセル申請（{@code Cargo} の中のエンティティ。注 N5）。
+     *
+     * <p>用語表はエンティティとして挙げ、コマンド表は {@code Cargo} のコマンドとして
+     * 並べている。<b>集約の中に置く</b>——予約の状態と一緒に決まるものなので、
+     * 別の集約にすると「輸送中か」を投影に尋ねることになる。</p>
+     */
+    private record CancellationRequest(String requestId, String reason, String requestedBy) {
+    }
 
     @EntityCreator
     public Cargo() {
@@ -745,6 +778,167 @@ public class Cargo {
     }
 
     /**
+     * キャンセルを申し出る（UC22 / US30 §受入基準 1・2・3）。
+     *
+     * <p><b>入口は 1 つで、どちらになるかは状態が決める。</b> 輸送開始前
+     * （{@code cancellableImmediately}）は即座にキャンセル、輸送中は申請になる。
+     * 画面が出し分けると、同じ判断が 2 か所に住み、片方だけが正しいまま残る。</p>
+     *
+     * <p><b>理由は必須</b>（§受入基準 3）。あとから「なぜ止めたか」を読む人がいる。</p>
+     *
+     * <p><b>未決着の申請があるあいだは受け付けない</b>（不変条件 10）。2 件あると、
+     * 追跡管理者はどちらに答えればよいのか決められない。</p>
+     */
+    @CommandHandler
+    public void requestCancellation(RequestCancellationCommand command,
+            EventAppender appender, Clock clock) {
+        if (bookingId == null) {
+            throw new IllegalTransition("予約 " + command.bookingId() + " がありません");
+        }
+        if (command.reason() == null || command.reason().isBlank()) {
+            // 理由が無いと、あとから「なぜ止めたか」を誰も確かめられない。
+            throw new BusinessRuleViolation("キャンセルの理由は必須です");
+        }
+        String reason = command.reason().trim();
+        if (pendingCancellation != null) {
+            throw new IllegalTransition(
+                    "この予約には承認待ちのキャンセル申請があります");
+        }
+        if (bookingStatus.cancellableImmediately()) {
+            appender.append(new CargoCancelledEvent(bookingId, trackingNumber,
+                    bookingStatus.name(), null, reason, command.requestedBy(),
+                    clock.instant()));
+            return;
+        }
+        if (!bookingStatus.canTransitionTo(BookingStatus.CANCELLED)) {
+            throw new IllegalTransition(
+                    "状態 " + bookingStatus.label() + " の予約はキャンセルできません");
+        }
+        // 輸送中。**状態は動かさない**——申請は「止めたい」という意思表示で、
+        // 止まったことではない。動かすと、承認前の貨物がキャンセル済として扱われる。
+        appender.append(new CancellationRequestedEvent(bookingId, command.requestId(),
+                reason, command.requestedBy(), clock.instant()));
+    }
+
+    /**
+     * キャンセル申請を承認する（UC22 / US30 §受入基準 5・6 / 不変条件 9・9-2）。
+     *
+     * <p><b>承認とは「どこで降ろすか」を決めること</b>である。決めずに承認しても、
+     * 貨物は船の上に残る。指定できるのは<b>現在地または残りの寄港地</b>で、
+     * 判定は {@link CancellationDecision} が持つ（画面の選択肢も同じ述語から作る）。</p>
+     *
+     * <p><b>判断とキャンセルを対で出す。</b> 予約がキャンセルになったことは契約
+     * イベントが伝えるが、<b>誰が・いつ・どこで降ろすと決めたか</b>は申請の履歴が
+     * 読む——記録と読み口は対で出す。</p>
+     */
+    @CommandHandler
+    public void approveCancellation(ApproveCancellationCommand command,
+            EventAppender appender, Clock clock) {
+        CancellationRequest request = pendingOrRefuse(command.bookingId());
+        var decision = CancellationDecision.approve(
+                Location.of(command.dischargeUnLocode()), currentLocation(), remainingPorts(),
+                command.reason(), command.approvedBy(), clock.instant());
+
+        appender.append(new CancellationApprovedEvent(bookingId, request.requestId(),
+                decision.dischargeLocation().unLocode().value(), decision.reason(),
+                decision.decidedBy(), decision.decidedAt()));
+        appender.append(new CargoCancelledEvent(bookingId, trackingNumber,
+                bookingStatus.name(), decision.dischargeLocation().unLocode().value(),
+                request.reason(), decision.decidedBy(), decision.decidedAt()));
+    }
+
+    /**
+     * キャンセル申請を却下する（UC22 / US30 §受入基準 7）。
+     *
+     * <p><b>予約の状態は動かさない。</b> 却下は「このまま運ぶ」という判断である。
+     * 申請は決着するので承認待ちから消える——残すと、追跡管理者が毎朝同じ申請を
+     * 読み直すことになる。</p>
+     */
+    @CommandHandler
+    public void rejectCancellation(RejectCancellationCommand command,
+            EventAppender appender, Clock clock) {
+        CancellationRequest request = pendingOrRefuse(command.bookingId());
+        var decision = CancellationDecision.reject(command.reason(), command.rejectedBy(),
+                clock.instant());
+
+        appender.append(new CancellationRejectedEvent(bookingId, request.requestId(),
+                decision.reason(), decision.decidedBy(), decision.decidedAt()));
+    }
+
+    private CancellationRequest pendingOrRefuse(String commandBookingId) {
+        if (bookingId == null) {
+            throw new IllegalTransition("予約 " + commandBookingId + " がありません");
+        }
+        if (pendingCancellation == null) {
+            // 判断する相手がいない。押せるのに断られる操作を画面に並べないための
+            // 述語（`hasPendingCancellation`）と、同じ判断をここでも守る。
+            throw new IllegalTransition("この予約に承認待ちのキャンセル申請はありません");
+        }
+        return pendingCancellation;
+    }
+
+    /** 現在地（最後の荷役の港）。まだ荷役が無ければ {@code null}。 */
+    private Location currentLocation() {
+        return lastHandlingUnLocode == null ? null : Location.of(lastHandlingUnLocode);
+    }
+
+    /**
+     * 残りの寄港地（不変条件 9-2）。
+     *
+     * <p><b>現在地より後の荷降し港。</b> 通過済みの港は入らない——船はもう戻らない。
+     * 現在地が旅程に無い（誤配）ときは、<b>全部の荷降し港を候補にする</b>：
+     * どこまで進んだか分からない状態で候補を狭めると、実際に降ろせる港まで
+     * 消えてしまう。</p>
+     */
+    private List<Location> remainingPorts() {
+        // **積み港で判定しない。** そこに居るということは、その区間はこれから
+        // 通るということである（東京で受領した貨物にとって、東京 → シンガポールは
+        // まだ先）。積み港も通過済みと数えると、**次の寄港地が候補から消える**。
+        int passed = -1;
+        for (int i = 0; i < legs.size(); i++) {
+            if (legs.get(i).unloadUnLocode().equals(lastHandlingUnLocode)) {
+                passed = i;
+            }
+        }
+        return legs.stream().skip(passed + 1L)
+                .map(leg -> Location.of(leg.unloadUnLocode()))
+                .toList();
+    }
+
+    /**
+     * 承認待ちのキャンセル申請があるか（画面のボタンの出し分け）。
+     *
+     * <p><b>画面はこの述語を呼ぶ。</b> 投影の列で判断すると、同じ判断が 2 か所に住む。</p>
+     */
+    public boolean hasPendingCancellation() {
+        return pendingCancellation != null;
+    }
+
+    @EventSourcingHandler
+    void on(CancellationRequestedEvent event) {
+        this.pendingCancellation = new CancellationRequest(event.requestId(),
+                event.reason(), event.requestedBy());
+    }
+
+    @EventSourcingHandler
+    void on(CancellationRejectedEvent event) {
+        // 決着したので承認待ちから外れる。もう一度申請できる。
+        this.pendingCancellation = null;
+    }
+
+    @EventSourcingHandler
+    void on(CancellationApprovedEvent event) {
+        this.pendingCancellation = null;
+    }
+
+    @EventSourcingHandler
+    void on(CargoCancelledEvent event) {
+        // キャンセルは終端。ここから進む先は無い（BookingStatus の遷移表）。
+        this.bookingStatus = BookingStatus.CANCELLED;
+        this.pendingCancellation = null;
+    }
+
+    /**
      * 入金の記録が取り消された（UC18 / US23。IT15 引き継ぎ 3）。
      *
      * <p><b>契約 {@code PaymentVoidedEvent} を受けて {@code BookingReactionHandler}
@@ -830,6 +1024,8 @@ public class Cargo {
     @EventSourcingHandler
     void on(HandlingRecordedEvent event) {
         this.recordedActivities.add(event.activityId());
+        // **現在地を覚える**（不変条件 9-2 の陸揚げ地の候補に要る）。
+        this.lastHandlingUnLocode = event.unLocode();
         // 最初の受領で輸送中になる。以降は動かさない。
         if (bookingStatus == BookingStatus.TRACKING_ISSUED) {
             this.bookingStatus = BookingStatus.IN_TRANSIT;
