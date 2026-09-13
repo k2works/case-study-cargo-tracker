@@ -23,6 +23,7 @@ import com.example.cargotracker.booking.domain.model.events.CancellationApproved
 import com.example.cargotracker.booking.domain.model.events.CancellationRejectedEvent;
 import com.example.cargotracker.booking.domain.model.events.CancellationRequestedEvent;
 import com.example.cargotracker.booking.domain.model.valueobjects.CancellationDecision;
+import com.example.cargotracker.booking.domain.service.DischargeCandidates;
 import com.example.cargotracker.shared.contract.event.CargoCancelledEvent;
 import com.example.cargotracker.booking.domain.model.commands.SettleBookingCommand;
 import com.example.cargotracker.booking.domain.model.commands.UpdateCargoSpecificationCommand;
@@ -836,7 +837,7 @@ public class Cargo {
             EventAppender appender, Clock clock) {
         CancellationRequest request = pendingOrRefuse(command.bookingId());
         var decision = CancellationDecision.approve(
-                Location.of(command.dischargeUnLocode()), currentLocation(), remainingPorts(),
+                Location.of(command.dischargeUnLocode()), dischargeCandidates(),
                 command.reason(), command.approvedBy(), clock.instant());
 
         appender.append(new CancellationApprovedEvent(bookingId, request.requestId(),
@@ -877,11 +878,6 @@ public class Cargo {
         return pendingCancellation;
     }
 
-    /** 現在地（最後の荷役の港）。まだ荷役が無ければ {@code null}。 */
-    private Location currentLocation() {
-        return lastHandlingUnLocode == null ? null : Location.of(lastHandlingUnLocode);
-    }
-
     /**
      * 残りの寄港地（不変条件 9-2）。
      *
@@ -890,19 +886,13 @@ public class Cargo {
      * どこまで進んだか分からない状態で候補を狭めると、実際に降ろせる港まで
      * 消えてしまう。</p>
      */
-    private List<Location> remainingPorts() {
-        // **積み港で判定しない。** そこに居るということは、その区間はこれから
-        // 通るということである（東京で受領した貨物にとって、東京 → シンガポールは
-        // まだ先）。積み港も通過済みと数えると、**次の寄港地が候補から消える**。
-        int passed = -1;
-        for (int i = 0; i < legs.size(); i++) {
-            if (legs.get(i).unloadUnLocode().equals(lastHandlingUnLocode)) {
-                passed = i;
-            }
-        }
-        return legs.stream().skip(passed + 1L)
-                .map(leg -> Location.of(leg.unloadUnLocode()))
-                .toList();
+    private List<Location> dischargeCandidates() {
+        // **判定は 1 か所**（DischargeCandidates）。画面の選択肢も同じ関数から
+        // 作るので、出ているのに押すと断られる港が生まれない。
+        return DischargeCandidates.of(legs.stream()
+                .map(leg -> new DischargeCandidates.Leg(leg.loadUnLocode(),
+                        leg.unloadUnLocode()))
+                .toList(), lastHandlingUnLocode);
     }
 
     /**

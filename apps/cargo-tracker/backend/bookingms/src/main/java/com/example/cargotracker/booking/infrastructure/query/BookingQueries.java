@@ -231,6 +231,26 @@ public final class BookingQueries {
     public record FindPendingCancellationsQuery() {
     }
 
+    /**
+     * 陸揚げ地の選択肢（S23 / US30 §受入基準 5）。
+     *
+     * <p><b>画面が組み立てない。</b> 集約が断る条件と同じ関数（{@code
+     * DischargeCandidates}）から作る——別々に書くと、画面に出ているのに押すと
+     * 断られる港が生まれる。</p>
+     */
+    public record FindDischargeCandidatesQuery(String bookingId) {
+    }
+
+    /**
+     * 選べる陸揚げ地（先頭が現在地）。
+     *
+     * @param currentUnLocode 現在地。<b>まだ荷役が無ければ {@code null}</b>
+     */
+    public record DischargeCandidatesView(
+            String currentUnLocode,
+            List<String> unLocodes) {
+    }
+
     /** その予約のキャンセル履歴（S22 / US30 §受入基準 10）。 */
     public record FindCancellationsOfBookingQuery(String bookingId) {
     }

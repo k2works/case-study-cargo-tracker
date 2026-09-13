@@ -62,6 +62,32 @@ public class BookingQueryHandler {
         return toListView(cancellations.findPending());
     }
 
+    /**
+     * 陸揚げ地の選択肢（S23 / US30 §受入基準 5）。
+     *
+     * <p><b>集約と同じ関数から作る。</b> 画面で組み立てると、出ているのに押すと
+     * 断られる港が生まれる（IT5 のレビューで一度出た形）。投影の旅程と現在地を
+     * 材料にして、判定そのものは {@code DischargeCandidates} に任せる。</p>
+     */
+    @org.axonframework.messaging.queryhandling.annotation.QueryHandler
+    public com.example.cargotracker.booking.infrastructure.query.BookingQueries
+            .DischargeCandidatesView handle(
+            com.example.cargotracker.booking.infrastructure.query.BookingQueries
+                    .FindDischargeCandidatesQuery query) {
+        var booking = cargos.findById(query.bookingId());
+        String current = booking == null ? null : booking.lastHandlingUnlocode();
+        var candidates = com.example.cargotracker.booking.domain.service.DischargeCandidates.of(
+                legs.findByBooking(query.bookingId()).stream()
+                        .map(leg -> new com.example.cargotracker.booking.domain.service
+                                .DischargeCandidates.Leg(leg.loadUnlocode(),
+                                leg.unloadUnlocode()))
+                        .toList(), current);
+        return new com.example.cargotracker.booking.infrastructure.query.BookingQueries
+                .DischargeCandidatesView(current, candidates.stream()
+                .map(port -> port.unLocode().value())
+                .toList());
+    }
+
     /** その予約のキャンセル履歴（S22 / US30 §受入基準 10）。 */
     @org.axonframework.messaging.queryhandling.annotation.QueryHandler
     public com.example.cargotracker.booking.infrastructure.query.BookingQueries

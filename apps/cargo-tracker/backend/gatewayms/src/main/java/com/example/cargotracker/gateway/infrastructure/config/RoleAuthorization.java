@@ -133,6 +133,9 @@ public final class RoleAuthorization {
         // **/bookings/** より先に置く。** 後ろに置くと広いほうに吸われる。
         rules.put("/api/v1/booking/bookings/cancellations", Set.of(TRACKER));
         rules.put("/api/v1/booking/bookings/*/cancellation/approval", Set.of(TRACKER));
+        // 陸揚げ地の選択肢は承認する人が読む（S23）。
+        rules.put("/api/v1/booking/bookings/*/cancellation/discharge-candidates",
+                Set.of(TRACKER));
         rules.put("/api/v1/booking/bookings/*/cancellation/rejection", Set.of(TRACKER));
         // 申請は営業。**履歴（GET）は同じ経路なので、読む側も含める**
         // ——追跡管理者は S23 から、営業は S22 から同じ履歴を読む。

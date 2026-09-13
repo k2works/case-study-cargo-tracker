@@ -176,6 +176,43 @@ class CancellationProjectionIT extends AbstractAxonIntegrationTest {
     }
 
     @Test
+    @DisplayName("US30 §5: 陸揚げ地の選択肢は集約と同じ関数から出る")
+    void offersDischargeCandidates() {
+        // **画面が組み立てない。** 集約が断る条件と同じ関数から作るので、
+        // 出ているのに押すと断られる港が生まれない。
+        String bookingId = booked("DC");
+        cargos.on(new com.example.cargotracker.booking.domain.model.events.CargoRoutedEvent(
+                bookingId, java.util.List.of(
+                        new com.example.cargotracker.booking.domain.model.events
+                                .CargoRoutedEvent.Leg("V-MOL-001", "JPTYO", "SGSIN",
+                                Instant.parse("2026-09-20T00:00:00Z"),
+                                Instant.parse("2026-10-02T00:00:00Z")),
+                        new com.example.cargotracker.booking.domain.model.events
+                                .CargoRoutedEvent.Leg("V-MSK-220", "SGSIN", "USNYC",
+                                Instant.parse("2026-10-03T00:00:00Z"),
+                                Instant.parse("2026-10-12T00:00:00Z"))),
+                "routing01", AT));
+
+        var candidates = queries.handle(new com.example.cargotracker.booking.infrastructure
+                .query.BookingQueries.FindDischargeCandidatesQuery(bookingId));
+
+        assertThat(candidates.unLocodes()).containsExactly("SGSIN", "USNYC");
+        assertThat(candidates.currentUnLocode())
+                .as("まだ荷役が無いので現在地は無い").isNull();
+    }
+
+    @Test
+    @DisplayName("知らない予約では選択肢が空（押せる操作を並べないための材料）")
+    void offersNoCandidatesForAnUnknownBooking() {
+        var candidates = queries.handle(new com.example.cargotracker.booking.infrastructure
+                .query.BookingQueries.FindDischargeCandidatesQuery(
+                "B-NONE-" + System.nanoTime()));
+
+        assertThat(candidates.unLocodes()).isEmpty();
+        assertThat(candidates.currentUnLocode()).isNull();
+    }
+
+    @Test
     @DisplayName("知らない予約・知らない申請に届いても落ちない（止めない）")
     void toleratesUnknownTargets() {
         String unknown = "B-NONE-" + System.nanoTime();

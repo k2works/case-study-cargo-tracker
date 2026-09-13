@@ -30,21 +30,19 @@ public record CancellationDecision(
     /**
      * 承認する。
      *
-     * @param current 現在地（最後の荷役の港）。<b>まだ荷役が無ければ {@code null}</b>
-     * @param remainingPorts 旅程の残りの寄港地
+     * @param candidates 指定できる港（{@code DischargeCandidates} が作る）。
+     *     <b>判定はこの 1 本だけを見る</b>——「現在地か、残りの寄港地か」を
+     *     ここでもう一度組み立てると、画面の選択肢と食い違う余地が生まれる
      */
-    public static CancellationDecision approve(Location dischargeLocation, Location current,
-            List<Location> remainingPorts, String reason, String decidedBy, Instant decidedAt) {
+    public static CancellationDecision approve(Location dischargeLocation,
+            List<Location> candidates, String reason, String decidedBy, Instant decidedAt) {
         if (dischargeLocation == null) {
             throw new BusinessRuleViolation("陸揚げ地は必須です");
         }
-        boolean reachable = dischargeLocation.equals(current)
-                || remainingPorts.contains(dischargeLocation);
-        if (!reachable) {
+        if (!candidates.contains(dischargeLocation)) {
             // **0 件の候補から選ばせない。** どこなら指定できるかを添える。
             throw new BusinessRuleViolation("陸揚げ地 " + dischargeLocation.unLocode().value()
-                    + " は旅程にありません。指定できるのは "
-                    + describe(current, remainingPorts) + " です");
+                    + " は旅程にありません。指定できるのは " + describe(candidates) + " です");
         }
         return new CancellationDecision(true, dischargeLocation, blankToNull(reason),
                 required(decidedBy), decidedAt);
@@ -60,13 +58,10 @@ public record CancellationDecision(
                 decidedAt);
     }
 
-    private static String describe(Location current, List<Location> remainingPorts) {
-        var candidates = new java.util.LinkedHashSet<String>();
-        if (current != null) {
-            candidates.add(current.unLocode().value());
-        }
-        remainingPorts.forEach(port -> candidates.add(port.unLocode().value()));
-        return candidates.isEmpty() ? "（ありません）" : String.join("・", candidates);
+    private static String describe(List<Location> candidates) {
+        return candidates.isEmpty() ? "（ありません）" : candidates.stream()
+                .map(port -> port.unLocode().value())
+                .collect(java.util.stream.Collectors.joining("・"));
     }
 
     /** 空文字は {@code null} に寄せる（入口で正規化する。判定を 2 か所に置かない）。 */

@@ -113,6 +113,22 @@ public class CancellationController {
                 CancellationListView.class));
     }
 
+    /**
+     * 陸揚げ地の選択肢（S23 / US30 §受入基準 5）。
+     *
+     * <p><b>画面が組み立てない。</b> 集約が断る条件と同じ関数から作る——別々に
+     * 書くと、画面に出ているのに押すと断られる港が生まれる。</p>
+     */
+    @GetMapping("/{bookingId}/cancellation/discharge-candidates")
+    public ResponseEntity<com.example.cargotracker.booking.infrastructure.query.BookingQueries
+            .DischargeCandidatesView> dischargeCandidates(@PathVariable String bookingId) {
+        return ResponseEntity.ok(queries.query(
+                new com.example.cargotracker.booking.infrastructure.query.BookingQueries
+                        .FindDischargeCandidatesQuery(bookingId),
+                com.example.cargotracker.booking.infrastructure.query.BookingQueries
+                        .DischargeCandidatesView.class));
+    }
+
     /** その予約のキャンセル履歴（S22 / US30 §受入基準 10）。 */
     @GetMapping("/{bookingId}/cancellation")
     public ResponseEntity<CancellationListView> history(@PathVariable String bookingId) {
