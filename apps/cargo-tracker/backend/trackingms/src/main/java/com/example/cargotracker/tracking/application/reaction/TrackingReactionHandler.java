@@ -2,10 +2,12 @@ package com.example.cargotracker.tracking.application.reaction;
 
 import org.axonframework.messaging.core.annotation.SequencingPolicy;
 import org.axonframework.messaging.core.sequencing.PropertySequencingPolicy;
+import com.example.cargotracker.shared.contract.event.CargoCancelledEvent;
 import com.example.cargotracker.shared.contract.event.HandlingActivityRegisteredEvent;
 import com.example.cargotracker.shared.contract.event.HandlingActivityVoidedEvent;
 import com.example.cargotracker.shared.contract.event.CustomsStatusChangedEvent;
 import com.example.cargotracker.tracking.domain.model.commands.AdvanceTrackingCommand;
+import com.example.cargotracker.tracking.domain.model.commands.PlanCancellationDischargeCommand;
 import com.example.cargotracker.tracking.domain.model.commands.RegisterTrackingExceptionCommand;
 import com.example.cargotracker.tracking.domain.model.commands.ResolveTrackingExceptionCommand;
 import com.example.cargotracker.tracking.domain.model.commands.RevertTrackingCommand;
@@ -52,6 +54,25 @@ public class TrackingReactionHandler {
         commands.sendAndWait(new AdvanceTrackingCommand(event.trackingNumber(),
                 event.activityId(), event.handlingType(), event.unLocode(), event.finalPort(),
                 event.offRoute(), event.operator(), event.completedAt()), Void.class);
+    }
+
+    /**
+     * 予約がキャンセルされた（UC22 / US30 / 不変条件 9）。
+     *
+     * <p><b>追跡は閉じない。</b> 陸揚げ地を記録するだけで、閉じるのはその港の
+     * 荷降しを受けてからである——ここで閉じると、降ろす作業が追跡に残らない。</p>
+     *
+     * <p><b>輸送開始前のキャンセルには追跡が無い。</b> 追跡番号が載っていなければ
+     * 何もしない——船に載っていないので、降ろす港も無い。</p>
+     */
+    @EventHandler
+    public void on(CargoCancelledEvent event) {
+        if (event.trackingNumber() == null || event.dischargeUnLocode() == null) {
+            return;
+        }
+        commands.sendAndWait(new PlanCancellationDischargeCommand(event.trackingNumber(),
+                event.dischargeUnLocode(), event.reason(), event.cancelledBy(),
+                event.cancelledAt()), Void.class);
     }
 
     @EventHandler

@@ -22,7 +22,11 @@ public interface TrackingSummaryMapper {
             + "destination_unlocode, cargo_type, transport_status, current_unlocode, "
             + "estimated_arrival, initialized_at, last_status_changed_at, projected_at, "
             + "last_event_id, open_exception_count, urgent_exception_count, "
-            + "status_before_exception, misrouted";
+            + "status_before_exception, misrouted, "
+            // キャンセルの陸揚げ地と、閉じた印（US30・IT15）。**列の順は record の
+            // 構築子と同じ**——注釈マッパー + record は位置で割り当てるので、
+            // 足す位置がずれると項目が丸ごと入れ替わる。
+            + "cancellation_discharge_unlocode, closed";
 
     /**
      * 追跡を作る（US14）。
@@ -177,7 +181,13 @@ public interface TrackingSummaryMapper {
             // 誤配として扱っているか（US28）。バナー（S22・S41）が読む。
             // **状態（MISROUTED）とは別に持つ**——例外の対応中は状態が
             // EXCEPTION に退避するが、誤配であることは変わらない。
-            boolean misrouted) {
+            boolean misrouted,
+            // キャンセルの陸揚げ地（US30）。**承認しても追跡は閉じない**ので、
+            // 「どこで降ろすか」と「閉じたか」は別の列である。
+            String cancellationDischargeUnlocode,
+            // 追跡を閉じたか。**既定は false**——列が無かったころの追跡は
+            // すべて動いている追跡なので、既定値が業務上正しい。
+            boolean closed) {
     }
 
     /**
@@ -191,6 +201,19 @@ public interface TrackingSummaryMapper {
             "UPDATE tracking_summary SET misrouted = TRUE, current_unlocode = #{unLocode}, "
             + "projected_at = #{projectedAt} WHERE tracking_number = #{trackingNumber}")
     int markMisrouted(@Param("trackingNumber") String trackingNumber,
+            @Param("unLocode") String unLocode,
+            @Param("projectedAt") Instant projectedAt);
+
+    /**
+     * キャンセルの陸揚げ地を写す（US30 / 不変条件 9）。
+     *
+     * <p><b>閉じない。</b> 貨物はまだ船の上にあり、陸揚げの荷役を記録できなければ
+     * ならない。閉じるのはその港の荷降しを受けてからである。</p>
+     */
+    @org.apache.ibatis.annotations.Update(
+            "UPDATE tracking_summary SET cancellation_discharge_unlocode = #{unLocode}, "
+            + "projected_at = #{projectedAt} WHERE tracking_number = #{trackingNumber}")
+    int planCancellationDischarge(@Param("trackingNumber") String trackingNumber,
             @Param("unLocode") String unLocode,
             @Param("projectedAt") Instant projectedAt);
 

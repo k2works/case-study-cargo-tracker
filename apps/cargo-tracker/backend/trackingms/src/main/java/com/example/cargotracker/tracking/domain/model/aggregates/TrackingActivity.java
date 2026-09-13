@@ -12,6 +12,7 @@ import com.example.cargotracker.tracking.domain.model.commands.RegisterTrackingE
 import com.example.cargotracker.tracking.domain.model.commands.ResolveTrackingExceptionCommand;
 import com.example.cargotracker.tracking.domain.model.commands.StartExceptionResponseCommand;
 import com.example.cargotracker.tracking.domain.model.entities.TrackingException;
+import com.example.cargotracker.tracking.domain.model.events.CancellationDischargePlannedEvent;
 import com.example.cargotracker.tracking.domain.model.events.ExceptionEscalatedEvent;
 import com.example.cargotracker.tracking.domain.model.events.ExceptionResponseStartedEvent;
 import com.example.cargotracker.tracking.domain.model.events.ExceptionShipperNotifiedEvent;
@@ -23,6 +24,7 @@ import com.example.cargotracker.tracking.domain.model.events.TrackingExceptionRe
 import com.example.cargotracker.tracking.domain.model.events.TrackingExceptionResolvedEvent;
 import com.example.cargotracker.tracking.domain.model.valueobjects.ExceptionType;
 import com.example.cargotracker.tracking.domain.model.valueobjects.ResponseStatus;
+import com.example.cargotracker.tracking.domain.model.commands.PlanCancellationDischargeCommand;
 import com.example.cargotracker.tracking.domain.model.commands.RevertTrackingCommand;
 import com.example.cargotracker.tracking.domain.model.commands.UpdateTransportStatusCommand;
 import com.example.cargotracker.tracking.domain.model.events.TransportStatusRevertedEvent;
@@ -623,6 +625,41 @@ public class TrackingActivity {
         this.trackingNumber = TrackingNumber.of(event.trackingNumber());
         this.bookingId = event.bookingId();
         this.status = TransportStatus.NOT_RECEIVED;
+    }
+
+    /**
+     * キャンセルの陸揚げ地を記録する（UC22 / US30 / 不変条件 9）。
+     *
+     * <p><b>追跡は閉じない。</b> 貨物はまだ船の上にあり、陸揚げの荷役を記録できな
+     * ければならない——ここで閉じると、降ろす作業が追跡に残らない。閉じるのは
+     * その港の荷降し（{@code UNLOAD}）を受けてからである。</p>
+     *
+     * <p><b>輸送状態も動かさない。</b> 貨物は運ばれ続けている（降ろす港が変わっただけ）。</p>
+     *
+     * <p><b>二度届いても 1 度だけ。</b> Event Processor は at-least-once である。</p>
+     */
+    @CommandHandler
+    public void planCancellationDischarge(PlanCancellationDischargeCommand command,
+            EventAppender appender) {
+        requireStarted(command.trackingNumber());
+        if (cancellationDischargeUnLocode != null) {
+            return;
+        }
+        appender.append(new CancellationDischargePlannedEvent(trackingNumber.value(),
+                bookingId, command.dischargeUnLocode(), command.reason(),
+                command.plannedBy(), command.plannedAt()));
+    }
+
+    /**
+     * キャンセルの陸揚げ地。<b>まだ決まっていなければ {@code null}</b>。
+     *
+     * <p>荷降しを受けて追跡を閉じてよいかの判断（T6）が読む。</p>
+     */
+    private String cancellationDischargeUnLocode;
+
+    @EventSourcingHandler
+    void on(CancellationDischargePlannedEvent event) {
+        this.cancellationDischargeUnLocode = event.dischargeUnLocode();
     }
 
     /** 復元した輸送状態。荷役（US15・IT9）が読む。 */

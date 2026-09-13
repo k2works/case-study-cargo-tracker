@@ -199,4 +199,43 @@ class TrackingReactionHandlerTest {
 
         assertThat(sent).isEmpty();
     }
+
+    @Test
+    @DisplayName("US30: キャンセル承認で陸揚げ地を記録する（追跡は閉じない）")
+    void plansTheDischargePort() {
+        handler.on(new com.example.cargotracker.shared.contract.event.CargoCancelledEvent(
+                "b-1", "TRK-8K2QX7M4RB", "IN_TRANSIT", "SGSIN", "荷主の発注取消",
+                "tracker01", HANDLED));
+
+        assertThat(sent).singleElement()
+                .isInstanceOfSatisfying(com.example.cargotracker.tracking.domain.model
+                        .commands.PlanCancellationDischargeCommand.class, command -> {
+                    assertThat(command.dischargeUnLocode()).isEqualTo("SGSIN");
+                    assertThat(command.plannedBy()).isEqualTo("tracker01");
+                });
+        // **閉じるコマンドは送らない。** 貨物はまだ船の上にあり、陸揚げの荷役を
+        // これから記録する（不変条件 9）。
+        assertThat(sent).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("輸送開始前のキャンセルには追跡が無いので何もしない")
+    void ignoresCancellationWithoutTracking() {
+        // 船に載っていないので、降ろす港も無い。**存在しない追跡へコマンドを
+        // 送ると、断られたものが退避先に積み上がる。**
+        handler.on(new com.example.cargotracker.shared.contract.event.CargoCancelledEvent(
+                "b-1", null, "TRACKING_ISSUED", null, "荷主の発注取消", "sales01", HANDLED));
+
+        assertThat(sent).isEmpty();
+    }
+
+    @Test
+    @DisplayName("陸揚げ地の無いキャンセルにも何もしない（決めずに承認は通らないが、守る）")
+    void ignoresCancellationWithoutADischargePort() {
+        handler.on(new com.example.cargotracker.shared.contract.event.CargoCancelledEvent(
+                "b-1", "TRK-8K2QX7M4RB", "TRACKING_ISSUED", null, "荷主の発注取消",
+                "sales01", HANDLED));
+
+        assertThat(sent).isEmpty();
+    }
 }

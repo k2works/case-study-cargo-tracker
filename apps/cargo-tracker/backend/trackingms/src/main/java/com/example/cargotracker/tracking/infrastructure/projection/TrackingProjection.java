@@ -6,6 +6,7 @@ import com.example.cargotracker.shared.contract.event.TrackingInitializedEvent;
 import com.example.cargotracker.tracking.domain.model.events.TransportStatusUpdatedEvent;
 import com.example.cargotracker.tracking.domain.model.valueobjects.TransportStatus;
 import com.example.cargotracker.tracking.infrastructure.persistence.TrackingEventMapper;
+import com.example.cargotracker.tracking.domain.model.events.CancellationDischargePlannedEvent;
 import com.example.cargotracker.tracking.domain.model.events.CargoMisroutedEvent;
 import com.example.cargotracker.tracking.domain.model.events.ExceptionEscalatedEvent;
 import com.example.cargotracker.tracking.domain.model.events.ExceptionResponseStartedEvent;
@@ -92,7 +93,10 @@ public class TrackingProjection {
                 estimatedArrival(event.legs()),
                 // 例外はまだ無い。件数は起票のたびに明細から数え直す。
                 // 誤配はまだ無い（US28）。予定外の荷役が来たときだけ立つ。
-                event.initializedAt(), event.initializedAt(), now, null, 0, 0, null, false));
+                // キャンセルの陸揚げ地はまだ無い。**閉じてもいない**——列が
+                // 無かったころの追跡と同じで、既定値が業務上正しい（US30・IT15）。
+                event.initializedAt(), event.initializedAt(), now, null, 0, 0, null, false,
+                null, false));
 
         // 旅程は消してから入れ直す。追記だけにすると、リプレイで区間が倍になる。
         trackings.deleteLegs(event.trackingNumber());
@@ -255,6 +259,25 @@ public class TrackingProjection {
         writeHistory(new HistoryEntry(eventId, event.trackingNumber(), "NOT_APPLIED",
                 event.currentStatus(), event.attemptedStatus(), event.unLocode(),
                 event.completedAt(), null), clock.instant());
+    }
+
+    /**
+     * キャンセルの陸揚げ地が決まった（US30 / 不変条件 9）。
+     *
+     * <p><b>記録と読み口は対で出す。</b> 荷役の担当者は「この船から降ろす貨物」を
+     * 追跡詳細（S41）で読むので、ここに書かなければ承認したことが現場に届かない。</p>
+     *
+     * <p><b>閉じない。</b> 貨物はまだ船の上にあり、陸揚げの荷役を記録できなければ
+     * ならない——閉じるのはその港の荷降しを受けてからである。</p>
+     */
+    @EventHandler
+    public void on(CancellationDischargePlannedEvent event) {
+        int updated = trackings.planCancellationDischarge(event.trackingNumber(),
+                event.dischargeUnLocode(), clock.instant());
+        if (updated == 0) {
+            log.warn("陸揚げ地を書ける追跡が投影に無い: trackingNumber={}",
+                    event.trackingNumber());
+        }
     }
 
     /**
