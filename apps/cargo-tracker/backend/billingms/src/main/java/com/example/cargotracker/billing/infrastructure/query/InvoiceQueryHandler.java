@@ -168,6 +168,13 @@ public class InvoiceQueryHandler {
                 row.issuedOn(), row.dueOn(), row.paidAt(),
                 // **判定は 1 か所**（PaymentTerm）。集約と別々に書かない。
                 PaymentTerm.overdue(status, row.dueOn(), today()),
-                lines);
+                lines,
+                invoices.findPayments(row.invoiceId()).stream()
+                        .map(payment -> new com.example.cargotracker.billing.infrastructure
+                                .query.BillingQueries.PaymentView(
+                                payment.paymentId(), payment.amount(), payment.currency(),
+                                payment.paidAt(), payment.recordedBy(), payment.voidedAt(),
+                                payment.voidedBy(), payment.voidReason()))
+                        .toList());
     }
 }

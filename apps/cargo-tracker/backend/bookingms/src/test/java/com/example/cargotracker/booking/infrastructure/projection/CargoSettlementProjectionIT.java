@@ -6,6 +6,7 @@ import com.example.cargotracker.booking.domain.model.events.BookingConfirmedEven
 import com.example.cargotracker.booking.domain.model.events.BookingDeliveredEvent;
 import com.example.cargotracker.booking.domain.model.events.BookingDeliveryRevertedEvent;
 import com.example.cargotracker.booking.domain.model.events.BookingSettledEvent;
+import com.example.cargotracker.booking.domain.model.events.BookingSettlementRevertedEvent;
 import com.example.cargotracker.booking.domain.model.events.HandlingRecordedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoRoutedEvent;
@@ -99,6 +100,24 @@ class CargoSettlementProjectionIT extends AbstractAxonIntegrationTest {
     }
 
     @Test
+    @DisplayName("入金が取り消されると一覧も引取済に戻る（IT15 引き継ぎ 3）")
+    void writesSettlementReverted() {
+        String bookingId = delivered();
+        progress.on(new BookingSettledEvent(bookingId, "INV-20260928-1a2b3c4d",
+                new BigDecimal("510000"), "JPY", Instant.parse("2026-10-05T02:00:00Z"),
+                "accountant01", Instant.parse("2026-10-05T02:30:00Z")));
+        assertThat(queries.handle(new FindBookingQuery(bookingId)).bookingStatus())
+                .isEqualTo("SETTLED");
+
+        progress.on(new BookingSettlementRevertedEvent(bookingId, "INV-20260928-1a2b3c4d",
+                "他社の入金と取り違えた"));
+
+        assertThat(queries.handle(new FindBookingQuery(bookingId)).bookingStatus())
+                .as("戻す側を書かなければ、営業の一覧は精算済のまま残る")
+                .isEqualTo("DELIVERED");
+    }
+
+    @Test
     @DisplayName("知らない予約に届いても落ちない（書けなかったことは警告で残す）")
     void toleratesUnknownBooking() {
         // **投影に行が無いことは起こりうる。** 投影が遅れている・弾かれた予約に
@@ -115,6 +134,7 @@ class CargoSettlementProjectionIT extends AbstractAxonIntegrationTest {
                 "IN_TRANSIT", "取り違え"));
         progress.on(new HandlingRecordedEvent(unknown, "act-1", "RECEIVE", "JPTYO",
                 Instant.parse("2026-09-20T01:00:00Z"), AT));
+        progress.on(new BookingSettlementRevertedEvent(unknown, "INV-1", "取り違え"));
 
         assertThat(queries.handle(new FindBookingQuery(unknown))).isNull();
     }

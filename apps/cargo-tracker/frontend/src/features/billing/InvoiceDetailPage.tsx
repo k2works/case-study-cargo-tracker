@@ -5,6 +5,7 @@ import {
   ALERT,
   BUTTON_DANGER,
   BUTTON_PRIMARY,
+  BUTTON_SECONDARY,
   CARD,
   FIELD,
   LABEL,
@@ -26,6 +27,7 @@ import {
   recordPayment,
   reverseAdjustment,
   voidInvoice,
+  voidPayment,
 } from './api';
 import type { InvoiceLineView } from './api';
 
@@ -85,6 +87,7 @@ export function InvoiceDetailPage() {
   const [basisExceptionId, setBasisExceptionId] = useState('');
 
   const [paidAt, setPaidAt] = useState('');
+  const [paymentVoidReason, setPaymentVoidReason] = useState('');
   const [voidReason, setVoidReason] = useState('');
 
   const issue = useMutation({
@@ -103,6 +106,14 @@ export function InvoiceDetailPage() {
     }),
     onSuccess: async () => {
       setPaidAt('');
+      await client.invalidateQueries({ queryKey: ['invoice', invoiceId] });
+    },
+  });
+
+  const revokePayment = useMutation({
+    mutationFn: (paymentId: string) => voidPayment(invoiceId, paymentId, paymentVoidReason),
+    onSuccess: async () => {
+      setPaymentVoidReason('');
       await client.invalidateQueries({ queryKey: ['invoice', invoiceId] });
     },
   });
@@ -322,6 +333,65 @@ export function InvoiceDetailPage() {
           {pay.isError && (
             <p role="alert" className={`${ALERT} mt-3`}>
               {pay.error instanceof ApiError ? pay.error.message : '入金を記録できませんでした'}
+            </p>
+          )}
+        </section>
+      )}
+
+      {/* **入金の記録と、その取り消し**（IT15 引き継ぎ 3）。
+          取り消した入金も出す——行を消さないのは「誤って記録して取り消した」
+          事実を残すためで、出さなければ残した意味が無い。 */}
+      {view.payments.length > 0 && (
+        <section className={`${CARD} mt-4`}>
+          <h2 className="text-base font-semibold text-gray-900">入金</h2>
+          <ul className="mt-3 space-y-3">
+            {view.payments.map((payment) => (
+              <li key={payment.paymentId} className="border-t border-gray-100 pt-3 first:border-0 first:pt-0">
+                <p className="text-sm text-gray-800">
+                  {formatMoney(payment.amount, payment.currency)}
+                  <span className="ml-2 text-gray-600">{formatBusinessDateTime(payment.paidAt)} 入金</span>
+                  {payment.recordedBy && <span className="ml-2 text-gray-500">記録: {payment.recordedBy}</span>}
+                </p>
+                {payment.voidedAt ? (
+                  <p className="mt-1 text-sm text-gray-600">
+                    <b>取消済</b>（{payment.voidedBy}）: {payment.voidReason}
+                  </p>
+                ) : (
+                  <form
+                    className="mt-2 flex flex-wrap items-end gap-3"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      revokePayment.mutate(payment.paymentId);
+                    }}
+                  >
+                    <div className="grow">
+                      <label className={LABEL} htmlFor="payment-void-reason">取消の理由</label>
+                      <input
+                        id="payment-void-reason"
+                        className={FIELD}
+                        value={paymentVoidReason}
+                        onChange={(event) => setPaymentVoidReason(event.target.value)}
+                        placeholder="他社の入金と取り違えた"
+                      />
+                    </div>
+                    <button
+                      className={BUTTON_SECONDARY}
+                      type="submit"
+                      disabled={revokePayment.isPending || paymentVoidReason.trim() === ''}
+                    >
+                      入金を取り消す
+                    </button>
+                    {revokePayment.isPending && <output className={NOTICE}>送信中…</output>}
+                  </form>
+                )}
+              </li>
+            ))}
+          </ul>
+          {revokePayment.isError && (
+            <p role="alert" className={`${ALERT} mt-3`}>
+              {revokePayment.error instanceof ApiError
+                ? revokePayment.error.message
+                : '入金を取り消せませんでした'}
             </p>
           )}
         </section>

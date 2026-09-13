@@ -18,7 +18,9 @@ export const BOOKING_TRANSITIONS: Readonly<Record<string, readonly string[]>> = 
   TRACKING_ISSUED: ['IN_TRANSIT', 'CANCELLED'],
   IN_TRANSIT: ['IN_TRANSIT', 'DELIVERED', 'CANCELLED'],
   DELIVERED: ['SETTLED'],
-  SETTLED: [],
+  // **精算済は終端ではない**（IT15 引き継ぎ 3）。誤って記録した入金は
+  // 取り消せる。戻る先は引取済だけ。
+  SETTLED: ['DELIVERED'],
   CANCELLED: [],
 };
 

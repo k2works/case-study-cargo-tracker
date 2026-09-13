@@ -122,7 +122,27 @@ public final class BillingQueries {
             java.time.LocalDate dueOn,
             Instant paidAt,
             boolean overdue,
-            List<InvoiceLineView> lineItems) {
+            List<InvoiceLineView> lineItems,
+            List<PaymentView> payments) {
+    }
+
+    /**
+     * 入金の 1 行（S61）。
+     *
+     * <p><b>取り消した入金も出す。</b> 行を消さないのは「誤って記録して取り消した」
+     * 事実を残すためで、出さなければ残した意味が無い。</p>
+     *
+     * @param voidedAt 取り消した日時。<b>入っていれば入金として数えない</b>
+     */
+    public record PaymentView(
+            String paymentId,
+            BigDecimal amount,
+            String currency,
+            Instant paidAt,
+            String recordedBy,
+            Instant voidedAt,
+            String voidedBy,
+            String voidReason) {
     }
 
     /**

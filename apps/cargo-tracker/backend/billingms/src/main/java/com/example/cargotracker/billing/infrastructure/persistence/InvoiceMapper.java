@@ -74,6 +74,39 @@ public interface InvoiceMapper {
     /** 入金の記録（追記専用。{@code payment_id} が PK）。 */
     int insertPayment(PaymentRow row);
 
+    /**
+     * 入金の記録を取り消したことを請求書に写す（IT15 引き継ぎ 3）。
+     *
+     * <p><b>請求済に戻す。</b> 入金が無かったことになるので、未払いの一覧にも
+     * 戻る（{@code paid_at} も消す——残すと「入金済でないのに入金日がある」行に
+     * なる）。</p>
+     */
+    int markPaymentVoided(@Param("invoiceId") String invoiceId,
+            @Param("projectedAt") Instant projectedAt,
+            @Param("lastEventId") String lastEventId);
+
+    /**
+     * 入金の行に取り消した印を付ける。
+     *
+     * <p><b>行は消さない。</b> 消すと、誤って記録して取り消した事実そのものが
+     * 残らない。</p>
+     */
+    int voidPayment(@Param("paymentId") String paymentId,
+            @Param("voidedAt") Instant voidedAt,
+            @Param("voidedBy") String voidedBy,
+            @Param("reason") String reason);
+
+    /**
+     * その請求書の入金（S61 の入金欄）。
+     *
+     * <p><b>取り消した行も返す。</b> 「誤って記録して取り消した」ことが経理に
+     * 見えなければ、取り消す操作を作った意味が無い（記録と読み口は対で出す）。</p>
+     */
+    @Select("SELECT payment_id, amount, currency, paid_at, recorded_by, "
+            + "voided_at, voided_by, void_reason FROM payment "
+            + "WHERE invoice_id = #{invoiceId} ORDER BY paid_at")
+    List<PaymentHistoryRow> findPayments(@Param("invoiceId") String invoiceId);
+
     /** 発行の通知（追記専用。{@code invoice_id} が PK）。 */
     int insertNotification(NotificationRow row);
 
@@ -151,6 +184,23 @@ public interface InvoiceMapper {
             String currency,
             Instant paidAt,
             String recordedBy) {
+    }
+
+    /**
+     * 入金の 1 行（S61）。
+     *
+     * <p><b>列名を明示して引く。</b> {@code SELECT *} は列の順で組み立てられるので、
+     * 列を足すたびに全部ずれる。</p>
+     */
+    record PaymentHistoryRow(
+            String paymentId,
+            BigDecimal amount,
+            String currency,
+            Instant paidAt,
+            String recordedBy,
+            Instant voidedAt,
+            String voidedBy,
+            String voidReason) {
     }
 
     record NotificationRow(

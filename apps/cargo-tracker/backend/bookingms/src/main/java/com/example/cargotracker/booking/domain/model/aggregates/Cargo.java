@@ -15,6 +15,7 @@ import com.example.cargotracker.booking.domain.model.commands.RecordHandlingComm
 import com.example.cargotracker.booking.domain.model.commands.RevertHandlingCommand;
 import com.example.cargotracker.booking.domain.model.commands.RevertTrackingNumberCommand;
 import com.example.cargotracker.booking.domain.model.commands.LinkQuotationCommand;
+import com.example.cargotracker.booking.domain.model.commands.RevertSettlementCommand;
 import com.example.cargotracker.booking.domain.model.commands.SettleBookingCommand;
 import com.example.cargotracker.booking.domain.model.commands.UpdateCargoSpecificationCommand;
 import com.example.cargotracker.booking.domain.model.events.BookingConfirmedEvent;
@@ -37,6 +38,7 @@ import com.example.cargotracker.booking.domain.model.events.BookingMisroutedEven
 import com.example.cargotracker.booking.domain.model.events.BookingDeliveredEvent;
 import com.example.cargotracker.booking.domain.model.events.BookingDeliveryRevertedEvent;
 import com.example.cargotracker.booking.domain.model.events.BookingSettledEvent;
+import com.example.cargotracker.booking.domain.model.events.BookingSettlementRevertedEvent;
 import com.example.cargotracker.booking.domain.model.events.HandlingRecordedEvent;
 import com.example.cargotracker.booking.domain.model.events.HandlingRevertedEvent;
 import com.example.cargotracker.booking.domain.model.events.TrackingNumberIssuedEvent;
@@ -740,6 +742,32 @@ public class Cargo {
         appender.append(new BookingSettledEvent(command.bookingId(), command.invoiceId(),
                 command.paidAmount(), command.currency(), command.paidAt(),
                 command.settledBy(), clock.instant()));
+    }
+
+    /**
+     * 入金の記録が取り消された（UC18 / US23。IT15 引き継ぎ 3）。
+     *
+     * <p><b>契約 {@code PaymentVoidedEvent} を受けて {@code BookingReactionHandler}
+     * が送る。</b> 戻さないと、入金が無いのに精算が終わっている予約が残る。</p>
+     *
+     * <p><b>戻る先は引取済で確定している</b>（精算済になれるのは引取済からだけ）。
+     * 導き直しではないので、イベントに戻り先を載せない。</p>
+     *
+     * <p><b>精算済でないなら何もしない。</b> 二度届いても 1 度だけ。</p>
+     */
+    @CommandHandler
+    public void revertSettlement(RevertSettlementCommand command, EventAppender appender) {
+        if (bookingId == null || bookingStatus != BookingStatus.SETTLED) {
+            return;
+        }
+        appender.append(new BookingSettlementRevertedEvent(command.bookingId(),
+                command.invoiceId(), command.reason()));
+    }
+
+    @EventSourcingHandler
+    void on(BookingSettlementRevertedEvent event) {
+        // 引取済に戻る。ここからもう一度精算できる（正しい入金を入れ直せる）。
+        this.bookingStatus = BookingStatus.DELIVERED;
     }
 
     @EventSourcingHandler

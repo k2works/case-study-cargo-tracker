@@ -49,6 +49,7 @@ function invoice(over: Record<string, unknown> = {}) {
     dueOn: null,
     paidAt: null,
     overdue: false,
+    payments: [],
     lineItems: [
       {
         itemType: 'BASE',
@@ -272,7 +273,8 @@ describe('S61 請求詳細', () => {
       new Response(JSON.stringify(invoice({
         adjustmentAmount: -10000,
         totalAmount: 423500,
-        lineItems: [
+        payments: [],
+    lineItems: [
           ...invoice().lineItems,
           {
             itemType: 'ADJUSTMENT',
@@ -418,7 +420,8 @@ describe('S61 請求詳細', () => {
       new Response(JSON.stringify(invoice({
         adjustmentAmount: -10000,
         totalAmount: 423500,
-        lineItems: [
+        payments: [],
+    lineItems: [
           ...invoice().lineItems,
           {
             itemType: 'ADJUSTMENT',
@@ -451,7 +454,8 @@ describe('S61 請求詳細', () => {
   it('引き継ぎ C: 取り消し済みの調整には取り消しを出さない', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(JSON.stringify(invoice({
-        lineItems: [
+        payments: [],
+    lineItems: [
           ...invoice().lineItems,
           {
             itemType: 'ADJUSTMENT',

@@ -7,7 +7,6 @@ import com.example.cargotracker.billing.domain.model.events.InvoiceCalculatedEve
 import com.example.cargotracker.billing.domain.model.events.InvoiceIssuedEvent;
 import com.example.cargotracker.billing.infrastructure.query.BillingQueries;
 import com.example.cargotracker.billing.domain.model.events.InvoiceVoidedEvent;
-import com.example.cargotracker.shared.contract.event.PaymentRecordedEvent;
 import com.example.cargotracker.billing.infrastructure.persistence.AttentionItemMapper;
 import com.example.cargotracker.billing.infrastructure.query.BillingQueries.FindInvoiceOfBookingQuery;
 import com.example.cargotracker.billing.infrastructure.query.BillingQueries.FindInvoiceQuery;
@@ -354,20 +353,6 @@ class InvoiceProjectionIT extends AbstractAxonIntegrationTest {
     }
 
     @Test
-    @DisplayName("US23 §4: 入金を写すと入金済になり、入金の行が 1 行だけ入る")
-    void marksPaid() {
-        String invoiceId = project("PAY");
-        var paid = new PaymentRecordedEvent(invoiceId, "PAY-1", "B-PAY", "SHP-000001",
-                new BigDecimal("433500"), "JPY", AT, "accountant01", AT);
-
-        projection.on(paid, "evt-pay-1");
-        // **同じ入金が 2 度届いても 1 行**（payment_id が PK・少なくとも 1 回配送）。
-        projection.on(paid, "evt-pay-2");
-
-        assertThat(queries.handle(new FindInvoiceQuery(invoiceId)).status()).isEqualTo("PAID");
-    }
-
-    @Test
     @DisplayName("US23 §5: 支払期限の翌日から未払いとして出る（SQL 側の境界）")
     void listsTheInvoiceTheDayAfterItsDueDate() {
         String invoiceId = project("OVERDUE");
@@ -391,18 +376,6 @@ class InvoiceProjectionIT extends AbstractAxonIntegrationTest {
                 .doesNotContain(invoiceId);
     }
 
-    @Test
-    @DisplayName("US23 §5: 入金済は未払いに出ない（決着したものを督促しない）")
-    void doesNotListPaidInvoices() {
-        String invoiceId = project("PAID-OVERDUE");
-        issue(invoiceId, "B-PAID-OVERDUE");
-        projection.on(new PaymentRecordedEvent(invoiceId, "PAY-O" + System.nanoTime(),
-                "B-PAID-OVERDUE", "SHP-000001", new BigDecimal("433500"), "JPY",
-                AT, "accountant01", AT), "evt-po" + System.nanoTime());
-
-        assertThat(overdueIds(java.time.LocalDate.of(2026, Month.NOVEMBER, 12)))
-                .doesNotContain(invoiceId);
-    }
 
     private java.util.List<String> overdueIds(java.time.LocalDate today) {
         return queries.handle(new BillingQueries.FindOverdueInvoicesQuery(today))

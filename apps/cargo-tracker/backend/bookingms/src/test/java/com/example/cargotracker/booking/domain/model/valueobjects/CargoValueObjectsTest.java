@@ -143,12 +143,13 @@ class CargoValueObjectsTest {
         assertThatCode(status::cancellableImmediately).doesNotThrowAnyException();
 
         // 例外が出ないことしか見ないと、行き先が空の状態を足しても緑になる（IT2 レビュー L7）。
-        // 終端は SETTLED・CANCELLED の 2 つだけで、それ以外は必ず行き先を持つ。
+        // **終端は CANCELLED だけ**——精算済は入金の取り消しで引取済に戻る
+        // （IT15 引き継ぎ 3）。それ以外は必ず行き先を持つ。
         boolean hasAnyNext = false;
         for (BookingStatus next : BookingStatus.values()) {
             hasAnyNext |= status.canTransitionTo(next);
         }
-        if (status == BookingStatus.SETTLED || status == BookingStatus.CANCELLED) {
+        if (status == BookingStatus.CANCELLED) {
             assertThat(hasAnyNext).as("終端の状態 %s は行き先を持たない", status).isFalse();
         } else {
             assertThat(hasAnyNext).as("%s は行き先を 1 つ以上持つ", status).isTrue();
@@ -156,13 +157,23 @@ class CargoValueObjectsTest {
     }
 
     @Test
-    @DisplayName("終わった状態からは動かない")
+    @DisplayName("キャンセルからは動かない。精算済から戻れるのは引取済だけ")
     void terminalStatusesHaveNoNext() {
         for (BookingStatus next : BookingStatus.values()) {
-            assertThat(BookingStatus.SETTLED.canTransitionTo(next)).isFalse();
-            assertThat(BookingStatus.CANCELLED.canTransitionTo(next)).isFalse();
+            assertThat(BookingStatus.CANCELLED.canTransitionTo(next))
+                    .as("キャンセルは終端（以降コマンドを受けない）").isFalse();
         }
-        assertThat(BookingStatus.SETTLED.cancellableImmediately()).isFalse();
+        // **精算済は終端ではない**（IT15 引き継ぎ 3）。誤って記録した入金は
+        // 取り消せる。戻る先は引取済だけで、そこからもう一度入れ直せる。
+        assertThat(BookingStatus.SETTLED.canTransitionTo(BookingStatus.DELIVERED)).isTrue();
+        for (BookingStatus next : BookingStatus.values()) {
+            if (next != BookingStatus.DELIVERED) {
+                assertThat(BookingStatus.SETTLED.canTransitionTo(next))
+                        .as("精算済から %s へは動かない", next).isFalse();
+            }
+        }
+        assertThat(BookingStatus.SETTLED.cancellableImmediately())
+                .as("入金の済んだ予約をその場でキャンセルはできない").isFalse();
         assertThat(BookingStatus.CANCELLED.cancellableImmediately()).isFalse();
     }
 }

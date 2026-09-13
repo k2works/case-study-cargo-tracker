@@ -5,6 +5,7 @@ import com.example.cargotracker.billing.domain.model.events.InvoiceCalculatedEve
 import com.example.cargotracker.billing.domain.model.events.InvoiceIssuedEvent;
 import com.example.cargotracker.billing.domain.model.events.InvoiceVoidedEvent;
 import com.example.cargotracker.shared.contract.event.PaymentRecordedEvent;
+import com.example.cargotracker.shared.contract.event.PaymentVoidedEvent;
 import com.example.cargotracker.billing.domain.model.valueobjects.BillingStatus;
 import com.example.cargotracker.billing.domain.model.valueobjects.LineItemType;
 import com.example.cargotracker.billing.infrastructure.persistence.InvoiceMapper;
@@ -149,6 +150,24 @@ public class InvoiceProjection {
         invoices.insertPayment(new InvoiceMapper.PaymentRow(event.paymentId(),
                 event.invoiceId(), event.amount(), event.currency(), event.paidAt(),
                 event.recordedBy()));
+    }
+
+    /**
+     * 記録した入金を取り消した（IT15 引き継ぎ 3）。
+     *
+     * <p><b>請求書は請求済に戻り、入金の行には印が付く。</b> 行は消さない——
+     * 消すと「誤って記録して取り消した」事実そのものが残らない。</p>
+     */
+    @EventHandler
+    public void on(PaymentVoidedEvent event, @MessageIdentifier String eventId) {
+        if (invoices.find(event.invoiceId()) == null) {
+            log.warn("請求書 {} が読み取りモデルに無いので入金の取消を写せません",
+                    event.invoiceId());
+            return;
+        }
+        invoices.markPaymentVoided(event.invoiceId(), clock.instant(), eventId);
+        invoices.voidPayment(event.paymentId(), event.voidedAt(), event.voidedBy(),
+                event.reason());
     }
 
     /**

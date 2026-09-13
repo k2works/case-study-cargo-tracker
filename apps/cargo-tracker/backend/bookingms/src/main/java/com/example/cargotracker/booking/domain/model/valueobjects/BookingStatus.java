@@ -59,7 +59,10 @@ public enum BookingStatus {
             TRACKING_ISSUED, EnumSet.of(IN_TRANSIT, CANCELLED),
             IN_TRANSIT, EnumSet.of(IN_TRANSIT, DELIVERED, CANCELLED),
             DELIVERED, EnumSet.of(SETTLED),
-            SETTLED, EnumSet.noneOf(BookingStatus.class),
+            // **精算済は終端ではない。** 誤って記録した入金は取り消せる
+            // （IT15 引き継ぎ 3）。戻る先は引取済だけで、そこからもう一度
+            // 正しい入金を入れ直せる。
+            SETTLED, EnumSet.of(DELIVERED),
             CANCELLED, EnumSet.noneOf(BookingStatus.class));
 
     public boolean canTransitionTo(BookingStatus next) {

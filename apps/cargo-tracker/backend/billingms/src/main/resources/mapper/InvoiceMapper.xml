@@ -73,6 +73,32 @@
         ON CONFLICT DO NOTHING
     </insert>
 
+    <!--
+      入金の記録を取り消す（IT15 引き継ぎ 3）。**請求済に戻る**——入金が
+      無かったことになるので、督促の対象にも戻る。paid_at は消す（残すと
+      「入金済でないのに入金日がある」行になり、一覧の読み手が迷う）。
+    -->
+    <update id="markPaymentVoided">
+        UPDATE invoice
+           SET billing_status = 'INVOICED',
+               paid_at        = NULL,
+               projected_at   = #{projectedAt},
+               last_event_id  = #{lastEventId}
+         WHERE invoice_id = #{invoiceId}
+    </update>
+
+    <!--
+      **行は消さない。** 取り消した事実そのものが読めなくなる。
+      二度届いても結果は同じ（同じ値を入れ直すだけ）。
+    -->
+    <update id="voidPayment">
+        UPDATE payment
+           SET voided_at   = #{voidedAt},
+               voided_by   = #{voidedBy},
+               void_reason = #{reason}
+         WHERE payment_id = #{paymentId}
+    </update>
+
     <insert id="insertNotification">
         INSERT INTO invoice_notification (invoice_id, shipper_id, kind, notified_at)
         VALUES (#{invoiceId}, #{shipperId}, #{kind}, #{notifiedAt})

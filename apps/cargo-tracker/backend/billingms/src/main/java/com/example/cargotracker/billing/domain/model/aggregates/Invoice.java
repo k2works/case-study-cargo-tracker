@@ -6,6 +6,7 @@ import com.example.cargotracker.billing.domain.model.commands.IssueInvoiceComman
 import com.example.cargotracker.billing.domain.model.commands.RecordPaymentCommand;
 import com.example.cargotracker.billing.domain.model.commands.ReverseAdjustmentCommand;
 import com.example.cargotracker.billing.domain.model.commands.VoidInvoiceCommand;
+import com.example.cargotracker.billing.domain.model.commands.VoidPaymentCommand;
 import com.example.cargotracker.billing.domain.model.events.InvoiceAdjustedEvent;
 import com.example.cargotracker.billing.domain.model.events.InvoiceCalculatedEvent;
 import com.example.cargotracker.billing.domain.model.events.InvoiceIssuedEvent;
@@ -19,6 +20,7 @@ import com.example.cargotracker.billing.domain.model.valueobjects.RateTable;
 import com.example.cargotracker.billing.domain.service.DiscountPolicy;
 import com.example.cargotracker.billing.domain.service.FreightChargeCalculator;
 import com.example.cargotracker.shared.contract.event.PaymentRecordedEvent;
+import com.example.cargotracker.shared.contract.event.PaymentVoidedEvent;
 import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.shared.domain.error.IllegalTransition;
 import com.example.cargotracker.shared.infrastructure.time.BusinessClockConfiguration;
@@ -103,6 +105,15 @@ public class Invoice {
      * 返す——発行していない請求書に「期限を過ぎた」は無い。</p>
      */
     private LocalDate dueOn;
+
+    /**
+     * 記録されていて、まだ取り消されていない入金の識別子。
+     *
+     * <p><b>状態だけでは足りない。</b> 「入金済だから取り消せる」で通すと、
+     * <b>どの入金を取り消したのかが残らない</b>——取り違えたのが別の入金なら、
+     * 誤った行に印が付く。一部入金を扱わないので高々 1 件である。</p>
+     */
+    private String paymentId;
 
     /**
      * 税率。<b>算出時のものを覚えておく</b>——あとで料率が変わっても、出した
@@ -342,6 +353,41 @@ public class Invoice {
     }
 
     /**
+     * 記録した入金を取り消す（UC18 / US23。IT15 引き継ぎ 3）。
+     *
+     * <p><b>請求書の取消とは別の操作である。</b> 請求書は正しく、入金の記録だけが
+     * 誤っている——取り違え・二重記録。請求書は<b>請求済に戻り</b>、督促の対象に
+     * 戻る。マニュアル 17 章が「いまのところ運用で引き取る」と書いていたものを
+     * 業務の操作にする。</p>
+     *
+     * <p><b>どの入金かを見る。</b> 状態だけで通すと、取り消したのがどの入金か
+     * 残らない。</p>
+     *
+     * <p><b>取り消したあとは記録し直せる。</b> 正しい入金を入れ直すのが目的で、
+     * 請求書を殺すのが目的ではない。</p>
+     */
+    @CommandHandler
+    public void voidPayment(VoidPaymentCommand command, EventAppender appender, Clock clock) {
+        if (invoiceId == null) {
+            throw new IllegalTransition("請求書 " + command.invoiceId() + " がありません");
+        }
+        if (status != BillingStatus.PAID) {
+            throw new IllegalTransition(
+                    "状態 " + status.label() + " の請求書に取り消せる入金はありません");
+        }
+        requireText(command.reason(), "取消の理由は必須です");
+        requireText(command.voidedBy(), "取り消した人は必須です");
+        if (!java.util.Objects.equals(paymentId, command.paymentId())) {
+            throw new BusinessRuleViolation(
+                    "記録されている入金と違います: " + command.paymentId()
+                            + "（記録されているのは " + paymentId + "）");
+        }
+
+        appender.append(new PaymentVoidedEvent(invoiceId, command.paymentId(), bookingId,
+                command.reason(), command.voidedBy(), clock.instant()));
+    }
+
+    /**
      * 請求書を取り消す（UC18）。
      *
      * <p><b>入金済は取り消さない。</b> 決着したものを動かすと、入金の事実と
@@ -389,6 +435,14 @@ public class Invoice {
     @EventSourcingHandler
     void on(PaymentRecordedEvent event) {
         this.status = BillingStatus.PAID;
+        this.paymentId = event.paymentId();
+    }
+
+    @EventSourcingHandler
+    void on(PaymentVoidedEvent event) {
+        // **請求済に戻る。** 入金が無かったことになるので、督促の対象にも戻る。
+        this.status = BillingStatus.INVOICED;
+        this.paymentId = null;
     }
 
     @EventSourcingHandler

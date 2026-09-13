@@ -81,6 +81,29 @@ export interface InvoiceView {
    */
   readonly overdue?: boolean;
   readonly lineItems: readonly InvoiceLineView[];
+  /**
+   * 入金（S61 の入金欄）。
+   *
+   * **取り消した入金も出る。** 行を消さないのは「誤って記録して取り消した」
+   * 事実を残すためで、出さなければ残した意味が無い。
+   */
+  readonly payments: readonly PaymentView[];
+}
+
+/**
+ * 入金の 1 行（S61 / IT15 引き継ぎ 3）。
+ *
+ * `voidedAt` が入っていれば**取り消された入金**で、入金として数えない。
+ */
+export interface PaymentView {
+  readonly paymentId: string;
+  readonly amount: number;
+  readonly currency: string;
+  readonly paidAt: string;
+  readonly recordedBy: string | null;
+  readonly voidedAt?: string | null;
+  readonly voidedBy?: string | null;
+  readonly voidReason?: string | null;
 }
 
 /**
@@ -190,6 +213,27 @@ export function recordPayment(
  */
 export function voidInvoice(invoiceId: string, reason: string): Promise<void> {
   return commandClient(`/billing/invoices/${encodeURIComponent(invoiceId)}/void`, { reason });
+}
+
+/**
+ * 記録した入金を取り消す（UC18 / US23。IT15 引き継ぎ 3）。
+ *
+ * <p><b>請求書の取消とは別の操作。</b> 請求書は正しく、入金の記録だけが誤って
+ * いるときに使う。請求書は請求済に戻り、予約も引取済に戻る。</p>
+ *
+ * <p><b>どの入金かを名指しする。</b> 状態だけで通すと、取り消したのがどの入金か
+ * 残らない。</p>
+ */
+export function voidPayment(
+  invoiceId: string,
+  paymentId: string,
+  reason: string,
+): Promise<void> {
+  return commandClient(
+    `/billing/invoices/${encodeURIComponent(invoiceId)}/payments/`
+      + `${encodeURIComponent(paymentId)}/void`,
+    { reason },
+  );
 }
 
 /**

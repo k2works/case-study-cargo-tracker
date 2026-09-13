@@ -3,9 +3,11 @@ package com.example.cargotracker.booking.domain.model.aggregates;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.cargotracker.booking.domain.model.commands.LinkQuotationCommand;
+import com.example.cargotracker.booking.domain.model.commands.RevertSettlementCommand;
 import com.example.cargotracker.booking.domain.model.commands.SettleBookingCommand;
 import com.example.cargotracker.booking.domain.model.events.BookingDeliveredEvent;
 import com.example.cargotracker.booking.domain.model.events.BookingSettledEvent;
+import com.example.cargotracker.booking.domain.model.events.BookingSettlementRevertedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
 import com.example.cargotracker.shared.contract.event.CargoQuotedEvent;
 import com.example.cargotracker.shared.domain.error.IllegalTransition;
@@ -140,5 +142,40 @@ class CargoSettlementTest {
                         com.example.cargotracker.booking.domain.model.valueobjects
                                 .BookingStatus.CANCELLED))
                 .isFalse();
+    }
+
+    @Test
+    @DisplayName("入金が取り消されると予約は引取済に戻る（IT15 引き継ぎ 3）")
+    void revertsSettlement() {
+        // **戻さないと、入金が無いのに精算が終わっている予約が残る。**
+        // 記録と打ち消しは同じ経路を通す（引き渡しの取り消しと同じ形）。
+        fixture.given().event(bookedEvent()).event(deliveredEvent())
+                .event(new BookingSettledEvent("B-0001", "INV-20260928-1a2b3c4d",
+                        new java.math.BigDecimal("510000"), "JPY", PAID_AT,
+                        "accountant01", NOW))
+                .when().command(new RevertSettlementCommand("B-0001",
+                        "INV-20260928-1a2b3c4d", "他社の入金と取り違えた"))
+                .then().events(new BookingSettlementRevertedEvent("B-0001",
+                        "INV-20260928-1a2b3c4d", "他社の入金と取り違えた"));
+    }
+
+    @Test
+    @DisplayName("精算済でない予約では何も起きない（二度届いても 1 度だけ）")
+    void ignoresRevertWhenNotSettled() {
+        fixture.given().event(bookedEvent()).event(deliveredEvent())
+                .when().command(new RevertSettlementCommand("B-0001", "INV-1", "取り違え"))
+                .then().noEvents();
+    }
+
+    @Test
+    @DisplayName("戻したあともう一度入金があれば、また精算済になる")
+    void settlesAgainAfterRevert() {
+        fixture.given().event(bookedEvent()).event(deliveredEvent())
+                .event(new BookingSettledEvent("B-0001", "INV-1",
+                        new java.math.BigDecimal("510000"), "JPY", PAID_AT,
+                        "accountant01", NOW))
+                .event(new BookingSettlementRevertedEvent("B-0001", "INV-1", "取り違え"))
+                .when().command(settle())
+                .then().success();
     }
 }

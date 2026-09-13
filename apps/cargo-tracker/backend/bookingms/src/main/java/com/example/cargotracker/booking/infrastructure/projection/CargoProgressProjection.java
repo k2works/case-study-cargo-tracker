@@ -4,6 +4,7 @@ import com.example.cargotracker.booking.domain.model.events.BookingDeliveredEven
 import com.example.cargotracker.booking.domain.model.events.BookingDeliveryRevertedEvent;
 import com.example.cargotracker.booking.domain.model.events.BookingMisroutedEvent;
 import com.example.cargotracker.booking.domain.model.events.BookingSettledEvent;
+import com.example.cargotracker.booking.domain.model.events.BookingSettlementRevertedEvent;
 import com.example.cargotracker.booking.domain.model.events.HandlingRecordedEvent;
 import com.example.cargotracker.booking.domain.model.events.HandlingRevertedEvent;
 import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
@@ -102,6 +103,22 @@ public class CargoProgressProjection {
                 BookingStatus.SETTLED.name(), clock.instant());
         if (updated == 0) {
             log.warn("精算を書ける予約が投影に無い: bookingId={} invoiceId={}",
+                    event.bookingId(), event.invoiceId());
+        }
+    }
+
+    /**
+     * 精算が取り消された（IT15 引き継ぎ 3）。
+     *
+     * <p><b>記録と打ち消しは対で出す。</b> 精算済を書いたのなら、戻す側も書く
+     * ——書かなければ営業の一覧は精算済のまま残る。</p>
+     */
+    @EventHandler
+    public void on(BookingSettlementRevertedEvent event) {
+        int updated = cargos.updateBookingStatus(event.bookingId(),
+                BookingStatus.DELIVERED.name(), clock.instant());
+        if (updated == 0) {
+            log.warn("精算の取り消しを書ける予約が投影に無い: bookingId={} invoiceId={}",
                     event.bookingId(), event.invoiceId());
         }
     }

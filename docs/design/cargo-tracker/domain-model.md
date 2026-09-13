@@ -4,7 +4,7 @@ title: "ドメインモデル設計 - 国際貨物輸送管理システム（CQR
 description: "CQRS / Event Sourcing 版 Cargo Tracker のドメインモデル設計。6 コンテキストの集約・不変条件・コマンド・イベント（内部 / 契約）・状態遷移・Reaction Handler を、イベントを永続化フォーマットとして定義する。"
 tags: [design,domain-model,ddd,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-09T22:35:39Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-13T02:29:13Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -550,7 +550,8 @@ CONFIRMED --> TRACKING_ISSUED : IssueTrackingNumberCommand
 TRACKING_ISSUED --> IN_TRANSIT : RecordHandlingCommand（最初の RECEIVE）
 IN_TRANSIT --> DELIVERED : MarkDeliveredCommand\n(CargoDeliveredEvent 購読)
 DELIVERED --> SETTLED : SettleBookingCommand\n(PaymentRecordedEvent 購読)
-SETTLED --> [*]
+SETTLED --> DELIVERED : RevertSettlementCommand\n(PaymentVoidedEvent 購読)
+DELIVERED --> [*]
 
 PRELIMINARY --> CANCELLED : RequestCancellationCommand（即時）
 ROUTE_PROPOSED --> CANCELLED : RequestCancellationCommand（即時）
@@ -1215,6 +1216,7 @@ Booking の `Quotation` はこの式と同じ料率で概算を出します。�
 | 5 | `PAID` になるとき `paidAt` は必須 |
 | 6 | `VOID` の請求書は再発行しない。新規に発行する |
 | 7 | `quotedAmount` は `CalculateInvoiceCommand` に載った見積時の概算をそのまま持つ。計算し直さない |
+| 9 | **入金の記録は取り消せる**（`PAID` → `INVOICED`）。請求書そのものの取消（`VOID`）とは別の操作で、**入金の行は消さず取り消した印を付ける**。取り消すと予約も精算済から引取済へ戻る |
 | 8 | 調整は識別子を持つ。**取り消しは行を消さず反対向きの調整を積む**（`reversedAdjustmentId` が元の調整を指す）。同じ調整を 2 度取り消さない——入れ直したのと同じ額になる。識別子の無い調整（IT13 までの記録）は**復元では断らず**、取り消そうとしたときに断る |
 
 | コマンド | アクター | 発行イベント | 契約 | UC / US |
@@ -1225,6 +1227,7 @@ Booking の `Quotation` はこの式と同じ料率で概算を出します。�
 | `IssueInvoiceCommand` | 経理担当者 | `InvoiceIssuedEvent` | — | UC18 / US23 |
 | `RecordPaymentCommand` | 経理担当者 | `PaymentRecordedEvent` | **○** | UC18 / US23 |
 | `VoidInvoiceCommand` | 経理担当者 | `InvoiceVoidedEvent` | — | UC18 |
+| `VoidPaymentCommand` | 経理担当者 | `PaymentVoidedEvent` | **○** | UC18 / US23（IT15 引き継ぎ 3） |
 | `ApplyCancellationFeeCommand` | Reaction Handler（`CargoCancelledEvent` 購読） | `CancellationFeeAppliedEvent` | — | UC22 |
 
 ## Auth Context（支援）— authms
@@ -1304,6 +1307,7 @@ User *-- "0..1" UserShipperLink
 | `TrackingInitializedEvent` | trackingms | bookingms（`BookingReactionHandler`。連鎖の終わり）、handlingms（`CargoSnapshot`・ADR-0012）、**billingms**（`billing_cargo_snapshot`。区間・重量・貨物種別から料金を数える。IT13） | `bookingId`, `trackingNumber`, **`shipperId`**, `originUnLocode`, `destinationUnLocode`, `cargoType`, **`weightKg`**（IT13 で追加。無い貨物では請求を作らず要確認へ出す）, `legs[]`, `initializedAt`。**bookingms が読むのは識別子だけ**だが、**trackingms 自身の投影はこのイベントからしか作れない**ので、コマンドで届いた値を載せ直す（IT7 で実測。載せずに実装して投影が作れなかった） |
 | `TrackingClosedEvent` | trackingms | bookingms（キャンセル完了を投影に写す） | `bookingId`, `trackingNumber`, `closedAt`, `reason` |
 | `PaymentRecordedEvent` | billingms | bookingms（`SETTLED`） | `invoiceId`, `bookingId`, `paidAt`, `amount` |
+| `PaymentVoidedEvent` | billingms | bookingms（`SETTLED` → `DELIVERED`） | `invoiceId`, `paymentId`, `bookingId`, `reason`, `voidedBy`, `voidedAt` |
 | `ShipperRegisteredEvent` | bookingms | billingms（`shipper_contract_snapshot` を作る） | `shipperId`, `shipperCode`, `shipperType`, `name`, `email`, `phone`, `address`, `corporateContract?`, `registeredAt`。`name` / `email` / `phone` / `address` は荷主ごとの鍵で暗号化して載せる（crypto-shredding、ADR-0003） |
 | `CorporateContractAssignedEvent` | bookingms | **購読者なし**（IT13 の判断。契約情報は `ShipperRegisteredEvent` が運ぶ） | `shipperId`, `contractNumber`, `discountRate`, `assignedAt` |
 

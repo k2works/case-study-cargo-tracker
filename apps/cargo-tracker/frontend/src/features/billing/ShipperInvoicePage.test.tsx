@@ -28,6 +28,7 @@ function invoice(over: Record<string, unknown> = {}) {
     dueOn: '2026-11-11',
     paidAt: null,
     overdue: false,
+    payments: [],
     lineItems: [
       {
         itemType: 'BASE',

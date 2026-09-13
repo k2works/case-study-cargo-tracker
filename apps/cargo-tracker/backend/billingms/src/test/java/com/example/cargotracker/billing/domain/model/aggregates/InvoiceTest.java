@@ -8,6 +8,7 @@ import com.example.cargotracker.billing.domain.model.commands.IssueInvoiceComman
 import com.example.cargotracker.billing.domain.model.commands.RecordPaymentCommand;
 import com.example.cargotracker.billing.domain.model.commands.ReverseAdjustmentCommand;
 import com.example.cargotracker.billing.domain.model.commands.VoidInvoiceCommand;
+import com.example.cargotracker.billing.domain.model.commands.VoidPaymentCommand;
 import com.example.cargotracker.billing.domain.model.events.InvoiceAdjustedEvent;
 import com.example.cargotracker.billing.domain.model.events.InvoiceCalculatedEvent;
 import com.example.cargotracker.billing.domain.model.events.InvoiceIssuedEvent;
@@ -20,6 +21,7 @@ import com.example.cargotracker.billing.domain.model.valueobjects.TransportRecor
 import com.example.cargotracker.billing.domain.service.DiscountPolicy;
 import com.example.cargotracker.billing.domain.service.FreightChargeCalculator;
 import com.example.cargotracker.shared.contract.event.PaymentRecordedEvent;
+import com.example.cargotracker.shared.contract.event.PaymentVoidedEvent;
 import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.shared.domain.error.IllegalTransition;
 import com.example.cargotracker.shared.domain.location.UnLocode;
@@ -568,6 +570,95 @@ class InvoiceTest {
                 .when().command(new VoidInvoiceCommand(INVOICE, "誤って記録した",
                         "accountant01"))
                 .then().exception(IllegalTransition.class);
+    }
+
+    @Test
+    @DisplayName("誤って記録した入金を取り消すと請求済に戻る（IT15 引き継ぎ 3）")
+    void voidsARecordedPayment() {
+        // **請求書の取消とは別の操作である。** 請求書は正しく、入金の記録だけが
+        // 誤っている——取り違え・二重記録。IT14 のマニュアル 17 章は
+        // 「いまのところ運用で引き取る」と書いていた。
+        var calculated = calculatedEventOf(calculate(ShipperType.INDIVIDUAL, null));
+        var issued = issuedEventOf(calculated);
+        var paid = new PaymentRecordedEvent(INVOICE, "PAY-1", BOOKING, "SHP-000001",
+                new BigDecimal("510000"), "JPY", NOW, "accountant01", NOW);
+
+        fixture.given().event(calculated).event(issued).event(paid)
+                .when().command(new VoidPaymentCommand(INVOICE, "PAY-1",
+                        "他社の入金と取り違えた", "accountant01"))
+                .then().events(new PaymentVoidedEvent(INVOICE, "PAY-1", BOOKING,
+                        "他社の入金と取り違えた", "accountant01", NOW));
+
+        assertThat(restored(calculated, issued, paid,
+                new PaymentVoidedEvent(INVOICE, "PAY-1", BOOKING, "取り違え",
+                        "accountant01", NOW)).overdue(issued.dueOn().plusDays(1)))
+                .as("**請求済に戻るので督促がまた点く。** 入金は無かったことになる")
+                .isTrue();
+    }
+
+    @Test
+    @DisplayName("知らない請求書の入金は取り消せない")
+    void doesNotVoidAPaymentOfAnUnknownInvoice() {
+        fixture.given().noPriorActivity()
+                .when().command(new VoidPaymentCommand(INVOICE, "PAY-1", "取り違え",
+                        "accountant01"))
+                .then().exception(IllegalTransition.class);
+    }
+
+    @Test
+    @DisplayName("入金していない請求書の入金は取り消せない")
+    void doesNotVoidAPaymentThatWasNotRecorded() {
+        var calculated = calculatedEventOf(calculate(ShipperType.INDIVIDUAL, null));
+
+        fixture.given().event(calculated).event(issuedEventOf(calculated))
+                .when().command(new VoidPaymentCommand(INVOICE, "PAY-1", "取り違え",
+                        "accountant01"))
+                .then().exception(IllegalTransition.class);
+    }
+
+    @Test
+    @DisplayName("取り消すのは記録した入金でなければならない（別の入金 ID は断る）")
+    void doesNotVoidAnotherPayment() {
+        // **識別子を見ずに状態だけで通すと、どの入金を取り消したのか残らない。**
+        var calculated = calculatedEventOf(calculate(ShipperType.INDIVIDUAL, null));
+        var issued = issuedEventOf(calculated);
+        var paid = new PaymentRecordedEvent(INVOICE, "PAY-1", BOOKING, "SHP-000001",
+                new BigDecimal("510000"), "JPY", NOW, "accountant01", NOW);
+
+        fixture.given().event(calculated).event(issued).event(paid)
+                .when().command(new VoidPaymentCommand(INVOICE, "PAY-9", "取り違え",
+                        "accountant01"))
+                .then().exception(BusinessRuleViolation.class);
+    }
+
+    @Test
+    @DisplayName("入金の取消にも理由が要る")
+    void requiresAReasonToVoidAPayment() {
+        var calculated = calculatedEventOf(calculate(ShipperType.INDIVIDUAL, null));
+        var issued = issuedEventOf(calculated);
+        var paid = new PaymentRecordedEvent(INVOICE, "PAY-1", BOOKING, "SHP-000001",
+                new BigDecimal("510000"), "JPY", NOW, "accountant01", NOW);
+
+        fixture.given().event(calculated).event(issued).event(paid)
+                .when().command(new VoidPaymentCommand(INVOICE, "PAY-1", "  ",
+                        "accountant01"))
+                .then().exception(BusinessRuleViolation.class);
+    }
+
+    @Test
+    @DisplayName("取り消したあとはもう一度入金を記録できる（記録し直せる）")
+    void acceptsANewPaymentAfterVoiding() {
+        var calculated = calculatedEventOf(calculate(ShipperType.INDIVIDUAL, null));
+        var issued = issuedEventOf(calculated);
+        var paid = new PaymentRecordedEvent(INVOICE, "PAY-1", BOOKING, "SHP-000001",
+                new BigDecimal("510000"), "JPY", NOW, "accountant01", NOW);
+        var voided = new PaymentVoidedEvent(INVOICE, "PAY-1", BOOKING, "取り違え",
+                "accountant01", NOW);
+
+        fixture.given().event(calculated).event(issued).event(paid).event(voided)
+                .when().command(new RecordPaymentCommand(INVOICE, "PAY-2",
+                        new BigDecimal("510000"), NOW, "accountant01"))
+                .then().success();
     }
 
     @Test

@@ -143,6 +143,28 @@ class ContractEventRoundTripIT extends AbstractAxonIntegrationTest {
     @Test
     @DisplayName("billingms で記録した入金が bookingms に届き、予約が精算済になる（US23 §4）")
     void paymentRecordedReachesBooking() {
+        var settled = settleOneBooking();
+
+        // **購読側の表で見る。** 発行側を見ても「送った」ことしか分からない。
+        await("予約が精算済になる").atMost(Duration.ofSeconds(60))
+                .pollInterval(Duration.ofMillis(500))
+                .until(() -> "SETTLED".equals(booking.getBean(JdbcTemplate.class)
+                        .queryForObject(
+                                "SELECT booking_status FROM cargo_summary WHERE booking_id = ?",
+                                String.class, settled.bookingId())));
+    }
+
+    /** 精算まで進めた予約 1 件（打ち消しの検査も同じ道具立てを使う）。 */
+    private record SettledBooking(String bookingId, String invoiceId, String paymentId) {
+    }
+
+    /**
+     * 引取済の予約を作り、請求書を発行して入金まで記録する。
+     *
+     * <p><b>画面の経路をなぞらない</b>——確かめたいのは「イベントが BC をまたいで
+     * 届くか」だけである。</p>
+     */
+    private SettledBooking settleOneBooking() {
         // **向きが逆の 1 本目である。** IT13 までの契約は booking → tracking →
         // handling → billing の一方向で、**billing から booking へ戻るのは IT14 が
         // 最初**。往復を検査していないと、購読側が読めていないことに気づけない。
@@ -237,16 +259,39 @@ class ContractEventRoundTripIT extends AbstractAxonIntegrationTest {
         java.math.BigDecimal total = billingJdbc.queryForObject(
                 "SELECT total_amount FROM invoice WHERE invoice_id = ?",
                 java.math.BigDecimal.class, invoiceId);
+        String paymentId = "PAY-RT-" + System.nanoTime();
         billingCommands.sendAndWait(new com.example.cargotracker.billing.domain.model.commands
-                .RecordPaymentCommand(invoiceId, "PAY-RT-" + System.nanoTime(), total,
+                .RecordPaymentCommand(invoiceId, paymentId, total,
                 java.time.Instant.parse("2026-09-06T02:00:00Z"), "accountant01"));
 
-        // **購読側の表で見る。** 発行側を見ても「送った」ことしか分からない。
-        await("予約が精算済になる").atMost(Duration.ofSeconds(60))
+        return new SettledBooking(bookingId, invoiceId, paymentId);
+    }
+
+    @Test
+    @DisplayName("入金の取り消しも bookingms に届き、予約が引取済に戻る（IT15 引き継ぎ 3）")
+    void paymentVoidedReachesBooking() {
+        // **記録と打ち消しは同じ経路を通る。** 届く側だけ検査すると、
+        // 「精算済にはなるが戻らない」形の欠陥が残る——US23 §4 でやったのと
+        // 同じ見落としを、打ち消し側で繰り返さない。
+        JdbcTemplate bookingJdbc = booking.getBean(JdbcTemplate.class);
+        var settled = settleOneBooking();
+        await("まず精算済になる").atMost(Duration.ofSeconds(60))
                 .pollInterval(Duration.ofMillis(500))
                 .until(() -> "SETTLED".equals(bookingJdbc.queryForObject(
                         "SELECT booking_status FROM cargo_summary WHERE booking_id = ?",
-                        String.class, bookingId)));
+                        String.class, settled.bookingId())));
+
+        var billingCommands = billing.getBean(
+                org.axonframework.messaging.commandhandling.gateway.CommandGateway.class);
+        billingCommands.sendAndWait(new com.example.cargotracker.billing.domain.model.commands
+                .VoidPaymentCommand(settled.invoiceId(), settled.paymentId(),
+                "他社の入金と取り違えた", "accountant01"));
+
+        await("予約が引取済に戻る").atMost(Duration.ofSeconds(60))
+                .pollInterval(Duration.ofMillis(500))
+                .until(() -> "DELIVERED".equals(bookingJdbc.queryForObject(
+                        "SELECT booking_status FROM cargo_summary WHERE booking_id = ?",
+                        String.class, settled.bookingId())));
     }
 
     @Test

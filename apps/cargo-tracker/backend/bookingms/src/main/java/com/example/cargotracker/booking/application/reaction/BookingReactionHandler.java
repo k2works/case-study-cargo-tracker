@@ -11,6 +11,7 @@ import com.example.cargotracker.booking.domain.model.commands.RecordHandlingComm
 import com.example.cargotracker.booking.domain.model.commands.RevertHandlingCommand;
 import com.example.cargotracker.booking.domain.model.commands.MarkDeliveredCommand;
 import com.example.cargotracker.booking.domain.model.commands.RevertDeliveryCommand;
+import com.example.cargotracker.booking.domain.model.commands.RevertSettlementCommand;
 import com.example.cargotracker.booking.domain.model.commands.SettleBookingCommand;
 import com.example.cargotracker.shared.contract.event.CargoDeliveredEvent;
 import com.example.cargotracker.shared.domain.error.IllegalTransition;
@@ -18,6 +19,7 @@ import com.example.cargotracker.shared.contract.event.CargoDeliveryRevertedEvent
 import com.example.cargotracker.shared.contract.event.HandlingActivityRegisteredEvent;
 import com.example.cargotracker.shared.contract.event.HandlingActivityVoidedEvent;
 import com.example.cargotracker.shared.contract.event.PaymentRecordedEvent;
+import com.example.cargotracker.shared.contract.event.PaymentVoidedEvent;
 import com.example.cargotracker.shared.contract.event.TrackingInitializedEvent;
 import java.time.Clock;
 import java.util.Map;
@@ -248,6 +250,36 @@ public class BookingReactionHandler {
             String reason = "入金は記録されたが予約を精算済にできなかった（"
                     + refusal.getMessage() + "）。請求書 " + event.invoiceId() + " を確かめる";
             log.warn("精算の連鎖が進めなかった: bookingId={} invoiceId={} reason={}",
+                    event.bookingId(), event.invoiceId(), refusal.getMessage());
+            attentionItems.add(SETTLEMENT_BLOCKED, "BOOKING", event.bookingId(),
+                    ROLE_ACCOUNTANT, reason, "{}", clock.instant());
+        }
+    }
+
+    /**
+     * 入金の記録が取り消された（UC18 / US23。IT15 引き継ぎ 3）。
+     *
+     * <p><b>記録と打ち消しは同じ経路を通す。</b> 入金を写して精算済にしたのなら、
+     * 取り消しも写して引取済に戻す——戻さないと、入金が無いのに精算が終わって
+     * いる予約が残る。</p>
+     *
+     * <p><b>断られたら要確認に出す。</b> 精算済でない予約なら集約は黙って
+     * 何もしないが、それ以外の理由で進めないときは経理が見て決める
+     * （入金の記録と同じ扱い）。</p>
+     */
+    @EventHandler
+    public void on(PaymentVoidedEvent event) {
+        try {
+            commands.sendAndWait(new RevertSettlementCommand(event.bookingId(),
+                    event.invoiceId(), event.reason()), Void.class);
+        } catch (RuntimeException e) {
+            IllegalTransition refusal = refusalIn(e);
+            if (refusal == null) {
+                throw e;
+            }
+            String reason = "入金は取り消されたが予約の精算を戻せなかった（"
+                    + refusal.getMessage() + "）。請求書 " + event.invoiceId() + " を確かめる";
+            log.warn("精算の取り消しが進めなかった: bookingId={} invoiceId={} reason={}",
                     event.bookingId(), event.invoiceId(), refusal.getMessage());
             attentionItems.add(SETTLEMENT_BLOCKED, "BOOKING", event.bookingId(),
                     ROLE_ACCOUNTANT, reason, "{}", clock.instant());

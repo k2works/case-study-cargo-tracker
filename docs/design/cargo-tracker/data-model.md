@@ -4,7 +4,7 @@ title: "データモデル設計 - 国際貨物輸送管理システム（CQRS /
 description: "CQRS / Event Sourcing 版 Cargo Tracker のデータモデル設計。Event Store は Axon Server に任せ、サービスごとの投影テーブル・Axon 管理テーブル・Auth の状態テーブルを ER 図とテーブル定義で示し、Processing Group との対応とリプレイ前提のマイグレーション方針を定める。"
 tags: [design,data-model,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-10T11:47:34Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-13T02:29:13Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -720,6 +720,9 @@ entity "payment" as pay {
   currency: VARCHAR(3) NOT NULL
   paid_at: TIMESTAMPTZ NOT NULL
   recorded_by: VARCHAR(50) NOT NULL
+  voided_at: TIMESTAMPTZ
+  voided_by: VARCHAR(50)
+  void_reason: TEXT
 }
 
 entity "invoice_notification" as inv_note {
@@ -783,7 +786,7 @@ bcs ||--o{ bcl
 | :--- | :--- | :--- | :--- |
 | `invoice` | `InvoiceCalculatedEvent`, `InvoiceAdjustedEvent`, `InvoiceIssuedEvent`, `PaymentRecordedEvent`, `InvoiceVoidedEvent`, `CancellationFeeAppliedEvent` | `UNIQUE(booking_id, void_marker)`, `INDEX(shipper_id)`、**`INDEX(billing_status, due_on)` は IT14 で足す**（`due_on` の書き手が US23 まで居ない） | **`billing_status` が正で、`void_marker` は UNIQUE を成立させるための派生列**（[ADR-0017](../../adr/cargo-tracker/0017-billing-status-is-the-source-of-truth.md)）。有効中 `''`、取り消し時に `invoice_id` を入れる。**この列を読んで業務の判断をしない**——読んでよいのは有効な請求書を引く 1 か所だけ（決定 3）。有効な請求書は予約ごとに 1 通。**`overdue` 列は持たず**、一覧の SQL が `due_on < :today AND billing_status = 'INVOICED'` で判定する。`quoted_amount` / `quoted_currency` は見積時の概算（任意。見積を経ない予約は `NULL`）で、S61 が「見積時の概算 → 請求 → 差額」を出す。`INDEX(shipper_id)` は荷主向け請求書（`FindShipperInvoiceQuery`）の索引を兼ねる |
 | `invoice_line_item` | 同上 | `UNIQUE(source_event_id) WHERE source_event_id IS NOT NULL`（V006） | **`source_event_id` は調整行の元イベント**。算出の明細は消して入れ直すので増えないが、**調整は別のイベントで積むので入れ直せない**——同じイベントが 2 度届くと `MAX(line_seq)+1` が新しい番号を採って同じ行が増える（IT13 で実測。合計は動かないのに明細だけ増えるので、二重に調整したと読める）。`item_type` は `BASE` / `DISCOUNT` / `ADJUSTMENT` / `CANCELLATION_FEE` / `TAX`。`basis_exception_id` は調整行の根拠になった例外 ID（任意。trackingms への論理参照）で、S61 から例外へリンクする |
-| `payment` | `PaymentRecordedEvent` | `PK(payment_id)`, `INDEX(invoice_id)` | **`payment_id` が PK**（追記系は元イベントの識別子で一意にする）。同じ入金が 2 度届いても 1 行 |
+| `payment` | `PaymentRecordedEvent`, `PaymentVoidedEvent` | `PK(payment_id)`, `INDEX(invoice_id)` | **`payment_id` が PK**（追記系は元イベントの識別子で一意にする）。同じ入金が 2 度届いても 1 行。**取り消しても行は消さない**——消すと「誤って記録して取り消した」事実そのものが残らない。`voided_at` が入っている行は入金として数えない |
 | `invoice_notification` | `InvoiceIssuedEvent` | `PK(invoice_id)` | **送信基盤はスコープ外**（IT14 の注 N9）。残すのは「いつ・誰に・何を伝えたか」だけで、荷主はメールではなく S62 で自社の請求書を読む。**書きっぱなしにしない**——読み口は `InvoiceMapper#findNotification` で、`InvoiceProjectionIT#marksIssued` が記録と読み口を対で確かめる |
 | `booking_quotation` | **`CargoQuotedEvent`（契約）の購読**（IT14 / V011） | `PK(booking_id)` | 予約のもとになった見積の概算を写す。`invoice.quoted_amount` の唯一の入力経路で、S61 が「見積時の概算 → 請求 → 差額」を出す。**貨物スナップショットに混ぜない**——あちらは追跡番号が主キーで、追跡番号は輸送が始まってから決まる。見積が結び付くのは予約の時点なので、混ぜると「まだ行が無い」ところへ概算を書くことになる。**見積を経ない予約では行が無い**（0 円で埋めると「0 円の見積があった」と読まれる） |
 | `shipper_contract_snapshot` | **`ShipperRegisteredEvent`（契約）の購読**。**`CorporateContractAssignedEvent` は足さない**（IT13 の判断）——法人契約は荷主登録で設定され、`ShipperRegisteredEvent` が既に契約番号と割引率を運んでいる。付与を後から行う操作は bookingms に無いので、**読む側の無い契約を先に足さない**（IT9〜IT12 と同じ判断） | `PK(shipper_id)` | billingms が bookingms に同期問い合わせをしないための ACL の読み取りモデル（`FindShipperForBillingQuery` は廃止）。荷主の最新の契約を写し、請求書作成時に `invoice.discount_rate` へ複写する。作成後に割引率が変わっても請求書は変わらない。`shipper_name` は crypto-shredding 後に `NULL`（ADR-0003） |

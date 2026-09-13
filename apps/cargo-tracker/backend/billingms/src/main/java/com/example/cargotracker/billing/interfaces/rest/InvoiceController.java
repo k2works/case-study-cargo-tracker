@@ -6,6 +6,7 @@ import com.example.cargotracker.billing.domain.model.commands.IssueInvoiceComman
 import com.example.cargotracker.billing.domain.model.commands.RecordPaymentCommand;
 import com.example.cargotracker.billing.domain.model.commands.ReverseAdjustmentCommand;
 import com.example.cargotracker.billing.domain.model.commands.VoidInvoiceCommand;
+import com.example.cargotracker.billing.domain.model.commands.VoidPaymentCommand;
 import com.example.cargotracker.billing.infrastructure.persistence.AttentionItemMapper;
 import com.example.cargotracker.billing.infrastructure.query.BillingQueries.FindInvoiceOfBookingQuery;
 import com.example.cargotracker.billing.infrastructure.query.BillingQueries.FindInvoiceQuery;
@@ -134,6 +135,25 @@ public class InvoiceController {
     public record RecordPaymentRequest(
             @NotNull BigDecimal amount,
             @NotNull java.time.Instant paidAt) {
+    }
+
+    /**
+     * 記録した入金を取り消す（UC18 / US23。IT15 引き継ぎ 3）。
+     *
+     * <p><b>請求書の取消とは別の入口である。</b> 請求書は正しく、入金の記録だけが
+     * 誤っている——取り違え・二重記録。請求書は請求済に戻り、予約も引取済に戻る。</p>
+     *
+     * <p><b>どの入金かを URL で名指しする。</b> 状態だけで通すと、取り消したのが
+     * どの入金か残らない。</p>
+     */
+    @PostMapping("/{invoiceId}/payments/{paymentId}/void")
+    public ResponseEntity<Void> voidPayment(@PathVariable String invoiceId,
+            @PathVariable String paymentId,
+            @RequestHeader(value = "X-Auth-Username", required = false) String username,
+            @Valid @RequestBody VoidRequest request) {
+        commands.sendAndWait(new VoidPaymentCommand(invoiceId, paymentId,
+                request.reason(), username), Void.class);
+        return ResponseEntity.ok().build();
     }
 
     /**
