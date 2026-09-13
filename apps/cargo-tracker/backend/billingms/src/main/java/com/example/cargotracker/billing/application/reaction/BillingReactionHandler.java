@@ -2,6 +2,7 @@ package com.example.cargotracker.billing.application.reaction;
 
 import com.example.cargotracker.billing.application.InvoiceCalculation;
 import com.example.cargotracker.billing.infrastructure.projection.AttentionItemRecorder;
+import com.example.cargotracker.shared.contract.event.CargoCancelledEvent;
 import com.example.cargotracker.shared.contract.event.CargoDeliveredEvent;
 import java.time.Clock;
 import org.axonframework.messaging.commandhandling.gateway.CommandGateway;
@@ -44,13 +45,24 @@ public class BillingReactionHandler {
     private final CommandGateway commands;
     private final InvoiceCalculation calculation;
     private final AttentionItemRecorder attentionItems;
+
+    /**
+     * 料率表。<b>キャンセル料が 0 かどうかを尋ねる</b>（US30・IT15）。
+     *
+     * <p>状態をここで数え直すと、料率の出典が 2 つになる。</p>
+     */
+    private final com.example.cargotracker.billing.domain.model.valueobjects.RateTable rates;
+
     private final Clock clock;
 
     public BillingReactionHandler(CommandGateway commands, InvoiceCalculation calculation,
-            AttentionItemRecorder attentionItems, Clock clock) {
+            AttentionItemRecorder attentionItems,
+            com.example.cargotracker.billing.domain.model.valueobjects.RateTable rates,
+            Clock clock) {
         this.commands = commands;
         this.calculation = calculation;
         this.attentionItems = attentionItems;
+        this.rates = rates;
         this.clock = clock;
     }
 
@@ -75,6 +87,51 @@ public class BillingReactionHandler {
             case InvoiceCalculation.Outcome.Ready ready ->
                     commands.sendAndWait(ready.command(), String.class);
         }
+    }
+
+    /**
+     * 予約がキャンセルされた（UC22 / US30 §受入基準 9。IT15 T8）。
+     *
+     * <p><b>キャンセル料を請求に積む。</b> 請求書がまだ無いのが通常の経路なので、
+     * キャンセル料だけの請求書ができる（正典「キャンセル料の受け皿」）。</p>
+     *
+     * <p><b>料率 0%（仮受付）は何もしない。</b> 0 円の請求書は業務として存在せず、
+     * 記録だけ作ると経理が「確かめるもの」として毎朝読む。判定は料率表が持つので、
+     * ここでは状態を見ない——<b>料率の出典は 1 つ</b>。</p>
+     */
+    @EventHandler
+    public void on(CargoCancelledEvent event) {
+        if (zeroFee(event.statusAtCancel())) {
+            return;
+        }
+        switch (calculation.prepareCancellationFee(event.bookingId(),
+                event.statusAtCancel(), event.cancelledBy())) {
+            case InvoiceCalculation.FeeOutcome.AlreadyInvoiced ignored ->
+                    // すでに請求書がある。**調整として積むのは経理の判断**なので、
+                    // 自動では足さない（誤って二重に請求しない）。
+                    fail(event.bookingId(), "予約 " + event.bookingId()
+                            + " にはすでに請求書があります。キャンセル料は調整で入れてください");
+            case InvoiceCalculation.FeeOutcome.Blocked blocked -> {
+                if (blocked.retryable()) {
+                    throw new IllegalStateException(blocked.reason());
+                }
+                // **黙って 0 円にしない。** 取りこぼした請求はあとから取り返せない。
+                fail(event.bookingId(), blocked.reason());
+            }
+            case InvoiceCalculation.FeeOutcome.Ready ready ->
+                    commands.sendAndWait(ready.command(), String.class);
+        }
+    }
+
+    /**
+     * 料率が 0 か（仮受付）。
+     *
+     * <p><b>料率表に尋ねる。</b> 状態をここで数え直すと、料率の出典が 2 つになる。
+     * 知らない状態は料率表が断るので、その例外はそのまま上がる——<b>黙って
+     * 0 円で通さない</b>。</p>
+     */
+    private boolean zeroFee(String statusAtCancel) {
+        return rates.cancellationFeeRate(statusAtCancel).signum() == 0;
     }
 
     /**

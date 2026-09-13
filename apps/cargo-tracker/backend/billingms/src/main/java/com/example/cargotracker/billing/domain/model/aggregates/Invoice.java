@@ -5,13 +5,17 @@ import com.example.cargotracker.billing.domain.model.commands.CalculateInvoiceCo
 import com.example.cargotracker.billing.domain.model.commands.IssueInvoiceCommand;
 import com.example.cargotracker.billing.domain.model.commands.RecordPaymentCommand;
 import com.example.cargotracker.billing.domain.model.commands.ReverseAdjustmentCommand;
+import com.example.cargotracker.billing.domain.model.commands.ApplyCancellationFeeCommand;
 import com.example.cargotracker.billing.domain.model.commands.VoidInvoiceCommand;
 import com.example.cargotracker.billing.domain.model.commands.VoidPaymentCommand;
 import com.example.cargotracker.billing.domain.model.events.InvoiceAdjustedEvent;
+import com.example.cargotracker.billing.domain.model.events.CancellationFeeAppliedEvent;
 import com.example.cargotracker.billing.domain.model.events.InvoiceCalculatedEvent;
 import com.example.cargotracker.billing.domain.model.events.InvoiceIssuedEvent;
 import com.example.cargotracker.billing.domain.model.events.InvoiceVoidedEvent;
 import com.example.cargotracker.billing.domain.model.valueobjects.BillingStatus;
+import com.example.cargotracker.billing.domain.model.valueobjects.DiscountRate;
+import com.example.cargotracker.billing.domain.model.valueobjects.ShipperType;
 import com.example.cargotracker.billing.domain.model.valueobjects.FreightCharge;
 import com.example.cargotracker.billing.domain.model.valueobjects.LineItemType;
 import com.example.cargotracker.billing.domain.model.valueobjects.Money;
@@ -312,6 +316,99 @@ public class Invoice {
     }
 
     /**
+     * キャンセル料を積む（UC22 / US30 §受入基準 9）。
+     *
+     * <p><b>請求書がまだ無いのが通常の経路である。</b> 輸送は行われていないので
+     * 輸送料金は無く、請求するのはキャンセル料だけ——<b>キャンセル料だけの
+     * 請求書</b>ができる（正典「キャンセル料の受け皿」）。</p>
+     *
+     * <p><b>基準は「運ぶはずだった料金」。</b> キャンセル料は基本料金 × 状態別
+     * 料率で決まる（正典の料金計算）。基本料金は輸送実績と同じ道具で出す
+     * ——式を 2 つ持つと、同じ貨物で違う額が出る。</p>
+     *
+     * <p><b>割引は当たる。</b> 契約は生きているので、法人の割引率はキャンセル料
+     * にも効く。<b>税もかかる</b>（輸出免税の判定も同じ）。</p>
+     *
+     * <p><b>料率表に無い状態は断る</b>（{@code RateTable#cancellationFeeRate}）。
+     * 黙って 0 円で通すと、取りこぼした請求はあとから取り返せない。</p>
+     */
+    @CommandHandler
+    public String applyCancellationFee(ApplyCancellationFeeCommand command,
+            EventAppender appender, FreightChargeCalculator calculator,
+            DiscountPolicy discountPolicy, RateTable rates, Clock clock) {
+        if (invoiceId != null) {
+            throw new IllegalTransition(
+                    "請求書 " + invoiceId + " にはすでに金額が入っています");
+        }
+        requireText(command.invoiceId(), "請求書 ID は必須です");
+        requireText(command.bookingId(), "予約 ID は必須です");
+        if (command.shipperType() == null || command.discountRate() == null) {
+            // **算出と同じ扱いにする。** 割引を判断できないまま額を出すと、
+            // 法人の割引が当たらない請求書が静かにできる（材料が足りないときは
+            // 要確認へ回すのが `InvoiceCalculation` の役目である）。
+            throw new BusinessRuleViolation("荷主種別が分からないので割引を判断できません");
+        }
+        if (command.transport() == null) {
+            throw new BusinessRuleViolation("輸送実績が無いのでキャンセル料を算出できません");
+        }
+
+        java.math.BigDecimal feeRate = rates.cancellationFeeRate(command.statusAtCancel());
+        Money fee = calculator.calculate(command.transport(), rates)
+                .baseCharge().multiply(feeRate);
+        Money discount = discountPolicy.discountFor(command.shipperType(),
+                command.discountRate(), fee);
+        Money afterDiscount = fee.subtract(discount);
+        Money tax = calculator.taxOn(command.transport(), afterDiscount, rates);
+        Money total = afterDiscount.add(tax);
+
+        List<InvoiceCalculatedEvent.LineItem> items = new ArrayList<>();
+        // **料率だけでは「なぜこの額か」が読めない。** どの状態でのキャンセルかを添える。
+        items.add(item(LineItemType.CANCELLATION_FEE,
+                "キャンセル料（" + BookingStatusLabel.of(command.statusAtCancel())
+                        + "・" + percent(feeRate) + "）", fee));
+        if (!discount.isZero()) {
+            items.add(item(LineItemType.DISCOUNT, discountDescription(command.shipperType(),
+                    command.discountRate(), command.contractNumber()), discount));
+        }
+        if (!tax.isZero()) {
+            items.add(item(LineItemType.TAX, "消費税", tax));
+        } else if (command.transport().isExport()) {
+            items.add(item(LineItemType.TAX, "消費税（輸出免税）", Money.zero()));
+        }
+
+        // **必須にしたものを三項で受け直さない。** 上で断っているので、ここの
+        // null 分岐は到達しない——**不到達の分岐は検査で覆えず、読む人には
+        // 「起こりうる」ように見える**。
+        appender.append(new CancellationFeeAppliedEvent(command.invoiceId(),
+                command.bookingId(), command.shipperId(), command.shipperName(),
+                command.shipperType().name(), command.contractNumber(),
+                command.discountRate().value(),
+                command.statusAtCancel(), feeRate,
+                round(fee), round(discount), round(tax),
+                rates.taxRate(), command.transport().isExport(),
+                round(total), fee.currency(), items, command.appliedBy(), clock.instant()));
+        return command.invoiceId();
+    }
+
+    /** 料率を画面の言葉にする（0.50 → 50%）。 */
+    private static String percent(java.math.BigDecimal rate) {
+        return rate.multiply(new java.math.BigDecimal("100")).stripTrailingZeros()
+                .toPlainString() + "%";
+    }
+
+    @EventSourcingHandler
+    void on(CancellationFeeAppliedEvent event) {
+        this.invoiceId = event.invoiceId();
+        this.bookingId = event.bookingId();
+        this.shipperId = event.shipperId();
+        this.status = BillingStatus.CALCULATED;
+        this.baseAmount = Money.yen(event.baseAmount());
+        this.discountAmount = Money.yen(event.discountAmount());
+        this.taxRate = event.taxRate();
+        this.taxExempt = event.taxExempt();
+    }
+
+    /**
      * 入金を記録する（US23 §受入基準 3・4）。
      *
      * <p><b>決済機関との接続はスコープ外</b>（計画の注 N9）。経理担当者が入金
@@ -482,11 +579,21 @@ public class Invoice {
     }
 
     private String discountDescription(CalculateInvoiceCommand command) {
-        String contract = command.contractNumber() == null ? ""
-                : "・" + command.contractNumber();
+        return discountDescription(command.shipperType(), command.discountRate(),
+                command.contractNumber());
+    }
+
+    /**
+     * 割引の説明。
+     *
+     * <p><b>算出とキャンセル料で同じものを出す。</b> 書き方が 2 つあると、
+     * 同じ荷主の請求書が経路によって違う読み方になる。</p>
+     */
+    private String discountDescription(ShipperType shipperType, DiscountRate discountRate,
+            String contractNumber) {
+        String contract = contractNumber == null ? "" : "・" + contractNumber;
         return LineItemType.DISCOUNT.label() + "（"
-                + command.discountRate().percentage().toPlainString() + "%"
-                + contract + "）";
+                + discountRate.percentage().toPlainString() + "%" + contract + "）";
     }
 
     /**

@@ -137,4 +137,51 @@ class InvoicePaymentProjectionIT extends AbstractAxonIntegrationTest {
         projection.on(new PaymentVoidedEvent("INV-NONE-" + System.nanoTime(), "PAY-X",
                 "B-NONE", "取り違え", "accountant01", AT), "evt-pv-none");
     }
+
+    @Test
+    @DisplayName("US30: キャンセル料の請求書が投影に出る（IT15 T8）")
+    void projectsTheCancellationFeeInvoice() {
+        // **記録と読み口は対で出す。** 請求書ができても投影に書かなければ、
+        // 経理は「キャンセル料を請求する相手」を知る手段を持たない。
+        String invoiceId = "INV-CF-" + System.nanoTime();
+        String bookingId = "B-CF-" + System.nanoTime();
+
+        projection.on(new com.example.cargotracker.billing.domain.model.events
+                .CancellationFeeAppliedEvent(invoiceId, bookingId, "SHP-000001", "山田商事",
+                "INDIVIDUAL", null, null, "IN_TRANSIT", new BigDecimal("0.50"),
+                new BigDecimal("255000"), BigDecimal.ZERO, BigDecimal.ZERO,
+                new BigDecimal("0.10"), true, new BigDecimal("255000"), "JPY",
+                List.of(new InvoiceCalculatedEvent.LineItem("CANCELLATION_FEE",
+                        "キャンセル料（輸送中・50%）", new BigDecimal("255000"), "JPY", null)),
+                "tracker01", AT), "evt-cf-1");
+
+        var view = queries.handle(new FindInvoiceQuery(invoiceId));
+        assertThat(view).isNotNull();
+        assertThat(view.totalAmount()).isEqualByComparingTo("255000");
+        assertThat(view.lineItems())
+                .extracting(line -> line.itemType())
+                .as("基本料金の行は出さない——輸送していない")
+                .containsExactly("CANCELLATION_FEE");
+        assertThat(view.quotedAmount())
+                .as("キャンセル料の請求書に見積時の概算は無い").isNull();
+    }
+
+    @Test
+    @DisplayName("同じキャンセル料が 2 度届いても明細は積み上がらない")
+    void doesNotDuplicateTheCancellationFee() {
+        String invoiceId = "INV-CF2-" + System.nanoTime();
+        var event = new com.example.cargotracker.billing.domain.model.events
+                .CancellationFeeAppliedEvent(invoiceId, "B-CF2-" + System.nanoTime(),
+                "SHP-000001", "山田商事", "INDIVIDUAL", null, null, "IN_TRANSIT",
+                new BigDecimal("0.50"), new BigDecimal("255000"), BigDecimal.ZERO,
+                BigDecimal.ZERO, new BigDecimal("0.10"), true, new BigDecimal("255000"),
+                "JPY", List.of(new InvoiceCalculatedEvent.LineItem("CANCELLATION_FEE",
+                        "キャンセル料（輸送中・50%）", new BigDecimal("255000"), "JPY", null)),
+                "tracker01", AT);
+
+        projection.on(event, "evt-cf2-1");
+        projection.on(event, "evt-cf2-2");
+
+        assertThat(queries.handle(new FindInvoiceQuery(invoiceId)).lineItems()).hasSize(1);
+    }
 }

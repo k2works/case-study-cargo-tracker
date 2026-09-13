@@ -69,6 +69,31 @@ public class InvoiceCalculation {
     }
 
     /**
+     * キャンセル料の材料をそろえた結果。
+     *
+     * <p><b>輸送料金の {@code Outcome} とは別の型にする。</b> 1 つにまとめると、
+     * どちらの経路にも「起こりえない結果」の分岐が残る——不到達の分岐は検査で
+     * 覆えず、読む人には「起こりうる」ように見える。<b>種類を足したときに
+     * 名乗り出る</b>性質は、家族ごとに保たれる。</p>
+     */
+    public sealed interface FeeOutcome {
+
+        /** キャンセル料を積めるコマンドができた。 */
+        record Ready(com.example.cargotracker.billing.domain.model.commands
+                .ApplyCancellationFeeCommand command) implements FeeOutcome { }
+
+        /** その予約にはすでに請求書がある。**調整として積むのは経理の判断**。 */
+        record AlreadyInvoiced(String invoiceId) implements FeeOutcome { }
+
+        /**
+         * 算出できない。
+         *
+         * @param retryable 待てば入るか。<b>連鎖はこれで例外にするか要確認にするかを分ける</b>
+         */
+        record Blocked(String reason, boolean retryable) implements FeeOutcome { }
+    }
+
+    /**
      * 追跡番号から材料をそろえる（引取の連鎖から）。
      */
     public Outcome prepare(String trackingNumber, String bookingId) {
@@ -102,6 +127,59 @@ public class InvoiceCalculation {
                     + " の貨物の写しが届いていません", true);
         }
         return prepareFor(cargo);
+    }
+
+    /**
+     * キャンセル料の材料をそろえる（UC22 / US30 §受入基準 9。IT15 T8）。
+     *
+     * <p><b>請求書がまだ無いのが通常の経路である。</b> 輸送は行われていないので
+     * 輸送料金は無く、請求するのはキャンセル料だけ——キャンセル料だけの請求書に
+     * なる（正典「キャンセル料の受け皿」）。</p>
+     *
+     * <p><b>写しが無ければ要確認へ。</b> 基本料金が出せない。<b>黙って 0 円に
+     * しない</b>——取りこぼした請求はあとから取り返せない。</p>
+     */
+    public FeeOutcome prepareCancellationFee(String bookingId, String statusAtCancel,
+            String appliedBy) {
+        var existing = invoices.findActiveByBooking(bookingId);
+        if (existing != null) {
+            // 引取後のキャンセルは起きないので稀だが、二重に作らない判断は同じ。
+            return new FeeOutcome.AlreadyInvoiced(existing.invoiceId());
+        }
+        var cargo = cargos.findByBooking(bookingId);
+        if (cargo == null) {
+            // **輸送開始前のキャンセルでは写しが無いことがある**（追跡が始まる前）。
+            // 待っても入らないので、人に渡す。
+            return new FeeOutcome.Blocked("予約 " + bookingId
+                    + " の貨物の写しが無いのでキャンセル料を算出できません", false);
+        }
+        if (cargo.weightKg() == null) {
+            return new FeeOutcome.Blocked("貨物 " + cargo.trackingNumber()
+                    + " の重量が分からないのでキャンセル料を算出できません", false);
+        }
+        var contract = shippers.find(cargo.shipperId());
+        if (contract == null) {
+            return new FeeOutcome.Blocked("荷主 " + cargo.shipperId()
+                    + " の契約がまだ届いていません（キャンセル料を算出できません）", true);
+        }
+        List<TransportRecord.BilledLeg> legs = new ArrayList<>();
+        for (BillingCargoSnapshotMapper.LegRow leg : cargos.findLegs(cargo.trackingNumber())) {
+            legs.add(new TransportRecord.BilledLeg(new UnLocode(leg.loadUnLocode()),
+                    new UnLocode(leg.unloadUnLocode())));
+        }
+        if (legs.isEmpty()) {
+            return new FeeOutcome.Blocked("貨物 " + cargo.trackingNumber()
+                    + " の区間が分からないのでキャンセル料を算出できません", false);
+        }
+        var transport = new TransportRecord(legs, cargo.weightKg(), cargo.cargoType(),
+                new UnLocode(cargo.originUnLocode()), new UnLocode(cargo.destinationUnLocode()));
+        return new FeeOutcome.Ready(
+                new com.example.cargotracker.billing.domain.model.commands
+                        .ApplyCancellationFeeCommand(nextInvoiceId(), bookingId,
+                        cargo.shipperId(), contract.shipperName(),
+                        ShipperType.of(contract.shipperType()),
+                        DiscountRate.ofNullable(contract.discountRate()),
+                        contract.contractNumber(), transport, statusAtCancel, appliedBy));
     }
 
     /** 見積時の概算。**結び付いていなければ {@code null}**（普通の状態）。 */

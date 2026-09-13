@@ -1,6 +1,7 @@
 package com.example.cargotracker.billing.infrastructure.projection;
 
 import com.example.cargotracker.billing.domain.model.events.InvoiceAdjustedEvent;
+import com.example.cargotracker.billing.domain.model.events.CancellationFeeAppliedEvent;
 import com.example.cargotracker.billing.domain.model.events.InvoiceCalculatedEvent;
 import com.example.cargotracker.billing.domain.model.events.InvoiceIssuedEvent;
 import com.example.cargotracker.billing.domain.model.events.InvoiceVoidedEvent;
@@ -150,6 +151,43 @@ public class InvoiceProjection {
         invoices.insertPayment(new InvoiceMapper.PaymentRow(event.paymentId(),
                 event.invoiceId(), event.amount(), event.currency(), event.paidAt(),
                 event.recordedBy()));
+    }
+
+    /**
+     * キャンセル料を積んだ（UC22 / US30 §受入基準 9。IT15 T8）。
+     *
+     * <p><b>記録と読み口は対で出す。</b> 請求書ができても投影に書かなければ、
+     * 経理は「キャンセル料を請求する相手」を知る手段を持たない。</p>
+     *
+     * <p><b>算出と同じ形で書く。</b> 明細の種別が違うだけで、請求書としては
+     * 同じものである——別の書き方をすると、一覧が経路によって違う行を出す。</p>
+     */
+    @EventHandler
+    public void on(CancellationFeeAppliedEvent event, @MessageIdentifier String eventId) {
+        int inserted = invoices.insert(new InvoiceMapper.InvoiceRow(
+                event.invoiceId(), event.bookingId(), event.shipperId(), event.shipperName(),
+                event.shipperType(), event.contractNumber(), event.baseAmount(),
+                event.discountAmount(), java.math.BigDecimal.ZERO, event.taxAmount(),
+                event.totalAmount(), event.currency(), event.discountRate(),
+                BillingStatus.CALCULATED.name(), event.appliedAt(),
+                null, null, null,
+                // キャンセル料の請求書に見積時の概算は無い（輸送していない）。
+                null,
+                clock.instant(), eventId));
+
+        if (inserted == 0 && invoices.find(event.invoiceId()) == null) {
+            log.warn("キャンセル料の請求書を書けませんでした: invoiceId={} bookingId={}",
+                    event.invoiceId(), event.bookingId());
+            return;
+        }
+
+        invoices.deleteCalculatedLineItems(event.invoiceId());
+        int seq = 1;
+        for (InvoiceCalculatedEvent.LineItem item : event.lineItems()) {
+            invoices.insertLineItem(new InvoiceMapper.LineItemRow(event.invoiceId(), seq++,
+                    item.itemType(), item.description(), item.amount(), item.currency(),
+                    item.basisExceptionId(), null, null, null));
+        }
     }
 
     /**
