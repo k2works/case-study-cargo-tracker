@@ -1003,14 +1003,11 @@ test.describe('kind クラスタでの通し確認', () => {
       await expect(page.getByText(/重量: 1200 kg → 1500 kg/)).toBeVisible();
     });
 
-  // **US23 §受入基準 4 は未達**。入金は記録され請求書は入金済になるが、
-  // bookingms が `PaymentRecordedEvent` を処理しない（ログにも要確認にも退避にも
-  // 残らず、reaction の token は追いついている）。**IT15 の最優先課題**。
-  // 欠陥を示す検査は契約の往復テスト
-  // `ContractEventRoundTripIT#paymentRecordedReachesBooking` に置いてある——
-  // クラスタ側は常時赤にすると他の 23 本の信号が読めなくなるので fixme にする。
-  // **直ったらこの行を外す。検査そのものは消さない。**
-  test.fixme('請求書を発行して入金を記録すると、予約が精算済になる（US23・IT14）',
+  // **US23 §受入基準 4**（IT14 で未達だったものを IT15 T-1 で直した）。
+  // 症状は「入金が bookingms に届かない」に見えたが、実体は
+  // **投影に `BookingSettledEvent` の書き手が無かった**ことだった。
+  // 契約の往復テスト `ContractEventRoundTripIT#paymentRecordedReachesBooking` と対で見る。
+  test('請求書を発行して入金を記録すると、予約が精算済になる（US23・IT14）',
     async ({ page, request }) => {
       // **US23 のクラスタ確認**（Try T7）。**BC をまたぐ連鎖はここでしか
       // 判別できない**——billingms の入金が bookingms へ届いて予約が精算済に

@@ -63,6 +63,7 @@ class ContractEventRoundTripIT extends AbstractAxonIntegrationTest {
             // 2 サービスを載せると `classpath:application.yml` は 1 つしか読まれず、
             // billingms の設定が消えて起動に失敗する（実測）。
             "--spring.config.import=optional:classpath:cargo-rates.yml",
+            
             "--server.port=" + port,
             "--axon.axonserver.servers=" + AXON_SERVER.getAxonServerAddress(),
             "--spring.datasource.url=" + POSTGRES.getJdbcUrl() + "&currentSchema=" + schema,
@@ -140,22 +141,18 @@ class ContractEventRoundTripIT extends AbstractAxonIntegrationTest {
     }
 
     @Test
-    @org.junit.jupiter.api.Disabled(
-            "US23 §受入基準 4 の未達を示す検査。IT15 の最優先課題として引き継ぐ。"
-            + "直ったらこの行を外す——検査そのものは消さない（消すと、次に同じ欠陥が"
-            + "入っても誰も気づけない）")
     @DisplayName("billingms で記録した入金が bookingms に届き、予約が精算済になる（US23 §4）")
     void paymentRecordedReachesBooking() {
         // **向きが逆の 1 本目である。** IT13 までの契約は booking → tracking →
         // handling → billing の一方向で、**billing から booking へ戻るのは IT14 が
         // 最初**。往復を検査していないと、購読側が読めていないことに気づけない。
         //
-        // **この検査は現在赤である**（US23 §受入基準 4 の未達）。入金は記録され
-        // 請求書は入金済になるが、bookingms は `PaymentRecordedEvent` を処理せず、
-        // ログにも要確認にも退避（`dead_letter_entry`）にも何も残らない。reaction
-        // の token は追いついているので「読んだが配送されていない」形である。
-        // `@EventTag` に予約 ID を足しても変わらなかった。**原因は Axon 5 の
-        // イベント配送にあると見ており、IT15 で腰を据えて調べる。**
+        // **この検査は IT14 で赤だった。** 原因は Axon の配送ではなく、
+        // **bookingms の投影に `BookingSettledEvent` の書き手が無かった**ことである
+        // （IT15 T-1 で特定。TRACE ログで、reaction は受け取って `SettleBookingCommand`
+        // まで通し、token も進めていた——欠けていたのは読み口だけだった）。
+        // **「届かない」に見えた症状の実体は「書いていない」だった**ので、
+        // 配送を疑って `@EventTag` を足すのは空振りになった。
         //
         // 計画の T7 は「契約イベントなのでゴールデン JSON **と Axon Server 経由の
         // 往復テスト**」を求めていたが、往復テストが作られていなかった。

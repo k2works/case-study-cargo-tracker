@@ -39,6 +39,10 @@ class CargoHandlingProjectionIT extends AbstractAxonIntegrationTest {
     @Autowired
     private CargoProjection projection;
 
+    /** 荷役・引取・精算は {@code CargoProgressProjection} が写す（同じ Processing Group）。 */
+    @Autowired
+    private CargoProgressProjection progress;
+
     @Autowired
     private BookingQueryHandler queries;
 
@@ -87,7 +91,7 @@ class CargoHandlingProjectionIT extends AbstractAxonIntegrationTest {
     void writesTheLastHandling() {
         String bookingId = bookedAndTracked();
 
-        projection.on(new HandlingRecordedEvent(bookingId, "act-1", "RECEIVE", "JPTYO",
+        progress.on(new HandlingRecordedEvent(bookingId, "act-1", "RECEIVE", "JPTYO",
                 Instant.parse("2026-09-20T01:00:00Z"), AT));
 
         var row = booking(bookingId);
@@ -100,10 +104,10 @@ class CargoHandlingProjectionIT extends AbstractAxonIntegrationTest {
         // **集約が引取済になっても、投影に書き手が無ければ一覧は輸送中のまま。**
         // クラスタで実測した欠陥（IT10 T2e）。
         String bookingId = bookedAndTracked();
-        projection.on(new HandlingRecordedEvent(bookingId, "act-1", "RECEIVE", "JPTYO",
+        progress.on(new HandlingRecordedEvent(bookingId, "act-1", "RECEIVE", "JPTYO",
                 Instant.parse("2026-09-20T01:00:00Z"), AT));
 
-        projection.on(new BookingDeliveredEvent(bookingId, "TRK-8K2QX7M4RB",
+        progress.on(new BookingDeliveredEvent(bookingId, "TRK-8K2QX7M4RB",
                 Instant.parse("2026-09-25T02:00:00Z"), "USNYC"));
 
         assertThat(booking(bookingId).bookingStatus()).isEqualTo("DELIVERED");
@@ -115,11 +119,11 @@ class CargoHandlingProjectionIT extends AbstractAxonIntegrationTest {
         // **記録と読み口は対で出す。** 集約が戻っても投影に書き手が無ければ、
         // 営業の一覧は配送完了のまま残る（IT10 で同じ形の欠陥を出した）。
         String bookingId = bookedAndTracked();
-        projection.on(new BookingDeliveredEvent(bookingId, "TRK-8K2QX7M4RB",
+        progress.on(new BookingDeliveredEvent(bookingId, "TRK-8K2QX7M4RB",
                 Instant.parse("2026-09-25T02:00:00Z"), "USNYC"));
         assertThat(booking(bookingId).bookingStatus()).isEqualTo("DELIVERED");
 
-        projection.on(new BookingDeliveryRevertedEvent(bookingId, "TRK-8K2QX7M4RB",
+        progress.on(new BookingDeliveryRevertedEvent(bookingId, "TRK-8K2QX7M4RB",
                 "IN_TRANSIT", "取り違え"));
 
         assertThat(booking(bookingId).bookingStatus()).isEqualTo("IN_TRANSIT");
@@ -130,10 +134,10 @@ class CargoHandlingProjectionIT extends AbstractAxonIntegrationTest {
     void marksAndClearsMisroute() {
         String bookingId = bookedAndTracked();
 
-        projection.on(new BookingMisroutedEvent(bookingId, "act-1", "SGSIN", AT));
+        progress.on(new BookingMisroutedEvent(bookingId, "act-1", "SGSIN", AT));
         assertThat(booking(bookingId).routingStatus()).isEqualTo("MISROUTED");
 
-        projection.on(new HandlingRevertedEvent(bookingId, "act-1", true, AT));
+        progress.on(new HandlingRevertedEvent(bookingId, "act-1", true, AT));
         assertThat(booking(bookingId).routingStatus()).isEqualTo("ROUTED");
     }
 
@@ -141,9 +145,9 @@ class CargoHandlingProjectionIT extends AbstractAxonIntegrationTest {
     @DisplayName("原因でない取り消しでは誤配を消さない（誤配に気づけなくなる）")
     void keepsMisrouteForUnrelatedVoid() {
         String bookingId = bookedAndTracked();
-        projection.on(new BookingMisroutedEvent(bookingId, "act-1", "SGSIN", AT));
+        progress.on(new BookingMisroutedEvent(bookingId, "act-1", "SGSIN", AT));
 
-        projection.on(new HandlingRevertedEvent(bookingId, "act-9", false, AT));
+        progress.on(new HandlingRevertedEvent(bookingId, "act-9", false, AT));
 
         assertThat(booking(bookingId).routingStatus()).isEqualTo("MISROUTED");
     }
@@ -151,7 +155,7 @@ class CargoHandlingProjectionIT extends AbstractAxonIntegrationTest {
     @Test
     @DisplayName("知らない予約の荷役では止まらない")
     void ignoresHandlingForUnknownBooking() {
-        projection.on(new HandlingRecordedEvent("B-NONE-" + System.nanoTime(), "act-1",
+        progress.on(new HandlingRecordedEvent("B-NONE-" + System.nanoTime(), "act-1",
                 "RECEIVE", "JPTYO", Instant.parse("2026-09-20T01:00:00Z"), AT));
     }
 }

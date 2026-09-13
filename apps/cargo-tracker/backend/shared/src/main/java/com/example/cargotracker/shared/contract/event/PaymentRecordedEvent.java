@@ -21,9 +21,10 @@ import org.axonframework.eventsourcing.annotation.EventTag;
  * 素通りする。</p>
  *
  * <p><b>予約 ID にもタグを付けてみたが、届かない原因ではなかった</b>（IT14 で
- * 実測。当てずっぽうの変更を残さないので戻した）。<b>bookingms が本イベントを
- * 処理できない欠陥は未解決</b>で、往復テスト
- * {@code ContractEventRoundTripIT#paymentRecordedReachesBooking} が赤で示す。</p>
+ * 実測。当てずっぽうの変更を残さないので戻した）。<b>実際には届いていた</b>——
+ * bookingms の投影に {@code BookingSettledEvent} の書き手が無かっただけである
+ * （IT15 T-1）。往復テスト
+ * {@code ContractEventRoundTripIT#paymentRecordedReachesBooking} が緑で示す。</p>
  *
  * @param paymentId 入金の識別子。<b>追記系投影の行を一意にする</b>
  *     （{@code payment.payment_id} が PK。少なくとも 1 回配送で二度入らない）
