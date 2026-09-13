@@ -3,7 +3,7 @@ type: Plan
 title: "イテレーション 14 計画"
 tags: [plan]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-11T08:46:03Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-13T01:03:05Z }
 verified:
   - { by: human:k2works, at: 2026-09-11T09:40:33Z }
 ---
@@ -59,7 +59,7 @@ US23 は**新設ゼロ**です。`Invoice` に `issue` / `recordPayment` / `void
 | §1 | 「確定」状態の輸送料金をもとに精算書（請求番号・請求金額・支払い期限）を発行できる | 受け入れ「算出済の請求書を発行する」・`InvoiceTest#issuesTheInvoice`（不変条件 3：`dueDate = issuedAt + 30 日`） |
 | §2 | 精算書が荷主にメール通知される | **送信基盤はスコープ外**（注 N9）。残すのは「いつ・何を伝えたか」で、荷主は S62 で自社の請求書を読む。`InvoiceProjectionIT#marksIssued`（通知の記録と読み口を対で確かめる） |
 | §3 | 決済機関との連携により入金確認ができる | **決済機関との接続はスコープ外**（注 N9）。経理担当者が入金を記録する。`InvoiceTest#recordsThePayment` |
-| §4 | 入金確認後、精算状態が「精算済」に更新され予約状態も「精算済」になる | **未達**（請求書は入金済になるが、**予約は引取済のまま**）。`InvoiceTest#recordsThePayment` と受け入れは緑だが、どちらも 1 サービスの中で完結する。**BC をまたぐ配送だけが未検査**だった——クローズで新設した `ContractEventRoundTripIT#paymentRecordedReachesBooking` が赤で示す（IT15 の最優先） |
+| §4 | 入金確認後、精算状態が「精算済」に更新され予約状態も「精算済」になる | **IT15 T-1 で達成**（IT14 時点では未達）。`InvoiceTest#recordsThePayment` と受け入れは緑だったが、どちらも 1 サービスの中で完結する。**BC をまたぐ往復だけが未検査**で、その先の**投影の書き手が無いこと**も誰も見ていなかった。いまは `ContractEventRoundTripIT#paymentRecordedReachesBooking`（往復）と `CargoSettlementProjectionIT`（読み口）が対で固定する |
 | §5 | 支払い期限超過時、経理担当者に未払い通知が送信される | 受け入れ「期限を過ぎた請求書が未払いとして出る」・`InvoiceTest#overdueStartsTheDayAfterTheDueDate`（**列を持たず `overdue(today)` で判定**。期限当日は超過ではない） |
 
 ### 受入基準に現れない不変条件（**正典にあり、実装が要る**）
