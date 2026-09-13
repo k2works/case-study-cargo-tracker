@@ -27,6 +27,9 @@ dependencies {
     // 追跡の契約イベント（TrackingInitializedEvent）の往復。IT13 で重量を足したので、
     // **足した項目が実際に billingms へ届く**ことを見る（開発戦略の終盤 Phase 2）。
     "roundTripTestImplementation"(project(":trackingms"))
+    // キャンセルの往復（US30・IT15 T9）。**3 つの購読側を 1 本で見る**
+    // ——どれか 1 つが欠けても業務は途中で止まる。
+    "roundTripTestImplementation"(project(":handlingms"))
     "roundTripTestImplementation"(libs.spring.boot.starter.test)
     "roundTripTestImplementation"(libs.spring.boot.starter.web)
     "roundTripTestImplementation"(libs.spring.boot.starter.jdbc)
