@@ -4,7 +4,7 @@ title: "ドメインモデル設計 - 国際貨物輸送管理システム（CQR
 description: "CQRS / Event Sourcing 版 Cargo Tracker のドメインモデル設計。6 コンテキストの集約・不変条件・コマンド・イベント（内部 / 契約）・状態遷移・Reaction Handler を、イベントを永続化フォーマットとして定義する。"
 tags: [design,domain-model,ddd,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-13T02:29:13Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-13T05:10:53Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -103,6 +103,9 @@ quadrantChart
 | 割引の当て方 | Discount Policy | `DiscountPolicy` | 法人割引を当てるドメインサービス（US22）。**種別で断ち切る**——個人荷主に割引率が入っていても当てない |
 | 明細の種別 | Line Item Type | `LineItemType` | `BASE` / `DISCOUNT` / `ADJUSTMENT` / `CANCELLATION_FEE` / `TAX`。**表示の分類であって業務判断ではない**ので、値オブジェクトには持たせず投影の列に置く |
 | 地域区分 | Port Region | `PortRegion` | 国内 / 近海 / 遠洋。区間の区分は**両端の重いほう**。国 → 区分の対応は設定から読む（表に無い国は遠洋） |
+| 輸送実績 | Transport Record | `TransportRecord` | 請求の入力になる「実際に通った区間」（区間・重量・貨物種別・出発地・目的地）。**見積の入力（候補経路）とは別物**なので、同じ式でも金額は一致しない |
+| 運賃 | Freight Charge | `FreightCharge` | `FreightChargeCalculator` が返す基本料金と税の内訳。**請求書の額そのものではない**——割引と調整は `Invoice` が積む |
+| 割引率 | Discount Rate | `DiscountRate` | 法人荷主の契約割引（0.0000〜0.3000）。**個人荷主には当てない**（`DiscountPolicy` が種別で断ち切る） |
 | 料率表 | Rate Table | `RateTable` | 基準運賃・地域係数・貨物種別係数・税率。**`application.yml` が出典**（[ADR-0016](../../adr/cargo-tracker/0016-rates-live-in-configuration.md)）。**知らない貨物種別は断る** |
 | 貨物スナップショット | Cargo Snapshot | `CargoSnapshot` | Handling が Booking のイベントから写し取った貨物の最小情報（ACL） |
 | 請求書 | Invoice | `Invoice` | 輸送料金の請求書。集約ルート |

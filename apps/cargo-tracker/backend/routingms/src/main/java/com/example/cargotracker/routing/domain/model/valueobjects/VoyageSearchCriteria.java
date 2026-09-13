@@ -22,22 +22,40 @@ public record VoyageSearchCriteria(
         String arrival,
         Instant departFrom,
         Instant departTo,
-        String cargoType) {
+        String cargoType,
+        // 航海番号の一部（IT12 引き継ぎ H.5）。**現場が持っているのは番号である**
+        // ——船社との会話も荷役からの問い合わせも番号で来るので、出発地・目的地から
+        // 辿り直させない。**部分一致・大文字小文字を問わない**。全体を正確に
+        // 打たせると、控え違いがそのまま 0 件になり、0 件は「無い」と読めるので
+        // 探し方の誤りだと気づけない。
+        String voyageNumber) {
 
+    /** 航海番号で絞らない形（既存の呼び出しはこちら）。 */
     public static VoyageSearchCriteria of(String departure, String arrival,
             Instant departFrom, Instant departTo, String cargoType) {
+        return of(departure, arrival, departFrom, departTo, cargoType, null);
+    }
+
+    public static VoyageSearchCriteria of(String departure, String arrival,
+            Instant departFrom, Instant departTo, String cargoType, String voyageNumber) {
         if (departFrom != null && departTo != null && departTo.isBefore(departFrom)) {
             throw new BusinessRuleViolation("出発期間の開始は終了より後にできません");
         }
         return new VoyageSearchCriteria(
                 port(departure), port(arrival),
-                departFrom, departTo, cargoTypeName(cargoType));
+                departFrom, departTo, cargoTypeName(cargoType), trimmed(voyageNumber));
+    }
+
+    /** 空文字は {@code null} に寄せる（入口で正規化する。判定を 2 か所に置かない）。 */
+    private static String trimmed(String value) {
+        return isBlank(value) ? null : value.trim();
     }
 
     /** 条件が 1 つも無い（既定の一覧と同じ）。0 件の案内を出し分けるのに使う。 */
     public boolean isEmpty() {
         return departure == null && arrival == null
-                && departFrom == null && departTo == null && cargoType == null;
+                && departFrom == null && departTo == null && cargoType == null
+                && voyageNumber == null;
     }
 
     private static String port(String value) {

@@ -137,7 +137,7 @@ class VoyageControllerTest {
         when(queries.query(any(), any(Class.class)))
                 .thenReturn(CompletableFuture.completedFuture(new VoyageListView(List.of(), 0)));
 
-        controller.list(0, 50, false, null, null, null, null, "  ");
+        controller.list(0, 50, false, null, null, null, null, "  ", null);
 
         ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
         org.mockito.Mockito.verify(queries).query(captor.capture(), any(Class.class));
@@ -149,7 +149,7 @@ class VoyageControllerTest {
     void rejectsUnknownFilter() {
         // 0 件は「無い」と読める。入力が誤っていることを伝える。
         assertThatThrownBy(() -> controller.list(0, 50, false, null, null, null, null,
-                "UNKNOWN"))
+                "UNKNOWN", null))
                 .isInstanceOf(BusinessRuleViolation.class);
     }
 

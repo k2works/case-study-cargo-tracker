@@ -269,6 +269,49 @@ describe('S02 ダッシュボード', () => {
       .toHaveAttribute('href', '/customs?overdueOnly=true');
   });
 
+  it('自分宛の要確認の件数が出て、そこから要確認一覧へ行ける（IT13 引き継ぎ E）', async () => {
+    // **気づく手段は次の行動へ繋ぐ。** 要確認は投影が弾いたものや止まった連鎖で、
+    // ダッシュボードに出ないと、S70 を自分で開きに行った人しか気づけない。
+    // 宛先の絞り込みはサーバがロールで行うので、ここはロールを問わず同じ形。
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      const url = String(input);
+      if (url.includes('/attention-items')) {
+        return Promise.resolve(new Response(JSON.stringify({
+          // **モックを本物より甘くしない。** サーバは occurredAt を必ず返すので、
+          // 省いたフィクスチャは「本物が返さない形」を通してしまう（実際、
+          // 省いたら並べ替えが落ちて一覧そのものが出なかった）。
+          items: [
+            { itemId: 'i-1', occurredAt: '2026-09-28T01:00:00Z' },
+            { itemId: 'i-2', occurredAt: '2026-09-28T02:00:00Z' },
+          ],
+        }), { status: 200 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ items: [] }), { status: 200 }));
+    });
+
+    renderAs(['ROLE_ACCOUNTANT']);
+
+    // 3 サービスに散っているので、束ねた件数で出す（2 件 × 3 サービス = 6 件）。
+    const notice = await screen.findByText(/確認が必要な項目が 6 件あります/);
+    // **件数を読んだその場から行けること。**「今日の作業」の一覧にもリンクはあるが、
+    // そこまで探させると、気づきが次の行動に繋がらない。
+    expect(within(notice.closest('output') as HTMLElement)
+      .getByRole('link', { name: '要確認一覧' }))
+      .toHaveAttribute('href', '/worklist/attention');
+  });
+
+  it('要確認が無ければ、その案内は出さない', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ items: [] }), { status: 200 }),
+    );
+
+    renderAs(['ROLE_ACCOUNTANT']);
+
+    await screen.findByRole('heading', { name: '今日の作業' });
+    // 0 件の案内は「読むものがある」という合図を薄めるだけである。
+    expect(screen.queryByText(/確認が必要な項目/)).not.toBeInTheDocument();
+  });
+
   it('US21: 経理には確かめていない請求の件数が出て、そこから請求一覧へ行ける', async () => {
     // **件数はその人の仕事に合わせる。** 経理は「出てきた請求を確かめる」ところから
     // 始まる。行けても自分の仕事でなければ進まない。

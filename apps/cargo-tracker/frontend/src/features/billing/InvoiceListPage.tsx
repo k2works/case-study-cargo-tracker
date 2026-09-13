@@ -4,6 +4,8 @@ import { Link, useSearchParams } from 'react-router';
 import {
   ALERT,
   CARD,
+  FIELD,
+  LABEL,
   LINK,
   NOTICE,
   PAGE_TITLE,
@@ -45,13 +47,28 @@ export function InvoiceListPage() {
   // ダッシュボードの知らせからは `?overdue=true` で来る。読まないと全件が出て、
   // どれが未払いかをもう一度自分で探すことになる。
   const [overdueOnly, setOverdueOnly] = useState(searchParams.get('overdue') === 'true');
+  /**
+   * 締めの絞り込み（IT13 引き継ぎ D）。荷主と**算出日**の期間で切る。
+   *
+   * <p>期間は算出日で切る——一覧の並びと同じ基準にしないと、「新しい順に
+   * 並んでいるのに期間の外が混ざる」ように見える。</p>
+   */
+  const [shipperId, setShipperId] = useState('');
+  const [calculatedFrom, setCalculatedFrom] = useState('');
+  const [calculatedTo, setCalculatedTo] = useState('');
   const invoices = useQuery({
-    queryKey: ['invoices', includeSettled, bookingId, overdueOnly],
-    queryFn: () => fetchInvoices(includeSettled, bookingId, overdueOnly),
+    queryKey: ['invoices', includeSettled, bookingId, overdueOnly,
+      shipperId, calculatedFrom, calculatedTo],
+    queryFn: () => fetchInvoices(includeSettled, bookingId, overdueOnly,
+      { shipperId, calculatedFrom, calculatedTo }),
     refetchInterval: REFETCH_INTERVAL_MS,
   });
 
   const items = invoices.data?.state === 'ready' ? invoices.data.value.items : [];
+  // **合計はサーバが数える。** 画面で足すと、一覧の上限（200 件）で切れたぶんが
+  // 静かに落ちて、締めの母数が実際より小さく出る。
+  const totalAmount = invoices.data?.state === 'ready'
+    ? invoices.data.value.totalAmount : null;
 
   return (
     <div>
@@ -87,6 +104,49 @@ export function InvoiceListPage() {
           {/* **期限当日は未払いにならない。** 当日中の入金はふつうにある。 */}
           <span>未払い（支払期限を過ぎたもの）だけ表示</span>
         </label>
+
+        {/* **締めの絞り込み**（IT13 引き継ぎ D）。荷主と算出日の期間で切り、
+            合計を出す。締めは「その期間に算出したぶん」を数える仕事なので、
+            一覧を目で拾って電卓を叩かせない。 */}
+        <div className="mt-3 flex flex-wrap items-end gap-4 border-t border-gray-100 pt-3">
+          <div>
+            <label className={LABEL} htmlFor="invoice-shipper">荷主 ID</label>
+            <input
+              id="invoice-shipper"
+              className={FIELD}
+              value={shipperId}
+              onChange={(event) => setShipperId(event.target.value)}
+              placeholder="SHP-000001"
+            />
+          </div>
+          <div>
+            <label className={LABEL} htmlFor="invoice-from">算出日（から）</label>
+            <input
+              id="invoice-from"
+              className={FIELD}
+              type="date"
+              value={calculatedFrom}
+              onChange={(event) => setCalculatedFrom(event.target.value)}
+            />
+          </div>
+          <div>
+            <label className={LABEL} htmlFor="invoice-to">算出日（まで）</label>
+            <input
+              id="invoice-to"
+              className={FIELD}
+              type="date"
+              value={calculatedTo}
+              onChange={(event) => setCalculatedTo(event.target.value)}
+            />
+          </div>
+        </div>
+        {totalAmount !== null && (
+          <p className="mt-3 text-sm text-gray-800">
+            {/* **絞り込んだぶんの合計**。件数だけでは締めの母数が読めない。 */}
+            合計 {formatMoney(totalAmount, items[0]?.currency ?? 'JPY')}
+            <span className="ml-2 text-gray-600">（{items.length} 件）</span>
+          </p>
+        )}
       </section>
 
       {invoices.data?.state === 'pending' && (

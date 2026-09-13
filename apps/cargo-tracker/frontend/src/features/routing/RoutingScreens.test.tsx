@@ -191,6 +191,27 @@ describe('S32 航海スケジュールの検索', () => {
     });
   });
 
+  it('航海番号でも探せる（IT12 引き継ぎ H.5）', async () => {
+    // **現場が持っているのは番号である。** 船社との会話も荷役からの問い合わせも
+    // 番号で来る。出発地・目的地から辿り直させると、番号を知っているのに
+    // 一覧を目で探すことになる。
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ items: [voyage()], total: 1 }), { status: 200 }),
+      ),
+    );
+
+    renderAt('/voyages-list', <VoyageListPage />);
+    await screen.findByText('V-MOL-001');
+
+    await userEvent.type(screen.getByLabelText('航海番号'), 'V-MOL');
+    await userEvent.click(screen.getByRole('button', { name: '絞り込む' }));
+
+    await waitFor(() => {
+      expect(String(fetchSpy.mock.calls.at(-1)?.[0])).toContain('voyageNumber=V-MOL');
+    });
+  });
+
   it('条件に合う航海が無いときは、条件を外して探し直せる', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
       Promise.resolve(new Response(JSON.stringify({ items: [], total: 0 }), { status: 200 })),

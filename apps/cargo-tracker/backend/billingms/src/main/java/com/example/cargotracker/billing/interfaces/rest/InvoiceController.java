@@ -81,7 +81,18 @@ public class InvoiceController {
     public ResponseEntity<InvoiceListView> list(
             @RequestParam(defaultValue = "false") boolean includeSettled,
             @RequestParam(defaultValue = "false") boolean overdue,
-            @RequestParam(required = false) String bookingId) {
+            @RequestParam(required = false) String bookingId,
+            // **締めの絞り込み**（IT13 引き継ぎ D）。荷主と期間で切り、合計を出す。
+            // 期間は**算出日**（並び順と同じ基準）。`to` はその日を含む。
+            @RequestParam(required = false) String shipperId,
+            @RequestParam(required = false)
+            @org.springframework.format.annotation.DateTimeFormat(iso =
+                    org.springframework.format.annotation.DateTimeFormat.ISO.DATE)
+            java.time.LocalDate calculatedFrom,
+            @RequestParam(required = false)
+            @org.springframework.format.annotation.DateTimeFormat(iso =
+                    org.springframework.format.annotation.DateTimeFormat.ISO.DATE)
+            java.time.LocalDate calculatedTo) {
         if (overdue) {
             // **今日はサーバが決める。** 業務タイムゾーンで判断しないと、
             // 時差の分だけ 1 日早く督促が飛ぶ時間帯ができる。
@@ -89,7 +100,8 @@ public class InvoiceController {
                     new FindOverdueInvoicesQuery(null), InvoiceListView.class));
         }
         return ResponseEntity.ok(queries.query(
-                new FindInvoicesQuery(includeSettled, bookingId), InvoiceListView.class));
+                new FindInvoicesQuery(includeSettled, bookingId, shipperId,
+                        calculatedFrom, calculatedTo), InvoiceListView.class));
     }
 
     /**

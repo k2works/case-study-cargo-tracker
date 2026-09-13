@@ -81,7 +81,23 @@ public class BookingReactionHandler {
     /** 精算の連鎖が進めなかった。**直せるのは請求の側**なので経理宛に出す。 */
     private static final String SETTLEMENT_BLOCKED = "SETTLEMENT_BLOCKED";
 
+    /**
+     * 連鎖のコマンドを集約が断った（IT13 引き継ぎ I）。
+     *
+     * <p><b>退避に積むだけにしない。</b> 集約の断りは再試行しても結果が
+     * 変わらないので、業務の担当者が見て決める。</p>
+     */
+    private static final String CHAIN_REFUSED = "CHAIN_REFUSED";
+
     private static final String ROLE_ACCOUNTANT = "ROLE_ACCOUNTANT";
+
+    /**
+     * 予約の側で断られたものの宛先は<b>営業</b>。
+     *
+     * <p>予約の状態を動かせるのは営業で、荷役や追跡には打つ手が無い——
+     * 気づく手段は、その人が次に取れる行動へ繋がらなければ意味がない。</p>
+     */
+    private static final String ROLE_SALES = "ROLE_SALES";
 
     private static final Logger log = LoggerFactory.getLogger(BookingReactionHandler.class);
 
@@ -199,9 +215,11 @@ public class BookingReactionHandler {
      */
     @EventHandler
     public void on(HandlingActivityRegisteredEvent event) {
-        commands.sendAndWait(new RecordHandlingCommand(event.bookingId(), event.activityId(),
+        // **断られたら要確認へ**（IT13 引き継ぎ I）。荷役の記録は現場が直せる。
+        sendOrRaise(new RecordHandlingCommand(event.bookingId(), event.activityId(),
                 event.handlingType(), event.unLocode(), event.offRoute(),
-                event.completedAt()), Void.class);
+                event.completedAt()), CHAIN_REFUSED, event.bookingId(), ROLE_SALES,
+                "荷役 " + event.activityId() + " を予約に写せなかった");
     }
 
     /**
@@ -212,8 +230,10 @@ public class BookingReactionHandler {
      */
     @EventHandler
     public void on(CargoDeliveredEvent event) {
-        commands.sendAndWait(new MarkDeliveredCommand(event.bookingId(),
-                event.trackingNumber(), event.deliveredAt(), event.location()), Void.class);
+        sendOrRaise(new MarkDeliveredCommand(event.bookingId(),
+                event.trackingNumber(), event.deliveredAt(), event.location()),
+                CHAIN_REFUSED, event.bookingId(), ROLE_SALES,
+                "引き渡しを予約に写せなかった");
     }
 
     /**
@@ -283,6 +303,33 @@ public class BookingReactionHandler {
                     event.bookingId(), event.invoiceId(), refusal.getMessage());
             attentionItems.add(SETTLEMENT_BLOCKED, "BOOKING", event.bookingId(),
                     ROLE_ACCOUNTANT, reason, "{}", clock.instant());
+        }
+    }
+
+    /**
+     * コマンドを送り、<b>集約が断ったら要確認へ出す</b>（IT13 引き継ぎ I）。
+     *
+     * <p><b>断りと障害を分ける。</b> 一時的な障害は投げ直して Event Processor に
+     * 再試行させる——繋がり直せば済むものを人が見ることになるからである。
+     * <b>集約の断りは再試行しても結果が変わらない</b>ので、退避先に積んでも
+     * 誰も気づかないまま溜まる（気づく手段は S91 に置いたが、<b>気づいたあとに
+     * 打つ手があるのは業務の担当者</b>である）。</p>
+     *
+     * <p><b>宛先は「直せる人」。</b> 全員に見えるものは誰も直さない。</p>
+     */
+    private void sendOrRaise(Object command, String kind, String bookingId,
+            String role, String what) {
+        try {
+            commands.sendAndWait(command, Void.class);
+        } catch (RuntimeException e) {
+            IllegalTransition refusal = refusalIn(e);
+            if (refusal == null) {
+                throw e;
+            }
+            String reason = what + "（" + refusal.getMessage() + "）";
+            log.warn("連鎖が進めなかった: kind={} bookingId={} reason={}",
+                    kind, bookingId, refusal.getMessage());
+            attentionItems.add(kind, "BOOKING", bookingId, role, reason, "{}", clock.instant());
         }
     }
 

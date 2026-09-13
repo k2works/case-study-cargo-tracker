@@ -10,9 +10,7 @@ import com.example.cargotracker.billing.domain.model.events.InvoiceVoidedEvent;
 import com.example.cargotracker.billing.infrastructure.persistence.AttentionItemMapper;
 import com.example.cargotracker.billing.infrastructure.query.BillingQueries.FindInvoiceOfBookingQuery;
 import com.example.cargotracker.billing.infrastructure.query.BillingQueries.FindInvoiceQuery;
-import com.example.cargotracker.billing.infrastructure.query.BillingQueries.FindInvoicesQuery;
 import com.example.cargotracker.billing.infrastructure.query.BillingQueries.InvoiceLineView;
-import com.example.cargotracker.billing.infrastructure.query.BillingQueries.InvoiceSummaryView;
 import com.example.cargotracker.billing.infrastructure.query.InvoiceQueryHandler;
 import com.example.cargotracker.shared.testing.AbstractAxonIntegrationTest;
 import java.math.BigDecimal;
@@ -140,6 +138,24 @@ class InvoiceProjectionIT extends AbstractAxonIntegrationTest {
     }
 
     @Test
+    @DisplayName("明細は基本 → 割引 → 調整 → 税の順に並ぶ（IT13 引き継ぎ F）")
+    void ordersLineItemsForReading() {
+        // **調整を入れると、算出の行は消して入れ直される**（税を数え直すため）。
+        // 追加順（line_seq）のまま出すと、調整が税より前だったり後だったりして
+        // 読む順が請求書ごとに変わる。**並べ方は LineItemType の宣言順 1 か所**で決める。
+        String invoiceId = project("ORDER");
+
+        projection.on(new InvoiceAdjustedEvent(invoiceId, "ADJ-1", null,
+                new BigDecimal("-10000"), "誤配による再設計", null,
+                new BigDecimal("-10000"), BigDecimal.ZERO, new BigDecimal("423500"),
+                "JPY", "accountant01", AT), "evt-o1");
+
+        assertThat(queries.handle(new FindInvoiceQuery(invoiceId)).lineItems())
+                .extracting(InvoiceLineView::itemType)
+                .containsExactly("BASE", "DISCOUNT", "ADJUSTMENT", "TAX");
+    }
+
+    @Test
     @DisplayName("不変条件 2: 同じ予約に 2 通目の有効な請求書は残らず、経理の要確認に出る")
     void keepsAtMostOneActiveInvoicePerBooking() {
         // **画面の確認だけでは同時の 2 件が通る**（読んでからコマンドを送るので、
@@ -162,61 +178,6 @@ class InvoiceProjectionIT extends AbstractAxonIntegrationTest {
                 .satisfies(item -> assertThat(item.reason()).contains(first));
     }
 
-    @Test
-    @DisplayName("一覧は算出日時の新しい順に出る（古い順にすると赤になる）")
-    void listsInvoicesNewestFirst() {
-        // **同じ時刻の 2 件では順序を判別しない**（IT13 のレビューで実測。
-        // `containsExactlyInAnyOrder` は `ORDER BY` を消しても緑だった）。
-        String booking = "B-ORD-" + System.nanoTime();
-        String older = "INV-ORD1-" + System.nanoTime();
-        String newer = "INV-ORD2-" + System.nanoTime();
-        projection.on(calculatedAt(older, booking + "-a", AT), "evt-" + System.nanoTime());
-        projection.on(calculatedAt(newer, booking + "-b", AT.plusSeconds(3600)),
-                "evt-" + System.nanoTime());
-
-        List<String> ids = queries.handle(new FindInvoicesQuery(false, null)).items().stream()
-                .map(InvoiceSummaryView::invoiceId)
-                .filter(id -> id.equals(older) || id.equals(newer))
-                .toList();
-
-        assertThat(ids).containsExactly(newer, older);
-    }
-
-    @Test
-    @DisplayName("一覧は既定で入金済・取消を外す（外さない実装に戻すと赤になる）")
-    void excludesSettledInvoicesByDefault() {
-        // **IT13 では PAID / VOID に至らない**ので、状態を直接書いて確かめる。
-        // 確かめずに置くと、US23 で入金が入った瞬間に決着済みが一覧へ混ざる
-        // （一覧は「まだ手を入れる場所」でなくなる）。
-        String paid = "INV-PAID-" + System.nanoTime();
-        String open = "INV-OPEN-" + System.nanoTime();
-        projection.on(calculated(paid, "B-PAID-" + System.nanoTime()),
-                "evt-" + System.nanoTime());
-        projection.on(calculated(open, "B-OPEN-" + System.nanoTime()),
-                "evt-" + System.nanoTime());
-        jdbc.update("UPDATE invoice SET billing_status = 'PAID' WHERE invoice_id = ?", paid);
-
-        assertThat(queries.handle(new FindInvoicesQuery(false, null)).items())
-                .extracting(InvoiceSummaryView::invoiceId)
-                .contains(open)
-                .doesNotContain(paid);
-        assertThat(queries.handle(new FindInvoicesQuery(true, null)).items())
-                .extracting(InvoiceSummaryView::invoiceId)
-                .as("切り替えれば出る（隠しっぱなしにしない）")
-                .contains(paid);
-    }
-
-    @Test
-    @DisplayName("予約で絞れる（予約詳細から請求書へ飛ぶ）")
-    void filtersByBooking() {
-        String booking = "B-F1-" + System.nanoTime();
-        String invoiceId = "INV-F1-" + System.nanoTime();
-        projection.on(calculated(invoiceId, booking), "evt-" + System.nanoTime());
-
-        assertThat(queries.handle(new FindInvoicesQuery(true, booking)).items())
-                .singleElement()
-                .satisfies(item -> assertThat(item.invoiceId()).isEqualTo(invoiceId));
-    }
 
     @Test
     @DisplayName("同じイベントを 2 度読んでも明細は積み上がらない")

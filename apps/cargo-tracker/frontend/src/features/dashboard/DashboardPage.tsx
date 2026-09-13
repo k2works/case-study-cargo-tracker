@@ -14,6 +14,7 @@ import { formatBusinessDateTime } from '@/shared/api/businessDate';
 import { fetchVoyagePorts } from '@/features/handling/api';
 import { fetchOpenExceptions, fetchRecentlyChanged } from '@/features/tracking/api';
 import { fetchOverdueCustomsHolds } from '@/features/customs/api';
+import { fetchAttentionItems } from '@/features/attention/api';
 
 /** S02 ダッシュボード。「今日の作業」からその日の入口へ行けるようにする。 */
 export function DashboardPage() {
@@ -60,6 +61,15 @@ export function DashboardPage() {
     queryKey: ['invoices-calculated'],
     queryFn: () => fetchInvoices(false),
     enabled: isAccountant,
+  });
+
+  // **要確認は宛先ロールごとに散っている**（IT13 引き継ぎ E）。**荷主には出ない**
+  // ——社内の受け皿なので、宛先ロールに荷主は無い（サーバが絞るので、ここで
+  // 分岐を増やして判定を 2 か所にしない）。
+  const { data: attentionItems } = useQuery({
+    queryKey: ['attention-items-count'],
+    queryFn: fetchAttentionItems,
+    enabled: !isShipper,
   });
 
   // **未払いは督促の起点**（US23 §受入基準 5）。期限を過ぎたものは放っておくと
@@ -315,6 +325,19 @@ export function DashboardPage() {
             通関申告一覧
           </Link>
           {' '}で督促してください。
+        </output>
+      )}
+
+      {/* **要確認は宛先ロールごとに散っている**（IT13 引き継ぎ E）。ここに出さないと、
+          S70 を自分で開きに行った人しか気づけない。**気づく手段は次の行動へ繋ぐ**ので
+          一覧へのリンクを添える。宛先の絞り込みはサーバがロールで行う。 */}
+      {attentionItems?.state === 'ready' && attentionItems.value.items.length > 0 && (
+        <output className={`${NOTICE} mt-4 block`}>
+          確認が必要な項目が {attentionItems.value.items.length} 件あります。{' '}
+          <Link to="/worklist/attention" className={LINK}>
+            要確認一覧
+          </Link>
+          {' '}で確かめてください。
         </output>
       )}
 

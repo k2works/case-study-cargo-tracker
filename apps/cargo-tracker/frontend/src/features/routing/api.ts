@@ -110,6 +110,13 @@ export interface VoyageSearchInput {
   readonly departFrom?: string;
   readonly departTo?: string;
   readonly cargoType?: string;
+  /**
+   * 航海番号の一部（IT12 引き継ぎ H.5）。
+   *
+   * **現場が持っているのは番号である。** 部分一致・大文字小文字を問わない
+   * 解釈はサーバが持つ（判定を 2 か所に置かない）。
+   */
+  readonly voyageNumber?: string;
 }
 
 /**

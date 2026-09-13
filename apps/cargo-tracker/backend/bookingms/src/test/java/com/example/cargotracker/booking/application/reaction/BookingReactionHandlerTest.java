@@ -50,6 +50,14 @@ class BookingReactionHandlerTest {
     private static final class RecordingCommands {
         private final List<Object> sent = new ArrayList<>();
         private RuntimeException failure;
+        /**
+         * 失敗させるコマンドの型。
+         *
+         * <p><b>既定は「全部」。</b> 名簿方式にすると、コマンドを足したときに
+         * 足したものだけが失敗しないまま検査を素通りする。<b>補償のように
+         * 「失敗の後始末そのもの」を見る検査だけ</b>が、対象を絞る。</p>
+         */
+        private Class<?> failFor = Object.class;
     }
 
     /** 途中経過のフェイク。実装（MyBatis）ではなく振る舞いを写す。 */
@@ -156,9 +164,9 @@ class BookingReactionHandlerTest {
                     org.axonframework.messaging.core.Metadata metadata,
                     org.axonframework.messaging.core.unitofwork.ProcessingContext context) {
                 commands.sent.add(command);
-                if (commands.failure != null
-                        && (command instanceof InitializeTrackingCommand
-                                || command instanceof SettleBookingCommand)) {
+                // **名簿方式にしない。** コマンドを足したときに、足したものだけが
+                // 「失敗しない」ままになる（IT13 引き継ぎ I で 2 本増えた）。
+                if (commands.failure != null && commands.failFor.isInstance(command)) {
                     throw commands.failure;
                 }
                 return () -> CompletableFuture.completedFuture(null);
@@ -250,6 +258,10 @@ class BookingReactionHandlerTest {
     @DisplayName("ADR-0010 決定 4: 上限を超えたら補償して要確認一覧に出す")
     void compensatesAfterTheLimit() {
         commands.failure = new IllegalStateException("trackingms が落ちている");
+        // **補償そのものは通す。** 落ちているのは trackingms で、予約を戻すのは
+        // 自分のサービスである——ここまで失敗させると、見たいのは補償なのに
+        // 補償が起きない状況を検査することになる。
+        commands.failFor = InitializeTrackingCommand.class;
 
         // 1 回目・2 回目は投げ直す（再試行される）。
         assertThatThrownBy(() -> handler.on(issued())).isInstanceOf(RuntimeException.class);
@@ -397,6 +409,55 @@ class BookingReactionHandlerTest {
                             .as("直せるのは請求の側。宛先を間違えると打つ手の無い人に届く")
                             .contains("INV-20260928-1a2b3c4d");
                 });
+    }
+
+    @Test
+    @DisplayName("引き渡しを断られたら要確認に出す（退避に積むだけにしない・IT13 引き継ぎ I）")
+    void recordsAttentionWhenDeliveryIsRefused() {
+        // **集約の断りは再試行しても結果が変わらない。** 退避先に積むと、
+        // 誰も打つ手を取らないまま溜まる。宛先は予約を動かせる営業。
+        commands.failure = new org.axonframework.messaging.commandhandling
+                .CommandExecutionException("引取済にできません",
+                new IllegalTransition("状態 キャンセル の予約は引取済にできません"));
+
+        handler.on(new com.example.cargotracker.shared.contract.event.CargoDeliveredEvent(
+                "TRK-8K2QX7M4RB", "B-0001", Instant.parse("2026-09-25T02:00:00Z"), "USNYC"));
+
+        assertThat(attentionItems.reasons).singleElement()
+                .satisfies(recorded -> assertThat(recorded)
+                        .startsWith("CHAIN_REFUSED/ROLE_SALES/"));
+    }
+
+    @Test
+    @DisplayName("荷役を断られたら、どの荷役かが読める形で要確認に出す")
+    void recordsAttentionWhenHandlingIsRefused() {
+        commands.failure = new org.axonframework.messaging.commandhandling
+                .CommandExecutionException("記録できません",
+                new IllegalTransition("状態 キャンセル の予約に荷役は記録できません"));
+
+        handler.on(handlingRegistered());
+
+        assertThat(attentionItems.reasons).singleElement()
+                .as("どの荷役かが読めないと、現場は何を直せばよいのか分からない")
+                .satisfies(recorded -> assertThat(recorded).contains("act-1"));
+    }
+
+    @Test
+    @DisplayName("荷役の一時的な障害は投げ直す（要確認に落とさない）")
+    void rethrowsTransientHandlingFailures() {
+        commands.failure = new IllegalStateException("コマンドバスに繋がりません");
+
+        assertThatThrownBy(() -> handler.on(handlingRegistered()))
+                .isInstanceOf(IllegalStateException.class);
+        assertThat(attentionItems.reasons).isEmpty();
+    }
+
+    private static com.example.cargotracker.shared.contract.event.HandlingActivityRegisteredEvent
+            handlingRegistered() {
+        return new com.example.cargotracker.shared.contract.event
+                .HandlingActivityRegisteredEvent("act-1", "TRK-8K2QX7M4RB", "B-0001",
+                "RECEIVE", "JPTYO", null, false, false, "handler01",
+                Instant.parse("2026-09-16T08:30:00Z"), NOW);
     }
 
     @Test

@@ -232,7 +232,8 @@ class BillingReactionHandlerIT extends AbstractAxonIntegrationTest {
         deliver(fixture);
 
         assertThat(queries.handle(new com.example.cargotracker.billing.infrastructure.query
-                .BillingQueries.FindInvoicesQuery(true, fixture.bookingId())).items())
+                .BillingQueries.FindInvoicesQuery(true, fixture.bookingId(),
+                        null, null, null)).items())
                 .hasSize(1);
         assertThat(attentionFor(fixture.bookingId()))
                 .as("2 度目は静かに止める（弾かれた事実を要確認に出さない）")

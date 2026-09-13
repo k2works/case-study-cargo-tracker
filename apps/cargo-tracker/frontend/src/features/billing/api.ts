@@ -120,7 +120,16 @@ export function fetchInvoices(
   includeSettled: boolean,
   bookingId?: string | null,
   overdue = false,
-): Promise<Pending<{ items: InvoiceSummaryView[]; total: number }>> {
+  /**
+   * 締めの絞り込み（IT13 引き継ぎ D）。荷主と**算出日**の期間で切る。
+   * `calculatedTo` はその日を含む。
+   */
+  closing: {
+    shipperId?: string | null;
+    calculatedFrom?: string | null;
+    calculatedTo?: string | null;
+  } = {},
+): Promise<Pending<InvoiceListView>> {
   const query = new URLSearchParams({ includeSettled: includeSettled ? 'true' : 'false' });
   if (overdue) {
     query.set('overdue', 'true');
@@ -128,7 +137,26 @@ export function fetchInvoices(
   if (bookingId !== undefined && bookingId !== null && bookingId.trim() !== '') {
     query.set('bookingId', bookingId.trim());
   }
+  // 空文字は送らない。**入口で null に寄せる**——空の絞り込みを送ると、
+  // サーバ側で「指定あり・値なし」と「指定なし」を見分けることになる。
+  for (const [key, value] of Object.entries(closing)) {
+    if (value !== undefined && value !== null && value.trim() !== '') {
+      query.set(key, value.trim());
+    }
+  }
   return queryClient(`/billing/invoices?${query.toString()}`);
+}
+
+/**
+ * 請求一覧の応答（S60）。
+ *
+ * `totalAmount` は**絞り込んだぶんの合計**。**サーバが数える**——画面で足すと、
+ * 一覧の上限で切れたぶんが静かに合計から落ちる。
+ */
+export interface InvoiceListView {
+  readonly items: readonly InvoiceSummaryView[];
+  readonly total: number;
+  readonly totalAmount: number;
 }
 
 /** 請求書 1 通（S61）。 */

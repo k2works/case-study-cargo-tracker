@@ -282,6 +282,37 @@ class VoyageProjectionIT extends AbstractAxonIntegrationTest {
     }
 
     @Test
+    @DisplayName("航海番号の一部で探せる（IT12 引き継ぎ H.5）")
+    void filtersByVoyageNumber() {
+        // **現場が持っているのは航海番号である。** 船社との会話も、荷役からの
+        // 問い合わせも番号で来る。出発地・目的地から辿り直させると、
+        // 番号を知っているのに一覧を目で探すことになる。
+        Instant future = clock.instant().plusSeconds(30 * 24 * 3600);
+        String wanted = uniqueNumber();
+        String other = uniqueNumber();
+        projection.on(registeredFrom(wanted, "JPTYO", "USNYC", future));
+        projection.on(registeredFrom(other, "JPTYO", "GBLON", future));
+
+        // **部分一致で探す。** 全体を打たせると、番号を控え違えたときに 0 件になる
+        // ——0 件は「無い」と読めるので、探し方の誤りだと気づけない。
+        assertThat(search(VoyageSearchCriteria.of(null, null, null, null, null,
+                wanted.substring(wanted.length() - 5))))
+                .contains(wanted).doesNotContain(other);
+    }
+
+    @Test
+    @DisplayName("航海番号は大文字小文字を問わない（控えの書き方で 0 件にしない）")
+    void filtersByVoyageNumberIgnoringCase() {
+        Instant future = clock.instant().plusSeconds(30 * 24 * 3600);
+        String wanted = uniqueNumber();
+        projection.on(registeredFrom(wanted, "JPTYO", "USNYC", future));
+
+        assertThat(search(VoyageSearchCriteria.of(null, null, null, null, null,
+                wanted.toLowerCase(java.util.Locale.ROOT))))
+                .contains(wanted);
+    }
+
+    @Test
     @DisplayName("US07: 検索条件は既定の絞り込みを消さない")
     void searchKeepsDefaultFilter() {
         // 条件で置き換えると、出港済みの航海が検索結果にだけ戻る。一覧では

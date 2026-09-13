@@ -116,6 +116,36 @@ describe('S60 請求一覧', () => {
       expect(String(fetchSpy.mock.calls[0]?.[0])).toContain('includeSettled=false');
     });
 
+  it('締めの絞り込み（荷主・期間）をサーバへ送り、合計金額を出す（IT13 引き継ぎ D）',
+    async () => {
+      // **締めは「その期間に算出したぶん」を数える仕事。** 一覧を目で拾って
+      // 電卓を叩かせると、件数が増えるほど取りこぼす。**合計はサーバが数える**
+      // ——画面で足すと、上限で切れたぶんが静かに落ちる。
+      // **呼ばれるたびに新しい Response を返す。** 同じ Response を使い回すと、
+      // 本体は 1 度しか読めないので 2 回目の読み込みが落ちる——絞り込みで
+      // 読み直す画面では、それが「一覧を取得できませんでした」に化ける。
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+        Promise.resolve(new Response(JSON.stringify({
+          items: [summary()], total: 1, totalAmount: 433500,
+        }), { status: 200 })));
+
+      renderAt('/invoices', <InvoiceListPage />);
+      await screen.findByText('INV-20260928-1a2b3c4d');
+
+      await userEvent.type(screen.getByLabelText('荷主 ID'), 'SHP-000001');
+      await userEvent.type(screen.getByLabelText('算出日（から）'), '2026-09-01');
+      await userEvent.type(screen.getByLabelText('算出日（まで）'), '2026-09-30');
+
+      await waitFor(() => {
+        const url = String(fetchSpy.mock.calls.at(-1)?.[0]);
+        expect(url).toContain('shipperId=SHP-000001');
+        expect(url).toContain('calculatedFrom=2026-09-01');
+        expect(url).toContain('calculatedTo=2026-09-30');
+      });
+      // 絞り込み直後は読み直し中（キーが変わる）。**読み終わるまで待つ。**
+      expect(await screen.findByText(/合計 ¥ ?433,500/)).toBeInTheDocument();
+    });
+
   it('US23 §5: 未払いだけに絞るとサーバが数える（画面で目視させない）', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(JSON.stringify({ items: [], total: 0 }), { status: 200 }),

@@ -34,6 +34,8 @@ interface SearchForm {
   departFrom: string;
   departTo: string;
   cargoType: string;
+  /** 航海番号の一部（IT12 引き継ぎ H.5）。**現場が持っているのは番号である。** */
+  voyageNumber: string;
 }
 
 const EMPTY_FORM: SearchForm = {
@@ -42,6 +44,7 @@ const EMPTY_FORM: SearchForm = {
   departFrom: '',
   departTo: '',
   cargoType: '',
+  voyageNumber: '',
 };
 
 function toCriteria(form: SearchForm): VoyageSearchInput {
@@ -49,6 +52,7 @@ function toCriteria(form: SearchForm): VoyageSearchInput {
     departure: form.departure.trim(),
     arrival: form.arrival.trim(),
     cargoType: form.cargoType,
+    voyageNumber: form.voyageNumber.trim(),
     ...departurePeriod(form.departFrom, form.departTo),
   };
 }
@@ -94,6 +98,7 @@ export function VoyageListPage() {
     departFrom: params.get('departFrom') ?? '',
     departTo: params.get('departTo') ?? '',
     cargoType: params.get('cargoType') ?? '',
+    voyageNumber: params.get('voyageNumber') ?? '',
   };
   const [form, setForm] = useState<SearchForm>(initial);
   // 「絞り込む」を押したときの条件。入力のたびに問い合わせると、
@@ -170,6 +175,18 @@ export function VoyageListPage() {
               placeholder="USNYC"
               value={form.arrival}
               onChange={(event) => setForm({ ...form, arrival: event.target.value })}
+            />
+          </label>
+          <label className={LABEL}>
+            {/* **番号で探せる**（IT12 引き継ぎ H.5）。船社との会話も荷役からの
+                問い合わせも番号で来る。部分一致・大文字小文字を問わない解釈は
+                サーバが持つ（判定を 2 か所に置かない）。 */}
+            <span>航海番号</span>
+            <input
+              className={FIELD}
+              placeholder="V-MOL"
+              value={form.voyageNumber}
+              onChange={(event) => setForm({ ...form, voyageNumber: event.target.value })}
             />
           </label>
           <label className={LABEL}>

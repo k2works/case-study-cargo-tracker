@@ -17,7 +17,12 @@ public final class BillingQueries {
      *     ものが混ざると、一覧全体が「まだ手を入れる場所」に見えなくなる
      * @param bookingId 予約で絞る（予約詳細から請求書へ飛ぶときに使う）
      */
-    public record FindInvoicesQuery(boolean includeSettled, String bookingId) {
+    public record FindInvoicesQuery(
+            boolean includeSettled,
+            String bookingId,
+            String shipperId,
+            java.time.LocalDate calculatedFrom,
+            java.time.LocalDate calculatedTo) {
     }
 
     /** 請求書 1 通（S61）。 */
@@ -62,8 +67,15 @@ public final class BillingQueries {
     public record FindShipperInvoiceOfBookingQuery(String bookingId, String shipperId) {
     }
 
-    /** 一覧の応答。 */
-    public record InvoiceListView(List<InvoiceSummaryView> items, int total) {
+    /**
+     * 請求一覧（S60）。
+     *
+     * @param totalAmount 絞り込んだぶんの<b>合計金額</b>（IT13 引き継ぎ D。締めの仕事）。
+     *     <b>サーバが数える</b>——画面で足すと、一覧の上限で切れたぶんが静かに
+     *     合計から落ちる
+     */
+    public record InvoiceListView(List<InvoiceSummaryView> items, int total,
+            BigDecimal totalAmount) {
     }
 
     /**

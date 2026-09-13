@@ -193,11 +193,13 @@ public class VoyageController {
             @RequestParam(required = false) String arrival,
             @RequestParam(required = false) Instant departFrom,
             @RequestParam(required = false) Instant departTo,
-            @RequestParam(required = false) String cargoType) {
+            @RequestParam(required = false) String cargoType,
+            // 航海番号の一部で探す（IT12 引き継ぎ H.5）。現場が持っているのは番号。
+            @RequestParam(required = false) String voyageNumber) {
         return ResponseEntity.ok(queries.query(
                 new FindVoyagesQuery(page, size, includeFinished,
                         VoyageSearchCriteria.of(departure, arrival, departFrom, departTo,
-                                cargoType)),
+                                cargoType, voyageNumber)),
                 VoyageListView.class));
     }
 

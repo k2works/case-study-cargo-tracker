@@ -63,8 +63,18 @@ class ReplayIT extends AbstractAxonIntegrationTest {
                 10, "自動車部品", null, null, null, null, "sales01");
     }
 
-    private int openAttentionCount() {
-        return attentionItems.findOpenByRole("ROLE_SALES").size();
+    /**
+     * <b>この検査が作った要確認だけを数える。</b>
+     *
+     * <p>ロール全体を数えると、同じ DB を使う他の検査が書いた行まで入る。
+     * IT15 で連鎖の断りも営業宛に出すようになり（引き継ぎ I）、<b>数え始めてから
+     * 数え終わるまでのあいだに増える</b>ようになった——読み直しが増やしたのか、
+     * 他人が増やしたのかを判別できない検査は、赤くなっても何も教えない。</p>
+     */
+    private int openAttentionCount(String targetId) {
+        return (int) attentionItems.findOpenByRole("ROLE_SALES").stream()
+                .filter(item -> targetId.equals(item.targetId()))
+                .count();
     }
 
     @Test
@@ -106,11 +116,14 @@ class ReplayIT extends AbstractAxonIntegrationTest {
 
         String rejectedId = "SHP-REJECTED-" + System.nanoTime();
         shipperProjection.on(shipper(rejectedId, email));
-        int afterFirstRejection = openAttentionCount();
+        int afterFirstRejection = openAttentionCount(rejectedId);
+        assertThat(afterFirstRejection)
+                .as("1 件も書けていないなら、この検査は何も見ていない")
+                .isEqualTo(1);
 
         shipperProjection.on(shipper(rejectedId, email));
 
-        assertThat(openAttentionCount())
+        assertThat(openAttentionCount(rejectedId))
                 .as("読み直しのたびに増えると、要確認一覧が同じ内容で膨らんで信用されなくなる")
                 .isEqualTo(afterFirstRejection);
     }

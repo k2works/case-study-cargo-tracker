@@ -149,7 +149,23 @@ public interface InvoiceMapper {
      */
     List<InvoiceRow> search(@Param("includeSettled") boolean includeSettled,
             @Param("bookingId") String bookingId,
+            @Param("shipperId") String shipperId,
+            @Param("calculatedFrom") java.time.LocalDate calculatedFrom,
+            @Param("calculatedTo") java.time.LocalDate calculatedTo,
             @Param("limit") int limit);
+
+    /**
+     * 絞り込んだぶんの合計金額（IT13 引き継ぎ D。締めの仕事）。
+     *
+     * <p><b>画面で足さない。</b> 一覧は上限で切るので、切れたぶんが静かに合計から
+     * 落ちる。<b>条件は一覧と同じ 1 か所</b>（{@code searchWhere}）——別々に書くと、
+     * 表に出ている金額の合計と、出ている合計が食い違う。</p>
+     */
+    java.math.BigDecimal sumTotalAmount(@Param("includeSettled") boolean includeSettled,
+            @Param("bookingId") String bookingId,
+            @Param("shipperId") String shipperId,
+            @Param("calculatedFrom") java.time.LocalDate calculatedFrom,
+            @Param("calculatedTo") java.time.LocalDate calculatedTo);
 
     /**
      * 明細を 1 行足す。

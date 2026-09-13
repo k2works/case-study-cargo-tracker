@@ -49,10 +49,15 @@ public class InvoiceQueryHandler {
     @QueryHandler
     public InvoiceListView handle(FindInvoicesQuery query) {
         List<InvoiceSummaryView> items = invoices
-                .search(query.includeSettled(), query.bookingId(), LIMIT).stream()
+                .search(query.includeSettled(), query.bookingId(), query.shipperId(),
+                        query.calculatedFrom(), query.calculatedTo(), LIMIT).stream()
                 .map(row -> toSummary(row, today()))
                 .toList();
-        return new InvoiceListView(items, items.size());
+        // **合計はサーバが数える**（IT13 引き継ぎ D）。一覧は上限で切るので、
+        // 画面で足すと切れたぶんが静かに落ちる。
+        return new InvoiceListView(items, items.size(),
+                invoices.sumTotalAmount(query.includeSettled(), query.bookingId(),
+                        query.shipperId(), query.calculatedFrom(), query.calculatedTo()));
     }
 
     @QueryHandler
@@ -79,7 +84,10 @@ public class InvoiceQueryHandler {
         List<InvoiceSummaryView> items = invoices.findOverdue(today).stream()
                 .map(row -> toSummary(row, today))
                 .toList();
-        return new InvoiceListView(items, items.size());
+        // **督促の母数も出す。** 「いくら回収できていないか」は、件数だけでは読めない。
+        return new InvoiceListView(items, items.size(), items.stream()
+                .map(InvoiceSummaryView::totalAmount)
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add));
     }
 
     /**
@@ -150,7 +158,16 @@ public class InvoiceQueryHandler {
                 .map(InvoiceMapper.LineItemRow::reversedAdjustmentId)
                 .filter(java.util.Objects::nonNull)
                 .collect(java.util.stream.Collectors.toSet());
+        // **読む順は種別で決まる**（基本 → 割引 → 調整 → キャンセル料 → 税。
+        // IT13 引き継ぎ F）。追加順（line_seq）のまま出すと、調整を入れた請求書だけ
+        // 税の位置が変わる——算出の行は税を数え直すために消して入れ直されるからである。
+        // **並べ方の出典は LineItemType の宣言順 1 か所**にする（SQL に CASE を
+        // 書くと、値を足したときに 2 か所を直すことになり、片方が置き去りになる）。
         List<InvoiceLineView> lines = lineRows.stream()
+                .sorted(java.util.Comparator
+                        .comparingInt((InvoiceMapper.LineItemRow line) ->
+                                LineItemType.valueOf(line.itemType()).ordinal())
+                        .thenComparingInt(InvoiceMapper.LineItemRow::lineSeq))
                 .map(line -> new InvoiceLineView(line.itemType(),
                         LineItemType.valueOf(line.itemType()).label(), line.description(),
                         line.amount(), line.currency(), line.basisExceptionId(),

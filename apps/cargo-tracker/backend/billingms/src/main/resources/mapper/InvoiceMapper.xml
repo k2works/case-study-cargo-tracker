@@ -138,15 +138,46 @@
                issued_on, due_on, paid_at, quoted_amount,
                projected_at, last_event_id
           FROM invoice
-         <where>
+         <include refid="searchWhere"/>
+         ORDER BY calculated_at DESC, invoice_id
+         LIMIT #{limit}
+    </select>
+
+    <!--
+      **絞り込みは 1 か所に書く。** 一覧と合計が別々の条件を持つと、
+      「表に出ている金額の合計」と「出ている合計」が食い違う——どちらが正しいのか
+      読む人には分からない。
+      **期間は算出日で切る**（並び順と同じ基準）。業務タイムゾーンの日付を
+      呼ぶ側が決めて渡す。to は**その日を含む**（締めは「30 日まで」と数える）。
+    -->
+    <sql id="searchWhere">
+        <where>
             <if test="!includeSettled">
                 AND billing_status NOT IN ('PAID', 'VOID')
             </if>
             <if test="bookingId != null">
                 AND booking_id = #{bookingId}
             </if>
-         </where>
-         ORDER BY calculated_at DESC, invoice_id
-         LIMIT #{limit}
+            <if test="shipperId != null">
+                AND shipper_id = #{shipperId}
+            </if>
+            <if test="calculatedFrom != null">
+                AND calculated_at &gt;= #{calculatedFrom}
+            </if>
+            <if test="calculatedTo != null">
+                AND calculated_at &lt; (CAST(#{calculatedTo} AS date) + 1)
+            </if>
+        </where>
+    </sql>
+
+    <!--
+      絞り込んだぶんの合計（IT13 引き継ぎ D）。**画面で足さない**——一覧は
+      上限で切るので、切れたぶんが静かに合計から落ちる。
+      1 件も無ければ 0 を返す（NULL を画面に出すと「読み込めていない」に見える）。
+    -->
+    <select id="sumTotalAmount" resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(total_amount), 0)
+          FROM invoice
+         <include refid="searchWhere"/>
     </select>
 </mapper>

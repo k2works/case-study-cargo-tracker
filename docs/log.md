@@ -1,6 +1,10 @@
 # Docs Update Log
 
 ## 2026-09-13
+* **Update**: [iteration_plan-15](/development/cargo-tracker/iteration_plan-15.md) を更新（claude-code/claude-opus-5）
+* **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-15](/development/cargo-tracker/iteration_plan-15.md) を更新（claude-code/claude-opus-5）
+* **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
 * **Update**: [06-利用者を管理する](/manual/06-利用者を管理する.md) を更新（claude-code/claude-opus-5）
 * **Update**: [iteration_plan-15](/development/cargo-tracker/iteration_plan-15.md) を更新（claude-code/claude-opus-5）
 * **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
