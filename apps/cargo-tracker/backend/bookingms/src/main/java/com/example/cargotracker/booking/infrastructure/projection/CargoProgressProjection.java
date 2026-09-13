@@ -4,6 +4,7 @@ import com.example.cargotracker.booking.domain.model.events.BookingDeliveredEven
 import com.example.cargotracker.booking.domain.model.events.BookingDeliveryRevertedEvent;
 import com.example.cargotracker.booking.domain.model.events.BookingMisroutedEvent;
 import com.example.cargotracker.booking.domain.model.events.BookingSettledEvent;
+import com.example.cargotracker.shared.contract.event.CargoCancelledEvent;
 import com.example.cargotracker.booking.domain.model.events.BookingSettlementRevertedEvent;
 import com.example.cargotracker.booking.domain.model.events.HandlingRecordedEvent;
 import com.example.cargotracker.booking.domain.model.events.HandlingRevertedEvent;
@@ -104,6 +105,28 @@ public class CargoProgressProjection {
         if (updated == 0) {
             log.warn("精算を書ける予約が投影に無い: bookingId={} invoiceId={}",
                     event.bookingId(), event.invoiceId());
+        }
+    }
+
+    /**
+     * 予約がキャンセルされた（US30 §受入基準 1・6）。
+     *
+     * <p><b>記録と読み口は対で出す。</b> 集約がキャンセルになっても、ここに
+     * 書き手が無ければ営業の一覧は輸送中のまま残る——US23 §4 でやったのと
+     * 同じ見落としを繰り返さない。</p>
+     *
+     * <p><b>状態だけを書く。</b> {@code cancelled_at} は読み口が無いので書かない
+     * ——誰も読まない列に書くと、正しいかどうかを確かめる手段が無いまま増える。
+     * 「いつキャンセルしたか」は申請の履歴（{@code cancellation_request}）が持つ。</p>
+     *
+     * <p><b>二度届いても同じ。</b> 同じ値を入れ直すだけである。</p>
+     */
+    @EventHandler
+    public void on(CargoCancelledEvent event) {
+        int updated = cargos.updateBookingStatus(event.bookingId(),
+                BookingStatus.CANCELLED.name(), clock.instant());
+        if (updated == 0) {
+            log.warn("キャンセルを書ける予約が投影に無い: bookingId={}", event.bookingId());
         }
     }
 

@@ -222,6 +222,46 @@ public final class BookingQueries {
     public record NotificationListView(List<NotificationView> items) {
     }
 
+    /**
+     * 承認待ちのキャンセル申請（S23 / US30 §受入基準 4）。
+     *
+     * <p><b>宛先は追跡管理者。</b> 陸揚げ地を決められるのはその人だけで、
+     * 営業には打つ手が無い。</p>
+     */
+    public record FindPendingCancellationsQuery() {
+    }
+
+    /** その予約のキャンセル履歴（S22 / US30 §受入基準 10）。 */
+    public record FindCancellationsOfBookingQuery(String bookingId) {
+    }
+
+    /**
+     * キャンセル申請 1 件（S22・S23）。
+     *
+     * @param decision <b>承認済 / 却下済 / 未判断（{@code null}）</b>。
+     *     「承認待ちか」は別の列に持たない——同じ事実を 2 か所が持つと、
+     *     片方だけが更新された行が生まれる
+     * @param decisionLabel 画面に出す呼び名。<b>列挙名を出さない</b>
+     */
+    public record CancellationRequestView(
+            String requestId,
+            String bookingId,
+            String bookingNumber,
+            String productName,
+            String reason,
+            String requestedBy,
+            Instant requestedAt,
+            String decision,
+            String decisionLabel,
+            String dischargeUnLocode,
+            String decisionReason,
+            String decidedBy,
+            Instant decidedAt) {
+    }
+
+    public record CancellationListView(List<CancellationRequestView> items) {
+    }
+
     /** 画面に出す予約。荷主名は鍵破棄後に {@code null} になる。 */
     public record BookingView(
             String bookingId,

@@ -1,6 +1,7 @@
 # Docs Update Log
 
 ## 2026-09-13
+* **Update**: [iteration_plan-15](/development/cargo-tracker/iteration_plan-15.md) を更新（claude-code/claude-opus-5）
 * **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
 * **Update**: [アプリケーション開発環境セットアップ手順書](/operation/cargo-tracker/アプリケーション開発環境セットアップ手順書.md) を更新（claude-code/claude-opus-5）
 * **Update**: [iteration_plan-15](/development/cargo-tracker/iteration_plan-15.md) を更新（claude-code/claude-opus-5）

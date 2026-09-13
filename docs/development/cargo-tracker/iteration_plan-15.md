@@ -3,7 +3,7 @@ type: Plan
 title: "イテレーション 15 計画"
 tags: [plan]
 status: draft
-generated: { by: claude-code/claude-opus-5, at: 2026-09-13T05:14:17Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-13T11:24:18Z }
 ---
 
 # イテレーション 15 計画
@@ -73,13 +73,13 @@ S22（申請）・S23（承認）を先に置き、連鎖を後ろから埋め�
 | # | 注 | 内容 |
 | :--- | :--- | :--- |
 | N1 | **キャンセル料の「状態別料率」が正典に数字で無い** | domain-model L1195 は「輸送開始前は低率、輸送中は高率 + 陸揚げ実費」としか書いていない。**料率は `billing-rates.yml` に置く**（ADR-0016 決定 1。見積・請求と同じ出典）。数字を決めて domain-model と `billing-rates.yml` の両方に書く。**陸揚げ実費は自動では出せない**ので、経理が S61 の調整で入れる形にし、その旨をマニュアル 17 章に書く |
-| N2 | **`cancellation_request` の DDL が bookingms に無い** | data-model L345 の ER にだけある。`V021__create_cancellation_request.sql` で作る（`request_id` PK・`INDEX(booking_id)`・`INDEX(decision)`） |
+| N2 | ~~**`cancellation_request` の DDL が bookingms に無い**~~ **解消**（2026-09-13・T3）。`V021__create_cancellation_request.sql` を作った。**承認待ちは `decision IS NULL` で表し、別の列を置かない**——同じ事実を 2 か所が持つと、片方だけ更新された行が生まれる |
 | N3 | **`CancellationFeeAppliedEvent` の受け皿が正典に無い** | `invoice_line_item` に `CANCELLATION` 行を積むのか、請求書が未作成なら何をするのかが書かれていない。**引取前のキャンセルには請求書がまだ無い**ので、`billing_cargo_snapshot` を元に算出する経路が要る。決めて data-model に書く |
 | N4 | **S23 が `ui_design.md` にあるが画面一覧の実装が無い** | 画面一覧（L138）に行はあり、節（L1119）もある。**実装だけが無い**——IT14 で入れた「行があって節が無い画面を検出する検査」の逆向きなので、**実装の有無まで見る検査に広げる**か、本 IT で実装して解消する |
 | N7 | **列挙が 2 つ増える**（`CancellationDecision` の判断値と `TrackingCloseReason`）。**要素表に行を足す** | 列挙に値を足したら全箇所を回る（扱っていない場所は名乗り出ない）。`domain-model` の要素表に 2 表を足し、`it.each` で値の一覧から回る検査を置く |
 | N6 | **追跡を閉じた理由と日時の置き場が正典に無い** | 正典の `tracking_summary` は `closed: BOOLEAN` だけを持つ。`TrackingClosedEvent` は `closedAt` と `reason` を運ぶので、**S41 で「なぜ閉じたか」を出すなら列が要る**。出さないなら運ばせる意味が薄い。決めて data-model に書く（**記録と読み口は対で出す**） |
 | N8 | **S42・S52 に荷主名を出すには契約イベントの版上げ（Upcaster）が要る** | trackingms・handlingms は荷主 ID しか持たず、名前を運ぶ契約イベントが無い。**`TrackingInitializedEvent` に荷主名を足すと既存のイベントが読めなくなる**ので Upcaster が要り、これは「契約の版管理」という別の主題である。IT12 → IT13 → IT14 → IT15 と 4 IT 持ち越しているので、**本 IT では着手せず、Release 3.0 の独立した課題として起票する**（余力次第にしない）。それまで S42・S52 は追跡番号と予約番号で辿る |
-| N5 | **`CancellationRequest` は集約か投影か** | domain-model の用語表（L110）はエンティティとして挙げるが、コマンド表（L603-605）は `Cargo` のコマンドとして並べている。**`Cargo` の中のエンティティ**として実装し、`cancellation_request` はその投影とする。正典に 1 行足す |
+| N5 | ~~**`CancellationRequest` は集約か投影か**~~ **解消**（2026-09-13・T2）。`Cargo` の中のエンティティとして実装し、正典の用語表に理由ごと書いた——別の集約にすると「輸送中か」を投影に尋ねることになり、投影が追いついていないあいだは申請できない／二重に申請できるの両方が起きる |
 
 ## 成功基準
 

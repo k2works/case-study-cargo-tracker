@@ -34,11 +34,23 @@ public class CancellationSteps {
      */
     private final ConditionAndNotificationSteps outcomes;
 
+    /**
+     * 契約イベントを BC の入口から流すための Reaction Handler。
+     *
+     * <p><b>本番の入口である。</b> テスト専用の口ではない——handlingms が送る
+     * イベントを、そのまま bookingms に渡している。</p>
+     */
+    private final com.example.cargotracker.booking.application.reaction
+            .BookingReactionHandler reactions;
+
     @Autowired
     public CancellationSteps(BookingRegistrationSteps bookings,
-            ConditionAndNotificationSteps outcomes) {
+            ConditionAndNotificationSteps outcomes,
+            com.example.cargotracker.booking.application.reaction
+                    .BookingReactionHandler reactions) {
         this.bookings = bookings;
         this.outcomes = outcomes;
+        this.reactions = reactions;
     }
 
     private String bookingId() {
@@ -62,24 +74,64 @@ public class CancellationSteps {
     /**
      * 輸送中まで進める。
      *
-     * <p><b>本筋ではない段をなぞらない。</b> 確かめたいのはキャンセルの扱いで、
+     * <p><b>本番に裏口を作らない。</b> 「状態を直接書き換える口」を置くと、
+     * 誰でも予約を配送完了にできてしまう。代わりに<b>契約イベントを BC の入口から
+     * 流す</b>——handlingms が送るのと同じイベントで、そこから先（Reaction Handler →
+     * 集約 → 投影）は本番と同じ道を通る。Axon の配送そのものは
+     * {@code ContractEventRoundTripIT} が別に見ている。</p>
+     *
+     * <p><b>本筋でない段はなぞらない。</b> 確かめたいのはキャンセルの扱いで、
      * そこへ至る道は US06〜US15 が別の受け入れで固めている。</p>
      */
     @もし("その予約を輸送中にする")
     public void 輸送中にする() {
-        advanceTo("IN_TRANSIT");
+        トラッキングまで進める();
+        reactions.on(new com.example.cargotracker.shared.contract.event
+                .HandlingActivityRegisteredEvent("act-" + System.nanoTime(),
+                trackingNumber(), bookingId(), "RECEIVE", "JPTYO", null, false, false,
+                "handler01", java.time.Instant.parse("2026-09-20T01:00:00Z"),
+                java.time.Instant.parse("2026-09-20T01:05:00Z")));
+        SharedSteps.awaitWithin(10, () -> "IN_TRANSIT".equals(
+                bookings.currentBooking().get("bookingStatus")), "予約が輸送中になる");
     }
 
     @もし("その予約を引取済にする")
     public void 引取済にする() {
-        advanceTo("DELIVERED");
+        輸送中にする();
+        reactions.on(new com.example.cargotracker.shared.contract.event.CargoDeliveredEvent(
+                trackingNumber(), bookingId(),
+                java.time.Instant.parse("2026-10-12T02:00:00Z"), "USNYC"));
+        SharedSteps.awaitWithin(10, () -> "DELIVERED".equals(
+                bookings.currentBooking().get("bookingStatus")), "予約が引取済になる");
     }
 
-    private void advanceTo(String status) {
-        var response = post("/test-support/status", Map.of("bookingStatus", status), "sales01");
-        assertThat(response.getStatusCode().is2xxSuccessful())
-                .as("前提を作れないと、確かめたいことまで辿り着けない（%s）", status)
-                .isTrue();
+    /** 経路の確定から追跡番号の発行まで（キャンセルの前提。別の受け入れが固めている）。 */
+    private void トラッキングまで進める() {
+        post("/routing-request", Map.of(), "sales01");
+        SharedSteps.awaitWithin(10, () -> "ROUTE_PROPOSED".equals(
+                bookings.currentBooking().get("bookingStatus")), "経路提案中になる");
+        Map<String, Object> leg = new LinkedHashMap<>();
+        leg.put("voyageNumber", "V-MOL-001");
+        leg.put("loadUnLocode", "JPTYO");
+        leg.put("unloadUnLocode", "USNYC");
+        leg.put("loadTime", "2026-09-20T00:00:00Z");
+        leg.put("unloadTime", "2026-10-12T00:00:00Z");
+        bookings.rest().post()
+                .uri(bookings.url("/api/v1/booking/bookings/" + bookingId() + "/route"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("X-Auth-Username", "routing01")
+                .body(Map.of("legs", List.of(leg)))
+                .retrieve().toEntity(BookingRegistrationSteps.JsonMap.class);
+        post("/notifications", Map.of("recipientEmail", "shipper@example.com",
+                "summary", "JPTYO → USNYC"), "sales01");
+        post("/confirmation", Map.of(), "sales01");
+        post("/tracking-number", Map.of(), "routing01");
+        SharedSteps.awaitWithin(10, () -> bookings.currentBooking().get("trackingNumber") != null,
+                "追跡番号が付く");
+    }
+
+    private String trackingNumber() {
+        return String.valueOf(bookings.currentBooking().get("trackingNumber"));
     }
 
     @もし("その予約を理由 {string} でキャンセルする")

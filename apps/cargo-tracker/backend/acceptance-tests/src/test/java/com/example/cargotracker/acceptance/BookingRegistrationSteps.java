@@ -45,6 +45,7 @@ public class BookingRegistrationSteps {
             "経路提案中", "ROUTE_PROPOSED",
             "経路通知済", "ROUTE_NOTIFIED",
             "予約確定", "CONFIRMED",
+            "追跡番号発行済", "TRACKING_ISSUED",
             "輸送中", "IN_TRANSIT",
             "配送完了", "DELIVERED",
             "精算済", "SETTLED",
@@ -214,10 +215,18 @@ public class BookingRegistrationSteps {
                 .startsWith("B-");
     }
 
+    /**
+     * 品名でその予約を引く。
+     *
+     * <p><b>終了した予約も含めて探す</b>（{@code includeFinished}）。一覧の既定は
+     * 精算済・キャンセルを外す——決着したものが混ざると「まだ手を入れる場所」に
+     * 見えなくなるからである。<b>その既定のまま探すと、キャンセルした予約が
+     * 「消えた」ように見えて、状態を確かめられない</b>（IT15 の受け入れで実測）。</p>
+     */
     @SuppressWarnings("unchecked")
     private Map<String, Object> findByProduct(String product) {
         ResponseEntity<JsonMap> response = rest.get()
-                .uri(url("/api/v1/booking/bookings?page=0&size=200"))
+                .uri(url("/api/v1/booking/bookings?page=0&size=200&includeFinished=true"))
                 .retrieve().toEntity(JsonMap.class);
         if (response.getStatusCode() != HttpStatus.OK) {
             return null;

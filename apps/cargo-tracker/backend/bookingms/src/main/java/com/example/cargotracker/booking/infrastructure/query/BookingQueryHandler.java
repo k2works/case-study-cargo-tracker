@@ -34,13 +34,72 @@ public class BookingQueryHandler {
     private final CargoRevisionMapper revisions;
     private final CargoLegMapper legs;
     private final CargoNotificationMapper notifications;
+    private final com.example.cargotracker.booking.infrastructure.persistence
+            .CancellationRequestMapper cancellations;
 
     public BookingQueryHandler(CargoSummaryMapper cargos, CargoRevisionMapper revisions,
-            CargoLegMapper legs, CargoNotificationMapper notifications) {
+            CargoLegMapper legs, CargoNotificationMapper notifications,
+            com.example.cargotracker.booking.infrastructure.persistence
+                    .CancellationRequestMapper cancellations) {
         this.cargos = cargos;
         this.revisions = revisions;
         this.legs = legs;
         this.notifications = notifications;
+        this.cancellations = cancellations;
+    }
+
+    /**
+     * 承認待ちのキャンセル申請（S23 / US30 §受入基準 4）。
+     *
+     * <p><b>予約の呼び名を一緒に返す。</b> 予約 ID だけでは、追跡管理者は
+     * どの貨物の話なのか分からない——件数から一覧へ辿れても、そこで止まる。</p>
+     */
+    @org.axonframework.messaging.queryhandling.annotation.QueryHandler
+    public com.example.cargotracker.booking.infrastructure.query.BookingQueries
+            .CancellationListView handle(
+            com.example.cargotracker.booking.infrastructure.query.BookingQueries
+                    .FindPendingCancellationsQuery query) {
+        return toListView(cancellations.findPending());
+    }
+
+    /** その予約のキャンセル履歴（S22 / US30 §受入基準 10）。 */
+    @org.axonframework.messaging.queryhandling.annotation.QueryHandler
+    public com.example.cargotracker.booking.infrastructure.query.BookingQueries
+            .CancellationListView handle(
+            com.example.cargotracker.booking.infrastructure.query.BookingQueries
+                    .FindCancellationsOfBookingQuery query) {
+        return toListView(cancellations.findByBooking(query.bookingId()));
+    }
+
+    private com.example.cargotracker.booking.infrastructure.query.BookingQueries
+            .CancellationListView toListView(
+            java.util.List<com.example.cargotracker.booking.infrastructure.persistence
+                    .CancellationRequestMapper.CancellationRequestRow> rows) {
+        return new com.example.cargotracker.booking.infrastructure.query.BookingQueries
+                .CancellationListView(rows.stream().map(row -> {
+                    var booking = cargos.findById(row.bookingId());
+                    return new com.example.cargotracker.booking.infrastructure.query
+                            .BookingQueries.CancellationRequestView(
+                            row.requestId(), row.bookingId(),
+                            booking == null ? null : booking.bookingNumber(),
+                            booking == null ? null : booking.productName(),
+                            row.reason(), row.requestedBy(), row.requestedAt(),
+                            row.decision(), decisionLabel(row.decision()),
+                            row.dischargeUnLocode(), row.decisionReason(),
+                            row.decidedBy(), row.decidedAt());
+                }).toList());
+    }
+
+    /** 画面に出す呼び名。<b>列挙名を出さない</b>（読む人は業務の言葉で読む）。 */
+    private static String decisionLabel(String decision) {
+        if (decision == null) {
+            return "承認待ち";
+        }
+        return switch (decision) {
+            case "APPROVED" -> "承認済";
+            case "REJECTED" -> "却下済";
+            default -> decision;
+        };
     }
 
     /** 確定した旅程（US09）。まだ決まっていなければ空。 */

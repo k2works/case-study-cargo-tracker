@@ -128,6 +128,16 @@ public final class RoleAuthorization {
         rules.put("/api/v1/booking/bookings/awaiting-tracking-number", Set.of(ROUTING));
         rules.put("/api/v1/booking/bookings/*/route", Set.of(ROUTING));
 
+        // キャンセル（US30）。**申請は営業、判断は追跡管理者**——陸揚げ地を
+        // 決められるのは追跡管理者だけで、営業には打つ手が無い。
+        // **/bookings/** より先に置く。** 後ろに置くと広いほうに吸われる。
+        rules.put("/api/v1/booking/bookings/cancellations", Set.of(TRACKER));
+        rules.put("/api/v1/booking/bookings/*/cancellation/approval", Set.of(TRACKER));
+        rules.put("/api/v1/booking/bookings/*/cancellation/rejection", Set.of(TRACKER));
+        // 申請は営業。**履歴（GET）は同じ経路なので、読む側も含める**
+        // ——追跡管理者は S23 から、営業は S22 から同じ履歴を読む。
+        rules.put("/api/v1/booking/bookings/*/cancellation", Set.of(SALES, TRACKER));
+
         // 予約（S20 / S21）は営業・経路設計・追跡が読む。
         rules.put("/api/v1/booking/bookings/**", Set.of(SALES, ROUTING, TRACKER));
         rules.put("/api/v1/booking/bookings", Set.of(SALES, ROUTING, TRACKER));
