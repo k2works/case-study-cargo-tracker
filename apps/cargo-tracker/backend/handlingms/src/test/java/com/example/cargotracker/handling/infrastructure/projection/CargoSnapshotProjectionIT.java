@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.cargotracker.handling.infrastructure.persistence.CargoSnapshotMapper;
+import com.example.cargotracker.shared.contract.event.CargoCancelledEvent;
 import com.example.cargotracker.shared.contract.event.TrackingInitializedEvent;
 import com.example.cargotracker.shared.testing.AbstractAxonIntegrationTest;
 import java.time.Instant;
@@ -63,13 +64,62 @@ class CargoSnapshotProjectionIT extends AbstractAxonIntegrationTest {
     }
 
     @Test
-    @DisplayName("ADR-0012 決定 3: キャンセルの既定は false（書き手は US30・IT15）")
+    @DisplayName("ADR-0012 決定 3: キャンセルの既定は false（書き手は CargoCancelledEvent）")
     void defaultsToNotCancelled() {
         String trackingNumber = "TRK-S" + System.nanoTime() % 1000000000L;
 
         projection.on(initialized(trackingNumber), "evt-2");
 
         assertThat(cargos.findByTrackingNumber(trackingNumber).cancelled()).isFalse();
+    }
+
+    @Test
+    @DisplayName("US30: キャンセルされると印が付き、荷役の作業一覧から外れる")
+    void marksCancelled() {
+        // **行は消さない。** 消すと、記録済みの荷役が「どの貨物のものか」を
+        // 辿れなくなる。読み口が cancelled = FALSE で絞るので、印を付けるだけで
+        // 現場の一覧から外れる——止まった貨物を積み続けるのを防ぐ。
+        String trackingNumber = "TRK-C" + System.nanoTime() % 1000000000L;
+        var event = initialized(trackingNumber);
+        projection.on(event, "evt-c1");
+        assertThat(cargos.findOnVoyage("V-MOL-001", "SGSIN"))
+                .extracting(CargoSnapshotMapper.CargoSnapshotRow::trackingNumber)
+                .contains(trackingNumber);
+
+        projection.on(new CargoCancelledEvent(event.bookingId(), trackingNumber,
+                "IN_TRANSIT", "SGSIN", "荷主の発注取消", "tracker01", AT));
+
+        assertThat(cargos.findByTrackingNumber(trackingNumber))
+                .as("行は残る（荷役の跡を辿れなくしない）").isNotNull()
+                .satisfies(row -> assertThat(row.cancelled()).isTrue());
+        assertThat(cargos.findOnVoyage("V-MOL-001", "SGSIN"))
+                .extracting(CargoSnapshotMapper.CargoSnapshotRow::trackingNumber)
+                .as("作業一覧から外れる").doesNotContain(trackingNumber);
+    }
+
+    @Test
+    @DisplayName("追跡が作り直されても、キャンセルの印は消えない")
+    void keepsTheCancelledMarkOnReplay() {
+        // **挿入で上書きしない。** 上書きすると、リプレイのたびに止めた貨物が
+        // 現場の一覧へ戻る。
+        String trackingNumber = "TRK-K" + System.nanoTime() % 1000000000L;
+        var event = initialized(trackingNumber);
+        projection.on(event, "evt-k1");
+        projection.on(new CargoCancelledEvent(event.bookingId(), trackingNumber,
+                "IN_TRANSIT", "SGSIN", "荷主の発注取消", "tracker01", AT));
+
+        projection.on(event, "evt-k2");
+
+        assertThat(cargos.findByTrackingNumber(trackingNumber).cancelled()).isTrue();
+    }
+
+    @Test
+    @DisplayName("写しの無い貨物のキャンセルでは止まらない（輸送開始前）")
+    void toleratesCancellationWithoutASnapshot() {
+        // 追跡が始まる前にキャンセルされた貨物は handlingms に写しが無い。
+        // 例外にすると Event Processor が止まり、無関係の貨物まで退避される。
+        projection.on(new CargoCancelledEvent("b-none-" + System.nanoTime(), null,
+                "PRELIMINARY", null, "荷主の発注取消", "sales01", AT));
     }
 
     @Test

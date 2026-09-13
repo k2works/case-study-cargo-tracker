@@ -123,7 +123,23 @@ public interface CargoSnapshotMapper {
     record VoyagePortRow(String voyageNumber, String unlocode, int cargoCount) {
     }
 
+    /**
+     * キャンセルの印を付ける（US30 / ADR-0012 決定 3。IT15 T7）。
+     *
+     * <p><b>行は消さない。</b> 消すと、記録済みの荷役が「どの貨物のものか」を
+     * 辿れなくなる。読み口の側が {@code cancelled = FALSE} で絞っているので、
+     * 印を付けるだけで作業一覧から外れる。</p>
+     *
+     * <p><b>二度届いても同じ。</b> 同じ値を入れ直すだけである。</p>
+     */
+    @org.apache.ibatis.annotations.Update(
+            "UPDATE cargo_snapshot SET cancelled = TRUE, projected_at = #{projectedAt} "
+            + "WHERE booking_id = #{bookingId}")
+    int markCancelled(@org.apache.ibatis.annotations.Param("bookingId") String bookingId,
+            @org.apache.ibatis.annotations.Param("projectedAt") java.time.Instant projectedAt);
+
     /** 貨物の写し。Booking / Tracking の型は持ち込まない。 */
+
     record CargoSnapshotRow(
             String trackingNumber,
             String bookingId,

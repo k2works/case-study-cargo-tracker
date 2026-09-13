@@ -2,6 +2,7 @@ package com.example.cargotracker.handling.infrastructure.projection;
 
 import org.axonframework.messaging.core.annotation.SequencingPolicy;
 import org.axonframework.messaging.core.sequencing.PropertySequencingPolicy;
+import com.example.cargotracker.shared.contract.event.CargoCancelledEvent;
 import com.example.cargotracker.shared.contract.event.TrackingInitializedEvent;
 import com.example.cargotracker.handling.infrastructure.persistence.CargoSnapshotMapper;
 import java.time.Clock;
@@ -33,6 +34,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class CargoSnapshotProjection {
 
+    private static final org.slf4j.Logger log =
+            org.slf4j.LoggerFactory.getLogger(CargoSnapshotProjection.class);
+
     private final CargoSnapshotMapper cargos;
     private final Clock clock;
 
@@ -41,13 +45,35 @@ public class CargoSnapshotProjection {
         this.clock = clock;
     }
 
+    /**
+     * 予約がキャンセルされた（US30 / ADR-0012 決定 3。IT15 T7）。
+     *
+     * <p><b>行は消さない。</b> 消すと、記録済みの荷役が「どの貨物のものか」を
+     * 辿れなくなる。読み口は {@code cancelled = FALSE} で絞っているので、
+     * 印を付けるだけで<b>荷役の作業一覧から外れる</b>——現場が止まった貨物を
+     * 積み続けるのを防ぐ。</p>
+     *
+     * <p><b>写しが無くても止めない。</b> 追跡が始まる前にキャンセルされた貨物は
+     * handlingms に写しが無い。例外にすると Event Processor が止まり、無関係の
+     * 貨物のイベントまで退避される。</p>
+     */
+    @EventHandler
+    public void on(CargoCancelledEvent event) {
+        int updated = cargos.markCancelled(event.bookingId(), clock.instant());
+        if (updated == 0) {
+            log.info("キャンセルを書ける貨物の写しが無い（輸送開始前のキャンセル）: "
+                    + "bookingId={}", event.bookingId());
+        }
+    }
+
     @EventHandler
     public void on(TrackingInitializedEvent event, @MessageIdentifier String eventId) {
         cargos.insert(new CargoSnapshotMapper.CargoSnapshotRow(
                 event.trackingNumber(), event.bookingId(),
                 event.originUnLocode(), event.destinationUnLocode(), event.cargoType(),
-                // キャンセルは US30（IT15）が書く。ここでは触らない
-                // （挿入時の既定 false。上書きもしない）。
+                // キャンセルはこのあと `CargoCancelledEvent` が書く（US30・IT15）。
+                // **挿入では触らない**——追跡が作り直されても、キャンセルの印は
+                // 消さない（上書きしない）。
                 false,
                 clock.instant(), eventId));
 
