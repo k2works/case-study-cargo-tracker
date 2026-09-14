@@ -452,7 +452,15 @@ test.describe('kind クラスタでの通し確認', () => {
 
     await page.goto('/logout');
     await signIn(page, 'sales01');
-    // 件数だけでは仕事が進まない。理由が読め、そこから予約へ行けること。
+    // **ダッシュボードから自分の行を名指ししない。** 見直しの一覧は
+    // 申し出の古い順で上限 50 件なので、作り直さないクラスタでは
+    // **差し戻した直後の予約が載らない**（実測: 50 件が 2026-09-06 の行で埋まる）。
+    // ここで見たいのは「営業に届いたこと」なので、知らせとその導線で確かめる。
+    await expectEventually(page, /条件の見直しを頼まれた予約が \d+ 件あります/);
+
+    // **件数だけでは仕事が進まない。** 理由が読め、そこから返せること——
+    // それは予約詳細に出る（差し戻しは状態を動かさないので、詳細が唯一の宛先）。
+    await page.goto(`/bookings/${bookingId}`);
     await expectEventually(page, `期限内に着ける便がありません（${product}）`);
   });
 
@@ -1035,9 +1043,9 @@ test.describe('kind クラスタでの通し確認', () => {
       await page.goto('/logout');
       await signIn(page, 'accountant01');
       await page.goto(`/invoices/${invoiceId}`);
-      // **料率だけでは「なぜこの額か」が読めない。** どの状態でのキャンセルかを
-      // 明細に添える（輸送中なら 50%）。
-      await expectEventually(page, 'キャンセル料（輸送中）');
+      // **料率だけでは「なぜこの額か」が読めない。** どの状態での
+      // キャンセルかと料率を明細に添える。
+      await expectEventually(page, 'キャンセル料（輸送中・50%）');
     });
 
   test('見積から候補と概算が出て、その見積で予約すると違いが知らされる（US01・IT14）',
