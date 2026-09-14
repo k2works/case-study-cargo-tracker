@@ -56,13 +56,6 @@ class InvoiceSearchIT extends AbstractAxonIntegrationTest {
                 "accountant01", calculatedAt);
     }
 
-    private String project(String suffix) {
-        String invoiceId = "INV-" + suffix + "-" + System.nanoTime();
-        projection.on(calculated(invoiceId, "B-" + suffix + "-" + System.nanoTime()),
-                "evt-" + System.nanoTime());
-        return invoiceId;
-    }
-
     @Test
     @DisplayName("一覧は算出日時の新しい順に出る（古い順にすると赤になる）")
     void listsInvoicesNewestFirst() {

@@ -228,7 +228,7 @@ public final class BookingQueries {
      * <p><b>宛先は追跡管理者。</b> 陸揚げ地を決められるのはその人だけで、
      * 営業には打つ手が無い。</p>
      */
-    public record FindPendingCancellationsQuery() {
+    public record FindPendingCancellationsQuery() { // NOSONAR: 型が問い合わせの識別子
     }
 
     /**

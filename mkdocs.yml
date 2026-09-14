@@ -132,8 +132,10 @@ nav:
           - イテレーション 14 計画: development/cargo-tracker/iteration_plan-14.md
           - イテレーション 15 計画: development/cargo-tracker/iteration_plan-15.md
           - イテレーション 14 ふりかえり: development/cargo-tracker/retrospective-14.md
+          - イテレーション 15 ふりかえり: development/cargo-tracker/retrospective-15.md
           - イテレーション 13 完了報告書: development/cargo-tracker/iteration_report-13.md
           - イテレーション 14 完了報告書: development/cargo-tracker/iteration_report-14.md
+          - イテレーション 15 完了報告書: development/cargo-tracker/iteration_report-15.md
           - イテレーション 11 計画: development/cargo-tracker/iteration_plan-11.md
           - イテレーション 11 ふりかえり: development/cargo-tracker/retrospective-11.md
           - イテレーション 11 完了報告書: development/cargo-tracker/iteration_report-11.md
@@ -170,6 +172,7 @@ nav:
       - 通関を通す: manual/16-通関を通す.md
       - 請求を組み立てる: manual/17-請求を組み立てる.md
       - 輸送見積を作る: manual/18-輸送見積を作る.md
+      - キャンセルを申請して承認する: manual/19-キャンセルを申請して承認する.md
   - レビュー:
       - 概要: review/index.md
       - ドメインモデル分析レビュー: review/ドメインモデル分析_review_20260331.md
@@ -190,6 +193,7 @@ nav:
           - IT13 実装レビュー（2026-09-11）: review/cargo-tracker/IT13実装_review_20260911.md
           - IT10 実装レビュー（2026-09-09）: review/cargo-tracker/IT10実装_review_20260909.md
           - IT14 実装レビュー（2026-09-12）: review/cargo-tracker/IT14実装_review_20260912.md
+          - IT15 実装レビュー（2026-09-14）: review/cargo-tracker/IT15実装_review_20260914.md
   - ADR:
       - 概要: adr/index.md
       - cargo-tracker:

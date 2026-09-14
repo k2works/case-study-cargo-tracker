@@ -53,6 +53,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class BookingReactionHandler {
 
+    /** 要確認一覧の対象種別。<b>予約を指す</b>（画面が「次の行動」を決める材料）。 */
+    private static final String TARGET_BOOKING = "BOOKING";
+
     /** 連鎖の種類。data-model.md が「現時点の該当はこれだけ」と名指ししている。 */
     public static final String PROCESS_TYPE = "BOOKING_TO_TRACKING";
     /** 1 段目: 追跡開始のコマンドを送った。 */
@@ -172,7 +175,7 @@ public class BookingReactionHandler {
                 event.bookingId(), event.trackingNumber(), cause);
         commands.sendAndWait(new RevertTrackingNumberCommand(event.bookingId(), reason));
         processes.compensate(PROCESS_TYPE, event.bookingId(), reason);
-        attentionItems.add(COMPENSATED, "BOOKING", event.bookingId(), ROLE_ROUTING,
+        attentionItems.add(COMPENSATED, TARGET_BOOKING, event.bookingId(), ROLE_ROUTING,
                 reason, "{}", clock.instant());
     }
 
@@ -271,7 +274,7 @@ public class BookingReactionHandler {
                     + refusal.getMessage() + "）。請求書 " + event.invoiceId() + " を確かめる";
             log.warn("精算の連鎖が進めなかった: bookingId={} invoiceId={} reason={}",
                     event.bookingId(), event.invoiceId(), refusal.getMessage());
-            attentionItems.add(SETTLEMENT_BLOCKED, "BOOKING", event.bookingId(),
+            attentionItems.add(SETTLEMENT_BLOCKED, TARGET_BOOKING, event.bookingId(),
                     ROLE_ACCOUNTANT, reason, "{}", clock.instant());
         }
     }
@@ -301,7 +304,7 @@ public class BookingReactionHandler {
                     + refusal.getMessage() + "）。請求書 " + event.invoiceId() + " を確かめる";
             log.warn("精算の取り消しが進めなかった: bookingId={} invoiceId={} reason={}",
                     event.bookingId(), event.invoiceId(), refusal.getMessage());
-            attentionItems.add(SETTLEMENT_BLOCKED, "BOOKING", event.bookingId(),
+            attentionItems.add(SETTLEMENT_BLOCKED, TARGET_BOOKING, event.bookingId(),
                     ROLE_ACCOUNTANT, reason, "{}", clock.instant());
         }
     }
@@ -329,7 +332,7 @@ public class BookingReactionHandler {
             String reason = what + "（" + refusal.getMessage() + "）";
             log.warn("連鎖が進めなかった: kind={} bookingId={} reason={}",
                     kind, bookingId, refusal.getMessage());
-            attentionItems.add(kind, "BOOKING", bookingId, role, reason, "{}", clock.instant());
+            attentionItems.add(kind, TARGET_BOOKING, bookingId, role, reason, "{}", clock.instant());
         }
     }
 

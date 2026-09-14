@@ -15,7 +15,6 @@ import com.example.cargotracker.billing.domain.model.events.InvoiceIssuedEvent;
 import com.example.cargotracker.billing.domain.model.events.InvoiceVoidedEvent;
 import com.example.cargotracker.billing.domain.model.valueobjects.BillingStatus;
 import com.example.cargotracker.billing.domain.model.valueobjects.DiscountRate;
-import com.example.cargotracker.billing.domain.model.valueobjects.ShipperType;
 import com.example.cargotracker.billing.domain.model.valueobjects.FreightCharge;
 import com.example.cargotracker.billing.domain.model.valueobjects.LineItemType;
 import com.example.cargotracker.billing.domain.model.valueobjects.Money;
@@ -62,6 +61,9 @@ import org.axonframework.messaging.eventhandling.gateway.EventAppender;
  */
 @EventSourced(idType = String.class, tagKey = "invoiceId")
 public class Invoice {
+
+    /** 取り消しの操作すべてで同じ断り方をする（調整・入金・請求書）。 */
+    private static final String REVERSER_REQUIRED = "取り消した人は必須です";
 
     private String invoiceId;
     private BillingStatus status;
@@ -257,7 +259,7 @@ public class Invoice {
                     "状態 " + status.label() + " の請求書は調整を取り消せません");
         }
         requireText(command.reason(), "取り消しの理由は必須です");
-        requireText(command.reversedBy(), "取り消した人は必須です");
+        requireText(command.reversedBy(), REVERSER_REQUIRED);
 
         BigDecimal original = reversibleAdjustments.get(command.adjustmentId());
         if (original == null) {
@@ -367,7 +369,7 @@ public class Invoice {
                 "キャンセル料（" + BookingStatusLabel.of(command.statusAtCancel())
                         + "・" + percent(feeRate) + "）", fee));
         if (!discount.isZero()) {
-            items.add(item(LineItemType.DISCOUNT, discountDescription(command.shipperType(),
+            items.add(item(LineItemType.DISCOUNT, discountDescription(
                     command.discountRate(), command.contractNumber()), discount));
         }
         if (!tax.isZero()) {
@@ -473,7 +475,7 @@ public class Invoice {
                     "状態 " + status.label() + " の請求書に取り消せる入金はありません");
         }
         requireText(command.reason(), "取消の理由は必須です");
-        requireText(command.voidedBy(), "取り消した人は必須です");
+        requireText(command.voidedBy(), REVERSER_REQUIRED);
         if (!java.util.Objects.equals(paymentId, command.paymentId())) {
             throw new BusinessRuleViolation(
                     "記録されている入金と違います: " + command.paymentId()
@@ -500,7 +502,7 @@ public class Invoice {
                     "状態 " + status.label() + " の請求書は取り消せません");
         }
         requireText(command.reason(), "取消の理由は必須です");
-        requireText(command.voidedBy(), "取り消した人は必須です");
+        requireText(command.voidedBy(), REVERSER_REQUIRED);
 
         appender.append(new InvoiceVoidedEvent(invoiceId, bookingId, command.reason(),
                 command.voidedBy(), clock.instant()));
@@ -579,7 +581,7 @@ public class Invoice {
     }
 
     private String discountDescription(CalculateInvoiceCommand command) {
-        return discountDescription(command.shipperType(), command.discountRate(),
+        return discountDescription(command.discountRate(),
                 command.contractNumber());
     }
 
@@ -589,8 +591,7 @@ public class Invoice {
      * <p><b>算出とキャンセル料で同じものを出す。</b> 書き方が 2 つあると、
      * 同じ荷主の請求書が経路によって違う読み方になる。</p>
      */
-    private String discountDescription(ShipperType shipperType, DiscountRate discountRate,
-            String contractNumber) {
+    private String discountDescription(DiscountRate discountRate, String contractNumber) {
         String contract = contractNumber == null ? "" : "・" + contractNumber;
         return LineItemType.DISCOUNT.label() + "（"
                 + discountRate.percentage().toPlainString() + "%" + contract + "）";
