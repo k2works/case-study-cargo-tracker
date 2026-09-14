@@ -79,7 +79,10 @@ public class ShipperProjection {
                 event.discountRate() == null ? null : new BigDecimal(event.discountRate()),
                 now,
                 now,
-                null));
+                null,
+                // **印だけでは混ざらない。** 除外は読み口の側が行う（US33 §3）。
+                // `null` は印が付く前に登録された荷主＝本物である。
+                Boolean.TRUE.equals(event.simulated())));
 
         if (inserted == 0) {
             // 弾かれた。集約は受け付けているので、ここで黙ると

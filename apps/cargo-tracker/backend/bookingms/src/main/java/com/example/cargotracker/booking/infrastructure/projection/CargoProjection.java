@@ -140,7 +140,9 @@ public class CargoProjection {
                 // まだ荷役が届いていない。
                 null, null, null, null,
                 now,
-                null));
+                null,
+                // **SQL が荷主から導く**（列は挿入時に上書きされる）。
+                false));
     }
 
     /**
@@ -336,7 +338,9 @@ public class CargoProjection {
                 // 読み直しのたびに最終更新が動く。
                 event.updatedAt(), event.updatedBy(), null, null, null, null, null, null, null,
                 // 探索の条件・確定日時・追跡番号・超過日数・荷役は UPDATE 文が触らない。
-                null, null, null, null, null, null, null, null, null, now, null));
+                null, null, null, null, null, null, null, null, null, now, null,
+                // **SQL が荷主から導く**（列は挿入時に上書きされる）。
+                false));
 
         if (before != null) {
             recordRevision(before, event);

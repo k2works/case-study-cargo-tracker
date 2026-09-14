@@ -405,4 +405,47 @@ class CargoProjectionIT extends AbstractAxonIntegrationTest {
 
         assertThat(queries.handle(new FindBookingItineraryQuery(bookingId)).legs()).isEmpty();
     }
+
+    @Test
+    @DisplayName("US33 §3: シミュレーションが作った予約は、営業の予約一覧に出ない")
+    void hidesSimulatedBookingsFromTheBusinessList() {
+        // **印だけでは混ざる。** 除外は読み口の側に置く——印を付けても一覧が
+        // 外さなければ、実データとして営業の「今日やること」に並ぶ（注 N7）。
+        String simulatedShipper = "SHP-S-" + System.nanoTime();
+        shipperProjection.on(new ShipperRegisteredEvent(simulatedShipper, "INDIVIDUAL",
+                "シミュレーション商事", simulatedShipper + "@example.com",
+                null, null, null, null, true));
+        String realShipper = "SHP-R-" + System.nanoTime();
+        shipperProjection.on(new ShipperRegisteredEvent(realShipper, "INDIVIDUAL",
+                "本物商事", realShipper + "@example.com", null, null, null, null, false));
+
+        String simulatedBooking = "B-S-" + System.nanoTime();
+        String realBooking = "B-R-" + System.nanoTime();
+        projection.on(booked(simulatedBooking, simulatedShipper, "シミュレーションの貨物"));
+        projection.on(booked(realBooking, realShipper, "本物の貨物"));
+
+        assertThat(cargos.findAll(true, 200, 0, null))
+                .extracting(CargoSummaryMapper.CargoSummaryRow::bookingId)
+                .as("本物は出る")
+                .contains(realBooking)
+                .as("**シミュレーション由来は出ない**")
+                .doesNotContain(simulatedBooking);
+    }
+
+    @Test
+    @DisplayName("US33 §3: 予約は荷主から由来を引き継ぐ（予約ごとに判断しない）")
+    void inheritsTheOriginFromTheShipper() {
+        String shipperId = "SHP-S-" + System.nanoTime();
+        shipperProjection.on(new ShipperRegisteredEvent(shipperId, "INDIVIDUAL",
+                "シミュレーション商事", shipperId + "@example.com",
+                null, null, null, null, true));
+        String bookingId = "B-S-" + System.nanoTime();
+
+        projection.on(booked(bookingId, shipperId, "シミュレーションの貨物"));
+
+        assertThat(cargos.findById(bookingId).simulated())
+                .as("**判定を 2 か所に書かない。** 由来は荷主が持ち、予約は引き継ぐ")
+                .isTrue();
+    }
+
 }

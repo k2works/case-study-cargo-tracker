@@ -19,16 +19,18 @@
             <arg column="registered_at" javaType="java.time.Instant"/>
             <arg column="projected_at" javaType="java.time.Instant"/>
             <arg column="last_event_id" javaType="string"/>
+            <!-- **列は位置で対応する。** record の末尾に足したので、ここも末尾。 -->
+            <arg column="simulated" javaType="_boolean"/>
         </constructor>
     </resultMap>
 
     <insert id="insert">
         INSERT INTO shipper (shipper_id, shipper_code, shipper_type, name, email, phone, address,
                              country_code, contract_number, discount_rate,
-                             registered_at, projected_at, last_event_id)
+                             registered_at, projected_at, last_event_id, simulated)
         VALUES (#{shipperId}, #{shipperCode}, #{shipperType}, #{name}, #{email}, #{phone}, #{address},
                 #{countryCode}, #{contractNumber}, #{discountRate},
-                #{registeredAt}, #{projectedAt}, #{lastEventId})
+                #{registeredAt}, #{projectedAt}, #{lastEventId}, #{simulated})
         -- 一意制約を例外にしない。PostgreSQL は制約違反でトランザクションを
         -- 中断させるので、例外を捕まえても外側（投影 + トークン）が書けなくなり、
         -- **投影がその 1 件で止まったまま二度と進まない**。0 件で返して、

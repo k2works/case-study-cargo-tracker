@@ -64,6 +64,8 @@ public interface ShipperMapper {
             java.math.BigDecimal discountRate,
             Instant registeredAt,
             Instant projectedAt,
-            String lastEventId) {
+            String lastEventId,
+            // シミュレーションが作った荷主か（US33 §3）。**業務の一覧は既定で外す**。
+            boolean simulated) {
     }
 }

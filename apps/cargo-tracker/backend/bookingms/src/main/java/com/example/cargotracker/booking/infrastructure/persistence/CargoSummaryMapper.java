@@ -478,6 +478,9 @@ public interface CargoSummaryMapper {
             Instant lastHandlingAt,
             Boolean lastHandlingOffRoute,
             Instant projectedAt,
-            String lastEventId) {
+            String lastEventId,
+            // シミュレーションが作った予約か（US33 §3）。**荷主から引き継ぐ**
+            // ——予約ごとに判断すると、判定が 2 か所に住む。
+            boolean simulated) {
     }
 }

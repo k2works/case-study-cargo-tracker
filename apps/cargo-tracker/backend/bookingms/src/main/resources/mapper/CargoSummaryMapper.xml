@@ -49,6 +49,8 @@
             <arg column="last_handling_off_route" javaType="java.lang.Boolean"/>
             <arg column="projected_at" javaType="java.time.Instant"/>
             <arg column="last_event_id" javaType="string"/>
+            <!-- **列は位置で対応する。** record の末尾に足したので、ここも末尾。 -->
+            <arg column="simulated" javaType="_boolean"/>
         </constructor>
     </resultMap>
 
@@ -86,8 +88,12 @@
     -->
     <sql id="visible">
         <where>
+            <!-- **シミュレーション由来は業務の一覧に出さない**（US33 §3）。
+                 印を付けても読み口が外さなければ、実データとして並ぶ。
+                 ここは一覧と件数の共通の絞りなので、**1 か所で外れる**。 -->
+            simulated = FALSE
             <if test="!includeFinished">
-                booking_status NOT IN ('SETTLED', 'CANCELLED')
+                AND booking_status NOT IN ('SETTLED', 'CANCELLED')
             </if>
             <if test="q != null and q != ''">
                 AND (lower(booking_number) LIKE lower('%' || #{q} || '%')
@@ -202,13 +208,15 @@
              length_cm, width_cm, height_cm, quantity, product_name,
              hazard_imo_class, hazard_un_number, temperature_min_c, temperature_max_c,
              booking_status, routing_status, booked_at, routing_requested_at,
-             updated_at, updated_by, projected_at, last_event_id)
+             updated_at, updated_by, projected_at, last_event_id, simulated)
         VALUES (#{bookingId}, #{bookingNumber}, #{shipperId}, #{shipperName}, #{trackingNumber},
                 #{originUnlocode}, #{destinationUnlocode}, #{arrivalDeadline}, #{cargoType},
                 #{weightKg}, #{lengthCm}, #{widthCm}, #{heightCm}, #{quantity}, #{productName},
                 #{hazardImoClass}, #{hazardUnNumber}, #{temperatureMinC}, #{temperatureMaxC},
                 #{bookingStatus}, #{routingStatus}, #{bookedAt}, #{routingRequestedAt},
-                #{updatedAt}, #{updatedBy}, #{projectedAt}, #{lastEventId})
+                #{updatedAt}, #{updatedBy}, #{projectedAt}, #{lastEventId},
+                -- **荷主から引き継ぐ。** 予約ごとに判断すると判定が 2 か所に住む。
+                COALESCE((SELECT simulated FROM shipper WHERE shipper_id = #{shipperId}), FALSE))
         ON CONFLICT (booking_id) DO NOTHING
     </insert>
 </mapper>

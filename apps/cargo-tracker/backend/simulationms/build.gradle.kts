@@ -25,3 +25,9 @@ dependencies {
     testImplementation(libs.testcontainers.postgresql)
     testImplementation(libs.awaitility)
 }
+
+// SimulationPropertiesTest は application.yml を読む。**入力として宣言しないと**
+// Gradle が UP-TO-DATE と判断し、設定を壊しても検査が走らない（IT10 の教訓）。
+tasks.named<Test>("test") {
+    inputs.file(file("src/main/resources/application.yml"))
+}
