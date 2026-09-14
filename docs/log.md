@@ -1,6 +1,7 @@
 # Docs Update Log
 
 ## 2026-09-14
+* **Creation**: [ADR-0018](/adr/cargo-tracker/0018-closing-the-tracking-belongs-to-the-tracking-aggregate.md)・[ADR-0019](/adr/cargo-tracker/0019-settled-can-be-reverted-to-delivered.md) を起票（claude-code/claude-opus-5）
 * **Verification**: [イテレーション 16 計画](/development/cargo-tracker/iteration_plan-16.md) を承認（human:k2works）。status を stable に昇格——**検証済みの計画だけが開発の根拠になる**
 * **Verification**: [iteration_plan-16](/development/cargo-tracker/iteration_plan-16.md) を human:k2works が検証
 * **Creation**: [イテレーション 16 計画](/development/cargo-tracker/iteration_plan-16.md) を作成（claude-code/claude-opus-5）

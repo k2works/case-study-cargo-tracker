@@ -686,7 +686,7 @@ take-4 の `ExternalCargoRoutingService`（REST）と役割は同じです。違
 
 ### ドメインイベント一覧
 
-契約（`shared/contract/event`）に置くイベントは **11 本**です。名簿は ArchUnit で固定し、`domain-model.md`・`test_strategy.md`・`non_functional.md` の数もこの 11 に揃えます。
+契約（`shared/contract/event`）に置くイベントは **11 本**です。名簿は `ContractEventRosterTest` が**名前で**固定し（本数だけを数えると、1 本足して 1 本消せば通る——**うっかり契約へ移したイベント**が素通りする。IT16 の着手前まで名簿の検査は実在しませんでした）、`domain-model.md`・`test_strategy.md`・`non_functional.md` の数もこの 11 に揃えます。
 
 | イベント | 発行サービス | 契約（shared） | 購読サービスと用途 | 参照元での状態 |
 | :--- | :--- | :--- | :--- | :--- |

@@ -915,7 +915,7 @@ EXCEPTION --> DELIVERED : 解決・引取完了
 | 6 | 例外は追記のみ。解決しても事実は消えず、料金調整の根拠として残る |
 | 7 | 緊急かどうかは `ExceptionType#urgent`（`LOSS` のみ真）が答える。属性には持たない。一覧の並びは `urgent` を先頭に、以降は到着期限までの残日数が少ない順（M16） |
 | 8 | **知らない追跡番号の荷役では止まらない**。集約が無ければ `AdvanceTrackingCommand` は `UnknownTrackingRejectedEvent` に相当する記録を投影側に残し、後続の荷役を止めない |
-| 9 | キャンセル承認（`CargoCancelledEvent`）を受けても**追跡は閉じない**。`dischargeLocation` を `cancellationDischargeLocation` に記録し（`CancellationDischargePlannedEvent`）、**その港での `UNLOAD` を適用する流れの中で** `TrackingClosedEvent(reason = CANCELLED)` を出す。貨物が船の上にある間、陸揚げの荷役を記録できる。**コマンドで外から閉じさせない**（IT15 T6）——陸揚げ地を知っているのは集約なので、送り手が投影を読むことになり、投影が追いついていないあいだ閉じられない。**閉じた追跡には荷役を重ねない**：届いた荷役は状態を動かさず `HandlingNotAppliedEvent` として履歴にだけ残す（無言で捨てると「記録したのに追跡が動いていない」に答えられない） |
+| 9 | [ADR-0018] キャンセル承認（`CargoCancelledEvent`）を受けても**追跡は閉じない**。`dischargeLocation` を `cancellationDischargeLocation` に記録し（`CancellationDischargePlannedEvent`）、**その港での `UNLOAD` を適用する流れの中で** `TrackingClosedEvent(reason = CANCELLED)` を出す。貨物が船の上にある間、陸揚げの荷役を記録できる。**コマンドで外から閉じさせない**（IT15 T6）——陸揚げ地を知っているのは集約なので、送り手が投影を読むことになり、投影が追いついていないあいだ閉じられない。**閉じた追跡には荷役を重ねない**：届いた荷役は状態を動かさず `HandlingNotAppliedEvent` として履歴にだけ残す（無言で捨てると「記録したのに追跡が動いていない」に答えられない） |
 | 10 | `closed` の集約はコマンドを拒否する |
 | 11 | 取り消された荷役（`HandlingActivityVoidedEvent`）を受けたら、その荷役で進めた状態を直前の状態に戻す（`RevertTrackingCommand`）。取り消しの事実はイベントとして残る |
 
@@ -1220,7 +1220,7 @@ Booking の `Quotation` はこの式と同じ料率で概算を出します。�
 | 5 | `PAID` になるとき `paidAt` は必須 |
 | 6 | `VOID` の請求書は再発行しない。新規に発行する |
 | 7 | `quotedAmount` は `CalculateInvoiceCommand` に載った見積時の概算をそのまま持つ。計算し直さない |
-| 9 | **入金の記録は取り消せる**（`PAID` → `INVOICED`）。請求書そのものの取消（`VOID`）とは別の操作で、**入金の行は消さず取り消した印を付ける**。取り消すと予約も精算済から引取済へ戻る |
+| 9 | [ADR-0019] **入金の記録は取り消せる**（`PAID` → `INVOICED`）。請求書そのものの取消（`VOID`）とは別の操作で、**入金の行は消さず取り消した印を付ける**。取り消すと予約も精算済から引取済へ戻る |
 | 8 | 調整は識別子を持つ。**取り消しは行を消さず反対向きの調整を積む**（`reversedAdjustmentId` が元の調整を指す）。同じ調整を 2 度取り消さない——入れ直したのと同じ額になる。識別子の無い調整（IT13 までの記録）は**復元では断らず**、取り消そうとしたときに断る |
 
 | コマンド | アクター | 発行イベント | 契約 | UC / US |

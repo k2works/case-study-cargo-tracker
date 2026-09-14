@@ -27,3 +27,5 @@ cargo-tracker プロジェクトのADRドキュメントです。
 * [ADR-0015 営業日の数え方は共有カーネルが持つ](./0015-business-day-counting-lives-in-the-shared-kernel.md) - HolidayCalendar を handlingms から共有カーネルへ移し、数える国を輸入港の UN/LOCODE から決める。国別分岐が本番の経路で一度も踏まれていなかった。
 * [ADR-0016 料率は設定に置き、見積と請求で同じものを読む](./0016-rates-live-in-configuration.md) - 基準運賃・地域係数・貨物種別係数・税率を application.yml に置く。検査のフィクスチャと起動したアプリの料率が一致することを検査で固定する。
 * [ADR-0017 請求書の有効／決着は billing_status を正とし、void_marker は派生列とする](./0017-billing-status-is-the-source-of-truth.md) - 「有効な請求書は予約ごとに 1 通」を守る部分ユニークが列を要求する。状態を 2 か所で表すことになるので、どちらが正かを決めて検査に落とす。
+* [ADR-0018 追跡を閉じるのは追跡の集約で、閉じたことは契約にしない](./0018-closing-the-tracking-belongs-to-the-tracking-aggregate.md) - キャンセルの陸揚げで閉じる判断を trackingms の集約に置き、TrackingClosedEvent を契約から内部イベントへ格下げする。**契約イベントの名簿を名前で固定する検査**を同じ変更で足した（本数だけの固定では、うっかり移したイベントが素通りする）。
+* [ADR-0019 精算済は終端ではない——入金の取り消しで引取済へ戻す](./0019-settled-can-be-reverted-to-delivered.md) - 誤って記録した入金を取り消せるようにした結果、予約の SETTLED が終端でなくなった。戻れる先・戻れない条件・人の操作では戻せないことを明示する。
