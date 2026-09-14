@@ -1887,10 +1887,18 @@ test.describe('kind クラスタでの通し確認', () => {
       const bookingLink = page.getByRole('row', { name: /予約の登録/ }).getByRole('link');
       const bookingId = (await bookingLink.textContent()) ?? '';
       await bookingLink.click();
-      await expect(page.getByRole('heading', { name: '予約詳細' })).toBeVisible();
+      // 見出しは予約番号を名乗る（`予約 B-…`）。**画面の文言に合わせる**——
+      // 「予約詳細」という見出しはどこにも無い。
+      await expect(page.getByRole('heading', { name: /^予約 B-/ })).toBeVisible();
       await expect(page.getByText('精算済')).toBeVisible();
 
       // **業務の一覧には出ない**（US33 §3）。印は荷主から貨物へ引き継がれる。
+      //
+      // **営業として確かめる。** 除外の約束は「営業の予約一覧に出ない」こと
+      // なので、管理者の画面で見ても確かめたことにならない（管理者は一覧を
+      // 持たない——実行結果から指された予約だけを開く）。
+      await page.goto('/logout');
+      await signIn(page, 'sales01');
       await page.goto('/bookings');
       await expect(page.getByRole('heading', { name: '予約一覧' })).toBeVisible();
       await expect(page.getByText(bookingId)).toHaveCount(0);
@@ -1920,7 +1928,7 @@ test.describe('kind クラスタでの通し確認', () => {
       // **それまでに作られた予約は残っている**（US34 §3）。
       const bookingLink = page.getByRole('row', { name: /予約の登録/ }).getByRole('link');
       await bookingLink.click();
-      await expect(page.getByRole('heading', { name: '予約詳細' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: /^予約 B-/ })).toBeVisible();
     });
 
 });
