@@ -1,6 +1,7 @@
 # Docs Update Log
 
 ## 2026-09-14
+* **Update**: [20-業務シミュレーションを流す](/manual/20-業務シミュレーションを流す.md) を更新（claude-code/claude-opus-5）
 * **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
 * **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
 * **Update**: UC15 に「システムから知らせる」向き（US37）を拡張として追記し、UC23 の主アクターに時間イベント（US36）を明記（claude-code/claude-opus-5）

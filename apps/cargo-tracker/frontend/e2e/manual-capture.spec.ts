@@ -1870,4 +1870,158 @@ test.describe('17 請求を組み立てる・18 輸送見積を作る', () => {
     await expect(page.getByRole('link', { name: 'この見積で予約する' })).toBeVisible();
     await page.screenshot({ path: `${OUT}/18-S13-quotation-detail.png`, fullPage: true });
   });
+
+  async function signInAsAdmin(page: import('@playwright/test').Page) {
+    await page.route('**/api/v1/auth/login', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          token: 'token',
+          username: 'admin01',
+          displayName: '管理 花子',
+          roles: ['ROLE_ADMIN'],
+          shipperId: null,
+        }),
+      }),
+    );
+    await page.goto('/login');
+    await page.getByLabel('利用者名').fill('admin01');
+    await page.getByLabel('パスワード').fill('secret1234');
+    await page.getByRole('button', { name: 'ログイン' }).click();
+    await expect(page.getByRole('heading', { name: 'ダッシュボード' })).toBeVisible();
+  }
+
+  /** 実行の一覧（S92）。**走っている 1 本と終わった 1 本**を並べる。 */
+  const SAMPLE_RUNS = {
+    items: [
+      {
+        runId: 'SIM-1a2b3c4d5e6f4a5b8c9d0e1f2a3b4c5d',
+        scenarioLabel: '一般貨物の標準輸送',
+        status: 'RUNNING',
+        statusLabel: '実行中',
+        startedAt: '2026-09-28T01:00:00Z',
+        finishedAt: null,
+        startedBy: 'admin01',
+        succeededSteps: 8,
+        plannedSteps: 13,
+      },
+      {
+        runId: 'SIM-9f8e7d6c5b4a3a2b1c0d9e8f7a6b5c4d',
+        scenarioLabel: '経路候補が見つからない輸送',
+        status: 'FAILED',
+        statusLabel: '失敗',
+        startedAt: '2026-09-28T00:40:00Z',
+        finishedAt: '2026-09-28T00:41:00Z',
+        startedBy: 'admin01',
+        succeededSteps: 3,
+        plannedSteps: 4,
+      },
+    ],
+  };
+
+  test('20 業務シミュレーション一覧', async ({ page }) => {
+    // **本文が「どこまで進んだか」と「実行中か」を説明している。**
+    // 進みの列と状態が写らなければ、読み方の表は絵と対応しない。
+    await page.route('**/api/v1/simulation/runs', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(SAMPLE_RUNS),
+      }),
+    );
+    await signInAsAdmin(page);
+    await page.goto('/admin/simulations');
+
+    await expect(page.getByRole('heading', { name: '業務シミュレーション' })).toBeVisible();
+    await expect(page.getByText('8 / 13 工程')).toBeVisible();
+    await expect(page.getByText('3 / 4 工程')).toBeVisible();
+    // 実行の入口（シナリオの選択とボタン）も同じ 1 枚に収める。
+    await expect(page.getByRole('button', { name: '実行する' })).toBeVisible();
+    await page.screenshot({ path: `${OUT}/20-S92-simulation-list.png`, fullPage: true });
+  });
+
+  test('20 実行結果', async ({ page }) => {
+    // **止まった工程とその理由を写す。** 本文の主張は「どこで止まったかが
+    // 読める」ことなので、成功だけの実行では絵が本文を支えない。
+    await page.route('**/api/v1/simulation/runs/*', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          runId: 'SIM-9f8e7d6c5b4a3a2b1c0d9e8f7a6b5c4d',
+          scenario: 'NO_ROUTE',
+          scenarioLabel: '経路候補が見つからない輸送',
+          status: 'FAILED',
+          statusLabel: '失敗',
+          seed: null,
+          startedAt: '2026-09-28T00:40:00Z',
+          finishedAt: '2026-09-28T00:41:00Z',
+          startedBy: 'admin01',
+          steps: [
+            {
+              stepNo: 1,
+              kind: 'REGISTER_SHIPPER',
+              kindLabel: '荷主の登録',
+              outcome: 'SUCCEEDED',
+              outcomeLabel: '成功',
+              elapsedMs: 380,
+              producedId: '11111111-1111-1111-1111-111111111111',
+              failureStatus: null,
+              failureMessage: null,
+              occurredAt: '2026-09-28T00:40:01Z',
+            },
+            {
+              stepNo: 2,
+              kind: 'REGISTER_BOOKING',
+              kindLabel: '予約の登録',
+              outcome: 'SUCCEEDED',
+              outcomeLabel: '成功',
+              elapsedMs: 210,
+              producedId: '55555555-5555-5555-5555-555555555555',
+              failureStatus: null,
+              failureMessage: null,
+              occurredAt: '2026-09-28T00:40:20Z',
+            },
+            {
+              stepNo: 3,
+              kind: 'REQUEST_ROUTING',
+              kindLabel: '経路設計への引き渡し',
+              outcome: 'SUCCEEDED',
+              outcomeLabel: '成功',
+              elapsedMs: 150,
+              producedId: null,
+              failureStatus: null,
+              failureMessage: null,
+              occurredAt: '2026-09-28T00:40:40Z',
+            },
+            {
+              stepNo: 4,
+              kind: 'ASSIGN_ROUTE',
+              kindLabel: '経路の確定',
+              outcome: 'FAILED',
+              outcomeLabel: '失敗',
+              elapsedMs: 120,
+              producedId: null,
+              failureStatus: 422,
+              failureMessage:
+                '期限に間に合う経路の候補が 1 件もありません（条件を調整するか、便を増やしてください）',
+              occurredAt: '2026-09-28T00:41:00Z',
+            },
+          ],
+        }),
+      }),
+    );
+    await signInAsAdmin(page);
+    await page.goto('/admin/simulations/SIM-9f8e7d6c5b4a3a2b1c0d9e8f7a6b5c4d');
+
+    await expect(page.getByRole('heading', { name: '実行結果' })).toBeVisible();
+    await expect(page.getByText(/期限に間に合う経路の候補が 1 件もありません/)).toBeVisible();
+    // **生成した識別子からの導線も写す。** 本文が「ここから業務画面へ行ける」と
+    // 書いているので、リンクが写らないと絵が本文を支えない。
+    await expect(page.getByRole('link', { name: '55555555-5555-5555-5555-555555555555' }))
+      .toBeVisible();
+    await page.screenshot({ path: `${OUT}/20-S93-simulation-run.png`, fullPage: true });
+  });
+
 });
