@@ -65,8 +65,13 @@ class SimulationRunnerTest {
         }
     }
 
+    /**
+     * 連鎖はすぐ追いつく前提で組む（待ちそのものは {@code ChainWaitTest} が見る）。
+     *
+     * <p><b>眠らない。</b> 検査で実際に待つと、遅い検査と脆い検査が同時にできる。</p>
+     */
     private static SimulationRunner runner(BusinessApi api) {
-        return new SimulationRunner(api, CLOCK);
+        return new SimulationRunner(api, (kind, produced) -> true, duration -> { }, CLOCK);
     }
 
     @Test
