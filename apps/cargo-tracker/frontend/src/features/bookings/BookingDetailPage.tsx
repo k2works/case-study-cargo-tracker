@@ -19,7 +19,7 @@ import {
 } from '@/shared/ui/styles';
 import { ApiError } from '@/shared/api/client';
 import { fetchInvoiceOfBooking } from '@/features/billing/api';
-import { useAuthStore } from '@/shared/auth/authStore';
+import { useRole } from '@/shared/auth/useRole';
 import { BookingCancellationPanel } from './BookingCancellationPanel';
 import {
   canIssueTrackingNumber,
@@ -49,6 +49,38 @@ import type { BookingView, ItineraryLegView } from './api';
 import type { Pending } from '@/shared/api/pending';
 
 /**
+ * この予約に打てる手（US06・US10・US12・US13・US14）。
+ *
+ * <p><b>判定は集約の述語をそのまま呼ぶ。</b> 画面で書き直すと、遷移表を直した
+ * ときに片方だけ古くなる（写しが増えるほどずれる）。</p>
+ *
+ * <p><b>まとめて 1 度に決める。</b> 同じ `booking != null &&` を画面の本体に
+ * 5 本並べると、そのぶん分岐が増えて「どの状態で何が出るのか」が読めなくなる。</p>
+ */
+function actionsFor(booking: BookingView | null) {
+  if (booking === null) {
+    return {
+      notifiable: false, confirmable: false, issuable: false,
+      returnable: false, respondable: false,
+    };
+  }
+  return {
+    notifiable: canNotifyShipper(booking.routingStatus),
+    // **確定は予約の状態の判断。** 遷移表がそのまま答えになる
+    //（ROUTE_NOTIFIED からだけ CONFIRMED に進める）。
+    confirmable: canTransitionTo(booking.bookingStatus, 'CONFIRMED'),
+    // **発行は経路設計者の操作**（ui_design.md S22）。営業に開くと、経路設計者の
+    // 手番を飛ばして発行できてしまう。二重発行も同じ判定で断る。
+    issuable: canIssueTrackingNumber(booking.bookingStatus),
+    returnable: canReturnToRouting(booking.bookingStatus),
+    // 経路設計者から条件の見直しを頼まれていて、まだ返していない（US10 §4 の対）。
+    // **打てる手を持つのは営業**（荷主と協議する）。
+    respondable: booking.conditionReviewRequestedAt !== null
+      && booking.conditionReviewRespondedAt === null,
+  };
+}
+
+/**
  * S22 予約詳細（UC04）。
  *
  * <p>IT2 の範囲は状態・貨物仕様・輸送条件まで。旅程・通知履歴・誤配バナーは
@@ -59,19 +91,16 @@ export function BookingDetailPage() {
   // 通知を記録したあと、投影に届くまで取り直す合図。
   const [awaitingNotificationProjection, setAwaitingNotificationProjection] = useState(false);
   const queries = useQueryClient();
-  // 引き渡すのは営業の仕事（US06）。詳細画面は経路設計・追跡にも開いているので、
-  // 状態だけで出し分けると、見に来ただけの人が引き渡せる。
+  // 引き渡すのは営業の仕事（US06）。詳細画面は経路設計・追跡・経理・管理者にも
+  // 開いているので、状態だけで出し分けると、見に来ただけの人が引き渡せる。
   // これは表示の話で、守りは Gateway の認可（ADR-0006）が担う。
-  const isSales = useAuthStore((state) => state.user?.roles.includes('ROLE_SALES') ?? false);
+  const isSales = useRole('ROLE_SALES');
   // キャンセルの履歴を読めるのは営業と追跡管理者だけ（Gateway の認可と同じ）。
-  const isTracker = useAuthStore(
-    (state) => state.user?.roles.includes('ROLE_TRACKER') ?? false);
+  const isTracker = useRole('ROLE_TRACKER');
   // 請求書（S61）へ入れるのは経理だけ（ui_design.md の画面一覧）。
-  const isAccountant = useAuthStore(
-    (state) => state.user?.roles.includes('ROLE_ACCOUNTANT') ?? false);
+  const isAccountant = useRole('ROLE_ACCOUNTANT');
   // 追跡番号の発行は経路設計者の操作（ui_design.md S22）。
-  const isRouting = useAuthStore(
-    (state) => state.user?.roles.includes('ROLE_ROUTING') ?? false);
+  const isRouting = useRole('ROLE_ROUTING');
   const { data, isPending, isError } = useQuery({
     queryKey: ['booking', bookingId],
     queryFn: () => fetchBooking(bookingId),
@@ -140,19 +169,7 @@ export function BookingDetailPage() {
     ? notifications.data.value.items ?? [] : [];
 
 
-  const notifiable = booking != null && canNotifyShipper(booking.routingStatus);
-  // **確定は予約の状態の判断。** 遷移表がそのまま答えになる（ROUTE_NOTIFIED から
-  // だけ CONFIRMED に進める）ので、別の述語を作らない。写しが増えるほどずれる。
-  const confirmable = booking != null && canTransitionTo(booking.bookingStatus, 'CONFIRMED');
-  // **発行は経路設計者の操作**（ui_design.md S22）。営業に開くと、経路設計者の
-  // 手番を飛ばして発行できてしまう。二重発行も同じ判定で断る。
-  const issuable = booking != null && canIssueTrackingNumber(booking.bookingStatus);
-  const returnable = booking != null && canReturnToRouting(booking.bookingStatus);
-  // 経路設計者から条件の見直しを頼まれていて、まだ返していない（US10 §4 の対）。
-  // **打てる手を持つのは営業**（荷主と協議する）。
-  const respondable = booking != null
-    && booking.conditionReviewRequestedAt !== null
-    && booking.conditionReviewRespondedAt === null;
+  const { notifiable, confirmable, issuable, returnable, respondable } = actionsFor(booking);
   const [responding, setResponding] = useState(false);
   const [reviewResponse, setReviewResponse] = useState('');
   const [reviewResponseError, setReviewResponseError] = useState('');
@@ -420,7 +437,7 @@ export function BookingDetailPage() {
 
           {/* 差し戻された予約に営業が返す（US10 §4 の対）。**理由と対で出す**——
               何を頼まれたのかが読めないまま返させると、協議の結果が噛み合わない。 */}
-          {isSales && respondable && (
+          {isSales && respondable && booking !== null && (
             <ConditionReviewResponsePanel
               reason={booking.conditionReviewReason ?? ''}
               requestedAt={booking.conditionReviewRequestedAt}
