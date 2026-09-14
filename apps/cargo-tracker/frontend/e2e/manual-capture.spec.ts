@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import type { InvoiceView } from '../src/features/billing/api';
 
 /**
  * マニュアルの画面キャプチャを生成する（creating-manual）。
@@ -1515,6 +1516,105 @@ test.describe('マニュアルの画面キャプチャ', () => {
     await page.getByLabel('理由').fill('書類の不備が解消したため');
     await page.screenshot({ path: `${OUT}/16-S53-customs-status-update.png`, fullPage: true });
   });
+  test('19 キャンセルの申請（営業）', async ({ page }) => {
+    // **本文が「輸送中は要承認」「理由が要る」「承認待ちの間は出し直せない」
+    // 「履歴に誰が・いつ・なぜ」を説明している。** どれかが写っていないと、
+    // 文章と画像が別々に正しくなる。
+    await page.route('**/api/v1/booking/bookings/*', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ...SAMPLE_ROUTED_BOOKING,
+          bookingStatus: 'IN_TRANSIT',
+          bookingStatusLabel: '輸送中',
+          routingStatus: 'ROUTED',
+        }),
+      }),
+    );
+    await page.route('**/api/v1/booking/bookings/*/cancellation', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: [{
+            requestId: 'cr-1',
+            bookingId: SAMPLE_ROUTED_BOOKING.bookingId,
+            bookingNumber: SAMPLE_ROUTED_BOOKING.bookingNumber,
+            productName: '精密機器',
+            reason: '荷主の発注取消',
+            requestedBy: 'sales02',
+            requestedAt: '2026-09-28T01:00:00Z',
+            decision: null,
+            decisionLabel: null,
+            decidedBy: null,
+            decidedAt: null,
+            decisionReason: null,
+            dischargeUnLocode: null,
+          }],
+        }),
+      }),
+    );
+    await signIn(page);
+    await page.goto(`/bookings/${SAMPLE_ROUTED_BOOKING.bookingId}`);
+
+    await expect(page.getByRole('heading', { name: 'キャンセル' })).toBeVisible();
+    await expect(page.getByText(/輸送中の予約は/)).toBeVisible();
+    await expect(page.getByText('承認待ちの申請があります。判断されるまで、新しい申請は出せません。'))
+      .toBeVisible();
+    await expect(page.getByText(/荷主の発注取消/)).toBeVisible();
+    await expect(page.getByTestId('cancellation-history-cr-1'))
+      .toContainText('承認待ち');
+    await page.screenshot({ path: `${OUT}/19-S22-cancellation-panel.png`, fullPage: true });
+  });
+
+  test('19 キャンセル承認一覧（追跡管理者）', async ({ page }) => {
+    // **本文が「申請の古い順」「承認には陸揚げ地が要る」「却下には理由が要る」
+    // 「承認しても追跡は閉じない」を説明している。**
+    await page.route('**/api/v1/booking/bookings/cancellations', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: [{
+            requestId: 'cr-1',
+            bookingId: SAMPLE_ROUTED_BOOKING.bookingId,
+            bookingNumber: SAMPLE_ROUTED_BOOKING.bookingNumber,
+            productName: '精密機器',
+            reason: '荷主の発注取消',
+            requestedBy: 'sales02',
+            requestedAt: '2026-09-28T01:00:00Z',
+            decision: null,
+            decisionLabel: null,
+            decidedBy: null,
+            decidedAt: null,
+            decisionReason: null,
+            dischargeUnLocode: null,
+          }],
+        }),
+      }),
+    );
+    await page.route('**/api/v1/booking/bookings/*/cancellation/discharge-candidates',
+      (route) => route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ currentUnLocode: 'SGSIN', unLocodes: ['SGSIN', 'USNYC'] }),
+      }),
+    );
+    await signInAsTracker(page);
+    await page.goto('/bookings/cancellations');
+
+    await expect(page.getByRole('heading', { name: 'キャンセル承認' })).toBeVisible();
+    await expect(page.getByText(/承認しても追跡は閉じません/)).toBeVisible();
+    // **判断の欄まで開いて撮る。** 一覧だけだと、本文が説明する
+    // 「陸揚げ地は現在地か残りの寄港地」が写らない。
+    await page.getByRole('button', { name: '判断する' }).click();
+    await expect(page.getByLabel('陸揚げ地')).toBeVisible();
+    await expect(page.getByText('現在地または残りの寄港地から選びます。')).toBeVisible();
+    await expect(page.getByRole('option', { name: 'SGSIN（現在地）' })).toBeAttached();
+    await page.screenshot({ path: `${OUT}/19-S23-cancellation-worklist.png`, fullPage: true });
+  });
+
 });
 
 test.describe('17 請求を組み立てる・18 輸送見積を作る', () => {
@@ -1571,7 +1671,11 @@ test.describe('17 請求を組み立てる・18 輸送見積を作る', () => {
         basisExceptionId: 'EX-2026-0928-03',
       },
     ],
-  };
+    // **モックを本物より甘くしない。** サーバは入金の一覧を必ず返す（空でも
+    // 配列）。抜けると画面は `payments.length` で落ち、本文が説明する要素が
+    // 1 つも写らないまま「キャプチャが取れなかった」とだけ出る（IT15 T13 で実測）。
+    payments: [],
+  } satisfies InvoiceView;
 
   async function signInAsAccountant(page: import('@playwright/test').Page) {
     await page.route('**/api/v1/auth/login', (route) =>
