@@ -42,6 +42,13 @@ export interface CargoOnVoyageView {
    * 表せない（M14）。
    */
   readonly handledTypes: readonly HandlingType[];
+  /**
+   * キャンセルの陸揚げとしてこの港に残っているか（US30）。
+   *
+   * <p><b>一覧に居る理由が読めないと、現場はいつもの順で積む。</b> この貨物は
+   * 降ろすためだけに残されていて、そのあと追跡が閉じる。</p>
+   */
+  readonly cancellationDischarge: boolean;
 }
 
 /** 予定の旅程の 1 区間。**時刻は持たない**（ADR-0012 決定 4）。 */

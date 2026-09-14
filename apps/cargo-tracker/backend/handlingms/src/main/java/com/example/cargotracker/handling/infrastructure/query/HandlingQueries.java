@@ -32,7 +32,11 @@ public final class HandlingQueries {
             String originUnLocode,
             String destinationUnLocode,
             String cargoType,
-            List<String> handledTypes) {
+            List<String> handledTypes,
+            // キャンセルの陸揚げとしてこの港に残っているか（US30）。**現場は
+            // 「なぜこの貨物がここに居るのか」を知らないと、いつもの順で
+            // 積んでしまう**——降ろすためだけに残している貨物である。
+            boolean cancellationDischarge) {
     }
 
     /**

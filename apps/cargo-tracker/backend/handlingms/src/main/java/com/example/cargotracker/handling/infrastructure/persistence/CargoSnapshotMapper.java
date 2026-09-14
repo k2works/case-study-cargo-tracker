@@ -17,7 +17,8 @@ public interface CargoSnapshotMapper {
      * 列は末尾に来るので、record の途中に項目を足すと全部ずれる（IT8 で実測）。</p>
      */
     String COLUMNS = "tracking_number, booking_id, origin_unlocode, destination_unlocode, "
-            + "cargo_type, cancelled, projected_at, last_event_id";
+            + "cargo_type, cancelled, projected_at, last_event_id, "
+            + "cancellation_discharge_unlocode";
 
     String LEG_COLUMNS = "tracking_number, leg_seq, voyage_number, load_unlocode, unload_unlocode";
 
@@ -47,14 +48,19 @@ public interface CargoSnapshotMapper {
      * <p>キャンセルされた貨物は出さない（作業の対象ではない）。</p>
      */
     @Select("SELECT s.tracking_number, s.booking_id, s.origin_unlocode, s.destination_unlocode, "
-            + "s.cargo_type, s.cancelled, s.projected_at, s.last_event_id "
+            + "s.cargo_type, s.cancelled, s.projected_at, s.last_event_id, "
+            + "s.cancellation_discharge_unlocode "
             + "FROM cargo_snapshot s JOIN cargo_snapshot_leg l "
             + "  ON l.tracking_number = s.tracking_number "
             + "WHERE l.voyage_number = #{voyageNumber} "
             // **積む港からも入る。** 降ろす港だけで引くと、受領と積込の作業を
             // する港からは画面が始まらない（種別は 3 つ選べるのに対象が出ない）。
             + "  AND (l.load_unlocode = #{unLocode} OR l.unload_unlocode = #{unLocode}) "
-            + "  AND s.cancelled = FALSE "
+            // **キャンセルされた貨物は外す。ただし指定された陸揚げ地は残す。**
+            // 全部の港から外すと、現場は「この港で降ろす」ことを知る手段を
+            // 持たない（IT15 のレビュー 高）。
+            + "  AND (s.cancelled = FALSE "
+            + "       OR s.cancellation_discharge_unlocode = #{unLocode}) "
             + "ORDER BY s.tracking_number")
     List<CargoSnapshotRow> findOnVoyage(@Param("voyageNumber") String voyageNumber,
             @Param("unLocode") String unLocode);
@@ -79,12 +85,16 @@ public interface CargoSnapshotMapper {
             + "  SELECT l.voyage_number, l.load_unlocode AS unlocode, l.tracking_number "
             + "  FROM cargo_snapshot_leg l JOIN cargo_snapshot s "
             + "    ON s.tracking_number = l.tracking_number "
+            // 積む港は外す（止まった貨物を積み続けない）。
             + "  WHERE s.cancelled = FALSE "
             + "  UNION ALL "
             + "  SELECT l.voyage_number, l.unload_unlocode AS unlocode, l.tracking_number "
             + "  FROM cargo_snapshot_leg l JOIN cargo_snapshot s "
             + "    ON s.tracking_number = l.tracking_number "
-            + "  WHERE s.cancelled = FALSE"
+            // 降ろす港は、キャンセルされた貨物の陸揚げ地も数える——
+            // ダッシュボードがその港への唯一の入口である。
+            + "  WHERE (s.cancelled = FALSE "
+            + "         OR s.cancellation_discharge_unlocode = l.unload_unlocode)"
             + ") ports "
             + "GROUP BY voyage_number, unlocode "
             + "ORDER BY voyage_number, unlocode "
@@ -105,7 +115,7 @@ public interface CargoSnapshotMapper {
      */
     @Select("SELECT s.tracking_number, s.booking_id, s.origin_unlocode, "
             + "s.destination_unlocode, s.cargo_type, s.cancelled, s.projected_at, "
-            + "s.last_event_id "
+            + "s.last_event_id, s.cancellation_discharge_unlocode "
             + "FROM cargo_snapshot s "
             + "WHERE s.cancelled = FALSE "
             + "  AND s.destination_unlocode = #{unLocode} "
@@ -130,13 +140,20 @@ public interface CargoSnapshotMapper {
      * 辿れなくなる。読み口の側が {@code cancelled = FALSE} で絞っているので、
      * 印を付けるだけで作業一覧から外れる。</p>
      *
+     * <p><b>陸揚げ地も一緒に書く</b>（US30）。**ここで降ろす作業だけは残す**
+     * ——全部の港から外すと、現場は降ろす港を知る手段を持たない。輸送開始前の
+     * キャンセルでは陸揚げ地が無く、NULL のままでよい（船に載っていない）。</p>
+     *
      * <p><b>二度届いても同じ。</b> 同じ値を入れ直すだけである。</p>
      */
     @org.apache.ibatis.annotations.Update(
-            "UPDATE cargo_snapshot SET cancelled = TRUE, projected_at = #{projectedAt} "
+            "UPDATE cargo_snapshot SET cancelled = TRUE, "
+            + "cancellation_discharge_unlocode = #{dischargeUnLocode}, "
+            + "projected_at = #{projectedAt} "
             + "WHERE booking_id = #{bookingId}")
-    int markCancelled(@org.apache.ibatis.annotations.Param("bookingId") String bookingId,
-            @org.apache.ibatis.annotations.Param("projectedAt") java.time.Instant projectedAt);
+    int markCancelled(@Param("bookingId") String bookingId,
+            @Param("dischargeUnLocode") String dischargeUnLocode,
+            @Param("projectedAt") java.time.Instant projectedAt);
 
     /** 貨物の写し。Booking / Tracking の型は持ち込まない。 */
 
@@ -148,7 +165,11 @@ public interface CargoSnapshotMapper {
             String cargoType,
             boolean cancelled,
             Instant projectedAt,
-            String lastEventId) {
+            String lastEventId,
+            // 承認されたキャンセルの陸揚げ地（US30）。**ここで降ろす作業だけは
+            // 残る**——降ろさなければ貨物は船の上に残り、追跡も閉じない。
+            // NULL はキャンセルされていない貨物。
+            String cancellationDischargeUnlocode) {
     }
 
     /** 予定の旅程の 1 区間。<b>時刻は持たない</b>（ADR-0012 決定 4）。 */

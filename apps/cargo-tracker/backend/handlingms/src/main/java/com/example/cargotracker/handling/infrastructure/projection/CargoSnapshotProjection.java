@@ -59,7 +59,8 @@ public class CargoSnapshotProjection {
      */
     @EventHandler
     public void on(CargoCancelledEvent event) {
-        int updated = cargos.markCancelled(event.bookingId(), clock.instant());
+        int updated = cargos.markCancelled(event.bookingId(),
+                event.dischargeUnLocode(), clock.instant());
         if (updated == 0) {
             log.info("キャンセルを書ける貨物の写しが無い（輸送開始前のキャンセル）: "
                     + "bookingId={}", event.bookingId());
@@ -75,7 +76,9 @@ public class CargoSnapshotProjection {
                 // **挿入では触らない**——追跡が作り直されても、キャンセルの印は
                 // 消さない（上書きしない）。
                 false,
-                clock.instant(), eventId));
+                clock.instant(), eventId,
+                // 陸揚げ地も同じ理由で触らない（挿入の SQL が列を書かない）。
+                null));
 
         cargos.deleteLegs(event.trackingNumber());
         if (event.legs().isEmpty()) {

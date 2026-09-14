@@ -81,7 +81,10 @@ public class HandlingQueryHandler {
                 cargos.findOnVoyage(query.voyageNumber(), query.unLocode()).stream()
                         .map(row -> new CargoOnVoyageView(row.trackingNumber(), row.bookingId(),
                                 row.originUnlocode(), row.destinationUnlocode(), row.cargoType(),
-                                handled.getOrDefault(row.trackingNumber(), List.of())))
+                                handled.getOrDefault(row.trackingNumber(), List.of()),
+                                // **印を出す。** 一覧に居る理由が「降ろすため」で
+                                // あることが読めないと、現場はいつもの順で積む。
+                                row.cancelled()))
                         .toList());
     }
 

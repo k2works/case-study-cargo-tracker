@@ -91,10 +91,35 @@ class CargoSnapshotProjectionIT extends AbstractAxonIntegrationTest {
 
         assertThat(cargos.findByTrackingNumber(trackingNumber))
                 .as("行は残る（荷役の跡を辿れなくしない）").isNotNull()
-                .satisfies(row -> assertThat(row.cancelled()).isTrue());
+                .satisfies(row -> assertThat(row.cancelled()).isTrue())
+                .satisfies(row -> assertThat(row.cancellationDischargeUnlocode())
+                        .as("どこで降ろすかを写しが持つ").isEqualTo("SGSIN"));
+        assertThat(cargos.findOnVoyage("V-MOL-001", "JPTYO"))
+                .extracting(CargoSnapshotMapper.CargoSnapshotRow::trackingNumber)
+                .as("積む港からは外れる（止まった貨物を積み続けない）")
+                .doesNotContain(trackingNumber);
+    }
+
+    @Test
+    @DisplayName("US30: 指定した陸揚げ地では、キャンセルされた貨物も作業一覧に残る")
+    void keepsCancelledCargoAtTheDischargePort() {
+        // **降ろさなければ貨物は船の上に残る。** 全部の港から外すと、現場は
+        // 「この港で降ろす」ことを知る手段を持たない——追跡も閉じない
+        // （IT15 のレビュー 高。クラスタ E2E は API で直接叩いたので出なかった）。
+        String trackingNumber = "TRK-D" + System.nanoTime() % 1000000000L;
+        var event = initialized(trackingNumber);
+        projection.on(event, "evt-d1");
+        projection.on(new CargoCancelledEvent(event.bookingId(), trackingNumber,
+                "IN_TRANSIT", "SGSIN", "荷主の発注取消", "tracker01", AT));
+
         assertThat(cargos.findOnVoyage("V-MOL-001", "SGSIN"))
                 .extracting(CargoSnapshotMapper.CargoSnapshotRow::trackingNumber)
-                .as("作業一覧から外れる").doesNotContain(trackingNumber);
+                .as("陸揚げ地では残る").contains(trackingNumber);
+        assertThat(cargos.findVoyagePorts(200))
+                .filteredOn(row -> "V-MOL-001".equals(row.voyageNumber())
+                        && "SGSIN".equals(row.unlocode()))
+                .as("ダッシュボードの件数にも入る（入口がそこにしかない）")
+                .isNotEmpty();
     }
 
     @Test

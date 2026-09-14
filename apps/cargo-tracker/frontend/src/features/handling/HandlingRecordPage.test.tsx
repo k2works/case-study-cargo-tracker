@@ -14,6 +14,7 @@ function cargo(over: Record<string, unknown> = {}) {
     destinationUnLocode: 'USNYC',
     cargoType: 'GENERAL',
     handledTypes: [],
+    cancellationDischarge: false,
     ...over,
   };
 }
@@ -159,6 +160,19 @@ describe('S50 荷役作業記録', () => {
     expect(row).toHaveTextContent('荷降し済');
     await userEvent.selectOptions(screen.getByLabelText('作業種別'), 'CLAIM');
     expect(await screen.findByRole('row', { name: /TRK-8K2QX7M4RB/ })).toHaveTextContent('未記録');
+  });
+
+  it('US30: キャンセルの陸揚げとして残っている貨物は、そうと分かる', async () => {
+    // **一覧に居る理由が読めないと、現場はいつもの順で積む。** この貨物は
+    // 降ろすためだけにこの港へ残されている（IT15 のレビュー 高）。
+    respondByUrl({
+      '/cargos?unLocode': { items: [cargo({ cancellationDischarge: true })] },
+    });
+
+    renderAt();
+
+    const row = await screen.findByRole('row', { name: /TRK-8K2QX7M4RB/ });
+    expect(row).toHaveTextContent('キャンセルの陸揚げ');
   });
 
   it('M15: 一覧の行から記録を始められる（追跡番号が入る）', async () => {

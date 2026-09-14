@@ -581,7 +581,7 @@ CANCELLED --> [*]
 | 6 | 荷主に通知していない予約は確定できない（`ROUTE_NOTIFIED` からのみ `CONFIRMED`） | `confirm` |
 | 7 | `CONFIRMED` 以降は経路設計へ戻せない | `returnToRouting` |
 | 8 | 追跡番号は `CONFIRMED` の予約にだけ発行し、二重に発行しない | `issueTrackingNumber` |
-| 9 | `IN_TRANSIT` のキャンセルは申請 → 承認（陸揚げ地必須）の 2 段階。`DELIVERED` 以降はキャンセル不可 | `requestCancellation` / `approveCancellation` |
+| 9 | `IN_TRANSIT` のキャンセルは申請 → 承認（陸揚げ地必須）の 2 段階。`DELIVERED` 以降はキャンセル不可——**申請の時点と承認の時点の両方で見る**（申請と判断のあいだに引取が済むことがあり、申請の有無だけを見ると引取済の予約がキャンセルになる。IT15 のレビューで実測）。**却下には掛けない**：却下は「このまま運ぶ」判断で状態を動かさず、掛けると決着しない申請が承認待ちに残り続ける | `requestCancellation` / `approveCancellation` |
 | 9-2 | `CancellationDecision.dischargeLocation` は**現在地（`lastHandling.location`）または旅程の残りの寄港地のいずれか**。旅程に無い港や通過済みの港は指定できない。**「通過済み」は荷降しの済んだ港だけ**——積み港に居ることは、その区間を通ったことではない（東京で受領した貨物にとって東京 → シンガポールはまだ先。積み港も通過済みと数えると次の寄港地が候補から消える。IT15 で実測） | `CancellationDecision.approve` |
 | 10 | 未決着の `CancellationRequest` は高々 1 件 | `requestCancellation` |
 | 11 | `CANCELLED` の集約は以降のコマンドを拒否する | 全ハンドラ |
@@ -915,7 +915,7 @@ EXCEPTION --> DELIVERED : 解決・引取完了
 | 6 | 例外は追記のみ。解決しても事実は消えず、料金調整の根拠として残る |
 | 7 | 緊急かどうかは `ExceptionType#urgent`（`LOSS` のみ真）が答える。属性には持たない。一覧の並びは `urgent` を先頭に、以降は到着期限までの残日数が少ない順（M16） |
 | 8 | **知らない追跡番号の荷役では止まらない**。集約が無ければ `AdvanceTrackingCommand` は `UnknownTrackingRejectedEvent` に相当する記録を投影側に残し、後続の荷役を止めない |
-| 9 | キャンセル承認（`CargoCancelledEvent`）を受けても**追跡は閉じない**。`dischargeLocation` を `cancellationDischargeLocation` に記録し（`CancellationDischargePlannedEvent`）、**その港での `UNLOAD` を適用する流れの中で** `TrackingClosedEvent(reason = CANCELLED)` を出す。貨物が船の上にある間、陸揚げの荷役を記録できる。**コマンドで外から閉じさせない**（IT15 T6）——陸揚げ地を知っているのは集約なので、送り手が投影を読むことになり、投影が追いついていないあいだ閉じられない |
+| 9 | キャンセル承認（`CargoCancelledEvent`）を受けても**追跡は閉じない**。`dischargeLocation` を `cancellationDischargeLocation` に記録し（`CancellationDischargePlannedEvent`）、**その港での `UNLOAD` を適用する流れの中で** `TrackingClosedEvent(reason = CANCELLED)` を出す。貨物が船の上にある間、陸揚げの荷役を記録できる。**コマンドで外から閉じさせない**（IT15 T6）——陸揚げ地を知っているのは集約なので、送り手が投影を読むことになり、投影が追いついていないあいだ閉じられない。**閉じた追跡には荷役を重ねない**：届いた荷役は状態を動かさず `HandlingNotAppliedEvent` として履歴にだけ残す（無言で捨てると「記録したのに追跡が動いていない」に答えられない） |
 | 10 | `closed` の集約はコマンドを拒否する |
 | 11 | 取り消された荷役（`HandlingActivityVoidedEvent`）を受けたら、その荷役で進めた状態を直前の状態に戻す（`RevertTrackingCommand`）。取り消しの事実はイベントとして残る |
 
@@ -1241,9 +1241,11 @@ Booking の `Quotation` はこの式と同じ料率で概算を出します。�
 | 状況 | どうするか | なぜ |
 | :--- | :--- | :--- |
 | 料率が 0%（仮受付） | **何もしない** | 0 円の請求書は業務として存在しない。記録だけ作ると、経理が「確かめるもの」として毎朝読む |
-| 有効な請求書がある（引取後にキャンセルは起きないので、実際には稀） | その請求書に `CANCELLATION_FEE` 行を積む | 荷主が受け取る紙は 1 枚 |
+| 有効な請求書がある（引取後にキャンセルは起きないので、実際には稀） | **自動では積まず、経理宛の要確認に出す**（「キャンセル料は調整で入れてください」） | 二重に請求しない。すでに発行・入金が進んでいることがあり、**自動で明細を足すと金額が黙って変わる**——積むかどうかは経理の判断である（IT15 のレビューで正典と実装が食い違っていたので、実装を正とした） |
 | 請求書がまだ無い（**通常の経路**） | **キャンセル料だけの請求書を新規に作る** | 輸送は行われていないので輸送料金は無い。請求するのはキャンセル料だけである |
 | `billing_cargo_snapshot` が無い | **経理宛の要確認に出す** | 基本料金が出せない。**黙って 0 円にしない**——取りこぼした請求はあとから取り返せない（US21 の「算出できなかったとき」と同じ扱い） |
+
+**自動でキャンセル料の請求書ができるのは、追跡番号を発行したあと（`TRACKING_ISSUED` 以降）だけです。** 基本料金の材料になる `billing_cargo_snapshot` の書き手が `TrackingInitializedEvent` しかないためで、`ROUTE_PROPOSED` / `ROUTE_NOTIFIED` / `CONFIRMED`（料率 5%・5%・10%）のキャンセルは毎回「写しが無い」で経理宛の要確認に落ちます。**取りこぼしはしません**が、請求は手作業になります。予約側から材料を取れるようにするかは Release 3.0 の課題として送りました（IT15 のレビュー 高）。
 
 **輸送中の陸揚げ実費は自動では出せません**（港・船社・貨物で変わる）。経理が S61 の調整行で入れます（マニュアル 17 章）。
 

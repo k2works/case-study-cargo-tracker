@@ -89,6 +89,7 @@ export function HandlingRecordPage() {
                 destinationUnLocode: item.destinationUnLocode,
                 cargoType: item.cargoType,
                 handledTypes: ['UNLOAD'],
+                cancellationDischarge: false,
               })),
             },
           }
@@ -321,6 +322,14 @@ export function HandlingRecordPage() {
                   </td>
                   <td className={TD}>
                     {item.originUnLocode} → {item.destinationUnLocode}
+                    {/* **なぜこの貨物がここに居るのか**を出す（US30）。
+                        降ろすためだけに残した貨物を、いつもの順で積ませない。 */}
+                    {item.cancellationDischarge && (
+                      <span className="ml-2 rounded bg-amber-100 px-2 py-0.5 text-xs
+                        text-amber-800">
+                        キャンセルの陸揚げ
+                      </span>
+                    )}
                   </td>
                   {/* **選んでいる種別で見る**（M14）。同じ港で荷降し → 引取が起きる。 */}
                   <td className={TD}>{handledLabel(item.handledTypes, handlingType)}</td>
