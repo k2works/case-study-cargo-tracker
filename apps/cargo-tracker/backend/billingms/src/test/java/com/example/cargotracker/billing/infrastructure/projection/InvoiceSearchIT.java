@@ -46,7 +46,13 @@ class InvoiceSearchIT extends AbstractAxonIntegrationTest {
     /** 算出日時を指定した算出イベント（並びと期間の絞り込みを見るため）。 */
     private static InvoiceCalculatedEvent calculatedAt(String invoiceId, String bookingId,
             Instant calculatedAt) {
-        return new InvoiceCalculatedEvent(invoiceId, bookingId, "SHP-000001", "山田商事",
+        return calculatedFor(invoiceId, bookingId, "SHP-000001", calculatedAt);
+    }
+
+    /** 荷主を指定した算出イベント（由来の絞り込みを見るため）。 */
+    private static InvoiceCalculatedEvent calculatedFor(String invoiceId, String bookingId,
+            String shipperId, Instant calculatedAt) {
+        return new InvoiceCalculatedEvent(invoiceId, bookingId, shipperId, "山田商事",
                 "CORPORATE", "CT-0012", new BigDecimal("0.1500"),
                 new BigDecimal("510000"), new BigDecimal("76500"), BigDecimal.ZERO,
                 new BigDecimal("0.10"), true,
@@ -169,4 +175,30 @@ class InvoiceSearchIT extends AbstractAxonIntegrationTest {
                 base.totalAmount(), base.currency(), base.quotedAmount(),
                 base.lineItems(), base.calculatedBy(), base.calculatedAt());
     }
+
+    @Test
+    @DisplayName("US33 §3: シミュレーションが作った請求書は、経理の一覧に出ない")
+    void hidesSimulatedInvoicesFromTheAccountingList() {
+        // **印だけでは混ざる。** 印を付けても一覧が外さなければ、締めの数字に
+        // シミュレーションの請求書が入る（注 N7）。
+        String simulatedShipper = "SHP-S-" + System.nanoTime();
+        jdbc.update("INSERT INTO shipper_contract_snapshot "
+                + "(shipper_id, shipper_name, shipper_type, discount_rate, contract_number, "
+                + " projected_at, last_event_id, simulated) "
+                + "VALUES (?, ?, 'INDIVIDUAL', NULL, NULL, now(), NULL, TRUE)",
+                simulatedShipper, "シミュレーション商事");
+
+        String simulated = "INV-20260928-" + Long.toHexString(System.nanoTime()).substring(0, 8);
+        projection.on(calculatedFor(simulated, "B-S-" + System.nanoTime(),
+                simulatedShipper, AT), "evt-s");
+
+        String real = "INV-20260928-" + Long.toHexString(System.nanoTime()).substring(0, 8);
+        projection.on(calculated(real, "B-R-" + System.nanoTime()), "evt-r");
+
+        List<String> ids = queries.handle(new FindInvoicesQuery(true, null, null, null, null))
+                .items().stream().map(InvoiceSummaryView::invoiceId).toList();
+        assertThat(ids).as("本物は出る").contains(real);
+        assertThat(ids).as("**シミュレーション由来は出ない**").doesNotContain(simulated);
+    }
+
 }

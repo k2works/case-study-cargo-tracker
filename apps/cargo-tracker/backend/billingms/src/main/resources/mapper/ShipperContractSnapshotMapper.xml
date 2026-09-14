@@ -13,6 +13,8 @@
             <arg column="contract_number" javaType="string"/>
             <arg column="projected_at" javaType="java.time.Instant"/>
             <arg column="last_event_id" javaType="string"/>
+            <!-- **列は位置で対応する。** record の末尾に足したので、ここも末尾。 -->
+            <arg column="simulated" javaType="_boolean"/>
         </constructor>
     </resultMap>
 
@@ -23,15 +25,16 @@
     <insert id="upsert">
         INSERT INTO shipper_contract_snapshot
             (shipper_id, shipper_name, shipper_type, discount_rate, contract_number,
-             projected_at, last_event_id)
+             projected_at, last_event_id, simulated)
         VALUES (#{shipperId}, #{shipperName}, #{shipperType}, #{discountRate}, #{contractNumber},
-                #{projectedAt}, #{lastEventId})
+                #{projectedAt}, #{lastEventId}, #{simulated})
         ON CONFLICT (shipper_id) DO UPDATE SET
             shipper_name    = EXCLUDED.shipper_name,
             shipper_type    = EXCLUDED.shipper_type,
             discount_rate   = EXCLUDED.discount_rate,
             contract_number = EXCLUDED.contract_number,
             projected_at    = EXCLUDED.projected_at,
-            last_event_id   = EXCLUDED.last_event_id
+            last_event_id   = EXCLUDED.last_event_id,
+            simulated       = EXCLUDED.simulated
     </insert>
 </mapper>

@@ -10,12 +10,16 @@
             currency, discount_rate, billing_status, calculated_at, projected_at, last_event_id,
             <!-- **見積時の概算も書く**（注 N12）。列と読み口だけあって書き込みが
                  無いと、S61 の差額行は永久に出ない。 -->
-            quoted_amount
+            quoted_amount,
+            simulated
         ) VALUES (
             #{invoiceId}, #{bookingId}, #{shipperId}, #{shipperName}, #{shipperType},
             #{contractNumber}, #{baseAmount}, #{discountAmount}, #{adjustmentAmount},
             #{taxAmount}, #{totalAmount}, #{currency}, #{discountRate}, #{billingStatus},
-            #{calculatedAt}, #{projectedAt}, #{lastEventId}, #{quotedAmount}
+            #{calculatedAt}, #{projectedAt}, #{lastEventId}, #{quotedAmount},
+            -- **荷主から引き継ぐ。** 請求書ごとに判断すると判定が 2 か所に住む。
+            COALESCE((SELECT simulated FROM shipper_contract_snapshot
+                       WHERE shipper_id = #{shipperId}), FALSE)
         )
         ON CONFLICT DO NOTHING
     </insert>
@@ -152,6 +156,10 @@
     -->
     <sql id="searchWhere">
         <where>
+            <!-- **シミュレーション由来は経理の締めに出さない**（US33 §3）。
+                 印を付けても読み口が外さなければ、実データとして並ぶ。
+                 ここは一覧と合計の共通の絞りなので、**1 か所で外れる**。 -->
+            simulated = FALSE
             <if test="!includeSettled">
                 AND billing_status NOT IN ('PAID', 'VOID')
             </if>

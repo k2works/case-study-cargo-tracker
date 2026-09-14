@@ -48,6 +48,8 @@ public class ShipperContractProjection {
                 event.discountRate() == null ? null : new BigDecimal(event.discountRate()),
                 event.contractNumber(),
                 clock.instant(),
-                null));
+                null,
+                // `null` は印が付く前に登録された荷主＝本物である。
+                Boolean.TRUE.equals(event.simulated())));
     }
 }
