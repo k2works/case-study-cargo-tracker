@@ -1,11 +1,27 @@
 # Docs Update Log
 
 ## 2026-09-14
+* **Verification**: [15-誤配を検知して経路を組み直す](/manual/15-誤配を検知して経路を組み直す.md) を human:k2works が検証
+* **Verification**: [14-引取と例外を扱う](/manual/14-引取と例外を扱う.md) を human:k2works が検証
+* **Verification**: [13-荷役作業を記録する](/manual/13-荷役作業を記録する.md) を human:k2works が検証
+* **Verification**: [12-貨物の輸送状況を追う](/manual/12-貨物の輸送状況を追う.md) を human:k2works が検証
+* **Verification**: [11-予約を確定して追跡番号を発行する](/manual/11-予約を確定して追跡番号を発行する.md) を human:k2works が検証
+* **Verification**: [10-荷主に経路を通知する](/manual/10-荷主に経路を通知する.md) を human:k2works が検証
+* **Verification**: [09-経路を設計する](/manual/09-経路を設計する.md) を human:k2works が検証
+* **Verification**: [08-経路設計に引き渡す](/manual/08-経路設計に引き渡す.md) を human:k2works が検証
+* **Verification**: [07-航海スケジュールを登録する](/manual/07-航海スケジュールを登録する.md) を human:k2works が検証
+* **Verification**: [06-利用者を管理する](/manual/06-利用者を管理する.md) を human:k2works が検証
+* **Verification**: [05-貨物予約を登録する](/manual/05-貨物予約を登録する.md) を human:k2works が検証
+* **Verification**: [04-要確認一覧を確認する](/manual/04-要確認一覧を確認する.md) を human:k2works が検証
+* **Verification**: [03-荷主を登録する](/manual/03-荷主を登録する.md) を human:k2works が検証
+* **Verification**: [02-ログインとログアウト](/manual/02-ログインとログアウト.md) を human:k2works が検証
+* **Verification**: [01-業務フロー](/manual/01-業務フロー.md) を human:k2works が検証
+* **Verification**: [00-はじめに](/manual/00-はじめに.md) を human:k2works が検証
 * **Verification**: [18-輸送見積を作る](/manual/18-輸送見積を作る.md) を human:k2works が検証
 * **Verification**: [17-請求を組み立てる](/manual/17-請求を組み立てる.md) を human:k2works が検証
 * **Verification**: [16-通関を通す](/manual/16-通関を通す.md) を human:k2works が検証
 * **Verification**: [19-キャンセルを申請して承認する](/manual/19-キャンセルを申請して承認する.md) を human:k2works が検証
-* **Verification**: IT15 の計画・ふりかえり・完了報告書・レビュー・リリース完了報告書 2.0 と、マニュアル 16〜19 章を承認（human:k2works）。status を stable に昇格（00〜15 章は draft のまま）
+* **Verification**: IT15 の計画・ふりかえり・完了報告書・レビュー・リリース完了報告書 2.0 と、**マニュアル全 20 章**を承認（human:k2works）。status を stable に昇格
 * **Verification**: [iteration_plan-15](/development/cargo-tracker/iteration_plan-15.md) を human:k2works が検証
 * **Verification**: [IT15実装_review_20260914](/review/cargo-tracker/IT15実装_review_20260914.md) を human:k2works が検証
 * **Verification**: [release_report-2_0_0](/development/cargo-tracker/release_report-2_0_0.md) を human:k2works が検証
