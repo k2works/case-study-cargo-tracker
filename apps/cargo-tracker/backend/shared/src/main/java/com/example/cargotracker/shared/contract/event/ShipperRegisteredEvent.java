@@ -23,5 +23,18 @@ public record ShipperRegisteredEvent(
         String phone,
         String address,
         String contractNumber,
-        String discountRate) {
+        String discountRate,
+        // シミュレーション由来か（US33 §受入基準 3 / [ADR-0020]）。
+        //
+        // **この項目より前に積まれたイベントでは false になる**——既存の荷主は
+        // 本物なので、既定値が業務上正しい（`golden-legacy` が読めることを固定）。
+        //
+        // **荷主種別にしない。** 由来と荷主種別は直交する（シミュレーションでも
+        // 法人割引を踏みたい）し、`ShipperType` は割引の判断に使われている。
+        //
+        // **印だけでは混ざらない。** 除外は各 BC の読み口の側に置く。
+        // **プリミティブにしない。** `boolean` だと項目が無い古いイベントを
+        // 読めない（IT16 で実測。「既定値 false で読める」という見立ては誤りだった）。
+        // `null` は「印が付く前に登録された荷主」＝本物である。
+        Boolean simulated) {
 }

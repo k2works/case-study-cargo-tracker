@@ -70,7 +70,7 @@ class ContractEventGoldenTest {
     static Stream<Object> contractEvents() {
         return Stream.of(
                 new ShipperRegisteredEvent("SHP-000001", "CORPORATE", "山田商事",
-                        "sales@example.com", "03-1111-1111", "東京都中央区", "CT-0001", "0.1000"),
+                        "sales@example.com", "03-1111-1111", "東京都中央区", "CT-0001", "0.1000", false),
                 new TrackingInitializedEvent("TRK-8K2QX7M4RB", "b-1", "SHP-000001", "JPTYO", "USNYC",
                         "GENERAL",
                         new BigDecimal("1200"),

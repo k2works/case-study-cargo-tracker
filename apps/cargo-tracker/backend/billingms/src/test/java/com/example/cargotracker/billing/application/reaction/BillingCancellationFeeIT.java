@@ -67,7 +67,7 @@ class BillingCancellationFeeIT extends AbstractAxonIntegrationTest {
         if (withContract) {
             shipperProjection.on(new ShipperRegisteredEvent(shipperId, shipperType, "山田商事",
                     shipperId + "@example.com", "03-0000-0000", "東京都港区",
-                    discountRate == null ? null : "CT-0012", discountRate));
+                    discountRate == null ? null : "CT-0012", discountRate, false));
         }
         cargoProjection.on(new TrackingInitializedEvent(trackingNumber, bookingId, shipperId,
                 "JPTYO", "USNYC", "GENERAL", weightKg,

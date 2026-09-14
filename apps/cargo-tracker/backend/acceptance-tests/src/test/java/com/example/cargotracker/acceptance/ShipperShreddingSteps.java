@@ -77,7 +77,7 @@ public class ShipperShreddingSteps {
 
         // Event Store に入っているのと同じ形（暗号文）を控える。
         storedEvent = converter.convert(new ShipperRegisteredEvent(shipperId, "CORPORATE",
-                name, email, "03-0000-0000", "東京都中央区", "CT-0001", "0.1000"), byte[].class);
+                name, email, "03-0000-0000", "東京都中央区", "CT-0001", "0.1000", false), byte[].class);
         assertThat(new String(storedEvent, java.nio.charset.StandardCharsets.UTF_8))
                 .as("Event Store には暗号文だけが入る")
                 .doesNotContain(name)

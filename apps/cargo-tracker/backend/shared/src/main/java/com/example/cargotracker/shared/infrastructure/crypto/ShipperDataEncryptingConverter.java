@@ -50,7 +50,7 @@ public class ShipperDataEncryptingConverter implements Converter {
                 cipher.encrypt(id, e.email()),
                 cipher.encrypt(id, e.phone()),
                 cipher.encrypt(id, e.address()),
-                e.contractNumber(), e.discountRate());
+                e.contractNumber(), e.discountRate(), false);
     }
 
     private ShipperRegisteredEvent decrypt(ShipperRegisteredEvent e) {
@@ -60,7 +60,7 @@ public class ShipperDataEncryptingConverter implements Converter {
                 cipher.decrypt(id, e.email()),
                 cipher.decrypt(id, e.phone()),
                 cipher.decrypt(id, e.address()),
-                e.contractNumber(), e.discountRate());
+                e.contractNumber(), e.discountRate(), false);
     }
 
     @Override

@@ -31,7 +31,7 @@ class ShipperContractProjectionIT extends AbstractAxonIntegrationTest {
 
     private ShipperRegisteredEvent corporate(String shipperId, String discountRate) {
         return new ShipperRegisteredEvent(shipperId, "CORPORATE", "山田商事",
-                shipperId + "@example.com", "03-0000-0000", "東京都港区", "CT-0001", discountRate);
+                shipperId + "@example.com", "03-0000-0000", "東京都港区", "CT-0001", discountRate, false);
     }
 
     @Test
@@ -54,7 +54,7 @@ class ShipperContractProjectionIT extends AbstractAxonIntegrationTest {
         String id = "SHP-BILL-IND-" + System.nanoTime();
 
         projection.on(new ShipperRegisteredEvent(id, "INDIVIDUAL", "山田 太郎",
-                id + "@example.com", "03-0000-0000", "東京都港区", null, null));
+                id + "@example.com", "03-0000-0000", "東京都港区", null, null, false));
 
         ShipperContractSnapshotMapper.SnapshotRow row = snapshots.find(id);
         assertThat(row.discountRate()).isNull();
@@ -85,7 +85,7 @@ class ShipperContractProjectionIT extends AbstractAxonIntegrationTest {
         String id = "SHP-BILL-SHRED-" + System.nanoTime();
 
         projection.on(new ShipperRegisteredEvent(id, "CORPORATE", null, null, null, null,
-                "CT-0001", "0.1000"));
+                "CT-0001", "0.1000", false));
 
         ShipperContractSnapshotMapper.SnapshotRow row = snapshots.find(id);
         assertThat(row.shipperName()).isNull();

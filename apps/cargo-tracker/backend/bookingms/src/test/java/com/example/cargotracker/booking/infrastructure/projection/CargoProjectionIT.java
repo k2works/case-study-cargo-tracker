@@ -68,7 +68,7 @@ class CargoProjectionIT extends AbstractAxonIntegrationTest {
         // 一覧が JOIN しないため（data-model.md）。
         String shipperId = "SHP-P-" + System.nanoTime();
         shipperProjection.on(new ShipperRegisteredEvent(shipperId, "INDIVIDUAL", "山田商事",
-                shipperId + "@example.com", null, null, null, null));
+                shipperId + "@example.com", null, null, null, null, false));
         String bookingId = "B-P-" + System.nanoTime();
 
         projection.on(booked(bookingId, shipperId, "自動車部品"));

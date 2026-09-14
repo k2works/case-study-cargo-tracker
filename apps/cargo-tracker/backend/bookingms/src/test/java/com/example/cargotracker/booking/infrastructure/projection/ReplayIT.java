@@ -53,7 +53,7 @@ class ReplayIT extends AbstractAxonIntegrationTest {
 
     private static ShipperRegisteredEvent shipper(String id, String email) {
         return new ShipperRegisteredEvent(id, "INDIVIDUAL", "山田商事", email,
-                "03-0000-0000", "東京都中央区", null, null);
+                "03-0000-0000", "東京都中央区", null, null, false);
     }
 
     private static CargoBookedEvent cargo(String bookingId, String shipperId) {

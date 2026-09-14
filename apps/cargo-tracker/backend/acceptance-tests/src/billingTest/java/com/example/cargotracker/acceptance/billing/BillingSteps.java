@@ -153,7 +153,7 @@ public class BillingSteps {
     public void 個人荷主の貨物がある(String from, String to, int legs) {
         shipperId = "SHP-AC-" + System.nanoTime();
         shippers.on(new ShipperRegisteredEvent(shipperId, "INDIVIDUAL", "山田 太郎",
-                shipperId + "@example.com", "03-0000-0000", "東京都港区", null, null));
+                shipperId + "@example.com", "03-0000-0000", "東京都港区", null, null, false));
         this.origin = from;
         this.destination = to;
         this.legCount = legs;
@@ -164,7 +164,7 @@ public class BillingSteps {
         shipperId = "SHP-AC-" + System.nanoTime();
         String rate = new BigDecimal(percentage).movePointLeft(2).setScale(4).toPlainString();
         shippers.on(new ShipperRegisteredEvent(shipperId, "CORPORATE", "山田商事",
-                shipperId + "@example.com", "03-0000-0000", "東京都港区", "CT-0012", rate));
+                shipperId + "@example.com", "03-0000-0000", "東京都港区", "CT-0012", rate, false));
         this.origin = from;
         this.destination = to;
         this.legCount = legs;

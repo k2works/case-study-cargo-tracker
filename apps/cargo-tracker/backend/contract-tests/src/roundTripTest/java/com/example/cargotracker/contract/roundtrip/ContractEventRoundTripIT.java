@@ -195,7 +195,7 @@ class ContractEventRoundTripIT extends AbstractAxonIntegrationTest {
                 .projection.ShipperContractProjection.class);
         shippers.on(new com.example.cargotracker.shared.contract.event.ShipperRegisteredEvent(
                 shipperId, "INDIVIDUAL", "山田 太郎", shipperId + "@example.com",
-                "03-0000-0000", "東京都港区", null, null));
+                "03-0000-0000", "東京都港区", null, null, false));
         cargos.on(new com.example.cargotracker.shared.contract.event.TrackingInitializedEvent(
                 trackingNumber, bookingId, shipperId, "JPTYO", "JPOSA", "GENERAL",
                 new java.math.BigDecimal("1200"),

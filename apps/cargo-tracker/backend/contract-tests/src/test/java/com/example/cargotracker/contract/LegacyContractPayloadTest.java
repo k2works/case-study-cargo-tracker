@@ -57,10 +57,32 @@ class LegacyContractPayloadTest {
         assertThat(restored)
                 .as("読めたが中身が空では、復元できたことにならない")
                 .isNotNull();
+        // **足りない項目だけが空になる。** 他の項目まで落ちていたら、読めている
+        // ように見えて中身が失われている。
+        //
+        // **1 つのイベントの目印を決め打ちしない。** `TRK-` だけを見ていたので、
+        // 追跡以外のイベントを足した瞬間に「読めているのに赤」になった
+        // （IT16 で実測）。**元の JSON に載っていた値が復元後にも居ること**を見る。
+        String marker = firstStringValue(new String(json, java.nio.charset.StandardCharsets.UTF_8));
         assertThat(restored.toString())
-                .as("**足りない項目だけが空になる。** 他の項目まで落ちていたら、"
-                        + "読めているように見えて中身が失われている")
-                .contains("TRK-");
+                .as("%s: 復元後に元の値（%s）が残っていない", payload.getFileName(), marker)
+                .contains(marker);
+    }
+
+
+    /**
+     * JSON の最初の文字列値。<b>そのイベントの目印</b>として使う。
+     *
+     * <p>イベントごとに違う識別子（追跡番号・荷主 ID・請求書 ID …）を持つので、
+     * 特定の接頭辞を決め打ちにすると、次に足したイベントで空振りするか赤になる。</p>
+     */
+    private static String firstStringValue(String json) {
+        java.util.regex.Matcher matcher =
+                java.util.regex.Pattern.compile(":\\s*\"([^\"]+)\"").matcher(json);
+        if (!matcher.find()) {
+            throw new IllegalStateException("JSON に文字列の値が無い: " + json);
+        }
+        return matcher.group(1);
     }
 
     @Test

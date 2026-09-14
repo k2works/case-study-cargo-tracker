@@ -47,7 +47,7 @@ class ShipperTest {
                 .when().command(individual())
                 .then().success()
                 .events(new ShipperRegisteredEvent("SHP-000001", "INDIVIDUAL", "山田太郎",
-                        "yamada@example.com", "03-0000-0000", "東京都港区", null, null));
+                        "yamada@example.com", "03-0000-0000", "東京都港区", null, null, false));
     }
 
     @Test
@@ -61,7 +61,7 @@ class ShipperTest {
                 .when().command(command)
                 .then().success()
                 .events(new ShipperRegisteredEvent("SHP-000002", "CORPORATE", "山田商事",
-                        "sales@example.com", "03-1111-1111", "東京都中央区", "CT-0001", "0.1000"));
+                        "sales@example.com", "03-1111-1111", "東京都中央区", "CT-0001", "0.1000", false));
     }
 
     @Test
@@ -102,7 +102,7 @@ class ShipperTest {
         // 生成系（static）で、集約を読み込まないため復元経路を通らないため。
         // 更新系コマンドが入るまでは、復元そのものを直接呼んで固定する。
         ShipperRegisteredEvent shredded = new ShipperRegisteredEvent(
-                "SHP-000009", "CORPORATE", null, null, null, null, "CT-0001", "0.1000");
+                "SHP-000009", "CORPORATE", null, null, null, null, "CT-0001", "0.1000", false);
         Shipper shipper = new Shipper();
 
         assertThatCode(() -> shipper.on(shredded))
@@ -117,7 +117,7 @@ class ShipperTest {
         Shipper shipper = new Shipper();
 
         shipper.on(new ShipperRegisteredEvent("SHP-000011", "CORPORATE", "山田商事",
-                "sales@example.com", "03-1111-1111", "東京都中央区", "CT-0001", "0.1000"));
+                "sales@example.com", "03-1111-1111", "東京都中央区", "CT-0001", "0.1000", false));
 
         assertThat(shipper.corporateContract())
                 .as("捨てると、リプレイした集約だけが契約を持たず、契約変更や割引の"
@@ -134,7 +134,7 @@ class ShipperTest {
         Shipper shipper = new Shipper();
 
         shipper.on(new ShipperRegisteredEvent("SHP-000012", "INDIVIDUAL", "山田太郎",
-                "yamada@example.com", "03-0000-0000", "東京都港区", null, null));
+                "yamada@example.com", "03-0000-0000", "東京都港区", null, null, false));
 
         assertThat(shipper.corporateContract()).isEmpty();
     }
@@ -145,7 +145,7 @@ class ShipperTest {
         Shipper shipper = new Shipper();
 
         shipper.on(new ShipperRegisteredEvent("SHP-000010", "CORPORATE", "山田商事",
-                "sales@example.com", "03-1111-1111", "東京都中央区", "CT-0001", "0.1000"));
+                "sales@example.com", "03-1111-1111", "東京都中央区", "CT-0001", "0.1000", false));
 
         assertThat(shipper.isShredded()).isFalse();
     }

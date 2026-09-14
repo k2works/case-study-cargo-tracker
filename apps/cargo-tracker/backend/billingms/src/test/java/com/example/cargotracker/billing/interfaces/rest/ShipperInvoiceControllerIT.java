@@ -94,7 +94,7 @@ class ShipperInvoiceControllerIT extends AbstractAxonIntegrationTest {
 
         shipperProjection.on(new ShipperRegisteredEvent(shipperId, "CORPORATE", "山田商事",
                 shipperId + "@example.com", "03-0000-0000", "東京都港区", "CT-0012",
-                "0.1500"));
+                "0.1500", false));
         cargoProjection.on(new TrackingInitializedEvent(trackingNumber, bookingId, shipperId,
                 "JPTYO", "USNYC", "GENERAL", new BigDecimal("1200"),
                 List.of(new TrackingInitializedEvent.Leg("V-MOL-001", "JPTYO", "SGSIN",

@@ -116,7 +116,7 @@ class ReplayIT extends AbstractAxonIntegrationTest {
     void replayingTheShipperContractDoesNotDuplicate() {
         String shipperId = "SHP-RP-" + System.nanoTime();
         var event = new ShipperRegisteredEvent(shipperId, "CORPORATE", "山田商事",
-                shipperId + "@example.com", "03-0000-0000", "東京都港区", "CT-0001", "0.1000");
+                shipperId + "@example.com", "03-0000-0000", "東京都港区", "CT-0001", "0.1000", false);
 
         shipperProjection.on(event);
         shipperProjection.on(event);

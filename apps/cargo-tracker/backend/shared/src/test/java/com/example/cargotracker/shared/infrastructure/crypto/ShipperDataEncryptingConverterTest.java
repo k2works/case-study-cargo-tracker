@@ -35,7 +35,7 @@ class ShipperDataEncryptingConverterTest {
 
     private static ShipperRegisteredEvent plaintextEvent() {
         return new ShipperRegisteredEvent("SHP-000001", "CORPORATE", "山田商事",
-                "sales@example.com", "03-1111-1111", "東京都中央区", "CT-0001", "0.1000");
+                "sales@example.com", "03-1111-1111", "東京都中央区", "CT-0001", "0.1000", false);
     }
 
     @Test

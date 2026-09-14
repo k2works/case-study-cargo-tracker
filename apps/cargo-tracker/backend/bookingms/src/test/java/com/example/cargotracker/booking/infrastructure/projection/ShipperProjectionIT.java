@@ -42,13 +42,13 @@ class ShipperProjectionIT extends AbstractAxonIntegrationTest {
      */
     private ShipperRegisteredEvent event(String shipperId, String name, String email) {
         return new ShipperRegisteredEvent(shipperId, "CORPORATE", name, email,
-                "03-0000-0000", "東京都港区", "CT-0001", "0.1000");
+                "03-0000-0000", "東京都港区", "CT-0001", "0.1000", false);
     }
 
     /** 鍵を破棄したあとに Converter が渡してくる形（個人情報が null）。 */
     private ShipperRegisteredEvent shreddedEvent(String shipperId) {
         return new ShipperRegisteredEvent(shipperId, "CORPORATE", null, null, null, null,
-                "CT-0001", "0.1000");
+                "CT-0001", "0.1000", false);
     }
 
     @Test
@@ -117,7 +117,7 @@ class ShipperProjectionIT extends AbstractAxonIntegrationTest {
         String id = "SHP-IT-I" + System.nanoTime();
         projection.on(new ShipperRegisteredEvent(id, "INDIVIDUAL",
                 "山田太郎", id + "@example.com", "03-0000-0000", "東京都港区",
-                null, null));
+                null, null, false));
 
         ShipperMapper.ShipperRow row = shippers.findById(id);
         assertThat(row.contractNumber()).isNull();
