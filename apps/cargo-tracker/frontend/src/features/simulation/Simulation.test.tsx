@@ -67,8 +67,8 @@ function renderRun(runId = 'SIM-1') {
         <Routes>
           <Route path="/admin/simulations/:runId" element={<SimulationRunPage />} />
           <Route path="/bookings/:bookingId" element={<p>予約詳細</p>} />
-          <Route path="/tracking" element={<p>追跡一覧</p>} />
-          <Route path="/invoices" element={<p>請求一覧</p>} />
+          <Route path="/tracking/:trackingNumber" element={<p>追跡詳細</p>} />
+          <Route path="/invoices/:invoiceId" element={<p>請求詳細</p>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -189,14 +189,21 @@ describe('S93 実行結果', () => {
     expect(screen.getByText('120 ミリ秒')).toBeInTheDocument();
   });
 
-  it('US34 §5: 生成した識別子から業務画面へ行ける', async () => {
-    runWith([step()]);
+  // **行き先は 1 つずつ数え上げる。** 1 件だけ確かめる形は、次に行き先を
+  // 足したときも同じ抜け方をする（実際に 3 件のうち 2 件が、引数を読まない
+  // 一覧へ飛んでいた。IT16 のレビュー 高）。
+  it.each([
+    ['REGISTER_BOOKING', '予約の登録', 'BK-1', '予約詳細'],
+    ['ISSUE_TRACKING_NUMBER', '追跡番号の発行', 'TRK-1', '追跡詳細'],
+    ['CALCULATE_INVOICE', '料金の算出', 'INV-1', '請求詳細'],
+  ])('US34 §5: %s が生成したものから業務画面へ行ける', async (kind, kindLabel, id, heading) => {
+    runWith([step({ kind, kindLabel, producedId: id })]);
 
     renderRun();
 
-    await userEvent.click(await screen.findByRole('link', { name: 'BK-1' }));
+    await userEvent.click(await screen.findByRole('link', { name: id }));
 
-    expect(await screen.findByText('予約詳細')).toBeInTheDocument();
+    expect(await screen.findByText(heading)).toBeInTheDocument();
   });
 
   it('US34 §2: 止まった工程の理由が出る（それまでの記録も残る）', async () => {

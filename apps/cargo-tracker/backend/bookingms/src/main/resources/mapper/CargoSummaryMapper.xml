@@ -153,19 +153,24 @@
       ことは既に知らせているので、絞る手段を足す。
     -->
     <sql id="worklistVisible">
+        <!-- **シミュレーション由来は経路設計の作業一覧にも出さない**（US33 §3）。
+             「経路候補が見つからない輸送」は必ず ROUTE_PROPOSED で止まるので、
+             1 回流すたびに 1 件ずつ滞留する。並びは到着期限順なので、期限の近い
+             偽の依頼が実物を表示上限の外へ押し出す（IT16 のレビュー 高）。 -->
+        WHERE simulated = FALSE
         <choose>
             <when test="kind == 'MISROUTED'">
-                WHERE routing_status = 'MISROUTED'
+                AND routing_status = 'MISROUTED'
             </when>
             <when test="kind == 'AWAITING'">
-                WHERE booking_status = 'ROUTE_PROPOSED'
+                AND booking_status = 'ROUTE_PROPOSED'
                 <if test="!includeRouted">
                     AND routing_status &lt;&gt; 'ROUTED'
                 </if>
                 AND routing_status &lt;&gt; 'MISROUTED'
             </when>
             <otherwise>
-                WHERE (
+                AND (
                     booking_status = 'ROUTE_PROPOSED'
                     <if test="!includeRouted">
                         AND routing_status &lt;&gt; 'ROUTED'

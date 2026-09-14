@@ -226,7 +226,11 @@ export function AppRoutes() {
         <Route
           path="/invoices/:invoiceId"
           element={
-            <RequireRole allow={['ROLE_ACCOUNTANT']}>
+            /* **管理者にも開く**（US34 §5 / IT16 レビュー 高）。実行結果の請求番号
+               から開く先で、ここが閉じていると「作ったものをどこからも開けない」
+               ——請求一覧はシミュレーション由来を既定で外すので、一覧経由では
+               絶対に辿り着けない。**操作は経理だけ**（画面が出し分ける）。 */
+            <RequireRole allow={['ROLE_ACCOUNTANT', 'ROLE_ADMIN']}>
               <InvoiceDetailPage />
             </RequireRole>
           }

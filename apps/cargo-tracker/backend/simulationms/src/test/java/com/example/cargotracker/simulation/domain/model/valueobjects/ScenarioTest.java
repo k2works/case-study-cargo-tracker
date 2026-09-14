@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
-import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -21,15 +20,23 @@ class ScenarioTest {
     @Test
     @DisplayName("US33 §1: 標準輸送は予約から精算までを順に含む")
     void standardScenarioRunsFromBookingToSettlement() {
-        List<StepKind> steps = Scenario.STANDARD.steps();
-
-        assertThat(steps).startsWith(StepKind.REGISTER_SHIPPER, StepKind.REGISTER_BOOKING);
-        assertThat(steps).endsWith(StepKind.RECORD_PAYMENT);
-        assertThat(steps)
-                .as("**予約から精算までが通ること**が US33 の中核である")
-                .contains(StepKind.ASSIGN_ROUTE, StepKind.ISSUE_TRACKING_NUMBER,
-                        StepKind.CLEAR_CUSTOMS, StepKind.CLAIM_CARGO,
-                        StepKind.CALCULATE_INVOICE);
+        // **並びをそのまま固定する。** `contains` は順序を見ないので、
+        // 引き渡しと経路の確定を入れ替えても緑になる——受入基準 1 が約束して
+        // いるのは「順に実行される」ことである（IT16 のレビュー 中）。
+        assertThat(Scenario.STANDARD.steps()).containsExactly(
+                StepKind.REGISTER_SHIPPER,
+                StepKind.REGISTER_BOOKING,
+                StepKind.REQUEST_ROUTING,
+                StepKind.ASSIGN_ROUTE,
+                StepKind.NOTIFY_SHIPPER,
+                StepKind.CONFIRM_BOOKING,
+                StepKind.ISSUE_TRACKING_NUMBER,
+                StepKind.RECORD_HANDLING,
+                StepKind.CLEAR_CUSTOMS,
+                StepKind.CLAIM_CARGO,
+                StepKind.CALCULATE_INVOICE,
+                StepKind.ISSUE_INVOICE,
+                StepKind.RECORD_PAYMENT);
     }
 
     @Test

@@ -28,10 +28,13 @@ function destinationOf(step: StepView): string | null {
   switch (step.kind) {
     case 'REGISTER_BOOKING':
       return `/bookings/${step.producedId}`;
+    // **一覧ではなく詳細へ送る。** 一覧は絞り込みの引数を読まないうえ、
+    // 請求一覧はシミュレーション由来を既定で外すので、飛んだ先に
+    // その請求書は**絶対に出ない**（IT16 のレビュー 高）。
     case 'ISSUE_TRACKING_NUMBER':
-      return `/tracking?q=${encodeURIComponent(step.producedId)}`;
+      return `/tracking/${encodeURIComponent(step.producedId)}`;
     case 'CALCULATE_INVOICE':
-      return `/invoices?q=${encodeURIComponent(step.producedId)}`;
+      return `/invoices/${encodeURIComponent(step.producedId)}`;
     default:
       return null;
   }

@@ -193,6 +193,10 @@ spec:
             - { name: DB_URL, value: "jdbc:postgresql://postgres:5432/booking_read_db" }
             - { name: DB_USER, value: "bookingms" }
             - { name: DB_PASSWORD, value: "bookingms" }
+            # シミュレーション由来の印を受け付けるか（US33 §3 / ADR-0020）。
+            # **印は業務の一覧から荷主と貨物を消す**ので、許可した環境でだけ
+            # 受け付ける。本番では立てない。
+            - { name: CARGOTRACKER_SIMULATION_ENABLED, value: "true" }
           ports:
             - { name: http, containerPort: 8082 }
           volumeMounts:

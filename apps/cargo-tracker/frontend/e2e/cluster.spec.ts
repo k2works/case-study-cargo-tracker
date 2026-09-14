@@ -1881,6 +1881,9 @@ test.describe('kind クラスタでの通し確認', () => {
         await expect(page.getByText('入金の記録')).toBeVisible();
         await expect(page.getByRole('row', { name: /入金の記録/ }).getByText('成功'))
           .toBeVisible();
+        // **実行そのものの決着も見る。** 最後の工程の行だけを見ると、
+        // 実行が「失敗」で終わっていても緑になる。
+        await expect(page.getByRole('definition').filter({ hasText: '成功' })).toBeVisible();
       }).toPass({ timeout: 300_000 });
 
       // **作られたものから業務画面へ行ける**（US34 §5）。
@@ -1890,7 +1893,12 @@ test.describe('kind クラスタでの通し確認', () => {
       // 見出しは予約番号を名乗る（`予約 B-…`）。**画面の文言に合わせる**——
       // 「予約詳細」という見出しはどこにも無い。
       await expect(page.getByRole('heading', { name: /^予約 B-/ })).toBeVisible();
-      await expect(page.getByText('精算済')).toBeVisible();
+      // **精算済になるまで待つ。** 最後の工程は請求書が入金済になるまでしか
+      // 待たない——予約が精算済になるのはその先の連鎖である。
+      await expect(async () => {
+        await page.reload();
+        await expect(page.getByText('精算済')).toBeVisible({ timeout: 5_000 });
+      }).toPass({ timeout: 120_000 });
 
       // **業務の一覧には出ない**（US33 §3）。印は荷主から貨物へ引き継がれる。
       //

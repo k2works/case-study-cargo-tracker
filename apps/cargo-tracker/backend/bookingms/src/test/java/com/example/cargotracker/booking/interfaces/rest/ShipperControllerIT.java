@@ -324,4 +324,21 @@ class ShipperControllerIT extends AbstractAxonIntegrationTest {
             assertThat(response.getBody()).containsEntry("total", 1);
         });
     }
+
+    @Test
+    @DisplayName("US33 §3: 許可していない環境ではシミュレーション由来の印を受け付けない")
+    void refusesSimulatedOriginWhenNotAllowed() {
+        // **印は業務の一覧から荷主と貨物を消す。** 誰でも立てられると、本物の荷主を
+        // 「シミュレーション由来」として静かに見えなくできる（IT16 のレビュー 高）。
+        // この検査のコンテキストは既定（無効）で立っている。
+        Map<String, Object> body = new java.util.LinkedHashMap<>(
+                corporate("sim-" + System.nanoTime() + "@example.com"));
+        body.put("simulated", true);
+
+        ResponseEntity<JsonMap> response = post("", body);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(422);
+        assertThat(String.valueOf(response.getBody().get("message")))
+                .contains("シミュレーション由来の荷主を登録できません");
+    }
 }

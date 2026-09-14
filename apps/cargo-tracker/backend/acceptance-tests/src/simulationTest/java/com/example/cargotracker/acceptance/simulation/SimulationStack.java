@@ -93,7 +93,10 @@ public final class SimulationStack extends AbstractAxonIntegrationTest {
                 "--cargo-tracker.demo-users=true",
                 "--cargo-tracker.jwt.secret=" + JWT_SECRET);
         launch(BookingApplication.class, "booking", "sim_booking", ports.get("booking"),
-                EXCLUDE_SECURITY);
+                EXCLUDE_SECURITY,
+                // **印を受け付ける環境として立てる。** 既定では断られるので、
+                // これが無いと 1 工程目（荷主の登録）で止まる（US33 §3 の守り）。
+                "--cargo-tracker.simulation.enabled=true");
         launch(RoutingApplication.class, "routing", "sim_routing", ports.get("routing"),
                 EXCLUDE_SECURITY);
         launch(TrackingApplication.class, "tracking", "sim_tracking", ports.get("tracking"),

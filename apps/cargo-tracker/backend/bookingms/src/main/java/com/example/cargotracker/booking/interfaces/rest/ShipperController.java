@@ -18,6 +18,8 @@ import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.UUID;
 import org.axonframework.messaging.commandhandling.gateway.CommandGateway;
+import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -31,6 +33,21 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/booking/shippers")
 public class ShipperController {
+
+    /**
+     * シミュレーション由来の印を受け付けるか（US33 §受入基準 3 / [ADR-0020]）。
+     *
+     * <p><b>印は業務の一覧から荷主と貨物を消す。</b> 誰でも立てられると、本物の
+     * 荷主を「シミュレーション由来」として静かに見えなくできる——営業の一覧にも
+     * 経理の一覧にも出なくなり、消えたことに誰も気づかない。</p>
+     *
+     * <p><b>許可した環境でだけ受け付ける。</b> 既定は無効で、本番では立てない。
+     * ロールで絞らないのは、シミュレーションが<b>人と同じ利用者</b>（営業担当者）
+     * として登録するからである（[ADR-0020] 決定 2）——ロールで分けると、
+     * シミュレーションだけが通る道を作ることになる。</p>
+     */
+    @Value("${cargo-tracker.simulation.enabled:false}")
+    private boolean simulationEnabled;
 
 
     private final CommandGateway commandGateway;
@@ -51,6 +68,14 @@ public class ShipperController {
         if (!request.duplicateAcknowledged()
                 && Boolean.TRUE.equals(queries.query(new ExistsShipperEmailQuery(email.value()), Boolean.class))) {
             throw new DuplicateShipperEmailException(email.value());
+        }
+
+        if (request.simulatedOrigin() && !simulationEnabled) {
+            // **黙って落とさない。** 印が付かないまま登録されると、
+            // シミュレーションの荷主が業務の一覧に混ざる。
+            throw new BusinessRuleViolation(
+                    "この環境ではシミュレーション由来の荷主を登録できません"
+                            + "（印の付いた荷主は業務の一覧に出ないため）");
         }
 
         String shipperId = UUID.randomUUID().toString();

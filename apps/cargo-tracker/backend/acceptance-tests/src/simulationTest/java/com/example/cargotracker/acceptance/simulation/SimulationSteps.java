@@ -98,9 +98,14 @@ public class SimulationSteps {
 
     @ならば("その操作は断られる")
     public void 断られる() {
+        // **状態だけでは判別しない。** 経路の綴り違いによる 404 でも緑になり、
+        // 確かめたい守り（無効な環境・二重実行）を 1 度も踏まずに通る。
         assertThat(lastResponse.statusCode())
                 .as("本文: %s", lastResponse.asString())
-                .isGreaterThanOrEqualTo(400);
+                .isBetween(400, 499);
+        assertThat(lastResponse.asString())
+                .as("断りの理由が本文に無い（次に何をすればよいか分からない）")
+                .containsAnyOf("実行できません", "実行中です");
     }
 
     @かつ("断りに実行中の識別子が含まれる")
@@ -124,9 +129,15 @@ public class SimulationSteps {
 
     @かつ("生成された予約の状態は {string} である")
     public void 予約の状態は(String label) {
-        Map<String, Object> booking = get("/api/v1/booking/bookings/"
-                + producedOf("REGISTER_BOOKING"), "sales01").jsonPath().getMap("$");
-        assertThat(String.valueOf(booking.get("bookingStatus"))).isEqualTo(codeOf(label));
+        // **待つ。** 最後の工程は請求書が入金済になるまでしか待たない。
+        // 予約が精算済になるのは**その先の連鎖**なので、実行が終わった直後に
+        // 読むと混んだ日に落ちる（IT16 のレビュー 高）。
+        String expected = codeOf(label);
+        String bookingId = producedOf("REGISTER_BOOKING");
+        await("予約が " + label + " になる").atMost(Duration.ofSeconds(60))
+                .pollInterval(Duration.ofSeconds(1))
+                .until(() -> expected.equals(get("/api/v1/booking/bookings/" + bookingId,
+                        "sales01").jsonPath().getString("bookingStatus")));
     }
 
     @かつ("生成された請求書の状態は {string} である")
@@ -143,18 +154,21 @@ public class SimulationSteps {
         assertThat(ids).doesNotContain(producedOf("REGISTER_BOOKING"));
     }
 
+    @かつ("経路設計の作業一覧に、生成された予約は出ない")
+    public void 作業一覧に出ない() {
+        // **失敗シナリオを流すたびに滞留する場所である。** 「経路候補が見つからない
+        // 輸送」は必ず ROUTE_PROPOSED で止まるので、外さないと経路設計者の朝の
+        // 一覧に偽の依頼が積み上がる（IT16 のレビュー 高）。
+        List<String> ids = get("/api/v1/booking/bookings/routing-worklist?page=0&size=200",
+                "routing01").jsonPath().getList("items.bookingId", String.class);
+        assertThat(ids).doesNotContain(producedOf("REGISTER_BOOKING"));
+    }
+
     @かつ("経理の請求一覧に、生成された請求書は出ない")
     public void 請求一覧に出ない() {
         List<String> ids = get("/api/v1/billing/invoices?page=0&size=200", "accountant01")
                 .jsonPath().getList("items.invoiceId", String.class);
         assertThat(ids).doesNotContain(producedOf("CALCULATE_INVOICE"));
-    }
-
-    @かつ("要確認一覧に、生成された予約の項目は出ない")
-    public void 要確認一覧に出ない() {
-        List<String> targets = get("/api/v1/booking/attention-items", "sales01")
-                .jsonPath().getList("items.targetId", String.class);
-        assertThat(targets).doesNotContain(producedOf("REGISTER_BOOKING"));
     }
 
     @かつ("失敗した工程は {string} である")
@@ -181,12 +195,24 @@ public class SimulationSteps {
 
     @かつ("どの工程も、前の工程が生成した識別子を使えている")
     public void 識別子を使えている() {
-        // 前の工程の結果を使えていなければ、後続は 4xx で止まる——
-        // 全部成功していることが「使えている」ことの証拠になる。
-        工程はすべて("成功");
-        assertThat(producedOf("CALCULATE_INVOICE"))
-                .as("請求は連鎖が作る。引取まで届いていなければ読めない")
-                .isNotBlank();
+        // **連なりを見る。** 予約は荷主から、追跡番号は予約から、請求は引取から
+        // 生まれる。どれか 1 つでも前を使えていなければ、そこで止まっている。
+        String shipperId = producedOf("REGISTER_SHIPPER");
+        String bookingId = producedOf("REGISTER_BOOKING");
+        String trackingNumber = producedOf("ISSUE_TRACKING_NUMBER");
+        String invoiceId = producedOf("CALCULATE_INVOICE");
+        assertThat(List.of(shipperId, bookingId, trackingNumber, invoiceId))
+                .allSatisfy(id -> assertThat(id).isNotBlank());
+
+        // 予約は**その荷主のもの**である（前の工程の結果を実際に使っている）。
+        assertThat(get("/api/v1/booking/bookings/" + bookingId, "sales01")
+                .jsonPath().getString("shipperId")).isEqualTo(shipperId);
+        // 請求は**その予約のもの**である（連鎖が引取から作った）。
+        assertThat(get("/api/v1/billing/invoices/" + invoiceId, "accountant01")
+                .jsonPath().getString("bookingId")).isEqualTo(bookingId);
+        // 追跡は**その予約のもの**である。
+        assertThat(get("/api/v1/tracking/trackings/" + trackingNumber, "tracker01")
+                .jsonPath().getString("bookingId")).isEqualTo(bookingId);
     }
 
     @かつ("工程の一覧に {string} と {string} が含まれる")
@@ -230,13 +256,20 @@ public class SimulationSteps {
         return (List<Map<String, Object>>) run().get("steps");
     }
 
+    /**
+     * その工程が生成した識別子。
+     *
+     * <p><b>見つからなければ断る。</b> 空文字を返すと `/bookings/` のような
+     * 経路になり、一覧に解決して 200 が返る——検査が素通りする。</p>
+     */
     private String producedOf(String kind) {
         return steps().stream()
                 .filter(step -> kind.equals(step.get("kind")))
                 .map(step -> (String) step.get("producedId"))
                 .filter(java.util.Objects::nonNull)
                 .findFirst()
-                .orElse("");
+                .orElseThrow(() -> new AssertionError(
+                        "工程 " + kind + " は識別子を作っていない。工程: " + steps()));
     }
 
     private static String codeOf(String label) {

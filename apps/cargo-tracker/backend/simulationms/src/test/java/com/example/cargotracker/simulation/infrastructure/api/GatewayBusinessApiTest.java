@@ -312,6 +312,10 @@ class GatewayBusinessApiTest {
                 StepKind.REGISTER_BOOKING, "BK-1",
                 StepKind.ISSUE_TRACKING_NUMBER, "TRK-1",
                 StepKind.CALCULATE_INVOICE, "INV-1");
+        // 引取の港も旅程から取る（荷役と同じ）。決め打ちにしない。
+        responses.put("/api/v1/booking/bookings/BK-1/itinerary",
+                "{\"legs\":[{\"voyageNumber\":\"V001\",\"loadUnLocode\":\"JPTYO\","
+                        + "\"unloadUnLocode\":\"USNYC\"}]}");
 
         assertThat(api.execute(StepKind.NOTIFY_SHIPPER, produced).succeeded()).isTrue();
         assertThat(api.execute(StepKind.ISSUE_INVOICE, produced).succeeded()).isTrue();
@@ -322,7 +326,9 @@ class GatewayBusinessApiTest {
         assertThat(requests).anyMatch(r -> r.startsWith("POST /api/v1/billing/invoices/INV-1/issue"));
         // **引取は荷役の記録として出す**（専用の経路を作らない）。
         assertThat(bodies).anyMatch(b -> b.startsWith("POST /api/v1/handling/activities")
-                && b.contains("\"handlingType\":\"CLAIM\""));
+                && b.contains("\"handlingType\":\"CLAIM\"")
+                // **旅程の最終区間の港で引き取る**（決め打ちの定数ではない）。
+                && b.contains("\"unLocode\":\"USNYC\""));
     }
 
     @Test
@@ -335,6 +341,9 @@ class GatewayBusinessApiTest {
                 StepKind.CALCULATE_INVOICE, "INV-1");
         statuses.put("/api/v1/handling/activities", 422);
         responses.put("/api/v1/handling/activities", "{\"message\":\"通関が済んでいません\"}");
+        responses.put("/api/v1/booking/bookings/BK-1/itinerary",
+                "{\"legs\":[{\"voyageNumber\":\"V001\",\"loadUnLocode\":\"JPTYO\","
+                        + "\"unloadUnLocode\":\"USNYC\"}]}");
         statuses.put("/api/v1/booking/bookings/BK-1/route-candidates", 500);
         statuses.put("/api/v1/booking/bookings/BK-1/tracking-number", 409);
         statuses.put("/api/v1/handling/customs-declarations", 403);
@@ -346,9 +355,6 @@ class GatewayBusinessApiTest {
         assertThat(api.execute(StepKind.CLEAR_CUSTOMS, produced).failureStatus()).isEqualTo(403);
         // **どの荷役で止まったかを添える。** 3 件を順に記録するので、
         // 「荷役が断られた」だけでは切り分けられない。
-        responses.put("/api/v1/booking/bookings/BK-1/itinerary",
-                "{\"legs\":[{\"voyageNumber\":\"V001\",\"loadUnLocode\":\"JPTYO\","
-                        + "\"unloadUnLocode\":\"USNYC\"}]}");
         assertThat(api.execute(StepKind.RECORD_HANDLING, produced).failureMessage())
                 .startsWith("RECEIVE:");
     }

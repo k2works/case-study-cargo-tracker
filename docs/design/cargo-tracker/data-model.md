@@ -4,7 +4,7 @@ title: "データモデル設計 - 国際貨物輸送管理システム（CQRS /
 description: "CQRS / Event Sourcing 版 Cargo Tracker のデータモデル設計。Event Store は Axon Server に任せ、サービスごとの投影テーブル・Axon 管理テーブル・Auth の状態テーブルを ER 図とテーブル定義で示し、Processing Group との対応とリプレイ前提のマイグレーション方針を定める。"
 tags: [design,data-model,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-14T11:57:40Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-14T16:16:36Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -862,12 +862,12 @@ skinparam linetype ortho
 entity "simulation_run" as run {
   * **run_id**: VARCHAR(36) <<PK>>
   --
-  scenario_id: VARCHAR(30) NOT NULL
+  scenario_id: VARCHAR(40) NOT NULL
   status: VARCHAR(20) NOT NULL
   seed: BIGINT
   started_at: TIMESTAMPTZ NOT NULL
   finished_at: TIMESTAMPTZ
-  started_by: VARCHAR(50) NOT NULL
+  started_by: VARCHAR(64) NOT NULL
   projected_at: TIMESTAMPTZ NOT NULL
 }
 
@@ -878,9 +878,9 @@ entity "simulation_step" as step {
   kind: VARCHAR(40) NOT NULL
   outcome: VARCHAR(20) NOT NULL
   elapsed_ms: BIGINT
-  produced_id: VARCHAR(40)
+  produced_id: VARCHAR(64)
   failure_status: INTEGER
-  failure_message: VARCHAR(1000)
+  failure_message: TEXT
   occurred_at: TIMESTAMPTZ NOT NULL
 }
 
@@ -890,7 +890,7 @@ run ||--o{ step
 
 | テーブル | 元になるイベント | 制約・インデックス | 備考 |
 | :--- | :--- | :--- | :--- |
-| `simulation_run` | **無し**（[ADR-0020] 決定 3） | `UNIQUE(scenario_id) WHERE status = 'RUNNING'` | **投影ではなく、ここが正である。** Event Sourcing を適用しないので、書くのはアプリケーション層。二重実行を断るのは**部分ユニークで**——数えてから入れる形は、2 つの要求が同時に来たときに両方とも通る |
+| `simulation_run` | **無し**（[ADR-0020] 決定 3） | `UNIQUE(scenario_id) WHERE status = 'RUNNING'`、`INDEX(started_at DESC)`（一覧は新しい順） | **投影ではなく、ここが正である。** Event Sourcing を適用しないので、書くのはアプリケーション層。二重実行を断るのは**部分ユニークで**——数えてから入れる形は、2 つの要求が同時に来たときに両方とも通る |
 | `simulation_step` | 無し | `PK(run_id, step_no)` | 工程は**記録した順**に 1 件ずつ書く。終わってからまとめて書くと、走っているあいだ S93 が「どこまで進んだか」を出せない。**失敗しても前の記録を消さない**（US34 §3） |
 
 ### Axon 管理テーブル（各 Read Model DB 共通）

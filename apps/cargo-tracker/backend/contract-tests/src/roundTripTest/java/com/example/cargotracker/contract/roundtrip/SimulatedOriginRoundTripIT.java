@@ -59,6 +59,10 @@ class SimulatedOriginRoundTripIT extends AbstractAxonIntegrationTest {
             "--spring.flyway.schemas=" + schema,
             "--spring.flyway.default-schema=" + schema,
             "--spring.flyway.create-schemas=true",
+            // **印を受け付ける環境として立てる**（US33 §3 の守り）。既定では
+            // 断られる——誰でも立てられると、本物の荷主を業務の一覧から
+            // 静かに消せてしまうため（IT16 のレビュー 高）。
+            "--cargo-tracker.simulation.enabled=true",
         };
     }
 
@@ -151,6 +155,25 @@ class SimulatedOriginRoundTripIT extends AbstractAxonIntegrationTest {
         assertThat(bookingIds())
                 .as("**シミュレーションが作った貨物は業務の予約一覧に出ない**")
                 .doesNotContain(simulatedBooking);
+
+        // (5) 請求一覧の読み口。**表を数えても一覧に出ないことは分からない**——
+        // javadoc が「4 つの読み口を見る」と約束している以上、請求も経路で見る。
+        assertThat(invoiceShipperIds())
+                .as("**シミュレーションが作った荷主の請求書は業務の請求一覧に出ない**")
+                .doesNotContain(simulatedShipper);
+    }
+
+    /** 請求一覧の読み口が返す荷主 ID。<b>表ではなく一覧の経路で見る</b>。 */
+    @SuppressWarnings("unchecked")
+    private List<String> invoiceShipperIds() {
+        Map<String, Object> body = REST.get()
+                .uri("http://localhost:" + portOf(billing)
+                        + "/api/v1/billing/invoices?page=0&size=200")
+                .header("X-Auth-Username", "accountant01")
+                .retrieve().body(Map.class);
+        List<Map<String, Object>> items = body == null
+                ? List.of() : (List<Map<String, Object>>) body.getOrDefault("items", List.of());
+        return items.stream().map(item -> String.valueOf(item.get("shipperId"))).toList();
     }
 
     /** 予約一覧の読み口が返す予約 ID。<b>表ではなく一覧の経路で見る</b>。 */
