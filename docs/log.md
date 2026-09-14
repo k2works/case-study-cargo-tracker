@@ -1,6 +1,7 @@
 # Docs Update Log
 
 ## 2026-09-14
+* **Update**: [iteration_plan-16](/development/cargo-tracker/iteration_plan-16.md) を更新（claude-code/claude-opus-5）
 * **Update**: [retrospective-16](/development/cargo-tracker/retrospective-16.md) を更新（claude-code/claude-opus-5）
 * **Update**: [iteration_report-16](/development/cargo-tracker/iteration_report-16.md) を更新（claude-code/claude-opus-5）
 * **Update**: [20-業務シミュレーションを流す](/manual/20-業務シミュレーションを流す.md) を更新（claude-code/claude-opus-5）

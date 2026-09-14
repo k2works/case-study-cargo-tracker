@@ -3,7 +3,7 @@ type: Plan
 title: "イテレーション 16 計画"
 tags: [plan]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-14T17:36:05Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-14T18:04:58Z }
 verified:
   - { by: human:k2works, at: 2026-09-14T06:38:40Z }
 ---
@@ -325,21 +325,21 @@ S93 --> S61 : 請求番号
 
 ## DoD
 
-- [ ] US33・US34 の受入基準 11 件がすべて緑（未達があればその旨を明記）
-- [ ] **受入基準の落とし先に空欄が無い**
-- [ ] デモ項目 8 件が受け入れテストかクラスタ E2E で緑（**シナリオ数を数で書く**）
-- [ ] `TZ=UTC` の分割フルビルドが緑（`simulationms` を含む）
-- [ ] フロントの `test` / `tsc -b` / `build` が緑
-- [ ] クラスタ E2E が緑（**IT の途中で 1 度 + クローズで通し**・**一覧から選んで始める**）
-- [ ] CI が緑
-- [ ] SonarQube の Quality Gate が両プロジェクト PASS
-- [ ] **ユーザーマニュアル 20 章を新設し、キャプチャを撮った**
-- [ ] 正典（`requirements` / `domain-model` / `data-model` / `architecture_backend` / `ui_design`）に `simulationms`・S92・S93・`simulation_read_db` を反映した
-- [ ] ADR-0020 の検査 2 本（`SimulationServiceIsSeparateTest`・`OnlySimulationCrossesByHttpTest`）を実装した
-- [ ] **`IterationPlanChecksExistTest` の `CURRENT_PLAN` を `iteration_plan-16.md` へ進めた**（注 N10。**クローズのときに進める**）
-- [ ] 引き継ぎ 2 件・負債 2 件を返した
-- [ ] `npx gulp okf:check` が ERROR 0
-- [ ] 各タスクの成果を意味のある単位でコミットした（**品質ゲートの欄を空にしない**）
+- [x] US33・US34 の受入基準 11 件がすべて緑（未達があればその旨を明記）——**§3 は外していない読み口が 3 つ残る**（追跡一覧・荷役の作業一覧・要確認一覧。[ADR-0020] 決定 4 の表に「未」と明記し IT17 へ）
+- [x] **受入基準の落とし先に空欄が無い**（完了報告書に 11 件の表として書き出した）
+- [x] デモ項目 8 件が受け入れテストかクラスタ E2E で緑——**受け入れ 9 シナリオ**（`simulationAcceptanceTest`）+ **クラスタ E2E 2 本**
+- [x] `TZ=UTC` の分割フルビルドが緑（`simulationms` を含む・6 群 41 分）
+- [x] フロントの `test`（537 件）/ `tsc -b` / `build` が緑
+- [x] クラスタ E2E が緑（**IT の途中で 1 度 + クローズで通し**・**S92 の一覧から選んで始める**）
+- [x] CI が緑
+- [x] SonarQube の Quality Gate が両プロジェクト PASS
+- [x] **ユーザーマニュアル 20 章を新設し、キャプチャを撮った**（`20-S92`・`20-S93`）
+- [x] 正典に `simulationms`・S92・S93・`simulation_read_db` を反映した（`requirements` UC23/US33-34・`domain-model` Simulation Context・`data-model` ER・`architecture_backend` ES 非適用・`ui_design` S92/S93）
+- [x] ADR-0020 の検査 2 本（`SimulationServiceIsSeparateTest`・`OnlySimulationCrossesByHttpTest`）を実装した。**レビューで決定 4 を追記し、検査を決定の数に揃えた**
+- [x] **`IterationPlanChecksExistTest` の `CURRENT_PLAN` を `iteration_plan-16.md` へ進めた**（注 N10）——**進めた瞬間に赤になり、計画がフロントの検査を 1 つも名指ししていないことが分かった**
+- [x] 引き継ぎ 2 件・負債 2 件を返した（**12 回連続で繰越ゼロ**）
+- [x] `npx gulp okf:check` が ERROR 0
+- [x] 各タスクの成果を意味のある単位でコミットした（品質ゲートの欄を埋めた）
 
 ## 関連ドキュメント
 
