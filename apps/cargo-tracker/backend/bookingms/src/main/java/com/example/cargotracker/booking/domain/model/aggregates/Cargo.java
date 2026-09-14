@@ -855,8 +855,10 @@ public class Cargo {
                     "状態 " + bookingStatus.label() + " の予約はキャンセルできません"
                             + "（申請を却下してください）");
         }
+        // **`Location.of` を先に通さない。** 空のときに形式エラーが出て、承認する
+        // 人が業務の言葉で断りを読めない（IT15 のレビュー 中）。検査は 1 か所。
         var decision = CancellationDecision.approve(
-                Location.of(command.dischargeUnLocode()), dischargeCandidates(),
+                command.dischargeUnLocode(), dischargeCandidates(),
                 command.reason(), command.approvedBy(), clock.instant());
 
         appender.append(new CancellationApprovedEvent(bookingId, request.requestId(),

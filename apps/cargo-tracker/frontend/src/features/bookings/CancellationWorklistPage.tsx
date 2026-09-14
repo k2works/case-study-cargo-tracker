@@ -64,6 +64,11 @@ function DecisionForm({ request, onDone }: Readonly<{
   const ports = candidates.data?.state === 'ready' ? candidates.data.value.unLocodes : [];
   const current = candidates.data?.state === 'ready'
     ? candidates.data.value.currentUnLocode : null;
+  // **押せない理由を出す。** 選択肢が取れないと `[承認する]` は押せないが、
+  // なぜ押せないのかが読めないと、判断する人は待つことしかできない
+  // （IT15 のレビュー 中。一覧側は出し分けているのに判断欄だけ落ちていた）。
+  const candidatesPending = candidates.isPending
+    || candidates.data?.state === 'pending';
 
   return (
     <div className={`${CARD} mt-3`}>
@@ -95,6 +100,12 @@ function DecisionForm({ request, onDone }: Readonly<{
           <p className="mt-1 text-xs text-gray-600">
             現在地または残りの寄港地から選びます。
           </p>
+          {candidatesPending && <output className={NOTICE}>選択肢を読み込み中…</output>}
+          {candidates.isError && (
+            <p role="alert" className={`${ALERT} mt-1`}>
+              陸揚げ地の選択肢を取得できませんでした。承認はできません（却下はできます）。
+            </p>
+          )}
         </div>
         <div className="grow">
           <label className={LABEL} htmlFor={`reason-${request.requestId}`}>理由</label>

@@ -30,15 +30,23 @@ public record CancellationDecision(
     /**
      * 承認する。
      *
+     * <p><b>文字列で受ける。</b> 「空か」と「形式が正しいか」と「候補に含まれるか」を
+     * ここ 1 か所で順に見る——呼ぶ側が先に {@code Location.of} を通すと、空のときに
+     * 形式エラーが出て業務の言葉で断れない。</p>
+     *
      * @param candidates 指定できる港（{@code DischargeCandidates} が作る）。
      *     <b>判定はこの 1 本だけを見る</b>——「現在地か、残りの寄港地か」を
      *     ここでもう一度組み立てると、画面の選択肢と食い違う余地が生まれる
      */
-    public static CancellationDecision approve(Location dischargeLocation,
+    public static CancellationDecision approve(String dischargeUnLocode,
             List<Location> candidates, String reason, String decidedBy, Instant decidedAt) {
-        if (dischargeLocation == null) {
+        if (blankToNull(dischargeUnLocode) == null) {
+            // **形式の検査より先に置く。** 呼ぶ側で `Location.of` を先に通すと、
+            // 承認する人が読むのは「UN/LOCODE は英大文字 5 文字です: null」に
+            // なる——業務の言葉で断れない（IT15 のレビュー 中）。
             throw new BusinessRuleViolation("陸揚げ地は必須です");
         }
+        Location dischargeLocation = Location.of(dischargeUnLocode.trim());
         if (!candidates.contains(dischargeLocation)) {
             // **0 件の候補から選ばせない。** どこなら指定できるかを添える。
             throw new BusinessRuleViolation("陸揚げ地 " + dischargeLocation.unLocode().value()

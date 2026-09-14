@@ -26,11 +26,20 @@ function request(over: Record<string, unknown> = {}) {
   };
 }
 
-/** 承認待ちと陸揚げ地の選択肢を URL で出し分ける。 */
-function mockApi(items: unknown[], ports: string[] = ['JPTYO', 'SGSIN', 'USNYC']) {
+/**
+ * 承認待ちと陸揚げ地の選択肢を URL で出し分ける。
+ *
+ * <p>`candidateStatus` を渡すと、選択肢の取得だけを失敗させられる。</p>
+ */
+function mockApi(items: unknown[], ports: string[] = ['JPTYO', 'SGSIN', 'USNYC'],
+  candidateStatus = 200) {
   return vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
     const url = String(input);
     if (url.includes('/discharge-candidates')) {
+      if (candidateStatus !== 200) {
+        return Promise.resolve(new Response(JSON.stringify({ message: '読めません' }),
+          { status: candidateStatus }));
+      }
       return Promise.resolve(new Response(JSON.stringify({
         currentUnLocode: 'JPTYO', unLocodes: ports,
       }), { status: 200 }));
@@ -141,6 +150,19 @@ describe('S23 キャンセル承認一覧', () => {
     expect(await screen.findByText('承認待ちのキャンセル申請はありません。'))
       .toBeInTheDocument();
   });
+
+  it('US30 §5: 陸揚げ地の選択肢が読めなければ、理由が出る', async () => {
+    // **押せないまま理由が読めない状態を作らない。** 取得に失敗すると選択肢が
+    // 空になり `[承認する]` が押せなくなるが、なぜ押せないのかが画面に無かった
+    // （IT15 のレビュー 中）。一覧側は出し分けているのに、判断欄だけ落ちていた。
+    mockApi([request()], [], 500);
+
+    renderWorklist();
+    await userEvent.click(await screen.findByRole('button', { name: '判断する' }));
+
+    expect(await screen.findByText(/陸揚げ地の選択肢を取得できませんでした/))
+      .toBeVisible();
+  });
 });
 
 describe('S22 キャンセル欄', () => {
@@ -223,4 +245,5 @@ describe('S22 キャンセル欄', () => {
     expect(await screen.findByTestId('cancellation-history-CR-1')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /キャンセル/ })).not.toBeInTheDocument();
   });
+
 });

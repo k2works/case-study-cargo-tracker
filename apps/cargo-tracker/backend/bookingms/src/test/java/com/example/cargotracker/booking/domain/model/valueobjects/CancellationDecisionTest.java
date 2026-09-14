@@ -27,7 +27,7 @@ class CancellationDecisionTest {
     @Test
     @DisplayName("残りの寄港地なら承認できる")
     void approvesARemainingPort() {
-        var decision = CancellationDecision.approve(SINGAPORE,
+        var decision = CancellationDecision.approve("SGSIN",
                 List.of(TOKYO, SINGAPORE, NEW_YORK), "荷主の指定倉庫が近い", "tracker01", AT);
 
         assertThat(decision.approved()).isTrue();
@@ -37,7 +37,7 @@ class CancellationDecisionTest {
     @Test
     @DisplayName("現在地でも承認できる（いま居る港で降ろす）")
     void approvesTheCurrentPort() {
-        assertThat(CancellationDecision.approve(TOKYO, List.of(TOKYO, SINGAPORE, NEW_YORK),
+        assertThat(CancellationDecision.approve("JPTYO", List.of(TOKYO, SINGAPORE, NEW_YORK),
                 null, "tracker01", AT).dischargeLocation())
                 .isEqualTo(TOKYO);
     }
@@ -45,7 +45,7 @@ class CancellationDecisionTest {
     @Test
     @DisplayName("旅程に無い港は断り、指定できる港を添える（0 件から選ばせない）")
     void refusesAPortOutsideTheItinerary() {
-        assertThatThrownBy(() -> CancellationDecision.approve(LONDON,
+        assertThatThrownBy(() -> CancellationDecision.approve("GBLON",
                 List.of(TOKYO, SINGAPORE, NEW_YORK), null, "tracker01", AT))
                 .isInstanceOf(BusinessRuleViolation.class)
                 .hasMessageContaining("GBLON")
@@ -58,7 +58,7 @@ class CancellationDecisionTest {
     void refusesAPassedPort() {
         // 東京を出て シンガポールへ向かっている。**東京は「残り」ではない**が、
         // 現在地が東京のあいだは指定できる——区別しているのは「いま居るか」である。
-        assertThatThrownBy(() -> CancellationDecision.approve(TOKYO,
+        assertThatThrownBy(() -> CancellationDecision.approve("JPTYO",
                 List.of(SINGAPORE, NEW_YORK), null, "tracker01", AT))
                 .isInstanceOf(BusinessRuleViolation.class);
     }
@@ -88,7 +88,7 @@ class CancellationDecisionTest {
     @Test
     @DisplayName("判断した人は必須（誰が決めたか分からない記録は履歴にならない）")
     void requiresTheDecider() {
-        assertThatThrownBy(() -> CancellationDecision.approve(SINGAPORE,
+        assertThatThrownBy(() -> CancellationDecision.approve("SGSIN",
                 List.of(TOKYO, SINGAPORE), null, "  ", AT))
                 .isInstanceOf(BusinessRuleViolation.class);
         assertThatThrownBy(() -> CancellationDecision.reject("理由", null, AT))

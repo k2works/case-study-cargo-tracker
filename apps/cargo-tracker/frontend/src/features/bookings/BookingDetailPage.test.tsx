@@ -1089,4 +1089,20 @@ describe('S22 誤配バナー（US28 §受入基準 3・4・6）', () => {
     await screen.findByText('B-2026-0903-0001', { exact: false });
     expect(screen.queryByText('誤配を検知しました。')).not.toBeInTheDocument();
   });
+
+  it('US30: 経路設計者にはキャンセル欄を出さない（履歴を読めない）', async () => {
+    // **読めない欄を並べない。** Gateway は `*/cancellation` を営業と追跡管理者に
+    // だけ開いているので、経路設計者には 403 が返り、見出しだけの空カードが出て
+    // いた——「申請が無い」とも「読めない」とも読める（IT15 のレビュー 中）。
+    useAuthStore.setState({
+      user: { username: 'routing01', roles: ['ROLE_ROUTING'], token: 't' },
+    });
+    mockFetch(new Response(JSON.stringify(booking({ bookingStatus: 'IN_TRANSIT' })),
+      { status: 200 }));
+
+    renderDetail();
+
+    await screen.findByRole('heading', { name: /^予約 / });
+    expect(screen.queryByRole('heading', { name: 'キャンセル' })).not.toBeInTheDocument();
+  });
 });

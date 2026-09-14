@@ -260,6 +260,23 @@ class CargoCancellationTest {
     }
 
     @Test
+    @DisplayName("US30 §5: 陸揚げ地が空なら、承認者に伝わる文言で断る")
+    void refusesApprovalWithoutADischargePort() {
+        // **形式エラーを見せない。** 承認する人が読むのは「陸揚げ地は必須です」で
+        // あって「UN/LOCODE は英大文字 5 文字です: null」ではない（IT15 のレビュー 中。
+        // 値オブジェクトの検査より先に `Location.of` が走っていた）。
+        fixture.given().event(booked()).event(routed()).event(issued())
+                .event(receivedAtTokyo())
+                .event(new CancellationRequestedEvent(BOOKING, REQUEST, "荷主の発注取消",
+                        "sales01", NOW))
+                .when().command(new ApproveCancellationCommand(BOOKING, null,
+                        "荷主の指定倉庫が近い", "tracker01"))
+                .then().exceptionSatisfies(thrown -> assertThat(thrown)
+                        .isInstanceOf(BusinessRuleViolation.class)
+                        .hasMessageContaining("陸揚げ地は必須です"));
+    }
+
+    @Test
     @DisplayName("不変条件 9-2: 旅程に無い港は断る")
     void refusesAPortOutsideTheItinerary() {
         fixture.given().event(booked()).event(routed()).event(issued())

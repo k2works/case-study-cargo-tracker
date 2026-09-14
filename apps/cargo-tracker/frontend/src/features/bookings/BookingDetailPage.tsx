@@ -63,6 +63,9 @@ export function BookingDetailPage() {
   // 状態だけで出し分けると、見に来ただけの人が引き渡せる。
   // これは表示の話で、守りは Gateway の認可（ADR-0006）が担う。
   const isSales = useAuthStore((state) => state.user?.roles.includes('ROLE_SALES') ?? false);
+  // キャンセルの履歴を読めるのは営業と追跡管理者だけ（Gateway の認可と同じ）。
+  const isTracker = useAuthStore(
+    (state) => state.user?.roles.includes('ROLE_TRACKER') ?? false);
   // 請求書（S61）へ入れるのは経理だけ（ui_design.md の画面一覧）。
   const isAccountant = useAuthStore(
     (state) => state.user?.roles.includes('ROLE_ACCOUNTANT') ?? false);
@@ -451,12 +454,17 @@ export function BookingDetailPage() {
 
           {/* キャンセル（US30）。**申請は営業、判断は追跡管理者**だが、履歴は
               両方が読む——「いま何が起きているか」を片方しか読めないと、話が
-              噛み合わない。 */}
-          <BookingCancellationPanel
-            bookingId={bookingId}
-            bookingStatus={data.value.bookingStatus}
-            canRequest={isSales}
-          />
+              噛み合わない。
+              **読めない人には出さない。** Gateway は履歴を営業と追跡管理者に
+              だけ開いているので、経路設計者に出すと見出しだけの空カードになる
+              ——「申請が無い」とも「読めない」とも読める（IT15 のレビュー 中）。 */}
+          {(isSales || isTracker) && (
+            <BookingCancellationPanel
+              bookingId={bookingId}
+              bookingStatus={data.value.bookingStatus}
+              canRequest={isSales}
+            />
+          )}
 
           {/* 追跡番号（US14）。**発行は経路設計者の操作**で、営業には出さない。
               発行済みなら「状態」の欄に番号が出る（二重に発行しない）。 */}

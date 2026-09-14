@@ -36,12 +36,33 @@ class DischargeCandidatesTest {
         "SGSIN, SGSIN|USNYC",
         // まだ荷役が無い（現在地なし）。旅程の荷降し港だけ。
         ", SGSIN|USNYC",
+        // **最終の荷降し港に着いた。** 先はもう無いので、候補は現在地 1 件だけに
+        // なる——`skip(passed + 1)` の off-by-one はここでしか出ない
+        // （IT15 のレビュー 中）。0 件になると承認そのものができなくなる。
+        "USNYC, USNYC",
     })
     @DisplayName("現在地から先の港が候補になる（現在地が先頭）")
     void listsPortsAhead(String current, String expected) {
         assertThat(DischargeCandidates.of(ITINERARY, current))
                 .extracting(port -> port.unLocode().value())
                 .containsExactly(expected.split("\\|"));
+    }
+
+    @Test
+    @DisplayName("区間が 1 本の旅程でも、候補は空にならない")
+    void keepsAtLeastOneCandidateOnASingleLeg() {
+        // 直航（乗り継ぎ無し）。降ろせるのは目的地だけだが、**0 件にはしない**
+        // ——0 件だと承認できず、貨物が船の上に残り続ける。
+        List<DischargeCandidates.Leg> direct =
+                List.of(new DischargeCandidates.Leg("JPTYO", "USNYC"));
+
+        assertThat(DischargeCandidates.of(direct, "JPTYO"))
+                .extracting(port -> port.unLocode().value())
+                .containsExactly("JPTYO", "USNYC");
+        assertThat(DischargeCandidates.of(direct, "USNYC"))
+                .as("目的地に着いたあとも、そこで降ろせる")
+                .extracting(port -> port.unLocode().value())
+                .containsExactly("USNYC");
     }
 
     @Test
@@ -53,7 +74,7 @@ class DischargeCandidatesTest {
             List<Location> candidates = DischargeCandidates.of(ITINERARY, current);
             assertThat(candidates).as("候補が空だと承認そのものができない").isNotEmpty();
             for (Location candidate : candidates) {
-                assertThat(CancellationDecision.approve(candidate, candidates, null,
+                assertThat(CancellationDecision.approve(candidate.unLocode().value(), candidates, null,
                         "tracker01", AT).dischargeLocation())
                         .as("現在地 %s の候補 %s", current, candidate)
                         .isEqualTo(candidate);
