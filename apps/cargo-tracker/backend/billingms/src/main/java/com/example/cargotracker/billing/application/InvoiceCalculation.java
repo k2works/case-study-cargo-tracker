@@ -153,26 +153,16 @@ public class InvoiceCalculation {
             return new FeeOutcome.Blocked("予約 " + bookingId
                     + " の貨物の写しが無いのでキャンセル料を算出できません", false);
         }
-        if (cargo.weightKg() == null) {
-            return new FeeOutcome.Blocked("貨物 " + cargo.trackingNumber()
-                    + " の重量が分からないのでキャンセル料を算出できません", false);
+        // **算出と同じ材料そろえを使う。** ガードを 1 つ足すと片方だけ直る形に
+        // しない（IT15 のレビュー 中）。
+        Materials gathered = gather(cargo);
+        if (gathered instanceof Materials.Missing missing) {
+            return new FeeOutcome.Blocked(missing.what()
+                    + "のでキャンセル料を算出できません", missing.retryable());
         }
-        var contract = shippers.find(cargo.shipperId());
-        if (contract == null) {
-            return new FeeOutcome.Blocked("荷主 " + cargo.shipperId()
-                    + " の契約がまだ届いていません（キャンセル料を算出できません）", true);
-        }
-        List<TransportRecord.BilledLeg> legs = new ArrayList<>();
-        for (BillingCargoSnapshotMapper.LegRow leg : cargos.findLegs(cargo.trackingNumber())) {
-            legs.add(new TransportRecord.BilledLeg(new UnLocode(leg.loadUnLocode()),
-                    new UnLocode(leg.unloadUnLocode())));
-        }
-        if (legs.isEmpty()) {
-            return new FeeOutcome.Blocked("貨物 " + cargo.trackingNumber()
-                    + " の区間が分からないのでキャンセル料を算出できません", false);
-        }
-        var transport = new TransportRecord(legs, cargo.weightKg(), cargo.cargoType(),
-                new UnLocode(cargo.originUnLocode()), new UnLocode(cargo.destinationUnLocode()));
+        var materials = (Materials.Ready) gathered;
+        var contract = materials.contract();
+        var transport = materials.transport();
         return new FeeOutcome.Ready(
                 new com.example.cargotracker.billing.domain.model.commands
                         .ApplyCancellationFeeCommand(nextInvoiceId(), bookingId,
@@ -180,6 +170,57 @@ public class InvoiceCalculation {
                         ShipperType.of(contract.shipperType()),
                         DiscountRate.ofNullable(contract.discountRate()),
                         contract.contractNumber(), transport, statusAtCancel, appliedBy));
+    }
+
+    /**
+     * 請求の材料（契約と輸送実績）。<b>算出とキャンセル料で同じものを使う</b>。
+     *
+     * <p>そろわない理由は場面で文言が変わる（「請求書を作れません」／
+     * 「キャンセル料を算出できません」）が、<b>何がそろわないか</b>と
+     * <b>待てば入るか</b>は同じである。そこだけを共通にする。</p>
+     */
+    private sealed interface Materials {
+
+        /** そろった。 */
+        record Ready(ShipperContractSnapshotMapper.SnapshotRow contract,
+                TransportRecord transport) implements Materials {
+        }
+
+        /** そろわない。{@code retryable} は待てば入るか。 */
+        record Missing(String what, boolean retryable) implements Materials {
+        }
+    }
+
+    /**
+     * 材料をそろえる（算出とキャンセル料で共通）。
+     *
+     * <p><b>ガードを 1 つ足すと片方だけ直る形にしない。</b> 重量・契約・区間の
+     * 3 つは、どちらの経路でも同じ順に同じ理由で要る（IT15 のレビュー 中）。</p>
+     */
+    private Materials gather(BillingCargoSnapshotMapper.SnapshotRow cargo) {
+        if (cargo.weightKg() == null) {
+            // **待っても入らない。** 重量を運ぶ前のイベントから作られた写しなので、
+            // 再試行しても同じである。
+            return new Materials.Missing("貨物 " + cargo.trackingNumber()
+                    + " の重量が分からない", false);
+        }
+        var contract = shippers.find(cargo.shipperId());
+        if (contract == null) {
+            return new Materials.Missing("荷主 " + cargo.shipperId()
+                    + " の契約がまだ届いていない", true);
+        }
+        List<TransportRecord.BilledLeg> legs = new ArrayList<>();
+        for (BillingCargoSnapshotMapper.LegRow leg : cargos.findLegs(cargo.trackingNumber())) {
+            legs.add(new TransportRecord.BilledLeg(new UnLocode(leg.loadUnLocode()),
+                    new UnLocode(leg.unloadUnLocode())));
+        }
+        if (legs.isEmpty()) {
+            return new Materials.Missing("貨物 " + cargo.trackingNumber()
+                    + " の区間が分からない", false);
+        }
+        return new Materials.Ready(contract, new TransportRecord(legs, cargo.weightKg(),
+                cargo.cargoType(), new UnLocode(cargo.originUnLocode()),
+                new UnLocode(cargo.destinationUnLocode())));
     }
 
     /** 見積時の概算。**結び付いていなければ {@code null}**（普通の状態）。 */
@@ -193,31 +234,15 @@ public class InvoiceCalculation {
         if (existing != null) {
             return new Outcome.AlreadyInvoiced(existing.invoiceId());
         }
-        if (cargo.weightKg() == null) {
-            // **待っても入らない。** 重量を運ぶ前のイベントから作られた写しなので、
-            // 再試行しても同じである。
-            return new Outcome.Blocked("貨物 " + cargo.trackingNumber()
-                    + " の重量が分からないので請求書を作れません", false);
+        // **そろえるのは 1 度だけ。** 2 度呼ぶと読み口を二重に叩く。
+        Materials gathered = gather(cargo);
+        if (gathered instanceof Materials.Missing missing) {
+            return new Outcome.Blocked(missing.what() + "ので請求書を作れません",
+                    missing.retryable());
         }
-
-        var contract = shippers.find(cargo.shipperId());
-        if (contract == null) {
-            return new Outcome.Blocked("荷主 " + cargo.shipperId()
-                    + " の契約がまだ届いていません（請求を作れません）", true);
-        }
-
-        List<TransportRecord.BilledLeg> legs = new ArrayList<>();
-        for (BillingCargoSnapshotMapper.LegRow leg : cargos.findLegs(cargo.trackingNumber())) {
-            legs.add(new TransportRecord.BilledLeg(new UnLocode(leg.loadUnLocode()),
-                    new UnLocode(leg.unloadUnLocode())));
-        }
-        if (legs.isEmpty()) {
-            return new Outcome.Blocked("貨物 " + cargo.trackingNumber()
-                    + " の区間が分からないので請求書を作れません", false);
-        }
-
-        var transport = new TransportRecord(legs, cargo.weightKg(), cargo.cargoType(),
-                new UnLocode(cargo.originUnLocode()), new UnLocode(cargo.destinationUnLocode()));
+        var materials = (Materials.Ready) gathered;
+        var contract = materials.contract();
+        var transport = materials.transport();
 
         return new Outcome.Ready(new CalculateInvoiceCommand(
                 nextInvoiceId(), cargo.bookingId(), cargo.shipperId(),

@@ -129,9 +129,19 @@ public class BookingQueryHandler {
             .CancellationListView toListView(
             java.util.List<com.example.cargotracker.booking.infrastructure.persistence
                     .CancellationRequestMapper.CancellationRequestRow> rows) {
+        // **1 行ずつ引かない。** 申請が積み上がっているときほど遅くなる
+        // （承認待ち一覧は 5 秒ごとに取り直す。IT15 のレビュー 中）。
+        // 同じ予約に複数の申請が付くので、**予約ごとに 1 度だけ**引く。
+        java.util.Map<String, CargoSummaryMapper.CargoSummaryRow> bookings =
+                rows.stream().map(row -> row.bookingId()).distinct()
+                        .map(cargos::findById)
+                        .filter(java.util.Objects::nonNull)
+                        .collect(java.util.stream.Collectors.toMap(
+                                CargoSummaryMapper.CargoSummaryRow::bookingId,
+                                java.util.function.Function.identity()));
         return new com.example.cargotracker.booking.infrastructure.query.BookingQueries
                 .CancellationListView(rows.stream().map(row -> {
-                    var booking = cargos.findById(row.bookingId());
+                    var booking = bookings.get(row.bookingId());
                     return new com.example.cargotracker.booking.infrastructure.query
                             .BookingQueries.CancellationRequestView(
                             row.requestId(), row.bookingId(),

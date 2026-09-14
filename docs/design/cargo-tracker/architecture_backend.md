@@ -211,7 +211,7 @@ package "Shared Kernel（shared ライブラリ）" as shared {
 booking ..> routing : FindRouteCandidatesQuery（経路候補）\n<<ACL, Axon Query Bus>>
 booking --> tracking : TrackingNumberIssuedEvent\nCargoCancelledEvent
 booking --> billing : ShipperRegisteredEvent\nCorporateContractAssignedEvent
-tracking --> booking : TrackingInitializedEvent\nTrackingClosedEvent\nCargoDeliveredEvent
+tracking --> booking : TrackingInitializedEvent\nCargoDeliveredEvent
 handling --> tracking : HandlingActivityRegisteredEvent\nHandlingActivityVoidedEvent\nCustomsStatusChangedEvent
 handling --> booking : HandlingActivityRegisteredEvent\nHandlingActivityVoidedEvent
 tracking --> billing : CargoDeliveredEvent
@@ -707,11 +707,11 @@ take-4 の `ExternalCargoRoutingService`（REST）と役割は同じです。違
 | `TrackingInitializedEvent` | trackingms | **○** | bookingms：`BookingReactionHandler` の 2 段目（`process_state` を `COMPLETED` に） | 本設計 |
 | `TransportStatusUpdatedEvent` / `CargoMisroutedEvent` / `TrackingExceptionRegisteredEvent` | trackingms | — | trackingms 投影 | take-4 |
 | `CargoDeliveredEvent` | trackingms | **○** | billingms：`BillingReactionHandler` 開始、bookingms：`MarkDeliveredCommand`（Reaction） | take-4（java-3 では未実装） |
-| `TrackingClosedEvent` | trackingms | **○** | bookingms：連鎖の補償完了（`BookingReactionHandler`） | 本設計 |
+| ~~`TrackingClosedEvent`~~ | trackingms | — | **契約から外した**（[ADR-0018] 決定 3）。閉じたことを読むサービスが無い——予約は承認の時点で既に `CANCELLED` である。**trackingms の内部イベント**にした。名簿は `ContractEventRosterTest` が名前で固定する |
 | `InvoiceCalculatedEvent` / `InvoiceAdjustedEvent` / `InvoiceIssuedEvent` | billingms | — | billingms 投影 | take-4（**`DiscountAppliedEvent` は IT13 で落とした**——割引は算出の中で当てる。別コマンドにすると、割引の無い請求書が一瞬見える状態が正常系として存在する） |
 | `PaymentRecordedEvent` | billingms | **○** | billingms 投影、bookingms：`SettleBookingCommand`（Reaction） | take-4 |
 
-契約の数は **イベント 11**（`ShipperRegisteredEvent`, `CorporateContractAssignedEvent`, `TrackingNumberIssuedEvent`, `CargoCancelledEvent`, `HandlingActivityRegisteredEvent`, `HandlingActivityVoidedEvent`, `CustomsStatusChangedEvent`, `TrackingInitializedEvent`, `CargoDeliveredEvent`, `TrackingClosedEvent`, `PaymentRecordedEvent`）、**コマンド 2**（`InitializeTrackingCommand`・**IT7 で実装済み**, `CreateInvoiceCommand`・未実装）、**クエリ 1**（`FindRouteCandidatesQuery`）です。
+契約の数は **イベント 11**（`ShipperRegisteredEvent`, `CargoQuotedEvent`, `CargoCancelledEvent`, `HandlingActivityRegisteredEvent`, `HandlingActivityVoidedEvent`, `CustomsStatusChangedEvent`, `TrackingInitializedEvent`, `CargoDeliveredEvent`, `CargoDeliveryRevertedEvent`, `PaymentRecordedEvent`, `PaymentVoidedEvent`）**——名簿は `ContractEventRosterTest` が名前で固定します**（実装と突き合わせて直しました。IT16 の着手前まで、この一覧は実装と 4 本ずれていました）、**コマンド 2**（`InitializeTrackingCommand`・**IT7 で実装済み**, `CreateInvoiceCommand`・未実装）、**クエリ 1**（`FindRouteCandidatesQuery`）です。
 
 **「読む側の無い配線を先に敷かない」**（`java-3` の判断）は本設計でも守ります。上の表は候補であり、イテレーション計画で購読側のストーリーが入った時点で契約に昇格させます。ただし Event Sourcing では、購読者がいなくても**集約が発行したイベントは Event Store に残ります**。「発行しない」判断は集約の設計判断であり、購読の有無とは別に決めます。
 
@@ -861,7 +861,7 @@ public class BookingReactionHandler {
 | 失敗 | 補償 |
 | :--- | :--- |
 | trackingms が落ちていて追跡の初期化コマンドが届かない | Reaction Handler が再試行（再試行間隔は `Clock` を差し替えてテストする）。上限を超えたら `Cargo` に `RevertTrackingNumberCommand`。予約は `CONFIRMED` に留まり、**経路設計者**の要確認一覧（`attention_item`）に写す。**追跡管理者には打つ手が無い**——追跡番号を発行し直せるのは経路設計者だけである（[ADR-0010](../../adr/cargo-tracker/0010-reaction-handler-as-the-only-coordinator.md) 決定 3。IT7 のクローズで宛先を直した） |
-| キャンセル承認後、陸揚げ地での荷降しが記録されない | 追跡は `dischargeLocation` を持ったまま開いている。当該港の `UNLOAD` を受けた `TrackingReactionHandler` が `CloseTrackingCommand` を送り、`TrackingClosedEvent` で連鎖が終わる |
+| キャンセル承認後、陸揚げ地での荷降しが記録されない | 追跡は `cancellationDischargeUnLocode` を持ったまま開いている。当該港の `UNLOAD` を**集約が適用する流れの中で** `TrackingClosedEvent`（内部）を出して連鎖が終わる。**コマンドで外から閉じさせない**（[ADR-0018] 決定 1・2） |
 | 配送完了後の請求書作成に失敗 | `BillingReactionHandler` が再試行。上限を超えたら `InvoiceCreationFailedEvent` を出し、経理担当者の作業一覧に写す |
 | 入金確認後の予約 `SETTLED` 化に失敗 | Reaction Handler が再試行し、失敗を **イベントとして残す**。戻り値を捨てて黙らない（`java-2` ADR-021 の教訓） |
 
