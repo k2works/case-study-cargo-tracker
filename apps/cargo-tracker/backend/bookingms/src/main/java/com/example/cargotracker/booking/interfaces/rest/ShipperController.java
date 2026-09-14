@@ -65,7 +65,11 @@ public class ShipperController {
                 email,
                 request.phone(),
                 request.address(),
-                corporateContract(request)));
+                corporateContract(request),
+                // **印は入口で受ける。** 内部に専用の書き込み経路を作ると、
+                // シミュレーションだけが通る道ができて、実際の操作の壊れに
+                // 気づけなくなる（[ADR-0020] 決定 2）。
+                request.simulatedOrigin()));
 
         return ResponseEntity.created(URI.create("/api/v1/booking/shippers/" + shipperId))
                 .body(new RegisterShipperResponse(shipperId));

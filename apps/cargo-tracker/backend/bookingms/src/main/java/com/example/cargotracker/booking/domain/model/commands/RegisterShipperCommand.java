@@ -13,5 +13,8 @@ public record RegisterShipperCommand(
         Email email,
         String phone,
         String address,
-        CorporateContract corporateContract) {
+        CorporateContract corporateContract,
+        // シミュレーションが作った荷主か（US33 §受入基準 3 / [ADR-0020]）。
+        // **コマンドは永続化しないので primitive でよい**（イベント側は Boolean）。
+        boolean simulated) {
 }

@@ -33,7 +33,7 @@ class ShipperRestoreIT extends AbstractAxonIntegrationTest {
 
     private static RegisterShipperCommand register(String shipperId, String email) {
         return new RegisterShipperCommand(shipperId, "山田商事", ShipperType.INDIVIDUAL,
-                new Email(email), "03-0000-0000", "東京都中央区", null);
+                new Email(email), "03-0000-0000", "東京都中央区", null, false);
     }
 
     @Test

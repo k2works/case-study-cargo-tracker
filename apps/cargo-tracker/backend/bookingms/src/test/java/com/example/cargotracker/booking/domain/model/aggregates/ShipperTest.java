@@ -33,7 +33,7 @@ class ShipperTest {
 
     private static RegisterShipperCommand individual() {
         return new RegisterShipperCommand("SHP-000001", "山田太郎", ShipperType.INDIVIDUAL,
-                new Email("yamada@example.com"), "03-0000-0000", "東京都港区", null);
+                new Email("yamada@example.com"), "03-0000-0000", "東京都港区", null, false);
     }
 
     private static CorporateContract contract() {
@@ -55,7 +55,7 @@ class ShipperTest {
     void registersCorporateWithContract() {
         RegisterShipperCommand command = new RegisterShipperCommand("SHP-000002", "山田商事",
                 ShipperType.CORPORATE, new Email("sales@example.com"), "03-1111-1111",
-                "東京都中央区", contract());
+                "東京都中央区", contract(), false);
 
         fixture.given().noPriorActivity()
                 .when().command(command)
@@ -65,11 +65,27 @@ class ShipperTest {
     }
 
     @Test
+    @DisplayName("シミュレーションが作った荷主はイベントに印が載る")
+    void marksSimulatedOrigin() {
+        // **印はここでしか付かない。** 後段（貨物・請求の読み口）は荷主の印を辿るので、
+        // ここで落とすと 4 つの BC すべてが本物と区別できなくなる（US33 §受入基準 3）。
+        RegisterShipperCommand command = new RegisterShipperCommand("SHP-000007", "試験商事",
+                ShipperType.INDIVIDUAL, new Email("sim@example.com"), "03-2222-2222",
+                "東京都港区", null, true);
+
+        fixture.given().noPriorActivity()
+                .when().command(command)
+                .then().success()
+                .events(new ShipperRegisteredEvent("SHP-000007", "INDIVIDUAL", "試験商事",
+                        "sim@example.com", "03-2222-2222", "東京都港区", null, null, true));
+    }
+
+    @Test
     @DisplayName("法人なのに契約番号が無ければ受け付けない")
     void rejectsCorporateWithoutContract() {
         RegisterShipperCommand command = new RegisterShipperCommand("SHP-000003", "山田商事",
                 ShipperType.CORPORATE, new Email("sales@example.com"), "03-1111-1111",
-                "東京都中央区", null);
+                "東京都中央区", null, false);
 
         fixture.given().noPriorActivity()
                 .when().command(command)
@@ -83,7 +99,7 @@ class ShipperTest {
     void rejectsIndividualWithContract() {
         RegisterShipperCommand command = new RegisterShipperCommand("SHP-000004", "山田太郎",
                 ShipperType.INDIVIDUAL, new Email("yamada@example.com"), "03-0000-0000",
-                "東京都港区", contract());
+                "東京都港区", contract(), false);
 
         fixture.given().noPriorActivity()
                 .when().command(command)
@@ -155,7 +171,7 @@ class ShipperTest {
     void rejectsBlankShipperId() {
         RegisterShipperCommand command = new RegisterShipperCommand("  ", "山田太郎",
                 ShipperType.INDIVIDUAL, new Email("yamada@example.com"), "03-0000-0000",
-                "東京都港区", null);
+                "東京都港区", null, false);
 
         fixture.given().noPriorActivity()
                 .when().command(command)
@@ -168,7 +184,7 @@ class ShipperTest {
     @DisplayName("荷主種別が無ければ受け付けない")
     void rejectsMissingShipperType() {
         RegisterShipperCommand command = new RegisterShipperCommand("SHP-000006", "山田太郎",
-                null, new Email("yamada@example.com"), "03-0000-0000", "東京都港区", null);
+                null, new Email("yamada@example.com"), "03-0000-0000", "東京都港区", null, false);
 
         fixture.given().noPriorActivity()
                 .when().command(command)
@@ -182,7 +198,7 @@ class ShipperTest {
     void rejectsBlankName() {
         RegisterShipperCommand command = new RegisterShipperCommand("SHP-000005", "  ",
                 ShipperType.INDIVIDUAL, new Email("yamada@example.com"), "03-0000-0000",
-                "東京都港区", null);
+                "東京都港区", null, false);
 
         fixture.given().noPriorActivity()
                 .when().command(command)

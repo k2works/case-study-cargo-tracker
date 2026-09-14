@@ -25,11 +25,19 @@ public final class ShipperDtos {
             // （domain-model.md の一意性の三段）。
             // 省略可能。primitive にすると、送っていないクライアントの要求が
             // 丸ごと 400 になる（実際に既存の呼び出しが全部落ちた）。
-            Boolean acknowledgedDuplicate) {
+            Boolean acknowledgedDuplicate,
+            // 業務シミュレーションが作った荷主か（US33 §受入基準 3）。
+            // **省略可能**。既存の呼び出し（画面・受入テスト）は送らない。
+            Boolean simulated) {
 
         /** 省略は「まだ問いかけていない」＝続行の意思なし。 */
         public boolean duplicateAcknowledged() {
             return Boolean.TRUE.equals(acknowledgedDuplicate);
+        }
+
+        /** 省略は「本物の荷主」。<b>既定を「シミュレーション」にしない</b>。 */
+        public boolean simulatedOrigin() {
+            return Boolean.TRUE.equals(simulated);
         }
     }
 

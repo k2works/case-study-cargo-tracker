@@ -65,7 +65,8 @@ public class Shipper {
                 command.phone(),
                 command.address(),
                 contract == null ? null : contract.contractNumber(),
-                contract == null ? null : contract.discountRate().value().toPlainString(), false));
+                contract == null ? null : contract.discountRate().value().toPlainString(),
+                command.simulated()));
         return command.shipperId();
     }
 
