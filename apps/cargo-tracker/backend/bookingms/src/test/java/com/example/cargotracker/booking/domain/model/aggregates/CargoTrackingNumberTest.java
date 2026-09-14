@@ -278,7 +278,7 @@ class CargoTrackingNumberTest {
     void clearsMisrouteWhenTheCauseIsVoided() {
         fixture.given().events(misrouted())
                 .when().command(new RevertHandlingCommand("B-0001", "act-1", "取り違え"))
-                .then().events(new HandlingRevertedEvent("B-0001", "act-1", true, NOW));
+                .then().events(new HandlingRevertedEvent("B-0001", "act-1", true, null, NOW));
     }
 
     @Test
@@ -288,7 +288,10 @@ class CargoTrackingNumberTest {
         // 誤配を消すと、経路設計者は誤配に気づけなくなる。
         fixture.given().events(misrouted())
                 .when().command(new RevertHandlingCommand("B-0001", "act-9", "別の記録"))
-                .then().events(new HandlingRevertedEvent("B-0001", "act-9", false, NOW));
+                // **現在地は動かない。** act-1（東京での受領）は取り消されて
+                // いないので、戻る先はそのまま東京である（不変条件 9-2）。
+                .then().events(new HandlingRevertedEvent("B-0001", "act-9", false,
+                        "JPTYO", NOW));
     }
 
     // ---- IT10 US16 §4: 引き渡しを予約に写す ----
@@ -437,7 +440,7 @@ class CargoTrackingNumberTest {
         // 二度目は clears = false で積まれる。予約の状態は変わらないが、
         // **取り消しの履歴に起きていない行が増える**。
         fixture.given().events(and(misrouted(),
-                        new HandlingRevertedEvent("B-0001", "act-1", true, NOW)))
+                        new HandlingRevertedEvent("B-0001", "act-1", true, null, NOW)))
                 .when().command(new RevertHandlingCommand("B-0001", "act-1", "取り違え"))
                 .then().success().noEvents();
     }

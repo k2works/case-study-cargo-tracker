@@ -137,7 +137,7 @@ class CargoHandlingProjectionIT extends AbstractAxonIntegrationTest {
         progress.on(new BookingMisroutedEvent(bookingId, "act-1", "SGSIN", AT));
         assertThat(booking(bookingId).routingStatus()).isEqualTo("MISROUTED");
 
-        progress.on(new HandlingRevertedEvent(bookingId, "act-1", true, AT));
+        progress.on(new HandlingRevertedEvent(bookingId, "act-1", true, null, AT));
         assertThat(booking(bookingId).routingStatus()).isEqualTo("ROUTED");
     }
 
@@ -147,7 +147,7 @@ class CargoHandlingProjectionIT extends AbstractAxonIntegrationTest {
         String bookingId = bookedAndTracked();
         progress.on(new BookingMisroutedEvent(bookingId, "act-1", "SGSIN", AT));
 
-        progress.on(new HandlingRevertedEvent(bookingId, "act-9", false, AT));
+        progress.on(new HandlingRevertedEvent(bookingId, "act-9", false, null, AT));
 
         assertThat(booking(bookingId).routingStatus()).isEqualTo("MISROUTED");
     }

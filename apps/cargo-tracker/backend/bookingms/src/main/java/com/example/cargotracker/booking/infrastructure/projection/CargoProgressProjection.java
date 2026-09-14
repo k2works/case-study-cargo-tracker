@@ -175,5 +175,14 @@ public class CargoProgressProjection {
             cargos.updateRoutingStatus(event.bookingId(), RoutingStatus.ROUTED.name(),
                     clock.instant());
         }
+        // **現在地も戻す**（不変条件 9-2）。取り消した港が残ると、通ってもいない
+        // 港を通過済と数え、陸揚げ地の候補からその先の寄港地が消える。
+        //
+        // **この項目より前に積まれたイベントでは `null`。** そのときは列を触らない
+        // ——以前と同じ振る舞いで、リプレイで壊れない。
+        if (event.restoredUnLocode() != null) {
+            cargos.updateLastHandlingUnLocode(event.bookingId(), event.restoredUnLocode(),
+                    clock.instant());
+        }
     }
 }

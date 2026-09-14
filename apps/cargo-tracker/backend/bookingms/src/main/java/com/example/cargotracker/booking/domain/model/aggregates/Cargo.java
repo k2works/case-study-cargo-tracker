@@ -690,8 +690,17 @@ public class Cargo {
         boolean clears = routingStatus == RoutingStatus.MISROUTED
                 && command.activityId().equals(misroutedBy);
 
+        // **戻ったあとの現在地を載せる。** 投影は履歴を持たないので、自分では
+        // 導けない（不変条件 9-2 の陸揚げ地の候補がこの値を材料にする）。
+        String restored = handlingHistory.stream()
+                .filter(handling -> !handling.activityId().equals(command.activityId()))
+                .filter(handling -> !revertedActivities.contains(handling.activityId()))
+                .reduce((first, second) -> second)
+                .map(HandlingAtPort::unLocode)
+                .orElse(null);
+
         appender.append(new HandlingRevertedEvent(command.bookingId(), command.activityId(),
-                clears, clock.instant()));
+                clears, restored, clock.instant()));
     }
 
     /**
@@ -1013,11 +1022,39 @@ public class Cargo {
     /** 取り消し済みの荷役。同じく再配送を弾く鍵。 */
     private final Set<String> revertedActivities = new HashSet<>();
 
+    /**
+     * 記録した順の荷役（活動 ID と港）。<b>取り消しで現在地を戻すのに要る</b>。
+     *
+     * <p>荷役は取り消せる（US15）。港を 1 つだけ覚えていると、取り消したあとも
+     * その港が現在地に残り、<b>通ってもいない港を「通過済み」と数える</b>
+     * ——その先の寄港地が陸揚げ地の候補から消える（IT15 のレビュー 高）。</p>
+     */
+    private final List<HandlingAtPort> handlingHistory = new java.util.ArrayList<>();
+
+    /** 荷役 1 件（現在地の導出に要る分だけ）。 */
+    private record HandlingAtPort(String activityId, String unLocode) {
+    }
+
+    /**
+     * 現在地を導き直す。<b>取り消されていない最後の荷役の港</b>。
+     *
+     * <p>覚えた値を更新するのではなく導く——どちらの向き（記録・取り消し）でも
+     * 同じ 1 つの規則で決まる。</p>
+     */
+    private void rederiveLastHandlingUnLocode() {
+        this.lastHandlingUnLocode = handlingHistory.stream()
+                .filter(handling -> !revertedActivities.contains(handling.activityId()))
+                .reduce((first, second) -> second)
+                .map(HandlingAtPort::unLocode)
+                .orElse(null);
+    }
+
     @EventSourcingHandler
     void on(HandlingRecordedEvent event) {
         this.recordedActivities.add(event.activityId());
         // **現在地を覚える**（不変条件 9-2 の陸揚げ地の候補に要る）。
-        this.lastHandlingUnLocode = event.unLocode();
+        this.handlingHistory.add(new HandlingAtPort(event.activityId(), event.unLocode()));
+        rederiveLastHandlingUnLocode();
         // 最初の受領で輸送中になる。以降は動かさない。
         if (bookingStatus == BookingStatus.TRACKING_ISSUED) {
             this.bookingStatus = BookingStatus.IN_TRANSIT;
@@ -1035,6 +1072,9 @@ public class Cargo {
     @EventSourcingHandler
     void on(HandlingRevertedEvent event) {
         this.revertedActivities.add(event.activityId());
+        // **現在地も戻す。** 取り消した港が残ると、通ってもいない港を通過済と
+        // 数え、その先の寄港地が陸揚げ地の候補から消える（不変条件 9-2）。
+        rederiveLastHandlingUnLocode();
         if (event.misrouteCleared()) {
             this.routingStatus = RoutingStatus.ROUTED;
             this.misroutedBy = null;

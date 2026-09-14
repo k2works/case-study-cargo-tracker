@@ -13,5 +13,11 @@ public record HandlingRevertedEvent(
         @EventTag(key = "bookingId") String bookingId,
         String activityId,
         boolean misrouteCleared,
+        // 取り消したあとの現在地（取り消されていない最後の荷役の港）。
+        // **投影は履歴を持たない**ので、どこへ戻るのかを集約が載せる
+        // （購読側の投影が作れる分を運ぶ）。荷役が 1 件も残らなければ null。
+        // **この項目より前に積まれたイベントでも null** で、投影はそのとき列を
+        // 触らない——リプレイで壊れない。
+        String restoredUnLocode,
         Instant revertedAt) {
 }

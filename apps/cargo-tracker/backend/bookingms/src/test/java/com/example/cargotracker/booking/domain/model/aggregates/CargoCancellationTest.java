@@ -12,6 +12,7 @@ import com.example.cargotracker.booking.domain.model.events.CancellationRequeste
 import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
 import com.example.cargotracker.booking.domain.model.events.CargoRoutedEvent;
 import com.example.cargotracker.booking.domain.model.events.HandlingRecordedEvent;
+import com.example.cargotracker.booking.domain.model.events.HandlingRevertedEvent;
 import com.example.cargotracker.booking.domain.model.events.TrackingNumberIssuedEvent;
 import com.example.cargotracker.shared.contract.event.CargoCancelledEvent;
 import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
@@ -232,6 +233,30 @@ class CargoCancellationTest {
                 .when().command(new ApproveCancellationCommand(BOOKING, "JPTYO", null,
                         "tracker01"))
                 .then().exception(BusinessRuleViolation.class);
+    }
+
+    @Test
+    @DisplayName("不変条件 9-2: 取り消した荷役の港は現在地に残らない")
+    void forgetsRevertedHandling() {
+        // **荷役は取り消せる**（US15）。取り消したのに現在地が残ると、通っても
+        // いない港を「通過済み」と数え、その先の寄港地が候補から消える
+        // （IT15 のレビュー 高）。取り消したあとの現在地は東京に戻る。
+        fixture.given().event(booked()).event(routed()).event(issued())
+                .event(receivedAtTokyo())
+                .event(new HandlingRecordedEvent(BOOKING, "act-2", "UNLOAD", "SGSIN",
+                        Instant.parse("2026-10-02T01:00:00Z"),
+                        Instant.parse("2026-10-02T01:05:00Z")))
+                .event(new HandlingRevertedEvent(BOOKING, "act-2", false, "JPTYO",
+                        Instant.parse("2026-10-02T02:00:00Z")))
+                .event(new CancellationRequestedEvent(BOOKING, REQUEST, "荷主の発注取消",
+                        "sales01", NOW))
+                // **現在地は東京（受領）に戻る。** シンガポールの荷降しを
+                // 取り消したので、その港はまだ通過していない——東京はいまも
+                // 候補（現在地）である。取り消しを無視すると、シンガポール通過済
+                // として東京が候補から外れ、ここが断られる。
+                .when().command(new ApproveCancellationCommand(BOOKING, "JPTYO", null,
+                        "tracker01"))
+                .then().success();
     }
 
     @Test

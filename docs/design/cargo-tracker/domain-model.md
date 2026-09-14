@@ -582,7 +582,7 @@ CANCELLED --> [*]
 | 7 | `CONFIRMED` 以降は経路設計へ戻せない | `returnToRouting` |
 | 8 | 追跡番号は `CONFIRMED` の予約にだけ発行し、二重に発行しない | `issueTrackingNumber` |
 | 9 | `IN_TRANSIT` のキャンセルは申請 → 承認（陸揚げ地必須）の 2 段階。`DELIVERED` 以降はキャンセル不可——**申請の時点と承認の時点の両方で見る**（申請と判断のあいだに引取が済むことがあり、申請の有無だけを見ると引取済の予約がキャンセルになる。IT15 のレビューで実測）。**却下には掛けない**：却下は「このまま運ぶ」判断で状態を動かさず、掛けると決着しない申請が承認待ちに残り続ける | `requestCancellation` / `approveCancellation` |
-| 9-2 | `CancellationDecision.dischargeLocation` は**現在地（`lastHandling.location`）または旅程の残りの寄港地のいずれか**。旅程に無い港や通過済みの港は指定できない。**「通過済み」は荷降しの済んだ港だけ**——積み港に居ることは、その区間を通ったことではない（東京で受領した貨物にとって東京 → シンガポールはまだ先。積み港も通過済みと数えると次の寄港地が候補から消える。IT15 で実測） | `CancellationDecision.approve` |
+| 9-2 | `CancellationDecision.dischargeLocation` は**現在地（`lastHandling.location`）または旅程の残りの寄港地のいずれか**。**現在地は取り消しで戻る**——取り消した荷役の港が残ると、通ってもいない港を「通過済み」と数え、その先の寄港地が候補から消える。集約は荷役を記録順に覚えて「取り消されていない最後の港」を導き、投影が同じ値を持てるよう `HandlingRevertedEvent` が戻り先を運ぶ（投影は履歴を持たない）。旅程に無い港や通過済みの港は指定できない。**「通過済み」は荷降しの済んだ港だけ**——積み港に居ることは、その区間を通ったことではない（東京で受領した貨物にとって東京 → シンガポールはまだ先。積み港も通過済みと数えると次の寄港地が候補から消える。IT15 で実測） | `CancellationDecision.approve` |
 | 10 | 未決着の `CancellationRequest` は高々 1 件 | `requestCancellation` |
 | 11 | `CANCELLED` の集約は以降のコマンドを拒否する | 全ハンドラ |
 | 11-2 | 貨物仕様・経路仕様を修正できるのは `PRELIMINARY` の予約だけ。修正時も登録時と同じ検査を通す（危険物なら申告、冷凍・冷蔵なら温度管理条件が必須） | `updateSpecification` |

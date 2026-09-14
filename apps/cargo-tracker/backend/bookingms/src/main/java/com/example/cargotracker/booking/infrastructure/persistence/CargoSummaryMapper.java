@@ -53,6 +53,19 @@ public interface CargoSummaryMapper {
             @Param("projectedAt") Instant projectedAt);
 
     /**
+     * 取り消しで現在地を戻す（US15 の取り消し / 不変条件 9-2）。
+     *
+     * <p><b>港だけを書く。</b> 種別・時刻・誤配は取り消しでは決まらない
+     * ——戻る先を知っているのは集約で、イベントが運んでくる。</p>
+     */
+    @org.apache.ibatis.annotations.Update(
+            "UPDATE cargo_summary SET last_handling_unlocode = #{unLocode}, "
+            + "projected_at = #{projectedAt} WHERE booking_id = #{bookingId}")
+    int updateLastHandlingUnLocode(@Param("bookingId") String bookingId,
+            @Param("unLocode") String unLocode,
+            @Param("projectedAt") Instant projectedAt);
+
+    /**
      * 引き渡しの前後で予約の状態を書く（US16 §受入基準 4 / IT11 引き継ぎ枠 A）。
      *
      * <p><b>状態だけを書く。</b> 最後の荷役（引取）は
