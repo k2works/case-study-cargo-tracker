@@ -1,6 +1,8 @@
 # Docs Update Log
 
 ## 2026-09-14
+* **Verification**: [イテレーション 16 計画](/development/cargo-tracker/iteration_plan-16.md) を承認（human:k2works）。status を stable に昇格——**検証済みの計画だけが開発の根拠になる**
+* **Verification**: [iteration_plan-16](/development/cargo-tracker/iteration_plan-16.md) を human:k2works が検証
 * **Creation**: [イテレーション 16 計画](/development/cargo-tracker/iteration_plan-16.md) を作成（claude-code/claude-opus-5）
 * **Update**: Release 3.0（運用と実演・IT16〜IT17・16 SP）をリリース計画と開発戦略に追加（claude-code/claude-opus-5）
 * **Update**: 業務シミュレーションの要件を追加（BUC25・UC23・US33〜US36）。take-7 の US34〜US37 を本プロジェクトの採番と構成に合わせて起票（claude-code/claude-opus-5）
