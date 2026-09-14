@@ -50,10 +50,15 @@ DDD（ドメイン駆動設計）のケーススタディとして、貨物追�
 最短の経路だけ示します。
 
 ```bash
+# 依存ミドルウェア（Axon Server・PostgreSQL）を先に起こす。
+# **Gulp タスクは起こしません**——サービスの起動だけを行います。
+cd apps/cargo-tracker && docker compose up -d && cd ../..
+
 npx gulp dev:help        # 開発タスクの一覧（何ができるかはここで引く）
-npx gulp dev:backend     # 依存ミドルウェアを起こして bookingms を起動
+npx gulp dev:backend     # bookingms を起動（個別は dev:backend:<service>）
 npx gulp dev:frontend    # フロントエンド開発サーバー
-npx gulp k8s:setup       # kind クラスタに一式を配って起動する
+
+npx gulp k8s:setup       # kind クラスタに一式を配って起動する（compose は要りません）
 ```
 
 ### 読む

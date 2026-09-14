@@ -1538,18 +1538,22 @@ test.describe('マニュアルの画面キャプチャ', () => {
         contentType: 'application/json',
         body: JSON.stringify({
           items: [{
-            requestId: 'cr-1',
+            requestId: 'cr-0',
             bookingId: SAMPLE_ROUTED_BOOKING.bookingId,
             bookingNumber: SAMPLE_ROUTED_BOOKING.bookingNumber,
-            productName: '精密機器',
-            reason: '荷主の発注取消',
+            // **同じ予約の話として読めるように、予約の品名と揃える。**
+            productName: '自動車部品',
+            reason: '荷主が出荷日を延期したい',
             requestedBy: 'sales02',
-            requestedAt: '2026-09-28T01:00:00Z',
-            decision: null,
-            decisionLabel: null,
-            decidedBy: null,
-            decidedAt: null,
-            decisionReason: null,
+            requestedAt: '2026-09-20T01:00:00Z',
+            // **判断済みにする。** 承認待ちだと申請の欄そのものが隠れ、本文が
+            // 説明する「理由」と `[キャンセル（要承認）]` が 1 つも写らない
+            // （IT15 のレビュー 高）。履歴と入口を同じ 1 枚に収める。
+            decision: 'REJECTED',
+            decisionLabel: '却下',
+            decidedBy: 'tracker01',
+            decidedAt: '2026-09-21T02:00:00Z',
+            decisionReason: 'すでに荷受人が手配済みです',
             dischargeUnLocode: null,
           }],
         }),
@@ -1560,11 +1564,13 @@ test.describe('マニュアルの画面キャプチャ', () => {
 
     await expect(page.getByRole('heading', { name: 'キャンセル' })).toBeVisible();
     await expect(page.getByText(/輸送中の予約は/)).toBeVisible();
-    await expect(page.getByText('承認待ちの申請があります。判断されるまで、新しい申請は出せません。'))
-      .toBeVisible();
-    await expect(page.getByText(/荷主の発注取消/)).toBeVisible();
-    await expect(page.getByTestId('cancellation-history-cr-1'))
-      .toContainText('承認待ち');
+    // **本文が説明する要素ごとに確かめる。** 理由欄とボタンが写らないと、
+    // 「理由は必須」「輸送中は要承認」を画像が支えない。
+    await expect(page.getByLabel('理由')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'キャンセル（要承認）' })).toBeVisible();
+    // 履歴（誰が・いつ・なぜ・どう判断したか）も同じ 1 枚に収める。
+    await expect(page.getByTestId('cancellation-history-cr-0'))
+      .toContainText('すでに荷受人が手配済みです');
     await page.screenshot({ path: `${OUT}/19-S22-cancellation-panel.png`, fullPage: true });
   });
 
@@ -1580,7 +1586,8 @@ test.describe('マニュアルの画面キャプチャ', () => {
             requestId: 'cr-1',
             bookingId: SAMPLE_ROUTED_BOOKING.bookingId,
             bookingNumber: SAMPLE_ROUTED_BOOKING.bookingNumber,
-            productName: '精密機器',
+            // **同じ予約の話として読めるように、予約の品名と揃える。**
+            productName: '自動車部品',
             reason: '荷主の発注取消',
             requestedBy: 'sales02',
             requestedAt: '2026-09-28T01:00:00Z',
@@ -1612,6 +1619,10 @@ test.describe('マニュアルの画面キャプチャ', () => {
     await expect(page.getByLabel('陸揚げ地')).toBeVisible();
     await expect(page.getByText('現在地または残りの寄港地から選びます。')).toBeVisible();
     await expect(page.getByRole('option', { name: 'SGSIN（現在地）' })).toBeAttached();
+    // **選んだ状態で撮る。** 「選んでください」のままだと、本文がいちばん
+    // 説明している陸揚げ地の候補が 1 件も写らない（IT15 のレビュー 中）。
+    await page.getByLabel('陸揚げ地').selectOption('USNYC');
+    await page.getByLabel('理由', { exact: true }).fill('荷主の指定倉庫が近い');
     await page.screenshot({ path: `${OUT}/19-S23-cancellation-worklist.png`, fullPage: true });
   });
 
