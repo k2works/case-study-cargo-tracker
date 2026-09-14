@@ -1,6 +1,8 @@
 # Docs Update Log
 
 ## 2026-09-14
+* **Creation**: [イテレーション 16 計画](/development/cargo-tracker/iteration_plan-16.md) を作成（claude-code/claude-opus-5）
+* **Update**: Release 3.0（運用と実演・IT16〜IT17・16 SP）をリリース計画と開発戦略に追加（claude-code/claude-opus-5）
 * **Update**: 業務シミュレーションの要件を追加（BUC25・UC23・US33〜US36）。take-7 の US34〜US37 を本プロジェクトの採番と構成に合わせて起票（claude-code/claude-opus-5）
 * **Verification**: [15-誤配を検知して経路を組み直す](/manual/15-誤配を検知して経路を組み直す.md) を human:k2works が検証
 * **Verification**: [14-引取と例外を扱う](/manual/14-引取と例外を扱う.md) を human:k2works が検証
