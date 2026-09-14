@@ -23,6 +23,8 @@ import { CustomsDetailPage } from '@/features/customs/CustomsDetailPage';
 import { CancellationWorklistPage } from '@/features/bookings/CancellationWorklistPage';
 import { AdminUserListPage } from '@/features/admin/AdminUserListPage';
 import { DeadLetterListPage } from '@/features/admin/DeadLetterListPage';
+import { SimulationListPage } from '@/features/simulation/SimulationListPage';
+import { SimulationRunPage } from '@/features/simulation/SimulationRunPage';
 import { BookingListPage } from '@/features/bookings/BookingListPage';
 import { BookingRegisterPage } from '@/features/bookings/BookingRegisterPage';
 import { BookingDetailPage } from '@/features/bookings/BookingDetailPage';
@@ -69,6 +71,7 @@ export const PAGES: Record<string, ReactElement> = {
   '/bookings/cancellations': <CancellationWorklistPage />,
   '/admin/users': <AdminUserListPage />,
   '/admin/dead-letters': <DeadLetterListPage />,
+  '/admin/simulations': <SimulationListPage />,
 };
 
 export function AppRoutes() {
@@ -137,6 +140,16 @@ export function AppRoutes() {
           element={
             <RequireRole allow={['ROLE_SALES']}>
               <BookingEditPage />
+            </RequireRole>
+          }
+        />
+        {/* 実行結果（S93）は S92 の一覧から開く。ナビには載せない
+            （実行ごとの画面なので、行き先の無い項目になる）。管理者だけ。 */}
+        <Route
+          path="/admin/simulations/:runId"
+          element={
+            <RequireRole allow={['ROLE_ADMIN']}>
+              <SimulationRunPage />
             </RequireRole>
           }
         />
