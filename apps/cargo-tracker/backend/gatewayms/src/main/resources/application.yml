@@ -33,6 +33,11 @@ spring.cloud.gateway.server.webmvc.routes:
   - id: billing
     uri: ${BILLINGMS_URI:http://localhost:8086}
     predicates: [Path=/api/v1/billing/**]
+  # 業務シミュレーション（UC23 / [ADR-0020]）。**管理者だけ**が使う。
+  # simulationms 自身も工程を Gateway 経由で叩くので、ここを通って戻ってくる。
+  - id: simulation
+    uri: ${SIMULATIONMS_URI:http://localhost:8087}
+    predicates: [Path=/api/v1/simulation/**]
 
 management:
   endpoints:

@@ -28,13 +28,16 @@ export const SERVICES = [
   'trackingms',
   'handlingms',
   'billingms',
+  // 業務そのものではなく「業務が成立していることを確かめる手段」（[ADR-0020]）。
+  // 起動の仕方は他と同じなので、同じ一覧に置く。
+  'simulationms',
 ];
 
 /**
- * JIG の対象サブプロジェクト数（業務 8 + テスト専用 2）。
+ * JIG の対象サブプロジェクト数（業務 9 + テスト専用 2）。
  * jigReports は全サブプロジェクトに登録されるため、テスト専用の 2 つも出力される。
  */
-const JIG_MODULE_COUNT = 10;
+const JIG_MODULE_COUNT = 11;
 
 /**
  * ポータルに載せる JIG の対象。
@@ -132,7 +135,7 @@ const gradle = (args, extraEnv = {}) => {
  * 分割フルビルドの単位。
  *
  * <p><b>この環境は 10 分を超える Gradle を完走させない。</b> 通しの `build` は
- * 必ず途中で殺されるので、依存の順に 5 つへ割って 1 群ずつ回す。順序は
+ * 必ず途中で殺されるので、依存の順に 6 つへ割って 1 群ずつ回す。順序は
  * `settings.gradle.kts` の依存方向——`shared` が全 BC の土台で、テスト専用の
  * 2 つは全サービスを参照するので最後に置く。</p>
  */
@@ -141,7 +144,8 @@ export const BUILD_GROUPS = [
   ['authms', 'gatewayms'],
   ['bookingms', 'routingms'],
   ['trackingms', 'handlingms'],
-  ['billingms', 'contract-tests', 'acceptance-tests'],
+  ['billingms', 'simulationms'],
+  ['contract-tests', 'acceptance-tests'],
 ];
 const npmRun = (args) => run('npm', args, FRONTEND_DIR);
 
@@ -317,7 +321,7 @@ export default function (gulp) {
     dev:backend:tdd            TDD モード（テスト自動再実行）
     dev:backend:check          Checkstyle + SpotBugs
     dev:backend:full           フルビルド（ArchUnit とカバレッジ閾値を含む）
-    dev:backend:full:split     分割フルビルド（TZ=UTC・5 群。10 分超が完走しない環境用）
+    dev:backend:full:split     分割フルビルド（TZ=UTC・6 群。10 分超が完走しない環境用）
     dev:backend:one            1 モジュールのテストを名前で絞って回す（--module / --tests）
     dev:backend:guard          走っている Gradle があるかを見るだけ
 

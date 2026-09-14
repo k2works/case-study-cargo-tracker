@@ -77,6 +77,11 @@ public final class RoleAuthorization {
         // 業務の担当者には打つ手が無い——原因を直すのは開発と運用で、一覧は
         // 「投影が止まっている」ことに画面から気づくためのものである。
         // **/booking/** などの広い宣言より先に置く**（後ろだと吸われる）。
+        // 業務シミュレーション（UC23 / [ADR-0020]）。**管理者だけ**——実データに
+        // 紛れる貨物を作れる操作で、実行結果には他の利用者の識別子も並ぶ。
+        rules.put("/api/v1/simulation/**", Set.of(ADMIN));
+        rules.put("/api/v1/simulation", Set.of(ADMIN));
+
         rules.put("/api/v1/booking/dead-letters/**", Set.of(ADMIN));
         rules.put("/api/v1/booking/dead-letters", Set.of(ADMIN));
         rules.put("/api/v1/routing/dead-letters/**", Set.of(ADMIN));

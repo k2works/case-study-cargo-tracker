@@ -93,6 +93,7 @@ bi --> bidb
 | trackingms | `tracking_read_db` | 投影 + 受け皿 + Axon 管理 | `tracking_summary`, `tracking_event`, `tracking_exception`, `attention_item`, `token_entry`, `dead_letter_entry` |
 | handlingms | `handling_read_db` | 投影 + Axon 管理 | `cargo_snapshot`, `cargo_snapshot_leg`, `handling_activity`, `customs_declaration`, `customs_status_history`, `token_entry`, `dead_letter_entry` |
 | billingms | `billing_read_db` | 投影 + 受け皿 + Axon 管理 | `invoice`, `invoice_line_item`, `payment`, `invoice_notification`, `booking_quotation`, `shipper_contract_snapshot`, **`billing_cargo_snapshot`**, **`billing_cargo_leg`**, `attention_item`, `token_entry`, `dead_letter_entry` |
+| simulationms | `simulation_read_db` | **投影ではない**（[ADR-0020] 決定 3。Event Sourcing を適用しない） | `simulation_run`, `simulation_step` |
 
 `location` のマスタは各 DB に置きません。UN/LOCODE は共有カーネルの値オブジェクトであり、港名の表示に要る対応表は `shared` のリソース（CSV）から読みます。マスタを各 DB に複製すると更新の同期が要ります。
 

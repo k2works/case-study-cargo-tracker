@@ -12,7 +12,7 @@ verified:
 
 # ADR-0001 CQRS / Event Sourcing を Axon Framework 5 でマイクロサービスとして実装する
 
-国際貨物輸送管理システム（Cargo Tracker）の `java/take-8` を、Axon Framework 5 による CQRS + Event Sourcing で、**BC ごとに独立デプロイするマイクロサービス（7 サービス + Gateway + 共有ライブラリ）** として実装する。
+国際貨物輸送管理システム（Cargo Tracker）の `java/take-8` を、Axon Framework 5 による CQRS + Event Sourcing で、**BC ごとに独立デプロイするマイクロサービス（7 サービス + Gateway + 共有ライブラリ）** として実装する。**IT16 で 1 つ増えて 8 サービス + Gateway になった**——`simulationms` は業務ではなく「業務が成立していることを確かめる手段」だが、デプロイ単位としては同じ扱いにする（[ADR-0020](0020-simulation-is-a-driver-not-an-event-sourced-context.md)）。Event Sourcing は適用しない。
 
 日付: 2026-09-02
 
@@ -243,7 +243,7 @@ IT1 の集約（`Shipper`）は登録しかせず、**イベント列から復�
 
 | 決定 | 検査 |
 | :--- | :--- |
-| サービス分割 | `settings.gradle` の `include` から**テスト専用サブプロジェクト（`contract-tests`・`acceptance-tests`）を除いたもの**が上の 8 つと一致すること |
+| サービス分割 | `settings.gradle` の `include` から**テスト専用サブプロジェクト（`contract-tests`・`acceptance-tests`）を除いたもの**が名簿と一致すること（`BuildConventionTest`）。**IT16 で `simulationms` を足して 9 つ**（shared + 8 サービス）。**名簿を直す前に ADR を改訂する**——検査のメッセージもそう促す |
 | サービス間は Axon Server だけ | ビルド：`BuildConventionTest#servicesDoNotDependOnEachOther`。ArchUnit：`aclDoesNotUseHttpClients` はパッケージで禁じる（`RestTemplate` / `RestClient` の名簿方式だと `WebClient` や `java.net.http` が素通りする） |
 | 共有カーネルの範囲 | ArchUnit：`SharedKernelScopeTest`。置けるパッケージの名簿を固定し、名簿を狭めると赤になること・`shared` が空でないことも併せて検査する（空なら「守っている」でなく「調べていない」で緑になる）。**IT2 で 2 つ足した**：`domain.location`（`Location` / `UnLocode` / `CountryCode`。全 BC が同じ意味で使い、輸出免税の判定にも国コードを使う）と `infrastructure.crypto`（crypto-shredding の変換。契約イベントを読む側も同じ変換が要る。[ADR-0003](0003-crypto-shredding-for-personal-data.md) 決定 1） 。**IT4 で 1 つ足した**：`domain.attention`（`AttentionItemId`。要確認一覧の識別子を採番せず事実から導く。IT2 の修正では導出が bookingms と routingms に 1 本ずつ書かれ、区切り文字が食い違ったまま残っていた。同じ表に同じ意味で書く値なので、片方だけ直せる場所に置くと次に直す人が食い違いに気づけない）。**IT13 で 1 つ足した**：`domain.calendar`（`HolidayCalendar`。留置の営業日数は handlingms の画面と billingms の請求（US21 の調整根拠）が同じ値を出さなければならない。移す条件は `domain-model.md` の要素表が「billingms が保管料を数え始めたら、そのとき移す」と書いており、US21 でそれが満たされた。[ADR-0015](0015-business-day-counting-lives-in-the-shared-kernel.md)） |
 | 契約の名簿 | `ContractEventGoldenTest`：名簿は `shared/contract/event` を**走査して導出**し、ゴールデンが無い契約と、検査していないゴールデンの両方を赤にする。手書きの名簿にすると、契約を足して書き忘れたものが素通りする |

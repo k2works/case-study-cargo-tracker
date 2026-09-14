@@ -227,6 +227,24 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
+    @DisplayName("業務シミュレーションは管理者だけに開く（UC23 / [ADR-0020]）")
+    void restrictsSimulationToAdmin() throws Exception {
+        // **実データに紛れる貨物を作れる操作である。** 誰でも叩けると、業務の
+        // 一覧に見慣れない予約が並ぶ。読むのも管理者だけ——実行結果には他の
+        // 利用者の識別子が並ぶ。
+        String path = "/api/v1/simulation/runs";
+        for (String role : java.util.List.of("ROLE_SALES", "ROLE_ROUTING",
+                "ROLE_TRACKER", "ROLE_ACCOUNTANT", "ROLE_HANDLER", "ROLE_SHIPPER")) {
+            assertThat(run(path, "Bearer " + tokenWithRoles(role)).getStatus())
+                    .as(role + " に業務シミュレーションを開いてはいけない")
+                    .isEqualTo(403);
+        }
+        assertThat(run(path, "Bearer " + tokenWithRoles("ROLE_ADMIN")).getStatus())
+                .as("管理者は自分の仕事の入口を開けなければならない")
+                .isNotEqualTo(403);
+    }
+
+    @Test
     @DisplayName("予約の修正は営業だけに開く（US32）")
     void restrictsBookingUpdateToSales() throws Exception {
         // /bookings/** は営業・経路設計・追跡に開いている。修正はそのうち営業だけ。

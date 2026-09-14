@@ -26,6 +26,8 @@ const SERVICES = {
   trackingms: 8084,
   handlingms: 8085,
   billingms: 8086,
+  // 業務そのものではなく「業務が成立していることを確かめる手段」（[ADR-0020]）。
+  simulationms: 8087,
 };
 
 function sh(command, options = {}) {

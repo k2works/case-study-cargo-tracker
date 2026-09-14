@@ -28,7 +28,10 @@ class BuildConventionTest {
     /** 業務サブプロジェクト。テスト専用（contract-tests・acceptance-tests）は数えない。 */
     private static final List<String> BUSINESS_PROJECTS = List.of(
             "shared", "gatewayms", "authms", "bookingms",
-            "routingms", "trackingms", "handlingms", "billingms");
+            "routingms", "trackingms", "handlingms", "billingms",
+            // 業務そのものではなく「業務が成立していることを確かめる手段」
+            // （[ADR-0020]）。デプロイ単位としては同じ扱いにする。
+            "simulationms");
 
     private static final List<String> TEST_ONLY_PROJECTS = List.of("contract-tests", "acceptance-tests");
 
@@ -48,7 +51,7 @@ class BuildConventionTest {
     }
 
     @Test
-    @DisplayName("ADR-0001 決定 1: 業務サブプロジェクトはテスト専用を除いて 8 つで、名簿と一致する")
+    @DisplayName("ADR-0001 決定 1: 業務サブプロジェクトはテスト専用を除いて 9 つで、名簿と一致する")
     void businessProjectsMatchTheRoster() throws IOException {
         List<String> business = includedProjects().stream()
                 .filter(p -> !TEST_ONLY_PROJECTS.contains(p))

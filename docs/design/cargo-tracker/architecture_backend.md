@@ -62,7 +62,7 @@ verified:
 | ドメインモデル | 全サービス | 業務ルールを集約に置く（参照元と同じ） |
 | ポートとアダプター（ヘキサゴナル） | 全サービス | ドメインを Spring / Axon / MyBatis から切り離す |
 | CQRS | 全サービス | コマンド側は集約、クエリ側は投影テーブルの MyBatis |
-| Event Sourcing | bookingms・routingms・trackingms・handlingms・billingms | 履歴と監査が要る集約。**authms と共有カーネルには適用しない** |
+| Event Sourcing | bookingms・routingms・trackingms・handlingms・billingms | 履歴と監査が要る集約。**authms・simulationms・共有カーネルには適用しない** |
 | Reaction Handler（調整役） | bookingms（予約〜追跡開始）、billingms（配送完了〜精算） | 複数サービスにまたがる業務連鎖を調整する。**Axon 5 に Saga が無い**ため、連鎖の段数ぶん Reaction Handler を並べ、途中経過が要る場合はその BC の集約か専用の投影テーブルに持つ（ADR-0001 決定 6） |
 | マイクロサービス | 配置 | BC ごとに独立デプロイ。Database per Service。サービス間は Axon Server 経由のメッセージだけ |
 
@@ -74,6 +74,7 @@ verified:
 | RabbitMQ / Kafka | Axon Server が Event Store と Event Bus を兼ねる。外部システムへ出す必要が生じた時点で ADR を起こす |
 | JPA / Hibernate | 参照元 2 つが ADR で退けた判断を維持する。Read Model は MyBatis の SQL で画面ごとに最適化する |
 | authms の Event Sourcing | ユーザーとロックは現在状態だけが業務に要る。履歴は監査ログテーブルで足りる |
+| simulationms の Event Sourcing | 実行の記録は業務の事実ではなく、監査もリプレイも要らない。加えて**実行は長く走る処理**で、コマンドで刻むと**コマンドバスをログとして使う**形になる（[ADR-0020] 決定 3） |
 | Axon Server Enterprise | 単一ノードで学習目標を満たす。可用性要件は `non_functional.md` で扱い、必要なら再評価する |
 | ローカル用の `subscribing` モード | take-4 ADR-0008 が一時的に許し、ADR-0009 で構成不全の発見を遅らせた。全環境で `pooled`（`PooledStreamingEventProcessor`）にする |
 | 投影からのコマンド送信 | 投影は SQL に写すだけにする。イベントを受けてコマンドを送る役割は `application/reaction` の Reaction Handler に置き、投影とは別の Processing Group にする（リプレイでコマンドが再送されない） |
