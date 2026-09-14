@@ -1,6 +1,7 @@
 # Docs Update Log
 
 ## 2026-09-14
+* **Update**: 業務シミュレーションの要件を追加（BUC25・UC23・US33〜US36）。take-7 の US34〜US37 を本プロジェクトの採番と構成に合わせて起票（claude-code/claude-opus-5）
 * **Verification**: [15-誤配を検知して経路を組み直す](/manual/15-誤配を検知して経路を組み直す.md) を human:k2works が検証
 * **Verification**: [14-引取と例外を扱う](/manual/14-引取と例外を扱う.md) を human:k2works が検証
 * **Verification**: [13-荷役作業を記録する](/manual/13-荷役作業を記録する.md) を human:k2works が検証
