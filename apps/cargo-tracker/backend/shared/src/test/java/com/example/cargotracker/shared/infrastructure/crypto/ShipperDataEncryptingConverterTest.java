@@ -57,6 +57,24 @@ class ShipperDataEncryptingConverterTest {
     }
 
     @Test
+    @DisplayName("暗号化しない項目を落とさない（組み直しで既定値に潰さない）")
+    void keepsEveryNonPersonalField() {
+        // **組み直す変換は、運ぶ項目を数え落とす。** シミュレーション由来の印は
+        // 暗号化の対象ではないのに、ここで落ちると読み口まで届かない
+        //（IT16 の往復テストで実測。単体では誰も見ていなかった）。
+        ShipperRegisteredEvent simulated = new ShipperRegisteredEvent("SHP-000002",
+                "INDIVIDUAL", "試験商事", "sim@example.com", "03-2222-2222", "東京都港区",
+                null, null, true);
+
+        byte[] serialized = converter.convert(simulated, byte[].class);
+        ShipperRegisteredEvent restored =
+                converter.convert(serialized, ShipperRegisteredEvent.class);
+
+        assertThat(restored.simulated()).isTrue();
+        assertThat(restored).isEqualTo(simulated);
+    }
+
+    @Test
     @DisplayName("読み戻すと平文に戻る")
     void roundTrips() {
         byte[] serialized = converter.convert(plaintextEvent(), byte[].class);

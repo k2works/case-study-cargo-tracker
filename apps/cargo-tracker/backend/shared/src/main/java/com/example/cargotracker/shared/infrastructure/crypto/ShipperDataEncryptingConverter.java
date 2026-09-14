@@ -50,7 +50,11 @@ public class ShipperDataEncryptingConverter implements Converter {
                 cipher.encrypt(id, e.email()),
                 cipher.encrypt(id, e.phone()),
                 cipher.encrypt(id, e.address()),
-                e.contractNumber(), e.discountRate(), false);
+                e.contractNumber(), e.discountRate(),
+                // **組み直す項目は 1 つ残らず運ぶ。** ここで落とすと、
+                // 暗号化しない項目まで既定値に潰れる——印は載っているのに
+                // 読み口へ届かない（IT16 の往復テストで実測）。
+                e.simulated());
     }
 
     private ShipperRegisteredEvent decrypt(ShipperRegisteredEvent e) {
@@ -60,7 +64,7 @@ public class ShipperDataEncryptingConverter implements Converter {
                 cipher.decrypt(id, e.email()),
                 cipher.decrypt(id, e.phone()),
                 cipher.decrypt(id, e.address()),
-                e.contractNumber(), e.discountRate(), false);
+                e.contractNumber(), e.discountRate(), e.simulated());
     }
 
     @Override
