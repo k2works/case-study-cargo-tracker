@@ -1,5 +1,15 @@
 # Docs Update Log
 
+## 2026-09-14
+* **Creation**: [19 キャンセルを申請して承認する](/manual/19-キャンセルを申請して承認する.md) を新設（claude-code/claude-opus-5）
+* **Creation**: [IT15 実装レビュー](/review/cargo-tracker/IT15実装_review_20260914.md) を作成（claude-code/claude-opus-5）
+* **Creation**: [イテレーション 15 ふりかえり](/development/cargo-tracker/retrospective-15.md) を作成（claude-code/claude-opus-5）
+* **Creation**: [イテレーション 15 完了報告書](/development/cargo-tracker/iteration_report-15.md) を作成（claude-code/claude-opus-5）
+* **Update**: マニュアル 12・13・17 章にキャンセルの節を追記（claude-code/claude-opus-5）
+* **Update**: 正典（domain-model・data-model）に不変条件 9・9-2 とキャンセル料の受け皿を反映（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md)・開発 index・docs index・mkdocs.yml を IT15 の実績で同期（claude-code/claude-opus-5）
+* **Update**: README にアプリケーションの入口と実行手順を追加（claude-code/claude-opus-5）
+
 ## 2026-09-13
 * **Update**: [iteration_plan-15](/development/cargo-tracker/iteration_plan-15.md) を更新（claude-code/claude-opus-5）
 * **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
