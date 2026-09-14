@@ -113,4 +113,33 @@ class SimulationRunTest {
                 .isInstanceOf(BusinessRuleViolation.class)
                 .hasMessageContaining("実行した人");
     }
+
+    @Test
+    @DisplayName("予期しない中断でも実行は決着する（実行中のまま残さない）")
+    void abortsWithoutRecordingAStep() {
+        // **決着しない実行は、そのシナリオを二度と流せなくする。** 二重実行の守りは
+        // 「RUNNING が 1 本」なので、掴んだまま離さない実行が 1 本あれば十分である。
+        SimulationRun run = started();
+        run.recordSuccess(StepKind.REGISTER_SHIPPER, Duration.ofMillis(5), "SHP-1", NOW);
+
+        run.abort(NOW);
+
+        assertThat(run.status()).isEqualTo(RunStatus.FAILED);
+        assertThat(run.finishedAt()).isEqualTo(NOW);
+        // **それまでの記録は消さない**（US34 §受入基準 3）。
+        assertThat(run.recordedSteps()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("終わった実行は中断で上書きしない")
+    void doesNotAbortFinishedRun() {
+        SimulationRun run = started();
+        for (StepKind kind : Scenario.STANDARD.steps()) {
+            run.recordSuccess(kind, Duration.ofMillis(5), null, NOW);
+        }
+
+        run.abort(NOW.plusSeconds(1));
+
+        assertThat(run.status()).isEqualTo(RunStatus.SUCCEEDED);
+    }
 }

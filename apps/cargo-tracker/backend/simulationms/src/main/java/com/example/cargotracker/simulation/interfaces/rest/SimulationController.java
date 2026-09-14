@@ -1,9 +1,7 @@
 package com.example.cargotracker.simulation.interfaces.rest;
 
-import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
-import com.example.cargotracker.shared.domain.error.IllegalTransition;
-import com.example.cargotracker.simulation.infrastructure.config.SimulationProperties;
-import com.example.cargotracker.simulation.infrastructure.persistence.SimulationRunMapper;
+import com.example.cargotracker.simulation.application.SimulationService;
+import com.example.cargotracker.simulation.domain.model.valueobjects.Scenario;
 import com.example.cargotracker.simulation.infrastructure.query.SimulationQueries;
 import com.example.cargotracker.simulation.infrastructure.query.SimulationQueryHandler;
 import jakarta.validation.constraints.NotBlank;
@@ -30,14 +28,12 @@ public class SimulationController {
     private static final int RECENT_LIMIT = 50;
 
     private final SimulationQueryHandler queries;
-    private final SimulationRunMapper runs;
-    private final SimulationProperties properties;
+    private final SimulationService simulations;
 
-    public SimulationController(SimulationQueryHandler queries, SimulationRunMapper runs,
-            SimulationProperties properties) {
+    public SimulationController(SimulationQueryHandler queries,
+            SimulationService simulations) {
         this.queries = queries;
-        this.runs = runs;
-        this.properties = properties;
+        this.simulations = simulations;
     }
 
     /**
@@ -52,21 +48,12 @@ public class SimulationController {
     public ResponseEntity<StartedRun> start(
             @RequestHeader(value = "X-Auth-Username", required = false) String username,
             @jakarta.validation.Valid @RequestBody StartRequest request) {
-        if (!properties.enabled()) {
-            throw new BusinessRuleViolation(
-                    "この環境では業務シミュレーションを実行できません"
-                            + "（実データに紛れる貨物を作らないため）");
-        }
-        var scenario = com.example.cargotracker.simulation.domain.model.valueobjects.Scenario
-                .of(request.scenario());
-        var running = runs.findRunning(scenario.name());
-        if (running != null) {
-            throw new IllegalTransition("シナリオ「" + scenario.label()
-                    + "」は実行中です（実行 " + running.runId() + "）。"
-                    + "その結果を開いてください");
-        }
-        throw new UnsupportedOperationException(
-                "実行の開始は T9 の次で配線する（読み口と入口を先に置く）");
+        // **断りの判断はここに書き直さない。** 本番かどうかも二重実行かも
+        // application が持つ——2 か所に書くと、片方だけ直したときに食い違う。
+        String runId = simulations.start(Scenario.of(request.scenario()), username);
+        return ResponseEntity
+                .created(java.net.URI.create("/api/v1/simulation/runs/" + runId))
+                .body(new StartedRun(runId));
     }
 
     /** 実行の一覧（S92 / US34 §受入基準 4）。 */

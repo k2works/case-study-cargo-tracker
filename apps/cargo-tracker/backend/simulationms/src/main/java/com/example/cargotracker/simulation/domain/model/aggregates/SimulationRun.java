@@ -87,6 +87,23 @@ public final class SimulationRun {
         this.finishedAt = occurredAt;
     }
 
+    /**
+     * 工程を記録できないまま終わった。
+     *
+     * <p><b>実行中のまま残さない。</b> 二重実行の守りは「同じシナリオの RUNNING は
+     * 1 本」なので、決着しない実行が 1 本あるだけでそのシナリオは二度と流せなくなる。</p>
+     *
+     * <p><b>終わった実行は上書きしない。</b> 成功した実行を「中断」に書き換えると、
+     * 記録のほうが事実と食い違う。</p>
+     */
+    public void abort(Instant occurredAt) {
+        if (status.isFinished()) {
+            return;
+        }
+        this.status = RunStatus.FAILED;
+        this.finishedAt = occurredAt;
+    }
+
     private void record(RecordedStep step) {
         recordedSteps.add(step);
     }

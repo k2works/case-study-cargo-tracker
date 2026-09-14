@@ -35,13 +35,34 @@ public class SimulationRunner {
     private final ChainReadiness readiness;
     private final Sleeper sleeper;
     private final Clock clock;
+    private final StepListener listener;
 
     public SimulationRunner(BusinessApi api, ChainReadiness readiness, Sleeper sleeper,
             Clock clock) {
+        this(api, readiness, sleeper, clock, (run, step) -> { });
+    }
+
+    public SimulationRunner(BusinessApi api, ChainReadiness readiness, Sleeper sleeper,
+            Clock clock, StepListener listener) {
         this.api = api;
         this.readiness = readiness;
         this.sleeper = sleeper;
         this.clock = clock;
+        this.listener = listener;
+    }
+
+    /**
+     * 工程を 1 件記録したときに呼ばれる。
+     *
+     * <p><b>終わってからまとめて書かない。</b> 標準シナリオは 13 工程あり、
+     * 最後まで走るのに数十秒かかる——そのあいだ画面が何も出せないと、
+     * 「どこまで進んだか」を見るための US34 が実行中には使えない。</p>
+     */
+    @FunctionalInterface
+    public interface StepListener {
+
+        /** 記録された。 */
+        void recorded(SimulationRun run, SimulationRun.RecordedStep step);
     }
 
     /**
@@ -91,6 +112,7 @@ public class SimulationRunner {
             if (!result.succeeded()) {
                 run.recordFailure(kind, elapsed, result.failureStatus(),
                         result.failureMessage(), clock.instant());
+                notifyLast(run);
                 // **以降は実行しない。** 止まったあとに業務データを増やさない。
                 return;
             }
@@ -106,9 +128,27 @@ public class SimulationRunner {
                                 + " 秒待ちました）。連鎖が止まっているか、"
                                 + "待ちの宣言が実際の読み口と食い違っています",
                         clock.instant());
+                notifyLast(run);
                 return;
             }
             run.recordSuccess(kind, elapsed, result.producedId(), clock.instant());
+            notifyLast(run);
+        }
+    }
+
+    /**
+     * 直前に記録した工程を知らせる。
+     *
+     * <p><b>知らせに失敗しても実行を落とさない。</b> 記録の書き出しが 1 度
+     * 失敗しても、業務の連鎖そのものは進んでいる——落とすと、進んだのに
+     * 「中断」として残る。</p>
+     */
+    private void notifyLast(SimulationRun run) {
+        var steps = run.recordedSteps();
+        try {
+            listener.recorded(run, steps.get(steps.size() - 1));
+        } catch (RuntimeException e) {
+            log.warn("工程の書き出しに失敗した: runId={}", run.runId(), e);
         }
     }
 
