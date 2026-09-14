@@ -52,6 +52,11 @@ describe('ロール別の到達性', () => {
    */
   const OPEN_WITHOUT_NAV: ReadonlyArray<readonly [Role, string]> = [
     ['ROLE_ACCOUNTANT', '/tracking/exceptions'],
+    // 業務シミュレーションの実行結果（S93）が「作られたものから業務画面へ
+    // 行ける」ことを約束している（US34 §受入基準 5）。**毎日の入口ではない**
+    // ので管理者のナビには出さないが、指された先は開けなければならない。
+    ['ROLE_ADMIN', '/tracking'],
+    ['ROLE_ADMIN', '/invoices'],
   ];
 
   it.each(ROLES)('%s: ナビに出ない画面は 403 になる（理由を書いたものを除く）', (role) => {
@@ -140,9 +145,13 @@ describe('一覧から開く画面（ナビに載せない）', () => {
   // 経理宛に出すので、開けないと**気づいた先が行き止まり**になる。正典の画面遷移
   // （ui_design.md）も S70 → S22 を経理の導線として書いている。一覧（/bookings）の
   // ナビには出さない——経理の仕事は予約を探すことではなく、指された予約を見ること。
+  //
+  // **管理者も参照だけ開く**（IT16）。業務シミュレーションの実行結果（S93）が
+  // 「作られたものから業務画面へ行ける」ことを約束しているので、開けないと
+  // そこが行き止まりになる（クラスタで実際に踏んだ）。
   const DETAIL_PATH = '/bookings/b-1';
   const ALLOWED: readonly Role[] = [
-    'ROLE_SALES', 'ROLE_ROUTING', 'ROLE_TRACKER', 'ROLE_ACCOUNTANT'];
+    'ROLE_SALES', 'ROLE_ROUTING', 'ROLE_TRACKER', 'ROLE_ACCOUNTANT', 'ROLE_ADMIN'];
 
   it.each(ALLOWED)('%s: 予約詳細を開ける', (role) => {
     loginAs([role]);

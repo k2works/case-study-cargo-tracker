@@ -47,4 +47,46 @@ class RoleAuthorizationDeclarationTest {
                     .hasSizeLessThan(4);
         }
     }
+
+    @Test
+    @DisplayName("US34 §5: 管理者は実行結果が指す業務画面を読める（行き止まりにしない）")
+    void administratorCanReadWhatTheSimulationProduced() {
+        // **「作られたものから業務画面へ行ける」は、行けることを確かめないと守れない。**
+        // 実行結果（S93）は予約番号・追跡番号・請求番号からリンクを出すのに、
+        // 管理者がその先を開けず 403 になっていた（IT16 のクラスタ E2E で実測）。
+        var destinations = java.util.List.of(
+                "/api/v1/booking/bookings/55555555-5555-5555-5555-555555555555",
+                "/api/v1/tracking/trackings/TRK-0000000001",
+                "/api/v1/billing/invoices/INV-0000000001");
+
+        for (String path : destinations) {
+            assertThat(RoleAuthorization.isAllowed("GET", path,
+                    java.util.List.of("ROLE_ADMIN")))
+                    .as(path + " を管理者が読めない（実行結果のリンクが行き止まりになる）")
+                    .isTrue();
+        }
+    }
+
+    @Test
+    @DisplayName("管理者に開けるのは読みだけ（業務の操作までは開けない）")
+    void administratorCannotWriteBusinessData() {
+        // **読みを開いたついでに書きまで開かない。** 実行結果から辿れれば足りる。
+        var writes = java.util.List.of(
+                java.util.Map.entry("POST",
+                        "/api/v1/booking/bookings/55555555-5555-5555-5555-555555555555"
+                                + "/confirmation"),
+                java.util.Map.entry("POST",
+                        "/api/v1/tracking/trackings/TRK-0000000001/status"),
+                java.util.Map.entry("POST",
+                        "/api/v1/billing/invoices/INV-0000000001/issue"),
+                java.util.Map.entry("POST",
+                        "/api/v1/billing/invoices/INV-0000000001/payments"));
+
+        for (var write : writes) {
+            assertThat(RoleAuthorization.isAllowed(write.getKey(), write.getValue(),
+                    java.util.List.of("ROLE_ADMIN")))
+                    .as(write.getKey() + " " + write.getValue() + " が管理者に開いている")
+                    .isFalse();
+        }
+    }
 }

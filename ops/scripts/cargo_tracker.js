@@ -574,6 +574,24 @@ export default function (gulp) {
   });
 
   /**
+   * DB と接続ユーザーを足りない分だけ作る（Database per Service / ADR-0001 決定 1）。
+   *
+   * <p><b>初期化 SQL は「DB が空のとき」しか走らない。</b> compose も Kustomize も
+   * 初回だけ実行するので、<b>サービスを足しても既に動いている環境には反映されない</b>
+   * ——simulationms を足したとき、クラスタだけが認証失敗で起動しなかった（IT16）。</p>
+   *
+   * <p><b>同じ SQL を流す。</b> ここで別の SQL を書くと出典が 2 つになり、
+   * 片方だけ直したときに環境で食い違う。SQL は何度流しても同じ結果になる。</p>
+   */
+  gulp.task('k8s:init-db', (done) => {
+    const sql = 'ops/k8s/base/postgres/init-databases.sql';
+    sh(`kubectl --context kind-${KIND_CLUSTER} -n ${NAMESPACE} exec -i postgres-0 -- `
+      + `psql -U postgres -v ON_ERROR_STOP=1 -f - < "${sql}"`, { stdio: 'inherit' });
+    console.log('DB と接続ユーザーを確かめました（足りない分だけ作りました）');
+    done();
+  });
+
+  /**
    * ビルドしたイメージを kind に載せる。
    *
    * タグを据え置いたまま載せ直しても Pod は作り直されないので、rollout restart まで踏む。

@@ -96,8 +96,11 @@ export function AppRoutes() {
         <Route
           path="/bookings/:bookingId"
           element={
+            /* **管理者も読める**（US34 §5・IT16）。業務シミュレーションの実行結果は
+               「作られたものから業務画面へ行ける」ことを約束しているのに、開けないと
+               そこが行き止まりになる。読みだけで、修正（S24）は営業のままである。 */
             <RequireRole allow={['ROLE_SALES', 'ROLE_ROUTING', 'ROLE_TRACKER',
-              'ROLE_ACCOUNTANT']}>
+              'ROLE_ACCOUNTANT', 'ROLE_ADMIN']}>
               <BookingDetailPage />
             </RequireRole>
           }
@@ -291,7 +294,11 @@ export function AppRoutes() {
           <Route
             key={item.path}
             path={item.path}
-            element={<RequireRole allow={item.allow}>{PAGES[item.path]}</RequireRole>}
+            element={
+              <RequireRole allow={[...item.allow, ...(item.alsoOpenableBy ?? [])]}>
+                {PAGES[item.path]}
+              </RequireRole>
+            }
           />
         ))}
       </Route>

@@ -158,8 +158,10 @@ public final class RoleAuthorization {
         // 自社の貨物すら追えない（ui_design.md:144-145）。
         // **公開照会（/tracking/public/**）はここに要らない**——PUBLIC_PATHS が
         // 認証そのものを外すので、ロールの宣言は通らない。
-        rules.put("/api/v1/tracking/trackings/**", Set.of(TRACKER, SHIPPER));
-        rules.put("/api/v1/tracking/trackings", Set.of(TRACKER, SHIPPER));
+        // **管理者も読める**（US34 §5）。S93 の追跡番号から S41 へ行くため。
+        // 書き込み（状態更新・例外）は上の宣言が追跡管理者だけに絞っている。
+        rules.put("/api/v1/tracking/trackings/**", Set.of(TRACKER, SHIPPER, ADMIN));
+        rules.put("/api/v1/tracking/trackings", Set.of(TRACKER, SHIPPER, ADMIN));
 
         // 荷役履歴（S51）は**荷役と追跡の両方**（ui_design.md:236）。
         // 追跡管理者は問い合わせを受けたときに現場の記録を確かめる。
@@ -190,8 +192,11 @@ public final class RoleAuthorization {
         rules.put("/api/v1/billing/shipper-invoices", Set.of(SHIPPER));
 
         // 請求（S60 / S61）は経理だけ（US21 §受入基準 1）。
-        rules.put("/api/v1/billing/invoices/**", Set.of(ACCOUNTANT));
-        rules.put("/api/v1/billing/invoices", Set.of(ACCOUNTANT));
+        // **管理者も読める**（US34 §5）。S93 の請求番号から S61 へ行くため。
+        // 書き込み（発行・入金・調整・取消）はメソッド込みの宣言が先に当たり、
+        // 経理だけに絞られている。
+        rules.put("/api/v1/billing/invoices/**", Set.of(ACCOUNTANT, ADMIN));
+        rules.put("/api/v1/billing/invoices", Set.of(ACCOUNTANT, ADMIN));
 
 
         // 航海（S32 / S33）は経路設計者だけ。
@@ -296,8 +301,13 @@ public final class RoleAuthorization {
         }
         // **GET だけ。** 書き込みの宣言（PUT / POST）は別に置いてあるので、
         // 経理が予約を書き換えられることはない。
+        //
+        // **管理者も読める**（US34 §受入基準 5 / IT16）。業務シミュレーションの
+        // 実行結果は「作られたものから業務画面へ行ける」ことを約束しているのに、
+        // 管理者が予約を開けないと**そこが行き止まり**になる（実際にクラスタで
+        // 踏んだ）。読みだけで、書き込みは開けない。
         ordered.add(new Rule("GET", "/api/v1/booking/bookings/*",
-                Set.of(SALES, ROUTING, TRACKER, ACCOUNTANT)));
+                Set.of(SALES, ROUTING, TRACKER, ACCOUNTANT, ADMIN)));
         // 料金の調整は経理だけ（US21 §受入基準 6）。**メソッド込みで宣言する**
         // ——読み向けの広い宣言に吸われると、載せ忘れた書き込みほど無防備になる。
         ordered.add(new Rule("POST", "/api/v1/billing/invoices/*/adjustments",
