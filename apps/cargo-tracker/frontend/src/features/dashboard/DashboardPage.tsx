@@ -15,7 +15,10 @@ import { fetchVoyagePorts } from '@/features/handling/api';
 import { fetchOpenExceptions, fetchRecentlyChanged } from '@/features/tracking/api';
 import { fetchOverdueCustomsHolds } from '@/features/customs/api';
 import { fetchAttentionItems } from '@/features/attention/api';
-import { fetchPendingCancellations } from '@/features/bookings/cancellationApi';
+import {
+  fetchPendingCancellations,
+  fetchRejectedCancellations,
+} from '@/features/bookings/cancellationApi';
 
 /** S02 ダッシュボード。「今日の作業」からその日の入口へ行けるようにする。 */
 export function DashboardPage() {
@@ -134,6 +137,18 @@ export function DashboardPage() {
   const conditionReviews =
     reviews?.state === 'ready' ? reviews.value.items ?? [] : [];
 
+  // 却下されたキャンセル（US30 §4 の対）。**承認は予約一覧で気づけるが、却下は
+  // 何も変わらない**——申請した本人が予約詳細を開き直さない限り、理由を書かせた
+  // 意味が無い。宛先は申請した本人で、サーバがヘッダで絞る。
+  const { data: rejections } = useQuery({
+    queryKey: ['rejected-cancellations'],
+    queryFn: fetchRejectedCancellations,
+    enabled: isSales,
+    refetchInterval: 10000,
+  });
+  const rejectedCancellations =
+    rejections?.state === 'ready' ? rejections.value.items ?? [] : [];
+
   // 確定を待っている予約（US13 §受入基準 3）。**打てる手を持つのは営業**で、
   // 荷主の承認を確認して確定する。経路設計者はこの件数に対して何もできない。
   const { data: awaiting } = useQuery({
@@ -159,6 +174,28 @@ export function DashboardPage() {
   return (
     <section>
       <h1 className={PAGE_TITLE}>ダッシュボード</h1>
+
+      {/* **却下は何も変わらない。** 申請した本人に理由が届かないと、理由を
+          書かせた意味が無い（US30 §7）。 */}
+      {isSales && rejectedCancellations.length > 0 && (
+        <output className={`${NOTICE} mt-4 block`}>
+          キャンセルの申請が却下されました（{rejectedCancellations.length} 件）。
+          <ul className="mt-2 space-y-1">
+            {rejectedCancellations.map((item) => (
+              <li key={item.requestId} data-testid={`rejected-cancellation-${item.requestId}`}>
+                <Link to={`/bookings/${item.bookingId}`} className={LINK}>
+                  {item.bookingNumber ?? item.bookingId}
+                </Link>
+                <span className="ml-2">{item.decisionReason ?? '（理由なし）'}</span>
+                <span className="ml-2 text-gray-600">
+                  （{item.decidedBy}・
+                  {formatBusinessDateTime(item.decidedAt ?? item.requestedAt)}）
+                </span>
+              </li>
+            ))}
+          </ul>
+        </output>
+      )}
 
       {/* 件数だけでは仕事が進まない。理由が読めないと荷主と何を協議するか
           分からないので、行そのものを出す。 */}

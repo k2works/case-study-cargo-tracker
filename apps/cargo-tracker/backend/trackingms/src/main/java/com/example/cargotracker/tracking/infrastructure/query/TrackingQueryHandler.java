@@ -163,7 +163,10 @@ public class TrackingQueryHandler {
                 row.destinationUnlocode(), row.cargoType(), status.name(), status.label(),
                 row.currentUnlocode(), row.estimatedArrival(),
                 row.lastStatusChangedAt(), events, trackingExceptions, nextStatuses(status),
-                row.misrouted());
+                row.misrouted(),
+                // **記録と読み口は対で出す。** 列は IT15 T5 で足したのに、
+                // どこにも出していなかった（IT15 のレビュー 高）。
+                row.cancellationDischargeUnlocode(), row.closed());
     }
 
     /**

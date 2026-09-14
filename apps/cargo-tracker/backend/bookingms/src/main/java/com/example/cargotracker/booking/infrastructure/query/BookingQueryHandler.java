@@ -36,16 +36,28 @@ public class BookingQueryHandler {
     private final CargoNotificationMapper notifications;
     private final com.example.cargotracker.booking.infrastructure.persistence
             .CancellationRequestMapper cancellations;
+    private final java.time.Clock clock;
+
+    /**
+     * 却下を知らせる期間（日）。<b>既読を覚える表を置かない</b>——営業の
+     * 「最近のできごと」であって、未処理の待ち行列ではない。
+     */
+    private static final int REJECTION_NOTICE_DAYS = 14;
+
+    /** 知らせる件数の上限。**黙って切らない**——画面が件数を出す。 */
+    private static final int REJECTION_NOTICE_LIMIT = 20;
 
     public BookingQueryHandler(CargoSummaryMapper cargos, CargoRevisionMapper revisions,
             CargoLegMapper legs, CargoNotificationMapper notifications,
             com.example.cargotracker.booking.infrastructure.persistence
-                    .CancellationRequestMapper cancellations) {
+                    .CancellationRequestMapper cancellations,
+            java.time.Clock clock) {
         this.cargos = cargos;
         this.revisions = revisions;
         this.legs = legs;
         this.notifications = notifications;
         this.cancellations = cancellations;
+        this.clock = clock;
     }
 
     /**
@@ -60,6 +72,22 @@ public class BookingQueryHandler {
             com.example.cargotracker.booking.infrastructure.query.BookingQueries
                     .FindPendingCancellationsQuery query) {
         return toListView(cancellations.findPending());
+    }
+
+    /**
+     * 却下されたキャンセル申請（S02 営業。US30 §受入基準 7 の落とし先）。
+     *
+     * <p><b>期間で区切る。</b> 既読を覚える表を足すより安く、営業の「最近の
+     * できごと」という性格にも合う。未処理の待ち行列ではない。</p>
+     */
+    @org.axonframework.messaging.queryhandling.annotation.QueryHandler
+    public com.example.cargotracker.booking.infrastructure.query.BookingQueries
+            .CancellationListView handle(
+            com.example.cargotracker.booking.infrastructure.query.BookingQueries
+                    .FindRejectedCancellationsQuery query) {
+        return toListView(cancellations.findRecentlyRejected(query.requestedBy(),
+                clock.instant().minus(REJECTION_NOTICE_DAYS, java.time.temporal.ChronoUnit.DAYS),
+                REJECTION_NOTICE_LIMIT));
     }
 
     /**

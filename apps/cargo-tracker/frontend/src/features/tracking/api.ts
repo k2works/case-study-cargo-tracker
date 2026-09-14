@@ -143,6 +143,14 @@ export interface TrackingView {
    * 消えてしまう。</p>
    */
   readonly misrouted: boolean;
+  /**
+   * キャンセルの陸揚げ地（US30・不変条件 9）。**承認しても追跡は閉じない**ので、
+   * 荷主も追跡管理者も「どこで降ろすことになったか」を読めなければ受け取りの
+   * 手配ができない。`null` はキャンセルされていない貨物。
+   */
+  readonly cancellationDischargeUnLocode: string | null;
+  /** すでに閉じたか。降ろし終わった追跡はもう動かない。 */
+  readonly closed: boolean;
 }
 
 /** 追跡一覧（S40）。荷主には自社のぶんだけが返る（サーバがヘッダで絞る）。 */

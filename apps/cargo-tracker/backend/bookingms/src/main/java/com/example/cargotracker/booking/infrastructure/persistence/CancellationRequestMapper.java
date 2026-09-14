@@ -46,6 +46,31 @@ public interface CancellationRequestMapper {
             + "ORDER BY requested_at, request_id")
     List<CancellationRequestRow> findPending();
 
+    /**
+     * 自分が申請して<b>却下された</b>もの（S02 営業。US30 §受入基準 7 の落とし先）。
+     *
+     * <p><b>却下だけを出す。</b> 承認されれば予約が「キャンセル」になり、予約一覧に
+     * そのまま出る——気づける。却下は<b>何も変わらない</b>ので、申請した本人が
+     * 予約詳細を開き直さない限り誰も気づかない。</p>
+     *
+     * <p><b>既読は持たない。</b> 読んだかどうかを覚える表を足すより、期間で区切る
+     * ほうが安い（{@code since} 以降に判断されたもの）。営業の「最近のできごと」で
+     * あって、未処理の待ち行列ではない。</p>
+     *
+     * <p><b>新しい順</b>——いま何が起きたかが先に読める。</p>
+     */
+    @Select("SELECT request_id, booking_id, reason, requested_by, requested_at, "
+            + "decision, discharge_unlocode, decision_reason, decided_by, decided_at "
+            + "FROM cancellation_request "
+            + "WHERE decision = 'REJECTED' AND requested_by = #{requestedBy} "
+            + "  AND decided_at >= #{since} "
+            + "ORDER BY decided_at DESC, request_id "
+            + "LIMIT #{limit}")
+    List<CancellationRequestRow> findRecentlyRejected(
+            @Param("requestedBy") String requestedBy,
+            @Param("since") Instant since,
+            @Param("limit") int limit);
+
     /** その予約の申請（S22 の履歴）。<b>新しい順</b>——いま何が起きているかが先に読める。 */
     @Select("SELECT request_id, booking_id, reason, requested_by, requested_at, "
             + "decision, discharge_unlocode, decision_reason, decided_by, decided_at "

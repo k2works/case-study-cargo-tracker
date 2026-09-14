@@ -114,6 +114,24 @@ public class CancellationController {
     }
 
     /**
+     * 自分が申請して却下されたキャンセル（S02 営業。US30 §受入基準 7 の落とし先）。
+     *
+     * <p><b>`/{bookingId}/cancellation` より先に宣言する。</b> `cancellations`
+     * と同じ理由——予約 ID として読まれると空で返る。</p>
+     *
+     * <p><b>宛先は申請した本人。</b> 誰の申請かはヘッダで決まり、要求では
+     * 指定させない——他人の申請を読めてしまう。</p>
+     */
+    @GetMapping("/cancellations/rejected")
+    public ResponseEntity<CancellationListView> rejected(
+            @RequestHeader(value = "X-Auth-Username", required = false) String username) {
+        return ResponseEntity.ok(queries.query(
+                new com.example.cargotracker.booking.infrastructure.query.BookingQueries
+                        .FindRejectedCancellationsQuery(username),
+                CancellationListView.class));
+    }
+
+    /**
      * 陸揚げ地の選択肢（S23 / US30 §受入基準 5）。
      *
      * <p><b>画面が組み立てない。</b> 集約が断る条件と同じ関数から作る——別々に

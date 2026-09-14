@@ -118,6 +118,16 @@ export function TrackingDetailPage() {
         </span>
       </h1>
 
+      {/* **陸揚げ待ち**（US30・不変条件 9）。承認しても追跡は閉じないので、
+          どこで降ろすことになったかを出さないと、荷主は受け取りの手配ができない。
+          降ろし終わった（閉じた）追跡には出さない——もう待っていない。 */}
+      {view.cancellationDischargeUnLocode !== null && !view.closed && (
+        <output className={`${NOTICE} mt-4 block`}>
+          キャンセルが承認されました。<b>陸揚げ待ち: {view.cancellationDischargeUnLocode}</b>
+          {' '}——この港で荷降しが記録されると、この追跡は終わります。
+        </output>
+      )}
+
       {view.misrouted && (
         <div role="alert" className={`${ALERT} mt-4`}>
           <p className="font-semibold">誤配を検知しました。</p>

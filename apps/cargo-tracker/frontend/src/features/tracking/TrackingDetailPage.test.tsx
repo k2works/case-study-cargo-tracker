@@ -24,6 +24,8 @@ function tracking(over: Record<string, unknown> = {}) {
     // モックを本物より甘くしない。
     nextStatuses: ['RECEIVED'],
     misrouted: false,
+    cancellationDischargeUnLocode: null,
+    closed: false,
     ...over,
   };
 }
@@ -192,6 +194,35 @@ describe('S41 追跡詳細・管理', () => {
 
     expect(await screen.findByText(/追跡番号が見つかりません/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '追跡一覧に戻る' })).toBeInTheDocument();
+  });
+
+  it('US30: キャンセルの陸揚げ待ちが読める（降ろす港が決まっている）', async () => {
+    // **承認しても追跡は閉じない。** 貨物は船の上にあり、荷主も追跡管理者も
+    // 「どこで降ろすことになったか」を読めなければ受け取りの手配ができない
+    // （正典 ui_design「陸揚げ待ち: SGSIN」。IT15 のレビュー 高で未実装が判明）。
+    respondWith(tracking({
+      status: 'LOADED',
+      statusLabel: '積込済',
+      cancellationDischargeUnLocode: 'SGSIN',
+    }));
+
+    renderDetail();
+
+    expect(await screen.findByText(/陸揚げ待ち: SGSIN/)).toBeVisible();
+  });
+
+  it('US30: 降ろし終わった追跡は陸揚げ待ちと出さない', async () => {
+    respondWith(tracking({
+      status: 'UNLOADED',
+      statusLabel: '荷降し済',
+      cancellationDischargeUnLocode: 'SGSIN',
+      closed: true,
+    }));
+
+    renderDetail();
+
+    await screen.findByRole('heading', { name: /TRK-/ });
+    expect(screen.queryByText(/陸揚げ待ち/)).not.toBeInTheDocument();
   });
 
   it('US30: 追跡が閉じた行は「追跡終了」と読める（状態の遷移として出さない）', async () => {

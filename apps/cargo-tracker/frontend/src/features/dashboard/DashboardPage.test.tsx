@@ -28,9 +28,24 @@ function mockApi(
   conditionReviews: unknown[] = [],
   awaitingConfirmation: unknown[] = [],
   awaitingTracking: unknown[] = [],
+  rejectedCancellations: unknown[] = [],
+  pendingCancellations: unknown[] = [],
 ) {
   return vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
     const url = String(input);
+    if (url.includes('/trackings/exceptions')) {
+      // **モックを本物より甘くしない。** サーバは必ず `items` を返す（空でも
+      // 配列）。既定の本体を返すと、画面は `items.length` で落ちる。
+      return Promise.resolve(new Response(JSON.stringify({ items: [] }), { status: 200 }));
+    }
+    if (url.includes('/bookings/cancellations') && !url.includes('/rejected')) {
+      return Promise.resolve(
+        new Response(JSON.stringify({ items: pendingCancellations }), { status: 200 }));
+    }
+    if (url.includes('/cancellations/rejected')) {
+      return Promise.resolve(
+        new Response(JSON.stringify({ items: rejectedCancellations }), { status: 200 }));
+    }
     if (url.includes('/condition-reviews')) {
       return Promise.resolve(
         new Response(JSON.stringify({ items: conditionReviews }), { status: 200 }));
@@ -142,6 +157,88 @@ describe('S02 ダッシュボード', () => {
     expect(row).toHaveTextContent('期限内に着ける便がありません');
     expect(within(row).getByRole('link', { name: 'B-2026-0903-0009' }))
       .toHaveAttribute('href', '/bookings/b-9');
+  });
+
+  it('US30 §4: 追跡管理者には承認待ちの件数が出て、そこから一覧へ行ける', async () => {
+    // **件数はその人の仕事に合わせる。** 陸揚げ地を決められるのは追跡管理者
+    // だけで、営業には打つ手が無い（IT15 のレビュー 高——この件数を丸ごと
+    // 削っても全テストが緑だった）。
+    mockApi({ preliminary: 0, routingWorklist: 0 }, [], [], [], [], [
+      { requestId: 'cr-1', bookingId: 'b-7' },
+      { requestId: 'cr-2', bookingId: 'b-8' },
+    ]);
+
+    renderAs(['ROLE_TRACKER']);
+
+    const notice = await screen.findByText(/承認待ちのキャンセル申請が 2 件あります/);
+    expect(within(notice).getByRole('link', { name: 'キャンセル承認' }))
+      .toHaveAttribute('href', '/bookings/cancellations');
+  });
+
+  it('US30 §4: 営業には承認待ちの件数を出さない（打てる手が無い）', async () => {
+    mockApi({ preliminary: 0, routingWorklist: 0 }, [], [], [], [], [
+      { requestId: 'cr-1', bookingId: 'b-7' },
+    ]);
+
+    renderAs(['ROLE_SALES']);
+
+    await screen.findByRole('heading', { name: 'ダッシュボード' });
+    expect(screen.queryByText(/承認待ちのキャンセル申請が/)).not.toBeInTheDocument();
+  });
+
+  it('US30 §7: 営業には却下されたキャンセルが理由つきで出て、そこから行ける', async () => {
+    // **却下は何も変わらない。** 承認なら予約が「キャンセル」になって予約一覧に
+    // 出るが、却下は申請した本人が予約詳細を開き直さない限り誰も気づかない
+    // ——理由を書かせた意味が無くなる（IT15 のレビュー 高）。
+    mockApi({ preliminary: 0, routingWorklist: 0 }, [], [], [], [
+      {
+        requestId: 'cr-1',
+        bookingId: 'b-7',
+        bookingNumber: 'B-2026-0903-0007',
+        productName: '精密機器',
+        reason: '荷主の発注取消',
+        requestedBy: 'sales01',
+        requestedAt: '2026-09-26T00:00:00Z',
+        decision: 'REJECTED',
+        decisionLabel: '却下',
+        decidedBy: 'tracker01',
+        decidedAt: '2026-09-27T00:00:00Z',
+        decisionReason: 'すでに荷受人が手配済みです',
+        dischargeUnLocode: null,
+      },
+    ]);
+
+    renderAs(['ROLE_SALES']);
+
+    const row = await screen.findByTestId('rejected-cancellation-cr-1');
+    expect(row).toHaveTextContent('すでに荷受人が手配済みです');
+    expect(within(row).getByRole('link', { name: 'B-2026-0903-0007' }))
+      .toHaveAttribute('href', '/bookings/b-7');
+  });
+
+  it('US30 §7: 追跡管理者には却下の知らせを出さない（判断した本人）', async () => {
+    mockApi({ preliminary: 0, routingWorklist: 0 }, [], [], [], [
+      {
+        requestId: 'cr-1',
+        bookingId: 'b-7',
+        bookingNumber: 'B-2026-0903-0007',
+        productName: '精密機器',
+        reason: '荷主の発注取消',
+        requestedBy: 'sales01',
+        requestedAt: '2026-09-26T00:00:00Z',
+        decision: 'REJECTED',
+        decisionLabel: '却下',
+        decidedBy: 'tracker01',
+        decidedAt: '2026-09-27T00:00:00Z',
+        decisionReason: 'すでに荷受人が手配済みです',
+        dischargeUnLocode: null,
+      },
+    ]);
+
+    renderAs(['ROLE_TRACKER']);
+
+    await screen.findByRole('heading', { name: 'ダッシュボード' });
+    expect(screen.queryByTestId('rejected-cancellation-cr-1')).not.toBeInTheDocument();
   });
 
   it('US10 §4: 経路設計には見直し依頼を出さない（受け皿は S30）', async () => {

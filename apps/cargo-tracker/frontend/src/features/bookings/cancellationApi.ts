@@ -75,6 +75,20 @@ export function fetchPendingCancellations(): Promise<
   return queryClient('/booking/bookings/cancellations');
 }
 
+/**
+ * 自分が申請して却下されたキャンセル（S02 営業 / US30 §受入基準 7）。
+ *
+ * <p><b>却下だけ。</b> 承認されれば予約が「キャンセル」になって予約一覧に出るが、
+ * 却下は何も変わらない——申請した本人が予約詳細を開き直さない限り気づけない。</p>
+ *
+ * <p>誰の申請かはサーバがヘッダで決める（要求では指定しない）。</p>
+ */
+export function fetchRejectedCancellations(): Promise<
+  Pending<{ items: CancellationRequestView[] }>
+> {
+  return queryClient('/booking/bookings/cancellations/rejected');
+}
+
 /** その予約のキャンセル履歴（S22 / US30 §受入基準 10）。 */
 export function fetchCancellationsOfBooking(
   bookingId: string,

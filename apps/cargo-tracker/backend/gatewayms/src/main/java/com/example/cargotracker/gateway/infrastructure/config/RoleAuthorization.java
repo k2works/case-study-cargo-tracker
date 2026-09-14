@@ -132,6 +132,9 @@ public final class RoleAuthorization {
         // 決められるのは追跡管理者だけで、営業には打つ手が無い。
         // **/bookings/** より先に置く。** 後ろに置くと広いほうに吸われる。
         rules.put("/api/v1/booking/bookings/cancellations", Set.of(TRACKER));
+        // 却下されたキャンセル（S02 営業。US30 §7 の落とし先）。**申請した本人だけ**
+        // に絞るのは bookingms（X-Auth-Username）で、ここではロールを絞る。
+        rules.put("/api/v1/booking/bookings/cancellations/rejected", Set.of(SALES));
         rules.put("/api/v1/booking/bookings/*/cancellation/approval", Set.of(TRACKER));
         // 陸揚げ地の選択肢は承認する人が読む（S23）。
         rules.put("/api/v1/booking/bookings/*/cancellation/discharge-candidates",
@@ -282,7 +285,8 @@ public final class RoleAuthorization {
                 // 営業・経路設計・経理にも開く**——実測（IT15 のレビュー 高）。
                 // 名簿方式の検査は「載っていないもの」を通すので、下の
                 // `roleSpecificListsComeFirst` が名簿そのものを固定する。
-                "/api/v1/booking/bookings/cancellations")) {
+                "/api/v1/booking/bookings/cancellations",
+                "/api/v1/booking/bookings/cancellations/rejected")) {
             ordered.add(new Rule("GET", roleSpecificList, rules.get(roleSpecificList)));
         }
         // **GET だけ。** 書き込みの宣言（PUT / POST）は別に置いてあるので、
