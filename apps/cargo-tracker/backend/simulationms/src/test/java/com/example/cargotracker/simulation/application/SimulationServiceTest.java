@@ -112,6 +112,9 @@ class SimulationServiceTest {
 
         assertThat(inserted).singleElement().satisfies(row -> {
             assertThat(row.runId()).isEqualTo(runId);
+            // **列に収まる長さで作る。** VARCHAR(36) にあふれると、集約は通り
+            // 記録だけが落ちる（billingms の `PAY-` と同じ形。3 度目）。
+            assertThat(row.runId()).hasSizeLessThanOrEqualTo(36);
             assertThat(row.status()).isEqualTo("RUNNING");
             assertThat(row.startedBy()).isEqualTo("admin01");
         });
@@ -161,5 +164,27 @@ class SimulationServiceTest {
 
         assertThat(steps).allSatisfy(step ->
                 assertThat(step.elapsedMs()).isNotNull().isGreaterThanOrEqualTo(0L));
+    }
+
+    @Test
+    @DisplayName("応答コードの無い失敗も失敗として記録する（成功にしない）")
+    void treatsFailureWithoutStatusAsFailure() {
+        // **応答コードだけで判定すると、コードの無い失敗が成功として通る。**
+        // 工程が止まっているのに「成功」と記録された（IT16 で実測）。
+        String runId = service(true, (kind, produced) -> kind == StepKind.REGISTER_BOOKING
+                ? BusinessApi.StepResult.failure("読み口に現れませんでした")
+                : BusinessApi.StepResult.success(null))
+                .start(Scenario.NO_ROUTE, "admin01");
+
+        assertThat(steps()).last().satisfies(step -> {
+            assertThat(step.outcome()).isEqualTo("FAILED");
+            assertThat(step.failureStatus()).isNull();
+            assertThat(step.failureMessage()).contains("読み口に現れませんでした");
+        });
+        assertThat(statuses).containsExactly(runId + ":FAILED");
+    }
+
+    private List<SimulationRunMapper.StepRow> steps() {
+        return steps;
     }
 }

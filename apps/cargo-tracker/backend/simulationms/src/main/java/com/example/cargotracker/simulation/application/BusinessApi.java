@@ -43,9 +43,26 @@ public interface BusinessApi {
             return new StepResult(null, status, message);
         }
 
-        /** 通ったか。 */
+        /**
+         * 応答コードの無い失敗。
+         *
+         * <p>相手が断ったのではなく、<b>自分が作ったものを読めなかった</b>ときに使う
+         * （投影が追いつかない等）。ここを応答コードのある失敗に寄せると、
+         * 「どちらが壊れているか」が読めなくなる。</p>
+         */
+        public static StepResult failure(String message) {
+            return new StepResult(null, null, message);
+        }
+
+        /**
+         * 通ったか。
+         *
+         * <p><b>理由の有無でも判定する。</b> 応答コードだけを見ると、コードの無い
+         * 失敗が成功として通る——実際に IT16 でそう書いて、工程が止まっているのに
+         * 「成功」と記録された。</p>
+         */
         public boolean succeeded() {
-            return failureStatus == null;
+            return failureStatus == null && failureMessage == null;
         }
     }
 }

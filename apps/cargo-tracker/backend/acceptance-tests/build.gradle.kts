@@ -178,3 +178,51 @@ tasks.named("test") {
     dependsOn(routingAcceptanceTest, trackingAcceptanceTest, handlingAcceptanceTest,
             billingAcceptanceTest)
 }
+
+// 業務シミュレーション（UC23 / US33・US34）のデモ項目。
+//
+// **7 つの業務サービスと Gateway を同じ JVM に立てる。** 確かめたいのは
+// 「予約から精算まで端から端まで通ること」なので、1 つでも欠けると確かめたいものが
+// 無くなる。他のスイートが「対象サービスだけを起動する」のとは、ここだけ理由が違う。
+val simulationTest: SourceSet by sourceSets.creating
+
+dependencies {
+    "simulationTestImplementation"(project(":shared"))
+    "simulationTestImplementation"(testFixtures(project(":shared")))
+    "simulationTestImplementation"(project(":authms"))
+    "simulationTestImplementation"(project(":bookingms"))
+    "simulationTestImplementation"(project(":routingms"))
+    "simulationTestImplementation"(project(":trackingms"))
+    "simulationTestImplementation"(project(":handlingms"))
+    "simulationTestImplementation"(project(":billingms"))
+    "simulationTestImplementation"(project(":simulationms"))
+    "simulationTestImplementation"(project(":gatewayms"))
+    "simulationTestImplementation"(libs.axon.test)
+    "simulationTestImplementation"(libs.testcontainers.junit.jupiter)
+    "simulationTestImplementation"(libs.testcontainers.postgresql)
+    "simulationTestImplementation"(libs.awaitility)
+    "simulationTestImplementation"(libs.cucumber.java)
+    "simulationTestImplementation"(libs.cucumber.junit.platform.engine)
+    "simulationTestImplementation"(libs.rest.assured)
+    "simulationTestImplementation"(libs.assertj.core)
+    "simulationTestImplementation"(platform(libs.junit.bom))
+    "simulationTestImplementation"("org.junit.platform:junit-platform-suite")
+    "simulationTestImplementation"(libs.spring.boot.starter.test)
+    "simulationTestImplementation"(libs.spring.boot.starter.web)
+    "simulationTestImplementation"(libs.spring.boot.starter.jdbc)
+    "simulationTestImplementation"(libs.mybatis.spring.boot.starter)
+    "simulationTestRuntimeOnly"(libs.junit.platform.launcher)
+}
+
+val simulationAcceptanceTest = tasks.register<Test>("simulationAcceptanceTest") {
+    description = "業務シミュレーション（UC23）のデモ項目を回す"
+    group = "verification"
+    testClassesDirs = simulationTest.output.classesDirs
+    classpath = simulationTest.runtimeClasspath
+    useJUnitPlatform()
+    systemProperty("cucumber.junit-platform.naming-strategy", "long")
+}
+
+// 他のスイートと同じく `test` にぶら下げる。**別の入口にしない**——
+// 忘れられる検査は、書いたのに走らない検査と同じである。
+tasks.named("test") { dependsOn(simulationAcceptanceTest) }

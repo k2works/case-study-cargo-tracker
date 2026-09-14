@@ -42,16 +42,35 @@ public class GatewayBusinessApi implements BusinessApi {
      */
     private static final int NO_ROUTE_DEADLINE_DAYS = 1;
 
+    /** 自分が作ったものが読めるようになるまで読み直す回数。 */
+    private static final int DEFAULT_ID_READ_ATTEMPTS = 60;
+
+    /** 読み直す間隔。 */
+    private static final long ID_READ_INTERVAL_MS = 500;
+
     private final GatewayCalls calls;
     private final Scenario scenario;
     private final Clock clock;
     private final ObjectMapper json = new ObjectMapper();
     private final String tag = UUID.randomUUID().toString().substring(0, 8);
 
+    private final int idReadAttempts;
+
     public GatewayBusinessApi(GatewayCalls calls, Scenario scenario, Clock clock) {
+        this(calls, scenario, clock, DEFAULT_ID_READ_ATTEMPTS);
+    }
+
+    /**
+     * 読み直す回数を決めて作る。
+     *
+     * <p><b>検査は待たない。</b> 実際に眠って確かめると、1 本の検査に 30 秒かかる
+     * ——そのぶん誰も回さなくなる。待つ回数のほうを変える。</p>
+     */
+    GatewayBusinessApi(GatewayCalls calls, Scenario scenario, Clock clock, int idReadAttempts) {
         this.calls = calls;
         this.scenario = scenario;
         this.clock = clock;
+        this.idReadAttempts = idReadAttempts;
     }
 
     @Override
@@ -96,17 +115,22 @@ public class GatewayBusinessApi implements BusinessApi {
         LocalDate deadline = LocalDate.now(clock.withZone(BUSINESS_ZONE))
                 .plusDays(scenario == Scenario.NO_ROUTE
                         ? NO_ROUTE_DEADLINE_DAYS : STANDARD_DEADLINE_DAYS);
-        var response = calls.post(StepRole.SALES, "/api/v1/booking/bookings", Map.of(
-                "shipperId", produced.get(StepKind.REGISTER_SHIPPER),
-                "originUnLocode", ORIGIN,
-                "destinationUnLocode", DESTINATION,
-                "arrivalDeadline", deadline.toString(),
-                "cargoType", "GENERAL",
-                "weightKg", 1000,
-                "lengthCm", 100,
-                "widthCm", 100,
-                "heightCm", 100,
-                "productName", "シミュレーション貨物"));
+        // **Map.of は 10 組までしか取れない。** 溢れた項目は黙って落ちるのではなく
+        // 書けなくなるだけだが、ここは項目が増えるので順序付きの地図で組む
+        // （必須の `quantity` を落として 400 で止まった。IT16 で実測）。
+        var body = new java.util.LinkedHashMap<String, Object>();
+        body.put("shipperId", produced.get(StepKind.REGISTER_SHIPPER));
+        body.put("originUnLocode", ORIGIN);
+        body.put("destinationUnLocode", DESTINATION);
+        body.put("arrivalDeadline", deadline.toString());
+        body.put("cargoType", "GENERAL");
+        body.put("weightKg", 1000);
+        body.put("lengthCm", 100);
+        body.put("widthCm", 100);
+        body.put("heightCm", 100);
+        body.put("quantity", 10);
+        body.put("productName", "シミュレーション貨物 " + tag);
+        var response = calls.post(StepRole.SALES, "/api/v1/booking/bookings", body);
         return idFrom(response, "bookingId");
     }
 
@@ -142,12 +166,21 @@ public class GatewayBusinessApi implements BusinessApi {
         }
         // **番号は応答に載らない**（予約 ID だけが返る）。読み口から取る——
         // 取れないと後続の工程が貨物を名指しできない。
-        var booking = calls.get(StepRole.ROUTING, bookingUri(produced, ""));
-        String trackingNumber = parse(booking).path("trackingNumber").asText(null);
-        return trackingNumber == null
-                ? StepResult.failure(booking.status(),
-                        "追跡番号を発行しましたが、予約の読み口にまだ現れていません")
-                : StepResult.success(trackingNumber);
+        //
+        // **1 度読んで諦めない。** 予約の投影も結果整合で、発行の直後は
+        // まだ空である。工程のあいだの待ちは ChainReadiness が見るが、
+        // 工程が自分の結果を読むときの待ちは、その工程が持つしかない。
+        for (int attempt = 0; attempt < idReadAttempts; attempt++) {
+            var booking = calls.get(StepRole.ROUTING, bookingUri(produced, ""));
+            String trackingNumber = parse(booking).path("trackingNumber").asText(null);
+            if (trackingNumber != null && !trackingNumber.isBlank()) {
+                return StepResult.success(trackingNumber);
+            }
+            sleepBriefly();
+        }
+        return StepResult.failure(
+                "追跡番号を発行しましたが、予約の読み口に現れませんでした"
+                        + "（投影が止まっている可能性があります）");
     }
 
     /**
@@ -197,7 +230,9 @@ public class GatewayBusinessApi implements BusinessApi {
         var registered = calls.post(StepRole.HANDLER,
                 "/api/v1/handling/customs-declarations", Map.of(
                         "declarationNumber", declarationNumber,
-                        "trackingNumber", produced.get(StepKind.ISSUE_TRACKING_NUMBER)));
+                        "trackingNumber", produced.get(StepKind.ISSUE_TRACKING_NUMBER),
+                        // **申告日時は必須**（集約が断る）。省くと通関で止まる。
+                        "declaredAt", clock.instant().toString()));
         if (!registered.ok()) {
             return StepResult.failure(registered.status(), registered.body());
         }
@@ -271,6 +306,15 @@ public class GatewayBusinessApi implements BusinessApi {
 
     private String bookingUri(Map<StepKind, String> produced, String suffix) {
         return "/api/v1/booking/bookings/" + produced.get(StepKind.REGISTER_BOOKING) + suffix;
+    }
+
+    private void sleepBriefly() {
+        try {
+            Thread.sleep(ID_READ_INTERVAL_MS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("待ちが中断されました", e);
+        }
     }
 
     private String email() {

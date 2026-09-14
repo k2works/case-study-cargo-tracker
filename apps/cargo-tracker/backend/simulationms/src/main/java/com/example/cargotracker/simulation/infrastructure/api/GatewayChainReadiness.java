@@ -54,7 +54,9 @@ public class GatewayChainReadiness implements ChainReadiness {
                     + produced.get(StepKind.REGISTER_BOOKING));
             // 読むだけの工程。待つ相手がいない。
             case CALCULATE_INVOICE -> true;
-            case ISSUE_INVOICE -> invoiceStatusIs(produced, "ISSUED");
+            // **状態の呼び名は請求側の列挙に合わせる**（`BillingStatus.INVOICED`）。
+            // 工程の名前（請求書の発行）から推測すると、いつまでも追いつかない。
+            case ISSUE_INVOICE -> invoiceStatusIs(produced, "INVOICED");
             case RECORD_PAYMENT -> invoiceStatusIs(produced, "PAID");
         };
     }

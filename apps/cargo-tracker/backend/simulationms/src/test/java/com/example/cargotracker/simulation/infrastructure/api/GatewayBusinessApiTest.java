@@ -65,8 +65,10 @@ class GatewayBusinessApiTest {
                 .baseUrl("http://localhost:" + server.getAddress().getPort())
                 .build();
         responses.put("/api/v1/auth/login", "{\"token\":\"t-1\"}");
+        // **読み直す回数は 1 回にする。** 本物は 60 回（30 秒）待つが、
+        // 検査で待つと誰も回さなくなる。
         return new GatewayBusinessApi(new GatewayCalls(client, new GatewayTokens(client)),
-                scenario, Clock.fixed(Instant.parse("2026-09-14T00:00:00Z"), ZoneOffset.UTC));
+                scenario, Clock.fixed(Instant.parse("2026-09-14T00:00:00Z"), ZoneOffset.UTC), 1);
     }
 
     @Test
@@ -188,7 +190,7 @@ class GatewayBusinessApiTest {
                 Map.of(StepKind.REGISTER_BOOKING, "BK-1"));
 
         assertThat(result.succeeded()).isFalse();
-        assertThat(result.failureMessage()).contains("まだ現れていません");
+        assertThat(result.failureMessage()).contains("読み口に現れませんでした");
     }
 
     @Test

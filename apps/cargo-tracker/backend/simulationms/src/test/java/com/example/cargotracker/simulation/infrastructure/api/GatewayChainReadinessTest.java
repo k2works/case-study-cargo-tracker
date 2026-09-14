@@ -152,7 +152,7 @@ class GatewayChainReadinessTest {
         responses.put("/api/v1/billing/invoices/INV-1", "{\"status\":\"CALCULATED\"}");
         assertThat(readiness.isReady(StepKind.ISSUE_INVOICE, PRODUCED)).isFalse();
 
-        responses.put("/api/v1/billing/invoices/INV-1", "{\"status\":\"ISSUED\"}");
+        responses.put("/api/v1/billing/invoices/INV-1", "{\"status\":\"INVOICED\"}");
         assertThat(readiness.isReady(StepKind.ISSUE_INVOICE, PRODUCED)).isTrue();
         assertThat(readiness.isReady(StepKind.RECORD_PAYMENT, PRODUCED)).isFalse();
 

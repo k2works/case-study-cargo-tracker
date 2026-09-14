@@ -72,7 +72,9 @@ public class SimulationService {
             throw new IllegalTransition("シナリオ「" + scenario.label()
                     + "」は実行中です（実行 " + running.runId() + "）。その結果を開いてください");
         }
-        String runId = "SIM-" + UUID.randomUUID();
+        // **36 文字に収める。** 列は VARCHAR(36) で、接頭辞 + UUID をそのまま
+        // 繋ぐと 40 文字になってあふれる（billingms の `PAY-` と同じ形。3 度目）。
+        String runId = "SIM-" + UUID.randomUUID().toString().replace("-", "");
         SimulationRun run = SimulationRun.start(runId, scenario, null, startedBy,
                 clock.instant());
         // **記録してから走らせる。** 先に走らせると、最初の工程が終わるまで

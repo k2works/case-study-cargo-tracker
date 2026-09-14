@@ -860,7 +860,7 @@ hide circle
 skinparam linetype ortho
 
 entity "simulation_run" as run {
-  * **run_id**: VARCHAR(40) <<PK>>
+  * **run_id**: VARCHAR(36) <<PK>>
   --
   scenario_id: VARCHAR(30) NOT NULL
   status: VARCHAR(20) NOT NULL
@@ -872,7 +872,7 @@ entity "simulation_run" as run {
 }
 
 entity "simulation_step" as step {
-  * **run_id**: VARCHAR(40) <<PK>> <<FK>>
+  * **run_id**: VARCHAR(36) <<PK>> <<FK>>
   * **step_no**: INTEGER <<PK>>
   --
   kind: VARCHAR(40) NOT NULL
