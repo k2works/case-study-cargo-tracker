@@ -836,6 +836,16 @@ public class Cargo {
     public void approveCancellation(ApproveCancellationCommand command,
             EventAppender appender, Clock clock) {
         CancellationRequest request = pendingOrRefuse(command.bookingId());
+        // **申請と判断のあいだに時間がある。** 申請した時点では輸送中でも、
+        // 追跡管理者が読むころには引き取られていることがある。申請の有無だけを
+        // 見て承認すると、引取済の予約がキャンセルになる（§8 の裏口。IT15 の
+        // レビュー 高）。**却下には掛けない**——却下は「このまま運ぶ」という
+        // 判断で状態を動かさず、掛けると決着しない申請が残り続ける。
+        if (!bookingStatus.canTransitionTo(BookingStatus.CANCELLED)) {
+            throw new IllegalTransition(
+                    "状態 " + bookingStatus.label() + " の予約はキャンセルできません"
+                            + "（申請を却下してください）");
+        }
         var decision = CancellationDecision.approve(
                 Location.of(command.dischargeUnLocode()), dischargeCandidates(),
                 command.reason(), command.approvedBy(), clock.instant());
@@ -871,8 +881,9 @@ public class Cargo {
             throw new IllegalTransition("予約 " + commandBookingId + " がありません");
         }
         if (pendingCancellation == null) {
-            // 判断する相手がいない。押せるのに断られる操作を画面に並べないための
-            // 述語（`hasPendingCancellation`）と、同じ判断をここでも守る。
+            // 判断する相手がいない。**画面は投影の `decision IS NULL` で同じことを
+            // 読む**——同じ事実を同じイベントから導いているので判定の重複ではない
+            // （集約の述語を公開しても、画面は CQRS の読み口しか見られない）。
             throw new IllegalTransition("この予約に承認待ちのキャンセル申請はありません");
         }
         return pendingCancellation;
@@ -893,15 +904,6 @@ public class Cargo {
                 .map(leg -> new DischargeCandidates.Leg(leg.loadUnLocode(),
                         leg.unloadUnLocode()))
                 .toList(), lastHandlingUnLocode);
-    }
-
-    /**
-     * 承認待ちのキャンセル申請があるか（画面のボタンの出し分け）。
-     *
-     * <p><b>画面はこの述語を呼ぶ。</b> 投影の列で判断すると、同じ判断が 2 か所に住む。</p>
-     */
-    public boolean hasPendingCancellation() {
-        return pendingCancellation != null;
     }
 
     @EventSourcingHandler

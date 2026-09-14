@@ -166,6 +166,29 @@ class TrackingCancellationTest {
                         .doesNotContain("TrackingClosedEvent"));
     }
 
+    @Test
+    @DisplayName("閉じた追跡には荷役を重ねない（届いた事実だけ残す）")
+    void doesNotApplyHandlingAfterClosing() {
+        // **閉じたあとの荷役は状態を動かさない。** 貨物はすでにこの経路を離れて
+        // いるので、引取待ちや引取済へ進めると事実と食い違う。
+        //
+        // **無言で捨てない。** 記録は handlingms にあるので、追跡の履歴に何も
+        // 残らないと「記録したのに追跡が動いていない」に答えられなくなる
+        // （IT9 レビュー M6 と同じ扱い）。
+        fixture.given().event(initialized())
+                .event(planned("SGSIN"))
+                .event(received())
+                .event(loaded())
+                .event(new TrackingClosedEvent(NUMBER, "b-1", "CANCELLED", "SGSIN", NOW))
+                .when().command(unload("USNYC", "act-9"))
+                .then().eventsSatisfy(events -> assertThat(events)
+                        .map(event -> event.payload().getClass().getSimpleName())
+                        .as("状態は動かさない")
+                        .doesNotContain("TransportStatusUpdatedEvent")
+                        .as("届いた事実は残す")
+                        .contains("HandlingNotAppliedEvent"));
+    }
+
     private static CancellationDischargePlannedEvent planned(String unLocode) {
         return new CancellationDischargePlannedEvent(NUMBER, "b-1", unLocode,
                 "荷主の発注取消", "tracker01", PLANNED_AT);

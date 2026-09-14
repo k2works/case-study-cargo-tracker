@@ -11,7 +11,7 @@ import {
 } from '@/shared/ui/styles';
 import { formatBusinessDateTime } from '@/shared/api/businessDate';
 import { ApiError } from '@/shared/api/client';
-import { canTransitionTo } from './transitions';
+import { cancellableImmediately, canTransitionTo } from './transitions';
 import { fetchCancellationsOfBooking, requestCancellation } from './cancellationApi';
 
 /**
@@ -55,8 +55,10 @@ export function BookingCancellationPanel({ bookingId, bookingStatus, canRequest 
   const pending = items.some((item) => item.decision === null);
   // **キャンセルできるかは遷移表が決める。** 画面で状態を数え直さない。
   const cancellable = canTransitionTo(bookingStatus, 'CANCELLED');
-  // 輸送中だけ承認が要る（不変条件 9）。文言はここで変える。
-  const needsApproval = bookingStatus === 'IN_TRANSIT';
+  // **輸送中だけ承認が要る**（不変条件 9）。文言はここで変えるが、**判断はしない**
+  // ——どちらの経路になるかは正典（`BookingStatus#cancellableImmediately`）が決め、
+  // `transitions.canon.test.ts` が写しのずれを赤にする。
+  const needsApproval = cancellable && !cancellableImmediately(bookingStatus);
 
   if (!cancellable && items.length === 0) {
     return null;

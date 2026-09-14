@@ -9,6 +9,7 @@ import {
   canRequestRouting,
   canReturnToRouting,
   canUpdateSpecification,
+  cancellableImmediately,
 } from './transitions';
 
 /**
@@ -78,6 +79,28 @@ describe('予約の状態遷移表', () => {
 
   it('画面の写しは正典と丸ごと一致する', () => {
     expect(BOOKING_TRANSITIONS).toEqual(canonTransitions());
+  });
+
+  it('その場でキャンセルできる状態は正典と一致する（US30 §2）', () => {
+    // **画面は文言を変えるだけで、判断はしない。** 輸送中だけが申請 → 承認の
+    // 2 段階になる（不変条件 9）。ここを画面に直書きすると、正典が変わっても
+    // 黙ってずれる（IT15 のレビュー 中）。
+    //
+    // 正典の形は `canTransitionTo(CANCELLED) && this != IN_TRANSIT` なので、
+    // **除外の並び**を読み取って突き合わせる。
+    const source = readFileSync(CANON, 'utf-8');
+    const body = source.slice(source.indexOf('cancellableImmediately()'));
+    const statement = /return ([^;]+);/.exec(body)?.[1];
+    expect(statement, '正典の本体を読めていない').toBeTruthy();
+    const excluded = [...(statement as string).matchAll(/this != (\w+)/g)]
+      .map((match) => match[1] as string);
+    expect(excluded.length, '除外を 1 件も拾えていない').toBeGreaterThan(0);
+
+    for (const status of Object.keys(BOOKING_TRANSITIONS)) {
+      const expected = (BOOKING_TRANSITIONS[status] ?? []).includes('CANCELLED')
+        && !excluded.includes(status);
+      expect(cancellableImmediately(status), status).toBe(expected);
+    }
   });
 
   it('引き渡せる状態は正典と一致する（US06）', () => {

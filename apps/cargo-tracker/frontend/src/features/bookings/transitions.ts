@@ -123,3 +123,16 @@ export function canRequestConditionReview(routingStatus: string): boolean {
 export function canIssueTrackingNumber(bookingStatus: string): boolean {
   return canTransitionTo(bookingStatus, 'TRACKING_ISSUED');
 }
+
+/**
+ * 申請を挟まずその場でキャンセルできるか（US30 §受入基準 2・不変条件 9）。
+ *
+ * <p><b>輸送中だけが 2 段階になる。</b> 荷物が船の上にある以上、どこで降ろすかを
+ * 決めなければ止めたことにならない——追跡管理者が承認する。</p>
+ *
+ * <p>写しであることは避けられない（ブラウザから集約は呼べない）。避けられるのは
+ * 黙ってずれることで、`transitions.canon.test.ts` が正典の本体を読んで突き合わせる。</p>
+ */
+export function cancellableImmediately(status: string): boolean {
+  return canTransitionTo(status, 'CANCELLED') && status !== 'IN_TRANSIT';
+}

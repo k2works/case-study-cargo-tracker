@@ -129,6 +129,40 @@ class CargoCancellationTest {
     }
 
     @Test
+    @DisplayName("US30 §8: 申請のあとに引き取られたら、承認はできない")
+    void refusesApprovalAfterDelivery() {
+        // **申請と判断のあいだに時間がある。** 申請した時点では輸送中でも、
+        // 追跡管理者が読むころには引き取られていることがある。申請の有無だけを
+        // 見て承認すると、**引取済の予約がキャンセルになる**（§8 の裏口）。
+        fixture.given().event(booked()).event(routed()).event(issued())
+                .event(receivedAtTokyo())
+                .event(new CancellationRequestedEvent(BOOKING, REQUEST, "荷主の発注取消",
+                        "sales01", NOW))
+                .event(new BookingDeliveredEvent(BOOKING, "TRK-8K2QX7M4RB",
+                        Instant.parse("2026-10-12T02:00:00Z"), "USNYC"))
+                .when().command(new ApproveCancellationCommand(BOOKING, "USNYC",
+                        "荷主の指定倉庫が近い", "tracker01"))
+                .then().exception(IllegalTransition.class);
+    }
+
+    @Test
+    @DisplayName("US30 §7 の裏: 引き取られたあとでも却下はできる")
+    void allowsRejectionAfterDelivery() {
+        // **却下は「このまま運ぶ」という判断で、状態を動かさない。** 承認と同じ
+        // 検査を掛けると、決着しない申請が承認待ちに残り続ける。
+        fixture.given().event(booked()).event(routed()).event(issued())
+                .event(receivedAtTokyo())
+                .event(new CancellationRequestedEvent(BOOKING, REQUEST, "荷主の発注取消",
+                        "sales01", NOW))
+                .event(new BookingDeliveredEvent(BOOKING, "TRK-8K2QX7M4RB",
+                        Instant.parse("2026-10-12T02:00:00Z"), "USNYC"))
+                .when().command(new RejectCancellationCommand(BOOKING,
+                        "すでに引き取られています", "tracker01"))
+                .then().events(new CancellationRejectedEvent(BOOKING, REQUEST,
+                        "すでに引き取られています", "tracker01", NOW));
+    }
+
+    @Test
     @DisplayName("不変条件 10: 未決着の申請があるあいだは、二度目を受け付けない")
     void refusesASecondPendingRequest() {
         fixture.given().event(booked()).event(routed()).event(issued())

@@ -186,6 +186,17 @@ public class TrackingActivity {
         }
         TransportStatus next = TransportStatus.afterHandling(
                 command.handlingType(), command.finalPort(), command.offRoute());
+        if (closed) {
+            // **閉じた追跡には荷役を重ねない**（US30・不変条件 9）。貨物はすでに
+            // この経路を離れているので、引取待ちや引取済へ進めると事実と食い違う。
+            //
+            // **無言で捨てない。** 記録は handlingms にあるので、追跡の履歴に
+            // 何も残らないと「記録したのに追跡が動いていない」に答えられない。
+            appender.append(new HandlingNotAppliedEvent(trackingNumber.value(),
+                    command.activityId(), command.handlingType(), command.unLocode(),
+                    status, next, command.completedAt(), clock.instant()));
+            return;
+        }
         if (status == TransportStatus.EXCEPTION) {
             // **例外の対応中は預かる**（IT11 引き継ぎ枠 B）。順序としては正しく、
             // 状態が例外へ退避しているだけなので、解決したら適用しなければ
@@ -690,7 +701,12 @@ public class TrackingActivity {
         this.cancellationDischargeUnLocode = event.dischargeUnLocode();
     }
 
-    /** 追跡を閉じたか。<b>閉じた追跡には荷役を重ねて記録しない</b>。 */
+    /**
+     * 追跡を閉じたか（US30・不変条件 9）。
+     *
+     * <p><b>閉じた追跡には荷役を重ねて記録しない。</b> {@code advance} が
+     * {@link HandlingNotAppliedEvent} だけを残して状態を動かさない。</p>
+     */
     private boolean closed;
 
     @EventSourcingHandler

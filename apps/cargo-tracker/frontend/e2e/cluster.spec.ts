@@ -997,10 +997,19 @@ test.describe('kind クラスタでの通し確認', () => {
       await expect(page.getByRole('row', { name: /追跡終了/ })).toHaveCount(0);
 
       // 予約は「キャンセル」になる（承認された時点で契約は終わる）。
+      //
+      // **文字列で探さない。** 同じ画面にキャンセル欄の見出しと申請ボタンがあり、
+      // `'キャンセル'` は状態が変わらなくても当たる（IT15 のレビュー 中）。
+      // 状態の欄そのものを名指しする。
       await page.goto('/logout');
       await signIn(page, 'sales01');
       await page.goto(`/bookings/${bookingId}`);
-      await expectEventually(page, 'キャンセル');
+      await waitForProjection(page, async () => {
+        await page.reload();
+        await expect(page.getByText('予約の状態', { exact: true })
+          .locator('xpath=following-sibling::dd[1]'))
+          .toHaveText('キャンセル');
+      });
 
       // **D7: 指定した港で荷降しを記録すると、そこで閉じる。**
       await expect(async () => {

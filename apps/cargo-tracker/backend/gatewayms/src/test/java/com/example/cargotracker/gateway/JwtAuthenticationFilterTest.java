@@ -201,6 +201,32 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
+    @DisplayName("キャンセル承認の経路は追跡管理者だけに開く（US30）")
+    void restrictsCancellationDecisionToTracker() throws Exception {
+        // **ロール専用の一覧は `/bookings/*` と同じ形をしている。** 先に宣言しないと
+        // 広いほうに吸われて全員に開く——経路設計者の作業一覧が営業にも見えた形が、
+        // そのまま承認待ち一覧で再現した（IT15 のレビュー 高）。
+        String list = "/api/v1/booking/bookings/cancellations";
+        for (String role : java.util.List.of("ROLE_SALES", "ROLE_ROUTING", "ROLE_ACCOUNTANT")) {
+            assertThat(run(list, "Bearer " + tokenWithRoles(role)).getStatus())
+                    .as(role + " に承認待ちのキャンセル一覧を見せてはいけない")
+                    .isEqualTo(403);
+        }
+        assertThat(run(list, "Bearer " + tokenWithRoles("ROLE_TRACKER")).getStatus())
+                .as("追跡管理者は自分の仕事の一覧を開けなければならない")
+                .isNotEqualTo(403);
+
+        // 判断そのもの（承認・却下）も追跡管理者だけ。
+        for (String path : java.util.List.of(
+                "/api/v1/booking/bookings/b-1/cancellation/approval",
+                "/api/v1/booking/bookings/b-1/cancellation/rejection")) {
+            assertThat(run(path, "Bearer " + tokenWithRoles("ROLE_SALES"), "POST").getStatus())
+                    .as("営業が自分の申請を自分で承認できてはいけない: " + path)
+                    .isEqualTo(403);
+        }
+    }
+
+    @Test
     @DisplayName("予約の修正は営業だけに開く（US32）")
     void restrictsBookingUpdateToSales() throws Exception {
         // /bookings/** は営業・経路設計・追跡に開いている。修正はそのうち営業だけ。

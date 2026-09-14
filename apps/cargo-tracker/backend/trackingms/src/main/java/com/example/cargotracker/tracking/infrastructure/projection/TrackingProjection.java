@@ -289,10 +289,15 @@ public class TrackingProjection {
      */
     @EventHandler
     public void on(TrackingClosedEvent event, @MessageIdentifier String eventId) {
+        // **状態を先に読む。** 閉じたあとに読むと、行が無いときに空になる。
+        var closedRow = trackings.findByTrackingNumber(event.trackingNumber());
         int updated = trackings.markClosed(event.trackingNumber(), event.unLocode(),
                 clock.instant());
         if (updated == 0) {
+            // 行が無いなら履歴も書かない。**`new_status` は NOT NULL** で、
+            // 空のまま書くと既定の「例外発生」になり、起きていない例外を語る。
             log.warn("閉じる追跡が投影に無い: trackingNumber={}", event.trackingNumber());
+            return;
         }
         // **閉じたことを履歴に残す。** 状態だけだと「いつ・どこで終わったか」が
         // 読めない（なぜ閉じたかは、申請の履歴が予約詳細に出す）。
@@ -301,9 +306,7 @@ public class TrackingProjection {
         // 貨物は荷降し済のままである。{@code previous} を空にすると
         // {@code newStatusName()} が「例外発生」を書き、履歴が
         // <b>起きていない例外</b>を語り出す（IT15 T12e の下ごしらえで実測）。</p>
-        var closedRow = trackings.findByTrackingNumber(event.trackingNumber());
-        var statusAtClose = closedRow == null
-                ? null : TransportStatus.valueOf(closedRow.transportStatus());
+        var statusAtClose = TransportStatus.valueOf(closedRow.transportStatus());
         // **記録者は人。** 閉じたのは連鎖なので空にする——理由を入れると、
         // 履歴の「記録者」に {@code CANCELLED} と出る。
         writeHistory(new HistoryEntry(eventId, event.trackingNumber(), "CLOSED",

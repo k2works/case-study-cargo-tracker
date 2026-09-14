@@ -277,7 +277,12 @@ public final class RoleAuthorization {
                 "/api/v1/booking/bookings/routing-worklist",
                 "/api/v1/booking/bookings/condition-reviews",
                 "/api/v1/booking/bookings/awaiting-confirmation",
-                "/api/v1/booking/bookings/awaiting-tracking-number")) {
+                "/api/v1/booking/bookings/awaiting-tracking-number",
+                // 承認待ちのキャンセル（S23 / US30）。**ここに載せ忘れると
+                // 営業・経路設計・経理にも開く**——実測（IT15 のレビュー 高）。
+                // 名簿方式の検査は「載っていないもの」を通すので、下の
+                // `roleSpecificListsComeFirst` が名簿そのものを固定する。
+                "/api/v1/booking/bookings/cancellations")) {
             ordered.add(new Rule("GET", roleSpecificList, rules.get(roleSpecificList)));
         }
         // **GET だけ。** 書き込みの宣言（PUT / POST）は別に置いてあるので、
