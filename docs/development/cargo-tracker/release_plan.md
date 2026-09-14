@@ -96,8 +96,8 @@ verified:
 | US23 | 精算を処理する | 4 | 中 | 中 | 中 | 低 | billingms, bookingms |
 | US30 | 輸送中の予約キャンセルを承認する | 6 | 中 | **高** | 高 | 低 | bookingms, trackingms, handlingms, billingms |
 | US32 | 仮受付の予約情報を修正する | 2 | 中 | 低 | 低 | 低 | bookingms |
-| US33 | 業務シナリオを選んで自動実行する | 5 | 中 | 高 | 中 | 高 | **simulationms（新設）** + gatewayms 経由で 6 サービス |
-| US34 | 業務シミュレーションの結果を工程ごとに確認する | 3 | 中 | 中 | 低 | 中 | simulationms, frontend |
+| US33 | 業務シナリオを選んで自動実行する（[#600](https://github.com/k2works/case-study-cargo-tracker/issues/600)） | 5 | 中 | 高 | 中 | 高 | **simulationms（新設）** + gatewayms 経由で 6 サービス |
+| US34 | 業務シミュレーションの結果を工程ごとに確認する（[#601](https://github.com/k2works/case-study-cargo-tracker/issues/601)） | 3 | 中 | 中 | 低 | 中 | simulationms, frontend |
 | US35 | 例外を含む業務シナリオを自動実行する | 3 | 中 | 中 | 中 | 高 | simulationms（trackingms・handlingms・routingms の実操作を踏む） |
 | US36 | ランダムな業務シナリオをバックエンドが継続実行する | 5 | 中 | 高 | 高 | 高 | simulationms |
 | | **合計** | **122** | | | | | |

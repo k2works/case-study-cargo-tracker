@@ -26,8 +26,8 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-14T07:00:00Z }
 
 | US | 内容 | SP | 受入基準 |
 | :--- | :--- | ---: | ---: |
-| US33 | 業務シナリオを選んで自動実行する | 5 | 6 件 |
-| US34 | 業務シミュレーションの結果を工程ごとに確認する | 3 | 5 件 |
+| US33 | [業務シナリオを選んで自動実行する](https://github.com/k2works/case-study-cargo-tracker/issues/600) | 5 | 6 件 |
+| US34 | [業務シミュレーションの結果を工程ごとに確認する](https://github.com/k2works/case-study-cargo-tracker/issues/601) | 3 | 5 件 |
 
 対応 UC は **UC23（業務シミュレーションを自動実行する・要約レベル）**、BUC は **BUC25（業務シミュレーション実行）**です。
 
