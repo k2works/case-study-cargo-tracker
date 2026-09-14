@@ -1,6 +1,7 @@
 # Docs Update Log
 
 ## 2026-09-14
+* **Update**: UC15 に「システムから知らせる」向き（US37）を拡張として追記し、UC23 の主アクターに時間イベント（US36）を明記（claude-code/claude-opus-5）
 * **Update**: US37（貨物の知らせを画面で受け取る）を追加し、Release 3.0 を 19 SP・IT17 へ配分（claude-code/claude-opus-5）
 * **Creation**: [ADR-0020](/adr/cargo-tracker/0020-simulation-is-a-driver-not-an-event-sourced-context.md) を起票（claude-code/claude-opus-5）
 * **Creation**: [ADR-0018](/adr/cargo-tracker/0018-closing-the-tracking-belongs-to-the-tracking-aggregate.md)・[ADR-0019](/adr/cargo-tracker/0019-settled-can-be-reverted-to-delivered.md) を起票（claude-code/claude-opus-5）
