@@ -442,4 +442,28 @@ class TrackingProjectionIT extends AbstractAxonIntegrationTest {
                 .as("他社の追跡が混ざると、荷主に他人の貨物が見える")
                 .doesNotContain(other);
     }
+
+    @Test
+    @DisplayName("US30: 閉じた履歴は「起きていない例外」を語らない（状態は動かない）")
+    void closingDoesNotInventAnException() {
+        String trackingNumber = "T-C-" + System.nanoTime();
+        projection.on(initialized(trackingNumber, "b-" + System.nanoTime()));
+        projection.on(updated(trackingNumber, TransportStatus.LOADED,
+                TransportStatus.UNLOADED, Instant.parse("2026-09-12T02:00:00Z")), "evt-u");
+
+        projection.on(new com.example.cargotracker.tracking.domain.model.events
+                .TrackingClosedEvent(trackingNumber, "b-1", "CANCELLED", "SGSIN",
+                Instant.parse("2026-09-13T02:00:00Z")), "evt-closed");
+
+        var closed = history.findHistory(trackingNumber).stream()
+                .filter(row -> "CLOSED".equals(row.eventType())).findFirst().orElseThrow();
+        // **new_status は NOT NULL。** 空で渡すと既定が「例外発生」になり、
+        // 起きていない例外が履歴に残る。閉じても貨物は荷降し済のままである。
+        assertThat(closed.newStatus()).isEqualTo("UNLOADED");
+        assertThat(closed.previousStatus()).isEqualTo("UNLOADED");
+        assertThat(closed.location()).isEqualTo("SGSIN");
+        // **記録者は人。** 理由を入れると、履歴の記録者欄に CANCELLED と出る。
+        assertThat(closed.recordedBy()).isNull();
+        assertThat(trackings.findByTrackingNumber(trackingNumber).closed()).isTrue();
+    }
 }

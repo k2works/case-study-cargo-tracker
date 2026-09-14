@@ -924,6 +924,122 @@ test.describe('kind クラスタでの通し確認', () => {
       expect(forbidden.status()).toBe(403);
     });
 
+  test('輸送中のキャンセルを申請して承認すると、降ろして閉じて請求に載る（US30・IT15）',
+    async ({ page, request }) => {
+      // **US30 のクラスタ確認**（Try T7。US ごとに 1 度、IT の途中で回す）。
+      // キャンセルは 4 サービスの連鎖（予約 → 追跡 → 荷役 → 請求）で、
+      // 層ごとの検査も往復の契約テストも「画面から踏んだときどうなるか」は見ない。
+      test.setTimeout(360_000);
+      const product = `キャンセルの貨物-${Date.now()}`;
+      const { bookingId, trackingNumber, voyageNumber } =
+        await issueTrackingNumber(request, product);
+
+      // 輸送中にする（積み込むまでは「即座にキャンセル」の経路で、承認は要らない）。
+      const handlerToken = await tokenOf(request, 'handler01');
+      const handlerHeaders = { Authorization: `Bearer ${handlerToken}` };
+      for (const step of [
+        { handlingType: 'RECEIVE', unLocode: 'JPTYO' },
+        { handlingType: 'LOAD', unLocode: 'JPTYO', voyageNumber },
+      ]) {
+        await expect(async () => {
+          const response = await request.post('/api/v1/handling/activities', {
+            headers: handlerHeaders,
+            data: { activityId: crypto.randomUUID(), trackingNumber, ...step },
+          });
+          expect(response.status()).toBe(201);
+        }).toPass({ timeout: 60_000 });
+      }
+
+      // **D1・D2: 営業が申請する。** 輸送中なのでボタンの文言が変わる——
+      // どちらの経路になるかを決めるのは集約で、画面は文言だけを変える。
+      await signIn(page, 'sales01');
+      await page.goto(`/bookings/${bookingId}`);
+      await waitForProjection(page, async () => {
+        await page.reload();
+        await expect(page.getByRole('button', { name: 'キャンセル（要承認）' }))
+          .toBeVisible();
+      });
+      await page.getByLabel('理由').fill('荷主の発注取消');
+      await page.getByRole('button', { name: 'キャンセル（要承認）' }).click();
+      await expectEventually(page, '承認待ちの申請があります');
+
+      // **D4: 承認待ちは追跡管理者の一覧に出る。** 陸揚げ地を決められるのは
+      // その人だけで、営業には打つ手が無い。
+      await page.goto('/logout');
+      await signIn(page, 'tracker01');
+      await page.goto('/bookings/cancellations');
+      const row = page.getByTestId(`cancellation-${bookingId}`);
+      await waitForProjection(page, async () => {
+        await expect(row).toBeVisible();
+      });
+      await row.getByRole('button', { name: '判断する' }).click();
+
+      // **D5: 陸揚げ地の選択肢はサーバが出す。** 集約が断る条件と同じ関数から
+      // 作られるので、出ているのに押すと断られる港は無い。
+      const discharge = page.getByLabel('陸揚げ地');
+      await expect(discharge.locator('option', { hasText: 'USNYC' }))
+        .toHaveCount(1, { timeout: 20_000 });
+      await discharge.selectOption('USNYC');
+      await page.getByRole('button', { name: '承認する' }).click();
+
+      // **D6: 承認しても追跡は閉じない。** 貨物はまだ船の上にある。
+      // 「閉じた」と出してしまうと、荷役の現場が降ろす前に手を引く。
+      await page.goto(`/tracking/${trackingNumber}`);
+      await expectEventually(page, '積込済');
+      await expect(page.getByRole('row', { name: /追跡終了/ })).toHaveCount(0);
+
+      // 予約は「キャンセル」になる（承認された時点で契約は終わる）。
+      await page.goto('/logout');
+      await signIn(page, 'sales01');
+      await page.goto(`/bookings/${bookingId}`);
+      await expectEventually(page, 'キャンセル');
+
+      // **D7: 指定した港で荷降しを記録すると、そこで閉じる。**
+      await expect(async () => {
+        const response = await request.post('/api/v1/handling/activities', {
+          headers: handlerHeaders,
+          data: {
+            activityId: crypto.randomUUID(),
+            trackingNumber,
+            handlingType: 'UNLOAD',
+            voyageNumber,
+            unLocode: 'USNYC',
+          },
+        });
+        expect(response.status()).toBe(201);
+      }).toPass({ timeout: 60_000 });
+
+      await page.goto('/logout');
+      await signIn(page, 'tracker01');
+      await page.goto(`/tracking/${trackingNumber}`);
+      // **「例外発生」と出さない。** 閉じるのは状態の遷移ではなく、これ以上
+      // 進まないという印である（T12e の下ごしらえで実際に出た欠陥）。
+      await expectEventually(page, '追跡終了');
+      await expect(page.getByRole('row', { name: /追跡終了/ }))
+        .toContainText('USNYC');
+      await expect(page.getByText('例外発生')).toHaveCount(0);
+
+      // **D10: キャンセル料が請求に載る。** 輸送していないので基本料金の請求書は
+      // 無く、キャンセル料だけの請求書ができる（正典「キャンセル料の受け皿」）。
+      const accountantToken = await tokenOf(request, 'accountant01');
+      let invoiceId = '';
+      await expect(async () => {
+        const response = await request.get(
+          `/api/v1/billing/invoices/by-booking/${bookingId}`,
+          { headers: { Authorization: `Bearer ${accountantToken}` } });
+        expect(response.status()).toBe(200);
+        invoiceId = (await response.json()).invoiceId ?? '';
+        expect(invoiceId).toMatch(/^INV-\d{8}-[0-9a-f]{8}$/);
+      }).toPass({ timeout: 120_000 });
+
+      await page.goto('/logout');
+      await signIn(page, 'accountant01');
+      await page.goto(`/invoices/${invoiceId}`);
+      // **料率だけでは「なぜこの額か」が読めない。** どの状態でのキャンセルかを
+      // 明細に添える（輸送中なら 50%）。
+      await expectEventually(page, 'キャンセル料（輸送中）');
+    });
+
   test('見積から候補と概算が出て、その見積で予約すると違いが知らされる（US01・IT14）',
     async ({ page, request }) => {
       // **US01 のクラスタ確認**（Try T7。US ごとに 1 度回す）。

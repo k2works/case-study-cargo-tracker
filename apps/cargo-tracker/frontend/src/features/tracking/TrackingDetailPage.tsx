@@ -246,11 +246,7 @@ function History({
             {history.map((event) => (
               <tr key={`${event.occurredAt}-${event.statusLabel}`}>
                 <td className={TD}>{formatBusinessDateTime(event.occurredAt)}</td>
-                <td className={TD}>
-                  {event.previousStatusLabel === null
-                    ? event.statusLabel
-                    : `${event.previousStatusLabel} → ${event.statusLabel}`}
-                </td>
+                <td className={TD}>{changeOf(event)}</td>
                 <td className={TD}>{event.location ?? '—'}</td>
                 {showRecordedBy && <td className={TD}>{event.recordedBy ?? '—'}</td>}
               </tr>
@@ -260,6 +256,23 @@ function History({
       )}
     </section>
   );
+}
+
+/**
+ * 履歴の「変更」欄の文言。
+ *
+ * <p><b>閉じたことは状態の遷移ではない。</b> 貨物は荷降し済のまま、これ以上
+ * 進まないという印が付いただけである（US30・不変条件 9）。遷移として出すと
+ * 「荷降し済 → 荷降し済」と読め、同じ状態への変更が起きたように見える。</p>
+ */
+function changeOf(event: TrackingView['history'][number]): string {
+  if (event.eventType === 'CLOSED') {
+    return '追跡終了';
+  }
+  if (event.previousStatusLabel === null) {
+    return event.statusLabel;
+  }
+  return `${event.previousStatusLabel} → ${event.statusLabel}`;
 }
 
 /**

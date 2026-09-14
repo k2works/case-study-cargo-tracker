@@ -194,6 +194,30 @@ describe('S41 追跡詳細・管理', () => {
     expect(screen.getByRole('link', { name: '追跡一覧に戻る' })).toBeInTheDocument();
   });
 
+  it('US30: 追跡が閉じた行は「追跡終了」と読める（状態の遷移として出さない）', async () => {
+    // **閉じるのは状態の遷移ではない。** 貨物は荷降し済のままで、これ以上進まない
+    // という印が付いただけである。「荷降し済 → 荷降し済」と出すと、同じ状態への
+    // 変更が起きたように読める（IT15 T12e の下ごしらえで実測した形の裏返し）。
+    respondWith(tracking({
+      status: 'UNLOADED',
+      statusLabel: '荷降し済',
+      history: [{
+        occurredAt: '2026-09-10T02:00:00Z',
+        eventType: 'CLOSED',
+        previousStatusLabel: '荷降し済',
+        statusLabel: '荷降し済',
+        location: 'SGSIN',
+        recordedBy: null,
+      }],
+    }));
+
+    renderDetail();
+
+    const row = await screen.findByRole('row', { name: /追跡終了/ });
+    expect(row).toHaveTextContent('SGSIN');
+    expect(row).not.toHaveTextContent('→');
+  });
+
   it('荷主には記録者（社内の担当者名）を出さない', async () => {
     // S41 は荷主も開く。ui_design は荷主向けで「担当者名は出しません」と定めている。
     asShipper();

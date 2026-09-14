@@ -294,10 +294,20 @@ public class TrackingProjection {
         if (updated == 0) {
             log.warn("閉じる追跡が投影に無い: trackingNumber={}", event.trackingNumber());
         }
-        // **なぜ閉じたかを履歴に残す。** 状態だけだと「引き取られた」のか
-        // 「キャンセルで降ろした」のかが読めない。
+        // **閉じたことを履歴に残す。** 状態だけだと「いつ・どこで終わったか」が
+        // 読めない（なぜ閉じたかは、申請の履歴が予約詳細に出す）。
+        //
+        // <p><b>状態は動かない。</b> 閉じるのは「これ以上進まない」という印で、
+        // 貨物は荷降し済のままである。{@code previous} を空にすると
+        // {@code newStatusName()} が「例外発生」を書き、履歴が
+        // <b>起きていない例外</b>を語り出す（IT15 T12e の下ごしらえで実測）。</p>
+        var closedRow = trackings.findByTrackingNumber(event.trackingNumber());
+        var statusAtClose = closedRow == null
+                ? null : TransportStatus.valueOf(closedRow.transportStatus());
+        // **記録者は人。** 閉じたのは連鎖なので空にする——理由を入れると、
+        // 履歴の「記録者」に {@code CANCELLED} と出る。
         writeHistory(new HistoryEntry(eventId, event.trackingNumber(), "CLOSED",
-                null, null, event.unLocode(), event.closedAt(), event.reason()),
+                statusAtClose, null, event.unLocode(), event.closedAt(), null),
                 clock.instant());
     }
 
