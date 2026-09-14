@@ -28,8 +28,46 @@ DDD（ドメイン駆動設計）のケーススタディとして、貨物追�
 | :----------- | :--------- | :--- |
 | nodejs       | 22.x       |      |
 
+## アプリケーション
+
+本リポジトリの実装は **Axon Framework 5 による CQRS / Event Sourcing のマイクロサービス**です。記事シリーズ「[エンタープライズ Java における実践的 DDD](docs/article/practical-ddd-in-enterprise-java/draft-2/index.md)」第 5 章（CQRS / Event Sourcing）の参照元になります。
+
+| 項目 | 内容 |
+| :--- | :--- |
+| 構成 | 7 サービス（gateway / auth / booking / routing / tracking / handling / billing）＋ 共有カーネル ＋ SPA |
+| メッセージ基盤 | Axon Server（Event Store ・ Command / Event / Query Bus） |
+| 永続化 | PostgreSQL（Database per Service）・Flyway・MyBatis |
+| 画面 | React + react-router + TanStack Query |
+| 配置 | Docker Compose（依存ミドルウェア）・kind（Kubernetes） |
+
+### 動かす
+
+**手順は運用手順書が正典です。** ここに書き写すと、手順が変わったときに片方だけ古くなります。
+
+- [アプリケーション開発環境セットアップ手順書](docs/operation/cargo-tracker/アプリケーション開発環境セットアップ手順書.md) — 前提・サブシステム一覧・技術スタック・ビルドとテスト・開発サーバー・kind での起動
+- [運用ドキュメント](docs/operation/cargo-tracker/index.md) — 手順書の一覧
+
+最短の経路だけ示します。
+
+```bash
+npx gulp dev:help        # 開発タスクの一覧（何ができるかはここで引く）
+npx gulp dev:backend     # 依存ミドルウェアを起こして bookingms を起動
+npx gulp dev:frontend    # フロントエンド開発サーバー
+npx gulp k8s:setup       # kind クラスタに一式を配って起動する
+```
+
+### 読む
+
+| 資料 | 内容 |
+| :--- | :--- |
+| [ドメインモデル](docs/design/cargo-tracker/domain-model.md) | 集約・イベント・不変条件・状態の一覧 |
+| [ADR](docs/adr/cargo-tracker/index.md) | 設計判断の記録 |
+| [ユーザーマニュアル](docs/manual/index.md) | 業務担当者向けの操作手引き |
+| [イテレーション計画・完了報告](docs/development/cargo-tracker/index.md) | 何を・なぜ・どの順で作ったか |
+
 ## 構成
 
+- [アプリケーション](#アプリケーション)
 - [構築](#構築)
 - [配置](#配置)
 - [運用](#運用)
