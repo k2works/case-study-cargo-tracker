@@ -1,6 +1,7 @@
 # Docs Update Log
 
 ## 2026-09-14
+* **Creation**: [リリース完了報告書 2.0](/development/cargo-tracker/release_report-2_0_0.md) を作成（claude-code/claude-opus-5）
 * **Creation**: [19 キャンセルを申請して承認する](/manual/19-キャンセルを申請して承認する.md) を新設（claude-code/claude-opus-5）
 * **Creation**: [IT15 実装レビュー](/review/cargo-tracker/IT15実装_review_20260914.md) を作成（claude-code/claude-opus-5）
 * **Creation**: [イテレーション 15 ふりかえり](/development/cargo-tracker/retrospective-15.md) を作成（claude-code/claude-opus-5）
