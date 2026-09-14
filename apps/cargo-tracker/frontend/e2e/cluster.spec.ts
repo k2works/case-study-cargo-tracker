@@ -1850,4 +1850,77 @@ test.describe('kind クラスタでの通し確認', () => {
     await expectEventually(page, '経路提案中');
     await expect(page.getByRole('link', { name: '修正する' })).toHaveCount(0);
   });
+
+  test('管理者が一覧からシナリオを流すと、精算まで通って結果を読める（US33・US34・IT16）',
+    async ({ page }) => {
+      await signIn(page, 'admin01');
+
+      // **一覧から始める。** 識別子を握って API を叩く形にすると、
+      // 一覧から辿れない欠陥を踏まない（IT15 の Try T2）。
+      await page.getByRole('link', { name: '業務シミュレーション' }).first().click();
+      await expect(page.getByRole('heading', { name: '業務シミュレーション' })).toBeVisible();
+
+      // **走っている実行が終わるのを待つ。** 同じシナリオは同時に 1 本しか
+      // 流せない。前の回が残っていると始められない。
+      await expect(async () => {
+        await page.reload();
+        await expect(page.getByText('実行中')).toHaveCount(0);
+      }).toPass({ timeout: 300_000 });
+
+      await page.getByLabel('シナリオ').selectOption('一般貨物の標準輸送');
+      await page.getByRole('button', { name: '実行する' }).click();
+
+      // 押すとその実行の結果へ移る。
+      await expect(page.getByRole('heading', { name: '実行結果' })).toBeVisible();
+
+      // **13 工程が通るまで数十秒かかる。** 連鎖が追いつくのを工程ごとに
+      // 待つので、速さではなく「通ること」を見る。
+      await expect(page.getByText('成功', { exact: true }).first())
+        .toBeVisible({ timeout: 300_000 });
+      await expect(async () => {
+        await expect(page.getByText('入金の記録')).toBeVisible();
+        await expect(page.getByRole('row', { name: /入金の記録/ }).getByText('成功'))
+          .toBeVisible();
+      }).toPass({ timeout: 300_000 });
+
+      // **作られたものから業務画面へ行ける**（US34 §5）。
+      const bookingLink = page.getByRole('row', { name: /予約の登録/ }).getByRole('link');
+      const bookingId = (await bookingLink.textContent()) ?? '';
+      await bookingLink.click();
+      await expect(page.getByRole('heading', { name: '予約詳細' })).toBeVisible();
+      await expect(page.getByText('精算済')).toBeVisible();
+
+      // **業務の一覧には出ない**（US33 §3）。印は荷主から貨物へ引き継がれる。
+      await page.goto('/bookings');
+      await expect(page.getByRole('heading', { name: '予約一覧' })).toBeVisible();
+      await expect(page.getByText(bookingId)).toHaveCount(0);
+    });
+
+  test('経路が組めないシナリオは、その工程で止まって理由が読める（US34・IT16）',
+    async ({ page }) => {
+      await signIn(page, 'admin01');
+      await page.getByRole('link', { name: '業務シミュレーション' }).first().click();
+
+      await expect(async () => {
+        await page.reload();
+        await expect(page.getByText('実行中')).toHaveCount(0);
+      }).toPass({ timeout: 300_000 });
+
+      await page.getByLabel('シナリオ').selectOption('経路候補が見つからない輸送');
+      await page.getByRole('button', { name: '実行する' }).click();
+      await expect(page.getByRole('heading', { name: '実行結果' })).toBeVisible();
+
+      // **止まった工程と理由が読める。** どちらか片方では次の手を決められない。
+      await expect(async () => {
+        await expect(page.getByRole('row', { name: /経路の確定/ }).getByText('失敗'))
+          .toBeVisible();
+      }).toPass({ timeout: 300_000 });
+      await expect(page.getByText(/経路の候補が 1 件もありません/)).toBeVisible();
+
+      // **それまでに作られた予約は残っている**（US34 §3）。
+      const bookingLink = page.getByRole('row', { name: /予約の登録/ }).getByRole('link');
+      await bookingLink.click();
+      await expect(page.getByRole('heading', { name: '予約詳細' })).toBeVisible();
+    });
+
 });

@@ -68,6 +68,11 @@ tasks.named<Test>("test") {
     inputs.files(rootProject.subprojects.map { it.file("build.gradle.kts") })
             .withPropertyName("subprojectBuildScripts")
             .withPathSensitivity(PathSensitivity.RELATIVE)
+    // DockerfilesCopyEveryModuleTest は Dockerfile そのものを読む。宣言しないと
+    // Gradle が UP-TO-DATE と判断し、写し忘れを作っても赤にならない（実測）。
+    inputs.files(rootProject.subprojects.map { it.file("Dockerfile") })
+            .withPropertyName("serviceDockerfiles")
+            .withPathSensitivity(PathSensitivity.RELATIVE)
     // ReplayCheckAccompaniesReactionTest は各サービスの本番ソースと ADR を読む。
     // 宣言しないと、Reaction Handler を足しても検査が走らずに緑のままになる。
     inputs.files(rootProject.subprojects.map { it.file("src/main/java") })
