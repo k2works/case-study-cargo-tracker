@@ -194,5 +194,21 @@ describe('画面の中のリンク先が、そのロールで開ける（Try T4�
 
     expect(screen.queryByText('この画面を開く権限がありません')).not.toBeInTheDocument();
   });
+
+  it('US27: /logout は本当にログアウトする（正典 S03）', async () => {
+    // **`*` に吸われていた。** 正典は「ヘッダの `[ログアウト]` から `/logout`（S03）へ。
+    // 認証ストアと `sessionStorage` を破棄し…」と書いているが、ルートが無く
+    // `<Navigate to="/">` に落ちるので、**認証されたままダッシュボードへ戻る**
+    // だけだった（IT16 T1 のドリフト洗い出しで発見）。クラスタ E2E の
+    // `page.goto('/logout')` も、ログアウトせずにロールを上書きしていた。
+    loginAs(['ROLE_SALES']);
+    sessionStorage.setItem('keep', 'me');
+
+    renderAt('/logout');
+
+    expect(useAuthStore.getState().user).toBeNull();
+    expect(sessionStorage.getItem('keep')).toBeNull();
+    expect(await screen.findByRole('heading', { name: 'ログイン' })).toBeVisible();
+  });
 });
 

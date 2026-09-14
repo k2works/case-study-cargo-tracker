@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { AppLayout } from './AppLayout';
+import { LogoutPage } from '@/app/LogoutPage';
 import { useAuthStore } from '@/shared/auth/authStore';
 
 function renderLayout(initial = '/shippers') {
@@ -13,6 +14,9 @@ function renderLayout(initial = '/shippers') {
           <Route path="/shippers" element={<h1>荷主一覧</h1>} />
           <Route path="/" element={<h1>ダッシュボード</h1>} />
         </Route>
+        {/* **本物と同じ形にする。** ヘッダの `[ログアウト]` は `/logout`（S03）へ
+            送る——器に置かないと、破棄しているかどうかを確かめられない。 */}
+        <Route path="/logout" element={<LogoutPage />} />
         <Route path="/login" element={<h1>ログイン</h1>} />
       </Routes>
     </MemoryRouter>,
@@ -35,7 +39,9 @@ describe('S03 ログアウト（US27）', () => {
       expect(screen.getByRole('heading', { name: 'ログイン' })).toBeInTheDocument(),
     );
     expect(useAuthStore.getState().user).toBeNull();
-    expect(sessionStorage.getItem('cargo-tracker-auth')).not.toContain('sales01');
+    // **残骸ごと消える。** 以前は「利用者名を含まない」までしか見ていなかったが、
+    // S03 は `sessionStorage` を丸ごと破棄する（共用端末で次の人が戻れないように）。
+    expect(sessionStorage.getItem('cargo-tracker-auth')).toBeNull();
   });
 
   it('ログアウト後にブラウザバックで戻っても保護画面は開かない', async () => {

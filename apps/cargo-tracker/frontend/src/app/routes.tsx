@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react';
 import { Navigate, Route, Routes } from 'react-router';
+import { LogoutPage } from './LogoutPage';
 import { LoginPage } from '@/features/auth/LoginPage';
 import { PublicTrackingPage } from '@/features/tracking/PublicTrackingPage';
 import { PortalPage } from '@/features/portal/PortalPage';
@@ -74,6 +75,10 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      {/* S03 ログアウト（US27）。**URL でも出入りできる**——正典が
+          `/logout` と書いており、E2E もそこへ行く。ルートが無いと `*` の
+          受け皿に落ち、認証されたままダッシュボードへ戻るだけになる。 */}
+      <Route path="/logout" element={<LogoutPage />} />
       {/* 公開追跡は認証の外。ロール別の到達性は認証済みの利用者にしか働かないので、
           荷受人が使う経路は NAVIGATION ではなくここに置く（ui_design.md）。 */}
       <Route path="/portal" element={<PortalPage />} />

@@ -33,7 +33,6 @@ const HANDLER_TABS = [
 /** 左サイドナビ + トップヘッダ（ui_design.md）。 */
 export function AppLayout() {
   const user = useAuthStore((state) => state.user);
-  const logout = useAuthStore((state) => state.logout);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -96,10 +95,9 @@ export function AppLayout() {
             </span>
             <button
               type="button"
-              onClick={() => {
-                logout();
-                navigate('/login', { replace: true });
-              }}
+              // **同じ経路を通す。** ボタンと URL で破棄するものが違うと、
+              // 片方だけ直したときにもう片方が古い振る舞いを続ける（S03）。
+              onClick={() => navigate('/logout', { replace: true })}
               className="rounded border border-gray-300 px-3 py-1.5 text-gray-700 hover:bg-gray-100"
             >
               ログアウト
