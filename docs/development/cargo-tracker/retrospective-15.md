@@ -2,8 +2,10 @@
 type: Retrospective
 title: "イテレーション 15 ふりかえり"
 tags: [retrospective]
-status: draft
+status: stable
 generated: { by: claude-code/claude-opus-5, at: 2026-09-14T06:00:00Z }
+verified:
+  - { by: human:k2works, at: 2026-09-14T06:02:03Z }
 ---
 
 # イテレーション 15 ふりかえり

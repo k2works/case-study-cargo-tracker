@@ -2,8 +2,10 @@
 type: Plan
 title: "イテレーション 15 計画"
 tags: [plan]
-status: draft
+status: stable
 generated: { by: claude-code/claude-opus-5, at: 2026-09-13T12:38:34Z }
+verified:
+  - { by: human:k2works, at: 2026-09-14T06:02:18Z }
 ---
 
 # イテレーション 15 計画

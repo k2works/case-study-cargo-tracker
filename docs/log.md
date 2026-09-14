@@ -1,6 +1,12 @@
 # Docs Update Log
 
 ## 2026-09-14
+* **Verification**: IT15 の計画・ふりかえり・完了報告書・レビュー・リリース完了報告書 2.0 を承認（human:k2works）。status を stable に昇格
+* **Verification**: [iteration_plan-15](/development/cargo-tracker/iteration_plan-15.md) を human:k2works が検証
+* **Verification**: [IT15実装_review_20260914](/review/cargo-tracker/IT15実装_review_20260914.md) を human:k2works が検証
+* **Verification**: [release_report-2_0_0](/development/cargo-tracker/release_report-2_0_0.md) を human:k2works が検証
+* **Verification**: [iteration_report-15](/development/cargo-tracker/iteration_report-15.md) を human:k2works が検証
+* **Verification**: [retrospective-15](/development/cargo-tracker/retrospective-15.md) を human:k2works が検証
 * **Creation**: [リリース完了報告書 2.0](/development/cargo-tracker/release_report-2_0_0.md) を作成（claude-code/claude-opus-5）
 * **Creation**: [19 キャンセルを申請して承認する](/manual/19-キャンセルを申請して承認する.md) を新設（claude-code/claude-opus-5）
 * **Creation**: [IT15 実装レビュー](/review/cargo-tracker/IT15実装_review_20260914.md) を作成（claude-code/claude-opus-5）
