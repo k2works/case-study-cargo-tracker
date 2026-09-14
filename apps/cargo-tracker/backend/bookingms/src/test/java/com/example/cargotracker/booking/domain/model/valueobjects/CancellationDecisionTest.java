@@ -22,7 +22,6 @@ class CancellationDecisionTest {
     private static final Location TOKYO = Location.of("JPTYO");
     private static final Location SINGAPORE = Location.of("SGSIN");
     private static final Location NEW_YORK = Location.of("USNYC");
-    private static final Location LONDON = Location.of("GBLON");
 
     @Test
     @DisplayName("残りの寄港地なら承認できる")
