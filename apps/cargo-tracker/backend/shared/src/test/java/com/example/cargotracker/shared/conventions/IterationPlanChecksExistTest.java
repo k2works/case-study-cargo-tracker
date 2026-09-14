@@ -54,8 +54,14 @@ class IterationPlanChecksExistTest {
      * 見続けると、前 IT の「直した」という記述に出てくる<b>旧クラス名</b>まで
      * 拾って赤になる（IT14 で実際に起きた）。それは本物の違反ではないので、
      * 検査そのものが信用されなくなる。</p>
+     *
+     * <p><b>進め忘れると、逆に何も守らない。</b> IT15 のあいだ、ここは
+     * {@code iteration_plan-14.md} を指したままだった——**IT15 の計画が名指しした
+     * 検査は 1 つも確かめられていなかった**（IT16 の着手前の検証で発見）。
+     * 進めるのは<b>クローズのとき</b>である：計画を書いた時点では検査は
+     * まだ無く、進めると赤になる。</p>
      */
-    private static final String CURRENT_PLAN = "iteration_plan-14.md";
+    private static final String CURRENT_PLAN = "iteration_plan-15.md";
 
     @Test
     @DisplayName("計画が名指しした検査（バックエンド）が実在する")
