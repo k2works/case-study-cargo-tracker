@@ -11,6 +11,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 import java.util.UUID;
 
 /**
@@ -53,8 +54,15 @@ public class GatewayBusinessApi implements BusinessApi {
     /** 読み直す間隔。 */
     private static final long ID_READ_INTERVAL_MS = 500;
 
-    /** 別サービスの断りを包む言い回し。<b>後ろにあるものから剥がす</b>。 */
-    private static final List<String> WRAPPERS = List.of("failed. Caused by ", "failed: ");
+    /**
+     * 別サービスの断りを包む言い回し。
+     *
+     * <p><b>間の字面を決め打ちしない。</b> 実測では {@code failed.\nCaused by }
+     * だったが、版によって {@code failed: } にも {@code failed. Caused by } にも
+     * なる。<b>最後の「原因」以降だけ</b>を人が読む一節として扱う。</p>
+     */
+    private static final Pattern WRAPPER =
+            Pattern.compile("(?s).*(?:Caused by|failed:)\\s*");
 
     /**
      * 通関の申告を出す担当。
@@ -366,15 +374,8 @@ public class GatewayBusinessApi implements BusinessApi {
         if (message == null || message.isBlank()) {
             return response.body();
         }
-        // **包み方を 1 つに決め打ちしない。** 実測では「failed. Caused by 〜」で、
-        // 版によって「failed: 〜」にもなる。**後ろにある区切りから剥がす**。
-        for (String separator : WRAPPERS) {
-            int wrapped = message.lastIndexOf(separator);
-            if (wrapped >= 0) {
-                return message.substring(wrapped + separator.length()).trim();
-            }
-        }
-        return message;
+        // **包み方を字面で決め打ちしない。** 区切りの前後の空白も改行も版で変わる。
+        return WRAPPER.matcher(message).replaceFirst("").trim();
     }
 
     private String email() {

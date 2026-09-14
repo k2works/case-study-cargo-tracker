@@ -398,7 +398,8 @@ class GatewayBusinessApiTest {
 
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.ValueSource(strings = {
-        "failed. Caused by ", "failed: "})
+        // **実測はこれ**（改行が入る）。版によって残り 2 つの形にもなる。
+        "failed.\nCaused by ", "failed. Caused by ", "failed: "})
     @DisplayName("別サービスの断りは、内部の言葉を剥がして人が読む一節だけ出す")
     void unwrapsTheRemoteRefusal(String separator) throws IOException {
         // **経路の問い合わせは別サービスへ渡る。** 断りが Axon の内部文言で
@@ -409,7 +410,9 @@ class GatewayBusinessApiTest {
         responses.put("/api/v1/booking/bookings/BK-1/route-candidates",
                 "{\"code\":\"BUSINESS_RULE_VIOLATION\",\"message\":\"An exception was thrown"
                         + " by the remote message handling component: Handling query with"
-                        + " identifier [6c03cc47] " + separator
+                        // **JSON の中では改行を逃がす。** 生の改行を混ぜると
+                        // 本文そのものが壊れ、剥がし方ではなく解析の検査になる。
+                        + " identifier [6c03cc47] " + separator.replace("\n", "\\n")
                         + "その港を通る航海が登録されていません: AQMCM\"}");
 
         BusinessApi.StepResult result = api.execute(StepKind.ASSIGN_ROUTE,
