@@ -4,7 +4,7 @@ title: "ドメインモデル設計 - 国際貨物輸送管理システム（CQR
 description: "CQRS / Event Sourcing 版 Cargo Tracker のドメインモデル設計。6 コンテキストの集約・不変条件・コマンド・イベント（内部 / 契約）・状態遷移・Reaction Handler を、イベントを永続化フォーマットとして定義する。"
 tags: [design,domain-model,ddd,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-13T12:38:34Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-14T11:57:40Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -43,6 +43,7 @@ quadrantChart
     "Handling": [0.58, 0.55]
     "Billing": [0.45, 0.62]
     "Auth": [0.20, 0.30]
+    "Simulation": [0.30, 0.35]
     "Shared Kernel": [0.35, 0.20]
 ```
 
@@ -54,6 +55,7 @@ quadrantChart
 | Handling | 補完 | 荷役記録は基盤だが業界共通。通関申告は監査履歴が要る | 適用 |
 | Billing | 補完 | 法人割引は固有だが精算自体は業界共通。金額を扱うため監査が要る | 適用 |
 | Auth | 一般または補完 | 認証・認可は汎用機能 | **適用しない**（状態保存） |
+| Simulation | 一般または補完 | **業務ではなく、業務が成立していることを確かめる手段**（UC23）。工程の並びは固有だが、やっていることは本番の API を順に叩くことである | **適用しない**（[ADR-0020] 決定 3。実行の記録は業務の事実ではなく、監査もリプレイも要らない） |
 | Shared Kernel | 一般 | UN/LOCODE 等の国際標準 | なし |
 
 ## ユビキタス言語
@@ -146,6 +148,9 @@ quadrantChart
 | 精算状態 `BillingStatus` | 算出待ち / 算出済 / 請求済 / 入金済 / 取消 | `PENDING` / `CALCULATED` / `INVOICED` / `PAID` / `VOID` | 期限超過は列に持たず `overdue(today)` で判定（**述語は US23・IT14 で入る**——期限が決まるのは発行のときなので、先に作ると入力経路の無い述語になる）。**`PENDING` は本プロジェクトの経路では通らない**——算出の起点は `CargoDeliveredEvent` で、算出できたときに初めて集約ができる。算出できなければ請求書を作らず要確認に出す。列挙に残すのは US23 以降で使う余地を消さないためで、**書いてあるのに通らない値は次に読む人が使おうとする**ので注記する |
 | 荷主種別 `ShipperType` | 個人 / 法人 | `INDIVIDUAL` / `CORPORATE` | |
 | 貨物種別 `CargoType` | 一般 / 危険物 / 冷凍 | `GENERAL` / `HAZARDOUS` / `REFRIGERATED` | |
+| 実行状態 `RunStatus` | 実行中 / 成功 / 失敗 | `RUNNING` / `SUCCEEDED` / `FAILED` | 業務シミュレーションの実行（UC23 / US33・US34）。**`RUNNING` は同じシナリオに 1 本だけ**（部分ユニークで断る）。決着しない実行が 1 本残ると、そのシナリオは二度と流せなくなる |
+| 工程 `StepKind` | 荷主の登録 / 予約の登録 / 経路設計への引き渡し / 経路の確定 / 荷主への通知 / 予約の確定 / 追跡番号の発行 / 荷役の記録 / 通関 / 引取 / 料金の算出 / 請求書の発行 / 入金の記録 | `REGISTER_SHIPPER` / `REGISTER_BOOKING` / `REQUEST_ROUTING` / `ASSIGN_ROUTE` / `NOTIFY_SHIPPER` / `CONFIRM_BOOKING` / `ISSUE_TRACKING_NUMBER` / `RECORD_HANDLING` / `CLEAR_CUSTOMS` / `CLAIM_CARGO` / `CALCULATE_INVOICE` / `ISSUE_INVOICE` / `RECORD_PAYMENT` | **業務の言葉で並べる**——S93 は「どの工程で止まったか」を読む人のためにある。**呼ぶ API は工程が知らない**（段取りと経路を同じ場所に書くと、API を変えるたびにシナリオの定義が動く） |
+| 工程の結果 `StepOutcome` | 成功 / 失敗 | `SUCCEEDED` / `FAILED` | 失敗した工程は**理由を必ず持つ**（US34 §2）。「失敗しました」では切り分けられない |
 
 ## アクターとコンテキストの対応
 
@@ -1307,6 +1312,74 @@ User *-- "0..1" UserShipperLink
 | `RegisterUserCommand` | システム管理者 | — |
 | `UnlockAccountCommand` | システム管理者 | US31 |
 | `LinkUserToShipperCommand` / `UnlinkUserFromShipperCommand` | システム管理者 | — |
+
+## Simulation Context（支援）— simulationms
+
+業務が端から端まで成立していることを確かめる手段であり、業務そのものではありません（UC23 / US33・US34）。**Event Sourcing は適用しません**（[ADR-0020](../../adr/cargo-tracker/0020-simulation-is-a-driver-not-an-event-sourced-context.md) 決定 3）——実行の記録は業務の事実ではなく、監査もリプレイも要りません。集約は**普通のオブジェクト**で、永続化はアプリケーション層が行います。
+
+**工程は Gateway 経由の HTTP で本番の API を叩きます**（決定 2）。専用の書き込み経路を作ると、「シミュレーションは通るのに実際の操作は通らない」状態を検出できなくなります。
+
+```plantuml
+@startuml
+title Simulation Context
+
+class SimulationRun <<Aggregate Root>> {
+  - runId: String
+  - scenario: Scenario
+  - seed: Long [0..1]
+  - startedBy: String
+  - startedAt: Instant
+  - status: RunStatus
+  - finishedAt: Instant [0..1]
+  - recordedSteps: List<RecordedStep>
+  + {static} start(runId, scenario, seed, startedBy, at): SimulationRun
+  + recordSuccess(kind, elapsed, producedId, at)
+  + recordFailure(kind, elapsed, status, message, at)
+  + abort(at)
+  + plannedSteps(): List<StepKind>
+}
+class Scenario <<Value Object>> {
+  + label(): String
+  + steps(): List<StepKind>
+  + {static} of(label): Scenario
+}
+class RecordedStep <<Value Object>> {
+  - stepNo: int
+  - kind: StepKind
+  - outcome: StepOutcome
+  - elapsed: Duration
+  - producedId: String [0..1]
+  - failureStatus: Integer [0..1]
+  - failureMessage: String [0..1]
+}
+class StepRole <<Value Object>> {
+  + username(): String
+  + {static} of(kind): StepRole
+}
+
+SimulationRun *-- Scenario
+SimulationRun *-- "*" RecordedStep
+Scenario ..> StepKind
+StepRole ..> StepKind
+@enduml
+```
+
+| # | 不変条件 |
+| :--- | :--- |
+| 1 | 工程は**シナリオが宣言した順に**記録する（飛ばして記録しない）。順を飛ばせると「どの工程まで進んだか」が読めなくなる |
+| 2 | **終わった実行に工程を足さない** |
+| 3 | 失敗しても**それまでの記録を消さない**。どこまで進んだかを追えることが US34 の目的である |
+| 4 | 実行した人は必須。誰が流したか分からない実行は、結果を誰にも問い合わせられない |
+| 5 | 同じシナリオの実行は**同時に 1 本**（US33 §5）。断りには**実行中の識別子を添える**——「二重に実行できません」だけでは、いまの結果へ行けない |
+| 6 | 実行は必ず決着する（`abort`）。実行中のまま残ると、5 の守りがそのシナリオを二度と流せなくする |
+| 7 | **本番では実行しない**（US33 §4）。実データに紛れる貨物を作らない |
+
+| シナリオ | 工程数 | 目的 |
+| :--- | :--- | :--- |
+| 一般貨物の標準輸送 `STANDARD` | 13 | 予約から精算まで通ることを確かめる（US33 の中核） |
+| 経路候補が見つからない輸送 `NO_ROUTE` | 4 | **失敗する経路も 1 本要る**——成功しか流せないと、「どの工程で止まったか」を出す仕組み（US34）が確かめられない |
+
+**シミュレーションが作った荷主には印が付きます**（`ShipperRegisteredEvent.simulated`。US33 §3）。貨物・請求は荷主の印を引き継ぎ、**除外は各 BC の読み口の側**に置きます——印を付けるだけでは業務の一覧に混ざります。
 
 ## ドメインイベント一覧（サービス横断）
 

@@ -4,7 +4,7 @@ title: "データモデル設計 - 国際貨物輸送管理システム（CQRS /
 description: "CQRS / Event Sourcing 版 Cargo Tracker のデータモデル設計。Event Store は Axon Server に任せ、サービスごとの投影テーブル・Axon 管理テーブル・Auth の状態テーブルを ER 図とテーブル定義で示し、Processing Group との対応とリプレイ前提のマイグレーション方針を定める。"
 tags: [design,data-model,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-13T02:29:13Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-14T11:57:40Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -265,6 +265,7 @@ entity "shipper" as shipper {
   registered_at: TIMESTAMPTZ NOT NULL
   projected_at: TIMESTAMPTZ NOT NULL
   last_event_id: VARCHAR(36)
+  simulated: BOOLEAN NOT NULL DEFAULT FALSE
 }
 
 entity "cargo_summary" as cargo {
@@ -310,6 +311,7 @@ entity "cargo_summary" as cargo {
   pending_cancellation: BOOLEAN NOT NULL DEFAULT FALSE
   projected_at: TIMESTAMPTZ NOT NULL
   last_event_id: VARCHAR(36)
+  simulated: BOOLEAN NOT NULL DEFAULT FALSE
 }
 
 entity "cargo_notification" as note {
@@ -695,6 +697,7 @@ entity "invoice" as inv {
   voided_at: TIMESTAMPTZ
   projected_at: TIMESTAMPTZ NOT NULL
   last_event_id: VARCHAR(36)
+  simulated: BOOLEAN NOT NULL DEFAULT FALSE
 }
 
 entity "invoice_line_item" as li {
@@ -775,6 +778,7 @@ entity "shipper_contract_snapshot" as scs {
   contract_number: VARCHAR(50)
   projected_at: TIMESTAMPTZ NOT NULL
   last_event_id: VARCHAR(36)
+  simulated: BOOLEAN NOT NULL DEFAULT FALSE
 }
 
 inv ||--o{ li
@@ -845,6 +849,49 @@ entity "process_state" as ps {
 | 始まっていない連鎖は進められない（例外にする） | 黙って作ると、始まっていない連鎖が進んだことになる |
 
 **制約は DB 側にも置きます。** `status` の値域、`completed_steps <= total_steps`、そして「`RUNNING` でないなら `completed_at` がある」を CHECK 制約にします。最後の 1 つが無いと、完了しているのに「いつ終わったか」を問えない行が作れてしまいます。
+
+### `simulation_read_db`（simulationms）
+
+```plantuml
+@startuml
+title simulation_read_db ER 図
+
+hide circle
+skinparam linetype ortho
+
+entity "simulation_run" as run {
+  * **run_id**: VARCHAR(40) <<PK>>
+  --
+  scenario_id: VARCHAR(30) NOT NULL
+  status: VARCHAR(20) NOT NULL
+  seed: BIGINT
+  started_at: TIMESTAMPTZ NOT NULL
+  finished_at: TIMESTAMPTZ
+  started_by: VARCHAR(50) NOT NULL
+  projected_at: TIMESTAMPTZ NOT NULL
+}
+
+entity "simulation_step" as step {
+  * **run_id**: VARCHAR(40) <<PK>> <<FK>>
+  * **step_no**: INTEGER <<PK>>
+  --
+  kind: VARCHAR(40) NOT NULL
+  outcome: VARCHAR(20) NOT NULL
+  elapsed_ms: BIGINT
+  produced_id: VARCHAR(40)
+  failure_status: INTEGER
+  failure_message: VARCHAR(1000)
+  occurred_at: TIMESTAMPTZ NOT NULL
+}
+
+run ||--o{ step
+@enduml
+```
+
+| テーブル | 元になるイベント | 制約・インデックス | 備考 |
+| :--- | :--- | :--- | :--- |
+| `simulation_run` | **無し**（[ADR-0020] 決定 3） | `UNIQUE(scenario_id) WHERE status = 'RUNNING'` | **投影ではなく、ここが正である。** Event Sourcing を適用しないので、書くのはアプリケーション層。二重実行を断るのは**部分ユニークで**——数えてから入れる形は、2 つの要求が同時に来たときに両方とも通る |
+| `simulation_step` | 無し | `PK(run_id, step_no)` | 工程は**記録した順**に 1 件ずつ書く。終わってからまとめて書くと、走っているあいだ S93 が「どこまで進んだか」を出せない。**失敗しても前の記録を消さない**（US34 §3） |
 
 ### Axon 管理テーブル（各 Read Model DB 共通）
 
@@ -1068,6 +1115,14 @@ take-4 の `handling_event_projection` に相当する追記専用テーブル�
 ### 6. 削除要求への備え
 
 イベントは削除できません。荷主の個人情報がイベントに載る以上、削除要求には「暗号化キーの破棄で読めなくする」手段が要ります。**ADR-0003（crypto-shredding）で解決済み**です。本書での対応は、`shipper` の個人情報列（`name` / `email` / `phone` / `address`）と `shipper_contract_snapshot.shipper_name` を NULL 許容にし、`UNIQUE(email)` が NULL を許すことです。鍵の破棄後にリプレイすると該当列が `NULL` になり、画面は「（削除済み）」を出します。
+
+### 7. シミュレーション由来の印
+
+`shipper.simulated` / `cargo_summary.simulated` / `shipper_contract_snapshot.simulated` / `invoice.simulated` は、業務シミュレーション（UC23 / US33 §受入基準 3）が作った行かどうかを表します。
+
+**印を付けるのは荷主の登録だけ**で、貨物と請求は荷主の印を引き継ぎます（`COALESCE((SELECT simulated FROM …), FALSE)`）。由来と荷主種別は直交するので、専用の `shipper_type` は作りません（シミュレーションでも法人割引を踏みたい）。
+
+**印だけでは混ざります。** 除外は**読み口の側**に置きます（予約一覧・請求一覧が既定で `simulated = FALSE` に絞る）。既定は `FALSE`——列が無かったころの行はすべて本物です。
 
 ## 参照
 
