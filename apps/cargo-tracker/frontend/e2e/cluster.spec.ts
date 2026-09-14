@@ -1922,7 +1922,7 @@ test.describe('kind クラスタでの通し確認', () => {
         await expect(page.getByText('実行中')).toHaveCount(0);
       }).toPass({ timeout: 300_000 });
 
-      await page.getByLabel('シナリオ').selectOption('経路候補が見つからない輸送');
+      await page.getByLabel('シナリオ').selectOption('便が通わない港への輸送');
       await page.getByRole('button', { name: '実行する' }).click();
       await expect(page.getByRole('heading', { name: '実行結果' })).toBeVisible();
 
@@ -1931,7 +1931,10 @@ test.describe('kind クラスタでの通し確認', () => {
         await expect(page.getByRole('row', { name: /経路の確定/ }).getByText('失敗'))
           .toBeVisible();
       }).toPass({ timeout: 300_000 });
-      await expect(page.getByText(/経路の候補が 1 件もありません/)).toBeVisible();
+      // **内部の言葉が出ていないことも見る。** 別サービスの断りをそのまま
+      // 出すと、読む人は次の手を決められない。
+      await expect(page.getByText(/航海が登録されていません/)).toBeVisible();
+      await expect(page.getByText(/remote message handling/)).toHaveCount(0);
 
       // **それまでに作られた予約は残っている**（US34 §3）。
       const bookingLink = page.getByRole('row', { name: /予約の登録/ }).getByRole('link');

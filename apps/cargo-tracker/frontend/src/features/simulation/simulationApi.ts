@@ -50,7 +50,7 @@ export interface RunView {
  * **呼び名はサーバの列挙と同じ文字列**——実行の要求はこの呼び名で送り、
  * サーバは知らないものを断る（打ち間違いを「工程 0 件で成功」にしない）。
  */
-export const SCENARIOS = ['一般貨物の標準輸送', '経路候補が見つからない輸送'] as const;
+export const SCENARIOS = ['一般貨物の標準輸送', '便が通わない港への輸送'] as const;
 
 /** 実行の一覧（S92）。<b>新しい順</b>。 */
 export function fetchSimulationRuns(): Promise<Pending<{ items: RunSummaryView[] }>> {

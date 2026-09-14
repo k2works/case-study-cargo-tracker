@@ -35,18 +35,26 @@ public class GatewayBusinessApi implements BusinessApi {
     private static final int STANDARD_DEADLINE_DAYS = 120;
 
     /**
-     * 経路が組めない期限（NO_ROUTE シナリオ）。
+     * 便が 1 本も結ばない目的地（NO_ROUTE シナリオ）。
      *
-     * <p><b>過去日にしない。</b> 予約の受付で断られると「経路が見つからない」
-     * ではなく「予約できない」で止まり、確かめたい工程（経路の確定）へ届かない。</p>
+     * <p><b>期限の短さで作らない。</b> 最初は「期限を 1 日にすれば候補が無くなる」
+     * と考えたが、<b>クラスタには過去の実行が登録した便が溜まる</b>ので、たまたま
+     * 間に合う便があると成功してしまう（実測）。<b>時間ではなく構造で決める</b>
+     * ——どの便も寄らない港を目的地にすれば、候補は必ず 0 件になる。</p>
+     *
+     * <p><b>実在の港を使う</b>（南極・マクマード基地）。架空の符号にすると、
+     * 断りが「経路が無い」ではなく「知らない港」に化けることがある。</p>
      */
-    private static final int NO_ROUTE_DEADLINE_DAYS = 1;
+    private static final String UNSERVED_DESTINATION = "AQMCM";
 
     /** 自分が作ったものが読めるようになるまで読み直す回数。 */
     private static final int DEFAULT_ID_READ_ATTEMPTS = 60;
 
     /** 読み直す間隔。 */
     private static final long ID_READ_INTERVAL_MS = 500;
+
+    /** 別サービスの断りを包む言い回し。<b>後ろにあるものから剥がす</b>。 */
+    private static final List<String> WRAPPERS = List.of("failed. Caused by ", "failed: ");
 
     /**
      * 通関の申告を出す担当。
@@ -122,15 +130,16 @@ public class GatewayBusinessApi implements BusinessApi {
 
     private StepResult registerBooking(StepKind kind, Map<StepKind, String> produced) {
         LocalDate deadline = LocalDate.now(clock.withZone(BUSINESS_ZONE))
-                .plusDays(scenario == Scenario.NO_ROUTE
-                        ? NO_ROUTE_DEADLINE_DAYS : STANDARD_DEADLINE_DAYS);
+                .plusDays(STANDARD_DEADLINE_DAYS);
+        String destination = scenario == Scenario.NO_ROUTE
+                ? UNSERVED_DESTINATION : DESTINATION;
         // **Map.of は 10 組までしか取れない。** 溢れた項目は黙って落ちるのではなく
         // 書けなくなるだけだが、ここは項目が増えるので順序付きの地図で組む
         // （必須の `quantity` を落として 400 で止まった。IT16 で実測）。
         var body = new java.util.LinkedHashMap<String, Object>();
         body.put("shipperId", produced.get(StepKind.REGISTER_SHIPPER));
         body.put("originUnLocode", ORIGIN);
-        body.put("destinationUnLocode", DESTINATION);
+        body.put("destinationUnLocode", destination);
         body.put("arrivalDeadline", deadline.toString());
         body.put("cargoType", "GENERAL");
         body.put("weightKg", 1000);
@@ -153,7 +162,7 @@ public class GatewayBusinessApi implements BusinessApi {
         var candidates = calls.get(StepRole.of(kind),
                 bookingUri(produced, "/route-candidates"));
         if (!candidates.ok()) {
-            return StepResult.failure(candidates.status(), candidates.body());
+            return StepResult.failure(candidates.status(), businessReason(candidates));
         }
         JsonNode legs = parse(candidates).path("candidates").path(0).path("legs");
         if (!legs.isArray() || legs.isEmpty()) {
@@ -341,6 +350,31 @@ public class GatewayBusinessApi implements BusinessApi {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("待ちが中断されました", e);
         }
+    }
+
+    /**
+     * 断りの理由のうち、人が読む部分を取り出す。
+     *
+     * <p><b>内部の言葉をそのまま出さない。</b> 経路の問い合わせは別サービスへ
+     * 渡るので、断りが「An exception was thrown by the remote message handling
+     * component: Handling query with identifier [...] failed: 〜」という形で
+     * 包まれて返る（IT16 のクラスタで実測）。<b>読む人が要るのは最後の一節</b>
+     * ——「その港を通る航海が登録されていません: AQMCM」である。</p>
+     */
+    private String businessReason(GatewayCalls.Response response) {
+        String message = parse(response).path("message").asText(null);
+        if (message == null || message.isBlank()) {
+            return response.body();
+        }
+        // **包み方を 1 つに決め打ちしない。** 実測では「failed. Caused by 〜」で、
+        // 版によって「failed: 〜」にもなる。**後ろにある区切りから剥がす**。
+        for (String separator : WRAPPERS) {
+            int wrapped = message.lastIndexOf(separator);
+            if (wrapped >= 0) {
+                return message.substring(wrapped + separator.length()).trim();
+            }
+        }
+        return message;
     }
 
     private String email() {

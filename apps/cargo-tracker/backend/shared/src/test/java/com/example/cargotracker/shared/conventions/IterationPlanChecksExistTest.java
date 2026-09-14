@@ -61,7 +61,7 @@ class IterationPlanChecksExistTest {
      * 進めるのは<b>クローズのとき</b>である：計画を書いた時点では検査は
      * まだ無く、進めると赤になる。</p>
      */
-    private static final String CURRENT_PLAN = "iteration_plan-15.md";
+    private static final String CURRENT_PLAN = "iteration_plan-16.md";
 
     @Test
     @DisplayName("計画が名指しした検査（バックエンド）が実在する")

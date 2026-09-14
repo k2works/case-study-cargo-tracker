@@ -160,24 +160,28 @@ class GatewayBusinessApiTest {
     }
 
     @Test
-    @DisplayName("シナリオで到着期限が変わる（経路が組めない条件を作れる）")
-    void choosesTheDeadlineByScenario() throws IOException {
+    @DisplayName("シナリオで目的地が変わる（経路が組めない条件を構造で作る）")
+    void choosesTheDestinationByScenario() throws IOException {
         GatewayBusinessApi standard = start(Scenario.STANDARD);
         responses.put("/api/v1/booking/bookings", "{\"bookingId\":\"BK-1\"}");
         standard.execute(StepKind.REGISTER_BOOKING, Map.of(StepKind.REGISTER_SHIPPER, "SHP-1"));
-        String far = bodies.get(bodies.size() - 1);
+        String served = bodies.get(bodies.size() - 1);
         stop();
         bodies.clear();
 
         GatewayBusinessApi noRoute = start(Scenario.NO_ROUTE);
         responses.put("/api/v1/booking/bookings", "{\"bookingId\":\"BK-2\"}");
         noRoute.execute(StepKind.REGISTER_BOOKING, Map.of(StepKind.REGISTER_SHIPPER, "SHP-1"));
-        String near = bodies.get(bodies.size() - 1);
+        String unserved = bodies.get(bodies.size() - 1);
 
-        assertThat(far).contains("2027-01-12");
-        // **過去日にしない。** 予約の受付で断られると、確かめたい工程
-        //（経路の確定）へ届かない。
-        assertThat(near).contains("2026-09-15");
+        assertThat(served).contains("\"destinationUnLocode\":\"USNYC\"");
+        // **時間ではなく構造で決める。** 期限の短さで候補を消すと、
+        // クラスタに溜まった便次第でたまたま間に合ってしまう（実測）。
+        assertThat(unserved).contains("\"destinationUnLocode\":\"AQMCM\"");
+        // **期限はどちらも同じだけ先にする。** 期限で断られると、
+        // 「経路が無い」ではなく「予約できない」で止まる。
+        assertThat(served).contains("2027-01-12");
+        assertThat(unserved).contains("2027-01-12");
     }
 
     @Test
@@ -390,5 +394,28 @@ class GatewayBusinessApiTest {
                 Map.of(StepKind.REGISTER_BOOKING, "BK-1"));
 
         assertThat(result.failureStatus()).isEqualTo(422);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {
+        "failed. Caused by ", "failed: "})
+    @DisplayName("別サービスの断りは、内部の言葉を剥がして人が読む一節だけ出す")
+    void unwrapsTheRemoteRefusal(String separator) throws IOException {
+        // **経路の問い合わせは別サービスへ渡る。** 断りが Axon の内部文言で
+        // 包まれて返るので、そのまま出すと読む人は次の手を決められない
+        //（IT16 のクラスタで実測）。
+        GatewayBusinessApi api = start(Scenario.NO_ROUTE);
+        statuses.put("/api/v1/booking/bookings/BK-1/route-candidates", 422);
+        responses.put("/api/v1/booking/bookings/BK-1/route-candidates",
+                "{\"code\":\"BUSINESS_RULE_VIOLATION\",\"message\":\"An exception was thrown"
+                        + " by the remote message handling component: Handling query with"
+                        + " identifier [6c03cc47] " + separator
+                        + "その港を通る航海が登録されていません: AQMCM\"}");
+
+        BusinessApi.StepResult result = api.execute(StepKind.ASSIGN_ROUTE,
+                Map.of(StepKind.REGISTER_BOOKING, "BK-1"));
+
+        assertThat(result.failureMessage())
+                .isEqualTo("その港を通る航海が登録されていません: AQMCM");
     }
 }

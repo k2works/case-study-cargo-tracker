@@ -4,7 +4,7 @@ title: "ドメインモデル設計 - 国際貨物輸送管理システム（CQR
 description: "CQRS / Event Sourcing 版 Cargo Tracker のドメインモデル設計。6 コンテキストの集約・不変条件・コマンド・イベント（内部 / 契約）・状態遷移・Reaction Handler を、イベントを永続化フォーマットとして定義する。"
 tags: [design,domain-model,ddd,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-14T11:57:40Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-14T17:36:05Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -1377,7 +1377,7 @@ StepRole ..> StepKind
 | シナリオ | 工程数 | 目的 |
 | :--- | :--- | :--- |
 | 一般貨物の標準輸送 `STANDARD` | 13 | 予約から精算まで通ることを確かめる（US33 の中核） |
-| 経路候補が見つからない輸送 `NO_ROUTE` | 4 | **失敗する経路も 1 本要る**——成功しか流せないと、「どの工程で止まったか」を出す仕組み（US34）が確かめられない |
+| 便が通わない港への輸送 `NO_ROUTE` | 4 | **失敗する経路も 1 本要る**——成功しか流せないと、「どの工程で止まったか」を出す仕組み（US34）が確かめられない |
 
 **シミュレーションが作った荷主には印が付きます**（`ShipperRegisteredEvent.simulated`。US33 §3）。貨物・請求は荷主の印を引き継ぎ、**除外は各 BC の読み口の側**に置きます——印を付けるだけでは業務の一覧に混ざります。
 

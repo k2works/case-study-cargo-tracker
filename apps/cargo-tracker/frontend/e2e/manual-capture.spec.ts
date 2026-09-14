@@ -1908,7 +1908,7 @@ test.describe('17 請求を組み立てる・18 輸送見積を作る', () => {
       },
       {
         runId: 'SIM-9f8e7d6c5b4a3a2b1c0d9e8f7a6b5c4d',
-        scenarioLabel: '経路候補が見つからない輸送',
+        scenarioLabel: '便が通わない港への輸送',
         status: 'FAILED',
         statusLabel: '失敗',
         startedAt: '2026-09-28T00:40:00Z',
@@ -1951,7 +1951,7 @@ test.describe('17 請求を組み立てる・18 輸送見積を作る', () => {
         body: JSON.stringify({
           runId: 'SIM-9f8e7d6c5b4a3a2b1c0d9e8f7a6b5c4d',
           scenario: 'NO_ROUTE',
-          scenarioLabel: '経路候補が見つからない輸送',
+          scenarioLabel: '便が通わない港への輸送',
           status: 'FAILED',
           statusLabel: '失敗',
           seed: null,
