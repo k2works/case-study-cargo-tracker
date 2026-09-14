@@ -42,8 +42,12 @@ class InvoiceCancellationFeeTest {
 
     private AxonTestFixture fixture;
 
+    // NOSONAR java:S5826 — **検出が誤り。** 直上の @BeforeEach が付いており、同じ形の
+    // `setUp` が他に 20 本以上あるのにこの 1 本だけが指摘される（プロジェクト全体で
+    // 1 件）。直すのが面倒だからではなく、指摘そのものが事実に反することを理由に
+    // 抑制する（`sonar-project.properties` の除外と同じ基準）。
     @BeforeEach
-    void setUp() {
+    void setUp() { // NOSONAR
         EventSourcingConfigurer configurer = EventSourcingConfigurer.create()
                 .registerEntity(EventSourcedEntityModule.autodetected(
                         String.class, Invoice.class))

@@ -12,7 +12,11 @@ import {
 import { formatBusinessDateTime } from '@/shared/api/businessDate';
 import { ApiError } from '@/shared/api/client';
 import { cancellableImmediately, canTransitionTo } from './transitions';
-import { fetchCancellationsOfBooking, requestCancellation } from './cancellationApi';
+import {
+  fetchCancellationsOfBooking,
+  requestCancellation,
+  type CancellationRequestView,
+} from './cancellationApi';
 
 /**
  * S22 のキャンセル欄（UC22 / US30 §受入基準 1・2・3・10）。
@@ -24,12 +28,33 @@ import { fetchCancellationsOfBooking, requestCancellation } from './cancellation
  * <p><b>履歴は誰でも読める。</b> 申請したのは営業、判断するのは追跡管理者なので、
  * 「いま何が起きているか」を両方が読めなければ話が噛み合わない。</p>
  */
-export function BookingCancellationPanel({ bookingId, bookingStatus, canRequest }: {
+/**
+ * 履歴 1 行の判断の部分。
+ *
+ * <p><b>いつ・誰が・どう判断したか</b>に、承認なら陸揚げ地、理由があれば理由を
+ * 添える。まだ判断されていなければ「承認待ち」。</p>
+ */
+function decisionLine(item: CancellationRequestView): string {
+  if (item.decision === null) {
+    return '承認待ち';
+  }
+  const when = formatBusinessDateTime(item.decidedAt ?? item.requestedAt);
+  const parts = [`${when} ${item.decisionLabel}（${item.decidedBy}）`];
+  if (item.dischargeUnLocode) {
+    parts.push(`陸揚げ地 ${item.dischargeUnLocode}`);
+  }
+  if (item.decisionReason) {
+    parts.push(item.decisionReason);
+  }
+  return parts.join('・');
+}
+
+export function BookingCancellationPanel({ bookingId, bookingStatus, canRequest }: Readonly<{
   bookingId: string;
   bookingStatus: string;
   /** 申請できる人か（営業）。**読むのは全員**。 */
   canRequest: boolean;
-}) {
+}>) {
   const client = useQueryClient();
   const [reason, setReason] = useState('');
 
@@ -133,14 +158,7 @@ export function BookingCancellationPanel({ bookingId, bookingStatus, canRequest 
                 {formatBusinessDateTime(item.requestedAt)} 申請（{item.requestedBy}）:
                 {' '}{item.reason}
               </p>
-              <p className="text-gray-600">
-                {item.decision === null
-                  ? '承認待ち'
-                  : `${formatBusinessDateTime(item.decidedAt ?? item.requestedAt)} `
-                    + `${item.decisionLabel}（${item.decidedBy}）`
-                    + `${item.dischargeUnLocode ? `・陸揚げ地 ${item.dischargeUnLocode}` : ''}`
-                    + `${item.decisionReason ? `・${item.decisionReason}` : ''}`}
-              </p>
+              <p className="text-gray-600">{decisionLine(item)}</p>
             </li>
           ))}
         </ul>

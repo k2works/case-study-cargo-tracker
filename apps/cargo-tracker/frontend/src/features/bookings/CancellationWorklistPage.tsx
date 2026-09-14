@@ -29,16 +29,21 @@ import {
 /** 承認待ちは 5 秒ごとに取り直す（申請は他の人が出す）。 */
 const REFETCH_INTERVAL_MS = 5000;
 
+/** 判断が記録できなかった理由。**サーバの断り文をそのまま出す**（原因が読める）。 */
+function decisionError(error: unknown): string {
+  return error instanceof ApiError ? error.message : '判断を記録できませんでした';
+}
+
 /**
  * 判断の欄（1 件ぶん）。
  *
  * <p><b>陸揚げ地の選択肢はサーバから取る。</b> 集約が断る条件と同じ関数から
  * 作られるので、出ているのに押すと断られる港が生まれない。</p>
  */
-function DecisionForm({ request, onDone }: {
+function DecisionForm({ request, onDone }: Readonly<{
   request: CancellationRequestView;
   onDone: () => void;
-}) {
+}>) {
   const [dischargeUnLocode, setDischargeUnLocode] = useState('');
   const [reason, setReason] = useState('');
 
@@ -131,9 +136,7 @@ function DecisionForm({ request, onDone }: {
 
       {(approve.isError || reject.isError) && (
         <p role="alert" className={`${ALERT} mt-3`}>
-          {(approve.error ?? reject.error) instanceof ApiError
-            ? (approve.error ?? reject.error as ApiError).message
-            : '判断を記録できませんでした'}
+          {decisionError(approve.error ?? reject.error)}
         </p>
       )}
     </div>
@@ -169,7 +172,7 @@ export function CancellationWorklistPage() {
     <section>
       <h1 className={PAGE_TITLE}>キャンセル承認</h1>
       <p className="mt-1 text-sm text-gray-600">
-        輸送中の予約に対するキャンセルの申請です。
+        輸送中の予約に対するキャンセルの申請です。{' '}
         <b>承認するには陸揚げ地を決めます</b>——決めずに承認しても、貨物は船の上に
         残ります。<b>承認しても追跡は閉じません</b>。その港で荷降しを記録してから
         閉じます。
