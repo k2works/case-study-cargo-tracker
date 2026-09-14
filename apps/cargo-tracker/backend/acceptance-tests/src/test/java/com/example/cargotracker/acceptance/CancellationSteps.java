@@ -2,6 +2,8 @@ package com.example.cargotracker.acceptance;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.cargotracker.shared.testing.AcceptanceFixtureTime;
+
 import io.cucumber.java.ja.かつ;
 import io.cucumber.java.ja.ならば;
 import io.cucumber.java.ja.もし;
@@ -89,8 +91,8 @@ public class CancellationSteps {
         reactions.on(new com.example.cargotracker.shared.contract.event
                 .HandlingActivityRegisteredEvent("act-" + System.nanoTime(),
                 trackingNumber(), bookingId(), "RECEIVE", "JPTYO", null, false, false,
-                "handler01", java.time.Instant.parse("2026-09-20T01:00:00Z"),
-                java.time.Instant.parse("2026-09-20T01:05:00Z")));
+                "handler01", AcceptanceFixtureTime.at(-2, 10),
+                AcceptanceFixtureTime.at(-2, 10)));
         SharedSteps.awaitWithin(10, () -> "IN_TRANSIT".equals(
                 bookings.currentBooking().get("bookingStatus")), "予約が輸送中になる");
     }
@@ -100,7 +102,7 @@ public class CancellationSteps {
         輸送中にする();
         reactions.on(new com.example.cargotracker.shared.contract.event.CargoDeliveredEvent(
                 trackingNumber(), bookingId(),
-                java.time.Instant.parse("2026-10-12T02:00:00Z"), "USNYC"));
+                AcceptanceFixtureTime.at(20, 11), "USNYC"));
         SharedSteps.awaitWithin(10, () -> "DELIVERED".equals(
                 bookings.currentBooking().get("bookingStatus")), "予約が引取済になる");
     }
@@ -114,8 +116,10 @@ public class CancellationSteps {
         leg.put("voyageNumber", "V-MOL-001");
         leg.put("loadUnLocode", "JPTYO");
         leg.put("unloadUnLocode", "USNYC");
-        leg.put("loadTime", "2026-09-20T00:00:00Z");
-        leg.put("unloadTime", "2026-10-12T00:00:00Z");
+        // **固定日付は時限式になる。** 現実の時刻が追い越した瞬間、直して
+        // いないのに赤くなる（IT13 負債枠 1）。位置関係だけを書く。
+        leg.put("loadTime", AcceptanceFixtureTime.at(-2, 9).toString());
+        leg.put("unloadTime", AcceptanceFixtureTime.at(20, 9).toString());
         bookings.rest().post()
                 .uri(bookings.url("/api/v1/booking/bookings/" + bookingId() + "/route"))
                 .contentType(MediaType.APPLICATION_JSON)
