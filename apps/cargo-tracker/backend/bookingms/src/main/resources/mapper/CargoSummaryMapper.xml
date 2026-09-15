@@ -129,6 +129,35 @@
         WHERE booking_id = #{bookingId}
     </update>
 
+    <!--
+      自社予約一覧（S45）。**荷主で絞るのはサーバ**（S40 と同じ）。
+
+      **シミュレーション由来は外さない。** 行はその荷主のものしか返らないので
+      本物の荷主に混ざりようがなく、外すと確認用の利用者が自分の一覧から
+      何も辿れなくなる（US37 §6・ADR-0020 決定 4 の「外さない読み口」）。
+
+      **並びは到着期限が近い順。** 荷主が知りたいのは「いつ着くか」で、
+      最終更新の新しい順にすると、誰も触っていない＝いちばん危ないものが沈む。
+    -->
+    <sql id="ownVisible">
+        WHERE shipper_id = #{shipperId}
+        <if test="!includeFinished">
+            AND booking_status NOT IN ('SETTLED', 'CANCELLED')
+        </if>
+    </sql>
+
+    <select id="findByShipper" resultMap="cargoSummaryRow">
+        SELECT * FROM cargo_summary
+        <include refid="ownVisible"/>
+        ORDER BY arrival_deadline ASC, booked_at DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="countByShipper" resultType="int">
+        SELECT count(*) FROM cargo_summary
+        <include refid="ownVisible"/>
+    </select>
+
     <select id="findById" resultMap="cargoSummaryRow">
         SELECT * FROM cargo_summary WHERE booking_id = #{bookingId}
     </select>

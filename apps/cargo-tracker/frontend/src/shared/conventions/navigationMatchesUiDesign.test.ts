@@ -76,6 +76,7 @@ const SCREEN_OF_PATH: Record<string, string> = {
   '/routing/worklist': 'S30',
   '/voyages': 'S32',
   '/voyages/new': 'S33',
+  '/shipper/bookings': 'S45',
   '/tracking': 'S40',
   '/tracking/exceptions': 'S42',
   '/handling': 'S51',

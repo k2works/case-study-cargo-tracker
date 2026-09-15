@@ -295,6 +295,82 @@ public final class BookingQueries {
     public record CancellationListView(List<CancellationRequestView> items) {
     }
 
+    /**
+     * 自社予約一覧（S45 / US18）。<b>荷主向け</b>。
+     *
+     * <p><b>荷主 ID は問い合わせに載せる。</b> 呼び出し側が渡さなければ何も
+     * 返らない形にする——既定を「全件」にすると、渡し忘れが他社の予約の
+     * 流出になる。</p>
+     */
+    public record FindShipperBookingsQuery(String shipperId, boolean includeFinished,
+            int limit) {
+    }
+
+    /**
+     * 自社予約 1 件（S45 の行）。
+     *
+     * <p><b>{@link BookingView} を使い回さない。</b> 荷主に出すのは
+     * 「どこからどこへ・いつまでに・いまどうなっているか」だけで、金額・社内メモ・
+     * 担当者名は出さない（ui_design.md「S45 / S46」）。使い回すと、列を足した
+     * 誰かが荷主向けにも見せるつもりのない項目を静かに増やす。</p>
+     */
+    public record ShipperBookingView(
+            String bookingId,
+            String bookingNumber,
+            String originUnLocode,
+            String destinationUnLocode,
+            LocalDate arrivalDeadline,
+            String productName,
+            String bookingStatus,
+            // 追跡番号（発行後のみ）。**S41 への導線**——発行前は null で、
+            // 画面はリンクを出さない。
+            String trackingNumber) {
+    }
+
+    /** 自社予約の一覧。<b>上限で切れていることを黙らない</b>ので総数も返す。 */
+    public record ShipperBookingListView(List<ShipperBookingView> items, int total) {
+    }
+
+    /**
+     * 自社予約の進み具合（S46 / UC10・UC15）。
+     *
+     * <p><b>荷主 ID で絞る。</b> 予約 ID を知っていても、自社のものでなければ
+     * 返さない——URL は推測できるし、共有もされる。</p>
+     */
+    public record FindShipperBookingProgressQuery(String shipperId, String bookingId) {
+    }
+
+    /** 荷主に見せる連絡の記録（S46）。<b>担当者名と宛先は出さない</b>。 */
+    public record ShipperNotificationView(Instant notifiedAt, String summary) {
+    }
+
+    /**
+     * 自社予約の進み具合（S46）。
+     *
+     * <p>追跡番号は予約確定後に発行されるので、予約から確定までの数日間は
+     * 荷主に何も見えない。<b>その期間を埋めるための画面</b>なので、
+     * 状態が動いた日時をそのまま並べる。</p>
+     */
+    public record ShipperBookingProgressView(
+            String bookingId,
+            String bookingNumber,
+            String originUnLocode,
+            String destinationUnLocode,
+            LocalDate arrivalDeadline,
+            String cargoType,
+            String productName,
+            String bookingStatus,
+            String routingStatus,
+            Instant bookedAt,
+            Instant routingRequestedAt,
+            Instant lastNotifiedAt,
+            Instant confirmedAt,
+            String trackingNumber,
+            Instant trackingIssuedAt,
+            List<ItineraryLegView> legs,
+            List<ShipperNotificationView> notifications) {
+    }
+
     /** 画面に出す予約。荷主名は鍵破棄後に {@code null} になる。 */
     public record BookingView(
             String bookingId,

@@ -1,6 +1,7 @@
 # Docs Update Log
 
 ## 2026-09-15
+* **Update**: S45・S46 を実装（引き継ぎ 2）。「未実装」の記述を更新し、読み口の分離と 404 の扱いを明記
 * **Update**: ADR-0020 決定 4 の読み口の表を確定（追跡・荷役・要確認を閉じ、外さない読み口も明記）
 * **Verification**: [iteration_plan-17](/development/cargo-tracker/iteration_plan-17.md) を human:k2works が検証
 

@@ -113,6 +113,13 @@ public final class RoleAuthorization {
         rules.put("/api/v1/booking/shippers/**", Set.of(SALES, ACCOUNTANT));
         rules.put("/api/v1/booking/shippers", Set.of(SALES, ACCOUNTANT));
 
+        // 自社予約（S45 / S46）は荷主だけ（引き継ぎ 2）。**社内向けの
+        // /bookings とは別の経路**にして、荷主に出す項目を読み口ごと分ける。
+        // 荷主管理（S10）の /booking/shippers とは 1 文字違いだが別の段なので
+        // 吸い合わない（shippers と shipper）。**紛らわしいので隣に置く。**
+        rules.put("/api/v1/booking/shipper/bookings/**", Set.of(SHIPPER));
+        rules.put("/api/v1/booking/shipper/bookings", Set.of(SHIPPER));
+
         // 経路設計作業一覧（S30）と引き渡しは経路設計者だけ。
         // **/bookings/** より先に置く。** 後ろに置くと広いほうに吸われる。
         rules.put("/api/v1/booking/bookings/routing-worklist", Set.of(ROUTING));

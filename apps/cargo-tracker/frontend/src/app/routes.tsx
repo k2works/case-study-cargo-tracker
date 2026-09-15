@@ -34,6 +34,8 @@ import { RoutingWorklistPage } from '@/features/routing/RoutingWorklistPage';
 import { VoyageListPage } from '@/features/routing/VoyageListPage';
 import { VoyageRegisterPage } from '@/features/routing/VoyageRegisterPage';
 import { VoyageDetailPage } from '@/features/routing/VoyageDetailPage';
+import { ShipperBookingListPage } from '@/features/shipperBookings/ShipperBookingListPage';
+import { ShipperBookingProgressPage } from '@/features/shipperBookings/ShipperBookingProgressPage';
 import { TrackingListPage } from '@/features/tracking/TrackingListPage';
 import { ExceptionListPage } from '@/features/tracking/ExceptionListPage';
 import { ExceptionReportPage } from '@/features/tracking/ExceptionReportPage';
@@ -63,6 +65,7 @@ export const PAGES: Record<string, ReactElement> = {
   '/routing/worklist': <RoutingWorklistPage />,
   '/voyages': <VoyageListPage />,
   '/voyages/new': <VoyageRegisterPage />,
+  '/shipper/bookings': <ShipperBookingListPage />,
   '/tracking': <TrackingListPage />,
   '/handling': <HandlingHistoryPage />,
   '/customs': <CustomsListPage />,
@@ -105,9 +108,19 @@ export function AppRoutes() {
             </RequireRole>
           }
         />
+        {/* 自社予約の進み具合（S46）は荷主だけ。**ナビには載せない**——予約ごとの
+            画面なので、一覧（S45）から開く（注 N9）。自社予約一覧（S45）は
+            荷主の毎日の入口なので NAVIGATION に載せる。 */}
+        <Route
+          path="/shipper/bookings/:bookingId"
+          element={
+            <RequireRole allow={['ROLE_SHIPPER']}>
+              <ShipperBookingProgressPage />
+            </RequireRole>
+          }
+        />
         {/* 自社請求書（S62）は荷主だけ。**ナビには載せない**——請求書番号ごとの
-            画面なので、一覧（S45・S46）か追跡詳細（S41）から開く。自社予約の
-            一覧は未実装なので、いまの入口は S41 だけである。 */}
+            画面なので、一覧（S45・S46）か追跡詳細（S41）から開く。 */}
         <Route
           path="/shipper/invoices/by-booking/:bookingId"
           element={

@@ -145,6 +145,19 @@ public interface CargoSummaryMapper {
     int countAll(@Param("includeFinished") boolean includeFinished, @Param("q") String q);
 
     /**
+     * 自社予約一覧（S45）。<b>絞るのはサーバ</b>（S40 と同じ）——全件を読んでから
+     * 捨てると、絞り忘れがそのまま情報漏れになる。シミュレーション由来を
+     * 外さない理由は XML 側の {@code ownVisible} に書いた（ADR-0020 決定 4）。
+     */
+    List<CargoSummaryRow> findByShipper(@Param("shipperId") String shipperId,
+            @Param("includeFinished") boolean includeFinished,
+            @Param("limit") int limit);
+
+    /** 自社予約の件数（S45）。<b>上限で切れていることを黙らないため</b>に数える。 */
+    int countByShipper(@Param("shipperId") String shipperId,
+            @Param("includeFinished") boolean includeFinished);
+
+    /**
      * 経路設計の依頼を投影に反映する（US06）。
      *
      * <p>常に INSERT する形にしない。状態の更新で行を増やすと、作成しかない

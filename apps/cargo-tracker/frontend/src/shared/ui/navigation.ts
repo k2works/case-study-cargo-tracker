@@ -36,6 +36,11 @@ export const NAVIGATION: readonly NavigationItem[] = [
   { path: '/routing/worklist', label: '経路設計作業', allow: ['ROLE_ROUTING'] },
   { path: '/voyages', label: '航海スケジュール', allow: ['ROLE_ROUTING'] },
   { path: '/voyages/new', label: '航海登録', allow: ['ROLE_ROUTING'] },
+  // 自社予約一覧（S45）は荷主の**毎日の入口**（引き継ぎ 2・注 N9）。追跡番号は
+  // 予約確定後に発行されるので、予約から確定までの数日間、荷主には追跡で見える
+  // ものが何も無い。その期間の唯一の入口がここである。
+  // **S46（進み具合）は載せない**——予約ごとの画面なので、一覧から開く。
+  { path: '/shipper/bookings', label: '自社の予約', allow: ['ROLE_SHIPPER'] },
   // 追跡（S40）は追跡管理者と荷主。**荷主を外すと自社の貨物すら追えない**
   // （ui_design.md:234「追跡 | S40 | 追跡、荷主」）。
   // 管理者はサイドナビには出さないが開ける。業務シミュレーションの実行結果
