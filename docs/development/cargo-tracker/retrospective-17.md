@@ -3,7 +3,7 @@ type: Retrospective
 title: "イテレーション 17 ふりかえり"
 tags: [retrospective]
 status: draft
-generated: { by: claude-code/claude-opus-5, at: 2026-09-15T16:18:32Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-15T17:11:35Z }
 ---
 
 # イテレーション 17 ふりかえり
@@ -14,7 +14,7 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-15T16:18:32Z }
 | 対象 | US36 ランダムな業務シナリオを継続実行する（5）・US37 貨物の知らせを画面で受け取る（3）・US35 例外を含む業務シナリオを自動実行する（3） |
 | 実績 | **11/11 SP（100%）**。加えて引き継ぎ枠 3・負債枠 2 |
 | 引き継ぎ | IT16 の 5 件を返済（**13 回連続で繰越ゼロ**） |
-| コミット | 20 |
+| コミット | 25 |
 | 新規 | 画面 3 枚（S94 継続実行の統計・S45 自社の予約・S46 進み具合）・共通要素 1（貨物の知らせ）・マニュアル 21 章・ADR-0021 |
 
 ## Keep

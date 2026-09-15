@@ -3,7 +3,7 @@ type: Report
 title: "イテレーション 17 完了報告書"
 tags: [report]
 status: draft
-generated: { by: claude-code/claude-opus-5, at: 2026-09-15T16:18:32Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-15T17:11:35Z }
 ---
 
 # イテレーション 17 完了報告書
@@ -15,7 +15,7 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-15T16:18:32Z }
 | 対象 | US36 ランダムな業務シナリオを継続実行する（5）・US37 貨物の知らせを画面で受け取る（3）・US35 例外を含む業務シナリオを自動実行する（3） |
 | 計画 SP | 11（+ 引き継ぎ枠 3・負債枠 2。いずれも SP 対象外） |
 | 実績 SP | **11 / 11（達成率 100%）**。累計 140 |
-| コミット | 22 |
+| コミット | 25 |
 
 ## エグゼクティブサマリー
 
@@ -69,7 +69,7 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-15T16:18:32Z }
 | フロント単体 | **574 緑 / 52 ファイル** |
 | `TZ=UTC` 分割フルビルド | 緑（**2 度赤にして直した**——通関の投影 12 件・JaCoCo 分岐 2 件） |
 | CI | 緑（**1 度赤にして直した**——輸送中キャンセルの連鎖） |
-| SonarQube Quality Gate | 本報告書の「課題と残作業」を参照 |
+| SonarQube Quality Gate | **両プロジェクト PASS**（**2 度赤にして直した**——`BookingQueryHandler` の依存が 25 で上限 20 超過・`{!running ? ... : null}` の否定の分岐） |
 
 ## レビュー結果
 
@@ -82,6 +82,8 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-15T16:18:32Z }
 | 1 | **荷主の紐付けに画面が無い**。運用の担当者が API を直接叩く | IT18。マニュアル ch.06 に現状を明記済み |
 | 2 | 知らせの見に行く間隔がフロントの定数にしかない | 許容（ADR-0021 の決定どおり）。変える必要が出たら設定へ出す |
 | 3 | `SimulationFeatureCountTest` は feature の字面しか見ていない | 許容。未定義ステップは Cucumber の strict 既定が赤にするので、2 つで対になる。その旨をクラスの説明に書いた |
+
+**未達として残るのは成功基準 2 件**（[計画](iteration_plan-17.md) の採点表）——壊して赤を見たのが 15/20 コミット、待ち条件が「自分を数えていないか」の確認。どちらもふりかえりの Try へ送った。
 
 ## ユーザーマニュアル
 
