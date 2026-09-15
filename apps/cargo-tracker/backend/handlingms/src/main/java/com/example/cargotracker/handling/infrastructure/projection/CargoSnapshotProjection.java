@@ -78,7 +78,12 @@ public class CargoSnapshotProjection {
                 false,
                 clock.instant(), eventId,
                 // 陸揚げ地も同じ理由で触らない（挿入の SQL が列を書かない）。
-                null));
+                null,
+                // **由来は投影が決めない。** 印は荷主に付くので SQL が写しから
+                // 解決する（ADR-0020 決定 4）。ここで渡す値は書き込みに使われない。
+                false),
+                // 荷主は写しの列に無い。印を解決するためだけに渡す。
+                event.shipperId());
 
         cargos.deleteLegs(event.trackingNumber());
         if (event.legs().isEmpty()) {

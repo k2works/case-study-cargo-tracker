@@ -14,10 +14,13 @@
     <insert id="insert">
         INSERT INTO cargo_snapshot (
             tracking_number, booking_id, origin_unlocode, destination_unlocode,
-            cargo_type, projected_at, last_event_id
+            cargo_type, projected_at, last_event_id, simulated
         ) VALUES (
-            #{trackingNumber}, #{bookingId}, #{originUnlocode}, #{destinationUnlocode},
-            #{cargoType}, #{projectedAt}, #{lastEventId}
+            #{row.trackingNumber}, #{row.bookingId}, #{row.originUnlocode},
+            #{row.destinationUnlocode}, #{row.cargoType}, #{row.projectedAt}, #{row.lastEventId},
+            -- 印は荷主に付く（ADR-0020 決定 4）。写しから解決する。
+            -- **写しがまだ無ければ本物として扱う**——作業一覧から黙って消す側に倒さない。
+            COALESCE((SELECT simulated FROM shipper_origin WHERE shipper_id = #{shipperId}), FALSE)
         )
         ON CONFLICT (tracking_number) DO UPDATE SET
             booking_id = EXCLUDED.booking_id,
@@ -25,7 +28,8 @@
             destination_unlocode = EXCLUDED.destination_unlocode,
             cargo_type = EXCLUDED.cargo_type,
             projected_at = EXCLUDED.projected_at,
-            last_event_id = EXCLUDED.last_event_id
+            last_event_id = EXCLUDED.last_event_id,
+            simulated = EXCLUDED.simulated
     </insert>
 
     <insert id="insertLegs">

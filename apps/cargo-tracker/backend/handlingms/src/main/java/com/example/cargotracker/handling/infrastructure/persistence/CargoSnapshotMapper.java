@@ -18,11 +18,20 @@ public interface CargoSnapshotMapper {
      */
     String COLUMNS = "tracking_number, booking_id, origin_unlocode, destination_unlocode, "
             + "cargo_type, cancelled, projected_at, last_event_id, "
-            + "cancellation_discharge_unlocode";
+            // シミュレーション由来か（ADR-0020 決定 4）。**末尾に足す**——
+            // record は位置で割り当てるので、途中に挟むと全部ずれる。
+            + "cancellation_discharge_unlocode, simulated";
 
     String LEG_COLUMNS = "tracking_number, leg_seq, voyage_number, load_unlocode, unload_unlocode";
 
-    int insert(CargoSnapshotRow row);
+    /**
+     * 貨物の写しを作る。
+     *
+     * <p><b>荷主は行に持たない。</b> {@code cargo_snapshot} は荷主を持たない
+     * （荷役の仕事に荷主は要らない）が、由来の印を写しから解決するために
+     * <b>書き込みのときだけ</b>荷主が要る。列に足さず、引数で受ける。</p>
+     */
+    int insert(@Param("row") CargoSnapshotRow row, @Param("shipperId") String shipperId);
 
     @Select("SELECT " + COLUMNS + " FROM cargo_snapshot WHERE tracking_number = #{trackingNumber}")
     CargoSnapshotRow findByTrackingNumber(@Param("trackingNumber") String trackingNumber);
@@ -49,7 +58,7 @@ public interface CargoSnapshotMapper {
      */
     @Select("SELECT s.tracking_number, s.booking_id, s.origin_unlocode, s.destination_unlocode, "
             + "s.cargo_type, s.cancelled, s.projected_at, s.last_event_id, "
-            + "s.cancellation_discharge_unlocode "
+            + "s.cancellation_discharge_unlocode, s.simulated "
             + "FROM cargo_snapshot s JOIN cargo_snapshot_leg l "
             + "  ON l.tracking_number = s.tracking_number "
             + "WHERE l.voyage_number = #{voyageNumber} "
@@ -61,6 +70,9 @@ public interface CargoSnapshotMapper {
             // 持たない（IT15 のレビュー 高）。
             + "  AND (s.cancelled = FALSE "
             + "       OR s.cancellation_discharge_unlocode = #{unLocode}) "
+            // シミュレーション由来は外す（ADR-0020 決定 4）。荷役の一覧は
+            // **荷主で絞られない**ので、外さなければ本物の作業に混ざる。
+            + "  AND s.simulated = FALSE "
             + "ORDER BY s.tracking_number")
     List<CargoSnapshotRow> findOnVoyage(@Param("voyageNumber") String voyageNumber,
             @Param("unLocode") String unLocode);
@@ -86,14 +98,15 @@ public interface CargoSnapshotMapper {
             + "  FROM cargo_snapshot_leg l JOIN cargo_snapshot s "
             + "    ON s.tracking_number = l.tracking_number "
             // 積む港は外す（止まった貨物を積み続けない）。
-            + "  WHERE s.cancelled = FALSE "
+            + "  WHERE s.cancelled = FALSE AND s.simulated = FALSE "
             + "  UNION ALL "
             + "  SELECT l.voyage_number, l.unload_unlocode AS unlocode, l.tracking_number "
             + "  FROM cargo_snapshot_leg l JOIN cargo_snapshot s "
             + "    ON s.tracking_number = l.tracking_number "
             // 降ろす港は、キャンセルされた貨物の陸揚げ地も数える——
             // ダッシュボードがその港への唯一の入口である。
-            + "  WHERE (s.cancelled = FALSE "
+            + "  WHERE s.simulated = FALSE "
+            + "    AND (s.cancelled = FALSE "
             + "         OR s.cancellation_discharge_unlocode = l.unload_unlocode)"
             + ") ports "
             + "GROUP BY voyage_number, unlocode "
@@ -115,9 +128,10 @@ public interface CargoSnapshotMapper {
      */
     @Select("SELECT s.tracking_number, s.booking_id, s.origin_unlocode, "
             + "s.destination_unlocode, s.cargo_type, s.cancelled, s.projected_at, "
-            + "s.last_event_id, s.cancellation_discharge_unlocode "
+            + "s.last_event_id, s.cancellation_discharge_unlocode, s.simulated "
             + "FROM cargo_snapshot s "
             + "WHERE s.cancelled = FALSE "
+            + "  AND s.simulated = FALSE "
             + "  AND s.destination_unlocode = #{unLocode} "
             + "  AND EXISTS (SELECT 1 FROM handling_activity a "
             + "              WHERE a.tracking_number = s.tracking_number "
@@ -169,7 +183,10 @@ public interface CargoSnapshotMapper {
             // 承認されたキャンセルの陸揚げ地（US30）。**ここで降ろす作業だけは
             // 残る**——降ろさなければ貨物は船の上に残り、追跡も閉じない。
             // NULL はキャンセルされていない貨物。
-            String cancellationDischargeUnlocode) {
+            String cancellationDischargeUnlocode,
+            // シミュレーション由来か（ADR-0020 決定 4）。作業一覧からは外すが、
+            // 写しそのものは作る——実行結果（S93）が貨物を辿れなくなる。
+            boolean simulated) {
     }
 
     /** 予定の旅程の 1 区間。<b>時刻は持たない</b>（ADR-0012 決定 4）。 */
