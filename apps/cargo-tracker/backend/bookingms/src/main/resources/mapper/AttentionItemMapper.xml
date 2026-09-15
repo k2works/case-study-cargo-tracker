@@ -21,9 +21,20 @@
 
     <insert id="insert">
         INSERT INTO attention_item (item_id, kind, target_type, target_id, assigned_role,
-                                    reason, payload, occurred_at, acknowledged_at, acknowledged_by)
+                                    reason, payload, occurred_at, acknowledged_at, acknowledged_by,
+                                    simulated)
         VALUES (#{itemId}, #{kind}, #{targetType}, #{targetId}, #{assignedRole},
-                #{reason}, #{payload}::jsonb, #{occurredAt}, #{acknowledgedAt}, #{acknowledgedBy})
+                #{reason}, #{payload}::jsonb, #{occurredAt}, #{acknowledgedAt}, #{acknowledgedBy},
+                -- 由来は対象から解決する（ADR-0020 決定 4）。**対象の種類ごとに引く表が違う**
+                -- ので、ここで数え上げる——あとから結合すると読むたびに条件が増える。
+                -- 知らない種類（VOYAGE など）は本物として扱う。共有の設備に印は付かない。
+                COALESCE(
+                    CASE #{targetType}
+                        WHEN 'BOOKING' THEN
+                            (SELECT simulated FROM cargo_summary WHERE booking_id = #{targetId})
+                        WHEN 'SHIPPER' THEN
+                            (SELECT simulated FROM shipper WHERE shipper_id = #{targetId})
+                    END, FALSE))
         -- 同じ事実は 1 行。投影を読み直しても増やさない（識別子は内容から導く）。
         -- 上書きもしない。確認済み（acknowledged_at）を消してしまう。
         ON CONFLICT (item_id) DO NOTHING
@@ -32,6 +43,10 @@
     <select id="findOpenByRole" resultMap="attentionRow">
         SELECT * FROM attention_item
         WHERE assigned_role = #{assignedRole} AND acknowledged_at IS NULL
+          -- シミュレーション由来は外す（ADR-0020 決定 4）。要確認一覧は
+          -- ロールで絞るだけで荷主では絞らないので、外さなければ
+          -- US36 の継続実行が作った要確認が本物に混ざる。
+          AND simulated = FALSE
         ORDER BY occurred_at DESC
     </select>
 

@@ -21,9 +21,25 @@
 
     <insert id="insert">
         INSERT INTO attention_item (item_id, kind, target_type, target_id, assigned_role,
-                                    reason, payload, occurred_at, acknowledged_at, acknowledged_by)
+                                    reason, payload, occurred_at, acknowledged_at, acknowledged_by,
+                                    simulated)
         VALUES (#{itemId}, #{kind}, #{targetType}, #{targetId}, #{assignedRole},
-                #{reason}, #{payload}::jsonb, #{occurredAt}, #{acknowledgedAt}, #{acknowledgedBy})
+                #{reason}, #{payload}::jsonb, #{occurredAt}, #{acknowledgedAt}, #{acknowledgedBy},
+                -- 由来は対象から解決する（ADR-0020 決定 4）。**対象の種類ごとに引く表が違う**
+                -- ので、ここで数え上げる。知らない種類は本物として扱う。
+                COALESCE(
+                    CASE #{targetType}
+                        WHEN 'INVOICE' THEN
+                            (SELECT simulated FROM invoice WHERE invoice_id = #{targetId})
+                        -- **予約は貨物の写しから引く。** 請求書から引くと、
+                        -- いちばん出したい要確認（請求書を作れなかった）だけが
+                        -- 引く先を持たず、シミュレーションの失敗が経理の一覧に
+                        -- 流れ込む——US36 の継続実行はこれを大量に作る。
+                        WHEN 'BOOKING' THEN
+                            (SELECT c.simulated FROM shipper_contract_snapshot c
+                               JOIN billing_cargo_snapshot s ON s.shipper_id = c.shipper_id
+                              WHERE s.booking_id = #{targetId} LIMIT 1)
+                    END, FALSE))
         -- 同じ事実は 1 行。投影を読み直しても増やさない（識別子は内容から導く）。
         -- 上書きもしない。確認済み（acknowledged_at）を消してしまう。
         ON CONFLICT (item_id) DO NOTHING
@@ -32,6 +48,10 @@
     <select id="findOpenByRole" resultMap="attentionRow">
         SELECT * FROM attention_item
         WHERE assigned_role = #{assignedRole} AND acknowledged_at IS NULL
+          -- シミュレーション由来は外す（ADR-0020 決定 4）。要確認一覧は
+          -- ロールで絞るだけで荷主では絞らないので、外さなければ
+          -- US36 の継続実行が作った要確認が本物に混ざる。
+          AND simulated = FALSE
         ORDER BY occurred_at DESC
     </select>
 
