@@ -4,7 +4,7 @@ title: "データモデル設計 - 国際貨物輸送管理システム（CQRS /
 description: "CQRS / Event Sourcing 版 Cargo Tracker のデータモデル設計。Event Store は Axon Server に任せ、サービスごとの投影テーブル・Axon 管理テーブル・Auth の状態テーブルを ER 図とテーブル定義で示し、Processing Group との対応とリプレイ前提のマイグレーション方針を定める。"
 tags: [design,data-model,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-14T16:16:36Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-15T03:35:58Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -93,7 +93,7 @@ bi --> bidb
 | trackingms | `tracking_read_db` | 投影 + 受け皿 + Axon 管理 | `tracking_summary`, `tracking_event`, `tracking_exception`, `attention_item`, `token_entry`, `dead_letter_entry` |
 | handlingms | `handling_read_db` | 投影 + Axon 管理 | `cargo_snapshot`, `cargo_snapshot_leg`, `handling_activity`, `customs_declaration`, `customs_status_history`, `token_entry`, `dead_letter_entry` |
 | billingms | `billing_read_db` | 投影 + 受け皿 + Axon 管理 | `invoice`, `invoice_line_item`, `payment`, `invoice_notification`, `booking_quotation`, `shipper_contract_snapshot`, **`billing_cargo_snapshot`**, **`billing_cargo_leg`**, `attention_item`, `token_entry`, `dead_letter_entry` |
-| simulationms | `simulation_read_db` | **投影ではない**（[ADR-0020] 決定 3。Event Sourcing を適用しない） | `simulation_run`, `simulation_step` |
+| simulationms | `simulation_read_db` | **投影ではない**（[ADR-0020] 決定 3。Event Sourcing を適用しない） | `simulation_run`, `simulation_step`, `simulation_schedule` |
 
 `location` のマスタは各 DB に置きません。UN/LOCODE は共有カーネルの値オブジェクトであり、港名の表示に要る対応表は `shared` のリソース（CSV）から読みます。マスタを各 DB に複製すると更新の同期が要ります。
 
@@ -865,6 +865,7 @@ entity "simulation_run" as run {
   scenario_id: VARCHAR(40) NOT NULL
   status: VARCHAR(20) NOT NULL
   seed: BIGINT
+  schedule_id: VARCHAR(36)
   started_at: TIMESTAMPTZ NOT NULL
   finished_at: TIMESTAMPTZ
   started_by: VARCHAR(64) NOT NULL
@@ -882,16 +883,35 @@ entity "simulation_step" as step {
   failure_status: INTEGER
   failure_message: TEXT
   occurred_at: TIMESTAMPTZ NOT NULL
+  waited_ms: BIGINT
+}
+
+entity "simulation_schedule" as sch {
+  * **schedule_id**: VARCHAR(36) <<PK>>
+  --
+  seed: BIGINT NOT NULL
+  interval_seconds: INTEGER NOT NULL
+  max_concurrent: INTEGER NOT NULL
+  exception_ratio: NUMERIC(3,2) NOT NULL
+  status: VARCHAR(20) NOT NULL
+  started_by: VARCHAR(64) NOT NULL
+  started_at: TIMESTAMPTZ NOT NULL
+  stopped_at: TIMESTAMPTZ
+  projected_at: TIMESTAMPTZ NOT NULL
 }
 
 run ||--o{ step
+sch ||--o{ run
 @enduml
 ```
+
+**`waited_ms` は `elapsed_ms` と足し合わせません**（IT16 のレビュー N8）。呼び出しが遅いのか連鎖が遅いのかは、切り分けでいちばん知りたい区別です。足すと「13 工程が数ミリ秒ずつ」と読めてしまい、実際に時間を使っている場所が見えません。
 
 | テーブル | 元になるイベント | 制約・インデックス | 備考 |
 | :--- | :--- | :--- | :--- |
 | `simulation_run` | **無し**（[ADR-0020] 決定 3） | `UNIQUE(scenario_id) WHERE status = 'RUNNING'`、`INDEX(started_at DESC)`（一覧は新しい順） | **投影ではなく、ここが正である。** Event Sourcing を適用しないので、書くのはアプリケーション層。二重実行を断るのは**部分ユニークで**——数えてから入れる形は、2 つの要求が同時に来たときに両方とも通る |
 | `simulation_step` | 無し | `PK(run_id, step_no)` | 工程は**記録した順**に 1 件ずつ書く。終わってからまとめて書くと、走っているあいだ S93 が「どこまで進んだか」を出せない。**失敗しても前の記録を消さない**（US34 §3） |
+| `simulation_schedule` | 無し | `UNIQUE WHERE status <> 'STOPPED'`（**稼働は 1 本**）、`INDEX(started_at DESC)` | 継続実行の稼働（US36）。**実行 1 本とは寿命が違う**——稼働は何時間も生き、実行は数十秒で終わる。二重の稼働を断るのも**部分ユニークで**（実行と同じ形）。`simulation_run.schedule_id` は**どの稼働が流したか**で、手で流した実行では `NULL` |
 
 ### Axon 管理テーブル（各 Read Model DB 共通）
 

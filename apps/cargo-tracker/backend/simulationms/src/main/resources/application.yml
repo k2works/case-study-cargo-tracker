@@ -26,6 +26,14 @@ cargo-tracker:
     enabled: ${CARGOTRACKER_SIMULATION_ENABLED:false}
     # 工程が叩く先。**Gateway を通る**——認可も本番と同じ経路にする。
     gateway-url: ${GATEWAY_URL:http://localhost:8080}
+    schedule:
+      # **継続実行はもう 1 段の許可を要る**（US36 §受入基準 6）。流し続ける側は
+      # 業務を止めうるので、「実行できる環境＝流し続けてよい環境」にしない。
+      enabled: ${CARGOTRACKER_SIMULATION_SCHEDULE_ENABLED:false}
+      # **間を空ける。** 0 にすると業務が止まる（この局面に固有の危険 3）。
+      interval: ${CARGOTRACKER_SIMULATION_SCHEDULE_INTERVAL:30s}
+      max-concurrent: ${CARGOTRACKER_SIMULATION_SCHEDULE_MAX_CONCURRENT:2}
+      exception-ratio: ${CARGOTRACKER_SIMULATION_SCHEDULE_EXCEPTION_RATIO:0.2}
 
 server:
   port: ${SERVER_PORT:8087}

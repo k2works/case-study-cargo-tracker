@@ -4,7 +4,7 @@ title: "ドメインモデル設計 - 国際貨物輸送管理システム（CQR
 description: "CQRS / Event Sourcing 版 Cargo Tracker のドメインモデル設計。6 コンテキストの集約・不変条件・コマンド・イベント（内部 / 契約）・状態遷移・Reaction Handler を、イベントを永続化フォーマットとして定義する。"
 tags: [design,domain-model,ddd,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-14T17:36:05Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-15T03:35:58Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -151,6 +151,7 @@ quadrantChart
 | 実行状態 `RunStatus` | 実行中 / 成功 / 失敗 | `RUNNING` / `SUCCEEDED` / `FAILED` | 業務シミュレーションの実行（UC23 / US33・US34）。**`RUNNING` は同じシナリオに 1 本だけ**（部分ユニークで断る）。決着しない実行が 1 本残ると、そのシナリオは二度と流せなくなる |
 | 工程 `StepKind` | 荷主の登録 / 予約の登録 / 経路設計への引き渡し / 経路の確定 / 荷主への通知 / 予約の確定 / 追跡番号の発行 / 荷役の記録 / 通関 / 引取 / 料金の算出 / 請求書の発行 / 入金の記録 | `REGISTER_SHIPPER` / `REGISTER_BOOKING` / `REQUEST_ROUTING` / `ASSIGN_ROUTE` / `NOTIFY_SHIPPER` / `CONFIRM_BOOKING` / `ISSUE_TRACKING_NUMBER` / `RECORD_HANDLING` / `CLEAR_CUSTOMS` / `CLAIM_CARGO` / `CALCULATE_INVOICE` / `ISSUE_INVOICE` / `RECORD_PAYMENT` | **業務の言葉で並べる**——S93 は「どの工程で止まったか」を読む人のためにある。**呼ぶ API は工程が知らない**（段取りと経路を同じ場所に書くと、API を変えるたびにシナリオの定義が動く） |
 | 工程の結果 `StepOutcome` | 成功 / 失敗 | `SUCCEEDED` / `FAILED` | 失敗した工程は**理由を必ず持つ**（US34 §2）。「失敗しました」では切り分けられない |
+| 稼働状態 `ScheduleStatus` | 停止中 / 実行中 / 停止処理中 | `STOPPED` / `RUNNING` / `STOPPING` | 継続実行の稼働（US36 §4）。**`STOPPING` を置く**——「止めたのに実行が残っている」状態を表さないと、画面が「停止中」と出しているあいだ実行が続く |
 
 ## アクターとコンテキストの対応
 
@@ -1333,8 +1334,8 @@ class SimulationRun <<Aggregate Root>> {
   - finishedAt: Instant [0..1]
   - recordedSteps: List<RecordedStep>
   + {static} start(runId, scenario, seed, startedBy, at): SimulationRun
-  + recordSuccess(kind, elapsed, producedId, at)
-  + recordFailure(kind, elapsed, status, message, at)
+  + recordSuccess(kind, elapsed, waited, producedId, at)
+  + recordFailure(kind, elapsed, waited, status, message, at)
   + abort(at)
   + plannedSteps(): List<StepKind>
 }
@@ -1348,6 +1349,7 @@ class RecordedStep <<Value Object>> {
   - kind: StepKind
   - outcome: StepOutcome
   - elapsed: Duration
+  - waited: Duration
   - producedId: String [0..1]
   - failureStatus: Integer [0..1]
   - failureMessage: String [0..1]
@@ -1357,12 +1359,48 @@ class StepRole <<Value Object>> {
   + {static} of(kind): StepRole
 }
 
+class SimulationSchedule <<Aggregate Root>> {
+  - scheduleId: String
+  - seed: long
+  - interval: Duration
+  - maxConcurrent: int
+  - exceptionRatio: BigDecimal
+  - status: ScheduleStatus
+  - startedBy: String
+  + {static} start(scheduleId, seed, interval, max, ratio, by, at)
+  + stop(at)
+  + settleIfDrained(running, at)
+  + canStartAnother(running): boolean
+  + nextScenario(): ScenarioInput
+}
+class ScheduleStatus <<Value Object>>
+class RandomScenario <<Domain Service>> {
+  + {static} from(seed): RandomScenario
+  + next(): ScenarioInput
+}
+class ScenarioInput <<Value Object>> {
+  - scenario: Scenario
+  - originUnLocode: String
+  - destinationUnLocode: String
+  - cargoType: String
+  - weightKg: BigDecimal
+  - arrivalDeadlineDays: int
+}
+
 SimulationRun *-- Scenario
 SimulationRun *-- "*" RecordedStep
+SimulationSchedule *-- ScheduleStatus
+SimulationSchedule ..> RandomScenario
+RandomScenario ..> ScenarioInput
+ScenarioInput ..> Scenario
 Scenario ..> StepKind
 StepRole ..> StepKind
 @enduml
 ```
+
+**`SimulationSchedule` は `SimulationRun` を持ちません。** 寿命が違います——稼働は何時間も生き、実行は数十秒で終わります。1 つの集約に混ぜると、実行を 1 本記録するたびに稼働ごと書き直すことになります（IT12 の `CustomsDeclaration`・IT13 の `Invoice` と同じ判断）。
+
+**種から再現できるのは `ScenarioInput` までです**（注 N4）。実行の時刻と生成される識別子（荷主 ID・予約番号・追跡番号）は**種の外**です——UUID と採番は乱数が決めません。**到着期限は日数で持ちます**：日付で持つと、同じ種でも流した日によって違う値になります。この線引きを書かないと「再現できない」と読まれます。
 
 | # | 不変条件 |
 | :--- | :--- |
@@ -1373,6 +1411,17 @@ StepRole ..> StepKind
 | 5 | 同じシナリオの実行は**同時に 1 本**（US33 §5）。断りには**実行中の識別子を添える**——「二重に実行できません」だけでは、いまの結果へ行けない |
 | 6 | 実行は必ず決着する（`abort`）。実行中のまま残ると、5 の守りがそのシナリオを二度と流せなくする |
 | 7 | **本番では実行しない**（US33 §4）。実データに紛れる貨物を作らない |
+
+`SimulationSchedule` の不変条件（US36）。
+
+| # | 不変条件 |
+| :--- | :--- |
+| 1 | **同時実行の上限を超えない**（§2）。判定は集約が持つ——呼ぶ側で数えてから始める形は、要求が同時に来たときに両方とも通る |
+| 2 | **実行間隔は 0 にできない**（§2）。間を空けないと業務が止まる（この局面に固有の危険 3）。同時実行数 0・比率が 0〜1 の外も「使えない設定」として断る |
+| 3 | 止めても**走っている実行は決着させる**（§4）。`STOPPING` を経てから `STOPPED` になる |
+| 4 | **終わった稼働を止め直さない**。停止中のものを止めると、いつ止まったかの記録が書き換わる |
+| 5 | 実行した人は必須（`SimulationRun` と同じ理由） |
+| 6 | **本番では起動しない**（§6）。実行そのものの許可とは**別の段**にする——流し続ける側は業務を止めうるので、「実行できる環境＝流し続けてよい環境」にしない |
 
 | シナリオ | 工程数 | 目的 |
 | :--- | :--- | :--- |

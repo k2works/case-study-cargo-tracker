@@ -39,8 +39,31 @@ class SimulationPropertiesTest {
     void namesTheEnvironmentVariableExplicitly() throws IOException {
         // **リラックスバインディングに頼らない。** どの環境変数名に対応するかは
         // 規則を知らないと読めず、外すと「既定のまま静かに無効」になって気づけない。
-        assertThat(config()).contains("${CARGOTRACKER_SIMULATION_ENABLED:");
-        assertThat(config()).contains("${GATEWAY_URL:");
+        // **設定を足したら、ここも足す**——1 本ずつ書くと、次に足した設定が漏れる。
+        assertThat(config())
+                .contains("${CARGOTRACKER_SIMULATION_ENABLED:")
+                .contains("${GATEWAY_URL:")
+                .contains("${CARGOTRACKER_SIMULATION_SCHEDULE_ENABLED:")
+                .contains("${CARGOTRACKER_SIMULATION_SCHEDULE_INTERVAL:")
+                .contains("${CARGOTRACKER_SIMULATION_SCHEDULE_MAX_CONCURRENT:")
+                .contains("${CARGOTRACKER_SIMULATION_SCHEDULE_EXCEPTION_RATIO:");
+    }
+
+    @Test
+    @DisplayName("US36 §6: 継続実行の既定は無効（実行できる環境＝流し続けてよい環境にしない）")
+    void scheduleDefaultsToDisabled() throws IOException {
+        // **流し続ける側は業務を止めうる**（この局面に固有の危険 3）。
+        // 実行そのものの許可とは別の段にする。
+        assertThat(config())
+                .contains("enabled: ${CARGOTRACKER_SIMULATION_SCHEDULE_ENABLED:false}");
+    }
+
+    @Test
+    @DisplayName("US36 §2: 実行間隔の既定は 0 でない（間を空けないと業務が止まる）")
+    void scheduleIntervalIsNotZeroByDefault() throws IOException {
+        assertThat(config())
+                .doesNotContain("CARGOTRACKER_SIMULATION_SCHEDULE_INTERVAL:0")
+                .contains("CARGOTRACKER_SIMULATION_SCHEDULE_INTERVAL:30s");
     }
 
     @Test

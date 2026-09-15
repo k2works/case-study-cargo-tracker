@@ -17,7 +17,7 @@ import org.springframework.web.client.RestClient;
 
 /** 実行の組み立て（[ADR-0020]）。 */
 @Configuration
-@EnableConfigurationProperties(SimulationProperties.class)
+@EnableConfigurationProperties({ SimulationProperties.class, SimulationScheduleProperties.class })
 public class SimulationConfig {
 
     /**
