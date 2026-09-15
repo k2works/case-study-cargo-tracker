@@ -165,10 +165,14 @@ public final class RoleAuthorization {
         // 自社の貨物すら追えない（ui_design.md:144-145）。
         // **公開照会（/tracking/public/**）はここに要らない**——PUBLIC_PATHS が
         // 認証そのものを外すので、ロールの宣言は通らない。
-        // **管理者も読める**（US34 §5）。S93 の追跡番号から S41 へ行くため。
+        // **管理者は単票だけ**（US34 §5・IT16 のレビュー N3）。S93 の追跡番号から
+        // S41 へ行くために要るのは 1 件の追跡であって、全社の追跡一覧ではない。
+        // 一覧まで開くと、行き止まりを塞ぐために要る幅を超えて開くことになる
+        // ——予約（S24）は単票に絞れているので、追跡と請求も揃える。
+        // 単票の宣言は下の ordered にメソッド込みで置く。
         // 書き込み（状態更新・例外）は上の宣言が追跡管理者だけに絞っている。
-        rules.put("/api/v1/tracking/trackings/**", Set.of(TRACKER, SHIPPER, ADMIN));
-        rules.put("/api/v1/tracking/trackings", Set.of(TRACKER, SHIPPER, ADMIN));
+        rules.put("/api/v1/tracking/trackings/**", Set.of(TRACKER, SHIPPER));
+        rules.put("/api/v1/tracking/trackings", Set.of(TRACKER, SHIPPER));
 
         // 荷役履歴（S51）は**荷役と追跡の両方**（ui_design.md:236）。
         // 追跡管理者は問い合わせを受けたときに現場の記録を確かめる。
@@ -202,8 +206,9 @@ public final class RoleAuthorization {
         // **管理者も読める**（US34 §5）。S93 の請求番号から S61 へ行くため。
         // 書き込み（発行・入金・調整・取消）はメソッド込みの宣言が先に当たり、
         // 経理だけに絞られている。
-        rules.put("/api/v1/billing/invoices/**", Set.of(ACCOUNTANT, ADMIN));
-        rules.put("/api/v1/billing/invoices", Set.of(ACCOUNTANT, ADMIN));
+        // **管理者は単票だけ**（IT16 のレビュー N3）。理由は追跡と同じ。
+        rules.put("/api/v1/billing/invoices/**", Set.of(ACCOUNTANT));
+        rules.put("/api/v1/billing/invoices", Set.of(ACCOUNTANT));
 
 
         // 航海（S32 / S33）は経路設計者だけ。
@@ -315,6 +320,12 @@ public final class RoleAuthorization {
         // 踏んだ）。読みだけで、書き込みは開けない。
         ordered.add(new Rule("GET", "/api/v1/booking/bookings/*",
                 Set.of(SALES, ROUTING, TRACKER, ACCOUNTANT, ADMIN)));
+        // **管理者の読みは単票に揃える**（IT16 のレビュー N3）。予約だけが
+        // 単票に絞れていて、追跡と請求は一覧まで開いていた——同じ約束
+        // （US34 §受入基準 5）を満たすのに要る幅は 3 つとも同じである。
+        ordered.add(new Rule("GET", "/api/v1/tracking/trackings/*",
+                Set.of(TRACKER, SHIPPER, ADMIN)));
+        ordered.add(new Rule("GET", "/api/v1/billing/invoices/*", Set.of(ACCOUNTANT, ADMIN)));
         // 料金の調整は経理だけ（US21 §受入基準 6）。**メソッド込みで宣言する**
         // ——読み向けの広い宣言に吸われると、載せ忘れた書き込みほど無防備になる。
         ordered.add(new Rule("POST", "/api/v1/billing/invoices/*/adjustments",

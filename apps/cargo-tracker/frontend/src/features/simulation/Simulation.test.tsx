@@ -30,10 +30,21 @@ function step(over: Record<string, unknown> = {}) {
     outcome: 'SUCCEEDED',
     outcomeLabel: '成功',
     elapsedMs: 120,
+    waitedMs: 0,
     producedId: 'BK-1',
     failureStatus: null,
     failureMessage: null,
     occurredAt: '2026-09-14T01:00:01Z',
+    ...over,
+  };
+}
+
+/** 予定の工程 1 件（N4）。 */
+function planned(over: Record<string, unknown> = {}) {
+  return {
+    stepNo: 1,
+    kind: 'REGISTER_BOOKING',
+    kindLabel: '予約の登録',
     ...over,
   };
 }
@@ -113,6 +124,7 @@ describe('S92 業務シミュレーション', () => {
             finishedAt: null,
             startedBy: 'admin01',
             steps: [step()],
+            plannedSteps: [planned()],
           }),
           { status: 200 },
         );
@@ -159,7 +171,8 @@ describe('S92 業務シミュレーション', () => {
 });
 
 describe('S93 実行結果', () => {
-  function runWith(steps: unknown[], finishedAt: string | null = null) {
+  function runWith(steps: unknown[], finishedAt: string | null = null,
+      planned2?: unknown[]) {
     return respond(() =>
       new Response(
         JSON.stringify({
@@ -173,11 +186,103 @@ describe('S93 実行結果', () => {
           finishedAt,
           startedBy: 'admin01',
           steps,
+          plannedSteps: planned2 ?? steps.map((each, index) => planned({
+            stepNo: (each as { stepNo?: number }).stepNo ?? index + 1,
+            kind: (each as { kind?: string }).kind,
+            kindLabel: (each as { kindLabel?: string }).kindLabel,
+          })),
         }),
         { status: 200 },
       ),
     );
   }
+
+  it('N4: 予定の工程を先に並べ、これからの工程と区別する', async () => {
+    // **記録済みだけを出すと、連鎖待ちの 30 秒のあいだ画面が何も変わらない。**
+    // 「進んでいるのか固まったのか」が読めず、切り分けが止まる。
+    runWith([step()], null, [
+      planned(),
+      planned({ stepNo: 2, kind: 'REQUEST_ROUTING', kindLabel: '経路設計への引き渡し' }),
+    ]);
+
+    renderRun();
+
+    expect(await screen.findByText('予約の登録')).toBeInTheDocument();
+    expect(screen.getByText('経路設計への引き渡し')).toBeInTheDocument();
+    expect(screen.getByText('これから')).toBeInTheDocument();
+    expect(screen.getByText('工程（1 / 2 件）')).toBeInTheDocument();
+  });
+
+  it('N8: 連鎖の待ちを所要時間とは別の列で出す（足し合わせない）', async () => {
+    runWith([step({ elapsedMs: 120, waitedMs: 8000 })]);
+
+    renderRun();
+
+    // **「13 工程が数ミリ秒ずつ」と読ませない。**
+    expect(await screen.findByText('120 ミリ秒')).toBeInTheDocument();
+    expect(screen.getByText('8000 ミリ秒')).toBeInTheDocument();
+  });
+
+  /**
+   * 止まった工程から次に取れる行動への行き先。**数え上げる**——1 件だけ
+   * 確かめる形は、次に足した行き先も同じ抜け方をする。
+   */
+  it.each([
+    [
+      { kind: 'REGISTER_BOOKING', failureMessage: '「荷主の登録」の結果が読めるようになりませんでした' },
+      '退避したイベントを見る',
+    ],
+    [
+      { kind: 'ASSIGN_ROUTE', failureMessage: '経路候補がありません' },
+      '航海スケジュールを見る',
+    ],
+  ])('N5: 止まった工程から次の行動へ行ける（%#）', async (over, label) => {
+    runWith([step({ outcome: 'FAILED', outcomeLabel: '失敗', producedId: null, ...over })],
+      '2026-09-14T01:05:00Z');
+
+    renderRun();
+
+    expect(await screen.findByRole('link', { name: label })).toBeInTheDocument();
+  });
+
+  it('N5: 行き先の分からない失敗に、当てずっぽうのリンクを出さない', async () => {
+    runWith([step({
+      outcome: 'FAILED', outcomeLabel: '失敗', producedId: null,
+      kind: 'REGISTER_SHIPPER', failureMessage: '想定していない断り',
+    })], '2026-09-14T01:05:00Z');
+
+    renderRun();
+
+    await screen.findByText('想定していない断り');
+    expect(screen.queryByRole('link', { name: /見る$/ })).not.toBeInTheDocument();
+  });
+
+  it('N6: 同じシナリオをもう一度流せる（一覧へ戻って選び直さない）', async () => {
+    const calls: string[] = [];
+    respond((url, init) => {
+      if (url.endsWith('/simulation/runs') && init?.method === 'POST') {
+        calls.push(String(init.body));
+        return new Response(JSON.stringify({ runId: 'SIM-2' }), { status: 201 });
+      }
+      return new Response(
+        JSON.stringify({
+          runId: 'SIM-1', scenario: 'STANDARD', scenarioLabel: '一般貨物の標準輸送',
+          status: 'FAILED', statusLabel: '失敗', seed: null,
+          startedAt: '2026-09-14T01:00:00Z', finishedAt: '2026-09-14T01:05:00Z',
+          startedBy: 'admin01', steps: [step()], plannedSteps: [planned()],
+        }),
+        { status: 200 },
+      );
+    });
+
+    renderRun();
+    await screen.findByText('予約の登録');
+    await userEvent.click(screen.getByRole('button', { name: '同じシナリオをもう一度流す' }));
+
+    // **切り分けは「直す → 流す」を何度も回す作業である。**
+    await waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]).toContain('STANDARD');
+  });
 
   it('US34 §1: 工程ごとに成否・所要時間・生成した識別子が出る', async () => {
     runWith([step()]);

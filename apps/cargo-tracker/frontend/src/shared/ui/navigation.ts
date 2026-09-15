@@ -17,8 +17,14 @@ export interface NavigationItem {
    *
    * <p><b>「毎日の入口」と「開けること」は別である。</b> 他の画面からリンクで
    * 辿り着く相手をサイドナビに載せると、その人の仕事でない項目が並ぶ。かといって
-   * 開けないままにすると、リンクの先が 403 の行き止まりになる（実測: 業務
-   * シミュレーションの実行結果から追跡・請求へ行けなかった）。</p>
+   * 開けないままにすると、リンクの先が 403 の行き止まりになる。</p>
+   *
+   * <p><b>いまは使っている項目が無い。</b> IT16 で管理者に追跡・請求の一覧を
+   * 開くために足したが、IT17 で<b>単票だけに絞った</b>（レビュー N3）——
+   * 行き止まりを塞ぐのに要る幅は単票までで、一覧まで開く必要は無かった。
+   * 単票はナビに載らないので、この仕組みではなくルート側で開く。
+   * <b>仕組みは残す</b>——「一覧そのものを、毎日の入口ではない相手に開く」形が
+   * 次に出たときに、また同じ判断からやり直さないためである。</p>
    */
   readonly alsoOpenableBy?: readonly Role[];
 }
@@ -43,9 +49,10 @@ export const NAVIGATION: readonly NavigationItem[] = [
   { path: '/shipper/bookings', label: '自社の予約', allow: ['ROLE_SHIPPER'] },
   // 追跡（S40）は追跡管理者と荷主。**荷主を外すと自社の貨物すら追えない**
   // （ui_design.md:234「追跡 | S40 | 追跡、荷主」）。
-  // 管理者はサイドナビには出さないが開ける。業務シミュレーションの実行結果
-  // （S93）が追跡番号から S41 へ送る（US34 §受入基準 5）。
-  { path: '/tracking', label: '追跡', allow: ['ROLE_TRACKER', 'ROLE_SHIPPER'], alsoOpenableBy: ['ROLE_ADMIN'] },
+  // **管理者には開かない**（IT16 のレビュー N3）。実行結果（S93）が送る先は
+  // 追跡番号ごとの単票（S41）で、そちらはルート側で管理者に開いている。
+  // 一覧まで開くと、行き止まりを塞ぐのに要る幅を超える。
+  { path: '/tracking', label: '追跡', allow: ['ROLE_TRACKER', 'ROLE_SHIPPER'] },
   // 例外（S42）は追跡管理者と**管理者**（ui_design.md の到達性の表 / IT11）。
   // **荷主には出さない**——起きていることは S41 で読めるが、対応するのは
   // 追跡管理者の仕事で、一覧を出しても打てる手が無い。
@@ -66,8 +73,9 @@ export const NAVIGATION: readonly NavigationItem[] = [
   // 請求（S60）は経理だけ（ui_design.md の到達性の表）。**構成表には IT2 から
   // 載っていたが、実装側に入口が無かった**——設計が先にあり実装が追いついて
   // いない形（IT12 の S52 と逆）。US21 で画面ができたので開く。
-  // 管理者はサイドナビには出さないが開ける（S93 → S61 / US34 §受入基準 5）。
-  { path: '/invoices', label: '請求', allow: ['ROLE_ACCOUNTANT'], alsoOpenableBy: ['ROLE_ADMIN'] },
+  // **管理者には開かない**（IT16 のレビュー N3）。S93 が送る先は請求書ごとの
+  // 単票（S61）で、そちらはルート側で管理者に開いている。
+  { path: '/invoices', label: '請求', allow: ['ROLE_ACCOUNTANT'] },
   {
     path: '/worklist/attention',
     label: '要確認一覧',

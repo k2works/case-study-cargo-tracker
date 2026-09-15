@@ -48,7 +48,11 @@ public final class SimulationQueries {
             String producedId,
             Integer failureStatus,
             String failureMessage,
-            Instant occurredAt) {
+            Instant occurredAt,
+            // 連鎖の結果を待った時間（IT16 のレビュー N8）。**所要時間と分けて出す**
+            // ——足し合わせると「13 工程が数ミリ秒ずつ」と読めてしまい、実際に
+            // 時間を使っている場所が見えない。
+            Long waitedMs) {
     }
 
     /** 実行の詳細（S93）。 */
@@ -62,6 +66,22 @@ public final class SimulationQueries {
             Instant startedAt,
             Instant finishedAt,
             String startedBy,
-            List<StepView> steps) {
+            List<StepView> steps,
+            /*
+             * 予定の工程（IT16 のレビュー N4）。
+             *
+             * <p><b>記録済みの工程だけでは「進んでいるのか固まったのか」が
+             * 分からない。</b> 連鎖待ちは 1 工程あたり最大 30 秒あり、そのあいだ
+             * 画面には何も増えない。予定を並べておけば、どこで止まっているかが
+             * 一目で読める。</p>
+             *
+             * <p><b>件数ではなく中身を渡す。</b> 画面が工程の呼び名を持つと、
+             * 列挙に値を足したときに片方だけが古くなる。</p>
+             */
+            List<PlannedStepView> plannedSteps) {
+    }
+
+    /** 予定の工程 1 件（S93 / IT16 のレビュー N4）。 */
+    public record PlannedStepView(int stepNo, String kind, String kindLabel) {
     }
 }

@@ -119,6 +119,6 @@ public class SimulationService {
         runs.insertStep(new SimulationRunMapper.StepRow(run.runId(), step.stepNo(),
                 step.kind().name(), step.outcome().name(), step.elapsed().toMillis(),
                 step.producedId(), step.failureStatus(), step.failureMessage(),
-                step.occurredAt()));
+                step.occurredAt(), step.waited().toMillis()));
     }
 }

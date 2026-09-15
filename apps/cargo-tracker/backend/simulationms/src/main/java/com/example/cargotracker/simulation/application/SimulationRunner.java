@@ -110,7 +110,8 @@ public class SimulationRunner {
             Duration elapsed = Duration.ofNanos(System.nanoTime() - startedAtNanos);
 
             if (!result.succeeded()) {
-                run.recordFailure(kind, elapsed, result.failureStatus(),
+                // 断られた工程は連鎖を待っていない。**0 と「分からない」を混ぜない。**
+                run.recordFailure(kind, elapsed, Duration.ZERO, result.failureStatus(),
                         result.failureMessage(), clock.instant());
                 notifyLast(run);
                 // **以降は実行しない。** 止まったあとに業務データを増やさない。
@@ -121,8 +122,10 @@ public class SimulationRunner {
             }
             // **連鎖の結果を待ってから次へ進む**（US33 §6）。待つのは成功した
             // 工程のあとだけ——止まったあとに読み口を叩いても意味が無い。
-            if (!awaitChain(kind, produced)) {
-                run.recordFailure(kind, elapsed, null,
+            ChainWait chain = awaitChain(kind, produced);
+            Duration waited = chain.waited();
+            if (!chain.ready()) {
+                run.recordFailure(kind, elapsed, waited, null,
                         "「" + kind.label() + "」の結果が読めるようになりませんでした（"
                                 + READ_ATTEMPTS * READ_INTERVAL.toMillis() / 1000
                                 + " 秒待ちました）。連鎖が止まっているか、"
@@ -131,7 +134,7 @@ public class SimulationRunner {
                 notifyLast(run);
                 return;
             }
-            run.recordSuccess(kind, elapsed, result.producedId(), clock.instant());
+            run.recordSuccess(kind, elapsed, waited, result.producedId(), clock.instant());
             notifyLast(run);
         }
     }
@@ -153,22 +156,36 @@ public class SimulationRunner {
     }
 
     /**
+     * 連鎖の待ちの結果。
+     *
+     * @param ready 追いついたか
+     * @param waited 待った時間。<b>実時計ではなく「何回眠るよう頼んだか」から導く</b>
+     *     ——経過時間で数えると、検査が脆弱な実装に戻しても緑になる（IT7 の教訓）。
+     *     知りたいのは「連鎖にどれだけ時間を使ったか」の桁であり、そこは
+     *     読み直しの間隔と回数で決まる
+     */
+    private record ChainWait(boolean ready, Duration waited) {
+    }
+
+    /**
      * 連鎖が追いつくまで読み直す。
      *
      * <p><b>読み口の例外は「まだ読めない」として扱う。</b> 投影が起き上がる途中の
      * 1 度の失敗で、実行ごと落とさない。</p>
      */
-    private boolean awaitChain(StepKind kind, Map<StepKind, String> produced) {
+    private ChainWait awaitChain(StepKind kind, Map<StepKind, String> produced) {
+        Duration waited = Duration.ZERO;
         for (int attempt = 0; attempt < READ_ATTEMPTS; attempt++) {
             try {
                 if (readiness.isReady(kind, Map.copyOf(produced))) {
-                    return true;
+                    return new ChainWait(true, waited);
                 }
             } catch (RuntimeException e) {
                 log.debug("読み口がまだ返さない: step={} attempt={}", kind, attempt, e);
             }
             sleeper.sleep(READ_INTERVAL);
+            waited = waited.plus(READ_INTERVAL);
         }
-        return false;
+        return new ChainWait(false, waited);
     }
 }

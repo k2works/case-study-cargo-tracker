@@ -41,9 +41,17 @@ public class SimulationQueryHandler {
         List<SimulationQueries.StepView> steps = runs.findSteps(runId).stream()
                 .map(SimulationQueryHandler::toStep)
                 .toList();
+        // **予定の工程はシナリオが持つ。** 画面に持たせると、列挙に値を足した
+        // ときに片方だけが古くなる（IT16 のレビュー N4）。
+        List<SimulationQueries.PlannedStepView> planned = java.util.stream.IntStream
+                .range(0, scenario.steps().size())
+                .mapToObj(index -> new SimulationQueries.PlannedStepView(index + 1,
+                        scenario.steps().get(index).name(),
+                        scenario.steps().get(index).label()))
+                .toList();
         return new SimulationQueries.RunView(row.runId(), scenario.name(), scenario.label(),
                 status.name(), status.label(), row.seed(), row.startedAt(), row.finishedAt(),
-                row.startedBy(), steps);
+                row.startedBy(), steps, planned);
     }
 
     private SimulationQueries.RunSummaryView toSummary(SimulationRunMapper.RunRow row) {
@@ -63,6 +71,6 @@ public class SimulationQueryHandler {
         StepOutcome outcome = StepOutcome.valueOf(row.outcome());
         return new SimulationQueries.StepView(row.stepNo(), kind.name(), kind.label(),
                 outcome.name(), outcome.label(), row.elapsedMs(), row.producedId(),
-                row.failureStatus(), row.failureMessage(), row.occurredAt());
+                row.failureStatus(), row.failureMessage(), row.occurredAt(), row.waitedMs());
     }
 }

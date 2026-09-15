@@ -1,5 +1,6 @@
-import { Link, useParams } from 'react-router';
-import { useQuery } from '@tanstack/react-query';
+import { Link, useNavigate, useParams } from 'react-router';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 import {
   ALERT,
   CARD,
@@ -12,7 +13,7 @@ import {
   TH,
 } from '@/shared/ui/styles';
 import { formatBusinessDateTime } from '@/shared/api/businessDate';
-import { fetchSimulationRun, type StepView } from './simulationApi';
+import { fetchSimulationRun, startSimulation, type StepView } from './simulationApi';
 
 /**
  * 生成した識別子から業務画面への行き先（US34 §受入基準 5）。
@@ -41,6 +42,32 @@ function destinationOf(step: StepView): string | null {
 }
 
 /**
+ * 止まった工程から、次に取れる行動への行き先（IT16 のレビュー N5）。
+ *
+ * <p><b>「失敗しました」で終わらせない。</b> マニュアルには次の行動が書いてあるが、
+ * 画面には何も無かった——止まった人はそこで手が止まる。原因の種類ごとに
+ * 「そこで何を確かめるか」の画面へ送る。</p>
+ *
+ * <p><b>行き先が無い失敗もある。</b> 分からないものに当てずっぽうのリンクを
+ * 出すと、開いた先で何もできず信用を失う。</p>
+ */
+function recoveryOf(step: StepView): { readonly label: string; readonly to: string } | null {
+  if (step.outcome !== 'FAILED') {
+    return null;
+  }
+  const message = step.failureMessage ?? '';
+  // 連鎖が追いつかない＝投影が止まっている疑い。退避したイベント（S91）を見る。
+  if (message.includes('読めるようになりませんでした')) {
+    return { label: '退避したイベントを見る', to: '/admin/dead-letters' };
+  }
+  // 経路が組めない＝便が無い。航海スケジュール（S32）を見る。
+  if (step.kind === 'ASSIGN_ROUTE' || step.kind === 'FIND_ROUTE_CANDIDATES') {
+    return { label: '航海スケジュールを見る', to: '/voyages' };
+  }
+  return null;
+}
+
+/**
  * S93 実行結果（US34）。
  *
  * <p><b>止まった工程とその理由を出す。</b> どこまで進んだかを追えることが
@@ -48,6 +75,18 @@ function destinationOf(step: StepView): string | null {
  */
 export function SimulationRunPage() {
   const { runId = '' } = useParams();
+  const navigate = useNavigate();
+  const [rerunError, setRerunError] = useState<string | null>(null);
+  const rerun = useMutation({
+    mutationFn: (scenario: string) => startSimulation(scenario),
+    onSuccess: (started) => {
+      setRerunError(null);
+      void navigate(`/admin/simulations/${started.runId}`);
+    },
+    // **断りをそのまま出す。** 実行中なら「実行中です」と言われる——
+    // 黙って何も起きないより、断りが読めるほうが次の手が決まる。
+    onError: (error: Error) => setRerunError(error.message),
+  });
   const { data, isPending, isError } = useQuery({
     queryKey: ['simulation-run', runId],
     queryFn: () => fetchSimulationRun(runId),
@@ -96,27 +135,53 @@ export function SimulationRunPage() {
 
           <div className={`${CARD} mt-4 overflow-x-auto`}>
             <table className={TABLE}>
-              <caption className={TABLE_CAPTION}>工程（{run.steps.length} 件）</caption>
+              <caption className={TABLE_CAPTION}>
+                工程（{run.steps.length} / {run.plannedSteps.length} 件）
+              </caption>
               <thead>
                 <tr>
                   <th scope="col" className={TH}>#</th>
                   <th scope="col" className={TH}>工程</th>
                   <th scope="col" className={TH}>結果</th>
-                  <th scope="col" className={TH}>所要</th>
+                  <th scope="col" className={TH}>呼び出し</th>
+                  <th scope="col" className={TH}>連鎖待ち</th>
                   <th scope="col" className={TH}>作られたもの</th>
                   <th scope="col" className={TH}>止まった理由</th>
                 </tr>
               </thead>
               <tbody>
-                {run.steps.map((step) => {
+                {/* **予定を並べる**（IT16 のレビュー N4）。記録済みだけを出すと、
+                    連鎖待ちの 30 秒のあいだ画面が何も変わらず、「進んでいるのか
+                    固まったのか」が読めない。 */}
+                {run.plannedSteps.map((planned) => {
+                  const step = run.steps.find((recorded) => recorded.stepNo === planned.stepNo);
+                  if (step === undefined) {
+                    return (
+                      <tr key={planned.stepNo} className="text-gray-400">
+                        <td className={TD}>{planned.stepNo}</td>
+                        <td className={TD}>{planned.kindLabel}</td>
+                        <td className={TD}>これから</td>
+                        <td className={TD}>—</td>
+                        <td className={TD}>—</td>
+                        <td className={TD}>—</td>
+                        <td className={TD}>—</td>
+                      </tr>
+                    );
+                  }
                   const destination = destinationOf(step);
+                  const recovery = recoveryOf(step);
                   return (
-                    <tr key={step.stepNo}>
+                    <tr key={planned.stepNo}>
                       <td className={TD}>{step.stepNo}</td>
                       <td className={TD}>{step.kindLabel}</td>
                       <td className={TD}>{step.outcomeLabel}</td>
                       <td className={TD}>
                         {step.elapsedMs === null ? '—' : `${step.elapsedMs} ミリ秒`}
+                      </td>
+                      <td className={TD}>
+                        {step.waitedMs === null || step.waitedMs === 0
+                          ? '—'
+                          : `${step.waitedMs} ミリ秒`}
                       </td>
                       <td className={TD}>
                         {step.producedId === null && '—'}
@@ -131,6 +196,14 @@ export function SimulationRunPage() {
                         {step.failureMessage
                           ? `${step.failureStatus ?? ''} ${step.failureMessage}`.trim()
                           : '—'}
+                        {recovery !== null && (
+                          <>
+                            {' '}
+                            <Link className={LINK} to={recovery.to}>
+                              {recovery.label}
+                            </Link>
+                          </>
+                        )}
                       </td>
                     </tr>
                   );
@@ -139,11 +212,21 @@ export function SimulationRunPage() {
             </table>
           </div>
 
-          {run.steps.length === 0 && (
-            <p className="mt-4 text-sm text-gray-600">
-              まだ工程が記録されていません（実行を始めたところです）。
-            </p>
-          )}
+          {/* **もう一度流せる**（IT16 のレビュー N6）。切り分けは「直す → 流す」を
+              何度も回す作業で、一覧へ戻ってシナリオを選び直すのは毎回同じ手間。 */}
+          <p className="mt-4 flex items-center gap-3 text-sm">
+            <button
+              type="button"
+              className={LINK}
+              disabled={rerun.isPending}
+              onClick={() => rerun.mutate(run.scenario)}
+            >
+              同じシナリオをもう一度流す
+            </button>
+            {rerunError !== null && (
+              <span role="alert" className={ALERT}>{rerunError}</span>
+            )}
+          </p>
         </>
       )}
     </section>

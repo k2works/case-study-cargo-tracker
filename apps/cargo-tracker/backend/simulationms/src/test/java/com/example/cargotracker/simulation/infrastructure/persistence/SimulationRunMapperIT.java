@@ -40,7 +40,7 @@ class SimulationRunMapperIT extends AbstractAxonIntegrationTest {
         String runId = "run-" + System.nanoTime();
         runs.insert(running(runId, "SC-" + System.nanoTime()));
         runs.insertStep(new SimulationRunMapper.StepRow(runId, 1, "REGISTER_SHIPPER",
-                "SUCCEEDED", 120L, "SHP-0001", null, null, AT));
+                "SUCCEEDED", 120L, "SHP-0001", null, null, AT, 3000L));
 
         assertThat(runs.find(runId)).isNotNull()
                 .satisfies(row -> assertThat(row.status()).isEqualTo("RUNNING"))

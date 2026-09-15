@@ -35,9 +35,8 @@ mybatis:
   configuration:
     map-underscore-to-camel-case: true
 
-axon:
-  axonserver:
-    servers: ${AXON_SERVER:localhost:8124}
+# **Axon の設定は置かない**（IT16 のレビュー N7）。このサービスは集約も
+# イベントも持たない（[ADR-0020] 決定 3）。置くと、いつの間にか依存が戻る。
 
 # Gateway の振り分けと同じ接頭辞。共有の読み口（退避一覧）が経路を組み立てる。
 cargo:

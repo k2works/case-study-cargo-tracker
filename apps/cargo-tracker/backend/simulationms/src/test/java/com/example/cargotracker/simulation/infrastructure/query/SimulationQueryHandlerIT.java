@@ -37,9 +37,9 @@ class SimulationQueryHandlerIT extends AbstractAxonIntegrationTest {
         runs.insert(new SimulationRunMapper.RunRow(runId, "STANDARD", status, null,
                 AT, "SUCCEEDED".equals(status) ? AT : null, "admin01", AT));
         runs.insertStep(new SimulationRunMapper.StepRow(runId, 1, "REGISTER_SHIPPER",
-                "SUCCEEDED", 120L, "SHP-0001", null, null, AT));
+                "SUCCEEDED", 120L, "SHP-0001", null, null, AT, 3000L));
         runs.insertStep(new SimulationRunMapper.StepRow(runId, 2, "REGISTER_BOOKING",
-                "FAILED", 45L, null, 422, "出発地と目的地が同じです", AT));
+                "FAILED", 45L, null, 422, "出発地と目的地が同じです", AT, 0L));
         return runId;
     }
 

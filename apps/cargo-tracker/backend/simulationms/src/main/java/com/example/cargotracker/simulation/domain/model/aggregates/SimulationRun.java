@@ -62,11 +62,18 @@ public final class SimulationRun {
         return new SimulationRun(runId, scenario, seed, startedBy.trim(), startedAt);
     }
 
-    /** 工程が通った。 */
-    public void recordSuccess(StepKind kind, Duration elapsed, String producedId,
-            Instant occurredAt) {
+    /**
+     * 工程が通った。
+     *
+     * @param elapsed API を呼んでいた時間
+     * @param waited 連鎖の結果が読めるようになるまで待った時間。<b>足し合わせない</b>
+     *     ——呼び出しが遅いのか連鎖が遅いのかは、切り分けでいちばん知りたい区別である
+     *     （IT16 のレビュー N8）
+     */
+    public void recordSuccess(StepKind kind, Duration elapsed, Duration waited,
+            String producedId, Instant occurredAt) {
         record(new RecordedStep(nextStepNo(kind), kind, StepOutcome.SUCCEEDED, elapsed,
-                producedId, null, null, occurredAt));
+                producedId, null, null, occurredAt, waited));
         if (recordedSteps.size() == scenario.steps().size()) {
             this.status = RunStatus.SUCCEEDED;
             this.finishedAt = occurredAt;
@@ -79,10 +86,10 @@ public final class SimulationRun {
      * <p><b>それまでに作られた業務データは取り消さない</b>（US34 §受入基準 3）。
      * どこまで進んだかを追えるようにするためである。</p>
      */
-    public void recordFailure(StepKind kind, Duration elapsed, Integer failureStatus,
-            String failureMessage, Instant occurredAt) {
+    public void recordFailure(StepKind kind, Duration elapsed, Duration waited,
+            Integer failureStatus, String failureMessage, Instant occurredAt) {
         record(new RecordedStep(nextStepNo(kind), kind, StepOutcome.FAILED, elapsed,
-                null, failureStatus, failureMessage, occurredAt));
+                null, failureStatus, failureMessage, occurredAt, waited));
         this.status = RunStatus.FAILED;
         this.finishedAt = occurredAt;
     }
@@ -185,6 +192,15 @@ public final class SimulationRun {
             String producedId,
             Integer failureStatus,
             String failureMessage,
-            Instant occurredAt) {
+            Instant occurredAt,
+            /*
+             * 連鎖の結果を待った時間（IT16 のレビュー N8）。
+             *
+             * **待たなかった工程は ZERO で、null にしない。** 「待たなかった」と
+             * 「分からない」を画面が区別できないと、0 ミリ秒と空欄のどちらを
+             * 出すか毎回迷う。作るのは集約の 2 つのメソッドだけなので、
+             * 受け口で作り直す防御は置かない（分岐が検査されないまま残る）。
+             */
+            Duration waited) {
     }
 }

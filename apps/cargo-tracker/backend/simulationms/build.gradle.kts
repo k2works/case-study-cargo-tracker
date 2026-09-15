@@ -9,10 +9,10 @@ dependencies {
     implementation(libs.spring.boot.starter.actuator)
     implementation(libs.spring.boot.starter.validation)
 
-    // **Event Sourcing は使わない**（[ADR-0020] 決定 3）。実行の記録は業務の
-    // 事実ではなく、現在状態だけが要る（authms と同じ扱い）。Axon は入れるが、
-    // 共有設定（起動確認・時計）が同じ形で動くためであって集約のためではない。
-    implementation(libs.bundles.axon)
+    // **Axon は入れない**（[ADR-0020] 決定 3 / IT16 のレビュー N7）。集約も
+    // イベントも持たないので、要るのは共有の時計だけである。入れておくと
+    // 起動確認が Axon Server を待ち、**切り分けの道具が切り分けたい相手より
+    // 先に落ちる**。`UsesNoAxonTest` が参照ゼロを固定している。
 
     implementation(libs.spring.boot.starter.jdbc)
     implementation(libs.mybatis.spring.boot.starter)

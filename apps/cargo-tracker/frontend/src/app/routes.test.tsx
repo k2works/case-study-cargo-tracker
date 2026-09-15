@@ -52,11 +52,6 @@ describe('ロール別の到達性', () => {
    */
   const OPEN_WITHOUT_NAV: ReadonlyArray<readonly [Role, string]> = [
     ['ROLE_ACCOUNTANT', '/tracking/exceptions'],
-    // 業務シミュレーションの実行結果（S93）が「作られたものから業務画面へ
-    // 行ける」ことを約束している（US34 §受入基準 5）。**毎日の入口ではない**
-    // ので管理者のナビには出さないが、指された先は開けなければならない。
-    ['ROLE_ADMIN', '/tracking'],
-    ['ROLE_ADMIN', '/invoices'],
   ];
 
   it.each(ROLES)('%s: ナビに出ない画面は 403 になる（理由を書いたものを除く）', (role) => {

@@ -24,7 +24,8 @@ public interface SimulationRunMapper {
             + "started_by, projected_at";
 
     String STEP_COLUMNS = "run_id, step_no, kind, outcome, elapsed_ms, produced_id, "
-            + "failure_status, failure_message, occurred_at";
+            // **末尾に足す。** record は位置で割り当てるので、途中に挟むとずれる。
+            + "failure_status, failure_message, occurred_at, waited_ms";
 
     /**
      * 実行を始める。
@@ -50,7 +51,7 @@ public interface SimulationRunMapper {
     /** 工程を 1 件書き足す。 */
     @Insert("INSERT INTO simulation_step (" + STEP_COLUMNS + ") VALUES ("
             + "#{runId}, #{stepNo}, #{kind}, #{outcome}, #{elapsedMs}, #{producedId}, "
-            + "#{failureStatus}, #{failureMessage}, #{occurredAt})")
+            + "#{failureStatus}, #{failureMessage}, #{occurredAt}, #{waitedMs})")
     int insertStep(StepRow row);
 
     /** 実行 1 件。 */
@@ -99,6 +100,10 @@ public interface SimulationRunMapper {
             String producedId,
             Integer failureStatus,
             String failureMessage,
-            Instant occurredAt) {
+            Instant occurredAt,
+            // 連鎖の結果が読めるようになるまで待った時間（IT16 のレビュー N8）。
+            // **足し合わせない**——呼び出しが遅いのか連鎖が遅いのかは、
+            // 切り分けるときにいちばん知りたい区別である。
+            Long waitedMs) {
     }
 }

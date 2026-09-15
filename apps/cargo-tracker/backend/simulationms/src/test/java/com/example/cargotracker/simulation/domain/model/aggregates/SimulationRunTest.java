@@ -43,7 +43,7 @@ class SimulationRunTest {
     void recordsEachStepWithElapsedAndProducedId() {
         SimulationRun run = started();
 
-        run.recordSuccess(StepKind.REGISTER_SHIPPER, Duration.ofMillis(120), "SHP-0001", NOW);
+        run.recordSuccess(StepKind.REGISTER_SHIPPER, Duration.ofMillis(120), Duration.ZERO, "SHP-0001", NOW);
 
         assertThat(run.recordedSteps()).hasSize(1);
         var step = run.recordedSteps().get(0);
@@ -59,7 +59,7 @@ class SimulationRunTest {
         SimulationRun run = started();
 
         assertThatThrownBy(() ->
-                run.recordSuccess(StepKind.RECORD_PAYMENT, Duration.ZERO, null, NOW))
+                run.recordSuccess(StepKind.RECORD_PAYMENT, Duration.ZERO, Duration.ZERO, null, NOW))
                 .isInstanceOf(IllegalTransition.class)
                 .hasMessageContaining("荷主の登録");
     }
@@ -68,9 +68,9 @@ class SimulationRunTest {
     @DisplayName("US34 §3: 失敗した工程は理由つきで残り、実行はそこで終わる")
     void failureStopsTheRunAndKeepsTheReason() {
         SimulationRun run = started();
-        run.recordSuccess(StepKind.REGISTER_SHIPPER, Duration.ofMillis(10), "SHP-0001", NOW);
+        run.recordSuccess(StepKind.REGISTER_SHIPPER, Duration.ofMillis(10), Duration.ZERO, "SHP-0001", NOW);
 
-        run.recordFailure(StepKind.REGISTER_BOOKING, Duration.ofMillis(20),
+        run.recordFailure(StepKind.REGISTER_BOOKING, Duration.ofMillis(20), Duration.ZERO,
                 422, "出発地と目的地が同じです", NOW);
 
         assertThat(run.status()).isEqualTo(RunStatus.FAILED);
@@ -86,10 +86,10 @@ class SimulationRunTest {
     @DisplayName("終わった実行には工程を足さない")
     void refusesStepsAfterTheRunEnded() {
         SimulationRun run = started();
-        run.recordFailure(StepKind.REGISTER_SHIPPER, Duration.ZERO, 500, "落ちた", NOW);
+        run.recordFailure(StepKind.REGISTER_SHIPPER, Duration.ZERO, Duration.ZERO, 500, "落ちた", NOW);
 
         assertThatThrownBy(() ->
-                run.recordSuccess(StepKind.REGISTER_BOOKING, Duration.ZERO, null, NOW))
+                run.recordSuccess(StepKind.REGISTER_BOOKING, Duration.ZERO, Duration.ZERO, null, NOW))
                 .isInstanceOf(IllegalTransition.class)
                 .hasMessageContaining("終わって");
     }
@@ -99,7 +99,7 @@ class SimulationRunTest {
     void succeedsWhenEveryStepIsRecorded() {
         SimulationRun run = started();
         for (StepKind kind : Scenario.STANDARD.steps()) {
-            run.recordSuccess(kind, Duration.ofMillis(5), null, NOW);
+            run.recordSuccess(kind, Duration.ofMillis(5), Duration.ZERO, null, NOW);
         }
 
         assertThat(run.status()).isEqualTo(RunStatus.SUCCEEDED);
@@ -120,7 +120,7 @@ class SimulationRunTest {
         // **決着しない実行は、そのシナリオを二度と流せなくする。** 二重実行の守りは
         // 「RUNNING が 1 本」なので、掴んだまま離さない実行が 1 本あれば十分である。
         SimulationRun run = started();
-        run.recordSuccess(StepKind.REGISTER_SHIPPER, Duration.ofMillis(5), "SHP-1", NOW);
+        run.recordSuccess(StepKind.REGISTER_SHIPPER, Duration.ofMillis(5), Duration.ZERO, "SHP-1", NOW);
 
         run.abort(NOW);
 
@@ -135,7 +135,7 @@ class SimulationRunTest {
     void doesNotAbortFinishedRun() {
         SimulationRun run = started();
         for (StepKind kind : Scenario.STANDARD.steps()) {
-            run.recordSuccess(kind, Duration.ofMillis(5), null, NOW);
+            run.recordSuccess(kind, Duration.ofMillis(5), Duration.ZERO, null, NOW);
         }
 
         run.abort(NOW.plusSeconds(1));

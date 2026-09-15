@@ -23,6 +23,13 @@ export interface StepView {
   readonly outcome: string;
   readonly outcomeLabel: string;
   readonly elapsedMs: number | null;
+  /**
+   * 連鎖の結果が読めるようになるまで待った時間（IT16 のレビュー N8）。
+   *
+   * **所要時間に足し合わせない。** 足すと「13 工程が数ミリ秒ずつ」と読めて
+   * しまい、実際に時間を使っている場所が見えない。
+   */
+  readonly waitedMs: number | null;
   /** その工程が生成した識別子。**ここから業務画面へ行ける**（§受入基準 5）。 */
   readonly producedId: string | null;
   readonly failureStatus: number | null;
@@ -42,6 +49,20 @@ export interface RunView {
   readonly finishedAt: string | null;
   readonly startedBy: string;
   readonly steps: readonly StepView[];
+  /**
+   * 予定の工程（IT16 のレビュー N4）。
+   *
+   * **記録済みの工程だけでは「進んでいるのか固まったのか」が分からない。**
+   * 連鎖待ちは 1 工程あたり最大 30 秒あり、そのあいだ画面には何も増えない。
+   */
+  readonly plannedSteps: readonly PlannedStepView[];
+}
+
+/** 予定の工程 1 件（S93）。 */
+export interface PlannedStepView {
+  readonly stepNo: number;
+  readonly kind: string;
+  readonly kindLabel: string;
 }
 
 /**

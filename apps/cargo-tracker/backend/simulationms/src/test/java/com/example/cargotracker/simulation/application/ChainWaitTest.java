@@ -84,6 +84,31 @@ class ChainWaitTest {
     }
 
     @Test
+    @DisplayName("N8: 連鎖の待ちを所要時間とは別に記録する（足し合わせない）")
+    void recordsTheChainWaitSeparately() {
+        AtomicInteger reads = new AtomicInteger();
+        // 1 件目の工程だけ 3 回読み直してから追いつく（＝2 回眠る）。
+        ChainReadiness readiness = (kind, produced) ->
+                kind != StepKind.REGISTER_SHIPPER || reads.incrementAndGet() >= 3;
+        SimulationRun run = standardRun();
+
+        new SimulationRunner((kind, produced) -> BusinessApi.StepResult.success("id-" + kind),
+                readiness, new CountingSleeper(), CLOCK).run(run);
+
+        var first = run.recordedSteps().get(0);
+        assertThat(first.waited())
+                .as("**「13 工程が数ミリ秒ずつ」と読ませない。** 時間を使っているのは連鎖である")
+                .isPositive();
+        assertThat(first.elapsed())
+                .as("**足し合わせない。** 呼び出しが遅いのか連鎖が遅いのかは、"
+                        + "切り分けでいちばん知りたい区別である")
+                .isNotEqualTo(first.waited());
+        assertThat(run.recordedSteps().get(1).waited())
+                .as("待たずに通った工程は 0（「分からない」と混ぜない）")
+                .isZero();
+    }
+
+    @Test
     @DisplayName("待つのは成功した工程のあとだけ（失敗したら待たない）")
     void doesNotWaitAfterAFailedStep() {
         AtomicInteger checked = new AtomicInteger();

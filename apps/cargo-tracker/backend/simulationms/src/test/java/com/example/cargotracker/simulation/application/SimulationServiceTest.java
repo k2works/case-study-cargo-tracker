@@ -31,6 +31,12 @@ class SimulationServiceTest {
     /** 次の {@code insert} を制約違反にする（同時押しの再現）。 */
     private boolean insertCollides;
 
+    /** 衝突したあとに読める「勝った実行」。既定は無い（先に消えた場合）。 */
+    private SimulationRunMapper.RunRow runningAfterRace;
+
+    /** {@code findRunning} の 1 度目かどうか。 */
+    private boolean runningSeenFirst = true;
+
     /** 記録の口。<b>本物より甘くしない</b>——書いた行をそのまま持つ。 */
     private final SimulationRunMapper runs = new SimulationRunMapper() {
 
@@ -70,7 +76,12 @@ class SimulationServiceTest {
 
         @Override
         public RunRow findRunning(String scenarioId) {
-            return running;
+            // **同時押しはここで再現する。** 1 度目は「実行中は無い」と答え、
+            // 書き込みで衝突したあとの 2 度目に勝った側を返す——実物の競り合いが
+            // まさにこの順で見える。
+            RunRow answer = runningSeenFirst ? running : runningAfterRace;
+            runningSeenFirst = false;
+            return answer;
         }
 
         @Override
@@ -126,6 +137,23 @@ class SimulationServiceTest {
                 .hasMessageContaining("実行中です")
                 .as("**原因は残す。** 切り分けるのは記録を読む人である")
                 .hasCauseInstanceOf(org.springframework.dao.DuplicateKeyException.class);
+    }
+
+    @Test
+    @DisplayName("N9: 競り負けたら、勝った実行の識別子を添える（いまの結果へ行けるように）")
+    void namesTheWinningRunAfterTheRace() {
+        insertCollides = true;
+        // 1 度目は「実行中は無い」。書き込みで衝突したあとの 2 度目に勝った側が読める。
+        running = null;
+        runningAfterRace = new SimulationRunMapper.RunRow("SIM-winner", Scenario.NO_ROUTE.name(),
+                "RUNNING", null, Instant.EPOCH, null, "admin01", Instant.EPOCH);
+
+        assertThatThrownBy(() -> service(true, (kind, produced) ->
+                BusinessApi.StepResult.success("ID"))
+                .start(Scenario.NO_ROUTE, "admin01"))
+                .isInstanceOf(IllegalTransition.class)
+                .as("**「二重に実行できません」だけでは、いまの結果へ行けない。**")
+                .hasMessageContaining("SIM-winner");
     }
 
     @Test
