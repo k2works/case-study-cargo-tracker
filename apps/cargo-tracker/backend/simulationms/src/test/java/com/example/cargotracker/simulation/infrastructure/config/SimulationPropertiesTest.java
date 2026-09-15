@@ -37,16 +37,41 @@ class SimulationPropertiesTest {
     @Test
     @DisplayName("環境変数の名前を推測させない（外したときに静かに無効にならない）")
     void namesTheEnvironmentVariableExplicitly() throws IOException {
-        // **リラックスバインディングに頼らない。** どの環境変数名に対応するかは
-        // 規則を知らないと読めず、外すと「既定のまま静かに無効」になって気づけない。
-        // **設定を足したら、ここも足す**——1 本ずつ書くと、次に足した設定が漏れる。
-        assertThat(config())
-                .contains("${CARGOTRACKER_SIMULATION_ENABLED:")
-                .contains("${GATEWAY_URL:")
-                .contains("${CARGOTRACKER_SIMULATION_SCHEDULE_ENABLED:")
-                .contains("${CARGOTRACKER_SIMULATION_SCHEDULE_INTERVAL:")
-                .contains("${CARGOTRACKER_SIMULATION_SCHEDULE_MAX_CONCURRENT:")
-                .contains("${CARGOTRACKER_SIMULATION_SCHEDULE_EXCEPTION_RATIO:");
+        // **名簿で緩めず数え上げる。** 「足したらここも足す」と書いた一覧は、
+        // 次に足した設定が載らないまま緑になる（IT17 のレビューで指摘）。
+        // `cargo-tracker:` の下の値を**全部拾ってから**、どれもが
+        // `${ENV:既定}` で受けていることを見る。
+        assertThat(cargoTrackerSettings())
+                .as("cargo-tracker の設定が 1 つも拾えていない（検査が何も見ていない）")
+                .isNotEmpty()
+                .allSatisfy(setting -> assertThat(setting)
+                        .as("環境変数名を明示していない設定がある: %s", setting)
+                        .containsPattern("\\$\\{[A-Z0-9_]+:"));
+    }
+
+    /**
+     * {@code cargo-tracker:} の下にある「値を持つ行」。
+     *
+     * <p><b>正しい形の行だけを拾わない。</b> `${...}` に一致する行だけを集めると、
+     * 環境変数で受けていない行は最初から検査の対象外になる。</p>
+     */
+    private static List<String> cargoTrackerSettings() throws IOException {
+        List<String> settings = new java.util.ArrayList<>();
+        boolean inside = false;
+        for (String line : config().split("\n", -1)) {
+            String trimmed = line.trim();
+            if (trimmed.isEmpty() || trimmed.startsWith("#")) {
+                continue;
+            }
+            if (!line.startsWith(" ")) {
+                inside = "cargo-tracker:".equals(trimmed);
+                continue;
+            }
+            if (inside && Pattern.compile("^[a-z0-9-]+:\\s*\\S").matcher(trimmed).find()) {
+                settings.add(trimmed);
+            }
+        }
+        return settings;
     }
 
     @Test

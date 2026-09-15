@@ -26,9 +26,15 @@ public class SimulationScheduleQueryHandler {
         this.mapper = mapper;
     }
 
-    /** いまの稼働と統計。<b>動いていなければ {@code null}</b>。 */
+    /**
+     * いちばん新しい稼働と統計。<b>一度も動かしていなければ {@code null}</b>。
+     *
+     * <p><b>止めた稼働も返す</b>（US36 §3・§8）。止めた瞬間に件数も失敗工程の
+     * 分布も乱数の種も読めなくなると、夜通し流して翌朝に結果を読む使い方が
+     * 成り立たない（IT17 のレビューで指摘）。</p>
+     */
     public SimulationScheduleQueries.ScheduleView findActive() {
-        SimulationSchedule schedule = schedules.activeOrNull();
+        SimulationSchedule schedule = schedules.latestOrNull();
         if (schedule == null) {
             return null;
         }

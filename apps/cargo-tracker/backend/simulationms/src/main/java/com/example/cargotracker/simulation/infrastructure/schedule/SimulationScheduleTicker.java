@@ -38,7 +38,10 @@ public class SimulationScheduleTicker {
      * <p><b>握りつぶす。</b> 1 回の失敗で糸を止めると、以後この稼働は誰にも
      * 動かせなくなる（止める操作も届かない）。記録して次の頃合いを待つ。</p>
      */
-    @Scheduled(fixedDelayString = "${cargo-tracker.simulation.schedule.interval:30s}")
+    // **既定値をここに書かない。** application.yml が
+    // `${CARGOTRACKER_SIMULATION_SCHEDULE_INTERVAL:30s}` で受けているので、
+    // ここにも 30s と書くと真実が 2 か所になり、片方だけ直る。
+    @Scheduled(fixedDelayString = "${cargo-tracker.simulation.schedule.interval}")
     public void tick() {
         try {
             schedules.tick();

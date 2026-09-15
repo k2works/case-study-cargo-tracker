@@ -337,6 +337,14 @@ export function notifyShipperOfException(
 export interface NoticeView {
   readonly sequenceNo: number;
   readonly trackingNumber: string;
+  /**
+   * 何が起きたか（US37 §受入基準 1）。
+   *
+   * **状態だけでは足りない。** 例外の起票も解決も状態は「例外発生」なので、
+   * 種別を出さないと同じ文面で届く——荷主は「解決しました」の知らせを
+   * 「また何か起きた」と読む。
+   */
+  readonly eventLabel: string;
   readonly statusLabel: string;
   readonly location: string | null;
   readonly occurredAt: string;

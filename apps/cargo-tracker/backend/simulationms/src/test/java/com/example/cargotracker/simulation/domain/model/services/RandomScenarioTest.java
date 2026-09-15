@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 class RandomScenarioTest {
 
     private static List<ScenarioInput> take(long seed, int count) {
-        RandomScenario random = RandomScenario.from(seed);
+        RandomScenario random = RandomScenario.from(seed, 0.5);
         return IntStream.range(0, count).mapToObj(index -> random.next()).toList();
     }
 
@@ -93,5 +93,68 @@ class RandomScenarioTest {
                 .containsAll(List.of(
                         com.example.cargotracker.simulation.domain.model.valueobjects
                                 .Scenario.values()));
+    }
+
+    @Test
+    @DisplayName("US36 §1・§3: すでに流した本数だけ進めた種は、通しで引いた並びと一致する")
+    void resumesWhereTheSequenceLeftOff() {
+        // **稼働は記憶を持たない**（毎回 DB から組み直す）ので、位置を記憶に
+        // 頼ると組み直すたびに先頭へ戻り、**同じ条件を延々と流す**
+        // （IT17 のレビューで実測。US36 §1 が成立していなかった）。
+        List<ScenarioInput> straight = take(42L, 5);
+
+        for (int drawn = 0; drawn < 5; drawn++) {
+            assertThat(RandomScenario.from(42L, 0.5, drawn).next())
+                    .as("%d 本流したあとの %d 本目", drawn, drawn + 1)
+                    .isEqualTo(straight.get(drawn));
+        }
+    }
+
+    @Test
+    @DisplayName("US36 §1: 続けて引くと条件が変わる（同じものを延々と流さない）")
+    void drawsDifferentInputsAsItGoes() {
+        assertThat(take(42L, 10))
+                .as("**同じ条件ばかり流すと、確かめている経路が 1 本に縮む**")
+                .doesNotHaveDuplicates();
+    }
+
+    @Test
+    @DisplayName("US36 §2: 例外の発生比率が効く（宣言だけの設定にしない）")
+    void honoursTheExceptionRatio() {
+        // **検証して保存して画面に出しても、選び方に効いていなければ
+        // 何も変わらない**——定義済み未使用は配線漏れのサインである。
+        assertThat(exceptionRateOf(0.0))
+                .as("0 なら例外シナリオを引かない")
+                .isZero();
+        assertThat(exceptionRateOf(1.0))
+                .as("1 なら例外シナリオだけを引く")
+                .isEqualTo(1.0);
+        assertThat(exceptionRateOf(0.2))
+                .as("**間の値も効く。** 0 と 1 だけだと、真偽値の実装でも緑になる")
+                .isBetween(0.10, 0.30);
+    }
+
+    /** 200 件引いたときの、例外シナリオの割合。 */
+    private static double exceptionRateOf(double ratio) {
+        RandomScenario random = RandomScenario.from(7L, ratio);
+        int exceptions = 0;
+        for (int i = 0; i < 200; i++) {
+            if (raisesException(random.next().scenario())) {
+                exceptions++;
+            }
+        }
+        return exceptions / 200.0;
+    }
+
+    private static boolean raisesException(
+            com.example.cargotracker.simulation.domain.model.valueobjects.Scenario scenario) {
+        return scenario.exceptionType() != null
+                || scenario.steps().stream().anyMatch(step ->
+                        step == com.example.cargotracker.simulation.domain.model
+                                .valueobjects.StepKind.REGISTER_EXCEPTION
+                        || step == com.example.cargotracker.simulation.domain.model
+                                .valueobjects.StepKind.RECORD_OFF_ROUTE_HANDLING
+                        || step == com.example.cargotracker.simulation.domain.model
+                                .valueobjects.StepKind.HOLD_CUSTOMS);
     }
 }

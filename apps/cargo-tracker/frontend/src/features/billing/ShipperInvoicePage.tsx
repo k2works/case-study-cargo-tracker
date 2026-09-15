@@ -43,9 +43,13 @@ export function ShipperInvoicePage() {
   });
 
   if (invoice.isError) {
+    // **入口によって言葉を変える。** 予約から開いた荷主は請求書番号を打って
+    // いないので、「番号をお確かめください」は行き止まりになる（IT17 のレビュー）。
     return (
       <p role="alert" className={ALERT}>
-        請求書が見つかりません。請求書番号をお確かめください。
+        {bookingId === undefined
+          ? '請求書が見つかりません。請求書番号をお確かめください。'
+          : 'この予約の請求書はまだ発行されていません。発行されるとここに出ます。'}
       </p>
     );
   }

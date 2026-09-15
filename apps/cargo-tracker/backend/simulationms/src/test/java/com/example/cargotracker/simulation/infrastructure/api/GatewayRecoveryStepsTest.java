@@ -5,99 +5,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.example.cargotracker.simulation.domain.model.valueobjects.Scenario;
 import com.example.cargotracker.simulation.domain.model.valueobjects.ScenarioInput;
 import com.example.cargotracker.simulation.domain.model.valueobjects.StepKind;
-import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.net.InetSocketAddress;
-import java.nio.charset.StandardCharsets;
-import java.time.Clock;
-import java.time.Instant;
-import java.time.ZoneOffset;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.web.client.RestClient;
 
 /**
- * 例外と輸送中キャンセルの工程（US35）。
+ * 例外の工程（US35 §受入基準 1・2・3）。
  *
- * <p><b>本物の HTTP を通す。</b> モックにすると「本番の API を人と同じ順で叩く」
- * という決定（[ADR-0020] 決定 2）そのものが確かめられない——経路の綴り違いも
- * 通ってしまう。</p>
- *
- * <p><b>正常系とは別のクラスにする。</b> 1 つのファイルに積むと読みどころが
- * 埋もれ、行の上限にも当たる。</p>
+ * <p><b>段取りは {@link GatewayStepsTestSupport} が持つ。</b> 本物の HTTP を
+ * 通す理由もそちらに書いてある。</p>
  */
-class GatewayRecoveryStepsTest {
-
-    private HttpServer server;
-    private final List<String> requests = new ArrayList<>();
-    private final List<String> bodies = new ArrayList<>();
-    private final Map<String, String> responses = new HashMap<>();
-    private final Map<String, Integer> statuses = new HashMap<>();
-
-    @AfterEach
-    void stop() {
-        if (server != null) {
-            server.stop(0);
-        }
-    }
-
-    private GatewayBusinessApi start(Scenario scenario) throws IOException {
-        server = HttpServer.create(new InetSocketAddress(0), 0);
-        server.createContext("/", exchange -> {
-            String path = exchange.getRequestURI().getPath();
-            String body = new String(exchange.getRequestBody().readAllBytes(),
-                    StandardCharsets.UTF_8);
-            requests.add(exchange.getRequestMethod() + " " + path
-                    + " auth=" + exchange.getRequestHeaders().getFirst("Authorization"));
-            bodies.add(exchange.getRequestMethod() + " " + path + " " + body);
-            byte[] bytes = responses.getOrDefault(path, "{}")
-                    .getBytes(StandardCharsets.UTF_8);
-            exchange.getResponseHeaders().add("Content-Type", "application/json");
-            exchange.sendResponseHeaders(statuses.getOrDefault(path, 200), bytes.length);
-            try (OutputStream out = exchange.getResponseBody()) {
-                out.write(bytes);
-            }
-        });
-        server.start();
-        RestClient client = RestClient.builder()
-                .baseUrl("http://localhost:" + server.getAddress().getPort())
-                .build();
-        responses.put("/api/v1/auth/login", "{\"token\":\"t-1\"}");
-        return new GatewayBusinessApi(new GatewayCalls(client, new GatewayTokens(client)),
-                ScenarioInput.standard(scenario),
-                Clock.fixed(Instant.parse("2026-09-15T00:00:00Z"), ZoneOffset.UTC), 1);
-    }
-
-    /** 起票した例外の URI（追跡番号と例外 ID は下の検査で固定する）。 */
-    private static final String TRACKING = "TRK-0000000001";
-    private static final String EXCEPTION = "exc-1";
-
-    /** 便が通っている港（誤配の記録先はここから選ばれる）。 */
-    private void servedPorts(String... ports) {
-        StringBuilder movements = new StringBuilder();
-        for (int i = 0; i + 1 < ports.length; i++) {
-            movements.append(i == 0 ? "" : ",")
-                    .append("{\"departureUnLocode\":\"").append(ports[i])
-                    .append("\",\"arrivalUnLocode\":\"").append(ports[i + 1]).append("\"}");
-        }
-        responses.put("/api/v1/routing/voyages",
-                "{\"items\":[{\"movements\":[" + movements + "]}]}");
-    }
-
-    private static Map<StepKind, String> inTransit() {
-        var produced = new java.util.LinkedHashMap<StepKind, String>();
-        produced.put(StepKind.REGISTER_SHIPPER, "SHP-1");
-        produced.put(StepKind.REGISTER_BOOKING, "B-1");
-        produced.put(StepKind.ISSUE_TRACKING_NUMBER, TRACKING);
-        return produced;
-    }
-
+class GatewayRecoveryStepsTest extends GatewayStepsTestSupport {
     @Test
     @DisplayName("US35 §1: 例外はシナリオの種別で起票する（工程は同じ・入力が違う）")
     void reportsTheExceptionTypeTheScenarioDeclares() throws IOException {
@@ -167,64 +85,6 @@ class GatewayRecoveryStepsTest {
 
         assertThat(result.succeeded()).isFalse();
         assertThat(result.failureMessage()).contains("組み直す先がありません");
-    }
-
-    @Test
-    @DisplayName("US35 §4: 承認は候補から陸揚げ地を選び、次の工程へ渡す")
-    void approvesTheCancellationAtACandidatePort() throws IOException {
-        responses.put("/api/v1/booking/bookings/B-1/cancellation/discharge-candidates",
-                "{\"currentUnLocode\":\"JPTYO\",\"unLocodes\":[\"SGSIN\"]}");
-        var api = start(Scenario.CANCEL_IN_TRANSIT);
-
-        var result = api.execute(StepKind.APPROVE_CANCELLATION, inTransit());
-
-        assertThat(result.producedId())
-                .as("**指定した港を渡す**——渡さないと承認と荷降しが別の港を指しうる")
-                .isEqualTo("SGSIN");
-        assertThat(bodies).anyMatch(body ->
-                body.contains("/cancellation/approval") && body.contains("SGSIN"));
-    }
-
-    @Test
-    @DisplayName("US35 §4: 陸揚げ地の候補が無ければ、そう言って止まる")
-    void refusesWhenThereIsNoDischargeCandidate() throws IOException {
-        responses.put("/api/v1/booking/bookings/B-1/cancellation/discharge-candidates",
-                "{\"currentUnLocode\":\"JPTYO\",\"unLocodes\":[]}");
-        var api = start(Scenario.CANCEL_IN_TRANSIT);
-
-        var result = api.execute(StepKind.APPROVE_CANCELLATION, inTransit());
-
-        assertThat(result.succeeded()).isFalse();
-        assertThat(result.failureMessage()).contains("陸揚げ地の候補");
-    }
-
-    @Test
-    @DisplayName("US35 §4: 荷降しは承認で指定した港で記録する（当て直さない）")
-    void dischargesAtTheApprovedPort() throws IOException {
-        responses.put("/api/v1/booking/bookings/B-1/itinerary",
-                "{\"legs\":[{\"voyageNumber\":\"V-9\",\"loadUnLocode\":\"JPTYO\","
-                + "\"unloadUnLocode\":\"SGSIN\"}]}");
-        var api = start(Scenario.CANCEL_IN_TRANSIT);
-        var produced = inTransit();
-        produced.put(StepKind.APPROVE_CANCELLATION, "SGSIN");
-
-        var result = api.execute(StepKind.DISCHARGE_CANCELLED, produced);
-
-        assertThat(result.succeeded()).isTrue();
-        assertThat(bodies).anyMatch(body ->
-                body.contains("/activities") && body.contains("UNLOAD")
-                        && body.contains("SGSIN") && body.contains("V-9"));
-    }
-
-    @Test
-    @DisplayName("US35 §4: 承認の港が読めなければ、当てずっぽうで降ろさない")
-    void refusesToDischargeWithoutTheApprovedPort() throws IOException {
-        var api = start(Scenario.CANCEL_IN_TRANSIT);
-
-        var result = api.execute(StepKind.DISCHARGE_CANCELLED, inTransit());
-
-        assertThat(result.succeeded()).isFalse();
-        assertThat(result.failureMessage()).contains("陸揚げ地が読めませんでした");
     }
 
     @Test
@@ -307,18 +167,6 @@ class GatewayRecoveryStepsTest {
     }
 
     @Test
-    @DisplayName("US35 §4: 申請は理由を添えて送る")
-    void requestsTheCancellationWithAReason() throws IOException {
-        var api = start(Scenario.CANCEL_IN_TRANSIT);
-
-        var result = api.execute(StepKind.REQUEST_CANCELLATION, inTransit());
-
-        assertThat(result.succeeded()).isTrue();
-        assertThat(bodies).anyMatch(body ->
-                body.contains("/cancellation") && body.contains("reason"));
-    }
-
-    @Test
     @DisplayName("この担い手が扱わない工程は、黙って成功にしない")
     void refusesStepsItDoesNotOwn() throws IOException {
         var api = start(Scenario.DELAY);
@@ -366,24 +214,6 @@ class GatewayRecoveryStepsTest {
     }
 
     @Test
-    @DisplayName("US35 §4: 荷降しを断られたら、理由を残して止まる")
-    void keepsTheReasonWhenTheDischargeIsRefused() throws IOException {
-        responses.put("/api/v1/booking/bookings/B-1/itinerary",
-                "{\"legs\":[{\"voyageNumber\":\"V-9\",\"loadUnLocode\":\"JPTYO\","
-                + "\"unloadUnLocode\":\"SGSIN\"}]}");
-        statuses.put("/api/v1/handling/activities", 422);
-        responses.put("/api/v1/handling/activities",
-                "{\"message\":\"その港では降ろせません\"}");
-        var api = start(Scenario.CANCEL_IN_TRANSIT);
-        var produced = inTransit();
-        produced.put(StepKind.APPROVE_CANCELLATION, "SGSIN");
-
-        var result = api.execute(StepKind.DISCHARGE_CANCELLED, produced);
-
-        assertThat(result.failureMessage()).contains("その港では降ろせません");
-    }
-
-    @Test
     @DisplayName("US35 §3: 経路外の荷役を断られたら、理由を残して止まる")
     void keepsTheReasonWhenOffRouteHandlingIsRefused() throws IOException {
         responses.put("/api/v1/booking/bookings/B-1/itinerary",
@@ -396,6 +226,22 @@ class GatewayRecoveryStepsTest {
 
         assertThat(api.execute(StepKind.RECORD_OFF_ROUTE_HANDLING, inTransit())
                 .failureMessage()).contains("記録できません");
+    }
+
+    @Test
+    @DisplayName("US35 §3: 航海の一覧が読めなければ、その理由を残す（港 0 件に化けさせない）")
+    void keepsTheReasonWhenTheVoyageListCannotBeRead() throws IOException {
+        responses.put("/api/v1/booking/bookings/B-1/itinerary",
+                "{\"legs\":[{\"voyageNumber\":\"V-1\",\"loadUnLocode\":\"JPTYO\","
+                + "\"unloadUnLocode\":\"USNYC\"}]}");
+        statuses.put("/api/v1/routing/voyages", 500);
+        responses.put("/api/v1/routing/voyages", "{\"message\":\"航海が読めません\"}");
+        var api = start(Scenario.MISROUTE);
+
+        // **応答の状態を見ないと「旅程に無い港が見つかりません」に化ける。**
+        // 原因は経路サービス側なのに、記録には誤配の段取りの失敗しか残らない。
+        assertThat(api.execute(StepKind.RECORD_OFF_ROUTE_HANDLING, inTransit())
+                .failureMessage()).contains("航海が読めません");
     }
 
     @Test
@@ -432,65 +278,4 @@ class GatewayRecoveryStepsTest {
                 .isFalse();
     }
 
-    @Test
-    @DisplayName("US35 §4: 承認が現在地（積んだ港）を選んでも荷降しできる")
-    void dischargesAtTheLoadPortWhenApproved() throws IOException {
-        // **降ろす港だけを見ると見つからない。** 承認は現在地も候補に出す
-        // ——積んだ港で降ろすことになったとき、区間は「積む港」として持つ。
-        responses.put("/api/v1/booking/bookings/B-1/itinerary",
-                "{\"legs\":[{\"voyageNumber\":\"V-9\",\"loadUnLocode\":\"JPTYO\","
-                + "\"unloadUnLocode\":\"USNYC\"}]}");
-        var api = start(Scenario.CANCEL_IN_TRANSIT);
-        var produced = inTransit();
-        produced.put(StepKind.APPROVE_CANCELLATION, "JPTYO");
-
-        var result = api.execute(StepKind.DISCHARGE_CANCELLED, produced);
-
-        assertThat(result.succeeded()).isTrue();
-        assertThat(bodies).anyMatch(body ->
-                body.contains("/activities") && body.contains("JPTYO")
-                        && body.contains("V-9"));
-    }
-
-    @Test
-    @DisplayName("US35 §4: 旅程に触れない港を指定されたら、そう言って止まる")
-    void refusesToDischargeAtAPortNotOnTheItinerary() throws IOException {
-        responses.put("/api/v1/booking/bookings/B-1/itinerary",
-                "{\"legs\":[{\"voyageNumber\":\"V-9\",\"loadUnLocode\":\"JPTYO\","
-                + "\"unloadUnLocode\":\"USNYC\"}]}");
-        var api = start(Scenario.CANCEL_IN_TRANSIT);
-        var produced = inTransit();
-        produced.put(StepKind.APPROVE_CANCELLATION, "DEHAM");
-
-        assertThat(api.execute(StepKind.DISCHARGE_CANCELLED, produced).failureMessage())
-                .contains("旅程にありません");
-    }
-
-    @Test
-    @DisplayName("US35 §4: 受領と積込を記録して輸送中にする（荷降しは記録しない）")
-    void loadsTheCargoWithoutUnloading() throws IOException {
-        responses.put("/api/v1/booking/bookings/B-1/itinerary",
-                "{\"legs\":[{\"voyageNumber\":\"V-9\",\"loadUnLocode\":\"JPTYO\","
-                + "\"unloadUnLocode\":\"USNYC\"}]}");
-        var api = start(Scenario.CANCEL_IN_TRANSIT);
-
-        var result = api.execute(StepKind.LOAD_CARGO, inTransit());
-
-        assertThat(result.succeeded()).isTrue();
-        assertThat(bodies).anyMatch(body -> body.contains("RECEIVE"))
-                .anyMatch(body -> body.contains("LOAD"));
-        assertThat(bodies)
-                .as("**荷降しまで記録すると輸送が終わり、承認の要らないキャンセルになる**")
-                .noneMatch(body -> body.contains("\"handlingType\":\"UNLOAD\""));
-    }
-
-    @Test
-    @DisplayName("US35 §4: 旅程が読めなければ、当てずっぽうで積まない")
-    void refusesToLoadWithoutAnItinerary() throws IOException {
-        responses.put("/api/v1/booking/bookings/B-1/itinerary", "{\"legs\":[]}");
-        var api = start(Scenario.CANCEL_IN_TRANSIT);
-
-        assertThat(api.execute(StepKind.LOAD_CARGO, inTransit()).failureMessage())
-                .contains("積込の港を決められません");
-    }
 }

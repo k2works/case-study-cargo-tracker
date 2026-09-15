@@ -181,10 +181,10 @@ final class GatewayRecoverySteps {
         if (!ports.isArray() || ports.isEmpty()) {
             return StepResult.failure("陸揚げ地の候補が 1 件もありません");
         }
-        String unLocode = ports.get(0).path("unLocode").asText(null);
-        if (unLocode == null) {
-            unLocode = ports.get(0).asText();
-        }
+        // **形は 1 つ。** 読み口は `List<String>`（BookingQueries の
+        // `unLocodes`）なので、オブジェクト形も受ける書き方にしない——
+        // 両方受けると、どちらが本当かを誰も確かめなくなる。
+        String unLocode = ports.get(0).asText();
         var approved = calls.post(StepRole.of(kind),
                 GatewayHandling.bookingUri(produced, "/cancellation/approval"),
                 Map.of("dischargeUnLocode", unLocode, "reason", "業務シミュレーション"));
@@ -235,7 +235,14 @@ final class GatewayRecoverySteps {
         // **便が通っている港から選ぶ。** 固定の一覧から選ぶと、その港に便が
         // 無い環境では「組み直す先がない」で次の工程が止まる——確かめたいのは
         // 誤配の対応であって、港の品揃えではない（実測で踏んだ）。
-        String offRoute = servedPorts().stream()
+        // **応答の状態を見ないまま読まない。** 断られた応答から港を数えると
+        // 0 件になり、「旅程に無い港が見つかりません」という別の理由に化ける
+        // ——原因（認可・経路サービスの停止）がどこにも残らない。
+        var voyages = calls.get(StepRole.ROUTING, "/api/v1/routing/voyages?size=200");
+        if (!voyages.ok()) {
+            return StepResult.failure(voyages.status(), businessReason(voyages));
+        }
+        String offRoute = servedPorts(voyages).stream()
                 .filter(port -> !onRoute.contains(port))
                 .findFirst()
                 .orElse(null);
@@ -314,8 +321,7 @@ final class GatewayRecoverySteps {
      * <p><b>登録されている航海から読む。</b> 固定の一覧にすると、環境ごとの
      * 品揃えの違いで「知らない港」や「便が無い」に化ける。</p>
      */
-    private java.util.List<String> servedPorts() {
-        var response = calls.get(StepRole.ROUTING, "/api/v1/routing/voyages?size=200");
+    private static java.util.List<String> servedPorts(GatewayCalls.Response response) {
         java.util.LinkedHashSet<String> ports = new java.util.LinkedHashSet<>();
         for (JsonNode voyage : parse(response).path("items")) {
             for (JsonNode movement : voyage.path("movements")) {

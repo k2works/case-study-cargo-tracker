@@ -34,6 +34,10 @@ import org.springframework.test.annotation.DirtiesContext;
  *       <td>外さない</td><td>US34 の実行結果が工程ごとにここへ辿る</td></tr>
  *   <tr><td>countRecentlyChanged（S02 荷主）</td><td>外さない</td>
  *       <td>荷主で絞る読み。上と同じ</td></tr>
+ *   <tr><td>findOpen（S42 例外一覧）</td><td>外す</td>
+ *       <td>全荷主の例外が並ぶ。US35 の例外シナリオ × 継続実行で一晩に数百件</td></tr>
+ *   <tr><td>findUnread（貨物の知らせ）</td><td>外さない</td>
+ *       <td>荷主で絞る読み。確認用の利用者が知らせを受け取れなくなる（US37 §6）</td></tr>
  * </table>
  */
 @SpringBootTest
@@ -138,5 +142,36 @@ class SimulatedOriginExcludedIT extends AbstractAxonIntegrationTest {
         assertThat(trackings.findByTrackingNumber(trackingNumber).simulated())
                 .as("写しがまだ無い荷主を、業務の一覧から黙って消す側に倒さない")
                 .isFalse();
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.example.cargotracker.tracking.infrastructure.persistence.TrackingExceptionMapper
+            exceptions;
+
+    @Test
+    @DisplayName("US33 §3: シミュレーション由来の例外は、例外一覧（S42）に出ない")
+    void excludesSimulatedFromTheExceptionWorklist() {
+        // **US35 の例外シナリオ × US36 の継続実行で、一晩に数百件積まれる。**
+        // 追跡管理者が毎朝いちばんに開く一覧が偽物で埋まると、「緊急が先」の
+        // 並びも信用されなくなる（IT17 のレビューで指摘）。
+        String simulatedShipper = registerShipper("SHP-S-", true);
+        String realShipper = registerShipper("SHP-R-", false);
+        String simulatedTracking = initializeTracking(simulatedShipper);
+        String realTracking = initializeTracking(realShipper);
+        registerException(simulatedTracking);
+        registerException(realTracking);
+
+        assertThat(exceptions.findOpen(false))
+                .extracting(row -> row.trackingNumber())
+                .contains(realTracking)
+                .doesNotContain(simulatedTracking);
+    }
+
+    private void registerException(String trackingNumber) {
+        exceptions.insert(new com.example.cargotracker.tracking.infrastructure.persistence
+                .TrackingExceptionMapper.TrackingExceptionRow(
+                "exc-" + System.nanoTime(), trackingNumber, "DELAY", "OPEN", false,
+                "JPTYO", "検査用", null, null, null, "b-x-" + System.nanoTime(),
+                null, AT, null, AT));
     }
 }

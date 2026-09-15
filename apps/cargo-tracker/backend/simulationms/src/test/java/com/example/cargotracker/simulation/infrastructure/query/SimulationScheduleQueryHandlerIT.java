@@ -105,8 +105,22 @@ class SimulationScheduleQueryHandlerIT extends AbstractAxonIntegrationTest {
     }
 
     @Test
-    @DisplayName("動いていなければ null（画面が「動いていません」を出す）")
-    void returnsNullWhenNothingIsActive() {
-        assertThat(queries.findActive()).isNull();
+    @DisplayName("止めても最後の 1 本は読める（統計が消えない）")
+    void keepsTheLastScheduleReadableAfterItStops() {
+        // **止めた瞬間に統計が読めなくなってはいけない**（IT17 のレビュー H7）。
+        // 「何件流して何件落ちたか」を見るのは、たいてい**止めたあと**である。
+        // **自分のものがいちばん新しいことを、時刻で決める。** 共有の表なので、
+        // 同じ時刻で並ぶと他のテストの行と順番が入れ替わる。
+        String scheduleId = "SCH-Q-" + System.nanoTime() % 100000000L;
+        Instant later = AT.plusSeconds(3600);
+        schedules.insert(new SimulationScheduleMapper.ScheduleRow(scheduleId, 42L, 30, 2,
+                new BigDecimal("0.20"), "RUNNING", "admin01", later, null, later));
+        seedRun(scheduleId, "SUCCEEDED");
+        schedules.updateStatus(scheduleId, "STOPPED", later, later);
+
+        assertThat(queries.findActive()).isNotNull()
+                .satisfies(view -> assertThat(view.scheduleId()).isEqualTo(scheduleId))
+                .satisfies(view -> assertThat(view.statusLabel()).isEqualTo("停止中"))
+                .satisfies(view -> assertThat(view.runsByStatus()).isNotEmpty());
     }
 }

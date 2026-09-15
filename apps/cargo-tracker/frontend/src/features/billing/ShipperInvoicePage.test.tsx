@@ -64,6 +64,23 @@ function renderPage() {
   );
 }
 
+/** 予約から開いた場合（荷主は請求書番号を打っていない）。 */
+function renderFromBooking() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={['/shipper/invoices/by-booking/B-1']}>
+        <Routes>
+          <Route
+            path="/shipper/invoices/by-booking/:bookingId"
+            element={<ShipperInvoicePage />}
+          />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
 afterEach(() => vi.restoreAllMocks());
 
 describe('S62 自社請求書（荷主）', () => {
@@ -116,4 +133,18 @@ describe('S62 自社請求書（荷主）', () => {
     const link = await screen.findByRole('link', { name: '自社予約の進み具合へ戻る' });
     expect(link).toHaveAttribute('href', '/shipper/bookings/B-2026-0902-004');
   });
+
+  it('予約から開いたときは「まだ発行されていません」と出す（行き止まりにしない）', async () => {
+    // **入口によって言葉を変える。** 予約から開いた荷主は請求書番号を打って
+    // いないので、「番号をお確かめください」では次に取れる行動が無い
+    // （IT17 のレビューで指摘）。
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('{}', { status: 404 }),
+    );
+
+    renderFromBooking();
+
+    expect(await screen.findByText(/まだ発行されていません/)).toBeInTheDocument();
+  });
+
 });

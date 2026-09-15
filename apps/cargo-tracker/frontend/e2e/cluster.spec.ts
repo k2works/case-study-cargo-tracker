@@ -239,6 +239,8 @@ test.describe('kind クラスタでの通し確認', () => {
   async function bookCargo(
     request: import('@playwright/test').APIRequestContext,
     product: string,
+    /** 荷主を指定する（荷主向けの画面は「自社の分だけ」なので、作った荷主に紐付ける）。 */
+    forShipperId?: string,
   ): Promise<string> {
     const token = await tokenOf(request, 'sales01');
     const headers = { Authorization: `Bearer ${token}` };
@@ -260,7 +262,7 @@ test.describe('kind クラスタでの通し確認', () => {
     const booking = await request.post('/api/v1/booking/bookings', {
       headers,
       data: {
-        shipperId: (await shipper.json()).shipperId,
+        shipperId: forShipperId ?? (await shipper.json()).shipperId,
         originUnLocode: 'JPTYO',
         destinationUnLocode: 'USNYC',
         arrivalDeadline: businessDate(60),
@@ -675,6 +677,7 @@ test.describe('kind クラスタでの通し確認', () => {
   async function issueTrackingNumber(
     request: import('@playwright/test').APIRequestContext,
     product: string,
+    forShipperId?: string,
   ): Promise<{ bookingId: string; trackingNumber: string; voyageNumber: string }> {
     const voyageNumber = uniqueVoyageNumber('V-CL-');
     const routingToken = await tokenOf(request, 'routing01');
@@ -699,7 +702,7 @@ test.describe('kind クラスタでの通し確認', () => {
     });
     expect(voyage.status(), await voyage.text()).toBe(201);
 
-    const bookingId = await bookCargo(request, product);
+    const bookingId = await bookCargo(request, product, forShipperId);
     const salesToken = await tokenOf(request, 'sales01');
     const salesHeaders = { Authorization: `Bearer ${salesToken}` };
 
@@ -2045,6 +2048,31 @@ test.describe('kind クラスタでの通し確認', () => {
         // 作り直さずに使い続けるので、登録したばかりの荷主は絞らないと出ない。
         await page.getByLabel('荷主名で絞り込む').fill(`負荷確認商事 ${stamp}`);
         await expectEventually(page, `load-${stamp}@example.com`, { reload: false });
+
+        // **予約の登録まで通す**（計画が挙げた操作）。荷主の登録だけでは、
+        // シミュレーションが重なる予約の集約・投影に触れていない——
+        // 「普段どおり」を名乗るなら、負荷と同じところを通す必要がある。
+        const product = `負荷確認-${stamp}`;
+        await page.goto('/bookings/new');
+        await page.getByLabel('荷主を名前で絞り込む').fill(`負荷確認商事 ${stamp}`);
+        const option = page.locator('#shipperId option', { hasText: `負荷確認商事 ${stamp}` });
+        await expect(option).toHaveCount(1, { timeout: 60_000 });
+        await page.getByLabel('荷主', { exact: true })
+          .selectOption((await option.getAttribute('value')) ?? '');
+        await page.getByLabel('出発地').fill('JPTYO');
+        await page.getByLabel('目的地').fill('USNYC');
+        await page.getByLabel('到着期限').fill(businessDate(60));
+        await page.getByLabel('重量 (kg)').fill('1200');
+        await page.getByLabel('長さ (cm)').fill('120');
+        await page.getByLabel('幅 (cm)').fill('80');
+        await page.getByLabel('高さ (cm)').fill('100');
+        await page.getByLabel('数量').fill('10');
+        await page.getByLabel('品名').fill(product);
+        await page.getByRole('button', { name: '登録する' }).click();
+
+        // 一覧は上限があるので、品名で絞ってから確かめる。
+        await page.getByLabel('予約番号・品名で絞り込む').fill(product);
+        await expect(page.getByText(product)).toBeVisible({ timeout: 120_000 });
       } finally {
         // **必ず止める。** 流したままにすると、次の検査も次の人も巻き込む。
         await page.goto('/logout');
@@ -2087,8 +2115,9 @@ test.describe('kind クラスタでの通し確認', () => {
           shipperId,
           originUnLocode: 'JPTYO',
           destinationUnLocode: 'USNYC',
-          arrivalDeadline: new Date(Date.now() + 90 * 86_400_000)
-            .toISOString().slice(0, 10),
+          // **業務タイムゾーンで作る**（共有ヘルパ）。toISOString は UTC なので、
+          // CI の日付が 1 日ずれる。
+          arrivalDeadline: businessDate(90),
           cargoType: 'GENERAL',
           weightKg: '1200',
           lengthCm: '120',
@@ -2125,6 +2154,42 @@ test.describe('kind クラスタでの通し確認', () => {
       // **他社の予約は開けない**（存在しないものと区別しない）。
       await page.goto('/shipper/bookings/00000000-0000-0000-0000-000000000000');
       await expect(page.getByRole('alert')).toContainText('予約が見つかりません');
+
+      // **知らせ（§2・§6）はここでしか踏めない。** 一覧と進み具合だけを見て
+      // 終わると、ポップアップはどこでも検査されないまま緑になる。
+      //
+      // **順番に意味がある。** 初回の読み出しで既読の位置が「いまの最新」に
+      // 進むので（出していない古い知らせを読んだことにしないため）、
+      // <b>ログインしたあとに起きた出来事</b>でなければ出ない。
+      await expect(page.getByLabel('貨物の知らせ')).toHaveCount(0);
+
+      const { trackingNumber } = await issueTrackingNumber(
+        request, `知らせ確認-${stamp}`, shipperId);
+      const handler = await tokenOf(request, 'handler01');
+      await expect(async () => {
+        const response = await request.post('/api/v1/handling/activities', {
+          headers: { Authorization: `Bearer ${handler}` },
+          data: {
+            activityId: crypto.randomUUID(),
+            trackingNumber,
+            handlingType: 'RECEIVE',
+            unLocode: 'JPTYO',
+          },
+        });
+        expect(response.status()).toBe(201);
+      }).toPass({ timeout: 60_000 });
+
+      // 見に行く間隔は 60 秒（ADR-0021。押し出さず読みに行く）。
+      const popup = page.getByLabel('貨物の知らせ');
+      await expect(popup).toBeVisible({ timeout: 180_000 });
+      await expect(popup).toContainText(trackingNumber);
+      await expect(popup).toContainText('荷役の記録');
+
+      // **既読はサーバが持つ**（§3）。閉じたら、読み直しても出ない。
+      await popup.getByRole('button', { name: '閉じる' }).click();
+      await expect(popup).toHaveCount(0);
+      await page.reload();
+      await expect(page.getByLabel('貨物の知らせ')).toHaveCount(0, { timeout: 30_000 });
     });
 
 });

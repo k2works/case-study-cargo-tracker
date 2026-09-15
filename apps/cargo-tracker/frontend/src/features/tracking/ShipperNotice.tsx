@@ -79,6 +79,8 @@ function ShipperNoticePopup() {
               {notice.trackingNumber}
             </Link>
             <span className="ml-1">
+              {notice.eventLabel}
+              {' / '}
               {notice.statusLabel}
               {notice.location !== null && `（${notice.location}）`}
             </span>

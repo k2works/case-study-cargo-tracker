@@ -69,8 +69,20 @@ class SimulationScheduleServiceTest {
         }
 
         @Override
+        public ScheduleRow findLatest() {
+            // **止めたあとも読める**（統計が消えない）。findActive と違い、
+            // STOPPED でも最後の 1 本を返す。
+            return stored;
+        }
+
+        @Override
         public int countRunning(String scheduleId) {
             return running;
+        }
+
+        @Override
+        public int countStarted(String scheduleId) {
+            return startedRuns.size();
         }
 
         @Override
@@ -97,7 +109,8 @@ class SimulationScheduleServiceTest {
             if (runRefuses) {
                 throw new IllegalTransition("そのシナリオは実行中です");
             }
-            startedRuns.add(input.scenario().name() + "@" + scheduleId);
+            startedRuns.add(input.scenario().name() + "@" + input.originUnLocode()
+                    + "-" + input.destinationUnLocode() + "@" + scheduleId);
             return "SIM-" + startedRuns.size();
         }
     };
@@ -198,6 +211,26 @@ class SimulationScheduleServiceTest {
         assertThat(service.tick()).isNull();
         assertThat(service.activeOrNull()).isNull();
         assertThatThrownBy(service::stop).isInstanceOf(IllegalTransition.class);
+    }
+
+    @Test
+    @DisplayName("US36 §1: tick のたびに違う条件を引く（同じものを延々と流さない）")
+    void drawsADifferentInputOnEveryTick() {
+        // **稼働は記憶を持たない**（毎回 DB から組み直す）。乱数を集約の中に
+        // 飼うと、組み直すたびに先頭へ戻って同じ条件ばかり流れる
+        // ——確かめている経路が 1 本に縮む（IT17 のレビューで実測）。
+        var service = service(true);
+        service.start(42L, "admin01");
+
+        for (int i = 0; i < 5; i++) {
+            running = 0;
+            assertThat(service.tick()).isNotNull();
+        }
+
+        assertThat(startedRuns)
+                .as("引いた条件: %s", startedRuns)
+                .hasSize(5)
+                .doesNotHaveDuplicates();
     }
 
     /** 実行の記録は触らない（この検査の対象ではない）。 */

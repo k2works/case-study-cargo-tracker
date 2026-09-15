@@ -73,6 +73,14 @@
                changed_by, destination_unlocode, projected_at
           FROM customs_declaration
          <where>
+            <!-- **シミュレーション由来は外す**（[ADR-0020] 決定 4）。US36 の継続実行は
+                 税関保留のシナリオを流し続けるので、通関の一覧が偽物で埋まる
+                 ——留置が 3 営業日を超えたものを毎朝見るのがこの一覧である
+                 （IT17 のレビューで指摘）。
+                 **貨物の写しから引く。** 申告そのものは荷主を持たない。 -->
+            AND EXISTS (SELECT 1 FROM cargo_snapshot s
+                         WHERE s.tracking_number = customs_declaration.tracking_number
+                           AND s.simulated = FALSE)
             <if test="!includeCleared">
                 AND status &lt;&gt; 'CLEARED'
             </if>

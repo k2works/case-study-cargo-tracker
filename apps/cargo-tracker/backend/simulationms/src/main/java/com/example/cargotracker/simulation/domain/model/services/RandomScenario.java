@@ -2,6 +2,7 @@ package com.example.cargotracker.simulation.domain.model.services;
 
 import com.example.cargotracker.simulation.domain.model.valueobjects.Scenario;
 import com.example.cargotracker.simulation.domain.model.valueobjects.ScenarioInput;
+import com.example.cargotracker.simulation.domain.model.valueobjects.StepKind;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Random;
@@ -43,22 +44,68 @@ public final class RandomScenario {
     private static final int MIN_DEADLINE_DAYS = 30;
     private static final int DEADLINE_SPREAD_DAYS = 90;
 
-    private final Random random;
+    /**
+     * 例外を含むシナリオ。
+     *
+     * <p><b>名簿にしない。</b> シナリオが例外種別を宣言しているか、例外の工程を
+     * 持っているかで決める——足した例外シナリオがここに載らないまま「例外が
+     * 出ない」ことにならないように。</p>
+     */
+    private static boolean raisesException(Scenario scenario) {
+        return scenario.exceptionType() != null
+                || scenario.steps().stream().anyMatch(step ->
+                        step == StepKind.REGISTER_EXCEPTION
+                                || step == StepKind.RECORD_OFF_ROUTE_HANDLING
+                                || step == StepKind.HOLD_CUSTOMS);
+    }
 
-    private RandomScenario(long seed) {
+    private final Random random;
+    /**
+     * 例外シナリオを選ぶ割合（US36 §受入基準 2）。
+     *
+     * <p><b>設定を受け取らないと、宣言だけの項目になる。</b> 検証して保存して
+     * 画面に出しても、選び方に効いていなければ何も変わらない
+     * ——定義済み未使用は配線漏れのサインである（IT17 のレビューで実測）。</p>
+     */
+    private final double exceptionRatio;
+
+    private RandomScenario(long seed, double exceptionRatio) {
         // **java.util.Random を使う。** 仕様で並びが決まっているので、
         // JDK が変わっても同じ種から同じ並びが出る（SecureRandom は再現しない）。
         this.random = new Random(seed); // NOSONAR: 再現性が要る（暗号用途ではない）
+        this.exceptionRatio = exceptionRatio;
     }
 
-    /** 種から作る。 */
-    public static RandomScenario from(long seed) {
-        return new RandomScenario(seed);
+    /** 種から作る。<b>例外の割合は設定から受ける</b>（US36 §受入基準 2）。 */
+    public static RandomScenario from(long seed, double exceptionRatio) {
+        return new RandomScenario(seed, exceptionRatio);
+    }
+
+    /**
+     * 種から作り、<b>すでに流した本数だけ進める</b>（US36 §受入基準 1・3）。
+     *
+     * <p>稼働は記憶を持たない（毎回 DB から組み直す）ので、位置を記憶に頼ると
+     * <b>組み直すたびに先頭へ戻り、同じ条件を延々と流す</b>。本数から決めれば、
+     * 同じ種の N 本目はいつ数え直しても同じ条件になる。</p>
+     */
+    public static RandomScenario from(long seed, double exceptionRatio, int alreadyDrawn) {
+        RandomScenario random = new RandomScenario(seed, exceptionRatio);
+        for (int i = 0; i < alreadyDrawn; i++) {
+            random.next();
+        }
+        return random;
     }
 
     /** 次の条件を選ぶ。 */
     public ScenarioInput next() {
-        Scenario scenario = pick(List.of(Scenario.values()));
+        // **例外の割合を先に決める。** どの群から引くかを決めてから中身を引く
+        // ——一様に引いてから捨てると、引いた回数が結果で変わって再現できない。
+        boolean wantsException = random.nextDouble() < exceptionRatio;
+        List<Scenario> candidates = List.of(Scenario.values()).stream()
+                .filter(scenario -> raisesException(scenario) == wantsException)
+                .toList();
+        Scenario scenario = pick(candidates.isEmpty()
+                ? List.of(Scenario.values()) : candidates);
         String origin = pick(PORTS);
         String destination = pickOtherThan(origin);
         return new ScenarioInput(scenario, origin, destination, pick(CARGO_TYPES),

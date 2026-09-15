@@ -21,6 +21,14 @@ public final class NoticeQueries {
     public record NoticeView(
             long sequenceNo,
             String trackingNumber,
+            /*
+             * 何が起きたか（US37 §受入基準 1）。
+             *
+             * **状態だけでは足りない。** 例外の起票も解決も、状態はどちらも
+             * 「例外発生」なので、同じ文面で届く——荷主は「解決しました」の
+             * 知らせを「また何か起きた」と読む（IT17 のレビューで実測）。
+             */
+            String eventLabel,
             String statusLabel,
             String location,
             Instant occurredAt,

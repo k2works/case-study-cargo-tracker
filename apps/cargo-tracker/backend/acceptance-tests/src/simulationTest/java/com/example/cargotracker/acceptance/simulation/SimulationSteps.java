@@ -251,7 +251,12 @@ public class SimulationSteps {
         // **解決まで通ったことを、追跡の読み口で見る**（US35 §2）。
         // **件数の列は単票に無い**（実測）ので、明細から数える——読み口に
         // 無い項目を当てにすると、検査は NullPointerException で落ちる。
+        // **空なら allMatch は真になる。** 例外がそもそも起票されていなくても
+        // 緑になる形では、「解決まで通った」ことを一切判別しない——
+        // まず起票されていることを見てから、全部が解決済みであることを見る。
         assertThat(tracking().getList("exceptions.responseStatus", String.class))
+                .as("例外が 1 件も起票されていない（解決を確かめようがない）")
+                .isNotEmpty()
                 .as("未解決の例外が残っている")
                 .allMatch("RESOLVED"::equals);
     }
@@ -321,10 +326,12 @@ public class SimulationSteps {
         // 走っている実行は最後まで終えるので、**止まりきるのを待ってから**数える。
         awaitQuiet();
         int before = recentRunIds().size();
-        await("停止が落ち着く").atMost(Duration.ofSeconds(60))
+        // **待ちは 1 回目のポーリングで真になってはいけない。** 「等しくなるまで待つ」
+        // 形は最初の 1 回で抜けるので、停止がまったく効かなくても緑になる。
+        // 刻み（30 秒）を 1 回以上またぐあいだ、増えないことが**続く**のを見る。
+        await("停止が続く").during(Duration.ofSeconds(45)).atMost(Duration.ofSeconds(90))
                 .pollInterval(Duration.ofSeconds(2))
                 .until(() -> recentRunIds().size() == before);
-        assertThat(recentRunIds()).hasSize(before);
     }
 
     private io.restassured.path.json.JsonPath schedule() {

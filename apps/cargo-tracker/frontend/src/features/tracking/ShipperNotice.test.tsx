@@ -37,6 +37,7 @@ function renderNotice() {
 const NOTICE = {
   sequenceNo: 7,
   trackingNumber: 'TRK-8K2QX7M4RB',
+  eventLabel: '荷役の記録',
   statusLabel: '積込済',
   location: 'JPTYO',
   occurredAt: '2026-09-15T01:00:00Z',
@@ -60,7 +61,9 @@ describe('貨物の知らせ（ポップアップ）', () => {
 
     expect(await screen.findByRole('complementary', { name: '貨物の知らせ' }))
       .toBeInTheDocument();
-    expect(screen.getByText('積込済（JPTYO）')).toBeInTheDocument();
+    // **何が起きたかを出す**（US37 §1）。状態だけだと、例外の起票と解決が
+    // 同じ文面で届く。
+    expect(screen.getByText('荷役の記録 / 積込済（JPTYO）')).toBeInTheDocument();
   });
 
   it('US37 §1: 新しい知らせが無ければ出ない', async () => {

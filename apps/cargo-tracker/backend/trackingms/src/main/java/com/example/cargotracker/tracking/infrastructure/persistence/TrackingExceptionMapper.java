@@ -94,6 +94,11 @@ public interface TrackingExceptionMapper {
             // 料金調整の根拠として参照される（US28 §受入基準 8）が、既定で
             // 混ぜると一覧が「まだ手を入れる場所」に見えなくなる。
             + "WHERE (#{includeResolved} OR x.response_status <> 'RESOLVED') "
+            // **シミュレーション由来は外す**（[ADR-0020] 決定 4）。US36 の継続実行は
+            // 例外シナリオを流し続けるので、一晩で数百件積まれる——追跡管理者が
+            // 毎朝いちばんに開く一覧が偽物で埋まると、「緊急が先」の並びも
+            // 信用されなくなる（IT17 のレビューで指摘）。
+            + "  AND s.simulated = FALSE "
             // **対応で期限が動いたら、その日付で並べる。** 古い期限のまま並べると、
             // 対応済みのものが「まだ急ぎ」の位置に残る（IT10 レビュー 高）。
             + "ORDER BY (x.response_status = 'RESOLVED'), x.urgent DESC, "

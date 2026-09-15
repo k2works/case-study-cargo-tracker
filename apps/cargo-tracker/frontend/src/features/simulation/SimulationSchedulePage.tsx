@@ -93,7 +93,10 @@ export function SimulationSchedulePage() {
     onError: (failure: Error) => setError(failure.message),
   });
 
-  const active = schedule.data?.state === 'ready' ? schedule.data.value : null;
+  const latest = schedule.data?.state === 'ready' ? schedule.data.value : null;
+  // **止めた稼働も返る**（US36 §3・§8）。止めた瞬間に件数も失敗工程の分布も
+  // 乱数の種も読めなくなると、夜通し流して翌朝に結果を読む使い方が成り立たない。
+  const running = latest !== null && latest.status !== 'STOPPED';
 
   return (
     <section>
@@ -104,7 +107,7 @@ export function SimulationSchedulePage() {
 
       {error !== null && <p role="alert" className={`${ALERT} mt-4`}>{error}</p>}
 
-      {active === null ? (
+      {!running ? (
         <div className={`${CARD} mt-4`}>
           <p className="text-sm text-gray-600">
             継続実行は動いていません。乱数の種を指定すると、同じ並びを再現できます
@@ -128,63 +131,67 @@ export function SimulationSchedulePage() {
             継続実行を開始する
           </button>
         </div>
-      ) : (
+      ) : null}
+
+      {latest !== null && (
         <>
           <dl className={`${CARD} mt-4 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4`}>
             <div>
               <dt className="text-gray-600">状態</dt>
-              <dd className="font-medium">{active.statusLabel}</dd>
+              <dd className="font-medium">{latest.statusLabel}</dd>
             </div>
             <div>
               {/* **種を読めるようにする**（§3）。読めないと再現できない。 */}
               <dt className="text-gray-600">乱数の種</dt>
-              <dd className="font-medium">{active.seed}</dd>
+              <dd className="font-medium">{latest.seed}</dd>
             </div>
             <div>
               <dt className="text-gray-600">実行間隔</dt>
-              <dd className="font-medium">{active.intervalSeconds} 秒</dd>
+              <dd className="font-medium">{latest.intervalSeconds} 秒</dd>
             </div>
             <div>
               <dt className="text-gray-600">同時実行</dt>
               <dd className="font-medium">
-                {active.runningNow} / {active.maxConcurrent} 本
+                {latest.runningNow} / {latest.maxConcurrent} 本
               </dd>
             </div>
             <div>
               <dt className="text-gray-600">開始</dt>
-              <dd className="font-medium">{formatBusinessDateTime(active.startedAt)}</dd>
+              <dd className="font-medium">{formatBusinessDateTime(latest.startedAt)}</dd>
             </div>
             <div>
               <dt className="text-gray-600">開始した人</dt>
-              <dd className="font-medium">{active.startedBy}</dd>
+              <dd className="font-medium">{latest.startedBy}</dd>
             </div>
           </dl>
 
-          {active.status === 'STOPPING' && (
+          {latest.status === 'STOPPING' && (
             <output className={`${NOTICE} mt-4 block`}>
               停止処理中です。走っている実行が終わるまで待っています
-              （{active.runningNow} 本）。
+              （{latest.runningNow} 本）。
             </output>
           )}
 
-          <button
-            type="button"
-            className={`${BUTTON_PRIMARY} mt-4`}
-            disabled={stop.isPending || active.status === 'STOPPING'}
-            onClick={() => stop.mutate()}
-          >
-            継続実行を停止する
-          </button>
+          {running && (
+            <button
+              type="button"
+              className={`${BUTTON_PRIMARY} mt-4`}
+              disabled={stop.isPending || latest.status === 'STOPPING'}
+              onClick={() => stop.mutate()}
+            >
+              継続実行を停止する
+            </button>
+          )}
 
           <div className={`${CARD} mt-4 overflow-x-auto`}>
-            <CountTable caption="実行の内訳" header="結果" counts={active.runsByStatus} />
+            <CountTable caption="実行の内訳" header="結果" counts={latest.runsByStatus} />
           </div>
           <div className={`${CARD} mt-4 overflow-x-auto`}>
             {/* **どの工程で止まりやすいかが、いちばん見たい形である。** */}
             <CountTable
               caption="止まった工程"
               header="工程"
-              counts={active.failuresByStep}
+              counts={latest.failuresByStep}
             />
           </div>
         </>

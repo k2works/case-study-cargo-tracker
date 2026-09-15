@@ -110,7 +110,10 @@ public class SimulationScheduleService {
             }
             return null;
         }
-        ScenarioInput input = schedule.nextScenario();
+        // **位置は記録から数える。** 稼働は記憶を持たないので、内側に乱数を
+        // 飼うと組み直すたびに先頭へ戻る（US36 §1 が成立しない）。
+        ScenarioInput input = schedule.nextScenario(
+                schedules.countStarted(schedule.scheduleId()));
         try {
             return runs.start(input, schedule.scheduleId(), schedule.startedBy());
         } catch (IllegalTransition e) {
@@ -131,9 +134,20 @@ public class SimulationScheduleService {
         return restore(row);
     }
 
-    /** いま動いている稼働（無ければ {@code null}）。<b>読み口はこちらを使う</b>。 */
+    /** いま動いている稼働（無ければ {@code null}）。 */
     public SimulationSchedule activeOrNull() {
         var row = schedules.findActive();
+        return row == null ? null : restore(row);
+    }
+
+    /**
+     * いちばん新しい稼働（止まったものも含む。無ければ {@code null}）。
+     *
+     * <p><b>読み口はこちらを使う。</b> 止めた瞬間に統計も種も読めなくなると、
+     * 夜通し流して翌朝に結果を読む使い方が成り立たない（US36 §3・§8）。</p>
+     */
+    public SimulationSchedule latestOrNull() {
+        var row = schedules.findLatest();
         return row == null ? null : restore(row);
     }
 
@@ -152,16 +166,21 @@ public class SimulationScheduleService {
     /**
      * 記録から稼働を組み直す。
      *
-     * <p><b>種から同じ位置に戻らない。</b> 組み直すたびに乱数は先頭から始まるので、
-     * 再起動をまたぐと同じ条件がもう一度流れる。<b>再現できるのは「同じ種を
-     * 指定して始め直したとき」であって、稼働の続きではない</b>（注 N4）。</p>
+     * <p><b>乱数の位置は組み直しても失われない。</b> 位置は「その稼働が始めた
+     * 本数」から決まるので（{@link SimulationSchedule#nextScenario(int)}）、
+     * 再起動をまたいでも続きから流れる。</p>
      */
     private SimulationSchedule restore(SimulationScheduleMapper.ScheduleRow row) {
         SimulationSchedule schedule = SimulationSchedule.start(row.scheduleId(), row.seed(),
                 java.time.Duration.ofSeconds(row.intervalSeconds()), row.maxConcurrent(),
                 row.exceptionRatio(), row.startedBy(), row.startedAt());
-        if (ScheduleStatus.valueOf(row.status()) == ScheduleStatus.STOPPING) {
+        ScheduleStatus status = ScheduleStatus.valueOf(row.status());
+        if (status == ScheduleStatus.STOPPING || status == ScheduleStatus.STOPPED) {
             schedule.stop(row.stoppedAt() == null ? Instant.EPOCH : row.stoppedAt());
+        }
+        if (status == ScheduleStatus.STOPPED) {
+            schedule.settleIfDrained(0, row.stoppedAt() == null
+                    ? Instant.EPOCH : row.stoppedAt());
         }
         return schedule;
     }

@@ -52,6 +52,18 @@ class NoticeQueryHandlerIT extends AbstractAxonIntegrationTest {
         return trackingNumber;
     }
 
+    /**
+     * 既読の起点を作る（初めて開いた荷主は「いまから」が起点になる）。
+     *
+     * <p>起点を作らずに知らせを足すと、最初の問い合わせが起点作りで消費される
+     * ——各検査が自分で前提を作る。</p>
+     */
+    private void startFrom(String shipperId) {
+        assertThat(notices.findUnread(shipperId).items())
+                .as("初めて開いた荷主には何も出さない（古い知らせの山を見せない）")
+                .isEmpty();
+    }
+
     /** 知らせを 1 件作る。<b>同じ時刻で入れる</b>——時刻では区別できないことを固定する。 */
     private void notice(String trackingNumber, String status) {
         events.insert(new TrackingEventMapper.TrackingEventRow(
@@ -64,6 +76,7 @@ class NoticeQueryHandlerIT extends AbstractAxonIntegrationTest {
     void showsNoticesForOwnCargo() {
         String shipperId = "SHP-N-" + System.nanoTime();
         String trackingNumber = initializeTracking(shipperId);
+        startFrom(shipperId);
         notice(trackingNumber, "RECEIVED");
         notice(trackingNumber, "LOADED");
 
@@ -83,6 +96,7 @@ class NoticeQueryHandlerIT extends AbstractAxonIntegrationTest {
     void doesNotRepeatWhatWasRead() {
         String shipperId = "SHP-R-" + System.nanoTime();
         String trackingNumber = initializeTracking(shipperId);
+        startFrom(shipperId);
         notice(trackingNumber, "RECEIVED");
         notice(trackingNumber, "LOADED");
 
@@ -104,6 +118,7 @@ class NoticeQueryHandlerIT extends AbstractAxonIntegrationTest {
     void neverMovesTheReadPositionBackwards() {
         String shipperId = "SHP-B-" + System.nanoTime();
         String trackingNumber = initializeTracking(shipperId);
+        startFrom(shipperId);
         notice(trackingNumber, "RECEIVED");
         long latest = notices.findUnread(shipperId).latestSequence();
 
@@ -123,6 +138,7 @@ class NoticeQueryHandlerIT extends AbstractAxonIntegrationTest {
         String mine = "SHP-M-" + System.nanoTime();
         String theirs = "SHP-T-" + System.nanoTime();
         initializeTracking(mine);
+        startFrom(mine);
         String theirTracking = initializeTracking(theirs);
         notice(theirTracking, "RECEIVED");
 
@@ -137,11 +153,52 @@ class NoticeQueryHandlerIT extends AbstractAxonIntegrationTest {
     void doesNotDropNoticesThatShareATimestamp() {
         String shipperId = "SHP-S-" + System.nanoTime();
         String trackingNumber = initializeTracking(shipperId);
+        startFrom(shipperId);
         // **すべて同じ occurredAt。** 時刻で既読を持つと、ここで取りこぼす。
         notice(trackingNumber, "RECEIVED");
         notice(trackingNumber, "LOADED");
         notice(trackingNumber, "DELIVERED");
 
         assertThat(notices.findUnread(shipperId).items()).hasSize(3);
+    }
+
+    @Test
+    @DisplayName("US37 §1: 何が起きたかが読める（起票と解決が同じ文面にならない）")
+    void tellsWhatHappenedNotJustTheStatus() {
+        String shipperId = "SHP-E-" + System.nanoTime();
+        String trackingNumber = initializeTracking(shipperId);
+        startFrom(shipperId);
+        events.insert(new TrackingEventMapper.TrackingEventRow(
+                "evt-" + System.nanoTime(), trackingNumber, "EXCEPTION", null, "EXCEPTION",
+                "JPTYO", AT, "tracking01", AT));
+        events.insert(new TrackingEventMapper.TrackingEventRow(
+                "evt-" + System.nanoTime(), trackingNumber, "RESOLVED", null, "EXCEPTION",
+                "JPTYO", AT, "tracking01", AT));
+
+        // **状態はどちらも「例外発生」。** 種別を出さないと、解決の知らせを
+        // 「また何か起きた」と読む。
+        assertThat(notices.findUnread(shipperId).items())
+                .extracting(NoticeQueries.NoticeView::eventLabel)
+                .containsExactly("異常の発生", "異常の解決");
+    }
+
+    @Test
+    @DisplayName("US37 §3: 上限で切れても、出していない知らせを既読にしない")
+    void neverMarksWhatItDidNotShow() {
+        String shipperId = "SHP-L-" + System.nanoTime();
+        String trackingNumber = initializeTracking(shipperId);
+        startFrom(shipperId);
+        // 上限（20 件）より多く作る。
+        for (int i = 0; i < 25; i++) {
+            notice(trackingNumber, "RECEIVED");
+        }
+
+        var first = notices.findUnread(shipperId);
+        assertThat(first.items()).hasSize(20);
+        notices.markRead(shipperId, first.latestSequence());
+
+        assertThat(notices.findUnread(shipperId).items())
+                .as("**出していない 5 件が黙って既読になっていない**")
+                .hasSize(5);
     }
 }

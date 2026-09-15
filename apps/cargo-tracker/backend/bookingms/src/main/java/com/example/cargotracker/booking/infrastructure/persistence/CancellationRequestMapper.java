@@ -43,6 +43,13 @@ public interface CancellationRequestMapper {
     @Select("SELECT request_id, booking_id, reason, requested_by, requested_at, "
             + "decision, discharge_unlocode, decision_reason, decided_by, decided_at "
             + "FROM cancellation_request WHERE decision IS NULL "
+            // **シミュレーション由来は外す**（[ADR-0020] 決定 4）。US36 の継続実行は
+            // 輸送中キャンセルのシナリオを流し続けるので、承認待ちが偽物で埋まる
+            // ——陸揚げ地を決められるのは追跡管理者だけで、毎朝ここを開く
+            // （IT17 のレビューで指摘）。
+            + "  AND EXISTS (SELECT 1 FROM cargo_summary c "
+            + "              WHERE c.booking_id = cancellation_request.booking_id "
+            + "                AND c.simulated = FALSE) "
             + "ORDER BY requested_at, request_id")
     List<CancellationRequestRow> findPending();
 

@@ -149,4 +149,27 @@ describe('S94 継続実行と統計', () => {
       expect(screen.getByRole('alert')).toHaveTextContent('この環境では継続実行を開始できません'),
     );
   });
+
+  it('US36 §3・§8: 止めたあとも、種と統計が読める（翌朝に結果を読む）', async () => {
+    // **止めた瞬間に件数も失敗工程の分布も乱数の種も消えると、夜通し流して
+    // 翌朝に結果を読む使い方が成り立たない**（IT17 のレビューで指摘）。
+    respond(() => new Response(
+      JSON.stringify(schedule({
+        status: 'STOPPED', statusLabel: '停止中', runningNow: 0,
+        stoppedAt: '2026-09-15T09:00:00Z',
+      })),
+      { status: 200 },
+    ));
+
+    renderPage();
+
+    expect(await screen.findByText('1789234512')).toBeInTheDocument();
+    expect(screen.getByText('経路の確定')).toBeInTheDocument();
+    expect(screen.getByText('18')).toBeInTheDocument();
+    // 止まっているので、もう一度始められる。
+    expect(screen.getByRole('button', { name: '継続実行を開始する' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '継続実行を停止する' }))
+      .not.toBeInTheDocument();
+  });
+
 });

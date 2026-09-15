@@ -46,6 +46,22 @@ public interface SimulationScheduleMapper {
     ScheduleRow findActive();
 
     /**
+     * いちばん新しい稼働（止まったものも含む）。
+     *
+     * <p><b>止めた瞬間に読めなくなってはいけない</b>（US36 §受入基準 3・8）。
+     * 夜通し流して翌朝に「何件流れて、どの工程で何件落ちたか」を読むのが本来の
+     * 使い方で、止めたら件数も失敗工程の分布も<b>乱数の種も</b>消えるなら、
+     * 「同じ種を指定すると同じ並びを再現できる」は実務で成立しない
+     * （IT17 のレビューで指摘）。</p>
+     */
+    // **動いているものを先に見る。** 「いちばん新しい」だけで並べると、
+    // 動いている稼働より後に止めた古い稼働が前に来うる——画面に出したいのは
+    // まず動いているもので、無いときに限って直前の記録である。
+    @Select("SELECT " + COLUMNS + " FROM simulation_schedule "
+            + "ORDER BY (status <> 'STOPPED') DESC, started_at DESC, schedule_id DESC LIMIT 1")
+    ScheduleRow findLatest();
+
+    /**
      * その稼働がいま走らせている実行の本数。
      *
      * <p><b>数えるのは自分が作った行だけ</b>——手で流した実行（`schedule_id` が
@@ -54,6 +70,19 @@ public interface SimulationScheduleMapper {
     @Select("SELECT count(*) FROM simulation_run "
             + "WHERE schedule_id = #{scheduleId} AND status = 'RUNNING'")
     int countRunning(@Param("scheduleId") String scheduleId);
+
+    /**
+     * その稼働がこれまでに始めた実行の本数。
+     *
+     * <p><b>乱数の位置はこれで決まる</b>（US36 §受入基準 1・3）。稼働は記憶を
+     * 持たない（毎回 DB から組み直す）ので、位置を記憶に頼ると<b>組み直すたびに
+     * 乱数が先頭へ戻り、同じ条件を延々と流す</b>（IT17 のレビューで実測）。</p>
+     *
+     * <p><b>本数から決めれば再現もできる。</b> 同じ種の N 本目は、いつ数え直しても
+     * 同じ条件になる。</p>
+     */
+    @Select("SELECT count(*) FROM simulation_run WHERE schedule_id = #{scheduleId}")
+    int countStarted(@Param("scheduleId") String scheduleId);
 
     /**
      * その稼働が流した実行の内訳（US36 §受入基準 8）。

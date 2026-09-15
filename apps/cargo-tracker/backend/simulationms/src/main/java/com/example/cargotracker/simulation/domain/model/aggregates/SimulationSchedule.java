@@ -35,7 +35,6 @@ public final class SimulationSchedule {
     private final BigDecimal exceptionRatio;
     private final String startedBy;
     private final Instant startedAt;
-    private final RandomScenario random;
 
     private ScheduleStatus status = ScheduleStatus.RUNNING;
     private Instant stoppedAt;
@@ -49,7 +48,6 @@ public final class SimulationSchedule {
         this.exceptionRatio = exceptionRatio;
         this.startedBy = startedBy;
         this.startedAt = startedAt;
-        this.random = RandomScenario.from(seed);
     }
 
     /**
@@ -116,9 +114,18 @@ public final class SimulationSchedule {
         return status.acceptsNewRuns() && running < maxConcurrent;
     }
 
-    /** 次に流す条件（US36 §受入基準 1）。<b>種から決まる</b>。 */
-    public ScenarioInput nextScenario() {
-        return random.next();
+    /**
+     * 次に流す条件（US36 §受入基準 1）。<b>種と「すでに流した本数」から決まる</b>。
+     *
+     * <p><b>乱数を集約の中に飼わない。</b> 稼働は記憶を持たず毎回 DB から
+     * 組み直されるので、内側に持つと<b>組み直すたびに先頭へ戻り、同じ条件を
+     * 延々と流す</b>（IT17 のレビューで実測。US36 §1 が成立していなかった）。
+     * 位置を外から受ければ、同じ種の N 本目はいつ数え直しても同じ条件になる。</p>
+     *
+     * @param alreadyStarted この稼働がこれまでに始めた本数
+     */
+    public ScenarioInput nextScenario(int alreadyStarted) {
+        return RandomScenario.from(seed, exceptionRatio.doubleValue(), alreadyStarted).next();
     }
 
     public String scheduleId() {

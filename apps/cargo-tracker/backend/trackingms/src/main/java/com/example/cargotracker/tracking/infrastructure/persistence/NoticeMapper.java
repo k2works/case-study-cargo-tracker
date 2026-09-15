@@ -28,6 +28,11 @@ public interface NoticeMapper {
      * <p><b>シミュレーション由来は外さない。</b> 行はその荷主のものしか返らない
      * ので本物に混ざりようがなく、外すと確認用の利用者が知らせを受け取れない
      * （US37 §6・[ADR-0020] 決定 4 の「外さない読み口」）。</p>
+     *
+     * <p><b>古い順に返す。</b> 新しい順だと、上限で切ったときに返る 20 件の
+     * 最大値が<b>未読全体の最大値</b>になる——それを既読にすると、出していない
+     * 古い知らせまで黙って読んだことになる（IT17 のレビューで実測）。
+     * 古い順なら、既読にするのは<b>出した分ちょうど</b>である。</p>
      */
     @Select("SELECT e.sequence_no, e.tracking_number, e.event_type, e.new_status, "
             + "e.location, e.occurred_at, s.origin_unlocode, s.destination_unlocode "
@@ -37,7 +42,7 @@ public interface NoticeMapper {
             + "  AND e.sequence_no > COALESCE("
             + "      (SELECT last_read_sequence FROM notice_read_position "
             + "        WHERE shipper_id = #{shipperId}), 0) "
-            + "ORDER BY e.sequence_no DESC "
+            + "ORDER BY e.sequence_no ASC "
             + "LIMIT #{limit}")
     List<NoticeRow> findUnread(@Param("shipperId") String shipperId,
             @Param("limit") int limit);
@@ -61,6 +66,19 @@ public interface NoticeMapper {
 
     @Select("SELECT last_read_sequence FROM notice_read_position WHERE shipper_id = #{shipperId}")
     Long findReadPosition(@Param("shipperId") String shipperId);
+
+    /**
+     * その荷主のいちばん新しい知らせの位置（無ければ {@code null}）。
+     *
+     * <p><b>初めて開いた荷主の起点になる。</b> 既読位置が無いと過去の履歴が
+     * すべて未読になり、何か月も前の積込・荷降しがポップアップで出る——
+     * 「新しいことが起きたら知らせる」という約束と逆である
+     * （IT17 のレビューで実測）。</p>
+     */
+    @Select("SELECT max(e.sequence_no) FROM tracking_event e "
+            + "JOIN tracking_summary s ON s.tracking_number = e.tracking_number "
+            + "WHERE s.shipper_id = #{shipperId}")
+    Long findLatestSequence(@Param("shipperId") String shipperId);
 
     /** 知らせ 1 件。<b>金額も社内メモも入らない</b>（荷主に出すのは状態だけ）。 */
     record NoticeRow(
