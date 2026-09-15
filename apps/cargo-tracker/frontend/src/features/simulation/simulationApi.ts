@@ -71,7 +71,17 @@ export interface PlannedStepView {
  * **呼び名はサーバの列挙と同じ文字列**——実行の要求はこの呼び名で送り、
  * サーバは知らないものを断る（打ち間違いを「工程 0 件で成功」にしない）。
  */
-export const SCENARIOS = ['一般貨物の標準輸送', '便が通わない港への輸送'] as const;
+export const SCENARIOS = [
+  '一般貨物の標準輸送',
+  '便が通わない港への輸送',
+  // 例外シナリオ（US35）。**4 つは工程が同じで、違うのは例外種別だけ**
+  // （IT17 の注 N10）。
+  '遅延の発生と対応',
+  '破損の発生と対応',
+  '誤配の発生と経路の組み直し',
+  '税関保留の発生と対応',
+  '輸送中のキャンセルと指定港での荷降し',
+] as const;
 
 /** 実行の一覧（S92）。<b>新しい順</b>。 */
 export function fetchSimulationRuns(): Promise<Pending<{ items: RunSummaryView[] }>> {

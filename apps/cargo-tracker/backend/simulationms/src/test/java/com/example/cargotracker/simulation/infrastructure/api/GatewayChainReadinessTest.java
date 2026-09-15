@@ -165,4 +165,96 @@ class GatewayChainReadinessTest {
     void doesNotWaitForReadOnlySteps() {
         assertThat(readiness.isReady(StepKind.CALCULATE_INVOICE, PRODUCED)).isTrue();
     }
+
+    /** 例外とキャンセルの工程で使う材料。 */
+    private static Map<StepKind, String> recovering() {
+        var produced = new java.util.LinkedHashMap<StepKind, String>(PRODUCED);
+        produced.put(StepKind.REGISTER_EXCEPTION, "exc-1");
+        return produced;
+    }
+
+    private void tracking(String body) {
+        responses.put("/api/v1/tracking/trackings/TRK-1", body);
+    }
+
+    @Test
+    @DisplayName("US35 §1: 起票は未解決の件数が増えるまで待つ")
+    void waitsUntilTheExceptionIsCounted() {
+        tracking("{\"openExceptionCount\":0}");
+        assertThat(readiness.isReady(StepKind.REGISTER_EXCEPTION, recovering())).isFalse();
+
+        tracking("{\"openExceptionCount\":1}");
+        assertThat(readiness.isReady(StepKind.REGISTER_EXCEPTION, recovering())).isTrue();
+    }
+
+    @Test
+    @DisplayName("US35 §2: 対応は、その例外の対応状態が変わるまで待つ")
+    void waitsForThatExceptionToBeResponding() {
+        // **別の例外が対応中でも満たさない。** 起票した例外を名指しで見る。
+        tracking("{\"exceptions\":[{\"exceptionId\":\"other\","
+                + "\"responseStatus\":\"RESPONDING\"}]}");
+        assertThat(readiness.isReady(StepKind.RESPOND_TO_EXCEPTION, recovering())).isFalse();
+
+        tracking("{\"exceptions\":[{\"exceptionId\":\"exc-1\","
+                + "\"responseStatus\":\"RESPONDING\"}]}");
+        assertThat(readiness.isReady(StepKind.RESPOND_TO_EXCEPTION, recovering())).isTrue();
+    }
+
+    @Test
+    @DisplayName("US35 §2: 解決は未解決が 0 に戻るまで待つ")
+    void waitsUntilNoExceptionIsOpen() {
+        tracking("{\"openExceptionCount\":1}");
+        assertThat(readiness.isReady(StepKind.RESOLVE_EXCEPTION, recovering())).isFalse();
+
+        tracking("{\"openExceptionCount\":0}");
+        assertThat(readiness.isReady(StepKind.RESOLVE_EXCEPTION, recovering())).isTrue();
+    }
+
+    @Test
+    @DisplayName("US35 §3: 組み直しは「前と違う旅程になった」ではなく「そうなった」で待つ")
+    void waitsUntilTheItineraryMatchesWhatWasAssigned() {
+        var produced = recovering();
+        produced.put(StepKind.REASSIGN_ROUTE, "V-2>JPTYO-USNYC|");
+        responses.put("/api/v1/booking/bookings/BK-1/itinerary",
+                "{\"legs\":[{\"voyageNumber\":\"V-1\",\"loadUnLocode\":\"JPTYO\","
+                + "\"unloadUnLocode\":\"USNYC\"}]}");
+
+        assertThat(readiness.isReady(StepKind.REASSIGN_ROUTE, produced))
+                .as("**旅程が入っているか、では最初から満たされる**（空振り）")
+                .isFalse();
+
+        responses.put("/api/v1/booking/bookings/BK-1/itinerary",
+                "{\"legs\":[{\"voyageNumber\":\"V-2\",\"loadUnLocode\":\"JPTYO\","
+                + "\"unloadUnLocode\":\"USNYC\"}]}");
+        assertThat(readiness.isReady(StepKind.REASSIGN_ROUTE, produced)).isTrue();
+    }
+
+    @Test
+    @DisplayName("US35 §4: 申請は承認待ちになるまで、承認は陸揚げ地が追跡へ届くまで待つ")
+    void waitsForTheCancellationChain() {
+        responses.put("/api/v1/booking/bookings/BK-1/cancellation", "{}");
+        assertThat(readiness.isReady(StepKind.REQUEST_CANCELLATION, recovering())).isFalse();
+        responses.put("/api/v1/booking/bookings/BK-1/cancellation",
+                "{\"requestedAt\":\"2026-09-15T00:00:00Z\"}");
+        assertThat(readiness.isReady(StepKind.REQUEST_CANCELLATION, recovering())).isTrue();
+
+        tracking("{}");
+        assertThat(readiness.isReady(StepKind.APPROVE_CANCELLATION, recovering()))
+                .as("**承認は追跡へ運ばれてから**（予約側だけ見ると連鎖を確かめない）")
+                .isFalse();
+        tracking("{\"cancellationDischargeUnLocode\":\"SGSIN\"}");
+        assertThat(readiness.isReady(StepKind.APPROVE_CANCELLATION, recovering())).isTrue();
+    }
+
+    @Test
+    @DisplayName("US35 §4: 荷降しは追跡が閉じるまで待つ（承認だけでは閉じない）")
+    void waitsUntilTheTrackingIsClosed() {
+        tracking("{\"closed\":false}");
+        assertThat(readiness.isReady(StepKind.DISCHARGE_CANCELLED, recovering()))
+                .as("**承認だけでは追跡は閉じない**（ADR-0018）。貨物はまだ船の上にある")
+                .isFalse();
+
+        tracking("{\"closed\":true}");
+        assertThat(readiness.isReady(StepKind.DISCHARGE_CANCELLED, recovering())).isTrue();
+    }
 }

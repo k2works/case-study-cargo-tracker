@@ -47,14 +47,109 @@ public enum Scenario {
             StepKind.REGISTER_SHIPPER,
             StepKind.REGISTER_BOOKING,
             StepKind.REQUEST_ROUTING,
-            StepKind.ASSIGN_ROUTE));
+            StepKind.ASSIGN_ROUTE)),
+
+    /**
+     * 遅延が起きて、対応して、解決する（US35 §受入基準 1・2）。
+     *
+     * <p><b>例外の 4 種類は工程の並びが同じで、違うのは種別だけである</b>
+     * （IT17 の注 N10）。種類ごとに {@link StepKind} を足すと列挙が肥大し、
+     * 扱っていない場所が名乗り出ないまま増える。</p>
+     */
+    DELAY("遅延の発生と対応", exceptionSteps(), "DELAY"),
+
+    /** 破損が起きて、対応して、解決する（US35 §受入基準 1・2）。 */
+    DAMAGE("破損の発生と対応", exceptionSteps(), "DAMAGE"),
+
+    /**
+     * 誤配が起きて、**現在地からの経路が組み直されて輸送が再開する**
+     * （US35 §受入基準 3）。
+     *
+     * <p><b>解決の前に経路を確定し直す。</b> 誤配は「どこに在るか」が変わった
+     * ことなので、対応の中身は経路の組み直しである——解決だけして経路を
+     * そのままにすると、同じ港へもう一度運ぶ。</p>
+     */
+    MISROUTE("誤配の発生と経路の組み直し", List.of(
+            StepKind.REGISTER_SHIPPER,
+            StepKind.REGISTER_BOOKING,
+            StepKind.REQUEST_ROUTING,
+            StepKind.ASSIGN_ROUTE,
+            StepKind.NOTIFY_SHIPPER,
+            StepKind.CONFIRM_BOOKING,
+            StepKind.ISSUE_TRACKING_NUMBER,
+            StepKind.REGISTER_EXCEPTION,
+            StepKind.RESPOND_TO_EXCEPTION,
+            // **現在地からの組み直し。** 叩く API は経路の確定と同じだが、
+            // 待つ相手が違う（前と違う旅程になったか）——工程を分けないと
+            // 2 度目の待ちが空振りする。
+            StepKind.REASSIGN_ROUTE,
+            StepKind.RESOLVE_EXCEPTION), "MISROUTE"),
+
+    /** 税関保留が起きて、対応して、解決する（US35 §受入基準 1・2）。 */
+    CUSTOMS_HOLD("税関保留の発生と対応", exceptionSteps(), "CUSTOMS_HOLD"),
+
+    /**
+     * 輸送中にキャンセルされ、**承認で指定した港での荷降しまで実行され、
+     * 追跡が閉じる**（US35 §受入基準 4）。
+     *
+     * <p><b>承認だけでは追跡は閉じない。</b> 貨物はまだ船の上にあるので、
+     * 指定された港で荷降しを記録して初めて閉じる（[ADR-0018]）。
+     * 「承認したら終わり」にすると、確かめたい連鎖の最後が抜ける。</p>
+     */
+    CANCEL_IN_TRANSIT("輸送中のキャンセルと指定港での荷降し", List.of(
+            StepKind.REGISTER_SHIPPER,
+            StepKind.REGISTER_BOOKING,
+            StepKind.REQUEST_ROUTING,
+            StepKind.ASSIGN_ROUTE,
+            StepKind.NOTIFY_SHIPPER,
+            StepKind.CONFIRM_BOOKING,
+            StepKind.ISSUE_TRACKING_NUMBER,
+            StepKind.REQUEST_CANCELLATION,
+            StepKind.APPROVE_CANCELLATION,
+            StepKind.DISCHARGE_CANCELLED), null);
+
+    /**
+     * 例外の起票・対応・解決までの並び（注 N10）。
+     *
+     * <p><b>4 つのシナリオが同じ並びを使う。</b> 書き写すと、1 つ直したときに
+     * 残り 3 つが古いままになる。</p>
+     */
+    private static List<StepKind> exceptionSteps() {
+        return List.of(
+                StepKind.REGISTER_SHIPPER,
+                StepKind.REGISTER_BOOKING,
+                StepKind.REQUEST_ROUTING,
+                StepKind.ASSIGN_ROUTE,
+                StepKind.NOTIFY_SHIPPER,
+                StepKind.CONFIRM_BOOKING,
+                StepKind.ISSUE_TRACKING_NUMBER,
+                StepKind.REGISTER_EXCEPTION,
+                StepKind.RESPOND_TO_EXCEPTION,
+                StepKind.RESOLVE_EXCEPTION);
+    }
 
     private final String label;
     private final List<StepKind> steps;
+    private final String exceptionType;
 
     Scenario(String label, List<StepKind> steps) {
+        this(label, steps, null);
+    }
+
+    Scenario(String label, List<StepKind> steps, String exceptionType) {
         this.label = label;
         this.steps = steps;
+        this.exceptionType = exceptionType;
+    }
+
+    /**
+     * 起票する例外の種別（US35）。<b>例外を含まないシナリオでは {@code null}</b>。
+     *
+     * <p>trackingms の {@code ExceptionType} の呼び名をそのまま使う——境界で
+     * 翻訳すると、種別が増えたときに片方だけが古くなる。</p>
+     */
+    public String exceptionType() {
+        return exceptionType;
     }
 
     /** 画面に出す呼び名。 */

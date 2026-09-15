@@ -42,10 +42,13 @@ public enum StepRole {
     public static StepRole of(StepKind kind) {
         return switch (kind) {
             case REGISTER_SHIPPER, REGISTER_BOOKING, REQUEST_ROUTING,
-                 NOTIFY_SHIPPER, CONFIRM_BOOKING -> SALES;
-            case ASSIGN_ROUTE, ISSUE_TRACKING_NUMBER -> ROUTING;
-            case RECORD_HANDLING, CLAIM_CARGO -> HANDLER;
-            case CLEAR_CUSTOMS -> TRACKER;
+                 NOTIFY_SHIPPER, CONFIRM_BOOKING, REQUEST_CANCELLATION -> SALES;
+            case ASSIGN_ROUTE, REASSIGN_ROUTE, ISSUE_TRACKING_NUMBER -> ROUTING;
+            case RECORD_HANDLING, CLAIM_CARGO, DISCHARGE_CANCELLED -> HANDLER;
+            // 例外の起票・対応・解決と、キャンセルの承認（陸揚げ地を決められるのは
+            // 追跡管理者だけ。営業には打つ手が無い）。
+            case CLEAR_CUSTOMS, REGISTER_EXCEPTION, RESPOND_TO_EXCEPTION,
+                 RESOLVE_EXCEPTION, APPROVE_CANCELLATION -> TRACKER;
             case CALCULATE_INVOICE, ISSUE_INVOICE, RECORD_PAYMENT -> ACCOUNTANT;
         };
     }

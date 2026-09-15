@@ -422,4 +422,5 @@ class GatewayBusinessApiTest {
         assertThat(result.failureMessage())
                 .isEqualTo("その港を通る航海が登録されていません: AQMCM");
     }
+
 }

@@ -58,7 +58,66 @@ public class GatewayChainReadiness implements ChainReadiness {
             // 工程の名前（請求書の発行）から推測すると、いつまでも追いつかない。
             case ISSUE_INVOICE -> invoiceStatusIs(produced, "INVOICED");
             case RECORD_PAYMENT -> invoiceStatusIs(produced, "PAID");
+            // 例外は起票すると追跡の状態が EXCEPTION へ退避し、件数が増える。
+            // **件数で見る**——状態だけだと、対応中に戻ったときに区別できない。
+            case REGISTER_EXCEPTION -> openExceptionCount(produced) > 0;
+            // 対応の開始は例外の状態を変える。**追跡の単票から読む**。
+            case RESPOND_TO_EXCEPTION -> exceptionStatusIs(produced, "RESPONDING");
+            // 解決すると未解決の件数が 0 に戻る。
+            case RESOLVE_EXCEPTION -> openExceptionCount(produced) == 0;
+            // **前と違う旅程になったかで待つ。**「旅程が入っているか」だと
+            // 最初から満たされていて何も確かめない（空振り）。
+            case REASSIGN_ROUTE -> itineraryChangedTo(produced);
+            // 申請は承認待ちになる。**予約の読み口で確かめる**。
+            case REQUEST_CANCELLATION -> present(cancellation(produced), "requestedAt");
+            // 承認すると陸揚げ地が決まり、追跡へ運ばれる。
+            case APPROVE_CANCELLATION -> present(tracking(produced),
+                    "cancellationDischargeUnLocode");
+            // **ここで追跡が閉じる**（US35 §4）。閉じたことが唯一の落とし先である。
+            case DISCHARGE_CANCELLED -> tracking(produced).path("closed").asBoolean(false);
         };
+    }
+
+    /** 追跡の単票。 */
+    private JsonNode tracking(Map<StepKind, String> produced) {
+        return body(StepRole.TRACKER, "/api/v1/tracking/trackings/"
+                + produced.get(StepKind.ISSUE_TRACKING_NUMBER));
+    }
+
+    /** 未解決の例外の件数。<b>状態ではなく件数で見る</b>。 */
+    private int openExceptionCount(Map<StepKind, String> produced) {
+        return tracking(produced).path("openExceptionCount").asInt(0);
+    }
+
+    /** 起票した例外の対応状態。 */
+    private boolean exceptionStatusIs(Map<StepKind, String> produced, String status) {
+        String exceptionId = produced.get(StepKind.REGISTER_EXCEPTION);
+        for (JsonNode exception : tracking(produced).path("exceptions")) {
+            if (exceptionId != null && exceptionId.equals(exception.path("exceptionId").asText())) {
+                return status.equals(exception.path("responseStatus").asText(null));
+            }
+        }
+        return false;
+    }
+
+    /** キャンセル申請の読み口。 */
+    private JsonNode cancellation(Map<StepKind, String> produced) {
+        return body(StepRole.SALES, "/api/v1/booking/bookings/"
+                + produced.get(StepKind.REGISTER_BOOKING) + "/cancellation");
+    }
+
+    /**
+     * 組み直したあとの旅程が、工程が確定したものと一致したか（US35 §受入基準 3）。
+     *
+     * <p><b>「変わったか」ではなく「そうなったか」で見る。</b> 変化だけを見ると、
+     * 別の誰かが同時に変えても満たされる。</p>
+     */
+    private boolean itineraryChangedTo(Map<StepKind, String> produced) {
+        String expected = produced.get(StepKind.REASSIGN_ROUTE);
+        JsonNode legs = body(StepRole.ROUTING, "/api/v1/booking/bookings/"
+                + produced.get(StepKind.REGISTER_BOOKING) + "/itinerary").path("legs");
+        return expected != null
+                && expected.equals(GatewayResponses.fingerprintOf(legs));
     }
 
     private boolean itineraryAssigned(Map<StepKind, String> produced) {

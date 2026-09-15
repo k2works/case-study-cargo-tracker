@@ -6,13 +6,16 @@ import com.example.cargotracker.simulation.domain.model.valueobjects.ScenarioInp
 import com.example.cargotracker.simulation.domain.model.valueobjects.StepKind;
 import com.example.cargotracker.simulation.domain.model.valueobjects.StepRole;
 import com.fasterxml.jackson.databind.JsonNode;
+import static com.example.cargotracker.simulation.infrastructure.api.GatewayResponses.businessReason;
+import static com.example.cargotracker.simulation.infrastructure.api.GatewayResponses.fingerprintOf;
+import static com.example.cargotracker.simulation.infrastructure.api.GatewayResponses.parse;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Pattern;
 import java.util.UUID;
 
 /**
@@ -48,15 +51,6 @@ public class GatewayBusinessApi implements BusinessApi {
     /** 読み直す間隔。 */
     private static final long ID_READ_INTERVAL_MS = 500;
 
-    /**
-     * 別サービスの断りを包む言い回し。
-     *
-     * <p><b>間の字面を決め打ちしない。</b> 実測では {@code failed.\nCaused by }
-     * だったが、版によって {@code failed: } にも {@code failed. Caused by } にも
-     * なる。<b>最後の「原因」以降だけ</b>を人が読む一節として扱う。</p>
-     */
-    private static final Pattern WRAPPER =
-            Pattern.compile("(?s).*(?:Caused by|failed:)\\s*");
 
     /**
      * 通関の申告を出す担当。
@@ -120,7 +114,95 @@ public class GatewayBusinessApi implements BusinessApi {
                     "/api/v1/billing/invoices/" + produced.get(StepKind.CALCULATE_INVOICE)
                             + "/issue", null);
             case RECORD_PAYMENT -> recordPayment(kind, produced);
+            // **種類は入力で変える**（IT17 の注 N10）。遅延・破損・誤配・税関保留で
+            // 起こすことは同じで、違うのは例外種別だけである。
+            case REGISTER_EXCEPTION -> registerException(kind, produced);
+            case REASSIGN_ROUTE -> reassignRoute(kind, produced);
+            case RESPOND_TO_EXCEPTION -> simplePost(kind, exceptionUri(produced, "/response"),
+                    Map.of("plan", input.scenario().label() + "の対応を始めます"));
+            case RESOLVE_EXCEPTION -> simplePost(kind, exceptionUri(produced, "/resolution"),
+                    Map.of("resolution", input.scenario().label() + "を解決しました"));
+            case REQUEST_CANCELLATION -> simplePost(kind, bookingUri(produced, "/cancellation"),
+                    Map.of("reason", "業務シミュレーション（輸送中キャンセル）"));
+            case APPROVE_CANCELLATION -> approveCancellation(kind, produced);
+            case DISCHARGE_CANCELLED -> dischargeCancelled(kind, produced);
         };
+    }
+
+    /**
+     * 例外を起票する（US35 §受入基準 1・2）。
+     *
+     * <p><b>種別はシナリオが持つ。</b> 工程に持たせると、種類の数だけ工程が増える
+     * ——扱っていない場所が名乗り出ないまま列挙が肥大する（注 N10）。</p>
+     */
+    private StepResult registerException(StepKind kind, Map<StepKind, String> produced) {
+        String exceptionType = input.scenario().exceptionType();
+        if (exceptionType == null) {
+            // **シナリオの宣言と工程の並びが食い違っている。** 黙って別の種別で
+            // 起票すると、確かめたいものと違うものが通る。
+            return StepResult.failure(
+                    "シナリオ「" + input.scenario().label() + "」に例外種別がありません");
+        }
+        var response = calls.post(StepRole.of(kind), "/api/v1/tracking/trackings/"
+                + produced.get(StepKind.ISSUE_TRACKING_NUMBER) + "/exceptions", Map.of(
+                "exceptionType", exceptionType,
+                "description", "業務シミュレーション: " + input.scenario().label()));
+        return idFrom(response, "exceptionId");
+    }
+
+    /**
+     * キャンセルを承認し、陸揚げ地を指定する（US35 §受入基準 4）。
+     *
+     * <p><b>陸揚げ地は候補から選ぶ。</b> 決め打ちにすると、経路が変わったときに
+     * 「その航海が寄らない港で降ろす」ことになり、業務が断る。</p>
+     */
+    private StepResult approveCancellation(StepKind kind, Map<StepKind, String> produced) {
+        var candidates = calls.get(StepRole.of(kind),
+                bookingUri(produced, "/cancellation/discharge-candidates"));
+        if (!candidates.ok()) {
+            return StepResult.failure(candidates.status(), businessReason(candidates));
+        }
+        JsonNode ports = parse(candidates).path("candidates");
+        if (!ports.isArray() || ports.isEmpty()) {
+            return StepResult.failure("陸揚げ地の候補が 1 件もありません");
+        }
+        String unLocode = ports.get(0).path("unLocode").asText(null);
+        if (unLocode == null) {
+            unLocode = ports.get(0).asText();
+        }
+        var approved = calls.post(StepRole.of(kind),
+                bookingUri(produced, "/cancellation/approval"),
+                Map.of("dischargeUnLocode", unLocode, "reason", "業務シミュレーション"));
+        // **指定した港を次の工程へ渡す。** 渡さないと、荷降しの港をもう一度
+        // 当てることになり、承認と荷降しが別の港を指しうる。
+        return approved.ok() ? StepResult.success(unLocode)
+                : StepResult.failure(approved.status(), businessReason(approved));
+    }
+
+    /** 指定された港で荷降しする。<b>ここで追跡が閉じる</b>（US35 §受入基準 4）。 */
+    private StepResult dischargeCancelled(StepKind kind, Map<StepKind, String> produced) {
+        String unLocode = produced.get(StepKind.APPROVE_CANCELLATION);
+        if (unLocode == null) {
+            return StepResult.failure("承認で指定した陸揚げ地が読めませんでした");
+        }
+        JsonNode legs = legsOf(produced);
+        String voyageNumber = null;
+        for (JsonNode leg : legs) {
+            if (unLocode.equals(leg.path("unloadUnLocode").asText())) {
+                voyageNumber = leg.path("voyageNumber").asText();
+                break;
+            }
+        }
+        var response = registerActivity(kind, produced.get(StepKind.ISSUE_TRACKING_NUMBER),
+                "UNLOAD", unLocode, voyageNumber, null);
+        return response.ok() ? StepResult.success(unLocode)
+                : StepResult.failure(response.status(), businessReason(response));
+    }
+
+    /** 起票した例外の URI。 */
+    private String exceptionUri(Map<StepKind, String> produced, String suffix) {
+        return "/api/v1/tracking/trackings/" + produced.get(StepKind.ISSUE_TRACKING_NUMBER)
+                + "/exceptions/" + produced.get(StepKind.REGISTER_EXCEPTION) + suffix;
     }
 
     private StepResult registerShipper(StepKind kind) {
@@ -183,8 +265,48 @@ public class GatewayBusinessApi implements BusinessApi {
         }
         var assigned = calls.post(StepRole.of(kind), bookingUri(produced, "/route"),
                 Map.of("legs", json.convertValue(legs, List.class)));
-        return assigned.ok() ? StepResult.success(null)
+        // **確定した旅程の指紋を残す。** 組み直し（US35 §3）が「前と違う旅程に
+        // なったか」で待つための比較対象である——残さないと、2 度目の待ちは
+        // 「旅程が入っているか」しか見られず最初から満たされる（空振り）。
+        return assigned.ok() ? StepResult.success(fingerprintOf(legs))
                 : StepResult.failure(assigned.status(), assigned.body());
+    }
+
+
+    /**
+     * 現在地からの経路を組み直す（US35 §受入基準 3）。
+     *
+     * <p><b>叩く API は経路の確定と同じ。</b> 専用の経路を作ると、実際の再設計で
+     * 通らない道を確かめることになる。違うのは<b>待ち方</b>だけである。</p>
+     *
+     * <p><b>同じ旅程を選び直さない。</b> 候補の 1 件目が前と同じなら 2 件目を取る
+     * ——同じものに戻すと、組み直したことにならない。</p>
+     */
+    private StepResult reassignRoute(StepKind kind, Map<StepKind, String> produced) {
+        var candidates = calls.get(StepRole.of(kind),
+                bookingUri(produced, "/route-candidates"));
+        if (!candidates.ok()) {
+            return StepResult.failure(candidates.status(), businessReason(candidates));
+        }
+        String before = produced.get(StepKind.ASSIGN_ROUTE);
+        JsonNode all = parse(candidates).path("candidates");
+        JsonNode chosen = null;
+        for (JsonNode candidate : all) {
+            JsonNode legs = candidate.path("legs");
+            if (legs.isArray() && !legs.isEmpty()
+                    && !fingerprintOf(legs).equals(before)) {
+                chosen = legs;
+                break;
+            }
+        }
+        if (chosen == null) {
+            return StepResult.failure(422,
+                    "前と違う経路の候補がありません（組み直す先がありません）");
+        }
+        var assigned = calls.post(StepRole.of(kind), bookingUri(produced, "/route"),
+                Map.of("legs", json.convertValue(chosen, List.class)));
+        return assigned.ok() ? StepResult.success(fingerprintOf(chosen))
+                : StepResult.failure(assigned.status(), businessReason(assigned));
     }
 
     private StepResult issueTrackingNumber(StepKind kind, Map<StepKind, String> produced) {
@@ -363,39 +485,9 @@ public class GatewayBusinessApi implements BusinessApi {
         }
     }
 
-    /**
-     * 断りの理由のうち、人が読む部分を取り出す。
-     *
-     * <p><b>内部の言葉をそのまま出さない。</b> 経路の問い合わせは別サービスへ
-     * 渡るので、断りが「An exception was thrown by the remote message handling
-     * component: Handling query with identifier [...] failed: 〜」という形で
-     * 包まれて返る（IT16 のクラスタで実測）。<b>読む人が要るのは最後の一節</b>
-     * ——「その港を通る航海が登録されていません: AQMCM」である。</p>
-     */
-    private String businessReason(GatewayCalls.Response response) {
-        String message = parse(response).path("message").asText(null);
-        if (message == null || message.isBlank()) {
-            return response.body();
-        }
-        // **包み方を字面で決め打ちしない。** 区切りの前後の空白も改行も版で変わる。
-        return WRAPPER.matcher(message).replaceFirst("").trim();
-    }
 
     private String email() {
         return "sim-" + tag + "@example.com";
     }
 
-    /**
-     * 本文を読む。
-     *
-     * <p><b>読めなければ空として扱う。</b> 断られた応答が JSON とは限らず、
-     * ここで例外にすると「どう断られたか」が失われる。</p>
-     */
-    private JsonNode parse(GatewayCalls.Response response) {
-        try {
-            return json.readTree(response.body() == null ? "{}" : response.body());
-        } catch (java.io.IOException e) {
-            return json.createObjectNode();
-        }
-    }
 }
