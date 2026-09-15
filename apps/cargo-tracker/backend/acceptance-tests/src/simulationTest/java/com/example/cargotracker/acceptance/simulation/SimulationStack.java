@@ -12,10 +12,14 @@ import com.example.cargotracker.tracking.TrackingApplication;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.ServerSocket;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
 
@@ -145,25 +149,78 @@ public final class SimulationStack extends AbstractAxonIntegrationTest {
                 "--spring.datasource.password=" + POSTGRES.getPassword(),
                 "--spring.flyway.enabled=false",
                 "--cargo.context=gateway"));
-        Map<String, String> prefixes = new LinkedHashMap<>();
-        prefixes.put("auth", "auth");
-        prefixes.put("booking", "booking");
-        prefixes.put("routing", "routing");
-        prefixes.put("tracking", "tracking");
-        prefixes.put("handling", "handling");
-        prefixes.put("billing", "billing");
-        prefixes.put("simulation", "simulation");
         int index = 0;
-        for (Map.Entry<String, String> entry : prefixes.entrySet()) {
+        for (Map.Entry<String, String> entry : productionRoutes().entrySet()) {
             String route = "--spring.cloud.gateway.server.webmvc.routes[" + index + "]";
             args.add(route + ".id=" + entry.getKey());
             args.add(route + ".uri=http://localhost:" + ports.get(entry.getKey()));
-            args.add(route + ".predicates[0]=Path=/api/v1/" + entry.getValue() + "/**");
+            args.add(route + ".predicates[0]=" + entry.getValue());
             index++;
         }
         CONTEXTS.add(new SpringApplicationBuilder(GatewayApplication.class)
                 .properties("spring.main.allow-bean-definition-overriding=true")
                 .run(args.toArray(String[]::new)));
+    }
+
+    /** 本番の Gateway の設定。<b>書き写さずに読み取る</b>。 */
+    private static final Path GATEWAY_CONFIG =
+            Path.of("../gatewayms/src/main/resources/application.yml");
+
+    private static final Pattern ROUTE_ID = Pattern.compile("^\\s*- id:\\s*(\\S+)\\s*$");
+    private static final Pattern ROUTE_PREDICATES =
+            Pattern.compile("^\\s*predicates:\\s*\\[(.+)\\]\\s*$");
+
+    /**
+     * 本番の Gateway が宣言している経路（id → 述語）。
+     *
+     * <p><b>書き写さない</b>（IT16 のレビュー N2）。受け入れスイートが経路を
+     * 自分で並べていたので、<b>本番の yml から経路を消しても受け入れは緑のまま</b>
+     * だった——ADR-0020 が「残っている窓」と呼んだものを、確かめる側が広げていた。</p>
+     *
+     * <p><b>差し替えるのは宛先だけ。</b> 同じ JVM に載せるので port は実行ごとに
+     * 変わるが、<b>どのパスがどのサービスへ行くか</b>は本番と同じでなければ
+     * 確かめたことにならない。</p>
+     *
+     * <p><b>読めなければ止まる。</b> 空の一覧で起動すると全部が 404 になり、
+     * 「業務が壊れている」ように見える——原因から遠い形で落とさない。</p>
+     */
+    private static Map<String, String> productionRoutes() {
+        List<String> lines;
+        try {
+            lines = Files.readAllLines(GATEWAY_CONFIG, StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new IllegalStateException(
+                    "本番の Gateway の設定を読めない: " + GATEWAY_CONFIG.toAbsolutePath(), e);
+        }
+        Map<String, String> routes = new LinkedHashMap<>();
+        String id = null;
+        for (String line : lines) {
+            var idMatch = ROUTE_ID.matcher(line);
+            if (idMatch.matches()) {
+                id = idMatch.group(1);
+                continue;
+            }
+            var predicateMatch = ROUTE_PREDICATES.matcher(line);
+            if (id != null && predicateMatch.matches()) {
+                routes.put(id, predicateMatch.group(1).trim());
+                id = null;
+            }
+        }
+        // **読み取れたことを数え上げて確かめる。** 空や欠けた一覧で起動すると
+        // 全部が 404 になり、「業務が壊れている」ように見える——原因から遠い
+        // 形で落とさない。宛先を差し替えられない経路があれば、そこで止める。
+        if (routes.isEmpty()) {
+            throw new IllegalStateException("本番の Gateway の経路を読み取れていない");
+        }
+        routes.keySet().stream()
+                .filter(routeId -> !ports.containsKey(routeId))
+                .findFirst()
+                .ifPresent(routeId -> {
+                    throw new IllegalStateException(
+                            "本番の Gateway に、この受け入れが立てていないサービスの経路がある: "
+                                    + routeId + "（スイートに足すか、経路を見直す）");
+                });
+        return routes;
     }
 
     private static void launch(Class<?> application, String service, String schema, int port,

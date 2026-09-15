@@ -32,6 +32,10 @@ dependencies {
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
     systemProperty("cucumber.junit-platform.naming-strategy", "long")
+    // SimulationStack は本番の Gateway の設定を読んで経路を組む（書き写さない）。
+    // **入力として宣言しないと** Gradle が UP-TO-DATE と判断し、経路を変えても
+    // 受け入れが走らない（IT10 の教訓）。
+    inputs.file(rootProject.file("gatewayms/src/main/resources/application.yml"))
 }
 
 // routingms の受け入れテストは別のソースセットに置く。
@@ -71,6 +75,10 @@ val routingAcceptanceTest = tasks.register<Test>("routingAcceptanceTest") {
     classpath = routingTest.runtimeClasspath
     useJUnitPlatform()
     systemProperty("cucumber.junit-platform.naming-strategy", "long")
+    // SimulationStack は本番の Gateway の設定を読んで経路を組む（書き写さない）。
+    // **入力として宣言しないと** Gradle が UP-TO-DATE と判断し、経路を変えても
+    // 受け入れが走らない（IT10 の教訓）。
+    inputs.file(rootProject.file("gatewayms/src/main/resources/application.yml"))
 }
 
 // 追跡（trackingms）も同じ理由で別のソースセットに置く。
@@ -104,6 +112,10 @@ val trackingAcceptanceTest = tasks.register<Test>("trackingAcceptanceTest") {
     classpath = trackingTest.runtimeClasspath
     useJUnitPlatform()
     systemProperty("cucumber.junit-platform.naming-strategy", "long")
+    // SimulationStack は本番の Gateway の設定を読んで経路を組む（書き写さない）。
+    // **入力として宣言しないと** Gradle が UP-TO-DATE と判断し、経路を変えても
+    // 受け入れが走らない（IT10 の教訓）。
+    inputs.file(rootProject.file("gatewayms/src/main/resources/application.yml"))
 }
 
 // `./gradlew :acceptance-tests:test` で全部回る。片方だけ回ると、
@@ -139,6 +151,10 @@ val handlingAcceptanceTest = tasks.register<Test>("handlingAcceptanceTest") {
     classpath = handlingTest.runtimeClasspath
     useJUnitPlatform()
     systemProperty("cucumber.junit-platform.naming-strategy", "long")
+    // SimulationStack は本番の Gateway の設定を読んで経路を組む（書き写さない）。
+    // **入力として宣言しないと** Gradle が UP-TO-DATE と判断し、経路を変えても
+    // 受け入れが走らない（IT10 の教訓）。
+    inputs.file(rootProject.file("gatewayms/src/main/resources/application.yml"))
 }
 
 // 請求（billingms）も同じ理由で別のソースセットに置く。
@@ -172,6 +188,10 @@ val billingAcceptanceTest = tasks.register<Test>("billingAcceptanceTest") {
     classpath = billingTest.runtimeClasspath
     useJUnitPlatform()
     systemProperty("cucumber.junit-platform.naming-strategy", "long")
+    // SimulationStack は本番の Gateway の設定を読んで経路を組む（書き写さない）。
+    // **入力として宣言しないと** Gradle が UP-TO-DATE と判断し、経路を変えても
+    // 受け入れが走らない（IT10 の教訓）。
+    inputs.file(rootProject.file("gatewayms/src/main/resources/application.yml"))
 }
 
 tasks.named("test") {
@@ -221,6 +241,10 @@ val simulationAcceptanceTest = tasks.register<Test>("simulationAcceptanceTest") 
     classpath = simulationTest.runtimeClasspath
     useJUnitPlatform()
     systemProperty("cucumber.junit-platform.naming-strategy", "long")
+    // SimulationStack は本番の Gateway の設定を読んで経路を組む（書き写さない）。
+    // **入力として宣言しないと** Gradle が UP-TO-DATE と判断し、経路を変えても
+    // 受け入れが走らない（IT10 の教訓）。
+    inputs.file(rootProject.file("gatewayms/src/main/resources/application.yml"))
 }
 
 // 他のスイートと同じく `test` にぶら下げる。**別の入口にしない**——
