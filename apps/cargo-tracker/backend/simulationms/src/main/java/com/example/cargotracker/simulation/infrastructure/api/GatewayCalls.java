@@ -10,6 +10,11 @@ import org.springframework.web.client.RestClient;
  * <p><b>ロールごとのトークンを添える。</b> 全部を管理者で叩くと認可を踏まない
  * ——「シミュレーションは通るのに実際の操作は通らない」状態を検出できなくなる。</p>
  *
+ * <p><b>期限切れだけは 1 度だけやり直す。</b> 401 は「工程が止まった」ではなく
+ * 「こちらの持ち物が古い」ので、トークンを取り直して同じ要求をもう一度送る。
+ * <b>2 度は試さない</b>——取り直しても 401 なら、期限ではなく認可の問題である
+ * （それは業務上の結果として呼び出し元に届けなければならない）。</p>
+ *
  * <p><b>断られたことを例外にしない。</b> 4xx・5xx は「工程が止まった」という
  * 業務上の結果なので、状態と本文を持ったまま呼び出し元へ返す——例外にすると
  * 「どの工程がどう断られたか」が失われる（US34 §受入基準 2）。</p>
@@ -43,11 +48,22 @@ public class GatewayCalls {
         return exchange(role, "GET", uri, null);
     }
 
+    /** 期限切れ。**取り直して 1 度だけやり直す**（認可の失敗と区別する）。 */
+    private static final int UNAUTHORIZED = 401;
+
     private Response exchange(StepRole role, String method, String uri, Object body) {
+        Response first = send(tokens.of(role), method, uri, body);
+        if (first.status() != UNAUTHORIZED) {
+            return first;
+        }
+        return send(tokens.renew(role), method, uri, body);
+    }
+
+    private Response send(String token, String method, String uri, Object body) {
         RestClient.RequestBodySpec spec = client
                 .method(org.springframework.http.HttpMethod.valueOf(method))
                 .uri(uri)
-                .header("Authorization", "Bearer " + tokens.of(role));
+                .header("Authorization", "Bearer " + token);
         if (body != null) {
             spec = spec.contentType(org.springframework.http.MediaType.APPLICATION_JSON)
                     .body(body);

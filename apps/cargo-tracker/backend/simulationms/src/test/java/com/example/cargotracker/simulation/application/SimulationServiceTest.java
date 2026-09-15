@@ -28,11 +28,19 @@ class SimulationServiceTest {
     private final List<String> statuses = new ArrayList<>();
     private SimulationRunMapper.RunRow running;
 
+    /** 次の {@code insert} を制約違反にする（同時押しの再現）。 */
+    private boolean insertCollides;
+
     /** 記録の口。<b>本物より甘くしない</b>——書いた行をそのまま持つ。 */
     private final SimulationRunMapper runs = new SimulationRunMapper() {
 
         @Override
         public int insert(RunRow row) {
+            if (insertCollides) {
+                // **本物より甘くしない。** 部分ユニーク索引は同じ形の例外を投げる。
+                throw new org.springframework.dao.DuplicateKeyException(
+                        "uq_simulation_run_running");
+            }
             inserted.add(row);
             return 1;
         }
@@ -101,6 +109,23 @@ class SimulationServiceTest {
                 // **識別子を添える。**「二重に実行できません」だけでは、
                 // いまの結果へ行けない。
                 .hasMessageContaining("SIM-running");
+    }
+
+    @Test
+    @DisplayName("N9: 同時に押されても 500 にしない（利用者には「実行中です」と同じ出来事）")
+    void translatesTheRaceIntoARefusal() {
+        // 読んでから書くまでの隙間でもう 1 本が始まる。**守りは索引の側にあり**、
+        // ここへは制約違反として届く——そのまま上げると 500 になる。
+        insertCollides = true;
+        running = null;
+
+        assertThatThrownBy(() -> service(true, (kind, produced) ->
+                BusinessApi.StepResult.success("ID"))
+                .start(Scenario.NO_ROUTE, "admin01"))
+                .isInstanceOf(IllegalTransition.class)
+                .hasMessageContaining("実行中です")
+                .as("**原因は残す。** 切り分けるのは記録を読む人である")
+                .hasCauseInstanceOf(org.springframework.dao.DuplicateKeyException.class);
     }
 
     @Test

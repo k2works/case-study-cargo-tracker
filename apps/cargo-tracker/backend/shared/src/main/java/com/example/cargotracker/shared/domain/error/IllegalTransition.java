@@ -18,4 +18,15 @@ public class IllegalTransition extends IllegalStateException {
     public IllegalTransition(String message) {
         super(MARKER + message);
     }
+
+    /**
+     * 原因を伴う遷移違反。
+     *
+     * <p><b>握りつぶさずに包む。</b> 同じ出来事が下の層では別の形（制約違反など）
+     * で届くことがある。利用者への断りは業務の言葉にしつつ、<b>原因は残す</b>
+     * ——切り分けるのは記録を読む人である。</p>
+     */
+    public IllegalTransition(String message, Throwable cause) {
+        super(MARKER + message, cause);
+    }
 }

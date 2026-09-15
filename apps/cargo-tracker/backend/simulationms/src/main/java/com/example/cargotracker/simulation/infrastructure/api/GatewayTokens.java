@@ -13,8 +13,12 @@ import org.springframework.web.client.RestClient;
  *
  * <p><b>1 度取ったら使い回す。</b> 工程ごとにログインすると、1 本のシナリオで
  * 10 回以上認証することになり、確かめたいもの（業務の連鎖）より認証の負荷が
- * 目立つ。<b>実行をまたいでは持たない</b>——期限切れを自分で判断しないため、
- * 実行ごとに作り直す。</p>
+ * 目立つ。</p>
+ *
+ * <p><b>期限切れは自分で判断しない。</b> 有効期間を写して数えると、authms が
+ * 期間を変えたときにこちらだけが古くなる。代わりに<b>断られたら捨てて取り直す</b>
+ * ——{@link #renew} を呼ぶのは 401 を受けた呼び出し側である。US36 の継続実行は
+ * 何時間も走るので、実行ごとに作り直すだけでは足りない（IT16 のレビュー N10）。</p>
  */
 public class GatewayTokens {
 
@@ -31,6 +35,17 @@ public class GatewayTokens {
     /** そのロールのトークン。<b>初回だけログインする</b>。 */
     public String of(StepRole role) {
         return tokens.computeIfAbsent(role, this::login);
+    }
+
+    /**
+     * そのロールのトークンを取り直す（401 を受けたとき）。
+     *
+     * @return 新しいトークン
+     */
+    public String renew(StepRole role) {
+        String renewed = login(role);
+        tokens.put(role, renewed);
+        return renewed;
     }
 
     private String login(StepRole role) {

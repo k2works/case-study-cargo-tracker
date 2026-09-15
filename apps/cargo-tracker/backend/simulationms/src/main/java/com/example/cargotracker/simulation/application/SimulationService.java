@@ -2,6 +2,7 @@ package com.example.cargotracker.simulation.application;
 
 import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
 import com.example.cargotracker.shared.domain.error.IllegalTransition;
+import org.springframework.dao.DuplicateKeyException;
 import com.example.cargotracker.simulation.domain.model.aggregates.SimulationRun;
 import com.example.cargotracker.simulation.domain.model.valueobjects.Scenario;
 import com.example.cargotracker.simulation.infrastructure.config.SimulationProperties;
@@ -79,9 +80,21 @@ public class SimulationService {
                 clock.instant());
         // **記録してから走らせる。** 先に走らせると、最初の工程が終わるまで
         // 実行が読み口に現れず、画面が「始まっていない」と読む。
-        runs.insert(new SimulationRunMapper.RunRow(runId, scenario.name(),
-                run.status().name(), null, run.startedAt(), null, run.startedBy(),
-                clock.instant()));
+        try {
+            runs.insert(new SimulationRunMapper.RunRow(runId, scenario.name(),
+                    run.status().name(), null, run.startedAt(), null, run.startedBy(),
+                    clock.instant()));
+        } catch (DuplicateKeyException e) {
+            // **読んでから書くまでの隙間で、もう 1 本が始まった。** 上の
+            // `findRunning` は同時押しを防げない——守りは部分ユニーク索引の側に
+            // あり、ここへは制約違反として届く。**500 にしない**（IT16 のレビュー
+            // N9）。利用者から見れば「実行中です」と同じ出来事である。
+            var winner = runs.findRunning(scenario.name());
+            throw new IllegalTransition("シナリオ「" + scenario.label()
+                    + "」は実行中です"
+                    + (winner == null ? "" : "（実行 " + winner.runId() + "）")
+                    + "。その結果を開いてください", e);
+        }
         executor.execute(() -> execute(run));
         return runId;
     }

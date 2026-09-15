@@ -11,6 +11,7 @@
  */
 
 import { spawnSync } from 'child_process';
+import { readFileSync } from 'fs';
 import { cleanDockerEnv, openUrl } from './shared.js';
 
 export const BACKEND_DIR = 'apps/cargo-tracker/backend';
@@ -34,10 +35,17 @@ export const SERVICES = [
 ];
 
 /**
- * JIG の対象サブプロジェクト数（業務 9 + テスト専用 2）。
- * jigReports は全サブプロジェクトに登録されるため、テスト専用の 2 つも出力される。
+ * JIG の対象サブプロジェクト数。
+ *
+ * <p><b>数えずに導く。</b> jigReports は全サブプロジェクトに登録されるので、
+ * 対象は `settings.gradle.kts` の `include` そのものである。定数で持つと、
+ * サービスを 1 つ足した日から表示だけが黙って古くなる——数え直す人はいない
+ * （IT16 のレビュー N13。同じ形を `DockerfilesCopyEveryModuleTest` で直した）。</p>
  */
-const JIG_MODULE_COUNT = 11;
+function jigModuleCount() {
+  const settings = readFileSync(`${BACKEND_DIR}/settings.gradle.kts`, 'utf-8');
+  return settings.match(/^include\("[^"]+"\)/gm)?.length ?? 0;
+}
 
 /**
  * ポータルに載せる JIG の対象。
@@ -292,7 +300,7 @@ export default function (gulp) {
 
   gulp.task('dev:jig', (done) => {
     gradle(['jigReports']);
-    console.log(`\n出力: ${BACKEND_DIR}/<module>/build/jig/index.html（${JIG_MODULE_COUNT} モジュール）`);
+    console.log(`\n出力: ${BACKEND_DIR}/<module>/build/jig/index.html（${jigModuleCount()} モジュール）`);
     done();
   });
 
@@ -334,7 +342,7 @@ export default function (gulp) {
     dev:frontend:typecheck     型検査（tsc -b）
 
   設計ドキュメント生成
-    dev:jig                    JIG でコードから設計ドキュメントを生成（${JIG_MODULE_COUNT} モジュール）
+    dev:jig                    JIG でコードから設計ドキュメントを生成（${jigModuleCount()} モジュール）
     dev:jig:open               JIG ドキュメント（${DEFAULT_SERVICE}）をブラウザで開く
     dev:jig-erd                jig-erd で実スキーマから ER 図を生成（Docker + Graphviz 必要）
 

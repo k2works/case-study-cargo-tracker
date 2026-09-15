@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.regex.Pattern;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -46,5 +48,64 @@ class SimulationPropertiesTest {
     void pointsAtTheGateway() throws IOException {
         // 直接指すと認可を通らず、確かめたいものが変わる（[ADR-0020] 決定 2）。
         assertThat(config()).contains("gateway-url:");
+    }
+
+    /** 設定に書かれた宛先。<b>1 つであること</b>が「Gateway だけを指す」の中身。 */
+    private static final Pattern URL_IN_CONFIG = Pattern.compile("https?://[^\\s\"}]+");
+
+    /** 本番コードに直書きされた宛先。<b>形を問わず全部拾ってから</b>判定する。 */
+    private static final Pattern URL_IN_CODE = Pattern.compile("\"https?://");
+
+    @Test
+    @DisplayName("[ADR-0020] 決定 2: 宛先は設定の 1 つだけ（サービスの URL を増やさない）")
+    void declaresExactlyOneDestination() throws IOException {
+        // **「gateway-url: がある」では何も確かめていない。** その隣に
+        // `booking-url:` を足しても緑のままで、Gateway を通さない経路が
+        // 静かに増える（IT16 のレビュー N11）。**宛先を数え上げる。**
+        List<String> destinations = URL_IN_CONFIG.matcher(config()).results()
+                .map(match -> match.group()).toList();
+
+        assertThat(destinations)
+                .as("設定に書かれた宛先: %s", destinations)
+                .hasSize(1);
+        assertThat(destinations.get(0)).startsWith("http://localhost:");
+    }
+
+    @Test
+    @DisplayName("[ADR-0020] 決定 2: 本番コードは宛先を直書きしない")
+    void hardCodesNoDestination() throws IOException {
+        // 設定を 1 つに絞っても、コードに直書きされていれば意味がない。
+        // **走査してから判定する**——「1 本ずつ思いついた場所を見る」形にすると、
+        // 次に足したクラスが漏れる。
+        List<Path> offenders;
+        try (var sources = Files.walk(Path.of("src/main/java"))) {
+            offenders = sources.filter(path -> path.toString().endsWith(".java"))
+                    .filter(SimulationPropertiesTest::containsLiteralUrl)
+                    .toList();
+        }
+
+        assertThat(offenders)
+                .as("宛先を直書きしているファイル: %s", offenders)
+                .isEmpty();
+    }
+
+    private static boolean containsLiteralUrl(Path path) {
+        try {
+            return URL_IN_CODE.matcher(Files.readString(path, StandardCharsets.UTF_8)).find();
+        } catch (IOException e) {
+            throw new IllegalStateException("読めないファイルがある: " + path, e);
+        }
+    }
+
+    @Test
+    @DisplayName("検査が空振りしていない（走査の対象が実在する）")
+    void scansSomething() throws IOException {
+        long sources;
+        try (var paths = Files.walk(Path.of("src/main/java"))) {
+            sources = paths.filter(path -> path.toString().endsWith(".java")).count();
+        }
+        assertThat(sources)
+                .as("**走査の対象が 0 件なら、上の検査は何も確かめていない**")
+                .isGreaterThan(10);
     }
 }
