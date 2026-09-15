@@ -76,16 +76,43 @@ class SimulatedOriginExcludedIT extends AbstractAxonIntegrationTest {
     void excludesSimulatedFromTheManagerWorklist() {
         String simulatedShipper = registerShipper("SHP-S-", true);
         String realShipper = registerShipper("SHP-R-", false);
+
         String simulatedTracking = initializeTracking(simulatedShipper);
         String realTracking = initializeTracking(realShipper);
 
-        assertThat(trackings.findAll(null, false, 1000))
+        // **自分が作った行だけで判定する。** 共有の表で全体を数えると、別の
+        // 検査が同時に書いた行で赤くなり、原因を指さない（IT16 の教訓）。
+        // 件数と一覧が同じ条件かは、`countsWithTheSameConditionAsTheList` が
+        // 宣言そのものを突き合わせて見る。
+        assertThat(trackings.findAll(null, false, 100000))
                 .extracting(TrackingSummaryMapper.TrackingSummaryRow::trackingNumber)
                 .contains(realTracking)
                 .doesNotContain(simulatedTracking);
-        assertThat(trackings.countAll(null, false))
-                .as("件数と一覧は同じ条件で数える——「あると言われた貨物が一覧に無い」を作らない")
-                .isEqualTo(trackings.findAll(null, false, 100000).size());
+    }
+
+    /**
+     * 件数と一覧が同じ条件で数える（US33 §3）。
+     *
+     * <p><b>件数で確かめられない。</b> 検査は同じ DB を共有して同時に走るので、
+     * 「全体を数えて一覧の件数と比べる」形は別の検査が書いた行で赤くなる
+     * ——原因を指さない赤は、本物の赤まで見逃させる。</p>
+     *
+     * <p><b>宣言を突き合わせる。</b> 見たいのは「同じ絞りを両方に書いたか」
+     * なので、書いたものを読み取って比べる（書き写した条件は正典が変わっても
+     * 追随しない、の同じ形）。</p>
+     */
+    @Test
+    @DisplayName("US33 §3: 件数は一覧と同じ条件で数える（「あると言われた貨物が一覧に無い」を作らない）")
+    void countsWithTheSameConditionAsTheList() throws java.io.IOException {
+        String source = java.nio.file.Files.readString(java.nio.file.Path.of(
+                "src/main/java/com/example/cargotracker/tracking/infrastructure/"
+                        + "persistence/TrackingSummaryMapper.java"),
+                java.nio.charset.StandardCharsets.UTF_8);
+        String clause = "<if test='shipperId == null'>AND simulated = FALSE</if>";
+
+        assertThat(source.split(java.util.regex.Pattern.quote(clause), -1).length - 1)
+                .as("一覧（findAll）と件数（countAll）の両方に書く")
+                .isEqualTo(2);
     }
 
     @Test

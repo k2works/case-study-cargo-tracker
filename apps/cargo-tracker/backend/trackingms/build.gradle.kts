@@ -28,3 +28,12 @@ dependencies {
     testImplementation(libs.testcontainers.postgresql)
     testImplementation(libs.awaitility)
 }
+
+// SimulatedOriginExcludedIT は TrackingSummaryMapper の宣言そのものを読む
+// （件数と一覧が同じ条件で絞っているかは、共有 DB の件数では判別できない）。
+// **入力として宣言しないと** Gradle が UP-TO-DATE と判断し、宣言を壊しても
+// 検査が走らない（IT10 の教訓）。
+tasks.named<Test>("test") {
+    inputs.file(file("src/main/java/com/example/cargotracker/tracking/"
+        + "infrastructure/persistence/TrackingSummaryMapper.java"))
+}

@@ -68,6 +68,31 @@ class RoleAuthorizationDeclarationTest {
     }
 
     @Test
+    @DisplayName("US37 §4・§5: 貨物の知らせは荷主だけ（他のロールは問い合わせにも行けない）")
+    void onlyTheShipperCanReadNotices() {
+        // **入口を足したら、通る相手を書き出す。** 知らせは荷主の貨物の話で、
+        // 他のロールには自分の入口（S40・S42）がある。
+        var entries = java.util.List.of(
+                java.util.Map.entry("GET", "/api/v1/tracking/notices"),
+                java.util.Map.entry("POST", "/api/v1/tracking/notices/read"));
+        var others = java.util.List.of("ROLE_SALES", "ROLE_ROUTING", "ROLE_TRACKER",
+                "ROLE_HANDLER", "ROLE_ACCOUNTANT", "ROLE_ADMIN");
+
+        for (var entry : entries) {
+            assertThat(RoleAuthorization.isAllowed(entry.getKey(), entry.getValue(),
+                    java.util.List.of("ROLE_SHIPPER")))
+                    .as(entry.getKey() + " " + entry.getValue() + " を荷主が使えない")
+                    .isTrue();
+            for (String role : others) {
+                assertThat(RoleAuthorization.isAllowed(entry.getKey(), entry.getValue(),
+                        java.util.List.of(role)))
+                        .as(entry.getKey() + " " + entry.getValue() + " が " + role + " に開いている")
+                        .isFalse();
+            }
+        }
+    }
+
+    @Test
     @DisplayName("US36: 継続実行の入口は管理者だけ（意図した相手以外が通る道を数え上げる）")
     void onlyTheAdministratorCanDriveTheSchedule() {
         // **入口を足したら、通る相手を書き出す**（IT16 の教訓）。継続実行は

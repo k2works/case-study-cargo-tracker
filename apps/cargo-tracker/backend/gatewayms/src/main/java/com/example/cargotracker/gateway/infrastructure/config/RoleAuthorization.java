@@ -174,6 +174,13 @@ public final class RoleAuthorization {
         rules.put("/api/v1/tracking/trackings/**", Set.of(TRACKER, SHIPPER));
         rules.put("/api/v1/tracking/trackings", Set.of(TRACKER, SHIPPER));
 
+        // 貨物の知らせ（US37）は**荷主だけ**。追跡管理者にも開かない——
+        // 「自分の貨物に新しい知らせがある」は荷主の話で、追跡管理者には
+        // 一覧（S40）と例外（S42）という自分の入口がある。
+        // **荷主以外は問い合わせにも行かない**（§5）ので、ここで断る。
+        rules.put("/api/v1/tracking/notices/**", Set.of(SHIPPER));
+        rules.put("/api/v1/tracking/notices", Set.of(SHIPPER));
+
         // 荷役履歴（S51）は**荷役と追跡の両方**（ui_design.md:236）。
         // 追跡管理者は問い合わせを受けたときに現場の記録を確かめる。
         // **読みだけ。** 書き込みは下の ordered でメソッド込みに宣言する。

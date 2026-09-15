@@ -4,7 +4,7 @@ title: "データモデル設計 - 国際貨物輸送管理システム（CQRS /
 description: "CQRS / Event Sourcing 版 Cargo Tracker のデータモデル設計。Event Store は Axon Server に任せ、サービスごとの投影テーブル・Axon 管理テーブル・Auth の状態テーブルを ER 図とテーブル定義で示し、Processing Group との対応とリプレイ前提のマイグレーション方針を定める。"
 tags: [design,data-model,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-15T03:35:58Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-15T04:29:50Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -90,7 +90,7 @@ bi --> bidb
 | authms | `auth_db` | 状態保存 | `users`, `user_roles`, `user_shipper_link`, `auth_audit_log` |
 | bookingms | `booking_read_db` | 投影 + 受け皿 + Axon 管理 | `shipper`, `cargo_summary`, `cargo_revision`, `cargo_notification`, `cargo_leg`, `cancellation_request`, `quotation`, `quotation_candidate`, `attention_item`, `process_state`, `token_entry` |
 | routingms | `routing_read_db` | 投影 + 受け皿 + Axon 管理 | `voyage`, `carrier_movement`, `voyage_accepted_cargo_type`, `attention_item`, `token_entry` |
-| trackingms | `tracking_read_db` | 投影 + 受け皿 + Axon 管理 | `tracking_summary`, `tracking_event`, `tracking_exception`, `attention_item`, `token_entry`, `dead_letter_entry` |
+| trackingms | `tracking_read_db` | 投影 + 受け皿 + Axon 管理 | `tracking_summary`, `tracking_event`, `tracking_exception`, `notice_read_position`, `shipper_origin`, `attention_item`, `token_entry`, `dead_letter_entry` |
 | handlingms | `handling_read_db` | 投影 + Axon 管理 | `cargo_snapshot`, `cargo_snapshot_leg`, `handling_activity`, `customs_declaration`, `customs_status_history`, `token_entry`, `dead_letter_entry` |
 | billingms | `billing_read_db` | 投影 + 受け皿 + Axon 管理 | `invoice`, `invoice_line_item`, `payment`, `invoice_notification`, `booking_quotation`, `shipper_contract_snapshot`, **`billing_cargo_snapshot`**, **`billing_cargo_leg`**, `attention_item`, `token_entry`, `dead_letter_entry` |
 | simulationms | `simulation_read_db` | **投影ではない**（[ADR-0020] 決定 3。Event Sourcing を適用しない） | `simulation_run`, `simulation_step`, `simulation_schedule` |
@@ -542,6 +542,14 @@ entity "tracking_event" as te {
   note: TEXT
   occurred_at: TIMESTAMPTZ NOT NULL
   recorded_by: VARCHAR(50)
+  sequence_no: BIGSERIAL
+}
+
+entity "notice_read_position" as nrp {
+  * **shipper_id**: VARCHAR(36) <<PK>>
+  --
+  last_read_sequence: BIGINT NOT NULL
+  updated_at: TIMESTAMPTZ NOT NULL
 }
 
 entity "tracking_exception" as tx {
@@ -578,10 +586,12 @@ ts ||--o{ tx
 
 **予定の旅程は `tracking_leg` に持ちます**（IT7 で新設。`tracking_number` + `leg_seq` が主キーで、**積む順**に並びます）。荷役（US15・IT9）が予定と実績を照合する材料です。投影は入れ直しの前に消します（追記だけにすると、リプレイで区間が倍になります）。
 
-| `tracking_summary` | `TrackingInitializedEvent`, `TransportStatusUpdatedEvent`, `CargoMisroutedEvent`, `TrackingException*Event`, `CancellationDischargePlannedEvent`, `TrackingClosedEvent` | `UNIQUE(booking_id)`, `INDEX(shipper_id)`, `INDEX(transport_status)`, `INDEX(urgent_exception_count DESC, last_status_changed_at)` | 例外の件数を非正規化して持ち、一覧が `tracking_exception` を数えない。`cancellation_discharge_unlocode` はキャンセル承認後の陸揚げ地（`CargoCancelledEvent.dischargeLocation` を `tracking-reaction` 経由で写す）。当該港の `UNLOAD` で `closed` になる |
-| `tracking_event` | `TransportStatusUpdatedEvent`（荷役由来・手動由来）、`CargoMisroutedEvent` | `UNIQUE(event_id)`（PK。元イベントの識別子）, `INDEX(tracking_number, occurred_at)` | 画面の履歴用。`event_type` は `HANDLING` / `MANUAL` / `MISROUTE` / `EXCEPTION` / `RESOLVED` / `VOIDED` / `NOT_APPLIED`（遷移表が許さず反映しなかった荷役。IT9 M6）/ `DEFERRED`（例外の対応中に預かった荷役。IT11 引き継ぎ枠 B）。**預かりと反映不可を分ける**——追跡管理者の次の行動が違う（反映不可は荷役側に問い合わせる、預かりは例外を解決すれば反映される）。追記系なので再配送は UNIQUE で弾く。真実は Event Store |
+| `tracking_summary` | `TrackingInitializedEvent`, `TransportStatusUpdatedEvent`, `CargoMisroutedEvent`, `TrackingException*Event`, `CancellationDischargePlannedEvent`, `TrackingClosedEvent` | `UNIQUE(booking_id)`, `INDEX(shipper_id)`, `INDEX(transport_status)`, `INDEX(urgent_exception_count DESC, last_status_changed_at)` | 例外の件数を非正規化して持ち、一覧が `tracking_exception` を数えない。`cancellation_discharge_unlocode` はキャンセル承認後の陸揚げ地（`CargoCancelledEvent.dischargeLocation` を `tracking-reaction` 経由で写す）。当該港の `UNLOAD` で `closed` になる。`simulated` は由来の印（[ADR-0020] 決定 4。IT17）——**追跡管理者の一覧からだけ外し**、荷主で絞る読みと単票は外さない |
+| `tracking_event` | `TransportStatusUpdatedEvent`（荷役由来・手動由来）、`CargoMisroutedEvent` | `UNIQUE(event_id)`（PK。元イベントの識別子）, `INDEX(tracking_number, occurred_at)` | 画面の履歴用。`event_type` は `HANDLING` / `MANUAL` / `MISROUTE` / `EXCEPTION` / `RESOLVED` / `VOIDED` / `NOT_APPLIED`（遷移表が許さず反映しなかった荷役。IT9 M6）/ `DEFERRED`（例外の対応中に預かった荷役。IT11 引き継ぎ枠 B）。**預かりと反映不可を分ける**——追跡管理者の次の行動が違う（反映不可は荷役側に問い合わせる、預かりは例外を解決すれば反映される）。追記系なので再配送は UNIQUE で弾く。真実は Event Store。**`sequence_no` は知らせの順序**（US37 §3。IT17）——主キーが UUID で順序を決める列が無く、時刻で既読を持つと同時刻の知らせを取りこぼす。追記は `ON CONFLICT (event_id) DO NOTHING` なので、**リプレイでも既存行の連番は変わらない**（実測） |
 | `tracking_exception` | `TrackingExceptionRegisteredEvent`, `ExceptionResponseStartedEvent`, `TrackingExceptionResolvedEvent`, `ExceptionEscalatedEvent` | `INDEX(response_status, urgent DESC, occurred_at)`, `INDEX(escalated_at DESC) WHERE escalated_at IS NOT NULL AND response_status <> 'RESOLVED'` | `urgent` は `ExceptionType#urgent` の結果を写す。`escalated_at` は上位者へ知らせた事実（US20 §3。**判定ではなく起きたこと**）。`booking_id` は一覧が予約番号を出すための写し——**荷主名は持てない**（契約 `TrackingInitializedEvent` が `shipperId` しか運ばず、名前を足すには本番に出ている契約の変更と Upcaster が要る。判断は IT12） |
 | ~~`shipper_cargo_snapshot`~~ | — | — | **作りません**（IT8 T5）。元にする予定だったイベントは契約ではなく trackingms から購読できず、購読できる `TrackingInitializedEvent` から作れる内容は `tracking_summary.shipper_id` と同じになる。同じ事実を 2 か所に持たない |
+| `notice_read_position` | 無し（荷主の操作で書く） | `PK(shipper_id)` | 荷主ごとの既読位置（US37 §3）。**サーバが持つ**——ブラウザに持つと、荷主が端末を使い分けたとき同じ知らせが行く先々でもう一度出る。**位置は戻さない**（`GREATEST` で更新）：別の端末が先に読んでいればそちらが正で、古い画面の「ここまで読んだ」で巻き戻すと同じ知らせが再び出る。荷主ごとに 1 行で不変条件が無いので、集約にしない |
+| `shipper_origin` | `ShipperRegisteredEvent`（契約） | `PK(shipper_id)` | 荷主がシミュレーション由来かの写し（[ADR-0020] 決定 4。IT17）。**印だけを持つ**——氏名も連絡先も写さない。billingms の `shipper_contract_snapshot` と同じ形 |
 | `attention_item` | `tracking-projection` の拒否、`tracking-reaction` のコマンド失敗 | `booking_read_db` と同じ | 定義は `booking_read_db` の `attention_item` と同一 |
 
 ### `handling_read_db`（handlingms）
