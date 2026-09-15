@@ -272,4 +272,12 @@ class SimulationScheduleServiceTest {
             return List.of();
         }
     }
+
+    @Test
+    @DisplayName("一度も始めていなければ、いちばん新しい稼働は無い")
+    void hasNoLatestScheduleBeforeAnythingStarts() {
+        // **無いことを null で返す。** 空の集約を返すと、画面は「動いている」
+        // と読んでしまう。
+        assertThat(service(true).latestOrNull()).isNull();
+    }
 }

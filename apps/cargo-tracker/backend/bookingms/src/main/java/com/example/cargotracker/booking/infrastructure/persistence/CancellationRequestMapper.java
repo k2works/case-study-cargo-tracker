@@ -47,9 +47,12 @@ public interface CancellationRequestMapper {
             // 輸送中キャンセルのシナリオを流し続けるので、承認待ちが偽物で埋まる
             // ——陸揚げ地を決められるのは追跡管理者だけで、毎朝ここを開く
             // （IT17 のレビューで指摘）。
-            + "  AND EXISTS (SELECT 1 FROM cargo_summary c "
-            + "              WHERE c.booking_id = cancellation_request.booking_id "
-            + "                AND c.simulated = FALSE) "
+            // **「写しがある」ことを条件にしない。** 投影が届く前の一瞬、本物の
+            // 申請まで消える（handlingms の同じ形をフルビルドで実測）。
+            // **外すのは「偽物だと分かっているもの」だけ**にする。
+            + "  AND NOT EXISTS (SELECT 1 FROM cargo_summary c "
+            + "                  WHERE c.booking_id = cancellation_request.booking_id "
+            + "                    AND c.simulated = TRUE) "
             + "ORDER BY requested_at, request_id")
     List<CancellationRequestRow> findPending();
 

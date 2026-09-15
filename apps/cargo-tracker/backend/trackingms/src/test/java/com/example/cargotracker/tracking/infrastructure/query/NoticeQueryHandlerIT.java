@@ -92,6 +92,42 @@ class NoticeQueryHandlerIT extends AbstractAxonIntegrationTest {
     }
 
     @Test
+    @DisplayName("初めて開いた荷主は、すでにある履歴を見せられない（起点はいま）")
+    void startsFromNowEvenWhenHistoryAlreadyExists() {
+        // **初回の起点は「最新」であって 0 ではない。** 0 にすると、何か月も前の
+        // 積込・荷降しが全部出て、最初の体験が「古い知らせの山を閉じる作業」になる。
+        String shipperId = "SHP-N-" + System.nanoTime();
+        String trackingNumber = initializeTracking(shipperId);
+        notice(trackingNumber, "RECEIVED");
+        notice(trackingNumber, "LOADED");
+
+        var first = notices.findUnread(shipperId);
+
+        assertThat(first.items()).isEmpty();
+        assertThat(first.latestSequence())
+                .as("起点が 0 のままだと、次に開いたとき古い履歴が出る")
+                .isPositive();
+        assertThat(notices.findUnread(shipperId).items())
+                .as("読み直しても古い履歴は出ない")
+                .isEmpty();
+    }
+
+    @Test
+    @DisplayName("知らない種類の出来事は、そのまま出す（黙って消さない）")
+    void showsUnknownEventTypesAsThemselves() {
+        String shipperId = "SHP-N-" + System.nanoTime();
+        String trackingNumber = initializeTracking(shipperId);
+        startFrom(shipperId);
+        events.insert(new TrackingEventMapper.TrackingEventRow(
+                "evt-" + System.nanoTime(), trackingNumber, "SOMETHING_NEW", null,
+                "RECEIVED", "JPTYO", AT, "tracking01", AT));
+
+        assertThat(notices.findUnread(shipperId).items())
+                .singleElement()
+                .satisfies(item -> assertThat(item.eventLabel()).isEqualTo("SOMETHING_NEW"));
+    }
+
+    @Test
     @DisplayName("US37 §3: 一度読んだ知らせは、もう一度出ない（サーバが覚えている）")
     void doesNotRepeatWhatWasRead() {
         String shipperId = "SHP-R-" + System.nanoTime();

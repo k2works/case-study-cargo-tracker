@@ -132,10 +132,15 @@ public class GatewayChainReadiness implements ChainReadiness {
      * 承認する人の一覧に出ていなくても次へ進んでしまう。</p>
      */
     private boolean awaitingApproval(Map<StepKind, String> produced) {
+        // **その予約の履歴を読む。** 承認待ちの一覧（S23）は追跡管理者の
+        // 毎朝の作業一覧なので、シミュレーション由来を既定で外している
+        // （[ADR-0020] 決定 4）——そこを待ちに使うと、**自分が作った申請が
+        // 自分には見えず**、30 秒待って必ず失敗する（IT17 のクローズで実測）。
+        // **待ちは「除外のかかっていない読み口」で判別する。**
         String bookingId = produced.get(StepKind.REGISTER_BOOKING);
         for (JsonNode request : body(StepRole.TRACKER,
-                "/api/v1/booking/bookings/cancellations").path("items")) {
-            if (bookingId.equals(request.path("bookingId").asText(null))) {
+                "/api/v1/booking/bookings/" + bookingId + "/cancellation").path("items")) {
+            if (!request.hasNonNull("decision")) {
                 return true;
             }
         }

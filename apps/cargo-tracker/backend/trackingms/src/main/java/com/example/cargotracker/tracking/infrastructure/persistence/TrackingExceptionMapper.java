@@ -98,7 +98,9 @@ public interface TrackingExceptionMapper {
             // 例外シナリオを流し続けるので、一晩で数百件積まれる——追跡管理者が
             // 毎朝いちばんに開く一覧が偽物で埋まると、「緊急が先」の並びも
             // 信用されなくなる（IT17 のレビューで指摘）。
-            + "  AND s.simulated = FALSE "
+            // **NULL を落とさない。** 列を足す前からある行は NULL のことがあり、
+            // `= FALSE` だと本物の例外が黙って消える（不変条件の追加は既存行を壊す）。
+            + "  AND s.simulated IS NOT TRUE "
             // **対応で期限が動いたら、その日付で並べる。** 古い期限のまま並べると、
             // 対応済みのものが「まだ急ぎ」の位置に残る（IT10 レビュー 高）。
             + "ORDER BY (x.response_status = 'RESOLVED'), x.urgent DESC, "

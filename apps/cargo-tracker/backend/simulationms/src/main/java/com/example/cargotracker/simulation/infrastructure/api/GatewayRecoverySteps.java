@@ -90,12 +90,38 @@ final class GatewayRecoverySteps {
                 : StepResult.failure(loaded.status(), businessReason(loaded));
     }
 
+    /** 申請が集約の追記とぶつかったときに、何回まで出し直すか。 */
+    private static final int CANCELLATION_ATTEMPTS = 4;
+
     private StepResult requestCancellation(StepKind kind, Map<StepKind, String> produced) {
-        var response = calls.post(StepRole.of(kind),
-                GatewayHandling.bookingUri(produced, "/cancellation"),
-                Map.of("reason", "業務シミュレーション（輸送中キャンセル）"));
-        return response.ok() ? StepResult.success(null)
-                : StepResult.failure(response.status(), businessReason(response));
+        // **積込の直後は、予約の集約に追記が続いている。** 輸送中になった瞬間に
+        // 申請を出すと、同じ集約への追記どうしがぶつかって断られる（Axon の
+        // `AppendEventsTransactionRejectedException`。IT17 のクローズで実測）。
+        //
+        // **字面で見分けない**（IT16 で 2 度外した）。ぶつかったのか、業務が
+        // 断ったのかは、**出し直して結果が変わるか**で判別する——業務の断りは
+        // 何度出しても同じ理由で断られ、最後の理由がそのまま記録に残る。
+        GatewayCalls.Response response = null;
+        for (int attempt = 0; attempt < CANCELLATION_ATTEMPTS; attempt++) {
+            response = calls.post(StepRole.of(kind),
+                    GatewayHandling.bookingUri(produced, "/cancellation"),
+                    Map.of("reason", "業務シミュレーション（輸送中キャンセル）"));
+            if (response.ok()) {
+                return StepResult.success(null);
+            }
+            if (attempt + 1 < CANCELLATION_ATTEMPTS) {
+                sleepBriefly();
+            }
+        }
+        return StepResult.failure(response.status(), businessReason(response));
+    }
+
+    private static void sleepBriefly() {
+        try {
+            Thread.sleep(java.time.Duration.ofMillis(500));
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     /**

@@ -77,10 +77,16 @@
                  税関保留のシナリオを流し続けるので、通関の一覧が偽物で埋まる
                  ——留置が 3 営業日を超えたものを毎朝見るのがこの一覧である
                  （IT17 のレビューで指摘）。
-                 **貨物の写しから引く。** 申告そのものは荷主を持たない。 -->
-            AND EXISTS (SELECT 1 FROM cargo_snapshot s
-                         WHERE s.tracking_number = customs_declaration.tracking_number
-                           AND s.simulated = FALSE)
+                 **貨物の写しから引く。** 申告そのものは荷主を持たない。
+
+                 **「写しがある」ことを条件にしない。** 写しは別の BC から投影で
+                 届くので、申告が先に入って写しがまだ来ていない瞬間がある——
+                 `EXISTS ... = FALSE` にすると、その間だけ本物の申告が一覧から
+                 消える（IT17 のフルビルドで実測。12 件が赤になった）。
+                 **外すのは「偽物だと分かっているもの」だけ**にする。 -->
+            AND NOT EXISTS (SELECT 1 FROM cargo_snapshot s
+                             WHERE s.tracking_number = customs_declaration.tracking_number
+                               AND s.simulated = TRUE)
             <if test="!includeCleared">
                 AND status &lt;&gt; 'CLEARED'
             </if>

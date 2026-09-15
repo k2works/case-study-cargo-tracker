@@ -238,17 +238,20 @@ class GatewayChainReadinessTest {
     @Test
     @DisplayName("US35 §4: 申請は承認待ちになるまで、承認は陸揚げ地が追跡へ届くまで待つ")
     void waitsForTheCancellationChain() {
-        // **次の工程が読む場所で待つ**（承認待ち一覧・S23）。履歴で待つと、
-        // 承認する人の一覧に出ていなくても次へ進む。
-        responses.put("/api/v1/booking/bookings/cancellations", "{\"items\":[]}");
+        // **その予約の履歴で待つ。** 承認待ち一覧（S23）は追跡管理者の作業一覧で、
+        // シミュレーション由来を既定で外している（[ADR-0020] 決定 4）——
+        // そこで待つと、**自分が出した申請が自分には見えず**必ず時間切れになる
+        // （IT17 のクローズで実測）。**除外のかかっていない読み口で判別する。**
+        String history = "/api/v1/booking/bookings/BK-1/cancellation";
+        responses.put(history, "{\"items\":[]}");
         assertThat(readiness.isReady(StepKind.REQUEST_CANCELLATION, recovering())).isFalse();
-        responses.put("/api/v1/booking/bookings/cancellations",
-                "{\"items\":[{\"bookingId\":\"other\"}]}");
+        responses.put(history,
+                "{\"items\":[{\"requestId\":\"r-1\",\"decision\":\"APPROVED\"}]}");
         assertThat(readiness.isReady(StepKind.REQUEST_CANCELLATION, recovering()))
-                .as("別の予約の申請では満たさない")
+                .as("決着済みの申請では満たさない（待っているのは承認待ちである）")
                 .isFalse();
-        responses.put("/api/v1/booking/bookings/cancellations",
-                "{\"items\":[{\"bookingId\":\"BK-1\"}]}");
+        responses.put(history,
+                "{\"items\":[{\"requestId\":\"r-1\",\"decision\":null}]}");
         assertThat(readiness.isReady(StepKind.REQUEST_CANCELLATION, recovering())).isTrue();
 
         tracking("{}");
