@@ -97,6 +97,9 @@ export function SimulationSchedulePage() {
   // **止めた稼働も返る**（US36 §3・§8）。止めた瞬間に件数も失敗工程の分布も
   // 乱数の種も読めなくなると、夜通し流して翌朝に結果を読む使い方が成り立たない。
   const running = latest !== null && latest.status !== 'STOPPED';
+  // **止まっているときだけ開始の入口を出す。** 否定の分岐にすると読み違えやすい
+  // ので、意味のある名前を与える。
+  const stopped = !running;
 
   return (
     <section>
@@ -107,7 +110,7 @@ export function SimulationSchedulePage() {
 
       {error !== null && <p role="alert" className={`${ALERT} mt-4`}>{error}</p>}
 
-      {!running ? (
+      {stopped && (
         <div className={`${CARD} mt-4`}>
           <p className="text-sm text-gray-600">
             継続実行は動いていません。乱数の種を指定すると、同じ並びを再現できます
@@ -131,7 +134,7 @@ export function SimulationSchedulePage() {
             継続実行を開始する
           </button>
         </div>
-      ) : null}
+      )}
 
       {latest !== null && (
         <>
