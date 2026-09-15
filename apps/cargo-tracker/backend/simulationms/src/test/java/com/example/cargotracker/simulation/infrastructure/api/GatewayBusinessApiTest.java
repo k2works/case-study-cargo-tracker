@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.cargotracker.simulation.application.BusinessApi;
 import com.example.cargotracker.simulation.domain.model.valueobjects.Scenario;
+import com.example.cargotracker.simulation.domain.model.valueobjects.ScenarioInput;
 import com.example.cargotracker.simulation.domain.model.valueobjects.StepKind;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
@@ -68,7 +69,7 @@ class GatewayBusinessApiTest {
         // **読み直す回数は 1 回にする。** 本物は 60 回（30 秒）待つが、
         // 検査で待つと誰も回さなくなる。
         return new GatewayBusinessApi(new GatewayCalls(client, new GatewayTokens(client)),
-                scenario, Clock.fixed(Instant.parse("2026-09-14T00:00:00Z"), ZoneOffset.UTC), 1);
+                ScenarioInput.standard(scenario), Clock.fixed(Instant.parse("2026-09-14T00:00:00Z"), ZoneOffset.UTC), 1);
     }
 
     @Test

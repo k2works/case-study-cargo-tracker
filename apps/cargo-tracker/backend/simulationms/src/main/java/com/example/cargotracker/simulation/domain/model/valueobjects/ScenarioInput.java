@@ -21,6 +21,12 @@ public record ScenarioInput(
         BigDecimal weightKg,
         int arrivalDeadlineDays) {
 
+    /** 手で流すときの既定（US33）。<b>便のある組み合わせ</b>を使う。 */
+    public static ScenarioInput standard(Scenario scenario) {
+        return new ScenarioInput(scenario, "JPTYO", "USNYC", "GENERAL",
+                BigDecimal.valueOf(1000), 120);
+    }
+
     public ScenarioInput {
         if (originUnLocode == null || originUnLocode.equals(destinationUnLocode)) {
             // 業務が必ず断る組を作ると、確かめたい経路を通らないまま

@@ -68,6 +68,32 @@ class RoleAuthorizationDeclarationTest {
     }
 
     @Test
+    @DisplayName("US36: 継続実行の入口は管理者だけ（意図した相手以外が通る道を数え上げる）")
+    void onlyTheAdministratorCanDriveTheSchedule() {
+        // **入口を足したら、通る相手を書き出す**（IT16 の教訓）。継続実行は
+        // 業務データを増やし続けるので、静かに叩ける相手を作らない。
+        var entries = java.util.List.of(
+                java.util.Map.entry("POST", "/api/v1/simulation/schedule"),
+                java.util.Map.entry("DELETE", "/api/v1/simulation/schedule"),
+                java.util.Map.entry("GET", "/api/v1/simulation/schedule"));
+        var others = java.util.List.of("ROLE_SALES", "ROLE_ROUTING", "ROLE_TRACKER",
+                "ROLE_HANDLER", "ROLE_ACCOUNTANT", "ROLE_SHIPPER");
+
+        for (var entry : entries) {
+            assertThat(RoleAuthorization.isAllowed(entry.getKey(), entry.getValue(),
+                    java.util.List.of("ROLE_ADMIN")))
+                    .as(entry.getKey() + " " + entry.getValue() + " を管理者が使えない")
+                    .isTrue();
+            for (String role : others) {
+                assertThat(RoleAuthorization.isAllowed(entry.getKey(), entry.getValue(),
+                        java.util.List.of(role)))
+                        .as(entry.getKey() + " " + entry.getValue() + " が " + role + " に開いている")
+                        .isFalse();
+            }
+        }
+    }
+
+    @Test
     @DisplayName("N3: 管理者に開くのは単票だけ（業務の一覧までは開けない）")
     void administratorCannotReadBusinessWorklists() {
         // **行き止まりを塞ぐのに要る幅は単票までである。** 一覧まで開くと、

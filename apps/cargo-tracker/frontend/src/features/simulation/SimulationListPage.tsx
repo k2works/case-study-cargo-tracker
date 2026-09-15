@@ -57,6 +57,13 @@ export function SimulationListPage() {
       <p className="mt-1 text-sm text-gray-600">
         予約から精算までを<b>実際の API で順に流します</b>。作られる荷主・貨物・請求には<b>シミュレーション由来の印</b>が付き、業務の一覧には出ません。
       </p>
+      {/* **S94 への入口はここだけ。** 統計は「いま何が起きているか」で、この一覧は
+          「何を流したか」——混ぜると一覧の目的がぼやける（注 N6）。 */}
+      <p className="mt-2 text-sm">
+        <Link className={LINK} to="/admin/simulations/schedule">
+          継続実行と統計を見る
+        </Link>
+      </p>
 
       <div className={`${CARD} mt-4 flex flex-wrap items-end gap-3 p-4`}>
         <label className="text-sm">

@@ -21,7 +21,8 @@ import org.apache.ibatis.annotations.Update;
 public interface SimulationRunMapper {
 
     String COLUMNS = "run_id, scenario_id, status, seed, started_at, finished_at, "
-            + "started_by, projected_at";
+            // **末尾に足す。** record は位置で割り当てるので、途中に挟むとずれる。
+            + "started_by, projected_at, schedule_id";
 
     String STEP_COLUMNS = "run_id, step_no, kind, outcome, elapsed_ms, produced_id, "
             // **末尾に足す。** record は位置で割り当てるので、途中に挟むとずれる。
@@ -37,7 +38,7 @@ public interface SimulationRunMapper {
      */
     @Insert("INSERT INTO simulation_run (" + COLUMNS + ") VALUES ("
             + "#{runId}, #{scenarioId}, #{status}, #{seed}, #{startedAt}, #{finishedAt}, "
-            + "#{startedBy}, #{projectedAt})")
+            + "#{startedBy}, #{projectedAt}, #{scheduleId})")
     int insert(RunRow row);
 
     /** 実行の状態を書く（終わったとき）。 */
@@ -87,7 +88,9 @@ public interface SimulationRunMapper {
             Instant startedAt,
             Instant finishedAt,
             String startedBy,
-            Instant projectedAt) {
+            Instant projectedAt,
+            // どの稼働が流したか（US36）。**手で流した実行では null**。
+            String scheduleId) {
     }
 
     /** 工程の行。 */

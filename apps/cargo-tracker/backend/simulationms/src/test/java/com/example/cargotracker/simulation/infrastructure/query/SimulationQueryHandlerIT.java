@@ -35,7 +35,7 @@ class SimulationQueryHandlerIT extends AbstractAxonIntegrationTest {
     private String seedRun(String status) {
         String runId = "run-" + System.nanoTime();
         runs.insert(new SimulationRunMapper.RunRow(runId, "STANDARD", status, null,
-                AT, "SUCCEEDED".equals(status) ? AT : null, "admin01", AT));
+                AT, "SUCCEEDED".equals(status) ? AT : null, "admin01", AT, null));
         runs.insertStep(new SimulationRunMapper.StepRow(runId, 1, "REGISTER_SHIPPER",
                 "SUCCEEDED", 120L, "SHP-0001", null, null, AT, 3000L));
         runs.insertStep(new SimulationRunMapper.StepRow(runId, 2, "REGISTER_BOOKING",
@@ -83,7 +83,7 @@ class SimulationQueryHandlerIT extends AbstractAxonIntegrationTest {
         String older = seedRun("SUCCEEDED");
         String newer = "run-" + System.nanoTime();
         runs.insert(new SimulationRunMapper.RunRow(newer, "STANDARD", "RUNNING", null,
-                AT.plusSeconds(60), null, "admin01", AT));
+                AT.plusSeconds(60), null, "admin01", AT, null));
 
         var ids = queries.findRecentRuns(50).items().stream()
                 .map(SimulationQueries.RunSummaryView::runId)

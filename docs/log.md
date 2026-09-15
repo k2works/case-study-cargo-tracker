@@ -1,6 +1,7 @@
 # Docs Update Log
 
 ## 2026-09-15
+* **Update**: IT17 T3: S94（継続実行と統計）を追加。S93 に予定の工程・連鎖の待ち・復帰の行き先・再実行を明記
 * **Update**: IT17 T2: SimulationSchedule・RandomScenario・ScenarioInput・ScheduleStatus と simulation_schedule を反映（注 N1・N4・N8）
 * **Update**: IT17 T2: SimulationSchedule・RandomScenario・ScenarioInput・ScheduleStatus と simulation_schedule を反映（注 N1・N4・N8）
 * **Update**: S45・S46 を実装（引き継ぎ 2）。「未実装」の記述を更新し、読み口の分離と 404 の扱いを明記

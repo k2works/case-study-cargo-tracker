@@ -5,6 +5,7 @@ import com.example.cargotracker.shared.domain.error.IllegalTransition;
 import org.springframework.dao.DuplicateKeyException;
 import com.example.cargotracker.simulation.domain.model.aggregates.SimulationRun;
 import com.example.cargotracker.simulation.domain.model.valueobjects.Scenario;
+import com.example.cargotracker.simulation.domain.model.valueobjects.ScenarioInput;
 import com.example.cargotracker.simulation.infrastructure.config.SimulationProperties;
 import com.example.cargotracker.simulation.infrastructure.persistence.SimulationRunMapper;
 import java.time.Clock;
@@ -48,8 +49,8 @@ public class SimulationService {
     @FunctionalInterface
     public interface RunnerFactory {
 
-        /** そのシナリオを走らせる手を作る。 */
-        SimulationRunner create(Scenario scenario, SimulationRunner.StepListener listener);
+        /** その条件でシナリオを走らせる手を作る。 */
+        SimulationRunner create(ScenarioInput input, SimulationRunner.StepListener listener);
     }
 
     /**
@@ -63,6 +64,17 @@ public class SimulationService {
      * @return 始めた実行の識別子。<b>画面はこれで S93 へ移る</b>
      */
     public String start(Scenario scenario, String startedBy) {
+        // 手で流すときは既定の条件で流す（US33）。継続実行は乱数が選ぶ（US36）。
+        return start(ScenarioInput.standard(scenario), null, startedBy);
+    }
+
+    /**
+     * 条件を指定して実行を始める（US36 §受入基準 1）。
+     *
+     * @param scheduleId どの稼働が流したか。<b>手で流した実行では {@code null}</b>
+     */
+    public String start(ScenarioInput input, String scheduleId, String startedBy) {
+        Scenario scenario = input.scenario();
         if (!properties.enabled()) {
             throw new BusinessRuleViolation(
                     "この環境では業務シミュレーションを実行できません"
@@ -83,7 +95,7 @@ public class SimulationService {
         try {
             runs.insert(new SimulationRunMapper.RunRow(runId, scenario.name(),
                     run.status().name(), null, run.startedAt(), null, run.startedBy(),
-                    clock.instant()));
+                    clock.instant(), scheduleId));
         } catch (DuplicateKeyException e) {
             // **読んでから書くまでの隙間で、もう 1 本が始まった。** 上の
             // `findRunning` は同時押しを防げない——守りは部分ユニーク索引の側に
@@ -95,13 +107,13 @@ public class SimulationService {
                     + (winner == null ? "" : "（実行 " + winner.runId() + "）")
                     + "。その結果を開いてください", e);
         }
-        executor.execute(() -> execute(run));
+        executor.execute(() -> execute(run, input));
         return runId;
     }
 
-    private void execute(SimulationRun run) {
+    private void execute(SimulationRun run, ScenarioInput input) {
         try {
-            runnerFactory.create(run.scenario(), this::writeStep).run(run);
+            runnerFactory.create(input, this::writeStep).run(run);
         } catch (RuntimeException e) {
             log.error("実行が例外で終わった: runId={}", run.runId(), e);
         } finally {

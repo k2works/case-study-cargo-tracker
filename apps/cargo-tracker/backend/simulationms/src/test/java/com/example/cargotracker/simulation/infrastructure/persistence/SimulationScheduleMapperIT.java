@@ -88,7 +88,7 @@ class SimulationScheduleMapperIT extends AbstractAxonIntegrationTest {
         schedules.insert(running(scheduleId));
         // 手で流した実行（schedule_id が NULL）。**数えると上限が早く埋まる。**
         runs.insert(new SimulationRunMapper.RunRow("SIM-manual-" + System.nanoTime(),
-                "STANDARD", "RUNNING", null, AT, null, "admin01", AT));
+                "STANDARD", "RUNNING", null, AT, null, "admin01", AT, null));
 
         assertThat(schedules.countRunning(scheduleId))
                 .as("共有の表で全体を数える検査は、別の変更で赤くなり原因を指さない")

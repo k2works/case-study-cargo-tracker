@@ -80,9 +80,10 @@ export async function queryClient<T>(path: string): Promise<Pending<T>> {
 export async function commandClient<T>(
   path: string,
   payload: unknown,
-  // 既定は POST。更新（US25 / US32）は PUT で送る。経路と動詞を画面ごとに
-  // 組み立てると、同じ操作が画面によって別の動詞になる。
-  method: 'POST' | 'PUT' = 'POST',
+  // 既定は POST。更新（US25 / US32）は PUT、取り消し（US36 の継続実行の停止）は
+  // DELETE で送る。経路と動詞を画面ごとに組み立てると、同じ操作が画面によって
+  // 別の動詞になる。
+  method: 'POST' | 'PUT' | 'DELETE' = 'POST',
 ): Promise<T> {
   const response = await fetch(`${BASE}${path}`, {
     method,

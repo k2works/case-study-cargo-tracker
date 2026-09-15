@@ -55,6 +55,32 @@ public interface SimulationScheduleMapper {
             + "WHERE schedule_id = #{scheduleId} AND status = 'RUNNING'")
     int countRunning(@Param("scheduleId") String scheduleId);
 
+    /**
+     * その稼働が流した実行の内訳（US36 §受入基準 8）。
+     *
+     * <p><b>明細から数える。</b> 走らせるたびに足し込む形にすると、記入漏れは
+     * 赤くならず永久に残る（IT4 の「インデックスの累計は明細から導く」）。</p>
+     */
+    @Select("SELECT status, count(*) AS count FROM simulation_run "
+            + "WHERE schedule_id = #{scheduleId} GROUP BY status ORDER BY status")
+    java.util.List<CountRow> countByStatus(@Param("scheduleId") String scheduleId);
+
+    /**
+     * 失敗した工程の分布（US36 §受入基準 8）。
+     *
+     * <p><b>どの工程で止まりやすいかが、いちばん見たい形である。</b> 件数だけ
+     * 出しても、次に何を直すかが決まらない。</p>
+     */
+    @Select("SELECT s.kind AS status, count(*) AS count FROM simulation_step s "
+            + "JOIN simulation_run r ON r.run_id = s.run_id "
+            + "WHERE r.schedule_id = #{scheduleId} AND s.outcome = 'FAILED' "
+            + "GROUP BY s.kind ORDER BY count(*) DESC, s.kind")
+    java.util.List<CountRow> countFailedStepsByKind(@Param("scheduleId") String scheduleId);
+
+    /** 数え上げの 1 行。<b>区分と件数の組</b>。 */
+    record CountRow(String status, int count) {
+    }
+
     /** 稼働の行。 */
     record ScheduleRow(
             String scheduleId,

@@ -31,7 +31,7 @@ class SimulationRunMapperIT extends AbstractAxonIntegrationTest {
 
     private static SimulationRunMapper.RunRow running(String runId, String scenarioId) {
         return new SimulationRunMapper.RunRow(runId, scenarioId, "RUNNING", null,
-                AT, null, "admin01", AT);
+                AT, null, "admin01", AT, null);
     }
 
     @Test

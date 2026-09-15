@@ -2,6 +2,7 @@ package com.example.cargotracker.simulation.infrastructure.api;
 
 import com.example.cargotracker.simulation.application.BusinessApi;
 import com.example.cargotracker.simulation.domain.model.valueobjects.Scenario;
+import com.example.cargotracker.simulation.domain.model.valueobjects.ScenarioInput;
 import com.example.cargotracker.simulation.domain.model.valueobjects.StepKind;
 import com.example.cargotracker.simulation.domain.model.valueobjects.StepRole;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -27,13 +28,6 @@ public class GatewayBusinessApi implements BusinessApi {
 
     /** 業務タイムゾーン。<b>UTC で「今日」を決めない</b>（IT9 の教訓）。 */
     private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Tokyo");
-
-    /** 標準シナリオの出発地・目的地。**便のある組み合わせを使う**。 */
-    private static final String ORIGIN = "JPTYO";
-    private static final String DESTINATION = "USNYC";
-
-    /** 経路が組める余裕（標準シナリオ）。 */
-    private static final int STANDARD_DEADLINE_DAYS = 120;
 
     /**
      * 便が 1 本も結ばない目的地（NO_ROUTE シナリオ）。
@@ -75,15 +69,21 @@ public class GatewayBusinessApi implements BusinessApi {
     private static final StepRole DECLARES_CUSTOMS = StepRole.HANDLER;
 
     private final GatewayCalls calls;
-    private final Scenario scenario;
+    /**
+     * この実行に渡された条件（US36 §受入基準 1）。
+     *
+     * <p><b>シナリオだけでなく条件ごと受ける。</b> 出発地や重量を定数で持つと、
+     * 乱数で選んだ値が業務まで届かない——<b>値は全層を生き延びるか確かめる</b>。</p>
+     */
+    private final ScenarioInput input;
     private final Clock clock;
     private final ObjectMapper json = new ObjectMapper();
     private final String tag = UUID.randomUUID().toString().substring(0, 8);
 
     private final int idReadAttempts;
 
-    public GatewayBusinessApi(GatewayCalls calls, Scenario scenario, Clock clock) {
-        this(calls, scenario, clock, DEFAULT_ID_READ_ATTEMPTS);
+    public GatewayBusinessApi(GatewayCalls calls, ScenarioInput input, Clock clock) {
+        this(calls, input, clock, DEFAULT_ID_READ_ATTEMPTS);
     }
 
     /**
@@ -92,9 +92,9 @@ public class GatewayBusinessApi implements BusinessApi {
      * <p><b>検査は待たない。</b> 実際に眠って確かめると、1 本の検査に 30 秒かかる
      * ——そのぶん誰も回さなくなる。待つ回数のほうを変える。</p>
      */
-    GatewayBusinessApi(GatewayCalls calls, Scenario scenario, Clock clock, int idReadAttempts) {
+    GatewayBusinessApi(GatewayCalls calls, ScenarioInput input, Clock clock, int idReadAttempts) {
         this.calls = calls;
-        this.scenario = scenario;
+        this.input = input;
         this.clock = clock;
         this.idReadAttempts = idReadAttempts;
     }
@@ -138,19 +138,22 @@ public class GatewayBusinessApi implements BusinessApi {
 
     private StepResult registerBooking(StepKind kind, Map<StepKind, String> produced) {
         LocalDate deadline = LocalDate.now(clock.withZone(BUSINESS_ZONE))
-                .plusDays(STANDARD_DEADLINE_DAYS);
-        String destination = scenario == Scenario.NO_ROUTE
-                ? UNSERVED_DESTINATION : DESTINATION;
+                .plusDays(input.arrivalDeadlineDays());
+        // **失敗する条件は構造で決める。** 乱数がどの港を選んでも、NO_ROUTE は
+        // どの便も寄らない港へ運ぶ——時間や期限で作ると、共有の環境に溜まった
+        // 便でたまたま成功する（IT16 で実測）。
+        String destination = input.scenario() == Scenario.NO_ROUTE
+                ? UNSERVED_DESTINATION : input.destinationUnLocode();
         // **Map.of は 10 組までしか取れない。** 溢れた項目は黙って落ちるのではなく
         // 書けなくなるだけだが、ここは項目が増えるので順序付きの地図で組む
         // （必須の `quantity` を落として 400 で止まった。IT16 で実測）。
         var body = new java.util.LinkedHashMap<String, Object>();
         body.put("shipperId", produced.get(StepKind.REGISTER_SHIPPER));
-        body.put("originUnLocode", ORIGIN);
+        body.put("originUnLocode", input.originUnLocode());
         body.put("destinationUnLocode", destination);
         body.put("arrivalDeadline", deadline.toString());
-        body.put("cargoType", "GENERAL");
-        body.put("weightKg", 1000);
+        body.put("cargoType", input.cargoType());
+        body.put("weightKg", input.weightKg());
         body.put("lengthCm", 100);
         body.put("widthCm", 100);
         body.put("heightCm", 100);

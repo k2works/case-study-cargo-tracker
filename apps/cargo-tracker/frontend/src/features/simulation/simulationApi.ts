@@ -87,3 +87,53 @@ export function fetchSimulationRun(runId: string): Promise<Pending<RunView>> {
 export async function startSimulation(scenario: string): Promise<{ runId: string }> {
   return commandClient<{ runId: string }>('/simulation/runs', { scenario });
 }
+
+/** 区分ごとの件数（S94 / US36 §受入基準 8）。 */
+export interface CountView {
+  readonly code: string;
+  readonly label: string;
+  readonly count: number;
+}
+
+/**
+ * 継続実行のいまと統計（S94 / US36）。
+ *
+ * **種が読める**（§3）。読めないと、同じ並びをもう一度流せない。
+ */
+export interface ScheduleView {
+  readonly scheduleId: string;
+  readonly seed: number;
+  readonly intervalSeconds: number;
+  readonly maxConcurrent: number;
+  readonly exceptionRatio: number;
+  readonly status: string;
+  readonly statusLabel: string;
+  readonly startedBy: string;
+  readonly startedAt: string;
+  readonly stoppedAt: string | null;
+  readonly runningNow: number;
+  readonly runsByStatus: readonly CountView[];
+  readonly failuresByStep: readonly CountView[];
+}
+
+/**
+ * いまの稼働（S94）。
+ *
+ * <p>動いていなければサーバは 204 を返す。**「見つかりません」の赤にしない**
+ * ——動いていないのは正常な状態である。</p>
+ */
+export function fetchSimulationSchedule(): Promise<Pending<ScheduleView | null>> {
+  return queryClient('/simulation/schedule');
+}
+
+/** 継続実行を始める（種は任意）。 */
+export async function startSimulationSchedule(
+  seed: number | null,
+): Promise<{ scheduleId: string }> {
+  return commandClient('/simulation/schedule', { seed });
+}
+
+/** 継続実行を止める。<b>すぐには止まらない</b>（走っている実行は最後まで終える）。 */
+export async function stopSimulationSchedule(): Promise<void> {
+  await commandClient('/simulation/schedule', undefined, 'DELETE');
+}

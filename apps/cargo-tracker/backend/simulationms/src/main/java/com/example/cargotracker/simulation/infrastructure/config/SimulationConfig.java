@@ -18,6 +18,7 @@ import org.springframework.web.client.RestClient;
 /** 実行の組み立て（[ADR-0020]）。 */
 @Configuration
 @EnableConfigurationProperties({ SimulationProperties.class, SimulationScheduleProperties.class })
+@org.springframework.scheduling.annotation.EnableScheduling
 public class SimulationConfig {
 
     /**
@@ -51,14 +52,26 @@ public class SimulationConfig {
     public SimulationService simulationService(SimulationRunMapper runs,
             SimulationProperties properties, RestClient gatewayRestClient,
             Executor simulationExecutor, Clock clock) {
-        return new SimulationService(runs, properties, (scenario, listener) -> {
+        return new SimulationService(runs, properties, (input, listener) -> {
             // **実行ごとに作る。** トークンも作った識別子も実行の中でしか
             // 意味を持たない（[ADR-0020] 決定 2）。
             GatewayCalls calls = new GatewayCalls(gatewayRestClient,
                     new GatewayTokens(gatewayRestClient));
-            return new SimulationRunner(new GatewayBusinessApi(calls, scenario, clock),
+            return new SimulationRunner(new GatewayBusinessApi(calls, input, clock),
                     new GatewayChainReadiness(calls), SimulationRunner.realSleeper(),
                     clock, listener);
         }, simulationExecutor, clock);
+    }
+
+    /** 継続実行の稼働（US36）。 */
+    @Bean
+    public com.example.cargotracker.simulation.application.SimulationScheduleService
+            simulationScheduleService(
+            com.example.cargotracker.simulation.infrastructure.persistence
+                    .SimulationScheduleMapper schedules,
+            SimulationService simulationService,
+            SimulationScheduleProperties properties, Clock clock) {
+        return new com.example.cargotracker.simulation.application.SimulationScheduleService(
+                schedules, simulationService, properties, clock);
     }
 }

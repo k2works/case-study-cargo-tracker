@@ -34,6 +34,7 @@ import { RoutingWorklistPage } from '@/features/routing/RoutingWorklistPage';
 import { VoyageListPage } from '@/features/routing/VoyageListPage';
 import { VoyageRegisterPage } from '@/features/routing/VoyageRegisterPage';
 import { VoyageDetailPage } from '@/features/routing/VoyageDetailPage';
+import { SimulationSchedulePage } from '@/features/simulation/SimulationSchedulePage';
 import { ShipperBookingListPage } from '@/features/shipperBookings/ShipperBookingListPage';
 import { ShipperBookingProgressPage } from '@/features/shipperBookings/ShipperBookingProgressPage';
 import { TrackingListPage } from '@/features/tracking/TrackingListPage';
@@ -156,6 +157,18 @@ export function AppRoutes() {
           element={
             <RequireRole allow={['ROLE_SALES']}>
               <BookingEditPage />
+            </RequireRole>
+          }
+        />
+        {/* 継続実行と統計（S94）は S92 から開く。ナビには載せない（注 N6）。
+            **`/admin/simulations/:runId` より先に置く。** 後ろに置くと
+            "schedule" が実行の識別子として吸われ、S94 が「見つかりません」になる
+            （S42 の "exceptions" と同じ形）。 */}
+        <Route
+          path="/admin/simulations/schedule"
+          element={
+            <RequireRole allow={['ROLE_ADMIN']}>
+              <SimulationSchedulePage />
             </RequireRole>
           }
         />

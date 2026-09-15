@@ -112,7 +112,7 @@ class SimulationServiceTest {
     @DisplayName("US33 §5: 同じシナリオが実行中なら、その実行の識別子を添えて断る")
     void refusesConcurrentRunAndNamesIt() {
         running = new SimulationRunMapper.RunRow("SIM-running", "STANDARD", "RUNNING",
-                null, NOW, null, "admin01", NOW);
+                null, NOW, null, "admin01", NOW, null);
 
         assertThatThrownBy(() -> service(true, (kind, produced) ->
                 BusinessApi.StepResult.success(null)).start(Scenario.STANDARD, "admin01"))
@@ -146,7 +146,7 @@ class SimulationServiceTest {
         // 1 度目は「実行中は無い」。書き込みで衝突したあとの 2 度目に勝った側が読める。
         running = null;
         runningAfterRace = new SimulationRunMapper.RunRow("SIM-winner", Scenario.NO_ROUTE.name(),
-                "RUNNING", null, Instant.EPOCH, null, "admin01", Instant.EPOCH);
+                "RUNNING", null, Instant.EPOCH, null, "admin01", Instant.EPOCH, null);
 
         assertThatThrownBy(() -> service(true, (kind, produced) ->
                 BusinessApi.StepResult.success("ID"))
