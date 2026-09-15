@@ -1,6 +1,8 @@
 # Docs Update Log
 
 ## 2026-09-15
+* **Update**: IT17 T5: ADR-0021（知らせを押し出さない）を起票。ui_design に共通要素「貨物の知らせ」を追加（注 N5）
+* **Creation**: IT17 T5: ADR-0021（知らせを押し出さない）を起票。ui_design に共通要素「貨物の知らせ」を追加（注 N5）
 * **Update**: IT17 T4: tracking_event.sequence_no・notice_read_position・shipper_origin を反映（注 N2・N3）
 * **Update**: IT17 T3: S94（継続実行と統計）を追加。S93 に予定の工程・連鎖の待ち・復帰の行き先・再実行を明記
 * **Update**: IT17 T2: SimulationSchedule・RandomScenario・ScenarioInput・ScheduleStatus と simulation_schedule を反映（注 N1・N4・N8）

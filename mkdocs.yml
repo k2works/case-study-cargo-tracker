@@ -221,6 +221,11 @@ nav:
           - ADR-0014 書けないイベントは退避して、処理を止めない: adr/cargo-tracker/0014-poison-events-are-parked-not-blocking.md
           - ADR-0015 営業日の数え方は共有カーネルが持つ: adr/cargo-tracker/0015-business-day-counting-lives-in-the-shared-kernel.md
           - ADR-0016 料率は設定に置き、見積と請求で同じものを読む: adr/cargo-tracker/0016-rates-live-in-configuration.md
+          - ADR-0017 請求書の有効／決着は billing_status を正とする: adr/cargo-tracker/0017-billing-status-is-the-source-of-truth.md
+          - ADR-0018 追跡を閉じるのは追跡の集約で、閉じたことは契約にしない: adr/cargo-tracker/0018-closing-the-tracking-belongs-to-the-tracking-aggregate.md
+          - ADR-0019 精算済は終端ではない: adr/cargo-tracker/0019-settled-can-be-reverted-to-delivered.md
+          - ADR-0020 業務シミュレーションは独立サービスに置く: adr/cargo-tracker/0020-simulation-is-a-driver-not-an-event-sourced-context.md
+          - ADR-0021 貨物の知らせは押し出さず、読みに行く: adr/cargo-tracker/0021-notices-are-pulled-not-pushed.md
   - 記事:
       - 概要: article/index.md
       - モノリスアーキテクチャ実装比較:

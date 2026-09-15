@@ -327,3 +327,40 @@ export function notifyShipperOfException(
 ): Promise<void> {
   return commandClient(`${exceptionPath(trackingNumber, exceptionId)}/notifications`, input);
 }
+
+/**
+ * 貨物の知らせ 1 件（US37 §受入基準 1・2）。
+ *
+ * **行き先はサーバが渡した値から組み立てる。** 画面が識別子の見た目で当てると、
+ * 書式を変えたときに黙って行き先が消える。
+ */
+export interface NoticeView {
+  readonly sequenceNo: number;
+  readonly trackingNumber: string;
+  readonly statusLabel: string;
+  readonly location: string | null;
+  readonly occurredAt: string;
+  readonly originUnLocode: string;
+  readonly destinationUnLocode: string;
+}
+
+export interface NoticeListView {
+  readonly items: readonly NoticeView[];
+  /**
+   * いちばん新しい知らせの位置。**これを既読として送り返す**。
+   *
+   * 画面が自分で最大値を数えると、上限で切れたときに「出していない知らせまで
+   * 既読」にしてしまう。
+   */
+  readonly latestSequence: number;
+}
+
+/** 未読の知らせ（S41 のポップアップ / US37 §1）。<b>荷主だけが呼ぶ</b>。 */
+export function fetchNotices(): Promise<Pending<NoticeListView>> {
+  return queryClient('/tracking/notices');
+}
+
+/** ここまで読んだ（§3）。<b>既読はサーバが持つ</b>。 */
+export async function markNoticesRead(sequenceNo: number): Promise<void> {
+  await commandClient('/tracking/notices/read', { sequenceNo });
+}

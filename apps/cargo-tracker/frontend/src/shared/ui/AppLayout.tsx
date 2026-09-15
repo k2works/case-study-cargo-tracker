@@ -1,4 +1,5 @@
 import { Link, NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router';
+import { ShipperNotice } from '@/features/tracking/ShipperNotice';
 import { IdleTimeout } from '@/shared/auth/IdleTimeout';
 import { useAuthStore } from '../auth/authStore';
 import { ROLE_LABELS } from '../auth/roles';
@@ -50,6 +51,10 @@ export function AppLayout() {
       {/* 共用端末に開きっぱなしの画面を残さない（non_functional.md「セッション」）。
           認証済みの画面すべてに効かせるため、シェルに置く。 */}
       <IdleTimeout />
+      {/* 貨物の知らせ（US37 / 注 N5）。**画面ではなく共通レイアウトの要素**
+          ——知らせは「いま見ている画面」とは無関係に起きる。荷主以外は
+          問い合わせにも行かない（§5）。 */}
+      <ShipperNotice />
       <nav
         aria-label="メインナビゲーション"
         className="w-56 shrink-0 border-r border-gray-200 bg-white p-4"

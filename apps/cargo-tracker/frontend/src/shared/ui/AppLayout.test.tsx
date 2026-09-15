@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
@@ -7,7 +8,11 @@ import { LogoutPage } from '@/app/LogoutPage';
 import { useAuthStore } from '@/shared/auth/authStore';
 
 function renderLayout(initial = '/shippers') {
+  // **シェル自身が問い合わせるようになった**（貨物の知らせ・US37）。
+  // 本番と同じ器で描かないと、荷主でログインした検査だけが落ちる。
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
+    <QueryClientProvider client={client}>
     <MemoryRouter initialEntries={['/', initial]}>
       <Routes>
         <Route element={<AppLayout />}>
@@ -19,7 +24,8 @@ function renderLayout(initial = '/shippers') {
         <Route path="/logout" element={<LogoutPage />} />
         <Route path="/login" element={<h1>ログイン</h1>} />
       </Routes>
-    </MemoryRouter>,
+    </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 

@@ -30,4 +30,4 @@ cargo-tracker プロジェクトのADRドキュメントです。
 * [ADR-0018 追跡を閉じるのは追跡の集約で、閉じたことは契約にしない](./0018-closing-the-tracking-belongs-to-the-tracking-aggregate.md) - キャンセルの陸揚げで閉じる判断を trackingms の集約に置き、TrackingClosedEvent を契約から内部イベントへ格下げする。**契約イベントの名簿を名前で固定する検査**を同じ変更で足した（本数だけの固定では、うっかり移したイベントが素通りする）。
 * [ADR-0019 精算済は終端ではない——入金の取り消しで引取済へ戻す](./0019-settled-can-be-reverted-to-delivered.md) - 誤って記録した入金を取り消せるようにした結果、予約の SETTLED が終端でなくなった。戻れる先・戻れない条件・人の操作では戻せないことを明示する。
 * [ADR-0020 業務シミュレーションは独立サービスに置き、Event Sourcing は適用しない](./0020-simulation-is-a-driver-not-an-event-sourced-context.md) - 本番と同じ API を人と同じ順で叩く駆動役を simulationms として切り出す。実行の記録は業務の事実ではないので authms と同じく現在状態だけを持つ。**HTTP で越境するのはこの 1 サービスだけ**と検査で固定する。
-
+* [ADR-0021: 貨物の知らせは押し出さず、読みに行く](./0021-notices-are-pulled-not-pushed.md)
