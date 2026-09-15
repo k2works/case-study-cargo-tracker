@@ -540,6 +540,14 @@ spec:
             # **本番では有効にしない**（US33 §受入基準 4）。kind は開発クラスタなので
             # 有効にする。名前は推測させず、application.yml で明示的に受けている。
             - { name: CARGOTRACKER_SIMULATION_ENABLED, value: "true" }
+            # **継続実行はもう 1 段の許可が要る**（US36 §受入基準 6）。流し続ける
+            # 側は業務を止めうるので、「実行できる環境＝流し続けてよい環境」に
+            # しない。kind は開発クラスタなので有効にする。
+            - { name: CARGOTRACKER_SIMULATION_SCHEDULE_ENABLED, value: "true" }
+            # **間を空ける。** 0 にすると業務が止まる（この局面に固有の危険 3）。
+            - { name: CARGOTRACKER_SIMULATION_SCHEDULE_INTERVAL, value: "30s" }
+            - { name: CARGOTRACKER_SIMULATION_SCHEDULE_MAX_CONCURRENT, value: "2" }
+            - { name: CARGOTRACKER_SIMULATION_SCHEDULE_EXCEPTION_RATIO, value: "0.2" }
             # 工程は **Gateway 経由**で本番の API を叩く（[ADR-0020] 決定 2）。
             # サービスを直接指すと認可を通らず、確かめたいものが変わる。
             - { name: GATEWAY_URL, value: "http://gatewayms:8080" }

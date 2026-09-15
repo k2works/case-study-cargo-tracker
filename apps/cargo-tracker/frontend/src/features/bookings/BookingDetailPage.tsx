@@ -90,6 +90,16 @@ export function BookingDetailPage() {
   const { bookingId = '' } = useParams();
   // 通知を記録したあと、投影に届くまで取り直す合図。
   const [awaitingNotificationProjection, setAwaitingNotificationProjection] = useState(false);
+  /**
+   * 追跡番号を発行したあと、投影に届くまで取り直す合図。
+   *
+   * <p><b>1 度の取り直しでは足りない。</b> 発行は同期で通るが、番号が
+   * この画面に出るのは投影が追いついてからである。混んでいるときは
+   * 取り直した時点でまだ届いておらず、<b>そのあと画面は二度と取り直さない</b>
+   * ——利用者は「発行したのに番号が出ない」まま、自分で読み込み直すしかない
+   * （IT17 のクラスタで実測）。</p>
+   */
+  const [awaitingTrackingNumber, setAwaitingTrackingNumber] = useState(false);
   const queries = useQueryClient();
   // 引き渡すのは営業の仕事（US06）。詳細画面は経路設計・追跡・経理・管理者にも
   // 開いているので、状態だけで出し分けると、見に来ただけの人が引き渡せる。
@@ -110,7 +120,8 @@ export function BookingDetailPage() {
     // 追いつくまで routingStatus は ROUTING_REQUESTED のままで、旅程の欄が
     // 現れない。確定を待っている間だけ取り直す（IT5 レビュー 高 1）。
     refetchInterval: (query) =>
-      bookingRefetchInterval(query.state.data, awaitingNotificationProjection),
+      bookingRefetchInterval(query.state.data, awaitingNotificationProjection,
+        awaitingTrackingNumber),
   });
 
   // 修正履歴（US32 §受入基準 4）。一度も直していない予約では問い合わせない。
@@ -204,6 +215,9 @@ export function BookingDetailPage() {
   const issue = useMutation({
     mutationFn: () => issueTrackingNumber(bookingId),
     onSuccess: async () => {
+      // **届くまで取り直す合図を立ててから読み直す。** 立てずに 1 度だけ
+      // 読み直すと、投影が遅れたときに番号が出ないまま止まる。
+      setAwaitingTrackingNumber(true);
       await queries.invalidateQueries({ queryKey: ['booking', bookingId] });
     },
   });
@@ -751,6 +765,7 @@ function ReturnToRoutingPanel(props: Readonly<{
 function bookingRefetchInterval(
   state: Pending<BookingView> | undefined,
   awaitingNotificationProjection: boolean,
+  awaitingTrackingNumber: boolean,
 ): number | false {
   if (state?.state === 'pending') {
     return 2000;
@@ -762,6 +777,11 @@ function bookingRefetchInterval(
   // 現れない。確定を待っている間だけ取り直す。
   if (state.value.routingStatus === 'ROUTING_REQUESTED') {
     return 3000;
+  }
+  // **発行した番号が届くまで取り直す。** 届いたら止める——止めないと、
+  // 誰も待っていない画面が問い合わせ続ける。
+  if (awaitingTrackingNumber && state.value.trackingNumber === null) {
+    return 2000;
   }
   return awaitingNotificationProjection ? 2000 : false;
 }

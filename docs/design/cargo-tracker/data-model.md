@@ -4,7 +4,7 @@ title: "データモデル設計 - 国際貨物輸送管理システム（CQRS /
 description: "CQRS / Event Sourcing 版 Cargo Tracker のデータモデル設計。Event Store は Axon Server に任せ、サービスごとの投影テーブル・Axon 管理テーブル・Auth の状態テーブルを ER 図とテーブル定義で示し、Processing Group との対応とリプレイ前提のマイグレーション方針を定める。"
 tags: [design,data-model,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-15T04:29:50Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-15T07:38:13Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -224,7 +224,7 @@ entity "auth_audit_log" as audit {
   --
   username: VARCHAR(50) NOT NULL
   event_type: VARCHAR(30) NOT NULL
-  reason: VARCHAR(30)
+  reason: VARCHAR(64)
   remote_addr: VARCHAR(45)
   occurred_at: TIMESTAMPTZ NOT NULL
 }
@@ -238,8 +238,10 @@ users ||--o| link
 | :--- | :--- | :--- |
 | `users` | 利用者。US31 の失敗回数とロック期限を列に持つ | `UNIQUE(username)`, `UNIQUE(email)` |
 | `user_roles` | ロール。`ROLE_SHIPPER` / `ROLE_SALES` / `ROLE_ROUTING` / `ROLE_TRACKER` / `ROLE_HANDLER` / `ROLE_ACCOUNTANT` / `ROLE_ADMIN` | 1 人 1 ロール以上（アプリで保証） |
-| `user_shipper_link` | 利用者と荷主の紐付け。**これだけを正とし、名前やメールの一致で推測しない** | `UNIQUE(shipper_id)`。`shipper_id` は bookingms への論理参照（FK 無し） |
-| `auth_audit_log` | 認証試行・ロック・解除の記録。`event_type` は `LOGIN_SUCCESS` / `LOGIN_FAILURE` / `LOCKED` / `UNLOCKED`。`reason` は `BAD_CREDENTIALS` / `LOCKED` / `DISABLED`（画面には出さない） | `INDEX(username, occurred_at)` |
+| `user_shipper_link` | 利用者と荷主の紐付け。**これだけを正とし、名前やメールの一致で推測しない**。**実装は `users.shipper_id` の 1 列**（別表にすると同じ事実が 2 か所に住む） | `UNIQUE(shipper_id)`。`shipper_id` は bookingms への論理参照（FK 無し） |
+
+**紐付けを設定する入口は IT17 で作りました**（`POST /api/v1/auth/admin/users/{username}/shipper`・管理者だけ）。それまで**この列は読まれるだけで、どこからも書かれていませんでした**——紐付けが無いと Gateway は `X-Auth-Shipper-Id` を載せられず、**荷主向けの画面がすべて 403 になります**（自社予約 S45・S46、自社請求書 S62、荷主の追跡一覧、貨物の知らせ）。クラスタで荷主としてログインして初めて分かりました。**定義済み未使用は配線漏れのサインです。**
+| `auth_audit_log` | 認証試行・ロック・解除・**荷主の紐付け**の記録。`event_type` は `LOGIN_SUCCESS` / `LOGIN_FAILURE` / `LOCKED` / `UNLOCKED` / `SHIPPER_LINKED` / `SHIPPER_UNLINKED`。`reason` は `BAD_CREDENTIALS` / `LOCKED` / `DISABLED`（画面には出さない）と、**紐付けた荷主 ID**。**64 文字**——UUID（36 文字）が入るので 30 では溢れる（IT17 で実測。識別子が列に収まらない形は**4 度目**） | `INDEX(username, occurred_at)` |
 
 ### `booking_read_db`（bookingms）
 

@@ -912,6 +912,53 @@ describe('S22 荷主への通知（US12）', () => {
     });
   });
 
+  it('US14 §1: 発行した番号が投影に届くまで取り直す（出ないまま止まらない）', async () => {
+    // **1 度の取り直しでは足りない。** 発行は同期で通るが、番号がこの画面に
+    // 出るのは投影が追いついてからである。混んでいるときは取り直した時点で
+    // まだ届いておらず、そのあと画面は二度と取り直さない——利用者は
+    // 「発行したのに番号が出ない」まま自分で読み込み直すしかない
+    // （IT17 のクラスタで実測）。
+    useAuthStore.setState({
+      user: { username: 'routing01', roles: ['ROLE_ROUTING'], token: 't' },
+    });
+    let reads = 0;
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
+      const url = String(input);
+      if (url.includes('/cancellation')) {
+        return Promise.resolve(new Response(JSON.stringify({ items: [] }), { status: 200 }));
+      }
+      if (url.includes('/notifications') && (init as RequestInit)?.method !== 'POST') {
+        return Promise.resolve(new Response(JSON.stringify({ items: [] }), { status: 200 }));
+      }
+      if (url.includes('/itinerary')) {
+        return Promise.resolve(new Response(JSON.stringify({ legs: [] }), { status: 200 }));
+      }
+      if (url.includes('/tracking-number')) {
+        return Promise.resolve(new Response(JSON.stringify({ bookingId: 'b-1' }),
+          { status: 200 }));
+      }
+      if (url.includes('/revisions')) {
+        return Promise.resolve(new Response(JSON.stringify({ items: [] }), { status: 200 }));
+      }
+      reads += 1;
+      // **3 度目でようやく届く。** 1 度の取り直しで出る形にすると、
+      // 直したこと（取り直し続ける）を確かめたことにならない。
+      return Promise.resolve(new Response(JSON.stringify({
+        ...NOTIFIED,
+        bookingStatus: 'CONFIRMED',
+        confirmedAt: '2026-09-08T00:00:00Z',
+        trackingNumber: reads >= 3 ? 'TRK-8K2QX7M4RB' : null,
+      }), { status: 200 }));
+    });
+
+    renderDetail();
+
+    await userEvent.click(await screen.findByRole('button', { name: '追跡番号を発行する' }));
+
+    expect(await screen.findByText('TRK-8K2QX7M4RB', {}, { timeout: 10_000 }))
+      .toBeInTheDocument();
+  });
+
   it('US14: 営業には発行の操作を出さない（発行は経路設計者の仕事）', async () => {
     mockApi({ ...NOTIFIED, bookingStatus: 'CONFIRMED',
       confirmedAt: '2026-09-08T00:00:00Z' });

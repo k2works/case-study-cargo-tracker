@@ -189,6 +189,47 @@ test.describe('kind クラスタでの通し確認', () => {
   }
 
   /**
+   * 荷主としてログインできる状態にする（US18・US23・US37 の前提）。
+   *
+   * <p><b>紐付けが無いと、荷主向けの画面はすべて 403 になる。</b> Gateway は
+   * JWT の {@code shipperId} から {@code X-Auth-Shipper-Id} を載せるので、
+   * 紐付けが空のままでは自社予約も自社請求書も貨物の知らせも開けない
+   * ——<b>この列は IT17 まで、読まれるだけでどこからも書かれていなかった</b>。</p>
+   *
+   * <p><b>各テストが自分で前提を作る。</b> 前の回が残した紐付けに頼ると、
+   * 作り直したクラスタで落ちる。</p>
+   *
+   * @returns 紐付けた荷主 ID
+   */
+  async function linkShipperAccount(
+    request: import('@playwright/test').APIRequestContext,
+  ): Promise<string> {
+    const sales = await tokenOf(request, 'sales01');
+    const stamp = Date.now();
+    const created = await request.post('/api/v1/booking/shippers', {
+      headers: { Authorization: `Bearer ${sales}` },
+      data: {
+        name: `自社確認商事-${stamp}`,
+        shipperType: 'INDIVIDUAL',
+        email: `own-${stamp}@example.com`,
+        phone: '03-0000-0000',
+        address: '東京都',
+        acknowledgedDuplicate: false,
+      },
+    });
+    expect(created.status()).toBe(201);
+    const shipperId = (await created.json()).shipperId as string;
+
+    const admin = await tokenOf(request, 'admin01');
+    const linked = await request.post('/api/v1/auth/admin/users/shipper01/shipper', {
+      headers: { Authorization: `Bearer ${admin}` },
+      data: { shipperId },
+    });
+    expect(linked.status()).toBe(204);
+    return shipperId;
+  }
+
+  /**
    * 仮受付の予約を 1 件作る。
    *
    * <p><b>各テストが自分で前提を作る</b>（IT2 引き継ぎ 7）。前のテストが残したものに
@@ -1940,6 +1981,150 @@ test.describe('kind クラスタでの通し確認', () => {
       const bookingLink = page.getByRole('row', { name: /予約の登録/ }).getByRole('link');
       await bookingLink.click();
       await expect(page.getByRole('heading', { name: /^予約 B-/ })).toBeVisible();
+    });
+
+
+  test('継続実行を回しているあいだも、営業は普段どおり予約を登録できる（US36 §7・IT17）',
+    async ({ page, request }) => {
+      // **止まりきるまで見届けるので長い。** 走っている実行は最後まで終える
+      // （US36 §4）ので、止めてから片付くまで数分かかる——自分が汚した分を
+      // 片付けずに去ると、次の検査がその負荷の中で待つことになる（実測）。
+      //
+      // **budget は実測から取る。** 1 本のシナリオは連鎖の待ちを含めて最大
+      // 5 分、同時に 2 本走るので、止めてから片付くまで 10 分を見込む
+      // （600 秒では足りずに切れた。実測）。
+      test.setTimeout(1_800_000);
+      // **負荷をかける側が業務を止めないことを、実際の経路で確かめる**
+      // （この局面に固有の危険 3）。層ごとの検査は自分の層しか見ない。
+      await signIn(page, 'admin01');
+      await page.getByRole('link', { name: '業務シミュレーション' }).first().click();
+      await page.getByRole('link', { name: '継続実行と統計を見る' }).click();
+      await expect(page.getByRole('heading', { name: '継続実行' })).toBeVisible();
+
+      // **前の回が残っていれば止めてから始める**（稼働は 1 本）。
+      // **どちらの状態かが定まるまで待つ。** 読み込み中に分岐すると、
+      // 「止める」も「始める」も見えないまま次へ進んでしまう。
+      const startButton = page.getByRole('button', { name: '継続実行を開始する' });
+      const stopButton = page.getByRole('button', { name: '継続実行を停止する' });
+      await expect(async () => {
+        await page.reload();
+        await expect(startButton.or(stopButton)).toBeVisible({ timeout: 10_000 });
+      }).toPass({ timeout: 120_000 });
+
+      if (await stopButton.isVisible()) {
+        await stopButton.click();
+        // 走っている実行が決着するまで止まりきらない（US36 §4）。
+        await expect(async () => {
+          await page.reload();
+          await expect(startButton).toBeVisible({ timeout: 10_000 });
+        }).toPass({ timeout: 900_000 });
+      }
+
+      await page.getByLabel('乱数の種').fill('20260915');
+      await startButton.click();
+      await expect(stopButton).toBeVisible({ timeout: 60_000 });
+      // **種が読める**（US36 §3）。読めないと同じ並びをもう一度流せない。
+      await expect(page.getByText('20260915')).toBeVisible();
+
+      try {
+        // **流れているあいだに、営業の操作を通す。**
+        await page.goto('/logout');
+        await signIn(page, 'sales01');
+        const stamp = Date.now();
+        await page.goto('/shippers/new');
+        // **画面の文言に合わせる**（「荷主名」ではなく「名称」）。
+        await page.getByLabel('名称').fill(`負荷確認商事 ${stamp}`);
+        await page.getByLabel('メールアドレス').fill(`load-${stamp}@example.com`);
+        await page.getByLabel('電話番号').fill('03-0000-0000');
+        await page.getByLabel('住所').fill('東京都中央区');
+        await page.getByRole('button', { name: '登録する' }).click();
+
+        await expect(page.getByRole('heading', { name: '荷主一覧' }))
+          .toBeVisible({ timeout: 60_000 });
+        // **名前で絞り込んでから確かめる。** 一覧には上限があり、クラスタは
+        // 作り直さずに使い続けるので、登録したばかりの荷主は絞らないと出ない。
+        await page.getByLabel('荷主名で絞り込む').fill(`負荷確認商事 ${stamp}`);
+        await expectEventually(page, `load-${stamp}@example.com`, { reload: false });
+      } finally {
+        // **必ず止める。** 流したままにすると、次の検査も次の人も巻き込む。
+        await page.goto('/logout');
+        await signIn(page, 'admin01');
+        await page.goto('/admin/simulations/schedule');
+        // **止まるまで見届ける。** 押しただけで去ると、次の検査が
+        // 「稼働は 1 本」で始められない。
+        await expect(async () => {
+          await page.reload();
+          if (await stopButton.isVisible()) {
+            await stopButton.click();
+          }
+          await expect(startButton).toBeVisible({ timeout: 10_000 });
+        }).toPass({ timeout: 900_000 });
+
+        // **走っている実行が無くなるまで見届ける。** 稼働が止まっても、
+        // 流し終えた実行の連鎖はしばらく続く——次の検査はその負荷の中で
+        // 待つことになり、20 秒の待ちを超えて落ちた（実測）。
+        // **自分が汚した分は自分で片付ける。**
+        await expect(async () => {
+          const runs = await request.get('/api/v1/simulation/runs', {
+            headers: { Authorization: `Bearer ${await tokenOf(request, 'admin01')}` },
+          });
+          const items = (await runs.json()).items as { status: string }[];
+          expect(items.some((run) => run.status === 'RUNNING')).toBe(false);
+        }).toPass({ timeout: 900_000 });
+      }
+    });
+
+  test('荷主は自社の予約一覧から進み具合を開き、知らせを受け取れる（US37・IT17）',
+    async ({ page, request }) => {
+      // **紐付けと予約を自分で作る。** 前の回の残骸に頼ると、作り直した
+      // クラスタで落ち、残骸でも緑になる検査は壊れていることを教えない。
+      const shipperId = await linkShipperAccount(request);
+      const sales = await tokenOf(request, 'sales01');
+      const stamp = Date.now();
+      const booked = await request.post('/api/v1/booking/bookings', {
+        headers: { Authorization: `Bearer ${sales}` },
+        data: {
+          shipperId,
+          originUnLocode: 'JPTYO',
+          destinationUnLocode: 'USNYC',
+          arrivalDeadline: new Date(Date.now() + 90 * 86_400_000)
+            .toISOString().slice(0, 10),
+          cargoType: 'GENERAL',
+          weightKg: '1200',
+          lengthCm: '120',
+          widthCm: '80',
+          heightCm: '100',
+          quantity: 10,
+          productName: `自社確認-${stamp}`,
+        },
+      });
+      expect(booked.status()).toBe(201);
+
+      await signIn(page, 'shipper01');
+
+      // **一覧から始める**（IT15 の Try T2）。識別子を握って開く形では、
+      // 一覧から辿れない欠陥を踏まない。
+      await page.getByRole('link', { name: '自社の予約' }).first().click();
+      await expect(page.getByRole('heading', { name: '自社の予約' })).toBeVisible();
+
+      const rows = page.getByRole('link', { name: /^B-/ });
+      await expect(rows.first()).toBeVisible({ timeout: 60_000 });
+      const bookingNumber = (await rows.first().textContent()) ?? '';
+      await rows.first().click();
+
+      // 進み具合が読める（追跡番号が出る前も）。
+      await expect(page.getByRole('heading', { name: `予約 ${bookingNumber}` })).toBeVisible();
+      // **進み具合の段で見る。** 見出しの脇にも状態が出るので、素の文字列だと
+      // 2 つ当たる——どちらを見たいのかを検査が言えていないことになる。
+      await expect(page.getByRole('listitem').filter({ hasText: '仮受付' })).toBeVisible();
+      await expect(page.getByRole('link', { name: '予約一覧へ' })).toBeVisible();
+
+      // **金額は出さない**（金額を出す荷主向けの画面は自社請求書だけ）。
+      await expect(page.getByText(/円$/)).toHaveCount(0);
+
+      // **他社の予約は開けない**（存在しないものと区別しない）。
+      await page.goto('/shipper/bookings/00000000-0000-0000-0000-000000000000');
+      await expect(page.getByRole('alert')).toContainText('予約が見つかりません');
     });
 
 });

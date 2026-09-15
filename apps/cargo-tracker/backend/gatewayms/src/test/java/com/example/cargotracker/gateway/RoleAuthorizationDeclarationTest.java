@@ -68,6 +68,40 @@ class RoleAuthorizationDeclarationTest {
     }
 
     @Test
+    @DisplayName("US18: 自社予約（S45・S46）は荷主だけが開ける")
+    void onlyTheShipperCanReadTheirOwnBookings() {
+        assertThat(RoleAuthorization.isAllowed("GET", "/api/v1/booking/shipper/bookings",
+                java.util.List.of("ROLE_SHIPPER")))
+                .as("荷主が自社の予約一覧を開けない")
+                .isTrue();
+        assertThat(RoleAuthorization.isAllowed("GET",
+                "/api/v1/booking/shipper/bookings/55555555-5555-5555-5555-555555555555",
+                java.util.List.of("ROLE_SHIPPER")))
+                .as("荷主が自社予約の進み具合を開けない")
+                .isTrue();
+        assertThat(RoleAuthorization.isAllowed("GET", "/api/v1/booking/shipper/bookings",
+                java.util.List.of("ROLE_SALES")))
+                .as("社内向けの一覧（S20）とは別の経路である")
+                .isFalse();
+    }
+
+    @Test
+    @DisplayName("荷主の紐付けを変えられるのは管理者だけ（静かに効く操作）")
+    void onlyTheAdministratorCanLinkAShipper() {
+        // **紐付けを変えれば、その利用者は別の荷主の予約と請求書を読める。**
+        // 静かに効く入口ほど、通る相手を数え上げる。
+        String path = "/api/v1/auth/admin/users/shipper01/shipper";
+        assertThat(RoleAuthorization.isAllowed("POST", path,
+                java.util.List.of("ROLE_ADMIN"))).isTrue();
+        for (String role : java.util.List.of("ROLE_SALES", "ROLE_ROUTING", "ROLE_TRACKER",
+                "ROLE_HANDLER", "ROLE_ACCOUNTANT", "ROLE_SHIPPER")) {
+            assertThat(RoleAuthorization.isAllowed("POST", path, java.util.List.of(role)))
+                    .as("%s が荷主の紐付けを変えられる", role)
+                    .isFalse();
+        }
+    }
+
+    @Test
     @DisplayName("US37 §4・§5: 貨物の知らせは荷主だけ（他のロールは問い合わせにも行けない）")
     void onlyTheShipperCanReadNotices() {
         // **入口を足したら、通る相手を書き出す。** 知らせは荷主の貨物の話で、

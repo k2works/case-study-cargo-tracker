@@ -42,6 +42,26 @@ public interface UserMapper {
             """)
     int unlock(@Param("username") String username, @Param("updatedAt") Instant updatedAt);
 
+    /**
+     * 利用者を荷主に紐付ける（US18・US23・US37 の前提）。
+     *
+     * <p><b>この列は読まれるだけで、どこからも書かれていなかった</b>（IT17 の
+     * クラスタで実測）。紐付けが無いと Gateway は {@code X-Auth-Shipper-Id} を
+     * 載せられず、<b>荷主向けの画面がすべて 403 になる</b>——自社予約（S45・S46）・
+     * 自社請求書（S62）・荷主の追跡一覧・貨物の知らせ。
+     * <b>定義済み未使用は配線漏れのサインである。</b></p>
+     *
+     * <p><b>解除もできる。</b> {@code shipperId} に {@code null} を渡すと外れる
+     * ——付けるだけの入口は、間違えたときに直す手立てが無い。</p>
+     */
+    @Update("""
+            UPDATE users SET shipper_id = #{shipperId}, updated_at = #{updatedAt}
+             WHERE username = #{username}
+            """)
+    int linkShipper(@Param("username") String username,
+            @Param("shipperId") String shipperId,
+            @Param("updatedAt") Instant updatedAt);
+
     /** S90 の 1 行。ロールは "," 区切り（利用者は 1 ロール以上を持つ）。 */
     record AdminUserRow(
             String username,
