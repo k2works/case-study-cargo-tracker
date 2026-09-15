@@ -26,7 +26,10 @@ public interface TrackingSummaryMapper {
             // キャンセルの陸揚げ地と、閉じた印（US30・IT15）。**列の順は record の
             // 構築子と同じ**——注釈マッパー + record は位置で割り当てるので、
             // 足す位置がずれると項目が丸ごと入れ替わる。
-            + "cancellation_discharge_unlocode, closed";
+            + "cancellation_discharge_unlocode, closed, "
+            // シミュレーション由来か（US33 §3・ADR-0020 決定 4）。**末尾に足す**——
+            // record は位置で割り当てるので、途中に挟むと全部ずれる。
+            + "simulated";
 
     /**
      * 追跡を作る（US14）。
@@ -114,6 +117,11 @@ public interface TrackingSummaryMapper {
         "<where>",
         "  <if test='shipperId != null'>AND shipper_id = #{shipperId}</if>",
         "  <if test='!includeDelivered'>AND transport_status &lt;&gt; 'DELIVERED'</if>",
+        // シミュレーション由来は<b>追跡管理者の一覧からだけ</b>外す（ADR-0020 決定 4）。
+        // 荷主で絞る読みでは外さない——行はその荷主のものしか返らないので、
+        // 本物の荷主にシミュレーションの貨物が混ざることはない。外すと
+        // 確認用の利用者が自分の一覧から何も辿れなくなる（US37 §6）。
+        "  <if test='shipperId == null'>AND simulated = FALSE</if>",
         "</where>",
         " ORDER BY estimated_arrival ASC NULLS LAST, last_status_changed_at DESC",
         " LIMIT #{limit}",
@@ -133,6 +141,11 @@ public interface TrackingSummaryMapper {
         "<where>",
         "  <if test='shipperId != null'>AND shipper_id = #{shipperId}</if>",
         "  <if test='!includeDelivered'>AND transport_status &lt;&gt; 'DELIVERED'</if>",
+        // シミュレーション由来は<b>追跡管理者の一覧からだけ</b>外す（ADR-0020 決定 4）。
+        // 荷主で絞る読みでは外さない——行はその荷主のものしか返らないので、
+        // 本物の荷主にシミュレーションの貨物が混ざることはない。外すと
+        // 確認用の利用者が自分の一覧から何も辿れなくなる（US37 §6）。
+        "  <if test='shipperId == null'>AND simulated = FALSE</if>",
         "</where>",
         "</script>"})
     int countAll(@Param("shipperId") String shipperId,
@@ -187,7 +200,10 @@ public interface TrackingSummaryMapper {
             String cancellationDischargeUnlocode,
             // 追跡を閉じたか。**既定は false**——列が無かったころの追跡は
             // すべて動いている追跡なので、既定値が業務上正しい。
-            boolean closed) {
+            boolean closed,
+            // シミュレーション由来か（ADR-0020 決定 4）。**一覧は外し、単票は外さない**
+            // ——US34 の実行結果は工程ごとにこの単票へ辿る。
+            boolean simulated) {
     }
 
     /**

@@ -56,7 +56,12 @@ class TrackingProjectionIT extends AbstractAxonIntegrationTest {
     private ExceptionNotificationMapper notifications;
 
     private static TrackingInitializedEvent initialized(String trackingNumber, String bookingId) {
-        return new TrackingInitializedEvent(trackingNumber, bookingId, "SHP-000001",
+        return initialized(trackingNumber, bookingId, "SHP-000001");
+    }
+
+    private static TrackingInitializedEvent initialized(String trackingNumber, String bookingId,
+            String shipperId) {
+        return new TrackingInitializedEvent(trackingNumber, bookingId, shipperId,
                 "JPTYO", "USNYC", "GENERAL",
                 new BigDecimal("1200"),
                 List.of(new TrackingInitializedEvent.Leg("V-MOL-001", "JPTYO", "SGSIN",

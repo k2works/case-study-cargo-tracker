@@ -97,7 +97,11 @@ public class TrackingProjection {
                 // キャンセルの陸揚げ地はまだ無い。**閉じてもいない**——列が
                 // 無かったころの追跡と同じで、既定値が業務上正しい（US30・IT15）。
                 event.initializedAt(), event.initializedAt(), now, null, 0, 0, null, false,
-                null, false));
+                null, false,
+                // **由来は投影が決めない。** 印は荷主に付くので、SQL が
+                // shipper_origin の写しから解決する（ADR-0020 決定 4）。ここで
+                // 渡した値は書き込みに使われない——読み出しのときだけ意味を持つ。
+                false));
 
         // 旅程は消してから入れ直す。追記だけにすると、リプレイで区間が倍になる。
         trackings.deleteLegs(event.trackingNumber());

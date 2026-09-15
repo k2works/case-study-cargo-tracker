@@ -16,11 +16,15 @@
         INSERT INTO tracking_summary (
             tracking_number, booking_id, shipper_id, origin_unlocode, destination_unlocode,
             cargo_type, transport_status, current_unlocode, estimated_arrival,
-            initialized_at, last_status_changed_at, projected_at, last_event_id
+            initialized_at, last_status_changed_at, projected_at, last_event_id, simulated
         ) VALUES (
             #{trackingNumber}, #{bookingId}, #{shipperId}, #{originUnlocode}, #{destinationUnlocode},
             #{cargoType}, #{transportStatus}, #{currentUnlocode}, #{estimatedArrival},
-            #{initializedAt}, #{lastStatusChangedAt}, #{projectedAt}, #{lastEventId}
+            #{initializedAt}, #{lastStatusChangedAt}, #{projectedAt}, #{lastEventId},
+            -- 印は荷主に付く（ADR-0020 決定 4）。投影の時点で写しから解決する。
+            -- **写しがまだ無ければ本物として扱う**——印が付く前に登録された荷主と
+            -- 同じ扱いで、業務の一覧から黙って消える側には倒さない。
+            COALESCE((SELECT simulated FROM shipper_origin WHERE shipper_id = #{shipperId}), FALSE)
         )
         ON CONFLICT (tracking_number) DO UPDATE SET
             booking_id = EXCLUDED.booking_id,
@@ -30,7 +34,8 @@
             cargo_type = EXCLUDED.cargo_type,
             estimated_arrival = EXCLUDED.estimated_arrival,
             initialized_at = EXCLUDED.initialized_at,
-            projected_at = EXCLUDED.projected_at
+            projected_at = EXCLUDED.projected_at,
+            simulated = EXCLUDED.simulated
     </insert>
 
     <insert id="insertLegs">
