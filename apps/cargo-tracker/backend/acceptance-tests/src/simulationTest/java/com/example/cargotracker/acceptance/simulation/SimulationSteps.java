@@ -103,9 +103,14 @@ public class SimulationSteps {
         assertThat(lastResponse.statusCode())
                 .as("本文: %s", lastResponse.asString())
                 .isBetween(400, 499);
-        assertThat(lastResponse.asString())
-                .as("断りの理由が本文に無い（次に何をすればよいか分からない）")
-                .containsAnyOf("実行できません", "実行中です");
+        // **言い回しを名簿にしない。** 断りの文言を並べる形は、断りを 1 つ
+        // 足すたびに名簿を直すことになり、直し忘れた断りが「理由が無い」と
+        // 誤って赤くなる（IT17 で実際に 2 度踏んだ）。見たいのは
+        // **「読める理由が本文にあるか」**である。
+        assertThat(lastResponse.jsonPath().getString("message"))
+                .as("断りの理由が本文に無い（次に何をすればよいか分からない）: %s",
+                        lastResponse.asString())
+                .isNotBlank();
     }
 
     @かつ("断りに実行中の識別子が含まれる")
@@ -241,6 +246,95 @@ public class SimulationSteps {
         assertThat(steps()).isNotEmpty();
     }
 
+    @かつ("生成された貨物に未解決の例外は残っていない")
+    public void 未解決の例外は残っていない() {
+        // **解決まで通ったことを、追跡の読み口で見る**（US35 §2）。
+        // **件数の列は単票に無い**（実測）ので、明細から数える——読み口に
+        // 無い項目を当てにすると、検査は NullPointerException で落ちる。
+        assertThat(tracking().getList("exceptions.responseStatus", String.class))
+                .as("未解決の例外が残っている")
+                .allMatch("RESOLVED"::equals);
+    }
+
+    @かつ("組み直したあとの旅程は、最初に確定した旅程と違う")
+    public void 旅程が組み直されている() {
+        // **「組み直した」は指紋で見る**（US35 §3）。工程が成功しただけでは、
+        // 同じ経路に戻していても通る。
+        assertThat(producedOf("REASSIGN_ROUTE"))
+                .as("組み直した先が記録されていない")
+                .isNotBlank()
+                .isNotEqualTo(producedOf("ASSIGN_ROUTE"));
+    }
+
+    @かつ("生成された貨物の追跡は閉じている")
+    public void 追跡は閉じている() {
+        // **承認だけでは閉じない**（ADR-0018）。指定港の荷降しまで通ったか。
+        assertThat(tracking().getBoolean("closed")).isTrue();
+    }
+
+    private io.restassured.path.json.JsonPath tracking() {
+        return get("/api/v1/tracking/trackings/" + producedOf("ISSUE_TRACKING_NUMBER"),
+                "tracker01").jsonPath();
+    }
+
+    @前提("継続実行が許可されていない設定である")
+    public void 継続実行が許可されていない設定である() {
+        // **同じ実装を違う設定で立ててある**（US36 §6）。
+        baseUrl = SimulationStack.disabledSimulationUrl();
+    }
+
+    @もし("継続実行を種 {long} で開始する")
+    public void 継続実行を開始する(long seed) {
+        lastResponse = given()
+                .baseUri(target())
+                .header("Authorization", "Bearer " + token)
+                .header("X-Auth-Username", "admin01")
+                .contentType("application/json")
+                .body(Map.of("seed", seed))
+                .post("/api/v1/simulation/schedule");
+    }
+
+    @もし("継続実行を停止する")
+    public void 継続実行を停止する() {
+        lastResponse = given()
+                .baseUri(target())
+                .header("Authorization", "Bearer " + token)
+                .header("X-Auth-Username", "admin01")
+                .delete("/api/v1/simulation/schedule");
+        assertThat(lastResponse.statusCode()).isEqualTo(202);
+    }
+
+    @ならば("継続実行の状態は {string} である")
+    public void 継続実行の状態は(String statusLabel) {
+        assertThat(schedule().getString("statusLabel")).isEqualTo(statusLabel);
+    }
+
+    @かつ("継続実行の乱数の種は {long} である")
+    public void 継続実行の種は(long seed) {
+        // **種が読めないと、同じ並びをもう一度流せない**（US36 §3）。
+        assertThat(schedule().getLong("seed")).isEqualTo(seed);
+    }
+
+    @ならば("継続実行は新しい実行を始めない")
+    public void 新しい実行を始めない() {
+        // **止めると言われたら、上限に余裕があっても始めない**（US36 §4）。
+        // 走っている実行は最後まで終えるので、**止まりきるのを待ってから**数える。
+        awaitQuiet();
+        int before = recentRunIds().size();
+        await("停止が落ち着く").atMost(Duration.ofSeconds(60))
+                .pollInterval(Duration.ofSeconds(2))
+                .until(() -> recentRunIds().size() == before);
+        assertThat(recentRunIds()).hasSize(before);
+    }
+
+    private io.restassured.path.json.JsonPath schedule() {
+        Response response = get("/api/v1/simulation/schedule", "admin01");
+        assertThat(response.statusCode())
+                .as("継続実行が動いていない: %s", response.asString())
+                .isEqualTo(200);
+        return response.jsonPath();
+    }
+
     private List<String> recentRunIds() {
         return get("/api/v1/simulation/runs", "admin01")
                 .jsonPath().getList("items.runId", String.class);
@@ -341,9 +435,41 @@ public class SimulationSteps {
         assertThat(registered.statusCode())
                 .as("便を登録できない: %s", registered.asString())
                 .isBetween(200, 299);
+        // **経由便も 1 本置く**（US35 §3）。誤配の組み直しは「前と違う経路」を
+        // 要るので、直行便しか無いと組み直す先が無い——**確かめたいのは誤配の
+        // 対応であって、便の品揃えではない**（実測で踏んだ）。
+        // 経由する港（SGSIN）は、経路外の荷役を記録する先にもなる。
+        Response viaRegistered = given().baseUri(SimulationStack.gatewayUrl())
+                .header("Authorization", "Bearer " + login("routing01"))
+                .header("X-Auth-Username", "routing01")
+                .contentType("application/json")
+                .body(Map.of(
+                        "voyageNumber", "V-SIM-002",
+                        "carrierCode", "SIM",
+                        "carrierName", "シミュレーション海運",
+                        "vesselName", "SIM MARU 2",
+                        "acceptedCargoTypes", List.of("GENERAL", "HAZARDOUS", "REEFER"),
+                        "movements", List.of(
+                                Map.of("departureUnLocode", "JPTYO",
+                                        "arrivalUnLocode", "SGSIN",
+                                        "departureAt", departure.toString(),
+                                        "arrivalAt", departure.plusSeconds(7L * 86_400)
+                                                .toString()),
+                                Map.of("departureUnLocode", "SGSIN",
+                                        "arrivalUnLocode", "USNYC",
+                                        "departureAt", departure.plusSeconds(8L * 86_400)
+                                                .toString(),
+                                        "arrivalAt", departure.plusSeconds(22L * 86_400)
+                                                .toString()))))
+                .post("/api/v1/routing/voyages");
+        assertThat(viaRegistered.statusCode())
+                .as("経由便を登録できない: %s", viaRegistered.asString())
+                .isBetween(200, 299);
         await("便が読めるようになる").atMost(Duration.ofSeconds(60))
                 .pollInterval(Duration.ofMillis(500))
                 .until(() -> get("/api/v1/routing/voyages/V-SIM-001", "routing01")
+                        .statusCode() == 200
+                        && get("/api/v1/routing/voyages/V-SIM-002", "routing01")
                         .statusCode() == 200);
     }
 

@@ -42,7 +42,13 @@ public class GatewayChainReadiness implements ChainReadiness {
             case CONFIRM_BOOKING -> present(booking(produced), "confirmedAt");
             // 追跡は別サービスの投影。**予約ではなく追跡の読み口で確かめる**
             // ——予約側は発行した時点で埋まるので、連鎖が届いたことにならない。
+            // **荷役の写しも待つ。** 次の工程（荷役の記録）は handlingms が貨物を
+            // 知っていることを要る——追跡だけ見て進むと「貨物が見つかりません」で
+            // 止まる（実測。同じイベントから別の BC が投影するので、追いつく時刻が
+            // 違う）。**待つのは「次の工程が読む場所」である。**
             case ISSUE_TRACKING_NUMBER -> ok(StepRole.TRACKER, "/api/v1/tracking/trackings/"
+                    + produced.get(StepKind.ISSUE_TRACKING_NUMBER))
+                    && ok(StepRole.HANDLER, "/api/v1/handling/cargos/"
                     + produced.get(StepKind.ISSUE_TRACKING_NUMBER));
             case RECORD_HANDLING -> handlingRecorded(produced);
             case CLEAR_CUSTOMS -> "CLEARED".equals(body(StepRole.TRACKER,
@@ -58,18 +64,24 @@ public class GatewayChainReadiness implements ChainReadiness {
             // 工程の名前（請求書の発行）から推測すると、いつまでも追いつかない。
             case ISSUE_INVOICE -> invoiceStatusIs(produced, "INVOICED");
             case RECORD_PAYMENT -> invoiceStatusIs(produced, "PAID");
-            // 例外は起票すると追跡の状態が EXCEPTION へ退避し、件数が増える。
-            // **件数で見る**——状態だけだと、対応中に戻ったときに区別できない。
-            case REGISTER_EXCEPTION -> openExceptionCount(produced) > 0;
+            // 起票すると未解決の例外が立つ。**手で起票したものも、荷役や通関から
+            // システムが起こしたものも、同じ読み口で確かめる**。
+            case REGISTER_EXCEPTION, RECORD_OFF_ROUTE_HANDLING, HOLD_CUSTOMS ->
+                    openException(produced) != null;
             // 対応の開始は例外の状態を変える。**追跡の単票から読む**。
-            case RESPOND_TO_EXCEPTION -> exceptionStatusIs(produced, "RESPONDING");
-            // 解決すると未解決の件数が 0 に戻る。
-            case RESOLVE_EXCEPTION -> openExceptionCount(produced) == 0;
+            case RESPOND_TO_EXCEPTION -> respondingTo(produced);
+            // 解決すると未解決の例外が無くなる。
+            case RESOLVE_EXCEPTION -> openException(produced) == null;
             // **前と違う旅程になったかで待つ。**「旅程が入っているか」だと
             // 最初から満たされていて何も確かめない（空振り）。
             case REASSIGN_ROUTE -> itineraryChangedTo(produced);
-            // 申請は承認待ちになる。**予約の読み口で確かめる**。
-            case REQUEST_CANCELLATION -> present(cancellation(produced), "requestedAt");
+            // 積込まで済むと輸送中になる。**予約の状態で確かめる**——
+            // 承認の要るキャンセルは輸送中にしか起きない。
+            case LOAD_CARGO -> "IN_TRANSIT".equals(
+                    booking(produced).path("bookingStatus").asText(null));
+            // 申請は**承認待ち一覧**（S23）に出る。次の工程（承認）が読む場所で
+            // 待つ——履歴で待つと、承認する人に見えていなくても次へ進む。
+            case REQUEST_CANCELLATION -> awaitingApproval(produced);
             // 承認すると陸揚げ地が決まり、追跡へ運ばれる。
             case APPROVE_CANCELLATION -> present(tracking(produced),
                     "cancellationDischargeUnLocode");
@@ -84,26 +96,50 @@ public class GatewayChainReadiness implements ChainReadiness {
                 + produced.get(StepKind.ISSUE_TRACKING_NUMBER));
     }
 
-    /** 未解決の例外の件数。<b>状態ではなく件数で見る</b>。 */
-    private int openExceptionCount(Map<StepKind, String> produced) {
-        return tracking(produced).path("openExceptionCount").asInt(0);
+    /**
+     * 未解決の例外（無ければ {@code null}）。
+     *
+     * <p><b>件数の列は単票に出ていない</b>（実測。一覧だけが持つ）。明細から
+     * 数える——読み口に無い項目で待つと、いつまでも追いつかない。</p>
+     *
+     * <p><b>1 本のシナリオに例外は 1 件</b>なので、名指しせずに「開いているもの」
+     * で足りる。システムが起こした誤配・税関保留は識別子を返さないので、
+     * <b>名指しできるのは手で起票したときだけ</b>である。</p>
+     */
+    static JsonNode openException(JsonNode tracking) {
+        for (JsonNode exception : tracking.path("exceptions")) {
+            if (!"RESOLVED".equals(exception.path("responseStatus").asText(null))) {
+                return exception;
+            }
+        }
+        return null;
     }
 
-    /** 起票した例外の対応状態。 */
-    private boolean exceptionStatusIs(Map<StepKind, String> produced, String status) {
-        String exceptionId = produced.get(StepKind.REGISTER_EXCEPTION);
-        for (JsonNode exception : tracking(produced).path("exceptions")) {
-            if (exceptionId != null && exceptionId.equals(exception.path("exceptionId").asText())) {
-                return status.equals(exception.path("responseStatus").asText(null));
+    private JsonNode openException(Map<StepKind, String> produced) {
+        return openException(tracking(produced));
+    }
+
+    /** 開いている例外の対応が始まったか。 */
+    private boolean respondingTo(Map<StepKind, String> produced) {
+        JsonNode open = openException(produced);
+        return open != null && "RESPONDING".equals(open.path("responseStatus").asText(null));
+    }
+
+    /**
+     * 承認待ちのキャンセル申請にその予約が出ているか（US35 §受入基準 4）。
+     *
+     * <p><b>次の工程が読む場所で待つ。</b> 履歴（{@code /cancellation}）で待つと、
+     * 承認する人の一覧に出ていなくても次へ進んでしまう。</p>
+     */
+    private boolean awaitingApproval(Map<StepKind, String> produced) {
+        String bookingId = produced.get(StepKind.REGISTER_BOOKING);
+        for (JsonNode request : body(StepRole.TRACKER,
+                "/api/v1/booking/bookings/cancellations").path("items")) {
+            if (bookingId.equals(request.path("bookingId").asText(null))) {
+                return true;
             }
         }
         return false;
-    }
-
-    /** キャンセル申請の読み口。 */
-    private JsonNode cancellation(Map<StepKind, String> produced) {
-        return body(StepRole.SALES, "/api/v1/booking/bookings/"
-                + produced.get(StepKind.REGISTER_BOOKING) + "/cancellation");
     }
 
     /**

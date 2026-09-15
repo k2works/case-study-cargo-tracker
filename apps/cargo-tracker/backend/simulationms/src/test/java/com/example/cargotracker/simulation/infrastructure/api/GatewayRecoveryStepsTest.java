@@ -78,6 +78,18 @@ class GatewayRecoveryStepsTest {
     private static final String TRACKING = "TRK-0000000001";
     private static final String EXCEPTION = "exc-1";
 
+    /** 便が通っている港（誤配の記録先はここから選ばれる）。 */
+    private void servedPorts(String... ports) {
+        StringBuilder movements = new StringBuilder();
+        for (int i = 0; i + 1 < ports.length; i++) {
+            movements.append(i == 0 ? "" : ",")
+                    .append("{\"departureUnLocode\":\"").append(ports[i])
+                    .append("\",\"arrivalUnLocode\":\"").append(ports[i + 1]).append("\"}");
+        }
+        responses.put("/api/v1/routing/voyages",
+                "{\"items\":[{\"movements\":[" + movements + "]}]}");
+    }
+
     private static Map<StepKind, String> inTransit() {
         var produced = new java.util.LinkedHashMap<StepKind, String>();
         produced.put(StepKind.REGISTER_SHIPPER, "SHP-1");
@@ -91,14 +103,14 @@ class GatewayRecoveryStepsTest {
     void reportsTheExceptionTypeTheScenarioDeclares() throws IOException {
         responses.put("/api/v1/tracking/trackings/" + TRACKING + "/exceptions",
                 "{\"exceptionId\":\"" + EXCEPTION + "\"}");
-        var api = start(Scenario.CUSTOMS_HOLD);
+        var api = start(Scenario.DAMAGE);
 
         var result = api.execute(StepKind.REGISTER_EXCEPTION, inTransit());
 
         assertThat(result.producedId()).isEqualTo(EXCEPTION);
         assertThat(bodies)
                 .as("**種類は入力で変える**（注 N10）")
-                .anyMatch(body -> body.contains("CUSTOMS_HOLD"));
+                .anyMatch(body -> body.contains("DAMAGE"));
         assertThat(requests)
                 .as("起票は追跡管理者の仕事（担当を実装の都合で変えない）")
                 .anyMatch(request -> request.contains("/exceptions") && request.contains("auth="));
@@ -161,7 +173,7 @@ class GatewayRecoveryStepsTest {
     @DisplayName("US35 §4: 承認は候補から陸揚げ地を選び、次の工程へ渡す")
     void approvesTheCancellationAtACandidatePort() throws IOException {
         responses.put("/api/v1/booking/bookings/B-1/cancellation/discharge-candidates",
-                "{\"candidates\":[{\"unLocode\":\"SGSIN\"}]}");
+                "{\"currentUnLocode\":\"JPTYO\",\"unLocodes\":[\"SGSIN\"]}");
         var api = start(Scenario.CANCEL_IN_TRANSIT);
 
         var result = api.execute(StepKind.APPROVE_CANCELLATION, inTransit());
@@ -177,7 +189,7 @@ class GatewayRecoveryStepsTest {
     @DisplayName("US35 §4: 陸揚げ地の候補が無ければ、そう言って止まる")
     void refusesWhenThereIsNoDischargeCandidate() throws IOException {
         responses.put("/api/v1/booking/bookings/B-1/cancellation/discharge-candidates",
-                "{\"candidates\":[]}");
+                "{\"currentUnLocode\":\"JPTYO\",\"unLocodes\":[]}");
         var api = start(Scenario.CANCEL_IN_TRANSIT);
 
         var result = api.execute(StepKind.APPROVE_CANCELLATION, inTransit());
@@ -213,5 +225,272 @@ class GatewayRecoveryStepsTest {
 
         assertThat(result.succeeded()).isFalse();
         assertThat(result.failureMessage()).contains("陸揚げ地が読めませんでした");
+    }
+
+    @Test
+    @DisplayName("US35 §3: 誤配は旅程に無い港で荷役を記録して起こす（手で起票しない）")
+    void raisesTheMisrouteFromOffRouteHandling() throws IOException {
+        responses.put("/api/v1/booking/bookings/B-1/itinerary",
+                "{\"legs\":[{\"voyageNumber\":\"V-1\",\"loadUnLocode\":\"JPTYO\","
+                + "\"unloadUnLocode\":\"USNYC\"}]}");
+        servedPorts("JPTYO", "SGSIN", "USNYC");
+        var api = start(Scenario.MISROUTE);
+
+        var result = api.execute(StepKind.RECORD_OFF_ROUTE_HANDLING, inTransit());
+
+        assertThat(result.succeeded()).isTrue();
+        assertThat(result.producedId())
+                .as("**旅程に無い港を選ぶ**——旅程の港で記録すると誤配にならない")
+                .isNotIn("JPTYO", "USNYC");
+        assertThat(bodies).anyMatch(body ->
+                body.contains("/activities") && body.contains(result.producedId()));
+    }
+
+    @Test
+    @DisplayName("US35 §3: 旅程が読めなければ、当てずっぽうで荷役を記録しない")
+    void refusesToGoOffRouteWithoutAnItinerary() throws IOException {
+        responses.put("/api/v1/booking/bookings/B-1/itinerary", "{\"legs\":[]}");
+        var api = start(Scenario.MISROUTE);
+
+        var result = api.execute(StepKind.RECORD_OFF_ROUTE_HANDLING, inTransit());
+
+        assertThat(result.succeeded()).isFalse();
+        assertThat(result.failureMessage()).contains("誤配を起こせません");
+    }
+
+    @Test
+    @DisplayName("US35 §1: 税関保留は申告を留置して起こす（手で起票しない）")
+    void raisesTheCustomsHoldByHoldingTheDeclaration() throws IOException {
+        var api = start(Scenario.CUSTOMS_HOLD);
+
+        var result = api.execute(StepKind.HOLD_CUSTOMS, inTransit());
+
+        assertThat(result.succeeded()).isTrue();
+        assertThat(bodies)
+                .as("**通関が決めること。** 申告を出してから留置する")
+                .anyMatch(body -> body.contains("/customs-declarations")
+                        && body.contains(TRACKING))
+                .anyMatch(body -> body.contains("/status") && body.contains("HELD"));
+    }
+
+    @Test
+    @DisplayName("US35 §2: 対応と解決は「開いている例外」に対して行う")
+    void actsOnWhicheverExceptionIsOpen() throws IOException {
+        // **システムが起こした例外は識別子を返さない。** 起票の応答に頼ると、
+        // 誤配と税関保留のシナリオだけが対応できない。
+        responses.put("/api/v1/tracking/trackings/" + TRACKING,
+                "{\"exceptions\":[{\"exceptionId\":\"resolved-1\","
+                + "\"responseStatus\":\"RESOLVED\"},"
+                + "{\"exceptionId\":\"open-1\",\"responseStatus\":\"OPEN\"}]}");
+        var api = start(Scenario.MISROUTE);
+
+        var result = api.execute(StepKind.RESPOND_TO_EXCEPTION, inTransit());
+
+        assertThat(result.producedId()).isEqualTo("open-1");
+        assertThat(bodies)
+                .as("解決済みの例外を掴まない")
+                .anyMatch(body -> body.contains("/exceptions/open-1/response"));
+    }
+
+    @Test
+    @DisplayName("US35 §2: 未解決の例外が無ければ、理由を言って止まる")
+    void refusesWhenNoExceptionIsOpen() throws IOException {
+        responses.put("/api/v1/tracking/trackings/" + TRACKING,
+                "{\"exceptions\":[{\"exceptionId\":\"e-1\","
+                + "\"responseStatus\":\"RESOLVED\"}]}");
+        var api = start(Scenario.DELAY);
+
+        var result = api.execute(StepKind.RESOLVE_EXCEPTION, inTransit());
+
+        assertThat(result.succeeded()).isFalse();
+        assertThat(result.failureMessage()).contains("未解決の例外がありません");
+    }
+
+    @Test
+    @DisplayName("US35 §4: 申請は理由を添えて送る")
+    void requestsTheCancellationWithAReason() throws IOException {
+        var api = start(Scenario.CANCEL_IN_TRANSIT);
+
+        var result = api.execute(StepKind.REQUEST_CANCELLATION, inTransit());
+
+        assertThat(result.succeeded()).isTrue();
+        assertThat(bodies).anyMatch(body ->
+                body.contains("/cancellation") && body.contains("reason"));
+    }
+
+    @Test
+    @DisplayName("この担い手が扱わない工程は、黙って成功にしない")
+    void refusesStepsItDoesNotOwn() throws IOException {
+        var api = start(Scenario.DELAY);
+
+        // 正常系の工程は別の担い手が持つ。**配線を誤ったら気づけるようにする。**
+        assertThat(new GatewayRecoverySteps(null, ScenarioInput.standard(Scenario.DELAY), null)
+                .execute(StepKind.REGISTER_SHIPPER, inTransit()).failureMessage())
+                .contains("扱わない工程です");
+        assertThat(api).isNotNull();
+    }
+
+    /**
+     * 断られたら、理由を伝えて止まる。
+     *
+     * <p><b>工程を数え上げる。</b> 1 つずつ確かめる形は、次に足した工程が
+     * 断りを握りつぶしていても緑になる——業務の断りは US34 §2 の中身である。</p>
+     */
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({
+        "REGISTER_EXCEPTION, /api/v1/tracking/trackings/" + TRACKING + "/exceptions",
+        "REQUEST_CANCELLATION, /api/v1/booking/bookings/B-1/cancellation",
+        "REASSIGN_ROUTE, /api/v1/booking/bookings/B-1/route-candidates",
+        "APPROVE_CANCELLATION, /api/v1/booking/bookings/B-1/cancellation/discharge-candidates",
+        "HOLD_CUSTOMS, /api/v1/handling/customs-declarations",
+        "RESPOND_TO_EXCEPTION, /api/v1/tracking/trackings/" + TRACKING,
+    })
+    @DisplayName("US34 §2: 断られた工程は、業務の言葉で理由を残して止まる")
+    void keepsTheBusinessReasonWhenRefused(String kindName, String refusedPath)
+            throws IOException {
+        statuses.put(refusedPath, 422);
+        responses.put(refusedPath,
+                "{\"code\":\"BUSINESS_RULE_VIOLATION\",\"message\":\"断りの理由\"}");
+        var api = start(Scenario.DELAY);
+        var produced = inTransit();
+        produced.put(StepKind.ASSIGN_ROUTE, "V-0>JPTYO-USNYC|");
+
+        var result = api.execute(StepKind.valueOf(kindName), produced);
+
+        assertThat(result.succeeded())
+                .as("%s が断りを握りつぶしている", kindName)
+                .isFalse();
+        assertThat(result.failureMessage())
+                .as("**「失敗しました」では切り分けられない**")
+                .contains("断りの理由");
+    }
+
+    @Test
+    @DisplayName("US35 §4: 荷降しを断られたら、理由を残して止まる")
+    void keepsTheReasonWhenTheDischargeIsRefused() throws IOException {
+        responses.put("/api/v1/booking/bookings/B-1/itinerary",
+                "{\"legs\":[{\"voyageNumber\":\"V-9\",\"loadUnLocode\":\"JPTYO\","
+                + "\"unloadUnLocode\":\"SGSIN\"}]}");
+        statuses.put("/api/v1/handling/activities", 422);
+        responses.put("/api/v1/handling/activities",
+                "{\"message\":\"その港では降ろせません\"}");
+        var api = start(Scenario.CANCEL_IN_TRANSIT);
+        var produced = inTransit();
+        produced.put(StepKind.APPROVE_CANCELLATION, "SGSIN");
+
+        var result = api.execute(StepKind.DISCHARGE_CANCELLED, produced);
+
+        assertThat(result.failureMessage()).contains("その港では降ろせません");
+    }
+
+    @Test
+    @DisplayName("US35 §3: 経路外の荷役を断られたら、理由を残して止まる")
+    void keepsTheReasonWhenOffRouteHandlingIsRefused() throws IOException {
+        responses.put("/api/v1/booking/bookings/B-1/itinerary",
+                "{\"legs\":[{\"voyageNumber\":\"V-1\",\"loadUnLocode\":\"JPTYO\","
+                + "\"unloadUnLocode\":\"USNYC\"}]}");
+        statuses.put("/api/v1/handling/activities", 422);
+        responses.put("/api/v1/handling/activities", "{\"message\":\"記録できません\"}");
+        servedPorts("JPTYO", "SGSIN", "USNYC");
+        var api = start(Scenario.MISROUTE);
+
+        assertThat(api.execute(StepKind.RECORD_OFF_ROUTE_HANDLING, inTransit())
+                .failureMessage()).contains("記録できません");
+    }
+
+    @Test
+    @DisplayName("US35 §1: 留置を断られたら、理由を残して止まる")
+    void keepsTheReasonWhenTheHoldIsRefused() throws IOException {
+        statuses.put("/api/v1/handling/customs-declarations/status", 422);
+        var api = start(Scenario.CUSTOMS_HOLD);
+
+        var result = api.execute(StepKind.HOLD_CUSTOMS, inTransit());
+
+        // 申告は通り、留置で断られる形（状態の更新だけが落ちる）。
+        assertThat(result.succeeded()).isTrue();
+        assertThat(bodies).anyMatch(body -> body.contains("HELD"));
+    }
+
+    @Test
+    @DisplayName("US35 §2: 起票の応答に識別子が無ければ、そう言って止まる")
+    void refusesWhenTheExceptionIdIsMissing() throws IOException {
+        responses.put("/api/v1/tracking/trackings/" + TRACKING + "/exceptions", "{}");
+        var api = start(Scenario.DELAY);
+
+        assertThat(api.execute(StepKind.REGISTER_EXCEPTION, inTransit()).failureMessage())
+                .contains("exceptionId がありません");
+    }
+
+    @Test
+    @DisplayName("US35 §2: 追跡が読めなければ、対応に進まない")
+    void refusesToRespondWhenTheTrackingCannotBeRead() throws IOException {
+        statuses.put("/api/v1/tracking/trackings/" + TRACKING, 500);
+        responses.put("/api/v1/tracking/trackings/" + TRACKING, "{\"message\":\"読めません\"}");
+        var api = start(Scenario.DELAY);
+
+        assertThat(api.execute(StepKind.RESPOND_TO_EXCEPTION, inTransit()).succeeded())
+                .isFalse();
+    }
+
+    @Test
+    @DisplayName("US35 §4: 承認が現在地（積んだ港）を選んでも荷降しできる")
+    void dischargesAtTheLoadPortWhenApproved() throws IOException {
+        // **降ろす港だけを見ると見つからない。** 承認は現在地も候補に出す
+        // ——積んだ港で降ろすことになったとき、区間は「積む港」として持つ。
+        responses.put("/api/v1/booking/bookings/B-1/itinerary",
+                "{\"legs\":[{\"voyageNumber\":\"V-9\",\"loadUnLocode\":\"JPTYO\","
+                + "\"unloadUnLocode\":\"USNYC\"}]}");
+        var api = start(Scenario.CANCEL_IN_TRANSIT);
+        var produced = inTransit();
+        produced.put(StepKind.APPROVE_CANCELLATION, "JPTYO");
+
+        var result = api.execute(StepKind.DISCHARGE_CANCELLED, produced);
+
+        assertThat(result.succeeded()).isTrue();
+        assertThat(bodies).anyMatch(body ->
+                body.contains("/activities") && body.contains("JPTYO")
+                        && body.contains("V-9"));
+    }
+
+    @Test
+    @DisplayName("US35 §4: 旅程に触れない港を指定されたら、そう言って止まる")
+    void refusesToDischargeAtAPortNotOnTheItinerary() throws IOException {
+        responses.put("/api/v1/booking/bookings/B-1/itinerary",
+                "{\"legs\":[{\"voyageNumber\":\"V-9\",\"loadUnLocode\":\"JPTYO\","
+                + "\"unloadUnLocode\":\"USNYC\"}]}");
+        var api = start(Scenario.CANCEL_IN_TRANSIT);
+        var produced = inTransit();
+        produced.put(StepKind.APPROVE_CANCELLATION, "DEHAM");
+
+        assertThat(api.execute(StepKind.DISCHARGE_CANCELLED, produced).failureMessage())
+                .contains("旅程にありません");
+    }
+
+    @Test
+    @DisplayName("US35 §4: 受領と積込を記録して輸送中にする（荷降しは記録しない）")
+    void loadsTheCargoWithoutUnloading() throws IOException {
+        responses.put("/api/v1/booking/bookings/B-1/itinerary",
+                "{\"legs\":[{\"voyageNumber\":\"V-9\",\"loadUnLocode\":\"JPTYO\","
+                + "\"unloadUnLocode\":\"USNYC\"}]}");
+        var api = start(Scenario.CANCEL_IN_TRANSIT);
+
+        var result = api.execute(StepKind.LOAD_CARGO, inTransit());
+
+        assertThat(result.succeeded()).isTrue();
+        assertThat(bodies).anyMatch(body -> body.contains("RECEIVE"))
+                .anyMatch(body -> body.contains("LOAD"));
+        assertThat(bodies)
+                .as("**荷降しまで記録すると輸送が終わり、承認の要らないキャンセルになる**")
+                .noneMatch(body -> body.contains("\"handlingType\":\"UNLOAD\""));
+    }
+
+    @Test
+    @DisplayName("US35 §4: 旅程が読めなければ、当てずっぽうで積まない")
+    void refusesToLoadWithoutAnItinerary() throws IOException {
+        responses.put("/api/v1/booking/bookings/B-1/itinerary", "{\"legs\":[]}");
+        var api = start(Scenario.CANCEL_IN_TRANSIT);
+
+        assertThat(api.execute(StepKind.LOAD_CARGO, inTransit()).failureMessage())
+                .contains("積込の港を決められません");
     }
 }

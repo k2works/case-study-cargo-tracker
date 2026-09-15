@@ -180,19 +180,23 @@ class GatewayChainReadinessTest {
     @Test
     @DisplayName("US35 §1: 起票は未解決の件数が増えるまで待つ")
     void waitsUntilTheExceptionIsCounted() {
-        tracking("{\"openExceptionCount\":0}");
+        // **解決済みしかなければ「まだ」。** 件数の列は単票に出ていないので、
+        // 明細から数える（読み口に無い項目で待つと、いつまでも追いつかない）。
+        tracking("{\"exceptions\":[{\"exceptionId\":\"old\","
+                + "\"responseStatus\":\"RESOLVED\"}]}");
         assertThat(readiness.isReady(StepKind.REGISTER_EXCEPTION, recovering())).isFalse();
 
-        tracking("{\"openExceptionCount\":1}");
+        tracking("{\"exceptions\":[{\"exceptionId\":\"exc-1\","
+                + "\"responseStatus\":\"OPEN\"}]}");
         assertThat(readiness.isReady(StepKind.REGISTER_EXCEPTION, recovering())).isTrue();
     }
 
     @Test
     @DisplayName("US35 §2: 対応は、その例外の対応状態が変わるまで待つ")
     void waitsForThatExceptionToBeResponding() {
-        // **別の例外が対応中でも満たさない。** 起票した例外を名指しで見る。
-        tracking("{\"exceptions\":[{\"exceptionId\":\"other\","
-                + "\"responseStatus\":\"RESPONDING\"}]}");
+        // **まだ開いただけなら満たさない。**
+        tracking("{\"exceptions\":[{\"exceptionId\":\"exc-1\","
+                + "\"responseStatus\":\"OPEN\"}]}");
         assertThat(readiness.isReady(StepKind.RESPOND_TO_EXCEPTION, recovering())).isFalse();
 
         tracking("{\"exceptions\":[{\"exceptionId\":\"exc-1\","
@@ -203,10 +207,12 @@ class GatewayChainReadinessTest {
     @Test
     @DisplayName("US35 §2: 解決は未解決が 0 に戻るまで待つ")
     void waitsUntilNoExceptionIsOpen() {
-        tracking("{\"openExceptionCount\":1}");
+        tracking("{\"exceptions\":[{\"exceptionId\":\"exc-1\","
+                + "\"responseStatus\":\"RESPONDING\"}]}");
         assertThat(readiness.isReady(StepKind.RESOLVE_EXCEPTION, recovering())).isFalse();
 
-        tracking("{\"openExceptionCount\":0}");
+        tracking("{\"exceptions\":[{\"exceptionId\":\"exc-1\","
+                + "\"responseStatus\":\"RESOLVED\"}]}");
         assertThat(readiness.isReady(StepKind.RESOLVE_EXCEPTION, recovering())).isTrue();
     }
 
@@ -232,10 +238,17 @@ class GatewayChainReadinessTest {
     @Test
     @DisplayName("US35 §4: 申請は承認待ちになるまで、承認は陸揚げ地が追跡へ届くまで待つ")
     void waitsForTheCancellationChain() {
-        responses.put("/api/v1/booking/bookings/BK-1/cancellation", "{}");
+        // **次の工程が読む場所で待つ**（承認待ち一覧・S23）。履歴で待つと、
+        // 承認する人の一覧に出ていなくても次へ進む。
+        responses.put("/api/v1/booking/bookings/cancellations", "{\"items\":[]}");
         assertThat(readiness.isReady(StepKind.REQUEST_CANCELLATION, recovering())).isFalse();
-        responses.put("/api/v1/booking/bookings/BK-1/cancellation",
-                "{\"requestedAt\":\"2026-09-15T00:00:00Z\"}");
+        responses.put("/api/v1/booking/bookings/cancellations",
+                "{\"items\":[{\"bookingId\":\"other\"}]}");
+        assertThat(readiness.isReady(StepKind.REQUEST_CANCELLATION, recovering()))
+                .as("別の予約の申請では満たさない")
+                .isFalse();
+        responses.put("/api/v1/booking/bookings/cancellations",
+                "{\"items\":[{\"bookingId\":\"BK-1\"}]}");
         assertThat(readiness.isReady(StepKind.REQUEST_CANCELLATION, recovering())).isTrue();
 
         tracking("{}");
@@ -256,5 +269,18 @@ class GatewayChainReadinessTest {
 
         tracking("{\"closed\":true}");
         assertThat(readiness.isReady(StepKind.DISCHARGE_CANCELLED, recovering())).isTrue();
+    }
+
+    @Test
+    @DisplayName("US33 §6: 追跡番号の発行は、荷役の写しが追いつくまで待つ")
+    void waitsForTheHandlingSnapshotToo() {
+        // **次の工程が読む場所で待つ。** 追跡だけ見て進むと、荷役の記録が
+        // 「貨物が見つかりません」で止まる（実測）——同じイベントから別の BC が
+        // 投影するので、追いつく時刻が違う。
+        statuses.put("/api/v1/handling/cargos/TRK-1", 404);
+        assertThat(readiness.isReady(StepKind.ISSUE_TRACKING_NUMBER, PRODUCED)).isFalse();
+
+        statuses.remove("/api/v1/handling/cargos/TRK-1");
+        assertThat(readiness.isReady(StepKind.ISSUE_TRACKING_NUMBER, PRODUCED)).isTrue();
     }
 }

@@ -24,9 +24,8 @@ class ScenarioTest {
      * <b>値の一覧から回す</b>——1 つずつ書くと、次に足した種類の検査が漏れる。</p>
      */
     @ParameterizedTest
-    @EnumSource(value = Scenario.class,
-            names = {"DELAY", "DAMAGE", "CUSTOMS_HOLD"})
-    @DisplayName("US35 §1・§2: 例外シナリオは起票・対応・解決までを順に含む")
+    @EnumSource(value = Scenario.class, names = {"DELAY", "DAMAGE"})
+    @DisplayName("US35 §1・§2: 手で起票する例外は、起票・対応・解決までを順に含む")
     void exceptionScenariosShareTheSameSteps(Scenario scenario) {
         assertThat(scenario.steps()).containsExactly(
                 StepKind.REGISTER_SHIPPER,
@@ -44,6 +43,24 @@ class ScenarioTest {
                 .isNotNull();
     }
 
+    @ParameterizedTest
+    @EnumSource(value = Scenario.class, names = {"MISROUTE", "CUSTOMS_HOLD"})
+    @DisplayName("US35 §1・§3: 誤配と税関保留は手で起票しない（業務の出来事から起こす）")
+    void systemRaisedExceptionsAreNotReportedByHand(Scenario scenario) {
+        // **実物が断った。** 誤配は荷役が、税関保留は通関が決めることなので、
+        // 手で起票できると「起きていない誤配」を記録できる——経路設計者は
+        // それを組み直そうとする。
+        assertThat(scenario.steps())
+                .as("%s は手で起票してはいけない", scenario)
+                .doesNotContain(StepKind.REGISTER_EXCEPTION);
+        assertThat(scenario.exceptionType())
+                .as("起票しないので種別も持たない")
+                .isNull();
+        assertThat(scenario.steps())
+                .as("代わりに業務の出来事から起こす")
+                .containsAnyOf(StepKind.RECORD_OFF_ROUTE_HANDLING, StepKind.HOLD_CUSTOMS);
+    }
+
     @Test
     @DisplayName("US35 §3: 誤配は対応の途中で経路を組み直してから解決する")
     void misrouteReassignsTheRouteBeforeResolving() {
@@ -56,7 +73,7 @@ class ScenarioTest {
                 StepKind.NOTIFY_SHIPPER,
                 StepKind.CONFIRM_BOOKING,
                 StepKind.ISSUE_TRACKING_NUMBER,
-                StepKind.REGISTER_EXCEPTION,
+                StepKind.RECORD_OFF_ROUTE_HANDLING,
                 StepKind.RESPOND_TO_EXCEPTION,
                 StepKind.REASSIGN_ROUTE,
                 StepKind.RESOLVE_EXCEPTION);
@@ -74,6 +91,7 @@ class ScenarioTest {
                 StepKind.NOTIFY_SHIPPER,
                 StepKind.CONFIRM_BOOKING,
                 StepKind.ISSUE_TRACKING_NUMBER,
+                StepKind.LOAD_CARGO,
                 StepKind.REQUEST_CANCELLATION,
                 StepKind.APPROVE_CANCELLATION,
                 StepKind.DISCHARGE_CANCELLED);

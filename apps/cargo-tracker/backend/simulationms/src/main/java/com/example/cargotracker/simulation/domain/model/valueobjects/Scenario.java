@@ -77,16 +77,32 @@ public enum Scenario {
             StepKind.NOTIFY_SHIPPER,
             StepKind.CONFIRM_BOOKING,
             StepKind.ISSUE_TRACKING_NUMBER,
-            StepKind.REGISTER_EXCEPTION,
+            // **手で起票しない**（実物が断った）。経路外の荷役から起こす。
+            StepKind.RECORD_OFF_ROUTE_HANDLING,
             StepKind.RESPOND_TO_EXCEPTION,
             // **現在地からの組み直し。** 叩く API は経路の確定と同じだが、
             // 待つ相手が違う（前と違う旅程になったか）——工程を分けないと
             // 2 度目の待ちが空振りする。
             StepKind.REASSIGN_ROUTE,
-            StepKind.RESOLVE_EXCEPTION), "MISROUTE"),
+            StepKind.RESOLVE_EXCEPTION), null),
 
-    /** 税関保留が起きて、対応して、解決する（US35 §受入基準 1・2）。 */
-    CUSTOMS_HOLD("税関保留の発生と対応", exceptionSteps(), "CUSTOMS_HOLD"),
+    /**
+     * 通関で留置され、対応して、解決する（US35 §受入基準 1・2）。
+     *
+     * <p><b>手で起票しない。</b> 税関保留は通関が決めることなので、実物は手での
+     * 起票を断る（実測）——<b>本番と同じ出来事（申告を留置する）から起こす</b>。</p>
+     */
+    CUSTOMS_HOLD("税関保留の発生と対応", List.of(
+            StepKind.REGISTER_SHIPPER,
+            StepKind.REGISTER_BOOKING,
+            StepKind.REQUEST_ROUTING,
+            StepKind.ASSIGN_ROUTE,
+            StepKind.NOTIFY_SHIPPER,
+            StepKind.CONFIRM_BOOKING,
+            StepKind.ISSUE_TRACKING_NUMBER,
+            StepKind.HOLD_CUSTOMS,
+            StepKind.RESPOND_TO_EXCEPTION,
+            StepKind.RESOLVE_EXCEPTION), null),
 
     /**
      * 輸送中にキャンセルされ、**承認で指定した港での荷降しまで実行され、
@@ -104,6 +120,9 @@ public enum Scenario {
             StepKind.NOTIFY_SHIPPER,
             StepKind.CONFIRM_BOOKING,
             StepKind.ISSUE_TRACKING_NUMBER,
+            // **先に輸送中にする。** 輸送前のキャンセルは承認を要らず即座に
+            // 決着するので、承認と陸揚げ地の指定を確かめられない（実測）。
+            StepKind.LOAD_CARGO,
             StepKind.REQUEST_CANCELLATION,
             StepKind.APPROVE_CANCELLATION,
             StepKind.DISCHARGE_CANCELLED), null);

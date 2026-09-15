@@ -114,12 +114,29 @@ public final class SimulationStack extends AbstractAxonIntegrationTest {
         launch(SimulationApplication.class, "simulation", "sim_simulation",
                 ports.get("simulation"), EXCLUDE_SECURITY,
                 "--cargo-tracker.simulation.enabled=true",
+                // **継続実行も許可した実物を立てる**（US36）。実行そのものの許可とは
+                // 別の段なので、片方だけ立てると §6 の断りを確かめたことにならない。
+                "--cargo-tracker.simulation.schedule.enabled=true",
+                // **間隔は短くする。** 本番の既定（30 秒）のままだと、受け入れが
+                // 「頃合いが来るのを待つ」だけで数分伸びる。**0 にはしない**
+                // ——間を空けないと業務が止まる（この局面に固有の危険 3）。
+                "--cargo-tracker.simulation.schedule.interval=5s",
+                // **設定は全部渡す。** 同じ JVM に 8 つ載せると application.yml が
+                // classpath 上で衝突し、どれか 1 つしか読まれない——既定を
+                // 当てにすると `maxConcurrent=0`（動かない稼働）で立ち上がる（実測）。
+                "--cargo-tracker.simulation.schedule.max-concurrent=2",
+                "--cargo-tracker.simulation.schedule.exception-ratio=0.2",
                 "--cargo-tracker.simulation.gateway-url=" + gatewayUrl);
         // **断るほうも立てる。** 「本番では実行しない」は設定で決まるので、
         // 同じ実装を違う設定で立てないと確かめられない（US33 §4）。
         launch(SimulationApplication.class, "simulation", "sim_simulation_off",
                 ports.get("simulationDisabled"), EXCLUDE_SECURITY,
                 "--cargo-tracker.simulation.enabled=false",
+                // 継続実行も許可しない（US36 §6）。
+                "--cargo-tracker.simulation.schedule.enabled=false",
+                "--cargo-tracker.simulation.schedule.interval=5s",
+                "--cargo-tracker.simulation.schedule.max-concurrent=2",
+                "--cargo-tracker.simulation.schedule.exception-ratio=0.2",
                 "--cargo-tracker.simulation.gateway-url=" + gatewayUrl);
 
         startGateway();
