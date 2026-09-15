@@ -4,7 +4,7 @@ title: "ADR-0020 業務シミュレーションは独立サービスに置き、
 description: "本番と同じ API を人と同じ順で叩く駆動役を simulationms として切り出す。実行の記録は業務の事実ではないので、authms と同じく現在状態だけを持つ。"
 tags: [adr]
 status: draft
-generated: { by: claude-code/claude-opus-5, at: 2026-09-14T16:16:36Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-15T02:13:08Z }
 ---
 
 # ADR-0020 業務シミュレーションは独立サービスに置き、Event Sourcing は適用しない
@@ -65,9 +65,21 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-14T16:16:36Z }
 | 経路設計の作業一覧（S30） | 済 | 同 `worklistVisible`。**失敗シナリオは必ずここで止まる** |
 | 荷主一覧（S10） | 済 | `ShipperMapper` の投影に印を持つ |
 | 請求一覧（S60） | 済 | `InvoiceMapper.xml` の `searchWhere` |
-| 追跡一覧（S40） | **未** | 印そのものが `trackingms` に無い。IT17 |
-| 荷役の作業一覧（S50・S54） | **未** | 同上（`handlingms`）。IT17 |
-| 要確認一覧（S70） | **未** | `attention_item` が荷主を持たない。列を足して登録時に解決する。IT17 |
+| 追跡一覧（S40） | 済 | `TrackingSummaryMapper` の `findAll` / `countAll`。IT17 |
+| 荷役の作業一覧（S50）・ダッシュボード（S02）・引取待ち（S54） | 済 | `CargoSnapshotMapper` の 3 つの読み口。IT17 |
+| 要確認一覧（S70・bookingms / billingms） | 済 | `AttentionItemMapper` の `findOpenByRole`。登録時に対象から解決する。IT17 |
+
+**外さない読み口も書く。** 「まだ外していない」と「意図して外さない」は別である。
+
+| 読み口 | 外さない理由 |
+| :--- | :--- |
+| 追跡・予約・請求・荷役の**単票** | US34 の実行結果が工程ごとにここへ辿る。外すと実行結果から何も開けない |
+| 追跡一覧を**荷主で絞る**読み（S40 荷主 / S02 荷主） | 行はその荷主のものしか返らない。外すと確認用の利用者が自分の一覧から辿れない（US37 §6） |
+| 航海あての要確認（`routingms`） | 航海は共有の設備で、荷主に属さない。印が付く対象ではない |
+
+**引く先が無い対象は本物として扱う。** シミュレーションかどうかを引けない要確認
+（写しがまだ無い・対象の種類を知らない）は一覧に出す。消す側に倒すと、いちばん
+知らせたい「請求書を作れなかった」が黙って消える。
 
 ## 検査
 
@@ -76,7 +88,7 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-14T16:16:36Z }
 | 1 | `SimulationServiceIsSeparateTest`（`simulationms` が他サービスのパッケージ・DB に依存しない） |
 | 2 | `OnlySimulationCrossesByHttpTest`（HTTP クライアントを本番コードで使うのは `simulationms` だけ。**全サービスを走査してから**判定する） |
 | 3 | `EventSourcedServicesHaveTheSameShapeTest`（`@EventSourced` を付けた集約だけを拾うので、付けなければ対象外。**付けたのに形が違えば赤**） |
-| 4 | `SimulatedOriginRoundTripIT`（印が 5 つの読み口まで届く・**表ではなく一覧の経路で見る**）、`ShipperDataEncryptingConverterTest`（組み直しで項目を落とさない）、`ShipperControllerIT`（許可していない環境では印を受け付けない）、受け入れ「生成した予約は、営業の予約一覧に出ない」 |
+| 4 | `SimulatedOriginRoundTripIT`（印が予約・請求・追跡・荷役の一覧まで届く・**表ではなく一覧の経路で見る**。BC をまたぐ配送を判別するのはここだけ）、`SimulatedOriginExcludedIT`（trackingms / handlingms。**読み口を数え上げた表を javadoc に置く**）、`SimulatedAttentionExcludedIT`（bookingms / billingms）、`ShipperDataEncryptingConverterTest`（組み直しで項目を落とさない）、`ShipperControllerIT`（許可していない環境では印を受け付けない）、受け入れ「生成した予約は、営業の予約一覧に出ない」 |
 
 **決定 3 に専用の検査は要りません。** 既存の検査は「`@EventSourced` が付いた集約を全部拾ってから形を見る」形なので、付けなければ何も要求しません。**名簿に例外を足す必要がない**のは、この検査が名簿方式でないからです。
 
@@ -95,3 +107,5 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-14T16:16:36Z }
 **悪い面.** **HTTP で越境する経路が 1 本できます。** `simulationms` は他サービスの API の形（パス・要求・応答）に依存するので、API を変えるとここも直ります——**契約イベントと違い、変更が検査で捕まりません**。受け入れシナリオとクラスタ E2E が唯一の安全網になります。
 
 **残っている窓.** `simulationms` が Gateway の URL を組み立てるので、**Gateway の経路を変えたときに気づく手段が弱い**です。IT17 で「シナリオが叩く経路の一覧」と Gateway の宣言を突き合わせる検査を置くかどうかを決めます。
+
+**印の解決には順序の窓があります。** 追跡・荷役・請求は「荷主の写しが先に届いている」ことを前提に投影の時点で印を解決します。写しがまだ無ければ本物として扱うので、荷主の登録と追跡の開始がごく短い間隔で起きると、その 1 件だけ一覧に残ります。シミュレーションは登録から追跡開始まで数十秒かかるので実害はありませんが、**印を消す側に倒さない判断の裏返し**として記録します。
