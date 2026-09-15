@@ -1,16 +1,16 @@
-# 適用済みマイグレーションの内容ハッシュ（IT10 Try T6）
 #
+#
+#
+#   - まだどこにも適用していない版を直した（その行だけ値が変わる）
+#   - 新しい版を足した（行が増える）
 # **既にある版を書き換えたら、この台帳との食い違いで赤になる。**
+# **直し方は、この台帳を書き換えることではない。** 新しい版を足すこと。
 # Flyway は適用済みの版の内容ハッシュを持っており、書き換えると動いている
 # クラスタだけが checksum mismatch で起動しなくなる。CI は毎回まっさらな DB に
-# 当てるので、この食い違いはどのテストにも現れない（IT9 で実測）。
-#
-# **直し方は、この台帳を書き換えることではない。** 新しい版を足すこと。
 # 台帳を直せば検査は何も守らなくなる。
-#
+# 当てるので、この食い違いはどのテストにも現れない（IT9 で実測）。
 # 更新するのは 2 つの場合だけ:
-#   - 新しい版を足した（行が増える）
-#   - まだどこにも適用していない版を直した（その行だけ値が変わる）
+# 適用済みマイグレーションの内容ハッシュ（IT10 Try T6）
 00551e3a08e56941dc7656e3ba6b41f4fd895f0ebba531f4080f3b70bdf51d5e  handlingms/src/main/resources/db/migration/handling/V007__create_customs_status_history.sql
 020ebb13a467535f4080c2262396baccae6320cf85de62f0502d8e8cb9c1417d  bookingms/src/main/resources/db/migration/booking/V011__add_route_search_conditions.sql
 02cb70e2764c6a45a8ab84c5d09962be62e6dbe4be5c6334e288c18843ed963c  trackingms/src/main/resources/db/migration/tracking/V003__create_tracking_event.sql
@@ -30,9 +30,12 @@
 39adbe0fc1adc238bb60ba47d44ead2ab20736b593be14336f8dbd15b90a1cb9  authms/src/main/resources/db/migration/auth/V003__align_auth_audit_log_with_design.sql
 3a237837a11f2de100f296254c103498ba5669293d16375145912b4967d04bd5  bookingms/src/main/resources/db/migration/booking/V009__create_cargo_leg.sql
 3ac80cb6fe1a36955e8fe5dc02bc5283cb35325599797bf68dfdcd717ba7d24b  handlingms/src/main/resources/db/migration/handling/V008__drop_held_business_days_and_guard_unsettled.sql
+3bfd9a16c14202b566bea1a202ba5622c2887d8a8afbbdc0cd8f19126cbbf575  handlingms/src/main/resources/db/migration/handling/V011__add_simulated_origin.sql
 4ccb9bcdb495fc8d341c236fa39d53a6d9621c2c309a093b3135de239f9fcb79  bookingms/src/main/resources/db/migration/booking/V008__create_cargo_revision.sql
+51f3c662493ed9fd40a5e5c9c69b5b090a47a74afdff03ea89e6aa0f2dac5163  trackingms/src/main/resources/db/migration/tracking/V013__add_simulated_origin.sql
 52669990ca85785eb2cbac00b495f2b79fb26a4b8a3d599b9fa7463f92821526  authms/src/main/resources/db/migration/auth/V002__create_user_tables.sql
 54d3d65842fedb844ba560ee4ef51d3d886bd7c0b9e75494061f217772e9291b  trackingms/src/main/resources/db/migration/tracking/V010__widen_exception_id.sql
+5cca667ece3587ff0dfc378e30522e0c35b97e4102bc834f272480ea58306e65  simulationms/src/main/resources/db/migration/simulation/V003__create_simulation_schedule.sql
 6314ff8bc3a620ebe35fbb53a9fbbd6ec8898024d2e19840a05d49c938d1a74c  billingms/src/main/resources/db/migration/billing/V013__add_simulated_origin.sql
 6afe84bb93d4818ae28925cd845c19cbeb8e641ae7c56aee4073ed59711a6205  bookingms/src/main/resources/db/migration/booking/V002__create_shipper_and_attention.sql
 6dfc218b53eac134a7a30184415a39c70412da626fa3c0aef2737d65b8ff0877  trackingms/src/main/resources/db/migration/tracking/V007__create_tracking_exception.sql
@@ -42,8 +45,10 @@
 6e28143da24c6e64d9932752e3a917b983af9baec40d2b3732a76d98e7ca1a35  routingms/src/main/resources/db/migration/routing/V009__create_dead_letter_entry.sql
 6e28143da24c6e64d9932752e3a917b983af9baec40d2b3732a76d98e7ca1a35  trackingms/src/main/resources/db/migration/tracking/V011__create_dead_letter_entry.sql
 6fb12a9660b41f0cf5e4815f0af915fed18ed4c05cf2b18da81e84afe8de0245  billingms/src/main/resources/db/migration/billing/V007__drop_unused_cargo_booking_index.sql
+7d85788d9f369806d28870d0adeccfef7ae0bbfdd007f3c9ecefa8a18e21d776  authms/src/main/resources/db/migration/auth/V004__widen_audit_reason.sql
 7e26dfa80985c6120614b5b89b14a905ee692280b74addc0092463d414e0a52e  trackingms/src/main/resources/db/migration/tracking/V004__add_shipper_id.sql
 80a096194e8b6f1bab70e47f5f2616cd8c56f0c79e652878cabadad0f485a474  handlingms/src/main/resources/db/migration/handling/V004__add_voided_by.sql
+838a2a2f587fcdd0cad287697186848d70337cb7510e52cf63b1f89c1dee73d0  bookingms/src/main/resources/db/migration/booking/V023__add_simulated_to_attention_item.sql
 85b88c37589842cad79798259d3a3bd300d712e7b16a9d09026b4c1f46181fa6  trackingms/src/main/resources/db/migration/tracking/V005__add_current_and_estimated.sql
 899e14e46bfc8032433d65c2d1fe2c2dcb3b7c0b733edae6d3bba16c27d92580  billingms/src/main/resources/db/migration/billing/V011__create_booking_quotation.sql
 8a02b7be2f4fa8ad63adc0fb709dfffaf0d985db0841e766460b16f85b34fe12  billingms/src/main/resources/db/migration/billing/V005__create_invoice_and_attention.sql
@@ -60,6 +65,7 @@ af3899057ea604fc2e9b250525980be9c1129ea4c056040771d623c03eb8dda4  routingms/src/
 b5cae5d0cad19a3074cb3103b07f7b15ad5fdab520f67c4c6dcef18e477cd8e0  bookingms/src/main/resources/db/migration/booking/V005__rederive_attention_item_id.sql
 b5cae5d0cad19a3074cb3103b07f7b15ad5fdab520f67c4c6dcef18e477cd8e0  routingms/src/main/resources/db/migration/routing/V006__rederive_attention_item_id.sql
 bc5c5a16d62432355afb3dd49d90a1dcc3fc3ebbf338f61b7f56b1d08a05eb08  bookingms/src/main/resources/db/migration/booking/V006__add_routing_requested_at.sql
+c3ec8e3ae3dff5b82acc29e27cda5a4b43992d16037a47462752f746ba4517d7  trackingms/src/main/resources/db/migration/tracking/V014__add_notice_sequence.sql
 c64466ed78f155aa1b6209bd4cf0ada66b4e2c338e0b799a242110734678c6d1  billingms/src/main/resources/db/migration/billing/V001__create_axon_tables.sql
 c64466ed78f155aa1b6209bd4cf0ada66b4e2c338e0b799a242110734678c6d1  bookingms/src/main/resources/db/migration/booking/V001__create_axon_tables.sql
 c64466ed78f155aa1b6209bd4cf0ada66b4e2c338e0b799a242110734678c6d1  handlingms/src/main/resources/db/migration/handling/V001__create_axon_tables.sql
@@ -69,6 +75,7 @@ c7c3cab9e23880fbec2c8c556686f003c0aa96ed2cf2dee11984d4fbbb5cf931  routingms/src/
 cccc4f0edbbcfaa34554cbdb5878618a8524feced10ef3cb31bd47be137158b2  handlingms/src/main/resources/db/migration/handling/V009__add_destination_to_customs_declaration.sql
 ce16ac2659624ff4564e13a3dcf70d2386403f74fb640780e97dd179ebece796  trackingms/src/main/resources/db/migration/tracking/V009__escalation_and_misroute.sql
 ce8833c09684de2fe03f7e9c5e6104184349c3ce2f07ef78b2299a5b4436645e  handlingms/src/main/resources/db/migration/handling/V006__create_customs_declaration.sql
+d45100a9bad7c4f76ff596efbdd4c332d6f3980ff0c094834b5c82763d70babf  billingms/src/main/resources/db/migration/billing/V014__add_simulated_to_attention_item.sql
 d4efff24301458d913ad41f58f6133c56adead5620b87a1f5cbd35e48d530579  trackingms/src/main/resources/db/migration/tracking/V008__exception_response_and_notification.sql
 e1b01fd97e172947eac8ff0a235474ff9a6bc06325bc485e74be233282bf081e  trackingms/src/main/resources/db/migration/tracking/V002__create_tracking_summary.sql
 e276e07388819c3d9950a126ff92d1d8aa3dc2e42fa14f58260aa71259c8a493  authms/src/main/resources/db/migration/auth/V001__create_auth_tables.sql
@@ -80,4 +87,5 @@ ea8505a0e0acb4d81f0f67c026fa9891da0355c2f7f70e1841f572dc99e98964  bookingms/src/
 f2477496b4402a355482ba40ed33899720430dc7f8f1f8e3a9ad240052043729  bookingms/src/main/resources/db/migration/booking/V014__create_tracking_number_seq.sql
 f42e04b96f951d50af0009f533f2fbeb1b58f1bf2ed8d2a575004cf68328e1c8  routingms/src/main/resources/db/migration/routing/V002__create_voyage.sql
 f555e30f9493804aa76bd3f7eca7adead1c5a08e0bd5ccafe49ca26828dcc3f1  routingms/src/main/resources/db/migration/routing/V004__create_voyage_accepted_cargo_type.sql
+f5a4d1b36c6546342c15889ad61d1f5f590a2c0317bb1e086877e0560a6dd430  simulationms/src/main/resources/db/migration/simulation/V002__add_waited_ms.sql
 fcb23236e197b96b37465cf6aa9d6b8c2be3441dc6752e772e81f144de13e696  routingms/src/main/resources/db/migration/routing/V008__add_voyage_cancellation.sql

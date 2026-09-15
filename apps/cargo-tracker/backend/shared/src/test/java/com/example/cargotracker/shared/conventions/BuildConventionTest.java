@@ -121,19 +121,62 @@ class BuildConventionTest {
         }
     }
 
-    @Test
-    @DisplayName("ADR-0001 決定 3: 全業務サービスが共有の起動時設定を取り込む")
-    void everyServiceImportsSharedConfiguration() throws IOException {
+    /**
+     * Axon を使うサービス。
+     *
+     * <p><b>名簿で決めない。</b> 「このサービスは例外」と名前を並べると、
+     * 次に足したサービスが素通りする。<b>依存の宣言から数え上げる</b>
+     * ——Axon を入れているサービスだけが、起動時接続検査を要る。</p>
+     *
+     * <p>{@code simulationms} は Axon を入れていない（[ADR-0020] 決定 3）。
+     * 集約もイベントも持たないのに起動確認が Axon Server を待つと、
+     * <b>切り分けの道具が切り分けたい相手より先に落ちる</b>（IT16 のレビュー N7）。</p>
+     */
+    private static List<String> axonServices() throws IOException {
+        List<String> services = new java.util.ArrayList<>();
         for (String service : BUSINESS_PROJECTS) {
             if (service.equals("shared")) {
-                continue;
+                continue; // 共有カーネルは接続を持たない
             }
+            if (read(service + "/build.gradle.kts").contains("libs.bundles.axon")) {
+                services.add(service);
+            }
+        }
+        return services;
+    }
+
+    @Test
+    @DisplayName("検査が空振りしていない（Axon を使うサービスが実在する）")
+    void someServicesUseAxon() throws IOException {
+        assertThat(axonServices())
+                .as("**1 つも拾えなければ、下の検査は何も確かめていない**")
+                .hasSizeGreaterThan(5);
+    }
+
+    @Test
+    @DisplayName("ADR-0001 決定 3: Axon を使うサービスは共有の起動時設定を取り込む")
+    void everyServiceImportsSharedConfiguration() throws IOException {
+        for (String service : axonServices()) {
             String applicationClass = findApplicationClass(service);
             assertThat(applicationClass)
                     .as("%s: 起動時接続検査を取り込んでいない。取り込み忘れても赤にならないと、"
                             + "そのサービスだけ Axon Server に繋がらないまま起動する", service)
                     .contains("AxonServerStartupCheckConfiguration.class")
                     .contains("BusinessClockConfiguration.class");
+        }
+    }
+
+    @Test
+    @DisplayName("Axon を使わないサービスは、起動時接続検査も取り込まない")
+    void servicesWithoutAxonDoNotWaitForIt() throws IOException {
+        for (String service : BUSINESS_PROJECTS) {
+            if (service.equals("shared") || axonServices().contains(service)) {
+                continue;
+            }
+            assertThat(findApplicationClass(service))
+                    .as("%s: Axon を入れていないのに起動確認だけ取り込んでいる"
+                            + "（切り分けの道具が、切り分けたい相手より先に落ちる）", service)
+                    .doesNotContain("AxonServerStartupCheckConfiguration.class");
         }
     }
 
@@ -147,12 +190,46 @@ class BuildConventionTest {
         }
     }
 
+    /**
+     * 集約やイベントを持つサービス（＝Axon を要るサービス）。
+     *
+     * <p><b>名簿ではなく中身から決める。</b> 本番コードが Axon の型を参照して
+     * いれば、接続が要る——参照していなければ要らない。</p>
+     */
+    private static boolean usesAxonTypes(String service) throws IOException {
+        Path root = backendRoot().resolve(service).resolve("src/main/java");
+        try (Stream<Path> paths = Files.walk(root)) {
+            return paths.filter(p -> p.toString().endsWith(".java"))
+                    .anyMatch(p -> {
+                        try {
+                            return Files.readString(p, StandardCharsets.UTF_8)
+                                    .contains("axonframework");
+                        } catch (IOException e) {
+                            throw new java.io.UncheckedIOException(e);
+                        }
+                    });
+        }
+    }
+
     @Test
-    @DisplayName("ADR-0001 決定 3: axon-server-connector を明示依存として全業務サービスが持つ")
+    @DisplayName("ADR-0001 決定 3: Axon の型を使うサービスは connector を明示依存で持つ")
     void everyServiceDeclaresTheServerConnector() throws IOException {
         for (String service : BUSINESS_PROJECTS) {
             if (service.equals("shared")) {
                 continue; // 共有カーネルは接続を持たない
+            }
+            // **要るかどうかは中身から決める。** 自分で Axon の型を使っていなくても、
+            // 共有の起動時接続検査を取り込んでいれば接続が要る（gatewayms がこれ）。
+            boolean needsAxon = usesAxonTypes(service)
+                    || findApplicationClass(service)
+                            .contains("AxonServerStartupCheckConfiguration.class");
+            if (!needsAxon) {
+                // 要らないサービスに入れさせない（[ADR-0020] 決定 3）。入れておくと
+                // 起動確認が Axon Server を待ち、切り分けの道具が先に落ちる。
+                assertThat(read(service + "/build.gradle.kts"))
+                        .as("%s: Axon を使っていないのに依存だけ持っている", service)
+                        .doesNotContain("libs.bundles.axon");
+                continue;
             }
             assertThat(read(service + "/build.gradle.kts"))
                     .as("%s: connector は starter の推移的依存に含まれない。無いと無音で in-memory に落ちる", service)
