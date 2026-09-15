@@ -4,7 +4,7 @@ title: "ADR-0020 業務シミュレーションは独立サービスに置き、
 description: "本番と同じ API を人と同じ順で叩く駆動役を simulationms として切り出す。実行の記録は業務の事実ではないので、authms と同じく現在状態だけを持つ。"
 tags: [adr]
 status: draft
-generated: { by: claude-code/claude-opus-5, at: 2026-09-15T02:13:08Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-15T16:18:32Z }
 ---
 
 # ADR-0020 業務シミュレーションは独立サービスに置き、Event Sourcing は適用しない
@@ -68,6 +68,11 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-15T02:13:08Z }
 | 追跡一覧（S40） | 済 | `TrackingSummaryMapper` の `findAll` / `countAll`。IT17 |
 | 荷役の作業一覧（S50）・ダッシュボード（S02）・引取待ち（S54） | 済 | `CargoSnapshotMapper` の 3 つの読み口。IT17 |
 | 要確認一覧（S70・bookingms / billingms） | 済 | `AttentionItemMapper` の `findOpenByRole`。登録時に対象から解決する。IT17 |
+| 例外一覧（S42） | 済 | `TrackingExceptionMapper` の `findOpen`。**US35 の例外シナリオ × 継続実行で一晩に数百件**。IT17 |
+| キャンセル承認待ち（S23） | 済 | `CancellationRequestMapper` の `findPending`。陸揚げ地を決められるのは追跡管理者だけ。IT17 |
+| 通関一覧（S52） | 済 | `CustomsDeclarationMapper` の `search`。留置が 3 営業日を超えたものを毎朝見る。IT17 |
+
+**この 3 つは IT17 のレビューで見つかりました。** 表が「済」と「未」で埋まっていたので**完全に見えていた**——数え上げたつもりで、例外・キャンセル・通関の一覧が表に載っていませんでした。**表に無いものは、外していないことにも気づけません。**
 
 **外さない読み口も書く。** 「まだ外していない」と「意図して外さない」は別である。
 
@@ -75,6 +80,7 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-15T02:13:08Z }
 | :--- | :--- |
 | 追跡・予約・請求・荷役の**単票** | US34 の実行結果が工程ごとにここへ辿る。外すと実行結果から何も開けない |
 | 追跡一覧を**荷主で絞る**読み（S40 荷主 / S02 荷主） | 行はその荷主のものしか返らない。外すと確認用の利用者が自分の一覧から辿れない（US37 §6） |
+| 自社予約一覧（S45・S46）・貨物の知らせ | 同上。荷主で絞る読みは外さない |
 | 航海あての要確認（`routingms`） | 航海は共有の設備で、荷主に属さない。印が付く対象ではない |
 
 **引く先が無い対象は本物として扱う。** シミュレーションかどうかを引けない要確認

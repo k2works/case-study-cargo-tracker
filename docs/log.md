@@ -1,6 +1,13 @@
 # Docs Update Log
 
 ## 2026-09-15
+* **Update**: [retrospective-17](/development/cargo-tracker/retrospective-17.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_report-17](/development/cargo-tracker/iteration_report-17.md) を更新（claude-code/claude-opus-5）
+* **Update**: [21-荷主が自社の貨物を見る](/manual/21-荷主が自社の貨物を見る.md) を更新（claude-code/claude-opus-5）
+* **Update**: [20-業務シミュレーションを流す](/manual/20-業務シミュレーションを流す.md) を更新（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-17](/development/cargo-tracker/iteration_plan-17.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0020-simulation-is-a-driver-not-an-event-sourced-context](/adr/cargo-tracker/0020-simulation-is-a-driver-not-an-event-sourced-context.md) を更新（claude-code/claude-opus-5）
 * **Update**: IT17 T9: クラスタで見つけた 3 件を計画に記録
 * **Update**: IT17 T9: 荷主の紐付けを設定する入口と auth_audit_log.reason の幅を反映（クラスタで実測）
 * **Update**: IT17 T10: マニュアル 20 章を継続実行・例外シナリオへ更新し、21 章（荷主が自社の貨物を見る）を追加

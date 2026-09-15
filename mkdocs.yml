@@ -137,10 +137,12 @@ nav:
           - イテレーション 14 ふりかえり: development/cargo-tracker/retrospective-14.md
           - イテレーション 15 ふりかえり: development/cargo-tracker/retrospective-15.md
           - イテレーション 16 ふりかえり: development/cargo-tracker/retrospective-16.md
+          - イテレーション 17 ふりかえり: development/cargo-tracker/retrospective-17.md
           - イテレーション 13 完了報告書: development/cargo-tracker/iteration_report-13.md
           - イテレーション 14 完了報告書: development/cargo-tracker/iteration_report-14.md
           - イテレーション 15 完了報告書: development/cargo-tracker/iteration_report-15.md
           - イテレーション 16 完了報告書: development/cargo-tracker/iteration_report-16.md
+          - イテレーション 17 完了報告書: development/cargo-tracker/iteration_report-17.md
           - イテレーション 11 計画: development/cargo-tracker/iteration_plan-11.md
           - イテレーション 11 ふりかえり: development/cargo-tracker/retrospective-11.md
           - イテレーション 11 完了報告書: development/cargo-tracker/iteration_report-11.md
@@ -202,6 +204,7 @@ nav:
           - IT14 実装レビュー（2026-09-12）: review/cargo-tracker/IT14実装_review_20260912.md
           - IT15 実装レビュー（2026-09-14）: review/cargo-tracker/IT15実装_review_20260914.md
           - IT16 実装レビュー（2026-09-15）: review/cargo-tracker/IT16実装_review_20260915.md
+          - IT17 実装レビュー（2026-09-15）: review/cargo-tracker/IT17実装_review_20260915.md
   - ADR:
       - 概要: adr/index.md
       - cargo-tracker:
