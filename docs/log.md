@@ -1,6 +1,8 @@
 # Docs Update Log
 
 ## 2026-09-15
+* **Update**: IT17 T10: マニュアル 20 章を継続実行・例外シナリオへ更新し、21 章（荷主が自社の貨物を見る）を追加
+* **Update**: IT17 T10: マニュアル 20 章を継続実行・例外シナリオへ更新し、21 章（荷主が自社の貨物を見る）を追加
 * **Update**: IT17 T5: ADR-0021（知らせを押し出さない）を起票。ui_design に共通要素「貨物の知らせ」を追加（注 N5）
 * **Creation**: IT17 T5: ADR-0021（知らせを押し出さない）を起票。ui_design に共通要素「貨物の知らせ」を追加（注 N5）
 * **Update**: IT17 T4: tracking_event.sequence_no・notice_read_position・shipper_origin を反映（注 N2・N3）

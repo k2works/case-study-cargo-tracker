@@ -1970,6 +1970,7 @@ test.describe('17 請求を組み立てる・18 輸送見積を作る', () => {
               failureStatus: null,
               failureMessage: null,
               occurredAt: '2026-09-28T00:40:01Z',
+              waitedMs: 8000,
             },
             {
               stepNo: 2,
@@ -1982,6 +1983,7 @@ test.describe('17 請求を組み立てる・18 輸送見積を作る', () => {
               failureStatus: null,
               failureMessage: null,
               occurredAt: '2026-09-28T00:40:20Z',
+              waitedMs: 12000,
             },
             {
               stepNo: 3,
@@ -1994,6 +1996,7 @@ test.describe('17 請求を組み立てる・18 輸送見積を作る', () => {
               failureStatus: null,
               failureMessage: null,
               occurredAt: '2026-09-28T00:40:40Z',
+              waitedMs: 3000,
             },
             {
               stepNo: 4,
@@ -2007,7 +2010,15 @@ test.describe('17 請求を組み立てる・18 輸送見積を作る', () => {
               failureMessage:
                 '期限に間に合う経路の候補が 1 件もありません（条件を調整するか、便を増やしてください）',
               occurredAt: '2026-09-28T00:41:00Z',
+              waitedMs: 0,
             },
+          ],
+          // **予定の工程も渡す**（本文が「これからの工程が並ぶ」と書いている）。
+          plannedSteps: [
+            { stepNo: 1, kind: 'REGISTER_SHIPPER', kindLabel: '荷主の登録' },
+            { stepNo: 2, kind: 'REGISTER_BOOKING', kindLabel: '予約の登録' },
+            { stepNo: 3, kind: 'REQUEST_ROUTING', kindLabel: '経路設計への引き渡し' },
+            { stepNo: 4, kind: 'ASSIGN_ROUTE', kindLabel: '経路の確定' },
           ],
         }),
       }),
@@ -2021,7 +2032,218 @@ test.describe('17 請求を組み立てる・18 輸送見積を作る', () => {
     // 書いているので、リンクが写らないと絵が本文を支えない。
     await expect(page.getByRole('link', { name: '55555555-5555-5555-5555-555555555555' }))
       .toBeVisible();
+    // **連鎖待ちの列も写す。** 本文が「所要時間は 2 つに分かれる」と書いている。
+    await expect(page.getByText('12000 ミリ秒')).toBeVisible();
+    // **止まったところからの行き先も写す**（本文の表と対応する）。
+    await expect(page.getByRole('link', { name: '航海スケジュールを見る' })).toBeVisible();
     await page.screenshot({ path: `${OUT}/20-S93-simulation-run.png`, fullPage: true });
+  });
+
+  test('20 継続実行と統計', async ({ page }) => {
+    // **本文が「止まった工程がいちばん見たい表」と書いている。**
+    // 種・同時実行・内訳・止まった工程が写らなければ、読み方の表は絵と対応しない。
+    await page.route('**/api/v1/simulation/schedule', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          scheduleId: 'SCH-1',
+          seed: 1789234512,
+          intervalSeconds: 30,
+          maxConcurrent: 2,
+          exceptionRatio: 0.2,
+          status: 'RUNNING',
+          statusLabel: '実行中',
+          startedBy: 'admin01',
+          startedAt: '2026-09-28T00:30:00Z',
+          stoppedAt: null,
+          runningNow: 1,
+          runsByStatus: [
+            { code: 'SUCCEEDED', label: '成功', count: 18 },
+            { code: 'FAILED', label: '失敗', count: 4 },
+            { code: 'RUNNING', label: '実行中', count: 1 },
+          ],
+          failuresByStep: [
+            { code: 'ASSIGN_ROUTE', label: '経路の確定', count: 3 },
+            { code: 'ISSUE_INVOICE', label: '請求書の発行', count: 1 },
+          ],
+        }),
+      }),
+    );
+    await signInAsAdmin(page);
+    await page.goto('/admin/simulations/schedule');
+
+    await expect(page.getByRole('heading', { name: '継続実行' })).toBeVisible();
+    await expect(page.getByText('1789234512')).toBeVisible();
+    await expect(page.getByText('1 / 2 本')).toBeVisible();
+    await expect(page.getByText('経路の確定')).toBeVisible();
+    await page.screenshot({ path: `${OUT}/20-S94-simulation-schedule.png`, fullPage: true });
+  });
+
+
+  async function signInAsShipper(page: import('@playwright/test').Page) {
+    await page.route('**/api/v1/auth/login', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          token: 'token',
+          username: 'shipper01',
+          displayName: '荷主 太郎',
+          roles: ['ROLE_SHIPPER'],
+          shipperId: 'SHP-000001',
+        }),
+      }),
+    );
+    // **知らせは共通レイアウトに出る。** 既定では空にしておかないと、
+    // すべての荷主向けの絵にポップアップが写り込む。
+    await page.route('**/api/v1/tracking/notices', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ items: [], latestSequence: 0 }),
+      }),
+    );
+    await page.goto('/login');
+    await page.getByLabel('利用者名').fill('shipper01');
+    await page.getByLabel('パスワード').fill('secret1234');
+    await page.getByRole('button', { name: 'ログイン' }).click();
+    await expect(page.getByRole('heading', { name: 'ダッシュボード' })).toBeVisible();
+  }
+
+  const SAMPLE_SHIPPER_BOOKINGS = {
+    items: [
+      {
+        bookingId: '55555555-5555-5555-5555-555555555555',
+        bookingNumber: 'B-2026-0902-004',
+        originUnLocode: 'JPTYO',
+        destinationUnLocode: 'USNYC',
+        arrivalDeadline: '2026-10-20',
+        productName: '自動車部品',
+        bookingStatus: 'IN_TRANSIT',
+        trackingNumber: 'TRK-AB12CD3456',
+      },
+      {
+        bookingId: '66666666-6666-6666-6666-666666666666',
+        bookingNumber: 'B-2026-0905-011',
+        originUnLocode: 'JPTYO',
+        destinationUnLocode: 'NLRTM',
+        arrivalDeadline: '2026-10-18',
+        productName: '産業機械',
+        bookingStatus: 'ROUTE_NOTIFIED',
+        trackingNumber: null,
+      },
+    ],
+    total: 2,
+  };
+
+  test('21 自社の予約一覧', async ({ page }) => {
+    // **本文が「並びは到着期限が近い順」「金額は出ない」と書いている。**
+    // 列が写らなければ、読み方の表は絵と対応しない。
+    await page.route('**/api/v1/booking/shipper/bookings?*', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(SAMPLE_SHIPPER_BOOKINGS),
+      }),
+    );
+    await signInAsShipper(page);
+    await page.goto('/shipper/bookings');
+
+    await expect(page.getByRole('heading', { name: '自社の予約' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'B-2026-0902-004' })).toBeVisible();
+    await expect(page.getByText('終了したものも表示')).toBeVisible();
+    await page.screenshot({ path: `${OUT}/21-S45-shipper-bookings.png`, fullPage: true });
+  });
+
+  test('21 自社予約の進み具合', async ({ page }) => {
+    // **本文が「済んだ段には日時、これからの段には（これから）」と書いている。**
+    await page.route('**/api/v1/booking/shipper/bookings/*', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          bookingId: '55555555-5555-5555-5555-555555555555',
+          bookingNumber: 'B-2026-0902-004',
+          originUnLocode: 'JPTYO',
+          destinationUnLocode: 'USNYC',
+          arrivalDeadline: '2026-10-20',
+          cargoType: 'GENERAL',
+          productName: '自動車部品',
+          bookingStatus: 'ROUTE_NOTIFIED',
+          routingStatus: 'ROUTED',
+          bookedAt: '2026-09-02T05:00:00Z',
+          routingRequestedAt: '2026-09-02T06:00:00Z',
+          lastNotifiedAt: '2026-09-02T09:00:00Z',
+          confirmedAt: null,
+          trackingNumber: null,
+          trackingIssuedAt: null,
+          legs: [
+            {
+              legSeq: 1,
+              voyageNumber: 'V-MOL-001',
+              loadUnLocode: 'JPTYO',
+              unloadUnLocode: 'SGSIN',
+              loadAt: '2026-09-20T09:00:00Z',
+              unloadAt: '2026-09-28T08:00:00Z',
+            },
+          ],
+          notifications: [
+            {
+              notifiedAt: '2026-09-02T09:00:00Z',
+              summary: '確定経路と到着予定をお電話でご案内しました',
+            },
+          ],
+        }),
+      }),
+    );
+    await signInAsShipper(page);
+    await page.goto('/shipper/bookings/55555555-5555-5555-5555-555555555555');
+
+    await expect(page.getByRole('heading', { name: '予約 B-2026-0902-004' })).toBeVisible();
+    await expect(page.getByText(/予約確定（これから）/)).toBeVisible();
+    await expect(page.getByText('確定経路と到着予定をお電話でご案内しました')).toBeVisible();
+    // **追跡番号が出る前はリンクを出さない**（本文の表と対応する）。
+    await expect(page.getByRole('link', { name: '追跡を見る' })).toHaveCount(0);
+    await page.screenshot({ path: `${OUT}/21-S46-shipper-progress.png`, fullPage: true });
+  });
+
+  test('21 貨物の知らせ', async ({ page }) => {
+    await page.route('**/api/v1/booking/shipper/bookings?*', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(SAMPLE_SHIPPER_BOOKINGS),
+      }),
+    );
+    await signInAsShipper(page);
+    // **知らせがある状態にしてから開く。** 空のままでは本文が説明している
+    // ポップアップが写らない。
+    await page.route('**/api/v1/tracking/notices', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: [
+            {
+              sequenceNo: 7,
+              trackingNumber: 'TRK-AB12CD3456',
+              statusLabel: '積込済',
+              location: 'JPTYO',
+              occurredAt: '2026-09-21T00:00:00Z',
+              originUnLocode: 'JPTYO',
+              destinationUnLocode: 'USNYC',
+            },
+          ],
+          latestSequence: 7,
+        }),
+      }),
+    );
+    await page.goto('/shipper/bookings');
+
+    await expect(page.getByRole('complementary', { name: '貨物の知らせ' })).toBeVisible();
+    await expect(page.getByText('積込済（JPTYO）')).toBeVisible();
+    await page.screenshot({ path: `${OUT}/21-notice-popup.png`, fullPage: true });
   });
 
 });
