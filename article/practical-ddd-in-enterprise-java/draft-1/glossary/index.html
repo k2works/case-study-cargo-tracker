@@ -7089,6 +7089,7 @@
 </tbody>
 </table>
 <h2 id="6-cqrs-axon">6. CQRS／イベントソーシングと Axon<a class="headerlink" href="#6-cqrs-axon" title="Permanent link">&para;</a></h2>
+<h3 id="61">6.1 アウトライン由来の訳語<a class="headerlink" href="#61" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
@@ -7113,9 +7114,9 @@
 </tr>
 <tr>
 <td style="text-align: left;">Event Store</td>
-<td style="text-align: left;">イベントストア</td>
-<td style="text-align: left;">訳出</td>
-<td style="text-align: left;"></td>
+<td style="text-align: left;">Event Store</td>
+<td style="text-align: left;">原語維持</td>
+<td style="text-align: left;">Axon Server の構成要素名。第 5・6 章は原語で統一している</td>
 </tr>
 <tr>
 <td style="text-align: left;">State</td>
@@ -7245,6 +7246,194 @@
 </tr>
 </tbody>
 </table>
+<h3 id="62-axon-5">6.2 Axon 5 のアノテーションと型<a class="headerlink" href="#62-axon-5" title="Permanent link">&para;</a></h3>
+<p>第 5 章が転記するコードに現れる識別子です。<strong>いずれも原語維持</strong>します——コード上の名前であり、訳すと実体を指せません。本文では初出で役割を補足します。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">識別子</th>
+<th style="text-align: left;">役割</th>
+<th style="text-align: left;">初出での補足</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>@EventSourced(idType, tagKey)</code></td>
+<td style="text-align: left;">集約をイベントソーシングの対象として登録する</td>
+<td style="text-align: left;">ドメイン層が持つ唯一の Spring stereotype</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>@EntityCreator</code></td>
+<td style="text-align: left;">イベント再生の起点となる空の集約を用意する</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>@CommandHandler</code></td>
+<td style="text-align: left;">コマンドを受けて業務判断を行う</td>
+<td style="text-align: left;">集約のメソッドに付く</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>@EventSourcingHandler</code></td>
+<td style="text-align: left;">イベントを状態へ反映する</td>
+<td style="text-align: left;"><strong>業務判断を書かない</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>@EventHandler</code></td>
+<td style="text-align: left;">投影または連鎖の調整でイベントを受ける</td>
+<td style="text-align: left;">置き場で役割が決まる</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>@QueryHandler</code></td>
+<td style="text-align: left;">問い合わせに投影テーブルから答える</td>
+<td style="text-align: left;"></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>@TargetEntityId</code></td>
+<td style="text-align: left;">コマンドの宛先となる集約を特定する</td>
+<td style="text-align: left;">コマンドの <code>record</code> に付く</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>@EventTag(key)</code></td>
+<td style="text-align: left;">イベントを集約に結び付けるタグを書く</td>
+<td style="text-align: left;"><strong>付け忘れると集約が空のまま復元される</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>@SequencingPolicy</code></td>
+<td style="text-align: left;">イベント処理の列の切り方を決める</td>
+<td style="text-align: left;">列の切り方が退避の被害範囲になる</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>EventAppender</code></td>
+<td style="text-align: left;">イベントを追記する（Axon 4 の <code>AggregateLifecycle.apply()</code> に相当）</td>
+<td style="text-align: left;">コマンドハンドラの引数で受ける</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>CommandGateway</code> / <code>QueryGateway</code></td>
+<td style="text-align: left;">コマンド・問い合わせの送り口</td>
+<td style="text-align: left;">Controller と Reaction Handler が使う</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>AxonTestFixture</code></td>
+<td style="text-align: left;">集約のテスト用フィクスチャ</td>
+<td style="text-align: left;"><code>disableAxonServer()</code> ではタグ復元が働かない</td>
+</tr>
+</tbody>
+</table>
+<h3 id="63">6.3 ランタイムと運用の用語<a class="headerlink" href="#63" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">英語表記</th>
+<th style="text-align: left;">日本語表記</th>
+<th style="text-align: left;">方針</th>
+<th style="text-align: left;">備考</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">Projection</td>
+<td style="text-align: left;">投影</td>
+<td style="text-align: left;">訳出</td>
+<td style="text-align: left;">§2 と同じ。捨てて作り直せるもので、正典ではない</td>
+</tr>
+<tr>
+<td style="text-align: left;">Read Model</td>
+<td style="text-align: left;">読み取りモデル</td>
+<td style="text-align: left;">訳出</td>
+<td style="text-align: left;">投影テーブルを通じて答えるモデル</td>
+</tr>
+<tr>
+<td style="text-align: left;">Eventual Consistency</td>
+<td style="text-align: left;">結果整合</td>
+<td style="text-align: left;">訳出</td>
+<td style="text-align: left;">「結果整合性」とは書かない</td>
+</tr>
+<tr>
+<td style="text-align: left;">Replay</td>
+<td style="text-align: left;">リプレイ</td>
+<td style="text-align: left;">訳出</td>
+<td style="text-align: left;">投影を作り直すこと。「再生」はイベントから状態を復元する意で使い分ける</td>
+</tr>
+<tr>
+<td style="text-align: left;">Upcaster</td>
+<td style="text-align: left;">Upcaster</td>
+<td style="text-align: left;">原語維持</td>
+<td style="text-align: left;">旧形式のイベントを新しい形へ読み替える仕組み。訳語が定着していない</td>
+</tr>
+<tr>
+<td style="text-align: left;">Processing Group</td>
+<td style="text-align: left;">Processing Group</td>
+<td style="text-align: left;">原語維持</td>
+<td style="text-align: left;">Axon 5 ではパッケージ名で指定する（<code>@ProcessingGroup</code> は存在しない）</td>
+</tr>
+<tr>
+<td style="text-align: left;">Dead Letter Queue / DLQ</td>
+<td style="text-align: left;">退避（デッドレター）</td>
+<td style="text-align: left;">併記</td>
+<td style="text-align: left;">処理できなかったイベントの置き場。第 4 章の「デッドレター」と同じもの</td>
+</tr>
+<tr>
+<td style="text-align: left;">Token Store</td>
+<td style="text-align: left;"><code>TokenStore</code></td>
+<td style="text-align: left;">原語維持</td>
+<td style="text-align: left;">どこまで読んだかを持つ。自動設定されない</td>
+</tr>
+<tr>
+<td style="text-align: left;">Reaction Handler</td>
+<td style="text-align: left;">Reaction Handler</td>
+<td style="text-align: left;">原語維持</td>
+<td style="text-align: left;">Axon 5 に Saga が無いため、その役割を担うイベントハンドラ。訳語を当てると「サガ」と混同する</td>
+</tr>
+<tr>
+<td style="text-align: left;">Dynamic Consistency Boundary / DCB</td>
+<td style="text-align: left;">DCB</td>
+<td style="text-align: left;">原語維持</td>
+<td style="text-align: left;">タグで集約を復元する Axon Server の仕組み</td>
+</tr>
+<tr>
+<td style="text-align: left;">Compensation</td>
+<td style="text-align: left;">補償</td>
+<td style="text-align: left;">訳出</td>
+<td style="text-align: left;">取り消しではなく「やり直せる状態に戻す」こと</td>
+</tr>
+</tbody>
+</table>
+<h3 id="64-axon-4-5">6.4 Axon 4 にあって 5 に無いもの<a class="headerlink" href="#64-axon-4-5" title="Permanent link">&para;</a></h3>
+<p>読者が Axon 4 の知識で本文を読むと食い違う箇所です。<strong>第 5 章の実装はいずれも使っていません。</strong></p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Axon 4</th>
+<th style="text-align: left;">Axon 5 での扱い</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>@Aggregate</code> / <code>@AggregateIdentifier</code></td>
+<td style="text-align: left;"><code>@EventSourced(idType, tagKey)</code> に置き換わった</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>AggregateLifecycle.apply()</code></td>
+<td style="text-align: left;">引数で受ける <code>EventAppender</code> に置き換わった</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>AggregateTestFixture</code></td>
+<td style="text-align: left;"><code>AxonTestFixture.with(ApplicationConfigurer)</code> に置き換わった</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>@Saga</code> / <code>SagaLifecycle</code> / Saga Store</td>
+<td style="text-align: left;"><strong>存在しない。</strong> Reaction Handler + <code>process_state</code> で置き換える</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>@ProcessingGroup</code></td>
+<td style="text-align: left;"><strong>存在しない。</strong> パッケージ名をキーに設定で指定する</td>
+</tr>
+<tr>
+<td style="text-align: left;">Deadline（タイムアウト起点の処理）</td>
+<td style="text-align: left;"><strong>存在しない。</strong> 投影テーブルを定期に走査する運用ジョブにする</td>
+</tr>
+</tbody>
+</table>
 <h2 id="7">7. 原語維持する固有名詞・略語<a class="headerlink" href="#7" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -7289,6 +7478,11 @@
 <td style="text-align: left;">Axon Server</td>
 <td style="text-align: left;">Axon Server</td>
 <td style="text-align: left;">製品名のため訳出しない</td>
+</tr>
+<tr>
+<td style="text-align: left;">Axon Framework 5</td>
+<td style="text-align: left;">Axon 5</td>
+<td style="text-align: left;">本文では「Axon 5」と略す。4 系とは API が非互換（§6.4）</td>
 </tr>
 <tr>
 <td style="text-align: left;">REST API / RESTful API</td>

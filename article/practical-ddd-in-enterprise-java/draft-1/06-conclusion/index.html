@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="モジュラーモノリス・EDA・CQRS/ES の 3 アプローチを比較し、適用判断の観点と現行実装への結論を示す（draft-1）。">
+        <meta name="description" content="モジュラーモノリス・EDA・CQRS/ES の 3 実装を比較し、適用判断の観点と選び方の手順を示す（draft-1）。">
       
       
         <meta name="author" content="Project Team">
@@ -6689,95 +6689,275 @@
 
 
 <h1 id="6">第 6 章：まとめ<a class="headerlink" href="#6" title="Permanent link">&para;</a></h1>
-<p>本シリーズでは、Cargo Tracker を同じ題材のまま 3 つの実装観点で整理しました。</p>
-<ol>
-<li>Spring Platform × モジュラーモノリス</li>
-<li>Spring Platform × EDA</li>
-<li>Spring Platform × CQRS/ES（Axon）</li>
-</ol>
-<p>ここでは、方式ごとの適用判断を最終的にまとめます。</p>
+<p>本シリーズは、Cargo Tracker という<strong>同じ業務</strong>を 3 つの構成で実装したコードを読んできました。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">章</th>
+<th style="text-align: left;">構成</th>
+<th style="text-align: left;">参照元</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">第 3 章</td>
+<td style="text-align: left;">モジュラーモノリス</td>
+<td style="text-align: left;"><code>docs/article/source/java-2</code></td>
+</tr>
+<tr>
+<td style="text-align: left;">第 4 章</td>
+<td style="text-align: left;">マイクロサービス + RabbitMQ（EDA）</td>
+<td style="text-align: left;"><code>docs/article/source/java-3</code></td>
+</tr>
+<tr>
+<td style="text-align: left;">第 5 章</td>
+<td style="text-align: left;">マイクロサービス + Axon Framework 5（CQRS/ES）</td>
+<td style="text-align: left;"><code>docs/article/source/java-4</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>3 つはいずれも動いている実装です。</strong>段階的に育てた 1 つのコードベースの履歴ではなく、<strong>独立した 3 本</strong>です。だから「第 3 章の次に第 4 章へ進んだ」とは読めません。読めるのは、<strong>同じ業務を別の前提で実装したときに何が変わるか</strong>だけです。</p>
+<p>この章では、その差分を 1 つの表に並べ、どれをいつ選ぶかを整理します。</p>
 <h2 id="3">3 つの実装アプローチの比較<a class="headerlink" href="#3" title="Permanent link">&para;</a></h2>
+<h3 id="_1">構成の比較<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
 <th style="text-align: left;">観点</th>
 <th style="text-align: left;">モジュラーモノリス</th>
 <th style="text-align: left;">EDA</th>
-<th style="text-align: left;">CQRS/ES（Axon）</th>
+<th style="text-align: left;">CQRS/ES</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td style="text-align: left;">配置単位</td>
-<td style="text-align: left;">単一デプロイ</td>
-<td style="text-align: left;">単一デプロイ（イベント連携強化）</td>
-<td style="text-align: left;">構成次第（単一/分散）</td>
+<td style="text-align: left;">デプロイ単位</td>
+<td style="text-align: left;">1 つ</td>
+<td style="text-align: left;">8 サービス + 共有ライブラリ</td>
+<td style="text-align: left;">8 サービス + 共有ライブラリ</td>
 </tr>
 <tr>
-<td style="text-align: left;">境界の表現</td>
-<td style="text-align: left;">BC パッケージ分割 + ACL</td>
-<td style="text-align: left;">BC + イベント契約</td>
-<td style="text-align: left;">BC + コマンド/イベント/投影</td>
+<td style="text-align: left;">BC の単位</td>
+<td style="text-align: left;">トップレベルパッケージ</td>
+<td style="text-align: left;">Gradle モジュール</td>
+<td style="text-align: left;">Gradle モジュール</td>
 </tr>
 <tr>
-<td style="text-align: left;">書き込み正典</td>
-<td style="text-align: left;">RDB の現在状態</td>
-<td style="text-align: left;">RDB + イベント通知</td>
-<td style="text-align: left;">イベント列（Event Store）</td>
+<td style="text-align: left;">BC 間の境界</td>
+<td style="text-align: left;">ArchUnit で守る規律</td>
+<td style="text-align: left;">クラスパスが分かれる</td>
+<td style="text-align: left;">クラスパスが分かれる</td>
 </tr>
 <tr>
-<td style="text-align: left;">読み取りモデル</td>
-<td style="text-align: left;">クエリサービス</td>
-<td style="text-align: left;">クエリサービス + 非同期反映</td>
-<td style="text-align: left;">投影（Projection）中心</td>
+<td style="text-align: left;">データベース</td>
+<td style="text-align: left;">1 つ（全 BC 共通）</td>
+<td style="text-align: left;">サービスごと</td>
+<td style="text-align: left;">サービスごと（<strong>投影と Axon 管理表</strong>）</td>
 </tr>
 <tr>
-<td style="text-align: left;">運用負荷</td>
-<td style="text-align: left;">低〜中</td>
-<td style="text-align: left;">中</td>
-<td style="text-align: left;">高</td>
+<td style="text-align: left;">BC 間の問い合わせ</td>
+<td style="text-align: left;">ACL ポート（メソッド呼び出し）</td>
+<td style="text-align: left;">ACL ポート（REST）</td>
+<td style="text-align: left;">ACL ポート（Axon Query Bus）</td>
 </tr>
 <tr>
-<td style="text-align: left;">本リポジトリでの状態</td>
-<td style="text-align: left;">実装済み</td>
-<td style="text-align: left;">実装済み</td>
-<td style="text-align: left;">構想段階（未導入）</td>
+<td style="text-align: left;">BC 間の通知</td>
+<td style="text-align: left;"><code>ApplicationEventPublisher</code></td>
+<td style="text-align: left;">RabbitMQ</td>
+<td style="text-align: left;">Axon Server（Event Bus）</td>
+</tr>
+<tr>
+<td style="text-align: left;">入口</td>
+<td style="text-align: left;">画面（Thymeleaf + htmx）</td>
+<td style="text-align: left;">REST + イベント購読</td>
+<td style="text-align: left;">REST + イベント購読</td>
+</tr>
+<tr>
+<td style="text-align: left;">Spring Cloud</td>
+<td style="text-align: left;">使わない</td>
+<td style="text-align: left;">Gateway のみ</td>
+<td style="text-align: left;">Gateway のみ</td>
 </tr>
 </tbody>
 </table>
-<h2 id="_1">適用判断の観点<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
-<h3 id="_2">チーム規模と運用コスト<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h3>
+<p>第 4 章と第 5 章は、<strong>この表ではほとんど同じ</strong>です。サービス分割を揃えたのは意図的で、差分が永続化と読み書きの分離だけになるように選ばれています。</p>
+<h3 id="_2">内側の比較<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h3>
+<p>構成が同じでも、サービスの内側は別物です。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">観点</th>
+<th style="text-align: left;">モジュラーモノリス</th>
+<th style="text-align: left;">EDA</th>
+<th style="text-align: left;">CQRS/ES</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">書き込みの正典</td>
+<td style="text-align: left;">RDB の現在状態</td>
+<td style="text-align: left;">RDB の現在状態</td>
+<td style="text-align: left;"><strong>イベント列（Event Store）</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;">集約の永続化</td>
+<td style="text-align: left;">集約単位で UPDATE</td>
+<td style="text-align: left;">集約単位で UPDATE</td>
+<td style="text-align: left;">イベントを追記し、再生して復元</td>
+</tr>
+<tr>
+<td style="text-align: left;">読み取り</td>
+<td style="text-align: left;">同じテーブルを SELECT</td>
+<td style="text-align: left;">同じテーブルを SELECT</td>
+<td style="text-align: left;"><strong>投影テーブル（結果整合）</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;">イベントの位置づけ</td>
+<td style="text-align: left;">保存のあとの通知</td>
+<td style="text-align: left;">保存のあとの通知（契約）</td>
+<td style="text-align: left;"><strong>保存そのもの</strong>（追記専用）</td>
+</tr>
+<tr>
+<td style="text-align: left;">イベントの改名</td>
+<td style="text-align: left;">自由</td>
+<td style="text-align: left;">契約の変更（両側に契約テスト）</td>
+<td style="text-align: left;"><strong>Upcaster が要る</strong>（過去は書き換えられない）</td>
+</tr>
+<tr>
+<td style="text-align: left;">調整役（サガ）</td>
+<td style="text-align: left;">アプリケーション層のイベント購読</td>
+<td style="text-align: left;">メッセージハンドラ</td>
+<td style="text-align: left;">Reaction Handler + <code>process_state</code></td>
+</tr>
+<tr>
+<td style="text-align: left;">失敗の扱い</td>
+<td style="text-align: left;">捕まえて件数に記録する</td>
+<td style="text-align: left;">捕まえない（デッドレターへ）</td>
+<td style="text-align: left;">再試行 → 上限 → <strong>補償と要確認一覧</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;">不変条件の材料</td>
+<td style="text-align: left;">集約 or DB の現在値</td>
+<td style="text-align: left;">集約 or DB の現在値</td>
+<td style="text-align: left;"><strong>集約だけ</strong>（投影に尋ねられない）</td>
+</tr>
+</tbody>
+</table>
+<p><strong>「不変条件の材料」の行が、CQRS/ES を選ぶときに最も効きます。</strong>投影は結果整合なので、「未決着のキャンセル申請は高々 1 件」のような判断を投影に尋ねると、追いついていないあいだは<strong>申請できないと二重に申請できるの両方</strong>が起こります。判断に要るものは集約が持つしかありません。第 3・4 章なら「テーブルを 1 本引けば済む」ことが、ここでは集約の設計に跳ね返ります。</p>
+<h3 id="_3">保証を誰が引き受けるか<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
+<p>3 章を通して繰り返し現れたのは、<strong>保証が消えるのではなく、引き受け手が移る</strong>という形です。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">保証</th>
+<th style="text-align: left;">モジュラーモノリス</th>
+<th style="text-align: left;">EDA</th>
+<th style="text-align: left;">CQRS/ES</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">コミット後に発行する</td>
+<td style="text-align: left;"><code>@TransactionalEventListener(AFTER_COMMIT)</code></td>
+<td style="text-align: left;">発行側で <code>afterCommit</code> を自作</td>
+<td style="text-align: left;">Axon の UnitOfWork</td>
+</tr>
+<tr>
+<td style="text-align: left;">イベントの型が一致する</td>
+<td style="text-align: left;">同じ <code>record</code> を参照</td>
+<td style="text-align: left;">契約テスト（両側に置く）</td>
+<td style="text-align: left;">契約テスト + Upcaster</td>
+</tr>
+<tr>
+<td style="text-align: left;">順序を守る</td>
+<td style="text-align: left;">同一トランザクション</td>
+<td style="text-align: left;">交換機とルーティングキー</td>
+<td style="text-align: left;">Sequencing Policy（<strong>列の切り方が被害の範囲</strong>）</td>
+</tr>
+<tr>
+<td style="text-align: left;">一度だけ効く</td>
+<td style="text-align: left;">トランザクション</td>
+<td style="text-align: left;">べき等な購読</td>
+<td style="text-align: left;"><code>process_state</code> の段</td>
+</tr>
+<tr>
+<td style="text-align: left;">集約の状態が正しい</td>
+<td style="text-align: left;">DB の行</td>
+<td style="text-align: left;">DB の行</td>
+<td style="text-align: left;"><strong><code>@EventTag</code> が付いていること</strong></td>
+</tr>
+</tbody>
+</table>
+<p>いちばん下の行が、この方式の本質です。第 3 章なら集約の単体テストが落ちれば守りが壊れたと分かります。第 5 章では、<code>@EventTag</code> を付け忘れると集約は毎回空のまま復元され、<strong>状態を見る守りが丸ごと素通りしてなお単体テストは緑</strong>になります。しかも <code>AxonTestFixture</code> の <code>disableAxonServer()</code> ではタグによる復元が働かないので、単体テストでは原理的に判別できません。</p>
+<p><strong>「緑に見えるが何も見ていない」テストが増える</strong>——これが CQRS/ES の代金のうち、見積もりに現れにくい部分です。</p>
+<h2 id="_4">適用判断の観点<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
+<h3 id="_5">チーム規模と運用コスト<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">方式</th>
+<th style="text-align: left;">動かすのに要るもの</th>
+<th style="text-align: left;">運用で見るもの</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">モジュラーモノリス</td>
+<td style="text-align: left;">アプリ 1 つ + DB 1 つ</td>
+<td style="text-align: left;">ログとメトリクス</td>
+</tr>
+<tr>
+<td style="text-align: left;">EDA</td>
+<td style="text-align: left;">サービス 8 つ + DB 8 つ + ブローカー</td>
+<td style="text-align: left;">上記 + キューの滞留・デッドレター</td>
+</tr>
+<tr>
+<td style="text-align: left;">CQRS/ES</td>
+<td style="text-align: left;">サービス 8 つ + DB 8 つ + Axon Server</td>
+<td style="text-align: left;">上記 + 投影の遅れ・トークンの位置・退避の再処理・<strong>Event Store のバックアップと復元</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>下に行くほど、業務が止まらなくても壊れている状態が増えます。</strong>投影が止まっても書き込みは通り、画面だけが古くなります。Axon Server に繋がらなくてもアプリは起動します。<strong>「起動した」「200 が返った」では健全性を判断できない</strong>構成である、ということです。</p>
+<p>小〜中規模のチームでは、まずモジュラーモノリスで境界を固定するほうが安全です。境界が正しいかどうかは、分ける前に確かめられます。</p>
+<h3 id="_6">境界づけられたコンテキストの独立性<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
+<p>分けたあとに境界を直す費用は、方式ごとに桁が違います。</p>
 <ul>
-<li><strong>小〜中規模チーム</strong>では、まずモジュラーモノリスで境界を固定するほうが安全です。</li>
-<li>非同期連携が増える段階で EDA を強めると、責務分離を保ったまま拡張できます。</li>
-<li>CQRS/ES は運用設計（イベント再生、投影再構築、監視）を伴うため、専任に近い運用能力が必要です。</li>
+<li><strong>モジュラーモノリス</strong>：パッケージの移動とリファクタリング。コンパイラが追随する</li>
+<li><strong>EDA</strong>：契約の変更。発行側と購読側の両方を直し、両方に契約テストを置く</li>
+<li><strong>CQRS/ES</strong>：<strong>過去のイベントが読めるかどうかで縛られる</strong>。クラスの移動・改名は Upcaster を伴い、パッケージ移動は「無料」ではない</li>
 </ul>
-<h3 id="_3">境界づけられたコンテキストの独立性<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
+<p>境界が曖昧なまま CQRS/ES へ進むと、<strong>間違った境界がイベントの型名として永久に残ります</strong>。逆に言えば、境界が安定していることが前提条件です。</p>
+<h3 id="_7">同期／非同期の整合性要件<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h3>
 <ul>
-<li>BC の責務が明確で、ACL ポートとイベント契約が安定しているほど、上位方式へ移行しやすくなります。</li>
-<li>境界が曖昧なまま CQRS/ES へ進むと、イベントスキーマの変更コストが急増します。</li>
+<li>即時整合を強く要求する領域は、同期コマンド中心の設計が適します。第 3 章の構成なら、1 トランザクションで済むことを分散させずに済みます</li>
+<li>結果整合を許容できる通知・連携は、EDA で分離したほうが保守しやすくなります</li>
+<li><strong>イベント履歴そのものが業務の材料</strong>である場合に、CQRS/ES の価値が最大化します</li>
 </ul>
-<h3 id="_4">同期／非同期の整合性要件<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
-<ul>
-<li>即時整合を強く要求する領域は、同期コマンド中心の設計が適します。</li>
-<li>結果整合を許容できる通知・連携は、EDA で分離したほうが保守しやすくなります。</li>
-<li>イベント履歴そのものを監査・再計算に使う要件が明確な場合に、CQRS/ES の価値が最大化します。</li>
-</ul>
-<h2 id="_5">現行実装への結論<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h2>
-<p>Cargo Tracker の現行コードベースは、<strong>モジュラーモノリス + EDA 実装済み、CQRS 分離済み、ES/Axon 未導入</strong>という位置にあります。<br />
-したがって最も現実的な進め方は、次の順序です。</p>
+<p>最後の点は言い換えが効きます。<strong>「結果」だけでなく「経緯」を業務が読むか</strong>です。第 5 章の実装は、履歴が業務として要る根拠を<strong>例外処理・誤配・通関</strong>（US19・US20・US28・US29）に置いています。逆に <code>authms</code> だけは状態保存のままです——現在状態だけが業務に要り、履歴は監査ログで足りるからです。</p>
+<h2 id="_8">選び方<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h2>
+<p>観点を 3 つ並べましたが、判断の順序は 1 つです。</p>
 <ol>
-<li>現行 EDA のイベント契約を安定化する</li>
-<li>投影モデルの再構築手順を先に運用化する</li>
-<li>そのうえで Axon 導入を評価する</li>
+<li><strong>境界が安定しているか</strong>を先に確かめる。安定していないなら、分ける前に直す。モジュラーモノリスはこれを安く確かめられる唯一の構成です</li>
+<li><strong>プロセスを分ける理由があるか</strong>を問う。デプロイ独立・チーム独立・スケール単位のどれかに実際の要求があるときだけ分けます。境界の表現のために分けるのは費用が合いません</li>
+<li><strong>経緯を業務が読むか</strong>を問う。読むなら CQRS/ES を検討します。読まないなら、履歴は監査ログで足ります</li>
 </ol>
-<h2 id="_6">次の実装ステップ<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
+<p>第 5 章の実装が <code>Quotation</code> と <code>Voyage</code> を「業務上は履歴が要らないのに」イベントソーシングにしたのは、<strong>記事の比較のため</strong>だと明記されています。実務でこれをやる理由はありません。そして同じ ADR が、<strong>見直しの発動条件を数値で置いています</strong>。</p>
+<blockquote>
+<p><strong>IT2 終了時点で実績ベロシティが計画の 70% 未満なら、<code>Quotation</code> と <code>Voyage</code> を
+状態保存（MyBatis の UPDATE）に落とす。</strong></p>
+</blockquote>
+<p>転記元: <code>docs/article/source/java-4/docs/adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md</code></p>
+<p>「工数の問題が出たら考える」では検知できません。<strong>採用した方式を降りる条件を、採用するときに決めておく</strong>——3 つの実装を並べて読んで、いちばん移植しやすい習慣はこれでした。</p>
+<h2 id="_9">次の実装ステップ<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h2>
+<p>読者が自分のコードベースで試すなら、次の順序を勧めます。</p>
 <ol>
-<li>BC ごとのイベント契約（フィールド、意味、互換性）の明文化</li>
-<li>代表ユースケースを 1 本選び、投影再生成を試行</li>
-<li>Axon PoC でコマンドモデル 1 つを Event Sourcing 化し、運用負荷を計測</li>
+<li><strong>境界の検査を書く</strong>。ArchUnit で BC 間の依存方向と ACL ポートを固定します。これは 3 方式のどれでも要り、どれを選んでも無駄になりません</li>
+<li><strong>イベントの契約を明文化する</strong>。フィールド・意味・互換性を書き、発行側と購読側の両方に契約テストを置きます。プロセスを分けていなくても効きます</li>
+<li><strong>投影を 1 本作って捨ててみる</strong>。読み取り専用のテーブルを 1 つ作り、再構築の手順を運用に載せます。CQRS/ES の運用負荷のうち、<strong>いちばん重い部分を先に測れます</strong></li>
+<li><strong>そのうえで方式を選ぶ</strong>。1〜3 を済ませた時点で、境界が安定しているか・分ける理由があるか・経緯を読むかの 3 問に答えられるようになっています</li>
 </ol>
-<p>この順序を守ると、フレームワーク導入が目的化せず、ドメイン境界と運用可能性を両立した移行判断ができます。</p>
+<p>この順序を守ると、フレームワークの導入が目的化しません。<strong>Axon を入れるかどうかは最後の判断であって、最初の判断ではない</strong>——3 本のコードを並べて読んだ結論は、そこに尽きます。</p>
 
 
 

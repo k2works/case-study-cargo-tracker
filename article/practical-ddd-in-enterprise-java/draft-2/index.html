@@ -6691,7 +6691,7 @@
 <h1 id="java-draft-2">エンタープライズ Java における実践的ドメイン駆動設計（draft-2）<a class="headerlink" href="#java-draft-2" title="Permanent link">&para;</a></h1>
 <h2 id="_1">概要<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
 <p>国際貨物輸送管理システム（Cargo Tracker）を題材に、<strong>DDD の概念が Java と Spring のコードとしてどこに現れるか</strong>を追うシリーズです。</p>
-<p>主に扱うのは 1 つの実装 —— <code>docs/article/source/java-2/</code> に収録された Spring Boot 実装です（第 4 章のみ、プロセスを越える配送を扱うために別実装 <code>docs/article/source/java-3/</code> を引きます）。<strong>この実装は書籍『Practical Domain-Driven Design in Enterprise Java』の構造を実際に適用したもの</strong>であり、設計ドキュメントは「Practical DDD in Enterprise Java (Chapter 3) のパッケージ構造に準拠する」と明記し、ADR は同書の <code>bookingms</code> を参照実装として名指ししています。</p>
+<p>主に扱うのは 1 つの実装 —— <code>docs/article/source/java-2/</code> に収録された Spring Boot 実装です（第 4 章と第 5 章のみ、それぞれプロセスを越える配送とイベントソーシングを扱うために別実装 <code>docs/article/source/java-3/</code>・<code>docs/article/source/java-4/</code> を引きます）。<strong>この実装は書籍『Practical Domain-Driven Design in Enterprise Java』の構造を実際に適用したもの</strong>であり、設計ドキュメントは「Practical DDD in Enterprise Java (Chapter 3) のパッケージ構造に準拠する」と明記し、ADR は同書の <code>bookingms</code> を参照実装として名指ししています。</p>
 <p><strong>したがって本シリーズは書籍の要約ではなく、適用した結果の報告です。</strong> 報告である以上、次の 2 つを同じ比重で扱います。</p>
 <ul>
 <li><strong>書籍の構成を写したまま使って壊れた箇所</strong> —— 識別子の置き場を写したために、分割が狙った利得が最初の 1 回で失われた（第 2 章）</li>
@@ -6727,6 +6727,16 @@
 <td style="text-align: left;">プロセスを越えるイベント — マイクロサービス版の Cargo Tracker</td>
 <td style="text-align: left;">BC をプロセスに分けたときイベント駆動が<strong>新しく要求するもの</strong>。契約・到達・冪等・コミット順序と、それを守る検査</td>
 </tr>
+<tr>
+<td style="text-align: left;"><a href="05-spring-cqrs-es-axon/">第 5 章</a></td>
+<td style="text-align: left;">イベントを正典にする — CQRS / Event Sourcing 版の Cargo Tracker</td>
+<td style="text-align: left;">集約の保存をイベント列に替えたとき<strong>判断の材料でなくなるもの</strong>。<strong>守りが外れてなお緑になる</strong>欠陥と、それを検査に落とす方法</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="06-conclusion/">第 6 章</a></td>
+<td style="text-align: left;">3 つの実装を同じ尺度で比べる</td>
+<td style="text-align: left;">配置・<strong>境界を直す費用</strong>・<strong>検知の手段</strong>の 3 軸。軸にしなかったものと、<strong>この比較が確かめていないこと</strong></td>
+</tr>
 </tbody>
 </table>
 <h2 id="_3">読む順序<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
@@ -6754,6 +6764,14 @@
 <tr>
 <td style="text-align: left;">プロセスを越えるイベント連携の実物を見たい</td>
 <td style="text-align: left;"><a href="04-spring-eda/">第 4 章</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">イベントソーシングの代金と、その検知の仕方を見たい</td>
+<td style="text-align: left;"><a href="05-spring-cqrs-es-axon/">第 5 章</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">3 方式の違いと、選ぶときの順序を知りたい</td>
+<td style="text-align: left;"><a href="06-conclusion/">第 6 章</a></td>
 </tr>
 </tbody>
 </table>
@@ -6790,6 +6808,18 @@
 <td style="text-align: left;">ADR（第 4 章・32 本）</td>
 <td style="text-align: left;"><a href="../../source/java-3/docs/adr"><code>docs/article/source/java-3/docs/adr/</code></a></td>
 </tr>
+<tr>
+<td style="text-align: left;">実装（第 5 章）</td>
+<td style="text-align: left;"><a href="../../source/java-4/apps/cargo-tracker/backend"><code>docs/article/source/java-4/apps/cargo-tracker/backend/</code></a></td>
+</tr>
+<tr>
+<td style="text-align: left;">設計ドキュメント（第 5 章）</td>
+<td style="text-align: left;"><a href="../../source/java-4/docs/design"><code>docs/article/source/java-4/docs/design/</code></a></td>
+</tr>
+<tr>
+<td style="text-align: left;">ADR（第 5 章）</td>
+<td style="text-align: left;"><a href="../../source/java-4/docs/adr"><code>docs/article/source/java-4/docs/adr/</code></a></td>
+</tr>
 </tbody>
 </table>
 <p><strong>記事中のコードはすべて上記の実ファイルから転記しています。</strong> 本体を <code>{ ... }</code> で省略した引用はありません。設計ドキュメントからの引用と実コードからの引用は、記事中で区別して示しています。</p>
@@ -6819,13 +6849,13 @@
 <td style="text-align: left;"><a href="../../monolith-architecture/">モノリスアーキテクチャ実装比較</a> が扱う</td>
 </tr>
 <tr>
-<td style="text-align: left;"><strong>Axon Framework / Event Sourcing</strong></td>
-<td style="text-align: left;"><strong>どちらの参照元実装にも存在しない。</strong> 構想で章を埋めることはしない</td>
+<td style="text-align: left;">~~<strong>Axon Framework / Event Sourcing</strong>~~</td>
+<td style="text-align: left;"><strong>第 5 章で扱うようになった。</strong> <code>source/java-4/</code> を収録し、実装から書き直した。<strong>構想で章を埋めない</strong>という判断は変えていない</td>
 </tr>
 </tbody>
 </table>
 <h2 id="_6">現在の範囲<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
-<p><strong>本稿は第 4 章までです。</strong> 残りは、対応する実装を参照元に収録できた時点で扱います。</p>
+<p><strong>本稿は第 6 章で完結します。</strong></p>
 <table>
 <thead>
 <tr>
@@ -6842,19 +6872,21 @@
 </tr>
 <tr>
 <td style="text-align: left;">第 5 章（CQRS / Event Sourcing）</td>
-<td style="text-align: left;">保留</td>
-<td style="text-align: left;">Event Sourcing 実装の収録。<strong>java-3 にもイベントストアは無い</strong></td>
+<td style="text-align: left;"><strong>執筆済</strong></td>
+<td style="text-align: left;">Axon Framework 5 による Event Sourcing 実装を <code>source/java-4/</code> に収録して成立</td>
 </tr>
 <tr>
-<td style="text-align: left;">第 6 章（比較と選択指針）</td>
-<td style="text-align: left;">保留</td>
-<td style="text-align: left;">第 5 章の成立。第 4 章だけでは比較軸が 2 つに届かない</td>
+<td style="text-align: left;">第 6 章（3 実装の比較）</td>
+<td style="text-align: left;"><strong>執筆済</strong></td>
+<td style="text-align: left;">比較の尺度（配置・境界を直す費用・検知の手段）を先に定めて成立</td>
 </tr>
 </tbody>
 </table>
+<p><strong>第 6 章は推奨を書きません。</strong> 書けるのは「何が違うか」と「どの順序で問うか」までです。3 本は制御実験ではなく（別の時期・同じ作り手・本番運用なし）、方式の差と学習の差を分離できません。<strong>その限界も同じ章に置いています。</strong></p>
 <p>保留の理由は <a href="outline/">アウトライン</a> §5 に記録しています。</p>
 <h2 id="_7">前稿<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h2>
 <p><a href="../draft-1/">draft-1</a> は本稿の前の版です。書籍の目次をそのまま章立てに採用したため参照元と噛み合わず、Axon の章が構想の記述になっていました。何をどう変えたかは <a href="outline/">アウトライン</a> §2 にまとめています。</p>
+<p><strong>その Axon の章は、本稿の第 5 章として実装から書き直しました。</strong> 構想版が書けたのは構成要素の一覧までで、実装版の中心（タグの付け忘れ・単体テストの限界・復元演習の落とし穴・検査の書き方）はどれも出てきません。両方を読み比べると、<strong>P1 の再発防止が何を守ったのか</strong>が分かります。</p>
 
 
 

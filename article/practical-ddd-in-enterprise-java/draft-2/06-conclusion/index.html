@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Axon Framework 5 によるイベントソーシングと CQRS で Cargo Tracker を構成する（draft-1）。集約・コマンド・イベント・投影・クエリハンドラ・連鎖の調整。">
+        <meta name="description" content="モジュラーモノリス・EDA・CQRS/ES の 3 実装を、配置・境界を直す費用・検知の手段という 3 軸で比べる。何を軸にしなかったかと、この比較そのものの限界。">
       
       
         <meta name="author" content="Project Team">
@@ -23,7 +23,7 @@
     
     
       
-        <title>第 5 章：Spring Platform × CQRS/ES（Axon） - Case Study Cargo Tracker</title>
+        <title>第 6 章：3 つの実装を同じ尺度で比べる - Case Study Cargo Tracker</title>
       
     
     
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#5-spring-platform-cqrsesaxon" class="md-skip">
+        <a href="#6-3" class="md-skip">
           Skip to content
         </a>
       
@@ -108,7 +108,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              第 5 章：Spring Platform × CQRS/ES（Axon）
+              第 6 章：3 つの実装を同じ尺度で比べる
             
           </span>
         </div>
@@ -6688,36 +6688,189 @@
   
 
 
-<h1 id="5-spring-platform-cqrsesaxon">第 5 章：Spring Platform × CQRS/ES（Axon）<a class="headerlink" href="#5-spring-platform-cqrsesaxon" title="Permanent link">&para;</a></h1>
-<p>第 4 章では BC をプロセスごとに分け、境界を越える通信をイベントとサービス間 API に置き換えました。ただし<strong>各サービスの中は現在状態の UPDATE のまま</strong>です。この章では、その内側を入れ替えます。<strong>保存するのは現在の状態ではなく、起きたことの列</strong>になります。</p>
-<p><strong>参照元の実装がまた変わります。</strong>第 3 章が <code>docs/article/source/java-2</code>（モジュラーモノリス）、第 4 章が <code>docs/article/source/java-3</code>（マイクロサービス + RabbitMQ）だったのに対し、本章は <code>docs/article/source/java-4</code>（マイクロサービス + Axon Framework 5）です。<strong>続きではなく別実装です。</strong>サービスの分割は第 4 章とほぼ同じに揃えてあり、<strong>差分が永続化と読み書きの分離だけになる</strong>ように選ばれています。</p>
-<blockquote>
-<p><code>java-3</code> が見送った Event Sourcing を、同じ分割の上で払う。</p>
-<p>転記元: <code>docs/adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md</code>（<code>java-4</code> の ADR-0001 決定 1）</p>
-</blockquote>
-<p>以降のコードのパスは <code>docs/article/source/java-4/apps/cargo-tracker/backend/</code> からの相対、一次資料（ADR・設計）のパスは <code>docs/article/source/java-4/</code> からの相対です。Java のパスは <code>&lt;サービス&gt;/src/main/java/com/example/cargotracker/&lt;BC&gt;/</code> を省いて記します（<code>bookingms/domain/model/aggregates/Cargo.java</code> は <code>bookingms/src/main/java/com/example/cargotracker/booking/domain/model/aggregates/Cargo.java</code> を指します）。</p>
-<h2 id="_1">イベントソーシング<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
-<h3 id="_2">状態を持たないということ<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h3>
-<p>第 3・4 章の集約は、<strong>現在の状態を持ち、それを行として保存</strong>していました。イベントは「保存したあとに他へ知らせるもの」で、消えても業務の記録は残ります。</p>
-<p>イベントソーシングでは順序が逆になります。<strong>集約はイベントを追記するだけ</strong>で、状態は読み込み時にイベントを再生して作り直します。</p>
-<div class="highlight"><pre><span></span><code><span class="nd">@EventSourced</span><span class="p">(</span><span class="n">idType</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">String</span><span class="p">.</span><span class="na">class</span><span class="p">,</span><span class="w"> </span><span class="n">tagKey</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"bookingId"</span><span class="p">)</span>
-<span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">Cargo</span><span class="w"> </span><span class="p">{</span>
+<h1 id="6-3">第 6 章：3 つの実装を同じ尺度で比べる<a class="headerlink" href="#6-3" title="Permanent link">&para;</a></h1>
+<p>ここまでで 3 本の実装を読みました。<strong>同じ業務（国際貨物輸送）を、違う前提で作ったものです。</strong></p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">章</th>
+<th style="text-align: left;">実装</th>
+<th style="text-align: left;">参照元</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">第 1〜3 章</td>
+<td style="text-align: left;">モジュラーモノリス</td>
+<td style="text-align: left;"><a href="../../source/java-2"><code>source/java-2/</code></a></td>
+</tr>
+<tr>
+<td style="text-align: left;">第 4 章</td>
+<td style="text-align: left;">マイクロサービス + RabbitMQ</td>
+<td style="text-align: left;"><a href="../../source/java-3"><code>source/java-3/</code></a></td>
+</tr>
+<tr>
+<td style="text-align: left;">第 5 章</td>
+<td style="text-align: left;">マイクロサービス + Axon Framework 5（CQRS / Event Sourcing）</td>
+<td style="text-align: left;"><a href="../../source/java-4"><code>source/java-4/</code></a></td>
+</tr>
+</tbody>
+</table>
+<p>各章はそれぞれの代金を、それぞれの言葉で書きました。<strong>この章がすることは、その言葉を揃え直すことだけです。</strong></p>
+<h2 id="_1">尺度を先に決めます<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
+<p>比較の章は、書き方を決めずに始めると印象の比較になります。「モノリスは単純」「マイクロサービスは複雑」は、どちらも測っていない文です。</p>
+<p>そこで<strong>軸を 3 つに絞り、それぞれについて「何を見れば決まるか」を先に決めます</strong>。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">軸</th>
+<th style="text-align: left;">問い</th>
+<th style="text-align: left;">何を見て決めるか</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>1. 何を分けたか</strong></td>
+<td style="text-align: left;">BC の境界は、何の単位として現れているか</td>
+<td style="text-align: left;">ビルドの構成・データベースの数・越境の手段</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>2. 境界を直す費用</strong></td>
+<td style="text-align: left;">境界を引き直すとき、何が追随し、何が追随しないか</td>
+<td style="text-align: left;">変更を止めるもの（コンパイラ・契約・過去のイベント）</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>3. 守りが壊れたとき何が赤くなるか</strong></td>
+<td style="text-align: left;">不変条件や境界が破れたことを、何が知らせるか</td>
+<td style="text-align: left;">実在する検査と、その検査が届かない範囲</td>
+</tr>
+</tbody>
+</table>
+<p><strong>3 つ目は本シリーズ固有の軸です。</strong>一般的な比較記事は 1 と 2 を扱いますが、draft-2 の主題（M2：境界は宣言しただけでは守られない）に照らすと、<strong>守りが壊れたことに気づけるかどうか</strong>が方式の差として最も大きく出ました。</p>
+<h3 id="_2">軸にしなかったもの<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">軸にしなかったもの</th>
+<th style="text-align: left;">理由</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">性能・スループット</td>
+<td style="text-align: left;"><strong>3 本とも測っていない。</strong> 比較できる数字が参照元に無い</td>
+</tr>
+<tr>
+<td style="text-align: left;">チーム規模・開発速度</td>
+<td style="text-align: left;">3 本とも同じ体制で作られている。<strong>分けて比べる材料が無い</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;">運用実績・障害の頻度</td>
+<td style="text-align: left;">本番運用の記録が無い。kind クラスタでの E2E までが上限</td>
+</tr>
+<tr>
+<td style="text-align: left;">学習コスト</td>
+<td style="text-align: left;">主観であり、参照元から読めない</td>
+</tr>
+</tbody>
+</table>
+<p><strong>書けないものを書きません。</strong>これは draft-1 の第 5 章が構想で章を埋めた失敗（アウトライン §2 の P1）と同じ規律です。<strong>「運用負荷が高い」と一般論で書くことはできますが、それは 3 本を読んだ結果ではありません。</strong></p>
+<h2 id="_3">この章のゴール<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
+<ol>
+<li>3 つの方式の差を、<strong>印象ではなく実在する成果物</strong>（ビルド構成・契約・検査）で言えること</li>
+<li>方式を選ぶとき、<strong>どの順序で何を問えばよいか</strong>を説明できること</li>
+<li>この比較が<strong>何を確かめていないか</strong>を言えること</li>
+</ol>
+<h2 id="1">軸 1：何を分けたか<a class="headerlink" href="#1" title="Permanent link">&para;</a></h2>
+<h3 id="_4">ビルドの構成に現れる<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
+<p>モジュラーモノリスのビルド構成は 1 行です。</p>
+<div class="highlight"><pre><span></span><code><span class="n">rootProject</span><span class="o">.</span><span class="na">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'cargo-tracker'</span>
+</code></pre></div>
+<p>引用元: <a href="../../../source/java-2/apps/cargo-tracker/settings.gradle"><code>apps/cargo-tracker/settings.gradle</code></a></p>
+<p><code>include</code> がありません。<strong>BC はトップレベルパッケージであって、ビルドの単位ではありません。</strong>第 3 章で「モジュラーモノリスのモジュールは Gradle のモジュールではない」と書いたのはこのことです。</p>
+<p>CQRS/ES 版は逆です。</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// 業務サブプロジェクト（9 つ）</span>
+<span class="n">include</span><span class="p">(</span><span class="s">"shared"</span><span class="p">)</span>
+<span class="n">include</span><span class="p">(</span><span class="s">"gatewayms"</span><span class="p">)</span>
+<span class="n">include</span><span class="p">(</span><span class="s">"authms"</span><span class="p">)</span>
+<span class="n">include</span><span class="p">(</span><span class="s">"bookingms"</span><span class="p">)</span>
+<span class="n">include</span><span class="p">(</span><span class="s">"routingms"</span><span class="p">)</span>
+<span class="n">include</span><span class="p">(</span><span class="s">"trackingms"</span><span class="p">)</span>
+<span class="n">include</span><span class="p">(</span><span class="s">"handlingms"</span><span class="p">)</span>
+<span class="n">include</span><span class="p">(</span><span class="s">"billingms"</span><span class="p">)</span>
+<span class="n">include</span><span class="p">(</span><span class="s">"simulationms"</span><span class="p">)</span>
 
-<span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">bookingId</span><span class="p">;</span>
-<span class="w">    </span><span class="kd">private</span><span class="w"> </span><span class="n">BookingStatus</span><span class="w"> </span><span class="n">bookingStatus</span><span class="p">;</span>
+<span class="c1">// テスト専用サブプロジェクト（業務サービスの数には含めない）</span>
+<span class="n">include</span><span class="p">(</span><span class="s">"contract-tests"</span><span class="p">)</span>
+<span class="n">include</span><span class="p">(</span><span class="s">"acceptance-tests"</span><span class="p">)</span>
 </code></pre></div>
-<p>転記元: <code>bookingms/domain/model/aggregates/Cargo.java</code></p>
-<p>フィールドはありますが、<strong>これは保存されません</strong>。保存されるのはイベントで、フィールドはイベントを適用した結果です。適用する場所は <code>@EventSourcingHandler</code> です。</p>
-<div class="highlight"><pre><span></span><code><span class="nd">@EventSourcingHandler</span>
-<span class="kt">void</span><span class="w"> </span><span class="nf">on</span><span class="p">(</span><span class="n">TrackingNumberIssuedEvent</span><span class="w"> </span><span class="n">event</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="k">this</span><span class="p">.</span><span class="na">bookingStatus</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">BookingStatus</span><span class="p">.</span><span class="na">TRACKING_ISSUED</span><span class="p">;</span>
-<span class="w">    </span><span class="k">this</span><span class="p">.</span><span class="na">trackingNumber</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">event</span><span class="p">.</span><span class="na">trackingNumber</span><span class="p">();</span>
-<span class="p">}</span>
-</code></pre></div>
-<p>転記元: <code>bookingms/domain/model/aggregates/Cargo.java</code></p>
-<p><strong>ここに業務判断は入りません。</strong>判断はコマンドハンドラが済ませ、イベントはその結果です。過去のイベントを再生するとき、当時の判断をやり直してはいけません。</p>
-<h3 id="_3">イベントは書き換えられない<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
-<p>この一点が、設計判断のほとんどを決めます。イベントは<strong>永続化フォーマット</strong>であり、追記しかできません。</p>
+<p>引用元: <a href="../../../source/java-4/apps/cargo-tracker/backend/settings.gradle.kts"><code>apps/cargo-tracker/backend/settings.gradle.kts</code></a></p>
+<p><strong>BC が独立したデプロイ単位である以上、ビルドの単位も分かれます。</strong>マイクロサービス版（java-3）も同じ形で、業務サービスの顔ぶれはほぼ同じです。</p>
+<h3 id="_5">分けたものを一覧にする<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;"></th>
+<th style="text-align: left;">モジュラーモノリス</th>
+<th style="text-align: left;">EDA</th>
+<th style="text-align: left;">CQRS/ES</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">BC の実体</td>
+<td style="text-align: left;">トップレベルパッケージ</td>
+<td style="text-align: left;">独立した Spring Boot アプリケーション</td>
+<td style="text-align: left;">独立した Spring Boot アプリケーション</td>
+</tr>
+<tr>
+<td style="text-align: left;">ビルドの単位</td>
+<td style="text-align: left;">1 つ（<code>include</code> 無し）</td>
+<td style="text-align: left;">サービスごと</td>
+<td style="text-align: left;">サービスごと（+ テスト専用 2）</td>
+</tr>
+<tr>
+<td style="text-align: left;">データベース</td>
+<td style="text-align: left;">1 つ（全 BC 共通）</td>
+<td style="text-align: left;">サービスごと</td>
+<td style="text-align: left;">サービスごと（投影と Axon 管理表）</td>
+</tr>
+<tr>
+<td style="text-align: left;">BC 間の通知</td>
+<td style="text-align: left;"><code>ApplicationEventPublisher</code></td>
+<td style="text-align: left;">RabbitMQ</td>
+<td style="text-align: left;">Axon Server</td>
+</tr>
+<tr>
+<td style="text-align: left;">BC 間の問い合わせ</td>
+<td style="text-align: left;">ACL ポート（メソッド呼び出し）</td>
+<td style="text-align: left;">REST（ACL 経由）</td>
+<td style="text-align: left;">Axon Query Bus（ACL 経由）</td>
+</tr>
+<tr>
+<td style="text-align: left;">集約の保存</td>
+<td style="text-align: left;">現在状態を UPDATE</td>
+<td style="text-align: left;">現在状態を UPDATE</td>
+<td style="text-align: left;">イベント列</td>
+</tr>
+</tbody>
+</table>
+<p><strong>第 4 章と第 5 章はこの表でほとんど同じです。</strong>サービス分割を揃えたのが ADR-0001 決定 1 の意図であり、差分が<strong>集約の保存の行だけ</strong>になるようにしてあります。</p>
+<p><strong>この軸だけを見ると、大きな段差は 1 つしかありません</strong>——プロセスを分けたかどうか。イベントソーシングは、この軸にはほとんど現れません。</p>
+<h2 id="2">軸 2：境界を直す費用<a class="headerlink" href="#2" title="Permanent link">&para;</a></h2>
+<p>ここで 3 本がはっきり分かれます。<strong>「境界を引き直す」とき、何が変更を止めるか</strong>が違うからです。</p>
+<h3 id="_6">モジュラーモノリス：コンパイラが追随する<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
+<p>BC を分け直す作業は、パッケージの移動とリファクタリングです。<strong>参照元を直し忘れればコンパイルが通りません。</strong>ACL ポートの名簿も同じで、型が変われば呼び出し側が壊れます。</p>
+<p><strong>止めるのはコンパイラだけなので、費用は 1 回きりです。</strong></p>
+<h3 id="eda">EDA：両側を同じ変更で直せない<a class="headerlink" href="#eda" title="Permanent link">&para;</a></h3>
+<p>プロセスが分かれた瞬間に、これが成り立たなくなります。</p>
+<blockquote>
+<p>破壊的な変更が要るときは、<strong>新しいイベント型を足して両方を出し</strong>、受け手が移ってから古いほうを止める。イベントは受け手が読んだあと取り消せないので、REST のように「両側を同じ変更で直す」ことができない。</p>
+</blockquote>
+<p>引用元: <a href="../../../source/java-3/docs/adr/022-domain-event-contract/"><code>docs/adr/022-domain-event-contract.md</code></a>（決定 3・設計文書からの引用）</p>
+<p><strong>費用が 1 回きりでなくなります。</strong>新旧を並行して出す期間があり、その期間の長さは相手が移るまで決まりません。受け手が自分のチームでないなら、なおさらです。</p>
+<h3 id="cqrses">CQRS/ES：過去の自分も読み手になる<a class="headerlink" href="#cqrses" title="Permanent link">&para;</a></h3>
+<p>イベントソーシングは、ここにもう 1 段積みます。<strong>受け手が他サービスだけでなく、将来の自分自身になる</strong>からです。</p>
 <table>
 <thead>
 <tr>
@@ -6735,734 +6888,269 @@
 <td style="text-align: left;">形を変えざるを得ないときは Upcaster を書き、旧形式のテストイベントを残す</td>
 </tr>
 <tr>
-<td style="text-align: left;">シリアライザは Jackson</td>
-<td style="text-align: left;"><code>record</code> をそのまま JSON にする</td>
-</tr>
-<tr>
 <td style="text-align: left;">型名はメタデータに載る</td>
-<td style="text-align: left;">クラスの移動・改名は Upcaster を伴う。<strong>パッケージ移動は「無料」ではない</strong></td>
+<td style="text-align: left;">クラスの移動・改名は <code>Revision</code> と Upcaster を伴う。<strong>パッケージ移動は「無料」ではない</strong></td>
 </tr>
 </tbody>
 </table>
-<p>転記元: <code>docs/design/cargo-tracker/architecture_backend.md</code>「イベント契約」</p>
-<p>イベントの中身にも効きます。値オブジェクトをそのまま載せると、あとで不変条件を足したときに<strong>過去のイベントが復元できなくなります</strong>。</p>
-<div class="highlight"><pre><span></span><code><span class="cm">/**</span>
-<span class="cm"> * 値は素の型で載せる。値オブジェクトをそのまま載せると、あとで不変条件を足したとき</span>
-<span class="cm"> * 過去のイベントが復元できなくなる（新しい検査を古いイベントが通らない）。</span>
-<span class="cm"> */</span>
-<span class="kd">public</span><span class="w"> </span><span class="kd">record</span> <span class="nc">CargoBookedEvent</span><span class="p">(</span>
-<span class="w">        </span><span class="nd">@EventTag</span><span class="p">(</span><span class="n">key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"bookingId"</span><span class="p">)</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">bookingId</span><span class="p">,</span>
-<span class="w">        </span><span class="n">String</span><span class="w"> </span><span class="n">shipperId</span><span class="p">,</span>
-<span class="w">        </span><span class="n">String</span><span class="w"> </span><span class="n">originUnLocode</span><span class="p">,</span>
-<span class="w">        </span><span class="n">String</span><span class="w"> </span><span class="n">destinationUnLocode</span><span class="p">,</span>
-<span class="w">        </span><span class="n">LocalDate</span><span class="w"> </span><span class="n">arrivalDeadline</span><span class="p">,</span>
-</code></pre></div>
-<p>転記元: <code>bookingms/domain/model/events/CargoBookedEvent.java</code></p>
-<p>第 3 章の集約は <code>RouteSpecification</code> を値オブジェクトのまま保持していました。イベントソーシングでは、その値オブジェクトを<strong>17 個の素の項目へ平坦化</strong>します。組み立て直す手順はイベント側の <code>of</code> に置きます——集約に書くと、受付と修正の 2 か所に同じ手順が並び、片方だけ直したときに食い違います。</p>
-<p>あとから項目を足す場合も、<strong>足す前に積まれたイベントには入っていません</strong>。</p>
-<div class="highlight"><pre><span></span><code><span class="cm">/**</span>
-<span class="cm"> * &lt;b&gt;{@code null} を許す。&lt;/b&gt; 足す前に積まれたイベントには入っていない——契約は</span>
-<span class="cm"> * 追記専用で、過去のイベントは書き換えられない。読めなくなればその貨物は復元できなく</span>
-<span class="cm"> * なるので、既定値（{@code null}）で読めるようにし、&lt;b&gt;重量が分からない貨物は請求を</span>
-<span class="cm"> * 作らずに要確認へ出す&lt;/b&gt;。足りない重量で安い請求を黙って出さない。</span>
-<span class="cm"> */</span>
-</code></pre></div>
-<p>転記元: <code>shared/contract/event/TrackingInitializedEvent.java</code></p>
-<h2 id="cqrs">CQRS<a class="headerlink" href="#cqrs" title="Permanent link">&para;</a></h2>
-<p>第 3 章の実装も <code>commandservices</code> / <code>queryservices</code> にパッケージを分けてはいました。しかし<strong>読む先は同じテーブル</strong>で、分けていたのは呼び出し口だけです。</p>
-<p>イベントソーシングを入れると、この分離は選択ではなく<strong>必然</strong>になります。イベント列は「予約 ID で 1 件引く」ことしかできず、「期限が近い順に並べて 20 件」には答えられないからです。答えるための表を別に作ります。</p>
+<p>引用元: <a href="../../../source/java-4/docs/design/cargo-tracker/architecture_backend/"><code>docs/design/cargo-tracker/architecture_backend.md</code></a>「イベント契約」（設計文書からの引用）</p>
+<p>最下段が効きます。<strong>モジュラーモノリスでは無料だった「パッケージを移す」が、ここでは移行作業になります。</strong>第 5 章で見たとおり、イベントに値オブジェクトを載せないのも同じ理由からです——あとで不変条件を足すと、過去のイベントが新しい検査を通らなくなります。</p>
+<h3 id="_7">費用を一覧にする<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
-<th style="text-align: left;">側</th>
-<th style="text-align: left;">置き場</th>
-<th style="text-align: left;">保存しているもの</th>
+<th style="text-align: left;"></th>
+<th style="text-align: left;">何が変更を止めるか</th>
+<th style="text-align: left;">費用の形</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td style="text-align: left;">書く</td>
-<td style="text-align: left;"><code>domain/model/aggregates</code></td>
-<td style="text-align: left;">イベント列（Axon Server の Event Store）</td>
+<td style="text-align: left;">モジュラーモノリス</td>
+<td style="text-align: left;">コンパイラ</td>
+<td style="text-align: left;"><strong>1 回きり</strong></td>
 </tr>
 <tr>
-<td style="text-align: left;">読む</td>
-<td style="text-align: left;"><code>infrastructure/projection</code> → <code>infrastructure/query</code></td>
-<td style="text-align: left;">投影テーブル（PostgreSQL・MyBatis）</td>
+<td style="text-align: left;">EDA</td>
+<td style="text-align: left;">受け手（読んだあと取り消せない）</td>
+<td style="text-align: left;"><strong>並行期間</strong>（相手が移るまで）</td>
+</tr>
+<tr>
+<td style="text-align: left;">CQRS/ES</td>
+<td style="text-align: left;">受け手 + 過去のイベント</td>
+<td style="text-align: left;"><strong>並行期間 + 移行コード</strong>（Upcaster は消えない）</td>
 </tr>
 </tbody>
 </table>
-<p><strong>投影テーブルは正典ではありません。</strong>捨てて作り直せるもので、正典はイベント列だけです。この性質が、あとの「投影はコマンドを送らない」という規律に繋がります。</p>
-<h2 id="axon-framework">Axon Framework<a class="headerlink" href="#axon-framework" title="Permanent link">&para;</a></h2>
-<h3 id="axon">Axon コンポーネント<a class="headerlink" href="#axon" title="Permanent link">&para;</a></h3>
-<p><code>java-4</code> が使う Axon の要素は次の 6 つです。</p>
-<table>
-<thead>
-<tr>
-<th style="text-align: left;">要素</th>
-<th style="text-align: left;">採用する API</th>
-<th style="text-align: left;">置き場</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align: left;">集約の登録</td>
-<td style="text-align: left;"><code>@EventSourced(idType, tagKey)</code>・<code>@EntityCreator</code></td>
-<td style="text-align: left;"><code>domain/model/aggregates</code></td>
-</tr>
-<tr>
-<td style="text-align: left;">コマンドハンドラ</td>
-<td style="text-align: left;"><code>@CommandHandler</code>（発行は引数の <code>EventAppender</code>）</td>
-<td style="text-align: left;">同上</td>
-</tr>
-<tr>
-<td style="text-align: left;">状態復元</td>
-<td style="text-align: left;"><code>@EventSourcingHandler</code></td>
-<td style="text-align: left;">同上</td>
-</tr>
-<tr>
-<td style="text-align: left;">コマンドの宛先</td>
-<td style="text-align: left;"><code>@TargetEntityId</code></td>
-<td style="text-align: left;"><code>domain/model/commands</code></td>
-</tr>
-<tr>
-<td style="text-align: left;">投影</td>
-<td style="text-align: left;"><code>@EventHandler</code> + Processing Group（<code>pooled</code>）</td>
-<td style="text-align: left;"><code>infrastructure/projection</code></td>
-</tr>
-<tr>
-<td style="text-align: left;">問い合わせ</td>
-<td style="text-align: left;"><code>@QueryHandler</code> + <code>QueryGateway</code></td>
-<td style="text-align: left;"><code>infrastructure/query</code></td>
-</tr>
-</tbody>
-</table>
-<p>転記元: <code>docs/adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md</code>（決定 3）</p>
-<p><strong>版は 5.1.0-RC2 に固定しています。</strong>理由は好みではありません。</p>
-<div class="highlight"><pre><span></span><code><span class="c1"># Axon の版について（ADR-0001 決定 3・IT1 スパイク）:</span>
-<span class="c1">#   axon-server-connector は Maven Central に 5.0.0 と 5.1.0-RC2 しか公開されていない。</span>
-<span class="c1">#   コアだけ 5.3 に上げると CommandBusConnector / QueryBusConnector を解決できず</span>
-<span class="c1">#   Axon Server に接続できない。starter / connector / axon-test は必ず同じ版で揃える。</span>
-<span class="c1">#   版の上限は connector の公開状況が決めるので、上げるときはまず connector を確認する。</span>
-<span class="n">axon</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"5.1.0-RC2"</span>
+<p><strong>「間違った境界」の寿命が、下に行くほど延びます。</strong>モジュラーモノリスなら直せば消えます。CQRS/ES では、間違った境界が<strong>イベントの型名として残り続けます</strong>。</p>
+<h2 id="3">軸 3：守りが壊れたとき何が赤くなるか<a class="headerlink" href="#3" title="Permanent link">&para;</a></h2>
+<p>本シリーズが一貫して追ってきた軸です。3 本とも「境界は宣言しただけでは守られない」と考えており、<strong>そのための仕組みを持っています</strong>。違うのは、その仕組みがどこまで届くかです。</p>
+<h3 id="_8">モジュラーモノリス：静的な依存で足りる<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="p">{</span><span class="nd">@code</span><span class="w"> </span><span class="n">allowEmptyShould</span><span class="p">(</span><span class="kc">true</span><span class="p">)}</span><span class="w"> </span><span class="n">は使わない</span><span class="err">。</span><span class="o">**</span><span class="n">何も検査していないルールを緑にすると</span><span class="err">、</span>
+<span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">実装が入った後も検査されていないことに気づけなくなる</span><span class="err">。</span><span class="o">**</span>
+<span class="w"> </span><span class="o">*</span>
+<span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;&lt;</span><span class="n">strong</span><span class="o">&gt;</span><span class="n">各ルールは違反を作って赤になることを確認済みである</span><span class="o">&lt;/</span><span class="n">strong</span><span class="o">&gt;</span><span class="err">（</span><span class="n">ADR</span><span class="o">-</span><span class="mo">005</span><span class="w"> </span><span class="n">の</span>
+<span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">コンプライアンス欄が定める手続き</span><span class="err">）。</span><span class="n">ADR</span><span class="o">-</span><span class="mo">012</span><span class="w"> </span><span class="n">のルールは</span><span class="w"> </span><span class="n">IT8</span><span class="w"> </span><span class="n">のレビューで</span><span class="err">、</span>
+<span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">他</span><span class="w"> </span><span class="n">BC</span><span class="w"> </span><span class="n">の</span><span class="w"> </span><span class="n">ACL</span><span class="w"> </span><span class="n">ポートを注入するとルール</span><span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="n">は緑のまま</span><span class="o">**</span><span class="n">本ルールだけが赤</span><span class="o">**</span><span class="n">になることを</span>
+<span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">実装者以外が確かめている</span><span class="err">。</span>
 </code></pre></div>
-<p>転記元: <code>gradle/libs.versions.toml</code></p>
-<p><strong>Axon 4 の API は 5 系に存在しません。</strong><code>@Aggregate</code> / <code>@AggregateIdentifier</code> / <code>AggregateLifecycle.apply()</code> / <code>AggregateTestFixture</code>、そして <code>@ProcessingGroup</code> も無くなっています。書籍や既存記事の Axon 4 のコードは、そのままでは 1 行も通りません。</p>
-<h3 id="axon-framework_1">Axon Framework のドメインモデルコンポーネント<a class="headerlink" href="#axon-framework_1" title="Permanent link">&para;</a></h3>
-<h4 id="_4">コマンド／コマンドハンドラ<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h4>
-<p>コマンドは素の <code>record</code> です。1 つだけ Axon のアノテーションが付きます。</p>
+<p>引用元: <a href="../../../source/java-2/apps/cargo-tracker/src/test/java/com/example/cargotracker/PackageStructureTest.java"><code>apps/cargo-tracker/src/test/java/com/example/cargotracker/PackageStructureTest.java</code></a></p>
+<p><strong>2 つのことを言っています。</strong>「何も検査していないルールを緑にしない」ことと、「各ルールが違反を作って赤になることを確認済みである」こと。前者は第 5 章の <code>actuallyInspectsAggregates</code> と同じ考え方で、後者は java-4 の <code>ArchRulesAreEffectiveTest</code>（違反フィクスチャで規則が赤を出せることを固定する）と同じです。</p>
+<p><strong>同じ規律が 3 本すべてに、別々の言葉で現れています。</strong>方式に依存しない部分だということです。</p>
+<p>そのうえで、モジュラーモノリスでは<strong>これで足ります</strong>。BC 間の参照は静的な依存であり、ArchUnit が見ている範囲に収まります。</p>
+<h3 id="eda_1">EDA：静的な依存では届かない<a class="headerlink" href="#eda_1" title="Permanent link">&para;</a></h3>
+<p>プロセスが分かれると、<strong>依存グラフに現れないものが出てきます</strong>。</p>
 <div class="highlight"><pre><span></span><code><span class="cm">/**</span>
-<span class="cm"> * {@code @TargetEntityId} が要る。集約に「作る側」（static）と「既にある側」の</span>
-<span class="cm"> * ハンドラが両方あると、Axon は後者のためにコマンドから集約を特定できなければならない。</span>
-<span class="cm"> * 付け忘れると {@code EntityIdResolutionException: found no identifiers} で落ちる。</span>
-<span class="cm"> */</span>
-<span class="kd">public</span><span class="w"> </span><span class="kd">record</span> <span class="nc">BookCargoCommand</span><span class="p">(</span>
-<span class="w">        </span><span class="nd">@TargetEntityId</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">bookingId</span><span class="p">,</span>
-<span class="w">        </span><span class="n">String</span><span class="w"> </span><span class="n">shipperId</span><span class="p">,</span>
-<span class="w">        </span><span class="n">CargoSpecification</span><span class="w"> </span><span class="n">cargoSpecification</span><span class="p">,</span>
-<span class="w">        </span><span class="n">RouteSpecification</span><span class="w"> </span><span class="n">routeSpecification</span><span class="p">,</span>
-<span class="w">        </span><span class="n">String</span><span class="w"> </span><span class="n">bookedBy</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="p">}</span>
-</code></pre></div>
-<p>転記元: <code>bookingms/domain/model/commands/BookCargoCommand.java</code></p>
-<p>コマンドハンドラは集約のメソッドです。<strong>イベントは <code>AggregateLifecycle.apply()</code> ではなく、引数で受け取る <code>EventAppender</code> に追記</strong>します。</p>
-<div class="highlight"><pre><span></span><code><span class="nd">@CommandHandler</span>
-<span class="kd">public</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="nf">book</span><span class="p">(</span><span class="n">BookCargoCommand</span><span class="w"> </span><span class="n">command</span><span class="p">,</span><span class="w"> </span><span class="n">EventAppender</span><span class="w"> </span><span class="n">appender</span><span class="p">,</span><span class="w"> </span><span class="n">Clock</span><span class="w"> </span><span class="n">clock</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">bookingId</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">null</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="c1">// 復元した集約が既に予約を持っているのに受け付けると、イベント列に</span>
-<span class="w">        </span><span class="c1">// 予約が 2 本並び、どちらが正か決まらない。</span>
-<span class="w">        </span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">IllegalTransition</span><span class="p">(</span><span class="s">"予約 "</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">bookingId</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s">" は既に受け付けています"</span><span class="p">);</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="w">    </span><span class="n">CargoValidation</span><span class="p">.</span><span class="na">validate</span><span class="p">(</span><span class="n">command</span><span class="p">,</span><span class="w"> </span><span class="n">LocalDate</span><span class="p">.</span><span class="na">now</span><span class="p">(</span><span class="n">clock</span><span class="p">));</span>
-<span class="w">    </span><span class="n">appender</span><span class="p">.</span><span class="na">append</span><span class="p">(</span><span class="n">CargoBookedEvent</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="n">command</span><span class="p">.</span><span class="na">bookingId</span><span class="p">(),</span><span class="w"> </span><span class="n">command</span><span class="p">.</span><span class="na">shipperId</span><span class="p">(),</span>
-<span class="w">            </span><span class="n">command</span><span class="p">.</span><span class="na">routeSpecification</span><span class="p">(),</span><span class="w"> </span><span class="n">command</span><span class="p">.</span><span class="na">cargoSpecification</span><span class="p">(),</span>
-<span class="w">            </span><span class="n">command</span><span class="p">.</span><span class="na">bookedBy</span><span class="p">()));</span>
-<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">command</span><span class="p">.</span><span class="na">bookingId</span><span class="p">();</span>
-<span class="p">}</span>
-</code></pre></div>
-<p>転記元: <code>bookingms/domain/model/aggregates/Cargo.java</code></p>
-<p><strong>作成系も <code>static</code> にしていません。</strong>これは実測から来た判断です。</p>
-<blockquote>
-<p><strong>static ではなくインスタンスのハンドラにしている。</strong> 両方置くと、集約が
-既に存在しても static のほうが呼ばれ、2 度目の受付が通る（IT2 で実測）。
-<code>@EntityCreator</code> が空の集約を用意するので、片方で両方を扱える。</p>
-</blockquote>
-<p>転記元: <code>bookingms/domain/model/aggregates/Cargo.java</code></p>
-<p><code>Clock</code> も引数で受けます。<strong>業務タイムゾーンの「今日」で判断する</strong>ためで、JVM 既定だと日本時間の朝 9 時より前に受け付けた予約で当日の期限が「過去」になる時間帯ができます。</p>
-<h4 id="_5">イベント／イベントハンドラ<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h4>
-<p>イベントも <code>record</code> です。集約と結び付けるのは <code>@EventTag</code> です。</p>
-<div class="highlight"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="kd">record</span> <span class="nc">CargoBookedEvent</span><span class="p">(</span>
-<span class="w">        </span><span class="nd">@EventTag</span><span class="p">(</span><span class="n">key</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"bookingId"</span><span class="p">)</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">bookingId</span><span class="p">,</span>
-</code></pre></div>
-<p>転記元: <code>bookingms/domain/model/events/CargoBookedEvent.java</code></p>
-<p><strong>この 1 行が、この章でいちばん危険な行です。</strong></p>
-<blockquote>
-<p><strong><code>@EventTag</code> が要る。</strong> DCB はイベントに付いたタグで集約を復元する。
-<code>@EventSourced(tagKey)</code> は集約側の宣言でしかなく、イベント側で「どの項目が
-そのタグか」を言わないとタグが書かれない。付け忘れると、集約は毎回<strong>空のまま
-復元され</strong>、状態を見る守り（2 度目の受付を断る、状態遷移の検査）が丸ごと
-素通りする。それでもテストは緑になる（IT2 で実測）。</p>
-</blockquote>
-<p>転記元: <code>bookingms/domain/model/events/CargoBookedEvent.java</code></p>
-<p>しかも、集約の単体テストでは判別できません。<code>AxonTestFixture</code> の <code>disableAxonServer()</code> ではタグによる復元が働かず、<code>given().event(...)</code> も <code>when()</code> の集約からは見えないためです。<strong>状態を見る守りを足したら、実 Axon Server の統合テストで「壊して赤」を確かめる</strong>——それ以外に確かめる手段がありません。</p>
-<h4 id="_6">クエリハンドラ<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h4>
-<p>問い合わせも <code>record</code> で、応答も <code>record</code> です。</p>
-<div class="highlight"><pre><span></span><code><span class="cm">/**</span>
-<span class="cm"> * 一覧（S20）。</span>
+<span class="cm"> * イベントが&lt;strong&gt;実際に届く&lt;/strong&gt;ことを実 RabbitMQ で確かめる、往復テストの土台。</span>
 <span class="cm"> *</span>
-<span class="cm"> * &lt;p&gt;{@code includeFinished} は「終了したものも表示」の操作に対応する。既定を</span>
-<span class="cm"> * false にしているのは、精算済とキャンセルが混ざると一覧全体が「今日やること」</span>
-<span class="cm"> * として信用されなくなるため（ui_design.md「一覧の既定条件」）。&lt;/p&gt;</span>
+<span class="cm"> * &lt;p&gt;「発行するコードを書いた」「購読するコードを書いた」ことと、&lt;strong&gt;相手に届くこと&lt;/strong&gt;は</span>
+<span class="cm"> * 別である。交換機の名前・ルーティングキー・キューの結びつけ・変換器のどれか 1 つがずれると、</span>
+<span class="cm"> * &lt;strong&gt;送り手はエラーにならないまま届かない&lt;/strong&gt;。</span>
+<span class="cm"> *</span>
+<span class="cm"> * &lt;p&gt;&lt;strong&gt;契約ごとにテストを分ける。&lt;/strong&gt;1 つのクラスに 2 契約を入れていたが、</span>
+<span class="cm"> * US17 で 3 契約目が入る。契約が増えるたびに同じクラスが伸びると、どの契約の何を</span>
+<span class="cm"> * 確かめているのかが読めなくなる。土台だけを共有し、契約ごとの取り決めは各テストが持つ。</span>
 <span class="cm"> */</span>
-<span class="kd">public</span><span class="w"> </span><span class="kd">record</span> <span class="nc">FindBookingsQuery</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">page</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">size</span><span class="p">,</span><span class="w"> </span><span class="kt">boolean</span><span class="w"> </span><span class="n">includeFinished</span><span class="p">,</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">q</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="p">}</span>
 </code></pre></div>
-<p>転記元: <code>bookingms/infrastructure/query/BookingQueries.java</code></p>
-<h4 id="_7">サガ<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h4>
-<p><strong>Axon 5 に Saga はありません。</strong>これは「まだ移植されていない」ではなく、調べ切った結果です。</p>
-<blockquote>
-<p><strong>Axon 5 に Saga は存在しない。</strong> 5.0.0・5.1.0-RC2・5.3.1 のいずれの jar にも
-<code>Saga</code>・<code>Deadline</code>・<code>@ProcessingGroup</code> を含むクラスが 1 つも無い（Axon 4 の概念）。
-設計の Saga はすべて Reaction Handler で実装する</p>
-</blockquote>
-<p>転記元: <code>docs/adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md</code>（決定 5 第 4 項）</p>
-<p>置き換え方は後述します（「サガ」節）。ここで押さえるのは、<strong><code>@Saga</code> を前提にした設計文書がそのままでは実装できない</strong>ことです。<code>java-4</code> でも設計書のほうが古く、IT7 の着手前検証で初めて食い違いが見つかっています。</p>
-<h4 id="axon_1">Axon のディスパッチモデルコンポーネント<a class="headerlink" href="#axon_1" title="Permanent link">&para;</a></h4>
-<p>コマンドバス・クエリバス・イベントバスはいずれも Axon Server が担います。アプリケーション側が触るのは Gateway だけです。</p>
-<div class="highlight"><pre><span></span><code><span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">CommandGateway</span><span class="w"> </span><span class="n">commandGateway</span><span class="p">;</span>
-<span class="kd">private</span><span class="w"> </span><span class="kd">final</span><span class="w"> </span><span class="n">QueryDispatcher</span><span class="w"> </span><span class="n">queries</span><span class="p">;</span>
-</code></pre></div>
-<p>転記元: <code>bookingms/interfaces/rest/BookingController.java</code></p>
-<p><code>QueryDispatcher</code> は <code>QueryGateway</code> を包んだ共有カーネルのクラスで、待ち時間と例外の翻訳を 1 か所に寄せています。</p>
-<div class="highlight"><pre><span></span><code><span class="kd">public</span><span class="w"> </span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="w"> </span><span class="n">T</span><span class="w"> </span><span class="nf">query</span><span class="p">(</span><span class="n">Object</span><span class="w"> </span><span class="n">query</span><span class="p">,</span><span class="w"> </span><span class="n">Class</span><span class="o">&lt;</span><span class="n">T</span><span class="o">&gt;</span><span class="w"> </span><span class="n">responseType</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="k">try</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">gateway</span><span class="p">.</span><span class="na">query</span><span class="p">(</span><span class="n">query</span><span class="p">,</span><span class="w"> </span><span class="n">responseType</span><span class="p">).</span><span class="na">get</span><span class="p">(</span><span class="n">TIMEOUT_SECONDS</span><span class="p">,</span><span class="w"> </span><span class="n">TimeUnit</span><span class="p">.</span><span class="na">SECONDS</span><span class="p">);</span>
-<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="n">InterruptedException</span><span class="w"> </span><span class="n">e</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">Thread</span><span class="p">.</span><span class="na">currentThread</span><span class="p">().</span><span class="na">interrupt</span><span class="p">();</span>
-<span class="w">        </span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">IllegalStateException</span><span class="p">(</span><span class="s">"問い合わせが中断されました"</span><span class="p">,</span><span class="w"> </span><span class="n">e</span><span class="p">);</span>
-<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="n">Exception</span><span class="w"> </span><span class="n">e</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="k">throw</span><span class="w"> </span><span class="n">translated</span><span class="p">(</span><span class="n">e</span><span class="p">);</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div>
-<p>転記元: <code>shared/infrastructure/axon/QueryDispatcher.java</code></p>
-<p><strong>業務の断りを 500 に化けさせない</strong>ためのクラスです。各 Controller が <code>catch (Exception)</code> を持つと、問い合わせ側が業務の判断で断ったことまで包まれ、画面には 500 が出ます。利用者は「壊れた」のか「入力が悪い」のかを判断できません。</p>
-<h3 id="axon-axon-server">Axon のインフラストラクチャコンポーネント：Axon Server<a class="headerlink" href="#axon-axon-server" title="Permanent link">&para;</a></h3>
-<p>Axon Server は 4 役を兼ねます——Command Bus・Event Bus・Query Bus・Event Store。第 4 章の RabbitMQ に相当しますが、<strong>過去のイベントを保持する点</strong>が決定的に違います。</p>
-<p>設定は数行です。</p>
-<div class="highlight"><pre><span></span><code><span class="nt">axon</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">axonserver</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">servers</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${AXON_SERVER:localhost:8124}</span>
-</code></pre></div>
-<p>転記元: <code>bookingms/src/main/resources/application.yml</code></p>
-<p>ただし、この「数行で済む」見た目が罠になります。<strong>繋がらなくても起動が成功します。</strong></p>
-<blockquote>
-<p>Axon Server に繋がらないとき、また context が DCB でないとき、
-アプリケーションは<strong>起動を止めずに無限に再接続を試み続ける</strong>。
-起動が成功してしまうので、投影が永久に進まないことに誰も気づかない。</p>
-</blockquote>
-<p>転記元: <code>shared/infrastructure/axon/AxonServerStartupCheck.java</code></p>
-<p>そのため起動時検査を自分で置いています。判定はログの検出ではなく context への問い合わせで行います——<strong>ログの文言は版で変わるうえ、「出なかった」ことは検査にできない</strong>からです。</p>
-<p>自動設定に任せられない Bean もあります。</p>
-<div class="highlight"><pre><span></span><code><span class="cm">/**</span>
-<span class="cm"> * &lt;b&gt;なぜ手で組むか。&lt;/b&gt; {@code TokenStore} は自動設定されず、無いと</span>
-<span class="cm"> * {@code Could not find a mandatory TokenStore} で起動に失敗する。</span>
-<span class="cm"> * {@code TransactionManager} は 1 つでなければならず、複数あると無音で</span>
-<span class="cm"> * {@code NoTransactionManager} に落ちる。</span>
-<span class="cm"> */</span>
-<span class="nd">@Configuration</span>
-<span class="nd">@ConditionalOnClass</span><span class="p">(</span><span class="n">DataSource</span><span class="p">.</span><span class="na">class</span><span class="p">)</span>
-<span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">AxonJdbcConfiguration</span><span class="w"> </span><span class="p">{</span>
-</code></pre></div>
-<p>転記元: <code>shared/infrastructure/axon/AxonJdbcConfiguration.java</code></p>
-<p>さらに Spring Boot との同居に 1 行の代償があります。</p>
-<div class="highlight"><pre><span></span><code><span class="w">  </span><span class="nt">main</span><span class="p">:</span>
-<span class="w">    </span><span class="c1"># Axon の axon.axonserver ConfigurationProperties が Spring Boot の</span>
-<span class="w">    </span><span class="c1"># BoundConfigurationProperties と Bean 循環を作るため必須（IT1 スパイクで実測）。</span>
-<span class="w">    </span><span class="c1"># Spring Boot の版を下げても回避できない。</span>
-<span class="w">    </span><span class="nt">allow-circular-references</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-</code></pre></div>
-<p>転記元: <code>bookingms/src/main/resources/application.yml</code></p>
-<p><strong>Event Store の運用も自分の責務に入ります。</strong><code>java-4</code> は差分エクスポートと再投入を実機で確かめており、そこで見つけたのが次の落とし穴です。</p>
-<blockquote>
-<p><strong>集約の復元はできない。</strong> エクスポートにタグ（DCB の label）が含まれない。
-タグ無しで投入したイベントは、集約のタグで検索すると <strong>0 件</strong>になる。
-件数と内容は一致しているのに、<code>@EventSourced(tagKey)</code> の集約だけが読めない。</p>
-</blockquote>
-<p>転記元: <code>docs/adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md</code>（決定 5 第 7 項）</p>
-<p>件数も内容も一致するので、検証としては合格に見えます。壊れるのは<strong>復元後に初めてその集約へコマンドを送ったとき</strong>です。だから復元演習の合格条件に「復元した集約へコマンドを 1 本送って通ること」を入れます。</p>
-<h2 id="cqrses-cargo-tracker">CQRS/ES としての Cargo Tracker<a class="headerlink" href="#cqrses-cargo-tracker" title="Permanent link">&para;</a></h2>
-<h3 id="axon_2">Axon を用いた境界づけられたコンテキスト<a class="headerlink" href="#axon_2" title="Permanent link">&para;</a></h3>
-<p>サービス分割は第 4 章とほぼ同じです。違いは 2 つ——<code>simulationms</code> が業務の検証手段として残ること、そして<strong>すべての業務 BC の集約がイベントソーシングになる</strong>ことです。</p>
-<table>
-<thead>
-<tr>
-<th style="text-align: left;">サービス</th>
-<th style="text-align: left;">集約</th>
-<th style="text-align: left;">永続化</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align: left;">bookingms</td>
-<td style="text-align: left;"><code>Cargo</code> / <code>Shipper</code> / <code>Quotation</code></td>
-<td style="text-align: left;">イベント列</td>
-</tr>
-<tr>
-<td style="text-align: left;">routingms</td>
-<td style="text-align: left;"><code>Voyage</code></td>
-<td style="text-align: left;">イベント列</td>
-</tr>
-<tr>
-<td style="text-align: left;">trackingms</td>
-<td style="text-align: left;"><code>TrackingActivity</code></td>
-<td style="text-align: left;">イベント列</td>
-</tr>
-<tr>
-<td style="text-align: left;">handlingms</td>
-<td style="text-align: left;"><code>HandlingActivity</code> / <code>CustomsDeclaration</code></td>
-<td style="text-align: left;">イベント列</td>
-</tr>
-<tr>
-<td style="text-align: left;">billingms</td>
-<td style="text-align: left;"><code>Invoice</code></td>
-<td style="text-align: left;">イベント列</td>
-</tr>
-<tr>
-<td style="text-align: left;">authms</td>
-<td style="text-align: left;"><code>User</code></td>
-<td style="text-align: left;"><strong>状態保存</strong></td>
-</tr>
-</tbody>
-</table>
-<p>転記元: <code>docs/adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md</code>（決定 2）</p>
-<p><strong>authms だけ外します。</strong>現在状態だけが業務に要り、履歴は監査ログテーブルで足りるからです。</p>
-<p>逆に、履歴が業務として要らない <code>Quotation</code> と <code>Voyage</code> も<strong>あえてイベントソーシングにしています</strong>。理由は業務ではなく比較のためだと明記されています——「履歴が要る集約だけ ES」にすると第 4 章との差分が集約ごとに違う形になり、代金を 1 つの表で並べられなくなるからです。そのうえで<strong>見直しの発動条件を数値で置いています</strong>。</p>
-<blockquote>
-<p><strong>IT2 終了時点で実績ベロシティが計画の 70% 未満なら、<code>Quotation</code> と <code>Voyage</code> を
-状態保存（MyBatis の UPDATE）に落とす。</strong></p>
-</blockquote>
-<p>転記元: 同上</p>
-<p>「工数の問題が出たら」では検知できないので、判定できる形にする——<strong>この置き方そのものが、学ぶに値する部分</strong>です。</p>
-<h3 id="_8">境界づけられたコンテキスト：成果物作成<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h3>
-<p>デプロイの単位は Gradle のサブプロジェクトです。</p>
-<div class="highlight"><pre><span></span><code><span class="c1">// 業務サブプロジェクト（9 つ）</span>
-<span class="n">include</span><span class="p">(</span><span class="s">"shared"</span><span class="p">)</span>
-<span class="n">include</span><span class="p">(</span><span class="s">"gatewayms"</span><span class="p">)</span>
-<span class="n">include</span><span class="p">(</span><span class="s">"authms"</span><span class="p">)</span>
-<span class="n">include</span><span class="p">(</span><span class="s">"bookingms"</span><span class="p">)</span>
-<span class="n">include</span><span class="p">(</span><span class="s">"routingms"</span><span class="p">)</span>
-<span class="n">include</span><span class="p">(</span><span class="s">"trackingms"</span><span class="p">)</span>
-<span class="n">include</span><span class="p">(</span><span class="s">"handlingms"</span><span class="p">)</span>
-<span class="n">include</span><span class="p">(</span><span class="s">"billingms"</span><span class="p">)</span>
-<span class="n">include</span><span class="p">(</span><span class="s">"simulationms"</span><span class="p">)</span>
+<p>引用元: <a href="../../../source/java-3/apps/backend/trackingms/src/test/java/com/example/trackingms/EventRoundTripTestBase.java"><code>apps/backend/trackingms/src/test/java/com/example/trackingms/EventRoundTripTestBase.java</code></a></p>
+<p><strong>「送り手はエラーにならないまま届かない」</strong>——コンパイラにも ArchUnit にも見えません。だから実 RabbitMQ の往復テストが要ります。第 4 章で見たとおり、契約テストも<strong>発行側と購読側の両方</strong>に置きます。片側だけでは守れないからです。</p>
+<h3 id="cqrses_1">CQRS/ES：単体テストでは判別できない<a class="headerlink" href="#cqrses_1" title="Permanent link">&para;</a></h3>
+<p>もう 1 段進みます。<strong>集約の単体テストが緑でも、守りが外れていることがあります。</strong></p>
+<p><code>@EventTag</code> を付け忘れると集約は空のまま復元され、状態を見る守りが丸ごと素通りします。しかも <code>AxonTestFixture</code> の <code>disableAxonServer()</code> ではタグ復元が働かないので、<strong>集約の単体テストでは原理的に判別できません</strong>。</p>
+<p>対処は静的な走査です。そして、その走査が空振りしていないことを同じクラスが見ます。</p>
+<div class="highlight"><pre><span></span><code><span class="w">    </span><span class="nd">@Test</span>
+<span class="w">    </span><span class="nd">@DisplayName</span><span class="p">(</span><span class="s">"検査の対象が実在する（空振りしていない）"</span><span class="p">)</span>
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="nf">actuallyInspectsAggregates</span><span class="p">()</span><span class="w"> </span><span class="kd">throws</span><span class="w"> </span><span class="n">IOException</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">List</span><span class="o">&lt;</span><span class="n">Aggregate</span><span class="o">&gt;</span><span class="w"> </span><span class="n">aggregates</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">eventSourcedAggregates</span><span class="p">();</span>
 
-<span class="c1">// テスト専用サブプロジェクト（業務サービスの数には含めない）</span>
-<span class="n">include</span><span class="p">(</span><span class="s">"contract-tests"</span><span class="p">)</span>
-<span class="n">include</span><span class="p">(</span><span class="s">"acceptance-tests"</span><span class="p">)</span>
+<span class="w">        </span><span class="n">assertThat</span><span class="p">(</span><span class="n">aggregates</span><span class="p">)</span>
+<span class="w">                </span><span class="p">.</span><span class="na">as</span><span class="p">(</span><span class="s">"@EventSourced(tagKey) の集約が 1 つも見つからないなら、"</span>
+<span class="w">                        </span><span class="o">+</span><span class="w"> </span><span class="s">"上の検査は『守っている』ではなく『調べていない』"</span><span class="p">)</span>
+<span class="w">                </span><span class="p">.</span><span class="na">isNotEmpty</span><span class="p">();</span>
+<span class="w">        </span><span class="n">assertThat</span><span class="p">(</span><span class="n">aggregates</span><span class="p">.</span><span class="na">stream</span><span class="p">().</span><span class="na">flatMap</span><span class="p">(</span><span class="n">a</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">a</span><span class="p">.</span><span class="na">events</span><span class="p">().</span><span class="na">stream</span><span class="p">()).</span><span class="na">toList</span><span class="p">())</span>
+<span class="w">                </span><span class="p">.</span><span class="na">as</span><span class="p">(</span><span class="s">"イベントを 1 つも拾えていないなら、appender.append の書き方が変わっている"</span><span class="p">)</span>
+<span class="w">                </span><span class="p">.</span><span class="na">isNotEmpty</span><span class="p">();</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
 </code></pre></div>
-<p>転記元: <code>settings.gradle.kts</code></p>
-<p>各サービスの依存は短く済みます。</p>
-<div class="highlight"><pre><span></span><code><span class="n">dependencies</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">implementation</span><span class="p">(</span><span class="n">project</span><span class="p">(</span><span class="s">":shared"</span><span class="p">))</span>
-<span class="w">    </span><span class="n">implementation</span><span class="p">(</span><span class="n">libs</span><span class="p">.</span><span class="na">spring</span><span class="p">.</span><span class="na">boot</span><span class="p">.</span><span class="na">starter</span><span class="p">.</span><span class="na">web</span><span class="p">)</span>
-<span class="w">    </span><span class="n">implementation</span><span class="p">(</span><span class="n">libs</span><span class="p">.</span><span class="na">spring</span><span class="p">.</span><span class="na">boot</span><span class="p">.</span><span class="na">starter</span><span class="p">.</span><span class="na">actuator</span><span class="p">)</span>
-<span class="w">    </span><span class="n">implementation</span><span class="p">(</span><span class="n">libs</span><span class="p">.</span><span class="na">spring</span><span class="p">.</span><span class="na">boot</span><span class="p">.</span><span class="na">starter</span><span class="p">.</span><span class="na">validation</span><span class="p">)</span>
-
-<span class="w">    </span><span class="c1">// Axon は starter と connector を必ず同じ版で入れる（ADR-0001 決定 3）。</span>
-<span class="w">    </span><span class="c1">// connector は starter の推移的依存に含まれないので明示する。</span>
-<span class="w">    </span><span class="n">implementation</span><span class="p">(</span><span class="n">libs</span><span class="p">.</span><span class="na">bundles</span><span class="p">.</span><span class="na">axon</span><span class="p">)</span>
-</code></pre></div>
-<p>転記元: <code>bookingms/build.gradle.kts</code></p>
-<p>第 4 章の <code>spring-boot-starter-amqp</code> が消え、Axon に置き換わっています。<strong>配送経路は Axon Server 一本</strong>で、サービスは互いの URL を知りません。</p>
-<h3 id="_9">境界づけられたコンテキスト：パッケージ構造<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h3>
-<p>4 層は第 3・4 章から変わりません。変わるのは各層の中身です。</p>
+<p>引用元: <a href="../../../source/java-4/apps/cargo-tracker/backend/shared/src/test/java/com/example/cargotracker/shared/conventions/EventTagAccompaniesEventSourcedTest.java"><code>apps/cargo-tracker/backend/shared/src/test/java/com/example/cargotracker/shared/conventions/EventTagAccompaniesEventSourcedTest.java</code></a></p>
+<p><strong>java-2 の <code>allowEmptyShould(true)</code> は使わないという判断と、同じことをしています。</strong>違うのは重みです。モジュラーモノリスでは「実装が入った後も検査されていないことに気づけなくなる」という将来のリスクでしたが、ここでは<strong>今まさに守りが外れているのに緑</strong>という現在の問題です。</p>
+<p>さらに、ArchUnit が届かない範囲も名指しされています。</p>
+<blockquote>
+<p><strong>ArchUnit の規則では代われない。</strong><code>CommandGateway</code> の利用箇所をパッケージで限定する規則はコンパイル時の依存しか見ておらず、「リプレイの実行中に呼ばれない」という動的な保証は別物である。</p>
+</blockquote>
+<p>引用元: <a href="../../../source/java-4/apps/cargo-tracker/backend/shared/src/test/java/com/example/cargotracker/shared/conventions/ReplayCheckAccompaniesReactionTest.java"><code>apps/cargo-tracker/backend/shared/src/test/java/com/example/cargotracker/shared/conventions/ReplayCheckAccompaniesReactionTest.java</code></a></p>
+<h3 id="_9">検知の手段を一覧にする<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
-<th style="text-align: left;">レイヤー</th>
-<th style="text-align: left;">置くもの</th>
-<th style="text-align: left;">置かないもの</th>
+<th style="text-align: left;"></th>
+<th style="text-align: left;">守りが壊れたとき赤くなるもの</th>
+<th style="text-align: left;">届かない範囲</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td style="text-align: left;"><code>domain</code></td>
-<td style="text-align: left;"><code>@EventSourced</code> の集約、コマンド／イベントの <code>record</code>、値オブジェクト、ドメインサービス</td>
-<td style="text-align: left;">Spring・MyBatis・Axon の設定</td>
+<td style="text-align: left;">モジュラーモノリス</td>
+<td style="text-align: left;">コンパイラ・ArchUnit・集約の単体テスト</td>
+<td style="text-align: left;">—</td>
 </tr>
 <tr>
-<td style="text-align: left;"><code>application</code></td>
-<td style="text-align: left;"><code>reaction</code> の Reaction Handler、ACL ポート（interface）、Gateway の利用</td>
-<td style="text-align: left;">SQL、HTTP</td>
+<td style="text-align: left;">EDA</td>
+<td style="text-align: left;">上記 + 契約テスト（両側）・実ブローカーの往復テスト</td>
+<td style="text-align: left;">静的な依存に現れない配送</td>
 </tr>
 <tr>
-<td style="text-align: left;"><code>infrastructure</code></td>
-<td style="text-align: left;"><code>@EventHandler</code> の投影、<code>@QueryHandler</code>、MyBatis Mapper、Axon の設定</td>
-<td style="text-align: left;">業務ルール、<strong>コマンドの送信</strong></td>
-</tr>
-<tr>
-<td style="text-align: left;"><code>interfaces</code></td>
-<td style="text-align: left;">REST Controller、DTO、DTO とコマンドの変換</td>
-<td style="text-align: left;">ドメインの直接操作（必ず Gateway を通す）</td>
+<td style="text-align: left;">CQRS/ES</td>
+<td style="text-align: left;">上記 + 静的なソース走査・実 Axon Server の統合テスト・<code>ReplayIT</code></td>
+<td style="text-align: left;"><strong>集約の単体テスト</strong>（タグ復元が働かない）・リプレイ中の動的な保証</td>
 </tr>
 </tbody>
 </table>
-<p>転記元: <code>docs/design/cargo-tracker/architecture_backend.md</code>「レイヤー責務一覧」</p>
-<p><strong>ドメイン層が Axon のアノテーションに依存すること</strong>は許容しています。<code>@CommandHandler</code> / <code>@EventSourcingHandler</code> はコンパイル時依存だけで、実行時のフレームワーク呼び出しを持ち込みません。問題は <code>@EventSourced</code> です——これは Spring の stereotype（メタアノテーションに <code>@Component</code>）を持ちます。</p>
-<p>それでも許すのは、<strong>これ無しでは集約が Command Bus に登録されない</strong>ためです。<code>@Bean EventSourcedEntityModule</code> で代替すると二重登録になり、<code>@EventSourcedEntity</code> は 5.1.0-RC2 に存在しません。そこで ArchUnit の許可リストに <strong><code>org.axonframework.extension.spring.stereotype.EventSourced</code> の 1 型だけ</strong>を明示し、<code>org.springframework..</code> への直接依存は引き続き禁止しています。</p>
-<p><strong>「例外を作る」ことと「例外を検査に落とす」ことは別です。</strong>許可リストに無い Axon の型をドメインが使えば赤になります。</p>
-<p>イベントの置き場にも規律があります。原則<strong>サービスの中</strong>（<code>domain/model/events</code>）に置き、他サービスが購読するものだけを <code>shared/contract/event</code> に置きます。Event Sourcing ではイベントが集約の永続化フォーマットであり、<strong>その所有者は集約を持つサービスだから</strong>です。</p>
-<div class="highlight"><pre><span></span><code><span class="cm">/**</span>
-<span class="cm"> * 契約イベントではない（bookingms の内側だけで読む）。他サービスが必要とするのは</span>
-<span class="cm"> * 追跡番号が出たあと（{@code TrackingNumberIssuedEvent}）なので、ここでは</span>
-<span class="cm"> * {@code shared/contract} に置かない。置くと、読む側の無い契約を先に敷くことになる。</span>
-<span class="cm"> */</span>
+<p><strong>この軸が、3 方式でいちばん差の大きい軸でした。</strong>しかも差は「検査が増える」だけではありません。<strong>CQRS/ES では、いちばん基本的な検査（集約の単体テスト）が判別力を失います。</strong></p>
+<h2 id="3_1">3 本に共通して現れたもの<a class="headerlink" href="#3_1" title="Permanent link">&para;</a></h2>
+<p>比べると差が目立ちますが、<strong>3 本すべてに現れた規律</strong>もあります。方式を選んでも捨てられない部分です。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">規律</th>
+<th style="text-align: left;">java-2 での現れ方</th>
+<th style="text-align: left;">java-3 での現れ方</th>
+<th style="text-align: left;">java-4 での現れ方</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>空振りする検査を作らない</strong></td>
+<td style="text-align: left;"><code>allowEmptyShould(true)</code> を使わない</td>
+<td style="text-align: left;">名簿を手で書かず DTO の要素から導く</td>
+<td style="text-align: left;"><code>actuallyInspectsAggregates</code> で対象が実在することを見る</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>規則が赤を出せることを確かめる</strong></td>
+<td style="text-align: left;">各ルールで違反を作って確認（ADR-005 の手続き）</td>
+<td style="text-align: left;">契約テストを両側に置く</td>
+<td style="text-align: left;"><code>ArchRulesAreEffectiveTest</code> が違反フィクスチャを食わせる</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>決定を文章のまま残さない</strong></td>
+<td style="text-align: left;">ADR の規則を ArchUnit に落とす</td>
+<td style="text-align: left;">ADR-022 の決定ごとに検査表を持つ</td>
+<td style="text-align: left;"><code>AdrHasChecksTest</code> が決定の数だけ検査を要求する</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>無いものを無いと書く</strong></td>
+<td style="text-align: left;">REST は無い・Mapper XML は無い</td>
+<td style="text-align: left;">Outbox は無い・イベントストアは無い</td>
+<td style="text-align: left;">Saga は無い・Deadline は無い・GA の connector は無い</td>
+</tr>
+</tbody>
+</table>
+<p><strong>4 つ目が特に効きます。</strong>3 本とも「無いもの」を持っていて、そのどれもが<strong>将来足すかもしれないもの</strong>です。無いと書いてあるから、読む側は「見落としたのか、決めて省いたのか」を区別できます。</p>
+<h3 id="3_2">設計文書は 3 本とも実装から離れた<a class="headerlink" href="#3_2" title="Permanent link">&para;</a></h3>
+<p>M3（実装は設計文書を裏切る）は、方式に関係なく起きました。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;"></th>
+<th style="text-align: left;">例</th>
+<th style="text-align: left;">種類</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">java-2</td>
+<td style="text-align: left;">正典が <code>interfaces/rest/</code> を規定するが全 BC に存在しない（第 3 章 D1）</td>
+<td style="text-align: left;">設計が先、実装が追随しない</td>
+</tr>
+<tr>
+<td style="text-align: left;">java-2</td>
+<td style="text-align: left;">ArchUnit の Javadoc が「ルール 5 のみ」のまま残っていた</td>
+<td style="text-align: left;"><strong>実装が先、宣言が追随しない</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;">java-3</td>
+<td style="text-align: left;">正典は Spring Cloud Stream、実装は素の AMQP（第 4 章）</td>
+<td style="text-align: left;">設計が先、実装が追随しない</td>
+</tr>
+<tr>
+<td style="text-align: left;">java-4</td>
+<td style="text-align: left;">設計が <code>@Saga</code> 前提で書かれていた（第 5 章）</td>
+<td style="text-align: left;">設計が先だが<strong>コンパイラが止める</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;">java-4</td>
+<td style="text-align: left;">「名簿は ArchUnit で固定する」と書いた検査が実在しなかった（第 5 章）</td>
+<td style="text-align: left;"><strong>約束だけがあった</strong></td>
+</tr>
+</tbody>
+</table>
+<p>java-2 の 2 例目は、当の Javadoc が自分で記録しています。</p>
+<div class="highlight"><pre><span></span><code><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;&lt;</span><span class="n">strong</span><span class="o">&gt;</span><span class="mi">10</span><span class="w"> </span><span class="n">ルールすべてが有効であり</span><span class="err">、</span><span class="n">緑である</span><span class="o">&lt;/</span><span class="n">strong</span><span class="o">&gt;</span><span class="err">（</span><span class="n">IT9</span><span class="w"> </span><span class="n">で本</span><span class="w"> </span><span class="n">Javadoc</span><span class="w"> </span><span class="n">を実態に合わせた</span><span class="err">。</span>
+<span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">IT1</span><span class="w"> </span><span class="n">の記述が</span><span class="err">「</span><span class="n">ルール</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="n">のみを実装している</span><span class="err">」</span><span class="n">のまま残っていた</span><span class="w"> </span><span class="err">—</span>
+<span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="o">&lt;</span><span class="n">strong</span><span class="o">&gt;</span><span class="n">実装はあるが宣言が古い</span><span class="o">&lt;/</span><span class="n">strong</span><span class="o">&gt;</span><span class="n">形であり</span><span class="err">、</span><span class="n">IT8</span><span class="w"> </span><span class="n">のふりかえり</span><span class="w"> </span><span class="n">P1</span><span class="w"> </span><span class="n">の裏返しである</span><span class="err">）。</span>
 </code></pre></div>
-<p>転記元: <code>bookingms/domain/model/events/CargoBookedEvent.java</code></p>
-<p>契約の名簿は<strong>名前で固定</strong>します。本数だけを数えると 1 本足して 1 本消しても通り、<strong>うっかり契約へ移したイベント</strong>が素通りするためです。</p>
-<h3 id="axon_3">Axon を用いたドメインモデルの実装<a class="headerlink" href="#axon_3" title="Permanent link">&para;</a></h3>
-<h4 id="_10">集約と状態<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h4>
-<p><code>Cargo</code> が持つフィールドは、<strong>「イベント列から復元して、判断に使う分」だけ</strong>です。表示のための値は持ちません。何を持つかは、そのつど理由とともに決まります。</p>
-<div class="highlight"><pre><span></span><code><span class="cm">/**</span>
-<span class="cm"> * 荷主。&lt;b&gt;発行のイベントに載せる&lt;/b&gt;（US18）。</span>
-<span class="cm"> *</span>
-<span class="cm"> * &lt;p&gt;受付のイベントには最初から載っていたが、集約は保持していなかった</span>
-<span class="cm"> * （{@code book()} を通り抜けるだけ）。持たないと、発行のときに誰の貨物か</span>
-<span class="cm"> * 分からず、trackingms は荷主を知る手段を持たない。&lt;/p&gt;</span>
-<span class="cm"> */</span>
-<span class="kd">private</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">shipperId</span><span class="p">;</span>
-</code></pre></div>
-<p>転記元: <code>bookingms/domain/model/aggregates/Cargo.java</code></p>
-<p><strong>投影に尋ねて済ませない</strong>という判断も、ここで繰り返し現れます。</p>
-<div class="highlight"><pre><span></span><code><span class="cm">/**</span>
-<span class="cm"> * 未決着のキャンセル申請（不変条件 10）。&lt;b&gt;高々 1 件&lt;/b&gt;。</span>
-<span class="cm"> *</span>
-<span class="cm"> * &lt;p&gt;&lt;b&gt;集約が持つ。&lt;/b&gt; 投影に尋ねると、投影が追いついていないあいだは</span>
-<span class="cm"> * 申請できない／二重に申請できるの両方が起こる。&lt;/p&gt;</span>
-<span class="cm"> */</span>
-<span class="kd">private</span><span class="w"> </span><span class="n">CancellationRequest</span><span class="w"> </span><span class="n">pendingCancellation</span><span class="p">;</span>
-</code></pre></div>
-<p>転記元: 同上</p>
-<p>これは CQRS 特有の落とし穴です。投影は<strong>結果整合</strong>なので、不変条件の判断材料にしてはいけません。判断に要るものは集約が持ちます。</p>
-<h4 id="_11">コマンドの処理<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h4>
-<p>判定は集約に書き直さず、値オブジェクトの述語を呼びます。</p>
-<div class="highlight"><pre><span></span><code><span class="nd">@CommandHandler</span>
-<span class="kd">public</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="nf">requestRouting</span><span class="p">(</span><span class="n">RequestRoutingCommand</span><span class="w"> </span><span class="n">command</span><span class="p">,</span><span class="w"> </span><span class="n">EventAppender</span><span class="w"> </span><span class="n">appender</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">requireBooked</span><span class="p">(</span><span class="n">command</span><span class="p">.</span><span class="na">bookingId</span><span class="p">());</span>
-<span class="w">    </span><span class="c1">// 遷移先で判断しない。ROUTE_PROPOSED への自己遷移は経路の確定と条件の調整の</span>
-<span class="w">    </span><span class="c1">// もので、引き渡しではない。述語を呼ぶ（BookingStatus#canRequestRouting）。</span>
-<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">bookingStatus</span><span class="p">.</span><span class="na">canRequestRouting</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">IllegalTransition</span><span class="p">(</span>
-<span class="w">                </span><span class="s">"状態 "</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">bookingStatus</span><span class="p">.</span><span class="na">label</span><span class="p">()</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="s">" の予約は経路設計へ引き渡せません"</span><span class="p">);</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="w">    </span><span class="n">appender</span><span class="p">.</span><span class="na">append</span><span class="p">(</span><span class="k">new</span><span class="w"> </span><span class="n">RoutingRequestedEvent</span><span class="p">(</span><span class="n">command</span><span class="p">.</span><span class="na">bookingId</span><span class="p">(),</span><span class="w"> </span><span class="n">command</span><span class="p">.</span><span class="na">requestedBy</span><span class="p">()));</span>
-<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">command</span><span class="p">.</span><span class="na">bookingId</span><span class="p">();</span>
-<span class="p">}</span>
-</code></pre></div>
-<p>転記元: <code>bookingms/domain/model/aggregates/Cargo.java</code></p>
-<p><strong>ここで <code>if (status == PRELIMINARY)</code> と書くと、遷移表と集約の判断が二重になります。</strong>画面も同じ述語を写して操作の出し分けを決めるので、二重になった時点で「出ているのに押すと断られるボタン」が生まれます。</p>
-<p>外から来た値も信じません。経路の確定では、探索が作った候補であっても集約が検算します。</p>
-<div class="highlight"><pre><span></span><code><span class="cm">/**</span>
-<span class="cm"> * &lt;b&gt;旅程が経路仕様を満たすかは集約が見る&lt;/b&gt;（不変条件 5）。「候補は探索が</span>
-<span class="cm"> * 作ったのだから正しい」としない——探索と集約は別の判断で、API を直接叩く経路も</span>
-<span class="cm"> * ある。</span>
-<span class="cm"> */</span>
-</code></pre></div>
-<p>転記元: 同上</p>
-<h4 id="_12">イベントの発行と状態の維持<a class="headerlink" href="#_12" title="Permanent link">&para;</a></h4>
-<p>コマンドハンドラは判断してイベントを追記し、<code>@EventSourcingHandler</code> がそれを状態へ反映します。<strong>最初のコマンドと後続のコマンドで、経路は変わりません。</strong></p>
+<p>引用元: <a href="../../../source/java-2/apps/cargo-tracker/src/test/java/com/example/cargotracker/PackageStructureTest.java"><code>apps/cargo-tracker/src/test/java/com/example/cargotracker/PackageStructureTest.java</code></a></p>
+<p><strong>「実装はあるが宣言が古い」</strong>——食い違いは設計文書の側からだけ起きるのではありません。そして java-4 の最後の例（約束だけがあった）が、いちばん見つけにくい形です。<strong>「検査で守る」と書いてある文書を読んだ人は、守られていると信じます。</strong></p>
+<h2 id="_10">選ぶときの順序<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h2>
+<p>3 つの軸は同時に効くわけではありません。<strong>順序があります。</strong></p>
+<ol>
+<li><strong>境界が安定しているか。</strong>安定していないなら分けません。軸 2 が示すとおり、<strong>間違った境界の寿命は方式で決まります</strong>。モジュラーモノリスはこれを安く確かめられる唯一の構成です</li>
+<li><strong>プロセスを分ける理由があるか。</strong>デプロイ独立・チーム独立・スケール単位のどれかに実際の要求があるときだけ分けます。軸 1 が示すとおり、<strong>境界の表現のためだけなら分ける必要はありません</strong>——モジュラーモノリスでも ArchUnit が守れます</li>
+<li><strong>経緯を業務が読むか。</strong>「結果」だけでなく「どう至ったか」を業務が使うなら、イベントソーシングを検討します。読まないなら履歴は監査ログで足ります</li>
+<li><strong>軸 3 の検査を引き受けられるか。</strong>これが最後の関門です。CQRS/ES を選ぶなら、<strong>実 Axon Server の統合テストとクラスタでの E2E は選択肢ではなく必須</strong>になります。引き受けられないなら選びません</li>
+</ol>
+<p><strong>4 を先に問わないことが大事です。</strong>1〜3 を飛ばして「Event Sourcing を入れるか」から始めると、境界が固まっていないまま型名が固定されます。</p>
+<h2 id="_11">この比較が確かめていないこと<a class="headerlink" href="#_11" title="Permanent link">&para;</a></h2>
+<p><strong>3 本は制御実験ではありません。</strong></p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">限界</th>
+<th style="text-align: left;">内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">同時期ではない</td>
+<td style="text-align: left;">3 本は別の時期に作られており、後のものほど前のものの知見を持っている</td>
+</tr>
+<tr>
+<td style="text-align: left;">完成度が違う</td>
+<td style="text-align: left;">java-2 は 20 イテレーションで v2.1.0 出荷済み、他の 2 本はイテレーションの本数が違う</td>
+</tr>
+<tr>
+<td style="text-align: left;">同じ人が作っている</td>
+<td style="text-align: left;">方式の差と、作り手が学習した差を分離できない</td>
+</tr>
+<tr>
+<td style="text-align: left;">本番運用が無い</td>
+<td style="text-align: left;">障害・スケール・運用負荷の実測が 3 本ともゼロ</td>
+</tr>
+<tr>
+<td style="text-align: left;">書籍の 4 アプローチのうち 2 つを扱っていない</td>
+<td style="text-align: left;">Jakarta EE / MicroProfile 版は参照元に無い。<strong>扱っていないものを評価しない</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>特に 3 行目は、この章の結論の重みを決めます。</strong>「CQRS/ES は検査が多い」という観察は、方式がそれを要求したのか、それとも<strong>作り手が 3 本目で検査の書き方を覚えたのか</strong>を分離できていません。</p>
+<p>ただし軸 3 の中心（<code>@EventTag</code> の付け忘れ・単体テストで判別できないこと）は、<strong>Axon のスパイク結果として ADR に記録されており</strong>、学習の差では説明できません。<strong>分離できる部分とできない部分を、分けて読んでください。</strong></p>
+<h2 id="_12">トレードオフ<a class="headerlink" href="#_12" title="Permanent link">&para;</a></h2>
+<p>この章自体の書き方にもトレードオフがあります。</p>
+<p><strong>軸を 3 つに絞ったことで失ったもの。</strong>性能・チーム規模・学習コストは、実務では選択を左右します。それらを落としたのは、<strong>参照元から読めないものを書かないため</strong>です。読者が自分の状況で選ぶときは、ここで扱った 3 軸に<strong>測れる材料を自分で足す</strong>必要があります。</p>
+<p><strong>「どれが良いか」を書かなかったこと。</strong>3 本のうちどれが優れているかは書いていません。書けるのは「何が違うか」と「どの順序で問うか」までです。<strong>同じ業務を 3 通りに作れたという事実自体が、単一の正解が無いことを示しています。</strong></p>
+<p><strong>採用しなかった書き方。</strong>当初は 1 つの表に全項目を並べる案を採りかけました。やめたのは、軸ごとに<strong>段差の位置が違う</strong>からです——軸 1 の段差は「プロセスを分けたか」の 1 か所ですが、軸 2 と軸 3 は 3 段階です。1 つの表に潰すと、この違いが消えます。</p>
+<h2 id="_13">まとめ<a class="headerlink" href="#_13" title="Permanent link">&para;</a></h2>
 <ul>
-<li>最初のコマンド：<code>@EntityCreator</code> が空の集約を作り、<code>book()</code> が <code>bookingId == null</code> を見て受け付ける</li>
-<li>後続のコマンド：Axon がタグでイベント列を引き、<code>@EventSourcingHandler</code> を順に当てて状態を作り、そこへコマンドが届く</li>
+<li><strong>尺度を先に決めました。</strong>何を分けたか・境界を直す費用・守りが壊れたとき何が赤くなるか、の 3 軸です。性能やチーム規模を軸にしなかったのは、<strong>3 本とも測っていない</strong>からです</li>
+<li><strong>軸 1（配置）の段差は 1 か所だけ</strong>でした。プロセスを分けたかどうかで、イベントソーシングはこの軸にほとんど現れません</li>
+<li><strong>軸 2（境界を直す費用）は 3 段階</strong>でした。コンパイラが止める → 受け手が読んだあと取り消せない → 過去のイベントも読み手になる。<strong>間違った境界の寿命が、方式で決まります</strong></li>
+<li><strong>軸 3（検知の手段）がいちばん差の大きい軸</strong>でした。しかも「検査が増える」だけではなく、<strong>CQRS/ES ではいちばん基本的な検査が判別力を失います</strong></li>
+<li><strong>3 本に共通する規律が 4 つありました。</strong>空振りする検査を作らない・規則が赤を出せることを確かめる・決定を文章のまま残さない・無いものを無いと書く。<strong>方式を選んでも捨てられません</strong></li>
+<li><strong>設計文書と実装の食い違いは、方式に関係なく起きました。</strong>向きは両方あり（設計が先・実装が先）、いちばん見つけにくいのは<strong>「検査で守る」と書いてその検査が無かった</strong>形です</li>
+<li><strong>この比較は制御実験ではありません。</strong>3 本は別の時期に同じ作り手が作っており、方式の差と学習の差を完全には分離できません。本番運用の記録もありません</li>
 </ul>
-<p><code>@EventSourcingHandler</code> には業務判断を書かない、と先に述べました。ただし<strong>書かざるを得ない分岐</strong>もあります。</p>
-<div class="highlight"><pre><span></span><code><span class="nd">@EventSourcingHandler</span>
-<span class="kt">void</span><span class="w"> </span><span class="nf">on</span><span class="p">(</span><span class="n">ShipperNotifiedEvent</span><span class="w"> </span><span class="n">event</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">bookingStatus</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">BookingStatus</span><span class="p">.</span><span class="na">IN_TRANSIT</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="c1">// **輸送中は状態を動かさない**（US28 §受入基準 6）。記録だけ残す。</span>
-<span class="w">        </span><span class="k">return</span><span class="p">;</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="w">    </span><span class="k">this</span><span class="p">.</span><span class="na">bookingStatus</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">BookingStatus</span><span class="p">.</span><span class="na">ROUTE_NOTIFIED</span><span class="p">;</span>
-<span class="p">}</span>
-</code></pre></div>
-<p>転記元: 同上</p>
-<p>これは判断ではなく、<strong>イベントの意味そのもの</strong>です。通知は出来事であって状態の巻き戻しではない——誤配を組み直したあとの再通知で <code>ROUTE_NOTIFIED</code> へ戻すと、輸送中の貨物が「経路を通知しただけ」に見え、確定も追跡番号の発行もやり直しになります。</p>
-<h4 id="_13">集約の投影<a class="headerlink" href="#_13" title="Permanent link">&para;</a></h4>
-<p>投影は <code>@EventHandler</code> を持つ普通の Spring コンポーネントです。</p>
-<div class="highlight"><pre><span></span><code><span class="nd">@SequencingPolicy</span><span class="p">(</span><span class="n">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">PropertySequencingPolicy</span><span class="p">.</span><span class="na">class</span><span class="p">,</span><span class="w"> </span><span class="n">parameters</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"bookingId"</span><span class="p">)</span>
-<span class="nd">@Component</span>
-<span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">CargoProjection</span><span class="w"> </span><span class="p">{</span>
-</code></pre></div>
-<p>転記元: <code>bookingms/infrastructure/projection/CargoProjection.java</code></p>
-<p>規律は 2 つあります。</p>
-<p><strong>1 つ目：投影はコマンドを送りません。</strong>送るとリプレイのたびに副作用が再実行されます。これはレイヤー責務表にも「<code>infrastructure</code> にコマンドの送信を置かない」として書かれています。</p>
-<p><strong>2 つ目：処理の列を細かく切ります。</strong></p>
-<blockquote>
-<p>既定では列が全体で 1 本なので、1 件の毒で<strong>無関係の予約のイベントまで退避される</strong>
-（IT12 のクラスタ E2E で 4 件のうち 3 件が巻き添え）。退避先は順序を守るために
-「同じ列の後続」も退避するので、<strong>列の切り方がそのまま被害の範囲になる</strong>。</p>
-</blockquote>
-<p>転記元: 同上</p>
-<p>かといって予約より細かくは切れません。同じ予約の中では順序が要る（訂正は登録より後に効かなければならない）からです。</p>
-<p>投影は<strong>落ちてよい場所ではありません</strong>。書けなかったときに黙らないようにします。</p>
-<div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">updated</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cargos</span><span class="p">.</span><span class="na">updateRoutingRequested</span><span class="p">(</span><span class="n">event</span><span class="p">.</span><span class="na">bookingId</span><span class="p">(),</span><span class="w"> </span><span class="p">...);</span>
-<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">updated</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">log</span><span class="p">.</span><span class="na">warn</span><span class="p">(</span><span class="s">"経路設計の依頼を書ける予約が投影に無い: bookingId={}"</span><span class="p">,</span><span class="w"> </span><span class="n">event</span><span class="p">.</span><span class="na">bookingId</span><span class="p">());</span>
-<span class="p">}</span>
-</code></pre></div>
-<p>転記元: 同上</p>
-<p>弾いたものは<strong>要確認一覧へ出します</strong>。宛先はロールで分けます——気づく手段は、その人が次に取れる行動へ繋がらなければ意味がないからです。</p>
-<p>設定側にも列挙の規律があります。</p>
-<div class="highlight"><pre><span></span><code><span class="nt">axon</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">eventhandling</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">processors</span><span class="p">:</span>
-<span class="w">      </span><span class="c1"># **退避先は Processor ごとに明示する**（ADR-0014）。`"[..default]"` は</span>
-<span class="w">      </span><span class="c1"># この版では効かない（実測。DLQ が付かず、1 件で全部止まる形に戻る）。</span>
-<span class="w">      </span><span class="s">"[com.example.cargotracker.booking.infrastructure.projection]"</span><span class="p p-Indicator">:</span>
-<span class="w">        </span><span class="nt">mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pooled</span>
-<span class="w">        </span><span class="nt">dlq</span><span class="p">:</span>
-<span class="w">          </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-<span class="w">      </span><span class="s">"[com.example.cargotracker.booking.application.reaction]"</span><span class="p p-Indicator">:</span>
-<span class="w">        </span><span class="nt">mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pooled</span>
-<span class="w">        </span><span class="nt">dlq</span><span class="p">:</span>
-<span class="w">          </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-</code></pre></div>
-<p>転記元: <code>bookingms/src/main/resources/application.yml</code></p>
-<p><strong>Processing Group はパッケージ名で分けます</strong>（<code>@ProcessingGroup</code> が無いため）。投影と Reaction Handler を別の Group にするために、パッケージを分けているわけです。そして書き忘れを人の注意で防がないよう、<strong>設定ファイルを走査する検査</strong>を置いています——<code>@EventHandler</code> を持つパッケージがここに載っているか、載っているものに <code>dlq</code> が付いているか、の 2 つです。</p>
-<h4 id="_14">クエリハンドラ<a class="headerlink" href="#_14" title="Permanent link">&para;</a></h4>
-<p>クエリハンドラは投影テーブルだけを見ます。</p>
-<div class="highlight"><pre><span></span><code><span class="cm">/** 予約の問い合わせ。読み取りモデルは投影テーブルだけを見る。 */</span>
-<span class="nd">@Component</span>
-<span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">BookingQueryHandler</span><span class="w"> </span><span class="p">{</span>
-</code></pre></div>
-<p>転記元: <code>bookingms/infrastructure/query/BookingQueryHandler.java</code></p>
-<p>ただし<strong>判定はテーブルの上で書き直しません</strong>。選択肢を作るような問い合わせは、集約と同じ関数を呼びます。</p>
-<div class="highlight"><pre><span></span><code><span class="cm">/**</span>
-<span class="cm"> * 陸揚げ地の選択肢（S23 / US30 §受入基準 5）。</span>
-<span class="cm"> *</span>
-<span class="cm"> * &lt;p&gt;&lt;b&gt;集約と同じ関数から作る。&lt;/b&gt; 画面で組み立てると、出ているのに押すと</span>
-<span class="cm"> * 断られる港が生まれる（IT5 のレビューで一度出た形）。投影の旅程と現在地を</span>
-<span class="cm"> * 材料にして、判定そのものは {@code DischargeCandidates} に任せる。&lt;/p&gt;</span>
-<span class="cm"> */</span>
-</code></pre></div>
-<p>転記元: 同上</p>
-<p><strong>CQRS は「読み側で好きに書いてよい」ではありません。</strong>読み側が本番の判定を写すと、写した瞬間から食い違いが始まります。</p>
-<h4 id="_15">サガ<a class="headerlink" href="#_15" title="Permanent link">&para;</a></h4>
-<p>設計が Saga と呼んでいた調整役は、すべて <code>application/reaction</code> の Reaction Handler です。</p>
-<div class="highlight"><pre><span></span><code><span class="cm">/**</span>
-<span class="cm"> * 予約 → 追跡開始の連鎖（US14 / ADR-0010）。&lt;b&gt;Reaction Handler の 1 本目&lt;/b&gt;。</span>
-<span class="cm"> *</span>
-<span class="cm"> * &lt;p&gt;&lt;b&gt;Saga ではない。&lt;/b&gt; Axon 5 に Saga の API が無い（ADR-0001 決定 6）。段の数だけ</span>
-<span class="cm"> * ハンドラを並べ、途中経過は {@code process_state} に持つ。Saga のストアに直列化して</span>
-<span class="cm"> * 埋めるのと違い、&lt;b&gt;止まった位置がそのまま SQL で読める&lt;/b&gt;。&lt;/p&gt;</span>
-<span class="cm"> */</span>
-<span class="nd">@SequencingPolicy</span><span class="p">(</span><span class="n">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">PropertySequencingPolicy</span><span class="p">.</span><span class="na">class</span><span class="p">,</span><span class="w"> </span><span class="n">parameters</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"bookingId"</span><span class="p">)</span>
-<span class="nd">@Component</span>
-<span class="kd">public</span><span class="w"> </span><span class="kd">class</span> <span class="nc">BookingReactionHandler</span><span class="w"> </span><span class="p">{</span>
-</code></pre></div>
-<p>転記元: <code>bookingms/application/reaction/BookingReactionHandler.java</code></p>
-<p>置き換えの対応は次のとおりです。</p>
-<table>
-<thead>
-<tr>
-<th style="text-align: left;">Saga の機能</th>
-<th style="text-align: left;">置き換え</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align: left;"><code>@StartSaga</code></td>
-<td style="text-align: left;">1 段目が <code>process_state</code> に <code>RUNNING</code> の行を作る</td>
-</tr>
-<tr>
-<td style="text-align: left;"><code>associateWith()</code></td>
-<td style="text-align: left;"><code>process_state</code> の <code>process_type</code> + <code>process_id</code></td>
-</tr>
-<tr>
-<td style="text-align: left;"><code>@EndSaga</code></td>
-<td style="text-align: left;">最後の段で <code>status = 'COMPLETED'</code>。<strong>行は消さない</strong></td>
-</tr>
-<tr>
-<td style="text-align: left;">Deadline</td>
-<td style="text-align: left;"><code>RUNNING</code> かつ 24 時間より古い行を運用ジョブで走査</td>
-</tr>
-<tr>
-<td style="text-align: left;">Saga Store</td>
-<td style="text-align: left;"><code>process_state</code>。<strong>止まった位置がそのまま SQL で読める</strong></td>
-</tr>
-</tbody>
-</table>
-<p>転記元: <code>docs/design/cargo-tracker/architecture_backend.md</code>「Saga の各機能の置き換え」</p>
-<p><strong>これは代替品ではなく、Axon 5 が勧めている形</strong>だと ADR は書いています。自分で持つほうがよい理由は 4 つ——状態が見える・直列化の事故が起きない・テストが単純・置き場を業務の都合で選べる。そして<strong>Saga が戻ってきても、この 4 つを上回らない限り移らない</strong>と、再評価の発動条件まで先に決めてあります（<code>SagaIsStillAbsentTest</code> が「Saga が現れたら赤」にします）。</p>
-<p>1 段目の実装はこうなります。</p>
-<div class="highlight"><pre><span></span><code><span class="nd">@EventHandler</span>
-<span class="kd">public</span><span class="w"> </span><span class="kt">void</span><span class="w"> </span><span class="nf">on</span><span class="p">(</span><span class="n">TrackingNumberIssuedEvent</span><span class="w"> </span><span class="n">event</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="kd">var</span><span class="w"> </span><span class="n">state</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">processes</span><span class="p">.</span><span class="na">start</span><span class="p">(</span><span class="n">PROCESS_TYPE</span><span class="p">,</span><span class="w"> </span><span class="n">event</span><span class="p">.</span><span class="na">bookingId</span><span class="p">(),</span><span class="w"> </span><span class="n">STEP_INITIALIZE_TRACKING</span><span class="p">,</span>
-<span class="w">            </span><span class="n">TOTAL_STEPS</span><span class="p">,</span><span class="w"> </span><span class="n">Map</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="s">"trackingNumber"</span><span class="p">,</span><span class="w"> </span><span class="n">event</span><span class="p">.</span><span class="na">trackingNumber</span><span class="p">()));</span>
-<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">state</span><span class="p">.</span><span class="na">isRunning</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="c1">// 終わった連鎖に遅れて届いた。送り直すと追跡が作り直される。</span>
-<span class="w">        </span><span class="k">return</span><span class="p">;</span>
-<span class="w">    </span><span class="p">}</span>
-
-<span class="w">    </span><span class="k">try</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">commands</span><span class="p">.</span><span class="na">sendAndWait</span><span class="p">(</span><span class="k">new</span><span class="w"> </span><span class="n">InitializeTrackingCommand</span><span class="p">(...));</span>
-<span class="w">        </span><span class="c1">// 送れたところまでを 1 段目の完了とする。**送る前に進めない**——届いて</span>
-<span class="w">        </span><span class="c1">// いないのに「1 段終わった」と読めると、滞留の走査から漏れる。</span>
-<span class="w">        </span><span class="n">processes</span><span class="p">.</span><span class="na">advance</span><span class="p">(</span><span class="n">PROCESS_TYPE</span><span class="p">,</span><span class="w"> </span><span class="n">event</span><span class="p">.</span><span class="na">bookingId</span><span class="p">(),</span>
-<span class="w">                </span><span class="n">STEP_INITIALIZE_TRACKING</span><span class="p">,</span><span class="w"> </span><span class="n">STEP_TRACKING_INITIALIZED</span><span class="p">);</span>
-<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="n">RuntimeException</span><span class="w"> </span><span class="n">e</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="c1">// **握りつぶさない。** 例外を投げ直すと Axon の Event Processor が</span>
-<span class="w">        </span><span class="c1">// 再試行する。上限を超えたときだけ補償へ落とす（ADR-0010 決定 4）。</span>
-<span class="w">        </span><span class="kt">int</span><span class="w"> </span><span class="n">attempts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">attemptsOf</span><span class="p">(</span><span class="n">state</span><span class="p">)</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
-<span class="w">        </span><span class="n">processes</span><span class="p">.</span><span class="na">recordAttempt</span><span class="p">(</span><span class="n">PROCESS_TYPE</span><span class="p">,</span><span class="w"> </span><span class="n">event</span><span class="p">.</span><span class="na">bookingId</span><span class="p">(),</span><span class="w"> </span><span class="n">attempts</span><span class="p">);</span>
-<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">attempts</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">MAX_ATTEMPTS</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">            </span><span class="k">throw</span><span class="w"> </span><span class="n">e</span><span class="p">;</span>
-<span class="w">        </span><span class="p">}</span>
-<span class="w">        </span><span class="n">compensate</span><span class="p">(</span><span class="n">event</span><span class="p">,</span><span class="w"> </span><span class="n">e</span><span class="p">);</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div>
-<p>転記元: <code>bookingms/application/reaction/BookingReactionHandler.java</code></p>
-<p><strong>補償は「取り消す」ことではなく「やり直せる状態に戻す」ことです。</strong>追跡番号の発行だけを取り消し、予約は <code>CONFIRMED</code> に留めます——キャンセルではないので、経路設計者がもう一度発行できるようにするだけです。</p>
-<p>そして補償したことを<strong>誰に知らせるか</strong>が、設計から変わっています。</p>
-<blockquote>
-<p>設計（architecture_backend.md）は「追跡管理者の要確認一覧に写す」と書いていたが、
-<strong>追跡管理者には打つ手が無い</strong>——追跡番号を発行し直せるのは経路設計者だけである。
-気づく手段は、その人が次に取れる行動へ繋がらなければ意味がない。</p>
-</blockquote>
-<p>転記元: 同上</p>
-<p><strong>Reaction Handler は同期クエリを呼びません。</strong><code>QueryDispatcher</code> で待つと Processing Group が止まるためで、ArchUnit の規則が <code>QueryGateway</code> の直接利用だけでなく <code>QueryDispatcher</code> 越しの呼び出しも禁じています。</p>
-<h3 id="_16">実装のまとめ<a class="headerlink" href="#_16" title="Permanent link">&para;</a></h3>
-<p>イベントソーシングが実際に変えたのは、次の 5 点です。</p>
-<table>
-<thead>
-<tr>
-<th style="text-align: left;">観点</th>
-<th style="text-align: left;">第 4 章（状態保存 + RabbitMQ）</th>
-<th style="text-align: left;">第 5 章（Event Sourcing + Axon）</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align: left;">集約の永続化</td>
-<td style="text-align: left;">現在状態を UPDATE</td>
-<td style="text-align: left;">イベントを追記し、再生して復元</td>
-</tr>
-<tr>
-<td style="text-align: left;">読み取り</td>
-<td style="text-align: left;">同じテーブルを SELECT</td>
-<td style="text-align: left;">投影テーブル（結果整合・作り直せる）</td>
-</tr>
-<tr>
-<td style="text-align: left;">イベントの位置づけ</td>
-<td style="text-align: left;">保存のあとの通知</td>
-<td style="text-align: left;"><strong>保存そのもの</strong>（追記専用・改名に代償）</td>
-</tr>
-<tr>
-<td style="text-align: left;">調整役</td>
-<td style="text-align: left;">メッセージハンドラ</td>
-<td style="text-align: left;">Reaction Handler + <code>process_state</code></td>
-</tr>
-<tr>
-<td style="text-align: left;">失敗の扱い</td>
-<td style="text-align: left;">再送とべき等</td>
-<td style="text-align: left;">再試行 → 上限 → <strong>補償と要確認一覧</strong></td>
-</tr>
-</tbody>
-</table>
-<p>代金も明確です。<strong>緑になるのに何も見ていないテスト</strong>が、この方式では 2 度出ました（<code>@EventTag</code> の付け忘れ、エクスポートからの復元）。どちらも件数と内容は一致し、単体テストは緑です。<strong>実 Axon Server での統合テストと、クラスタでの E2E を検査として持たない限り、この方式は安全になりません。</strong></p>
-<h3 id="axon_4">Axon を用いたドメインモデルサービスの実装<a class="headerlink" href="#axon_4" title="Permanent link">&para;</a></h3>
-<h4 id="rest-api">受信サービス：REST API<a class="headerlink" href="#rest-api" title="Permanent link">&para;</a></h4>
-<p>Controller は HTTP と業務の境界のままです。変わるのは、ユースケースクラスではなく <strong>Gateway を呼ぶ</strong>点です。</p>
-<div class="highlight"><pre><span></span><code><span class="nd">@PostMapping</span>
-<span class="kd">public</span><span class="w"> </span><span class="n">ResponseEntity</span><span class="o">&lt;</span><span class="n">BookCargoResponse</span><span class="o">&gt;</span><span class="w"> </span><span class="nf">book</span><span class="p">(</span><span class="nd">@Valid</span><span class="w"> </span><span class="nd">@RequestBody</span><span class="w"> </span><span class="n">BookCargoRequest</span><span class="w"> </span><span class="n">request</span><span class="p">,</span>
-<span class="w">        </span><span class="nd">@RequestHeader</span><span class="p">(</span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">"X-Auth-Username"</span><span class="p">,</span><span class="w"> </span><span class="n">required</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span><span class="p">)</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">username</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">String</span><span class="w"> </span><span class="n">bookingId</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">UUID</span><span class="p">.</span><span class="na">randomUUID</span><span class="p">().</span><span class="na">toString</span><span class="p">();</span>
-
-<span class="w">    </span><span class="n">BookCargoCommand</span><span class="w"> </span><span class="n">command</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">BookCargoCommand</span><span class="p">(</span>
-<span class="w">            </span><span class="n">bookingId</span><span class="p">,</span>
-<span class="w">            </span><span class="n">request</span><span class="p">.</span><span class="na">shipperId</span><span class="p">(),</span>
-<span class="w">            </span><span class="n">CargoSpecificationAssembler</span><span class="p">.</span><span class="na">from</span><span class="p">(</span><span class="n">request</span><span class="p">),</span>
-<span class="w">            </span><span class="k">new</span><span class="w"> </span><span class="n">RouteSpecification</span><span class="p">(</span>
-<span class="w">                    </span><span class="n">Location</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="na">originUnLocode</span><span class="p">()),</span>
-<span class="w">                    </span><span class="n">Location</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="na">destinationUnLocode</span><span class="p">()),</span>
-<span class="w">                    </span><span class="n">request</span><span class="p">.</span><span class="na">arrivalDeadline</span><span class="p">()),</span>
-<span class="w">            </span><span class="n">username</span><span class="p">);</span>
-<span class="w">    </span><span class="n">commandGateway</span><span class="p">.</span><span class="na">sendAndWait</span><span class="p">(</span><span class="n">command</span><span class="p">);</span>
-</code></pre></div>
-<p>転記元: <code>bookingms/interfaces/rest/BookingController.java</code></p>
-<p><strong>識別子は Controller が採ります。</strong>集約はまだ存在せず、コマンドの宛先を決めるのは送る側だからです。</p>
-<p>読み取りは <code>QueryDispatcher</code> 経由で、同じ Controller の中に並びます。<strong>書く側と読む側が同じクラスに同居していてもよい</strong>——分けるのは呼び出し口ではなくモデルのほうです。</p>
-<h4 id="_17">受信サービス：イベントハンドラ<a class="headerlink" href="#_17" title="Permanent link">&para;</a></h4>
-<p>イベントを受ける口は 2 種類あり、<strong>置き場で役割が決まります</strong>。</p>
-<table>
-<thead>
-<tr>
-<th style="text-align: left;">置き場</th>
-<th style="text-align: left;">役割</th>
-<th style="text-align: left;">コマンドを送るか</th>
-<th style="text-align: left;">リプレイ対象か</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align: left;"><code>infrastructure/projection</code></td>
-<td style="text-align: left;">投影を書く</td>
-<td style="text-align: left;"><strong>送らない</strong></td>
-<td style="text-align: left;">する</td>
-</tr>
-<tr>
-<td style="text-align: left;"><code>application/reaction</code></td>
-<td style="text-align: left;">連鎖を進める</td>
-<td style="text-align: left;">送る</td>
-<td style="text-align: left;"><strong>しない</strong></td>
-</tr>
-</tbody>
-</table>
-<p>同じ Group にすると、投影のリプレイでコマンドが再送され、追跡が作り直されます。<strong>パッケージが Processing Group そのもの</strong>なので、置き場所を間違えることが設定の誤りと同義になります。</p>
-<h2 id="_18">アプリケーションサービス<a class="headerlink" href="#_18" title="Permanent link">&para;</a></h2>
-<p>第 3・4 章にあった「アプリケーションサービス」というクラス群は、この方式では<strong>ほとんど消えます</strong>。ユースケースの手順は集約のコマンドハンドラと Reaction Handler に分かれ、<code>application</code> パッケージに残るのは ACL ポートの定義と、いくつかの計算だけです。</p>
-<div class="highlight"><pre><span></span><code><span class="cm">/**</span>
-<span class="cm"> * ACL ポート（利用側が定義する interface）。</span>
-<span class="cm"> */</span>
-<span class="kn">package</span><span class="w"> </span><span class="nn">com.example.cargotracker.booking.application.port</span><span class="p">;</span>
-</code></pre></div>
-<p>転記元: <code>bookingms/application/port/package-info.java</code></p>
-<p>ACL の実装は <code>infrastructure/acl</code> に置き、<strong>Axon の Query Bus 越し</strong>に他サービスへ問い合わせます。</p>
-<div class="highlight"><pre><span></span><code><span class="nd">@Override</span>
-<span class="kd">public</span><span class="w"> </span><span class="n">RouteCandidates</span><span class="w"> </span><span class="nf">find</span><span class="p">(</span><span class="n">RouteSearchRequest</span><span class="w"> </span><span class="n">request</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">    </span><span class="n">RouteCandidatesResponse</span><span class="w"> </span><span class="n">response</span><span class="p">;</span>
-<span class="w">    </span><span class="k">try</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="n">response</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">queries</span><span class="p">.</span><span class="na">query</span><span class="p">(</span><span class="n">toQuery</span><span class="p">(</span><span class="n">request</span><span class="p">),</span><span class="w"> </span><span class="n">RouteCandidatesResponse</span><span class="p">.</span><span class="na">class</span><span class="p">);</span>
-<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="n">BusinessRuleViolation</span><span class="w"> </span><span class="n">e</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="c1">// 経路設計側が「知らない港・種別」と断った。障害ではないので、そのまま通す。</span>
-<span class="w">        </span><span class="k">throw</span><span class="w"> </span><span class="n">e</span><span class="p">;</span>
-<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">catch</span><span class="w"> </span><span class="p">(</span><span class="n">RuntimeException</span><span class="w"> </span><span class="n">e</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="c1">// 相手が居ない（NoHandlerForQueryException）・時間切れ・通信の失敗。</span>
-<span class="w">        </span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">RouteSearchUnavailable</span><span class="p">(</span><span class="s">"経路設計サービスに問い合わせられませんでした"</span><span class="p">,</span><span class="w"> </span><span class="n">e</span><span class="p">);</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">response</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="kc">null</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="c1">// ハンドラが null を返すことはないが、返ったなら「0 件」ではない。</span>
-<span class="w">        </span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">RouteSearchUnavailable</span><span class="p">(</span><span class="s">"経路設計サービスから応答がありません"</span><span class="p">,</span><span class="w"> </span><span class="kc">null</span><span class="p">);</span>
-<span class="w">    </span><span class="p">}</span>
-</code></pre></div>
-<p>転記元: <code>bookingms/infrastructure/acl/QueryBusRouteCandidateFinder.java</code></p>
-<p><strong>落ちているときに空リストを返しません。</strong>空にすると「候補が無い」と読まれ、経路設計者は直らない条件を変え続けます。Query Bus を選んだ理由の 1 つがここにあります——REST の接続エラーと違い、<strong>Axon Server が「誰も居ない」と明示的に答える</strong>からです。</p>
-<p>ACL の責務は第 3・4 章と変わりません。契約 DTO を自 BC の型へ組み直します。ただし<strong>数え直しは慎重に</strong>分けています。</p>
-<blockquote>
-<p><strong>候補の超過日数は routingms が数えたものを写す。</strong> ここで数え直すと、探索が使った
-期限と画面に出す超過日数がずれる。<strong>確定するときは <code>Cargo</code> が数え直す。</strong> 呼ぶ側が
-持ってきた数を信じないためで、しかも予約の期限は条件調整で動きうる。
-2 か所あるのは重複ではなく、<strong>答えるべき問いが違う</strong>。</p>
-</blockquote>
-<p>転記元: 同上</p>
-<h2 id="_19">まとめ<a class="headerlink" href="#_19" title="Permanent link">&para;</a></h2>
-<p>第 5 章は、第 4 章のサービス分割をそのままに、<strong>各サービスの内側を状態保存からイベント列へ入れ替えました</strong>。</p>
-<p>得たものは 3 つです。<strong>起きたことが全部残る</strong>（誤配も取り消しも、結果ではなく経緯として読める）。<strong>読み取りモデルを業務の都合で何枚でも作れる</strong>（一覧・作業一覧・要確認一覧が同じ表を奪い合わない）。<strong>サービスが互いの URL を知らない</strong>（配送経路が Axon Server 1 本に揃う）。</p>
-<p>払ったものも 3 つです。<strong>イベントが契約になる</strong>（改名も項目追加も、過去のイベントが読めるかどうかで縛られる）。<strong>結果整合が業務判断に入り込む</strong>（不変条件の材料を投影に尋ねられない）。そして<strong>緑に見えて何も見ていないテストが増える</strong>（<code>@EventTag</code>、復元演習、<code>disableAxonServer()</code>）。</p>
-<p>最後の 1 つがこの方式の本質的な代金です。第 3 章の実装なら、集約の単体テストが落ちれば守りが壊れたと分かります。この方式では、<strong>守りが丸ごと外れていても単体テストは緑になります</strong>。実 Axon Server での統合テストとクラスタでの E2E を、選択肢ではなく<strong>必須の検査</strong>として持てるかどうか——導入判断はフレームワークの好みではなく、そこにあります。</p>
-<p>次章では、ここまでの 3 方式（モジュラーモノリス、EDA、CQRS/ES）を比較し、採用判断の基準を整理します。</p>
+<p>本シリーズはここで終わります。<strong>書籍の構造を実際に適用したら何が残り、何が変わったか</strong>を、3 通りの適用結果から報告しました。<strong>適用結果の側から書くとは、うまくいった設計だけでなく、写して失敗した記録と、まだ無いものを同じ比重で残すことです。</strong></p>
 
 
 
