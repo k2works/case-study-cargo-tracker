@@ -1,5 +1,6 @@
 package com.example.cargotracker.simulation.domain.model.services;
 
+import com.example.cargotracker.simulation.domain.model.valueobjects.CargoKind;
 import com.example.cargotracker.simulation.domain.model.valueobjects.Scenario;
 import com.example.cargotracker.simulation.domain.model.valueobjects.ScenarioInput;
 import com.example.cargotracker.simulation.domain.model.valueobjects.StepKind;
@@ -32,9 +33,14 @@ public final class RandomScenario {
     private static final List<String> PORTS =
             List.of("JPTYO", "USNYC", "SGSIN", "NLRTM", "DEHAM", "CNSHA");
 
-    /** 選べる貨物種別。<b>業務の列挙と同じ語</b>（境界で翻訳しない）。 */
+    /**
+     * 選べる貨物種別。<b>名簿を書き写さない</b>——{@link CargoKind} から数え上げる。
+     *
+     * <p>書き写すと、種別を足した人が付帯情報だけ足して抽選に入れ忘れる（あるいは
+     * その逆で、<b>付帯情報の無い種別を引いて 422 で止まる</b>）。</p>
+     */
     private static final List<String> CARGO_TYPES =
-            List.of("GENERAL", "HAZARDOUS", "REFRIGERATED");
+            java.util.Arrays.stream(CargoKind.values()).map(Enum::name).toList();
 
     /** 重量の範囲（kg）。業務が断らない幅に収める。 */
     private static final int MIN_WEIGHT_KG = 100;

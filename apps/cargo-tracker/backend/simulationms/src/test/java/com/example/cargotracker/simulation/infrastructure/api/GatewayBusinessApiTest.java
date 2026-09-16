@@ -62,14 +62,19 @@ class GatewayBusinessApiTest {
             }
         });
         server.start();
-        RestClient client = RestClient.builder()
-                .baseUrl("http://localhost:" + server.getAddress().getPort())
-                .build();
         responses.put("/api/v1/auth/login", "{\"token\":\"t-1\"}");
         // **読み直す回数は 1 回にする。** 本物は 60 回（30 秒）待つが、
         // 検査で待つと誰も回さなくなる。
+        return start(ScenarioInput.standard(scenario));
+    }
+
+    /** 条件を指定して始める（乱数が選ぶ条件を再現する）。 */
+    private GatewayBusinessApi start(ScenarioInput input) {
+        RestClient client = RestClient.builder()
+                .baseUrl("http://localhost:" + server.getAddress().getPort())
+                .build();
         return new GatewayBusinessApi(new GatewayCalls(client, new GatewayTokens(client)),
-                ScenarioInput.standard(scenario), Clock.fixed(Instant.parse("2026-09-14T00:00:00Z"), ZoneOffset.UTC), 1);
+                input, Clock.fixed(Instant.parse("2026-09-14T00:00:00Z"), ZoneOffset.UTC), 1);
     }
 
     @Test
@@ -423,4 +428,58 @@ class GatewayBusinessApiTest {
                 .isEqualTo("その港を通る航海が登録されていません: AQMCM");
     }
 
+
+    /**
+     * どの貨物種別でも予約が通る（US33 §受入基準 1）。
+     *
+     * <p><b>名簿で緩めず数え上げる。</b> 種別を 1 つずつ書く形だと、次に足した
+     * 種別の付帯情報が漏れて<b>そのシナリオだけが 422 で止まる</b>——実際に
+     * 危険物と冷凍・冷蔵で起きた（実環境で「危険物には危険物申告が必要です」）。</p>
+     *
+     * <p><b>両方向を見る。</b> 業務は「要るものが無い」だけでなく
+     * 「要らないものが付いている」も断る。</p>
+     */
+    @org.junit.jupiter.params.ParameterizedTest(name = "{0}")
+    @org.junit.jupiter.params.provider.EnumSource(
+            com.example.cargotracker.simulation.domain.model.valueobjects.CargoKind.class)
+    @DisplayName("US33 §1: どの貨物種別でも、その種別に要る付帯情報だけを送る")
+    void sendsExactlyTheDeclarationEachCargoKindNeeds(
+            com.example.cargotracker.simulation.domain.model.valueobjects.CargoKind kind)
+            throws IOException {
+        GatewayBusinessApi api = start(Scenario.STANDARD);
+        responses.put("/api/v1/booking/bookings", "{\"bookingId\":\"BK-1\"}");
+
+        start(new ScenarioInput(Scenario.STANDARD, "JPTYO", "USNYC", kind.name(),
+                java.math.BigDecimal.valueOf(1000), 120))
+                .execute(StepKind.REGISTER_BOOKING,
+                        Map.of(StepKind.REGISTER_SHIPPER, "SHP-1"));
+
+        String body = bodies.stream()
+                .filter(it -> it.startsWith("POST /api/v1/booking/bookings "))
+                .reduce((first, last) -> last).orElseThrow();
+        assertThat(body).contains("\"cargoType\":\"" + kind.name() + "\"");
+        // その種別に要るものは入っている。
+        for (String field : kind.declaration().keySet()) {
+            assertThat(body)
+                    .as("%s に要る %s が入っていない（業務が 422 で断る）", kind, field)
+                    .contains("\"" + field + "\"");
+        }
+        // **他の種別のものは入っていない。**「危険物以外に危険物申告は
+        // 付けられません」で断られる。
+        for (var other : com.example.cargotracker.simulation.domain.model.valueobjects
+                .CargoKind.values()) {
+            if (other == kind) {
+                continue;
+            }
+            for (String field : other.declaration().keySet()) {
+                if (kind.declaration().containsKey(field)) {
+                    continue;
+                }
+                assertThat(body)
+                        .as("%s に %s（%s のもの）が付いている", kind, field, other)
+                        .doesNotContain("\"" + field + "\"");
+            }
+        }
+        assertThat(api).isNotNull();
+    }
 }

@@ -165,6 +165,12 @@ public class GatewayBusinessApi implements BusinessApi {
         body.put("heightCm", 100);
         body.put("quantity", 10);
         body.put("productName", "シミュレーション貨物 " + tag);
+        // **種別に要る付帯情報を足す。** 業務は両方向に検査する——危険物には
+        // 危険物申告が要り、危険物以外には付けられない。付け忘れると
+        // 「危険物には危険物申告が必要です」で工程 2 が止まり、**乱数が
+        // 危険物か冷凍・冷蔵を引いた実行はすべて失敗する**（実環境で実測）。
+        body.putAll(com.example.cargotracker.simulation.domain.model.valueobjects.CargoKind
+                .of(input.cargoType()).declaration());
         var response = calls.post(StepRole.of(kind), "/api/v1/booking/bookings", body);
         return idFrom(response, "bookingId");
     }
