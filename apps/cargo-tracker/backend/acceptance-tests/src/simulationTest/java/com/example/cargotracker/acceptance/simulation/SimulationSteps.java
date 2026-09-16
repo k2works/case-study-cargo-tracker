@@ -10,7 +10,6 @@ import io.cucumber.java.ja.もし;
 import io.cucumber.java.ja.前提;
 import io.restassured.response.Response;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
