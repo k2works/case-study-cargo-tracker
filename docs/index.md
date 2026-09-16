@@ -16,9 +16,9 @@
 | カテゴリ | 概要 | 状況 |
 | :--- | :--- | :--- |
 | [戦略](./strategy/index.md) | ビジネスアーキテクチャ、インセプションデッキの整理 | 2 件作成済み |
-| [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理の入口 | 4 件作成済み |
-| [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 未作成 |
-| [開発](./development/index.md) | リリース計画、イテレーション計画、進捗管理 | `index.md` を整備済み |
+| [要件](./requirements/index.md) | RDRA 2.0 とユースケース整理、Unit 定義・リスク台帳の入口 | 6 件作成済み |
+| [設計](./design/index.md) | アーキテクチャ、モデル、テスト、非機能の整理 | 1 件作成済み（用語集） |
+| [開発](./development/index.md) | リリース計画、Bolt 計画、進捗管理 | 2 件作成済み |
 | [運用](./operation/index.md) | 環境構築、デプロイ、運用手順の整理 | `index.md` を整備済み |
 | [レビュー](./review/index.md) | 分析・開発レビュー結果の記録 | 1 件作成済み |
 | [ADR](./adr/index.md) | Architecture Decision Records の管理 | `index.md` を整備済み |
@@ -39,9 +39,19 @@
 | ドキュメント | 概要 |
 | :--- | :--- |
 | [要件定義書](./requirements/requirements_definition.md) | RDRA 2.0 に基づく 4 層（システム価値・外部環境・境界・内部構造） |
-| [ビジネスユースケース](./requirements/business_usecase.md) | 業務レベル BUC 21 件・アクター目的リスト |
-| [システムユースケース](./requirements/system_usecase.md) | システム境界 UC 19 件（完全形式） |
-| [ユーザーストーリー](./requirements/user_story.md) | US 31 件・受け入れ基準・トレーサビリティマトリックス（US 採番の正典） |
+| [ビジネスユースケース](./requirements/business_usecase.md) | 業務レベル BUC 24 件・アクター目的リスト |
+| [システムユースケース](./requirements/system_usecase.md) | システム境界 UC 22 件（完全形式） |
+| [ユーザーストーリー](./requirements/user_story.md) | US 31 件・受入条件（Given/When/Then）・トレーサビリティマトリックス（US 採番の正典） |
+| [Unit 定義](./requirements/units.md) | ストーリー 31 本を 5 Unit にまとめた定義・依存 DAG・ストーリーマップ |
+| [リスク台帳](./requirements/risk_register.md) | AI に渡せる範囲、確認必須の操作、R-01〜R-10 |
+
+### 設計・開発ドキュメント
+
+| ドキュメント | 概要 |
+| :--- | :--- |
+| [ドメイン用語集](./design/glossary.md) | アクター・業務の概念・状態・区分値（用語の正典） |
+| [リリース計画](./development/release_plan.md) | Bolt 1〜20 の並び、エントロピー評価とテスト戦略、ゲート密度 |
+| [AI-DLC 移行計画](./development/aidlc_migration_plan.md) | XP 版の成果物を AI-DLC の契約に揃えた移行の記録 |
 
 ### 記事ドキュメント
 
