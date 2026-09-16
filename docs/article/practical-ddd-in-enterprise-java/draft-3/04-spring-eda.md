@@ -1493,244 +1493,402 @@ ApplicationServices -> EventHandler
 
 ##### アプリケーションサービス
 
-###### アプリケーションサービス：コマンド／クエリの委譲
+- アプリケーションサービスは受信/送信サービスと境界づけられたコンテキスト内のコアドメインモデルのファサードまたはポートとして機能します。
+- 境界づけられたコンテキスト内では、アプリケーションサービスは受信サービスからのリクエスト受付と対応するサービスへの委譲、すなわちコマンドはコマンドサービスにクエリはクエリサービスに委譲する責任を持ちます。
+- コマンド委譲プロセスの一環としてアプリケーションサービスは集約の状態を基底となるデータストアに永続化する責務を持ちます。
+- クエリ委譲プロセスの一環としてアプリケーションサービスは基底となるデータストアから集約の状態を取得する責務を持ちます。
+- それら責務の一部としてアプリケーションはタスクを完了させるため送信サービスに依存します。
+- 送信サービスは物理データストア接続に要求されるコンポーネントに必要なインフラコンポーネントを提供します。
 
-ユースケースの役割は第 3 章と同じです。**入力の実在確認・集約の生成・保存**を順に行い、業務のルールは集約に委ねます。
-
-```java
-    public Cargo book(BookCargoCommand command) {
-        if (command.shipperId() == null || shippers.findById(command.shipperId()).isEmpty()) {
-            throw new IllegalArgumentException("指定された荷主が見つかりません: " + command.shipperId());
-        }
-
-        Location origin = locationOf(command.originUnLocode(), "出発地");
-        Location destination = locationOf(command.destinationUnLocode(), "目的地");
-
-        // 到着期限は目的地の暦で判断する。UTC で判断すると、時差の分だけ
-        // 受付が拒否される時間帯ができる（ADR-010）
-        ZoneId destinationZone = locations.timeZoneOf(command.destinationUnLocode())
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "目的地の業務タイムゾーンが登録されていません: " + command.destinationUnLocode()));
-
-        RouteSpecification route = RouteSpecification.of(origin, destination,
-                command.departureDate(), command.arrivalDeadline(), destinationZone, clock);
-
-        return cargoes.save(Cargo.book(command.shipperId(), specificationOf(command), route));
-    }
-```
-
-転記元: `bookingms/application/internal/commandservices/BookCargoUseCase.java`
-
-役割分担も明文化されています。
-
-```java
- * <p>荷主と地点が実在することはここで確かめる。集約は「実在するもの同士の組み合わせ」の
- * 妥当性だけを見る。存在しない荷主 ID を通すと、誰の貨物か分からない予約が保存される。
- */
-@Service
-public class BookCargoUseCase {
-```
-
-転記元: `bookingms/application/internal/commandservices/BookCargoUseCase.java`
-
-**第 3 章で「BC をまたぐ確認だから集約の外」と説明した境目が、ここでは「自分の DB を引く必要があるから集約の外」に変わっています。**理由は違いますが、結論は同じです。集約は自分が持つ値だけで判断できることを判断します。
-
-##### 送信サービス
-
-出力ポートはアプリケーション層に定義し、実装をインフラ層に置きます。この形も第 3 章と同じです。**相手が 3 種類に増えます。**
-
-###### 送信サービス：リポジトリクラス
-
-自分のデータベースへの永続化です。実装は MyBatis で、第 3 章と同じ構成です。
-
-```java
-package com.example.bookingms.infrastructure.repositories;
-
-import com.example.bookingms.domain.repository.CargoRepository;
-```
-
-転記元: `bookingms/infrastructure/repositories/MyBatisCargoRepository.java`
-
-変わったのは**データベースがサービス専用になった**ことです。第 3 章では 1 つのデータベースに全 BC のテーブルがあり、JOIN しようと思えばできました。ここでは他サービスのテーブルは接続先にすら存在しません。
-
-###### 送信サービス：REST API
-
-他サービスへの同期呼び出しです。**イベント駆動にしても、すべてが非同期になるわけではありません。**
-
-```java
-/**
- * 経路候補を routingms へ取りに行く ACL（[ADR-019]）。
- *
- * <p>routingms の型はここから先へ出さない。{@link RouteCandidateResponse} で受け、
- * Booking Context の {@link CargoItinerary} へ変換する。
- *
- * <p><strong>利用者ヘッダ（[ADR-007]）は伝播しない。</strong>この呼び出しは
- * 「システムが経路候補を引く」ものであり、利用者の代理ではない。伝播すると、
- * routingms 側の認可が「呼び出し元の利用者が経路設計者か」を見ることになり、
- * bookingms の中で完結する処理（確定時の再検証）がロールに依存する。
- * サービス間の信頼はネットワーク境界（Gateway より内側）で担保する。
- */
-public class RestRouteCandidateFinder implements RouteCandidateFinder {
-```
-
-転記元: `bookingms/infrastructure/acl/RestRouteCandidateFinder.java`
-
-**問い合わせは同期、通知は非同期**という分け方です。経路候補は「いま答えが要る」ものであり、イベントで解決できません。
-
-呼び出し元が誰かという問題も生まれます。
-
-```java
-    /**
-     * このサービス自身を表す主体。
-     *
-     * <p>利用者 ID と取り違えられない形にする。利用者と同じ見た目にすると、監査ログで
-     * 「誰がやったのか」が分からなくなる。
-     */
-    public static final String SYSTEM_PRINCIPAL = "system:bookingms";
-```
-
-転記元: `bookingms/infrastructure/acl/RestRouteCandidateFinder.java`
-
-**同一プロセスなら存在しなかった問題です。**メソッド呼び出しに「誰として呼ぶか」はありません。
-
-###### 送信サービス：メッセージブローカー
-
-イベントの発行です。**ここだけがメッセージ基盤を知ります。**
-
-```java
-/**
- * 予約のイベントを RabbitMQ へ流す（[ADR-022]）。
- *
- * <p><strong>ここだけがメッセージ基盤を知る。</strong>ドメインもユースケースも
- * {@link CargoEventNotifier} という「何を頼むか」しか知らない
- * （`eventPublishingOnlyInMessagingInfrastructureRule` が検査する）。
- */
-public class RabbitCargoEventNotifier implements CargoEventNotifier {
-
-    private final RabbitTemplate rabbitTemplate;
-```
-
-転記元: `bookingms/infrastructure/acl/RabbitCargoEventNotifier.java`
-
-発行のタイミングが重要です。
-
-```java
-    /**
-     * コミットしたあとに送る（[ADR-022] 決定 6）。
-     *
-     * <p>コミット前に出すと、<strong>ロールバックした予約のイベントが飛ぶ</strong>。
-     * 存在しない予約の追跡ができ、荷主は追えるのに貨物が無い状態になる。
-     *
-     * <p><strong>ここで決めるのは、トランザクションの境目がインフラの関心だからである。</strong>
-     * ユースケースに「コミット後に呼べ」と作法を課すと、入口が増えた数だけ破られる。
-     */
-    private void afterCommit(Runnable send) {
-        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
-            send.run();
-            return;
-        }
-```
-
-転記元: `bookingms/infrastructure/acl/RabbitCargoEventNotifier.java`
-
-第 3 章の `@TransactionalEventListener(AFTER_COMMIT)` と**同じ判断を、自分で書いています**。Spring が購読側で用意していた仕組みが、プロセスをまたぐと発行側の責務になります。
-
-流れ先の名前は定数にまとめます。
-
-```java
-/**
- * イベントの流れ先の名前（[ADR-022]）。
- *
- * <p>文字列を配線のあちこちに書くと、片方だけ直したときに「送っているのに届かない」形で壊れる。
- * 送り手と受け手は別のサービスなので、<strong>名前は写しになる</strong>。写しであることを
- * 契約テストが突き合わせる。
- */
-public final class CargoEventChannels {
-
-    public static final String EXCHANGE = "cargoBookingChannel";
-
-    /** 追跡番号を発行したことのルーティングキー。 */
-    public static final String TRACKING_NUMBER_ISSUED = "cargo.tracking-number-issued";
-```
-
-転記元: `bookingms/infrastructure/acl/CargoEventChannels.java`
-
-**「届かない」を防ぐ仕掛けが 2 段あります。**
-
-```java
-    /** 荷役のイベントのデッドレター。 */
-    public static final String HANDLING_DEAD_LETTER_QUEUE =
-            "bookingms.handling-activity-registered.dlq";
-
-    /**
-     * どのキューにも結びつかなかったイベントの行き先（[ADR-022] 決定 4）。
-     *
-     * <p>デッドレターが守るのは「受け取ったが処理できなかった」だけである。ルーティングキーの
-     * 綴りが違う・購読側がまだ配線されていない場合、イベントは<strong>どのキューにも入らず
-     * 黙って消える</strong>。しかも発行側は成功を返すため、どこにも異常が残らない。
-     *
-     * <p>交換機に予備の行き先（alternate-exchange）を持たせ、行き場のないイベントをここへ流す。
-     */
-    public static final String UNROUTABLE_EXCHANGE = "cargo.unroutable";
-```
-
-転記元: `bookingms/infrastructure/acl/CargoEventChannels.java`
-
-デッドレターが守るのは「受け取ったが処理できなかった」だけです。**綴り違いや配線漏れは、デッドレターに入る前に消えます。**この 2 つは守る範囲が違うため、両方が要ります。
-
-#### 実装のまとめ
-
-第 3 章と本章で、DDD の成果物の実装がどう変わったかを並べます。
-
-| 成果物 | 第 3 章（モジュラーモノリス） | 本章（マイクロサービス） |
-| :--- | :--- | :--- |
-| BC の単位 | トップレベルパッケージ | Gradle モジュール = デプロイ単位 |
-| BC 間の境界 | ArchUnit で守る規律 | クラスパスが分かれ、参照できない |
-| 集約 | 可変クラス | 不変クラス（操作が新インスタンスを返す） |
-| エンティティ | 2 BC に存在（routing・tracking） | 同じ 2 サービスに存在 |
-| 共有カーネル | `Location`・`ShipperId` の 2 つ | `Location` の 1 つ |
-| コマンド | 値オブジェクトを受ける | 素の値を受ける（実在確認が DB を要する） |
-| BC 間の問い合わせ | ACL ポート（メソッド呼び出し） | ACL ポート（REST） |
-| BC 間の通知 | `ApplicationEventPublisher` | RabbitMQ（交換機・ルーティングキー） |
-| 発行のタイミング | `@TransactionalEventListener(AFTER_COMMIT)` | 発行側で `afterCommit` を自作 |
-| 購読の失敗 | 捕まえて件数に記録する | 捕まえない（デッドレターへ回す） |
-| イベントの型 | `shared/domain/event` に 1 つ | 発行側と購読側が別々に持つ |
-| 型の共有 | 同じ `record` を参照 | 契約（`testFixtures`）だけを共有 |
-| 入口 | 画面（Thymeleaf + htmx） | REST + イベント購読 |
-| データベース | 1 つ（全 BC 共通） | サービスごと |
 
 ```plantuml
 @startuml
 
-title サービス間の連携（bookingms から見た図）
+title アプリケーションサービスの責務
 
-rectangle "gatewayms" as gw
-rectangle "bookingms" as b
-rectangle "routingms" as r
-rectangle "trackingms" as t
-rectangle "handlingms" as h
-queue "cargoBookingChannel" as ex1
-queue "cargoHandlingChannel" as ex2
+package "Bounded Context" {
+    [Command]
+    [Queries]
+    [Application Services]
+    [Command Services]
+    [Queries Services]
+    [Outbound Services]
+}
 
-gw --> b : REST（認証済みヘッダ）
-b --> r : REST（経路候補の問い合わせ・同期）
-b --> ex1 : TrackingNumberIssued / CargoCancelled
-ex1 --> t : 購読
-h --> ex2 : HandlingActivityRegistered
-ex2 --> b : 購読
-ex2 --> t : 購読
+[Command] --> [Application Services]
+[Queries] --> [Application Services]
+[Application Services] --> [Command Services]
+[Application Services] --> [Queries Services]
+[Application Services] --> [Outbound Services]
 
 @enduml
 ```
 
-**左で 1 行だったものが、右では 1 節になります。**同じ「BC 間の通知」が、片方では 1 つのアノテーションで済み、もう片方では交換機・ルーティングキー・受け皿・契約・デッドレター・予備の行き先を要します。
+
+###### アプリケーションサービス：コマンド／クエリの委譲
+
+- レポジトリの一部として、境界づけられたコンテキスト内のアプリケーションサービスはコマンド/クエリリクエストを受け取ります。
+- これらのリクエストは主に受信サービス(APIレイヤ)から送信されます。
+- 処理の一部として、アプリケーションサービスは最初にドメインモデルのコマンドハンドラ/クエリハンドラを使って状態の設定と問い合わせを行います。
+- 最後に送信サービスを使って集約の状態を永続化または問い合わせの実行を行います。
+
+```plantuml
+@startuml
+title アプリケーションサービスのコマンド/クエリ実装ダイアグラム
+
+class BookCargoCommand <<Command>>
+class RouteCargoCommand <<Command>>
+class CargoBookingCommandService <<Application Services>> {
+    + cargoRepository: CargoRepository
+    --
+    + bookCargo(BookCargoCommand bookCargoCommand) : void
+    + assignRoute(RouteCargoCommand routeCargoCommand) : void
+}
+class Cargo<<Model>>
+class CargoBookingQueryService <<Service>> {
+    + cargoRepository: CargoRepository
+    --
+    + fidAll(): List<Cargo>
+    + findAllBookingIds(): List<BookingId>
+    + find(String bookingId): Cargo
+}
+class CargoRepository <<OutboundServices>> {
+    + save(Cargo: cargo): void
+    + findAll(): List<Cargo>
+    + findAllBookingIds(): List<BookingId>
+    + find(String bookingId): Cargo
+}
+
+BookCargoCommand <-- CargoBookingCommandService
+RouteCargoCommand <-- CargoBookingCommandService
+CargoBookingCommandService --> Cargo
+Cargo <-- CargoBookingQueryService
+CargoBookingCommandService -> CargoRepository
+CargoBookingQueryService -> CargoRepository
+@enduml
+```
+
+```plantuml
+@startuml
+
+title アプリケーションサービスの実装プロセスサマリ
+
+InboundServices -> ApplicationServices :
+ApplicationServices -> CommandQueryHandlers
+CommandQueryHandlers -> ApplicationServices
+ApplicationServices -> OutboundServices
+OutboundServices -> ApplicationServices
+ApplicationServices -> InboundServices
+
+@enduml
+```
+1. 受信サービスレイヤから境界づけられたコンテキスト内のアプリケーションサービスにコマンド/クエリ実行のリクエストが送信されます。
+2. アプリケーションサービスはドメインモデル内で定義されたコマンドハンドラ/クエリハンドラに依存して集約の状態を更新・問い合わせします。
+3. アプリケーションサービスは送信サービスを使って集約の状態を永続化または問い合わせの実行を行います。
+
+##### 送信サービス
+
+- アプリケーションサービス以下の外部サービスと連携する必要があります。
+  - レポジトリ
+  - メッセージブローカー
+  - 他の境界づけられたコンテキスト
+- アプリケーションサービスは送信サービスに連携を依存します。
+- 送信サービスは外部サービスとの連携を実現する機能を提供します。
+
+
+```plantuml
+@startuml
+
+title マイクロサービスアーキテクチャ内のドメインモデルサービス
+
+skinparam component {
+    BackgroundColor<<Inbound Services>> #D6EAF8
+    BackgroundColor<<Outbound Services>> #D5F5E3
+    BackgroundColor<<Application Services>> #FADBD8
+}
+
+package "Bounded Context" {
+    package "Application Service" {
+        [Commands]
+        [Queries]
+    }
+    package "Aggregates" {
+        [Events]
+    }
+    
+    [Outbound Services]
+    
+    "Application Service" --> [Outbound Services]
+    "Aggregates" --> [Outbound Services]
+}
+
+package "External Services" {
+  database DB [
+    Datastore
+  ]
+  queue BUS_1 [
+    Broker
+  ]
+  boundary CTX_1 [
+    Other Bounded Context
+  ]
+}
+
+[Outbound Services] --> DB : Persistence API
+[Outbound Services] --> BUS_1 : Broker API
+[Outbound Services] --> CTX_1 : REST API
+
+
+
+@enduml
+```
+
+###### 送信サービス：リポジトリクラス
+
+- データベース接続のための送信サービスはレポジトリクラスとして実装されます。
+- レポジトリクラスは以下の集約の操作のための機能を提供します。
+  - 集約と関連を新規永続化する
+  - 集約と関連を更新する
+  - 集約と関連を問い合わせする
+
+```plantuml
+@startuml
+title 送信サービス - レポジトリ実装
+
+interface MyBatisRepository 
+
+class CargoRepository {
+    + findByBookingId(String bookingId): Cargo
+    + findAllBookingIds(): List<BookingId>
+    + findAll(): List<Cargo>
+}
+
+MyBatisRepository <|.. CargoRepository
+
+@enduml
+```
+
+###### 送信サービス：REST API
+
+- マイクロサービス間の連携にREST APIを使うのは最もよくあるパターンです。
+
+```plantuml
+@startuml
+title 境界づけられたコンテキスト間のHTTP呼び出し
+
+package "Booking Bounded Context" {
+    [Booking Service]
+}
+
+package "Routing Bounded Context" {
+    [Routing Service]
+}
+
+[Booking Service] -> [Routing Service] : HTTP API
+
+@enduml
+```
+
+```plantuml
+@startuml
+title 境界づけられたコンテキスト間の腐敗防止層
+
+package "Booking Bounded Context" {
+    [Booking Service]
+    [Anti-Corruption Layer]
+}
+
+package "Routing Bounded Context" {
+    [Routing Service]
+}
+
+[Anti-Corruption Layer] -> [Routing Service] : HTTP API
+
+@enduml
+```
+
+```plantuml
+@startuml
+title REST APIクラス図
+
+class CargoRoutingService {
+    + findOptimalRoute(originLocation, destinationLocation, arrivalDeadline): TransitPath
+}
+
+class CargoRoutingController {
+    + cargoRoutingService: CargoRoutingService
+    --
+    + findOptimalRoute(originLocation, destinationLocation, arrivalDeadline): TransitPath
+}
+
+class TransitPath {
+    + transitEdges: List<TransitEdge>
+}
+
+class TransitEdge {
+    + voyageNumber: String
+    + fromUnLocCode: String
+    + toUnLocCode: String
+    + fromDate: Date
+    + toDate: Date
+}
+
+CargoRoutingService <-- CargoRoutingController
+CargoRoutingService -> TransitPath
+TransitPath --> TransitEdge
+
+@enduml
+```
+
+```plantuml
+@startuml
+title 送信サービス - REST API実装
+
+class TransitPath
+
+class CargoItinerary
+
+class ExternalCargoRoutingService {
+    + fetchRouteForSpecification(RouteSpecification routeSpecification): CargoItinerary
+    + toLeg(TrasEdg edge): Leg
+}
+
+class RestTemplate
+
+class CargoBookingCommandService {
+    + externalCargoRoutingService: ExternalCargoRoutingService
+    --
+    + assignRouteToCargo(RouteCargoCommand routeCargoCommand): type
+}
+
+TransitPath <-- ExternalCargoRoutingService
+CargoItinerary <-- ExternalCargoRoutingService
+ExternalCargoRoutingService -> RestTemplate
+ExternalCargoRoutingService <-- CargoBookingCommandService
+
+@enduml
+```
+
+```plantuml
+@startuml
+
+title 送信サービス(HTTP)実装プロセス
+
+ApplicationService --> OutboundServices
+OutboundServices --> TypeSafeRestClients
+OutboundServices --> ACL
+ApplicationService <-- OutboundServices
+
+@enduml
+```
+
+1. アプリケーションサービスクラスはコマンド/クエリ/イベントを受信する。
+2. プロセスの一部として、RESTを使った他の境界づけられたコンテキストとの通信が必要な場合は送信サービスが利用可能です。
+3. 送信サービスはRestTemplateクラスを使ってRestクライアントを生成します。
+
+###### 送信サービス：メッセージブローカー
+
+- 送信サービスの最後の責務はコマンド実行中の集約により登録されたドメインイベントを公開することです。
+
+```plantuml
+@startuml
+title 境界づけられたコンテキスト内のイベントフローメカニズム
+
+ApplicationService --> Aggregates
+Aggregates --> Events
+OutboundServices --> MessageBroker : Transactional Event Listener
+Events <-- OutboundServices
+ApplicationService --> OutboundServices : Repositories
+
+@enduml
+```
+
+1. アプリケーションサービスは特定のコマンドを受け取ります。
+2. アプリケーションサービスは集約コマンドハンドラに処理を委譲します。
+3. コマンドハンドラは公開の必要のあるイベントを登録します。
+4. アプリケーションサービスは送信サービスのリポジトリを使って集約の状態を永続化します。
+5. レポジトリの実行は送信サービス内のイベントリスナでトリガーされます。このイベントリスナは公開する必要のある全てのペンディングドメインイベントを集めます。
+6. イベントリスナは同一トランザクションでドメインイベントを外部メッセージブローカーに公開します。
+
+```plantuml
+@startuml
+title イベントパブリッシャ実装クラス図
+
+interface CargoEventSource
+
+class MessageChannel
+
+class CargoEventPublisherService <<Service>> {
+    + cargoEventSource: CargoEventSource
+    --
+    + handleCargoBookedEvent(CargoBookedEvent cargoBookedEvent): void
+    + handleCargoRoutedEvent(CargoRoutedEvent cargoRoutedEvent): void
+}
+
+class CargoBookedEvent
+
+class CargoRoutedEvent
+
+
+CargoEventSource <|-- CargoEventPublisherService
+MessageChannel <-- CargoEventPublisherService
+CargoEventPublisherService --> CargoBookedEvent
+CargoEventPublisherService --> CargoRoutedEvent
+
+@enduml
+```
+
+#### 実装のまとめ
+
+- Springプラットフォームを使って複数のDDDアーティファクトと伴にマイクロサービスCargo Trackerアプリケーションの実装を完了しました。
+
+```plantuml
+@startuml
+title DDD artifact implementation summary using Spring Boot
+
+
+rectangle {
+usecase Aggregates
+usecase Entities
+usecase ValueObjects
+}
+
+rectangle {
+usecase Commands
+usecase Queries
+}
+
+rectangle {
+usecase ApplicationServices
+usecase InboundServices
+usecase OutboundServices
+}
+
+rectangle {
+usecase MicroserviceMessageChoreography
+}
+
+rectangle {
+usecase MyBatisSpringStarter
+usecase SpringServiceClasses
+}
+
+rectangle {
+usecase SpringWeb
+usecase SpringServiceClasses as cs2
+usecase MyBatisSpringStarter as mb2
+}
+
+rectangle {
+usecase SpringCloudStream
+usecase SpringServiceClasses as cs3
+usecase MyBatisSpringStarter as mb3
+}
+@enduml
+```
 
 ### まとめ
 
-- 参照元が第 3 章と異なり、8 つのサービスに分かれたマイクロサービス実装です。**続きではなく別実装**であり、同じ業務を別の構成で実装したものとして読む必要があります。
-- 4 層のパッケージ構造は変わりません。**プロセスを分けても、層の構成を変える理由はありません。**変わったのは外側との接点の数（DB・他サービス・ブローカー）です。
-- 境界を守るコストは下がりました。他サービスのクラスは参照しようとしてもコンパイルが通りません。代わりに、越境の手段（REST・イベント・契約）を自分で作る必要が生まれます。
-- 第 3 章でフレームワークが与えていた保証が、いくつか手作業に変わりました。コミット後の発行、イベントの型の一致、失敗の記録がその例です。**保証が消えたのではなく、誰が引き受けるかが変わっています。**
-- 購読の失敗に対する正しい書き方は、第 3 章と**逆になりました**。基盤が失敗を引き受ける仕組み（デッドレター）を持つかどうかで、例外を捕まえるべきかが反転します。**プラクティスは文脈を伴って初めて意味を持ちます。**
-
-イベント駆動にしても、集約の現在状態を直接読み書きする点は第 3 章と同じです。次章では、状態そのものをイベントの列として保存する方式（Event Sourcing）と、読み書きを別のモデルに分ける CQRS を扱います。
+- Springプラットフォームの詳細と提供する機能を確立することから着手した。
+- Springプラットフォームが提供するサブプロジェクト(Spring Boot, Spring Web, Spring Cloud Stream, MyBatis Spring Starter)を使ってCargo Trackerマイクロサービスアプリケーションを実装することを決定した。
+- さまざまなDDDアーティファクトを開発した。最初に選択した技術を使ってドメインモデル、ドメインモデルサービスを実装。
