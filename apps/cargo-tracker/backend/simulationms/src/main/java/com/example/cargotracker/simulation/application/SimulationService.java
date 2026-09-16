@@ -140,10 +140,15 @@ public class SimulationService {
                 return new StartOutcome(scenario.name(), scenario.label(),
                         start(scenario, startedBy), null);
             } catch (IllegalTransition e) {
-                // **理由をそのまま運ぶ。** 実行中の識別子が入っているので、
+                // **印を外して運ぶ。** 断りを例外として返す経路（1 本ずつの実行）は
+                // REST の例外ハンドラが `[ILLEGAL_STATE] ` を外すが、ここは
+                // 正常な応答の中身なので誰も外さない——**実クラスタで画面に
+                // 出る文言を見て気づいた**（層ごとの検査はどれも緑だった）。
+                //
+                // **理由そのものは残す。** 実行中の識別子が入っているので、
                 // 画面はそこから「いまの結果」へ案内できる。
                 return new StartOutcome(scenario.name(), scenario.label(), null,
-                        e.getMessage());
+                        BusinessRuleViolation.strip(e.getMessage()));
             }
         }).toList();
     }

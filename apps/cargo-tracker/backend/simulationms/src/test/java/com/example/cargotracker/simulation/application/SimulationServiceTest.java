@@ -270,7 +270,11 @@ class SimulationServiceTest {
         assertThat(outcomes.get(0).runId()).isNull();
         assertThat(outcomes.get(0).refusalReason())
                 .as("**断りの理由を運ぶ。** 実行中の識別子が入っていないと、いまの結果へ行けない")
-                .contains("SIM-running");
+                .contains("SIM-running")
+                // **内部の印を画面に出さない。** 例外として返す経路はハンドラが
+                // 外すが、ここは正常な応答の中身なので誰も外さない（実クラスタで
+                // 「[ILLEGAL_STATE] シナリオ…」と出た）。
+                .doesNotContain("ILLEGAL_STATE");
         assertThat(outcomes.get(1).runId()).isNotBlank();
         assertThat(inserted).extracting(SimulationRunMapper.RunRow::scenarioId)
                 .containsExactly("DELAY");
