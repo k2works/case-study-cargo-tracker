@@ -97,11 +97,13 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-03T00:00:00Z }
 
 ## 6. CQRS／イベントソーシングと Axon
 
+### 6.1 アウトライン由来の訳語
+
 | 英語表記 | 日本語表記 | 方針 | 備考 |
 | :--- | :--- | :--- | :--- |
 | Event Sourcing | イベントソーシング | 訳出 | 略記 ES は章タイトルでのみ使用 |
 | CQRS | CQRS | 原語維持 | 定着した略語 |
-| Event Store | イベントストア | 訳出 | |
+| Event Store | Event Store | 原語維持 | Axon Server の構成要素名。第 5・6 章は原語で統一している |
 | State | 状態 | 訳出 | |
 | Command Handling | コマンドの処理 | 訳出 | |
 | Identification of Commands | コマンドの識別 | 訳出 | |
@@ -124,6 +126,54 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-03T00:00:00Z }
 | Query Bus | クエリバス | 訳出 | |
 | Event Bus | イベントバス | 訳出 | |
 
+### 6.2 Axon 5 のアノテーションと型
+
+第 5 章が転記するコードに現れる識別子です。**いずれも原語維持**します——コード上の名前であり、訳すと実体を指せません。本文では初出で役割を補足します。
+
+| 識別子 | 役割 | 初出での補足 |
+| :--- | :--- | :--- |
+| `@EventSourced(idType, tagKey)` | 集約をイベントソーシングの対象として登録する | ドメイン層が持つ唯一の Spring stereotype |
+| `@EntityCreator` | イベント再生の起点となる空の集約を用意する | |
+| `@CommandHandler` | コマンドを受けて業務判断を行う | 集約のメソッドに付く |
+| `@EventSourcingHandler` | イベントを状態へ反映する | **業務判断を書かない** |
+| `@EventHandler` | 投影または連鎖の調整でイベントを受ける | 置き場で役割が決まる |
+| `@QueryHandler` | 問い合わせに投影テーブルから答える | |
+| `@TargetEntityId` | コマンドの宛先となる集約を特定する | コマンドの `record` に付く |
+| `@EventTag(key)` | イベントを集約に結び付けるタグを書く | **付け忘れると集約が空のまま復元される** |
+| `@SequencingPolicy` | イベント処理の列の切り方を決める | 列の切り方が退避の被害範囲になる |
+| `EventAppender` | イベントを追記する（Axon 4 の `AggregateLifecycle.apply()` に相当） | コマンドハンドラの引数で受ける |
+| `CommandGateway` / `QueryGateway` | コマンド・問い合わせの送り口 | Controller と Reaction Handler が使う |
+| `AxonTestFixture` | 集約のテスト用フィクスチャ | `disableAxonServer()` ではタグ復元が働かない |
+
+### 6.3 ランタイムと運用の用語
+
+| 英語表記 | 日本語表記 | 方針 | 備考 |
+| :--- | :--- | :--- | :--- |
+| Projection | 投影 | 訳出 | §2 と同じ。捨てて作り直せるもので、正典ではない |
+| Read Model | 読み取りモデル | 訳出 | 投影テーブルを通じて答えるモデル |
+| Eventual Consistency | 結果整合 | 訳出 | 「結果整合性」とは書かない |
+| Replay | リプレイ | 訳出 | 投影を作り直すこと。「再生」はイベントから状態を復元する意で使い分ける |
+| Upcaster | Upcaster | 原語維持 | 旧形式のイベントを新しい形へ読み替える仕組み。訳語が定着していない |
+| Processing Group | Processing Group | 原語維持 | Axon 5 ではパッケージ名で指定する（`@ProcessingGroup` は存在しない） |
+| Dead Letter Queue / DLQ | 退避（デッドレター） | 併記 | 処理できなかったイベントの置き場。第 4 章の「デッドレター」と同じもの |
+| Token Store | `TokenStore` | 原語維持 | どこまで読んだかを持つ。自動設定されない |
+| Reaction Handler | Reaction Handler | 原語維持 | Axon 5 に Saga が無いため、その役割を担うイベントハンドラ。訳語を当てると「サガ」と混同する |
+| Dynamic Consistency Boundary / DCB | DCB | 原語維持 | タグで集約を復元する Axon Server の仕組み |
+| Compensation | 補償 | 訳出 | 取り消しではなく「やり直せる状態に戻す」こと |
+
+### 6.4 Axon 4 にあって 5 に無いもの
+
+読者が Axon 4 の知識で本文を読むと食い違う箇所です。**第 5 章の実装はいずれも使っていません。**
+
+| Axon 4 | Axon 5 での扱い |
+| :--- | :--- |
+| `@Aggregate` / `@AggregateIdentifier` | `@EventSourced(idType, tagKey)` に置き換わった |
+| `AggregateLifecycle.apply()` | 引数で受ける `EventAppender` に置き換わった |
+| `AggregateTestFixture` | `AxonTestFixture.with(ApplicationConfigurer)` に置き換わった |
+| `@Saga` / `SagaLifecycle` / Saga Store | **存在しない。** Reaction Handler + `process_state` で置き換える |
+| `@ProcessingGroup` | **存在しない。** パッケージ名をキーに設定で指定する |
+| Deadline（タイムアウト起点の処理） | **存在しない。** 投影テーブルを定期に走査する運用ジョブにする |
+
 ## 7. 原語維持する固有名詞・略語
 
 | 英語表記 | 表記 | 備考 |
@@ -135,6 +185,7 @@ generated: { by: claude-code/claude-opus-5, at: 2026-09-03T00:00:00Z }
 | Spring Platform | Spring プラットフォーム | 「プラットフォーム」のみ訳出 |
 | Axon Framework | Axon Framework | |
 | Axon Server | Axon Server | 製品名のため訳出しない |
+| Axon Framework 5 | Axon 5 | 本文では「Axon 5」と略す。4 系とは API が非互換（§6.4） |
 | REST API / RESTful API | REST API / RESTful API | |
 | EDA | EDA | Event-Driven Architecture。初出で「イベント駆動アーキテクチャ（EDA）」と補足 |
 | DDD | DDD | Domain-Driven Design |
