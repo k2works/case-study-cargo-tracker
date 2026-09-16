@@ -44,6 +44,11 @@ abstract class GatewayStepsTestSupport {
     }
 
     GatewayBusinessApi start(Scenario scenario) throws IOException {
+        return start(ScenarioInput.standard(scenario));
+    }
+
+    /** 条件を指定して始める（乱数が選ぶ条件を再現する）。 */
+    GatewayBusinessApi start(ScenarioInput input) throws IOException {
         server = HttpServer.create(new InetSocketAddress(0), 0);
         server.createContext("/", exchange -> {
             String path = exchange.getRequestURI().getPath();
@@ -66,7 +71,7 @@ abstract class GatewayStepsTestSupport {
                 .build();
         responses.put("/api/v1/auth/login", "{\"token\":\"t-1\"}");
         return new GatewayBusinessApi(new GatewayCalls(client, new GatewayTokens(client)),
-                ScenarioInput.standard(scenario),
+                input,
                 Clock.fixed(Instant.parse("2026-09-15T00:00:00Z"), ZoneOffset.UTC), 1);
     }
 

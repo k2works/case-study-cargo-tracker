@@ -80,7 +80,8 @@ class ChainWaitTest {
                 .as("**「失敗しました」では切り分けられない。** 連鎖の欠落か待ち不足かを"
                         + "読む人が判断できる文言にする")
                 .contains("読めるようになりませんでした")
-                .contains(StepKind.REGISTER_SHIPPER.label());
+                // **先頭の工程を書き写さない。** 先頭が変わるたびに赤になる。
+                .contains(Scenario.STANDARD.steps().get(0).label());
     }
 
     @Test
@@ -88,8 +89,9 @@ class ChainWaitTest {
     void recordsTheChainWaitSeparately() {
         AtomicInteger reads = new AtomicInteger();
         // 1 件目の工程だけ 3 回読み直してから追いつく（＝2 回眠る）。
+        StepKind firstKind = Scenario.STANDARD.steps().get(0);
         ChainReadiness readiness = (kind, produced) ->
-                kind != StepKind.REGISTER_SHIPPER || reads.incrementAndGet() >= 3;
+                kind != firstKind || reads.incrementAndGet() >= 3;
         SimulationRun run = standardRun();
 
         new SimulationRunner((kind, produced) -> BusinessApi.StepResult.success("id-" + kind),

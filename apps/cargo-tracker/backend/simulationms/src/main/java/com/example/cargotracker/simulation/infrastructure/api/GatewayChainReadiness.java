@@ -32,6 +32,11 @@ public class GatewayChainReadiness implements ChainReadiness {
     @Override
     public boolean isReady(StepKind kind, Map<StepKind, String> produced) {
         return switch (kind) {
+            // **用意した便が読めるまで待つ。** 便は投影に現れてから候補の
+            // 探索に入るので、待たずに進むと「経路の候補が 1 件もありません」
+            // で止まる——用意したのに間に合っていないだけなのに、
+            // 「便が無い」と読めてしまう。
+            case PREPARE_VOYAGES -> preparedVoyagesAreVisible(produced);
             // 投影が現れるまで 202 が返る（本文は「反映中」）。
             case REGISTER_SHIPPER -> ok(StepRole.SALES, "/api/v1/booking/shippers/"
                     + produced.get(StepKind.REGISTER_SHIPPER));
@@ -88,6 +93,27 @@ public class GatewayChainReadiness implements ChainReadiness {
             // **ここで追跡が閉じる**（US35 §4）。閉じたことが唯一の落とし先である。
             case DISCHARGE_CANCELLED -> tracking(produced).path("closed").asBoolean(false);
         };
+    }
+
+    /**
+     * 用意した便が航海の一覧から読めるか。
+     *
+     * <p><b>「既にある便を使う」ときは待たない。</b> 足していないのだから、
+     * 待つ相手がいない——既定を「待つ」にすると、何も足さなかった実行が
+     * 上限まで待ってから失敗する。</p>
+     */
+    private boolean preparedVoyagesAreVisible(Map<StepKind, String> produced) {
+        String prepared = produced.get(StepKind.PREPARE_VOYAGES);
+        if (prepared == null || !prepared.startsWith("V-SIM-")) {
+            return true;
+        }
+        JsonNode voyages = body(StepRole.ROUTING, "/api/v1/routing/voyages?size=200")
+                .path("items");
+        java.util.Set<String> visible = new java.util.HashSet<>();
+        for (JsonNode voyage : voyages) {
+            visible.add(voyage.path("voyageNumber").asText());
+        }
+        return visible.containsAll(java.util.List.of(prepared.split(",")));
     }
 
     /** 追跡の単票。 */

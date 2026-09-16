@@ -43,7 +43,7 @@ public enum StepRole {
         return switch (kind) {
             case REGISTER_SHIPPER, REGISTER_BOOKING, REQUEST_ROUTING,
                  NOTIFY_SHIPPER, CONFIRM_BOOKING, REQUEST_CANCELLATION -> SALES;
-            case ASSIGN_ROUTE, REASSIGN_ROUTE, ISSUE_TRACKING_NUMBER -> ROUTING;
+            case PREPARE_VOYAGES, ASSIGN_ROUTE, REASSIGN_ROUTE, ISSUE_TRACKING_NUMBER -> ROUTING;
             case RECORD_HANDLING, CLAIM_CARGO, DISCHARGE_CANCELLED,
                  RECORD_OFF_ROUTE_HANDLING, LOAD_CARGO -> HANDLER;
             // 例外の起票・対応・解決と、キャンセルの承認（陸揚げ地を決められるのは

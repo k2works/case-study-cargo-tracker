@@ -99,6 +99,7 @@ public class GatewayBusinessApi implements BusinessApi {
     @Override
     public StepResult execute(StepKind kind, Map<StepKind, String> produced) {
         return switch (kind) {
+            case PREPARE_VOYAGES -> GatewayVoyages.prepare(calls, input, clock, tag);
             case REGISTER_SHIPPER -> registerShipper(kind);
             case REGISTER_BOOKING -> registerBooking(kind, produced);
             case REQUEST_ROUTING -> simplePost(kind, GatewayHandling.bookingUri(produced, "/routing-request"),

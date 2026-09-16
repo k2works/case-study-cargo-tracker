@@ -98,9 +98,11 @@ class SimulationRunnerTest {
 
         runner(api).run(run);
 
-        // 3 番目の工程（経路設計への引き渡し）は、荷主と予約の識別子を見ている。
-        Map<StepKind, String> atThirdStep = api.seenContext.get(2);
-        assertThat(atThirdStep)
+        // 経路設計への引き渡しは、荷主と予約の識別子を見ている。
+        // **位置を数えない。** 先頭に工程を足すたびに添字が動く——工程の種類で引く。
+        Map<StepKind, String> atRoutingRequest = api.seenContext.get(
+                Scenario.STANDARD.steps().indexOf(StepKind.REQUEST_ROUTING));
+        assertThat(atRoutingRequest)
                 .as("**つなぐ組み立てが潰れても緑にならない形にする**")
                 .containsEntry(StepKind.REGISTER_SHIPPER, "SHP-0001")
                 .containsEntry(StepKind.REGISTER_BOOKING, "B-0001");

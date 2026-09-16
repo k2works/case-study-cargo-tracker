@@ -4,7 +4,7 @@ title: "データモデル設計 - 国際貨物輸送管理システム（CQRS /
 description: "CQRS / Event Sourcing 版 Cargo Tracker のデータモデル設計。Event Store は Axon Server に任せ、サービスごとの投影テーブル・Axon 管理テーブル・Auth の状態テーブルを ER 図とテーブル定義で示し、Processing Group との対応とリプレイ前提のマイグレーション方針を定める。"
 tags: [design,data-model,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-15T07:38:13Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-16T02:59:31Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -917,7 +917,7 @@ sch ||--o{ run
 @enduml
 ```
 
-**`waited_ms` は `elapsed_ms` と足し合わせません**（IT16 のレビュー N8）。呼び出しが遅いのか連鎖が遅いのかは、切り分けでいちばん知りたい区別です。足すと「13 工程が数ミリ秒ずつ」と読めてしまい、実際に時間を使っている場所が見えません。
+**`waited_ms` は `elapsed_ms` と足し合わせません**（IT16 のレビュー N8）。呼び出しが遅いのか連鎖が遅いのかは、切り分けでいちばん知りたい区別です。足すと「14 工程が数ミリ秒ずつ」と読めてしまい、実際に時間を使っている場所が見えません。
 
 | テーブル | 元になるイベント | 制約・インデックス | 備考 |
 | :--- | :--- | :--- | :--- |

@@ -18,6 +18,7 @@ public enum Scenario {
 
     /** 一般貨物が予約から精算まで通る。**US33 の中核**。 */
     STANDARD("一般貨物の標準輸送", List.of(
+            StepKind.PREPARE_VOYAGES,
             StepKind.REGISTER_SHIPPER,
             StepKind.REGISTER_BOOKING,
             StepKind.REQUEST_ROUTING,
@@ -44,6 +45,7 @@ public enum Scenario {
      * どの便も寄らない港なら、必ず同じところで止まる。</p>
      */
     NO_ROUTE("便が通わない港への輸送", List.of(
+            StepKind.PREPARE_VOYAGES,
             StepKind.REGISTER_SHIPPER,
             StepKind.REGISTER_BOOKING,
             StepKind.REQUEST_ROUTING,
@@ -70,6 +72,7 @@ public enum Scenario {
      * そのままにすると、同じ港へもう一度運ぶ。</p>
      */
     MISROUTE("誤配の発生と経路の組み直し", List.of(
+            StepKind.PREPARE_VOYAGES,
             StepKind.REGISTER_SHIPPER,
             StepKind.REGISTER_BOOKING,
             StepKind.REQUEST_ROUTING,
@@ -93,6 +96,7 @@ public enum Scenario {
      * 起票を断る（実測）——<b>本番と同じ出来事（申告を留置する）から起こす</b>。</p>
      */
     CUSTOMS_HOLD("税関保留の発生と対応", List.of(
+            StepKind.PREPARE_VOYAGES,
             StepKind.REGISTER_SHIPPER,
             StepKind.REGISTER_BOOKING,
             StepKind.REQUEST_ROUTING,
@@ -113,6 +117,7 @@ public enum Scenario {
      * 「承認したら終わり」にすると、確かめたい連鎖の最後が抜ける。</p>
      */
     CANCEL_IN_TRANSIT("輸送中のキャンセルと指定港での荷降し", List.of(
+            StepKind.PREPARE_VOYAGES,
             StepKind.REGISTER_SHIPPER,
             StepKind.REGISTER_BOOKING,
             StepKind.REQUEST_ROUTING,
@@ -135,6 +140,7 @@ public enum Scenario {
      */
     private static List<StepKind> exceptionSteps() {
         return List.of(
+                StepKind.PREPARE_VOYAGES,
                 StepKind.REGISTER_SHIPPER,
                 StepKind.REGISTER_BOOKING,
                 StepKind.REQUEST_ROUTING,

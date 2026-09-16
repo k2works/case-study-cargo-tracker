@@ -29,7 +29,11 @@ public class SimulationSteps {
     @前提("システム管理者 {string} でログインしている")
     public void ログインしている(String username) {
         SimulationStack.start();
-        prepareVoyages();
+        // **便は用意しない。** 必要なデータ準備はシナリオの工程に含まれている
+        // （`PREPARE_VOYAGES`）——ここで先に用意すると、<b>用意の工程が
+        // 何もしなくても緑になる</b>。立ち上げたばかりの routingms は便を
+        // 1 本も持たないので、この受け入れは「シナリオが自分で前提を作れるか」
+        // をそのまま確かめる。
         awaitQuiet();
         token = login(username);
     }
@@ -408,78 +412,4 @@ public class SimulationSteps {
         });
     }
 
-    /**
-     * 標準シナリオが通る便を用意する。
-     *
-     * <p><b>便が無ければ経路は組めない。</b> 立ち上げたばかりの routingms には
-     * 航海が 1 本も無いので、確かめたい工程（精算まで）へ届かない。
-     * <b>NO_ROUTE シナリオのために期限の近い便は作らない</b>——「候補が無い」
-     * ことを期限の短さで作っているので、速い便があると止まらなくなる。</p>
-     */
-    private void prepareVoyages() {
-        if (!VOYAGES_READY.compareAndSet(false, true)) {
-            return;
-        }
-        Instant departure = Instant.now().plusSeconds(30L * 86_400);
-        Response registered = given().baseUri(SimulationStack.gatewayUrl())
-                .header("Authorization", "Bearer " + login("routing01"))
-                .header("X-Auth-Username", "routing01")
-                .contentType("application/json")
-                .body(Map.of(
-                        "voyageNumber", "V-SIM-001",
-                        "carrierCode", "SIM",
-                        "carrierName", "シミュレーション海運",
-                        "vesselName", "SIM MARU",
-                        "acceptedCargoTypes", List.of("GENERAL", "HAZARDOUS", "REEFER"),
-                        "movements", List.of(Map.of(
-                                "departureUnLocode", "JPTYO",
-                                "arrivalUnLocode", "USNYC",
-                                "departureAt", departure.toString(),
-                                "arrivalAt", departure.plusSeconds(20L * 86_400).toString()))))
-                .post("/api/v1/routing/voyages");
-        // **登録の結果を捨てない。** 捨てると「便が読めない」としか分からず、
-        // 断られた理由（入力の食い違い）に辿り着けない。
-        assertThat(registered.statusCode())
-                .as("便を登録できない: %s", registered.asString())
-                .isBetween(200, 299);
-        // **経由便も 1 本置く**（US35 §3）。誤配の組み直しは「前と違う経路」を
-        // 要るので、直行便しか無いと組み直す先が無い——**確かめたいのは誤配の
-        // 対応であって、便の品揃えではない**（実測で踏んだ）。
-        // 経由する港（SGSIN）は、経路外の荷役を記録する先にもなる。
-        Response viaRegistered = given().baseUri(SimulationStack.gatewayUrl())
-                .header("Authorization", "Bearer " + login("routing01"))
-                .header("X-Auth-Username", "routing01")
-                .contentType("application/json")
-                .body(Map.of(
-                        "voyageNumber", "V-SIM-002",
-                        "carrierCode", "SIM",
-                        "carrierName", "シミュレーション海運",
-                        "vesselName", "SIM MARU 2",
-                        "acceptedCargoTypes", List.of("GENERAL", "HAZARDOUS", "REEFER"),
-                        "movements", List.of(
-                                Map.of("departureUnLocode", "JPTYO",
-                                        "arrivalUnLocode", "SGSIN",
-                                        "departureAt", departure.toString(),
-                                        "arrivalAt", departure.plusSeconds(7L * 86_400)
-                                                .toString()),
-                                Map.of("departureUnLocode", "SGSIN",
-                                        "arrivalUnLocode", "USNYC",
-                                        "departureAt", departure.plusSeconds(8L * 86_400)
-                                                .toString(),
-                                        "arrivalAt", departure.plusSeconds(22L * 86_400)
-                                                .toString()))))
-                .post("/api/v1/routing/voyages");
-        assertThat(viaRegistered.statusCode())
-                .as("経由便を登録できない: %s", viaRegistered.asString())
-                .isBetween(200, 299);
-        await("便が読めるようになる").atMost(Duration.ofSeconds(60))
-                .pollInterval(Duration.ofMillis(500))
-                .until(() -> get("/api/v1/routing/voyages/V-SIM-001", "routing01")
-                        .statusCode() == 200
-                        && get("/api/v1/routing/voyages/V-SIM-002", "routing01")
-                        .statusCode() == 200);
-    }
-
-    private static final java.util.concurrent.atomic.AtomicBoolean VOYAGES_READY =
-            new java.util.concurrent.atomic.AtomicBoolean();
 }

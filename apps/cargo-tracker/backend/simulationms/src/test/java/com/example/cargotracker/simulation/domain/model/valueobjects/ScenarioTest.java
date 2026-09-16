@@ -28,6 +28,7 @@ class ScenarioTest {
     @DisplayName("US35 §1・§2: 手で起票する例外は、起票・対応・解決までを順に含む")
     void exceptionScenariosShareTheSameSteps(Scenario scenario) {
         assertThat(scenario.steps()).containsExactly(
+                StepKind.PREPARE_VOYAGES,
                 StepKind.REGISTER_SHIPPER,
                 StepKind.REGISTER_BOOKING,
                 StepKind.REQUEST_ROUTING,
@@ -66,6 +67,7 @@ class ScenarioTest {
     void misrouteReassignsTheRouteBeforeResolving() {
         // **解決だけして経路をそのままにすると、同じ港へもう一度運ぶ。**
         assertThat(Scenario.MISROUTE.steps()).containsExactly(
+                StepKind.PREPARE_VOYAGES,
                 StepKind.REGISTER_SHIPPER,
                 StepKind.REGISTER_BOOKING,
                 StepKind.REQUEST_ROUTING,
@@ -84,6 +86,7 @@ class ScenarioTest {
     void cancellationRunsThroughTheDischarge() {
         // **承認だけでは追跡は閉じない**（ADR-0018）。貨物はまだ船の上にある。
         assertThat(Scenario.CANCEL_IN_TRANSIT.steps()).containsExactly(
+                StepKind.PREPARE_VOYAGES,
                 StepKind.REGISTER_SHIPPER,
                 StepKind.REGISTER_BOOKING,
                 StepKind.REQUEST_ROUTING,
@@ -137,6 +140,7 @@ class ScenarioTest {
         // 引き渡しと経路の確定を入れ替えても緑になる——受入基準 1 が約束して
         // いるのは「順に実行される」ことである（IT16 のレビュー 中）。
         assertThat(Scenario.STANDARD.steps()).containsExactly(
+                StepKind.PREPARE_VOYAGES,
                 StepKind.REGISTER_SHIPPER,
                 StepKind.REGISTER_BOOKING,
                 StepKind.REQUEST_ROUTING,
