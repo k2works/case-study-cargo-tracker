@@ -1,0 +1,83 @@
+spring:
+  # 料率は請求と同じファイルを読む（ADR-0016）。出典が 1 つでなければ片方だけ
+  # 直り、見積が旧料率・請求が新料率という状態になる。**別名のファイルにして
+  # 名指しする**——2 つのサービスを同じ JVM に載せたとき classpath:application.yml
+  # は最初に見つかった 1 つしか読まれない。
+  config:
+    import: classpath:cargo-rates.yml
+  application:
+    name: bookingms
+  datasource:
+    # Database per Service（ADR-0001 決定 1）。他サービスの DB には繋がない。
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/booking_read_db}
+    username: ${DB_USER:bookingms}
+    password: ${DB_PASSWORD:bookingms}
+  flyway:
+    enabled: true
+    # サービスごとに置き場を分ける。同じ classpath:db/migration に置くと、
+    # 2 つのサービスを同じ JVM に載せた瞬間に双方の V001 が衝突して起動しない
+    # （Found more than one migration with version 001）。契約テストの往復は
+    # 2 サービスを同時に起動するので、番号取りをサービス間で調整しない形にする。
+    locations: classpath:db/migration/booking
+  main:
+    # Axon の axon.axonserver ConfigurationProperties が Spring Boot の
+    # BoundConfigurationProperties と Bean 循環を作るため必須（IT1 スパイクで実測）。
+    # Spring Boot の版を下げても回避できない。
+    allow-circular-references: true
+
+server:
+  port: ${SERVER_PORT:8082}
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+
+axon:
+  axonserver:
+    servers: ${AXON_SERVER:localhost:8124}
+  eventhandling:
+    processors:
+      # **退避先は Processor ごとに明示する**（ADR-0014）。`"[..default]"` は
+      # この版では効かない（実測。DLQ が付かず、1 件で全部止まる形に戻る）。
+      # 書き忘れを人の注意で防がないよう、EventSourcedServicesHaveTheSameShapeTest が
+      # 2 つ見る：everyEventHandlerPackageIsEnumerated（@EventHandler を持つ
+      # パッケージがここに載っているか）と everyEnumeratedProcessorHasADeadLetterQueue
+      # （載っているものに dlq が付いているか）。
+      # Processing Group はパッケージ名キーで指定する（@ProcessingGroup は Axon 5 に無い）。
+      # 投影と Reaction Handler を別 Group にするため、パッケージを分けている。
+      # 名前の正典は data-model.md「Processing Group とテーブルの対応」。
+      "[com.example.cargotracker.booking.infrastructure.projection]":
+        mode: pooled
+        dlq:
+          enabled: true
+      "[com.example.cargotracker.booking.application.reaction]":
+        mode: pooled
+        dlq:
+          enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # deadletters は退避したイベントを処理し直す入口（ADR-0014 決定 1）。
+        # **直したあとに退避を消すのは「黙って捨てる」こと**なので、消す手段では
+        # なく処理し直す手段を置く。運用の読み口（projection:dead-letters）と
+        # 同じ立場のものを同じ入口に並べる。
+        include: health,info,deadletters
+
+# Gateway の振り分けと同じ接頭辞。共有の読み口（退避一覧）が経路を組み立てる。
+cargo-tracker:
+  # **シミュレーション由来の印を受け付けるか**（US33 §受入基準 3 / [ADR-0020]）。
+  #
+  # **印は業務の一覧から荷主と貨物を消す。** 誰でも立てられると、本物の荷主を
+  # 「シミュレーション由来」として静かに見えなくできる（IT16 のレビューで指摘）。
+  # 許可した環境でだけ受け付ける——**本番では既定のまま無効**にする。
+  #
+  # 環境変数の名前を推測させない。リラックスバインディングがどの環境変数名に
+  # 対応するかは規則を知らないと読めず、外したときは「既定のまま無効」になる。
+  simulation:
+    enabled: ${CARGOTRACKER_SIMULATION_ENABLED:false}
+
+cargo:
+  context: booking

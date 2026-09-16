@@ -1,0 +1,1096 @@
+package com.example.cargotracker.booking.domain.model.aggregates;
+
+import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
+import com.example.cargotracker.shared.domain.location.Location;
+import com.example.cargotracker.booking.domain.model.commands.AdjustRouteSpecificationCommand;
+import com.example.cargotracker.booking.domain.model.commands.BookCargoCommand;
+import com.example.cargotracker.booking.domain.model.commands.NotifyShipperCommand;
+import com.example.cargotracker.booking.domain.model.commands.ReturnToRoutingCommand;
+import com.example.cargotracker.booking.domain.model.commands.RequestConditionReviewCommand;
+import com.example.cargotracker.booking.domain.model.commands.RequestRoutingCommand;
+import com.example.cargotracker.booking.domain.model.commands.RespondToConditionReviewCommand;
+import com.example.cargotracker.booking.domain.model.commands.MarkDeliveredCommand;
+import com.example.cargotracker.booking.domain.model.commands.RevertDeliveryCommand;
+import com.example.cargotracker.booking.domain.model.commands.RecordHandlingCommand;
+import com.example.cargotracker.booking.domain.model.commands.RevertHandlingCommand;
+import com.example.cargotracker.booking.domain.model.commands.RevertTrackingNumberCommand;
+import com.example.cargotracker.booking.domain.model.commands.LinkQuotationCommand;
+import com.example.cargotracker.booking.domain.model.commands.RevertSettlementCommand;
+import com.example.cargotracker.booking.domain.model.commands.ApproveCancellationCommand;
+import com.example.cargotracker.booking.domain.model.commands.RejectCancellationCommand;
+import com.example.cargotracker.booking.domain.model.commands.RequestCancellationCommand;
+import com.example.cargotracker.booking.domain.model.events.CancellationApprovedEvent;
+import com.example.cargotracker.booking.domain.model.events.CancellationRejectedEvent;
+import com.example.cargotracker.booking.domain.model.events.CancellationRequestedEvent;
+import com.example.cargotracker.booking.domain.model.valueobjects.CancellationDecision;
+import com.example.cargotracker.booking.domain.service.DischargeCandidates;
+import com.example.cargotracker.shared.contract.event.CargoCancelledEvent;
+import com.example.cargotracker.booking.domain.model.commands.SettleBookingCommand;
+import com.example.cargotracker.booking.domain.model.commands.UpdateCargoSpecificationCommand;
+import com.example.cargotracker.booking.domain.model.events.BookingConfirmedEvent;
+import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
+import com.example.cargotracker.shared.contract.event.CargoQuotedEvent;
+import com.example.cargotracker.booking.domain.model.events.ReturnedToRoutingEvent;
+import com.example.cargotracker.booking.domain.model.events.ShipperNotifiedEvent;
+import com.example.cargotracker.booking.domain.model.events.ConditionReviewRequestedEvent;
+import com.example.cargotracker.booking.domain.model.events.ConditionReviewRespondedEvent;
+import com.example.cargotracker.booking.domain.model.events.RouteSpecificationAdjustedEvent;
+import com.example.cargotracker.booking.domain.model.events.CargoSpecificationUpdatedEvent;
+import com.example.cargotracker.booking.domain.model.events.RoutingRequestedEvent;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
+import com.example.cargotracker.booking.domain.model.valueobjects.RouteSpecification;
+import com.example.cargotracker.booking.domain.model.commands.AssignRouteCommand;
+import com.example.cargotracker.booking.domain.model.commands.ConfirmBookingCommand;
+import com.example.cargotracker.booking.domain.model.commands.IssueTrackingNumberCommand;
+import com.example.cargotracker.booking.domain.model.events.CargoRoutedEvent;
+import com.example.cargotracker.booking.domain.model.events.BookingMisroutedEvent;
+import com.example.cargotracker.booking.domain.model.events.BookingDeliveredEvent;
+import com.example.cargotracker.booking.domain.model.events.BookingDeliveryRevertedEvent;
+import com.example.cargotracker.booking.domain.model.events.BookingSettledEvent;
+import com.example.cargotracker.booking.domain.model.events.BookingSettlementRevertedEvent;
+import com.example.cargotracker.booking.domain.model.events.HandlingRecordedEvent;
+import com.example.cargotracker.booking.domain.model.events.HandlingRevertedEvent;
+import com.example.cargotracker.booking.domain.model.events.TrackingNumberIssuedEvent;
+import com.example.cargotracker.booking.domain.model.events.TrackingNumberRevertedEvent;
+import com.example.cargotracker.booking.domain.model.valueobjects.CargoItinerary;
+import com.example.cargotracker.booking.domain.model.valueobjects.RoutingStatus;
+import com.example.cargotracker.shared.domain.error.IllegalTransition;
+import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import org.axonframework.eventsourcing.annotation.EventSourcingHandler;
+import org.axonframework.eventsourcing.annotation.reflection.EntityCreator;
+import org.axonframework.extension.spring.stereotype.EventSourced;
+import org.axonframework.messaging.commandhandling.annotation.CommandHandler;
+import org.axonframework.messaging.eventhandling.gateway.EventAppender;
+
+/**
+ * 貨物予約（UC03 / US04・US05）。
+ *
+ * <p>状態を持つ最初の集約であり、イベント列からの復元が判断に効く。IT2 で到達するのは
+ * {@code PRELIMINARY} までだが、遷移の判定は {@link BookingStatus#canTransitionTo} に
+ * 置き、あとの IT で足すたびに書き足す場所が増えないようにする。</p>
+ *
+ * <p>不変条件は domain-model.md「Cargo 集約の不変条件」が正典。1（BookingId は不変・
+ * ShipperId 必須）はここが、2（出発地 ≠ 目的地）は {@code RouteSpecification} が、
+ * 3（危険物の申告・温度条件）は {@code CargoSpecification} が、8（二重発行の禁止）は
+ * {@code issueTrackingNumber} が守る。</p>
+ */
+@EventSourced(idType = String.class, tagKey = "bookingId")
+public class Cargo {
+
+    private String bookingId;
+    private BookingStatus bookingStatus;
+    /** もとになった見積。**無いほうが多い**（見積を経ない予約）。 */
+    private String quotationId;
+    private RoutingStatus routingStatus;
+    /** 受け付けたときの到着期限。修正で期限を触ったかどうかの判断に要る。 */
+    private LocalDate arrivalDeadline;
+    /**
+     * 経路仕様の端点。旅程が仕様を満たすかの判断（不変条件 5）に要る。
+     *
+     * <p><b>修正（US32）でも書き換える。</b> 受付時の値だけを覚えていると、
+     * 目的地を直した予約に古い目的地の経路が付く。</p>
+     */
+    private Location origin;
+    private Location destination;
+    /** 貨物種別。追跡番号の発行（US14）で trackingms へ渡す。 */
+    private String cargoType;
+
+    /**
+     * 貨物の重量（kg）。<b>請求が数える材料</b>（IT13）。
+     *
+     * <p>予約の時点から分かっているのに、追跡へ渡す契約に載っていなかった。
+     * 載せ直すために集約が覚えておく——{@code IssueTrackingNumberCommand} は
+     * 重量を持たないので、コマンドから採ることはできない。</p>
+     */
+    private BigDecimal weightKg;
+    /**
+     * 荷主。<b>発行のイベントに載せる</b>（US18）。
+     *
+     * <p>受付のイベントには最初から載っていたが、集約は保持していなかった
+     * （{@code book()} を通り抜けるだけ）。持たないと、発行のときに誰の貨物か
+     * 分からず、trackingms は荷主を知る手段を持たない。</p>
+     */
+    private String shipperId;
+    /** 発行済みの追跡番号。取り消し（補償）で「何を取り消したか」を残すのに要る。 */
+    private String trackingNumber;
+    /** 営業へ差し戻していて、まだ返事が来ていないか（US10 §4 の対）。 */
+    private boolean awaitingConditionReviewResponse;
+    /** 確定した旅程。<b>発行のイベントに載せる</b>（IT9 の荷役が材料にする）。 */
+    private List<CargoRoutedEvent.Leg> legs = List.of();
+
+    /**
+     * 現在地（最後の荷役の港）。<b>陸揚げ地の候補を決めるのに要る</b>（不変条件 9-2）。
+     *
+     * <p>まだ荷役が無ければ {@code null}。船に載っていないので、降ろす港も無い。</p>
+     */
+    private String lastHandlingUnLocode;
+
+    /**
+     * 未決着のキャンセル申請（不変条件 10）。<b>高々 1 件</b>。
+     *
+     * <p><b>集約が持つ。</b> 投影に尋ねると、投影が追いついていないあいだは
+     * 申請できない／二重に申請できるの両方が起こる（調整の取り消しと同じ形）。</p>
+     */
+    private CancellationRequest pendingCancellation;
+
+    /**
+     * キャンセル申請（{@code Cargo} の中のエンティティ。注 N5）。
+     *
+     * <p>用語表はエンティティとして挙げ、コマンド表は {@code Cargo} のコマンドとして
+     * 並べている。<b>集約の中に置く</b>——予約の状態と一緒に決まるものなので、
+     * 別の集約にすると「輸送中か」を投影に尋ねることになる。</p>
+     */
+    private record CancellationRequest(String requestId, String reason, String requestedBy) {
+    }
+
+    @EntityCreator
+    public Cargo() {
+        // Axon がイベント再生で呼ぶ。
+    }
+
+    /**
+     * 予約を受け付ける。
+     *
+     * <p><b>static ではなくインスタンスのハンドラにしている。</b> 両方置くと、集約が
+     * 既に存在しても static のほうが呼ばれ、2 度目の受付が通る（IT2 で実測）。
+     * {@code @EntityCreator} が空の集約を用意するので、片方で両方を扱える。</p>
+     */
+    @CommandHandler
+    public String book(BookCargoCommand command, EventAppender appender, Clock clock) {
+        if (bookingId != null) {
+            // 復元した集約が既に予約を持っているのに受け付けると、イベント列に
+            // 予約が 2 本並び、どちらが正か決まらない。
+            throw new IllegalTransition("予約 " + bookingId + " は既に受け付けています");
+        }
+        // 業務タイムゾーンの「今日」で判断する。JVM 既定だと、日本時間の朝 9 時より
+        // 前に受け付けた予約で当日の期限が「過去」になる時間帯ができる。
+        CargoValidation.validate(command, LocalDate.now(clock));
+        appender.append(CargoBookedEvent.of(command.bookingId(), command.shipperId(),
+                command.routeSpecification(), command.cargoSpecification(),
+                command.bookedBy()));
+        return command.bookingId();
+    }
+
+    /**
+     * 経路設計者に引き渡す（UC04 / US06）。
+     *
+     * <p><b>遷移の判定は書き直さず {@link BookingStatus#canTransitionTo} を呼ぶ。</b>
+     * IT2 で置いた遷移表を初めて使う場所。ここで {@code if (status == PRELIMINARY)} と
+     * 書くと、遷移表と集約の判断が二重になり、片方だけ直したときに食い違う。</p>
+     */
+    @CommandHandler
+    public String requestRouting(RequestRoutingCommand command, EventAppender appender) {
+        requireBooked(command.bookingId());
+        // 遷移先で判断しない。ROUTE_PROPOSED への自己遷移は経路の確定と条件の調整の
+        // もので、引き渡しではない。述語を呼ぶ（BookingStatus#canRequestRouting）。
+        if (!bookingStatus.canRequestRouting()) {
+            throw new IllegalTransition(
+                    "状態 " + bookingStatus.label() + " の予約は経路設計へ引き渡せません");
+        }
+        appender.append(new RoutingRequestedEvent(command.bookingId(), command.requestedBy()));
+        return command.bookingId();
+    }
+
+    /**
+     * 入力の誤りを直す（UC03・UC04 / US32）。
+     *
+     * <p><b>直せるかどうかは遷移表の述語を呼ぶ</b>（{@link BookingStatus#canUpdateSpecification}）。
+     * ここで書き直すと、状態が増えたときに集約と遷移表の判断が食い違う。</p>
+     *
+     * <p><b>登録と同じ検査を通す。</b> 書き直すと「登録では断るのに修正では通る」が
+     * 生まれる（{@code CargoValidation} が両方を守る）。</p>
+     */
+    @CommandHandler
+    public String updateSpecification(UpdateCargoSpecificationCommand command,
+            EventAppender appender, Clock clock) {
+        requireBooked(command.bookingId());
+        if (!bookingStatus.canUpdateSpecification()) {
+            throw new IllegalTransition("状態 " + bookingStatus.label() + " の予約は修正できません");
+        }
+        // **期限は「変えたときだけ」検査する。** 据え置きにも今日以降を求めると、
+        // 期限を過ぎた仮受付の予約は品名すら直せなくなる（誤りに気づくのは
+        // たいてい期限が近づいてからで、そのときには直せない）。
+        CargoValidation.validate(command.cargoSpecification(), command.routeSpecification(),
+                LocalDate.now(clock), arrivalDeadline);
+
+        appender.append(CargoSpecificationUpdatedEvent.of(command.bookingId(),
+                command.routeSpecification(), command.cargoSpecification(),
+                command.updatedBy(), clock.instant()));
+        return command.bookingId();
+    }
+
+    /**
+     * 選んだ経路を確定する（UC07 / US09）。
+     *
+     * <p><b>旅程が経路仕様を満たすかは集約が見る</b>（不変条件 5）。「候補は探索が
+     * 作ったのだから正しい」としない——探索と集約は別の判断で、API を直接叩く経路も
+     * ある。区間の連結と時刻の昇順は {@link CargoItinerary} が守る（不変条件 4）。</p>
+     *
+     * <p><b>{@code BookingStatus} は動かさない。</b> 荷主に通知するまでは提案中である。</p>
+     */
+    @CommandHandler
+    public String assignRoute(AssignRouteCommand command, EventAppender appender, Clock clock) {
+        requireBooked(command.bookingId());
+        // 判定は書き直さず述語を呼ぶ（RoutingStatus#canAssignRoute）。画面も同じ
+        // 判断を写しており、canon テストが述語の本体を読んで突き合わせる。
+        if (!routingStatus.canAssignRoute()) {
+            throw new IllegalTransition(
+                    "経路設計を依頼していない予約には経路を確定できません（"
+                            + routingStatus.label() + "）");
+        }
+        if (command.itinerary() == null) {
+            throw new BusinessRuleViolation("旅程は必須です");
+        }
+        // **誤配の再設計だけ、出発地と期限を緩める**（US28 §受入基準 4・5・6 /
+        // domain-model.md:737）。予定ルートを外れた貨物はもう出発地に無く、
+        // 現在地からでは期限に間に合わないのが普通である。断ると貨物が
+        // 動かせなくなる——超過した事実はイベントに載せて荷主への説明に使う。
+        boolean redesign = routingStatus == RoutingStatus.MISROUTED;
+        boolean satisfied = redesign
+                ? routeSpecification().isSatisfiedByRedesign(command.itinerary(), misroutedAt)
+                : routeSpecification().isSatisfiedBy(command.itinerary(), clock.getZone());
+        if (!satisfied) {
+            // 不変条件 5。期限も端点も、いま集約が持っている値で見る。
+            throw new BusinessRuleViolation(
+                    "選んだ旅程は予約の経路仕様を満たしません（期限 " + arrivalDeadline
+                            + " / " + origin.unLocode().value() + " → "
+                            + destination.unLocode().value() + "）");
+        }
+
+        appender.append(CargoRoutedEvent.of(command.bookingId(), command.itinerary(),
+                command.assignedBy(), clock.instant(),
+                redesign
+                        ? routeSpecification().overdueDays(command.itinerary(), clock.getZone())
+                        : 0));
+        return command.bookingId();
+    }
+
+    /**
+     * 経路の条件を調整する（UC08 / US10）。
+     *
+     * <p><b>調整を集約に記録する。</b> 画面の一時的な絞り込みにすると、誰がいつ期限を
+     * 延ばしたかが残らない（UC08 の最低保証「調整条件と再算出結果が記録される」）。</p>
+     *
+     * <p><b>経路設計に入ってからだけ開く。</b> 仮受付のあいだは S24（予約修正）が正典で、
+     * 2 つの入口を同時に開くと「どちらが正か」が読めない。逆に経路設計に入った予約は
+     * S24 が使えないので、期限を延ばす手段はここだけである。</p>
+     *
+     * <p><b>確定済みの旅程は消さない。</b> 戻すのは {@code routingStatus} だけ
+     * （ROUTED のままだと条件を変えても確定し直せない）。</p>
+     */
+    @CommandHandler
+    public String adjustRouteSpecification(AdjustRouteSpecificationCommand command,
+            EventAppender appender, Clock clock) {
+        requireBooked(command.bookingId());
+        // 誤配を含めない（調整が誤配の記録を消し、US28 の設計を先に縛る）。
+        if (!routingStatus.canAdjustRouteSpecification()) {
+            throw new IllegalTransition(
+                    "この予約の条件は調整できません（" + routingStatus.label() + "）");
+        }
+        LocalDate deadline = command.arrivalDeadline();
+        if (deadline == null) {
+            throw new BusinessRuleViolation("到着期限は必須です");
+        }
+        if (deadline.isBefore(LocalDate.now(clock))) {
+            // 過去の期限にすると、どの候補も期限切れになる。組めない条件を作らせない。
+            throw new BusinessRuleViolation("到着期限は今日以降にしてください: " + deadline);
+        }
+        // **港コードは Location に通す。** 生文字列だと小文字が端点の除外検査を
+        // 素通りし、長すぎる起点は投影の UPDATE で落ちてリプレイのたびに落ち続ける。
+        List<Location> excluded = (command.excludeUnLocodes() == null
+                ? List.<String>of() : command.excludeUnLocodes()).stream()
+                .map(Location::of)
+                .toList();
+        for (Location port : excluded) {
+            // 必ず通る港を除外すると、候補は必ず 0 件になる。条件を変えても直らない
+            // ものを、変え続けさせることになる。
+            if (port.equals(origin) || port.equals(destination)) {
+                throw new BusinessRuleViolation(
+                        "出発地と目的地は除外できません: " + port.unLocode().value());
+            }
+        }
+        Location departFrom = command.departFromUnLocode() == null
+                ? null : Location.of(command.departFromUnLocode());
+
+        appender.append(new RouteSpecificationAdjustedEvent(command.bookingId(), deadline,
+                excluded.stream().map(port -> port.unLocode().value()).toList(),
+                departFrom == null ? null : departFrom.unLocode().value(),
+                command.adjustedBy(), clock.instant()));
+        return command.bookingId();
+    }
+
+    /**
+     * 条件では組めないことを営業へ差し戻す（UC08 / US10 §受入基準 4）。
+     *
+     * <p><b>状態は動かさない</b>（ADR-0009 決定 1）。{@code NOT_ROUTED} へ戻すと
+     * 「一度も設計していない予約」と区別が付かなくなり、経路設計作業一覧（S30）と
+     * 誤配の扱いにも波及する。記録で表し、営業のダッシュボードに出す。</p>
+     *
+     * <p>差し戻せる状態の判断は {@link RoutingStatus#canRequestConditionReview()} に
+     * 置く。ここに条件を書き直すと、画面と食い違う。</p>
+     */
+    @CommandHandler
+    public String requestConditionReview(RequestConditionReviewCommand command,
+            EventAppender appender, Clock clock) {
+        requireBooked(command.bookingId());
+        if (!routingStatus.canRequestConditionReview()) {
+            throw new IllegalTransition(
+                    "この予約は営業へ差し戻せません（" + routingStatus.label() + "）");
+        }
+        if (command.reason() == null || command.reason().isBlank()) {
+            // 理由が無いと、営業は荷主と何を協議すればよいのか分からない。
+            throw new BusinessRuleViolation("差し戻す理由は必須です");
+        }
+
+        appender.append(new ConditionReviewRequestedEvent(command.bookingId(),
+                command.reason().trim(), command.requestedBy(), clock.instant()));
+        return command.bookingId();
+    }
+
+    /**
+     * 確定した経路を荷主へ通知した記録を残す（UC10 / US12）。
+     *
+     * <p><b>送信基盤はスコープ外だが、記録は業務の守りとして働く。</b> 経路が
+     * 決まっていない予約は通知できず、通知した予約だけが確定（US13）へ進める。
+     * 再通知は許す（条件が変わったら伝え直す）。</p>
+     */
+    @CommandHandler
+    public String notifyShipper(NotifyShipperCommand command, EventAppender appender,
+            Clock clock) {
+        requireBooked(command.bookingId());
+        // 判定は書き直さず述語を呼ぶ（RoutingStatus#canNotifyShipper）。
+        if (!routingStatus.canNotifyShipper()) {
+            throw new IllegalTransition(
+                    "経路が決まっていない予約は荷主へ通知できません（"
+                            + routingStatus.label() + "）");
+        }
+        // **予約の状態も見る。** routingStatus だけだと、確定済みや終端の予約への
+        // 再通知で、遷移表に無い後退が静かに起きる。
+        //
+        // **輸送中の予約は状態を動かさずに記録だけ残す**（US28 §受入基準 6 /
+        // IT11 レビュー 高）。誤配を組み直したあと、超過日数を荷主へ伝えた記録が
+        // 残せないと「聞いていない」と言われたときに突き合わせられない。かといって
+        // `ROUTE_NOTIFIED` へ戻すと、輸送中の貨物が「経路を通知しただけ」に見え、
+        // 確定も追跡番号の発行もやり直しになる——**通知は出来事であって、状態の
+        // 巻き戻しではない**。
+        boolean inTransit = bookingStatus == BookingStatus.IN_TRANSIT;
+        if (!inTransit && !bookingStatus.canTransitionTo(BookingStatus.ROUTE_NOTIFIED)) {
+            throw new IllegalTransition(
+                    "状態 " + bookingStatus.label() + " の予約は荷主へ通知できません");
+        }
+        if (command.recipientEmail() == null || command.recipientEmail().isBlank()) {
+            throw new BusinessRuleViolation("通知の宛先は必須です");
+        }
+        if (command.summary() == null || command.summary().isBlank()) {
+            // 荷主から「聞いていない」と言われたときに突き合わせられない。
+            throw new BusinessRuleViolation("通知内容は必須です");
+        }
+
+        appender.append(new ShipperNotifiedEvent(command.bookingId(),
+                command.recipientEmail().trim(), command.summary().trim(),
+                command.notifiedBy(), clock.instant()));
+        return command.bookingId();
+    }
+
+    @EventSourcingHandler
+    void on(ShipperNotifiedEvent event) {
+        if (bookingStatus == BookingStatus.IN_TRANSIT) {
+            // **輸送中は状態を動かさない**（US28 §受入基準 6）。記録だけ残す。
+            return;
+        }
+        this.bookingStatus = BookingStatus.ROUTE_NOTIFIED;
+    }
+
+    /**
+     * 予約を確定する（UC11 / US13）。営業が荷主の承認を確認してから使う。
+     *
+     * <p><b>通知していない予約は確定できない。</b> 遷移表は
+     * {@code ROUTE_NOTIFIED → CONFIRMED} だけを許す。荷主が知らないうちに確定すると、
+     * 追跡番号の発行と輸送手配まで進む。二重の確定も同じ判定で断る
+     * （{@code CONFIRMED → CONFIRMED} は遷移表に無い）。</p>
+     */
+    @CommandHandler
+    public String confirm(ConfirmBookingCommand command, EventAppender appender, Clock clock) {
+        requireBooked(command.bookingId());
+        if (!bookingStatus.canTransitionTo(BookingStatus.CONFIRMED)) {
+            throw new IllegalTransition(
+                    "状態 " + bookingStatus.label() + " の予約は確定できません"
+                            + "（荷主へ通知してから確定してください）");
+        }
+
+        appender.append(new BookingConfirmedEvent(command.bookingId(),
+                command.confirmedBy(), clock.instant()));
+        return command.bookingId();
+    }
+
+    @EventSourcingHandler
+    void on(BookingConfirmedEvent event) {
+        this.bookingStatus = BookingStatus.CONFIRMED;
+    }
+
+    /**
+     * 追跡番号を発行する（UC12 / US14）。<b>経路設計者の操作</b>。
+     *
+     * <p><b>不変条件 8: 二重に発行しない。</b> 発行から連鎖が始まるので、2 度発行すると
+     * 追跡が 2 つできる。遷移表が {@code CONFIRMED → TRACKING_ISSUED} だけを許すので、
+     * 未確定の発行も二重の発行も同じ判定で断る。</p>
+     *
+     * <p><b>採番はしない</b>（同時に 2 件発行したときに同じ番号が出る）。投影が採る。</p>
+     */
+    @CommandHandler
+    public String issueTrackingNumber(IssueTrackingNumberCommand command,
+            EventAppender appender, Clock clock) {
+        requireBooked(command.bookingId());
+        if (!bookingStatus.canTransitionTo(BookingStatus.TRACKING_ISSUED)) {
+            throw new IllegalTransition(
+                    "状態 " + bookingStatus.label() + " の予約に追跡番号は発行できません");
+        }
+        if (command.trackingNumber() == null || command.trackingNumber().isBlank()) {
+            throw new BusinessRuleViolation("追跡番号は必須です");
+        }
+
+        appender.append(TrackingNumberIssuedEvent.of(command.bookingId(),
+                command.trackingNumber().trim(), shipperId, origin.unLocode().value(),
+                destination.unLocode().value(), cargoType, weightKg, legs,
+                command.issuedBy(), clock.instant()));
+        return command.bookingId();
+    }
+
+    @EventSourcingHandler
+    void on(TrackingNumberIssuedEvent event) {
+        this.bookingStatus = BookingStatus.TRACKING_ISSUED;
+        this.trackingNumber = event.trackingNumber();
+    }
+
+    /**
+     * 追跡番号の発行を取り消す（US14 の補償 / ADR-0010 決定 4）。
+     *
+     * <p>trackingms へ追跡開始が届かないまま再試行の上限を超えたときに、調整役が送る。
+     * <b>予約は {@code CONFIRMED} に戻る</b>——キャンセルではないので、経路設計者が
+     * もう一度発行できる状態にするだけである。</p>
+     */
+    @CommandHandler
+    public String revertTrackingNumber(RevertTrackingNumberCommand command,
+            EventAppender appender, Clock clock) {
+        if (bookingStatus != BookingStatus.TRACKING_ISSUED) {
+            // 発行していないものは取り消せない。再試行で 2 度届いても 1 度だけ効く。
+            throw new IllegalTransition(
+                    "状態 " + (bookingStatus == null ? "未受付" : bookingStatus.label())
+                            + " の予約の追跡番号は取り消せません");
+        }
+
+        appender.append(new TrackingNumberRevertedEvent(command.bookingId(), trackingNumber,
+                command.reason(), clock.instant()));
+        return command.bookingId();
+    }
+
+    @EventSourcingHandler
+    void on(TrackingNumberRevertedEvent event) {
+        // キャンセルではない。もう一度発行できる状態に戻す。
+        this.bookingStatus = BookingStatus.CONFIRMED;
+        this.trackingNumber = null;
+    }
+
+    /**
+     * 通知した経路を経路設計へ戻す（UC08 / US12）。
+     *
+     * <p>荷主が変更を求めたときに営業が使う。<b>通知したあとだけ開く</b>——通知前に
+     * 組み直したいなら、経路設計者が自分で確定し直せばよい。</p>
+     *
+     * <p><b>{@code RoutingRequestedEvent} を再利用しない</b>（詳細は
+     * {@link ReturnToRoutingCommand}）。確定済みの旅程は消さない。</p>
+     */
+    @CommandHandler
+    public String returnToRouting(ReturnToRoutingCommand command, EventAppender appender,
+            Clock clock) {
+        requireBooked(command.bookingId());
+        // 判定は書き直さず述語を呼ぶ（BookingStatus#canReturnToRouting）。
+        if (!bookingStatus.canReturnToRouting()) {
+            throw new IllegalTransition(
+                    "状態 " + bookingStatus.label() + " の予約は経路設計へ戻せません");
+        }
+        if (command.reason() == null || command.reason().isBlank()) {
+            // 経路設計者が何を直せばよいのか分からない。
+            throw new BusinessRuleViolation("経路設計へ戻す理由は必須です");
+        }
+
+        appender.append(new ReturnedToRoutingEvent(command.bookingId(),
+                command.reason().trim(), command.returnedBy(), clock.instant()));
+        return command.bookingId();
+    }
+
+    @EventSourcingHandler
+    void on(ReturnedToRoutingEvent event) {
+        this.bookingStatus = BookingStatus.ROUTE_PROPOSED;
+        // 経路設計者の手番に戻す。**旅程は消さない**（再設計で入れ替わるまで残す）。
+        this.routingStatus = RoutingStatus.ROUTING_REQUESTED;
+    }
+
+    @EventSourcingHandler
+    void on(ConditionReviewRequestedEvent event) {
+        // **状態は動かさない**（ADR-0009 決定 1）。ただし「差し戻されている最中か」は
+        // 集約が持つ——営業が返事を返せるのは差し戻されているあいだだけである。
+        this.awaitingConditionReviewResponse = true;
+    }
+
+    /**
+     * 荷主との協議の結果を経路設計者へ返す（UC08 / US10 §受入基準 4 の対）。
+     *
+     * <p><b>差し戻しは一方向しか無かった。</b> 営業は協議を終えても伝える手段が
+     * なく、差し戻しはダッシュボードに出たままだった（IT6 レビュー）。</p>
+     *
+     * <p><b>状態は動かさない</b>（ADR-0009 決定 1）。条件を実際に直すのは経路設計者で、
+     * ここで返すのは協議の結果である。</p>
+     */
+    @CommandHandler
+    public String respondToConditionReview(RespondToConditionReviewCommand command,
+            EventAppender appender, Clock clock) {
+        requireBooked(command.bookingId());
+        if (!awaitingConditionReviewResponse) {
+            // 誰も待っていない返事を残さない。二度目もここで断る。
+            throw new IllegalTransition("この予約は営業へ差し戻されていません");
+        }
+        if (command.response() == null || command.response().isBlank()) {
+            // 中身が無いと、経路設計者は条件をどう直せばよいのか分からない。
+            throw new BusinessRuleViolation("協議の結果は必須です");
+        }
+
+        appender.append(new ConditionReviewRespondedEvent(command.bookingId(),
+                command.response().trim(), command.respondedBy(), clock.instant()));
+        return command.bookingId();
+    }
+
+    @EventSourcingHandler
+    void on(ConditionReviewRespondedEvent event) {
+        // 営業の手番は終わった。**差し戻しの記録は消さない**（投影が両方を持つ）。
+        this.awaitingConditionReviewResponse = false;
+    }
+
+    @EventSourcingHandler
+    void on(RouteSpecificationAdjustedEvent event) {
+        this.arrivalDeadline = event.arrivalDeadline();
+        // 条件が変われば営業の手番は終わっている（投影も差し戻しの記録を消す）。
+        this.awaitingConditionReviewResponse = false;
+        // 条件が変わったので、確定済みの経路は設計し直しになる。**旅程は消さない**
+        // （再設計で入れ替わるまで残す）。ROUTED のままだと確定し直せない。
+        this.routingStatus = RoutingStatus.ROUTING_REQUESTED;
+    }
+
+    /**
+     * 受け付け済みか。<b>どのコマンドでも最初に通す。</b>
+     *
+     * <p>受け付けていない予約に操作が届くのは、識別子の打ち間違いか、投影が先に
+     * 消えたか。どちらも 409 で断る（500 にすると「壊れた」と読まれる）。</p>
+     */
+    private void requireBooked(String commandBookingId) {
+        if (bookingId == null) {
+            throw new IllegalTransition("予約 " + commandBookingId + " は受け付けていません");
+        }
+    }
+
+    /** いま集約が持っている経路仕様。修正（US32）を反映した値になる。 */
+    private RouteSpecification routeSpecification() {
+        return new RouteSpecification(origin, destination, arrivalDeadline);
+    }
+
+    @EventSourcingHandler
+    void on(CargoSpecificationUpdatedEvent event) {
+        // 状態は変わらない。仮受付のまま内容だけが差し替わる。
+        this.bookingId = event.bookingId();
+        this.arrivalDeadline = event.arrivalDeadline();
+        this.origin = Location.of(event.originUnLocode());
+        this.destination = Location.of(event.destinationUnLocode());
+        this.cargoType = event.cargoType();
+        this.weightKg = event.weightKg();
+    }
+
+    @EventSourcingHandler
+    void on(CargoBookedEvent event) {
+        this.bookingId = event.bookingId();
+        this.bookingStatus = BookingStatus.PRELIMINARY;
+        this.routingStatus = RoutingStatus.NOT_ROUTED;
+        this.arrivalDeadline = event.arrivalDeadline();
+        this.origin = Location.of(event.originUnLocode());
+        this.destination = Location.of(event.destinationUnLocode());
+        this.cargoType = event.cargoType();
+        this.weightKg = event.weightKg();
+        this.shipperId = event.shipperId();
+    }
+
+    @EventSourcingHandler
+    void on(RoutingRequestedEvent event) {
+        this.bookingStatus = BookingStatus.ROUTE_PROPOSED;
+        this.routingStatus = RoutingStatus.ROUTING_REQUESTED;
+    }
+
+    @EventSourcingHandler
+    void on(CargoRoutedEvent event) {
+        this.routingStatus = RoutingStatus.ROUTED;
+        // 発行のイベントに載せる（US14）。組み直せば新しい旅程で上書きされる。
+        this.legs = event.legs();
+        // BookingStatus は動かさない。荷主に通知するまでは提案中（US12）。
+    }
+
+    /**
+     * 荷役が記録されたことを予約に写す（US15・US28 / 不変条件 12）。
+     *
+     * <p><b>最初の受領で輸送中にする</b>（domain-model.md の状態遷移図）。
+     * 2 回目以降の荷役では状態を動かさない——輸送中のまま港を進む。</p>
+     *
+     * <p><b>予定外なら経路設計の状態を誤配にする。</b> 経路設計者が現在地起点で
+     * 組み直すまで、その予約は作業一覧に残る。</p>
+     *
+     * <p><b>知らない予約の荷役では止まらない。</b> 荷役は handlingms に記録済みで、
+     * ここで例外にすると Event Processor が止まり、後続の荷役まで届かなくなる
+     * （trackingms 側と同じ判断）。</p>
+     *
+     * <p><b>同じ荷役が二度届いても 1 度しか書かない。</b> Event Processor は
+     * at-least-once で、リプレイや再配送で同じイベントがもう一度来る。投影は
+     * 追記系の主キーで弾けるが、<b>イベントストアは弾けない</b>——集約が
+     * {@code activityId} を覚えていることでしか防げない。</p>
+     */
+    @CommandHandler
+    public void recordHandling(RecordHandlingCommand command, EventAppender appender,
+            Clock clock) {
+        if (bookingId == null || recordedActivities.contains(command.activityId())) {
+            return;
+        }
+        var now = clock.instant();
+        appender.append(new HandlingRecordedEvent(command.bookingId(), command.activityId(),
+                command.handlingType(), command.unLocode(), command.completedAt(), now));
+
+        if (command.offRoute() && routingStatus != RoutingStatus.MISROUTED) {
+            appender.append(new BookingMisroutedEvent(command.bookingId(), command.activityId(),
+                    command.unLocode(), now));
+        }
+    }
+
+    /**
+     * 取り消された荷役の分を戻す（不変条件 13）。
+     *
+     * <p><b>誤配の原因が取り消された荷役だけなら、経路設計の状態も戻す。</b>
+     * 取り消したのに作業一覧へ残り続けると、経路設計者は起きていない誤配を
+     * 組み直そうとする。</p>
+     *
+     * <p><b>同じ取り消しが二度届いても 1 度しか書かない。</b> 二度目は
+     * {@code misrouteCleared = false} で積まれ、予約の状態こそ変わらないが、
+     * <b>取り消しの履歴に起きていない行が増える</b>。</p>
+     */
+    @CommandHandler
+    public void revertHandling(RevertHandlingCommand command, EventAppender appender,
+            Clock clock) {
+        if (bookingId == null || revertedActivities.contains(command.activityId())) {
+            return;
+        }
+        boolean clears = routingStatus == RoutingStatus.MISROUTED
+                && command.activityId().equals(misroutedBy);
+
+        // **戻ったあとの現在地を載せる。** 投影は履歴を持たないので、自分では
+        // 導けない（不変条件 9-2 の陸揚げ地の候補がこの値を材料にする）。
+        String restored = handlingHistory.stream()
+                .filter(handling -> !handling.activityId().equals(command.activityId()))
+                .filter(handling -> !revertedActivities.contains(handling.activityId()))
+                .reduce((first, second) -> second)
+                .map(HandlingAtPort::unLocode)
+                .orElse(null);
+
+        appender.append(new HandlingRevertedEvent(command.bookingId(), command.activityId(),
+                clears, restored, clock.instant()));
+    }
+
+    /**
+     * 貨物が引き渡された（UC14 / US16 §受入基準 4）。
+     *
+     * <p><b>契約 {@code CargoDeliveredEvent} を受けて {@code BookingReactionHandler}
+     * が送る。</b> 輸送の完了は trackingms が知っており、予約はその事実を写す。</p>
+     *
+     * <p><b>二度届いても 1 度だけ。</b> Event Processor は at-least-once である。</p>
+     *
+     * <p><b>知らない予約では止まらない。</b> 引き渡しは trackingms に記録済みで、
+     * ここで例外にすると Event Processor が止まり、後続の予約まで届かなくなる。</p>
+     */
+    @CommandHandler
+    public void markDelivered(MarkDeliveredCommand command, EventAppender appender) {
+        if (bookingId == null || bookingStatus == BookingStatus.DELIVERED) {
+            return;
+        }
+        appender.append(new BookingDeliveredEvent(command.bookingId(),
+                command.trackingNumber(), command.deliveredAt(), command.location()));
+    }
+
+    @EventSourcingHandler
+    void on(BookingDeliveredEvent event) {
+        // 引取済からはキャンセルできない（不変条件 9）。次に来るのは精算だけ。
+        this.statusBeforeDelivery = bookingStatus;
+        this.bookingStatus = BookingStatus.DELIVERED;
+    }
+
+    /**
+     * もとになった見積を結び付ける（US01 §受入基準 4・注 N12）。
+     *
+     * <p><b>概算を請求へ渡す唯一の経路である。</b> 追跡のイベントには載せない
+     * ——trackingms は金額に関わらないので、そこを通すと金額を知る必要の無い
+     * BC が金額を運ぶ。</p>
+     *
+     * <p><b>二度結び付けない。</b> 押し直しでイベントが積まれると、投影は
+     * 最後の 1 つを見るだけだが、履歴には「見積を 2 度取った予約」が残る。</p>
+     *
+     * <p><b>知らない予約では止まらない。</b> 予約の受付は既に済んでいる。</p>
+     */
+    @CommandHandler
+    public void linkQuotation(LinkQuotationCommand command, EventAppender appender,
+            Clock clock) {
+        if (bookingId == null || quotationId != null) {
+            return;
+        }
+        appender.append(new CargoQuotedEvent(command.bookingId(), command.quotationId(),
+                command.quotedAmount(), command.currency(), clock.instant()));
+    }
+
+    @EventSourcingHandler
+    void on(CargoQuotedEvent event) {
+        this.quotationId = event.quotationId();
+    }
+
+    /**
+     * 予約が精算済になった（UC18 / US23 §受入基準 4）。
+     *
+     * <p><b>契約 {@code PaymentRecordedEvent} を受けて
+     * {@code BookingReactionHandler} が送る。</b> 入金を知っているのは billingms
+     * であり、予約はその事実を写す。<b>画面から直接送る入口は置かない</b>——
+     * 入金を伴わない「精算済」は業務として存在しない。</p>
+     *
+     * <p><b>引取済からだけ進む</b>（{@code BookingStatus#canTransitionTo}）。
+     * 配送が終わっていない予約に入金があるのは、請求書の取り違えである。</p>
+     *
+     * <p><b>二度届いても 1 度だけ。</b> Event Processor は at-least-once である。</p>
+     *
+     * <p><b>知らない予約では止まらない。</b> 入金は billingms に記録済みで、
+     * ここで例外にすると Event Processor が止まり、後続の予約まで届かなくなる。</p>
+     */
+    @CommandHandler
+    public void settle(SettleBookingCommand command, EventAppender appender, Clock clock) {
+        if (bookingId == null || bookingStatus == BookingStatus.SETTLED) {
+            return;
+        }
+        if (!bookingStatus.canTransitionTo(BookingStatus.SETTLED)) {
+            throw new IllegalTransition(
+                    "状態 " + bookingStatus.label() + " の予約は精算済にできません");
+        }
+        appender.append(new BookingSettledEvent(command.bookingId(), command.invoiceId(),
+                command.paidAmount(), command.currency(), command.paidAt(),
+                command.settledBy(), clock.instant()));
+    }
+
+    /**
+     * キャンセルを申し出る（UC22 / US30 §受入基準 1・2・3）。
+     *
+     * <p><b>入口は 1 つで、どちらになるかは状態が決める。</b> 輸送開始前
+     * （{@code cancellableImmediately}）は即座にキャンセル、輸送中は申請になる。
+     * 画面が出し分けると、同じ判断が 2 か所に住み、片方だけが正しいまま残る。</p>
+     *
+     * <p><b>理由は必須</b>（§受入基準 3）。あとから「なぜ止めたか」を読む人がいる。</p>
+     *
+     * <p><b>未決着の申請があるあいだは受け付けない</b>（不変条件 10）。2 件あると、
+     * 追跡管理者はどちらに答えればよいのか決められない。</p>
+     */
+    @CommandHandler
+    public void requestCancellation(RequestCancellationCommand command,
+            EventAppender appender, Clock clock) {
+        if (bookingId == null) {
+            throw new IllegalTransition("予約 " + command.bookingId() + " がありません");
+        }
+        if (command.reason() == null || command.reason().isBlank()) {
+            // 理由が無いと、あとから「なぜ止めたか」を誰も確かめられない。
+            throw new BusinessRuleViolation("キャンセルの理由は必須です");
+        }
+        String reason = command.reason().trim();
+        if (pendingCancellation != null) {
+            throw new IllegalTransition(
+                    "この予約には承認待ちのキャンセル申請があります");
+        }
+        if (bookingStatus.cancellableImmediately()) {
+            appender.append(new CargoCancelledEvent(bookingId, trackingNumber,
+                    bookingStatus.name(), null, reason, command.requestedBy(),
+                    clock.instant()));
+            return;
+        }
+        if (!bookingStatus.canTransitionTo(BookingStatus.CANCELLED)) {
+            throw new IllegalTransition(
+                    "状態 " + bookingStatus.label() + " の予約はキャンセルできません");
+        }
+        // 輸送中。**状態は動かさない**——申請は「止めたい」という意思表示で、
+        // 止まったことではない。動かすと、承認前の貨物がキャンセル済として扱われる。
+        appender.append(new CancellationRequestedEvent(bookingId, command.requestId(),
+                reason, command.requestedBy(), clock.instant()));
+    }
+
+    /**
+     * キャンセル申請を承認する（UC22 / US30 §受入基準 5・6 / 不変条件 9・9-2）。
+     *
+     * <p><b>承認とは「どこで降ろすか」を決めること</b>である。決めずに承認しても、
+     * 貨物は船の上に残る。指定できるのは<b>現在地または残りの寄港地</b>で、
+     * 判定は {@link CancellationDecision} が持つ（画面の選択肢も同じ述語から作る）。</p>
+     *
+     * <p><b>判断とキャンセルを対で出す。</b> 予約がキャンセルになったことは契約
+     * イベントが伝えるが、<b>誰が・いつ・どこで降ろすと決めたか</b>は申請の履歴が
+     * 読む——記録と読み口は対で出す。</p>
+     */
+    @CommandHandler
+    public void approveCancellation(ApproveCancellationCommand command,
+            EventAppender appender, Clock clock) {
+        CancellationRequest request = pendingOrRefuse(command.bookingId());
+        // **申請と判断のあいだに時間がある。** 申請した時点では輸送中でも、
+        // 追跡管理者が読むころには引き取られていることがある。申請の有無だけを
+        // 見て承認すると、引取済の予約がキャンセルになる（§8 の裏口。IT15 の
+        // レビュー 高）。**却下には掛けない**——却下は「このまま運ぶ」という
+        // 判断で状態を動かさず、掛けると決着しない申請が残り続ける。
+        if (!bookingStatus.canTransitionTo(BookingStatus.CANCELLED)) {
+            throw new IllegalTransition(
+                    "状態 " + bookingStatus.label() + " の予約はキャンセルできません"
+                            + "（申請を却下してください）");
+        }
+        // **`Location.of` を先に通さない。** 空のときに形式エラーが出て、承認する
+        // 人が業務の言葉で断りを読めない（IT15 のレビュー 中）。検査は 1 か所。
+        var decision = CancellationDecision.approve(
+                command.dischargeUnLocode(), dischargeCandidates(),
+                command.reason(), command.approvedBy(), clock.instant());
+
+        appender.append(new CancellationApprovedEvent(bookingId, request.requestId(),
+                decision.dischargeLocation().unLocode().value(), decision.reason(),
+                decision.decidedBy(), decision.decidedAt()));
+        appender.append(new CargoCancelledEvent(bookingId, trackingNumber,
+                bookingStatus.name(), decision.dischargeLocation().unLocode().value(),
+                request.reason(), decision.decidedBy(), decision.decidedAt()));
+    }
+
+    /**
+     * キャンセル申請を却下する（UC22 / US30 §受入基準 7）。
+     *
+     * <p><b>予約の状態は動かさない。</b> 却下は「このまま運ぶ」という判断である。
+     * 申請は決着するので承認待ちから消える——残すと、追跡管理者が毎朝同じ申請を
+     * 読み直すことになる。</p>
+     */
+    @CommandHandler
+    public void rejectCancellation(RejectCancellationCommand command,
+            EventAppender appender, Clock clock) {
+        CancellationRequest request = pendingOrRefuse(command.bookingId());
+        var decision = CancellationDecision.reject(command.reason(), command.rejectedBy(),
+                clock.instant());
+
+        appender.append(new CancellationRejectedEvent(bookingId, request.requestId(),
+                decision.reason(), decision.decidedBy(), decision.decidedAt()));
+    }
+
+    private CancellationRequest pendingOrRefuse(String commandBookingId) {
+        if (bookingId == null) {
+            throw new IllegalTransition("予約 " + commandBookingId + " がありません");
+        }
+        if (pendingCancellation == null) {
+            // 判断する相手がいない。**画面は投影の `decision IS NULL` で同じことを
+            // 読む**——同じ事実を同じイベントから導いているので判定の重複ではない
+            // （集約の述語を公開しても、画面は CQRS の読み口しか見られない）。
+            throw new IllegalTransition("この予約に承認待ちのキャンセル申請はありません");
+        }
+        return pendingCancellation;
+    }
+
+    /**
+     * 残りの寄港地（不変条件 9-2）。
+     *
+     * <p><b>現在地より後の荷降し港。</b> 通過済みの港は入らない——船はもう戻らない。
+     * 現在地が旅程に無い（誤配）ときは、<b>全部の荷降し港を候補にする</b>：
+     * どこまで進んだか分からない状態で候補を狭めると、実際に降ろせる港まで
+     * 消えてしまう。</p>
+     */
+    private List<Location> dischargeCandidates() {
+        // **判定は 1 か所**（DischargeCandidates）。画面の選択肢も同じ関数から
+        // 作るので、出ているのに押すと断られる港が生まれない。
+        return DischargeCandidates.of(legs.stream()
+                .map(leg -> new DischargeCandidates.Leg(leg.loadUnLocode(),
+                        leg.unloadUnLocode()))
+                .toList(), lastHandlingUnLocode);
+    }
+
+    @EventSourcingHandler
+    void on(CancellationRequestedEvent event) {
+        this.pendingCancellation = new CancellationRequest(event.requestId(),
+                event.reason(), event.requestedBy());
+    }
+
+    @EventSourcingHandler
+    void on(CancellationRejectedEvent event) {
+        // 決着したので承認待ちから外れる。もう一度申請できる。
+        this.pendingCancellation = null;
+    }
+
+    @EventSourcingHandler
+    void on(CancellationApprovedEvent event) {
+        this.pendingCancellation = null;
+    }
+
+    @EventSourcingHandler
+    void on(CargoCancelledEvent event) {
+        // キャンセルは終端。ここから進む先は無い（BookingStatus の遷移表）。
+        this.bookingStatus = BookingStatus.CANCELLED;
+        this.pendingCancellation = null;
+    }
+
+    /**
+     * 入金の記録が取り消された（UC18 / US23。IT15 引き継ぎ 3）。
+     *
+     * <p><b>契約 {@code PaymentVoidedEvent} を受けて {@code BookingReactionHandler}
+     * が送る。</b> 戻さないと、入金が無いのに精算が終わっている予約が残る。</p>
+     *
+     * <p><b>戻る先は引取済で確定している</b>（精算済になれるのは引取済からだけ）。
+     * 導き直しではないので、イベントに戻り先を載せない。</p>
+     *
+     * <p><b>精算済でないなら何もしない。</b> 二度届いても 1 度だけ。</p>
+     */
+    @CommandHandler
+    public void revertSettlement(RevertSettlementCommand command, EventAppender appender) {
+        if (bookingId == null || bookingStatus != BookingStatus.SETTLED) {
+            return;
+        }
+        appender.append(new BookingSettlementRevertedEvent(command.bookingId(),
+                command.invoiceId(), command.reason()));
+    }
+
+    @EventSourcingHandler
+    void on(BookingSettlementRevertedEvent event) {
+        // 引取済に戻る。ここからもう一度精算できる（正しい入金を入れ直せる）。
+        this.bookingStatus = BookingStatus.DELIVERED;
+    }
+
+    @EventSourcingHandler
+    void on(BookingSettledEvent event) {
+        // 精算済は終端。ここから進む先は無い（BookingStatus の遷移表）。
+        this.bookingStatus = BookingStatus.SETTLED;
+    }
+
+    /**
+     * 引き渡しの記録が取り消された（IT11 引き継ぎ枠 A）。
+     *
+     * <p><b>契約 {@code CargoDeliveryRevertedEvent} を受けて
+     * {@code BookingReactionHandler} が送る。</b> 引取は荷役の記録なので、
+     * 取り違え・二重記録で取り消されることがある。予約だけ引取済のまま残すと、
+     * 営業には配送完了、荷役には陸揚げ待ちに見える。</p>
+     *
+     * <p><b>引取済でないなら何もしない。</b> 二度届いても 1 度だけ
+     * （Event Processor は at-least-once）。</p>
+     */
+    @CommandHandler
+    public void revertDelivery(RevertDeliveryCommand command, EventAppender appender) {
+        if (bookingId == null || bookingStatus != BookingStatus.DELIVERED) {
+            return;
+        }
+        appender.append(new BookingDeliveryRevertedEvent(command.bookingId(),
+                command.trackingNumber(), statusBeforeDelivery.name(), command.reason()));
+    }
+
+    @EventSourcingHandler
+    void on(BookingDeliveryRevertedEvent event) {
+        this.bookingStatus = BookingStatus.valueOf(event.restoredStatus());
+    }
+
+    /** 引取済にする前の状態。打ち消しの戻し先。<b>導き直さない</b>。 */
+    private BookingStatus statusBeforeDelivery;
+
+    /** 誤配にした荷役。取り消しで戻してよいかの判断に要る（不変条件 13）。 */
+    private String misroutedBy;
+
+    /**
+     * 誤配を検知した港（US28 §受入基準 4）。<b>再設計の起点</b>。
+     *
+     * <p>覚えていないと、集約は「目的地さえ合っていればどこ発でもよい」ことに
+     * なる——探索が現在地から探しているのは<b>探索の便宜</b>にすぎず、
+     * REST を直接叩けば任意の起点の旅程を確定できてしまう（IT11 レビュー 高）。</p>
+     */
+    private Location misroutedAt;
+
+    /**
+     * 反映済みの荷役。<b>再配送を弾く鍵</b>。
+     *
+     * <p>予約 1 件あたりの荷役は旅程の区間数に比例する数（受領・積込・荷降し・引取）で、
+     * 際限なく増えるものではない。</p>
+     */
+    private final Set<String> recordedActivities = new HashSet<>();
+
+    /** 取り消し済みの荷役。同じく再配送を弾く鍵。 */
+    private final Set<String> revertedActivities = new HashSet<>();
+
+    /**
+     * 記録した順の荷役（活動 ID と港）。<b>取り消しで現在地を戻すのに要る</b>。
+     *
+     * <p>荷役は取り消せる（US15）。港を 1 つだけ覚えていると、取り消したあとも
+     * その港が現在地に残り、<b>通ってもいない港を「通過済み」と数える</b>
+     * ——その先の寄港地が陸揚げ地の候補から消える（IT15 のレビュー 高）。</p>
+     */
+    private final List<HandlingAtPort> handlingHistory = new java.util.ArrayList<>();
+
+    /** 荷役 1 件（現在地の導出に要る分だけ）。 */
+    private record HandlingAtPort(String activityId, String unLocode) {
+    }
+
+    /**
+     * 現在地を導き直す。<b>取り消されていない最後の荷役の港</b>。
+     *
+     * <p>覚えた値を更新するのではなく導く——どちらの向き（記録・取り消し）でも
+     * 同じ 1 つの規則で決まる。</p>
+     */
+    private void rederiveLastHandlingUnLocode() {
+        this.lastHandlingUnLocode = handlingHistory.stream()
+                .filter(handling -> !revertedActivities.contains(handling.activityId()))
+                .reduce((first, second) -> second)
+                .map(HandlingAtPort::unLocode)
+                .orElse(null);
+    }
+
+    @EventSourcingHandler
+    void on(HandlingRecordedEvent event) {
+        this.recordedActivities.add(event.activityId());
+        // **現在地を覚える**（不変条件 9-2 の陸揚げ地の候補に要る）。
+        this.handlingHistory.add(new HandlingAtPort(event.activityId(), event.unLocode()));
+        rederiveLastHandlingUnLocode();
+        // 最初の受領で輸送中になる。以降は動かさない。
+        if (bookingStatus == BookingStatus.TRACKING_ISSUED) {
+            this.bookingStatus = BookingStatus.IN_TRANSIT;
+        }
+    }
+
+    @EventSourcingHandler
+    void on(BookingMisroutedEvent event) {
+        this.routingStatus = RoutingStatus.MISROUTED;
+        this.misroutedBy = event.activityId();
+        // **現在地を覚える。** 再設計の起点をここで検査する（US28 §受入基準 4）。
+        this.misroutedAt = Location.of(event.unLocode());
+    }
+
+    @EventSourcingHandler
+    void on(HandlingRevertedEvent event) {
+        this.revertedActivities.add(event.activityId());
+        // **現在地も戻す。** 取り消した港が残ると、通ってもいない港を通過済と
+        // 数え、その先の寄港地が陸揚げ地の候補から消える（不変条件 9-2）。
+        rederiveLastHandlingUnLocode();
+        if (event.misrouteCleared()) {
+            this.routingStatus = RoutingStatus.ROUTED;
+            this.misroutedBy = null;
+            this.misroutedAt = null;
+        }
+    }
+
+    /** 復元した予約の状態。画面のボタン出し分けはこの値と述語で決める。 */
+    public BookingStatus bookingStatus() {
+        return bookingStatus;
+    }
+
+    /** 復元した経路設計の進み具合。 */
+    public RoutingStatus routingStatus() {
+        return routingStatus;
+    }
+}

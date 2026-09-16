@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.booking.infrastructure.persistence.CargoLegMapper">
+
+    <resultMap id="legRow"
+               type="com.example.cargotracker.booking.infrastructure.persistence.CargoLegMapper$CargoLegRow">
+        <constructor>
+            <idArg column="booking_id" javaType="string"/>
+            <idArg column="leg_seq" javaType="_int"/>
+            <arg column="voyage_number" javaType="string"/>
+            <arg column="load_unlocode" javaType="string"/>
+            <arg column="unload_unlocode" javaType="string"/>
+            <arg column="load_at" javaType="java.time.Instant"/>
+            <arg column="unload_at" javaType="java.time.Instant"/>
+        </constructor>
+    </resultMap>
+
+    <delete id="deleteByBooking">
+        DELETE FROM cargo_leg WHERE booking_id = #{bookingId}
+    </delete>
+
+    <insert id="insert">
+        INSERT INTO cargo_leg (
+            booking_id, leg_seq, voyage_number, load_unlocode, unload_unlocode,
+            load_at, unload_at
+        ) VALUES (
+            #{bookingId}, #{legSeq}, #{voyageNumber}, #{loadUnlocode}, #{unloadUnlocode},
+            #{loadAt}, #{unloadAt}
+        )
+    </insert>
+
+    <resultMap id="affectedBookingRow"
+               type="com.example.cargotracker.booking.infrastructure.persistence.CargoLegMapper$AffectedBookingRow">
+        <constructor>
+            <idArg column="booking_id" javaType="string"/>
+            <arg column="booking_number" javaType="string"/>
+            <arg column="booking_status" javaType="string"/>
+            <arg column="routing_status" javaType="string"/>
+        </constructor>
+    </resultMap>
+
+    <!-- その航海で経路を組んだ予約（S34）。同じ航海を 2 区間で使う旅程があるので
+         DISTINCT で 1 予約 1 行にする。区間ごとに返すと件数が実際より多くなる。 -->
+    <select id="findBookingsByVoyage" resultMap="affectedBookingRow">
+        SELECT DISTINCT s.booking_id, s.booking_number, s.booking_status, s.routing_status
+        FROM cargo_leg l
+        JOIN cargo_summary s ON s.booking_id = l.booking_id
+        WHERE l.voyage_number = #{voyageNumber}
+        ORDER BY s.booking_number
+    </select>
+
+    <select id="findByBooking" resultMap="legRow">
+        SELECT * FROM cargo_leg WHERE booking_id = #{bookingId} ORDER BY leg_seq
+    </select>
+</mapper>

@@ -1,0 +1,693 @@
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { MemoryRouter, Route, Routes } from 'react-router';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { RoutingWorkbenchPage } from './RoutingWorkbenchPage';
+import { useAuthStore } from '@/shared/auth/authStore';
+
+function booking() {
+  return {
+    bookingId: 'b-1',
+    bookingNumber: 'B-2026-0903-0001',
+    shipperId: 's-1',
+    shipperName: '山田商事',
+    originUnLocode: 'JPTYO',
+    destinationUnLocode: 'USNYC',
+    arrivalDeadline: '2026-12-01',
+    cargoType: 'GENERAL',
+    weightKg: '1200.00',
+    lengthCm: null,
+    widthCm: null,
+    heightCm: null,
+    quantity: 10,
+    productName: '自動車部品',
+    hazardImoClass: null,
+    hazardUnNumber: null,
+    temperatureMinC: null,
+    temperatureMaxC: null,
+    bookingStatus: 'ROUTE_PROPOSED',
+    routingStatus: 'ROUTING_REQUESTED',
+    bookedAt: '2026-09-03T01:00:00Z',
+    routingRequestedAt: '2026-09-04T01:00:00Z',
+    lastNotifiedAt: null,
+    returnedToRoutingAt: null,
+    returnReason: null,
+    routeExcludeUnLocodes: ['SGSIN'],
+    routeDepartFromUnLocode: 'JPOSA',
+    conditionReviewReason: null,
+    conditionReviewRequestedAt: null,
+    conditionReviewResponse: null,
+    conditionReviewRespondedAt: null,
+    updatedAt: null,
+    updatedBy: null,
+  };
+}
+
+/** まだ何も調整していない状態。サーバは常に条件を載せて返す。 */
+const NO_CONDITION = {
+  arrivalDeadline: '2026-12-01',
+  excludeUnLocodes: [] as string[],
+  departFromUnLocode: null,
+};
+
+function leg(voyageNumber: string, from: string, to: string, load: string, unload: string) {
+  return {
+    voyageNumber,
+    loadUnLocode: from,
+    unloadUnLocode: to,
+    loadTime: load,
+    unloadTime: unload,
+  };
+}
+
+function mockApi(candidatesResponse: Response, bookingOverride: object = {}) {
+  return vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+    if (String(input).includes('/route-candidates')) {
+      return Promise.resolve(candidatesResponse);
+    }
+    return Promise.resolve(new Response(
+      JSON.stringify({ ...booking(), ...bookingOverride }), { status: 200 }));
+  });
+}
+
+function renderWorkbench() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={['/routing/bookings/b-1']}>
+        <Routes>
+          <Route path="/routing/bookings/:bookingId" element={<RoutingWorkbenchPage />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
+beforeEach(() => {
+  useAuthStore.setState({ user: { username: 'routing01', roles: ['ROLE_ROUTING'], token: 't' } });
+});
+afterEach(() => vi.restoreAllMocks());
+
+describe('S31 経路設計ワークベンチ', () => {
+  it('候補が推奨順に出て、航海番号と経由港が読める', async () => {
+    mockApi(
+      new Response(
+        JSON.stringify({
+          candidates: [
+            {
+              legs: [leg('V-MOL-001', 'JPTYO', 'USNYC', '2026-09-10T09:00:00Z',
+                '2026-09-24T18:00:00Z')],
+              transitDays: 14,
+              direct: true,
+              overdueDays: 0,
+            },
+            {
+              legs: [
+                leg('V-1', 'JPTYO', 'SGSIN', '2026-09-10T09:00:00Z', '2026-09-16T08:00:00Z'),
+                leg('V-2', 'SGSIN', 'USNYC', '2026-09-17T06:00:00Z', '2026-09-25T18:00:00Z'),
+              ],
+              transitDays: 15,
+              direct: false,
+              overdueDays: 0,
+            },
+          ],
+          truncated: false, condition: NO_CONDITION,
+        }),
+        { status: 200 },
+      ),
+    );
+
+    renderWorkbench();
+
+    const first = await screen.findByTestId('candidate-1');
+    expect(first).toHaveTextContent('直行便');
+    expect(first).toHaveTextContent('V-MOL-001');
+    expect(first).toHaveTextContent('14 日');
+    const second = screen.getByTestId('candidate-2');
+    // 経由港が読めないと、どこで積み替えるのか分からない。
+    expect(second).toHaveTextContent('SGSIN');
+    expect(second).toHaveTextContent('V-1 → V-2');
+  });
+
+  it('候補 0 件は「見つからなかった」と条件調整の案内を出す（エラーにしない）', async () => {
+    mockApi(
+      new Response(JSON.stringify({ candidates: [], truncated: false, condition: NO_CONDITION }), { status: 200 }),
+    );
+
+    renderWorkbench();
+
+    expect(await screen.findByText(/期限内に到着できる経路が見つかりませんでした/))
+      .toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('探せなかったときは「候補が無い」と言わない（503）', async () => {
+    // 空の候補一覧に見せると、経路設計者は直らない条件を変え続けることになる。
+    mockApi(
+      new Response(JSON.stringify({ code: 'ROUTE_SEARCH_UNAVAILABLE', message: 'x' }),
+        { status: 503 }),
+    );
+
+    renderWorkbench();
+
+    expect(await screen.findByRole('alert'))
+      .toHaveTextContent('経路設計サービスに問い合わせできませんでした');
+    expect(screen.queryByText(/経路が見つかりませんでした/)).not.toBeInTheDocument();
+  });
+
+  it('US10 §4 の対: 営業から返ってきた協議の結果が読める（IT8 H.2）', async () => {
+    // **差し戻しは一方向しか無かった。** 営業が荷主と協議しても、経路設計者は
+    // 結果を画面から読めず、条件を直す手掛かりが無かった（IT6 レビュー）。
+    mockApi(
+      new Response(JSON.stringify({ candidates: [], truncated: false }), { status: 200 }),
+      {
+        conditionReviewReason: '期限内に着ける便がありません',
+        conditionReviewRequestedAt: '2026-09-06T00:00:00Z',
+        conditionReviewResponse: '荷主が期限を 1 月末まで延ばすことに同意',
+        conditionReviewRespondedAt: '2026-09-07T00:00:00Z',
+      },
+    );
+
+    renderWorkbench();
+
+    const notice = await screen.findByText(/営業から返事が来ています/);
+    // **頼んだ理由と対で出す。** 何を頼んだかが読めないと、返事の意味が取れない。
+    expect(notice.closest('output')).toHaveTextContent('期限内に着ける便がありません');
+    expect(notice.closest('output')).toHaveTextContent('荷主が期限を 1 月末まで延ばすことに同意');
+  });
+
+  it('US10 §4 の対: 返事が来ていなければ出さない（差し戻し中だけ）', async () => {
+    mockApi(
+      new Response(JSON.stringify({ candidates: [], truncated: false }), { status: 200 }),
+      {
+        conditionReviewReason: '組めません',
+        conditionReviewRequestedAt: '2026-09-06T00:00:00Z',
+      },
+    );
+
+    renderWorkbench();
+
+    await screen.findByRole('heading', { name: '探す条件' });
+    expect(screen.queryByText(/営業から返事が来ています/)).not.toBeInTheDocument();
+  });
+
+  it('探せなくても条件は直せるし、営業へ差し戻せる（H.1）', async () => {
+    // **条件は予約が持つ。** 候補算出の応答から組むと、探索が落ちている間だけ
+    // 条件の欄と差し戻しが画面から消える。直せる手段が要るのはまさにそのときで、
+    // 経路設計者は「探索が直るのを待つ」以外に何もできなくなる。
+    mockApi(
+      new Response(JSON.stringify({ code: 'ROUTE_SEARCH_UNAVAILABLE', message: 'x' }),
+        { status: 503 }),
+    );
+
+    renderWorkbench();
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    // 予約が持つ条件で欄が埋まる（候補の応答は無い）。
+    expect(await screen.findByLabelText('除外する港')).toHaveValue('SGSIN');
+    expect(screen.getByLabelText('この港より後に出る便だけ')).toHaveValue('JPOSA');
+    expect(screen.getByLabelText('到着期限')).toHaveValue('2026-12-01');
+    expect(screen.getByRole('button', { name: '営業へ差し戻す' })).toBeInTheDocument();
+  });
+
+  it('0 件で打ち切りに当たったら「条件を変えても増えない」と伝える', async () => {
+    // 期限を延ばす・港を広げるという逆の案内を重ねて出さない
+    // （IT5 レビュー 高 1）。乗り継ぎの上限で捨てた枝は条件では戻らない。
+    mockApi(
+      new Response(JSON.stringify({ candidates: [], truncated: true, condition: NO_CONDITION }), { status: 200 }),
+    );
+
+    renderWorkbench();
+
+    expect(await screen.findByText(/条件を変えても候補は増えません/)).toBeInTheDocument();
+    expect(screen.queryByText(/到着期限を延ばすか/)).not.toBeInTheDocument();
+  });
+
+  it('候補が出ていて打ち切りに当たったら「上限まで探した」と伝える', async () => {
+    mockApi(
+      new Response(
+        JSON.stringify({
+          candidates: [
+            {
+              legs: [leg('V-MOL-001', 'JPTYO', 'USNYC', '2026-09-10T09:00:00Z',
+                '2026-09-24T18:00:00Z')],
+              transitDays: 14,
+              direct: true,
+              overdueDays: 0,
+            },
+          ],
+          truncated: true, condition: NO_CONDITION,
+        }),
+        { status: 200 },
+      ),
+    );
+
+    renderWorkbench();
+
+    // **「乗り継ぎの多い経路は出していません」とは言わない。** 打ち切りは並べた
+    // あとに効くので、出ていないのは推奨順の 21 位以下（ADR-0007 決定 2 の訂正）。
+    expect(await screen.findByText(/推奨順の上位 20 件だけ/)).toBeInTheDocument();
+    expect(screen.queryByText(/乗り継ぎの多い経路は出していません/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/条件を変えても候補は増えません/)).not.toBeInTheDocument();
+  });
+
+  it('経路が確定済みの予約では確定ボタンを出さない（押してから断らせない）', async () => {
+    // S30 の「設計済みも表示」から開いたときに起きる。押すと集約が断るが、
+    // その文言（経路設計を依頼していない…）は状況の説明として的外れ。
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      if (String(input).includes('/route-candidates')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              candidates: [
+                {
+                  legs: [leg('V-MOL-001', 'JPTYO', 'USNYC', '2026-09-10T09:00:00Z',
+                    '2026-09-24T18:00:00Z')],
+                  transitDays: 14,
+                  direct: true,
+                  overdueDays: 0,
+                },
+              ],
+              truncated: false, condition: NO_CONDITION,
+            }),
+            { status: 200 },
+          ),
+        );
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify({ ...booking(), routingStatus: 'ROUTED' }), { status: 200 }),
+      );
+    });
+
+    renderWorkbench();
+
+    expect(await screen.findByText(/この予約は経路が確定しています/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'この経路で確定' })).not.toBeInTheDocument();
+  });
+
+  it('費用は出さず、どこで出るかを書く', async () => {
+    // 0 円と出すと「費用 0 円の経路」と読める（US08 §受入基準 3 の未達）。
+    mockApi(
+      new Response(JSON.stringify({ candidates: [], truncated: false, condition: NO_CONDITION }), { status: 200 }),
+    );
+
+    renderWorkbench();
+
+    expect(await screen.findByText(/費用はこの画面では出ません/)).toBeInTheDocument();
+  });
+});
+
+describe('S31 経路の確定（US09）', () => {
+  function mockWithCandidates() {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
+      const url = String(input);
+      if (url.includes('/route-candidates')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              candidates: [
+                {
+                  legs: [
+                    leg('V-MOL-001', 'JPTYO', 'USNYC', '2026-09-10T09:00:00Z',
+                      '2026-09-24T18:00:00Z'),
+                  ],
+                  transitDays: 14,
+                  direct: true,
+                  overdueDays: 0,
+                },
+              ],
+              truncated: false, condition: NO_CONDITION,
+            }),
+            { status: 200 },
+          ),
+        );
+      }
+      if (url.endsWith('/route') && init?.method === 'POST') {
+        return Promise.resolve(new Response(JSON.stringify({ bookingId: 'b-1' }), { status: 200 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify(booking()), { status: 200 }));
+    });
+    return fetchSpy;
+  }
+
+  it('候補を選んで確定すると、旅程そのものを送る', async () => {
+    const fetchSpy = mockWithCandidates();
+
+    renderWorkbench();
+
+    await userEvent.click(await screen.findByRole('radio', { name: '候補 1' }));
+    await userEvent.click(screen.getByRole('button', { name: 'この経路で確定' }));
+
+    await waitFor(() => {
+      const call = fetchSpy.mock.calls.find(
+        ([url, init]) => String(url).endsWith('/route') && init?.method === 'POST',
+      );
+      expect(call).toBeDefined();
+      // 候補 ID ではなく区間の列を送る。候補はテーブルに持たないので、
+      // 送るまでの間に航海が更新されうる。
+      const body = JSON.parse(String(call?.[1]?.body));
+      expect(body.legs).toHaveLength(1);
+      expect(body.legs[0].voyageNumber).toBe('V-MOL-001');
+      expect(body.legs[0].loadUnLocode).toBe('JPTYO');
+    });
+  });
+
+  it('選ばずに確定しようとしても送らない', async () => {
+    const fetchSpy = mockWithCandidates();
+
+    renderWorkbench();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'この経路で確定' }));
+
+    expect(await screen.findByText('経路候補を選んでください')).toBeInTheDocument();
+    expect(
+      fetchSpy.mock.calls.filter(([url]) => String(url).endsWith('/route')),
+    ).toHaveLength(0);
+  });
+
+  it('確定できなかったときは理由を出す（409）', async () => {
+    // 集約が断った理由（期限を満たさないなど）を出さないと、押せない理由が分からない。
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
+      const url = String(input);
+      if (url.includes('/route-candidates')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              candidates: [
+                {
+                  legs: [
+                    leg('V-MOL-001', 'JPTYO', 'USNYC', '2026-09-10T09:00:00Z',
+                      '2026-09-24T18:00:00Z'),
+                  ],
+                  transitDays: 14,
+                  direct: true,
+                  overdueDays: 0,
+                },
+              ],
+              truncated: false, condition: NO_CONDITION,
+            }),
+            { status: 200 },
+          ),
+        );
+      }
+      if (url.endsWith('/route') && init?.method === 'POST') {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              code: 'BUSINESS_RULE_VIOLATION',
+              message: '選んだ旅程は予約の経路仕様を満たしません',
+            }),
+            { status: 422 },
+          ),
+        );
+      }
+      return Promise.resolve(new Response(JSON.stringify(booking()), { status: 200 }));
+    });
+
+    renderWorkbench();
+
+    await userEvent.click(await screen.findByRole('radio', { name: '候補 1' }));
+    await userEvent.click(screen.getByRole('button', { name: 'この経路で確定' }));
+
+    expect(await screen.findByRole('alert'))
+      .toHaveTextContent('選んだ旅程は予約の経路仕様を満たしません');
+  });
+
+  it('US10: いまの条件が読める（何で絞っているか分からないと同じ条件で回す）', async () => {
+    // **条件は予約が持つ**（IT7 H.1）。候補算出の応答から組むと、探索が落ちて
+    // いる間だけ条件が読めなくなる。
+    mockApi(
+      new Response(
+        JSON.stringify({ candidates: [], truncated: false, condition: NO_CONDITION }),
+        { status: 200 },
+      ),
+      {
+        arrivalDeadline: '2027-01-31',
+        routeExcludeUnLocodes: ['SGSIN', 'HKHKG'],
+        routeDepartFromUnLocode: 'JPOSA',
+      },
+    );
+
+    renderWorkbench();
+
+    expect(await screen.findByLabelText('到着期限')).toHaveValue('2027-01-31');
+    expect(screen.getByLabelText('除外する港')).toHaveValue('SGSIN, HKHKG');
+    expect(screen.getByLabelText('この港より後に出る便だけ')).toHaveValue('JPOSA');
+  });
+
+  it('US10: 条件を変えて再算出すると、調整を送ってから候補を取り直す', async () => {
+    const fetchSpy = mockApi(
+      new Response(
+        JSON.stringify({ candidates: [], truncated: false, condition: NO_CONDITION }),
+        { status: 200 },
+      ),
+    );
+
+    renderWorkbench();
+    await screen.findByLabelText('到着期限');
+
+    await userEvent.clear(screen.getByLabelText('除外する港'));
+    await userEvent.type(screen.getByLabelText('除外する港'), 'SGSIN, HKHKG');
+    await userEvent.click(screen.getByRole('button', { name: '条件を変えて再算出' }));
+
+    await waitFor(() => {
+      const call = fetchSpy.mock.calls.find(([url, init]) =>
+        String(url).includes('/route-specification')
+        && (init as RequestInit)?.method === 'PUT');
+      expect(call, '条件は集約に記録してから読み直す').toBeDefined();
+      // 打ち間違いの空白で港が増えない。
+      expect(String((call?.[1] as RequestInit)?.body))
+        .toContain('"excludeUnLocodes":["SGSIN","HKHKG"]');
+    });
+  });
+
+  it('US10 §4: 理由を入れて営業へ差し戻せる', async () => {
+    const fetchSpy = mockApi(
+      new Response(
+        JSON.stringify({ candidates: [], truncated: false, condition: NO_CONDITION }),
+        { status: 200 },
+      ),
+    );
+
+    renderWorkbench();
+
+    await userEvent.click(await screen.findByRole('button', { name: '営業へ差し戻す' }));
+    await userEvent.type(screen.getByLabelText('差し戻す理由'), '期限内に着ける便がありません');
+    await userEvent.click(screen.getByRole('button', { name: '差し戻しを送る' }));
+
+    await waitFor(() => {
+      expect(fetchSpy.mock.calls.some(([url]) =>
+        String(url).includes('/condition-review'))).toBe(true);
+    });
+  });
+
+  it('US10 §4: 理由が空のままでは差し戻さない', async () => {
+    // 集約も断るが、押してから 422 で気づく形にしない。
+    const fetchSpy = mockApi(
+      new Response(
+        JSON.stringify({ candidates: [], truncated: false, condition: NO_CONDITION }),
+        { status: 200 },
+      ),
+    );
+
+    renderWorkbench();
+
+    await userEvent.click(await screen.findByRole('button', { name: '営業へ差し戻す' }));
+    await userEvent.click(screen.getByRole('button', { name: '差し戻しを送る' }));
+
+    expect(await screen.findByText('差し戻す理由を入力してください')).toBeInTheDocument();
+    expect(fetchSpy.mock.calls.filter(([url]) =>
+      String(url).includes('/condition-review'))).toHaveLength(0);
+  });
+
+  it('US10 §4: 経路が決まった予約には差し戻しの導線を出さない', async () => {
+    // 組めているのだから見直しは要らない。押してから断られる導線にしない。
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      if (String(input).includes('/route-candidates')) {
+        return Promise.resolve(new Response(
+          JSON.stringify({ candidates: [], truncated: false, condition: NO_CONDITION }),
+          { status: 200 },
+        ));
+      }
+      return Promise.resolve(new Response(
+        JSON.stringify({ ...booking(), routingStatus: 'ROUTED' }), { status: 200 },
+      ));
+    });
+
+    renderWorkbench();
+
+    await screen.findByLabelText('到着期限');
+    expect(screen.queryByRole('button', { name: '営業へ差し戻す' })).not.toBeInTheDocument();
+  });
+
+  it('US12: 営業が戻した理由が経路設計者に読める', async () => {
+    // **記録と読み口は対で出す。** 理由の入力を必須にしておいて誰にも届かないのは、
+    // 営業に無駄な入力をさせているのと同じ（IT6 レビュー 高）。
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      if (String(input).includes('/route-candidates')) {
+        return Promise.resolve(new Response(
+          JSON.stringify({ candidates: [], truncated: false, condition: NO_CONDITION }),
+          { status: 200 },
+        ));
+      }
+      return Promise.resolve(new Response(JSON.stringify({
+        ...booking(),
+        returnedToRoutingAt: '2026-09-07T00:00:00Z',
+        returnReason: '荷主が SGSIN 経由を避けたい',
+      }), { status: 200 }));
+    });
+
+    renderWorkbench();
+
+    expect(await screen.findByText(/営業から戻されました/)).toBeInTheDocument();
+    expect(screen.getByText(/荷主が SGSIN 経由を避けたい/)).toBeInTheDocument();
+  });
+
+  it('戻されていない予約には戻された理由を出さない', async () => {
+    mockApi(new Response(
+      JSON.stringify({ candidates: [], truncated: false, condition: NO_CONDITION }),
+      { status: 200 },
+    ));
+
+    renderWorkbench();
+
+    await screen.findByRole('heading', { name: '経路候補' });
+    expect(screen.queryByText(/営業から戻されました/)).not.toBeInTheDocument();
+  });
+
+  it('US10 §4: 誤配の予約には差し戻しの導線を出さない（押すと 422 になる）', async () => {
+    // 経路の確定はできる（US28 の再設計）が、差し戻しはできない（ADR-0009 決定 2）。
+    // 同じ述語で出し分けると、ここで押せて 422 になる。
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      if (String(input).includes('/route-candidates')) {
+        return Promise.resolve(new Response(
+          JSON.stringify({ candidates: [], truncated: false, condition: NO_CONDITION }),
+          { status: 200 },
+        ));
+      }
+      return Promise.resolve(new Response(
+        JSON.stringify({ ...booking(), routingStatus: 'MISROUTED' }), { status: 200 },
+      ));
+    });
+
+    renderWorkbench();
+
+    await screen.findByLabelText('到着期限');
+    expect(screen.queryByRole('button', { name: '営業へ差し戻す' })).not.toBeInTheDocument();
+  });
+});
+
+describe('S31 誤配の再設計（US28 §受入基準 6）', () => {
+  function overdueResponse() {
+    return new Response(
+      JSON.stringify({
+        candidates: [
+          {
+            legs: [leg('V-A', 'SGSIN', 'USNYC', '2026-11-01T09:00:00Z',
+              '2026-11-20T18:00:00Z')],
+            transitDays: 19,
+            direct: true,
+            overdueDays: 0,
+          },
+          {
+            legs: [leg('V-LATE', 'SGSIN', 'USNYC', '2026-11-05T09:00:00Z',
+              '2026-12-04T18:00:00Z')],
+            transitDays: 29,
+            direct: true,
+            overdueDays: 3,
+          },
+        ],
+        truncated: false, condition: NO_CONDITION,
+      }),
+      { status: 200 },
+    );
+  }
+
+  it('期限を超える候補も出て、超過日数が読める', async () => {
+    // **候補を隠すと 0 件になり、貨物が動かせなくなる。**
+    mockApi(overdueResponse());
+
+    renderWorkbench();
+
+    expect(await screen.findByText('3 日超過')).toBeInTheDocument();
+    expect(screen.getByText('期限内')).toBeInTheDocument();
+  });
+
+  it('超過候補の確定は、超過日数を再掲して 1 度確かめる', async () => {
+    // **押した本人が超過に気づかないまま確定すると、荷主への説明が
+    // 「なぜ遅れるのか」から始まらない。**
+    mockApi(overdueResponse());
+
+    renderWorkbench();
+
+    await userEvent.click(await screen.findByRole('radio', { name: '候補 2' }));
+    await userEvent.click(screen.getByRole('button', { name: 'この経路で確定' }));
+
+    const dialog = await screen.findByRole('alertdialog', { name: '期限超過の確認' });
+    expect(dialog).toHaveTextContent('3 日');
+  });
+
+  it('期限内の候補では確認を挟まない', async () => {
+    mockApi(overdueResponse());
+
+    renderWorkbench();
+
+    await userEvent.click(await screen.findByRole('radio', { name: '候補 1' }));
+    await userEvent.click(screen.getByRole('button', { name: 'この経路で確定' }));
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  it('誤配のときは出発港が現在地で固定され、編集できない（US28 §4）', async () => {
+    // **編集できると「入れても効かない欄」になる。** サーバは誤配のとき
+    // 現在地を優先するので、画面と挙動が食い違う（IT11 レビュー 高）。
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes('route-candidates')) {
+        return new Response(
+          JSON.stringify({ candidates: [], truncated: false, condition: NO_CONDITION }),
+          { status: 200 },
+        );
+      }
+      return new Response(
+        JSON.stringify({
+          ...booking(),
+          routingStatus: 'MISROUTED',
+          lastHandlingUnLocode: 'SGSIN',
+        }),
+        { status: 200 },
+      );
+    });
+
+    renderWorkbench();
+
+    const origin = await screen.findByLabelText('出発港（現在地）');
+    expect(origin).toHaveValue('SGSIN');
+    expect(origin).toHaveAttribute('readonly');
+  });
+
+  it('超過の候補が無ければ、期限超過の列そのものを出さない', async () => {
+    // **常に「期限内」と並ぶ列は、読む人の目を無駄に使う。**
+    mockApi(
+      new Response(
+        JSON.stringify({
+          candidates: [{
+            legs: [leg('V-MOL-001', 'JPTYO', 'USNYC', '2026-09-10T09:00:00Z',
+              '2026-09-24T18:00:00Z')],
+            transitDays: 14,
+            direct: true,
+            overdueDays: 0,
+          }],
+          truncated: false, condition: NO_CONDITION,
+        }),
+        { status: 200 },
+      ),
+    );
+
+    renderWorkbench();
+
+    await screen.findByTestId('candidate-1');
+    expect(screen.queryByRole('columnheader', { name: '期限超過' })).not.toBeInTheDocument();
+  });
+});

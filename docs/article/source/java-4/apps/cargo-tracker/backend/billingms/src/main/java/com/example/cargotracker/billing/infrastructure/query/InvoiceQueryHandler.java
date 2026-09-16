@@ -1,0 +1,197 @@
+package com.example.cargotracker.billing.infrastructure.query;
+
+import com.example.cargotracker.billing.domain.model.valueobjects.BillingStatus;
+import com.example.cargotracker.billing.domain.model.valueobjects.LineItemType;
+import com.example.cargotracker.billing.domain.model.valueobjects.PaymentTerm;
+import com.example.cargotracker.billing.domain.model.valueobjects.ShipperType;
+import com.example.cargotracker.billing.infrastructure.persistence.InvoiceMapper;
+import com.example.cargotracker.billing.infrastructure.query.BillingQueries.FindInvoiceOfBookingQuery;
+import com.example.cargotracker.billing.infrastructure.query.BillingQueries.FindInvoiceQuery;
+import com.example.cargotracker.billing.infrastructure.query.BillingQueries.FindInvoicesQuery;
+import com.example.cargotracker.billing.infrastructure.query.BillingQueries.FindOverdueInvoicesQuery;
+import com.example.cargotracker.billing.infrastructure.query.BillingQueries.FindShipperInvoiceOfBookingQuery;
+import com.example.cargotracker.billing.infrastructure.query.BillingQueries.FindShipperInvoiceQuery;
+import com.example.cargotracker.billing.infrastructure.query.BillingQueries.InvoiceLineView;
+import com.example.cargotracker.billing.infrastructure.query.BillingQueries.InvoiceListView;
+import com.example.cargotracker.billing.infrastructure.query.BillingQueries.InvoiceSummaryView;
+import com.example.cargotracker.billing.infrastructure.query.BillingQueries.InvoiceView;
+import java.util.List;
+import org.axonframework.messaging.queryhandling.annotation.QueryHandler;
+import org.springframework.stereotype.Component;
+
+/** 請求の読み取り（S60・S61）。 */
+@Component
+public class InvoiceQueryHandler {
+
+    /** 一覧の上限。**画面が読める量で切る**（絞り込みは呼ぶ側が決める）。 */
+    private static final int LIMIT = 200;
+
+    private final InvoiceMapper invoices;
+    private final java.time.Clock clock;
+
+    public InvoiceQueryHandler(InvoiceMapper invoices, java.time.Clock clock) {
+        this.invoices = invoices;
+        this.clock = clock;
+    }
+
+    /**
+     * 業務タイムゾーンの今日。
+     *
+     * <p><b>DB の {@code CURRENT_DATE} を使わない。</b> サーバのタイムゾーンで
+     * 判断されると、時差の分だけ 1 日早く督促が飛ぶ時間帯ができる。</p>
+     */
+    private java.time.LocalDate today() {
+        return java.time.LocalDate.ofInstant(clock.instant(),
+                com.example.cargotracker.shared.infrastructure.time
+                        .BusinessClockConfiguration.BUSINESS_ZONE);
+    }
+
+    @QueryHandler
+    public InvoiceListView handle(FindInvoicesQuery query) {
+        List<InvoiceSummaryView> items = invoices
+                .search(query.includeSettled(), query.bookingId(), query.shipperId(),
+                        query.calculatedFrom(), query.calculatedTo(), LIMIT).stream()
+                .map(row -> toSummary(row, today()))
+                .toList();
+        // **合計はサーバが数える**（IT13 引き継ぎ D）。一覧は上限で切るので、
+        // 画面で足すと切れたぶんが静かに落ちる。
+        return new InvoiceListView(items, items.size(),
+                invoices.sumTotalAmount(query.includeSettled(), query.bookingId(),
+                        query.shipperId(), query.calculatedFrom(), query.calculatedTo()));
+    }
+
+    @QueryHandler
+    public InvoiceView handle(FindInvoiceQuery query) {
+        InvoiceMapper.InvoiceRow row = invoices.find(query.invoiceId());
+        return row == null ? null : toView(row);
+    }
+
+    @QueryHandler
+    public InvoiceView handle(FindInvoiceOfBookingQuery query) {
+        InvoiceMapper.InvoiceRow row = invoices.findActiveByBooking(query.bookingId());
+        return row == null ? null : toView(row);
+    }
+
+    /**
+     * 未払いの請求書（US23 §受入基準 5）。
+     *
+     * <p><b>絞りは SQL に置く。</b> 全件を読んでから画面で数えると、上限の
+     * 打ち切りで未払いが漏れる。</p>
+     */
+    @QueryHandler
+    public InvoiceListView handle(FindOverdueInvoicesQuery query) {
+        java.time.LocalDate today = query.today() == null ? today() : query.today();
+        List<InvoiceSummaryView> items = invoices.findOverdue(today).stream()
+                .map(row -> toSummary(row, today))
+                .toList();
+        // **督促の母数も出す。** 「いくら回収できていないか」は、件数だけでは読めない。
+        return new InvoiceListView(items, items.size(), items.stream()
+                .map(InvoiceSummaryView::totalAmount)
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add));
+    }
+
+    /**
+     * 荷主が読む自社の請求書（S62 / US23 §受入基準 2）。
+     *
+     * <p><b>荷主 ID をサーバで突き合わせる。</b> 他社の請求書は読めない——
+     * 金額を出す唯一の荷主向け画面なので、絞りを画面に任せない。</p>
+     *
+     * <p><b>発行済と入金済だけを出す。</b> 算出済は社内の途中経過で、荷主に
+     * 見せるものではない。取消も出さない（一度取り消したものを見せ続けない）。</p>
+     */
+    @QueryHandler
+    public InvoiceView handle(FindShipperInvoiceQuery query) {
+        return shipperView(invoices.find(query.invoiceId()), query.shipperId());
+    }
+
+    /**
+     * 荷主が予約から引く自社の請求書（S62）。
+     *
+     * <p><b>有効な請求書だけ</b>を引く（取り消したものは {@code void_marker} で
+     * 外れる）。絞りは {@link #shipperView} が同じ規則で掛ける——荷主向けの
+     * 判断を 2 か所に書かない。</p>
+     */
+    @QueryHandler
+    public InvoiceView handle(FindShipperInvoiceOfBookingQuery query) {
+        return shipperView(invoices.findActiveByBooking(query.bookingId()), query.shipperId());
+    }
+
+    /**
+     * 荷主に見せてよい請求書か。
+     *
+     * <p><b>荷主 ID をサーバで突き合わせる。</b> 他社の請求書は {@code null}
+     * （呼び出し側が 404 にする）——403 にすると存在を教えてしまう。</p>
+     *
+     * <p><b>発行済と入金済だけ。</b> 算出済は社内の途中経過で、見せると
+     * 「まだ確定していない金額」で会話が始まる。取消も見せない。</p>
+     */
+    private InvoiceView shipperView(InvoiceMapper.InvoiceRow row, String shipperId) {
+        // **突き合わせで落ちない。** 荷主 ID が欠けた行（古い記録）で例外に
+        // すると、荷主には 500 に見える——「ありません」と同じ扱いでよい。
+        if (row == null || !java.util.Objects.equals(row.shipperId(), shipperId)) {
+            return null;
+        }
+        BillingStatus status = BillingStatus.valueOf(row.billingStatus());
+        if (status != BillingStatus.INVOICED && status != BillingStatus.PAID) {
+            return null;
+        }
+        return toView(row);
+    }
+
+    private static InvoiceSummaryView toSummary(InvoiceMapper.InvoiceRow row,
+            java.time.LocalDate today) {
+        BillingStatus status = BillingStatus.valueOf(row.billingStatus());
+        return new InvoiceSummaryView(row.invoiceId(), row.bookingId(), row.shipperId(),
+                row.shipperName(), ShipperType.of(row.shipperType()).label(),
+                row.billingStatus(), status.label(), row.totalAmount(), row.currency(),
+                row.calculatedAt(), row.dueOn(),
+                // **判定は 1 か所**（PaymentTerm）。集約と別々に書かない。
+                PaymentTerm.overdue(status, row.dueOn(), today));
+    }
+
+    private InvoiceView toView(InvoiceMapper.InvoiceRow row) {
+        BillingStatus status = BillingStatus.valueOf(row.billingStatus());
+        var lineRows = invoices.findLineItems(row.invoiceId());
+        // 取り消された調整の識別子。**行を消さずに印を付ける**——何が起きたかを
+        // 追えない記録は、経理にとって根拠にならない。
+        var reversedIds = lineRows.stream()
+                .map(InvoiceMapper.LineItemRow::reversedAdjustmentId)
+                .filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.toSet());
+        // **読む順は種別で決まる**（基本 → 割引 → 調整 → キャンセル料 → 税。
+        // IT13 引き継ぎ F）。追加順（line_seq）のまま出すと、調整を入れた請求書だけ
+        // 税の位置が変わる——算出の行は税を数え直すために消して入れ直されるからである。
+        // **並べ方の出典は LineItemType の宣言順 1 か所**にする（SQL に CASE を
+        // 書くと、値を足したときに 2 か所を直すことになり、片方が置き去りになる）。
+        List<InvoiceLineView> lines = lineRows.stream()
+                .sorted(java.util.Comparator
+                        .comparingInt((InvoiceMapper.LineItemRow line) ->
+                                LineItemType.valueOf(line.itemType()).ordinal())
+                        .thenComparingInt(InvoiceMapper.LineItemRow::lineSeq))
+                .map(line -> new InvoiceLineView(line.itemType(),
+                        LineItemType.valueOf(line.itemType()).label(), line.description(),
+                        line.amount(), line.currency(), line.basisExceptionId(),
+                        line.adjustmentId(),
+                        line.adjustmentId() != null && reversedIds.contains(line.adjustmentId())))
+                .toList();
+        return new InvoiceView(row.invoiceId(), row.bookingId(), row.shipperId(),
+                row.shipperName(), row.shipperType(), ShipperType.of(row.shipperType()).label(),
+                row.contractNumber(), row.discountRate(), row.baseAmount(), row.discountAmount(),
+                row.adjustmentAmount(), row.taxAmount(), row.totalAmount(), row.currency(),
+                row.billingStatus(), status.label(), row.calculatedAt(),
+                // 見積時の概算（注 N12）。**見積を経ない予約では null** で、
+                // S61 は概算行と差額を出さない。
+                row.quotedAmount(),
+                row.issuedOn(), row.dueOn(), row.paidAt(),
+                // **判定は 1 か所**（PaymentTerm）。集約と別々に書かない。
+                PaymentTerm.overdue(status, row.dueOn(), today()),
+                lines,
+                invoices.findPayments(row.invoiceId()).stream()
+                        .map(payment -> new com.example.cargotracker.billing.infrastructure
+                                .query.BillingQueries.PaymentView(
+                                payment.paymentId(), payment.amount(), payment.currency(),
+                                payment.paidAt(), payment.recordedBy(), payment.voidedAt(),
+                                payment.voidedBy(), payment.voidReason()))
+                        .toList());
+    }
+}

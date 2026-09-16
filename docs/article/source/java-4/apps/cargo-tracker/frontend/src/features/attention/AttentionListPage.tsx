@@ -1,0 +1,228 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router';
+import { ApiError } from '@/shared/api/client';
+import { formatBusinessDateTime } from '@/shared/api/businessDate';
+import {
+  ALERT,
+  BUTTON_SECONDARY,
+  CARD,
+  LINK,
+  NOTICE,
+  PAGE_TITLE,
+  TABLE,
+  TABLE_CAPTION,
+  TD,
+  TH,
+} from '@/shared/ui/styles';
+import {
+  acknowledgeAttentionItem,
+  fetchAttentionItems,
+  recalculateInvoice,
+  type AttentionItemView,
+} from './api';
+
+/**
+ * S70 要確認一覧。
+ *
+ * <p>投影が弾いたもの・連鎖が補償に至ったものを出す。件数を出すだけでは仕事が
+ * 進まないので、対象へ行ける導線を必ず添える。</p>
+ */
+export function AttentionListPage() {
+  const { data, isPending, isError } = useQuery({
+    queryKey: ['attention-items'],
+    queryFn: fetchAttentionItems,
+    refetchInterval: 5000,
+  });
+
+  return (
+    <section>
+      <h1 className={PAGE_TITLE}>要確認一覧</h1>
+
+      {isPending && <output className={`${NOTICE} mt-4`}>読み込み中…</output>}
+      {isError && (
+        <p role="alert" className={`${ALERT} mt-4`}>
+          要確認一覧を取得できませんでした
+        </p>
+      )}
+      {data?.state === 'pending' && <output className={`${NOTICE} mt-4`}>{data.message}</output>}
+
+      {/* 「無い」は良い知らせなので、失敗と同じ見た目にしない。 */}
+      {data?.state === 'ready' && data.value.items.length === 0 && (
+        <output
+          className={
+            'mt-4 block rounded border border-green-300 bg-green-50 px-4 py-3'
+            + ' text-sm text-green-800'
+          }
+        >
+          確認が必要なものはありません
+        </output>
+      )}
+
+      {data?.state === 'ready' && data.value.items.length > 0 && (
+        <>
+        <div className={`${CARD} mt-4 overflow-x-auto`}>
+          <table className={TABLE}>
+            <caption className={TABLE_CAPTION}>確認が必要なもの</caption>
+            <thead>
+              <tr>
+                <th scope="col" className={TH}>
+                  発生日時
+                </th>
+                <th scope="col" className={TH}>
+                  理由
+                </th>
+                <th scope="col" className={TH}>
+                  対象
+                </th>
+                <th scope="col" className={TH}>
+                  操作
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.value.items.map((item) => (
+                <tr key={item.itemId}>
+                  <td className={`${TD} whitespace-nowrap`}>
+                    {formatBusinessDateTime(item.occurredAt)}
+                  </td>
+                  <td className={TD}>{item.reason}</td>
+                  <td className={`${TD} font-mono`}>{item.targetId}</td>
+                  <td className={TD}>
+                    {/* **気づく手段で終わらせず、次の行動へ繋ぐ。** ただし「次の行動」は
+                        対象によって違う。荷主の重複なら既存を使えば済むが、予約の項目
+                        （連鎖の補償・投影の弾き）で開くべきなのはその予約である。
+                        一律に荷主のリンクを出すと、経路設計者は追跡番号を発行し直す
+                        入口にたどり着けない（IT7 クローズの自己レビュー）。 */}
+                    <div className="flex flex-col gap-1">
+                      <NextAction item={item} />
+                      {/* **片づけた印が無いと、件数はいつまでも減らない。**
+                          同じ行を毎朝読み直すことになる（IT13 レビュー user #4）。 */}
+                      <AcknowledgeButton item={item} />
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {/* なぜ空のフォームが開くのかを言う。黙って空だと「消えた」と受け取られる。
+            **荷主の項目があるときだけ出す**——予約の項目しか無い人に「再登録」の
+            説明を読ませても、その人の仕事とは関係がない。 */}
+        {data.value.items.some((item) => item.targetType !== 'BOOKING') && (
+        <p className="mt-3 text-sm text-gray-600">
+          「修正して再登録する」は空のフォームを開きます。受け付けた内容には個人情報が含まれるため、
+          鍵を破棄したときに消えない場所へ写していません。お手元の資料をご用意ください。
+        </p>
+        )}
+        </>
+      )}
+    </section>
+  );
+}
+
+/**
+ * 請求を作り直す（IT14 引き継ぎ B）。
+ *
+ * <p>材料がまだ直っていなければサーバが理由を返すので、それをそのまま出す。
+ * 「作れませんでした」だけでは、何を直せばよいのかが分からない。</p>
+ */
+function RecalculateButton({ bookingId }: { readonly bookingId: string }) {
+  const queryClient = useQueryClient();
+  const { mutate, isPending, isError, error } = useMutation({
+    mutationFn: () => recalculateInvoice(bookingId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['attention-items'] }),
+  });
+
+  return (
+    <>
+      <button
+        type="button"
+        className={BUTTON_SECONDARY}
+        disabled={isPending}
+        onClick={() => mutate()}
+      >
+        請求を作り直す
+      </button>
+      {isError && (
+        <span role="alert" className="text-sm text-red-700">
+          {error instanceof ApiError ? error.message : '請求を作り直せませんでした'}
+        </span>
+      )}
+    </>
+  );
+}
+
+/**
+ * 確認済にする。
+ *
+ * <p><b>確認したことも仕事の結果である。</b> 押したあとは担当の一覧から外れ、
+ * 誰がいつ確認したかはサーバに残る。失敗したら黙って消さず、理由を出す。</p>
+ */
+function AcknowledgeButton({ item }: { readonly item: AttentionItemView }) {
+  const queryClient = useQueryClient();
+  const { mutate, isPending, isError } = useMutation({
+    mutationFn: () => acknowledgeAttentionItem(item),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['attention-items'] }),
+  });
+
+  return (
+    <>
+      <button
+        type="button"
+        className={BUTTON_SECONDARY}
+        disabled={isPending}
+        onClick={() => mutate()}
+      >
+        確認済にする
+      </button>
+      {isError && (
+        <span role="alert" className="text-sm text-red-700">
+          確認済にできませんでした
+        </span>
+      )}
+    </>
+  );
+}
+
+/**
+ * その項目に対して打てる手。
+ *
+ * <p><b>対象の種類で違う。</b> 荷主の重複なら既存を使えば済むが、予約の項目
+ * （連鎖の補償・投影の弾き）で開くべきなのはその予約で、請求書の項目は
+ * 投影に行が無いので請求一覧へ送る（IT13）。</p>
+ */
+function NextAction({ item }: { readonly item: AttentionItemView }) {
+  if (item.targetType === 'BOOKING') {
+    return (
+      <>
+        <Link to={`/bookings/${item.targetId}`} className={LINK}>
+          予約を開く
+        </Link>
+        {/* **予約を開くだけでは締めの母集団に戻らない。** 引取はもう届かない
+            ので、材料を直しても誰かが請求へ戻さなければ落ち続ける。 */}
+        {item.kind === 'REACTION_FAILED' && item.assignedRole === 'ROLE_ACCOUNTANT' && (
+          <RecalculateButton bookingId={item.targetId} />
+        )}
+      </>
+    );
+  }
+  if (item.targetType === 'INVOICE') {
+    return (
+      <Link to="/invoices" className={LINK}>
+        請求一覧を開く
+      </Link>
+    );
+  }
+  return (
+    <>
+      {item.relatedShipperId !== null && (
+        <Link to="/shippers" className={LINK}>
+          既存の荷主を見る
+        </Link>
+      )}
+      <Link to="/shippers/new" className={LINK}>
+        修正して再登録する
+      </Link>
+    </>
+  );
+}

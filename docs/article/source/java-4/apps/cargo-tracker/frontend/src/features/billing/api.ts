@@ -1,0 +1,288 @@
+import { commandClient, queryClient } from '@/shared/api/client';
+import type { Pending } from '@/shared/api/pending';
+
+/** 請求の状態（domain-model.md の要素表が正典）。 */
+export type BillingStatus = 'PENDING' | 'CALCULATED' | 'INVOICED' | 'PAID' | 'VOID';
+
+/** 明細の種別（`invoice_line_item.item_type`）。 */
+export type LineItemType = 'BASE' | 'DISCOUNT' | 'ADJUSTMENT' | 'CANCELLATION_FEE' | 'TAX';
+
+export interface InvoiceLineView {
+  readonly itemType: LineItemType;
+  /** 呼び名はサーバが返す。**画面で対応表を持たない**——2 か所になると片方だけ直る。 */
+  readonly itemTypeLabel: string;
+  /** 根拠の文（「2 区間・近海 2.5 + 遠洋 6.0・1,200 kg・一般 1.0」）。 */
+  readonly description: string;
+  readonly amount: number;
+  readonly currency: string;
+  /** 調整の根拠になった例外 ID。**S42 の例外へ飛ぶ**（US28 §8 の受け側）。 */
+  readonly basisExceptionId: string | null;
+  /** 調整の識別子（IT14 引き継ぎ C）。取り消す操作の宛先。調整以外は null。 */
+  readonly adjustmentId?: string | null;
+  /** すでに取り消されたか。**取り消し済みに取り消しを出さない。** */
+  readonly reversed?: boolean;
+}
+
+export interface InvoiceSummaryView {
+  readonly invoiceId: string;
+  readonly bookingId: string;
+  readonly shipperId: string;
+  readonly shipperName: string | null;
+  readonly shipperTypeLabel: string;
+  readonly status: BillingStatus;
+  readonly statusLabel: string;
+  readonly totalAmount: number;
+  readonly currency: string;
+  readonly calculatedAt: string;
+  /** 支払期限（発行日 + 30 日）。**未発行なら `null`**。 */
+  readonly dueOn: string | null;
+  /**
+   * 支払期限を過ぎているか。**列ではなく問い合わせのたびにサーバが数える**
+   * ——期限当日は超過ではない。
+   */
+  readonly overdue: boolean;
+}
+
+export interface InvoiceView {
+  readonly invoiceId: string;
+  readonly bookingId: string;
+  readonly shipperId: string;
+  readonly shipperName: string | null;
+  readonly shipperType: string;
+  readonly shipperTypeLabel: string;
+  readonly contractNumber: string | null;
+  readonly discountRate: number | null;
+  readonly baseAmount: number;
+  readonly discountAmount: number;
+  readonly adjustmentAmount: number;
+  readonly taxAmount: number;
+  readonly totalAmount: number;
+  readonly currency: string;
+  readonly status: BillingStatus;
+  readonly statusLabel: string;
+  readonly calculatedAt: string;
+  /**
+   * 見積時の概算。
+   *
+   * **見積を経ない予約では `null`**（注 N12）。`null` のときは概算行も差額も
+   * 出さない——出すと「見積が無い」ことを「差額 0」と読み違える。
+   */
+  readonly quotedAmount: number | null;
+  /** 発行日。**未発行なら null**（US23 §1）。 */
+  readonly issuedOn?: string | null;
+  /** 支払期限（発行日 + 30 日）。**未発行なら null**。 */
+  readonly dueOn?: string | null;
+  readonly paidAt?: string | null;
+  /**
+   * 支払期限を過ぎているか。
+   *
+   * **列ではなくサーバが問い合わせのたびに数える**（不変条件 4）。期限当日は
+   * 超過ではない。画面で数え直すと、業務タイムゾーンの扱いが 2 か所になる。
+   */
+  readonly overdue?: boolean;
+  readonly lineItems: readonly InvoiceLineView[];
+  /**
+   * 入金（S61 の入金欄）。
+   *
+   * **取り消した入金も出る。** 行を消さないのは「誤って記録して取り消した」
+   * 事実を残すためで、出さなければ残した意味が無い。
+   */
+  readonly payments: readonly PaymentView[];
+}
+
+/**
+ * 入金の 1 行（S61 / IT15 引き継ぎ 3）。
+ *
+ * `voidedAt` が入っていれば**取り消された入金**で、入金として数えない。
+ */
+export interface PaymentView {
+  readonly paymentId: string;
+  readonly amount: number;
+  readonly currency: string;
+  readonly paidAt: string;
+  readonly recordedBy: string | null;
+  readonly voidedAt?: string | null;
+  readonly voidedBy?: string | null;
+  readonly voidReason?: string | null;
+}
+
+/**
+ * 請求一覧（S60 / US21）。
+ *
+ * **既定で入金済・取消を外す。** 決着したものが混ざると、一覧全体が「まだ手を
+ * 入れる場所」に見えなくなる。並びはサーバが決める（算出日時の新しい順。
+ * 未払いだけに絞ったときは**支払期限の近い順**）。
+ *
+ * **未払いの絞りもサーバが数える**（US23 §受入基準 5）。全件を読んでから画面で
+ * 数えると、上限の打ち切りで未払いが漏れる。
+ */
+export function fetchInvoices(
+  includeSettled: boolean,
+  bookingId?: string | null,
+  overdue = false,
+  /**
+   * 締めの絞り込み（IT13 引き継ぎ D）。荷主と**算出日**の期間で切る。
+   * `calculatedTo` はその日を含む。
+   */
+  closing: {
+    shipperId?: string | null;
+    calculatedFrom?: string | null;
+    calculatedTo?: string | null;
+  } = {},
+): Promise<Pending<InvoiceListView>> {
+  const query = new URLSearchParams({ includeSettled: includeSettled ? 'true' : 'false' });
+  if (overdue) {
+    query.set('overdue', 'true');
+  }
+  if (bookingId !== undefined && bookingId !== null && bookingId.trim() !== '') {
+    query.set('bookingId', bookingId.trim());
+  }
+  // 空文字は送らない。**入口で null に寄せる**——空の絞り込みを送ると、
+  // サーバ側で「指定あり・値なし」と「指定なし」を見分けることになる。
+  for (const [key, value] of Object.entries(closing)) {
+    if (value !== undefined && value !== null && value.trim() !== '') {
+      query.set(key, value.trim());
+    }
+  }
+  return queryClient(`/billing/invoices?${query.toString()}`);
+}
+
+/**
+ * 請求一覧の応答（S60）。
+ *
+ * `totalAmount` は**絞り込んだぶんの合計**。**サーバが数える**——画面で足すと、
+ * 一覧の上限で切れたぶんが静かに合計から落ちる。
+ */
+export interface InvoiceListView {
+  readonly items: readonly InvoiceSummaryView[];
+  readonly total: number;
+  readonly totalAmount: number;
+}
+
+/** 請求書 1 通（S61）。 */
+export function fetchInvoice(invoiceId: string): Promise<Pending<InvoiceView>> {
+  return queryClient(`/billing/invoices/${encodeURIComponent(invoiceId)}`);
+}
+
+/** その予約の有効な請求書（S22 予約詳細から飛ぶ）。 */
+export function fetchInvoiceOfBooking(bookingId: string): Promise<Pending<InvoiceView>> {
+  return queryClient(`/billing/invoices/by-booking/${encodeURIComponent(bookingId)}`);
+}
+
+/**
+ * 料金を調整する（S61 / US21 §受入基準 6）。
+ *
+ * **符号で向きを表す**——減額は負、補償費用は正。理由は必須。
+ */
+export function adjustInvoice(
+  invoiceId: string,
+  input: { amount: number; reason: string; basisExceptionId: string | null },
+): Promise<{ adjustmentId: string }> {
+  return commandClient(`/billing/invoices/${encodeURIComponent(invoiceId)}/adjustments`, input);
+}
+
+/**
+ * 入れた調整を取り消す（IT14 引き継ぎ C）。
+ *
+ * <p><b>消さずに反対向きを積む。</b> 何が起きたかを追えない記録は、経理に
+ * とって根拠にならない。理由は必須。</p>
+ */
+export function reverseAdjustment(
+  invoiceId: string,
+  adjustmentId: string,
+  reason: string,
+): Promise<void> {
+  return commandClient(
+    `/billing/invoices/${encodeURIComponent(invoiceId)}`
+    + `/adjustments/${encodeURIComponent(adjustmentId)}/reversal`,
+    { reason },
+  );
+}
+
+/**
+ * 金額の表示。
+ *
+ * <p><b>実体は共有に移した</b>（`@/shared/ui/money`）。見積（S13）も金額を
+ * 出すようになり、機能ごとに書式を持つと同じ額が画面によって違う見た目に
+ * なる。ここは既存の import を壊さないための再輸出である。</p>
+ */
+export { formatMoney } from '@/shared/ui/money';
+
+/**
+ * 請求書を発行する（US23 §受入基準 1）。
+ *
+ * <p>支払期限（発行日 + 30 日）は集約が決める。画面は発行後に読み直す。</p>
+ */
+export function issueInvoice(invoiceId: string): Promise<void> {
+  return commandClient(`/billing/invoices/${encodeURIComponent(invoiceId)}/issue`, {});
+}
+
+/**
+ * 入金を記録する（US23 §受入基準 3・4）。
+ *
+ * <p><b>決済機関との接続はスコープ外。</b> 経理担当者が入金明細を見て記録する。
+ * <b>入金日時は入金のあった時刻</b>で、記録した時刻ではない（記録は後日に
+ * なることがある）。</p>
+ */
+export function recordPayment(
+  invoiceId: string,
+  input: { amount: number; paidAt: string },
+): Promise<void> {
+  return commandClient(`/billing/invoices/${encodeURIComponent(invoiceId)}/payments`, input);
+}
+
+/**
+ * 請求書を取り消す（UC18）。
+ *
+ * <p><b>理由は必須。</b> 取り消した請求書は荷主にも見えなくなるので、何が
+ * 起きたかを追えなければ、あとから誰も確かめられない。</p>
+ *
+ * <p><b>取り消したら再発行しない</b>（不変条件 6）。出し直すときは新規に発行する。</p>
+ */
+export function voidInvoice(invoiceId: string, reason: string): Promise<void> {
+  return commandClient(`/billing/invoices/${encodeURIComponent(invoiceId)}/void`, { reason });
+}
+
+/**
+ * 記録した入金を取り消す（UC18 / US23。IT15 引き継ぎ 3）。
+ *
+ * <p><b>請求書の取消とは別の操作。</b> 請求書は正しく、入金の記録だけが誤って
+ * いるときに使う。請求書は請求済に戻り、予約も引取済に戻る。</p>
+ *
+ * <p><b>どの入金かを名指しする。</b> 状態だけで通すと、取り消したのがどの入金か
+ * 残らない。</p>
+ */
+export function voidPayment(
+  invoiceId: string,
+  paymentId: string,
+  reason: string,
+): Promise<void> {
+  return commandClient(
+    `/billing/invoices/${encodeURIComponent(invoiceId)}/payments/`
+      + `${encodeURIComponent(paymentId)}/void`,
+    { reason },
+  );
+}
+
+/**
+ * 荷主が読む自社の請求書（S62 / US23 §受入基準 2）。
+ *
+ * <p><b>荷主 ID は送らない。</b> Gateway が JWT から取り出して伝える
+ * （ADR-0001 決定 4）。クライアントが指定できると、他社の請求書が読まれる。</p>
+ *
+ * <p><b>経理向けの一覧とは別の経路。</b> 同じ経路にロールで分岐を足すと、
+ * 載せ忘れた分岐ほど無防備になる。</p>
+ */
+export function fetchShipperInvoice(invoiceId: string): Promise<Pending<InvoiceView>> {
+  return queryClient(`/billing/shipper-invoices/${encodeURIComponent(invoiceId)}`);
+}
+
+/**
+ * 予約から引く自社の請求書（S62）。
+ *
+ * <p><b>荷主は請求書番号を知らない。</b> 荷主が持っているのは予約番号と追跡番号
+ * である。番号を打たせると探しに行くことになる。</p>
+ */
+export function fetchShipperInvoiceOfBooking(bookingId: string): Promise<Pending<InvoiceView>> {
+  return queryClient(`/billing/shipper-invoices/by-booking/${encodeURIComponent(bookingId)}`);
+}

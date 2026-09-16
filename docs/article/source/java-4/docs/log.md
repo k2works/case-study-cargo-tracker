@@ -1,0 +1,730 @@
+# Docs Update Log
+
+## 2026-09-16
+* **Update**: [21-荷主が自社の貨物を見る](/manual/21-荷主が自社の貨物を見る.md) を更新（claude-code/claude-opus-5）
+* **Update**: [20-業務シミュレーションを流す](/manual/20-業務シミュレーションを流す.md) を更新（claude-code/claude-opus-5）
+* **Update**: [20-業務シミュレーションを流す](/manual/20-業務シミュレーションを流す.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0020-simulation-is-a-driver-not-an-event-sourced-context](/adr/cargo-tracker/0020-simulation-is-a-driver-not-an-event-sourced-context.md) を更新（claude-code/claude-opus-5）
+* **Update**: [20-業務シミュレーションを流す](/manual/20-業務シミュレーションを流す.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+* **Update**: [アプリケーション開発環境セットアップ手順書](/operation/cargo-tracker/アプリケーション開発環境セットアップ手順書.md) を更新（claude-code/claude-opus-5）
+* **Update**: [operation](/design/cargo-tracker/operation.md) を更新（claude-code/claude-opus-5）
+
+## 2026-09-15
+* **Update**: [release_report-3_0_0](/development/cargo-tracker/release_report-3_0_0.md) を更新（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [retrospective-17](/development/cargo-tracker/retrospective-17.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_report-17](/development/cargo-tracker/iteration_report-17.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-17](/development/cargo-tracker/iteration_plan-17.md) を更新（claude-code/claude-opus-5）
+* **Update**: [retrospective-17](/development/cargo-tracker/retrospective-17.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_report-17](/development/cargo-tracker/iteration_report-17.md) を更新（claude-code/claude-opus-5）
+* **Update**: [21-荷主が自社の貨物を見る](/manual/21-荷主が自社の貨物を見る.md) を更新（claude-code/claude-opus-5）
+* **Update**: [20-業務シミュレーションを流す](/manual/20-業務シミュレーションを流す.md) を更新（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-17](/development/cargo-tracker/iteration_plan-17.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0020-simulation-is-a-driver-not-an-event-sourced-context](/adr/cargo-tracker/0020-simulation-is-a-driver-not-an-event-sourced-context.md) を更新（claude-code/claude-opus-5）
+* **Update**: IT17 T9: クラスタで見つけた 3 件を計画に記録
+* **Update**: IT17 T9: 荷主の紐付けを設定する入口と auth_audit_log.reason の幅を反映（クラスタで実測）
+* **Update**: IT17 T10: マニュアル 20 章を継続実行・例外シナリオへ更新し、21 章（荷主が自社の貨物を見る）を追加
+* **Update**: IT17 T10: マニュアル 20 章を継続実行・例外シナリオへ更新し、21 章（荷主が自社の貨物を見る）を追加
+* **Update**: IT17 T5: ADR-0021（知らせを押し出さない）を起票。ui_design に共通要素「貨物の知らせ」を追加（注 N5）
+* **Creation**: IT17 T5: ADR-0021（知らせを押し出さない）を起票。ui_design に共通要素「貨物の知らせ」を追加（注 N5）
+* **Update**: IT17 T4: tracking_event.sequence_no・notice_read_position・shipper_origin を反映（注 N2・N3）
+* **Update**: IT17 T3: S94（継続実行と統計）を追加。S93 に予定の工程・連鎖の待ち・復帰の行き先・再実行を明記
+* **Update**: IT17 T2: SimulationSchedule・RandomScenario・ScenarioInput・ScheduleStatus と simulation_schedule を反映（注 N1・N4・N8）
+* **Update**: IT17 T2: SimulationSchedule・RandomScenario・ScenarioInput・ScheduleStatus と simulation_schedule を反映（注 N1・N4・N8）
+* **Update**: S45・S46 を実装（引き継ぎ 2）。「未実装」の記述を更新し、読み口の分離と 404 の扱いを明記
+* **Update**: ADR-0020 決定 4 の読み口の表を確定（追跡・荷役・要確認を閉じ、外さない読み口も明記）
+* **Verification**: [iteration_plan-17](/development/cargo-tracker/iteration_plan-17.md) を human:k2works が検証
+
+## 2026-09-14
+* **Update**: [iteration_plan-17](/development/cargo-tracker/iteration_plan-17.md) を更新（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-17](/development/cargo-tracker/iteration_plan-17.md) を更新（claude-code/claude-opus-5）
+* **Update**: [retrospective-16](/development/cargo-tracker/retrospective-16.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-16](/development/cargo-tracker/iteration_plan-16.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-16](/development/cargo-tracker/iteration_plan-16.md) を更新（claude-code/claude-opus-5）
+* **Update**: [retrospective-16](/development/cargo-tracker/retrospective-16.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_report-16](/development/cargo-tracker/iteration_report-16.md) を更新（claude-code/claude-opus-5）
+* **Update**: [20-業務シミュレーションを流す](/manual/20-業務シミュレーションを流す.md) を更新（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-16](/development/cargo-tracker/iteration_plan-16.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+* **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [retrospective-16](/development/cargo-tracker/retrospective-16.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_report-16](/development/cargo-tracker/iteration_report-16.md) を更新（claude-code/claude-opus-5）
+* **Update**: [retrospective-16](/development/cargo-tracker/retrospective-16.md) を更新（claude-code/claude-opus-5）
+* **Update**: [IT16実装_review_20260915](/review/cargo-tracker/IT16実装_review_20260915.md) を更新（claude-code/claude-opus-5）
+* **Update**: [アプリケーション開発環境セットアップ手順書](/operation/cargo-tracker/アプリケーション開発環境セットアップ手順書.md) を更新（claude-code/claude-opus-5）
+* **Update**: [20-業務シミュレーションを流す](/manual/20-業務シミュレーションを流す.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0020-simulation-is-a-driver-not-an-event-sourced-context](/adr/cargo-tracker/0020-simulation-is-a-driver-not-an-event-sourced-context.md) を更新（claude-code/claude-opus-5）
+* **Update**: [アプリケーション開発環境セットアップ手順書](/operation/cargo-tracker/アプリケーション開発環境セットアップ手順書.md) を更新（claude-code/claude-opus-5）
+* **Update**: [20-業務シミュレーションを流す](/manual/20-業務シミュレーションを流す.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0020-simulation-is-a-driver-not-an-event-sourced-context](/adr/cargo-tracker/0020-simulation-is-a-driver-not-an-event-sourced-context.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-16](/development/cargo-tracker/iteration_plan-16.md) を更新（claude-code/claude-opus-5）
+* **Update**: [20-業務シミュレーションを流す](/manual/20-業務シミュレーションを流す.md) を更新（claude-code/claude-opus-5）
+* **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: UC15 に「システムから知らせる」向き（US37）を拡張として追記し、UC23 の主アクターに時間イベント（US36）を明記（claude-code/claude-opus-5）
+* **Update**: US37（貨物の知らせを画面で受け取る）を追加し、Release 3.0 を 19 SP・IT17 へ配分（claude-code/claude-opus-5）
+* **Creation**: [ADR-0020](/adr/cargo-tracker/0020-simulation-is-a-driver-not-an-event-sourced-context.md) を起票（claude-code/claude-opus-5）
+* **Creation**: [ADR-0018](/adr/cargo-tracker/0018-closing-the-tracking-belongs-to-the-tracking-aggregate.md)・[ADR-0019](/adr/cargo-tracker/0019-settled-can-be-reverted-to-delivered.md) を起票（claude-code/claude-opus-5）
+* **Verification**: [イテレーション 16 計画](/development/cargo-tracker/iteration_plan-16.md) を承認（human:k2works）。status を stable に昇格——**検証済みの計画だけが開発の根拠になる**
+* **Verification**: [iteration_plan-16](/development/cargo-tracker/iteration_plan-16.md) を human:k2works が検証
+* **Creation**: [イテレーション 16 計画](/development/cargo-tracker/iteration_plan-16.md) を作成（claude-code/claude-opus-5）
+* **Update**: Release 3.0（運用と実演・IT16〜IT17・16 SP）をリリース計画と開発戦略に追加（claude-code/claude-opus-5）
+* **Update**: 業務シミュレーションの要件を追加（BUC25・UC23・US33〜US36）。take-7 の US34〜US37 を本プロジェクトの採番と構成に合わせて起票（claude-code/claude-opus-5）
+* **Verification**: [15-誤配を検知して経路を組み直す](/manual/15-誤配を検知して経路を組み直す.md) を human:k2works が検証
+* **Verification**: [14-引取と例外を扱う](/manual/14-引取と例外を扱う.md) を human:k2works が検証
+* **Verification**: [13-荷役作業を記録する](/manual/13-荷役作業を記録する.md) を human:k2works が検証
+* **Verification**: [12-貨物の輸送状況を追う](/manual/12-貨物の輸送状況を追う.md) を human:k2works が検証
+* **Verification**: [11-予約を確定して追跡番号を発行する](/manual/11-予約を確定して追跡番号を発行する.md) を human:k2works が検証
+* **Verification**: [10-荷主に経路を通知する](/manual/10-荷主に経路を通知する.md) を human:k2works が検証
+* **Verification**: [09-経路を設計する](/manual/09-経路を設計する.md) を human:k2works が検証
+* **Verification**: [08-経路設計に引き渡す](/manual/08-経路設計に引き渡す.md) を human:k2works が検証
+* **Verification**: [07-航海スケジュールを登録する](/manual/07-航海スケジュールを登録する.md) を human:k2works が検証
+* **Verification**: [06-利用者を管理する](/manual/06-利用者を管理する.md) を human:k2works が検証
+* **Verification**: [05-貨物予約を登録する](/manual/05-貨物予約を登録する.md) を human:k2works が検証
+* **Verification**: [04-要確認一覧を確認する](/manual/04-要確認一覧を確認する.md) を human:k2works が検証
+* **Verification**: [03-荷主を登録する](/manual/03-荷主を登録する.md) を human:k2works が検証
+* **Verification**: [02-ログインとログアウト](/manual/02-ログインとログアウト.md) を human:k2works が検証
+* **Verification**: [01-業務フロー](/manual/01-業務フロー.md) を human:k2works が検証
+* **Verification**: [00-はじめに](/manual/00-はじめに.md) を human:k2works が検証
+* **Verification**: [18-輸送見積を作る](/manual/18-輸送見積を作る.md) を human:k2works が検証
+* **Verification**: [17-請求を組み立てる](/manual/17-請求を組み立てる.md) を human:k2works が検証
+* **Verification**: [16-通関を通す](/manual/16-通関を通す.md) を human:k2works が検証
+* **Verification**: [19-キャンセルを申請して承認する](/manual/19-キャンセルを申請して承認する.md) を human:k2works が検証
+* **Verification**: IT15 の計画・ふりかえり・完了報告書・レビュー・リリース完了報告書 2.0 と、**マニュアル全 20 章**を承認（human:k2works）。status を stable に昇格
+* **Verification**: [iteration_plan-15](/development/cargo-tracker/iteration_plan-15.md) を human:k2works が検証
+* **Verification**: [IT15実装_review_20260914](/review/cargo-tracker/IT15実装_review_20260914.md) を human:k2works が検証
+* **Verification**: [release_report-2_0_0](/development/cargo-tracker/release_report-2_0_0.md) を human:k2works が検証
+* **Verification**: [iteration_report-15](/development/cargo-tracker/iteration_report-15.md) を human:k2works が検証
+* **Verification**: [retrospective-15](/development/cargo-tracker/retrospective-15.md) を human:k2works が検証
+* **Creation**: [リリース完了報告書 2.0](/development/cargo-tracker/release_report-2_0_0.md) を作成（claude-code/claude-opus-5）
+* **Creation**: [19 キャンセルを申請して承認する](/manual/19-キャンセルを申請して承認する.md) を新設（claude-code/claude-opus-5）
+* **Creation**: [IT15 実装レビュー](/review/cargo-tracker/IT15実装_review_20260914.md) を作成（claude-code/claude-opus-5）
+* **Creation**: [イテレーション 15 ふりかえり](/development/cargo-tracker/retrospective-15.md) を作成（claude-code/claude-opus-5）
+* **Creation**: [イテレーション 15 完了報告書](/development/cargo-tracker/iteration_report-15.md) を作成（claude-code/claude-opus-5）
+* **Update**: マニュアル 12・13・17 章にキャンセルの節を追記（claude-code/claude-opus-5）
+* **Update**: 正典（domain-model・data-model）に不変条件 9・9-2 とキャンセル料の受け皿を反映（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md)・開発 index・docs index・mkdocs.yml を IT15 の実績で同期（claude-code/claude-opus-5）
+* **Update**: README にアプリケーションの入口と実行手順を追加（claude-code/claude-opus-5）
+
+## 2026-09-13
+* **Update**: [iteration_plan-15](/development/cargo-tracker/iteration_plan-15.md) を更新（claude-code/claude-opus-5）
+* **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-15](/development/cargo-tracker/iteration_plan-15.md) を更新（claude-code/claude-opus-5）
+* **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [アプリケーション開発環境セットアップ手順書](/operation/cargo-tracker/アプリケーション開発環境セットアップ手順書.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-15](/development/cargo-tracker/iteration_plan-15.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-15](/development/cargo-tracker/iteration_plan-15.md) を更新（claude-code/claude-opus-5）
+* **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-15](/development/cargo-tracker/iteration_plan-15.md) を更新（claude-code/claude-opus-5）
+* **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [06-利用者を管理する](/manual/06-利用者を管理する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-15](/development/cargo-tracker/iteration_plan-15.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+* **Update**: [06-利用者を管理する](/manual/06-利用者を管理する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+* **Update**: [17-請求を組み立てる](/manual/17-請求を組み立てる.md) を更新（claude-code/claude-opus-5）
+* **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [20260913](/journal/cargo-tracker/20260913.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-15](/development/cargo-tracker/iteration_plan-15.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-14](/development/cargo-tracker/iteration_plan-14.md) を更新（claude-code/claude-opus-5）
+
+## 2026-09-12
+* **Update**: [iteration_plan-15](/development/cargo-tracker/iteration_plan-15.md) を更新（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+
+## 2026-09-11
+* **Verification**: [iteration_report-11](/development/cargo-tracker/iteration_report-11.md) を human:k2works が検証
+* **Verification**: [iteration_report-10](/development/cargo-tracker/iteration_report-10.md) を human:k2works が検証
+* **Verification**: [iteration_report-9](/development/cargo-tracker/iteration_report-9.md) を human:k2works が検証
+* **Verification**: [iteration_report-8](/development/cargo-tracker/iteration_report-8.md) を human:k2works が検証
+* **Verification**: [iteration_report-7](/development/cargo-tracker/iteration_report-7.md) を human:k2works が検証
+* **Verification**: [iteration_report-6](/development/cargo-tracker/iteration_report-6.md) を human:k2works が検証
+* **Verification**: [iteration_report-5](/development/cargo-tracker/iteration_report-5.md) を human:k2works が検証
+* **Verification**: [iteration_report-4](/development/cargo-tracker/iteration_report-4.md) を human:k2works が検証
+* **Verification**: [iteration_report-3](/development/cargo-tracker/iteration_report-3.md) を human:k2works が検証
+* **Verification**: [iteration_report-2](/development/cargo-tracker/iteration_report-2.md) を human:k2works が検証
+* **Verification**: [iteration_report-1](/development/cargo-tracker/iteration_report-1.md) を human:k2works が検証
+* **Verification**: [iteration_plan-14](/development/cargo-tracker/iteration_plan-14.md) を human:k2works が検証
+* **Verification**: [release_report-1_1_0](/development/cargo-tracker/release_report-1_1_0.md) を human:k2works が検証
+* **Verification**: [release_report-1_0_0](/development/cargo-tracker/release_report-1_0_0.md) を human:k2works が検証
+* **Verification**: [release_report-0_2_0](/development/cargo-tracker/release_report-0_2_0.md) を human:k2works が検証
+* **Verification**: [release_report-0_1_0](/development/cargo-tracker/release_report-0_1_0.md) を human:k2works が検証
+* **Creation**: [release_report-1_1_0](/development/cargo-tracker/release_report-1_1_0.md) を作成（claude-code/claude-opus-5）
+* **Creation**: [release_report-1_0_0](/development/cargo-tracker/release_report-1_0_0.md) を作成（claude-code/claude-opus-5）
+* **Creation**: [release_report-0_2_0](/development/cargo-tracker/release_report-0_2_0.md) を作成（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-14](/development/cargo-tracker/iteration_plan-14.md) を更新（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Creation**: [iteration_plan-14](/development/cargo-tracker/iteration_plan-14.md) を作成（claude-code/claude-opus-5）
+* **Verification**: [iteration_report-13](/development/cargo-tracker/iteration_report-13.md) を human:k2works が検証
+* **Verification**: [retrospective-13](/development/cargo-tracker/retrospective-13.md) を human:k2works が検証
+* **Update**: [retrospective-13](/development/cargo-tracker/retrospective-13.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_report-13](/development/cargo-tracker/iteration_report-13.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-13](/development/cargo-tracker/iteration_plan-13.md) を更新（claude-code/claude-opus-5）
+* **Verification**: [IT13実装_review_20260911](/review/cargo-tracker/IT13実装_review_20260911.md) を human:k2works が検証
+* **Verification**: [iteration_report-13](/development/cargo-tracker/iteration_report-13.md) を human:k2works が検証
+* **Verification**: [retrospective-13](/development/cargo-tracker/retrospective-13.md) を human:k2works が検証
+* **Update**: [20260911](/journal/cargo-tracker/20260911.md) を更新（claude-code/claude-opus-5）
+
+## 2026-09-10
+* **Verification**: [iteration_plan-13](/development/cargo-tracker/iteration_plan-13.md) を human:k2works が検証
+* **Update**: [iteration_plan-13](/development/cargo-tracker/iteration_plan-13.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-12](/development/cargo-tracker/iteration_plan-12.md) を更新（claude-code/claude-opus-5）
+* **Update**: [development_strategy](/development/cargo-tracker/development_strategy.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-13](/development/cargo-tracker/iteration_plan-13.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-12](/development/cargo-tracker/iteration_plan-12.md) を更新（claude-code/claude-opus-5）
+* **Update**: [development_strategy](/development/cargo-tracker/development_strategy.md) を更新（claude-code/claude-opus-5）
+* **Creation**: [iteration_plan-13](/development/cargo-tracker/iteration_plan-13.md) を作成（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Verification**: [iteration_plan-12](/development/cargo-tracker/iteration_plan-12.md) を human:k2works が検証
+* **Verification**: [IT12実装_review_20260910](/review/cargo-tracker/IT12実装_review_20260910.md) を human:k2works が検証
+* **Verification**: [iteration_report-12](/development/cargo-tracker/iteration_report-12.md) を human:k2works が検証
+* **Verification**: [retrospective-12](/development/cargo-tracker/retrospective-12.md) を human:k2works が検証
+* **Update**: [iteration_report-12](/development/cargo-tracker/iteration_report-12.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-12](/development/cargo-tracker/iteration_plan-12.md) を更新（claude-code/claude-opus-5）
+* **Update**: [IT12実装_review_20260910](/review/cargo-tracker/IT12実装_review_20260910.md) を更新（claude-code/claude-opus-5）
+* **Update**: [アプリケーション開発環境セットアップ手順書](/operation/cargo-tracker/アプリケーション開発環境セットアップ手順書.md) を更新（claude-code/claude-opus-5）
+* **Update**: [16-通関を通す](/manual/16-通関を通す.md) を更新（claude-code/claude-opus-5）
+* **Update**: [retrospective-12](/development/cargo-tracker/retrospective-12.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-12](/development/cargo-tracker/iteration_plan-12.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+* **Update**: [16-通関を通す](/manual/16-通関を通す.md) を更新（claude-code/claude-opus-5）
+* **Update**: [14-引取と例外を扱う](/manual/14-引取と例外を扱う.md) を更新（claude-code/claude-opus-5）
+* **Update**: [13-荷役作業を記録する](/manual/13-荷役作業を記録する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [retrospective-12](/development/cargo-tracker/retrospective-12.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_report-12](/development/cargo-tracker/iteration_report-12.md) を更新（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Creation**: [retrospective-12](/development/cargo-tracker/retrospective-12.md) を作成（claude-code/claude-opus-5）
+* **Creation**: [iteration_report-12](/development/cargo-tracker/iteration_report-12.md) を作成（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-12](/development/cargo-tracker/iteration_plan-12.md) を更新（claude-code/claude-opus-5）
+* **Update**: [IT12実装_review_20260910](/review/cargo-tracker/IT12実装_review_20260910.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-12](/development/cargo-tracker/iteration_plan-12.md) を更新（claude-code/claude-opus-5）
+* **Creation**: [IT12実装_review_20260910](/review/cargo-tracker/IT12実装_review_20260910.md) を作成（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-12](/development/cargo-tracker/iteration_plan-12.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-12](/development/cargo-tracker/iteration_plan-12.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0014-poison-events-are-parked-not-blocking](/adr/cargo-tracker/0014-poison-events-are-parked-not-blocking.md) を更新（claude-code/claude-opus-5）
+* **Update**: [16-通関を通す](/manual/16-通関を通す.md) を更新（claude-code/claude-opus-5）
+* **Update**: [14-引取と例外を扱う](/manual/14-引取と例外を扱う.md) を更新（claude-code/claude-opus-5）
+* **Update**: [13-荷役作業を記録する](/manual/13-荷役作業を記録する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [01-業務フロー](/manual/01-業務フロー.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-12](/development/cargo-tracker/iteration_plan-12.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-12](/development/cargo-tracker/iteration_plan-12.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+
+## 2026-09-09
+* **Update**: [iteration_plan-12](/development/cargo-tracker/iteration_plan-12.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-12](/development/cargo-tracker/iteration_plan-12.md) を更新（claude-code/claude-opus-5）
+* **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-12](/development/cargo-tracker/iteration_plan-12.md) を更新（claude-code/claude-opus-5）
+* **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0014-poison-events-are-parked-not-blocking](/adr/cargo-tracker/0014-poison-events-are-parked-not-blocking.md) を更新（claude-code/claude-opus-5）
+* **Update**: [アプリケーション開発環境セットアップ手順書](/operation/cargo-tracker/アプリケーション開発環境セットアップ手順書.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-12](/development/cargo-tracker/iteration_plan-12.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+* **Update**: [operation](/design/cargo-tracker/operation.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-12](/development/cargo-tracker/iteration_plan-12.md) を更新（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-11](/development/cargo-tracker/iteration_plan-11.md) を更新（claude-code/claude-opus-5）
+* **Update**: [IT11実装_review_20260909](/review/cargo-tracker/IT11実装_review_20260909.md) を更新（claude-code/claude-opus-5）
+* **Update**: [15-誤配を検知して経路を組み直す](/manual/15-誤配を検知して経路を組み直す.md) を更新（claude-code/claude-opus-5）
+* **Update**: [14-引取と例外を扱う](/manual/14-引取と例外を扱う.md) を更新（claude-code/claude-opus-5）
+* **Update**: [retrospective-11](/development/cargo-tracker/retrospective-11.md) を更新（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_report-11](/development/cargo-tracker/iteration_report-11.md) を更新（claude-code/claude-opus-5）
+* **Update**: [retrospective-11](/development/cargo-tracker/retrospective-11.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_report-11](/development/cargo-tracker/iteration_report-11.md) を更新（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [IT11実装_review_20260909](/review/cargo-tracker/IT11実装_review_20260909.md) を更新（claude-code/claude-opus-5）
+* **Update**: [15-誤配を検知して経路を組み直す](/manual/15-誤配を検知して経路を組み直す.md) を更新（claude-code/claude-opus-5）
+* **Update**: [20260909](/journal/cargo-tracker/20260909.md) を更新（claude-code/claude-opus-5）
+* **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-11](/development/cargo-tracker/iteration_plan-11.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0013-shared-kernel-holds-the-error-mapping](/adr/cargo-tracker/0013-shared-kernel-holds-the-error-mapping.md) を更新（claude-code/claude-opus-5）
+* **Update**: [15-誤配を検知して経路を組み直す](/manual/15-誤配を検知して経路を組み直す.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-11](/development/cargo-tracker/iteration_plan-11.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0013-shared-kernel-holds-the-error-mapping](/adr/cargo-tracker/0013-shared-kernel-holds-the-error-mapping.md) を更新（claude-code/claude-opus-5）
+* **Update**: [15-誤配を検知して経路を組み直す](/manual/15-誤配を検知して経路を組み直す.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-11](/development/cargo-tracker/iteration_plan-11.md) を更新（claude-code/claude-opus-5）
+* **Update**: [operation](/design/cargo-tracker/operation.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-11](/development/cargo-tracker/iteration_plan-11.md) を更新（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [20260909](/journal/cargo-tracker/20260909.md) を更新（claude-code/claude-opus-5）
+* **Update**: [retrospective-10](/development/cargo-tracker/retrospective-10.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_report-10](/development/cargo-tracker/iteration_report-10.md) を更新（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-10](/development/cargo-tracker/iteration_plan-10.md) を更新（claude-code/claude-opus-5）
+* **Update**: [retrospective-10](/development/cargo-tracker/retrospective-10.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_report-10](/development/cargo-tracker/iteration_report-10.md) を更新（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-10](/development/cargo-tracker/iteration_plan-10.md) を更新（claude-code/claude-opus-5）
+* **Update**: [IT10実装_review_20260909](/review/cargo-tracker/IT10実装_review_20260909.md) を更新（claude-code/claude-opus-5）
+* **Update**: [14-引取と例外を扱う](/manual/14-引取と例外を扱う.md) を更新（claude-code/claude-opus-5）
+* **Update**: [12-貨物の輸送状況を追う](/manual/12-貨物の輸送状況を追う.md) を更新（claude-code/claude-opus-5）
+* **Update**: [01-業務フロー](/manual/01-業務フロー.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+* **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
+
+## 2026-09-08
+* **Update**: [iteration_plan-10](/development/cargo-tracker/iteration_plan-10.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-10](/development/cargo-tracker/iteration_plan-10.md) を更新（claude-code/claude-opus-5）
+* **Update**: [11-予約を確定して追跡番号を発行する](/manual/11-予約を確定して追跡番号を発行する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [10-荷主に経路を通知する](/manual/10-荷主に経路を通知する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-10](/development/cargo-tracker/iteration_plan-10.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-10](/development/cargo-tracker/iteration_plan-10.md) を更新（claude-code/claude-opus-5）
+* **Update**: [20260908](/journal/cargo-tracker/20260908.md) を更新（claude-code/claude-opus-5）
+* **Update**: [retrospective-9](/development/cargo-tracker/retrospective-9.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_report-9](/development/cargo-tracker/iteration_report-9.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-9](/development/cargo-tracker/iteration_plan-9.md) を更新（claude-code/claude-opus-5）
+
+## 2026-09-07
+* **Update**: [13-荷役作業を記録する](/manual/13-荷役作業を記録する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [01-業務フロー](/manual/01-業務フロー.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0012-cargo-snapshot-from-tracking-initialized](/adr/cargo-tracker/0012-cargo-snapshot-from-tracking-initialized.md) を更新（claude-code/claude-opus-5）
+* **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-9](/development/cargo-tracker/iteration_plan-9.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0008-cargo-revision-as-a-projection](/adr/cargo-tracker/0008-cargo-revision-as-a-projection.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-9](/development/cargo-tracker/iteration_plan-9.md) を更新（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-9](/development/cargo-tracker/iteration_plan-9.md) を更新（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-9](/development/cargo-tracker/iteration_plan-9.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-8](/development/cargo-tracker/iteration_plan-8.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_report-8](/development/cargo-tracker/iteration_report-8.md) を更新（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [IT8実装_review_20260907](/review/cargo-tracker/IT8実装_review_20260907.md) を更新（claude-code/claude-opus-5）
+* **Update**: [retrospective-8](/development/cargo-tracker/retrospective-8.md) を更新（claude-code/claude-opus-5）
+* **Update**: [12-貨物の輸送状況を追う](/manual/12-貨物の輸送状況を追う.md) を更新（claude-code/claude-opus-5）
+* **Update**: [01-業務フロー](/manual/01-業務フロー.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-8](/development/cargo-tracker/iteration_plan-8.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0011-tracking-number-is-hard-to-guess](/adr/cargo-tracker/0011-tracking-number-is-hard-to-guess.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-8](/development/cargo-tracker/iteration_plan-8.md) を更新（claude-code/claude-opus-5）
+* **Update**: [12-貨物の輸送状況を追う](/manual/12-貨物の輸送状況を追う.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-8](/development/cargo-tracker/iteration_plan-8.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+* **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-8](/development/cargo-tracker/iteration_plan-8.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+* **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-8](/development/cargo-tracker/iteration_plan-8.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-8](/development/cargo-tracker/iteration_plan-8.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-8](/development/cargo-tracker/iteration_plan-8.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-8](/development/cargo-tracker/iteration_plan-8.md) を更新（claude-code/claude-opus-5）
+* **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [architecture_backend](/design/cargo-tracker/architecture_backend.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-8](/development/cargo-tracker/iteration_plan-8.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-8](/development/cargo-tracker/iteration_plan-8.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0011-tracking-number-is-hard-to-guess](/adr/cargo-tracker/0011-tracking-number-is-hard-to-guess.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-8](/development/cargo-tracker/iteration_plan-8.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0010-reaction-handler-as-the-only-coordinator](/adr/cargo-tracker/0010-reaction-handler-as-the-only-coordinator.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0011-tracking-number-is-hard-to-guess](/adr/cargo-tracker/0011-tracking-number-is-hard-to-guess.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0010-reaction-handler-as-the-only-coordinator](/adr/cargo-tracker/0010-reaction-handler-as-the-only-coordinator.md) を更新（claude-code/claude-opus-5）
+* **Update**: [user_story](/requirements/user_story.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+* **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [アプリケーション開発環境セットアップ手順書](/operation/cargo-tracker/アプリケーション開発環境セットアップ手順書.md) を更新（claude-code/claude-opus-5）
+* **Update**: [architecture_backend](/design/cargo-tracker/architecture_backend.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0010-reaction-handler-as-the-only-coordinator](/adr/cargo-tracker/0010-reaction-handler-as-the-only-coordinator.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-8](/development/cargo-tracker/iteration_plan-8.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-7](/development/cargo-tracker/iteration_plan-7.md) を更新（claude-code/claude-opus-5）
+* **Creation**: [iteration_plan-8](/development/cargo-tracker/iteration_plan-8.md) を作成（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_report-7](/development/cargo-tracker/iteration_report-7.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-7](/development/cargo-tracker/iteration_plan-7.md) を更新（claude-code/claude-opus-5）
+
+## 2026-09-06
+* **Update**: [IT7実装_review_20260907](/review/cargo-tracker/IT7実装_review_20260907.md) を更新（claude-code/claude-opus-5）
+* **Update**: [retrospective-7](/development/cargo-tracker/retrospective-7.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_report-7](/development/cargo-tracker/iteration_report-7.md) を更新（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-7](/development/cargo-tracker/iteration_plan-7.md) を更新（claude-code/claude-opus-5）
+* **Update**: [architecture_backend](/design/cargo-tracker/architecture_backend.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0010-reaction-handler-as-the-only-coordinator](/adr/cargo-tracker/0010-reaction-handler-as-the-only-coordinator.md) を更新（claude-code/claude-opus-5）
+* **Creation**: [IT7実装_review_20260907](/review/cargo-tracker/IT7実装_review_20260907.md) を作成（claude-code/claude-opus-5）
+* **Creation**: [retrospective-7](/development/cargo-tracker/retrospective-7.md) を作成（claude-code/claude-opus-5）
+* **Creation**: [iteration_report-7](/development/cargo-tracker/iteration_report-7.md) を作成（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-7](/development/cargo-tracker/iteration_plan-7.md) を更新（claude-code/claude-opus-5）
+* **Update**: [architecture_backend](/design/cargo-tracker/architecture_backend.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0010-reaction-handler-as-the-only-coordinator](/adr/cargo-tracker/0010-reaction-handler-as-the-only-coordinator.md) を更新（claude-code/claude-opus-5）
+* **Update**: [user_story](/requirements/user_story.md) を更新（claude-code/claude-opus-5）
+* **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Creation**: [11-予約を確定して追跡番号を発行する](/manual/11-予約を確定して追跡番号を発行する.md) を作成（claude-code/claude-opus-5）
+* **Update**: [01-業務フロー](/manual/01-業務フロー.md) を更新（claude-code/claude-opus-5）
+* **Creation**: [0010-reaction-handler-as-the-only-coordinator](/adr/cargo-tracker/0010-reaction-handler-as-the-only-coordinator.md) を作成（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-7](/development/cargo-tracker/iteration_plan-7.md) を更新（claude-code/claude-opus-5）
+* **Update**: [architecture_backend](/design/cargo-tracker/architecture_backend.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+* **Update**: [09-経路を設計する](/manual/09-経路を設計する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-7](/development/cargo-tracker/iteration_plan-7.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-7](/development/cargo-tracker/iteration_plan-7.md) を更新（claude-code/claude-opus-5）
+* **Creation**: [iteration_plan-7](/development/cargo-tracker/iteration_plan-7.md) を作成（claude-code/claude-opus-5）
+* **Update**: [retrospective-6](/development/cargo-tracker/retrospective-6.md) を更新（claude-code/claude-opus-5）
+* **Update**: [retrospective-6](/development/cargo-tracker/retrospective-6.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_report-6](/development/cargo-tracker/iteration_report-6.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-6](/development/cargo-tracker/iteration_plan-6.md) を更新（claude-code/claude-opus-5）
+* **Update**: [IT6実装_review_20260906](/review/cargo-tracker/IT6実装_review_20260906.md) を更新（claude-code/claude-opus-5）
+* **Update**: [retrospective-6](/development/cargo-tracker/retrospective-6.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_report-6](/development/cargo-tracker/iteration_report-6.md) を更新（claude-code/claude-opus-5）
+* **Update**: [retrospective-6](/development/cargo-tracker/retrospective-6.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_report-6](/development/cargo-tracker/iteration_report-6.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-6](/development/cargo-tracker/iteration_plan-6.md) を更新（claude-code/claude-opus-5）
+* **Creation**: [IT6実装_review_20260906](/review/cargo-tracker/IT6実装_review_20260906.md) を作成（claude-code/claude-opus-5）
+* **Update**: [10-荷主に経路を通知する](/manual/10-荷主に経路を通知する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [09-経路を設計する](/manual/09-経路を設計する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [07-航海スケジュールを登録する](/manual/07-航海スケジュールを登録する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [05-貨物予約を登録する](/manual/05-貨物予約を登録する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [01-業務フロー](/manual/01-業務フロー.md) を更新（claude-code/claude-opus-5）
+* **Update**: [retrospective-6](/development/cargo-tracker/retrospective-6.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_report-6](/development/cargo-tracker/iteration_report-6.md) を更新（claude-code/claude-opus-5）
+* **Creation**: [IT6実装_review_20260906](/review/cargo-tracker/IT6実装_review_20260906.md) を作成（claude-code/claude-opus-5）
+* **Update**: [09-経路を設計する](/manual/09-経路を設計する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [retrospective-6](/development/cargo-tracker/retrospective-6.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_report-6](/development/cargo-tracker/iteration_report-6.md) を更新（claude-code/claude-opus-5）
+* **Update**: [retrospective-6](/development/cargo-tracker/retrospective-6.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_report-6](/development/cargo-tracker/iteration_report-6.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-6](/development/cargo-tracker/iteration_plan-6.md) を更新（claude-code/claude-opus-5）
+* **Creation**: [iteration_report-6](/development/cargo-tracker/iteration_report-6.md) を作成（claude-code/claude-opus-5）
+* **Creation**: [retrospective-6](/development/cargo-tracker/retrospective-6.md) を作成（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-6](/development/cargo-tracker/iteration_plan-6.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-6](/development/cargo-tracker/iteration_plan-6.md) を更新（claude-code/claude-opus-5）
+* **Creation**: [10-荷主に経路を通知する](/manual/10-荷主に経路を通知する.md) を作成（claude-code/claude-opus-5）
+* **Update**: [09-経路を設計する](/manual/09-経路を設計する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+* **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [09-経路を設計する](/manual/09-経路を設計する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+* **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [architecture_backend](/design/cargo-tracker/architecture_backend.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0009-condition-review-is-not-a-state-transition](/adr/cargo-tracker/0009-condition-review-is-not-a-state-transition.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-6](/development/cargo-tracker/iteration_plan-6.md) を更新（claude-code/claude-opus-5）
+
+## 2026-09-05
+* **Update**: [iteration_plan-6](/development/cargo-tracker/iteration_plan-6.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-6](/development/cargo-tracker/iteration_plan-6.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-6](/development/cargo-tracker/iteration_plan-6.md) を更新（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [retrospective-5](/development/cargo-tracker/retrospective-5.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_report-5](/development/cargo-tracker/iteration_report-5.md) を更新（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-5](/development/cargo-tracker/iteration_plan-5.md) を更新（claude-code/claude-opus-5）
+* **Creation**: [09-経路を設計する](/manual/09-経路を設計する.md) を作成（claude-code/claude-opus-5）。IT5 の S31 経路設計ワークベンチ
+* **Creation**: [ADR-0008 予約の修正内容は投影として持つ](/adr/cargo-tracker/0008-cargo-revision-as-a-projection.md) を作成（claude-code/claude-opus-5）。IT4 の「履歴テーブルは作らない」判断を改めた
+* **Creation**: [ADR-0007 経路探索の打ち切り](/adr/cargo-tracker/0007-route-search-cutoff.md) を作成（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）。`cargo_revision`・`cargo_leg`・航海のキャンセル 3 列
+* **Update**: [ADR-0006 Gateway でのロール認可](/adr/cargo-tracker/0006-role-authorization-at-the-gateway.md) に決定 7（読み取りに POST を使う経路）を追記（claude-code/claude-opus-5）
+* **Creation**: [iteration_plan-5](/development/cargo-tracker/iteration_plan-5.md) を作成（claude-code/claude-opus-5）
+* **Update**: [architecture_frontend](/design/cargo-tracker/architecture_frontend.md) を更新（claude-code/claude-opus-5）
+* **Update**: [architecture_backend](/design/cargo-tracker/architecture_backend.md) を更新（claude-code/claude-opus-5）
+* **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+* **Creation**: [release_report-0_1_0](/development/cargo-tracker/release_report-0_1_0.md) を作成（claude-code/claude-opus-5）
+* **Creation**: [iteration_report-4](/development/cargo-tracker/iteration_report-4.md) を作成（claude-code/claude-opus-5）
+* **Creation**: [retrospective-4](/development/cargo-tracker/retrospective-4.md) を作成（claude-code/claude-opus-5）
+* **Creation**: [IT4実装_review_20260905](/review/cargo-tracker/IT4実装_review_20260905.md) を作成（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-4](/development/cargo-tracker/iteration_plan-4.md) を更新（claude-code/claude-opus-5）
+* **Update**: [05-貨物予約を登録する](/manual/05-貨物予約を登録する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [07-航海スケジュールを登録する](/manual/07-航海スケジュールを登録する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [08-経路設計に引き渡す](/manual/08-経路設計に引き渡す.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+
+## 2026-09-04
+* **Update**: [iteration_plan-4](/development/cargo-tracker/iteration_plan-4.md) を更新（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-3](/development/cargo-tracker/iteration_plan-3.md) を更新（claude-code/claude-opus-5）
+* **Update**: [development_strategy](/development/cargo-tracker/development_strategy.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+* **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Creation**: [iteration_plan-4](/development/cargo-tracker/iteration_plan-4.md) を作成（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-3](/development/cargo-tracker/iteration_plan-3.md) を更新（claude-code/claude-opus-5）
+* **Update**: [development_strategy](/development/cargo-tracker/development_strategy.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+* **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [20260904](/journal/cargo-tracker/20260904.md) を更新（claude-code/claude-opus-5）
+* **Update**: [07-航海スケジュールを登録する](/manual/07-航海スケジュールを登録する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-3](/development/cargo-tracker/iteration_plan-3.md) を更新（claude-code/claude-opus-5）
+* **Update**: [07-航海スケジュールを登録する](/manual/07-航海スケジュールを登録する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-3](/development/cargo-tracker/iteration_plan-3.md) を更新（claude-code/claude-opus-5）
+* **Update**: [retrospective-3](/development/cargo-tracker/retrospective-3.md) を更新（claude-code/claude-opus-5）
+* **Creation**: [iteration_report-3](/development/cargo-tracker/iteration_report-3.md) を作成（claude-code/claude-opus-5）
+* **Creation**: [retrospective-3](/development/cargo-tracker/retrospective-3.md) を作成（claude-code/claude-opus-5）
+* **Creation**: [IT3実装_review_20260904](/review/cargo-tracker/IT3実装_review_20260904.md) を作成（claude-code/claude-opus-5）
+* **Update**: [user_story](/requirements/user_story.md) を更新（claude-code/claude-opus-5）
+* **Update**: [08-経路設計に引き渡す](/manual/08-経路設計に引き渡す.md) を更新（claude-code/claude-opus-5）
+* **Update**: [07-航海スケジュールを登録する](/manual/07-航海スケジュールを登録する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [05-貨物予約を登録する](/manual/05-貨物予約を登録する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-3](/development/cargo-tracker/iteration_plan-3.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+* **Update**: [architecture_frontend](/design/cargo-tracker/architecture_frontend.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0006-role-authorization-at-the-gateway](/adr/cargo-tracker/0006-role-authorization-at-the-gateway.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0005-flyway-locations-per-service](/adr/cargo-tracker/0005-flyway-locations-per-service.md) を更新（claude-code/claude-opus-5）
+* **Update**: [user_story](/requirements/user_story.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [architecture_backend](/design/cargo-tracker/architecture_backend.md) を更新（claude-code/claude-opus-5）
+* **Creation**: [0006-role-authorization-at-the-gateway](/adr/cargo-tracker/0006-role-authorization-at-the-gateway.md) を作成（claude-code/claude-opus-5）
+* **Update**: [0005-flyway-locations-per-service](/adr/cargo-tracker/0005-flyway-locations-per-service.md) を更新（claude-code/claude-opus-5）
+* **Update**: [user_story](/requirements/user_story.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Creation**: [0005-flyway-locations-per-service](/adr/cargo-tracker/0005-flyway-locations-per-service.md) を作成（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-3](/development/cargo-tracker/iteration_plan-3.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-3](/development/cargo-tracker/iteration_plan-3.md) を更新（claude-code/claude-opus-5）
+* **Creation**: [08-経路設計に引き渡す](/manual/08-経路設計に引き渡す.md) を作成（claude-code/claude-opus-5）
+* **Creation**: [07-航海スケジュールを登録する](/manual/07-航海スケジュールを登録する.md) を作成（claude-code/claude-opus-5）
+* **Update**: [05-貨物予約を登録する](/manual/05-貨物予約を登録する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [00-はじめに](/manual/00-はじめに.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-3](/development/cargo-tracker/iteration_plan-3.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+* **Update**: [user_story](/requirements/user_story.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-3](/development/cargo-tracker/iteration_plan-3.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+* **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [user_story](/requirements/user_story.md) を更新（claude-code/claude-opus-5）
+* **Update**: [system_usecase](/requirements/system_usecase.md) を更新（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-3](/development/cargo-tracker/iteration_plan-3.md) を更新（claude-code/claude-opus-5）
+* **Verification**: [iteration_plan-3](/development/cargo-tracker/iteration_plan-3.md) を human:kakimomokuri が検証
+* **Update**: [iteration_plan-3](/development/cargo-tracker/iteration_plan-3.md) を更新（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_report-2](/development/cargo-tracker/iteration_report-2.md) を更新（claude-code/claude-opus-5）
+* **Creation**: [IT2実装_review_20260904](/review/cargo-tracker/IT2実装_review_20260904.md) を作成（claude-code/claude-opus-5）
+* **Update**: [retrospective-2](/development/cargo-tracker/retrospective-2.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_report-2](/development/cargo-tracker/iteration_report-2.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-2](/development/cargo-tracker/iteration_plan-2.md) を更新（claude-code/claude-opus-5）
+* **Update**: [06-利用者を管理する](/manual/06-利用者を管理する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [05-貨物予約を登録する](/manual/05-貨物予約を登録する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [02-ログインとログアウト](/manual/02-ログインとログアウト.md) を更新（claude-code/claude-opus-5）
+* **Update**: [00-はじめに](/manual/00-はじめに.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+* **Creation**: [20260904](/journal/cargo-tracker/20260904.md) を作成（claude-code/claude-opus-5）
+* **Update**: [retrospective-2](/development/cargo-tracker/retrospective-2.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_report-2](/development/cargo-tracker/iteration_report-2.md) を更新（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-2](/development/cargo-tracker/iteration_plan-2.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0001-cqrs-es-with-axon-in-microservices](/adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) を更新（claude-code/claude-opus-5）
+* **Creation**: [retrospective-2](/development/cargo-tracker/retrospective-2.md) を作成（claude-code/claude-opus-5）
+* **Creation**: [iteration_report-2](/development/cargo-tracker/iteration_report-2.md) を作成（claude-code/claude-opus-5）
+* **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-2](/development/cargo-tracker/iteration_plan-2.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0001-cqrs-es-with-axon-in-microservices](/adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) を更新（claude-code/claude-opus-5）
+* **Creation**: [IT2実装_review_20260904](/review/cargo-tracker/IT2実装_review_20260904.md) を作成（claude-code/claude-opus-5）
+* **Update**: [05-貨物予約を登録する](/manual/05-貨物予約を登録する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0001-cqrs-es-with-axon-in-microservices](/adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-2](/development/cargo-tracker/iteration_plan-2.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-2](/development/cargo-tracker/iteration_plan-2.md) を更新（claude-code/claude-opus-5）
+* **Update**: [operation](/design/cargo-tracker/operation.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-2](/development/cargo-tracker/iteration_plan-2.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-2](/development/cargo-tracker/iteration_plan-2.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0001-cqrs-es-with-axon-in-microservices](/adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) を更新（claude-code/claude-opus-5）
+
+## 2026-09-03
+* **Update**: [iteration_plan-2](/development/cargo-tracker/iteration_plan-2.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0001-cqrs-es-with-axon-in-microservices](/adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-2](/development/cargo-tracker/iteration_plan-2.md) を更新（claude-code/claude-opus-5）
+* **Creation**: [06-利用者を管理する](/manual/06-利用者を管理する.md) を作成（claude-code/claude-opus-5）
+* **Creation**: [05-貨物予約を登録する](/manual/05-貨物予約を登録する.md) を作成（claude-code/claude-opus-5）
+* **Update**: [04-要確認一覧を確認する](/manual/04-要確認一覧を確認する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [03-荷主を登録する](/manual/03-荷主を登録する.md) を更新（claude-code/claude-opus-5）
+* **Update**: [02-ログインとログアウト](/manual/02-ログインとログアウト.md) を更新（claude-code/claude-opus-5）
+* **Update**: [01-業務フロー](/manual/01-業務フロー.md) を更新（claude-code/claude-opus-5）
+* **Update**: [user_story](/requirements/user_story.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-2](/development/cargo-tracker/iteration_plan-2.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0003-crypto-shredding-for-personal-data](/adr/cargo-tracker/0003-crypto-shredding-for-personal-data.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-2](/development/cargo-tracker/iteration_plan-2.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0001-cqrs-es-with-axon-in-microservices](/adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0003-crypto-shredding-for-personal-data](/adr/cargo-tracker/0003-crypto-shredding-for-personal-data.md) を更新（claude-code/claude-opus-5）
+* **Update**: [user_story](/requirements/user_story.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-2](/development/cargo-tracker/iteration_plan-2.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-2](/development/cargo-tracker/iteration_plan-2.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+* **Update**: [operation](/design/cargo-tracker/operation.md) を更新（claude-code/claude-opus-5）
+* **Update**: [non_functional](/design/cargo-tracker/non_functional.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0001-cqrs-es-with-axon-in-microservices](/adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) を更新（claude-code/claude-opus-5）
+* **Verification**: [iteration_plan-2](/development/cargo-tracker/iteration_plan-2.md) を human:kakimomokuri が検証
+* **Creation**: [イテレーション計画 2](/development/cargo-tracker/iteration_plan-2.md) を新規作成。US31・US03・US04（9 SP）と IT1 返済枠 9 件。検証で 7 件の不整合を修正（claude-code/claude-opus-5）
+* **Update**: [開発戦略](/development/cargo-tracker/development_strategy.md) の序盤完了条件と骨格から「全ルートのプレースホルダ」を外し、画面はストーリーの IT でナビと対に足す方針へ改めた（claude-code/claude-opus-5）
+* **Update**: [リリース計画](/development/cargo-tracker/release_plan.md) の進捗表に IT2「計画済み」を追加（claude-code/claude-opus-5）
+* **Creation**: [イテレーション 1 完了報告書](/development/cargo-tracker/iteration_report-1.md) を新規作成。IT1 の実績 9 SP・達成率 100%、品質指標、未達 5 件と技術的負債 3 件（claude-code/claude-opus-5）
+* **Creation**: [イテレーション 1 ふりかえり](/development/cargo-tracker/retrospective-1.md) を新規作成。KPT。検査が空振りしていた 4 件と、落とす順序が実態と合わなかったこと（claude-code/claude-opus-5）
+* **Creation**: [IT1 実装レビュー（2026-09-03）](/review/cargo-tracker/IT1実装_review_20260903.md) を新規作成。5 視点・高 4 / 中 6 / 低 3（claude-code/claude-opus-5）
+* **Creation**: [ドキュメント環境セットアップ手順書](/operation/cargo-tracker/ドキュメント環境セットアップ手順書.md) を新規作成。MkDocs・マニュアル・JIG・ER 図とドキュメントポータルの構築手順（claude-code/claude-opus-5）
+* **Update**: [イテレーション計画 1](/development/cargo-tracker/iteration_plan-1.md) をクローズの実績で更新。タスクの状態・成功基準・DoD を訂正し、未達を明記（claude-code/claude-opus-5）
+* **Update**: [リリース計画](/development/cargo-tracker/release_plan.md) の進捗状況に IT1 の実績（9 SP・100%）と持ち越し 5 件を記録（claude-code/claude-opus-5）
+* **Update**: [ユーザーマニュアル 01 業務フロー](/manual/01-業務フロー.md) を要件定義の 4 業務から書き起こし、いま使える範囲を表にした（claude-code/claude-opus-5）
+* **Update**: [アプリケーション開発環境セットアップ手順書](/operation/cargo-tracker/アプリケーション開発環境セットアップ手順書.md) を更新（claude-code/claude-opus-5）
+* **Update**: [architecture_backend](/design/cargo-tracker/architecture_backend.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0001-cqrs-es-with-axon-in-microservices](/adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) を更新（claude-code/claude-opus-5）
+
+## 2026-09-02
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [operation](/design/cargo-tracker/operation.md) を更新（claude-code/claude-opus-5）
+* **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0001-cqrs-es-with-axon-in-microservices](/adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) を更新（claude-code/claude-opus-5）
+* **Update**: [operation](/design/cargo-tracker/operation.md) を更新（claude-code/claude-opus-5）
+* **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0001-cqrs-es-with-axon-in-microservices](/adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) を更新（claude-code/claude-opus-5）
+* **Update**: [tech_stack](/design/cargo-tracker/tech_stack.md) を更新（claude-code/claude-opus-5）
+* **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0001-cqrs-es-with-axon-in-microservices](/adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-1](/development/cargo-tracker/iteration_plan-1.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-1](/development/cargo-tracker/iteration_plan-1.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-1](/development/cargo-tracker/iteration_plan-1.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-1](/development/cargo-tracker/iteration_plan-1.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-1](/development/cargo-tracker/iteration_plan-1.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-1](/development/cargo-tracker/iteration_plan-1.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-1](/development/cargo-tracker/iteration_plan-1.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-1](/development/cargo-tracker/iteration_plan-1.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-1](/development/cargo-tracker/iteration_plan-1.md) を更新（claude-code/claude-opus-5）
+* **Update**: [tech_stack](/design/cargo-tracker/tech_stack.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-1](/development/cargo-tracker/iteration_plan-1.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-1](/development/cargo-tracker/iteration_plan-1.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-1](/development/cargo-tracker/iteration_plan-1.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-1](/development/cargo-tracker/iteration_plan-1.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-1](/development/cargo-tracker/iteration_plan-1.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-1](/development/cargo-tracker/iteration_plan-1.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0001-cqrs-es-with-axon-in-microservices](/adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-1](/development/cargo-tracker/iteration_plan-1.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-1](/development/cargo-tracker/iteration_plan-1.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-1](/development/cargo-tracker/iteration_plan-1.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-1](/development/cargo-tracker/iteration_plan-1.md) を更新（claude-code/claude-opus-5）
+* **Update**: [architecture_backend](/design/cargo-tracker/architecture_backend.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-1](/development/cargo-tracker/iteration_plan-1.md) を更新（claude-code/claude-opus-5）
+* **Update**: [tech_stack](/design/cargo-tracker/tech_stack.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [iteration_plan-1](/development/cargo-tracker/iteration_plan-1.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
+* **Update**: [test_strategy](/design/cargo-tracker/test_strategy.md) を更新（claude-code/claude-opus-5）
+* **Update**: [tech_stack](/design/cargo-tracker/tech_stack.md) を更新（claude-code/claude-opus-5）
+* **Update**: [operation](/design/cargo-tracker/operation.md) を更新（claude-code/claude-opus-5）
+* **Update**: [non_functional](/design/cargo-tracker/non_functional.md) を更新（claude-code/claude-opus-5）
+* **Update**: [domain-model](/design/cargo-tracker/domain-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
+* **Update**: [architecture_infrastructure](/design/cargo-tracker/architecture_infrastructure.md) を更新（claude-code/claude-opus-5）
+* **Update**: [architecture_frontend](/design/cargo-tracker/architecture_frontend.md) を更新（claude-code/claude-opus-5）
+* **Update**: [architecture_backend](/design/cargo-tracker/architecture_backend.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0002-event-store-axon-server-and-postgresql-read-models](/adr/cargo-tracker/0002-event-store-axon-server-and-postgresql-read-models.md) を更新（claude-code/claude-opus-5）
+* **Update**: [0001-cqrs-es-with-axon-in-microservices](/adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) を更新（claude-code/claude-opus-5）
+* **Verification**: [iteration_plan-1](/development/cargo-tracker/iteration_plan-1.md) を human:kakimomokuri が検証
+* **Verification**: [development_strategy](/development/cargo-tracker/development_strategy.md) を human:kakimomokuri が検証
+* **Verification**: [release_plan](/development/cargo-tracker/release_plan.md) を human:kakimomokuri が検証
+* **Verification**: [0001-cqrs-es-with-axon-in-microservices](/adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) を human:kakimomokuri が検証
+* **Verification**: [tech_stack](/design/cargo-tracker/tech_stack.md) を human:kakimomokuri が検証
+* **Verification**: [test_strategy](/design/cargo-tracker/test_strategy.md) を human:kakimomokuri が検証
+* **Update**: Update: バックエンドの受け入れテストに Cucumber を追加。テスト戦略にレベル 5（受け入れテスト・Cucumber / API）を新設し E2E を画面に絞る、技術スタックに Cucumber JVM 7.34 系と REST Assured を追加、ADR-0001 の include 検査に acceptance-tests を追加、開発戦略と IT1 計画のデモ項目の翻訳先を Cucumber と Playwright の 2 つに分けた。
+* **Update**: Update: バックエンドの受け入れテストに Cucumber を追加。テスト戦略にレベル 5（受け入れテスト・Cucumber / API）を新設し E2E を画面に絞る、技術スタックに Cucumber JVM 7.34 系と REST Assured を追加、ADR-0001 の include 検査に acceptance-tests を追加、開発戦略と IT1 計画のデモ項目の翻訳先を Cucumber と Playwright の 2 つに分けた。
+* **Update**: Update: バックエンドの受け入れテストに Cucumber を追加。テスト戦略にレベル 5（受け入れテスト・Cucumber / API）を新設し E2E を画面に絞る、技術スタックに Cucumber JVM 7.34 系と REST Assured を追加、ADR-0001 の include 検査に acceptance-tests を追加、開発戦略と IT1 計画のデモ項目の翻訳先を Cucumber と Playwright の 2 つに分けた。
+* **Update**: Update: バックエンドの受け入れテストに Cucumber を追加。テスト戦略にレベル 5（受け入れテスト・Cucumber / API）を新設し E2E を画面に絞る、技術スタックに Cucumber JVM 7.34 系と REST Assured を追加、ADR-0001 の include 検査に acceptance-tests を追加、開発戦略と IT1 計画のデモ項目の翻訳先を Cucumber と Playwright の 2 つに分けた。
+* **Update**: Update: バックエンドの受け入れテストに Cucumber を追加。テスト戦略にレベル 5（受け入れテスト・Cucumber / API）を新設し E2E を画面に絞る、技術スタックに Cucumber JVM 7.34 系と REST Assured を追加、ADR-0001 の include 検査に acceptance-tests を追加、開発戦略と IT1 計画のデモ項目の翻訳先を Cucumber と Playwright の 2 つに分けた。
+* **Update**: Update: IT1 の開始準備。イテレーション計画に設計 4 図・ストーリー詳細・ナビゲーション整合・ユーザーマニュアル・アクセシビリティの型を追加し、検証で見つかった salt 欠落を「設計への反映が必要な事項」として明記した。
+* **Update**: Update: IT1 の開始準備。イテレーション計画に設計 4 図・ストーリー詳細・ナビゲーション整合・ユーザーマニュアル・アクセシビリティの型を追加し、検証で見つかった salt 欠落を「設計への反映が必要な事項」として明記した。
+* **Update**: Update: IT1 の開始準備。イテレーション計画に設計 4 図・ストーリー詳細・ナビゲーション整合・ユーザーマニュアル・アクセシビリティの型を追加し、検証で見つかった salt 欠落を「設計への反映が必要な事項」として明記した。
+* **Update**: Update: 開発計画の作成にともない索引を同期。
+* **Update**: Update: 開発計画の作成にともない索引を同期。
+* **Update**: Update: 開発計画の作成にともない索引を同期。
+* **Creation**: Creation: cargo-tracker の IT1 計画を新規作成。ウォーキングスケルトンは荷主登録の縦切り、E2E は Day 2 に赤で置く。
+* **Creation**: Creation: cargo-tracker の開発戦略を新規作成。Event Sourcing ではインサイドアウトの起点が集約になること、契約が第 3 の入口になることを明記した。
+* **Creation**: Creation: cargo-tracker のリリース計画を新規作成。15 IT・120 SP・実効ベロシティ 8 SP/IT。
+* **Update**: MkDocs のビルドで確認したところ、[UI 設計](/design/cargo-tracker/ui_design.md) の日本語見出しへのアンカーリンク 7 件が解決していなかった（toc が Unicode スラッグを使わない設定のため、見出し ID が `_3` のような連番になる）。他の設計文書と同じく本文で節名を書く形に直した。
+* **Verification**: [設計_review_20260902](/review/cargo-tracker/設計_review_20260902.md) を human:kakimomokuri が検証
+* **Verification**: [0003-crypto-shredding-for-personal-data](/adr/cargo-tracker/0003-crypto-shredding-for-personal-data.md) を human:kakimomokuri が検証
+* **Verification**: [0002-event-store-axon-server-and-postgresql-read-models](/adr/cargo-tracker/0002-event-store-axon-server-and-postgresql-read-models.md) を human:kakimomokuri が検証
+* **Verification**: [0001-cqrs-es-with-axon-in-microservices](/adr/cargo-tracker/0001-cqrs-es-with-axon-in-microservices.md) を human:kakimomokuri が検証
+* **Verification**: [ui_design](/design/cargo-tracker/ui_design.md) を human:kakimomokuri が検証
+* **Verification**: [test_strategy](/design/cargo-tracker/test_strategy.md) を human:kakimomokuri が検証
+* **Verification**: [tech_stack](/design/cargo-tracker/tech_stack.md) を human:kakimomokuri が検証
+* **Verification**: [operation](/design/cargo-tracker/operation.md) を human:kakimomokuri が検証
+* **Verification**: [non_functional](/design/cargo-tracker/non_functional.md) を human:kakimomokuri が検証
+* **Verification**: [domain-model](/design/cargo-tracker/domain-model.md) を human:kakimomokuri が検証
+* **Verification**: [data-model](/design/cargo-tracker/data-model.md) を human:kakimomokuri が検証
+* **Verification**: [architecture_infrastructure](/design/cargo-tracker/architecture_infrastructure.md) を human:kakimomokuri が検証
+* **Verification**: [architecture_frontend](/design/cargo-tracker/architecture_frontend.md) を human:kakimomokuri が検証
+* **Verification**: [architecture_backend](/design/cargo-tracker/architecture_backend.md) を human:kakimomokuri が検証
+* **Update**: 設計レビュー（2026-09-02）の高 17・中 24・低 8 件を設計 10 件と ADR-0001/0002 に反映。集約の登録 API を take-4 ADR-0008 の @EventSourced に訂正、DCB 有効化、Reaction Handler の導入、契約イベント 11 本、Processing Group 名の統一、要確認一覧 attention_item、荷役の航海番号起点と港のローカル時刻、キャンセル承認後の陸揚げまで追跡を開く、見積と請求の差額表示、テストの判別力の修正。
+* **Creation**: Creation: ADR-0003 個人情報の crypto-shredding（設計レビュー H4 の対応）。
+* **Creation**: Creation: cargo-tracker の設計レビュー（2026-09-02）。XP エージェント 5 名の並列レビューを統合。高 20 件のうち 17 件を修正、通知の送信基盤はスコープ外と明記、段階導入計画は次工程へ引き渡す。
+* **Creation**: Creation: cargo-tracker の技術スタックを新規作成（stale_after 90 日）。Axon 系のバージョン同期と Axon Server 2026.0.4 を正典とした。
+* **Creation**: Creation: cargo-tracker の運用要件を新規作成。リプレイを障害対応でなく日常操作に置き直し、四半期の復元演習と crypto-shredding の手順を加えた。
+* **Creation**: Creation: cargo-tracker の非機能要件を新規作成。反映の遅れを SLO に置き、Axon Server SE の停止を可用性の前提として明記し、イベントが削除できない前提で個人情報の削除要件を定めた。
+* **Creation**: Creation: cargo-tracker のテスト戦略を新規作成。投影をプロファイルで除外せず Testcontainers の Axon Server で確かめ、契約は両側のゴールデン JSON と往復で守り、名簿は載っていないものを通さない形にした。
+* **Creation**: Creation: cargo-tracker の UI 設計を新規作成。反映中・楽観的更新・409 の扱いを画面共通の規約にし、要確認一覧（反映の拒否・失敗した Saga）を画面として置いた。
+* **Creation**: Creation: cargo-tracker のインフラストラクチャアーキテクチャを新規作成。Axon Server を無効化する開発環境（Heroku）は採らず、結合テストは Testcontainers とステージングで行う。
+* **Creation**: Creation: cargo-tracker のフロントエンドアーキテクチャを新規作成。結果整合性を隠さず 202 + 後追い確認を既定にした。
+* **Creation**: Creation: cargo-tracker のデータモデル設計を新規作成。投影テーブルは派生データとして業務 CHECK を置かず、一意制約は投影を最後の砦とし、履歴テーブルはイベント列に置き換える方針で 6 DB を定義した。
+* **Creation**: Creation: cargo-tracker のドメインモデル設計を新規作成。take-4 の Axon 5 前提モデルに java-3 の UC21 通関・UC22 キャンセル承認・US28 誤配・US31 アカウント保護を取り込み、内部イベントと契約イベントを分けて定義した。
+* **Creation**: ADR-0002 Event Store は Axon Server SE、Read Model は PostgreSQL + MyBatis にする。
+* **Update**: ユーザーの指示により配置をモジュラーモノリスからマイクロサービス（7 サービス + Gateway + shared）に変更。バックエンドアーキテクチャ・ADR-0001（改名）・ADR-0002 を改訂。サービス間の同期問い合わせは REST でなく Axon Query Bus を通す。
+* **Creation**: ADR-0001 CQRS / Event Sourcing を Axon Framework 5 でモジュラーモノリスとして実装する（同日マイクロサービスに改訂）。
+* **Creation**: cargo-tracker のバックエンドアーキテクチャ（Axon Framework 5 による CQRS / Event Sourcing 版）を新規作成。tmp/take-4 と source/java-3 の設計を参照元とし、プロセス境界は第 3 章のモジュラーモノリスに戻して永続化と読み書きの分離だけを変える。
+* **Creation**: [エンタープライズ Java における実践的 DDD（draft-2）](/article/practical-ddd-in-enterprise-java/draft-2/index.md) の第 4 章「プロセスを越えるイベント — マイクロサービス版の Cargo Tracker」を執筆。参照元は新たに収録した `source/java-3`（`java/take-7`。8 サービス + 共有ライブラリ・RabbitMQ）。索引・アウトライン（§4〜§7）・第 3 章末尾の誘導もあわせて更新した。
+* **Creation**: 第 4 章の参照元として `docs/article/source/java-3/` を収録（実装 1,186 ファイル・一次資料 199 ファイル）。アウトライン §5 の着手条件「メッセージングを使う実装が `docs/article/source/` に収録されること」を満たすため。`source/README.md` に節を追加した。
+* **Creation**: [Docker/Kubernetes 実践コンテナ解説](/article/getting-start-docker-kubernetes/index.md) と [実践データベース設計](/article/practical-database-design/index.md) のシリーズ索引を新規作成。各章から張られていたリンク切れ 13 件を解消した。
+* **Migration**: 前回移行以降に追加された 104 件を OKF v0.2 に適合させた。記事 97 件（practical-ddd-spring-boot 23・ai-driven-development 15・xp-domain-driven-design 14・monolith-architecture 12・enterprise-architecture 12・practical-ddd-in-enterprise-java 11・functional-domain-modeling 10）に `type: Article` を、[ビジネスアーキテクチャ](/strategy/business_architecture.md)・[インセプションデッキ](/strategy/inception-deck.md) に `type: Strategy` を付与。requirements 4 件と review 1 件は Wiki.js 由来のフロントマター（`published`・`editor`・`date`）を OKF 形式に併合し、`type: Requirements` / `type: Review` を与えた。本文は変更していない。
+* **Update**: 検査・移行の対象外パスを宣言する `docs/.okfignore` を追加し、`article/source/` を除外した。mkdocs.yml の `exclude_docs` と対応する。配下は記事のサンプル実装ソースツリーで、入れ子の docs やサードパーティ由来の README を含むため知識バンドルの対象にしない。`okf_check.py` に `.okfignore` 対応を追加した。
+
+## 2026-08-26
+* **Verification**: [ドキュメント構成ガイド](/reference/ドキュメント構成ガイド.md) を human:kakimomokuri が検証
+* **Update**: ドキュメント構成ガイドを更新。docs/review を共通からプロジェクト別カテゴリに変更（プロジェクト別は 7 カテゴリに）。
+* **Creation**: ドキュメント構成ガイドを新規作成。単一企業・統合戦略・複数プロジェクトのコンセプトと apps/ との対応規約を定義。
+
+## 2026-08-25
+* **Update**: リンク切れ 53 件を修正。`grokking-concurrency` のサンプルコード参照をインラインコード表記に統一、`functional-desgin-ppp/elixir` の目次 6〜10 章を実際の章構成に合わせて書き直し、[Codex CLI MCP アプリケーション開発フロー](/reference/CodexCLIMCPアプリケーション開発フロー.md) の関連ドキュメントを実在ガイドに付け替え、未執筆の付録は「未作成」と明記。`template/まずこれを読もうリスト.md` の 10 件はコピー先基準のパスのため据え置き。
+* **Migration**: `docs/` を OKF v0.2 の知識バンドルに移行。601 件のコンセプト（Article 552 件・Reference 31 件・Template 18 件）に `type`・`title`・`description`・`tags`・`generated` を付与し、ルート `index.md` に `okf_version: "0.2"` を宣言。本文は変更していない。Wiki.js 由来のフロントマターは OKF 形式に併合した。

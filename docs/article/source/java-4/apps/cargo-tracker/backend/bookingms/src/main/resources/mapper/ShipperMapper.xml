@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.booking.infrastructure.persistence.ShipperMapper">
+
+    <resultMap id="shipperRow"
+               type="com.example.cargotracker.booking.infrastructure.persistence.ShipperMapper$ShipperRow">
+        <constructor>
+            <idArg column="shipper_id" javaType="string"/>
+            <arg column="shipper_code" javaType="string"/>
+            <arg column="shipper_type" javaType="string"/>
+            <arg column="name" javaType="string"/>
+            <arg column="email" javaType="string"/>
+            <arg column="phone" javaType="string"/>
+            <arg column="address" javaType="string"/>
+            <arg column="country_code" javaType="string"/>
+            <arg column="contract_number" javaType="string"/>
+            <arg column="discount_rate" javaType="java.math.BigDecimal"/>
+            <arg column="registered_at" javaType="java.time.Instant"/>
+            <arg column="projected_at" javaType="java.time.Instant"/>
+            <arg column="last_event_id" javaType="string"/>
+            <!-- **列は位置で対応する。** record の末尾に足したので、ここも末尾。 -->
+            <arg column="simulated" javaType="_boolean"/>
+        </constructor>
+    </resultMap>
+
+    <insert id="insert">
+        INSERT INTO shipper (shipper_id, shipper_code, shipper_type, name, email, phone, address,
+                             country_code, contract_number, discount_rate,
+                             registered_at, projected_at, last_event_id, simulated)
+        VALUES (#{shipperId}, #{shipperCode}, #{shipperType}, #{name}, #{email}, #{phone}, #{address},
+                #{countryCode}, #{contractNumber}, #{discountRate},
+                #{registeredAt}, #{projectedAt}, #{lastEventId}, #{simulated})
+        -- 一意制約を例外にしない。PostgreSQL は制約違反でトランザクションを
+        -- 中断させるので、例外を捕まえても外側（投影 + トークン）が書けなくなり、
+        -- **投影がその 1 件で止まったまま二度と進まない**。0 件で返して、
+        -- 弾いたことは呼び出し側が判断する。
+        ON CONFLICT DO NOTHING
+    </insert>
+
+    <select id="findById" resultMap="shipperRow">
+        SELECT * FROM shipper WHERE shipper_id = #{shipperId}
+    </select>
+
+    <!--
+      名前で絞り込める。絞り込みが無いと、上限を超えた荷主にたどり着けない
+      （一覧は荷主コード順なので、新しく採った荷主ほど後ろに回る）。
+
+      部分一致・大文字小文字を問わない。荷主名は手で打つので完全一致では探せない。
+      鍵破棄後の荷主は name が NULL になるため、絞り込むと出てこない（意図どおり
+      ——名前で探せないものを名前で探させない）。
+    -->
+    <select id="findAll" resultMap="shipperRow">
+        SELECT * FROM shipper
+        <where>
+            <if test="q != null and q != ''">
+                AND lower(name) LIKE lower('%' || #{q} || '%')
+            </if>
+        </where>
+        ORDER BY shipper_code LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countAll" resultType="int">
+        SELECT count(*) FROM shipper
+        <where>
+            <if test="q != null and q != ''">
+                AND lower(name) LIKE lower('%' || #{q} || '%')
+            </if>
+        </where>
+    </select>
+</mapper>

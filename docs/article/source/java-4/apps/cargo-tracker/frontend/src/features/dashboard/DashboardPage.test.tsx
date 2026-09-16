@@ -1,0 +1,482 @@
+import { render, screen, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { DashboardPage } from './DashboardPage';
+import { useAuthStore } from '@/shared/auth/authStore';
+import type { Role } from '@/shared/auth/roles';
+
+function renderAs(roles: readonly Role[]) {
+  useAuthStore.setState({ user: { username: 'u', roles, token: 't' } });
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <DashboardPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
+/**
+ * ダッシュボードは読み口を 3 つ引く。<b>URL で出し分ける。</b>
+ *
+ * <p>1 つの本体を全部の問い合わせに返すと、本物が返さない形で検査が通る。</p>
+ */
+function mockApi(
+  summary: Record<string, number>,
+  conditionReviews: unknown[] = [],
+  awaitingConfirmation: unknown[] = [],
+  awaitingTracking: unknown[] = [],
+  rejectedCancellations: unknown[] = [],
+  pendingCancellations: unknown[] = [],
+) {
+  return vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+    const url = String(input);
+    if (url.includes('/trackings/exceptions')) {
+      // **モックを本物より甘くしない。** サーバは必ず `items` を返す（空でも
+      // 配列）。既定の本体を返すと、画面は `items.length` で落ちる。
+      return Promise.resolve(new Response(JSON.stringify({ items: [] }), { status: 200 }));
+    }
+    if (url.includes('/bookings/cancellations') && !url.includes('/rejected')) {
+      return Promise.resolve(
+        new Response(JSON.stringify({ items: pendingCancellations }), { status: 200 }));
+    }
+    if (url.includes('/cancellations/rejected')) {
+      return Promise.resolve(
+        new Response(JSON.stringify({ items: rejectedCancellations }), { status: 200 }));
+    }
+    if (url.includes('/condition-reviews')) {
+      return Promise.resolve(
+        new Response(JSON.stringify({ items: conditionReviews }), { status: 200 }));
+    }
+    if (url.includes('/awaiting-confirmation')) {
+      return Promise.resolve(
+        new Response(JSON.stringify({ items: awaitingConfirmation }), { status: 200 }));
+    }
+    if (url.includes('/handling/voyages')) {
+      return Promise.resolve(new Response(JSON.stringify({
+        items: [{ voyageNumber: 'V-MOL-001', unLocode: 'SGSIN', cargoCount: 12 }],
+      }), { status: 200 }));
+    }
+    if (url.includes('/recently-changed')) {
+      return Promise.resolve(new Response(JSON.stringify({
+        count: 3, withinHours: 24,
+      }), { status: 200 }));
+    }
+    if (url.includes('/customs-declarations')) {
+      // 通関の督促（US29 §受入基準 6）。既定は 0 件で、必要なテストだけ差し替える。
+      return Promise.resolve(new Response(JSON.stringify({ items: [], total: 0 }),
+        { status: 200 }));
+    }
+    if (url.includes('/awaiting-tracking-number')) {
+      return Promise.resolve(
+        new Response(JSON.stringify({ items: awaitingTracking }), { status: 200 }));
+    }
+    return Promise.resolve(new Response(JSON.stringify(summary), { status: 200 }));
+  });
+}
+
+const AWAITING = [
+  {
+    bookingId: 'b-9',
+    bookingNumber: 'B-2026-0903-0009',
+    notifiedAt: '2026-09-07T00:00:00Z',
+  },
+];
+
+beforeEach(() => {
+  mockApi({ preliminary: 3, routingWorklist: 5, awaitingNotification: 2 });
+});
+afterEach(() => vi.restoreAllMocks());
+
+describe('S02 ダッシュボード', () => {
+  it('営業には引き渡していない予約の件数と、そこから行ける導線を出す', async () => {
+    // US04 §受入基準 5 の通知は送信基盤がスコープ外。担当者はここで気づく。
+    // 引き渡すのは営業の仕事（US06）なので、件数は営業に出す。
+    renderAs(['ROLE_SALES']);
+
+    const notice = await screen.findByText(/経路設計者へ引き渡していない予約が 3 件/);
+    // 知らせの中から直接行けること。「今日の作業」の一覧にもリンクはあるが、
+    // 件数を読んだその場から行けなければ、気づきが次の行動に繋がらない。
+    const link = within(notice.closest('output') as HTMLElement)
+      .getByRole('link', { name: '予約一覧' });
+    expect(link).toHaveAttribute('href', '/bookings');
+  });
+
+  it('経路設計には設計を待っている件数と、作業一覧への導線を出す', async () => {
+    // 経路設計者に「引き渡していない予約」を出しても、その件数に対して
+    // 打てる手が無い（引き渡すのは営業）。自分の作業の件数を出す。
+    renderAs(['ROLE_ROUTING']);
+
+    const notice = await screen.findByText(/経路設計を待っている予約が 5 件/);
+    const link = within(notice.closest('output') as HTMLElement)
+      .getByRole('link', { name: '経路設計作業一覧' });
+    expect(link).toHaveAttribute('href', '/routing/worklist');
+  });
+
+  it('経路設計に、引き渡していない予約の件数は出さない', async () => {
+    renderAs(['ROLE_ROUTING']);
+    await screen.findByRole('heading', { name: '今日の作業' });
+
+    expect(screen.queryByText(/引き渡していない予約が/)).not.toBeInTheDocument();
+  });
+
+  it('0 件のときは知らせない', async () => {
+    mockApi({ preliminary: 0, routingWorklist: 0, awaitingNotification: 0 });
+
+    renderAs(['ROLE_ROUTING', 'ROLE_SALES']);
+    await screen.findByRole('heading', { name: '今日の作業' });
+
+    // 0 件を強調すると、毎朝「0 件」を読み飛ばす習慣がついて、件数が出た日も見落とす。
+    expect(screen.queryByText(/件あります/)).not.toBeInTheDocument();
+  });
+
+  it('どちらのロールでもない利用者には件数を出さない', async () => {
+    renderAs(['ROLE_TRACKER']);
+    await screen.findByRole('heading', { name: '今日の作業' });
+
+    expect(screen.queryByText(/件あります/)).not.toBeInTheDocument();
+  });
+
+  it('US10 §4: 営業には見直しを頼まれた予約が理由つきで出て、そこから行ける', async () => {
+    // 打てる手を持つのは営業（荷主と条件を協議する）。件数だけでは、何を協議
+    // すればよいのか分からない。
+    mockApi({ preliminary: 0, routingWorklist: 0 }, [
+      {
+        bookingId: 'b-9',
+        bookingNumber: 'B-2026-0903-0009',
+        reason: '期限内に着ける便がありません',
+        requestedAt: '2026-09-06T00:00:00Z',
+      },
+    ]);
+
+    renderAs(['ROLE_SALES']);
+
+    const row = await screen.findByTestId('condition-review-b-9');
+    expect(row).toHaveTextContent('期限内に着ける便がありません');
+    expect(within(row).getByRole('link', { name: 'B-2026-0903-0009' }))
+      .toHaveAttribute('href', '/bookings/b-9');
+  });
+
+  it('US30 §4: 追跡管理者には承認待ちの件数が出て、そこから一覧へ行ける', async () => {
+    // **件数はその人の仕事に合わせる。** 陸揚げ地を決められるのは追跡管理者
+    // だけで、営業には打つ手が無い（IT15 のレビュー 高——この件数を丸ごと
+    // 削っても全テストが緑だった）。
+    mockApi({ preliminary: 0, routingWorklist: 0 }, [], [], [], [], [
+      { requestId: 'cr-1', bookingId: 'b-7' },
+      { requestId: 'cr-2', bookingId: 'b-8' },
+    ]);
+
+    renderAs(['ROLE_TRACKER']);
+
+    const notice = await screen.findByText(/承認待ちのキャンセル申請が 2 件あります/);
+    expect(within(notice).getByRole('link', { name: 'キャンセル承認' }))
+      .toHaveAttribute('href', '/bookings/cancellations');
+  });
+
+  it('US30 §4: 営業には承認待ちの件数を出さない（打てる手が無い）', async () => {
+    mockApi({ preliminary: 0, routingWorklist: 0 }, [], [], [], [], [
+      { requestId: 'cr-1', bookingId: 'b-7' },
+    ]);
+
+    renderAs(['ROLE_SALES']);
+
+    await screen.findByRole('heading', { name: 'ダッシュボード' });
+    expect(screen.queryByText(/承認待ちのキャンセル申請が/)).not.toBeInTheDocument();
+  });
+
+  it('US30 §7: 営業には却下されたキャンセルが理由つきで出て、そこから行ける', async () => {
+    // **却下は何も変わらない。** 承認なら予約が「キャンセル」になって予約一覧に
+    // 出るが、却下は申請した本人が予約詳細を開き直さない限り誰も気づかない
+    // ——理由を書かせた意味が無くなる（IT15 のレビュー 高）。
+    mockApi({ preliminary: 0, routingWorklist: 0 }, [], [], [], [
+      {
+        requestId: 'cr-1',
+        bookingId: 'b-7',
+        bookingNumber: 'B-2026-0903-0007',
+        productName: '精密機器',
+        reason: '荷主の発注取消',
+        requestedBy: 'sales01',
+        requestedAt: '2026-09-26T00:00:00Z',
+        decision: 'REJECTED',
+        decisionLabel: '却下',
+        decidedBy: 'tracker01',
+        decidedAt: '2026-09-27T00:00:00Z',
+        decisionReason: 'すでに荷受人が手配済みです',
+        dischargeUnLocode: null,
+      },
+    ]);
+
+    renderAs(['ROLE_SALES']);
+
+    const row = await screen.findByTestId('rejected-cancellation-cr-1');
+    expect(row).toHaveTextContent('すでに荷受人が手配済みです');
+    expect(within(row).getByRole('link', { name: 'B-2026-0903-0007' }))
+      .toHaveAttribute('href', '/bookings/b-7');
+  });
+
+  it('US30 §7: 追跡管理者には却下の知らせを出さない（判断した本人）', async () => {
+    mockApi({ preliminary: 0, routingWorklist: 0 }, [], [], [], [
+      {
+        requestId: 'cr-1',
+        bookingId: 'b-7',
+        bookingNumber: 'B-2026-0903-0007',
+        productName: '精密機器',
+        reason: '荷主の発注取消',
+        requestedBy: 'sales01',
+        requestedAt: '2026-09-26T00:00:00Z',
+        decision: 'REJECTED',
+        decisionLabel: '却下',
+        decidedBy: 'tracker01',
+        decidedAt: '2026-09-27T00:00:00Z',
+        decisionReason: 'すでに荷受人が手配済みです',
+        dischargeUnLocode: null,
+      },
+    ]);
+
+    renderAs(['ROLE_TRACKER']);
+
+    await screen.findByRole('heading', { name: 'ダッシュボード' });
+    expect(screen.queryByTestId('rejected-cancellation-cr-1')).not.toBeInTheDocument();
+  });
+
+  it('US10 §4: 経路設計には見直し依頼を出さない（受け皿は S30）', async () => {
+    mockApi({ preliminary: 0, routingWorklist: 0 }, [
+      {
+        bookingId: 'b-9',
+        bookingNumber: 'B-2026-0903-0009',
+        reason: '組めません',
+        requestedAt: '2026-09-06T00:00:00Z',
+      },
+    ]);
+
+    renderAs(['ROLE_ROUTING']);
+    await screen.findByRole('heading', { name: '今日の作業' });
+
+    expect(screen.queryByText(/条件の見直しを頼まれた予約/)).not.toBeInTheDocument();
+  });
+
+  it('US12: 営業には通知していない経路確定済みの予約の件数を出す', async () => {
+    renderAs(['ROLE_SALES']);
+
+    const notice = await screen.findByText(/荷主へ通知していない経路確定済みの予約が 2 件/);
+    expect(within(notice.closest('output') as HTMLElement)
+      .getByRole('link', { name: '予約一覧' })).toHaveAttribute('href', '/bookings');
+  });
+
+  it('US13 §3: 営業には確定を待っている予約の行を出し、そこから予約詳細へ行ける', async () => {
+    // **件数だけでは仕事が進まない。** 通知したまま確定を忘れた予約は、追跡番号の
+    // 発行も輸送手配も始まらない。どの予約を開けばよいかが読めなければならない。
+    mockApi({ preliminary: 0, routingWorklist: 0, awaitingNotification: 0 }, [], AWAITING);
+
+    renderAs(['ROLE_SALES']);
+
+    const row = await screen.findByTestId('awaiting-confirmation-b-9');
+    expect(within(row).getByRole('link', { name: 'B-2026-0903-0009' }))
+      .toHaveAttribute('href', '/bookings/b-9');
+  });
+
+  it('US13 §3: 経路設計には確定待ちを出さない（確定は営業の仕事）', async () => {
+    mockApi({ preliminary: 0, routingWorklist: 0, awaitingNotification: 0 }, [], AWAITING);
+
+    renderAs(['ROLE_ROUTING']);
+    await screen.findByRole('heading', { name: '今日の作業' });
+
+    expect(screen.queryByText(/確定していない予約/)).not.toBeInTheDocument();
+  });
+
+  it('US14: 経路設計には発行待ちの予約の行を出し、そこから予約詳細へ行ける', async () => {
+    // **確定したまま発行を忘れると、荷主は追跡番号を受け取れない。** US13 §3 の
+    // 「経路設計者への通知」は送信基盤がスコープ外なので、この受け皿で代える。
+    mockApi({ preliminary: 0, routingWorklist: 0, awaitingNotification: 0 }, [], [], [
+      { bookingId: 'b-7', bookingNumber: 'B-2026-0903-0007',
+        confirmedAt: '2026-09-08T00:00:00Z' },
+    ]);
+
+    renderAs(['ROLE_ROUTING']);
+
+    const row = await screen.findByTestId('awaiting-tracking-b-7');
+    expect(within(row).getByRole('link', { name: 'B-2026-0903-0007' }))
+      .toHaveAttribute('href', '/bookings/b-7');
+  });
+
+  it('US14: 営業には発行待ちを出さない（発行は経路設計者の仕事）', async () => {
+    mockApi({ preliminary: 0, routingWorklist: 0, awaitingNotification: 0 }, [], [], [
+      { bookingId: 'b-7', bookingNumber: 'B-2026-0903-0007',
+        confirmedAt: '2026-09-08T00:00:00Z' },
+    ]);
+
+    renderAs(['ROLE_SALES']);
+    await screen.findByRole('heading', { name: '今日の作業' });
+
+    expect(screen.queryByText(/追跡番号の発行を待っている/)).not.toBeInTheDocument();
+  });
+
+  it('US12: 経路設計には通知していない件数を出さない（通知は営業の仕事）', async () => {
+    renderAs(['ROLE_ROUTING']);
+    await screen.findByRole('heading', { name: '今日の作業' });
+
+    expect(screen.queryByText(/荷主へ通知していない/)).not.toBeInTheDocument();
+  });
+
+  it('荷役には作業のある航海を出し、その航海の画面へ直接繋ぐ（IT9）', async () => {
+    // **件数だけでは仕事が進まない。** 追跡番号は現場が持っていないので、
+    // 航海と港から入れないと画面が始まらない。
+    renderAs(['ROLE_HANDLER']);
+
+    const link = await screen.findByRole('link', { name: /V-MOL-001/ });
+    expect(link).toHaveAttribute('href', '/handling/voyages/V-MOL-001?unLocode=SGSIN');
+    expect(link).toHaveTextContent('予定 12 本');
+  });
+
+  it('荷主には「変わったこと」を知らせ、一覧へ繋ぐ（IT9 / US17 §4 の代わり）', async () => {
+    // 荷主には通知が届かない（送信基盤はスコープ外）。一覧を毎回見比べるしかなかった。
+    renderAs(['ROLE_SHIPPER']);
+
+    expect(await screen.findByText(/3 件の貨物の状態が変わりました/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '追跡一覧で確かめる' }))
+      .toHaveAttribute('href', '/tracking');
+  });
+
+  it('荷役以外に作業のある航海は出さない（その人の仕事ではない）', async () => {
+    renderAs(['ROLE_SALES']);
+
+    await screen.findByText('今日の作業');
+    expect(screen.queryByText('作業のある航海')).not.toBeInTheDocument();
+  });
+  it('US29 §6: 追跡管理者には留置 3 営業日超の件数が出て、そこから行ける', async () => {
+    // **件数だけでは進まない。** どの申告に督促すればよいかは一覧が持つ。
+    // **判定はサーバが持つ**——画面で数えると一覧と件数が食い違う。
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      const url = String(input);
+      if (url.includes('/customs-declarations')) {
+        return Promise.resolve(new Response(JSON.stringify({
+          items: [{ declarationNumber: 'IMP-1' }], total: 1,
+        }), { status: 200 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ items: [] }), { status: 200 }));
+    });
+
+    renderAs(['ROLE_TRACKER']);
+
+    expect(await screen.findByText(/留置が 3 営業日を超えた通関申告が 1 件あります/))
+      .toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '通関申告一覧' }))
+      .toHaveAttribute('href', '/customs?overdueOnly=true');
+  });
+
+  it('自分宛の要確認の件数が出て、そこから要確認一覧へ行ける（IT13 引き継ぎ E）', async () => {
+    // **気づく手段は次の行動へ繋ぐ。** 要確認は投影が弾いたものや止まった連鎖で、
+    // ダッシュボードに出ないと、S70 を自分で開きに行った人しか気づけない。
+    // 宛先の絞り込みはサーバがロールで行うので、ここはロールを問わず同じ形。
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      const url = String(input);
+      if (url.includes('/attention-items')) {
+        return Promise.resolve(new Response(JSON.stringify({
+          // **モックを本物より甘くしない。** サーバは occurredAt を必ず返すので、
+          // 省いたフィクスチャは「本物が返さない形」を通してしまう（実際、
+          // 省いたら並べ替えが落ちて一覧そのものが出なかった）。
+          items: [
+            { itemId: 'i-1', occurredAt: '2026-09-28T01:00:00Z' },
+            { itemId: 'i-2', occurredAt: '2026-09-28T02:00:00Z' },
+          ],
+        }), { status: 200 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ items: [] }), { status: 200 }));
+    });
+
+    renderAs(['ROLE_ACCOUNTANT']);
+
+    // 3 サービスに散っているので、束ねた件数で出す（2 件 × 3 サービス = 6 件）。
+    const notice = await screen.findByText(/確認が必要な項目が 6 件あります/);
+    // **件数を読んだその場から行けること。**「今日の作業」の一覧にもリンクはあるが、
+    // そこまで探させると、気づきが次の行動に繋がらない。
+    expect(within(notice.closest('output') as HTMLElement)
+      .getByRole('link', { name: '要確認一覧' }))
+      .toHaveAttribute('href', '/worklist/attention');
+  });
+
+  it('要確認が無ければ、その案内は出さない', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ items: [] }), { status: 200 }),
+    );
+
+    renderAs(['ROLE_ACCOUNTANT']);
+
+    await screen.findByRole('heading', { name: '今日の作業' });
+    // 0 件の案内は「読むものがある」という合図を薄めるだけである。
+    expect(screen.queryByText(/確認が必要な項目/)).not.toBeInTheDocument();
+  });
+
+  it('US21: 経理には確かめていない請求の件数が出て、そこから請求一覧へ行ける', async () => {
+    // **件数はその人の仕事に合わせる。** 経理は「出てきた請求を確かめる」ところから
+    // 始まる。行けても自分の仕事でなければ進まない。
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      const url = String(input);
+      if (url.includes('/billing/invoices') && !url.includes('overdue=true')) {
+        return Promise.resolve(new Response(JSON.stringify({
+          items: [{ invoiceId: 'INV-20260928-1a2b3c4d' }], total: 1,
+        }), { status: 200 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ items: [] }), { status: 200 }));
+    });
+
+    renderAs(['ROLE_ACCOUNTANT']);
+
+    expect(await screen.findByText(/確かめていない請求が 1 件あります/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '請求一覧' }))
+      .toHaveAttribute('href', '/invoices');
+  });
+
+  it('US23 §5: 経理には未払いの件数が出て、そこから未払いだけの一覧へ行ける', async () => {
+    // **気づく手段は次の行動へ繋ぐ。** 件数だけ出して一覧が全件なら、
+    // どれが未払いかをもう一度自分で探すことになる。
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      const url = String(input);
+      if (url.includes('/billing/invoices') && url.includes('overdue=true')) {
+        return Promise.resolve(new Response(JSON.stringify({
+          items: [{ invoiceId: 'INV-20260928-1a2b3c4d' }], total: 1,
+        }), { status: 200 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ items: [] }), { status: 200 }));
+    });
+
+    renderAs(['ROLE_ACCOUNTANT']);
+
+    expect(await screen.findByText(/支払期限を過ぎた請求が 1 件あります/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '請求一覧' }))
+      .toHaveAttribute('href', '/invoices?overdue=true');
+  });
+
+  it('経理以外に請求の件数を出さない（自分の仕事でないものを並べない）', async () => {
+    renderAs(['ROLE_TRACKER']);
+    await screen.findByRole('heading', { name: '今日の作業' });
+
+    expect(screen.queryByText(/確かめていない請求が/)).not.toBeInTheDocument();
+  });
+
+  it('US01: 営業には見積作成への入口がある（業務の入口は毎日使う）', async () => {
+    // **正典の画面遷移図が S02 → S12 を求めている。** サイドナビにあっても、
+    // 毎朝ここから始める人には「今日の作業」から入れるほうが早い。
+    renderAs(['ROLE_SALES']);
+    await screen.findByRole('heading', { name: '今日の作業' });
+
+    expect(screen.getByRole('link', { name: '見積を作る' }))
+      .toHaveAttribute('href', '/quotations/new');
+  });
+
+  it('営業以外に見積の入口は出さない（自分の仕事でないものを並べない）', async () => {
+    renderAs(['ROLE_ACCOUNTANT']);
+    await screen.findByRole('heading', { name: '今日の作業' });
+
+    expect(screen.queryByRole('link', { name: '見積を作る' })).not.toBeInTheDocument();
+  });
+
+  it('督促の対象が無ければ通関の件数は出さない（0 件の行を並べない）', async () => {
+    renderAs(['ROLE_TRACKER']);
+    await screen.findByRole('heading', { name: '今日の作業' });
+
+    expect(screen.queryByText(/留置が 3 営業日を超えた/)).not.toBeInTheDocument();
+  });
+});

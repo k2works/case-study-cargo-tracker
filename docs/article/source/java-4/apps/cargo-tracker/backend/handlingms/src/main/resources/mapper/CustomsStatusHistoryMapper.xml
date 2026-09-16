@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.handling.infrastructure.persistence.CustomsStatusHistoryMapper">
+
+    <!--
+      主キーは元イベントの識別子。再配送も読み直しも同じ行に落ちる。
+      内容は書き換えない——起きたことの記録は変わらない。
+    -->
+    <insert id="insert">
+        INSERT INTO customs_status_history (
+            event_id, declaration_number, kind, previous_status, status, reason,
+            changed_by, changed_at, projected_at
+        ) VALUES (
+            #{eventId}, #{declarationNumber}, #{kind}, #{previousStatus}, #{status}, #{reason},
+            #{changedBy}, #{changedAt}, #{projectedAt}
+        )
+        ON CONFLICT (event_id) DO NOTHING
+    </insert>
+
+</mapper>

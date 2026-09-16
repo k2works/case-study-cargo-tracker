@@ -1,0 +1,1002 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router';
+import {
+  ALERT,
+  BUTTON_PRIMARY,
+  BUTTON_SECONDARY,
+  CARD,
+  FIELD,
+  LABEL,
+  LINK,
+  NOTICE,
+  PAGE_TITLE,
+  SECTION_TITLE,
+  TABLE,
+  TABLE_CAPTION,
+  TD,
+  TH,
+} from '@/shared/ui/styles';
+import { ApiError } from '@/shared/api/client';
+import { fetchInvoiceOfBooking } from '@/features/billing/api';
+import { useRole } from '@/shared/auth/useRole';
+import { BookingCancellationPanel } from './BookingCancellationPanel';
+import {
+  canIssueTrackingNumber,
+  canNotifyShipper,
+  canTransitionTo,
+  canRequestRouting,
+  canReturnToRouting,
+  canUpdateSpecification,
+} from './transitions';
+import { formatBusinessDateTime } from '@/shared/api/businessDate';
+import { display } from '@/features/shippers/api';
+import {
+  bookingStatusLabel,
+  cargoTypeLabel,
+  confirmBooking,
+  issueTrackingNumber,
+  fetchBooking,
+  fetchBookingItinerary,
+  fetchBookingNotifications,
+  fetchBookingRevisions,
+  notifyShipper,
+  returnToRouting,
+  routingStatusLabel,
+} from './api';
+import { requestRouting, respondToConditionReview } from '@/features/routing/api';
+import type { BookingView, ItineraryLegView } from './api';
+import type { Pending } from '@/shared/api/pending';
+
+/**
+ * この予約に打てる手（US06・US10・US12・US13・US14）。
+ *
+ * <p><b>判定は集約の述語をそのまま呼ぶ。</b> 画面で書き直すと、遷移表を直した
+ * ときに片方だけ古くなる（写しが増えるほどずれる）。</p>
+ *
+ * <p><b>まとめて 1 度に決める。</b> 同じ `booking != null &&` を画面の本体に
+ * 5 本並べると、そのぶん分岐が増えて「どの状態で何が出るのか」が読めなくなる。</p>
+ */
+function actionsFor(booking: BookingView | null) {
+  if (booking === null) {
+    return {
+      notifiable: false, confirmable: false, issuable: false,
+      returnable: false, respondable: false,
+    };
+  }
+  return {
+    notifiable: canNotifyShipper(booking.routingStatus),
+    // **確定は予約の状態の判断。** 遷移表がそのまま答えになる
+    //（ROUTE_NOTIFIED からだけ CONFIRMED に進める）。
+    confirmable: canTransitionTo(booking.bookingStatus, 'CONFIRMED'),
+    // **発行は経路設計者の操作**（ui_design.md S22）。営業に開くと、経路設計者の
+    // 手番を飛ばして発行できてしまう。二重発行も同じ判定で断る。
+    issuable: canIssueTrackingNumber(booking.bookingStatus),
+    returnable: canReturnToRouting(booking.bookingStatus),
+    // 経路設計者から条件の見直しを頼まれていて、まだ返していない（US10 §4 の対）。
+    // **打てる手を持つのは営業**（荷主と協議する）。
+    respondable: booking.conditionReviewRequestedAt !== null
+      && booking.conditionReviewRespondedAt === null,
+  };
+}
+
+/**
+ * S22 予約詳細（UC04）。
+ *
+ * <p>IT2 の範囲は状態・貨物仕様・輸送条件まで。旅程・通知履歴・誤配バナーは
+ * それを作るイテレーションで足す。中身の無い欄を先に置くと、動くと誤解される。</p>
+ */
+export function BookingDetailPage() {
+  const { bookingId = '' } = useParams();
+  // 通知を記録したあと、投影に届くまで取り直す合図。
+  const [awaitingNotificationProjection, setAwaitingNotificationProjection] = useState(false);
+  /**
+   * 追跡番号を発行したあと、投影に届くまで取り直す合図。
+   *
+   * <p><b>1 度の取り直しでは足りない。</b> 発行は同期で通るが、番号が
+   * この画面に出るのは投影が追いついてからである。混んでいるときは
+   * 取り直した時点でまだ届いておらず、<b>そのあと画面は二度と取り直さない</b>
+   * ——利用者は「発行したのに番号が出ない」まま、自分で読み込み直すしかない
+   * （IT17 のクラスタで実測）。</p>
+   */
+  const [awaitingTrackingNumber, setAwaitingTrackingNumber] = useState(false);
+  const queries = useQueryClient();
+  // 引き渡すのは営業の仕事（US06）。詳細画面は経路設計・追跡・経理・管理者にも
+  // 開いているので、状態だけで出し分けると、見に来ただけの人が引き渡せる。
+  // これは表示の話で、守りは Gateway の認可（ADR-0006）が担う。
+  const isSales = useRole('ROLE_SALES');
+  // キャンセルの履歴を読めるのは営業と追跡管理者だけ（Gateway の認可と同じ）。
+  const isTracker = useRole('ROLE_TRACKER');
+  // 請求書（S61）へ入れるのは経理だけ（ui_design.md の画面一覧）。
+  const isAccountant = useRole('ROLE_ACCOUNTANT');
+  // 追跡番号の発行は経路設計者の操作（ui_design.md S22）。
+  const isRouting = useRole('ROLE_ROUTING');
+  const { data, isPending, isError } = useQuery({
+    queryKey: ['booking', bookingId],
+    queryFn: () => fetchBooking(bookingId),
+    // 登録直後は投影がまだなので 202 が返る。反映されるまで取り直す。
+    //
+    // **経路を確定した直後もここを通る。** 確定してから S22 へ来ると、投影が
+    // 追いつくまで routingStatus は ROUTING_REQUESTED のままで、旅程の欄が
+    // 現れない。確定を待っている間だけ取り直す（IT5 レビュー 高 1）。
+    refetchInterval: (query) =>
+      bookingRefetchInterval(query.state.data, awaitingNotificationProjection,
+        awaitingTrackingNumber),
+  });
+
+  // 修正履歴（US32 §受入基準 4）。一度も直していない予約では問い合わせない。
+  // 「修正した」とだけ残っていて中身が読めない状態を作らないための読み口。
+  // `!== null` にしない。項目が欠けた応答では undefined になり、「一度も直して
+  // いない予約」が「直した予約」として扱われる（マニュアルのキャプチャで実測）。
+  // **読めた予約を 1 度だけ取り出す。** 以降で `data?.state === 'ready' &&` を
+  // 繰り返すと、条件が増えるほど「どの状態でどれが出るのか」が読めなくなる。
+  const booking = data?.state === 'ready' ? data.value : null;
+  const updated = Boolean(booking?.updatedAt);
+  const revisions = useQuery({
+    queryKey: ['booking', bookingId, 'revisions'],
+    queryFn: () => fetchBookingRevisions(bookingId),
+    enabled: updated,
+  });
+
+  // 旅程（US09）。引き渡していない予約には無いので問い合わせない。
+  // 記録（cargo_leg）だけあって読み口が無いと、誰も区間を確かめられない。
+  //
+  // **状態が ROUTED のときだけ問い合わせる形にしない。** 条件を調整したり
+  // 経路設計へ戻したりすると設計依頼中に戻るが、確定済みの旅程は残っている
+  // （ADR-0009 決定 3・US12）。状態で出し分けると、戻した瞬間に旅程が消えて
+  // 「何を組み直すのか」が分からなくなる（クラスタの E2E で実測）。
+  const routed = booking?.routingStatus === 'ROUTED';
+  const everRouted = booking != null && booking.routingStatus !== 'NOT_ROUTED';
+  const itinerary = useQuery({
+    queryKey: ['booking', bookingId, 'itinerary'],
+    queryFn: () => fetchBookingItinerary(bookingId),
+    enabled: everRouted,
+    // 経路を確定した直後は投影が数秒遅れる。1 回で諦めると、旅程の欄ごと
+    // 現れないまま「失敗した」と読まれる（IT5 レビュー 高 1）。
+    refetchInterval: (query) => itineraryRefetchInterval(query.state.data),
+  });
+
+  // 通知履歴（US12 §受入基準 4）。**読むのは全員**——経路設計者も追跡も
+  // 「荷主に何を伝えたか」を知る必要がある。操作だけを営業に絞る。
+  //
+  // 一度も経路を組んでいない予約では問い合わせない。**`lastNotifiedAt` では
+  // 絞れない**——戻したり条件を変えたりすると、組み直したあと再び「未通知」に
+  // 出せるように印を落とすため（IT6 レビュー 中）。履歴そのものは残るので、
+  // 旅程と同じ「一度でも経路を組んだか」で問い合わせる。
+  const notified = everRouted;
+  // 届いたら取り直しを止める。
+  useEffect(() => {
+    if (notified) {
+      setAwaitingNotificationProjection(false);
+    }
+  }, [notified]);
+  const notifications = useQuery({
+    queryKey: ['booking', bookingId, 'notifications'],
+    queryFn: () => fetchBookingNotifications(bookingId),
+    enabled: notified,
+  });
+  // **1 つの読み口で画面全体を落とさない。** 予約詳細は 4 つの読み口を束ねる。
+  const notificationItems = notifications.data?.state === 'ready'
+    ? notifications.data.value.items ?? [] : [];
+
+
+  const { notifiable, confirmable, issuable, returnable, respondable } = actionsFor(booking);
+  const [responding, setResponding] = useState(false);
+  const [reviewResponse, setReviewResponse] = useState('');
+  const [reviewResponseError, setReviewResponseError] = useState('');
+
+  const [recipient, setRecipient] = useState('');
+  const [returning, setReturning] = useState(false);
+  const [returnReason, setReturnReason] = useState('');
+  const [returnError, setReturnError] = useState('');
+
+  // 通知する内容は旅程から作る。**画面で打たせない**——打ち直すと、実際の旅程と
+  // 違うことを伝えられる。料金概算は US21（IT13）が正典で、いまは欄を置かない
+  // （0 円と読まれる）。
+  const summary = itinerary.data?.state === 'ready'
+    ? summaryOf(itinerary.data.value.legs) : '';
+
+  const notify = useMutation({
+    mutationFn: () => notifyShipper(bookingId, { recipientEmail: recipient, summary }),
+    onSuccess: async () => {
+      setAwaitingNotificationProjection(true);
+      await queries.invalidateQueries({ queryKey: ['booking', bookingId] });
+      await queries.invalidateQueries({ queryKey: ['booking', bookingId, 'notifications'] });
+    },
+  });
+
+  const confirm = useMutation({
+    mutationFn: () => confirmBooking(bookingId),
+    onSuccess: async () => {
+      await queries.invalidateQueries({ queryKey: ['booking', bookingId] });
+    },
+  });
+
+  const issue = useMutation({
+    mutationFn: () => issueTrackingNumber(bookingId),
+    onSuccess: async () => {
+      // **届くまで取り直す合図を立ててから読み直す。** 立てずに 1 度だけ
+      // 読み直すと、投影が遅れたときに番号が出ないまま止まる。
+      setAwaitingTrackingNumber(true);
+      await queries.invalidateQueries({ queryKey: ['booking', bookingId] });
+    },
+  });
+
+  const respond = useMutation({
+    mutationFn: () => respondToConditionReview(bookingId, reviewResponse),
+    onSuccess: async () => {
+      setResponding(false);
+      setReviewResponse('');
+      await queries.invalidateQueries({ queryKey: ['booking', bookingId] });
+    },
+  });
+
+  const sendBack = useMutation({
+    mutationFn: () => returnToRouting(bookingId, returnReason),
+    onSuccess: async () => {
+      setReturning(false);
+      setReturnReason('');
+      await queries.invalidateQueries({ queryKey: ['booking', bookingId] });
+    },
+  });
+
+  const handOver = useMutation({
+    mutationFn: () => requestRouting(bookingId),
+    onSuccess: () => queries.invalidateQueries({ queryKey: ['booking', bookingId] }),
+  });
+
+  return (
+    <section>
+      <h1 className={PAGE_TITLE}>
+        {booking ? `予約 ${booking.bookingNumber}` : '予約'}
+      </h1>
+      <p className="mt-2 text-sm">
+        <Link to="/bookings" className={LINK}>
+          予約一覧に戻る
+        </Link>
+      </p>
+
+      {isPending && <output className={`${NOTICE} mt-4`}>読み込み中…</output>}
+      {isError && (
+        <p role="alert" className={`${ALERT} mt-4`}>
+          予約を取得できませんでした
+        </p>
+      )}
+      {/* 受け付けたことと反映が終わったことは別。404 にすると「登録に失敗した」
+          と読めてしまう。 */}
+      {data?.state === 'pending' && <output className={`${NOTICE} mt-4`}>{data.message}</output>}
+
+      {data?.state === 'ready' && data.value.routingStatus === 'MISROUTED' && (
+        <MisrouteBanner booking={data.value} isRouting={isRouting} />
+      )}
+
+      {data?.state === 'ready' && (
+        <div className={`${CARD} mt-4 space-y-6`}>
+          <div>
+            <h2 className={SECTION_TITLE}>状態</h2>
+            <dl className="mt-2 grid gap-2 sm:grid-cols-2">
+              <Row label="予約の状態" value={bookingStatusLabel(data.value.bookingStatus)} />
+              {/* 経路設定状態は予約の状態と別の軸。出さないと、この予約の経路が
+                  いまどこまで進んだのかを予約詳細から読めない。 */}
+              <Row
+                label="経路設定状態"
+                value={routingStatusLabel(data.value.routingStatus)}
+              />
+              {/* 追跡番号（US14）。**発行するまで欄そのものを出さない**——
+                  空欄は「番号が消えた」と読める。荷主に伝える唯一の手掛かりなので、
+                  発行後は誰が見ても読めるようにする（ロールで隠さない）。 */}
+              {data.value.trackingNumber && (
+                <Row label="追跡番号" value={data.value.trackingNumber} />
+              )}
+              <Row label="荷主" value={display(data.value.shipperName)} />
+              {/* 一度も直していない予約に最終更新を出すと、受付日時と
+                  区別が付かない。直したことのある予約だけに出す（US32）。 */}
+              {data.value.updatedAt && (
+                <Row
+                  label="最終更新"
+                  value={`${formatBusinessDateTime(data.value.updatedAt)}${
+                    data.value.updatedBy ? `（${data.value.updatedBy}）` : ''
+                  }`}
+                />
+              )}
+            </dl>
+          </div>
+
+          <div>
+            <h2 className={SECTION_TITLE}>輸送条件</h2>
+            <dl className="mt-2 grid gap-2 sm:grid-cols-2">
+              <Row label="出発地" value={data.value.originUnLocode} />
+              <Row label="目的地" value={data.value.destinationUnLocode} />
+              <Row label="到着期限" value={data.value.arrivalDeadline} />
+            </dl>
+          </div>
+
+          {/* **経理はここから請求書へ入る**（ui_design.md の画面遷移「S22 → S61」）。
+              予約から辿れないと、請求書を開くには番号を知っている必要がある。
+              **経理以外には出さない**——押しても Gateway の 403 に当たる
+              （開けない場所へ誘わない）。 */}
+          {isAccountant && <InvoiceLink bookingId={bookingId} />}
+
+          {/* ボタンの出し分けは状態の述語をそのまま呼ぶ。ここで
+              status === 'PRELIMINARY' と書くと、集約の遷移表と判断が二重になり、
+              片方だけ直したときに食い違う。 */}
+          {/* 修正できるのは仮受付だけ（US32）。判定は集約と同じ述語を呼ぶ。
+              営業以外に出すと、押してから Gateway の 403 で気づくことになる。 */}
+          {isSales && canUpdateSpecification(data.value.bookingStatus) && (
+            <p className="text-sm">
+              <Link to={`/bookings/${encodeURIComponent(bookingId)}/edit`} className={LINK}>
+                修正する
+              </Link>
+            </p>
+          )}
+
+          {isSales && canRequestRouting(data.value.bookingStatus) && (
+            <div>
+              <button
+                type="button"
+                className={BUTTON_PRIMARY}
+                disabled={handOver.isPending}
+                onClick={() => handOver.mutate()}
+              >
+                {handOver.isPending ? '送信中…' : '経路設計を依頼する'}
+              </button>
+              {handOver.error instanceof ApiError && (
+                <p role="alert" className={`${ALERT} mt-2`}>
+                  {handOver.error.body.message}
+                </p>
+              )}
+              {/* 通信断のように応答が返らない場合も黙らない。押しても何も
+                  起きないように見えると、利用者は同じ操作を繰り返す。 */}
+              {handOver.error !== null && !(handOver.error instanceof ApiError) && (
+                <p role="alert" className={`${ALERT} mt-2`}>
+                  引き渡せませんでした。通信の状態を確かめて、もう一度お試しください
+                </p>
+              )}
+            </div>
+          )}
+
+          <div>
+            <h2 className={SECTION_TITLE}>貨物</h2>
+            <dl className="mt-2 grid gap-2 sm:grid-cols-2">
+              <Row label="品名" value={data.value.productName} />
+              <Row label="種別" value={cargoTypeLabel(data.value.cargoType)} />
+              <Row label="重量" value={`${data.value.weightKg} kg`} />
+              <Row label="数量" value={String(data.value.quantity)} />
+              <Row
+                label="寸法"
+                value={
+                  data.value.lengthCm
+                    ? `${data.value.lengthCm} × ${data.value.widthCm} × ${data.value.heightCm} cm`
+                    : '—'
+                }
+              />
+              {data.value.hazardImoClass && (
+                <Row
+                  label="危険物申告"
+                  value={`IMO ${data.value.hazardImoClass} / ${data.value.hazardUnNumber}`}
+                />
+              )}
+              {data.value.temperatureMinC && (
+                <Row
+                  label="温度条件"
+                  value={`${data.value.temperatureMinC} 〜 ${data.value.temperatureMaxC} ℃`}
+                />
+              )}
+            </dl>
+          </div>
+
+          {/* 経路が決まっているのに旅程が読めないことを黙らない。黙ると
+              「まだ決まっていない予約」と同じ見た目になる（IT5 レビュー 中 7）。 */}
+          {routed && itinerary.isError && (
+            <p role="alert" className={ALERT}>
+              旅程を取得できませんでした
+            </p>
+          )}
+          {routed
+            && !itinerary.isError
+            && (itinerary.isPending
+              || (itinerary.data?.state === 'ready'
+                && itinerary.data.value.legs.length === 0)) && (
+            <output className={NOTICE}>経路の反映を待っています</output>
+          )}
+
+          {/* 区間があるかどうかで出す。設計し直しの途中でも読める。 */}
+          {everRouted
+            && itinerary.data?.state === 'ready'
+            && itinerary.data.value.legs.length > 0 && (
+            <div>
+              <h2 className={SECTION_TITLE}>旅程</h2>
+              <div className="mt-2 overflow-x-auto">
+                <table className={TABLE}>
+                  <caption className={TABLE_CAPTION}>積む順に並んでいます</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col" className={TH}>区間</th>
+                      <th scope="col" className={TH}>航海</th>
+                      <th scope="col" className={TH}>積地 → 揚地</th>
+                      <th scope="col" className={TH}>積込</th>
+                      <th scope="col" className={TH}>荷揚</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {itinerary.data.value.legs.map((leg) => (
+                      <tr key={leg.legSeq} data-testid={`leg-${leg.legSeq}`}>
+                        <td className={TD}>{leg.legSeq}</td>
+                        <td className={TD}>{leg.voyageNumber}</td>
+                        <td className={TD}>
+                          {leg.loadUnLocode} → {leg.unloadUnLocode}
+                        </td>
+                        <td className={TD}>{formatBusinessDateTime(leg.loadAt)}</td>
+                        <td className={TD}>{formatBusinessDateTime(leg.unloadAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* 通知の操作は営業だけ（US12）。読むのは全員——経路設計者も追跡も
+              「荷主に何を伝えたか」を知る必要がある。 */}
+          {isSales && notifiable && (
+            <NotifyShipperPanel
+              recipient={recipient}
+              summary={summary}
+              pending={notify.isPending}
+              error={notify.error}
+              onRecipientChange={setRecipient}
+              onNotify={() => notify.mutate()}
+            />
+          )}
+
+          {/* 差し戻された予約に営業が返す（US10 §4 の対）。**理由と対で出す**——
+              何を頼まれたのかが読めないまま返させると、協議の結果が噛み合わない。 */}
+          {isSales && respondable && booking !== null && (
+            <ConditionReviewResponsePanel
+              reason={booking.conditionReviewReason ?? ''}
+              requestedAt={booking.conditionReviewRequestedAt}
+              open={responding}
+              response={reviewResponse}
+              error={reviewResponseError}
+              failed={respond.isError}
+              pending={respond.isPending}
+              onOpen={() => setResponding(true)}
+              onResponseChange={setReviewResponse}
+              onCancel={() => {
+                setResponding(false);
+                setReviewResponseError('');
+              }}
+              onSubmit={() => {
+                if (!reviewResponse.trim()) {
+                  // 集約も断るが、押してから 422 で気づく形にしない。
+                  setReviewResponseError('協議の結果を入力してください');
+                  return;
+                }
+                setReviewResponseError('');
+                respond.mutate();
+              }}
+            />
+          )}
+
+          {isSales && confirmable && (
+            <ConfirmPanel pending={confirm.isPending} error={confirm.error}
+              onConfirm={() => confirm.mutate()} />
+          )}
+
+          {/* キャンセル（US30）。**申請は営業、判断は追跡管理者**だが、履歴は
+              両方が読む——「いま何が起きているか」を片方しか読めないと、話が
+              噛み合わない。
+              **読めない人には出さない。** Gateway は履歴を営業と追跡管理者に
+              だけ開いているので、経路設計者に出すと見出しだけの空カードになる
+              ——「申請が無い」とも「読めない」とも読める（IT15 のレビュー 中）。 */}
+          {(isSales || isTracker) && (
+            <BookingCancellationPanel
+              bookingId={bookingId}
+              bookingStatus={data.value.bookingStatus}
+              canRequest={isSales}
+            />
+          )}
+
+          {/* 追跡番号（US14）。**発行は経路設計者の操作**で、営業には出さない。
+              発行済みなら「状態」の欄に番号が出る（二重に発行しない）。 */}
+          {isRouting && issuable && (
+            <IssueTrackingNumberPanel pending={issue.isPending} error={issue.error}
+              onIssue={() => issue.mutate()} />
+          )}
+
+          {/* 通知したあとだけ開く。通知前に組み直したいなら、経路設計者が自分で
+              確定し直せばよい（判定は集約と同じ述語を呼ぶ）。 */}
+          {isSales && returnable && (
+            <ReturnToRoutingPanel
+              open={returning}
+              reason={returnReason}
+              error={returnError}
+              failed={sendBack.isError}
+              pending={sendBack.isPending}
+              onOpen={() => setReturning(true)}
+              onReasonChange={setReturnReason}
+              onCancel={() => {
+                setReturning(false);
+                setReturnError('');
+              }}
+              onSubmit={() => {
+                if (!returnReason.trim()) {
+                  // 集約も断るが、押してから 422 で気づく形にしない。
+                  setReturnError('戻す理由を入力してください');
+                  return;
+                }
+                setReturnError('');
+                sendBack.mutate();
+              }}
+            />
+          )}
+
+          {/* **1 つの読み口で画面全体を落とさない。** 予約詳細は 4 つの読み口を
+              束ねるので、どれか 1 つが思わぬ形を返すと予約の内容ごと消える。 */}
+          {notificationItems.length > 0 && (
+            <div>
+              <h2 className={SECTION_TITLE}>通知履歴</h2>
+              <div className="mt-2 overflow-x-auto">
+                <table className={TABLE}>
+                  <caption className={TABLE_CAPTION}>新しい通知が先に並んでいます</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col" className={TH}>いつ</th>
+                      <th scope="col" className={TH}>誰が</th>
+                      <th scope="col" className={TH}>宛先</th>
+                      <th scope="col" className={TH}>内容</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {notificationItems.map((item) => (
+                      <tr key={item.notifiedAt} data-testid={`notification-${item.notifiedAt}`}>
+                        <td className={TD}>{formatBusinessDateTime(item.notifiedAt)}</td>
+                        {/* 誰が通知したか分からないことは「—」で表す（記録は残る）。 */}
+                        <td className={TD}>{item.notifiedBy ?? '—'}</td>
+                        <td className={TD}>{item.recipientEmail}</td>
+                        <td className={TD}>{item.summary}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {updated
+            && revisions.data?.state === 'ready'
+            && revisions.data.value.items.length > 0 && (
+            <div>
+              <h2 className={SECTION_TITLE}>修正履歴</h2>
+              <div className="mt-2 overflow-x-auto">
+                <table className={TABLE}>
+                  <caption className={TABLE_CAPTION}>新しい修正が先に並んでいます</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col" className={TH}>いつ</th>
+                      <th scope="col" className={TH}>誰が</th>
+                      <th scope="col" className={TH}>項目</th>
+                      <th scope="col" className={TH}>変更前</th>
+                      <th scope="col" className={TH}>変更後</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {revisions.data.value.items.map((item) => (
+                      <tr
+                        key={`${item.updatedAt}-${item.label}`}
+                        data-testid={`revision-${item.label}`}
+                      >
+                        <td className={TD}>{formatBusinessDateTime(item.updatedAt)}</td>
+                        {/* display() は鍵破棄で読めないことを表す（荷主名）。
+                            修正した利用者が分からないのは別の意味なので使わない。 */}
+                        <td className={TD}>{item.updatedBy ?? '—'}</td>
+                        <td className={TD}>{item.label}</td>
+                        <td className={TD}>{item.before}</td>
+                        <td className={TD}>{item.after}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+/**
+ * 通知する内容を旅程から作る（US12 §受入基準 2）。
+ *
+ * <p>経由港・所要日数・到着予定日を並べる。<b>料金概算は含めない</b>——料金表は
+ * US21（IT13）が正典で、現時点で存在しない。0 と出すと「費用 0 円」と読める。</p>
+ */
+function summaryOf(legs: readonly ItineraryLegView[]): string {
+  const first = legs[0];
+  const last = legs.at(-1);
+  if (!first || !last) {
+    return '';
+  }
+  const ports = [first.loadUnLocode, ...legs.map((leg) => leg.unloadUnLocode)].join(' → ');
+  const days = Math.ceil(
+    (new Date(last.unloadAt).getTime() - new Date(first.loadAt).getTime())
+    / (24 * 60 * 60 * 1000),
+  );
+  return `${ports} / 所要 ${days} 日 / 到着予定 ${formatBusinessDateTime(last.unloadAt)}`;
+}
+
+function Row({ label, value }: { readonly label: string; readonly value: string }) {
+  return (
+    <div className="flex gap-2">
+      <dt className="w-32 shrink-0 text-sm text-gray-600">{label}</dt>
+      <dd className="text-sm text-gray-900">{value}</dd>
+    </div>
+  );
+}
+
+/**
+ * 予約の確定（US13）。<b>営業だけ</b>が使う。
+ *
+ * <p>本体から切り出した。予約詳細は読み口を 4 つ束ねるうえに操作も増えたので、
+ * 1 つの関数に置くと「どの条件でどれが出るのか」が読めなくなる。</p>
+ */
+function ConfirmPanel({ pending, error, onConfirm }: Readonly<{
+  pending: boolean;
+  error: unknown;
+  onConfirm: () => void;
+}>) {
+  return (
+    <div className="space-y-2">
+      <h2 className={SECTION_TITLE}>予約の確定</h2>
+      <p className="text-sm text-gray-600">
+        荷主の承認を確認してから確定してください。{' '}
+        <b>確定すると経路設計へは戻せません。</b>{' '}
+        荷主が変更を求めたら、確定する前に戻します
+      </p>
+      {error != null && (
+        <p role="alert" className={ALERT}>
+          {error instanceof ApiError ? error.body.message : '予約を確定できませんでした'}
+        </p>
+      )}
+      <button type="button" className={BUTTON_PRIMARY} disabled={pending} onClick={onConfirm}>
+        {pending ? '確定しています…' : '予約を確定する'}
+      </button>
+    </div>
+  );
+}
+
+/**
+ * 追跡番号の発行（US14）。<b>経路設計者だけ</b>が使う。
+ *
+ * <p>営業に開くと、経路設計者の手番を飛ばして発行できてしまう
+ * （[ADR-0010](../../../../../docs/adr/cargo-tracker/0010-reaction-handler-as-the-only-coordinator.md) 決定 3）。</p>
+ */
+function IssueTrackingNumberPanel({ pending, error, onIssue }: Readonly<{
+  pending: boolean;
+  error: unknown;
+  onIssue: () => void;
+}>) {
+  return (
+    <div className="space-y-2">
+      <h2 className={SECTION_TITLE}>追跡番号の発行</h2>
+      <p className="text-sm text-gray-600">
+        発行すると荷主が輸送状況を追えるようになります。{' '}
+        <b>番号はシステムが採ります。</b>{' '}
+        一度発行した予約に二度目は発行できません
+      </p>
+      {error != null && (
+        <p role="alert" className={ALERT}>
+          {error instanceof ApiError ? error.body.message : '追跡番号を発行できませんでした'}
+        </p>
+      )}
+      <button type="button" className={BUTTON_PRIMARY} disabled={pending} onClick={onIssue}>
+        {pending ? '発行しています…' : '追跡番号を発行する'}
+      </button>
+    </div>
+  );
+}
+
+/**
+ * 通知した経路を経路設計へ戻す（US12）。<b>営業だけ</b>が使う。
+ *
+ * <p>本体から切り出した。予約詳細は読み口を 4 つ束ねるうえに操作が 4 つ載るので、
+ * 1 つの関数に置くと「どの条件でどれが出るのか」が読めなくなる。</p>
+ */
+function ReturnToRoutingPanel(props: Readonly<{
+  open: boolean;
+  reason: string;
+  error: string;
+  failed: boolean;
+  pending: boolean;
+  onOpen: () => void;
+  onReasonChange: (value: string) => void;
+  onCancel: () => void;
+  onSubmit: () => void;
+}>) {
+  if (!props.open) {
+    return (
+      <div className="space-y-2">
+        <button type="button" className={BUTTON_SECONDARY} onClick={props.onOpen}>
+          経路設計へ戻す
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-2">
+      <div className={`${CARD} space-y-2`}>
+        <p className="text-sm">
+          荷主が経路の変更を求めたときに戻します。<b>確定した旅程はそのまま残ります。</b>
+        </p>
+        <label htmlFor="return-reason" className={LABEL}>
+          戻す理由
+        </label>
+        <input
+          id="return-reason"
+          className={FIELD}
+          value={props.reason}
+          onChange={(event) => props.onReasonChange(event.target.value)}
+        />
+        {props.error && <p role="alert" className={ALERT}>{props.error}</p>}
+        {props.failed && (
+          <p role="alert" className={ALERT}>経路設計へ戻せませんでした</p>
+        )}
+        <div className="flex gap-2">
+          <button type="button" className={BUTTON_PRIMARY}
+            disabled={props.pending} onClick={props.onSubmit}>
+            戻すことを確定する
+          </button>
+          <button type="button" className={BUTTON_SECONDARY} onClick={props.onCancel}>
+            やめる
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 予約の読み口を取り直す間隔（ミリ秒）。取り直さないなら {@code false}。
+ *
+ * <p>投影は数秒遅れる。待たないと、押したのに状態も履歴も変わらず、利用者は同じ
+ * 操作を繰り返す（IT5 レビュー 高 1・IT6 レビュー 中）。</p>
+ */
+function bookingRefetchInterval(
+  state: Pending<BookingView> | undefined,
+  awaitingNotificationProjection: boolean,
+  awaitingTrackingNumber: boolean,
+): number | false {
+  if (state?.state === 'pending') {
+    return 2000;
+  }
+  if (state?.state !== 'ready') {
+    return false;
+  }
+  // 経路を確定した直後は routingStatus が ROUTING_REQUESTED のままで、旅程の欄が
+  // 現れない。確定を待っている間だけ取り直す。
+  if (state.value.routingStatus === 'ROUTING_REQUESTED') {
+    return 3000;
+  }
+  // **発行した番号が届くまで取り直す。** 届いたら止める——止めないと、
+  // 誰も待っていない画面が問い合わせ続ける。
+  if (awaitingTrackingNumber && state.value.trackingNumber === null) {
+    return 2000;
+  }
+  return awaitingNotificationProjection ? 2000 : false;
+}
+
+/**
+ * 旅程の読み口を取り直す間隔（ミリ秒）。区間が届いたら止める。
+ *
+ * <p>経路を確定した直後は投影が数秒遅れる。1 回で諦めると、旅程の欄ごと現れない
+ * まま「失敗した」と読まれる（IT5 レビュー 高 1）。</p>
+ */
+function itineraryRefetchInterval(
+  state: Pending<{ legs: readonly ItineraryLegView[] }> | undefined,
+): number | false {
+  return state?.state === 'ready' && state.value.legs.length > 0 ? false : 2000;
+}
+
+/**
+ * 荷主への通知の記録（US12）。<b>営業だけ</b>が使う（読むのは全員）。
+ *
+ * <p>本体から切り出した。<b>このシステムは送信しない</b>——通知は電話・メールで
+ * 行い、ここには「いつ・誰に・何を伝えたか」の記録だけを残す。</p>
+ */
+function NotifyShipperPanel(props: Readonly<{
+  recipient: string;
+  summary: string;
+  pending: boolean;
+  error: unknown;
+  onRecipientChange: (value: string) => void;
+  onNotify: () => void;
+}>) {
+  return (
+    <div>
+      <h2 className={SECTION_TITLE}>荷主への通知</h2>
+      <p className="mt-2 text-sm text-gray-600">
+        <b>このシステムは送信しません。</b>通知は電話・メールで行い、ここには
+        「いつ・誰に・何を伝えたか」の記録だけを残します
+      </p>
+      <div className="mt-2 space-y-3">
+        <label className={LABEL}>
+          <span>通知先メールアドレス</span>
+          <input
+            className={FIELD}
+            type="email"
+            value={props.recipient}
+            onChange={(event) => props.onRecipientChange(event.target.value)}
+          />
+        </label>
+        <label className={LABEL}>
+          {/* 内容は旅程から作る。打ち直せると、実際の旅程と違うことを伝えられる。
+              料金概算は US21（IT13）が正典なので置かない。 */}
+          <span>通知内容</span>
+          <textarea className={FIELD} rows={2} value={props.summary} readOnly />
+        </label>
+        {props.error != null && (
+          <p role="alert" className={ALERT}>
+            {props.error instanceof ApiError
+              ? props.error.body.message
+              : '通知を記録できませんでした'}
+          </p>
+        )}
+        <button
+          type="button"
+          className={BUTTON_PRIMARY}
+          disabled={props.pending || props.summary === ''}
+          onClick={props.onNotify}
+        >
+          {props.pending ? '記録しています…' : '通知した記録を残す'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 荷主との協議の結果を経路設計者へ返す（US10 §受入基準 4 の対）。<b>営業だけ</b>。
+ *
+ * <p><b>頼まれた理由と対で出す。</b> 何を頼まれたのかが読めないまま返させると、
+ * 協議の結果が噛み合わない。差し戻しは経路設計者 → 営業の一方向しか無く、営業は
+ * 協議を終えても伝える手段を持たなかった（IT6 レビュー・IT8 H.2）。</p>
+ */
+function ConditionReviewResponsePanel(props: Readonly<{
+  reason: string;
+  requestedAt: string | null;
+  open: boolean;
+  response: string;
+  error: string;
+  failed: boolean;
+  pending: boolean;
+  onOpen: () => void;
+  onResponseChange: (value: string) => void;
+  onCancel: () => void;
+  onSubmit: () => void;
+}>) {
+  return (
+    <div className="space-y-2">
+      <h2 className={SECTION_TITLE}>条件の見直し依頼</h2>
+      <output className={`${NOTICE} block`}>
+        <b>経路設計者から見直しを頼まれています</b>
+        {props.requestedAt ? `（${formatBusinessDateTime(props.requestedAt)}）` : ''}
+        : {props.reason}
+      </output>
+      <p className="text-sm text-gray-600">
+        荷主と協議し、決まった内容を返してください。{' '}
+        <b>条件を直すのは経路設計者です。</b>{' '}
+        この画面からは条件そのものを変えられません
+      </p>
+      {!props.open && (
+        <button type="button" className={BUTTON_SECONDARY} onClick={props.onOpen}>
+          協議の結果を返す
+        </button>
+      )}
+      {props.open && (
+        <div className={`${CARD} space-y-2`}>
+          <label htmlFor="review-response" className={LABEL}>
+            協議の結果
+          </label>
+          <input
+            id="review-response"
+            className={FIELD}
+            value={props.response}
+            onChange={(event) => props.onResponseChange(event.target.value)}
+          />
+          {props.error && <p role="alert" className={ALERT}>{props.error}</p>}
+          {props.failed && (
+            <p role="alert" className={ALERT}>協議の結果を返せませんでした</p>
+          )}
+          <div className="flex gap-2">
+            <button type="button" className={BUTTON_PRIMARY}
+              disabled={props.pending} onClick={props.onSubmit}>
+              経路設計者へ返す
+            </button>
+            <button type="button" className={BUTTON_SECONDARY} onClick={props.onCancel}>
+              やめる
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * 誤配の警告バナー（S22 / US28 §受入基準 3・4）。
+ *
+ * <p><b>検知した荷役と現在地を出す。</b> 「誤配です」だけでは、営業も荷主も
+ * 何が起きたか説明できない。いつ・どこで予定外の荷役が記録されたかまで出して
+ * 初めて、次に取る行動（組み直しの依頼・荷主への連絡）が決まる。</p>
+ *
+ * <p><b>`[経路を再設計]` は経路設計者にだけ出す。</b> 他のロールには
+ * 「経路設計者に依頼済み」と出す——押せない操作を並べると、できることが
+ * 読めなくなる。**リンクを出さないだけでは守りにならない**ので、
+ * サーバ側も 403 を返す。</p>
+ *
+ * <p><b>超過日数は組み直したあとに出る。</b> 再設計で期限に間に合わなくなった
+ * ときだけ 0 より大きくなる（US28 §受入基準 6）。</p>
+ */
+function MisrouteBanner({
+  booking,
+  isRouting,
+}: {
+  readonly booking: BookingView;
+  readonly isRouting: boolean;
+}) {
+  const where = booking.lastHandlingUnLocode;
+  const when = booking.lastHandlingAt;
+  return (
+    <div role="alert" className={`${ALERT} mt-4`}>
+      <p className="font-semibold">誤配を検知しました。</p>
+      <p className="mt-1 text-sm">
+        {when && where
+          ? `${formatBusinessDateTime(when)} に ${where} で予定外の荷役が記録されました。現在地: ${where}。`
+          : '予定ルート外での荷役が記録されました。'}
+      </p>
+      {booking.routeOverdueDays != null && booking.routeOverdueDays > 0 && (
+        <p className="mt-1 text-sm font-semibold">
+          組み直した経路では、当初の到着期限 {booking.arrivalDeadline} を{' '}
+          {booking.routeOverdueDays} 日超えます。荷主への連絡にこの差分を含めてください。
+        </p>
+      )}
+      <p className="mt-2 text-sm">
+        {isRouting ? (
+          <Link to={`/routing/bookings/${booking.bookingId}`} className={LINK}>
+            経路を再設計
+          </Link>
+        ) : (
+          '経路設計者に再設計を依頼済みです。'
+        )}
+      </p>
+    </div>
+  );
+}
+
+/**
+ * その予約の請求書への導線（S22 → S61）。
+ *
+ * <p><b>請求書へ直行する。</b> 一覧を経由すると、1 件しかないと分かっている
+ * ものをもう一度選ぶことになる。<b>まだ算出されていなければリンクを出さない</b>
+ * ——押しても開く先が無いものを並べない（IT13 のレビュー 中）。</p>
+ */
+function InvoiceLink({ bookingId }: { readonly bookingId: string }) {
+  const invoice = useQuery({
+    queryKey: ['invoice-of-booking', bookingId],
+    queryFn: () => fetchInvoiceOfBooking(bookingId),
+    // 404（まだ算出されていない）は「失敗」ではない。再試行しない。
+    retry: false,
+  });
+
+  if (invoice.data?.state !== 'ready') {
+    return null;
+  }
+  return (
+    <p className="text-sm">
+      <Link to={`/invoices/${invoice.data.value.invoiceId}`} className={LINK}>
+        この予約の請求書（{invoice.data.value.statusLabel}）
+      </Link>
+    </p>
+  );
+}

@@ -9,6 +9,7 @@
 | 10 言語の `apps/` | [モノリスアーキテクチャ実装比較](../monolith-architecture/index.md) / [関数型ドメインモデリング](../functional-domain-modeling/index.md) |
 | [`java-2/`](java-2) | [実践 AI 駆動開発](../ai-driven-development/index.md) / [XP によるドメイン駆動設計の実践](../xp-domain-driven-design/index.md) / [エンタープライズアーキテクチャの 4 観点](../enterprise-architecture/index.md) / [実践 DDD in Spring Boot](../practical-ddd-spring-boot/index.md) / [エンタープライズ Java における実践的 DDD](../practical-ddd-in-enterprise-java/draft-2/index.md)（第 1〜3 章） |
 | [`java-3/`](java-3) | [エンタープライズ Java における実践的 DDD](../practical-ddd-in-enterprise-java/draft-2/index.md)（第 4 章） |
+| [`java-4/`](java-4) | [エンタープライズ Java における実践的 DDD](../practical-ddd-in-enterprise-java/draft-1/index.md)（第 5 章） |
 
 ## 収録内容
 
@@ -78,6 +79,25 @@ Skill の定義（`.claude/skills/`）も収録していません。**本リポ�
 | フロントエンド | 独立した SPA（`apps/frontend`） |
 
 `docs/article/`・`reference/`・`template/`・`assets/` は収録していません（`java-2` と同じ方針）。
+
+## java-4（エンタープライズ Java における実践的 DDD 第 5 章）
+
+`java/take-8`（CQRS / Event Sourcing 版）の実装と一次資料です。上の `java-3`（マイクロサービス + RabbitMQ）と**同じ業務・ほぼ同じサービス分割**で、**永続化と読み書きの分離だけが違う**実装です。第 5 章が Event Sourcing の代金を第 4 章との差分として示せるよう、この形で選ばれています（`java-4` ADR-0001 決定 1）。
+
+| 種別 | パス | ファイル数 | 内容 |
+| :--- | :--- | ---: | :--- |
+| 実装 | [java-4/apps](java-4/apps) | 1,229 | backend（8 サービス + 共有ライブラリ + テスト専用 2）・frontend・www |
+| 一次資料 | [java-4/docs](java-4/docs) | 214 | ADR・設計・計画／完了報告／ふりかえり・レビュー・要件・運用・マニュアル |
+
+| 項目 | 値 |
+| :--- | :--- |
+| サービス | gatewayms / authms / bookingms / routingms / trackingms / handlingms / billingms / simulationms（+ 共有ライブラリ `shared`） |
+| メッセージ基盤 | Axon Server（Event Store ・ Command / Event / Query Bus）。**RabbitMQ は使っていない** |
+| Axon | Axon Framework 5.1.0-RC2（4 系の `@Aggregate` / `AggregateLifecycle` / `@Saga` は存在しない） |
+| 永続化 | イベント列（Event Store）＋ 投影テーブル（PostgreSQL・Database per Service・Flyway・MyBatis） |
+| フロントエンド | 独立した SPA（`apps/cargo-tracker/frontend`） |
+
+`docs/article/`・`reference/`・`template/`・`assets/` は収録していません（`java-2`・`java-3` と同じ方針）。
 
 ## 収録していないもの
 

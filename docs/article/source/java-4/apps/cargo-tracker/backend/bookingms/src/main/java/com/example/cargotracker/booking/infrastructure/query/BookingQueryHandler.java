@@ -1,0 +1,280 @@
+package com.example.cargotracker.booking.infrastructure.query;
+
+import com.example.cargotracker.booking.infrastructure.persistence.CargoLegMapper;
+import com.example.cargotracker.booking.infrastructure.persistence.CargoNotificationMapper;
+import com.example.cargotracker.booking.infrastructure.persistence.CargoRevisionMapper;
+import com.example.cargotracker.booking.infrastructure.persistence.CargoSummaryMapper;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.AffectedBookingListView;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.AffectedBookingView;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.BookingListView;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingNotificationsQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindRouteConditionQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.NotificationListView;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.NotificationView;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.RouteConditionView;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.BookingView;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingsByVoyageQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingItineraryQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingRevisionsQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingsQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.ItineraryLegView;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.ItineraryView;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.RevisionListView;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.RevisionView;
+import java.util.List;
+import org.axonframework.messaging.queryhandling.annotation.QueryHandler;
+import org.springframework.stereotype.Component;
+
+/** 予約の問い合わせ。読み取りモデルは投影テーブルだけを見る。 */
+@Component
+public class BookingQueryHandler {
+
+    private final CargoSummaryMapper cargos;
+    private final CargoRevisionMapper revisions;
+    private final CargoLegMapper legs;
+    private final CargoNotificationMapper notifications;
+    private final com.example.cargotracker.booking.infrastructure.persistence
+            .CancellationRequestMapper cancellations;
+    private final java.time.Clock clock;
+
+    /**
+     * 却下を知らせる期間（日）。<b>既読を覚える表を置かない</b>——営業の
+     * 「最近のできごと」であって、未処理の待ち行列ではない。
+     */
+    private static final int REJECTION_NOTICE_DAYS = 14;
+
+    /** 知らせる件数の上限。**黙って切らない**——画面が件数を出す。 */
+    private static final int REJECTION_NOTICE_LIMIT = 20;
+
+    public BookingQueryHandler(CargoSummaryMapper cargos, CargoRevisionMapper revisions,
+            CargoLegMapper legs, CargoNotificationMapper notifications,
+            com.example.cargotracker.booking.infrastructure.persistence
+                    .CancellationRequestMapper cancellations,
+            java.time.Clock clock) {
+        this.cargos = cargos;
+        this.revisions = revisions;
+        this.legs = legs;
+        this.notifications = notifications;
+        this.cancellations = cancellations;
+        this.clock = clock;
+    }
+
+    /**
+     * 承認待ちのキャンセル申請（S23 / US30 §受入基準 4）。
+     *
+     * <p><b>予約の呼び名を一緒に返す。</b> 予約 ID だけでは、追跡管理者は
+     * どの貨物の話なのか分からない——件数から一覧へ辿れても、そこで止まる。</p>
+     */
+    @org.axonframework.messaging.queryhandling.annotation.QueryHandler
+    public com.example.cargotracker.booking.infrastructure.query.BookingQueries
+            .CancellationListView handle(
+            com.example.cargotracker.booking.infrastructure.query.BookingQueries
+                    .FindPendingCancellationsQuery query) {
+        return toListView(cancellations.findPending());
+    }
+
+    /**
+     * 却下されたキャンセル申請（S02 営業。US30 §受入基準 7 の落とし先）。
+     *
+     * <p><b>期間で区切る。</b> 既読を覚える表を足すより安く、営業の「最近の
+     * できごと」という性格にも合う。未処理の待ち行列ではない。</p>
+     */
+    @org.axonframework.messaging.queryhandling.annotation.QueryHandler
+    public com.example.cargotracker.booking.infrastructure.query.BookingQueries
+            .CancellationListView handle(
+            com.example.cargotracker.booking.infrastructure.query.BookingQueries
+                    .FindRejectedCancellationsQuery query) {
+        return toListView(cancellations.findRecentlyRejected(query.requestedBy(),
+                clock.instant().minus(REJECTION_NOTICE_DAYS, java.time.temporal.ChronoUnit.DAYS),
+                REJECTION_NOTICE_LIMIT));
+    }
+
+    /**
+     * 陸揚げ地の選択肢（S23 / US30 §受入基準 5）。
+     *
+     * <p><b>集約と同じ関数から作る。</b> 画面で組み立てると、出ているのに押すと
+     * 断られる港が生まれる（IT5 のレビューで一度出た形）。投影の旅程と現在地を
+     * 材料にして、判定そのものは {@code DischargeCandidates} に任せる。</p>
+     */
+    @org.axonframework.messaging.queryhandling.annotation.QueryHandler
+    public com.example.cargotracker.booking.infrastructure.query.BookingQueries
+            .DischargeCandidatesView handle(
+            com.example.cargotracker.booking.infrastructure.query.BookingQueries
+                    .FindDischargeCandidatesQuery query) {
+        var booking = cargos.findById(query.bookingId());
+        String current = booking == null ? null : booking.lastHandlingUnlocode();
+        var candidates = com.example.cargotracker.booking.domain.service.DischargeCandidates.of(
+                legs.findByBooking(query.bookingId()).stream()
+                        .map(leg -> new com.example.cargotracker.booking.domain.service
+                                .DischargeCandidates.Leg(leg.loadUnlocode(),
+                                leg.unloadUnlocode()))
+                        .toList(), current);
+        return new com.example.cargotracker.booking.infrastructure.query.BookingQueries
+                .DischargeCandidatesView(current, candidates.stream()
+                .map(port -> port.unLocode().value())
+                .toList());
+    }
+
+    /** その予約のキャンセル履歴（S22 / US30 §受入基準 10）。 */
+    @org.axonframework.messaging.queryhandling.annotation.QueryHandler
+    public com.example.cargotracker.booking.infrastructure.query.BookingQueries
+            .CancellationListView handle(
+            com.example.cargotracker.booking.infrastructure.query.BookingQueries
+                    .FindCancellationsOfBookingQuery query) {
+        return toListView(cancellations.findByBooking(query.bookingId()));
+    }
+
+    private com.example.cargotracker.booking.infrastructure.query.BookingQueries
+            .CancellationListView toListView(
+            java.util.List<com.example.cargotracker.booking.infrastructure.persistence
+                    .CancellationRequestMapper.CancellationRequestRow> rows) {
+        // **1 行ずつ引かない。** 申請が積み上がっているときほど遅くなる
+        // （承認待ち一覧は 5 秒ごとに取り直す。IT15 のレビュー 中）。
+        // 同じ予約に複数の申請が付くので、**予約ごとに 1 度だけ**引く。
+        java.util.Map<String, CargoSummaryMapper.CargoSummaryRow> bookings =
+                rows.stream().map(row -> row.bookingId()).distinct()
+                        .map(cargos::findById)
+                        .filter(java.util.Objects::nonNull)
+                        .collect(java.util.stream.Collectors.toMap(
+                                CargoSummaryMapper.CargoSummaryRow::bookingId,
+                                java.util.function.Function.identity()));
+        return new com.example.cargotracker.booking.infrastructure.query.BookingQueries
+                .CancellationListView(rows.stream().map(row -> {
+                    var booking = bookings.get(row.bookingId());
+                    return new com.example.cargotracker.booking.infrastructure.query
+                            .BookingQueries.CancellationRequestView(
+                            row.requestId(), row.bookingId(),
+                            booking == null ? null : booking.bookingNumber(),
+                            booking == null ? null : booking.productName(),
+                            row.reason(), row.requestedBy(), row.requestedAt(),
+                            row.decision(), decisionLabel(row.decision()),
+                            row.dischargeUnLocode(), row.decisionReason(),
+                            row.decidedBy(), row.decidedAt());
+                }).toList());
+    }
+
+    /** 画面に出す呼び名。<b>列挙名を出さない</b>（読む人は業務の言葉で読む）。 */
+    private static String decisionLabel(String decision) {
+        if (decision == null) {
+            return "承認待ち";
+        }
+        return switch (decision) {
+            case "APPROVED" -> "承認済";
+            case "REJECTED" -> "却下済";
+            default -> decision;
+        };
+    }
+
+    /** 確定した旅程（US09）。まだ決まっていなければ空。 */
+    @QueryHandler
+    public ItineraryView handle(FindBookingItineraryQuery query) {
+        return new ItineraryView(legs.findByBooking(query.bookingId()).stream()
+                .map(row -> new ItineraryLegView(row.legSeq(), row.voyageNumber(),
+                        row.loadUnlocode(), row.unloadUnlocode(), row.loadAt(), row.unloadAt()))
+                .toList());
+    }
+
+    /**
+     * その航海で経路を組んだ予約（S34 / US24）。組んでいなければ空。
+     *
+     * <p>止めても予約側の旅程は自動では戻らない。<b>止める前に</b>誰を巻き込むかを
+     * 読めるようにする（IT5 引き継ぎ 2）。</p>
+     */
+    @QueryHandler
+    public AffectedBookingListView handle(FindBookingsByVoyageQuery query) {
+        return new AffectedBookingListView(
+                legs.findBookingsByVoyage(query.voyageNumber()).stream()
+                        .map(row -> new AffectedBookingView(row.bookingId(), row.bookingNumber(),
+                                row.bookingStatus(), row.routingStatus()))
+                        .toList());
+    }
+
+    /**
+     * 調整された探索条件（US10）。調整していなければ空。
+     *
+     * <p>予約そのものが無いときも空を返す。{@code null} を返すと、呼ぶ側が
+     * 「予約が無い」と「条件が無い」を分けて扱うことになるが、候補算出は先に
+     * 予約の有無を見ている。</p>
+     */
+    @QueryHandler
+    public RouteConditionView handle(FindRouteConditionQuery query) {
+        CargoSummaryMapper.RouteConditionRow row = cargos.findRouteCondition(query.bookingId());
+        if (row == null || row.excludeUnlocodes() == null && row.departFromUnlocode() == null) {
+            return new RouteConditionView(List.of(), null);
+        }
+        return new RouteConditionView(parsePorts(row.excludeUnlocodes()),
+                row.departFromUnlocode());
+    }
+
+    /** 通知履歴（US12 §受入基準 4）。一度も通知していなければ空。 */
+    @QueryHandler
+    public NotificationListView handle(FindBookingNotificationsQuery query) {
+        return new NotificationListView(
+                notifications.findByBooking(query.bookingId()).stream()
+                        .map(row -> new NotificationView(row.notifiedAt(), row.recipientEmail(),
+                                row.summary(), row.notifiedBy()))
+                        .toList());
+    }
+
+    /** 修正履歴（US32 §受入基準 4）。一度も直していなければ空。 */
+    @QueryHandler
+    public RevisionListView handle(FindBookingRevisionsQuery query) {
+        return new RevisionListView(revisions.findByBooking(query.bookingId()).stream()
+                .map(row -> new RevisionView(row.updatedAt(), row.updatedBy(),
+                        row.fieldLabel(), row.beforeValue(), row.afterValue()))
+                .toList());
+    }
+
+    @QueryHandler
+    public BookingView handle(FindBookingQuery query) {
+        CargoSummaryMapper.CargoSummaryRow row = cargos.findById(query.bookingId());
+        return row == null ? null : toView(row);
+    }
+
+    @QueryHandler
+    public BookingListView handle(FindBookingsQuery query) {
+        int size = Math.clamp(query.size(), 1, 200);
+        int offset = Math.max(query.page(), 0) * size;
+        return new BookingListView(
+                cargos.findAll(query.includeFinished(), size, offset, query.q()).stream()
+                        .map(BookingQueryHandler::toView).toList(),
+                cargos.countAll(query.includeFinished(), query.q()));
+    }
+
+    /**
+     * 投影の行を画面に出す形へ。<b>同じパッケージの読み口が共有する</b>
+     * （{@link BookingWorklistQueryHandler} も一覧を返す）。写しを作ると、
+     * 列を足したときに片方だけが古くなる。
+     */
+    static BookingView toView(CargoSummaryMapper.CargoSummaryRow row) {
+        return new BookingView(
+                row.bookingId(), row.bookingNumber(), row.shipperId(), row.shipperName(),
+                row.originUnlocode(), row.destinationUnlocode(), row.arrivalDeadline(),
+                row.cargoType(), row.weightKg(), row.lengthCm(), row.widthCm(), row.heightCm(),
+                row.quantity(), row.productName(), row.hazardImoClass(), row.hazardUnNumber(),
+                row.temperatureMinC(), row.temperatureMaxC(),
+                row.bookingStatus(), row.routingStatus(), row.bookedAt(),
+                row.routingRequestedAt(), row.lastNotifiedAt(),
+                row.returnedToRoutingAt(), row.returnReason(),
+                row.conditionReviewReason(), row.conditionReviewRequestedAt(),
+                row.conditionReviewResponse(), row.conditionReviewRespondedAt(),
+                parsePorts(row.routeExcludeUnlocodes()), row.routeDepartFromUnlocode(),
+                row.confirmedAt(), row.trackingNumber(), row.trackingIssuedAt(),
+                row.routeOverdueDays(),
+                row.lastHandlingUnlocode(), row.lastHandlingAt(),
+                Boolean.TRUE.equals(row.lastHandlingOffRoute()),
+                row.updatedAt(), row.updatedBy());
+    }
+
+    /**
+     * 保存した除外港（カンマ区切り）を読み出す。<b>読み方を 1 か所にする。</b>
+     *
+     * <p>探索が組む条件と画面に映す条件が別々に解釈すると、片方だけが正しく
+     * なる。調整していなければ空リスト（{@code null} を画面へ渡さない）。</p>
+     */
+    private static List<String> parsePorts(String stored) {
+        return stored == null || stored.isBlank()
+                ? List.of() : List.of(stored.split(","));
+    }
+}

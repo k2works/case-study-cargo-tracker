@@ -1,0 +1,74 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+    "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+    "https://checkstyle.org/dtds/configuration_1_3.dtd">
+<module name="Checker">
+    <property name="charset" value="UTF-8"/>
+    <!--
+      指摘は落とす（severity=error + ignoreFailures=false）。警告のままにすると、
+      レポートに出続けるだけで誰も止まらない——IT6 では二重 import が検出されていたのに
+      ビルドが緑のまま通っていた。
+    -->
+    <property name="severity" value="error"/>
+    <property name="fileExtensions" value="java, properties, xml"/>
+
+    <module name="SuppressionFilter">
+        <property name="file" value="${config_loc}/suppressions.xml"/>
+    </module>
+
+    <!--
+      ファイルが長いのは「割る基準を決めていない」ことの現れである。500 行はその合図で、
+      超えたら責務で割る（行数で切らない）。
+    -->
+    <module name="FileLength">
+        <property name="max" value="500"/>
+    </module>
+
+    <module name="TreeWalker">
+        <!-- Naming Conventions -->
+        <module name="TypeName"/>
+        <module name="MethodName"/>
+        <module name="ConstantName">
+            <!--
+              log は定数ではなくロガーである。ConstantName は static final を一律に
+              定数と見なすため当たるが、業界の慣習は小文字の log であり、直すと読みにくい。
+
+              抑制ではなく format で許すのは、抑制を message で書くとロケールに依存する
+              ためである（指摘の文言は日本語と英語で変わる）。
+            -->
+            <property name="format" value="^([A-Z][A-Z0-9]*(_[A-Z0-9]+)*|log)$"/>
+        </module>
+        <module name="LocalVariableName"/>
+        <module name="MemberName"/>
+        <module name="PackageName"/>
+        <module name="ParameterName"/>
+
+        <!-- Imports -->
+        <module name="AvoidStarImport"/>
+        <module name="UnusedImports"/>
+        <module name="RedundantImport"/>
+
+        <!-- Whitespace -->
+        <module name="WhitespaceAround"/>
+        <module name="NoWhitespaceAfter"/>
+        <module name="NoWhitespaceBefore"/>
+
+        <!-- Blocks -->
+        <module name="NeedBraces"/>
+        <module name="LeftCurly"/>
+        <module name="RightCurly"/>
+
+        <!-- Coding -->
+        <module name="EqualsHashCode"/>
+        <module name="SimplifyBooleanExpression"/>
+        <module name="SimplifyBooleanReturn"/>
+
+        <!-- Design -->
+        <module name="FinalClass"/>
+        <module name="HideUtilityClassConstructor"/>
+
+        <!-- Miscellaneous -->
+        <module name="ArrayTypeStyle"/>
+        <module name="UpperEll"/>
+    </module>
+</module>

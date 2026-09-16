@@ -1,0 +1,150 @@
+package com.example.cargotracker.booking.infrastructure.projection;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.lang.reflect.Constructor;
+import java.util.List;
+import org.axonframework.messaging.commandhandling.gateway.CommandGateway;
+
+import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
+import com.example.cargotracker.booking.infrastructure.persistence.AttentionItemMapper;
+import com.example.cargotracker.booking.infrastructure.persistence.CargoSummaryMapper;
+import com.example.cargotracker.booking.infrastructure.persistence.ShipperMapper;
+import com.example.cargotracker.shared.contract.event.ShipperRegisteredEvent;
+import com.example.cargotracker.shared.testing.AbstractAxonIntegrationTest;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.Month;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.DirtiesContext;
+
+/**
+ * 投影のリプレイ（[ADR-0001] コンプライアンス「投影がコマンドを送らない」）。
+ *
+ * <p>ArchUnit の {@code onlyInterfacesAndReactionSendCommands} はコンパイル時の依存
+ * しか見ておらず、<b>実行時に呼ばれないことの保証ではない</b>。ここでは投影のハンドラを
+ * もう一度流し、副作用が積み上がらないことを確かめる。</p>
+ *
+ * <p><b>投影の冪等性は「行が増えない」だけでは足りない。</b> 投影は
+ * {@code attention_item}（追記専用の受け皿。リプレイで TRUNCATE しない）にも書く。
+ * ここが増えると、要確認一覧が同じ内容で膨らみ、営業が毎朝見る一覧が信用されなくなる。</p>
+ */
+@SpringBootTest
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+class ReplayIT extends AbstractAxonIntegrationTest {
+
+    @Autowired
+    private ShipperProjection shipperProjection;
+
+    @Autowired
+    private CargoProjection cargoProjection;
+
+    @Autowired
+    private ShipperMapper shippers;
+
+    @Autowired
+    private CargoSummaryMapper cargos;
+
+    @Autowired
+    private AttentionItemMapper attentionItems;
+
+    private static ShipperRegisteredEvent shipper(String id, String email) {
+        return new ShipperRegisteredEvent(id, "INDIVIDUAL", "山田商事", email,
+                "03-0000-0000", "東京都中央区", null, null, false);
+    }
+
+    private static CargoBookedEvent cargo(String bookingId, String shipperId) {
+        return new CargoBookedEvent(bookingId, shipperId, "JPTYO", "USNYC",
+                LocalDate.of(2026, Month.DECEMBER, 1), "GENERAL", new BigDecimal("1200"),
+                new BigDecimal("120"), new BigDecimal("80"), new BigDecimal("100"),
+                10, "自動車部品", null, null, null, null, "sales01");
+    }
+
+    /**
+     * <b>この検査が作った要確認だけを数える。</b>
+     *
+     * <p>ロール全体を数えると、同じ DB を使う他の検査が書いた行まで入る。
+     * IT15 で連鎖の断りも営業宛に出すようになり（引き継ぎ I）、<b>数え始めてから
+     * 数え終わるまでのあいだに増える</b>ようになった——読み直しが増やしたのか、
+     * 他人が増やしたのかを判別できない検査は、赤くなっても何も教えない。</p>
+     */
+    private int openAttentionCount(String targetId) {
+        return (int) attentionItems.findOpenByRole("ROLE_SALES").stream()
+                .filter(item -> targetId.equals(item.targetId()))
+                .count();
+    }
+
+    @Test
+    @DisplayName("同じイベントを読み直しても荷主の行は増えない")
+    void replayingShipperIsIdempotent() {
+        String id = "SHP-REPLAY-" + System.nanoTime();
+        String email = id + "@example.com";
+
+        shipperProjection.on(shipper(id, email));
+        String codeAfterFirst = shippers.findById(id).shipperCode();
+
+        shipperProjection.on(shipper(id, email));
+
+        assertThat(shippers.findById(id).shipperCode())
+                .as("読み直しで荷主コードが振り直されると、書類と一覧が食い違う")
+                .isEqualTo(codeAfterFirst);
+    }
+
+    @Test
+    @DisplayName("同じイベントを読み直しても予約の行は増えない")
+    void replayingCargoIsIdempotent() {
+        String bookingId = "B-REPLAY-" + System.nanoTime();
+
+        cargoProjection.on(cargo(bookingId, "SHP-X"));
+        String numberAfterFirst = cargos.findById(bookingId).bookingNumber();
+
+        cargoProjection.on(cargo(bookingId, "SHP-X"));
+
+        assertThat(cargos.findById(bookingId).bookingNumber()).isEqualTo(numberAfterFirst);
+    }
+
+    @Test
+    @DisplayName("弾かれた登録を読み直しても要確認一覧は増えない")
+    void replayingRejectedShipperDoesNotDuplicateAttentionItems() {
+        // attention_item は追記専用でリプレイでも消さない（data-model.md）。
+        // 投影が毎回書くと、同じ内容の行が読み直しの回数だけ積み上がる。
+        String email = "replay-dup-" + System.nanoTime() + "@example.com";
+        shipperProjection.on(shipper("SHP-FIRST-" + System.nanoTime(), email));
+
+        String rejectedId = "SHP-REJECTED-" + System.nanoTime();
+        shipperProjection.on(shipper(rejectedId, email));
+        int afterFirstRejection = openAttentionCount(rejectedId);
+        assertThat(afterFirstRejection)
+                .as("1 件も書けていないなら、この検査は何も見ていない")
+                .isEqualTo(1);
+
+        shipperProjection.on(shipper(rejectedId, email));
+
+        assertThat(openAttentionCount(rejectedId))
+                .as("読み直しのたびに増えると、要確認一覧が同じ内容で膨らんで信用されなくなる")
+                .isEqualTo(afterFirstRejection);
+    }
+
+    @Test
+    @DisplayName("ADR-0001 決定 6: 投影はコマンドの送り口を持たない（リプレイで連鎖が走り直さない）")
+    void projectionsCannotSendCommands() {
+        // **投影と Reaction Handler を同じ Processing Group に置くと、投影のリプレイで
+        // InitializeTrackingCommand が再送され、追跡が作り直される。** 分けたことは
+        // パッケージ（application.yml の列挙）で表しているが、それだけでは
+        // 「投影がコマンドを送らない」ことにならない。
+        //
+        // 送り口そのものを持っていないことを見る。持っていなければ送りようがない。
+        List<Class<?>> projections = List.of(CargoProjection.class, ShipperProjection.class);
+        for (Class<?> projection : projections) {
+            for (Constructor<?> constructor : projection.getDeclaredConstructors()) {
+                assertThat(constructor.getParameterTypes())
+                        .as("%s が CommandGateway を持つと、リプレイのたびに連鎖が走り直す",
+                                projection.getSimpleName())
+                        .doesNotContain(CommandGateway.class);
+            }
+        }
+    }
+}

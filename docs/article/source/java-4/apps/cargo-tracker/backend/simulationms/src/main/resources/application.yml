@@ -1,0 +1,57 @@
+spring:
+  application:
+    name: simulationms
+  datasource:
+    # Database per Service（ADR-0001 決定 1）。他サービスの DB には繋がない。
+    # **業務データはここに無い**——シミュレーションが持つのは実行の記録だけで、
+    # 業務データは各サービスが本番の経路で作る（[ADR-0020] 決定 2）。
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/simulation_read_db}
+    username: ${DB_USER:simulationms}
+    password: ${DB_PASSWORD:simulationms}
+  flyway:
+    enabled: true
+    # サービスごとに置き場を分ける（同じ場所に置くと版が衝突する）。
+    locations: classpath:db/migration/simulation
+  main:
+    # Axon の ConfigurationProperties が Bean 循環を作るため必須（IT1 実測）。
+    allow-circular-references: true
+
+cargo-tracker:
+  simulation:
+    # **本番では実行しない**（US33 §受入基準 4）。既定は無効。
+    #
+    # 環境変数は名前を推測させず、ここで明示的に受ける。リラックスバインディングが
+    # どの環境変数名に対応するかは規則を知らないと読めず、外したときは
+    # 「既定のまま静かに無効」になって気づけない（authms の demo-users で実測）。
+    enabled: ${CARGOTRACKER_SIMULATION_ENABLED:false}
+    # 工程が叩く先。**Gateway を通る**——認可も本番と同じ経路にする。
+    gateway-url: ${GATEWAY_URL:http://localhost:8080}
+    schedule:
+      # **継続実行はもう 1 段の許可を要る**（US36 §受入基準 6）。流し続ける側は
+      # 業務を止めうるので、「実行できる環境＝流し続けてよい環境」にしない。
+      enabled: ${CARGOTRACKER_SIMULATION_SCHEDULE_ENABLED:false}
+      # **間を空ける。** 0 にすると業務が止まる（この局面に固有の危険 3）。
+      interval: ${CARGOTRACKER_SIMULATION_SCHEDULE_INTERVAL:30s}
+      max-concurrent: ${CARGOTRACKER_SIMULATION_SCHEDULE_MAX_CONCURRENT:2}
+      exception-ratio: ${CARGOTRACKER_SIMULATION_SCHEDULE_EXCEPTION_RATIO:0.2}
+
+server:
+  port: ${SERVER_PORT:8087}
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+
+# **Axon の設定は置かない**（IT16 のレビュー N7）。このサービスは集約も
+# イベントも持たない（[ADR-0020] 決定 3）。置くと、いつの間にか依存が戻る。
+
+# Gateway の振り分けと同じ接頭辞。共有の読み口（退避一覧）が経路を組み立てる。
+cargo:
+  context: simulation
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

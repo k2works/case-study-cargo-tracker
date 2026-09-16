@@ -1,0 +1,46 @@
+spring:
+  application:
+    name: gatewayms
+  main:
+    # Axon の axon.axonserver ConfigurationProperties が Spring Boot の
+    # BoundConfigurationProperties と Bean 循環を作るため必須（IT1 スパイクで実測）。
+    # Spring Boot の版を下げても回避できない。
+    allow-circular-references: true
+
+server:
+  port: ${SERVER_PORT:8080}
+
+axon:
+  axonserver:
+    servers: ${AXON_SERVER:localhost:8124}
+
+spring.cloud.gateway.server.webmvc.routes:
+  - id: auth
+    uri: ${AUTHMS_URI:http://localhost:8081}
+    predicates: [Path=/api/v1/auth/**]
+  - id: booking
+    uri: ${BOOKINGMS_URI:http://localhost:8082}
+    predicates: [Path=/api/v1/booking/**]
+  - id: routing
+    uri: ${ROUTINGMS_URI:http://localhost:8083}
+    predicates: [Path=/api/v1/routing/**]
+  - id: tracking
+    uri: ${TRACKINGMS_URI:http://localhost:8084}
+    predicates: [Path=/api/v1/tracking/**]
+  - id: handling
+    uri: ${HANDLINGMS_URI:http://localhost:8085}
+    predicates: [Path=/api/v1/handling/**]
+  - id: billing
+    uri: ${BILLINGMS_URI:http://localhost:8086}
+    predicates: [Path=/api/v1/billing/**]
+  # 業務シミュレーション（UC23 / [ADR-0020]）。**管理者だけ**が使う。
+  # simulationms 自身も工程を Gateway 経由で叩くので、ここを通って戻ってくる。
+  - id: simulation
+    uri: ${SIMULATIONMS_URI:http://localhost:8087}
+    predicates: [Path=/api/v1/simulation/**]
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

@@ -1,0 +1,47 @@
+spring:
+  application:
+    name: authms
+  datasource:
+    # Database per Service（ADR-0001 決定 1）。他サービスの DB には繋がない。
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/auth_db}
+    username: ${DB_USER:authms}
+    password: ${DB_PASSWORD:authms}
+  flyway:
+    enabled: true
+    # サービスごとに置き場を分ける。同じ classpath:db/migration に置くと、
+    # 2 つのサービスを同じ JVM に載せた瞬間に双方の V001 が衝突して起動しない
+    # （Found more than one migration with version 001）。契約テストの往復は
+    # 2 サービスを同時に起動するので、番号取りをサービス間で調整しない形にする。
+    locations: classpath:db/migration/auth
+  main:
+    # Axon の axon.axonserver ConfigurationProperties が Spring Boot の
+    # BoundConfigurationProperties と Bean 循環を作るため必須（IT1 スパイクで実測）。
+    # Spring Boot の版を下げても回避できない。
+    allow-circular-references: true
+
+cargo-tracker:
+  # 動作確認用の利用者を読み込むか（ADR-0004）。既定は無効。有効にすると
+  # classpath:db/seed が Flyway の場所に加わる（DemoUserSeedConfiguration）。
+  #
+  # 環境変数は名前を推測させず、ここで明示的に受ける。リラックスバインディングが
+  # どの環境変数名に対応するかは規則を知らないと読めず、外したときは
+  # 「既定のまま静かに無効」になって気づけない（実測: kind クラスタで空振りした）。
+  demo-users: ${CARGOTRACKER_DEMOUSERS:false}
+
+server:
+  port: ${SERVER_PORT:8081}
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+
+axon:
+  axonserver:
+    servers: ${AXON_SERVER:localhost:8124}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

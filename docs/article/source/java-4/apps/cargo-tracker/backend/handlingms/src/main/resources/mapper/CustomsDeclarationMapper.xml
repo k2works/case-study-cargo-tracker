@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.handling.infrastructure.persistence.CustomsDeclarationMapper">
+
+    <!--
+      主キーは申告番号（税関が採番し、利用者が持ち込む）。読み直しても増えない。
+      内容は書き換えない——登録時の内容は変わらない。
+
+      **衝突先を書かない**（ON CONFLICT (declaration_number) にしない）。不変条件 3 の
+      部分ユニークインデックス（uq_customs_declaration_unsettled）があるので、
+      衝突先を 1 つに絞ると**リプレイのたびに別の索引で例外になる**——同じ行を
+      読み直しただけで退避される。衝突先を書かなければ、どちらの索引でも黙って
+      見送る。見送った事実は投影側が読み直して記録する（CustomsDeclarationProjection）。
+    -->
+    <insert id="insert">
+        INSERT INTO customs_declaration (
+            declaration_number, tracking_number, booking_id, status, declared_at,
+            last_status_changed_at, destination_unlocode, projected_at
+        ) VALUES (
+            #{declarationNumber}, #{trackingNumber}, #{bookingId}, #{status}, #{declaredAt},
+            #{lastStatusChangedAt}, #{destinationUnLocode}, #{projectedAt}
+        )
+        ON CONFLICT DO NOTHING
+    </insert>
+
+    <!--
+      **古い配送で巻き戻らないようにする。** 少なくとも 1 回配送では、更新が
+      入れ替わって届くことがある。最後に起きた変更より古いものは書かない。
+    -->
+    <update id="updateStatus">
+        UPDATE customs_declaration
+           SET status = #{status},
+               last_reason = #{reason},
+               changed_by = #{changedBy},
+               last_held_at = COALESCE(#{lastHeldAt}, last_held_at),
+               last_status_changed_at = #{changedAt},
+               projected_at = #{projectedAt}
+         WHERE declaration_number = #{declarationNumber}
+           AND last_status_changed_at &lt;= #{changedAt}
+    </update>
+
+    <!--
+      **貨物ごとに 1 行だけ返す。** 引取待ちの一覧が、行ごとに問い合わせずに
+      通関状態を出せるようにする（N+1 を作らない）。同じ貨物に複数の申告が
+      あるとき（不可のあとに出し直した場合）は、引取のガードと同じ順——
+      最後に状態が変わったものが先——で最初の 1 件を採る。
+    -->
+    <select id="findLatestByCargos" resultType="com.example.cargotracker.handling.infrastructure.persistence.CustomsDeclarationMapper$CustomsDeclarationRow">
+        SELECT DISTINCT ON (tracking_number)
+               declaration_number, tracking_number, booking_id, status, declared_at,
+               last_status_changed_at, last_held_at, last_reason,
+               changed_by, destination_unlocode, projected_at
+          FROM customs_declaration
+         WHERE tracking_number IN
+        <foreach item="number" collection="trackingNumbers" open="(" separator="," close=")">
+            #{number}
+        </foreach>
+         ORDER BY tracking_number, last_status_changed_at DESC, declared_at DESC
+    </select>
+
+    <!--
+      **既定で通関済を外す。** 決着したものが混ざると、一覧全体が「まだ手を
+      入れる場所」に見えなくなる。
+
+      **並べ替えはここでしない。** 留置営業日の多い順に並べるが、留置中の日数は
+      日が経つだけで変わり、イベントは来ないので列は古いままになる。数えるのは
+      読むときで、並べ替えもそこで行う（CustomsQueryHandler）。
+    -->
+    <select id="search" resultType="com.example.cargotracker.handling.infrastructure.persistence.CustomsDeclarationMapper$CustomsDeclarationRow">
+        SELECT declaration_number, tracking_number, booking_id, status, declared_at,
+               last_status_changed_at, last_held_at, last_reason,
+               changed_by, destination_unlocode, projected_at
+          FROM customs_declaration
+         <where>
+            <!-- **シミュレーション由来は外す**（[ADR-0020] 決定 4）。US36 の継続実行は
+                 税関保留のシナリオを流し続けるので、通関の一覧が偽物で埋まる
+                 ——留置が 3 営業日を超えたものを毎朝見るのがこの一覧である
+                 （IT17 のレビューで指摘）。
+                 **貨物の写しから引く。** 申告そのものは荷主を持たない。
+
+                 **「写しがある」ことを条件にしない。** 写しは別の BC から投影で
+                 届くので、申告が先に入って写しがまだ来ていない瞬間がある——
+                 `EXISTS ... = FALSE` にすると、その間だけ本物の申告が一覧から
+                 消える（IT17 のフルビルドで実測。12 件が赤になった）。
+                 **外すのは「偽物だと分かっているもの」だけ**にする。 -->
+            AND NOT EXISTS (SELECT 1 FROM cargo_snapshot s
+                             WHERE s.tracking_number = customs_declaration.tracking_number
+                               AND s.simulated = TRUE)
+            <if test="!includeCleared">
+                AND status &lt;&gt; 'CLEARED'
+            </if>
+            <if test="trackingNumber != null">
+                AND tracking_number = #{trackingNumber}
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+         </where>
+         ORDER BY declared_at, declaration_number
+         LIMIT #{limit}
+    </select>
+
+</mapper>

@@ -1,0 +1,64 @@
+package com.example.cargotracker.billing.domain.model.events;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
+import org.axonframework.eventsourcing.annotation.EventTag;
+
+/**
+ * 輸送料金を算出した（billingms の内部イベント / US21）。
+ *
+ * <p><b>契約にしない。</b> 算出したことを読む BC はいまのところ無い。予約が
+ * 「精算済」になるのは入金のとき（US23・IT14）である。</p>
+ *
+ * <p><b>{@code @EventTag} が要る。</b> 付け忘れると集約は空のまま復元され、
+ * 「算出済の請求書に二度算出しない」のような状態を見る守りが素通りする。</p>
+ *
+ * <p><b>投影が作れる分を運ぶ。</b> 投影はコマンドを読まないので、明細も根拠も
+ * ここに載せる（IT7 の教訓）。</p>
+ *
+ * <p><b>税率と免税は載せて運ぶ。</b> 「税額 ÷ 課税対象」で割り戻すと、税率 0% の
+ * 期間や全額割引のときに国内貨物が免税として復元される。<b>免税であることは業務の
+ * 判断</b>であって、割り算で復元する値ではない（IT13 のレビュー 中）。</p>
+ */
+public record InvoiceCalculatedEvent(
+        @EventTag(key = "invoiceId") String invoiceId,
+        String bookingId,
+        String shipperId,
+        String shipperName,
+        String shipperType,
+        String contractNumber,
+        BigDecimal discountRate,
+        BigDecimal baseAmount,
+        BigDecimal discountAmount,
+        BigDecimal taxAmount,
+        BigDecimal taxRate,
+        boolean taxExempt,
+        BigDecimal totalAmount,
+        String currency,
+        // 見積時の概算（注 N12）。**見積を経ない予約では null。** 投影はコマンドを
+        // 読まないので、ここに載っていなければ S61 は概算行を出せない。
+        BigDecimal quotedAmount,
+        List<LineItem> lineItems,
+        String calculatedBy,
+        Instant calculatedAt) {
+
+    public InvoiceCalculatedEvent {
+        lineItems = lineItems == null ? List.of() : List.copyOf(lineItems);
+    }
+
+    /**
+     * 明細の 1 行。
+     *
+     * @param itemType 表示の分類（{@code BASE} / {@code DISCOUNT} / {@code TAX} …）
+     * @param description 根拠の文（「3 区間・近海 2.5 + 遠洋 6.0・1,200 kg・一般」）
+     * @param basisExceptionId 調整行の根拠になった例外 ID（任意）
+     */
+    public record LineItem(
+            String itemType,
+            String description,
+            BigDecimal amount,
+            String currency,
+            String basisExceptionId) {
+    }
+}

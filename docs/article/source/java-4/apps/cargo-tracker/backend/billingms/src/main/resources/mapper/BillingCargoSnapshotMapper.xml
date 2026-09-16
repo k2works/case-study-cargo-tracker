@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.billing.infrastructure.persistence.BillingCargoSnapshotMapper">
+
+    <insert id="upsert">
+        INSERT INTO billing_cargo_snapshot
+            (tracking_number, booking_id, shipper_id, origin_unlocode, destination_unlocode,
+             cargo_type, weight_kg, projected_at, last_event_id)
+        VALUES (#{trackingNumber}, #{bookingId}, #{shipperId}, #{originUnLocode},
+                #{destinationUnLocode}, #{cargoType}, #{weightKg}, #{projectedAt}, #{lastEventId})
+        ON CONFLICT (tracking_number) DO UPDATE SET
+            booking_id           = EXCLUDED.booking_id,
+            shipper_id           = EXCLUDED.shipper_id,
+            origin_unlocode      = EXCLUDED.origin_unlocode,
+            destination_unlocode = EXCLUDED.destination_unlocode,
+            cargo_type           = EXCLUDED.cargo_type,
+            weight_kg            = EXCLUDED.weight_kg,
+            projected_at         = EXCLUDED.projected_at,
+            last_event_id        = EXCLUDED.last_event_id
+    </insert>
+
+    <insert id="insertLeg">
+        INSERT INTO billing_cargo_leg (tracking_number, leg_seq, load_unlocode, unload_unlocode)
+        VALUES (#{trackingNumber}, #{legSeq}, #{loadUnLocode}, #{unloadUnLocode})
+    </insert>
+</mapper>

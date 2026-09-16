@@ -1,0 +1,128 @@
+:root {
+  --fg: #24292f;
+  --muted: #57606a;
+  --border: #d0d7de;
+  --accent: #1a237e;
+  --accent-soft: #e8eaf6;
+  --generated: #00695c;
+  --generated-soft: #e0f2f1;
+  --app: #b71c1c;
+  --app-soft: #ffebee;
+  --soft: #f6f8fa;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif;
+  color: var(--fg);
+  line-height: 1.75;
+  background: #fff;
+}
+
+/* ヒーロー */
+.hero {
+  background: linear-gradient(135deg, var(--accent) 0%, #303f9f 100%);
+  color: #fff;
+  padding: 3rem 1.5rem;
+}
+.hero-inner { max-width: 980px; margin: 0 auto; }
+.eyebrow {
+  margin: 0 0 .3rem;
+  font-size: .8rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  opacity: .75;
+}
+.hero h1 { margin: 0 0 .8rem; font-size: 2rem; line-height: 1.35; }
+.lead { margin: 0; max-width: 44rem; font-size: .98rem; opacity: .93; }
+.lead strong { font-weight: 600; }
+
+/* 本文 */
+main { max-width: 980px; margin: 0 auto; padding: 2.5rem 1.5rem 1rem; }
+section { margin-bottom: 2.8rem; }
+section h2 {
+  margin: 0 0 .3rem;
+  font-size: 1.2rem;
+  padding-bottom: .4rem;
+  border-bottom: 2px solid var(--border);
+}
+.section-note { margin: .5rem 0 1.2rem; color: var(--muted); font-size: .9rem; }
+
+/* カード */
+.cards {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+}
+.card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.1rem 1.2rem;
+  text-decoration: none;
+  color: inherit;
+  background: #fff;
+  transition: border-color .15s, box-shadow .15s, transform .15s;
+}
+.card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 4px 14px rgba(26, 35, 126, .12);
+  transform: translateY(-2px);
+}
+.card h3 { margin: 0 0 .4rem; font-size: 1.02rem; }
+.card p { margin: 0 0 .8rem; color: var(--muted); font-size: .88rem; flex-grow: 1; }
+.card .meta {
+  display: block;
+  margin-bottom: .8rem;
+  font-size: .78rem;
+  color: var(--muted);
+  border-left: 3px solid var(--border);
+  padding-left: .6rem;
+}
+.card .cta {
+  align-self: flex-start;
+  background: var(--accent);
+  color: #fff;
+  padding: .35rem .9rem;
+  border-radius: 4px;
+  font-size: .82rem;
+}
+
+.card.primary { background: var(--accent-soft); border-color: #c5cae9; }
+
+.card.generated { background: var(--generated-soft); border-color: #b2dfdb; }
+.card.generated:hover { border-color: var(--generated); box-shadow: 0 4px 14px rgba(0, 105, 92, .14); }
+.card.generated .cta { background: var(--generated); }
+
+.card.app { background: var(--app-soft); border-color: #ffcdd2; }
+.card.app:hover { border-color: var(--app); box-shadow: 0 4px 14px rgba(183, 28, 28, .14); }
+.card.app .cta { background: var(--app); }
+
+/* フッター */
+footer {
+  border-top: 1px solid var(--border);
+  margin-top: 2rem;
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--muted);
+  font-size: .88rem;
+  background: var(--soft);
+}
+footer p { margin: .2rem 0; }
+footer .small { font-size: .8rem; }
+footer code {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: .1rem .35rem;
+  font-size: .95em;
+}
+
+@media (max-width: 600px) {
+  .hero { padding: 2rem 1.2rem; }
+  .hero h1 { font-size: 1.5rem; }
+  main { padding: 1.8rem 1.2rem 1rem; }
+}

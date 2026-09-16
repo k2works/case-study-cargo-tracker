@@ -1,0 +1,491 @@
+package com.example.cargotracker.booking.infrastructure.query;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.List;
+
+/** 貨物予約の読み取りモデル（domain-model.md「クエリ一覧」）。 */
+public final class BookingQueries {
+
+    private BookingQueries() {
+    }
+
+    public record FindBookingQuery(String bookingId) {
+    }
+
+    /**
+     * 一覧（S20）。
+     *
+     * <p>{@code includeFinished} は「終了したものも表示」の操作に対応する。既定を
+     * false にしているのは、精算済とキャンセルが混ざると一覧全体が「今日やること」
+     * として信用されなくなるため（ui_design.md「一覧の既定条件」）。</p>
+     */
+    public record FindBookingsQuery(int page, int size, boolean includeFinished, String q) {
+    }
+
+    /**
+     * 状態ごとの件数（S02 の「今日の作業」）。
+     *
+     * <p>「仮受付の件数」に限定しない。誤配の件数（S30）も同じ形で数えるので、
+     * 状態を引数に取る。専用のクエリを状態の数だけ足すと、増やすたびに配線が増える。</p>
+     */
+    public record CountBookingsByStatusQuery(String bookingStatus) {
+    }
+
+    /**
+     * 経路設計作業一覧（S30）。
+     *
+     * <p>{@code includeRouted} は「設計済みも表示」の操作に対応する。既定を false に
+     * しているのは、設計の済んだ予約が混ざると一覧全体が「今日やること」として
+     * 信用されなくなるため。誤配は既定でも含める（現在地からの再設計が要る）。</p>
+     */
+    public record FindRoutingWorklistQuery(int page, int size, boolean includeRouted,
+            String kind) {
+    }
+
+    /**
+     * 修正履歴（S22 / US32 §受入基準 4）。
+     *
+     * <p>一覧（{@code FindBookingsQuery}）には載せない。全件ぶんの履歴を読むことに
+     * なるうえ、一覧では読まない。</p>
+     */
+    public record FindBookingRevisionsQuery(String bookingId) {
+    }
+
+    /** 1 回の修正で変わった項目 1 つ。新しい修正が先に並ぶ。 */
+    public record RevisionView(
+            Instant updatedAt,
+            String updatedBy,
+            String label,
+            String before,
+            String after) {
+    }
+
+    public record RevisionListView(List<RevisionView> items) {
+    }
+
+    /**
+     * 確定した旅程（S22 / US09）。
+     *
+     * <p>一覧には載せない。全件ぶんの区間を読むことになるうえ、一覧では読まない。</p>
+     */
+    public record FindBookingItineraryQuery(String bookingId) {
+    }
+
+    /** 旅程の区間 1 つ。<b>並び順が業務の意味を持つ。</b> */
+    public record ItineraryLegView(
+            int legSeq,
+            String voyageNumber,
+            String loadUnLocode,
+            String unloadUnLocode,
+            Instant loadAt,
+            Instant unloadAt) {
+    }
+
+    public record ItineraryView(List<ItineraryLegView> legs) {
+    }
+
+    /**
+     * その航海で経路を組んだ予約（S34 / US24）。
+     *
+     * <p>航海を止める前に、巻き込む予約を数え、そこへ行けるようにする。止めても
+     * 予約側の旅程は自動では戻らないので、<b>誰が影響を受けるかを止める前に知る</b>
+     * 必要がある。マニュアル 07 章は「控えてください」と書いているが、控える先が
+     * 無かった（IT5 引き継ぎ 2）。</p>
+     *
+     * <p>読むのは {@code cargo_leg}。{@code voyage_number} の索引が既にある。</p>
+     */
+    public record FindBookingsByVoyageQuery(String voyageNumber) {
+    }
+
+    /**
+     * 巻き込む予約 1 件。
+     *
+     * <p><b>一覧の {@code BookingView} を使い回さない。</b> 止める判断に要るのは
+     * 「どの予約が」「いまどの状態か」だけで、荷主名や貨物の寸法まで運ぶと、
+     * 航海を読む人に予約の中身を余分に見せることになる。</p>
+     */
+    public record AffectedBookingView(
+            String bookingId,
+            String bookingNumber,
+            String bookingStatus,
+            String routingStatus) {
+    }
+
+    /** 巻き込む予約の一覧。件数は {@code items().size()} で足りる。 */
+    public record AffectedBookingListView(List<AffectedBookingView> items) {
+    }
+
+    /**
+     * 見直しを頼まれている予約（S02 / 営業。US10 §受入基準 4）。
+     *
+     * <p>件数だけでは仕事が進まないので、行そのものを返して予約詳細へ行けるように
+     * する（IT4 の「気づく手段は次の行動へ繋ぐ」）。</p>
+     */
+    public record FindConditionReviewsQuery(int limit) {
+    }
+
+    /** 見直しを頼まれている予約 1 件。理由が読めないと、営業は何を協議するか分からない。 */
+    public record ConditionReviewView(
+            String bookingId,
+            String bookingNumber,
+            String reason,
+            Instant requestedAt) {
+    }
+
+    public record ConditionReviewListView(List<ConditionReviewView> items) {
+    }
+
+    /** 調整された探索条件（US10）。候補を出すたびに投影から組む。 */
+    public record FindRouteConditionQuery(String bookingId) {
+    }
+
+    /**
+     * 探索の条件。<b>画面にも出す</b>（S31 の「いまの条件」）。
+     *
+     * <p>いま何で絞っているのかが読めないと、経路設計者は同じ条件で何度も再算出する。</p>
+     */
+    public record RouteConditionView(
+            List<String> excludeUnLocodes,
+            String departFromUnLocode) {
+    }
+
+    /**
+     * 荷主へ通知していない経路確定済みの予約の件数（S02 / 営業。US12）。
+     *
+     * <p>履歴テーブルを数えず {@code last_notified_at} で絞る。</p>
+     *
+     * <p><b>引数を持たない。</b> Axon のクエリは<b>型そのものが問い合わせの識別子</b>で、
+     * この問い合わせに絞り込みの余地は無い（「経路が決まっていて、まだ通知していない」
+     * は 1 つの状態である）。数えるだけの引数を足すと、呼ぶ側が「別の状態でも数え
+     * られる」と読んでしまう。静的解析の「空のクラス」指摘はこの形に当たらない。</p>
+     */
+    public record CountAwaitingNotificationQuery() { // NOSONAR: 型が問い合わせの識別子
+    }
+
+    /**
+     * 確定を待っている予約（S02 / 営業。US13 §受入基準 3）。
+     *
+     * <p>荷主へ通知したまま確定を忘れると、追跡番号の発行も輸送手配も始まらない。
+     * <b>件数でなく行を返す</b>——件数だけでは、営業はどの予約を開けばよいか
+     * 分からない。</p>
+     */
+    public record FindAwaitingConfirmationQuery(int limit) {
+    }
+
+    /**
+     * 追跡番号の発行を待っている予約（S02 / 経路設計者。US13 §受入基準 3）。
+     *
+     * <p>確定したまま発行を忘れると、荷主は追跡番号を受け取れない。US13 §3 の
+     * 「経路設計者への通知」は送信基盤がスコープ外なので、<b>この受け皿で代える</b>。</p>
+     */
+    public record FindAwaitingTrackingNumberQuery(int limit) {
+    }
+
+    /** 追跡番号の発行を待っている予約 1 件。予約詳細（S22）へ行ける。 */
+    public record AwaitingTrackingView(
+            String bookingId,
+            String bookingNumber,
+            Instant confirmedAt) {
+    }
+
+    public record AwaitingTrackingListView(List<AwaitingTrackingView> items) {
+    }
+
+    /** 確定を待っている予約 1 件。予約詳細（S22）へ行ける。 */
+    public record AwaitingConfirmationView(
+            String bookingId,
+            String bookingNumber,
+            Instant notifiedAt) {
+    }
+
+    public record AwaitingConfirmationListView(List<AwaitingConfirmationView> items) {
+    }
+
+    /** 通知履歴（S22 / US12 §受入基準 4）。新しい通知が先。 */
+    public record FindBookingNotificationsQuery(String bookingId) {
+    }
+
+    /**
+     * 通知 1 件。<b>何を伝えたかを残す。</b>
+     *
+     * <p>要約が読めないと、荷主から「聞いていない」と言われたときに突き合わせられない。</p>
+     */
+    public record NotificationView(
+            Instant notifiedAt,
+            String recipientEmail,
+            String summary,
+            String notifiedBy) {
+    }
+
+    public record NotificationListView(List<NotificationView> items) {
+    }
+
+    /**
+     * 承認待ちのキャンセル申請（S23 / US30 §受入基準 4）。
+     *
+     * <p><b>宛先は追跡管理者。</b> 陸揚げ地を決められるのはその人だけで、
+     * 営業には打つ手が無い。</p>
+     */
+    public record FindPendingCancellationsQuery() { // NOSONAR: 型が問い合わせの識別子
+    }
+
+    /**
+     * 自分が申請して却下されたキャンセル（S02 営業。US30 §受入基準 7 の落とし先）。
+     *
+     * <p><b>却下だけを出す。</b> 承認されれば予約が「キャンセル」になって予約一覧に
+     * 出るが、却下は<b>何も変わらない</b>——申請した本人が予約詳細を開き直さない
+     * 限り、理由を書かせた意味が無い。</p>
+     *
+     * <p><b>宛先は申請した本人。</b> 営業全員に出すと、自分に打つ手の無い行が
+     * 毎朝積み上がる。</p>
+     */
+    public record FindRejectedCancellationsQuery(String requestedBy) {
+    }
+
+    /**
+     * 陸揚げ地の選択肢（S23 / US30 §受入基準 5）。
+     *
+     * <p><b>画面が組み立てない。</b> 集約が断る条件と同じ関数（{@code
+     * DischargeCandidates}）から作る——別々に書くと、画面に出ているのに押すと
+     * 断られる港が生まれる。</p>
+     */
+    public record FindDischargeCandidatesQuery(String bookingId) {
+    }
+
+    /**
+     * 選べる陸揚げ地（先頭が現在地）。
+     *
+     * @param currentUnLocode 現在地。<b>まだ荷役が無ければ {@code null}</b>
+     */
+    public record DischargeCandidatesView(
+            String currentUnLocode,
+            List<String> unLocodes) {
+    }
+
+    /** その予約のキャンセル履歴（S22 / US30 §受入基準 10）。 */
+    public record FindCancellationsOfBookingQuery(String bookingId) {
+    }
+
+    /**
+     * キャンセル申請 1 件（S22・S23）。
+     *
+     * @param decision <b>承認済 / 却下済 / 未判断（{@code null}）</b>。
+     *     「承認待ちか」は別の列に持たない——同じ事実を 2 か所が持つと、
+     *     片方だけが更新された行が生まれる
+     * @param decisionLabel 画面に出す呼び名。<b>列挙名を出さない</b>
+     */
+    public record CancellationRequestView(
+            String requestId,
+            String bookingId,
+            String bookingNumber,
+            String productName,
+            String reason,
+            String requestedBy,
+            Instant requestedAt,
+            String decision,
+            String decisionLabel,
+            String dischargeUnLocode,
+            String decisionReason,
+            String decidedBy,
+            Instant decidedAt) {
+    }
+
+    public record CancellationListView(List<CancellationRequestView> items) {
+    }
+
+    /**
+     * 自社予約一覧（S45 / US18）。<b>荷主向け</b>。
+     *
+     * <p><b>荷主 ID は問い合わせに載せる。</b> 呼び出し側が渡さなければ何も
+     * 返らない形にする——既定を「全件」にすると、渡し忘れが他社の予約の
+     * 流出になる。</p>
+     */
+    public record FindShipperBookingsQuery(String shipperId, boolean includeFinished,
+            int limit) {
+    }
+
+    /**
+     * 自社予約 1 件（S45 の行）。
+     *
+     * <p><b>{@link BookingView} を使い回さない。</b> 荷主に出すのは
+     * 「どこからどこへ・いつまでに・いまどうなっているか」だけで、金額・社内メモ・
+     * 担当者名は出さない（ui_design.md「S45 / S46」）。使い回すと、列を足した
+     * 誰かが荷主向けにも見せるつもりのない項目を静かに増やす。</p>
+     */
+    public record ShipperBookingView(
+            String bookingId,
+            String bookingNumber,
+            String originUnLocode,
+            String destinationUnLocode,
+            LocalDate arrivalDeadline,
+            String productName,
+            String bookingStatus,
+            // 追跡番号（発行後のみ）。**S41 への導線**——発行前は null で、
+            // 画面はリンクを出さない。
+            String trackingNumber) {
+    }
+
+    /** 自社予約の一覧。<b>上限で切れていることを黙らない</b>ので総数も返す。 */
+    public record ShipperBookingListView(List<ShipperBookingView> items, int total) {
+    }
+
+    /**
+     * 自社予約の進み具合（S46 / UC10・UC15）。
+     *
+     * <p><b>荷主 ID で絞る。</b> 予約 ID を知っていても、自社のものでなければ
+     * 返さない——URL は推測できるし、共有もされる。</p>
+     */
+    public record FindShipperBookingProgressQuery(String shipperId, String bookingId) {
+    }
+
+    /** 荷主に見せる連絡の記録（S46）。<b>担当者名と宛先は出さない</b>。 */
+    public record ShipperNotificationView(Instant notifiedAt, String summary) {
+    }
+
+    /**
+     * 自社予約の進み具合（S46）。
+     *
+     * <p>追跡番号は予約確定後に発行されるので、予約から確定までの数日間は
+     * 荷主に何も見えない。<b>その期間を埋めるための画面</b>なので、
+     * 状態が動いた日時をそのまま並べる。</p>
+     */
+    public record ShipperBookingProgressView(
+            String bookingId,
+            String bookingNumber,
+            String originUnLocode,
+            String destinationUnLocode,
+            LocalDate arrivalDeadline,
+            String cargoType,
+            String productName,
+            String bookingStatus,
+            String routingStatus,
+            Instant bookedAt,
+            Instant routingRequestedAt,
+            Instant lastNotifiedAt,
+            Instant confirmedAt,
+            String trackingNumber,
+            Instant trackingIssuedAt,
+            List<ItineraryLegView> legs,
+            List<ShipperNotificationView> notifications) {
+    }
+
+    /** 画面に出す予約。荷主名は鍵破棄後に {@code null} になる。 */
+    public record BookingView(
+            String bookingId,
+            String bookingNumber,
+            String shipperId,
+            String shipperName,
+            String originUnLocode,
+            String destinationUnLocode,
+            LocalDate arrivalDeadline,
+            String cargoType,
+            BigDecimal weightKg,
+            BigDecimal lengthCm,
+            BigDecimal widthCm,
+            BigDecimal heightCm,
+            int quantity,
+            String productName,
+            String hazardImoClass,
+            String hazardUnNumber,
+            BigDecimal temperatureMinC,
+            BigDecimal temperatureMaxC,
+            String bookingStatus,
+            String routingStatus,
+            Instant bookedAt,
+            // 経路設計者へ引き渡した日時（US06）。引き渡していなければ null。
+            // 期限が遠い案件が S30 の下に沈んで放置されたことに気づく手立て。
+            Instant routingRequestedAt,
+            // 最後に荷主へ通知した日時（US12）。一度も通知していなければ null。
+            // 画面は「通知履歴を問い合わせるか」をこの値で決める。
+            Instant lastNotifiedAt,
+            // 営業が経路設計へ戻した日時と理由（US12）。**経路設計者が読む。**
+            // 記録だけ残して読み口を出さないと、営業に無駄な入力をさせることになる。
+            Instant returnedToRoutingAt,
+            String returnReason,
+            // 差し戻し（US10 §4）と協議の結果（§4 の対）。**対で持つ。**
+            // 営業は「何を頼まれたか」を、経路設計者は「何が決まったか」を読む。
+            String conditionReviewReason,
+            Instant conditionReviewRequestedAt,
+            String conditionReviewResponse,
+            Instant conditionReviewRespondedAt,
+            // 調整済みの探索条件（US10）。**候補算出の応答から切り離して持つ。**
+            // 探索が落ちていても、条件の調整と差し戻しは使えなければならない
+            // （IT6 引き継ぎ 8b）。調整していなければ空リストと null。
+            List<String> routeExcludeUnLocodes,
+            String routeDepartFromUnLocode,
+            // 確定した日時（US13）。未確定なら null。
+            Instant confirmedAt,
+            // 追跡番号と発行日時（US14）。未発行なら null。
+            String trackingNumber,
+            Instant trackingIssuedAt,
+            // 誤配の再設計で到着期限を何日超えたか（US28 §受入基準 6）。
+            // **null は「誤配になっていない」、0 は「組み直して間に合った」。**
+            // 画面はこの差分を出し、荷主への通知内容にも含める。
+            Integer routeOverdueDays,
+            // 検知した荷役（US28 §受入基準 3）。誤配のバナーが「いつ・どこで
+            // 予定外の荷役が記録されたか」と現在地を出すために要る。
+            String lastHandlingUnLocode,
+            Instant lastHandlingAt,
+            boolean lastHandlingOffRoute,
+            // 最終更新（US32）。変更内容の履歴は Event Store が持つ。
+            Instant updatedAt,
+            String updatedBy) {
+    }
+
+    /** 見積 1 件（S13 / US01）。 */
+    public record FindQuotationQuery(String quotationId) {
+    }
+
+    /**
+     * 見積の詳細（S13）。
+     *
+     * <p><b>候補も一緒に返す。</b> 候補ごとに問い合わせると N+1 になり、何より
+     * 「どの案にするか」は 1 画面で比べられなければ選べない。</p>
+     *
+     * <p><b>危険物申告は持たない。</b> 正典の {@code quotation} 表に列が無く、
+     * 申告そのものは予約のときに {@code Cargo} が持つ。画面は貨物種別で入力欄を
+     * 出し分ける（US01 §受入基準 6）——投影に無いものをビューに出さない。</p>
+     *
+     * @param estimatedAmount いちばん安い候補の概算。<b>候補が無ければ 0 円</b>
+     * @param hasDeadlineMeetingCandidate 希望期限に間に合う候補があるか。
+     *     <b>サーバが数える</b>（画面に数え直させない・US01 §受入基準 5）
+     */
+    public record QuotationView(
+            String quotationId,
+            String originUnLocode,
+            String destinationUnLocode,
+            java.time.LocalDate arrivalDeadline,
+            String cargoType,
+            BigDecimal weightKg,
+            BigDecimal estimatedAmount,
+            String currency,
+            java.time.LocalDate validUntil,
+            boolean hasDeadlineMeetingCandidate,
+            String createdBy,
+            Instant createdAt,
+            List<QuotationCandidateView> candidates) {
+    }
+
+    /**
+     * ルート候補 1 件（S13 / US01 §受入基準 3）。
+     *
+     * <p>経由港・所要日数・概算料金・航海番号——この 4 つが読めなければ、
+     * 営業担当者は荷主に案を説明できない。</p>
+     *
+     * @param overdueDays 希望期限からの超過日数。<b>0 なら間に合う</b>
+     */
+    public record QuotationCandidateView(
+            int candidateSeq,
+            String voyageNumbers,
+            String ports,
+            int transitDays,
+            BigDecimal estimatedCost,
+            String currency,
+            int overdueDays) {
+    }
+
+    public record BookingListView(List<BookingView> items, int total) {
+    }
+}

@@ -1,0 +1,479 @@
+package com.example.cargotracker.booking.interfaces.rest;
+
+import com.example.cargotracker.booking.application.port.RouteCandidateFinder;
+import com.example.cargotracker.booking.application.port.TrackingNumberGenerator;
+import com.example.cargotracker.booking.domain.model.commands.LinkQuotationCommand;
+import com.example.cargotracker.booking.domain.model.commands.AdjustRouteSpecificationCommand;
+import com.example.cargotracker.booking.domain.model.commands.AssignRouteCommand;
+import com.example.cargotracker.booking.domain.model.commands.NotifyShipperCommand;
+import com.example.cargotracker.booking.domain.model.commands.ReturnToRoutingCommand;
+import com.example.cargotracker.booking.domain.model.commands.RequestConditionReviewCommand;
+import com.example.cargotracker.booking.domain.model.commands.RespondToConditionReviewCommand;
+import com.example.cargotracker.booking.domain.model.valueobjects.CargoItinerary;
+import com.example.cargotracker.booking.domain.model.valueobjects.Leg;
+import com.example.cargotracker.booking.application.port.RouteSearchRequest;
+import com.example.cargotracker.booking.domain.model.valueobjects.RouteCandidate;
+import com.example.cargotracker.booking.domain.model.commands.BookCargoCommand;
+import com.example.cargotracker.booking.domain.model.commands.ConfirmBookingCommand;
+import com.example.cargotracker.booking.domain.model.commands.IssueTrackingNumberCommand;
+import com.example.cargotracker.booking.domain.model.commands.RequestRoutingCommand;
+import com.example.cargotracker.booking.domain.model.commands.UpdateCargoSpecificationCommand;
+import com.example.cargotracker.booking.domain.model.valueobjects.CargoType;
+import com.example.cargotracker.booking.domain.model.valueobjects.RouteSpecification;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.BookingListView;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.BookingView;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.AffectedBookingListView;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingNotificationsQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindRouteConditionQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.NotificationListView;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.RouteConditionView;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingItineraryQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingsByVoyageQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingRevisionsQuery;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.ItineraryView;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.RevisionListView;
+import com.example.cargotracker.booking.infrastructure.query.BookingQueries.FindBookingsQuery;
+import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos;
+import com.example.cargotracker.booking.interfaces.rest.dto.CargoSpecificationAssembler;
+import com.example.cargotracker.shared.infrastructure.axon.QueryDispatcher;
+import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos.BookCargoRequest;
+import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos.AssignRouteRequest;
+import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos.BookCargoResponse;
+import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos.AffectedBookingResponse;
+import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos.AffectedBookingsResponse;
+import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos.ItineraryLegResponse;
+import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos.ItineraryResponse;
+import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos.RouteCandidateResponse;
+import com.example.cargotracker.booking.interfaces.rest.dto.BookingDtos.RouteCandidatesResponse;
+import com.example.cargotracker.booking.interfaces.rest.dto.ShipperDtos.PendingResponse;
+import com.example.cargotracker.shared.domain.location.Location;
+import jakarta.validation.Valid;
+import java.net.URI;
+import java.util.List;
+import java.util.UUID;
+import org.axonframework.messaging.commandhandling.gateway.CommandGateway;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+/** 貨物予約（UC03 / US04）。 */
+@RestController
+@RequestMapping("/api/v1/booking/bookings")
+public class BookingController {
+
+
+    private final CommandGateway commandGateway;
+    private final QueryDispatcher queries;
+    private final RouteCandidateFinder routeCandidates;
+    private final TrackingNumberGenerator trackingNumbers;
+    /** 見積との違いを項目名で知らせる（US01・正典の不変条件 3）。 */
+    private final com.example.cargotracker.booking.application.QuotationDiff quotationDiff;
+
+    public BookingController(CommandGateway commandGateway, QueryDispatcher queries,
+            RouteCandidateFinder routeCandidates, TrackingNumberGenerator trackingNumbers,
+            com.example.cargotracker.booking.application.QuotationDiff quotationDiff) {
+        this.commandGateway = commandGateway;
+        this.queries = queries;
+        this.routeCandidates = routeCandidates;
+        this.trackingNumbers = trackingNumbers;
+        this.quotationDiff = quotationDiff;
+    }
+
+    @PostMapping
+    public ResponseEntity<BookCargoResponse> book(@Valid @RequestBody BookCargoRequest request,
+            @RequestHeader(name = "X-Auth-Username", required = false) String username) {
+        String bookingId = UUID.randomUUID().toString();
+
+        BookCargoCommand command = new BookCargoCommand(
+                bookingId,
+                request.shipperId(),
+                CargoSpecificationAssembler.from(request),
+                new RouteSpecification(
+                        Location.of(request.originUnLocode()),
+                        Location.of(request.destinationUnLocode()),
+                        request.arrivalDeadline()),
+                username);
+        commandGateway.sendAndWait(command);
+
+        // **見積の行は 1 度だけ読む。** 差分と概算を別々に読むと、片方だけが
+        // 古い見積を見ることになる。
+        var quoted = quotationDiff.quoted(request.quotationId());
+        if (quoted != null) {
+            // **概算を請求へ渡す唯一の経路**（注 N12）。結び付けに失敗しても
+            // 予約は残す——見積と比べられない予約は成り立つが、受け付けられ
+            // なかった予約は成り立たない。
+            commandGateway.sendAndWait(new LinkQuotationCommand(bookingId,
+                    quoted.quotationId(), quoted.estimatedAmount(),
+                    quoted.estimatedCurrency(), username));
+        }
+
+        // **見積との違いは断らずに知らせる**（正典の不変条件 3）。荷主の事情は
+        // 見積のあとで変わる——重量が増えることも、期限が延びることもある。
+        // 断ると業務が止まるので、「何がどう違うか」を返すにとどめる。
+        //
+        // **予約そのものは既に受け付けてある。** 差分を数えるために受付を
+        // 遅らせない——数え方の誤りで予約が通らなくなるほうが重い。
+        return ResponseEntity.created(URI.create("/api/v1/booking/bookings/" + bookingId))
+                .body(new BookCargoResponse(bookingId,
+                        // **判定も「見つからないときどうするか」も application が持つ**
+                        // （QuotationDiff）。入口に置くと、同じ扱いを画面の数だけ書く。
+                        quotationDiff.differences(request.quotationId(), command)));
+    }
+
+    /**
+     * 仮受付の予約情報を修正する（US32）。
+     *
+     * <p>修正できる状態かは集約が遷移表の述語で判断する。ここで先に問い合わせて
+     * 分岐すると、同じ判断が 2 か所になって片方が古くなる。</p>
+     */
+    @PutMapping("/{bookingId}")
+    public ResponseEntity<BookCargoResponse> update(@PathVariable String bookingId,
+            @Valid @RequestBody BookingDtos.UpdateBookingRequest request,
+            @RequestHeader(name = "X-Auth-Username", required = false) String username) {
+        commandGateway.sendAndWait(new UpdateCargoSpecificationCommand(
+                bookingId,
+                CargoSpecificationAssembler.from(request),
+                new RouteSpecification(
+                        Location.of(request.originUnLocode()),
+                        Location.of(request.destinationUnLocode()),
+                        request.arrivalDeadline()),
+                username));
+
+        return ResponseEntity.ok(new BookCargoResponse(bookingId));
+    }
+
+    /**
+     * 予約 1 件。投影がまだなら {@code 202} を返す。
+     *
+     * <p>{@code 404} にすると「登録に失敗した」と読めてしまう。受け付けたことと
+     * 反映が終わったことは別なので、画面が「反映中」を出せるように区別する。</p>
+     */
+    @GetMapping("/{bookingId}")
+    public ResponseEntity<?> find(@PathVariable String bookingId) {
+        BookingView view = queries.query(new FindBookingQuery(bookingId), BookingView.class);
+        if (view == null) {
+            return ResponseEntity.accepted()
+                    .body(new PendingResponse(bookingId, "登録を受け付けました。反映までしばらくお待ちください"));
+        }
+        return ResponseEntity.ok(view);
+    }
+
+    /**
+     * 経路候補（US08）。<b>予約 ID で問い合わせる。</b>
+     *
+     * <p>条件を画面から組み立てて送らない。画面が組むと、予約の期限を直したのに
+     * 古い期限で探すことが起きる。条件は投影から組む（候補算出は Query 側なので
+     * 集約を読み出さない）。</p>
+     *
+     * <p><b>問い合わせられないときは 503。</b> 空の候補一覧を返すと「候補が無い」と
+     * 読まれ、経路設計者は条件を変え続けることになる。</p>
+     *
+     * <p><b>いまの条件はこの応答に載せない。</b> 載せると、探索が落ちている間だけ
+     * 画面から条件の欄と差し戻しが消える。直せる手段が要るのはまさにそのときで、
+     * 経路設計者は「探索が直るのを待つ」以外に何もできなくなる（IT6 引き継ぎ 8b）。
+     * 条件は予約の読み口（{@code GET /bookings/&#123;id&#125;}）が持つ。</p>
+     */
+    @GetMapping("/{bookingId}/route-candidates")
+    public ResponseEntity<?> routeCandidates(@PathVariable String bookingId) {
+        BookingView booking = queries.query(new FindBookingQuery(bookingId), BookingView.class);
+        if (booking == null) {
+            return ResponseEntity.accepted().body(new PendingResponse(bookingId,
+                    "登録を受け付けました。反映までしばらくお待ちください"));
+        }
+
+        // **条件は投影から組む**（US10）。画面から組み立てて送ると、条件を直したのに
+        // 古い条件で探すことが起きる。調整していなければどちらも null で、
+        // IT5 までと同じ探索になる。
+        RouteConditionView condition = queries.query(
+                new FindRouteConditionQuery(bookingId), RouteConditionView.class);
+        RouteCandidateFinder.RouteCandidates found = routeCandidates.find(
+                new RouteSearchRequest(
+                        Location.of(booking.originUnLocode()),
+                        Location.of(booking.destinationUnLocode()),
+                        booking.arrivalDeadline(),
+                        CargoType.valueOf(booking.cargoType()),
+                        condition.excludeUnLocodes().stream().map(Location::of).toList(),
+                        departFrom(booking, condition)));
+
+        return ResponseEntity.ok(new RouteCandidatesResponse(
+                found.candidates().stream()
+                        .map(BookingController::toCandidateResponse)
+                        .toList(),
+                found.truncated()));
+    }
+
+    /**
+     * 探索の起点（US28 §受入基準 4）。
+     *
+     * <p><b>誤配は現在地から組み直す。</b> 予定ルートを外れた貨物はもう出発地に
+     * 無いので、条件の調整（US10）で入れた起点より、いま貨物が置かれている港が
+     * 優先される。ここを条件任せにすると、経路設計者が毎回手で現在地を
+     * 入れ直すことになり、入れ忘れれば届かない経路が出る。</p>
+     *
+     * <p>誤配でなければ、これまでどおり調整済みの条件に従う。</p>
+     */
+    static Location departFrom(BookingView booking, RouteConditionView condition) {
+        if ("MISROUTED".equals(booking.routingStatus()) && booking.lastHandlingUnLocode() != null) {
+            return Location.of(booking.lastHandlingUnLocode());
+        }
+        return condition.departFromUnLocode() == null
+                ? null : Location.of(condition.departFromUnLocode());
+    }
+
+    private static RouteCandidateResponse toCandidateResponse(RouteCandidate candidate) {
+        return new RouteCandidateResponse(
+                candidate.legs().stream()
+                        .map(leg -> new RouteCandidateResponse.LegResponse(
+                                leg.voyageNumber(),
+                                leg.load().unLocode().value(),
+                                leg.unload().unLocode().value(),
+                                leg.loadTime(),
+                                leg.unloadTime()))
+                        .toList(),
+                candidate.transitDays(),
+                candidate.direct(),
+                candidate.overdueDays());
+    }
+
+    /**
+     * 経路を確定する（US09）。
+     *
+     * <p>旅程が予約の経路仕様を満たすかは<b>集約が見る</b>。ここで先に確かめると、
+     * 同じ判断が 2 か所になって片方が古くなる。</p>
+     */
+    @PostMapping("/{bookingId}/route")
+    public ResponseEntity<BookCargoResponse> assignRoute(
+            @PathVariable String bookingId,
+            @Valid @RequestBody AssignRouteRequest request,
+            @RequestHeader(name = "X-Auth-Username", required = false) String username) {
+        commandGateway.sendAndWait(new AssignRouteCommand(bookingId,
+                new CargoItinerary(request.legs().stream()
+                        .map(BookingController::toLeg)
+                        .toList()),
+                username));
+
+        return ResponseEntity.ok(new BookCargoResponse(bookingId));
+    }
+
+    private static Leg toLeg(AssignRouteRequest.LegRequest leg) {
+        return new Leg(leg.voyageNumber(), Location.of(leg.loadUnLocode()),
+                Location.of(leg.unloadUnLocode()), leg.loadTime(), leg.unloadTime());
+    }
+
+    /**
+     * 確定した旅程（S22 / US09）。
+     *
+     * <p>まだ決まっていなければ空の一覧を返す。{@code 404} にすると「予約が無い」と
+     * 読める。読む相手は予約詳細と同じなので、認可の宣言は {@code /bookings/**} が
+     * そのまま当たる。</p>
+     */
+    @GetMapping("/{bookingId}/itinerary")
+    public ResponseEntity<ItineraryResponse> itinerary(@PathVariable String bookingId) {
+        ItineraryView view = queries.query(
+                new FindBookingItineraryQuery(bookingId), ItineraryView.class);
+        return ResponseEntity.ok(new ItineraryResponse(view.legs().stream()
+                .map(leg -> new ItineraryLegResponse(leg.legSeq(), leg.voyageNumber(),
+                        leg.loadUnLocode(), leg.unloadUnLocode(), leg.loadAt(), leg.unloadAt()))
+                .toList()));
+    }
+
+    /**
+     * その航海で経路を組んだ予約（S34 / US24）。
+     *
+     * <p>航海を止めると経路候補から外れるが、<b>既に組んだ予約の旅程は自動では
+     * 戻らない</b>。止める前に誰を巻き込むかを読めるようにする（IT5 引き継ぎ 2）。</p>
+     *
+     * <p>読むのは航海を止める経路設計者だけなので、宣言は
+     * {@code /bookings/by-voyage/*} を {@code /bookings/**} より先に置いて絞る。
+     * 予約の一覧に相乗りさせると、営業・追跡にも開くことになる。</p>
+     */
+    @GetMapping("/by-voyage/{voyageNumber}")
+    public ResponseEntity<AffectedBookingsResponse> byVoyage(@PathVariable String voyageNumber) {
+        AffectedBookingListView view = queries.query(
+                new FindBookingsByVoyageQuery(voyageNumber), AffectedBookingListView.class);
+        return ResponseEntity.ok(new AffectedBookingsResponse(view.items().stream()
+                .map(item -> new AffectedBookingResponse(item.bookingId(), item.bookingNumber(),
+                        item.bookingStatus(), item.routingStatus()))
+                .toList()));
+    }
+
+    /**
+     * 修正履歴（US32 §受入基準 4「何を変えたか」）。
+     *
+     * <p>一度も直していなければ空の一覧を返す。{@code 404} にすると「予約が無い」と
+     * 読める。</p>
+     *
+     * <p>読む相手は予約詳細と同じ（営業・経路設計・追跡）なので、認可の宣言は
+     * {@code /bookings/**} がそのまま当たる。絞る必要が出たら宣言を先に置く。</p>
+     */
+    @GetMapping("/{bookingId}/revisions")
+    public ResponseEntity<RevisionListView> revisions(@PathVariable String bookingId) {
+        return ResponseEntity.ok(queries.query(
+                new FindBookingRevisionsQuery(bookingId), RevisionListView.class));
+    }
+
+    @GetMapping
+    public ResponseEntity<BookingListView> list(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size,
+            @RequestParam(defaultValue = "false") boolean includeFinished,
+            @RequestParam(required = false) String q) {
+        return ResponseEntity.ok(queries.query(
+                new FindBookingsQuery(page, size, includeFinished, q), BookingListView.class));
+    }
+
+    /**
+     * 経路設計者に引き渡す（US06）。
+     *
+     * <p>遷移できるかは集約が {@code BookingStatus} の述語で判断する。ここでは
+     * 判定を書き直さない。書き直すと、片方だけ直したときに画面と集約の判断が
+     * 食い違う。</p>
+     */
+    @PostMapping("/{bookingId}/routing-request")
+    public ResponseEntity<BookCargoResponse> requestRouting(@PathVariable String bookingId,
+            @RequestHeader(name = "X-Auth-Username", required = false) String username) {
+        commandGateway.sendAndWait(new RequestRoutingCommand(bookingId, username));
+        return ResponseEntity.accepted().body(new BookCargoResponse(bookingId));
+    }
+
+    /**
+     * 経路の条件を調整する（US10）。
+     *
+     * <p>調整できる状態かは集約が見る。ここで先に問い合わせて分岐すると、同じ判断が
+     * 2 か所になって片方が古くなる。</p>
+     *
+     * <p>認可は Gateway が持つ（{@code PUT /bookings/*} は営業だけなので、この経路は
+     * <b>その宣言より前に</b>経路設計者として宣言する）。</p>
+     */
+    @PutMapping("/{bookingId}/route-specification")
+    public ResponseEntity<BookCargoResponse> adjustRouteSpecification(
+            @PathVariable String bookingId,
+            @Valid @RequestBody BookingDtos.AdjustRouteSpecificationRequest request,
+            @RequestHeader(name = "X-Auth-Username", required = false) String username) {
+        commandGateway.sendAndWait(new AdjustRouteSpecificationCommand(bookingId,
+                request.arrivalDeadline(),
+                request.excludeUnLocodes() == null ? List.of() : request.excludeUnLocodes(),
+                request.departFromUnLocode(),
+                username));
+        return ResponseEntity.ok(new BookCargoResponse(bookingId));
+    }
+
+    /**
+     * 条件では組めないことを営業へ差し戻す（US10 §受入基準 4）。
+     *
+     * <p><b>状態は動かさない</b>（ADR-0009）。記録が増えるだけなので {@code 200} を
+     * 返す。差し戻せる状態かは集約が {@code RoutingStatus} の述語で判断する。</p>
+     */
+    @PostMapping("/{bookingId}/condition-review")
+    public ResponseEntity<BookCargoResponse> requestConditionReview(
+            @PathVariable String bookingId,
+            @Valid @RequestBody BookingDtos.RequestConditionReviewRequest request,
+            @RequestHeader(name = "X-Auth-Username", required = false) String username) {
+        commandGateway.sendAndWait(
+                new RequestConditionReviewCommand(bookingId, request.reason(), username));
+        return ResponseEntity.ok(new BookCargoResponse(bookingId));
+    }
+
+    /**
+     * 荷主との協議の結果を経路設計者へ返す（UC08 / US10 §受入基準 4 の対）。営業だけ。
+     *
+     * <p>差し戻しは経路設計者 → 営業の一方向しか無く、<b>営業は協議を終えても伝える
+     * 手段を持たなかった</b>（IT6 レビュー）。差し戻されていない予約には返せない（409）。</p>
+     */
+    @PostMapping("/{bookingId}/condition-review/response")
+    public ResponseEntity<BookCargoResponse> respondToConditionReview(
+            @PathVariable String bookingId,
+            @Valid @RequestBody BookingDtos.RespondToConditionReviewRequest request,
+            @RequestHeader(name = "X-Auth-Username", required = false) String username) {
+        commandGateway.sendAndWait(
+                new RespondToConditionReviewCommand(bookingId, request.response(), username));
+        return ResponseEntity.ok(new BookCargoResponse(bookingId));
+    }
+
+    /**
+     * 予約を確定する（UC11 / US13 §受入基準 2）。営業だけが使う。
+     *
+     * <p>本文を取らない。確定は「荷主の承認を確認した」という営業の行為で、
+     * 入力する内容が無い。<b>通知していない予約は集約が断る</b>（422）。</p>
+     */
+    @PostMapping("/{bookingId}/confirmation")
+    public ResponseEntity<BookCargoResponse> confirm(
+            @PathVariable String bookingId,
+            @RequestHeader(name = "X-Auth-Username", required = false) String username) {
+        commandGateway.sendAndWait(new ConfirmBookingCommand(bookingId, username));
+        return ResponseEntity.ok(new BookCargoResponse(bookingId));
+    }
+
+    /**
+     * 追跡番号を発行する（UC12 / US14 §受入基準 1・2）。<b>経路設計者だけ</b>が使う
+     * （ui_design.md S22「[追跡番号を発行]（経路設計者）」）。
+     *
+     * <p><b>採番はここで行う</b>（ADR-0010 決定 2）。集約で MAX+1 を採ると、同時に
+     * 2 件発行したときに同じ番号が出る。集約は「発行してよいか」だけを判断する。</p>
+     *
+     * <p><b>採ってから断られることがある。</b> 二重発行を集約が断ると、採った番号は
+     * 使われずに飛ぶ。番号が連続しないことより、同じ番号が 2 つ出ないことを優先する。</p>
+     */
+    @PostMapping("/{bookingId}/tracking-number")
+    public ResponseEntity<BookCargoResponse> issueTrackingNumber(
+            @PathVariable String bookingId,
+            @RequestHeader(name = "X-Auth-Username", required = false) String username) {
+        commandGateway.sendAndWait(new IssueTrackingNumberCommand(bookingId,
+                trackingNumbers.next(), username));
+        return ResponseEntity.ok(new BookCargoResponse(bookingId));
+    }
+
+    /**
+     * 確定した経路を荷主へ通知した記録を残す（US12 §受入基準 3・4）。
+     *
+     * <p><b>送信はしない</b>（送信基盤はスコープ外）。通知は手作業で行い、ここには
+     * その事実だけを残す。通知できる状態かは集約が見る。</p>
+     */
+    @PostMapping("/{bookingId}/notifications")
+    public ResponseEntity<BookCargoResponse> notifyShipper(
+            @PathVariable String bookingId,
+            @Valid @RequestBody BookingDtos.NotifyShipperRequest request,
+            @RequestHeader(name = "X-Auth-Username", required = false) String username) {
+        commandGateway.sendAndWait(new NotifyShipperCommand(bookingId,
+                request.recipientEmail(), request.summary(), username));
+        return ResponseEntity.ok(new BookCargoResponse(bookingId));
+    }
+
+    /**
+     * 通知履歴（US12 §受入基準 4）。
+     *
+     * <p>一度も通知していなければ空の一覧を返す。{@code 404} にすると「予約が無い」と
+     * 読める。読む相手は予約詳細と同じなので、認可の宣言は {@code /bookings/**} が
+     * そのまま当たる（同じ集合の宣言を重ねると、片方だけ直したときに食い違う）。</p>
+     */
+    @GetMapping("/{bookingId}/notifications")
+    public ResponseEntity<NotificationListView> notifications(@PathVariable String bookingId) {
+        return ResponseEntity.ok(queries.query(
+                new FindBookingNotificationsQuery(bookingId), NotificationListView.class));
+    }
+
+    /**
+     * 通知した経路を経路設計へ戻す（US12）。
+     *
+     * <p>荷主が変更を求めたときに営業が使う。<b>{@code /routing-request} を
+     * 再利用しない</b>（引き渡しと戻しを履歴で区別するため）。</p>
+     */
+    @PostMapping("/{bookingId}/return-to-routing")
+    public ResponseEntity<BookCargoResponse> returnToRouting(
+            @PathVariable String bookingId,
+            @Valid @RequestBody BookingDtos.ReturnToRoutingRequest request,
+            @RequestHeader(name = "X-Auth-Username", required = false) String username) {
+        commandGateway.sendAndWait(
+                new ReturnToRoutingCommand(bookingId, request.reason(), username));
+        return ResponseEntity.ok(new BookCargoResponse(bookingId));
+    }
+
+}

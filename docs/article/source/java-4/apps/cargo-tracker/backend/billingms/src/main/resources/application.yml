@@ -1,0 +1,71 @@
+spring:
+  # **料率は別ファイルに置く**（ADR-0016）。2 サービスを同じ JVM に載せる
+  # 契約の往復テストでは `classpath:application.yml` が 1 つしか読まれず、
+  # 料率が消えて起動に失敗した。名指しで取り込めば、どちらが先でも入る。
+  config:
+    import: classpath:cargo-rates.yml
+  application:
+    name: billingms
+  datasource:
+    # Database per Service（ADR-0001 決定 1）。他サービスの DB には繋がない。
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/billing_read_db}
+    username: ${DB_USER:billingms}
+    password: ${DB_PASSWORD:billingms}
+  flyway:
+    enabled: true
+    # サービスごとに置き場を分ける。同じ classpath:db/migration に置くと、
+    # 2 つのサービスを同じ JVM に載せた瞬間に双方の V001 が衝突して起動しない
+    # （Found more than one migration with version 001）。契約テストの往復は
+    # 2 サービスを同時に起動するので、番号取りをサービス間で調整しない形にする。
+    locations: classpath:db/migration/billing
+  main:
+    # Axon の axon.axonserver ConfigurationProperties が Spring Boot の
+    # BoundConfigurationProperties と Bean 循環を作るため必須（IT1 スパイクで実測）。
+    # Spring Boot の版を下げても回避できない。
+    allow-circular-references: true
+
+server:
+  port: ${SERVER_PORT:8086}
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+
+axon:
+  axonserver:
+    servers: ${AXON_SERVER:localhost:8124}
+  eventhandling:
+    processors:
+      # **退避先は Processor ごとに明示する**（ADR-0014）。`"[..default]"` は
+      # この版では効かない（実測。DLQ が付かず、1 件で全部止まる形に戻る）。
+      # 書き忘れを人の注意で防がないよう、EventSourcedServicesHaveTheSameShapeTest が
+      # 2 つ見る：everyEventHandlerPackageIsEnumerated（@EventHandler を持つ
+      # パッケージがここに載っているか）と everyEnumeratedProcessorHasADeadLetterQueue
+      # （載っているものに dlq が付いているか）。
+      # Processing Group はパッケージ名キーで指定する（@ProcessingGroup は Axon 5 に無い）。
+      # 名前の正典は data-model.md「Processing Group とテーブルの対応」。
+      "[com.example.cargotracker.billing.infrastructure.projection]":
+        mode: pooled
+        dlq:
+          enabled: true
+      # 反応（コマンドを送る）は投影と別の Group にする（ADR-0001 決定 6）。
+      # 同じにすると、投影のリプレイでコマンドが再送され、請求書が二度作られる。
+      "[com.example.cargotracker.billing.application.reaction]":
+        mode: pooled
+        dlq:
+          enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # deadletters は退避したイベントを処理し直す入口（ADR-0014 決定 1）。
+        # **直したあとに退避を消すのは「黙って捨てる」こと**なので、消す手段では
+        # なく処理し直す手段を置く。運用の読み口（projection:dead-letters）と
+        # 同じ立場のものを同じ入口に並べる。
+        include: health,info,deadletters
+
+# Gateway の振り分けと同じ接頭辞。共有の読み口（退避一覧）が経路を組み立てる。
+cargo:
+  context: billing

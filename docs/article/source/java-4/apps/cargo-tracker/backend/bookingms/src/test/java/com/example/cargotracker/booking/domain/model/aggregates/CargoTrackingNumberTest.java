@@ -1,0 +1,455 @@
+package com.example.cargotracker.booking.domain.model.aggregates;
+
+import com.example.cargotracker.booking.domain.model.commands.IssueTrackingNumberCommand;
+import com.example.cargotracker.booking.domain.model.commands.AssignRouteCommand;
+import com.example.cargotracker.booking.domain.model.valueobjects.CargoItinerary;
+import com.example.cargotracker.booking.domain.model.valueobjects.Leg;
+import com.example.cargotracker.shared.domain.error.BusinessRuleViolation;
+import com.example.cargotracker.shared.domain.location.Location;
+import com.example.cargotracker.booking.domain.model.commands.MarkDeliveredCommand;
+import com.example.cargotracker.booking.domain.model.commands.RevertDeliveryCommand;
+import com.example.cargotracker.booking.domain.model.events.BookingDeliveryRevertedEvent;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
+import com.example.cargotracker.booking.domain.model.events.BookingDeliveredEvent;
+import com.example.cargotracker.booking.domain.model.commands.RecordHandlingCommand;
+import com.example.cargotracker.booking.domain.model.commands.RevertHandlingCommand;
+import com.example.cargotracker.booking.domain.model.commands.RevertTrackingNumberCommand;
+import com.example.cargotracker.booking.domain.model.events.BookingConfirmedEvent;
+import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
+import com.example.cargotracker.booking.domain.model.events.CargoRoutedEvent;
+import com.example.cargotracker.booking.domain.model.events.RoutingRequestedEvent;
+import com.example.cargotracker.booking.domain.model.events.ShipperNotifiedEvent;
+import com.example.cargotracker.booking.domain.model.events.BookingMisroutedEvent;
+import com.example.cargotracker.booking.domain.model.events.HandlingRecordedEvent;
+import com.example.cargotracker.booking.domain.model.events.HandlingRevertedEvent;
+import com.example.cargotracker.booking.domain.model.events.TrackingNumberIssuedEvent;
+import com.example.cargotracker.booking.domain.model.events.TrackingNumberRevertedEvent;
+import com.example.cargotracker.shared.domain.error.IllegalTransition;
+import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.Month;
+import java.time.ZoneId;
+import java.util.List;
+import org.axonframework.eventsourcing.configuration.EventSourcedEntityModule;
+import org.axonframework.eventsourcing.configuration.EventSourcingConfigurer;
+import org.axonframework.test.fixture.AxonTestFixture;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+/**
+ * 追跡番号の発行（UC12 / US14）。
+ *
+ * <p>中核の判断は<b>「二重に発行しない」</b>（不変条件 8）と<b>「確定した予約だけ」</b>。
+ * 発行から連鎖が始まるので、2 度発行すると追跡が 2 つ作られる。</p>
+ */
+class CargoTrackingNumberTest {
+
+    private static final ZoneId ZONE = ZoneId.of("Asia/Tokyo");
+    private static final Instant NOW = Instant.parse("2026-09-06T00:00:00Z");
+    private static final LocalDate DEADLINE = LocalDate.of(2026, Month.DECEMBER, 1);
+    private static final Instant LOAD = Instant.parse("2026-09-10T00:00:00Z");
+    private static final Instant UNLOAD = Instant.parse("2026-09-24T09:00:00Z");
+
+    private AxonTestFixture fixture;
+
+    @BeforeEach
+    void setUp() {
+        EventSourcingConfigurer configurer = EventSourcingConfigurer.create()
+                .registerEntity(EventSourcedEntityModule.autodetected(String.class, Cargo.class))
+                .componentRegistry(registry -> registry.registerComponent(
+                        Clock.class, c -> Clock.fixed(NOW, ZONE)));
+        fixture = AxonTestFixture.with(configurer, c -> c.disableAxonServer());
+    }
+
+    private static CargoBookedEvent booked() {
+        return new CargoBookedEvent("B-0001", "SHP-000001", "JPTYO", "USNYC", DEADLINE,
+                "GENERAL", new BigDecimal("1200"), new BigDecimal("120"),
+                new BigDecimal("80"), new BigDecimal("100"), 10, "自動車部品",
+                null, null, null, null, "sales01");
+    }
+
+    private static CargoRoutedEvent routed() {
+        return new CargoRoutedEvent("B-0001",
+                List.of(new CargoRoutedEvent.Leg("V-MOL-001", "JPTYO", "SGSIN", LOAD,
+                                Instant.parse("2026-09-15T00:00:00Z")),
+                        new CargoRoutedEvent.Leg("V-MSK-220", "SGSIN", "USNYC",
+                                Instant.parse("2026-09-16T00:00:00Z"), UNLOAD)),
+                "routing01", NOW);
+    }
+
+    /** 確定済みの予約のイベント列。ここまで来て初めて追跡番号を発行できる。 */
+    private static Object[] confirmed() {
+        return new Object[] {
+            booked(), new RoutingRequestedEvent("B-0001", "sales01"), routed(),
+            new ShipperNotifiedEvent("B-0001", "shipper@example.com", "案内", "sales01", NOW),
+            new BookingConfirmedEvent("B-0001", "sales01", NOW),
+        };
+    }
+
+    @Test
+    @DisplayName("US14 §1: 確定した予約に追跡番号を発行できる（旅程も載る）")
+    void issuesTrackingNumber() {
+        // **legs を落とさない。** 購読側（handlingms の CargoSnapshot・IT9）がまだ
+        // 無くても載せる。契約イベントは追記専用で、あとから形を変えられない。
+        fixture.given().events(confirmed())
+                .when().command(new IssueTrackingNumberCommand("B-0001", "T-0001", "routing01"))
+                .then().success()
+                .events(new TrackingNumberIssuedEvent("B-0001", "T-0001", "SHP-000001", "JPTYO",
+                        "USNYC", "GENERAL",
+                        new BigDecimal("1200"),
+                        List.of(new TrackingNumberIssuedEvent.Leg("V-MOL-001", "JPTYO", "SGSIN",
+                                        LOAD, Instant.parse("2026-09-15T00:00:00Z")),
+                                new TrackingNumberIssuedEvent.Leg("V-MSK-220", "SGSIN", "USNYC",
+                                        Instant.parse("2026-09-16T00:00:00Z"), UNLOAD)),
+                        "routing01", NOW));
+    }
+
+    @Test
+    @DisplayName("US14: 不変条件 8 — 二重に発行しない")
+    void rejectsSecondIssue() {
+        // 発行から連鎖が始まる。2 度発行すると追跡が 2 つ作られる。
+        fixture.given().events(booked(), new RoutingRequestedEvent("B-0001", "sales01"),
+                        routed(),
+                        new ShipperNotifiedEvent("B-0001", "s@example.com", "案内", "sales01", NOW),
+                        new BookingConfirmedEvent("B-0001", "sales01", NOW),
+                        new TrackingNumberIssuedEvent("B-0001", "T-0001", "SHP-000001",
+                                "JPTYO", "USNYC", "GENERAL", new BigDecimal("1200"), List.of(), "routing01", NOW))
+                .when().command(new IssueTrackingNumberCommand("B-0001", "T-0002", "routing02"))
+                .then().exception(IllegalTransition.class);
+    }
+
+    @Test
+    @DisplayName("US14 §1: 確定していない予約には発行できない")
+    void rejectsUnconfirmedBooking() {
+        fixture.given().events(booked(), new RoutingRequestedEvent("B-0001", "sales01"),
+                        routed(),
+                        new ShipperNotifiedEvent("B-0001", "s@example.com", "案内", "sales01", NOW))
+                .when().command(new IssueTrackingNumberCommand("B-0001", "T-0001", "routing01"))
+                .then().exception(IllegalTransition.class);
+    }
+
+    @Test
+    @DisplayName("US14: 番号の無い発行は断る（採番は投影が行う）")
+    void rejectsBlankTrackingNumber() {
+        fixture.given().events(confirmed())
+                .when().command(new IssueTrackingNumberCommand("B-0001", "  ", "routing01"))
+                .then().exception(com.example.cargotracker.shared.domain.error
+                        .BusinessRuleViolation.class);
+    }
+
+    @Test
+    @DisplayName("受け付けていない予約には発行できない")
+    void rejectsUnknownBooking() {
+        fixture.given().noPriorActivity()
+                .when().command(new IssueTrackingNumberCommand("B-NONE", "T-0001", "routing01"))
+                .then().exception(IllegalTransition.class);
+    }
+
+    @Test
+    @DisplayName("ADR-0010 決定 4: 発行済みの追跡番号を取り消せる（予約は確定に戻る）")
+    void revertsTrackingNumber() {
+        // 補償。**キャンセルではない**ので、経路設計者がもう一度発行できる状態にする。
+        fixture.given().events(booked(), new RoutingRequestedEvent("B-0001", "sales01"),
+                        routed(),
+                        new ShipperNotifiedEvent("B-0001", "s@example.com", "案内", "sales01", NOW),
+                        new BookingConfirmedEvent("B-0001", "sales01", NOW),
+                        new TrackingNumberIssuedEvent("B-0001", "T-0001", "SHP-000001",
+                                "JPTYO", "USNYC", "GENERAL", new BigDecimal("1200"), List.of(), "routing01", NOW))
+                .when().command(new RevertTrackingNumberCommand("B-0001", "届きませんでした"))
+                .then().success()
+                .events(new TrackingNumberRevertedEvent("B-0001", "T-0001",
+                        "届きませんでした", NOW));
+    }
+
+    @Test
+    @DisplayName("ADR-0010 決定 4: 取り消したあとはもう一度発行できる")
+    void allowsReissueAfterRevert() {
+        fixture.given().events(booked(), new RoutingRequestedEvent("B-0001", "sales01"),
+                        routed(),
+                        new ShipperNotifiedEvent("B-0001", "s@example.com", "案内", "sales01", NOW),
+                        new BookingConfirmedEvent("B-0001", "sales01", NOW),
+                        new TrackingNumberIssuedEvent("B-0001", "T-0001", "SHP-000001",
+                                "JPTYO", "USNYC", "GENERAL", new BigDecimal("1200"), List.of(), "routing01", NOW),
+                        new TrackingNumberRevertedEvent("B-0001", "T-0001", "届かず", NOW))
+                .when().command(new IssueTrackingNumberCommand("B-0001", "T-0002", "routing01"))
+                .then().success();
+    }
+
+    @Test
+    @DisplayName("発行していない予約の追跡番号は取り消せない（再試行で 2 度届いても 1 度だけ効く）")
+    void rejectsRevertWhenNotIssued() {
+        fixture.given().events(confirmed())
+                .when().command(new RevertTrackingNumberCommand("B-0001", "届かず"))
+                .then().exception(IllegalTransition.class);
+    }
+
+    @Test
+    @DisplayName("受け付けていない予約の追跡番号は取り消せない（500 にしない）")
+    void rejectsRevertForUnknownBooking() {
+        fixture.given().noPriorActivity()
+                .when().command(new RevertTrackingNumberCommand("B-NONE", "届かず"))
+                .then().exception(IllegalTransition.class);
+    }
+
+    // ---- US15・US28 荷役の反映（IT9 T6b / 不変条件 12・13） ----
+
+    private static final Instant HANDLED = Instant.parse("2026-09-20T01:00:00Z");
+
+    private static Object[] trackingIssued() {
+        return new Object[] {
+            booked(), new RoutingRequestedEvent("B-0001", "sales01"), routed(),
+            new ShipperNotifiedEvent("B-0001", "shipper@example.com", "案内", "sales01", NOW),
+            new BookingConfirmedEvent("B-0001", "sales01", NOW),
+            new TrackingNumberIssuedEvent("B-0001", "TRK-8K2QX7M4RB", "SHP-000001",
+                    "JPTYO", "USNYC", "GENERAL", new BigDecimal("1200"), List.of(), "routing01", NOW),
+        };
+    }
+
+    /** 追跡番号を発行し、指定した港での予定外の荷役で誤配になっているところまで。 */
+    private static Object[] misroutedAt(String unLocode) {
+        var issued = trackingIssued();
+        var events = new Object[issued.length + 2];
+        System.arraycopy(issued, 0, events, 0, issued.length);
+        events[issued.length] = new HandlingRecordedEvent("B-0001", "act-1", "UNLOAD",
+                unLocode, HANDLED, NOW);
+        events[issued.length + 1] = new BookingMisroutedEvent("B-0001", "act-1", unLocode, NOW);
+        return events;
+    }
+
+    /** 追跡番号を発行し、予定外の受領で誤配になっているところまで。 */
+    private static Object[] misrouted() {
+        var issued = trackingIssued();
+        var events = new Object[issued.length + 2];
+        System.arraycopy(issued, 0, events, 0, issued.length);
+        events[issued.length] = new HandlingRecordedEvent("B-0001", "act-1", "RECEIVE",
+                "JPTYO", HANDLED, NOW);
+        events[issued.length + 1] = new BookingMisroutedEvent("B-0001", "act-1", "JPTYO", NOW);
+        return events;
+    }
+
+    /** 既定の履歴に追記する（varargs に配列と単体を混ぜられないため）。 */
+    private static Object[] and(Object[] base, Object... more) {
+        var events = new Object[base.length + more.length];
+        System.arraycopy(base, 0, events, 0, base.length);
+        System.arraycopy(more, 0, events, base.length, more.length);
+        return events;
+    }
+
+    private static RecordHandlingCommand recordHandling(boolean offRoute) {
+        return new RecordHandlingCommand("B-0001", "act-1", "RECEIVE", "JPTYO", offRoute,
+                HANDLED);
+    }
+
+    @Test
+    @DisplayName("US15 §4: 最初の受領で予約が輸送中になる")
+    void firstReceiveMovesToInTransit() {
+        fixture.given().events(trackingIssued())
+                .when().command(recordHandling(false))
+                .then().events(new HandlingRecordedEvent("B-0001", "act-1", "RECEIVE",
+                        "JPTYO", HANDLED, NOW));
+    }
+
+    @Test
+    @DisplayName("不変条件 12: 予定ルート外の荷役で経路設計が誤配になる")
+    void marksMisroutedOnOffRouteHandling() {
+        fixture.given().events(trackingIssued())
+                .when().command(recordHandling(true))
+                .then().events(
+                        new HandlingRecordedEvent("B-0001", "act-1", "RECEIVE", "JPTYO",
+                                HANDLED, NOW),
+                        new BookingMisroutedEvent("B-0001", "act-1", "JPTYO", NOW));
+    }
+
+    @Test
+    @DisplayName("不変条件 12: すでに誤配なら二度は出さない")
+    void doesNotRepeatMisroute() {
+        fixture.given().events(misrouted())
+                .when().command(new RecordHandlingCommand("B-0001", "act-2", "LOAD", "SGSIN",
+                        true, HANDLED))
+                .then().events(new HandlingRecordedEvent("B-0001", "act-2", "LOAD", "SGSIN",
+                        HANDLED, NOW));
+    }
+
+    @Test
+    @DisplayName("不変条件 13: 誤配の原因が取り消されたら経路設計も戻る")
+    void clearsMisrouteWhenTheCauseIsVoided() {
+        fixture.given().events(misrouted())
+                .when().command(new RevertHandlingCommand("B-0001", "act-1", "取り違え"))
+                .then().events(new HandlingRevertedEvent("B-0001", "act-1", true, null, NOW));
+    }
+
+    @Test
+    @DisplayName("不変条件 13: 別の荷役の取り消しでは誤配は解けない")
+    void keepsMisrouteWhenAnotherActivityIsVoided() {
+        // **起きていない誤配を組み直させない**——逆に、原因でない取り消しで
+        // 誤配を消すと、経路設計者は誤配に気づけなくなる。
+        fixture.given().events(misrouted())
+                .when().command(new RevertHandlingCommand("B-0001", "act-9", "別の記録"))
+                // **現在地は動かない。** act-1（東京での受領）は取り消されて
+                // いないので、戻る先はそのまま東京である（不変条件 9-2）。
+                .then().events(new HandlingRevertedEvent("B-0001", "act-9", false,
+                        "JPTYO", NOW));
+    }
+
+    // ---- IT10 US16 §4: 引き渡しを予約に写す ----
+
+    /** 追跡番号を発行し、最初の受領で輸送中になっているところまで。 */
+    private static Object[] inTransit() {
+        return and(trackingIssued(),
+                new HandlingRecordedEvent("B-0001", "act-1", "RECEIVE", "JPTYO", HANDLED, NOW));
+    }
+
+    @Test
+    @DisplayName("US16 §4: 引き渡しが届くと予約が引取済になる")
+    void marksDelivered() {
+        fixture.given().events(inTransit())
+                .when().command(new MarkDeliveredCommand("B-0001", "TRK-8K2QX7M4RB",
+                        HANDLED, "USNYC"))
+                .then().events(new BookingDeliveredEvent("B-0001", "TRK-8K2QX7M4RB",
+                        HANDLED, "USNYC"));
+    }
+
+    @Test
+    @DisplayName("US16 §4: 二度届いても 1 度だけ（再配送で状態が揺れない）")
+    void marksDeliveredOnlyOnce() {
+        fixture.given().events(and(inTransit(),
+                        new BookingDeliveredEvent("B-0001", "TRK-8K2QX7M4RB", HANDLED, "USNYC")))
+                .when().command(new MarkDeliveredCommand("B-0001", "TRK-8K2QX7M4RB",
+                        HANDLED, "USNYC"))
+                .then().success().noEvents();
+    }
+
+    @Test
+    @DisplayName("知らない予約の引き渡しでは止まらない")
+    void doesNotFailForUnknownBookingOnDelivered() {
+        fixture.given().noPriorActivity()
+                .when().command(new MarkDeliveredCommand("B-NONE", "TRK-8K2QX7M4RB",
+                        HANDLED, "USNYC"))
+                .then().success().noEvents();
+    }
+
+    // ---- IT11 US28: 誤配の再設計 ----
+
+    @Test
+    @DisplayName("US28 §4・§5・§6: 誤配の再設計は現在地から組み直し、期限超過も受ける")
+    void assignsRouteFromCurrentLocationWhenMisrouted() {
+        // **予定ルートを外れた貨物はもう出発地に無く、現在地からでは間に合わない
+        // のが普通である。** 断ると貨物が動かせなくなる——超過した事実は
+        // イベントに載せて荷主への説明に使う。
+        var fromSingapore = new CargoItinerary(List.of(new Leg("V-9",
+                Location.of("SGSIN"), Location.of("USNYC"),
+                Instant.parse("2026-11-20T00:00:00Z"),
+                Instant.parse("2026-12-20T00:00:00Z"))));
+
+        fixture.given().events(misroutedAt("SGSIN"))
+                .when().command(new AssignRouteCommand("B-0001", fromSingapore, "routing01"))
+                .then().success()
+                .events(CargoRoutedEvent.of("B-0001", fromSingapore, "routing01", NOW,
+                        // 到着期限を 19 日超える（業務タイムゾーンで日付にして数える）。
+                        19));
+    }
+
+    @Test
+    @DisplayName("US28 §4: 再設計の起点は誤配を検知した港でなければならない")
+    void rejectsRedesignFromAnotherPort() {
+        // **出発地を「見ない」のではなく「差し替える」。** 検査を外すと、REST を
+        // 直接叩いて貨物のいない港から出る旅程が確定できる（IT11 レビュー 高）。
+        var fromRotterdam = new CargoItinerary(List.of(new Leg("V-9",
+                Location.of("NLRTM"), Location.of("USNYC"),
+                Instant.parse("2026-10-01T00:00:00Z"),
+                Instant.parse("2026-10-20T00:00:00Z"))));
+
+        fixture.given().events(misroutedAt("SGSIN"))
+                .when().command(new AssignRouteCommand("B-0001", fromRotterdam, "routing01"))
+                .then().exception(BusinessRuleViolation.class);
+    }
+
+    @Test
+    @DisplayName("US28 §6: 通常の設計では期限超過を受けない（緩めすぎに気づける）")
+    void stillRejectsOverdueItineraryWhenNotMisrouted() {
+        // **緩める側だけを検査すると、緩みすぎに気づけない。**
+        var late = new CargoItinerary(List.of(new Leg("V-9",
+                Location.of("JPTYO"), Location.of("USNYC"),
+                Instant.parse("2026-11-20T00:00:00Z"),
+                Instant.parse("2026-12-20T00:00:00Z"))));
+
+        // 経路設計を依頼したところ（まだ確定していない）で試す。
+        fixture.given().events(booked(), new RoutingRequestedEvent("B-0001", "sales01"))
+                .when().command(new AssignRouteCommand("B-0001", late, "routing01"))
+                .then().exception(BusinessRuleViolation.class);
+    }
+
+    // ---- IT11 引き継ぎ枠 A: 引き渡しの打ち消し ----
+
+    @Test
+    @DisplayName("打ち消しが届くと予約が引取済から戻る（IT11 引き継ぎ枠 A）")
+    void revertsDelivery() {
+        // **戻す先は「引取済にする前の状態」。** 集約が覚えている。導き直すと、
+        // 途中でキャンセル申請などが入っていたときに誤った先へ戻る。
+        fixture.given().events(and(inTransit(),
+                        new BookingDeliveredEvent("B-0001", "TRK-8K2QX7M4RB", HANDLED, "USNYC")))
+                .when().command(new RevertDeliveryCommand("B-0001", "TRK-8K2QX7M4RB", "取り違え"))
+                .then().events(new BookingDeliveryRevertedEvent("B-0001", "TRK-8K2QX7M4RB",
+                        BookingStatus.IN_TRANSIT.name(), "取り違え"));
+    }
+
+    @Test
+    @DisplayName("引取済でない予約への打ち消しでは何も起きない（二度届いても 1 度だけ）")
+    void revertsDeliveryOnlyOnce() {
+        fixture.given().events(inTransit())
+                .when().command(new RevertDeliveryCommand("B-0001", "TRK-8K2QX7M4RB", "取り違え"))
+                .then().success().noEvents();
+    }
+
+    @Test
+    @DisplayName("知らない予約の打ち消しでは止まらない")
+    void doesNotFailForUnknownBookingOnRevertDelivery() {
+        fixture.given().noPriorActivity()
+                .when().command(new RevertDeliveryCommand("B-NONE", "TRK-8K2QX7M4RB", "取り違え"))
+                .then().success().noEvents();
+    }
+
+    // ---- IT10 引き継ぎ枠 A: 少なくとも 1 回配送の再配送で重複を積まない ----
+
+    @Test
+    @DisplayName("同じ荷役が二度届いても記録は 1 度だけ（Event Processor は at-least-once）")
+    void ignoresRedeliveredHandling() {
+        // **リプレイでイベントストアに重複が積まれる。** 投影は追記系の PK で弾けるが、
+        // イベントストアは弾けない——集約が同じ荷役を二度書かないことでしか防げない。
+        fixture.given().events(and(trackingIssued(),
+                        new HandlingRecordedEvent("B-0001", "act-1", "RECEIVE", "JPTYO",
+                                HANDLED, NOW)))
+                .when().command(recordHandling(false))
+                .then().success().noEvents();
+    }
+
+    @Test
+    @DisplayName("再配送では誤配も二度出さない")
+    void ignoresRedeliveredOffRouteHandling() {
+        fixture.given().events(misrouted())
+                .when().command(recordHandling(true))
+                .then().success().noEvents();
+    }
+
+    @Test
+    @DisplayName("同じ取り消しが二度届いても戻すのは 1 度だけ")
+    void ignoresRedeliveredRevert() {
+        // 二度目は clears = false で積まれる。予約の状態は変わらないが、
+        // **取り消しの履歴に起きていない行が増える**。
+        fixture.given().events(and(misrouted(),
+                        new HandlingRevertedEvent("B-0001", "act-1", true, null, NOW)))
+                .when().command(new RevertHandlingCommand("B-0001", "act-1", "取り違え"))
+                .then().success().noEvents();
+    }
+
+    @Test
+    @DisplayName("知らない予約の荷役では止まらない（後続の荷役まで届かなくなる）")
+    void doesNotFailForUnknownBooking() {
+        fixture.given().noPriorActivity()
+                .when().command(recordHandling(false))
+                .then().success().noEvents();
+    }
+}

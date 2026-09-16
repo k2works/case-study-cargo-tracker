@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.booking.infrastructure.persistence.CargoRevisionMapper">
+
+    <resultMap id="revisionRow"
+               type="com.example.cargotracker.booking.infrastructure.persistence.CargoRevisionMapper$CargoRevisionRow">
+        <constructor>
+            <idArg column="booking_id" javaType="string"/>
+            <idArg column="updated_at" javaType="java.time.Instant"/>
+            <idArg column="field_label" javaType="string"/>
+            <arg column="field_seq" javaType="_int"/>
+            <arg column="before_value" javaType="string"/>
+            <arg column="after_value" javaType="string"/>
+            <arg column="updated_by" javaType="string"/>
+        </constructor>
+    </resultMap>
+
+    <insert id="insert">
+        INSERT INTO cargo_revision (
+            booking_id, updated_at, field_label, field_seq, before_value, after_value, updated_by
+        ) VALUES (
+            #{bookingId}, #{updatedAt}, #{fieldLabel}, #{fieldSeq}, #{beforeValue},
+            #{afterValue}, #{updatedBy}
+        )
+        ON CONFLICT (booking_id, updated_at, field_label) DO NOTHING
+    </insert>
+
+    <select id="findByBooking" resultMap="revisionRow">
+        SELECT * FROM cargo_revision
+        WHERE booking_id = #{bookingId}
+        ORDER BY updated_at DESC, field_seq
+    </select>
+</mapper>

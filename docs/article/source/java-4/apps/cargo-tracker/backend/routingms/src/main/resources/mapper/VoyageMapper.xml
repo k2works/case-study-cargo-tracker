@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.routing.infrastructure.persistence.VoyageMapper">
+
+    <resultMap id="voyageRow"
+               type="com.example.cargotracker.routing.infrastructure.persistence.VoyageMapper$VoyageRow">
+        <constructor>
+            <idArg column="voyage_number" javaType="string"/>
+            <arg column="carrier_code" javaType="string"/>
+            <arg column="carrier_name" javaType="string"/>
+            <arg column="vessel_name" javaType="string"/>
+            <arg column="departure_unlocode" javaType="string"/>
+            <arg column="arrival_unlocode" javaType="string"/>
+            <arg column="departure_at" javaType="java.time.Instant"/>
+            <arg column="arrival_at" javaType="java.time.Instant"/>
+            <arg column="cancelled" javaType="_boolean"/>
+            <arg column="registered_at" javaType="java.time.Instant"/>
+            <arg column="projected_at" javaType="java.time.Instant"/>
+            <arg column="last_event_id" javaType="string"/>
+            <arg column="updated_at" javaType="java.time.Instant"/>
+            <arg column="updated_by" javaType="string"/>
+            <arg column="cancelled_at" javaType="java.time.Instant"/>
+            <arg column="cancel_reason" javaType="string"/>
+            <arg column="cancelled_by" javaType="string"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="movementRow"
+               type="com.example.cargotracker.routing.infrastructure.persistence.VoyageMapper$MovementRow">
+        <constructor>
+            <idArg column="voyage_number" javaType="string"/>
+            <arg column="movement_seq" javaType="_int"/>
+            <arg column="departure_unlocode" javaType="string"/>
+            <arg column="arrival_unlocode" javaType="string"/>
+            <arg column="departure_at" javaType="java.time.Instant"/>
+            <arg column="arrival_at" javaType="java.time.Instant"/>
+        </constructor>
+    </resultMap>
+
+    <!--
+      一覧の既定条件はここ 1 か所に置く。画面とクエリの両方に書くと、
+      片方だけ緩めても検査が気づかない（IT2 T6）。
+    -->
+    <sql id="visible">
+        WHERE 1 = 1
+        <if test="!includeFinished">
+            AND cancelled = FALSE
+            AND departure_at &gt; #{now}
+        </if>
+        <if test="criteria.cargoType != null">
+            AND EXISTS (
+                SELECT 1 FROM voyage_accepted_cargo_type t
+                WHERE t.voyage_number = voyage.voyage_number
+                  AND t.cargo_type = #{criteria.cargoType}
+            )
+        </if>
+        <!--
+          検索条件（US07）。出発地と目的地は非正規化した端点で見る。
+          途中の寄港地は US08（経路探索）の仕事で、ここでは扱わない。
+        -->
+        <if test="criteria.voyageNumber != null">
+            <!--
+              **部分一致・大文字小文字を問わない**（IT12 引き継ぎ H.5）。
+              控え違いがそのまま 0 件になると、探し方の誤りだと気づけない。
+              LIKE のメタ文字は入口で無害化する（`%` だけを打たれて全件が
+              返るのを防ぐ。ESCAPE を明示しないと方言で解釈が変わる）。
+            -->
+            AND UPPER(voyage_number) LIKE UPPER('%' ||
+                REPLACE(REPLACE(REPLACE(#{criteria.voyageNumber}, '!', '!!'),
+                        '%', '!%'), '_', '!_') || '%') ESCAPE '!'
+        </if>
+        <if test="criteria.departure != null">
+            AND departure_unlocode = #{criteria.departure}
+        </if>
+        <if test="criteria.arrival != null">
+            AND arrival_unlocode = #{criteria.arrival}
+        </if>
+        <if test="criteria.departFrom != null">
+            AND departure_at &gt;= #{criteria.departFrom}
+        </if>
+        <if test="criteria.departTo != null">
+            AND departure_at &lt;= #{criteria.departTo}
+        </if>
+    </sql>
+
+    <insert id="insert">
+        INSERT INTO voyage (
+            voyage_number, carrier_code, carrier_name, vessel_name,
+            departure_unlocode, arrival_unlocode, departure_at, arrival_at,
+            cancelled, registered_at, projected_at, last_event_id, updated_at, updated_by
+        ) VALUES (
+            #{voyageNumber}, #{carrierCode}, #{carrierName}, #{vesselName},
+            #{departureUnlocode}, #{arrivalUnlocode}, #{departureAt}, #{arrivalAt},
+            #{cancelled}, #{registeredAt}, #{projectedAt}, #{lastEventId},
+            #{updatedAt}, #{updatedBy}
+        )
+        ON CONFLICT (voyage_number) DO NOTHING
+    </insert>
+
+    <insert id="insertMovement">
+        INSERT INTO carrier_movement (
+            voyage_number, movement_seq, departure_unlocode, arrival_unlocode,
+            departure_at, arrival_at
+        ) VALUES (
+            #{voyageNumber}, #{movementSeq}, #{departureUnlocode}, #{arrivalUnlocode},
+            #{departureAt}, #{arrivalAt}
+        )
+        ON CONFLICT (voyage_number, movement_seq) DO NOTHING
+    </insert>
+
+    <insert id="insertAcceptedCargoType">
+        INSERT INTO voyage_accepted_cargo_type (voyage_number, cargo_type)
+        VALUES (#{voyageNumber}, #{cargoType})
+        ON CONFLICT (voyage_number, cargo_type) DO NOTHING
+    </insert>
+
+    <update id="updateSchedule">
+        UPDATE voyage SET
+            carrier_code = #{carrierCode},
+            carrier_name = #{carrierName},
+            vessel_name = #{vesselName},
+            departure_unlocode = #{departureUnlocode},
+            arrival_unlocode = #{arrivalUnlocode},
+            departure_at = #{departureAt},
+            arrival_at = #{arrivalAt},
+            projected_at = #{projectedAt},
+            updated_at = #{updatedAt},
+            updated_by = #{updatedBy}
+        WHERE voyage_number = #{voyageNumber}
+    </update>
+
+    <delete id="deleteMovements">
+        DELETE FROM carrier_movement WHERE voyage_number = #{voyageNumber}
+    </delete>
+
+    <delete id="deleteAcceptedCargoTypes">
+        DELETE FROM voyage_accepted_cargo_type WHERE voyage_number = #{voyageNumber}
+    </delete>
+
+    <!--
+      キャンセルは cancelled と理由の 3 列だけを書く。スケジュールの列は触らない
+      （止めた航海の「元の予定」は残す。何を止めたのかが読めなくなる）。
+    -->
+    <update id="cancel">
+        UPDATE voyage SET
+            cancelled = TRUE,
+            cancelled_at = #{cancelledAt},
+            cancel_reason = #{cancelReason},
+            cancelled_by = #{cancelledBy},
+            projected_at = #{projectedAt}
+        WHERE voyage_number = #{voyageNumber}
+    </update>
+
+    <select id="findByNumber" resultMap="voyageRow">
+        SELECT * FROM voyage WHERE voyage_number = #{voyageNumber}
+    </select>
+
+    <select id="findAll" resultMap="voyageRow">
+        SELECT * FROM voyage
+        <include refid="visible"/>
+        ORDER BY departure_at, voyage_number
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countAll" resultType="_int">
+        SELECT count(*) FROM voyage
+        <include refid="visible"/>
+    </select>
+
+    <resultMap id="transitEdgeRow"
+               type="com.example.cargotracker.routing.infrastructure.persistence.VoyageMapper$TransitEdgeRow">
+        <constructor>
+            <idArg column="voyage_number" javaType="string"/>
+            <arg column="departure_unlocode" javaType="string"/>
+            <arg column="arrival_unlocode" javaType="string"/>
+            <arg column="departure_at" javaType="java.time.Instant"/>
+            <arg column="arrival_at" javaType="java.time.Instant"/>
+        </constructor>
+    </resultMap>
+
+    <!--
+      探索が見る区間（US08）。キャンセル済み・出港済みの航海は外す（一覧の既定と
+      同じ理由。走らない船で経路を組ませない）。**航海の出港ではなく区間の出発**で
+      見る。航海はもう出ていても、まだ出ていない後半の区間には積める。
+      受入貨物種別はここでは取らない。集約関数で 1 行に畳むと方言に寄る
+      （string_agg は PostgreSQL）。呼ぶ側が航海ごとに 1 度だけ引いて覚える。
+    -->
+    <select id="findEdgesFrom" resultMap="transitEdgeRow">
+        SELECT cm.voyage_number,
+               cm.departure_unlocode,
+               cm.arrival_unlocode,
+               cm.departure_at,
+               cm.arrival_at
+          FROM carrier_movement cm
+          JOIN voyage v ON v.voyage_number = cm.voyage_number
+         WHERE cm.departure_unlocode = #{unLocode}
+           AND v.cancelled = FALSE
+           AND cm.departure_at &gt; #{now}
+         ORDER BY cm.departure_at, cm.voyage_number, cm.movement_seq
+    </select>
+
+    <!--
+      投影が知っている港か。EXISTS で止める（件数は要らない）。
+      出発側・到着側の両方を見る。終着港は departure_unlocode に現れない。
+    -->
+    <select id="existsPort" resultType="_boolean">
+        SELECT EXISTS (
+            SELECT 1 FROM carrier_movement
+             WHERE departure_unlocode = #{unLocode}
+                OR arrival_unlocode = #{unLocode}
+        )
+    </select>
+
+    <select id="findAcceptedCargoTypes" resultType="string">
+        SELECT cargo_type FROM voyage_accepted_cargo_type
+        WHERE voyage_number = #{voyageNumber}
+        ORDER BY cargo_type
+    </select>
+
+    <select id="findMovements" resultMap="movementRow">
+        SELECT * FROM carrier_movement
+        WHERE voyage_number = #{voyageNumber}
+        ORDER BY movement_seq
+    </select>
+</mapper>

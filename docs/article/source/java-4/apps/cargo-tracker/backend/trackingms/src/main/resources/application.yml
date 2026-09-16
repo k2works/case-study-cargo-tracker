@@ -1,0 +1,66 @@
+spring:
+  application:
+    name: trackingms
+  datasource:
+    # Database per Service（ADR-0001 決定 1）。他サービスの DB には繋がない。
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/tracking_read_db}
+    username: ${DB_USER:trackingms}
+    password: ${DB_PASSWORD:trackingms}
+  flyway:
+    enabled: true
+    # サービスごとに置き場を分ける。同じ classpath:db/migration に置くと、
+    # 2 つのサービスを同じ JVM に載せた瞬間に双方の V001 が衝突して起動しない
+    # （Found more than one migration with version 001）。契約テストの往復は
+    # 2 サービスを同時に起動するので、番号取りをサービス間で調整しない形にする。
+    locations: classpath:db/migration/tracking
+  main:
+    # Axon の axon.axonserver ConfigurationProperties が Spring Boot の
+    # BoundConfigurationProperties と Bean 循環を作るため必須（IT1 スパイクで実測）。
+    # Spring Boot の版を下げても回避できない。
+    allow-circular-references: true
+
+server:
+  port: ${SERVER_PORT:8084}
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+
+axon:
+  axonserver:
+    servers: ${AXON_SERVER:localhost:8124}
+  eventhandling:
+    processors:
+      # **退避先は Processor ごとに明示する**（ADR-0014）。`"[..default]"` は
+      # この版では効かない（実測。DLQ が付かず、1 件で全部止まる形に戻る）。
+      # 書き忘れを人の注意で防がないよう、EventSourcedServicesHaveTheSameShapeTest が
+      # 2 つ見る：everyEventHandlerPackageIsEnumerated（@EventHandler を持つ
+      # パッケージがここに載っているか）と everyEnumeratedProcessorHasADeadLetterQueue
+      # （載っているものに dlq が付いているか）。
+      # Processing Group はパッケージ名キーで指定する（@ProcessingGroup は Axon 5 に無い）。
+      # 列挙し忘れると既定の設定で動くので、テストは緑のまま本番だけ挙動が変わる。
+      "[com.example.cargotracker.tracking.infrastructure.projection]":
+        mode: pooled
+        dlq:
+          enabled: true
+      # 反応（コマンドを送る）は投影と別の Group にする。同じにすると、
+      # 投影のリプレイでコマンドが再送され、貨物状態が二度進む。
+      "[com.example.cargotracker.tracking.application.reaction]":
+        mode: pooled
+        dlq:
+          enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # deadletters は退避したイベントを処理し直す入口（ADR-0014 決定 1）。
+        # **直したあとに退避を消すのは「黙って捨てる」こと**なので、消す手段では
+        # なく処理し直す手段を置く。運用の読み口（projection:dead-letters）と
+        # 同じ立場のものを同じ入口に並べる。
+        include: health,info,deadletters
+
+# Gateway の振り分けと同じ接頭辞。共有の読み口（退避一覧）が経路を組み立てる。
+cargo:
+  context: tracking

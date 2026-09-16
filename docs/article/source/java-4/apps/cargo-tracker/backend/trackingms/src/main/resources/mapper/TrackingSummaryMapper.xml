@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.tracking.infrastructure.persistence.TrackingSummaryMapper">
+
+    <!--
+      リプレイで行が増えない形にする。追跡番号が主キーなので、同じイベントを
+      2 度読んでも上書きになる（IT6 の「追記専用の行はリプレイで増える」）。
+
+      **状態と最終更新は上書きしない。** ここで書くのは「追跡が始まった」ことで、
+      そのときの状態（未受領）は挿入のときだけ正しい。開始イベントだけが再配送
+      されると（少なくとも 1 回配送では起こりうる）、履歴は受領済を持ったまま
+      一覧と詳細だけが未受領に巻き戻る（IT8 のレビューで指摘）。
+    -->
+    <insert id="insert">
+        INSERT INTO tracking_summary (
+            tracking_number, booking_id, shipper_id, origin_unlocode, destination_unlocode,
+            cargo_type, transport_status, current_unlocode, estimated_arrival,
+            initialized_at, last_status_changed_at, projected_at, last_event_id, simulated
+        ) VALUES (
+            #{trackingNumber}, #{bookingId}, #{shipperId}, #{originUnlocode}, #{destinationUnlocode},
+            #{cargoType}, #{transportStatus}, #{currentUnlocode}, #{estimatedArrival},
+            #{initializedAt}, #{lastStatusChangedAt}, #{projectedAt}, #{lastEventId},
+            -- 印は荷主に付く（ADR-0020 決定 4）。投影の時点で写しから解決する。
+            -- **写しがまだ無ければ本物として扱う**——印が付く前に登録された荷主と
+            -- 同じ扱いで、業務の一覧から黙って消える側には倒さない。
+            COALESCE((SELECT simulated FROM shipper_origin WHERE shipper_id = #{shipperId}), FALSE)
+        )
+        ON CONFLICT (tracking_number) DO UPDATE SET
+            booking_id = EXCLUDED.booking_id,
+            shipper_id = EXCLUDED.shipper_id,
+            origin_unlocode = EXCLUDED.origin_unlocode,
+            destination_unlocode = EXCLUDED.destination_unlocode,
+            cargo_type = EXCLUDED.cargo_type,
+            estimated_arrival = EXCLUDED.estimated_arrival,
+            initialized_at = EXCLUDED.initialized_at,
+            projected_at = EXCLUDED.projected_at,
+            simulated = EXCLUDED.simulated
+    </insert>
+
+    <insert id="insertLegs">
+        INSERT INTO tracking_leg (
+            tracking_number, leg_seq, voyage_number,
+            load_unlocode, unload_unlocode, load_time, unload_time
+        ) VALUES
+        <foreach collection="legs" item="leg" separator=",">
+            (#{trackingNumber}, #{leg.legSeq}, #{leg.voyageNumber},
+             #{leg.loadUnlocode}, #{leg.unloadUnlocode}, #{leg.loadTime}, #{leg.unloadTime})
+        </foreach>
+    </insert>
+</mapper>

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.cargotracker.booking.infrastructure.persistence.CancellationRequestMapper">
+
+    <!--
+      **二度届いても 1 行**（request_id が PK・少なくとも 1 回配送）。
+      判断を書いたあとに申請が再配送されても、判断を消さない——上書きすると
+      「承認したはずの申請が承認待ちに戻る」。
+    -->
+    <insert id="insert">
+        INSERT INTO cancellation_request (request_id, booking_id, reason,
+                                          requested_by, requested_at, projected_at)
+        VALUES (#{requestId}, #{bookingId}, #{reason},
+                #{requestedBy}, #{requestedAt}, #{requestedAt})
+        ON CONFLICT DO NOTHING
+    </insert>
+
+    <!--
+      **承認待ちの行にだけ書く。** 先に読んでから更新すると、そのあいだに
+      他の人が判断した跡を上書きできる。更新できた行数で判断する。
+    -->
+    <update id="decide">
+        UPDATE cancellation_request
+           SET decision           = #{decision},
+               discharge_unlocode = #{dischargeUnLocode},
+               decision_reason    = #{decisionReason},
+               decided_by         = #{decidedBy},
+               decided_at         = #{decidedAt},
+               projected_at       = #{projectedAt}
+         WHERE request_id = #{requestId}
+           AND decision IS NULL
+    </update>
+</mapper>

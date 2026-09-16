@@ -1,0 +1,2 @@
+- [新章を足したら 00・01 の入口表も直す](manual-entry-docs-go-stale.md) — index/mkdocs だけ直して読者の入口が古いまま残る
+- [「NN 章」参照は目次と突き合わせる](manual-cross-reference-chapter-numbers.md) — 素の章番号は検査に掛からず静かにずれる

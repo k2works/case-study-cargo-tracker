@@ -1,0 +1,475 @@
+import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router';
+import { fetchInvoices } from '@/features/billing/api';
+import { useAuthStore } from '@/shared/auth/authStore';
+import { navigationFor } from '@/shared/ui/navigation';
+import { CARD, LINK, NOTICE, PAGE_TITLE, SECTION_TITLE } from '@/shared/ui/styles';
+import {
+  fetchAwaitingConfirmation,
+  fetchAwaitingTrackingNumber,
+  fetchBookingSummary,
+  fetchConditionReviews,
+} from '@/features/bookings/api';
+import { formatBusinessDateTime } from '@/shared/api/businessDate';
+import { fetchVoyagePorts } from '@/features/handling/api';
+import { fetchOpenExceptions, fetchRecentlyChanged } from '@/features/tracking/api';
+import { fetchOverdueCustomsHolds } from '@/features/customs/api';
+import { fetchAttentionItems } from '@/features/attention/api';
+import {
+  fetchPendingCancellations,
+  fetchRejectedCancellations,
+} from '@/features/bookings/cancellationApi';
+
+/** S02 ダッシュボード。「今日の作業」からその日の入口へ行けるようにする。 */
+export function DashboardPage() {
+  const user = useAuthStore((state) => state.user);
+  const items = user ? navigationFor(user.roles).filter((i) => i.path !== '/') : [];
+  const isRouting = user?.roles.includes('ROLE_ROUTING') ?? false;
+  const isSales = user?.roles.includes('ROLE_SALES') ?? false;
+  const isHandler = user?.roles.includes('ROLE_HANDLER') ?? false;
+  const isShipper = user?.roles.includes('ROLE_SHIPPER') ?? false;
+  const isTracker = user?.roles.includes('ROLE_TRACKER') ?? false;
+  const isAccountant = user?.roles.includes('ROLE_ACCOUNTANT') ?? false;
+
+  // **荷役は航海から始まる。** 追跡番号は現場が持っていないので、
+  // 「今日どの船のどの港を扱うか」を出さないと画面に入れない。
+  const { data: voyagePorts } = useQuery({
+    queryKey: ['handling-voyage-ports'],
+    queryFn: fetchVoyagePorts,
+    enabled: isHandler,
+  });
+
+  // **追跡管理者の「今日の仕事」は未解決の例外**（US19）。件数だけでは進まないので
+  // 一覧へ繋ぐ（IT4 の「気づく手段は次の行動へ繋ぐ」）。
+  const { data: openExceptions } = useQuery({
+    queryKey: ['open-exceptions'],
+    // 引数を渡さない（既定で未解決だけ）。queryFn にそのまま渡すと、
+    // TanStack Query の context が第 1 引数として入る。
+    queryFn: () => fetchOpenExceptions(),
+    enabled: isTracker,
+  });
+
+  // **留置 3 営業日超は督促の対象**（US29 §受入基準 6）。件数だけでは進まないので
+  // 一覧へ繋ぐ。**判定はサーバが持つ**——留置中の日数は日が経つだけで変わるので、
+  // 画面で数えると一覧と件数が食い違う。
+  const { data: overdueCustoms } = useQuery({
+    queryKey: ['customs-overdue'],
+    queryFn: () => fetchOverdueCustomsHolds(),
+    enabled: isTracker,
+  });
+
+  // **経理の「今日の仕事」は算出済の請求**（US21）。引取が完了すると自動で
+  // 算出されるので、経理は「出てきたものを確かめる」ところから始まる。
+  // **件数はその人の仕事に合わせる**——算出済（まだ発行していない）だけを数える。
+  const { data: calculatedInvoices } = useQuery({
+    queryKey: ['invoices-calculated'],
+    queryFn: () => fetchInvoices(false),
+    enabled: isAccountant,
+  });
+
+  // **要確認は宛先ロールごとに散っている**（IT13 引き継ぎ E）。**荷主には出ない**
+  // ——社内の受け皿なので、宛先ロールに荷主は無い（サーバが絞るので、ここで
+  // 分岐を増やして判定を 2 か所にしない）。
+  const { data: attentionItems } = useQuery({
+    queryKey: ['attention-items-count'],
+    queryFn: fetchAttentionItems,
+    enabled: !isShipper,
+  });
+
+  // **承認待ちのキャンセルは追跡管理者の仕事**（US30 §受入基準 4）。
+  // 件数だけでは進まないので一覧へ繋ぐ——陸揚げ地を決められるのはこの人だけで、
+  // 気づく手段はその人が次に取れる行動へ繋がらなければ意味がない。
+  const { data: pendingCancellations } = useQuery({
+    queryKey: ['pending-cancellations-count'],
+    queryFn: fetchPendingCancellations,
+    enabled: isTracker,
+  });
+
+  // **未払いは督促の起点**（US23 §受入基準 5）。期限を過ぎたものは放っておくと
+  // 誰も数えない——一覧を開いて目で探させると、件数が増えるほど取りこぼす。
+  // **数えるのはサーバ**で、期限当日は未払いにしない。
+  const { data: overdueInvoices } = useQuery({
+    queryKey: ['invoices-overdue'],
+    queryFn: () => fetchInvoices(false, null, true),
+    enabled: isAccountant,
+  });
+
+  // **荷主には「変わったこと」を知る手段がない**（送信基盤はスコープ外）。
+  // 件数を出して一覧へ繋ぐ（US17 §受入基準 4 の代わり。IT8 のレビュー指摘）。
+  const { data: recentlyChanged } = useQuery({
+    queryKey: ['tracking-recently-changed'],
+    queryFn: fetchRecentlyChanged,
+    enabled: isShipper,
+  });
+
+  // US04 §受入基準 5・US06 §受入基準 3 の「通知」。送信基盤はスコープ外なので、
+  // 担当者はここで気づく（ユーザーストーリーの通知に関する注記）。
+  //
+  // **件数は担当の仕事に合わせる。** 引き渡していない予約（仮受付）は営業の
+  // 仕事で、経路設計者はその件数に対して打てる手が無い。設計を待っている件数は
+  // 経路設計者の仕事である。
+  const { data: summary } = useQuery({
+    queryKey: ['booking-summary'],
+    queryFn: fetchBookingSummary,
+    enabled: isRouting || isSales,
+    refetchInterval: 10000,
+  });
+  const preliminary =
+    summary?.state === 'ready' ? summary.value.preliminary : 0;
+  const routingWorklist =
+    summary?.state === 'ready' ? summary.value.routingWorklist : 0;
+  // 荷主へ通知していない経路確定済みの予約（US12）。**通知するのは営業の仕事**なので
+  // 営業に出す。経路設計者はその件数に対して打てる手が無い。
+  const awaitingNotification =
+    summary?.state === 'ready' ? summary.value.awaitingNotification ?? 0 : 0;
+
+  // 見直しを頼まれた予約（US10 §4）。**打てる手を持つのは営業**（荷主と条件を
+  // 協議する）。経路設計者の受け皿は S30 で、こちらではない。
+  const { data: reviews } = useQuery({
+    queryKey: ['condition-reviews'],
+    queryFn: fetchConditionReviews,
+    enabled: isSales,
+    refetchInterval: 10000,
+  });
+  // **1 つの読み口で画面全体を落とさない。** ダッシュボードは複数の読み口を
+  // 束ねるので、どれか 1 つが思わぬ形を返すと「今日の作業」ごと消える
+  // （マニュアルのキャプチャで実測。要確認一覧でも同じ形の失敗があった）。
+  const conditionReviews =
+    reviews?.state === 'ready' ? reviews.value.items ?? [] : [];
+
+  // 却下されたキャンセル（US30 §4 の対）。**承認は予約一覧で気づけるが、却下は
+  // 何も変わらない**——申請した本人が予約詳細を開き直さない限り、理由を書かせた
+  // 意味が無い。宛先は申請した本人で、サーバがヘッダで絞る。
+  const { data: rejections } = useQuery({
+    queryKey: ['rejected-cancellations'],
+    queryFn: fetchRejectedCancellations,
+    enabled: isSales,
+    refetchInterval: 10000,
+  });
+  const rejectedCancellations =
+    rejections?.state === 'ready' ? rejections.value.items ?? [] : [];
+
+  // 確定を待っている予約（US13 §受入基準 3）。**打てる手を持つのは営業**で、
+  // 荷主の承認を確認して確定する。経路設計者はこの件数に対して何もできない。
+  const { data: awaiting } = useQuery({
+    queryKey: ['awaiting-confirmation'],
+    queryFn: fetchAwaitingConfirmation,
+    enabled: isSales,
+    refetchInterval: 10000,
+  });
+  const awaitingConfirmation =
+    awaiting?.state === 'ready' ? awaiting.value.items ?? [] : [];
+
+  // 追跡番号の発行を待っている予約（US13 §受入基準 3 の代わり）。**打てる手を
+  // 持つのは経路設計者**で、発行は経路設計者の操作である。営業には出さない。
+  const { data: awaitingTracking } = useQuery({
+    queryKey: ['awaiting-tracking-number'],
+    queryFn: fetchAwaitingTrackingNumber,
+    enabled: isRouting,
+    refetchInterval: 10000,
+  });
+  const awaitingTrackingNumber =
+    awaitingTracking?.state === 'ready' ? awaitingTracking.value.items ?? [] : [];
+
+  return (
+    <section>
+      <h1 className={PAGE_TITLE}>ダッシュボード</h1>
+
+      {/* **却下は何も変わらない。** 申請した本人に理由が届かないと、理由を
+          書かせた意味が無い（US30 §7）。 */}
+      {isSales && rejectedCancellations.length > 0 && (
+        <output className={`${NOTICE} mt-4 block`}>
+          キャンセルの申請が却下されました（{rejectedCancellations.length} 件）。
+          <ul className="mt-2 space-y-1">
+            {rejectedCancellations.map((item) => (
+              <li key={item.requestId} data-testid={`rejected-cancellation-${item.requestId}`}>
+                <Link to={`/bookings/${item.bookingId}`} className={LINK}>
+                  {item.bookingNumber ?? item.bookingId}
+                </Link>
+                <span className="ml-2">{item.decisionReason ?? '（理由なし）'}</span>
+                <span className="ml-2 text-gray-600">
+                  （{item.decidedBy}・
+                  {formatBusinessDateTime(item.decidedAt ?? item.requestedAt)}）
+                </span>
+              </li>
+            ))}
+          </ul>
+        </output>
+      )}
+
+      {/* 件数だけでは仕事が進まない。理由が読めないと荷主と何を協議するか
+          分からないので、行そのものを出す。 */}
+      {isSales && conditionReviews.length > 0 && (
+        <output className={`${NOTICE} mt-4 block`}>
+          経路設計者から条件の見直しを頼まれた予約が {conditionReviews.length} 件あります。
+          <ul className="mt-2 space-y-1">
+            {conditionReviews.map((item) => (
+              <li key={item.bookingId} data-testid={`condition-review-${item.bookingId}`}>
+                <Link to={`/bookings/${item.bookingId}`} className={LINK}>
+                  {item.bookingNumber}
+                </Link>
+                <span className="ml-2">{item.reason}</span>
+                <span className="ml-2 text-gray-600">
+                  （{formatBusinessDateTime(item.requestedAt)}）
+                </span>
+              </li>
+            ))}
+          </ul>
+        </output>
+      )}
+
+      {/* **業務の入口は件数と別に置く。** ほかの行は「対処が要るもの」の
+          知らせだが、見積は毎日そこから始める仕事である——0 件で消える形に
+          すると、始められる場所が日によって変わる（正典の画面遷移図
+          S02 → S12）。 */}
+      {isSales && (
+        <p className="mt-4 text-sm text-gray-700">
+          荷主から輸送の相談を受けたら、
+          <Link to="/quotations/new" className={`${LINK} mx-1`}>
+            見積を作る
+          </Link>
+          から始めます。
+        </p>
+      )}
+
+      {/* 0 件のときは出さない。毎朝「0 件」を読み飛ばす習慣がつくと、
+          件数が出た日も見落とす。 */}
+      {isSales && preliminary > 0 && (
+        <output className={`${NOTICE} mt-4 block`}>
+          経路設計者へ引き渡していない予約が {preliminary} 件あります。
+          {/* 件数を出すだけでは仕事が進まない。対象へ行ける導線を添える。 */}
+          <Link to="/bookings" className={`${LINK} ml-1`}>
+            予約一覧
+          </Link>
+          で確認してください。
+        </output>
+      )}
+
+      {/* 件数だけでは仕事が進まない。**どの予約を開けばよいか**が読めるように
+          行そのものを出す（US13 §受入基準 3 の「通知」の代わり）。 */}
+      {isSales && awaitingConfirmation.length > 0 && (
+        <output className={`${NOTICE} mt-4 block`}>
+          荷主へ通知したまま確定していない予約が {awaitingConfirmation.length} 件あります。
+          <ul className="mt-2 space-y-1">
+            {awaitingConfirmation.map((item) => (
+              <li key={item.bookingId} data-testid={`awaiting-confirmation-${item.bookingId}`}>
+                <Link to={`/bookings/${item.bookingId}`} className={LINK}>
+                  {item.bookingNumber}
+                </Link>
+                <span className="ml-2 text-gray-600">
+                  （通知 {formatBusinessDateTime(item.notifiedAt)}）
+                </span>
+              </li>
+            ))}
+          </ul>
+        </output>
+      )}
+
+      {isSales && awaitingNotification > 0 && (
+        <output className={`${NOTICE} mt-4 block`}>
+          荷主へ通知していない経路確定済みの予約が {awaitingNotification} 件あります。
+          <Link to="/bookings" className={`${LINK} ml-1`}>
+            予約一覧
+          </Link>
+          で確認してください。
+        </output>
+      )}
+
+      {/* 確定したまま発行を忘れると、荷主は追跡番号を受け取れない。US13 §3 の
+          「経路設計者への通知」は送信基盤がスコープ外なので、この受け皿で代える。 */}
+      {isRouting && awaitingTrackingNumber.length > 0 && (
+        <output className={`${NOTICE} mt-4 block`}>
+          追跡番号の発行を待っている予約が {awaitingTrackingNumber.length} 件あります。
+          <ul className="mt-2 space-y-1">
+            {awaitingTrackingNumber.map((item) => (
+              <li key={item.bookingId} data-testid={`awaiting-tracking-${item.bookingId}`}>
+                <Link to={`/bookings/${item.bookingId}`} className={LINK}>
+                  {item.bookingNumber}
+                </Link>
+                <span className="ml-2 text-gray-600">
+                  （確定 {formatBusinessDateTime(item.confirmedAt)}）
+                </span>
+              </li>
+            ))}
+          </ul>
+        </output>
+      )}
+
+      {isRouting && routingWorklist > 0 && (
+        <output className={`${NOTICE} mt-4 block`}>
+          経路設計を待っている予約が {routingWorklist} 件あります。
+          <Link to="/routing/worklist" className={`${LINK} ml-1`}>
+            経路設計作業一覧
+          </Link>
+          で確認してください。
+        </output>
+      )}
+
+      {/* 経路設計者の作業の入口は S30。予約一覧（S20）は予約全体を横断して
+          見たいときに開く（ui_design.md S20 の注記）。0 件でも導線は出す。
+          件数が 0 の日でも「どこへ行けばよいか」は変わらない。 */}
+      {isRouting && (
+        <p className="mt-4 text-sm">
+          <Link to="/routing/worklist" className={LINK}>
+            経路設計作業一覧を開く
+          </Link>
+        </p>
+      )}
+
+      {/* 荷役の入口。**件数だけでは仕事が進まない**ので、その航海の画面へ直接繋ぐ。
+          **「本日」とは書かない。** 写しは予定の時刻を持たない（ADR-0012 決定 4）
+          ので日付で絞れない。出せるのは「作業のある航海」までで、見出しをそう書く
+          ——書けないことを見出しで約束すると、数か月後に終わった船が並んだとき
+          利用者は見出しのほうを信じて探し続ける。 */}
+      {isHandler && voyagePorts?.state === 'ready' && (
+        <section className="mt-6">
+          <h2 className={SECTION_TITLE}>作業のある航海</h2>
+          {voyagePorts.value.items.length === 0 ? (
+            <output className={`${NOTICE} mt-3`}>
+              扱う貨物のある航海はありません。追跡番号が発行されると、ここに並びます。
+            </output>
+          ) : (
+            <ul className={`${CARD} mt-3 divide-y divide-gray-100`}>
+              {voyagePorts.value.items.map((item) => (
+                <li key={`${item.voyageNumber}-${item.unLocode}`} className="py-2">
+                  <Link
+                    to={`/handling/voyages/${item.voyageNumber}?unLocode=${item.unLocode}`}
+                    className={LINK}
+                  >
+                    {item.voyageNumber}{'\u3000'}{item.unLocode}（予定 {item.cargoCount} 本）
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+          {/* **上限で切れたことを黙らない**（IT10 レビュー N6）。無音で切ると、
+              載らなかった航海は「今日の仕事ではない」と読まれる。 */}
+          {voyagePorts.value.truncated && (
+            <output className={`${NOTICE} mt-3 block`}>
+              航海が多いため、一部だけを出しています。荷役の一覧から探してください
+            </output>
+          )}
+        </section>
+      )}
+
+      {/* **追跡管理者の受け皿。** 未解決の例外が残っているあいだは、それが仕事である。 */}
+      {isTracker && openExceptions?.state === 'ready'
+        && openExceptions.value.items.length > 0 && (
+        <output className={`${NOTICE} mt-6 block`}>
+          未解決の例外が {openExceptions.value.items.length} 件あります。{' '}
+          <Link to="/tracking/exceptions" className={LINK}>
+            例外一覧
+          </Link>
+          {' '}で対応してください。
+        </output>
+      )}
+
+      {/* **留置が長い申告は督促の対象**（US29 §受入基準 6）。件数から一覧へ繋ぐ。 */}
+      {isTracker && overdueCustoms?.state === 'ready' && overdueCustoms.value.total > 0 && (
+        <output className={`${NOTICE} mt-4 block`}>
+          留置が 3 営業日を超えた通関申告が {overdueCustoms.value.total} 件あります。{' '}
+          <Link to="/customs?overdueOnly=true" className={LINK}>
+            通関申告一覧
+          </Link>
+          {' '}で督促してください。
+        </output>
+      )}
+
+      {/* **要確認は宛先ロールごとに散っている**（IT13 引き継ぎ E）。ここに出さないと、
+          S70 を自分で開きに行った人しか気づけない。**気づく手段は次の行動へ繋ぐ**ので
+          一覧へのリンクを添える。宛先の絞り込みはサーバがロールで行う。 */}
+      {attentionItems?.state === 'ready' && attentionItems.value.items.length > 0 && (
+        <output className={`${NOTICE} mt-4 block`}>
+          確認が必要な項目が {attentionItems.value.items.length} 件あります。{' '}
+          <Link to="/worklist/attention" className={LINK}>
+            要確認一覧
+          </Link>
+          {' '}で確かめてください。
+        </output>
+      )}
+
+      {/* **承認待ちのキャンセルは追跡管理者の仕事**（US30 §受入基準 4）。
+          件数から一覧へ辿れる形にする。 */}
+      {isTracker && pendingCancellations?.state === 'ready'
+        && pendingCancellations.value.items.length > 0 && (
+        <output className={`${NOTICE} mt-4 block`}>
+          承認待ちのキャンセル申請が {pendingCancellations.value.items.length} 件あります。{' '}
+          <Link to="/bookings/cancellations" className={LINK}>
+            キャンセル承認
+          </Link>
+          {' '}で判断してください。
+        </output>
+      )}
+
+      {/* **経理は「出てきた請求」から始まる**（US21）。件数だけでは進まないので
+          一覧へ繋ぐ。**算出されないこと**に気づく手段は要確認一覧のほうにある
+          （材料が足りない予約はそこへ出る）。 */}
+      {isAccountant && calculatedInvoices?.state === 'ready'
+        && calculatedInvoices.value.items.length > 0 && (
+        <output className={`${NOTICE} mt-4 block`}>
+          確かめていない請求が {calculatedInvoices.value.items.length} 件あります。{' '}
+          <Link to="/invoices" className={LINK}>
+            請求一覧
+          </Link>
+          {' '}で内容を確かめてください。
+        </output>
+      )}
+
+      {/* **未払いは督促の起点**（US23 §受入基準 5）。件数だけでは進まないので
+          一覧へ繋ぐ——期限の近いものから並ぶ。 */}
+      {isAccountant && overdueInvoices?.state === 'ready'
+        && overdueInvoices.value.items.length > 0 && (
+        <output className={`${NOTICE} mt-4 block`}>
+          支払期限を過ぎた請求が {overdueInvoices.value.items.length} 件あります。{' '}
+          <Link to="/invoices?overdue=true" className={LINK}>
+            請求一覧
+          </Link>
+          {' '}で督促してください。
+        </output>
+      )}
+
+      {/* **引取は航海起点では辿り着けない**（船から降りたあとの作業で、どの航海の
+          仕事でもない）。モバイル幅では下部タブが受け持つが、**デスクトップ幅にも
+          導線が要る**——出さないと、その画面はロール別到達性の外に落ちる。 */}
+      {isHandler && (
+        <p className="mt-4 text-sm">
+          <Link to="/handling/awaiting-claim" className={LINK}>
+            引取待ちの貨物を見る
+          </Link>
+        </p>
+      )}
+
+      {/* 荷主が「変わったこと」に気づく手段。**そこから一覧へ行ける**。 */}
+      {isShipper && recentlyChanged?.state === 'ready'
+        && recentlyChanged.value.count > 0 && (
+        <output className={`${NOTICE} mt-6 block`}>
+          この {recentlyChanged.value.withinHours} 時間で
+          {recentlyChanged.value.count} 件の貨物の状態が変わりました。
+          <Link to="/tracking" className={`${LINK} ml-1`}>
+            追跡一覧で確かめる
+          </Link>
+        </output>
+      )}
+
+      <h2 className={`${SECTION_TITLE} mt-6`}>今日の作業</h2>
+
+      {/* 入口が 1 つも無いロールがある（IT1 時点の荷役・荷主など）。空の一覧を
+          黙って出すと「読み込みに失敗した」と受け取られるので、理由を書く。 */}
+      {items.length === 0 ? (
+        <output className={`${NOTICE} mt-3`}>
+          このロール向けの画面は、次のイテレーションから増えていきます。
+        </output>
+      ) : (
+        <ul className={`${CARD} mt-3 divide-y divide-gray-100`}>
+          {items.map((item) => (
+            <li key={item.path} className="py-2 first:pt-0 last:pb-0">
+              <Link to={item.path} className={LINK}>
+                {item.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}

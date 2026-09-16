@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+    <!-- Spring Boot auto-generated code -->
+    <Match>
+        <Class name="~.*Application"/>
+    </Match>
+    <!-- Test files -->
+    <Match>
+        <Source name="~.*Test\.java"/>
+    </Match>
+    <Match>
+        <Source name="~.*Tests\.java"/>
+    </Match>
+    <!--
+      EI_EXPOSE_REP / EI_EXPOSE_REP2（可変オブジェクトの参照を出し入れする）は除外する。
+
+      この検出器は、コンストラクタ注入と record という**このコードベースの標準的な形**に
+      構造的に鳴る。リポジトリが Mapper を受け取る、通知の実装が RabbitTemplate を受け取る、
+      応答の record が一覧を返す——いずれも写しを作ることはできない（Spring の Bean は
+      複製できない）か、意味がない。
+
+      実害があるのは「呼び出し元が持っている一覧をそのまま抱える」形だけであり、そこは
+      除外ではなく、record の簡潔コンストラクタで List.copyOf して直してある。
+
+      なお、この除外は「いま出ているから外す」ではない。ignoreFailures = true を外すまで、
+      SpotBugs は Java 25 のクラスファイルを読めておらず**1 クラスも解析していなかった**。
+      ツール版を上げて初めて中身が見えた（IT7 返済枠 0.11）。
+    -->
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+    <!--
+      ArchUnit の違反／適合フィクスチャ（com.example.cargotracker.archfixture..）は
+      実行されないコードである。**実コードと同じ形で書く**ことが目的で、そのために
+      使われないフィールドや呼ばれないメソッドを持つ。ここはバグではなく素材である。
+
+      除外はこのパッケージに限る。テストコード全体を外すと、テストの中の本物の欠陥
+      （閉じないリソース、握り潰す catch）まで見えなくなる。
+    -->
+    <Match>
+        <Package name="~com\.example\.cargotracker\.archfixture.*"/>
+    </Match>
+    <!--
+      NM_CLASS_NOT_EXCEPTION（例外クラスのような名前だが Exception を継承していない）は
+      TrackingException に限って除外する。
+
+      これは**業務の「例外」**（輸送中に起きた遅延・破損・紛失）であって、Java の例外では
+      ない。名前は正典（domain-model.md「TrackingException」）のユビキタス言語で、
+      追跡管理者も画面も「例外」と呼ぶ。Java の都合で TrackingIncident などに改名すると、
+      設計と実装で呼び名が割れ、次に読む人がどちらを信じるか迷う。
+
+      **除外はこのクラスに限る。** パターン全体を外すと、本当に Exception を継承し忘れた
+      クラスが出たときに気づけない。
+    -->
+    <Match>
+        <Class name="com.example.cargotracker.tracking.domain.model.entities.TrackingException"/>
+        <Bug pattern="NM_CLASS_NOT_EXCEPTION"/>
+    </Match>
+</FindBugsFilter>

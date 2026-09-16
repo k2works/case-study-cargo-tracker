@@ -1,0 +1,53 @@
+<?xml version="1.0"?>
+<!DOCTYPE suppressions PUBLIC
+    "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
+    "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+<!--
+  検査を実際に落とす（ignoreFailures = false）にあたって、構造的に成り立たない指摘だけを外す。
+
+  「いま出ているから外す」形にはしない。それは基準を実装に合わせることであり、
+  抑制した瞬間に負債が見えなくなる。ここに並ぶのは、規則の前提がこのコードベースに
+  当てはまらないものだけである。
+
+  ここで message（指摘の文言）による抑制を書かないこと。文言はロケールで変わるため、
+  日本語で書いた抑制は英語で動く CI に効かない。
+-->
+<suppressions>
+    <!--
+      Spring Boot の起動クラスは main しか持たないため、ユーティリティクラスに見える。
+      だがコンストラクタを private にすると Spring がインスタンス化できず起動しない。
+    -->
+    <suppress checks="HideUtilityClassConstructor" files=".*Application\.java$"/>
+
+    <!--
+      Cucumber の設定クラスは、コンテナを static で保持するためユーティリティクラスに見える。
+      だが Cucumber は @CucumberContextConfiguration を付けたクラスを Spring に
+      インスタンス化させる。private コンストラクタにすると受け入れテストが起動しない。
+    -->
+    <suppress checks="HideUtilityClassConstructor" files=".*CucumberSpringConfiguration\.java$"/>
+    <suppress checks="HideUtilityClassConstructor" files=".*RoutingCucumberConfiguration\.java$"/>
+
+    <!--
+      Event Sourcing の集約ルートは、**そのエンティティのコマンドハンドラを 1 クラスに
+      集めることが Axon の要求**である（別クラスに置いても登録されない）。FileLength の
+      前提は「超えたら責務で割る」だが、この 1 クラスには割る手段が無い。
+
+      割れるものは既に割った——入力の検査は CargoValidation へ、イベントの平坦化は
+      各イベントの静的ファクトリへ、受け皿の読み口は BookingWorklistController へ。
+      残っているのは 10 本のコマンドハンドラと復元ハンドラで、これは集約の形そのもの。
+
+      **この抑制を入れる前に、判断の理由を書いた javadoc を削って行数を合わせていた。**
+      それは基準を守るために、なぜそう決めたのかを消す取引になる。抑制する側を選ぶ。
+
+      対象は集約ルートだけに絞る（`domain/model/aggregates/`）。他の場所で 500 行を
+      超えたら、そこには割る手段がある。
+    -->
+    <suppress checks="FileLength"
+              files="[\\/]domain[\\/]model[\\/]aggregates[\\/].*\.java$"/>
+
+    <!--
+      テストのメソッド名は日本語で書く。何を確かめているかは、テストの唯一の説明である。
+      識別子の規約を優先して英語に直すと、失敗したときに読めるものが減る。
+    -->
+    <suppress checks="MethodName" files="[\\/]src[\\/][a-zA-Z]*[Tt]est[\\/]"/>
+</suppressions>

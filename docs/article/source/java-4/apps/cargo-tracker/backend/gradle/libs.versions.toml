@@ -1,0 +1,98 @@
+# 国際貨物輸送管理システム（CQRS / ES 版）バージョンカタログ
+#
+# 正典: docs/design/cargo-tracker/tech_stack.md
+#
+# Axon の版について（ADR-0001 決定 3・IT1 スパイク）:
+#   axon-server-connector は Maven Central に 5.0.0 と 5.1.0-RC2 しか公開されていない。
+#   コアだけ 5.3 に上げると CommandBusConnector / QueryBusConnector を解決できず
+#   Axon Server に接続できない。starter / connector / axon-test は必ず同じ版で揃える。
+#   版の上限は connector の公開状況が決めるので、上げるときはまず connector を確認する。
+
+[versions]
+java = "25"
+
+# 静的コード解析。SpotBugs のツール版は Java 25（クラスファイル 69）を読める版であること。
+# 古い版は全クラスの解析に失敗し、指摘が 1 件も無いように見える。
+checkstyle = "10.21.4"
+spotbugs-plugin = "6.1.9"
+spotbugs-tool = "4.9.8"
+
+# JIG（バイトコードからの設計ドキュメント生成）。docs/design が「こう設計した」、
+# JIG の出力が「こう実装されている」を示す。
+jig = "2026.7.4"
+jig-erd = "0.2.2"
+
+# Spring Cloud Gateway 5.0.x は Spring Boot 4.0.x にしか対応しない（4.1 では
+# 「not compatible with this Spring Cloud release train」で起動しない。IT1 タスク 4.4 で実測）。
+# gatewayms が Spring Cloud Gateway を使う以上、全サービスを 4.0.x に揃える。
+spring-boot = "4.0.6"
+spring-dependency-management = "1.1.7"
+
+# Axon 系はこの 1 つの ref だけを参照する（ArchUnit/ビルド検査で固定）
+axon = "5.1.0-RC2"
+
+mybatis-spring-boot = "4.0.1"
+flyway = "11.16.0"
+postgresql = "42.7.9"
+
+jjwt = "0.12.6"
+spring-cloud-gateway = "5.0.1"
+
+junit = "5.14.0"
+assertj = "3.27.7"
+mockito = "5.20.0"
+testcontainers = "1.20.6"
+archunit = "1.4.1"
+awaitility = "4.3.0"
+cucumber = "7.34.7"
+rest-assured = "5.5.6"
+
+[libraries]
+spring-boot-starter-web = { module = "org.springframework.boot:spring-boot-starter-web", version.ref = "spring-boot" }
+spring-boot-starter-jdbc = { module = "org.springframework.boot:spring-boot-starter-jdbc", version.ref = "spring-boot" }
+spring-boot-starter-validation = { module = "org.springframework.boot:spring-boot-starter-validation", version.ref = "spring-boot" }
+spring-boot-starter-actuator = { module = "org.springframework.boot:spring-boot-starter-actuator", version.ref = "spring-boot" }
+spring-boot-starter-security = { module = "org.springframework.boot:spring-boot-starter-security", version.ref = "spring-boot" }
+spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test", version.ref = "spring-boot" }
+
+# Axon（すべて version.ref = "axon"）
+axon-spring-boot-starter = { module = "org.axonframework.extensions.spring:axon-spring-boot-starter", version.ref = "axon" }
+axon-server-connector = { module = "org.axonframework:axon-server-connector", version.ref = "axon" }
+axon-test = { module = "org.axonframework:axon-test", version.ref = "axon" }
+
+mybatis-spring-boot-starter = { module = "org.mybatis.spring.boot:mybatis-spring-boot-starter", version.ref = "mybatis-spring-boot" }
+# Spring Boot 4 は自動設定をモジュールに分割した。flyway-core だけを入れても
+# FlywayAutoConfiguration が classpath に無く、マイグレーションが「無音で走らない」。
+spring-boot-starter-flyway = { module = "org.springframework.boot:spring-boot-starter-flyway", version.ref = "spring-boot" }
+flyway-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flyway" }
+postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
+
+spring-cloud-starter-gateway-server-webmvc = { module = "org.springframework.cloud:spring-cloud-starter-gateway-server-webmvc", version.ref = "spring-cloud-gateway" }
+jjwt-api = { module = "io.jsonwebtoken:jjwt-api", version.ref = "jjwt" }
+jjwt-impl = { module = "io.jsonwebtoken:jjwt-impl", version.ref = "jjwt" }
+jjwt-jackson = { module = "io.jsonwebtoken:jjwt-jackson", version.ref = "jjwt" }
+
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
+mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockito" }
+archunit-junit5 = { module = "com.tngtech.archunit:archunit-junit5", version.ref = "archunit" }
+awaitility = { module = "org.awaitility:awaitility", version.ref = "awaitility" }
+testcontainers-junit-jupiter = { module = "org.testcontainers:junit-jupiter", version.ref = "testcontainers" }
+testcontainers-postgresql = { module = "org.testcontainers:postgresql", version.ref = "testcontainers" }
+jig-erd = { module = "com.github.irof:jig-erd", version.ref = "jig-erd" }
+flyway-core = { module = "org.flywaydb:flyway-core", version.ref = "flyway" }
+cucumber-java = { module = "io.cucumber:cucumber-java", version.ref = "cucumber" }
+cucumber-spring = { module = "io.cucumber:cucumber-spring", version.ref = "cucumber" }
+cucumber-junit-platform-engine = { module = "io.cucumber:cucumber-junit-platform-engine", version.ref = "cucumber" }
+rest-assured = { module = "io.rest-assured:rest-assured", version.ref = "rest-assured" }
+
+[bundles]
+axon = ["axon-spring-boot-starter", "axon-server-connector"]
+
+[plugins]
+spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
+spotbugs = { id = "com.github.spotbugs", version.ref = "spotbugs-plugin" }
+jig = { id = "org.dddjava.jig-gradle-plugin", version.ref = "jig" }
+spring-dependency-management = { id = "io.spring.dependency-management", version.ref = "spring-dependency-management" }

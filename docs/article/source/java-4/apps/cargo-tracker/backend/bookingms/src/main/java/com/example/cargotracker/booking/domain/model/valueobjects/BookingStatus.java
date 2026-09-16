@@ -1,0 +1,122 @@
+package com.example.cargotracker.booking.domain.model.valueobjects;
+
+import java.util.EnumSet;
+import java.util.Map;
+import java.util.Set;
+
+/**
+ * 予約の状態（domain-model.md「BookingStatus 状態遷移（正典）」）。
+ *
+ * <p><b>遷移の判定はここ 1 か所に置く。</b> 画面のボタン出し分けは投影の
+ * {@code booking_status} を読むが、判定を書き直さずこの述語を呼ぶ。書き直すと、
+ * 片方だけ直したときに画面と集約の判断が食い違う。</p>
+ *
+ * <p>遷移表は IT2 の時点で到達しない先まで正典どおり全部書く。あとから値を足す
+ * たびに全箇所を回るのを避けるため。</p>
+ */
+public enum BookingStatus {
+    /** 仮受付。BookCargoCommand で始まる。 */
+    PRELIMINARY("仮受付"),
+    /** 経路提案中。 */
+    ROUTE_PROPOSED("経路提案中"),
+    /** 荷主へ経路を通知済み。 */
+    ROUTE_NOTIFIED("経路通知済"),
+    /** 予約確定。 */
+    CONFIRMED("予約確定"),
+    /** 追跡番号発行済み。 */
+    TRACKING_ISSUED("追跡番号発行済"),
+    /** 輸送中。 */
+    IN_TRANSIT("輸送中"),
+    /**
+     * 配送完了。
+     *
+     * <p><b>{@code TransportStatus.DELIVERED}（引取済）と呼び名を分ける。</b>
+     * 同じ「引取済」にすると、予約の状態なのか輸送の状態なのかが画面で見分けられない
+     * （domain-model.md の状態の一覧が「文脈語を添えて区別する」と決めている）。</p>
+     */
+    DELIVERED("配送完了"),
+    /** 精算済。 */
+    SETTLED("精算済"),
+    /** キャンセル。 */
+    CANCELLED("キャンセル");
+
+    private final String label;
+
+    BookingStatus(String label) {
+        this.label = label;
+    }
+
+    /** 利用者に見せる呼び名。列挙名は見せない。 */
+    public String label() {
+        return label;
+    }
+
+    private static final Map<BookingStatus, Set<BookingStatus>> NEXT = Map.of(
+            PRELIMINARY, EnumSet.of(ROUTE_PROPOSED, CANCELLED),
+            ROUTE_PROPOSED, EnumSet.of(ROUTE_PROPOSED, ROUTE_NOTIFIED, CANCELLED),
+            ROUTE_NOTIFIED, EnumSet.of(ROUTE_NOTIFIED, ROUTE_PROPOSED, CONFIRMED, CANCELLED),
+            CONFIRMED, EnumSet.of(TRACKING_ISSUED, CANCELLED),
+            TRACKING_ISSUED, EnumSet.of(IN_TRANSIT, CANCELLED),
+            IN_TRANSIT, EnumSet.of(IN_TRANSIT, DELIVERED, CANCELLED),
+            DELIVERED, EnumSet.of(SETTLED),
+            // **精算済は終端ではない。** 誤って記録した入金は取り消せる
+            // （IT15 引き継ぎ 3）。戻る先は引取済だけで、そこからもう一度
+            // 正しい入金を入れ直せる。
+            SETTLED, EnumSet.of(DELIVERED),
+            CANCELLED, EnumSet.noneOf(BookingStatus.class));
+
+    public boolean canTransitionTo(BookingStatus next) {
+        return NEXT.get(this).contains(next);
+    }
+
+    /**
+     * 経路設計へ引き渡せるか（US06）。
+     *
+     * <p><b>遷移先だけでは表せない。</b> 正典で {@code RequestRoutingCommand} が出るのは
+     * {@code PRELIMINARY} からだけで、{@code ROUTE_PROPOSED} の自己遷移は経路の確定
+     * （{@code AssignRouteCommand}）と条件の調整（{@code AdjustRouteSpecificationCommand}）
+     * のものである（domain-model.md「BookingStatus 状態遷移（正典）」）。</p>
+     *
+     * <p>{@code canTransitionTo(ROUTE_PROPOSED)} で代用すると、引き渡し済みの予約を
+     * もう一度引き渡せる。{@code RoutingRequestedEvent} は routingStatus を
+     * {@code ROUTING_REQUESTED} に戻すので、<b>確定済みの経路が理由も残さず未設計に
+     * 戻る</b>。戻すのは {@code ReturnToRoutingCommand} の仕事（US12）。</p>
+     */
+    public boolean canRequestRouting() {
+        return this == PRELIMINARY;
+    }
+
+    /**
+     * 経路設計へ戻せるか（US12）。
+     *
+     * <p>通知したあとだけ開く。通知前に組み直したいなら経路設計者が自分で確定し
+     * 直せばよく、営業が戻す操作は「荷主が変更を求めた」ことを表す。</p>
+     *
+     * <p>遷移表（{@code ROUTE_NOTIFIED → ROUTE_PROPOSED}）では表せない。同じ遷移が
+     * 条件の調整でも起きるため、遷移で代用すると営業に出してはいけない予約でも開く。</p>
+     */
+    public boolean canReturnToRouting() {
+        return this == ROUTE_NOTIFIED;
+    }
+
+    /**
+     * 入力の誤りを直せるか（US32。不変条件「修正できるのは仮受付の予約だけ」）。
+     *
+     * <p>経路提案中より先へ進むと、経路設計者が既にその内容で作業している。直せると、
+     * 設計の前提が黙って変わる。<b>遷移ではないので canTransitionTo では表せない。</b>
+     * 画面のボタン出し分けもこの述語を呼ぶ（判定を書き直さない）。</p>
+     */
+    public boolean canUpdateSpecification() {
+        return this == PRELIMINARY;
+    }
+
+    /**
+     * 申請を挟まずその場でキャンセルできるか。
+     *
+     * <p>{@code IN_TRANSIT} だけは荷物が動いているので、申請 → 承認（陸揚げ地の指定）の
+     * 2 段階になる（不変条件 9）。</p>
+     */
+    public boolean cancellableImmediately() {
+        return canTransitionTo(CANCELLED) && this != IN_TRANSIT;
+    }
+}

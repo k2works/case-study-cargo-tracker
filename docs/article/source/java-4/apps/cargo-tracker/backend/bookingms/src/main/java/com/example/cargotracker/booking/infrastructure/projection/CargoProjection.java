@@ -1,0 +1,429 @@
+package com.example.cargotracker.booking.infrastructure.projection;
+
+import org.axonframework.messaging.core.annotation.SequencingPolicy;
+import org.axonframework.messaging.core.sequencing.PropertySequencingPolicy;
+import com.example.cargotracker.booking.domain.model.events.BookingConfirmedEvent;
+import com.example.cargotracker.booking.domain.model.events.CargoBookedEvent;
+import com.example.cargotracker.booking.domain.model.events.CargoSpecificationUpdatedEvent;
+import com.example.cargotracker.booking.domain.model.events.CargoRoutedEvent;
+import com.example.cargotracker.booking.domain.model.events.ConditionReviewRequestedEvent;
+import com.example.cargotracker.booking.domain.model.events.ConditionReviewRespondedEvent;
+import com.example.cargotracker.booking.domain.model.events.ReturnedToRoutingEvent;
+import com.example.cargotracker.booking.domain.model.events.RouteSpecificationAdjustedEvent;
+import com.example.cargotracker.booking.domain.model.events.ShipperNotifiedEvent;
+import com.example.cargotracker.booking.domain.model.events.RoutingRequestedEvent;
+import com.example.cargotracker.booking.domain.model.events.TrackingNumberIssuedEvent;
+import com.example.cargotracker.booking.domain.model.events.TrackingNumberRevertedEvent;
+import com.example.cargotracker.booking.domain.model.valueobjects.BookingStatus;
+import com.example.cargotracker.booking.domain.model.valueobjects.RoutingStatus;
+import com.example.cargotracker.booking.domain.service.CargoSpecificationDiff;
+import com.example.cargotracker.booking.infrastructure.persistence.CargoLegMapper;
+import com.example.cargotracker.booking.infrastructure.persistence.CargoRevisionMapper;
+import com.example.cargotracker.booking.infrastructure.persistence.CargoNotificationMapper;
+import com.example.cargotracker.booking.infrastructure.persistence.CargoSummaryMapper;
+import com.example.cargotracker.booking.infrastructure.persistence.ShipperMapper;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.List;
+import org.axonframework.messaging.eventhandling.annotation.EventHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
+/**
+ * 貨物予約の投影（Processing Group: booking-cargo-projection）。
+ *
+ * <p>荷主名を非正規化して持つ。一覧が JOIN しないため（data-model.md）。荷主が
+ * 見つからないときは {@code null} のまま書く。予約そのものは受け付けられている
+ * ので、荷主の投影が遅れていることを理由に予約を落とさない。</p>
+ *
+ * <p><b>投影はコマンドを送らない。</b> 送るとリプレイのたびに副作用が再実行される。</p>
+ *
+ * <p><b>処理の列を予約ごとに分ける。</b> 既定では列が全体で 1 本なので、1 件の毒で
+ * <b>無関係の予約のイベントまで退避される</b>（IT12 のクラスタ E2E で 4 件のうち 3 件が
+ * 巻き添え）。退避先は順序を守るために「同じ列の後続」も退避するので、列の切り方が
+ * そのまま被害の範囲になる。同じ予約の中では順序が要る（訂正は登録より後に効かなければ
+ * ならない）ので、予約より細かくは切らない。</p>
+ */
+@SequencingPolicy(type = PropertySequencingPolicy.class, parameters = "bookingId")
+@Component
+public class CargoProjection {
+
+    private static final Logger log = LoggerFactory.getLogger(CargoProjection.class);
+
+    /** 要確認一覧の種類。投影が弾いたことを表す（data-model.md）。 */
+    private static final String PROJECTION_REJECTED = "PROJECTION_REJECTED";
+    /** 要確認一覧の対象の種類。 */
+    private static final String TARGET_BOOKING = "BOOKING";
+    /** 要確認一覧の宛先（予約の投影が弾いたものは営業が見る）。 */
+    private static final String ROLE_SALES = "ROLE_SALES";
+
+    private final CargoSummaryMapper cargos;
+    private final CargoRevisionMapper revisions;
+    private final CargoLegMapper legs;
+    private final CargoNotificationMapper notifications;
+    private final ShipperMapper shippers;
+    private final AttentionItemRecorder attentionItems;
+    private final Clock clock;
+
+    public CargoProjection(CargoSummaryMapper cargos, CargoRevisionMapper revisions,
+            CargoLegMapper legs, CargoNotificationMapper notifications, ShipperMapper shippers,
+            AttentionItemRecorder attentionItems, Clock clock) {
+        this.cargos = cargos;
+        this.revisions = revisions;
+        this.legs = legs;
+        this.notifications = notifications;
+        this.shippers = shippers;
+        this.attentionItems = attentionItems;
+        this.clock = clock;
+    }
+
+    @EventHandler
+    public void on(CargoBookedEvent event) {
+        Instant now = clock.instant();
+        // 業務日付で採番する。UTC で採ると、日本時間の朝 9 時より前に受け付けた
+        // 予約の番号が前日の日付になる。
+        LocalDate bookedOn = LocalDate.ofInstant(now, clock.getZone());
+
+        ShipperMapper.ShipperRow shipper = shippers.findById(event.shipperId());
+
+        cargos.insert(new CargoSummaryMapper.CargoSummaryRow(
+                event.bookingId(),
+                cargos.nextBookingNumber(bookedOn),
+                event.shipperId(),
+                shipper == null ? null : shipper.name(),
+                null,
+                event.originUnLocode(),
+                event.destinationUnLocode(),
+                event.arrivalDeadline(),
+                event.cargoType(),
+                event.weightKg(),
+                event.lengthCm(),
+                event.widthCm(),
+                event.heightCm(),
+                event.quantity(),
+                event.productName(),
+                event.hazardImoClass(),
+                event.hazardUnNumber(),
+                event.temperatureMinC(),
+                event.temperatureMaxC(),
+                BookingStatus.PRELIMINARY.name(),
+                RoutingStatus.NOT_ROUTED.name(),
+                now,
+                // 引き渡しはまだ。受け付けた時点で入れると、放置の判断ができない。
+                null,
+                // 受け付けた時点では修正されていない。受付日時を入れると
+                // 「一度も直していない予約」と「直した予約」が見分けられない。
+                null,
+                null,
+                // まだ荷主へ通知していない（US12）。
+                null,
+                // まだ経路設計へ戻されていない（US12）。
+                null,
+                null,
+                // まだ差し戻されていない・返していない（US10 §4 と対）。
+                null,
+                null,
+                null,
+                null,
+                // まだ探索の条件を調整していない（US10）。
+                null,
+                null,
+                // まだ確定していない（US13）。まだ発行していない（US14）。
+                null,
+                null,
+                // まだ再設計していない（US28）。**0 ではない**——0 は「組み直して
+                // 間に合った」で、null は「誤配になっていない」である。
+                null,
+                // まだ荷役が届いていない。
+                null, null, null, null,
+                now,
+                null,
+                // **SQL が荷主から導く**（列は挿入時に上書きされる）。
+                false));
+    }
+
+    /**
+     * 経路設計を依頼した（US06）。予約と経路設計の状態を進める。
+     *
+     * <p>状態は集約のイベントだけが書く。画面のボタン出し分けはこの値を読むが、
+     * 判定は書き直さず {@code BookingStatus} の述語を呼ぶ。</p>
+     *
+     * <p><b>更新できなかったことを黙らない。</b> 戻り値を捨てると、対象の行が
+     * 無かったこと（投影の取りこぼし・順序の入れ替わり）が誰にも見えないまま
+     * 残り、経路設計者の一覧に出ないだけになる。</p>
+     */
+    @EventHandler
+    public void on(RoutingRequestedEvent event) {
+        Instant now = clock.instant();
+        int updated = cargos.updateRoutingRequested(event.bookingId(),
+                BookingStatus.ROUTE_PROPOSED.name(),
+                RoutingStatus.ROUTING_REQUESTED.name(),
+                now,
+                now);
+        if (updated == 0) {
+            log.warn("経路設計の依頼を書ける予約が投影に無い: bookingId={}", event.bookingId());
+        }
+    }
+
+    /**
+     * 条件の調整（US10 / ADR-0009 決定 3）。
+     *
+     * <p>期限を書き換え、経路設計をやり直しにする。<b>{@code cargo_leg} は消さない。</b>
+     * 差し戻しの記録は消す（条件が変わったので営業の手番は終わっている）。</p>
+     */
+    @EventHandler
+    public void on(RouteSpecificationAdjustedEvent event) {
+        // 除外港はカンマ区切りで持つ。**空の一覧を空文字にしない**（「制限なし」と
+        // 「未設定」が読み分けられなくなる）。
+        List<String> excluded = event.excludeUnLocodes() == null
+                ? List.of() : event.excludeUnLocodes();
+        int updated = cargos.updateAdjustedRouteSpecification(event.bookingId(),
+                event.arrivalDeadline(),
+                excluded.isEmpty() ? null : String.join(",", excluded),
+                event.departFromUnLocode(),
+                RoutingStatus.ROUTING_REQUESTED.name(),
+                clock.instant());
+        if (updated == 0) {
+            log.warn("条件の調整を書ける予約が投影に無い: bookingId={}", event.bookingId());
+        }
+    }
+
+    /**
+     * 荷主への通知（US12）。
+     *
+     * <p>履歴に 1 行増やし、予約の状態を通知済みにする。<b>再通知では行が増え、
+     * リプレイでは増えない</b>——主キーが内容（予約 ID と通知日時）から決まる。</p>
+     */
+    @EventHandler
+    public void on(ShipperNotifiedEvent event) {
+        Instant now = clock.instant();
+        int updated = cargos.updateNotified(event.bookingId(),
+                BookingStatus.ROUTE_NOTIFIED.name(), event.notifiedAt(), now);
+        if (updated == 0) {
+            log.warn("通知を書ける予約が投影に無い: bookingId={}", event.bookingId());
+            return;
+        }
+        notifications.insert(new CargoNotificationMapper.CargoNotificationRow(
+                event.bookingId(), event.notifiedAt(), event.recipientEmail(),
+                event.summary(), event.notifiedBy()));
+    }
+
+    /**
+     * 荷主との協議の結果（US10 §受入基準 4 の対 / IT8 H.2）。
+     *
+     * <p><b>差し戻しの記録は消さない。</b> 何を頼まれて何が決まったかが対で読めないと、
+     * 経路設計者は条件をどう直せばよいのか分からない。営業の受け皿からは
+     * 「返した」ことで消える（読み口が `responded_at IS NULL` で絞る）。</p>
+     */
+    @EventHandler
+    public void on(ConditionReviewRespondedEvent event) {
+        int updated = cargos.updateConditionReviewResponse(event.bookingId(),
+                event.response(), event.respondedAt(), clock.instant());
+        if (updated == 0) {
+            log.warn("協議の結果を書ける予約が投影に無い: bookingId={}", event.bookingId());
+            attentionItems.add(PROJECTION_REJECTED, TARGET_BOOKING, event.bookingId(),
+                    ROLE_SALES, "協議の結果の対象が投影に無い", "{}", clock.instant());
+        }
+    }
+
+    /**
+     * 予約の確定（UC11 / US13）。
+     *
+     * <p><b>確定日時を残す。</b> 状態だけだと、通知から確定までにどれだけ待たせたか
+     * も、確定したまま追跡番号が発行されていない期間も読めない。</p>
+     */
+    @EventHandler
+    public void on(BookingConfirmedEvent event) {
+        int updated = cargos.updateConfirmed(event.bookingId(),
+                BookingStatus.CONFIRMED.name(), event.confirmedAt(), clock.instant());
+        if (updated == 0) {
+            log.warn("確定を書ける予約が投影に無い: bookingId={}", event.bookingId());
+            attentionItems.add(PROJECTION_REJECTED, TARGET_BOOKING, event.bookingId(),
+                    ROLE_SALES, "確定の対象が投影に無い", "{}", clock.instant());
+        }
+    }
+
+    /**
+     * 追跡番号の発行（UC12 / US14）。
+     *
+     * <p><b>番号は集約が載せたものを書く。</b> ここで採り直すと、イベントに残った番号と
+     * 投影の番号が食い違う。採番そのものは発行の入口（Controller）が行う。</p>
+     */
+    @EventHandler
+    public void on(TrackingNumberIssuedEvent event) {
+        int updated = cargos.updateTrackingNumber(event.bookingId(),
+                BookingStatus.TRACKING_ISSUED.name(), event.trackingNumber(),
+                event.issuedAt(), clock.instant());
+        if (updated == 0) {
+            log.warn("追跡番号を書ける予約が投影に無い: bookingId={}", event.bookingId());
+            attentionItems.add(PROJECTION_REJECTED, TARGET_BOOKING, event.bookingId(),
+                    "ROLE_ROUTING", "追跡番号の対象が投影に無い", "{}", clock.instant());
+        }
+    }
+
+    /**
+     * 追跡番号の発行の取り消し（US14 の補償 / ADR-0010 決定 4）。
+     *
+     * <p><b>予約は確定に戻る。</b> キャンセルではないので、経路設計者がもう一度
+     * 発行できる状態にするだけである。</p>
+     */
+    @EventHandler
+    public void on(TrackingNumberRevertedEvent event) {
+        int updated = cargos.updateTrackingNumberReverted(event.bookingId(),
+                BookingStatus.CONFIRMED.name(), clock.instant());
+        if (updated == 0) {
+            log.warn("取り消しを書ける予約が投影に無い: bookingId={}", event.bookingId());
+        }
+    }
+
+    /**
+     * 経路設計への差し戻し（US12）。
+     *
+     * <p><b>{@code routing_requested_at} は触らない。</b> 引き渡した日時と、通知後に
+     * 戻した日時は別のことである。<b>旅程も消さない</b>（再設計で入れ替わるまで残す）。</p>
+     */
+    @EventHandler
+    public void on(ReturnedToRoutingEvent event) {
+        int updated = cargos.updateReturnedToRouting(event.bookingId(),
+                BookingStatus.ROUTE_PROPOSED.name(),
+                RoutingStatus.ROUTING_REQUESTED.name(),
+                event.returnedAt(), event.reason(), clock.instant());
+        if (updated == 0) {
+            log.warn("差し戻しを書ける予約が投影に無い: bookingId={}", event.bookingId());
+        }
+    }
+
+    /**
+     * 条件の見直し依頼（US10 §4 / ADR-0009 決定 1）。
+     *
+     * <p><b>{@code routing_status} は動かさない。</b> 記録だけを写す。</p>
+     */
+    @EventHandler
+    public void on(ConditionReviewRequestedEvent event) {
+        int updated = cargos.updateConditionReview(event.bookingId(),
+                event.requestedAt(), event.reason(), clock.instant());
+        if (updated == 0) {
+            log.warn("差し戻しを書ける予約が投影に無い: bookingId={}", event.bookingId());
+        }
+    }
+
+    /**
+     * 仮受付の予約情報の修正（US32）。
+     *
+     * <p>状態は動かさない。仮受付のまま内容だけが差し替わる。</p>
+     *
+     * <p><b>更新できなかったことを黙らない。</b> 戻り値を捨てると、投影に行が無い
+     * ことが誰にも見えないまま「直したのに反映されない」だけが残る。</p>
+     */
+    @EventHandler
+    public void on(CargoSpecificationUpdatedEvent event) {
+        Instant now = clock.instant();
+        // 何を変えたかは、書き換える前の行としか比べられない（US32 §受入基準 4）。
+        // 更新してから読むと、before が after と同じになる。
+        CargoSummaryMapper.CargoSummaryRow before = cargos.findById(event.bookingId());
+        int updated = cargos.updateSpecification(new CargoSummaryMapper.CargoSummaryRow(
+                event.bookingId(), null, null, null, null,
+                event.originUnLocode(), event.destinationUnLocode(), event.arrivalDeadline(),
+                event.cargoType(), event.weightKg(), event.lengthCm(), event.widthCm(),
+                event.heightCm(), event.quantity(), event.productName(),
+                event.hazardImoClass(), event.hazardUnNumber(),
+                event.temperatureMinC(), event.temperatureMaxC(),
+                // 状態と受付日時は UPDATE 文が触らない。行の値をここで作り直すと、
+                // 受付日時が修正のたびに動く。
+                null, null, null, null,
+                // 「いつ直したか」はイベントが持つ。ここで現在時刻を書くと、
+                // 読み直しのたびに最終更新が動く。
+                event.updatedAt(), event.updatedBy(), null, null, null, null, null, null, null,
+                // 探索の条件・確定日時・追跡番号・超過日数・荷役は UPDATE 文が触らない。
+                null, null, null, null, null, null, null, null, null, now, null,
+                // **SQL が荷主から導く**（列は挿入時に上書きされる）。
+                false));
+
+        if (before != null) {
+            recordRevision(before, event);
+        }
+
+        if (updated == 0) {
+            log.warn("修正を書ける予約が投影に無い: bookingId={}", event.bookingId());
+            attentionItems.add(PROJECTION_REJECTED, TARGET_BOOKING, event.bookingId(),
+                    ROLE_SALES, "修正の対象が投影に無い", "{}", now);
+        }
+    }
+
+    /** 業務タイムゾーン。Clock が持つ（BusinessClockConfiguration）。 */
+    ZoneId zone() {
+        return clock.getZone();
+    }
+
+    /**
+     * 経路が決まった（US09）。
+     *
+     * <p><b>区間は全行を入れ替える</b>（data-model.md）。足すだけにすると、経路を
+     * 設計し直した予約に古い区間が残り、旅程が二重に見える。短くなった旅程では、
+     * 行かないはずの港が残る。</p>
+     *
+     * <p>{@code booking_status} は動かさない。荷主に通知するまでは提案中（US12）。</p>
+     */
+    @EventHandler
+    public void on(CargoRoutedEvent event) {
+        Instant now = clock.instant();
+        int updated = cargos.updateRouted(event.bookingId(),
+                RoutingStatus.ROUTED.name(),
+                // **再設計で期限を超えた事実を残す**（US28 §受入基準 6）。
+                // 0 でも書く——組み直して間に合うようになったことも情報である。
+                event.overdueDays(), now);
+        if (updated == 0) {
+            log.warn("経路を書ける予約が投影に無い: bookingId={}", event.bookingId());
+            attentionItems.add(PROJECTION_REJECTED, TARGET_BOOKING, event.bookingId(),
+                    "ROLE_ROUTING", "経路の対象が投影に無い", "{}", now);
+            return;
+        }
+
+        legs.deleteByBooking(event.bookingId());
+        for (int i = 0; i < event.legs().size(); i++) {
+            CargoRoutedEvent.Leg leg = event.legs().get(i);
+            legs.insert(new CargoLegMapper.CargoLegRow(
+                    event.bookingId(), i + 1, leg.voyageNumber(),
+                    leg.loadUnLocode(), leg.unloadUnLocode(),
+                    leg.loadTime(), leg.unloadTime()));
+        }
+    }
+
+    /**
+     * 何を変えたかを残す（US32 §受入基準 4）。
+     *
+     * <p>変わっていなければ 1 行も書かない。「修正した」とだけ残っていて中身が空の
+     * 履歴は、読む側に何も伝えない。</p>
+     *
+     * <p>行は修正イベントから決まりきった形で導くので、<b>リプレイで増えない</b>
+     * （主キーに修正時刻を含め、{@code ON CONFLICT DO NOTHING} で入れる）。</p>
+     */
+    private void recordRevision(CargoSummaryMapper.CargoSummaryRow before,
+            CargoSpecificationUpdatedEvent event) {
+        List<CargoSpecificationDiff.FieldChange> changes = CargoSpecificationDiff.between(
+                new CargoSpecificationDiff.CargoSnapshot(
+                        before.originUnlocode(), before.destinationUnlocode(),
+                        before.arrivalDeadline(), before.cargoType(), before.weightKg(),
+                        before.lengthCm(), before.widthCm(), before.heightCm(),
+                        before.quantity(), before.productName(), before.hazardImoClass(),
+                        before.hazardUnNumber(), before.temperatureMinC(),
+                        before.temperatureMaxC()),
+                new CargoSpecificationDiff.CargoSnapshot(
+                        event.originUnLocode(), event.destinationUnLocode(),
+                        event.arrivalDeadline(), event.cargoType(), event.weightKg(),
+                        event.lengthCm(), event.widthCm(), event.heightCm(),
+                        event.quantity(), event.productName(), event.hazardImoClass(),
+                        event.hazardUnNumber(), event.temperatureMinC(),
+                        event.temperatureMaxC()));
+
+        for (int i = 0; i < changes.size(); i++) {
+            CargoSpecificationDiff.FieldChange change = changes.get(i);
+            revisions.insert(new CargoRevisionMapper.CargoRevisionRow(
+                    event.bookingId(), event.updatedAt(), change.label(), i + 1,
+                    change.before(), change.after(), event.updatedBy()));
+        }
+    }
+}
