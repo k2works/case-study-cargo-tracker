@@ -98,6 +98,33 @@ export async function startSimulation(scenario: string): Promise<{ runId: string
   return commandClient<{ runId: string }>('/simulation/runs', { scenario });
 }
 
+/**
+ * 一斉に流したときの、シナリオ 1 つぶんの結果（S92）。
+ *
+ * **始められなかったものも返る。** 返さないと、選んだのに何も起きていない
+ * シナリオが画面から消え、流れたものと区別できない。
+ */
+export interface StartOutcomeView {
+  readonly scenario: string;
+  readonly scenarioLabel: string;
+  /** 始めた実行の識別子。断られたときは `null`。 */
+  readonly runId: string | null;
+  /** 断りの理由。始められたときは `null`。**実行中の識別子が入っている**。 */
+  readonly refusalReason: string | null;
+}
+
+/**
+ * 選んだシナリオを一斉に実行する（S92）。
+ *
+ * **1 件の断りで全体は落ちない。** 断りはシナリオごとに返るので、画面は
+ * 「流れたもの」と「断られたもの」を並べて出す。
+ */
+export async function startSimulations(
+  scenarios: readonly string[],
+): Promise<{ items: StartOutcomeView[] }> {
+  return commandClient<{ items: StartOutcomeView[] }>('/simulation/runs/batch', { scenarios });
+}
+
 /** 区分ごとの件数（S94 / US36 §受入基準 8）。 */
 export interface CountView {
   readonly code: string;

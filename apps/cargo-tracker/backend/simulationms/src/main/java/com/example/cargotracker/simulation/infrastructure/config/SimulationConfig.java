@@ -22,13 +22,21 @@ import org.springframework.web.client.RestClient;
 public class SimulationConfig {
 
     /**
-     * 同時に走らせる本数。
+     * 同時に走らせる本数。<b>シナリオの数から導く</b>。
      *
-     * <p><b>増やさない。</b> シナリオ 1 本で 13 工程・数十回の HTTP を出すので、
-     * 並べると確かめたいもの（業務の連鎖）より負荷のほうが目立つ。二重実行は
-     * そもそも断るので、シナリオの数だけあれば足りる。</p>
+     * <p><b>数を書き写さない。</b> 二重実行はそもそも断る（US33 §受入基準 5）
+     * ので、<b>同時に走りうるのは多くてもシナリオの数</b>である——書き写すと、
+     * シナリオを足したときに片方だけが直る。</p>
+     *
+     * <p><b>足りないと「実行中なのに進まない」が起きる。</b> 実行は
+     * <b>記録してから走らせる</b>（読み口に現れないと画面が「始まっていない」と
+     * 読むため）。糸が足りないと、記録だけ「実行中」で置かれたまま順番待ちに
+     * なり、S92 には進まない実行が並ぶ。まとめて流せるようにした以上、
+     * <b>選べる数だけ走れる</b>必要がある。</p>
      */
-    private static final int CONCURRENT_RUNS = 2;
+    private static final int CONCURRENT_RUNS =
+            com.example.cargotracker.simulation.domain.model.valueobjects.Scenario
+                    .values().length;
 
     /** Gateway を叩く口。<b>Gateway を通る</b>（[ADR-0020] 決定 2）。 */
     @Bean

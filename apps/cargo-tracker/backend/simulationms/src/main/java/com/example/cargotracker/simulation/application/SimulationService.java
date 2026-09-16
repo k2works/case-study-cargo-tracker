@@ -111,6 +111,56 @@ public class SimulationService {
         return runId;
     }
 
+    /**
+     * 選んだシナリオを一斉に始める（S92 の「まとめて流す」）。
+     *
+     * <p><b>1 件の断りで残りを止めない。</b> 「そのシナリオは実行中です」は
+     * 選んだ他のシナリオには関係が無い——全体を断ると、実行中の 1 本のせいで
+     * 残り 6 本が流せなくなる。<b>断りはシナリオごとに返す</b>。</p>
+     *
+     * <p><b>環境の断りは全体に効く</b>（US33 §受入基準 4）。本番では 1 本も
+     * 始めない——ここで捕まえずに {@link #start} から投げさせるのは、
+     * <b>判断を 2 か所に書かない</b>ためである。</p>
+     *
+     * <p><b>同じシナリオを 2 つ受け取らない。</b> 2 つ目は必ず「実行中です」で
+     * 断られるので、要求として成立していない。黙って 1 つに畳むと、選んだ側は
+     * 畳まれたことに気づけない。</p>
+     */
+    public java.util.List<StartOutcome> startAll(java.util.List<Scenario> scenarios,
+            String startedBy) {
+        if (scenarios.isEmpty()) {
+            throw new BusinessRuleViolation("シナリオを 1 つ以上選んでください");
+        }
+        if (java.util.Set.copyOf(scenarios).size() != scenarios.size()) {
+            throw new BusinessRuleViolation(
+                    "同じシナリオを 2 つ選べません（同じシナリオは実行中のものが 1 本だけです）");
+        }
+        return scenarios.stream().map(scenario -> {
+            try {
+                return new StartOutcome(scenario.name(), scenario.label(),
+                        start(scenario, startedBy), null);
+            } catch (IllegalTransition e) {
+                // **理由をそのまま運ぶ。** 実行中の識別子が入っているので、
+                // 画面はそこから「いまの結果」へ案内できる。
+                return new StartOutcome(scenario.name(), scenario.label(), null,
+                        e.getMessage());
+            }
+        }).toList();
+    }
+
+    /**
+     * 一斉に流したときの、シナリオ 1 つぶんの結果。
+     *
+     * <p><b>始められなかったものも返す。</b> 返さないと、選んだのに何も起きて
+     * いないシナリオが画面から消え、利用者は流れたものと区別できない。</p>
+     *
+     * @param runId 始めた実行の識別子。断られたときは {@code null}
+     * @param refusalReason 断りの理由。始められたときは {@code null}
+     */
+    public record StartOutcome(String scenario, String scenarioLabel, String runId,
+            String refusalReason) {
+    }
+
     private void execute(SimulationRun run, ScenarioInput input) {
         try {
             runnerFactory.create(input, this::writeStep).run(run);

@@ -1936,8 +1936,14 @@ test.describe('17 請求を組み立てる・18 輸送見積を作る', () => {
     await expect(page.getByRole('heading', { name: '業務シミュレーション' })).toBeVisible();
     await expect(page.getByText('8 / 13 工程')).toBeVisible();
     await expect(page.getByText('3 / 4 工程')).toBeVisible();
+
+    // **本文は「複数選べます」と書いている。** 1 つだけ選んだ絵を載せると、
+    // 文章と画像が別々に正しく見えて、読者は複数選べることに気づかない。
+    await page.getByRole('checkbox', { name: '遅延の発生と対応' }).check();
+    await page.getByRole('checkbox', { name: '破損の発生と対応' }).check();
     // 実行の入口（シナリオの選択とボタン）も同じ 1 枚に収める。
-    await expect(page.getByRole('button', { name: '実行する' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '選んだ 3 件を一斉に実行する' }))
+      .toBeVisible();
     await page.screenshot({ path: `${OUT}/20-S92-simulation-list.png`, fullPage: true });
   });
 

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router';
@@ -108,8 +108,15 @@ describe('S92 業務シミュレーション', () => {
     const calls: string[] = [];
     respond((url, init) => {
       calls.push(`${init?.method ?? 'GET'} ${url} ${String(init?.body ?? '')}`);
-      if (url.endsWith('/simulation/runs') && init?.method === 'POST') {
-        return new Response(JSON.stringify({ runId: 'SIM-9' }), { status: 201 });
+      if (url.endsWith('/simulation/runs/batch') && init?.method === 'POST') {
+        return new Response(JSON.stringify({
+          items: [{
+            scenario: 'STANDARD',
+            scenarioLabel: '一般貨物の標準輸送',
+            runId: 'SIM-9',
+            refusalReason: null,
+          }],
+        }), { status: 200 });
       }
       if (url.includes('/simulation/runs/SIM-9')) {
         return new Response(
@@ -140,21 +147,24 @@ describe('S92 業務シミュレーション', () => {
     // 欠陥を踏まない（IT15 Try T2）。
     expect(await screen.findByText('実行結果')).toBeInTheDocument();
     expect(calls).toContainEqual(
-      expect.stringContaining('"scenario":"一般貨物の標準輸送"'),
+      expect.stringContaining('"scenarios":["一般貨物の標準輸送"]'),
     );
   });
 
   it('US33 §5: 二重実行は断りの理由をそのまま出す（実行中の識別子ごと）', async () => {
     respond((url, init) => {
-      if (url.endsWith('/simulation/runs') && init?.method === 'POST') {
-        return new Response(
-          JSON.stringify({
-            code: 'ILLEGAL_TRANSITION',
-            message:
+      if (url.endsWith('/simulation/runs/batch') && init?.method === 'POST') {
+        // **断りは 200 の内訳で返る。** 1 件の断りで全体を落とさないためである
+        // ——他のシナリオには関係が無い出来事だからだ。
+        return new Response(JSON.stringify({
+          items: [{
+            scenario: 'STANDARD',
+            scenarioLabel: '一般貨物の標準輸送',
+            runId: null,
+            refusalReason:
               'シナリオ「一般貨物の標準輸送」は実行中です（実行 SIM-1）。その結果を開いてください',
-          }),
-          { status: 409 },
-        );
+          }],
+        }), { status: 200 });
       }
       return new Response(JSON.stringify({ items: [summary()] }), { status: 200 });
     });
@@ -168,6 +178,69 @@ describe('S92 業務シミュレーション', () => {
       expect(screen.getByRole('alert')).toHaveTextContent('実行 SIM-1'),
     );
   });
+  it('S92: 選んだシナリオを一斉に流し、断られたものも並べる', async () => {
+    const calls: string[] = [];
+    respond((url, init) => {
+      calls.push(String(init?.body ?? ''));
+      if (url.endsWith('/simulation/runs/batch') && init?.method === 'POST') {
+        return new Response(JSON.stringify({
+          items: [
+            {
+              scenario: 'STANDARD',
+              scenarioLabel: '一般貨物の標準輸送',
+              runId: null,
+              refusalReason:
+                'シナリオ「一般貨物の標準輸送」は実行中です（実行 SIM-1）。その結果を開いてください',
+            },
+            {
+              scenario: 'DELAY',
+              scenarioLabel: '遅延の発生と対応',
+              runId: 'SIM-2',
+              refusalReason: null,
+            },
+            {
+              scenario: 'DAMAGE',
+              scenarioLabel: '破損の発生と対応',
+              runId: 'SIM-3',
+              refusalReason: null,
+            },
+          ],
+        }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ items: [] }), { status: 200 });
+    });
+
+    renderList();
+    await screen.findByText('まだ実行していません。');
+    await userEvent.click(screen.getByRole('checkbox', { name: '遅延の発生と対応' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: '破損の発生と対応' }));
+
+    // **選んだ数が押す前に読める。** 3 件選んだのに 1 件しか流れないと
+    // 分からないまま押すことになる。
+    await userEvent.click(screen.getByRole('button', { name: '選んだ 3 件を一斉に実行する' }));
+
+    expect(calls).toContainEqual(expect.stringContaining('"遅延の発生と対応"'));
+    expect(calls).toContainEqual(expect.stringContaining('"破損の発生と対応"'));
+
+    // **1 件の断りで残りを止めない。** 断りは出しつつ、流れた 2 件は開ける。
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent('実行 SIM-1'));
+    const started = screen.getByRole('list', { name: '始めた実行' });
+    expect(within(started).getAllByRole('link', { name: '実行を開く' })).toHaveLength(2);
+    // **一覧に留まる。** 移ると、他の実行がどうなったか読めない。
+    expect(screen.queryByText('実行結果')).not.toBeInTheDocument();
+  });
+
+  it('S92: 1 つも選んでいなければ実行できない（何も起きないのに「流した」と読ませない）',
+    async () => {
+      respond(() => new Response(JSON.stringify({ items: [] }), { status: 200 }));
+
+      renderList();
+      await screen.findByText('まだ実行していません。');
+      await userEvent.click(screen.getByRole('checkbox', { name: '一般貨物の標準輸送' }));
+
+      expect(screen.getByRole('button', { name: '実行する' })).toBeDisabled();
+    });
 });
 
 describe('S93 実行結果', () => {

@@ -56,6 +56,22 @@ public class SimulationController {
                 .body(new StartedRun(runId));
     }
 
+    /**
+     * 選んだシナリオを一斉に実行する（S92 の「まとめて流す」）。
+     *
+     * <p><b>201 にしない。</b> 作られた資源が 1 つに定まらず、Location を
+     * 指せない——始まったものと断られたものが混ざる。<b>200 で内訳を返す</b>。</p>
+     *
+     * <p><b>1 件の断りで全体を落とさない。</b> 判断は application が持つ。</p>
+     */
+    @PostMapping("/runs/batch")
+    public ResponseEntity<StartedRuns> startAll(
+            @RequestHeader(value = "X-Auth-Username", required = false) String username,
+            @jakarta.validation.Valid @RequestBody StartBatchRequest request) {
+        return ResponseEntity.ok(new StartedRuns(simulations.startAll(
+                request.scenarios().stream().map(Scenario::of).toList(), username)));
+    }
+
     /** 実行の一覧（S92 / US34 §受入基準 4）。 */
     @GetMapping("/runs")
     public ResponseEntity<SimulationQueries.RunListView> recent() {
@@ -75,5 +91,19 @@ public class SimulationController {
 
     /** 実行を始めた結果。<b>識別子を返す</b>——画面がその結果へ移る。 */
     public record StartedRun(String runId) {
+    }
+
+    /**
+     * 一斉に実行する入力。
+     *
+     * <p><b>空を受け取らない。</b> 何も起きない要求を 200 で返すと、
+     * 画面は「流した」と読む。</p>
+     */
+    public record StartBatchRequest(
+            @jakarta.validation.constraints.NotEmpty java.util.List<@NotBlank String> scenarios) {
+    }
+
+    /** 一斉に実行した結果。<b>断られたものも並べる</b>。 */
+    public record StartedRuns(java.util.List<SimulationService.StartOutcome> items) {
     }
 }

@@ -5,7 +5,6 @@ import {
   ALERT,
   BUTTON_PRIMARY,
   CARD,
-  FIELD,
   LABEL,
   LINK,
   NOTICE,
@@ -17,7 +16,8 @@ import {
 } from '@/shared/ui/styles';
 import { formatBusinessDateTime } from '@/shared/api/businessDate';
 import { ApiError } from '@/shared/api/client';
-import { SCENARIOS, fetchSimulationRuns, startSimulation } from './simulationApi';
+import type { StartOutcomeView } from './simulationApi';
+import { SCENARIOS, fetchSimulationRuns, startSimulations } from './simulationApi';
 
 /**
  * S92 業務シミュレーション（UC23 / US33・US34）。
@@ -31,7 +31,17 @@ import { SCENARIOS, fetchSimulationRuns, startSimulation } from './simulationApi
 export function SimulationListPage() {
   const client = useQueryClient();
   const navigate = useNavigate();
-  const [scenario, setScenario] = useState<string>(SCENARIOS[0]);
+  // **選ぶのは複数。** シナリオ 1 本は連鎖待ちを含めて数分かかるので、
+  // 7 種類を順に流すと待ち時間が積み上がる。同じシナリオは実行中 1 本だけ
+  // （US33 §受入基準 5）なので、**違うシナリオは同時に流してよい**。
+  const [chosen, setChosen] = useState<readonly string[]>([SCENARIOS[0]]);
+  const [outcomes, setOutcomes] = useState<readonly StartOutcomeView[]>([]);
+
+  function toggle(name: string) {
+    setChosen((current) => (current.includes(name)
+      ? current.filter((it) => it !== name)
+      : [...current, name]));
+  }
 
   const { data, isPending, isError } = useQuery({
     queryKey: ['simulation-runs'],
@@ -41,10 +51,19 @@ export function SimulationListPage() {
   });
 
   const start = useMutation({
-    mutationFn: () => startSimulation(scenario),
+    // **1 本でもまとめて流す口を使う。** 経路を 2 つ持つと、断りの出し方が
+    // 片方だけ直る。
+    mutationFn: () => startSimulations([...chosen].sort(
+      (a, b) => SCENARIOS.indexOf(a as never) - SCENARIOS.indexOf(b as never))),
     onSuccess: (started) => {
       client.invalidateQueries({ queryKey: ['simulation-runs'] });
-      navigate(`/admin/simulations/${started.runId}`);
+      setOutcomes(started.items);
+      // **1 本だけ始まったときは、その結果へ移る**（これまでと同じ体験）。
+      // 複数流したときは一覧に留まる——移ると、他の実行がどうなったか読めない。
+      const only = started.items.length === 1 ? started.items[0] : undefined;
+      if (only?.runId != null) {
+        navigate(`/admin/simulations/${only.runId}`);
+      }
     },
   });
 
@@ -66,27 +85,30 @@ export function SimulationListPage() {
       </p>
 
       <div className={`${CARD} mt-4 flex flex-wrap items-end gap-3 p-4`}>
-        <label className="text-sm">
-          <span className={LABEL}>シナリオ</span>
-          <select
-            className={FIELD}
-            value={scenario}
-            onChange={(event) => setScenario(event.target.value)}
-          >
+        <fieldset className="text-sm">
+          <legend className={LABEL}>シナリオ（複数選べます）</legend>
+          <div className="mt-1 grid gap-1 sm:grid-cols-2">
             {SCENARIOS.map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
+              <label key={name} className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={chosen.includes(name)}
+                  onChange={() => toggle(name)}
+                />
+                <span>{name}</span>
+              </label>
             ))}
-          </select>
-        </label>
+          </div>
+        </fieldset>
         <button
           className={BUTTON_PRIMARY}
           type="button"
-          disabled={start.isPending}
+          // **1 つも選んでいなければ押せない。** 押せてしまうと、何も起きない
+          // のに「流した」と読める。
+          disabled={start.isPending || chosen.length === 0}
           onClick={() => start.mutate()}
         >
-          実行する
+          {chosen.length > 1 ? `選んだ ${chosen.length} 件を一斉に実行する` : '実行する'}
         </button>
         {start.isPending && <output className={NOTICE}>実行を始めています…</output>}
       </div>
@@ -97,6 +119,35 @@ export function SimulationListPage() {
         <p role="alert" className={`${ALERT} mt-4`}>
           {refusal}
         </p>
+      )}
+
+      {/* **断られたシナリオは必ず出す。** 出さないと、選んだのに何も起きて
+          いないシナリオが画面から消え、流れたものと区別できない。**1 件でも出す**
+          ——「まとめて流したときだけ」にすると、1 つ選んで断られた人には
+          何も見えない。 */}
+      {outcomes.some((item) => item.runId === null) && (
+        <ul role="alert" className={`${ALERT} mt-4 space-y-1`}>
+          {outcomes.filter((item) => item.runId === null).map((item) => (
+            <li key={item.scenario}>
+              <span className="font-medium">{item.scenarioLabel}</span>
+              <span className="ml-2">{item.refusalReason}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {/* 始まったものは、そこから開ける（複数流したときは一覧に留まる）。 */}
+      {outcomes.filter((item) => item.runId !== null).length > 1 && (
+        <ul className={`${CARD} mt-4 space-y-1 p-4 text-sm`} aria-label="始めた実行">
+          {outcomes.filter((item) => item.runId !== null).map((item) => (
+            <li key={item.scenario}>
+              <span className="font-medium">{item.scenarioLabel}</span>
+              <Link className={`${LINK} ml-2`} to={`/admin/simulations/${item.runId}`}>
+                実行を開く
+              </Link>
+            </li>
+          ))}
+        </ul>
       )}
 
       {isPending && <output className={`${NOTICE} mt-4`}>読み込み中…</output>}

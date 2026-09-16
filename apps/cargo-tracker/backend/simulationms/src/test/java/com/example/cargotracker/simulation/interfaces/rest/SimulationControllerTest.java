@@ -139,4 +139,37 @@ class SimulationControllerTest {
         assertThat(view.startedBy()).isEqualTo("admin01");
         assertThat(view.steps()).hasSize(Scenario.NO_ROUTE.steps().size());
     }
+
+    @Test
+    @DisplayName("S92: 選んだシナリオを一斉に実行し、内訳を返す")
+    void startsEveryChosenScenario() {
+        var response = controller(true).startAll("admin01",
+                new SimulationController.StartBatchRequest(
+                        List.of(Scenario.NO_ROUTE.label(), Scenario.DELAY.label())));
+
+        // **201 にしない。** 作られた資源が 1 つに定まらず、Location を指せない。
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().items()).hasSize(2)
+                .allSatisfy(item -> assertThat(item.runId()).startsWith("SIM-"))
+                .extracting(SimulationService.StartOutcome::scenarioLabel)
+                .containsExactly(Scenario.NO_ROUTE.label(), Scenario.DELAY.label());
+    }
+
+    @Test
+    @DisplayName("S92: 一斉実行でも知らないシナリオは断る（打ち間違いを通さない）")
+    void refusesUnknownScenarioInBatch() {
+        assertThatThrownBy(() -> controller(true).startAll("admin01",
+                new SimulationController.StartBatchRequest(
+                        List.of(Scenario.DELAY.label(), "そんなシナリオは無い"))))
+                .hasMessageContaining("そんなシナリオは無い");
+    }
+
+    @Test
+    @DisplayName("US33 §4: 無効な環境では一斉実行も断る")
+    void refusesBatchWhenDisabled() {
+        assertThatThrownBy(() -> controller(false).startAll("admin01",
+                new SimulationController.StartBatchRequest(
+                        List.of(Scenario.STANDARD.label()))))
+                .hasMessageContaining("実行できません");
+    }
 }

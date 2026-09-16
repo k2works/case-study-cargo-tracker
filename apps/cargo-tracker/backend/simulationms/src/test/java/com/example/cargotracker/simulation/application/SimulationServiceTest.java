@@ -240,4 +240,65 @@ class SimulationServiceTest {
     private List<SimulationRunMapper.StepRow> steps() {
         return steps;
     }
+
+    @Test
+    @DisplayName("S92: 選んだシナリオを一斉に始める（選んだ数だけ記録される）")
+    void startsEveryChosenScenario() {
+        var outcomes = service(true, (kind, produced) -> BusinessApi.StepResult.success(null))
+                .startAll(List.of(Scenario.STANDARD, Scenario.DELAY, Scenario.DAMAGE),
+                        "admin01");
+
+        assertThat(outcomes).hasSize(3)
+                .allSatisfy(o -> assertThat(o.runId()).isNotBlank())
+                .allSatisfy(o -> assertThat(o.refusalReason()).isNull());
+        assertThat(inserted).hasSize(3);
+        assertThat(inserted).extracting(SimulationRunMapper.RunRow::scenarioId)
+                .containsExactly("STANDARD", "DELAY", "DAMAGE");
+    }
+
+    @Test
+    @DisplayName("S92: 1 件の断りで残りを止めない（実行中の 1 本が他を巻き込まない）")
+    void keepsGoingWhenOneScenarioIsAlreadyRunning() {
+        // **STANDARD だけが実行中。** 他のシナリオには関係が無い出来事である。
+        running = new SimulationRunMapper.RunRow("SIM-running", "STANDARD", "RUNNING",
+                null, NOW, null, "admin01", NOW, null);
+
+        var outcomes = service(true, (kind, produced) -> BusinessApi.StepResult.success(null))
+                .startAll(List.of(Scenario.STANDARD, Scenario.DELAY), "admin01");
+
+        assertThat(outcomes).hasSize(2);
+        assertThat(outcomes.get(0).runId()).isNull();
+        assertThat(outcomes.get(0).refusalReason())
+                .as("**断りの理由を運ぶ。** 実行中の識別子が入っていないと、いまの結果へ行けない")
+                .contains("SIM-running");
+        assertThat(outcomes.get(1).runId()).isNotBlank();
+        assertThat(inserted).extracting(SimulationRunMapper.RunRow::scenarioId)
+                .containsExactly("DELAY");
+    }
+
+    @Test
+    @DisplayName("US33 §4: 無効な環境では 1 本も始めない（全体を断る）")
+    void refusesTheWholeBatchWhenDisabled() {
+        assertThatThrownBy(() -> service(false, (kind, produced) ->
+                BusinessApi.StepResult.success(null))
+                .startAll(List.of(Scenario.STANDARD, Scenario.DELAY), "admin01"))
+                .isInstanceOf(BusinessRuleViolation.class);
+        assertThat(inserted).isEmpty();
+    }
+
+    @Test
+    @DisplayName("S92: 空の選択と同じシナリオの重複は断る（何も起きない要求を通さない）")
+    void refusesEmptyAndDuplicateSelections() {
+        var service = service(true, (kind, produced) -> BusinessApi.StepResult.success(null));
+
+        assertThatThrownBy(() -> service.startAll(List.of(), "admin01"))
+                .isInstanceOf(BusinessRuleViolation.class)
+                .hasMessageContaining("1 つ以上");
+        // **黙って 1 つに畳まない。** 畳むと、選んだ側は畳まれたことに気づけない。
+        assertThatThrownBy(() -> service.startAll(
+                List.of(Scenario.STANDARD, Scenario.STANDARD), "admin01"))
+                .isInstanceOf(BusinessRuleViolation.class)
+                .hasMessageContaining("2 つ選べません");
+        assertThat(inserted).isEmpty();
+    }
 }

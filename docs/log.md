@@ -1,6 +1,8 @@
 # Docs Update Log
 
 ## 2026-09-16
+* **Update**: [20-業務シミュレーションを流す](/manual/20-業務シミュレーションを流す.md) を更新（claude-code/claude-opus-5）
+* **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
 * **Update**: [アプリケーション開発環境セットアップ手順書](/operation/cargo-tracker/アプリケーション開発環境セットアップ手順書.md) を更新（claude-code/claude-opus-5）
 * **Update**: [operation](/design/cargo-tracker/operation.md) を更新（claude-code/claude-opus-5）
 
