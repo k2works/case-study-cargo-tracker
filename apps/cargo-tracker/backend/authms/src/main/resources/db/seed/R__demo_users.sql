@@ -20,6 +20,11 @@ VALUES
     ('handler01',    '$2a$10$Pap5MEtrfTd55wwSny.X/eSSC96w81dIblU.baI9Xq2XlwMPStTBa', '荷役 三郎',   NULL, TRUE,  0, now(), now()),
     ('accountant01', '$2a$10$Pap5MEtrfTd55wwSny.X/eSSC96w81dIblU.baI9Xq2XlwMPStTBa', '経理 四郎',   NULL, TRUE,  0, now(), now()),
     ('shipper01',    '$2a$10$Pap5MEtrfTd55wwSny.X/eSSC96w81dIblU.baI9Xq2XlwMPStTBa', '荷主 五郎',   NULL, TRUE,  0, now(), now()),
+    -- 業務シミュレーションが作る貨物を、荷主として読むための利用者（US37 §受入基準 6）。
+    -- **shipper01 と分ける。** shipper01 は手で流すデモとクラスタ E2E が紐付け先を
+    -- 決めており、実行のたびに付け替えると互いを壊す。
+    -- 紐付け先はシミュレーションが実行のたびに書き換える（最新の実行の荷主を指す）。
+    ('sim01',        '$2a$10$Pap5MEtrfTd55wwSny.X/eSSC96w81dIblU.baI9Xq2XlwMPStTBa', '確認 八郎',   NULL, TRUE,  0, now(), now()),
     ('admin01',      '$2a$10$Pap5MEtrfTd55wwSny.X/eSSC96w81dIblU.baI9Xq2XlwMPStTBa', '管理 六郎',   NULL, TRUE,  0, now(), now()),
     ('disabled01',   '$2a$10$Pap5MEtrfTd55wwSny.X/eSSC96w81dIblU.baI9Xq2XlwMPStTBa', '無効 七郎',   NULL, FALSE, 0, now(), now())
 ON CONFLICT (username) DO NOTHING;
@@ -32,6 +37,7 @@ VALUES
     ('handler01',    'ROLE_HANDLER'),
     ('accountant01', 'ROLE_ACCOUNTANT'),
     ('shipper01',    'ROLE_SHIPPER'),
+    ('sim01',        'ROLE_SHIPPER'),
     ('admin01',      'ROLE_ADMIN'),
     ('disabled01',   'ROLE_SALES')
 ON CONFLICT (username, role) DO NOTHING;

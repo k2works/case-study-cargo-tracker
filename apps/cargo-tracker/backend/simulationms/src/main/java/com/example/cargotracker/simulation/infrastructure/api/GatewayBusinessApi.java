@@ -6,6 +6,8 @@ import com.example.cargotracker.simulation.domain.model.valueobjects.ScenarioInp
 import com.example.cargotracker.simulation.domain.model.valueobjects.StepKind;
 import com.example.cargotracker.simulation.domain.model.valueobjects.StepRole;
 import com.fasterxml.jackson.databind.JsonNode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static com.example.cargotracker.simulation.infrastructure.api.GatewayResponses.businessReason;
 import static com.example.cargotracker.simulation.infrastructure.api.GatewayResponses.fingerprintOf;
 import static com.example.cargotracker.simulation.infrastructure.api.GatewayResponses.parse;
@@ -28,6 +30,8 @@ import java.util.UUID;
  * が持つ。ここにあるのは「その工程はどの経路をどのロールで叩くか」だけである。</p>
  */
 public class GatewayBusinessApi implements BusinessApi {
+
+    private static final Logger log = LoggerFactory.getLogger(GatewayBusinessApi.class);
 
     /** 業務タイムゾーン。<b>UTC で「今日」を決めない</b>（IT9 の教訓）。 */
     private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Tokyo");
@@ -140,8 +144,56 @@ public class GatewayBusinessApi implements BusinessApi {
                 // **印はここで付く**（US33 §受入基準 3）。落とすと 4 つの BC が
                 // 本物と区別できなくなる。
                 "simulated", true));
-        return idFrom(response, "shipperId");
+        StepResult registered = idFrom(response, "shipperId");
+        if (registered.succeeded()) {
+            linkConfirmationUser(registered.producedId());
+        }
+        return registered;
     }
+
+    /**
+     * 確認用の利用者を、いま作った荷主へ紐付ける（US37 §受入基準 6）。
+     *
+     * <p><b>作った貨物の知らせは、その荷主にしか届かない。</b> 紐付けが無いと
+     * 「知らせが出るところ」を誰も画面で確かめられない——実行のたびに新しい
+     * 荷主を作るので、固定の利用者を付け替える。</p>
+     *
+     * <p><b>失敗しても実行は止めない。</b> これは業務の工程ではなく、確認を
+     * 楽にするための段取りである。止めると、紐付けの都合でシナリオが失敗し、
+     * <b>確かめたい業務の連鎖が読めなくなる</b>。記録には残す。</p>
+     *
+     * <p><b>shipper01 は使わない。</b> あちらは手で流すデモとクラスタ E2E が
+     * 紐付け先を決めており、実行のたびに付け替えると互いを壊す。</p>
+     */
+    private void linkConfirmationUser(String shipperId) {
+        var linked = calls.post(StepRole.ADMIN,
+                "/api/v1/auth/admin/users/" + CONFIRMATION_USERNAME + "/shipper",
+                Map.of("shipperId", shipperId));
+        if (!linked.ok()) {
+            log.warn("確認用の利用者を紐付けられなかった（実行は続ける）: user={} status={} body={}",
+                    CONFIRMATION_USERNAME, linked.status(), linked.body());
+            return;
+        }
+        // **ここで 1 度読む。** 知らせは「初めて開いた荷主には何も出さない」
+        // ——既読の位置が無いと、その時点の最新まで読んだことにするからである
+        // （何か月も前の履歴を見せないための規則）。
+        //
+        // **いま読めば、この荷主にはまだ出来事が 1 件も無い**ので、位置は 0 に
+        // なる。以後この実行が起こす出来事は<b>すべて未読の知らせになる</b>——
+        // 画面を開くのが実行の途中でも後でも、同じものが読める。
+        //
+        // <b>読まずに任せると取りこぼす。</b> 画面は 60 秒ごとに見に行くので、
+        // 最初の問い合わせが出来事のあとに落ちると、その実行の知らせは
+        // 1 件も出ない（実クラスタで実測）。
+        var primed = calls.get(StepRole.CONFIRMATION, "/api/v1/tracking/notices");
+        if (!primed.ok()) {
+            log.warn("確認用の利用者の既読位置を作れなかった（実行は続ける）: status={} body={}",
+                    primed.status(), primed.body());
+        }
+    }
+
+    /** 知らせを画面で確かめるための利用者（動作確認用・ADR-0004）。 */
+    private static final String CONFIRMATION_USERNAME = "sim01";
 
     private StepResult registerBooking(StepKind kind, Map<StepKind, String> produced) {
         LocalDate deadline = LocalDate.now(clock.withZone(BUSINESS_ZONE))

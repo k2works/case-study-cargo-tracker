@@ -20,7 +20,22 @@ public enum StepRole {
     /** 荷役作業員。荷役・通関申告・引取。 */
     HANDLER("handler01"),
     /** 経理担当者。請求の発行・入金。 */
-    ACCOUNTANT("accountant01");
+    ACCOUNTANT("accountant01"),
+    /**
+     * システム管理者。
+     *
+     * <p><b>業務の工程では使わない。</b> 全部を管理者で叩くと認可を踏まない。
+     * 使うのは業務ではない段取り——確認用の利用者を、いま作った荷主へ
+     * 紐付けるところだけである（US37 §受入基準 6）。</p>
+     */
+    ADMIN("admin01"),
+    /**
+     * 知らせを確かめる荷主（US37 §受入基準 6）。
+     *
+     * <p><b>shipper01 とは分ける。</b> あちらは手で流すデモとクラスタ E2E が
+     * 紐付け先を決めており、実行のたびに付け替えると互いを壊す。</p>
+     */
+    CONFIRMATION("sim01");
 
     private final String username;
 

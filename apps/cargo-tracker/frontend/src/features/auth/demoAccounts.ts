@@ -54,6 +54,8 @@ export const DEMO_ACCOUNTS: readonly DemoAccount[] = [
   account('routing01', ['ROLE_ROUTING'], '経路設計者（IT1 時点では専用の画面はまだありません）'),
   account('handler01', ['ROLE_HANDLER'], '荷役担当者（IT1 時点では専用の画面はまだありません）'),
   account('shipper01', ['ROLE_SHIPPER'], '荷主（IT1 時点では専用の画面はまだありません）'),
+  account('sim01', ['ROLE_SHIPPER'],
+    '荷主（業務シミュレーションが作った貨物の荷主。知らせが出るところを確かめる）'),
   account('admin01', ['ROLE_ADMIN'], '管理者（IT1 時点では専用の画面はまだありません）'),
   account('disabled01', ['ROLE_SALES'], '無効化されたアカウント（ログインできないことの確認用）', false),
 ];

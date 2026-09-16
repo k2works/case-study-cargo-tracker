@@ -1,6 +1,8 @@
 # Docs Update Log
 
 ## 2026-09-16
+* **Update**: [21-荷主が自社の貨物を見る](/manual/21-荷主が自社の貨物を見る.md) を更新（claude-code/claude-opus-5）
+* **Update**: [20-業務シミュレーションを流す](/manual/20-業務シミュレーションを流す.md) を更新（claude-code/claude-opus-5）
 * **Update**: [20-業務シミュレーションを流す](/manual/20-業務シミュレーションを流す.md) を更新（claude-code/claude-opus-5）
 * **Update**: [ui_design](/design/cargo-tracker/ui_design.md) を更新（claude-code/claude-opus-5）
 * **Update**: [data-model](/design/cargo-tracker/data-model.md) を更新（claude-code/claude-opus-5）
