@@ -4,7 +4,7 @@ title: "運用要件 - 国際貨物輸送管理システム（CQRS / Event Sourc
 description: "CQRS / Event Sourcing 版 Cargo Tracker の運用要件。投影のリプレイを日常操作として置き、Event Store の復元演習、Event Processor と Reaction Handler の監視、ランブック、イベントの形を変えるリリース手順、鍵の破棄、Gulp タスクを定める。"
 tags: [design,operation,cqrs,event-sourcing,axon]
 status: stable
-generated: { by: claude-code/claude-opus-5, at: 2026-09-09T12:06:18Z }
+generated: { by: claude-code/claude-opus-5, at: 2026-09-16T00:47:24Z }
 verified:
   - { by: human:kakimomokuri, at: 2026-09-02T08:13:46Z }
 ---
@@ -332,6 +332,21 @@ Axon Server の停止中はコマンドを受け付けません。荷役作業�
 `gulp k8s:images` は最後に**イメージ自身が持つ作成時刻**を出します。**すべてが「seconds ago」「minutes ago」であることを見てから** `gulp k8s:load` に進みます。1 つでも「hours ago」があれば、その先で見るものは古いコードの挙動です。
 
 **自分でループを書いてイメージを作るときは、タグを `${s}` のように囲みます。** zsh では `$s:latest` の `:l` が修飾子として解釈され、`cargo-tracker/trackingmsatest` のような壊れたタグができます（IT10 で 3 つ作りました）。
+
+### 9.4 溜まったデータは区切りで作り直す
+
+**kind のクラスタは作り直さずに使い続けます。** E2E と業務シミュレーションが作った貨物が溜まり続け、**一覧の上限に当たった時点から新しく作ったものが出なくなります**——検査は原因の分からない形で落ち始めます（IT17 で実測）。
+
+```bash
+npx gulp k8s:reset-db --yes   # 壊す操作。--yes が無いと実行しない
+npx gulp k8s:wait
+```
+
+**読み取り DB と Axon Server のイベントを一緒に消します。** 読み取り DB だけを消すと、集約のイベントは残ったまま投影だけが空になり、「予約はあるのに一覧に出ない」という、**どちらの状態よりも読みにくい形**になります。
+
+消す DB は `init-databases.sql` から数え上げます（一覧を書き写しません）。Flyway は空の DB に流し直されるので、**適用済みマイグレーションを書き換えて `checksum mismatch` になった環境も戻せます**。動作確認用の利用者は起動時に作り直されますが、荷主・航海・予約は残りません。
+
+手順の中身と、それぞれが要る理由は [アプリケーション開発環境セットアップ手順書](../../operation/cargo-tracker/アプリケーション開発環境セットアップ手順書.md)「クラスタのデータを消して作り直す」にあります。
 
 ## 10. 運用 KPI
 

@@ -1,5 +1,9 @@
 # Docs Update Log
 
+## 2026-09-16
+* **Update**: [アプリケーション開発環境セットアップ手順書](/operation/cargo-tracker/アプリケーション開発環境セットアップ手順書.md) を更新（claude-code/claude-opus-5）
+* **Update**: [operation](/design/cargo-tracker/operation.md) を更新（claude-code/claude-opus-5）
+
 ## 2026-09-15
 * **Update**: [release_report-3_0_0](/development/cargo-tracker/release_report-3_0_0.md) を更新（claude-code/claude-opus-5）
 * **Update**: [release_plan](/development/cargo-tracker/release_plan.md) を更新（claude-code/claude-opus-5）

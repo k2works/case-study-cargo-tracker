@@ -320,6 +320,13 @@ const READY_TIMEOUT_SECONDS = 600;
 
 /** kind クラスタ名と名前空間。手順書と揃える。 */
 const KIND_CLUSTER = 'cargo-tracker';
+
+/**
+ * DB と接続ユーザーの出典（Kustomize と compose が共有する）。
+ *
+ * <p><b>2 か所に持たない。</b> 片方だけ直したときに環境で食い違う。</p>
+ */
+const INIT_DB_SQL = 'ops/k8s/base/postgres/init-databases.sql';
 const KIND_API_SERVER_PORT = 16443;
 const NAMESPACE = 'cargo-tracker';
 const OVERLAY = 'ops/k8s/overlays/local';
@@ -584,10 +591,104 @@ export default function (gulp) {
    * 片方だけ直したときに環境で食い違う。SQL は何度流しても同じ結果になる。</p>
    */
   gulp.task('k8s:init-db', (done) => {
-    const sql = 'ops/k8s/base/postgres/init-databases.sql';
     sh(`kubectl --context kind-${KIND_CLUSTER} -n ${NAMESPACE} exec -i postgres-0 -- `
-      + `psql -U postgres -v ON_ERROR_STOP=1 -f - < "${sql}"`, { stdio: 'inherit' });
+      + `psql -U postgres -v ON_ERROR_STOP=1 -f - < "${INIT_DB_SQL}"`, { stdio: 'inherit' });
     console.log('DB と接続ユーザーを確かめました（足りない分だけ作りました）');
+    done();
+  });
+
+  /**
+   * 初期化 SQL が作る DB の一覧。
+   *
+   * <p><b>名簿を書き写さない。</b> ここに一覧を持つと、サービスを足したときに
+   * 片方だけが直る——実際に simulationms を足したとき、初期化 SQL には載って
+   * いたのに既存環境へ反映されず、そのサービスだけが起動しなかった（IT16）。
+   * <b>出典は初期化 SQL 1 つ</b>にして、そこから数え上げる。</p>
+   */
+  function databasesInInitSql() {
+    const sql = fs.readFileSync(INIT_DB_SQL, 'utf8');
+    const names = [...sql.matchAll(/CREATE DATABASE (\w+) OWNER/g)].map((m) => m[1]);
+    if (names.length === 0) {
+      throw new Error(`${INIT_DB_SQL} から DB を 1 つも読み取れませんでした`);
+    }
+    return names;
+  }
+
+  /**
+   * クラスタのデータを消して作り直す（**壊す操作**）。
+   *
+   * <p><b>なぜ要るか。</b> kind のクラスタは作り直さずに使い続けるので、E2E と
+   * 業務シミュレーションが作った貨物が溜まり続ける。一覧には上限があるため、
+   * ある時点から<b>新しく作ったものが一覧に出なくなる</b>——検査が原因の分からない
+   * 形で落ち始める（IT17 で実測）。</p>
+   *
+   * <p><b>投影とイベントを一緒に消す。</b> 読み取り DB だけを消すと、Axon Server
+   * には集約のイベントが残ったまま投影だけが空になる——「予約はあるのに一覧に
+   * 出ない」という、どちらの状態よりも読みにくい形になる。</p>
+   *
+   * <p><b>先に止めてから消す。</b> 動いているサービスは接続を握っており、
+   * DROP DATABASE が待たされる。消している最中に書き込まれると、作り直した
+   * はずの DB に古い連鎖の続きが入る。</p>
+   *
+   * <p><b>Flyway は空の DB に対して流し直される</b>ので、マイグレーションの
+   * 適用済み記録も一緒に消える。適用済みマイグレーションを書き換えたあとに
+   * checksum mismatch で起動しなくなった環境も、これで戻せる。</p>
+   */
+  gulp.task('k8s:reset-db', (done) => {
+    if (!process.argv.includes('--yes')) {
+      done(new Error(
+        'クラスタのデータをすべて消します（読み取り DB と Axon Server のイベント）。'
+        + ' 実行するには --yes を付けてください: npx gulp k8s:reset-db --yes',
+      ));
+      return;
+    }
+    const context = `kind-${KIND_CLUSTER}`;
+    const kubectl = `kubectl --context ${context} -n ${NAMESPACE}`;
+    const deployments = [...Object.keys(SERVICES), FRONTEND.name];
+    const databases = databasesInInitSql();
+
+    console.log(`[1/5] サービスを止めます（${deployments.length} 個）`);
+    for (const name of deployments) {
+      sh(`${kubectl} scale deployment/${name} --replicas=0`);
+    }
+    for (const name of deployments) {
+      sh(`${kubectl} rollout status deployment/${name} --timeout=${READY_TIMEOUT_SECONDS}s`);
+    }
+
+    console.log(`[2/5] 読み取り DB を消します（${databases.length} 個）`);
+    // **WITH (FORCE) で接続を切る。** 残った接続が 1 本でもあると DROP は
+    // 待たされ、理由が「他の誰かが使っています」としか出ない。
+    //
+    // **1 文ずつ `-c` に渡す。** 複数文をまとめて 1 つの `-c` に入れると
+    // psql が 1 トランザクションで包み、`DROP DATABASE cannot run inside a
+    // transaction block` で落ちる（初期化 SQL が CREATE DATABASE を \gexec で
+    // 流しているのと同じ理由。実クラスタで踏んだ）。
+    const drops = databases
+      .map((name) => `-c "DROP DATABASE IF EXISTS ${name} WITH (FORCE)"`)
+      .join(' ');
+    sh(`${kubectl} exec -i postgres-0 -- psql -U postgres -v ON_ERROR_STOP=1 ${drops}`,
+      { stdio: 'inherit' });
+
+    console.log('[3/5] Axon Server のイベントを消します');
+    // StatefulSet を止めてから PVC を消す。動いている Pod が握っている PVC は
+    // 削除要求だけ受け付けて消えず、そのまま作り直すと**古いイベントが残る**。
+    sh(`${kubectl} scale statefulset/${AXON_SERVER.name} --replicas=0`);
+    sh(`${kubectl} rollout status statefulset/${AXON_SERVER.name}`
+      + ` --timeout=${READY_TIMEOUT_SECONDS}s`);
+    sh(`${kubectl} delete pvc events-${AXON_SERVER.name}-0 --ignore-not-found`);
+    sh(`${kubectl} scale statefulset/${AXON_SERVER.name} --replicas=1`);
+    sh(`${kubectl} rollout status statefulset/${AXON_SERVER.name}`
+      + ` --timeout=${READY_TIMEOUT_SECONDS}s`);
+
+    console.log('[4/5] DB と接続ユーザーを作り直します');
+    sh(`${kubectl} exec -i postgres-0 -- psql -U postgres -v ON_ERROR_STOP=1 -f - `
+      + `< "${INIT_DB_SQL}"`, { stdio: 'inherit' });
+
+    console.log(`[5/5] サービスを戻します（Flyway が空の DB に流し直します）`);
+    for (const name of deployments) {
+      sh(`${kubectl} scale deployment/${name} --replicas=1`);
+    }
+    console.log('作り直しました。`npx gulp k8s:wait` で Ready を確かめてください');
     done();
   });
 
@@ -1075,6 +1176,8 @@ export default function (gulp) {
   k8s:load     イメージ（Axon Server を含む）を kind に載せ直して rollout restart する
   k8s:wait     全 Pod が Ready になるまで待つ
   k8s:status   Pod の状態を表示する
+  k8s:init-db  足りない DB と接続ユーザーを作る（サービスを足したあと）
+  k8s:reset-db データを消して作り直す（読み取り DB と Axon Server のイベント。--yes が要る）
   k8s:render   マニフェストを描画する（クラスタが無くても回せる）
   k8s:open     port-forward を張って画面を開く（Ctrl+C まで待つ）
   k8s:down     kind クラスタを消す
