@@ -1,4 +1,4 @@
-package com.example.cargotracker.acceptance;
+package com.example.cargotracker.acceptance.booking;
 
 import com.example.cargotracker.shared.testing.AcceptanceFixtureTime;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -100,7 +100,7 @@ public class RouteAssignmentSteps {
         // バッジ表（`:1461`）で、どちらも「設計依頼中」。IT6 で
         // RoutingStatus#label() が「設計依頼済み」になっていたのを見つけて実装を
         // 直した。**この分岐を踏むシナリオが 1 本も無かったので気づけていなかった**
-        // ——利用者に見せる文字列は、画面から踏むテストでしか固定されない。
+        // ——利用者に��せる文字列は、画面から踏むテストでしか固定されない。
         String expected = switch (label) {
             case "未設定" -> "NOT_ROUTED";
             case "設計依頼中" -> "ROUTING_REQUESTED";

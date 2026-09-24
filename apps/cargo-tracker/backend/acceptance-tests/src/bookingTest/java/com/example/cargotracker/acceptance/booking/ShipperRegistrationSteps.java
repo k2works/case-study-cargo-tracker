@@ -1,4 +1,4 @@
-package com.example.cargotracker.acceptance;
+package com.example.cargotracker.acceptance.booking;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -150,7 +150,7 @@ public class ShipperRegistrationSteps {
     @ならば("{int} 秒以内に要確認一覧に {string} が {int} 件現れる")
     public void 要確認一覧に現れる(int seconds, String reason, int count) {
         SharedSteps.awaitWithin(seconds, () -> countAttention(reason) >= count,
-                "要確認一覧に「" + reason + "」が出る");
+                "要確認一覧に���" + reason + "」が出る");
     }
 
     @かつ("その要確認の担当ロールは {string} である")

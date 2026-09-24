@@ -1,4 +1,4 @@
-package com.example.cargotracker.acceptance;
+package com.example.cargotracker.acceptance.booking;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -197,7 +197,7 @@ public class CancellationSteps {
         }, "キャンセル履歴に申請者と判断者が残る");
     }
 
-    /** 業務の言葉 → 投影の値。**列挙名を受け入れに書かない**（読む人は業務の言葉で読む）。 */
+    /** 業務の言葉 → 投影の値。**列挙名を受け入れに書かない**（読���人は業務の言葉で読む）。 */
     private static String decisionOf(String label) {
         return switch (label) {
             case "承認" -> "APPROVED";

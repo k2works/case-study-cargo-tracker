@@ -24,7 +24,7 @@
       だが Cucumber は @CucumberContextConfiguration を付けたクラスを Spring に
       インスタンス化させる。private コンストラクタにすると受け入れテストが起動しない。
     -->
-    <suppress checks="HideUtilityClassConstructor" files=".*CucumberSpringConfiguration\.java$"/>
+    <suppress checks="HideUtilityClassConstructor" files=".*BookingCucumberConfiguration\.java$"/>
     <suppress checks="HideUtilityClassConstructor" files=".*RoutingCucumberConfiguration\.java$"/>
 
     <!--

@@ -1,4 +1,4 @@
-package com.example.cargotracker.acceptance;
+package com.example.cargotracker.acceptance.booking;
 
 import com.example.cargotracker.shared.testing.AcceptanceFixtureTime;
 import static org.assertj.core.api.Assertions.assertThat;

@@ -1,4 +1,4 @@
-package com.example.cargotracker.acceptance;
+package com.example.cargotracker.acceptance.booking;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

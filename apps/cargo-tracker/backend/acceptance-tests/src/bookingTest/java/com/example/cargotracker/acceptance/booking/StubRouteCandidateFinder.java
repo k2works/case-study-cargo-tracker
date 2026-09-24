@@ -1,4 +1,4 @@
-package com.example.cargotracker.acceptance;
+package com.example.cargotracker.acceptance.booking;
 
 import com.example.cargotracker.booking.application.port.RouteCandidateFinder;
 import com.example.cargotracker.booking.application.port.RouteSearchRequest;

@@ -1,4 +1,4 @@
-package com.example.cargotracker.acceptance;
+package com.example.cargotracker.acceptance.booking;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -150,7 +150,7 @@ public class QuotationSteps {
         });
     }
 
-    @かつ("概算料金は同じ条件の請求の基本料金と一致する")
+    @かつ("概算料金は同じ条件の請求の基本��金と一致する")
     public void 概算は請求の基本料金と一致する() {
         assertThat(new BigDecimal(String.valueOf(quotation.get("estimatedAmount"))))
                 .as("料率の出典は 1 つ（ADR-0016）。片方だけ動くとここが赤くなる")

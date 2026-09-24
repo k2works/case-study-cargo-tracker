@@ -1,4 +1,4 @@
-package com.example.cargotracker.acceptance;
+package com.example.cargotracker.acceptance.booking;
 
 import com.example.cargotracker.booking.BookingApplication;
 import com.example.cargotracker.shared.testing.AbstractAxonIntegrationTest;
@@ -6,7 +6,7 @@ import io.cucumber.spring.CucumberContextConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 
 /**
- * 受け入れテストの土台。bookingms を実際に起動し、API を叩いて確かめる。
+ * 貨物予約（bookingms）の受け入れテストの土台。bookingms を実際に起動し、API を叩いて確かめる。
  *
  * <p>コンテナの立て方は {@link AbstractAxonIntegrationTest} に合わせる。以前はここで
  * 同じものを別に組み立てていたので、起動猶予やスキーマ分離を片方だけ直す形になっていた
@@ -23,5 +23,5 @@ import org.springframework.boot.test.context.SpringBootTest;
 @SpringBootTest(classes = { BookingApplication.class,
         StubRouteCandidateFinder.Configuration.class },
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-public class CucumberSpringConfiguration extends AbstractAxonIntegrationTest {
+public class BookingCucumberConfiguration extends AbstractAxonIntegrationTest {
 }

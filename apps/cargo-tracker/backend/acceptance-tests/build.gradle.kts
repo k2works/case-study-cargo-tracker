@@ -1,35 +1,52 @@
 // 受け入れテスト（デモ項目の Gherkin 実行）。業務サービスの数（8）には数えない（ADR-0001）。
 plugins { java }
 
-dependencies {
-    testImplementation(project(":shared"))
-    testImplementation(testFixtures(project(":shared")))
-    testImplementation(libs.axon.test)
-    testImplementation(libs.testcontainers.junit.jupiter)
-    testImplementation(libs.testcontainers.postgresql)
-    testImplementation(libs.awaitility)
-
-    // Cucumber は 3 つの成果物を同一バージョンで揃える（tech_stack.md）。
-    testImplementation(libs.cucumber.java)
-    testImplementation(libs.cucumber.spring)
-    testImplementation(libs.cucumber.junit.platform.engine)
-    testImplementation(libs.rest.assured)
-    testImplementation(libs.assertj.core)
-    testImplementation(platform(libs.junit.bom))
-    testImplementation("org.junit.platform:junit-platform-suite")
-
-    // 起動するのは対象サービスだけにする。複数サービスを同一 JVM に載せると、
-    // 各サービスの V001 マイグレーションが classpath 上で衝突する
-    // （Found more than one migration with version 001）。サービスを跨ぐデモ項目は
-    // サービスごとに別のコンテキストで回す。
-    testImplementation(project(":bookingms"))
-    testImplementation(libs.spring.boot.starter.web)
-    testImplementation(libs.spring.boot.starter.jdbc)
-    // ステップ定義が Mapper を注入するので、注釈の定義もクラスパスに要る。
-    testImplementation(libs.mybatis.spring.boot.starter)
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
+    systemProperty("cucumber.junit-platform.naming-strategy", "long")
+    // SimulationStack は本番の Gateway の設定を読んで経路を組む（書き写さない）。
+    // **入力として宣言しないと** Gradle が UP-TO-DATE と判断し、経路を変えても
+    // 受け入れが走らない（IT10 の教訓）。
+    inputs.file(rootProject.file("gatewayms/src/main/resources/application.yml"))
 }
 
-tasks.withType<Test>().configureEach {
+// 貨物予約（bookingms）の受け入れテスト。
+// Cucumber は 1 つの glue パッケージにつき 1 つのコンテキストしか持てず、
+// 起動するサービスが違えばコンテキストも別になる。ソースセットを分けることで、
+// 各スイートのクラスパスにそのサービスの分だけを載せる。
+//
+// マイグレーションの衝突（双方の V001）は db/migration/<サービス名>/ へ分けた
+// ことで解けているので、ここは分離の理由ではない。
+val bookingTest: SourceSet by sourceSets.creating
+
+dependencies {
+    "bookingTestImplementation"(project(":shared"))
+    "bookingTestImplementation"(testFixtures(project(":shared")))
+    "bookingTestImplementation"(project(":bookingms"))
+    "bookingTestImplementation"(libs.axon.test)
+    "bookingTestImplementation"(libs.testcontainers.junit.jupiter)
+    "bookingTestImplementation"(libs.testcontainers.postgresql)
+    "bookingTestImplementation"(libs.awaitility)
+    "bookingTestImplementation"(libs.cucumber.java)
+    "bookingTestImplementation"(libs.cucumber.spring)
+    "bookingTestImplementation"(libs.cucumber.junit.platform.engine)
+    "bookingTestImplementation"(libs.rest.assured)
+    "bookingTestImplementation"(libs.assertj.core)
+    "bookingTestImplementation"(platform(libs.junit.bom))
+    "bookingTestImplementation"("org.junit.platform:junit-platform-suite")
+    "bookingTestImplementation"(libs.spring.boot.starter.test)
+    "bookingTestImplementation"(libs.spring.boot.starter.web)
+    "bookingTestImplementation"(libs.spring.boot.starter.jdbc)
+    // ステップ定義が Mapper を注入するので、注釈の定義もクラスパスに要る。
+    "bookingTestImplementation"(libs.mybatis.spring.boot.starter)
+    "bookingTestRuntimeOnly"(libs.junit.platform.launcher)
+}
+
+val bookingAcceptanceTest = tasks.register<Test>("bookingAcceptanceTest") {
+    description = "貨物予約（bookingms）のデモ項目を回す"
+    group = "verification"
+    testClassesDirs = bookingTest.output.classesDirs
+    classpath = bookingTest.runtimeClasspath
     useJUnitPlatform()
     systemProperty("cucumber.junit-platform.naming-strategy", "long")
     // SimulationStack は本番の Gateway の設定を読んで経路を組む（書き写さない）。
@@ -195,7 +212,7 @@ val billingAcceptanceTest = tasks.register<Test>("billingAcceptanceTest") {
 }
 
 tasks.named("test") {
-    dependsOn(routingAcceptanceTest, trackingAcceptanceTest, handlingAcceptanceTest,
+    dependsOn(bookingAcceptanceTest, routingAcceptanceTest, trackingAcceptanceTest, handlingAcceptanceTest,
             billingAcceptanceTest)
 }
 
