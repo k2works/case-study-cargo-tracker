@@ -1,0 +1,64 @@
+scalar Long
+
+type Booking {
+  id: String!
+  number: String!
+  shipperId: String!
+  status: String!
+  version: Long!
+  availableCommands: [String!]!
+  origin: String!
+  destination: String!
+  deadline: String!
+  preferredHandover: String!
+  cargo: Cargo!
+  history: [HistoryEntry!]!
+}
+
+type BookingSummary {
+  id: String!
+  number: String!
+  shipperId: String!
+  status: String!
+  origin: String!
+  destination: String!
+  deadline: String!
+  version: Long!
+  availableCommands: [String!]!
+}
+
+type Cargo {
+  itemName: String!
+  weightKg: String!
+  quantity: Int!
+}
+
+type HistoryEntry {
+  eventId: String!
+  kind: String!
+  occurredAt: String!
+  actorUserId: String
+}
+
+type Query {
+  shippers(keyword: String): [ShipperSummary!]!
+  shipper(id: String!): Shipper!
+  bookings(status: String, shipperId: String): [BookingSummary!]!
+  booking(id: String!): Booking!
+}
+
+type Shipper {
+  id: String!
+  kind: String!
+  name: String!
+  address: String!
+  contact: String!
+  email: String!
+}
+
+type ShipperSummary {
+  id: String!
+  name: String!
+  email: String!
+  kind: String!
+}
