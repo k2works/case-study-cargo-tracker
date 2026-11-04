@@ -3,8 +3,10 @@ type: ADR
 title: "ADR-009: フロントエンドの構成（React + TypeScript + Vite の SPA）"
 description: "React + TypeScript + Vite の SPA とし、サーバー状態は TanStack Query + graphql-request + graphql-codegen、認証方式は AuthProvider の内側に閉じ込める。"
 tags: [adr]
-status: draft
+status: stable
 generated: { by: claude-code/claude-sonnet-5-5, at: 2026-11-04T02:47:01Z }
+verified:
+  - { by: human:kakimomokuri, at: 2026-11-04T03:59:37Z }
 ---
 
 # ADR-009: フロントエンドの構成（React + TypeScript + Vite の SPA）
@@ -15,9 +17,9 @@ React + TypeScript + Vite の SPA とし、サーバー状態は TanStack Query 
 
 ## ステータス
 
-提案中
+承認済み（2026-11-04、Bolt 1 の着手前ゲートとして）
 
-> **人の承認待ちです。** この ADR は設計書の「提案」（ADR 候補 FE-01・FE-02・FE-03・TS-08・TS-11）を決定記録の形にしたもので、AI が起草しました。リスク台帳 R-08（アーキテクチャ判断）・R-01（外部ライブラリ）・R-02（認証）に従い、**承認されるまで決定として扱わず、実装の根拠にしません**。承認されたら本文のステータスを「承認済み」にし、`apply-okf` の `verify` で文書を `stable` にします。決定期限：Bolt 1 の前
+> **承認の範囲：** Bolt 1 の着手に必要な範囲です。 以下は起草時の注記です。**元の注記：人の承認待ちです。** この ADR は設計書の「提案」（ADR 候補 FE-01・FE-02・FE-03・TS-08・TS-11）を決定記録の形にしたもので、AI が起草しました。リスク台帳 R-08（アーキテクチャ判断）・R-01（外部ライブラリ）・R-02（認証）に従い、**承認されるまで決定として扱わず、実装の根拠にしません**。承認されたら本文のステータスを「承認済み」にし、`apply-okf` の `verify` で文書を `stable` にします。決定期限：Bolt 1 の前
 
 ## コンテキスト
 

@@ -3,8 +3,10 @@ type: ADR
 title: "ADR-002: イベントストアと配信方式"
 description: "ウォーキングスケルトンでは参照実装どおり（DynamoDB Journal + Streams + Lambda）で始め、最初の Unit 間の反応（Bolt 4）の前に PoC で A′／B へ移るかを決める。"
 tags: [adr]
-status: draft
+status: stable
 generated: { by: claude-code/claude-sonnet-5-5, at: 2026-11-04T02:47:01Z }
+verified:
+  - { by: human:kakimomokuri, at: 2026-11-04T03:59:36Z }
 ---
 
 # ADR-002: イベントストアと配信方式
@@ -15,9 +17,9 @@ generated: { by: claude-code/claude-sonnet-5-5, at: 2026-11-04T02:47:01Z }
 
 ## ステータス
 
-提案中
+承認済み（2026-11-04、Bolt 1 の着手前ゲートとして）
 
-> **人の承認待ちです。** この ADR は設計書の「提案」（ADR 候補 BE-03・BE-04・IF-04・NF-02）を決定記録の形にしたもので、AI が起草しました。リスク台帳 R-08（アーキテクチャ判断）・R-01（外部ライブラリ）・R-02（認証）に従い、**承認されるまで決定として扱わず、実装の根拠にしません**。承認されたら本文のステータスを「承認済み」にし、`apply-okf` の `verify` で文書を `stable` にします。決定期限：一次：Bolt 1 の前。二次：Bolt 4 の前
+> **承認の範囲：** Bolt 1 の着手に必要な範囲です。 本 ADR の承認は**一次判断（方式 A で始める）のみ**で、Bolt 4 の前の見直しは別の ADR で決めます。 以下は起草時の注記です。**元の注記：人の承認待ちです。** この ADR は設計書の「提案」（ADR 候補 BE-03・BE-04・IF-04・NF-02）を決定記録の形にしたもので、AI が起草しました。リスク台帳 R-08（アーキテクチャ判断）・R-01（外部ライブラリ）・R-02（認証）に従い、**承認されるまで決定として扱わず、実装の根拠にしません**。承認されたら本文のステータスを「承認済み」にし、`apply-okf` の `verify` で文書を `stable` にします。決定期限：一次：Bolt 1 の前。二次：Bolt 4 の前
 
 ## コンテキスト
 
@@ -62,6 +64,13 @@ generated: { by: claude-code/claude-sonnet-5-5, at: 2026-11-04T02:47:01Z }
 - A6：同じイベントを 2 回・順序を入れ替えて流しても読み取りモデルが同じ（テスト戦略 6.4）。
 - 反映遅延を指標として計測し、Bolt 1 の完了時に p95・p99 を記録する（NFR-P10）。
 - Bolt 4 の前に、PoC の結果と移行判断を新しい ADR として残す。
+
+## Bolt 1 の実装での割り切り（2026-11-04、S27）
+
+- Bolt 1 の実行物（`apps/local-server`）は、方式 A / B のどちらでもなく、**標準の `EventSourcedBehavior` ＋ インメモリ Journal（persistence-testkit）** で結線した（S17 で承認）。再起動で Journal は消える一方、読み取りモデル・採番・冪等性キーは PostgreSQL に残る。
+- イベント処理は、読み取り Journal の `eventsByTag` が testkit では 2 件目以降を配らず、offset も集約ごとの連番であるため、**`currentEventsByTag(noOffset)` を一定間隔で読み、集約ごとの処理済みの連番で重複を除く方式**にした（ローカル限り。毎回全件を読むので件数に比例して遅くなる）。この方式の反映遅延は、NFR-P10 の判断材料にならない。
+- したがって、本 ADR の「Bolt 1 の完了時に p95・p99 を記録する」は成立していない。**SP-1（同時書き込みと A / B の Journal 比較）の結果で、本 ADR を見直す**（置換または追記）。
+- 併せて SP-1 で見る観点：集約レジストリの監督と passivation、永続化失敗時の挙動、同じキーの再送（ADR-003 の Bolt 1 の制約）。
 
 ## 備考
 

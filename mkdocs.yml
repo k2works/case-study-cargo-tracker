@@ -83,6 +83,7 @@ nav:
       - 概要: development/index.md
       - リリース計画: development/release_plan.md
       - AI-DLC 移行計画: development/aidlc_migration_plan.md
+      - Bolt 計画 1: development/bolt_plan-1.md
   - 運用:
       - 概要: operation/index.md
   - レビュー:

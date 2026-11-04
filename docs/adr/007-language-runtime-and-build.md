@@ -3,8 +3,10 @@ type: ADR
 title: "ADR-007: 言語・実行環境・ビルド（Scala 3 LTS・JDK 21・sbt、ZIO は採らない）"
 description: "Scala 3.9 LTS + JDK 21（Temurin）+ sbt 1.12 を採り、実行時のエフェクトは ZIO でなく Future + Either とし、Protobuf は ScalaPB のみを使う。"
 tags: [adr]
-status: draft
+status: stable
 generated: { by: claude-code/claude-sonnet-5-5, at: 2026-11-04T02:47:01Z }
+verified:
+  - { by: human:kakimomokuri, at: 2026-11-04T03:59:37Z }
 ---
 
 # ADR-007: 言語・実行環境・ビルド（Scala 3 LTS・JDK 21・sbt、ZIO は採らない）
@@ -15,9 +17,9 @@ Scala 3.9 LTS + JDK 21（Temurin）+ sbt 1.12 を採り、実行時のエフェ�
 
 ## ステータス
 
-提案中
+承認済み（2026-11-04、Bolt 1 の着手前ゲートとして）
 
-> **人の承認待ちです。** この ADR は設計書の「提案」（ADR 候補 TS-01・TS-02・TS-06・TS-12・BE-07）を決定記録の形にしたもので、AI が起草しました。リスク台帳 R-08（アーキテクチャ判断）・R-01（外部ライブラリ）・R-02（認証）に従い、**承認されるまで決定として扱わず、実装の根拠にしません**。承認されたら本文のステータスを「承認済み」にし、`apply-okf` の `verify` で文書を `stable` にします。決定期限：Bolt 1 の前
+> **承認の範囲：** Bolt 1 の着手に必要な範囲です。 以下は起草時の注記です。**元の注記：人の承認待ちです。** この ADR は設計書の「提案」（ADR 候補 TS-01・TS-02・TS-06・TS-12・BE-07）を決定記録の形にしたもので、AI が起草しました。リスク台帳 R-08（アーキテクチャ判断）・R-01（外部ライブラリ）・R-02（認証）に従い、**承認されるまで決定として扱わず、実装の根拠にしません**。承認されたら本文のステータスを「承認済み」にし、`apply-okf` の `verify` で文書を `stable` にします。決定期限：Bolt 1 の前
 
 ## コンテキスト
 
@@ -55,6 +57,13 @@ Scala 3.9 LTS + JDK 21（Temurin）+ sbt 1.12 を採り、実行時のエフェ�
 
 - A3：`domain` が Pekko・Slick・GraphQL・ZIO を import しない。
 - サポート期限を年次で確認する（OPR-F40）。
+
+## 更新（2026-11-04）：実行・開発の JDK を 25 にする
+
+人の指示で、JDK を 21 から **25**（OpenJDK 25.0.2）に変更した。Scala 3.9.0・Pekko 1.5.0・Slick・Testcontainers・ScalaPB の組み合わせで、`sbt test` を全体で実行し、全モジュールが緑であることを確認した（JDK 25 の既定の `java` でそのまま動く。`JAVA_HOME` の指定は不要）。上の「JDK 21（Temurin）」は、起草時の判断として残す。
+
+- 影響：イメージのベースは `eclipse-temurin:25-jre` を想定する（サポートは 2031-09-30 まで）。Scala のライブラリが出す `sun.misc.Unsafe` の警告は無害（将来の JDK で除去される際は、Scala 側の更新を待つ）。
+- 残る確認：CI とコンテナのイメージを JDK 25 で組むときに、同じ検査（`sbt test`）を通す。
 
 ## 備考
 

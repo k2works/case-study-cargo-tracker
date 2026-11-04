@@ -171,7 +171,7 @@ entity 監査ログ
 | 型 | 定義 | 由来 |
 | :--- | :--- | :--- |
 | `ulid` | `char(26)`、`CHECK (VALUE ~ '^[0-9A-HJKMNP-TV-Z]{26}$')` | 集約・行の ID |
-| `port_code` | `char(5)`、`CHECK (VALUE ~ '^[A-Z]{2}[A-Z2-9]{3}$')` | UN/LOCODE（形式のみ。実在は `reference.port` の外部キーが保証） |
+| `port_code` | `char(5)`、`CHECK (VALUE ~ '^[A-Z]{2}[A-Z2-9]{3}$')` | UN/LOCODE（形式のみ）。実在は `reference.port` の外部キーが**読み取りモデルを守る**が、受け付けたコマンドの正しさは保証しない（イベントソーシングでは Journal に残ってから投影が失敗する）。**書き込み側でも実在を確かめる**（Bolt 1 で `PortCatalog` を追加。レビュー H1） |
 | `cargo_kind_t` | `text`、`CHECK (VALUE IN ('GENERAL','DANGEROUS','TEMPERATURE_CONTROLLED'))` | 貨物種別 |
 
 ### 5.2 列挙値
@@ -242,7 +242,7 @@ port ||--o{ pck
 | テーブル | 列と制約 | 備考 |
 | :--- | :--- | :--- |
 | `platform.idempotency_key`（冪等性キー） | (`principal_user_id` ulid, `idempotency_key` text) PK、`command_name` NN、`request_hash` NN、`result` jsonb NN、`created_at` NN、`expires_at` NN | 同じキーで内容が違う要求は拒む（`request_hash`）。保持期間は非機能要件で決める（BE-08） |
-| `platform.dead_letter_event`（待避したイベント） | `dead_letter_id` ulid PK、`projection_name` NN、`event_id` NN、`persistence_id` NN、`seq_nr` NN、`payload` bytea NN、`error` text NN、`attempts` int NN、`failed_at` NN、`resolved_at` null | 投影が失敗したイベントを黙って捨てない（バックエンド 6.2）。件数を監視する |
+| `platform.dead_letter_event`（待避したイベント） | `dead_letter_id` ulid PK、`projection_name` NN、`event_id` NN、`persistence_id` NN、`seq_nr` NN、`payload` bytea NN、`error` text NN、`attempts` int NN、`failed_at` NN、`resolved_at` null | 投影が失敗したイベントを黙って捨てない（バックエンド 6.2）。件数を監視する。`(projection_name, persistence_id, seq_nr)` に一意制約（platform V4。ストリームの読み直しで行が増えない） |
 | `platform.notification_log`（通知の記録） | `notification_id` ulid PK、`source_event_id` ulid **UQ**、`kind` NN、`recipient_kind` NN（`SHIPPER`・`CONSIGNEE`・`STAFF_ROLE`）、`recipient_ref` text NN（荷主 ID・ロール名など。**メールアドレスは持たない**）、`status` NN（`PENDING`・`SENT`・`FAILED`）、`attempts` int NN、`last_error` null、`created_at`、`sent_at` null | 通知はイベントを購読して送る。送信の成否を残し、失敗を見えるようにする（バックエンド 6.5、US12 AC-02「送信の記録」）。宛先は送信時に荷主 ID から引く |
 | 採番（シーケンス） | `platform.booking_number_seq`、`quote_number_seq`、`invoice_number_seq`、`voyage_registration_seq`（PostgreSQL のシーケンス） | 人が読む番号の元。**番号の形式（接頭辞・日付・桁数）は未定義**で、アプリケーションが整形する（バックエンド 4.4）。追跡番号は推測困難な乱数で、シーケンスを使わない |
 
@@ -903,9 +903,9 @@ DB は「安い検証」だけを二重に持ちます。状態遷移や複数�
 
 | # | 論点 | 影響 |
 | :--- | :--- | :--- |
-| Q1 | 荷主のメールアドレスを一意制約にするか（ドメイン Q2） | `booking.shipper` |
+| Q1 | 荷主のメールアドレスを一意制約にするか（ドメイン Q2） | `booking.shipper`。**Bolt 1 で確定：警告にとどめ、一意制約にしない**（正規化した列に通常の索引） |
 | Q2 | 通貨・最小単位・端数処理 | `Money` 列、`CHECK` |
-| Q3 | 追跡番号・予約番号・見積番号・請求番号・登録番号の形式と桁数 | 各 `UQ` 列、採番 |
+| Q3 | 追跡番号・予約番号・見積番号・請求番号・登録番号の形式と桁数 | 各 `UQ` 列、採番。**予約番号は Bolt 1 で仮に確定：`BK-` ＋ 6 桁（`platform.booking_number_seq`）**。他は未定 |
 | Q4 | 港湾マスタと運送会社マスタの出所・維持の方法（維持するストーリーが無い） | `reference.*` |
 | Q5 | 港湾ごとの取扱い貨物種別の実データ（今は架空） | `port_cargo_kind` |
 | Q6 | 危険物申告情報・温度管理条件の項目（R-05） | `jsonb` 列の展開 |

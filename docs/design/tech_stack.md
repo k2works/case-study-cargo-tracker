@@ -77,7 +77,7 @@ BE-03（イベントストアと配信方式）と BE-04（永続化ライブラ
 | DB ドライバ | PostgreSQL JDBC | △ 参照実装は 42.7.x | 接続 | — | △ 最新を着手時に確認 |
 | データアクセス | Slick（`slick`、`slick-hikaricp`） | 3.6.1 | 読み取りモデルの DAO | — | ✓ 3.6.1 が最新。Scala 3 対応 |
 | DAO 生成 | sbt-dao-generator | △ 参照実装は 1.4.1 | スキーマから DAO を生成 | — | △ **個人のメンテナ**。生成に PostgreSQL（Docker）を要する。代替は手書きの Slick テーブル定義（TS-05） |
-| マイグレーション | Flyway（core、`flyway-database-postgresql`） | 12.x | Unit ごとのスキーマのマイグレーション | — | 12.x が最新（二次情報）。参照実装は 10.21.0。**着手時に版を固定** |
+| マイグレーション | Flyway（core、`flyway-database-postgresql`） | 13.12.0 | Unit ごとのスキーマのマイグレーション | — | **Bolt 1 で 13.12.0 に固定**（設計時の「12.x」から更新）。場所は `db/migration/platform` と `db/migration/booking`、履歴の表は別 |
 
 ### 2.5 テスト・品質
 
@@ -97,7 +97,7 @@ BE-03（イベントストアと配信方式）と BE-04（永続化ライブラ
 | カテゴリ | 技術 | バージョン | 用途 | サポート期限 | 確度・備考 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | パッケージ | sbt-native-packager（Docker） | △ 参照実装は 1.11.x | コンテナイメージの作成 | — | △ |
-| ベースイメージ | `eclipse-temurin:21-jre` | 21 | 実行 | JDK 21 に従う | ✓ 参照実装は `17-jre-focal`。タグでなく**ダイジェストで固定**する（インフラ 4.3） |
+| ベースイメージ | `eclipse-temurin:25-jre` | 25 | 実行 | JDK 25 に従う（2026-11-04 に 21 から変更。ADR-007 の更新を参照） | ✓ 参照実装は `17-jre-focal`。タグでなく**ダイジェストで固定**する（インフラ 4.3） |
 | 配布（Lambda） | コンテナイメージ | — | event-processor（方式 A のとき） | — | 参照実装の `sbt-assembly` の fat jar は採らない（IF-04） |
 
 ---
@@ -107,20 +107,20 @@ BE-03（イベントストアと配信方式）と BE-04（永続化ライブラ
 | カテゴリ | 技術 | バージョン | 用途 | サポート期限 | 確度・備考 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | 実行環境 | Node.js（**LTS**） | **24** | ビルド・テスト・開発サーバー | 2028-04 | ✓ 二次情報。リポジトリの既存コンテナは Node 22（`docker-compose.yml` の `NODE_MAJOR: 22`、**2027-04-30** で EOL）。アプリは 24 に揃える |
-| 言語 | TypeScript | 5.x の最新 | 型付き開発 | — | ? |
+| 言語 | TypeScript | 6.0.3 | 型付き開発 | — | **Bolt 1 で 6.0.3 に固定**。typescript-eslint 8.72.1 が TypeScript 6.1 未満を要求するため、最新（6.1 以上）にしない |
 | フレームワーク | React | 19.x の最新 | SPA（FE-01） | — | △ 19 系の最新を着手時に確認 |
 | ビルド | Vite | 最新の安定版 | 開発サーバー、バンドル | — | ? 最新を着手時に確認 |
 | ルーティング | React Router | 7.x | 画面遷移、`RequireRole` | — | ? フロントエンド設計で未決だった項目。ライブラリとして使う（フレームワークモードの SSR は使わない） |
 | サーバー状態 | TanStack Query | 5 系または 6 系 | サーバー状態のキャッシュ、「版が追いつくまで再取得」（FE-02） | — | **要確認**：2026-03 に v6 が公開されたとの情報がある一方、v5 のパッチも続く。**安定した最新のメジャーを着手時に決める** |
-| GraphQL | graphql-request、GraphQL Code Generator（client preset） | 最新 | 型付きの問い合わせ、スキーマから型を生成（検査 F3） | — | ? |
+| GraphQL | graphql-request、GraphQL Code Generator（client preset） | graphql-request 7.4.0、graphql **16.14.2**、codegen client preset | 型付きの問い合わせ、スキーマから型を生成（検査 F3） | — | **graphql は 16 系に固定**（graphql-request 7.4.0 が graphql 14〜16 を要求）。17 系にするには graphql-request の更新が要る。Query と Mutation は別のスキーマ・別の出力 |
 | フォーム | React Hook Form、Zod | 最新 | 入力の検証（クライアント側は「その場で分かるもの」だけ） | — | ? 外部ライブラリの導入は承認が要る |
-| スタイル | Tailwind CSS | 4.x | ユーティリティクラス | — | ? 最新を着手時に確認 |
-| 部品 | Radix UI（プリミティブ） | 最新 | ダイアログ・タブなどのアクセシブルな土台 | — | ? **自前の薄い部品群**にする案（FE-06）。コンポーネントライブラリ一式は採らない |
+| スタイル | Tailwind CSS | 未導入 | ユーティリティクラス | — | Bolt 1 では導入していない（素の CSS）。導入は画面が増える Bolt で決める |
+| 部品 | Radix UI（プリミティブ） | 未導入 | ダイアログ・タブなどのアクセシブルな土台 | — | Bolt 1 では導入していない。**自前の薄い部品群**にする案（FE-06）。コンポーネントライブラリ一式は採らない |
 | 単体テスト | Vitest、Testing Library | 最新 | 部品・フックの検査 | — | ? |
 | モック | MSW（`msw`）＋スキーマ検証 | 最新 | API のモック | — | ? **スキーマで応答を検証し、バックエンドより甘いモックにしない**（検査 F4） |
 | E2E | Playwright | 最新 | 画面から踏む検査（一覧から対象を選んで始める） | — | ? |
 | アクセシビリティ | axe-core（`@axe-core/playwright`） | 最新 | 自動のアクセシビリティ検査 | — | ? |
-| 静的解析 | ESLint（flat config）、Prettier | 最新 | 検査 F1・F2（feature の import、GraphQL の直接呼び出しの禁止） | — | ? `eslint-plugin-boundaries` 等 |
+| 静的解析 | ESLint（flat config）、Prettier | ESLint 10.14.0（Prettier は未導入） | 検査 F1・F2（feature の import、GraphQL の直接呼び出しの禁止） | — | F1・F2 は `no-restricted-imports` を、ファイル群ごとにまとめた設定で実現（後の設定が前を置き換えるため）。自作の規則はメタテストで固定 |
 | パッケージ管理 | npm | Node 24 に同梱 | 依存の管理 | — | 既存のリポジトリに合わせる（`package-lock.json`） |
 
 > 画面の言語は日本語のみ（UI 設計の仮定）。i18n のライブラリは入れません。
@@ -157,7 +157,7 @@ BE-03（イベントストアと配信方式）と BE-04（永続化ライブラ
 
 | ID | 判断 | 推奨 | 主な代替 | 関連 | 決定期限 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| TS-01 | 言語と JDK | Scala 3.9 LTS ＋ JDK 21 | Scala 3.3 LTS（JDK 8 互換、2027-09 まで）、JDK 25 | — | Bolt 1 の前 |
+| TS-01 | 言語と JDK | Scala 3.9 LTS ＋ JDK 25（2026-11-04 に 21 から変更。ADR-007） | Scala 3.3 LTS（JDK 8 互換、2027-09 まで）、JDK 25 | — | Bolt 1 の前 |
 | TS-02 | エフェクト（BE-07） | **ZIO を採らず**、`Future` ＋ `Either` | ZIO 2 | BE-07 | Bolt 1 の前 |
 | TS-03 | イベントストア系の依存 | BE-03・BE-04 の結果に従う（A または B の一式） | — | BE-03、BE-04 | Bolt 1 の前 |
 | TS-04 | GraphQL ライブラリ | Sangria ＋ circe | Caliban | BE-06 | Bolt 1 の前 |

@@ -1,6 +1,18 @@
 # Docs Update Log
 
 ## 2026-11-04
+* **Verification**: [bolt_plan-1](/development/bolt_plan-1.md) を human:kakimomokuri が検証
+* **Verification**: [011-test-strategy](/adr/011-test-strategy.md) を human:kakimomokuri が検証
+* **Verification**: [009-frontend-stack](/adr/009-frontend-stack.md) を human:kakimomokuri が検証
+* **Verification**: [008-data-store-layout-and-conventions](/adr/008-data-store-layout-and-conventions.md) を human:kakimomokuri が検証
+* **Verification**: [007-language-runtime-and-build](/adr/007-language-runtime-and-build.md) を human:kakimomokuri が検証
+* **Verification**: [006-graphql-and-public-endpoint](/adr/006-graphql-and-public-endpoint.md) を human:kakimomokuri が検証
+* **Verification**: [005-clock-and-business-date](/adr/005-clock-and-business-date.md) を human:kakimomokuri が検証
+* **Verification**: [004-personal-data-handling](/adr/004-personal-data-handling.md) を human:kakimomokuri が検証
+* **Verification**: [003-command-idempotency-and-identifiers](/adr/003-command-idempotency-and-identifiers.md) を human:kakimomokuri が検証
+* **Verification**: [002-event-store-and-delivery](/adr/002-event-store-and-delivery.md) を human:kakimomokuri が検証
+* **Verification**: [001-pattern-and-module-structure](/adr/001-pattern-and-module-structure.md) を human:kakimomokuri が検証
+* **Update**: [bolt_plan-1](/development/bolt_plan-1.md) を更新（claude-code/claude-sonnet-5-5）
 * **Update**: [設計成果物_review_20261104](/review/設計成果物_review_20261104.md) を更新（claude-code/claude-sonnet-5-5）
 * **Update**: [ui_design](/design/ui_design.md) を更新（claude-code/claude-sonnet-5-5）
 * **Update**: [test_strategy](/design/test_strategy.md) を更新（claude-code/claude-sonnet-5-5）

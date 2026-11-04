@@ -3,8 +3,10 @@ type: ADR
 title: "ADR-006: API 方式（GraphQL）と公開照会の分離"
 description: "API は GraphQL（Sangria + circe）とし、ログイン無しの追跡照会は別エンドポイント・別スキーマ・別バンドル・別ターゲットグループに分離する。"
 tags: [adr]
-status: draft
+status: stable
 generated: { by: claude-code/claude-sonnet-5-5, at: 2026-11-04T02:47:01Z }
+verified:
+  - { by: human:kakimomokuri, at: 2026-11-04T03:59:37Z }
 ---
 
 # ADR-006: API 方式（GraphQL）と公開照会の分離
@@ -15,9 +17,9 @@ API は GraphQL（Sangria + circe）とし、ログイン無しの追跡照会�
 
 ## ステータス
 
-提案中
+承認済み（2026-11-04、Bolt 1 の着手前ゲートとして）
 
-> **人の承認待ちです。** この ADR は設計書の「提案」（ADR 候補 BE-06・FE-04・IF-07・TS-04）を決定記録の形にしたもので、AI が起草しました。リスク台帳 R-08（アーキテクチャ判断）・R-01（外部ライブラリ）・R-02（認証）に従い、**承認されるまで決定として扱わず、実装の根拠にしません**。承認されたら本文のステータスを「承認済み」にし、`apply-okf` の `verify` で文書を `stable` にします。決定期限：Bolt 1 の前（GraphQL）、Bolt 8 の前（公開照会の防御）
+> **承認の範囲：** Bolt 1 の着手に必要な範囲です。 本 ADR の承認は **GraphQL の API 方式のみ**で、公開照会の分離（Bolt 8）は別に承認します。 以下は起草時の注記です。**元の注記：人の承認待ちです。** この ADR は設計書の「提案」（ADR 候補 BE-06・FE-04・IF-07・TS-04）を決定記録の形にしたもので、AI が起草しました。リスク台帳 R-08（アーキテクチャ判断）・R-01（外部ライブラリ）・R-02（認証）に従い、**承認されるまで決定として扱わず、実装の根拠にしません**。承認されたら本文のステータスを「承認済み」にし、`apply-okf` の `verify` で文書を `stable` にします。決定期限：Bolt 1 の前（GraphQL）、Bolt 8 の前（公開照会の防御）
 
 ## コンテキスト
 
