@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package cargotracker.booking.commandadapter.proto;
+
+// イベントの Envelope（型名・版・ペイロード。バックエンド 9.2）。
+// 互換性の規則：項目の追加は後方互換（既定値あり）。意味の変更や削除は新しい版を作り、旧版を読む変換を置く。
+message EventEnvelope {
+  string type_name    = 1;
+  int32  type_version = 2;
+  bytes  payload      = 3;
+}
+
+// BookingRegistered_V1。個人情報（氏名・住所・連絡先・メール）は載せない（NFR-S22）。荷主は ID と種別だけ。
+message BookingRegisteredV1 {
+  string event_id            = 1;  // ULID
+  int64  occurred_at_seconds = 2;
+  int32  occurred_at_nanos   = 3;
+  string booking_id          = 4;  // ULID
+  string booking_number      = 5;
+  string shipper_id          = 6;  // ULID
+  string shipper_kind        = 7;  // INDIVIDUAL
+  string cargo_kind          = 8;  // GENERAL
+  string item_name           = 9;
+  string weight_kg           = 10; // 10 進数の文字列（桁を保つ）
+  string length_cm           = 11;
+  string width_cm            = 12;
+  string height_cm           = 13;
+  int32  quantity            = 14;
+  string origin_port         = 15; // UN/LOCODE
+  string destination_port    = 16;
+  string preferred_handover  = 17; // ISO 8601 の日付
+  string deadline            = 18;
+  string actor_user_id       = 19; // 実行者（NFR-S10）。空はシステムの反応。V1 のまま項目を追加（後方互換）
+}
