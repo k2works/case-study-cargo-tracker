@@ -92,19 +92,19 @@ nav:
       - 設計成果物レビュー: review/設計成果物_review_20261104.md
   - ADR:
       - 概要: adr/index.md
-      - ADR-001: バックエンドのパターン・モジュール構成・Unit 間連携: adr/001-pattern-and-module-structure.md
-      - ADR-002: イベントストアと配信方式: adr/002-event-store-and-delivery.md
-      - ADR-003: コマンドの冪等性と識別子: adr/003-command-idempotency-and-identifiers.md
-      - ADR-004: 個人情報の扱い（荷主を CRUD にし、イベントに載せない）: adr/004-personal-data-handling.md
-      - ADR-005: 時刻と業務日付: adr/005-clock-and-business-date.md
-      - ADR-006: API 方式（GraphQL）と公開照会の分離: adr/006-graphql-and-public-endpoint.md
-      - ADR-007: 言語・実行環境・ビルド（Scala 3 LTS・JDK 21・sbt、ZIO は採らない）: adr/007-language-runtime-and-build.md
-      - ADR-008: データストアの構成とスキーマ規約: adr/008-data-store-layout-and-conventions.md
-      - ADR-009: フロントエンドの構成（React + TypeScript + Vite の SPA）: adr/009-frontend-stack.md
-      - ADR-010: クラウド・実行基盤・IaC・デプロイ戦略（AWS・ECS Fargate・Terraform・ローリング更新）: adr/010-cloud-runtime-and-iac.md
-      - ADR-011: テスト戦略（形状・水準・DB・E2E）: adr/011-test-strategy.md
-      - ADR-012: 税関と電子連携せず、通関結果を手入力で記録する: adr/012-customs-manual-entry.md
-      - ADR-013: 非機能要件の初期目標と測定（SLO・RPO/RTO・保持）: adr/013-nonfunctional-baseline.md
+      - "ADR-001: バックエンドのパターン・モジュール構成・Unit 間連携": adr/001-pattern-and-module-structure.md
+      - "ADR-002: イベントストアと配信方式": adr/002-event-store-and-delivery.md
+      - "ADR-003: コマンドの冪等性と識別子": adr/003-command-idempotency-and-identifiers.md
+      - "ADR-004: 個人情報の扱い（荷主を CRUD にし、イベントに載せない）": adr/004-personal-data-handling.md
+      - "ADR-005: 時刻と業務日付": adr/005-clock-and-business-date.md
+      - "ADR-006: API 方式（GraphQL）と公開照会の分離": adr/006-graphql-and-public-endpoint.md
+      - "ADR-007: 言語・実行環境・ビルド（Scala 3 LTS・JDK 21・sbt、ZIO は採らない）": adr/007-language-runtime-and-build.md
+      - "ADR-008: データストアの構成とスキーマ規約": adr/008-data-store-layout-and-conventions.md
+      - "ADR-009: フロントエンドの構成（React + TypeScript + Vite の SPA）": adr/009-frontend-stack.md
+      - "ADR-010: クラウド・実行基盤・IaC・デプロイ戦略（AWS・ECS Fargate・Terraform・ローリング更新）": adr/010-cloud-runtime-and-iac.md
+      - "ADR-011: テスト戦略（形状・水準・DB・E2E）": adr/011-test-strategy.md
+      - "ADR-012: 税関と電子連携せず、通関結果を手入力で記録する": adr/012-customs-manual-entry.md
+      - "ADR-013: 非機能要件の初期目標と測定（SLO・RPO/RTO・保持）": adr/013-nonfunctional-baseline.md
   - 記事:
       - 概要: article/index.md
       - モノリスアーキテクチャ実装比較:
