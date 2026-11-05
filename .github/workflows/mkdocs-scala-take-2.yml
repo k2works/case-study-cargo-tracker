@@ -1,0 +1,48 @@
+name: Deploy MkDocs (scala/take-2)
+
+# main の mkdocs.yml は gh-pages のルートへ公開する。
+# このブランチはサブディレクトリ scala/take-2/ へ公開し、main のサイトを上書きしない。
+
+on:
+  push:
+    branches:
+      - scala/take-2
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# gh-pages への push が競合しないよう直列化する
+concurrency:
+  group: gh-pages-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js latest
+        uses: actions/setup-node@v4
+        with:
+          node-version: latest
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build documentation
+        run: npm run docs:build
+
+      - name: Deploy to GitHub Pages (scala/take-2)
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          destination_dir: scala/take-2
+          keep_files: true
