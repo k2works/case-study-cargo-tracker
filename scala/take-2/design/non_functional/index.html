@@ -1,0 +1,9244 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="性能・容量・セキュリティ・可用性・保守運用・拡張性・使用性の非機能要件を、測定方法つきの数値で提案する草案。規模の仮置き、SLO、RPO/RTO、データ保持、ADR 候補 NF-01〜08 を含む。">
+      
+      
+        <meta name="author" content="Project Team">
+      
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+    
+    
+      
+        <title>非機能要件定義：国際貨物輸送管理システム - Case Study Cargo Tracker</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/css/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#_1" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Case Study Cargo Tracker" class="md-header__button md-logo" aria-label="Case Study Cargo Tracker" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Case Study Cargo Tracker
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              非機能要件定義：国際貨物輸送管理システム
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/k2works/case-study-cargo-tracker" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    case-study-cargo-tracker
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../strategy/" class="md-tabs__link">
+          
+  
+  
+  戦略
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../requirements/" class="md-tabs__link">
+          
+  
+  
+  要件
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../" class="md-tabs__link">
+          
+  
+  
+  設計
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../development/" class="md-tabs__link">
+          
+  
+  
+  開発
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../operation/" class="md-tabs__link">
+          
+  
+  
+  運用
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../review/" class="md-tabs__link">
+          
+  
+  
+  レビュー
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../adr/" class="md-tabs__link">
+          
+  
+  
+  ADR
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../article/" class="md-tabs__link">
+          
+  
+  
+  記事
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../reference/" class="md-tabs__link">
+          
+  
+  
+  リファレンス
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../template/" class="md-tabs__link">
+          
+  
+  
+  テンプレート
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--lifted md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Case Study Cargo Tracker" class="md-nav__button md-logo" aria-label="Case Study Cargo Tracker" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Case Study Cargo Tracker
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/k2works/case-study-cargo-tracker" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    case-study-cargo-tracker
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    戦略
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    戦略
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../strategy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../strategy/business_architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ビジネスアーキテクチャ
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../strategy/inception-deck/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    インセプションデッキ
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    要件
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    要件
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../requirements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../requirements/requirements_definition/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    要件定義書
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../requirements/business_usecase/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ビジネスユースケース
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../requirements/system_usecase/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    システムユースケース
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../requirements/user_story/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ユーザーストーリー
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../requirements/units/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Unit 定義
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../requirements/risk_register/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リスク台帳
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    設計
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    設計
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ドメイン用語集
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    開発
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    開発
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/release_plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリース計画
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/aidlc_migration_plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI-DLC 移行計画
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/bolt_plan-1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bolt 計画 1
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    運用
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    運用
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    レビュー
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    レビュー
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../review/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../review/%E3%83%89%E3%83%A1%E3%82%A4%E3%83%B3%E3%83%A2%E3%83%87%E3%83%AB%E5%88%86%E6%9E%90_review_20260331/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ドメインモデル分析レビュー
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../review/%E8%A8%AD%E8%A8%88%E6%88%90%E6%9E%9C%E7%89%A9_review_20261104/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    設計成果物レビュー
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--draft"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ADR
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adr/001-pattern-and-module-structure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-001: バックエンドのパターン・モジュール構成・Unit 間連携
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adr/002-event-store-and-delivery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-002: イベントストアと配信方式
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adr/003-command-idempotency-and-identifiers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-003: コマンドの冪等性と識別子
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adr/004-personal-data-handling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-004: 個人情報の扱い（荷主を CRUD にし、イベントに載せない）
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adr/005-clock-and-business-date/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-005: 時刻と業務日付
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adr/006-graphql-and-public-endpoint/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-006: API 方式（GraphQL）と公開照会の分離
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adr/007-language-runtime-and-build/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-007: 言語・実行環境・ビルド（Scala 3 LTS・JDK 21・sbt、ZIO は採らない）
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adr/008-data-store-layout-and-conventions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-008: データストアの構成とスキーマ規約
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adr/009-frontend-stack/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-009: フロントエンドの構成（React + TypeScript + Vite の SPA）
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adr/010-cloud-runtime-and-iac/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-010: クラウド・実行基盤・IaC・デプロイ戦略（AWS・ECS Fargate・Terraform・ローリング更新）
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--draft"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adr/011-test-strategy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-011: テスト戦略（形状・水準・DB・E2E）
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adr/012-customs-manual-entry/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-012: 税関と電子連携せず、通関結果を手入力で記録する
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--draft"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adr/013-nonfunctional-baseline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-013: 非機能要件の初期目標と測定（SLO・RPO/RTO・保持）
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--draft"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    記事
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    記事
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_9_2" id="__nav_9_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    モノリスアーキテクチャ実装比較
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_9_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    モノリスアーキテクチャ実装比較
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/monolith-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/monolith-architecture/01-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 1 章 モノリスアーキテクチャの全体像
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/monolith-architecture/02-iteration-01/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 2 章 IT1 荷主登録と貨物予約の基盤
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/monolith-architecture/03-iteration-02/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 3 章 IT2 特殊貨物と予約確定
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/monolith-architecture/04-iteration-03/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 4 章 IT3 輸送見積と経路設計への引き渡し
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/monolith-architecture/05-iteration-04/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 5 章 IT4 航海スケジュール検索と経路候補算出
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/monolith-architecture/06-iteration-05/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 6 章 IT5 経路の選択・確定・紐付け
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/monolith-architecture/07-iteration-06/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 7 章 IT6 法人割引と精算処理
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/monolith-architecture/08-iteration-07/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 8 章 IT7 追跡番号発行と荷役作業記録
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/monolith-architecture/09-iteration-08/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 9 章 IT8 引取記録・追跡照会・状態手動更新
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/monolith-architecture/10-iteration-09/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 10 章 IT9 遅延・破損・紛失の例外処理
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/monolith-architecture/11-iteration-10/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 11 章 IT10 輸送料金算出とリリース 2.0
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/monolith-architecture/12-comparison/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 12 章 10 言語横断まとめ
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_9_3" id="__nav_9_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    関数型ドメインモデリング
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_9_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    関数型ドメインモデリング
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/functional-domain-modeling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/functional-domain-modeling/01-functional-domain-modeling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 1 章 関数型ドメインモデリングとは
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/functional-domain-modeling/02-iteration-01/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 2 章 IT1 型で守る土台をつくる
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/functional-domain-modeling/03-iteration-02/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 3 章 IT2 貨物予約と特殊貨物
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/functional-domain-modeling/04-iteration-03/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 4 章 IT3 航海スケジュールと経路候補算出
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/functional-domain-modeling/05-iteration-04/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 5 章 IT4 経路確定から予約確定まで
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/functional-domain-modeling/06-iteration-05/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 6 章 IT5 追跡と荷役
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/functional-domain-modeling/07-iteration-06/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 7 章 IT6 輸送例外の登録と解決
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/functional-domain-modeling/08-iteration-07/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 8 章 IT7 料金算出と精算
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/functional-domain-modeling/09-iteration-08/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 9 章 IT8 実務品質への引き上げ
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/functional-domain-modeling/10-summary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 10 章 型で守れたもの・守れなかったもの
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_9_4" id="__nav_9_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    実践 AI 駆動開発
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_9_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    実践 AI 駆動開発
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/ai-driven-development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/ai-driven-development/01-overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 1 章 AI 駆動開発の全体像
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/ai-driven-development/02-skills/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 2 章 Skill 体系で開発プロセスを固定する
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/ai-driven-development/03-iteration-lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 3 章 イテレーションのライフサイクル
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/ai-driven-development/04-ralph-loop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 4 章 Ralph Loop と自律実行の境界
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/ai-driven-development/05-destructive-verification/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 5 章 TDD と破壊検証
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/ai-driven-development/06-review/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 6 章 マルチパースペクティブレビュー
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/ai-driven-development/07-rules-into-checks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 7 章 規則を検査に落とす
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/ai-driven-development/08-memory-and-debt/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 8 章 記憶と負債
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/ai-driven-development/09-startup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 9 章 立ち上げ IT1〜IT3
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/ai-driven-development/10-end-to-end/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 10 章 一気通貫 IT4〜IT10
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/ai-driven-development/11-completion-and-billing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 11 章 補完と精算 IT11〜IT15
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/ai-driven-development/12-rectification/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 12 章 整流 IT16〜IT17
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/ai-driven-development/13-shipping/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 13 章 出荷と是正 IT18〜IT20
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/ai-driven-development/14-conclusion/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 14 章 何が効き、何が効かなかったか
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_9_5" id="__nav_9_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    XP によるドメイン駆動設計の実践
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_9_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    XP によるドメイン駆動設計の実践
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/xp-domain-driven-design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/xp-domain-driven-design/01-xp-and-ddd/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 1 章 XP と DDD をなぜ一緒に語るのか
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/xp-domain-driven-design/02-inception-to-contexts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 2 章 インセプションデッキから境界づけられたコンテキストへ
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/xp-domain-driven-design/03-releases-and-stories/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 3 章 小さなリリースとイテレーション計画
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/xp-domain-driven-design/04-development-strategy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 4 章 開発戦略 7 局面で TDD の入口を切り替える
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/xp-domain-driven-design/05-acceptance-to-aggregates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 5 章 受入テストから集約を立ち上げる
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/xp-domain-driven-design/06-value-objects-and-invariants/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 6 章 値オブジェクトと不変条件
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/xp-domain-driven-design/07-refactoring-splits-the-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 7 章 リファクタリングでモデルが割れる
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/xp-domain-driven-design/08-guarding-boundaries/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 8 章 境界を守る五つの手段
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/xp-domain-driven-design/09-ubiquitous-language/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 9 章 ユビキタス言語はどこで離れるか
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/xp-domain-driven-design/10-executable-design-docs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 10 章 設計ドキュメントを実行可能にする
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/xp-domain-driven-design/11-continuous-integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 11 章 継続的インテグレーションが暴いたもの
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/xp-domain-driven-design/12-retrospectives/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 12 章 ふりかえりが設計を変えた
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/xp-domain-driven-design/13-conclusion/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 13 章 XP は DDD に何を与えたか
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_9_6" id="__nav_9_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    エンタープライズアーキテクチャの 4 観点
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_9_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    エンタープライズアーキテクチャの 4 観点
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/enterprise-architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/enterprise-architecture/01-four-viewpoints/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 1 章 4 つの観点と貫通の地図
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/enterprise-architecture/02-business-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 2 章 ビジネスモデルとケイパビリティ
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/enterprise-architecture/03-capability-to-story/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 3 章 ケイパビリティから境界づけられたコンテキストへ
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/enterprise-architecture/04-context-map/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 4 章 コンテキストマップ 7 つの業務領域
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/enterprise-architecture/05-hexagonal-layers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 5 章 ヘキサゴナルの 4 層とポートの置き場所
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/enterprise-architecture/06-context-integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 6 章 コンテキスト間連携 ACL とドメインイベント
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/enterprise-architecture/07-data-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 7 章 データモデルとテーブルの所有
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/enterprise-architecture/08-persistence-and-cqrs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 8 章 CQRS の読み書き分離とスキーマの進化
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/enterprise-architecture/09-runtime-stack/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 9 章 ランタイムスタックと環境戦略
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/enterprise-architecture/10-architecture-governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 10 章 アーキテクチャを検査に落とす
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/enterprise-architecture/11-traceability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 11 章 4 観点の貫通と破れた箇所
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_9_7" id="__nav_9_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    実践 DDD in Spring Boot
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_9_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    実践 DDD in Spring Boot
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/practical-ddd-spring-boot/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/practical-ddd-spring-boot/01-overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 1 章 Spring Boot で DDD を書く土台
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/practical-ddd-spring-boot/02-iteration-01/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 2 章 IT1 ウォーキングスケルトンを 1 本通す
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/practical-ddd-spring-boot/03-iteration-02/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 3 章 IT2 Cargo 集約と最初の ACL ポート
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/practical-ddd-spring-boot/04-iteration-03/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 4 章 IT3 航海スケジュールと経路設計への引き渡し
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/practical-ddd-spring-boot/05-iteration-04/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 5 章 IT4 経路候補算出
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/practical-ddd-spring-boot/06-iteration-05/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 6 章 IT5 経路の確定と予約への紐付け
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/practical-ddd-spring-boot/07-iteration-06/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 7 章 IT6 予約確定・追跡番号・荷役記録
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/practical-ddd-spring-boot/08-iteration-07/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 8 章 IT7 追跡照会・引取・法人荷主
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/practical-ddd-spring-boot/09-iteration-08/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 9 章 IT8 うまくいかなかったときを扱う
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/practical-ddd-spring-boot/10-iteration-09/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 10 章 IT9 荷主セルフサービスと特殊貨物
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/practical-ddd-spring-boot/11-iteration-10/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 11 章 IT10 遅延・破損・紛失の例外処理
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/practical-ddd-spring-boot/12-iteration-11/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 12 章 IT11 誤配の再設計と通関申告
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/practical-ddd-spring-boot/13-iteration-12/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 13 章 IT12 引取確認コードと引取記録の訂正
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/practical-ddd-spring-boot/14-iteration-13/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 14 章 IT13 Billing Context の立ち上げと金額の丸め
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/practical-ddd-spring-boot/15-iteration-14/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 15 章 IT14 請求から入金確認までを閉じる
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/practical-ddd-spring-boot/16-iteration-15/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 16 章 IT15 輸送中キャンセルの承認
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/practical-ddd-spring-boot/17-iteration-16/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 17 章 IT16 宣言した規則を検査に落とす
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/practical-ddd-spring-boot/18-iteration-17/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 18 章 IT17 数え上げた負債を返す
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/practical-ddd-spring-boot/19-iteration-18/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 19 章 IT18 Estimation Context の立ち上げ
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/practical-ddd-spring-boot/20-iteration-19/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 20 章 IT19 正典に届いていない実装を返す
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/practical-ddd-spring-boot/21-iteration-20/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 21 章 IT20 育つ負債を止める
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../article/practical-ddd-spring-boot/22-conclusion/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    第 22 章 20 イテレーションで積み上がったもの
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リファレンス
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    リファレンス
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%82%88%E3%81%84%E3%82%BD%E3%83%95%E3%83%88%E3%82%A6%E3%82%A7%E3%82%A2%E3%81%A8%E3%81%AF/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    よいソフトウェアとは
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%83%AD%E3%82%B8%E3%82%AB%E3%83%AB%E3%82%B7%E3%83%B3%E3%82%AD%E3%83%B3%E3%82%B0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ロジカルシンキング
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E9%96%8B%E7%99%BA%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    開発ガイド
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%83%93%E3%82%B8%E3%83%8D%E3%82%B9%E3%82%A2%E3%83%BC%E3%82%AD%E3%83%86%E3%82%AF%E3%83%81%E3%83%A3%E5%88%86%E6%9E%90%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ビジネスアーキテクチャ分析ガイド
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E8%A6%81%E4%BB%B6%E5%AE%9A%E7%BE%A9%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    要件定義ガイド
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%83%A6%E3%83%BC%E3%82%B9%E3%82%B1%E3%83%BC%E3%82%B9%E4%BD%9C%E6%88%90%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ユースケース作成ガイド
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%82%A2%E3%83%BC%E3%82%AD%E3%83%86%E3%82%AF%E3%83%81%E3%83%A3%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    アーキテクチャ設計ガイド
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%83%87%E3%83%BC%E3%82%BF%E3%83%A2%E3%83%87%E3%83%AB%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    データモデル設計ガイド
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%83%89%E3%83%A1%E3%82%A4%E3%83%B3%E3%83%A2%E3%83%87%E3%83%AB%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ドメインモデル設計ガイド
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/UI%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UI 設計ガイド
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%83%86%E3%82%B9%E3%83%88%E6%88%A6%E7%95%A5%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    テスト戦略ガイド
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E9%9D%9E%E6%A9%9F%E8%83%BD%E8%A6%81%E4%BB%B6%E5%AE%9A%E7%BE%A9%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    非機能要件定義ガイド
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E9%81%8B%E7%94%A8%E8%A6%81%E4%BB%B6%E5%AE%9A%E7%BE%A9%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    運用要件定義ガイド
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%82%A4%E3%83%B3%E3%83%95%E3%83%A9%E8%A8%AD%E8%A8%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    インフラ設計ガイド
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%82%B3%E3%83%BC%E3%83%87%E3%82%A3%E3%83%B3%E3%82%B0%E3%81%A8%E3%83%86%E3%82%B9%E3%83%88%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    コーディングとテストガイド
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%82%A8%E3%82%AF%E3%82%B9%E3%83%88%E3%83%AA%E3%83%BC%E3%83%A0%E3%83%97%E3%83%AD%E3%82%B0%E3%83%A9%E3%83%9F%E3%83%B3%E3%82%B0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    エクストリームプログラミング
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/AI-DLC%E5%B0%8E%E5%85%A5%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI-DLC 導入ガイド
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E9%96%8B%E7%99%BA%E3%82%AC%E3%82%A4%E3%83%89_AI-DLC%E7%89%88/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    開発ガイド（AI-DLC 版）
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9%E3%83%BB%E3%82%A4%E3%83%86%E3%83%AC%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E8%A8%88%E7%94%BB%E3%82%AC%E3%82%A4%E3%83%89_AI-DLC%E7%89%88/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリース・イテレーション計画ガイド（AI-DLC 版）
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%83%A6%E3%83%BC%E3%82%B9%E3%82%B1%E3%83%BC%E3%82%B9%E4%BD%9C%E6%88%90%E3%82%AC%E3%82%A4%E3%83%89_AI-DLC%E7%89%88/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ユースケース作成ガイド（AI-DLC 版）
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%82%B3%E3%83%BC%E3%83%87%E3%82%A3%E3%83%B3%E3%82%B0%E3%81%A8%E3%83%86%E3%82%B9%E3%83%88%E3%82%AC%E3%82%A4%E3%83%89_AI-DLC%E7%89%88/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    コーディングとテストガイド（AI-DLC 版）
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/AI-DLC%E7%94%A8%E8%AA%9E%E9%9B%86/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI-DLC 用語集
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%83%89%E3%82%AD%E3%83%A5%E3%83%A1%E3%83%B3%E3%83%88%E6%A7%8B%E6%88%90%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ドキュメント構成ガイド
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/OKF%E5%B0%8E%E5%85%A5%E3%82%AC%E3%82%A4%E3%83%89_V0.2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OKF 導入ガイド（v0.2）
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリースガイド
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9%E3%83%BB%E3%82%A4%E3%83%86%E3%83%AC%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E8%A8%88%E7%94%BB%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリース・イテレーション計画ガイド
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E7%92%B0%E5%A2%83%E5%A4%89%E6%95%B0%E7%AE%A1%E7%90%86%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    環境変数管理ガイド
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E8%A8%80%E8%AA%9E%E5%88%A5%E9%96%8B%E7%99%BA%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    言語別開発ガイド
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/Java%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E7%92%B0%E5%A2%83%E6%A7%8B%E7%AF%89%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Java アプリケーション環境構築ガイド
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/TypeScript%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E7%92%B0%E5%A2%83%E6%A7%8B%E7%AF%89%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TypeScript アプリケーション環境構築ガイド
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E9%81%8B%E7%94%A8%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88%E4%BD%9C%E6%88%90%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    運用スクリプト作成ガイド
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/CodexCLIMCP%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E9%96%8B%E7%99%BA%E3%83%95%E3%83%AD%E3%83%BC/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Codex CLI MCP アプリケーション開発フロー
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/CodexCLIMCP%E3%82%B5%E3%83%BC%E3%83%90%E3%83%BC%E8%A8%AD%E5%AE%9A%E6%89%8B%E9%A0%86/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Codex CLI MCP サーバー設定手順
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/SonarQube%E3%83%AD%E3%83%BC%E3%82%AB%E3%83%AB%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SonarQube ローカル環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/Vim%E6%93%8D%E4%BD%9C%E3%83%9E%E3%83%8B%E3%83%A5%E3%82%A2%E3%83%AB/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vim 操作マニュアル
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E7%B5%8C%E5%96%B6%E6%88%A6%E7%95%A5%E5%88%86%E6%9E%90%E3%82%AC%E3%82%A4%E3%83%89/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    経営戦略分析ガイド
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E4%BC%81%E6%A5%AD%E7%B5%8C%E5%96%B6%E8%AB%96/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    企業経営論
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/%E9%81%8B%E5%96%B6%E7%AE%A1%E7%90%86/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    運営管理
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    テンプレート
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    テンプレート
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    概要
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E3%81%BE%E3%81%9A%E3%81%93%E3%82%8C%E3%82%92%E8%AA%AD%E3%82%82%E3%81%86%E3%83%AA%E3%82%B9%E3%83%88/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    まずこれを読もうリスト
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E3%83%93%E3%82%B8%E3%83%8D%E3%82%B9%E3%82%A2%E3%83%BC%E3%82%AD%E3%83%86%E3%82%AF%E3%83%81%E3%83%A3/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ビジネスアーキテクチャ
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E8%A6%81%E4%BB%B6%E5%AE%9A%E7%BE%A9/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    要件定義
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E5%AE%8C%E5%85%A8%E5%BD%A2%E5%BC%8F%E3%81%AE%E3%83%A6%E3%83%BC%E3%82%B9%E3%82%B1%E3%83%BC%E3%82%B9/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    完全形式のユースケース
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E8%A8%AD%E8%A8%88/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    設計
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/ADR/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E3%82%A4%E3%83%B3%E3%82%BB%E3%83%97%E3%82%B7%E3%83%A7%E3%83%B3%E3%83%87%E3%83%83%E3%82%AD/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    インセプションデッキ
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E3%82%A4%E3%83%86%E3%83%AC%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E8%A8%88%E7%94%BB/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    イテレーション計画
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E3%82%A4%E3%83%86%E3%83%AC%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E5%AE%8C%E4%BA%86%E5%A0%B1%E5%91%8A%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    イテレーション完了報告書
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9%E8%A8%88%E7%94%BB/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリース計画
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9%E5%AE%8C%E4%BA%86%E5%A0%B1%E5%91%8A%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    リリース完了報告書
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E9%96%8B%E7%99%BA%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    アプリケーション開発環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E9%96%8B%E7%99%BA%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    開発環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/AWS%E3%82%B9%E3%83%86%E3%83%BC%E3%82%B8%E3%83%B3%E3%82%B0%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AWS ステージング環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/AWS%E3%83%97%E3%83%AD%E3%83%80%E3%82%AF%E3%82%B7%E3%83%A7%E3%83%B3%E7%92%B0%E5%A2%83%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E6%89%8B%E9%A0%86%E6%9B%B8/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AWS プロダクション環境セットアップ手順書
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E4%BA%8B%E4%BE%8B%E5%88%86%E6%9E%90/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    事例分析
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/%E4%BC%81%E6%A5%AD%E5%88%86%E6%9E%90/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    企業分析
+  
+
+    
+  </span>
+  
+  
+    
+  
+  
+    <span class="md-status md-status--stable"></span>
+  
+
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../template/README.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    README
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="_1">非機能要件定義：国際貨物輸送管理システム<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h1>
+<p><a href="../architecture_backend/">バックエンド</a>・<a href="../architecture_frontend/">フロントエンド</a>・<a href="../architecture_infrastructure/">インフラストラクチャ</a>のアーキテクチャ、<a href="../data-model/">データモデル</a>、<a href="../tech_stack/">技術スタック</a>、<a href="../test_strategy/">テスト戦略</a>が「非機能要件定義で決める」として残した数値を、<strong>測定できる形</strong>で提案します。</p>
+<ul>
+<li>入力: <a href="../../requirements/requirements_definition/">要件定義書</a>、<a href="../../strategy/inception-deck/">インセプションデッキ</a>、<a href="../../requirements/units/">Unit 定義</a>の NFR、<a href="../../requirements/user_story/">ユーザーストーリー</a>、<a href="../../requirements/risk_register/">リスク台帳</a>、上記の設計書</li>
+<li><strong>本書の数値は、ほとんどが AI の仮置きです</strong>。インセプションデッキにもユーザーストーリーにも、利用者数・件数・応答時間・稼働率の数値はありません（リリース計画も「目標値は未定」としています）。そのため、各要件に<strong>根拠</strong>と<strong>状態</strong>（確定／提案）を付けました。<strong>提案はビジネス側との合意を取る前提の叩き台</strong>で、合意前に SLA として扱いません</li>
+<li>ケーススタディのため、実在の契約・法令・規制は確認できません。法定の保存期間などは<strong>創作せず、担当者に確認する項目</strong>として挙げます（R-05 の考え方と同じ）</li>
+<li>認証・認可の<strong>方式</strong>は BE-09（R-02）で人が決めます。本書は方式に依存する要件（パスワードの保存方式、セッションかトークンか）を決めず、<strong>満たすべき性質</strong>だけを書きます</li>
+</ul>
+<hr />
+<h2 id="1">1. 読み方<a class="headerlink" href="#1" title="Permanent link">&para;</a></h2>
+<h3 id="11">1.1 状態の区分<a class="headerlink" href="#11" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">状態</th>
+<th style="text-align: left;">意味</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>確定</strong></td>
+<td style="text-align: left;">要件定義・ストーリー・Unit 定義にすでに書かれている。変更するには要件側の合意が要る</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>提案</strong></td>
+<td style="text-align: left;">本書が根拠を示して置いた数値。合意前の叩き台</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>要確認</strong></td>
+<td style="text-align: left;">数値を置けない、または置いた数値が人の判断（業務・法令・運用体制）に依存する</td>
+</tr>
+</tbody>
+</table>
+<h3 id="12-id">1.2 要件 ID<a class="headerlink" href="#12-id" title="Permanent link">&para;</a></h3>
+<p><code>NFR-</code> + 分類（P 性能、C 容量、S セキュリティ、A 可用性・信頼性、M 保守・運用、E 拡張性、U 使用性、D データ）+ 連番。テスト戦略・監視・ADR からこの ID で参照します。</p>
+<h3 id="13">1.3 品質特性の優先順位（提案）<a class="headerlink" href="#13" title="Permanent link">&para;</a></h3>
+<p>インセプションデッキの優先順位（品質 &gt; スコープ &gt; 時間 &gt; コスト、「品質を犠牲にした早期リリースは許容しない」）と、データの性質から、次の順を提案します。トレードオフが生じたときの判断基準になります。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">順位</th>
+<th style="text-align: left;">品質特性</th>
+<th style="text-align: left;">理由</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;">1</td>
+<td style="text-align: left;"><strong>正確性・完全性</strong>（金額、状態遷移、イベントの損失なし）</td>
+<td style="text-align: left;">誤りが業務上の損失に直結する。イベントは消せず、失うと復元できない（インフラ 5.1）</td>
+</tr>
+<tr>
+<td style="text-align: center;">2</td>
+<td style="text-align: left;"><strong>セキュリティ</strong>（荷主の情報、認証、公開照会）</td>
+<td style="text-align: left;">業務データの漏洩と、ログイン無しの入口</td>
+</tr>
+<tr>
+<td style="text-align: center;">3</td>
+<td style="text-align: left;"><strong>追跡の鮮度と可用性</strong>（反映時間、公開照会の稼働）</td>
+<td style="text-align: left;">ビジネス目標 2「24 時間いつでも確認」・3・5</td>
+</tr>
+<tr>
+<td style="text-align: center;">4</td>
+<td style="text-align: left;">保守性・運用性</td>
+<td style="text-align: left;">「変更を楽に安全にできる」ことが、よいソフトウェアの条件</td>
+</tr>
+<tr>
+<td style="text-align: center;">5</td>
+<td style="text-align: left;">性能（処理能力）・コスト</td>
+<td style="text-align: left;">規模が小さい前提（第 2 章）のため、過剰に作り込まない</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>この順位の含意</strong>：規模が小さい前提では、処理能力の要件は厳しくなりません。本システムで難しい NFR は、<strong>反映遅延・正確性・可用性・セキュリティ</strong>です。</p>
+</blockquote>
+<hr />
+<h2 id="2">2. 規模の前提（仮置き）<a class="headerlink" href="#2" title="Permanent link">&para;</a></h2>
+<p>性能・容量の数値を導くための<strong>入力</strong>です。実際の値は事業側から得られていません。ここを直せば、第 3・4 章の数値は導き直せます（NF-01）。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">#</th>
+<th style="text-align: left;">項目</th>
+<th style="text-align: left;">仮置き</th>
+<th style="text-align: left;">根拠（導き方）</th>
+<th style="text-align: left;">状態</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">V1</td>
+<td style="text-align: left;">年間の貨物予約数</td>
+<td style="text-align: left;"><strong>12,000 件</strong>（月 1,000 件、1 営業日あたり約 50 件）</td>
+<td style="text-align: left;">値が無いため仮置き。国際貨物輸送会社 1 社が荷主を直接持つ規模を想定</td>
+<td style="text-align: left;">要確認</td>
+</tr>
+<tr>
+<td style="text-align: left;">V2</td>
+<td style="text-align: left;">運用期間</td>
+<td style="text-align: left;">5 年（ガイドの保持例）〜 7 年</td>
+<td style="text-align: left;">データ保持の検討用（NFR-D01）</td>
+<td style="text-align: left;">要確認</td>
+</tr>
+<tr>
+<td style="text-align: left;">V3</td>
+<td style="text-align: left;">社内利用者（ログインする人）</td>
+<td style="text-align: left;"><strong>約 50 人</strong>、同時に約 30 人</td>
+<td style="text-align: left;">6 ロール（営業・経路設計・追跡管理・荷役・経理＋荷主）。荷主のログインは少数と想定</td>
+<td style="text-align: left;">要確認</td>
+</tr>
+<tr>
+<td style="text-align: left;">V4</td>
+<td style="text-align: left;">1 予約あたりのイベント数</td>
+<td style="text-align: left;">約 <strong>40</strong> 件（予約 10、経路 8、追跡 15、精算 7）</td>
+<td style="text-align: left;">ドメインモデルの内部イベントから概算</td>
+<td style="text-align: left;">提案</td>
+</tr>
+<tr>
+<td style="text-align: left;">V5</td>
+<td style="text-align: left;">年間のイベント数</td>
+<td style="text-align: left;">約 <strong>48 万</strong>件（V1 × V4）。7 年で約 336 万</td>
+<td style="text-align: left;">算術</td>
+<td style="text-align: left;">提案</td>
+</tr>
+<tr>
+<td style="text-align: left;">V6</td>
+<td style="text-align: left;">荷役作業の記録</td>
+<td style="text-align: left;">1 貨物あたり約 6 回 → 年約 <strong>7.2 万</strong>回</td>
+<td style="text-align: left;">受領・積込・荷降し・引取（経由港で増える）</td>
+<td style="text-align: left;">提案</td>
+</tr>
+<tr>
+<td style="text-align: left;">V7</td>
+<td style="text-align: left;">公開の追跡照会</td>
+<td style="text-align: left;">1 貨物あたり約 30 回（荷主＋荷受人）→ 年約 <strong>36 万</strong>回、平均 0.012 回/秒</td>
+<td style="text-align: left;">ビジネス目標 2・3（照会と問い合わせ削減）から</td>
+<td style="text-align: left;">要確認</td>
+</tr>
+<tr>
+<td style="text-align: left;">V8</td>
+<td style="text-align: left;">航海スケジュール</td>
+<td style="text-align: left;">有効な航海 約 <strong>2,000</strong> 件、港 約 <strong>200</strong>、運送会社 約 <strong>30</strong></td>
+<td style="text-align: left;">経路算出の入力規模。値が無いため仮置き</td>
+<td style="text-align: left;">要確認</td>
+</tr>
+<tr>
+<td style="text-align: left;">V9</td>
+<td style="text-align: left;">運用時間帯</td>
+<td style="text-align: left;">追跡照会は <strong>24 時間 365 日</strong>。業務画面は<strong>平日日中を主</strong>とするが、荷役作業員は港の都合で時間帯が広い</td>
+<td style="text-align: left;">デッキ（24 時間いつでも）、荷役の性質</td>
+<td style="text-align: left;">要確認</td>
+</tr>
+</tbody>
+</table>
+<h3 id="21-v1v8">2.1 ピークの設計値（V1〜V8 から）<a class="headerlink" href="#21-v1v8" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">対象</th>
+<th style="text-align: left;">平均</th>
+<th style="text-align: left;"><strong>設計ピーク</strong>（平均より大きく余裕を取った値）</th>
+<th style="text-align: left;">導き方</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">コマンド（Mutation）</td>
+<td style="text-align: left;">約 0.015 回/秒（年約 48 万イベント ÷ 秒数）</td>
+<td style="text-align: left;"><strong>5 回/秒</strong></td>
+<td style="text-align: left;">予約・荷役・精算の合計。荷役は船の入港で集中する（1 隻で数十件を数十分で記録する想定でも約 0.1 回/秒）</td>
+</tr>
+<tr>
+<td style="text-align: left;">業務画面のクエリ</td>
+<td style="text-align: left;">数回/秒</td>
+<td style="text-align: left;"><strong>20 回/秒</strong></td>
+<td style="text-align: left;">同時利用者 30 人が、数秒に 1 回操作する想定</td>
+</tr>
+<tr>
+<td style="text-align: left;">公開の追跡照会</td>
+<td style="text-align: left;">約 0.01 回/秒</td>
+<td style="text-align: left;"><strong>10 回/秒</strong></td>
+<td style="text-align: left;">遅延通知の直後に荷主・荷受人が集中して見る場面を想定</td>
+</tr>
+<tr>
+<td style="text-align: left;">経路候補の算出</td>
+<td style="text-align: left;">1 営業日あたり約 50〜100 回</td>
+<td style="text-align: left;"><strong>1 回/秒</strong></td>
+<td style="text-align: left;">経路設計者の手作業。再算出（US10）を含む</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>結果として、<strong>API は小さな構成（各 2 タスク）で足ります</strong>。数値は低くても、第 5 章の可用性と第 4 章の反映遅延が構成を決めます。</p>
+</blockquote>
+<hr />
+<h2 id="3">3. 性能要件<a class="headerlink" href="#3" title="Permanent link">&para;</a></h2>
+<p>応答時間は<strong>サーバー側の処理時間</strong>（ALB に到着してから応答を返すまで）を基準にし、画面の体感はフロントエンドの指標（NFR-U）で別に持ちます。</p>
+<h3 id="31">3.1 応答時間<a class="headerlink" href="#31" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">ID</th>
+<th style="text-align: left;">対象</th>
+<th style="text-align: left;">指標</th>
+<th style="text-align: left;">目標（提案）</th>
+<th style="text-align: left;">出典・根拠</th>
+<th style="text-align: left;">測定</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">NFR-P01</td>
+<td style="text-align: left;">業務画面の Query（一覧・詳細。読み取りモデルへの問い合わせ）</td>
+<td style="text-align: left;">p95／p99</td>
+<td style="text-align: left;"><strong>500 ms／1 s 以内</strong></td>
+<td style="text-align: left;">読み取りモデルに最適化した表（データモデル）。ガイドの「API 応答 &lt; 1 秒」を厳しくした</td>
+<td style="text-align: left;">アプリの指標、負荷テスト</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-P02</td>
+<td style="text-align: left;">Mutation（イベントの永続化まで。読み取りへの反映は含まない）</td>
+<td style="text-align: left;">p95／p99</td>
+<td style="text-align: left;"><strong>1 s／2 s 以内</strong></td>
+<td style="text-align: left;">集約アクターの永続化 1 回＋冪等性キーの確認。ガイドの「予約作成 &lt; 2 秒」</td>
+<td style="text-align: left;">同上</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-P03</td>
+<td style="text-align: left;"><strong>公開の追跡照会</strong></td>
+<td style="text-align: left;">p95／p99</td>
+<td style="text-align: left;"><strong>500 ms／1 s 以内</strong>。コールドスタートを含めない</td>
+<td style="text-align: left;">荷主・荷受人が弱い回線で使う。画面の描画は別（NFR-U02）</td>
+<td style="text-align: left;">合成監視、負荷テスト</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-P04</td>
+<td style="text-align: left;">航海スケジュールの検索（US07）</td>
+<td style="text-align: left;">p95</td>
+<td style="text-align: left;"><strong>1 s 以内</strong></td>
+<td style="text-align: left;">V8 の規模。索引つきの表</td>
+<td style="text-align: left;">負荷テスト</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-P05</td>
+<td style="text-align: left;"><strong>経路候補の算出</strong>（US08・US10。<code>RouteFinder</code>）</td>
+<td style="text-align: left;">p95／<strong>上限</strong></td>
+<td style="text-align: left;"><strong>5 s 以内／30 s で打ち切り</strong></td>
+<td style="text-align: left;">V8 の規模。上限は経路設計者が待てる時間の目安。打ち切ったときは<strong>打ち切ったことを利用者に示す</strong>（候補が無いことと区別する）</td>
+<td style="text-align: left;">プロパティテストの入力規模、負荷テスト</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-P06</td>
+<td style="text-align: left;">見積の経路概算（US01。U-03 への問い合わせ）</td>
+<td style="text-align: left;">p95</td>
+<td style="text-align: left;"><strong>3 s 以内</strong></td>
+<td style="text-align: left;">営業担当者が荷主と話しながら使う</td>
+<td style="text-align: left;">同上</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-P07</td>
+<td style="text-align: left;">ログイン（U-01）</td>
+<td style="text-align: left;">p95</td>
+<td style="text-align: left;"><strong>1 s 以内</strong></td>
+<td style="text-align: left;">ガイドの「ユーザー認証 &lt; 1 秒」。パスワード検証のコストを含む</td>
+<td style="text-align: left;">同上</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-P08</td>
+<td style="text-align: left;">起動からレディまで（各実行物）</td>
+<td style="text-align: left;">最大</td>
+<td style="text-align: left;"><strong>60 s 以内</strong></td>
+<td style="text-align: left;">デプロイの切り離し待ち時間（インフラ 4.3）と合わせる</td>
+<td style="text-align: left;">デプロイ時の計測</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>経路算出の打ち切り</strong>（NFR-P05）は性能のための上限で、<strong>業務の制約条件ではありません</strong>。ただし打ち切りで候補が落ちると「経路が無い」と誤って見えるため、探索の上限（乗り継ぎ回数・候補数。ドメインモデル 6.4 で NFR 待ち）は<strong>制約条件を足す・省くことにならない</strong>形で決めます（R-04）。具体値は人が決めます（要確認）。</p>
+</blockquote>
+<h3 id="32">3.2 反映遅延（結果整合）<a class="headerlink" href="#32" title="Permanent link">&para;</a></h3>
+<p>最も重要な性能要件です。U-04 の測定基準「荷役作業から追跡情報への反映時間」と、画面の「版が追いつくまで待つ」の上限を決めます。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">ID</th>
+<th style="text-align: left;">対象</th>
+<th style="text-align: left;">指標</th>
+<th style="text-align: left;">目標（提案）</th>
+<th style="text-align: left;">根拠</th>
+<th style="text-align: left;">測定</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">NFR-P10</td>
+<td style="text-align: left;"><strong>反映遅延</strong>（イベントの発生時刻 → 読み取りモデルへの反映時刻）</td>
+<td style="text-align: left;">p95／p99</td>
+<td style="text-align: left;"><strong>5 s／15 s 以内</strong></td>
+<td style="text-align: left;">荷主が見る追跡情報の鮮度は秒単位で足りる。ただし「即座」（デッキ・U-04）を、人が待たされない範囲として仮置き</td>
+<td style="text-align: left;">アプリの指標（反映遅延）。ウォーキングスケルトンで実測</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-P11</td>
+<td style="text-align: left;">画面が反映を待つ上限</td>
+<td style="text-align: left;">最大</td>
+<td style="text-align: left;"><strong>15 s</strong>（NFR-P10 の p99 に合わせる）。超えたら「反映待ち」を表示し、手動で更新できる</td>
+<td style="text-align: left;">フロントエンド 3.2、UI 設計</td>
+<td style="text-align: left;">E2E</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-P12</td>
+<td style="text-align: left;">画面の再取得の間隔</td>
+<td style="text-align: left;">—</td>
+<td style="text-align: left;"><strong>500 ms から始め、徐々に間隔を延ばし</strong>（上限 2 s）、NFR-P11 まで</td>
+<td style="text-align: left;">サーバーへの負荷と体感のバランス</td>
+<td style="text-align: left;">同上</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-P13</td>
+<td style="text-align: left;">購読の停滞（Streams・キューの滞留）</td>
+<td style="text-align: left;">最大</td>
+<td style="text-align: left;"><strong>60 s を超えたら警告</strong></td>
+<td style="text-align: left;">反映遅延の先行指標（インフラ 7.1）</td>
+<td style="text-align: left;">アラーム</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>BE-03 の判断基準にする</strong>：Bolt 1 のウォーキングスケルトンで NFR-P10 を実測し、方式 A（DynamoDB Streams + Lambda）で p99 が目標を超えるなら、A′ または B へ移る根拠になる。<strong>目標を守るために方式を決める</strong>（逆ではない）</li>
+<li>目標値の確定は、<strong>事業側の「どれだけ遅れると問い合わせが増えるか」の確認</strong>を要する（要確認）</li>
+</ul>
+<h3 id="33">3.3 バッチ・非同期<a class="headerlink" href="#33" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">ID</th>
+<th style="text-align: left;">対象</th>
+<th style="text-align: left;">目標（提案）</th>
+<th style="text-align: left;">根拠</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">NFR-P20</td>
+<td style="text-align: left;">読み取りモデルの再構築</td>
+<td style="text-align: left;">V5 のイベント数（7 年分 約 336 万）で <strong>1 時間以内</strong></td>
+<td style="text-align: left;">RTO（NFR-A05）の前提。ステージングで実測する（検査 I6）</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-P21</td>
+<td style="text-align: left;">通関の留置 3 日超過の判定（US29 AC-07）・支払い期限超過の判定（US23 AC-03）</td>
+<td style="text-align: left;">超過後 <strong>1 時間以内</strong>に警告・通知</td>
+<td style="text-align: left;">日次でなくてよいが、翌日になるのは遅い（保管料の発生を防ぐ、UC21 3a2）</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-P22</td>
+<td style="text-align: left;">通知の送信（メール）</td>
+<td style="text-align: left;">イベント発生後 <strong>60 s 以内</strong>に送信を試行</td>
+<td style="text-align: left;">ビジネス目標 3・5（例外発生から荷主への通知までの時間）。<strong>実際の到達は外部の通知システムに依存</strong>し、本システムの保証外</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4">4. 容量・データ要件<a class="headerlink" href="#4" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">ID</th>
+<th style="text-align: left;">対象</th>
+<th style="text-align: left;">要件（提案）</th>
+<th style="text-align: left;">根拠</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">NFR-C01</td>
+<td style="text-align: left;">イベントストア</td>
+<td style="text-align: left;">V5 の増加（年 約 48 万件）を<strong>無期限に</strong>保持できる。1 イベントを数 KB とすると 7 年で数 GB（概算）</td>
+<td style="text-align: left;">小さい。DynamoDB・PostgreSQL のどちらでも課題にならない</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-C02</td>
+<td style="text-align: left;">読み取りモデル</td>
+<td style="text-align: left;">7 年分の履歴を含めて <strong>数 GB 以内</strong>（概算）。追跡イベントの履歴は予約あたり 数十行</td>
+<td style="text-align: left;">同上</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-C03</td>
+<td style="text-align: left;">同時接続（ログイン済み）</td>
+<td style="text-align: left;"><strong>30</strong>（V3）。設計上限は <strong>100</strong></td>
+<td style="text-align: left;">同時利用者の約 3 倍の余裕</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-C04</td>
+<td style="text-align: left;">設計ピークに対する余裕</td>
+<td style="text-align: left;">負荷テストで、第 2.1 節の<strong>設計ピークの 2 倍</strong>を、NFR-P01〜P03 を満たしたまま処理できる</td>
+<td style="text-align: left;">通常の余裕。10 倍以上は NFR-E01 の拡張で扱う</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-C05</td>
+<td style="text-align: left;">添付・ファイル</td>
+<td style="text-align: left;"><strong>扱わない</strong>（要件に無い。危険物申告の書類などが要るなら別途）</td>
+<td style="text-align: left;">スコープ</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>容量が小さいため、<strong>スナップショット・パーティショニング・キャッシュは当初置きません</strong>（バックエンド 4.1）。必要になった指標（イベント数の多い集約の復元時間など）を NFR-M の監視に載せ、閾値を超えたら導入します。</p>
+</blockquote>
+<hr />
+<h2 id="5">5. 可用性・信頼性要件<a class="headerlink" href="#5" title="Permanent link">&para;</a></h2>
+<h3 id="51-slo">5.1 稼働率（SLO）<a class="headerlink" href="#51-slo" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">ID</th>
+<th style="text-align: left;">対象</th>
+<th style="text-align: left;">目標（提案）</th>
+<th style="text-align: left;">許容停止時間（30 日）</th>
+<th style="text-align: left;">根拠</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">NFR-A01</td>
+<td style="text-align: left;"><strong>公開の追跡照会</strong></td>
+<td style="text-align: left;"><strong>99.9%</strong>／月</td>
+<td style="text-align: left;">約 43 分</td>
+<td style="text-align: left;">デッキ「24 時間いつでも確認」。荷主の不安を直接解消する入口で、業務画面と独立して落ちにくくする（インフラ 1.1）</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-A02</td>
+<td style="text-align: left;">業務画面・API（営業・経路・追跡・経理・認証）</td>
+<td style="text-align: left;"><strong>99.5%</strong>／月</td>
+<td style="text-align: left;">約 3.6 時間</td>
+<td style="text-align: left;">利用者は社内が中心。99.9% はコストが桁違い（構成の冗長化が増える）ため、まず 99.5%</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-A03</td>
+<td style="text-align: left;">荷役作業の記録（モバイル）</td>
+<td style="text-align: left;">NFR-A02 と同じ。<strong>ただし港の運用時間帯は計画停止をしない</strong></td>
+<td style="text-align: left;">—</td>
+<td style="text-align: left;">荷役は時間帯が広い（V9）。時間帯は要確認</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-A04</td>
+<td style="text-align: left;">計画停止</td>
+<td style="text-align: left;"><strong>ゼロを目標</strong>（ローリング更新とスキーマ変更の分割で、停止なしにデプロイする）</td>
+<td style="text-align: left;">—</td>
+<td style="text-align: left;">インフラ 4.3。例外は事前通知・営業時間外</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>稼働率の<strong>測定対象と除外</strong>（計画停止、外部システム障害、利用者側の回線）は、SLA にする前に合意が要ります。外部の通知・決済の障害は本システムの稼働率に含めず、<strong>失敗が見える</strong>ことを要件にします（NFR-A12）。</p>
+</blockquote>
+<h3 id="52">5.2 復旧目標<a class="headerlink" href="#52" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">ID</th>
+<th style="text-align: left;">障害の種類</th>
+<th style="text-align: left;">RPO</th>
+<th style="text-align: left;">RTO</th>
+<th style="text-align: left;">方式（IF-06）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">NFR-A05</td>
+<td style="text-align: left;"><strong>データの破損・誤削除・リージョンの障害</strong></td>
+<td style="text-align: left;">イベントストア <strong>15 分以内</strong>、RDS <strong>15 分以内</strong></td>
+<td style="text-align: left;"><strong>4 時間以内</strong>（イベントストアを復旧し、読み取りモデルを再構築）</td>
+<td style="text-align: left;">バックアップ＆リストアから始める。再構築の所要時間が RTO の主要部分（NFR-P20）</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-A06</td>
+<td style="text-align: left;"><strong>AZ（アベイラビリティゾーン）の障害</strong></td>
+<td style="text-align: left;">0（同期レプリカ）</td>
+<td style="text-align: left;"><strong>5 分以内</strong>（自動切り替え）</td>
+<td style="text-align: left;">RDS Multi-AZ、ECS を複数 AZ に配置、DynamoDB は標準で複数 AZ</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-A07</td>
+<td style="text-align: left;">1 つの実行物（タスク）の障害</td>
+<td style="text-align: left;">0</td>
+<td style="text-align: left;"><strong>1 分以内</strong>（再起動・入れ替え）</td>
+<td style="text-align: left;">ECS のヘルスチェック。タスクは最低 2 つ</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-A08</td>
+<td style="text-align: left;">読み取りモデルの損失・破損</td>
+<td style="text-align: left;">0（イベントから再作成）</td>
+<td style="text-align: left;"><strong>1 時間以内</strong>（NFR-P20）</td>
+<td style="text-align: left;">再構築。公開照会は再構築中も<strong>古い値で応答する</strong>か、停止するかを決める（要確認）</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>RPO の 15 分は、DynamoDB のポイントインタイム復旧や RDS の自動バックアップが前提とする粒度です（<strong>実際の粒度は着手時に確認</strong>）。0 に近づけるのは費用が大きく、V1 の規模では過剰と判断しました</li>
+<li><strong>復旧の手順は実際に回して</strong>所要時間を測る（検査 I6）。手順書に書いただけにしない</li>
+</ul>
+<h3 id="53">5.3 信頼性・障害許容<a class="headerlink" href="#53" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">ID</th>
+<th style="text-align: left;">要件（提案）</th>
+<th style="text-align: left;">根拠</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">NFR-A10</td>
+<td style="text-align: left;"><strong>イベントを失わない</strong>：永続化に成功してから成功を返す。成功を返したイベントは、AZ 障害でも失われない</td>
+<td style="text-align: left;">正確性が最優先（1.3）</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-A11</td>
+<td style="text-align: left;"><strong>二重に処理しない</strong>：コマンドは冪等（再送で二重に登録しない）。購読側は同じイベントを 2 回処理しても結果が同じ。保持期間は NFR-D02</td>
+<td style="text-align: left;">バックエンド 4.5・6.2</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-A12</td>
+<td style="text-align: left;"><strong>外部システムの失敗が業務の状態を巻き込まない</strong>。通知・決済の失敗は記録し、再試行し、<strong>失敗が誰かに見える</strong>（待避先の件数がアラームになる）。握りつぶさない</td>
+<td style="text-align: left;">R-01、バックエンド 6.5・9.3</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-A13</td>
+<td style="text-align: left;"><strong>再試行の上限と待避</strong>：購読の適用失敗は、指数バックオフで <strong>5 回</strong>再試行し、待避先へ。待避先の件数が 0 より大きければ警告</td>
+<td style="text-align: left;">バックエンド 6.2。回数は仮</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-A14</td>
+<td style="text-align: left;"><strong>過負荷でヘルスチェックを落とさない</strong>：公開照会の回数制限・同時実行制限の対象からヘルスチェックを除く。過負荷のときも 200 を返す</td>
+<td style="text-align: left;">インフラ 5.3・検査 I4</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-A15</td>
+<td style="text-align: left;"><strong>公開照会が業務側の障害に巻き込まれない</strong>：別のターゲットグループ、別のバンドル。業務側が停止しても、公開照会は読み取りモデルが生きている限り応答する</td>
+<td style="text-align: left;">インフラ 5.3、FE-04</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-A16</td>
+<td style="text-align: left;"><strong>新旧の版が同時に動く時間でも壊れない</strong>：新しい版のイベントを旧版が読める（読む側を先にデプロイ）。直前の版に対して検査する</td>
+<td style="text-align: left;">インフラ 4.3・検査 I5</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-A17</td>
+<td style="text-align: left;"><strong>同一集約への同時書き込み</strong>：コマンドを処理するタスクが複数になる場合に、同じ集約を 2 つのタスクが同時に書く可能性を扱う</td>
+<td style="text-align: left;">下の注</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>NFR-A17 の注（重要な未決事項）</strong>：タスクを最低 2 つにする（NFR-A07）と、バックエンド BE-12 の「まずローカルモード（クラスターなし）」では、<strong>同じ集約アクターが 2 つのタスクに同時に存在しうる</strong>（デプロイ中の入れ替えを含む）。イベントストアの連番の衝突で片方が失敗するはずだが、失敗時の挙動（アクターの停止・再試行・応答）は<strong>PoC で確かめる必要がある</strong>（要確認）。結果次第で、NFR 上の理由から BE-12 を「クラスターモード（シャーディング）」に変える可能性があります（NF-05）。可用性の要件が、アーキテクチャ判断 BE-12 に<strong>逆流する</strong>点です。</p>
+</blockquote>
+<hr />
+<h2 id="6">6. セキュリティ要件<a class="headerlink" href="#6" title="Permanent link">&para;</a></h2>
+<p>認証・認可の方式は BE-09（R-02）で人が決めます。ここでは<strong>方式を問わず満たすべき性質</strong>と、守る資産を定義します。</p>
+<h3 id="61">6.1 守る資産とリスク<a class="headerlink" href="#61" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">資産</th>
+<th style="text-align: center;">機密性</th>
+<th style="text-align: center;">完全性</th>
+<th style="text-align: center;">可用性</th>
+<th style="text-align: left;">主な脅威</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">荷主の個人情報（氏名・住所・連絡先・メール）</td>
+<td style="text-align: center;"><strong>高</strong></td>
+<td style="text-align: center;">中</td>
+<td style="text-align: center;">中</td>
+<td style="text-align: left;">漏洩、不正取得、イベントや log への混入</td>
+</tr>
+<tr>
+<td style="text-align: left;">認証情報（パスワードのハッシュ、セッション）</td>
+<td style="text-align: center;"><strong>高</strong></td>
+<td style="text-align: center;"><strong>高</strong></td>
+<td style="text-align: center;">中</td>
+<td style="text-align: left;">総当たり、窃取、ユーザー列挙</td>
+</tr>
+<tr>
+<td style="text-align: left;">イベントストア（予約・追跡・精算の履歴）</td>
+<td style="text-align: center;">中</td>
+<td style="text-align: center;"><strong>高</strong></td>
+<td style="text-align: center;"><strong>高</strong></td>
+<td style="text-align: left;">改ざん、削除（唯一の真実）</td>
+</tr>
+<tr>
+<td style="text-align: left;">金額・精算情報</td>
+<td style="text-align: center;">中</td>
+<td style="text-align: center;"><strong>高</strong></td>
+<td style="text-align: center;">中</td>
+<td style="text-align: left;">不正な料金・割引、二重請求</td>
+</tr>
+<tr>
+<td style="text-align: left;">追跡情報（公開部分）</td>
+<td style="text-align: center;">低</td>
+<td style="text-align: center;">中</td>
+<td style="text-align: center;"><strong>高</strong>（24 時間）</td>
+<td style="text-align: left;">追跡番号の推測、過負荷</td>
+</tr>
+<tr>
+<td style="text-align: left;">接続情報・鍵</td>
+<td style="text-align: center;"><strong>高</strong></td>
+<td style="text-align: center;"><strong>高</strong></td>
+<td style="text-align: center;">中</td>
+<td style="text-align: left;">リポジトリ・イメージ・ログへの混入（R-10）</td>
+</tr>
+</tbody>
+</table>
+<h3 id="62">6.2 認証・認可・監査<a class="headerlink" href="#62" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">ID</th>
+<th style="text-align: left;">要件</th>
+<th style="text-align: left;">状態</th>
+<th style="text-align: left;">根拠・測定</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">NFR-S01</td>
+<td style="text-align: left;">認証に <strong>5 回連続で失敗</strong>したらアカウントを一時ロックする。成功で失敗回数は 0 に戻る</td>
+<td style="text-align: left;"><strong>確定</strong></td>
+<td style="text-align: left;">US31 AC-01・02</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-S02</td>
+<td style="text-align: left;">ロック中も、正しいパスワードで入っても<strong>認証情報の誤りと同じメッセージ</strong>を返す。アカウントの存在・ロック状態を知らせない。応答の<strong>時間差</strong>でも区別できない</td>
+<td style="text-align: left;"><strong>確定</strong>（メッセージ）／提案（時間差）</td>
+<td style="text-align: left;">US31 AC-03。時間差は列挙攻撃への対策として追加</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-S03</td>
+<td style="text-align: left;">ロックの解除は <strong>30 分</strong>の経過または管理者の解除</td>
+<td style="text-align: left;">提案（AI の仮定）</td>
+<td style="text-align: left;">US31 AC-04 の「一定時間」が未定義（要確認）</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-S04</td>
+<td style="text-align: left;">パスワードは<strong>適応型のハッシュ</strong>で保存する（平文・可逆暗号・高速ハッシュは不可）。アルゴリズムとパラメータは BE-09</td>
+<td style="text-align: left;">提案</td>
+<td style="text-align: left;">R-02。検査：保存値がハッシュ形式</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-S05</td>
+<td style="text-align: left;">パスワードの長さは <strong>12 文字以上</strong>を提案。複雑性の強制より長さと既知の漏洩パスワードの拒否を優先する</td>
+<td style="text-align: left;">提案（要確認）</td>
+<td style="text-align: left;">公開されている指針（NIST SP 800-63B など）の考え方。具体は BE-09</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-S06</td>
+<td style="text-align: left;">セッション（またはトークン）の有効期間：<strong>アイドル 30 分、絶対 12 時間</strong>を出発点にする。荷役作業員の現場端末は <strong>8 時間シフトを途切れず使える</strong>ようにする（延長の方式は BE-09）</td>
+<td style="text-align: left;">提案（要確認）</td>
+<td style="text-align: left;">方式は BE-09。値は業務の運用に依存</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-S07</td>
+<td style="text-align: left;">ログアウト後、戻る操作で業務画面が<strong>表示されない</strong>（キャッシュさせない）</td>
+<td style="text-align: left;"><strong>確定</strong></td>
+<td style="text-align: left;">US27 AC-02</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-S08</td>
+<td style="text-align: left;"><strong>認可はユースケースの入口</strong>で、ロールと操作の表に従う。<strong>入力検証より先</strong>。権限の無いロールは、不正な入力を送っても<strong>入力の仕様ではなく認可のエラー</strong>を受ける</td>
+<td style="text-align: left;">提案</td>
+<td style="text-align: left;">バックエンド 4.3・8.1。検査 A8</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-S09</td>
+<td style="text-align: left;">画面で隠した操作を直接送っても、バックエンドが拒む。URL の直打ちは 403</td>
+<td style="text-align: left;"><strong>確定</strong></td>
+<td style="text-align: left;">US26 AC-04、検査 F6</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-S10</td>
+<td style="text-align: left;"><strong>監査ログ</strong>：ログイン成功・失敗・ロック・解除・無効化を追記専用で残す。予約・経路・追跡・精算の<strong>すべてのコマンドに実行者（利用者 ID）と時刻</strong>を残す。改ざんできない（追記専用、削除不可）</td>
+<td style="text-align: left;"><strong>確定</strong>（認証）／提案（コマンド）</td>
+<td style="text-align: left;">US31 AC-06、US26、データモデルのイベントの <code>actor_user_id</code>・<code>command_id</code></td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-S11</td>
+<td style="text-align: left;">重要な操作（キャンセルの承認、通関状態の変更、割引率の変更、アカウントの無効化）は<strong>理由つき</strong>で記録する</td>
+<td style="text-align: left;"><strong>確定</strong>（一部）</td>
+<td style="text-align: left;">US29 AC-02・03、US30 AC-03</td>
+</tr>
+</tbody>
+</table>
+<h3 id="63">6.3 データの保護<a class="headerlink" href="#63" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">ID</th>
+<th style="text-align: left;">要件</th>
+<th style="text-align: left;">状態</th>
+<th style="text-align: left;">根拠・測定</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">NFR-S20</td>
+<td style="text-align: left;">通信は <strong>TLS 1.2 以上</strong>（1.3 を優先）。HTTP は HTTPS へ転送。内部通信の暗号化は検討</td>
+<td style="text-align: left;">提案</td>
+<td style="text-align: left;">インフラ 5.4</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-S21</td>
+<td style="text-align: left;">保管時の暗号化：DynamoDB・RDS・S3 とバックアップ</td>
+<td style="text-align: left;">提案</td>
+<td style="text-align: left;">インフラ 5.4</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-S22</td>
+<td style="text-align: left;"><strong>個人情報はイベントに載せない</strong>。荷主の表にだけ置く。ログ・メトリクス・エラー文面にも出さない</td>
+<td style="text-align: left;">提案</td>
+<td style="text-align: left;">BE-10。検査：イベントのスキーマにフィールドが無い、ログの走査</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-S23</td>
+<td style="text-align: left;"><strong>個人情報の訂正・削除</strong>ができる（荷主の表）。イベントは消さない</td>
+<td style="text-align: left;">提案</td>
+<td style="text-align: left;">BE-10。削除の運用と法令は要確認</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-S24</td>
+<td style="text-align: left;">接続情報・鍵は<strong>リポジトリ・イメージ・ログに無い</strong>。実行時に Secrets Manager 等から与える。AI は値を読まない</td>
+<td style="text-align: left;"><strong>確定</strong></td>
+<td style="text-align: left;">R-10、検査 I1</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-S25</td>
+<td style="text-align: left;">実行物ごとに IAM ロールを分け、<strong>最小権限</strong>にする（command-api だけが Journal へ書ける、など）</td>
+<td style="text-align: left;">提案</td>
+<td style="text-align: left;">インフラ 5.4</td>
+</tr>
+</tbody>
+</table>
+<h3 id="64">6.4 公開エンドポイント（ログイン無しの追跡照会）<a class="headerlink" href="#64" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">ID</th>
+<th style="text-align: left;">要件</th>
+<th style="text-align: left;">状態</th>
+<th style="text-align: left;">根拠・測定</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">NFR-S30</td>
+<td style="text-align: left;">追跡番号は<strong>推測困難</strong>：乱数部 <strong>60 ビット以上</strong>（Base32 で 12 文字以上）。連番・日付・予約番号から導けない</td>
+<td style="text-align: left;">提案（要確認：形式は R-02 の承認時に決める）</td>
+<td style="text-align: left;">下の計算</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-S31</td>
+<td style="text-align: left;"><strong>回数制限</strong>：IP あたり <strong>60 回/分</strong>（WAF）。追跡番号あたり <strong>30 回/分</strong>（アプリ）。超えたら 429 と待つ案内。値は運用で調整</td>
+<td style="text-align: left;">提案</td>
+<td style="text-align: left;">V7 の設計ピーク（10 回/秒）は全体で、1 つの利用者はそれより遥かに少ない</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-S32</td>
+<td style="text-align: left;"><strong>存在しない番号と形式不正の番号で応答が変わらない</strong>（文面・状態コード・時間）</td>
+<td style="text-align: left;"><strong>確定</strong>（文面）／提案（コード・時間）</td>
+<td style="text-align: left;">US18 AC-03、バックエンド 8.2</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-S33</td>
+<td style="text-align: left;">応答に<strong>個人情報を含まない</strong>。公開スキーマは項目を固定する</td>
+<td style="text-align: left;">提案</td>
+<td style="text-align: left;">検査 A7</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-S34</td>
+<td style="text-align: left;">クエリの<strong>深さ・複雑さを制限</strong>し、イントロスペクションを無効にする</td>
+<td style="text-align: left;">提案</td>
+<td style="text-align: left;">バックエンド 8.2</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-S35</td>
+<td style="text-align: left;">公開パスは<strong>別のターゲットグループ</strong>に置き、過負荷が業務側を巻き込まない</td>
+<td style="text-align: left;">提案</td>
+<td style="text-align: left;">検査 I3</td>
+</tr>
+</tbody>
+</table>
+<p><strong>推測困難の根拠（NFR-S30）</strong>：運用 5 年で有効な追跡番号は約 6 万件（V1 × 5）。攻撃者が 1,000 の IP から、回数制限（60 回/分）の上限で 1 年間試すと、約 3×10¹⁰ 回。番号空間が 2⁶⁰（約 1.2×10¹⁸）なら、有効な番号に当たる期待回数は約 3×10¹⁰ × 6×10⁴ ÷ 1.2×10¹⁸ ≈ <strong>0.0016 回/年</strong>。60 ビットで十分、桁数を増やすほど人が打ち間違えやすい。<strong>打ちやすさ（荷役作業員の手入力、スキャン）との折り合い</strong>を人が決める。</p>
+<h3 id="65">6.5 脆弱性と開発プロセス<a class="headerlink" href="#65" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">ID</th>
+<th style="text-align: left;">要件（提案）</th>
+<th style="text-align: left;">測定</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">NFR-S40</td>
+<td style="text-align: left;">依存ライブラリとイメージを CI で走査する。<strong>重大／高</strong>の脆弱性は、それぞれ <strong>7 日／30 日以内</strong>に対処または例外を記録する</td>
+<td style="text-align: left;">CI の結果、台帳</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-S41</td>
+<td style="text-align: left;">セキュリティ検証の基準は、<strong>OWASP ASVS のレベル 2</strong> を出発点にする（認証・セッション・アクセス制御・入力検証・ログ）。公開前に公開エンドポイントを中心に検証する</td>
+<td style="text-align: left;">要確認：基準の採否は人が決める（NF-04）</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-S42</td>
+<td style="text-align: left;">OWASP Top 10 に相当する典型的な欠陥（注入、認可の抜け、機微なデータの露出）を、<strong>テスト戦略の攻撃者の視点の検査</strong>（U-01・公開照会）で確かめる</td>
+<td style="text-align: left;">テスト戦略 4・6.8</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="7">7. 保守性・運用性要件<a class="headerlink" href="#7" title="Permanent link">&para;</a></h2>
+<h3 id="71">7.1 ログと監視<a class="headerlink" href="#71" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">ID</th>
+<th style="text-align: left;">要件（提案）</th>
+<th style="text-align: left;">根拠</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">NFR-M01</td>
+<td style="text-align: left;"><strong>構造化ログ（JSON）</strong>。相関 ID（冪等性キー）・集約 ID・利用者 ID・イベント ID を載せる。個人情報と接続情報は出さない</td>
+<td style="text-align: left;">バックエンド 9.4、インフラ 7.2</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-M02</td>
+<td style="text-align: left;">ログレベルは ERROR（要対応）・WARN（異常だが継続）・INFO（業務の節目）・DEBUG（調査用。本番は既定で出さない）。ヘルスチェックの要求はアクセスログから除く</td>
+<td style="text-align: left;">インフラ 7.2</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-M03</td>
+<td style="text-align: left;">ログの保持：アプリケーションログ <strong>90 日</strong>、監査ログ <strong>13 か月</strong>（オンライン）。以降のアーカイブは NFR-D の保持に従う</td>
+<td style="text-align: left;">仮。法令は要確認</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-M04</td>
+<td style="text-align: left;">指標（インフラ 7.1）を Unit 別・実行物別に収集する：<strong>反映遅延</strong>、待避の件数、購読の停滞、API の要求数・エラー率・応答時間、業務エラー、認証の失敗・ロック、公開照会の制限到達</td>
+<td style="text-align: left;">測定基準（ビジネス目標 2〜6）の計測点</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-M05</td>
+<td style="text-align: left;"><strong>分散トレース</strong>は当初置かない（実行物が 4 つで、相関 ID で足りる）。必要が出たら導入を判断する</td>
+<td style="text-align: left;">技術スタック（OpenTelemetry は NFR 後に判断）</td>
+</tr>
+</tbody>
+</table>
+<h3 id="72">7.2 アラート<a class="headerlink" href="#72" title="Permanent link">&para;</a></h3>
+<p>重要度は 3 段階とし、<strong>通知先は運用体制の確定後に決めます</strong>（要確認：ケーススタディのため体制を想定するか）。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">重要度</th>
+<th style="text-align: left;">意味</th>
+<th style="text-align: left;">例（条件は仮）</th>
+<th style="text-align: left;">応答の目標</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Sev1</strong>（緊急）</td>
+<td style="text-align: left;">利用者に影響が出ている／出る</td>
+<td style="text-align: left;">公開照会の 5xx 率 <strong>&gt; 5%</strong>（1 分）。ヘルスチェックの連続失敗。イベントストアへの書き込み失敗。待避先が急増</td>
+<td style="text-align: left;"><strong>15 分以内</strong>に着手</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Sev2</strong>（警告）</td>
+<td style="text-align: left;">放置すると Sev1 になる</td>
+<td style="text-align: left;">反映遅延 p99 <strong>&gt; 15 s</strong>（5 分継続）。購読の停滞 <strong>&gt; 60 s</strong>。API の 5xx 率 <strong>&gt; 1%</strong>（5 分）。待避先の件数 <strong>&gt; 0</strong>。認証の失敗の急増</td>
+<td style="text-align: left;"><strong>営業時間内</strong>に着手</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Sev3</strong>（情報）</td>
+<td style="text-align: left;">傾向の把握</td>
+<td style="text-align: left;">回数制限への到達、依存の脆弱性の新規検出、容量の傾向</td>
+<td style="text-align: left;">週次で確認</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>応答の目標（15 分など）は<strong>人の体制に依存</strong>する。体制が無ければ自動復旧（NFR-A07）と記録だけにする</li>
+</ul>
+<h3 id="73">7.3 変更の容易さ<a class="headerlink" href="#73" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">ID</th>
+<th style="text-align: left;">要件（提案）</th>
+<th style="text-align: left;">根拠・測定</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">NFR-M10</td>
+<td style="text-align: left;"><strong>テスト</strong>：カバレッジはテスト戦略 5.1 に従う（ドメイン 90%、全体 80% など）。Comprehensive の Unit は守りを壊して赤になる確認を持つ</td>
+<td style="text-align: left;">テスト戦略</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-M11</td>
+<td style="text-align: left;"><strong>構造の規則を検査に落とす</strong>：Unit 間の依存、<code>domain</code> の import、イベント一覧、公開スキーマ、ロール × 操作（A1〜A9、F1〜F9、I1〜I8）</td>
+<td style="text-align: left;">テスト戦略 12</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-M12</td>
+<td style="text-align: left;"><strong>デプロイ</strong>：main への反映でステージングへ自動。本番は承認つきの手動。ロールバックは前の版のイメージに戻す（イベントは戻せないので旧版が新版のイベントを読めることを事前に検査）</td>
+<td style="text-align: left;">インフラ 4.3・6.3</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-M13</td>
+<td style="text-align: left;"><strong>変更の追跡</strong>：設計判断は ADR、設計書は <code>docs/design/</code>、変更は小さな単位で Git に残す。ドキュメントは OKF の検査を通る</td>
+<td style="text-align: left;">CLAUDE.md、OKF</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-M14</td>
+<td style="text-align: left;"><strong>依存の更新</strong>：サポート期限（技術スタック 6・7）の 6 か月前に更新を計画する。Node 22 の EOL（2027-04-30）など</td>
+<td style="text-align: left;">技術スタック</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-M15</td>
+<td style="text-align: left;"><strong>運用手順の整備</strong>：環境操作は運用手順書の定義済みタスクで行い、独自スクリプトを作らない（R-10）。読み取りモデルの再構築・待避先の再処理・マイグレーションの確認を手順化する</td>
+<td style="text-align: left;">インフラ 7.3</td>
+</tr>
+</tbody>
+</table>
+<h3 id="74">7.4 運用データ<a class="headerlink" href="#74" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">ID</th>
+<th style="text-align: left;">要件</th>
+<th style="text-align: left;">備考</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">NFR-M20</td>
+<td style="text-align: left;">スキーマ変更は <strong>追加 → 切り替え → 削除</strong> に分け、各段階で新旧のアプリが同時に動いても壊れない</td>
+<td style="text-align: left;">R-03、インフラ 4.3</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-M21</td>
+<td style="text-align: left;">マイグレーションは<strong>空の DB と、前の版まで適用済みの DB の両方</strong>で通る</td>
+<td style="text-align: left;">検査 I7</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-M22</td>
+<td style="text-align: left;">環境ごとの差は設定（接続先・ポート・タイムアウト）だけ。コードに環境名で分岐しない</td>
+<td style="text-align: left;">インフラ 5.2</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="8">8. データ要件（保持・バックアップ）<a class="headerlink" href="#8" title="Permanent link">&para;</a></h2>
+<p>法定の保存期間は<strong>創作せず</strong>、担当者への確認項目として挙げます。値は仮置きです。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">ID</th>
+<th style="text-align: left;">対象</th>
+<th style="text-align: left;">保持（提案）</th>
+<th style="text-align: left;">バックアップ</th>
+<th style="text-align: left;">根拠・確認</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">NFR-D01</td>
+<td style="text-align: left;"><strong>イベントストア</strong>（唯一の真実）</td>
+<td style="text-align: left;"><strong>最低 7 年</strong>（V2）。削除しない。アーカイブは読める形で</td>
+<td style="text-align: left;">ポイントインタイム復旧＋<strong>定期のエクスポート</strong>（月次）。削除保護</td>
+<td style="text-align: left;">帳簿・書類の保存に関する法令の期間を<strong>確認</strong>（要確認）。経理上の根拠を残す</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-D02</td>
+<td style="text-align: left;">冪等性キー</td>
+<td style="text-align: left;"><strong>7 日</strong></td>
+<td style="text-align: left;">不要（期限付き）</td>
+<td style="text-align: left;">クライアントの再送が起きうる期間。超えたキーは別の要求として扱う</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-D03</td>
+<td style="text-align: left;">監査ログ（認証・コマンド）</td>
+<td style="text-align: left;">オンライン <strong>13 か月</strong>、以降は <strong>7 年</strong>のアーカイブ（V2 に合わせる）</td>
+<td style="text-align: left;">RDS のバックアップに含む</td>
+<td style="text-align: left;">法令・社内規程を確認</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-D04</td>
+<td style="text-align: left;">待避したイベント</td>
+<td style="text-align: left;">解決後 <strong>90 日</strong></td>
+<td style="text-align: left;">不要</td>
+<td style="text-align: left;">調査用</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-D05</td>
+<td style="text-align: left;">読み取りモデル</td>
+<td style="text-align: left;">イベントに従う（作り直せる）</td>
+<td style="text-align: left;">RDS の自動バックアップ <strong>14 日</strong>（任意）</td>
+<td style="text-align: left;">失っても再構築（NFR-P20）</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-D06</td>
+<td style="text-align: left;">荷主（個人情報）</td>
+<td style="text-align: left;">取引の終了後、<strong>必要な期間</strong>（要確認）。訂正・削除の依頼に応じる</td>
+<td style="text-align: left;">RDS のバックアップ＋スナップショット</td>
+<td style="text-align: left;">個人情報の取り扱い方針を<strong>確認</strong>（BE-10）。バックアップからの削除の扱いも決める</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-D07</td>
+<td style="text-align: left;">認証（アカウント）</td>
+<td style="text-align: left;">アカウントの存続中。無効化後の保持は要確認</td>
+<td style="text-align: left;">同上</td>
+<td style="text-align: left;">—</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-D08</td>
+<td style="text-align: left;">アプリケーションログ</td>
+<td style="text-align: left;"><strong>90 日</strong>（NFR-M03）</td>
+<td style="text-align: left;">—</td>
+<td style="text-align: left;">—</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>バックアップの検査</strong>：復元して<strong>実際に読める</strong>ことを定期的に確かめる（初回はステージングの構築時、以降は四半期ごと）。手順書に書いただけにしない</li>
+<li>時刻の保存は<strong>UTC の瞬間</strong>、表示は業務タイムゾーン（BE-11。基準は要確認）。期限（日付）と到着（時刻付き）の比較は日付単位</li>
+</ul>
+<hr />
+<h2 id="9">9. 拡張性要件<a class="headerlink" href="#9" title="Permanent link">&para;</a></h2>
+<h3 id="91">9.1 スケーリング方針<a class="headerlink" href="#91" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">ID</th>
+<th style="text-align: left;">要件（提案）</th>
+<th style="text-align: left;">根拠</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">NFR-E01</td>
+<td style="text-align: left;"><strong>第 2.1 節の設計ピークの 10 倍</strong>（年 12 万件相当）まで、<strong>構成の見直しなしの台数・サイズの増加</strong>だけで対応できる</td>
+<td style="text-align: left;">小さい規模から始め、事業が伸びても作り直さない</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-E02</td>
+<td style="text-align: left;">API（command・query・identity）は<strong>ステートレス</strong>で、水平にスケールできる（ECS のタスク数）。command-api が複数でも集約が壊れない（NFR-A17 の結論に従う）</td>
+<td style="text-align: left;">インフラ 4.2</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-E03</td>
+<td style="text-align: left;">RDS は<strong>垂直</strong>（インスタンスのサイズ）→ 読み取り専用レプリカの順に拡張する。パーティショニングは、履歴の表が <strong>数千万行</strong>を超えそうになってから</td>
+<td style="text-align: left;">容量が小さい（第 4 章）</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-E04</td>
+<td style="text-align: left;">イベントストアは<strong>マネージドの水平スケール</strong>（DynamoDB のオンデマンド）または PostgreSQL の増強。Journal の容量を監視する</td>
+<td style="text-align: left;">BE-03</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-E05</td>
+<td style="text-align: left;">規模の見直しのトリガー：<strong>使用率が 60% を超えた状態が 1 週間続く</strong>／p95 が目標の 80% を超える／反映遅延が目標を超える。見直しの判断は人が行う</td>
+<td style="text-align: left;">運用の指標</td>
+</tr>
+</tbody>
+</table>
+<h3 id="92">9.2 想定する拡張シナリオ<a class="headerlink" href="#92" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">シナリオ</th>
+<th style="text-align: left;">影響する設計</th>
+<th style="text-align: left;">対応の方針</th>
+<th style="text-align: left;">現スコープ</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">港・運送会社・航海の増加</td>
+<td style="text-align: left;">U-03、<code>reference</code>、経路算出</td>
+<td style="text-align: left;">データの増加は容量内。探索の上限（NFR-P05）を見直す</td>
+<td style="text-align: left;">含む</td>
+</tr>
+<tr>
+<td style="text-align: left;">貨物種別の追加（例：新しい規制貨物）</td>
+<td style="text-align: left;">U-02・U-03、経路の制約</td>
+<td style="text-align: left;">受入条件に書いてから実装（R-04・R-05）。イベントの版を上げる</td>
+<td style="text-align: left;">含まない（要件が先）</td>
+</tr>
+<tr>
+<td style="text-align: left;">新しいロール</td>
+<td style="text-align: left;">U-01、ロール × 操作の表</td>
+<td style="text-align: left;">表に行を足し、検査（A8・F5）が全組み合わせを生成する</td>
+<td style="text-align: left;">含む</td>
+</tr>
+<tr>
+<td style="text-align: left;">通知チャネルの追加（SMS など）</td>
+<td style="text-align: left;"><code>NotificationPort</code></td>
+<td style="text-align: left;">ポートの実装を足す。業務ロジックは変えない</td>
+<td style="text-align: left;">含む（ポートまで）</td>
+</tr>
+<tr>
+<td style="text-align: left;">税関・港湾・決済機関との電子連携</td>
+<td style="text-align: left;">各ポート、BE-13</td>
+<td style="text-align: left;">スタブから実装へ。契約テストを足す（R-01）</td>
+<td style="text-align: left;">フェーズ 3</td>
+</tr>
+<tr>
+<td style="text-align: left;">実行物の分割（Unit ごと）</td>
+<td style="text-align: left;"><code>contract</code></td>
+<td style="text-align: left;"><code>contract</code> で境界を強制済みなので、実行物を分けられる</td>
+<td style="text-align: left;">含まない</td>
+</tr>
+<tr>
+<td style="text-align: left;">多言語・多通貨</td>
+<td style="text-align: left;">UI、金額の型</td>
+<td style="text-align: left;">日本語のみ・単一通貨を仮定。必要なら金額の型に通貨を持たせる</td>
+<td style="text-align: left;"><strong>含まない（要確認）</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;">大量データの分析</td>
+<td style="text-align: left;">読み取りモデル</td>
+<td style="text-align: left;">イベントから分析用の読み取りモデルを別に作る（CQRS の利点）</td>
+<td style="text-align: left;">含まない</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="10">10. 使用性・互換性要件<a class="headerlink" href="#10" title="Permanent link">&para;</a></h2>
+<h3 id="101">10.1 フロントエンドの性能・使用性<a class="headerlink" href="#101" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">ID</th>
+<th style="text-align: left;">要件（提案）</th>
+<th style="text-align: left;">根拠</th>
+<th style="text-align: left;">測定</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">NFR-U01</td>
+<td style="text-align: left;">業務画面：操作から画面の更新まで <strong>p95 で 1 s 以内</strong>（NFR-P01 に描画を加える）。反映待ちがあるときは待ち状態を表示する</td>
+<td style="text-align: left;">NFR-P01・P11</td>
+<td style="text-align: left;">E2E の計測</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-U02</td>
+<td style="text-align: left;"><strong>公開の追跡照会</strong>：4G 相当の回線で <strong>LCP 2.5 s 以内</strong>。初期の JS は <strong>100 KB（gzip）以内</strong></td>
+<td style="text-align: left;">荷主・荷受人の弱い回線。業務画面のコードを含めない（FE-04）</td>
+<td style="text-align: left;">Lighthouse 等、バンドルの検査（F7）</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-U03</td>
+<td style="text-align: left;">荷役作業の記録は、追跡番号・作業種別・日時・場所の<strong>最小の入力</strong>で完結し、熟練者が <strong>1 件 30 秒以内</strong>に記録できる</td>
+<td style="text-align: left;">UI 設計 P6、US15</td>
+<td style="text-align: left;">ユーザビリティの観察</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-U04</td>
+<td style="text-align: left;">主要な作業は、ログイン直後のホームから <strong>2 操作以内</strong>で担当の作業に辿り着ける</td>
+<td style="text-align: left;">フロントエンド 5.2</td>
+<td style="text-align: left;">E2E（F5）</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-U05</td>
+<td style="text-align: left;">入力の誤りは、<strong>どの項目がなぜ誤りか</strong>を示す。通信エラーと業務エラーを区別して案内する</td>
+<td style="text-align: left;">フロントエンド 7.1</td>
+<td style="text-align: left;">コンポーネントの検査</td>
+</tr>
+</tbody>
+</table>
+<h3 id="102">10.2 アクセシビリティ・互換性<a class="headerlink" href="#102" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">ID</th>
+<th style="text-align: left;">要件（提案）</th>
+<th style="text-align: left;">根拠</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">NFR-U10</td>
+<td style="text-align: left;"><strong>WCAG 2.2 AA</strong> を目標にする（ガイドは 2.1 AA。差分は小さいため新しい版を推奨）。キーボードだけで操作でき、状態（例外・留置・誤配）を色だけで伝えない</td>
+<td style="text-align: left;">フロントエンド 7.3。自動検査（axe-core）＋主要画面の手動確認</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-U11</td>
+<td style="text-align: left;">対応ブラウザ：Chrome・Edge・Firefox・Safari の<strong>最新 2 版</strong>。モバイルは<strong>幅 360 px 以上</strong>（荷役作業員の端末は未定）</td>
+<td style="text-align: left;">ガイドの例。端末は要確認</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-U12</td>
+<td style="text-align: left;">言語：日本語のみ</td>
+<td style="text-align: left;">AI の仮定（要確認）</td>
+</tr>
+<tr>
+<td style="text-align: left;">NFR-U13</td>
+<td style="text-align: left;">標準準拠：港湾・都市は <strong>UN/LOCODE（実在する値）</strong>、日時は <strong>ISO 8601</strong>、金額は通貨コード（ISO 4217）を持てる型</td>
+<td style="text-align: left;">インセプションデッキの原則「標準準拠」、R-09</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="11-unit-nfr">11. Unit 別の NFR まとめ<a class="headerlink" href="#11-unit-nfr" title="Permanent link">&para;</a></h2>
+<p>Unit 定義に書かれた NFR を、本書の要件 ID に対応づけます。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Unit</th>
+<th style="text-align: left;">Unit 定義の NFR</th>
+<th style="text-align: left;">本書の要件</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">U-01 認証</td>
+<td style="text-align: left;">同じメッセージ、監査ログ</td>
+<td style="text-align: left;">NFR-S01〜S07・S10・S11、NFR-P07</td>
+</tr>
+<tr>
+<td style="text-align: left;">U-02 貨物予約</td>
+<td style="text-align: left;">状態遷移を状態モデルどおりに、個人情報を扱う</td>
+<td style="text-align: left;">NFR-A10・A11（正確性）、NFR-S22・S23、NFR-P01・P02・P06、NFR-D06</td>
+</tr>
+<tr>
+<td style="text-align: left;">U-03 航海・経路設計</td>
+<td style="text-align: left;">制約条件 5 つをすべて満たす、<strong>算出時間の上限</strong></td>
+<td style="text-align: left;">NFR-P04・P05、NFR-C（V8）、R-04（制約を落とさない）</td>
+</tr>
+<tr>
+<td style="text-align: left;">U-04 荷役・追跡</td>
+<td style="text-align: left;"><strong>荷役記録の反映</strong>、追跡番号の推測に耐える</td>
+<td style="text-align: left;">NFR-P10〜P13、NFR-S30〜S35、NFR-A01・A14・A15、NFR-U02・U03</td>
+</tr>
+<tr>
+<td style="text-align: left;">U-05 精算</td>
+<td style="text-align: left;"><strong>端数処理を一意に</strong>、決済機関をスタブで</td>
+<td style="text-align: left;">NFR-A10・A11・A12、NFR-D01（金額の履歴）、テスト戦略の金額プロパティ</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="12">12. 測定と検証<a class="headerlink" href="#12" title="Permanent link">&para;</a></h2>
+<p>非機能要件は、<strong>測れること</strong>が要件です。各要件がどこで測られ、どこで守られるかを割り当てます。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">区分</th>
+<th style="text-align: left;">要件</th>
+<th style="text-align: left;">測定・検証</th>
+<th style="text-align: left;">実行のタイミング</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">応答時間</td>
+<td style="text-align: left;">NFR-P01〜P07</td>
+<td style="text-align: left;">負荷テスト（設計ピークの 2 倍。NFR-C04）。アプリの指標（p95・p99）を継続監視</td>
+<td style="text-align: left;">ステージング（Bolt ごとに主要経路）、本番は常時</td>
+</tr>
+<tr>
+<td style="text-align: left;">反映遅延</td>
+<td style="text-align: left;">NFR-P10〜P13</td>
+<td style="text-align: left;"><strong>ウォーキングスケルトンで実測</strong>。以降、指標とアラーム。E2E で「更新直後に一覧で見える」</td>
+<td style="text-align: left;">Bolt 1、各 Bolt、本番は常時</td>
+</tr>
+<tr>
+<td style="text-align: left;">経路算出</td>
+<td style="text-align: left;">NFR-P05</td>
+<td style="text-align: left;">入力規模（V8）を変えた性能テスト。プロパティテストの入力を同規模にする</td>
+<td style="text-align: left;">Bolt 5（U-03）</td>
+</tr>
+<tr>
+<td style="text-align: left;">再構築</td>
+<td style="text-align: left;">NFR-P20、NFR-A08</td>
+<td style="text-align: left;">ステージングで再構築を実際に回して所要時間を記録（検査 I6）</td>
+<td style="text-align: left;">ステージング構築後、四半期ごと</td>
+</tr>
+<tr>
+<td style="text-align: left;">稼働率</td>
+<td style="text-align: left;">NFR-A01〜A04</td>
+<td style="text-align: left;">合成監視（公開照会）＋ ALB の指標。月次で SLO の達成を確認</td>
+<td style="text-align: left;">本番</td>
+</tr>
+<tr>
+<td style="text-align: left;">復旧</td>
+<td style="text-align: left;">NFR-A05〜A08</td>
+<td style="text-align: left;"><strong>復旧訓練</strong>（バックアップからの復元、AZ 切り替え、タスク障害）</td>
+<td style="text-align: left;">ステージングで初回、以降 四半期ごと</td>
+</tr>
+<tr>
+<td style="text-align: left;">冪等・二重処理</td>
+<td style="text-align: left;">NFR-A11</td>
+<td style="text-align: left;">二重送信・同じイベントを 2 回流す検査（A6）、停止・再開</td>
+<td style="text-align: left;">統合テスト</td>
+</tr>
+<tr>
+<td style="text-align: left;">同時書き込み</td>
+<td style="text-align: left;">NFR-A17</td>
+<td style="text-align: left;">2 つのタスクで同じ集約へ同時にコマンドを送る PoC</td>
+<td style="text-align: left;">Bolt 1 の前〜Bolt 1</td>
+</tr>
+<tr>
+<td style="text-align: left;">セキュリティ</td>
+<td style="text-align: left;">NFR-S01〜S42</td>
+<td style="text-align: left;">テスト戦略の攻撃者の視点の検査、CI の走査、公開前の検証（ASVS L2）</td>
+<td style="text-align: left;">各 Bolt（U-01 は Bolt 2、公開照会は Bolt 8）、公開前</td>
+</tr>
+<tr>
+<td style="text-align: left;">使用性</td>
+<td style="text-align: left;">NFR-U01〜U13</td>
+<td style="text-align: left;">E2E、axe-core、Lighthouse、ユーザビリティの観察</td>
+<td style="text-align: left;">各 Bolt、画面ごと</td>
+</tr>
+<tr>
+<td style="text-align: left;">保守</td>
+<td style="text-align: left;">NFR-M10〜M22</td>
+<td style="text-align: left;">テスト戦略、CI、OKF の検査</td>
+<td style="text-align: left;">常時</td>
+</tr>
+<tr>
+<td style="text-align: left;">非同期の通知・判定</td>
+<td style="text-align: left;">NFR-P21（留置・支払い期限の判定）、NFR-P22（通知の送信）</td>
+<td style="text-align: left;">固定した <code>Clock</code> で超過後の判定を検査（L1・L5）。通知のスタブが送信を記録し、遅延を測る</td>
+<td style="text-align: left;">統合テスト（Bolt 15・20 など該当 Bolt）、本番は指標</td>
+</tr>
+<tr>
+<td style="text-align: left;">容量・データ</td>
+<td style="text-align: left;">NFR-C01〜C03、NFR-D01〜D04</td>
+<td style="text-align: left;">負荷テストのデータ量（V5 規模）、保持期間の自動削除の検査、エクスポートの読み出し確認（運用 OPR-F24）</td>
+<td style="text-align: left;">ステージング、月次</td>
+</tr>
+<tr>
+<td style="text-align: left;">保護・暗号化の構成</td>
+<td style="text-align: left;">NFR-S20（TLS）、NFR-S21（保管時暗号化）、NFR-S25（最小権限）</td>
+<td style="text-align: left;"><strong>攻撃者の視点のテストではなく IaC の検査・構成の走査</strong>（インフラ I1〜I3 と同じ層）</td>
+<td style="text-align: left;">ステージング構築時、CI</td>
+</tr>
+</tbody>
+</table>
+<h3 id="121">12.1 テスト戦略への反映<a class="headerlink" href="#121" title="Permanent link">&para;</a></h3>
+<p><a href="../test_strategy/">テスト戦略</a>の次の箇所が、本書で埋まります（反映する変更は別途）。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">テスト戦略</th>
+<th style="text-align: left;">本書</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">5.3 実行時間の目標</td>
+<td style="text-align: left;">性能テストの閾値は NFR-P01〜P07、設計ピークは 2.1</td>
+</tr>
+<tr>
+<td style="text-align: left;">TST-08 性能・負荷テスト</td>
+<td style="text-align: left;">対象と閾値を本書で定義。<strong>ツールの選定は別途</strong>（外部ツールの導入は承認が要る）</td>
+</tr>
+<tr>
+<td style="text-align: left;">6.8 公開の追跡照会</td>
+<td style="text-align: left;">NFR-S30〜S35 の数値（回数制限など）</td>
+</tr>
+<tr>
+<td style="text-align: left;">6.9 マイグレーション</td>
+<td style="text-align: left;">NFR-M20・M21</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="13-adr">13. 設計判断の一覧（ADR 候補）<a class="headerlink" href="#13-adr" title="Permanent link">&para;</a></h2>
+<p>承認は人が行います。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">ID</th>
+<th style="text-align: left;">判断</th>
+<th style="text-align: left;">推奨</th>
+<th style="text-align: left;">主な代替</th>
+<th style="text-align: left;">関連</th>
+<th style="text-align: left;">決定期限</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">NF-01</td>
+<td style="text-align: left;"><strong>規模の前提</strong>（V1〜V9）。事業側から値を得る</td>
+<td style="text-align: left;">本書の仮置き（年 12,000 件など）を出発点に、事業側と合意する</td>
+<td style="text-align: left;">値が得られるまで仮置きのまま進める</td>
+<td style="text-align: left;">全 NFR</td>
+<td style="text-align: left;">Bolt 1 の前（仮置きのまま進めてよいか）</td>
+</tr>
+<tr>
+<td style="text-align: left;">NF-02</td>
+<td style="text-align: left;"><strong>反映遅延の目標</strong>（NFR-P10・P11）</td>
+<td style="text-align: left;">p95 5 s／p99 15 s。ウォーキングスケルトンで実測して確定</td>
+<td style="text-align: left;">より厳しい（p99 5 s）、より緩い</td>
+<td style="text-align: left;">BE-03、R-08</td>
+<td style="text-align: left;">Bolt 1 で実測、Bolt 4 の前に確定</td>
+</tr>
+<tr>
+<td style="text-align: left;">NF-03</td>
+<td style="text-align: left;"><strong>稼働率とコスト</strong>（NFR-A01〜A04）</td>
+<td style="text-align: left;">公開照会 99.9%／業務 99.5%</td>
+<td style="text-align: left;">全体で 99.9%（構成が増える）、全体で 99%</td>
+<td style="text-align: left;">IF-01・IF-06</td>
+<td style="text-align: left;">ステージング構築の前</td>
+</tr>
+<tr>
+<td style="text-align: left;">NF-04</td>
+<td style="text-align: left;"><strong>セキュリティの基準</strong>（NFR-S41）と具体値（パスワード長、セッション、回数制限）</td>
+<td style="text-align: left;">ASVS L2 を出発点。具体値は BE-09 と合わせて確定</td>
+<td style="text-align: left;">ASVS L1／独自の基準</td>
+<td style="text-align: left;">R-02、BE-09</td>
+<td style="text-align: left;">Bolt 2 の前</td>
+</tr>
+<tr>
+<td style="text-align: left;">NF-05</td>
+<td style="text-align: left;"><strong>同時書き込みの扱い</strong>（NFR-A17）と BE-12 の見直し</td>
+<td style="text-align: left;">PoC で挙動を確かめ、必要ならクラスターモードを採る</td>
+<td style="text-align: left;">ローカルモード＋タスク 1 つ（可用性が下がる）</td>
+<td style="text-align: left;">BE-12、NFR-A07</td>
+<td style="text-align: left;">Bolt 1 の前（PoC）、結論は Bolt 1 内</td>
+</tr>
+<tr>
+<td style="text-align: left;">NF-06</td>
+<td style="text-align: left;"><strong>RPO／RTO と復旧の水準</strong>（NFR-A05〜A08）</td>
+<td style="text-align: left;">RPO 15 分／RTO 4 時間、バックアップ＆リストア</td>
+<td style="text-align: left;">パイロットライト以上、RPO 0</td>
+<td style="text-align: left;">IF-06</td>
+<td style="text-align: left;">ステージング構築の前</td>
+</tr>
+<tr>
+<td style="text-align: left;">NF-07</td>
+<td style="text-align: left;"><strong>データの保持期間</strong>（NFR-D01〜D08）と法定の確認</td>
+<td style="text-align: left;">表のとおり（最低 7 年は仮）。法令・社内規程を確認してから確定</td>
+<td style="text-align: left;">無期限、短期</td>
+<td style="text-align: left;">BE-10、R-03</td>
+<td style="text-align: left;">Bolt 1 の前（冪等性キーなど）、イベントの保持は Bolt 7 の前</td>
+</tr>
+<tr>
+<td style="text-align: left;">NF-08</td>
+<td style="text-align: left;"><strong>経路算出の打ち切りの方針</strong>（NFR-P05）</td>
+<td style="text-align: left;">時間の上限 30 s と、打ち切りの明示。探索の上限は人が決める</td>
+<td style="text-align: left;">上限なし</td>
+<td style="text-align: left;">R-04、US08</td>
+<td style="text-align: left;">Bolt 5 の前</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>Bolt 1 の計画前に判断が要るのは、NF-01（規模の仮置きのまま進めてよいか）、NF-05（同時書き込み。時間制限つきのスパイクで挙動を確かめる）、NF-07 の冪等性キー分です。NF-02 は Bolt 1 で実測、NF-04 は Bolt 2 の前、NF-03・NF-06 はステージング構築の前、NF-08 は Bolt 5 の前に判断します。</p>
+</blockquote>
+<hr />
+<h2 id="14-ai">14. 未決事項と AI の仮定<a class="headerlink" href="#14-ai" title="Permanent link">&para;</a></h2>
+<h3 id="141">14.1 人に確認する点<a class="headerlink" href="#141" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>規模</strong>（V1〜V9）：年間の予約数、利用者数、運用時間帯（24 時間か平日日中か）、運用期間。値が得られなければ仮置きのまま進めてよいか</li>
+<li><strong>稼働率の合意</strong>：公開照会 99.9%・業務 99.5% でよいか。測定対象と除外</li>
+<li><strong>反映遅延の許容</strong>：荷主にとって「即座」はどれだけの遅れまでか（NFR-P10）</li>
+<li><strong>法定の保存期間</strong>：帳簿・通関書類・個人情報の保存と削除（NFR-D01・D03・D06）</li>
+<li><strong>セキュリティの具体値</strong>：パスワード長、セッション、ロック解除時間、追跡番号の桁数（BE-09、R-02）</li>
+<li><strong>運用の体制</strong>：アラートを誰が受けるか、応答時間（7.2）</li>
+<li><strong>経路算出の探索の上限</strong>（乗り継ぎ回数・候補数。R-04）</li>
+<li><strong>荷役作業員の端末と回線</strong>（NFR-U11・U03）</li>
+<li><strong>多言語・多通貨</strong>を将来のスコープに含めるか</li>
+</ul>
+<h3 id="142-ai">14.2 AI の仮定<a class="headerlink" href="#142-ai" title="Permanent link">&para;</a></h3>
+<ul>
+<li>本書の数値は、根拠を示した<strong>仮置き</strong>で、事業側の合意を得ていない。確定（要件・ストーリーにすでにある）と提案を区別した</li>
+<li>規模は小さい（年 12,000 件）。この前提が外れると、第 3・4・9 章の数値と、BE-12・IF-01 の判断が変わる</li>
+<li>RPO／RTO の粒度は、マネージドサービスの標準的な機能を前提にした。<strong>実際の粒度は着手時に確認</strong>する</li>
+<li>外部システム（通知・決済）の可用性・応答時間は、本システムの SLO に含めない</li>
+<li>ISO/IEC 25010 の品質特性（機能適合性、性能効率性、互換性、使用性、信頼性、セキュリティ、保守性、移植性）のうち、<strong>移植性</strong>（別の環境への移行）は要件を置かない。クラウドを AWS とする前提（IF-01）で足りる</li>
+</ul>
+<h3 id="143">14.3 次の設計活動<a class="headerlink" href="#143" title="Permanent link">&para;</a></h3>
+<ol>
+<li>運用要件（<code>analyzing-operation</code>）：SLO・アラートを受けて、体制・手順・ランブックを定義する</li>
+<li>テスト戦略への反映：本書の数値を 5.3・TST-08・6.8 に反映する（性能テストのツール選定は承認が要る）</li>
+<li>承認後：ADR の作成（<code>creating-adr</code>）。BE・FE・IF・TS・TST・NF の各候補</li>
+<li>承認後：ウォーキングスケルトン（Bolt 1）の計画。反映遅延の実測（NFR-P10）と同時書き込みの PoC（NFR-A17）を含める</li>
+</ol>
+
+
+
+
+
+
+
+  
+  
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+    <a href="https://github.com/k2works/case-study-cargo-tracker" target="_blank" rel="noopener" title="GitHub Repository/case-study-cargo-tracker" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "toc.integrate", "search.suggest", "search.highlight"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mermaid@11.6.0/dist/mermaid.min.js"></script>
+      
+        <script src="../../assets/js/extra.js"></script>
+      
+    
+  </body>
+</html>
